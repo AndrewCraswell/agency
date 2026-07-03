@@ -72,6 +72,15 @@ For building command-line tools.
 - ◻️ **@fluentui/react-charting** or **recharts** — charts / data visualization.
 - ◻️ **shadcn** — component scaffolding for non-Fluent projects (`pnpm dlx shadcn@latest init -t <vite|start>`).
 
+## Markdown & rich text
+
+Built on the **unified** (remark + rehype) ecosystem — the standard for parsing and transforming Markdown/HTML.
+
+- ◻️ **react-markdown** — render Markdown as React components (no `dangerouslySetInnerHTML`); the default for showing
+  Markdown content.
+- ◻️ **remark-rehype** + **rehype-react** — build a custom Markdown→React pipeline directly on **unified** when
+  `react-markdown` isn't flexible enough.
+
 ## State management
 
 - ◻️ **zustand** — lightweight client state (default for local/global UI state).
