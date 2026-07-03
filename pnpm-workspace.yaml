@@ -1,3 +1,17 @@
 packages:
   - "apps/*"
   - "packages/*"
+# Flat node_modules so depending on @repo/storybook-config transitively provides
+# the whole Storybook stack (addons resolve from the app dir).
+nodeLinker: hoisted
+# Versions locked once for the whole monorepo. Reference them with "catalog:".
+catalog:
+  "@types/node": 24.13.2
+  typescript: 7.0.1-rc
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  msw: true
+minimumReleaseAgeExclude:
+  - vite@8.1.3
+  - chromatic@18.0.1

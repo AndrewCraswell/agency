@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Turbo Remote Cache. Set TURBO_TOKEN (secret) and TURBO_TEAM (variable) in the
+  # repository settings to share the cache across CI runs and contributors.
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # `pnpm verify` runs `beachball check`, which diffs against
+          # origin/main, so the full git history must be available.
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Storybook browser tests run through Playwright.
+      - run: pnpm --filter web exec playwright install --with-deps chromium
+      - run: pnpm verify

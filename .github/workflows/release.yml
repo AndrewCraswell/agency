@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# Never run two publishes at once; don't cancel an in-flight release.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  # Beachball pushes the version-bump commit, changelogs, and tags back to main.
+  contents: write
+
+env:
+  # Turbo Remote Cache (see CI workflow) speeds up the build before publishing.
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Beachball needs full history to compute bumps and push tags.
+          fetch-depth: 0
+          # Use a token that can push back to a protected main if needed.
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      # Bumps versions, writes changelogs, tags, pushes to main, and publishes to
+      # npm. No-ops when there are no change files, so the follow-up push it
+      # creates does not loop.
+      - name: Publish
+        run: pnpm exec beachball publish --yes --message "applying package updates [skip ci]"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

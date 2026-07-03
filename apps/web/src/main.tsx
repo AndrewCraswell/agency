@@ -1,25 +1,19 @@
-import { createRoot } from "react-dom/client";
-import "./style.css";
-import typescriptLogo from "/typescript.svg";
-import { Header, Counter } from "@repo/ui";
+import { RouterProvider } from "@tanstack/react-router"
+import { StrictMode } from "react"
+import { createRoot } from "react-dom/client"
+import invariant from "tiny-invariant"
+import { AppShell } from "@/components/AppShell/AppShell"
+import { router } from "./router"
+import "the-new-css-reset/css/reset.css"
+import "./style.css"
 
-const App = () => (
-  <div>
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="/vite.svg" className="logo" alt="Vite logo" />
-    </a>
-    <a href="https://www.typescriptlang.org/" target="_blank">
-      <img
-        src={typescriptLogo}
-        className="logo vanilla"
-        alt="TypeScript logo"
-      />
-    </a>
-    <Header title="Web" />
-    <div className="card">
-      <Counter />
-    </div>
-  </div>
-);
+const container = document.getElementById("app")
+invariant(container, "Root container #app was not found in the document")
 
-createRoot(document.getElementById("app")!).render(<App />);
+createRoot(container).render(
+  <StrictMode>
+    <AppShell>
+      <RouterProvider router={router} />
+    </AppShell>
+  </StrictMode>
+)

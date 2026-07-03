@@ -1,0 +1,33 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "ignore": ["beachball.config.js", "**/coverage/**", "**/storybook-static/**"],
+  "workspaces": {
+    "apps/web": {
+      "entry": ["src/**/*.stories.tsx", ".storybook/{main,preview,vitest.setup}.ts"],
+      "ignoreDependencies": [
+        "@repo/oxlint-config",
+        "@axe-core/playwright",
+        "@playwright/test",
+        "@storybook/addon-vitest",
+        "@storybook/react-vite",
+        "@mantine/hooks",
+        "date-fns",
+        "nuqs",
+        "ts-extras",
+        "ts-pattern"
+      ]
+    },
+    "packages/storybook-config": {
+      "ignoreDependencies": [
+        "@repo/oxlint-config",
+        "@chromatic-com/storybook",
+        "@storybook/addon-a11y",
+        "@storybook/addon-vitest"
+      ]
+    },
+    "packages/ui": {
+      "ignoreDependencies": ["@repo/oxlint-config"]
+    }
+  }
+}

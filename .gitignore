@@ -4,8 +4,9 @@ node_modules
 *.log
 dist
 dist-ssr
+coverage
+storybook-static
 *.local
-.env
 .cache
 server/dist
 public/dist
