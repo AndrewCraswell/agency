@@ -26,6 +26,21 @@
       "command": "C:\\Users\\andcra\\.pencil\\mcp\\visual_studio_code\\out\\mcp-server-windows-x64.exe",
       "args": ["--app", "visual_studio_code", "--agent", "copilotIDE"],
       "env": {}
+    },
+    "shopify-dev-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@shopify/dev-mcp@latest"]
+    },
+    "linear": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.linear.app/mcp"]
+    },
+    "trigger": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["trigger.dev@4.5.4", "mcp"]
     }
   },
   "inputs": []
