@@ -16,7 +16,7 @@
     "@repo/oxlint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
     "@types/react": "^19.2.0",
-    "oxlint": "^1.72.0",
+    "oxlint": "^1.74.0",
     "typescript": "catalog:"
   }
 }
