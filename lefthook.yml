@@ -16,5 +16,5 @@ pre-commit:
 
 pre-push:
   commands:
-    check-types:
+    types:
       run: pnpm run check:types
