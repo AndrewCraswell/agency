@@ -36,6 +36,7 @@ For building command-line tools.
 - ◻️ **@clack/prompts** — interactive prompts.
 - ◻️ **picocolors** — terminal colors (tiny, fast).
 - ◻️ **ink** — React for the terminal, for rich interactive CLIs.
+- ◻️ **c12** — Configuration file management.
 
 ## Testing
 
