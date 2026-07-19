@@ -2,10 +2,10 @@ import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { z } from "zod"
 import { GitHubAppPublisher } from "../github/githubAppPublisher"
-import { runPhase1 } from "../prototype/runner"
-import { createPhase2Graph } from "./graph"
+import { runWorker } from "../prototype/runner"
+import { createWorkflowGraph } from "./graph"
 
-const Phase2EnvironmentSchema = z.object({
+const WorkflowEnvironmentSchema = z.object({
   DAYTONA_API_KEY: z.string().min(1),
   GITHUB_APP_ID: z.string().min(1),
   GITHUB_APP_INSTALLATION_ID: z.string().min(1),
@@ -15,30 +15,30 @@ const Phase2EnvironmentSchema = z.object({
 
 const artifactsDirectory = fileURLToPath(new URL("../../artifacts/", import.meta.url))
 
-export function phase2ArtifactRoot(runId: string): string {
+export function workflowArtifactRoot(runId: string): string {
   return join(artifactsDirectory, runId)
 }
 
-export function createLivePhase2Workflow(environmentInput: NodeJS.ProcessEnv = process.env) {
-  const environment = Phase2EnvironmentSchema.parse(environmentInput)
+export function createLiveWorkflow(environmentInput: NodeJS.ProcessEnv = process.env) {
+  const environment = WorkflowEnvironmentSchema.parse(environmentInput)
   const publisher = new GitHubAppPublisher({
     appId: environment.GITHUB_APP_ID,
     installationId: environment.GITHUB_APP_INSTALLATION_ID,
     privateKey: environment.GITHUB_APP_PRIVATE_KEY.replaceAll("\\n", "\n")
   })
-  return createPhase2Graph({
-    artifactRoot: phase2ArtifactRoot,
+  return createWorkflowGraph({
+    artifactRoot: workflowArtifactRoot,
     runWorker: async ({ assignment, artifactRoot, signal }) => {
       const githubToken = await publisher.installationToken()
       const startedAt = Date.now()
-      return runPhase1({
+      return runWorker({
         assignment,
         artifactRoot,
         signal,
         cleanupMode: "stop",
         onProgress: (message) => {
           const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1_000)
-          process.stderr.write(`[phase-2 +${elapsedSeconds}s] ${message}\n`)
+          process.stderr.write(`[workflow +${elapsedSeconds}s] ${message}\n`)
         },
         secrets: {
           githubToken,

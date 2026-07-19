@@ -21,15 +21,15 @@ const REMOTE_ARTIFACT_ROOT = "/workspace/orchestrator-artifacts"
 const APPROVED_REPOSITORY = "AndrewCraswell/fencing-club-shopify-theme"
 const DEFAULT_ARTIFACTS_ROOT = fileURLToPath(new URL("../../artifacts/", import.meta.url))
 
-export interface Phase1Secrets {
+export interface WorkerSecrets {
   githubToken: string
   modelProviderApiKey: string
 }
 
-export interface Phase1Options {
+export interface WorkerOptions {
   assignment: Assignment
   cleanupMode: CleanupMode
-  secrets: Phase1Secrets
+  secrets: WorkerSecrets
   artifactRoot?: string
   signal?: AbortSignal
   onProgress?: (message: string) => void
@@ -103,12 +103,12 @@ function classifyFailure(error: unknown): WorkerResult["failure"] {
   if (error instanceof Error) {
     return { classification: "internal", message: error.message, retryable: false }
   }
-  return { classification: "internal", message: "Unknown Phase 1 failure", retryable: false }
+  return { classification: "internal", message: "Unknown worker failure", retryable: false }
 }
 
 function throwIfCancelled(signal: AbortSignal | undefined): void {
   if (signal?.aborted === true) {
-    const error = new Error("Phase 1 worker was cancelled")
+    const error = new Error("Worker was cancelled")
     error.name = "AbortError"
     throw error
   }
@@ -121,7 +121,7 @@ async function prepareRepository(
 ): Promise<void> {
   const repository = `${assignment.repository.owner}/${assignment.repository.name}`
   if (repository !== APPROVED_REPOSITORY) {
-    throw new Error(`Repository ${repository} is outside the Phase 1 allowlist`)
+    throw new Error(`Repository ${repository} is outside the worker allowlist`)
   }
 
   const clone = await workspace.executeCommand({
@@ -312,7 +312,7 @@ function buildWorkspaceHandle(
   }
 }
 
-export async function runPhase1(options: Phase1Options): Promise<WorkerResult> {
+export async function runWorker(options: WorkerOptions): Promise<WorkerResult> {
   const startedAt = Date.now()
   const { assignment, cleanupMode, secrets } = options
   const progress = (message: string): void => options.onProgress?.(message)
@@ -335,7 +335,7 @@ export async function runPhase1(options: Phase1Options): Promise<WorkerResult> {
       role: "coder",
       repositoryHash,
       promptVersion: assignment.promptVersion,
-      environment: "phase-1"
+      environment: "worker"
     },
     retention: { autoArchiveMinutes: 1_440, autoDeleteMinutes: 10_080 },
     environment: createAgentServerEnvironment({ sessionApiKey, encryptionKey }),

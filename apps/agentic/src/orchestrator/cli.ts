@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises"
 import { AssignmentSchema } from "../contracts/assignment"
-import { createLivePhase2Workflow, phase2ArtifactRoot } from "./runtime"
+import { createLiveWorkflow, workflowArtifactRoot } from "./runtime"
 import {
   clearWorkflowCancellationRequest,
   hasWorkflowCancellationRequest,
@@ -26,8 +26,8 @@ const command = process.argv[2]
 if (command === "run") {
   const assignmentPath = requiredArgument("--assignment")
   const assignment = AssignmentSchema.parse(JSON.parse(await readFile(assignmentPath, "utf8")))
-  const workflow = createLivePhase2Workflow()
-  const artifactRoot = phase2ArtifactRoot(assignment.runId)
+  const workflow = createLiveWorkflow()
+  const artifactRoot = workflowArtifactRoot(assignment.runId)
   const cancellationWatcher = setInterval(() => {
     void hasWorkflowCancellationRequest(artifactRoot).then((isCancellationRequested) => {
       if (isCancellationRequested) {
@@ -48,14 +48,14 @@ if (command === "run") {
   process.exitCode = state.terminalStatus === "published" ? 0 : 1
 } else if (command === "inspect") {
   const runId = requiredArgument("--run-id")
-  const state = await readWorkflowState(phase2ArtifactRoot(runId))
+  const state = await readWorkflowState(workflowArtifactRoot(runId))
   process.stdout.write(`${JSON.stringify(state, null, 2)}\n`)
 } else if (command === "cancel") {
   const runId = requiredArgument("--run-id")
-  const path = await requestWorkflowCancellation(phase2ArtifactRoot(runId))
+  const path = await requestWorkflowCancellation(workflowArtifactRoot(runId))
   process.stdout.write(`${JSON.stringify({ runId, cancellationRequest: path }, null, 2)}\n`)
 } else {
   throw new Error(
-    "Usage: pnpm phase2 run --assignment <path> | pnpm phase2 inspect --run-id <uuid> | pnpm phase2 cancel --run-id <uuid>"
+    "Usage: pnpm workflow run --assignment <path> | pnpm workflow inspect --run-id <uuid> | pnpm workflow cancel --run-id <uuid>"
   )
 }

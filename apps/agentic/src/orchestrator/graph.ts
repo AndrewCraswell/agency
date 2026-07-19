@@ -7,24 +7,24 @@ import { traceOperation } from "../observability/tracing"
 import {
   type GraphEvent,
   type GraphFailure,
-  PHASE_2_GRAPH_SCHEMA_VERSION,
-  Phase2GraphStateSchema,
-  type Phase2GraphState,
+  WORKFLOW_SCHEMA_VERSION,
+  WorkflowStateSchema,
+  type WorkflowState,
   type PublicationResult,
   type ValidationResult,
   createInitialGraphState
 } from "./state"
 
-const Phase2StateAnnotation = Annotation.Root({
-  schemaVersion: Annotation<Phase2GraphState["schemaVersion"]>(),
+const WorkflowStateAnnotation = Annotation.Root({
+  schemaVersion: Annotation<WorkflowState["schemaVersion"]>(),
   runId: Annotation<string>(),
   assignmentDigest: Annotation<string>(),
   assignment: Annotation<Assignment>(),
-  phase: Annotation<Phase2GraphState["phase"]>(),
+  phase: Annotation<WorkflowState["phase"]>(),
   workerResult: Annotation<WorkerResult | null>(),
   validationResult: Annotation<ValidationResult | null>(),
   publicationResult: Annotation<PublicationResult | null>(),
-  terminalStatus: Annotation<Phase2GraphState["terminalStatus"]>(),
+  terminalStatus: Annotation<WorkflowState["terminalStatus"]>(),
   failure: Annotation<GraphFailure | null>(),
   cleanupFailure: Annotation<GraphFailure | null>(),
   events: Annotation<GraphEvent[]>({
@@ -37,22 +37,22 @@ const Phase2StateAnnotation = Annotation.Root({
   })
 })
 
-export type Phase2WorkerOptions = {
+export type WorkerExecutionOptions = {
   assignment: Assignment
   artifactRoot: string
   signal: AbortSignal
   onProgress?: (message: string) => void
 }
 
-export type Phase2GraphDependencies = {
+export type WorkflowGraphDependencies = {
   artifactRoot(runId: string): string
-  runWorker(options: Phase2WorkerOptions): Promise<WorkerResult>
+  runWorker(options: WorkerExecutionOptions): Promise<WorkerResult>
   publisher: DraftPullRequestPublisher
   now?: () => Date
 }
 
 function event(
-  dependencies: Phase2GraphDependencies,
+  dependencies: WorkflowGraphDependencies,
   node: GraphEvent["node"],
   outcome: GraphEvent["outcome"],
   summary: string
@@ -75,7 +75,7 @@ function failure(
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Unknown Phase 2 workflow failure"
+  return error instanceof Error ? error.message : "Unknown workflow failure"
 }
 
 function validateWorkerResult(workerResult: WorkerResult | null): ValidationResult {
@@ -105,18 +105,18 @@ function validateWorkerResult(workerResult: WorkerResult | null): ValidationResu
   }
 }
 
-export function createPhase2Graph(dependencies: Phase2GraphDependencies) {
+export function createWorkflowGraph(dependencies: WorkflowGraphDependencies) {
   const activeRuns = new Map<string, AbortController>()
-  const prepareAssignment = (stateInput: Phase2GraphState) => {
-    const state = Phase2GraphStateSchema.parse(stateInput)
+  const prepareAssignment = (stateInput: WorkflowState) => {
+    const state = WorkflowStateSchema.parse(stateInput)
     return {
       phase: "prepared" as const,
       events: [event(dependencies, "prepareAssignment", "completed", `Prepared assignment ${state.assignmentDigest}`)]
     }
   }
 
-  const provisionWorkspace = (stateInput: Phase2GraphState) => {
-    const state = Phase2GraphStateSchema.parse(stateInput)
+  const provisionWorkspace = (stateInput: WorkflowState) => {
+    const state = WorkflowStateSchema.parse(stateInput)
     return {
       phase: "running" as const,
       events: [
@@ -130,20 +130,20 @@ export function createPhase2Graph(dependencies: Phase2GraphDependencies) {
     }
   }
 
-  const runCoder = async (stateInput: Phase2GraphState) => {
-    const state = Phase2GraphStateSchema.parse(stateInput)
+  const runCoder = async (stateInput: WorkflowState) => {
+    const state = WorkflowStateSchema.parse(stateInput)
     const signal = activeRuns.get(state.runId)?.signal ?? AbortSignal.abort()
     try {
       const workerResult = await traceOperation(
         {
-          name: "phase2.runCoder",
+          name: "workflow.runCoder",
           metadata: {
             runId: state.runId,
             repository: `${state.assignment.repository.owner}/${state.assignment.repository.name}`,
             baseCommitSha: state.assignment.baseCommitSha,
             promptVersion: state.assignment.promptVersion
           },
-          tags: ["phase-2", "coder"]
+          tags: ["workflow", "coder"]
         },
         () =>
           dependencies.runWorker({
@@ -168,20 +168,21 @@ export function createPhase2Graph(dependencies: Phase2GraphDependencies) {
     }
   }
 
-  const validateResult = (stateInput: Phase2GraphState) => {
-    const state = Phase2GraphStateSchema.parse(stateInput)
-    if (state.failure?.classification === "cancelled" || state.workerResult?.status === "cancelled") {
+  const validateResult = (stateInput: WorkflowState) => {
+    const state = WorkflowStateSchema.parse(stateInput)
+    if (state.failure !== null || state.workerResult?.status === "cancelled") {
       const graphFailure =
         state.failure ?? failure("validateResult", "cancelled", "Worker result records cancellation", false)
+      const isCancelled = graphFailure.classification === "cancelled"
       return {
-        phase: "cancelled" as const,
+        phase: isCancelled ? ("cancelled" as const) : ("failed" as const),
         validationResult: {
           disposition: "failed" as const,
           reasons: [graphFailure.message],
           checkedAt: (dependencies.now?.() ?? new Date()).toISOString()
         },
         failure: graphFailure,
-        terminalStatus: "cancelled" as const,
+        terminalStatus: isCancelled ? ("cancelled" as const) : ("failed" as const),
         events: [event(dependencies, "validateResult", "failed", graphFailure.message)]
       }
     }
@@ -204,8 +205,8 @@ export function createPhase2Graph(dependencies: Phase2GraphDependencies) {
     }
   }
 
-  const publishDraftPr = async (stateInput: Phase2GraphState) => {
-    const state = Phase2GraphStateSchema.parse(stateInput)
+  const publishDraftPr = async (stateInput: WorkflowState) => {
+    const state = WorkflowStateSchema.parse(stateInput)
     const workerResult = state.workerResult
     const patchArtifact = workerResult?.patchArtifact
     if (workerResult === null || patchArtifact === null || patchArtifact === undefined) {
@@ -221,13 +222,13 @@ export function createPhase2Graph(dependencies: Phase2GraphDependencies) {
     try {
       const publicationResult = await traceOperation(
         {
-          name: "phase2.publishDraftPr",
+          name: "workflow.publishDraftPr",
           metadata: {
             runId: state.runId,
             repository: `${state.assignment.repository.owner}/${state.assignment.repository.name}`,
             baseCommitSha: state.assignment.baseCommitSha
           },
-          tags: ["phase-2", "github-publication"]
+          tags: ["workflow", "github-publication"]
         },
         () =>
           dependencies.publisher.publish({
@@ -260,8 +261,8 @@ export function createPhase2Graph(dependencies: Phase2GraphDependencies) {
     }
   }
 
-  const recordFailure = (stateInput: Phase2GraphState) => {
-    const state = Phase2GraphStateSchema.parse(stateInput)
+  const recordFailure = (stateInput: WorkflowState) => {
+    const state = WorkflowStateSchema.parse(stateInput)
     const graphFailure =
       state.failure ?? failure("recordFailure", "internal", "Workflow reached failure routing without a typed failure")
     return {
@@ -272,8 +273,8 @@ export function createPhase2Graph(dependencies: Phase2GraphDependencies) {
     }
   }
 
-  const stopWorkspace = (stateInput: Phase2GraphState) => {
-    const state = Phase2GraphStateSchema.parse(stateInput)
+  const stopWorkspace = (stateInput: WorkflowState) => {
+    const state = WorkflowStateSchema.parse(stateInput)
     const lifecycleState = state.workerResult?.workspace.lifecycleState
     if (
       lifecycleState !== undefined &&
@@ -299,13 +300,13 @@ export function createPhase2Graph(dependencies: Phase2GraphDependencies) {
     }
   }
 
-  const routeAfterValidation = (stateInput: Phase2GraphState) => {
-    const state = Phase2GraphStateSchema.parse(stateInput)
+  const routeAfterValidation = (stateInput: WorkflowState) => {
+    const state = WorkflowStateSchema.parse(stateInput)
     return state.validationResult?.disposition === "publishable" ? "publishDraftPr" : "recordFailure"
   }
 
   const checkpointer = new MemorySaver()
-  const graph = new StateGraph(Phase2StateAnnotation)
+  const graph = new StateGraph(WorkflowStateAnnotation)
     .addNode("prepareAssignment", prepareAssignment)
     .addNode("provisionWorkspace", provisionWorkspace)
     .addNode("runCoder", runCoder)
@@ -326,7 +327,7 @@ export function createPhase2Graph(dependencies: Phase2GraphDependencies) {
   return {
     graph,
     checkpointer,
-    async invoke(assignment: Assignment): Promise<Phase2GraphState> {
+    async invoke(assignment: Assignment): Promise<WorkflowState> {
       const initialState = createInitialGraphState(assignment)
       const config = {
         configurable: { thread_id: assignment.runId },
@@ -334,14 +335,14 @@ export function createPhase2Graph(dependencies: Phase2GraphDependencies) {
           runId: assignment.runId,
           repository: `${assignment.repository.owner}/${assignment.repository.name}`,
           baseCommitSha: assignment.baseCommitSha,
-          graphVersion: PHASE_2_GRAPH_SCHEMA_VERSION,
+          graphVersion: WORKFLOW_SCHEMA_VERSION,
           promptVersion: assignment.promptVersion,
           workerImageVersion: assignment.workerImageVersion
         },
-        tags: ["phase-2", "local-langgraph"]
+        tags: ["workflow", "local-langgraph"]
       }
       const existingSnapshot = await graph.getState(config)
-      const existingState = Phase2GraphStateSchema.safeParse(existingSnapshot.values)
+      const existingState = WorkflowStateSchema.safeParse(existingSnapshot.values)
       if (existingState.success) {
         if (existingState.data.assignmentDigest !== initialState.assignmentDigest) {
           throw new Error(`Run ${assignment.runId} is already bound to a different assignment digest`)
@@ -354,14 +355,14 @@ export function createPhase2Graph(dependencies: Phase2GraphDependencies) {
       activeRuns.set(assignment.runId, controller)
       try {
         const result = await graph.invoke(initialState, { ...config })
-        return Phase2GraphStateSchema.parse(result)
+        return WorkflowStateSchema.parse(result)
       } finally {
         activeRuns.delete(assignment.runId)
       }
     },
-    async inspect(runId: string): Promise<Phase2GraphState | null> {
+    async inspect(runId: string): Promise<WorkflowState | null> {
       const snapshot = await graph.getState({ configurable: { thread_id: runId } })
-      const state = Phase2GraphStateSchema.safeParse(snapshot.values)
+      const state = WorkflowStateSchema.safeParse(snapshot.values)
       return state.success ? state.data : null
     },
     cancel(runId: string): boolean {

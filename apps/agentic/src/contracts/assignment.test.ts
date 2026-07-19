@@ -33,7 +33,7 @@ const validAssignment = {
     maxRepairAttempts: 0
   },
   contextBundle: {
-    uri: "file:///workspace/orchestrator-context/phase-1/manifest.json",
+    uri: "file:///workspace/orchestrator-context/worker/manifest.json",
     sha256: "a".repeat(64)
   },
   promptVersion: "coder-v1",

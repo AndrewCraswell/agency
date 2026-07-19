@@ -3,10 +3,10 @@ import { CommandResultSchema, WorkerResultSchema, WorkspaceHandleSchema } from "
 
 const workspace = {
   provider: "daytona",
-  workspaceId: "sandbox-phase-1",
+  workspaceId: "sandbox-worker",
   lifecycleState: "stopped",
   repositoryPath: "/workspace/repository",
-  agentServerUrlReference: "daytona-preview:sandbox-phase-1:3000",
+  agentServerUrlReference: "daytona-preview:sandbox-worker:3000",
   conversationId: "conversation-1",
   createdAt: "2026-07-18T20:00:00.000Z",
   lastActivityAt: "2026-07-18T20:10:00.000Z",

@@ -109,4 +109,73 @@ describe("DaytonaWorkspaceProvider", () => {
       provider.start({ ...handle, labels: { ...handle.labels, runId: "other-run" } }, 1_000)
     ).rejects.toThrow("label runId does not match")
   })
+
+  it("supports execution, binary transfer, archive, and destroy through serializable handles", async () => {
+    const sandbox = fakeSandbox()
+    const client: DaytonaClientPort = {
+      create: async (params) => {
+        sandbox.labels = params.labels
+        return sandbox
+      }
+    }
+    const provider = new DaytonaWorkspaceProvider(client)
+    const handle = await provider.create({
+      image: "example.test/worker:1.0.0",
+      resources: { cpu: 4, memory: 8, disk: 10 },
+      labels: {
+        runId: "run-1",
+        role: "coder",
+        repositoryHash: "repository-hash",
+        promptVersion: "v1",
+        environment: "test"
+      },
+      retention: { autoArchiveMinutes: 60, autoDeleteMinutes: 120 },
+      environment: { FEATURE_FLAG: "enabled" },
+      createTimeoutMs: 30_000
+    })
+
+    await expect(
+      provider.execute(handle, { executionId: "role-1", command: "run", timeoutMs: 1_000 })
+    ).resolves.toMatchObject({ workspaceId: "workspace-1", executionId: "command-1", status: "running" })
+    await provider.upload(handle, Uint8Array.from([0, 255]), "/workspace/data.bin", 1_000)
+    await expect(provider.download(handle, "/workspace/data.bin", 1_000)).resolves.toEqual(Buffer.from([0, 255]))
+    const archived = await provider.archive(handle, 1_000)
+    expect(archived.lifecycleState).toBe("archived")
+    await expect(provider.destroy(archived, 1_000)).resolves.toMatchObject({ lifecycleState: "deleted" })
+    await expect(provider.start(handle, 1_000)).rejects.toThrow("is not attached")
+  })
+
+  it("rejects missing labels, wrong providers, and unattached workspace handles", async () => {
+    const sandbox = fakeSandbox()
+    const client: DaytonaClientPort = {
+      create: async (params) => {
+        sandbox.labels = params.labels
+        return sandbox
+      }
+    }
+    const provider = new DaytonaWorkspaceProvider(client)
+    const options = {
+      image: "example.test/worker:1.0.0",
+      resources: { cpu: 4, memory: 8, disk: 10 },
+      labels: {
+        runId: "run-1",
+        role: "coder",
+        repositoryHash: "repository-hash",
+        promptVersion: "v1",
+        environment: "test"
+      },
+      retention: { autoArchiveMinutes: 60, autoDeleteMinutes: 120 },
+      createTimeoutMs: 30_000
+    }
+
+    await expect(provider.create({ ...options, labels: { ...options.labels, role: "" } })).rejects.toThrow(
+      "Missing required Daytona workspace label role"
+    )
+    const handle = await provider.create(options)
+    await expect(provider.start({ ...handle, provider: "azure" }, 1_000)).rejects.toThrow(
+      "Daytona provider cannot operate on azure workspace"
+    )
+    const detachedProvider = new DaytonaWorkspaceProvider(client)
+    await expect(detachedProvider.start(handle, 1_000)).rejects.toThrow("is not attached")
+  })
 })

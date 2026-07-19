@@ -43,7 +43,7 @@ agent-platform/
 |   |-- src/profiles.ts
 |   `-- test/client.test.ts
 |-- prompts/coder/v1.md
-`-- tests/fixtures/phase-1-assignment.json
+`-- tests/fixtures/worker-assignment.json
 ```
 
 ## 4. Technical design
@@ -188,7 +188,7 @@ pnpm typecheck
 pnpm test --filter contracts
 pnpm test --filter daytona-workspace
 pnpm test --filter openhands-client
-pnpm prototype --assignment tests/fixtures/phase-1-assignment.json
+pnpm worker --assignment tests/fixtures/worker-assignment.json
 ```
 
 ## 7. Acceptance criteria

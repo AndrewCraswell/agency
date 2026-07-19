@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from "vitest"
 import { AssignmentSchema, type Assignment } from "../contracts/assignment"
 import { WorkerResultSchema, type WorkerResult } from "../contracts/results"
 import type { DraftPullRequestPublisher } from "../github/publisher"
-import { createPhase2Graph } from "./graph"
+import { createWorkflowGraph } from "./graph"
 
-const fixtureUrl = new URL("../../tests/fixtures/phase-1-repair-assignment.json", import.meta.url)
+const fixtureUrl = new URL("../../tests/fixtures/worker-repair-assignment.json", import.meta.url)
 const timestamp = "2026-07-19T00:00:00.000Z"
 
 async function assignmentFixture(): Promise<Assignment> {
@@ -86,7 +86,7 @@ function workerResult(
   })
 }
 
-describe("Phase 2 graph", () => {
+describe("workflow graph", () => {
   it("routes a publishable worker result through publication and cleanup", async () => {
     const assignment = await assignmentFixture()
     const runWorker = vi.fn(async () => workerResult(assignment))
@@ -97,7 +97,7 @@ describe("Phase 2 graph", () => {
       headCommitSha: "b".repeat(40),
       updatedExisting: false
     })
-    const workflow = createPhase2Graph({
+    const workflow = createWorkflowGraph({
       artifactRoot: (runId) => `D:/artifacts/${runId}`,
       runWorker,
       publisher: { publish },
@@ -133,7 +133,7 @@ describe("Phase 2 graph", () => {
       headCommitSha: "b".repeat(40),
       updatedExisting: false
     })
-    const workflow = createPhase2Graph({
+    const workflow = createWorkflowGraph({
       artifactRoot: (runId) => `D:/artifacts/${runId}`,
       runWorker: async () => workerResult(assignment),
       publisher: { publish },
@@ -150,7 +150,7 @@ describe("Phase 2 graph", () => {
   it("routes failed independent validation through evidence preservation and cleanup", async () => {
     const assignment = await assignmentFixture()
     const publish = vi.fn<DraftPullRequestPublisher["publish"]>()
-    const workflow = createPhase2Graph({
+    const workflow = createWorkflowGraph({
       artifactRoot: (runId) => `D:/artifacts/${runId}`,
       runWorker: async () => workerResult(assignment, "failed"),
       publisher: { publish },
@@ -177,7 +177,7 @@ describe("Phase 2 graph", () => {
       headCommitSha: "b".repeat(40),
       updatedExisting: false
     })
-    const workflow = createPhase2Graph({
+    const workflow = createWorkflowGraph({
       artifactRoot: (runId) => `D:/artifacts/${runId}`,
       runWorker: async () => workerResult(assignment, "completed", "running"),
       publisher: { publish },
@@ -198,7 +198,7 @@ describe("Phase 2 graph", () => {
     const workerStarted = new Promise<void>((resolvePromise) => {
       markWorkerStarted = resolvePromise
     })
-    const workflow = createPhase2Graph({
+    const workflow = createWorkflowGraph({
       artifactRoot: (runId) => `D:/artifacts/${runId}`,
       runWorker: async ({ signal }) => {
         markWorkerStarted?.()
@@ -223,5 +223,90 @@ describe("Phase 2 graph", () => {
     expect(result.failure?.classification).toBe("cancelled")
     expect(result.events.at(-1)?.node).toBe("stopWorkspace")
     expect(publish).not.toHaveBeenCalled()
+  })
+
+  it("routes thrown worker errors and cancellation through typed terminal outcomes", async () => {
+    const assignment = await assignmentFixture()
+    const publish = vi.fn<DraftPullRequestPublisher["publish"]>()
+    const failedWorkflow = createWorkflowGraph({
+      artifactRoot: (runId) => `D:/artifacts/${runId}`,
+      runWorker: async () => {
+        throw "worker unavailable"
+      },
+      publisher: { publish },
+      now: () => new Date(timestamp)
+    })
+    const failed = await failedWorkflow.invoke(assignment)
+    expect(failed).toMatchObject({ terminalStatus: "failed", failure: { classification: "worker" } })
+    expect(failed.failure?.message).toBe("Unknown workflow failure")
+
+    const cancelledAssignment = { ...assignment, runId: "858355f6-a892-4fa9-af05-66c5085cc901" }
+    const cancelledWorkflow = createWorkflowGraph({
+      artifactRoot: (runId) => `D:/artifacts/${runId}`,
+      runWorker: async () => {
+        const error = new Error("cancelled")
+        error.name = "AbortError"
+        throw error
+      },
+      publisher: { publish },
+      now: () => new Date(timestamp)
+    })
+    const cancelled = await cancelledWorkflow.invoke(cancelledAssignment)
+    expect(cancelled).toMatchObject({ terminalStatus: "cancelled", failure: { classification: "cancelled" } })
+    expect(publish).not.toHaveBeenCalled()
+  })
+
+  it("collects every independent validation reason from a failed worker result", async () => {
+    const assignment = await assignmentFixture()
+    const publish = vi.fn<DraftPullRequestPublisher["publish"]>()
+    const failedResult = workerResult(assignment, "failed")
+    const workflow = createWorkflowGraph({
+      artifactRoot: (runId) => `D:/artifacts/${runId}`,
+      runWorker: async () =>
+        WorkerResultSchema.parse({
+          ...failedResult,
+          changedFiles: [],
+          patchArtifact: null,
+          validationResults: failedResult.validationResults.map((result) => ({
+            ...result,
+            exitCode: null,
+            timedOut: true
+          }))
+        }),
+      publisher: { publish },
+      now: () => new Date(timestamp)
+    })
+
+    const result = await workflow.invoke(assignment)
+
+    expect(result.validationResult?.reasons).toEqual([
+      "Coder finished with failed status",
+      "Coder produced no patch artifact",
+      "Coder produced no changed files",
+      "Independent validation did not pass"
+    ])
+    expect(publish).not.toHaveBeenCalled()
+  })
+
+  it("classifies publication rejection and supports state inspection", async () => {
+    const assignment = await assignmentFixture()
+    const workflow = createWorkflowGraph({
+      artifactRoot: (runId) => `D:/artifacts/${runId}`,
+      runWorker: async () => workerResult(assignment),
+      publisher: {
+        publish: async () => {
+          throw "publication unavailable"
+        }
+      },
+      now: () => new Date(timestamp)
+    })
+
+    const result = await workflow.invoke(assignment)
+
+    expect(result).toMatchObject({ terminalStatus: "failed", failure: { classification: "publication" } })
+    expect(result.failure?.message).toBe("Unknown workflow failure")
+    await expect(workflow.inspect(assignment.runId)).resolves.toEqual(result)
+    await expect(workflow.inspect("62b81077-c4c6-4bbf-8114-b37179186cba")).resolves.toBeNull()
+    expect(workflow.cancel(assignment.runId)).toBe(false)
   })
 })

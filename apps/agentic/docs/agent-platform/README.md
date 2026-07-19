@@ -230,7 +230,7 @@ Normalized events contain:
 | ----- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | 1     | [Direct worker prototype](phase-1-direct-worker-prototype.md)               | One TypeScript process controls one OpenHands agent in Daytona.                |
 | 2     | [Local LangGraph workflow](phase-2-local-langgraph-workflow.md)             | One deterministic graph creates a validated draft PR.                          |
-| 3     | [Local specialized agent chain](phase-3-local-specialized-agent-chain.md)   | Scrum-master, coder, reviewer, and repairer roles prove the product workflow.  |
+| 3     | [Local specialized agent chain](phase-3-local-specialized-agent-chain.md)   | Linear triage and specialized roles prove the local product workflow.          |
 | 4     | [Durable resumable workspaces](phase-4-durable-resumable-workspaces.md)     | Specialized workflows survive restarts and run concurrently.                   |
 | 5     | [Webhook automation](phase-5-webhook-automation.md)                         | Authenticated events start and resume workflows safely.                        |
 | 6     | [Azure-managed data and secrets](phase-6-azure-managed-data-and-secrets.md) | Azure services replace local persistence, artifacts, and secret loading.       |

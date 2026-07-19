@@ -27,7 +27,7 @@ export interface OpenHandsModelProfile {
 }
 
 export const createCoderProfile = (usageId: string): OpenHandsModelProfile => ({
-  name: "phase-1-coder",
+  name: "coder",
   model: "openrouter/openai/gpt-5.6-terra",
   baseUrl: "https://openrouter.ai/api/v1",
   reasoningEffort: "medium",

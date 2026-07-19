@@ -6,7 +6,7 @@ import { WorkerResultSchema, type WorkerResult } from "../contracts/results"
 import { GitHubAppPublisher, type GitCommandRunner } from "./githubAppPublisher"
 import type { DraftPullRequestInput } from "./publisher"
 
-const fixtureUrl = new URL("../../tests/fixtures/phase-1-repair-assignment.json", import.meta.url)
+const fixtureUrl = new URL("../../tests/fixtures/worker-repair-assignment.json", import.meta.url)
 const timestamp = "2026-07-19T00:00:00.000Z"
 
 async function assignmentFixture(): Promise<Assignment> {
@@ -252,5 +252,147 @@ describe("GitHubAppPublisher", () => {
 
     await expect(publisher.publish(publicationInput(assignment))).rejects.toThrow("is not owned by run")
     expect(gitRunner).not.toHaveBeenCalled()
+  })
+
+  it("rejects non-publishable worker results before requesting a token", async () => {
+    const assignment = await assignmentFixture()
+    const input = publicationInput(assignment)
+    const fetcher = vi.fn<(input: string | URL | Request, init?: RequestInit) => Promise<Response>>()
+    const publisher = new GitHubAppPublisher({
+      appId: "123",
+      installationId: "456",
+      privateKey: privateKey(),
+      fetcher
+    })
+
+    await expect(
+      publisher.publish({ ...input, workerResult: { ...input.workerResult, patchArtifact: null } })
+    ).rejects.toThrow("Only a completed worker result with a patch can be published")
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
+  it("reuses a run-owned branch and creates its missing draft pull request", async () => {
+    const assignment = await assignmentFixture()
+    const branchSha = "e".repeat(40)
+    const marker = `Agent-Run-ID: ${assignment.runId}`
+    const fetcher = vi.fn(async (request: string | URL | Request, init?: RequestInit) => {
+      const url = request.toString()
+      if (url.endsWith("/access_tokens")) {
+        return response({ token: "installation-token", expires_at: "2026-07-19T01:00:00.000Z" }, 201)
+      }
+      if (url.endsWith("/repos/AndrewCraswell/fencing-club-shopify-theme")) {
+        return response({ default_branch: "master" })
+      }
+      if (url.includes("/git/ref/heads/")) {
+        return response({ object: { sha: branchSha } })
+      }
+      if (url.includes("/pulls?")) {
+        return response([])
+      }
+      if (url.includes("/git/commits/")) {
+        return response({ message: marker })
+      }
+      if (url.endsWith("/pulls") && init?.method === "POST") {
+        return response(
+          {
+            number: 43,
+            html_url: "https://github.com/AndrewCraswell/fencing-club-shopify-theme/pull/43",
+            body: "draft",
+            head: { sha: branchSha }
+          },
+          201
+        )
+      }
+      return response({ message: `Unexpected request ${url}` }, 500)
+    })
+    const gitRunner = vi.fn<GitCommandRunner>()
+    const publisher = new GitHubAppPublisher({
+      appId: "123",
+      installationId: "456",
+      privateKey: privateKey(),
+      apiBaseUrl: "https://api.github.test/",
+      fetcher,
+      gitRunner,
+      now: () => new Date(timestamp)
+    })
+
+    await expect(publisher.publish(publicationInput(assignment))).resolves.toMatchObject({
+      pullRequestNumber: 43,
+      headCommitSha: branchSha,
+      updatedExisting: false
+    })
+    expect(gitRunner).not.toHaveBeenCalled()
+  })
+
+  it("reports GitHub reference lookup failures", async () => {
+    const assignment = await assignmentFixture()
+    const fetcher = vi.fn(async (request: string | URL | Request) => {
+      const url = request.toString()
+      if (url.endsWith("/access_tokens")) {
+        return response({ token: "installation-token", expires_at: "2026-07-19T01:00:00.000Z" }, 201)
+      }
+      if (url.endsWith("/repos/AndrewCraswell/fencing-club-shopify-theme")) {
+        return response({ default_branch: "master" })
+      }
+      return response({ message: "unavailable" }, 503)
+    })
+    const publisher = new GitHubAppPublisher({
+      appId: "123",
+      installationId: "456",
+      privateKey: privateKey(),
+      fetcher,
+      gitRunner: vi.fn<GitCommandRunner>(),
+      now: () => new Date(timestamp)
+    })
+
+    await expect(publisher.publish(publicationInput(assignment))).rejects.toThrow(
+      "GitHub reference lookup failed with status 503"
+    )
+  })
+
+  it.each([
+    { name: "wrong checkout SHA", head: "f".repeat(40), status: "", files: "" },
+    { name: "dirty checkout", head: null, status: " M local.txt\n", files: "" },
+    { name: "changed-file mismatch", head: null, status: "", files: "other-file.ts\n" }
+  ])("rejects a fresh publication checkout with $name", async ({ head, status, files }) => {
+    const assignment = await assignmentFixture()
+    const fetcher = vi.fn(async (request: string | URL | Request) => {
+      const url = request.toString()
+      if (url.endsWith("/access_tokens")) {
+        return response({ token: "installation-token", expires_at: "2026-07-19T01:00:00.000Z" }, 201)
+      }
+      if (url.endsWith("/repos/AndrewCraswell/fencing-club-shopify-theme")) {
+        return response({ default_branch: "master" })
+      }
+      if (url.includes("/git/ref/heads/")) {
+        return response({ message: "Not Found" }, 404)
+      }
+      if (url.includes("/pulls?")) {
+        return response([])
+      }
+      return response({ message: `Unexpected request ${url}` }, 500)
+    })
+    const gitRunner = vi.fn<GitCommandRunner>(async (arguments_) => {
+      if (arguments_[0] === "rev-parse") {
+        return { stdout: `${head ?? assignment.baseCommitSha}\n`, stderr: "" }
+      }
+      if (arguments_[0] === "status") {
+        return { stdout: status, stderr: "" }
+      }
+      if (arguments_.includes("--name-only")) {
+        return { stdout: files, stderr: "" }
+      }
+      return { stdout: "", stderr: "" }
+    })
+    const publisher = new GitHubAppPublisher({
+      appId: "123",
+      installationId: "456",
+      privateKey: privateKey(),
+      fetcher,
+      gitRunner,
+      now: () => new Date(timestamp)
+    })
+
+    await expect(publisher.publish(publicationInput(assignment))).rejects.toThrow()
   })
 })

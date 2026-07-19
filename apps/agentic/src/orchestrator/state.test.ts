@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest"
 import { AssignmentSchema } from "../contracts/assignment"
 import { createInitialGraphState, roundTripGraphState } from "./state"
 
-const fixtureUrl = new URL("../../tests/fixtures/phase-1-repair-assignment.json", import.meta.url)
+const fixtureUrl = new URL("../../tests/fixtures/worker-repair-assignment.json", import.meta.url)
 
-describe("Phase 2 graph state", () => {
+describe("workflow graph state", () => {
   it("round-trips initialized state through JSON", async () => {
     const assignment = AssignmentSchema.parse(JSON.parse(await readFile(fixtureUrl, "utf8")))
     const state = createInitialGraphState(assignment)

@@ -9,52 +9,74 @@ independent review, bounded repair loops, and automatic draft pull-request updat
 
 ## 1. Objective
 
-Expand the proven single-coder graph into a specialized delivery chain before investing in durable orchestration. The
-scrum-master prepares a bounded assignment, the coder implements it, the reviewer examines the result in a fresh
-workspace, and the repairer addresses actionable findings in the retained coder workspace. Deterministic nodes enforce
-budgets, validation, and terminal outcomes while the graph uses the Phase 2 memory checkpointer and runs one workflow at
-a time.
+Expand the proven single-coder graph into a specialized delivery chain before investing in durable orchestration. A
+team-scoped read-only CLI fetches three marker-owned Linear backlog issues and the scrum master selects one bounded
+task. The scrum master prepares the engineer handoff, the coder implements it, the reviewer examines the result in a
+fresh workspace, and the repairer addresses actionable findings in the retained coder workspace. Deterministic nodes
+enforce budgets, validation, and terminal outcomes while the graph uses the Phase 2 memory checkpointer and runs one
+workflow at a time.
 
 ## 2. Role and workspace model
 
-| Role         | Workspace                      | Repository state                      | May edit | Required output  |
-| ------------ | ------------------------------ | ------------------------------------- | -------- | ---------------- |
-| Scrum master | No coding workspace by default | Read-only context snapshot            | No       | `PlanningResult` |
-| Coder        | New retained Daytona workspace | Exact base SHA                        | Yes      | `CodingResult`   |
-| Reviewer     | Fresh Daytona workspace        | Exact candidate commit                | No       | `ReviewResult`   |
-| Repairer     | Reuses coder workspace         | Reviewed candidate plus local context | Yes      | `RepairResult`   |
+| Role         | Workspace                      | Repository state                        | May edit | Required output  |
+| ------------ | ------------------------------ | --------------------------------------- | -------- | ---------------- |
+| Scrum master | No coding workspace by default | Linear candidates and read-only context | No       | `PlanningResult` |
+| Coder        | New retained Daytona workspace | Exact base SHA                          | Yes      | `CodingResult`   |
+| Reviewer     | Fresh Daytona workspace        | Exact candidate commit                  | No       | `ReviewResult`   |
+| Repairer     | Reuses coder workspace         | Reviewed candidate plus local context   | Yes      | `RepairResult`   |
 
 The reviewer must not inherit the coder conversation, untracked files, dependency caches, or hidden context. The
 repairer should reuse the coder workspace and conversation when available because its task is a continuation of
 implementation.
 
+### 2.1 Linear trial intake
+
+Phase 3 polls Linear explicitly rather than receiving webhooks. `pnpm --filter agentic linear:tasks seed --team FEN`
+idempotently creates three marker-owned trial issues, and
+`pnpm --filter agentic linear:tasks fetch --team FEN --limit 3` returns only active candidates as versioned JSON. The
+`--team` argument accepts a Linear team key or UUID and takes precedence over the optional `LINEAR_TEAM_ID` fallback.
+
+The scrum master runs the fetch command, selects exactly one candidate by clarity, bounded scope, validation cost,
+dependencies, and regression risk, and copies the unchanged issue into the `PlanningResult.sourceWorkItem` engineer
+handoff. If exactly one candidate is returned, it selects that issue only when the task is sufficiently bounded;
+otherwise it returns a blocked plan. The scrum-master role may not create, edit, assign, transition, or comment on
+Linear issues.
+
+### 2.2 Workspace agent definitions
+
+The workspace exposes repository-specific custom agents under `.github/agents/` for scrum-master planning, bounded
+engineering, and independent code review. Their tool access and agent-authored output payloads are intentionally
+narrower than the final orchestration contracts. Deterministic graph nodes validate and enrich those payloads with run,
+attempt, workspace, usage, digest, commit, and independent-validation evidence.
+
 ## 3. Graph design
 
 ```mermaid
 flowchart TD
-    A[normalizeWorkItem] --> B[runScrumMaster]
-    B --> C[validatePlan]
-    C --> D{assignment ready?}
-    D -->|no| X[terminalBlocked]
-    D -->|yes| E[runCoder]
-    E --> F[validateCandidate]
-    F --> G{candidate valid?}
-    G -->|no| Y[terminalFailed]
-    G -->|yes| H[materializeCandidateCommit]
-    H --> I[runReviewerFreshWorkspace]
-    I --> J[validateReview]
-    J --> K{disposition}
-    K -->|approved| L[publishOrUpdateDraftPr]
-    K -->|changes requested| M{repair budget?}
-    K -->|blocked| X
-    M -->|yes| N[runRepairerRetainedWorkspace]
-    M -->|no| O[terminalNeedsRepair]
-    N --> F
-    L --> P[applyRetentionPolicy]
-    X --> P
-    Y --> P
-    O --> P
-    P --> Q[END]
+      A[fetchLinearCandidates] --> B[runScrumMaster]
+      B --> C[normalizeSelectedWorkItem]
+      C --> D[validatePlan]
+      D --> E{assignment ready?}
+      E -->|no| X[terminalBlocked]
+      E -->|yes| F[runCoder]
+      F --> G[validateCandidate]
+      G --> H{candidate valid?}
+      H -->|no| Y[terminalFailed]
+      H -->|yes| I[materializeCandidateCommit]
+      I --> J[runReviewerFreshWorkspace]
+      J --> K[validateReview]
+      K --> L{disposition}
+      L -->|approved| M[publishOrUpdateDraftPr]
+      L -->|changes requested| N{repair budget?}
+      L -->|blocked| X
+      N -->|yes| O[runRepairerRetainedWorkspace]
+      N -->|no| P[terminalNeedsRepair]
+      O --> G
+      M --> Q[applyRetentionPolicy]
+      X --> Q
+      Y --> Q
+      P --> Q
+      Q --> R[END]
 ```
 
 `approved` means the independent reviewer found no actionable defect under its contract. It is not human approval and
@@ -64,6 +86,7 @@ does not authorize merge.
 
 ### 4.1 PlanningResult
 
+- Exact selected Linear source work item.
 - Assignment objective and acceptance criteria.
 - Immutable base SHA.
 - Relevant paths and context evidence.
@@ -104,16 +127,16 @@ does not authorize merge.
 
 ### 5.1 Contract package
 
-- [ ] P3-001 Add versioned Zod schemas for `PlanningResult`, `CodingResult`, `ReviewFinding`, `ReviewResult`, and
+- [x] P3-001 Add versioned Zod schemas for `PlanningResult`, `CodingResult`, `ReviewFinding`, `ReviewResult`, and
       `RepairResult`.
-- [ ] P3-002 Define stable finding IDs derived from run, review attempt, file locator, category, and normalized finding
+- [x] P3-002 Define stable finding IDs derived from run, review attempt, file locator, category, and normalized finding
       text.
-- [ ] P3-003 Add schemas for role attempt, model profile, prompt version, workspace identity, and budget consumption.
-- [ ] P3-004 Define typed dispositions that graph routing can exhaustively switch over.
-- [ ] P3-005 Reject a reviewer result that requests changes without at least one actionable finding.
-- [ ] P3-006 Reject an approved review that contains critical, high, medium, or actionable low findings.
-- [ ] P3-007 Reject a repair result that references finding IDs absent from the latest accepted review.
-- [ ] P3-008 Add schema fixtures for valid, malformed, contradictory, and unsupported-version outputs.
+- [x] P3-003 Add schemas for role attempt, model profile, prompt version, workspace identity, and budget consumption.
+- [x] P3-004 Define typed dispositions that graph routing can exhaustively switch over.
+- [x] P3-005 Reject a reviewer result that requests changes without at least one actionable finding.
+- [x] P3-006 Reject an approved review that contains critical, high, medium, or actionable low findings.
+- [x] P3-007 Reject a repair result that references finding IDs absent from the latest accepted review.
+- [x] P3-008 Add schema fixtures for valid, malformed, contradictory, and unsupported-version outputs.
 
 ### 5.2 Prompt registry
 
@@ -145,15 +168,20 @@ does not authorize merge.
 
 ### 5.4 Scrum-master nodes
 
+- [x] P3-LIN-001 Add versioned schemas and a read-only Linear GraphQL client for active trial candidates.
+- [x] P3-LIN-002 Add idempotent seed and fetch CLI commands with an explicit team key or UUID.
+- [x] P3-LIN-003 Add immutable scrum-master selection and engineer-handoff prompts with content digests.
+- [x] P3-LIN-004 Invoke the scrum master in the graph and verify its selection belongs to the fetched candidate set.
+
 - [ ] P3-028 Implement `normalizeWorkItem` to convert source input into trusted metadata and explicitly untrusted text
       fields.
-- [ ] P3-029 Resolve the current base SHA before planning and freeze it in graph state.
+- [x] P3-029 Resolve the current base SHA before planning and freeze it in graph state.
 - [ ] P3-030 Build a read-only context bundle containing repository metadata, selected files, and source evidence.
 - [ ] P3-031 Implement `runScrumMaster` through the same structured OpenHands client boundary or a direct
       structured-model adapter selected by configuration.
-- [ ] P3-032 Parse the role response through `PlanningResultSchema` and store the raw response as evidence.
+- [x] P3-032 Parse the role response through `PlanningResultSchema` and store the raw response as evidence.
 - [ ] P3-033 Implement `validatePlan` to enforce repository, SHA, path, command, and budget policy independently.
-- [ ] P3-034 Route blocked or policy-invalid plans to a terminal outcome without provisioning a coding workspace.
+- [x] P3-034 Route blocked or policy-invalid plans to a terminal outcome without provisioning a coding workspace.
 
 ### 5.5 Coder nodes
 
@@ -223,17 +251,20 @@ does not authorize merge.
       adherence.
 - [ ] P3-082 Run at least three live tasks: approved first pass, repaired after review, and unresolved after budget
       exhaustion.
+- [x] P3-083 Add least-privileged workspace custom agents for scrum-master, engineer, and code-reviewer roles.
 
 ## 6. Acceptance criteria
 
 1. Every role consumes and produces a versioned structured contract.
-2. The reviewer runs in a fresh isolated workspace at the exact candidate SHA.
-3. The repairer reuses the coder workspace or records why recovery required a new conversation.
-4. Routing decisions depend on validated dispositions and deterministic policy, not free-form text.
-5. Every repaired candidate receives a new independent review.
-6. Repair loops stop at explicit attempt, time, token, and spend limits.
-7. Accepted work updates one draft PR; unresolved work retains findings without merging.
-8. Contract, routing, isolation, evaluation, and live workflow tests pass.
+2. The team-scoped Linear CLI returns only active marker-owned trial candidates, and the selected issue is retained
+   unchanged in the engineer handoff.
+3. The reviewer runs in a fresh isolated workspace at the exact candidate SHA.
+4. The repairer reuses the coder workspace or records why recovery required a new conversation.
+5. Routing decisions depend on validated dispositions and deterministic policy, not free-form text.
+6. Every repaired candidate receives a new independent review.
+7. Repair loops stop at explicit attempt, time, token, and spend limits.
+8. Accepted work updates one draft PR; unresolved work retains findings without merging.
+9. Contract, routing, isolation, evaluation, and live workflow tests pass.
 
 ## 7. Non-goals
 

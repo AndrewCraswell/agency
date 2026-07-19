@@ -217,6 +217,34 @@ describe("DaytonaWorkspace", () => {
     ).resolves.toEqual({ exitCode: null, output: "", timedOut: true })
   })
 
+  it("returns successful command output and propagates unrelated command errors", async () => {
+    const client = new FakeClient()
+    const workspace = await DaytonaWorkspace.create(client, {
+      ...workspaceOptions,
+      environment: { FEATURE_FLAG: "enabled" }
+    })
+
+    await expect(
+      workspace.executeCommand({
+        commandId: "validation",
+        command: "pnpm test",
+        workingDirectory: "/workspace/repository",
+        timeoutMs: 500
+      })
+    ).resolves.toEqual({ exitCode: 0, output: "command output", timedOut: false })
+    expect(client.createParams?.envVars).toEqual({ FEATURE_FLAG: "enabled" })
+
+    client.sandbox.commandError = new Error("provider unavailable")
+    await expect(
+      workspace.executeCommand({
+        commandId: "validation",
+        command: "pnpm test",
+        workingDirectory: "/workspace/repository",
+        timeoutMs: 500
+      })
+    ).rejects.toThrow("provider unavailable")
+  })
+
   it("uploads and downloads binary content without text conversion", async () => {
     const client = new FakeClient()
     const workspace = await DaytonaWorkspace.create(client, workspaceOptions)
@@ -287,6 +315,26 @@ describe("DaytonaWorkspace", () => {
 
     expect(client.sandbox.stopCalls).toBe(1)
   })
+
+  it("handles start, archive, and delete lifecycle transitions idempotently", async () => {
+    const client = new FakeClient()
+    const workspace = await DaytonaWorkspace.create(client, workspaceOptions)
+
+    await workspace.start(1_000)
+    client.sandbox.state = "stopped"
+    await workspace.start(1_000)
+    expect(client.sandbox.state).toBe("started")
+
+    await workspace.cleanup("archive", 1_000)
+    await workspace.cleanup("archive", 1_000)
+    expect(client.sandbox.stopCalls).toBe(1)
+    expect(client.sandbox.archiveCalls).toBe(1)
+    await expect(workspace.start(1_000)).rejects.toThrow("Cannot start Daytona workspace from archived state")
+
+    await workspace.cleanup("delete", 1_000)
+    await workspace.cleanup("delete", 1_000)
+    expect(client.sandbox.deleteCalls).toBe(1)
+  })
 })
 
 describe("waitForHttpReadiness", () => {
@@ -320,5 +368,21 @@ describe("waitForHttpReadiness", () => {
       )
     ).rejects.toThrow("after 2 attempts; last status 503")
     expect(fetcher).toHaveBeenCalledTimes(2)
+  })
+
+  it("rejects invalid attempts and preserves the final request failure as cause", async () => {
+    await expect(
+      waitForHttpReadiness({ url: "https://agent.example/health", maxAttempts: 0, requestTimeoutMs: 1, intervalMs: 1 })
+    ).rejects.toThrow("must be at least 1")
+
+    const failure = new Error("connection refused")
+    const fetcher = vi.fn<ReadinessFetcher>().mockRejectedValue(failure)
+    await expect(
+      waitForHttpReadiness(
+        { url: "https://agent.example/health", maxAttempts: 1, requestTimeoutMs: 1, intervalMs: 1 },
+        fetcher,
+        vi.fn<ReadinessWait>()
+      )
+    ).rejects.toMatchObject({ message: "Service did not become ready after 1 attempts", cause: failure })
   })
 })

@@ -40,7 +40,7 @@
     "maxRepairAttempts": 2
   },
   "contextBundle": {
-    "uri": "https://context.invalid/phase-1-repair",
+    "uri": "https://context.invalid/worker-repair",
     "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
   "promptVersion": "coder-v1",

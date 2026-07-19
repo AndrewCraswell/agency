@@ -5,7 +5,7 @@ import { OPENHANDS_AGENT_SERVER_IMAGE, createAgentServerEnvironment, createCoder
 const conversationId = "dff7a1a0-2c52-4e3f-a325-90d314f81820"
 
 class FakeGateway implements OpenHandsGatewayPort {
-  modelIds = ["openhands_phase-1-coder"]
+  modelIds = ["openhands_coder"]
   completion = {
     conversationId,
     content: "Completed the assignment.",
@@ -65,14 +65,14 @@ describe("OpenHandsClient", () => {
     const requests: Array<{ input: string; init: RequestInit }> = []
     const fetcher = vi.fn<(input: string, init: RequestInit) => Promise<Response>>(async (input, init) => {
       requests.push({ input, init })
-      return Response.json({ name: "phase-1-coder", message: "Profile saved" }, { status: 201 })
+      return Response.json({ name: "coder", message: "Profile saved" }, { status: 201 })
     })
     const client = new OpenHandsClient(clientOptions, { fetcher, gateway: new FakeGateway() })
 
     await client.configureProfile("provider-secret")
 
     expect(requests).toHaveLength(1)
-    expect(requests[0]?.input).toBe("https://agent.example/api/profiles/phase-1-coder")
+    expect(requests[0]?.input).toBe("https://agent.example/api/profiles/coder")
     expect(requests[0]?.init.headers).toEqual({
       "Content-Type": "application/json",
       "X-Session-API-Key": "session-key"
@@ -101,6 +101,37 @@ describe("OpenHandsClient", () => {
     await expect(result).rejects.toMatchObject({ classification: "authentication" })
   })
 
+  it.each([
+    {
+      name: "timeout",
+      error: new DOMException("timed out", "TimeoutError"),
+      classification: "timeout",
+      retryable: true
+    },
+    { name: "network failure", error: new Error("connection refused"), classification: "startup", retryable: true }
+  ])("classifies profile creation $name", async ({ error, classification, retryable }) => {
+    const fetcher = vi.fn<(input: string, init: RequestInit) => Promise<Response>>().mockRejectedValue(error)
+    const client = new OpenHandsClient(clientOptions, { fetcher, gateway: new FakeGateway() })
+
+    await expect(client.configureProfile("provider-secret")).rejects.toMatchObject({ classification, retryable })
+  })
+
+  it("rejects unsuccessful and malformed profile responses", async () => {
+    const rejected = new OpenHandsClient(clientOptions, {
+      fetcher: vi.fn(async () => Response.json({ message: "invalid model" }, { status: 422 })),
+      gateway: new FakeGateway()
+    })
+    await expect(rejected.configureProfile("provider-secret")).rejects.toMatchObject({ classification: "model" })
+
+    const malformed = new OpenHandsClient(clientOptions, {
+      fetcher: vi.fn(async () => Response.json({ name: "other-profile", message: "saved" }, { status: 201 })),
+      gateway: new FakeGateway()
+    })
+    await expect(malformed.configureProfile("provider-secret")).rejects.toMatchObject({
+      classification: "malformed_response"
+    })
+  })
+
   it("verifies the profile through the gateway model list", async () => {
     const client = new OpenHandsClient(clientOptions, { gateway: new FakeGateway() })
 
@@ -115,12 +146,20 @@ describe("OpenHandsClient", () => {
     await expect(client.verifyProfile()).rejects.toMatchObject({ classification: "model" })
   })
 
+  it("classifies an unknown gateway failure as a model failure", async () => {
+    const gateway = new FakeGateway()
+    gateway.error = new Error("unexpected gateway response")
+    const client = new OpenHandsClient(clientOptions, { gateway })
+
+    await expect(client.verifyProfile()).rejects.toMatchObject({ classification: "model", retryable: false })
+  })
+
   it("returns the final response and conversation header", async () => {
     const requests: Array<{ input: string; init: RequestInit }> = []
     const fetcher = vi.fn<(input: string, init: RequestInit) => Promise<Response>>(async (input, init) => {
       requests.push({ input, init })
-      if (input.endsWith("/api/profiles/phase-1-coder")) {
-        return Response.json({ name: "phase-1-coder", message: "Profile saved" }, { status: 201 })
+      if (input.endsWith("/api/profiles/coder")) {
+        return Response.json({ name: "coder", message: "Profile saved" }, { status: 201 })
       }
       if (input.endsWith("/api/conversations")) {
         return Response.json({ id: conversationId, execution_status: "finished" }, { status: 201 })
@@ -143,7 +182,7 @@ describe("OpenHandsClient", () => {
       usage: { promptTokens: null, completionTokens: null }
     })
     expect(requests.map((request) => request.input)).toEqual([
-      "https://agent.example/api/profiles/phase-1-coder",
+      "https://agent.example/api/profiles/coder",
       "https://agent.example/api/conversations",
       `https://agent.example/api/conversations/${conversationId}/agent_final_response`
     ])
@@ -167,8 +206,8 @@ describe("OpenHandsClient", () => {
 
   it("rejects malformed native conversation state", async () => {
     const fetcher = vi.fn<(input: string, init: RequestInit) => Promise<Response>>(async (input) => {
-      if (input.endsWith("/api/profiles/phase-1-coder")) {
-        return Response.json({ name: "phase-1-coder", message: "Profile saved" }, { status: 201 })
+      if (input.endsWith("/api/profiles/coder")) {
+        return Response.json({ name: "coder", message: "Profile saved" }, { status: 201 })
       }
       return Response.json({ id: "not-a-uuid", execution_status: "finished" }, { status: 201 })
     })
@@ -181,13 +220,97 @@ describe("OpenHandsClient", () => {
     ).rejects.toMatchObject({ classification: "malformed_response" })
   })
 
+  it("requires configuration and honors cancellation before conversation creation", async () => {
+    const fetcher = vi.fn<(input: string, init: RequestInit) => Promise<Response>>(async () =>
+      Response.json({ name: "coder", message: "Profile saved" }, { status: 201 })
+    )
+    const client = new OpenHandsClient(clientOptions, { fetcher, gateway: new FakeGateway() })
+    await expect(client.chat({ systemPrompt: "Policy", userPrompt: "Work" })).rejects.toMatchObject({
+      classification: "model"
+    })
+
+    await client.configureProfile("provider-secret")
+    const controller = new AbortController()
+    controller.abort()
+    await expect(
+      client.chat({ systemPrompt: "Policy", userPrompt: "Work", conversationId, signal: controller.signal })
+    ).rejects.toMatchObject({ classification: "cancelled" })
+  })
+
+  it.each(["error", "stuck", "paused", "waiting_for_confirmation"])(
+    "classifies a conversation ending with %s as a model failure",
+    async (executionStatus) => {
+      const fetcher = vi.fn<(input: string, init: RequestInit) => Promise<Response>>(async (input) => {
+        if (input.endsWith("/api/profiles/coder")) {
+          return Response.json({ name: "coder", message: "Profile saved" }, { status: 201 })
+        }
+        return Response.json({ id: conversationId, execution_status: executionStatus }, { status: 201 })
+      })
+      const client = new OpenHandsClient(clientOptions, { fetcher, gateway: new FakeGateway() })
+      await client.configureProfile("provider-secret")
+
+      await expect(client.chat({ systemPrompt: "Policy", userPrompt: "Work", conversationId })).rejects.toMatchObject({
+        classification: "model"
+      })
+    }
+  )
+
+  it("interrupts a conversation that exceeds its deadline", async () => {
+    const requests: string[] = []
+    const fetcher = vi.fn<(input: string, init: RequestInit) => Promise<Response>>(async (input) => {
+      requests.push(input)
+      if (input.endsWith("/api/profiles/coder")) {
+        return Response.json({ name: "coder", message: "Profile saved" }, { status: 201 })
+      }
+      return Response.json({ id: conversationId, execution_status: "running" }, { status: 201 })
+    })
+    const client = new OpenHandsClient({ ...clientOptions, timeoutMs: 0 }, { fetcher, gateway: new FakeGateway() })
+    await client.configureProfile("provider-secret")
+
+    await expect(client.chat({ systemPrompt: "Policy", userPrompt: "Work", conversationId })).rejects.toMatchObject({
+      classification: "timeout",
+      retryable: true
+    })
+    expect(requests).toContain(`https://agent.example/api/conversations/${conversationId}/interrupt`)
+  })
+
+  it("rejects incomplete final responses and native HTTP failures", async () => {
+    const incompleteFetcher = vi.fn<(input: string, init: RequestInit) => Promise<Response>>(async (input) => {
+      if (input.endsWith("/api/profiles/coder")) {
+        return Response.json({ name: "coder", message: "Profile saved" }, { status: 201 })
+      }
+      if (input.endsWith("/api/conversations")) {
+        return Response.json({ id: conversationId, execution_status: "finished" }, { status: 201 })
+      }
+      return Response.json({ response: "" })
+    })
+    const incomplete = new OpenHandsClient(clientOptions, { fetcher: incompleteFetcher, gateway: new FakeGateway() })
+    await incomplete.configureProfile("provider-secret")
+    await expect(incomplete.chat({ systemPrompt: "Policy", userPrompt: "Work", conversationId })).rejects.toMatchObject(
+      { classification: "malformed_response" }
+    )
+
+    const failedFetcher = vi.fn<(input: string, init: RequestInit) => Promise<Response>>(async (input) => {
+      if (input.endsWith("/api/profiles/coder")) {
+        return Response.json({ name: "coder", message: "Profile saved" }, { status: 201 })
+      }
+      return Response.json({ message: "unavailable" }, { status: 503 })
+    })
+    const failed = new OpenHandsClient(clientOptions, { fetcher: failedFetcher, gateway: new FakeGateway() })
+    await failed.configureProfile("provider-secret")
+    await expect(failed.chat({ systemPrompt: "Policy", userPrompt: "Work", conversationId })).rejects.toMatchObject({
+      classification: "startup",
+      retryable: true
+    })
+  })
+
   it("interrupts an active native conversation when cancelled", async () => {
     const controller = new AbortController()
     const requests: string[] = []
     const fetcher = vi.fn<(input: string, init: RequestInit) => Promise<Response>>(async (input) => {
       requests.push(input)
-      if (input.endsWith("/api/profiles/phase-1-coder")) {
-        return Response.json({ name: "phase-1-coder", message: "Profile saved" }, { status: 201 })
+      if (input.endsWith("/api/profiles/coder")) {
+        return Response.json({ name: "coder", message: "Profile saved" }, { status: 201 })
       }
       if (input.endsWith("/api/conversations")) {
         controller.abort()

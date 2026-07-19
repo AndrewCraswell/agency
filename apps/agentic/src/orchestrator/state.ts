@@ -3,7 +3,7 @@ import { z } from "zod"
 import { AssignmentSchema, type Assignment } from "../contracts/assignment"
 import { WorkerResultSchema } from "../contracts/results"
 
-export const PHASE_2_GRAPH_SCHEMA_VERSION = "1" as const
+export const WORKFLOW_SCHEMA_VERSION = "1" as const
 
 const GitCommitShaSchema = z.string().regex(/^[0-9a-f]{40}$/u, "Expected a full lowercase Git commit SHA")
 const Sha256DigestSchema = z.string().regex(/^[0-9a-f]{64}$/u, "Expected a lowercase SHA-256 digest")
@@ -53,9 +53,9 @@ export const GraphEventSchema = z
   })
   .strict()
 
-export const Phase2GraphStateSchema = z
+export const WorkflowStateSchema = z
   .object({
-    schemaVersion: z.literal(PHASE_2_GRAPH_SCHEMA_VERSION),
+    schemaVersion: z.literal(WORKFLOW_SCHEMA_VERSION),
     runId: z.uuid(),
     assignmentDigest: Sha256DigestSchema,
     assignment: AssignmentSchema,
@@ -93,7 +93,7 @@ export type ValidationResult = z.infer<typeof ValidationResultSchema>
 export type PublicationResult = z.infer<typeof PublicationResultSchema>
 export type GraphFailure = z.infer<typeof GraphFailureSchema>
 export type GraphEvent = z.infer<typeof GraphEventSchema>
-export type Phase2GraphState = z.infer<typeof Phase2GraphStateSchema>
+export type WorkflowState = z.infer<typeof WorkflowStateSchema>
 
 export function assignmentDigest(assignment: Assignment): string {
   return createHash("sha256")
@@ -101,10 +101,10 @@ export function assignmentDigest(assignment: Assignment): string {
     .digest("hex")
 }
 
-export function createInitialGraphState(assignmentInput: Assignment): Phase2GraphState {
+export function createInitialGraphState(assignmentInput: Assignment): WorkflowState {
   const assignment = AssignmentSchema.parse(assignmentInput)
-  return Phase2GraphStateSchema.parse({
-    schemaVersion: PHASE_2_GRAPH_SCHEMA_VERSION,
+  return WorkflowStateSchema.parse({
+    schemaVersion: WORKFLOW_SCHEMA_VERSION,
     runId: assignment.runId,
     assignmentDigest: assignmentDigest(assignment),
     assignment,
@@ -120,6 +120,6 @@ export function createInitialGraphState(assignmentInput: Assignment): Phase2Grap
   })
 }
 
-export function roundTripGraphState(state: Phase2GraphState): Phase2GraphState {
-  return Phase2GraphStateSchema.parse(JSON.parse(JSON.stringify(state)))
+export function roundTripGraphState(state: WorkflowState): WorkflowState {
+  return WorkflowStateSchema.parse(JSON.parse(JSON.stringify(state)))
 }

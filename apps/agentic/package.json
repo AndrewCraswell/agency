@@ -6,8 +6,9 @@
   "scripts": {
     "check:types": "tsc --noEmit",
     "lint": "oxlint --max-warnings=0",
-    "phase2": "tsx src/orchestrator/cli.ts",
-    "prototype": "tsx src/prototype/cli.ts",
+    "linear:tasks": "tsx --env-file=.env src/linear/cli.ts",
+    "worker": "tsx src/prototype/cli.ts",
+    "workflow": "tsx src/orchestrator/cli.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

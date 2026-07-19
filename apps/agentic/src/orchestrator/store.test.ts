@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join, normalize } from "node:path"
 import { describe, expect, it } from "vitest"
 import { AssignmentSchema } from "../contracts/assignment"
-import { phase2ArtifactRoot } from "./runtime"
+import { workflowArtifactRoot } from "./runtime"
 import { createInitialGraphState } from "./state"
 import {
   cancellationRequestPath,
@@ -16,11 +16,11 @@ import {
   writeWorkflowState
 } from "./store"
 
-const fixtureUrl = new URL("../../tests/fixtures/phase-1-repair-assignment.json", import.meta.url)
+const fixtureUrl = new URL("../../tests/fixtures/worker-repair-assignment.json", import.meta.url)
 
-describe("local Phase 2 state store", () => {
+describe("local workflow state store", () => {
   it("persists and reconstructs graph state through the schema", async () => {
-    const temporaryRoot = await mkdtemp(join(tmpdir(), "phase-2-state-"))
+    const temporaryRoot = await mkdtemp(join(tmpdir(), "workflow-state-"))
     try {
       const assignment = AssignmentSchema.parse(JSON.parse(await readFile(fixtureUrl, "utf8")))
       const state = createInitialGraphState(assignment)
@@ -33,14 +33,14 @@ describe("local Phase 2 state store", () => {
   })
 
   it("derives artifacts from the package directory instead of the process working directory", () => {
-    const root = normalize(phase2ArtifactRoot("run-1"))
+    const root = normalize(workflowArtifactRoot("run-1"))
 
     expect(root).toMatch(/[\\/]apps[\\/]agentic[\\/]artifacts[\\/]run-1$/u)
     expect(root).not.toMatch(/[\\/]apps[\\/]agentic[\\/]apps[\\/]agentic[\\/]/u)
   })
 
   it("records and clears a local cancellation request", async () => {
-    const temporaryRoot = await mkdtemp(join(tmpdir(), "phase-2-cancel-"))
+    const temporaryRoot = await mkdtemp(join(tmpdir(), "workflow-cancel-"))
     try {
       await expect(hasWorkflowCancellationRequest(temporaryRoot)).resolves.toBe(false)
       await expect(requestWorkflowCancellation(temporaryRoot)).resolves.toBe(cancellationRequestPath(temporaryRoot))

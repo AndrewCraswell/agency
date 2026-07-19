@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises"
 import { AssignmentSchema } from "../contracts/assignment"
 import type { CleanupMode } from "../daytona/workspace"
-import { runPhase1 } from "./runner"
+import { runWorker } from "./runner"
 
 function argument(name: string): string | undefined {
   const index = process.argv.indexOf(name)
@@ -28,12 +28,12 @@ if (cleanupValue !== "stop" && cleanupValue !== "archive" && cleanupValue !== "d
 
 const assignment = AssignmentSchema.parse(JSON.parse(await readFile(assignmentPath, "utf8")))
 const startedAt = Date.now()
-const result = await runPhase1({
+const result = await runWorker({
   assignment,
   cleanupMode: cleanupValue satisfies CleanupMode,
   onProgress: (message) => {
     const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1_000)
-    process.stderr.write(`[phase-1 +${elapsedSeconds}s] ${message}\n`)
+    process.stderr.write(`[worker +${elapsedSeconds}s] ${message}\n`)
   },
   secrets: {
     githubToken: requiredEnvironment("GITHUB_TOKEN"),

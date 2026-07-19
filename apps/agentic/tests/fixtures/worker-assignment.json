@@ -1,16 +1,16 @@
 {
   "schemaVersion": "1",
-  "runId": "9b2a8c28-3515-40ec-8e85-cb9cb70fa649",
-  "roleExecutionId": "afee27d5-b85c-483a-a9be-7f81da726b5e",
+  "runId": "2d3d72dc-14ef-4e84-a516-1c5424efec45",
+  "roleExecutionId": "e4ee7d9b-1dcf-48a6-83e3-66724cd6e6ce",
   "repository": {
     "provider": "github",
     "owner": "AndrewCraswell",
     "name": "fencing-club-shopify-theme"
   },
   "baseCommitSha": "8c185e6bb5214b2dd27552cd5d7e7ad0349a4cf1",
-  "objective": "Add a Phase 1 completion note to the root README.md. Do not edit any other file.",
-  "acceptanceCriteria": ["The root README.md contains the completion note."],
-  "relevantPaths": ["README.md"],
+  "objective": "Inspect the repository and make no changes. Confirm that the fixed base commit is already suitable for work.",
+  "acceptanceCriteria": ["No repository files are changed.", "The validation command succeeds."],
+  "relevantPaths": ["**"],
   "validationCommands": [
     {
       "id": "clean-worktree",
@@ -20,8 +20,8 @@
     }
   ],
   "pathPolicy": {
-    "allowed": ["apps/structured-data/**"],
-    "forbidden": ["README.md", ".git/**"]
+    "allowed": ["**"],
+    "forbidden": [".git/**"]
   },
   "budgets": {
     "maxTurns": 5,
@@ -30,8 +30,8 @@
     "maxRepairAttempts": 0
   },
   "contextBundle": {
-    "uri": "https://context.invalid/phase-1-blocked",
-    "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    "uri": "https://context.invalid/worker-no-op",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   },
   "promptVersion": "coder-v1",
   "workerImageVersion": "1.36.1"
