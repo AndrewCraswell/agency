@@ -1,0 +1,27 @@
+{
+  "name": "agentic",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check:types": "tsc --noEmit",
+    "lint": "oxlint --max-warnings=0",
+    "prototype": "tsx src/prototype/cli.ts",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@daytona/sdk": "0.196.0",
+    "openai": "6.46.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "^4.1.9",
+    "oxlint": "^1.72.0",
+    "tsx": "4.23.0",
+    "typescript": "catalog:",
+    "vitest": "^4.1.9"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": "1",
+  "runId": "9b2a8c28-3515-40ec-8e85-cb9cb70fa649",
+  "roleExecutionId": "afee27d5-b85c-483a-a9be-7f81da726b5e",
+  "repository": {
+    "provider": "github",
+    "owner": "AndrewCraswell",
+    "name": "fencing-club-shopify-theme"
+  },
+  "baseCommitSha": "8c185e6bb5214b2dd27552cd5d7e7ad0349a4cf1",
+  "objective": "Add a Phase 1 completion note to the root README.md. Do not edit any other file.",
+  "acceptanceCriteria": ["The root README.md contains the completion note."],
+  "relevantPaths": ["README.md"],
+  "validationCommands": [
+    {
+      "id": "clean-worktree",
+      "command": "test -z \"$(git status --porcelain=v1)\"",
+      "workingDirectory": ".",
+      "timeoutMs": 30000
+    }
+  ],
+  "pathPolicy": {
+    "allowed": ["apps/structured-data/**"],
+    "forbidden": ["README.md", ".git/**"]
+  },
+  "budgets": {
+    "maxTurns": 5,
+    "maxTokens": 10000,
+    "maxElapsedMs": 600000,
+    "maxRepairAttempts": 0
+  },
+  "contextBundle": {
+    "uri": "https://context.invalid/phase-1-blocked",
+    "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  },
+  "promptVersion": "coder-v1",
+  "workerImageVersion": "1.36.1"
+}

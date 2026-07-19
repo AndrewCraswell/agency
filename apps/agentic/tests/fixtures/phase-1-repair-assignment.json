@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1",
+  "runId": "2fca7e2a-c9b6-4c2e-95d7-f08b6f7f7b84",
+  "roleExecutionId": "7e277ed4-c081-47f8-9ae6-c4cbbe1700da",
+  "repository": {
+    "provider": "github",
+    "owner": "AndrewCraswell",
+    "name": "fencing-club-shopify-theme"
+  },
+  "baseCommitSha": "8c185e6bb5214b2dd27552cd5d7e7ad0349a4cf1",
+  "objective": "Fix buildRemediationLink so URL-encoded storefront handles are decoded exactly once before they are encoded into Shopify Admin query parameters. Add a regression case proving that https://example.myshopify.com/products/red%20bag maps to a query value of red%20bag rather than red%2520bag.",
+  "acceptanceCriteria": [
+    "The remediation-links regression test covers an encoded product handle.",
+    "The generated Shopify Admin URL contains query=red%20bag and does not double-encode the percent sign.",
+    "The focused remediation-links test passes."
+  ],
+  "relevantPaths": [
+    "apps/structured-data/app/domain/remediation-links.ts",
+    "apps/structured-data/app/domain/remediation-links.test.ts"
+  ],
+  "validationCommands": [
+    {
+      "id": "remediation-links-test",
+      "command": "corepack pnpm install --frozen-lockfile && pnpm exec vitest run app/domain/remediation-links.test.ts",
+      "workingDirectory": "apps/structured-data",
+      "timeoutMs": 600000
+    }
+  ],
+  "pathPolicy": {
+    "allowed": [
+      "apps/structured-data/app/domain/remediation-links.ts",
+      "apps/structured-data/app/domain/remediation-links.test.ts"
+    ],
+    "forbidden": [".git/**", "apps/structured-data/pnpm-lock.yaml"]
+  },
+  "budgets": {
+    "maxTurns": 20,
+    "maxTokens": 30000,
+    "maxElapsedMs": 1800000,
+    "maxRepairAttempts": 2
+  },
+  "contextBundle": {
+    "uri": "https://context.invalid/phase-1-repair",
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "promptVersion": "coder-v1",
+  "workerImageVersion": "1.36.1"
+}
