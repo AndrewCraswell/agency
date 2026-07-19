@@ -2,7 +2,7 @@
 
 Status: Proposed
 
-Depends on: [Phase 4](phase-4-specialized-agent-chain.md)
+Depends on: [Phase 4](phase-4-durable-resumable-workspaces.md)
 
 Produces: Authenticated, idempotent webhook ingestion that starts or resumes workflows asynchronously, plus scheduled
 reconciliation that repairs missed or out-of-order events.
@@ -118,7 +118,7 @@ All unsupported events are retained according to policy and acknowledged without
       webhook payload state.
 - [ ] P5-046 Refuse new work for deleted, archived, disabled, or suspended installations.
 - [ ] P5-047 Refuse commands that target branches or PRs not owned by the correlated workflow.
-- [ ] P5-048 Route eligible new assignments through `normalizeWorkItem` in the Phase 4 graph.
+- [ ] P5-048 Route eligible new assignments through `normalizeWorkItem` in the durable Phase 4 graph.
 - [ ] P5-049 Route check completions to a deterministic node that evaluates the required check set.
 - [ ] P5-050 Route PR closure to cancellation and workspace retention policy.
 - [ ] P5-051 Treat force-push or external candidate-branch mutation as a typed ownership conflict.
@@ -142,7 +142,7 @@ All unsupported events are retained according to policy and acknowledged without
 ### 4.8 Abuse, rate, and failure controls
 
 - [ ] P5-063 Add per-installation and per-repository request-rate limits after signature verification.
-- [ ] P5-064 Add workflow-creation quotas and retain the Phase 3 global concurrency limit.
+- [ ] P5-064 Add workflow-creation quotas and retain the Phase 4 global concurrency limit.
 - [ ] P5-065 Bound retry counts and route exhausted deliveries to quarantine with evidence.
 - [ ] P5-066 Implement graceful shutdown that stops accepting traffic and releases inbox leases safely.
 - [ ] P5-067 Return acknowledgment within the configured latency target without waiting for graph work.

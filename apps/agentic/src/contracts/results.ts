@@ -90,6 +90,7 @@ const WorkerFailureSchema = z
       "validation",
       "malformed_response",
       "cleanup",
+      "cancelled",
       "internal"
     ]),
     message: z.string().trim().min(1),

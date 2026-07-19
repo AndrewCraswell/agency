@@ -18,7 +18,13 @@ const ConversationInfoSchema = z
   .passthrough()
 const AgentResponseSchema = z.object({ response: z.string() }).strict()
 
-export type OpenHandsFailureClassification = "authentication" | "startup" | "model" | "timeout" | "malformed_response"
+export type OpenHandsFailureClassification =
+  | "authentication"
+  | "startup"
+  | "model"
+  | "timeout"
+  | "malformed_response"
+  | "cancelled"
 
 export class OpenHandsError extends Error {
   readonly classification: OpenHandsFailureClassification
@@ -40,6 +46,7 @@ export interface OpenHandsChatRequest {
   systemPrompt: string
   userPrompt: string
   conversationId?: string
+  signal?: AbortSignal
 }
 
 export interface OpenHandsChatResult {
@@ -70,6 +77,10 @@ export interface OpenHandsGatewayPort {
 }
 
 type Fetcher = (input: string, init: RequestInit) => Promise<Response>
+
+function isAborted(signal: AbortSignal | undefined): boolean {
+  return signal?.aborted ?? false
+}
 
 class OpenAIGateway implements OpenHandsGatewayPort {
   readonly #client: OpenAI
@@ -216,6 +227,9 @@ export class OpenHandsClient {
       throw new OpenHandsError("model", "OpenHands model profile must be configured before chat")
     }
     const conversationId = ConversationIdSchema.parse(request.conversationId ?? randomUUID())
+    if (isAborted(request.signal)) {
+      throw new OpenHandsError("cancelled", "OpenHands conversation was cancelled")
+    }
     const started = await this.#nativeRequest("/api/conversations", {
       method: "POST",
       body: JSON.stringify({
@@ -241,7 +255,8 @@ export class OpenHandsClient {
         },
         max_iterations: this.#maxIterations,
         autotitle: false
-      })
+      }),
+      signal: request.signal
     })
     const initial = ConversationInfoSchema.safeParse(await started.json())
     if (!initial.success || initial.data.id !== conversationId) {
@@ -251,6 +266,12 @@ export class OpenHandsClient {
     const deadline = Date.now() + this.#timeoutMs
     let conversation = initial.data
     while (conversation.execution_status === "idle" || conversation.execution_status === "running") {
+      if (isAborted(request.signal)) {
+        await this.#nativeRequest(`/api/conversations/${conversationId}/interrupt`, { method: "POST" }).catch(
+          () => undefined
+        )
+        throw new OpenHandsError("cancelled", "OpenHands conversation was cancelled")
+      }
       if (Date.now() >= deadline) {
         await this.#nativeRequest(`/api/conversations/${conversationId}/interrupt`, { method: "POST" }).catch(
           () => undefined
@@ -260,7 +281,7 @@ export class OpenHandsClient {
         })
       }
       await new Promise((resolve) => setTimeout(resolve, 2_000))
-      const status = await this.#nativeRequest(`/api/conversations/${conversationId}`)
+      const status = await this.#nativeRequest(`/api/conversations/${conversationId}`, { signal: request.signal })
       const parsed = ConversationInfoSchema.safeParse(await status.json())
       if (!parsed.success) {
         throw new OpenHandsError("malformed_response", "OpenHands returned malformed conversation state")
@@ -300,6 +321,9 @@ export class OpenHandsClient {
         signal: AbortSignal.timeout(Math.min(this.#timeoutMs, 30_000))
       })
     } catch (error) {
+      if (init.signal?.aborted === true) {
+        throw new OpenHandsError("cancelled", "OpenHands request was cancelled", { cause: error })
+      }
       throw new OpenHandsError("startup", "OpenHands native request failed", { cause: error, retryable: true })
     }
     if (response.status === 401 || response.status === 403) {

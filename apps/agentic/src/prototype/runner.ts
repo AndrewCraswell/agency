@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto"
 import { readFile } from "node:fs/promises"
 import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { type Assignment } from "../contracts/assignment"
 import { type CommandResult, type WorkerResult, type WorkspaceHandle, WorkerResultSchema } from "../contracts/results"
 import { type CleanupMode, DaytonaWorkspace, createDaytonaClient, waitForHttpReadiness } from "../daytona/workspace"
@@ -18,6 +19,7 @@ const REPOSITORY_PATH = "/workspace/repository"
 const CONTEXT_ROOT = "/workspace/orchestrator-context"
 const REMOTE_ARTIFACT_ROOT = "/workspace/orchestrator-artifacts"
 const APPROVED_REPOSITORY = "AndrewCraswell/fencing-club-shopify-theme"
+const DEFAULT_ARTIFACTS_ROOT = fileURLToPath(new URL("../../artifacts/", import.meta.url))
 
 export interface Phase1Secrets {
   githubToken: string
@@ -29,6 +31,7 @@ export interface Phase1Options {
   cleanupMode: CleanupMode
   secrets: Phase1Secrets
   artifactRoot?: string
+  signal?: AbortSignal
   onProgress?: (message: string) => void
 }
 
@@ -101,6 +104,14 @@ function classifyFailure(error: unknown): WorkerResult["failure"] {
     return { classification: "internal", message: error.message, retryable: false }
   }
   return { classification: "internal", message: "Unknown Phase 1 failure", retryable: false }
+}
+
+function throwIfCancelled(signal: AbortSignal | undefined): void {
+  if (signal?.aborted === true) {
+    const error = new Error("Phase 1 worker was cancelled")
+    error.name = "AbortError"
+    throw error
+  }
 }
 
 async function prepareRepository(
@@ -305,8 +316,9 @@ export async function runPhase1(options: Phase1Options): Promise<WorkerResult> {
   const startedAt = Date.now()
   const { assignment, cleanupMode, secrets } = options
   const progress = (message: string): void => options.onProgress?.(message)
-  const artifactRoot = options.artifactRoot ?? join("apps", "agentic", "artifacts", assignment.runId)
+  const artifactRoot = options.artifactRoot ?? join(DEFAULT_ARTIFACTS_ROOT, assignment.runId)
   const artifacts = new ArtifactStore(artifactRoot)
+  throwIfCancelled(options.signal)
   const client = createDaytonaClient()
   const sessionApiKey = randomBytes(32).toString("hex")
   const encryptionKey = randomBytes(32).toString("hex")
@@ -344,8 +356,10 @@ export async function runPhase1(options: Phase1Options): Promise<WorkerResult> {
   let agentServerCommandId: string | null = null
 
   try {
+    throwIfCancelled(options.signal)
     progress("Cloning repository and checking out the pinned commit")
     await prepareRepository(workspace, assignment, secrets.githubToken)
+    throwIfCancelled(options.signal)
     progress("Uploading and verifying the context bundle")
     const contextDirectory = await uploadContext(workspace, assignment, artifacts)
     progress("Starting OpenHands Agent Server")
@@ -365,7 +379,8 @@ export async function runPhase1(options: Phase1Options): Promise<WorkerResult> {
     progress("Running the OpenHands coder")
     const completion = await openHands.chat({
       systemPrompt,
-      userPrompt: `Read ${contextDirectory}/manifest.json, then complete the assignment in ${REPOSITORY_PATH}.`
+      userPrompt: `Read ${contextDirectory}/manifest.json, then complete the assignment in ${REPOSITORY_PATH}.`,
+      signal: options.signal
     })
     state.conversationId = completion.conversationId
     state.finalResponse = completion.finalResponse
@@ -406,7 +421,11 @@ export async function runPhase1(options: Phase1Options): Promise<WorkerResult> {
       state.failure = null
     }
   } catch (error) {
-    state.status = "failed"
+    state.status =
+      (error instanceof OpenHandsError && error.classification === "cancelled") ||
+      (error instanceof Error && error.name === "AbortError")
+        ? "cancelled"
+        : "failed"
     state.failure = classifyFailure(error)
     if (agentServerCommandId !== null) {
       try {

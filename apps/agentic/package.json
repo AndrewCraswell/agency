@@ -6,12 +6,15 @@
   "scripts": {
     "check:types": "tsc --noEmit",
     "lint": "oxlint --max-warnings=0",
+    "phase2": "tsx src/orchestrator/cli.ts",
     "prototype": "tsx src/prototype/cli.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@daytona/sdk": "0.196.0",
+    "@langchain/langgraph": "1.4.7",
+    "langsmith": "0.8.1",
     "openai": "6.46.0",
     "zod": "^4.4.3"
   },

@@ -1,13 +1,13 @@
 {
   "schemaVersion": "1",
-  "runId": "2fca7e2a-c9b6-4c2e-95d7-f08b6f7f7b84",
-  "roleExecutionId": "7e277ed4-c081-47f8-9ae6-c4cbbe1700da",
+  "runId": "bc8a972a-5982-4984-9254-daa5bc70aa03",
+  "roleExecutionId": "60deb42e-f436-4ad2-acb7-02c481bce492",
   "repository": {
     "provider": "github",
     "owner": "AndrewCraswell",
     "name": "fencing-club-shopify-theme"
   },
-  "baseCommitSha": "8c185e6bb5214b2dd27552cd5d7e7ad0349a4cf1",
+  "baseCommitSha": "9f5b14b2b4200f02c3c56115358d600f0dd855c7",
   "objective": "Fix buildRemediationLink so URL-encoded storefront handles are decoded exactly once before they are encoded into Shopify Admin query parameters. Add a regression case proving that https://example.myshopify.com/products/red%20bag maps to a query value of red%20bag rather than red%2520bag.",
   "acceptanceCriteria": [
     "The remediation-links regression test covers an encoded product handle.",

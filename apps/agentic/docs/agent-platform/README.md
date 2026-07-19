@@ -2,7 +2,7 @@
 
 Status: Proposed implementation specification
 
-Last reviewed: 2026-07-18
+Last reviewed: 2026-07-19
 
 Implementation language: TypeScript wherever supported
 
@@ -33,7 +33,10 @@ Build an internal software-delivery system that can:
 6. Start or resume workflows from authenticated external webhooks.
 7. Publish agent work as branches and draft pull requests.
 8. Trace orchestration and model activity without treating traces as workflow state.
-9. Run the control plane in Azure and, if required, replace Daytona with an Azure-native workspace implementation.
+9. Migrate data, secrets, and application compute to Azure as separate changes.
+10. Evaluate and migrate orchestration or role execution to a Microsoft-hosted agent framework one boundary at a time.
+11. Replace Daytona only after every higher-level component is proven and an Azure workspace passes the same provider
+    contract.
 
 ## 2. Guiding decisions
 
@@ -43,22 +46,24 @@ The webhook API, LangGraph workflows, provider clients, schemas, GitHub integrat
 code use TypeScript. Python is limited to the OpenHands implementation already packaged in the Agent Server runtime and
 to an eventual worker-side shim only if an Azure runtime cannot call the Agent Server directly.
 
-### 2.2 Daytona owns initial workspace lifecycle
+### 2.2 Daytona owns workspace lifecycle until the final phase
 
 Each active coding or repair workflow receives a Daytona sandbox. The sandbox contains the repository checkout,
 generated context, OpenHands Agent Server, dependency state, and validation artifacts. The orchestrator stores
 identifiers, not live SDK objects.
 
-### 2.3 LangGraph owns workflow truth
+### 2.3 LangGraph owns initial workflow truth
 
 LangGraph and its PostgreSQL checkpointer own role sequencing, retries, budgets, terminal outcomes, and resumability.
 Agent prose, LangSmith traces, GitHub comments, and Daytona state are evidence or external state; none replaces the
-workflow checkpoint.
+workflow checkpoint. Phase 8 may replace this boundary only after the Microsoft-hosted implementation proves equivalent
+state ownership, deterministic routing, idempotency, and recovery.
 
-### 2.4 OpenHands owns coding behavior
+### 2.4 OpenHands owns initial coding behavior
 
 OpenHands explores the repository, edits files, runs permitted commands, and reports its result. It does not decide
-whether its own validation is sufficient, whether another role should run, or whether a retry budget is available.
+whether its own validation is sufficient, whether another role should run, or whether a retry budget is available. Phase
+8 evaluates replacement of role execution independently from orchestration and workspace hosting.
 
 ### 2.5 Webhooks signal; reconciliation proves
 
@@ -72,37 +77,50 @@ The system may create or update draft pull requests automatically. Human approva
 approval, merge authorization, and automatic merging are outside this specification. Existing repository policies remain
 authoritative.
 
+### 2.7 Cloud migration replaces one boundary at a time
+
+Azure-managed data and secrets precede Azure-hosted application compute. Microsoft-hosted orchestration or role
+execution follows only after the hosted control plane is stable. Daytona remains in place until the final phase because
+filesystem persistence, command transport, process isolation, stop, resume, archive, and recovery must all be replaced
+together behind `AgentWorkspace`.
+
 ## 3. Target architecture
 
 ```mermaid
 flowchart LR
     GH[GitHub webhooks and API] --> API[Webhook API]
-    API --> LG[LangGraph orchestrator]
+   API --> OR[Workflow and role contracts]
+   OR --> LG[LangGraph and OpenHands]
+   OR -. Phase 8 migration .-> MS[Microsoft-hosted agent framework]
     LG <--> PG[(PostgreSQL)]
+   MS <--> PG
     LG --> BS[Context and result storage]
+   MS --> BS
     LG --> WP[AgentWorkspace interface]
+   MS --> WP
     WP --> DC[Daytona Cloud]
-    WP -. later .-> AZW[Azure workspace runtime]
-    DC --> OH[OpenHands Agent Server]
-    AZW --> OH
-    OH --> REPO[Isolated repository checkout]
+   WP -. Phase 9 migration .-> AZW[Azure workspace runtime]
+   DC --> REPO[Isolated repository checkout]
+   AZW --> REPO
     LG --> LS[LangSmith]
+   MS --> TM[Azure agent telemetry]
     LG --> GH
+   MS --> GH
 ```
 
 ## 4. System boundaries
 
-| Capability                       | Initial owner                            | Final owner                                                 |
-| -------------------------------- | ---------------------------------------- | ----------------------------------------------------------- |
-| Workflow state and transitions   | LangGraph.js                             | LangGraph.js on Azure Container Apps                        |
-| Durable checkpoints              | Local/in-memory, then PostgreSQL         | Azure Database for PostgreSQL                               |
-| Agent workspace                  | Daytona Cloud                            | Daytona Cloud or Azure `AgentWorkspace` adapter             |
-| Coding loop                      | OpenHands Agent Server                   | OpenHands Agent Server                                      |
-| Context bundles                  | Local files, then object storage         | Azure Blob Storage                                          |
-| Source control and pull requests | GitHub                                   | GitHub                                                      |
-| Secrets                          | Local environment, then provider secrets | Azure Key Vault                                             |
-| Agent and graph traces           | LangSmith Cloud                          | LangSmith Cloud unless separately licensed for self-hosting |
-| Platform telemetry               | Local logs                               | Application Insights and OpenTelemetry                      |
+| Capability                       | Initial owner                            | Evidence-gated final owner                                       |
+| -------------------------------- | ---------------------------------------- | ---------------------------------------------------------------- |
+| Workflow state and transitions   | LangGraph.js                             | Phase 8 Microsoft-hosted orchestration or retained LangGraph.js  |
+| Durable checkpoints              | Local/in-memory, then PostgreSQL         | Azure PostgreSQL plus any selected Phase 8 hosted state          |
+| Agent workspace                  | Daytona Cloud                            | Phase 9 Azure adapter, or retained Daytona after formal deferral |
+| Coding loop                      | OpenHands Agent Server                   | Phase 8 Microsoft-hosted role runtime or retained OpenHands      |
+| Context bundles                  | Local files, then object storage         | Azure Blob Storage                                               |
+| Source control and pull requests | GitHub                                   | GitHub                                                           |
+| Secrets                          | Local environment, then provider secrets | Azure Key Vault                                                  |
+| Agent and graph traces           | LangSmith Cloud                          | Phase 8 selected trace services with Azure correlation           |
+| Platform telemetry               | Local logs                               | Application Insights and OpenTelemetry                           |
 
 ## 5. Repository architecture
 
@@ -208,15 +226,17 @@ Normalized events contain:
 
 ## 8. Phase sequence
 
-| Phase | Specification                                                           | Working capability                                                              |
-| ----- | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| 1     | [Direct worker prototype](phase-1-direct-worker-prototype.md)           | One TypeScript process controls one OpenHands agent in Daytona.                 |
-| 2     | [Local LangGraph workflow](phase-2-local-langgraph-workflow.md)         | One deterministic graph creates a validated draft PR.                           |
-| 3     | [Durable resumable workspaces](phase-3-durable-resumable-workspaces.md) | Workflows and workspaces survive process restarts and repair turns.             |
-| 4     | [Specialized agent chain](phase-4-specialized-agent-chain.md)           | Scrum-master, coder, reviewer, and repairer roles coordinate through contracts. |
-| 5     | [Webhook automation](phase-5-webhook-automation.md)                     | Authenticated events start and resume workflows safely.                         |
-| 6     | [Azure control plane](phase-6-azure-control-plane.md)                   | TypeScript services, state, artifacts, and secrets run in Azure.                |
-| 7     | [Azure-native workspaces](phase-7-azure-native-workspaces.md)           | An optional Azure adapter replaces Daytona without changing graph contracts.    |
+| Phase | Specification                                                               | Working capability                                                             |
+| ----- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 1     | [Direct worker prototype](phase-1-direct-worker-prototype.md)               | One TypeScript process controls one OpenHands agent in Daytona.                |
+| 2     | [Local LangGraph workflow](phase-2-local-langgraph-workflow.md)             | One deterministic graph creates a validated draft PR.                          |
+| 3     | [Local specialized agent chain](phase-3-local-specialized-agent-chain.md)   | Scrum-master, coder, reviewer, and repairer roles prove the product workflow.  |
+| 4     | [Durable resumable workspaces](phase-4-durable-resumable-workspaces.md)     | Specialized workflows survive restarts and run concurrently.                   |
+| 5     | [Webhook automation](phase-5-webhook-automation.md)                         | Authenticated events start and resume workflows safely.                        |
+| 6     | [Azure-managed data and secrets](phase-6-azure-managed-data-and-secrets.md) | Azure services replace local persistence, artifacts, and secret loading.       |
+| 7     | [Azure-hosted control plane](phase-7-azure-hosted-control-plane.md)         | Application processes move to Azure while Daytona remains unchanged.           |
+| 8     | [Microsoft-hosted agent runtime](phase-8-microsoft-hosted-agent-runtime.md) | Agent components migrate independently after contract and parity proof.        |
+| 9     | [Azure-native workspaces](phase-9-azure-native-workspaces.md)               | A gated Azure adapter replaces Daytona last without changing higher contracts. |
 
 Each phase begins only after the previous phase's executable acceptance checks pass. A later operational preference must
 not retroactively expand an earlier phase's scope.
@@ -251,4 +271,6 @@ Every phase must:
 The program is complete when the Azure-hosted system can accept authenticated events, execute up to ten isolated role
 runs concurrently, resume retained coding workspaces, produce independently validated changes, chain review and bounded
 repair work, publish or update draft pull requests, reconcile missed events, and expose correlated workflow and model
-traces without relying on a human-approval or automatic-merge path.
+traces without relying on a human-approval or automatic-merge path. Every migrated component must meet its legacy
+contract and rollback threshold. Phase 9 completes with either a proven Azure `AgentWorkspace` rollout or a measured,
+formally recorded decision to retain Daytona.

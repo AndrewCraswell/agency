@@ -180,4 +180,35 @@ describe("OpenHandsClient", () => {
       client.chat({ systemPrompt: "Follow policy.", userPrompt: "Implement assignment." })
     ).rejects.toMatchObject({ classification: "malformed_response" })
   })
+
+  it("interrupts an active native conversation when cancelled", async () => {
+    const controller = new AbortController()
+    const requests: string[] = []
+    const fetcher = vi.fn<(input: string, init: RequestInit) => Promise<Response>>(async (input) => {
+      requests.push(input)
+      if (input.endsWith("/api/profiles/phase-1-coder")) {
+        return Response.json({ name: "phase-1-coder", message: "Profile saved" }, { status: 201 })
+      }
+      if (input.endsWith("/api/conversations")) {
+        controller.abort()
+        return Response.json({ id: conversationId, execution_status: "running" }, { status: 201 })
+      }
+      if (input.endsWith(`/api/conversations/${conversationId}/interrupt`)) {
+        return Response.json({ id: conversationId, execution_status: "paused" })
+      }
+      return Response.json({ message: "Unexpected request" }, { status: 500 })
+    })
+    const client = new OpenHandsClient(clientOptions, { fetcher, gateway: new FakeGateway() })
+    await client.configureProfile("provider-secret")
+
+    await expect(
+      client.chat({
+        systemPrompt: "Follow policy.",
+        userPrompt: "Implement assignment.",
+        conversationId,
+        signal: controller.signal
+      })
+    ).rejects.toMatchObject({ classification: "cancelled" })
+    expect(requests).toContain(`https://agent.example/api/conversations/${conversationId}/interrupt`)
+  })
 })
