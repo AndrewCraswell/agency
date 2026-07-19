@@ -10,3 +10,4 @@ storybook-static
 .cache
 server/dist
 public/dist
+.env
