@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentName": {
+      "value": "staging"
+    },
+    "location": {
+      "value": "eastus2"
+    },
+    "registryPublicNetworkAccess": {
+      "value": "Disabled"
+    },
+    "apiMinimumReplicas": {
+      "value": 1
+    },
+    "apiMaximumReplicas": {
+      "value": 3
+    },
+    "workerMinimumReplicas": {
+      "value": 1
+    },
+    "workerMaximumReplicas": {
+      "value": 2
+    },
+    "postgresSkuName": {
+      "value": "Standard_D2ds_v5"
+    },
+    "postgresStorageSizeGB": {
+      "value": 128
+    },
+    "backupRetentionDays": {
+      "value": 14
+    },
+    "monitoringRetentionDays": {
+      "value": 60
+    }
+  }
+}

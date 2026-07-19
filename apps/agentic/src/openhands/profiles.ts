@@ -33,3 +33,11 @@ export const createCoderProfile = (usageId: string): OpenHandsModelProfile => ({
   reasoningEffort: "medium",
   usageId
 })
+
+export const createReviewerProfile = (usageId: string): OpenHandsModelProfile => ({
+  name: "reviewer",
+  model: "openrouter/openai/gpt-5.6",
+  baseUrl: "https://openrouter.ai/api/v1",
+  reasoningEffort: "high",
+  usageId
+})

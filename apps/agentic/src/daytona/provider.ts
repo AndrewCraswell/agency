@@ -33,7 +33,7 @@ function handleFor(workspace: DaytonaWorkspace, lifecycleState: ProviderWorkspac
 export class DaytonaWorkspaceProvider implements AgentWorkspace {
   readonly #client: DaytonaClientPort
   readonly #logger: WorkspaceLogger | undefined
-  readonly #workspaces = new Map<string, DaytonaWorkspace>()
+  readonly #workspaces = new Map<string, Promise<DaytonaWorkspace>>()
 
   constructor(client: DaytonaClientPort, logger?: WorkspaceLogger) {
     this.#client = client
@@ -57,12 +57,12 @@ export class DaytonaWorkspaceProvider implements AgentWorkspace {
     }
     const workspace = await DaytonaWorkspace.create(this.#client, workspaceOptions, this.#logger)
     const handle = handleFor(workspace, "running")
-    this.#workspaces.set(handle.workspaceId, workspace)
+    this.#workspaces.set(handle.workspaceId, Promise.resolve(workspace))
     return handle
   }
 
   async start(handle: ProviderWorkspaceHandle, timeoutMs: number): Promise<ProviderWorkspaceHandle> {
-    const workspace = this.#workspace(handle)
+    const workspace = await this.#workspace(handle)
     await workspace.start(timeoutMs)
     return handleFor(workspace, "running")
   }
@@ -71,7 +71,7 @@ export class DaytonaWorkspaceProvider implements AgentWorkspace {
     handle: ProviderWorkspaceHandle,
     options: WorkspaceExecutionOptions
   ): Promise<ReturnType<typeof ExecutionHandleSchema.parse>> {
-    const workspace = this.#workspace(handle)
+    const workspace = await this.#workspace(handle)
     const commandId = await workspace.startBackgroundSession(options.executionId, options.command, options.timeoutMs)
     return ExecutionHandleSchema.parse({
       schemaVersion: "1",
@@ -85,7 +85,8 @@ export class DaytonaWorkspaceProvider implements AgentWorkspace {
   }
 
   async executeCommand(handle: ProviderWorkspaceHandle, options: WorkspaceCommandOptions) {
-    return this.#workspace(handle).executeCommand(options)
+    const workspace = await this.#workspace(handle)
+    return workspace.executeCommand(options)
   }
 
   async upload(
@@ -94,41 +95,52 @@ export class DaytonaWorkspaceProvider implements AgentWorkspace {
     remotePath: string,
     timeoutMs: number
   ): Promise<void> {
-    await this.#workspace(handle).upload(content, remotePath, timeoutMs)
+    const workspace = await this.#workspace(handle)
+    await workspace.upload(content, remotePath, timeoutMs)
   }
 
   async download(handle: ProviderWorkspaceHandle, remotePath: string, timeoutMs: number): Promise<Uint8Array> {
-    return this.#workspace(handle).download(remotePath, timeoutMs)
+    const workspace = await this.#workspace(handle)
+    return workspace.download(remotePath, timeoutMs)
   }
 
   async stop(handle: ProviderWorkspaceHandle, timeoutMs: number): Promise<ProviderWorkspaceHandle> {
-    const workspace = this.#workspace(handle)
+    const workspace = await this.#workspace(handle)
     await workspace.stop(timeoutMs)
     return handleFor(workspace, "stopped")
   }
 
   async archive(handle: ProviderWorkspaceHandle, timeoutMs: number): Promise<ProviderWorkspaceHandle> {
-    const workspace = this.#workspace(handle)
+    const workspace = await this.#workspace(handle)
     await workspace.archive(timeoutMs)
     return handleFor(workspace, "archived")
   }
 
   async destroy(handle: ProviderWorkspaceHandle, timeoutMs: number): Promise<ProviderWorkspaceHandle> {
-    const workspace = this.#workspace(handle)
+    const workspace = await this.#workspace(handle)
     await workspace.delete(timeoutMs)
     this.#workspaces.delete(handle.workspaceId)
     return handleFor(workspace, "deleted")
   }
 
-  #workspace(handleInput: ProviderWorkspaceHandle): DaytonaWorkspace {
+  async #workspace(handleInput: ProviderWorkspaceHandle): Promise<DaytonaWorkspace> {
     const handle = ProviderWorkspaceHandleSchema.parse(handleInput)
     if (handle.provider !== "daytona") {
       throw new Error(`Daytona provider cannot operate on ${handle.provider} workspace ${handle.workspaceId}`)
     }
 
-    const workspace = this.#workspaces.get(handle.workspaceId)
-    if (workspace === undefined) {
-      throw new Error(`Daytona workspace ${handle.workspaceId} is not attached to this local provider process`)
+    let workspacePromise = this.#workspaces.get(handle.workspaceId)
+    if (workspacePromise === undefined) {
+      workspacePromise = DaytonaWorkspace.attach(this.#client, handle.workspaceId, this.#logger)
+      this.#workspaces.set(handle.workspaceId, workspacePromise)
+    }
+
+    let workspace: DaytonaWorkspace
+    try {
+      workspace = await workspacePromise
+    } catch (error) {
+      this.#workspaces.delete(handle.workspaceId)
+      throw error
     }
 
     const labels = workspace.describe().labels

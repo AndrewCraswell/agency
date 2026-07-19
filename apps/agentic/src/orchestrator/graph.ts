@@ -1,9 +1,11 @@
 import { resolve } from "node:path"
 import { Annotation, END, MemorySaver, START, StateGraph } from "@langchain/langgraph"
+import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint"
 import type { Assignment } from "../contracts/assignment"
 import type { WorkerResult } from "../contracts/results"
 import type { DraftPullRequestPublisher } from "../github/publisher"
 import { traceOperation } from "../observability/tracing"
+import type { ControlPlaneStore } from "../persistence/controlPlaneStore"
 import {
   type GraphEvent,
   type GraphFailure,
@@ -48,7 +50,37 @@ export type WorkflowGraphDependencies = {
   artifactRoot(runId: string): string
   runWorker(options: WorkerExecutionOptions): Promise<WorkerResult>
   publisher: DraftPullRequestPublisher
+  checkpointer?: BaseCheckpointSaver
+  controlPlaneStore?: ControlPlaneStore
   now?: () => Date
+}
+
+export async function recordCoderWorkspaceLease(
+  store: Pick<ControlPlaneStore, "createWorkspaceLease">,
+  assignment: Assignment,
+  workerResult: WorkerResult
+): Promise<void> {
+  await store.createWorkspaceLease({
+    provider: "daytona",
+    workspaceId: workerResult.workspace.workspaceId,
+    runId: assignment.runId,
+    role: "coder",
+    roleAttempt: 1,
+    lifecycleState: workerResult.workspace.lifecycleState,
+    labels: {
+      repository: `${assignment.repository.owner}/${assignment.repository.name}`,
+      promptVersion: assignment.promptVersion,
+      roleExecutionId: assignment.roleExecutionId
+    },
+    ...(workerResult.conversationId === null ? {} : { conversationId: workerResult.conversationId }),
+    profileName: "coder",
+    retentionUntil: new Date(workerResult.workspace.retentionUntil),
+    expiresAt: new Date(workerResult.workspace.expiresAt)
+  })
+}
+
+function workflowThreadId(runId: string): string {
+  return `workflow:${runId}`
 }
 
 function event(
@@ -143,7 +175,8 @@ export function createWorkflowGraph(dependencies: WorkflowGraphDependencies) {
             baseCommitSha: state.assignment.baseCommitSha,
             promptVersion: state.assignment.promptVersion
           },
-          tags: ["workflow", "coder"]
+          tags: ["workflow", "coder"],
+          onTrace: (reference) => dependencies.controlPlaneStore?.recordTrace(state.runId, reference)
         },
         () =>
           dependencies.runWorker({
@@ -152,6 +185,9 @@ export function createWorkflowGraph(dependencies: WorkflowGraphDependencies) {
             signal
           })
       )
+      if (dependencies.controlPlaneStore !== undefined) {
+        await recordCoderWorkspaceLease(dependencies.controlPlaneStore, state.assignment, workerResult)
+      }
       return {
         workerResult,
         artifactReferences: workerResult.artifacts.map((artifact) => artifact.relativePath),
@@ -220,6 +256,7 @@ export function createWorkflowGraph(dependencies: WorkflowGraphDependencies) {
     }
 
     try {
+      await dependencies.controlPlaneStore?.setWorkflowProgress(state.runId, "running", "publishing", null)
       const publicationResult = await traceOperation(
         {
           name: "workflow.publishDraftPr",
@@ -228,7 +265,8 @@ export function createWorkflowGraph(dependencies: WorkflowGraphDependencies) {
             repository: `${state.assignment.repository.owner}/${state.assignment.repository.name}`,
             baseCommitSha: state.assignment.baseCommitSha
           },
-          tags: ["workflow", "github-publication"]
+          tags: ["workflow", "github-publication"],
+          onTrace: (reference) => dependencies.controlPlaneStore?.recordTrace(state.runId, reference)
         },
         () =>
           dependencies.publisher.publish({
@@ -305,7 +343,7 @@ export function createWorkflowGraph(dependencies: WorkflowGraphDependencies) {
     return state.validationResult?.disposition === "publishable" ? "publishDraftPr" : "recordFailure"
   }
 
-  const checkpointer = new MemorySaver()
+  const checkpointer = dependencies.checkpointer ?? new MemorySaver()
   const graph = new StateGraph(WorkflowStateAnnotation)
     .addNode("prepareAssignment", prepareAssignment)
     .addNode("provisionWorkspace", provisionWorkspace)
@@ -329,8 +367,24 @@ export function createWorkflowGraph(dependencies: WorkflowGraphDependencies) {
     checkpointer,
     async invoke(assignment: Assignment): Promise<WorkflowState> {
       const initialState = createInitialGraphState(assignment)
+      const existingRun = await dependencies.controlPlaneStore?.getWorkflowRun(assignment.runId)
+      if (existingRun === null) {
+        await dependencies.controlPlaneStore?.bindWorkflowRun({
+          runId: assignment.runId,
+          requestDigest: initialState.assignmentDigest,
+          graphVersion: WORKFLOW_SCHEMA_VERSION,
+          repositoryOwner: assignment.repository.owner,
+          repositoryName: assignment.repository.name
+        })
+      } else if (
+        existingRun !== undefined &&
+        (existingRun.repositoryOwner !== assignment.repository.owner ||
+          existingRun.repositoryName !== assignment.repository.name)
+      ) {
+        throw new Error(`Run ${assignment.runId} is bound to a different repository`)
+      }
       const config = {
-        configurable: { thread_id: assignment.runId },
+        configurable: { thread_id: workflowThreadId(assignment.runId) },
         metadata: {
           runId: assignment.runId,
           repository: `${assignment.repository.owner}/${assignment.repository.name}`,
@@ -348,20 +402,23 @@ export function createWorkflowGraph(dependencies: WorkflowGraphDependencies) {
           throw new Error(`Run ${assignment.runId} is already bound to a different assignment digest`)
         }
         if (existingState.data.terminalStatus !== "running") {
+          await dependencies.controlPlaneStore?.persistWorkflowState(existingState.data)
           return existingState.data
         }
       }
+      await dependencies.controlPlaneStore?.setWorkflowProgress(assignment.runId, "running", "coding", "coder")
       const controller = new AbortController()
       activeRuns.set(assignment.runId, controller)
       try {
-        const result = await graph.invoke(initialState, { ...config })
-        return WorkflowStateSchema.parse(result)
+        const result = WorkflowStateSchema.parse(await graph.invoke(initialState, { ...config }))
+        await dependencies.controlPlaneStore?.persistWorkflowState(result)
+        return result
       } finally {
         activeRuns.delete(assignment.runId)
       }
     },
     async inspect(runId: string): Promise<WorkflowState | null> {
-      const snapshot = await graph.getState({ configurable: { thread_id: runId } })
+      const snapshot = await graph.getState({ configurable: { thread_id: workflowThreadId(runId) } })
       const state = WorkflowStateSchema.safeParse(snapshot.values)
       return state.success ? state.data : null
     },

@@ -14,9 +14,7 @@ export function RootLayout() {
           borderBottom: `1px solid ${tokens.colorNeutralStroke2}`
         }}
       >
-        <AppLink to="/">Home</AppLink>
-        <AppLink to="/about">About</AppLink>
-        <AppLink to="/contact">Contact</AppLink>
+        <AppLink to="/">Operations</AppLink>
       </nav>
       <Outlet />
     </div>

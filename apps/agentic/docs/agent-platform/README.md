@@ -1,8 +1,14 @@
-# Agentic Software Delivery Platform Specification
+# Agentic Software Delivery Platform Documentation
 
-Status: Proposed implementation specification
+Status: Historical specification index; use the approved direction below for future work
 
 Last reviewed: 2026-07-19
+
+> **Current direction:** Use the
+> [integration-driven workflow platform implementation plan](integration-workflow-platform-plan.md) for future work.
+> Agency owns provider adapters, PostgreSQL workflow definitions, and LangGraph execution. Nango owns connection
+> authentication and credential lifecycle only. The phase documents below describe the experimental implementation
+> retained at the pause-point; they are not approval to deploy Azure resources or continue the fixed-role architecture.
 
 Implementation language: TypeScript wherever supported
 
@@ -31,7 +37,8 @@ Build an internal software-delivery system that can:
 4. Independently validate agent changes and retain command evidence.
 5. Chain role-specific agents through deterministic LangGraph transitions.
 6. Start or resume workflows from authenticated external webhooks.
-7. Publish agent work as branches and draft pull requests.
+7. Publish agent work as branches and draft pull requests, independently review exact candidate SHAs, and either merge
+   an approved SHA or abandon the pull request after bounded repair attempts.
 8. Trace orchestration and model activity without treating traces as workflow state.
 9. Migrate data, secrets, and application compute to Azure as separate changes.
 10. Evaluate and migrate orchestration or role execution to a Microsoft-hosted agent framework one boundary at a time.
@@ -71,11 +78,12 @@ Webhook handlers authenticate, persist, normalize, and acknowledge events. They 
 periodic reconciliation process repairs missed deliveries and compares LangGraph, workspace-provider, and source-control
 state.
 
-### 2.6 No human-approval workflow is in scope
+### 2.6 Autonomous outcomes do not use human-approval nodes
 
-The system may create or update draft pull requests automatically. Human approval nodes, LangGraph interrupts for
-approval, merge authorization, and automatic merging are outside this specification. Existing repository policies remain
-authoritative.
+The system creates or updates draft pull requests, independently reviews the exact candidate SHA, repairs in the
+retained coder workspace, and squash-merges only the approved SHA. A third non-approved review round abandons the pull
+request with evidence in GitHub and Linear. Human approval nodes and LangGraph approval interrupts remain outside this
+specification. Existing repository checks and branch protections remain authoritative; the system does not bypass them.
 
 ### 2.7 Cloud migration replaces one boundary at a time
 
@@ -124,33 +132,25 @@ flowchart LR
 
 ## 5. Repository architecture
 
-The implementation should converge on this pnpm workspace without requiring the entire structure in the first phase:
+The implementation deliberately remains one deployable package and one image. Process entry points select API, worker,
+reconciler, or migration behavior without splitting contracts into additional workspace packages:
 
 ```text
-agent-platform/
-|-- apps/
-|   |-- orchestrator/
-|   |-- webhook-api/
-|   `-- reconciler/
-|-- packages/
-|   |-- contracts/
-|   |-- workspace/
-|   |-- daytona-workspace/
-|   |-- openhands-client/
-|   |-- github-client/
-|   |-- context-bundle/
-|   `-- observability/
+apps/agentic/
+|-- docs/agent-platform/
+|-- drizzle/
+|-- infra/
+|   |-- environments/
+|   `-- modules/
 |-- prompts/
-|   |-- scrum-master/
-|   |-- coder/
-|   |-- reviewer/
-|   `-- repairer/
-|-- tests/
-|   |-- contract/
-|   |-- integration/
-|   `-- fixtures/
+|-- src/
+|   |-- azure/
+|   |-- controlPlane/
+|   |-- orchestrator/
+|   |-- persistence/
+|   `-- workspace/
+|-- Dockerfile
 |-- package.json
-|-- pnpm-workspace.yaml
 `-- tsconfig.json
 ```
 
@@ -226,20 +226,22 @@ Normalized events contain:
 
 ## 8. Phase sequence
 
-| Phase | Specification                                                               | Working capability                                                             |
-| ----- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| 1     | [Direct worker prototype](phase-1-direct-worker-prototype.md)               | One TypeScript process controls one OpenHands agent in Daytona.                |
-| 2     | [Local LangGraph workflow](phase-2-local-langgraph-workflow.md)             | One deterministic graph creates a validated draft PR.                          |
-| 3     | [Local specialized agent chain](phase-3-local-specialized-agent-chain.md)   | Linear triage and specialized roles prove the local product workflow.          |
-| 4     | [Durable resumable workspaces](phase-4-durable-resumable-workspaces.md)     | Specialized workflows survive restarts and run concurrently.                   |
-| 5     | [Webhook automation](phase-5-webhook-automation.md)                         | Authenticated events start and resume workflows safely.                        |
-| 6     | [Azure-managed data and secrets](phase-6-azure-managed-data-and-secrets.md) | Azure services replace local persistence, artifacts, and secret loading.       |
-| 7     | [Azure-hosted control plane](phase-7-azure-hosted-control-plane.md)         | Application processes move to Azure while Daytona remains unchanged.           |
-| 8     | [Microsoft-hosted agent runtime](phase-8-microsoft-hosted-agent-runtime.md) | Agent components migrate independently after contract and parity proof.        |
-| 9     | [Azure-native workspaces](phase-9-azure-native-workspaces.md)               | A gated Azure adapter replaces Daytona last without changing higher contracts. |
+| Phase | Specification                                                               | Current disposition                              |
+| ----- | --------------------------------------------------------------------------- | ------------------------------------------------ |
+| 1     | [Direct worker prototype](phase-1-direct-worker-prototype.md)               | Implemented in source                            |
+| 2     | [Local LangGraph workflow](phase-2-local-langgraph-workflow.md)             | Implemented in source                            |
+| 3     | [Local specialized agent chain](phase-3-local-specialized-agent-chain.md)   | Implemented in source                            |
+| 4     | [Durable resumable workspaces](phase-4-durable-resumable-workspaces.md)     | Implemented in source                            |
+| 5     | [Webhook automation](phase-5-webhook-automation.md)                         | Implemented in source                            |
+| 6     | [Azure-managed data and secrets](phase-6-azure-managed-data-and-secrets.md) | Deployment source complete; live acceptance open |
+| 7     | [Azure-hosted control plane](phase-7-azure-hosted-control-plane.md)         | Deployment source complete; live acceptance open |
+| 8     | [Microsoft-hosted agent runtime](phase-8-microsoft-hosted-agent-runtime.md) | Deferred: no approved candidate or parity proof  |
+| 9     | [Azure-native workspaces](phase-9-azure-native-workspaces.md)               | Deferred: no qualifying entry driver             |
 
-Each phase begins only after the previous phase's executable acceptance checks pass. A later operational preference must
-not retroactively expand an earlier phase's scope.
+Implementation may proceed behind disabled provider and deployment gates, but production activation requires the prior
+phase's executable acceptance evidence. The [Azure deployment and acceptance runbook](azure-deployment-runbook.md)
+defines the Phase 6 and Phase 7 promotion order. A later operational preference must not retroactively expand an earlier
+phase's scope.
 
 ## 9. Cross-phase quality gates
 
@@ -256,7 +258,7 @@ Every phase must:
 
 ## 10. Global non-goals
 
-- Automatic merge or bypass of repository policies.
+- Bypassing repository checks, branch protection, or exact-SHA merge guards.
 - Human approval workflows or approval interrupts.
 - A general-purpose multi-tenant agent platform.
 - Supporting multiple source-control providers before GitHub works end to end.
@@ -268,9 +270,10 @@ Every phase must:
 
 ## 11. Program completion criteria
 
-The program is complete when the Azure-hosted system can accept authenticated events, execute up to ten isolated role
-runs concurrently, resume retained coding workspaces, produce independently validated changes, chain review and bounded
-repair work, publish or update draft pull requests, reconcile missed events, and expose correlated workflow and model
-traces without relying on a human-approval or automatic-merge path. Every migrated component must meet its legacy
-contract and rollback threshold. Phase 9 completes with either a proven Azure `AgentWorkspace` rollout or a measured,
-formally recorded decision to retain Daytona.
+The source implementation is complete when the Azure-hosted system is deployable to accept authenticated events, execute
+up to ten isolated role runs concurrently, resume retained coding workspaces, produce independently validated changes,
+chain review and bounded repair work, merge only an approved exact SHA or abandon with evidence, reconcile missed
+events, and expose correlated workflow and model traces without relying on a human-approval path. Operational acceptance
+additionally requires the retained live evidence named by Phases 6 and 7. Every migrated component must meet its legacy
+contract and rollback threshold. Phase 9 completes with either a proven Azure `AgentWorkspace` rollout or a formally
+recorded decision to retain Daytona.

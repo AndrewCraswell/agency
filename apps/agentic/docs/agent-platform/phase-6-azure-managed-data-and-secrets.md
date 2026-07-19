@@ -1,11 +1,32 @@
 # Phase 6: Azure-Managed Data and Secrets
 
-Status: Proposed
+Status: Deployment source complete; live Azure acceptance pending
 
 Depends on: [Phase 5](phase-5-webhook-automation.md)
 
 Produces: The unchanged webhook and workflow processes use Azure Database for PostgreSQL, Azure Blob Storage, and Azure
 Key Vault while they can still run from local or CI-hosted compute and Daytona remains the workspace provider.
+
+## Implementation record
+
+Implemented in source:
+
+- Bicep modules for private networking, PostgreSQL 16, Blob Storage, Key Vault, monitoring, managed identities, and
+  environment sizing.
+- Entra-authenticated PostgreSQL clients with TLS verification, bounded pools and timeouts, explicit Drizzle and
+  LangGraph migrations, and separate API, worker, and reconciler grants bootstrapped by the migration identity.
+- Managed-identity Azure Blob and Key Vault providers with digest verification, bounded secret caching, private storage,
+  versioning, soft delete, and lifecycle policy.
+- Typed local/Azure provider selection with startup rejection for invalid combinations.
+
+Verified locally: the root Bicep template compiles without warnings, the Drizzle journal is consistent, and focused
+PostgreSQL, Blob, Key Vault, and provider tests pass. This is source-level evidence, not proof that Azure accepted or
+ran the resources.
+
+Still required for operational acceptance: subscription-level `validate` and `what-if`, a live deployment, denied-role
+tests, migration execution, restore, artifact recovery, secret rotation, and one complete webhook-to-merge or
+webhook-to-abandon workflow. Follow the [Azure deployment and acceptance runbook](azure-deployment-runbook.md). The
+unchecked checklist below remains the live acceptance contract; source presence alone does not check an evidence item.
 
 ## 1. Objective
 

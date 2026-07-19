@@ -1,6 +1,6 @@
 # Phase 5: Webhook Automation
 
-Status: Proposed
+Status: Implemented in source
 
 Depends on: [Phase 4](phase-4-durable-resumable-workspaces.md)
 

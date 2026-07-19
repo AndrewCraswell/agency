@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "1",
+  "runId": "dff7a1a0-2c52-4e3f-a325-90d314f81820",
+  "roleAttempt": {
+    "schemaVersion": "1",
+    "runId": "dff7a1a0-2c52-4e3f-a325-90d314f81820",
+    "roleExecutionId": "af32fd7f-c98c-4a31-88ca-acfb99654c69",
+    "role": "scrum_master",
+    "attempt": 1,
+    "modelProfile": {
+      "schemaVersion": "1",
+      "profileId": "scrum-master-default",
+      "role": "scrum_master",
+      "provider": "openrouter",
+      "model": "openai/gpt-5.6",
+      "reasoningEffort": "medium"
+    },
+    "prompt": {
+      "schemaVersion": "1",
+      "role": "scrum_master",
+      "version": "v1",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    "workspace": null,
+    "budget": {
+      "schemaVersion": "1",
+      "limits": {
+        "maxTurns": 4,
+        "maxInputTokens": 20000,
+        "maxOutputTokens": 4000,
+        "maxElapsedMs": 120000,
+        "maxEstimatedSpendUsd": 1
+      },
+      "turns": 1,
+      "inputTokens": 2000,
+      "outputTokens": 500,
+      "elapsedMs": 5000,
+      "estimatedSpendUsd": 0.1,
+      "actualSpendUsd": null
+    },
+    "startedAt": "2026-07-19T12:00:00.000Z",
+    "endedAt": "2026-07-19T12:00:00.000Z"
+  },
+  "disposition": "ready",
+  "sourceWorkItem": {
+    "schemaVersion": "1",
+    "source": "linear",
+    "id": "5ee37578-285f-4cf2-a737-a2f56fe1466b",
+    "identifier": "FEN-421",
+    "title": "[Agent Trial] Add OpenHands profile helper tests",
+    "description": "Add focused unit tests for src/openhands/profiles.ts.",
+    "url": "https://linear.app/fencing-club/issue/FEN-421/agent-trial-add-openhands-profile-helper-tests",
+    "priority": 4,
+    "state": {
+      "id": "ff47e33a-743c-43a8-b5d6-d9c525b2e498",
+      "name": "Backlog",
+      "type": "backlog"
+    },
+    "team": {
+      "id": "b9c888b8-e2d4-4694-8820-065e4c65cdcb",
+      "key": "FEN",
+      "name": "Fencing Club"
+    }
+  },
+  "objective": "Add focused tests for the OpenHands profile helpers.",
+  "acceptanceCriteria": ["Focused profile tests pass."],
+  "baseCommitSha": "8c185e6bb5214b2dd27552cd5d7e7ad0349a4cf1",
+  "relevantPaths": ["apps/agentic/src/openhands/profiles.ts"],
+  "contextEvidence": [
+    {
+      "uri": "https://linear.app/fencing-club/issue/FEN-421/agent-trial-add-openhands-profile-helper-tests",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    }
+  ],
+  "validationCommands": [
+    {
+      "id": "profile-tests",
+      "command": "pnpm --filter agentic exec vitest run src/openhands/profiles.test.ts",
+      "workingDirectory": ".",
+      "timeoutMs": 300000
+    }
+  ],
+  "pathPolicy": {
+    "allowed": ["apps/agentic/src/openhands/profiles.test.ts"],
+    "forbidden": [".git/**"]
+  },
+  "risks": [],
+  "dependencies": [],
+  "blockers": [],
+  "taskClass": "small",
+  "configuredBudget": {
+    "maxTurns": 4,
+    "maxInputTokens": 20000,
+    "maxOutputTokens": 4000,
+    "maxElapsedMs": 120000,
+    "maxEstimatedSpendUsd": 1
+  }
+}

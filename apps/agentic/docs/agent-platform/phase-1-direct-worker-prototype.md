@@ -1,6 +1,6 @@
 # Phase 1: Direct Worker Prototype
 
-Status: Proposed
+Status: Implemented in source
 
 Depends on: [Parent specification](README.md)
 

@@ -1,6 +1,6 @@
 # Phase 4: Durable and Resumable Workspaces
 
-Status: Proposed
+Status: Implemented in source
 
 Depends on: [Phase 3](phase-3-local-specialized-agent-chain.md)
 

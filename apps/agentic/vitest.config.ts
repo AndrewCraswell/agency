@@ -7,7 +7,12 @@ export default defineConfig({
       reporter: ["text", "text-summary", "html", "lcov", "json-summary"],
       reportsDirectory: "coverage",
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/**/cli.ts"],
+      exclude: [
+        "src/**/*.test.ts",
+        "src/**/cli.ts",
+        "src/controlPlane/{api,reconciler,worker}.ts",
+        "src/persistence/migrate.ts"
+      ],
       thresholds: {
         lines: 80,
         statements: 80,

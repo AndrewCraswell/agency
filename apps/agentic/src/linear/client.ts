@@ -2,6 +2,8 @@ import { z } from "zod"
 import {
   LINEAR_WORK_ITEM_SCHEMA_VERSION,
   LinearCandidateListSchema,
+  LinearIssueStateTypeSchema,
+  LinearTaskGraphSchema,
   LinearTeamSchema,
   LinearWorkItemSchema
 } from "../contracts/linear"
@@ -92,9 +94,43 @@ const RawLinearIssueSchema = z
       .object({
         id: z.uuid(),
         name: z.string(),
-        type: z.string()
+        type: LinearIssueStateTypeSchema
+      })
+      .strict(),
+    project: z.object({ id: z.uuid(), name: z.string() }).strict().nullable().optional().default(null),
+    relations: z
+      .object({
+        nodes: z.array(z.unknown()),
+        pageInfo: z.object({ hasNextPage: z.boolean(), endCursor: z.string().nullable() }).strict()
       })
       .strict()
+      .optional()
+      .default({ nodes: [], pageInfo: { hasNextPage: false, endCursor: null } }),
+    inverseRelations: z
+      .object({
+        nodes: z.array(z.unknown()),
+        pageInfo: z.object({ hasNextPage: z.boolean(), endCursor: z.string().nullable() }).strict()
+      })
+      .strict()
+      .optional()
+      .default({ nodes: [], pageInfo: { hasNextPage: false, endCursor: null } })
+  })
+  .strict()
+
+const RawTaskReferenceSchema = z
+  .object({
+    id: z.uuid(),
+    identifier: z.string(),
+    state: z.object({ type: LinearIssueStateTypeSchema }).strict()
+  })
+  .strict()
+
+const RawIssueRelationSchema = z
+  .object({
+    id: z.uuid(),
+    type: z.enum(["blocks", "duplicate", "related", "similar"]),
+    issue: RawTaskReferenceSchema,
+    relatedIssue: RawTaskReferenceSchema
   })
   .strict()
 
@@ -107,8 +143,28 @@ const TeamsResponseSchema = z
 const TeamIssuesResponseSchema = z
   .object({
     team: LinearTeamSchema.extend({
-      issues: z.object({ nodes: z.array(RawLinearIssueSchema) }).strict()
+      issues: z
+        .object({
+          nodes: z.array(RawLinearIssueSchema),
+          pageInfo: z
+            .object({ hasNextPage: z.boolean(), endCursor: z.string().nullable() })
+            .strict()
+            .optional()
+            .default({ hasNextPage: false, endCursor: null })
+        })
+        .strict()
     }).nullable()
+  })
+  .strict()
+
+const IssueRelationsResponseSchema = z
+  .object({
+    issueRelations: z
+      .object({
+        nodes: z.array(RawIssueRelationSchema),
+        pageInfo: z.object({ hasNextPage: z.boolean(), endCursor: z.string().nullable() }).strict()
+      })
+      .strict()
   })
   .strict()
 
@@ -122,8 +178,32 @@ const IssueCreateResponseSchema = z
       .strict()
   })
   .strict()
+const WorkflowStatesResponseSchema = z
+  .object({
+    team: z
+      .object({
+        states: z
+          .object({
+            nodes: z.array(z.object({ id: z.uuid(), name: z.string(), type: LinearIssueStateTypeSchema }).strict())
+          })
+          .strict()
+      })
+      .strict()
+      .nullable()
+  })
+  .strict()
+const CommentCreateResponseSchema = z
+  .object({
+    commentCreate: z.object({ success: z.boolean(), comment: z.object({ id: z.uuid() }).strict().nullable() }).strict()
+  })
+  .strict()
+const IssueUpdateResponseSchema = z
+  .object({
+    issueUpdate: z.object({ success: z.boolean(), issue: z.object({ id: z.uuid() }).strict().nullable() }).strict()
+  })
+  .strict()
 
-const CandidateLimitSchema = z.number().int().positive().max(seedIssues.length)
+const CandidateLimitSchema = z.number().int().positive().max(50)
 
 type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
 
@@ -142,12 +222,17 @@ const teamQuery = `
 `
 
 const teamIssuesQuery = `
-  query WorkItemTeamIssues($teamId: String!, $first: Int!) {
+  query WorkItemTeamIssues($teamId: String!, $first: Int!, $after: String) {
     team(id: $teamId) {
       id
       key
       name
-      issues(first: $first) {
+      issues(
+        first: $first
+        after: $after
+        filter: { state: { type: { in: ["triage", "backlog", "unstarted", "started"] } } }
+      ) {
+        pageInfo { hasNextPage endCursor }
         nodes {
           id
           identifier
@@ -156,7 +241,22 @@ const teamIssuesQuery = `
           url
           priority
           state { id name type }
+          project { id name }
         }
+      }
+    }
+  }
+`
+
+const issueRelationsQuery = `
+  query WorkItemRelations($first: Int!, $after: String) {
+    issueRelations(first: $first, after: $after) {
+      pageInfo { hasNextPage endCursor }
+      nodes {
+        id
+        type
+        issue { id identifier state { type } }
+        relatedIssue { id identifier state { type } }
       }
     }
   }
@@ -179,6 +279,24 @@ const createIssueMutation = `
   }
 `
 
+const workflowStatesQuery = `
+  query WorkItemWorkflowStates($teamId: String!) {
+    team(id: $teamId) { states { nodes { id name type } } }
+  }
+`
+
+const createCommentMutation = `
+  mutation RecordAgentEvidence($input: CommentCreateInput!) {
+    commentCreate(input: $input) { success comment { id } }
+  }
+`
+
+const updateIssueMutation = `
+  mutation UpdateAgentWorkItem($id: String!, $input: IssueUpdateInput!) {
+    issueUpdate(id: $id, input: $input) { success issue { id } }
+  }
+`
+
 function seedMarker(key: string): string {
   return `<!-- ${SEED_MARKER_PREFIX}${key} -->`
 }
@@ -193,6 +311,10 @@ function seedKey(description: string | null): string | null {
     return null
   }
   return key.replace(/^[a-z]+[0-9]+-(.+)$/u, "$1")
+}
+
+function isTerminalState(stateType: z.infer<typeof LinearIssueStateTypeSchema>): boolean {
+  return stateType === "completed" || stateType === "canceled" || stateType === "duplicate"
 }
 
 export class LinearClient {
@@ -210,31 +332,114 @@ export class LinearClient {
     this.#now = options.now ?? (() => new Date())
   }
 
-  async listCandidates(limitInput = seedIssues.length) {
-    const limit = CandidateLimitSchema.parse(limitInput)
+  async listTaskGraph() {
     const team = await this.#resolveTeam()
     const issues = await this.#listTeamIssues(team.id)
-    const issuesBySeedKey = new Map(
-      issues.flatMap((issue) => {
-        const key = seedKey(issue.description)
-        return key === null ? [] : [[key, issue]]
-      })
+    const taskIds = new Set(issues.map((issue) => issue.id))
+    const relations = (await this.#listIssueRelations()).filter(
+      (relation) => taskIds.has(relation.issue.id) || taskIds.has(relation.relatedIssue.id)
     )
-    const candidates = seedIssues
-      .map((seedIssue) => issuesBySeedKey.get(seedIssue.key))
-      .filter((issue) => issue !== undefined)
-      .filter((issue) => issue.state.type === "backlog" || issue.state.type === "unstarted")
-      .slice(0, limit)
-      .map((issue) => this.#workItem(team, issue))
+    const edges = relations
+      .filter((relation) => relation.type === "blocks")
+      .map((relation) => ({
+        blocker: this.#taskReference(relation.issue),
+        blocked: this.#taskReference(relation.relatedIssue)
+      }))
+    const taskById = new Map(issues.map((issue) => [issue.id, issue]))
+    const openTaskIds = new Set(issues.filter((issue) => !isTerminalState(issue.state.type)).map((issue) => issue.id))
+    const incoming = new Map([...openTaskIds].map((taskId) => [taskId, 0]))
+    const outgoing = new Map<string, string[]>()
+    for (const edge of edges) {
+      if (!openTaskIds.has(edge.blocked.id) || isTerminalState(edge.blocker.stateType)) {
+        continue
+      }
+      incoming.set(edge.blocked.id, (incoming.get(edge.blocked.id) ?? 0) + 1)
+      if (openTaskIds.has(edge.blocker.id)) {
+        outgoing.set(edge.blocker.id, [...(outgoing.get(edge.blocker.id) ?? []), edge.blocked.id])
+      }
+    }
+    const levels: { depth: number; taskIds: string[] }[] = []
+    const processed = new Set<string>()
+    let frontier = [...openTaskIds].filter((taskId) => incoming.get(taskId) === 0)
+    while (frontier.length > 0) {
+      frontier.sort((left, right) => this.#compareTasks(taskById.get(left), taskById.get(right), outgoing))
+      const taskIds = [...frontier]
+      levels.push({ depth: levels.length, taskIds })
+      frontier = []
+      for (const taskId of taskIds) {
+        processed.add(taskId)
+        for (const blockedId of outgoing.get(taskId) ?? []) {
+          const remaining = (incoming.get(blockedId) ?? 0) - 1
+          incoming.set(blockedId, remaining)
+          if (remaining === 0) {
+            frontier.push(blockedId)
+          }
+        }
+      }
+    }
+    const readyTaskIds = (levels[0]?.taskIds ?? []).filter((taskId) => {
+      const type = taskById.get(taskId)?.state.type
+      return type === "backlog" || type === "unstarted"
+    })
+    const blockedTaskIds = [...openTaskIds].filter((taskId) => !processed.has(taskId))
+    const tasks = issues.map((issue) => ({
+      schemaVersion: LINEAR_WORK_ITEM_SCHEMA_VERSION,
+      source: "linear" as const,
+      id: issue.id,
+      identifier: issue.identifier,
+      title: issue.title,
+      description: issue.description ?? "",
+      url: issue.url,
+      priority: issue.priority,
+      state: issue.state,
+      team,
+      project: issue.project,
+      blockedBy: edges.filter((edge) => edge.blocked.id === issue.id).map((edge) => edge.blocker),
+      blocks: edges.filter((edge) => edge.blocker.id === issue.id).map((edge) => edge.blocked)
+    }))
+    return LinearTaskGraphSchema.parse({
+      schemaVersion: LINEAR_WORK_ITEM_SCHEMA_VERSION,
+      fetchedAt: this.#now().toISOString(),
+      team,
+      tasks,
+      edges,
+      levels,
+      readyTaskIds,
+      blockedTaskIds
+    })
+  }
+
+  async listCandidates(limitInput = 50) {
+    const limit = CandidateLimitSchema.parse(limitInput)
+    const graph = await this.listTaskGraph()
+    const taskById = new Map(graph.tasks.map((task) => [task.id, task]))
+    const candidates = graph.readyTaskIds.slice(0, limit).map((taskId) => {
+      const task = taskById.get(taskId)
+      if (task === undefined || (task.state.type !== "backlog" && task.state.type !== "unstarted")) {
+        throw new Error(`Dependency-ready Linear task ${taskId} is unavailable`)
+      }
+      return LinearWorkItemSchema.parse({
+        schemaVersion: task.schemaVersion,
+        source: task.source,
+        id: task.id,
+        identifier: task.identifier,
+        title: task.title,
+        description: task.description,
+        url: task.url,
+        priority: task.priority,
+        state: task.state,
+        team: task.team
+      })
+    })
 
     if (candidates.length === 0) {
-      throw new Error("No active Linear candidate issues were found; run the seed command first")
+      throw new Error("No dependency-ready Linear tasks were found")
     }
 
     return LinearCandidateListSchema.parse({
       schemaVersion: LINEAR_WORK_ITEM_SCHEMA_VERSION,
       fetchedAt: this.#now().toISOString(),
-      team,
+      team: graph.team,
       issues: candidates
     })
   }
@@ -268,6 +473,38 @@ export class LinearClient {
     return this.listCandidates()
   }
 
+  async recordAgentActivity(
+    issueIdInput: string,
+    stateTypeInput: "started" | "completed" | "canceled",
+    evidenceBodyInput: string
+  ): Promise<void> {
+    const issueId = z.uuid().parse(issueIdInput)
+    const stateType = z.enum(["started", "completed", "canceled"]).parse(stateTypeInput)
+    const evidenceBody = z.string().trim().min(1).max(20_000).parse(evidenceBodyInput)
+    const team = await this.#resolveTeam()
+    const stateResult = await this.#request(workflowStatesQuery, { teamId: team.id }, WorkflowStatesResponseSchema)
+    const state = stateResult.team?.states.nodes.find((candidate) => candidate.type === stateType)
+    if (state === undefined) {
+      throw new Error(`Linear team ${team.key} has no ${stateType} workflow state`)
+    }
+    const commentResult = await this.#request(
+      createCommentMutation,
+      { input: { issueId, body: evidenceBody } },
+      CommentCreateResponseSchema
+    )
+    if (!commentResult.commentCreate.success || commentResult.commentCreate.comment === null) {
+      throw new Error("Linear did not record the agent evidence comment")
+    }
+    const updateResult = await this.#request(
+      updateIssueMutation,
+      { id: issueId, input: { stateId: state.id } },
+      IssueUpdateResponseSchema
+    )
+    if (!updateResult.issueUpdate.success || updateResult.issueUpdate.issue?.id !== issueId) {
+      throw new Error("Linear did not apply the agent workflow state")
+    }
+  }
+
   async #resolveTeam() {
     const result = await this.#request(teamQuery, {}, TeamsResponseSchema)
     if (this.#config.teamSelector !== undefined) {
@@ -293,21 +530,72 @@ export class LinearClient {
   }
 
   async #listTeamIssues(teamId: string) {
-    const result = await this.#request(teamIssuesQuery, { teamId, first: 100 }, TeamIssuesResponseSchema)
-    if (result.team === null) {
-      throw new Error("Linear returned no team for the selected team ID")
-    }
-    return result.team.issues.nodes
+    const issues: z.output<typeof RawLinearIssueSchema>[] = []
+    let after: string | null = null
+    do {
+      const result: z.output<typeof TeamIssuesResponseSchema> = await this.#request(
+        teamIssuesQuery,
+        { teamId, first: 100, after },
+        TeamIssuesResponseSchema
+      )
+      if (result.team === null) {
+        throw new Error("Linear returned no team for the selected team ID")
+      }
+      issues.push(...result.team.issues.nodes)
+      const pageInfo: { hasNextPage: boolean; endCursor: string | null } = result.team.issues.pageInfo
+      if (pageInfo.hasNextPage && pageInfo.endCursor === null) {
+        throw new Error("Linear returned an incomplete issue page without an end cursor")
+      }
+      after = pageInfo.hasNextPage ? pageInfo.endCursor : null
+    } while (after !== null)
+    return issues
   }
 
-  #workItem(team: z.output<typeof LinearTeamSchema>, issue: z.output<typeof RawLinearIssueSchema>) {
-    return LinearWorkItemSchema.parse({
-      schemaVersion: LINEAR_WORK_ITEM_SCHEMA_VERSION,
-      source: "linear",
-      ...issue,
-      description: issue.description,
-      team
-    })
+  async #listIssueRelations() {
+    const relations: z.output<typeof RawIssueRelationSchema>[] = []
+    let after: string | null = null
+    do {
+      const result: z.output<typeof IssueRelationsResponseSchema> = await this.#request(
+        issueRelationsQuery,
+        { first: 100, after },
+        IssueRelationsResponseSchema
+      )
+      relations.push(...result.issueRelations.nodes)
+      const pageInfo: { hasNextPage: boolean; endCursor: string | null } = result.issueRelations.pageInfo
+      if (pageInfo.hasNextPage && pageInfo.endCursor === null) {
+        throw new Error("Linear returned an incomplete relation page without an end cursor")
+      }
+      after = pageInfo.hasNextPage ? pageInfo.endCursor : null
+    } while (after !== null)
+    return relations
+  }
+
+  #taskReference(reference: z.output<typeof RawTaskReferenceSchema>) {
+    return {
+      id: reference.id,
+      identifier: reference.identifier,
+      stateType: reference.state.type
+    }
+  }
+
+  #compareTasks(
+    left: z.output<typeof RawLinearIssueSchema> | undefined,
+    right: z.output<typeof RawLinearIssueSchema> | undefined,
+    outgoing: ReadonlyMap<string, string[]>
+  ): number {
+    if (left === undefined || right === undefined) {
+      return 0
+    }
+    const priorityRank = (priority: number) => (priority === 0 ? 5 : priority)
+    const priorityDifference = priorityRank(left.priority) - priorityRank(right.priority)
+    if (priorityDifference !== 0) {
+      return priorityDifference
+    }
+    const dependencyDifference = (outgoing.get(right.id)?.length ?? 0) - (outgoing.get(left.id)?.length ?? 0)
+    if (dependencyDifference !== 0) {
+      return dependencyDifference
+    }
+    return left.identifier.localeCompare(right.identifier, "en", { numeric: true })
   }
 
   async #request<Output>(query: string, variables: Readonly<Record<string, unknown>>, schema: z.ZodType<Output>) {
@@ -320,7 +608,8 @@ export class LinearClient {
       body: JSON.stringify({ query, variables })
     })
     if (!response.ok) {
-      throw new Error(`Linear GraphQL request failed with status ${response.status}`)
+      const responseText = await response.text()
+      throw new Error(`Linear GraphQL request failed with status ${response.status}: ${responseText.slice(0, 500)}`)
     }
     const envelope = GraphqlEnvelopeSchema.parse(await response.json())
     if (envelope.errors !== undefined && envelope.errors.length > 0) {

@@ -1,4 +1,3 @@
-import { randomBytes } from "node:crypto"
 import { readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -12,13 +11,13 @@ import {
   createAgentServerEnvironment,
   createCoderProfile
 } from "../openhands/profiles"
-import { ArtifactStore } from "./artifacts"
+import { deriveAgentServerSecrets } from "../openhands/secrets"
+import { ArtifactStore, type ArtifactStorePort } from "./artifacts"
 import { createContextBundle, findPathPolicyViolations, sha256 } from "./context"
 
 const REPOSITORY_PATH = "/workspace/repository"
 const CONTEXT_ROOT = "/workspace/orchestrator-context"
 const REMOTE_ARTIFACT_ROOT = "/workspace/orchestrator-artifacts"
-const APPROVED_REPOSITORY = "AndrewCraswell/fencing-club-shopify-theme"
 const DEFAULT_ARTIFACTS_ROOT = fileURLToPath(new URL("../../artifacts/", import.meta.url))
 
 export interface WorkerSecrets {
@@ -28,9 +27,12 @@ export interface WorkerSecrets {
 
 export interface WorkerOptions {
   assignment: Assignment
+  approvedRepository: string
+  workspaceSecretKey: string
   cleanupMode: CleanupMode
   secrets: WorkerSecrets
   artifactRoot?: string
+  artifactStore?: ArtifactStorePort
   signal?: AbortSignal
   onProgress?: (message: string) => void
 }
@@ -117,10 +119,11 @@ function throwIfCancelled(signal: AbortSignal | undefined): void {
 async function prepareRepository(
   workspace: DaytonaWorkspace,
   assignment: Assignment,
-  githubToken: string
+  githubToken: string,
+  approvedRepository: string
 ): Promise<void> {
   const repository = `${assignment.repository.owner}/${assignment.repository.name}`
-  if (repository !== APPROVED_REPOSITORY) {
+  if (repository !== approvedRepository) {
     throw new Error(`Repository ${repository} is outside the worker allowlist`)
   }
 
@@ -145,7 +148,7 @@ async function prepareRepository(
 async function uploadContext(
   workspace: DaytonaWorkspace,
   assignment: Assignment,
-  artifacts: ArtifactStore
+  artifacts: ArtifactStorePort
 ): Promise<string> {
   const contextDirectory = `${CONTEXT_ROOT}/${assignment.runId}`
   const createDirectory = await workspace.executeCommand({
@@ -206,7 +209,7 @@ async function startAgentServer(
 async function collectValidation(
   workspace: DaytonaWorkspace,
   assignment: Assignment,
-  artifacts: ArtifactStore
+  artifacts: ArtifactStorePort
 ): Promise<CommandResult[]> {
   const results: CommandResult[] = []
   for (const validation of assignment.validationCommands) {
@@ -243,7 +246,7 @@ async function collectValidation(
 
 async function collectGitEvidence(
   workspace: DaytonaWorkspace,
-  artifacts: ArtifactStore
+  artifacts: ArtifactStorePort
 ): Promise<{ resultingCommitSha: string; changedFiles: string[]; patchArtifact: string | null }> {
   const status = await workspace.executeCommand({
     commandId: "git-status",
@@ -317,11 +320,14 @@ export async function runWorker(options: WorkerOptions): Promise<WorkerResult> {
   const { assignment, cleanupMode, secrets } = options
   const progress = (message: string): void => options.onProgress?.(message)
   const artifactRoot = options.artifactRoot ?? join(DEFAULT_ARTIFACTS_ROOT, assignment.runId)
-  const artifacts = new ArtifactStore(artifactRoot)
+  const artifacts = options.artifactStore ?? new ArtifactStore(artifactRoot)
   throwIfCancelled(options.signal)
   const client = createDaytonaClient()
-  const sessionApiKey = randomBytes(32).toString("hex")
-  const encryptionKey = randomBytes(32).toString("hex")
+  const { sessionApiKey, encryptionKey } = deriveAgentServerSecrets(
+    options.workspaceSecretKey,
+    assignment.runId,
+    "coder"
+  )
   const repositoryHash = sha256(Buffer.from(`${assignment.repository.owner}/${assignment.repository.name}`)).slice(
     0,
     32
@@ -358,7 +364,7 @@ export async function runWorker(options: WorkerOptions): Promise<WorkerResult> {
   try {
     throwIfCancelled(options.signal)
     progress("Cloning repository and checking out the pinned commit")
-    await prepareRepository(workspace, assignment, secrets.githubToken)
+    await prepareRepository(workspace, assignment, secrets.githubToken, options.approvedRepository)
     throwIfCancelled(options.signal)
     progress("Uploading and verifying the context bundle")
     const contextDirectory = await uploadContext(workspace, assignment, artifacts)

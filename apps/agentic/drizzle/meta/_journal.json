@@ -1,0 +1,62 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784437440000,
+      "tag": "0000_control_plane",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784437920000,
+      "tag": "0001_idempotent_workflow_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784438400000,
+      "tag": "0002_workflow_stages",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1784469600000,
+      "tag": "0003_webhook_inbox",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1784473200000,
+      "tag": "0004_agent_assignments",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1784478600000,
+      "tag": "0005_review_cycles",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1784482200000,
+      "tag": "0006_webhook_reconciliation",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784490000000,
+      "tag": "0007_runtime_selections",
+      "breakpoints": true
+    }
+  ]
+}

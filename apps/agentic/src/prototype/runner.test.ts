@@ -109,6 +109,8 @@ async function artifactRoot(): Promise<string> {
 function runOptions(assignment: Assignment, root: string) {
   return {
     assignment,
+    approvedRepository: `${assignment.repository.owner}/${assignment.repository.name}`,
+    workspaceSecretKey: "workspace-secret-key-for-focused-runner-tests",
     cleanupMode: "stop" as const,
     artifactRoot: root,
     secrets: { githubToken: "github-secret", modelProviderApiKey: "model-secret" }

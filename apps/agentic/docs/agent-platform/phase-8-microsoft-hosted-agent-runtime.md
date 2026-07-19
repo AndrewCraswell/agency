@@ -1,11 +1,24 @@
 # Phase 8: Microsoft-Hosted Agent Runtime Migration
 
-Status: Proposed, gated by capability and parity evidence
+Status: Deferred on 2026-07-19; no approved Microsoft candidate or parity evidence
 
 Depends on: [Phase 7](phase-7-azure-hosted-control-plane.md)
 
 Produces: Selected orchestration or agent-execution responsibilities run on the approved Microsoft-hosted agent
 framework with measured parity, independent rollback, and no change to the Daytona workspace provider.
+
+## Decision record
+
+Decision code: `no-approved-microsoft-candidate-or-parity-evidence`
+
+No exact Microsoft service, API version, support level, region, quota, identity boundary, retention policy, and measured
+parity package has passed the entry assessment. P8-008 therefore resolves to deferral rather than an assumed migration.
+LangGraph.js 1.4.7 and the pinned OpenHands Agent Server remain authoritative.
+
+The versioned runtime selector is implemented and persisted atomically with each workflow. Startup rejects any
+orchestrator or role-runtime provider other than the retained pair, so deployment configuration cannot silently opt into
+an unsupported Microsoft path. Reopen this phase only with an approved candidate and evidence for P8-001 through P8-007.
+This decision is completion of the gate, not Microsoft runtime parity evidence.
 
 ## 1. Objective
 
@@ -63,7 +76,7 @@ workflow remains on that version set unless an explicit state-migration design h
 - [ ] P8-006 Document identity, private networking, regional processing, retention, deletion, encryption, and diagnostic
       data behavior.
 - [ ] P8-007 Measure quota, latency, and cost assumptions against the ten-workflow target.
-- [ ] P8-008 Produce a decision record that selects the first replaceable boundary or defers migration when no boundary
+- [x] P8-008 Produce a decision record that selects the first replaceable boundary or defers migration when no boundary
       passes the entry criteria.
 
 ### 4.2 Stable runtime contracts
@@ -72,9 +85,9 @@ workflow remains on that version set unless an explicit state-migration design h
       cancellation, and trace correlation at the existing ownership boundaries.
 - [ ] P8-010 Keep assignment, role result, review finding, artifact, workspace handle, webhook, and publication schemas
       unchanged unless a separately versioned backward-compatible extension is required.
-- [ ] P8-011 Add a versioned runtime selector that independently chooses orchestration and role-execution providers.
-- [ ] P8-012 Persist every provider and version selection before the first external side effect.
-- [ ] P8-013 Prevent a workflow from switching providers implicitly during retry, restart, deployment, or rollback.
+- [x] P8-011 Add a versioned runtime selector that independently chooses orchestration and role-execution providers.
+- [x] P8-012 Persist every provider and version selection before the first external side effect.
+- [x] P8-013 Prevent a workflow from switching providers implicitly during retry, restart, deployment, or rollback.
 - [ ] P8-014 Run the same contract suites against legacy and Microsoft implementations.
 - [ ] P8-015 Keep Daytona reachable only through the existing `AgentWorkspace` interface from both paths.
 

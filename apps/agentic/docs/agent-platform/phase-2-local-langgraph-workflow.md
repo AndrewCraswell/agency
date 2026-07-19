@@ -1,6 +1,6 @@
 # Phase 2: Local LangGraph Workflow
 
-Status: Proposed
+Status: Implemented in source
 
 Depends on: [Phase 1](phase-1-direct-worker-prototype.md)
 

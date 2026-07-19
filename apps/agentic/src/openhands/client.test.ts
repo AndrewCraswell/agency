@@ -61,6 +61,42 @@ describe("OpenHands profiles", () => {
 })
 
 describe("OpenHandsClient", () => {
+  it("continues an existing conversation through the gateway", async () => {
+    const conversationId = "f94da77f-0dbd-469a-82be-6bc613e4cc47"
+    const gateway = {
+      listModelIds: vi.fn(async () => ["openhands_coder"]),
+      complete: vi.fn(async () => ({
+        conversationId,
+        content: "STATUS: COMPLETED",
+        promptTokens: 11,
+        completionTokens: 7
+      }))
+    }
+    const fetcher = vi.fn(async () => Response.json({ name: "coder", message: "Profile saved" }, { status: 201 }))
+    const client = new OpenHandsClient(clientOptions, { fetcher, gateway })
+    await client.configureProfile("provider-key")
+
+    await expect(
+      client.followUp({
+        conversationId,
+        systemPrompt: "Apply accepted review findings.",
+        userPrompt: "Fix finding_123."
+      })
+    ).resolves.toEqual({
+      conversationId,
+      finalResponse: "STATUS: COMPLETED",
+      usage: { promptTokens: 11, completionTokens: 7 }
+    })
+    expect(gateway.complete).toHaveBeenCalledWith({
+      model: "openhands_coder",
+      messages: [
+        { role: "system", content: "Apply accepted review findings." },
+        { role: "user", content: "Fix finding_123." }
+      ],
+      conversationId
+    })
+  })
+
   it("creates the native profile with reasoning and caching enabled", async () => {
     const requests: Array<{ input: string; init: RequestInit }> = []
     const fetcher = vi.fn<(input: string, init: RequestInit) => Promise<Response>>(async (input, init) => {

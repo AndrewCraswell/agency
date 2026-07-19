@@ -110,6 +110,7 @@ export interface DaytonaSandboxPort {
 }
 
 export interface DaytonaClientPort {
+  get(sandboxIdOrName: string): Promise<DaytonaSandboxPort>
   create(
     params: {
       image: string
@@ -197,6 +198,20 @@ export class DaytonaWorkspace {
       resources: options.resources
     })
 
+    return new DaytonaWorkspace(sandbox, logger)
+  }
+
+  static async attach(
+    client: DaytonaClientPort,
+    workspaceId: string,
+    logger: WorkspaceLogger = silentLogger
+  ): Promise<DaytonaWorkspace> {
+    const sandbox = await client.get(workspaceId)
+    if (sandbox.id !== workspaceId) {
+      throw new Error(`Daytona returned workspace ${sandbox.id} while attaching ${workspaceId}`)
+    }
+    await sandbox.refreshData()
+    logger.debug("daytona.workspace.attached", { workspaceId })
     return new DaytonaWorkspace(sandbox, logger)
   }
 

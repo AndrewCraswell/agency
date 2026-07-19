@@ -22,10 +22,13 @@ describe("LinearWorkItemSchema", () => {
 
   it.each([
     ["unsupported version", { schemaVersion: "2" }],
-    ["missing description", { description: "" }],
     ["completed state", { state: { ...issue.state, type: "completed" } }]
   ])("rejects %s", (_scenario, replacement) => {
     expect(LinearWorkItemSchema.safeParse({ ...issue, ...replacement }).success).toBe(false)
+  })
+
+  it("accepts a task without a description", () => {
+    expect(LinearWorkItemSchema.parse({ ...issue, description: "" }).description).toBe("")
   })
 })
 

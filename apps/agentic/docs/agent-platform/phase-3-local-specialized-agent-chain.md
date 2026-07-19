@@ -1,6 +1,6 @@
 # Phase 3: Local Specialized Agent Chain
 
-Status: Proposed
+Status: Implemented in source
 
 Depends on: [Phase 2](phase-2-local-langgraph-workflow.md)
 
@@ -31,10 +31,11 @@ implementation.
 
 ### 2.1 Linear trial intake
 
-Phase 3 polls Linear explicitly rather than receiving webhooks. `pnpm --filter agentic linear:tasks seed --team FEN`
-idempotently creates three marker-owned trial issues, and
-`pnpm --filter agentic linear:tasks fetch --team FEN --limit 3` returns only active candidates as versioned JSON. The
-`--team` argument accepts a Linear team key or UUID and takes precedence over the optional `LINEAR_TEAM_ID` fallback.
+Phase 3 polls Linear explicitly rather than receiving webhooks. `pnpm --filter agentic linear:tasks fetch --team FEN`
+paginates every non-terminal issue visible to the selected team and returns a versioned dependency graph. The graph
+retains active task states, `blocks` edges, topological levels, and the dependency-ready frontier used by the scrum
+master. The `--team` argument accepts a Linear team key or UUID and takes precedence over `LINEAR_TEAM_ID`; one of them
+is required when the configured Linear account can access multiple teams.
 
 The scrum master runs the fetch command, selects exactly one candidate by clarity, bounded scope, validation cost,
 dependencies, and regression risk, and copies the unchanged issue into the `PlanningResult.sourceWorkItem` engineer

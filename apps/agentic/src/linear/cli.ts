@@ -16,14 +16,11 @@ const command = process.argv[2]
 const client = createLinearClientFromEnvironment(process.env, argument("--team"))
 
 if (command === "fetch") {
-  const limitValue = argument("--limit")
-  const result = await client.listCandidates(limitValue === undefined ? undefined : Number(limitValue))
+  const result = await client.listTaskGraph()
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
 } else if (command === "seed") {
   const result = await client.seedCandidates()
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
 } else {
-  throw new Error(
-    "Usage: pnpm linear:tasks fetch --team <key-or-id> [--limit 1|2|3] | pnpm linear:tasks seed --team <key-or-id>"
-  )
+  throw new Error("Usage: pnpm linear:tasks fetch --team <key-or-id> | pnpm linear:tasks seed --team <key-or-id>")
 }

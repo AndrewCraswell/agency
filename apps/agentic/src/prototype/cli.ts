@@ -27,9 +27,12 @@ if (cleanupValue !== "stop" && cleanupValue !== "archive" && cleanupValue !== "d
 }
 
 const assignment = AssignmentSchema.parse(JSON.parse(await readFile(assignmentPath, "utf8")))
+const approvedRepository = `${requiredEnvironment("AGENT_REPOSITORY_OWNER")}/${requiredEnvironment("AGENT_REPOSITORY_NAME")}`
 const startedAt = Date.now()
 const result = await runWorker({
   assignment,
+  approvedRepository,
+  workspaceSecretKey: requiredEnvironment("WORKSPACE_SECRET_KEY"),
   cleanupMode: cleanupValue satisfies CleanupMode,
   onProgress: (message) => {
     const elapsedSeconds = Math.floor((Date.now() - startedAt) / 1_000)

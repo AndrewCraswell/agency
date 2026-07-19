@@ -1,11 +1,33 @@
 # Phase 7: Azure-Hosted Control Plane
 
-Status: Proposed
+Status: Deployment source complete; live Azure acceptance pending
 
 Depends on: [Phase 6](phase-6-azure-managed-data-and-secrets.md)
 
 Produces: The proven TypeScript webhook API, orchestrator, reconciler, and migration workload run on Azure Container
 Apps and Container Apps Jobs while using the Phase 6 managed services and retaining Daytona as the workspace provider.
+
+## Implementation record
+
+Implemented in source:
+
+- One production image for the single `agentic` package, with API, worker, reconciler, and migration selected by process
+  arguments.
+- ACR, a VNet-integrated Container Apps environment, separate managed identities, API and worker Container Apps,
+  scheduled reconciliation, a manual migration job, health probes, replica limits, and digest-only image references.
+- A safe three-state deployment gate: infrastructure only, migration ready, then runtime application. Runtime processes
+  are disabled by default and require `enableRuntimeProcesses=true` after the migration job succeeds.
+- Pinned LangGraph, OpenHands, and Daytona runtime selections persisted atomically with workflow creation.
+
+Verified locally: the composed Bicep template compiles without warnings and focused process, persistence, runtime
+selection, and control-plane tests pass. No image has been accepted by ACR and no Container Apps revision has been run
+in Azure from this repository state.
+
+Operational constraints are explicit. The polling worker keeps a minimum replica of one; scale-to-zero is not claimed
+without a durable event-driven scaler. Container Apps ingress is app-wide, so the current external API surface is not
+equivalent to route-level webhook-only ingress. Production acceptance requires an approved gateway or authentication
+boundary for non-webhook routes. The unchecked checklist below remains the live acceptance contract. Follow the
+[Azure deployment and acceptance runbook](azure-deployment-runbook.md).
 
 ## 1. Objective
 

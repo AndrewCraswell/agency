@@ -49,6 +49,7 @@ describe("DaytonaWorkspaceProvider", () => {
   it("implements the serializable workspace contract without exposing the SDK sandbox", async () => {
     const sandbox = fakeSandbox()
     const client: DaytonaClientPort = {
+      get: async () => sandbox,
       create: async (params) => {
         sandbox.labels = params.labels
         return sandbox
@@ -85,6 +86,7 @@ describe("DaytonaWorkspaceProvider", () => {
   it("rejects a handle whose labels do not match the attached workspace", async () => {
     const sandbox = fakeSandbox()
     const client: DaytonaClientPort = {
+      get: async () => sandbox,
       create: async (params) => {
         sandbox.labels = params.labels
         return sandbox
@@ -113,6 +115,7 @@ describe("DaytonaWorkspaceProvider", () => {
   it("supports execution, binary transfer, archive, and destroy through serializable handles", async () => {
     const sandbox = fakeSandbox()
     const client: DaytonaClientPort = {
+      get: async () => sandbox,
       create: async (params) => {
         sandbox.labels = params.labels
         return sandbox
@@ -142,12 +145,58 @@ describe("DaytonaWorkspaceProvider", () => {
     const archived = await provider.archive(handle, 1_000)
     expect(archived.lifecycleState).toBe("archived")
     await expect(provider.destroy(archived, 1_000)).resolves.toMatchObject({ lifecycleState: "deleted" })
-    await expect(provider.start(handle, 1_000)).rejects.toThrow("is not attached")
+    await expect(provider.start(handle, 1_000)).rejects.toThrow("Cannot start Daytona workspace from destroyed state")
   })
 
-  it("rejects missing labels, wrong providers, and unattached workspace handles", async () => {
+  it("reattaches a persisted handle in a new provider process", async () => {
+    const sandbox = fakeSandbox()
+    const labels = {
+      runId: "run-1",
+      role: "coder",
+      repositoryHash: "repository-hash",
+      promptVersion: "v1",
+      environment: "test"
+    }
+    sandbox.labels = labels
+    sandbox.state = "stopped"
+    let getCalls = 0
+    const client: DaytonaClientPort = {
+      get: async (workspaceId) => {
+        getCalls += 1
+        expect(workspaceId).toBe("workspace-1")
+        return sandbox
+      },
+      create: async () => {
+        throw new Error("reattachment must not create a workspace")
+      }
+    }
+    const handle = {
+      schemaVersion: "1" as const,
+      provider: "daytona" as const,
+      workspaceId: "workspace-1",
+      lifecycleState: "stopped" as const,
+      labels,
+      createdAt: sandbox.createdAt ?? null,
+      lastActivityAt: sandbox.lastActivityAt ?? null
+    }
+
+    const provider = new DaytonaWorkspaceProvider(client)
+    await expect(provider.start(handle, 1_000)).resolves.toMatchObject({ lifecycleState: "running" })
+    await expect(
+      provider.executeCommand(handle, {
+        commandId: "test",
+        command: "true",
+        workingDirectory: "/workspace",
+        timeoutMs: 1_000
+      })
+    ).resolves.toEqual({ exitCode: 0, output: "ok", timedOut: false })
+    expect(getCalls).toBe(1)
+  })
+
+  it("rejects missing labels, wrong providers, and mismatched reattachments", async () => {
     const sandbox = fakeSandbox()
     const client: DaytonaClientPort = {
+      get: async () => sandbox,
       create: async (params) => {
         sandbox.labels = params.labels
         return sandbox
@@ -176,6 +225,7 @@ describe("DaytonaWorkspaceProvider", () => {
       "Daytona provider cannot operate on azure workspace"
     )
     const detachedProvider = new DaytonaWorkspaceProvider(client)
-    await expect(detachedProvider.start(handle, 1_000)).rejects.toThrow("is not attached")
+    sandbox.labels = { ...handle.labels, runId: "other-run" }
+    await expect(detachedProvider.start(handle, 1_000)).rejects.toThrow("label runId does not match")
   })
 })

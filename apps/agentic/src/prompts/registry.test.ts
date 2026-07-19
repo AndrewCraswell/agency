@@ -6,7 +6,7 @@ describe("resolvePrompt", () => {
   it("resolves the scrum-master Linear intake instructions with a content digest", async () => {
     const prompt = await resolvePrompt("scrum_master")
 
-    expect(prompt.content).toContain("pnpm linear:tasks fetch --team FEN --limit 3")
+    expect(prompt.content).toContain("dependency-ready candidate frontier")
     expect(prompt.content).toContain("select exactly one")
     expect(prompt.content).toContain("sourceWorkItem")
     expect(prompt.sha256).toBe(createHash("sha256").update(prompt.content).digest("hex"))

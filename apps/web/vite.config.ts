@@ -20,6 +20,8 @@ export default defineConfig(({ mode }) => ({
     tsconfigPaths: true
   },
   server: {
+    port: 5173,
+    strictPort: true,
     watch: {
       // Don't let generated output (e.g. Vitest coverage reports) trigger HMR
       // reloads while the dev server and tests run at the same time.

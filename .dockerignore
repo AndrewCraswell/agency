@@ -1,0 +1,11 @@
+.git
+.github
+**/.env
+**/.env.*
+!**/.env.example
+**/artifacts
+**/coverage
+**/dist
+**/node_modules
+**/storybook-static
+**/*.log

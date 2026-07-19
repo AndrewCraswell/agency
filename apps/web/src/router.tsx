@@ -20,8 +20,13 @@ const contactRoute = createRoute({
   path: "/contact",
   component: lazyRouteComponent(() => import("./routes/ContactPage"), "ContactPage")
 })
+const runDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/runs/$runId",
+  component: lazyRouteComponent(() => import("./routes/RunDetailPage"), "RunDetailPage")
+})
 
-const routeTree = rootRoute.addChildren([indexRoute, aboutRoute, contactRoute])
+const routeTree = rootRoute.addChildren([indexRoute, aboutRoute, contactRoute, runDetailRoute])
 
 export const router = createRouter({
   routeTree,

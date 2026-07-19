@@ -92,6 +92,38 @@ function response(body: unknown, status = 200): Response {
 }
 
 describe("GitHubAppPublisher", () => {
+  it("merges only the exact reviewed pull-request head", async () => {
+    const reviewedSha = "d".repeat(40)
+    const mergeSha = "e".repeat(40)
+    const requests: Array<{ url: string; init?: RequestInit }> = []
+    const fetcher = vi.fn(async (request: string | URL | Request, init?: RequestInit) => {
+      const url = request.toString()
+      requests.push({ url, init })
+      if (url.endsWith("/access_tokens")) {
+        return response({ token: "installation-token", expires_at: "2026-07-19T01:00:00.000Z" }, 201)
+      }
+      if (url.endsWith("/pulls/42") && init?.method === "GET") {
+        return response({ number: 42, node_id: "PR_node", draft: false, state: "open", head: { sha: reviewedSha } })
+      }
+      if (url.endsWith("/pulls/42/merge")) {
+        return response({ sha: mergeSha, merged: true, message: "Pull Request successfully merged" })
+      }
+      return response({ message: "Not Found" }, 404)
+    })
+    const publisher = new GitHubAppPublisher({
+      appId: "1",
+      installationId: "2",
+      privateKey: privateKey(),
+      fetcher
+    })
+
+    await expect(publisher.mergePullRequest("AndrewCraswell", "agency", 42, reviewedSha)).resolves.toBe(mergeSha)
+
+    const mergeRequest = requests.find(({ url }) => url.endsWith("/pulls/42/merge"))
+    expect(mergeRequest?.init?.method).toBe("PUT")
+    expect(JSON.parse(String(mergeRequest?.init?.body))).toEqual({ sha: reviewedSha, merge_method: "squash" })
+  })
+
   it("materializes a validated patch and creates one draft pull request", async () => {
     const assignment = await assignmentFixture()
     const input = publicationInput(assignment)

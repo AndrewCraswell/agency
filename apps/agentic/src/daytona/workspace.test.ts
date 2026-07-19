@@ -124,6 +124,10 @@ class FakeClient implements DaytonaClientPort {
     this.sandbox = sandbox
   }
 
+  async get(): Promise<DaytonaSandboxPort> {
+    return this.sandbox
+  }
+
   async create(
     params: Parameters<DaytonaClientPort["create"]>[0],
     options: Parameters<DaytonaClientPort["create"]>[1]
@@ -138,6 +142,14 @@ class FakeClient implements DaytonaClientPort {
 }
 
 describe("DaytonaWorkspace", () => {
+  it("attaches an existing workspace by immutable provider ID", async () => {
+    const client = new FakeClient()
+
+    const workspace = await DaytonaWorkspace.attach(client, "sandbox-1")
+
+    expect(workspace.describe()).toMatchObject({ workspaceId: "sandbox-1", state: "started" })
+  })
+
   it("creates a private persistent workspace with explicit policy", async () => {
     const client = new FakeClient()
 

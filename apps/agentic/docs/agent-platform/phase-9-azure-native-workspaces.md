@@ -1,11 +1,24 @@
 # Phase 9: Azure-Native Workspaces
 
-Status: Optional, gated by feasibility and operating-cost evidence
+Status: Deferred on 2026-07-19; no qualifying Azure workspace entry driver
 
 Depends on: [Phase 8](phase-8-microsoft-hosted-agent-runtime.md)
 
 Produces: An `AgentWorkspace` implementation hosted on Azure, selected only when it matches the required isolation,
 persistence, resume, startup, concurrency, security, and cost behavior without changing orchestration or role contracts.
+
+## Decision record
+
+Decision code: `no-qualifying-azure-workspace-entry-driver`
+
+No measured Daytona cost, residency, network-control, reliability, quota, startup, or strategic-ownership condition
+meets the entry gate below. Daytona SDK 0.196.0 remains the workspace provider and no Azure workspace spike is
+authorized.
+
+The persisted runtime selector records Daytona for each workflow and rejects `WORKSPACE_PROVIDER=azure` at startup. This
+prevents an implicit provider switch while preserving the provider-neutral handle schema for a future evidence-backed
+spike. Reopen this phase only after recording a qualifying driver, owner, thresholds, time box, and experiment budget.
+This formal deferral satisfies the optional provider decision; it is not Azure workspace parity evidence.
 
 ## 1. Objective
 
@@ -76,7 +89,7 @@ attachment, command transport, and lifecycle details stay inside `AzureWorkspace
 - [ ] P9-018 Define failure domains and recovery behavior for compute, volume, registry, network, and regional service
       loss.
 - [ ] P9-019 Estimate ongoing patching, scaling, incident-response, and platform-engineering labor.
-- [ ] P9-020 Select one runtime or formally defer the phase.
+- [x] P9-020 Select one runtime or formally defer the phase.
 - [ ] P9-021 Approve no graph, role contract, or webhook contract changes as part of the provider decision.
 
 ### 5.3 Azure worker image
@@ -183,9 +196,9 @@ attachment, command transport, and lifecycle details stay inside `AzureWorkspace
 
 ### 5.10 Provider rollout and rollback
 
-- [ ] P9-087 Add a typed workspace-provider configuration that defaults to Daytona.
-- [ ] P9-088 Select the provider when a workflow is created and persist it for that workflow's lifetime.
-- [ ] P9-089 Do not switch a live workflow between providers unless a separate migration design has been validated.
+- [x] P9-087 Add a typed workspace-provider configuration that defaults to Daytona.
+- [x] P9-088 Select the provider when a workflow is created and persist it for that workflow's lifetime.
+- [x] P9-089 Do not switch a live workflow between providers unless a separate migration design has been validated.
 - [ ] P9-090 Run Azure workspaces for internal fixture repositories before production repositories.
 - [ ] P9-091 Add a percentage or repository allowlist rollout gate.
 - [ ] P9-092 Compare reliability, latency, completion rate, intervention rate, and cost during the trial.

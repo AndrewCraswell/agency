@@ -19,6 +19,25 @@ const PullRequestSchema = z.object({
   head: z.object({ sha: z.string().regex(/^[0-9a-f]{40}$/u) })
 })
 const PullRequestListSchema = z.array(PullRequestSchema)
+const PullRequestDetailsSchema = z.object({
+  number: z.number().int().positive(),
+  node_id: z.string().min(1),
+  draft: z.boolean(),
+  state: z.enum(["open", "closed"]),
+  head: z.object({ sha: z.string().regex(/^[0-9a-f]{40}$/u) })
+})
+const MergeResultSchema = z.object({
+  sha: z.string().regex(/^[0-9a-f]{40}$/u),
+  merged: z.boolean(),
+  message: z.string()
+})
+const IssueCommentSchema = z.object({ id: z.number().int().positive(), html_url: z.url() })
+const MarkReadyResponseSchema = z.object({
+  data: z.object({
+    markPullRequestReadyForReview: z.object({ pullRequest: z.object({ isDraft: z.literal(false) }) })
+  }),
+  errors: z.array(z.object({ message: z.string() })).optional()
+})
 
 type Fetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>
 
@@ -271,6 +290,116 @@ export class GitHubAppPublisher implements DraftPullRequestPublisher {
     return result.token
   }
 
+  async resolveDefaultBranchSha(ownerInput: string, repositoryInput: string): Promise<string> {
+    const owner = RepositorySegmentSchema.parse(ownerInput)
+    const repository = RepositorySegmentSchema.parse(repositoryInput)
+    const token = await this.installationToken()
+    const repositoryDetails = await this.#request(
+      `/repos/${owner}/${repository}`,
+      { method: "GET" },
+      RepositoryDetailsSchema,
+      token
+    )
+    const commitSha = await this.#reference(owner, repository, repositoryDetails.default_branch, token)
+    if (commitSha === null) {
+      throw new Error(`GitHub default branch ${repositoryDetails.default_branch} has no reference`)
+    }
+    return commitSha
+  }
+
+  async recordReviewComment(
+    ownerInput: string,
+    repositoryInput: string,
+    pullRequestNumber: number,
+    body: string
+  ): Promise<string> {
+    const owner = RepositorySegmentSchema.parse(ownerInput)
+    const repository = RepositorySegmentSchema.parse(repositoryInput)
+    const token = await this.installationToken()
+    const comment = await this.#request(
+      `/repos/${owner}/${repository}/issues/${z.number().int().positive().parse(pullRequestNumber)}/comments`,
+      { method: "POST", body: JSON.stringify({ body: z.string().trim().min(1).max(65_536).parse(body) }) },
+      IssueCommentSchema,
+      token
+    )
+    return comment.html_url
+  }
+
+  async mergePullRequest(
+    ownerInput: string,
+    repositoryInput: string,
+    pullRequestNumberInput: number,
+    expectedHeadShaInput: string
+  ): Promise<string> {
+    const owner = RepositorySegmentSchema.parse(ownerInput)
+    const repository = RepositorySegmentSchema.parse(repositoryInput)
+    const pullRequestNumber = z.number().int().positive().parse(pullRequestNumberInput)
+    const expectedHeadSha = z
+      .string()
+      .regex(/^[0-9a-f]{40}$/u)
+      .parse(expectedHeadShaInput)
+    const token = await this.installationToken()
+    const pullRequest = await this.#request(
+      `/repos/${owner}/${repository}/pulls/${pullRequestNumber}`,
+      { method: "GET" },
+      PullRequestDetailsSchema,
+      token
+    )
+    if (pullRequest.state !== "open" || pullRequest.head.sha !== expectedHeadSha) {
+      throw new Error("Pull request is not open at the reviewed candidate commit")
+    }
+    if (pullRequest.draft) {
+      await this.#markReadyForReview(pullRequest.node_id, token)
+    }
+    const result = await this.#request(
+      `/repos/${owner}/${repository}/pulls/${pullRequestNumber}/merge`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ sha: expectedHeadSha, merge_method: "squash" })
+      },
+      MergeResultSchema,
+      token
+    )
+    if (!result.merged) {
+      throw new Error(`GitHub did not merge the pull request: ${result.message}`)
+    }
+    return result.sha
+  }
+
+  async abandonPullRequest(
+    ownerInput: string,
+    repositoryInput: string,
+    pullRequestNumberInput: number,
+    expectedHeadShaInput: string
+  ): Promise<void> {
+    const owner = RepositorySegmentSchema.parse(ownerInput)
+    const repository = RepositorySegmentSchema.parse(repositoryInput)
+    const pullRequestNumber = z.number().int().positive().parse(pullRequestNumberInput)
+    const expectedHeadSha = z
+      .string()
+      .regex(/^[0-9a-f]{40}$/u)
+      .parse(expectedHeadShaInput)
+    const token = await this.installationToken()
+    const pullRequest = await this.#request(
+      `/repos/${owner}/${repository}/pulls/${pullRequestNumber}`,
+      { method: "GET" },
+      PullRequestDetailsSchema,
+      token
+    )
+    if (pullRequest.head.sha !== expectedHeadSha) {
+      throw new Error("Pull request head changed after the final review")
+    }
+    if (pullRequest.state === "closed") {
+      return
+    }
+    await this.#request(
+      `/repos/${owner}/${repository}/pulls/${pullRequestNumber}`,
+      { method: "PATCH", body: JSON.stringify({ state: "closed" }) },
+      PullRequestDetailsSchema,
+      token
+    )
+  }
+
   async #reference(owner: string, repository: string, branch: string, token: string): Promise<string | null> {
     const response = await this.#fetcher(
       `${this.#apiBaseUrl}/repos/${owner}/${repository}/git/ref/heads/${encodeURIComponent(branch)}`,
@@ -304,6 +433,27 @@ export class GitHubAppPublisher implements DraftPullRequestPublisher {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${token}`,
       "X-GitHub-Api-Version": "2022-11-28"
+    }
+  }
+
+  async #markReadyForReview(pullRequestNodeId: string, token: string): Promise<void> {
+    const result = await this.#request(
+      "/graphql",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          query:
+            "mutation MarkReady($pullRequestId: ID!) { markPullRequestReadyForReview(input: { pullRequestId: $pullRequestId }) { pullRequest { isDraft } } }",
+          variables: { pullRequestId: pullRequestNodeId }
+        })
+      },
+      MarkReadyResponseSchema,
+      token
+    )
+    if (result.errors !== undefined && result.errors.length > 0) {
+      throw new Error(
+        `GitHub could not mark the pull request ready: ${result.errors.map((error) => error.message).join("; ")}`
+      )
     }
   }
 

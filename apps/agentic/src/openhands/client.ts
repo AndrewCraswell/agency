@@ -58,6 +58,13 @@ export interface OpenHandsChatResult {
   }
 }
 
+export interface OpenHandsFollowUpRequest {
+  conversationId: string
+  systemPrompt: string
+  userPrompt: string
+  signal?: AbortSignal
+}
+
 interface GatewayCompletionRequest {
   model: string
   messages: Array<{ role: "system" | "user"; content: string }>
@@ -304,6 +311,44 @@ export class OpenHandsClient {
       usage: {
         promptTokens: null,
         completionTokens: null
+      }
+    }
+  }
+
+  async followUp(request: OpenHandsFollowUpRequest): Promise<OpenHandsChatResult> {
+    if (this.#providerApiKey === null) {
+      throw new OpenHandsError("model", "OpenHands model profile must be configured before follow-up")
+    }
+    const conversationId = ConversationIdSchema.parse(request.conversationId)
+    if (isAborted(request.signal)) {
+      throw new OpenHandsError("cancelled", "OpenHands conversation was cancelled")
+    }
+
+    let result: GatewayCompletionResult
+    try {
+      result = await this.#gateway.complete({
+        model: this.gatewayModel,
+        messages: [
+          { role: "system", content: request.systemPrompt },
+          { role: "user", content: request.userPrompt }
+        ],
+        conversationId
+      })
+    } catch (error) {
+      if (isAborted(request.signal)) {
+        throw new OpenHandsError("cancelled", "OpenHands conversation was cancelled", { cause: error })
+      }
+      throw this.#classifyGatewayError(error, "continuing the OpenHands conversation")
+    }
+    if (result.conversationId !== conversationId || result.content === null || result.content.length === 0) {
+      throw new OpenHandsError("malformed_response", "OpenHands returned an incomplete follow-up response")
+    }
+    return {
+      conversationId,
+      finalResponse: result.content,
+      usage: {
+        promptTokens: result.promptTokens,
+        completionTokens: result.completionTokens
       }
     }
   }

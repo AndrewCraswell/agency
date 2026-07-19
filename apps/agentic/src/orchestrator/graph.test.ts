@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 import { AssignmentSchema, type Assignment } from "../contracts/assignment"
 import { WorkerResultSchema, type WorkerResult } from "../contracts/results"
 import type { DraftPullRequestPublisher } from "../github/publisher"
-import { createWorkflowGraph } from "./graph"
+import { createWorkflowGraph, recordCoderWorkspaceLease } from "./graph"
 
 const fixtureUrl = new URL("../../tests/fixtures/worker-repair-assignment.json", import.meta.url)
 const timestamp = "2026-07-19T00:00:00.000Z"
@@ -87,6 +87,29 @@ function workerResult(
 }
 
 describe("workflow graph", () => {
+  it("persists the retained coder workspace and conversation", async () => {
+    const assignment = await assignmentFixture()
+    const result = workerResult(assignment)
+    const createWorkspaceLease = vi.fn(async () => {
+      throw new Error("Return value is not used")
+    })
+
+    await expect(recordCoderWorkspaceLease({ createWorkspaceLease }, assignment, result)).rejects.toThrow(
+      "Return value is not used"
+    )
+    expect(createWorkspaceLease).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: "workspace-1",
+        runId: assignment.runId,
+        role: "coder",
+        roleAttempt: 1,
+        lifecycleState: "stopped",
+        conversationId: "conversation-1",
+        profileName: "coder"
+      })
+    )
+  })
+
   it("routes a publishable worker result through publication and cleanup", async () => {
     const assignment = await assignmentFixture()
     const runWorker = vi.fn(async () => workerResult(assignment))

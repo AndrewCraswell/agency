@@ -1,4 +1,5 @@
 import { Annotation, END, MemorySaver, START, StateGraph } from "@langchain/langgraph"
+import type { BaseCheckpointSaver } from "@langchain/langgraph-checkpoint"
 import { z } from "zod"
 import { LinearCandidateListSchema, LinearWorkItemSchema } from "../contracts/linear"
 import { PlanningResultSchema, PromptVersionSchema } from "../contracts/specialized"
@@ -63,7 +64,13 @@ export type WorkItemIntakeDependencies = {
   resolveBaseCommitSha(repository: WorkItemIntakeRequest["repository"]): Promise<string>
   runScrumMaster(input: ScrumMasterInvocationInput): Promise<unknown>
   loadScrumMasterPrompt?: () => Promise<unknown>
+  checkpointer?: BaseCheckpointSaver
+  onTrace?: (runId: string, reference: import("../observability/tracing").TraceReference) => void | Promise<void>
   now?: () => Date
+}
+
+function workItemIntakeThreadId(runId: string): string {
+  return `work-item-intake:${runId}`
 }
 
 function errorMessage(error: unknown): string {
@@ -174,7 +181,8 @@ export function createWorkItemIntakeGraph(dependencies: WorkItemIntakeDependenci
               promptDigest: prompt.sha256,
               linearTeam: candidates.team.key
             },
-            tags: ["work-item-intake", "scrum-master", "linear-triage"]
+            tags: ["work-item-intake", "scrum-master", "linear-triage"],
+            onTrace: (reference) => dependencies.onTrace?.(state.runId, reference)
           },
           () =>
             dependencies.runScrumMaster({
@@ -272,7 +280,7 @@ export function createWorkItemIntakeGraph(dependencies: WorkItemIntakeDependenci
     }
   }
 
-  const checkpointer = new MemorySaver()
+  const checkpointer = dependencies.checkpointer ?? new MemorySaver()
   const graph = new StateGraph(WorkItemIntakeAnnotation)
     .addNode("fetchLinearCandidates", fetchLinearCandidates)
     .addNode("resolveBaseCommit", resolveBaseCommit)
@@ -291,7 +299,7 @@ export function createWorkItemIntakeGraph(dependencies: WorkItemIntakeDependenci
     async invoke(request: WorkItemIntakeRequest): Promise<WorkItemIntakeState> {
       const initialState = createInitialWorkItemIntakeState(request)
       const config = {
-        configurable: { thread_id: request.runId },
+        configurable: { thread_id: workItemIntakeThreadId(request.runId) },
         metadata: {
           runId: request.runId,
           repository: `${request.repository.owner}/${request.repository.name}`,
@@ -319,7 +327,7 @@ export function createWorkItemIntakeGraph(dependencies: WorkItemIntakeDependenci
       }
     },
     async inspect(runId: string): Promise<WorkItemIntakeState | null> {
-      const snapshot = await graph.getState({ configurable: { thread_id: runId } })
+      const snapshot = await graph.getState({ configurable: { thread_id: workItemIntakeThreadId(runId) } })
       const state = WorkItemIntakeStateSchema.safeParse(snapshot.values)
       return state.success ? state.data : null
     },

@@ -25,7 +25,6 @@
     "@fluentui/react-components": "^9.74.3",
     "@fluentui/react-icons": "^2.0.331",
     "@mantine/hooks": "^9.4.1",
-    "@repo/ui": "workspace:*",
     "@t3-oss/env-core": "^0.13.11",
     "@tanstack/react-form": "^1.33.0",
     "@tanstack/react-router": "1.169.2",

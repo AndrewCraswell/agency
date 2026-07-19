@@ -26,7 +26,7 @@ const command = process.argv[2]
 if (command === "run") {
   const assignmentPath = requiredArgument("--assignment")
   const assignment = AssignmentSchema.parse(JSON.parse(await readFile(assignmentPath, "utf8")))
-  const workflow = createLiveWorkflow()
+  const workflow = await createLiveWorkflow()
   const artifactRoot = workflowArtifactRoot(assignment.runId)
   const cancellationWatcher = setInterval(() => {
     void hasWorkflowCancellationRequest(artifactRoot).then((isCancellationRequested) => {
@@ -41,7 +41,11 @@ if (command === "run") {
     state = await workflow.invoke(assignment)
   } finally {
     clearInterval(cancellationWatcher)
-    await clearWorkflowCancellationRequest(artifactRoot)
+    try {
+      await clearWorkflowCancellationRequest(artifactRoot)
+    } finally {
+      await workflow.close()
+    }
   }
   await writeWorkflowState(artifactRoot, state)
   process.stdout.write(`${JSON.stringify(state, null, 2)}\n`)
