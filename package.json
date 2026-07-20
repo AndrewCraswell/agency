@@ -8,6 +8,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
+    "auth": "artifacts-npm-credprovider -c .npmrc",
     "verify": "run-s check test:coverage",
     "check": "run-p check:*",
     "check:change": "beachball check",

@@ -130,12 +130,12 @@ describe("App", () => {
     renderApp()
 
     await user.click(await screen.findByRole("button", { name: "Assign agent" }))
-    const dialog = screen.getByRole("dialog")
+    const dialog = await screen.findByRole("dialog", { hidden: true })
     expect(dialog).toHaveTextContent("The selected engineer will receive this task after scrum-master planning.")
-    await user.click(within(dialog).getByRole("button", { name: "Assign agent" }))
+    await user.click(within(dialog).getByRole("button", { name: "Assign agent", hidden: true }))
 
     expect(await screen.findByText("Engineer")).toBeInTheDocument()
-    expect(screen.getByText("FEN-42 · AndrewCraswell/agency")).toBeInTheDocument()
+    expect(screen.getByText("FEN-42 in AndrewCraswell/agency")).toBeInTheDocument()
     expect(assignment.spy).toHaveBeenCalledWith({ workItemId: taskId, agentId: "engineer" })
   })
 })

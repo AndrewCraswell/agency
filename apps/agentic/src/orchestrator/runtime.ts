@@ -4,6 +4,7 @@ import { z } from "zod"
 import { createArtifactStoreFactory } from "../azure/artifactStore"
 import { resolveRuntimeSecrets } from "../azure/secretProvider"
 import { GitHubAppPublisher } from "../github/githubAppPublisher"
+import { createNangoGitHubTokenProvider } from "../github/nangoTokenProvider"
 import { createControlPlaneRuntime } from "../persistence/controlPlaneRuntime"
 import { runWorker } from "../prototype/runner"
 import { createCheckpointRuntime } from "./checkpointRuntime"
@@ -12,9 +13,9 @@ import { createWorkflowGraph } from "./graph"
 const WorkflowEnvironmentSchema = z
   .object({
     DAYTONA_API_KEY: z.string().min(1),
-    GITHUB_APP_ID: z.string().min(1),
-    GITHUB_APP_INSTALLATION_ID: z.string().min(1),
-    GITHUB_APP_PRIVATE_KEY: z.string().min(1),
+    NANGO_API_KEY: z.string().min(1),
+    NANGO_GITHUB_INTEGRATION_ID: z.string().trim().min(1).default("github-app"),
+    NANGO_GITHUB_CONNECTION_ID: z.string().trim().min(1).optional(),
     OPENROUTER_API_KEY: z.string().min(1),
     AGENT_REPOSITORY_OWNER: z.string().trim().min(1),
     AGENT_REPOSITORY_NAME: z.string().trim().min(1),
@@ -47,9 +48,11 @@ export async function createLiveWorkflow(environmentInput: NodeJS.ProcessEnv = p
   const artifactStoreFactory = createArtifactStoreFactory(runtimeEnvironment)
   await artifactStoreFactory.assertReady()
   const publisher = new GitHubAppPublisher({
-    appId: environment.GITHUB_APP_ID,
-    installationId: environment.GITHUB_APP_INSTALLATION_ID,
-    privateKey: environment.GITHUB_APP_PRIVATE_KEY.replaceAll("\\n", "\n")
+    tokenProvider: createNangoGitHubTokenProvider({
+      apiKey: environment.NANGO_API_KEY,
+      integrationId: environment.NANGO_GITHUB_INTEGRATION_ID,
+      connectionId: environment.NANGO_GITHUB_CONNECTION_ID
+    })
   })
   const checkpointRuntime = await createCheckpointRuntime(runtimeEnvironment)
   const controlPlaneRuntime =
@@ -63,7 +66,7 @@ export async function createLiveWorkflow(environmentInput: NodeJS.ProcessEnv = p
       const startedAt = Date.now()
       return runWorker({
         assignment,
-        approvedRepository: `${environment.AGENT_REPOSITORY_OWNER}/${environment.AGENT_REPOSITORY_NAME}`,
+        approvedRepository: `${assignment.repository.owner}/${assignment.repository.name}`,
         workspaceSecretKey: environment.WORKSPACE_SECRET_KEY,
         artifactRoot,
         artifactStore: artifactStoreFactory.forRun(assignment.runId, artifactRoot),

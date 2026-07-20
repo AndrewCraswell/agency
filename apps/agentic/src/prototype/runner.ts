@@ -33,6 +33,7 @@ export interface WorkerOptions {
   secrets: WorkerSecrets
   artifactRoot?: string
   artifactStore?: ArtifactStorePort
+  systemPrompt?: string
   signal?: AbortSignal
   onProgress?: (message: string) => void
 }
@@ -381,7 +382,8 @@ export async function runWorker(options: WorkerOptions): Promise<WorkerResult> {
     progress("Configuring and verifying the model profile")
     await openHands.configureProfile(secrets.modelProviderApiKey)
     await openHands.verifyProfile()
-    const systemPrompt = await readFile(new URL("../../prompts/coder/v1.md", import.meta.url), "utf8")
+    const systemPrompt =
+      options.systemPrompt ?? (await readFile(new URL("../../prompts/coder/v1.md", import.meta.url), "utf8"))
     progress("Running the OpenHands coder")
     const completion = await openHands.chat({
       systemPrompt,

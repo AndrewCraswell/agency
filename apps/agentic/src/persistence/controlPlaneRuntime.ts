@@ -2,9 +2,12 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import { runtimeSelectionFromEnvironment } from "../contracts/runtimeSelection"
 import { PostgresControlPlaneStore } from "./controlPlaneStore"
+import { PostgresIntegrationConnectionStore } from "./integrationStore"
 import { postgresRuntimeConfiguration } from "./postgres"
 import * as schema from "./schema"
 import { PostgresWebhookDeliveryStore } from "./webhookStore"
+import { PostgresWorkflowJournalStore } from "./workflowJournalStore"
+import { PostgresWorkflowStore } from "./workflowStore"
 
 export async function createControlPlaneRuntime(environmentInput: NodeJS.ProcessEnv = process.env) {
   const runtimeSelection = runtimeSelectionFromEnvironment(environmentInput)
@@ -20,7 +23,10 @@ export async function createControlPlaneRuntime(environmentInput: NodeJS.Process
   return {
     provider: configuration.provider,
     store: new PostgresControlPlaneStore(database, { runtimeSelection }),
+    integrationStore: new PostgresIntegrationConnectionStore(database),
     webhookStore: new PostgresWebhookDeliveryStore(database),
+    workflowJournalStore: new PostgresWorkflowJournalStore(database),
+    workflowStore: new PostgresWorkflowStore(database),
     async close(): Promise<void> {
       await pool.end()
     }

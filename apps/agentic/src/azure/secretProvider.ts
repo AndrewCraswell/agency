@@ -79,9 +79,8 @@ const runtimeSecretNames = {
   POSTGRES_API_URL: "postgres-api-url",
   DAYTONA_API_KEY: "daytona-api-key",
   LINEAR_API_KEY: "linear-api-key",
-  GITHUB_APP_ID: "github-app-id",
-  GITHUB_APP_INSTALLATION_ID: "github-app-installation-id",
-  GITHUB_APP_PRIVATE_KEY: "github-app-private-key",
+  NANGO_API_KEY: "nango-api-key",
+  NANGO_WEBHOOK_SIGNING_KEY: "nango-webhook-signing-key",
   GITHUB_WEBHOOK_SECRET: "github-webhook-secret",
   OPENROUTER_API_KEY: "openrouter-api-key",
   WORKSPACE_SECRET_KEY: "workspace-secret-key"
@@ -91,9 +90,8 @@ const allRuntimeSecretNames: readonly RuntimeSecretName[] = [
   "POSTGRES_API_URL",
   "DAYTONA_API_KEY",
   "LINEAR_API_KEY",
-  "GITHUB_APP_ID",
-  "GITHUB_APP_INSTALLATION_ID",
-  "GITHUB_APP_PRIVATE_KEY",
+  "NANGO_API_KEY",
+  "NANGO_WEBHOOK_SIGNING_KEY",
   "GITHUB_WEBHOOK_SECRET",
   "OPENROUTER_API_KEY",
   "WORKSPACE_SECRET_KEY"

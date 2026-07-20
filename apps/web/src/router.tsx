@@ -20,13 +20,36 @@ const contactRoute = createRoute({
   path: "/contact",
   component: lazyRouteComponent(() => import("./routes/ContactPage"), "ContactPage")
 })
+const settingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings",
+  component: lazyRouteComponent(() => import("./routes/SettingsPage"), "SettingsPage")
+})
+const workflowsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/workflows",
+  component: lazyRouteComponent(() => import("./routes/WorkflowsPage"), "WorkflowsPage")
+})
+const workflowEditorRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/workflows/$workflowId",
+  component: lazyRouteComponent(() => import("./routes/WorkflowEditorPage"), "WorkflowEditorPage")
+})
 const runDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/runs/$runId",
   component: lazyRouteComponent(() => import("./routes/RunDetailPage"), "RunDetailPage")
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, aboutRoute, contactRoute, runDetailRoute])
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  aboutRoute,
+  contactRoute,
+  settingsRoute,
+  workflowsRoute,
+  workflowEditorRoute,
+  runDetailRoute
+])
 
 export const router = createRouter({
   routeTree,

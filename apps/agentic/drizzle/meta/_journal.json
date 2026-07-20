@@ -57,6 +57,34 @@
       "when": 1784490000000,
       "tag": "0007_runtime_selections",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784493600000,
+      "tag": "0008_integration_connections",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784497200000,
+      "tag": "0009_workflow_definitions",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784500800000,
+      "tag": "0010_workflow_execution_journal",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1784519693080,
+      "tag": "0011_early_sabretooth",
+      "breakpoints": true
     }
   ]
 }

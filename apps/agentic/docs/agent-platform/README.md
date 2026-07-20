@@ -6,6 +6,8 @@ Last reviewed: 2026-07-19
 
 > **Current direction:** Use the
 > [integration-driven workflow platform implementation plan](integration-workflow-platform-plan.md) for future work.
+> Use the [full-featured workflow editor plan](workflow-editor-plan.md) for the authoritative workflow resource,
+> authoring UX, typed handoff, repository-agent, AI model node, artifact, and variable design.
 > Agency owns provider adapters, PostgreSQL workflow definitions, and LangGraph execution. Nango owns connection
 > authentication and credential lifecycle only. The phase documents below describe the experimental implementation
 > retained at the pause-point; they are not approval to deploy Azure resources or continue the fixed-role architecture.

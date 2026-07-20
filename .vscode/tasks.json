@@ -1,0 +1,26 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "agentic-focused-workflowJournalStore-test",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["--filter", "agentic", "test", "--", "src/persistence/workflowJournalStore.test.ts"],
+      "isBackground": false
+    },
+    {
+      "label": "agentic-check-types",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["--filter", "agentic", "check:types"],
+      "isBackground": false
+    },
+    {
+      "label": "agentic-lint",
+      "type": "shell",
+      "command": "pnpm",
+      "args": ["--filter", "agentic", "lint"],
+      "isBackground": false
+    }
+  ]
+}

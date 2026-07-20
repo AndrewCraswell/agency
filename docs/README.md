@@ -12,6 +12,7 @@ as the change they describe.
 | [react.md](react.md)             | React component conventions, Fluent griffel styling, and the state/error/URL/routing/form libraries.                                                        |
 | [typescript.md](typescript.md)   | TypeScript/type conventions **and** the type-helper libraries (`ts-extras`, `ts-pattern`, `tiny-invariant`, `zod`) — read before writing a new type helper. |
 | [hooks.md](hooks.md)             | React hook conventions **and** the full `@mantine/hooks` catalog — read before writing a new hook.                                                          |
+| [ux-design-review.md](ux-design-review.md) | Multi-persona UX review of the product interface, information architecture, workflow editor, and Fluent UI usage.                               |
 
 ## Principles for these docs
 

@@ -11,7 +11,7 @@ import { z } from "zod"
 export const env = createEnv({
   clientPrefix: "VITE_",
   client: {
-    VITE_API_BASE_URL: z.string().url().default("http://localhost:3000"),
+    VITE_API_BASE_URL: z.string().url().default("http://127.0.0.1:3000"),
     VITE_LANGSMITH_BASE_URL: z.string().url().default("https://smith.langchain.com"),
     VITE_LANGSMITH_WORKSPACE_ID: z.string().trim().min(1).default("38b74c4b-cae0-450b-bd68-dcaac6fb58a7"),
     VITE_LANGSMITH_PROJECT_ID: z.string().trim().min(1).default("bdc8ae06-8403-46e5-be23-16ef49736b2f")

@@ -12,5 +12,9 @@ Quick reference:
 - **Git hooks:** lefthook (pre-commit: `oxlint --fix` + `oxfmt`; pre-push: `check:types`). Don't use `--no-verify`.
 - **Reuse first:** prefer `@mantine/hooks`, `ts-extras`, `ts-pattern`, and `tiny-invariant` over hand-rolled hooks /
   type helpers; narrow with type guards, not `as`.
+- **Product copy:** validate every customer-facing string with Fluent Agent MCP when available. Never use `·`, `•`, or
+  another dot glyph as a visual separator.
+- **UX acceptance:** verify every UX change through the integrated browser before calling it complete. Component tests
+  alone are not sufficient.
 
 Verify loop (must be clean before finishing): run **`pnpm verify`** (format, lint, types, knip, tests with coverage).

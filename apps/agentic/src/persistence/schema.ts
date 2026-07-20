@@ -4,6 +4,7 @@ import {
   bigserial,
   char,
   check,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -15,8 +16,96 @@ import {
   uuid
 } from "drizzle-orm/pg-core"
 import type { RuntimeSelection } from "../contracts/runtimeSelection"
+import type { WorkflowContent } from "../workflows/contracts"
+import type { ActivationScopeSegment, ExecutionPackageContent } from "../workflows/executionContracts"
 
 export const agenticSchema = pgSchema("agentic")
+
+export const integrationConnections = agenticSchema.table(
+  "integration_connections",
+  {
+    connectionId: uuid("connection_id").primaryKey().defaultRandom(),
+    provider: text("provider").notNull(),
+    providerConfigKey: text("provider_config_key").notNull(),
+    nangoConnectionId: text("nango_connection_id").notNull(),
+    displayName: text("display_name"),
+    status: text("status").notNull(),
+    errorCode: text("error_code"),
+    lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
+    disconnectedAt: timestamp("disconnected_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("integration_connections_provider_check", sql`${table.provider} in ('github', 'linear')`),
+    check("integration_connections_status_check", sql`${table.status} in ('connected', 'degraded', 'disconnected')`),
+    uniqueIndex("integration_connections_nango_uidx").on(table.providerConfigKey, table.nangoConnectionId),
+    index("integration_connections_provider_idx").on(table.provider, table.status)
+  ]
+)
+
+export const integrationResources = agenticSchema.table(
+  "integration_resources",
+  {
+    connectionId: uuid("connection_id")
+      .notNull()
+      .references(() => integrationConnections.connectionId, { onDelete: "cascade" }),
+    resourceType: text("resource_type").notNull(),
+    externalId: text("external_id").notNull(),
+    name: text("name").notNull(),
+    stale: integer("stale").notNull().default(0),
+    lastDiscoveredAt: timestamp("last_discovered_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.connectionId, table.resourceType, table.externalId] }),
+    check("integration_resources_type_check", sql`${table.resourceType} in ('repository', 'team')`),
+    check("integration_resources_stale_check", sql`${table.stale} in (0, 1)`),
+    index("integration_resources_connection_idx").on(table.connectionId, table.resourceType)
+  ]
+)
+
+export const workflowDefinitions = agenticSchema.table(
+  "workflow_definitions",
+  {
+    workflowId: uuid("workflow_id").primaryKey().defaultRandom(),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    status: text("status").notNull().default("draft"),
+    draftRevision: integer("draft_revision").notNull().default(1),
+    draft: jsonb("draft").$type<WorkflowContent>().notNull(),
+    publishedVersion: integer("published_version"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("workflow_definitions_status_check", sql`${table.status} in ('draft', 'published', 'archived')`),
+    check("workflow_definitions_revision_check", sql`${table.draftRevision} > 0`),
+    check(
+      "workflow_definitions_published_version_check",
+      sql`${table.publishedVersion} is null or ${table.publishedVersion} > 0`
+    ),
+    index("workflow_definitions_status_idx").on(table.status, table.updatedAt)
+  ]
+)
+
+export const workflowVersions = agenticSchema.table(
+  "workflow_versions",
+  {
+    workflowId: uuid("workflow_id")
+      .notNull()
+      .references(() => workflowDefinitions.workflowId, { onDelete: "restrict" }),
+    version: integer("version").notNull(),
+    content: jsonb("content").$type<WorkflowContent>().notNull(),
+    contentDigest: char("content_digest", { length: 64 }).notNull(),
+    publishedAt: timestamp("published_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.workflowId, table.version] }),
+    check("workflow_versions_version_check", sql`${table.version} > 0`),
+    check("workflow_versions_digest_check", sql`${table.contentDigest} ~ '^[0-9a-f]{64}$'`)
+  ]
+)
 
 export const workflowRuns = agenticSchema.table(
   "workflow_runs",
@@ -67,6 +156,342 @@ export const runtimeSelections = agenticSchema.table("runtime_selections", {
   selection: jsonb("selection").$type<RuntimeSelection>().notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
 })
+
+export const workflowRunBindings = agenticSchema.table(
+  "workflow_run_bindings",
+  {
+    runId: uuid("run_id")
+      .primaryKey()
+      .references(() => workflowRuns.runId, { onDelete: "restrict" }),
+    workflowId: uuid("workflow_id")
+      .notNull()
+      .references(() => workflowDefinitions.workflowId, { onDelete: "restrict" }),
+    version: integer("version").notNull(),
+    triggerType: text("trigger_type").notNull(),
+    triggerKey: text("trigger_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("workflow_run_bindings_version_check", sql`${table.version} > 0`),
+    check("workflow_run_bindings_trigger_check", sql`${table.triggerType} in ('manual', 'webhook', 'schedule')`),
+    index("workflow_run_bindings_workflow_idx").on(table.workflowId, table.version, table.createdAt)
+  ]
+)
+
+export const workflowExecutionPackages = agenticSchema.table(
+  "workflow_execution_packages",
+  {
+    packageDigest: char("package_digest", { length: 64 }).primaryKey(),
+    workflowId: uuid("workflow_id")
+      .notNull()
+      .references(() => workflowDefinitions.workflowId, { onDelete: "restrict" }),
+    workflowVersion: integer("workflow_version").notNull(),
+    contractVersion: text("contract_version").notNull(),
+    compilerVersion: text("compiler_version").notNull(),
+    compiledPlanDigest: char("compiled_plan_digest", { length: 64 }).notNull(),
+    content: jsonb("content").$type<ExecutionPackageContent>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.workflowId, table.workflowVersion],
+      foreignColumns: [workflowVersions.workflowId, workflowVersions.version],
+      name: "workflow_execution_packages_version_fk"
+    }).onDelete("restrict"),
+    check("workflow_execution_packages_digest_check", sql`${table.packageDigest} ~ '^[0-9a-f]{64}$'`),
+    check("workflow_execution_packages_plan_digest_check", sql`${table.compiledPlanDigest} ~ '^[0-9a-f]{64}$'`),
+    check("workflow_execution_packages_version_check", sql`${table.workflowVersion} > 0`),
+    uniqueIndex("workflow_execution_packages_version_uidx").on(table.workflowId, table.workflowVersion)
+  ]
+)
+
+export const workflowJournalRuns = agenticSchema.table(
+  "workflow_journal_runs",
+  {
+    runId: uuid("run_id").primaryKey().defaultRandom(),
+    packageDigest: char("package_digest", { length: 64 })
+      .notNull()
+      .references(() => workflowExecutionPackages.packageDigest, { onDelete: "restrict" }),
+    requestDigest: char("request_digest", { length: 64 }).notNull(),
+    triggerIdentity: text("trigger_identity").notNull(),
+    sealedManifest: jsonb("sealed_manifest").$type<Record<string, unknown>>().notNull(),
+    status: text("status").notNull().default("preparing"),
+    cancellationGeneration: integer("cancellation_generation").notNull().default(0),
+    latestSequence: bigint("latest_sequence", { mode: "number" }).notNull().default(0),
+    schedulerCursor: text("scheduler_cursor"),
+    pendingCheckpointCursor: text("pending_checkpoint_cursor"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    terminalAt: timestamp("terminal_at", { withTimezone: true })
+  },
+  (table) => [
+    check("workflow_journal_runs_request_digest_check", sql`${table.requestDigest} ~ '^[0-9a-f]{64}$'`),
+    check(
+      "workflow_journal_runs_status_check",
+      sql`${table.status} in ('preparing', 'runnable', 'running', 'waiting', 'succeeded', 'failed', 'cancelled', 'abandoned')`
+    ),
+    check("workflow_journal_runs_cancellation_check", sql`${table.cancellationGeneration} >= 0`),
+    check("workflow_journal_runs_sequence_check", sql`${table.latestSequence} >= 0`),
+    uniqueIndex("workflow_journal_runs_trigger_uidx").on(table.packageDigest, table.triggerIdentity),
+    index("workflow_journal_runs_status_idx").on(table.status, table.updatedAt)
+  ]
+)
+
+export const workflowActivations = agenticSchema.table(
+  "workflow_activations",
+  {
+    activationId: char("activation_id", { length: 64 }).primaryKey(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => workflowJournalRuns.runId, { onDelete: "restrict" }),
+    stepId: text("step_id").notNull(),
+    scope: jsonb("scope").$type<ActivationScopeSegment[]>().notNull(),
+    status: text("status").notNull().default("blocked"),
+    inputBindings: jsonb("input_bindings").$type<Record<string, unknown>>().notNull().default({}),
+    selectedAttemptOrdinal: integer("selected_attempt_ordinal"),
+    nextAttemptOrdinal: integer("next_attempt_ordinal").notNull().default(1),
+    dependencyCount: integer("dependency_count").notNull().default(0),
+    availableAt: timestamp("available_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("workflow_activations_id_check", sql`${table.activationId} ~ '^[0-9a-f]{64}$'`),
+    check(
+      "workflow_activations_status_check",
+      sql`${table.status} in ('blocked', 'ready', 'leased', 'running', 'waiting', 'succeeded', 'failed', 'cancelled')`
+    ),
+    check(
+      "workflow_activations_attempt_check",
+      sql`${table.selectedAttemptOrdinal} is null or ${table.selectedAttemptOrdinal} > 0`
+    ),
+    check("workflow_activations_next_attempt_check", sql`${table.nextAttemptOrdinal} > 0`),
+    check("workflow_activations_dependency_check", sql`${table.dependencyCount} >= 0`),
+    uniqueIndex("workflow_activations_run_id_uidx").on(table.runId, table.activationId),
+    index("workflow_activations_run_status_idx").on(table.runId, table.status, table.availableAt)
+  ]
+)
+
+export const workflowRunLinks = agenticSchema.table(
+  "workflow_run_links",
+  {
+    parentRunId: uuid("parent_run_id")
+      .notNull()
+      .references(() => workflowJournalRuns.runId, { onDelete: "restrict" }),
+    parentActivationId: char("parent_activation_id", { length: 64 }).notNull(),
+    childRunId: uuid("child_run_id")
+      .notNull()
+      .references(() => workflowJournalRuns.runId, { onDelete: "restrict" }),
+    childPackageDigest: char("child_package_digest", { length: 64 })
+      .notNull()
+      .references(() => workflowExecutionPackages.packageDigest, { onDelete: "restrict" }),
+    interfaceDigest: char("interface_digest", { length: 64 }).notNull(),
+    terminalStatus: text("terminal_status"),
+    result: jsonb("result").$type<Record<string, unknown>>(),
+    error: jsonb("error").$type<Record<string, unknown>>(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.parentRunId, table.parentActivationId] }),
+    foreignKey({
+      columns: [table.parentRunId, table.parentActivationId],
+      foreignColumns: [workflowActivations.runId, workflowActivations.activationId],
+      name: "workflow_run_links_parent_activation_fk"
+    }).onDelete("restrict"),
+    check("workflow_run_links_parent_activation_check", sql`${table.parentActivationId} ~ '^[0-9a-f]{64}$'`),
+    check("workflow_run_links_package_digest_check", sql`${table.childPackageDigest} ~ '^[0-9a-f]{64}$'`),
+    check("workflow_run_links_interface_digest_check", sql`${table.interfaceDigest} ~ '^[0-9a-f]{64}$'`),
+    check(
+      "workflow_run_links_terminal_status_check",
+      sql`${table.terminalStatus} is null or ${table.terminalStatus} in ('succeeded', 'failed')`
+    ),
+    uniqueIndex("workflow_run_links_child_uidx").on(table.childRunId)
+  ]
+)
+
+export const workflowAttempts = agenticSchema.table(
+  "workflow_attempts",
+  {
+    runId: uuid("run_id").notNull(),
+    activationId: char("activation_id", { length: 64 }).notNull(),
+    ordinal: integer("ordinal").notNull(),
+    status: text("status").notNull().default("queued"),
+    fencingToken: bigint("fencing_token", { mode: "number" }).notNull().default(0),
+    leaseOwner: text("lease_owner"),
+    leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+    input: jsonb("input").$type<Record<string, unknown>>().notNull(),
+    output: jsonb("output").$type<Record<string, unknown>>(),
+    error: jsonb("error").$type<Record<string, unknown>>(),
+    usage: jsonb("usage").$type<Record<string, unknown>>(),
+    evidence: jsonb("evidence").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true })
+  },
+  (table) => [
+    primaryKey({ columns: [table.activationId, table.ordinal] }),
+    foreignKey({
+      columns: [table.runId, table.activationId],
+      foreignColumns: [workflowActivations.runId, workflowActivations.activationId],
+      name: "workflow_attempts_activation_fk"
+    }).onDelete("restrict"),
+    check("workflow_attempts_ordinal_check", sql`${table.ordinal} > 0`),
+    check(
+      "workflow_attempts_status_check",
+      sql`${table.status} in ('queued', 'running', 'waiting', 'succeeded', 'failed', 'cancelled', 'unknown')`
+    ),
+    check("workflow_attempts_fencing_check", sql`${table.fencingToken} >= 0`),
+    uniqueIndex("workflow_attempts_run_activation_ordinal_uidx").on(table.runId, table.activationId, table.ordinal),
+    index("workflow_attempts_lease_idx").on(table.status, table.leaseExpiresAt)
+  ]
+)
+
+export const workflowData = agenticSchema.table(
+  "workflow_data",
+  {
+    datumId: uuid("datum_id").primaryKey().defaultRandom(),
+    runId: uuid("run_id").notNull(),
+    activationId: char("activation_id", { length: 64 }).notNull(),
+    attemptOrdinal: integer("attempt_ordinal").notNull(),
+    name: text("name").notNull(),
+    kind: text("kind").notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    digest: char("digest", { length: 64 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.runId, table.activationId, table.attemptOrdinal],
+      foreignColumns: [workflowAttempts.runId, workflowAttempts.activationId, workflowAttempts.ordinal],
+      name: "workflow_data_attempt_fk"
+    }).onDelete("restrict"),
+    check(
+      "workflow_data_kind_check",
+      sql`${table.kind} in ('value', 'artifact', 'external_reference', 'observation', 'secret_capability')`
+    ),
+    check("workflow_data_digest_check", sql`${table.digest} ~ '^[0-9a-f]{64}$'`),
+    uniqueIndex("workflow_data_producer_name_uidx").on(
+      table.runId,
+      table.activationId,
+      table.attemptOrdinal,
+      table.name
+    ),
+    index("workflow_data_run_idx").on(table.runId, table.createdAt)
+  ]
+)
+
+export const workflowEffects = agenticSchema.table(
+  "workflow_effects",
+  {
+    effectId: uuid("effect_id").primaryKey().defaultRandom(),
+    runId: uuid("run_id").notNull(),
+    activationId: char("activation_id", { length: 64 }).notNull(),
+    effectSlot: text("effect_slot").notNull(),
+    attemptOrdinal: integer("attempt_ordinal"),
+    provider: text("provider").notNull(),
+    requestDigest: char("request_digest", { length: 64 }).notNull(),
+    idempotencyKey: text("idempotency_key"),
+    status: text("status").notNull().default("prepared"),
+    request: jsonb("request").$type<Record<string, unknown>>().notNull(),
+    result: jsonb("result").$type<Record<string, unknown>>(),
+    reconciliation: jsonb("reconciliation").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.runId, table.activationId],
+      foreignColumns: [workflowActivations.runId, workflowActivations.activationId],
+      name: "workflow_effects_activation_fk"
+    }).onDelete("restrict"),
+    check("workflow_effects_request_digest_check", sql`${table.requestDigest} ~ '^[0-9a-f]{64}$'`),
+    check(
+      "workflow_effects_status_check",
+      sql`${table.status} in ('prepared', 'dispatching', 'confirmed', 'unknown', 'conflict', 'failed', 'resolved')`
+    ),
+    uniqueIndex("workflow_effects_logical_uidx").on(table.runId, table.activationId, table.effectSlot),
+    index("workflow_effects_status_idx").on(table.status, table.updatedAt)
+  ]
+)
+
+export const workflowWaits = agenticSchema.table(
+  "workflow_waits",
+  {
+    waitId: uuid("wait_id").primaryKey().defaultRandom(),
+    runId: uuid("run_id").notNull(),
+    activationId: char("activation_id", { length: 64 }).notNull(),
+    attemptOrdinal: integer("attempt_ordinal").notNull(),
+    correlationKey: text("correlation_key").notNull(),
+    acceptedInputSchema: jsonb("accepted_input_schema").$type<Record<string, unknown>>().notNull(),
+    authorization: jsonb("authorization").$type<Record<string, unknown>>(),
+    status: text("status").notNull().default("pending"),
+    consuming: integer("consuming").notNull().default(1),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    winningEventSequence: bigint("winning_event_sequence", { mode: "number" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.runId, table.activationId, table.attemptOrdinal],
+      foreignColumns: [workflowAttempts.runId, workflowAttempts.activationId, workflowAttempts.ordinal],
+      name: "workflow_waits_attempt_fk"
+    }).onDelete("restrict"),
+    check(
+      "workflow_waits_status_check",
+      sql`${table.status} in ('pending', 'claimed', 'resumed', 'timed_out', 'cancelled')`
+    ),
+    check("workflow_waits_consuming_check", sql`${table.consuming} in (0, 1)`),
+    uniqueIndex("workflow_waits_correlation_uidx").on(table.runId, table.correlationKey),
+    index("workflow_waits_pending_idx").on(table.status, table.expiresAt)
+  ]
+)
+
+export const workflowRunEvents = agenticSchema.table(
+  "workflow_run_events",
+  {
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => workflowJournalRuns.runId, { onDelete: "restrict" }),
+    sequence: bigint("sequence", { mode: "number" }).notNull(),
+    transactionId: uuid("transaction_id").notNull(),
+    eventType: text("event_type").notNull(),
+    eventVersion: integer("event_version").notNull(),
+    reducerVersion: text("reducer_version").notNull(),
+    causationSequence: bigint("causation_sequence", { mode: "number" }),
+    correlationId: text("correlation_id"),
+    activationId: char("activation_id", { length: 64 }),
+    attemptOrdinal: integer("attempt_ordinal"),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull(),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.runId, table.sequence] }),
+    foreignKey({
+      columns: [table.runId, table.activationId],
+      foreignColumns: [workflowActivations.runId, workflowActivations.activationId],
+      name: "workflow_run_events_activation_fk"
+    }).onDelete("restrict"),
+    foreignKey({
+      columns: [table.runId, table.activationId, table.attemptOrdinal],
+      foreignColumns: [workflowAttempts.runId, workflowAttempts.activationId, workflowAttempts.ordinal],
+      name: "workflow_run_events_attempt_fk"
+    }).onDelete("restrict"),
+    check("workflow_run_events_sequence_check", sql`${table.sequence} > 0`),
+    check("workflow_run_events_version_check", sql`${table.eventVersion} > 0`),
+    check(
+      "workflow_run_events_causation_check",
+      sql`${table.causationSequence} is null or ${table.causationSequence} < ${table.sequence}`
+    ),
+    check(
+      "workflow_run_events_attempt_identity_check",
+      sql`${table.attemptOrdinal} is null or ${table.activationId} is not null`
+    ),
+    index("workflow_run_events_type_idx").on(table.eventType, table.recordedAt),
+    index("workflow_run_events_transaction_idx").on(table.transactionId)
+  ]
+)
 
 export const workspaceLeases = agenticSchema.table(
   "workspace_leases",

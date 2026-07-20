@@ -166,6 +166,24 @@ describe("runWorker", () => {
     expect(progress).toHaveBeenCalledWith("Running independent validation")
   })
 
+  it("uses an immutable repository-agent prompt when supplied", async () => {
+    const assignment = await assignmentFixture()
+    const root = await artifactRoot()
+    mocks.createWorkspace.mockResolvedValue(
+      fakeWorkspace({
+        statusOutput: "",
+        validationExitCode: 0,
+        validationTimedOut: false,
+        commandFailure: null,
+        cleanupMode: null
+      })
+    )
+
+    await runWorker({ ...runOptions(assignment, root), systemPrompt: "Pinned repository agent" })
+
+    expect(mocks.chat).toHaveBeenCalledWith(expect.objectContaining({ systemPrompt: "Pinned repository agent" }))
+  })
+
   it.each([
     {
       name: "path policy violation",

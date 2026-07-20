@@ -1,4 +1,3 @@
-import { generateKeyPairSync } from "node:crypto"
 import { readFile } from "node:fs/promises"
 import { describe, expect, it, vi } from "vitest"
 import { AssignmentSchema, type Assignment } from "../contracts/assignment"
@@ -8,14 +7,10 @@ import type { DraftPullRequestInput } from "./publisher"
 
 const fixtureUrl = new URL("../../tests/fixtures/worker-repair-assignment.json", import.meta.url)
 const timestamp = "2026-07-19T00:00:00.000Z"
+const tokenProvider = async () => "installation-token"
 
 async function assignmentFixture(): Promise<Assignment> {
   return AssignmentSchema.parse(JSON.parse(await readFile(fixtureUrl, "utf8")))
-}
-
-function privateKey(): string {
-  const pair = generateKeyPairSync("rsa", { modulusLength: 2_048 })
-  return pair.privateKey.export({ format: "pem", type: "pkcs8" }).toString()
 }
 
 function workerResult(assignment: Assignment): WorkerResult {
@@ -111,9 +106,7 @@ describe("GitHubAppPublisher", () => {
       return response({ message: "Not Found" }, 404)
     })
     const publisher = new GitHubAppPublisher({
-      appId: "1",
-      installationId: "2",
-      privateKey: privateKey(),
+      tokenProvider,
       fetcher
     })
 
@@ -172,12 +165,9 @@ describe("GitHubAppPublisher", () => {
       return { stdout: "", stderr: "" }
     })
     const publisher = new GitHubAppPublisher({
-      appId: "123",
-      installationId: "456",
-      privateKey: privateKey(),
+      tokenProvider,
       fetcher,
-      gitRunner,
-      now: () => new Date(timestamp)
+      gitRunner
     })
 
     const result = await publisher.publish(input)
@@ -235,12 +225,9 @@ describe("GitHubAppPublisher", () => {
     })
     const gitRunner = vi.fn<GitCommandRunner>()
     const publisher = new GitHubAppPublisher({
-      appId: "123",
-      installationId: "456",
-      privateKey: privateKey(),
+      tokenProvider,
       fetcher,
-      gitRunner,
-      now: () => new Date(timestamp)
+      gitRunner
     })
 
     const result = await publisher.publish(publicationInput(assignment))
@@ -274,12 +261,9 @@ describe("GitHubAppPublisher", () => {
     })
     const gitRunner = vi.fn<GitCommandRunner>()
     const publisher = new GitHubAppPublisher({
-      appId: "123",
-      installationId: "456",
-      privateKey: privateKey(),
+      tokenProvider,
       fetcher,
-      gitRunner,
-      now: () => new Date(timestamp)
+      gitRunner
     })
 
     await expect(publisher.publish(publicationInput(assignment))).rejects.toThrow("is not owned by run")
@@ -291,9 +275,7 @@ describe("GitHubAppPublisher", () => {
     const input = publicationInput(assignment)
     const fetcher = vi.fn<(input: string | URL | Request, init?: RequestInit) => Promise<Response>>()
     const publisher = new GitHubAppPublisher({
-      appId: "123",
-      installationId: "456",
-      privateKey: privateKey(),
+      tokenProvider,
       fetcher
     })
 
@@ -339,13 +321,10 @@ describe("GitHubAppPublisher", () => {
     })
     const gitRunner = vi.fn<GitCommandRunner>()
     const publisher = new GitHubAppPublisher({
-      appId: "123",
-      installationId: "456",
-      privateKey: privateKey(),
+      tokenProvider,
       apiBaseUrl: "https://api.github.test/",
       fetcher,
-      gitRunner,
-      now: () => new Date(timestamp)
+      gitRunner
     })
 
     await expect(publisher.publish(publicationInput(assignment))).resolves.toMatchObject({
@@ -369,12 +348,9 @@ describe("GitHubAppPublisher", () => {
       return response({ message: "unavailable" }, 503)
     })
     const publisher = new GitHubAppPublisher({
-      appId: "123",
-      installationId: "456",
-      privateKey: privateKey(),
+      tokenProvider,
       fetcher,
-      gitRunner: vi.fn<GitCommandRunner>(),
-      now: () => new Date(timestamp)
+      gitRunner: vi.fn<GitCommandRunner>()
     })
 
     await expect(publisher.publish(publicationInput(assignment))).rejects.toThrow(
@@ -417,12 +393,9 @@ describe("GitHubAppPublisher", () => {
       return { stdout: "", stderr: "" }
     })
     const publisher = new GitHubAppPublisher({
-      appId: "123",
-      installationId: "456",
-      privateKey: privateKey(),
+      tokenProvider,
       fetcher,
-      gitRunner,
-      now: () => new Date(timestamp)
+      gitRunner
     })
 
     await expect(publisher.publish(publicationInput(assignment))).rejects.toThrow()

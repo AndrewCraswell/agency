@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process"
-import { createSign } from "node:crypto"
 import { mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -8,7 +7,6 @@ import { PublicationResultSchema } from "../orchestrator/state"
 import type { DraftPullRequestInput, DraftPullRequestPublisher } from "./publisher"
 
 const RepositorySegmentSchema = z.string().regex(/^[A-Za-z0-9_.-]+$/u)
-const InstallationTokenSchema = z.object({ token: z.string().min(1), expires_at: z.iso.datetime({ offset: true }) })
 const RepositoryDetailsSchema = z.object({ default_branch: z.string().min(1) })
 const GitReferenceSchema = z.object({ object: z.object({ sha: z.string().regex(/^[0-9a-f]{40}$/u) }) })
 const GitCommitSchema = z.object({ message: z.string() })
@@ -52,28 +50,10 @@ export type GitCommandRunner = (
 ) => Promise<GitCommandResult>
 
 export type GitHubAppPublisherOptions = {
-  appId: string
-  installationId: string
-  privateKey: string
+  tokenProvider: () => Promise<string>
   apiBaseUrl?: string
   fetcher?: Fetcher
   gitRunner?: GitCommandRunner
-  now?: () => Date
-}
-
-function base64UrlJson(value: Readonly<Record<string, string | number>>): string {
-  return Buffer.from(JSON.stringify(value)).toString("base64url")
-}
-
-function createAppJwt(appId: string, privateKey: string, now: Date): string {
-  const issuedAt = Math.floor(now.getTime() / 1_000) - 60
-  const unsignedToken = `${base64UrlJson({ alg: "RS256", typ: "JWT" })}.${base64UrlJson({
-    iat: issuedAt,
-    exp: issuedAt + 600,
-    iss: appId
-  })}`
-  const signature = createSign("RSA-SHA256").update(unsignedToken).sign(privateKey).toString("base64url")
-  return `${unsignedToken}.${signature}`
 }
 
 async function defaultGitRunner(
@@ -172,22 +152,16 @@ function commitMessage(input: DraftPullRequestInput): string {
 }
 
 export class GitHubAppPublisher implements DraftPullRequestPublisher {
-  readonly #appId: string
-  readonly #installationId: string
-  readonly #privateKey: string
+  readonly #tokenProvider: () => Promise<string>
   readonly #apiBaseUrl: string
   readonly #fetcher: Fetcher
   readonly #gitRunner: GitCommandRunner
-  readonly #now: () => Date
 
   constructor(options: GitHubAppPublisherOptions) {
-    this.#appId = options.appId
-    this.#installationId = options.installationId
-    this.#privateKey = options.privateKey
+    this.#tokenProvider = options.tokenProvider
     this.#apiBaseUrl = (options.apiBaseUrl ?? "https://api.github.com").replace(/\/$/u, "")
     this.#fetcher = options.fetcher ?? fetch
     this.#gitRunner = options.gitRunner ?? defaultGitRunner
-    this.#now = options.now ?? (() => new Date())
   }
 
   async publish(input: DraftPullRequestInput) {
@@ -280,14 +254,10 @@ export class GitHubAppPublisher implements DraftPullRequestPublisher {
   }
 
   async installationToken(): Promise<string> {
-    const appJwt = createAppJwt(this.#appId, this.#privateKey, this.#now())
-    const result = await this.#request(
-      `/app/installations/${encodeURIComponent(this.#installationId)}/access_tokens`,
-      { method: "POST" },
-      InstallationTokenSchema,
-      appJwt
-    )
-    return result.token
+    return z
+      .string()
+      .min(1)
+      .parse(await this.#tokenProvider())
   }
 
   async resolveDefaultBranchSha(ownerInput: string, repositoryInput: string): Promise<string> {

@@ -19,7 +19,7 @@ describe("assignmentFromPlan", () => {
       runId: plan.runId,
       repository: { owner: "AndrewCraswell", name: "agency" },
       objective: plan.objective,
-      budgets: { maxRepairAttempts: 3 }
+      budgets: { maxTurns: 20, maxTokens: 100_000, maxElapsedMs: 900_000, maxRepairAttempts: 3 }
     })
   })
 })

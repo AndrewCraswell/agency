@@ -13,6 +13,8 @@ Conventions for authoring React components in this monorepo. Hooks have their ow
 - **Name event handlers** with an `on` prefix (`onClick`) or a `handle` prefix (`handleClick`).
 - **The app is wrapped in `<StrictMode>` and an app shell** (`FluentProvider` + a top-level `react-error-boundary`).
   Wrap stories and tests with the same shell so every surface shares context.
+- **Use Fluent UI v9 throughout the product surface** — app shell, navigation, controls, forms, dialogs,
+  notifications, and command icons. Do not introduce a second component system for these surfaces.
 
 ## Styling
 
@@ -27,7 +29,12 @@ Conventions for authoring React components in this monorepo. Hooks have their ow
 - **Read/write URL state with [`nuqs`](https://nuqs.dev)** rather than hand-parsing `location.search`.
 - **Routing is type-safe via [TanStack Router](https://tanstack.com/router)** — register the router type and prefer the
   router's `<Link>` (it validates `to` and preloads on intent).
-- **Forms use [TanStack Form](https://tanstack.com/form)** with a `zod` schema validator.
+- **Forms use [React Hook Form](https://react-hook-form.com)** with Zod through `@hookform/resolvers/zod`.
+- **Use `@1js/fluentui-rhf-inputs`** for controlled Fluent fields instead of repeating `Controller`, `Field`, and
+  event wiring.
+- **Use Fluent Toasts for transient action feedback** and reserve Message Bars for persistent inline status that
+  belongs to a page or section. Use `@1js/fluentui-modal-manager` for implicit or awaitable modals rather than
+  building ad hoc global state for them.
 
 For component file layout (`{ComponentName}.tsx` / `.styles.ts` / `.utils.ts` / `.test.tsx` / `.stories.tsx`), see
 [conventions.md](conventions.md#files--component-layout).

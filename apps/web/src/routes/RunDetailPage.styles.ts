@@ -30,6 +30,7 @@ export const useRunDetailPageStyles = makeStyles({
     gap: tokens.spacingVerticalXXS,
     minWidth: 0
   },
+  runActions: { display: "flex", alignItems: "center", gap: tokens.spacingHorizontalS, flexWrap: "wrap" },
   eyebrow: { color: tokens.colorBrandForeground1, fontWeight: tokens.fontWeightSemibold },
   runId: { fontFamily: tokens.fontFamilyMonospace, color: tokens.colorNeutralForeground2, wordBreak: "break-all" },
   stageSection: {
@@ -92,6 +93,69 @@ export const useRunDetailPageStyles = makeStyles({
     "@media (max-width: 640px)": { gridTemplateColumns: "1fr", gap: tokens.spacingVerticalM }
   },
   workflowSection: { marginBottom: tokens.spacingVerticalXXL },
+  activationList: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+    gap: tokens.spacingHorizontalM,
+    listStyleType: "none",
+    padding: 0,
+    margin: 0,
+    "& > li": {
+      display: "flex",
+      flexDirection: "column",
+      gap: tokens.spacingVerticalS,
+      minWidth: 0,
+      padding: tokens.spacingHorizontalM,
+      backgroundColor: tokens.colorNeutralBackground1,
+      ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
+      ...shorthands.borderRadius(tokens.borderRadiusMedium)
+    }
+  },
+  activationRow: {
+    display: "grid",
+    gridTemplateColumns: "max-content minmax(80px, auto) minmax(0, 1fr) max-content",
+    alignItems: "center",
+    gap: tokens.spacingHorizontalS,
+    minWidth: 0,
+    "& code": { fontFamily: tokens.fontFamilyMonospace },
+    "@media (max-width: 640px)": {
+      gridTemplateColumns: "max-content minmax(0, 1fr)",
+      "& > span:last-child": { gridColumn: "1 / -1" }
+    }
+  },
+  diagnosticGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: tokens.spacingHorizontalL,
+    marginBottom: tokens.spacingVerticalXXL,
+    "@media (max-width: 800px)": { gridTemplateColumns: "1fr" }
+  },
+  evidenceSection: {
+    minWidth: 0,
+    padding: tokens.spacingHorizontalL,
+    backgroundColor: tokens.colorNeutralBackground1,
+    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    "& ul": {
+      display: "flex",
+      flexDirection: "column",
+      gap: tokens.spacingVerticalM,
+      listStyleType: "none",
+      padding: 0,
+      margin: 0
+    },
+    "& li": { display: "flex", flexDirection: "column", gap: tokens.spacingVerticalXS, minWidth: 0 },
+    "& details": { color: tokens.colorNeutralForeground2 },
+    "& summary": { cursor: "pointer", fontWeight: tokens.fontWeightSemibold },
+    "& pre": {
+      overflowX: "auto",
+      margin: `${tokens.spacingVerticalS} 0 0`,
+      padding: tokens.spacingHorizontalS,
+      backgroundColor: tokens.colorNeutralBackground3,
+      fontFamily: tokens.fontFamilyMonospace,
+      fontSize: tokens.fontSizeBase200
+    }
+  },
   workflowNodes: {
     display: "grid",
     gridTemplateColumns: "repeat(5, minmax(168px, 1fr))",
@@ -185,6 +249,16 @@ export const useRunDetailPageStyles = makeStyles({
       gap: tokens.spacingHorizontalM,
       padding: tokens.spacingHorizontalL,
       ...shorthands.borderBottom("1px", "solid", tokens.colorNeutralStroke2)
+    },
+    "& details": { color: tokens.colorNeutralForeground2 },
+    "& summary": { cursor: "pointer", fontWeight: tokens.fontWeightSemibold },
+    "& pre": {
+      overflowX: "auto",
+      margin: `${tokens.spacingVerticalS} 0 0`,
+      padding: tokens.spacingHorizontalS,
+      backgroundColor: tokens.colorNeutralBackground3,
+      fontFamily: tokens.fontFamilyMonospace,
+      fontSize: tokens.fontSizeBase200
     }
   },
   timelineMarker: {

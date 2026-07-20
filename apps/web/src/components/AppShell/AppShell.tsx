@@ -1,6 +1,8 @@
-import { FluentProvider, webLightTheme } from "@fluentui/react-components"
+import { ModalRenderer } from "@1js/fluentui-modal-manager"
+import { FluentProvider, Toaster, webLightTheme } from "@fluentui/react-components"
 import type { ReactNode } from "react"
 import { ErrorBoundary } from "react-error-boundary"
+import { appToasterId } from "@/hooks/useAppToast"
 import { FallbackError } from "./FallbackError"
 
 interface AppShellProps {
@@ -14,6 +16,10 @@ interface AppShellProps {
  */
 export const AppShell = ({ children }: AppShellProps) => (
   <FluentProvider theme={webLightTheme}>
-    <ErrorBoundary FallbackComponent={FallbackError}>{children}</ErrorBoundary>
+    <ErrorBoundary FallbackComponent={FallbackError}>
+      <Toaster toasterId={appToasterId} position="top-end" pauseOnHover pauseOnWindowBlur />
+      {children}
+      <ModalRenderer />
+    </ErrorBoundary>
   </FluentProvider>
 )

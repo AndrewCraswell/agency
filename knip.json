@@ -1,7 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "ignoreExportsUsedInFile": true,
-  "ignore": ["beachball.config.js", "**/coverage/**", "**/storybook-static/**"],
+  "ignore": ["beachball.config.js"],
+  "ignoreBinaries": ["artifacts-npm-credprovider"],
   "workspaces": {
     "apps/web": {
       "entry": ["src/**/*.stories.tsx", ".storybook/{main,preview,vitest.setup}.ts"],
@@ -12,7 +13,6 @@
         "@storybook/addon-vitest",
         "@storybook/react-vite",
         "@mantine/hooks",
-        "date-fns",
         "nuqs",
         "ts-extras",
         "ts-pattern"

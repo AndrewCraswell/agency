@@ -10,5 +10,5 @@
     "sortSpecifiers": true
   },
   "sortPackageJson": false,
-  "ignorePatterns": ["**/dist/**", "**/storybook-static/**", "**/coverage/**", "pnpm-lock.yaml"]
+  "ignorePatterns": ["**/dist/**", "**/storybook-static/**", "**/coverage/**", "**/docs/**", "pnpm-lock.yaml"]
 }

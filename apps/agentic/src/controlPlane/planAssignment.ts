@@ -8,6 +8,13 @@ const RepositorySchema = z
   .object({ provider: z.literal("github"), owner: z.string().trim().min(1), name: z.string().trim().min(1) })
   .strict()
 
+const engineerBudget = {
+  maxTurns: 20,
+  maxTokens: 100_000,
+  maxElapsedMs: 900_000,
+  maxRepairAttempts: 3
+} as const
+
 export function assignmentFromPlan(
   planInput: unknown,
   repositoryInput: unknown,
@@ -33,12 +40,7 @@ export function assignmentFromPlan(
     relevantPaths: plan.relevantPaths,
     validationCommands: plan.validationCommands,
     pathPolicy: plan.pathPolicy,
-    budgets: {
-      maxTurns: plan.configuredBudget.maxTurns,
-      maxTokens: plan.configuredBudget.maxInputTokens + plan.configuredBudget.maxOutputTokens,
-      maxElapsedMs: plan.configuredBudget.maxElapsedMs,
-      maxRepairAttempts: 3
-    },
+    budgets: engineerBudget,
     contextBundle,
     promptVersion: "coder-v1",
     workerImageVersion: OPENHANDS_AGENT_SERVER_IMAGE

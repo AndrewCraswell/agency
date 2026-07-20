@@ -15,6 +15,11 @@ for conventions.
 
 ## Build / verify loop
 
+Complete the coherent implementation before running unit tests, type-checks, lint, browser acceptance, or the full
+verification suite. Do not run these checks after each small edit. Once the implementation is complete, run the smallest
+relevant focused checks, then run the required final verification. If a check exposes related defects, batch the repairs
+before rerunning that check.
+
 Run `pnpm verify` before declaring work done — it must be clean. It runs `check` (oxfmt format + `oxlint` lint and `tsc`
 type-check deferred per-package via Turbo + `knip` once over the whole graph) then `test:coverage`. Formatting is
 global; lint and type-check are per-package; knip is root-only.
@@ -44,6 +49,18 @@ needs a human discussion**, not a silent add.
 - **Keep this file brief** — it's the entry point; link to `docs/` articles rather than duplicating detail.
 - **Prefer small, focused `docs/` pages**, and update them (and the [index](../docs/README.md)) in the same change as
   the behavior they describe.
+
+## Product copy and UX acceptance
+
+- Review every new or changed customer-facing string with the Fluent Agent MCP when it is available. Use the Microsoft
+  Content Style Guide knowledge base for wording and the relevant Fluent design knowledge base for the interaction.
+  Apply the guidance before considering the copy complete. If the MCP is unavailable, state that in the final result and
+  do not claim that the copy was Fluent-validated.
+- Never use a dot glyph, including `·` or `•`, as a visual separator. Use layout, separate text elements, or a clearly
+  worded phrase instead.
+- Verify every new or changed UX feature in the integrated browser before considering it complete. Exercise the customer
+  workflow, inspect the rendered result at desktop and mobile sizes, and check keyboard and accessible-name behavior.
+  Unit or component tests do not replace this browser acceptance check.
 
 ## Gotchas
 

@@ -1,6 +1,8 @@
 import { createArtifactStoreFactory } from "../azure/artifactStore"
 import { resolveRuntimeSecrets } from "../azure/secretProvider"
 import { GitHubAppPublisher } from "../github/githubAppPublisher"
+import { createNangoGitHubTokenProvider } from "../github/nangoTokenProvider"
+import { NangoIntegrationCredentialBroker } from "../integrations/nangoBroker"
 import { createLinearClientFromEnvironment } from "../linear/client"
 import { createCheckpointRuntime } from "../orchestrator/checkpointRuntime"
 import { createWorkflowGraph } from "../orchestrator/graph"
@@ -10,6 +12,11 @@ import { createControlPlaneRuntime } from "../persistence/controlPlaneRuntime"
 import { runWorker } from "../prototype/runner"
 import { DurableWebhookRouter } from "../webhooks/router"
 import { DurableWebhookDispatcher } from "../webhooks/service"
+import { OpenRouterWorkflowModelExecutor } from "../workflows/modelExecutor"
+import { Phase2WorkflowDispatcher } from "../workflows/phase2Executor"
+import { WorkflowProviderExecutor } from "../workflows/providerExecutor"
+import { createRepositoryAgentExecutor } from "../workflows/repositoryAgentExecutor"
+import { GitHubRepositoryDataReader } from "../workflows/repositoryDataExecutor"
 import { QueuedRunDispatcher } from "./dispatcher"
 import { PlanningRunExecutor } from "./planningExecutor"
 import { createProcessHealthServer } from "./processHealth"
@@ -22,9 +29,7 @@ const runtimeEnvironment = await resolveRuntimeSecrets(process.env, [
   "POSTGRES_API_URL",
   "DAYTONA_API_KEY",
   "LINEAR_API_KEY",
-  "GITHUB_APP_ID",
-  "GITHUB_APP_INSTALLATION_ID",
-  "GITHUB_APP_PRIVATE_KEY",
+  "NANGO_API_KEY",
   "OPENROUTER_API_KEY",
   "WORKSPACE_SECRET_KEY"
 ])
@@ -36,9 +41,11 @@ const runtime = await createControlPlaneRuntime(runtimeEnvironment)
 const checkpointRuntime = await createCheckpointRuntime(runtimeEnvironment)
 const linear = createLinearClientFromEnvironment(runtimeEnvironment)
 const github = new GitHubAppPublisher({
-  appId: environment.GITHUB_APP_ID,
-  installationId: environment.GITHUB_APP_INSTALLATION_ID,
-  privateKey: environment.GITHUB_APP_PRIVATE_KEY.replaceAll("\\n", "\n")
+  tokenProvider: createNangoGitHubTokenProvider({
+    apiKey: environment.NANGO_API_KEY,
+    integrationId: environment.NANGO_GITHUB_INTEGRATION_ID,
+    connectionId: environment.NANGO_GITHUB_CONNECTION_ID
+  })
 })
 const planner = new ScrumMasterPlanner({
   apiKey: environment.OPENROUTER_API_KEY,
@@ -53,7 +60,7 @@ const delivery = createWorkflowGraph({
     const githubToken = await github.installationToken()
     return runWorker({
       assignment,
-      approvedRepository: `${environment.AGENT_REPOSITORY_OWNER}/${environment.AGENT_REPOSITORY_NAME}`,
+      approvedRepository: `${assignment.repository.owner}/${assignment.repository.name}`,
       workspaceSecretKey: environment.WORKSPACE_SECRET_KEY,
       artifactRoot,
       artifactStore: artifactStoreFactory.forRun(assignment.runId, artifactRoot),
@@ -93,6 +100,44 @@ const scrumMasterScheduler = new ScrumMasterScheduler(linear, runtime.store, {
   repositoryName: environment.AGENT_REPOSITORY_NAME
 })
 const webhookDispatcher = new DurableWebhookDispatcher(runtime.webhookStore, new DurableWebhookRouter(runtime.store))
+const repositoryDataReader = new GitHubRepositoryDataReader({ tokenProvider: () => github.installationToken() })
+const workflowModelExecutor = new OpenRouterWorkflowModelExecutor({
+  apiKey: environment.OPENROUTER_API_KEY,
+  artifactStoreForRun: (runId) => artifactStoreFactory.forRun(runId, workflowArtifactRoot(runId))
+})
+const workflowProviderExecutor = new WorkflowProviderExecutor(
+  new NangoIntegrationCredentialBroker({
+    apiKey: environment.NANGO_API_KEY,
+    endUserId: environment.NANGO_END_USER_ID,
+    githubIntegrationId: environment.NANGO_GITHUB_INTEGRATION_ID,
+    linearIntegrationId: environment.NANGO_LINEAR_INTEGRATION_ID
+  }),
+  runtime.integrationStore,
+  runtime.workflowJournalStore
+)
+const workflowDispatcher = new Phase2WorkflowDispatcher(
+  runtime.workflowJournalStore,
+  `workflow-${process.env.COMPUTERNAME ?? process.pid}`,
+  (runId) => artifactStoreFactory.forRun(runId, workflowArtifactRoot(runId)),
+  createRepositoryAgentExecutor(async ({ assignment, approvedRepository, systemPrompt, artifactPrefix }) => {
+    const githubToken = await github.installationToken()
+    return runWorker({
+      assignment,
+      approvedRepository,
+      workspaceSecretKey: environment.WORKSPACE_SECRET_KEY,
+      artifactRoot: workflowArtifactRoot(assignment.runId),
+      artifactStore: artifactStoreFactory.forRun(assignment.runId, workflowArtifactRoot(assignment.runId)),
+      cleanupMode: "stop",
+      secrets: { githubToken, modelProviderApiKey: environment.OPENROUTER_API_KEY },
+      systemPrompt,
+      onProgress: (message) => process.stdout.write(`[workflow-agent:${artifactPrefix}] ${message}\n`)
+    })
+  }),
+  (step, input) => repositoryDataReader.execute(step, input),
+  (input) => workflowModelExecutor.execute(input),
+  (step, input) => workflowProviderExecutor.read(step, input),
+  (input) => workflowProviderExecutor.act(input)
+)
 
 function reportFailure(component: string, error: unknown): void {
   const message = error instanceof Error ? error.message : `Unknown ${component} failure`
@@ -103,7 +148,8 @@ const dispatch = () => {
   void Promise.all([
     dispatcher.dispatchPending(),
     reviewLoop.dispatchPending(),
-    webhookDispatcher.dispatchPending()
+    webhookDispatcher.dispatchPending(),
+    workflowDispatcher.dispatchReady()
   ]).catch((error: unknown) => reportFailure("dispatch", error))
 }
 const schedule = () => {

@@ -1,22 +1,154 @@
-import { tokens } from "@fluentui/react-components"
-import { Outlet } from "@tanstack/react-router"
-import { AppLink } from "@/components/AppLink/AppLink"
+import {
+  Button,
+  DrawerHeaderTitle,
+  makeStyles,
+  mergeClasses,
+  NavDrawer,
+  NavDrawerBody,
+  NavDrawerHeader,
+  NavItem,
+  Subtitle1,
+  tokens
+} from "@fluentui/react-components"
+import {
+  BoardFilled,
+  BoardRegular,
+  BranchForkFilled,
+  BranchForkRegular,
+  bundleIcon,
+  DismissRegular,
+  NavigationRegular,
+  SettingsFilled,
+  SettingsRegular
+} from "@fluentui/react-icons"
+import { createLink, Outlet, useRouterState } from "@tanstack/react-router"
+import { useState, type ReactNode } from "react"
+import { WorkflowScheduleCoordinator } from "@/components/WorkflowScheduleCoordinator"
 
-/** App layout: top navigation + the active route's content via <Outlet />. */
+const useStyles = makeStyles({
+  shell: { display: "grid", gridTemplateColumns: "260px minmax(0, 1fr)", minHeight: "100vh" },
+  desktopDrawer: {
+    position: "sticky",
+    top: 0,
+    height: "100vh",
+    "@media (max-width: 800px)": { display: "none" }
+  },
+  brand: {
+    display: "flex",
+    alignItems: "center",
+    gap: tokens.spacingHorizontalS,
+    paddingBlock: tokens.spacingVerticalS
+  },
+  mark: {
+    width: "28px",
+    height: "28px",
+    display: "grid",
+    placeItems: "center",
+    backgroundColor: tokens.colorBrandBackground,
+    color: tokens.colorNeutralForegroundOnBrand
+  },
+  navigationBody: { paddingInline: tokens.spacingHorizontalM },
+  content: { minWidth: 0, backgroundColor: tokens.colorNeutralBackground2 },
+  mobileHeader: {
+    display: "none",
+    position: "sticky",
+    top: 0,
+    zIndex: 10,
+    alignItems: "center",
+    justifyContent: "space-between",
+    minHeight: "52px",
+    paddingInline: tokens.spacingHorizontalM,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    backgroundColor: tokens.colorNeutralBackground1,
+    "@media (max-width: 800px)": { display: "flex" }
+  },
+  mobileShell: { "@media (max-width: 800px)": { display: "block" } }
+})
+
+const OperationsIcon = bundleIcon(BoardFilled, BoardRegular)
+const WorkflowsIcon = bundleIcon(BranchForkFilled, BranchForkRegular)
+const SettingsIcon = bundleIcon(SettingsFilled, SettingsRegular)
+
+const navigation = [
+  { to: "/" as const, label: "Operations", icon: <OperationsIcon /> },
+  { to: "/workflows" as const, label: "Workflows", icon: <WorkflowsIcon /> },
+  { to: "/settings" as const, label: "Settings", icon: <SettingsIcon /> }
+]
+
+const RouterNavItem = createLink(NavItem)
+
+function selectedNavigationValue(pathname: string): string {
+  return navigation.find((item) => (item.to === "/" ? pathname === "/" : pathname.startsWith(item.to)))?.to ?? ""
+}
+
+function navigationItems(close?: () => void): ReactNode {
+  return navigation.map((item) => (
+    <RouterNavItem key={item.to} to={item.to} value={item.to} icon={item.icon} onClick={close} preload="intent">
+      {item.label}
+    </RouterNavItem>
+  ))
+}
+
 export function RootLayout() {
+  const styles = useStyles()
+  const pathname = useRouterState({ select: (state) => state.location.pathname })
+  const selectedValue = selectedNavigationValue(pathname)
+  const [drawerOpen, setDrawerOpen] = useState(false)
   return (
-    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      <nav
-        style={{
-          display: "flex",
-          gap: tokens.spacingHorizontalL,
-          padding: tokens.spacingVerticalM,
-          borderBottom: `1px solid ${tokens.colorNeutralStroke2}`
-        }}
+    <div className={mergeClasses(styles.shell, styles.mobileShell)}>
+      <WorkflowScheduleCoordinator />
+      <NavDrawer
+        className={styles.desktopDrawer}
+        type="inline"
+        open
+        aria-label="Primary navigation"
+        selectedValue={selectedValue}
       >
-        <AppLink to="/">Operations</AppLink>
-      </nav>
-      <Outlet />
+        <NavDrawerHeader>
+          <div className={styles.brand}>
+            <span className={styles.mark}>A</span>
+            <Subtitle1>Agency</Subtitle1>
+          </div>
+        </NavDrawerHeader>
+        <NavDrawerBody className={styles.navigationBody}>{navigationItems()}</NavDrawerBody>
+      </NavDrawer>
+      <div className={styles.content}>
+        <header className={styles.mobileHeader}>
+          <Button
+            appearance="subtle"
+            icon={<NavigationRegular />}
+            aria-label="Open navigation"
+            onClick={() => setDrawerOpen(true)}
+          />
+          <Subtitle1>Agency</Subtitle1>
+          <span style={{ width: 32 }} />
+        </header>
+        <Outlet />
+      </div>
+      <NavDrawer
+        type="overlay"
+        open={drawerOpen}
+        position="start"
+        aria-label="Primary navigation"
+        selectedValue={selectedValue}
+        onOpenChange={(_, data) => setDrawerOpen(data.open)}
+      >
+        <NavDrawerHeader>
+          <DrawerHeaderTitle
+            action={
+              <Button
+                appearance="subtle"
+                icon={<DismissRegular />}
+                aria-label="Close navigation"
+                onClick={() => setDrawerOpen(false)}
+              />
+            }
+          >
+            Agency
+          </DrawerHeaderTitle>
+        </NavDrawerHeader>
+        <NavDrawerBody>{navigationItems(() => setDrawerOpen(false))}</NavDrawerBody>
+      </NavDrawer>
     </div>
   )
 }

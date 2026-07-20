@@ -26,6 +26,21 @@ This Turborepo includes the following packages and apps:
 
 Each package and app is 100% [TypeScript](https://www.typescriptlang.org/).
 
+### Install dependencies
+
+The web app uses `@1js` packages from the Office Azure Artifacts feed. Install dependencies normally:
+
+```sh
+pnpm install
+```
+
+If installation fails because the feed credentials have expired, refresh them and retry:
+
+```sh
+pnpm auth
+pnpm install
+```
+
 ### Utilities
 
 This Turborepo has some additional tools already setup for you:

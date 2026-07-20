@@ -11,10 +11,10 @@ describe("secret providers", () => {
     const getSecret = vi.fn(async () => ({ value: `secret-${getSecret.mock.calls.length}` }))
     const provider = new AzureKeyVaultSecretProvider({ getSecret }, 1_000, () => now)
 
-    await expect(provider.get("github-app-private-key")).resolves.toBe("secret-1")
-    await expect(provider.get("github-app-private-key")).resolves.toBe("secret-1")
+    await expect(provider.get("nango-api-key")).resolves.toBe("secret-1")
+    await expect(provider.get("nango-api-key")).resolves.toBe("secret-1")
     now = 2_001
-    await expect(provider.get("github-app-private-key")).resolves.toBe("secret-2")
+    await expect(provider.get("nango-api-key")).resolves.toBe("secret-2")
     expect(getSecret).toHaveBeenCalledTimes(2)
   })
 

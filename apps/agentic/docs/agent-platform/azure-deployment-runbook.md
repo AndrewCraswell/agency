@@ -156,9 +156,8 @@ Through the approved secret-bootstrap workload, create enabled Key Vault version
 - `linear-api-key`
 - `github-webhook-secret`
 - `daytona-api-key`
-- `github-app-id`
-- `github-app-installation-id`
-- `github-app-private-key`
+- `nango-api-key`
+- `nango-webhook-signing-key`
 - `openrouter-api-key`
 - `workspace-secret-key`
 - `langsmith-api-key` only when LangSmith tracing is enabled

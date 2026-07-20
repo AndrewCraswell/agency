@@ -1,4 +1,6 @@
+import { createHmac } from "node:crypto"
 import { once } from "node:events"
+import { Nango } from "@nangohq/node"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { LinearCandidateListSchema, LinearTaskGraphSchema } from "../contracts/linear"
 import type { TraceReference } from "../observability/tracing"
@@ -121,7 +123,12 @@ function taskGraph() {
   })
 }
 
-async function startServer(webhookService?: Parameters<typeof createControlPlaneServer>[2]) {
+async function startServer(
+  webhookService?: Parameters<typeof createControlPlaneServer>[2],
+  nangoWebhookReceiver?: Parameters<typeof createControlPlaneServer>[3],
+  integrationService?: Parameters<typeof createControlPlaneServer>[4],
+  workflowService?: Parameters<typeof createControlPlaneServer>[5]
+) {
   const store = new HttpTestStore()
   const service = new ControlPlaneService(
     { listCandidates: async () => candidates(), listTaskGraph: async () => taskGraph() },
@@ -129,7 +136,14 @@ async function startServer(webhookService?: Parameters<typeof createControlPlane
     { repositoryOwner: "AndrewCraswell", repositoryName: "agency" },
     { now: () => now, runId: () => "b906f6ca-6be5-4b5a-9c2e-ff1f4f69b0a1" }
   )
-  const server = createControlPlaneServer(service, "http://localhost:5173", webhookService)
+  const server = createControlPlaneServer(
+    service,
+    "http://localhost:5173",
+    webhookService,
+    nangoWebhookReceiver,
+    integrationService,
+    workflowService
+  )
   openServers.push(server)
   server.listen(0, "127.0.0.1")
   await once(server, "listening")
@@ -189,9 +203,129 @@ describe("control-plane HTTP server", () => {
     expect(health.status).toBe(200)
     await expect(health.json()).resolves.toEqual({ status: "ok" })
 
-    const preflight = await fetch(`${baseUrl}/api/control-plane`, { method: "OPTIONS" })
+    const preflight = await fetch(`${baseUrl}/api/control-plane`, {
+      method: "OPTIONS",
+      headers: { Origin: "http://127.0.0.1:5173" }
+    })
     expect(preflight.status).toBe(204)
-    expect(preflight.headers.get("access-control-allow-methods")).toBe("GET,POST,OPTIONS")
+    expect(preflight.headers.get("access-control-allow-origin")).toBe("http://127.0.0.1:5173")
+    expect(preflight.headers.get("access-control-allow-methods")).toBe("DELETE,GET,PATCH,POST,PUT,OPTIONS")
+  })
+
+  it("routes the complete workflow lifecycle", async () => {
+    const workflowId = "3195de29-2774-4272-be07-6ed600cefd51"
+    const workflowService = {
+      list: vi.fn(async () => [{ workflowId }]),
+      create: vi.fn(async (input) => ({ workflowId, input })),
+      schedules: vi.fn(async () => [{ workflowId, scheduleId: "schedule-1" }]),
+      definitions: vi.fn(() => ({ schemaVersion: "1", definitions: [{ kind: "manual_trigger" }] })),
+      draft: vi.fn(async () => ({ workflowId, revision: 1 })),
+      updateDraft: vi.fn(async (_id, input) => ({ workflowId, revision: 2, input })),
+      validate: vi.fn(async () => ({ valid: true, issues: [] })),
+      publish: vi.fn(async () => ({ workflowId, version: 1 })),
+      test: vi.fn(async (_id, input) => ({ workflowId, mode: "draft", simulated: true, input })),
+      start: vi.fn(async (_id, input) => ({ workflowId, runId: "run-1", input })),
+      runDetail: vi.fn(async (runId) => ({ schemaVersion: "1", run: { runId, status: "running" } })),
+      cancelRun: vi.fn(async (runId, input) => ({ schemaVersion: "1", run: { runId, status: "cancelled", input } })),
+      receiveWebhook: vi.fn(async () => [])
+    }
+    const baseUrl = await startServer(undefined, undefined, undefined, workflowService as never)
+
+    await expect((await fetch(`${baseUrl}/api/workflows`)).json()).resolves.toEqual([{ workflowId }])
+    const created = await fetch(`${baseUrl}/api/workflows`, {
+      method: "POST",
+      body: JSON.stringify({ name: "Deliver Linear task" })
+    })
+    expect(created.status).toBe(201)
+    expect(workflowService.create).toHaveBeenCalledWith({ name: "Deliver Linear task" })
+    await expect((await fetch(`${baseUrl}/api/workflows/schedules`)).json()).resolves.toEqual([
+      { workflowId, scheduleId: "schedule-1" }
+    ])
+    await expect((await fetch(`${baseUrl}/api/workflows/steps`)).json()).resolves.toEqual({
+      schemaVersion: "1",
+      definitions: [{ kind: "manual_trigger" }]
+    })
+    await expect((await fetch(`${baseUrl}/api/workflows/${workflowId}/draft`)).json()).resolves.toMatchObject({
+      revision: 1
+    })
+
+    const updated = await fetch(`${baseUrl}/api/workflows/${workflowId}/draft`, {
+      method: "PATCH",
+      body: JSON.stringify({ revision: 1 })
+    })
+    await expect(updated.json()).resolves.toMatchObject({ revision: 2 })
+    expect(workflowService.updateDraft).toHaveBeenCalledWith(workflowId, { revision: 1 })
+
+    await expect(
+      (await fetch(`${baseUrl}/api/workflows/${workflowId}/validate`, { method: "POST" })).json()
+    ).resolves.toMatchObject({ valid: true })
+    await expect(
+      (await fetch(`${baseUrl}/api/workflows/${workflowId}/publish`, { method: "POST" })).json()
+    ).resolves.toMatchObject({ version: 1 })
+    await expect(
+      (
+        await fetch(`${baseUrl}/api/workflows/${workflowId}/test`, {
+          method: "POST",
+          body: JSON.stringify({ input: { issue: "FEN-423" } })
+        })
+      ).json()
+    ).resolves.toMatchObject({ mode: "draft", simulated: true })
+    const started = await fetch(`${baseUrl}/api/workflows/${workflowId}/runs`, {
+      method: "POST",
+      body: JSON.stringify({ trigger: { type: "manual" } })
+    })
+    expect(started.status).toBe(201)
+    await expect(started.json()).resolves.toMatchObject({ runId: "run-1" })
+    await expect((await fetch(`${baseUrl}/api/workflow-runs/${workflowId}`)).json()).resolves.toMatchObject({
+      schemaVersion: "1",
+      run: { runId: workflowId, status: "running" }
+    })
+    expect(workflowService.runDetail).toHaveBeenCalledWith(workflowId)
+    const cancelled = await fetch(`${baseUrl}/api/workflow-runs/${workflowId}/cancel`, {
+      method: "POST",
+      body: JSON.stringify({ reason: "Operator stopped the run" })
+    })
+    await expect(cancelled.json()).resolves.toMatchObject({ run: { status: "cancelled" } })
+    expect(workflowService.cancelRun).toHaveBeenCalledWith(workflowId, { reason: "Operator stopped the run" })
+  })
+
+  it("routes the complete integration lifecycle", async () => {
+    const connectionId = "86b72ec2-1c25-4712-b298-0fb4cd888ee4"
+    const integrationService = {
+      settings: vi.fn(async () => ({ connections: [] })),
+      startAuthorization: vi.fn(async () => ({ token: "connect-token" })),
+      completeAuthorization: vi.fn(async () => ({ connectionId })),
+      startReconnect: vi.fn(async () => ({ token: "reconnect-token" })),
+      reconcile: vi.fn(async () => ({ checked: 1 })),
+      refresh: vi.fn(async () => ({ connectionId, status: "connected" })),
+      inventory: vi.fn(async () => ({ schemaVersion: "2", resources: [] })),
+      disconnect: vi.fn(async () => ({ connectionId, status: "disconnected" }))
+    }
+    const baseUrl = await startServer(undefined, undefined, integrationService as never)
+
+    await expect((await fetch(`${baseUrl}/api/integrations`)).json()).resolves.toEqual({ connections: [] })
+    const authorize = await fetch(`${baseUrl}/api/integrations/authorize`, {
+      method: "POST",
+      body: JSON.stringify({ provider: "github" })
+    })
+    expect(authorize.status).toBe(201)
+    await fetch(`${baseUrl}/api/integrations/complete`, { method: "POST", body: "{}" })
+    await fetch(`${baseUrl}/api/integrations/reconnect`, { method: "POST", body: "{}" })
+    await fetch(`${baseUrl}/api/integrations/reconcile`, { method: "POST" })
+    await fetch(`${baseUrl}/api/integrations/resources?capability=repository.read`)
+    await fetch(`${baseUrl}/api/integrations/connections/${connectionId}`, { method: "POST" })
+    const disconnected = await fetch(`${baseUrl}/api/integrations/connections/${connectionId}`, {
+      method: "DELETE"
+    })
+
+    expect(integrationService.startAuthorization).toHaveBeenCalledWith({ provider: "github" })
+    expect(integrationService.completeAuthorization).toHaveBeenCalledWith({})
+    expect(integrationService.startReconnect).toHaveBeenCalledWith({})
+    expect(integrationService.reconcile).toHaveBeenCalledOnce()
+    expect(integrationService.inventory).toHaveBeenCalledWith({ capability: "repository.read" })
+    expect(integrationService.refresh).toHaveBeenCalledWith(connectionId)
+    expect(disconnected.status).toBe(200)
+    expect(integrationService.disconnect).toHaveBeenCalledWith(connectionId)
   })
 
   it("validates and accepts GitHub webhook deliveries", async () => {
@@ -222,6 +356,62 @@ describe("control-plane HTTP server", () => {
         rawBody: Buffer.from("{}")
       })
     )
+  })
+
+  it("verifies and acknowledges Nango webhook deliveries", async () => {
+    const signingKey = "nango-webhook-signing-key"
+    const nango = new Nango({ apiKey: "nango-api-key", webhookSigningKey: signingKey })
+    const onAcceptedWebhook = vi.fn()
+    const baseUrl = await startServer(undefined, {
+      verifyIncomingWebhookRequest: (body, headers) => nango.verifyIncomingWebhookRequest(body, headers),
+      onAcceptedWebhook
+    })
+    const body = JSON.stringify({
+      type: "forward",
+      from: "linear",
+      connectionId: "linear-connection",
+      providerConfigKey: "linear",
+      payload: {
+        action: "create",
+        type: "Issue",
+        data: { title: "Secret work item title", description: "Sensitive work item description" }
+      }
+    })
+
+    const unsigned = await fetch(`${baseUrl}/api/webhooks/nango`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body
+    })
+    expect(unsigned.status).toBe(401)
+    await expect(unsigned.json()).resolves.toEqual({ error: "Invalid Nango webhook signature" })
+
+    const invalid = await fetch(`${baseUrl}/api/webhooks/nango`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Nango-Hmac-Sha256": "invalid" },
+      body
+    })
+    expect(invalid.status).toBe(401)
+
+    const signature = createHmac("sha256", signingKey).update(body).digest("hex")
+    const accepted = await fetch(`${baseUrl}/api/webhooks/nango`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Nango-Hmac-Sha256": signature },
+      body
+    })
+    expect(accepted.status).toBe(202)
+    await expect(accepted.json()).resolves.toEqual({ accepted: true })
+    expect(onAcceptedWebhook).toHaveBeenCalledOnce()
+    expect(onAcceptedWebhook).toHaveBeenCalledWith({
+      webhookType: "forward",
+      from: "linear",
+      connectionId: "linear-connection",
+      providerConfigKey: "linear",
+      providerEventAction: "create",
+      providerObjectType: "Issue"
+    })
+    expect(JSON.stringify(onAcceptedWebhook.mock.calls)).not.toContain("Secret work item title")
+    expect(JSON.stringify(onAcceptedWebhook.mock.calls)).not.toContain("Sensitive work item description")
   })
 
   it("rejects oversized request bodies with a bounded conflict", async () => {

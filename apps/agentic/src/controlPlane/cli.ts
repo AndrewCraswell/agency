@@ -3,6 +3,7 @@ import { z } from "zod"
 import { createArtifactStoreFactory } from "../azure/artifactStore"
 import { resolveRuntimeSecrets } from "../azure/secretProvider"
 import { GitHubAppPublisher } from "../github/githubAppPublisher"
+import { createNangoGitHubTokenProvider } from "../github/nangoTokenProvider"
 import { createLinearClientFromEnvironment } from "../linear/client"
 import { createCheckpointRuntime } from "../orchestrator/checkpointRuntime"
 import { createWorkflowGraph } from "../orchestrator/graph"
@@ -10,6 +11,7 @@ import { workflowArtifactRoot } from "../orchestrator/runtime"
 import { ScrumMasterPlanner } from "../orchestrator/scrumMasterPlanner"
 import { createControlPlaneRuntime } from "../persistence/controlPlaneRuntime"
 import { runWorker } from "../prototype/runner"
+import { createNangoWebhookReceiver } from "../webhooks/nango"
 import { DurableWebhookRouter } from "../webhooks/router"
 import { GitHubWebhookService } from "../webhooks/service"
 import { QueuedRunDispatcher } from "./dispatcher"
@@ -29,9 +31,10 @@ const ServerEnvironmentSchema = z.object({
   AGENT_REPOSITORY_OWNER: z.string().trim().min(1).default("AndrewCraswell"),
   AGENT_REPOSITORY_NAME: z.string().trim().min(1).default("agency"),
   LINEAR_TEAM_ID: z.string().trim().min(1),
-  GITHUB_APP_ID: z.string().min(1),
-  GITHUB_APP_INSTALLATION_ID: z.string().min(1),
-  GITHUB_APP_PRIVATE_KEY: z.string().min(1),
+  NANGO_API_KEY: z.string().min(1),
+  NANGO_WEBHOOK_SIGNING_KEY: z.string().min(1),
+  NANGO_GITHUB_INTEGRATION_ID: z.string().trim().min(1).default("github-app"),
+  NANGO_GITHUB_CONNECTION_ID: z.string().trim().min(1).optional(),
   GITHUB_WEBHOOK_SECRET: z.string().min(1).optional(),
   GITHUB_WEBHOOK_ASSIGNMENT_LABEL: z.string().trim().min(1).default("agency-agent"),
   GITHUB_APP_BOT_LOGIN: z.string().trim().min(1).optional(),
@@ -56,9 +59,11 @@ const runtime = await createControlPlaneRuntime(runtimeEnvironment)
 const checkpointRuntime = await createCheckpointRuntime(runtimeEnvironment)
 const linear = createLinearClientFromEnvironment(runtimeEnvironment)
 const github = new GitHubAppPublisher({
-  appId: environment.GITHUB_APP_ID,
-  installationId: environment.GITHUB_APP_INSTALLATION_ID,
-  privateKey: environment.GITHUB_APP_PRIVATE_KEY.replaceAll("\\n", "\n")
+  tokenProvider: createNangoGitHubTokenProvider({
+    apiKey: environment.NANGO_API_KEY,
+    integrationId: environment.NANGO_GITHUB_INTEGRATION_ID,
+    connectionId: environment.NANGO_GITHUB_CONNECTION_ID
+  })
 })
 const planner = new ScrumMasterPlanner({
   apiKey: environment.OPENROUTER_API_KEY,
@@ -74,7 +79,7 @@ const delivery = createWorkflowGraph({
     const startedAt = Date.now()
     return runWorker({
       assignment,
-      approvedRepository: `${environment.AGENT_REPOSITORY_OWNER}/${environment.AGENT_REPOSITORY_NAME}`,
+      approvedRepository: `${assignment.repository.owner}/${assignment.repository.name}`,
       workspaceSecretKey: environment.WORKSPACE_SECRET_KEY,
       artifactRoot,
       artifactStore: artifactStoreFactory.forRun(assignment.runId, artifactRoot),
@@ -140,7 +145,16 @@ const webhookService =
         store: runtime.webhookStore,
         router: new DurableWebhookRouter(runtime.store)
       })
-const server = createControlPlaneServer(service, environment.CONTROL_PLANE_WEB_ORIGIN, webhookService)
+const nangoWebhookReceiver = createNangoWebhookReceiver({
+  apiKey: environment.NANGO_API_KEY,
+  webhookSigningKey: environment.NANGO_WEBHOOK_SIGNING_KEY
+})
+const server = createControlPlaneServer(
+  service,
+  environment.CONTROL_PLANE_WEB_ORIGIN,
+  webhookService,
+  nangoWebhookReceiver
+)
 process.stdout.write(
   `Control plane providers: database=${runtime.provider}, checkpoints=${checkpointRuntime.provider}, artifacts=${artifactStoreFactory.provider}, secrets=${runtimeEnvironment.SECRET_PROVIDER ?? "environment"}, workspaces=daytona\n`
 )

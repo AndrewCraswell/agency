@@ -62,14 +62,17 @@ For building command-line tools.
 - ✅ **react-error-boundary** — error boundaries · ✅ **nuqs** — type-safe URL state.
 - ✅ **@tanstack/react-router** — type-safe routing. Preferred setup: **@tanstack/router-plugin** (Vite, file-based
   routes) + **router-devtools**. _(This repo currently uses code-based routes; move to the plugin when routes grow.)_
-- ✅ **@tanstack/react-form** — forms (+ **@tanstack/react-form-devtools**, **@tanstack/react-devtools**).
+- ✅ **react-hook-form** + **@hookform/resolvers** — forms with Zod-backed validation.
 - ◻️ **@tanstack/react-hotkeys** — keyboard shortcuts (or `useHotkeys` from `@mantine/hooks`).
 
 ## UI & components
 
 - ✅ **the-new-css-reset** — CSS reset.
-- ✅ **@fluentui/react-components** — component library (Fluent UI v9) · ✅ **@fluentui/react-icons** — icons.
-- ◻️ **@fluentui/react-datepicker-compat** — date picker (Fluent v9 has none in core).
+- ✅ **@fluentui/react-components** — component library (Fluent UI v9) · ✅ **@fluentui/react-icons** — icons. Use
+  Fluent components for the app shell, navigation, controls, forms, dialogs, notifications, and command icons.
+- ✅ **@1js/fluentui-rhf-inputs** — controlled Fluent UI v9 inputs for React Hook Form.
+- ✅ **@1js/fluentui-modal-manager** — implicit and awaitable Fluent modals.
+- ✅ **@fluentui/react-datepicker-compat** + **@fluentui/react-timepicker-compat** — Fluent date and time inputs.
 - ◻️ **@fluentui/react-charting** or **recharts** — charts / data visualization.
 - ◻️ **shadcn** — component scaffolding for non-Fluent projects (`pnpm dlx shadcn@latest init -t <vite|start>`).
 

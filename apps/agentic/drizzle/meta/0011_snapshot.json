@@ -1,0 +1,3028 @@
+{
+  "id": "6a048c12-eb57-4afa-9256-d3058199a2a6",
+  "prevId": "f37eebaa-cba5-4d34-93d7-c15a1852d2f3",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "agentic.artifact_records": {
+      "name": "artifact_records",
+      "schema": "agentic",
+      "columns": {
+        "artifact_id": {
+          "name": "artifact_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_attempt": {
+          "name": "role_attempt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "artifact_type": {
+          "name": "artifact_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "uri": {
+          "name": "uri",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sha256": {
+          "name": "sha256",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "media_type": {
+          "name": "media_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "byte_length": {
+          "name": "byte_length",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "artifact_records_run_role_attempt_uri_uidx": {
+          "name": "artifact_records_run_role_attempt_uri_uidx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role_attempt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "uri",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "artifact_records_run_idx": {
+          "name": "artifact_records_run_idx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "artifact_records_run_id_workflow_runs_run_id_fk": {
+          "name": "artifact_records_run_id_workflow_runs_run_id_fk",
+          "tableFrom": "artifact_records",
+          "tableTo": "workflow_runs",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["run_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "artifact_records_role_check": {
+          "name": "artifact_records_role_check",
+          "value": "\"agentic\".\"artifact_records\".\"role\" in ('scrum_master', 'coder', 'reviewer', 'repairer')"
+        },
+        "artifact_records_role_attempt_check": {
+          "name": "artifact_records_role_attempt_check",
+          "value": "\"agentic\".\"artifact_records\".\"role_attempt\" > 0"
+        },
+        "artifact_records_sha256_check": {
+          "name": "artifact_records_sha256_check",
+          "value": "\"agentic\".\"artifact_records\".\"sha256\" ~ '^[0-9a-f]{64}$'"
+        },
+        "artifact_records_byte_length_check": {
+          "name": "artifact_records_byte_length_check",
+          "value": "\"agentic\".\"artifact_records\".\"byte_length\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.integration_connections": {
+      "name": "integration_connections",
+      "schema": "agentic",
+      "columns": {
+        "connection_id": {
+          "name": "connection_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_config_key": {
+          "name": "provider_config_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nango_connection_id": {
+          "name": "nango_connection_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "display_name": {
+          "name": "display_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "error_code": {
+          "name": "error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_checked_at": {
+          "name": "last_checked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "disconnected_at": {
+          "name": "disconnected_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "integration_connections_nango_uidx": {
+          "name": "integration_connections_nango_uidx",
+          "columns": [
+            {
+              "expression": "provider_config_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "nango_connection_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "integration_connections_provider_idx": {
+          "name": "integration_connections_provider_idx",
+          "columns": [
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "integration_connections_provider_check": {
+          "name": "integration_connections_provider_check",
+          "value": "\"agentic\".\"integration_connections\".\"provider\" in ('github', 'linear')"
+        },
+        "integration_connections_status_check": {
+          "name": "integration_connections_status_check",
+          "value": "\"agentic\".\"integration_connections\".\"status\" in ('connected', 'degraded', 'disconnected')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.integration_resources": {
+      "name": "integration_resources",
+      "schema": "agentic",
+      "columns": {
+        "connection_id": {
+          "name": "connection_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_type": {
+          "name": "resource_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "external_id": {
+          "name": "external_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stale": {
+          "name": "stale",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_discovered_at": {
+          "name": "last_discovered_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "integration_resources_connection_idx": {
+          "name": "integration_resources_connection_idx",
+          "columns": [
+            {
+              "expression": "connection_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "resource_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "integration_resources_connection_id_integration_connections_connection_id_fk": {
+          "name": "integration_resources_connection_id_integration_connections_connection_id_fk",
+          "tableFrom": "integration_resources",
+          "tableTo": "integration_connections",
+          "schemaTo": "agentic",
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["connection_id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "integration_resources_connection_id_resource_type_external_id_pk": {
+          "name": "integration_resources_connection_id_resource_type_external_id_pk",
+          "columns": ["connection_id", "resource_type", "external_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "integration_resources_type_check": {
+          "name": "integration_resources_type_check",
+          "value": "\"agentic\".\"integration_resources\".\"resource_type\" in ('repository', 'team')"
+        },
+        "integration_resources_stale_check": {
+          "name": "integration_resources_stale_check",
+          "value": "\"agentic\".\"integration_resources\".\"stale\" in (0, 1)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.review_cycles": {
+      "name": "review_cycles",
+      "schema": "agentic",
+      "columns": {
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "review_round": {
+          "name": "review_round",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_commit_sha": {
+          "name": "candidate_commit_sha",
+          "type": "char(40)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reviewer_agent_id": {
+          "name": "reviewer_agent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reviewer_workspace_id": {
+          "name": "reviewer_workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "findings": {
+          "name": "findings",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "review_cycles_status_idx": {
+          "name": "review_cycles_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "review_cycles_candidate_idx": {
+          "name": "review_cycles_candidate_idx",
+          "columns": [
+            {
+              "expression": "candidate_commit_sha",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "review_cycles_run_id_workflow_runs_run_id_fk": {
+          "name": "review_cycles_run_id_workflow_runs_run_id_fk",
+          "tableFrom": "review_cycles",
+          "tableTo": "workflow_runs",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["run_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "review_cycles_run_id_review_round_pk": {
+          "name": "review_cycles_run_id_review_round_pk",
+          "columns": ["run_id", "review_round"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "review_cycles_round_check": {
+          "name": "review_cycles_round_check",
+          "value": "\"agentic\".\"review_cycles\".\"review_round\" between 1 and 3"
+        },
+        "review_cycles_commit_check": {
+          "name": "review_cycles_commit_check",
+          "value": "\"agentic\".\"review_cycles\".\"candidate_commit_sha\" ~ '^[0-9a-f]{40}$'"
+        },
+        "review_cycles_status_check": {
+          "name": "review_cycles_status_check",
+          "value": "\"agentic\".\"review_cycles\".\"status\" in ('queued', 'running', 'approved', 'changes_requested', 'blocked', 'merged', 'abandoned')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.runtime_selections": {
+      "name": "runtime_selections",
+      "schema": "agentic",
+      "columns": {
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "selection": {
+          "name": "selection",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "runtime_selections_run_id_workflow_runs_run_id_fk": {
+          "name": "runtime_selections_run_id_workflow_runs_run_id_fk",
+          "tableFrom": "runtime_selections",
+          "tableTo": "workflow_runs",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["run_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "agentic.webhook_deliveries": {
+      "name": "webhook_deliveries",
+      "schema": "agentic",
+      "columns": {
+        "delivery_id": {
+          "name": "delivery_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "correlation_id": {
+          "name": "correlation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_name": {
+          "name": "event_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "installation_id": {
+          "name": "installation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "repository_owner": {
+          "name": "repository_owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "repository_name": {
+          "name": "repository_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "payload_digest": {
+          "name": "payload_digest",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "raw_payload": {
+          "name": "raw_payload",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "normalized_envelope": {
+          "name": "normalized_envelope",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "processing_status": {
+          "name": "processing_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempt_count": {
+          "name": "attempt_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "next_attempt_at": {
+          "name": "next_attempt_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "received_at": {
+          "name": "received_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "webhook_deliveries_status_received_idx": {
+          "name": "webhook_deliveries_status_received_idx",
+          "columns": [
+            {
+              "expression": "processing_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "received_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "webhook_deliveries_repository_idx": {
+          "name": "webhook_deliveries_repository_idx",
+          "columns": [
+            {
+              "expression": "repository_owner",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "repository_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "webhook_deliveries_provider_check": {
+          "name": "webhook_deliveries_provider_check",
+          "value": "\"agentic\".\"webhook_deliveries\".\"provider\" = 'github'"
+        },
+        "webhook_deliveries_digest_check": {
+          "name": "webhook_deliveries_digest_check",
+          "value": "\"agentic\".\"webhook_deliveries\".\"payload_digest\" ~ '^[0-9a-f]{64}$'"
+        },
+        "webhook_deliveries_status_check": {
+          "name": "webhook_deliveries_status_check",
+          "value": "\"agentic\".\"webhook_deliveries\".\"processing_status\" in ('normalized', 'dispatching', 'dispatched', 'ignored', 'failed', 'quarantined')"
+        },
+        "webhook_deliveries_attempt_count_check": {
+          "name": "webhook_deliveries_attempt_count_check",
+          "value": "\"agentic\".\"webhook_deliveries\".\"attempt_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_activations": {
+      "name": "workflow_activations",
+      "schema": "agentic",
+      "columns": {
+        "activation_id": {
+          "name": "activation_id",
+          "type": "char(64)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "step_id": {
+          "name": "step_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope": {
+          "name": "scope",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'blocked'"
+        },
+        "input_bindings": {
+          "name": "input_bindings",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "selected_attempt_ordinal": {
+          "name": "selected_attempt_ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "next_attempt_ordinal": {
+          "name": "next_attempt_ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "dependency_count": {
+          "name": "dependency_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "available_at": {
+          "name": "available_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workflow_activations_run_id_uidx": {
+          "name": "workflow_activations_run_id_uidx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "activation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_activations_run_status_idx": {
+          "name": "workflow_activations_run_status_idx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "available_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workflow_activations_run_id_workflow_journal_runs_run_id_fk": {
+          "name": "workflow_activations_run_id_workflow_journal_runs_run_id_fk",
+          "tableFrom": "workflow_activations",
+          "tableTo": "workflow_journal_runs",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["run_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_activations_id_check": {
+          "name": "workflow_activations_id_check",
+          "value": "\"agentic\".\"workflow_activations\".\"activation_id\" ~ '^[0-9a-f]{64}$'"
+        },
+        "workflow_activations_status_check": {
+          "name": "workflow_activations_status_check",
+          "value": "\"agentic\".\"workflow_activations\".\"status\" in ('blocked', 'ready', 'leased', 'running', 'waiting', 'succeeded', 'failed', 'cancelled')"
+        },
+        "workflow_activations_attempt_check": {
+          "name": "workflow_activations_attempt_check",
+          "value": "\"agentic\".\"workflow_activations\".\"selected_attempt_ordinal\" is null or \"agentic\".\"workflow_activations\".\"selected_attempt_ordinal\" > 0"
+        },
+        "workflow_activations_next_attempt_check": {
+          "name": "workflow_activations_next_attempt_check",
+          "value": "\"agentic\".\"workflow_activations\".\"next_attempt_ordinal\" > 0"
+        },
+        "workflow_activations_dependency_check": {
+          "name": "workflow_activations_dependency_check",
+          "value": "\"agentic\".\"workflow_activations\".\"dependency_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_attempts": {
+      "name": "workflow_attempts",
+      "schema": "agentic",
+      "columns": {
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activation_id": {
+          "name": "activation_id",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'queued'"
+        },
+        "fencing_token": {
+          "name": "fencing_token",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "lease_owner": {
+          "name": "lease_owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lease_expires_at": {
+          "name": "lease_expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "input": {
+          "name": "input",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "output": {
+          "name": "output",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "usage": {
+          "name": "usage",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "evidence": {
+          "name": "evidence",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "workflow_attempts_run_activation_ordinal_uidx": {
+          "name": "workflow_attempts_run_activation_ordinal_uidx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "activation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ordinal",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_attempts_lease_idx": {
+          "name": "workflow_attempts_lease_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lease_expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workflow_attempts_activation_fk": {
+          "name": "workflow_attempts_activation_fk",
+          "tableFrom": "workflow_attempts",
+          "tableTo": "workflow_activations",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id", "activation_id"],
+          "columnsTo": ["run_id", "activation_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "workflow_attempts_activation_id_ordinal_pk": {
+          "name": "workflow_attempts_activation_id_ordinal_pk",
+          "columns": ["activation_id", "ordinal"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_attempts_ordinal_check": {
+          "name": "workflow_attempts_ordinal_check",
+          "value": "\"agentic\".\"workflow_attempts\".\"ordinal\" > 0"
+        },
+        "workflow_attempts_status_check": {
+          "name": "workflow_attempts_status_check",
+          "value": "\"agentic\".\"workflow_attempts\".\"status\" in ('queued', 'running', 'waiting', 'succeeded', 'failed', 'cancelled', 'unknown')"
+        },
+        "workflow_attempts_fencing_check": {
+          "name": "workflow_attempts_fencing_check",
+          "value": "\"agentic\".\"workflow_attempts\".\"fencing_token\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_data": {
+      "name": "workflow_data",
+      "schema": "agentic",
+      "columns": {
+        "datum_id": {
+          "name": "datum_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activation_id": {
+          "name": "activation_id",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempt_ordinal": {
+          "name": "attempt_ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "digest": {
+          "name": "digest",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workflow_data_producer_name_uidx": {
+          "name": "workflow_data_producer_name_uidx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "activation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "attempt_ordinal",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_data_run_idx": {
+          "name": "workflow_data_run_idx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workflow_data_attempt_fk": {
+          "name": "workflow_data_attempt_fk",
+          "tableFrom": "workflow_data",
+          "tableTo": "workflow_attempts",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id", "activation_id", "attempt_ordinal"],
+          "columnsTo": ["run_id", "activation_id", "ordinal"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_data_kind_check": {
+          "name": "workflow_data_kind_check",
+          "value": "\"agentic\".\"workflow_data\".\"kind\" in ('value', 'artifact', 'external_reference', 'observation', 'secret_capability')"
+        },
+        "workflow_data_digest_check": {
+          "name": "workflow_data_digest_check",
+          "value": "\"agentic\".\"workflow_data\".\"digest\" ~ '^[0-9a-f]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_definitions": {
+      "name": "workflow_definitions",
+      "schema": "agentic",
+      "columns": {
+        "workflow_id": {
+          "name": "workflow_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "draft_revision": {
+          "name": "draft_revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "draft": {
+          "name": "draft",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "published_version": {
+          "name": "published_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workflow_definitions_status_idx": {
+          "name": "workflow_definitions_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_definitions_status_check": {
+          "name": "workflow_definitions_status_check",
+          "value": "\"agentic\".\"workflow_definitions\".\"status\" in ('draft', 'published', 'archived')"
+        },
+        "workflow_definitions_revision_check": {
+          "name": "workflow_definitions_revision_check",
+          "value": "\"agentic\".\"workflow_definitions\".\"draft_revision\" > 0"
+        },
+        "workflow_definitions_published_version_check": {
+          "name": "workflow_definitions_published_version_check",
+          "value": "\"agentic\".\"workflow_definitions\".\"published_version\" is null or \"agentic\".\"workflow_definitions\".\"published_version\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_effects": {
+      "name": "workflow_effects",
+      "schema": "agentic",
+      "columns": {
+        "effect_id": {
+          "name": "effect_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activation_id": {
+          "name": "activation_id",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "effect_slot": {
+          "name": "effect_slot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempt_ordinal": {
+          "name": "attempt_ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_digest": {
+          "name": "request_digest",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'prepared'"
+        },
+        "request": {
+          "name": "request",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "result": {
+          "name": "result",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reconciliation": {
+          "name": "reconciliation",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workflow_effects_logical_uidx": {
+          "name": "workflow_effects_logical_uidx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "activation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "effect_slot",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_effects_status_idx": {
+          "name": "workflow_effects_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workflow_effects_activation_fk": {
+          "name": "workflow_effects_activation_fk",
+          "tableFrom": "workflow_effects",
+          "tableTo": "workflow_activations",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id", "activation_id"],
+          "columnsTo": ["run_id", "activation_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_effects_request_digest_check": {
+          "name": "workflow_effects_request_digest_check",
+          "value": "\"agentic\".\"workflow_effects\".\"request_digest\" ~ '^[0-9a-f]{64}$'"
+        },
+        "workflow_effects_status_check": {
+          "name": "workflow_effects_status_check",
+          "value": "\"agentic\".\"workflow_effects\".\"status\" in ('prepared', 'dispatching', 'confirmed', 'unknown', 'conflict', 'failed', 'resolved')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_events": {
+      "name": "workflow_events",
+      "schema": "agentic",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "event_key": {
+          "name": "event_key",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "node": {
+          "name": "node",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "summary": {
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "details": {
+          "name": "details",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workflow_events_event_key_uidx": {
+          "name": "workflow_events_event_key_uidx",
+          "columns": [
+            {
+              "expression": "event_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_events_run_created_idx": {
+          "name": "workflow_events_run_created_idx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workflow_events_run_id_workflow_runs_run_id_fk": {
+          "name": "workflow_events_run_id_workflow_runs_run_id_fk",
+          "tableFrom": "workflow_events",
+          "tableTo": "workflow_runs",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["run_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_events_event_key_check": {
+          "name": "workflow_events_event_key_check",
+          "value": "\"agentic\".\"workflow_events\".\"event_key\" ~ '^[0-9a-f]{64}$'"
+        },
+        "workflow_events_outcome_check": {
+          "name": "workflow_events_outcome_check",
+          "value": "\"agentic\".\"workflow_events\".\"outcome\" in ('started', 'completed', 'failed', 'skipped', 'retried')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_execution_packages": {
+      "name": "workflow_execution_packages",
+      "schema": "agentic",
+      "columns": {
+        "package_digest": {
+          "name": "package_digest",
+          "type": "char(64)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "workflow_id": {
+          "name": "workflow_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workflow_version": {
+          "name": "workflow_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "contract_version": {
+          "name": "contract_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "compiler_version": {
+          "name": "compiler_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "compiled_plan_digest": {
+          "name": "compiled_plan_digest",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workflow_execution_packages_version_uidx": {
+          "name": "workflow_execution_packages_version_uidx",
+          "columns": [
+            {
+              "expression": "workflow_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "workflow_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workflow_execution_packages_workflow_id_workflow_definitions_workflow_id_fk": {
+          "name": "workflow_execution_packages_workflow_id_workflow_definitions_workflow_id_fk",
+          "tableFrom": "workflow_execution_packages",
+          "tableTo": "workflow_definitions",
+          "schemaTo": "agentic",
+          "columnsFrom": ["workflow_id"],
+          "columnsTo": ["workflow_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "workflow_execution_packages_version_fk": {
+          "name": "workflow_execution_packages_version_fk",
+          "tableFrom": "workflow_execution_packages",
+          "tableTo": "workflow_versions",
+          "schemaTo": "agentic",
+          "columnsFrom": ["workflow_id", "workflow_version"],
+          "columnsTo": ["workflow_id", "version"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_execution_packages_digest_check": {
+          "name": "workflow_execution_packages_digest_check",
+          "value": "\"agentic\".\"workflow_execution_packages\".\"package_digest\" ~ '^[0-9a-f]{64}$'"
+        },
+        "workflow_execution_packages_plan_digest_check": {
+          "name": "workflow_execution_packages_plan_digest_check",
+          "value": "\"agentic\".\"workflow_execution_packages\".\"compiled_plan_digest\" ~ '^[0-9a-f]{64}$'"
+        },
+        "workflow_execution_packages_version_check": {
+          "name": "workflow_execution_packages_version_check",
+          "value": "\"agentic\".\"workflow_execution_packages\".\"workflow_version\" > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_journal_runs": {
+      "name": "workflow_journal_runs",
+      "schema": "agentic",
+      "columns": {
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "package_digest": {
+          "name": "package_digest",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "request_digest": {
+          "name": "request_digest",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trigger_identity": {
+          "name": "trigger_identity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sealed_manifest": {
+          "name": "sealed_manifest",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'preparing'"
+        },
+        "cancellation_generation": {
+          "name": "cancellation_generation",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "latest_sequence": {
+          "name": "latest_sequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "scheduler_cursor": {
+          "name": "scheduler_cursor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pending_checkpoint_cursor": {
+          "name": "pending_checkpoint_cursor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "terminal_at": {
+          "name": "terminal_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "workflow_journal_runs_trigger_uidx": {
+          "name": "workflow_journal_runs_trigger_uidx",
+          "columns": [
+            {
+              "expression": "package_digest",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "trigger_identity",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_journal_runs_status_idx": {
+          "name": "workflow_journal_runs_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workflow_journal_runs_package_digest_workflow_execution_packages_package_digest_fk": {
+          "name": "workflow_journal_runs_package_digest_workflow_execution_packages_package_digest_fk",
+          "tableFrom": "workflow_journal_runs",
+          "tableTo": "workflow_execution_packages",
+          "schemaTo": "agentic",
+          "columnsFrom": ["package_digest"],
+          "columnsTo": ["package_digest"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_journal_runs_request_digest_check": {
+          "name": "workflow_journal_runs_request_digest_check",
+          "value": "\"agentic\".\"workflow_journal_runs\".\"request_digest\" ~ '^[0-9a-f]{64}$'"
+        },
+        "workflow_journal_runs_status_check": {
+          "name": "workflow_journal_runs_status_check",
+          "value": "\"agentic\".\"workflow_journal_runs\".\"status\" in ('preparing', 'runnable', 'running', 'waiting', 'succeeded', 'failed', 'cancelled', 'abandoned')"
+        },
+        "workflow_journal_runs_cancellation_check": {
+          "name": "workflow_journal_runs_cancellation_check",
+          "value": "\"agentic\".\"workflow_journal_runs\".\"cancellation_generation\" >= 0"
+        },
+        "workflow_journal_runs_sequence_check": {
+          "name": "workflow_journal_runs_sequence_check",
+          "value": "\"agentic\".\"workflow_journal_runs\".\"latest_sequence\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_run_bindings": {
+      "name": "workflow_run_bindings",
+      "schema": "agentic",
+      "columns": {
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "workflow_id": {
+          "name": "workflow_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trigger_type": {
+          "name": "trigger_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trigger_key": {
+          "name": "trigger_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workflow_run_bindings_workflow_idx": {
+          "name": "workflow_run_bindings_workflow_idx",
+          "columns": [
+            {
+              "expression": "workflow_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workflow_run_bindings_run_id_workflow_runs_run_id_fk": {
+          "name": "workflow_run_bindings_run_id_workflow_runs_run_id_fk",
+          "tableFrom": "workflow_run_bindings",
+          "tableTo": "workflow_runs",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["run_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "workflow_run_bindings_workflow_id_workflow_definitions_workflow_id_fk": {
+          "name": "workflow_run_bindings_workflow_id_workflow_definitions_workflow_id_fk",
+          "tableFrom": "workflow_run_bindings",
+          "tableTo": "workflow_definitions",
+          "schemaTo": "agentic",
+          "columnsFrom": ["workflow_id"],
+          "columnsTo": ["workflow_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_run_bindings_version_check": {
+          "name": "workflow_run_bindings_version_check",
+          "value": "\"agentic\".\"workflow_run_bindings\".\"version\" > 0"
+        },
+        "workflow_run_bindings_trigger_check": {
+          "name": "workflow_run_bindings_trigger_check",
+          "value": "\"agentic\".\"workflow_run_bindings\".\"trigger_type\" in ('manual', 'webhook', 'schedule')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_run_events": {
+      "name": "workflow_run_events",
+      "schema": "agentic",
+      "columns": {
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sequence": {
+          "name": "sequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "transaction_id": {
+          "name": "transaction_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_version": {
+          "name": "event_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reducer_version": {
+          "name": "reducer_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "causation_sequence": {
+          "name": "causation_sequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "correlation_id": {
+          "name": "correlation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "activation_id": {
+          "name": "activation_id",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attempt_ordinal": {
+          "name": "attempt_ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workflow_run_events_type_idx": {
+          "name": "workflow_run_events_type_idx",
+          "columns": [
+            {
+              "expression": "event_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "recorded_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_run_events_transaction_idx": {
+          "name": "workflow_run_events_transaction_idx",
+          "columns": [
+            {
+              "expression": "transaction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workflow_run_events_run_id_workflow_journal_runs_run_id_fk": {
+          "name": "workflow_run_events_run_id_workflow_journal_runs_run_id_fk",
+          "tableFrom": "workflow_run_events",
+          "tableTo": "workflow_journal_runs",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["run_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "workflow_run_events_activation_fk": {
+          "name": "workflow_run_events_activation_fk",
+          "tableFrom": "workflow_run_events",
+          "tableTo": "workflow_activations",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id", "activation_id"],
+          "columnsTo": ["run_id", "activation_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "workflow_run_events_attempt_fk": {
+          "name": "workflow_run_events_attempt_fk",
+          "tableFrom": "workflow_run_events",
+          "tableTo": "workflow_attempts",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id", "activation_id", "attempt_ordinal"],
+          "columnsTo": ["run_id", "activation_id", "ordinal"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "workflow_run_events_run_id_sequence_pk": {
+          "name": "workflow_run_events_run_id_sequence_pk",
+          "columns": ["run_id", "sequence"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_run_events_sequence_check": {
+          "name": "workflow_run_events_sequence_check",
+          "value": "\"agentic\".\"workflow_run_events\".\"sequence\" > 0"
+        },
+        "workflow_run_events_version_check": {
+          "name": "workflow_run_events_version_check",
+          "value": "\"agentic\".\"workflow_run_events\".\"event_version\" > 0"
+        },
+        "workflow_run_events_causation_check": {
+          "name": "workflow_run_events_causation_check",
+          "value": "\"agentic\".\"workflow_run_events\".\"causation_sequence\" is null or \"agentic\".\"workflow_run_events\".\"causation_sequence\" < \"agentic\".\"workflow_run_events\".\"sequence\""
+        },
+        "workflow_run_events_attempt_identity_check": {
+          "name": "workflow_run_events_attempt_identity_check",
+          "value": "\"agentic\".\"workflow_run_events\".\"attempt_ordinal\" is null or \"agentic\".\"workflow_run_events\".\"activation_id\" is not null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_run_links": {
+      "name": "workflow_run_links",
+      "schema": "agentic",
+      "columns": {
+        "parent_run_id": {
+          "name": "parent_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_activation_id": {
+          "name": "parent_activation_id",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "child_run_id": {
+          "name": "child_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "child_package_digest": {
+          "name": "child_package_digest",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "interface_digest": {
+          "name": "interface_digest",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "terminal_status": {
+          "name": "terminal_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "result": {
+          "name": "result",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workflow_run_links_child_uidx": {
+          "name": "workflow_run_links_child_uidx",
+          "columns": [
+            {
+              "expression": "child_run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workflow_run_links_parent_run_id_workflow_journal_runs_run_id_fk": {
+          "name": "workflow_run_links_parent_run_id_workflow_journal_runs_run_id_fk",
+          "tableFrom": "workflow_run_links",
+          "tableTo": "workflow_journal_runs",
+          "schemaTo": "agentic",
+          "columnsFrom": ["parent_run_id"],
+          "columnsTo": ["run_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "workflow_run_links_child_run_id_workflow_journal_runs_run_id_fk": {
+          "name": "workflow_run_links_child_run_id_workflow_journal_runs_run_id_fk",
+          "tableFrom": "workflow_run_links",
+          "tableTo": "workflow_journal_runs",
+          "schemaTo": "agentic",
+          "columnsFrom": ["child_run_id"],
+          "columnsTo": ["run_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "workflow_run_links_child_package_digest_workflow_execution_packages_package_digest_fk": {
+          "name": "workflow_run_links_child_package_digest_workflow_execution_packages_package_digest_fk",
+          "tableFrom": "workflow_run_links",
+          "tableTo": "workflow_execution_packages",
+          "schemaTo": "agentic",
+          "columnsFrom": ["child_package_digest"],
+          "columnsTo": ["package_digest"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "workflow_run_links_parent_activation_fk": {
+          "name": "workflow_run_links_parent_activation_fk",
+          "tableFrom": "workflow_run_links",
+          "tableTo": "workflow_activations",
+          "schemaTo": "agentic",
+          "columnsFrom": ["parent_run_id", "parent_activation_id"],
+          "columnsTo": ["run_id", "activation_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "workflow_run_links_parent_run_id_parent_activation_id_pk": {
+          "name": "workflow_run_links_parent_run_id_parent_activation_id_pk",
+          "columns": ["parent_run_id", "parent_activation_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_run_links_parent_activation_check": {
+          "name": "workflow_run_links_parent_activation_check",
+          "value": "\"agentic\".\"workflow_run_links\".\"parent_activation_id\" ~ '^[0-9a-f]{64}$'"
+        },
+        "workflow_run_links_package_digest_check": {
+          "name": "workflow_run_links_package_digest_check",
+          "value": "\"agentic\".\"workflow_run_links\".\"child_package_digest\" ~ '^[0-9a-f]{64}$'"
+        },
+        "workflow_run_links_interface_digest_check": {
+          "name": "workflow_run_links_interface_digest_check",
+          "value": "\"agentic\".\"workflow_run_links\".\"interface_digest\" ~ '^[0-9a-f]{64}$'"
+        },
+        "workflow_run_links_terminal_status_check": {
+          "name": "workflow_run_links_terminal_status_check",
+          "value": "\"agentic\".\"workflow_run_links\".\"terminal_status\" is null or \"agentic\".\"workflow_run_links\".\"terminal_status\" in ('succeeded', 'failed')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_runs": {
+      "name": "workflow_runs",
+      "schema": "agentic",
+      "columns": {
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "request_digest": {
+          "name": "request_digest",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stage": {
+          "name": "stage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "active_role": {
+          "name": "active_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "graph_version": {
+          "name": "graph_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "repository_owner": {
+          "name": "repository_owner",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "repository_name": {
+          "name": "repository_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_work_item_id": {
+          "name": "source_work_item_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_work_item_identifier": {
+          "name": "source_work_item_identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "assigned_agent_id": {
+          "name": "assigned_agent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pull_request_number": {
+          "name": "pull_request_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retry_count": {
+          "name": "retry_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "next_attempt_at": {
+          "name": "next_attempt_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workflow_runs_status_idx": {
+          "name": "workflow_runs_status_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_runs_repository_idx": {
+          "name": "workflow_runs_repository_idx",
+          "columns": [
+            {
+              "expression": "repository_owner",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "repository_name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_runs_assigned_agent_idx": {
+          "name": "workflow_runs_assigned_agent_idx",
+          "columns": [
+            {
+              "expression": "assigned_agent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_runs_pull_request_idx": {
+          "name": "workflow_runs_pull_request_idx",
+          "columns": [
+            {
+              "expression": "pull_request_number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_runs_status_check": {
+          "name": "workflow_runs_status_check",
+          "value": "\"agentic\".\"workflow_runs\".\"status\" in ('queued', 'running', 'blocked', 'failed', 'cancelled', 'published')"
+        },
+        "workflow_runs_stage_check": {
+          "name": "workflow_runs_stage_check",
+          "value": "\"agentic\".\"workflow_runs\".\"stage\" in ('intake', 'planning', 'coding', 'reviewing', 'repairing', 'publishing', 'completed')"
+        },
+        "workflow_runs_active_role_check": {
+          "name": "workflow_runs_active_role_check",
+          "value": "\"agentic\".\"workflow_runs\".\"active_role\" is null or \"agentic\".\"workflow_runs\".\"active_role\" in ('scrum_master', 'coder', 'reviewer', 'repairer')"
+        },
+        "workflow_runs_request_digest_check": {
+          "name": "workflow_runs_request_digest_check",
+          "value": "\"agentic\".\"workflow_runs\".\"request_digest\" ~ '^[0-9a-f]{64}$'"
+        },
+        "workflow_runs_retry_count_check": {
+          "name": "workflow_runs_retry_count_check",
+          "value": "\"agentic\".\"workflow_runs\".\"retry_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_versions": {
+      "name": "workflow_versions",
+      "schema": "agentic",
+      "columns": {
+        "workflow_id": {
+          "name": "workflow_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content_digest": {
+          "name": "content_digest",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "published_at": {
+          "name": "published_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "workflow_versions_workflow_id_workflow_definitions_workflow_id_fk": {
+          "name": "workflow_versions_workflow_id_workflow_definitions_workflow_id_fk",
+          "tableFrom": "workflow_versions",
+          "tableTo": "workflow_definitions",
+          "schemaTo": "agentic",
+          "columnsFrom": ["workflow_id"],
+          "columnsTo": ["workflow_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "workflow_versions_workflow_id_version_pk": {
+          "name": "workflow_versions_workflow_id_version_pk",
+          "columns": ["workflow_id", "version"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_versions_version_check": {
+          "name": "workflow_versions_version_check",
+          "value": "\"agentic\".\"workflow_versions\".\"version\" > 0"
+        },
+        "workflow_versions_digest_check": {
+          "name": "workflow_versions_digest_check",
+          "value": "\"agentic\".\"workflow_versions\".\"content_digest\" ~ '^[0-9a-f]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workflow_waits": {
+      "name": "workflow_waits",
+      "schema": "agentic",
+      "columns": {
+        "wait_id": {
+          "name": "wait_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "activation_id": {
+          "name": "activation_id",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attempt_ordinal": {
+          "name": "attempt_ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "correlation_key": {
+          "name": "correlation_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_input_schema": {
+          "name": "accepted_input_schema",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "authorization": {
+          "name": "authorization",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "consuming": {
+          "name": "consuming",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "winning_event_sequence": {
+          "name": "winning_event_sequence",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workflow_waits_correlation_uidx": {
+          "name": "workflow_waits_correlation_uidx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "correlation_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workflow_waits_pending_idx": {
+          "name": "workflow_waits_pending_idx",
+          "columns": [
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workflow_waits_attempt_fk": {
+          "name": "workflow_waits_attempt_fk",
+          "tableFrom": "workflow_waits",
+          "tableTo": "workflow_attempts",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id", "activation_id", "attempt_ordinal"],
+          "columnsTo": ["run_id", "activation_id", "ordinal"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workflow_waits_status_check": {
+          "name": "workflow_waits_status_check",
+          "value": "\"agentic\".\"workflow_waits\".\"status\" in ('pending', 'claimed', 'resumed', 'timed_out', 'cancelled')"
+        },
+        "workflow_waits_consuming_check": {
+          "name": "workflow_waits_consuming_check",
+          "value": "\"agentic\".\"workflow_waits\".\"consuming\" in (0, 1)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "agentic.workspace_leases": {
+      "name": "workspace_leases",
+      "schema": "agentic",
+      "columns": {
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role_attempt": {
+          "name": "role_attempt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lifecycle_state": {
+          "name": "lifecycle_state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "labels": {
+          "name": "labels",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "conversation_id": {
+          "name": "conversation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "profile_name": {
+          "name": "profile_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "retention_until": {
+          "name": "retention_until",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "workspace_leases_provider_workspace_uidx": {
+          "name": "workspace_leases_provider_workspace_uidx",
+          "columns": [
+            {
+              "expression": "provider",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workspace_leases_run_role_attempt_uidx": {
+          "name": "workspace_leases_run_role_attempt_uidx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role_attempt",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workspace_leases_run_idx": {
+          "name": "workspace_leases_run_idx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "workspace_leases_retention_idx": {
+          "name": "workspace_leases_retention_idx",
+          "columns": [
+            {
+              "expression": "retention_until",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "workspace_leases_run_id_workflow_runs_run_id_fk": {
+          "name": "workspace_leases_run_id_workflow_runs_run_id_fk",
+          "tableFrom": "workspace_leases",
+          "tableTo": "workflow_runs",
+          "schemaTo": "agentic",
+          "columnsFrom": ["run_id"],
+          "columnsTo": ["run_id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "workspace_leases_provider_check": {
+          "name": "workspace_leases_provider_check",
+          "value": "\"agentic\".\"workspace_leases\".\"provider\" in ('daytona', 'azure')"
+        },
+        "workspace_leases_role_check": {
+          "name": "workspace_leases_role_check",
+          "value": "\"agentic\".\"workspace_leases\".\"role\" in ('scrum_master', 'coder', 'reviewer', 'repairer')"
+        },
+        "workspace_leases_lifecycle_check": {
+          "name": "workspace_leases_lifecycle_check",
+          "value": "\"agentic\".\"workspace_leases\".\"lifecycle_state\" in ('creating', 'running', 'stopped', 'archived', 'deleted', 'failed')"
+        },
+        "workspace_leases_role_attempt_check": {
+          "name": "workspace_leases_role_attempt_check",
+          "value": "\"agentic\".\"workspace_leases\".\"role_attempt\" > 0"
+        },
+        "workspace_leases_version_check": {
+          "name": "workspace_leases_version_check",
+          "value": "\"agentic\".\"workspace_leases\".\"version\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "agentic": "agentic"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

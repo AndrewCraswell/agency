@@ -232,7 +232,7 @@ export function App() {
               <span className={classes.agentIdentity}>
                 <strong>{agentNames.get(activeAgentId(run)) ?? "Unknown agent"}</strong>
                 <small>
-                  {run.sourceWorkItemIdentifier ?? "Reviewing ready work"} · {run.repository}
+                  {run.sourceWorkItemIdentifier ?? "Reviewing ready work"} in {run.repository}
                 </small>
               </span>
               <Badge appearance="tint" color="brand">
