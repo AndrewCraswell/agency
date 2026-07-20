@@ -41,13 +41,12 @@ export const ACTIVE_RUNTIME_SELECTION = RuntimeSelectionSchema.parse({
   decisions: {
     phase8: {
       code: "no-approved-microsoft-candidate-or-parity-evidence",
-      evidence:
-        "docs/agent-platform/phase-8-microsoft-hosted-agent-runtime.md#41-capability-and-responsibility-assessment",
+      evidence: "docs/agent-platform/integration-workflow-platform-plan.md#deferred-runtime-decisions",
       status: "deferred"
     },
     phase9: {
       code: "no-qualifying-azure-workspace-entry-driver",
-      evidence: "docs/agent-platform/phase-9-azure-native-workspaces.md#2-entry-gate",
+      evidence: "docs/agent-platform/integration-workflow-platform-plan.md#deferred-runtime-decisions",
       status: "deferred"
     }
   },
