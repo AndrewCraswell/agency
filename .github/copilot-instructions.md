@@ -66,3 +66,16 @@ needs a human discussion**, not a silent add.
 
 - Hosted on **GitHub** — use GitHub for PRs and issues.
 - oxlint rules live in the shared `@repo/oxlint-config` base; add new rules there so every package benefits.
+
+## Principles for development
+
+- **Don't reinvent wheels.** [typescript.md](../docs/typescript.md) and [hooks.md](../docs/hooks.md) catalog what the
+  installed libraries already provide. Check them before adding a hook or type helper.
+- **One topic per page, kept short.** Prefer a new focused page over growing an existing one past a scannable length.
+- **Docs stay current.** When behavior, tooling, or conventions change, update the relevant page (and this index) in the
+  same change.
+- Don't overtest or verify. Complete shippable units of work before running test passes and resolving failures. Test
+  passes cost lots of time.
+- Prefer correctness over expediency or backwards compatibility. If faced with an issue where the new behavior would
+  create a breaking change, ask first whether it needs to be backwards compatible. If no user is available to answer,
+  assume not.

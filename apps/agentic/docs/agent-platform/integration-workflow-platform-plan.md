@@ -43,25 +43,11 @@ after a controlled process restart.
 
 ## Current position
 
-Milestone 1 is complete. The active engineering workstream is Milestone 2: provider-neutral product boundaries. Durable
-scheduling, generic restart, real-provider, and local browser acceptance gates remain open in later milestones.
+The active engineering workstream is provider-neutral product boundaries. Durable scheduling, generic restart,
+real-provider, and local browser acceptance gates remain open in later milestones.
 
 Work should proceed through the milestones below. A later milestone may be developed behind disabled gates, but it is
 not accepted until the preceding milestone's evidence exists.
-
-## Completed: Milestone 1 persistence and publication
-
-Accepted on 2026-07-20. The migration chain applies twice to a clean PostgreSQL database, persists and publishes a
-workflow, and contains the expected journal objects. The integrated lifecycle creates a repository-bound workflow,
-enforces revision checks, validates, publishes, reloads, preserves the immutable execution package after draft edits,
-and starts a run from the published version. Published webhook and schedule resolution reads sealed execution packages
-and matches provider events to their bound resources.
-
-Acceptance evidence:
-
-- `pnpm --filter agentic test:postgres`: 3 test files and 3 tests passed, covering clean migration, checkpoint recovery,
-  and the workflow lifecycle.
-- `pnpm verify`: formatting, lint, TypeScript, Knip, and all coverage suites passed.
 
 ## Milestone 2: complete provider-neutral product boundaries
 
