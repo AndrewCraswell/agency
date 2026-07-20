@@ -7,8 +7,8 @@ Last reviewed: 2026-07-20
 This is the only engineering roadmap for the agent platform. It records work that remains. Delivered requirements
 belong in code, tests, migrations, and API contracts instead of additional planning documents.
 
-The [workflow editor plan](workflow-editor-plan.md) is the designer-owned working specification for authoring and run
-experience. Engineering must preserve its contracts and coordinate before changing its owned surfaces.
+The completed authoring and run surfaces define the current product contract. Engineering changes must preserve their
+customer workflows or update the product surface and acceptance coverage as one coherent change.
 
 ## Product target
 
@@ -30,7 +30,11 @@ after a controlled process restart.
 - Nango stores and refreshes provider credentials. Credentials never enter Agency workflow records or run evidence.
 - GitHub is the first repository provider, Linear is the first task provider, OpenRouter supplies direct model inference,
   Daytona supplies isolated workspaces, and LangGraph remains the selected orchestrator.
-- Resources are bound where needed. Connecting an integration does not select a global repository, team, or project.
+- Every workflow selects one GitHub repository at creation. That repository defines the workflow scope and is inherited
+   by repository agents, repository data, GitHub events, and GitHub actions without per-step selection. Other resources,
+   including Linear teams and projects, are bound only where their steps need them.
+- Provider-specific catalog entries fix their provider identity. A GitHub event cannot be changed into a Linear event,
+   and a Linear event cannot be changed into a GitHub event from the step inspector.
 - Provider mutations use stable effect identities. Unknown outcomes block automatic retry until reconciled.
 - Loops, fan-out, joins, retries, waits, and child workflows are bounded and deterministic.
 - Human approval and arbitrary model tools remain out of scope until their authorization and durable-resume contracts
@@ -39,35 +43,32 @@ after a controlled process restart.
 
 ## Current position
 
-The repository contains substantial implementation for integrations, workflow drafts and versions, compilation,
-journaled execution, provider/model/repository-agent steps, orchestration controls, the React Flow editor, and run
-operations. That breadth is not phase completion. Clean-database, immutable-trigger, durable scheduling, generic restart,
-real-provider, and browser acceptance gates remain open.
+Milestone 1 is complete. The active engineering workstream is Milestone 2: provider-neutral product boundaries. Durable
+scheduling, generic restart, real-provider, and local browser acceptance gates remain open in later milestones.
 
 Work should proceed through the milestones below. A later milestone may be developed behind disabled gates, but it is
 not accepted until the preceding milestone's evidence exists.
 
-## Milestone 1: stabilize persistence and publication
+## Completed: Milestone 1 persistence and publication
 
-1. Repair migration `0011_early_sabretooth.sql`, which currently contains incomplete and misplaced workflow run event
-   DDL.
-2. Add a clean PostgreSQL migration test that applies the full migration chain and exercises workflow persistence.
-3. Align workflow creation contracts so name-only and repository-free drafts are valid. Require repository, team, model,
-   or provider bindings only when a selected step needs them.
-4. Add an integrated API test covering create, update with revision checks, validate, publish, reload, and version
-   immutability.
-5. Resolve webhook and schedule triggers from the published execution package, never mutable draft steps.
-6. Prove that editing a draft cannot change a published trigger, resource snapshot, agent snapshot, model snapshot, or
-   historical graph.
+Accepted on 2026-07-20. The migration chain applies twice to a clean PostgreSQL database, persists and publishes a
+workflow, and contains the expected journal objects. The integrated lifecycle creates a repository-bound workflow,
+enforces revision checks, validates, publishes, reloads, preserves the immutable execution package after draft edits,
+and starts a run from the published version. Published webhook and schedule resolution reads sealed execution packages
+and matches provider events to their bound resources.
 
-Exit gate: a clean database can create and publish a repository-free workflow, and later draft edits do not alter the
-published package or its trigger behavior.
+Acceptance evidence:
+
+- `pnpm --filter agentic test:postgres`: 3 test files and 3 tests passed, covering clean migration, checkpoint recovery,
+  and the workflow lifecycle.
+- `pnpm verify`: formatting, lint, TypeScript, Knip, and all coverage suites passed.
 
 ## Milestone 2: complete provider-neutral product boundaries
 
 1. Introduce explicit repository and task provider ports resolved by connection and capability.
 2. Route repository discovery and task operations through those ports without exposing Nango details.
-3. Remove remaining fixed repository, Linear team, and fixed-role assumptions from the generic workflow path.
+3. Remove fixed provider-client, Linear team, and fixed-role assumptions from the generic workflow path while preserving
+   the required workflow repository scope.
 4. Add provider-fixture contract tests proving a second adapter can implement each capability without changing workflow
    contracts.
 5. Provide the API required for a provider-neutral Taskboard: resource selection, URL-backed filters, pagination, task
@@ -124,19 +125,19 @@ intentionally missed event and one interrupted schedule fire.
 Exit gate: the complete path succeeds twice and the retained evidence explains both the successful run and the injected
 failure without relying on process memory or secret-bearing logs.
 
-## Designer coordination boundary
+## Product surface contract
 
-The designer currently owns workflow and run presentation work, including:
+The completed product surface includes:
 
 - Workflows list, visual canvas, ordered outline, settings surfaces, Add step, mappings, and validation navigation.
 - Undo/redo, keyboard authoring, focus recovery, responsive behavior, and accessibility acceptance.
 - Step configuration UX for repository agents, models, provider operations, and orchestration controls.
 - Immutable run graph/outline projection, event history, artifacts, retry/resume/cancel flows, and operator messaging.
-- Taskboard information architecture and interface after engineering provides stable provider-neutral APIs.
+- Taskboard information architecture and interface, backed by stable provider-neutral APIs.
 
-Engineering work should stay in migrations, stores, provider ports, API contracts, compiler/runtime behavior, scheduling,
-webhook processing, and executable acceptance tests. Prefer additive API changes while designer work is active. Coordinate
-before renaming step kinds, removing response fields, changing draft shapes, or editing the workflow editor and run page.
+Backend, contract, and runtime changes must update affected product code and executable acceptance tests in the same
+workstream. This prototype has no backward-compatibility requirement: replace superseded APIs, response fields, draft
+shapes, and implementation paths directly when the target design requires it.
 
 ## Cross-cutting acceptance
 

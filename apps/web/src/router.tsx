@@ -40,7 +40,7 @@ const integrationsRoute = createRoute({
     returnTo: search.returnTo === "workflow-create" ? ("workflow-create" as const) : undefined,
     workflowName: typeof search.workflowName === "string" ? search.workflowName : undefined
   }),
-  component: lazyRouteComponent(() => import("./routes/IntegrationsPage"), "IntegrationsPage")
+  component: lazyRouteComponent(() => import("./routes/SettingsPage"), "IntegrationsPage")
 })
 const workflowsRoute = createRoute({
   getParentRoute: () => rootRoute,

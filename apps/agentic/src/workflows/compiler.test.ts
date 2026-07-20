@@ -381,15 +381,23 @@ describe("compileWorkflowDefinition", () => {
     )
   })
 
-  it("rejects unreferenced sealed resource bindings", () => {
+  it("allows the workflow repository and rejects other unreferenced resource bindings", () => {
     const source = definition()
     source.resourceBindings = {
-      team: {
+      repository: {
         connectionId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e77",
+        provider: "github",
+        resourceType: "repository",
+        externalId: "REPOSITORY",
+        name: "agency/repository",
+        capabilities: ["repository.read"]
+      },
+      team: {
+        connectionId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e78",
         provider: "linear",
         resourceType: "team",
         externalId: "TEAM",
-        name: "Linear Team",
+        name: "Agency",
         capabilities: ["issue.read"]
       }
     }

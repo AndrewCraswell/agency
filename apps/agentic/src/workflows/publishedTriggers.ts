@@ -12,7 +12,9 @@ const PublishedWebhookTriggerSchema = z
     nodeId: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u),
     label: z.string().min(1),
     provider: z.enum(["github", "linear"]),
-    eventKey: z.string().trim().min(1)
+    eventKey: z.string().trim().min(1),
+    resourceType: z.enum(["repository", "team"]),
+    resourceId: z.string().min(1)
   })
   .strict()
 
@@ -61,7 +63,13 @@ export async function resolvePublishedTriggerCatalog(store: PublishedTriggerStor
           for (const step of graph.steps) {
             if (step.definition.kind === "provider_event") {
               const config = z
-                .object({ provider: z.enum(["github", "linear"]), eventKey: z.string().trim().min(1) })
+                .object({
+                  provider: z.enum(["github", "linear"]),
+                  eventKey: z.string().trim().min(1),
+                  binding: z
+                    .object({ resourceType: z.enum(["repository", "team"]), externalId: z.string().min(1) })
+                    .passthrough()
+                })
                 .passthrough()
                 .parse(step.config)
               webhooks.push(
@@ -72,7 +80,9 @@ export async function resolvePublishedTriggerCatalog(store: PublishedTriggerStor
                   nodeId: step.id,
                   label: step.label,
                   provider: config.provider,
-                  eventKey: config.eventKey
+                  eventKey: config.eventKey,
+                  resourceType: config.binding.resourceType,
+                  resourceId: config.binding.externalId
                 })
               )
             }
@@ -102,9 +112,18 @@ export async function resolvePublishedTriggerCatalog(store: PublishedTriggerStor
 
 export function matchPublishedWebhookTriggers(
   catalog: PublishedTriggerCatalog,
-  event: { provider: "github" | "linear"; eventKey: string }
+  event: {
+    provider: "github" | "linear"
+    eventKey: string
+    resourceType: "repository" | "team"
+    resourceId: string
+  }
 ): PublishedWebhookTrigger[] {
   return catalog.webhooks.filter(
-    (trigger) => trigger.provider === event.provider && trigger.eventKey === event.eventKey
+    (trigger) =>
+      trigger.provider === event.provider &&
+      trigger.eventKey === event.eventKey &&
+      trigger.resourceType === event.resourceType &&
+      trigger.resourceId === event.resourceId
   )
 }

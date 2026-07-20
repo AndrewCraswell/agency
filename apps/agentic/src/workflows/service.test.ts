@@ -605,27 +605,24 @@ describe("WorkflowService V2", () => {
     ])
   })
 
-  it("creates repository-bound blank workflows through an explicit template", async () => {
+  it("requires a repository when creating a blank workflow", async () => {
     const store = new FakeWorkflowStore()
     const service = new WorkflowService(store, journal())
+    const repository = {
+      connectionId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e31",
+      provider: "github" as const,
+      resourceType: "repository" as const,
+      externalId: "42",
+      name: "agency/repository",
+      capabilities: ["repository.read"]
+    }
 
-    await expect(
-      service.create({
-        template: "blank",
+    await expect(service.create({ template: "blank", name: "Repository workflow", repository })).resolves.toMatchObject(
+      {
         name: "Repository workflow",
-        repository: {
-          connectionId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e31",
-          provider: "github",
-          resourceType: "repository",
-          externalId: "42",
-          name: "agency/repository",
-          capabilities: ["repository.read"]
-        }
-      })
-    ).resolves.toMatchObject({
-      name: "Repository workflow",
-      content: { resourceBindings: { repository: expect.objectContaining({ externalId: "42" }) }, steps: [] }
-    })
+        content: { resourceBindings: { repository }, steps: [], connections: [] }
+      }
+    )
     await expect(service.create({ template: "blank", name: "Missing repository" })).rejects.toThrow(
       "Invalid input: expected object, received undefined"
     )
@@ -1678,7 +1675,7 @@ describe("WorkflowService V2", () => {
           providerEventAction: "created",
           providerObjectType: "Comment",
           providerObjectId: "84",
-          providerResourceId: "team-7"
+          providerResourceId: "team-1"
         },
         "delivery-42"
       )

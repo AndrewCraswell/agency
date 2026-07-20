@@ -130,6 +130,18 @@ function broker(connections: Partial<Record<"github" | "linear", BrokerConnectio
 }
 
 describe("IntegrationService", () => {
+  it("exposes provider-owned workflow events", () => {
+    const service = new IntegrationService(broker({}), new MemoryIntegrationStore(), {})
+
+    expect(service.eventDefinitions()).toMatchObject({
+      schemaVersion: "2",
+      events: expect.arrayContaining([
+        { provider: "github", resourceType: "repository", eventKey: "issue.created", label: "Issue created" },
+        { provider: "linear", resourceType: "team", eventKey: "task.created", label: "Issue created" }
+      ])
+    })
+  })
+
   it("completes authorization, discovers resources, and redacts credentials", async () => {
     const store = new MemoryIntegrationStore()
     const githubConnection = {

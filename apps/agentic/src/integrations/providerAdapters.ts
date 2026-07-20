@@ -1,6 +1,42 @@
 import { z } from "zod"
 import { ProviderPortResolver, type ProviderResourcePort } from "./providerPorts"
 
+const githubEvents = [
+  { eventKey: "pull_request.created", label: "Pull request created" },
+  { eventKey: "pull_request.updated", label: "Pull request updated" },
+  { eventKey: "pull_request.closed", label: "Pull request closed" },
+  { eventKey: "pull_request.merged", label: "Pull request merged" },
+  { eventKey: "issue.created", label: "Issue created" },
+  { eventKey: "issue.updated", label: "Issue updated" },
+  { eventKey: "issue.closed", label: "Issue closed" },
+  { eventKey: "issue.reopened", label: "Issue reopened" },
+  { eventKey: "issue.comment.created", label: "Issue comment created" },
+  { eventKey: "issue.comment.updated", label: "Issue comment updated" },
+  { eventKey: "issue.comment.deleted", label: "Issue comment deleted" }
+] as const
+
+const linearEvents = [
+  { eventKey: "task.created", label: "Issue created" },
+  { eventKey: "task.updated", label: "Issue updated" },
+  { eventKey: "task.removed", label: "Issue removed" },
+  { eventKey: "task.comment.created", label: "Comment created" },
+  { eventKey: "task.comment.updated", label: "Comment updated" },
+  { eventKey: "task.comment.removed", label: "Comment removed" }
+] as const
+
+function normalizedAction(action: string): string {
+  const value = action.toLowerCase()
+  if (value === "create" || value === "opened") return "created"
+  if (value === "edit" || value === "edited" || value === "synchronize" || value === "update") return "updated"
+  if (value === "delete") return "deleted"
+  if (value === "remove") return "removed"
+  return value
+}
+
+function knownEvent(events: readonly { eventKey: string }[], eventKey: string): boolean {
+  return events.some((event) => event.eventKey === eventKey)
+}
+
 const GitHubRepositoriesSchema = z
   .object({
     total_count: z.number().int().nonnegative(),
@@ -30,6 +66,19 @@ export const githubRepositoryProvider: ProviderResourcePort = {
   provider: "github",
   resourceType: "repository",
   capabilities: ["repository.read", "repository.write", "pull_request.write"],
+  events: githubEvents,
+  normalizeEvent(input) {
+    const objectType = input.objectType.toLowerCase()
+    let prefix: string | null = null
+    if (objectType.includes("pull")) prefix = "pull_request"
+    if (objectType.includes("issue") && objectType.includes("comment")) prefix = "issue.comment"
+    if (prefix === null && objectType.includes("issue")) prefix = "issue"
+    if (prefix === null) return null
+    const eventKey = `${prefix}.${normalizedAction(input.action)}`
+    return knownEvent(githubEvents, eventKey)
+      ? { eventKey, objectType: prefix, ...(input.objectId === undefined ? {} : { objectId: input.objectId }) }
+      : null
+  },
   async discover(context) {
     const repositories: Array<z.infer<typeof GitHubRepositoriesSchema>["repositories"][number]> = []
     let page = 1
@@ -56,6 +105,18 @@ export const linearTaskProvider: ProviderResourcePort = {
   provider: "linear",
   resourceType: "team",
   capabilities: ["team.read", "issue.read", "issue.write"],
+  events: linearEvents,
+  normalizeEvent(input) {
+    const objectType = input.objectType.toLowerCase()
+    let prefix: string | null = null
+    if (objectType.includes("comment")) prefix = "task.comment"
+    if (prefix === null && objectType.includes("issue")) prefix = "task"
+    if (prefix === null) return null
+    const eventKey = `${prefix}.${normalizedAction(input.action)}`
+    return knownEvent(linearEvents, eventKey)
+      ? { eventKey, objectType: prefix, ...(input.objectId === undefined ? {} : { objectId: input.objectId }) }
+      : null
+  },
   async discover(context) {
     const teams: Array<{ id: string; key: string; name: string }> = []
     let cursor: string | null = null

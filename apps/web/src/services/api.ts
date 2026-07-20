@@ -144,6 +144,11 @@ const integrationConnectionSchema = z
     resources: z.array(integrationResourceSchema)
   })
   .strict()
+  .transform((connection) => ({
+    ...connection,
+    displayName: connection.providerAccount,
+    errorCode: connection.latestError
+  }))
 const integrationDisconnectImpactSchema = z
   .object({
     connectionId: z.uuid(),
@@ -189,6 +194,17 @@ const integrationResourceInventorySchema = z
         .strict()
     )
   })
+  .strict()
+const integrationProviderEventSchema = z
+  .object({
+    provider: integrationProviderSchema,
+    resourceType: z.enum(["repository", "team"]),
+    eventKey: z.string(),
+    label: z.string()
+  })
+  .strict()
+const integrationProviderEventCatalogSchema = z
+  .object({ schemaVersion: z.literal("2"), events: z.array(integrationProviderEventSchema) })
   .strict()
 const authorizationSessionSchema = z
   .object({
@@ -698,17 +714,30 @@ export type WorkItemQuery = {
   pageSize?: number
 }
 export type IntegrationProvider = z.infer<typeof integrationProviderSchema>
-export type IntegrationConnection = z.infer<typeof integrationConnectionSchema>
-export type IntegrationSettings = z.infer<typeof integrationSettingsSchema>
+export type IntegrationConnection = z.input<typeof integrationConnectionSchema> & {
+  displayName?: string | null
+  errorCode?: string | null
+}
+export type IntegrationSettings = Omit<z.input<typeof integrationSettingsSchema>, "connections"> & {
+  connections: IntegrationConnection[]
+}
 export type IntegrationDisconnectImpact = z.infer<typeof integrationDisconnectImpactSchema>
 export type IntegrationResourceCapability = z.infer<typeof integrationResourceCapabilitySchema>
 export type IntegrationResourceInventory = z.infer<typeof integrationResourceInventorySchema>
+export type IntegrationProviderEvent = z.infer<typeof integrationProviderEventSchema>
 export type WorkflowStep = z.infer<typeof workflowStepSchema>
 export type WorkflowDraftContent = z.infer<typeof workflowDraftContentSchema>
 export type WorkflowSummary = z.infer<typeof workflowSummarySchema>
 export type WorkflowDraftView = z.infer<typeof workflowDraftViewSchema>
 export type WorkflowValidation = z.infer<typeof workflowValidationSchema>
 export type WorkflowSchedule = z.infer<typeof workflowScheduleSchema>
+export type PublishedWorkflowSchedule = {
+  workflowId: string
+  version: number
+  nodeId: string
+  label: string
+  intervalSeconds: number
+}
 export type WorkflowSimulation = z.infer<typeof workflowSimulationSchema>
 export type WorkflowRunDetail = z.infer<typeof workflowRunDetailSchema>
 export type WorkflowStepDefinition = z.infer<typeof workflowStepDefinitionSchema>
@@ -874,6 +903,12 @@ export function getIntegrationResourceInventory(
   return requestJson(`/api/integrations/resources${query}`, integrationResourceInventorySchema)
 }
 
+export function listIntegrationProviderEvents(): Promise<IntegrationProviderEvent[]> {
+  return requestJson("/api/integrations/provider-events", integrationProviderEventCatalogSchema).then(
+    ({ events }) => events
+  )
+}
+
 export function startIntegrationAuthorization(provider: IntegrationProvider) {
   return requestJson("/api/integrations/authorize", authorizationSessionSchema, jsonRequest("POST", { provider }))
 }
@@ -929,6 +964,25 @@ export function listWorkflows(): Promise<WorkflowSummary[]> {
 
 export function listWorkflowSchedules(): Promise<WorkflowSchedule[]> {
   return requestJson("/api/workflows/schedules", z.array(workflowScheduleSchema))
+}
+
+export function listPublishedWorkflowSchedules(): Promise<PublishedWorkflowSchedule[]> {
+  return listWorkflowSchedules().then((schedules) =>
+    schedules.flatMap((schedule) => {
+      if (!schedule.enabled || schedule.intervalSeconds === null) {
+        return []
+      }
+      return [
+        {
+          workflowId: schedule.workflowId,
+          version: schedule.workflowVersion,
+          nodeId: schedule.triggerNodeId,
+          label: schedule.label,
+          intervalSeconds: schedule.intervalSeconds
+        }
+      ]
+    })
+  )
 }
 
 export function listWorkflowStepDefinitions(): Promise<WorkflowStepDefinition[]> {

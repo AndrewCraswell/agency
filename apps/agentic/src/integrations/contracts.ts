@@ -100,6 +100,22 @@ export const IntegrationResourceInventorySchema = z
   })
   .strict()
 
+export const IntegrationProviderEventSchema = z
+  .object({
+    provider: IntegrationProviderSchema,
+    resourceType: IntegrationResourceTypeSchema,
+    eventKey: z.string().min(1),
+    label: z.string().min(1)
+  })
+  .strict()
+
+export const IntegrationProviderEventCatalogSchema = z
+  .object({
+    schemaVersion: z.literal(INTEGRATION_SCHEMA_VERSION),
+    events: z.array(IntegrationProviderEventSchema)
+  })
+  .strict()
+
 export const StartAuthorizationRequestSchema = z.object({ provider: IntegrationProviderSchema }).strict()
 export const StartReconnectRequestSchema = z.object({ connectionId: z.uuid() }).strict()
 export const AuthorizationSessionSchema = z

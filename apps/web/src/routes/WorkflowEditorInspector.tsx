@@ -24,10 +24,12 @@ import { useEffect, useState, type ReactNode, type RefObject } from "react"
 import {
   discoverRepositoryAgents,
   getIntegrationResourceInventory,
+  listIntegrationProviderEvents,
   listProviderOperations,
   listWorkflowModels,
   parseRepositoryAgentReference,
   type IntegrationResourceInventory,
+  type IntegrationProviderEvent,
   type JsonValue,
   type ProviderOperation,
   type RepositoryAgentReference,
@@ -280,9 +282,7 @@ function StepInspector({
       )}
       {definition.kind === "ai_model" && <AiModelInspector step={step} changeStep={changeStep} />}
       {definition.kind === "structured_judgment" && <StructuredJudgmentInspector step={step} changeStep={changeStep} />}
-      {definition.kind === "provider_event" && (
-        <ProviderEventInspector step={step} repository={repository} changeStep={changeStep} />
-      )}
+      {definition.kind === "provider_event" && <ProviderEventInspector step={step} changeStep={changeStep} />}
       {definition.kind === "schedule" && <ScheduleInspector step={step} changeStep={changeStep} />}
       {definition.kind === "provider_data" && (
         <ProviderStepInspector mode="read" step={step} repository={repository} changeStep={changeStep} />
@@ -1304,60 +1304,45 @@ function StructuredJudgmentInspector({
   )
 }
 
-function ProviderEventInspector({
-  step,
-  repository,
-  changeStep
-}: {
-  step: WorkflowStep
-  repository: ResourceBinding | undefined
-  changeStep: ProviderChangeStep
-}) {
+function ProviderEventInspector({ step, changeStep }: { step: WorkflowStep; changeStep: ProviderChangeStep }) {
   const { inventory, state, error } = useProviderInventory()
+  const eventState = useProviderEvents()
   const provider = step.config.provider === "linear" ? "linear" : "github"
-  const events =
-    provider === "github"
-      ? ["pull_request.created", "pull_request.updated", "pull_request.closed", "pull_request.merged"]
-      : ["task.created", "task.updated", "task.comment.created"]
+  const events = eventState.events.filter((event) => event.provider === provider)
+  const configuredEventKey = typeof step.config.eventKey === "string" ? step.config.eventKey : ""
+  const selectedEvent = events.find((event) => event.eventKey === configuredEventKey) ?? events[0]
+  useEffect(() => {
+    if (eventState.state === "ready" && configuredEventKey === "" && selectedEvent !== undefined) {
+      changeStep({ ...step, config: { ...step.config, eventKey: selectedEvent.eventKey } })
+    }
+  }, [changeStep, configuredEventKey, eventState.state, selectedEvent, step])
+  if (eventState.state === "loading") {
+    return <Spinner size="tiny" label="Loading provider events" />
+  }
+  if (eventState.state === "error") {
+    return <Caption1>{eventState.error}</Caption1>
+  }
+  if (selectedEvent === undefined) {
+    return <Caption1>No {provider === "github" ? "GitHub" : "Linear"} events are available.</Caption1>
+  }
   return (
     <ProviderState state={state} error={error} inventory={inventory}>
-      <Field label="Provider">
-        <Dropdown
-          value={provider === "github" ? "GitHub" : "Linear"}
-          selectedOptions={[provider]}
-          onOptionSelect={(_, data) => {
-            const next = data.optionValue === "linear" ? "linear" : "github"
-            changeStep(
-              {
-                ...step,
-                config: { provider: next, eventKey: next === "github" ? "pull_request.created" : "task.created" }
-              },
-              null
-            )
-          }}
-        >
-          <Option value="github">GitHub</Option>
-          <Option value="linear">Linear</Option>
-        </Dropdown>
-      </Field>
       <Field label="Event">
         <Dropdown
-          value={typeof step.config.eventKey === "string" ? step.config.eventKey : events[0]}
-          selectedOptions={[typeof step.config.eventKey === "string" ? step.config.eventKey : events[0]!]}
+          value={selectedEvent.label}
+          selectedOptions={[selectedEvent.eventKey]}
           onOptionSelect={(_, data) =>
-            changeStep({ ...step, config: { ...step.config, eventKey: data.optionValue ?? events[0]! } })
+            changeStep({ ...step, config: { ...step.config, eventKey: data.optionValue ?? selectedEvent.eventKey } })
           }
         >
           {events.map((event) => (
-            <Option key={event} value={event}>
-              {event.replaceAll("_", " ")}
+            <Option key={event.eventKey} value={event.eventKey}>
+              {event.label}
             </Option>
           ))}
         </Dropdown>
       </Field>
-      {provider === "github" ? (
-        <WorkflowRepositoryField repository={repository} />
-      ) : (
+      {provider === "linear" && (
         <ProviderResourcePicker
           step={step}
           provider={provider}
@@ -1447,6 +1432,32 @@ function useProviderInventory() {
     }
   }, [])
   return { inventory, state, error }
+}
+
+function useProviderEvents() {
+  const [events, setEvents] = useState<IntegrationProviderEvent[]>([])
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading")
+  const [error, setError] = useState("")
+  useEffect(() => {
+    let active = true
+    void listIntegrationProviderEvents()
+      .then((result) => {
+        if (active) {
+          setEvents(result)
+          setState("ready")
+        }
+      })
+      .catch((reason: unknown) => {
+        if (active) {
+          setError(reason instanceof Error ? reason.message : "Provider events could not be loaded")
+          setState("error")
+        }
+      })
+    return () => {
+      active = false
+    }
+  }, [])
+  return { events, state, error }
 }
 
 function useProviderOperations() {
@@ -1562,17 +1573,6 @@ function ProviderResourcePicker({
   )
 }
 
-function WorkflowRepositoryField({ repository }: { repository: ResourceBinding | undefined }) {
-  if (repository === undefined) {
-    return <Caption1>This workflow has no repository.</Caption1>
-  }
-  return (
-    <Field label="Repository">
-      <Input readOnly value={repository.name} />
-    </Field>
-  )
-}
-
 function ProviderStepInspector({
   mode,
   step,
@@ -1658,18 +1658,15 @@ function ProviderStepInspector({
           ))}
         </Dropdown>
       </Field>
-      {operation !== undefined &&
-        (provider === "github" ? (
-          <WorkflowRepositoryField repository={repository} />
-        ) : (
-          <ProviderResourcePicker
-            step={step}
-            provider={provider}
-            inventory={inventoryState.inventory}
-            capability={operation.capability}
-            changeStep={changeStep}
-          />
-        ))}
+      {operation !== undefined && provider === "linear" && (
+        <ProviderResourcePicker
+          step={step}
+          provider={provider}
+          inventory={inventoryState.inventory}
+          capability={operation.capability}
+          changeStep={changeStep}
+        />
+      )}
       {mode === "write" && (
         <Caption1>
           Agency records the external change before it runs. If the result is unknown, retries pause until you confirm

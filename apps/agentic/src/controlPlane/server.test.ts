@@ -171,6 +171,13 @@ describe("control-plane HTTP server", () => {
     expect(snapshot.status).toBe(200)
     await expect(snapshot.json()).resolves.toMatchObject({ tasks: [{ identifier: "FEN-42" }], runs: [] })
 
+    const topology = await fetch(`${baseUrl}/api/control-plane/topology`)
+    expect(topology.status).toBe(200)
+    await expect(topology.json()).resolves.toMatchObject({
+      graphVersion: "delivery-v1",
+      nodes: expect.arrayContaining([expect.objectContaining({ id: "planning" })])
+    })
+
     const assignment = await fetch(`${baseUrl}/api/control-plane/assign`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

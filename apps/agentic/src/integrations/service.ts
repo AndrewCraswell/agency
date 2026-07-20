@@ -7,6 +7,7 @@ import {
   INTEGRATION_SCHEMA_VERSION,
   IntegrationConnectionSchema,
   IntegrationDisconnectImpactSchema,
+  IntegrationProviderEventCatalogSchema,
   IntegrationProviderSchema,
   IntegrationResourceInventoryRequestSchema,
   IntegrationResourceInventorySchema,
@@ -111,6 +112,13 @@ export class IntegrationService {
     return IntegrationResourceInventorySchema.parse({
       schemaVersion: INTEGRATION_SCHEMA_VERSION,
       resources: resources.flat()
+    })
+  }
+
+  eventDefinitions() {
+    return IntegrationProviderEventCatalogSchema.parse({
+      schemaVersion: INTEGRATION_SCHEMA_VERSION,
+      events: this.#providerPorts.eventDefinitions()
     })
   }
 

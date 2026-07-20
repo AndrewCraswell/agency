@@ -7,6 +7,7 @@ import type { GitHubWebhookService } from "../webhooks/service"
 import type { WorkflowService } from "../workflows/service"
 import { ApiErrorSchema } from "./contracts"
 import type { ControlPlaneService } from "./service"
+import { deliveryWorkflowTopology } from "./workflowTopology"
 
 const MAX_REQUEST_BYTES = 65_536
 const MAX_WEBHOOK_BYTES = 262_144
@@ -75,6 +76,10 @@ export function createControlPlaneServer(
       }
       if (request.method === "GET" && url.pathname === "/api/control-plane") {
         writeJson(response, 200, await service.snapshot(), responseOrigin)
+        return
+      }
+      if (request.method === "GET" && url.pathname === "/api/control-plane/topology") {
+        writeJson(response, 200, deliveryWorkflowTopology, responseOrigin)
         return
       }
       if (request.method === "GET" && url.pathname === "/api/control-plane/runs") {
@@ -240,6 +245,14 @@ export function createControlPlaneServer(
           await integrationService.inventory(capability === null ? {} : { capability }),
           responseOrigin
         )
+        return
+      }
+      if (
+        request.method === "GET" &&
+        url.pathname === "/api/integrations/provider-events" &&
+        integrationService !== undefined
+      ) {
+        writeJson(response, 200, integrationService.eventDefinitions(), responseOrigin)
         return
       }
       if (

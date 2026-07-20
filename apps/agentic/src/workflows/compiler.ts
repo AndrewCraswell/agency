@@ -711,8 +711,8 @@ export function compileWorkflowDefinition(input: {
       })
     }
   }
-  for (const [bindingId, binding] of Object.entries(definition.resourceBindings)) {
-    if (bindingId === "repository" && binding.provider === "github" && binding.resourceType === "repository") continue
+  for (const bindingId of Object.keys(definition.resourceBindings)) {
+    if (bindingId === "repository") continue
     if (!referencedBindingIds.has(bindingId)) {
       issues.push({
         code: "provider_binding_unreferenced",

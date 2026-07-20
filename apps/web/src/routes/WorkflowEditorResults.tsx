@@ -12,7 +12,7 @@ import {
   Title3
 } from "@fluentui/react-components"
 import { ChevronDownRegular, ChevronUpRegular } from "@fluentui/react-icons"
-import { useEffect, useState, type ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import type { WorkflowSimulation, WorkflowValidation } from "@/services/api"
 import { useWorkflowEditorResultsStyles } from "./WorkflowEditorResults.styles"
 
@@ -77,11 +77,6 @@ export function WorkflowEditorResults({
   const testFailureCount = simulationValue?.steps.filter(({ status }) => status === "failed").length ?? 0
   const validationStale = validationValue !== null && (draftDirty || validationValue.draftRevision !== currentRevision)
   const simulationStale = simulationValue !== null && (draftDirty || simulationValue.draftRevision !== currentRevision)
-  useEffect(() => {
-    if (validation.status !== "idle" || simulation.status !== "idle") {
-      setOpen(true)
-    }
-  }, [simulation.status, validation.status])
   let validationContent = <Body1 className={styles.muted}>Check the draft to find issues before publishing.</Body1>
   if (validationValue?.valid === true) {
     validationContent = (
@@ -110,7 +105,7 @@ export function WorkflowEditorResults({
     )
   }
   let panelContent: ReactNode = null
-  if (open && panel === "problems") {
+  if (panel === "problems") {
     panelContent = (
       <div
         className={styles.panel}
@@ -118,6 +113,7 @@ export function WorkflowEditorResults({
         role="tabpanel"
         aria-labelledby="problems-tab"
         aria-live="polite"
+        hidden={!open}
       >
         <div className={styles.heading}>
           <Title3 as="h2">Problems</Title3>
@@ -132,7 +128,7 @@ export function WorkflowEditorResults({
         {validationContent}
       </div>
     )
-  } else if (open) {
+  } else {
     panelContent = (
       <div
         className={styles.panel}
@@ -140,6 +136,7 @@ export function WorkflowEditorResults({
         role="tabpanel"
         aria-labelledby="test-results-tab"
         aria-live="polite"
+        hidden={!open}
       >
         <div className={styles.heading}>
           <Title3 as="h2">Test results</Title3>

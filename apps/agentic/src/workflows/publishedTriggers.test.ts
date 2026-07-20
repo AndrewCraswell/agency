@@ -102,10 +102,30 @@ describe("published trigger resolution", () => {
 
     const catalog = await resolvePublishedTriggerCatalog(store)
 
-    expect(matchPublishedWebhookTriggers(catalog, { provider: "linear", eventKey: "task.created" })).toEqual([
-      expect.objectContaining({ workflowId, version: 1, nodeId: "linear-event" })
-    ])
-    expect(matchPublishedWebhookTriggers(catalog, { provider: "linear", eventKey: "task.updated" })).toEqual([])
+    expect(
+      matchPublishedWebhookTriggers(catalog, {
+        provider: "linear",
+        eventKey: "task.created",
+        resourceType: "team",
+        resourceId: "agency-team"
+      })
+    ).toEqual([expect.objectContaining({ workflowId, version: 1, nodeId: "linear-event" })])
+    expect(
+      matchPublishedWebhookTriggers(catalog, {
+        provider: "linear",
+        eventKey: "task.updated",
+        resourceType: "team",
+        resourceId: "agency-team"
+      })
+    ).toEqual([])
+    expect(
+      matchPublishedWebhookTriggers(catalog, {
+        provider: "linear",
+        eventKey: "task.created",
+        resourceType: "team",
+        resourceId: "another-team"
+      })
+    ).toEqual([])
     expect(catalog.schedules).toEqual([
       {
         workflowId,

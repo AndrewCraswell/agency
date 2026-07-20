@@ -152,7 +152,7 @@ function initialStepConfig(kind: string): Record<string, JsonValue> {
     }
   }
   if (kind === "provider_event") {
-    return { provider: "github", eventKey: "pull_request.created" }
+    return { provider: "github", eventKey: "" }
   }
   if (kind === "schedule") {
     return { timezone: "UTC", intervalSeconds: 300 }
@@ -342,6 +342,18 @@ function WorkflowCanvasNode({ data, selected }: NodeProps<CanvasNode>) {
 
 const nodeTypes = { workflow: WorkflowCanvasNode }
 
+function contextualStepDefinition(step: WorkflowStep, definition: WorkflowStepDefinition): WorkflowStepDefinition {
+  if (definition.kind !== "provider_event") {
+    return definition
+  }
+  const provider = step.config.provider
+  if (provider !== "github" && provider !== "linear") {
+    return definition
+  }
+  const name = provider === "github" ? "GitHub" : "Linear"
+  return { ...definition, description: `Starts the workflow from a ${name} event.` }
+}
+
 function toCanvasNodes(steps: WorkflowStep[], definitions: WorkflowStepDefinition[]): CanvasNode[] {
   return steps.flatMap((step) => {
     const definition = definitions.find(
@@ -349,7 +361,14 @@ function toCanvasNodes(steps: WorkflowStep[], definitions: WorkflowStepDefinitio
     )
     return definition === undefined
       ? []
-      : [{ id: step.id, type: "workflow" as const, position: step.position, data: { step, definition } }]
+      : [
+          {
+            id: step.id,
+            type: "workflow" as const,
+            position: step.position,
+            data: { step, definition: contextualStepDefinition(step, definition) }
+          }
+        ]
   })
 }
 
@@ -603,7 +622,15 @@ export function WorkflowEditorPage() {
       ),
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     }
-    setNodes((current) => [...current, { id, type: "workflow", position: step.position, data: { step, definition } }])
+    setNodes((current) => [
+      ...current,
+      {
+        id,
+        type: "workflow",
+        position: step.position,
+        data: { step, definition: contextualStepDefinition(step, definition) }
+      }
+    ])
     setSelectedNodeId(id)
     setSelectedEdgeId(undefined)
     setDockOpen(true)
@@ -1198,7 +1225,7 @@ function StepCatalog({
         provider,
         config: {
           provider,
-          eventKey: provider === "github" ? "pull_request.created" : "task.created"
+          eventKey: ""
         } satisfies Record<string, JsonValue>
       }
     })

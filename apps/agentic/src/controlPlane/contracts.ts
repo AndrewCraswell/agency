@@ -39,6 +39,35 @@ export const ControlPlaneRunSnapshotSchema = z
   })
   .strict()
 
+export const WorkflowTopologySchema = z
+  .object({
+    graphVersion: z.string().min(1),
+    name: z.string().min(1),
+    nodes: z.array(
+      z
+        .object({
+          id: z.string().min(1),
+          label: z.string().min(1),
+          description: z.string().min(1),
+          agentId: AgentIdSchema.nullable(),
+          agentName: z.string().min(1).nullable(),
+          stages: z.array(z.enum(["intake", "planning", "coding", "reviewing", "repairing", "publishing", "completed"]))
+        })
+        .strict()
+    ),
+    edges: z.array(
+      z
+        .object({
+          source: z.string().min(1),
+          target: z.string().min(1),
+          label: z.string().min(1),
+          kind: z.enum(["forward", "loop"])
+        })
+        .strict()
+    )
+  })
+  .strict()
+
 export const WorkItemQueueStatusSchema = z.enum(["todo", "in_progress", "blocked"])
 export const WorkItemQuerySchema = z
   .object({

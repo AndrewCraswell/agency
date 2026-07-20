@@ -108,7 +108,7 @@ export const useWorkflowEditorPageStyles = makeStyles({
     gridTemplateColumns: "minmax(0, 1fr) 320px",
     "@media (max-width: 800px)": {
       gridTemplateColumns: "minmax(0, 1fr)",
-      gridTemplateRows: "minmax(260px, 1fr) minmax(220px, 42vh)"
+      gridTemplateRows: "minmax(0, 1fr) minmax(0, 42%)"
     }
   },
   workspaceCatalogDock: {
@@ -116,7 +116,7 @@ export const useWorkflowEditorPageStyles = makeStyles({
     "@media (max-width: 1100px)": { gridTemplateColumns: "280px minmax(0, 1fr) 300px" },
     "@media (max-width: 800px)": {
       gridTemplateColumns: "minmax(0, 1fr)",
-      gridTemplateRows: "minmax(260px, 1fr) minmax(220px, 42vh)"
+      gridTemplateRows: "minmax(0, 1fr) minmax(0, 42%)"
     }
   },
   surface: {
@@ -125,7 +125,7 @@ export const useWorkflowEditorPageStyles = makeStyles({
     minHeight: 0,
     backgroundColor: tokens.colorNeutralBackground3,
     "& .react-flow__attribution a": { color: tokens.colorNeutralForeground1 },
-    "@media (max-width: 800px)": { minHeight: "260px" }
+    "@media (max-width: 800px)": { minHeight: 0 }
   },
   surfaceHidden: { display: "none" },
   hint: { color: tokens.colorNeutralForeground3 },

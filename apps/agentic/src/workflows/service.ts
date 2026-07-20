@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto"
 import { z } from "zod"
+import { createDefaultProviderPortResolver } from "../integrations/providerAdapters"
+import type { ProviderPortResolver } from "../integrations/providerPorts"
 import type { PostgresWorkflowJournalStore } from "../persistence/workflowJournalStore"
 import type { PostgresWorkflowScheduleStore, WorkflowScheduleRecord } from "../persistence/workflowScheduleStore"
 import type { PostgresWorkflowStore, WorkflowDefinitionRecord } from "../persistence/workflowStore"
@@ -463,13 +465,13 @@ function defaultWorkflowDefinition(
   })
 }
 
-function blankWorkflowDefinition(repository?: WorkflowDefinitionV2["resourceBindings"][string]): WorkflowDefinitionV2 {
+function blankWorkflowDefinition(repository: WorkflowDefinitionV2["resourceBindings"][string]): WorkflowDefinitionV2 {
   return WorkflowDefinitionV2Schema.parse({
     schemaVersion: "2",
     inputSchema: { type: "object", additionalProperties: true },
     outputSchema: { type: "object", additionalProperties: true },
     constants: {},
-    resourceBindings: repository === undefined ? {} : { repository },
+    resourceBindings: { repository },
     fixtures: [],
     steps: [],
     connections: []
@@ -539,30 +541,10 @@ function compilationValidation(
   }
 }
 
-function webhookEvent(
-  receipt: NangoWebhookReceipt
-): { provider: "github" | "linear"; eventKey: string; correlationKey?: string } | null {
+function webhookProvider(receipt: NangoWebhookReceipt): "github" | "linear" | null {
   const source = `${receipt.from ?? ""} ${receipt.providerConfigKey ?? ""}`.toLowerCase()
-  let provider: "github" | "linear" | null = null
-  if (source.includes("github")) provider = "github"
-  if (source.includes("linear")) provider = "linear"
-  const action = receipt.providerEventAction?.toLowerCase()
-  const objectType = receipt.providerObjectType?.toLowerCase()
-  if (provider === null || action === undefined || objectType === undefined) return null
-  const correlationKey =
-    receipt.providerResourceId === undefined || receipt.providerObjectId === undefined
-      ? undefined
-      : `${provider}:${receipt.providerResourceId}:${objectType.toLowerCase()}:${receipt.providerObjectId}`
-  if (provider === "github" && objectType.includes("pull")) {
-    let suffix = action
-    if (action === "opened") suffix = "created"
-    if (action === "synchronize") suffix = "updated"
-    return { provider, eventKey: `pull_request.${suffix}`, ...(correlationKey === undefined ? {} : { correlationKey }) }
-  }
-  if (provider === "linear" && objectType.includes("comment"))
-    return { provider, eventKey: `task.comment.${action}`, ...(correlationKey === undefined ? {} : { correlationKey }) }
-  if (provider === "linear" && objectType.includes("issue"))
-    return { provider, eventKey: `task.${action}`, ...(correlationKey === undefined ? {} : { correlationKey }) }
+  if (source.includes("github")) return "github"
+  if (source.includes("linear")) return "linear"
   return null
 }
 
@@ -573,6 +555,7 @@ export class WorkflowService {
   readonly #models: WorkflowModelCatalogPort | undefined
   readonly #scheduleStore: WorkflowScheduleServiceStore | undefined
   readonly #now: () => Date
+  readonly #providerPorts: ProviderPortResolver
 
   constructor(
     store: WorkflowServiceStore,
@@ -580,7 +563,8 @@ export class WorkflowService {
     repositoryAgents?: WorkflowRepositoryAgentCatalog,
     models?: WorkflowModelCatalogPort,
     scheduleStore?: WorkflowScheduleServiceStore,
-    now: () => Date = () => new Date()
+    now: () => Date = () => new Date(),
+    providerPorts: ProviderPortResolver = createDefaultProviderPortResolver()
   ) {
     this.#store = store
     this.#journal = journal
@@ -588,6 +572,7 @@ export class WorkflowService {
     this.#models = models
     this.#scheduleStore = scheduleStore
     this.#now = now
+    this.#providerPorts = providerPorts
   }
 
   definitions() {
@@ -867,10 +852,24 @@ export class WorkflowService {
   }
 
   async receiveWebhook(receipt: NangoWebhookReceipt, deliveryKey: string): Promise<number> {
-    const event = webhookEvent(receipt)
+    const provider = webhookProvider(receipt)
+    if (
+      provider === null ||
+      receipt.providerEventAction === undefined ||
+      receipt.providerObjectType === undefined ||
+      receipt.providerResourceId === undefined
+    ) {
+      return 0
+    }
+    const event = this.#providerPorts.normalizeEvent(provider, {
+      action: receipt.providerEventAction,
+      objectType: receipt.providerObjectType,
+      resourceId: receipt.providerResourceId,
+      ...(receipt.providerObjectId === undefined ? {} : { objectId: receipt.providerObjectId })
+    })
     if (event === null) return 0
-    if (event.correlationKey !== undefined) {
-      const correlationKey = event.correlationKey
+    if (event.objectId !== undefined) {
+      const correlationKey = `${event.provider}:${event.resourceId}:${event.objectType}:${event.objectId}`
       const waits = await this.#journal.listPendingWaits(correlationKey)
       await Promise.all(waits.map(({ runId }) => this.#journal.resumeWait({ runId, correlationKey, event })))
     }

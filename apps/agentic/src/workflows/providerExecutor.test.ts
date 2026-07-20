@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import type { IntegrationCredentialBroker } from "../integrations/broker"
+import { ProviderExecutionPortResolver, type ProviderExecutionPort } from "../integrations/providerPorts"
 import type { IntegrationConnectionStore } from "../persistence/integrationStore"
 import type { WorkflowEffectRecord } from "../persistence/workflowJournalStore"
 import type { WorkflowStepInstance } from "./definitionV2"
@@ -170,6 +171,46 @@ type LinearActionCase = {
 }
 
 describe("WorkflowProviderExecutor", () => {
+  it("executes reads and durable actions through a substitutable provider port", async () => {
+    const values = dependencies("github", { resourceType: "repository", externalId: "42", name: "octo/agency" })
+    const read = vi.fn<ProviderExecutionPort["read"]>(async () => ({ source: "fixture-read" }))
+    const act = vi.fn<ProviderExecutionPort["act"]>(async () => ({ source: "fixture-action" }))
+    const executor = new WorkflowProviderExecutor(
+      values.broker,
+      values.store,
+      values.journal,
+      new ProviderExecutionPortResolver([{ provider: "github", resourceType: "repository", read, act }])
+    )
+
+    await expect(
+      executor.read(step("github", "github.repository", "octo/agency", "42", ["repository.read"]), {})
+    ).resolves.toEqual({ result: { source: "fixture-read" } })
+    await expect(
+      executor.act({
+        runId,
+        activationId,
+        attemptOrdinal: 1,
+        step: step("github", "github.close_pull_request", "octo/agency", "42", ["pull_request.write"]),
+        request: { pullRequestNumber: 7 }
+      })
+    ).resolves.toEqual({ result: { source: "fixture-action" } })
+
+    expect(read).toHaveBeenCalledWith(
+      expect.objectContaining({ connectionId: "github-connection", provider: "github" }),
+      "github.repository",
+      expect.objectContaining({ externalId: "42", name: "octo/agency" }),
+      {}
+    )
+    expect(act).toHaveBeenCalledWith(
+      expect.objectContaining({ connectionId: "github-connection", provider: "github" }),
+      "github.close_pull_request",
+      expect.objectContaining({ externalId: "42", name: "octo/agency" }),
+      { pullRequestNumber: 7 }
+    )
+    expect(values.request).not.toHaveBeenCalled()
+    expect(values.journal.confirmEffect).toHaveBeenCalledWith(expect.any(String), { source: "fixture-action" })
+  })
+
   it("performs a bounded GitHub read through its sealed resource connection", async () => {
     const values = dependencies("github", { resourceType: "repository", externalId: "42", name: "octo/agency" })
     values.request.mockResolvedValue({ id: 42, full_name: "octo/agency" })

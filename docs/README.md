@@ -17,6 +17,7 @@ as the change they describe.
 | [operations-query.md](operations-query.md) | Server-owned work-queue filtering, sorting, pagination, and URL state. |
 | [action-availability.md](action-availability.md) | Consequence, permission, disabled-reason, and asynchronous status contracts. |
 | [durable-scheduling.md](durable-scheduling.md) | Persisted schedule state, worker leases, retries, and missed-run policy. |
+| [provider-ports.md](provider-ports.md) | Provider-neutral resource discovery and journal-backed operation execution. |
 
 ## Principles for these docs
 
