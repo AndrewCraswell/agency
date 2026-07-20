@@ -13,95 +13,13 @@ beforeEach(() => {
 })
 
 describe("RunDetailPage", { timeout: 30_000 }, () => {
-  it("shows stage, durable events, and a LangSmith trace link", async () => {
-    ApiMock.get(`/api/workflow-runs/${runId}`, { status: 404, data: { error: "Workflow run not found" } })
-    ApiMock.get(`/api/control-plane/runs/${runId}`, {
-      data: {
-        schemaVersion: "1",
-        run: {
-          runId,
-          status: "running",
-          stage: "coding",
-          activeRole: "coder",
-          repository: "AndrewCraswell/agency",
-          sourceWorkItemId: "96ab4b51-9e71-4a0d-b0ca-4c10b6e10e57",
-          sourceWorkItemIdentifier: "FEN-42",
-          assignedAgentId: "engineer",
-          pullRequestNumber: null,
-          createdAt: "2026-07-19T05:20:00.000Z",
-          updatedAt: "2026-07-19T05:21:00.000Z"
-        },
-        workflow: {
-          graphVersion: "delivery-v1",
-          name: "Autonomous delivery",
-          nodes: [
-            {
-              id: "planning",
-              label: "Plan",
-              description: "Select and shape one bounded work item.",
-              agentId: "scrum-master",
-              agentName: "Scrum master",
-              stages: ["intake", "planning"]
-            },
-            {
-              id: "implementation",
-              label: "Implement",
-              description: "Build and independently validate the assigned change.",
-              agentId: "engineer",
-              agentName: "Engineer",
-              stages: ["coding", "publishing"]
-            },
-            {
-              id: "review",
-              label: "Review",
-              description: "Review the exact candidate commit in a fresh workspace.",
-              agentId: "reviewer",
-              agentName: "Reviewer",
-              stages: ["reviewing"]
-            },
-            {
-              id: "repair",
-              label: "Repair",
-              description: "Address accepted findings in the retained engineer workspace.",
-              agentId: "engineer",
-              agentName: "Engineer",
-              stages: ["repairing"]
-            },
-            {
-              id: "decision",
-              label: "Finish",
-              description: "Merge an approved candidate or block an unresolved delivery.",
-              agentId: null,
-              agentName: null,
-              stages: ["completed"]
-            }
-          ],
-          edges: [
-            { source: "planning", target: "implementation", label: "Assignment ready", kind: "forward" },
-            { source: "implementation", target: "review", label: "Draft pull request", kind: "forward" },
-            { source: "review", target: "decision", label: "Approved or final", kind: "forward" },
-            { source: "review", target: "repair", label: "Changes requested", kind: "loop" },
-            { source: "repair", target: "review", label: "Re-review", kind: "loop" }
-          ]
-        },
-        events: [
-          {
-            eventId: 1,
-            node: "workflow.runCoder",
-            outcome: "started",
-            summary: "Started workflow.runCoder trace",
-            details: {
-              trace: {
-                traceId: "858355f6-a892-4fa9-af05-66c5085cc901",
-                runId: "9539b499-1c48-4770-ab32-da1cbda14d57",
-                projectName: "Agency",
-                name: "workflow.runCoder"
-              }
-            },
-            createdAt: "2026-07-19T05:21:00.000Z"
-          }
-        ]
-      }
+  it("shows a journal error without probing a legacy run source", async () => {
+    const journalDetail = ApiMock.get(`/api/workflow-runs/${runId}`, {
+      status: 404,
+      data: { error: "Workflow run not found" }
+    })
+    const legacyDetail = ApiMock.get(`/api/control-plane/runs/${runId}`, {
+      data: { error: "Legacy run detail must not be requested" }
     })
     window.history.pushState({}, "", `/runs/${runId}`)
 
@@ -111,17 +29,9 @@ describe("RunDetailPage", { timeout: 30_000 }, () => {
       </AppShell>
     )
 
-    expect(await screen.findByRole("heading", { name: "coder" })).toBeInTheDocument()
-    expect(screen.getByRole("heading", { name: "Agent workflow" })).toBeInTheDocument()
-    expect(screen.getByText("Scrum master")).toBeInTheDocument()
-    expect(screen.getByText("Reviewer")).toBeInTheDocument()
-    expect(screen.getAllByText("Engineer")).toHaveLength(2)
-    expect(screen.getByText("Current")).toBeInTheDocument()
-    expect(screen.getByText("Changes requested")).toBeInTheDocument()
-    expect(screen.getByText("Re-review")).toBeInTheDocument()
-    expect(screen.getByText("Started workflow.runCoder trace")).toBeInTheDocument()
-    const traceLink = screen.getByRole("link", { name: "Open trace" })
-    expect(traceLink).toHaveAttribute("href", expect.stringContaining("bdc8ae06-8403-46e5-be23-16ef49736b2f"))
+    expect(await screen.findByText("Workflow run not found", undefined, { timeout: 10_000 })).toBeInTheDocument()
+    expect(journalDetail.hits).toBeGreaterThan(0)
+    expect(legacyDetail.hits).toBe(0)
   })
 
   it("projects journal activations and persisted evidence after restart", async () => {
@@ -145,7 +55,98 @@ describe("RunDetailPage", { timeout: 30_000 }, () => {
     }
     ApiMock.get(`/api/workflow-runs/${runId}`, {
       data: {
-        schemaVersion: "1",
+        schemaVersion: "2",
+        summary: {
+          outcome: "waiting",
+          currentStep: { stepId: "wait", label: "Wait for review" },
+          failure: {
+            stepId: "agent",
+            stepLabel: "Draft response",
+            cause: "model_failed",
+            downstreamEffect: "1 downstream step is blocked.",
+            occurredAt: timestamp,
+            recommendedAction: "Confirm whether the external change occurred before retrying."
+          },
+          actions: [
+            {
+              key: "retry_step",
+              label: "Retry unavailable step",
+              targetId: "denied-activation",
+              allowed: false,
+              disabledReason: "Confirm whether the external change occurred before retrying.",
+              targetLabel: "Provider update",
+              approvalRequirement: "none",
+              requiredCapability: null,
+              consequence: "Creates another attempt for the failed step and preserves prior attempts."
+            },
+            {
+              key: "cancel",
+              label: "Cancel run",
+              targetId: null,
+              allowed: true,
+              disabledReason: null,
+              targetLabel: `Run ${runId}`,
+              approvalRequirement: "confirmation",
+              requiredCapability: null,
+              consequence: "Stops new work. External changes already sent to a provider are not undone."
+            },
+            {
+              key: "run_again",
+              label: "Run again",
+              targetId: null,
+              allowed: true,
+              disabledReason: null,
+              targetLabel: `Run ${runId}`,
+              approvalRequirement: "confirmation",
+              requiredCapability: null,
+              consequence: "Creates a new run from the same published workflow version and preserves this run."
+            },
+            {
+              key: "retry_step",
+              label: "Retry step",
+              targetId: failedActivationId,
+              allowed: true,
+              disabledReason: null,
+              targetLabel: "Draft response",
+              approvalRequirement: "none",
+              requiredCapability: null,
+              consequence: "Creates another attempt for the failed step and preserves prior attempts."
+            },
+            {
+              key: "retry_from_here",
+              label: "Retry from here",
+              targetId: failedActivationId,
+              allowed: true,
+              disabledReason: null,
+              targetLabel: "Draft response",
+              approvalRequirement: "confirmation",
+              requiredCapability: null,
+              consequence: "Retries the failed step and descendants that have not committed output."
+            },
+            {
+              key: "resume",
+              label: "Resume",
+              targetId: "9539b499-1c48-4770-ab32-da1cbda14d57",
+              allowed: true,
+              disabledReason: null,
+              targetLabel: "review:42",
+              approvalRequirement: "none",
+              requiredCapability: null,
+              consequence: "Supplies the event required by review:42."
+            },
+            {
+              key: "resolve_effect",
+              label: "Confirm external change",
+              targetId: "858355f6-a892-4fa9-af05-66c5085cc901",
+              allowed: true,
+              disabledReason: null,
+              targetLabel: "provider-change",
+              approvalRequirement: "required",
+              requiredCapability: null,
+              consequence: "Records whether the provider change occurred before the workflow can continue or retry."
+            }
+          ]
+        },
         run: journalRun,
         executionPackage: {
           packageDigest: "b".repeat(64),
@@ -445,16 +446,31 @@ describe("RunDetailPage", { timeout: 30_000 }, () => {
       </AppShell>
     )
 
-    expect(await screen.findByRole("heading", { name: "Workflow run" })).toBeInTheDocument()
+    expect(await screen.findByRole("heading", { name: "Run failed at Draft response" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Run summary" })).toBeInTheDocument()
+    expect(screen.getByText("Draft response failed")).toBeInTheDocument()
+    expect(screen.getByText("model_failed")).toBeInTheDocument()
+    expect(screen.getByText("1 downstream step is blocked.")).toBeInTheDocument()
+    expect(screen.getAllByText("Confirm whether the external change occurred before retrying.")).toHaveLength(2)
+    const deniedAction = screen.getByRole("button", { name: "Retry unavailable step" })
+    expect(deniedAction).toHaveAttribute("aria-disabled", "true")
+    deniedAction.focus()
+    expect(deniedAction).toHaveFocus()
+    expect(deniedAction).toHaveAccessibleDescription("Confirm whether the external change occurred before retrying.")
+    await userEvent.click(screen.getByText("Diagnostics"))
     expect(screen.getByText("Wait for review")).toBeInTheDocument()
     expect(screen.getByText("review:42")).toBeInTheDocument()
     expect(screen.getByText("github comment")).toBeInTheDocument()
     expect(screen.getByText("report")).toBeInTheDocument()
     expect(screen.getByText("attempt.waiting")).toBeInTheDocument()
     expect(screen.getByRole("region", { name: "Child runs" })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole("button", { name: "Needs confirmation" })).toBeEnabled())
-    await userEvent.click(screen.getByRole("button", { name: "Needs confirmation" }))
-    const effectDialogTitle = await screen.findByText("Confirm external change", {}, { timeout: 5_000 })
+    await waitFor(() => expect(screen.getByRole("button", { name: "Confirm external change" })).toBeEnabled())
+    await userEvent.click(screen.getByRole("button", { name: "Confirm external change" }))
+    const effectDialogTitle = await screen.findByRole(
+      "heading",
+      { name: "Confirm external change", hidden: true },
+      { timeout: 5_000 }
+    )
     const effectDialog = effectDialogTitle.closest<HTMLElement>('[role="dialog"]')
     expect(effectDialog).not.toBeNull()
     if (effectDialog === null) {
@@ -477,16 +493,30 @@ describe("RunDetailPage", { timeout: 30_000 }, () => {
     ).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole("button", { name: "Run again" })).toBeEnabled())
     await userEvent.click(screen.getByRole("button", { name: "Run again" }))
-    const runAgainDialog = screen.getByRole("dialog", { name: "Run workflow again", hidden: true })
+    const runAgainDialogTitle = await screen.findByRole(
+      "heading",
+      { name: "Run workflow again", hidden: true },
+      { timeout: 10_000 }
+    )
+    const runAgainDialog = runAgainDialogTitle.closest<HTMLElement>('[role="dialog"]')
+    expect(runAgainDialog).not.toBeNull()
+    if (runAgainDialog === null) {
+      throw new Error("Run-again dialog did not render")
+    }
     expect(within(runAgainDialog).getByRole("textbox", { name: "Run input JSON", hidden: true })).toHaveValue(
       JSON.stringify(journalRun.sealedManifest.input, null, 2)
     )
     await userEvent.click(within(runAgainDialog).getByRole("button", { name: "Cancel", hidden: true }))
+    await waitFor(
+      () => expect(screen.queryByRole("heading", { name: "Run workflow again", hidden: true })).not.toBeInTheDocument(),
+      { timeout: 10_000 }
+    )
+    await waitFor(() => expect(screen.getByRole("button", { name: "Resume" })).toBeEnabled())
     await userEvent.click(screen.getByRole("button", { name: "Resume" }))
     const resumeDialog = await screen.findByRole(
       "dialog",
       { name: "Resume workflow", hidden: true },
-      { timeout: 5_000 }
+      { timeout: 10_000 }
     )
     await userEvent.click(within(resumeDialog).getByRole("button", { name: "Resume", hidden: true }))
     expect(resume.hits).toBe(1)

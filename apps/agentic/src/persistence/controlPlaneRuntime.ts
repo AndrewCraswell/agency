@@ -7,6 +7,7 @@ import { postgresRuntimeConfiguration } from "./postgres"
 import * as schema from "./schema"
 import { PostgresWebhookDeliveryStore } from "./webhookStore"
 import { PostgresWorkflowJournalStore } from "./workflowJournalStore"
+import { PostgresWorkflowScheduleStore } from "./workflowScheduleStore"
 import { PostgresWorkflowStore } from "./workflowStore"
 
 export async function createControlPlaneRuntime(environmentInput: NodeJS.ProcessEnv = process.env) {
@@ -26,6 +27,7 @@ export async function createControlPlaneRuntime(environmentInput: NodeJS.Process
     integrationStore: new PostgresIntegrationConnectionStore(database),
     webhookStore: new PostgresWebhookDeliveryStore(database),
     workflowJournalStore: new PostgresWorkflowJournalStore(database),
+    workflowScheduleStore: new PostgresWorkflowScheduleStore(database),
     workflowStore: new PostgresWorkflowStore(database),
     async close(): Promise<void> {
       await pool.end()

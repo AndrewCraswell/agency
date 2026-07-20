@@ -13,8 +13,6 @@
         "@storybook/addon-vitest",
         "@storybook/react-vite",
         "@mantine/hooks",
-        "nuqs",
-        "ts-extras",
         "ts-pattern"
       ]
     },

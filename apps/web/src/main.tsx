@@ -1,4 +1,5 @@
 import { RouterProvider } from "@tanstack/react-router"
+import { NuqsAdapter } from "nuqs/adapters/tanstack-router"
 import { StrictMode } from "react"
 import { createRoot } from "react-dom/client"
 import invariant from "tiny-invariant"
@@ -13,7 +14,9 @@ invariant(container, "Root container #app was not found in the document")
 createRoot(container).render(
   <StrictMode>
     <AppShell>
-      <RouterProvider router={router} />
+      <NuqsAdapter>
+        <RouterProvider router={router} />
+      </NuqsAdapter>
     </AppShell>
   </StrictMode>
 )

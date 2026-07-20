@@ -11,6 +11,8 @@ const issue = {
   description: "Add focused unit coverage for the OpenHands profile helpers.",
   url: "https://linear.app/fencing-club/issue/FEN-101/add-focused-profile-helper-tests",
   priority: 4,
+  createdAt: "2026-07-18T04:15:00.000Z",
+  updatedAt: "2026-07-19T04:15:00.000Z",
   state: { id: "7a766a80-3d80-4bd8-8143-b19f4fc8d4c7", name: "Todo", type: "unstarted" },
   team
 }

@@ -122,7 +122,8 @@ export class PostgresWorkflowStore {
   async publish(
     workflowIdInput: string,
     agentSnapshots: RepositoryAgentSnapshot[] = [],
-    modelSnapshots: WorkflowModelSnapshot[] = []
+    modelSnapshots: WorkflowModelSnapshot[] = [],
+    expectedRevision?: number
   ): Promise<WorkflowVersionRecord> {
     const workflowId = z.uuid().parse(workflowIdInput)
     return this.#database.transaction(async (transaction) => {
@@ -133,7 +134,16 @@ export class PostgresWorkflowStore {
         .limit(1)
         .for("update")
       const workflow = WorkflowDefinitionRecordSchema.parse(rows[0])
-      const version = (workflow.publishedVersion ?? 0) + 1
+      if (expectedRevision !== undefined && workflow.draftRevision !== expectedRevision) {
+        throw new Error("Workflow draft changed during publication")
+      }
+      const latestVersions = await transaction
+        .select({ version: workflowVersions.version })
+        .from(workflowVersions)
+        .where(eq(workflowVersions.workflowId, workflowId))
+        .orderBy(desc(workflowVersions.version))
+        .limit(1)
+      const version = (latestVersions[0]?.version ?? 0) + 1
       const contentDigest = jsonValueDigest(workflow.draft)
       const inserted = await transaction
         .insert(workflowVersions)
@@ -158,15 +168,15 @@ export class PostgresWorkflowStore {
       })
       await transaction
         .update(workflowDefinitions)
-        .set({ status: "published", publishedVersion: version, updatedAt: new Date() })
+        .set({ activePublishedVersion: version, updatedAt: new Date() })
         .where(eq(workflowDefinitions.workflowId, workflowId))
       return WorkflowVersionRecordSchema.parse(inserted[0])
     })
   }
 
-  async getPublishedVersion(workflowIdInput: string): Promise<WorkflowVersionRecord | null> {
+  async getActivePublishedVersion(workflowIdInput: string): Promise<WorkflowVersionRecord | null> {
     const workflow = await this.get(workflowIdInput)
-    if (workflow?.publishedVersion === null || workflow === null) {
+    if (workflow?.activePublishedVersion === null || workflow === null) {
       return null
     }
     const rows = await this.#database
@@ -175,7 +185,7 @@ export class PostgresWorkflowStore {
       .where(
         and(
           eq(workflowVersions.workflowId, workflow.workflowId),
-          eq(workflowVersions.version, workflow.publishedVersion)
+          eq(workflowVersions.version, workflow.activePublishedVersion)
         )
       )
       .limit(1)

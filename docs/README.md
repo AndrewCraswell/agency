@@ -12,7 +12,11 @@ as the change they describe.
 | [react.md](react.md)             | React component conventions, Fluent griffel styling, and the state/error/URL/routing/form libraries.                                                        |
 | [typescript.md](typescript.md)   | TypeScript/type conventions **and** the type-helper libraries (`ts-extras`, `ts-pattern`, `tiny-invariant`, `zod`) — read before writing a new type helper. |
 | [hooks.md](hooks.md)             | React hook conventions **and** the full `@mantine/hooks` catalog — read before writing a new hook.                                                          |
-| [ux-design-review.md](ux-design-review.md) | Multi-persona UX review of the product interface, information architecture, workflow editor, and Fluent UI usage.                               |
+| [Agency UX design review](../apps/agentic/docs/agent-platform/ux-design-review.md) | Multi-persona review of the product interface, information architecture, workflow editor, and Fluent UI usage. |
+| [workflow-lifecycle.md](workflow-lifecycle.md) | Mutable drafts, immutable active versions, and the canonical journal-backed run model. |
+| [operations-query.md](operations-query.md) | Server-owned work-queue filtering, sorting, pagination, and URL state. |
+| [action-availability.md](action-availability.md) | Consequence, permission, disabled-reason, and asynchronous status contracts. |
+| [durable-scheduling.md](durable-scheduling.md) | Persisted schedule state, worker leases, retries, and missed-run policy. |
 
 ## Principles for these docs
 

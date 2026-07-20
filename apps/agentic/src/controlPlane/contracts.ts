@@ -30,63 +30,63 @@ export const ControlPlaneSnapshotSchema = z
   })
   .strict()
 
-export const WorkflowEventViewSchema = z
+export const ControlPlaneRunSnapshotSchema = z
   .object({
-    eventId: z.number().int().positive(),
-    node: z.string().trim().min(1),
-    outcome: z.enum(["started", "completed", "failed", "skipped", "retried"]),
-    summary: z.string().trim().min(1),
-    details: z.record(z.string(), z.unknown()),
-    createdAt: z.iso.datetime({ offset: true })
+    schemaVersion: z.literal(CONTROL_PLANE_SCHEMA_VERSION),
+    fetchedAt: z.iso.datetime({ offset: true }),
+    agents: z.array(AgentDefinitionSchema),
+    runs: z.array(WorkflowRunViewSchema)
   })
   .strict()
 
-const WorkflowTopologyNodeIdSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u)
-const WorkflowStageSchema = z.enum([
-  "intake",
-  "planning",
-  "coding",
-  "reviewing",
-  "repairing",
-  "publishing",
-  "completed"
-])
-
-export const WorkflowTopologySchema = z
+export const WorkItemQueueStatusSchema = z.enum(["todo", "in_progress", "blocked"])
+export const WorkItemQuerySchema = z
   .object({
-    graphVersion: z.string().trim().min(1),
-    name: z.string().trim().min(1),
-    nodes: z.array(
+    q: z.string().trim().max(200).optional(),
+    status: WorkItemQueueStatusSchema.optional(),
+    repository: z.string().trim().min(1).optional(),
+    assignee: AgentIdSchema.optional(),
+    priority: z.coerce.number().int().min(0).max(4).optional(),
+    age: z.enum(["day", "week", "month"]).optional(),
+    sort: z.enum(["priority", "created", "updated", "identifier"]).default("priority"),
+    direction: z.enum(["asc", "desc"]).default("desc"),
+    cursor: z.string().trim().min(1).optional(),
+    pageSize: z.coerce.number().int().min(1).max(100).default(25)
+  })
+  .strict()
+
+const WorkItemFacetSchema = z.object({ value: z.string(), count: z.number().int().nonnegative() }).strict()
+const WorkItemPriorityFacetSchema = z
+  .object({ value: z.number().int().min(0).max(4), count: z.number().int().nonnegative() })
+  .strict()
+
+export const WorkItemQueryResponseSchema = z
+  .object({
+    schemaVersion: z.literal(CONTROL_PLANE_SCHEMA_VERSION),
+    fetchedAt: z.iso.datetime({ offset: true }),
+    items: z.array(
       z
         .object({
-          id: WorkflowTopologyNodeIdSchema,
-          label: z.string().trim().min(1),
-          description: z.string().trim().min(1),
-          agentId: AgentIdSchema.nullable(),
-          agentName: z.string().trim().min(1).nullable(),
-          stages: z.array(WorkflowStageSchema).min(1)
+          task: LinearTaskGraphNodeSchema,
+          run: WorkflowRunViewSchema.nullable(),
+          status: WorkItemQueueStatusSchema
         })
         .strict()
     ),
-    edges: z.array(
-      z
-        .object({
-          source: WorkflowTopologyNodeIdSchema,
-          target: WorkflowTopologyNodeIdSchema,
-          label: z.string().trim().min(1),
-          kind: z.enum(["forward", "loop"])
-        })
-        .strict()
-    )
-  })
-  .strict()
-
-export const WorkflowRunDetailSchema = z
-  .object({
-    schemaVersion: z.literal(CONTROL_PLANE_SCHEMA_VERSION),
-    run: WorkflowRunViewSchema,
-    workflow: WorkflowTopologySchema,
-    events: z.array(WorkflowEventViewSchema)
+    total: z.number().int().nonnegative(),
+    previousCursor: z.string().nullable(),
+    nextCursor: z.string().nullable(),
+    aggregates: z
+      .object({
+        all: z.number().int().nonnegative(),
+        todo: z.number().int().nonnegative(),
+        inProgress: z.number().int().nonnegative(),
+        blocked: z.number().int().nonnegative(),
+        repositories: z.array(WorkItemFacetSchema),
+        assignees: z.array(WorkItemFacetSchema),
+        priorities: z.array(WorkItemPriorityFacetSchema)
+      })
+      .strict()
   })
   .strict()
 
@@ -100,6 +100,16 @@ export const AssignWorkItemResponseSchema = z
   })
   .strict()
 
-export const ApiErrorSchema = z.object({ error: z.string().trim().min(1) }).strict()
+export const ApiErrorSchema = z
+  .object({
+    error: z.string().trim().min(1),
+    fieldErrors: z
+      .array(z.object({ field: z.string().trim().min(1), message: z.string().trim().min(1) }).strict())
+      .optional()
+  })
+  .strict()
 
 export type WorkflowRunView = z.infer<typeof WorkflowRunViewSchema>
+export type WorkItemQueueStatus = z.infer<typeof WorkItemQueueStatusSchema>
+export type WorkItemQuery = z.infer<typeof WorkItemQuerySchema>
+export type WorkItemQueryResponse = z.infer<typeof WorkItemQueryResponseSchema>

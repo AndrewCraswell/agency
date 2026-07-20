@@ -85,6 +85,20 @@
       "when": 1784519693080,
       "tag": "0011_early_sabretooth",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1784520000000,
+      "tag": "0012_active_workflow_version",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1784523600000,
+      "tag": "0013_durable_workflow_schedules",
+      "breakpoints": true
     }
   ]
 }

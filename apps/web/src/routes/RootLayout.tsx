@@ -1,6 +1,7 @@
 import {
   Button,
   DrawerHeaderTitle,
+  Hamburger,
   makeStyles,
   mergeClasses,
   NavDrawer,
@@ -17,20 +18,31 @@ import {
   BranchForkRegular,
   bundleIcon,
   DismissRegular,
-  NavigationRegular,
-  SettingsFilled,
-  SettingsRegular
+  PlugConnectedFilled,
+  PlugConnectedRegular
 } from "@fluentui/react-icons"
 import { createLink, Outlet, useRouterState } from "@tanstack/react-router"
 import { useState, type ReactNode } from "react"
-import { WorkflowScheduleCoordinator } from "@/components/WorkflowScheduleCoordinator"
 
 const useStyles = makeStyles({
   shell: { display: "grid", gridTemplateColumns: "260px minmax(0, 1fr)", minHeight: "100vh" },
+  shellCollapsed: { gridTemplateColumns: "48px minmax(0, 1fr)" },
   desktopDrawer: {
     position: "sticky",
     top: 0,
     height: "100vh",
+    "@media (max-width: 800px)": { display: "none" }
+  },
+  collapsedNavigation: {
+    position: "sticky",
+    top: 0,
+    height: "100vh",
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "center",
+    paddingTop: tokens.spacingVerticalS,
+    backgroundColor: tokens.colorNeutralBackground1,
+    borderRight: `1px solid ${tokens.colorNeutralStroke2}`,
     "@media (max-width: 800px)": { display: "none" }
   },
   brand: {
@@ -67,12 +79,12 @@ const useStyles = makeStyles({
 
 const OperationsIcon = bundleIcon(BoardFilled, BoardRegular)
 const WorkflowsIcon = bundleIcon(BranchForkFilled, BranchForkRegular)
-const SettingsIcon = bundleIcon(SettingsFilled, SettingsRegular)
+const IntegrationsIcon = bundleIcon(PlugConnectedFilled, PlugConnectedRegular)
 
 const navigation = [
   { to: "/" as const, label: "Operations", icon: <OperationsIcon /> },
   { to: "/workflows" as const, label: "Workflows", icon: <WorkflowsIcon /> },
-  { to: "/settings" as const, label: "Settings", icon: <SettingsIcon /> }
+  { to: "/integrations" as const, label: "Integrations", icon: <IntegrationsIcon /> }
 ]
 
 const RouterNavItem = createLink(NavItem)
@@ -93,33 +105,48 @@ export function RootLayout() {
   const styles = useStyles()
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const selectedValue = selectedNavigationValue(pathname)
+  const workflowNavigation = pathname.startsWith("/workflows")
+  const [navigationOverride, setNavigationOverride] = useState<{
+    workflowNavigation: boolean
+    open: boolean
+  } | null>(null)
+  const navigationOpen =
+    navigationOverride?.workflowNavigation === workflowNavigation ? navigationOverride.open : !workflowNavigation
   const [drawerOpen, setDrawerOpen] = useState(false)
+
   return (
-    <div className={mergeClasses(styles.shell, styles.mobileShell)}>
-      <WorkflowScheduleCoordinator />
-      <NavDrawer
-        className={styles.desktopDrawer}
-        type="inline"
-        open
-        aria-label="Primary navigation"
-        selectedValue={selectedValue}
-      >
-        <NavDrawerHeader>
-          <div className={styles.brand}>
-            <span className={styles.mark}>A</span>
-            <Subtitle1>Agency</Subtitle1>
-          </div>
-        </NavDrawerHeader>
-        <NavDrawerBody className={styles.navigationBody}>{navigationItems()}</NavDrawerBody>
-      </NavDrawer>
+    <div className={mergeClasses(styles.shell, !navigationOpen && styles.shellCollapsed, styles.mobileShell)}>
+      {navigationOpen ? (
+        <NavDrawer
+          className={styles.desktopDrawer}
+          type="inline"
+          open
+          aria-label="Primary navigation"
+          selectedValue={selectedValue}
+        >
+          <NavDrawerHeader>
+            <div className={styles.brand}>
+              <Hamburger
+                aria-label="Collapse navigation"
+                onClick={() => setNavigationOverride({ workflowNavigation, open: false })}
+              />
+              <span className={styles.mark}>A</span>
+              <Subtitle1>Agency</Subtitle1>
+            </div>
+          </NavDrawerHeader>
+          <NavDrawerBody className={styles.navigationBody}>{navigationItems()}</NavDrawerBody>
+        </NavDrawer>
+      ) : (
+        <div className={styles.collapsedNavigation}>
+          <Hamburger
+            aria-label="Expand navigation"
+            onClick={() => setNavigationOverride({ workflowNavigation, open: true })}
+          />
+        </div>
+      )}
       <div className={styles.content}>
         <header className={styles.mobileHeader}>
-          <Button
-            appearance="subtle"
-            icon={<NavigationRegular />}
-            aria-label="Open navigation"
-            onClick={() => setDrawerOpen(true)}
-          />
+          <Hamburger aria-label="Open navigation" onClick={() => setDrawerOpen(true)} />
           <Subtitle1>Agency</Subtitle1>
           <span style={{ width: 32 }} />
         </header>

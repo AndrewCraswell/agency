@@ -15,8 +15,11 @@ import { DurableWebhookDispatcher } from "../webhooks/service"
 import { OpenRouterWorkflowModelExecutor } from "../workflows/modelExecutor"
 import { Phase2WorkflowDispatcher } from "../workflows/phase2Executor"
 import { WorkflowProviderExecutor } from "../workflows/providerExecutor"
+import { resolvePublishedTriggerCatalog } from "../workflows/publishedTriggers"
 import { createRepositoryAgentExecutor } from "../workflows/repositoryAgentExecutor"
 import { GitHubRepositoryDataReader } from "../workflows/repositoryDataExecutor"
+import { WorkflowScheduleDispatcher } from "../workflows/scheduleDispatcher"
+import { WorkflowService } from "../workflows/service"
 import { QueuedRunDispatcher } from "./dispatcher"
 import { PlanningRunExecutor } from "./planningExecutor"
 import { createProcessHealthServer } from "./processHealth"
@@ -138,6 +141,13 @@ const workflowDispatcher = new Phase2WorkflowDispatcher(
   (step, input) => workflowProviderExecutor.read(step, input),
   (input) => workflowProviderExecutor.act(input)
 )
+const workflowService = new WorkflowService(runtime.workflowStore, runtime.workflowJournalStore)
+const workflowScheduleDispatcher = new WorkflowScheduleDispatcher(
+  runtime.workflowScheduleStore,
+  async () => (await resolvePublishedTriggerCatalog(runtime.workflowStore)).schedules,
+  (workflowId, input) => workflowService.start(workflowId, input),
+  { owner: `schedule-${process.env.COMPUTERNAME ?? process.pid}` }
+)
 
 function reportFailure(component: string, error: unknown): void {
   const message = error instanceof Error ? error.message : `Unknown ${component} failure`
@@ -149,7 +159,14 @@ const dispatch = () => {
     dispatcher.dispatchPending(),
     reviewLoop.dispatchPending(),
     webhookDispatcher.dispatchPending(),
-    workflowDispatcher.dispatchReady()
+    workflowDispatcher.dispatchReady(),
+    workflowScheduleDispatcher.dispatchDue().then((result) => {
+      if (result.failed > 0) {
+        process.stderr.write(
+          `[workflow-scheduler] ${result.failed} schedule dispatch(es) failed and remain retryable\n`
+        )
+      }
+    })
   ]).catch((error: unknown) => reportFailure("dispatch", error))
 }
 const schedule = () => {

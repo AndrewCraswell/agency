@@ -25,6 +25,8 @@ const candidate = {
   description: "Add unit tests for the profile helper.",
   url: "https://linear.app/example/FEN-421",
   priority: 4,
+  createdAt: "2026-07-18T12:00:00.000Z",
+  updatedAt: "2026-07-19T12:00:00.000Z",
   state: { id: "ff47e33a-743c-43a8-b5d6-d9c525b2e498", name: "Todo", type: "unstarted" as const },
   team: { id: "b9c888b8-e2d4-4694-8820-065e4c65cdcb", key: "FEN", name: "Fencing Club" }
 }

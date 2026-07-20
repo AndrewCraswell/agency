@@ -65,6 +65,9 @@ importers:
       '@nangohq/node':
         specifier: 0.70.9
         version: 0.70.9
+      cron-parser:
+        specifier: ^5.6.2
+        version: 5.6.2
       drizzle-orm:
         specifier: ^0.45.2
         version: 0.45.2(@opentelemetry/api@1.9.1)(@types/pg@8.20.0)(pg@8.22.0)
@@ -117,24 +120,12 @@ importers:
       '@1js/fluentui-modal-manager':
         specifier: ^2.0.16
         version: 2.0.16(@fluentui/react-components@9.74.3(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@1js/fluentui-rhf-inputs':
-        specifier: ^1.1.11
-        version: 1.1.11(@fluentui/react-components@9.74.3(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0))(@fluentui/react-datepicker-compat@0.6.34(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0))(@fluentui/react-timepicker-compat@0.4.36(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0))(react-dom@19.2.7(react@19.2.7))(react-hook-form@7.81.0(react@19.2.7))(react@19.2.7)
       '@fluentui/react-components':
         specifier: ^9.74.3
         version: 9.74.3(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)
-      '@fluentui/react-datepicker-compat':
-        specifier: ^0.6.34
-        version: 0.6.34(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)
       '@fluentui/react-icons':
         specifier: ^2.0.333
         version: 2.0.333(react@19.2.7)
-      '@fluentui/react-timepicker-compat':
-        specifier: ^0.4.36
-        version: 0.4.36(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)
-      '@hookform/resolvers':
-        specifier: ^5.4.0
-        version: 5.4.0(react-hook-form@7.81.0(react@19.2.7))
       '@mantine/hooks':
         specifier: ^9.4.1
         version: 9.4.1(react@19.2.7)
@@ -165,9 +156,6 @@ importers:
       react-error-boundary:
         specifier: ^6.1.2
         version: 6.1.2(react@19.2.7)
-      react-hook-form:
-        specifier: ^7.81.0
-        version: 7.81.0(react@19.2.7)
       the-new-css-reset:
         specifier: ^1.11.3
         version: 1.11.3
@@ -331,16 +319,6 @@ packages:
       '@fluentui/react-components': ^9.74.1
       react: ^18.3.1
       react-dom: ^18.3.1
-
-  '@1js/fluentui-rhf-inputs@1.1.11':
-    resolution: {integrity: sha1-4BG2H5L5Ykc3GcxsJAiFqFiE21U=}
-    peerDependencies:
-      '@fluentui/react-components': ^9.74.1
-      '@fluentui/react-datepicker-compat': ^0.4.59
-      '@fluentui/react-timepicker-compat': ^0.2.1
-      react: ^18.3.1
-      react-dom: ^18.3.1
-      react-hook-form: ^7.43.4
 
   '@adobe/css-tools@4.5.0':
     resolution: {integrity: sha1-tbcaJaTRavokglkt36YvzMYLx9E=, tarball: https://ms-feed-2.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@adobe/css-tools/-/css-tools-4.5.0.tgz}
@@ -1175,14 +1153,6 @@ packages:
       react: '>=16.14.0 <20.0.0'
       react-dom: '>=16.14.0 <20.0.0'
 
-  '@fluentui/react-calendar-compat@0.4.4':
-    resolution: {integrity: sha1-xZT3JrkYR8GBQXAOWu6DetlGKmk=, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@fluentui/react-calendar-compat/-/react-calendar-compat-0.4.4.tgz}
-    peerDependencies:
-      '@types/react': '>=16.8.0 <20.0.0'
-      '@types/react-dom': '>=16.8.0 <20.0.0'
-      react: '>=16.8.0 <20.0.0'
-      react-dom: '>=16.8.0 <20.0.0'
-
   '@fluentui/react-card@9.7.1':
     resolution: {integrity: sha1-zq0vx7rRtC5fJf5rWi4wxCJicGo=, tarball: https://ms-feed-2.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@fluentui/react-card/-/react-card-9.7.1.tgz}
     peerDependencies:
@@ -1239,14 +1209,6 @@ packages:
       react: '>=16.14.0 <20.0.0'
       react-dom: '>=16.14.0 <20.0.0'
       scheduler: '>=0.19.0'
-
-  '@fluentui/react-datepicker-compat@0.6.34':
-    resolution: {integrity: sha1-9WZXkb+iUYECKVKtZwo82DPU4zI=, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@fluentui/react-datepicker-compat/-/react-datepicker-compat-0.6.34.tgz}
-    peerDependencies:
-      '@types/react': '>=16.14.0 <20.0.0'
-      '@types/react-dom': '>=16.9.0 <20.0.0'
-      react: '>=16.8.0 <20.0.0'
-      react-dom: '>=16.14.0 <20.0.0'
 
   '@fluentui/react-dialog@9.18.2':
     resolution: {integrity: sha1-rjnUnyrBoKcIG8wAvVIQZWg+f0k=, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@fluentui/react-dialog/-/react-dialog-9.18.2.tgz}
@@ -1596,14 +1558,6 @@ packages:
   '@fluentui/react-theme@9.2.1':
     resolution: {integrity: sha1-136U7MjtoyJDe2HY36L9FnkcN9o=, tarball: https://ms-feed-2.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@fluentui/react-theme/-/react-theme-9.2.1.tgz}
 
-  '@fluentui/react-timepicker-compat@0.4.36':
-    resolution: {integrity: sha1-c7L4n128cEQKXSBvzUAPO+Nb4PU=, tarball: https://ms-feed-2.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@fluentui/react-timepicker-compat/-/react-timepicker-compat-0.4.36.tgz}
-    peerDependencies:
-      '@types/react': '>=16.8.0 <20.0.0'
-      '@types/react-dom': '>=16.8.0 <20.0.0'
-      react: '>=16.8.0 <20.0.0'
-      react-dom: '>=16.8.0 <20.0.0'
-
   '@fluentui/react-toast@9.8.1':
     resolution: {integrity: sha1-VV7L0VRNiKyVlMfttNUvQfyfcNg=, tarball: https://ms-feed-2.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@fluentui/react-toast/-/react-toast-9.8.1.tgz}
     peerDependencies:
@@ -1672,11 +1626,6 @@ packages:
     resolution: {integrity: sha1-WmspDMv7GuL2d1r7dOmJi9jF1Og=, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@grpc/proto-loader/-/proto-loader-0.8.1.tgz}
     engines: {node: '>=6'}
     hasBin: true
-
-  '@hookform/resolvers@5.4.0':
-    resolution: {integrity: sha1-if9wmghXZ2b774SeXsYOVJqIgAY=, tarball: https://ms-feed-12.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@hookform/resolvers/-/resolvers-5.4.0.tgz}
-    peerDependencies:
-      react-hook-form: ^7.55.0
 
   '@iarna/toml@2.2.5':
     resolution: {integrity: sha1-syNmyJtDxvjO+976x3i5yCjjuow=, tarball: https://ms-feed-12.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@iarna/toml/-/toml-2.2.5.tgz}
@@ -2952,9 +2901,6 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha1-p5tV26+GBIEvUtFAssmrQbwVC7g=, tarball: https://ms-feed-2.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@standard-schema/spec/-/spec-1.1.0.tgz}
 
-  '@standard-schema/utils@0.3.0':
-    resolution: {integrity: sha1-PV5gjxbCOQwQUo6Y5Zrva/c8rns=, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@standard-schema/utils/-/utils-0.3.0.tgz}
-
   '@storybook/addon-a11y@10.4.6':
     resolution: {integrity: sha1-61rNU4pxHR+gUp06RnMd4CEUkig=, tarball: https://ms-feed-12.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/@storybook/addon-a11y/-/addon-a11y-10.4.6.tgz}
     peerDependencies:
@@ -3704,6 +3650,10 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  cron-parser@5.6.2:
+    resolution: {integrity: sha1-jRgV/wbrs2BcXD5s1iy7GPlVEBw=, tarball: https://ms-feed-2.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/cron-parser/-/cron-parser-5.6.2.tgz}
+    engines: {node: '>=18'}
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha1-ilj+ePANzXDDcEUXWd+/rwPo7p8=, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/cross-spawn/-/cross-spawn-7.0.6.tgz}
@@ -4556,6 +4506,10 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha1-HaJ+ZxAnGUdpXa9oSOhH8B2EuSA=, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/lru-cache/-/lru-cache-5.1.1.tgz}
 
+  luxon@3.7.2:
+    resolution: {integrity: sha1-1pfkj0eFU8yhh6D4Q2r/Ro47oLo=, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/luxon/-/luxon-3.7.2.tgz}
+    engines: {node: '>=12'}
+
   lz-string@1.5.0:
     resolution: {integrity: sha1-watQ93iHtxJiEgG6n9Tjpu0JmUE=, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/lz-string/-/lz-string-1.5.0.tgz}
     hasBin: true
@@ -4976,12 +4930,6 @@ packages:
     resolution: {integrity: sha1-0hN4AynOs2eM7HgTp2oA4qdYT0g=, tarball: https://ms-feed-25.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/react-error-boundary/-/react-error-boundary-6.1.2.tgz}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
-
-  react-hook-form@7.81.0:
-    resolution: {integrity: sha1-AD8bT9ExAqsRQq7CIFckAa0e2sQ=, tarball: https://ms-feed-12.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/react-hook-form/-/react-hook-form-7.81.0.tgz}
-    engines: {node: '>=18.0.0'}
-    peerDependencies:
-      react: ^16.8.0 || ^17 || ^18 || ^19
 
   react-is@17.0.2:
     resolution: {integrity: sha1-5pHUqOnHiTZWVVOas3J2Kw77VPA=, tarball: https://ms-feed-2.pkgs.visualstudio.com/1es-public/_packaging/npm-public/npm/registry/react-is/-/react-is-17.0.2.tgz}
@@ -5578,17 +5526,6 @@ snapshots:
       '@oxc-project/runtime': 0.126.0
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
-      tslib: 2.8.1
-
-  '@1js/fluentui-rhf-inputs@1.1.11(@fluentui/react-components@9.74.3(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0))(@fluentui/react-datepicker-compat@0.6.34(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0))(@fluentui/react-timepicker-compat@0.4.36(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0))(react-dom@19.2.7(react@19.2.7))(react-hook-form@7.81.0(react@19.2.7))(react@19.2.7)':
-    dependencies:
-      '@fluentui/react-components': 9.74.3(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)
-      '@fluentui/react-datepicker-compat': 0.6.34(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)
-      '@fluentui/react-timepicker-compat': 0.4.36(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)
-      '@oxc-project/runtime': 0.126.0
-      react: 19.2.7
-      react-dom: 19.2.7(react@19.2.7)
-      react-hook-form: 7.81.0(react@19.2.7)
       tslib: 2.8.1
 
   '@adobe/css-tools@4.5.0': {}
@@ -6554,24 +6491,6 @@ snapshots:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
-  '@fluentui/react-calendar-compat@0.4.4(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
-    dependencies:
-      '@fluentui/keyboard-keys': 9.0.8
-      '@fluentui/react-icons': 2.0.333(react@19.2.7)
-      '@fluentui/react-jsx-runtime': 9.4.4(@types/react@19.2.17)(react@19.2.7)
-      '@fluentui/react-motion': 9.16.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@fluentui/react-motion-components-preview': 0.15.6(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@fluentui/react-shared-contexts': 9.26.2(@types/react@19.2.17)(react@19.2.7)
-      '@fluentui/react-tabster': 9.26.16(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@fluentui/react-theme': 9.2.1
-      '@fluentui/react-utilities': 9.26.5(@types/react@19.2.17)(react@19.2.7)
-      '@griffel/react': 1.7.5(react@19.2.7)
-      '@swc/helpers': 0.5.23
-      '@types/react': 19.2.17
-      '@types/react-dom': 19.2.3(@types/react@19.2.17)
-      react: 19.2.7
-      react-dom: 19.2.7(react@19.2.7)
-
   '@fluentui/react-card@9.7.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@fluentui/keyboard-keys': 9.0.8
@@ -6752,30 +6671,6 @@ snapshots:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
       scheduler: 0.27.0
-
-  '@fluentui/react-datepicker-compat@0.6.34(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)':
-    dependencies:
-      '@fluentui/keyboard-keys': 9.0.8
-      '@fluentui/react-calendar-compat': 0.4.4(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@fluentui/react-field': 9.5.3(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)
-      '@fluentui/react-icons': 2.0.333(react@19.2.7)
-      '@fluentui/react-input': 9.8.4(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)
-      '@fluentui/react-jsx-runtime': 9.4.4(@types/react@19.2.17)(react@19.2.7)
-      '@fluentui/react-popover': 9.14.4(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)
-      '@fluentui/react-portal': 9.8.14(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@fluentui/react-positioning': 9.22.3(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@fluentui/react-shared-contexts': 9.26.2(@types/react@19.2.17)(react@19.2.7)
-      '@fluentui/react-tabster': 9.26.16(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
-      '@fluentui/react-theme': 9.2.1
-      '@fluentui/react-utilities': 9.26.5(@types/react@19.2.17)(react@19.2.7)
-      '@griffel/react': 1.7.5(react@19.2.7)
-      '@swc/helpers': 0.5.23
-      '@types/react': 19.2.17
-      '@types/react-dom': 19.2.3(@types/react@19.2.17)
-      react: 19.2.7
-      react-dom: 19.2.7(react@19.2.7)
-    transitivePeerDependencies:
-      - scheduler
 
   '@fluentui/react-dialog@9.18.2(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)':
     dependencies:
@@ -7509,24 +7404,6 @@ snapshots:
       '@fluentui/tokens': 1.0.0-alpha.23
       '@swc/helpers': 0.5.23
 
-  '@fluentui/react-timepicker-compat@0.4.36(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)':
-    dependencies:
-      '@fluentui/keyboard-keys': 9.0.8
-      '@fluentui/react-combobox': 9.17.3(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)
-      '@fluentui/react-field': 9.5.3(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(scheduler@0.27.0)
-      '@fluentui/react-jsx-runtime': 9.4.4(@types/react@19.2.17)(react@19.2.7)
-      '@fluentui/react-shared-contexts': 9.26.2(@types/react@19.2.17)(react@19.2.7)
-      '@fluentui/react-theme': 9.2.1
-      '@fluentui/react-utilities': 9.26.5(@types/react@19.2.17)(react@19.2.7)
-      '@griffel/react': 1.7.5(react@19.2.7)
-      '@swc/helpers': 0.5.23
-      '@types/react': 19.2.17
-      '@types/react-dom': 19.2.3(@types/react@19.2.17)
-      react: 19.2.7
-      react-dom: 19.2.7(react@19.2.7)
-    transitivePeerDependencies:
-      - scheduler
-
   '@fluentui/react-toast@9.8.1(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
       '@fluentui/keyboard-keys': 9.0.8
@@ -7664,11 +7541,6 @@ snapshots:
       long: 5.3.2
       protobufjs: 7.6.5
       yargs: 17.7.3
-
-  '@hookform/resolvers@5.4.0(react-hook-form@7.81.0(react@19.2.7))':
-    dependencies:
-      '@standard-schema/utils': 0.3.0
-      react-hook-form: 7.81.0(react@19.2.7)
 
   '@iarna/toml@2.2.5': {}
 
@@ -8680,8 +8552,6 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@standard-schema/utils@0.3.0': {}
-
   '@storybook/addon-a11y@10.4.6(storybook@10.4.6(@testing-library/dom@10.4.1)(@types/react@19.2.17)(react@19.2.7))':
     dependencies:
       '@storybook/global': 5.0.0
@@ -9437,6 +9307,10 @@ snapshots:
       js-yaml: 4.3.0
       parse-json: 5.2.0
 
+  cron-parser@5.6.2:
+    dependencies:
+      luxon: 3.7.2
+
   cross-spawn@7.0.6:
     dependencies:
       path-key: 3.1.1
@@ -10179,6 +10053,8 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
+  luxon@3.7.2: {}
+
   lz-string@1.5.0: {}
 
   magic-string@0.30.21:
@@ -10688,10 +10564,6 @@ snapshots:
       scheduler: 0.27.0
 
   react-error-boundary@6.1.2(react@19.2.7):
-    dependencies:
-      react: 19.2.7
-
-  react-hook-form@7.81.0(react@19.2.7):
     dependencies:
       react: 19.2.7
 

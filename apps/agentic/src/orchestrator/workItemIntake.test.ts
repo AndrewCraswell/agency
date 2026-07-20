@@ -17,6 +17,8 @@ const issue = {
   description: "Add focused unit tests for src/openhands/profiles.ts.",
   url: "https://linear.app/fencing-club/issue/FEN-421/agent-trial-add-openhands-profile-helper-tests",
   priority: 4,
+  createdAt: "2026-07-18T12:00:00.000Z",
+  updatedAt: timestamp,
   state: { id: "ff47e33a-743c-43a8-b5d6-d9c525b2e498", name: "Backlog", type: "backlog" },
   team
 }

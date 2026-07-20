@@ -6,15 +6,17 @@ import {
   CompleteAuthorizationRequestSchema,
   INTEGRATION_SCHEMA_VERSION,
   IntegrationConnectionSchema,
+  IntegrationDisconnectImpactSchema,
   IntegrationProviderSchema,
   IntegrationResourceInventoryRequestSchema,
   IntegrationResourceInventorySchema,
   IntegrationSettingsSchema,
   StartAuthorizationRequestSchema,
   StartReconnectRequestSchema,
-  type IntegrationProvider,
-  type IntegrationResourceCapability
+  type IntegrationProvider
 } from "./contracts"
+import { createDefaultProviderPortResolver } from "./providerAdapters"
+import { type ProviderConnectionContext, ProviderPortResolver } from "./providerPorts"
 
 const IntegrationServiceOptionsSchema = z
   .object({
@@ -22,31 +24,6 @@ const IntegrationServiceOptionsSchema = z
     linearIntegrationId: z.string().min(1).default("linear")
   })
   .strict()
-
-const GitHubRepositoriesSchema = z
-  .object({
-    total_count: z.number().int().nonnegative(),
-    repositories: z.array(
-      z
-        .object({ id: z.number().int().positive(), full_name: z.string().min(1), archived: z.boolean().default(false) })
-        .passthrough()
-    )
-  })
-  .passthrough()
-
-const LinearTeamsSchema = z
-  .object({
-    data: z
-      .object({
-        teams: z.object({
-          nodes: z.array(z.object({ id: z.string().min(1), key: z.string(), name: z.string() })),
-          pageInfo: z.object({ hasNextPage: z.boolean(), endCursor: z.string().nullable() })
-        })
-      })
-      .optional(),
-    errors: z.array(z.object({ message: z.string() }).passthrough()).optional()
-  })
-  .passthrough()
 
 const catalog = [
   {
@@ -63,17 +40,14 @@ const catalog = [
   }
 ]
 
-function resourceCapabilities(
-  provider: IntegrationProvider,
-  resourceType: "repository" | "team"
-): IntegrationResourceCapability[] {
-  if (provider === "github" && resourceType === "repository") {
-    return ["repository.read", "repository.write", "pull_request.write"]
-  }
-  if (provider === "linear" && resourceType === "team") {
-    return ["team.read", "issue.read", "issue.write"]
-  }
-  return []
+type WorkflowContentWithBindings = { resourceBindings: Record<string, { connectionId: string }> }
+type IntegrationWorkflowReader = {
+  list(): Promise<Array<{ workflowId: string; name: string; draft: WorkflowContentWithBindings }>>
+  getActivePublishedVersion(workflowId: string): Promise<{ content: WorkflowContentWithBindings } | null>
+}
+
+function usesConnection(content: WorkflowContentWithBindings, connectionId: string): boolean {
+  return Object.values(content.resourceBindings).some((binding) => binding.connectionId === connectionId)
 }
 
 export class IntegrationService {
@@ -81,17 +55,23 @@ export class IntegrationService {
   readonly #store: IntegrationConnectionStore
   readonly #options: z.output<typeof IntegrationServiceOptionsSchema>
   readonly #now: () => Date
+  readonly #providerPorts: ProviderPortResolver
+  readonly #workflowReader: IntegrationWorkflowReader | undefined
 
   constructor(
     broker: IntegrationCredentialBroker,
     store: IntegrationConnectionStore,
     options: z.input<typeof IntegrationServiceOptionsSchema>,
-    now: () => Date = () => new Date()
+    now: () => Date = () => new Date(),
+    providerPorts: ProviderPortResolver = createDefaultProviderPortResolver(),
+    workflowReader?: IntegrationWorkflowReader
   ) {
     this.#broker = broker
     this.#store = store
     this.#options = IntegrationServiceOptionsSchema.parse(options)
     this.#now = now
+    this.#providerPorts = providerPorts
+    this.#workflowReader = workflowReader
   }
 
   async settings() {
@@ -120,7 +100,7 @@ export class IntegrationService {
                 resourceType: resource.resourceType,
                 externalId: resource.externalId,
                 name: resource.name,
-                capabilities: resourceCapabilities(connection.provider, resource.resourceType),
+                capabilities: [...this.#providerPorts.capabilities(connection.provider, resource.resourceType)],
                 stale: resource.stale,
                 lastDiscoveredAt: resource.lastDiscoveredAt.toISOString()
               }
@@ -230,6 +210,33 @@ export class IntegrationService {
     return this.#connectionView(await this.#requireConnection(connection.connectionId))
   }
 
+  async disconnectImpact(connectionId: string) {
+    await this.#requireConnection(connectionId)
+    if (this.#workflowReader === undefined) {
+      return IntegrationDisconnectImpactSchema.parse({ connectionId, affectedWorkflowCount: 0, workflows: [] })
+    }
+    const workflows = await this.#workflowReader.list()
+    const affected = await Promise.all(
+      workflows.map(async (workflow) => {
+        const usesDraft = usesConnection(workflow.draft, connectionId)
+        const activeVersion = await this.#workflowReader?.getActivePublishedVersion(workflow.workflowId)
+        const usesPublishedVersion =
+          activeVersion !== null && activeVersion !== undefined
+            ? usesConnection(activeVersion.content, connectionId)
+            : false
+        return usesDraft || usesPublishedVersion
+          ? { workflowId: workflow.workflowId, name: workflow.name, usesDraft, usesPublishedVersion }
+          : null
+      })
+    )
+    const references = affected.filter((workflow) => workflow !== null)
+    return IntegrationDisconnectImpactSchema.parse({
+      connectionId,
+      affectedWorkflowCount: references.length,
+      workflows: references
+    })
+  }
+
   async #persistBrokerConnection(provider: IntegrationProvider, connection: BrokerConnection) {
     return this.#store.upsertConnection({
       provider,
@@ -247,58 +254,18 @@ export class IntegrationService {
       return
     }
     try {
-      if (connection.provider === "github") {
-        const repositories: Array<z.infer<typeof GitHubRepositoriesSchema>["repositories"][number]> = []
-        let page = 1
-        let totalCount = 0
-        do {
-          const response = GitHubRepositoriesSchema.parse(
-            await this.#broker.request(this.#brokerConnection(connection), {
-              method: "GET",
-              endpoint: "/installation/repositories",
-              params: { per_page: 100, page }
-            })
-          )
-          repositories.push(...response.repositories)
-          totalCount = response.total_count
-          page += 1
-        } while (repositories.length < totalCount)
+      const brokerConnection = this.#brokerConnection(connection)
+      const context: ProviderConnectionContext = {
+        connectionId: connection.connectionId,
+        provider: connection.provider,
+        request: (request) => this.#broker.request(brokerConnection, request)
+      }
+      for (const port of this.#providerPorts.forProvider(connection.provider)) {
+        const resources = await port.discover(context)
         await this.#store.replaceDiscoveredResources(
           connection.connectionId,
-          "repository",
-          repositories
-            .filter((repository) => !repository.archived)
-            .map((repository) => ({ externalId: String(repository.id), name: repository.full_name })),
-          this.#now()
-        )
-      } else {
-        const teams: Array<{ id: string; key: string; name: string }> = []
-        let cursor: string | null = null
-        let hasNextPage = true
-        while (hasNextPage) {
-          const response = LinearTeamsSchema.parse(
-            await this.#broker.request(this.#brokerConnection(connection), {
-              method: "POST",
-              endpoint: "/graphql",
-              headers: { "Content-Type": "application/json" },
-              data: {
-                query:
-                  "query AgencyIntegrationTeams($after: String) { teams(first: 100, after: $after) { nodes { id key name } pageInfo { hasNextPage endCursor } } }",
-                variables: { after: cursor }
-              }
-            })
-          )
-          if (response.data === undefined || response.errors !== undefined) {
-            throw new Error("Linear team discovery failed")
-          }
-          teams.push(...response.data.teams.nodes)
-          hasNextPage = response.data.teams.pageInfo.hasNextPage
-          cursor = response.data.teams.pageInfo.endCursor
-        }
-        await this.#store.replaceDiscoveredResources(
-          connection.connectionId,
-          "team",
-          teams.map((team) => ({ externalId: team.id, name: `${team.key} ${team.name}` })),
+          port.resourceType,
+          [...resources],
           this.#now()
         )
       }
@@ -314,20 +281,36 @@ export class IntegrationService {
 
   async #connectionView(connection: IntegrationConnectionRecord) {
     const resources = await this.#store.listResources(connection.connectionId)
+    const capabilities = [
+      ...new Set(
+        resources.flatMap((resource) => this.#providerPorts.capabilities(connection.provider, resource.resourceType))
+      )
+    ].sort()
+    const successfulResourceSyncs = resources
+      .filter((resource) => !resource.stale)
+      .map((resource) => resource.lastDiscoveredAt)
+    const lastSuccessfulSync = successfulResourceSyncs.sort((left, right) => right.getTime() - left.getTime())[0]
     return IntegrationConnectionSchema.parse({
       connectionId: connection.connectionId,
       provider: connection.provider,
-      displayName: connection.displayName,
+      providerAccount: connection.displayName,
       status: connection.status,
-      errorCode: connection.errorCode,
+      lastSuccessfulSyncAt: lastSuccessfulSync?.toISOString() ?? null,
+      latestError: connection.errorCode,
       lastCheckedAt: connection.lastCheckedAt?.toISOString() ?? null,
+      resourceCounts: {
+        total: resources.length,
+        active: resources.filter((resource) => !resource.stale).length,
+        stale: resources.filter((resource) => resource.stale).length
+      },
+      capabilities,
       createdAt: connection.createdAt.toISOString(),
       updatedAt: connection.updatedAt.toISOString(),
       resources: resources.map((resource) => ({
         resourceType: resource.resourceType,
         externalId: resource.externalId,
         name: resource.name,
-        capabilities: resourceCapabilities(connection.provider, resource.resourceType),
+        capabilities: [...this.#providerPorts.capabilities(connection.provider, resource.resourceType)],
         stale: resource.stale,
         lastDiscoveredAt: resource.lastDiscoveredAt.toISOString()
       }))

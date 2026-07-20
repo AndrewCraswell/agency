@@ -26,6 +26,8 @@ const task = LinearTaskGraphNodeSchema.parse({
   description: "Add focused tests.",
   url: "https://linear.app/example/FEN-42",
   priority: 2,
+  createdAt: "2026-07-18T12:00:00.000Z",
+  updatedAt: "2026-07-19T12:00:00.000Z",
   state: { id: "dff7a1a0-2c52-4e3f-a325-90d314f81820", name: "Todo", type: "unstarted" },
   team: { id: "9539b499-1c48-4770-ab32-da1cbda14d57", key: "FEN", name: "Frontend" },
   project: null,

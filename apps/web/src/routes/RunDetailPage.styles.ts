@@ -33,53 +33,48 @@ export const useRunDetailPageStyles = makeStyles({
   runActions: { display: "flex", alignItems: "center", gap: tokens.spacingHorizontalS, flexWrap: "wrap" },
   eyebrow: { color: tokens.colorBrandForeground1, fontWeight: tokens.fontWeightSemibold },
   runId: { fontFamily: tokens.fontFamilyMonospace, color: tokens.colorNeutralForeground2, wordBreak: "break-all" },
-  stageSection: {
+  summary: {
+    display: "flex",
+    flexDirection: "column",
+    gap: tokens.spacingVerticalL,
+    padding: tokens.spacingHorizontalL,
+    marginBottom: tokens.spacingVerticalXL,
+    backgroundColor: tokens.colorNeutralBackground1,
+    ...shorthands.borderLeft("4px", "solid", tokens.colorBrandStroke1),
+    boxShadow: tokens.shadow4
+  },
+  recoverySection: { display: "flex", flexDirection: "column", gap: tokens.spacingVerticalS },
+  unavailableReason: { color: tokens.colorNeutralForeground3 },
+  recoveryActions: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: tokens.spacingHorizontalM,
+    listStyleType: "none",
+    padding: 0,
+    margin: 0,
+    "& > li": {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "flex-start",
+      gap: tokens.spacingVerticalXS,
+      minWidth: 0
+    }
+  },
+  diagnostics: {
     backgroundColor: tokens.colorNeutralBackground1,
     ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
     ...shorthands.borderRadius(tokens.borderRadiusMedium),
-    padding: tokens.spacingHorizontalL,
-    marginBottom: tokens.spacingVerticalL
+    "& > summary": {
+      display: "flex",
+      cursor: "pointer",
+      padding: tokens.spacingHorizontalL,
+      listStyleType: "none"
+    },
+    "& > summary::-webkit-details-marker": { display: "none" },
+    "& > summary > span": { display: "flex", flexDirection: "column", gap: tokens.spacingVerticalXXS },
+    "&[open] > summary": { ...shorthands.borderBottom("1px", "solid", tokens.colorNeutralStroke2) }
   },
-  stageList: {
-    display: "grid",
-    gridTemplateColumns: "repeat(7, minmax(80px, 1fr))",
-    listStyleType: "none",
-    padding: 0,
-    margin: `${tokens.spacingVerticalL} 0 0`,
-    overflowX: "auto"
-  },
-  stageItem: {
-    display: "flex",
-    alignItems: "center",
-    flexDirection: "column",
-    gap: tokens.spacingVerticalXS,
-    textTransform: "capitalize",
-    minWidth: "80px",
-    "& span": {
-      display: "grid",
-      placeItems: "center",
-      width: "28px",
-      height: "28px",
-      ...shorthands.borderRadius(tokens.borderRadiusCircular)
-    }
-  },
-  stageComplete: {
-    color: tokens.colorBrandForeground1,
-    "& span": { backgroundColor: tokens.colorBrandBackground2, color: tokens.colorBrandForeground1 }
-  },
-  stageCurrent: {
-    color: tokens.colorNeutralForeground1,
-    fontWeight: tokens.fontWeightSemibold,
-    "& span": {
-      backgroundColor: tokens.colorBrandBackground,
-      color: tokens.colorNeutralForegroundOnBrand,
-      boxShadow: `0 0 0 3px ${tokens.colorBrandBackground2}`
-    }
-  },
-  stagePending: {
-    color: tokens.colorNeutralForeground3,
-    "& span": { backgroundColor: tokens.colorNeutralBackground4 }
-  },
+  diagnosticsContent: { padding: tokens.spacingHorizontalL },
   details: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
@@ -156,76 +151,6 @@ export const useRunDetailPageStyles = makeStyles({
       fontSize: tokens.fontSizeBase200
     }
   },
-  workflowNodes: {
-    display: "grid",
-    gridTemplateColumns: "repeat(5, minmax(168px, 1fr))",
-    gap: tokens.spacingHorizontalM,
-    listStyleType: "none",
-    padding: `0 0 ${tokens.spacingVerticalXS}`,
-    margin: 0,
-    overflowX: "auto"
-  },
-  workflowNode: {
-    display: "flex",
-    flexDirection: "column",
-    gap: tokens.spacingVerticalXS,
-    minHeight: "168px",
-    padding: tokens.spacingHorizontalM,
-    backgroundColor: tokens.colorNeutralBackground1,
-    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
-    "& > strong": { fontSize: tokens.fontSizeBase400 },
-    "& > span:last-child": { color: tokens.colorNeutralForeground2 }
-  },
-  workflowNodeActive: {
-    boxShadow: `inset 0 3px 0 ${tokens.colorBrandBackground}`
-  },
-  workflowNodeHeading: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    minHeight: "32px"
-  },
-  workflowNodeIcon: {
-    display: "grid",
-    placeItems: "center",
-    width: "32px",
-    height: "32px",
-    color: tokens.colorBrandForeground1,
-    backgroundColor: tokens.colorBrandBackground2,
-    ...shorthands.borderRadius(tokens.borderRadiusCircular),
-    "& svg": { fontSize: "18px" }
-  },
-  workflowAgent: { color: tokens.colorBrandForeground1, fontWeight: tokens.fontWeightSemibold },
-  routeHeading: { display: "block", marginTop: tokens.spacingVerticalL, marginBottom: tokens.spacingVerticalS },
-  workflowRoutes: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-    gap: tokens.spacingHorizontalS,
-    listStyleType: "none",
-    padding: 0,
-    margin: 0,
-    "& > li": {
-      display: "grid",
-      gridTemplateColumns: "minmax(0, 1fr) minmax(104px, auto) minmax(0, 1fr)",
-      alignItems: "center",
-      gap: tokens.spacingHorizontalS,
-      padding: `${tokens.spacingVerticalS} ${tokens.spacingHorizontalM}`,
-      backgroundColor: tokens.colorNeutralBackground1,
-      ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
-      ...shorthands.borderRadius(tokens.borderRadiusMedium),
-      "& > strong:last-child": { textAlign: "right" }
-    }
-  },
-  workflowTransition: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    gap: tokens.spacingVerticalXXS,
-    color: tokens.colorNeutralForeground2,
-    textAlign: "center",
-    "& svg": { fontSize: "18px", color: tokens.colorBrandForeground1 }
-  },
   timelineSection: { maxWidth: "960px" },
   sectionHeading: {
     display: "flex",
@@ -274,14 +199,6 @@ export const useRunDetailPageStyles = makeStyles({
     justifyContent: "space-between",
     alignItems: "center",
     gap: tokens.spacingHorizontalM
-  },
-  traceReference: {
-    display: "flex",
-    alignItems: "center",
-    gap: tokens.spacingHorizontalM,
-    flexWrap: "wrap",
-    marginTop: tokens.spacingVerticalXS,
-    "& code": { fontFamily: tokens.fontFamilyMonospace, color: tokens.colorNeutralForeground2, wordBreak: "break-all" }
   },
   emptyState: {
     display: "flex",

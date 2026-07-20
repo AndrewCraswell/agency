@@ -31,6 +31,8 @@ function candidateList() {
         description: "Add focused unit coverage.",
         url: "https://linear.app/example/issue/FEN-42",
         priority: 4,
+        createdAt: "2026-07-01T05:20:00.000Z",
+        updatedAt: now.toISOString(),
         state: { id: "dff7a1a0-2c52-4e3f-a325-90d314f81820", name: "Todo", type: "unstarted" },
         team: { id: "9539b499-1c48-4770-ab32-da1cbda14d57", key: "FEN", name: "Frontend" }
       }
@@ -164,6 +166,91 @@ describe("ControlPlaneService", () => {
     expect(listTaskGraph).toHaveBeenCalledOnce()
   })
 
+  it("polls runs without loading Linear task inventory", async () => {
+    const listTaskGraph = vi.fn(async () => taskGraph())
+    const service = new ControlPlaneService(
+      { listCandidates: async () => candidateList(), listTaskGraph },
+      new FakeStore(),
+      { repositoryOwner: "AndrewCraswell", repositoryName: "agency" },
+      { now: () => now }
+    )
+
+    await expect(service.runSnapshot()).resolves.toMatchObject({ agents: expect.any(Array), runs: [] })
+    expect(listTaskGraph).not.toHaveBeenCalled()
+  })
+
+  it("filters and cursor-paginates work items with stable priority ordering", async () => {
+    const baseTask = taskGraph().tasks[0]!
+    const inProgressId = "858355f6-a892-4fa9-af05-66c5085cc901"
+    const blockedId = "af32fd7f-c98c-4a31-88ca-acfb99654c69"
+    const tasks = [
+      baseTask,
+      {
+        ...baseTask,
+        id: inProgressId,
+        identifier: "FEN-43",
+        title: "Build runtime controls",
+        priority: 2,
+        createdAt: "2026-07-18T05:20:00.000Z",
+        state: { ...baseTask.state, name: "In Progress", type: "started" as const }
+      },
+      {
+        ...baseTask,
+        id: blockedId,
+        identifier: "FEN-44",
+        title: "Publish profile changes",
+        priority: 3,
+        createdAt: "2026-07-05T05:20:00.000Z",
+        blockedBy: [{ id: baseTask.id, identifier: baseTask.identifier, stateType: baseTask.state.type }]
+      }
+    ]
+    const store = new FakeStore()
+    store.records.push({
+      runId,
+      graphVersion: "delivery-v1",
+      repositoryOwner: "AndrewCraswell",
+      repositoryName: "agency",
+      sourceWorkItemId: inProgressId,
+      sourceWorkItemIdentifier: "FEN-43",
+      assignedAgentId: "engineer",
+      requestDigest: "a".repeat(64),
+      status: "queued",
+      stage: "intake",
+      activeRole: null,
+      pullRequestNumber: null,
+      retryCount: 0,
+      nextAttemptAt: null,
+      createdAt: now,
+      updatedAt: now
+    })
+    const service = new ControlPlaneService(
+      {
+        listCandidates: async () => candidateList(),
+        listTaskGraph: async () => ({ ...taskGraph(), tasks })
+      },
+      store,
+      { repositoryOwner: "AndrewCraswell", repositoryName: "agency" },
+      { now: () => now }
+    )
+
+    const firstPage = await service.queryWorkItems({ pageSize: 2 })
+    expect(firstPage).toMatchObject({
+      total: 3,
+      items: [{ task: { identifier: "FEN-42" } }, { task: { identifier: "FEN-44" }, status: "blocked" }],
+      aggregates: { all: 3, todo: 1, inProgress: 1, blocked: 1 }
+    })
+    expect(firstPage.nextCursor).not.toBeNull()
+    await expect(service.queryWorkItems({ cursor: firstPage.nextCursor, pageSize: 2 })).resolves.toMatchObject({
+      items: [{ task: { identifier: "FEN-43" }, status: "in_progress" }],
+      nextCursor: null
+    })
+    await expect(
+      service.queryWorkItems({ q: "runtime", repository: "AndrewCraswell/agency", assignee: "engineer", priority: 2 })
+    ).resolves.toMatchObject({ total: 1, items: [{ task: { identifier: "FEN-43" } }] })
+    await expect(service.queryWorkItems({ age: "week" })).resolves.toMatchObject({ total: 2 })
+    await expect(service.queryWorkItems({ cursor: "not-a-cursor" })).rejects.toThrow("Cursor is invalid")
+  })
+
   it("restores dashboard inventory without querying Linear after restart", async () => {
     const listTaskGraph = vi.fn(async () => taskGraph())
     const load = vi.fn(async () => taskGraph().tasks)
@@ -217,24 +304,6 @@ describe("ControlPlaneService", () => {
     expect(repeated).toMatchObject({ created: false, run: { runId } })
     expect(store.records).toHaveLength(1)
     expect(store.records[0]?.requestDigest).toMatch(/^[0-9a-f]{64}$/u)
-    await expect(service.runDetail(runId)).resolves.toMatchObject({
-      run: { runId },
-      workflow: {
-        graphVersion: "delivery-v1",
-        nodes: [
-          { id: "planning", agentId: "scrum-master" },
-          { id: "implementation", agentId: "engineer" },
-          { id: "review", agentId: "reviewer" },
-          { id: "repair", agentId: "engineer" },
-          { id: "decision", agentId: null }
-        ],
-        edges: expect.arrayContaining([
-          { source: "review", target: "repair", label: "Changes requested", kind: "loop" },
-          { source: "repair", target: "review", label: "Re-review", kind: "loop" }
-        ])
-      },
-      events: []
-    })
   })
 
   it("rejects a task outside the active Linear candidate set", async () => {
@@ -270,11 +339,5 @@ describe("ControlPlaneService", () => {
     await expect(agentConflict.service.assign({ workItemId, agentId: "engineer" })).rejects.toThrow(
       "already assigned to a task"
     )
-  })
-
-  it("rejects a missing workflow run detail", async () => {
-    const { service } = createService()
-
-    await expect(service.runDetail(runId)).rejects.toThrow(`Workflow run ${runId} does not exist`)
   })
 })

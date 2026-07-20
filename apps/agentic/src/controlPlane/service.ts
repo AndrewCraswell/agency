@@ -7,14 +7,17 @@ import {
   AssignWorkItemRequestSchema,
   AssignWorkItemResponseSchema,
   CONTROL_PLANE_SCHEMA_VERSION,
+  ControlPlaneRunSnapshotSchema,
   ControlPlaneSnapshotSchema,
-  WorkflowEventViewSchema,
-  WorkflowRunDetailSchema,
+  WorkItemQueryResponseSchema,
+  WorkItemQuerySchema,
   WorkflowRunViewSchema,
+  type WorkItemQuery,
+  type WorkItemQueryResponse,
+  type WorkItemQueueStatus,
   type WorkflowRunView
 } from "./contracts"
 import type { TaskInventory, TaskInventoryCache } from "./taskInventoryCache"
-import { deliveryWorkflowTopology } from "./workflowTopology"
 
 const ServiceOptionsSchema = z
   .object({
@@ -26,6 +29,8 @@ const ServiceOptionsSchema = z
 type CandidateSource = Pick<LinearClient, "listCandidates" | "listTaskGraph">
 const TASK_GRAPH_TTL_MS = 30 * 60 * 1_000
 const TASK_GRAPH_RETRY_MS = 5 * 60 * 1_000
+const WorkItemCursorSchema = z.object({ offset: z.number().int().nonnegative() }).strict()
+const AGE_MILLISECONDS = { day: 24 * 60 * 60 * 1_000, week: 7 * 24 * 60 * 60 * 1_000, month: 30 * 24 * 60 * 60 * 1_000 }
 
 function runView(record: WorkflowRunRecord): WorkflowRunView {
   return WorkflowRunViewSchema.parse({
@@ -45,6 +50,68 @@ function runView(record: WorkflowRunRecord): WorkflowRunView {
 
 function assignmentRequestDigest(input: Omit<BindWorkflowRunInput, "requestDigest">): string {
   return createHash("sha256").update(JSON.stringify(input)).digest("hex")
+}
+
+function queueStatus(task: TaskInventory[number], run: WorkflowRunView | null): WorkItemQueueStatus | null {
+  if (run?.status === "published") {
+    return null
+  }
+  if (run?.status === "blocked" || run?.status === "failed" || run?.status === "cancelled") {
+    return "blocked"
+  }
+  if (run?.status === "queued" || run?.status === "running" || task.state.type === "started") {
+    return "in_progress"
+  }
+  return task.blockedBy.length > 0 ? "blocked" : "todo"
+}
+
+function decodeCursor(cursor: string | undefined): number {
+  if (cursor === undefined) {
+    return 0
+  }
+  try {
+    const value: unknown = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"))
+    return WorkItemCursorSchema.parse(value).offset
+  } catch {
+    throw new z.ZodError([{ code: "custom", path: ["cursor"], message: "Cursor is invalid." }])
+  }
+}
+
+function encodeCursor(offset: number): string {
+  return Buffer.from(JSON.stringify({ offset }), "utf8").toString("base64url")
+}
+
+function compareWorkItems(
+  left: WorkItemQueryResponse["items"][number],
+  right: WorkItemQueryResponse["items"][number],
+  query: WorkItemQuery
+): number {
+  let result = 0
+  if (query.sort === "priority") {
+    result = left.task.priority - right.task.priority
+  } else if (query.sort === "created") {
+    result = left.task.createdAt.localeCompare(right.task.createdAt)
+  } else if (query.sort === "updated") {
+    result = left.task.updatedAt.localeCompare(right.task.updatedAt)
+  } else {
+    result = left.task.identifier.localeCompare(right.task.identifier, undefined, { numeric: true })
+  }
+  if (result !== 0) {
+    return query.direction === "asc" ? result : -result
+  }
+  return left.task.identifier.localeCompare(right.task.identifier, undefined, { numeric: true })
+}
+
+function facet(values: Array<string | null>): Array<{ value: string; count: number }> {
+  const counts = new Map<string, number>()
+  for (const value of values) {
+    if (value !== null) {
+      counts.set(value, (counts.get(value) ?? 0) + 1)
+    }
+  }
+  return [...counts]
+    .map(([value, count]) => ({ value, count }))
+    .toSorted((left, right) => left.value.localeCompare(right.value))
 }
 
 export class ControlPlaneService {
@@ -80,6 +147,71 @@ export class ControlPlaneService {
       agents,
       tasks,
       runs: runRecords.map(runView)
+    })
+  }
+
+  async runSnapshot() {
+    const runRecords = await this.#store.listWorkflowRuns(200)
+    return ControlPlaneRunSnapshotSchema.parse({
+      schemaVersion: CONTROL_PLANE_SCHEMA_VERSION,
+      fetchedAt: this.#now().toISOString(),
+      agents,
+      runs: runRecords.map(runView)
+    })
+  }
+
+  async queryWorkItems(queryInput: unknown) {
+    const query = WorkItemQuerySchema.parse(queryInput)
+    const [tasks, runRecords] = await Promise.all([this.#taskInventory(), this.#store.listWorkflowRuns(200)])
+    const runs = runRecords.map(runView)
+    const rows = tasks.flatMap((task) => {
+      const run =
+        runs
+          .filter((candidate) => candidate.sourceWorkItemId === task.id)
+          .toSorted((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0] ?? null
+      const status = queueStatus(task, run)
+      return status === null ? [] : [{ task, run, status }]
+    })
+    const aggregates = {
+      all: rows.length,
+      todo: rows.filter(({ status }) => status === "todo").length,
+      inProgress: rows.filter(({ status }) => status === "in_progress").length,
+      blocked: rows.filter(({ status }) => status === "blocked").length,
+      repositories: facet(rows.map(({ run }) => run?.repository ?? null)),
+      assignees: facet(rows.map(({ run }) => run?.assignedAgentId ?? null)),
+      priorities: [0, 1, 2, 3, 4]
+        .map((value) => ({ value, count: rows.filter(({ task }) => task.priority === value).length }))
+        .filter(({ count }) => count > 0)
+    }
+    const normalizedQuery = query.q?.toLocaleLowerCase()
+    const maximumCreatedAt = query.age === undefined ? undefined : this.#now().getTime() - AGE_MILLISECONDS[query.age]
+    const filtered = rows
+      .filter(({ task, run, status }) => {
+        if (
+          normalizedQuery !== undefined &&
+          !`${task.identifier} ${task.title} ${task.description}`.toLocaleLowerCase().includes(normalizedQuery)
+        ) {
+          return false
+        }
+        if (query.status !== undefined && status !== query.status) return false
+        if (query.repository !== undefined && run?.repository !== query.repository) return false
+        if (query.assignee !== undefined && run?.assignedAgentId !== query.assignee) return false
+        if (query.priority !== undefined && task.priority !== query.priority) return false
+        if (maximumCreatedAt !== undefined && new Date(task.createdAt).getTime() > maximumCreatedAt) return false
+        return true
+      })
+      .toSorted((left, right) => compareWorkItems(left, right, query))
+    const offset = decodeCursor(query.cursor)
+    const items = filtered.slice(offset, offset + query.pageSize)
+    const nextOffset = offset + items.length
+    return WorkItemQueryResponseSchema.parse({
+      schemaVersion: CONTROL_PLANE_SCHEMA_VERSION,
+      fetchedAt: this.#now().toISOString(),
+      items,
+      total: filtered.length,
+      previousCursor: offset > 0 ? encodeCursor(Math.max(0, offset - query.pageSize)) : null,
+      nextCursor: nextOffset < filtered.length ? encodeCursor(nextOffset) : null,
+      aggregates
     })
   }
 
@@ -170,32 +302,6 @@ export class ControlPlaneService {
       schemaVersion: CONTROL_PLANE_SCHEMA_VERSION,
       created: true,
       run: runView(created)
-    })
-  }
-
-  async runDetail(runIdInput: string) {
-    const runId = z.uuid().parse(runIdInput)
-    const [record, events] = await Promise.all([
-      this.#store.getWorkflowRun(runId),
-      this.#store.listWorkflowEvents(runId, 200)
-    ])
-    if (record === null) {
-      throw new Error(`Workflow run ${runId} does not exist`)
-    }
-    return WorkflowRunDetailSchema.parse({
-      schemaVersion: CONTROL_PLANE_SCHEMA_VERSION,
-      run: runView(record),
-      workflow: deliveryWorkflowTopology,
-      events: events.map((event) =>
-        WorkflowEventViewSchema.parse({
-          eventId: event.eventId,
-          node: event.node,
-          outcome: event.outcome,
-          summary: event.summary,
-          details: event.details,
-          createdAt: event.createdAt.toISOString()
-        })
-      )
     })
   }
 }

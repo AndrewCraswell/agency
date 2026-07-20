@@ -16,8 +16,8 @@ const RouterFluentLink = createLink(FluentLink)
  * with `preload={false}` to opt out, or `preload="viewport"` / `"render"`.
  *
  * ```tsx
- * <AppLink to="/about">About</AppLink>
- * <AppLink to="/contact" preload={false}>Contact</AppLink>
+ * <AppLink to="/workflows">Workflows</AppLink>
+ * <AppLink to="/integrations" preload={false}>Integrations</AppLink>
  * ```
  */
 export const AppLink: LinkComponent<typeof FluentLink> = (props) => <RouterFluentLink preload="intent" {...props} />

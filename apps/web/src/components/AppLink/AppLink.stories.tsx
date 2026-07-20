@@ -19,9 +19,9 @@ function createStoryRouter() {
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <nav style={{ display: "flex", gap: 16 }}>
           <AppLink to="/">Home</AppLink>
-          <AppLink to="/about">About</AppLink>
-          <AppLink to="/about" preload={false}>
-            About (no preload)
+          <AppLink to="/workflows">Workflows</AppLink>
+          <AppLink to="/workflows" preload={false}>
+            Workflows (no preload)
           </AppLink>
         </nav>
         <Outlet />
@@ -33,14 +33,14 @@ function createStoryRouter() {
     path: "/",
     component: () => <span>Home page</span>
   })
-  const aboutRoute = createRoute({
+  const workflowsRoute = createRoute({
     getParentRoute: () => rootRoute,
-    path: "/about",
-    component: () => <span>About page</span>
+    path: "/workflows",
+    component: () => <span>Workflows page</span>
   })
 
   return createRouter({
-    routeTree: rootRoute.addChildren([indexRoute, aboutRoute]),
+    routeTree: rootRoute.addChildren([indexRoute, workflowsRoute]),
     history: createMemoryHistory({ initialEntries: ["/"] })
   })
 }
@@ -72,7 +72,7 @@ export const NavigatesOnClick: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText("Home page")).toBeInTheDocument()
-    await userEvent.click(canvas.getByRole("link", { name: "About" }))
-    await expect(await canvas.findByText("About page")).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole("link", { name: "Workflows" }))
+    await expect(await canvas.findByText("Workflows page")).toBeInTheDocument()
   }
 }

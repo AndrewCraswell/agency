@@ -74,16 +74,16 @@ export const workflowDefinitions = agenticSchema.table(
     status: text("status").notNull().default("draft"),
     draftRevision: integer("draft_revision").notNull().default(1),
     draft: jsonb("draft").$type<WorkflowContent>().notNull(),
-    publishedVersion: integer("published_version"),
+    activePublishedVersion: integer("active_published_version"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
-    check("workflow_definitions_status_check", sql`${table.status} in ('draft', 'published', 'archived')`),
+    check("workflow_definitions_status_check", sql`${table.status} in ('draft', 'archived')`),
     check("workflow_definitions_revision_check", sql`${table.draftRevision} > 0`),
     check(
-      "workflow_definitions_published_version_check",
-      sql`${table.publishedVersion} is null or ${table.publishedVersion} > 0`
+      "workflow_definitions_active_published_version_check",
+      sql`${table.activePublishedVersion} is null or ${table.activePublishedVersion} > 0`
     ),
     index("workflow_definitions_status_idx").on(table.status, table.updatedAt)
   ]
@@ -104,6 +104,48 @@ export const workflowVersions = agenticSchema.table(
     primaryKey({ columns: [table.workflowId, table.version] }),
     check("workflow_versions_version_check", sql`${table.version} > 0`),
     check("workflow_versions_digest_check", sql`${table.contentDigest} ~ '^[0-9a-f]{64}$'`)
+  ]
+)
+
+export const workflowSchedules = agenticSchema.table(
+  "workflow_schedules",
+  {
+    scheduleId: uuid("schedule_id").primaryKey().defaultRandom(),
+    workflowId: uuid("workflow_id")
+      .notNull()
+      .references(() => workflowDefinitions.workflowId, { onDelete: "cascade" }),
+    workflowVersion: integer("workflow_version").notNull(),
+    triggerNodeId: text("trigger_node_id").notNull(),
+    label: text("label").notNull(),
+    enabled: integer("enabled").notNull().default(1),
+    intervalSeconds: integer("interval_seconds"),
+    scheduleExpression: text("schedule_expression"),
+    timezone: text("timezone").notNull().default("UTC"),
+    nextRunAt: timestamp("next_run_at", { withTimezone: true }).notNull(),
+    lastAttemptedAt: timestamp("last_attempted_at", { withTimezone: true }),
+    lastSuccessfulAt: timestamp("last_successful_at", { withTimezone: true }),
+    leaseOwner: text("lease_owner"),
+    leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true }),
+    failureCode: text("failure_code"),
+    failureDetails: text("failure_details"),
+    revision: integer("revision").notNull().default(1),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    foreignKey({
+      columns: [table.workflowId, table.workflowVersion],
+      foreignColumns: [workflowVersions.workflowId, workflowVersions.version]
+    }).onDelete("cascade"),
+    check("workflow_schedules_enabled_check", sql`${table.enabled} in (0, 1)`),
+    check("workflow_schedules_revision_check", sql`${table.revision} > 0`),
+    check(
+      "workflow_schedules_definition_check",
+      sql`(${table.intervalSeconds} is not null and ${table.intervalSeconds} >= 10 and ${table.scheduleExpression} is null) or (${table.intervalSeconds} is null and ${table.scheduleExpression} is not null)`
+    ),
+    uniqueIndex("workflow_schedules_trigger_uidx").on(table.workflowId, table.triggerNodeId),
+    index("workflow_schedules_due_idx").on(table.enabled, table.nextRunAt),
+    index("workflow_schedules_lease_idx").on(table.leaseExpiresAt)
   ]
 )
 

@@ -1,33 +1,54 @@
 import { createRootRoute, createRoute, createRouter, lazyRouteComponent } from "@tanstack/react-router"
-import { App } from "./App"
+import { z } from "zod"
+import { NotFoundPage } from "./routes/NotFoundPage"
+import { OperationsPage } from "./routes/operations/OperationsPage"
 import { RootLayout } from "./routes/RootLayout"
 
-const rootRoute = createRootRoute({ component: RootLayout })
+const rootRoute = createRootRoute({ component: RootLayout, notFoundComponent: NotFoundPage })
+
+type IntegrationsSearch = { returnTo?: "workflow-create"; workflowName?: string }
+type WorkflowsSearch = { create?: true; name?: string }
+const OperationsSearchSchema = z.object({
+  view: z.enum(["overview", "runs", "work-queue"]).optional().catch(undefined),
+  q: z.string().trim().max(200).optional().catch(undefined),
+  status: z.enum(["todo", "in_progress", "blocked"]).optional().catch(undefined),
+  repository: z.string().trim().min(1).optional().catch(undefined),
+  assignee: z.string().trim().min(1).optional().catch(undefined),
+  priority: z.coerce.number().int().min(0).max(4).optional().catch(undefined),
+  age: z.enum(["day", "week", "month"]).optional().catch(undefined),
+  sort: z.enum(["priority", "created", "updated", "identifier"]).optional().catch(undefined),
+  direction: z.enum(["asc", "desc"]).optional().catch(undefined),
+  cursor: z.string().trim().min(1).optional().catch(undefined)
+})
 
 // The home route is the initial paint, so it's bundled eagerly. Other routes are
 // code-split with `lazyRouteComponent` — each becomes its own chunk that is only
 // fetched when needed. Combined with `defaultPreload: "intent"` below, hovering
 // or focusing a <Link> to one of them prefetches its chunk, so the navigation
 // itself is instant.
-const indexRoute = createRoute({ getParentRoute: () => rootRoute, path: "/", component: App })
-const aboutRoute = createRoute({
+const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/about",
-  component: lazyRouteComponent(() => import("./routes/AboutPage"), "AboutPage")
+  path: "/",
+  validateSearch: (search: Record<string, unknown>): z.infer<typeof OperationsSearchSchema> =>
+    OperationsSearchSchema.parse(search),
+  component: OperationsPage
 })
-const contactRoute = createRoute({
+const integrationsRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: "/contact",
-  component: lazyRouteComponent(() => import("./routes/ContactPage"), "ContactPage")
-})
-const settingsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/settings",
-  component: lazyRouteComponent(() => import("./routes/SettingsPage"), "SettingsPage")
+  path: "/integrations",
+  validateSearch: (search: Record<string, unknown>): IntegrationsSearch => ({
+    returnTo: search.returnTo === "workflow-create" ? ("workflow-create" as const) : undefined,
+    workflowName: typeof search.workflowName === "string" ? search.workflowName : undefined
+  }),
+  component: lazyRouteComponent(() => import("./routes/IntegrationsPage"), "IntegrationsPage")
 })
 const workflowsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/workflows",
+  validateSearch: (search: Record<string, unknown>): WorkflowsSearch => ({
+    create: search.create === true || search.create === "true" ? true : undefined,
+    name: typeof search.name === "string" ? search.name : undefined
+  }),
   component: lazyRouteComponent(() => import("./routes/WorkflowsPage"), "WorkflowsPage")
 })
 const workflowEditorRoute = createRoute({
@@ -43,9 +64,7 @@ const runDetailRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
-  aboutRoute,
-  contactRoute,
-  settingsRoute,
+  integrationsRoute,
   workflowsRoute,
   workflowEditorRoute,
   runDetailRoute

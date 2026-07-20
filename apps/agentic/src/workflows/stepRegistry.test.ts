@@ -60,4 +60,19 @@ describe("workflow step registry", () => {
     expect(getWorkflowStepDefinition("provider_action", 1).mutationPolicy).toBe("external_effect")
     expect(() => getWorkflowStepDefinition("provider_action", 1, 5)).toThrow("not available through phase 5")
   })
+
+  it("publishes explicit UI metadata for typed and advanced configuration", () => {
+    expect(getWorkflowStepDefinition("set_fields", 1).ui.fields).toContainEqual(
+      expect.objectContaining({ key: "fields", label: "Fields", control: "object_rows", group: "basic" })
+    )
+    expect(getWorkflowStepDefinition("collect", 1).ui.fields).toContainEqual(
+      expect.objectContaining({ key: "maximumItems", minimum: 1, maximum: 1000 })
+    )
+    expect(getWorkflowStepDefinition("validate", 1).ui.fields).toContainEqual(
+      expect.objectContaining({ key: "schema", control: "json", group: "advanced", required: true })
+    )
+    expect(getWorkflowStepDefinition("child_workflow", 1).ui.fields).toEqual(
+      expect.arrayContaining([expect.objectContaining({ key: "packageDigest", immutable: true })])
+    )
+  })
 })

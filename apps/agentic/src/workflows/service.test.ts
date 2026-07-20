@@ -93,7 +93,7 @@ function workflow(draft = content()): WorkflowDefinitionRecord {
     status: "draft",
     draftRevision: 1,
     draft,
-    publishedVersion: null,
+    activePublishedVersion: null,
     createdAt: now,
     updatedAt: now
   }
@@ -140,10 +140,14 @@ class FakeWorkflowStore implements WorkflowServiceStore {
   async publish(
     _workflowId = workflowId,
     agentSnapshots: RepositoryAgentSnapshot[] = [],
-    modelSnapshots: WorkflowModelSnapshot[] = []
+    modelSnapshots: WorkflowModelSnapshot[] = [],
+    expectedRevision?: number
   ) {
     if (this.current === null) throw new Error("Workflow not found")
-    const version = (this.current.publishedVersion ?? 0) + 1
+    if (expectedRevision !== undefined && this.current.draftRevision !== expectedRevision) {
+      throw new Error("Workflow draft changed during publication")
+    }
+    const version = (this.versions[0]?.version ?? 0) + 1
     const compiled = compileWorkflowDefinition({
       workflowId,
       workflowVersion: version,
@@ -171,13 +175,13 @@ class FakeWorkflowStore implements WorkflowServiceStore {
       content: compiled.content,
       createdAt: now
     }
-    this.current = { ...this.current, status: "published", publishedVersion: version }
+    this.current = { ...this.current, activePublishedVersion: version }
     return versionRecord
   }
 
-  async getPublishedVersion() {
-    if (this.current?.publishedVersion === null || this.current === null) return null
-    return this.versions.find(({ version }) => version === this.current?.publishedVersion) ?? null
+  async getActivePublishedVersion() {
+    if (this.current?.activePublishedVersion === null || this.current === null) return null
+    return this.versions.find(({ version }) => version === this.current?.activePublishedVersion) ?? null
   }
 
   async getExecutionPackage() {
@@ -321,8 +325,33 @@ describe("WorkflowService V2", () => {
     const service = new WorkflowService(store, workflowJournal)
 
     await expect(service.runDetail(runId)).resolves.toMatchObject({
-      schemaVersion: "1",
-      run: expect.objectContaining({ runId })
+      schemaVersion: "2",
+      run: expect.objectContaining({ runId }),
+      summary: {
+        outcome: "failed",
+        currentStep: null,
+        failure: null,
+        actions: [
+          {
+            key: "cancel",
+            label: "Cancel run",
+            targetId: null,
+            allowed: false,
+            disabledReason: "This run has already ended.",
+            approvalRequirement: "confirmation",
+            consequence: expect.any(String)
+          },
+          {
+            key: "run_again",
+            label: "Run again",
+            targetId: null,
+            allowed: true,
+            disabledReason: null,
+            approvalRequirement: "confirmation",
+            consequence: expect.any(String)
+          }
+        ]
+      }
     })
     await expect(service.runDetail(runId)).rejects.toThrow(`Workflow run ${runId} was not found`)
   })
@@ -486,7 +515,13 @@ describe("WorkflowService V2", () => {
 
     vi.spyOn(store, "create").mockRejectedValueOnce(new Error("Workflow name already exists"))
     await expect(
-      service.create({ name: "Delivery", repository, linearTeam, modelId: selectedModel.modelId })
+      service.create({
+        template: "agency_delivery",
+        name: "Delivery",
+        repository,
+        linearTeam,
+        modelId: selectedModel.modelId
+      })
     ).rejects.toThrow("Workflow name already exists")
 
     vi.spyOn(store, "updateDraft").mockRejectedValueOnce(new Error("Draft revision mismatch"))
@@ -517,12 +552,13 @@ describe("WorkflowService V2", () => {
       capabilities: ["repository.read", "pull_request.write"]
     }
     const created = await service.create({
+      template: "agency_delivery",
       name: "Delivery",
       repository,
       linearTeam,
       modelId: selectedModel.modelId
     })
-    expect(created).toMatchObject({ schemaVersion: "2", draftRevision: 1 })
+    expect(created).toMatchObject({ schemaVersion: "3", draftRevision: 1 })
     expect(created.content.resourceBindings).toEqual({ repository, linearTeam })
     expect(created.content.steps.map(({ id }) => id)).toEqual([
       "manual-start",
@@ -541,11 +577,14 @@ describe("WorkflowService V2", () => {
       ])
     )
     await expect(service.validate(workflowId)).resolves.toEqual({
+      schemaVersion: "1",
+      draftRevision: 1,
       valid: false,
       issues: [
         expect.objectContaining({
           code: "agent_reference",
-          nodeId: "delivery-agent"
+          nodeId: "delivery-agent",
+          field: "Agent"
         })
       ]
     })
@@ -559,11 +598,40 @@ describe("WorkflowService V2", () => {
       content: next
     })
     const published = await service.publish(workflowId)
-    expect(published).toMatchObject({ publishedVersion: 1, name: "Updated" })
+    expect(published).toMatchObject({ activePublishedVersion: 1, name: "Updated" })
     expect(store.executionPackage?.content.graph).toMatchObject({ schemaVersion: "2" })
     await expect(service.list()).resolves.toEqual([
       expect.objectContaining({ triggers: [{ kind: "manual", label: "Manual start", enabled: true }] })
     ])
+  })
+
+  it("creates repository-bound blank workflows through an explicit template", async () => {
+    const store = new FakeWorkflowStore()
+    const service = new WorkflowService(store, journal())
+
+    await expect(
+      service.create({
+        template: "blank",
+        name: "Repository workflow",
+        repository: {
+          connectionId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e31",
+          provider: "github",
+          resourceType: "repository",
+          externalId: "42",
+          name: "agency/repository",
+          capabilities: ["repository.read"]
+        }
+      })
+    ).resolves.toMatchObject({
+      name: "Repository workflow",
+      content: { resourceBindings: { repository: expect.objectContaining({ externalId: "42" }) }, steps: [] }
+    })
+    await expect(service.create({ template: "blank", name: "Missing repository" })).rejects.toThrow(
+      "Invalid input: expected object, received undefined"
+    )
+    await expect(
+      service.create({ template: "agency_delivery", name: "Incomplete starter", repository: undefined })
+    ).rejects.toThrow("Invalid input: expected object, received undefined")
   })
 
   it("lists no workflows when the store is empty", async () => {
@@ -646,8 +714,13 @@ describe("WorkflowService V2", () => {
     store.current = workflow(source)
     const service = new WorkflowService(store, journal(), repositoryAgents)
 
-    await expect(service.validate(workflowId)).resolves.toEqual({ valid: true, issues: [] })
-    await expect(service.publish(workflowId)).resolves.toMatchObject({ publishedVersion: 1 })
+    await expect(service.validate(workflowId)).resolves.toEqual({
+      schemaVersion: "1",
+      draftRevision: 1,
+      valid: true,
+      issues: []
+    })
+    await expect(service.publish(workflowId)).resolves.toMatchObject({ activePublishedVersion: 1 })
     expect(repositoryAgents.resolve).toHaveBeenCalledTimes(2)
     expect(store.executionPackage?.content.agentSnapshots).toEqual([snapshot])
   })
@@ -721,7 +794,12 @@ describe("WorkflowService V2", () => {
     store.current = workflow(source)
     const service = new WorkflowService(store, journal(), repositoryAgents)
 
-    await expect(service.validate(workflowId)).resolves.toEqual({ valid: true, issues: [] })
+    await expect(service.validate(workflowId)).resolves.toEqual({
+      schemaVersion: "1",
+      draftRevision: 1,
+      valid: true,
+      issues: []
+    })
     expect(repositoryAgents.resolve).toHaveBeenCalledTimes(1)
   })
 
@@ -795,8 +873,13 @@ describe("WorkflowService V2", () => {
     const service = new WorkflowService(store, journal(), undefined, models)
 
     await expect(service.modelDefinitions()).resolves.toEqual({ schemaVersion: "1", models: [snapshot] })
-    await expect(service.validate(workflowId)).resolves.toEqual({ valid: true, issues: [] })
-    await expect(service.publish(workflowId)).resolves.toMatchObject({ publishedVersion: 1 })
+    await expect(service.validate(workflowId)).resolves.toEqual({
+      schemaVersion: "1",
+      draftRevision: 1,
+      valid: true,
+      issues: []
+    })
+    await expect(service.publish(workflowId)).resolves.toMatchObject({ activePublishedVersion: 1 })
     expect(models.resolve).toHaveBeenCalledTimes(2)
     expect(store.executionPackage?.content.modelSnapshots).toEqual([snapshot])
   })
@@ -908,7 +991,12 @@ describe("WorkflowService V2", () => {
     }
     const service = new WorkflowService(store, journal(), undefined, models)
 
-    await expect(service.validate(workflowId)).resolves.toEqual({ valid: true, issues: [] })
+    await expect(service.validate(workflowId)).resolves.toEqual({
+      schemaVersion: "1",
+      draftRevision: 1,
+      valid: true,
+      issues: []
+    })
     expect(models.resolve).toHaveBeenCalledTimes(2)
     expect(models.resolve).toHaveBeenNthCalledWith(1, "alpha/model")
     expect(models.resolve).toHaveBeenNthCalledWith(2, "zeta/model")
@@ -950,7 +1038,11 @@ describe("WorkflowService V2", () => {
     const service = new WorkflowService(store, workflowJournal)
 
     await expect(
-      service.start(workflowId, { input: { issue: "FEN-423" }, trigger: { type: "manual", key: "request-1" } })
+      service.start(workflowId, {
+        version: 1,
+        input: { issue: "FEN-423" },
+        trigger: { type: "manual", key: "request-1" }
+      })
     ).resolves.toEqual({ runId, created: true, version: 1 })
     expect(workflowJournal.prepareRun).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1022,6 +1114,7 @@ describe("WorkflowService V2", () => {
 
     await expect(
       service.start(workflowId, {
+        version: 1,
         input: { when: "now" },
         trigger: { type: "schedule", key: "cron-1", stepId: "schedule-start" }
       })
@@ -1035,6 +1128,7 @@ describe("WorkflowService V2", () => {
 
     await expect(
       service.start(workflowId, {
+        version: 1,
         input: { event: "opened" },
         trigger: { type: "webhook", key: "delivery-1", stepId: "webhook-start" }
       })
@@ -1055,6 +1149,7 @@ describe("WorkflowService V2", () => {
 
     await expect(
       service.start(workflowId, {
+        version: 1,
         input: {},
         trigger: { type: "schedule", key: "cron-1", stepId: "missing-step" }
       })
@@ -1105,14 +1200,19 @@ describe("WorkflowService V2", () => {
     const ambiguousService = new WorkflowService(ambiguousStore, journal())
     await expect(
       ambiguousService.start(workflowId, {
+        version: 1,
         input: {},
         trigger: { type: "manual", key: "request-1" }
       })
     ).rejects.toThrow("Trigger is stale, unavailable, or ambiguous")
 
     await expect(
-      service.start(workflowId, { trigger: { type: "webhook", key: "x", stepId: "BAD_STEP" } })
+      service.start(workflowId, { version: 1, trigger: { type: "webhook", key: "x", stepId: "BAD_STEP" } })
     ).rejects.toThrow(/Invalid string/u)
+
+    await expect(
+      service.start(workflowId, { version: 2, trigger: { type: "manual", key: "stale-version" } })
+    ).rejects.toThrow("Published version 2 is not active")
   })
 
   it("runs the same immutable package again with a fresh trigger identity", async () => {
@@ -1452,7 +1552,9 @@ describe("WorkflowService V2", () => {
       source: { stepId: "schedule-start", port: "fire" }
     }
     const store = new FakeWorkflowStore()
-    store.current = { ...workflow(scheduled), status: "published", publishedVersion: 1 }
+    store.current = workflow(scheduled)
+    await store.publish()
+    store.current = { ...store.current, draft: content() }
     const workflowJournal = journal()
     workflowJournal.listPendingWaits.mockResolvedValueOnce([
       {
@@ -1471,10 +1573,53 @@ describe("WorkflowService V2", () => {
         updatedAt: now
       }
     ])
-    const service = new WorkflowService(store, workflowJournal)
+    const scheduleId = "019c230c-60c6-7bd8-a9f8-9e5f51b09e35"
+    const scheduleStore = {
+      list: vi.fn(async () => [
+        {
+          scheduleId,
+          workflowId,
+          workflowVersion: 1,
+          triggerNodeId: "schedule-start",
+          label: "Every minute",
+          enabled: true,
+          intervalSeconds: 60,
+          scheduleExpression: null,
+          timezone: "UTC",
+          nextRunAt: new Date("2026-07-19T12:01:00.000Z"),
+          lastAttemptedAt: null,
+          lastSuccessfulAt: null,
+          leaseOwner: null,
+          leaseExpiresAt: null,
+          failureCode: null,
+          failureDetails: null,
+          revision: 1,
+          createdAt: now,
+          updatedAt: now
+        }
+      ]),
+      update: vi.fn()
+    }
+    const service = new WorkflowService(store, workflowJournal, undefined, undefined, scheduleStore, () => now)
 
     await expect(service.schedules()).resolves.toEqual([
-      { workflowId, version: 1, nodeId: "schedule-start", label: "Every minute", intervalSeconds: 60 }
+      {
+        scheduleId,
+        workflowId,
+        workflowVersion: 1,
+        triggerNodeId: "schedule-start",
+        label: "Every minute",
+        enabled: true,
+        intervalSeconds: 60,
+        scheduleExpression: null,
+        timezone: "UTC",
+        nextRunAt: "2026-07-19T12:01:00.000Z",
+        lastAttemptedAt: null,
+        lastSuccessfulAt: null,
+        health: "scheduled",
+        latestError: null,
+        revision: 1
+      }
     ])
     await expect(service.receiveWebhook({ webhookType: "unknown" }, "missing")).resolves.toBe(0)
     await service.receiveWebhook(
@@ -1500,34 +1645,27 @@ describe("WorkflowService V2", () => {
     const source = content()
     source.steps[0] = {
       ...source.steps[0]!,
-      id: "invalid-schedule",
-      label: "Invalid schedule",
-      definition: { kind: "schedule", version: 1 },
-      config: { intervalSeconds: "60" }
-    }
-    source.steps.push({
       id: "linear-event",
       label: "Linear event",
-      position: { x: 0, y: 200 },
       definition: { kind: "provider_event", version: 1 },
-      config: { provider: "linear", eventKey: "task.comment.created" },
-      failurePolicy: { mode: "stop", maximumAttempts: 1 }
-    })
-    source.connections.push({
-      id: "linear-event-fields",
+      config: { provider: "linear", eventKey: "task.comment.created", binding: linearTeam }
+    }
+    source.resourceBindings = { linearTeam }
+    source.connections[0] = {
+      ...source.connections[0]!,
       source: { stepId: "linear-event", port: "event" },
-      target: { stepId: "set-fields", port: "input" },
-      outcome: "success",
-      mappings: [{ sourcePath: [], targetPath: [] }]
-    })
-    const published = { ...workflow(source), status: "published" as const, publishedVersion: 2 }
-    const draft = workflow(content())
+      target: { stepId: "set-fields", port: "input" }
+    }
     const store = new FakeWorkflowStore()
-    store.current = published
-    vi.spyOn(store, "list").mockResolvedValueOnce([published, draft])
+    store.current = workflow(source)
+    await store.publish()
+    store.current = { ...store.current, draft: content() }
     const workflowJournal = journal()
-    const service = new WorkflowService(store, workflowJournal)
-    const startSpy = vi.spyOn(service, "start").mockResolvedValue({ runId, created: true, version: 2 })
+    const service = new WorkflowService(store, workflowJournal, undefined, undefined, {
+      list: vi.fn(async () => []),
+      update: vi.fn()
+    })
+    const startSpy = vi.spyOn(service, "start").mockResolvedValue({ runId, created: true, version: 1 })
 
     await expect(service.schedules()).resolves.toEqual([])
 
@@ -1552,6 +1690,57 @@ describe("WorkflowService V2", () => {
         trigger: { type: "webhook", key: "delivery-42:task.comment.created", stepId: "linear-event" }
       })
     )
+  })
+
+  it("updates a durable schedule with optimistic concurrency", async () => {
+    const scheduleId = "019c230c-60c6-7bd8-a9f8-9e5f51b09e36"
+    const updatedAt = new Date("2026-07-19T12:05:00.000Z")
+    const updated = {
+      scheduleId,
+      workflowId,
+      workflowVersion: 2,
+      triggerNodeId: "schedule-start",
+      label: "Delivery schedule",
+      enabled: false,
+      intervalSeconds: 600,
+      scheduleExpression: null,
+      timezone: "UTC",
+      nextRunAt: new Date("2026-07-19T12:15:00.000Z"),
+      lastAttemptedAt: now,
+      lastSuccessfulAt: now,
+      leaseOwner: null,
+      leaseExpiresAt: null,
+      failureCode: null,
+      failureDetails: null,
+      revision: 3,
+      createdAt: now,
+      updatedAt
+    }
+    const scheduleStore = {
+      list: vi.fn(async () => [updated]),
+      update: vi.fn(async () => updated)
+    }
+    const service = new WorkflowService(
+      new FakeWorkflowStore(),
+      journal(),
+      undefined,
+      undefined,
+      scheduleStore,
+      () => updatedAt
+    )
+
+    await expect(
+      service.updateSchedule(scheduleId, { expectedRevision: 2, enabled: false, intervalSeconds: 600 })
+    ).resolves.toMatchObject({ scheduleId, enabled: false, health: "disabled", revision: 3 })
+    expect(scheduleStore.update).toHaveBeenCalledWith({
+      scheduleId,
+      expectedRevision: 2,
+      enabled: false,
+      intervalSeconds: 600,
+      scheduleExpression: null,
+      timezone: "UTC",
+      now: updatedAt
+    })
   })
 
   it("exposes repository agent discovery and model definitions errors when unavailable", async () => {
@@ -1609,7 +1798,7 @@ describe("WorkflowService V2", () => {
     const service = new WorkflowService(store, journal())
     await expect(service.draft(workflowId)).rejects.toThrow("Workflow not found")
     store.current = workflow()
-    await expect(service.start(workflowId, { trigger: { type: "manual" } })).rejects.toThrow(
+    await expect(service.start(workflowId, { version: 1, trigger: { type: "manual" } })).rejects.toThrow(
       "Publish the workflow before starting a run"
     )
   })

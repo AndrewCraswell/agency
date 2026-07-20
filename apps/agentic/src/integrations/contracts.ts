@@ -37,13 +37,39 @@ export const IntegrationConnectionSchema = z
   .object({
     connectionId: z.uuid(),
     provider: IntegrationProviderSchema,
-    displayName: z.string().min(1).nullable(),
+    providerAccount: z.string().min(1).nullable(),
     status: IntegrationConnectionStatusSchema,
-    errorCode: z.string().min(1).nullable(),
+    lastSuccessfulSyncAt: z.iso.datetime({ offset: true }).nullable(),
+    latestError: z.string().min(1).nullable(),
     lastCheckedAt: z.iso.datetime({ offset: true }).nullable(),
+    resourceCounts: z
+      .object({
+        total: z.number().int().nonnegative(),
+        active: z.number().int().nonnegative(),
+        stale: z.number().int().nonnegative()
+      })
+      .strict(),
+    capabilities: z.array(IntegrationResourceCapabilitySchema),
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
     resources: z.array(IntegrationResourceSchema)
+  })
+  .strict()
+
+export const IntegrationDisconnectImpactSchema = z
+  .object({
+    connectionId: z.uuid(),
+    affectedWorkflowCount: z.number().int().nonnegative(),
+    workflows: z.array(
+      z
+        .object({
+          workflowId: z.uuid(),
+          name: z.string().min(1),
+          usesDraft: z.boolean(),
+          usesPublishedVersion: z.boolean()
+        })
+        .strict()
+    )
   })
   .strict()
 

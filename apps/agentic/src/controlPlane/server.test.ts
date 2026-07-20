@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto"
 import { once } from "node:events"
 import { Nango } from "@nangohq/node"
 import { afterEach, describe, expect, it, vi } from "vitest"
+import { z } from "zod"
 import { LinearCandidateListSchema, LinearTaskGraphSchema } from "../contracts/linear"
 import type { TraceReference } from "../observability/tracing"
 import type {
@@ -102,6 +103,8 @@ function candidates() {
         description: "Add focused unit coverage.",
         url: "https://linear.app/example/issue/FEN-42",
         priority: 4,
+        createdAt: "2026-07-01T05:20:00.000Z",
+        updatedAt: now.toISOString(),
         state: { id: "dff7a1a0-2c52-4e3f-a325-90d314f81820", name: "Todo", type: "unstarted" },
         team: { id: "9539b499-1c48-4770-ab32-da1cbda14d57", key: "FEN", name: "Frontend" }
       }
@@ -176,10 +179,28 @@ describe("control-plane HTTP server", () => {
     expect(assignment.status).toBe(201)
     expect(assignment.headers.get("access-control-allow-origin")).toBe("http://localhost:5173")
     await expect(assignment.json()).resolves.toMatchObject({ created: true, run: { status: "queued" } })
+  })
 
-    const detail = await fetch(`${baseUrl}/api/control-plane/runs/b906f6ca-6be5-4b5a-9c2e-ff1f4f69b0a1`)
-    expect(detail.status).toBe(200)
-    await expect(detail.json()).resolves.toMatchObject({ run: { status: "queued" }, events: [] })
+  it("serves independently polled runs and queryable work items", async () => {
+    const baseUrl = await startServer()
+
+    const runs = await fetch(`${baseUrl}/api/control-plane/runs`)
+    expect(runs.status).toBe(200)
+    await expect(runs.json()).resolves.toMatchObject({ agents: expect.any(Array), runs: [] })
+
+    const workItems = await fetch(
+      `${baseUrl}/api/control-plane/work-items?q=profile&priority=4&sort=identifier&direction=asc&pageSize=1`
+    )
+    expect(workItems.status).toBe(200)
+    await expect(workItems.json()).resolves.toMatchObject({
+      total: 1,
+      items: [{ task: { identifier: "FEN-42" }, status: "todo" }],
+      nextCursor: null
+    })
+
+    const invalid = await fetch(`${baseUrl}/api/control-plane/work-items?status=unknown`)
+    expect(invalid.status).toBe(400)
+    await expect(invalid.json()).resolves.toMatchObject({ fieldErrors: [{ field: "status" }] })
   })
 
   it("returns bounded JSON errors for malformed and unknown requests", async () => {
@@ -194,6 +215,25 @@ describe("control-plane HTTP server", () => {
     const missing = await fetch(`${baseUrl}/missing`)
     expect(missing.status).toBe(404)
     await expect(missing.json()).resolves.toEqual({ error: "Route not found" })
+  })
+
+  it("returns structured field errors for invalid workflow creation", async () => {
+    const workflowService = {
+      create: vi.fn(async () => {
+        throw new z.ZodError([{ code: "custom", path: ["name"], message: "Enter a workflow name." }])
+      })
+    }
+    const baseUrl = await startServer(undefined, undefined, undefined, workflowService as never)
+
+    const response = await fetch(`${baseUrl}/api/workflows`, {
+      method: "POST",
+      body: JSON.stringify({ template: "blank", name: "" })
+    })
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({
+      fieldErrors: [{ field: "name", message: "Enter a workflow name." }]
+    })
   })
 
   it("serves health and CORS preflight requests", async () => {
@@ -214,10 +254,12 @@ describe("control-plane HTTP server", () => {
 
   it("routes the complete workflow lifecycle", async () => {
     const workflowId = "3195de29-2774-4272-be07-6ed600cefd51"
+    const scheduleId = "019c230c-60c6-7bd8-a9f8-9e5f51b09e36"
     const workflowService = {
       list: vi.fn(async () => [{ workflowId }]),
       create: vi.fn(async (input) => ({ workflowId, input })),
-      schedules: vi.fn(async () => [{ workflowId, scheduleId: "schedule-1" }]),
+      schedules: vi.fn(async () => [{ workflowId, scheduleId }]),
+      updateSchedule: vi.fn(async (_scheduleId, input) => ({ workflowId, scheduleId, revision: 2, input })),
       definitions: vi.fn(() => ({ schemaVersion: "1", definitions: [{ kind: "manual_trigger" }] })),
       draft: vi.fn(async () => ({ workflowId, revision: 1 })),
       updateDraft: vi.fn(async (_id, input) => ({ workflowId, revision: 2, input })),
@@ -232,15 +274,38 @@ describe("control-plane HTTP server", () => {
     const baseUrl = await startServer(undefined, undefined, undefined, workflowService as never)
 
     await expect((await fetch(`${baseUrl}/api/workflows`)).json()).resolves.toEqual([{ workflowId }])
+    const createRequest = {
+      template: "blank",
+      name: "Deliver Linear task",
+      description: "",
+      repository: {
+        connectionId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e31",
+        provider: "github",
+        resourceType: "repository",
+        externalId: "42",
+        name: "octo/agency",
+        capabilities: ["repository.read", "pull_request.write"]
+      }
+    }
     const created = await fetch(`${baseUrl}/api/workflows`, {
       method: "POST",
-      body: JSON.stringify({ name: "Deliver Linear task" })
+      body: JSON.stringify(createRequest)
     })
     expect(created.status).toBe(201)
-    expect(workflowService.create).toHaveBeenCalledWith({ name: "Deliver Linear task" })
+    expect(workflowService.create).toHaveBeenCalledWith(createRequest)
     await expect((await fetch(`${baseUrl}/api/workflows/schedules`)).json()).resolves.toEqual([
-      { workflowId, scheduleId: "schedule-1" }
+      { workflowId, scheduleId }
     ])
+    const updatedSchedule = await fetch(`${baseUrl}/api/workflows/schedules/${scheduleId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ expectedRevision: 1, enabled: false, intervalSeconds: 600 })
+    })
+    expect(updatedSchedule.status).toBe(200)
+    expect(workflowService.updateSchedule).toHaveBeenCalledWith(scheduleId, {
+      expectedRevision: 1,
+      enabled: false,
+      intervalSeconds: 600
+    })
     await expect((await fetch(`${baseUrl}/api/workflows/steps`)).json()).resolves.toEqual({
       schemaVersion: "1",
       definitions: [{ kind: "manual_trigger" }]
@@ -272,7 +337,7 @@ describe("control-plane HTTP server", () => {
     ).resolves.toMatchObject({ mode: "draft", simulated: true })
     const started = await fetch(`${baseUrl}/api/workflows/${workflowId}/runs`, {
       method: "POST",
-      body: JSON.stringify({ trigger: { type: "manual" } })
+      body: JSON.stringify({ version: 1, trigger: { type: "manual" } })
     })
     expect(started.status).toBe(201)
     await expect(started.json()).resolves.toMatchObject({ runId: "run-1" })

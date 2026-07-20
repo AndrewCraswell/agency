@@ -20,64 +20,31 @@ import {
   Subtitle1,
   Textarea,
   Title1,
-  Tooltip,
-  mergeClasses
+  Tooltip
 } from "@fluentui/react-components"
 import {
   ArrowClockwiseRegular,
   ArrowLeftRegular,
-  ArrowRightRegular,
   ArrowSyncRegular,
-  CheckmarkCircleRegular,
-  CheckmarkRegular,
   HistoryRegular,
-  OpenRegular,
-  PersonRegular,
   StopRegular
 } from "@fluentui/react-icons"
 import { Link, useNavigate, useParams } from "@tanstack/react-router"
 import { useEffect, useEffectEvent, useState } from "react"
+import { AsyncStatus } from "@/components/AsyncStatus/AsyncStatus"
 import { showAppToast, useAppToast } from "@/hooks/useAppToast"
 import {
   cancelJournalWorkflowRun,
-  getJournalWorkflowRunDetail,
   getWorkflowRunDetail,
-  langSmithTraceUrl,
   resolveJournalWorkflowEffect,
   resumeJournalWorkflowRun,
   retryJournalWorkflowActivation,
   retryJournalWorkflowFromHere,
   runJournalWorkflowAgain,
-  traceReference,
-  type JournalWorkflowRunDetail,
   type JsonValue,
   type WorkflowRunDetail
 } from "@/services/api"
 import { useRunDetailPageStyles } from "./RunDetailPage.styles"
-
-const stages = ["intake", "planning", "coding", "reviewing", "repairing", "publishing", "completed"] as const
-
-function runStatusColor(status: WorkflowRunDetail["run"]["status"]): "brand" | "danger" | "success" {
-  if (status === "failed" || status === "blocked") {
-    return "danger"
-  }
-  if (status === "published") {
-    return "success"
-  }
-  return "brand"
-}
-
-function eventOutcomeColor(
-  outcome: WorkflowRunDetail["events"][number]["outcome"]
-): "danger" | "informative" | "success" {
-  if (outcome === "failed") {
-    return "danger"
-  }
-  if (outcome === "completed") {
-    return "success"
-  }
-  return "informative"
-}
 
 function journalStatusColor(status: string): "brand" | "danger" | "informative" | "success" | "warning" {
   if (status === "failed" || status === "abandoned" || status === "unknown" || status === "conflict") {
@@ -99,33 +66,25 @@ function persistedJson(value: unknown) {
   return JSON.stringify(value, null, 2)
 }
 
-function retryFromHereDescendants(detail: JournalWorkflowRunDetail, stepId: string) {
-  const reachable = new Set<string>()
-  const pending = [stepId]
-  while (pending.length > 0) {
-    const current = pending.pop()
-    if (current === undefined) {
-      continue
-    }
-    for (const connection of detail.graph.connections) {
-      if (connection.source.stepId !== current || reachable.has(connection.target.stepId)) {
-        continue
-      }
-      reachable.add(connection.target.stepId)
-      pending.push(connection.target.stepId)
-    }
+function runMutationStatus(detail: WorkflowRunDetail, busyAction: string | null): string {
+  if (busyAction === null) {
+    return "Run details up to date"
   }
-  reachable.delete(stepId)
-  return detail.activations.filter((activation) => reachable.has(activation.stepId))
+  const action = detail.summary.actions.find(
+    (candidate) => candidate.targetId === busyAction || candidate.key.replaceAll("_", "-") === busyAction
+  )
+  return action === undefined ? "Updating run" : `${action.label} in progress`
 }
 
 function EffectResolutionAction({
   effect,
   busy,
+  label,
   onSubmit
 }: {
-  effect: JournalWorkflowRunDetail["effects"][number]
+  effect: WorkflowRunDetail["effects"][number]
   busy: boolean
+  label: string
   onSubmit: (input: {
     outcome: "occurred" | "absent" | "indeterminate"
     reason: string
@@ -175,8 +134,8 @@ function EffectResolutionAction({
       }}
     >
       <DialogTrigger disableButtonEnhancement>
-        <Button size="small" disabled={busy}>
-          Needs confirmation
+        <Button size="small" appearance="primary" disabled={busy}>
+          {label}
         </Button>
       </DialogTrigger>
       <DialogSurface>
@@ -233,7 +192,7 @@ function EffectResolutionAction({
   )
 }
 
-function JournalRunView({
+function RunSummary({
   detail,
   busyAction,
   onCancel,
@@ -243,269 +202,401 @@ function JournalRunView({
   onRetryFromHere,
   onRunAgain
 }: {
-  detail: JournalWorkflowRunDetail
+  detail: WorkflowRunDetail
   busyAction: string | null
   onCancel: () => void
   onResolveEffect: (
-    effect: JournalWorkflowRunDetail["effects"][number],
+    effect: WorkflowRunDetail["effects"][number],
     input: { outcome: "occurred" | "absent" | "indeterminate"; reason: string; result?: Record<string, JsonValue> }
   ) => Promise<void>
-  onResume: (wait: JournalWorkflowRunDetail["waits"][number]) => void
+  onResume: (wait: WorkflowRunDetail["waits"][number]) => void
+  onRetry: (activationId: string) => void
+  onRetryFromHere: (activationId: string) => void
+  onRunAgain: () => void
+}) {
+  const classes = useRunDetailPageStyles()
+  const { failure } = detail.summary
+  return (
+    <section className={classes.summary} aria-labelledby="run-summary-heading">
+      <div className={classes.sectionHeading}>
+        <div>
+          <Subtitle1 as="h2" id="run-summary-heading">
+            Run summary
+          </Subtitle1>
+          <Caption1>
+            {detail.summary.currentStep === null
+              ? "No step is currently active"
+              : `Current step: ${detail.summary.currentStep.label}`}
+          </Caption1>
+        </div>
+        <Badge appearance="filled" color={journalStatusColor(detail.summary.outcome)}>
+          {detail.summary.outcome}
+        </Badge>
+      </div>
+      {failure === null ? null : (
+        <MessageBar intent="error">
+          <MessageBarBody>
+            <strong>{failure.stepLabel} failed</strong>
+            <div>{failure.cause}</div>
+            <div>{failure.downstreamEffect}</div>
+            <div>{failure.recommendedAction}</div>
+          </MessageBarBody>
+        </MessageBar>
+      )}
+      <div className={classes.recoverySection}>
+        <Subtitle1 as="h3">Next actions</Subtitle1>
+        {detail.summary.actions.length === 0 ? (
+          <Body1>No recovery action is available for this run.</Body1>
+        ) : (
+          <ul className={classes.recoveryActions}>
+            {detail.summary.actions.map((action) => {
+              const targetId = action.targetId
+              const actionId = targetId ?? action.key.replaceAll("_", "-")
+              const reasonId = `action-reason-${actionId}`
+              const busy = busyAction === actionId
+              const effect =
+                action.key === "resolve_effect"
+                  ? detail.effects.find(({ effectId }) => effectId === targetId)
+                  : undefined
+              let control: React.ReactNode = null
+              if (action.key === "cancel") {
+                control = (
+                  <Button
+                    icon={busy ? <Spinner size="tiny" /> : <StopRegular />}
+                    disabled={busy}
+                    disabledFocusable={!action.allowed}
+                    aria-describedby={action.allowed ? undefined : reasonId}
+                    onClick={onCancel}
+                  >
+                    {action.label}
+                  </Button>
+                )
+              } else if (action.key === "run_again") {
+                control = (
+                  <Button
+                    icon={busy ? <Spinner size="tiny" /> : <ArrowSyncRegular />}
+                    disabled={busy}
+                    disabledFocusable={!action.allowed}
+                    aria-describedby={action.allowed ? undefined : reasonId}
+                    onClick={onRunAgain}
+                  >
+                    {action.label}
+                  </Button>
+                )
+              } else if (action.key === "retry_step" && targetId !== null) {
+                control = (
+                  <Button
+                    appearance="primary"
+                    icon={busy ? <Spinner size="tiny" /> : <ArrowClockwiseRegular />}
+                    disabled={busy}
+                    disabledFocusable={!action.allowed}
+                    aria-describedby={action.allowed ? undefined : reasonId}
+                    onClick={() => onRetry(targetId)}
+                  >
+                    {action.label}
+                  </Button>
+                )
+              } else if (action.key === "retry_from_here" && targetId !== null) {
+                control = (
+                  <Button
+                    disabled={busy}
+                    disabledFocusable={!action.allowed}
+                    aria-describedby={action.allowed ? undefined : reasonId}
+                    onClick={() => onRetryFromHere(targetId)}
+                  >
+                    {action.label}
+                  </Button>
+                )
+              } else if (action.key === "resume" && targetId !== null) {
+                const wait = detail.waits.find(({ waitId }) => waitId === targetId)
+                if (wait !== undefined) {
+                  control = (
+                    <Button
+                      disabled={busy}
+                      disabledFocusable={!action.allowed}
+                      aria-describedby={action.allowed ? undefined : reasonId}
+                      onClick={() => onResume(wait)}
+                    >
+                      {action.label}
+                    </Button>
+                  )
+                }
+              } else if (effect !== undefined) {
+                control = (
+                  <EffectResolutionAction
+                    effect={effect}
+                    busy={busy}
+                    label={action.label}
+                    onSubmit={(input) => onResolveEffect(effect, input)}
+                  />
+                )
+              }
+              return control === null ? null : (
+                <li key={`${action.key}:${targetId ?? "run"}`}>
+                  {control}
+                  {action.disabledReason === null ? null : (
+                    <Caption1 id={reasonId} className={classes.unavailableReason}>
+                      {action.disabledReason}
+                    </Caption1>
+                  )}
+                  <Caption1>{action.consequence}</Caption1>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function WorkflowRunView({
+  detail,
+  busyAction,
+  onCancel,
+  onResolveEffect,
+  onResume,
+  onRetry,
+  onRetryFromHere,
+  onRunAgain
+}: {
+  detail: WorkflowRunDetail
+  busyAction: string | null
+  onCancel: () => void
+  onResolveEffect: (
+    effect: WorkflowRunDetail["effects"][number],
+    input: { outcome: "occurred" | "absent" | "indeterminate"; reason: string; result?: Record<string, JsonValue> }
+  ) => Promise<void>
+  onResume: (wait: WorkflowRunDetail["waits"][number]) => void
   onRetry: (activationId: string) => void
   onRetryFromHere: (activationId: string) => void
   onRunAgain: () => void
 }) {
   const classes = useRunDetailPageStyles()
   const attemptsByActivation = Map.groupBy(detail.attempts, ({ activationId }) => activationId)
+  const pageTitle =
+    detail.summary.failure === null
+      ? `Workflow run ${detail.summary.outcome}`
+      : `Run failed at ${detail.summary.failure.stepLabel}`
   return (
     <>
       <header className={classes.header}>
         <div className={classes.headerIdentity}>
           <Caption1 className={classes.eyebrow}>Workflow version {detail.executionPackage.workflowVersion}</Caption1>
-          <Title1 as="h1">Workflow run</Title1>
+          <Title1 as="h1">{pageTitle}</Title1>
           <Body1 className={classes.runId}>{detail.run.runId}</Body1>
         </div>
         <div className={classes.runActions}>
-          {!detail.run.triggerIdentity.startsWith("child:") && (
-            <Button disabled={busyAction !== null} icon={<ArrowSyncRegular />} onClick={onRunAgain}>
-              Run again
-            </Button>
-          )}
-          {!(["succeeded", "failed", "cancelled", "abandoned"] as string[]).includes(detail.run.status) && (
-            <Button
-              disabled={busyAction !== null}
-              icon={busyAction === "cancel" ? <Spinner size="tiny" /> : <StopRegular />}
-              onClick={onCancel}
-            >
-              Cancel run
-            </Button>
-          )}
           <Badge appearance="filled" color={journalStatusColor(detail.run.status)}>
             {detail.run.status}
           </Badge>
         </div>
       </header>
-      <dl className={classes.details} aria-label="Run metadata">
-        <div>
-          <dt>
-            <Caption1>Trigger</Caption1>
-          </dt>
-          <dd>
-            <Body1>{detail.run.triggerIdentity}</Body1>
-          </dd>
-        </div>
-        <div>
-          <dt>
-            <Caption1>Package</Caption1>
-          </dt>
-          <dd>
-            <Body1 className={classes.runId}>{detail.run.packageDigest}</Body1>
-          </dd>
-        </div>
-        <div>
-          <dt>
-            <Caption1>Last event</Caption1>
-          </dt>
-          <dd>
-            <Body1>Sequence {detail.run.latestSequence}</Body1>
-          </dd>
-        </div>
-      </dl>
-      <section className={classes.workflowSection} aria-labelledby="journal-graph-heading">
-        <div className={classes.sectionHeading}>
-          <div>
-            <Subtitle1 as="h2" id="journal-graph-heading">
-              Immutable graph
-            </Subtitle1>
-            <Caption1>{detail.graph.steps.length} steps from the sealed execution package</Caption1>
-          </div>
-          <CounterBadge appearance="ghost" color="informative" count={detail.activations.length} showZero />
-        </div>
-        <ol className={classes.activationList}>
-          {detail.graph.topologicalOrder.map((stepId) => {
-            const step = detail.graph.steps.find(({ id }) => id === stepId)
-            if (step === undefined) {
-              return null
-            }
-            const activations = detail.activations.filter((activation) => activation.stepId === stepId)
-            return (
-              <li key={stepId}>
-                <div className={classes.eventHeading}>
-                  <strong>{step.label}</strong>
-                  <Caption1>{step.definition.kind.replaceAll("_", " ")}</Caption1>
-                </div>
-                {activations.length === 0 ? (
-                  <Caption1>Not activated</Caption1>
-                ) : (
-                  activations.map((activation) => (
-                    <div className={classes.activationRow} key={activation.activationId}>
-                      <Badge appearance="tint" color={journalStatusColor(activation.status)}>
-                        {activation.status}
-                      </Badge>
-                      <code>{activation.activationId.slice(0, 12)}</code>
-                      <Caption1>
-                        {activation.scope.length === 0
-                          ? "root scope"
-                          : activation.scope
-                              .map((scope) => (scope.kind === "loop" ? `${scope.key}:${scope.iteration}` : scope.key))
-                              .join(" / ")}
-                      </Caption1>
-                      <Caption1>{attemptsByActivation.get(activation.activationId)?.length ?? 0} attempt(s)</Caption1>
-                      {activation.status === "failed" && activation.selectedAttemptOrdinal === null ? (
-                        <>
-                          <Button
-                            size="small"
-                            disabled={busyAction !== null}
-                            icon={
-                              busyAction === activation.activationId ? (
-                                <Spinner size="tiny" />
-                              ) : (
-                                <ArrowClockwiseRegular />
-                              )
-                            }
-                            onClick={() => onRetry(activation.activationId)}
-                          >
-                            Retry step
-                          </Button>
-                          {retryFromHereDescendants(detail, activation.stepId).every(
-                            (descendant) =>
-                              descendant.status === "blocked" && descendant.selectedAttemptOrdinal === null
-                          ) ? (
-                            <Button
-                              size="small"
-                              appearance="subtle"
-                              disabled={busyAction !== null}
-                              onClick={() => onRetryFromHere(activation.activationId)}
-                            >
-                              Retry from here
-                            </Button>
-                          ) : null}
-                        </>
-                      ) : null}
-                    </div>
-                  ))
-                )}
-              </li>
-            )
-          })}
-        </ol>
-      </section>
-      <div className={classes.diagnosticGrid}>
-        <JournalEvidenceSection
-          title="Attempts"
-          empty="No attempts yet"
-          items={detail.attempts.map((attempt) => ({
-            id: `${attempt.activationId}:${attempt.ordinal}`,
-            label: `Attempt ${attempt.ordinal}`,
-            status: attempt.status,
-            meta: attempt.activationId.slice(0, 12),
-            value: {
-              input: attempt.input,
-              output: attempt.output,
-              error: attempt.error,
-              usage: attempt.usage,
-              evidence: attempt.evidence
-            }
-          }))}
-        />
-        <JournalEvidenceSection
-          title="Waits"
-          empty="No durable waits"
-          items={detail.waits.map((wait) => ({
-            id: wait.waitId,
-            label: wait.correlationKey,
-            status: wait.status,
-            meta: `Expires ${new Date(wait.expiresAt).toLocaleString()}`,
-            value: { acceptedInputSchema: wait.acceptedInputSchema, winningEventSequence: wait.winningEventSequence },
-            action:
-              wait.status === "pending" && new Date(wait.expiresAt) > new Date() ? (
-                <Button size="small" disabled={busyAction !== null} onClick={() => onResume(wait)}>
-                  Resume
-                </Button>
-              ) : undefined
-          }))}
-        />
-        <JournalEvidenceSection
-          title="Effects"
-          empty="No external effects"
-          items={detail.effects.map((effect) => ({
-            id: effect.effectId,
-            label: `${effect.provider} ${effect.effectSlot}`,
-            status: effect.status,
-            meta: effect.requestDigest.slice(0, 12),
-            value: { request: effect.request, result: effect.result, reconciliation: effect.reconciliation },
-            action:
-              effect.status === "unknown" || effect.status === "conflict" ? (
-                <EffectResolutionAction
-                  effect={effect}
-                  busy={busyAction !== null}
-                  onSubmit={(input) => onResolveEffect(effect, input)}
-                />
-              ) : undefined
-          }))}
-        />
-        <JournalEvidenceSection
-          title="Data and artifacts"
-          empty="No produced data"
-          items={detail.data.map((datum) => ({
-            id: datum.datumId,
-            label: datum.name,
-            status: datum.kind,
-            meta: datum.digest.slice(0, 12),
-            value: datum.payload
-          }))}
-        />
-        <JournalEvidenceSection
-          title="Child runs"
-          empty="No child workflows"
-          items={detail.childLinks.map((link) => ({
-            id: link.childRunId,
-            label: link.childRunId,
-            status: link.terminalStatus ?? "running",
-            meta: link.childPackageDigest.slice(0, 12),
-            value: { result: link.result, error: link.error }
-          }))}
-        />
-      </div>
-      <section className={classes.timelineSection} aria-labelledby="journal-events-heading">
-        <div className={classes.sectionHeading}>
-          <div>
-            <Subtitle1 as="h2" id="journal-events-heading">
-              Event history
-            </Subtitle1>
-            <Caption1>Ordered persisted transitions</Caption1>
-          </div>
-          <CounterBadge appearance="ghost" color="informative" count={detail.events.length} showZero />
-        </div>
-        {detail.events.length === 0 ? (
-          <div className={classes.emptyState}>
-            <HistoryRegular aria-hidden="true" />
+      <RunSummary
+        detail={detail}
+        busyAction={busyAction}
+        onCancel={onCancel}
+        onResolveEffect={onResolveEffect}
+        onResume={onResume}
+        onRetry={onRetry}
+        onRetryFromHere={onRetryFromHere}
+        onRunAgain={onRunAgain}
+      />
+      <details className={classes.diagnostics}>
+        <summary aria-label="Toggle run diagnostics">
+          <span>
+            <Subtitle1>Diagnostics</Subtitle1>
+            <Caption1>Inspect the sealed graph, attempts, provider evidence, and event history.</Caption1>
+          </span>
+        </summary>
+        <div className={classes.diagnosticsContent}>
+          <dl className={classes.details} aria-label="Run metadata">
             <div>
-              <Subtitle1>No events yet</Subtitle1>
-              <Body1>The run has not recorded a transition.</Body1>
+              <dt>
+                <Caption1>Trigger</Caption1>
+              </dt>
+              <dd>
+                <Body1>{detail.run.triggerIdentity}</Body1>
+              </dd>
             </div>
+            <div>
+              <dt>
+                <Caption1>Package</Caption1>
+              </dt>
+              <dd>
+                <Body1 className={classes.runId}>{detail.run.packageDigest}</Body1>
+              </dd>
+            </div>
+            <div>
+              <dt>
+                <Caption1>Last event</Caption1>
+              </dt>
+              <dd>
+                <Body1>Sequence {detail.run.latestSequence}</Body1>
+              </dd>
+            </div>
+          </dl>
+          <section className={classes.workflowSection} aria-labelledby="journal-graph-heading">
+            <div className={classes.sectionHeading}>
+              <div>
+                <Subtitle1 as="h2" id="journal-graph-heading">
+                  Immutable graph
+                </Subtitle1>
+                <Caption1>{detail.graph.steps.length} steps from the sealed execution package</Caption1>
+              </div>
+              <CounterBadge appearance="ghost" color="informative" count={detail.activations.length} showZero />
+            </div>
+            <ol className={classes.activationList}>
+              {detail.graph.topologicalOrder.map((stepId) => {
+                const step = detail.graph.steps.find(({ id }) => id === stepId)
+                if (step === undefined) {
+                  return null
+                }
+                const activations = detail.activations.filter((activation) => activation.stepId === stepId)
+                return (
+                  <li key={stepId}>
+                    <div className={classes.eventHeading}>
+                      <strong>{step.label}</strong>
+                      <Caption1>{step.definition.kind.replaceAll("_", " ")}</Caption1>
+                    </div>
+                    {activations.length === 0 ? (
+                      <Caption1>Not activated</Caption1>
+                    ) : (
+                      activations.map((activation) => (
+                        <div className={classes.activationRow} key={activation.activationId}>
+                          <Badge appearance="tint" color={journalStatusColor(activation.status)}>
+                            {activation.status}
+                          </Badge>
+                          <code>{activation.activationId.slice(0, 12)}</code>
+                          <Caption1>
+                            {activation.scope.length === 0
+                              ? "root scope"
+                              : activation.scope
+                                  .map((scope) =>
+                                    scope.kind === "loop" ? `${scope.key}:${scope.iteration}` : scope.key
+                                  )
+                                  .join(" / ")}
+                          </Caption1>
+                          <Caption1>
+                            {attemptsByActivation.get(activation.activationId)?.length ?? 0} attempt(s)
+                          </Caption1>
+                        </div>
+                      ))
+                    )}
+                  </li>
+                )
+              })}
+            </ol>
+          </section>
+          <div className={classes.diagnosticGrid}>
+            <JournalEvidenceSection
+              title="Attempts"
+              empty="No attempts yet"
+              items={detail.attempts.map((attempt) => ({
+                id: `${attempt.activationId}:${attempt.ordinal}`,
+                label: `Attempt ${attempt.ordinal}`,
+                status: attempt.status,
+                meta: attempt.activationId.slice(0, 12),
+                value: {
+                  input: attempt.input,
+                  output: attempt.output,
+                  error: attempt.error,
+                  usage: attempt.usage,
+                  evidence: attempt.evidence
+                }
+              }))}
+            />
+            <JournalEvidenceSection
+              title="Waits"
+              empty="No durable waits"
+              items={detail.waits.map((wait) => ({
+                id: wait.waitId,
+                label: wait.correlationKey,
+                status: wait.status,
+                meta: `Expires ${new Date(wait.expiresAt).toLocaleString()}`,
+                value: {
+                  acceptedInputSchema: wait.acceptedInputSchema,
+                  winningEventSequence: wait.winningEventSequence
+                },
+                action: undefined
+              }))}
+            />
+            <JournalEvidenceSection
+              title="Effects"
+              empty="No external effects"
+              items={detail.effects.map((effect) => ({
+                id: effect.effectId,
+                label: `${effect.provider} ${effect.effectSlot}`,
+                status: effect.status,
+                meta: effect.requestDigest.slice(0, 12),
+                value: { request: effect.request, result: effect.result, reconciliation: effect.reconciliation },
+                action: undefined
+              }))}
+            />
+            <JournalEvidenceSection
+              title="Data and artifacts"
+              empty="No produced data"
+              items={detail.data.map((datum) => ({
+                id: datum.datumId,
+                label: datum.name,
+                status: datum.kind,
+                meta: datum.digest.slice(0, 12),
+                value: datum.payload
+              }))}
+            />
+            <JournalEvidenceSection
+              title="Child runs"
+              empty="No child workflows"
+              items={detail.childLinks.map((link) => ({
+                id: link.childRunId,
+                label: link.childRunId,
+                status: link.terminalStatus ?? "running",
+                meta: link.childPackageDigest.slice(0, 12),
+                value: { result: link.result, error: link.error }
+              }))}
+            />
           </div>
-        ) : (
-          <ol className={classes.timeline}>
-            {detail.events.map((event) => (
-              <li key={event.sequence}>
-                <span className={classes.timelineMarker} />
-                <div className={classes.eventBody}>
-                  <div className={classes.eventHeading}>
-                    <strong>{event.eventType}</strong>
-                    <Badge appearance="outline">#{event.sequence}</Badge>
-                  </div>
-                  <Caption1>{new Date(event.recordedAt).toLocaleString()}</Caption1>
-                  <details>
-                    <summary>Persisted payload</summary>
-                    <pre>{persistedJson(event.payload)}</pre>
-                  </details>
+          <section className={classes.timelineSection} aria-labelledby="journal-events-heading">
+            <div className={classes.sectionHeading}>
+              <div>
+                <Subtitle1 as="h2" id="journal-events-heading">
+                  Event history
+                </Subtitle1>
+                <Caption1>Ordered persisted transitions</Caption1>
+              </div>
+              <CounterBadge appearance="ghost" color="informative" count={detail.events.length} showZero />
+            </div>
+            {detail.events.length === 0 ? (
+              <div className={classes.emptyState}>
+                <HistoryRegular aria-hidden="true" />
+                <div>
+                  <Subtitle1>No events yet</Subtitle1>
+                  <Body1>The run has not recorded a transition.</Body1>
                 </div>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+              </div>
+            ) : (
+              <ol className={classes.timeline}>
+                {detail.events.map((event) => (
+                  <li key={event.sequence}>
+                    <span className={classes.timelineMarker} />
+                    <div className={classes.eventBody}>
+                      <div className={classes.eventHeading}>
+                        <strong>{event.eventType}</strong>
+                        <Badge appearance="outline">#{event.sequence}</Badge>
+                      </div>
+                      <Caption1>{new Date(event.recordedAt).toLocaleString()}</Caption1>
+                      <details>
+                        <summary>Persisted payload</summary>
+                        <pre>{persistedJson(event.payload)}</pre>
+                      </details>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
+        </div>
+      </details>
     </>
   )
 }
@@ -558,11 +649,10 @@ export function RunDetailPage() {
   const navigate = useNavigate()
   const dispatchToast = useAppToast()
   const [detail, setDetail] = useState<WorkflowRunDetail | null>(null)
-  const [journalDetail, setJournalDetail] = useState<JournalWorkflowRunDetail | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [busyAction, setBusyAction] = useState<string | null>(null)
-  const [resumeWait, setResumeWait] = useState<JournalWorkflowRunDetail["waits"][number] | null>(null)
+  const [resumeWait, setResumeWait] = useState<WorkflowRunDetail["waits"][number] | null>(null)
   const [resumeEvent, setResumeEvent] = useState("{}")
   const [resumeError, setResumeError] = useState("")
   const [runAgainOpen, setRunAgainOpen] = useState(false)
@@ -571,18 +661,10 @@ export function RunDetailPage() {
 
   async function loadDetail() {
     try {
-      const next = await getJournalWorkflowRunDetail(runId)
-      setJournalDetail(next)
-      setDetail(null)
+      setDetail(await getWorkflowRunDetail(runId))
       setError(null)
-    } catch {
-      try {
-        setDetail(await getWorkflowRunDetail(runId))
-        setJournalDetail(null)
-        setError(null)
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "We couldn't load this run. Refresh and try again.")
-      }
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "We couldn't load this run. Refresh and try again.")
     } finally {
       setIsLoading(false)
     }
@@ -719,7 +801,7 @@ export function RunDetailPage() {
   }
 
   async function resolveEffect(
-    effect: JournalWorkflowRunDetail["effects"][number],
+    effect: WorkflowRunDetail["effects"][number],
     input: { outcome: "occurred" | "absent" | "indeterminate"; reason: string; result?: Record<string, JsonValue> }
   ) {
     setBusyAction(effect.effectId)
@@ -745,8 +827,6 @@ export function RunDetailPage() {
     }
   }, [runId])
 
-  const currentStageIndex = detail === null ? -1 : stages.indexOf(detail.run.stage)
-
   return (
     <main className={classes.page}>
       <div className={classes.toolbar}>
@@ -768,10 +848,13 @@ export function RunDetailPage() {
           <MessageBarBody>{error}</MessageBarBody>
         </MessageBar>
       )}
-      {detail === null && journalDetail === null && isLoading ? <Spinner label="Loading run" /> : null}
-      {journalDetail === null ? null : (
-        <JournalRunView
-          detail={journalDetail}
+      {detail === null ? null : (
+        <AsyncStatus message={runMutationStatus(detail, busyAction)} pending={busyAction !== null} />
+      )}
+      {detail === null && isLoading ? <Spinner label="Loading run" /> : null}
+      {detail === null ? null : (
+        <WorkflowRunView
+          detail={detail}
           busyAction={busyAction}
           onCancel={() => void cancelRun()}
           onResolveEffect={resolveEffect}
@@ -783,7 +866,7 @@ export function RunDetailPage() {
           onRetry={(activationId) => void retryActivation(activationId)}
           onRetryFromHere={(activationId) => void retryFromHere(activationId)}
           onRunAgain={() => {
-            setRunAgainInput(persistedJson(journalDetail.run.sealedManifest.input ?? {}))
+            setRunAgainInput(persistedJson(detail.run.sealedManifest.input ?? {}))
             setRunAgainError("")
             setRunAgainOpen(true)
           }}
@@ -844,8 +927,8 @@ export function RunDetailPage() {
               <DialogTitle>Run workflow again</DialogTitle>
               <DialogContent>
                 <Body1>
-                  Create a new run from workflow version {journalDetail?.executionPackage.workflowVersion}. The current
-                  run and its evidence remain unchanged.
+                  Create a new run from workflow version {detail?.executionPackage.workflowVersion}. The current run and
+                  its evidence remain unchanged.
                 </Body1>
                 <Field
                   label="Run input JSON"
@@ -875,195 +958,6 @@ export function RunDetailPage() {
             </DialogBody>
           </DialogSurface>
         </Dialog>
-      )}
-      {detail === null ? null : (
-        <>
-          <header className={classes.header}>
-            <div className={classes.headerIdentity}>
-              <Caption1 className={classes.eyebrow}>{detail.run.sourceWorkItemIdentifier ?? "Workflow run"}</Caption1>
-              <Title1 as="h1">{detail.run.activeRole?.replace("_", " ") ?? "Workflow details"}</Title1>
-              <Body1 className={classes.runId}>{detail.run.runId}</Body1>
-            </div>
-            <Badge appearance="filled" color={runStatusColor(detail.run.status)}>
-              {detail.run.status}
-            </Badge>
-          </header>
-          <section className={classes.stageSection} aria-labelledby="stage-heading">
-            <Subtitle1 as="h2" id="stage-heading">
-              Delivery stage
-            </Subtitle1>
-            <ol className={classes.stageList}>
-              {stages.map((stage, index) => {
-                let stateClass = classes.stagePending
-                let stateLabel = "not started"
-                if (index < currentStageIndex) {
-                  stateClass = classes.stageComplete
-                  stateLabel = "completed"
-                } else if (index === currentStageIndex) {
-                  stateClass = classes.stageCurrent
-                  stateLabel = "current stage"
-                }
-
-                return (
-                  <li
-                    className={mergeClasses(classes.stageItem, stateClass)}
-                    key={stage}
-                    aria-current={index === currentStageIndex ? "step" : undefined}
-                    aria-label={`${stage}, ${stateLabel}`}
-                  >
-                    <span>{index < currentStageIndex ? <CheckmarkRegular aria-hidden="true" /> : index + 1}</span>
-                    <small>{stage}</small>
-                  </li>
-                )
-              })}
-            </ol>
-          </section>
-          <dl className={classes.details} aria-label="Run metadata">
-            <div>
-              <dt>
-                <Caption1>Repository</Caption1>
-              </dt>
-              <dd>
-                <Body1>{detail.run.repository}</Body1>
-              </dd>
-            </div>
-            <div>
-              <dt>
-                <Caption1>Last updated</Caption1>
-              </dt>
-              <dd>
-                <Body1>{new Date(detail.run.updatedAt).toLocaleString()}</Body1>
-              </dd>
-            </div>
-            <div>
-              <dt>
-                <Caption1>Pull request</Caption1>
-              </dt>
-              <dd>
-                <Body1>{detail.run.pullRequestNumber ?? "Not created"}</Body1>
-              </dd>
-            </div>
-          </dl>
-          <section className={classes.workflowSection} aria-labelledby="workflow-heading">
-            <div className={classes.sectionHeading}>
-              <div>
-                <Subtitle1 as="h2" id="workflow-heading">
-                  Agent workflow
-                </Subtitle1>
-                <Caption1>
-                  {detail.workflow.name} | {detail.workflow.graphVersion}
-                </Caption1>
-              </div>
-              <CounterBadge appearance="ghost" color="informative" count={detail.workflow.nodes.length} />
-            </div>
-            <ol className={classes.workflowNodes}>
-              {detail.workflow.nodes.map((node) => {
-                const isActive = node.stages.includes(detail.run.stage)
-                const NodeIcon = node.agentId === null ? CheckmarkCircleRegular : PersonRegular
-                return (
-                  <li
-                    className={mergeClasses(classes.workflowNode, isActive && classes.workflowNodeActive)}
-                    key={node.id}
-                  >
-                    <div className={classes.workflowNodeHeading}>
-                      <span className={classes.workflowNodeIcon}>
-                        <NodeIcon aria-hidden="true" />
-                      </span>
-                      {isActive ? (
-                        <Badge appearance="tint" color="brand">
-                          Current
-                        </Badge>
-                      ) : null}
-                    </div>
-                    <strong>{node.label}</strong>
-                    <Caption1 className={classes.workflowAgent}>{node.agentName ?? "Control plane"}</Caption1>
-                    <Body1>{node.description}</Body1>
-                  </li>
-                )
-              })}
-            </ol>
-            <Subtitle1 as="h3" className={classes.routeHeading}>
-              Routes
-            </Subtitle1>
-            <ul className={classes.workflowRoutes}>
-              {detail.workflow.edges.map((edge) => {
-                const source = detail.workflow.nodes.find((node) => node.id === edge.source)
-                const target = detail.workflow.nodes.find((node) => node.id === edge.target)
-                const EdgeIcon = edge.kind === "loop" ? ArrowSyncRegular : ArrowRightRegular
-                return (
-                  <li key={`${edge.source}-${edge.target}-${edge.label}`}>
-                    <strong>{source?.label ?? edge.source}</strong>
-                    <span className={classes.workflowTransition}>
-                      <EdgeIcon aria-hidden="true" />
-                      <Caption1>{edge.label}</Caption1>
-                    </span>
-                    <strong>{target?.label ?? edge.target}</strong>
-                  </li>
-                )
-              })}
-            </ul>
-          </section>
-          <section className={classes.timelineSection} aria-labelledby="timeline-heading">
-            <div className={classes.sectionHeading}>
-              <div>
-                <Subtitle1 as="h2" id="timeline-heading">
-                  Run activity
-                </Subtitle1>
-                <Caption1>Workflow events and LangSmith traces</Caption1>
-              </div>
-              <CounterBadge appearance="ghost" color="informative" count={detail.events.length} showZero />
-            </div>
-            {detail.events.length === 0 ? (
-              <div className={classes.emptyState}>
-                <HistoryRegular aria-hidden="true" />
-                <div>
-                  <Subtitle1>No activity yet</Subtitle1>
-                  <Body1>Workflow events and trace links will appear here after the agent starts.</Body1>
-                </div>
-              </div>
-            ) : (
-              <ol className={classes.timeline}>
-                {detail.events.map((event) => {
-                  const trace = traceReference(event)
-                  const traceUrl = langSmithTraceUrl(event)
-                  return (
-                    <li key={event.eventId}>
-                      <span className={classes.timelineMarker} />
-                      <div className={classes.eventBody}>
-                        <div className={classes.eventHeading}>
-                          <strong>{event.node}</strong>
-                          <Badge appearance="tint" color={eventOutcomeColor(event.outcome)}>
-                            {event.outcome}
-                          </Badge>
-                        </div>
-                        <Body1>{event.summary}</Body1>
-                        <Caption1>{new Date(event.createdAt).toLocaleString()}</Caption1>
-                        {trace.success ? (
-                          <div className={classes.traceReference}>
-                            <code>{trace.data.traceId}</code>
-                            {traceUrl === null ? null : (
-                              <Button
-                                as="a"
-                                href={traceUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                size="small"
-                                appearance="subtle"
-                                icon={<OpenRegular />}
-                              >
-                                Open trace
-                              </Button>
-                            )}
-                          </div>
-                        ) : null}
-                      </div>
-                    </li>
-                  )
-                })}
-              </ol>
-            )}
-          </section>
-        </>
       )}
     </main>
   )

@@ -35,6 +35,8 @@ const linearTaskSchema = z
     description: z.string(),
     url: z.url(),
     priority: z.number().int(),
+    createdAt: z.iso.datetime({ offset: true }),
+    updatedAt: z.iso.datetime({ offset: true }),
     state: z
       .object({ id: z.uuid(), name: z.string(), type: z.enum(["triage", "backlog", "unstarted", "started"]) })
       .strict(),
@@ -45,22 +47,48 @@ const linearTaskSchema = z
   })
   .strict()
 
-const snapshotSchema = z
+const agentSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    role: z.enum(["scrum_master", "engineer", "reviewer"]),
+    description: z.string()
+  })
+  .strict()
+
+const controlPlaneRunSnapshotSchema = z
   .object({
     schemaVersion: z.literal("1"),
     fetchedAt: z.iso.datetime({ offset: true }),
-    agents: z.array(
+    agents: z.array(agentSchema),
+    runs: z.array(workflowRunSchema)
+  })
+  .strict()
+const workItemQueueStatusSchema = z.enum(["todo", "in_progress", "blocked"])
+const workItemFacetSchema = z.object({ value: z.string(), count: z.number().int().nonnegative() }).strict()
+const workItemQueryResponseSchema = z
+  .object({
+    schemaVersion: z.literal("1"),
+    fetchedAt: z.iso.datetime({ offset: true }),
+    items: z.array(
       z
-        .object({
-          id: z.string(),
-          name: z.string(),
-          role: z.enum(["scrum_master", "engineer", "reviewer"]),
-          description: z.string()
-        })
+        .object({ task: linearTaskSchema, run: workflowRunSchema.nullable(), status: workItemQueueStatusSchema })
         .strict()
     ),
-    tasks: z.array(linearTaskSchema),
-    runs: z.array(workflowRunSchema)
+    total: z.number().int().nonnegative(),
+    previousCursor: z.string().nullable(),
+    nextCursor: z.string().nullable(),
+    aggregates: z
+      .object({
+        all: z.number().int().nonnegative(),
+        todo: z.number().int().nonnegative(),
+        inProgress: z.number().int().nonnegative(),
+        blocked: z.number().int().nonnegative(),
+        repositories: z.array(workItemFacetSchema),
+        assignees: z.array(workItemFacetSchema),
+        priorities: z.array(z.object({ value: z.number().int(), count: z.number().int().nonnegative() }).strict())
+      })
+      .strict()
   })
   .strict()
 
@@ -68,60 +96,12 @@ const assignmentResponseSchema = z
   .object({ schemaVersion: z.literal("1"), created: z.boolean(), run: workflowRunSchema })
   .strict()
 
-const workflowEventSchema = z
+const apiErrorSchema = z
   .object({
-    eventId: z.number().int().positive(),
-    node: z.string(),
-    outcome: z.enum(["started", "completed", "failed", "skipped", "retried"]),
-    summary: z.string(),
-    details: z.record(z.string(), z.unknown()),
-    createdAt: z.iso.datetime({ offset: true })
+    error: z.string(),
+    fieldErrors: z.array(z.object({ field: z.string(), message: z.string() }).strict()).optional()
   })
   .strict()
-
-const traceReferenceSchema = z
-  .object({ traceId: z.uuid(), runId: z.uuid(), projectName: z.string(), name: z.string() })
-  .strict()
-
-const workflowTopologySchema = z
-  .object({
-    graphVersion: z.string(),
-    name: z.string(),
-    nodes: z.array(
-      z
-        .object({
-          id: z.string(),
-          label: z.string(),
-          description: z.string(),
-          agentId: z.string().nullable(),
-          agentName: z.string().nullable(),
-          stages: z.array(z.enum(["intake", "planning", "coding", "reviewing", "repairing", "publishing", "completed"]))
-        })
-        .strict()
-    ),
-    edges: z.array(
-      z
-        .object({
-          source: z.string(),
-          target: z.string(),
-          label: z.string(),
-          kind: z.enum(["forward", "loop"])
-        })
-        .strict()
-    )
-  })
-  .strict()
-
-const runDetailSchema = z
-  .object({
-    schemaVersion: z.literal("1"),
-    run: workflowRunSchema,
-    workflow: workflowTopologySchema,
-    events: z.array(workflowEventSchema)
-  })
-  .strict()
-
-const apiErrorSchema = z.object({ error: z.string() })
 
 const integrationProviderSchema = z.enum(["github", "linear"])
 const integrationResourceCapabilitySchema = z.enum([
@@ -146,13 +126,38 @@ const integrationConnectionSchema = z
   .object({
     connectionId: z.uuid(),
     provider: integrationProviderSchema,
-    displayName: z.string().nullable(),
+    providerAccount: z.string().nullable(),
     status: z.enum(["connected", "degraded", "disconnected"]),
-    errorCode: z.string().nullable(),
+    lastSuccessfulSyncAt: z.iso.datetime({ offset: true }).nullable(),
+    latestError: z.string().nullable(),
     lastCheckedAt: z.iso.datetime({ offset: true }).nullable(),
+    resourceCounts: z
+      .object({
+        total: z.number().int().nonnegative(),
+        active: z.number().int().nonnegative(),
+        stale: z.number().int().nonnegative()
+      })
+      .strict(),
+    capabilities: z.array(integrationResourceCapabilitySchema),
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
     resources: z.array(integrationResourceSchema)
+  })
+  .strict()
+const integrationDisconnectImpactSchema = z
+  .object({
+    connectionId: z.uuid(),
+    affectedWorkflowCount: z.number().int().nonnegative(),
+    workflows: z.array(
+      z
+        .object({
+          workflowId: z.uuid(),
+          name: z.string(),
+          usesDraft: z.boolean(),
+          usesPublishedVersion: z.boolean()
+        })
+        .strict()
+    )
   })
   .strict()
 const integrationSettingsSchema = z
@@ -265,9 +270,9 @@ const workflowSummarySchema = z
     workflowId: z.uuid(),
     name: z.string(),
     description: z.string(),
-    status: z.enum(["draft", "published", "archived"]),
+    status: z.enum(["draft", "archived"]),
     draftRevision: z.number().int(),
-    publishedVersion: z.number().int().nullable(),
+    activePublishedVersion: z.number().int().nullable(),
     triggers: z.array(
       z.object({ kind: z.enum(["manual", "webhook", "schedule"]), label: z.string(), enabled: z.boolean() }).strict()
     ),
@@ -276,13 +281,13 @@ const workflowSummarySchema = z
   .strict()
 const workflowDraftViewSchema = z
   .object({
-    schemaVersion: z.literal("2"),
+    schemaVersion: z.literal("3"),
     workflowId: z.uuid(),
     name: z.string(),
     description: z.string(),
-    status: z.enum(["draft", "published", "archived"]),
+    status: z.enum(["draft", "archived"]),
     draftRevision: z.number().int(),
-    publishedVersion: z.number().int().nullable(),
+    activePublishedVersion: z.number().int().nullable(),
     content: workflowDraftContentSchema,
     versions: z.array(
       z.object({ version: z.number().int(), contentDigest: z.string(), publishedAt: z.iso.datetime({ offset: true }) })
@@ -292,6 +297,8 @@ const workflowDraftViewSchema = z
   .strict()
 const workflowValidationSchema = z
   .object({
+    schemaVersion: z.literal("1"),
+    draftRevision: z.number().int().positive(),
     valid: z.boolean(),
     issues: z.array(
       z
@@ -299,7 +306,8 @@ const workflowValidationSchema = z
           code: z.string(),
           message: z.string(),
           nodeId: z.string().nullable(),
-          connectionId: z.string().nullable()
+          connectionId: z.string().nullable(),
+          field: z.string().nullable()
         })
         .strict()
     )
@@ -313,9 +321,50 @@ const activationScopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("loop"), key: z.string(), iteration: z.number().int().nonnegative() }).strict(),
   z.object({ kind: z.literal("item"), key: z.string() }).strict()
 ])
-const journalWorkflowRunDetailSchema = z
+const workflowRunDetailSchema = z
   .object({
-    schemaVersion: z.literal("1"),
+    schemaVersion: z.literal("2"),
+    summary: z
+      .object({
+        outcome: z.enum([
+          "preparing",
+          "runnable",
+          "running",
+          "waiting",
+          "succeeded",
+          "failed",
+          "cancelled",
+          "abandoned"
+        ]),
+        currentStep: z.object({ stepId: z.string(), label: z.string() }).strict().nullable(),
+        failure: z
+          .object({
+            stepId: z.string(),
+            stepLabel: z.string(),
+            cause: z.string(),
+            downstreamEffect: z.string(),
+            occurredAt: z.iso.datetime({ offset: true }).nullable(),
+            recommendedAction: z.string()
+          })
+          .strict()
+          .nullable(),
+        actions: z.array(
+          z
+            .object({
+              key: z.enum(["cancel", "retry_step", "retry_from_here", "resume", "run_again", "resolve_effect"]),
+              label: z.string(),
+              targetId: z.string().nullable(),
+              allowed: z.boolean(),
+              disabledReason: z.string().nullable(),
+              targetLabel: z.string(),
+              consequence: z.string(),
+              approvalRequirement: z.enum(["none", "confirmation", "required"]),
+              requiredCapability: z.string().nullable()
+            })
+            .strict()
+        )
+      })
+      .strict(),
     run: z
       .object({
         runId: z.uuid(),
@@ -538,6 +587,27 @@ const workflowStepDefinitionSchema = z
     inputs: z.array(workflowPortDefinitionSchema),
     outputs: z.array(workflowPortDefinitionSchema),
     errorSchema: jsonValueSchema,
+    ui: z
+      .object({
+        fields: z.array(
+          z
+            .object({
+              key: z.string(),
+              label: z.string(),
+              description: z.string(),
+              control: z.enum(["text", "multiline", "number", "boolean", "select", "object_rows", "json"]),
+              group: z.enum(["basic", "advanced"]),
+              required: z.boolean(),
+              secret: z.boolean(),
+              immutable: z.boolean(),
+              minimum: z.number().optional(),
+              maximum: z.number().optional(),
+              options: z.array(z.string()).optional()
+            })
+            .strict()
+        )
+      })
+      .strict(),
     executorDigest: z.string()
   })
   .strict()
@@ -591,24 +661,46 @@ const providerOperationSchema = z
 const providerOperationCatalogSchema = z
   .object({ schemaVersion: z.literal("1"), operations: z.array(providerOperationSchema) })
   .strict()
-const publishedWorkflowScheduleSchema = z
+const workflowScheduleSchema = z
   .object({
+    scheduleId: z.uuid(),
     workflowId: z.uuid(),
-    version: z.number().int().positive(),
-    nodeId: z.string(),
+    workflowVersion: z.number().int().positive(),
+    triggerNodeId: z.string(),
     label: z.string(),
-    intervalSeconds: z.number().int().min(10)
+    enabled: z.boolean(),
+    intervalSeconds: z.number().int().min(10).nullable(),
+    scheduleExpression: z.string().nullable(),
+    timezone: z.string(),
+    nextRunAt: z.iso.datetime({ offset: true }),
+    lastAttemptedAt: z.iso.datetime({ offset: true }).nullable(),
+    lastSuccessfulAt: z.iso.datetime({ offset: true }).nullable(),
+    health: z.enum(["disabled", "scheduled", "running", "retrying"]),
+    latestError: z.string().nullable(),
+    revision: z.number().int().positive()
   })
   .strict()
 
 export type WorkflowRun = z.infer<typeof workflowRunSchema>
-export type LinearTask = z.infer<typeof linearTaskSchema>
-export type ControlPlaneSnapshot = z.infer<typeof snapshotSchema>
-export type WorkflowEvent = z.infer<typeof workflowEventSchema>
-export type WorkflowRunDetail = z.infer<typeof runDetailSchema>
+export type ControlPlaneRunSnapshot = z.infer<typeof controlPlaneRunSnapshotSchema>
+export type WorkItemQueueStatus = z.infer<typeof workItemQueueStatusSchema>
+export type WorkItemQueryResponse = z.infer<typeof workItemQueryResponseSchema>
+export type WorkItemQuery = {
+  q?: string
+  status?: WorkItemQueueStatus
+  repository?: string
+  assignee?: string
+  priority?: number
+  age?: "day" | "week" | "month"
+  sort?: "priority" | "created" | "updated" | "identifier"
+  direction?: "asc" | "desc"
+  cursor?: string
+  pageSize?: number
+}
 export type IntegrationProvider = z.infer<typeof integrationProviderSchema>
 export type IntegrationConnection = z.infer<typeof integrationConnectionSchema>
 export type IntegrationSettings = z.infer<typeof integrationSettingsSchema>
+export type IntegrationDisconnectImpact = z.infer<typeof integrationDisconnectImpactSchema>
 export type IntegrationResourceCapability = z.infer<typeof integrationResourceCapabilitySchema>
 export type IntegrationResourceInventory = z.infer<typeof integrationResourceInventorySchema>
 export type WorkflowStep = z.infer<typeof workflowStepSchema>
@@ -616,13 +708,39 @@ export type WorkflowDraftContent = z.infer<typeof workflowDraftContentSchema>
 export type WorkflowSummary = z.infer<typeof workflowSummarySchema>
 export type WorkflowDraftView = z.infer<typeof workflowDraftViewSchema>
 export type WorkflowValidation = z.infer<typeof workflowValidationSchema>
-export type PublishedWorkflowSchedule = z.infer<typeof publishedWorkflowScheduleSchema>
+export type WorkflowSchedule = z.infer<typeof workflowScheduleSchema>
 export type WorkflowSimulation = z.infer<typeof workflowSimulationSchema>
-export type JournalWorkflowRunDetail = z.infer<typeof journalWorkflowRunDetailSchema>
+export type WorkflowRunDetail = z.infer<typeof workflowRunDetailSchema>
 export type WorkflowStepDefinition = z.infer<typeof workflowStepDefinitionSchema>
 export type RepositoryAgentReference = z.infer<typeof repositoryAgentReferenceSchema>
 export type WorkflowModelSnapshot = z.infer<typeof workflowModelSnapshotSchema>
 export type ProviderOperation = z.infer<typeof providerOperationSchema>
+export type WorkflowResourceBinding = WorkflowDraftContent["resourceBindings"][string]
+export type CreateWorkflowRequest =
+  | {
+      template: "blank"
+      name: string
+      description: string
+      repository: WorkflowResourceBinding
+    }
+  | {
+      template: "agency_delivery"
+      name: string
+      description: string
+      repository: WorkflowResourceBinding
+      linearTeam: WorkflowResourceBinding
+      modelId: string
+    }
+
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly fieldErrors: ReadonlyArray<{ field: string; message: string }> = []
+  ) {
+    super(message)
+    this.name = "ApiRequestError"
+  }
+}
 
 export function parseRepositoryAgentReference(value: JsonValue | undefined): RepositoryAgentReference | undefined {
   const result = repositoryAgentReferenceSchema.safeParse(value)
@@ -639,13 +757,27 @@ async function requestJson<Output>(path: string, schema: z.ZodType<Output>, init
   const body: unknown = await response.json()
   if (!response.ok) {
     const parsedError = apiErrorSchema.safeParse(body)
-    throw new Error(parsedError.success ? parsedError.data.error : `Request failed with status ${response.status}`)
+    if (parsedError.success) {
+      throw new ApiRequestError(parsedError.data.error, parsedError.data.fieldErrors)
+    }
+    throw new ApiRequestError(`Request failed with status ${response.status}`)
   }
   return schema.parse(body)
 }
 
-export function getControlPlaneSnapshot(): Promise<ControlPlaneSnapshot> {
-  return requestJson("/api/control-plane", snapshotSchema)
+export function getControlPlaneRunSnapshot(): Promise<ControlPlaneRunSnapshot> {
+  return requestJson("/api/control-plane/runs", controlPlaneRunSnapshotSchema)
+}
+
+export function queryWorkItems(query: WorkItemQuery): Promise<WorkItemQueryResponse> {
+  const parameters = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== "") {
+      parameters.set(key, String(value))
+    }
+  }
+  const suffix = parameters.size === 0 ? "" : `?${parameters.toString()}`
+  return requestJson(`/api/control-plane/work-items${suffix}`, workItemQueryResponseSchema)
 }
 
 export function assignWorkItem(workItemId: string, agentId: string) {
@@ -657,17 +789,13 @@ export function assignWorkItem(workItemId: string, agentId: string) {
 }
 
 export function getWorkflowRunDetail(runId: string): Promise<WorkflowRunDetail> {
-  return requestJson(`/api/control-plane/runs/${encodeURIComponent(runId)}`, runDetailSchema)
-}
-
-export function getJournalWorkflowRunDetail(runId: string): Promise<JournalWorkflowRunDetail> {
-  return requestJson(`/api/workflow-runs/${encodeURIComponent(runId)}`, journalWorkflowRunDetailSchema)
+  return requestJson(`/api/workflow-runs/${encodeURIComponent(runId)}`, workflowRunDetailSchema)
 }
 
 export function cancelJournalWorkflowRun(runId: string, reason = "Cancelled by operator") {
   return requestJson(
     `/api/workflow-runs/${encodeURIComponent(runId)}/cancel`,
-    z.object({ schemaVersion: z.literal("1"), run: journalWorkflowRunDetailSchema.shape.run }).strict(),
+    z.object({ schemaVersion: z.literal("1"), run: workflowRunDetailSchema.shape.run }).strict(),
     jsonRequest("POST", { reason })
   )
 }
@@ -675,9 +803,7 @@ export function cancelJournalWorkflowRun(runId: string, reason = "Cancelled by o
 export function retryJournalWorkflowActivation(runId: string, activationId: string) {
   return requestJson(
     `/api/workflow-runs/${encodeURIComponent(runId)}/activations/${encodeURIComponent(activationId)}/retry`,
-    z
-      .object({ schemaVersion: z.literal("1"), activation: journalWorkflowRunDetailSchema.shape.activations.element })
-      .strict(),
+    z.object({ schemaVersion: z.literal("1"), activation: workflowRunDetailSchema.shape.activations.element }).strict(),
     jsonRequest("POST", {})
   )
 }
@@ -688,7 +814,7 @@ export function retryJournalWorkflowFromHere(runId: string, activationId: string
     z
       .object({
         schemaVersion: z.literal("1"),
-        activation: journalWorkflowRunDetailSchema.shape.activations.element,
+        activation: workflowRunDetailSchema.shape.activations.element,
         affectedDescendantIds: z.array(z.string())
       })
       .strict(),
@@ -700,7 +826,7 @@ export function resumeJournalWorkflowRun(runId: string, correlationKey: string, 
   return requestJson(
     `/api/workflow-runs/${encodeURIComponent(runId)}/resume`,
     z
-      .object({ schemaVersion: z.literal("1"), resumed: journalWorkflowRunDetailSchema.shape.waits.element.nullable() })
+      .object({ schemaVersion: z.literal("1"), resumed: workflowRunDetailSchema.shape.waits.element.nullable() })
       .strict(),
     jsonRequest("POST", { correlationKey, event })
   )
@@ -728,7 +854,7 @@ export function resolveJournalWorkflowEffect(
 ) {
   return requestJson(
     `/api/workflow-runs/${encodeURIComponent(runId)}/effects/${encodeURIComponent(effectId)}/resolve`,
-    z.object({ schemaVersion: z.literal("1"), effect: journalWorkflowRunDetailSchema.shape.effects.element }).strict(),
+    z.object({ schemaVersion: z.literal("1"), effect: workflowRunDetailSchema.shape.effects.element }).strict(),
     jsonRequest("POST", input)
   )
 }
@@ -782,6 +908,13 @@ export function disconnectIntegration(connectionId: string) {
   })
 }
 
+export function getIntegrationDisconnectImpact(connectionId: string): Promise<IntegrationDisconnectImpact> {
+  return requestJson(
+    `/api/integrations/connections/${encodeURIComponent(connectionId)}/impact`,
+    integrationDisconnectImpactSchema
+  )
+}
+
 export function reconcileIntegrations() {
   return requestJson(
     "/api/integrations/reconcile",
@@ -794,8 +927,8 @@ export function listWorkflows(): Promise<WorkflowSummary[]> {
   return requestJson("/api/workflows", z.array(workflowSummarySchema))
 }
 
-export function listPublishedWorkflowSchedules(): Promise<PublishedWorkflowSchedule[]> {
-  return requestJson("/api/workflows/schedules", z.array(publishedWorkflowScheduleSchema))
+export function listWorkflowSchedules(): Promise<WorkflowSchedule[]> {
+  return requestJson("/api/workflows/schedules", z.array(workflowScheduleSchema))
 }
 
 export function listWorkflowStepDefinitions(): Promise<WorkflowStepDefinition[]> {
@@ -825,12 +958,8 @@ export function discoverRepositoryAgents(input: {
   ).then(({ agents }) => agents)
 }
 
-export function createWorkflow(
-  name: string,
-  repository: WorkflowDraftContent["resourceBindings"][string],
-  description = ""
-) {
-  return requestJson("/api/workflows", workflowDraftViewSchema, jsonRequest("POST", { name, description, repository }))
+export function createWorkflow(request: CreateWorkflowRequest) {
+  return requestJson("/api/workflows", workflowDraftViewSchema, jsonRequest("POST", request))
 }
 
 export function getWorkflowDraft(workflowId: string): Promise<WorkflowDraftView> {
@@ -869,13 +998,14 @@ export function publishWorkflow(workflowId: string) {
 
 export function startWorkflowRun(
   workflowId: string,
+  version: number,
   trigger: { type: "manual" | "schedule" | "webhook"; key: string; stepId?: string },
   input: JsonValue = {}
 ) {
   return requestJson(
     `/api/workflows/${encodeURIComponent(workflowId)}/runs`,
     workflowRunStartSchema,
-    jsonRequest("POST", { trigger, input })
+    jsonRequest("POST", { version, trigger, input })
   )
 }
 
@@ -888,17 +1018,4 @@ export function testWorkflowDraft(
     workflowSimulationSchema,
     jsonRequest("POST", options)
   )
-}
-
-export function langSmithTraceUrl(event: WorkflowEvent): string | null {
-  const trace = traceReference(event)
-  if (!trace.success || env.VITE_LANGSMITH_WORKSPACE_ID === undefined || env.VITE_LANGSMITH_PROJECT_ID === undefined) {
-    return null
-  }
-  const baseUrl = env.VITE_LANGSMITH_BASE_URL.replace(/\/$/u, "")
-  return `${baseUrl}/o/${encodeURIComponent(env.VITE_LANGSMITH_WORKSPACE_ID)}/projects/p/${encodeURIComponent(env.VITE_LANGSMITH_PROJECT_ID)}?peek=${encodeURIComponent(trace.data.runId)}`
-}
-
-export function traceReference(event: WorkflowEvent) {
-  return traceReferenceSchema.safeParse(z.object({ trace: z.unknown() }).safeParse(event.details).data?.trace)
 }

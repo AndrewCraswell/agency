@@ -9,6 +9,31 @@ export const WorkflowExecutionClassSchema = z.enum(["control", "provider", "mode
 export const WorkflowSimulationPolicySchema = z.enum(["deterministic", "fixture", "read_only", "blocked"])
 export const WorkflowMutationPolicySchema = z.enum(["none", "external_effect"])
 export const WorkflowPortCardinalitySchema = z.enum(["one", "optional", "many"])
+export const WorkflowConfigControlSchema = z.enum([
+  "text",
+  "multiline",
+  "number",
+  "boolean",
+  "select",
+  "object_rows",
+  "json"
+])
+
+export const WorkflowConfigFieldUiSchema = z
+  .object({
+    key: z.string().regex(/^[a-z][A-Za-z0-9]*$/u),
+    label: z.string().trim().min(1),
+    description: z.string().trim().min(1),
+    control: WorkflowConfigControlSchema,
+    group: z.enum(["basic", "advanced"]),
+    required: z.boolean(),
+    secret: z.boolean(),
+    immutable: z.boolean(),
+    minimum: z.number().optional(),
+    maximum: z.number().optional(),
+    options: z.array(z.string()).optional()
+  })
+  .strict()
 
 export const WorkflowPortDefinitionSchema = z
   .object({
@@ -35,11 +60,12 @@ export const WorkflowStepDefinitionSchema = z
     inputs: z.array(WorkflowPortDefinitionSchema),
     outputs: z.array(WorkflowPortDefinitionSchema),
     errorSchema: JsonValueSchema,
+    ui: z.object({ fields: z.array(WorkflowConfigFieldUiSchema) }).strict(),
     executorDigest: z.string().regex(/^[0-9a-f]{64}$/u)
   })
   .strict()
 
-type StepSeed = Omit<z.input<typeof WorkflowStepDefinitionSchema>, "executorDigest">
+type StepSeed = Omit<z.input<typeof WorkflowStepDefinitionSchema>, "executorDigest" | "ui">
 
 const objectSchema = { type: "object", additionalProperties: true } as const
 const emptyObjectSchema = { type: "object", additionalProperties: false } as const
@@ -113,6 +139,7 @@ function port(
 function step(seed: StepSeed): z.infer<typeof WorkflowStepDefinitionSchema> {
   return WorkflowStepDefinitionSchema.parse({
     ...seed,
+    ui: { fields: workflowConfigFields[seed.kind] ?? [] },
     executorDigest: jsonValueDigest({
       registryVersion: WORKFLOW_STEP_REGISTRY_VERSION,
       kind: seed.kind,
@@ -120,6 +147,123 @@ function step(seed: StepSeed): z.infer<typeof WorkflowStepDefinitionSchema> {
       executionClass: seed.executionClass
     })
   })
+}
+
+type ConfigFieldUi = z.input<typeof WorkflowConfigFieldUiSchema>
+
+function field(
+  key: string,
+  label: string,
+  description: string,
+  control: z.input<typeof WorkflowConfigControlSchema>,
+  options: Partial<Omit<ConfigFieldUi, "key" | "label" | "description" | "control">> = {}
+): ConfigFieldUi {
+  return {
+    key,
+    label,
+    description,
+    control,
+    group: options.group ?? "basic",
+    required: options.required ?? false,
+    secret: options.secret ?? false,
+    immutable: options.immutable ?? false,
+    ...options
+  }
+}
+
+const workflowConfigFields: Record<string, ConfigFieldUi[]> = {
+  manual_trigger: [
+    field("inputSchema", "Input schema", "Defines accepted manual input.", "json", { group: "advanced" })
+  ],
+  set_fields: [
+    field("fields", "Fields", "Creates named values from constants and input.", "object_rows", { required: true })
+  ],
+  map_fields: [field("mappings", "Mappings", "Maps source paths to output fields.", "object_rows", { required: true })],
+  validate: [
+    field("schema", "Validation schema", "Defines the shape the incoming value must match.", "json", {
+      group: "advanced",
+      required: true
+    })
+  ],
+  failure: [
+    field("code", "Failure code", "Identifies this failure for downstream handling.", "text", { required: true }),
+    field("message", "Message", "Explains why the path failed.", "multiline", { required: true })
+  ],
+  compose_markdown: [
+    field("template", "Markdown template", "Creates Markdown and supports declared value placeholders.", "multiline", {
+      required: true
+    })
+  ],
+  collect: [
+    field("mode", "Collection mode", "Returns an ordered array or keyed object.", "select", {
+      options: ["array", "keyed"]
+    }),
+    field("keyField", "Key field", "Selects the field used as each object key.", "text"),
+    field("maximumItems", "Maximum items", "Limits collected results.", "number", { minimum: 1, maximum: 1000 })
+  ],
+  condition: [
+    field("expression", "Condition", "Tests an input path with a deterministic operator.", "json", { required: true })
+  ],
+  switch: [
+    field("cases", "Cases", "Evaluates ordered branch conditions.", "json", { group: "advanced", required: true }),
+    field("defaultKey", "Default branch key", "Selects the branch used when no case matches.", "text"),
+    field("joinStepId", "Merge step", "Identifies the exclusive merge for these branches.", "select")
+  ],
+  join: [
+    field("policy", "Join policy", "Controls when parallel inputs continue.", "select", {
+      options: ["all", "any", "quorum"]
+    }),
+    field("quorum", "Quorum", "Sets the number of required inputs.", "number", { minimum: 1 })
+  ],
+  for_each: [
+    field("maximumItems", "Maximum items", "Limits items expanded by the loop.", "number", {
+      minimum: 1,
+      maximum: 1000
+    }),
+    field("concurrency", "Concurrency", "Limits simultaneous item work.", "number", { minimum: 1, maximum: 1000 }),
+    field("bodyStepId", "Body step", "Selects the first step in the loop body.", "select", { required: true }),
+    field("joinStepId", "Join step", "Selects the step that collects loop results.", "select", { required: true })
+  ],
+  bounded_loop: [
+    field("condition", "Condition", "Tests whether another iteration should run.", "json", { required: true }),
+    field("maximumIterations", "Maximum iterations", "Limits loop repetitions.", "number", {
+      minimum: 1,
+      maximum: 1000
+    }),
+    field("maximumActivations", "Maximum activations", "Limits total work created by the loop.", "number", {
+      minimum: 1,
+      maximum: 100000
+    }),
+    field("bodyStepId", "Body step", "Selects the first step in the loop body.", "select", { required: true }),
+    field("exitStepId", "Exit step", "Selects where the workflow continues.", "select", { required: true }),
+    field("onExhaustion", "On exhaustion", "Chooses whether reaching the limit completes or fails.", "select", {
+      options: ["fail", "complete"]
+    })
+  ],
+  wait: [
+    field("correlation", "Correlation key", "Matches the external event that resumes this run.", "text", {
+      required: true
+    }),
+    field("expiresAfterSeconds", "Expires after seconds", "Sets how long the workflow waits.", "number", {
+      minimum: 1
+    }),
+    field("eventSchema", "Resume event schema", "Defines accepted resume event data.", "json", {
+      group: "advanced",
+      required: true
+    })
+  ],
+  child_workflow: [
+    field("packageDigest", "Execution package digest", "Pins the child workflow package.", "text", {
+      group: "advanced",
+      required: true,
+      immutable: true
+    }),
+    field("interfaceDigest", "Interface digest", "Pins the child workflow interface.", "text", {
+      group: "advanced",
+      required: true,
+      immutable: true
+    })
+  ]
 }
 
 const seeds: StepSeed[] = [
@@ -382,7 +526,7 @@ const seeds: StepSeed[] = [
       required: ["timezone"],
       properties: {
         cron: { type: "string" },
-        intervalSeconds: { type: "integer", minimum: 10 },
+        intervalSeconds: { type: "integer", minimum: 10, maximum: 86400 },
         timezone: { type: "string" }
       }
     },

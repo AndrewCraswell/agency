@@ -10,6 +10,7 @@ import { isJsonSchemaAssignable, schemaAtPath, SupportedJsonSchemaSchema } from 
 import { WorkflowModelSnapshotSchema, type WorkflowModelSnapshot } from "./modelCatalog"
 import { getProviderOperation } from "./providerCatalog"
 import { RepositoryAgentSnapshotSchema, type RepositoryAgentSnapshot } from "./repositoryAgents"
+import { nextScheduleRunAt, scheduleDefinitionFromConfig } from "./scheduleDefinition"
 import { getWorkflowStepDefinition, type WorkflowStepDefinition } from "./stepRegistry"
 
 export const WORKFLOW_COMPILER_VERSION = "1" as const
@@ -166,6 +167,7 @@ function validateConnections(
   for (const connection of definition.connections) {
     const sourceDefinition = definitions.get(connection.source.stepId)
     const targetDefinition = definitions.get(connection.target.stepId)
+    const sourceStep = definition.steps.find(({ id }) => id === connection.source.stepId)
     if (sourceDefinition === undefined || targetDefinition === undefined) {
       issues.push({
         code: "missing_step",
@@ -176,7 +178,6 @@ function validateConnections(
       continue
     }
     if (sourceDefinition.kind === "switch") {
-      const sourceStep = definition.steps.find(({ id }) => id === connection.source.stepId)
       const rawCases = sourceStep?.config.cases
       const cases = Array.isArray(rawCases) ? rawCases : []
       const declaredKeys = cases.flatMap((candidate) => {
@@ -247,8 +248,12 @@ function validateConnections(
         })
       connectedInputs.add(inputKey)
     }
+    const sourcePortSchema =
+      sourceDefinition.kind === "collect" && sourcePort.name === "collection"
+        ? { type: sourceStep?.config.mode === "keyed" ? ("object" as const) : ("array" as const) }
+        : sourcePort.schema
     for (const mapping of connection.mappings) {
-      const sourceSchema = schemaAtPath(sourcePort.schema, mapping.sourcePath)
+      const sourceSchema = schemaAtPath(sourcePortSchema, mapping.sourcePath)
       const targetSchema = schemaAtPath(targetPort.schema, mapping.targetPath)
       if (sourceSchema === null || targetSchema === null || !isJsonSchemaAssignable(sourceSchema, targetSchema)) {
         issues.push({
@@ -493,6 +498,19 @@ export function compileWorkflowDefinition(input: {
       issues.push({
         code: "step_unavailable",
         message: error instanceof Error ? error.message : "Step is unavailable.",
+        stepId: step.id,
+        connectionId: null
+      })
+    }
+  }
+  for (const step of definition.steps.filter(({ definition: item }) => item.kind === "schedule")) {
+    try {
+      const schedule = scheduleDefinitionFromConfig(step.config)
+      nextScheduleRunAt(schedule, new Date(0), `${workflowId}:${step.id}`)
+    } catch (error) {
+      issues.push({
+        code: "schedule_configuration",
+        message: error instanceof Error ? error.message : "Enter a valid schedule.",
         stepId: step.id,
         connectionId: null
       })

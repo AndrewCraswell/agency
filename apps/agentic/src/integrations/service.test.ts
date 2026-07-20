@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import { describe, expect, it, vi } from "vitest"
 import type { IntegrationConnectionStore } from "../persistence/integrationStore"
 import type { BrokerConnection, IntegrationCredentialBroker } from "./broker"
+import { ProviderPortResolver, type ProviderConnectionContext } from "./providerPorts"
 import { IntegrationService } from "./service"
 
 const now = new Date("2026-07-19T12:00:00.000Z")
@@ -164,6 +165,45 @@ describe("IntegrationService", () => {
     expect(serialized).not.toContain("access_token")
   })
 
+  it("exposes only Agency connection identity and bound transport to provider adapters", async () => {
+    const store = new MemoryIntegrationStore()
+    const remote = {
+      providerConfigKey: "github-app",
+      connectionId: "nango-github-port",
+      displayName: "Agency installation",
+      healthy: true,
+      errorCode: null
+    }
+    const fakeBroker = broker({ github: [remote] })
+    let receivedContext: ProviderConnectionContext | undefined
+    const providerPorts = new ProviderPortResolver([
+      {
+        provider: "github",
+        resourceType: "repository",
+        capabilities: ["repository.read"],
+        async discover(context) {
+          receivedContext = context
+          await context.request({ method: "GET", endpoint: "/repositories" })
+          return [{ externalId: "repository-1", name: "agency/platform" }]
+        }
+      }
+    ])
+    const service = new IntegrationService(fakeBroker, store, {}, () => now, providerPorts)
+
+    const connection = await service.completeAuthorization({
+      provider: "github",
+      providerConfigKey: "github-app",
+      nangoConnectionId: remote.connectionId
+    })
+
+    expect(Object.keys(receivedContext ?? {}).sort()).toEqual(["connectionId", "provider", "request"])
+    expect(receivedContext).toMatchObject({ connectionId: connection.connectionId, provider: "github" })
+    expect(fakeBroker.request).toHaveBeenCalledWith(
+      expect.objectContaining({ connectionId: remote.connectionId, providerConfigKey: remote.providerConfigKey }),
+      { method: "GET", endpoint: "/repositories" }
+    )
+  })
+
   it("reconciles Linear resources and marks removed connections disconnected", async () => {
     const store = new MemoryIntegrationStore()
     const remote = {
@@ -220,6 +260,61 @@ describe("IntegrationService", () => {
     await expect(service.inventory({ capability: "team.read" })).resolves.toMatchObject({ resources: [] })
     await expect(service.disconnect(connection.connectionId)).resolves.toMatchObject({ status: "disconnected" })
     expect(fakeBroker.revoke).toHaveBeenCalledOnce()
+  })
+
+  it("projects connection summaries and draft or published disconnect impact", async () => {
+    const store = new MemoryIntegrationStore()
+    const remote = {
+      providerConfigKey: "github-app",
+      connectionId: "nango-github-impact",
+      displayName: "Agency installation",
+      healthy: true,
+      errorCode: null
+    }
+    const fakeBroker = broker({ github: [remote] })
+    const draftWorkflowId = randomUUID()
+    const publishedWorkflowId = randomUUID()
+    let connectionId = ""
+    function resourceBindings(value?: string): Record<string, { connectionId: string }> {
+      return value === undefined ? {} : { repository: { connectionId: value } }
+    }
+    type WorkflowReader = NonNullable<ConstructorParameters<typeof IntegrationService>[5]>
+    const workflowReader: WorkflowReader = {
+      list: vi.fn<WorkflowReader["list"]>(async () => [
+        {
+          workflowId: draftWorkflowId,
+          name: "Draft delivery",
+          draft: { resourceBindings: resourceBindings(connectionId) }
+        },
+        { workflowId: publishedWorkflowId, name: "Published delivery", draft: { resourceBindings: resourceBindings() } }
+      ]),
+      getActivePublishedVersion: vi.fn<WorkflowReader["getActivePublishedVersion"]>(async (workflowId) =>
+        workflowId === publishedWorkflowId ? { content: { resourceBindings: resourceBindings(connectionId) } } : null
+      )
+    }
+    const service = new IntegrationService(fakeBroker, store, {}, () => now, undefined, workflowReader)
+    const connection = await service.completeAuthorization({
+      provider: "github",
+      providerConfigKey: "github-app",
+      nangoConnectionId: remote.connectionId
+    })
+    connectionId = connection.connectionId
+
+    expect(connection).toMatchObject({
+      providerAccount: "Agency installation",
+      lastSuccessfulSyncAt: now.toISOString(),
+      latestError: null,
+      resourceCounts: { total: 1, active: 1, stale: 0 },
+      capabilities: ["pull_request.write", "repository.read", "repository.write"]
+    })
+    await expect(service.disconnectImpact(connectionId)).resolves.toEqual({
+      connectionId,
+      affectedWorkflowCount: 2,
+      workflows: [
+        { workflowId: draftWorkflowId, name: "Draft delivery", usesDraft: true, usesPublishedVersion: false },
+        { workflowId: publishedWorkflowId, name: "Published delivery", usesDraft: false, usesPublishedVersion: true }
+      ]
+    })
   })
 
   it("rejects invalid authorization completion and missing local connections", async () => {

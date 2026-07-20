@@ -28,6 +28,8 @@ const seedIssues = [
   description: `Acceptance criteria.\n\n<!-- agency-agent-platform:seed:${key} -->`,
   url: `https://linear.app/fencing-club/issue/${identifier}/task`,
   priority: 4,
+  createdAt: "2026-07-18T04:15:00.000Z",
+  updatedAt: "2026-07-19T04:15:00.000Z",
   state
 }))
 

@@ -30,6 +30,8 @@ export const LinearWorkItemSchema = z
     description: z.string(),
     url: z.url(),
     priority: z.number().int().min(0).max(4),
+    createdAt: z.iso.datetime({ offset: true }),
+    updatedAt: z.iso.datetime({ offset: true }),
     state: z
       .object({
         id: z.uuid(),
@@ -59,6 +61,8 @@ export const LinearTaskGraphNodeSchema = z
     description: z.string(),
     url: z.url(),
     priority: z.number().int().min(0).max(4),
+    createdAt: z.iso.datetime({ offset: true }),
+    updatedAt: z.iso.datetime({ offset: true }),
     state: z
       .object({
         id: z.uuid(),

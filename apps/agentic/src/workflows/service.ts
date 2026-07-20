@@ -1,17 +1,21 @@
 import { randomUUID } from "node:crypto"
 import { z } from "zod"
 import type { PostgresWorkflowJournalStore } from "../persistence/workflowJournalStore"
+import type { PostgresWorkflowScheduleStore, WorkflowScheduleRecord } from "../persistence/workflowScheduleStore"
 import type { PostgresWorkflowStore, WorkflowDefinitionRecord } from "../persistence/workflowStore"
 import type { NangoWebhookReceipt } from "../webhooks/nango"
 import { CompiledWorkflowGraphSchema, compileWorkflowDefinition, WorkflowCompilationError } from "./compiler"
 import {
   CreateWorkflowRequestSchema,
-  PublishedWorkflowScheduleSchema,
   StartWorkflowRunRequestSchema,
   UpdateWorkflowDraftRequestSchema,
   WorkflowDraftViewSchema,
+  WorkflowRunSummarySchema,
   WorkflowRunStartSchema,
-  WorkflowSummarySchema
+  WorkflowScheduleViewSchema,
+  WorkflowSummarySchema,
+  UpdateWorkflowScheduleRequestSchema,
+  WorkflowValidationSchema
 } from "./contracts"
 import { WorkflowDefinitionV2Schema, type WorkflowDefinitionV2 } from "./definitionV2"
 import { JsonValueSchema, jsonValueDigest } from "./executionContracts"
@@ -19,6 +23,7 @@ import { validateJsonValue } from "./jsonSchema"
 import type { WorkflowModelCatalogPort, WorkflowModelSnapshot } from "./modelCatalog"
 import { simulatePhase2Workflow } from "./phase2Executor"
 import { listProviderOperations } from "./providerCatalog"
+import { matchPublishedWebhookTriggers, resolvePublishedTriggerCatalog } from "./publishedTriggers"
 import {
   RepositoryAgentReferenceSchema,
   type RepositoryAgentCatalog,
@@ -28,7 +33,14 @@ import { CURRENT_WORKFLOW_RELEASE_PHASE, listWorkflowStepDefinitions } from "./s
 
 export type WorkflowServiceStore = Pick<
   PostgresWorkflowStore,
-  "create" | "get" | "getExecutionPackage" | "getPublishedVersion" | "list" | "listVersions" | "publish" | "updateDraft"
+  | "create"
+  | "get"
+  | "getExecutionPackage"
+  | "getActivePublishedVersion"
+  | "list"
+  | "listVersions"
+  | "publish"
+  | "updateDraft"
 >
 
 export type WorkflowServiceJournal = Pick<
@@ -42,7 +54,220 @@ export type WorkflowServiceJournal = Pick<
   | "retryFromHere"
   | "resolveEffect"
 >
+
+export type WorkflowScheduleServiceStore = Pick<PostgresWorkflowScheduleStore, "list" | "update">
+
+function scheduleView(schedule: WorkflowScheduleRecord, now: Date) {
+  let health: "disabled" | "retrying" | "running" | "scheduled" = "scheduled"
+  if (!schedule.enabled) {
+    health = "disabled"
+  } else if (schedule.failureCode !== null) {
+    health = "retrying"
+  } else if (schedule.leaseExpiresAt !== null && schedule.leaseExpiresAt > now) {
+    health = "running"
+  }
+  return WorkflowScheduleViewSchema.parse({
+    scheduleId: schedule.scheduleId,
+    workflowId: schedule.workflowId,
+    workflowVersion: schedule.workflowVersion,
+    triggerNodeId: schedule.triggerNodeId,
+    label: schedule.label,
+    enabled: schedule.enabled,
+    intervalSeconds: schedule.intervalSeconds,
+    scheduleExpression: schedule.scheduleExpression,
+    timezone: schedule.timezone,
+    nextRunAt: schedule.nextRunAt.toISOString(),
+    lastAttemptedAt: schedule.lastAttemptedAt?.toISOString() ?? null,
+    lastSuccessfulAt: schedule.lastSuccessfulAt?.toISOString() ?? null,
+    health,
+    latestError: schedule.failureDetails,
+    revision: schedule.revision
+  })
+}
 export type WorkflowRepositoryAgentCatalog = Pick<RepositoryAgentCatalog, "discover" | "resolve">
+type WorkflowRunDetail = NonNullable<Awaited<ReturnType<WorkflowServiceJournal["getRunDetail"]>>>
+
+function errorSummary(error: WorkflowRunDetail["attempts"][number]["error"]): string {
+  if (error !== null) {
+    for (const key of ["message", "summary", "reason", "code"]) {
+      const value = error[key]
+      if (typeof value === "string" && value.trim() !== "") {
+        return value.trim()
+      }
+    }
+  }
+  return "The step failed without a recorded explanation."
+}
+
+function reachableActivationIds(detail: WorkflowRunDetail, sourceStepId: string): Set<string> {
+  const reachableSteps = new Set<string>()
+  const pendingSteps = [sourceStepId]
+  while (pendingSteps.length > 0) {
+    const currentStepId = pendingSteps.pop()
+    if (currentStepId === undefined) continue
+    for (const connection of detail.graph.connections) {
+      if (connection.source.stepId !== currentStepId || reachableSteps.has(connection.target.stepId)) continue
+      reachableSteps.add(connection.target.stepId)
+      pendingSteps.push(connection.target.stepId)
+    }
+  }
+  return new Set(
+    detail.activations.filter(({ stepId }) => reachableSteps.has(stepId)).map(({ activationId }) => activationId)
+  )
+}
+
+function runSummary(detail: WorkflowRunDetail) {
+  const activeActivation = detail.activations.find(({ status }) =>
+    (["ready", "leased", "running", "waiting"] as string[]).includes(status)
+  )
+  const activeStep =
+    activeActivation === undefined ? undefined : detail.graph.steps.find(({ id }) => id === activeActivation.stepId)
+  const failedActivation = detail.activations.findLast(({ status }) => status === "failed")
+  const failedStep =
+    failedActivation === undefined ? undefined : detail.graph.steps.find(({ id }) => id === failedActivation.stepId)
+  const failedAttempt =
+    failedActivation === undefined
+      ? undefined
+      : detail.attempts.findLast(
+          ({ activationId, status }) => activationId === failedActivation.activationId && status === "failed"
+        )
+  const unresolvedEffect =
+    failedActivation === undefined
+      ? undefined
+      : detail.effects.find(
+          ({ activationId, status }) =>
+            activationId === failedActivation.activationId && (status === "unknown" || status === "conflict")
+        )
+  const actions: Array<{
+    key: "cancel" | "retry_step" | "retry_from_here" | "resume" | "run_again" | "resolve_effect"
+    label: string
+    targetId: string | null
+    allowed: boolean
+    disabledReason: string | null
+    targetLabel: string
+    consequence: string
+    approvalRequirement: "none" | "confirmation" | "required"
+    requiredCapability: string | null
+  }> = []
+  const terminal = ["succeeded", "failed", "cancelled", "abandoned"].includes(detail.run.status)
+  actions.push({
+    key: "cancel",
+    label: "Cancel run",
+    targetId: null,
+    allowed: !terminal,
+    disabledReason: terminal ? "This run has already ended." : null,
+    targetLabel: `Run ${detail.run.runId}`,
+    consequence: "Stops new work. External changes already sent to a provider are not undone.",
+    approvalRequirement: "confirmation",
+    requiredCapability: null
+  })
+  const childRun = detail.run.triggerIdentity.startsWith("child:")
+  actions.push({
+    key: "run_again",
+    label: "Run again",
+    targetId: null,
+    allowed: !childRun,
+    disabledReason: childRun ? "Start this child workflow through its parent workflow." : null,
+    targetLabel: `Run ${detail.run.runId}`,
+    consequence: "Creates a new run from the same published workflow version and preserves this run.",
+    approvalRequirement: "confirmation",
+    requiredCapability: null
+  })
+  if (failedActivation !== undefined) {
+    const retryAllowed = failedActivation.selectedAttemptOrdinal === null && unresolvedEffect === undefined
+    let retryDisabledReason: string | null = null
+    if (unresolvedEffect !== undefined) {
+      retryDisabledReason = "Confirm whether the external change occurred before retrying."
+    } else if (failedActivation.selectedAttemptOrdinal !== null) {
+      retryDisabledReason = "A successful attempt has already been selected for this step."
+    }
+    actions.push({
+      key: "retry_step",
+      label: "Retry step",
+      targetId: failedActivation.activationId,
+      allowed: retryAllowed,
+      disabledReason: retryDisabledReason,
+      targetLabel: failedStep?.label ?? failedActivation.stepId,
+      consequence: "Creates another attempt for the failed step and preserves prior attempts.",
+      approvalRequirement: "none",
+      requiredCapability: null
+    })
+    const descendants = reachableActivationIds(detail, failedActivation.stepId)
+    const canRetryFromHere = detail.activations
+      .filter(({ activationId }) => descendants.has(activationId))
+      .every(({ status, selectedAttemptOrdinal }) => status === "blocked" && selectedAttemptOrdinal === null)
+    actions.push({
+      key: "retry_from_here",
+      label: "Retry from here",
+      targetId: failedActivation.activationId,
+      allowed: retryAllowed && canRetryFromHere,
+      disabledReason:
+        retryAllowed && !canRetryFromHere ? "A downstream step has already committed output." : retryDisabledReason,
+      targetLabel: failedStep?.label ?? failedActivation.stepId,
+      consequence: "Retries the failed step and descendants that have not committed output.",
+      approvalRequirement: "confirmation",
+      requiredCapability: null
+    })
+  }
+  for (const wait of detail.waits.filter(({ status }) => status === "pending")) {
+    actions.push({
+      key: "resume",
+      label: "Resume",
+      targetId: wait.waitId,
+      allowed: true,
+      disabledReason: null,
+      targetLabel: wait.correlationKey,
+      consequence: `Supplies the event required by ${wait.correlationKey}.`,
+      approvalRequirement: "none",
+      requiredCapability: null
+    })
+  }
+  for (const effect of detail.effects.filter(({ status }) => status === "unknown" || status === "conflict")) {
+    actions.push({
+      key: "resolve_effect",
+      label: "Confirm external change",
+      targetId: effect.effectId,
+      allowed: true,
+      disabledReason: null,
+      targetLabel: effect.effectSlot,
+      consequence: "Records whether the provider change occurred before the workflow can continue or retry.",
+      approvalRequirement: "required",
+      requiredCapability: null
+    })
+  }
+  let recommendedAction = "Review the persisted evidence before creating a new run."
+  if (unresolvedEffect !== undefined) {
+    recommendedAction = "Confirm whether the external change occurred before retrying."
+  } else if (failedActivation !== undefined && failedActivation.selectedAttemptOrdinal === null) {
+    recommendedAction = "Retry the failed step when the cause has been corrected."
+  }
+  const blockedDescendants =
+    failedActivation === undefined
+      ? 0
+      : detail.activations.filter(
+          ({ activationId, status }) =>
+            reachableActivationIds(detail, failedActivation.stepId).has(activationId) && status === "blocked"
+        ).length
+  return WorkflowRunSummarySchema.parse({
+    outcome: detail.run.status,
+    currentStep: activeStep === undefined ? null : { stepId: activeStep.id, label: activeStep.label },
+    failure:
+      failedActivation === undefined || failedStep === undefined
+        ? null
+        : {
+            stepId: failedStep.id,
+            stepLabel: failedStep.label,
+            cause: errorSummary(failedAttempt?.error ?? null),
+            downstreamEffect:
+              blockedDescendants === 0
+                ? "No downstream steps are blocked."
+                : `${blockedDescendants} downstream step${blockedDescendants === 1 ? " is" : "s are"} blocked.`,
+            occurredAt: failedAttempt?.finishedAt?.toISOString() ?? null,
+            recommendedAction
+          },
+    actions
+  })
+}
 
 function defaultWorkflowDefinition(
   repository: WorkflowDefinitionV2["resourceBindings"][string],
@@ -238,6 +463,19 @@ function defaultWorkflowDefinition(
   })
 }
 
+function blankWorkflowDefinition(repository?: WorkflowDefinitionV2["resourceBindings"][string]): WorkflowDefinitionV2 {
+  return WorkflowDefinitionV2Schema.parse({
+    schemaVersion: "2",
+    inputSchema: { type: "object", additionalProperties: true },
+    outputSchema: { type: "object", additionalProperties: true },
+    constants: {},
+    resourceBindings: repository === undefined ? {} : { repository },
+    fixtures: [],
+    steps: [],
+    connections: []
+  })
+}
+
 type TriggerSummary = { kind: "manual" | "webhook" | "schedule"; label: string; enabled: boolean }
 
 function triggerSummary(workflow: WorkflowDefinitionRecord): TriggerSummary[] {
@@ -263,6 +501,19 @@ function compilationValidation(
   agentSnapshots: RepositoryAgentSnapshot[] = [],
   modelSnapshots: WorkflowModelSnapshot[] = []
 ) {
+  const fieldByIssueCode: Partial<Record<string, string>> = {
+    agent_reference: "Agent",
+    for_each_body: "Body step",
+    for_each_join: "Join step",
+    join_quorum_unsatisfiable: "Quorum",
+    loop_body: "Body step",
+    loop_exit: "Exit step",
+    mapping_type: "Mappings",
+    model_reference: "Model",
+    source_port: "From",
+    schedule_configuration: "Schedule",
+    target_port: "To"
+  }
   try {
     compileWorkflowDefinition({
       workflowId,
@@ -281,7 +532,8 @@ function compilationValidation(
         code: issue.code,
         message: issue.message,
         nodeId: issue.stepId,
-        connectionId: issue.connectionId
+        connectionId: issue.connectionId,
+        field: fieldByIssueCode[issue.code] ?? null
       }))
     }
   }
@@ -314,27 +566,28 @@ function webhookEvent(
   return null
 }
 
-function configString(config: Record<string, unknown>, name: string): string | null {
-  const value = config[name]
-  return typeof value === "string" ? value : null
-}
-
 export class WorkflowService {
   readonly #store: WorkflowServiceStore
   readonly #journal: WorkflowServiceJournal
   readonly #repositoryAgents: WorkflowRepositoryAgentCatalog | undefined
   readonly #models: WorkflowModelCatalogPort | undefined
+  readonly #scheduleStore: WorkflowScheduleServiceStore | undefined
+  readonly #now: () => Date
 
   constructor(
     store: WorkflowServiceStore,
     journal: WorkflowServiceJournal,
     repositoryAgents?: WorkflowRepositoryAgentCatalog,
-    models?: WorkflowModelCatalogPort
+    models?: WorkflowModelCatalogPort,
+    scheduleStore?: WorkflowScheduleServiceStore,
+    now: () => Date = () => new Date()
   ) {
     this.#store = store
     this.#journal = journal
     this.#repositoryAgents = repositoryAgents
     this.#models = models
+    this.#scheduleStore = scheduleStore
+    this.#now = now
   }
 
   definitions() {
@@ -345,7 +598,7 @@ export class WorkflowService {
     const runId = z.uuid().parse(runIdInput)
     const detail = await this.#journal.getRunDetail(runId)
     if (detail === null) throw new Error(`Workflow run ${runId} was not found`)
-    return { schemaVersion: "1" as const, ...detail }
+    return { schemaVersion: "2" as const, summary: runSummary(detail), ...detail }
   }
 
   async cancelRun(runIdInput: string, inputValue: unknown) {
@@ -460,7 +713,7 @@ export class WorkflowService {
           description: workflow.description,
           status: workflow.status,
           draftRevision: workflow.draftRevision,
-          publishedVersion: workflow.publishedVersion,
+          activePublishedVersion: workflow.activePublishedVersion,
           triggers: triggerSummary(workflow),
           updatedAt: workflow.updatedAt.toISOString()
         })
@@ -470,11 +723,15 @@ export class WorkflowService {
 
   async create(input: unknown) {
     const request = CreateWorkflowRequestSchema.parse(input)
+    const draft =
+      request.template === "agency_delivery"
+        ? defaultWorkflowDefinition(request.repository, request.linearTeam, request.modelId)
+        : blankWorkflowDefinition(request.repository)
     return this.#draftView(
       await this.#store.create({
         name: request.name,
         description: request.description,
-        draft: defaultWorkflowDefinition(request.repository, request.linearTeam, request.modelId)
+        draft
       })
     )
   }
@@ -498,34 +755,40 @@ export class WorkflowService {
 
   async validate(workflowId: string) {
     const workflow = await this.#requireWorkflow(workflowId)
-    const [agentSnapshots, modelSnapshots] = await Promise.all([
+    const [agentSnapshots, modelSnapshots, versions] = await Promise.all([
       this.#resolveRepositoryAgents(workflow.draft),
-      this.#resolveModels(workflow.draft)
+      this.#resolveModels(workflow.draft),
+      this.#store.listVersions(workflowId)
     ])
-    return compilationValidation(
-      workflow.draft,
-      workflowId,
-      (workflow.publishedVersion ?? 0) + 1,
-      agentSnapshots,
-      modelSnapshots
-    )
+    return WorkflowValidationSchema.parse({
+      schemaVersion: "1",
+      draftRevision: workflow.draftRevision,
+      ...compilationValidation(
+        workflow.draft,
+        workflowId,
+        (versions[0]?.version ?? 0) + 1,
+        agentSnapshots,
+        modelSnapshots
+      )
+    })
   }
 
   async publish(workflowId: string) {
     const workflow = await this.#requireWorkflow(workflowId)
-    const [agentSnapshots, modelSnapshots] = await Promise.all([
+    const [agentSnapshots, modelSnapshots, versions] = await Promise.all([
       this.#resolveRepositoryAgents(workflow.draft),
-      this.#resolveModels(workflow.draft)
+      this.#resolveModels(workflow.draft),
+      this.#store.listVersions(workflowId)
     ])
     const validation = compilationValidation(
       workflow.draft,
       workflowId,
-      (workflow.publishedVersion ?? 0) + 1,
+      (versions[0]?.version ?? 0) + 1,
       agentSnapshots,
       modelSnapshots
     )
     if (!validation.valid) throw new Error(validation.issues.map(({ message }) => message).join(" "))
-    await this.#store.publish(workflowId, agentSnapshots, modelSnapshots)
+    await this.#store.publish(workflowId, agentSnapshots, modelSnapshots, workflow.draftRevision)
     return this.draft(workflowId)
   }
 
@@ -560,9 +823,12 @@ export class WorkflowService {
 
   async start(workflowId: string, input: unknown) {
     const request = StartWorkflowRunRequestSchema.parse(input)
-    const version = await this.#store.getPublishedVersion(workflowId)
-    if (version === null) throw new Error("Publish the workflow before starting a run")
-    const executionPackage = await this.#store.getExecutionPackage(workflowId, version.version)
+    const workflow = await this.#requireWorkflow(workflowId)
+    if (workflow.activePublishedVersion === null) throw new Error("Publish the workflow before starting a run")
+    if (workflow.activePublishedVersion !== request.version) {
+      throw new Error(`Published version ${request.version} is not active`)
+    }
+    const executionPackage = await this.#store.getExecutionPackage(workflowId, request.version)
     if (executionPackage === null) throw new Error("Published workflow has no execution package")
     const graph = CompiledWorkflowGraphSchema.parse(executionPackage.content.graph)
     const inputIssues = validateJsonValue(graph.inputSchema, request.input)
@@ -596,7 +862,7 @@ export class WorkflowService {
     return WorkflowRunStartSchema.parse({
       runId: prepared.run.runId,
       created: prepared.created,
-      version: version.version
+      version: request.version
     })
   }
 
@@ -608,23 +874,14 @@ export class WorkflowService {
       const waits = await this.#journal.listPendingWaits(correlationKey)
       await Promise.all(waits.map(({ runId }) => this.#journal.resumeWait({ runId, correlationKey, event })))
     }
-    const workflows = await this.#store.list()
-    const matches = workflows.flatMap((workflow) => {
-      if (workflow.publishedVersion === null) return []
-      return workflow.draft.steps
-        .filter(
-          (step) =>
-            step.definition.kind === "provider_event" &&
-            configString(step.config, "provider") === event.provider &&
-            configString(step.config, "eventKey") === event.eventKey
-        )
-        .map((step) => ({ workflowId: workflow.workflowId, stepId: step.id }))
-    })
+    const catalog = await resolvePublishedTriggerCatalog(this.#store)
+    const matches = matchPublishedWebhookTriggers(catalog, event)
     await Promise.all(
       matches.map((match) =>
         this.start(match.workflowId, {
+          version: match.version,
           input: { event },
-          trigger: { type: "webhook", key: `${deliveryKey}:${event.eventKey}`, stepId: match.stepId }
+          trigger: { type: "webhook", key: `${deliveryKey}:${event.eventKey}`, stepId: match.nodeId }
         })
       )
     )
@@ -632,36 +889,31 @@ export class WorkflowService {
   }
 
   async schedules() {
-    const workflows = await this.#store.list()
-    return workflows.flatMap((workflow) => {
-      if (workflow.publishedVersion === null) return []
-      return workflow.draft.steps.flatMap((step) => {
-        if (step.definition.kind !== "schedule") return []
-        const intervalSeconds = step.config.intervalSeconds
-        if (typeof intervalSeconds !== "number") return []
-        return [
-          PublishedWorkflowScheduleSchema.parse({
-            workflowId: workflow.workflowId,
-            version: workflow.publishedVersion,
-            nodeId: step.id,
-            label: step.label,
-            intervalSeconds
-          })
-        ]
-      })
-    })
+    if (this.#scheduleStore === undefined) {
+      throw new Error("Workflow schedule persistence is unavailable")
+    }
+    return Promise.all((await this.#scheduleStore.list()).map((schedule) => scheduleView(schedule, this.#now())))
+  }
+
+  async updateSchedule(scheduleId: string, inputValue: unknown) {
+    if (this.#scheduleStore === undefined) {
+      throw new Error("Workflow schedule persistence is unavailable")
+    }
+    const input = UpdateWorkflowScheduleRequestSchema.parse(inputValue)
+    const updated = await this.#scheduleStore.update({ scheduleId, ...input, now: this.#now() })
+    return scheduleView(updated, this.#now())
   }
 
   async #draftView(workflow: WorkflowDefinitionRecord) {
     const versions = await this.#store.listVersions(workflow.workflowId)
     return WorkflowDraftViewSchema.parse({
-      schemaVersion: "2",
+      schemaVersion: "3",
       workflowId: workflow.workflowId,
       name: workflow.name,
       description: workflow.description,
       status: workflow.status,
       draftRevision: workflow.draftRevision,
-      publishedVersion: workflow.publishedVersion,
+      activePublishedVersion: workflow.activePublishedVersion,
       content: workflow.draft,
       versions: versions.map((version) => ({
         version: version.version,

@@ -79,15 +79,23 @@ const integrationBroker = new NangoIntegrationCredentialBroker({
   githubIntegrationId: environment.NANGO_GITHUB_INTEGRATION_ID,
   linearIntegrationId: environment.NANGO_LINEAR_INTEGRATION_ID
 })
-const integrationService = new IntegrationService(integrationBroker, runtime.integrationStore, {
-  githubIntegrationId: environment.NANGO_GITHUB_INTEGRATION_ID,
-  linearIntegrationId: environment.NANGO_LINEAR_INTEGRATION_ID
-})
+const integrationService = new IntegrationService(
+  integrationBroker,
+  runtime.integrationStore,
+  {
+    githubIntegrationId: environment.NANGO_GITHUB_INTEGRATION_ID,
+    linearIntegrationId: environment.NANGO_LINEAR_INTEGRATION_ID
+  },
+  undefined,
+  undefined,
+  runtime.workflowStore
+)
 const workflowService = new WorkflowService(
   runtime.workflowStore,
   runtime.workflowJournalStore,
   new RepositoryAgentCatalog(integrationBroker, runtime.integrationStore),
-  new OpenRouterModelCatalog({ apiKey: environment.OPENROUTER_API_KEY })
+  new OpenRouterModelCatalog({ apiKey: environment.OPENROUTER_API_KEY }),
+  runtime.workflowScheduleStore
 )
 const server = createControlPlaneServer(
   service,

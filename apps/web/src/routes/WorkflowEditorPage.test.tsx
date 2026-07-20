@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, describe, expect, it, vi } from "vitest"
-import type { WorkflowDraftContent } from "@/services/api"
+import type { IntegrationConnection, IntegrationSettings, WorkflowDraftContent } from "@/services/api"
 import { ApiMock } from "@/tests/server"
 import { WorkflowEditorPage } from "./WorkflowEditorPage"
 
@@ -449,9 +449,10 @@ const definitions = [
       .repeat(64)
       .slice(0, 64)
   }))
-]
+].map((definition) => ({ ...definition, ui: { fields: [] } }))
 
 const connectionId = "9f336dbd-c1cb-4514-9b3e-9374b3524c98"
+const linearConnectionId = "2f4524b1-37e8-43e0-a598-708d268fc422"
 const repositoryBinding = {
   connectionId,
   provider: "github" as const,
@@ -488,6 +489,44 @@ const repositoryInventory = {
       }
     }
   ]
+}
+const integrationConnections: IntegrationConnection[] = [
+  {
+    connectionId,
+    provider: "github",
+    providerAccount: "Agency GitHub",
+    status: "connected",
+    lastSuccessfulSyncAt: "2026-07-19T12:00:00.000Z",
+    latestError: null,
+    lastCheckedAt: "2026-07-19T12:00:00.000Z",
+    resourceCounts: { total: 1, active: 1, stale: 0 },
+    capabilities: ["repository.read", "repository.write", "pull_request.write"],
+    createdAt: "2026-07-19T12:00:00.000Z",
+    updatedAt: "2026-07-19T12:00:00.000Z",
+    resources: []
+  },
+  {
+    connectionId: linearConnectionId,
+    provider: "linear",
+    providerAccount: "Agency Linear",
+    status: "connected",
+    lastSuccessfulSyncAt: "2026-07-19T12:00:00.000Z",
+    latestError: null,
+    lastCheckedAt: "2026-07-19T12:00:00.000Z",
+    resourceCounts: { total: 1, active: 1, stale: 0 },
+    capabilities: ["issue.read", "issue.write", "team.read"],
+    createdAt: "2026-07-19T12:00:00.000Z",
+    updatedAt: "2026-07-19T12:00:00.000Z",
+    resources: []
+  }
+]
+const integrationSettings: IntegrationSettings = {
+  schemaVersion: "2",
+  catalog: [
+    { provider: "github", name: "GitHub", description: "GitHub", capabilities: [] },
+    { provider: "linear", name: "Linear", description: "Linear", capabilities: [] }
+  ],
+  connections: integrationConnections
 }
 const agentReference = {
   connectionId,
@@ -607,32 +646,40 @@ const content = {
   fixtures: []
 }
 
-function draft(revision = 1, publishedVersion: number | null = 1) {
+function draft(revision = 1, activePublishedVersion: number | null = 1) {
   return {
-    schemaVersion: "2",
+    schemaVersion: "3",
     workflowId,
     name: "Data preparation",
     description: "Prepare typed input.",
-    status: publishedVersion === null ? "draft" : "published",
+    status: "draft",
     draftRevision: revision,
-    publishedVersion,
+    activePublishedVersion,
     content,
     versions:
-      publishedVersion === null
+      activePublishedVersion === null
         ? []
-        : [{ version: publishedVersion, contentDigest: "a".repeat(64), publishedAt: "2026-07-19T12:00:00.000Z" }],
+        : [{ version: activePublishedVersion, contentDigest: "a".repeat(64), publishedAt: "2026-07-19T12:00:00.000Z" }],
     updatedAt: "2026-07-19T12:00:00.000Z"
   }
 }
 
-function registerEditorApis(value = draft()) {
+function registerEditorApis(value = draft(), settings = integrationSettings) {
   ApiMock.get(`/api/workflows/${workflowId}/draft`, { data: value })
   ApiMock.get("/api/workflows/steps", { data: { schemaVersion: "1", definitions } })
+  ApiMock.get("/api/integrations", { data: settings })
 }
 
 async function addStep(name: RegExp) {
-  await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-  await userEvent.click(screen.getByRole("menuitem", { name }))
+  let catalog = screen.queryByRole("complementary", { name: "Step library" })
+  if (catalog === null) {
+    await userEvent.click(screen.getByRole("button", { name: "Open step library" }))
+    catalog = await screen.findByRole("complementary", { name: "Step library" })
+  }
+  const search = within(catalog).getByPlaceholderText("Search steps")
+  await userEvent.clear(search)
+  await userEvent.type(search, name.source.replaceAll("^", "").replaceAll("$", ""))
+  await userEvent.click(within(catalog).getByRole("button", { name }))
 }
 
 afterEach(() => navigate.mockReset())
@@ -643,14 +690,35 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     render(<WorkflowEditorPage />)
 
     expect(await screen.findByDisplayValue("Data preparation")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 1, name: "Data preparation" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Open details" })).toBeInTheDocument()
     expect(screen.queryByText("Workflow details")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Add step" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: "Problems" })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: "Close step library" }))
+    await userEvent.click(screen.getByRole("button", { name: "Open step library" }))
+    await waitFor(() => expect(screen.getByPlaceholderText("Search steps")).toHaveFocus())
+    await userEvent.click(screen.getByRole("button", { name: "Data" }))
+    const stepLibrary = screen.getByRole("complementary", { name: "Step library" })
+    expect(within(stepLibrary).getByRole("button", { name: /Provider data/u })).toBeInTheDocument()
+    expect(within(stepLibrary).getByRole("button", { name: /Manual run/u })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: "Expand results" }))
+    expect(screen.getByRole("heading", { name: "Problems" })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Collapse results" }))
+    expect(screen.queryByRole("heading", { name: "Problems" })).not.toBeInTheDocument()
 
     await userEvent.click(screen.getByRole("tab", { name: "Outline" }))
-    expect(screen.getByRole("button", { name: /Set fields/u })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole("button", { name: /Set fields/u }))
-    expect(screen.getByRole("textbox", { name: "Fields" })).toHaveValue('{\n  "answer": 42\n}')
+    const topology = screen.getByRole("navigation", { name: "Workflow topology" })
+    const setFields = within(topology).getByRole("button", { name: /Set fields/u })
+    expect(setFields).toBeInTheDocument()
+    await userEvent.click(setFields)
+    expect(screen.getByRole("textbox", { name: "Field name" })).toHaveValue("answer")
+    expect(screen.getByRole("textbox", { name: "Value" })).toHaveValue("42")
     expect(screen.getByRole("button", { name: "Run to here" })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Close properties" }))
+    await waitFor(() => expect(setFields).toHaveFocus())
   })
 
   it("autosaves graph and identity changes", async () => {
@@ -665,7 +733,17 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     await userEvent.click(screen.getByRole("button", { name: "Remove edge" }))
 
     await waitFor(() => expect(save.hits).toBeGreaterThan(0), { timeout: 2500 })
-    expect(await screen.findByText("saved")).toBeInTheDocument()
+    expect(await screen.findByText("All changes saved")).toBeInTheDocument()
+  })
+
+  it("explains why a workflow without an active version cannot run", async () => {
+    registerEditorApis(draft(1, null))
+    render(<WorkflowEditorPage />)
+
+    expect(await screen.findByText("Draft")).toBeInTheDocument()
+    expect(screen.getByText("All changes saved")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Run published version" })).toBeDisabled()
+    expect(screen.getByText("Publish a version before starting a run.")).toBeInTheDocument()
   })
 
   it("reassigns and deletes a selected connection", async () => {
@@ -682,8 +760,8 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     await waitFor(() => expect(save.hits).toBeGreaterThan(0), { timeout: 2500 })
 
     await userEvent.click(screen.getByRole("button", { name: "Delete connection" }))
-    expect(screen.getByText("The connected steps will remain in the workflow.")).toBeInTheDocument()
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }))
+    expect(await screen.findByText("The connected steps will remain in the workflow.")).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole("button", { name: "Delete", hidden: true }))
     await waitFor(
       () =>
         expect(
@@ -700,29 +778,35 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     registerEditorApis()
     ApiMock.post(`/api/workflows/${workflowId}/validate`, {
       data: {
+        schemaVersion: "1",
+        draftRevision: 1,
         valid: false,
         issues: [
           {
-            code: "agent_reference",
+            code: "step_label",
             message: "Set fields needs an agent definition.",
             nodeId: "set",
-            connectionId: null
+            connectionId: null,
+            field: "Label"
           }
         ]
       }
     })
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Validate" }))
-    expect(await screen.findByText("Fix workflow issues")).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole("button", { name: "Check for issues" }))
+    expect(await screen.findByText("1 issue to fix for draft revision 1.")).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: "Set fields needs an agent definition." }))
-    expect(screen.getByRole("textbox", { name: "Label" })).toHaveValue("Set fields")
-    expect(screen.getByRole("complementary", { name: "Workflow details" })).toHaveFocus()
+    const label = screen.getByRole("textbox", { name: "Label" })
+    expect(label).toHaveValue("Set fields")
+    expect(label).toHaveFocus()
   })
 
   it("tests the draft, runs to a selected step, publishes, and starts a durable run", async () => {
     registerEditorApis()
-    ApiMock.post(`/api/workflows/${workflowId}/validate`, { data: { valid: true, issues: [] } })
+    ApiMock.post(`/api/workflows/${workflowId}/validate`, {
+      data: { schemaVersion: "1", draftRevision: 1, valid: true, issues: [] }
+    })
     ApiMock.post(`/api/workflows/${workflowId}/publish`, { data: draft(1, 2) })
     const testDraft = ApiMock.post(`/api/workflows/${workflowId}/test`, {
       data: {
@@ -740,12 +824,73 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "Test draft" }))
     await waitFor(() => expect(testDraft.hits).toBe(1))
-    expect(screen.getByText("Simulated result")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Test results" })).toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole("button", { name: "Publish" }))
-    await userEvent.click(screen.getByRole("button", { name: "Run" }))
+    await userEvent.click(screen.getByRole("button", { name: "Publish version 2" }))
+    expect(await screen.findByText("Active version 2")).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Run published version 2" }))
     await waitFor(() => expect(run.hits).toBe(1))
+    expect(run.spy).toHaveBeenCalledWith(expect.objectContaining({ version: 2 }))
     expect(navigate).toHaveBeenCalledWith({ to: "/runs/$runId", params: { runId } })
+  })
+
+  it("keeps problems and failed tests revision-scoped and marks both stale after an edit", async () => {
+    registerEditorApis()
+    ApiMock.post(`/api/workflows/${workflowId}/validate`, {
+      data: {
+        schemaVersion: "1",
+        draftRevision: 1,
+        valid: false,
+        issues: [
+          {
+            code: "step_label",
+            message: "Set fields needs a label.",
+            nodeId: "set",
+            connectionId: null,
+            field: "Label"
+          }
+        ]
+      }
+    })
+    ApiMock.post(`/api/workflows/${workflowId}/test`, {
+      data: {
+        schemaVersion: "1",
+        mode: "draft",
+        simulated: true,
+        draftRevision: 1,
+        fixtureId: null,
+        elapsedMs: 2,
+        steps: [
+          {
+            stepId: "set",
+            status: "failed",
+            input: {},
+            output: {},
+            error: { message: "Invalid field value" }
+          }
+        ]
+      }
+    })
+    render(<WorkflowEditorPage />)
+
+    await userEvent.click(await screen.findByRole("button", { name: "Check for issues" }))
+    const problemsTab = await screen.findByRole("tab", { name: "Problems, 1" })
+    expect(problemsTab).toHaveAttribute("aria-controls", "problems-panel")
+    expect(screen.getByRole("tabpanel", { name: "Problems, 1" })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: "Test draft" }))
+    const testsTab = await screen.findByRole("tab", { name: "Test results, 1 failed" })
+    expect(testsTab).toHaveAttribute("aria-controls", "test-results-panel")
+    expect(screen.getByRole("tabpanel", { name: "Test results, 1 failed" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Set fields failed/u })).toBeInTheDocument()
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Workflow description" }), {
+      target: { value: "Changed after results" }
+    })
+    expect(await screen.findByText("Out of date. Test the current draft again.")).toBeInTheDocument()
+    await userEvent.click(problemsTab)
+    expect(screen.getByText("Out of date. Check the current draft again.")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Set fields needs a label." })).toBeInTheDocument()
   })
 
   it("searches the authoritative catalog and adds an executable step", async () => {
@@ -754,10 +899,11 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     render(<WorkflowEditorPage />)
 
     await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    const search = screen.getByPlaceholderText("Find a step")
+    const catalog = await screen.findByRole("complementary", { name: "Step library" })
+    const search = within(catalog).getByPlaceholderText("Search steps")
     await userEvent.type(search, "success")
-    expect(screen.queryByRole("menuitem", { name: /Manual run/u })).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole("menuitem", { name: /Success/u }))
+    expect(within(catalog).queryByRole("button", { name: /Manual run/u })).not.toBeInTheDocument()
+    await userEvent.click(within(catalog).getByRole("button", { name: /Success/u }))
     expect(screen.getAllByRole("button", { name: "Select Success" })).toHaveLength(2)
     expect(screen.getByRole("button", { name: "Run to here" })).toBeInTheDocument()
   })
@@ -767,15 +913,14 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2, null) })
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Compose Markdown/u }))
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/Compose Markdown/u)
     const template = screen.getByRole("textbox", { name: "Markdown template" })
     expect(template).toHaveValue("# Report\n\n{{summary}}")
     await userEvent.clear(template)
     await userEvent.type(template, "# {{issue.id}}")
 
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Collect/u }))
+    await addStep(/Collect/u)
     expect(screen.getByRole("combobox", { name: "Collection mode" })).toHaveTextContent("Ordered array")
     expect(screen.getByRole("spinbutton", { name: "Maximum items" })).toHaveValue(100)
     await userEvent.click(screen.getByRole("combobox", { name: "Collection mode" }))
@@ -788,66 +933,67 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2, null) })
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Map fields/u }))
-    const mappings = screen.getByRole("textbox", { name: "Mappings" })
-    fireEvent.change(mappings, { target: { value: "not-json" } })
-    fireEvent.change(mappings, { target: { value: '{"title":"issue.title"}' } })
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/Map fields/u)
+    await userEvent.click(screen.getByRole("button", { name: "Add row" }))
+    fireEvent.change(screen.getByRole("textbox", { name: "Output field" }), { target: { value: "title" } })
+    fireEvent.change(screen.getByRole("textbox", { name: "Source path" }), { target: { value: "issue.title" } })
 
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /^Validate/u }))
+    await addStep(/^Validate/u)
+    await userEvent.click(screen.getByText("Advanced schema"))
     const validationSchema = screen.getByRole("textbox", { name: "Validation schema" })
     fireEvent.change(validationSchema, { target: { value: "{" } })
     fireEvent.change(validationSchema, { target: { value: '{"type":"string"}' } })
 
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /^Failure/u }))
+    await addStep(/^Failure/u)
     await userEvent.clear(screen.getByRole("textbox", { name: "Failure code" }))
     await userEvent.type(screen.getByRole("textbox", { name: "Failure code" }), "review_failed")
     await userEvent.clear(screen.getByRole("textbox", { name: "Message" }))
     await userEvent.type(screen.getByRole("textbox", { name: "Message" }), "Review did not pass")
 
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /^Exclusive merge/u }))
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /^Switch/u }))
-    const cases = screen.getByRole("textbox", { name: "Cases" })
-    fireEvent.change(cases, { target: { value: "invalid" } })
-    fireEvent.change(cases, {
-      target: { value: '[{"key":"approved","when":{"path":["approved"],"operator":"truthy"}}]' }
-    })
+    await addStep(/^Exclusive merge/u)
+    await addStep(/^Switch/u)
+    await userEvent.click(screen.getByRole("button", { name: "Add case" }))
+    fireEvent.change(screen.getAllByRole("textbox", { name: "Branch key" }).at(-1)!, { target: { value: "approved" } })
+    fireEvent.change(screen.getAllByRole("textbox", { name: "Input path" }).at(-1)!, { target: { value: "approved" } })
     await userEvent.clear(screen.getByRole("textbox", { name: "Default branch key" }))
     await userEvent.type(screen.getByRole("textbox", { name: "Default branch key" }), "rejected")
     await userEvent.click(screen.getByRole("combobox", { name: "Merge step" }))
     await userEvent.click(screen.getByRole("option", { name: "Exclusive merge" }))
 
     expect(screen.getByRole("textbox", { name: "Default branch key" })).toHaveValue("rejected")
-  })
+  }, 60_000)
 
   it("configures bounded repository data for the workflow repository", async () => {
     registerEditorApis(draft(1, null))
     const save = ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2, null) })
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Repository data/u }))
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/Repository data/u)
     expect(await screen.findByRole("textbox", { name: "Repository" })).toHaveValue("octo/agency")
     await userEvent.click(screen.getByRole("combobox", { name: "Operation" }))
     await userEvent.click(screen.getByRole("option", { name: "file content" }))
     await userEvent.clear(screen.getByRole("textbox", { name: "Repository ref" }))
     await userEvent.type(screen.getByRole("textbox", { name: "Repository ref" }), "release")
 
-    await waitFor(() => expect(save.hits).toBeGreaterThan(0), { timeout: 2500 })
-    expect(save.spy).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        content: expect.objectContaining({
-          steps: expect.arrayContaining([
-            expect.objectContaining({
-              config: { operation: "file_content", repository: { owner: "octo", name: "agency", ref: "release" } }
+    await waitFor(
+      () =>
+        expect(save.spy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            content: expect.objectContaining({
+              steps: expect.arrayContaining([
+                expect.objectContaining({
+                  config: {
+                    operation: "file_content",
+                    repository: { owner: "octo", name: "agency", ref: "release" }
+                  }
+                })
+              ])
             })
-          ])
-        })
-      })
+          })
+        ),
+      { timeout: 5000 }
     )
   })
 
@@ -859,8 +1005,8 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     const save = ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2, null) })
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Repository agent/u }))
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/Repository agent/u)
     expect(await screen.findByRole("textbox", { name: "Repository" })).toHaveValue("octo/agency")
     await userEvent.click(screen.getByRole("button", { name: "Find agents" }))
     await waitFor(() => expect(discover.hits).toBe(1))
@@ -895,8 +1041,8 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     ])
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Repository agent/u }))
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/Repository agent/u)
     expect(await screen.findByRole("textbox", { name: "Repository" })).toHaveValue("octo/agency")
     await userEvent.click(screen.getByRole("button", { name: "Find agents" }))
     expect(await screen.findByText("No repository agents were found.")).toBeInTheDocument()
@@ -910,17 +1056,18 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     const save = ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2, null) })
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /^AI model/u }))
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/^AI model/u)
     await userEvent.click(await screen.findByRole("combobox", { name: "Model" }))
     await userEvent.click(screen.getByRole("option", { name: /GPT Test/u }))
     await userEvent.click(screen.getByRole("button", { name: "Use workflow context" }))
     await userEvent.click(screen.getByRole("combobox", { name: "Output format" }))
     await userEvent.click(screen.getByRole("option", { name: "Structured JSON" }))
+    await userEvent.click(screen.getByText("Advanced schema"))
     const schema = screen.getByRole("textbox", { name: "Output schema" })
     await userEvent.clear(schema)
     await userEvent.type(schema, "not-json")
-    expect(screen.getByText("Enter valid JSON Schema")).toBeInTheDocument()
+    expect(screen.getByText("Enter valid JSON Schema.")).toBeInTheDocument()
     await userEvent.clear(schema)
     fireEvent.change(schema, { target: { value: '{"type":"object","properties":{"label":{"type":"string"}}}' } })
     const temperature = screen.getByRole("spinbutton", { name: "Temperature" })
@@ -955,8 +1102,8 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     const save = ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2, null) })
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Structured judgment/u }))
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/Structured judgment/u)
     await userEvent.click(await screen.findByRole("combobox", { name: "Model" }))
     await userEvent.click(screen.getByRole("option", { name: /GPT Test/u }))
     const criteria = screen.getByRole("textbox", { name: "Judgment criteria" })
@@ -986,13 +1133,12 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2, null) })
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Provider event/u }))
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/GitHub event/u)
     expect(await screen.findByRole("textbox", { name: "Repository" })).toHaveValue("octo/agency")
     expect(screen.getByRole("combobox", { name: "Event" })).toHaveTextContent("pull_request.created")
 
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /^Schedule/u }))
+    await addStep(/^Schedule/u)
     expect(screen.getByRole("spinbutton", { name: "Interval seconds" })).toHaveValue(300)
     await userEvent.click(screen.getByRole("combobox", { name: "Schedule mode" }))
     await userEvent.click(screen.getByRole("option", { name: "CRON" }))
@@ -1006,8 +1152,8 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     const save = ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2, null) })
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Provider data/u }))
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/Provider data/u)
     expect(await screen.findByRole("textbox", { name: "Repository" })).toHaveValue("octo/agency")
     await waitFor(() => expect(save.hits).toBeGreaterThan(0), { timeout: 2500 })
     const providerDataSave = save.spy.mock.calls.at(-1)?.[0] as { content: WorkflowDraftContent }
@@ -1018,8 +1164,7 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     expect(providerDataStep!.config.binding).toEqual(providerDataSave.content.resourceBindings.repository)
     expect(providerDataSave.content.resourceBindings[providerDataStep!.id]).toBeUndefined()
 
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Provider action/u }))
+    await addStep(/Provider action/u)
     expect(await screen.findByRole("textbox", { name: "Repository" })).toHaveValue("octo/agency")
     expect(screen.getByText(/retries pause until you confirm what happened/u)).toBeInTheDocument()
     await waitFor(
@@ -1049,29 +1194,42 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2, null) })
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Provider event/u }))
-    await userEvent.click(await screen.findByRole("combobox", { name: "Provider" }))
-    await userEvent.click(screen.getByRole("option", { name: "Linear" }))
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/Linear event/u)
+    expect(await screen.findByRole("combobox", { name: "Provider" })).toHaveTextContent("Linear")
     await userEvent.click(await screen.findByRole("combobox", { name: "Team" }))
     await userEvent.click(screen.getByRole("option", { name: "Agency Engineering" }))
     expect(screen.getByRole("combobox", { name: "Event" })).toHaveTextContent("task.created")
 
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Provider data/u }))
+    await addStep(/Provider data/u)
     await userEvent.click(await screen.findByRole("combobox", { name: "Provider" }))
     await userEvent.click(screen.getByRole("option", { name: "Linear" }))
     await userEvent.click(await screen.findByRole("combobox", { name: "Team" }))
     await userEvent.click(screen.getByRole("option", { name: "Agency Engineering" }))
     expect(screen.getByRole("combobox", { name: "Operation" })).toHaveTextContent("Task")
 
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Provider action/u }))
+    await addStep(/Provider action/u)
     await userEvent.click(await screen.findByRole("combobox", { name: "Provider" }))
     await userEvent.click(screen.getByRole("option", { name: "Linear" }))
     await userEvent.click(await screen.findByRole("combobox", { name: "Team" }))
     await userEvent.click(screen.getByRole("option", { name: "Agency Engineering" }))
     expect(screen.getByRole("combobox", { name: "Operation" })).toHaveTextContent("Add task comment")
+  })
+
+  it("disables integration events until that provider is connected", async () => {
+    registerEditorApis(draft(1, null), {
+      ...integrationSettings,
+      connections: integrationConnections.filter(({ provider }) => provider === "linear")
+    })
+    render(<WorkflowEditorPage />)
+
+    await screen.findByRole("button", { name: "Add step" })
+    const githubEvent = screen.getByRole("button", { name: /GitHub event/u })
+    expect(githubEvent).toHaveAttribute("aria-disabled", "true")
+    const prerequisite = screen.getByLabelText("GitHub event. Connect GitHub in Integrations before adding this event.")
+    prerequisite.focus()
+    expect(await screen.findByText("Connect GitHub in Integrations before adding this event.")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Linear event/u })).toBeEnabled()
   })
 
   it("shows empty and error states while loading provider resources", async () => {
@@ -1084,12 +1242,11 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2, null) })
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Provider data/u }))
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/Provider data/u)
     expect(await screen.findByText("No connected provider resources are available.")).toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /Provider action/u }))
+    await addStep(/Provider action/u)
     expect(await screen.findByText("Provider inventory unavailable")).toBeInTheDocument()
   })
 
@@ -1182,7 +1339,10 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
         expect(
           save.spy.mock.calls.some(([body]) =>
             (body as { content: WorkflowDraftContent }).content.steps.some(
-              ({ definition, config }) => definition.kind === "bounded_loop" && config.maximumActivations === 25
+              ({ definition, config }) =>
+                definition.kind === "bounded_loop" &&
+                config.maximumActivations === 25 &&
+                config.onExhaustion === "complete"
             )
           )
         ).toBe(true),
@@ -1200,15 +1360,14 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     const save = ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2) })
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /^Wait/u }))
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/^Wait/u)
     const correlation = screen.getByRole("textbox", { name: "Correlation key" })
     fireEvent.change(correlation, { target: { value: "github:{{repository}}:{{number}}" } })
     const expiry = screen.getByRole("spinbutton", { name: "Expires after seconds" })
     fireEvent.change(expiry, { target: { value: "600" } })
 
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /^Invoke workflow/u }))
+    await addStep(/^Invoke workflow/u)
     fireEvent.change(screen.getByRole("textbox", { name: "Execution package digest" }), {
       target: { value: "e".repeat(64) }
     })

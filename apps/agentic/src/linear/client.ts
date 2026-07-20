@@ -90,6 +90,8 @@ const RawLinearIssueSchema = z
     description: z.string().nullable(),
     url: z.url(),
     priority: z.number().int(),
+    createdAt: z.iso.datetime({ offset: true }),
+    updatedAt: z.iso.datetime({ offset: true }),
     state: z
       .object({
         id: z.uuid(),
@@ -240,6 +242,8 @@ const teamIssuesQuery = `
           description
           url
           priority
+          createdAt
+          updatedAt
           state { id name type }
           project { id name }
         }
@@ -391,6 +395,8 @@ export class LinearClient {
       description: issue.description ?? "",
       url: issue.url,
       priority: issue.priority,
+      createdAt: issue.createdAt,
+      updatedAt: issue.updatedAt,
       state: issue.state,
       team,
       project: issue.project,
@@ -427,6 +433,8 @@ export class LinearClient {
         description: task.description,
         url: task.url,
         priority: task.priority,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
         state: task.state,
         team: task.team
       })

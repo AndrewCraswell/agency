@@ -77,6 +77,14 @@ export function createControlPlaneServer(
         writeJson(response, 200, await service.snapshot(), responseOrigin)
         return
       }
+      if (request.method === "GET" && url.pathname === "/api/control-plane/runs") {
+        writeJson(response, 200, await service.runSnapshot(), responseOrigin)
+        return
+      }
+      if (request.method === "GET" && url.pathname === "/api/control-plane/work-items") {
+        writeJson(response, 200, await service.queryWorkItems(Object.fromEntries(url.searchParams)), responseOrigin)
+        return
+      }
       if (url.pathname === "/api/workflows" && workflowService !== undefined) {
         if (request.method === "GET") {
           writeJson(response, 200, await workflowService.list(), responseOrigin)
@@ -89,6 +97,16 @@ export function createControlPlaneServer(
       }
       if (request.method === "GET" && url.pathname === "/api/workflows/schedules" && workflowService !== undefined) {
         writeJson(response, 200, await workflowService.schedules(), responseOrigin)
+        return
+      }
+      const workflowScheduleRouteMatch = /^\/api\/workflows\/schedules\/([0-9a-f-]+)$/u.exec(url.pathname)
+      if (request.method === "PATCH" && workflowScheduleRouteMatch !== null && workflowService !== undefined) {
+        writeJson(
+          response,
+          200,
+          await workflowService.updateSchedule(workflowScheduleRouteMatch[1] ?? "", await readJson(request)),
+          responseOrigin
+        )
         return
       }
       if (request.method === "GET" && url.pathname === "/api/workflows/steps" && workflowService !== undefined) {
@@ -261,6 +279,16 @@ export function createControlPlaneServer(
         writeJson(response, 200, await integrationService.reconcile(), responseOrigin)
         return
       }
+      const integrationImpactMatch = /^\/api\/integrations\/connections\/([0-9a-f-]+)\/impact$/u.exec(url.pathname)
+      if (request.method === "GET" && integrationImpactMatch !== null && integrationService !== undefined) {
+        writeJson(
+          response,
+          200,
+          await integrationService.disconnectImpact(integrationImpactMatch[1] ?? ""),
+          responseOrigin
+        )
+        return
+      }
       const integrationConnectionMatch = /^\/api\/integrations\/connections\/([0-9a-f-]+)$/u.exec(url.pathname)
       if (integrationConnectionMatch !== null && integrationService !== undefined) {
         const connectionId = integrationConnectionMatch[1] ?? ""
@@ -272,11 +300,6 @@ export function createControlPlaneServer(
           writeJson(response, 200, await integrationService.disconnect(connectionId), responseOrigin)
           return
         }
-      }
-      const runDetailMatch = /^\/api\/control-plane\/runs\/([0-9a-f-]+)$/u.exec(url.pathname)
-      if (request.method === "GET" && runDetailMatch !== null) {
-        writeJson(response, 200, await service.runDetail(runDetailMatch[1] ?? ""), responseOrigin)
-        return
       }
       if (request.method === "POST" && url.pathname === "/api/control-plane/assign") {
         writeJson(response, 201, await service.assign(await readJson(request)), responseOrigin)
@@ -329,10 +352,17 @@ export function createControlPlaneServer(
     } catch (error) {
       const status = error instanceof z.ZodError || error instanceof SyntaxError ? 400 : 409
       const message = error instanceof Error ? error.message : "Control-plane request failed"
+      const fieldErrors =
+        error instanceof z.ZodError
+          ? error.issues.flatMap((issue) => {
+              const field = issue.path[0]
+              return typeof field === "string" ? [{ field, message: issue.message }] : []
+            })
+          : undefined
       writeJson(
         response,
         status,
-        ApiErrorSchema.parse({ error: message }),
+        ApiErrorSchema.parse({ error: message, ...(fieldErrors === undefined ? {} : { fieldErrors }) }),
         resolveAllowedOrigin(allowedOrigin, request.headers.origin)
       )
     }

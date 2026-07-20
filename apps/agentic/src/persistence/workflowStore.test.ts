@@ -49,7 +49,7 @@ function workflow(overrides: Partial<WorkflowDefinitionRecord> = {}): WorkflowDe
     status: "draft",
     draftRevision: 1,
     draft: content,
-    publishedVersion: null,
+    activePublishedVersion: null,
     createdAt: now,
     updatedAt: now,
     ...overrides
@@ -175,11 +175,11 @@ describe("PostgresWorkflowStore", () => {
   it("publishes the next immutable version under a transaction lock", async () => {
     const publishedVersion = version({ version: 2 })
     const harness = databaseHarness({
-      select: [[workflow({ status: "published", publishedVersion: 1 })]],
+      select: [[workflow({ activePublishedVersion: 1 })], [{ version: 1 }]],
       returning: [[publishedVersion]]
     })
 
-    await expect(store(harness).publish(workflowId)).resolves.toEqual(publishedVersion)
+    await expect(store(harness).publish(workflowId, [], [], 1)).resolves.toEqual(publishedVersion)
 
     expect(harness.transaction).toHaveBeenCalledOnce()
     expect(harness.insertedValues[0]).toEqual(
@@ -197,19 +197,32 @@ describe("PostgresWorkflowStore", () => {
         packageDigest: expect.stringMatching(/^[0-9a-f]{64}$/u)
       })
     )
-    expect(harness.updatedValues[0]).toEqual(expect.objectContaining({ status: "published", publishedVersion: 2 }))
+    expect(harness.updatedValues[0]).toEqual(expect.objectContaining({ activePublishedVersion: 2 }))
+  })
+
+  it("rejects a draft revision that changed before the publication lock", async () => {
+    const harness = databaseHarness({ select: [[workflow({ draftRevision: 2 })]] })
+
+    await expect(store(harness).publish(workflowId, [], [], 1)).rejects.toThrow(
+      "Workflow draft changed during publication"
+    )
+    expect(harness.insertedValues).toEqual([])
   })
 
   it("loads the current published version and handles unpublished or missing rows", async () => {
     await expect(
-      store(databaseHarness({ select: [[workflow({ publishedVersion: 1 })], [version()]] })).getPublishedVersion(
+      store(
+        databaseHarness({ select: [[workflow({ activePublishedVersion: 1 })], [version()]] })
+      ).getActivePublishedVersion(workflowId)
+    ).resolves.toEqual(version())
+    await expect(
+      store(databaseHarness({ select: [[workflow()]] })).getActivePublishedVersion(workflowId)
+    ).resolves.toBeNull()
+    await expect(store(databaseHarness({ select: [[]] })).getActivePublishedVersion(workflowId)).resolves.toBeNull()
+    await expect(
+      store(databaseHarness({ select: [[workflow({ activePublishedVersion: 1 })], []] })).getActivePublishedVersion(
         workflowId
       )
-    ).resolves.toEqual(version())
-    await expect(store(databaseHarness({ select: [[workflow()]] })).getPublishedVersion(workflowId)).resolves.toBeNull()
-    await expect(store(databaseHarness({ select: [[]] })).getPublishedVersion(workflowId)).resolves.toBeNull()
-    await expect(
-      store(databaseHarness({ select: [[workflow({ publishedVersion: 1 })], []] })).getPublishedVersion(workflowId)
     ).resolves.toBeNull()
   })
 

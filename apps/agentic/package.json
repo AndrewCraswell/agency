@@ -17,7 +17,7 @@
     "worker": "tsx src/prototype/cli.ts",
     "workflow": "tsx src/orchestrator/cli.ts",
     "test": "vitest run",
-    "test:postgres": "node --env-file=.env ../../node_modules/vitest/vitest.mjs run src/orchestrator/checkpointRecovery.integration.test.ts",
+    "test:postgres": "node --env-file=.env ../../node_modules/vitest/vitest.mjs run src/orchestrator/checkpointRecovery.integration.test.ts src/persistence/migrate.integration.test.ts src/workflows/workflowLifecycle.integration.test.ts",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
@@ -29,6 +29,7 @@
     "@langchain/langgraph-checkpoint": "1.1.3",
     "@langchain/langgraph-checkpoint-postgres": "1.0.4",
     "@nangohq/node": "0.70.9",
+    "cron-parser": "^5.6.2",
     "drizzle-orm": "^0.45.2",
     "drizzle-zod": "^0.8.3",
     "langsmith": "0.8.1",
