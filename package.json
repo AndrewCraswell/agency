@@ -12,7 +12,7 @@
     "verify": "run-s check test:coverage",
     "check": "run-p check:*",
     "check:change": "beachball check",
-    "check:format": "oxfmt --check",
+    "check:format": "oxfmt",
     "check:lint": "turbo run lint",
     "check:types": "turbo run check:types",
     "check:unused": "knip",

@@ -630,6 +630,11 @@ function registerEditorApis(value = draft()) {
   ApiMock.get("/api/workflows/steps", { data: { schemaVersion: "1", definitions } })
 }
 
+async function addStep(name: RegExp) {
+  await userEvent.click(screen.getByRole("button", { name: "Add step" }))
+  await userEvent.click(screen.getByRole("menuitem", { name }))
+}
+
 afterEach(() => navigate.mockReset())
 
 describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
@@ -1088,15 +1093,14 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     expect(await screen.findByText("Provider inventory unavailable")).toBeInTheDocument()
   })
 
-  it("authors and persists Phase 7 orchestration boundaries and runtime bounds", async () => {
+  it("authors and persists condition and exclusive-merge boundaries", async () => {
     registerEditorApis()
     const save = ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2) })
     render(<WorkflowEditorPage />)
 
-    await userEvent.click(await screen.findByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /^Exclusive merge/u }))
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /^Condition/u }))
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/^Exclusive merge/u)
+    await addStep(/^Condition/u)
     fireEvent.change(screen.getByRole("textbox", { name: "Expression path" }), { target: { value: "score" } })
     await userEvent.click(screen.getByRole("combobox", { name: "Operator" }))
     await userEvent.click(screen.getByRole("option", { name: "greater than or equal" }))
@@ -1104,22 +1108,70 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     await userEvent.click(screen.getByRole("combobox", { name: "Merge step" }))
     await userEvent.click(screen.getByRole("option", { name: "Exclusive merge" }))
 
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /^Join/u }))
+    await waitFor(
+      () =>
+        expect(
+          save.spy.mock.calls.some(([body]) =>
+            (body as { content: WorkflowDraftContent }).content.steps.some(
+              ({ definition, config }) =>
+                definition.kind === "condition" &&
+                (config.expression as { operator?: string } | undefined)?.operator === "greater_than_or_equal"
+            )
+          )
+        ).toBe(true),
+      { timeout: 2500 }
+    )
+    const saved = save.spy.mock.lastCall?.[0] as { content: WorkflowDraftContent }
+    expect(saved.content.steps.find(({ definition }) => definition.kind === "condition")?.config).toMatchObject({
+      expression: { path: ["score"], operator: "greater_than_or_equal", value: 80 }
+    })
+  }, 15_000)
+
+  it("authors and persists for-each and join runtime bounds", async () => {
+    registerEditorApis()
+    const save = ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2) })
+    render(<WorkflowEditorPage />)
+
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/^Join/u)
     await userEvent.click(screen.getByRole("combobox", { name: "Join policy" }))
     await userEvent.click(screen.getByRole("option", { name: "Quorum" }))
     const quorum = screen.getByRole("spinbutton", { name: "Quorum" })
     fireEvent.change(quorum, { target: { value: "2" } })
 
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /^For each/u }))
+    await addStep(/^For each/u)
     const concurrency = screen.getByRole("spinbutton", { name: "Concurrency" })
     fireEvent.change(concurrency, { target: { value: "3" } })
     await userEvent.click(screen.getByRole("combobox", { name: "Join step" }))
     await userEvent.click(screen.getByRole("option", { name: "Join" }))
 
-    await userEvent.click(screen.getByRole("button", { name: "Add step" }))
-    await userEvent.click(screen.getByRole("menuitem", { name: /^Bounded loop/u }))
+    await waitFor(
+      () =>
+        expect(
+          save.spy.mock.calls.some(([body]) => {
+            const steps = (body as { content: WorkflowDraftContent }).content.steps
+            return steps.some(({ definition, config }) => definition.kind === "for_each" && config.concurrency === 3)
+          })
+        ).toBe(true),
+      { timeout: 2500 }
+    )
+    const saved = save.spy.mock.lastCall?.[0] as { content: WorkflowDraftContent }
+    expect(saved.content.steps.find(({ definition }) => definition.kind === "join")?.config).toEqual({
+      policy: "quorum",
+      quorum: 2
+    })
+    expect(saved.content.steps.find(({ definition }) => definition.kind === "for_each")?.config).toMatchObject({
+      concurrency: 3
+    })
+  }, 15_000)
+
+  it("authors and persists bounded-loop runtime limits", async () => {
+    registerEditorApis()
+    const save = ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2) })
+    render(<WorkflowEditorPage />)
+
+    await screen.findByRole("button", { name: "Add step" })
+    await addStep(/^Bounded loop/u)
     const maximumActivations = screen.getByRole("spinbutton", { name: "Maximum activations" })
     fireEvent.change(maximumActivations, { target: { value: "25" } })
     await userEvent.click(screen.getByRole("combobox", { name: "On exhaustion" }))
@@ -1128,26 +1180,15 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     await waitFor(
       () =>
         expect(
-          save.spy.mock.calls.some(([body]) => {
-            const steps = (body as { content: WorkflowDraftContent }).content.steps
-            return steps.some(
+          save.spy.mock.calls.some(([body]) =>
+            (body as { content: WorkflowDraftContent }).content.steps.some(
               ({ definition, config }) => definition.kind === "bounded_loop" && config.maximumActivations === 25
             )
-          })
+          )
         ).toBe(true),
       { timeout: 2500 }
     )
     const saved = save.spy.mock.lastCall?.[0] as { content: WorkflowDraftContent }
-    expect(saved.content.steps.find(({ definition }) => definition.kind === "condition")?.config).toMatchObject({
-      expression: { path: ["score"], operator: "greater_than_or_equal", value: 80 }
-    })
-    expect(saved.content.steps.find(({ definition }) => definition.kind === "join")?.config).toEqual({
-      policy: "quorum",
-      quorum: 2
-    })
-    expect(saved.content.steps.find(({ definition }) => definition.kind === "for_each")?.config).toMatchObject({
-      concurrency: 3
-    })
     expect(saved.content.steps.find(({ definition }) => definition.kind === "bounded_loop")?.config).toMatchObject({
       maximumActivations: 25,
       onExhaustion: "complete"

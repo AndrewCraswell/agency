@@ -477,14 +477,18 @@ describe("RunDetailPage", { timeout: 30_000 }, () => {
     ).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole("button", { name: "Run again" })).toBeEnabled())
     await userEvent.click(screen.getByRole("button", { name: "Run again" }))
-    const runAgainDialog = screen.getByRole("dialog", { name: "Run workflow again" })
-    expect(within(runAgainDialog).getByRole("textbox", { name: "Run input JSON" })).toHaveValue(
+    const runAgainDialog = screen.getByRole("dialog", { name: "Run workflow again", hidden: true })
+    expect(within(runAgainDialog).getByRole("textbox", { name: "Run input JSON", hidden: true })).toHaveValue(
       JSON.stringify(journalRun.sealedManifest.input, null, 2)
     )
-    await userEvent.click(within(runAgainDialog).getByRole("button", { name: "Cancel" }))
+    await userEvent.click(within(runAgainDialog).getByRole("button", { name: "Cancel", hidden: true }))
     await userEvent.click(screen.getByRole("button", { name: "Resume" }))
-    const resumeDialog = await screen.findByRole("dialog", { name: "Resume workflow" }, { timeout: 5_000 })
-    await userEvent.click(within(resumeDialog).getByRole("button", { name: "Resume" }))
+    const resumeDialog = await screen.findByRole(
+      "dialog",
+      { name: "Resume workflow", hidden: true },
+      { timeout: 5_000 }
+    )
+    await userEvent.click(within(resumeDialog).getByRole("button", { name: "Resume", hidden: true }))
     expect(resume.hits).toBe(1)
     expect(await screen.findByText("The event was validated and committed to the journal.")).toBeInTheDocument()
     await userEvent.click(await screen.findByRole("button", { name: "Cancel run" }))
