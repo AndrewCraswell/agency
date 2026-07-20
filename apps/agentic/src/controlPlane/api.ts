@@ -11,6 +11,7 @@ import { DurableWebhookRouter } from "../webhooks/router"
 import { GitHubWebhookService } from "../webhooks/service"
 import { OpenRouterModelCatalog } from "../workflows/modelCatalog"
 import { RepositoryAgentCatalog } from "../workflows/repositoryAgents"
+import { OpenRouterWorkflowSchemaGenerator } from "../workflows/schemaGenerator"
 import { WorkflowService } from "../workflows/service"
 import { createControlPlaneServer } from "./server"
 import { ControlPlaneService } from "./service"
@@ -97,13 +98,15 @@ const workflowService = new WorkflowService(
   new OpenRouterModelCatalog({ apiKey: environment.OPENROUTER_API_KEY }),
   runtime.workflowScheduleStore
 )
+const workflowSchemaGenerator = new OpenRouterWorkflowSchemaGenerator({ apiKey: environment.OPENROUTER_API_KEY })
 const server = createControlPlaneServer(
   service,
   environment.CONTROL_PLANE_WEB_ORIGIN,
   webhookService,
   nangoWebhookReceiver,
   integrationService,
-  workflowService
+  workflowService,
+  workflowSchemaGenerator.generate.bind(workflowSchemaGenerator)
 )
 
 await integrationService.reconcile()

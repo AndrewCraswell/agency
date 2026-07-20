@@ -1,16 +1,16 @@
 import { z } from "zod"
 import {
-  WorkflowDefinitionV2Schema,
-  WorkflowResourceBindingV2Schema,
-  type WorkflowConnectionV2Schema,
-  type WorkflowDefinitionV2,
+  WorkflowDefinitionSchema,
+  WorkflowResourceBindingSchema,
+  type WorkflowConnectionSchema,
+  type WorkflowDefinition,
   type WorkflowStepInstance
-} from "./definitionV2"
+} from "./definition"
 import { RepositoryAgentReferenceSchema } from "./repositoryAgents"
 
-type ResourceBinding = z.infer<typeof WorkflowResourceBindingV2Schema>
+type ResourceBinding = z.infer<typeof WorkflowResourceBindingSchema>
 type RepositoryAgentReference = z.infer<typeof RepositoryAgentReferenceSchema>
-type WorkflowConnection = z.infer<typeof WorkflowConnectionV2Schema>
+type WorkflowConnection = z.infer<typeof WorkflowConnectionSchema>
 
 export type SelfHostingWorkflowInput = {
   repository: ResourceBinding
@@ -56,9 +56,9 @@ function connection(
   }
 }
 
-export function createSelfHostingWorkflowDefinition(input: SelfHostingWorkflowInput): WorkflowDefinitionV2 {
-  const repository = WorkflowResourceBindingV2Schema.parse(input.repository)
-  const linearTeam = WorkflowResourceBindingV2Schema.parse(input.linearTeam)
+export function createSelfHostingWorkflowDefinition(input: SelfHostingWorkflowInput): WorkflowDefinition {
+  const repository = WorkflowResourceBindingSchema.parse(input.repository)
+  const linearTeam = WorkflowResourceBindingSchema.parse(input.linearTeam)
   if (repository.provider !== "github" || repository.resourceType !== "repository") {
     throw new Error("Self-hosting requires a GitHub repository binding")
   }
@@ -163,13 +163,12 @@ export function createSelfHostingWorkflowDefinition(input: SelfHostingWorkflowIn
     connection("loop-success", "review-loop", "result", "success", "result")
   ]
 
-  return WorkflowDefinitionV2Schema.parse({
+  return WorkflowDefinitionSchema.parse({
     schemaVersion: "2",
     inputSchema: { type: "object", additionalProperties: true },
     outputSchema: { type: "object", additionalProperties: true },
     constants: {},
     resourceBindings: { repository, linearTeam },
-    fixtures: [],
     steps,
     connections
   })

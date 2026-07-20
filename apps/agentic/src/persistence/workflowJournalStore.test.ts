@@ -24,7 +24,7 @@ function executionPackage(): ExecutionPackageContent {
   return {
     schemaVersion: EXECUTION_CONTRACT_VERSION,
     workflowId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f",
-    workflowVersion: 1,
+    source: { kind: "published", version: 1 },
     compilerVersion: "1.0.0",
     mappingExpressionVersion: "1",
     eventDecoderVersions: { "run.prepared": "1" },
@@ -38,10 +38,14 @@ function executionPackage(): ExecutionPackageContent {
 }
 
 function executionPackageRecord(content = executionPackage(), overrides: Record<string, unknown> = {}) {
+  const workflowVersion = content.source.kind === "published" ? content.source.version : null
+  const draftRevision = content.source.kind === "draft_test" ? content.source.draftRevision : null
   return {
     packageDigest: executionPackageDigest(content),
     workflowId: content.workflowId,
-    workflowVersion: content.workflowVersion,
+    sourceKind: content.source.kind,
+    workflowVersion,
+    draftRevision,
     contractVersion: content.schemaVersion,
     compilerVersion: content.compilerVersion,
     compiledPlanDigest: jsonValueDigest(content.graph),
@@ -264,6 +268,25 @@ describe("PostgresWorkflowJournalStore", () => {
     )
   })
 
+  it("persists and reuses a draft-test package by immutable digest", async () => {
+    const content: ExecutionPackageContent = {
+      ...executionPackage(),
+      source: { kind: "draft_test", draftRevision: 4 }
+    }
+    const record = executionPackageRecord(content)
+    const harness = databaseHarness({ selects: [[record]] })
+
+    await expect(store(harness).publishExecutionPackage(content)).resolves.toEqual(record)
+    expect(harness.insertedValues[0]).toEqual(
+      expect.objectContaining({
+        packageDigest: record.packageDigest,
+        sourceKind: "draft_test",
+        workflowVersion: null,
+        draftRevision: 4
+      })
+    )
+  })
+
   it("prepares initial activations once and returns an idempotent run", async () => {
     const preparedRun = run({ status: "runnable", latestSequence: 1 })
     const createdHarness = databaseHarness({ returns: [[preparedRun]] })
@@ -320,8 +343,7 @@ describe("PostgresWorkflowJournalStore", () => {
       outputSchema: { type: "object" },
       steps: [],
       connections: [],
-      topologicalOrder: [],
-      fixtures: []
+      topologicalOrder: []
     }
     const packageRecord = executionPackageRecord(content, { packageDigest: "c".repeat(64) })
     const harness = databaseHarness({
@@ -440,7 +462,6 @@ describe("PostgresWorkflowJournalStore", () => {
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
-      fixtures: [],
       topologicalOrder: ["create-pull-request", "success"]
     }
     const packageRecord = executionPackageRecord({ ...executionPackage(), graph }, { packageDigest: "c".repeat(64) })
@@ -502,7 +523,6 @@ describe("PostgresWorkflowJournalStore", () => {
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
-      fixtures: [],
       topologicalOrder: ["create-pull-request", "success"]
     }
     const packageRecord = executionPackageRecord({ ...executionPackage(), graph }, { packageDigest: "c".repeat(64) })
@@ -760,8 +780,7 @@ describe("PostgresWorkflowJournalStore", () => {
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
-      topologicalOrder: ["wait", "success"],
-      fixtures: []
+      topologicalOrder: ["wait", "success"]
     }
     const harness = databaseHarness({
       selects: [[run()], [activation({ stepId: "wait", status: "waiting" })], [executionPackageRecord(content)]],
@@ -941,8 +960,7 @@ describe("PostgresWorkflowJournalStore", () => {
         }
       ],
       connections: [],
-      topologicalOrder: ["success"],
-      fixtures: []
+      topologicalOrder: ["success"]
     }
     const childPackage = executionPackageRecord({ ...executionPackage(), graph }, { packageDigest: "c".repeat(64) })
     const childActivation = activation({
@@ -987,8 +1005,7 @@ describe("PostgresWorkflowJournalStore", () => {
         }
       ],
       connections: [],
-      topologicalOrder: ["failure"],
-      fixtures: []
+      topologicalOrder: ["failure"]
     }
     const childPackage = executionPackageRecord({ ...executionPackage(), graph }, { packageDigest: "c".repeat(64) })
     const childActivation = activation({

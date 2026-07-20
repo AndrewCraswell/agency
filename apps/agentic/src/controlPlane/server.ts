@@ -4,6 +4,7 @@ import { z } from "zod"
 import type { IntegrationService } from "../integrations/service"
 import { summarizeNangoWebhook, type NangoWebhookReceiver } from "../webhooks/nango"
 import type { GitHubWebhookService } from "../webhooks/service"
+import type { WorkflowSchemaGenerator } from "../workflows/schemaGenerator"
 import type { WorkflowService } from "../workflows/service"
 import { ApiErrorSchema } from "./contracts"
 import type { ControlPlaneService } from "./service"
@@ -60,7 +61,8 @@ export function createControlPlaneServer(
   webhookService?: GitHubWebhookService,
   nangoWebhookReceiver?: NangoWebhookReceiver,
   integrationService?: IntegrationService,
-  workflowService?: WorkflowService
+  workflowService?: WorkflowService,
+  workflowSchemaGenerator?: WorkflowSchemaGenerator
 ) {
   return createServer(async (request, response) => {
     try {
@@ -120,6 +122,19 @@ export function createControlPlaneServer(
       }
       if (request.method === "GET" && url.pathname === "/api/workflows/models" && workflowService !== undefined) {
         writeJson(response, 200, await workflowService.modelDefinitions(), responseOrigin)
+        return
+      }
+      if (
+        request.method === "POST" &&
+        url.pathname === "/api/workflows/generate-schema" &&
+        workflowSchemaGenerator !== undefined
+      ) {
+        writeJson(
+          response,
+          200,
+          { schemaVersion: "1", schema: await workflowSchemaGenerator(await readJson(request)) },
+          responseOrigin
+        )
         return
       }
       if (

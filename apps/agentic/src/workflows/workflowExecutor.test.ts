@@ -1,27 +1,25 @@
 import { describe, expect, it, vi } from "vitest"
 import { CompiledWorkflowGraphSchema } from "./compiler"
-import type { WorkflowDefinitionV2 } from "./definitionV2"
+import type { WorkflowDefinition } from "./definition"
 import { WorkflowModelExecutionError } from "./modelExecutor"
+import { WorkflowProviderExecutionError } from "./providerExecutor"
 import {
   downstreamActivations,
-  executePhase2Step,
-  Phase2WorkflowDispatcher,
-  projectConnectionOutput,
-  simulatePhase2Workflow
-} from "./phase2Executor"
-import { WorkflowProviderExecutionError } from "./providerExecutor"
+  executeWorkflowStep,
+  WorkflowDispatcher,
+  projectConnectionOutput
+} from "./workflowExecutor"
 
 const runId = "019c230c-60c6-7bd8-a9f8-9e5f51b09e30"
 const activationId = "a".repeat(64)
 
-function definition(): WorkflowDefinitionV2 {
+function definition(): WorkflowDefinition {
   return {
     schemaVersion: "2",
     inputSchema: { type: "object" },
     outputSchema: { type: "object" },
     constants: {},
     resourceBindings: {},
-    fixtures: [],
     steps: [
       {
         id: "manual",
@@ -77,16 +75,16 @@ function childReconciliationJournal() {
   }
 }
 
-describe("Phase 2 workflow execution", () => {
+describe("workflow execution", () => {
   it("executes deterministic data steps and terminal nodes", async () => {
     const source = definition()
-    await expect(executePhase2Step(source.steps[1]!, { input: { issue: "FEN-423" } })).resolves.toEqual({
+    await expect(executeWorkflowStep(source.steps[1]!, { input: { issue: "FEN-423" } })).resolves.toEqual({
       output: { value: { issue: "FEN-423", answer: 42 } },
       terminalStatus: null,
       error: null,
       data: []
     })
-    await expect(executePhase2Step(source.steps[2]!, { result: { answer: 42 } })).resolves.toEqual({
+    await expect(executeWorkflowStep(source.steps[2]!, { result: { answer: 42 } })).resolves.toEqual({
       output: { result: { answer: 42 } },
       terminalStatus: "succeeded",
       error: null,
@@ -101,86 +99,6 @@ describe("Phase 2 workflow execution", () => {
     })
   })
 
-  it("simulates a draft and supports run to here", async () => {
-    await expect(simulatePhase2Workflow(definition(), { issue: "FEN-423" })).resolves.toEqual([
-      expect.objectContaining({ stepId: "manual", status: "succeeded" }),
-      expect.objectContaining({ stepId: "set", output: { value: { issue: "FEN-423", answer: 42 } } }),
-      expect.objectContaining({ stepId: "success", status: "succeeded" })
-    ])
-    await expect(simulatePhase2Workflow(definition(), {}, "set")).resolves.toHaveLength(2)
-  })
-
-  it("requires and propagates port-valid model fixtures during simulation", async () => {
-    const source = definition()
-    source.steps[1] = {
-      ...source.steps[1]!,
-      definition: { kind: "ai_model", version: 1 },
-      config: { modelId: "openai/gpt-test", messages: [{ role: "user", content: "Classify" }], outputMode: "text" }
-    }
-    source.connections[0] = { ...source.connections[0]!, target: { stepId: "set", port: "context" } }
-    source.connections[1] = { ...source.connections[1]!, source: { stepId: "set", port: "response" } }
-
-    await expect(simulatePhase2Workflow(source, {})).rejects.toThrow("Fixture response for Set is required")
-    const fixture = {
-      id: "model-fixture",
-      name: "Model fixture",
-      revision: 1,
-      workflowInput: {},
-      providerResponses: {},
-      agentResponses: {},
-      modelResponses: { set: { response: { mode: "text", text: "bug" } } }
-    }
-    await expect(simulatePhase2Workflow(source, {}, undefined, fixture)).resolves.toEqual([
-      expect.objectContaining({ stepId: "manual" }),
-      expect.objectContaining({ stepId: "set", output: fixture.modelResponses.set }),
-      expect.objectContaining({ stepId: "success" })
-    ])
-  })
-
-  it.each<{
-    kind: string
-    config: WorkflowDefinitionV2["steps"][number]["config"]
-    inputPort: string
-    outputPort: string
-  }>([
-    {
-      kind: "wait",
-      config: { correlation: "event:{{id}}", expiresAfterSeconds: 60, eventSchema: { type: "object" } },
-      inputPort: "context",
-      outputPort: "event"
-    },
-    {
-      kind: "child_workflow",
-      config: { packageDigest: "e".repeat(64), interfaceDigest: "f".repeat(64) },
-      inputPort: "input",
-      outputPort: "output"
-    }
-  ])(
-    "simulates $kind through a validated external-boundary fixture",
-    async ({ kind, config, inputPort, outputPort }) => {
-      const source = definition()
-      source.steps[1] = { ...source.steps[1]!, definition: { kind, version: 1 }, config }
-      source.connections[0] = { ...source.connections[0]!, target: { stepId: "set", port: inputPort } }
-      source.connections[1] = { ...source.connections[1]!, source: { stepId: "set", port: outputPort } }
-      const output = { [outputPort]: { answer: 42 } }
-      const fixture = {
-        id: `${kind}-fixture`,
-        name: `${kind} fixture`,
-        revision: 1,
-        workflowInput: {},
-        providerResponses: { set: output },
-        modelResponses: {},
-        agentResponses: {}
-      }
-
-      await expect(simulatePhase2Workflow(source, {}, undefined, fixture)).resolves.toEqual([
-        expect.objectContaining({ stepId: "manual" }),
-        expect.objectContaining({ stepId: "set", output }),
-        expect.objectContaining({ stepId: "success" })
-      ])
-    }
-  )
-
   it("stages a bounded Markdown artifact and emits its durable datum", async () => {
     const write = vi.fn(async () => "artifact.md")
     const step = {
@@ -191,7 +109,7 @@ describe("Phase 2 workflow execution", () => {
       config: { template: "# {{issue.id}}\n\n{{summary}}" },
       failurePolicy: { mode: "stop" as const, maximumAttempts: 1 }
     }
-    const result = await executePhase2Step(
+    const result = await executeWorkflowStep(
       step,
       { values: { issue: { id: "FEN-423" }, summary: "Ready" } },
       {
@@ -220,7 +138,7 @@ describe("Phase 2 workflow execution", () => {
       failurePolicy: { mode: "stop" as const, maximumAttempts: 1 }
     }
     await expect(
-      executePhase2Step(step, {
+      executeWorkflowStep(step, {
         items: [
           { id: "a", value: 1 },
           { id: "b", value: 2 }
@@ -229,7 +147,7 @@ describe("Phase 2 workflow execution", () => {
     ).resolves.toMatchObject({
       output: { collection: { a: { id: "a", value: 1 }, b: { id: "b", value: 2 } } }
     })
-    await expect(executePhase2Step(step, { items: [{ id: "a" }, { id: "b" }, { id: "c" }] })).rejects.toThrow(
+    await expect(executeWorkflowStep(step, { items: [{ id: "a" }, { id: "b" }, { id: "c" }] })).rejects.toThrow(
       "maximum is 2"
     )
   })
@@ -242,14 +160,14 @@ describe("Phase 2 workflow execution", () => {
       config: { mappings: { issueId: "issue.id", title: "issue.title" } }
     }
     await expect(
-      executePhase2Step(step, {
+      executeWorkflowStep(step, {
         input: { issue: { id: "FEN-423", title: "Fix flaky test", ignored: true }, actor: { login: "octocat" } }
       })
     ).resolves.toMatchObject({
       output: { value: { issueId: "FEN-423", title: "Fix flaky test" } }
     })
 
-    await expect(executePhase2Step(step, { input: { issue: { title: "Missing id" } } })).rejects.toThrow(
+    await expect(executeWorkflowStep(step, { input: { issue: { title: "Missing id" } } })).rejects.toThrow(
       "Mapping source path issue.id is unavailable"
     )
   })
@@ -269,7 +187,7 @@ describe("Phase 2 workflow execution", () => {
         }
       }
     }
-    await expect(executePhase2Step(step, { value: { status: "pending" } })).resolves.toMatchObject({
+    await expect(executeWorkflowStep(step, { value: { status: "pending" } })).resolves.toMatchObject({
       terminalStatus: "failed",
       error: {
         code: "validation_failed",
@@ -281,7 +199,7 @@ describe("Phase 2 workflow execution", () => {
       ...step,
       config: { schema: "not-an-object" }
     }
-    await expect(executePhase2Step(invalidSchemaStep, { value: { status: "open" } })).rejects.toThrow(
+    await expect(executeWorkflowStep(invalidSchemaStep, { value: { status: "open" } })).rejects.toThrow(
       "$.schema: Expected object"
     )
   })
@@ -293,7 +211,7 @@ describe("Phase 2 workflow execution", () => {
       definition: { kind: "failure", version: 1 },
       config: { code: "domain_failure", message: "Domain validation failed" }
     }
-    await expect(executePhase2Step(step, { error: { detail: "Missing owner" } })).resolves.toEqual({
+    await expect(executeWorkflowStep(step, { error: { detail: "Missing owner" } })).resolves.toEqual({
       output: {},
       terminalStatus: "failed",
       error: { code: "domain_failure", message: "Domain validation failed", detail: "Missing owner" },
@@ -308,10 +226,10 @@ describe("Phase 2 workflow execution", () => {
       definition: { kind: "condition", version: 1 },
       config: { expression: { path: ["score"], operator: "greater_than_or_equal", value: 80 }, joinStepId: "merge" }
     }
-    await expect(executePhase2Step(condition, { input: { score: 91 } })).resolves.toMatchObject({
+    await expect(executeWorkflowStep(condition, { input: { score: 91 } })).resolves.toMatchObject({
       output: { true: { score: 91 } }
     })
-    await expect(executePhase2Step(condition, { input: { score: 42 } })).resolves.toMatchObject({
+    await expect(executeWorkflowStep(condition, { input: { score: 42 } })).resolves.toMatchObject({
       output: { false: { score: 42 } }
     })
 
@@ -324,20 +242,20 @@ describe("Phase 2 workflow execution", () => {
         joinStepId: "merge"
       }
     }
-    await expect(executePhase2Step(switchStep, { input: { priority: "urgent" } })).resolves.toMatchObject({
+    await expect(executeWorkflowStep(switchStep, { input: { priority: "urgent" } })).resolves.toMatchObject({
       output: { branch: { key: "urgent", value: { priority: "urgent" } } }
     })
-    await expect(executePhase2Step(switchStep, { input: { priority: "low" } })).resolves.toMatchObject({
+    await expect(executeWorkflowStep(switchStep, { input: { priority: "low" } })).resolves.toMatchObject({
       output: { branch: { key: "normal", value: { priority: "low" } } }
     })
     await expect(
-      executePhase2Step(
+      executeWorkflowStep(
         { ...source.steps[1]!, definition: { kind: "exclusive_merge", version: 1 }, config: {} },
         { branches: [{ id: "one" }] }
       )
     ).resolves.toMatchObject({ output: { value: { id: "one" } } })
     await expect(
-      executePhase2Step(
+      executeWorkflowStep(
         { ...source.steps[1]!, definition: { kind: "join", version: 1 }, config: { policy: "all" } },
         { branches: [{ id: "one" }, { id: "two" }] }
       )
@@ -367,16 +285,16 @@ describe("Phase 2 workflow execution", () => {
       config: { expression: { path: ["score"], operator: "less_than", value: 10 }, joinStepId: "merge" }
     }
 
-    await expect(executePhase2Step(conditionExists, { input: { issue: { id: "FEN-423" } } })).resolves.toMatchObject({
+    await expect(executeWorkflowStep(conditionExists, { input: { issue: { id: "FEN-423" } } })).resolves.toMatchObject({
       output: { true: { issue: { id: "FEN-423" } } }
     })
-    await expect(executePhase2Step(conditionTruthy, { input: { count: 0 } })).resolves.toMatchObject({
+    await expect(executeWorkflowStep(conditionTruthy, { input: { count: 0 } })).resolves.toMatchObject({
       output: { false: { count: 0 } }
     })
-    await expect(executePhase2Step(conditionNotEquals, { input: { status: "queued" } })).resolves.toMatchObject({
+    await expect(executeWorkflowStep(conditionNotEquals, { input: { status: "queued" } })).resolves.toMatchObject({
       output: { true: { status: "queued" } }
     })
-    await expect(executePhase2Step(conditionLessThan, { input: { score: 7 } })).resolves.toMatchObject({
+    await expect(executeWorkflowStep(conditionLessThan, { input: { score: 7 } })).resolves.toMatchObject({
       output: { true: { score: 7 } }
     })
 
@@ -410,7 +328,6 @@ describe("Phase 2 workflow execution", () => {
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
-      fixtures: [],
       topologicalOrder: ["condition", "on-true", "on-false"]
     })
     expect(downstreamActivations(conditionGraph, "condition", { true: { ok: true } }, [])).toEqual([
@@ -458,7 +375,6 @@ describe("Phase 2 workflow execution", () => {
           mappings: [{ sourcePath: ["value"], targetPath: [] }]
         }
       ],
-      fixtures: [],
       topologicalOrder: ["switch", "urgent-target", "normal-target"]
     })
     expect(
@@ -506,7 +422,6 @@ describe("Phase 2 workflow execution", () => {
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
-      fixtures: [],
       topologicalOrder: ["loop", "body", "exit"]
     })
 
@@ -530,12 +445,12 @@ describe("Phase 2 workflow execution", () => {
       }
     }
     await expect(
-      executePhase2Step(loop, { state: { remaining: 2 } }, { activationId, attemptOrdinal: 1, scope: [] })
+      executeWorkflowStep(loop, { state: { remaining: 2 } }, { activationId, attemptOrdinal: 1, scope: [] })
     ).resolves.toMatchObject({
       output: { iteration: { state: { remaining: 2 }, index: 0 } }
     })
     await expect(
-      executePhase2Step(
+      executeWorkflowStep(
         loop,
         { state: { remaining: 0 } },
         { activationId, attemptOrdinal: 1, scope: [{ kind: "loop", key: "set", iteration: 1 }] }
@@ -544,7 +459,7 @@ describe("Phase 2 workflow execution", () => {
       output: { result: { remaining: 0 } }
     })
     await expect(
-      executePhase2Step(
+      executeWorkflowStep(
         loop,
         { state: { remaining: 1 } },
         { activationId, attemptOrdinal: 1, scope: [{ kind: "loop", key: "set", iteration: 2 }] }
@@ -565,7 +480,7 @@ describe("Phase 2 workflow execution", () => {
         joinStepId: "merge"
       }
     }
-    await expect(executePhase2Step(equalsStep, { input: { payload: { id: "FEN-423" } } })).resolves.toMatchObject({
+    await expect(executeWorkflowStep(equalsStep, { input: { payload: { id: "FEN-423" } } })).resolves.toMatchObject({
       output: { true: { payload: { id: "FEN-423" } } }
     })
 
@@ -582,13 +497,13 @@ describe("Phase 2 workflow execution", () => {
       config: { expression: { path: ["score"], operator: "less_than_or_equal", value: 2 }, joinStepId: "merge" }
     }
 
-    await expect(executePhase2Step(greaterThanStep, { input: { score: 3 } })).rejects.toThrow(
+    await expect(executeWorkflowStep(greaterThanStep, { input: { score: 3 } })).rejects.toThrow(
       "greater_than requires numeric operands"
     )
-    await expect(executePhase2Step(greaterThanOrEqualStep, { input: { score: "3" } })).rejects.toThrow(
+    await expect(executeWorkflowStep(greaterThanOrEqualStep, { input: { score: "3" } })).rejects.toThrow(
       "greater_than_or_equal requires numeric operands"
     )
-    await expect(executePhase2Step(lessThanOrEqualStep, { input: { score: "3" } })).rejects.toThrow(
+    await expect(executeWorkflowStep(lessThanOrEqualStep, { input: { score: "3" } })).rejects.toThrow(
       "less_than_or_equal requires numeric operands"
     )
   })
@@ -603,7 +518,7 @@ describe("Phase 2 workflow execution", () => {
         joinStepId: "merge"
       }
     }
-    await expect(executePhase2Step(switchStep, { input: { priority: "low" } })).rejects.toThrow(
+    await expect(executeWorkflowStep(switchStep, { input: { priority: "low" } })).rejects.toThrow(
       "Switch matched no case and has no default branch"
     )
   })
@@ -623,10 +538,10 @@ describe("Phase 2 workflow execution", () => {
       failurePolicy: { mode: "stop" as const, maximumAttempts: 1 }
     }
 
-    await expect(executePhase2Step(arrayCollect, { items: [{ id: "a" }, { id: "b" }] })).resolves.toMatchObject({
+    await expect(executeWorkflowStep(arrayCollect, { items: [{ id: "a" }, { id: "b" }] })).resolves.toMatchObject({
       output: { collection: [{ id: "a" }, { id: "b" }] }
     })
-    await expect(executePhase2Step(keyedCollect, { items: [{ id: { nested: true } }] })).rejects.toThrow(
+    await expect(executeWorkflowStep(keyedCollect, { items: [{ id: { nested: true } }] })).rejects.toThrow(
       "Collect item is missing scalar key field id"
     )
   })
@@ -639,11 +554,11 @@ describe("Phase 2 workflow execution", () => {
       config: { template: "{{body}}" }
     }
 
-    await expect(executePhase2Step(compose, { values: { body: "ok" } })).rejects.toThrow(
+    await expect(executeWorkflowStep(compose, { values: { body: "ok" } })).rejects.toThrow(
       "Compose Markdown requires attempt provenance"
     )
     await expect(
-      executePhase2Step(
+      executeWorkflowStep(
         compose,
         { values: { body: "a".repeat(65_537) } },
         { activationId, attemptOrdinal: 1, artifactStore: { write: vi.fn(), read: vi.fn(), manifest: () => [] } }
@@ -683,7 +598,6 @@ describe("Phase 2 workflow execution", () => {
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
-      fixtures: [],
       topologicalOrder: ["for-each", "body", "join"]
     })
     expect(downstreamActivations(graphAny, "for-each", { item: [{ id: "a" }, { id: "b" }, { id: "c" }] }, [])).toEqual([
@@ -764,7 +678,6 @@ describe("Phase 2 workflow execution", () => {
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
-      fixtures: [],
       topologicalOrder: ["loop", "body", "exit"]
     })
 
@@ -808,14 +721,14 @@ describe("Phase 2 workflow execution", () => {
     const getExecutionPackage = vi.fn(async () => ({
       packageDigest: "b".repeat(64),
       workflowId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f",
-      workflowVersion: 1,
+      source: { kind: "published" as const, version: 1 },
       contractVersion: "1",
       compilerVersion: "1",
       compiledPlanDigest: "d".repeat(64),
       content: {
         schemaVersion: "1" as const,
         workflowId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f",
-        workflowVersion: 1,
+        source: { kind: "published" as const, version: 1 },
         compilerVersion: "1",
         mappingExpressionVersion: "1",
         eventDecoderVersions: {},
@@ -825,7 +738,6 @@ describe("Phase 2 workflow execution", () => {
           outputSchema: source.outputSchema,
           steps: source.steps,
           connections: source.connections,
-          fixtures: source.fixtures,
           topologicalOrder: ["manual", "set", "success"]
         },
         stepDefinitions: [],
@@ -947,7 +859,7 @@ describe("Phase 2 workflow execution", () => {
       ...childReconciliationJournal()
     }
 
-    const dispatcher = new Phase2WorkflowDispatcher(
+    const dispatcher = new WorkflowDispatcher(
       journal,
       "worker-1",
       undefined,
@@ -1026,14 +938,14 @@ describe("Phase 2 workflow execution", () => {
     const getExecutionPackage = vi.fn(async () => ({
       packageDigest: "b".repeat(64),
       workflowId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f",
-      workflowVersion: 1,
+      source: { kind: "published" as const, version: 1 },
       contractVersion: "1",
       compilerVersion: "1",
       compiledPlanDigest: "d".repeat(64),
       content: {
         schemaVersion: "1" as const,
         workflowId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f",
-        workflowVersion: 1,
+        source: { kind: "published" as const, version: 1 },
         compilerVersion: "1",
         mappingExpressionVersion: "1",
         eventDecoderVersions: {},
@@ -1043,7 +955,6 @@ describe("Phase 2 workflow execution", () => {
           outputSchema: source.outputSchema,
           steps: source.steps,
           connections: source.connections,
-          fixtures: source.fixtures,
           topologicalOrder: ["manual", "set", "success"]
         },
         stepDefinitions: [],
@@ -1114,7 +1025,7 @@ describe("Phase 2 workflow execution", () => {
     }
 
     await expect(
-      new Phase2WorkflowDispatcher(
+      new WorkflowDispatcher(
         baseJournal,
         "worker-1",
         undefined,
@@ -1146,7 +1057,7 @@ describe("Phase 2 workflow execution", () => {
       }
     }
     await expect(
-      new Phase2WorkflowDispatcher(
+      new WorkflowDispatcher(
         {
           ...baseJournal,
           listReadyActivations: vi.fn(async () => [{ ...(await baseJournal.listReadyActivations())[0] }])
@@ -1196,7 +1107,7 @@ describe("Phase 2 workflow execution", () => {
       invokeChildWorkflow: vi.fn(),
       ...childReconciliationJournal()
     }
-    await expect(new Phase2WorkflowDispatcher(continueJournal, "worker-1").dispatchReady()).resolves.toBe(0)
+    await expect(new WorkflowDispatcher(continueJournal, "worker-1").dispatchReady()).resolves.toBe(0)
 
     const failJournal = {
       ...continueJournal,
@@ -1204,7 +1115,7 @@ describe("Phase 2 workflow execution", () => {
         throw new Error("database unavailable")
       })
     }
-    await expect(new Phase2WorkflowDispatcher(failJournal, "worker-1").dispatchReady()).rejects.toThrow(
+    await expect(new WorkflowDispatcher(failJournal, "worker-1").dispatchReady()).rejects.toThrow(
       "database unavailable"
     )
   })
@@ -1248,14 +1159,14 @@ describe("Phase 2 workflow execution", () => {
         return {
           packageDigest: "b".repeat(64),
           workflowId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f",
-          workflowVersion: 1,
+          source: { kind: "published" as const, version: 1 },
           contractVersion: "1",
           compilerVersion: "1",
           compiledPlanDigest: "d".repeat(64),
           content: {
             schemaVersion: "1" as const,
             workflowId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f",
-            workflowVersion: 1,
+            source: { kind: "published" as const, version: 1 },
             compilerVersion: "1",
             mappingExpressionVersion: "1",
             eventDecoderVersions: {},
@@ -1265,7 +1176,6 @@ describe("Phase 2 workflow execution", () => {
               outputSchema: source.outputSchema,
               steps: source.steps,
               connections: source.connections,
-              fixtures: source.fixtures,
               topologicalOrder: ["manual", "set", "success"]
             },
             stepDefinitions: [],
@@ -1302,7 +1212,7 @@ describe("Phase 2 workflow execution", () => {
       invokeChildWorkflow: vi.fn(async () => undefined),
       ...childReconciliationJournal()
     }
-    const dispatcher = new Phase2WorkflowDispatcher(journal, "worker-1")
+    const dispatcher = new WorkflowDispatcher(journal, "worker-1")
 
     await expect(dispatcher.dispatchReady()).resolves.toBe(1)
     expect(completeAttempt).toHaveBeenCalledWith(
@@ -1375,14 +1285,14 @@ describe("Phase 2 workflow execution", () => {
       getExecutionPackage: vi.fn(async () => ({
         packageDigest: "b".repeat(64),
         workflowId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f",
-        workflowVersion: 1,
+        source: { kind: "published" as const, version: 1 },
         contractVersion: "1",
         compilerVersion: "1",
         compiledPlanDigest: "d".repeat(64),
         content: {
           schemaVersion: "1" as const,
           workflowId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f",
-          workflowVersion: 1,
+          source: { kind: "published" as const, version: 1 },
           compilerVersion: "1",
           mappingExpressionVersion: "1",
           eventDecoderVersions: {},
@@ -1392,7 +1302,6 @@ describe("Phase 2 workflow execution", () => {
             outputSchema: source.outputSchema,
             steps: source.steps,
             connections: source.connections,
-            fixtures: source.fixtures,
             topologicalOrder: ["manual", "set", "success"]
           },
           stepDefinitions: [],
@@ -1429,7 +1338,7 @@ describe("Phase 2 workflow execution", () => {
       ...childReconciliationJournal()
     }
 
-    await expect(new Phase2WorkflowDispatcher(journal, "worker-1").dispatchReady()).resolves.toBe(1)
+    await expect(new WorkflowDispatcher(journal, "worker-1").dispatchReady()).resolves.toBe(1)
     expect(completeAttempt).toHaveBeenCalledWith(
       expect.objectContaining({
         downstream: [
@@ -1490,14 +1399,14 @@ describe("Phase 2 workflow execution", () => {
       getExecutionPackage: vi.fn(async () => ({
         packageDigest: "b".repeat(64),
         workflowId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f",
-        workflowVersion: 1,
+        source: { kind: "published" as const, version: 1 },
         contractVersion: "1",
         compilerVersion: "1",
         compiledPlanDigest: "d".repeat(64),
         content: {
           schemaVersion: "1" as const,
           workflowId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f",
-          workflowVersion: 1,
+          source: { kind: "published" as const, version: 1 },
           compilerVersion: "1",
           mappingExpressionVersion: "1",
           eventDecoderVersions: {},
@@ -1507,7 +1416,6 @@ describe("Phase 2 workflow execution", () => {
             outputSchema: source.outputSchema,
             steps: source.steps,
             connections: source.connections,
-            fixtures: source.fixtures,
             topologicalOrder: ["manual", "set", "success"]
           },
           stepDefinitions: [],
@@ -1545,7 +1453,7 @@ describe("Phase 2 workflow execution", () => {
     }
 
     await expect(
-      new Phase2WorkflowDispatcher(
+      new WorkflowDispatcher(
         journal,
         "worker-1",
         undefined,
@@ -1581,7 +1489,7 @@ describe("Phase 2 workflow execution", () => {
     const parentPackage = {
       schemaVersion: "1" as const,
       workflowId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f",
-      workflowVersion: 1,
+      source: { kind: "published" as const, version: 1 },
       compilerVersion: "1",
       mappingExpressionVersion: "1",
       eventDecoderVersions: {},
@@ -1591,7 +1499,6 @@ describe("Phase 2 workflow execution", () => {
         outputSchema: parent.outputSchema,
         steps: parent.steps,
         connections: parent.connections,
-        fixtures: parent.fixtures,
         topologicalOrder: ["manual", "set", "success"]
       },
       stepDefinitions: [],
@@ -1608,7 +1515,6 @@ describe("Phase 2 workflow execution", () => {
         outputSchema: child.outputSchema,
         steps: child.steps,
         connections: child.connections,
-        fixtures: child.fixtures,
         topologicalOrder: ["manual", "set", "success"]
       }
     }
@@ -1647,7 +1553,7 @@ describe("Phase 2 workflow execution", () => {
       getExecutionPackage: vi.fn(async (digest: string) => ({
         packageDigest: digest,
         workflowId: parentPackage.workflowId,
-        workflowVersion: 1,
+        source: { kind: "published" as const, version: 1 },
         contractVersion: "1",
         compilerVersion: "1",
         compiledPlanDigest: "d".repeat(64),
@@ -1680,7 +1586,7 @@ describe("Phase 2 workflow execution", () => {
       ...childReconciliationJournal()
     }
 
-    await expect(new Phase2WorkflowDispatcher(journal, "worker-1").dispatchReady()).resolves.toBe(1)
+    await expect(new WorkflowDispatcher(journal, "worker-1").dispatchReady()).resolves.toBe(1)
     expect(invokeChildWorkflow).toHaveBeenCalledWith(
       expect.objectContaining({
         parentRunId: runId,
@@ -1719,7 +1625,7 @@ describe("Phase 2 workflow execution", () => {
       failWait: vi.fn()
     }
 
-    await expect(new Phase2WorkflowDispatcher(journal, "worker-1").dispatchReady()).resolves.toBe(0)
+    await expect(new WorkflowDispatcher(journal, "worker-1").dispatchReady()).resolves.toBe(0)
     expect(recordChildRunCompletion).toHaveBeenCalledWith({
       childRunId,
       status: "succeeded",
@@ -1757,7 +1663,7 @@ describe("Phase 2 workflow execution", () => {
       failWait
     }
 
-    await expect(new Phase2WorkflowDispatcher(journal, "worker-1").dispatchReady()).resolves.toBe(0)
+    await expect(new WorkflowDispatcher(journal, "worker-1").dispatchReady()).resolves.toBe(0)
     expect(recordChildRunCompletion).toHaveBeenCalledWith({ childRunId, status: "failed", output: {}, error })
     expect(failWait).toHaveBeenCalledWith({
       runId,
@@ -1787,7 +1693,7 @@ describe("Phase 2 workflow execution", () => {
       failWait
     }
 
-    await expect(new Phase2WorkflowDispatcher(journal, "worker-1").dispatchReady()).resolves.toBe(0)
+    await expect(new WorkflowDispatcher(journal, "worker-1").dispatchReady()).resolves.toBe(0)
     expect(failWait).toHaveBeenCalledWith({
       runId,
       correlationKey: `child:${childRunId}`,
@@ -1811,7 +1717,7 @@ describe("Phase 2 workflow execution", () => {
       ...childReconciliationJournal()
     }
 
-    await expect(new Phase2WorkflowDispatcher(journal, "worker-1").dispatchReady()).resolves.toBe(0)
+    await expect(new WorkflowDispatcher(journal, "worker-1").dispatchReady()).resolves.toBe(0)
     expect(timeoutWait).toHaveBeenCalledWith({ runId, correlationKey: "wait:github:octo/agency:42" })
     expect(journal.listReadyActivations).toHaveBeenCalledTimes(1)
   })

@@ -151,7 +151,7 @@ export class PostgresWorkflowStore {
         .returning()
       const executionPackage = compileWorkflowDefinition({
         workflowId,
-        workflowVersion: version,
+        source: { kind: "published", version },
         definition: workflow.draft,
         maximumPhase: CURRENT_WORKFLOW_RELEASE_PHASE,
         agentSnapshots,
@@ -160,7 +160,9 @@ export class PostgresWorkflowStore {
       await transaction.insert(workflowExecutionPackages).values({
         packageDigest: executionPackageDigest(executionPackage),
         workflowId,
+        sourceKind: "published",
         workflowVersion: version,
+        draftRevision: null,
         contractVersion: executionPackage.schemaVersion,
         compilerVersion: executionPackage.compilerVersion,
         compiledPlanDigest: jsonValueDigest(executionPackage.graph),

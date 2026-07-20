@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
 import { compileWorkflowDefinition } from "./compiler"
-import type { WorkflowResourceBindingV2Schema } from "./definitionV2"
+import type { WorkflowResourceBindingSchema } from "./definition"
 import { RepositoryAgentSnapshotSchema, type RepositoryAgentSnapshot } from "./repositoryAgents"
 import { createSelfHostingWorkflowDefinition } from "./selfHostingWorkflow"
 import { CURRENT_WORKFLOW_RELEASE_PHASE } from "./stepRegistry"
@@ -15,7 +15,7 @@ function binding(
   externalId: string,
   name: string,
   capabilities: string[]
-): z.infer<typeof WorkflowResourceBindingV2Schema> {
+): z.infer<typeof WorkflowResourceBindingSchema> {
   return { connectionId, provider, resourceType, externalId, name, capabilities }
 }
 
@@ -65,14 +65,14 @@ describe("createSelfHostingWorkflowDefinition", () => {
     })
     const compiled = compileWorkflowDefinition({
       workflowId,
-      workflowVersion: 1,
+      source: { kind: "published", version: 1 },
       definition,
       maximumPhase: CURRENT_WORKFLOW_RELEASE_PHASE,
       agentSnapshots: snapshots
     })
     const reordered = compileWorkflowDefinition({
       workflowId,
-      workflowVersion: 1,
+      source: { kind: "published", version: 1 },
       definition: {
         ...definition,
         steps: [...definition.steps].reverse(),

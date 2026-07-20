@@ -53,8 +53,7 @@ function draft() {
       steps: [],
       connections: [],
       constants: {},
-      resourceBindings: {},
-      fixtures: []
+      resourceBindings: {}
     },
     versions: [],
     updatedAt

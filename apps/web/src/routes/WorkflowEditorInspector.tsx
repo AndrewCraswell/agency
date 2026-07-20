@@ -18,11 +18,12 @@ import {
   Textarea,
   Title3
 } from "@fluentui/react-components"
-import { BeakerRegular, ChevronRightRegular, DeleteRegular } from "@fluentui/react-icons"
+import { ChevronRightRegular, DeleteRegular } from "@fluentui/react-icons"
 import { type Edge, type Node } from "@xyflow/react"
 import { useEffect, useState, type ReactNode, type RefObject } from "react"
 import {
   discoverRepositoryAgents,
+  generateWorkflowSchema,
   getIntegrationResourceInventory,
   listIntegrationProviderEvents,
   listProviderOperations,
@@ -41,6 +42,7 @@ import {
 } from "@/services/api"
 import { ConnectionMappingsField } from "./workflowEditor/ConnectionMappingsField"
 import { DraftJsonField } from "./workflowEditor/DraftJsonField"
+import { supportedJsonSchemaError } from "./workflowEditor/generateJsonSchema"
 import { ObjectRowsField } from "./workflowEditor/ObjectRowsField"
 import { SwitchCasesField } from "./workflowEditor/SwitchCasesField"
 import { WorkflowTestInputEditor } from "./workflowEditor/WorkflowTestInputEditor"
@@ -58,6 +60,9 @@ type WorkflowEditorInspectorProps = {
   draft: WorkflowDraftView
   testInput: string
   setTestInput: (value: string) => void
+  testTriggers: Array<{ id: string; label: string; kind: string }>
+  testTriggerId: string | undefined
+  setTestTriggerId: (stepId: string) => void
   selectedNode: CanvasNode | undefined
   selectedEdge: CanvasEdge | undefined
   nodes: CanvasNode[]
@@ -65,7 +70,6 @@ type WorkflowEditorInspectorProps = {
   repository: WorkflowDraftContent["resourceBindings"][string] | undefined
   changeStep: (step: WorkflowStep, resourceBinding?: WorkflowDraftContent["resourceBindings"][string] | null) => void
   changeEdge: (edge: CanvasEdge) => void
-  runToHere: (stepId: string) => void
   removeSelectedStep: () => void
   removeSelectedEdge: () => void
   close: () => void
@@ -77,6 +81,9 @@ export function WorkflowEditorInspector({
   draft,
   testInput,
   setTestInput,
+  testTriggers,
+  testTriggerId,
+  setTestTriggerId,
   selectedNode,
   selectedEdge,
   nodes,
@@ -84,7 +91,6 @@ export function WorkflowEditorInspector({
   repository,
   changeStep,
   changeEdge,
-  runToHere,
   removeSelectedStep,
   removeSelectedEdge,
   close
@@ -119,6 +125,24 @@ export function WorkflowEditorInspector({
       )}
       {selectedEdge === undefined && selectedNode === undefined && (
         <div className={styles.fields}>
+          <Field label="Test trigger" hint="Webhook events and schedule fires are injected after external ingress.">
+            <Dropdown
+              placeholder="Select a trigger"
+              value={testTriggers.find(({ id }) => id === testTriggerId)?.label ?? ""}
+              selectedOptions={testTriggerId === undefined ? [] : [testTriggerId]}
+              onOptionSelect={(_, data) => {
+                if (data.optionValue !== undefined) {
+                  setTestTriggerId(data.optionValue)
+                }
+              }}
+            >
+              {testTriggers.map((trigger) => (
+                <Option key={trigger.id} value={trigger.id}>
+                  {trigger.label}
+                </Option>
+              ))}
+            </Dropdown>
+          </Field>
           <WorkflowTestInputEditor schema={draft.content.inputSchema} value={testInput} onChange={setTestInput} />
           <Body1>Draft revision {draft.draftRevision}</Body1>
           {draft.versions.map((version) => (
@@ -136,7 +160,6 @@ export function WorkflowEditorInspector({
           changeStep={changeStep}
           repository={repository}
           changeEdge={changeEdge}
-          runToHere={() => runToHere(selectedNode.id)}
           remove={removeSelectedStep}
         />
       )}
@@ -151,7 +174,6 @@ function StepInspector({
   repository,
   changeStep,
   changeEdge,
-  runToHere,
   remove
 }: {
   node: CanvasNode
@@ -160,7 +182,6 @@ function StepInspector({
   repository: WorkflowDraftContent["resourceBindings"][string] | undefined
   changeStep: (step: WorkflowStep, resourceBinding?: WorkflowDraftContent["resourceBindings"][string] | null) => void
   changeEdge: (edge: CanvasEdge) => void
-  runToHere: () => void
   remove: () => void
 }) {
   const styles = useWorkflowEditorInspectorStyles()
@@ -316,9 +337,6 @@ function StepInspector({
       {definition.kind === "wait" && <WaitInspector step={step} changeStep={changeStep} />}
       {definition.kind === "child_workflow" && <ChildWorkflowInspector step={step} changeStep={changeStep} />}
       {edges.length > 0 && <ConnectionInspector node={node} edges={edges} changeEdge={changeEdge} />}
-      <Button icon={<BeakerRegular />} onClick={runToHere}>
-        Run to here
-      </Button>
       <Button appearance="subtle" icon={<DeleteRegular />} onClick={remove}>
         Delete step
       </Button>
@@ -1091,6 +1109,102 @@ function ModelCatalogState({
   return children
 }
 
+function SchemaGenerator({
+  modelId,
+  modelName,
+  initialPrompt,
+  onApply
+}: {
+  modelId: string
+  modelName: string
+  initialPrompt: string
+  onApply: (schema: JsonValue) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [prompt, setPrompt] = useState("")
+  const [proposal, setProposal] = useState<JsonValue | undefined>()
+  const [error, setError] = useState("")
+  const [generating, setGenerating] = useState(false)
+
+  async function generate(): Promise<void> {
+    setGenerating(true)
+    setError("")
+    try {
+      setProposal(await generateWorkflowSchema({ modelId, prompt }))
+    } catch (generationError) {
+      setError(generationError instanceof Error ? generationError.message : "Schema generation failed.")
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  return (
+    <>
+      <Button
+        disabled={modelId === ""}
+        onClick={() => {
+          setPrompt(initialPrompt)
+          setProposal(undefined)
+          setError("")
+          setOpen(true)
+        }}
+      >
+        Generate schema
+      </Button>
+      <Dialog open={open} onOpenChange={(_, data) => setOpen(data.open)}>
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Generate output schema</DialogTitle>
+            <DialogContent>
+              <Body1>
+                Generating a proposal calls {modelName} through OpenRouter and may incur model charges. Review and edit
+                the proposal before using it.
+              </Body1>
+              <Field label="Output description or example">
+                <Textarea resize="vertical" value={prompt} onChange={(_, data) => setPrompt(data.value)} />
+              </Field>
+              {error === "" ? null : <Caption1>{error}</Caption1>}
+              {proposal === undefined ? null : (
+                <DraftJsonField
+                  label="Schema proposal"
+                  value={proposal}
+                  invalidMessage="Enter valid JSON Schema."
+                  onChange={setProposal}
+                />
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                appearance="secondary"
+                disabled={generating || prompt.trim() === ""}
+                onClick={() => void generate()}
+              >
+                {generating ? "Generating" : "Generate proposal"}
+              </Button>
+              <Button
+                appearance="primary"
+                disabled={proposal === undefined || supportedJsonSchemaError(proposal) !== null}
+                onClick={() => {
+                  if (proposal === undefined || supportedJsonSchemaError(proposal) !== null) {
+                    return
+                  }
+                  onApply(proposal)
+                  setOpen(false)
+                }}
+              >
+                Use schema
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+    </>
+  )
+}
+
 function AiModelInspector({ step, changeStep }: { step: WorkflowStep; changeStep: (step: WorkflowStep) => void }) {
   const { models, state, error } = useWorkflowModels()
   const messages = promptMessages(step.config.messages)
@@ -1199,12 +1313,20 @@ function AiModelInspector({ step, changeStep }: { step: WorkflowStep; changeStep
         </Dropdown>
       </Field>
       {outputMode === "structured" && (
-        <JsonSchemaField
-          key={`${step.id}:output-schema`}
-          label="Output schema"
-          value={step.config.outputSchema}
-          onChange={(outputSchema) => changeStep({ ...step, config: { ...step.config, outputSchema } })}
-        />
+        <>
+          <JsonSchemaField
+            key={`${step.id}:output-schema`}
+            label="Output schema"
+            value={step.config.outputSchema}
+            onChange={(outputSchema) => changeStep({ ...step, config: { ...step.config, outputSchema } })}
+          />
+          <SchemaGenerator
+            modelId={modelId}
+            modelName={selected?.name ?? modelId}
+            initialPrompt={messages.map((message) => message.content).join("\n\n")}
+            onApply={(outputSchema) => changeStep({ ...step, config: { ...step.config, outputSchema } })}
+          />
+        </>
       )}
       <Field label="Temperature">
         <Input
@@ -1279,6 +1401,8 @@ function StructuredJudgmentInspector({
 }) {
   const { models, state, error } = useWorkflowModels()
   const modelId = typeof step.config.modelId === "string" ? step.config.modelId : ""
+  const selected = models.find((model) => model.modelId === modelId)
+  const criteria = typeof step.config.criteria === "string" ? step.config.criteria : ""
   return (
     <ModelCatalogState state={state} error={error} models={models}>
       <ModelPicker
@@ -1289,7 +1413,7 @@ function StructuredJudgmentInspector({
       <Field label="Judgment criteria">
         <Textarea
           resize="vertical"
-          value={typeof step.config.criteria === "string" ? step.config.criteria : ""}
+          value={criteria}
           onChange={(_, data) => changeStep({ ...step, config: { ...step.config, criteria: data.value } })}
         />
       </Field>
@@ -1298,6 +1422,12 @@ function StructuredJudgmentInspector({
         label="Judgment output schema"
         value={step.config.outputSchema}
         onChange={(outputSchema) => changeStep({ ...step, config: { ...step.config, outputSchema } })}
+      />
+      <SchemaGenerator
+        modelId={modelId}
+        modelName={selected?.name ?? modelId}
+        initialPrompt={criteria}
+        onApply={(outputSchema) => changeStep({ ...step, config: { ...step.config, outputSchema } })}
       />
       <Caption1>The model receives mapped evidence as untrusted data and must return this schema.</Caption1>
     </ModelCatalogState>

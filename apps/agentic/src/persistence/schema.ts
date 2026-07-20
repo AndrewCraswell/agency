@@ -227,7 +227,9 @@ export const workflowExecutionPackages = agenticSchema.table(
     workflowId: uuid("workflow_id")
       .notNull()
       .references(() => workflowDefinitions.workflowId, { onDelete: "restrict" }),
-    workflowVersion: integer("workflow_version").notNull(),
+    sourceKind: text("source_kind").notNull(),
+    workflowVersion: integer("workflow_version"),
+    draftRevision: integer("draft_revision"),
     contractVersion: text("contract_version").notNull(),
     compilerVersion: text("compiler_version").notNull(),
     compiledPlanDigest: char("compiled_plan_digest", { length: 64 }).notNull(),
@@ -242,8 +244,12 @@ export const workflowExecutionPackages = agenticSchema.table(
     }).onDelete("restrict"),
     check("workflow_execution_packages_digest_check", sql`${table.packageDigest} ~ '^[0-9a-f]{64}$'`),
     check("workflow_execution_packages_plan_digest_check", sql`${table.compiledPlanDigest} ~ '^[0-9a-f]{64}$'`),
-    check("workflow_execution_packages_version_check", sql`${table.workflowVersion} > 0`),
-    uniqueIndex("workflow_execution_packages_version_uidx").on(table.workflowId, table.workflowVersion)
+    check(
+      "workflow_execution_packages_source_check",
+      sql`(${table.sourceKind} = 'published' and ${table.workflowVersion} > 0 and ${table.draftRevision} is null) or (${table.sourceKind} = 'draft_test' and ${table.workflowVersion} is null and ${table.draftRevision} > 0)`
+    ),
+    uniqueIndex("workflow_execution_packages_version_uidx").on(table.workflowId, table.workflowVersion),
+    index("workflow_execution_packages_draft_idx").on(table.workflowId, table.draftRevision)
   ]
 )
 

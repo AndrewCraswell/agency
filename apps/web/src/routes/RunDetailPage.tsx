@@ -66,6 +66,13 @@ function persistedJson(value: unknown) {
   return JSON.stringify(value, null, 2)
 }
 
+function executionPackageLabel(executionPackage: WorkflowRunDetail["executionPackage"]): string {
+  if (executionPackage.sourceKind === "draft_test") {
+    return `Draft test revision ${executionPackage.draftRevision}`
+  }
+  return `Workflow version ${executionPackage.workflowVersion}`
+}
+
 function runMutationStatus(detail: WorkflowRunDetail, busyAction: string | null): string {
   if (busyAction === null) {
     return "Run details up to date"
@@ -382,7 +389,7 @@ function WorkflowRunView({
     <>
       <header className={classes.header}>
         <div className={classes.headerIdentity}>
-          <Caption1 className={classes.eyebrow}>Workflow version {detail.executionPackage.workflowVersion}</Caption1>
+          <Caption1 className={classes.eyebrow}>{executionPackageLabel(detail.executionPackage)}</Caption1>
           <Title1 as="h1">{pageTitle}</Title1>
           <Body1 className={classes.runId}>{detail.run.runId}</Body1>
         </div>
@@ -913,7 +920,7 @@ export function RunDetailPage() {
           </DialogSurface>
         </Dialog>
       )}
-      {!runAgainOpen ? null : (
+      {!runAgainOpen || detail?.executionPackage.sourceKind !== "published" ? null : (
         <Dialog
           open
           onOpenChange={(_, data) => {
@@ -927,7 +934,7 @@ export function RunDetailPage() {
               <DialogTitle>Run workflow again</DialogTitle>
               <DialogContent>
                 <Body1>
-                  Create a new run from workflow version {detail?.executionPackage.workflowVersion}. The current run and
+                  Create a new run from workflow version {detail.executionPackage.workflowVersion}. The current run and
                   its evidence remain unchanged.
                 </Body1>
                 <Field

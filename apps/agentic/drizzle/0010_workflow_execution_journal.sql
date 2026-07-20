@@ -5,7 +5,9 @@ ALTER TABLE "agentic"."integration_resources" DROP COLUMN "selected";
 CREATE TABLE "agentic"."workflow_execution_packages" (
   "package_digest" char(64) PRIMARY KEY NOT NULL,
   "workflow_id" uuid NOT NULL,
-  "workflow_version" integer NOT NULL,
+  "source_kind" text NOT NULL,
+  "workflow_version" integer,
+  "draft_revision" integer,
   "contract_version" text NOT NULL,
   "compiler_version" text NOT NULL,
   "compiled_plan_digest" char(64) NOT NULL,
@@ -15,10 +17,12 @@ CREATE TABLE "agentic"."workflow_execution_packages" (
   CONSTRAINT "workflow_execution_packages_version_fk" FOREIGN KEY ("workflow_id", "workflow_version") REFERENCES "agentic"."workflow_versions"("workflow_id", "version") ON DELETE RESTRICT,
   CONSTRAINT "workflow_execution_packages_digest_check" CHECK ("agentic"."workflow_execution_packages"."package_digest" ~ '^[0-9a-f]{64}$'),
   CONSTRAINT "workflow_execution_packages_plan_digest_check" CHECK ("agentic"."workflow_execution_packages"."compiled_plan_digest" ~ '^[0-9a-f]{64}$'),
-  CONSTRAINT "workflow_execution_packages_version_check" CHECK ("agentic"."workflow_execution_packages"."workflow_version" > 0)
+  CONSTRAINT "workflow_execution_packages_source_check" CHECK (("agentic"."workflow_execution_packages"."source_kind" = 'published' and "agentic"."workflow_execution_packages"."workflow_version" > 0 and "agentic"."workflow_execution_packages"."draft_revision" is null) or ("agentic"."workflow_execution_packages"."source_kind" = 'draft_test' and "agentic"."workflow_execution_packages"."workflow_version" is null and "agentic"."workflow_execution_packages"."draft_revision" > 0))
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX "workflow_execution_packages_version_uidx" ON "agentic"."workflow_execution_packages" USING btree ("workflow_id", "workflow_version");
+--> statement-breakpoint
+CREATE INDEX "workflow_execution_packages_draft_idx" ON "agentic"."workflow_execution_packages" USING btree ("workflow_id", "draft_revision");
 --> statement-breakpoint
 CREATE TABLE "agentic"."workflow_journal_runs" (
   "run_id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,

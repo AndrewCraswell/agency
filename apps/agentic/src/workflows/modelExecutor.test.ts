@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import type { ArtifactStorePort } from "../prototype/artifacts"
-import type { WorkflowStepInstance } from "./definitionV2"
+import type { WorkflowStepInstance } from "./definition"
 import type { WorkflowModelSnapshot } from "./modelCatalog"
 import { OpenRouterWorkflowModelExecutor, WorkflowModelExecutionError } from "./modelExecutor"
 

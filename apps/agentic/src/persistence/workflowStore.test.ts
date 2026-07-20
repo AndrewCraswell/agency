@@ -1,17 +1,16 @@
 import { describe, expect, it, vi } from "vitest"
-import { WorkflowDefinitionV2Schema } from "../workflows/definitionV2"
+import { WorkflowDefinitionSchema } from "../workflows/definition"
 import { PostgresWorkflowStore, type WorkflowDefinitionRecord, type WorkflowVersionRecord } from "./workflowStore"
 
 const workflowId = "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f"
 const runId = "019c230c-60c6-7bd8-a9f8-9e5f51b09e30"
 const now = new Date("2026-07-19T12:00:00.000Z")
-const content = WorkflowDefinitionV2Schema.parse({
+const content = WorkflowDefinitionSchema.parse({
   schemaVersion: "2",
   inputSchema: { type: "object" },
   outputSchema: { type: "object" },
   constants: {},
   resourceBindings: {},
-  fixtures: [],
   steps: [
     {
       id: "manual",

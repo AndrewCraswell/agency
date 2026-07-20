@@ -100,7 +100,6 @@ export const StepDefinitionSchema = z
     outputSchema: JsonValueSchema,
     errorSchema: JsonValueSchema,
     executionClass: z.enum(["control", "provider", "model", "workspace"]),
-    simulationPolicy: z.enum(["deterministic", "fixture", "read_only", "blocked"]),
     mutationPolicy: z.enum(["none", "external_effect"]),
     capabilities: z.array(IdentifierSchema)
   })
@@ -110,7 +109,10 @@ export const ExecutionPackageContentSchema = z
   .object({
     schemaVersion: z.literal(EXECUTION_CONTRACT_VERSION),
     workflowId: z.uuid(),
-    workflowVersion: z.number().int().positive(),
+    source: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("published"), version: z.number().int().positive() }).strict(),
+      z.object({ kind: z.literal("draft_test"), draftRevision: z.number().int().positive() }).strict()
+    ]),
     compilerVersion: IdentifierSchema,
     mappingExpressionVersion: IdentifierSchema,
     eventDecoderVersions: z.record(IdentifierSchema, IdentifierSchema),

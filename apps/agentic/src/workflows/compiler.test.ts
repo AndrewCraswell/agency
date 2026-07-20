@@ -1,19 +1,19 @@
 import { describe, expect, it } from "vitest"
 import { compileWorkflowDefinition, WorkflowCompilationError } from "./compiler"
-import type { WorkflowDefinitionV2 } from "./definitionV2"
+import type { WorkflowDefinition } from "./definition"
 import type { WorkflowModelSnapshot } from "./modelCatalog"
 import type { RepositoryAgentSnapshot } from "./repositoryAgents"
 
 const workflowId = "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f"
+const publishedSource = { kind: "published", version: 1 } as const
 
-function definition(): WorkflowDefinitionV2 {
+function definition(): WorkflowDefinition {
   return {
     schemaVersion: "2",
     inputSchema: { type: "object", additionalProperties: false },
     outputSchema: { type: "object" },
     constants: {},
     resourceBindings: {},
-    fixtures: [],
     steps: [
       {
         id: "manual",
@@ -60,9 +60,9 @@ function definition(): WorkflowDefinitionV2 {
 }
 
 describe("compileWorkflowDefinition", () => {
-  function compileIssues(source: WorkflowDefinitionV2, maximumPhase: 2 | 3 | 4 | 5 | 6 | 7) {
+  function compileIssues(source: WorkflowDefinition, maximumPhase: 2 | 3 | 4 | 5 | 6 | 7) {
     try {
-      compileWorkflowDefinition({ workflowId, workflowVersion: 1, definition: source, maximumPhase })
+      compileWorkflowDefinition({ workflowId, source: publishedSource, definition: source, maximumPhase })
       throw new Error("Expected compilation to fail")
     } catch (error) {
       expect(error).toBeInstanceOf(WorkflowCompilationError)
@@ -70,11 +70,7 @@ describe("compileWorkflowDefinition", () => {
     }
   }
 
-  function expectIssueCodes(
-    source: WorkflowDefinitionV2,
-    maximumPhase: 2 | 3 | 4 | 5 | 6 | 7,
-    expectedCodes: string[]
-  ) {
+  function expectIssueCodes(source: WorkflowDefinition, maximumPhase: 2 | 3 | 4 | 5 | 6 | 7, expectedCodes: string[]) {
     const issues = compileIssues(source, maximumPhase)
     const actualCodes = [...new Set(issues.map(({ code }) => code))].sort()
     expect(actualCodes).toEqual([...expectedCodes].sort())
@@ -82,9 +78,19 @@ describe("compileWorkflowDefinition", () => {
 
   it("builds a canonical Phase 2 execution package", () => {
     const source = definition()
-    const first = compileWorkflowDefinition({ workflowId, workflowVersion: 1, definition: source, maximumPhase: 2 })
+    const first = compileWorkflowDefinition({
+      workflowId,
+      source: publishedSource,
+      definition: source,
+      maximumPhase: 2
+    })
     const reordered = { ...source, steps: [...source.steps].reverse(), connections: [...source.connections].reverse() }
-    const second = compileWorkflowDefinition({ workflowId, workflowVersion: 1, definition: reordered, maximumPhase: 2 })
+    const second = compileWorkflowDefinition({
+      workflowId,
+      source: publishedSource,
+      definition: reordered,
+      maximumPhase: 2
+    })
 
     expect(first.digest).toBe(second.digest)
     expect(first.content.stepDefinitions.map(({ kind }) => kind)).toEqual(["manual_trigger", "set_fields", "success"])
@@ -96,7 +102,7 @@ describe("compileWorkflowDefinition", () => {
     source.steps[1] = { ...source.steps[1]!, definition: { kind: "ai_model", version: 1 } }
 
     expect(() =>
-      compileWorkflowDefinition({ workflowId, workflowVersion: 1, definition: source, maximumPhase: 2 })
+      compileWorkflowDefinition({ workflowId, source: publishedSource, definition: source, maximumPhase: 2 })
     ).toThrow(WorkflowCompilationError)
   })
 
@@ -112,7 +118,7 @@ describe("compileWorkflowDefinition", () => {
     })
 
     try {
-      compileWorkflowDefinition({ workflowId, workflowVersion: 1, definition: source, maximumPhase: 2 })
+      compileWorkflowDefinition({ workflowId, source: publishedSource, definition: source, maximumPhase: 2 })
       throw new Error("Expected compilation to fail")
     } catch (error) {
       expect(error).toBeInstanceOf(WorkflowCompilationError)
@@ -141,7 +147,7 @@ describe("compileWorkflowDefinition", () => {
     }
 
     try {
-      compileWorkflowDefinition({ workflowId, workflowVersion: 1, definition: source, maximumPhase: 7 })
+      compileWorkflowDefinition({ workflowId, source: publishedSource, definition: source, maximumPhase: 7 })
       throw new Error("Expected compilation to fail")
     } catch (error) {
       expect(error).toBeInstanceOf(WorkflowCompilationError)
@@ -200,7 +206,7 @@ describe("compileWorkflowDefinition", () => {
     ]
 
     expect(() =>
-      compileWorkflowDefinition({ workflowId, workflowVersion: 1, definition: source, maximumPhase: 7 })
+      compileWorkflowDefinition({ workflowId, source: publishedSource, definition: source, maximumPhase: 7 })
     ).not.toThrow()
   })
 
@@ -217,7 +223,7 @@ describe("compileWorkflowDefinition", () => {
     }
 
     try {
-      compileWorkflowDefinition({ workflowId, workflowVersion: 1, definition: source, maximumPhase: 7 })
+      compileWorkflowDefinition({ workflowId, source: publishedSource, definition: source, maximumPhase: 7 })
       throw new Error("Expected compilation to fail")
     } catch (error) {
       expect(error).toBeInstanceOf(WorkflowCompilationError)
@@ -270,11 +276,11 @@ describe("compileWorkflowDefinition", () => {
     }
 
     expect(() =>
-      compileWorkflowDefinition({ workflowId, workflowVersion: 1, definition: source, maximumPhase: 4 })
+      compileWorkflowDefinition({ workflowId, source: publishedSource, definition: source, maximumPhase: 4 })
     ).toThrow("no approved repository agent snapshot")
     const compiled = compileWorkflowDefinition({
       workflowId,
-      workflowVersion: 1,
+      source: publishedSource,
       definition: source,
       maximumPhase: 4,
       agentSnapshots: [snapshot]
@@ -308,13 +314,13 @@ describe("compileWorkflowDefinition", () => {
     }
 
     expect(() =>
-      compileWorkflowDefinition({ workflowId, workflowVersion: 1, definition: source, maximumPhase: 5 })
+      compileWorkflowDefinition({ workflowId, source: publishedSource, definition: source, maximumPhase: 5 })
     ).toThrow("no approved model catalog snapshot")
     source.steps[1]!.config.parameters = { top_p: 0.8 }
     expect(() =>
       compileWorkflowDefinition({
         workflowId,
-        workflowVersion: 1,
+        source: publishedSource,
         definition: source,
         maximumPhase: 5,
         modelSnapshots: [snapshot]
@@ -323,7 +329,7 @@ describe("compileWorkflowDefinition", () => {
     source.steps[1]!.config.parameters = { temperature: 0 }
     const compiled = compileWorkflowDefinition({
       workflowId,
-      workflowVersion: 1,
+      source: publishedSource,
       definition: source,
       maximumPhase: 5,
       modelSnapshots: [snapshot]
@@ -449,7 +455,7 @@ describe("compileWorkflowDefinition", () => {
     try {
       compileWorkflowDefinition({
         workflowId,
-        workflowVersion: 1,
+        source: publishedSource,
         definition: source,
         maximumPhase: 5,
         modelSnapshots: [modelSnapshot],
@@ -692,7 +698,7 @@ describe("compileWorkflowDefinition", () => {
       name: "duplicate step IDs",
       maximumPhase: 2 as const,
       expectedCodes: ["duplicate_step"],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps.push({
           ...source.steps[1]!,
           id: "set",
@@ -705,7 +711,7 @@ describe("compileWorkflowDefinition", () => {
       name: "duplicate connection IDs",
       maximumPhase: 2 as const,
       expectedCodes: ["duplicate_connection"],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps.push({
           id: "failure",
           label: "Failure",
@@ -727,7 +733,7 @@ describe("compileWorkflowDefinition", () => {
       name: "connection references a missing source step",
       maximumPhase: 2 as const,
       expectedCodes: ["missing_step"],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.connections.push({
           id: "missing-success",
           source: { stepId: "ghost", port: "input" },
@@ -741,7 +747,7 @@ describe("compileWorkflowDefinition", () => {
       name: "connection references an unavailable source port",
       maximumPhase: 2 as const,
       expectedCodes: ["source_port"],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps.push({
           id: "failure",
           label: "Failure",
@@ -763,7 +769,7 @@ describe("compileWorkflowDefinition", () => {
       name: "connection references an unavailable target port",
       maximumPhase: 2 as const,
       expectedCodes: ["target_port"],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.connections.push({
           id: "manual-success-missing",
           source: { stepId: "manual", port: "input" },
@@ -777,7 +783,7 @@ describe("compileWorkflowDefinition", () => {
       name: "connection mapping has incompatible schemas",
       maximumPhase: 7 as const,
       expectedCodes: ["mapping_type"],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "join", version: 1 },
@@ -798,7 +804,7 @@ describe("compileWorkflowDefinition", () => {
       name: "single-cardinality input receives multiple edges",
       maximumPhase: 2 as const,
       expectedCodes: ["input_cardinality"],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps.splice(2, 0, {
           id: "map",
           label: "Map",
@@ -831,7 +837,7 @@ describe("compileWorkflowDefinition", () => {
       name: "arbitrary non-loop cycle in graph",
       maximumPhase: 7 as const,
       expectedCodes: ["cycle"],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "exclusive_merge", version: 1 },
@@ -881,7 +887,7 @@ describe("compileWorkflowDefinition", () => {
       name: "orphaned step is unreachable and cannot reach a terminal",
       maximumPhase: 2 as const,
       expectedCodes: ["terminal_unreachable", "unreachable_step"],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps.push({
           id: "orphan",
           label: "Orphan",
@@ -896,7 +902,7 @@ describe("compileWorkflowDefinition", () => {
       name: "workflow requires at least one trigger",
       maximumPhase: 2 as const,
       expectedCodes: ["trigger_required", "unreachable_step"],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[0] = {
           ...source.steps[0]!,
           definition: { kind: "set_fields", version: 1 },
@@ -912,7 +918,7 @@ describe("compileWorkflowDefinition", () => {
       name: "workflow requires at least one terminal",
       maximumPhase: 2 as const,
       expectedCodes: ["terminal_required", "terminal_unreachable"],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[2] = {
           ...source.steps[2]!,
           definition: { kind: "set_fields", version: 1 },
@@ -934,21 +940,21 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "switch connection without a branch key",
       expectedCodes: ["switch_branch_required", "switch_branch_unconnected"],
-      mutate(source: WorkflowDefinitionV2) {
+      mutate(source: WorkflowDefinition) {
         source.connections[1] = { ...source.connections[1]!, branchKey: undefined }
       }
     },
     {
       name: "switch connection with an undeclared branch key",
       expectedCodes: ["switch_branch_unknown", "switch_branch_unconnected"],
-      mutate(source: WorkflowDefinitionV2) {
+      mutate(source: WorkflowDefinition) {
         source.connections[1] = { ...source.connections[1]!, branchKey: "other" }
       }
     },
     {
       name: "switch declares duplicate case/default keys",
       expectedCodes: ["switch_branch_duplicate"],
-      mutate(source: WorkflowDefinitionV2) {
+      mutate(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           config: {
@@ -1086,7 +1092,7 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "join any",
       maximumPhase: 7 as const,
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "join", version: 1 },
@@ -1113,7 +1119,7 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "join all",
       maximumPhase: 7 as const,
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "join", version: 1 },
@@ -1140,7 +1146,7 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "join quorum",
       maximumPhase: 7 as const,
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "join", version: 1 },
@@ -1183,7 +1189,7 @@ describe("compileWorkflowDefinition", () => {
     const source = definition()
     build(source)
     expect(() =>
-      compileWorkflowDefinition({ workflowId, workflowVersion: 1, definition: source, maximumPhase })
+      compileWorkflowDefinition({ workflowId, source: publishedSource, definition: source, maximumPhase })
     ).not.toThrow()
   })
 
@@ -1214,7 +1220,7 @@ describe("compileWorkflowDefinition", () => {
     })
 
     expect(() =>
-      compileWorkflowDefinition({ workflowId, workflowVersion: 1, definition: source, maximumPhase: 7 })
+      compileWorkflowDefinition({ workflowId, source: publishedSource, definition: source, maximumPhase: 7 })
     ).not.toThrow()
   })
 
@@ -1320,7 +1326,7 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "failure policy maximum attempts above limit",
       maximumPhase: 2 as const,
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           failurePolicy: { mode: "stop", maximumAttempts: 11 }
@@ -1330,7 +1336,7 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "for-each limits below minimum",
       maximumPhase: 7 as const,
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "for_each", version: 1 },
@@ -1346,7 +1352,7 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "bounded-loop exhaustion policy outside enum",
       maximumPhase: 7 as const,
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "bounded_loop", version: 1 },
@@ -1364,7 +1370,7 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "wait timeout below minimum",
       maximumPhase: 7 as const,
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "wait", version: 1 },
@@ -1379,7 +1385,7 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "child workflow digest constraints",
       maximumPhase: 7 as const,
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "child_workflow", version: 1 },
@@ -1394,7 +1400,7 @@ describe("compileWorkflowDefinition", () => {
     const source = definition()
     build(source)
     expect(() =>
-      compileWorkflowDefinition({ workflowId, workflowVersion: 1, definition: source, maximumPhase })
+      compileWorkflowDefinition({ workflowId, source: publishedSource, definition: source, maximumPhase })
     ).toThrow()
   })
 
@@ -1403,7 +1409,7 @@ describe("compileWorkflowDefinition", () => {
       name: "repository agent reference must include a content digest",
       maximumPhase: 4 as const,
       expectedCodes: ["agent_reference"],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "repository_agent", version: 1 },
@@ -1417,7 +1423,7 @@ describe("compileWorkflowDefinition", () => {
       name: "model steps require a string model ID",
       maximumPhase: 5 as const,
       expectedCodes: ["model_reference"],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "ai_model", version: 1 },
@@ -1446,7 +1452,7 @@ describe("compileWorkflowDefinition", () => {
           observedAt: "2026-07-19T12:00:00.000Z"
         }
       ] as WorkflowModelSnapshot[],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "ai_model", version: 1 },
@@ -1476,7 +1482,7 @@ describe("compileWorkflowDefinition", () => {
           observedAt: "2026-07-19T12:00:00.000Z"
         }
       ] as WorkflowModelSnapshot[],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "ai_model", version: 1 },
@@ -1506,7 +1512,7 @@ describe("compileWorkflowDefinition", () => {
           observedAt: "2026-07-19T12:00:00.000Z"
         }
       ] as WorkflowModelSnapshot[],
-      build(source: WorkflowDefinitionV2) {
+      build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "ai_model", version: 1 },
@@ -1528,7 +1534,7 @@ describe("compileWorkflowDefinition", () => {
     try {
       compileWorkflowDefinition({
         workflowId,
-        workflowVersion: 1,
+        source: publishedSource,
         definition: source,
         maximumPhase,
         modelSnapshots: modelSnapshots ?? []

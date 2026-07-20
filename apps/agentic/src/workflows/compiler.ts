@@ -1,5 +1,5 @@
 import { z } from "zod"
-import { WorkflowDefinitionV2Schema, type WorkflowDefinitionV2 } from "./definitionV2"
+import { WorkflowDefinitionSchema, type WorkflowDefinition } from "./definition"
 import {
   ExecutionPackageContentSchema,
   executionPackageDigest,
@@ -21,10 +21,9 @@ export const CompiledWorkflowGraphSchema = z
     schemaVersion: z.literal("2"),
     inputSchema: SupportedJsonSchemaSchema,
     outputSchema: SupportedJsonSchemaSchema,
-    steps: WorkflowDefinitionV2Schema.shape.steps,
-    connections: WorkflowDefinitionV2Schema.shape.connections,
-    topologicalOrder: z.array(z.string()),
-    fixtures: WorkflowDefinitionV2Schema.shape.fixtures
+    steps: WorkflowDefinitionSchema.shape.steps,
+    connections: WorkflowDefinitionSchema.shape.connections,
+    topologicalOrder: z.array(z.string())
   })
   .strict()
 
@@ -54,7 +53,7 @@ function aggregatePortSchema(ports: WorkflowStepDefinition["inputs"] | WorkflowS
   }
 }
 
-function topologicalOrder(definition: WorkflowDefinitionV2, issues: WorkflowCompilationIssue[]): string[] {
+function topologicalOrder(definition: WorkflowDefinition, issues: WorkflowCompilationIssue[]): string[] {
   const stepIds = new Set(definition.steps.map(({ id }) => id))
   const incoming = new Map([...stepIds].map((id) => [id, 0]))
   const outgoing = new Map([...stepIds].map((id) => [id, [] as string[]]))
@@ -92,7 +91,7 @@ function topologicalOrder(definition: WorkflowDefinitionV2, issues: WorkflowComp
 }
 
 function validateReachability(
-  definition: WorkflowDefinitionV2,
+  definition: WorkflowDefinition,
   definitions: Map<string, WorkflowStepDefinition>,
   issues: WorkflowCompilationIssue[]
 ): void {
@@ -159,7 +158,7 @@ function validateReachability(
 }
 
 function validateConnections(
-  definition: WorkflowDefinitionV2,
+  definition: WorkflowDefinition,
   definitions: Map<string, WorkflowStepDefinition>,
   issues: WorkflowCompilationIssue[]
 ): void {
@@ -296,7 +295,7 @@ function validateConnections(
   }
 }
 
-function pathExists(definition: WorkflowDefinitionV2, sourceStepId: string, targetStepId: string): boolean {
+function pathExists(definition: WorkflowDefinition, sourceStepId: string, targetStepId: string): boolean {
   const outgoing = new Map(definition.steps.map(({ id }) => [id, [] as string[]]))
   for (const connection of definition.connections)
     outgoing.get(connection.source.stepId)?.push(connection.target.stepId)
@@ -312,7 +311,7 @@ function pathExists(definition: WorkflowDefinitionV2, sourceStepId: string, targ
   return false
 }
 
-function validateOrchestration(definition: WorkflowDefinitionV2, issues: WorkflowCompilationIssue[]): void {
+function validateOrchestration(definition: WorkflowDefinition, issues: WorkflowCompilationIssue[]): void {
   for (const step of definition.steps.filter(({ definition: item }) => item.kind === "join")) {
     const incomingCount = definition.connections.filter(
       ({ target, outcome, loopBack }) => target.stepId === step.id && outcome === "success" && loopBack !== true
@@ -468,16 +467,16 @@ function validateOrchestration(definition: WorkflowDefinitionV2, issues: Workflo
 
 export function compileWorkflowDefinition(input: {
   workflowId: string
-  workflowVersion: number
-  definition: WorkflowDefinitionV2
+  source: { kind: "published"; version: number } | { kind: "draft_test"; draftRevision: number }
+  definition: WorkflowDefinition
   maximumPhase: number
   agentSnapshots?: RepositoryAgentSnapshot[]
   modelSnapshots?: WorkflowModelSnapshot[]
 }): { content: ExecutionPackageContent; digest: string } {
   const workflowId = z.uuid().parse(input.workflowId)
-  const workflowVersion = z.number().int().positive().parse(input.workflowVersion)
+  const source = ExecutionPackageContentSchema.shape.source.parse(input.source)
   const maximumPhase = z.number().int().min(2).max(7).parse(input.maximumPhase)
-  const definition = WorkflowDefinitionV2Schema.parse(input.definition)
+  const definition = WorkflowDefinitionSchema.parse(input.definition)
   const agentSnapshots = z.array(RepositoryAgentSnapshotSchema).parse(input.agentSnapshots ?? [])
   const modelSnapshots = z.array(WorkflowModelSnapshotSchema).parse(input.modelSnapshots ?? [])
   const issues: WorkflowCompilationIssue[] = []
@@ -741,7 +740,6 @@ export function compileWorkflowDefinition(input: {
       outputSchema: aggregatePortSchema(item.outputs),
       errorSchema: item.errorSchema,
       executionClass: item.executionClass,
-      simulationPolicy: item.simulationPolicy,
       mutationPolicy: item.mutationPolicy,
       capabilities: item.capabilities
     }))
@@ -751,13 +749,12 @@ export function compileWorkflowDefinition(input: {
     outputSchema: definition.outputSchema,
     steps: [...definition.steps].sort((left, right) => left.id.localeCompare(right.id)),
     connections: [...definition.connections].sort((left, right) => left.id.localeCompare(right.id)),
-    topologicalOrder: order,
-    fixtures: definition.fixtures
+    topologicalOrder: order
   }
   const content = ExecutionPackageContentSchema.parse({
     schemaVersion: "1",
     workflowId,
-    workflowVersion,
+    source,
     compilerVersion: WORKFLOW_COMPILER_VERSION,
     mappingExpressionVersion: WORKFLOW_MAPPING_EXPRESSION_VERSION,
     eventDecoderVersions: { "run.prepared": "1", "attempt.succeeded": "1", "attempt.failed": "1" },

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import { compileWorkflowDefinition } from "./compiler"
-import type { WorkflowDefinitionV2 } from "./definitionV2"
+import type { WorkflowDefinition } from "./definition"
 import { matchPublishedWebhookTriggers, resolvePublishedTriggerCatalog } from "./publishedTriggers"
 import { CURRENT_WORKFLOW_RELEASE_PHASE } from "./stepRegistry"
 
@@ -14,14 +14,13 @@ const linearTeam = {
   capabilities: ["provider.events"]
 }
 
-function publishedDefinition(): WorkflowDefinitionV2 {
+function publishedDefinition(): WorkflowDefinition {
   return {
     schemaVersion: "2",
     inputSchema: { type: "object" },
     outputSchema: { type: "object" },
     constants: {},
     resourceBindings: { linearTeam },
-    fixtures: [],
     steps: [
       {
         id: "linear-event",
@@ -79,7 +78,7 @@ describe("published trigger resolution", () => {
   it("uses the active execution package after the mutable draft changes", async () => {
     const executionPackage = compileWorkflowDefinition({
       workflowId,
-      workflowVersion: 1,
+      source: { kind: "published", version: 1 },
       definition: publishedDefinition(),
       maximumPhase: CURRENT_WORKFLOW_RELEASE_PHASE
     })
@@ -150,7 +149,7 @@ describe("published trigger resolution", () => {
     }
     const executionPackage = compileWorkflowDefinition({
       workflowId,
-      workflowVersion: 1,
+      source: { kind: "published", version: 1 },
       definition,
       maximumPhase: CURRENT_WORKFLOW_RELEASE_PHASE
     })

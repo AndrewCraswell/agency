@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto"
 import { z } from "zod"
 import type { ArtifactStorePort } from "../prototype/artifacts"
-import type { WorkflowStepInstance } from "./definitionV2"
+import type { WorkflowStepInstance } from "./definition"
 import { JsonValueSchema, WorkflowArtifactReferenceSchema, jsonValueDigest, type JsonValue } from "./executionContracts"
 import { validateJsonValue } from "./jsonSchema"
 import { WorkflowModelSnapshotSchema, type WorkflowModelSnapshot } from "./modelCatalog"

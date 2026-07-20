@@ -6,7 +6,6 @@ export const CURRENT_WORKFLOW_RELEASE_PHASE = 7 as const
 
 export const WorkflowStepCategorySchema = z.enum(["trigger", "data", "ai", "action", "logic", "terminal"])
 export const WorkflowExecutionClassSchema = z.enum(["control", "provider", "model", "workspace"])
-export const WorkflowSimulationPolicySchema = z.enum(["deterministic", "fixture", "read_only", "blocked"])
 export const WorkflowMutationPolicySchema = z.enum(["none", "external_effect"])
 export const WorkflowPortCardinalitySchema = z.enum(["one", "optional", "many"])
 export const WorkflowConfigControlSchema = z.enum([
@@ -53,7 +52,6 @@ export const WorkflowStepDefinitionSchema = z
     label: z.string().trim().min(1),
     description: z.string().trim().min(1),
     executionClass: WorkflowExecutionClassSchema,
-    simulationPolicy: WorkflowSimulationPolicySchema,
     mutationPolicy: WorkflowMutationPolicySchema,
     capabilities: z.array(z.string().trim().min(1)),
     configSchema: JsonValueSchema,
@@ -275,7 +273,6 @@ const seeds: StepSeed[] = [
     label: "Manual run",
     description: "Starts the workflow with input provided by a person.",
     executionClass: "control",
-    simulationPolicy: "fixture",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: { type: "object", properties: { inputSchema: { type: "object" } } },
@@ -291,7 +288,6 @@ const seeds: StepSeed[] = [
     label: "Set fields",
     description: "Creates an object from constants and workflow input.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: { type: "object", required: ["fields"], properties: { fields: objectSchema } },
@@ -307,7 +303,6 @@ const seeds: StepSeed[] = [
     label: "Map fields",
     description: "Selects and renames fields without running code.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: { type: "object", required: ["mappings"], properties: { mappings: objectSchema } },
@@ -323,7 +318,6 @@ const seeds: StepSeed[] = [
     label: "Validate",
     description: "Checks a value against a JSON schema.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: { type: "object", required: ["schema"], properties: { schema: { type: "object" } } },
@@ -339,7 +333,6 @@ const seeds: StepSeed[] = [
     label: "Success",
     description: "Ends the current path successfully.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: emptyObjectSchema,
@@ -355,7 +348,6 @@ const seeds: StepSeed[] = [
     label: "Failure",
     description: "Ends the current path with an error.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: {
@@ -375,7 +367,6 @@ const seeds: StepSeed[] = [
     label: "Compose Markdown",
     description: "Creates Markdown from a template and workflow input.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: { type: "object", required: ["template"], properties: { template: { type: "string" } } },
@@ -391,7 +382,6 @@ const seeds: StepSeed[] = [
     label: "Collect",
     description: "Collects parallel results in source order.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: {
@@ -414,7 +404,6 @@ const seeds: StepSeed[] = [
     label: "Repository data",
     description: "Reads repository details or content.",
     executionClass: "provider",
-    simulationPolicy: "read_only",
     mutationPolicy: "none",
     capabilities: ["repository.read"],
     configSchema: {
@@ -434,7 +423,6 @@ const seeds: StepSeed[] = [
     label: "Repository agent",
     description: "Runs a selected repository agent in its own workspace.",
     executionClass: "workspace",
-    simulationPolicy: "fixture",
     mutationPolicy: "none",
     capabilities: ["repository.read", "workspace.create"],
     configSchema: {
@@ -454,7 +442,6 @@ const seeds: StepSeed[] = [
     label: "AI model",
     description: "Runs a selected OpenRouter model.",
     executionClass: "model",
-    simulationPolicy: "fixture",
     mutationPolicy: "none",
     capabilities: ["model.inference"],
     configSchema: {
@@ -478,7 +465,6 @@ const seeds: StepSeed[] = [
     label: "Structured judgment",
     description: "Uses a model to make a decision and provide evidence.",
     executionClass: "model",
-    simulationPolicy: "fixture",
     mutationPolicy: "none",
     capabilities: ["model.inference", "model.structured_output"],
     configSchema: {
@@ -498,7 +484,6 @@ const seeds: StepSeed[] = [
     label: "Provider event",
     description: "Starts the workflow from a GitHub or Linear event.",
     executionClass: "provider",
-    simulationPolicy: "fixture",
     mutationPolicy: "none",
     capabilities: ["provider.events"],
     configSchema: {
@@ -518,7 +503,6 @@ const seeds: StepSeed[] = [
     label: "Schedule",
     description: "Starts the workflow on a recurring schedule.",
     executionClass: "control",
-    simulationPolicy: "fixture",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: {
@@ -542,7 +526,6 @@ const seeds: StepSeed[] = [
     label: "Provider data",
     description: "Reads GitHub or Linear records.",
     executionClass: "provider",
-    simulationPolicy: "read_only",
     mutationPolicy: "none",
     capabilities: ["provider.read"],
     configSchema: {
@@ -562,7 +545,6 @@ const seeds: StepSeed[] = [
     label: "Provider action",
     description: "Creates or updates one GitHub or Linear record.",
     executionClass: "provider",
-    simulationPolicy: "blocked",
     mutationPolicy: "external_effect",
     capabilities: ["provider.write"],
     configSchema: {
@@ -582,7 +564,6 @@ const seeds: StepSeed[] = [
     label: "Condition",
     description: "Chooses a path based on a true or false condition.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: {
@@ -603,7 +584,6 @@ const seeds: StepSeed[] = [
     label: "Switch",
     description: "Chooses a matching path or the default path.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: {
@@ -637,7 +617,6 @@ const seeds: StepSeed[] = [
     label: "Exclusive merge",
     description: "Continues after the one path that ran.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: emptyObjectSchema,
@@ -653,7 +632,6 @@ const seeds: StepSeed[] = [
     label: "Join",
     description: "Waits for all paths, any path, or a required number of paths.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: {
@@ -673,7 +651,6 @@ const seeds: StepSeed[] = [
     label: "For each",
     description: "Runs the selected steps for each item in a collection.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: {
@@ -699,7 +676,6 @@ const seeds: StepSeed[] = [
     label: "Repeat",
     description: "Repeats the selected steps while a condition is true.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: {
@@ -730,7 +706,6 @@ const seeds: StepSeed[] = [
     label: "Wait",
     description: "Waits for a matching event or until the time limit.",
     executionClass: "control",
-    simulationPolicy: "fixture",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: {
@@ -754,7 +729,6 @@ const seeds: StepSeed[] = [
     label: "Invoke workflow",
     description: "Runs a specific version of another workflow.",
     executionClass: "control",
-    simulationPolicy: "fixture",
     mutationPolicy: "external_effect",
     capabilities: ["workflow.invoke"],
     configSchema: {

@@ -9,6 +9,12 @@ import {
   Caption1,
   Card,
   CardHeader,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
   Input,
   mergeClasses,
   Menu,
@@ -78,7 +84,6 @@ import {
   type WorkflowDraftView,
   type JsonValue,
   type IntegrationProvider,
-  type WorkflowSimulation,
   type WorkflowStep,
   type WorkflowStepDefinition,
   type WorkflowValidation
@@ -87,12 +92,7 @@ import { WorkflowEditorInspector } from "./WorkflowEditorInspector"
 import { WorkflowEditorOutline } from "./WorkflowEditorOutline"
 import { projectWorkflowOutline } from "./WorkflowEditorOutline.utils"
 import { useWorkflowEditorPageStyles } from "./WorkflowEditorPage.styles"
-import {
-  resultValue,
-  WorkflowEditorResults,
-  type EditorResultPanel,
-  type EditorResultState
-} from "./WorkflowEditorResults"
+import { resultValue, WorkflowEditorResults, type EditorResultState } from "./WorkflowEditorResults"
 
 type CanvasNode = Node<{ step: WorkflowStep; definition: WorkflowStepDefinition }, "workflow">
 type WorkflowConnection = WorkflowDraftContent["connections"][number]
@@ -327,15 +327,17 @@ function WorkflowCanvasNode({ data, selected }: NodeProps<CanvasNode>) {
           </span>
         }
       />
-      {data.definition.outputs.map((output, index) => (
-        <Handle
-          key={output.name}
-          id={output.name}
-          type="source"
-          position={Position.Right}
-          style={{ top: `${((index + 1) / (data.definition.outputs.length + 1)) * 100}%` }}
-        />
-      ))}
+      {data.definition.category === "terminal"
+        ? null
+        : data.definition.outputs.map((output, index) => (
+            <Handle
+              key={output.name}
+              id={output.name}
+              type="source"
+              position={Position.Right}
+              style={{ top: `${((index + 1) / (data.definition.outputs.length + 1)) * 100}%` }}
+            />
+          ))}
     </Card>
   )
 }
@@ -461,9 +463,9 @@ export function WorkflowEditorPage() {
   const [catalogQuery, setCatalogQuery] = useState("")
   const [connectedProviders, setConnectedProviders] = useState<ReadonlySet<IntegrationProvider>>(new Set())
   const [testInput, setTestInput] = useState("{}")
-  const [simulation, setSimulation] = useState<EditorResultState<WorkflowSimulation>>({ status: "idle" })
-  const [activeCommand, setActiveCommand] = useState<"publishing" | "starting-run">()
-  const [resultPanel, setResultPanel] = useState<EditorResultPanel>("problems")
+  const [testTriggerId, setTestTriggerId] = useState<string>()
+  const [testConfirmationOpen, setTestConfirmationOpen] = useState(false)
+  const [activeCommand, setActiveCommand] = useState<"publishing" | "starting-run" | "testing-draft">()
   const revisionRef = useRef(1)
   const lastSavedRef = useRef("")
   const initializedRef = useRef(false)
@@ -489,6 +491,10 @@ export function WorkflowEditorPage() {
         setBaseContent(loadedDraft.content)
         setNodes(canvasNodes)
         setEdges(canvasEdges)
+        const triggers = loadedDraft.content.steps.filter(({ definition }) =>
+          ["manual_trigger", "provider_event", "schedule"].includes(definition.kind)
+        )
+        setTestTriggerId(triggers.length === 1 ? triggers[0]?.id : undefined)
         revisionRef.current = loadedDraft.draftRevision
         lastSavedRef.current = serializedDraft(
           loadedDraft.name,
@@ -711,7 +717,6 @@ export function WorkflowEditorPage() {
     }
     const previous = resultValue(validation)
     setValidation({ status: "running", previous })
-    setResultPanel("problems")
     try {
       const result = await validateWorkflow(workflowId)
       setValidation({ status: "complete", value: result })
@@ -767,29 +772,50 @@ export function WorkflowEditorPage() {
     }
   }
 
-  async function test(stopAtStepId?: string) {
-    if (simulation.status === "running") {
+  function requestTest() {
+    if (activeCommand === "testing-draft") {
       return
     }
-    const previous = resultValue(simulation)
-    setSimulation({ status: "running", previous })
-    setResultPanel("test-results")
-    try {
-      const result = await testWorkflowDraft(workflowId, { input: parsedTestInput(), stopAtStepId })
-      setSimulation({ status: "complete", value: result })
+    if (testTriggerId === undefined) {
       showAppToast(dispatchToast, {
-        intent: result.steps.some(({ status }) => status === "failed") ? "warning" : "success",
-        title: stopAtStepId === undefined ? "Draft test complete" : "Path test complete",
-        body: `${result.steps.length} simulated step${result.steps.length === 1 ? "" : "s"}.`
+        intent: "error",
+        title: "Select a test trigger",
+        body: "Open workflow details and select the trigger to inject."
       })
+      return
+    }
+    try {
+      parsedTestInput()
+      setTestConfirmationOpen(true)
     } catch (error) {
-      const message = error instanceof Error ? error.message : "The workflow test failed."
-      setSimulation({ status: "error", message, previous })
+      showAppToast(dispatchToast, {
+        intent: "error",
+        title: "Invalid test input",
+        body: error instanceof Error ? error.message : "Enter valid JSON before testing."
+      })
+    }
+  }
+
+  async function test() {
+    if (testTriggerId === undefined) {
+      return
+    }
+    setTestConfirmationOpen(false)
+    setActiveCommand("testing-draft")
+    try {
+      const started = await testWorkflowDraft(workflowId, {
+        expectedRevision: revisionRef.current,
+        triggerStepId: testTriggerId,
+        input: parsedTestInput()
+      })
+      await navigate({ to: "/runs/$runId", params: { runId: started.runId } })
+    } catch (error) {
       showAppToast(dispatchToast, {
         intent: "error",
         title: "Test failed",
-        body: message
+        body: error instanceof Error ? error.message : "The workflow test could not be started."
       })
+      setActiveCommand(undefined)
     }
   }
 
@@ -825,7 +851,6 @@ export function WorkflowEditorPage() {
   }
 
   const validationValue = resultValue(validation)
-  const simulationValue = resultValue(simulation)
   const outlineItems = projectWorkflowOutline(
     nodes.map(({ id, data }) => ({
       id,
@@ -845,7 +870,11 @@ export function WorkflowEditorPage() {
   const problemStepIds = new Set(
     validationValue?.issues.flatMap(({ nodeId }) => (nodeId === null ? [] : [nodeId])) ?? []
   )
-  const testStatusByStep = new Map(simulationValue?.steps.map(({ stepId, status }) => [stepId, status]) ?? [])
+  const testTriggers = nodes.flatMap(({ id, data }) =>
+    ["manual_trigger", "provider_event", "schedule"].includes(data.definition.kind)
+      ? [{ id, label: data.step.label, kind: data.definition.kind }]
+      : []
+  )
   const nextPublishedVersion = (draft.versions[0]?.version ?? 0) + 1
   let asyncStatus = saveStateLabel(saveState)
   let asyncPending = saveState === "saving"
@@ -853,8 +882,8 @@ export function WorkflowEditorPage() {
     asyncStatus = "Checking workflow"
     asyncPending = true
   }
-  if (simulation.status === "running") {
-    asyncStatus = "Testing draft"
+  if (activeCommand === "testing-draft") {
+    asyncStatus = "Starting draft test"
     asyncPending = true
   }
   if (activeCommand === "publishing") {
@@ -937,8 +966,8 @@ export function WorkflowEditorPage() {
               <OverflowItem id="test-draft" priority={2}>
                 <ToolbarButton
                   icon={<BeakerRegular />}
-                  disabled={saveState !== "saved" || simulation.status === "running"}
-                  onClick={() => void test()}
+                  disabled={saveState !== "saved" || activeCommand === "testing-draft"}
+                  onClick={requestTest}
                 >
                   Test draft
                 </ToolbarButton>
@@ -975,9 +1004,9 @@ export function WorkflowEditorPage() {
                 </ToolbarButton>
               </OverflowItem>
               <WorkflowCommandOverflow
-                canTest={saveState === "saved" && simulation.status !== "running"}
+                canTest={saveState === "saved" && activeCommand !== "testing-draft"}
                 check={() => void check()}
-                test={() => void test()}
+                test={requestTest}
               />
             </Toolbar>
           </Overflow>
@@ -1093,7 +1122,7 @@ export function WorkflowEditorPage() {
               selectedNodeId={selectedNodeId}
               selectedEdgeId={selectedEdgeId}
               problemStepIds={problemStepIds}
-              testStatusByStep={testStatusByStep}
+              testStatusByStep={new Map()}
               onSelectNode={(stepId) => {
                 setSelectedNodeId(stepId)
                 setSelectedEdgeId(undefined)
@@ -1113,6 +1142,9 @@ export function WorkflowEditorPage() {
           draft={draft}
           testInput={testInput}
           setTestInput={setTestInput}
+          testTriggers={testTriggers}
+          testTriggerId={testTriggerId}
+          setTestTriggerId={setTestTriggerId}
           selectedNode={selectedNode}
           selectedEdge={selectedEdge}
           nodes={nodes}
@@ -1123,7 +1155,6 @@ export function WorkflowEditorPage() {
             setEdges((current) => current.map((candidate) => (candidate.id === edge.id ? edge : candidate)))
             setSaveState("dirty")
           }}
-          runToHere={(stepId) => void test(stepId)}
           removeSelectedStep={() => {
             if (selectedNode === undefined) {
               return
@@ -1164,20 +1195,47 @@ export function WorkflowEditorPage() {
           }}
         />
       </section>
+      <Dialog
+        open={testConfirmationOpen}
+        modalType="alert"
+        onOpenChange={(_, data) => setTestConfirmationOpen(data.open)}
+      >
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Start live draft test?</DialogTitle>
+            <DialogContent>
+              <Body1>
+                This starts a durable server run from {testTriggers.find(({ id }) => id === testTriggerId)?.label}.
+              </Body1>
+              <Body1>
+                Resources:{" "}
+                {Object.values(baseContent.resourceBindings)
+                  .map(({ name }) => name)
+                  .join(", ")}
+                .
+              </Body1>
+              <Body1>
+                {nodes.filter(({ data }) => data.definition.executionClass === "model").length} live model call steps
+                and {nodes.filter(({ data }) => data.definition.mutationPolicy === "external_effect").length} external
+                mutation steps may run.
+              </Body1>
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" onClick={() => setTestConfirmationOpen(false)}>
+                Cancel
+              </Button>
+              <Button appearance="primary" onClick={() => void test()}>
+                Start draft test
+              </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
       <WorkflowEditorResults
         currentRevision={draft.draftRevision}
         draftDirty={saveState !== "saved"}
-        panel={resultPanel}
-        simulation={simulation}
         validation={validation}
-        stepLabels={new Map(nodes.map((node) => [node.id, node.data.step.label]))}
-        onPanelChange={setResultPanel}
         onSelectIssue={focusIssue}
-        onSelectStep={(stepId) => {
-          setSelectedNodeId(stepId)
-          setSelectedEdgeId(undefined)
-          setDockOpen(true)
-        }}
       />
     </main>
   )

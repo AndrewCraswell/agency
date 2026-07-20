@@ -151,7 +151,9 @@ describe("RunDetailPage", { timeout: 30_000 }, () => {
         executionPackage: {
           packageDigest: "b".repeat(64),
           workflowId: "3195de29-2774-4272-be07-6ed600cefd51",
+          sourceKind: "published",
           workflowVersion: 3,
+          draftRevision: null,
           contractVersion: "1",
           compilerVersion: "1",
           compiledPlanDigest: "d".repeat(64),
@@ -181,7 +183,6 @@ describe("RunDetailPage", { timeout: 30_000 }, () => {
             }
           ],
           connections: [],
-          fixtures: [],
           topologicalOrder: ["wait", "agent"]
         },
         activations: [

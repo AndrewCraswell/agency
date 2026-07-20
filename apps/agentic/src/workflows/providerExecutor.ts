@@ -4,7 +4,7 @@ import { createDefaultProviderExecutionPortResolver } from "../integrations/prov
 import type { ProviderConnectionContext, ProviderExecutionPortResolver } from "../integrations/providerPorts"
 import type { IntegrationConnectionStore } from "../persistence/integrationStore"
 import type { PostgresWorkflowJournalStore } from "../persistence/workflowJournalStore"
-import { WorkflowResourceBindingV2Schema, type WorkflowStepInstance } from "./definitionV2"
+import { WorkflowResourceBindingSchema, type WorkflowStepInstance } from "./definition"
 import { JsonValueSchema, type JsonValue } from "./executionContracts"
 import { getProviderOperation } from "./providerCatalog"
 
@@ -13,7 +13,7 @@ const ProviderStepConfigSchema = z
   .object({
     provider: z.enum(["github", "linear"]),
     operation: z.string().trim().min(1),
-    binding: WorkflowResourceBindingV2Schema
+    binding: WorkflowResourceBindingSchema
   })
   .strict()
 export type ProviderEffectJournal = Pick<

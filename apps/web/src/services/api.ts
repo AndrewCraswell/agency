@@ -258,17 +258,6 @@ const workflowResourceBindingSchema = z
     capabilities: z.array(z.string())
   })
   .strict()
-const workflowFixtureSchema = z
-  .object({
-    id: z.string(),
-    name: z.string(),
-    revision: z.number().int().positive(),
-    workflowInput: jsonValueSchema,
-    providerResponses: z.record(z.string(), jsonValueSchema),
-    modelResponses: z.record(z.string(), jsonValueSchema),
-    agentResponses: z.record(z.string(), jsonValueSchema)
-  })
-  .strict()
 const workflowDraftContentSchema = z
   .object({
     schemaVersion: z.literal("2"),
@@ -277,8 +266,7 @@ const workflowDraftContentSchema = z
     steps: z.array(workflowStepSchema),
     connections: z.array(workflowConnectionSchema),
     constants: z.record(z.string(), jsonValueSchema),
-    resourceBindings: z.record(z.string(), workflowResourceBindingSchema),
-    fixtures: z.array(workflowFixtureSchema)
+    resourceBindings: z.record(z.string(), workflowResourceBindingSchema)
   })
   .strict()
 const workflowSummarySchema = z
@@ -330,7 +318,14 @@ const workflowValidationSchema = z
   })
   .strict()
 const workflowRunStartSchema = z
-  .object({ runId: z.uuid(), created: z.boolean(), version: z.number().int().positive() })
+  .object({
+    runId: z.uuid(),
+    created: z.boolean(),
+    source: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("published"), version: z.number().int().positive() }).strict(),
+      z.object({ kind: z.literal("draft_test"), draftRevision: z.number().int().positive() }).strict()
+    ])
+  })
   .strict()
 const activationScopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("branch"), key: z.string() }).strict(),
@@ -411,7 +406,9 @@ const workflowRunDetailSchema = z
       .object({
         packageDigest: z.string(),
         workflowId: z.uuid(),
-        workflowVersion: z.number().int().positive(),
+        sourceKind: z.enum(["published", "draft_test"]),
+        workflowVersion: z.number().int().positive().nullable(),
+        draftRevision: z.number().int().positive().nullable(),
         contractVersion: z.string(),
         compilerVersion: z.string(),
         compiledPlanDigest: z.string(),
@@ -426,7 +423,6 @@ const workflowRunDetailSchema = z
         outputSchema: jsonValueSchema,
         steps: z.array(workflowStepSchema),
         connections: z.array(workflowConnectionSchema),
-        fixtures: z.array(workflowFixtureSchema),
         topologicalOrder: z.array(z.string())
       })
       .strict(),
@@ -559,26 +555,6 @@ const workflowRunDetailSchema = z
     )
   })
   .strict()
-const workflowSimulationStepSchema = z
-  .object({
-    stepId: z.string(),
-    status: z.enum(["succeeded", "failed"]),
-    input: z.record(z.string(), jsonValueSchema),
-    output: z.record(z.string(), jsonValueSchema),
-    error: z.record(z.string(), jsonValueSchema).nullable()
-  })
-  .strict()
-const workflowSimulationSchema = z
-  .object({
-    schemaVersion: z.literal("1"),
-    mode: z.enum(["draft", "run_to_here"]),
-    simulated: z.literal(true),
-    draftRevision: z.number().int().positive(),
-    fixtureId: z.string().nullable(),
-    elapsedMs: z.number().nonnegative(),
-    steps: z.array(workflowSimulationStepSchema)
-  })
-  .strict()
 const workflowPortDefinitionSchema = z
   .object({
     name: z.string(),
@@ -596,7 +572,6 @@ const workflowStepDefinitionSchema = z
     label: z.string(),
     description: z.string(),
     executionClass: z.enum(["control", "provider", "model", "workspace"]),
-    simulationPolicy: z.enum(["deterministic", "fixture", "read_only", "blocked"]),
     mutationPolicy: z.enum(["none", "external_effect"]),
     capabilities: z.array(z.string()),
     configSchema: jsonValueSchema,
@@ -664,6 +639,7 @@ const workflowModelSnapshotSchema = z
 const workflowModelCatalogSchema = z
   .object({ schemaVersion: z.literal("1"), models: z.array(workflowModelSnapshotSchema) })
   .strict()
+const workflowGeneratedSchemaSchema = z.object({ schemaVersion: z.literal("1"), schema: jsonValueSchema }).strict()
 const providerOperationSchema = z
   .object({
     operation: z.string(),
@@ -738,7 +714,6 @@ export type PublishedWorkflowSchedule = {
   label: string
   intervalSeconds: number
 }
-export type WorkflowSimulation = z.infer<typeof workflowSimulationSchema>
 export type WorkflowRunDetail = z.infer<typeof workflowRunDetailSchema>
 export type WorkflowStepDefinition = z.infer<typeof workflowStepDefinitionSchema>
 export type RepositoryAgentReference = z.infer<typeof repositoryAgentReferenceSchema>
@@ -993,6 +968,13 @@ export function listWorkflowModels(): Promise<WorkflowModelSnapshot[]> {
   return requestJson("/api/workflows/models", workflowModelCatalogSchema).then(({ models }) => models)
 }
 
+export function generateWorkflowSchema(input: { modelId: string; prompt: string }): Promise<JsonValue> {
+  return requestJson("/api/workflows/generate-schema", workflowGeneratedSchemaSchema, {
+    method: "POST",
+    body: JSON.stringify(input)
+  }).then(({ schema }) => schema)
+}
+
 export function listProviderOperations(): Promise<ProviderOperation[]> {
   return requestJson("/api/workflows/provider-operations", providerOperationCatalogSchema).then(
     ({ operations }) => operations
@@ -1065,11 +1047,11 @@ export function startWorkflowRun(
 
 export function testWorkflowDraft(
   workflowId: string,
-  options: { input?: JsonValue; fixtureId?: string; stopAtStepId?: string } = {}
-): Promise<WorkflowSimulation> {
+  options: { expectedRevision: number; triggerStepId: string; input?: JsonValue }
+) {
   return requestJson(
     `/api/workflows/${encodeURIComponent(workflowId)}/test`,
-    workflowSimulationSchema,
+    workflowRunStartSchema,
     jsonRequest("POST", options)
   )
 }

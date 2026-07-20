@@ -5,7 +5,7 @@ import type {
   WorkflowVersionRecord
 } from "../persistence/workflowStore"
 import { CompiledWorkflowGraphSchema, compileWorkflowDefinition } from "./compiler"
-import { WorkflowDefinitionV2Schema, type WorkflowDefinitionV2 } from "./definitionV2"
+import { WorkflowDefinitionSchema, type WorkflowDefinition } from "./definition"
 import type { WorkflowModelSnapshot } from "./modelCatalog"
 import type { RepositoryAgentSnapshot } from "./repositoryAgents"
 import { WorkflowService, type WorkflowServiceJournal, type WorkflowServiceStore } from "./service"
@@ -32,14 +32,13 @@ const selectedModel: WorkflowModelSnapshot = {
   observedAt: "2026-07-19T12:00:00.000Z"
 }
 
-function content(): WorkflowDefinitionV2 {
-  return WorkflowDefinitionV2Schema.parse({
+function content(): WorkflowDefinition {
+  return WorkflowDefinitionSchema.parse({
     schemaVersion: "2",
     inputSchema: { type: "object", additionalProperties: true },
     outputSchema: { type: "object", additionalProperties: true },
     constants: {},
     resourceBindings: {},
-    fixtures: [],
     steps: [
       {
         id: "manual-start",
@@ -114,7 +113,7 @@ class FakeWorkflowStore implements WorkflowServiceStore {
 
   async create(input: Parameters<WorkflowServiceStore["create"]>[0]) {
     this.current = {
-      ...workflow(input.draft as WorkflowDefinitionV2),
+      ...workflow(input.draft as WorkflowDefinition),
       name: input.name,
       description: input.description
     }
@@ -150,7 +149,7 @@ class FakeWorkflowStore implements WorkflowServiceStore {
     const version = (this.versions[0]?.version ?? 0) + 1
     const compiled = compileWorkflowDefinition({
       workflowId,
-      workflowVersion: version,
+      source: { kind: "published", version },
       definition: this.current.draft,
       maximumPhase: CURRENT_WORKFLOW_RELEASE_PHASE,
       agentSnapshots,
@@ -168,7 +167,9 @@ class FakeWorkflowStore implements WorkflowServiceStore {
     this.executionPackage = {
       packageDigest: compiled.digest,
       workflowId,
+      sourceKind: "published",
       workflowVersion: version,
+      draftRevision: null,
       contractVersion: "1",
       compilerVersion: "1",
       compiledPlanDigest: "a".repeat(64),
@@ -207,6 +208,18 @@ function journal() {
       terminalAt: now
     })),
     getRunDetail: vi.fn<WorkflowServiceJournal["getRunDetail"]>(async () => null),
+    publishExecutionPackage: vi.fn<WorkflowServiceJournal["publishExecutionPackage"]>(async (content) => ({
+      packageDigest: "a".repeat(64),
+      workflowId: content.workflowId,
+      sourceKind: content.source.kind,
+      workflowVersion: content.source.kind === "published" ? content.source.version : null,
+      draftRevision: content.source.kind === "draft_test" ? content.source.draftRevision : null,
+      contractVersion: content.schemaVersion,
+      compilerVersion: content.compilerVersion,
+      compiledPlanDigest: "b".repeat(64),
+      content,
+      createdAt: now
+    })),
     prepareRun: vi.fn<WorkflowServiceJournal["prepareRun"]>(async () => ({
       created: true,
       run: {
@@ -279,7 +292,7 @@ function journal() {
   }
 }
 
-describe("WorkflowService V2", () => {
+describe("WorkflowService", () => {
   it("returns workflow step definitions", () => {
     const service = new WorkflowService(new FakeWorkflowStore(), journal())
 
@@ -354,6 +367,64 @@ describe("WorkflowService V2", () => {
       }
     })
     await expect(service.runDetail(runId)).rejects.toThrow(`Workflow run ${runId} was not found`)
+  })
+
+  it("disables published rerun actions for draft-test run details", async () => {
+    const store = new FakeWorkflowStore()
+    store.current = workflow()
+    await store.publish()
+    const publishedPackage = store.executionPackage
+    if (publishedPackage === null) throw new Error("Expected execution package")
+    const executionPackage = {
+      ...publishedPackage,
+      sourceKind: "draft_test",
+      workflowVersion: null,
+      draftRevision: 1,
+      content: {
+        ...publishedPackage.content,
+        source: { kind: "draft_test" as const, draftRevision: 1 }
+      }
+    }
+    const workflowJournal = journal()
+    workflowJournal.getRunDetail.mockResolvedValueOnce({
+      run: {
+        runId,
+        packageDigest: executionPackage.packageDigest,
+        requestDigest: "b".repeat(64),
+        triggerIdentity: "draft_test:request-1",
+        sealedManifest: { input: {}, resources: [], source: executionPackage.content.source },
+        status: "running",
+        cancellationGeneration: 0,
+        latestSequence: 1,
+        schedulerCursor: null,
+        pendingCheckpointCursor: null,
+        createdAt: now,
+        updatedAt: now,
+        terminalAt: null
+      },
+      executionPackage,
+      graph: CompiledWorkflowGraphSchema.parse(executionPackage.content.graph),
+      activations: [],
+      attempts: [],
+      effects: [],
+      waits: [],
+      data: [],
+      events: [],
+      childLinks: []
+    })
+    const service = new WorkflowService(store, workflowJournal)
+
+    await expect(service.runDetail(runId)).resolves.toMatchObject({
+      summary: {
+        actions: expect.arrayContaining([
+          expect.objectContaining({
+            key: "run_again",
+            allowed: false,
+            disabledReason: "Start another test from the current workflow draft."
+          })
+        ])
+      }
+    })
   })
 
   it("cancels a run and forwards parsed input", async () => {
@@ -449,55 +520,139 @@ describe("WorkflowService V2", () => {
     })
   })
 
-  it("simulates draft execution with fixture selection and run-to-here", async () => {
-    const source = content()
-    source.fixtures = [
-      {
-        id: "fixture-1",
-        name: "Fixture one",
-        revision: 1,
-        workflowInput: { issue: "FIXTURE-123" },
-        providerResponses: {},
-        modelResponses: {},
-        agentResponses: {}
-      }
-    ]
+  it("seals and starts a durable live draft test without publishing the workflow", async () => {
     const store = new FakeWorkflowStore()
-    store.current = workflow(source)
-    const service = new WorkflowService(store, journal())
+    store.current = workflow()
+    const workflowJournal = journal()
+    const service = new WorkflowService(store, workflowJournal)
 
     await expect(
       service.test(workflowId, {
-        input: { issue: "REQUEST-456" },
-        fixtureId: "fixture-1"
+        expectedRevision: 1,
+        triggerStepId: "manual-start",
+        input: { issue: "REQUEST-456" }
       })
-    ).resolves.toMatchObject({
-      schemaVersion: "1",
-      mode: "draft",
-      simulated: true,
-      fixtureId: "fixture-1"
+    ).resolves.toEqual({
+      runId,
+      created: true,
+      source: { kind: "draft_test", draftRevision: 1 }
     })
-
-    const fixtureRun = await service.test(workflowId, {
-      input: { issue: "REQUEST-456" },
-      fixtureId: "fixture-1"
-    })
-    expect(fixtureRun.steps).toHaveLength(3)
-    expect(fixtureRun.steps[1]).toMatchObject({
-      stepId: "set-fields",
-      output: { value: { issue: "FIXTURE-123", answer: 42 } }
-    })
-
-    const runToHere = await service.test(workflowId, {
-      input: { issue: "REQUEST-456" },
-      stopAtStepId: "set-fields"
-    })
-    expect(runToHere.mode).toBe("run_to_here")
-    expect(runToHere.steps).toHaveLength(2)
-
-    await expect(service.test(workflowId, { fixtureId: "missing-fixture" })).rejects.toThrow(
-      "Fixture missing-fixture was not found"
+    expect(workflowJournal.publishExecutionPackage).toHaveBeenCalledWith(
+      expect.objectContaining({ source: { kind: "draft_test", draftRevision: 1 } })
     )
+    expect(workflowJournal.prepareRun).toHaveBeenCalledWith({
+      packageDigest: "a".repeat(64),
+      requestDigest: expect.stringMatching(/^[0-9a-f]{64}$/u),
+      triggerIdentity: expect.stringMatching(/^draft_test:/u),
+      sealedManifest: {
+        input: { issue: "REQUEST-456" },
+        resources: [],
+        source: { kind: "draft_test", draftRevision: 1 }
+      },
+      initialActivations: [{ stepId: "manual-start", inputBindings: { input: { issue: "REQUEST-456" } } }]
+    })
+    expect(store.current.activePublishedVersion).toBeNull()
+    const sealedPackage = workflowJournal.publishExecutionPackage.mock.calls[0]?.[0]
+    if (sealedPackage === undefined) throw new Error("Expected a sealed draft-test package")
+    store.current.draft.steps[1]!.label = "Changed after test started"
+    const sealedGraph = CompiledWorkflowGraphSchema.parse(sealedPackage.graph)
+    expect(sealedGraph.steps.find(({ id }) => id === "set-fields")?.label).toBe("Set fields")
+
+    await expect(
+      service.test(workflowId, { expectedRevision: 2, triggerStepId: "manual-start", input: {} })
+    ).rejects.toThrow("Workflow draft changed before testing")
+    await expect(
+      service.test(workflowId, { expectedRevision: 1, triggerStepId: "set-fields", input: {} })
+    ).rejects.toThrow("Select an available trigger step")
+  })
+
+  it("injects draft schedule and provider-event inputs after external ingress", async () => {
+    const source = content()
+    source.resourceBindings = {
+      repo: {
+        connectionId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e31",
+        provider: "github",
+        resourceType: "repository",
+        externalId: "42",
+        name: "agency/repository",
+        capabilities: ["provider.events"]
+      }
+    }
+    source.steps[0] = {
+      ...source.steps[0]!,
+      id: "schedule-start",
+      label: "Every minute",
+      definition: { kind: "schedule", version: 1 },
+      config: { timezone: "UTC", intervalSeconds: 60 }
+    }
+    source.steps.push({
+      id: "webhook-start",
+      label: "Webhook start",
+      position: { x: 0, y: 160 },
+      definition: { kind: "provider_event", version: 1 },
+      config: {
+        provider: "github",
+        eventKey: "pull_request.created",
+        binding: {
+          connectionId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e31",
+          externalId: "42"
+        }
+      },
+      failurePolicy: { mode: "stop", maximumAttempts: 1 }
+    })
+    source.steps.push({
+      id: "webhook-success",
+      label: "Webhook success",
+      position: { x: 420, y: 220 },
+      definition: { kind: "success", version: 1 },
+      config: {},
+      failurePolicy: { mode: "stop", maximumAttempts: 1 }
+    })
+    source.connections[0] = {
+      ...source.connections[0]!,
+      source: { stepId: "schedule-start", port: "fire" }
+    }
+    source.connections.push({
+      id: "webhook-success",
+      source: { stepId: "webhook-start", port: "event" },
+      target: { stepId: "webhook-success", port: "result" },
+      outcome: "success",
+      mappings: [{ sourcePath: [], targetPath: [] }]
+    })
+    const store = new FakeWorkflowStore()
+    store.current = workflow(source)
+    const workflowJournal = journal()
+    const service = new WorkflowService(store, workflowJournal)
+
+    await service.test(workflowId, {
+      expectedRevision: 1,
+      triggerStepId: "schedule-start",
+      input: { scheduledAt: "2026-07-20T12:00:00.000Z" }
+    })
+    await service.test(workflowId, {
+      expectedRevision: 1,
+      triggerStepId: "webhook-start",
+      input: { action: "opened" }
+    })
+
+    expect(workflowJournal.prepareRun).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        initialActivations: [
+          {
+            stepId: "schedule-start",
+            inputBindings: { fire: { scheduledAt: "2026-07-20T12:00:00.000Z" } }
+          }
+        ]
+      })
+    )
+    expect(workflowJournal.prepareRun).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        initialActivations: [{ stepId: "webhook-start", inputBindings: { event: { action: "opened" } } }]
+      })
+    )
+    expect(store.current.activePublishedVersion).toBeNull()
   })
 
   it("propagates create, update, and publish conflicts from the store", async () => {
@@ -1040,7 +1195,7 @@ describe("WorkflowService V2", () => {
         input: { issue: "FEN-423" },
         trigger: { type: "manual", key: "request-1" }
       })
-    ).resolves.toEqual({ runId, created: true, version: 1 })
+    ).resolves.toEqual({ runId, created: true, source: { kind: "published", version: 1 } })
     expect(workflowJournal.prepareRun).toHaveBeenCalledWith(
       expect.objectContaining({
         triggerIdentity: "manual:request-1",
@@ -1115,7 +1270,7 @@ describe("WorkflowService V2", () => {
         input: { when: "now" },
         trigger: { type: "schedule", key: "cron-1", stepId: "schedule-start" }
       })
-    ).resolves.toEqual({ runId, created: true, version: 1 })
+    ).resolves.toEqual({ runId, created: true, source: { kind: "published", version: 1 } })
     expect(workflowJournal.prepareRun).toHaveBeenLastCalledWith(
       expect.objectContaining({
         triggerIdentity: "schedule:cron-1",
@@ -1129,7 +1284,7 @@ describe("WorkflowService V2", () => {
         input: { event: "opened" },
         trigger: { type: "webhook", key: "delivery-1", stepId: "webhook-start" }
       })
-    ).resolves.toEqual({ runId, created: true, version: 1 })
+    ).resolves.toEqual({ runId, created: true, source: { kind: "published", version: 1 } })
     expect(workflowJournal.prepareRun).toHaveBeenLastCalledWith(
       expect.objectContaining({
         triggerIdentity: "webhook:delivery-1",
@@ -1662,7 +1817,9 @@ describe("WorkflowService V2", () => {
       list: vi.fn(async () => []),
       update: vi.fn()
     })
-    const startSpy = vi.spyOn(service, "start").mockResolvedValue({ runId, created: true, version: 1 })
+    const startSpy = vi
+      .spyOn(service, "start")
+      .mockResolvedValue({ runId, created: true, source: { kind: "published", version: 1 } })
 
     await expect(service.schedules()).resolves.toEqual([])
 

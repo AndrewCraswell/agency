@@ -13,13 +13,13 @@ import { runWorker } from "../prototype/runner"
 import { DurableWebhookRouter } from "../webhooks/router"
 import { DurableWebhookDispatcher } from "../webhooks/service"
 import { OpenRouterWorkflowModelExecutor } from "../workflows/modelExecutor"
-import { Phase2WorkflowDispatcher } from "../workflows/phase2Executor"
 import { WorkflowProviderExecutor } from "../workflows/providerExecutor"
 import { resolvePublishedTriggerCatalog } from "../workflows/publishedTriggers"
 import { createRepositoryAgentExecutor } from "../workflows/repositoryAgentExecutor"
 import { GitHubRepositoryDataReader } from "../workflows/repositoryDataExecutor"
 import { WorkflowScheduleDispatcher } from "../workflows/scheduleDispatcher"
 import { WorkflowService } from "../workflows/service"
+import { WorkflowDispatcher } from "../workflows/workflowExecutor"
 import { QueuedRunDispatcher } from "./dispatcher"
 import { PlanningRunExecutor } from "./planningExecutor"
 import { createProcessHealthServer } from "./processHealth"
@@ -118,7 +118,7 @@ const workflowProviderExecutor = new WorkflowProviderExecutor(
   runtime.integrationStore,
   runtime.workflowJournalStore
 )
-const workflowDispatcher = new Phase2WorkflowDispatcher(
+const workflowDispatcher = new WorkflowDispatcher(
   runtime.workflowJournalStore,
   `workflow-${process.env.COMPUTERNAME ?? process.pid}`,
   (runId) => artifactStoreFactory.forRun(runId, workflowArtifactRoot(runId)),

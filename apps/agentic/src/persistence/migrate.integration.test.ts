@@ -6,7 +6,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { describe, expect, it } from "vitest"
 import { z } from "zod"
-import { WorkflowDefinitionV2Schema } from "../workflows/definitionV2"
+import { WorkflowDefinitionSchema } from "../workflows/definition"
 import * as schema from "./schema"
 import { PostgresWorkflowScheduleStore } from "./workflowScheduleStore"
 import { PostgresWorkflowStore } from "./workflowStore"
@@ -14,13 +14,12 @@ import { PostgresWorkflowStore } from "./workflowStore"
 const describePostgres = process.env.POSTGRES_API_URL === undefined ? describe.skip : describe
 const migrationsFolder = fileURLToPath(new URL("../../drizzle/", import.meta.url))
 const migrationJournalUrl = new URL("../../drizzle/meta/_journal.json", import.meta.url)
-const initialDraft = WorkflowDefinitionV2Schema.parse({
+const initialDraft = WorkflowDefinitionSchema.parse({
   schemaVersion: "2",
   inputSchema: { type: "object" },
   outputSchema: { type: "object" },
   constants: {},
   resourceBindings: {},
-  fixtures: [],
   steps: [
     {
       id: "manual",
@@ -135,7 +134,7 @@ describePostgres.sequential("PostgreSQL migrations", () => {
         activePublishedVersion: 1
       })
 
-      const changedDraft = WorkflowDefinitionV2Schema.parse({
+      const changedDraft = WorkflowDefinitionSchema.parse({
         ...initialDraft,
         steps: initialDraft.steps.map((step) =>
           step.id === "success" ? { ...step, label: "Changed after publication" } : step

@@ -3,7 +3,7 @@ import type { IntegrationCredentialBroker } from "../integrations/broker"
 import { ProviderExecutionPortResolver, type ProviderExecutionPort } from "../integrations/providerPorts"
 import type { IntegrationConnectionStore } from "../persistence/integrationStore"
 import type { WorkflowEffectRecord } from "../persistence/workflowJournalStore"
-import type { WorkflowStepInstance } from "./definitionV2"
+import type { WorkflowStepInstance } from "./definition"
 import type { JsonValue } from "./executionContracts"
 import {
   WorkflowProviderExecutionError,

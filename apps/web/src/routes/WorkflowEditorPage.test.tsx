@@ -149,7 +149,8 @@ vi.mock("@xyflow/react", async () => {
     addEdge: (connection: MockEdge, edges: MockEdge[]) => [...edges, connection],
     Background: () => null,
     Controls: () => null,
-    Handle: () => React.createElement("span"),
+    Handle: ({ id, type }: { id: string; type: string }) =>
+      React.createElement("span", { "aria-label": `${type} handle ${id}` }),
     BackgroundVariant: { Dots: "dots" },
     Position: { Left: "left", Right: "right" }
   }
@@ -164,7 +165,6 @@ const definitions = [
     label: "Manual run",
     description: "Starts with supplied input.",
     executionClass: "control",
-    simulationPolicy: "fixture",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: { type: "object" },
@@ -181,7 +181,6 @@ const definitions = [
     label: "Set fields",
     description: "Creates a typed object.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: { type: "object" },
@@ -223,7 +222,6 @@ const definitions = [
     label: item.label,
     description: item.description,
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: { type: "object" },
@@ -242,12 +240,11 @@ const definitions = [
     label: "Success",
     description: "Ends the branch successfully.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: { type: "object" },
     inputs: [{ name: "result", label: "Result", schema: { type: "object" }, cardinality: "optional" }],
-    outputs: [],
+    outputs: [{ name: "result", label: "Result", schema: { type: "object" }, cardinality: "one" }],
     errorSchema: { type: "object" },
     executorDigest: "c".repeat(64)
   },
@@ -259,7 +256,6 @@ const definitions = [
     label: "Compose Markdown",
     description: "Creates an immutable Markdown artifact.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: { type: "object" },
@@ -276,7 +272,6 @@ const definitions = [
     label: "Collect",
     description: "Collects bounded outputs in source order.",
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: { type: "object" },
@@ -293,7 +288,6 @@ const definitions = [
     label: "Repository data",
     description: "Reads bounded repository metadata or content.",
     executionClass: "provider",
-    simulationPolicy: "read_only",
     mutationPolicy: "none",
     capabilities: ["repository.read"],
     configSchema: { type: "object" },
@@ -310,7 +304,6 @@ const definitions = [
     label: "Repository agent",
     description: "Runs one pinned repository agent.",
     executionClass: "workspace",
-    simulationPolicy: "fixture",
     mutationPolicy: "none",
     capabilities: ["repository.read", "workspace.create"],
     configSchema: { type: "object" },
@@ -327,7 +320,6 @@ const definitions = [
     label: "AI model",
     description: "Runs a pinned OpenRouter model.",
     executionClass: "model",
-    simulationPolicy: "fixture",
     mutationPolicy: "none",
     capabilities: ["model.inference"],
     configSchema: { type: "object" },
@@ -344,7 +336,6 @@ const definitions = [
     label: "Structured judgment",
     description: "Produces a schema-validated decision.",
     executionClass: "model",
-    simulationPolicy: "fixture",
     mutationPolicy: "none",
     capabilities: ["model.inference", "model.structured_output"],
     configSchema: { type: "object" },
@@ -361,7 +352,6 @@ const definitions = [
     label: "Provider event",
     description: "Starts from a normalized provider event.",
     executionClass: "provider",
-    simulationPolicy: "fixture",
     mutationPolicy: "none",
     capabilities: ["provider.events"],
     configSchema: { type: "object" },
@@ -378,7 +368,6 @@ const definitions = [
     label: "Schedule",
     description: "Starts from a durable schedule.",
     executionClass: "control",
-    simulationPolicy: "fixture",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: { type: "object" },
@@ -395,7 +384,6 @@ const definitions = [
     label: "Provider data",
     description: "Reads connected provider records.",
     executionClass: "provider",
-    simulationPolicy: "read_only",
     mutationPolicy: "none",
     capabilities: ["provider.read"],
     configSchema: { type: "object" },
@@ -412,7 +400,6 @@ const definitions = [
     label: "Provider action",
     description: "Performs one durable provider mutation.",
     executionClass: "provider",
-    simulationPolicy: "blocked",
     mutationPolicy: "external_effect",
     capabilities: ["provider.write"],
     configSchema: { type: "object" },
@@ -438,7 +425,6 @@ const definitions = [
     label: item.label,
     description: `Configure ${item.label}.`,
     executionClass: "control",
-    simulationPolicy: "deterministic",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: { type: "object" },
@@ -609,7 +595,7 @@ const providerEvents = {
   ]
 }
 
-const content = {
+const content: WorkflowDraftContent = {
   schemaVersion: "2",
   inputSchema: { type: "object" },
   outputSchema: { type: "object" },
@@ -656,8 +642,7 @@ const content = {
     }
   ],
   constants: {},
-  resourceBindings: { repository: repositoryBinding },
-  fixtures: []
+  resourceBindings: { repository: repositoryBinding }
 }
 
 function draft(revision = 1, activePublishedVersion: number | null = 1) {
@@ -698,7 +683,16 @@ async function addStep(name: RegExp) {
 
 afterEach(() => navigate.mockReset())
 
-describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
+describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
+  it("renders terminal steps with an input handle only", async () => {
+    registerEditorApis()
+    render(<WorkflowEditorPage />)
+
+    expect(await screen.findByDisplayValue("Data preparation")).toBeInTheDocument()
+    expect(screen.getByLabelText("target handle result")).toBeInTheDocument()
+    expect(screen.queryByLabelText("source handle result")).not.toBeInTheDocument()
+  })
+
   it("loads the catalog and synchronizes canvas and outline selection", async () => {
     registerEditorApis()
     render(<WorkflowEditorPage />)
@@ -719,9 +713,9 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     expect(within(stepLibrary).getByRole("button", { name: /Manual run/u })).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole("button", { name: "Expand results" }))
-    expect(screen.getByRole("heading", { name: "Problems" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Problems 0" })).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: "Collapse results" }))
-    expect(screen.queryByRole("heading", { name: "Problems" })).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Expand results" })).toHaveAttribute("aria-expanded", "false")
 
     await userEvent.click(screen.getByRole("tab", { name: "Outline" }))
     const topology = screen.getByRole("navigation", { name: "Workflow topology" })
@@ -730,7 +724,7 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     await userEvent.click(setFields)
     expect(screen.getByRole("textbox", { name: "Field name" })).toHaveValue("answer")
     expect(screen.getByRole("textbox", { name: "Value" })).toHaveValue("42")
-    expect(screen.getByRole("button", { name: "Run to here" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Run to here" })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: "Close properties" }))
     await waitFor(() => expect(setFields).toHaveFocus())
   })
@@ -817,7 +811,7 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     expect(label).toHaveFocus()
   })
 
-  it("tests the draft, runs to a selected step, publishes, and starts a durable run", async () => {
+  it("tests the draft through its trigger, publishes, and starts a durable run", async () => {
     registerEditorApis()
     ApiMock.post(`/api/workflows/${workflowId}/validate`, {
       data: { schemaVersion: "1", draftRevision: 1, valid: true, issues: [] }
@@ -825,22 +819,24 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     ApiMock.post(`/api/workflows/${workflowId}/publish`, { data: draft(1, 2) })
     const testDraft = ApiMock.post(`/api/workflows/${workflowId}/test`, {
       data: {
-        schemaVersion: "1",
-        mode: "draft",
-        simulated: true,
-        draftRevision: 1,
-        fixtureId: null,
-        elapsedMs: 1,
-        steps: [{ stepId: "manual", status: "succeeded", input: { input: {} }, output: { input: {} }, error: null }]
+        runId,
+        created: true,
+        source: { kind: "draft_test", draftRevision: 1 }
       }
     })
-    const run = ApiMock.post(`/api/workflows/${workflowId}/runs`, { data: { runId, created: true, version: 2 } })
+    const run = ApiMock.post(`/api/workflows/${workflowId}/runs`, {
+      data: { runId, created: true, source: { kind: "published", version: 2 } }
+    })
     render(<WorkflowEditorPage />)
 
     await userEvent.click(await screen.findByRole("button", { name: "Test draft" }))
+    expect(testDraft.hits).toBe(0)
+    const confirmation = await screen.findByRole("alertdialog", { name: "Start live draft test?" })
+    expect(within(confirmation).getByText("Resources: octo/agency.")).toBeInTheDocument()
+    await userEvent.click(within(confirmation).getByRole("button", { name: "Start draft test" }))
     await waitFor(() => expect(testDraft.hits).toBe(1))
-    await userEvent.click(screen.getByRole("button", { name: "Expand results" }))
-    expect(screen.getByRole("heading", { name: "Test results" })).toBeInTheDocument()
+    expect(testDraft.spy).toHaveBeenCalledWith({ expectedRevision: 1, triggerStepId: "manual", input: {} })
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/runs/$runId", params: { runId } }))
 
     await userEvent.click(screen.getByRole("button", { name: "Publish version 2" }))
     expect(await screen.findByText("Active version 2")).toBeInTheDocument()
@@ -850,7 +846,39 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     expect(navigate).toHaveBeenCalledWith({ to: "/runs/$runId", params: { runId } })
   })
 
-  it("keeps problems and failed tests revision-scoped and marks both stale after an edit", async () => {
+  it("requires an explicit test trigger when the draft has multiple triggers", async () => {
+    const schedule: WorkflowDraftContent["steps"][number] = {
+      ...content.steps[0]!,
+      id: "schedule",
+      label: "Daily schedule",
+      definition: { kind: "schedule", version: 1 },
+      config: { timezone: "UTC", intervalSeconds: 86_400 }
+    }
+    const multiTriggerContent: WorkflowDraftContent = { ...content, steps: [...content.steps, schedule] }
+    registerEditorApis({
+      ...draft(),
+      content: multiTriggerContent
+    })
+    const testDraft = ApiMock.post(`/api/workflows/${workflowId}/test`, {
+      data: { runId, created: true, source: { kind: "draft_test", draftRevision: 1 } }
+    })
+    render(<WorkflowEditorPage />)
+
+    await userEvent.click(await screen.findByRole("button", { name: "Open details" }))
+    const trigger = screen.getByRole("combobox", { name: "Test trigger" })
+    expect(trigger).toHaveValue("")
+    await userEvent.click(trigger)
+    await userEvent.click(await screen.findByRole("option", { name: "Daily schedule" }))
+    await userEvent.click(screen.getByRole("button", { name: "Test draft" }))
+    expect(testDraft.hits).toBe(0)
+    expect(await screen.findByText("This starts a durable server run from Daily schedule.")).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Start draft test" }))
+
+    await waitFor(() => expect(testDraft.hits).toBe(1))
+    expect(testDraft.spy).toHaveBeenCalledWith({ expectedRevision: 1, triggerStepId: "schedule", input: {} })
+  })
+
+  it("keeps validation problems revision-scoped and marks them stale after an edit", async () => {
     registerEditorApis()
     ApiMock.post(`/api/workflows/${workflowId}/validate`, {
       data: {
@@ -868,44 +896,15 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
         ]
       }
     })
-    ApiMock.post(`/api/workflows/${workflowId}/test`, {
-      data: {
-        schemaVersion: "1",
-        mode: "draft",
-        simulated: true,
-        draftRevision: 1,
-        fixtureId: null,
-        elapsedMs: 2,
-        steps: [
-          {
-            stepId: "set",
-            status: "failed",
-            input: {},
-            output: {},
-            error: { message: "Invalid field value" }
-          }
-        ]
-      }
-    })
     render(<WorkflowEditorPage />)
 
     await userEvent.click(await screen.findByRole("button", { name: "Check for issues" }))
-    const problemsTab = await screen.findByRole("tab", { name: "Problems, 1" })
-    expect(problemsTab).toHaveAttribute("aria-controls", "problems-panel")
     await userEvent.click(screen.getByRole("button", { name: "Expand results" }))
-    expect(screen.getByRole("tabpanel", { name: "Problems, 1" })).toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole("button", { name: "Test draft" }))
-    const testsTab = await screen.findByRole("tab", { name: "Test results, 1 failed" })
-    expect(testsTab).toHaveAttribute("aria-controls", "test-results-panel")
-    expect(screen.getByRole("tabpanel", { name: "Test results, 1 failed" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Set fields failed/u })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Problems 1" })).toBeInTheDocument()
 
     fireEvent.change(screen.getByRole("textbox", { name: "Workflow description" }), {
       target: { value: "Changed after results" }
     })
-    expect(await screen.findByText("Out of date. Test the current draft again.")).toBeInTheDocument()
-    await userEvent.click(problemsTab)
     expect(screen.getByText("Out of date. Check the current draft again.")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Set fields needs a label." })).toBeInTheDocument()
   })
@@ -921,7 +920,7 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
     expect(within(catalog).queryByRole("button", { name: /Manual run/u })).not.toBeInTheDocument()
     await userEvent.click(within(catalog).getByRole("button", { name: /Success/u }))
     expect(screen.getAllByRole("button", { name: "Select Success" })).toHaveLength(2)
-    expect(screen.getByRole("button", { name: "Run to here" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Run to here" })).not.toBeInTheDocument()
   })
 
   it("authors Phase 3 Markdown artifacts and bounded collections", async () => {
@@ -1109,6 +1108,63 @@ describe("WorkflowEditorPage V2", { timeout: 30_000 }, () => {
           })
         ),
       { timeout: 2500 }
+    )
+  }, 30_000)
+
+  it("reviews a generated schema proposal before applying it", async () => {
+    registerEditorApis(draft(1, null))
+    ApiMock.get("/api/workflows/models", { data: modelCatalog })
+    const generate = ApiMock.post("/api/workflows/generate-schema", {
+      data: {
+        schemaVersion: "1",
+        schema: {
+          type: "object",
+          properties: { decision: { type: "string" } },
+          required: ["decision"],
+          additionalProperties: false
+        }
+      }
+    })
+    const save = ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2, null) })
+    render(<WorkflowEditorPage />)
+
+    await screen.findByRole("complementary", { name: "Step library" })
+    await addStep(/^AI model/u)
+    await userEvent.click(await screen.findByRole("combobox", { name: "Model" }))
+    await userEvent.click(screen.getByRole("option", { name: /GPT Test/u }))
+    await userEvent.click(screen.getByRole("combobox", { name: "Output format" }))
+    await userEvent.click(screen.getByRole("option", { name: "Structured JSON" }))
+    await userEvent.click(screen.getByRole("button", { name: "Generate schema" }))
+
+    expect(generate.hits).toBe(0)
+    expect(screen.getByText(/may incur model charges/u)).toBeInTheDocument()
+    const prompt = screen.getByRole("textbox", { name: "Output description or example" })
+    await userEvent.type(prompt, "Return an approval decision.")
+    await userEvent.click(screen.getByRole("button", { name: "Generate proposal" }))
+    const proposal = await screen.findByRole("textbox", { name: "Schema proposal" })
+    expect(generate.hits).toBe(1)
+    expect((proposal as HTMLTextAreaElement).value).toContain('"decision"')
+
+    const savesBeforeApply = save.hits
+    await userEvent.click(screen.getByRole("button", { name: "Use schema" }))
+    await waitFor(() => expect(save.hits).toBeGreaterThan(savesBeforeApply), { timeout: 2500 })
+    expect(save.spy).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        content: expect.objectContaining({
+          steps: expect.arrayContaining([
+            expect.objectContaining({
+              config: expect.objectContaining({
+                outputSchema: {
+                  type: "object",
+                  properties: { decision: { type: "string" } },
+                  required: ["decision"],
+                  additionalProperties: false
+                }
+              })
+            })
+          ])
+        })
+      })
     )
   }, 30_000)
 

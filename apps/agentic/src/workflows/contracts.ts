@@ -1,21 +1,21 @@
 import { randomUUID } from "node:crypto"
 import { z } from "zod"
 import { ActionAvailabilitySchema } from "../contracts/actionAvailability"
-import { WorkflowDefinitionV2Schema, WorkflowResourceBindingV2Schema, type WorkflowDefinitionV2 } from "./definitionV2"
+import { WorkflowDefinitionSchema, WorkflowResourceBindingSchema, type WorkflowDefinition } from "./definition"
 import { JsonValueSchema } from "./executionContracts"
 import { ScheduleDefinitionShape } from "./scheduleDefinition"
 
 export const WorkflowStatusSchema = z.enum(["draft", "archived"])
 const StepIdSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u)
 
-export const WorkflowContentSchema = WorkflowDefinitionV2Schema
+export const WorkflowContentSchema = WorkflowDefinitionSchema
 
 const WorkflowNameSchema = z.string().trim().min(1, "Enter a workflow name.").max(120)
-const GitHubRepositoryBindingSchema = WorkflowResourceBindingV2Schema.refine(
+const GitHubRepositoryBindingSchema = WorkflowResourceBindingSchema.refine(
   ({ provider, resourceType }) => provider === "github" && resourceType === "repository",
   "Select a GitHub repository."
 )
-const LinearTeamBindingSchema = WorkflowResourceBindingV2Schema.refine(
+const LinearTeamBindingSchema = WorkflowResourceBindingSchema.refine(
   ({ provider, resourceType }) => provider === "linear" && resourceType === "team",
   "Select a Linear team."
 )
@@ -107,7 +107,14 @@ export const WorkflowDraftViewSchema = z
   .strict()
 
 export const WorkflowRunStartSchema = z
-  .object({ runId: z.uuid(), created: z.boolean(), version: z.number().int().positive() })
+  .object({
+    runId: z.uuid(),
+    created: z.boolean(),
+    source: z.discriminatedUnion("kind", [
+      z.object({ kind: z.literal("published"), version: z.number().int().positive() }).strict(),
+      z.object({ kind: z.literal("draft_test"), draftRevision: z.number().int().positive() }).strict()
+    ])
+  })
   .strict()
 
 export const WorkflowValidationSchema = z
@@ -213,4 +220,4 @@ export const UpdateWorkflowScheduleRequestSchema = z.union([
     .strict()
 ])
 
-export type WorkflowContent = WorkflowDefinitionV2
+export type WorkflowContent = WorkflowDefinition

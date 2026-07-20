@@ -12,7 +12,7 @@ function executionPackage(graph: ExecutionPackageContent["graph"]): ExecutionPac
   return {
     schemaVersion: EXECUTION_CONTRACT_VERSION,
     workflowId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f",
-    workflowVersion: 1,
+    source: { kind: "published", version: 1 },
     compilerVersion: "1.0.0",
     mappingExpressionVersion: "1",
     eventDecoderVersions: { "run.started": "1" },
@@ -27,7 +27,6 @@ function executionPackage(graph: ExecutionPackageContent["graph"]): ExecutionPac
         outputSchema: { type: "object" },
         errorSchema: { type: "object" },
         executionClass: "control",
-        simulationPolicy: "deterministic",
         mutationPolicy: "none",
         capabilities: []
       }

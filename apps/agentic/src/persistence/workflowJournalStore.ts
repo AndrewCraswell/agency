@@ -21,7 +21,7 @@ import {
   type ExecutionPackageContent
 } from "../workflows/executionContracts"
 import { validateJsonValue } from "../workflows/jsonSchema"
-import { downstreamActivations } from "../workflows/phase2Executor"
+import { downstreamActivations } from "../workflows/workflowExecutor"
 import {
   workflowActivations,
   workflowAttempts,
@@ -202,6 +202,8 @@ export class PostgresWorkflowJournalStore {
 
   async publishExecutionPackage(contentInput: ExecutionPackageContent): Promise<ExecutionPackageRecord> {
     const content = ExecutionPackageContentSchema.parse(contentInput)
+    const workflowVersion = content.source.kind === "published" ? content.source.version : null
+    const draftRevision = content.source.kind === "draft_test" ? content.source.draftRevision : null
     const packageDigest = executionPackageDigest(content)
     const compiledPlanDigest = jsonValueDigest(content.graph)
     return this.#database.transaction(async (transaction) => {
@@ -210,7 +212,9 @@ export class PostgresWorkflowJournalStore {
         .values({
           packageDigest,
           workflowId: content.workflowId,
-          workflowVersion: content.workflowVersion,
+          sourceKind: content.source.kind,
+          workflowVersion,
+          draftRevision,
           contractVersion: content.schemaVersion,
           compilerVersion: content.compilerVersion,
           compiledPlanDigest,
@@ -218,23 +222,30 @@ export class PostgresWorkflowJournalStore {
           createdAt: this.#now()
         })
         .onConflictDoNothing({
-          target: [workflowExecutionPackages.workflowId, workflowExecutionPackages.workflowVersion]
+          target:
+            content.source.kind === "published"
+              ? [workflowExecutionPackages.workflowId, workflowExecutionPackages.workflowVersion]
+              : workflowExecutionPackages.packageDigest
         })
       const rows = await transaction
         .select()
         .from(workflowExecutionPackages)
         .where(
-          and(
-            eq(workflowExecutionPackages.workflowId, content.workflowId),
-            eq(workflowExecutionPackages.workflowVersion, content.workflowVersion)
-          )
+          content.source.kind === "published"
+            ? and(
+                eq(workflowExecutionPackages.workflowId, content.workflowId),
+                eq(workflowExecutionPackages.workflowVersion, content.source.version)
+              )
+            : eq(workflowExecutionPackages.packageDigest, packageDigest)
         )
         .limit(1)
       const executionPackage = ExecutionPackageRecordSchema.parse(rows[0])
       if (executionPackage.packageDigest !== packageDigest) {
-        throw new Error(
-          `Workflow ${content.workflowId} version ${content.workflowVersion} already has a different execution package`
-        )
+        const source =
+          content.source.kind === "published"
+            ? `version ${content.source.version}`
+            : `draft revision ${content.source.draftRevision}`
+        throw new Error(`Workflow ${content.workflowId} ${source} already has a different execution package`)
       }
       return executionPackage
     })

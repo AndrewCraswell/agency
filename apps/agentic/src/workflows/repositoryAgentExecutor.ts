@@ -2,7 +2,7 @@ import { createHash } from "node:crypto"
 import { z } from "zod"
 import { AssignmentSchema } from "../contracts/assignment"
 import type { WorkerResult } from "../contracts/results"
-import type { WorkflowStepInstance } from "./definitionV2"
+import type { WorkflowStepInstance } from "./definition"
 import { JsonValueSchema, jsonValueDigest, type JsonValue } from "./executionContracts"
 import { RepositoryAgentSnapshotSchema, type RepositoryAgentSnapshot } from "./repositoryAgents"
 

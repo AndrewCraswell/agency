@@ -19,11 +19,10 @@ import {
   UpdateWorkflowScheduleRequestSchema,
   WorkflowValidationSchema
 } from "./contracts"
-import { WorkflowDefinitionV2Schema, type WorkflowDefinitionV2 } from "./definitionV2"
+import { WorkflowDefinitionSchema, type WorkflowDefinition } from "./definition"
 import { JsonValueSchema, jsonValueDigest } from "./executionContracts"
 import { validateJsonValue } from "./jsonSchema"
 import type { WorkflowModelCatalogPort, WorkflowModelSnapshot } from "./modelCatalog"
-import { simulatePhase2Workflow } from "./phase2Executor"
 import { listProviderOperations } from "./providerCatalog"
 import { matchPublishedWebhookTriggers, resolvePublishedTriggerCatalog } from "./publishedTriggers"
 import {
@@ -49,6 +48,7 @@ export type WorkflowServiceJournal = Pick<
   PostgresWorkflowJournalStore,
   | "cancelRun"
   | "getRunDetail"
+  | "publishExecutionPackage"
   | "prepareRun"
   | "listPendingWaits"
   | "resumeWait"
@@ -164,12 +164,19 @@ function runSummary(detail: WorkflowRunDetail) {
     requiredCapability: null
   })
   const childRun = detail.run.triggerIdentity.startsWith("child:")
+  const draftTest = detail.executionPackage.content.source.kind === "draft_test"
+  let runAgainDisabledReason: string | null = null
+  if (childRun) {
+    runAgainDisabledReason = "Start this child workflow through its parent workflow."
+  } else if (draftTest) {
+    runAgainDisabledReason = "Start another test from the current workflow draft."
+  }
   actions.push({
     key: "run_again",
     label: "Run again",
     targetId: null,
-    allowed: !childRun,
-    disabledReason: childRun ? "Start this child workflow through its parent workflow." : null,
+    allowed: !childRun && !draftTest,
+    disabledReason: runAgainDisabledReason,
     targetLabel: `Run ${detail.run.runId}`,
     consequence: "Creates a new run from the same published workflow version and preserves this run.",
     approvalRequirement: "confirmation",
@@ -272,17 +279,16 @@ function runSummary(detail: WorkflowRunDetail) {
 }
 
 function defaultWorkflowDefinition(
-  repository: WorkflowDefinitionV2["resourceBindings"][string],
-  linearTeam: WorkflowDefinitionV2["resourceBindings"][string],
+  repository: WorkflowDefinition["resourceBindings"][string],
+  linearTeam: WorkflowDefinition["resourceBindings"][string],
   modelId: string
-): WorkflowDefinitionV2 {
-  return WorkflowDefinitionV2Schema.parse({
+): WorkflowDefinition {
+  return WorkflowDefinitionSchema.parse({
     schemaVersion: "2",
     inputSchema: { type: "object", additionalProperties: true },
     outputSchema: { type: "object", additionalProperties: true },
     constants: {},
     resourceBindings: { repository, linearTeam },
-    fixtures: [],
     steps: [
       {
         id: "manual-start",
@@ -465,14 +471,13 @@ function defaultWorkflowDefinition(
   })
 }
 
-function blankWorkflowDefinition(repository: WorkflowDefinitionV2["resourceBindings"][string]): WorkflowDefinitionV2 {
-  return WorkflowDefinitionV2Schema.parse({
+function blankWorkflowDefinition(repository: WorkflowDefinition["resourceBindings"][string]): WorkflowDefinition {
+  return WorkflowDefinitionSchema.parse({
     schemaVersion: "2",
     inputSchema: { type: "object", additionalProperties: true },
     outputSchema: { type: "object", additionalProperties: true },
     constants: {},
     resourceBindings: { repository },
-    fixtures: [],
     steps: [],
     connections: []
   })
@@ -497,9 +502,9 @@ function triggerSummary(workflow: WorkflowDefinitionRecord): TriggerSummary[] {
 }
 
 function compilationValidation(
-  definition: WorkflowDefinitionV2,
+  definition: WorkflowDefinition,
   workflowId: string,
-  workflowVersion: number,
+  source: { kind: "published"; version: number } | { kind: "draft_test"; draftRevision: number },
   agentSnapshots: RepositoryAgentSnapshot[] = [],
   modelSnapshots: WorkflowModelSnapshot[] = []
 ) {
@@ -519,7 +524,7 @@ function compilationValidation(
   try {
     compileWorkflowDefinition({
       workflowId,
-      workflowVersion,
+      source,
       definition,
       maximumPhase: CURRENT_WORKFLOW_RELEASE_PHASE,
       agentSnapshots,
@@ -657,7 +662,12 @@ export class WorkflowService {
       schemaVersion: "1" as const,
       runId: prepared.run.runId,
       created: prepared.created,
-      version: detail.executionPackage.workflowVersion
+      version:
+        detail.executionPackage.content.source.kind === "published"
+          ? detail.executionPackage.content.source.version
+          : (() => {
+              throw new Error("Draft test runs cannot be rerun as published versions")
+            })()
     }
   }
 
@@ -751,7 +761,7 @@ export class WorkflowService {
       ...compilationValidation(
         workflow.draft,
         workflowId,
-        (versions[0]?.version ?? 0) + 1,
+        { kind: "published", version: (versions[0]?.version ?? 0) + 1 },
         agentSnapshots,
         modelSnapshots
       )
@@ -768,7 +778,7 @@ export class WorkflowService {
     const validation = compilationValidation(
       workflow.draft,
       workflowId,
-      (versions[0]?.version ?? 0) + 1,
+      { kind: "published", version: (versions[0]?.version ?? 0) + 1 },
       agentSnapshots,
       modelSnapshots
     )
@@ -780,30 +790,60 @@ export class WorkflowService {
   async test(workflowId: string, input: unknown) {
     const request = z
       .object({
-        input: JsonValueSchema.default({}),
-        fixtureId: z.string().optional(),
-        stopAtStepId: z.string().optional()
+        expectedRevision: z.number().int().positive(),
+        triggerStepId: z.string().trim().min(1),
+        input: JsonValueSchema.default({})
       })
       .strict()
       .parse(input)
     const workflow = await this.#requireWorkflow(workflowId)
-    const fixture =
-      request.fixtureId === undefined ? undefined : workflow.draft.fixtures.find(({ id }) => id === request.fixtureId)
-    if (request.fixtureId !== undefined && fixture === undefined) {
-      throw new Error(`Fixture ${request.fixtureId} was not found`)
+    if (workflow.draftRevision !== request.expectedRevision) {
+      throw new Error("Workflow draft changed before testing")
     }
-    const simulationInput = fixture?.workflowInput ?? request.input
-    const startedAt = Date.now()
-    const steps = await simulatePhase2Workflow(workflow.draft, simulationInput, request.stopAtStepId, fixture)
-    return {
-      schemaVersion: "1" as const,
-      mode: request.stopAtStepId === undefined ? ("draft" as const) : ("run_to_here" as const),
-      simulated: true as const,
-      draftRevision: workflow.draftRevision,
-      fixtureId: fixture?.id ?? null,
-      elapsedMs: Math.max(0, Date.now() - startedAt),
-      steps
+    const [agentSnapshots, modelSnapshots] = await Promise.all([
+      this.#resolveRepositoryAgents(workflow.draft),
+      this.#resolveModels(workflow.draft)
+    ])
+    const compiled = compileWorkflowDefinition({
+      workflowId,
+      source: { kind: "draft_test", draftRevision: workflow.draftRevision },
+      definition: workflow.draft,
+      maximumPhase: CURRENT_WORKFLOW_RELEASE_PHASE,
+      agentSnapshots,
+      modelSnapshots
+    })
+    const graph = CompiledWorkflowGraphSchema.parse(compiled.content.graph)
+    const inputIssues = validateJsonValue(graph.inputSchema, request.input)
+    if (inputIssues.length > 0) throw new Error(inputIssues.map((issue) => `${issue.path}: ${issue.message}`).join(" "))
+    const trigger = graph.steps.find(({ id }) => id === request.triggerStepId)
+    if (trigger === undefined || !["manual_trigger", "provider_event", "schedule"].includes(trigger.definition.kind)) {
+      throw new Error("Select an available trigger step")
     }
+    let triggerPort = "input"
+    if (trigger.definition.kind === "provider_event") triggerPort = "event"
+    if (trigger.definition.kind === "schedule") triggerPort = "fire"
+    const executionPackage = await this.#journal.publishExecutionPackage(compiled.content)
+    const triggerIdentity = `draft_test:${randomUUID()}`
+    const prepared = await this.#journal.prepareRun({
+      packageDigest: executionPackage.packageDigest,
+      requestDigest: jsonValueDigest({
+        packageDigest: executionPackage.packageDigest,
+        triggerIdentity,
+        input: request.input
+      }),
+      triggerIdentity,
+      sealedManifest: {
+        input: request.input,
+        resources: executionPackage.content.resourceReferences,
+        source: executionPackage.content.source
+      },
+      initialActivations: [{ stepId: trigger.id, inputBindings: { [triggerPort]: request.input } }]
+    })
+    return WorkflowRunStartSchema.parse({
+      runId: prepared.run.runId,
+      created: prepared.created,
+      source: executionPackage.content.source
+    })
   }
 
   async start(workflowId: string, input: unknown) {
@@ -847,7 +887,7 @@ export class WorkflowService {
     return WorkflowRunStartSchema.parse({
       runId: prepared.run.runId,
       created: prepared.created,
-      version: request.version
+      source: { kind: "published", version: request.version }
     })
   }
 
@@ -923,7 +963,7 @@ export class WorkflowService {
     })
   }
 
-  async #resolveRepositoryAgents(definition: WorkflowDefinitionV2): Promise<RepositoryAgentSnapshot[]> {
+  async #resolveRepositoryAgents(definition: WorkflowDefinition): Promise<RepositoryAgentSnapshot[]> {
     const references = new Map<string, z.infer<typeof RepositoryAgentReferenceSchema>>()
     for (const step of definition.steps.filter(({ definition: item }) => item.kind === "repository_agent")) {
       const parsed = RepositoryAgentReferenceSchema.safeParse(step.config.agentReference)
@@ -936,7 +976,7 @@ export class WorkflowService {
     return Promise.all([...references.values()].map((reference) => repositoryAgents.resolve(reference)))
   }
 
-  async #resolveModels(definition: WorkflowDefinitionV2): Promise<WorkflowModelSnapshot[]> {
+  async #resolveModels(definition: WorkflowDefinition): Promise<WorkflowModelSnapshot[]> {
     const modelIds = new Set<string>()
     for (const step of definition.steps.filter(
       ({ definition: item }) => item.kind === "ai_model" || item.kind === "structured_judgment"

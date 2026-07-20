@@ -10,7 +10,7 @@ import { createControlPlaneServer } from "../controlPlane/server"
 import * as schema from "../persistence/schema"
 import { PostgresWorkflowJournalStore } from "../persistence/workflowJournalStore"
 import { PostgresWorkflowStore } from "../persistence/workflowStore"
-import { WorkflowDefinitionV2Schema } from "./definitionV2"
+import { WorkflowDefinitionSchema } from "./definition"
 import { WorkflowService } from "./service"
 
 const describePostgres = process.env.POSTGRES_API_URL === undefined ? describe.skip : describe
@@ -22,13 +22,12 @@ function databaseIdentifier(value: string) {
 }
 
 function manualDefinition(successLabel: string) {
-  return WorkflowDefinitionV2Schema.parse({
+  return WorkflowDefinitionSchema.parse({
     schemaVersion: "2",
     inputSchema: { type: "object", additionalProperties: true },
     outputSchema: { type: "object", additionalProperties: true },
     constants: {},
     resourceBindings: {},
-    fixtures: [],
     steps: [
       {
         id: "manual",

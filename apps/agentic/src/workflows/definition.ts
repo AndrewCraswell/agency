@@ -2,7 +2,7 @@ import { z } from "zod"
 import { JsonValueSchema } from "./executionContracts"
 import { SupportedJsonSchemaSchema } from "./jsonSchema"
 
-export const WORKFLOW_DEFINITION_V2_SCHEMA_VERSION = "2" as const
+export const WORKFLOW_DEFINITION_SCHEMA_VERSION = "2" as const
 const IdentifierSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u)
 const PortNameSchema = z.string().regex(/^[a-z][a-z0-9_]*$/u)
 const PositionSchema = z.object({ x: z.number().finite(), y: z.number().finite() }).strict()
@@ -29,7 +29,7 @@ export const WorkflowFieldMappingSchema = z
   .object({ sourcePath: z.array(z.string()).default([]), targetPath: z.array(z.string()).default([]) })
   .strict()
 
-export const WorkflowConnectionV2Schema = z
+export const WorkflowConnectionSchema = z
   .object({
     id: IdentifierSchema,
     source: WorkflowPortReferenceSchema,
@@ -44,7 +44,7 @@ export const WorkflowConnectionV2Schema = z
   })
   .strict()
 
-export const WorkflowResourceBindingV2Schema = z
+export const WorkflowResourceBindingSchema = z
   .object({
     connectionId: z.uuid(),
     provider: z.enum(["github", "linear"]),
@@ -55,30 +55,17 @@ export const WorkflowResourceBindingV2Schema = z
   })
   .strict()
 
-export const WorkflowFixtureSchema = z
+export const WorkflowDefinitionSchema = z
   .object({
-    id: IdentifierSchema,
-    name: z.string().trim().min(1).max(120),
-    revision: z.number().int().positive(),
-    workflowInput: JsonValueSchema,
-    providerResponses: z.record(z.string(), JsonValueSchema).default({}),
-    modelResponses: z.record(z.string(), JsonValueSchema).default({}),
-    agentResponses: z.record(z.string(), JsonValueSchema).default({})
-  })
-  .strict()
-
-export const WorkflowDefinitionV2Schema = z
-  .object({
-    schemaVersion: z.literal(WORKFLOW_DEFINITION_V2_SCHEMA_VERSION),
+    schemaVersion: z.literal(WORKFLOW_DEFINITION_SCHEMA_VERSION),
     inputSchema: SupportedJsonSchemaSchema,
     outputSchema: SupportedJsonSchemaSchema,
     steps: z.array(WorkflowStepInstanceSchema),
-    connections: z.array(WorkflowConnectionV2Schema),
+    connections: z.array(WorkflowConnectionSchema),
     constants: z.record(z.string(), JsonValueSchema).default({}),
-    resourceBindings: z.record(z.string(), WorkflowResourceBindingV2Schema).default({}),
-    fixtures: z.array(WorkflowFixtureSchema).default([])
+    resourceBindings: z.record(z.string(), WorkflowResourceBindingSchema).default({})
   })
   .strict()
 
-export type WorkflowDefinitionV2 = z.infer<typeof WorkflowDefinitionV2Schema>
+export type WorkflowDefinition = z.infer<typeof WorkflowDefinitionSchema>
 export type WorkflowStepInstance = z.infer<typeof WorkflowStepInstanceSchema>

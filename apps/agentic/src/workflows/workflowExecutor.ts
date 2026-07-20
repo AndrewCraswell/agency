@@ -8,7 +8,7 @@ import type {
 } from "../persistence/workflowJournalStore"
 import type { ArtifactStorePort } from "../prototype/artifacts"
 import { CompiledWorkflowGraphSchema } from "./compiler"
-import type { WorkflowConnectionV2Schema, WorkflowDefinitionV2, WorkflowStepInstance } from "./definitionV2"
+import type { WorkflowConnectionSchema, WorkflowStepInstance } from "./definition"
 import {
   JsonValueSchema,
   WorkflowArtifactReferenceSchema,
@@ -25,13 +25,13 @@ import {
 } from "./providerExecutor"
 import type { RepositoryAgentExecutor } from "./repositoryAgentExecutor"
 import type { RepositoryDataExecutor } from "./repositoryDataExecutor"
-import { CURRENT_WORKFLOW_RELEASE_PHASE, getWorkflowStepDefinition } from "./stepRegistry"
+import { getWorkflowStepDefinition } from "./stepRegistry"
 
 const JsonObjectSchema = z.record(z.string(), JsonValueSchema)
 type JsonObject = z.infer<typeof JsonObjectSchema>
-type WorkflowConnection = z.infer<typeof WorkflowConnectionV2Schema>
+type WorkflowConnection = z.infer<typeof WorkflowConnectionSchema>
 
-export type Phase2StepResult = {
+export type WorkflowStepResult = {
   output: JsonObject
   terminalStatus: "succeeded" | "failed" | null
   error: JsonObject | null
@@ -354,18 +354,18 @@ function collectItems(step: WorkflowStepInstance, input: JsonObject): JsonValue 
   )
 }
 
-export async function executePhase2Step(
+export async function executeWorkflowStep(
   step: WorkflowStepInstance,
   inputValue: unknown,
   context?: StepExecutionContext
-): Promise<Phase2StepResult> {
+): Promise<WorkflowStepResult> {
   const input = JsonObjectSchema.parse(inputValue)
   const definition = getWorkflowStepDefinition(step.definition.kind, step.definition.version, MAXIMUM_EXECUTOR_PHASE)
   const configIssues = validateJsonValue(definition.configSchema, step.config)
   if (configIssues.length > 0) {
     throw new Error(configIssues.map((issue) => `${issue.path}: ${issue.message}`).join(" "))
   }
-  let result: Phase2StepResult
+  let result: WorkflowStepResult
   if (step.definition.kind === "manual_trigger") {
     result = { output: { input: input.input ?? {} }, terminalStatus: null, error: null, data: [] }
   } else if (step.definition.kind === "provider_event") {
@@ -533,110 +533,10 @@ export async function executePhase2Step(
   return result
 }
 
-export type WorkflowSimulationStep = {
-  stepId: string
-  status: "succeeded" | "failed"
-  input: JsonObject
-  output: JsonObject
-  error: JsonObject | null
-}
-
-export async function simulatePhase2Workflow(
-  definition: WorkflowDefinitionV2,
-  inputValue: JsonValue,
-  stopAtStepId?: string,
-  fixture?: WorkflowDefinitionV2["fixtures"][number]
-): Promise<WorkflowSimulationStep[]> {
-  const graph = CompiledWorkflowGraphSchema.parse({
-    schemaVersion: definition.schemaVersion,
-    inputSchema: definition.inputSchema,
-    outputSchema: definition.outputSchema,
-    steps: definition.steps,
-    connections: definition.connections,
-    fixtures: definition.fixtures,
-    topologicalOrder: definition.steps.map(({ id }) => id)
-  })
-  const steps = new Map(graph.steps.map((step) => [step.id, step]))
-  const pendingInputs = new Map<string, JsonObject>()
-  const trigger = graph.steps.find((step) =>
-    ["manual_trigger", "provider_event", "schedule"].includes(step.definition.kind)
-  )
-  if (trigger === undefined) throw new Error("Simulation requires a trigger")
-  let triggerPort = "input"
-  if (trigger.definition.kind === "provider_event") triggerPort = "event"
-  if (trigger.definition.kind === "schedule") triggerPort = "fire"
-  pendingInputs.set(trigger.id, { [triggerPort]: inputValue })
-  const results: WorkflowSimulationStep[] = []
-  for (const stepId of graph.topologicalOrder) {
-    const input = pendingInputs.get(stepId)
-    if (input === undefined) continue
-    const step = steps.get(stepId)
-    if (step === undefined) throw new Error(`Step ${stepId} is unavailable`)
-    const resolvedInput = resolveActivationInput(graph, step, input)
-    let result: Phase2StepResult
-    if (step.definition.kind === "provider_action") throw new Error(`Simulation is blocked for ${step.label}`)
-    if (
-      step.definition.kind === "repository_data" ||
-      step.definition.kind === "repository_agent" ||
-      step.definition.kind === "ai_model" ||
-      step.definition.kind === "structured_judgment" ||
-      step.definition.kind === "provider_data" ||
-      step.definition.kind === "wait" ||
-      step.definition.kind === "child_workflow"
-    ) {
-      let responses = fixture?.modelResponses
-      if (
-        step.definition.kind === "repository_data" ||
-        step.definition.kind === "wait" ||
-        step.definition.kind === "child_workflow"
-      )
-        responses = fixture?.providerResponses
-      if (step.definition.kind === "repository_agent") responses = fixture?.agentResponses
-      const fixtureOutput = responses?.[step.id]
-      if (fixtureOutput === undefined) throw new Error(`Fixture response for ${step.label} is required`)
-      const output = JsonObjectSchema.parse(fixtureOutput)
-      const definitionSnapshot = getWorkflowStepDefinition(
-        step.definition.kind,
-        step.definition.version,
-        CURRENT_WORKFLOW_RELEASE_PHASE
-      )
-      const outputSchema = {
-        type: "object",
-        additionalProperties: false,
-        properties: Object.fromEntries(definitionSnapshot.outputs.map((port) => [port.name, port.schema])),
-        required: definitionSnapshot.outputs.filter(({ cardinality }) => cardinality === "one").map(({ name }) => name)
-      }
-      const issues = validateJsonValue(outputSchema, output)
-      if (issues.length > 0) throw new Error(issues.map((issue) => `${issue.path}: ${issue.message}`).join(" "))
-      result = { output, terminalStatus: null, error: null, data: [] }
-    } else {
-      result = await executePhase2Step(step, resolvedInput, {
-        activationId: jsonValueDigest({ simulation: true, stepId }),
-        attemptOrdinal: 1
-      })
-    }
-    results.push({
-      stepId,
-      status: result.error === null ? "succeeded" : "failed",
-      input,
-      output: result.output,
-      error: result.error
-    })
-    if (result.error !== null || result.terminalStatus !== null || stepId === stopAtStepId) break
-    for (const downstream of downstreamActivations(graph, stepId, result.output)) {
-      pendingInputs.set(downstream.stepId, {
-        ...pendingInputs.get(downstream.stepId),
-        ...downstream.inputBindings
-      })
-    }
-  }
-  return results
-}
-
-export type Phase2Journal = {
+export type WorkflowJournal = {
   listReadyActivations(limit?: number): Promise<WorkflowActivationRecord[]>
   getRun(runId: string): Promise<JournalRunRecord | null>
-  getExecutionPackage(packageDigest: string): Promise<ExecutionPackageRecord | null>
+  getExecutionPackage(packageDigest: string): Promise<Pick<ExecutionPackageRecord, "packageDigest" | "content"> | null>
   leaseActivation(input: {
     runId: string
     activationId: string
@@ -720,8 +620,8 @@ export type Phase2Journal = {
   failWait(input: { runId: string; correlationKey: string; error: JsonObject }): Promise<unknown>
 }
 
-export class Phase2WorkflowDispatcher {
-  readonly #journal: Phase2Journal
+export class WorkflowDispatcher {
+  readonly #journal: WorkflowJournal
   readonly #workerId: string
   readonly #artifactStoreForRun: ((runId: string) => ArtifactStorePort) | undefined
   readonly #repositoryAgentExecutor: RepositoryAgentExecutor | undefined
@@ -732,7 +632,7 @@ export class Phase2WorkflowDispatcher {
   readonly #now: () => Date
 
   constructor(
-    journal: Phase2Journal,
+    journal: WorkflowJournal,
     workerId: string,
     artifactStoreForRun?: (runId: string) => ArtifactStorePort,
     repositoryAgentExecutor?: RepositoryAgentExecutor,
@@ -861,7 +761,7 @@ export class Phase2WorkflowDispatcher {
       })
       return
     }
-    let result: Phase2StepResult
+    let result: WorkflowStepResult
     try {
       const resolvedInput = resolveActivationInput(graph, step, attempt.input)
       if (step.definition.kind === "repository_agent") {
@@ -928,7 +828,7 @@ export class Phase2WorkflowDispatcher {
           data: []
         }
       } else {
-        result = await executePhase2Step(step, resolvedInput, {
+        result = await executeWorkflowStep(step, resolvedInput, {
           activationId: activation.activationId,
           attemptOrdinal: attempt.ordinal,
           scope: activation.scope,

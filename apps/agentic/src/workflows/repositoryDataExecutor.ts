@@ -1,5 +1,5 @@
 import { z } from "zod"
-import type { WorkflowStepInstance } from "./definitionV2"
+import type { WorkflowStepInstance } from "./definition"
 import { JsonValueSchema, type JsonValue } from "./executionContracts"
 
 const MAXIMUM_FILE_BYTES = 65_536

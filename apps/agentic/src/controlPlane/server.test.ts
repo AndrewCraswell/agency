@@ -272,7 +272,12 @@ describe("control-plane HTTP server", () => {
       updateDraft: vi.fn(async (_id, input) => ({ workflowId, revision: 2, input })),
       validate: vi.fn(async () => ({ valid: true, issues: [] })),
       publish: vi.fn(async () => ({ workflowId, version: 1 })),
-      test: vi.fn(async (_id, input) => ({ workflowId, mode: "draft", simulated: true, input })),
+      test: vi.fn(async (_id, input) => ({
+        runId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e30",
+        created: true,
+        source: { kind: "draft_test", draftRevision: 1 },
+        input
+      })),
       start: vi.fn(async (_id, input) => ({ workflowId, runId: "run-1", input })),
       runDetail: vi.fn(async (runId) => ({ schemaVersion: "1", run: { runId, status: "running" } })),
       cancelRun: vi.fn(async (runId, input) => ({ schemaVersion: "1", run: { runId, status: "cancelled", input } })),
@@ -338,10 +343,13 @@ describe("control-plane HTTP server", () => {
       (
         await fetch(`${baseUrl}/api/workflows/${workflowId}/test`, {
           method: "POST",
-          body: JSON.stringify({ input: { issue: "FEN-423" } })
+          body: JSON.stringify({ expectedRevision: 1, triggerStepId: "manual", input: { issue: "FEN-423" } })
         })
       ).json()
-    ).resolves.toMatchObject({ mode: "draft", simulated: true })
+    ).resolves.toMatchObject({
+      runId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e30",
+      source: { kind: "draft_test", draftRevision: 1 }
+    })
     const started = await fetch(`${baseUrl}/api/workflows/${workflowId}/runs`, {
       method: "POST",
       body: JSON.stringify({ version: 1, trigger: { type: "manual" } })

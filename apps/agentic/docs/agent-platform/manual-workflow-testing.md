@@ -34,31 +34,35 @@ real external event or scheduled fire.
 
 ## Product work
 
-- [ ] Replace the fixture-based draft simulation endpoint and editor result model with a durable **Test draft** command.
-- [ ] Save and validate before testing, then reject the test if the client revision is stale.
-- [ ] Build an immutable test execution package without changing the workflow's active published version.
-- [ ] Resolve and pin model, agent, provider operation, and resource snapshots exactly as publication does.
-- [ ] Give every draft test a unique trigger identity while retaining stable effect identities within that run.
-- [ ] Support synthetic manual input, normalized provider events, and schedule fires without registering draft triggers
+- [x] Replace the fixture-based draft simulation endpoint and editor result model with a durable **Test draft** command.
+- [x] Save and validate before testing, then reject the test if the client revision is stale.
+- [x] Build an immutable test execution package without changing the workflow's active published version.
+- [x] Resolve and pin model, agent, provider operation, and resource snapshots exactly as publication does.
+- [x] Give every draft test a unique trigger identity while retaining stable effect identities within that run.
+- [x] Support synthetic manual input, normalized provider events, and schedule fires without registering draft triggers
       in the published webhook or schedule catalogs.
-- [ ] Require the user to select the exact trigger step when a draft contains more than one eligible trigger.
-- [ ] Record run provenance that distinguishes draft tests from published runs and includes the tested draft revision
+- [x] Require the user to select the exact trigger step when a draft contains more than one eligible trigger.
+- [x] Record run provenance that distinguishes draft tests from published runs and includes the tested draft revision
       and package digest.
-- [ ] Navigate from the editor to the normal run details surface so long-running, waiting, and child workflows remain
+- [x] Navigate from the editor to the normal run details surface so long-running, waiting, and child workflows remain
       observable after navigation or refresh.
-- [ ] Persist Markdown and model artifacts through the same artifact store used by published runs.
-- [ ] Remove workflow fixtures, fixture selection, and simulation result contracts from workflow definitions and product
+- [x] Persist Markdown and model artifacts through the same artifact store used by published runs.
+- [x] Remove workflow fixtures, fixture selection, and simulation result contracts from workflow definitions and product
       APIs after live testing replaces simulation.
-- [ ] Keep deterministic executor tests and provider fakes as automated engineering tests; do not expose them as the
+- [x] Keep deterministic executor tests and provider fakes as automated engineering tests; do not expose them as the
       product's workflow Test action.
-- [ ] Explain in the trigger input UI that synthetic webhook and schedule inputs begin after external ingress.
-- [ ] Prove that editing a draft during a test cannot change its sealed package or execution history.
-- [ ] Prove that draft tests never receive real webhook deliveries or automatic schedule fires.
+- [x] Explain in the trigger input UI that synthetic webhook and schedule inputs begin after external ingress.
+- [x] Describe affected resources, live model calls, and external mutations before starting the run.
+- [x] Prove that editing a draft during a test cannot change its sealed package or execution history.
+- [x] Prove that draft tests never receive real webhook deliveries or automatic schedule fires.
 - [ ] Decide how Daytona-backed repository-agent tests acquire, retain, and clean up workspaces before enabling that
       step in this manual suite.
-- [ ] Last: require an explicit JSON Schema for every structured model output, send it to the model provider, and
+- [x] Require an explicit JSON Schema for every structured model output, send it to the model provider, and
       validate the returned JSON locally. Add a **Generate schema** option that derives an editable schema from the
       prompt or example output, validates it as a supported schema, and requires user review before saving it.
+
+The execution-package schema was fixed forward in the original journal migration. Existing prototype databases created
+from the earlier migration shape must be reset; there is no compatibility rewrite for unreleased package content.
 
 ## Manual workflow suite
 
