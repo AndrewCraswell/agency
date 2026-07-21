@@ -153,13 +153,9 @@ review satisfies the shared definition of done. Add a task whenever a new regist
 
 ### Durable composition
 
-- [x] Review [`wait` (`Wait`)](types/23-wait.md).
+- [x] Review [`wait_event_github` and `wait_event_linear` (`Wait event`)](types/23-wait-event.md).
+- [x] Review [`delay` (`Delay`)](types/25-delay.md).
 - [x] Review [`child_workflow` (`Invoke workflow`)](types/24-child-workflow.md).
-
-### Outcomes
-
-- [x] Review [`success` (`Success`)](types/05-success.md).
-- [x] Review [`failure` (`Failure`)](types/06-failure.md).
 
 ### Cross-node synthesis
 
@@ -224,7 +220,8 @@ Priorities use P0 for correctness or core authorability, P1 for major usability 
 
 | Node | What works | Main gaps | Target behavior | Priority |
 | --- | --- | --- | --- | --- |
-| Wait | Durable suspension, correlation, event schema, expiry, and diagnostics. | Correlation is text, timeout is not an authorable outcome, source authentication and collision risk are hidden. | Schema-aware correlation builder, sample event validation, source-bound matching, and Resumed/Timeout/Error outputs. | P0 |
+| Wait event | Durable provider suspension, sealed resource matching, selected events, and routable expiry. | Object ID selection is still a dot path and normalized event payloads remain broad. | Add a schema field picker and provider-specific closed event payloads. | P1 |
+| Delay | Durable relative timer with pass-through input and successful continuation. | Relative durations only. | Keep absolute time and business calendars as separate node contracts. | P2 |
 | Invoke workflow | Pinned package/interface validation, durable child linkage, and propagated result. | Users paste opaque digests; interface mapping, version comparison, timeout, and failure behavior are hidden. | Workflow/version picker with interface diff, generated typed mappings, visible child-run link, configurable timeout, and Success/Failure/Timeout outputs. | P0 |
 
 ### Outcomes

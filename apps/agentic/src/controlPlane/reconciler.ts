@@ -19,7 +19,11 @@ const runtime = await createControlPlaneRuntime(runtimeEnvironment)
 try {
   const staleBefore = new Date(Date.now() - environment.WEBHOOK_STALE_AFTER_MS)
   const requeued = await runtime.webhookStore.requeueRecoverable(staleBefore, environment.WEBHOOK_MAX_ATTEMPTS)
+  const providerDeliveries = await runtime.providerDeliveryStore.recover(staleBefore, environment.WEBHOOK_MAX_ATTEMPTS)
+  const effects = await runtime.workflowJournalStore.reconcileStaleEffects(staleBefore)
   process.stdout.write(`Requeued ${requeued} recoverable webhook deliveries.\n`)
+  process.stdout.write(`Recovered ${providerDeliveries} provider deliveries.\n`)
+  process.stdout.write(`Marked ${effects} stale provider effects for reconciliation.\n`)
 } finally {
   await runtime.close()
 }

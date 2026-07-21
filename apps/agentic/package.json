@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "check:types": "tsc --noEmit",
+    "dev": "run-p control-plane:api control-plane:worker",
     "control-plane:api": "tsx --env-file=.env src/controlPlane/api.ts",
     "control-plane:worker": "tsx --env-file=.env src/controlPlane/worker.ts",
     "control-plane:reconcile": "tsx --env-file=.env src/controlPlane/reconciler.ts",

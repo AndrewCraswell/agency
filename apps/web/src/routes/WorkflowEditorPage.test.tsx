@@ -203,16 +203,8 @@ const definitions = [
       category: "data",
       label: "Validate",
       description: "Checks a value against a JSON schema.",
-      inputs: ["value"],
-      outputs: ["value"]
-    },
-    {
-      kind: "failure",
-      category: "terminal",
-      label: "Failure",
-      description: "Ends the current path with an error.",
-      inputs: ["error"],
-      outputs: []
+      inputs: ["input"],
+      outputs: ["true", "false"]
     }
   ].map((item, index) => ({
     kind: item.kind,
@@ -232,22 +224,6 @@ const definitions = [
       .repeat(64)
       .slice(0, 64)
   })),
-  {
-    kind: "success",
-    version: 1,
-    phase: 2,
-    category: "terminal",
-    label: "Success",
-    description: "Ends the branch successfully.",
-    executionClass: "control",
-    mutationPolicy: "none",
-    capabilities: [],
-    configSchema: { type: "object" },
-    inputs: [{ name: "result", label: "Result", schema: { type: "object" }, cardinality: "optional" }],
-    outputs: [{ name: "result", label: "Result", schema: { type: "object" }, cardinality: "one" }],
-    errorSchema: { type: "object" },
-    executorDigest: "c".repeat(64)
-  },
   {
     kind: "compose_markdown",
     version: 1,
@@ -415,13 +391,18 @@ const definitions = [
     { kind: "for_each", label: "For each", inputs: ["items"], outputs: ["item"] },
     { kind: "join", label: "Join", inputs: ["branches"], outputs: ["results"] },
     { kind: "bounded_loop", label: "Bounded loop", inputs: ["state"], outputs: ["iteration", "result"] },
-    { kind: "wait", label: "Wait", inputs: ["context"], outputs: ["event"] },
+    { kind: "wait_event_github", label: "Wait event (GitHub)", inputs: ["input"], outputs: ["event", "timeout"] },
+    { kind: "wait_event_linear", label: "Wait event (Linear)", inputs: ["input"], outputs: ["event", "timeout"] },
+    { kind: "delay", label: "Delay", inputs: ["input"], outputs: ["continued"] },
     { kind: "child_workflow", label: "Invoke workflow", inputs: ["input"], outputs: ["output"] }
   ].map((item, index) => ({
     kind: item.kind,
     version: 1,
     phase: 7,
-    category: item.kind === "wait" || item.kind === "child_workflow" ? "action" : "logic",
+    category:
+      item.kind.startsWith("wait_event_") || item.kind === "delay" || item.kind === "child_workflow"
+        ? "action"
+        : "logic",
     label: item.label,
     description: `Configure ${item.label}.`,
     executionClass: "control",
@@ -435,7 +416,34 @@ const definitions = [
       .repeat(64)
       .slice(0, 64)
   }))
-].map((definition) => ({ ...definition, ui: { fields: [] } }))
+].map((definition) => {
+  const fieldByKind: Record<string, { key: string; label: string; control: "text" | "number" | "multiline" }> = {
+    bounded_loop: { key: "maximumIterations", label: "Maximum iterations", control: "number" },
+    compose_markdown: { key: "template", label: "Markdown template", control: "multiline" },
+    wait_event_github: { key: "eventKey", label: "Event", control: "text" },
+    wait_event_linear: { key: "eventKey", label: "Event", control: "text" },
+    delay: { key: "duration", label: "Duration", control: "number" }
+  }
+  const field = fieldByKind[definition.kind]
+  return {
+    ...definition,
+    ui: {
+      fields:
+        field === undefined
+          ? []
+          : [
+              {
+                ...field,
+                description: `Configure ${field.label}.`,
+                group: "basic" as const,
+                required: true,
+                secret: false,
+                immutable: false
+              }
+            ]
+    }
+  }
+})
 
 const connectionId = "9f336dbd-c1cb-4514-9b3e-9374b3524c98"
 const linearConnectionId = "2f4524b1-37e8-43e0-a598-708d268fc422"
@@ -540,6 +548,15 @@ const modelCatalog = {
       architecture: { inputModalities: ["text"], outputModalities: ["text"] },
       supportedParameters: ["temperature", "max_tokens", "response_format"],
       observedAt: "2026-07-19T12:00:00.000Z"
+    },
+    {
+      modelId: "anthropic/fable-test",
+      name: "Fable Test",
+      contextLength: 128000,
+      pricing: { prompt: "0.000001", completion: "0.000002" },
+      architecture: { inputModalities: ["text"], outputModalities: ["text"] },
+      supportedParameters: ["max_tokens"],
+      observedAt: "2026-07-19T12:00:00.000Z"
     }
   ]
 }
@@ -618,10 +635,10 @@ const content: WorkflowDraftContent = {
     },
     {
       id: "success",
-      label: "Success",
+      label: "Result",
       position: { x: 400, y: 0 },
-      definition: { kind: "success", version: 1 },
-      config: {},
+      definition: { kind: "set_fields", version: 1 },
+      config: { fields: {} },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     }
   ],
@@ -636,7 +653,7 @@ const content: WorkflowDraftContent = {
     {
       id: "set-success",
       source: { stepId: "set", port: "value" },
-      target: { stepId: "success", port: "result" },
+      target: { stepId: "success", port: "input" },
       outcome: "success",
       mappings: [{ sourcePath: [], targetPath: [] }]
     }
@@ -677,20 +694,38 @@ async function addStep(name: RegExp) {
   }
   const search = within(catalog).getByPlaceholderText("Search steps")
   await userEvent.clear(search)
-  await userEvent.type(search, name.source.replaceAll("^", "").replaceAll("$", ""))
+  await userEvent.type(
+    search,
+    name.source.replaceAll("^", "").replaceAll("$", "").replaceAll("\\(", "(").replaceAll("\\)", ")")
+  )
   await userEvent.click(within(catalog).getByRole("button", { name }))
 }
 
 afterEach(() => navigate.mockReset())
 
 describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
-  it("renders terminal steps with an input handle only", async () => {
+  it("renders validation with Input, True, and False ports", async () => {
+    const value = draft()
+    value.content.steps[1] = {
+      ...value.content.steps[1]!,
+      definition: { kind: "validate", version: 1 },
+      config: { schema: { type: "object" } }
+    }
+    registerEditorApis(value)
+    render(<WorkflowEditorPage />)
+
+    expect(await screen.findAllByLabelText("target handle input")).not.toHaveLength(0)
+    expect(screen.getByLabelText("source handle true")).toBeInTheDocument()
+    expect(screen.getByLabelText("source handle false")).toBeInTheDocument()
+  })
+
+  it("renders an ordinary sink with input and output handles", async () => {
     registerEditorApis()
     render(<WorkflowEditorPage />)
 
     expect(await screen.findByDisplayValue("Data preparation")).toBeInTheDocument()
-    expect(screen.getByLabelText("target handle result")).toBeInTheDocument()
-    expect(screen.queryByLabelText("source handle result")).not.toBeInTheDocument()
+    expect(screen.getAllByLabelText("target handle input")).not.toHaveLength(0)
+    expect(screen.getAllByLabelText("source handle value")).not.toHaveLength(0)
   })
 
   it("loads the catalog and synchronizes canvas and outline selection", async () => {
@@ -719,11 +754,14 @@ describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
 
     await userEvent.click(screen.getByRole("tab", { name: "Outline" }))
     const topology = screen.getByRole("navigation", { name: "Workflow topology" })
-    const setFields = within(topology).getByRole("button", { name: /Set fields/u })
+    const setFields = topology.querySelector<HTMLButtonElement>('[data-outline-selection="set"]')
+    expect(setFields).not.toBeNull()
+    if (setFields === null) {
+      throw new Error("Set fields outline item is unavailable")
+    }
     expect(setFields).toBeInTheDocument()
     await userEvent.click(setFields)
-    expect(screen.getByRole("textbox", { name: "Field name" })).toHaveValue("answer")
-    expect(screen.getByRole("textbox", { name: "Value" })).toHaveValue("42")
+    expect(screen.getByDisplayValue("Set fields")).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Run to here" })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: "Close properties" }))
     await waitFor(() => expect(setFields).toHaveFocus())
@@ -833,7 +871,7 @@ describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
     expect(testDraft.hits).toBe(0)
     const confirmation = await screen.findByRole("alertdialog", { name: "Start live draft test?" })
     expect(within(confirmation).getByText("Resources: octo/agency.")).toBeInTheDocument()
-    await userEvent.click(within(confirmation).getByRole("button", { name: "Start draft test" }))
+    await userEvent.click(within(confirmation).getByRole("button", { name: "Start draft test", hidden: true }))
     await waitFor(() => expect(testDraft.hits).toBe(1))
     expect(testDraft.spy).toHaveBeenCalledWith({ expectedRevision: 1, triggerStepId: "manual", input: {} })
     await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/runs/$runId", params: { runId } }))
@@ -942,10 +980,10 @@ describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
 
     const catalog = await screen.findByRole("complementary", { name: "Step library" })
     const search = within(catalog).getByPlaceholderText("Search steps")
-    await userEvent.type(search, "success")
+    await userEvent.type(search, "compose markdown")
     expect(within(catalog).queryByRole("button", { name: /Manual run/u })).not.toBeInTheDocument()
-    await userEvent.click(within(catalog).getByRole("button", { name: /Success/u }))
-    expect(screen.getAllByRole("button", { name: "Select Success" })).toHaveLength(2)
+    await userEvent.click(within(catalog).getByRole("button", { name: /Compose Markdown/u }))
+    expect(screen.getByRole("button", { name: "Select Compose Markdown" })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Run to here" })).not.toBeInTheDocument()
   })
 
@@ -969,7 +1007,7 @@ describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
     expect(screen.getByRole("textbox", { name: "Key field" })).toBeInTheDocument()
   })
 
-  it("authors mapping, validation, failure, and switch control steps", async () => {
+  it("authors mapping, validation, merge, and switch control steps", async () => {
     registerEditorApis(draft(1, null))
     ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2, null) })
     render(<WorkflowEditorPage />)
@@ -985,12 +1023,6 @@ describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
     const validationSchema = screen.getByRole("textbox", { name: "Validation schema" })
     fireEvent.change(validationSchema, { target: { value: "{" } })
     fireEvent.change(validationSchema, { target: { value: '{"type":"string"}' } })
-
-    await addStep(/^Failure/u)
-    await userEvent.clear(screen.getByRole("textbox", { name: "Failure code" }))
-    await userEvent.type(screen.getByRole("textbox", { name: "Failure code" }), "review_failed")
-    await userEvent.clear(screen.getByRole("textbox", { name: "Message" }))
-    await userEvent.type(screen.getByRole("textbox", { name: "Message" }), "Review did not pass")
 
     await addStep(/^Exclusive merge/u)
     await addStep(/^Switch/u)
@@ -1126,7 +1158,7 @@ describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
                     modelId: "openai/gpt-test",
                     outputMode: "structured",
                     outputSchema: { type: "object", properties: { label: { type: "string" } } },
-                    parameters: { temperature: 0, max_tokens: 2000 }
+                    parameters: { temperature: 0 }
                   })
                 })
               ])
@@ -1134,6 +1166,44 @@ describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
           })
         ),
       { timeout: 2500 }
+    )
+  }, 30_000)
+
+  it("removes parameters unsupported by the selected model", async () => {
+    registerEditorApis(draft(1, null))
+    ApiMock.get("/api/workflows/models", { data: modelCatalog })
+    const save = ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2, null) })
+    render(<WorkflowEditorPage />)
+
+    await screen.findByRole("complementary", { name: "Step library" })
+    await addStep(/^AI model/u)
+    await userEvent.click(await screen.findByRole("combobox", { name: "Model" }))
+    await userEvent.click(screen.getByRole("option", { name: /GPT Test/u }))
+    const temperature = screen.getByRole("spinbutton", { name: "Temperature" })
+    const maxTokens = screen.getByRole("spinbutton", { name: "Maximum completion tokens" })
+    await userEvent.type(temperature, "0.7")
+    await userEvent.type(maxTokens, "500")
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Model" }))
+    await userEvent.click(screen.getByRole("option", { name: /Fable Test/u }))
+
+    expect(screen.queryByRole("spinbutton", { name: "Temperature" })).not.toBeInTheDocument()
+    expect(screen.getByRole("spinbutton", { name: "Maximum completion tokens" })).toHaveValue(500)
+    await waitFor(() =>
+      expect(save.spy).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          content: expect.objectContaining({
+            steps: expect.arrayContaining([
+              expect.objectContaining({
+                config: expect.objectContaining({
+                  modelId: "anthropic/fable-test",
+                  parameters: { max_tokens: 500 }
+                })
+              })
+            ])
+          })
+        })
+      )
     )
   }, 30_000)
 
@@ -1462,7 +1532,7 @@ describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
     const maximumActivations = screen.getByRole("spinbutton", { name: "Maximum activations" })
     fireEvent.change(maximumActivations, { target: { value: "25" } })
     await userEvent.click(screen.getByRole("combobox", { name: "On exhaustion" }))
-    await userEvent.click(screen.getByRole("option", { name: "Complete" }))
+    await userEvent.click(screen.getByRole("option", { name: "Route Exhausted" }))
 
     await waitFor(
       () =>
@@ -1472,7 +1542,7 @@ describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
               ({ definition, config }) =>
                 definition.kind === "bounded_loop" &&
                 config.maximumActivations === 25 &&
-                config.onExhaustion === "complete"
+                config.onExhaustion === "route"
             )
           )
         ).toBe(true),
@@ -1481,21 +1551,26 @@ describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
     const saved = save.spy.mock.lastCall?.[0] as { content: WorkflowDraftContent }
     expect(saved.content.steps.find(({ definition }) => definition.kind === "bounded_loop")?.config).toMatchObject({
       maximumActivations: 25,
-      onExhaustion: "complete"
+      onExhaustion: "route"
     })
   }, 15_000)
 
-  it("authors and persists durable wait and pinned child workflow contracts", async () => {
+  it("authors and persists provider wait, delay, and pinned child workflow contracts", async () => {
     registerEditorApis()
+    ApiMock.get("/api/integrations/resources", { data: repositoryInventory })
+    ApiMock.get("/api/integrations/provider-events", { data: providerEvents })
     const save = ApiMock.patch(`/api/workflows/${workflowId}/draft`, { data: draft(2) })
     render(<WorkflowEditorPage />)
 
     await screen.findByRole("complementary", { name: "Step library" })
-    await addStep(/^Wait/u)
-    const correlation = screen.getByRole("textbox", { name: "Correlation key" })
-    fireEvent.change(correlation, { target: { value: "github:{{repository}}:{{number}}" } })
-    const expiry = screen.getByRole("spinbutton", { name: "Expires after seconds" })
-    fireEvent.change(expiry, { target: { value: "600" } })
+    await addStep(/^Wait event \(GitHub\)/u)
+    fireEvent.change(screen.getByRole("textbox", { name: "Object ID from input" }), {
+      target: { value: "pullRequest.id" }
+    })
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Wait up to" }), { target: { value: "2" } })
+
+    await addStep(/^Delay/u)
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Duration" }), { target: { value: "15" } })
 
     await addStep(/^Invoke workflow/u)
     fireEvent.change(screen.getByRole("textbox", { name: "Execution package digest" }), {
@@ -1516,14 +1591,21 @@ describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
       { timeout: 2500 }
     )
     const saved = save.spy.mock.lastCall?.[0] as { content: WorkflowDraftContent }
-    expect(saved.content.steps.find(({ definition }) => definition.kind === "wait")?.config).toMatchObject({
-      correlation: "github:{{repository}}:{{number}}",
-      expiresAfterSeconds: 600,
-      eventSchema: { type: "object" }
+    expect(saved.content.steps.find(({ definition }) => definition.kind === "wait_event_github")?.config).toMatchObject(
+      {
+        objectIdPath: ["pullRequest", "id"],
+        expiresAfterSeconds: 7200
+      }
+    )
+    expect(saved.content.steps.find(({ definition }) => definition.kind === "delay")?.config).toEqual({
+      duration: 15,
+      unit: "minutes"
     })
     expect(saved.content.steps.find(({ definition }) => definition.kind === "child_workflow")?.config).toEqual({
       packageDigest: "e".repeat(64),
-      interfaceDigest: "f".repeat(64)
+      interfaceDigest: "f".repeat(64),
+      timeoutSeconds: 86400,
+      maximumDepth: 5
     })
   }, 15_000)
 })

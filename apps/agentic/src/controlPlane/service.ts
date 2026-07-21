@@ -4,6 +4,7 @@ import { agents, engineeringAgent } from "../contracts/agent"
 import type { LinearClient } from "../linear/client"
 import type { BindWorkflowRunInput, ControlPlaneStore, WorkflowRunRecord } from "../persistence/controlPlaneStore"
 import {
+  AgentCatalogSchema,
   AssignWorkItemRequestSchema,
   AssignWorkItemResponseSchema,
   CONTROL_PLANE_SCHEMA_VERSION,
@@ -115,6 +116,10 @@ function facet(values: Array<string | null>): Array<{ value: string; count: numb
 }
 
 export class ControlPlaneService {
+  agents() {
+    return AgentCatalogSchema.parse({ schemaVersion: CONTROL_PLANE_SCHEMA_VERSION, agents })
+  }
+
   readonly #candidates: CandidateSource
   readonly #store: ControlPlaneStore
   readonly #options: z.output<typeof ServiceOptionsSchema>

@@ -3,6 +3,8 @@ export type WorkflowOutlineNode = {
   label: string
   kind: string
   category: string
+  typeLabel: string
+  version: number
 }
 
 export type WorkflowOutlineConnection = {
@@ -34,9 +36,6 @@ function outlineRole(node: WorkflowOutlineNode): WorkflowOutlineRole {
   }
   if (node.kind === "join" || node.kind === "exclusive_merge") {
     return "join"
-  }
-  if (node.category === "terminal") {
-    return "outcome"
   }
   return "step"
 }

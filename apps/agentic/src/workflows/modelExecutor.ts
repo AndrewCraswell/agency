@@ -69,9 +69,9 @@ const OpenRouterResponseSchema = z
       .min(1),
     usage: z
       .object({
-        prompt_tokens: z.number().int().nonnegative().default(0),
-        completion_tokens: z.number().int().nonnegative().default(0),
-        total_tokens: z.number().int().nonnegative().default(0),
+        prompt_tokens: z.number().int().nonnegative().optional(),
+        completion_tokens: z.number().int().nonnegative().optional(),
+        total_tokens: z.number().int().nonnegative().optional(),
         prompt_tokens_details: z.object({ cached_tokens: z.number().int().nonnegative().optional() }).optional()
       })
       .passthrough()
@@ -175,6 +175,13 @@ export class OpenRouterWorkflowModelExecutor {
             }
           })()
         : ModelConfigSchema.parse(input.step.config)
+    const artifactStore = config.outputMode === "markdown" ? this.#artifactStoreForRun?.(input.runId) : undefined
+    if (config.outputMode === "markdown" && artifactStore === undefined) {
+      throw new WorkflowModelExecutionError(
+        "model_artifact_store_unavailable",
+        "Markdown output requires artifact storage"
+      )
+    }
     const snapshots = z.array(WorkflowModelSnapshotSchema).parse(input.snapshots)
     const snapshot = snapshots.find(({ modelId }) => modelId === config.modelId)
     if (snapshot === undefined)
@@ -220,14 +227,20 @@ export class OpenRouterWorkflowModelExecutor {
       )
     }
     const usage = response.usage
-    const promptTokens = usage?.prompt_tokens ?? 0
-    const completionTokens = usage?.completion_tokens ?? 0
+    const promptTokens = usage?.prompt_tokens
+    const completionTokens = usage?.completion_tokens
+    const totalTokens =
+      usage?.total_tokens ??
+      (promptTokens !== undefined && completionTokens !== undefined ? promptTokens + completionTokens : null)
     const normalizedUsage: JsonObject = {
-      inputTokens: promptTokens,
-      cachedInputTokens: usage?.prompt_tokens_details?.cached_tokens ?? 0,
-      outputTokens: completionTokens,
-      totalTokens: usage?.total_tokens ?? promptTokens + completionTokens,
-      estimatedCostUsd: estimatedCost(snapshot, promptTokens, completionTokens)
+      inputTokens: promptTokens ?? null,
+      cachedInputTokens: usage?.prompt_tokens_details?.cached_tokens ?? null,
+      outputTokens: completionTokens ?? null,
+      totalTokens,
+      estimatedCostUsd:
+        promptTokens === undefined || completionTokens === undefined
+          ? null
+          : estimatedCost(snapshot, promptTokens, completionTokens)
     }
     const evidence: JsonObject = {
       provider: "openrouter",
@@ -238,7 +251,8 @@ export class OpenRouterWorkflowModelExecutor {
       effectiveParameters: config.parameters,
       outputMode: config.outputMode,
       finishReason: choice.finish_reason,
-      elapsedMs
+      elapsedMs,
+      usageReported: usage !== undefined
     }
     if (config.outputMode === "structured") {
       let value: JsonValue
@@ -262,6 +276,12 @@ export class OpenRouterWorkflowModelExecutor {
     if (config.outputMode === "text") {
       return { output: { response: { mode: "text", text: content } }, data: [], usage: normalizedUsage, evidence }
     }
+    if (artifactStore === undefined) {
+      throw new WorkflowModelExecutionError(
+        "model_artifact_store_unavailable",
+        "Markdown output requires artifact storage"
+      )
+    }
     const bytes = Buffer.from(content)
     const sha256 = createHash("sha256").update(bytes).digest("hex")
     const artifactId = jsonValueDigest({
@@ -270,7 +290,7 @@ export class OpenRouterWorkflowModelExecutor {
       name: "response",
       sha256
     })
-    await this.#artifactStoreForRun?.(input.runId).write(
+    await artifactStore.write(
       `workflow/${input.activationId}/${input.attemptOrdinal}/${artifactId}.md`,
       bytes,
       "text/markdown"

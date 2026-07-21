@@ -41,12 +41,10 @@ export type WorkflowStepExecutionLog = {
   input?: JsonObject
   output?: JsonObject
   error?: JsonObject
-  terminalStatus?: "succeeded" | null
 }
 
 export type WorkflowStepResult = {
   output: JsonObject
-  terminalStatus: "succeeded" | "failed" | null
   error: JsonObject | null
   data: Array<{ name: string; kind: "artifact"; payload: JsonObject }>
   usage?: JsonObject
@@ -62,6 +60,7 @@ type StepExecutionContext = {
 
 const MAXIMUM_MARKDOWN_BYTES = 65_536
 const MAXIMUM_COLLECTION_ITEMS = 1_000
+const MAXIMUM_VALIDATION_ISSUES = 100
 const MAXIMUM_EXECUTOR_PHASE = 7
 
 function readPath(value: JsonValue, path: string[]): JsonValue {
@@ -246,9 +245,19 @@ export function downstreamActivations(
       .object({ policy: z.enum(["all", "any", "quorum"]), quorum: z.number().int().min(1).optional() })
       .strict()
       .parse(join.config)
+    if (items.length === 0) {
+      if (joinConfig.policy === "quorum") {
+        throw new Error(`Join quorum ${joinConfig.quorum ?? 1} cannot be met by 0 items`)
+      }
+      return downstreamActivations(graph, join.id, { results: [] }, sourceScope)
+    }
     let dependencyCount = items.length
-    if (joinConfig.policy === "any") dependencyCount = Math.min(items.length, 1)
-    if (joinConfig.policy === "quorum") dependencyCount = Math.min(items.length, joinConfig.quorum ?? 1)
+    if (joinConfig.policy === "any") dependencyCount = 1
+    if (joinConfig.policy === "quorum") {
+      const quorum = joinConfig.quorum ?? 1
+      if (items.length < quorum) throw new Error(`Join quorum ${quorum} cannot be met by ${items.length} items`)
+      dependencyCount = quorum
+    }
     return [...itemActivations, { stepId: config.joinStepId, scope: sourceScope, inputBindings: {}, dependencyCount }]
   }
   const byTarget = new Map<string, JsonObject>()
@@ -322,6 +331,16 @@ export function downstreamActivations(
     if (owningBranch !== undefined && scope.at(-1)?.kind === "branch") scope = scope.slice(0, -1)
     const target = graph.steps.find(({ id }) => id === stepId)
     let dependencyCount = Math.max(0, incomingCount - Object.keys(inputBindings).length)
+    if (target?.definition.kind === "join") {
+      const config = z
+        .object({ policy: z.enum(["all", "any", "quorum"]), quorum: z.number().int().min(1).optional() })
+        .strict()
+        .parse(target.config)
+      let required = incomingCount
+      if (config.policy === "any") required = 1
+      if (config.policy === "quorum") required = config.quorum ?? 1
+      dependencyCount = Math.max(0, required - Object.keys(inputBindings).length)
+    }
     if (loopBack?.loopBack === true) dependencyCount = 0
     if (target?.definition.kind === "exclusive_merge") dependencyCount = 0
     return {
@@ -346,25 +365,27 @@ function renderMarkdown(template: string, values: JsonObject): string {
 
 function collectItems(step: WorkflowStepInstance, input: JsonObject): JsonValue {
   const items = z.array(JsonValueSchema).parse(input.items)
-  const maximumItems = z
-    .number()
-    .int()
-    .min(1)
-    .max(MAXIMUM_COLLECTION_ITEMS)
-    .parse(step.config.maximumItems ?? MAXIMUM_COLLECTION_ITEMS)
+  const maximumItems = z.number().int().min(1).max(MAXIMUM_COLLECTION_ITEMS).parse(step.config.maximumItems)
   if (items.length > maximumItems) throw new Error(`Collect received ${items.length} items; maximum is ${maximumItems}`)
   if (step.config.mode !== "keyed") return items
   const keyField = z.string().trim().min(1).parse(step.config.keyField)
-  return Object.fromEntries(
-    items.map((item) => {
-      const object = JsonObjectSchema.parse(item)
-      const key = object[keyField]
-      if (typeof key !== "string" && typeof key !== "number") {
-        throw new Error(`Collect item is missing scalar key field ${keyField}`)
-      }
-      return [String(key), item]
-    })
-  )
+  const result: JsonObject = {}
+  const keyIndexes = new Map<string, number>()
+  items.forEach((item, index) => {
+    const object = JsonObjectSchema.parse(item)
+    const key = object[keyField]
+    if (typeof key !== "string" && typeof key !== "number") {
+      throw new Error(`Collect item is missing scalar key field ${keyField}`)
+    }
+    const normalizedKey = String(key)
+    const existingIndex = keyIndexes.get(normalizedKey)
+    if (existingIndex !== undefined) {
+      throw new Error(`Collect key ${normalizedKey} is duplicated by items ${existingIndex} and ${index}`)
+    }
+    keyIndexes.set(normalizedKey, index)
+    result[normalizedKey] = item
+  })
+  return result
 }
 
 export async function executeWorkflowStep(
@@ -380,56 +401,45 @@ export async function executeWorkflowStep(
   }
   let result: WorkflowStepResult
   if (step.definition.kind === "manual_trigger") {
-    result = { output: { input: input.input ?? {} }, terminalStatus: null, error: null, data: [] }
+    result = { output: { input: input.input ?? {} }, error: null, data: [] }
   } else if (step.definition.kind === "provider_event") {
-    result = { output: { event: input.event ?? {} }, terminalStatus: null, error: null, data: [] }
+    result = { output: { event: input.event ?? {} }, error: null, data: [] }
   } else if (step.definition.kind === "schedule") {
-    result = { output: { fire: input.fire ?? {} }, terminalStatus: null, error: null, data: [] }
+    result = { output: { fire: input.fire ?? {} }, error: null, data: [] }
   } else if (step.definition.kind === "set_fields") {
     result = {
       output: { value: { ...objectValue(input.input), ...objectValue(step.config.fields) } },
-      terminalStatus: null,
       error: null,
       data: []
     }
   } else if (step.definition.kind === "map_fields") {
     result = {
       output: { value: mappedFields(objectValue(input.input), objectValue(step.config.mappings)) },
-      terminalStatus: null,
       error: null,
       data: []
     }
   } else if (step.definition.kind === "validate") {
-    const value = input.value ?? {}
+    if (!("input" in input)) throw new Error("Validate requires input")
+    const value = JsonObjectSchema.parse(input.input)
     const issues = validateJsonValue(step.config.schema, value)
     if (issues.length > 0) {
       result = {
-        output: {},
-        terminalStatus: "failed",
-        error: {
-          code: "validation_failed",
-          message: issues.map((issue) => `${issue.path}: ${issue.message}`).join(" ")
+        output: {
+          false: {
+            value,
+            issues: issues.slice(0, MAXIMUM_VALIDATION_ISSUES),
+            schemaDigest: jsonValueDigest(step.config.schema)
+          }
         },
+        error: null,
         data: []
       }
     } else {
-      result = { output: { value }, terminalStatus: null, error: null, data: [] }
-    }
-  } else if (step.definition.kind === "success") {
-    result = { output: { result: objectValue(input.result) }, terminalStatus: "succeeded", error: null, data: [] }
-  } else if (step.definition.kind === "failure") {
-    result = {
-      output: {},
-      terminalStatus: "failed",
-      error: {
-        code: typeof step.config.code === "string" ? step.config.code : "workflow_failed",
-        message: typeof step.config.message === "string" ? step.config.message : "Workflow failed",
-        ...objectValue(input.error)
-      },
-      data: []
+      result = { output: { true: value }, error: null, data: [] }
     }
   } else if (step.definition.kind === "compose_markdown") {
     if (context === undefined) throw new Error("Compose Markdown requires attempt provenance")
+    if (context.artifactStore === undefined) throw new Error("Compose Markdown requires artifact storage")
     const content = Buffer.from(renderMarkdown(z.string().parse(step.config.template), objectValue(input.values)))
     if (content.byteLength > MAXIMUM_MARKDOWN_BYTES) {
       throw new Error(`Markdown artifact exceeds ${MAXIMUM_MARKDOWN_BYTES} bytes`)
@@ -441,7 +451,7 @@ export async function executeWorkflowStep(
       name: "markdown",
       sha256
     })
-    await context.artifactStore?.write(
+    await context.artifactStore.write(
       `workflow/${context.activationId}/${context.attemptOrdinal}/${artifactId}.md`,
       content,
       "text/markdown"
@@ -458,16 +468,15 @@ export async function executeWorkflowStep(
     })
     result = {
       output: { markdown: reference },
-      terminalStatus: null,
       error: null,
       data: [{ name: "markdown", kind: "artifact", payload: { ...reference } }]
     }
   } else if (step.definition.kind === "collect") {
-    result = { output: { collection: collectItems(step, input) }, terminalStatus: null, error: null, data: [] }
+    result = { output: { collection: collectItems(step, input) }, error: null, data: [] }
   } else if (step.definition.kind === "condition") {
     const value = objectValue(input.input)
     const port = evaluateExpression(value, step.config.expression) ? "true" : "false"
-    result = { output: { [port]: value }, terminalStatus: null, error: null, data: [] }
+    result = { output: { [port]: value }, error: null, data: [] }
   } else if (step.definition.kind === "switch") {
     const value = objectValue(input.input)
     const config = z
@@ -482,17 +491,17 @@ export async function executeWorkflowStep(
       .parse(step.config)
     const selected = config.cases.find(({ when }) => evaluateExpression(value, when))?.key ?? config.defaultKey
     if (selected === undefined) throw new Error("Switch matched no case and has no default branch")
-    result = { output: { branch: { key: selected, value } }, terminalStatus: null, error: null, data: [] }
+    result = { output: { branch: { key: selected, value } }, error: null, data: [] }
   } else if (step.definition.kind === "for_each") {
     const maximumItems = z.number().int().min(1).max(MAXIMUM_COLLECTION_ITEMS).parse(step.config.maximumItems)
     const items = z.array(JsonObjectSchema).max(maximumItems).parse(input.items)
-    result = { output: { item: items }, terminalStatus: null, error: null, data: [] }
+    result = { output: { item: items }, error: null, data: [] }
   } else if (step.definition.kind === "exclusive_merge") {
     const branches = z.array(JsonObjectSchema).length(1).parse(input.branches)
-    result = { output: { value: branches[0]! }, terminalStatus: null, error: null, data: [] }
+    result = { output: { value: branches[0]! }, error: null, data: [] }
   } else if (step.definition.kind === "join") {
     const branches = z.array(JsonObjectSchema).parse(input.branches)
-    result = { output: { results: branches }, terminalStatus: null, error: null, data: [] }
+    result = { output: { results: branches }, error: null, data: [] }
   } else if (step.definition.kind === "bounded_loop") {
     const config = z
       .object({
@@ -501,7 +510,7 @@ export async function executeWorkflowStep(
         condition: DeterministicExpressionSchema,
         bodyStepId: z.string().trim().min(1),
         exitStepId: z.string().trim().min(1),
-        onExhaustion: z.enum(["fail", "complete"])
+        onExhaustion: z.enum(["fail", "route"])
       })
       .strict()
       .parse(step.config)
@@ -509,19 +518,24 @@ export async function executeWorkflowStep(
     const loopScope = context?.scope?.at(-1)
     const iteration = loopScope?.kind === "loop" && loopScope.key === step.id ? loopScope.iteration : 0
     if (!evaluateExpression(state, config.condition)) {
-      result = { output: { result: state }, terminalStatus: null, error: null, data: [] }
+      result = { output: { result: state }, error: null, data: [] }
     } else if (iteration >= config.maximumIterations) {
       result =
-        config.onExhaustion === "complete"
-          ? { output: { result: state }, terminalStatus: null, error: null, data: [] }
+        config.onExhaustion === "route"
+          ? {
+              output: {
+                exhausted: { state, iterations: iteration, maximumIterations: config.maximumIterations }
+              },
+              error: null,
+              data: []
+            }
           : {
               output: {},
-              terminalStatus: "failed",
               error: { code: "loop_exhausted", message: `Loop exhausted after ${config.maximumIterations} iterations` },
               data: []
             }
     } else {
-      result = { output: { iteration: { state, index: iteration } }, terminalStatus: null, error: null, data: [] }
+      result = { output: { iteration: { state, index: iteration } }, error: null, data: [] }
     }
   } else {
     throw new Error(`Workflow executor does not support ${step.definition.kind}`)
@@ -576,7 +590,7 @@ export type WorkflowJournal = {
     releases?: Array<{ stepId: string; scope: ActivationScopeSegment[] }>
     loopBudgets?: Array<{ key: string; maximumActivations: number }>
     checkpoint: { cursor: string; committed: boolean }
-    terminalStatus?: "succeeded"
+    workflowResult?: JsonObject
   }): Promise<void>
   failAttempt(input: {
     runId: string
@@ -585,7 +599,6 @@ export type WorkflowJournal = {
     leaseOwner: string
     fencingToken: number
     error: JsonObject
-    terminalStatus?: "failed"
   }): Promise<void>
   suspendAttempt(input: {
     runId: string
@@ -596,6 +609,7 @@ export type WorkflowJournal = {
     correlationKey: string
     acceptedInputSchema: JsonObject
     expiresAt: Date
+    suspendedInput?: JsonObject
   }): Promise<unknown>
   listExpiredWaits(limit?: number): Promise<Array<{ runId: string; correlationKey: string }>>
   timeoutWait(input: { runId: string; correlationKey: string }): Promise<unknown>
@@ -610,12 +624,16 @@ export type WorkflowJournal = {
     childInput: JsonObject
     childTriggerStepId: string
     childTriggerPort: string
+    timeoutSeconds: number
+    maximumDepth: number
   }): Promise<unknown>
   listChildRunLinks(limit?: number): Promise<
     Array<{
       parentRunId: string
       childRunId: string
       terminalStatus: "succeeded" | "failed" | null
+      result: JsonObject | null
+      error: JsonObject | null
     }>
   >
   getChildRunCompletion(childRunId: string): Promise<{
@@ -673,11 +691,15 @@ export class WorkflowDispatcher {
     const childLinks = await this.#journal.listChildRunLinks(limit)
     for (const link of childLinks) {
       const completion =
-        link.terminalStatus === null ? await this.#journal.getChildRunCompletion(link.childRunId) : null
+        link.terminalStatus === null
+          ? await this.#journal.getChildRunCompletion(link.childRunId)
+          : { status: link.terminalStatus, output: link.result ?? {}, error: link.error }
       if (completion !== null) {
-        await this.#journal.recordChildRunCompletion({ childRunId: link.childRunId, ...completion })
+        if (link.terminalStatus === null) {
+          await this.#journal.recordChildRunCompletion({ childRunId: link.childRunId, ...completion })
+        }
         if (completion.status === "succeeded") {
-          const output = objectValue(completion.output.result)
+          const output = completion.output
           await this.#journal.resumeWait({
             runId: link.parentRunId,
             correlationKey: `child:${link.childRunId}`,
@@ -737,11 +759,17 @@ export class WorkflowDispatcher {
       stepKind: step.definition.kind
     }
     this.#log({ ...logContext, status: "started", input: resolvedInput })
-    if (step.definition.kind === "wait") {
-      const correlationTemplate = z.string().trim().min(1).parse(step.config.correlation)
-      const correlationKey = renderMarkdown(correlationTemplate, objectValue(resolvedInput.context))
+    if (step.definition.kind === "wait_event_github" || step.definition.kind === "wait_event_linear") {
+      const provider = step.definition.kind === "wait_event_github" ? "github" : "linear"
+      const binding = z
+        .object({ externalId: z.string().min(1) })
+        .passthrough()
+        .parse(step.config.binding)
+      const eventKey = z.string().trim().min(1).parse(step.config.eventKey)
+      const objectIdPath = z.array(z.string().min(1)).min(1).parse(step.config.objectIdPath)
+      const objectId = z.string().trim().min(1).parse(optionalPath(resolvedInput.input, objectIdPath))
+      const correlationKey = `${provider}:${binding.externalId}:${eventKey}:${objectId}`
       const expiresAfterSeconds = z.number().int().min(1).parse(step.config.expiresAfterSeconds)
-      const eventSchema = JsonObjectSchema.parse(step.config.eventSchema)
       await this.#journal.suspendAttempt({
         runId: activation.runId,
         activationId: activation.activationId,
@@ -749,8 +777,31 @@ export class WorkflowDispatcher {
         leaseOwner: this.#workerId,
         fencingToken: attempt.fencingToken,
         correlationKey,
-        acceptedInputSchema: eventSchema,
+        acceptedInputSchema: { type: "object" },
         expiresAt: new Date(this.#now().getTime() + expiresAfterSeconds * 1000)
+      })
+      this.#log({ ...logContext, status: "suspended", input: resolvedInput })
+      return
+    }
+    if (step.definition.kind === "delay") {
+      const duration = z.number().int().min(1).max(2_592_000).parse(step.config.duration)
+      const unit = z.enum(["seconds", "minutes", "hours", "days"]).parse(step.config.unit)
+      const unitSeconds = { seconds: 1, minutes: 60, hours: 3_600, days: 86_400 }[unit]
+      const durationSeconds = z
+        .number()
+        .int()
+        .max(2_592_000)
+        .parse(duration * unitSeconds)
+      await this.#journal.suspendAttempt({
+        runId: activation.runId,
+        activationId: activation.activationId,
+        ordinal: attempt.ordinal,
+        leaseOwner: this.#workerId,
+        fencingToken: attempt.fencingToken,
+        correlationKey: `delay:${activation.activationId}:${attempt.ordinal}`,
+        acceptedInputSchema: { type: "object" },
+        expiresAt: new Date(this.#now().getTime() + durationSeconds * 1000),
+        suspendedInput: resolvedInput
       })
       this.#log({ ...logContext, status: "suspended", input: resolvedInput })
       return
@@ -764,6 +815,8 @@ export class WorkflowDispatcher {
         .string()
         .regex(/^[0-9a-f]{64}$/u)
         .parse(step.config.interfaceDigest)
+      const timeoutSeconds = z.number().int().min(1).max(604_800).parse(step.config.timeoutSeconds)
+      const maximumDepth = z.number().int().min(1).max(20).parse(step.config.maximumDepth)
       const childPackage = await this.#journal.getExecutionPackage(childPackageDigest)
       if (childPackage === null) throw new Error(`Child execution package ${childPackageDigest} is unavailable`)
       const childGraph = CompiledWorkflowGraphSchema.parse(childPackage.content.graph)
@@ -781,7 +834,9 @@ export class WorkflowDispatcher {
         interfaceDigest,
         childInput: objectValue(resolvedInput.input),
         childTriggerStepId: triggers[0].id,
-        childTriggerPort: "input"
+        childTriggerPort: "input",
+        timeoutSeconds,
+        maximumDepth
       })
       this.#log({ ...logContext, status: "child_invoked", input: resolvedInput })
       return
@@ -799,7 +854,6 @@ export class WorkflowDispatcher {
             input: resolvedInput,
             snapshots: executionPackage.content.agentSnapshots
           }),
-          terminalStatus: null,
           error: null,
           data: []
         }
@@ -807,7 +861,6 @@ export class WorkflowDispatcher {
         if (this.#repositoryDataExecutor === undefined) throw new Error("Repository data execution is unavailable")
         result = {
           output: await this.#repositoryDataExecutor(step, resolvedInput),
-          terminalStatus: null,
           error: null,
           data: []
         }
@@ -823,7 +876,6 @@ export class WorkflowDispatcher {
         })
         result = {
           output: modelResult.output,
-          terminalStatus: null,
           error: null,
           data: modelResult.data,
           usage: modelResult.usage,
@@ -833,7 +885,6 @@ export class WorkflowDispatcher {
         if (this.#providerDataExecutor === undefined) throw new Error("Provider data execution is unavailable")
         result = {
           output: await this.#providerDataExecutor(step, resolvedInput),
-          terminalStatus: null,
           error: null,
           data: []
         }
@@ -847,7 +898,6 @@ export class WorkflowDispatcher {
             step,
             request: objectValue(resolvedInput.request)
           }),
-          terminalStatus: null,
           error: null,
           data: []
         }
@@ -862,7 +912,6 @@ export class WorkflowDispatcher {
     } catch (error) {
       result = {
         output: {},
-        terminalStatus: "failed",
         error: {
           code:
             error instanceof WorkflowModelExecutionError || error instanceof WorkflowProviderExecutionError
@@ -880,11 +929,33 @@ export class WorkflowDispatcher {
         ordinal: attempt.ordinal,
         leaseOwner: this.#workerId,
         fencingToken: attempt.fencingToken,
-        error: result.error,
-        terminalStatus: "failed"
+        error: result.error
       })
       this.#log({ ...logContext, status: "failed", error: result.error })
       return
+    }
+    const definition = getWorkflowStepDefinition(step.definition.kind, step.definition.version, MAXIMUM_EXECUTOR_PHASE)
+    const workflowResult = step.id === graph.sinkStepId ? objectValue(result.output[definition.outputs[0]!.name]) : null
+    if (workflowResult !== null) {
+      const outputIssues = validateJsonValue(graph.outputSchema, workflowResult)
+      if (outputIssues.length > 0) {
+        const error = {
+          code: "workflow_output_invalid",
+          message: outputIssues.map((issue) => `${issue.path}: ${issue.message}`).join(" "),
+          classification: "execution_error",
+          issues: outputIssues
+        }
+        await this.#journal.failAttempt({
+          runId: activation.runId,
+          activationId: activation.activationId,
+          ordinal: attempt.ordinal,
+          leaseOwner: this.#workerId,
+          fencingToken: attempt.fencingToken,
+          error
+        })
+        this.#log({ ...logContext, status: "failed", error })
+        return
+      }
     }
     const downstream = downstreamActivations(graph, step.id, result.output, activation.scope)
     const loopBudgets = graph.steps
@@ -940,13 +1011,12 @@ export class WorkflowDispatcher {
       releases,
       loopBudgets,
       checkpoint: { cursor: `${activation.activationId}:${attempt.ordinal}`, committed: true },
-      ...(result.terminalStatus === "succeeded" ? { terminalStatus: "succeeded" as const } : {})
+      ...(workflowResult === null ? {} : { workflowResult })
     })
     this.#log({
       ...logContext,
       status: "succeeded",
-      output: result.output,
-      terminalStatus: result.terminalStatus === "succeeded" ? "succeeded" : null
+      output: result.output
     })
   }
 }

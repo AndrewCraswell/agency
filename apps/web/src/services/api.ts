@@ -56,14 +56,6 @@ const agentSchema = z
   })
   .strict()
 
-const controlPlaneRunSnapshotSchema = z
-  .object({
-    schemaVersion: z.literal("1"),
-    fetchedAt: z.iso.datetime({ offset: true }),
-    agents: z.array(agentSchema),
-    runs: z.array(workflowRunSchema)
-  })
-  .strict()
 const workItemQueueStatusSchema = z.enum(["todo", "in_progress", "blocked"])
 const workItemFacetSchema = z.object({ value: z.string(), count: z.number().int().nonnegative() }).strict()
 const workItemQueryResponseSchema = z
@@ -332,6 +324,39 @@ const activationScopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("loop"), key: z.string(), iteration: z.number().int().nonnegative() }).strict(),
   z.object({ kind: z.literal("item"), key: z.string() }).strict()
 ])
+const agentCatalogSchema = z.object({ schemaVersion: z.literal("1"), agents: z.array(agentSchema) }).strict()
+const journalWorkflowRunListSchema = z
+  .object({
+    schemaVersion: z.literal("1"),
+    runs: z.array(
+      z
+        .object({
+          runId: z.uuid(),
+          workflowId: z.uuid(),
+          workflowName: z.string(),
+          source: z.discriminatedUnion("kind", [
+            z.object({ kind: z.literal("published"), version: z.number().int().positive() }).strict(),
+            z.object({ kind: z.literal("draft_test"), draftRevision: z.number().int().positive() }).strict()
+          ]),
+          triggerIdentity: z.string(),
+          status: z.enum([
+            "preparing",
+            "runnable",
+            "running",
+            "waiting",
+            "succeeded",
+            "failed",
+            "cancelled",
+            "abandoned"
+          ]),
+          createdAt: z.iso.datetime({ offset: true }),
+          updatedAt: z.iso.datetime({ offset: true }),
+          terminalAt: z.iso.datetime({ offset: true }).nullable()
+        })
+        .strict()
+    )
+  })
+  .strict()
 const workflowRunDetailSchema = z
   .object({
     schemaVersion: z.literal("2"),
@@ -423,6 +448,7 @@ const workflowRunDetailSchema = z
         outputSchema: jsonValueSchema,
         steps: z.array(workflowStepSchema),
         connections: z.array(workflowConnectionSchema),
+        sinkStepId: z.string(),
         topologicalOrder: z.array(z.string())
       })
       .strict(),
@@ -568,7 +594,7 @@ const workflowStepDefinitionSchema = z
     kind: z.string(),
     version: z.number().int().positive(),
     phase: z.number().int(),
-    category: z.enum(["trigger", "data", "ai", "action", "logic", "terminal"]),
+    category: z.enum(["trigger", "data", "ai", "action", "logic"]),
     label: z.string(),
     description: z.string(),
     executionClass: z.enum(["control", "provider", "model", "workspace"]),
@@ -673,8 +699,8 @@ const workflowScheduleSchema = z
   })
   .strict()
 
-export type WorkflowRun = z.infer<typeof workflowRunSchema>
-export type ControlPlaneRunSnapshot = z.infer<typeof controlPlaneRunSnapshotSchema>
+export type AgentDefinition = z.infer<typeof agentSchema>
+export type JournalWorkflowRun = z.infer<typeof journalWorkflowRunListSchema>["runs"][number]
 export type WorkItemQueueStatus = z.infer<typeof workItemQueueStatusSchema>
 export type WorkItemQueryResponse = z.infer<typeof workItemQueryResponseSchema>
 export type WorkItemQuery = {
@@ -734,6 +760,7 @@ export type CreateWorkflowRequest =
       repository: WorkflowResourceBinding
       linearTeam: WorkflowResourceBinding
       modelId: string
+      agentReference: RepositoryAgentReference
     }
 
 export class ApiRequestError extends Error {
@@ -769,8 +796,12 @@ async function requestJson<Output>(path: string, schema: z.ZodType<Output>, init
   return schema.parse(body)
 }
 
-export function getControlPlaneRunSnapshot(): Promise<ControlPlaneRunSnapshot> {
-  return requestJson("/api/control-plane/runs", controlPlaneRunSnapshotSchema)
+export function listControlPlaneAgents(): Promise<AgentDefinition[]> {
+  return requestJson("/api/control-plane/agents", agentCatalogSchema).then(({ agents }) => agents)
+}
+
+export function listJournalWorkflowRuns(): Promise<JournalWorkflowRun[]> {
+  return requestJson("/api/workflow-runs", journalWorkflowRunListSchema).then(({ runs }) => runs)
 }
 
 export function queryWorkItems(query: WorkItemQuery): Promise<WorkItemQueryResponse> {
@@ -823,16 +854,6 @@ export function retryJournalWorkflowFromHere(runId: string, activationId: string
       })
       .strict(),
     jsonRequest("POST", {})
-  )
-}
-
-export function resumeJournalWorkflowRun(runId: string, correlationKey: string, event: Record<string, JsonValue>) {
-  return requestJson(
-    `/api/workflow-runs/${encodeURIComponent(runId)}/resume`,
-    z
-      .object({ schemaVersion: z.literal("1"), resumed: workflowRunDetailSchema.shape.waits.element.nullable() })
-      .strict(),
-    jsonRequest("POST", { correlationKey, event })
   )
 }
 
@@ -996,6 +1017,14 @@ export function discoverRepositoryAgents(input: {
 
 export function createWorkflow(request: CreateWorkflowRequest) {
   return requestJson("/api/workflows", workflowDraftViewSchema, jsonRequest("POST", request))
+}
+
+export function deleteWorkflow(workflowId: string) {
+  return requestJson(
+    `/api/workflows/${encodeURIComponent(workflowId)}`,
+    z.object({ workflowId: z.uuid(), deleted: z.literal(true) }).strict(),
+    { method: "DELETE" }
+  )
 }
 
 export function getWorkflowDraft(workflowId: string): Promise<WorkflowDraftView> {

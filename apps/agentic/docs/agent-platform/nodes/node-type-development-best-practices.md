@@ -394,13 +394,17 @@ artifacts, usage, and evidence. Do not put secrets or full sensitive payloads in
 
 ### Canvas card
 
-Every node card SHOULD show:
+Every node card MUST show:
 
 - immutable type and selected operation;
 - editable **Title**;
 - one concise configuration summary;
-- validation and latest-run status;
-- visible named ports and outcome labels; and
+- validation state; and
+- visible named ports and outcome labels.
+
+Every node card SHOULD also show:
+
+- latest-run status; and
 - relevant provider, effect, approval, AI, cost, concurrency, timeout, and limit badges.
 
 Summaries should answer what the node will do, not restate field names. Badges should communicate operational
@@ -433,7 +437,8 @@ generated form, or visual policy control can represent the contract safely.
 
 ### Isolated testing
 
-Every independently executable node SHOULD support:
+Every independently executable node MUST support a safe isolated test path appropriate to its work class. The test
+experience SHOULD include:
 
 - sample input generated from its schema;
 - saved and pinned fixtures;
@@ -604,15 +609,12 @@ Persist one idempotent parent-child link and reconcile authoritative child termi
 **Failure**, **Timeout**, and **Error** with explicit parent-cancellation, child-cancellation, retry-reuse, late-completion,
 and detach policies. Provide a direct link to the child run and retain invocation provenance.
 
-### Terminal nodes
+### Workflow completion
 
-Success MUST be a run-level return boundary unless scoped terminals are a separately designed feature. It MUST construct
-and validate the final value against the workflow output interface and atomically prevent incompatible pending work from
-starting.
-
-Failure is for intentional domain termination, not provider outages, malformed configuration, or escaped executor
-faults. Configured code and message MUST win unless the author explicitly selects an input-mapping mode. Terminal nodes
-do not have ordinary downstream outputs or automatic retry.
+Every publishable workflow must have exactly one reachable graph sink. The sink is an ordinary step with exactly one
+output port, and that output schema must be assignable to the workflow output schema. The runtime commits that output as
+the workflow result and atomically cancels incompatible sibling work when the sink completes. Execution faults fail the
+active attempt through the journal; authors do not add success or failure nodes to encode run state.
 
 ## Testing strategy
 

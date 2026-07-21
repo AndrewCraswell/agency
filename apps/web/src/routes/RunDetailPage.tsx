@@ -37,13 +37,13 @@ import {
   cancelJournalWorkflowRun,
   getWorkflowRunDetail,
   resolveJournalWorkflowEffect,
-  resumeJournalWorkflowRun,
   retryJournalWorkflowActivation,
   retryJournalWorkflowFromHere,
   runJournalWorkflowAgain,
   type JsonValue,
   type WorkflowRunDetail
 } from "@/services/api"
+import { formatIdentifierLabel } from "@/utils/formatIdentifierLabel"
 import { useRunDetailPageStyles } from "./RunDetailPage.styles"
 
 function journalStatusColor(status: string): "brand" | "danger" | "informative" | "success" | "warning" {
@@ -64,6 +64,23 @@ function journalStatusColor(status: string): "brand" | "danger" | "informative" 
 
 function persistedJson(value: unknown) {
   return JSON.stringify(value, null, 2)
+}
+
+function attemptTiming(attempt: WorkflowRunDetail["attempts"][number]): string | null {
+  if (attempt.startedAt === null) {
+    return null
+  }
+  if (attempt.finishedAt === null) {
+    return `Started ${new Date(attempt.startedAt).toLocaleString()}`
+  }
+  const elapsedMilliseconds = Math.max(
+    0,
+    new Date(attempt.finishedAt).getTime() - new Date(attempt.startedAt).getTime()
+  )
+  if (elapsedMilliseconds < 1_000) {
+    return `${elapsedMilliseconds} ms`
+  }
+  return `${(elapsedMilliseconds / 1_000).toFixed(elapsedMilliseconds < 10_000 ? 1 : 0)} s`
 }
 
 function executionPackageLabel(executionPackage: WorkflowRunDetail["executionPackage"]): string {
@@ -204,7 +221,6 @@ function RunSummary({
   busyAction,
   onCancel,
   onResolveEffect,
-  onResume,
   onRetry,
   onRetryFromHere,
   onRunAgain
@@ -216,7 +232,6 @@ function RunSummary({
     effect: WorkflowRunDetail["effects"][number],
     input: { outcome: "occurred" | "absent" | "indeterminate"; reason: string; result?: Record<string, JsonValue> }
   ) => Promise<void>
-  onResume: (wait: WorkflowRunDetail["waits"][number]) => void
   onRetry: (activationId: string) => void
   onRetryFromHere: (activationId: string) => void
   onRunAgain: () => void
@@ -237,7 +252,7 @@ function RunSummary({
           </Caption1>
         </div>
         <Badge appearance="filled" color={journalStatusColor(detail.summary.outcome)}>
-          {detail.summary.outcome}
+          {formatIdentifierLabel(detail.summary.outcome)}
         </Badge>
       </div>
       {failure === null ? null : (
@@ -314,20 +329,6 @@ function RunSummary({
                     {action.label}
                   </Button>
                 )
-              } else if (action.key === "resume" && targetId !== null) {
-                const wait = detail.waits.find(({ waitId }) => waitId === targetId)
-                if (wait !== undefined) {
-                  control = (
-                    <Button
-                      disabled={busy}
-                      disabledFocusable={!action.allowed}
-                      aria-describedby={action.allowed ? undefined : reasonId}
-                      onClick={() => onResume(wait)}
-                    >
-                      {action.label}
-                    </Button>
-                  )
-                }
               } else if (effect !== undefined) {
                 control = (
                   <EffectResolutionAction
@@ -357,12 +358,151 @@ function RunSummary({
   )
 }
 
+function StepProgress({ detail }: { detail: WorkflowRunDetail }) {
+  const classes = useRunDetailPageStyles()
+  const attemptsByActivation = Map.groupBy(detail.attempts, ({ activationId }) => activationId)
+
+  return (
+    <section className={classes.stepProgress} aria-labelledby="step-progress-heading">
+      <div className={classes.sectionHeading}>
+        <div>
+          <Subtitle1 as="h2" id="step-progress-heading">
+            Step progress
+          </Subtitle1>
+          <Caption1>Follow the input and output recorded at each point in the workflow.</Caption1>
+        </div>
+        <CounterBadge appearance="ghost" color="informative" count={detail.graph.steps.length} showZero />
+      </div>
+      <ol className={classes.stepList}>
+        {detail.graph.topologicalOrder.map((stepId, stepIndex) => {
+          const step = detail.graph.steps.find(({ id }) => id === stepId)
+          if (step === undefined) {
+            return null
+          }
+          const activations = detail.activations.filter((activation) => activation.stepId === stepId)
+          return (
+            <li key={stepId} className={classes.stepItem}>
+              <div className={classes.stepMarker} aria-hidden="true">
+                {stepIndex + 1}
+              </div>
+              <div className={classes.stepContent}>
+                <div className={classes.stepHeading}>
+                  <div>
+                    <Subtitle1 as="h3">{step.label}</Subtitle1>
+                    <Caption1>{step.definition.kind.replaceAll("_", " ")}</Caption1>
+                  </div>
+                  {activations.length === 0 ? (
+                    <Badge appearance="tint">Not started</Badge>
+                  ) : (
+                    <Badge appearance="filled" color={journalStatusColor(activations.at(-1)!.status)}>
+                      {formatIdentifierLabel(activations.at(-1)!.status)}
+                    </Badge>
+                  )}
+                </div>
+                {activations.length === 0 ? (
+                  <Body1 className={classes.pendingStep}>This step has not received input.</Body1>
+                ) : (
+                  activations.map((activation, activationIndex) => {
+                    const attempts = (attemptsByActivation.get(activation.activationId) ?? []).toSorted(
+                      (left, right) => left.ordinal - right.ordinal
+                    )
+                    return (
+                      <div className={classes.activationTrace} key={activation.activationId}>
+                        {activations.length > 1 ? (
+                          <Caption1>
+                            Activation {activationIndex + 1} of {activations.length}
+                          </Caption1>
+                        ) : null}
+                        {attempts.length === 0 ? (
+                          <div className={classes.dataColumns}>
+                            <section aria-label={`${step.label} input`}>
+                              <strong>Input</strong>
+                              <pre className={classes.jsonBlock}>{persistedJson(activation.inputBindings)}</pre>
+                            </section>
+                            <section aria-label={`${step.label} output`}>
+                              <strong>Output</strong>
+                              <Body1>No output yet.</Body1>
+                            </section>
+                          </div>
+                        ) : (
+                          attempts.map((attempt, attemptIndex) => {
+                            const timing = attemptTiming(attempt)
+                            return (
+                              <details
+                                className={classes.attemptTrace}
+                                key={attempt.ordinal}
+                                open={attemptIndex === attempts.length - 1}
+                              >
+                                <summary>
+                                  <span>Attempt {attempt.ordinal}</span>
+                                  <span className={classes.attemptMeta}>
+                                    {timing === null ? null : <Caption1>{timing}</Caption1>}
+                                    <Badge appearance="tint" color={journalStatusColor(attempt.status)}>
+                                      {formatIdentifierLabel(attempt.status)}
+                                    </Badge>
+                                  </span>
+                                </summary>
+                                <div className={classes.dataColumns}>
+                                  <section aria-label={`${step.label} input for attempt ${attempt.ordinal}`}>
+                                    <strong>Input</strong>
+                                    <pre className={classes.jsonBlock}>{persistedJson(attempt.input)}</pre>
+                                  </section>
+                                  <section aria-label={`${step.label} output for attempt ${attempt.ordinal}`}>
+                                    <strong>Output</strong>
+                                    {attempt.output === null ? (
+                                      <Body1>No output was recorded.</Body1>
+                                    ) : (
+                                      <pre className={classes.jsonBlock}>{persistedJson(attempt.output)}</pre>
+                                    )}
+                                  </section>
+                                </div>
+                                {attempt.error === null ? null : (
+                                  <section className={classes.stepError} aria-label={`${step.label} error`}>
+                                    <strong>Error</strong>
+                                    <pre className={classes.jsonBlock}>{persistedJson(attempt.error)}</pre>
+                                  </section>
+                                )}
+                                {attempt.usage === null && Object.keys(attempt.evidence).length === 0 ? null : (
+                                  <details className={classes.providerDetails}>
+                                    <summary>Provider details</summary>
+                                    <div className={classes.dataColumns}>
+                                      {attempt.usage === null ? null : (
+                                        <section aria-label={`${step.label} usage for attempt ${attempt.ordinal}`}>
+                                          <strong>Usage</strong>
+                                          <pre className={classes.jsonBlock}>{persistedJson(attempt.usage)}</pre>
+                                        </section>
+                                      )}
+                                      {Object.keys(attempt.evidence).length === 0 ? null : (
+                                        <section aria-label={`${step.label} evidence for attempt ${attempt.ordinal}`}>
+                                          <strong>Provider evidence</strong>
+                                          <pre className={classes.jsonBlock}>{persistedJson(attempt.evidence)}</pre>
+                                        </section>
+                                      )}
+                                    </div>
+                                  </details>
+                                )}
+                              </details>
+                            )
+                          })
+                        )}
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </section>
+  )
+}
+
 function WorkflowRunView({
   detail,
   busyAction,
   onCancel,
   onResolveEffect,
-  onResume,
   onRetry,
   onRetryFromHere,
   onRunAgain
@@ -374,16 +514,14 @@ function WorkflowRunView({
     effect: WorkflowRunDetail["effects"][number],
     input: { outcome: "occurred" | "absent" | "indeterminate"; reason: string; result?: Record<string, JsonValue> }
   ) => Promise<void>
-  onResume: (wait: WorkflowRunDetail["waits"][number]) => void
   onRetry: (activationId: string) => void
   onRetryFromHere: (activationId: string) => void
   onRunAgain: () => void
 }) {
   const classes = useRunDetailPageStyles()
-  const attemptsByActivation = Map.groupBy(detail.attempts, ({ activationId }) => activationId)
   const pageTitle =
     detail.summary.failure === null
-      ? `Workflow run ${detail.summary.outcome}`
+      ? `Workflow run: ${formatIdentifierLabel(detail.summary.outcome)}`
       : `Run failed at ${detail.summary.failure.stepLabel}`
   return (
     <>
@@ -395,7 +533,7 @@ function WorkflowRunView({
         </div>
         <div className={classes.runActions}>
           <Badge appearance="filled" color={journalStatusColor(detail.run.status)}>
-            {detail.run.status}
+            {formatIdentifierLabel(detail.run.status)}
           </Badge>
         </div>
       </header>
@@ -404,23 +542,24 @@ function WorkflowRunView({
         busyAction={busyAction}
         onCancel={onCancel}
         onResolveEffect={onResolveEffect}
-        onResume={onResume}
         onRetry={onRetry}
         onRetryFromHere={onRetryFromHere}
         onRunAgain={onRunAgain}
       />
+      <StepProgress detail={detail} />
       <details className={classes.diagnostics}>
-        <summary aria-label="Toggle run diagnostics">
+        <summary aria-label="Toggle technical details">
           <span>
-            <Subtitle1>Diagnostics</Subtitle1>
-            <Caption1>Inspect the sealed graph, attempts, provider evidence, and event history.</Caption1>
+            <Subtitle1>Technical details</Subtitle1>
+            <Caption1>Inspect run identifiers, external activity, and the system event log.</Caption1>
           </span>
         </summary>
         <div className={classes.diagnosticsContent}>
+          <Subtitle1 as="h2">Run context</Subtitle1>
           <dl className={classes.details} aria-label="Run metadata">
             <div>
               <dt>
-                <Caption1>Trigger</Caption1>
+                <Caption1>Started by</Caption1>
               </dt>
               <dd>
                 <Body1>{detail.run.triggerIdentity}</Body1>
@@ -428,7 +567,7 @@ function WorkflowRunView({
             </div>
             <div>
               <dt>
-                <Caption1>Package</Caption1>
+                <Caption1>Execution package</Caption1>
               </dt>
               <dd>
                 <Body1 className={classes.runId}>{detail.run.packageDigest}</Body1>
@@ -436,86 +575,21 @@ function WorkflowRunView({
             </div>
             <div>
               <dt>
-                <Caption1>Last event</Caption1>
+                <Caption1>Latest event</Caption1>
               </dt>
               <dd>
                 <Body1>Sequence {detail.run.latestSequence}</Body1>
               </dd>
             </div>
           </dl>
-          <section className={classes.workflowSection} aria-labelledby="journal-graph-heading">
-            <div className={classes.sectionHeading}>
-              <div>
-                <Subtitle1 as="h2" id="journal-graph-heading">
-                  Immutable graph
-                </Subtitle1>
-                <Caption1>{detail.graph.steps.length} steps from the sealed execution package</Caption1>
-              </div>
-              <CounterBadge appearance="ghost" color="informative" count={detail.activations.length} showZero />
-            </div>
-            <ol className={classes.activationList}>
-              {detail.graph.topologicalOrder.map((stepId) => {
-                const step = detail.graph.steps.find(({ id }) => id === stepId)
-                if (step === undefined) {
-                  return null
-                }
-                const activations = detail.activations.filter((activation) => activation.stepId === stepId)
-                return (
-                  <li key={stepId}>
-                    <div className={classes.eventHeading}>
-                      <strong>{step.label}</strong>
-                      <Caption1>{step.definition.kind.replaceAll("_", " ")}</Caption1>
-                    </div>
-                    {activations.length === 0 ? (
-                      <Caption1>Not activated</Caption1>
-                    ) : (
-                      activations.map((activation) => (
-                        <div className={classes.activationRow} key={activation.activationId}>
-                          <Badge appearance="tint" color={journalStatusColor(activation.status)}>
-                            {activation.status}
-                          </Badge>
-                          <code>{activation.activationId.slice(0, 12)}</code>
-                          <Caption1>
-                            {activation.scope.length === 0
-                              ? "root scope"
-                              : activation.scope
-                                  .map((scope) =>
-                                    scope.kind === "loop" ? `${scope.key}:${scope.iteration}` : scope.key
-                                  )
-                                  .join(" / ")}
-                          </Caption1>
-                          <Caption1>
-                            {attemptsByActivation.get(activation.activationId)?.length ?? 0} attempt(s)
-                          </Caption1>
-                        </div>
-                      ))
-                    )}
-                  </li>
-                )
-              })}
-            </ol>
-          </section>
+          <div className={classes.subsectionHeading}>
+            <Subtitle1 as="h2">External activity</Subtitle1>
+            <Caption1>Provider changes, waits, artifacts, and child workflows created by this run.</Caption1>
+          </div>
           <div className={classes.diagnosticGrid}>
             <JournalEvidenceSection
-              title="Attempts"
-              empty="No attempts yet"
-              items={detail.attempts.map((attempt) => ({
-                id: `${attempt.activationId}:${attempt.ordinal}`,
-                label: `Attempt ${attempt.ordinal}`,
-                status: attempt.status,
-                meta: attempt.activationId.slice(0, 12),
-                value: {
-                  input: attempt.input,
-                  output: attempt.output,
-                  error: attempt.error,
-                  usage: attempt.usage,
-                  evidence: attempt.evidence
-                }
-              }))}
-            />
-            <JournalEvidenceSection
-              title="Waits"
-              empty="No durable waits"
+              title="Waiting for events"
+              empty="This run did not wait for an external event."
               items={detail.waits.map((wait) => ({
                 id: wait.waitId,
                 label: wait.correlationKey,
@@ -529,8 +603,8 @@ function WorkflowRunView({
               }))}
             />
             <JournalEvidenceSection
-              title="Effects"
-              empty="No external effects"
+              title="Provider changes"
+              empty="This run made no external changes."
               items={detail.effects.map((effect) => ({
                 id: effect.effectId,
                 label: `${effect.provider} ${effect.effectSlot}`,
@@ -541,8 +615,8 @@ function WorkflowRunView({
               }))}
             />
             <JournalEvidenceSection
-              title="Data and artifacts"
-              empty="No produced data"
+              title="Artifacts"
+              empty="This run produced no saved artifacts."
               items={detail.data.map((datum) => ({
                 id: datum.datumId,
                 label: datum.name,
@@ -552,8 +626,8 @@ function WorkflowRunView({
               }))}
             />
             <JournalEvidenceSection
-              title="Child runs"
-              empty="No child workflows"
+              title="Child workflows"
+              empty="This run started no child workflows."
               items={detail.childLinks.map((link) => ({
                 id: link.childRunId,
                 label: link.childRunId,
@@ -567,9 +641,9 @@ function WorkflowRunView({
             <div className={classes.sectionHeading}>
               <div>
                 <Subtitle1 as="h2" id="journal-events-heading">
-                  Event history
+                  System event log
                 </Subtitle1>
-                <Caption1>Ordered persisted transitions</Caption1>
+                <Caption1>Low-level state changes recorded by the workflow runtime.</Caption1>
               </div>
               <CounterBadge appearance="ghost" color="informative" count={detail.events.length} showZero />
             </div>
@@ -593,7 +667,7 @@ function WorkflowRunView({
                       </div>
                       <Caption1>{new Date(event.recordedAt).toLocaleString()}</Caption1>
                       <details>
-                        <summary>Persisted payload</summary>
+                        <summary>Event data</summary>
                         <pre>{persistedJson(event.payload)}</pre>
                       </details>
                     </div>
@@ -633,7 +707,7 @@ function JournalEvidenceSection({
               <div className={classes.eventHeading}>
                 <strong>{item.label}</strong>
                 <Badge appearance="tint" color={journalStatusColor(item.status)}>
-                  {item.status}
+                  {formatIdentifierLabel(item.status)}
                 </Badge>
               </div>
               <Caption1>{item.meta}</Caption1>
@@ -659,9 +733,6 @@ export function RunDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [busyAction, setBusyAction] = useState<string | null>(null)
-  const [resumeWait, setResumeWait] = useState<WorkflowRunDetail["waits"][number] | null>(null)
-  const [resumeEvent, setResumeEvent] = useState("{}")
-  const [resumeError, setResumeError] = useState("")
   const [runAgainOpen, setRunAgainOpen] = useState(false)
   const [runAgainInput, setRunAgainInput] = useState("{}")
   const [runAgainError, setRunAgainError] = useState("")
@@ -736,43 +807,6 @@ export function RunDetailPage() {
         title: "Retry from here blocked",
         body: retryError instanceof Error ? retryError.message : "The affected steps could not be retried."
       })
-    } finally {
-      setBusyAction(null)
-    }
-  }
-
-  async function submitResume() {
-    if (resumeWait === null) {
-      return
-    }
-    let event: Record<string, JsonValue>
-    try {
-      const parsed: unknown = JSON.parse(resumeEvent)
-      if (parsed === null || Array.isArray(parsed) || typeof parsed !== "object") {
-        throw new Error("Resume event must be a JSON object")
-      }
-      event = parsed as Record<string, JsonValue>
-      setResumeError("")
-    } catch (parseError) {
-      setResumeError(parseError instanceof Error ? parseError.message : "Enter a valid JSON object")
-      return
-    }
-    setBusyAction(resumeWait.waitId)
-    try {
-      const result = await resumeJournalWorkflowRun(runId, resumeWait.correlationKey, event)
-      if (result.resumed === null) {
-        throw new Error("This wait is no longer pending")
-      }
-      setResumeWait(null)
-      setResumeEvent("{}")
-      showAppToast(dispatchToast, {
-        intent: "success",
-        title: "Run resumed",
-        body: "The event was validated and committed to the journal."
-      })
-      await loadDetail()
-    } catch (resumeFailure) {
-      setResumeError(resumeFailure instanceof Error ? resumeFailure.message : "The run could not be resumed.")
     } finally {
       setBusyAction(null)
     }
@@ -865,11 +899,6 @@ export function RunDetailPage() {
           busyAction={busyAction}
           onCancel={() => void cancelRun()}
           onResolveEffect={resolveEffect}
-          onResume={(wait) => {
-            setResumeWait(wait)
-            setResumeEvent("{}")
-            setResumeError("")
-          }}
           onRetry={(activationId) => void retryActivation(activationId)}
           onRetryFromHere={(activationId) => void retryFromHere(activationId)}
           onRunAgain={() => {
@@ -878,47 +907,6 @@ export function RunDetailPage() {
             setRunAgainOpen(true)
           }}
         />
-      )}
-      {resumeWait === null ? null : (
-        <Dialog
-          open
-          onOpenChange={(_, data) => {
-            if (!data.open && busyAction === null) {
-              setResumeWait(null)
-            }
-          }}
-        >
-          <DialogSurface>
-            <DialogBody>
-              <DialogTitle>Resume workflow</DialogTitle>
-              <DialogContent>
-                <Body1>
-                  Send an event for <code>{resumeWait?.correlationKey}</code>.
-                </Body1>
-                <Field
-                  label="Event JSON"
-                  validationState={resumeError === "" ? "none" : "error"}
-                  validationMessage={resumeError}
-                >
-                  <Textarea resize="vertical" value={resumeEvent} onChange={(_, data) => setResumeEvent(data.value)} />
-                </Field>
-              </DialogContent>
-              <DialogActions>
-                <Button appearance="secondary" disabled={busyAction !== null} onClick={() => setResumeWait(null)}>
-                  Cancel
-                </Button>
-                <Button
-                  appearance="primary"
-                  disabled={busyAction !== null}
-                  icon={busyAction === resumeWait?.waitId ? <Spinner size="tiny" /> : undefined}
-                  onClick={() => void submitResume()}
-                >
-                  Resume
-                </Button>
-              </DialogActions>
-            </DialogBody>
-          </DialogSurface>
-        </Dialog>
       )}
       {!runAgainOpen || detail?.executionPackage.sourceKind !== "published" ? null : (
         <Dialog

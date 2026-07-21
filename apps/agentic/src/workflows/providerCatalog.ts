@@ -35,6 +35,62 @@ export type ProviderOperationDefinition = {
   label: string
 }
 
+const ProviderInputSchemas: Record<ProviderOperation, z.ZodType<Record<string, unknown>>> = {
+  "github.repository": z.object({}).passthrough(),
+  "github.pull_request": z.object({ pullRequestNumber: z.number().int().positive() }).passthrough(),
+  "github.pull_request_comments": z.object({ pullRequestNumber: z.number().int().positive() }).passthrough(),
+  "github.pull_request_reviews": z.object({ pullRequestNumber: z.number().int().positive() }).passthrough(),
+  "github.checks": z.object({ ref: z.string().trim().min(1) }).passthrough(),
+  "github.create_or_update_pull_request": z
+    .object({
+      pullRequestNumber: z.number().int().positive().optional(),
+      title: z.string().trim().min(1).optional(),
+      head: z.string().trim().min(1).optional(),
+      base: z.string().trim().min(1).optional()
+    })
+    .passthrough()
+    .superRefine((request, context) => {
+      if (
+        request.pullRequestNumber === undefined &&
+        (request.title === undefined || request.head === undefined || request.base === undefined)
+      ) {
+        context.addIssue({ code: "custom", message: "Creating a pull request requires title, head, and base." })
+      }
+    }),
+  "github.add_pull_request_comment": z
+    .object({ pullRequestNumber: z.number().int().positive(), body: z.string().trim().min(1) })
+    .passthrough(),
+  "github.submit_pull_request_review": z
+    .object({ pullRequestNumber: z.number().int().positive(), event: z.string().trim().min(1) })
+    .passthrough(),
+  "github.request_reviewers": z
+    .object({ pullRequestNumber: z.number().int().positive(), reviewers: z.array(z.string().trim().min(1)).min(1) })
+    .passthrough(),
+  "github.add_labels": z
+    .object({ pullRequestNumber: z.number().int().positive(), labels: z.array(z.string().trim().min(1)).min(1) })
+    .passthrough(),
+  "github.remove_label": z
+    .object({ pullRequestNumber: z.number().int().positive(), label: z.string().trim().min(1) })
+    .passthrough(),
+  "github.set_check_status": z
+    .object({ name: z.string().trim().min(1), head_sha: z.string().trim().min(1), status: z.string().trim().min(1) })
+    .passthrough(),
+  "github.merge_pull_request": z.object({ pullRequestNumber: z.number().int().positive() }).passthrough(),
+  "github.close_pull_request": z.object({ pullRequestNumber: z.number().int().positive() }).passthrough(),
+  "linear.ready_issues": z.object({ limit: z.number().int().min(1).max(100).optional() }).passthrough(),
+  "linear.issue": z.object({ issueId: z.string().trim().min(1) }).passthrough(),
+  "linear.issue_comments": z.object({ issueId: z.string().trim().min(1) }).passthrough(),
+  "linear.create_issue": z.object({ title: z.string().trim().min(1) }).passthrough(),
+  "linear.update_issue": z
+    .object({ issueId: z.string().trim().min(1), input: z.record(z.string(), z.unknown()) })
+    .passthrough(),
+  "linear.add_comment": z.object({ issueId: z.string().trim().min(1), body: z.string().trim().min(1) }).passthrough(),
+  "linear.add_label": z.object({ issueId: z.string().trim().min(1), labelId: z.string().trim().min(1) }).passthrough(),
+  "linear.remove_label": z
+    .object({ issueId: z.string().trim().min(1), labelId: z.string().trim().min(1) })
+    .passthrough()
+}
+
 const definitions: ProviderOperationDefinition[] = [
   {
     operation: "github.repository",
@@ -223,4 +279,12 @@ export function getProviderOperation(operationInput: string): ProviderOperationD
   const definition = definitions.find((candidate) => candidate.operation === operation)
   if (definition === undefined) throw new Error(`Provider operation ${operation} is unavailable`)
   return definition
+}
+
+export function validateProviderOperationInput(
+  operationInput: string,
+  input: Record<string, unknown>
+): Record<string, unknown> {
+  const operation = ProviderOperationSchema.parse(operationInput)
+  return ProviderInputSchemas[operation].parse(input)
 }

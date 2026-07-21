@@ -1,5 +1,6 @@
 import { inspect } from "node:util"
 import { describe, expect, it, vi } from "vitest"
+import { CompiledWorkflowGraphSchema } from "../workflows/compiler"
 import {
   EXECUTION_CONTRACT_VERSION,
   executionPackageDigest,
@@ -343,6 +344,7 @@ describe("PostgresWorkflowJournalStore", () => {
       outputSchema: { type: "object" },
       steps: [],
       connections: [],
+      sinkStepId: "unused",
       topologicalOrder: []
     }
     const packageRecord = executionPackageRecord(content, { packageDigest: "c".repeat(64) })
@@ -431,7 +433,7 @@ describe("PostgresWorkflowJournalStore", () => {
 
   it("retries from here when every reachable descendant is blocked and unselected", async () => {
     const descendantId = "b".repeat(64)
-    const graph = {
+    const graph = CompiledWorkflowGraphSchema.parse({
       schemaVersion: "2" as const,
       inputSchema: { type: "object" },
       outputSchema: { type: "object" },
@@ -446,10 +448,10 @@ describe("PostgresWorkflowJournalStore", () => {
         },
         {
           id: "success",
-          label: "Success",
+          label: "Result",
           position: { x: 320, y: 0 },
-          definition: { kind: "success", version: 1 },
-          config: {},
+          definition: { kind: "set_fields", version: 1 },
+          config: { fields: {} },
           failurePolicy: { mode: "stop", maximumAttempts: 1 }
         }
       ],
@@ -457,13 +459,14 @@ describe("PostgresWorkflowJournalStore", () => {
         {
           id: "to-success",
           source: { stepId: "create-pull-request", port: "result" },
-          target: { stepId: "success", port: "result" },
+          target: { stepId: "success", port: "input" },
           outcome: "success" as const,
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
+      sinkStepId: "success",
       topologicalOrder: ["create-pull-request", "success"]
-    }
+    })
     const packageRecord = executionPackageRecord({ ...executionPackage(), graph }, { packageDigest: "c".repeat(64) })
     const failedActivation = activation({ status: "failed", selectedAttemptOrdinal: null })
     const blockedDescendant = activation({
@@ -492,7 +495,7 @@ describe("PostgresWorkflowJournalStore", () => {
 
   it("requires Run again when a reachable descendant selected successful output", async () => {
     const descendantId = "b".repeat(64)
-    const graph = {
+    const graph = CompiledWorkflowGraphSchema.parse({
       schemaVersion: "2" as const,
       inputSchema: { type: "object" },
       outputSchema: { type: "object" },
@@ -507,10 +510,10 @@ describe("PostgresWorkflowJournalStore", () => {
         },
         {
           id: "success",
-          label: "Success",
+          label: "Result",
           position: { x: 320, y: 0 },
-          definition: { kind: "success", version: 1 },
-          config: {},
+          definition: { kind: "set_fields", version: 1 },
+          config: { fields: {} },
           failurePolicy: { mode: "stop", maximumAttempts: 1 }
         }
       ],
@@ -518,13 +521,14 @@ describe("PostgresWorkflowJournalStore", () => {
         {
           id: "to-success",
           source: { stepId: "create-pull-request", port: "result" },
-          target: { stepId: "success", port: "result" },
+          target: { stepId: "success", port: "input" },
           outcome: "success" as const,
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
+      sinkStepId: "success",
       topologicalOrder: ["create-pull-request", "success"]
-    }
+    })
     const packageRecord = executionPackageRecord({ ...executionPackage(), graph }, { packageDigest: "c".repeat(64) })
     const failedActivation = activation({ status: "failed", selectedAttemptOrdinal: null })
     const succeededDescendant = activation({
@@ -593,7 +597,7 @@ describe("PostgresWorkflowJournalStore", () => {
   })
 
   it("leases a ready activation with an immutable ordinal and fencing token", async () => {
-    const harness = databaseHarness({ selects: [[activation()]], returns: [[attempt()]] })
+    const harness = databaseHarness({ selects: [[run()], [activation()]], returns: [[attempt()]] })
 
     await expect(
       store(harness).leaseActivation({ runId, activationId, leaseOwner: "worker-1", leaseDurationMs: 60_000 })
@@ -683,6 +687,53 @@ describe("PostgresWorkflowJournalStore", () => {
     )
   })
 
+  it("atomically cancels remaining work when the workflow sink completes", async () => {
+    const content = executionPackage()
+    content.graph = {
+      schemaVersion: "2",
+      inputSchema: { type: "object" },
+      outputSchema: { type: "object" },
+      steps: [
+        {
+          id: "result",
+          label: "Result",
+          position: { x: 0, y: 0 },
+          definition: { kind: "set_fields", version: 1 },
+          config: { fields: {} },
+          failurePolicy: { mode: "stop", maximumAttempts: 1 }
+        }
+      ],
+      connections: [],
+      sinkStepId: "result",
+      topologicalOrder: ["result"]
+    }
+    const harness = databaseHarness({
+      selects: [[run()], [executionPackageRecord(content)]],
+      returns: [[{ ordinal: 2 }], [{ activationId }]]
+    })
+
+    await expect(
+      store(harness).completeAttempt({
+        runId,
+        activationId,
+        ordinal: 2,
+        leaseOwner: "worker-1",
+        fencingToken: 2,
+        output: { value: { done: true } },
+        workflowResult: { done: true },
+        checkpoint: { cursor: "checkpoint-2", committed: true }
+      })
+    ).resolves.toBeUndefined()
+
+    expect(harness.updatedValues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ status: "cancelled", leaseOwner: null, leaseExpiresAt: null }),
+        expect.objectContaining({ status: "cancelled", updatedAt: now }),
+        expect.objectContaining({ status: "succeeded", terminalAt: now })
+      ])
+    )
+  })
+
   it("rejects downstream work that exceeds a keyed loop activation budget", async () => {
     const loopScope = [{ kind: "loop" as const, key: "review-loop", iteration: 0 }]
     const harness = databaseHarness({
@@ -758,28 +809,35 @@ describe("PostgresWorkflowJournalStore", () => {
           id: "wait",
           label: "Wait",
           position: { x: 0, y: 0 },
-          definition: { kind: "wait", version: 1 },
-          config: { correlation: "key", expiresAfterSeconds: 60, eventSchema: { type: "object" } },
+          definition: { kind: "wait_event_github", version: 1 },
+          config: {
+            eventKey: "pull_request.updated",
+            objectIdPath: ["pullRequest", "id"],
+            binding: { externalId: "repo-42" },
+            expiresAfterSeconds: 60,
+            onTimeout: "fail"
+          },
           failurePolicy: { mode: "stop", maximumAttempts: 1 }
         },
         {
           id: "success",
-          label: "Success",
+          label: "Result",
           position: { x: 200, y: 0 },
-          definition: { kind: "success", version: 1 },
-          config: {},
+          definition: { kind: "set_fields", version: 1 },
+          config: { fields: {} },
           failurePolicy: { mode: "stop", maximumAttempts: 1 }
         }
       ],
       connections: [
         {
           id: "wait-success",
-          source: { stepId: "wait", port: "output" },
-          target: { stepId: "success", port: "result" },
+          source: { stepId: "wait", port: "event" },
+          target: { stepId: "success", port: "input" },
           outcome: "success",
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
+      sinkStepId: "success",
       topologicalOrder: ["wait", "success"]
     }
     const harness = databaseHarness({
@@ -792,7 +850,7 @@ describe("PostgresWorkflowJournalStore", () => {
         runId,
         correlationKey: "github:octo/agency:pull-request:42",
         event: { eventKey: "pull_request.updated" },
-        outputPort: "output"
+        outputPort: "event"
       })
     ).resolves.toMatchObject({ status: "resumed" })
 
@@ -804,7 +862,7 @@ describe("PostgresWorkflowJournalStore", () => {
     )
     expect(harness.updatedValues).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ status: "succeeded", output: { output: { eventKey: "pull_request.updated" } } }),
+        expect.objectContaining({ status: "succeeded", output: { event: { eventKey: "pull_request.updated" } } }),
         expect.objectContaining({ status: "succeeded", selectedAttemptOrdinal: 2 })
       ])
     )
@@ -840,8 +898,38 @@ describe("PostgresWorkflowJournalStore", () => {
   })
 
   it("times out only a still-pending wait", async () => {
+    const content = executionPackage()
+    content.graph = {
+      schemaVersion: "2",
+      inputSchema: { type: "object" },
+      outputSchema: { type: "object" },
+      steps: [
+        {
+          id: "wait",
+          label: "Wait",
+          position: { x: 0, y: 0 },
+          definition: { kind: "wait_event_github", version: 1 },
+          config: {
+            eventKey: "pull_request.updated",
+            objectIdPath: ["pullRequest", "id"],
+            binding: { externalId: "repo-42" },
+            expiresAfterSeconds: 60,
+            onTimeout: "fail"
+          },
+          failurePolicy: { mode: "stop", maximumAttempts: 1 }
+        }
+      ],
+      connections: [],
+      sinkStepId: "wait",
+      topologicalOrder: ["wait"]
+    }
     const harness = databaseHarness({
-      selects: [[run()]],
+      selects: [
+        [run()],
+        [activation({ stepId: "wait", status: "waiting" })],
+        [executionPackageRecord(content)],
+        [{ input: { input: { pullRequest: { id: "42" } } } }]
+      ],
       returns: [[wait({ status: "timed_out", winningEventSequence: 2 })], [{ ordinal: 2 }], [{ activationId }]]
     })
 
@@ -859,6 +947,159 @@ describe("PostgresWorkflowJournalStore", () => {
       ])
     )
     expect(harness.insertedValues).toContainEqual(expect.objectContaining({ eventType: "wait.timed_out" }))
+  })
+
+  it("routes a typed timeout outcome without failing the run", async () => {
+    const content = executionPackage()
+    content.graph = {
+      schemaVersion: "2",
+      inputSchema: { type: "object" },
+      outputSchema: { type: "object" },
+      steps: [
+        {
+          id: "wait",
+          label: "Wait",
+          position: { x: 0, y: 0 },
+          definition: { kind: "wait_event_github", version: 1 },
+          config: {
+            eventKey: "pull_request.updated",
+            objectIdPath: ["pullRequest", "id"],
+            binding: { externalId: "repo-42" },
+            expiresAfterSeconds: 60,
+            onTimeout: "route"
+          },
+          failurePolicy: { mode: "stop", maximumAttempts: 1 }
+        },
+        {
+          id: "success",
+          label: "Result",
+          position: { x: 200, y: 0 },
+          definition: { kind: "set_fields", version: 1 },
+          config: { fields: {} },
+          failurePolicy: { mode: "stop", maximumAttempts: 1 }
+        }
+      ],
+      connections: [
+        {
+          id: "wait-timeout",
+          source: { stepId: "wait", port: "timeout" },
+          target: { stepId: "success", port: "input" },
+          outcome: "success",
+          mappings: [{ sourcePath: [], targetPath: [] }]
+        }
+      ],
+      sinkStepId: "success",
+      topologicalOrder: ["wait", "success"]
+    }
+    const harness = databaseHarness({
+      selects: [
+        [run()],
+        [activation({ stepId: "wait", status: "waiting" })],
+        [executionPackageRecord(content)],
+        [{ input: { input: { pullRequest: { id: "42" } } } }]
+      ],
+      returns: [[wait({ status: "timed_out", winningEventSequence: 2 })], [{ ordinal: 2 }], [{ activationId }]]
+    })
+
+    await expect(
+      store(harness).timeoutWait({ runId, correlationKey: "github:octo/agency:pull-request:42" })
+    ).resolves.toMatchObject({ status: "timed_out" })
+
+    expect(harness.updatedValues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: "succeeded",
+          output: {
+            timeout: {
+              deadline: "2026-07-19T13:00:00.000Z",
+              elapsedSeconds: 0,
+              correlationDigest: expect.stringMatching(/^[0-9a-f]{64}$/u)
+            }
+          }
+        }),
+        expect.objectContaining({ status: "succeeded", selectedAttemptOrdinal: 2 }),
+        expect.objectContaining({ status: "running" })
+      ])
+    )
+    expect(harness.insertedValues).toEqual(
+      expect.arrayContaining([
+        [expect.objectContaining({ stepId: "success", status: "ready" })],
+        expect.objectContaining({
+          eventType: "wait.timed_out",
+          payload: { waitId, disposition: "routed", downstreamCount: 1 }
+        })
+      ])
+    )
+  })
+
+  it("completes an expired delay and forwards its preserved input", async () => {
+    const content = executionPackage()
+    content.graph = {
+      schemaVersion: "2",
+      inputSchema: { type: "object" },
+      outputSchema: { type: "object" },
+      steps: [
+        {
+          id: "wait",
+          label: "Delay",
+          position: { x: 0, y: 0 },
+          definition: { kind: "delay", version: 1 },
+          config: { duration: 5, unit: "minutes" },
+          failurePolicy: { mode: "stop", maximumAttempts: 1 }
+        },
+        {
+          id: "success",
+          label: "Result",
+          position: { x: 200, y: 0 },
+          definition: { kind: "set_fields", version: 1 },
+          config: { fields: {} },
+          failurePolicy: { mode: "stop", maximumAttempts: 1 }
+        }
+      ],
+      connections: [
+        {
+          id: "delay-success",
+          source: { stepId: "wait", port: "continued" },
+          target: { stepId: "success", port: "input" },
+          outcome: "success",
+          mappings: [{ sourcePath: [], targetPath: [] }]
+        }
+      ],
+      sinkStepId: "success",
+      topologicalOrder: ["wait", "success"]
+    }
+    const harness = databaseHarness({
+      selects: [
+        [run()],
+        [activation({ stepId: "wait", status: "waiting" })],
+        [executionPackageRecord(content)],
+        [{ input: { input: { issueId: "ENG-42" } } }]
+      ],
+      returns: [
+        [wait({ status: "timed_out", winningEventSequence: 2 })],
+        [wait({ status: "completed", winningEventSequence: 2 })],
+        [{ ordinal: 2 }],
+        [{ activationId }]
+      ]
+    })
+
+    await expect(
+      store(harness).timeoutWait({ runId, correlationKey: `delay:${activationId}:2` })
+    ).resolves.toMatchObject({ status: "completed" })
+
+    expect(harness.updatedValues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ status: "succeeded", output: { continued: { issueId: "ENG-42" } } }),
+        expect.objectContaining({ status: "succeeded", selectedAttemptOrdinal: 2 }),
+        expect.objectContaining({ status: "running" })
+      ])
+    )
+    expect(harness.insertedValues).toEqual(
+      expect.arrayContaining([
+        [expect.objectContaining({ stepId: "success", status: "ready" })],
+        expect.objectContaining({ eventType: "delay.completed" })
+      ])
+    )
   })
 
   it("does not resume a wait when no pending unexpired record wins", async () => {
@@ -920,7 +1161,9 @@ describe("PostgresWorkflowJournalStore", () => {
         interfaceDigest: existing.interfaceDigest,
         childInput: { issue: "FEN-423" },
         childTriggerStepId: "manual",
-        childTriggerPort: "input"
+        childTriggerPort: "input",
+        timeoutSeconds: 86400,
+        maximumDepth: 5
       })
     ).resolves.toEqual(existing)
 
@@ -952,14 +1195,15 @@ describe("PostgresWorkflowJournalStore", () => {
       steps: [
         {
           id: "success",
-          label: "Success",
+          label: "Result",
           position: { x: 0, y: 0 },
-          definition: { kind: "success", version: 1 },
-          config: {},
+          definition: { kind: "set_fields", version: 1 },
+          config: { fields: {} },
           failurePolicy: { mode: "stop", maximumAttempts: 1 }
         }
       ],
       connections: [],
+      sinkStepId: "success",
       topologicalOrder: ["success"]
     }
     const childPackage = executionPackageRecord({ ...executionPackage(), graph }, { packageDigest: "c".repeat(64) })
@@ -975,7 +1219,7 @@ describe("PostgresWorkflowJournalStore", () => {
       activationId: childActivationId,
       ordinal: 4,
       status: "succeeded",
-      output: { done: true },
+      output: { value: { done: true } },
       error: null,
       finishedAt: now
     })
@@ -990,31 +1234,6 @@ describe("PostgresWorkflowJournalStore", () => {
 
   it("returns child completion for a failed child run", async () => {
     const childRun = run({ runId: childRunId, status: "failed", packageDigest: "c".repeat(64) })
-    const graph = {
-      schemaVersion: "2" as const,
-      inputSchema: { type: "object" },
-      outputSchema: { type: "object" },
-      steps: [
-        {
-          id: "failure",
-          label: "Failure",
-          position: { x: 0, y: 0 },
-          definition: { kind: "failure", version: 1 },
-          config: {},
-          failurePolicy: { mode: "stop", maximumAttempts: 1 }
-        }
-      ],
-      connections: [],
-      topologicalOrder: ["failure"]
-    }
-    const childPackage = executionPackageRecord({ ...executionPackage(), graph }, { packageDigest: "c".repeat(64) })
-    const childActivation = activation({
-      runId: childRunId,
-      activationId: childActivationId,
-      stepId: "failure",
-      status: "failed",
-      selectedAttemptOrdinal: null
-    })
     const childAttempt = attempt({
       runId: childRunId,
       activationId: childActivationId,
@@ -1023,7 +1242,7 @@ describe("PostgresWorkflowJournalStore", () => {
       error: { code: "child_failed", message: "Step failed" },
       finishedAt: now
     })
-    const harness = databaseHarness({ selects: [[childRun], [childPackage], [childActivation], [childAttempt]] })
+    const harness = databaseHarness({ selects: [[childRun], [childAttempt]] })
 
     await expect(store(harness).getChildRunCompletion(childRunId)).resolves.toEqual({
       status: "failed",
@@ -1090,7 +1309,7 @@ describe("PostgresWorkflowJournalStore", () => {
     ).rejects.toThrow("conflicts with its immutable link")
   })
 
-  it("publishes a failed attempt with event payload code and terminal status", async () => {
+  it("publishes a failed attempt and atomically fails the run", async () => {
     const harness = databaseHarness({ selects: [[run()]], returns: [[{ ordinal: 2 }], [{ activationId }]] })
 
     await expect(
@@ -1100,8 +1319,7 @@ describe("PostgresWorkflowJournalStore", () => {
         ordinal: 2,
         leaseOwner: "worker-1",
         fencingToken: 2,
-        error: { code: "provider_failed", message: "GitHub API error" },
-        terminalStatus: "failed"
+        error: { code: "provider_failed", message: "GitHub API error" }
       })
     ).resolves.toBeUndefined()
 
@@ -1109,6 +1327,8 @@ describe("PostgresWorkflowJournalStore", () => {
       expect.arrayContaining([
         expect.objectContaining({ status: "failed", error: { code: "provider_failed", message: "GitHub API error" } }),
         expect.objectContaining({ status: "failed", updatedAt: now }),
+        expect.objectContaining({ status: "cancelled", leaseOwner: null, leaseExpiresAt: null }),
+        expect.objectContaining({ status: "cancelled", updatedAt: now }),
         expect.objectContaining({ status: "failed", latestSequence: 2, terminalAt: now })
       ])
     )
@@ -1250,7 +1470,7 @@ describe("PostgresWorkflowJournalStore", () => {
   it("resolves unknown effect outcomes as absent or indeterminate with immutable events", async () => {
     const absentEffect = effect({ status: "unknown", reconciliation: { code: "provider_outcome_unknown" } })
     const resolvedEffect = effect({
-      status: "resolved",
+      status: "prepared",
       reconciliation: {
         code: "provider_outcome_unknown",
         latest: {
@@ -1285,6 +1505,7 @@ describe("PostgresWorkflowJournalStore", () => {
         payload: { effectId, outcome: "absent", reason: "No matching pull request exists" }
       })
     )
+    expect(absentHarness.updatedValues).toContainEqual(expect.objectContaining({ status: "prepared" }))
 
     const indeterminateEffect = effect({ status: "conflict", reconciliation: { code: "digest_mismatch" } })
     const unknownAgain = effect({
@@ -1326,6 +1547,19 @@ describe("PostgresWorkflowJournalStore", () => {
         payload: { effectId, outcome: "indeterminate", reason: "Provider audit unavailable" }
       })
     )
+  })
+
+  it("moves stale dispatching effects to operator-reconcilable unknown state", async () => {
+    const harness = databaseHarness({ returns: [[{ effectId }]] })
+
+    await expect(store(harness).reconcileStaleEffects(new Date(now.getTime() - 300_000))).resolves.toBe(1)
+
+    expect(harness.updatedValues).toEqual([
+      expect.objectContaining({
+        status: "unknown",
+        reconciliation: expect.objectContaining({ code: "dispatch_lease_expired" })
+      })
+    ])
   })
 
   it("rebuilds a projection from ordered stored events only", async () => {

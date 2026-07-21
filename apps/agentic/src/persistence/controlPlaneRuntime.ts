@@ -4,6 +4,7 @@ import { runtimeSelectionFromEnvironment } from "../contracts/runtimeSelection"
 import { PostgresControlPlaneStore } from "./controlPlaneStore"
 import { PostgresIntegrationConnectionStore } from "./integrationStore"
 import { postgresRuntimeConfiguration } from "./postgres"
+import { PostgresProviderDeliveryStore } from "./providerDeliveryStore"
 import * as schema from "./schema"
 import { PostgresWebhookDeliveryStore } from "./webhookStore"
 import { PostgresWorkflowJournalStore } from "./workflowJournalStore"
@@ -25,6 +26,7 @@ export async function createControlPlaneRuntime(environmentInput: NodeJS.Process
     provider: configuration.provider,
     store: new PostgresControlPlaneStore(database, { runtimeSelection }),
     integrationStore: new PostgresIntegrationConnectionStore(database),
+    providerDeliveryStore: new PostgresProviderDeliveryStore(database),
     webhookStore: new PostgresWebhookDeliveryStore(database),
     workflowJournalStore: new PostgresWorkflowJournalStore(database),
     workflowScheduleStore: new PostgresWorkflowScheduleStore(database),

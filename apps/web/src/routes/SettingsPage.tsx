@@ -38,6 +38,7 @@ import {
   type IntegrationProvider,
   type IntegrationSettings
 } from "@/services/api"
+import { formatIdentifierLabel } from "@/utils/formatIdentifierLabel"
 
 const useStyles = makeStyles({
   page: {
@@ -341,7 +342,7 @@ export function IntegrationsPage() {
                   <div className={styles.capabilities}>
                     {item.capabilities.map((capability) => (
                       <Badge key={capability} appearance="outline">
-                        {capability}
+                        {formatIdentifierLabel(capability)}
                       </Badge>
                     ))}
                   </div>

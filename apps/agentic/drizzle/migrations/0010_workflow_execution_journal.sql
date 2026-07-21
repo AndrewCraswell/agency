@@ -137,7 +137,7 @@ CREATE TABLE "agentic"."workflow_effects" (
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT "workflow_effects_activation_fk" FOREIGN KEY ("run_id", "activation_id") REFERENCES "agentic"."workflow_activations"("run_id", "activation_id") ON DELETE RESTRICT,
   CONSTRAINT "workflow_effects_request_digest_check" CHECK ("agentic"."workflow_effects"."request_digest" ~ '^[0-9a-f]{64}$'),
-  CONSTRAINT "workflow_effects_status_check" CHECK ("agentic"."workflow_effects"."status" in ('prepared', 'dispatching', 'confirmed', 'unknown', 'conflict', 'failed', 'resolved'))
+  CONSTRAINT "workflow_effects_status_check" CHECK ("agentic"."workflow_effects"."status" in ('prepared', 'dispatching', 'confirmed', 'unknown', 'conflict', 'failed'))
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX "workflow_effects_logical_uidx" ON "agentic"."workflow_effects" USING btree ("run_id", "activation_id", "effect_slot");
@@ -159,7 +159,7 @@ CREATE TABLE "agentic"."workflow_waits" (
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
   CONSTRAINT "workflow_waits_attempt_fk" FOREIGN KEY ("run_id", "activation_id", "attempt_ordinal") REFERENCES "agentic"."workflow_attempts"("run_id", "activation_id", "ordinal") ON DELETE RESTRICT,
-  CONSTRAINT "workflow_waits_status_check" CHECK ("agentic"."workflow_waits"."status" in ('pending', 'claimed', 'resumed', 'timed_out', 'cancelled')),
+  CONSTRAINT "workflow_waits_status_check" CHECK ("agentic"."workflow_waits"."status" in ('pending', 'claimed', 'resumed', 'completed', 'timed_out', 'cancelled')),
   CONSTRAINT "workflow_waits_consuming_check" CHECK ("agentic"."workflow_waits"."consuming" in (0, 1))
 );
 --> statement-breakpoint

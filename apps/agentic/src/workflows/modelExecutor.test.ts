@@ -86,7 +86,8 @@ describe("OpenRouterWorkflowModelExecutor", () => {
         effectiveParameters: { temperature: 0 },
         outputMode: "structured",
         finishReason: "stop",
-        elapsedMs: 0
+        elapsedMs: 0,
+        usageReported: true
       }
     })
     const request = JSON.parse(String(fetcher.mock.calls[0]?.[1]?.body)) as Record<string, unknown>
@@ -156,7 +157,7 @@ describe("OpenRouterWorkflowModelExecutor", () => {
     })
   })
 
-  it("returns text output with default usage when provider usage is absent", async () => {
+  it("represents provider usage as unknown when it is absent", async () => {
     const fetcher = vi.fn(async () =>
       response({ id: "generation-2", choices: [{ finish_reason: "stop", message: { content: "ok", refusal: null } }] })
     )
@@ -174,7 +175,13 @@ describe("OpenRouterWorkflowModelExecutor", () => {
     ).resolves.toEqual({
       output: { response: { mode: "text", text: "ok" } },
       data: [],
-      usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0, totalTokens: 0, estimatedCostUsd: 0 },
+      usage: {
+        inputTokens: null,
+        cachedInputTokens: null,
+        outputTokens: null,
+        totalTokens: null,
+        estimatedCostUsd: null
+      },
       evidence: {
         provider: "openrouter",
         requestId: "generation-2",
@@ -184,9 +191,27 @@ describe("OpenRouterWorkflowModelExecutor", () => {
         effectiveParameters: { temperature: 0 },
         outputMode: "text",
         finishReason: "stop",
-        elapsedMs: 0
+        elapsedMs: 0,
+        usageReported: false
       }
     })
+  })
+
+  it("fails before requesting Markdown when artifact storage is unavailable", async () => {
+    const fetcher = vi.fn(async () => response(providerResponse("# Review")))
+    const executor = new OpenRouterWorkflowModelExecutor({ apiKey: "secret", fetcher })
+
+    await expect(
+      executor.execute({
+        runId,
+        activationId,
+        attemptOrdinal: 1,
+        step: step("markdown"),
+        context: { issue: { id: "FEN-42" } },
+        snapshots: [snapshot]
+      })
+    ).rejects.toMatchObject({ code: "model_artifact_store_unavailable" })
+    expect(fetcher).not.toHaveBeenCalled()
   })
 
   it("fails when the selected model snapshot is unavailable", async () => {

@@ -35,6 +35,7 @@ function store(claimed: WorkflowScheduleRecord[]) {
   return {
     synchronize: vi.fn(async () => undefined),
     claimDue: vi.fn(async () => claimed),
+    beginOccurrence: vi.fn(async () => undefined),
     completeClaim: vi.fn(async () => undefined),
     failClaim: vi.fn(async () => undefined)
   }
@@ -44,7 +45,14 @@ describe("WorkflowScheduleDispatcher", () => {
   it("synchronizes, claims, and starts one overdue occurrence with a stable key", async () => {
     const claimed = schedule()
     const scheduleStore = store([claimed])
-    const startRun = vi.fn(async () => ({ created: true }))
+    const events: string[] = []
+    scheduleStore.beginOccurrence.mockImplementation(async () => {
+      events.push("persisted")
+    })
+    const startRun = vi.fn(async () => {
+      events.push("started")
+      return { created: true }
+    })
     const definitions = vi.fn(async () => [
       {
         workflowId: claimed.workflowId,
@@ -68,7 +76,16 @@ describe("WorkflowScheduleDispatcher", () => {
     expect(scheduleStore.synchronize).toHaveBeenCalledWith(await definitions(), now)
     expect(startRun).toHaveBeenCalledWith(claimed.workflowId, {
       version: 3,
-      input: {},
+      input: {
+        occurrenceId: `${claimed.scheduleId}:${dueAt.toISOString()}`,
+        scheduledAt: dueAt.toISOString(),
+        timezone: "UTC",
+        dispatchedAt: now.toISOString(),
+        latenessMs: 300_000,
+        attempt: 1,
+        misfireDisposition: "latest",
+        synthetic: false
+      },
       trigger: {
         type: "schedule",
         key: `${claimed.scheduleId}:${dueAt.toISOString()}`,
@@ -76,6 +93,8 @@ describe("WorkflowScheduleDispatcher", () => {
       }
     })
     expect(scheduleStore.completeClaim).toHaveBeenCalledWith({ schedule: claimed, owner: "worker-a", now })
+    expect(scheduleStore.beginOccurrence).toHaveBeenCalledWith({ schedule: claimed, dispatchedAt: now })
+    expect(events).toEqual(["persisted", "started"])
   })
 
   it("persists dispatch failure for retry with the same due occurrence", async () => {
@@ -133,6 +152,7 @@ describe("WorkflowScheduleDispatcher", () => {
           { ...due, leaseOwner: owner, leaseExpiresAt: new Date(now.getTime() + 30_000), revision: due.revision + 1 }
         ]
       }),
+      beginOccurrence: vi.fn(async () => undefined),
       completeClaim: vi.fn(async () => {
         leased = false
       }),
@@ -186,6 +206,7 @@ describe("WorkflowScheduleDispatcher", () => {
         }
         return [current]
       }),
+      beginOccurrence: vi.fn(async () => undefined),
       completeClaim: vi.fn(async () => {
         current = {
           ...current,

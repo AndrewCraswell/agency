@@ -169,8 +169,14 @@ describe("RunDetailPage", { timeout: 30_000 }, () => {
               id: "wait",
               label: "Wait for review",
               position: { x: 0, y: 0 },
-              definition: { kind: "wait", version: 1 },
-              config: { correlation: "review:42", expiresAfterSeconds: 600, eventSchema: { type: "object" } },
+              definition: { kind: "wait_event_github", version: 1 },
+              config: {
+                eventKey: "pull_request.updated",
+                objectIdPath: ["pullRequest", "id"],
+                binding: { externalId: "repo-42" },
+                expiresAfterSeconds: 600,
+                onTimeout: "fail"
+              },
               failurePolicy: { mode: "stop", maximumAttempts: 1 }
             },
             {
@@ -183,6 +189,7 @@ describe("RunDetailPage", { timeout: 30_000 }, () => {
             }
           ],
           connections: [],
+          sinkStepId: "agent",
           topologicalOrder: ["wait", "agent"]
         },
         activations: [
@@ -413,26 +420,6 @@ describe("RunDetailPage", { timeout: 30_000 }, () => {
         }
       }
     )
-    const resume = ApiMock.post(`/api/workflow-runs/${runId}/resume`, {
-      data: {
-        schemaVersion: "1",
-        resumed: {
-          waitId: "9539b499-1c48-4770-ab32-da1cbda14d57",
-          runId,
-          activationId,
-          attemptOrdinal: 1,
-          correlationKey: "review:42",
-          acceptedInputSchema: { type: "object" },
-          authorization: null,
-          status: "resumed",
-          consuming: 1,
-          expiresAt: "2099-07-19T05:31:00.000Z",
-          winningEventSequence: 3,
-          createdAt: timestamp,
-          updatedAt: timestamp
-        }
-      }
-    })
     const cancel = ApiMock.post(`/api/workflow-runs/${runId}/cancel`, {
       data: {
         schemaVersion: "1",
@@ -453,18 +440,26 @@ describe("RunDetailPage", { timeout: 30_000 }, () => {
     expect(screen.getByText("model_failed")).toBeInTheDocument()
     expect(screen.getByText("1 downstream step is blocked.")).toBeInTheDocument()
     expect(screen.getAllByText("Confirm whether the external change occurred before retrying.")).toHaveLength(2)
+    expect(screen.getByRole("heading", { name: "Step progress" })).toBeInTheDocument()
+    expect(screen.getByRole("region", { name: "Wait for review input for attempt 1" })).toHaveTextContent("FEN-42")
+    expect(screen.getByRole("region", { name: "Wait for review output for attempt 1" })).toHaveTextContent(
+      "No output was recorded."
+    )
+    expect(screen.getByRole("region", { name: "Draft response error" })).toHaveTextContent("model_failed")
     const deniedAction = screen.getByRole("button", { name: "Retry unavailable step" })
     expect(deniedAction).toHaveAttribute("aria-disabled", "true")
     deniedAction.focus()
     expect(deniedAction).toHaveFocus()
     expect(deniedAction).toHaveAccessibleDescription("Confirm whether the external change occurred before retrying.")
-    await userEvent.click(screen.getByText("Diagnostics"))
-    expect(screen.getByText("Wait for review")).toBeInTheDocument()
+    await userEvent.click(screen.getByText("Technical details"))
+    expect(screen.getByRole("heading", { name: "Run context" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "External activity" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "System event log" })).toBeInTheDocument()
     expect(screen.getByText("review:42")).toBeInTheDocument()
     expect(screen.getByText("github comment")).toBeInTheDocument()
     expect(screen.getByText("report")).toBeInTheDocument()
     expect(screen.getByText("attempt.waiting")).toBeInTheDocument()
-    expect(screen.getByRole("region", { name: "Child runs" })).toBeInTheDocument()
+    expect(screen.getByRole("region", { name: "Child workflows" })).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole("button", { name: "Confirm external change" })).toBeEnabled())
     await userEvent.click(screen.getByRole("button", { name: "Confirm external change" }))
     const effectDialogTitle = await screen.findByRole(
@@ -512,16 +507,6 @@ describe("RunDetailPage", { timeout: 30_000 }, () => {
       () => expect(screen.queryByRole("heading", { name: "Run workflow again", hidden: true })).not.toBeInTheDocument(),
       { timeout: 10_000 }
     )
-    await waitFor(() => expect(screen.getByRole("button", { name: "Resume" })).toBeEnabled())
-    await userEvent.click(screen.getByRole("button", { name: "Resume" }))
-    const resumeDialog = await screen.findByRole(
-      "dialog",
-      { name: "Resume workflow", hidden: true },
-      { timeout: 10_000 }
-    )
-    await userEvent.click(within(resumeDialog).getByRole("button", { name: "Resume", hidden: true }))
-    expect(resume.hits).toBe(1)
-    expect(await screen.findByText("The event was validated and committed to the journal.")).toBeInTheDocument()
     await userEvent.click(await screen.findByRole("button", { name: "Cancel run" }))
     expect(cancel.hits).toBe(1)
     expect(

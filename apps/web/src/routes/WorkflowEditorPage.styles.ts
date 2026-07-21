@@ -129,12 +129,47 @@ export const useWorkflowEditorPageStyles = makeStyles({
   },
   surfaceHidden: { display: "none" },
   hint: { color: tokens.colorNeutralForeground3 },
-  node: { width: "220px", minHeight: "78px", overflow: "visible" },
+  node: { width: "220px", minHeight: "112px", overflow: "visible" },
   nodeSelected: { outline: `2px solid ${tokens.colorBrandStroke1}`, boxShadow: tokens.shadow8 },
-  nodeHeader: { minWidth: 0 },
-  nodeIcon: { fontSize: "20px", color: tokens.colorBrandForeground1 },
-  nodeCopy: { display: "flex", flexDirection: "column", gap: tokens.spacingVerticalXXS, minWidth: 0 },
+  nodeHeader: { minWidth: 0, alignItems: "flex-start" },
+  nodeIcon: {
+    width: "28px",
+    height: "28px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "24px",
+    color: tokens.colorBrandForeground1
+  },
+  nodeIdentity: { display: "flex", flexDirection: "column", minWidth: 0 },
+  nodeCopy: {
+    display: "flex",
+    flexDirection: "column",
+    gap: tokens.spacingVerticalXXS,
+    minWidth: 0,
+    marginTop: tokens.spacingVerticalS
+  },
   nodeKind: { color: tokens.colorNeutralForeground3, textTransform: "uppercase" },
+  nodePorts: {
+    display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+    gap: tokens.spacingHorizontalS,
+    padding: `0 ${tokens.spacingHorizontalS} ${tokens.spacingVerticalS}`,
+    minHeight: "28px"
+  },
+  nodePortColumn: { display: "flex", flexDirection: "column", gap: tokens.spacingVerticalXXS, minWidth: 0 },
+  nodeOutputColumn: { alignItems: "stretch" },
+  nodePortRow: { position: "relative", minHeight: "24px", display: "flex", alignItems: "center", minWidth: 0 },
+  nodeOutputRow: { justifyContent: "flex-end", textAlign: "right" },
+  nodePortLabel: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+    color: tokens.colorNeutralForeground2
+  },
+  nodeHandle: { top: "50%" },
+  nodeInputHandle: { marginLeft: `calc(-2 * ${tokens.spacingHorizontalS})` },
+  nodeOutputHandle: { marginRight: `calc(-2 * ${tokens.spacingHorizontalS})` },
   catalogPanel: {
     minWidth: 0,
     minHeight: 0,

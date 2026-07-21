@@ -1,50 +1,65 @@
 import { Badge, Body1, Body1Strong, Caption1, Spinner, Subtitle1 } from "@fluentui/react-components"
+import { ChevronRightRegular } from "@fluentui/react-icons"
 import { formatDistanceToNow } from "date-fns"
-import type { ControlPlaneRunSnapshot, WorkflowRun } from "@/services/api"
+import type { JournalWorkflowRun } from "@/services/api"
+import { formatIdentifierLabel } from "@/utils/formatIdentifierLabel"
 import { useOperationsRunsStyles } from "./OperationsRuns.styles"
 
-type OperationsRunsProps = { snapshot: ControlPlaneRunSnapshot | undefined }
-type OperationsRunsListProps = Pick<ControlPlaneRunSnapshot, "agents" | "runs">
+type OperationsRunsProps = { runs: JournalWorkflowRun[] | undefined }
+type OperationsRunsListProps = { runs: JournalWorkflowRun[] }
 
-function activeAgentId(run: WorkflowRun): string {
-  if (run.activeRole === "scrum_master") {
-    return "scrum-master"
+function sourceLabel(source: JournalWorkflowRun["source"]): string {
+  if (source.kind === "draft_test") {
+    return `Draft test, revision ${source.draftRevision}`
   }
-  if (run.activeRole === "reviewer") {
-    return "reviewer"
-  }
-  return run.assignedAgentId ?? "scrum-master"
+  return `Published version ${source.version}`
 }
 
-export function OperationsRunsList({ agents, runs }: OperationsRunsListProps) {
+function triggerLabel(triggerIdentity: string): string {
+  if (triggerIdentity.startsWith("draft_test:")) {
+    return "Manual test"
+  }
+  const triggerKind = triggerIdentity.split(":", 1)[0]
+  const labels: Record<string, string> = {
+    child: "Child workflow",
+    manual: "Manual run",
+    schedule: "Schedule",
+    webhook: "Webhook"
+  }
+  return labels[triggerKind ?? ""] ?? "Workflow trigger"
+}
+
+export function OperationsRunsList({ runs }: OperationsRunsListProps) {
   const classes = useOperationsRunsStyles()
-  const agentNames = new Map(agents.map((agent) => [agent.id, agent.name]))
   return (
     <ul className={classes.list} aria-label="Workflow runs">
       {runs.map((run) => (
-        <li className={classes.row} key={run.runId}>
-          <span className={classes.identity}>
-            <Body1Strong>{run.sourceWorkItemIdentifier ?? "Unassigned intake"}</Body1Strong>
-            <Caption1 className={classes.secondary}>{run.repository}</Caption1>
-          </span>
-          <Body1>{agentNames.get(activeAgentId(run)) ?? "Unknown agent"}</Body1>
-          <Badge appearance="tint">{run.status}</Badge>
-          <Caption1>{formatDistanceToNow(new Date(run.updatedAt), { addSuffix: true })}</Caption1>
+        <li key={run.runId}>
+          <a className={classes.row} href={`/runs/${run.runId}`}>
+            <span className={classes.identity}>
+              <Body1Strong>{run.workflowName}</Body1Strong>
+              <Caption1 className={classes.secondary}>{sourceLabel(run.source)}</Caption1>
+            </span>
+            <Body1>{triggerLabel(run.triggerIdentity)}</Body1>
+            <Badge appearance="tint">{formatIdentifierLabel(run.status === "runnable" ? "queued" : run.status)}</Badge>
+            <Caption1>{formatDistanceToNow(new Date(run.updatedAt), { addSuffix: true })}</Caption1>
+            <ChevronRightRegular aria-hidden="true" />
+          </a>
         </li>
       ))}
     </ul>
   )
 }
 
-export function OperationsRuns({ snapshot }: OperationsRunsProps) {
+export function OperationsRuns({ runs }: OperationsRunsProps) {
   const classes = useOperationsRunsStyles()
   let content = <Spinner label="Loading runs" />
-  if (snapshot !== undefined) {
+  if (runs !== undefined) {
     content =
-      snapshot.runs.length === 0 ? (
+      runs.length === 0 ? (
         <Body1 className={classes.empty}>No workflow runs yet.</Body1>
       ) : (
-        <OperationsRunsList agents={snapshot.agents} runs={snapshot.runs} />
+        <OperationsRunsList runs={runs} />
       )
   }
 

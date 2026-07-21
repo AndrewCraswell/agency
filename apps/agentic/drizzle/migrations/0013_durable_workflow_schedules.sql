@@ -32,3 +32,28 @@ CREATE UNIQUE INDEX "workflow_schedules_trigger_uidx" ON "agentic"."workflow_sch
 CREATE INDEX "workflow_schedules_due_idx" ON "agentic"."workflow_schedules" USING btree ("enabled","next_run_at");
 --> statement-breakpoint
 CREATE INDEX "workflow_schedules_lease_idx" ON "agentic"."workflow_schedules" USING btree ("lease_expires_at");
+--> statement-breakpoint
+CREATE TABLE "agentic"."workflow_schedule_occurrences" (
+	"occurrence_id" text PRIMARY KEY NOT NULL,
+	"schedule_id" uuid NOT NULL,
+	"scheduled_at" timestamp with time zone NOT NULL,
+	"timezone" text NOT NULL,
+	"status" text DEFAULT 'dispatching' NOT NULL,
+	"attempt_count" integer DEFAULT 1 NOT NULL,
+	"dispatched_at" timestamp with time zone,
+	"lateness_ms" integer NOT NULL,
+	"disposition" text NOT NULL,
+	"run_id" uuid,
+	"last_error" text,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "workflow_schedule_occurrences_status_check" CHECK ("agentic"."workflow_schedule_occurrences"."status" in ('dispatching', 'started', 'failed')),
+	CONSTRAINT "workflow_schedule_occurrences_attempt_check" CHECK ("agentic"."workflow_schedule_occurrences"."attempt_count" > 0),
+	CONSTRAINT "workflow_schedule_occurrences_lateness_check" CHECK ("agentic"."workflow_schedule_occurrences"."lateness_ms" >= 0)
+);
+--> statement-breakpoint
+ALTER TABLE "agentic"."workflow_schedule_occurrences" ADD CONSTRAINT "workflow_schedule_occurrences_schedule_id_workflow_schedules_schedule_id_fk" FOREIGN KEY ("schedule_id") REFERENCES "agentic"."workflow_schedules"("schedule_id") ON DELETE cascade ON UPDATE no action;
+--> statement-breakpoint
+CREATE UNIQUE INDEX "workflow_schedule_occurrences_schedule_time_uidx" ON "agentic"."workflow_schedule_occurrences" USING btree ("schedule_id","scheduled_at");
+--> statement-breakpoint
+CREATE INDEX "workflow_schedule_occurrences_schedule_created_idx" ON "agentic"."workflow_schedule_occurrences" USING btree ("schedule_id","created_at");

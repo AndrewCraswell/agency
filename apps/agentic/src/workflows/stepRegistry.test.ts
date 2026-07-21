@@ -8,8 +8,6 @@ describe("workflow step registry", () => {
       "set_fields",
       "map_fields",
       "validate",
-      "success",
-      "failure",
       "compose_markdown",
       "collect",
       "repository_data",
@@ -26,7 +24,9 @@ describe("workflow step registry", () => {
       "join",
       "for_each",
       "bounded_loop",
-      "wait",
+      "wait_event_github",
+      "wait_event_linear",
+      "delay",
       "child_workflow"
     ])
   })
@@ -49,7 +49,9 @@ describe("workflow step registry", () => {
         "join",
         "for_each",
         "bounded_loop",
-        "wait",
+        "wait_event_github",
+        "wait_event_linear",
+        "delay",
         "child_workflow"
       ])
     )
@@ -62,6 +64,10 @@ describe("workflow step registry", () => {
   })
 
   it("publishes explicit UI metadata for typed and advanced configuration", () => {
+    expect(getWorkflowStepDefinition("manual_trigger", 1)).toMatchObject({
+      configSchema: { type: "object", additionalProperties: false },
+      ui: { fields: [] }
+    })
     expect(getWorkflowStepDefinition("set_fields", 1).ui.fields).toContainEqual(
       expect.objectContaining({ key: "fields", label: "Fields", control: "object_rows", group: "basic" })
     )
@@ -74,5 +80,70 @@ describe("workflow step registry", () => {
     expect(getWorkflowStepDefinition("child_workflow", 1).ui.fields).toEqual(
       expect.arrayContaining([expect.objectContaining({ key: "packageDigest", immutable: true })])
     )
+  })
+
+  it("publishes closed model configuration contracts aligned with their executors", () => {
+    const modelConfig = getWorkflowStepDefinition("ai_model", 1).configSchema
+    expect(modelConfig).toMatchObject({
+      type: "object",
+      additionalProperties: false,
+      required: ["modelId", "messages", "outputMode"],
+      properties: {
+        modelId: { type: "string", minLength: 1 },
+        messages: { type: "array", minItems: 1, maxItems: 64 },
+        outputMode: { enum: ["text", "markdown", "structured"] },
+        outputSchema: {},
+        parameters: { type: "object", additionalProperties: false },
+        timeoutMs: { type: "integer", minimum: 1_000, maximum: 300_000 }
+      }
+    })
+    expect(getWorkflowStepDefinition("structured_judgment", 1).configSchema).toMatchObject({
+      type: "object",
+      additionalProperties: false,
+      required: ["modelId", "criteria", "outputSchema"],
+      properties: {
+        modelId: { type: "string", minLength: 1 },
+        criteria: { type: "string", minLength: 1, maxLength: 262_144 },
+        outputSchema: {},
+        parameters: { type: "object", additionalProperties: false },
+        timeoutMs: { type: "integer", minimum: 1_000, maximum: 300_000 }
+      }
+    })
+  })
+
+  it("publishes closed repository node contracts aligned with their executors", () => {
+    expect(getWorkflowStepDefinition("repository_data", 1).configSchema).toMatchObject({
+      type: "object",
+      additionalProperties: false,
+      required: ["operation", "repository"],
+      properties: {
+        operation: {
+          enum: [
+            "metadata",
+            "file_content",
+            "commit",
+            "code_search",
+            "pull_request",
+            "pull_request_files",
+            "checks",
+            "reviews",
+            "comments"
+          ]
+        },
+        repository: { type: "object", additionalProperties: false, required: ["owner", "name"] }
+      }
+    })
+    expect(getWorkflowStepDefinition("repository_agent", 1).configSchema).toMatchObject({
+      type: "object",
+      additionalProperties: false,
+      required: ["agentReference", "validationCommands", "allowedPaths", "forbiddenPaths", "budgets"],
+      properties: {
+        agentReference: { type: "object", additionalProperties: false },
+        validationCommands: { type: "array", minItems: 1, maxItems: 20 },
+        allowedPaths: { type: "array", minItems: 1, maxItems: 100 },
+        forbiddenPaths: { type: "array", maxItems: 100 },
+        budgets: { type: "object", additionalProperties: false }
+      }
+    })
   })
 })

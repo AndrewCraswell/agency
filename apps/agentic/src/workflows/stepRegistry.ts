@@ -4,7 +4,7 @@ import { JsonValueSchema, jsonValueDigest } from "./executionContracts"
 export const WORKFLOW_STEP_REGISTRY_VERSION = "1" as const
 export const CURRENT_WORKFLOW_RELEASE_PHASE = 7 as const
 
-export const WorkflowStepCategorySchema = z.enum(["trigger", "data", "ai", "action", "logic", "terminal"])
+export const WorkflowStepCategorySchema = z.enum(["trigger", "data", "ai", "action", "logic"])
 export const WorkflowExecutionClassSchema = z.enum(["control", "provider", "model", "workspace"])
 export const WorkflowMutationPolicySchema = z.enum(["none", "external_effect"])
 export const WorkflowPortCardinalitySchema = z.enum(["one", "optional", "many"])
@@ -67,6 +67,22 @@ type StepSeed = Omit<z.input<typeof WorkflowStepDefinitionSchema>, "executorDige
 
 const objectSchema = { type: "object", additionalProperties: true } as const
 const emptyObjectSchema = { type: "object", additionalProperties: false } as const
+const validationIssueSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["path", "message"],
+  properties: { path: { type: "string" }, message: { type: "string" } }
+} as const
+const invalidValidationSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["value", "issues", "schemaDigest"],
+  properties: {
+    value: objectSchema,
+    issues: { type: "array", items: validationIssueSchema, maxItems: 100 },
+    schemaDigest: { type: "string" }
+  }
+} as const
 const deterministicExpressionSchema = {
   type: "object",
   additionalProperties: false,
@@ -124,6 +140,28 @@ const loopIterationSchema = {
   required: ["state", "index"],
   properties: { state: objectSchema, index: { type: "integer", minimum: 0 } }
 } as const
+const modelParametersSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    temperature: { type: "number", minimum: 0, maximum: 2 },
+    top_p: { type: "number", minimum: 0, maximum: 1 },
+    top_k: { type: "integer", minimum: 0 },
+    min_p: { type: "number", minimum: 0, maximum: 1 },
+    top_a: { type: "number", minimum: 0, maximum: 1 },
+    frequency_penalty: { type: "number", minimum: -2, maximum: 2 },
+    presence_penalty: { type: "number", minimum: -2, maximum: 2 },
+    repetition_penalty: { type: "number", minimum: Number.MIN_VALUE },
+    seed: { type: "integer" },
+    max_tokens: { type: "integer", minimum: 1, maximum: 65_536 },
+    stop: { type: "array", items: { type: "string" }, maxItems: 16 },
+    logprobs: { type: "boolean" },
+    top_logprobs: { type: "integer", minimum: 0, maximum: 20 },
+    reasoning: objectSchema,
+    verbosity: { enum: ["low", "medium", "high"] }
+  }
+} as const
+const modelTimeoutSchema = { type: "integer", minimum: 1_000, maximum: 300_000 } as const
 
 function port(
   name: string,
@@ -170,9 +208,7 @@ function field(
 }
 
 const workflowConfigFields: Record<string, ConfigFieldUi[]> = {
-  manual_trigger: [
-    field("inputSchema", "Input schema", "Defines accepted manual input.", "json", { group: "advanced" })
-  ],
+  manual_trigger: [],
   set_fields: [
     field("fields", "Fields", "Creates named values from constants and input.", "object_rows", { required: true })
   ],
@@ -182,10 +218,6 @@ const workflowConfigFields: Record<string, ConfigFieldUi[]> = {
       group: "advanced",
       required: true
     })
-  ],
-  failure: [
-    field("code", "Failure code", "Identifies this failure for downstream handling.", "text", { required: true }),
-    field("message", "Message", "Explains why the path failed.", "multiline", { required: true })
   ],
   compose_markdown: [
     field("template", "Markdown template", "Creates Markdown and supports declared value placeholders.", "multiline", {
@@ -234,23 +266,56 @@ const workflowConfigFields: Record<string, ConfigFieldUi[]> = {
     }),
     field("bodyStepId", "Body step", "Selects the first step in the loop body.", "select", { required: true }),
     field("exitStepId", "Exit step", "Selects where the workflow continues.", "select", { required: true }),
-    field("onExhaustion", "On exhaustion", "Chooses whether reaching the limit completes or fails.", "select", {
-      options: ["fail", "complete"]
+    field("onExhaustion", "On exhaustion", "Chooses whether reaching the limit routes or fails.", "select", {
+      options: ["fail", "route"]
     })
   ],
-  wait: [
-    field("correlation", "Correlation key", "Matches the external event that resumes this run.", "text", {
+  wait_event_github: [
+    field("eventKey", "Event", "Selects the GitHub event that resumes the workflow.", "select", { required: true }),
+    field("objectIdPath", "Object ID from input", "Selects the input path containing the GitHub object ID.", "json", {
       required: true
     }),
-    field("expiresAfterSeconds", "Expires after seconds", "Sets how long the workflow waits.", "number", {
-      minimum: 1
+    field("onTimeout", "On timeout", "Chooses whether expiry routes or fails the run.", "select", {
+      options: ["fail", "route"]
     }),
-    field("eventSchema", "Resume event schema", "Defines accepted resume event data.", "json", {
-      group: "advanced",
+    field("expiresAfterSeconds", "Wait up to", "Sets how long the workflow waits.", "number", {
+      minimum: 1,
+      maximum: 2592000
+    })
+  ],
+  wait_event_linear: [
+    field("eventKey", "Event", "Selects the Linear event that resumes the workflow.", "select", { required: true }),
+    field("objectIdPath", "Object ID from input", "Selects the input path containing the Linear object ID.", "json", {
+      required: true
+    }),
+    field("onTimeout", "On timeout", "Chooses whether expiry routes or fails the run.", "select", {
+      options: ["fail", "route"]
+    }),
+    field("expiresAfterSeconds", "Wait up to", "Sets how long the workflow waits.", "number", {
+      minimum: 1,
+      maximum: 2592000
+    })
+  ],
+  delay: [
+    field("duration", "Duration", "Sets how long the workflow pauses.", "number", {
+      minimum: 1,
+      maximum: 2592000,
+      required: true
+    }),
+    field("unit", "Unit", "Sets the duration unit.", "select", {
+      options: ["seconds", "minutes", "hours", "days"],
       required: true
     })
   ],
   child_workflow: [
+    field("timeoutSeconds", "Timeout", "Limits how long the parent waits for the child.", "number", {
+      minimum: 1,
+      maximum: 604800
+    }),
+    field("maximumDepth", "Maximum invocation depth", "Limits nested workflow invocation.", "number", {
+      minimum: 1,
+      maximum: 20
+    }),
     field("packageDigest", "Execution package digest", "Pins the child workflow package.", "text", {
       group: "advanced",
       required: true,
@@ -275,7 +340,7 @@ const seeds: StepSeed[] = [
     executionClass: "control",
     mutationPolicy: "none",
     capabilities: [],
-    configSchema: { type: "object", properties: { inputSchema: { type: "object" } } },
+    configSchema: { type: "object", additionalProperties: false },
     inputs: [],
     outputs: [port("input", "Workflow input", objectSchema)],
     errorSchema
@@ -290,7 +355,12 @@ const seeds: StepSeed[] = [
     executionClass: "control",
     mutationPolicy: "none",
     capabilities: [],
-    configSchema: { type: "object", required: ["fields"], properties: { fields: objectSchema } },
+    configSchema: {
+      type: "object",
+      required: ["fields"],
+      properties: { fields: objectSchema },
+      additionalProperties: false
+    },
     inputs: [port("input", "Input", objectSchema, "optional")],
     outputs: [port("value", "Value", objectSchema)],
     errorSchema
@@ -305,7 +375,12 @@ const seeds: StepSeed[] = [
     executionClass: "control",
     mutationPolicy: "none",
     capabilities: [],
-    configSchema: { type: "object", required: ["mappings"], properties: { mappings: objectSchema } },
+    configSchema: {
+      type: "object",
+      required: ["mappings"],
+      properties: { mappings: objectSchema },
+      additionalProperties: false
+    },
     inputs: [port("input", "Input", objectSchema)],
     outputs: [port("value", "Mapped value", objectSchema)],
     errorSchema
@@ -320,43 +395,17 @@ const seeds: StepSeed[] = [
     executionClass: "control",
     mutationPolicy: "none",
     capabilities: [],
-    configSchema: { type: "object", required: ["schema"], properties: { schema: { type: "object" } } },
-    inputs: [port("value", "Value", objectSchema)],
-    outputs: [port("value", "Validated value", objectSchema)],
-    errorSchema
-  },
-  {
-    kind: "success",
-    version: 1,
-    phase: 2,
-    category: "terminal",
-    label: "Success",
-    description: "Ends the current path successfully.",
-    executionClass: "control",
-    mutationPolicy: "none",
-    capabilities: [],
-    configSchema: emptyObjectSchema,
-    inputs: [port("result", "Result", objectSchema, "optional")],
-    outputs: [port("result", "Result", objectSchema)],
-    errorSchema
-  },
-  {
-    kind: "failure",
-    version: 1,
-    phase: 2,
-    category: "terminal",
-    label: "Failure",
-    description: "Ends the current path with an error.",
-    executionClass: "control",
-    mutationPolicy: "none",
-    capabilities: [],
     configSchema: {
       type: "object",
-      required: ["code", "message"],
-      properties: { code: { type: "string" }, message: { type: "string" } }
+      required: ["schema"],
+      properties: { schema: { type: "object" } },
+      additionalProperties: false
     },
-    inputs: [port("error", "Error details", objectSchema, "optional")],
-    outputs: [],
+    inputs: [port("input", "Input", objectSchema)],
+    outputs: [
+      port("true", "True", objectSchema, "optional"),
+      port("false", "False", invalidValidationSchema, "optional")
+    ],
     errorSchema
   },
   {
@@ -369,7 +418,12 @@ const seeds: StepSeed[] = [
     executionClass: "control",
     mutationPolicy: "none",
     capabilities: [],
-    configSchema: { type: "object", required: ["template"], properties: { template: { type: "string" } } },
+    configSchema: {
+      type: "object",
+      required: ["template"],
+      properties: { template: { type: "string" } },
+      additionalProperties: false
+    },
     inputs: [port("values", "Template values", objectSchema)],
     outputs: [port("markdown", "Markdown artifact", artifactReferenceSchema)],
     errorSchema
@@ -386,11 +440,13 @@ const seeds: StepSeed[] = [
     capabilities: [],
     configSchema: {
       type: "object",
+      required: ["mode", "maximumItems"],
       properties: {
         mode: { enum: ["array", "keyed"] },
         keyField: { type: "string" },
         maximumItems: { type: "integer", minimum: 1, maximum: 1000 }
-      }
+      },
+      additionalProperties: false
     },
     inputs: [port("items", "Items", objectSchema, "many")],
     outputs: [port("collection", "Collection", { type: ["array", "object"] })],
@@ -409,7 +465,32 @@ const seeds: StepSeed[] = [
     configSchema: {
       type: "object",
       required: ["operation", "repository"],
-      properties: { operation: { type: "string" }, repository: objectSchema }
+      properties: {
+        operation: {
+          enum: [
+            "metadata",
+            "file_content",
+            "commit",
+            "code_search",
+            "pull_request",
+            "pull_request_files",
+            "checks",
+            "reviews",
+            "comments"
+          ]
+        },
+        repository: {
+          type: "object",
+          required: ["owner", "name"],
+          properties: {
+            owner: { type: "string", minLength: 1, maxLength: 100 },
+            name: { type: "string", minLength: 1, maxLength: 100 },
+            ref: { type: "string", minLength: 1, default: "HEAD" }
+          },
+          additionalProperties: false
+        }
+      },
+      additionalProperties: false
     },
     inputs: [port("query", "Query", objectSchema, "optional")],
     outputs: [port("result", "Repository result", objectSchema)],
@@ -427,8 +508,72 @@ const seeds: StepSeed[] = [
     capabilities: ["repository.read", "workspace.create"],
     configSchema: {
       type: "object",
-      required: ["agentReference"],
-      properties: { agentReference: objectSchema, instructions: { type: "string" } }
+      required: ["agentReference", "validationCommands", "allowedPaths", "forbiddenPaths", "budgets"],
+      properties: {
+        agentReference: {
+          type: "object",
+          required: [
+            "connectionId",
+            "repositoryId",
+            "repositoryName",
+            "ref",
+            "path",
+            "observedCommitSha",
+            "blobSha",
+            "contentDigest",
+            "sourceUrl",
+            "name",
+            "description",
+            "requestedTools"
+          ],
+          properties: {
+            connectionId: { type: "string", format: "uuid" },
+            repositoryId: { type: "string", minLength: 1 },
+            repositoryName: { type: "string", minLength: 3, maxLength: 201 },
+            ref: { type: "string", minLength: 1 },
+            path: { type: "string", minLength: 1, maxLength: 500 },
+            observedCommitSha: { type: "string", minLength: 40, maxLength: 40 },
+            blobSha: { type: "string", minLength: 40, maxLength: 40 },
+            contentDigest: { type: "string", minLength: 64, maxLength: 64 },
+            sourceUrl: { type: "string", format: "uri" },
+            name: { type: "string", minLength: 1, maxLength: 120 },
+            description: { type: "string", minLength: 1, maxLength: 500 },
+            requestedModel: { type: "string", minLength: 1 },
+            requestedTools: { type: "array", maxItems: 64, items: { type: "string", minLength: 1 } }
+          },
+          additionalProperties: false
+        },
+        instructions: { type: "string", minLength: 1, maxLength: 20000 },
+        validationCommands: {
+          type: "array",
+          minItems: 1,
+          maxItems: 20,
+          items: {
+            type: "object",
+            required: ["id", "command", "workingDirectory", "timeoutMs"],
+            properties: {
+              id: { type: "string", minLength: 1, maxLength: 100 },
+              command: { type: "string", minLength: 1 },
+              workingDirectory: { type: "string", minLength: 1 },
+              timeoutMs: { type: "integer", minimum: 1, maximum: 3600000 }
+            },
+            additionalProperties: false
+          }
+        },
+        allowedPaths: { type: "array", minItems: 1, maxItems: 100, items: { type: "string", minLength: 1 } },
+        forbiddenPaths: { type: "array", maxItems: 100, items: { type: "string", minLength: 1 } },
+        budgets: {
+          type: "object",
+          required: ["maxTurns", "maxTokens", "maxElapsedMs"],
+          properties: {
+            maxTurns: { type: "integer", minimum: 1, maximum: 200 },
+            maxTokens: { type: "integer", minimum: 1000, maximum: 1000000 },
+            maxElapsedMs: { type: "integer", minimum: 60000, maximum: 3600000 }
+          },
+          additionalProperties: false
+        }
+      },
+      additionalProperties: false
     },
     inputs: [port("context", "Agent context", objectSchema)],
     outputs: [port("result", "Agent result", objectSchema)],
@@ -448,10 +593,27 @@ const seeds: StepSeed[] = [
       type: "object",
       required: ["modelId", "messages", "outputMode"],
       properties: {
-        modelId: { type: "string" },
-        messages: { type: "array" },
-        outputMode: { enum: ["text", "markdown", "structured"] }
-      }
+        modelId: { type: "string", minLength: 1 },
+        messages: {
+          type: "array",
+          minItems: 1,
+          maxItems: 64,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["role", "content"],
+            properties: {
+              role: { enum: ["system", "developer", "user"] },
+              content: { type: "string", maxLength: 262_144 }
+            }
+          }
+        },
+        outputMode: { enum: ["text", "markdown", "structured"] },
+        outputSchema: {},
+        parameters: modelParametersSchema,
+        timeoutMs: modelTimeoutSchema
+      },
+      additionalProperties: false
     },
     inputs: [port("context", "Prompt context", objectSchema, "optional")],
     outputs: [port("response", "Model response", objectSchema)],
@@ -470,7 +632,14 @@ const seeds: StepSeed[] = [
     configSchema: {
       type: "object",
       required: ["modelId", "criteria", "outputSchema"],
-      properties: { modelId: { type: "string" }, criteria: { type: "string" }, outputSchema: objectSchema }
+      properties: {
+        modelId: { type: "string", minLength: 1 },
+        criteria: { type: "string", minLength: 1, maxLength: 262_144 },
+        outputSchema: {},
+        parameters: modelParametersSchema,
+        timeoutMs: modelTimeoutSchema
+      },
+      additionalProperties: false
     },
     inputs: [port("evidence", "Evidence", objectSchema)],
     outputs: [port("judgment", "Judgment", objectSchema)],
@@ -695,37 +864,111 @@ const seeds: StepSeed[] = [
         condition: deterministicExpressionSchema,
         bodyStepId: { type: "string" },
         exitStepId: { type: "string" },
-        onExhaustion: { enum: ["fail", "complete"] }
+        onExhaustion: { enum: ["fail", "route"] }
       }
     },
     inputs: [port("state", "Loop state", objectSchema)],
     outputs: [
       port("iteration", "Iteration", loopIterationSchema, "optional"),
-      port("result", "Final result", objectSchema, "optional")
+      port("result", "Final result", objectSchema, "optional"),
+      port(
+        "exhausted",
+        "Exhausted",
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["state", "iterations", "maximumIterations"],
+          properties: {
+            state: objectSchema,
+            iterations: { type: "integer", minimum: 0 },
+            maximumIterations: { type: "integer", minimum: 1 }
+          }
+        },
+        "optional"
+      )
     ],
     errorSchema
   },
+  ...(
+    [
+      {
+        kind: "wait_event_github",
+        label: "Wait event (GitHub)",
+        description: "Waits for a GitHub event in this workflow's repository.",
+        provider: "github"
+      },
+      {
+        kind: "wait_event_linear",
+        label: "Wait event (Linear)",
+        description: "Waits for a Linear event in a selected team.",
+        provider: "linear"
+      }
+    ] as const
+  ).map(({ kind, label, description, provider }) => ({
+    kind,
+    version: 1,
+    phase: 7,
+    category: "action" as const,
+    label,
+    description,
+    executionClass: "control" as const,
+    mutationPolicy: "none" as const,
+    capabilities: ["provider.events"],
+    configSchema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["eventKey", "objectIdPath", "binding", "expiresAfterSeconds", "onTimeout"],
+      properties: {
+        eventKey: { type: "string", minLength: 1 },
+        objectIdPath: { type: "array", items: { type: "string", minLength: 1 }, minItems: 1 },
+        binding: objectSchema,
+        expiresAfterSeconds: { type: "integer", minimum: 1, maximum: 2592000 },
+        onTimeout: { enum: ["fail", "route"] },
+        provider: { const: provider }
+      }
+    },
+    inputs: [port("input", "Input", objectSchema)],
+    outputs: [
+      port("event", "Event received", objectSchema, "optional"),
+      port(
+        "timeout",
+        "Timed out",
+        {
+          type: "object",
+          additionalProperties: false,
+          required: ["deadline", "elapsedSeconds", "correlationDigest"],
+          properties: {
+            deadline: { type: "string" },
+            elapsedSeconds: { type: "integer", minimum: 0 },
+            correlationDigest: { type: "string", minLength: 64, maxLength: 64 }
+          }
+        },
+        "optional"
+      )
+    ],
+    errorSchema
+  })),
   {
-    kind: "wait",
+    kind: "delay",
     version: 1,
     phase: 7,
     category: "action",
-    label: "Wait",
-    description: "Waits for a matching event or until the time limit.",
+    label: "Delay",
+    description: "Continues after a set amount of time.",
     executionClass: "control",
     mutationPolicy: "none",
     capabilities: [],
     configSchema: {
       type: "object",
-      required: ["correlation", "expiresAfterSeconds", "eventSchema"],
+      additionalProperties: false,
+      required: ["duration", "unit"],
       properties: {
-        correlation: { type: "string" },
-        expiresAfterSeconds: { type: "integer", minimum: 1 },
-        eventSchema: objectSchema
+        duration: { type: "integer", minimum: 1, maximum: 2592000 },
+        unit: { enum: ["seconds", "minutes", "hours", "days"] }
       }
     },
-    inputs: [port("context", "Wait context", objectSchema, "optional")],
-    outputs: [port("event", "Resume event", objectSchema)],
+    inputs: [port("input", "Input", objectSchema)],
+    outputs: [port("continued", "Continued", objectSchema)],
     errorSchema
   },
   {
@@ -741,10 +984,12 @@ const seeds: StepSeed[] = [
     configSchema: {
       type: "object",
       additionalProperties: false,
-      required: ["packageDigest", "interfaceDigest"],
+      required: ["packageDigest", "interfaceDigest", "timeoutSeconds", "maximumDepth"],
       properties: {
-        packageDigest: { type: "string", pattern: "^[0-9a-f]{64}$" },
-        interfaceDigest: { type: "string", pattern: "^[0-9a-f]{64}$" }
+        packageDigest: { type: "string", minLength: 64, maxLength: 64 },
+        interfaceDigest: { type: "string", minLength: 64, maxLength: 64 },
+        timeoutSeconds: { type: "integer", minimum: 1, maximum: 604800 },
+        maximumDepth: { type: "integer", minimum: 1, maximum: 20 }
       }
     },
     inputs: [port("input", "Child input", objectSchema)],

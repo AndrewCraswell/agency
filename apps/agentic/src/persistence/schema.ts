@@ -149,6 +149,34 @@ export const workflowSchedules = agenticSchema.table(
   ]
 )
 
+export const workflowScheduleOccurrences = agenticSchema.table(
+  "workflow_schedule_occurrences",
+  {
+    occurrenceId: text("occurrence_id").primaryKey(),
+    scheduleId: uuid("schedule_id")
+      .notNull()
+      .references(() => workflowSchedules.scheduleId, { onDelete: "cascade" }),
+    scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
+    timezone: text("timezone").notNull(),
+    status: text("status").notNull().default("dispatching"),
+    attemptCount: integer("attempt_count").notNull().default(1),
+    dispatchedAt: timestamp("dispatched_at", { withTimezone: true }),
+    latenessMs: integer("lateness_ms").notNull(),
+    disposition: text("disposition").notNull(),
+    runId: uuid("run_id"),
+    lastError: text("last_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("workflow_schedule_occurrences_status_check", sql`${table.status} in ('dispatching', 'started', 'failed')`),
+    check("workflow_schedule_occurrences_attempt_check", sql`${table.attemptCount} > 0`),
+    check("workflow_schedule_occurrences_lateness_check", sql`${table.latenessMs} >= 0`),
+    uniqueIndex("workflow_schedule_occurrences_schedule_time_uidx").on(table.scheduleId, table.scheduledAt),
+    index("workflow_schedule_occurrences_schedule_created_idx").on(table.scheduleId, table.createdAt)
+  ]
+)
+
 export const workflowRuns = agenticSchema.table(
   "workflow_runs",
   {
@@ -456,7 +484,7 @@ export const workflowEffects = agenticSchema.table(
     check("workflow_effects_request_digest_check", sql`${table.requestDigest} ~ '^[0-9a-f]{64}$'`),
     check(
       "workflow_effects_status_check",
-      sql`${table.status} in ('prepared', 'dispatching', 'confirmed', 'unknown', 'conflict', 'failed', 'resolved')`
+      sql`${table.status} in ('prepared', 'dispatching', 'confirmed', 'unknown', 'conflict', 'failed')`
     ),
     uniqueIndex("workflow_effects_logical_uidx").on(table.runId, table.activationId, table.effectSlot),
     index("workflow_effects_status_idx").on(table.status, table.updatedAt)
@@ -488,7 +516,7 @@ export const workflowWaits = agenticSchema.table(
     }).onDelete("restrict"),
     check(
       "workflow_waits_status_check",
-      sql`${table.status} in ('pending', 'claimed', 'resumed', 'timed_out', 'cancelled')`
+      sql`${table.status} in ('pending', 'claimed', 'resumed', 'completed', 'timed_out', 'cancelled')`
     ),
     check("workflow_waits_consuming_check", sql`${table.consuming} in (0, 1)`),
     uniqueIndex("workflow_waits_correlation_uidx").on(table.runId, table.correlationKey),
@@ -659,6 +687,40 @@ export const webhookDeliveries = agenticSchema.table(
     check("webhook_deliveries_attempt_count_check", sql`${table.attemptCount} >= 0`),
     index("webhook_deliveries_status_received_idx").on(table.processingStatus, table.receivedAt),
     index("webhook_deliveries_repository_idx").on(table.repositoryOwner, table.repositoryName)
+  ]
+)
+
+export const providerDeliveries = agenticSchema.table(
+  "provider_deliveries",
+  {
+    deliveryKey: char("delivery_key", { length: 64 }).primaryKey(),
+    provider: text("provider").notNull(),
+    receipt: jsonb("receipt").$type<Record<string, unknown>>().notNull(),
+    rawPayloadDigest: char("raw_payload_digest", { length: 64 }).notNull(),
+    status: text("status").notNull().default("pending"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    matchedCount: integer("matched_count"),
+    lastError: text("last_error"),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
+    dispatchStartedAt: timestamp("dispatch_started_at", { withTimezone: true }),
+    dispatchedAt: timestamp("dispatched_at", { withTimezone: true }),
+    failedAt: timestamp("failed_at", { withTimezone: true }),
+    quarantinedAt: timestamp("quarantined_at", { withTimezone: true }),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("provider_deliveries_provider_check", sql`${table.provider} = 'nango'`),
+    check("provider_deliveries_key_check", sql`${table.deliveryKey} ~ '^[0-9a-f]{64}$'`),
+    check("provider_deliveries_digest_check", sql`${table.rawPayloadDigest} ~ '^[0-9a-f]{64}$'`),
+    check(
+      "provider_deliveries_status_check",
+      sql`${table.status} in ('pending', 'dispatching', 'dispatched', 'failed', 'quarantined')`
+    ),
+    check("provider_deliveries_attempt_count_check", sql`${table.attemptCount} >= 0`),
+    check("provider_deliveries_matched_count_check", sql`${table.matchedCount} is null or ${table.matchedCount} >= 0`),
+    index("provider_deliveries_status_received_idx").on(table.status, table.receivedAt),
+    index("provider_deliveries_retry_idx").on(table.status, table.nextAttemptAt)
   ]
 )
 

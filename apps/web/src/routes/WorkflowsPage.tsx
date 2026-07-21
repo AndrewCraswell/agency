@@ -24,14 +24,17 @@ import {
   ArrowRightRegular,
   BranchForkRegular,
   ClockRegular,
+  DeleteRegular,
   PlugConnectedRegular
 } from "@fluentui/react-icons"
 import { createLink, useNavigate, useSearch } from "@tanstack/react-router"
 import { formatDistanceToNow } from "date-fns"
 import { useEffect, useEffectEvent, useRef, useState, type ReactNode } from "react"
+import { DangerButton } from "@/components/DangerButton/DangerButton"
 import { showAppToast, useAppToast } from "@/hooks/useAppToast"
 import {
   createWorkflow,
+  deleteWorkflow,
   getIntegrationResourceInventory,
   listWorkflowSchedules,
   listWorkflows,
@@ -40,6 +43,7 @@ import {
   type WorkflowSchedule,
   type WorkflowSummary
 } from "@/services/api"
+import { formatIdentifierLabel } from "@/utils/formatIdentifierLabel"
 
 const useStyles = makeStyles({
   page: {
@@ -57,15 +61,21 @@ const useStyles = makeStyles({
   list: { display: "flex", flexDirection: "column", borderTop: `1px solid ${tokens.colorNeutralStroke2}` },
   row: {
     display: "grid",
+    gridTemplateColumns: "minmax(0, 1fr) 40px",
+    alignItems: "center",
+    minHeight: "84px",
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    ":hover": { backgroundColor: tokens.colorNeutralBackground1Hover }
+  },
+  rowLink: {
+    display: "grid",
     gridTemplateColumns: "minmax(220px, 1.5fr) minmax(180px, 1fr) 150px 120px 32px",
     gap: tokens.spacingHorizontalL,
     alignItems: "center",
-    minHeight: "84px",
+    alignSelf: "stretch",
     padding: `${tokens.spacingVerticalM} ${tokens.spacingHorizontalS}`,
-    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
     color: tokens.colorNeutralForeground1,
     textDecorationLine: "none",
-    ":hover": { backgroundColor: tokens.colorNeutralBackground1Hover },
     "@media (max-width: 800px)": {
       gridTemplateColumns: "minmax(0, 1fr) auto",
       "& > :nth-child(2), & > :nth-child(3), & > :nth-child(4)": { display: "none" }
@@ -82,7 +92,8 @@ const useStyles = makeStyles({
   empty: { minHeight: "260px", display: "grid", placeItems: "center", color: tokens.colorNeutralForeground3 },
   emptyCopy: { display: "flex", flexDirection: "column", alignItems: "center", gap: tokens.spacingVerticalM },
   dialogContent: { display: "flex", flexDirection: "column", gap: tokens.spacingVerticalL },
-  prerequisite: { display: "flex", flexDirection: "column", alignItems: "start", gap: tokens.spacingVerticalS }
+  prerequisite: { display: "flex", flexDirection: "column", alignItems: "start", gap: tokens.spacingVerticalS },
+  rowAction: { display: "flex", alignItems: "center", justifyContent: "center" }
 })
 
 function triggerIcon(kind: "manual" | "webhook" | "schedule") {
@@ -122,6 +133,8 @@ export function WorkflowsPage() {
   const [repositoryId, setRepositoryId] = useState("")
   const [repositoriesLoading, setRepositoriesLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; repository?: string }>({})
+  const [deleteTarget, setDeleteTarget] = useState<WorkflowSummary | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -234,6 +247,28 @@ export function WorkflowsPage() {
     }
   }
 
+  async function confirmDelete(): Promise<void> {
+    if (deleteTarget === null || deleting) {
+      return
+    }
+    setDeleting(true)
+    try {
+      await deleteWorkflow(deleteTarget.workflowId)
+      setWorkflows((current) => current?.filter(({ workflowId }) => workflowId !== deleteTarget.workflowId))
+      setSchedules((current) => current.filter(({ workflowId }) => workflowId !== deleteTarget.workflowId))
+      setDeleteTarget(null)
+      showAppToast(dispatchToast, { intent: "success", title: "Workflow deleted", body: deleteTarget.name })
+    } catch (error) {
+      showAppToast(dispatchToast, {
+        intent: "error",
+        title: "Delete failed",
+        body: error instanceof Error ? error.message : "The workflow could not be deleted."
+      })
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   let content: ReactNode
   if (workflows === undefined) {
     content = (
@@ -259,39 +294,50 @@ export function WorkflowsPage() {
         {workflows.map((workflow) => {
           const workflowSchedules = schedules.filter((schedule) => schedule.workflowId === workflow.workflowId)
           return (
-            <a
-              key={workflow.workflowId}
-              className={styles.row}
-              href={`/workflows/${workflow.workflowId}`}
-              onClick={(event) => {
-                event.preventDefault()
-                void navigate({ to: "/workflows/$workflowId", params: { workflowId: workflow.workflowId } })
-              }}
-            >
-              <div className={styles.identity}>
-                <Body1Strong>{workflow.name}</Body1Strong>
-                <Body1 className={styles.description}>{workflow.description || "No description"}</Body1>
-              </div>
-              <div className={styles.triggers}>
-                {workflow.triggers.map((trigger) => (
-                  <Badge key={`${trigger.kind}-${trigger.label}`} appearance="tint" icon={triggerIcon(trigger.kind)}>
-                    {trigger.label}
-                  </Badge>
-                ))}
-                {workflowSchedules.map((schedule) => (
-                  <Badge key={schedule.scheduleId} appearance="tint" color={scheduleHealthColor(schedule.health)}>
-                    {schedule.enabled ? `${schedule.label}: ${schedule.health}` : `${schedule.label}: disabled`}
-                  </Badge>
-                ))}
-              </div>
-              <Badge appearance="tint" color={workflow.activePublishedVersion === null ? "informative" : "success"}>
-                {workflow.activePublishedVersion === null
-                  ? "Not published"
-                  : `Active version ${workflow.activePublishedVersion}`}
-              </Badge>
-              <Body1>{formatDistanceToNow(new Date(workflow.updatedAt), { addSuffix: true })}</Body1>
-              <ArrowRightRegular />
-            </a>
+            <div key={workflow.workflowId} className={styles.row}>
+              <a
+                className={styles.rowLink}
+                href={`/workflows/${workflow.workflowId}`}
+                onClick={(event) => {
+                  event.preventDefault()
+                  void navigate({ to: "/workflows/$workflowId", params: { workflowId: workflow.workflowId } })
+                }}
+              >
+                <div className={styles.identity}>
+                  <Body1Strong>{workflow.name}</Body1Strong>
+                  <Body1 className={styles.description}>{workflow.description || "No description"}</Body1>
+                </div>
+                <div className={styles.triggers}>
+                  {workflow.triggers.map((trigger) => (
+                    <Badge key={`${trigger.kind}-${trigger.label}`} appearance="tint" icon={triggerIcon(trigger.kind)}>
+                      {trigger.label}
+                    </Badge>
+                  ))}
+                  {workflowSchedules.map((schedule) => (
+                    <Badge key={schedule.scheduleId} appearance="tint" color={scheduleHealthColor(schedule.health)}>
+                      {schedule.enabled
+                        ? `${schedule.label}: ${formatIdentifierLabel(schedule.health)}`
+                        : `${schedule.label}: Disabled`}
+                    </Badge>
+                  ))}
+                </div>
+                <Badge appearance="tint" color={workflow.activePublishedVersion === null ? "informative" : "success"}>
+                  {workflow.activePublishedVersion === null
+                    ? "Not published"
+                    : `Active version ${workflow.activePublishedVersion}`}
+                </Badge>
+                <Body1>{formatDistanceToNow(new Date(workflow.updatedAt), { addSuffix: true })}</Body1>
+                <ArrowRightRegular />
+              </a>
+              <span className={styles.rowAction}>
+                <Button
+                  appearance="subtle"
+                  icon={<DeleteRegular />}
+                  aria-label={`Delete ${workflow.name}`}
+                  onClick={() => setDeleteTarget(workflow)}
+                />
+              </span>
+            </div>
           )
         })}
       </div>
@@ -391,6 +437,31 @@ export function WorkflowsPage() {
               >
                 Create
               </Button>
+            </DialogActions>
+          </DialogBody>
+        </DialogSurface>
+      </Dialog>
+      <Dialog
+        open={deleteTarget !== null}
+        onOpenChange={(_, data) => {
+          if (!data.open && !deleting) {
+            setDeleteTarget(null)
+          }
+        }}
+      >
+        <DialogSurface>
+          <DialogBody>
+            <DialogTitle>Delete workflow?</DialogTitle>
+            <DialogContent>
+              Delete {deleteTarget?.name}? This permanently removes the workflow, published versions, and run history.
+            </DialogContent>
+            <DialogActions>
+              <Button appearance="secondary" disabled={deleting} onClick={() => setDeleteTarget(null)}>
+                Cancel
+              </Button>
+              <DangerButton disabled={deleting} onClick={() => void confirmDelete()}>
+                Delete workflow
+              </DangerButton>
             </DialogActions>
           </DialogBody>
         </DialogSurface>

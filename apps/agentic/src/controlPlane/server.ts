@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { createServer, type ServerResponse } from "node:http"
 import { z } from "zod"
 import type { IntegrationService } from "../integrations/service"
+import type { ProviderDeliveryStore } from "../persistence/providerDeliveryStore"
 import { summarizeNangoWebhook, type NangoWebhookReceiver } from "../webhooks/nango"
 import type { GitHubWebhookService } from "../webhooks/service"
 import type { WorkflowSchemaGenerator } from "../workflows/schemaGenerator"
@@ -62,7 +63,8 @@ export function createControlPlaneServer(
   nangoWebhookReceiver?: NangoWebhookReceiver,
   integrationService?: IntegrationService,
   workflowService?: WorkflowService,
-  workflowSchemaGenerator?: WorkflowSchemaGenerator
+  workflowSchemaGenerator?: WorkflowSchemaGenerator,
+  providerDeliveryStore?: ProviderDeliveryStore
 ) {
   return createServer(async (request, response) => {
     try {
@@ -84,6 +86,10 @@ export function createControlPlaneServer(
         writeJson(response, 200, deliveryWorkflowTopology, responseOrigin)
         return
       }
+      if (request.method === "GET" && url.pathname === "/api/control-plane/agents") {
+        writeJson(response, 200, service.agents(), responseOrigin)
+        return
+      }
       if (request.method === "GET" && url.pathname === "/api/control-plane/runs") {
         writeJson(response, 200, await service.runSnapshot(), responseOrigin)
         return
@@ -101,6 +107,11 @@ export function createControlPlaneServer(
           writeJson(response, 201, await workflowService.create(await readJson(request)), responseOrigin)
           return
         }
+      }
+      const workflowDeleteRouteMatch = /^\/api\/workflows\/([0-9a-f-]+)$/u.exec(url.pathname)
+      if (request.method === "DELETE" && workflowDeleteRouteMatch !== null && workflowService !== undefined) {
+        writeJson(response, 200, await workflowService.delete(workflowDeleteRouteMatch[1] ?? ""), responseOrigin)
+        return
       }
       if (request.method === "GET" && url.pathname === "/api/workflows/schedules" && workflowService !== undefined) {
         writeJson(response, 200, await workflowService.schedules(), responseOrigin)
@@ -158,6 +169,10 @@ export function createControlPlaneServer(
         )
         return
       }
+      if (request.method === "GET" && url.pathname === "/api/workflow-runs" && workflowService !== undefined) {
+        writeJson(response, 200, await workflowService.runs(), responseOrigin)
+        return
+      }
       const workflowActivationRouteMatch =
         /^\/api\/workflow-runs\/([0-9a-f-]+)\/activations\/([a-f0-9]+)\/(retry|retry-from-here)$/u.exec(url.pathname)
       if (request.method === "POST" && workflowActivationRouteMatch !== null && workflowService !== undefined) {
@@ -197,10 +212,6 @@ export function createControlPlaneServer(
         }
         if (request.method === "POST" && workflowRunRouteMatch[2] === "cancel") {
           writeJson(response, 200, await workflowService.cancelRun(runId, await readJson(request)), responseOrigin)
-          return
-        }
-        if (request.method === "POST" && workflowRunRouteMatch[2] === "resume") {
-          writeJson(response, 200, await workflowService.resumeRunWait(runId, await readJson(request)), responseOrigin)
           return
         }
         if (request.method === "POST" && workflowRunRouteMatch[2] === "run-again") {
@@ -360,20 +371,16 @@ export function createControlPlaneServer(
           return
         }
         const receipt = summarizeNangoWebhook(body)
-        writeJson(response, 202, { accepted: true }, responseOrigin)
+        const deliveryKey = createHash("sha256").update(rawBody).digest("hex")
+        if (providerDeliveryStore === undefined) throw new Error("Provider delivery persistence is unavailable")
+        const persisted = await providerDeliveryStore.insert(receipt, deliveryKey, deliveryKey)
         try {
           nangoWebhookReceiver.onAcceptedWebhook(receipt)
         } catch (error) {
           const message = error instanceof Error ? error.message : "Unknown receipt logging failure"
           process.stderr.write(`[nango-webhook] receipt logging failed: ${message}\n`)
         }
-        if (workflowService !== undefined) {
-          const deliveryKey = createHash("sha256").update(rawBody).digest("hex")
-          void workflowService.receiveWebhook(receipt, deliveryKey).catch((error: unknown) => {
-            const message = error instanceof Error ? error.message : "Unknown workflow trigger failure"
-            process.stderr.write(`[nango-webhook] workflow trigger failed: ${message}\n`)
-          })
-        }
+        writeJson(response, 202, { accepted: true, duplicate: !persisted.created }, responseOrigin)
         return
       }
       writeJson(response, 404, ApiErrorSchema.parse({ error: "Route not found" }), responseOrigin)

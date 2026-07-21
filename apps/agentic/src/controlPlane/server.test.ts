@@ -14,6 +14,7 @@ import type {
   WorkspaceLeaseRecord,
   WorkspaceLeaseTransition
 } from "../persistence/controlPlaneStore"
+import type { ProviderDeliveryStore } from "../persistence/providerDeliveryStore"
 import { createControlPlaneServer } from "./server"
 import { ControlPlaneService } from "./service"
 
@@ -130,7 +131,8 @@ async function startServer(
   webhookService?: Parameters<typeof createControlPlaneServer>[2],
   nangoWebhookReceiver?: Parameters<typeof createControlPlaneServer>[3],
   integrationService?: Parameters<typeof createControlPlaneServer>[4],
-  workflowService?: Parameters<typeof createControlPlaneServer>[5]
+  workflowService?: Parameters<typeof createControlPlaneServer>[5],
+  providerDeliveryStore?: Parameters<typeof createControlPlaneServer>[7]
 ) {
   const store = new HttpTestStore()
   const service = new ControlPlaneService(
@@ -145,7 +147,9 @@ async function startServer(
     webhookService,
     nangoWebhookReceiver,
     integrationService,
-    workflowService
+    workflowService,
+    undefined,
+    providerDeliveryStore
   )
   openServers.push(server)
   server.listen(0, "127.0.0.1")
@@ -265,6 +269,7 @@ describe("control-plane HTTP server", () => {
     const workflowService = {
       list: vi.fn(async () => [{ workflowId }]),
       create: vi.fn(async (input) => ({ workflowId, input })),
+      delete: vi.fn(async () => ({ workflowId, deleted: true })),
       schedules: vi.fn(async () => [{ workflowId, scheduleId }]),
       updateSchedule: vi.fn(async (_scheduleId, input) => ({ workflowId, scheduleId, revision: 2, input })),
       definitions: vi.fn(() => ({ schemaVersion: "1", definitions: [{ kind: "manual_trigger" }] })),
@@ -305,6 +310,10 @@ describe("control-plane HTTP server", () => {
     })
     expect(created.status).toBe(201)
     expect(workflowService.create).toHaveBeenCalledWith(createRequest)
+    const deleted = await fetch(`${baseUrl}/api/workflows/${workflowId}`, { method: "DELETE" })
+    expect(deleted.status).toBe(200)
+    await expect(deleted.json()).resolves.toEqual({ workflowId, deleted: true })
+    expect(workflowService.delete).toHaveBeenCalledWith(workflowId)
     await expect((await fetch(`${baseUrl}/api/workflows/schedules`)).json()).resolves.toEqual([
       { workflowId, scheduleId }
     ])
@@ -441,11 +450,23 @@ describe("control-plane HTTP server", () => {
   it("verifies and acknowledges Nango webhook deliveries", async () => {
     const signingKey = "nango-webhook-signing-key"
     const nango = new Nango({ apiKey: "nango-api-key", webhookSigningKey: signingKey })
-    const onAcceptedWebhook = vi.fn()
-    const baseUrl = await startServer(undefined, {
-      verifyIncomingWebhookRequest: (body, headers) => nango.verifyIncomingWebhookRequest(body, headers),
-      onAcceptedWebhook
+    const events: string[] = []
+    const onAcceptedWebhook = vi.fn(() => events.push("logged"))
+    const insert = vi.fn(async () => {
+      events.push("persisted")
+      return { created: true, record: {} as never }
     })
+    const providerDeliveryStore = { insert } as unknown as ProviderDeliveryStore
+    const baseUrl = await startServer(
+      undefined,
+      {
+        verifyIncomingWebhookRequest: (body, headers) => nango.verifyIncomingWebhookRequest(body, headers),
+        onAcceptedWebhook
+      },
+      undefined,
+      undefined,
+      providerDeliveryStore
+    )
     const body = JSON.stringify({
       type: "forward",
       from: "linear",
@@ -480,7 +501,15 @@ describe("control-plane HTTP server", () => {
       body
     })
     expect(accepted.status).toBe(202)
-    await expect(accepted.json()).resolves.toEqual({ accepted: true })
+    await expect(accepted.json()).resolves.toEqual({ accepted: true, duplicate: false })
+    expect(events).toEqual(["persisted", "logged"])
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({ providerEventAction: "create", providerObjectType: "Issue" }),
+      expect.stringMatching(/^[0-9a-f]{64}$/u),
+      expect.stringMatching(/^[0-9a-f]{64}$/u)
+    )
+    expect(JSON.stringify(insert.mock.calls)).not.toContain("Secret work item title")
+    expect(JSON.stringify(insert.mock.calls)).not.toContain("Sensitive work item description")
     expect(onAcceptedWebhook).toHaveBeenCalledOnce()
     expect(onAcceptedWebhook).toHaveBeenCalledWith({
       webhookType: "forward",
@@ -492,6 +521,18 @@ describe("control-plane HTTP server", () => {
     })
     expect(JSON.stringify(onAcceptedWebhook.mock.calls)).not.toContain("Secret work item title")
     expect(JSON.stringify(onAcceptedWebhook.mock.calls)).not.toContain("Sensitive work item description")
+
+    insert.mockResolvedValueOnce({ created: false, record: {} as never })
+    onAcceptedWebhook.mockImplementationOnce(() => {
+      throw new Error("logging unavailable")
+    })
+    const duplicate = await fetch(`${baseUrl}/api/webhooks/nango`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Nango-Hmac-Sha256": signature },
+      body
+    })
+    expect(duplicate.status).toBe(202)
+    await expect(duplicate.json()).resolves.toEqual({ accepted: true, duplicate: true })
   })
 
   it("rejects oversized request bodies with a bounded conflict", async () => {

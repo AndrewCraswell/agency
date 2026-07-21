@@ -44,7 +44,7 @@ import { arrayIncludes } from "ts-extras"
 import {
   assignWorkItem,
   queryWorkItems,
-  type ControlPlaneRunSnapshot,
+  type AgentDefinition,
   type WorkItemQuery,
   type WorkItemQueryResponse
 } from "@/services/api"
@@ -71,7 +71,7 @@ const queueParsers = {
 type WorkItem = WorkItemQueryResponse["items"][number]
 
 type OperationsWorkQueueProps = {
-  agents: ControlPlaneRunSnapshot["agents"]
+  agents: AgentDefinition[]
   onAssigned: () => Promise<void>
 }
 

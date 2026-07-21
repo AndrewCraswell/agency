@@ -12,6 +12,7 @@ import {
   StartWorkflowRunRequestSchema,
   UpdateWorkflowDraftRequestSchema,
   WorkflowDraftViewSchema,
+  WorkflowRunListSchema,
   WorkflowRunSummarySchema,
   WorkflowRunStartSchema,
   WorkflowScheduleViewSchema,
@@ -35,6 +36,7 @@ import { CURRENT_WORKFLOW_RELEASE_PHASE, listWorkflowStepDefinitions } from "./s
 export type WorkflowServiceStore = Pick<
   PostgresWorkflowStore,
   | "create"
+  | "delete"
   | "get"
   | "getExecutionPackage"
   | "getActivePublishedVersion"
@@ -48,6 +50,7 @@ export type WorkflowServiceJournal = Pick<
   PostgresWorkflowJournalStore,
   | "cancelRun"
   | "getRunDetail"
+  | "listRuns"
   | "publishExecutionPackage"
   | "prepareRun"
   | "listPendingWaits"
@@ -218,19 +221,6 @@ function runSummary(detail: WorkflowRunDetail) {
       requiredCapability: null
     })
   }
-  for (const wait of detail.waits.filter(({ status }) => status === "pending")) {
-    actions.push({
-      key: "resume",
-      label: "Resume",
-      targetId: wait.waitId,
-      allowed: true,
-      disabledReason: null,
-      targetLabel: wait.correlationKey,
-      consequence: `Supplies the event required by ${wait.correlationKey}.`,
-      approvalRequirement: "none",
-      requiredCapability: null
-    })
-  }
   for (const effect of detail.effects.filter(({ status }) => status === "unknown" || status === "conflict")) {
     actions.push({
       key: "resolve_effect",
@@ -281,7 +271,8 @@ function runSummary(detail: WorkflowRunDetail) {
 function defaultWorkflowDefinition(
   repository: WorkflowDefinition["resourceBindings"][string],
   linearTeam: WorkflowDefinition["resourceBindings"][string],
-  modelId: string
+  modelId: string,
+  agentReference: z.infer<typeof RepositoryAgentReferenceSchema>
 ): WorkflowDefinition {
   return WorkflowDefinitionSchema.parse({
     schemaVersion: "2",
@@ -358,8 +349,15 @@ function defaultWorkflowDefinition(
         position: { x: 1160, y: 40 },
         definition: { kind: "repository_agent", version: 1 },
         config: {
+          agentReference,
           instructions:
-            "Implement the selected Linear task. Address any review feedback from earlier rounds and return the pull request request."
+            "Implement the selected Linear task. Address any review feedback from earlier rounds and return the pull request request.",
+          validationCommands: [
+            { id: "diff-check", command: "git diff --check", workingDirectory: ".", timeoutMs: 60_000 }
+          ],
+          allowedPaths: ["apps/agentic/**"],
+          forbiddenPaths: [".git/**"],
+          budgets: { maxTurns: 40, maxTokens: 100_000, maxElapsedMs: 1_800_000 }
         },
         failurePolicy: { mode: "stop", maximumAttempts: 2 }
       },
@@ -404,8 +402,8 @@ function defaultWorkflowDefinition(
         id: "success",
         label: "Delivery complete",
         position: { x: 1160, y: 240 },
-        definition: { kind: "success", version: 1 },
-        config: {},
+        definition: { kind: "set_fields", version: 1 },
+        config: { fields: {} },
         failurePolicy: { mode: "stop", maximumAttempts: 1 }
       }
     ],
@@ -463,7 +461,7 @@ function defaultWorkflowDefinition(
       {
         id: "loop-to-success",
         source: { stepId: "delivery-loop", port: "result" },
-        target: { stepId: "success", port: "result" },
+        target: { stepId: "success", port: "input" },
         outcome: "success",
         mappings: [{ sourcePath: [], targetPath: [] }]
       }
@@ -554,6 +552,27 @@ function webhookProvider(receipt: NangoWebhookReceipt): "github" | "linear" | nu
 }
 
 export class WorkflowService {
+  async runs() {
+    const runs = await this.#journal.listRuns()
+    return WorkflowRunListSchema.parse({
+      schemaVersion: "1",
+      runs: runs.map((run) => ({
+        runId: run.runId,
+        workflowId: run.workflowId,
+        workflowName: run.workflowName,
+        source:
+          run.sourceKind === "published"
+            ? { kind: "published" as const, version: run.workflowVersion }
+            : { kind: "draft_test" as const, draftRevision: run.draftRevision },
+        triggerIdentity: run.triggerIdentity,
+        status: run.status,
+        createdAt: run.createdAt.toISOString(),
+        updatedAt: run.updatedAt.toISOString(),
+        terminalAt: run.terminalAt?.toISOString() ?? null
+      }))
+    })
+  }
+
   readonly #store: WorkflowServiceStore
   readonly #journal: WorkflowServiceJournal
   readonly #repositoryAgents: WorkflowRepositoryAgentCatalog | undefined
@@ -610,18 +629,6 @@ export class WorkflowService {
     const runId = z.uuid().parse(runIdInput)
     const activationId = z.string().trim().min(1).parse(activationIdInput)
     return { schemaVersion: "1" as const, ...(await this.#journal.retryFromHere({ runId, activationId })) }
-  }
-
-  async resumeRunWait(runIdInput: string, inputValue: unknown) {
-    const runId = z.uuid().parse(runIdInput)
-    const input = z
-      .object({
-        correlationKey: z.string().trim().min(1).max(500),
-        event: z.record(z.string(), JsonValueSchema)
-      })
-      .strict()
-      .parse(inputValue)
-    return { schemaVersion: "1" as const, resumed: await this.#journal.resumeWait({ runId, ...input }) }
   }
 
   async runAgain(runIdInput: string, inputValue: unknown) {
@@ -720,7 +727,7 @@ export class WorkflowService {
     const request = CreateWorkflowRequestSchema.parse(input)
     const draft =
       request.template === "agency_delivery"
-        ? defaultWorkflowDefinition(request.repository, request.linearTeam, request.modelId)
+        ? defaultWorkflowDefinition(request.repository, request.linearTeam, request.modelId, request.agentReference)
         : blankWorkflowDefinition(request.repository)
     return this.#draftView(
       await this.#store.create({
@@ -729,6 +736,12 @@ export class WorkflowService {
         draft
       })
     )
+  }
+
+  async delete(workflowIdInput: string) {
+    const workflowId = z.uuid().parse(workflowIdInput)
+    await this.#store.delete(workflowId)
+    return { workflowId, deleted: true as const }
   }
 
   async draft(workflowId: string) {
@@ -909,7 +922,7 @@ export class WorkflowService {
     })
     if (event === null) return 0
     if (event.objectId !== undefined) {
-      const correlationKey = `${event.provider}:${event.resourceId}:${event.objectType}:${event.objectId}`
+      const correlationKey = `${event.provider}:${event.resourceId}:${event.eventKey}:${event.objectId}`
       const waits = await this.#journal.listPendingWaits(correlationKey)
       await Promise.all(waits.map(({ runId }) => this.#journal.resumeWait({ runId, correlationKey, event })))
     }
@@ -919,8 +932,8 @@ export class WorkflowService {
       matches.map((match) =>
         this.start(match.workflowId, {
           version: match.version,
-          input: { event },
-          trigger: { type: "webhook", key: `${deliveryKey}:${event.eventKey}`, stepId: match.nodeId }
+          input: event,
+          trigger: { type: "webhook", key: `${deliveryKey}:${event.eventKey}:${match.nodeId}`, stepId: match.nodeId }
         })
       )
     )
@@ -972,7 +985,7 @@ export class WorkflowService {
     }
     if (references.size === 0) return []
     const repositoryAgents = this.#repositoryAgents
-    if (repositoryAgents === undefined) throw new Error("Repository agent resolution is unavailable")
+    if (repositoryAgents === undefined) return []
     return Promise.all([...references.values()].map((reference) => repositoryAgents.resolve(reference)))
   }
 

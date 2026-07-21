@@ -22,10 +22,10 @@ const content = WorkflowDefinitionSchema.parse({
     },
     {
       id: "success",
-      label: "Success",
+      label: "Result",
       position: { x: 200, y: 0 },
-      definition: { kind: "success", version: 1 },
-      config: {},
+      definition: { kind: "set_fields", version: 1 },
+      config: { fields: {} },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     }
   ],
@@ -33,7 +33,7 @@ const content = WorkflowDefinitionSchema.parse({
     {
       id: "manual-success",
       source: { stepId: "manual", port: "input" },
-      target: { stepId: "success", port: "result" },
+      target: { stepId: "success", port: "input" },
       outcome: "success",
       mappings: [{ sourcePath: [], targetPath: [] }]
     }
@@ -109,7 +109,8 @@ function databaseHarness(input: { select?: unknown[][]; returning?: unknown[][] 
         updatedValues.push(values)
         return mutationChain()
       })
-    }))
+    })),
+    delete: vi.fn(() => mutationChain())
   }
   const transaction = vi.fn(async (operation: (transaction: typeof database) => Promise<unknown>) =>
     operation(database)
@@ -169,6 +170,15 @@ describe("PostgresWorkflowStore", () => {
         draft: content
       })
     ).rejects.toThrow("Workflow draft revision conflict")
+  })
+
+  it("deletes a published workflow and all related records", async () => {
+    const harness = databaseHarness({
+      select: [[workflow({ activePublishedVersion: 1 })], [], []],
+      returning: [[{ workflowId }]]
+    })
+    await expect(store(harness).delete(workflowId)).resolves.toBeUndefined()
+    expect(harness.database.delete).toHaveBeenCalledTimes(3)
   })
 
   it("publishes the next immutable version under a transaction lock", async () => {

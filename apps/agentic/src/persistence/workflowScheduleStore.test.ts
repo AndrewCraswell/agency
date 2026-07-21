@@ -102,4 +102,70 @@ describe("PostgresWorkflowScheduleStore", () => {
     expect(set).toHaveBeenCalledWith(expect.objectContaining({ timezone: "America/New_York", revision: 3 }))
     expect(set).toHaveBeenCalledWith(expect.objectContaining({ enabled: 0, revision: 3 }))
   })
+
+  it("advances intervals from the intended occurrence without dispatch drift", async () => {
+    const dueAt = new Date("2026-07-19T12:00:00.000Z")
+    const schedule = storedSchedule(
+      "019c230c-60c6-7bd8-a9f8-9e5f51b09e41",
+      "019c230c-60c6-7bd8-a9f8-9e5f51b09e31",
+      "delivery-schedule",
+      {
+        nextRunAt: dueAt,
+        leaseOwner: "worker-a"
+      }
+    )
+    const returning = vi.fn(async () => [{ scheduleId: schedule.scheduleId }])
+    const where = vi.fn(() => ({ returning }))
+    const set = vi.fn(() => ({ where }))
+    const database = { update: vi.fn(() => ({ set })) }
+
+    await new PostgresWorkflowScheduleStore(database as never).completeClaim({
+      schedule: { ...schedule, enabled: true },
+      owner: "worker-a",
+      now: new Date("2026-07-19T12:05:00.000Z")
+    })
+
+    expect(set).toHaveBeenCalledWith(expect.objectContaining({ nextRunAt: new Date("2026-07-19T12:05:00.000Z") }))
+  })
+
+  it("persists an occurrence before dispatch and links the started run", async () => {
+    const schedule = {
+      ...storedSchedule(
+        "019c230c-60c6-7bd8-a9f8-9e5f51b09e41",
+        "019c230c-60c6-7bd8-a9f8-9e5f51b09e31",
+        "delivery-schedule",
+        { nextRunAt: now, leaseOwner: "worker-a" }
+      ),
+      enabled: true
+    }
+    const onConflictDoUpdate = vi.fn(async () => undefined)
+    const values = vi.fn(() => ({ onConflictDoUpdate }))
+    const returning = vi.fn(async () => [{ scheduleId: schedule.scheduleId }])
+    const where = vi.fn(() => ({ returning }))
+    const set = vi.fn(() => ({ where }))
+    const database = {
+      insert: vi.fn(() => ({ values })),
+      update: vi.fn(() => ({ set }))
+    }
+    const store = new PostgresWorkflowScheduleStore(database as never)
+    const dispatchedAt = new Date("2026-07-19T12:05:00.000Z")
+    const runId = "019c230c-60c6-7bd8-a9f8-9e5f51b09e51"
+
+    await store.beginOccurrence({ schedule, dispatchedAt })
+    await store.completeClaim({ schedule, owner: "worker-a", now: dispatchedAt, runId })
+
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({
+        occurrenceId: `${schedule.scheduleId}:${now.toISOString()}`,
+        scheduledAt: now,
+        status: "dispatching",
+        latenessMs: 300_000,
+        disposition: "latest"
+      })
+    )
+    expect(onConflictDoUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ set: expect.objectContaining({ status: "dispatching", lastError: null }) })
+    )
+    expect(set).toHaveBeenCalledWith(expect.objectContaining({ status: "started", runId }))
+  })
 })

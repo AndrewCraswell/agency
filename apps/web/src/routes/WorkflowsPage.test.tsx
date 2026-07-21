@@ -143,12 +143,44 @@ describe("WorkflowsPage", () => {
     expect(screen.getByText("Manual start")).toBeInTheDocument()
     expect(screen.getByText("Linear task created")).toBeInTheDocument()
     expect(screen.getByText("Every 300 seconds")).toBeInTheDocument()
-    expect(screen.getByText("Delivery schedule: retrying")).toBeInTheDocument()
+    expect(screen.getByText("Delivery schedule: Retrying")).toBeInTheDocument()
     expect(screen.getByText("No description")).toBeInTheDocument()
     expect(screen.getByText("Not published")).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole("link", { name: /Autonomous delivery/u }))
     expect(navigate).toHaveBeenCalledWith({ to: "/workflows/$workflowId", params: { workflowId } })
+  })
+
+  it("requires confirmation before deleting a draft workflow", async () => {
+    ApiMock.get("/api/workflows", {
+      data: [
+        {
+          workflowId,
+          name: "Temporary workflow",
+          description: "Disposable draft",
+          status: "draft",
+          draftRevision: 1,
+          activePublishedVersion: null,
+          triggers: [],
+          updatedAt
+        }
+      ]
+    })
+    const remove = ApiMock.delete(`/api/workflows/${workflowId}`, { data: { workflowId, deleted: true } })
+    render(<WorkflowsPage />)
+
+    await userEvent.click(await screen.findByRole("button", { name: "Delete Temporary workflow" }))
+    const dialog = screen.getByRole("dialog", { name: "Delete workflow?" })
+    expect(dialog).toHaveTextContent("This permanently removes the workflow, published versions, and run history.")
+    expect(remove.hits).toBe(0)
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }))
+    expect(screen.getByText("Temporary workflow")).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Delete workflow?" })).not.toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete Temporary workflow" }))
+    await userEvent.click(await screen.findByRole("button", { name: "Delete workflow" }))
+    await waitFor(() => expect(remove.hits).toBe(1))
+    expect(screen.queryByText("Temporary workflow")).not.toBeInTheDocument()
   })
 
   it("creates the first workflow from the empty state", async () => {

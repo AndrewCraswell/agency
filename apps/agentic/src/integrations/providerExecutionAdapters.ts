@@ -16,6 +16,13 @@ const GraphqlResponseSchema = z
   })
   .passthrough()
 
+export class ProviderMutationRejectedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = "ProviderMutationRejectedError"
+  }
+}
+
 async function graphql(
   context: ProviderConnectionContext,
   query: string,
@@ -41,6 +48,21 @@ async function graphqlObject(
   variables: Record<string, JsonValue>
 ): Promise<Record<string, JsonValue>> {
   return JsonObjectSchema.parse(await graphql(context, query, variables))
+}
+
+async function graphqlMutationObject(
+  context: ProviderConnectionContext,
+  query: string,
+  variables: Record<string, JsonValue>
+): Promise<Record<string, JsonValue>> {
+  const result = await graphqlObject(context, query, variables)
+  for (const payload of Object.values(result)) {
+    const parsed = z.object({ success: z.boolean().optional() }).passthrough().safeParse(payload)
+    if (parsed.success && parsed.data.success === false) {
+      throw new ProviderMutationRejectedError("Linear mutation reported success false")
+    }
+  }
+  return result
 }
 
 export const githubWorkflowProvider: ProviderExecutionPort = {
@@ -157,37 +179,48 @@ export const linearWorkflowProvider: ProviderExecutionPort = {
     const issueId = z.string().trim().min(1).parse(query.issueId)
     const selection =
       operation === "linear.issue_comments"
-        ? "comments(first: 100) { nodes { id body createdAt user { id name } } }"
-        : "identifier title description priority url state { id name } assignee { id name } labels { nodes { id name } }"
-    return graphql(context, `query AgencyWorkflowIssue($id: String!) { issue(id: $id) { id ${selection} } }`, {
-      id: issueId
-    })
+        ? "team { id } comments(first: 100) { nodes { id body createdAt user { id name } } }"
+        : "team { id } identifier title description priority url state { id name } assignee { id name } labels { nodes { id name } }"
+    const result = JsonObjectSchema.parse(
+      await graphql(context, `query AgencyWorkflowIssue($id: String!) { issue(id: $id) { id ${selection} } }`, {
+        id: issueId
+      })
+    )
+    const issue = z
+      .object({ team: z.object({ id: z.string() }) })
+      .passthrough()
+      .nullable()
+      .parse(result.issue)
+    if (issue !== null && issue.team.id !== resource.externalId) {
+      throw new Error("Linear task is outside the sealed team scope")
+    }
+    return result
   },
   async act(context, operation, resource, requestInput) {
     const request = JsonObjectSchema.parse(requestInput)
     if (operation === "linear.create_issue") {
-      return graphqlObject(
+      return graphqlMutationObject(
         context,
         "mutation AgencyCreateIssue($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier title url } } }",
         { input: { ...request, teamId: resource.externalId } }
       )
     }
     if (operation === "linear.update_issue") {
-      return graphqlObject(
+      return graphqlMutationObject(
         context,
         "mutation AgencyUpdateIssue($id: String!, $input: IssueUpdateInput!) { issueUpdate(id: $id, input: $input) { success issue { id identifier title url } } }",
         { id: request.issueId, input: request.input }
       )
     }
     if (operation === "linear.add_comment") {
-      return graphqlObject(
+      return graphqlMutationObject(
         context,
         "mutation AgencyAddComment($input: CommentCreateInput!) { commentCreate(input: $input) { success comment { id body url } } }",
         { input: { issueId: request.issueId, body: request.body } }
       )
     }
     const mutation = operation === "linear.add_label" ? "issueAddLabel" : "issueRemoveLabel"
-    return graphqlObject(
+    return graphqlMutationObject(
       context,
       `mutation AgencyLabel($id: String!, $labelId: String!) { ${mutation}(id: $id, labelId: $labelId) { success } }`,
       { id: request.issueId, labelId: request.labelId }

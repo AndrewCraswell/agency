@@ -106,7 +106,8 @@ const server = createControlPlaneServer(
   nangoWebhookReceiver,
   integrationService,
   workflowService,
-  workflowSchemaGenerator.generate.bind(workflowSchemaGenerator)
+  workflowSchemaGenerator.generate.bind(workflowSchemaGenerator),
+  runtime.providerDeliveryStore
 )
 
 await integrationService.reconcile()

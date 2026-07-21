@@ -2791,7 +2791,7 @@
       "checkConstraints": {
         "workflow_waits_status_check": {
           "name": "workflow_waits_status_check",
-          "value": "\"agentic\".\"workflow_waits\".\"status\" in ('pending', 'claimed', 'resumed', 'timed_out', 'cancelled')"
+          "value": "\"agentic\".\"workflow_waits\".\"status\" in ('pending', 'claimed', 'resumed', 'completed', 'timed_out', 'cancelled')"
         },
         "workflow_waits_consuming_check": {
           "name": "workflow_waits_consuming_check",

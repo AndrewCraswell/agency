@@ -1,12 +1,12 @@
 import { Body1, Caption1, Spinner, Subtitle1 } from "@fluentui/react-components"
 import { useEffect, useState } from "react"
-import { queryWorkItems, type ControlPlaneRunSnapshot, type WorkItemQueryResponse } from "@/services/api"
+import { queryWorkItems, type JournalWorkflowRun, type WorkItemQueryResponse } from "@/services/api"
 import { useOperationsOverviewStyles } from "./OperationsOverview.styles"
 import { OperationsRunsList } from "./OperationsRuns"
 
-type OperationsOverviewProps = { snapshot: ControlPlaneRunSnapshot | undefined }
+type OperationsOverviewProps = { runs: JournalWorkflowRun[] | undefined }
 
-export function OperationsOverview({ snapshot }: OperationsOverviewProps) {
+export function OperationsOverview({ runs }: OperationsOverviewProps) {
   const classes = useOperationsOverviewStyles()
   const [inventory, setInventory] = useState<WorkItemQueryResponse>()
 
@@ -22,16 +22,13 @@ export function OperationsOverview({ snapshot }: OperationsOverviewProps) {
     }
   }, [])
 
-  const activeRuns = snapshot?.runs.filter(({ status }) => status === "queued" || status === "running") ?? []
-  const publishedRuns = snapshot?.runs.filter(({ status }) => status === "published").length ?? 0
+  const activeRuns =
+    runs?.filter(({ status }) => ["preparing", "runnable", "running", "waiting"].includes(status)) ?? []
+  const completedRuns = runs?.filter(({ status }) => status === "succeeded").length ?? 0
   let activeRunsContent = <Spinner label="Loading active runs" />
-  if (snapshot !== undefined) {
+  if (runs !== undefined) {
     activeRunsContent =
-      activeRuns.length === 0 ? (
-        <Body1>No runs are active.</Body1>
-      ) : (
-        <OperationsRunsList agents={snapshot.agents} runs={activeRuns} />
-      )
+      activeRuns.length === 0 ? <Body1>No runs are active.</Body1> : <OperationsRunsList runs={activeRuns} />
   }
 
   return (
@@ -50,8 +47,8 @@ export function OperationsOverview({ snapshot }: OperationsOverviewProps) {
           <span>Blocked</span>
         </div>
         <div>
-          <strong>{publishedRuns}</strong>
-          <span>Published</span>
+          <strong>{completedRuns}</strong>
+          <span>Completed runs</span>
         </div>
       </section>
       <section className={classes.section} aria-labelledby="active-runs-heading">

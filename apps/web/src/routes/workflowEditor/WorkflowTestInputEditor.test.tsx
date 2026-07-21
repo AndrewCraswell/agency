@@ -32,7 +32,12 @@ describe("WorkflowTestInputEditor", () => {
   it("marks missing required input", () => {
     render(
       <AppShell>
-        <WorkflowTestInputEditor schema={schema} value="{}" onChange={vi.fn()} showValidation />
+        <WorkflowTestInputEditor
+          schema={schema}
+          value="{}"
+          onChange={vi.fn<(value: string) => void>()}
+          showValidation
+        />
       </AppShell>
     )
 

@@ -53,7 +53,7 @@ describe("example workflow seeds", () => {
       "set_fields",
       "exclusive_merge",
       "compose_markdown",
-      "success"
+      "set_fields"
     ])
     expect(() =>
       compileWorkflowDefinition({

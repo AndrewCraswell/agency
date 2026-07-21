@@ -1,5 +1,6 @@
 import { Badge, Body1, Button, Caption1, mergeClasses } from "@fluentui/react-components"
 import type { CSSProperties } from "react"
+import { formatIdentifierLabel } from "@/utils/formatIdentifierLabel"
 import { useWorkflowEditorOutlineStyles } from "./WorkflowEditorOutline.styles"
 import type { WorkflowOutlineItem } from "./WorkflowEditorOutline.utils"
 
@@ -60,17 +61,20 @@ export function WorkflowEditorOutline({
                 <span className={classes.index}>{String(index + 1).padStart(2, "0")}</span>
                 <span className={classes.copy}>
                   <Body1>{item.label}</Body1>
+                  <Caption1 className={classes.typeIdentity}>{item.typeLabel}</Caption1>
                   <Caption1 className={classes.description}>{descriptions.get(item.id)}</Caption1>
                   <Caption1 className={classes.relationSummary}>
                     {item.incoming.length} incoming, {item.outgoing.length} outgoing
                   </Caption1>
                 </span>
                 <span className={classes.badges}>
-                  <Badge appearance="outline">{item.role}</Badge>
+                  <Badge appearance="outline">{formatIdentifierLabel(item.role)}</Badge>
                   {item.unreachable ? <Badge color="warning">Unreachable</Badge> : null}
                   {problemStepIds.has(item.id) ? <Badge color="danger">Issue</Badge> : null}
                   {testStatus === undefined ? null : (
-                    <Badge color={testStatus === "failed" ? "danger" : "success"}>{testStatus}</Badge>
+                    <Badge color={testStatus === "failed" ? "danger" : "success"}>
+                      {formatIdentifierLabel(testStatus)}
+                    </Badge>
                   )}
                 </span>
               </button>

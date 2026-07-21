@@ -21,6 +21,7 @@ import {
 import { ChevronRightRegular, DeleteRegular } from "@fluentui/react-icons"
 import { type Edge, type Node } from "@xyflow/react"
 import { useEffect, useState, type ReactNode, type RefObject } from "react"
+import { DangerButton } from "@/components/DangerButton/DangerButton"
 import {
   discoverRepositoryAgents,
   generateWorkflowSchema,
@@ -239,22 +240,6 @@ function StepInspector({
           />
         </AdvancedSection>
       )}
-      {definition.kind === "failure" && (
-        <>
-          <Field label="Failure code">
-            <Input
-              value={typeof step.config.code === "string" ? step.config.code : ""}
-              onChange={(_, data) => changeStep({ ...step, config: { ...step.config, code: data.value } })}
-            />
-          </Field>
-          <Field label="Message">
-            <Textarea
-              value={typeof step.config.message === "string" ? step.config.message : ""}
-              onChange={(_, data) => changeStep({ ...step, config: { ...step.config, message: data.value } })}
-            />
-          </Field>
-        </>
-      )}
       {definition.kind === "compose_markdown" && (
         <Field label="Markdown template" hint="Insert declared values with {{path.to.value}}">
           <Textarea
@@ -341,12 +326,15 @@ function StepInspector({
       {definition.kind === "for_each" && <ForEachInspector step={step} nodes={nodes} changeStep={changeStep} />}
       {definition.kind === "join" && <JoinInspector step={step} changeStep={changeStep} />}
       {definition.kind === "bounded_loop" && <BoundedLoopInspector step={step} nodes={nodes} changeStep={changeStep} />}
-      {definition.kind === "wait" && <WaitInspector step={step} changeStep={changeStep} />}
+      {(definition.kind === "wait_event_github" || definition.kind === "wait_event_linear") && (
+        <WaitEventInspector step={step} repository={repository} changeStep={changeStep} />
+      )}
+      {definition.kind === "delay" && <DelayInspector step={step} changeStep={changeStep} />}
       {definition.kind === "child_workflow" && <ChildWorkflowInspector step={step} changeStep={changeStep} />}
       {edges.length > 0 && <ConnectionInspector node={node} edges={edges} changeEdge={changeEdge} />}
-      <Button appearance="subtle" icon={<DeleteRegular />} onClick={remove}>
+      <DangerButton icon={<DeleteRegular />} onClick={remove}>
         Delete step
-      </Button>
+      </DangerButton>
     </div>
   )
 }
@@ -616,50 +604,96 @@ function BoundedLoopInspector({
       />
       <Field label="On exhaustion">
         <Dropdown
-          value={step.config.onExhaustion === "complete" ? "Complete" : "Fail"}
-          selectedOptions={[step.config.onExhaustion === "complete" ? "complete" : "fail"]}
+          value={step.config.onExhaustion === "route" ? "Route Exhausted" : "Fail run"}
+          selectedOptions={[step.config.onExhaustion === "route" ? "route" : "fail"]}
           onOptionSelect={(_, data) =>
             changeStep({
               ...step,
-              config: { ...step.config, onExhaustion: data.optionValue === "complete" ? "complete" : "fail" }
+              config: { ...step.config, onExhaustion: data.optionValue === "route" ? "route" : "fail" }
             })
           }
         >
-          <Option value="fail">Fail</Option>
-          <Option value="complete">Complete</Option>
+          <Option value="fail">Fail run</Option>
+          <Option value="route">Route Exhausted</Option>
         </Dropdown>
       </Field>
     </>
   )
 }
 
-function WaitInspector({ step, changeStep }: { step: WorkflowStep; changeStep: (step: WorkflowStep) => void }) {
+function WaitDurationFields({ step, changeStep }: { step: WorkflowStep; changeStep: (step: WorkflowStep) => void }) {
+  const duration =
+    typeof step.config.expiresAfterSeconds === "number" ? Math.max(1, step.config.expiresAfterSeconds / 3600) : 1
   return (
     <>
-      <Field label="Correlation key" hint="Use {{path}} placeholders from wait context">
-        <Input
-          value={typeof step.config.correlation === "string" ? step.config.correlation : ""}
-          onChange={(_, data) => changeStep({ ...step, config: { ...step.config, correlation: data.value } })}
-        />
-      </Field>
-      <Field label="Expires after seconds">
+      <Field label="Wait up to">
         <Input
           type="number"
           min={1}
-          value={String(step.config.expiresAfterSeconds ?? 3600)}
+          max={720}
+          value={String(duration)}
           onChange={(_, data) => {
-            const expiresAfterSeconds = Number(data.value)
-            if (Number.isInteger(expiresAfterSeconds) && expiresAfterSeconds >= 1) {
-              changeStep({ ...step, config: { ...step.config, expiresAfterSeconds } })
+            const hours = Number(data.value)
+            if (Number.isInteger(hours) && hours >= 1 && hours <= 720) {
+              changeStep({ ...step, config: { ...step.config, expiresAfterSeconds: hours * 3600 } })
+            }
+          }}
+          contentAfter="hours"
+        />
+      </Field>
+      <Field label="On timeout">
+        <Dropdown
+          value={step.config.onTimeout === "route" ? "Route Timeout" : "Fail run"}
+          selectedOptions={[step.config.onTimeout === "route" ? "route" : "fail"]}
+          onOptionSelect={(_, data) =>
+            changeStep({
+              ...step,
+              config: { ...step.config, onTimeout: data.optionValue === "route" ? "route" : "fail" }
+            })
+          }
+        >
+          <Option value="fail">Fail run</Option>
+          <Option value="route">Route Timeout</Option>
+        </Dropdown>
+      </Field>
+    </>
+  )
+}
+
+function DelayInspector({ step, changeStep }: { step: WorkflowStep; changeStep: (step: WorkflowStep) => void }) {
+  const duration = typeof step.config.duration === "number" ? step.config.duration : 5
+  const unit = typeof step.config.unit === "string" ? step.config.unit : "minutes"
+  const maximumDuration = { seconds: 2592000, minutes: 43200, hours: 720, days: 30 }[unit] ?? 2592000
+  return (
+    <>
+      <Field label="Duration">
+        <Input
+          type="number"
+          min={1}
+          max={maximumDuration}
+          value={String(duration)}
+          onChange={(_, data) => {
+            const nextDuration = Number(data.value)
+            if (Number.isInteger(nextDuration) && nextDuration >= 1 && nextDuration <= maximumDuration) {
+              changeStep({ ...step, config: { ...step.config, duration: nextDuration } })
             }
           }}
         />
       </Field>
-      <JsonSchemaField
-        label="Resume event schema"
-        value={step.config.eventSchema}
-        onChange={(eventSchema) => changeStep({ ...step, config: { ...step.config, eventSchema } })}
-      />
+      <Field label="Unit">
+        <Dropdown
+          value={unit[0]?.toUpperCase() + unit.slice(1)}
+          selectedOptions={[unit]}
+          onOptionSelect={(_, data) =>
+            changeStep({ ...step, config: { ...step.config, unit: data.optionValue ?? "minutes" } })
+          }
+        >
+          <Option value="seconds">Seconds</Option>
+          <Option value="minutes">Minutes</Option>
+          <Option value="hours">Hours</Option>
+          <Option value="days">Days</Option>
+        </Dropdown>
+      </Field>
     </>
   )
 }
@@ -672,22 +706,54 @@ function ChildWorkflowInspector({
   changeStep: (step: WorkflowStep) => void
 }) {
   return (
-    <AdvancedSection label="Advanced package references">
-      <Field label="Execution package digest">
+    <>
+      <Field label="Timeout seconds">
         <Input
-          value={typeof step.config.packageDigest === "string" ? step.config.packageDigest : ""}
-          onChange={(_, data) => changeStep({ ...step, config: { ...step.config, packageDigest: data.value.trim() } })}
+          type="number"
+          min={1}
+          max={604800}
+          value={String(step.config.timeoutSeconds ?? 86400)}
+          onChange={(_, data) => {
+            const timeoutSeconds = Number(data.value)
+            if (Number.isInteger(timeoutSeconds) && timeoutSeconds >= 1 && timeoutSeconds <= 604800) {
+              changeStep({ ...step, config: { ...step.config, timeoutSeconds } })
+            }
+          }}
         />
       </Field>
-      <Field label="Interface digest">
+      <Field label="Maximum invocation depth">
         <Input
-          value={typeof step.config.interfaceDigest === "string" ? step.config.interfaceDigest : ""}
-          onChange={(_, data) =>
-            changeStep({ ...step, config: { ...step.config, interfaceDigest: data.value.trim() } })
-          }
+          type="number"
+          min={1}
+          max={20}
+          value={String(step.config.maximumDepth ?? 5)}
+          onChange={(_, data) => {
+            const maximumDepth = Number(data.value)
+            if (Number.isInteger(maximumDepth) && maximumDepth >= 1 && maximumDepth <= 20) {
+              changeStep({ ...step, config: { ...step.config, maximumDepth } })
+            }
+          }}
         />
       </Field>
-    </AdvancedSection>
+      <AdvancedSection label="Advanced package references">
+        <Field label="Execution package digest">
+          <Input
+            value={typeof step.config.packageDigest === "string" ? step.config.packageDigest : ""}
+            onChange={(_, data) =>
+              changeStep({ ...step, config: { ...step.config, packageDigest: data.value.trim() } })
+            }
+          />
+        </Field>
+        <Field label="Interface digest">
+          <Input
+            value={typeof step.config.interfaceDigest === "string" ? step.config.interfaceDigest : ""}
+            onChange={(_, data) =>
+              changeStep({ ...step, config: { ...step.config, interfaceDigest: data.value.trim() } })
+            }
+          />
+        </Field>
+      </AdvancedSection>
+    </>
   )
 }
 
@@ -700,7 +766,6 @@ function ConnectionInspector({
   edges: CanvasEdge[]
   changeEdge: (edge: CanvasEdge) => void
 }) {
-  const styles = useWorkflowEditorInspectorStyles()
   return (
     <>
       {edges.map((edge) => {
@@ -806,9 +871,9 @@ function SelectedConnectionInspector({
         value={edge.data?.mappings ?? []}
         onChange={(mappings) => changeEdge({ ...edge, data: { ...edge.data, mappings } })}
       />
-      <Button appearance="subtle" icon={<DeleteRegular />} onClick={() => setConfirmDelete(true)}>
+      <DangerButton icon={<DeleteRegular />} onClick={() => setConfirmDelete(true)}>
         Delete connection
-      </Button>
+      </DangerButton>
       <Dialog open={confirmDelete} onOpenChange={(_, data) => setConfirmDelete(data.open)}>
         <DialogSurface>
           <DialogBody>
@@ -818,9 +883,7 @@ function SelectedConnectionInspector({
               <Button appearance="secondary" onClick={() => setConfirmDelete(false)}>
                 Cancel
               </Button>
-              <Button appearance="primary" onClick={remove}>
-                Delete
-              </Button>
+              <DangerButton onClick={remove}>Delete</DangerButton>
             </DialogActions>
           </DialogBody>
         </DialogSurface>
@@ -1087,6 +1150,13 @@ function modelParameters(value: JsonValue | undefined): Record<string, JsonValue
   return value
 }
 
+function supportedModelParameters(
+  parameters: Record<string, JsonValue>,
+  supportedParameters: readonly string[]
+): Record<string, JsonValue> {
+  return Object.fromEntries(Object.entries(parameters).filter(([parameter]) => supportedParameters.includes(parameter)))
+}
+
 function ModelCatalogState({
   state,
   error,
@@ -1216,6 +1286,16 @@ function AiModelInspector({ step, changeStep }: { step: WorkflowStep; changeStep
   const parameters = modelParameters(step.config.parameters)
   const promptCharacters = messages.reduce((total, message) => total + message.content.length, 0)
 
+  useEffect(() => {
+    if (selected === undefined) {
+      return
+    }
+    const supported = supportedModelParameters(parameters, selected.supportedParameters)
+    if (Object.keys(supported).length !== Object.keys(parameters).length) {
+      changeStep({ ...step, config: { ...step.config, parameters: supported } })
+    }
+  }, [changeStep, parameters, selected, step])
+
   function changeMessage(index: number, message: PromptMessage) {
     changeStep({
       ...step,
@@ -1231,7 +1311,16 @@ function AiModelInspector({ step, changeStep }: { step: WorkflowStep; changeStep
       <ModelPicker
         models={models}
         value={modelId}
-        onSelect={(model) => changeStep({ ...step, config: { ...step.config, modelId: model.modelId } })}
+        onSelect={(model) =>
+          changeStep({
+            ...step,
+            config: {
+              ...step.config,
+              modelId: model.modelId,
+              parameters: supportedModelParameters(parameters, model.supportedParameters)
+            }
+          })
+        }
       />
       {messages.map((message, index) => (
         <div key={`${index}-${message.role}`}>
@@ -1329,35 +1418,54 @@ function AiModelInspector({ step, changeStep }: { step: WorkflowStep; changeStep
           />
         </>
       )}
-      <Field label="Temperature">
-        <Input
-          type="number"
-          min={0}
-          max={2}
-          step={0.1}
-          value={String(typeof parameters.temperature === "number" ? parameters.temperature : 0.2)}
-          onChange={(_, data) => {
-            const temperature = Number(data.value)
-            if (Number.isFinite(temperature) && temperature >= 0 && temperature <= 2) {
-              changeStep({ ...step, config: { ...step.config, parameters: { ...parameters, temperature } } })
-            }
-          }}
-        />
-      </Field>
-      <Field label="Maximum completion tokens">
-        <Input
-          type="number"
-          min={1}
-          max={65536}
-          value={String(typeof parameters.max_tokens === "number" ? parameters.max_tokens : 2000)}
-          onChange={(_, data) => {
-            const maxTokens = Number(data.value)
-            if (Number.isInteger(maxTokens) && maxTokens >= 1 && maxTokens <= 65536) {
-              changeStep({ ...step, config: { ...step.config, parameters: { ...parameters, max_tokens: maxTokens } } })
-            }
-          }}
-        />
-      </Field>
+      {selected?.supportedParameters.includes("temperature") ? (
+        <Field label="Temperature">
+          <Input
+            type="number"
+            min={0}
+            max={2}
+            step={0.1}
+            placeholder="Model default"
+            value={typeof parameters.temperature === "number" ? String(parameters.temperature) : ""}
+            onChange={(_, data) => {
+              if (data.value === "") {
+                const { temperature: _temperature, ...remainingParameters } = parameters
+                changeStep({ ...step, config: { ...step.config, parameters: remainingParameters } })
+                return
+              }
+              const temperature = Number(data.value)
+              if (Number.isFinite(temperature) && temperature >= 0 && temperature <= 2) {
+                changeStep({ ...step, config: { ...step.config, parameters: { ...parameters, temperature } } })
+              }
+            }}
+          />
+        </Field>
+      ) : null}
+      {selected?.supportedParameters.includes("max_tokens") ? (
+        <Field label="Maximum completion tokens">
+          <Input
+            type="number"
+            min={1}
+            max={65536}
+            placeholder="Model default"
+            value={typeof parameters.max_tokens === "number" ? String(parameters.max_tokens) : ""}
+            onChange={(_, data) => {
+              if (data.value === "") {
+                const { max_tokens: _maxTokens, ...remainingParameters } = parameters
+                changeStep({ ...step, config: { ...step.config, parameters: remainingParameters } })
+                return
+              }
+              const maxTokens = Number(data.value)
+              if (Number.isInteger(maxTokens) && maxTokens >= 1 && maxTokens <= 65536) {
+                changeStep({
+                  ...step,
+                  config: { ...step.config, parameters: { ...parameters, max_tokens: maxTokens } }
+                })
+              }
+            }}
+          />
+        </Field>
+      ) : null}
     </ModelCatalogState>
   )
 }
@@ -1482,6 +1590,84 @@ function ProviderEventInspector({ step, changeStep }: { step: WorkflowStep; chan
           changeStep={changeStep}
         />
       )}
+    </ProviderState>
+  )
+}
+
+function WaitEventInspector({
+  step,
+  repository,
+  changeStep
+}: {
+  step: WorkflowStep
+  repository: ResourceBinding | undefined
+  changeStep: ProviderChangeStep
+}) {
+  const { inventory, state, error } = useProviderInventory()
+  const eventState = useProviderEvents()
+  const provider = step.definition.kind === "wait_event_linear" ? "linear" : "github"
+  const events = eventState.events.filter((event) => event.provider === provider)
+  const configuredEventKey = typeof step.config.eventKey === "string" ? step.config.eventKey : ""
+  const selectedEvent = events.find((event) => event.eventKey === configuredEventKey) ?? events[0]
+  const objectIdPath = Array.isArray(step.config.objectIdPath)
+    ? step.config.objectIdPath.filter((item): item is string => typeof item === "string").join(".")
+    : ""
+  useEffect(() => {
+    if (eventState.state === "ready" && configuredEventKey === "" && selectedEvent !== undefined) {
+      changeStep({ ...step, config: { ...step.config, eventKey: selectedEvent.eventKey } })
+    }
+  }, [changeStep, configuredEventKey, eventState.state, selectedEvent, step])
+  if (eventState.state === "loading") {
+    return <Spinner size="tiny" label="Loading provider events" />
+  }
+  if (eventState.state === "error") {
+    return <Caption1>{eventState.error}</Caption1>
+  }
+  if (selectedEvent === undefined) {
+    return <Caption1>No events are available.</Caption1>
+  }
+  return (
+    <ProviderState state={state} error={error} inventory={inventory}>
+      {provider === "github" && (
+        <Field label="Repository">
+          <Input value={repository?.name ?? ""} readOnly />
+        </Field>
+      )}
+      {provider === "linear" && (
+        <ProviderResourcePicker
+          step={step}
+          provider="linear"
+          inventory={inventory}
+          capability="team.read"
+          changeStep={changeStep}
+        />
+      )}
+      <Field label="Event">
+        <Dropdown
+          value={selectedEvent.label}
+          selectedOptions={[selectedEvent.eventKey]}
+          onOptionSelect={(_, data) =>
+            changeStep({ ...step, config: { ...step.config, eventKey: data.optionValue ?? selectedEvent.eventKey } })
+          }
+        >
+          {events.map((event) => (
+            <Option key={event.eventKey} value={event.eventKey}>
+              {event.label}
+            </Option>
+          ))}
+        </Dropdown>
+      </Field>
+      <Field label="Object ID from input" hint="Dot path to the GitHub or Linear object ID">
+        <Input
+          aria-label="Object ID from input"
+          value={objectIdPath}
+          placeholder={provider === "github" ? "pullRequest.id" : "issue.id"}
+          onChange={(_, data) =>
+            changeStep({ ...step, config: { ...step.config, objectIdPath: data.value.split(".").filter(Boolean) } })
+          }
+        />
+      </Field>
+      <WaitDurationFields step={step} changeStep={changeStep} />
     </ProviderState>
   )
 }

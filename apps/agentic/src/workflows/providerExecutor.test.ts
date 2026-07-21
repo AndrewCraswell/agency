@@ -287,6 +287,7 @@ describe("WorkflowProviderExecutor", () => {
         response: {
           issue: {
             id: "issue-1",
+            team: { id: "team-1" },
             identifier: "FEN-42",
             title: "Ship",
             description: "Ready",
@@ -304,6 +305,7 @@ describe("WorkflowProviderExecutor", () => {
         response: {
           issue: {
             id: "issue-1",
+            team: { id: "team-1" },
             comments: { nodes: [{ id: "comment-1", body: "Looks good", createdAt: now.toISOString(), user: null }] }
           }
         },
@@ -330,6 +332,18 @@ describe("WorkflowProviderExecutor", () => {
         })
       })
     }
+  })
+
+  it("rejects a Linear task outside the sealed team scope", async () => {
+    const values = dependencies("linear", { resourceType: "team", externalId: "team-1", name: "FEN Frontend" })
+    values.request.mockResolvedValue({ data: { issue: { id: "issue-1", team: { id: "team-2" } } } })
+    const executor = new WorkflowProviderExecutor(values.broker, values.store, values.journal)
+
+    await expect(
+      executor.read(step("linear", "linear.issue", "FEN Frontend", "team-1", ["issue.read"]), {
+        query: { issueId: "issue-1" }
+      })
+    ).rejects.toThrow("outside the sealed team scope")
   })
 
   it("lists ready Linear tasks for the selected team", async () => {
@@ -376,6 +390,45 @@ describe("WorkflowProviderExecutor", () => {
       })
     ).resolves.toMatchObject({ result: { issueCreate: { success: true } } })
     expectSuccessfulDispatch(values)
+  })
+
+  it("rejects malformed actions before reserving a durable effect", async () => {
+    const values = dependencies("github", { resourceType: "repository", externalId: "42", name: "octo/agency" })
+    const executor = new WorkflowProviderExecutor(values.broker, values.store, values.journal)
+
+    await expect(
+      executor.act({
+        runId,
+        activationId,
+        attemptOrdinal: 1,
+        step: step("github", "github.add_pull_request_comment", "octo/agency", "42", ["pull_request.write"]),
+        request: { pullRequestNumber: 7 }
+      })
+    ).rejects.toThrow()
+    expect(values.journal.reserveEffect).not.toHaveBeenCalled()
+    expect(values.request).not.toHaveBeenCalled()
+  })
+
+  it("classifies an explicit Linear mutation rejection as failed", async () => {
+    const values = dependencies("linear", { resourceType: "team", externalId: "team-1", name: "FEN Frontend" })
+    values.request.mockResolvedValue({ data: { issueCreate: { success: false, issue: null } } })
+    const executor = new WorkflowProviderExecutor(values.broker, values.store, values.journal)
+
+    await expect(
+      executor.act({
+        runId,
+        activationId,
+        attemptOrdinal: 1,
+        step: step("linear", "linear.create_issue", "FEN Frontend", "team-1", ["issue.write"]),
+        request: { title: "Ship" }
+      })
+    ).rejects.toMatchObject({ code: "provider_rejected" })
+    expect(values.journal.classifyEffectFailure).toHaveBeenCalledWith(
+      expect.any(String),
+      "failed",
+      expect.objectContaining({ code: "provider_rejected" })
+    )
+    expect(values.journal.confirmEffect).not.toHaveBeenCalled()
   })
 
   it("routes supported GitHub actions to expected methods and endpoints", async () => {

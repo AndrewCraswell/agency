@@ -39,6 +39,10 @@ export const ControlPlaneRunSnapshotSchema = z
   })
   .strict()
 
+export const AgentCatalogSchema = z
+  .object({ schemaVersion: z.literal(CONTROL_PLANE_SCHEMA_VERSION), agents: z.array(AgentDefinitionSchema) })
+  .strict()
+
 export const WorkflowTopologySchema = z
   .object({
     graphVersion: z.string().min(1),

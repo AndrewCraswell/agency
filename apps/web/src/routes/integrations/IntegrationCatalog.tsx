@@ -1,6 +1,7 @@
 import { Badge, Body1Strong, Card, CardHeader, makeStyles, tokens } from "@fluentui/react-components"
 import { PlugConnectedRegular } from "@fluentui/react-icons"
 import type { IntegrationSettings } from "@/services/api"
+import { formatIdentifierLabel } from "@/utils/formatIdentifierLabel"
 
 const useStyles = makeStyles({
   catalog: {
@@ -38,7 +39,7 @@ export function IntegrationCatalog({ catalog, connections }: Props) {
               <div className={styles.capabilities} aria-label={`${item.name} capabilities`}>
                 {item.capabilities.map((capability) => (
                   <Badge key={capability} appearance="outline">
-                    {capability}
+                    {formatIdentifierLabel(capability)}
                   </Badge>
                 ))}
               </div>

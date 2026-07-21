@@ -31,6 +31,26 @@ const selectedModel: WorkflowModelSnapshot = {
   supportedParameters: ["response_format"],
   observedAt: "2026-07-19T12:00:00.000Z"
 }
+const selectedAgentReference = {
+  connectionId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e31",
+  repositoryId: "42",
+  repositoryName: "agency/repository",
+  ref: "main",
+  path: ".github/delivery.agent.md",
+  observedCommitSha: "a".repeat(40),
+  blobSha: "b".repeat(40),
+  contentDigest: "d".repeat(64),
+  sourceUrl: "https://github.com/agency/repository/blob/main/.github/delivery.agent.md",
+  name: "Delivery agent",
+  description: "Implements selected delivery work",
+  requestedTools: ["read", "edit"]
+}
+const repositoryAgentExecutionPolicy = {
+  validationCommands: [{ id: "diff-check", command: "git diff --check", workingDirectory: ".", timeoutMs: 60_000 }],
+  allowedPaths: ["apps/agentic/**"],
+  forbiddenPaths: [".git/**"],
+  budgets: { maxTurns: 20, maxTokens: 50_000, maxElapsedMs: 600_000 }
+}
 
 function content(): WorkflowDefinition {
   return WorkflowDefinitionSchema.parse({
@@ -58,10 +78,10 @@ function content(): WorkflowDefinition {
       },
       {
         id: "success",
-        label: "Success",
+        label: "Result",
         position: { x: 400, y: 0 },
-        definition: { kind: "success", version: 1 },
-        config: {},
+        definition: { kind: "set_fields", version: 1 },
+        config: { fields: {} },
         failurePolicy: { mode: "stop", maximumAttempts: 1 }
       }
     ],
@@ -76,7 +96,7 @@ function content(): WorkflowDefinition {
       {
         id: "fields-success",
         source: { stepId: "set-fields", port: "value" },
-        target: { stepId: "success", port: "result" },
+        target: { stepId: "success", port: "input" },
         outcome: "success",
         mappings: [{ sourcePath: [], targetPath: [] }]
       }
@@ -99,6 +119,10 @@ function workflow(draft = content()): WorkflowDefinitionRecord {
 }
 
 class FakeWorkflowStore implements WorkflowServiceStore {
+  async delete(workflowIdInput: string): Promise<void> {
+    if (this.current?.workflowId !== workflowIdInput) throw new Error("Workflow not found")
+    this.current = null
+  }
   current: WorkflowDefinitionRecord | null = null
   versions: WorkflowVersionRecord[] = []
   executionPackage: WorkflowExecutionPackageRecord | null = null
@@ -208,6 +232,7 @@ function journal() {
       terminalAt: now
     })),
     getRunDetail: vi.fn<WorkflowServiceJournal["getRunDetail"]>(async () => null),
+    listRuns: vi.fn<WorkflowServiceJournal["listRuns"]>(async () => []),
     publishExecutionPackage: vi.fn<WorkflowServiceJournal["publishExecutionPackage"]>(async (content) => ({
       packageDigest: "a".repeat(64),
       workflowId: content.workflowId,
@@ -281,7 +306,7 @@ function journal() {
         provider: "github",
         requestDigest: "b".repeat(64),
         idempotencyKey: "effect-1",
-        status: "resolved",
+        status: "confirmed",
         request: {},
         result: null,
         reconciliation: {},
@@ -457,42 +482,6 @@ describe("WorkflowService", () => {
     expect(workflowJournal.retryFromHere).toHaveBeenCalledWith({ runId, activationId })
   })
 
-  it("resumes a pending wait with correlation key and event payload", async () => {
-    const workflowJournal = journal()
-    workflowJournal.resumeWait.mockResolvedValueOnce({
-      waitId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e35",
-      runId,
-      activationId: "a".repeat(64),
-      attemptOrdinal: 1,
-      correlationKey: "github:repo-42:pull_request:84",
-      acceptedInputSchema: { type: "object" },
-      authorization: null,
-      status: "resumed",
-      consuming: 1,
-      expiresAt: new Date("2026-07-19T13:00:00.000Z"),
-      winningEventSequence: 7,
-      createdAt: now,
-      updatedAt: now
-    })
-    const service = new WorkflowService(new FakeWorkflowStore(), workflowJournal)
-    const event = { action: "opened", pullRequest: 84 }
-
-    await expect(
-      service.resumeRunWait(runId, {
-        correlationKey: "github:repo-42:pull_request:84",
-        event
-      })
-    ).resolves.toMatchObject({
-      schemaVersion: "1",
-      resumed: expect.objectContaining({ runId, correlationKey: "github:repo-42:pull_request:84" })
-    })
-    expect(workflowJournal.resumeWait).toHaveBeenCalledWith({
-      runId,
-      correlationKey: "github:repo-42:pull_request:84",
-      event
-    })
-  })
-
   it.each([
     { outcome: "occurred" as const, result: { ok: true } },
     { outcome: "absent" as const, result: undefined },
@@ -585,6 +574,12 @@ describe("WorkflowService", () => {
       definition: { kind: "schedule", version: 1 },
       config: { timezone: "UTC", intervalSeconds: 60 }
     }
+    source.steps[1] = {
+      ...source.steps[1]!,
+      label: "Trigger results",
+      definition: { kind: "join", version: 1 },
+      config: { policy: "any" }
+    }
     source.steps.push({
       id: "webhook-start",
       label: "Webhook start",
@@ -600,22 +595,20 @@ describe("WorkflowService", () => {
       },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     })
-    source.steps.push({
-      id: "webhook-success",
-      label: "Webhook success",
-      position: { x: 420, y: 220 },
-      definition: { kind: "success", version: 1 },
-      config: {},
-      failurePolicy: { mode: "stop", maximumAttempts: 1 }
-    })
     source.connections[0] = {
       ...source.connections[0]!,
-      source: { stepId: "schedule-start", port: "fire" }
+      source: { stepId: "schedule-start", port: "fire" },
+      target: { stepId: "set-fields", port: "branches" }
+    }
+    source.connections[1] = {
+      ...source.connections[1]!,
+      source: { stepId: "set-fields", port: "results" },
+      mappings: [{ sourcePath: ["[]"], targetPath: [] }]
     }
     source.connections.push({
       id: "webhook-success",
       source: { stepId: "webhook-start", port: "event" },
-      target: { stepId: "webhook-success", port: "result" },
+      target: { stepId: "set-fields", port: "branches" },
       outcome: "success",
       mappings: [{ sourcePath: [], targetPath: [] }]
     })
@@ -675,7 +668,8 @@ describe("WorkflowService", () => {
         name: "Delivery",
         repository,
         linearTeam,
-        modelId: selectedModel.modelId
+        modelId: selectedModel.modelId,
+        agentReference: selectedAgentReference
       })
     ).rejects.toThrow("Workflow name already exists")
 
@@ -711,7 +705,8 @@ describe("WorkflowService", () => {
       name: "Delivery",
       repository,
       linearTeam,
-      modelId: selectedModel.modelId
+      modelId: selectedModel.modelId,
+      agentReference: selectedAgentReference
     })
     expect(created).toMatchObject({ schemaVersion: "3", draftRevision: 1 })
     expect(created.content.resourceBindings).toEqual({ repository, linearTeam })
@@ -737,9 +732,8 @@ describe("WorkflowService", () => {
       valid: false,
       issues: [
         expect.objectContaining({
-          code: "agent_reference",
-          nodeId: "delivery-agent",
-          field: "Agent"
+          code: "agent_snapshot",
+          nodeId: "delivery-agent"
         })
       ]
     })
@@ -800,7 +794,7 @@ describe("WorkflowService", () => {
     const service = new WorkflowService(store, journal())
 
     await expect(service.validate(workflowId)).resolves.toMatchObject({ valid: false })
-    await expect(service.publish(workflowId)).rejects.toThrow("cannot reach a terminal step")
+    await expect(service.publish(workflowId)).rejects.toThrow("not reachable from a trigger")
   })
 
   it("returns compiler validation issues with node and connection targets", async () => {
@@ -846,10 +840,14 @@ describe("WorkflowService", () => {
     source.steps[1] = {
       ...source.steps[1]!,
       definition: { kind: "repository_agent", version: 1 },
-      config: { agentReference: reference }
+      config: { agentReference: reference, ...repositoryAgentExecutionPolicy }
     }
     source.connections[0] = { ...source.connections[0]!, target: { stepId: "set-fields", port: "context" } }
-    source.connections[1] = { ...source.connections[1]!, source: { stepId: "set-fields", port: "result" } }
+    source.connections[1] = {
+      ...source.connections[1]!,
+      source: { stepId: "set-fields", port: "result" },
+      target: { stepId: "success", port: "input" }
+    }
     const snapshot: RepositoryAgentSnapshot = {
       reference,
       content: "---\nname: Reviewer\ndescription: Reviews candidate changes\n---\nReview.",
@@ -896,24 +894,37 @@ describe("WorkflowService", () => {
     source.steps[1] = {
       ...source.steps[1]!,
       definition: { kind: "repository_agent", version: 1 },
-      config: { agentReference: reference }
+      config: { agentReference: reference, ...repositoryAgentExecutionPolicy }
     }
     source.connections[0] = { ...source.connections[0]!, target: { stepId: "set-fields", port: "context" } }
-    source.connections[1] = { ...source.connections[1]!, source: { stepId: "set-fields", port: "result" } }
+    source.steps[2] = {
+      ...source.steps[2]!,
+      label: "Agent results",
+      definition: { kind: "join", version: 1 },
+      config: { policy: "any" }
+    }
+    source.connections[1] = {
+      ...source.connections[1]!,
+      source: { stepId: "set-fields", port: "result" },
+      target: { stepId: "success", port: "branches" }
+    }
     source.steps.push({
       id: "second-agent",
       label: "Second agent",
       position: { x: 280, y: 200 },
       definition: { kind: "repository_agent", version: 1 },
-      config: { agentReference: { ...reference, path: ".github/reviewer-copy.agent.md" } },
+      config: {
+        agentReference: { ...reference, path: ".github/reviewer-copy.agent.md" },
+        ...repositoryAgentExecutionPolicy
+      },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     })
     source.steps.push({
-      id: "success-2",
-      label: "Success 2",
-      position: { x: 620, y: 220 },
-      definition: { kind: "success", version: 1 },
-      config: {},
+      id: "result",
+      label: "Result",
+      position: { x: 620, y: 0 },
+      definition: { kind: "set_fields", version: 1 },
+      config: { fields: {} },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     })
     source.connections.push({
@@ -926,9 +937,16 @@ describe("WorkflowService", () => {
     source.connections.push({
       id: "second-agent-success",
       source: { stepId: "second-agent", port: "result" },
-      target: { stepId: "success-2", port: "result" },
+      target: { stepId: "success", port: "branches" },
       outcome: "success",
       mappings: [{ sourcePath: [], targetPath: [] }]
+    })
+    source.connections.push({
+      id: "agents-result",
+      source: { stepId: "success", port: "results" },
+      target: { stepId: "result", port: "input" },
+      outcome: "success",
+      mappings: [{ sourcePath: ["[]"], targetPath: [] }]
     })
     const snapshot: RepositoryAgentSnapshot = {
       reference,
@@ -974,7 +992,7 @@ describe("WorkflowService", () => {
     source.steps[1] = {
       ...source.steps[1]!,
       definition: { kind: "repository_agent", version: 1 },
-      config: { agentReference: reference }
+      config: { agentReference: reference, ...repositoryAgentExecutionPolicy }
     }
     source.connections[0] = { ...source.connections[0]!, target: { stepId: "set-fields", port: "context" } }
     source.connections[1] = { ...source.connections[1]!, source: { stepId: "set-fields", port: "result" } }
@@ -993,7 +1011,12 @@ describe("WorkflowService", () => {
     )
 
     const noCatalogService = new WorkflowService(store, journal())
-    await expect(noCatalogService.validate(workflowId)).rejects.toThrow("Repository agent resolution is unavailable")
+    await expect(noCatalogService.validate(workflowId)).resolves.toEqual({
+      schemaVersion: "1",
+      draftRevision: 1,
+      valid: false,
+      issues: [expect.objectContaining({ code: "agent_snapshot", nodeId: "set-fields" })]
+    })
   })
 
   it("resolves and pins model catalog snapshots for validation and publication", async () => {
@@ -1073,20 +1096,18 @@ describe("WorkflowService", () => {
       },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     })
+    source.steps[2] = {
+      ...source.steps[2]!,
+      label: "Model results",
+      definition: { kind: "join", version: 1 },
+      config: { policy: "any" }
+    }
     source.steps.push({
-      id: "success-a",
-      label: "Success A",
-      position: { x: 600, y: 220 },
-      definition: { kind: "success", version: 1 },
-      config: {},
-      failurePolicy: { mode: "stop", maximumAttempts: 1 }
-    })
-    source.steps.push({
-      id: "success-z2",
-      label: "Success Z2",
-      position: { x: 600, y: 320 },
-      definition: { kind: "success", version: 1 },
-      config: {},
+      id: "result",
+      label: "Result",
+      position: { x: 600, y: 0 },
+      definition: { kind: "set_fields", version: 1 },
+      config: { fields: {} },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     })
     source.connections[0] = {
@@ -1095,7 +1116,8 @@ describe("WorkflowService", () => {
     }
     source.connections[1] = {
       ...source.connections[1]!,
-      source: { stepId: "model-z", port: "response" }
+      source: { stepId: "model-z", port: "response" },
+      target: { stepId: "success", port: "branches" }
     }
     source.connections.push({
       id: "manual-model-a",
@@ -1107,7 +1129,7 @@ describe("WorkflowService", () => {
     source.connections.push({
       id: "model-a-success",
       source: { stepId: "model-a", port: "judgment" },
-      target: { stepId: "success-a", port: "result" },
+      target: { stepId: "success", port: "branches" },
       outcome: "success",
       mappings: [{ sourcePath: [], targetPath: [] }]
     })
@@ -1121,9 +1143,16 @@ describe("WorkflowService", () => {
     source.connections.push({
       id: "model-z-2-success",
       source: { stepId: "model-z-2", port: "response" },
-      target: { stepId: "success-z2", port: "result" },
+      target: { stepId: "success", port: "branches" },
       outcome: "success",
       mappings: [{ sourcePath: [], targetPath: [] }]
+    })
+    source.connections.push({
+      id: "models-result",
+      source: { stepId: "success", port: "results" },
+      target: { stepId: "result", port: "input" },
+      outcome: "success",
+      mappings: [{ sourcePath: ["[]"], targetPath: [] }]
     })
 
     const store = new FakeWorkflowStore()
@@ -1224,6 +1253,12 @@ describe("WorkflowService", () => {
       definition: { kind: "schedule", version: 1 },
       config: { timezone: "UTC", intervalSeconds: 60 }
     }
+    source.steps[1] = {
+      ...source.steps[1]!,
+      label: "Trigger results",
+      definition: { kind: "join", version: 1 },
+      config: { policy: "any" }
+    }
     source.steps.push({
       id: "webhook-start",
       label: "Webhook start",
@@ -1239,22 +1274,20 @@ describe("WorkflowService", () => {
       },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     })
-    source.steps.push({
-      id: "webhook-success",
-      label: "Webhook success",
-      position: { x: 420, y: 220 },
-      definition: { kind: "success", version: 1 },
-      config: {},
-      failurePolicy: { mode: "stop", maximumAttempts: 1 }
-    })
     source.connections[0] = {
       ...source.connections[0]!,
-      source: { stepId: "schedule-start", port: "fire" }
+      source: { stepId: "schedule-start", port: "fire" },
+      target: { stepId: "set-fields", port: "branches" }
+    }
+    source.connections[1] = {
+      ...source.connections[1]!,
+      source: { stepId: "set-fields", port: "results" },
+      mappings: [{ sourcePath: ["[]"], targetPath: [] }]
     }
     source.connections.push({
       id: "webhook-fields",
       source: { stepId: "webhook-start", port: "event" },
-      target: { stepId: "webhook-success", port: "result" },
+      target: { stepId: "set-fields", port: "branches" },
       outcome: "success",
       mappings: [{ sourcePath: [], targetPath: [] }]
     })
@@ -1326,10 +1359,10 @@ describe("WorkflowService", () => {
     })
     ambiguous.steps.push({
       id: "success-2",
-      label: "Success 2",
+      label: "Result 2",
       position: { x: 420, y: 220 },
-      definition: { kind: "success", version: 1 },
-      config: {},
+      definition: { kind: "set_fields", version: 1 },
+      config: { fields: {} },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     })
     ambiguous.connections.push({
@@ -1342,21 +1375,13 @@ describe("WorkflowService", () => {
     ambiguous.connections.push({
       id: "fields-2-success-2",
       source: { stepId: "set-fields-2", port: "value" },
-      target: { stepId: "success-2", port: "result" },
+      target: { stepId: "success-2", port: "input" },
       outcome: "success",
       mappings: [{ sourcePath: [], targetPath: [] }]
     })
     const ambiguousStore = new FakeWorkflowStore()
     ambiguousStore.current = workflow(ambiguous)
-    await ambiguousStore.publish()
-    const ambiguousService = new WorkflowService(ambiguousStore, journal())
-    await expect(
-      ambiguousService.start(workflowId, {
-        version: 1,
-        input: {},
-        trigger: { type: "manual", key: "request-1" }
-      })
-    ).rejects.toThrow("Trigger is stale, unavailable, or ambiguous")
+    await expect(ambiguousStore.publish()).rejects.toThrow("A workflow can contain only one Manual run trigger")
 
     await expect(
       service.start(workflowId, { version: 1, trigger: { type: "webhook", key: "x", stepId: "BAD_STEP" } })
@@ -1632,10 +1657,10 @@ describe("WorkflowService", () => {
     })
     staleSource.steps.push({
       id: "success-2",
-      label: "Success 2",
+      label: "Result 2",
       position: { x: 600, y: 240 },
-      definition: { kind: "success", version: 1 },
-      config: {},
+      definition: { kind: "set_fields", version: 1 },
+      config: { fields: {} },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     })
     staleSource.connections.push({
@@ -1648,46 +1673,13 @@ describe("WorkflowService", () => {
     staleSource.connections.push({
       id: "fields2-success2",
       source: { stepId: "set-fields-2", port: "value" },
-      target: { stepId: "success-2", port: "result" },
+      target: { stepId: "success-2", port: "input" },
       outcome: "success",
       mappings: [{ sourcePath: [], targetPath: [] }]
     })
     const staleStore = new FakeWorkflowStore()
     staleStore.current = workflow(staleSource)
-    await staleStore.publish()
-    const staleExecutionPackage = staleStore.executionPackage
-    if (staleExecutionPackage === null) throw new Error("Expected execution package")
-    const staleJournal = journal()
-    staleJournal.getRunDetail.mockResolvedValueOnce({
-      run: {
-        runId,
-        packageDigest: staleExecutionPackage.packageDigest,
-        requestDigest: "b".repeat(64),
-        triggerIdentity: "manual:request-1",
-        sealedManifest: { input: { issue: "FEN-423" }, resources: [] },
-        status: "failed",
-        cancellationGeneration: 0,
-        latestSequence: 2,
-        schedulerCursor: null,
-        pendingCheckpointCursor: null,
-        createdAt: now,
-        updatedAt: now,
-        terminalAt: now
-      },
-      executionPackage: staleExecutionPackage,
-      graph: CompiledWorkflowGraphSchema.parse(staleExecutionPackage.content.graph),
-      activations: [],
-      attempts: [],
-      effects: [],
-      waits: [],
-      data: [],
-      events: [],
-      childLinks: []
-    })
-    const staleService = new WorkflowService(staleStore, staleJournal)
-    await expect(staleService.runAgain(runId, {})).rejects.toThrow(
-      "The immutable package has no unambiguous operator trigger"
-    )
+    await expect(staleStore.publish()).rejects.toThrow("A workflow can contain only one Manual run trigger")
   })
 
   it("lists schedules and routes matching provider events", async () => {
@@ -1714,7 +1706,7 @@ describe("WorkflowService", () => {
         runId,
         activationId: "a".repeat(64),
         attemptOrdinal: 1,
-        correlationKey: "github:repo-42:pull_request:84",
+        correlationKey: "github:repo-42:pull_request.created:84",
         acceptedInputSchema: { type: "object" },
         authorization: null,
         status: "pending",
@@ -1788,7 +1780,7 @@ describe("WorkflowService", () => {
     expect(workflowJournal.resumeWait).toHaveBeenCalledWith(
       expect.objectContaining({
         runId,
-        correlationKey: "github:repo-42:pull_request:84"
+        correlationKey: "github:repo-42:pull_request.created:84"
       })
     )
   })
@@ -1838,12 +1830,22 @@ describe("WorkflowService", () => {
       )
     ).resolves.toBe(1)
 
-    expect(startSpy).toHaveBeenCalledWith(
-      workflowId,
-      expect.objectContaining({
-        trigger: { type: "webhook", key: "delivery-42:task.comment.created", stepId: "linear-event" }
-      })
-    )
+    expect(startSpy).toHaveBeenCalledWith(workflowId, {
+      version: 1,
+      input: {
+        provider: "linear",
+        resourceType: "team",
+        resourceId: "team-1",
+        eventKey: "task.comment.created",
+        objectType: "task.comment",
+        objectId: "84"
+      },
+      trigger: {
+        type: "webhook",
+        key: "delivery-42:task.comment.created:linear-event",
+        stepId: "linear-event"
+      }
+    })
   })
 
   it("updates a durable schedule with optimistic concurrency", async () => {

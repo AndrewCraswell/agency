@@ -6,12 +6,40 @@ import { projectWorkflowOutline } from "./WorkflowEditorOutline.utils"
 
 const items = projectWorkflowOutline(
   [
-    { id: "trigger", label: "Pull request opened", kind: "provider_event", category: "trigger" },
-    { id: "triage", label: "Choose review path", kind: "switch", category: "control" },
-    { id: "review", label: "Review changes", kind: "structured_judgment", category: "ai" },
-    { id: "join", label: "Join paths", kind: "join", category: "control" },
-    { id: "complete", label: "Review complete", kind: "success", category: "terminal" },
-    { id: "unused", label: "Unused formatter", kind: "set_fields", category: "data" }
+    {
+      id: "trigger",
+      label: "Pull request opened",
+      kind: "provider_event",
+      category: "trigger",
+      typeLabel: "Event",
+      version: 1
+    },
+    { id: "triage", label: "Choose review path", kind: "switch", category: "control", typeLabel: "Switch", version: 1 },
+    {
+      id: "review",
+      label: "Review changes",
+      kind: "structured_judgment",
+      category: "ai",
+      typeLabel: "Judge",
+      version: 1
+    },
+    { id: "join", label: "Join paths", kind: "join", category: "control", typeLabel: "Join", version: 1 },
+    {
+      id: "complete",
+      label: "Review complete",
+      kind: "set_fields",
+      category: "data",
+      typeLabel: "Set fields",
+      version: 1
+    },
+    {
+      id: "unused",
+      label: "Unused formatter",
+      kind: "set_fields",
+      category: "data",
+      typeLabel: "Set fields",
+      version: 1
+    }
   ],
   [
     { id: "start", sourceStepId: "trigger", targetStepId: "triage" },

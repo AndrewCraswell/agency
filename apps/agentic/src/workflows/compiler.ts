@@ -6,7 +6,7 @@ import {
   type ExecutionPackageContent,
   type JsonValue
 } from "./executionContracts"
-import { isJsonSchemaAssignable, schemaAtPath, SupportedJsonSchemaSchema } from "./jsonSchema"
+import { isJsonSchemaAssignable, schemaAtPath, SupportedJsonSchemaSchema, validateJsonValue } from "./jsonSchema"
 import { WorkflowModelSnapshotSchema, type WorkflowModelSnapshot } from "./modelCatalog"
 import { getProviderOperation } from "./providerCatalog"
 import { RepositoryAgentSnapshotSchema, type RepositoryAgentSnapshot } from "./repositoryAgents"
@@ -23,6 +23,7 @@ export const CompiledWorkflowGraphSchema = z
     outputSchema: SupportedJsonSchemaSchema,
     steps: WorkflowDefinitionSchema.shape.steps,
     connections: WorkflowDefinitionSchema.shape.connections,
+    sinkStepId: z.string(),
     topologicalOrder: z.array(z.string())
   })
   .strict()
@@ -94,23 +95,23 @@ function validateReachability(
   definition: WorkflowDefinition,
   definitions: Map<string, WorkflowStepDefinition>,
   issues: WorkflowCompilationIssue[]
-): void {
+): string | null {
   const triggers = definition.steps.filter((step) => definitions.get(step.id)?.category === "trigger")
-  const terminals = new Set(
-    definition.steps.filter((step) => definitions.get(step.id)?.category === "terminal").map(({ id }) => id)
-  )
+  const manualTriggers = triggers.filter((step) => step.definition.kind === "manual_trigger")
   if (triggers.length === 0)
     issues.push({ code: "trigger_required", message: "Add at least one trigger.", stepId: null, connectionId: null })
-  if (terminals.size === 0)
+  if (manualTriggers.length > 1)
     issues.push({
-      code: "terminal_required",
-      message: "Add at least one Success or Failure step.",
-      stepId: null,
+      code: "manual_trigger_ambiguous",
+      message: "A workflow can contain only one Manual run trigger.",
+      stepId: manualTriggers[1]?.id ?? null,
       connectionId: null
     })
   const outgoing = new Map(definition.steps.map(({ id }) => [id, [] as string[]]))
   const incoming = new Map(definition.steps.map(({ id }) => [id, [] as string[]]))
-  for (const connection of definition.connections.filter(({ loopBack }) => loopBack !== true)) {
+  for (const connection of definition.connections.filter(
+    ({ loopBack, outcome }) => loopBack !== true && outcome === "success"
+  )) {
     outgoing.get(connection.source.stepId)?.push(connection.target.stepId)
     incoming.get(connection.target.stepId)?.push(connection.source.stepId)
   }
@@ -134,26 +135,169 @@ function validateReachability(
         connectionId: null
       })
   }
-  const reachesTerminal = new Set<string>(terminals)
-  const reversePending = [...terminals]
+  if (triggers.length === 0) return null
+  const sinks = definition.steps.filter(
+    ({ id }) =>
+      reachable.has(id) &&
+      !definition.connections.some(({ source, outcome }) => source.stepId === id && outcome === "success")
+  )
+  if (sinks.length !== 1) {
+    issues.push({
+      code: "sink_count",
+      message: `A workflow must have exactly one reachable sink; found ${sinks.length}.`,
+      stepId: null,
+      connectionId: null
+    })
+    return null
+  }
+  const sink = sinks[0]!
+  const reachesSink = new Set<string>([sink.id])
+  const reversePending = [sink.id]
   while (reversePending.length > 0) {
     const current = reversePending.shift()
     if (current === undefined) continue
     for (const source of incoming.get(current) ?? []) {
-      if (!reachesTerminal.has(source)) {
-        reachesTerminal.add(source)
+      if (!reachesSink.has(source)) {
+        reachesSink.add(source)
         reversePending.push(source)
       }
     }
   }
-  for (const step of definition.steps) {
-    if (!reachesTerminal.has(step.id))
+  for (const step of definition.steps.filter(({ id }) => reachable.has(id))) {
+    if (!reachesSink.has(step.id))
       issues.push({
-        code: "terminal_unreachable",
-        message: `${step.label} cannot reach a terminal step.`,
+        code: "sink_unreachable",
+        message: `${step.label} cannot reach the workflow sink.`,
         stepId: step.id,
         connectionId: null
       })
+  }
+  const sinkDefinition = definitions.get(sink.id)
+  if (sinkDefinition !== undefined) {
+    if (sinkDefinition.outputs.length !== 1) {
+      issues.push({
+        code: "sink_output_count",
+        message: `${sink.label} must have exactly one output port.`,
+        stepId: sink.id,
+        connectionId: null
+      })
+    } else if (!isJsonSchemaAssignable(sinkDefinition.outputs[0]!.schema, definition.outputSchema)) {
+      issues.push({
+        code: "sink_output_schema",
+        message: `${sink.label} output is not assignable to the workflow output schema.`,
+        stepId: sink.id,
+        connectionId: null
+      })
+    }
+  }
+  return sink.id
+}
+
+function validateStepConfigurations(
+  definition: WorkflowDefinition,
+  definitions: Map<string, WorkflowStepDefinition>,
+  issues: WorkflowCompilationIssue[]
+): void {
+  for (const step of definition.steps) {
+    const stepDefinition = definitions.get(step.id)
+    if (stepDefinition === undefined) continue
+    const configIssues = validateJsonValue(stepDefinition.configSchema, step.config)
+    for (const issue of configIssues) {
+      issues.push({
+        code: "step_configuration",
+        message: `${step.label} configuration ${issue.path}: ${issue.message}.`,
+        stepId: step.id,
+        connectionId: null
+      })
+    }
+    if (configIssues.length > 0) continue
+    if (step.definition.kind === "map_fields") {
+      const mappings = z.record(z.string(), z.unknown()).parse(step.config.mappings)
+      for (const [target, source] of Object.entries(mappings)) {
+        if (
+          typeof source !== "string" ||
+          source.trim().length === 0 ||
+          source.split(".").some((segment) => segment.length === 0)
+        ) {
+          issues.push({
+            code: "step_configuration",
+            message: `${step.label} mapping ${target} must use a non-empty dot-separated source path.`,
+            stepId: step.id,
+            connectionId: null
+          })
+        }
+      }
+    } else if (step.definition.kind === "validate") {
+      const parsed = SupportedJsonSchemaSchema.safeParse(step.config.schema)
+      if (!parsed.success) {
+        issues.push({
+          code: "step_configuration",
+          message: `${step.label} validation schema is unsupported: ${z.prettifyError(parsed.error)}`,
+          stepId: step.id,
+          connectionId: null
+        })
+      } else if (parsed.data.type !== "object") {
+        issues.push({
+          code: "step_configuration",
+          message: `${step.label} validation schema must declare an object root.`,
+          stepId: step.id,
+          connectionId: null
+        })
+      }
+    } else if (step.definition.kind === "collect" && step.config.mode === "keyed") {
+      if (typeof step.config.keyField !== "string" || step.config.keyField.trim().length === 0) {
+        issues.push({
+          code: "step_configuration",
+          message: `${step.label} requires a key field in keyed mode.`,
+          stepId: step.id,
+          connectionId: null
+        })
+      }
+    } else if (step.definition.kind === "repository_data") {
+      validateRepositoryDataQuery(definition, step, issues)
+    }
+  }
+}
+
+function validateRepositoryDataQuery(
+  definition: WorkflowDefinition,
+  step: WorkflowDefinition["steps"][number],
+  issues: WorkflowCompilationIssue[]
+): void {
+  const operation = step.config.operation
+  let requiredField: "path" | "text" | "pullRequestNumber" | null = null
+  if (operation === "file_content") requiredField = "path"
+  else if (operation === "code_search") requiredField = "text"
+  else if (["pull_request", "pull_request_files", "reviews", "comments"].includes(String(operation))) {
+    requiredField = "pullRequestNumber"
+  }
+  if (requiredField === null) return
+  const connection = definition.connections.find(({ target }) => target.stepId === step.id && target.port === "query")
+  if (connection === undefined) {
+    issues.push({
+      code: "repository_data_query",
+      message: `${step.label} requires query.${requiredField} for the ${String(operation)} operation.`,
+      stepId: step.id,
+      connectionId: null
+    })
+    return
+  }
+  const source = definition.steps.find(({ id }) => id === connection.source.stepId)
+  if (source?.definition.kind !== "set_fields" || connection.source.port !== "value") return
+  const fields = source.config.fields
+  if (fields === null || typeof fields !== "object" || Array.isArray(fields)) return
+  const value = fields[requiredField]
+  const valid =
+    requiredField === "pullRequestNumber"
+      ? typeof value === "number" && Number.isInteger(value) && value > 0
+      : typeof value === "string" && value.trim().length > 0
+  if (!valid) {
+    issues.push({
+      code: "repository_data_query",
+      message: `${step.label} requires a valid query.${requiredField} for the ${String(operation)} operation.`,
+      stepId: step.id,
+      connectionId: connection.id
+    })
   }
 }
 
@@ -271,6 +415,24 @@ function validateConnections(
       return typeof candidate.key === "string" ? [candidate.key] : []
     })
     if (typeof step.config.defaultKey === "string") keys.push(step.config.defaultKey)
+    if (typeof step.config.defaultKey !== "string" || step.config.defaultKey.length === 0) {
+      issues.push({
+        code: "switch_default_required",
+        message: `${step.label} must declare an explicit default branch.`,
+        stepId: step.id,
+        connectionId: null
+      })
+    }
+    for (const key of keys) {
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(key)) {
+        issues.push({
+          code: "switch_branch_key",
+          message: `${step.label} branch ${key} must use lowercase words separated by hyphens.`,
+          stepId: step.id,
+          connectionId: null
+        })
+      }
+    }
     const duplicate = keys.find((key, index) => keys.indexOf(key) !== index)
     if (duplicate !== undefined) {
       issues.push({
@@ -293,6 +455,22 @@ function validateConnections(
         })
     }
   }
+  for (const step of definition.steps.filter(({ definition: item }) => item.kind === "condition")) {
+    const outgoing = definition.connections.filter(
+      ({ source, outcome }) => source.stepId === step.id && outcome === "success"
+    )
+    for (const port of ["true", "false"] as const) {
+      const count = outgoing.filter(({ source }) => source.port === port).length
+      if (count !== 1) {
+        issues.push({
+          code: "condition_outcome",
+          message: `${step.label} ${port === "true" ? "True" : "False"} outcome must connect exactly once.`,
+          stepId: step.id,
+          connectionId: null
+        })
+      }
+    }
+  }
 }
 
 function pathExists(definition: WorkflowDefinition, sourceStepId: string, targetStepId: string): boolean {
@@ -312,11 +490,50 @@ function pathExists(definition: WorkflowDefinition, sourceStepId: string, target
 }
 
 function validateOrchestration(definition: WorkflowDefinition, issues: WorkflowCompilationIssue[]): void {
+  for (const step of definition.steps.filter(({ definition: item }) => item.kind === "delay")) {
+    const duration = typeof step.config.duration === "number" ? step.config.duration : 0
+    const unit = typeof step.config.unit === "string" ? step.config.unit : "seconds"
+    const unitSeconds = { seconds: 1, minutes: 60, hours: 3600, days: 86400 }[unit]
+    if (unitSeconds !== undefined && duration * unitSeconds > 2592000) {
+      issues.push({
+        code: "delay_duration",
+        message: `${step.label} cannot delay for more than 30 days.`,
+        stepId: step.id,
+        connectionId: null
+      })
+    }
+  }
+  for (const step of definition.steps.filter(
+    ({ definition: item }) => item.kind === "wait_event_github" || item.kind === "wait_event_linear"
+  )) {
+    const timeoutTargets = definition.connections.filter(
+      ({ source }) => source.stepId === step.id && source.port === "timeout"
+    )
+    if (step.config.onTimeout === "route" && timeoutTargets.length === 0) {
+      issues.push({
+        code: "wait_timeout_edge",
+        message: `${step.label} must connect its Timeout output when timeout is routed.`,
+        stepId: step.id,
+        connectionId: null
+      })
+    }
+    if (step.config.onTimeout === "fail" && timeoutTargets.length > 0) {
+      issues.push({
+        code: "wait_timeout_policy",
+        message: `${step.label} cannot connect its Timeout output when timeout fails the run.`,
+        stepId: step.id,
+        connectionId: timeoutTargets[0]!.id
+      })
+    }
+  }
   for (const step of definition.steps.filter(({ definition: item }) => item.kind === "join")) {
     const incomingCount = definition.connections.filter(
       ({ target, outcome, loopBack }) => target.stepId === step.id && outcome === "success" && loopBack !== true
     ).length
-    if (step.config.policy === "quorum") {
+    const dynamicOwner = definition.steps.find(
+      ({ definition: item, config }) => item.kind === "for_each" && config.joinStepId === step.id
+    )
+    if (step.config.policy === "quorum" && dynamicOwner === undefined) {
       const quorum = typeof step.config.quorum === "number" ? step.config.quorum : 0
       if (quorum > incomingCount) {
         issues.push({
@@ -384,6 +601,20 @@ function validateOrchestration(definition: WorkflowDefinition, issues: WorkflowC
       }
     }
   }
+  for (const merge of definition.steps.filter(({ definition: item }) => item.kind === "exclusive_merge")) {
+    const owners = definition.steps.filter(
+      ({ definition: item, config }) =>
+        (item.kind === "condition" || item.kind === "switch") && config.joinStepId === merge.id
+    )
+    if (owners.length !== 1) {
+      issues.push({
+        code: "branch_merge_owner",
+        message: `${merge.label} must belong to exactly one Condition or Switch.`,
+        stepId: merge.id,
+        connectionId: null
+      })
+    }
+  }
   for (const step of definition.steps.filter(({ definition: item }) => item.kind === "bounded_loop")) {
     const bodyStepId = typeof step.config.bodyStepId === "string" ? step.config.bodyStepId : ""
     const exitStepId = typeof step.config.exitStepId === "string" ? step.config.exitStepId : ""
@@ -432,6 +663,9 @@ function validateOrchestration(definition: WorkflowDefinition, issues: WorkflowC
     const resultTargets = definition.connections.filter(
       ({ source }) => source.stepId === step.id && source.port === "result"
     )
+    const exhaustedTargets = definition.connections.filter(
+      ({ source }) => source.stepId === step.id && source.port === "exhausted"
+    )
     if (!iterationTargets.some(({ target }) => target.stepId === bodyStepId)) {
       issues.push({
         code: "loop_body_edge",
@@ -446,6 +680,22 @@ function validateOrchestration(definition: WorkflowDefinition, issues: WorkflowC
         message: `${step.label} result output must connect to its exit step.`,
         stepId: step.id,
         connectionId: null
+      })
+    }
+    if (step.config.onExhaustion === "route" && exhaustedTargets.length === 0) {
+      issues.push({
+        code: "loop_exhausted_edge",
+        message: `${step.label} must connect its Exhausted output when exhaustion is routed.`,
+        stepId: step.id,
+        connectionId: null
+      })
+    }
+    if (step.config.onExhaustion === "fail" && exhaustedTargets.length > 0) {
+      issues.push({
+        code: "loop_exhausted_policy",
+        message: `${step.label} cannot connect its Exhausted output when exhaustion fails the run.`,
+        stepId: step.id,
+        connectionId: exhaustedTargets[0]!.id
       })
     }
   }
@@ -502,6 +752,7 @@ export function compileWorkflowDefinition(input: {
       })
     }
   }
+  validateStepConfigurations(definition, definitions, issues)
   for (const step of definition.steps.filter(({ definition: item }) => item.kind === "schedule")) {
     try {
       const schedule = scheduleDefinitionFromConfig(step.config)
@@ -611,7 +862,9 @@ export function compileWorkflowDefinition(input: {
         }
       }
     }
-    if (step.config.outputMode === "structured" && !snapshot.supportedParameters.includes("response_format")) {
+    const requiresStructuredOutput =
+      step.definition.kind === "structured_judgment" || step.config.outputMode === "structured"
+    if (requiresStructuredOutput && !snapshot.supportedParameters.includes("response_format")) {
       issues.push({
         code: "model_structured_output",
         message: `${step.label} model does not advertise structured output.`,
@@ -633,7 +886,11 @@ export function compileWorkflowDefinition(input: {
   const referencedBindingIds = new Set<string>()
   for (const step of definition.steps.filter(
     ({ definition: item }) =>
-      item.kind === "provider_event" || item.kind === "provider_data" || item.kind === "provider_action"
+      item.kind === "provider_event" ||
+      item.kind === "provider_data" ||
+      item.kind === "provider_action" ||
+      item.kind === "wait_event_github" ||
+      item.kind === "wait_event_linear"
   )) {
     const binding = step.config.binding
     if (binding === null || Array.isArray(binding) || typeof binding !== "object") {
@@ -669,7 +926,9 @@ export function compileWorkflowDefinition(input: {
       continue
     }
     referencedBindingIds.add(bindingKey[0])
-    const provider = step.config.provider
+    let provider = step.config.provider
+    if (step.definition.kind === "wait_event_github") provider = "github"
+    if (step.definition.kind === "wait_event_linear") provider = "linear"
     if (provider !== bindingKey[1].provider) {
       issues.push({
         code: "provider_binding_mismatch",
@@ -678,7 +937,12 @@ export function compileWorkflowDefinition(input: {
         connectionId: null
       })
     }
-    if (step.definition.kind === "provider_event") continue
+    if (
+      step.definition.kind === "provider_event" ||
+      step.definition.kind === "wait_event_github" ||
+      step.definition.kind === "wait_event_linear"
+    )
+      continue
     try {
       const operation = getProviderOperation(z.string().parse(step.config.operation))
       const expectedMode = step.definition.kind === "provider_data" ? "read" : "write"
@@ -723,9 +987,10 @@ export function compileWorkflowDefinition(input: {
   }
   validateConnections(definition, definitions, issues)
   validateOrchestration(definition, issues)
-  validateReachability(definition, definitions, issues)
+  const sinkStepId = validateReachability(definition, definitions, issues)
   const order = topologicalOrder(definition, issues)
   if (issues.length > 0) throw new WorkflowCompilationError(issues)
+  if (sinkStepId === null) throw new Error("Workflow sink validation did not produce a sink")
 
   const snapshots = [
     ...new Map([...definitions.values()].map((item) => [`${item.kind}@${item.version}`, item])).values()
@@ -749,6 +1014,7 @@ export function compileWorkflowDefinition(input: {
     outputSchema: definition.outputSchema,
     steps: [...definition.steps].sort((left, right) => left.id.localeCompare(right.id)),
     connections: [...definition.connections].sort((left, right) => left.id.localeCompare(right.id)),
+    sinkStepId,
     topologicalOrder: order
   }
   const content = ExecutionPackageContentSchema.parse({

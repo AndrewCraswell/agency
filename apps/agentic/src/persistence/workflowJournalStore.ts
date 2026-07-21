@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto"
-import { and, asc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gt, inArray, isNull, lte, sql } from "drizzle-orm"
 import type { NodePgDatabase } from "drizzle-orm/node-postgres"
 import { createSelectSchema } from "drizzle-zod"
 import { z } from "zod"
@@ -21,6 +21,7 @@ import {
   type ExecutionPackageContent
 } from "../workflows/executionContracts"
 import { validateJsonValue } from "../workflows/jsonSchema"
+import { getWorkflowStepDefinition } from "../workflows/stepRegistry"
 import { downstreamActivations } from "../workflows/workflowExecutor"
 import {
   workflowActivations,
@@ -28,6 +29,7 @@ import {
   workflowData,
   workflowEffects,
   workflowExecutionPackages,
+  workflowDefinitions,
   workflowJournalRuns,
   workflowRunEvents,
   workflowRunLinks,
@@ -134,7 +136,7 @@ type CompleteAttemptInput = {
   releases?: Array<{ stepId: string; scope: ActivationScopeSegment[] }>
   loopBudgets?: Array<{ key: string; maximumActivations: number }>
   checkpoint: { cursor: string; committed: boolean }
-  terminalStatus?: "succeeded"
+  workflowResult?: Record<string, z.input<typeof JsonValueSchema>>
   transactionId?: string
 }
 
@@ -171,7 +173,7 @@ function effectReservation(effect: WorkflowEffectRecord, requestDigest: string):
   if (effect.requestDigest !== requestDigest || effect.status === "conflict") {
     return { effect, dispatchable: false, reason: "conflict" }
   }
-  if (effect.status === "prepared" || effect.status === "resolved") {
+  if (effect.status === "prepared") {
     return { effect, dispatchable: true, reason: "prepared" }
   }
   if (effect.status === "confirmed") {
@@ -187,6 +189,32 @@ function effectReservation(effect: WorkflowEffectRecord, requestDigest: string):
 }
 
 export class PostgresWorkflowJournalStore {
+  async listRuns(limitInput = 100) {
+    const limit = z.number().int().positive().max(500).parse(limitInput)
+    return this.#database
+      .select({
+        runId: workflowJournalRuns.runId,
+        workflowId: workflowExecutionPackages.workflowId,
+        workflowName: workflowDefinitions.name,
+        sourceKind: workflowExecutionPackages.sourceKind,
+        workflowVersion: workflowExecutionPackages.workflowVersion,
+        draftRevision: workflowExecutionPackages.draftRevision,
+        triggerIdentity: workflowJournalRuns.triggerIdentity,
+        status: workflowJournalRuns.status,
+        createdAt: workflowJournalRuns.createdAt,
+        updatedAt: workflowJournalRuns.updatedAt,
+        terminalAt: workflowJournalRuns.terminalAt
+      })
+      .from(workflowJournalRuns)
+      .innerJoin(
+        workflowExecutionPackages,
+        eq(workflowExecutionPackages.packageDigest, workflowJournalRuns.packageDigest)
+      )
+      .innerJoin(workflowDefinitions, eq(workflowDefinitions.workflowId, workflowExecutionPackages.workflowId))
+      .orderBy(desc(workflowJournalRuns.updatedAt))
+      .limit(limit)
+  }
+
   readonly #database: NodePgDatabase<JournalPersistenceSchema>
   readonly #now: () => Date
   readonly #newId: () => string
@@ -683,6 +711,16 @@ export class PostgresWorkflowJournalStore {
     const leaseOwner = z.string().trim().min(1).parse(input.leaseOwner)
     const leaseDurationMs = z.number().int().min(1_000).max(3_600_000).parse(input.leaseDurationMs)
     return this.#database.transaction(async (transaction) => {
+      const runRows = await transaction
+        .select()
+        .from(workflowJournalRuns)
+        .where(eq(workflowJournalRuns.runId, runId))
+        .limit(1)
+        .for("update")
+      const run = JournalRunRecordSchema.parse(runRows[0])
+      if (["succeeded", "failed", "cancelled", "abandoned"].includes(run.status)) {
+        throw new Error(`Run ${runId} is ${run.status} and cannot lease activations`)
+      }
       const rows = await transaction
         .select()
         .from(workflowActivations)
@@ -739,6 +777,9 @@ export class PostgresWorkflowJournalStore {
         .limit(1)
         .for("update")
       const run = JournalRunRecordSchema.parse(runRows[0])
+      if (["succeeded", "failed", "cancelled", "abandoned"].includes(run.status)) {
+        throw new StaleWorkflowLeaseError(activationId, ordinal)
+      }
       const completed = await transaction
         .update(workflowAttempts)
         .set({ status: "succeeded", output, usage, evidence, finishedAt: now })
@@ -772,7 +813,6 @@ export class PostgresWorkflowJournalStore {
       if (selected[0] === undefined) {
         throw new StaleWorkflowLeaseError(activationId, ordinal)
       }
-
       const data = (input.data ?? []).map((datum) => {
         const payload = JsonObjectSchema.parse(datum.payload)
         return {
@@ -880,6 +920,39 @@ export class PostgresWorkflowJournalStore {
           )
       }
 
+      if (input.workflowResult !== undefined) {
+        const workflowResult = JsonObjectSchema.parse(input.workflowResult)
+        const packageRows = await transaction
+          .select()
+          .from(workflowExecutionPackages)
+          .where(eq(workflowExecutionPackages.packageDigest, run.packageDigest))
+          .limit(1)
+        const executionPackage = ExecutionPackageRecordSchema.parse(packageRows[0])
+        const graph = CompiledWorkflowGraphSchema.parse(executionPackage.content.graph)
+        if (validateJsonValue(graph.outputSchema, workflowResult).length > 0) {
+          throw new Error("Workflow result does not match the compiled output schema")
+        }
+        await transaction
+          .update(workflowAttempts)
+          .set({ status: "cancelled", leaseOwner: null, leaseExpiresAt: null, finishedAt: now })
+          .where(
+            and(eq(workflowAttempts.runId, runId), inArray(workflowAttempts.status, ["queued", "running", "waiting"]))
+          )
+        await transaction
+          .update(workflowActivations)
+          .set({ status: "cancelled", updatedAt: now })
+          .where(
+            and(
+              eq(workflowActivations.runId, runId),
+              inArray(workflowActivations.status, ["blocked", "ready", "leased", "running", "waiting"])
+            )
+          )
+        await transaction
+          .update(workflowWaits)
+          .set({ status: "cancelled", updatedAt: now })
+          .where(and(eq(workflowWaits.runId, runId), inArray(workflowWaits.status, ["pending", "claimed"])))
+      }
+
       const nextSequence = run.latestSequence + 1
       await transaction.insert(workflowRunEvents).values({
         runId,
@@ -897,12 +970,12 @@ export class PostgresWorkflowJournalStore {
       await transaction
         .update(workflowJournalRuns)
         .set({
-          status: input.terminalStatus ?? (downstream.length === 0 ? run.status : "running"),
+          status: input.workflowResult === undefined ? (downstream.length === 0 ? run.status : "running") : "succeeded",
           latestSequence: nextSequence,
           schedulerCursor: input.checkpoint.committed ? checkpointCursor : run.schedulerCursor,
           pendingCheckpointCursor: input.checkpoint.committed ? null : checkpointCursor,
           updatedAt: now,
-          terminalAt: input.terminalStatus === undefined ? run.terminalAt : now
+          terminalAt: input.workflowResult === undefined ? run.terminalAt : now
         })
         .where(eq(workflowJournalRuns.runId, runId))
     })
@@ -915,7 +988,6 @@ export class PostgresWorkflowJournalStore {
     leaseOwner: string
     fencingToken: number
     error: Record<string, z.input<typeof JsonValueSchema>>
-    terminalStatus?: "failed"
     transactionId?: string
   }): Promise<void> {
     const runId = z.uuid().parse(input.runId)
@@ -934,6 +1006,9 @@ export class PostgresWorkflowJournalStore {
         .limit(1)
         .for("update")
       const run = JournalRunRecordSchema.parse(runRows[0])
+      if (["succeeded", "failed", "cancelled", "abandoned"].includes(run.status)) {
+        throw new StaleWorkflowLeaseError(activationId, ordinal)
+      }
       const failed = await transaction
         .update(workflowAttempts)
         .set({ status: "failed", error, finishedAt: now })
@@ -963,6 +1038,25 @@ export class PostgresWorkflowJournalStore {
         )
         .returning({ activationId: workflowActivations.activationId })
       if (updatedActivation[0] === undefined) throw new StaleWorkflowLeaseError(activationId, ordinal)
+      await transaction
+        .update(workflowAttempts)
+        .set({ status: "cancelled", leaseOwner: null, leaseExpiresAt: null, finishedAt: now })
+        .where(
+          and(eq(workflowAttempts.runId, runId), inArray(workflowAttempts.status, ["queued", "running", "waiting"]))
+        )
+      await transaction
+        .update(workflowActivations)
+        .set({ status: "cancelled", updatedAt: now })
+        .where(
+          and(
+            eq(workflowActivations.runId, runId),
+            inArray(workflowActivations.status, ["blocked", "ready", "leased", "running", "waiting"])
+          )
+        )
+      await transaction
+        .update(workflowWaits)
+        .set({ status: "cancelled", updatedAt: now })
+        .where(and(eq(workflowWaits.runId, runId), inArray(workflowWaits.status, ["pending", "claimed"])))
       const nextSequence = run.latestSequence + 1
       await transaction.insert(workflowRunEvents).values({
         runId,
@@ -980,10 +1074,10 @@ export class PostgresWorkflowJournalStore {
       await transaction
         .update(workflowJournalRuns)
         .set({
-          status: input.terminalStatus ?? run.status,
+          status: "failed",
           latestSequence: nextSequence,
           updatedAt: now,
-          terminalAt: input.terminalStatus === undefined ? run.terminalAt : now
+          terminalAt: now
         })
         .where(eq(workflowJournalRuns.runId, runId))
     })
@@ -998,6 +1092,7 @@ export class PostgresWorkflowJournalStore {
     correlationKey: string
     acceptedInputSchema: Record<string, z.input<typeof JsonValueSchema>>
     expiresAt: Date
+    suspendedInput?: Record<string, z.input<typeof JsonValueSchema>>
     transactionId?: string
   }): Promise<WorkflowWaitRecord> {
     const runId = z.uuid().parse(input.runId)
@@ -1007,6 +1102,7 @@ export class PostgresWorkflowJournalStore {
     const fencingToken = z.number().int().nonnegative().parse(input.fencingToken)
     const correlationKey = z.string().trim().min(1).parse(input.correlationKey)
     const acceptedInputSchema = JsonObjectSchema.parse(input.acceptedInputSchema)
+    const suspendedInput = input.suspendedInput === undefined ? undefined : JsonObjectSchema.parse(input.suspendedInput)
     const expiresAt = z.date().parse(input.expiresAt)
     const transactionId = z.uuid().parse(input.transactionId ?? this.#newId())
     const now = this.#now()
@@ -1021,7 +1117,12 @@ export class PostgresWorkflowJournalStore {
       const run = JournalRunRecordSchema.parse(runRows[0])
       const suspended = await transaction
         .update(workflowAttempts)
-        .set({ status: "waiting", leaseOwner: null, leaseExpiresAt: null })
+        .set({
+          status: "waiting",
+          leaseOwner: null,
+          leaseExpiresAt: null,
+          ...(suspendedInput === undefined ? {} : { input: suspendedInput })
+        })
         .where(
           and(
             eq(workflowAttempts.runId, runId),
@@ -1098,6 +1199,8 @@ export class PostgresWorkflowJournalStore {
     childInput: Record<string, z.input<typeof JsonValueSchema>>
     childTriggerStepId: string
     childTriggerPort: string
+    timeoutSeconds: number
+    maximumDepth: number
     transactionId?: string
   }): Promise<WorkflowRunLinkRecord> {
     const parentRunId = z.uuid().parse(input.parentRunId)
@@ -1108,6 +1211,8 @@ export class PostgresWorkflowJournalStore {
     const childInput = JsonObjectSchema.parse(input.childInput)
     const childTriggerStepId = z.string().trim().min(1).parse(input.childTriggerStepId)
     const childTriggerPort = z.string().trim().min(1).parse(input.childTriggerPort)
+    const timeoutSeconds = z.number().int().min(1).max(604_800).parse(input.timeoutSeconds)
+    const maximumDepth = z.number().int().min(1).max(20).parse(input.maximumDepth)
     const transactionId = z.uuid().parse(input.transactionId ?? this.#newId())
     const childRunId = z.uuid().parse(this.#newId())
     const now = this.#now()
@@ -1119,6 +1224,15 @@ export class PostgresWorkflowJournalStore {
         .limit(1)
         .for("update")
       const parent = JournalRunRecordSchema.parse(parentRows[0])
+      if (parent.packageDigest === childPackageDigest) throw new Error("A workflow cannot invoke its own package")
+      const parentDepth = z
+        .number()
+        .int()
+        .nonnegative()
+        .parse(parent.sealedManifest.invocationDepth ?? 0)
+      if (parentDepth + 1 > maximumDepth) {
+        throw new Error(`Child workflow invocation exceeds maximum depth ${maximumDepth}`)
+      }
       const existingRows = await transaction
         .select()
         .from(workflowRunLinks)
@@ -1162,7 +1276,7 @@ export class PostgresWorkflowJournalStore {
           packageDigest: childPackageDigest,
           requestDigest: childRequestDigest,
           triggerIdentity: childTriggerIdentity,
-          sealedManifest: { input: childInput, parentRunId, parentActivationId },
+          sealedManifest: { input: childInput, parentRunId, parentActivationId, invocationDepth: parentDepth + 1 },
           status: "runnable",
           latestSequence: 1,
           createdAt: now,
@@ -1240,7 +1354,7 @@ export class PostgresWorkflowJournalStore {
         acceptedInputSchema: childGraph.outputSchema,
         status: "pending",
         consuming: 1,
-        expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt: new Date(now.getTime() + timeoutSeconds * 1000),
         createdAt: now,
         updatedAt: now
       })
@@ -1285,58 +1399,56 @@ export class PostgresWorkflowJournalStore {
     const childRunId = z.uuid().parse(childRunIdInput)
     const run = await this.getRun(childRunId)
     if (run === null || (run.status !== "succeeded" && run.status !== "failed")) return null
+    if (run.status === "failed") {
+      const attemptRows = await this.#database
+        .select()
+        .from(workflowAttempts)
+        .where(and(eq(workflowAttempts.runId, childRunId), eq(workflowAttempts.status, "failed")))
+        .orderBy(sql`${workflowAttempts.finishedAt} desc nulls last`, sql`${workflowAttempts.ordinal} desc`)
+        .limit(1)
+      const attempt = AttemptRecordSchema.parse(attemptRows[0])
+      return { status: "failed", output: attempt.output ?? {}, error: attempt.error }
+    }
     const executionPackage = await this.getExecutionPackage(run.packageDigest)
     if (executionPackage === null) throw new Error(`Child execution package ${run.packageDigest} is unavailable`)
     const graph = CompiledWorkflowGraphSchema.parse(executionPackage.content.graph)
-    const terminalStepIds = graph.steps
-      .filter(({ definition }) => definition.kind === (run.status === "succeeded" ? "success" : "failure"))
-      .map(({ id }) => id)
-    if (terminalStepIds.length === 0) throw new Error(`Child run ${childRunId} has no matching terminal step`)
+    const sink = graph.steps.find(({ id }) => id === graph.sinkStepId)
+    if (sink === undefined) throw new Error(`Child run ${childRunId} has no compiled sink step`)
     const activationRows = await this.#database
       .select()
       .from(workflowActivations)
       .where(
         and(
           eq(workflowActivations.runId, childRunId),
-          inArray(workflowActivations.stepId, terminalStepIds),
+          eq(workflowActivations.stepId, graph.sinkStepId),
           eq(workflowActivations.status, run.status)
         )
       )
       .limit(1)
     const activation = ActivationRecordSchema.parse(activationRows[0])
-    if (run.status === "succeeded" && activation.selectedAttemptOrdinal === null)
-      throw new Error(`Child terminal activation ${activation.activationId} has no selected attempt`)
-    let attemptRows
-    if (run.status === "succeeded") {
-      attemptRows = await this.#database
-        .select()
-        .from(workflowAttempts)
-        .where(
-          and(
-            eq(workflowAttempts.runId, childRunId),
-            eq(workflowAttempts.activationId, activation.activationId),
-            eq(workflowAttempts.ordinal, activation.selectedAttemptOrdinal!)
-          )
+    if (activation.selectedAttemptOrdinal === null)
+      throw new Error(`Child sink activation ${activation.activationId} has no selected attempt`)
+    const attemptRows = await this.#database
+      .select()
+      .from(workflowAttempts)
+      .where(
+        and(
+          eq(workflowAttempts.runId, childRunId),
+          eq(workflowAttempts.activationId, activation.activationId),
+          eq(workflowAttempts.ordinal, activation.selectedAttemptOrdinal)
         )
-        .limit(1)
-    } else {
-      attemptRows = await this.#database
-        .select()
-        .from(workflowAttempts)
-        .where(
-          and(
-            eq(workflowAttempts.runId, childRunId),
-            eq(workflowAttempts.activationId, activation.activationId),
-            eq(workflowAttempts.status, "failed")
-          )
-        )
-        .orderBy(sql`${workflowAttempts.ordinal} desc`)
-        .limit(1)
-    }
+      )
+      .limit(1)
     const attempt = AttemptRecordSchema.parse(attemptRows[0])
+    const sinkDefinition = getWorkflowStepDefinition(sink.definition.kind, sink.definition.version)
+    const outputPort = sinkDefinition.outputs[0]
+    if (outputPort === undefined || sinkDefinition.outputs.length !== 1) {
+      throw new Error(`Child sink ${sink.id} does not have exactly one output port`)
+    }
+    const output = JsonObjectSchema.parse(attempt.output)
     return {
       status: run.status,
-      output: attempt.output ?? {},
+      output: JsonObjectSchema.parse(output[outputPort.name]),
       error: attempt.error
     }
   }
@@ -1555,11 +1667,67 @@ export class PostgresWorkflowJournalStore {
         )
         .returning()
       if (waitRows[0] === undefined) return null
-      const wait = WaitRecordSchema.parse(waitRows[0])
+      let wait = WaitRecordSchema.parse(waitRows[0])
+      const activationRows = await transaction
+        .select()
+        .from(workflowActivations)
+        .where(and(eq(workflowActivations.runId, runId), eq(workflowActivations.activationId, wait.activationId)))
+        .limit(1)
+        .for("update")
+      const activation = ActivationRecordSchema.parse(activationRows[0])
+      const packageRows = await transaction
+        .select()
+        .from(workflowExecutionPackages)
+        .where(eq(workflowExecutionPackages.packageDigest, run.packageDigest))
+        .limit(1)
+      const executionPackage = ExecutionPackageRecordSchema.parse(packageRows[0])
+      const graph = CompiledWorkflowGraphSchema.parse(executionPackage.content.graph)
+      const step = graph.steps.find(({ id }) => id === activation.stepId)
+      const providerWait =
+        step?.definition.kind === "wait_event_github" || step?.definition.kind === "wait_event_linear"
+      const delay = step?.definition.kind === "delay"
+      if (!providerWait && !delay && step?.definition.kind !== "child_workflow") {
+        throw new Error(`Wait activation ${activation.activationId} is invalid`)
+      }
+      if (delay) {
+        const completedRows = await transaction
+          .update(workflowWaits)
+          .set({ status: "completed", updatedAt: now })
+          .where(and(eq(workflowWaits.waitId, wait.waitId), eq(workflowWaits.status, "timed_out")))
+          .returning()
+        wait = WaitRecordSchema.parse(completedRows[0])
+      }
+      const routeTimeout = providerWait && step.config.onTimeout === "route"
+      const elapsedSeconds = Math.max(0, Math.floor((now.getTime() - wait.createdAt.getTime()) / 1000))
+      const attemptRows = await transaction
+        .select({ input: workflowAttempts.input })
+        .from(workflowAttempts)
+        .where(
+          and(
+            eq(workflowAttempts.runId, runId),
+            eq(workflowAttempts.activationId, wait.activationId),
+            eq(workflowAttempts.ordinal, wait.attemptOrdinal)
+          )
+        )
+        .limit(1)
+      const suspendedInput = JsonObjectSchema.parse(attemptRows[0]?.input)
+      let output: z.infer<typeof JsonObjectSchema>
+      if (delay) {
+        output = { continued: JsonObjectSchema.parse(suspendedInput.input) }
+      } else {
+        output = {
+          timeout: {
+            deadline: wait.expiresAt.toISOString(),
+            elapsedSeconds,
+            correlationDigest: jsonValueDigest(wait.correlationKey)
+          }
+        }
+      }
+      const succeeds = delay || routeTimeout
       const error = { code: "wait_timed_out", message: `Wait ${correlationKey} expired` }
       const attempts = await transaction
         .update(workflowAttempts)
-        .set({ status: "failed", error, finishedAt: now })
+        .set(succeeds ? { status: "succeeded", output, finishedAt: now } : { status: "failed", error, finishedAt: now })
         .where(
           and(
             eq(workflowAttempts.runId, runId),
@@ -1570,9 +1738,13 @@ export class PostgresWorkflowJournalStore {
         )
         .returning({ ordinal: workflowAttempts.ordinal })
       if (attempts[0] === undefined) throw new StaleWorkflowLeaseError(wait.activationId, wait.attemptOrdinal)
-      const activations = await transaction
+      const selectedActivations = await transaction
         .update(workflowActivations)
-        .set({ status: "failed", updatedAt: now })
+        .set(
+          succeeds
+            ? { status: "succeeded", selectedAttemptOrdinal: wait.attemptOrdinal, updatedAt: now }
+            : { status: "failed", updatedAt: now }
+        )
         .where(
           and(
             eq(workflowActivations.runId, runId),
@@ -1582,25 +1754,57 @@ export class PostgresWorkflowJournalStore {
           )
         )
         .returning({ activationId: workflowActivations.activationId })
-      if (activations[0] === undefined) throw new StaleWorkflowLeaseError(wait.activationId, wait.attemptOrdinal)
+      if (selectedActivations[0] === undefined)
+        throw new StaleWorkflowLeaseError(wait.activationId, wait.attemptOrdinal)
+      const downstreamInput = succeeds ? downstreamActivations(graph, activation.stepId, output, activation.scope) : []
+      const downstream = downstreamInput.map((candidate) => {
+        const scope = candidate.scope ?? []
+        const dependencyCount = z
+          .number()
+          .int()
+          .nonnegative()
+          .parse(candidate.dependencyCount ?? 0)
+        return {
+          activationId: deterministicActivationId({ runId, stepId: candidate.stepId, scope }),
+          runId,
+          stepId: z.string().trim().min(1).parse(candidate.stepId),
+          scope,
+          status: dependencyCount === 0 ? ("ready" as const) : ("blocked" as const),
+          inputBindings: JsonObjectSchema.parse(candidate.inputBindings ?? {}),
+          dependencyCount,
+          availableAt: dependencyCount === 0 ? now : null,
+          createdAt: now,
+          updatedAt: now
+        }
+      })
+      if (downstream.length > 0) await transaction.insert(workflowActivations).values(downstream).onConflictDoNothing()
       const nextSequence = run.latestSequence + 1
       await transaction.insert(workflowRunEvents).values({
         runId,
         sequence: nextSequence,
         transactionId,
-        eventType: "wait.timed_out",
+        eventType: delay ? "delay.completed" : "wait.timed_out",
         eventVersion: 1,
         reducerVersion: "1",
         causationSequence: run.latestSequence === 0 ? null : run.latestSequence,
         correlationId: correlationKey,
         activationId: wait.activationId,
         attemptOrdinal: wait.attemptOrdinal,
-        payload: { waitId: wait.waitId },
+        payload: {
+          waitId: wait.waitId,
+          disposition: succeeds ? "routed" : "failed",
+          downstreamCount: downstream.length,
+          ...(delay ? { deadline: wait.expiresAt.toISOString(), elapsedSeconds } : {})
+        },
         recordedAt: now
       })
       await transaction
         .update(workflowJournalRuns)
-        .set({ status: "failed", latestSequence: nextSequence, updatedAt: now, terminalAt: now })
+        .set(
+          succeeds
+            ? { status: downstream.length === 0 ? run.status : "running", latestSequence: nextSequence, updatedAt: now }
+            : { status: "failed", latestSequence: nextSequence, updatedAt: now, terminalAt: now }
+        )
         .where(eq(workflowJournalRuns.runId, runId))
       return wait
     })
@@ -1791,6 +1995,25 @@ export class PostgresWorkflowJournalStore {
     return EffectRecordSchema.parse(rows[0])
   }
 
+  async reconcileStaleEffects(staleBeforeInput: Date): Promise<number> {
+    const staleBefore = z.date().parse(staleBeforeInput)
+    const now = this.#now()
+    const rows = await this.#database
+      .update(workflowEffects)
+      .set({
+        status: "unknown",
+        reconciliation: {
+          code: "dispatch_lease_expired",
+          message: "Provider dispatch did not complete before the recovery deadline",
+          detectedAt: now.toISOString()
+        },
+        updatedAt: now
+      })
+      .where(and(eq(workflowEffects.status, "dispatching"), lte(workflowEffects.updatedAt, staleBefore)))
+      .returning({ effectId: workflowEffects.effectId })
+    return rows.length
+  }
+
   async resolveEffect(input: {
     runId: string
     effectId: string
@@ -1827,7 +2050,7 @@ export class PostgresWorkflowJournalStore {
         throw new Error(`Effect ${effectId} does not need confirmation`)
       const previousHistory = z.array(JsonObjectSchema).catch([]).parse(effect.reconciliation?.history)
       const decision = { source: "operator", outcome, reason, recordedAt: now.toISOString() }
-      const status = outcome === "occurred" ? "confirmed" : outcome === "absent" ? "resolved" : "unknown"
+      const status = outcome === "occurred" ? "confirmed" : outcome === "absent" ? "prepared" : "unknown"
       const updatedRows = await transaction
         .update(workflowEffects)
         .set({

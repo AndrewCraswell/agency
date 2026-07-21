@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import type { WorkerResult } from "../contracts/results"
+import { OPENHANDS_AGENT_SERVER_IMAGE } from "../openhands/profiles"
 import { createRepositoryAgentExecutor } from "./repositoryAgentExecutor"
 
 const runId = "019c230c-60c6-7bd8-a9f8-9e5f51b09e30"
@@ -125,7 +126,10 @@ describe("repository agent executor", () => {
           runId,
           baseCommitSha: "b".repeat(40),
           promptVersion: `repository-agent-${contentDigest}`,
-          objective: expect.stringContaining('"issue":"FEN-423"')
+          objective: expect.stringContaining('"issue":"FEN-423"'),
+          workerImageVersion: OPENHANDS_AGENT_SERVER_IMAGE,
+          pathPolicy: { allowed: ["src/**"], forbidden: [".git/**"] },
+          budgets: { maxTurns: 20, maxTokens: 50_000, maxElapsedMs: 600_000, maxRepairAttempts: 0 }
         })
       })
     )
@@ -134,5 +138,30 @@ describe("repository agent executor", () => {
   it("fails closed when the approved snapshot is absent", async () => {
     const execute = createRepositoryAgentExecutor(vi.fn(async () => workerResult()))
     await expect(execute({ ...input(), snapshots: [] })).rejects.toThrow("snapshot is unavailable")
+  })
+
+  it("requires explicit paths and budgets and rejects unknown configuration", async () => {
+    const execute = createRepositoryAgentExecutor(vi.fn(async () => workerResult()))
+    const base = input()
+    const { allowedPaths: _allowedPaths, ...withoutAllowedPaths } = base.step.config
+    await expect(execute({ ...base, step: { ...base.step, config: withoutAllowedPaths } })).rejects.toThrow(
+      "allowedPaths"
+    )
+    const { budgets: _budgets, ...withoutBudgets } = base.step.config
+    await expect(execute({ ...base, step: { ...base.step, config: withoutBudgets } })).rejects.toThrow("budgets")
+    await expect(
+      execute({ ...base, step: { ...base.step, config: { ...base.step.config, executor: "passthrough" } } })
+    ).rejects.toThrow("Unrecognized key")
+  })
+
+  it("rejects oversized objective context instead of truncating it", async () => {
+    const worker = vi.fn(async () => workerResult())
+    const execute = createRepositoryAgentExecutor(worker)
+    const base = input()
+
+    await expect(execute({ ...base, input: { context: { payload: "x".repeat(50_000) } } })).rejects.toThrow(
+      "exceed 50000 characters"
+    )
+    expect(worker).not.toHaveBeenCalled()
   })
 })

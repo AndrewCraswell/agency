@@ -146,22 +146,22 @@ export function createManualDataValidationWorkflow(): WorkflowDefinition {
         id: "success",
         label: "Report ready",
         position: { x: 1960, y: 160 },
-        definition: { kind: "success", version: 1 },
-        config: {},
+        definition: { kind: "set_fields", version: 1 },
+        config: { fields: {} },
         failurePolicy: { mode: "stop", maximumAttempts: 1 }
       }
     ],
     connections: [
       connection("start-normalize", "manual-start", "input", "normalize-request", "input"),
       connection("normalize-select", "normalize-request", "value", "select-fields", "input"),
-      connection("select-validate", "select-fields", "value", "validate-request", "value"),
-      connection("validate-route", "validate-request", "value", "route-priority", "input"),
+      connection("select-validate", "select-fields", "value", "validate-request", "input"),
+      connection("validate-route", "validate-request", "true", "route-priority", "input"),
       connection("route-urgent", "route-priority", "true", "mark-urgent", "input"),
       connection("route-normal", "route-priority", "false", "mark-normal", "input"),
       connection("urgent-merge", "mark-urgent", "value", "merge-route", "branches"),
       connection("normal-merge", "mark-normal", "value", "merge-route", "branches"),
       connection("merge-compose", "merge-route", "value", "compose-report", "values"),
-      connection("compose-success", "compose-report", "markdown", "success", "result")
+      connection("compose-success", "compose-report", "markdown", "success", "input")
     ]
   })
 }
@@ -242,7 +242,7 @@ export function createParallelCollectionRoutingWorkflow(): WorkflowDefinition {
         template:
           "# Report {{request.requestId}}\n\nFormat: {{selectedFormat}}\n\n{{formatNote}}\n\nRequest: {{request.summary}}\n\nContext: {{context.summary}}\n\nAction: {{action.summary}}"
       }),
-      step("success", "Report ready", 1960, 220, "success", {})
+      step("success", "Report ready", 1960, 220, "set_fields", { fields: {} })
     ],
     connections: [
       connection("start-request", "manual-start", "input", "request-section", "input"),
@@ -251,8 +251,8 @@ export function createParallelCollectionRoutingWorkflow(): WorkflowDefinition {
       connection("request-collect", "request-section", "value", "collect-sections", "items"),
       connection("context-collect", "context-section", "value", "collect-sections", "items"),
       connection("action-collect", "action-section", "value", "collect-sections", "items"),
-      connection("collect-validate", "collect-sections", "collection", "validate-sections", "value"),
-      connection("validate-route", "validate-sections", "value", "route-format", "input"),
+      connection("collect-validate", "collect-sections", "collection", "validate-sections", "input"),
+      connection("validate-route", "validate-sections", "true", "route-format", "input"),
       branchConnection("route-summary", "route-format", "summary", "summary-format"),
       branchConnection("route-detailed", "route-format", "detailed", "detailed-format"),
       branchConnection("route-fallback", "route-format", "fallback", "fallback-format"),
@@ -260,7 +260,7 @@ export function createParallelCollectionRoutingWorkflow(): WorkflowDefinition {
       connection("detailed-merge", "detailed-format", "value", "merge-format", "branches"),
       connection("fallback-merge", "fallback-format", "value", "merge-format", "branches"),
       connection("merge-compose", "merge-format", "value", "compose-report", "values"),
-      connection("compose-success", "compose-report", "markdown", "success", "result")
+      connection("compose-success", "compose-report", "markdown", "success", "input")
     ]
   })
 }

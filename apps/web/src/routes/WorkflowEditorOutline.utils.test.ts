@@ -6,13 +6,27 @@ import {
 } from "./WorkflowEditorOutline.utils"
 
 const nodes: WorkflowOutlineNode[] = [
-  { id: "trigger", label: "Manual run", kind: "manual_trigger", category: "trigger" },
-  { id: "branch", label: "Choose path", kind: "switch", category: "control" },
-  { id: "approve", label: "Approve", kind: "provider_action", category: "action" },
-  { id: "reject", label: "Reject", kind: "failure", category: "terminal" },
-  { id: "join", label: "Join paths", kind: "join", category: "control" },
-  { id: "done", label: "Done", kind: "success", category: "terminal" },
-  { id: "orphan", label: "Unreachable step", kind: "set_fields", category: "data" }
+  {
+    id: "trigger",
+    label: "Manual run",
+    kind: "manual_trigger",
+    category: "trigger",
+    typeLabel: "Manual run",
+    version: 1
+  },
+  { id: "branch", label: "Choose path", kind: "switch", category: "control", typeLabel: "Switch", version: 1 },
+  {
+    id: "approve",
+    label: "Approve",
+    kind: "provider_action",
+    category: "action",
+    typeLabel: "Provider action",
+    version: 1
+  },
+  { id: "reject", label: "Reject", kind: "set_fields", category: "data", typeLabel: "Set fields", version: 1 },
+  { id: "join", label: "Join paths", kind: "join", category: "control", typeLabel: "Join", version: 1 },
+  { id: "done", label: "Done", kind: "set_fields", category: "data", typeLabel: "Set fields", version: 1 },
+  { id: "orphan", label: "Unreachable step", kind: "set_fields", category: "data", typeLabel: "Set fields", version: 1 }
 ]
 
 const connections: WorkflowOutlineConnection[] = [
@@ -32,7 +46,7 @@ describe("projectWorkflowOutline", () => {
     expect(outline.find(({ id }) => id === "trigger")).toMatchObject({ role: "trigger", root: true, depth: 0 })
     expect(outline.find(({ id }) => id === "branch")).toMatchObject({ role: "branch", depth: 1 })
     expect(outline.find(({ id }) => id === "join")).toMatchObject({ role: "join" })
-    expect(outline.find(({ id }) => id === "done")).toMatchObject({ role: "outcome" })
+    expect(outline.find(({ id }) => id === "done")).toMatchObject({ role: "step" })
     expect(outline.find(({ id }) => id === "orphan")).toMatchObject({ root: true, unreachable: true })
     expect(outline.find(({ id }) => id === "branch")?.outgoing).toEqual(
       expect.arrayContaining([

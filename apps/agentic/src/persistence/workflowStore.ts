@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { and, desc, eq } from "drizzle-orm"
+import { and, desc, eq, inArray, or } from "drizzle-orm"
 import type { NodePgDatabase } from "drizzle-orm/node-postgres"
 import { createSelectSchema } from "drizzle-zod"
 import { z } from "zod"
@@ -11,11 +11,24 @@ import type { WorkflowModelSnapshot } from "../workflows/modelCatalog"
 import type { RepositoryAgentSnapshot } from "../workflows/repositoryAgents"
 import { CURRENT_WORKFLOW_RELEASE_PHASE } from "../workflows/stepRegistry"
 import {
+  artifactRecords,
+  reviewCycles,
   runtimeSelections,
+  workflowActivations,
+  workflowAttempts,
+  workflowData,
   workflowDefinitions,
+  workflowEffects,
+  workflowEvents,
   workflowExecutionPackages,
+  workflowJournalRuns,
   workflowRunBindings,
+  workflowRunEvents,
+  workflowRunLinks,
   workflowRuns,
+  workflowSchedules,
+  workflowWaits,
+  workspaceLeases,
   workflowVersions
 } from "./schema"
 
@@ -78,6 +91,78 @@ export class PostgresWorkflowStore {
       })
       .returning()
     return WorkflowDefinitionRecordSchema.parse(rows[0])
+  }
+
+  async delete(workflowIdInput: string): Promise<void> {
+    const workflowId = z.uuid().parse(workflowIdInput)
+    await this.#database.transaction(async (transaction) => {
+      const rows = await transaction
+        .select()
+        .from(workflowDefinitions)
+        .where(eq(workflowDefinitions.workflowId, workflowId))
+        .limit(1)
+        .for("update")
+      WorkflowDefinitionRecordSchema.parse(rows[0])
+
+      const packageRows = await transaction
+        .select({ packageDigest: workflowExecutionPackages.packageDigest })
+        .from(workflowExecutionPackages)
+        .where(eq(workflowExecutionPackages.workflowId, workflowId))
+      const packageDigests = packageRows.map(({ packageDigest }) => packageDigest)
+      if (packageDigests.length > 0) {
+        const journalRunRows = await transaction
+          .select({ runId: workflowJournalRuns.runId })
+          .from(workflowJournalRuns)
+          .where(inArray(workflowJournalRuns.packageDigest, packageDigests))
+        const journalRunIds = journalRunRows.map(({ runId }) => runId)
+        if (journalRunIds.length > 0) {
+          await transaction
+            .delete(workflowRunLinks)
+            .where(
+              or(
+                inArray(workflowRunLinks.parentRunId, journalRunIds),
+                inArray(workflowRunLinks.childRunId, journalRunIds),
+                inArray(workflowRunLinks.childPackageDigest, packageDigests)
+              )
+            )
+          await transaction.delete(workflowRunEvents).where(inArray(workflowRunEvents.runId, journalRunIds))
+          await transaction.delete(workflowWaits).where(inArray(workflowWaits.runId, journalRunIds))
+          await transaction.delete(workflowData).where(inArray(workflowData.runId, journalRunIds))
+          await transaction.delete(workflowEffects).where(inArray(workflowEffects.runId, journalRunIds))
+          await transaction.delete(workflowAttempts).where(inArray(workflowAttempts.runId, journalRunIds))
+          await transaction.delete(workflowActivations).where(inArray(workflowActivations.runId, journalRunIds))
+          await transaction.delete(workflowJournalRuns).where(inArray(workflowJournalRuns.runId, journalRunIds))
+        } else {
+          await transaction.delete(workflowRunLinks).where(inArray(workflowRunLinks.childPackageDigest, packageDigests))
+        }
+        await transaction
+          .delete(workflowExecutionPackages)
+          .where(inArray(workflowExecutionPackages.packageDigest, packageDigests))
+      }
+
+      const legacyBindingRows = await transaction
+        .select({ runId: workflowRunBindings.runId })
+        .from(workflowRunBindings)
+        .where(eq(workflowRunBindings.workflowId, workflowId))
+      const legacyRunIds = legacyBindingRows.map(({ runId }) => runId)
+      if (legacyRunIds.length > 0) {
+        await transaction.delete(workspaceLeases).where(inArray(workspaceLeases.runId, legacyRunIds))
+        await transaction.delete(artifactRecords).where(inArray(artifactRecords.runId, legacyRunIds))
+        await transaction.delete(workflowEvents).where(inArray(workflowEvents.runId, legacyRunIds))
+        await transaction.delete(reviewCycles).where(inArray(reviewCycles.runId, legacyRunIds))
+        await transaction.delete(runtimeSelections).where(inArray(runtimeSelections.runId, legacyRunIds))
+        await transaction.delete(workflowRunBindings).where(inArray(workflowRunBindings.runId, legacyRunIds))
+        await transaction.delete(workflowRuns).where(inArray(workflowRuns.runId, legacyRunIds))
+      }
+
+      await transaction.delete(workflowSchedules).where(eq(workflowSchedules.workflowId, workflowId))
+      await transaction.delete(workflowVersions).where(eq(workflowVersions.workflowId, workflowId))
+      const deleted = await transaction
+        .delete(workflowDefinitions)
+        .where(eq(workflowDefinitions.workflowId, workflowId))
+        .returning({ workflowId: workflowDefinitions.workflowId })
+      if (deleted[0] === undefined) throw new Error("Workflow was not deleted")
+    })
   }
 
   async updateDraft(input: {

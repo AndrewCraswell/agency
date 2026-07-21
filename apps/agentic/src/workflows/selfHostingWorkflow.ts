@@ -12,6 +12,13 @@ type ResourceBinding = z.infer<typeof WorkflowResourceBindingSchema>
 type RepositoryAgentReference = z.infer<typeof RepositoryAgentReferenceSchema>
 type WorkflowConnection = z.infer<typeof WorkflowConnectionSchema>
 
+const repositoryAgentExecutionPolicy = {
+  validationCommands: [{ id: "diff-check", command: "git diff --check", workingDirectory: ".", timeoutMs: 60_000 }],
+  allowedPaths: ["apps/agentic/**"],
+  forbiddenPaths: [".git/**"],
+  budgets: { maxTurns: 40, maxTokens: 100_000, maxElapsedMs: 1_800_000 }
+}
+
 export type SelfHostingWorkflowInput = {
   repository: ResourceBinding
   linearTeam: ResourceBinding
@@ -33,7 +40,7 @@ function agentStep(
     label,
     position,
     definition: { kind: "repository_agent", version: 1 },
-    config: { agentReference, instructions },
+    config: { agentReference, instructions, ...repositoryAgentExecutionPolicy },
     failurePolicy: { mode: "stop", maximumAttempts: 2 }
   }
 }
@@ -143,8 +150,8 @@ export function createSelfHostingWorkflowDefinition(input: SelfHostingWorkflowIn
       id: "success",
       label: "Change approved",
       position: { x: 1720, y: 300 },
-      definition: { kind: "success", version: 1 },
-      config: {},
+      definition: { kind: "set_fields", version: 1 },
+      config: { fields: {} },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     }
   ]
@@ -160,7 +167,7 @@ export function createSelfHostingWorkflowDefinition(input: SelfHostingWorkflowIn
     },
     connection("repair-review", "repair", "result", "re-review", "context"),
     connection("re-review-loop", "re-review", "result", "review-loop", "state", true),
-    connection("loop-success", "review-loop", "result", "success", "result")
+    connection("loop-success", "review-loop", "result", "success", "input")
   ]
 
   return WorkflowDefinitionSchema.parse({

@@ -3,7 +3,12 @@ import { ArrowClockwiseRegular } from "@fluentui/react-icons"
 import { parseAsStringLiteral, useQueryState } from "nuqs"
 import { useEffect, useState } from "react"
 import { arrayIncludes } from "ts-extras"
-import { getControlPlaneRunSnapshot, type ControlPlaneRunSnapshot } from "@/services/api"
+import {
+  listControlPlaneAgents,
+  listJournalWorkflowRuns,
+  type AgentDefinition,
+  type JournalWorkflowRun
+} from "@/services/api"
 import { OperationsOverview } from "./OperationsOverview"
 import { useOperationsPageStyles } from "./OperationsPage.styles"
 import { OperationsRuns } from "./OperationsRuns"
@@ -17,7 +22,8 @@ export function OperationsPage() {
     "view",
     parseAsStringLiteral(operationViews).withDefault("overview").withOptions({ history: "push" })
   )
-  const [runSnapshot, setRunSnapshot] = useState<ControlPlaneRunSnapshot>()
+  const [agents, setAgents] = useState<AgentDefinition[]>([])
+  const [workflowRuns, setWorkflowRuns] = useState<JournalWorkflowRun[]>()
   const [runError, setRunError] = useState<string>()
   const [isRefreshing, setIsRefreshing] = useState(false)
 
@@ -26,7 +32,9 @@ export function OperationsPage() {
       setIsRefreshing(true)
     }
     try {
-      setRunSnapshot(await getControlPlaneRunSnapshot())
+      const [nextAgents, nextRuns] = await Promise.all([listControlPlaneAgents(), listJournalWorkflowRuns()])
+      setAgents(nextAgents)
+      setWorkflowRuns(nextRuns)
       setRunError(undefined)
     } catch (error) {
       setRunError(error instanceof Error ? error.message : "We couldn't load workflow runs.")
@@ -79,11 +87,9 @@ export function OperationsPage() {
           <MessageBarBody>{runError}</MessageBarBody>
         </MessageBar>
       )}
-      {view === "overview" ? <OperationsOverview snapshot={runSnapshot} /> : null}
-      {view === "runs" ? <OperationsRuns snapshot={runSnapshot} /> : null}
-      {view === "work-queue" ? (
-        <OperationsWorkQueue agents={runSnapshot?.agents ?? []} onAssigned={() => loadRuns()} />
-      ) : null}
+      {view === "overview" ? <OperationsOverview runs={workflowRuns} /> : null}
+      {view === "runs" ? <OperationsRuns runs={workflowRuns} /> : null}
+      {view === "work-queue" ? <OperationsWorkQueue agents={agents} onAssigned={() => loadRuns()} /> : null}
     </main>
   )
 }

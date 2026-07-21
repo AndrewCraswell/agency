@@ -10,6 +10,7 @@ import { workflowArtifactRoot } from "../orchestrator/runtime"
 import { ScrumMasterPlanner } from "../orchestrator/scrumMasterPlanner"
 import { createControlPlaneRuntime } from "../persistence/controlPlaneRuntime"
 import { runWorker } from "../prototype/runner"
+import { ProviderDeliveryDispatcher } from "../webhooks/providerDeliveryDispatcher"
 import { DurableWebhookRouter } from "../webhooks/router"
 import { DurableWebhookDispatcher } from "../webhooks/service"
 import { OpenRouterWorkflowModelExecutor } from "../workflows/modelExecutor"
@@ -144,6 +145,10 @@ const workflowDispatcher = new WorkflowDispatcher(
   (event) => process.stdout.write(`[workflow-step] ${JSON.stringify(event)}\n`)
 )
 const workflowService = new WorkflowService(runtime.workflowStore, runtime.workflowJournalStore)
+const providerDeliveryDispatcher = new ProviderDeliveryDispatcher(
+  runtime.providerDeliveryStore,
+  workflowService.receiveWebhook.bind(workflowService)
+)
 const workflowScheduleDispatcher = new WorkflowScheduleDispatcher(
   runtime.workflowScheduleStore,
   async () => (await resolvePublishedTriggerCatalog(runtime.workflowStore)).schedules,
@@ -161,6 +166,7 @@ const dispatch = () => {
     dispatcher.dispatchPending(),
     reviewLoop.dispatchPending(),
     webhookDispatcher.dispatchPending(),
+    providerDeliveryDispatcher.dispatchPending(),
     workflowDispatcher.dispatchReady(),
     workflowScheduleDispatcher.dispatchDue().then((result) => {
       if (result.failed > 0) {

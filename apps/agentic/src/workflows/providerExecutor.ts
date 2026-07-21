@@ -1,12 +1,15 @@
 import { z } from "zod"
 import type { IntegrationCredentialBroker } from "../integrations/broker"
-import { createDefaultProviderExecutionPortResolver } from "../integrations/providerExecutionAdapters"
+import {
+  createDefaultProviderExecutionPortResolver,
+  ProviderMutationRejectedError
+} from "../integrations/providerExecutionAdapters"
 import type { ProviderConnectionContext, ProviderExecutionPortResolver } from "../integrations/providerPorts"
 import type { IntegrationConnectionStore } from "../persistence/integrationStore"
 import type { PostgresWorkflowJournalStore } from "../persistence/workflowJournalStore"
 import { WorkflowResourceBindingSchema, type WorkflowStepInstance } from "./definition"
 import { JsonValueSchema, type JsonValue } from "./executionContracts"
-import { getProviderOperation } from "./providerCatalog"
+import { getProviderOperation, validateProviderOperationInput } from "./providerCatalog"
 
 const JsonObjectSchema = z.record(z.string(), JsonValueSchema)
 const ProviderStepConfigSchema = z
@@ -50,7 +53,8 @@ export class WorkflowProviderExecutor {
 
   async read(step: WorkflowStepInstance, input: Record<string, JsonValue>): Promise<Record<string, JsonValue>> {
     const { operation, binding, context } = await this.#resolve(step, "read")
-    const query = JsonObjectSchema.parse(input.query ?? {})
+    const queryInput = JsonObjectSchema.parse(input.query ?? {})
+    const query = JsonObjectSchema.parse(validateProviderOperationInput(operation.operation, queryInput))
     const port = this.#providerPorts.resolve(operation.provider, operation.resourceType)
     const result = await port.read(context, operation.operation, binding, query)
     return { result: JsonValueSchema.parse(result) }
@@ -64,7 +68,7 @@ export class WorkflowProviderExecutor {
     request: Record<string, JsonValue>
   }): Promise<Record<string, JsonValue>> {
     const { operation, binding, context } = await this.#resolve(input.step, "write")
-    const request = JsonObjectSchema.parse(input.request)
+    const request = JsonObjectSchema.parse(validateProviderOperationInput(operation.operation, input.request))
     const effect = await this.#journal.reserveEffect({
       runId: input.runId,
       activationId: input.activationId,
@@ -89,12 +93,14 @@ export class WorkflowProviderExecutor {
       await this.#journal.confirmEffect(effect.effect.effectId, normalized)
       return { result: normalized }
     } catch (error) {
-      await this.#journal.classifyEffectFailure(effect.effect.effectId, "unknown", {
-        code: "provider_outcome_unknown",
+      const rejected = error instanceof ProviderMutationRejectedError
+      const code = rejected ? "provider_rejected" : "provider_outcome_unknown"
+      await this.#journal.classifyEffectFailure(effect.effect.effectId, rejected ? "failed" : "unknown", {
+        code,
         message: error instanceof Error ? error.message : "Provider action outcome is unknown"
       })
       throw new WorkflowProviderExecutionError(
-        "provider_outcome_unknown",
+        code,
         error instanceof Error ? error.message : "Provider action outcome is unknown"
       )
     }

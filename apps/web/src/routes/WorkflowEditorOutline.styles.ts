@@ -51,6 +51,7 @@ export const useWorkflowEditorOutlineStyles = makeStyles({
   index: { color: tokens.colorNeutralForeground3, fontVariantNumeric: "tabular-nums" },
   copy: { minWidth: 0, display: "flex", flexDirection: "column", gap: tokens.spacingVerticalXXS },
   description: { color: tokens.colorNeutralForeground3 },
+  typeIdentity: { color: tokens.colorNeutralForeground2, fontWeight: tokens.fontWeightSemibold },
   badges: {
     display: "flex",
     flexWrap: "wrap",

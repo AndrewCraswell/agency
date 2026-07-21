@@ -48,8 +48,7 @@ import {
   PlayRegular,
   PlugConnectedRegular,
   SearchRegular,
-  SettingsRegular,
-  StopRegular
+  SettingsRegular
 } from "@fluentui/react-icons"
 import { useNavigate, useParams } from "@tanstack/react-router"
 import {
@@ -119,9 +118,6 @@ function initialStepConfig(kind: string): Record<string, JsonValue> {
   if (kind === "validate") {
     return { schema: { type: "object" } }
   }
-  if (kind === "failure") {
-    return { code: "workflow_failed", message: "Workflow failed" }
-  }
   if (kind === "compose_markdown") {
     return { template: "# Report\n\n{{summary}}" }
   }
@@ -142,7 +138,7 @@ function initialStepConfig(kind: string): Record<string, JsonValue> {
         { role: "user", content: "Use this workflow context: {{context}}" }
       ],
       outputMode: "text",
-      parameters: { temperature: 0.2, max_tokens: 2_000 }
+      parameters: {}
     }
   }
   if (kind === "structured_judgment") {
@@ -189,11 +185,14 @@ function initialStepConfig(kind: string): Record<string, JsonValue> {
       onExhaustion: "fail"
     }
   }
-  if (kind === "wait") {
-    return { correlation: "event:{{id}}", expiresAfterSeconds: 3600, eventSchema: { type: "object" } }
+  if (kind === "wait_event_github" || kind === "wait_event_linear") {
+    return { eventKey: "", objectIdPath: ["id"], expiresAfterSeconds: 3600, onTimeout: "fail" }
+  }
+  if (kind === "delay") {
+    return { duration: 5, unit: "minutes" }
   }
   if (kind === "child_workflow") {
-    return { packageDigest: "", interfaceDigest: "" }
+    return { packageDigest: "", interfaceDigest: "", timeoutSeconds: 86400, maximumDepth: 5 }
   }
   return {}
 }
@@ -214,6 +213,9 @@ function repositoryScopedConfig(
   if (kind === "repository_data") {
     return { ...config, repository: { ...repositoryParts(repository.name), ref: "main" } }
   }
+  if (kind === "wait_event_github") {
+    return { ...config, binding: repository }
+  }
   if (kind === "provider_event" || kind === "provider_data" || kind === "provider_action") {
     if (config.provider !== repository.provider) {
       return config
@@ -226,9 +228,6 @@ function repositoryScopedConfig(
 function categoryLabel(category: WorkflowStepDefinition["category"]) {
   if (category === "ai") {
     return "AI"
-  }
-  if (category === "terminal") {
-    return "Outcomes"
   }
   return `${category[0]?.toUpperCase() ?? ""}${category.slice(1)}`
 }
@@ -292,9 +291,6 @@ function categoryIcon(category: WorkflowStepDefinition["category"]) {
   if (category === "data") {
     return <DataUsageRegular />
   }
-  if (category === "terminal") {
-    return <StopRegular />
-  }
   if (category === "ai") {
     return <BotRegular />
   }
@@ -304,41 +300,94 @@ function categoryIcon(category: WorkflowStepDefinition["category"]) {
   return <BranchForkRegular />
 }
 
+function nodeConfigurationSummary(step: WorkflowStep, definition: WorkflowStepDefinition): string | null {
+  const entries = definition.ui.fields
+    .filter(({ group, secret, key }) => group === "basic" && !secret && !/(?:Id|Digest)$/u.test(key))
+    .flatMap(({ key, label }) => {
+      const value = step.config[key]
+      if (typeof value === "string" && value.trim() !== "" && !value.includes("\n")) {
+        const summaryValue = value.length > 48 ? `${value.slice(0, 45)}...` : value
+        return [`${label}: ${summaryValue}`]
+      }
+      if (typeof value === "number" || typeof value === "boolean") {
+        return [`${label}: ${String(value)}`]
+      }
+      return []
+    })
+    .slice(0, 2)
+  return entries.length === 0 ? null : entries.join(", ")
+}
+
+function portCardinality(cardinality: WorkflowStepDefinition["inputs"][number]["cardinality"]): string {
+  if (cardinality === "many") {
+    return "many"
+  }
+  if (cardinality === "optional") {
+    return "optional"
+  }
+  return "required"
+}
+
 function WorkflowCanvasNode({ data, selected }: NodeProps<CanvasNode>) {
   const styles = useWorkflowEditorPageStyles()
+  const summary = nodeConfigurationSummary(data.step, data.definition)
   return (
     <Card appearance="filled" className={mergeClasses(styles.node, selected && styles.nodeSelected)} size="small">
-      {data.definition.inputs.map((input, index) => (
-        <Handle
-          key={input.name}
-          id={input.name}
-          type="target"
-          position={Position.Left}
-          style={{ top: `${((index + 1) / (data.definition.inputs.length + 1)) * 100}%` }}
-        />
-      ))}
       <CardHeader
         className={styles.nodeHeader}
         image={<span className={styles.nodeIcon}>{categoryIcon(data.definition.category)}</span>}
-        header={<Body1>{data.step.label}</Body1>}
+        header={
+          <span className={styles.nodeIdentity}>
+            <Body1>{data.step.label}</Body1>
+            <Caption1 className={styles.nodeKind}>{data.definition.label}</Caption1>
+          </span>
+        }
         description={
           <span className={styles.nodeCopy}>
-            <Caption1 className={styles.nodeKind}>{data.definition.category}</Caption1>
-            <Caption1 className={styles.hint}>{data.definition.description}</Caption1>
+            <Caption1 className={styles.hint}>{summary ?? data.definition.description}</Caption1>
           </span>
         }
       />
-      {data.definition.category === "terminal"
-        ? null
-        : data.definition.outputs.map((output, index) => (
-            <Handle
-              key={output.name}
-              id={output.name}
-              type="source"
-              position={Position.Right}
-              style={{ top: `${((index + 1) / (data.definition.outputs.length + 1)) * 100}%` }}
-            />
+      <div className={styles.nodePorts}>
+        <div className={styles.nodePortColumn} aria-label="Inputs">
+          {data.definition.inputs.map((input) => (
+            <div key={input.name} className={styles.nodePortRow}>
+              <Handle
+                id={input.name}
+                type="target"
+                position={Position.Left}
+                className={mergeClasses(styles.nodeHandle, styles.nodeInputHandle)}
+                aria-label={`${input.label} input, ${portCardinality(input.cardinality)}`}
+              />
+              <Caption1
+                className={styles.nodePortLabel}
+                title={`${input.label}, ${portCardinality(input.cardinality)}`}
+              >
+                {input.label}
+              </Caption1>
+            </div>
           ))}
+        </div>
+        <div className={mergeClasses(styles.nodePortColumn, styles.nodeOutputColumn)} aria-label="Outputs">
+          {data.definition.outputs.map((output) => (
+            <div key={output.name} className={mergeClasses(styles.nodePortRow, styles.nodeOutputRow)}>
+              <Caption1
+                className={styles.nodePortLabel}
+                title={`${output.label}, ${portCardinality(output.cardinality)}`}
+              >
+                {output.label}
+              </Caption1>
+              <Handle
+                id={output.name}
+                type="source"
+                position={Position.Right}
+                className={mergeClasses(styles.nodeHandle, styles.nodeOutputHandle)}
+                aria-label={`${output.label} output, ${portCardinality(output.cardinality)}`}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
     </Card>
   )
 }
@@ -866,7 +915,9 @@ export function WorkflowEditorPage() {
       id,
       label: data.step.label,
       kind: data.definition.kind,
-      category: data.definition.category
+      category: data.definition.category,
+      typeLabel: data.definition.label,
+      version: data.definition.version
     })),
     edges.map((edge) => ({
       id: edge.id,

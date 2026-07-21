@@ -60,6 +60,109 @@ export const useRunDetailPageStyles = makeStyles({
       minWidth: 0
     }
   },
+  stepProgress: { marginBottom: tokens.spacingVerticalXL },
+  stepList: {
+    display: "flex",
+    flexDirection: "column",
+    listStyleType: "none",
+    padding: 0,
+    margin: 0
+  },
+  stepItem: {
+    position: "relative",
+    display: "grid",
+    gridTemplateColumns: "32px minmax(0, 1fr)",
+    gap: tokens.spacingHorizontalM,
+    paddingBottom: tokens.spacingVerticalL,
+    "&:not(:last-child)::before": {
+      content: "''",
+      position: "absolute",
+      top: "32px",
+      bottom: 0,
+      left: "15px",
+      width: "2px",
+      backgroundColor: tokens.colorNeutralStroke2
+    }
+  },
+  stepMarker: {
+    zIndex: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "32px",
+    height: "32px",
+    color: tokens.colorNeutralForegroundOnBrand,
+    backgroundColor: tokens.colorBrandBackground,
+    fontWeight: tokens.fontWeightSemibold,
+    ...shorthands.borderRadius(tokens.borderRadiusCircular)
+  },
+  stepContent: {
+    minWidth: 0,
+    padding: tokens.spacingHorizontalL,
+    backgroundColor: tokens.colorNeutralBackground1,
+    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
+    ...shorthands.borderRadius(tokens.borderRadiusMedium)
+  },
+  stepHeading: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: tokens.spacingHorizontalM,
+    marginBottom: tokens.spacingVerticalM,
+    "& > div": { display: "flex", flexDirection: "column" }
+  },
+  pendingStep: { color: tokens.colorNeutralForeground3 },
+  activationTrace: { display: "flex", flexDirection: "column", gap: tokens.spacingVerticalS },
+  attemptTrace: {
+    ...shorthands.borderTop("1px", "solid", tokens.colorNeutralStroke2),
+    "& > summary": {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: tokens.spacingHorizontalM,
+      padding: `${tokens.spacingVerticalM} 0`,
+      cursor: "pointer",
+      fontWeight: tokens.fontWeightSemibold
+    }
+  },
+  attemptMeta: { display: "flex", alignItems: "center", gap: tokens.spacingHorizontalS },
+  dataColumns: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: tokens.spacingHorizontalM,
+    paddingBottom: tokens.spacingVerticalM,
+    "& > section": {
+      display: "flex",
+      flexDirection: "column",
+      gap: tokens.spacingVerticalXS,
+      minWidth: 0
+    },
+    "@media (max-width: 720px)": { gridTemplateColumns: "1fr" }
+  },
+  stepError: {
+    display: "flex",
+    flexDirection: "column",
+    gap: tokens.spacingVerticalXS,
+    paddingBottom: tokens.spacingVerticalM,
+    color: tokens.colorPaletteRedForeground1
+  },
+  providerDetails: {
+    marginBottom: tokens.spacingVerticalM,
+    color: tokens.colorNeutralForeground2,
+    "& > summary": { cursor: "pointer", fontWeight: tokens.fontWeightSemibold },
+    "& > div": { paddingTop: tokens.spacingVerticalS }
+  },
+  jsonBlock: {
+    overflowX: "auto",
+    maxHeight: "320px",
+    margin: 0,
+    padding: tokens.spacingHorizontalS,
+    backgroundColor: tokens.colorNeutralBackground3,
+    fontFamily: tokens.fontFamilyMonospace,
+    fontSize: tokens.fontSizeBase200,
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word"
+  },
   diagnostics: {
     backgroundColor: tokens.colorNeutralBackground1,
     ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
@@ -75,6 +178,12 @@ export const useRunDetailPageStyles = makeStyles({
     "&[open] > summary": { ...shorthands.borderBottom("1px", "solid", tokens.colorNeutralStroke2) }
   },
   diagnosticsContent: { padding: tokens.spacingHorizontalL },
+  subsectionHeading: {
+    display: "flex",
+    flexDirection: "column",
+    gap: tokens.spacingVerticalXXS,
+    marginBottom: tokens.spacingVerticalM
+  },
   details: {
     display: "grid",
     gridTemplateColumns: "repeat(3, minmax(0, 1fr))",

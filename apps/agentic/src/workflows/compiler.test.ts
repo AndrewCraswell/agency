@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest"
 import { compileWorkflowDefinition, WorkflowCompilationError } from "./compiler"
 import type { WorkflowDefinition } from "./definition"
+import type { JsonValue } from "./executionContracts"
 import type { WorkflowModelSnapshot } from "./modelCatalog"
 import type { RepositoryAgentSnapshot } from "./repositoryAgents"
 
 const workflowId = "019c230c-60c6-7bd8-a9f8-9e5f51b09e2f"
 const publishedSource = { kind: "published", version: 1 } as const
+const repositoryAgentExecutionPolicy = {
+  validationCommands: [{ id: "diff-check", command: "git diff --check", workingDirectory: ".", timeoutMs: 60_000 }],
+  allowedPaths: ["apps/agentic/**"],
+  forbiddenPaths: [".git/**"],
+  budgets: { maxTurns: 20, maxTokens: 50_000, maxElapsedMs: 600_000 }
+}
 
 function definition(): WorkflowDefinition {
   return {
@@ -33,10 +40,10 @@ function definition(): WorkflowDefinition {
       },
       {
         id: "success",
-        label: "Success",
+        label: "Result",
         position: { x: 400, y: 0 },
-        definition: { kind: "success", version: 1 },
-        config: {},
+        definition: { kind: "map_fields", version: 1 },
+        config: { mappings: { answer: "answer" } },
         failurePolicy: { mode: "stop", maximumAttempts: 1 }
       }
     ],
@@ -51,7 +58,7 @@ function definition(): WorkflowDefinition {
       {
         id: "set-success",
         source: { stepId: "set", port: "value" },
-        target: { stepId: "success", port: "result" },
+        target: { stepId: "success", port: "input" },
         outcome: "success",
         mappings: [{ sourcePath: [], targetPath: [] }]
       }
@@ -93,8 +100,123 @@ describe("compileWorkflowDefinition", () => {
     })
 
     expect(first.digest).toBe(second.digest)
-    expect(first.content.stepDefinitions.map(({ kind }) => kind)).toEqual(["manual_trigger", "set_fields", "success"])
-    expect(first.content.graph).toMatchObject({ topologicalOrder: ["manual", "set", "success"] })
+    expect(first.content.stepDefinitions.map(({ kind }) => kind)).toEqual([
+      "manual_trigger",
+      "map_fields",
+      "set_fields"
+    ])
+    expect(first.content.graph).toMatchObject({ sinkStepId: "success", topologicalOrder: ["manual", "set", "success"] })
+  })
+
+  it("requires one reachable sink whose sole output matches the workflow output", () => {
+    const multiple = definition()
+    multiple.steps.push({ ...multiple.steps[1]!, id: "other", label: "Other result" })
+    multiple.connections.push({
+      id: "manual-other",
+      source: { stepId: "manual", port: "input" },
+      target: { stepId: "other", port: "input" },
+      outcome: "success",
+      mappings: [{ sourcePath: [], targetPath: [] }]
+    })
+    expect(compileIssues(multiple, 2)).toContainEqual(expect.objectContaining({ code: "sink_count" }))
+
+    const incompatible = definition()
+    incompatible.outputSchema = {
+      type: "object",
+      additionalProperties: false,
+      required: ["approved"],
+      properties: { approved: { type: "boolean" } }
+    }
+    expect(compileIssues(incompatible, 2)).toContainEqual(expect.objectContaining({ code: "sink_output_schema" }))
+
+    const noOutput = definition()
+    noOutput.steps[2] = {
+      ...noOutput.steps[2]!,
+      definition: { kind: "validate", version: 1 },
+      config: { schema: { type: "object" } }
+    }
+    noOutput.connections[1] = { ...noOutput.connections[1]!, target: { stepId: "success", port: "value" } }
+    expect(compileIssues(noOutput, 2)).toContainEqual(expect.objectContaining({ code: "sink_output_count" }))
+  })
+
+  it("rejects more than one Manual run trigger", () => {
+    const source = definition()
+    source.steps.push({
+      ...source.steps[0]!,
+      id: "other-manual",
+      label: "Other manual"
+    })
+
+    const issues = compileIssues(source, 2)
+
+    expect(issues).toContainEqual(
+      expect.objectContaining({
+        code: "manual_trigger_ambiguous",
+        stepId: "other-manual"
+      })
+    )
+  })
+
+  it("rejects malformed step configuration before publication", () => {
+    const candidates: Array<{ kind: string; config: Record<string, JsonValue>; message: string }> = [
+      { kind: "set_fields", config: {}, message: "Required value is missing" },
+      { kind: "map_fields", config: { mappings: { name: 1 } }, message: "non-empty dot-separated source path" },
+      {
+        kind: "map_fields",
+        config: { mappings: { name: "user..name" } },
+        message: "non-empty dot-separated source path"
+      },
+      {
+        kind: "validate",
+        config: { schema: { type: "object", unsupported: true } },
+        message: "validation schema is unsupported"
+      },
+      {
+        kind: "validate",
+        config: { schema: { type: "array" } },
+        message: "validation schema must declare an object root"
+      },
+      { kind: "compose_markdown", config: {}, message: "Required value is missing" },
+      { kind: "collect", config: { mode: "keyed", maximumItems: 100 }, message: "requires a key field" }
+    ]
+
+    for (const candidate of candidates) {
+      const source = definition()
+      source.steps[1] = {
+        ...source.steps[1]!,
+        definition: { kind: candidate.kind, version: 1 },
+        config: candidate.config
+      }
+
+      const issues = compileIssues(source, candidate.kind === "set_fields" || candidate.kind === "map_fields" ? 2 : 3)
+
+      expect(issues).toContainEqual(expect.objectContaining({ code: "step_configuration", stepId: "set" }))
+      expect(issues.some(({ message }) => message.includes(candidate.message))).toBe(true)
+    }
+  })
+
+  it.each([
+    ["file_content", { path: " " }, "path"],
+    ["code_search", { text: "" }, "text"],
+    ["pull_request", { pullRequestNumber: 0 }, "pullRequestNumber"],
+    ["pull_request_files", {}, "pullRequestNumber"],
+    ["reviews", { pullRequestNumber: -1 }, "pullRequestNumber"],
+    ["comments", { pullRequestNumber: 1.5 }, "pullRequestNumber"]
+  ])("rejects invalid static repository query for %s", (operation, fields, requiredField) => {
+    const source = definition()
+    source.steps[1] = { ...source.steps[1]!, config: { fields } }
+    source.steps[2] = {
+      ...source.steps[2]!,
+      definition: { kind: "repository_data", version: 1 },
+      config: { operation, repository: { owner: "agency", name: "repository", ref: "main" } }
+    }
+    source.connections[1] = { ...source.connections[1]!, target: { stepId: "success", port: "query" } }
+
+    const issues = compileIssues(source, 4)
+    expect(issues).toContainEqual(
+      expect.objectContaining({ code: "repository_data_query", stepId: "success", connectionId: "set-success" })
+    )
+    expect(issues.some(({ message }) => message.includes(String(requiredField)))).toBe(true)
   })
 
   it("rejects step families before their release phase", () => {
@@ -111,7 +233,7 @@ describe("compileWorkflowDefinition", () => {
     source.connections[0] = { ...source.connections[0]!, source: { stepId: "manual", port: "missing" } }
     source.connections.push({
       id: "success-set",
-      source: { stepId: "success", port: "result" },
+      source: { stepId: "success", port: "value" },
       target: { stepId: "set", port: "input" },
       outcome: "success",
       mappings: [{ sourcePath: [], targetPath: [] }]
@@ -199,7 +321,7 @@ describe("compileWorkflowDefinition", () => {
       {
         id: "loop-success",
         source: { stepId: "set", port: "result" },
-        target: { stepId: "success", port: "result" },
+        target: { stepId: "success", port: "input" },
         outcome: "success",
         mappings: [{ sourcePath: [], targetPath: [] }]
       }
@@ -256,7 +378,7 @@ describe("compileWorkflowDefinition", () => {
     source.steps[1] = {
       ...source.steps[1]!,
       definition: { kind: "repository_agent", version: 1 },
-      config: { agentReference: reference }
+      config: { agentReference: reference, ...repositoryAgentExecutionPolicy }
     }
     source.connections[0] = {
       ...source.connections[0]!,
@@ -524,10 +646,10 @@ describe("compileWorkflowDefinition", () => {
     }
     source.steps.splice(2, 0, {
       id: "failure",
-      label: "Failure",
+      label: "Alternate result",
       position: { x: 400, y: 100 },
-      definition: { kind: "failure", version: 1 },
-      config: { code: "FAILED", message: "failed" },
+      definition: { kind: "set_fields", version: 1 },
+      config: { fields: {} },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     })
     source.connections = [
@@ -535,13 +657,13 @@ describe("compileWorkflowDefinition", () => {
       {
         ...source.connections[1]!,
         source: { stepId: "set", port: "branch" },
-        target: { stepId: "success", port: "result" },
+        target: { stepId: "success", port: "input" },
         branchKey: "urgent"
       },
       {
         id: "switch-default",
         source: { stepId: "set", port: "branch" },
-        target: { stepId: "failure", port: "error" },
+        target: { stepId: "failure", port: "input" },
         outcome: "success",
         branchKey: "normal",
         mappings: [{ sourcePath: [], targetPath: [] }]
@@ -710,20 +832,20 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "duplicate connection IDs",
       maximumPhase: 2 as const,
-      expectedCodes: ["duplicate_connection"],
+      expectedCodes: ["duplicate_connection", "sink_count"],
       build(source: WorkflowDefinition) {
         source.steps.push({
           id: "failure",
-          label: "Failure",
+          label: "Alternate result",
           position: { x: 420, y: 120 },
-          definition: { kind: "failure", version: 1 },
-          config: { code: "FAILED", message: "failed" },
+          definition: { kind: "set_fields", version: 1 },
+          config: { fields: {} },
           failurePolicy: { mode: "stop", maximumAttempts: 1 }
         })
         source.connections.push({
           id: "set-success",
           source: { stepId: "manual", port: "input" },
-          target: { stepId: "failure", port: "error" },
+          target: { stepId: "failure", port: "input" },
           outcome: "success",
           mappings: [{ sourcePath: [], targetPath: [] }]
         })
@@ -746,20 +868,20 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "connection references an unavailable source port",
       maximumPhase: 2 as const,
-      expectedCodes: ["source_port"],
+      expectedCodes: ["sink_count", "source_port"],
       build(source: WorkflowDefinition) {
         source.steps.push({
           id: "failure",
-          label: "Failure",
+          label: "Alternate result",
           position: { x: 420, y: 120 },
-          definition: { kind: "failure", version: 1 },
-          config: { code: "FAILED", message: "failed" },
+          definition: { kind: "set_fields", version: 1 },
+          config: { fields: {} },
           failurePolicy: { mode: "stop", maximumAttempts: 1 }
         })
         source.connections.push({
           id: "manual-failure",
           source: { stepId: "manual", port: "missing" },
-          target: { stepId: "failure", port: "error" },
+          target: { stepId: "failure", port: "input" },
           outcome: "success",
           mappings: [{ sourcePath: [], targetPath: [] }]
         })
@@ -836,7 +958,7 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "arbitrary non-loop cycle in graph",
       maximumPhase: 7 as const,
-      expectedCodes: ["cycle"],
+      expectedCodes: ["branch_merge_owner", "cycle"],
       build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
@@ -876,7 +998,7 @@ describe("compileWorkflowDefinition", () => {
           {
             id: "body-success",
             source: { stepId: "body", port: "value" },
-            target: { stepId: "success", port: "result" },
+            target: { stepId: "success", port: "input" },
             outcome: "success",
             mappings: [{ sourcePath: [], targetPath: [] }]
           }
@@ -884,9 +1006,9 @@ describe("compileWorkflowDefinition", () => {
       }
     },
     {
-      name: "orphaned step is unreachable and cannot reach a terminal",
+      name: "orphaned step is unreachable",
       maximumPhase: 2 as const,
-      expectedCodes: ["terminal_unreachable", "unreachable_step"],
+      expectedCodes: ["unreachable_step"],
       build(source: WorkflowDefinition) {
         source.steps.push({
           id: "orphan",
@@ -911,22 +1033,6 @@ describe("compileWorkflowDefinition", () => {
         source.connections[0] = {
           ...source.connections[0]!,
           source: { stepId: "manual", port: "value" }
-        }
-      }
-    },
-    {
-      name: "workflow requires at least one terminal",
-      maximumPhase: 2 as const,
-      expectedCodes: ["terminal_required", "terminal_unreachable"],
-      build(source: WorkflowDefinition) {
-        source.steps[2] = {
-          ...source.steps[2]!,
-          definition: { kind: "set_fields", version: 1 },
-          config: { fields: {} }
-        }
-        source.connections[1] = {
-          ...source.connections[1]!,
-          target: { stepId: "success", port: "input" }
         }
       }
     }
@@ -1016,7 +1122,7 @@ describe("compileWorkflowDefinition", () => {
       {
         id: "merge-success",
         source: { stepId: "merge", port: "value" },
-        target: { stepId: "success", port: "result" },
+        target: { stepId: "success", port: "input" },
         outcome: "success",
         mappings: [{ sourcePath: [], targetPath: [] }]
       }
@@ -1049,10 +1155,10 @@ describe("compileWorkflowDefinition", () => {
     })
     conditionSource.steps.push({
       id: "failure",
-      label: "Failure",
+      label: "Alternate path",
       position: { x: 540, y: 100 },
-      definition: { kind: "failure", version: 1 },
-      config: { code: "FAILED", message: "failed" },
+      definition: { kind: "set_fields", version: 1 },
+      config: { fields: {} },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     })
     conditionSource.connections = [
@@ -1066,7 +1172,7 @@ describe("compileWorkflowDefinition", () => {
       {
         id: "condition-true",
         source: { stepId: "set", port: "true" },
-        target: { stepId: "failure", port: "error" },
+        target: { stepId: "failure", port: "input" },
         outcome: "success",
         mappings: [{ sourcePath: [], targetPath: [] }]
       },
@@ -1080,12 +1186,12 @@ describe("compileWorkflowDefinition", () => {
       {
         id: "merge-success",
         source: { stepId: "merge", port: "value" },
-        target: { stepId: "success", port: "result" },
+        target: { stepId: "success", port: "input" },
         outcome: "success",
         mappings: [{ sourcePath: [], targetPath: [] }]
       }
     ]
-    expectIssueCodes(conditionSource, 7, ["branch_merge_unreachable"])
+    expectIssueCodes(conditionSource, 7, ["branch_merge_unreachable", "sink_count"])
   })
 
   it.each([
@@ -1109,7 +1215,7 @@ describe("compileWorkflowDefinition", () => {
           {
             id: "join-success",
             source: { stepId: "set", port: "results" },
-            target: { stepId: "success", port: "result" },
+            target: { stepId: "success", port: "input" },
             outcome: "success",
             mappings: [{ sourcePath: ["[]"], targetPath: [] }]
           }
@@ -1136,7 +1242,7 @@ describe("compileWorkflowDefinition", () => {
           {
             id: "join-success",
             source: { stepId: "set", port: "results" },
-            target: { stepId: "success", port: "result" },
+            target: { stepId: "success", port: "input" },
             outcome: "success",
             mappings: [{ sourcePath: ["[]"], targetPath: [] }]
           }
@@ -1178,7 +1284,7 @@ describe("compileWorkflowDefinition", () => {
           {
             id: "join-success",
             source: { stepId: "set", port: "results" },
-            target: { stepId: "success", port: "result" },
+            target: { stepId: "success", port: "input" },
             outcome: "success",
             mappings: [{ sourcePath: ["[]"], targetPath: [] }]
           }
@@ -1203,21 +1309,34 @@ describe("compileWorkflowDefinition", () => {
       config: { timezone: "UTC", intervalSeconds: 60 },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     })
-    source.steps.push({
-      id: "failure",
-      label: "Failure",
-      position: { x: 420, y: 120 },
-      definition: { kind: "failure", version: 1 },
-      config: { code: "FAILED", message: "failed" },
-      failurePolicy: { mode: "stop", maximumAttempts: 1 }
-    })
-    source.connections.push({
-      id: "schedule-failure",
-      source: { stepId: "schedule", port: "fire" },
-      target: { stepId: "failure", port: "error" },
-      outcome: "success",
-      mappings: [{ sourcePath: [], targetPath: [] }]
-    })
+    source.steps[2] = {
+      ...source.steps[2]!,
+      definition: { kind: "join", version: 1 },
+      config: { policy: "any" }
+    }
+    source.connections = [
+      {
+        id: "manual-join",
+        source: { stepId: "manual", port: "input" },
+        target: { stepId: "set", port: "branches" },
+        outcome: "success",
+        mappings: [{ sourcePath: [], targetPath: [] }]
+      },
+      {
+        id: "schedule-join",
+        source: { stepId: "schedule", port: "fire" },
+        target: { stepId: "set", port: "branches" },
+        outcome: "success",
+        mappings: [{ sourcePath: [], targetPath: [] }]
+      },
+      {
+        id: "join-success",
+        source: { stepId: "set", port: "results" },
+        target: { stepId: "success", port: "input" },
+        outcome: "success",
+        mappings: [{ sourcePath: ["[]"], targetPath: [] }]
+      }
+    ]
 
     expect(() =>
       compileWorkflowDefinition({ workflowId, source: publishedSource, definition: source, maximumPhase: 7 })
@@ -1234,18 +1353,18 @@ describe("compileWorkflowDefinition", () => {
       config: { fields: {} },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     })
-    expectIssueCodes(unknownVersion, 7, ["step_unavailable", "terminal_unreachable", "unreachable_step"])
+    expectIssueCodes(unknownVersion, 7, ["step_unavailable", "unreachable_step"])
 
     const phaseGated = definition()
     phaseGated.steps.push({
       id: "late",
       label: "Late phase",
       position: { x: 620, y: 0 },
-      definition: { kind: "wait", version: 1 },
-      config: { correlation: "run.id", expiresAfterSeconds: 30, eventSchema: { type: "object" } },
+      definition: { kind: "delay", version: 1 },
+      config: { duration: 30, unit: "seconds" },
       failurePolicy: { mode: "stop", maximumAttempts: 1 }
     })
-    expectIssueCodes(phaseGated, 6, ["step_unavailable", "terminal_unreachable", "unreachable_step"])
+    expectIssueCodes(phaseGated, 6, ["step_unavailable", "unreachable_step"])
   })
 
   it("flags duplicate loop-back edges on bounded loops", () => {
@@ -1313,13 +1432,116 @@ describe("compileWorkflowDefinition", () => {
       {
         id: "loop-success",
         source: { stepId: "set", port: "result" },
-        target: { stepId: "success", port: "result" },
+        target: { stepId: "success", port: "input" },
         outcome: "success",
         mappings: [{ sourcePath: [], targetPath: [] }]
       }
     ]
 
     expectIssueCodes(source, 7, ["loop_back", "loop_back_duplicate"])
+  })
+
+  it("requires Repeat exhaustion wiring to agree with its policy", () => {
+    const source = definition()
+    source.steps[1] = {
+      ...source.steps[1]!,
+      definition: { kind: "bounded_loop", version: 1 },
+      config: {
+        maximumIterations: 3,
+        maximumActivations: 20,
+        condition: { path: ["continue"], operator: "truthy" },
+        bodyStepId: "body",
+        exitStepId: "success",
+        onExhaustion: "route"
+      }
+    }
+    source.steps.splice(2, 0, {
+      id: "body",
+      label: "Body",
+      position: { x: 300, y: 100 },
+      definition: { kind: "set_fields", version: 1 },
+      config: { fields: {} },
+      failurePolicy: { mode: "stop", maximumAttempts: 1 }
+    })
+    source.connections = [
+      { ...source.connections[0]!, target: { stepId: "set", port: "state" } },
+      {
+        id: "loop-body",
+        source: { stepId: "set", port: "iteration" },
+        target: { stepId: "body", port: "input" },
+        outcome: "success",
+        mappings: [{ sourcePath: ["state"], targetPath: [] }]
+      },
+      {
+        id: "loop-back",
+        source: { stepId: "body", port: "value" },
+        target: { stepId: "set", port: "state" },
+        outcome: "success",
+        loopBack: true,
+        mappings: [{ sourcePath: [], targetPath: [] }]
+      },
+      {
+        ...source.connections[1]!,
+        source: { stepId: "set", port: "result" },
+        target: { stepId: "success", port: "result" }
+      }
+    ]
+    expect(compileIssues(source, 7)).toContainEqual(
+      expect.objectContaining({ code: "loop_exhausted_edge", stepId: "set" })
+    )
+
+    source.connections.push({
+      id: "loop-exhausted",
+      source: { stepId: "set", port: "exhausted" },
+      target: { stepId: "success", port: "result" },
+      outcome: "success",
+      mappings: [{ sourcePath: [], targetPath: [] }]
+    })
+    source.steps[1]!.config.onExhaustion = "fail"
+    expect(compileIssues(source, 7)).toContainEqual(
+      expect.objectContaining({ code: "loop_exhausted_policy", connectionId: "loop-exhausted" })
+    )
+  })
+
+  it("requires Wait timeout wiring to agree with its policy", () => {
+    const source = definition()
+    const binding = {
+      connectionId: "019c230c-60c6-7bd8-a9f8-9e5f51b09e77",
+      provider: "github" as const,
+      resourceType: "repository" as const,
+      externalId: "REPOSITORY",
+      name: "agency/repository",
+      capabilities: ["repository.read"]
+    }
+    source.resourceBindings = { repository: binding }
+    source.steps[1] = {
+      ...source.steps[1]!,
+      definition: { kind: "wait_event_github", version: 1 },
+      config: {
+        eventKey: "pull_request.updated",
+        objectIdPath: ["id"],
+        binding,
+        expiresAfterSeconds: 60,
+        onTimeout: "route"
+      }
+    }
+    source.connections[0] = { ...source.connections[0]!, target: { stepId: "set", port: "input" } }
+    source.connections[1] = { ...source.connections[1]!, source: { stepId: "set", port: "event" } }
+    expect(compileIssues(source, 7)).toContainEqual(
+      expect.objectContaining({ code: "wait_timeout_edge", stepId: "set" })
+    )
+
+    source.connections.push({
+      id: "wait-timeout",
+      source: { stepId: "set", port: "timeout" },
+      target: { stepId: "success", port: "input" },
+      outcome: "success",
+      mappings: [{ sourcePath: [], targetPath: [] }]
+    })
+    source.steps[1]!.config.onTimeout = "fail"
+    expect(compileIssues(source, 7)).toContainEqual(
+      expect.objectContaining({ code: "wait_timeout_policy", connectionId: "wait-timeout" })
+    )
   })
 
   it.each([
@@ -1368,17 +1590,13 @@ describe("compileWorkflowDefinition", () => {
       }
     },
     {
-      name: "wait timeout below minimum",
+      name: "delay duration below minimum",
       maximumPhase: 7 as const,
       build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
-          definition: { kind: "wait", version: 1 },
-          config: {
-            correlation: "run.id",
-            expiresAfterSeconds: 0,
-            eventSchema: { type: "object" }
-          }
+          definition: { kind: "delay", version: 1 },
+          config: { duration: 0, unit: "seconds" }
         }
       }
     },
@@ -1391,7 +1609,9 @@ describe("compileWorkflowDefinition", () => {
           definition: { kind: "child_workflow", version: 1 },
           config: {
             packageDigest: "not-a-digest",
-            interfaceDigest: "still-not-a-digest"
+            interfaceDigest: "still-not-a-digest",
+            timeoutSeconds: 86400,
+            maximumDepth: 5
           }
         }
       }
@@ -1408,12 +1628,12 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "repository agent reference must include a content digest",
       maximumPhase: 4 as const,
-      expectedCodes: ["agent_reference"],
+      expectedCodes: ["agent_reference", "step_configuration"],
       build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
           definition: { kind: "repository_agent", version: 1 },
-          config: { agentReference: { name: "Reviewer" } }
+          config: { agentReference: { name: "Reviewer" }, ...repositoryAgentExecutionPolicy }
         }
         source.connections[0] = { ...source.connections[0]!, target: { stepId: "set", port: "context" } }
         source.connections[1] = { ...source.connections[1]!, source: { stepId: "set", port: "result" } }
@@ -1422,7 +1642,7 @@ describe("compileWorkflowDefinition", () => {
     {
       name: "model steps require a string model ID",
       maximumPhase: 5 as const,
-      expectedCodes: ["model_reference"],
+      expectedCodes: ["model_reference", "step_configuration"],
       build(source: WorkflowDefinition) {
         source.steps[1] = {
           ...source.steps[1]!,
@@ -1468,9 +1688,38 @@ describe("compileWorkflowDefinition", () => {
       }
     },
     {
+      name: "structured judgments require response_format support",
+      maximumPhase: 5 as const,
+      expectedCodes: ["model_structured_output"],
+      modelSnapshots: [
+        {
+          modelId: "openai/gpt-test",
+          name: "GPT Test",
+          contextLength: 128_000,
+          pricing: { prompt: "0.000001", completion: "0.000002" },
+          architecture: { inputModalities: ["text"], outputModalities: ["text"] },
+          supportedParameters: ["temperature"],
+          observedAt: "2026-07-19T12:00:00.000Z"
+        }
+      ] as WorkflowModelSnapshot[],
+      build(source: WorkflowDefinition) {
+        source.steps[1] = {
+          ...source.steps[1]!,
+          definition: { kind: "structured_judgment", version: 1 },
+          config: {
+            modelId: "openai/gpt-test",
+            criteria: "Approve complete evidence.",
+            outputSchema: { type: "object", properties: { approved: { type: "boolean" } }, required: ["approved"] }
+          }
+        }
+        source.connections[0] = { ...source.connections[0]!, target: { stepId: "set", port: "evidence" } }
+        source.connections[1] = { ...source.connections[1]!, source: { stepId: "set", port: "judgment" } }
+      }
+    },
+    {
       name: "model parameters must be an object",
       maximumPhase: 5 as const,
-      expectedCodes: ["model_parameters"],
+      expectedCodes: ["model_parameters", "step_configuration"],
       modelSnapshots: [
         {
           modelId: "openai/gpt-test",

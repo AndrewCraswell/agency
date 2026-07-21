@@ -223,6 +223,21 @@ describe("GitHubRepositoryDataReader", () => {
     expect(requested.searchParams.get("per_page")).toBe("10")
   })
 
+  it.each([
+    ["file_content", { path: " " }],
+    ["code_search", { text: "" }],
+    ["pull_request", { pullRequestNumber: 0 }],
+    ["pull_request_files", {}],
+    ["reviews", { pullRequestNumber: -1 }],
+    ["comments", { pullRequestNumber: 1.5 }]
+  ])("rejects invalid query input for %s", async (operation, query) => {
+    const fetcher = createFetcher({})
+    const reader = createReader(fetcher)
+
+    await expect(reader.execute(step(operation), { query })).rejects.toThrow()
+    expect(fetcher).not.toHaveBeenCalled()
+  })
+
   it("returns pull request details", async () => {
     const fetcher = createFetcher({
       number: 12,
@@ -304,7 +319,7 @@ describe("GitHubRepositoryDataReader", () => {
     })
     const reader = createReader(fetcher)
 
-    await expect(reader.execute(step("checks"), { query: { pullRequestNumber: 12 } })).resolves.toEqual({
+    await expect(reader.execute(step("checks"), { query: {} })).resolves.toEqual({
       result: {
         total_count: 1,
         check_runs: [
@@ -330,7 +345,7 @@ describe("GitHubRepositoryDataReader", () => {
     })
     const reader = createReader(fetcher)
 
-    await reader.execute(step("checks"), { query: { pullRequestNumber: 12, ref: "release/v1" } })
+    await reader.execute(step("checks"), { query: { ref: "release/v1" } })
 
     expect(requestedUrl(fetcher).pathname).toBe("/repos/agency/repository/commits/release%2Fv1/check-runs")
     expect(requestedUrl(fetcher).search).toBe("?per_page=100")
@@ -396,6 +411,20 @@ describe("GitHubRepositoryDataReader", () => {
     const reader = createReader(createFetcher({}))
 
     await expect(reader.execute(step("unknown_operation"), {})).rejects.toThrow("operation")
+  })
+
+  it("fails closed for additional repository configuration", async () => {
+    const reader = createReader(createFetcher({}))
+    const invalidStep = {
+      ...step("metadata"),
+      config: {
+        operation: "metadata",
+        repository: { owner: "agency", name: "repository", ref: "main" },
+        token: "must-not-pass-through"
+      }
+    }
+
+    await expect(reader.execute(invalidStep, {})).rejects.toThrow("Unrecognized key")
   })
 
   it("fails closed for invalid repository ref in configuration", async () => {

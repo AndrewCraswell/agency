@@ -3,6 +3,7 @@ import { z } from "zod"
 import { ActionAvailabilitySchema } from "../contracts/actionAvailability"
 import { WorkflowDefinitionSchema, WorkflowResourceBindingSchema, type WorkflowDefinition } from "./definition"
 import { JsonValueSchema } from "./executionContracts"
+import { RepositoryAgentReferenceSchema } from "./repositoryAgents"
 import { ScheduleDefinitionShape } from "./scheduleDefinition"
 
 export const WorkflowStatusSchema = z.enum(["draft", "archived"])
@@ -36,7 +37,8 @@ export const CreateWorkflowRequestSchema = z.discriminatedUnion("template", [
       description: z.string().trim().max(500).default(""),
       repository: GitHubRepositoryBindingSchema,
       linearTeam: LinearTeamBindingSchema,
-      modelId: z.string().trim().min(1, "Select a model.")
+      modelId: z.string().trim().min(1, "Select a model."),
+      agentReference: RepositoryAgentReferenceSchema
     })
     .strict()
 ])
@@ -114,6 +116,39 @@ export const WorkflowRunStartSchema = z
       z.object({ kind: z.literal("published"), version: z.number().int().positive() }).strict(),
       z.object({ kind: z.literal("draft_test"), draftRevision: z.number().int().positive() }).strict()
     ])
+  })
+  .strict()
+
+export const WorkflowRunListSchema = z
+  .object({
+    schemaVersion: z.literal("1"),
+    runs: z.array(
+      z
+        .object({
+          runId: z.uuid(),
+          workflowId: z.uuid(),
+          workflowName: z.string().min(1),
+          source: z.discriminatedUnion("kind", [
+            z.object({ kind: z.literal("published"), version: z.number().int().positive() }).strict(),
+            z.object({ kind: z.literal("draft_test"), draftRevision: z.number().int().positive() }).strict()
+          ]),
+          triggerIdentity: z.string().min(1),
+          status: z.enum([
+            "preparing",
+            "runnable",
+            "running",
+            "waiting",
+            "succeeded",
+            "failed",
+            "cancelled",
+            "abandoned"
+          ]),
+          createdAt: z.iso.datetime({ offset: true }),
+          updatedAt: z.iso.datetime({ offset: true }),
+          terminalAt: z.iso.datetime({ offset: true }).nullable()
+        })
+        .strict()
+    )
   })
   .strict()
 

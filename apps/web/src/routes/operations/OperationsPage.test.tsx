@@ -34,13 +34,24 @@ function workflowRun() {
   }
 }
 
-function runSnapshot(withRun = false) {
+function journalRun(overrides: Record<string, unknown> = {}) {
   return {
-    schemaVersion: "1" as const,
-    fetchedAt: updatedAt,
-    agents: agents(),
-    runs: withRun ? [workflowRun()] : []
+    runId,
+    workflowId: "3195de29-2774-4272-be07-6ed600cefd51",
+    workflowName: "AI joke teller",
+    source: { kind: "draft_test" as const, draftRevision: 10 },
+    triggerIdentity: "draft_test:49094ce2-6f7d-4289-8765-c364015e8d26",
+    status: "succeeded" as const,
+    createdAt: updatedAt,
+    updatedAt,
+    terminalAt: updatedAt,
+    ...overrides
   }
+}
+
+function mockOperationsFeeds(runs: ReturnType<typeof journalRun>[] = []) {
+  ApiMock.get("/api/control-plane/agents", { data: { schemaVersion: "1", agents: agents() } })
+  return ApiMock.get("/api/workflow-runs", { data: { schemaVersion: "1", runs } })
 }
 
 function queueItem(index = 42): WorkItemQueryResponse["items"][number] {
@@ -107,7 +118,7 @@ afterEach(() => {
 
 describe("OperationsPage", () => {
   it("restores queue state from the URL and pages a 225-item result", async () => {
-    ApiMock.get("/api/control-plane/runs", { data: runSnapshot() })
+    mockOperationsFeeds()
     const workItems = ApiMock.get("/api/control-plane/work-items", {
       data: queueResponse({ count: 25, total: 225, nextCursor: "next-page" })
     })
@@ -134,7 +145,7 @@ describe("OperationsPage", () => {
   }, 15_000)
 
   it("updates shareable search and sort state and supports keyboard row expansion", async () => {
-    ApiMock.get("/api/control-plane/runs", { data: runSnapshot() })
+    mockOperationsFeeds()
     const workItems = ApiMock.get("/api/control-plane/work-items", { data: queueResponse() })
     const urlUpdates = vi.fn<(event: UrlUpdateEvent) => void>()
     const user = userEvent.setup()
@@ -169,7 +180,7 @@ describe("OperationsPage", () => {
   })
 
   it("assigns an engineer from a filtered queue result", async () => {
-    ApiMock.get("/api/control-plane/runs", [{ data: runSnapshot() }, { data: runSnapshot(true) }])
+    mockOperationsFeeds()
     ApiMock.get("/api/control-plane/work-items", { data: queueResponse() })
     const assignment = ApiMock.post("/api/control-plane/assign", {
       status: 201,
@@ -191,44 +202,32 @@ describe("OperationsPage", () => {
     expect(assignment.spy).toHaveBeenCalledWith({ workItemId: queueItem(1).task.id, agentId: "engineer" })
   })
 
-  it("identifies active agents and unassigned intake in the runs view", async () => {
-    const engineerRun = workflowRun()
-    ApiMock.get("/api/control-plane/runs", {
-      data: {
-        ...runSnapshot(),
-        runs: [
-          engineerRun,
-          {
-            ...engineerRun,
-            runId: "09978e29-4b5b-4869-b592-d7bbfd25ca76",
-            activeRole: "scrum_master",
-            assignedAgentId: null,
-            sourceWorkItemId: null,
-            sourceWorkItemIdentifier: null
-          },
-          {
-            ...engineerRun,
-            runId: "8a6d607a-4573-4492-ad9c-e9fc636d4d73",
-            activeRole: "reviewer",
-            assignedAgentId: null,
-            sourceWorkItemIdentifier: "FEN-43"
-          }
-        ]
-      }
-    })
+  it("shows draft and published workflow runs as links to their details", async () => {
+    mockOperationsFeeds([
+      journalRun(),
+      journalRun({
+        runId: "09978e29-4b5b-4869-b592-d7bbfd25ca76",
+        workflowName: "Release workflow",
+        source: { kind: "published", version: 3 },
+        triggerIdentity: "schedule:nightly",
+        status: "running",
+        terminalAt: null
+      })
+    ])
 
     renderOperations("?view=runs")
 
     const runs = await screen.findByRole("list", { name: "Workflow runs" })
-    expect(within(runs).getByText("Engineer")).toBeInTheDocument()
-    expect(within(runs).getByText("Scrum master")).toBeInTheDocument()
-    expect(within(runs).getByText("Unknown agent")).toBeInTheDocument()
-    expect(within(runs).getByText("Unassigned intake")).toBeInTheDocument()
+    expect(within(runs).getByText("Draft test, revision 10")).toBeInTheDocument()
+    expect(within(runs).getByText("Manual test")).toBeInTheDocument()
+    expect(within(runs).getByText("Published version 3")).toBeInTheDocument()
+    expect(within(runs).getByText("Schedule")).toBeInTheDocument()
+    expect(within(runs).getByRole("link", { name: /AI joke teller/u })).toHaveAttribute("href", `/runs/${runId}`)
   })
 
   it("polls run status without polling queue inventory", async () => {
     vi.useFakeTimers()
-    const runs = ApiMock.get("/api/control-plane/runs", { data: runSnapshot() })
+    const runs = mockOperationsFeeds()
     const workItems = ApiMock.get("/api/control-plane/work-items", { data: queueResponse() })
 
     renderOperations("?view=work-queue")

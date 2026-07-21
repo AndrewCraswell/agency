@@ -21,6 +21,7 @@ import {
 } from "@fluentui/react-icons"
 import { useDeferredValue, useId, useState } from "react"
 import type { IntegrationConnection } from "@/services/api"
+import { formatIdentifierLabel } from "@/utils/formatIdentifierLabel"
 import { IntegrationConnectionActions } from "./IntegrationConnectionActions"
 
 const useStyles = makeStyles({
@@ -166,7 +167,7 @@ export function IntegrationConnectionCard({ connection, busy, onDisconnect, onRe
               ? "None"
               : connection.capabilities.map((capability) => (
                   <Badge key={capability} appearance="outline">
-                    {capability.replaceAll(".", " ")}
+                    {formatIdentifierLabel(capability)}
                   </Badge>
                 ))}
           </dd>

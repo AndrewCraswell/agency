@@ -129,7 +129,7 @@ export class GitHubRepositoryDataReader {
     const config = RepositoryDataConfigSchema.parse(step.config)
     const query = JsonObjectSchema.parse(inputValue.query ?? {})
     const repositoryPath = `/repos/${config.repository.owner}/${config.repository.name}`
-    let result: JsonValue
+    let result: JsonValue | undefined
     if (config.operation === "metadata") {
       const value = RepositoryMetadataSchema.parse(await this.#get(repositoryPath))
       result = {
@@ -185,7 +185,19 @@ export class GitHubRepositoryDataReader {
         incomplete: value.incomplete_results,
         items: value.items.slice(0, maximumItems)
       }
-    } else {
+    } else if (config.operation === "checks") {
+      const reference = typeof query.ref === "string" ? query.ref : config.repository.ref
+      result = CheckRunsSchema.parse(
+        await this.#get(`${repositoryPath}/commits/${encodeURIComponent(reference)}/check-runs`, {
+          per_page: MAXIMUM_ITEMS
+        })
+      )
+    } else if (
+      config.operation === "pull_request" ||
+      config.operation === "pull_request_files" ||
+      config.operation === "reviews" ||
+      config.operation === "comments"
+    ) {
       const pullRequestNumber = z.number().int().positive().parse(query.pullRequestNumber)
       if (config.operation === "pull_request") {
         result = PullRequestSchema.parse(await this.#get(`${repositoryPath}/pulls/${pullRequestNumber}`))
@@ -204,15 +216,11 @@ export class GitHubRepositoryDataReader {
           .array(CommentSchema)
           .max(MAXIMUM_ITEMS)
           .parse(await this.#get(`${repositoryPath}/issues/${pullRequestNumber}/comments`, { per_page: MAXIMUM_ITEMS }))
-      } else {
-        const reference = typeof query.ref === "string" ? query.ref : config.repository.ref
-        result = CheckRunsSchema.parse(
-          await this.#get(`${repositoryPath}/commits/${encodeURIComponent(reference)}/check-runs`, {
-            per_page: MAXIMUM_ITEMS
-          })
-        )
       }
+    } else {
+      throw new Error(`Repository operation ${config.operation} is unavailable`)
     }
+    if (result === undefined) throw new Error(`Repository operation ${config.operation} produced no result`)
     return { result }
   }
 

@@ -31,11 +31,11 @@ function publishedDefinition(): WorkflowDefinition {
         failurePolicy: { mode: "stop", maximumAttempts: 1 }
       },
       {
-        id: "event-success",
-        label: "Event complete",
+        id: "trigger-results",
+        label: "Trigger results",
         position: { x: 200, y: 0 },
-        definition: { kind: "success", version: 1 },
-        config: {},
+        definition: { kind: "join", version: 1 },
+        config: { policy: "any" },
         failurePolicy: { mode: "stop", maximumAttempts: 1 }
       },
       {
@@ -47,11 +47,11 @@ function publishedDefinition(): WorkflowDefinition {
         failurePolicy: { mode: "stop", maximumAttempts: 1 }
       },
       {
-        id: "schedule-success",
-        label: "Schedule complete",
-        position: { x: 200, y: 200 },
-        definition: { kind: "success", version: 1 },
-        config: {},
+        id: "result",
+        label: "Result",
+        position: { x: 400, y: 100 },
+        definition: { kind: "set_fields", version: 1 },
+        config: { fields: {} },
         failurePolicy: { mode: "stop", maximumAttempts: 1 }
       }
     ],
@@ -59,16 +59,23 @@ function publishedDefinition(): WorkflowDefinition {
       {
         id: "event-success",
         source: { stepId: "linear-event", port: "event" },
-        target: { stepId: "event-success", port: "result" },
+        target: { stepId: "trigger-results", port: "branches" },
         outcome: "success",
         mappings: [{ sourcePath: [], targetPath: [] }]
       },
       {
         id: "schedule-success",
         source: { stepId: "hourly", port: "fire" },
-        target: { stepId: "schedule-success", port: "result" },
+        target: { stepId: "trigger-results", port: "branches" },
         outcome: "success",
         mappings: [{ sourcePath: [], targetPath: [] }]
+      },
+      {
+        id: "triggers-result",
+        source: { stepId: "trigger-results", port: "results" },
+        target: { stepId: "result", port: "input" },
+        outcome: "success",
+        mappings: [{ sourcePath: ["[]"], targetPath: [] }]
       }
     ]
   }

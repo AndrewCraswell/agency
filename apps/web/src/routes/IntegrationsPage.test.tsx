@@ -125,7 +125,7 @@ describe("IntegrationsPage", () => {
     expect(screen.getByText("Connected")).toBeInTheDocument()
     expect(screen.getAllByRole("button", { name: "Add integration" })).toHaveLength(1)
     expect(screen.getByText("1 current, 0 stale")).toBeInTheDocument()
-    expect(screen.getByText("team read")).toBeInTheDocument()
+    expect(screen.getByText("Team read")).toBeInTheDocument()
     expect(screen.queryByRole("list", { name: "Discovered teams" })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: "Show resources (1)" }))
     expect(screen.getByRole("list", { name: "Discovered teams" })).toHaveTextContent("ENG Engineering")

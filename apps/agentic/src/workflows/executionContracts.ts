@@ -70,11 +70,10 @@ export const WorkflowEffectStatusSchema = z.enum([
   "confirmed",
   "unknown",
   "conflict",
-  "failed",
-  "resolved"
+  "failed"
 ])
 
-export const WorkflowWaitStatusSchema = z.enum(["pending", "claimed", "resumed", "timed_out", "cancelled"])
+export const WorkflowWaitStatusSchema = z.enum(["pending", "claimed", "resumed", "completed", "timed_out", "cancelled"])
 
 export const ActivationScopeSegmentSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("branch"), key: IdentifierSchema }).strict(),

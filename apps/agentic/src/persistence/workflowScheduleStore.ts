@@ -1,9 +1,9 @@
-import { and, asc, eq, isNull, lte, or } from "drizzle-orm"
+import { and, asc, eq, isNull, lte, or, sql } from "drizzle-orm"
 import type { NodePgDatabase } from "drizzle-orm/node-postgres"
 import { createSelectSchema } from "drizzle-zod"
 import { z } from "zod"
 import { ScheduleDefinitionSchema, nextScheduleRunAt, type ScheduleDefinition } from "../workflows/scheduleDefinition"
-import { workflowSchedules } from "./schema"
+import { workflowScheduleOccurrences, workflowSchedules } from "./schema"
 
 const WorkflowScheduleRecordSchema = createSelectSchema(workflowSchedules, {
   enabled: z
@@ -20,7 +20,14 @@ export type PublishedScheduleDefinition = ScheduleDefinition & {
   label: string
 }
 
-type WorkflowScheduleDatabase = NodePgDatabase<{ workflowSchedules: typeof workflowSchedules }>
+type WorkflowScheduleDatabase = NodePgDatabase<{
+  workflowSchedules: typeof workflowSchedules
+  workflowScheduleOccurrences: typeof workflowScheduleOccurrences
+}>
+
+function occurrenceId(schedule: WorkflowScheduleRecord): string {
+  return `${schedule.scheduleId}:${schedule.nextRunAt.toISOString()}`
+}
 
 function scheduleDefinition(value: {
   intervalSeconds: number | null
@@ -200,10 +207,57 @@ export class PostgresWorkflowScheduleStore {
     return claimed
   }
 
-  async completeClaim(input: { schedule: WorkflowScheduleRecord; owner: string; now: Date }): Promise<void> {
+  async beginOccurrence(input: { schedule: WorkflowScheduleRecord; dispatchedAt: Date }): Promise<void> {
+    const latenessMs = Math.max(0, input.dispatchedAt.getTime() - input.schedule.nextRunAt.getTime())
+    await this.#database
+      .insert(workflowScheduleOccurrences)
+      .values({
+        occurrenceId: occurrenceId(input.schedule),
+        scheduleId: input.schedule.scheduleId,
+        scheduledAt: input.schedule.nextRunAt,
+        timezone: input.schedule.timezone,
+        status: "dispatching",
+        attemptCount: 1,
+        dispatchedAt: input.dispatchedAt,
+        latenessMs,
+        disposition: latenessMs === 0 ? "on_time" : "latest",
+        updatedAt: input.dispatchedAt
+      })
+      .onConflictDoUpdate({
+        target: workflowScheduleOccurrences.occurrenceId,
+        set: {
+          status: "dispatching",
+          attemptCount: sql`${workflowScheduleOccurrences.attemptCount} + 1`,
+          dispatchedAt: input.dispatchedAt,
+          latenessMs,
+          lastError: null,
+          updatedAt: input.dispatchedAt
+        }
+      })
+  }
+
+  async completeClaim(input: {
+    schedule: WorkflowScheduleRecord
+    owner: string
+    now: Date
+    runId?: string
+  }): Promise<void> {
     const definition = scheduleDefinition(input.schedule)
+    await this.#database
+      .update(workflowScheduleOccurrences)
+      .set({
+        status: "started",
+        runId: input.runId === undefined ? null : z.uuid().parse(input.runId),
+        lastError: null,
+        updatedAt: input.now
+      })
+      .where(eq(workflowScheduleOccurrences.occurrenceId, occurrenceId(input.schedule)))
     await this.#finishClaim(input, {
-      nextRunAt: nextScheduleRunAt(definition, input.now, input.schedule.scheduleId),
+      nextRunAt: nextScheduleRunAt(
+        definition,
+        input.schedule.nextRunAt,
+        `${input.schedule.workflowId}:${input.schedule.triggerNodeId}`
+      ),
       lastSuccessfulAt: input.now,
       failureCode: null,
       failureDetails: null
@@ -217,6 +271,10 @@ export class PostgresWorkflowScheduleStore {
     error: unknown
   }): Promise<void> {
     const message = input.error instanceof Error ? input.error.message : "Scheduled run dispatch failed"
+    await this.#database
+      .update(workflowScheduleOccurrences)
+      .set({ status: "failed", lastError: message.slice(0, 2_000), updatedAt: input.now })
+      .where(eq(workflowScheduleOccurrences.occurrenceId, occurrenceId(input.schedule)))
     await this.#finishClaim(input, { failureCode: "dispatch_failed", failureDetails: message.slice(0, 2_000) })
   }
 

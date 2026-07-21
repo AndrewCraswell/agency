@@ -39,10 +39,10 @@ function definition(): WorkflowDefinition {
       },
       {
         id: "success",
-        label: "Success",
+        label: "Result",
         position: { x: 400, y: 0 },
-        definition: { kind: "success", version: 1 },
-        config: {},
+        definition: { kind: "set_fields", version: 1 },
+        config: { fields: {} },
         failurePolicy: { mode: "stop", maximumAttempts: 1 }
       }
     ],
@@ -57,7 +57,7 @@ function definition(): WorkflowDefinition {
       {
         id: "set-success",
         source: { stepId: "set", port: "value" },
-        target: { stepId: "success", port: "result" },
+        target: { stepId: "success", port: "input" },
         outcome: "success",
         mappings: [{ sourcePath: [], targetPath: [] }]
       }
@@ -76,17 +76,15 @@ function childReconciliationJournal() {
 }
 
 describe("workflow execution", () => {
-  it("executes deterministic data steps and terminal nodes", async () => {
+  it("executes deterministic data steps including an ordinary sink", async () => {
     const source = definition()
     await expect(executeWorkflowStep(source.steps[1]!, { input: { issue: "FEN-423" } })).resolves.toEqual({
       output: { value: { issue: "FEN-423", answer: 42 } },
-      terminalStatus: null,
       error: null,
       data: []
     })
-    await expect(executeWorkflowStep(source.steps[2]!, { result: { answer: 42 } })).resolves.toEqual({
-      output: { result: { answer: 42 } },
-      terminalStatus: "succeeded",
+    await expect(executeWorkflowStep(source.steps[2]!, { input: { answer: 42 } })).resolves.toEqual({
+      output: { value: { answer: 42 } },
       error: null,
       data: []
     })
@@ -172,7 +170,7 @@ describe("workflow execution", () => {
     )
   })
 
-  it("fails validate on schema mismatch and rejects invalid validate step config", async () => {
+  it("routes valid and invalid values and rejects invalid validate step config", async () => {
     const source = definition()
     const step = {
       ...source.steps[1]!,
@@ -187,13 +185,20 @@ describe("workflow execution", () => {
         }
       }
     }
-    await expect(executeWorkflowStep(step, { value: { status: "pending" } })).resolves.toMatchObject({
-      terminalStatus: "failed",
-      error: {
-        code: "validation_failed",
-        message: "$.status: Value is not one of the allowed values"
+    await expect(executeWorkflowStep(step, { input: { status: "pending" } })).resolves.toMatchObject({
+      output: {
+        false: {
+          value: { status: "pending" },
+          issues: [{ path: "$.status", message: "Value is not one of the allowed values" }],
+          schemaDigest: expect.stringMatching(/^[0-9a-f]{64}$/u)
+        }
       }
     })
+    await expect(executeWorkflowStep(step, { input: { status: "open" } })).resolves.toMatchObject({
+      output: { true: { status: "open" } },
+      error: null
+    })
+    await expect(executeWorkflowStep(step, {})).rejects.toThrow("Validate requires input")
 
     const invalidSchemaStep = {
       ...step,
@@ -202,21 +207,6 @@ describe("workflow execution", () => {
     await expect(executeWorkflowStep(invalidSchemaStep, { value: { status: "open" } })).rejects.toThrow(
       "$.schema: Expected object"
     )
-  })
-
-  it("emits explicit failure step errors from configured code and message", async () => {
-    const source = definition()
-    const step = {
-      ...source.steps[1]!,
-      definition: { kind: "failure", version: 1 },
-      config: { code: "domain_failure", message: "Domain validation failed" }
-    }
-    await expect(executeWorkflowStep(step, { error: { detail: "Missing owner" } })).resolves.toEqual({
-      output: {},
-      terminalStatus: "failed",
-      error: { code: "domain_failure", message: "Domain validation failed", detail: "Missing owner" },
-      data: []
-    })
   })
 
   it("routes deterministic conditions and selects one switch branch", async () => {
@@ -328,6 +318,7 @@ describe("workflow execution", () => {
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
+      sinkStepId: "on-true",
       topologicalOrder: ["condition", "on-true", "on-false"]
     })
     expect(downstreamActivations(conditionGraph, "condition", { true: { ok: true } }, [])).toEqual([
@@ -375,6 +366,7 @@ describe("workflow execution", () => {
           mappings: [{ sourcePath: ["value"], targetPath: [] }]
         }
       ],
+      sinkStepId: "urgent-target",
       topologicalOrder: ["switch", "urgent-target", "normal-target"]
     })
     expect(
@@ -422,6 +414,7 @@ describe("workflow execution", () => {
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
+      sinkStepId: "exit",
       topologicalOrder: ["loop", "body", "exit"]
     })
 
@@ -465,8 +458,19 @@ describe("workflow execution", () => {
         { activationId, attemptOrdinal: 1, scope: [{ kind: "loop", key: "set", iteration: 2 }] }
       )
     ).resolves.toMatchObject({
-      terminalStatus: "failed",
       error: { code: "loop_exhausted" }
+    })
+    await expect(
+      executeWorkflowStep(
+        { ...loop, config: { ...loop.config, onExhaustion: "route" } },
+        { state: { remaining: 1 } },
+        { activationId, attemptOrdinal: 1, scope: [{ kind: "loop", key: "set", iteration: 2 }] }
+      )
+    ).resolves.toMatchObject({
+      output: {
+        exhausted: { state: { remaining: 1 }, iterations: 2, maximumIterations: 2 }
+      },
+      error: null
     })
   })
 
@@ -544,6 +548,9 @@ describe("workflow execution", () => {
     await expect(executeWorkflowStep(keyedCollect, { items: [{ id: { nested: true } }] })).rejects.toThrow(
       "Collect item is missing scalar key field id"
     )
+    await expect(executeWorkflowStep(keyedCollect, { items: [{ id: 1 }, { id: "1" }] })).rejects.toThrow(
+      "Collect key 1 is duplicated by items 0 and 1"
+    )
   })
 
   it("requires compose markdown provenance and enforces markdown size limits", async () => {
@@ -557,6 +564,9 @@ describe("workflow execution", () => {
     await expect(executeWorkflowStep(compose, { values: { body: "ok" } })).rejects.toThrow(
       "Compose Markdown requires attempt provenance"
     )
+    await expect(
+      executeWorkflowStep(compose, { values: { body: "ok" } }, { activationId, attemptOrdinal: 1 })
+    ).rejects.toThrow("Compose Markdown requires artifact storage")
     await expect(
       executeWorkflowStep(
         compose,
@@ -598,6 +608,7 @@ describe("workflow execution", () => {
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
+      sinkStepId: "join",
       topologicalOrder: ["for-each", "body", "join"]
     })
     expect(downstreamActivations(graphAny, "for-each", { item: [{ id: "a" }, { id: "b" }, { id: "c" }] }, [])).toEqual([
@@ -637,6 +648,85 @@ describe("workflow execution", () => {
     expect(
       downstreamActivations(graphQuorum, "for-each", { item: [{ id: "a" }, { id: "b" }, { id: "c" }] }, [])
     ).toContainEqual({ stepId: "join", scope: [], inputBindings: {}, dependencyCount: 2 })
+    expect(() => downstreamActivations(graphQuorum, "for-each", { item: [{ id: "a" }] }, [])).toThrow(
+      "Join quorum 2 cannot be met by 1 items"
+    )
+
+    const emptyGraph = CompiledWorkflowGraphSchema.parse({
+      ...graphAny,
+      steps: [
+        ...graphAny.steps.map((step) => (step.id === "join" ? { ...step, config: { policy: "all" as const } } : step)),
+        { ...source.steps[2]!, id: "done" }
+      ],
+      connections: [
+        ...graphAny.connections,
+        {
+          id: "join-done",
+          source: { stepId: "join", port: "results" },
+          target: { stepId: "done", port: "result" },
+          outcome: "success" as const,
+          mappings: [{ sourcePath: [], targetPath: [] }]
+        }
+      ],
+      sinkStepId: "done",
+      topologicalOrder: ["for-each", "body", "join", "done"]
+    })
+    expect(downstreamActivations(emptyGraph, "for-each", { item: [] }, [])).toEqual([
+      {
+        stepId: "done",
+        scope: [],
+        inputBindings: { "join-done": { result: [] } },
+        dependencyCount: 0
+      }
+    ])
+    expect(() => downstreamActivations(graphQuorum, "for-each", { item: [] }, [])).toThrow(
+      "Join quorum 2 cannot be met by 0 items"
+    )
+  })
+
+  it("applies any and quorum thresholds to ordinary join fan-in", () => {
+    const source = definition()
+    const graph = CompiledWorkflowGraphSchema.parse({
+      schemaVersion: "2" as const,
+      inputSchema: { type: "object" as const },
+      outputSchema: { type: "object" as const },
+      steps: [
+        { ...source.steps[1]!, id: "first", definition: { kind: "set_fields", version: 1 }, config: { fields: {} } },
+        { ...source.steps[1]!, id: "second", definition: { kind: "set_fields", version: 1 }, config: { fields: {} } },
+        { ...source.steps[2]!, id: "join", definition: { kind: "join", version: 1 }, config: { policy: "any" } }
+      ],
+      connections: [
+        {
+          id: "first-join",
+          source: { stepId: "first", port: "value" },
+          target: { stepId: "join", port: "branches" },
+          outcome: "success",
+          mappings: [{ sourcePath: [], targetPath: [] }]
+        },
+        {
+          id: "second-join",
+          source: { stepId: "second", port: "value" },
+          target: { stepId: "join", port: "branches" },
+          outcome: "success",
+          mappings: [{ sourcePath: [], targetPath: [] }]
+        }
+      ],
+      sinkStepId: "join",
+      topologicalOrder: ["first", "second", "join"]
+    })
+
+    expect(downstreamActivations(graph, "first", { value: { id: "a" } }, [])).toContainEqual(
+      expect.objectContaining({ stepId: "join", dependencyCount: 0 })
+    )
+    const quorum = CompiledWorkflowGraphSchema.parse({
+      ...graph,
+      steps: graph.steps.map((step) =>
+        step.id === "join" ? { ...step, config: { policy: "quorum", quorum: 2 } } : step
+      )
+    })
+    expect(downstreamActivations(quorum, "first", { value: { id: "a" } }, [])).toContainEqual(
+      expect.objectContaining({ stepId: "join", dependencyCount: 1 })
+    )
   })
 
   it("propagates bounded loop iteration scope and then exits to parent scope", () => {
@@ -656,7 +746,7 @@ describe("workflow execution", () => {
             condition: { path: ["remaining"], operator: "greater_than", value: 0 },
             bodyStepId: "body",
             exitStepId: "exit",
-            onExhaustion: "complete"
+            onExhaustion: "route"
           }
         },
         { ...source.steps[1]!, id: "body", definition: { kind: "set_fields", version: 1 }, config: { fields: {} } },
@@ -678,6 +768,7 @@ describe("workflow execution", () => {
           mappings: [{ sourcePath: [], targetPath: [] }]
         }
       ],
+      sinkStepId: "exit",
       topologicalOrder: ["loop", "body", "exit"]
     })
 
@@ -738,6 +829,7 @@ describe("workflow execution", () => {
           outputSchema: source.outputSchema,
           steps: source.steps,
           connections: source.connections,
+          sinkStepId: "success",
           topologicalOrder: ["manual", "set", "success"]
         },
         stepDefinitions: [],
@@ -955,6 +1047,7 @@ describe("workflow execution", () => {
           outputSchema: source.outputSchema,
           steps: source.steps,
           connections: source.connections,
+          sinkStepId: "success",
           topologicalOrder: ["manual", "set", "success"]
         },
         stepDefinitions: [],
@@ -1176,6 +1269,7 @@ describe("workflow execution", () => {
               outputSchema: source.outputSchema,
               steps: source.steps,
               connections: source.connections,
+              sinkStepId: "success",
               topologicalOrder: ["manual", "set", "success"]
             },
             stepDefinitions: [],
@@ -1322,6 +1416,7 @@ describe("workflow execution", () => {
             outputSchema: source.outputSchema,
             steps: source.steps,
             connections: source.connections,
+            sinkStepId: "success",
             topologicalOrder: ["manual", "set", "success"]
           },
           stepDefinitions: [],
@@ -1371,15 +1466,17 @@ describe("workflow execution", () => {
     )
   })
 
-  it("suspends wait nodes without selecting an attempt output", async () => {
+  it("derives a GitHub wait event correlation from its sealed repository and input object ID", async () => {
     const source = definition()
     source.steps[0] = {
       ...source.steps[0]!,
-      definition: { kind: "wait", version: 1 },
+      definition: { kind: "wait_event_github", version: 1 },
       config: {
-        correlation: "github:{{repository}}:{{number}}",
+        eventKey: "pull_request.updated",
+        objectIdPath: ["pullRequest", "id"],
+        binding: { externalId: "repo-42" },
         expiresAfterSeconds: 300,
-        eventSchema: { type: "object" }
+        onTimeout: "fail"
       }
     }
     const suspendAttempt = vi.fn(async () => undefined)
@@ -1392,7 +1489,7 @@ describe("workflow execution", () => {
           stepId: "manual",
           scope: [],
           status: "ready" as const,
-          inputBindings: { context: { repository: "octo/agency", number: 42 } },
+          inputBindings: { input: { pullRequest: { id: "84" } } },
           selectedAttemptOrdinal: null,
           nextAttemptOrdinal: 1,
           dependencyCount: 0,
@@ -1436,6 +1533,7 @@ describe("workflow execution", () => {
             outputSchema: source.outputSchema,
             steps: source.steps,
             connections: source.connections,
+            sinkStepId: "success",
             topologicalOrder: ["manual", "set", "success"]
           },
           stepDefinitions: [],
@@ -1454,7 +1552,7 @@ describe("workflow execution", () => {
         fencingToken: 1,
         leaseOwner: "worker-1",
         leaseExpiresAt: new Date(),
-        input: { context: { repository: "octo/agency", number: 42 } },
+        input: { input: { pullRequest: { id: "84" } } },
         output: null,
         error: null,
         usage: null,
@@ -1487,7 +1585,7 @@ describe("workflow execution", () => {
     ).resolves.toBe(1)
     expect(suspendAttempt).toHaveBeenCalledWith(
       expect.objectContaining({
-        correlationKey: "github:octo/agency:42",
+        correlationKey: "github:repo-42:pull_request.updated:84",
         expiresAt: new Date("2026-07-19T12:05:00.000Z")
       })
     )
@@ -1502,7 +1600,7 @@ describe("workflow execution", () => {
     parent.steps[0] = {
       ...parent.steps[0]!,
       definition: { kind: "child_workflow", version: 1 },
-      config: { packageDigest: childPackageDigest, interfaceDigest }
+      config: { packageDigest: childPackageDigest, interfaceDigest, timeoutSeconds: 86400, maximumDepth: 5 }
     }
     const invokeChildWorkflow = vi.fn(async () => undefined)
     const completeAttempt = vi.fn(async () => undefined)
@@ -1519,6 +1617,7 @@ describe("workflow execution", () => {
         outputSchema: parent.outputSchema,
         steps: parent.steps,
         connections: parent.connections,
+        sinkStepId: "success",
         topologicalOrder: ["manual", "set", "success"]
       },
       stepDefinitions: [],
@@ -1535,6 +1634,7 @@ describe("workflow execution", () => {
         outputSchema: child.outputSchema,
         steps: child.steps,
         connections: child.connections,
+        sinkStepId: "success",
         topologicalOrder: ["manual", "set", "success"]
       }
     }
@@ -1634,10 +1734,12 @@ describe("workflow execution", () => {
       listExpiredWaits: vi.fn(async () => []),
       timeoutWait: vi.fn(async () => null),
       invokeChildWorkflow: vi.fn(),
-      listChildRunLinks: vi.fn(async () => [{ parentRunId: runId, childRunId, terminalStatus: null }]),
+      listChildRunLinks: vi.fn(async () => [
+        { parentRunId: runId, childRunId, terminalStatus: null, result: null, error: null }
+      ]),
       getChildRunCompletion: vi.fn(async () => ({
         status: "succeeded" as const,
-        output: { result: { answer: 42 } },
+        output: { answer: 42 },
         error: null
       })),
       recordChildRunCompletion,
@@ -1649,7 +1751,7 @@ describe("workflow execution", () => {
     expect(recordChildRunCompletion).toHaveBeenCalledWith({
       childRunId,
       status: "succeeded",
-      output: { result: { answer: 42 } },
+      output: { answer: 42 },
       error: null
     })
     expect(resumeWait).toHaveBeenCalledWith({
@@ -1676,7 +1778,9 @@ describe("workflow execution", () => {
       listExpiredWaits: vi.fn(async () => []),
       timeoutWait: vi.fn(async () => null),
       invokeChildWorkflow: vi.fn(),
-      listChildRunLinks: vi.fn(async () => [{ parentRunId: runId, childRunId, terminalStatus: null }]),
+      listChildRunLinks: vi.fn(async () => [
+        { parentRunId: runId, childRunId, terminalStatus: null, result: null, error: null }
+      ]),
       getChildRunCompletion: vi.fn(async () => ({ status: "failed" as const, output: {}, error })),
       recordChildRunCompletion,
       resumeWait: vi.fn(),
@@ -1706,7 +1810,9 @@ describe("workflow execution", () => {
       listExpiredWaits: vi.fn(async () => []),
       timeoutWait: vi.fn(async () => null),
       invokeChildWorkflow: vi.fn(),
-      listChildRunLinks: vi.fn(async () => [{ parentRunId: runId, childRunId, terminalStatus: null }]),
+      listChildRunLinks: vi.fn(async () => [
+        { parentRunId: runId, childRunId, terminalStatus: null, result: null, error: null }
+      ]),
       getChildRunCompletion: vi.fn(async () => ({ status: "failed" as const, output: {}, error: null })),
       recordChildRunCompletion: vi.fn(async () => undefined),
       resumeWait: vi.fn(),
@@ -1718,6 +1824,48 @@ describe("workflow execution", () => {
       runId,
       correlationKey: `child:${childRunId}`,
       error: { code: "child_workflow_failed", message: `Child workflow ${childRunId} failed` }
+    })
+  })
+
+  it("repairs parent resume after child completion was already recorded", async () => {
+    const childRunId = "019c230c-60c6-7bd8-a9f8-9e5f51b09e31"
+    const getChildRunCompletion = vi.fn()
+    const recordChildRunCompletion = vi.fn()
+    const resumeWait = vi.fn(async () => undefined)
+    const journal = {
+      listReadyActivations: vi.fn(async () => []),
+      getRun: vi.fn(),
+      getExecutionPackage: vi.fn(),
+      leaseActivation: vi.fn(),
+      completeAttempt: vi.fn(),
+      failAttempt: vi.fn(),
+      suspendAttempt: vi.fn(),
+      listExpiredWaits: vi.fn(async () => []),
+      timeoutWait: vi.fn(async () => null),
+      invokeChildWorkflow: vi.fn(),
+      listChildRunLinks: vi.fn(async () => [
+        {
+          parentRunId: runId,
+          childRunId,
+          terminalStatus: "succeeded" as const,
+          result: { answer: 42 },
+          error: null
+        }
+      ]),
+      getChildRunCompletion,
+      recordChildRunCompletion,
+      resumeWait,
+      failWait: vi.fn()
+    }
+
+    await expect(new WorkflowDispatcher(journal, "worker-1").dispatchReady()).resolves.toBe(0)
+    expect(getChildRunCompletion).not.toHaveBeenCalled()
+    expect(recordChildRunCompletion).not.toHaveBeenCalled()
+    expect(resumeWait).toHaveBeenCalledWith({
+      runId,
+      correlationKey: `child:${childRunId}`,
+      event: { answer: 42 },
+      outputPort: "output"
     })
   })
 

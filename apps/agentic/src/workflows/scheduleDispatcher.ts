@@ -13,13 +13,25 @@ const ScheduleDispatcherOptionsSchema = z
   })
   .strict()
 
-type ScheduleStore = Pick<PostgresWorkflowScheduleStore, "claimDue" | "completeClaim" | "failClaim" | "synchronize">
+type ScheduleStore = Pick<
+  PostgresWorkflowScheduleStore,
+  "beginOccurrence" | "claimDue" | "completeClaim" | "failClaim" | "synchronize"
+>
 
 export type ScheduledRunStarter = (
   workflowId: string,
   input: {
     version: number
-    input: Record<string, never>
+    input: {
+      occurrenceId: string
+      scheduledAt: string
+      timezone: string
+      dispatchedAt: string
+      latenessMs: number
+      attempt: number
+      misfireDisposition: "on_time" | "latest"
+      synthetic: false
+    }
     trigger: { type: "schedule"; key: string; stepId: string }
   }
 ) => Promise<unknown>
@@ -68,12 +80,30 @@ export class WorkflowScheduleDispatcher {
       let failed = 0
       for (const schedule of schedules) {
         try {
-          await this.#startRun(schedule.workflowId, {
+          const dispatchedAt = this.#now()
+          const occurrenceId = triggerKey(schedule)
+          await this.#store.beginOccurrence({ schedule, dispatchedAt })
+          const startedRun = await this.#startRun(schedule.workflowId, {
             version: schedule.workflowVersion,
-            input: {},
-            trigger: { type: "schedule", key: triggerKey(schedule), stepId: schedule.triggerNodeId }
+            input: {
+              occurrenceId,
+              scheduledAt: schedule.nextRunAt.toISOString(),
+              timezone: schedule.timezone,
+              dispatchedAt: dispatchedAt.toISOString(),
+              latenessMs: Math.max(0, dispatchedAt.getTime() - schedule.nextRunAt.getTime()),
+              attempt: 1,
+              misfireDisposition: dispatchedAt > schedule.nextRunAt ? "latest" : "on_time",
+              synthetic: false
+            },
+            trigger: { type: "schedule", key: occurrenceId, stepId: schedule.triggerNodeId }
           })
-          await this.#store.completeClaim({ schedule, owner: this.#options.owner, now: this.#now() })
+          const runId = z.object({ runId: z.uuid() }).passthrough().safeParse(startedRun)
+          await this.#store.completeClaim({
+            schedule,
+            owner: this.#options.owner,
+            now: this.#now(),
+            ...(runId.success ? { runId: runId.data.runId } : {})
+          })
           started += 1
         } catch (error) {
           await this.#store.failClaim({ schedule, owner: this.#options.owner, now: this.#now(), error })

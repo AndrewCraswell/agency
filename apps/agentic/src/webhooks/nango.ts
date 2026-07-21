@@ -1,4 +1,5 @@
 import { Nango } from "@nangohq/node"
+import { z } from "zod"
 
 type NangoWebhookType = "auth" | "sync" | "forward" | "async_action"
 
@@ -18,16 +19,20 @@ type ProviderPayloadSummary = {
   resourceId?: string | number
 }
 
-export type NangoWebhookReceipt = {
-  webhookType: "auth" | "sync" | "forward" | "async_action" | "unattributed" | "unknown"
-  from?: string
-  providerConfigKey?: string
-  connectionId?: string
-  providerEventAction?: string
-  providerObjectType?: string
-  providerObjectId?: string
-  providerResourceId?: string
-}
+export const NangoWebhookReceiptSchema = z
+  .object({
+    webhookType: z.enum(["auth", "sync", "forward", "async_action", "unattributed", "unknown"]),
+    from: z.string().optional(),
+    providerConfigKey: z.string().optional(),
+    connectionId: z.string().optional(),
+    providerEventAction: z.string().optional(),
+    providerObjectType: z.string().optional(),
+    providerObjectId: z.string().optional(),
+    providerResourceId: z.string().optional()
+  })
+  .strict()
+
+export type NangoWebhookReceipt = z.infer<typeof NangoWebhookReceiptSchema>
 
 export type NangoWebhookReceiver = {
   verifyIncomingWebhookRequest(body: string, headers: Record<string, unknown>): boolean

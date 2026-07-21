@@ -2,6 +2,7 @@ import { createHash } from "node:crypto"
 import { z } from "zod"
 import { AssignmentSchema } from "../contracts/assignment"
 import type { WorkerResult } from "../contracts/results"
+import { OPENHANDS_AGENT_SERVER_IMAGE } from "../openhands/profiles"
 import type { WorkflowStepInstance } from "./definition"
 import { JsonValueSchema, jsonValueDigest, type JsonValue } from "./executionContracts"
 import { RepositoryAgentSnapshotSchema, type RepositoryAgentSnapshot } from "./repositoryAgents"
@@ -17,25 +18,20 @@ const ValidationCommandConfigSchema = z
   .strict()
 const RepositoryAgentExecutionConfigSchema = z
   .object({
-    agentReference: z.object({ contentDigest: z.string().regex(/^[0-9a-f]{64}$/u) }).passthrough(),
+    agentReference: RepositoryAgentSnapshotSchema.shape.reference,
     instructions: z.string().trim().min(1).max(20_000).optional(),
-    validationCommands: z
-      .array(ValidationCommandConfigSchema)
-      .min(1)
-      .max(20)
-      .default([{ id: "diff-check", command: "git diff --check", workingDirectory: ".", timeoutMs: 60_000 }]),
-    allowedPaths: z.array(z.string().trim().min(1)).min(1).max(100).default(["**/*"]),
-    forbiddenPaths: z.array(z.string().trim().min(1)).max(100).default([".git/**"]),
+    validationCommands: z.array(ValidationCommandConfigSchema).min(1).max(20),
+    allowedPaths: z.array(z.string().trim().min(1)).min(1).max(100),
+    forbiddenPaths: z.array(z.string().trim().min(1)).max(100),
     budgets: z
       .object({
-        maxTurns: z.number().int().min(1).max(200).default(40),
-        maxTokens: z.number().int().min(1_000).max(1_000_000).default(100_000),
-        maxElapsedMs: z.number().int().min(60_000).max(3_600_000).default(1_800_000)
+        maxTurns: z.number().int().min(1).max(200),
+        maxTokens: z.number().int().min(1_000).max(1_000_000),
+        maxElapsedMs: z.number().int().min(60_000).max(3_600_000)
       })
       .strict()
-      .default({ maxTurns: 40, maxTokens: 100_000, maxElapsedMs: 1_800_000 })
   })
-  .passthrough()
+  .strict()
 
 export type RepositoryAgentRunInput = {
   runId: string
@@ -74,7 +70,9 @@ function objective(
     "Use only the supplied workflow context and the publication-approved repository-agent definition.",
     `Workflow context: ${JSON.stringify(input)}`
   ]
-  return parts.join("\n\n").slice(0, 50_000)
+  const value = parts.join("\n\n")
+  if (value.length > 50_000) throw new Error("Repository agent objective and context exceed 50000 characters")
+  return value
 }
 
 function systemPrompt(snapshot: RepositoryAgentSnapshot): string {
@@ -139,7 +137,7 @@ export function createRepositoryAgentExecutor(worker: RepositoryAgentWorker) {
         sha256: jsonValueDigest(context)
       },
       promptVersion: `repository-agent-${snapshot.reference.contentDigest}`,
-      workerImageVersion: "openhands-agent-server-pinned"
+      workerImageVersion: OPENHANDS_AGENT_SERVER_IMAGE
     })
     const result = await worker({
       assignment,
