@@ -31,6 +31,19 @@ const JsonObjectSchema = z.record(z.string(), JsonValueSchema)
 type JsonObject = z.infer<typeof JsonObjectSchema>
 type WorkflowConnection = z.infer<typeof WorkflowConnectionSchema>
 
+export type WorkflowStepExecutionLog = {
+  runId: string
+  activationId: string
+  attemptOrdinal: number
+  stepId: string
+  stepKind: string
+  status: "started" | "succeeded" | "failed" | "suspended" | "child_invoked"
+  input?: JsonObject
+  output?: JsonObject
+  error?: JsonObject
+  terminalStatus?: "succeeded" | null
+}
+
 export type WorkflowStepResult = {
   output: JsonObject
   terminalStatus: "succeeded" | "failed" | null
@@ -630,6 +643,7 @@ export class WorkflowDispatcher {
   readonly #providerDataExecutor: WorkflowProviderDataExecutor | undefined
   readonly #providerActionExecutor: WorkflowProviderActionExecutor | undefined
   readonly #now: () => Date
+  readonly #log: (event: WorkflowStepExecutionLog) => void
 
   constructor(
     journal: WorkflowJournal,
@@ -640,7 +654,8 @@ export class WorkflowDispatcher {
     modelExecutor?: WorkflowModelExecutor,
     providerDataExecutor?: WorkflowProviderDataExecutor,
     providerActionExecutor?: WorkflowProviderActionExecutor,
-    now: () => Date = () => new Date()
+    now: () => Date = () => new Date(),
+    log: (event: WorkflowStepExecutionLog) => void = () => undefined
   ) {
     this.#journal = journal
     this.#workerId = z.string().trim().min(1).parse(workerId)
@@ -651,6 +666,7 @@ export class WorkflowDispatcher {
     this.#providerDataExecutor = providerDataExecutor
     this.#providerActionExecutor = providerActionExecutor
     this.#now = now
+    this.#log = log
   }
 
   async dispatchReady(limit = 25): Promise<number> {
@@ -712,8 +728,16 @@ export class WorkflowDispatcher {
       leaseOwner: this.#workerId,
       leaseDurationMs: 60_000
     })
+    const resolvedInput = resolveActivationInput(graph, step, attempt.input)
+    const logContext = {
+      runId: activation.runId,
+      activationId: activation.activationId,
+      attemptOrdinal: attempt.ordinal,
+      stepId: step.id,
+      stepKind: step.definition.kind
+    }
+    this.#log({ ...logContext, status: "started", input: resolvedInput })
     if (step.definition.kind === "wait") {
-      const resolvedInput = resolveActivationInput(graph, step, attempt.input)
       const correlationTemplate = z.string().trim().min(1).parse(step.config.correlation)
       const correlationKey = renderMarkdown(correlationTemplate, objectValue(resolvedInput.context))
       const expiresAfterSeconds = z.number().int().min(1).parse(step.config.expiresAfterSeconds)
@@ -728,10 +752,10 @@ export class WorkflowDispatcher {
         acceptedInputSchema: eventSchema,
         expiresAt: new Date(this.#now().getTime() + expiresAfterSeconds * 1000)
       })
+      this.#log({ ...logContext, status: "suspended", input: resolvedInput })
       return
     }
     if (step.definition.kind === "child_workflow") {
-      const resolvedInput = resolveActivationInput(graph, step, attempt.input)
       const childPackageDigest = z
         .string()
         .regex(/^[0-9a-f]{64}$/u)
@@ -759,11 +783,11 @@ export class WorkflowDispatcher {
         childTriggerStepId: triggers[0].id,
         childTriggerPort: "input"
       })
+      this.#log({ ...logContext, status: "child_invoked", input: resolvedInput })
       return
     }
     let result: WorkflowStepResult
     try {
-      const resolvedInput = resolveActivationInput(graph, step, attempt.input)
       if (step.definition.kind === "repository_agent") {
         if (this.#repositoryAgentExecutor === undefined) throw new Error("Repository agent execution is unavailable")
         result = {
@@ -859,6 +883,7 @@ export class WorkflowDispatcher {
         error: result.error,
         terminalStatus: "failed"
       })
+      this.#log({ ...logContext, status: "failed", error: result.error })
       return
     }
     const downstream = downstreamActivations(graph, step.id, result.output, activation.scope)
@@ -916,6 +941,12 @@ export class WorkflowDispatcher {
       loopBudgets,
       checkpoint: { cursor: `${activation.activationId}:${attempt.ordinal}`, committed: true },
       ...(result.terminalStatus === "succeeded" ? { terminalStatus: "succeeded" as const } : {})
+    })
+    this.#log({
+      ...logContext,
+      status: "succeeded",
+      output: result.output,
+      terminalStatus: result.terminalStatus === "succeeded" ? "succeeded" : null
     })
   }
 }

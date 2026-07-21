@@ -17,7 +17,7 @@ const pool = new pg.Pool(configuration.pool)
 
 try {
   const database = drizzle(pool)
-  const migrationsFolder = fileURLToPath(new URL("../../drizzle/", import.meta.url))
+  const migrationsFolder = fileURLToPath(new URL("../../drizzle/migrations/", import.meta.url))
   await migrate(database, { migrationsFolder, migrationsSchema: "agentic", migrationsTable: "migrations" })
   const checkpointer = new PostgresSaver(pool, undefined, { schema: "langgraph" })
   await checkpointer.setup()

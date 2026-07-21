@@ -67,13 +67,27 @@ type WorkflowTestInputEditorProps = {
   schema: JsonValue
   value: string
   onChange: (value: string) => void
+  showValidation?: boolean
 }
 
-export function WorkflowTestInputEditor({ schema, value, onChange }: WorkflowTestInputEditorProps) {
+export function missingRequiredTestInputs(schema: JsonValue, value: string): string[] {
+  const input = parsedInput(value)
+  return propertyDefinitions(schema)
+    .filter(({ name, required }) => required && (input.parsed[name] === undefined || input.parsed[name] === ""))
+    .map(({ name }) => name)
+}
+
+export function WorkflowTestInputEditor({
+  schema,
+  value,
+  onChange,
+  showValidation = false
+}: WorkflowTestInputEditorProps) {
   const classes = useWorkflowTestInputEditorStyles()
   const definitions = propertyDefinitions(schema)
   const [mode, setMode] = useState<InputMode>(definitions.length === 0 ? "json" : "form")
   const input = parsedInput(value)
+  const missingRequired = new Set(missingRequiredTestInputs(schema, value))
 
   function updateProperty(definition: PropertyDefinition, rawValue: string | boolean): void {
     const next = { ...input.parsed }
@@ -149,7 +163,15 @@ export function WorkflowTestInputEditor({ schema, value, onChange }: WorkflowTes
       {mode === "form" ? (
         <div className={classes.fields}>
           {definitions.map((definition) => (
-            <Field key={definition.name} label={definition.label} required={definition.required}>
+            <Field
+              key={definition.name}
+              label={definition.label}
+              required={definition.required}
+              validationState={showValidation && missingRequired.has(definition.name) ? "error" : "none"}
+              validationMessage={
+                showValidation && missingRequired.has(definition.name) ? `${definition.label} is required.` : undefined
+              }
+            >
               {propertyControl(definition)}
             </Field>
           ))}

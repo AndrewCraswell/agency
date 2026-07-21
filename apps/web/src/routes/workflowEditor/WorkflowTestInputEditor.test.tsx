@@ -29,6 +29,17 @@ describe("WorkflowTestInputEditor", () => {
     expect(screen.getByRole("checkbox", { name: "Dry run" })).toBeInTheDocument()
   })
 
+  it("marks missing required input", () => {
+    render(
+      <AppShell>
+        <WorkflowTestInputEditor schema={schema} value="{}" onChange={vi.fn()} showValidation />
+      </AppShell>
+    )
+
+    expect(screen.getByRole("textbox", { name: "Issue identifier" })).toHaveAttribute("aria-invalid", "true")
+    expect(screen.getByText("Issue identifier is required.")).toBeInTheDocument()
+  })
+
   it("preserves invalid Advanced JSON and restores form values after correction", async () => {
     const onChange = vi.fn<(value: string) => void>()
     const view = render(

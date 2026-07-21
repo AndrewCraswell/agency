@@ -60,6 +60,7 @@ type WorkflowEditorInspectorProps = {
   draft: WorkflowDraftView
   testInput: string
   setTestInput: (value: string) => void
+  showTestInputValidation: boolean
   testTriggers: Array<{ id: string; label: string; kind: string }>
   testTriggerId: string | undefined
   setTestTriggerId: (stepId: string) => void
@@ -81,6 +82,7 @@ export function WorkflowEditorInspector({
   draft,
   testInput,
   setTestInput,
+  showTestInputValidation,
   testTriggers,
   testTriggerId,
   setTestTriggerId,
@@ -143,7 +145,12 @@ export function WorkflowEditorInspector({
               ))}
             </Dropdown>
           </Field>
-          <WorkflowTestInputEditor schema={draft.content.inputSchema} value={testInput} onChange={setTestInput} />
+          <WorkflowTestInputEditor
+            schema={draft.content.inputSchema}
+            value={testInput}
+            onChange={setTestInput}
+            showValidation={showTestInputValidation}
+          />
           <Body1>Draft revision {draft.draftRevision}</Body1>
           {draft.versions.map((version) => (
             <Badge key={version.version} appearance="outline">
@@ -340,10 +347,6 @@ function StepInspector({
       <Button appearance="subtle" icon={<DeleteRegular />} onClick={remove}>
         Delete step
       </Button>
-      <Caption1 className={styles.hint}>
-        {definition.inputs.length} input port{definition.inputs.length === 1 ? "" : "s"}. {definition.outputs.length}{" "}
-        output port{definition.outputs.length === 1 ? "" : "s"}.
-      </Caption1>
     </div>
   )
 }
@@ -704,8 +707,6 @@ function ConnectionInspector({
         const outgoing = edge.source === node.id
         return (
           <div key={edge.id}>
-            <Caption1>{outgoing ? "Outgoing connection" : "Incoming connection"}</Caption1>
-            <Caption1 className={styles.hint}>{edge.id}</Caption1>
             {outgoing && node.data.definition.kind === "switch" && (
               <Field label="Branch key">
                 <Input

@@ -606,7 +606,14 @@ const seeds: StepSeed[] = [
       }
     },
     inputs: [port("input", "Input", objectSchema)],
-    outputs: [port("branch", "Selected branch", objectSchema)],
+    outputs: [
+      port("branch", "Selected branch", {
+        type: "object",
+        additionalProperties: false,
+        required: ["key", "value"],
+        properties: { key: { type: "string" }, value: objectSchema }
+      })
+    ],
     errorSchema
   },
   {

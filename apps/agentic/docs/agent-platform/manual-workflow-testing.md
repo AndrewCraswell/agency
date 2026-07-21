@@ -55,11 +55,11 @@ real external event or scheduled fire.
 - [x] Describe affected resources, live model calls, and external mutations before starting the run.
 - [x] Prove that editing a draft during a test cannot change its sealed package or execution history.
 - [x] Prove that draft tests never receive real webhook deliveries or automatic schedule fires.
-- [ ] Decide how Daytona-backed repository-agent tests acquire, retain, and clean up workspaces before enabling that
-      step in this manual suite.
 - [x] Require an explicit JSON Schema for every structured model output, send it to the model provider, and
       validate the returned JSON locally. Add a **Generate schema** option that derives an editable schema from the
       prompt or example output, validates it as a supported schema, and requires user review before saving it.
+- [ ] Last: decide how Daytona-backed repository-agent tests acquire, retain, and clean up workspaces before enabling
+      that step in this manual suite.
 
 The execution-package schema was fixed forward in the original journal migration. Existing prototype databases created
 from the earlier migration shape must be reset; there is no compatibility rewrite for unreleased package content.
@@ -69,6 +69,10 @@ from the earlier migration shape must be reset; there is no compatibility rewrit
 Every workflow is created against a dedicated GitHub test repository. Provider mutations use dedicated GitHub or
 Linear test resources whose changes may be discarded. Each workflow should remain small enough that its run graph and
 evidence make a failure attributable to one capability.
+
+Run `pnpm db:seed` after database migration to create or update the example workflow drafts. Each example has
+a stable seed-owned workflow ID. Rerunning the command leaves unchanged drafts alone and advances the draft revision
+only when the canonical example definition or metadata changes.
 
 ### 1. Manual data and validation
 

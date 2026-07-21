@@ -68,10 +68,14 @@ export class PostgresWorkflowStore {
     return rows[0] === undefined ? null : WorkflowDefinitionRecordSchema.parse(rows[0])
   }
 
-  async create(input: { name: string; description: string; draft: WorkflowContent }) {
+  async create(input: { workflowId?: string; name: string; description: string; draft: WorkflowContent }) {
     const rows = await this.#database
       .insert(workflowDefinitions)
-      .values({ ...input, draft: WorkflowContentSchema.parse(input.draft) })
+      .values({
+        ...input,
+        workflowId: input.workflowId === undefined ? undefined : z.uuid().parse(input.workflowId),
+        draft: WorkflowContentSchema.parse(input.draft)
+      })
       .returning()
     return WorkflowDefinitionRecordSchema.parse(rows[0])
   }

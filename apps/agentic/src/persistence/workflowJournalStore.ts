@@ -846,6 +846,7 @@ export class PostgresWorkflowJournalStore {
         }
       }
       if (downstream.length > 0) {
+        const contributionCount = sql`jsonb_array_length(jsonb_path_query_array(excluded.input_bindings, '$.*'))`
         await transaction
           .insert(workflowActivations)
           .values(downstream)
@@ -853,9 +854,9 @@ export class PostgresWorkflowJournalStore {
             target: workflowActivations.activationId,
             set: {
               inputBindings: sql`case when ${workflowActivations.status} = 'blocked' then ${workflowActivations.inputBindings} || excluded.input_bindings else ${workflowActivations.inputBindings} end`,
-              dependencyCount: sql`case when ${workflowActivations.status} = 'blocked' then greatest(${workflowActivations.dependencyCount} - jsonb_object_length(excluded.input_bindings), 0) else ${workflowActivations.dependencyCount} end`,
-              status: sql`case when ${workflowActivations.status} = 'blocked' and ${workflowActivations.dependencyCount} <= jsonb_object_length(excluded.input_bindings) then 'ready' else ${workflowActivations.status} end`,
-              availableAt: sql`case when ${workflowActivations.status} = 'blocked' and ${workflowActivations.dependencyCount} <= jsonb_object_length(excluded.input_bindings) then ${now} else ${workflowActivations.availableAt} end`,
+              dependencyCount: sql`case when ${workflowActivations.status} = 'blocked' then greatest(${workflowActivations.dependencyCount} - ${contributionCount}, 0) else ${workflowActivations.dependencyCount} end`,
+              status: sql`case when ${workflowActivations.status} = 'blocked' and ${workflowActivations.dependencyCount} <= ${contributionCount} then 'ready' else ${workflowActivations.status} end`,
+              availableAt: sql`case when ${workflowActivations.status} = 'blocked' and ${workflowActivations.dependencyCount} <= ${contributionCount} then ${now} else ${workflowActivations.availableAt} end`,
               updatedAt: now
             }
           })

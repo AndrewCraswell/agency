@@ -14,7 +14,7 @@ import { WorkflowDefinitionSchema } from "./definition"
 import { WorkflowService } from "./service"
 
 const describePostgres = process.env.POSTGRES_API_URL === undefined ? describe.skip : describe
-const migrationsFolder = fileURLToPath(new URL("../../drizzle/", import.meta.url))
+const migrationsFolder = fileURLToPath(new URL("../../drizzle/migrations/", import.meta.url))
 
 function databaseIdentifier(value: string) {
   if (!/^agency_lifecycle_[a-f0-9]+$/u.test(value)) throw new Error("Invalid lifecycle test database name")

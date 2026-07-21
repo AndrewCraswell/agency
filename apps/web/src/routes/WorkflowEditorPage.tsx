@@ -88,6 +88,7 @@ import {
   type WorkflowStepDefinition,
   type WorkflowValidation
 } from "@/services/api"
+import { missingRequiredTestInputs } from "./workflowEditor/WorkflowTestInputEditor"
 import { WorkflowEditorInspector } from "./WorkflowEditorInspector"
 import { WorkflowEditorOutline } from "./WorkflowEditorOutline"
 import { projectWorkflowOutline } from "./WorkflowEditorOutline.utils"
@@ -465,6 +466,7 @@ export function WorkflowEditorPage() {
   const [testInput, setTestInput] = useState("{}")
   const [testTriggerId, setTestTriggerId] = useState<string>()
   const [testConfirmationOpen, setTestConfirmationOpen] = useState(false)
+  const [showTestInputValidation, setShowTestInputValidation] = useState(false)
   const [activeCommand, setActiveCommand] = useState<"publishing" | "starting-run" | "testing-draft">()
   const revisionRef = useRef(1)
   const lastSavedRef = useRef("")
@@ -786,6 +788,14 @@ export function WorkflowEditorPage() {
     }
     try {
       parsedTestInput()
+      if (missingRequiredTestInputs(baseContent?.inputSchema ?? {}, testInput).length > 0) {
+        setShowTestInputValidation(true)
+        setSelectedNodeId(undefined)
+        setSelectedEdgeId(undefined)
+        setDockOpen(true)
+        window.setTimeout(() => inspectorRef.current?.querySelector<HTMLElement>("[aria-invalid='true']")?.focus(), 0)
+        return
+      }
       setTestConfirmationOpen(true)
     } catch (error) {
       showAppToast(dispatchToast, {
@@ -1141,7 +1151,11 @@ export function WorkflowEditorPage() {
           inspectorRef={inspectorRef}
           draft={draft}
           testInput={testInput}
-          setTestInput={setTestInput}
+          setTestInput={(value) => {
+            setTestInput(value)
+            setShowTestInputValidation(false)
+          }}
+          showTestInputValidation={showTestInputValidation}
           testTriggers={testTriggers}
           testTriggerId={testTriggerId}
           setTestTriggerId={setTestTriggerId}

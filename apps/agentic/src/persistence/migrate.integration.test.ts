@@ -12,8 +12,8 @@ import { PostgresWorkflowScheduleStore } from "./workflowScheduleStore"
 import { PostgresWorkflowStore } from "./workflowStore"
 
 const describePostgres = process.env.POSTGRES_API_URL === undefined ? describe.skip : describe
-const migrationsFolder = fileURLToPath(new URL("../../drizzle/", import.meta.url))
-const migrationJournalUrl = new URL("../../drizzle/meta/_journal.json", import.meta.url)
+const migrationsFolder = fileURLToPath(new URL("../../drizzle/migrations/", import.meta.url))
+const migrationJournalUrl = new URL("../../drizzle/migrations/meta/_journal.json", import.meta.url)
 const initialDraft = WorkflowDefinitionSchema.parse({
   schemaVersion: "2",
   inputSchema: { type: "object" },

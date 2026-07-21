@@ -139,7 +139,9 @@ const workflowDispatcher = new WorkflowDispatcher(
   (step, input) => repositoryDataReader.execute(step, input),
   (input) => workflowModelExecutor.execute(input),
   (step, input) => workflowProviderExecutor.read(step, input),
-  (input) => workflowProviderExecutor.act(input)
+  (input) => workflowProviderExecutor.act(input),
+  undefined,
+  (event) => process.stdout.write(`[workflow-step] ${JSON.stringify(event)}\n`)
 )
 const workflowService = new WorkflowService(runtime.workflowStore, runtime.workflowJournalStore)
 const workflowScheduleDispatcher = new WorkflowScheduleDispatcher(

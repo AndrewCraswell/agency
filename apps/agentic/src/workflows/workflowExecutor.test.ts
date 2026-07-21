@@ -1212,9 +1212,29 @@ describe("workflow execution", () => {
       invokeChildWorkflow: vi.fn(async () => undefined),
       ...childReconciliationJournal()
     }
-    const dispatcher = new WorkflowDispatcher(journal, "worker-1")
+    const log = vi.fn()
+    const dispatcher = new WorkflowDispatcher(
+      journal,
+      "worker-1",
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      log
+    )
 
     await expect(dispatcher.dispatchReady()).resolves.toBe(1)
+    expect(log).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ status: "started", stepId: "manual", input: { input: { issue: "FEN-423" } } })
+    )
+    expect(log).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ status: "succeeded", stepId: "manual", output: { input: { issue: "FEN-423" } } })
+    )
     expect(completeAttempt).toHaveBeenCalledWith(
       expect.objectContaining({
         downstream: [

@@ -10,6 +10,9 @@ belong in code, tests, migrations, and API contracts instead of additional plann
 The completed authoring and run surfaces define the current product contract. Engineering changes must preserve their
 customer workflows or update the product surface and acceptance coverage as one coherent change.
 
+The [workflow node design review](nodes/workflow-node-design-review.md) defines the authoring, composition, safety, and
+extensibility baseline for current and future node types.
+
 ## Product target
 
 Agency connects to external services through provider-neutral capabilities, stores mutable workflow drafts and immutable

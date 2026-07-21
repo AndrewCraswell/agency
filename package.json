@@ -16,6 +16,7 @@
     "check:lint": "turbo run lint",
     "check:types": "turbo run check:types",
     "check:unused": "knip",
+    "db:seed": "pnpm --filter agentic db:seed",
     "lint": "turbo run lint",
     "format": "oxfmt",
     "test": "turbo run test",

@@ -846,6 +846,32 @@ describe("WorkflowEditorPage", { timeout: 30_000 }, () => {
     expect(navigate).toHaveBeenCalledWith({ to: "/runs/$runId", params: { runId } })
   })
 
+  it("blocks draft testing and focuses the first missing required input", async () => {
+    registerEditorApis({
+      ...draft(),
+      content: {
+        ...content,
+        inputSchema: {
+          type: "object",
+          required: ["requestId"],
+          properties: { requestId: { type: "string", title: "Request ID" } }
+        }
+      }
+    })
+    const testDraft = ApiMock.post(`/api/workflows/${workflowId}/test`, {
+      data: { runId, created: true, source: { kind: "draft_test", draftRevision: 1 } }
+    })
+    render(<WorkflowEditorPage />)
+
+    await userEvent.click(await screen.findByRole("button", { name: "Test draft" }))
+
+    expect(testDraft.hits).toBe(0)
+    expect(screen.queryByRole("alertdialog", { name: "Start live draft test?" })).not.toBeInTheDocument()
+    const requestId = screen.getByRole("textbox", { name: "Request ID" })
+    expect(requestId).toHaveAttribute("aria-invalid", "true")
+    expect(requestId).toHaveFocus()
+  })
+
   it("requires an explicit test trigger when the draft has multiple triggers", async () => {
     const schedule: WorkflowDraftContent["steps"][number] = {
       ...content.steps[0]!,
