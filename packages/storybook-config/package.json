@@ -23,7 +23,8 @@
   },
   "scripts": {
     "lint": "oxlint --max-warnings=0",
-    "check:types": "tsc --noEmit"
+    "check:types": "tsc --noEmit",
+    "check:unused": "knip --directory ../.. --workspace packages/storybook-config"
   },
   "publishConfig": {
     "access": "public"

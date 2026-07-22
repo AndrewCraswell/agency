@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "check:types": "tsc --noEmit",
+    "check:unused": "knip --directory ../.. --workspace apps/agentic",
     "dev": "run-p control-plane:api control-plane:worker",
     "control-plane:api": "tsx --env-file=.env src/controlPlane/api.ts",
     "control-plane:worker": "tsx --env-file=.env src/controlPlane/worker.ts",

@@ -13,6 +13,7 @@
     "check:format": "oxfmt --check",
     "check:lint": "pnpm lint",
     "check:types": "tsc --noEmit",
+    "check:unused": "knip --directory ../.. --workspace apps/web",
     "lint": "oxlint --max-warnings=0",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -22,7 +22,9 @@
     "**/coverage": true,
     "**/storybook-static": true,
     "**/.turbo": true,
-    "**/build-storybook.log": true
+    "**/build-storybook.log": true,
+    "**/build": true,
+    "**/.react-router": true
   },
   "search.exclude": {
     "**/dist": true,
@@ -32,7 +34,9 @@
     "**/storybook-static": true,
     "**/.turbo": true,
     "**/pnpm-lock.yaml": true,
-    "**/build-storybook.log": true
+    "**/build-storybook.log": true,
+    "**/build": true,
+    "**/.react-router": true
   },
   "npm.packageManager": "pnpm",
   "npm.enableRunFromFolder": true,

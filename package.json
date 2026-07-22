@@ -8,17 +8,15 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "auth": "artifacts-npm-credprovider -c .npmrc",
+    "gen:shopify-app": "turbo gen shopify-app",
+    "auth": "git config --global credential.azreposCredentialType oauth && git config --global credential.msauthUseBroker true && npm install ado-npm-auth@latest --location=global --registry=https://registry.npmjs.org && ado-npm-auth -Config .npmrc -F",
     "verify": "run-s check test:coverage",
     "check": "run-p check:*",
     "check:change": "beachball check",
     "check:format": "oxfmt",
     "check:lint": "turbo run lint",
     "check:types": "turbo run check:types",
-    "check:unused": "knip",
-    "db:seed": "pnpm --filter agentic db:seed",
-    "lint": "turbo run lint",
-    "format": "oxfmt",
+    "check:unused": "turbo run check:unused",
     "test": "turbo run test",
     "test:coverage": "turbo run test:coverage",
     "change": "beachball change",
@@ -26,6 +24,7 @@
     "prepare": "lefthook install"
   },
   "devDependencies": {
+    "@turbo/gen": "^2.10.0",
     "beachball": "^2.65.5",
     "knip": "^6.16.1",
     "lefthook": "^2.1.9",

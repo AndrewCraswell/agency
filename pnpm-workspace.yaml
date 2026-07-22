@@ -12,7 +12,12 @@ allowBuilds:
   esbuild: true
   lefthook: true
   msw: true
+  '@parcel/watcher': true
+  '@prisma/client': true
+  '@prisma/engines': true
   protobufjs: true
+  prisma: true
+  unrs-resolver: true
 minimumReleaseAgeExclude:
   - vite@8.1.3
   - chromatic@18.0.1

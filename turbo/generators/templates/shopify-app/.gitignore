@@ -1,0 +1,16 @@
+node_modules
+.DS_Store
+/.cache
+/.react-router
+/.shopify
+/build
+/coverage
+/public/build
+/public/_dev
+/storybook-static
+.env
+.env.*
+!.env.example
+package-lock.json
+pnpm-lock.yaml
+yarn.lock

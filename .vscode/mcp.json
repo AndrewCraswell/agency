@@ -15,7 +15,7 @@
     "fluent-agent": {
       "type": "http",
       "url": "https://chat.fluentui.dev/mcp/server"
-    }
+    },
     // "microsoft/playwright-mcp": {
     //   "type": "stdio",
     //   "command": "npx",
@@ -27,11 +27,11 @@
     //   "args": ["--app", "visual_studio_code", "--agent", "copilotIDE"],
     //   "env": {}
     // },
-    // "shopify-dev-mcp": {
-    //   "type": "stdio",
-    //   "command": "npx",
-    //   "args": ["-y", "@shopify/dev-mcp@latest"]
-    // },
+    "shopify-dev-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@shopify/dev-mcp@latest"]
+    }
     // "linear": {
     //   "type": "stdio",
     //   "command": "npx",
