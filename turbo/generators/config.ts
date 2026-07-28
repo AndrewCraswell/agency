@@ -33,9 +33,7 @@ async function replaceTokens(directory: string, packageName: string, displayName
       }
 
       const content = await readFile(path, "utf8")
-      const rendered = content
-        .replaceAll("__PACKAGE_NAME__", packageName)
-        .replaceAll("__DISPLAY_NAME__", displayName)
+      const rendered = content.replaceAll("__PACKAGE_NAME__", packageName).replaceAll("__DISPLAY_NAME__", displayName)
       await writeFile(path, rendered, "utf8")
     })
   )

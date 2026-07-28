@@ -1,0 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS vector;--> statement-breakpoint
+ALTER TABLE "blog_writer"."tenant_resource_chunks" DROP CONSTRAINT "tenant_resource_chunks_embedding_check";--> statement-breakpoint
+ALTER TABLE "blog_writer"."tenant_resource_chunks" ADD COLUMN "embedding" vector(1536);--> statement-breakpoint
+CREATE INDEX "tenant_resource_chunks_embedding_idx" ON "blog_writer"."tenant_resource_chunks" USING hnsw ("embedding" vector_cosine_ops);--> statement-breakpoint
+ALTER TABLE "blog_writer"."tenant_resource_chunks" ADD CONSTRAINT "tenant_resource_chunks_embedding_check" CHECK (("blog_writer"."tenant_resource_chunks"."embedding_model" is null and "blog_writer"."tenant_resource_chunks"."embedding_version" is null and "blog_writer"."tenant_resource_chunks"."embedding" is null) or ("blog_writer"."tenant_resource_chunks"."embedding_model" is not null and "blog_writer"."tenant_resource_chunks"."embedding_version" is not null and "blog_writer"."tenant_resource_chunks"."embedding" is not null));

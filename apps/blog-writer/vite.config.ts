@@ -1,6 +1,6 @@
 import { reactRouter } from "@react-router/dev/vite"
 import babel from "@rolldown/plugin-babel"
-import react, { reactCompilerPreset } from "@vitejs/plugin-react"
+import { reactCompilerPreset } from "@vitejs/plugin-react"
 import { defineConfig, type UserConfig } from "vite"
 
 // Related: https://github.com/remix-run/remix/issues/2835#issuecomment-1144102176
@@ -40,11 +40,14 @@ export default defineConfig({
     port: Number(process.env.PORT || 3000),
     hmr: hmrConfig,
     fs: {
-      // See https://vitejs.dev/config/server-options.html#server-fs-allow for more information
-      allow: ["app", "node_modules"]
+      // See https://vitejs.dev/config/server-options.html#server-fs-allow for more information.
+      // Dependencies are hoisted to the workspace root, so that tree has to be servable too.
+      allow: ["app", "node_modules", "../../node_modules"]
     }
   },
-  plugins: [reactRouter(), react(), babel({ presets: [reactCompilerPreset({ target: "19" })] })],
+  // The React Router plugin already injects the React Refresh runtime, so adding
+  // @vitejs/plugin-react here would declare it twice and break hydration in dev.
+  plugins: [reactRouter(), babel({ presets: [reactCompilerPreset({ target: "19" })] })],
   resolve: {
     tsconfigPaths: true
   },

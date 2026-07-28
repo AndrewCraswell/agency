@@ -4,6 +4,40 @@
   "ignore": ["beachball.config.js"],
   "ignoreBinaries": ["artifacts-npm-credprovider"],
   "workspaces": {
+    "apps/blog-writer": {
+      "entry": [
+        "app/**/*.stories.tsx",
+        ".storybook/{main,preview}.ts{,x}",
+        "app/shopify.server.ts",
+        "app/persistence/contracts.server.ts"
+      ],
+      "ignore": [
+        "app/components/tiptap-node/**",
+        "app/components/tiptap-ui/**",
+        "app/components/tiptap-ui-primitive/**",
+        "app/hooks/**",
+        "app/lib/tiptap-utils.ts"
+      ],
+      "ignoreDependencies": [
+        "@repo/oxlint-config",
+        "@axe-core/playwright",
+        "@playwright/test",
+        "@storybook/addon-a11y",
+        "@storybook/addon-vitest",
+        "@chromatic-com/storybook",
+        "@mantine/hooks",
+        "@shopify/api-codegen-preset",
+        "@t3-oss/env-core",
+        "date-fns",
+        "graphql-config",
+        "msw",
+        "react-error-boundary",
+        "rollup-plugin-visualizer",
+        "ts-extras",
+        "ts-pattern"
+      ],
+      "ignoreBinaries": ["graphql-codegen", "shopify"]
+    },
     "apps/web": {
       "entry": ["src/**/*.stories.tsx", ".storybook/{main,preview,vitest.setup}.ts"],
       "ignoreDependencies": [
@@ -23,9 +57,6 @@
         "@storybook/addon-a11y",
         "@storybook/addon-vitest"
       ]
-    },
-    "packages/ui": {
-      "ignoreDependencies": ["@repo/oxlint-config"]
     }
   }
 }

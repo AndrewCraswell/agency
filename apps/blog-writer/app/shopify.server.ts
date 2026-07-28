@@ -1,6 +1,6 @@
 import "@shopify/shopify-app-react-router/adapters/node"
 import { ApiVersion, AppDistribution, shopifyApp } from "@shopify/shopify-app-react-router/server"
-import { MemorySessionStorage } from "@shopify/shopify-app-session-storage-memory"
+import { createSessionStorage } from "./session-storage.server"
 
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
@@ -9,7 +9,7 @@ const shopify = shopifyApp({
   scopes: process.env.SCOPES?.split(","),
   appUrl: process.env.SHOPIFY_APP_URL || "",
   authPathPrefix: "/auth",
-  sessionStorage: new MemorySessionStorage(),
+  sessionStorage: createSessionStorage(process.env.DATABASE_URL),
   distribution: AppDistribution.AppStore,
   future: {
     expiringOfflineAccessTokens: true

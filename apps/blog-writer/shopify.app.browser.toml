@@ -1,0 +1,18 @@
+client_id = "e8005027d0c0b30471da038ebe6cc1d7"
+name = "Blog Writer"
+application_url = "https://localhost:18765"
+embedded = true
+
+[access_scopes]
+scopes = "read_content,read_locales,read_markets_home,read_online_store_pages,read_products,write_content"
+optional_scopes = []
+use_legacy_install_flow = false
+
+[webhooks]
+api_version = "2025-10"
+
+[auth]
+redirect_urls = ["https://localhost:18765/auth/callback"]
+
+[build]
+automatically_update_urls_on_dev = true

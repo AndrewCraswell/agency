@@ -12,9 +12,9 @@ allowBuilds:
   esbuild: true
   lefthook: true
   msw: true
-  '@parcel/watcher': true
-  '@prisma/client': true
-  '@prisma/engines': true
+  "@parcel/watcher": true
+  "@prisma/client": true
+  "@prisma/engines": true
   protobufjs: true
   prisma: true
   unrs-resolver: true

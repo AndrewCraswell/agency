@@ -1,0 +1,2 @@
+ALTER TABLE "blog_writer"."blog_ideas" ADD COLUMN "scheduled_for" date;--> statement-breakpoint
+CREATE INDEX "blog_ideas_scheduled_idx" ON "blog_writer"."blog_ideas" USING btree ("scheduled_for","status");

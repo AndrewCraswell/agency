@@ -1,0 +1,1 @@
+ALTER TABLE "blog_writer"."tenant_stores" ADD COLUMN "brand_brief" text DEFAULT '' NOT NULL;

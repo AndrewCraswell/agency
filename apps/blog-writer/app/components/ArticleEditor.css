@@ -1,0 +1,614 @@
+/*
+ * Frames the Tiptap editor so it reads as one Polaris field inside the article form.
+ * The border, radius, and focus ring repeat the values Polaris resolves for `s-text-field`, because the editor
+ * sits directly beside those fields and any difference reads as a rendering fault rather than a design choice.
+ * The toolbar, node, and control styles come from the Tiptap components themselves; only the surrounding
+ * chrome and the embedded-admin adjustments live here.
+ */
+
+/*
+ * Polaris web components carry their typography inside their own shadow roots, so nothing in this app declares a
+ * font for the light DOM the editor renders into. Without this the editor, its popovers, and its tooltips all fall
+ * back to the browser's default serif. The stack matches the admin, which loads Inter from the Shopify CDN.
+ */
+:root {
+  --article-editor-font:
+    "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+}
+
+/* The popover, dropdown, and tooltip surfaces are portalled to `body`, so they are named here rather than nested. */
+.article-editor,
+.tiptap-popover,
+.tiptap-dropdown-menu-content,
+.tiptap-dropdown-menu-sub-content,
+.tiptap-tooltip,
+.article-editor__selection-menu {
+  font-family: var(--article-editor-font);
+}
+
+/*
+ * Only the editor's own chrome takes this size and colour. The portalled surfaces each dress themselves — the
+ * tooltip in particular reverses to light text on a dark chip, so setting a colour here would hide its label.
+ */
+.article-editor {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--tt-gray-light-a-700, rgba(37, 39, 45, 0.86));
+}
+
+/* Form controls and buttons do not inherit typography on their own. */
+.article-editor input,
+.article-editor button,
+.article-editor textarea,
+.tiptap-popover input,
+.tiptap-popover button,
+.tiptap-dropdown-menu-content button {
+  font-family: inherit;
+}
+
+/*
+ * Toolbar controls, matched to the admin's own rich text editor: a 1.75rem square holding a 1.25rem Polaris glyph,
+ * subdued until it is hovered or turned on. The measurements come from the admin's editor, which uses the same icon
+ * set through `s-icon`.
+ */
+.article-editor .tiptap-button {
+  height: 1.75rem;
+  min-width: 1.75rem;
+  padding: 0.25rem;
+  gap: 0.25rem;
+  border-radius: 0.5rem;
+  color: #4a4a4a;
+  font-size: 0.8125rem;
+  font-weight: 450;
+}
+
+.article-editor .tiptap-button .tiptap-button-icon,
+.article-editor__selection-menu .tiptap-button .tiptap-button-icon,
+.tiptap-popover .tiptap-button .tiptap-button-icon,
+.tiptap-dropdown-menu-content .tiptap-button .tiptap-button-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/*
+ * The chevron that says a button opens a menu. Polaris ships two icon sizes and the smaller one still reads heavy
+ * beside a 1.25rem glyph, so the drawing is scaled the rest of the way down to a caret.
+ */
+.tiptap-button-dropdown-small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.625rem;
+  height: 0.625rem;
+  color: #616161;
+}
+
+.tiptap-button-dropdown-small s-icon {
+  display: flex;
+  transform: scale(0.7);
+}
+
+/* A button that names its own state needs room for the words, unlike the square icon buttons beside it. */
+.article-editor .tiptap-button .tiptap-button-text {
+  white-space: nowrap;
+}
+
+.article-editor .tiptap-button.article-editor__style-trigger {
+  padding-left: 0.5rem;
+}
+
+.article-editor .tiptap-button:hover:not([disabled]),
+.article-editor .tiptap-button[data-state="open"] {
+  background-color: rgba(0, 0, 0, 0.06);
+  color: #303030;
+}
+
+.article-editor .tiptap-button[data-active-state="on"],
+.article-editor .tiptap-button[aria-pressed="true"] {
+  background-color: #e3e3e3;
+  color: #303030;
+}
+
+.article-editor .tiptap-button[disabled] {
+  color: #b5b5b5;
+}
+
+/*
+ * Tooltips. Polaris draws these as a light chip, where the vendored Tiptap default is a dark one; against the
+ * admin's white surfaces the dark chip reads as a different product.
+ */
+.tiptap-tooltip {
+  border-radius: 0.5rem;
+  background-color: #ffffff;
+  padding: 0.25rem 0.5rem;
+  color: #303030;
+  font-size: 0.8125rem;
+  font-weight: 450;
+  line-height: 1.25rem;
+  box-shadow:
+    0 8px 24px -8px rgba(0, 0, 0, 0.28),
+    0 8px 16px -4px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.tiptap-tooltip kbd {
+  color: #616161;
+}
+
+/*
+ * Menu items. The vendored stylesheet draws the surface but leaves the rows to whatever button sits inside them,
+ * and the rows this app writes are plain text, so they need the same shape the admin gives its menus.
+ */
+.tiptap-dropdown-menu-item,
+.tiptap-dropdown-menu-radio-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  color: #303030;
+  font-size: 0.8125rem;
+  font-weight: 450;
+  line-height: 1.25rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.tiptap-dropdown-menu-item[data-highlighted],
+.tiptap-dropdown-menu-radio-item[data-highlighted] {
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+/* The check keeps its column whether or not the row is the chosen one, so the labels stay on one edge. */
+.tiptap-dropdown-menu-radio-item .tiptap-dropdown-menu-item-indicator {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 0.75rem;
+  height: 0.75rem;
+  color: #303030;
+}
+
+.tiptap-dropdown-menu-item[data-variant="destructive"] {
+  color: #8e1f0b;
+}
+
+.tiptap-dropdown-menu-item[data-variant="destructive"][data-highlighted] {
+  background-color: #fdd7d5;
+}
+
+.tiptap-dropdown-menu-item[data-disabled] {
+  color: #b5b5b5;
+  cursor: default;
+}
+
+.tiptap-dropdown-menu-item[data-disabled][data-variant="destructive"] {
+  color: #b5b5b5;
+}
+
+.tiptap-dropdown-menu-separator {
+  height: 1px;
+  margin: 0.25rem -0.375rem;
+  background-color: #e3e3e3;
+}
+
+/*
+ * The formatting menu previews each option in the type it produces, which is how the admin lets a writer pick a
+ * heading by eye rather than by remembering what "Heading 3" looks like.
+ */
+.article-editor__style-menu {
+  min-width: 11rem;
+}
+
+.article-editor__style-option--heading-1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 2rem;
+}
+
+.article-editor__style-option--heading-2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.75rem;
+}
+
+.article-editor__style-option--heading-3 {
+  font-size: 1.0625rem;
+  font-weight: 650;
+  line-height: 1.5rem;
+}
+
+.article-editor__style-option--heading-4 {
+  font-size: 0.9375rem;
+  font-weight: 650;
+  line-height: 1.375rem;
+}
+
+.article-editor__style-option--heading-5 {
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.article-editor__style-option--heading-6 {
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.article-editor__style-option--blockquote {
+  color: #616161;
+  font-style: italic;
+}
+
+.article-editor {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e3e3e3;
+  border-radius: 0.5rem;
+}
+
+.article-editor:focus-within {
+  border-color: #8a8a8a;
+  outline: 2px solid #005bd3;
+  outline-offset: 1px;
+}
+
+/*
+ * The article form sits in a narrow admin column, so the controls wrap onto more rows instead of
+ * scrolling sideways -- a horizontal scroller would hide tools with no visible affordance. Below
+ * 480px the vendored toolbar docks itself as a fixed-height bar, which overlaps the writing
+ * surface here, so the height and edges are restored to the inline treatment at every width.
+ */
+.article-editor__toolbar.tiptap-toolbar[data-variant="fixed"] {
+  position: static;
+  height: auto;
+  flex-wrap: wrap;
+  padding: 0.25rem 0.5rem;
+  overflow-x: visible;
+  row-gap: 0.25rem;
+  border-top: none;
+  border-bottom: 1px solid var(--tt-toolbar-border-color, #e3e3e3);
+}
+
+.article-editor__content {
+  max-height: 32rem;
+  overflow-y: auto;
+}
+
+.article-editor .tiptap.ProseMirror.article-editor__surface {
+  min-height: 18rem;
+  padding: 1rem 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  outline: none;
+}
+
+.article-editor .tiptap.ProseMirror.article-editor__surface > :first-child {
+  margin-block-start: 0;
+}
+
+.article-editor__status {
+  margin: 0;
+  padding: 0.375rem 0.75rem;
+  border-top: 1px solid var(--tt-gray-light-a-100, rgba(15, 22, 36, 0.05));
+  color: var(--tt-gray-light-a-500, rgba(52, 55, 60, 0.64));
+  font-size: 0.75rem;
+}
+
+/* A disabled editor should read as unavailable while a save is in flight. */
+.article-editor:has(.tiptap.ProseMirror[contenteditable="false"]) {
+  background: var(--tt-gray-light-a-50, rgba(56, 56, 56, 0.04));
+}
+
+/* The excerpt is a few sentences, so it opens at roughly the height of a multiline Polaris field. */
+.article-editor--compact .tiptap.ProseMirror.article-editor__surface {
+  min-height: 7rem;
+}
+
+.article-editor--compact .article-editor__content {
+  max-height: 18rem;
+}
+
+/* Pushes the HTML toggle to the trailing edge, so it reads as a view switch rather than another format control. */
+.article-editor__toolbar-end {
+  margin-inline-start: auto;
+}
+
+/* The source view replaces the writing surface, so it keeps the same footprint rather than resizing the field. */
+.article-editor__html {
+  min-height: 12rem;
+  max-height: 32rem;
+  padding: 1rem 1.25rem;
+  overflow: auto;
+}
+
+.article-editor__html:focus-within {
+  outline: 2px solid #005bd3;
+  outline-offset: -2px;
+}
+
+/* The frame grows with the markup, so both layers scroll together inside the box above and never drift apart. */
+.article-editor__html-frame {
+  position: relative;
+  min-height: 10rem;
+}
+
+/*
+ * Everything that decides where a line wraps has to match between the painted copy and the box the writer types in,
+ * or the caret drifts away from the character it sits on. The nesting outruns the rule that hands form controls the
+ * surrounding typography.
+ */
+.article-editor .article-editor__html-highlight,
+.article-editor .article-editor__html-input {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-family: "JetBrains Mono NL", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  letter-spacing: normal;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 2;
+}
+
+.article-editor__html-highlight {
+  color: #303030;
+}
+
+.article-editor__html-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  color: transparent;
+  caret-color: #303030;
+  overflow: hidden;
+  resize: none;
+}
+
+.article-editor__html-input:focus-visible {
+  outline: none;
+}
+
+/* The typed text is invisible, so the selection has to be the thing that shows what is selected. */
+.article-editor__html-input::selection {
+  background: #b8d4f8;
+}
+
+/* Colours the markup the way a code editor would, so the tags read as structure rather than as more prose. */
+.article-editor__html-punctuation {
+  color: #8a8a8a;
+}
+
+.article-editor__html-tag {
+  color: #0f5132;
+}
+
+.article-editor__html-attribute {
+  color: #005bd3;
+}
+
+.article-editor__html-value {
+  color: #8a3b00;
+}
+
+/*
+ * Tables. Tiptap ships no table styling, so the grid, header shading, and the column-resize and cell-selection
+ * affordances are all defined here.
+ */
+.article-editor .tiptap.ProseMirror table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+  overflow: hidden;
+}
+
+.article-editor .tiptap.ProseMirror :is(th, td) {
+  position: relative;
+  min-width: 4rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--tt-gray-light-a-200, rgba(24, 24, 27, 0.12));
+  vertical-align: top;
+}
+
+.article-editor .tiptap.ProseMirror th {
+  background: var(--tt-gray-light-a-50, rgba(56, 56, 56, 0.04));
+  font-weight: 600;
+  text-align: start;
+}
+
+.article-editor .tiptap.ProseMirror :is(th, td) > :first-child {
+  margin-block-start: 0;
+}
+
+.article-editor .tiptap.ProseMirror :is(th, td) > :last-child {
+  margin-block-end: 0;
+}
+
+/* ProseMirror marks the cells covered by a rectangular selection; without this the selection is invisible. */
+.article-editor .tiptap.ProseMirror .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 91, 211, 0.12);
+  pointer-events: none;
+}
+
+.article-editor .tiptap.ProseMirror .column-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: -2px;
+  right: -2px;
+  width: 4px;
+  background: #005bd3;
+  pointer-events: none;
+}
+
+.article-editor .tiptap.ProseMirror.resize-cursor {
+  cursor: col-resize;
+}
+
+/*
+ * The vendored node styles size body copy at 1rem, which reads a size larger than every field beside it. Headings
+ * are declared in `em`, so lowering the base scales the whole document rather than flattening the hierarchy.
+ */
+.article-editor .tiptap.ProseMirror {
+  font-size: 0.875rem;
+}
+
+.article-editor .tiptap.ProseMirror p:not(td p):not(th p) {
+  font-size: 0.875rem;
+}
+
+/* The vendored heading styles stop at h4, and the formatting menu now offers the two levels below it. */
+.article-editor .tiptap.ProseMirror h5 {
+  margin-top: 2em;
+  font-size: 0.9375em;
+  font-weight: 600;
+}
+
+.article-editor .tiptap.ProseMirror h6 {
+  margin-top: 2em;
+  font-size: 0.875em;
+  font-weight: 600;
+}
+
+/* Store files carry their full resolution, which is far wider than the writing surface. */
+.article-editor .tiptap img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1rem 0;
+  border-radius: 0.5rem;
+}
+
+.article-editor .tiptap img.ProseMirror-selectednode {
+  outline: 2px solid #005bd3;
+  outline-offset: 2px;
+}
+
+/*
+ * Embeds. The frame is held inert so a click selects the block for editing instead of being swallowed by the
+ * embedded player; the video still plays normally once the article is on the storefront.
+ */
+.article-editor__embed {
+  position: relative;
+  margin: 1rem 0;
+  padding-block-end: 56.25%;
+  border-radius: 0.5rem;
+  background: var(--tt-gray-light-a-100, rgba(15, 22, 36, 0.05));
+  overflow: hidden;
+}
+
+.article-editor__embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  pointer-events: none;
+}
+
+.article-editor .ProseMirror-selectednode .article-editor__embed,
+.article-editor .article-editor__embed.ProseMirror-selectednode {
+  outline: 2px solid #005bd3;
+  outline-offset: 2px;
+}
+
+/* The floating menu that follows a selection. */
+.article-editor__selection-menu {
+  display: flex;
+  gap: 0.125rem;
+  padding: 0.1875rem;
+  border: 1px solid var(--tt-gray-light-a-200, rgba(24, 24, 27, 0.12));
+  border-radius: 0.5rem;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/*
+ * The shipped card centres a single row of controls, which is right for the link popover it was drawn for. These
+ * popovers stack labelled fields instead, so they need a set width and full-width rows to read as a small form.
+ */
+.article-editor__popover.tiptap-card {
+  width: 18rem;
+  align-items: stretch;
+}
+
+.article-editor__popover .tiptap-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem 0.5rem;
+}
+
+.article-editor__popover .tiptap-card-item-group {
+  min-width: 0;
+}
+
+/* The shipped label capitalizes every word, which fights the sentence case the rest of the admin writes in. */
+.article-editor__popover .tiptap-card-group-label {
+  padding: 0.5rem 0 0.125rem;
+  text-transform: none;
+}
+
+.article-editor__popover .tiptap-input {
+  width: 100%;
+}
+
+/* The confirming action closes the popover, so it spans the width rather than sitting in the corner. */
+.article-editor__popover .tiptap-button[data-style="primary"] {
+  width: 100%;
+  margin-block-start: 0.375rem;
+  justify-content: center;
+}
+
+.article-editor__popover [role="alert"] {
+  margin: 0.25rem 0 0;
+  color: var(--tt-color-text-red, hsl(2, 62%, 55%));
+  font-size: 0.75rem;
+}
+
+.article-editor__popover p {
+  margin: 0.25rem 0;
+  color: var(--tt-gray-light-a-500, rgba(52, 55, 60, 0.64));
+  font-size: 0.75rem;
+}
+
+/* Crosslink results: each row is one full-width choice, so the list scrolls rather than the popover growing. */
+.article-editor__crosslinks {
+  display: flex;
+  flex-direction: column;
+  max-height: 14rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.article-editor__crosslinks .tiptap-button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.article-editor__crosslinks .tiptap-button-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.article-editor__crosslink-type {
+  margin-inline-start: auto;
+  padding-inline-start: 0.5rem;
+  color: var(--tt-gray-light-a-500, rgba(52, 55, 60, 0.64));
+  font-size: 0.6875rem;
+}

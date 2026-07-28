@@ -1,0 +1,132 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1784805902722,
+      "tag": "0000_narrow_sumo",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784875253843,
+      "tag": "0001_special_karen_page",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1784875616583,
+      "tag": "0002_tricky_triathlon",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785009374905,
+      "tag": "0003_red_lightspeed",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785033859624,
+      "tag": "0004_many_magma",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785047533868,
+      "tag": "0005_absurd_wraith",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785057513548,
+      "tag": "0006_slippery_deadpool",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785104166815,
+      "tag": "0007_shallow_ozymandias",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785115211561,
+      "tag": "0008_ambiguous_proemial_gods",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785131964927,
+      "tag": "0009_embeddings_halfvec_512",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1785133341776,
+      "tag": "0010_giant_colonel_america",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1785134007982,
+      "tag": "0011_dapper_clea",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1785142429212,
+      "tag": "0012_nice_black_tarantula",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1785146394710,
+      "tag": "0013_funny_swarm",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1785146475111,
+      "tag": "0014_hard_starhawk",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1785146719446,
+      "tag": "0015_warm_dagger",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1785147331537,
+      "tag": "0016_overjoyed_thunderbolts",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1785195910342,
+      "tag": "0017_wet_exodus",
+      "breakpoints": true
+    }
+  ]
+}

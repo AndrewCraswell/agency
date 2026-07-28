@@ -1,0 +1,1 @@
+ALTER TABLE "blog_writer"."keyword_clusters" ALTER COLUMN "difficulty" SET DATA TYPE double precision;

@@ -1,0 +1,19 @@
+.version-diff {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+/* Inserted and deleted text carry an underline and a strikethrough so the change reads without relying on color. */
+.version-diff ins {
+  background: #cdfee1;
+  color: #0c5132;
+  text-decoration: underline;
+}
+
+.version-diff del {
+  background: #ffd6d6;
+  color: #8e1f0b;
+  text-decoration: line-through;
+}

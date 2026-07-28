@@ -1,0 +1,3369 @@
+{
+  "id": "58f5f4cd-a7bb-44e2-bc15-7cd7f57b5362",
+  "prevId": "819cfa47-a86e-455a-bcb3-7d8b872926b6",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "blog_writer.article_publication_events": {
+      "name": "article_publication_events",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "article_id": {
+          "name": "article_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision_id": {
+          "name": "revision_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "event_type": {
+          "name": "event_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "shopify_article_gid": {
+          "name": "shopify_article_gid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shopify_article_url": {
+          "name": "shopify_article_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "occurred_at": {
+          "name": "occurred_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "article_publication_events_article_idx": {
+          "name": "article_publication_events_article_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "article_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occurred_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "article_publication_events_tenant_id_tenant_stores_tenant_id_fk": {
+          "name": "article_publication_events_tenant_id_tenant_stores_tenant_id_fk",
+          "tableFrom": "article_publication_events",
+          "tableTo": "tenant_stores",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "tenant_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "article_publication_events_article_fk": {
+          "name": "article_publication_events_article_fk",
+          "tableFrom": "article_publication_events",
+          "tableTo": "articles",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "article_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "article_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "article_publication_events_revision_fk": {
+          "name": "article_publication_events_revision_fk",
+          "tableFrom": "article_publication_events",
+          "tableTo": "article_revisions",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "revision_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "revision_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "article_publication_events_tenant_id_event_id_pk": {
+          "name": "article_publication_events_tenant_id_event_id_pk",
+          "columns": [
+            "tenant_id",
+            "event_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "article_publication_events_type_check": {
+          "name": "article_publication_events_type_check",
+          "value": "\"blog_writer\".\"article_publication_events\".\"event_type\" in ('shopify_draft_saved', 'published', 'unpublished')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "blog_writer.article_revisions": {
+      "name": "article_revisions",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision_id": {
+          "name": "revision_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "article_id": {
+          "name": "article_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "revision_number": {
+          "name": "revision_number",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "origin": {
+          "name": "origin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "excerpt": {
+          "name": "excerpt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "tags": {
+          "name": "tags",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "author": {
+          "name": "author",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "handle": {
+          "name": "handle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "seo_title": {
+          "name": "seo_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "seo_description": {
+          "name": "seo_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "image_url": {
+          "name": "image_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "image_alt_text": {
+          "name": "image_alt_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "article_revisions_number_uidx": {
+          "name": "article_revisions_number_uidx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "article_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "revision_number",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "article_revisions_article_idx": {
+          "name": "article_revisions_article_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "article_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "article_revisions_tenant_id_tenant_stores_tenant_id_fk": {
+          "name": "article_revisions_tenant_id_tenant_stores_tenant_id_fk",
+          "tableFrom": "article_revisions",
+          "tableTo": "tenant_stores",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "tenant_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "article_revisions_article_fk": {
+          "name": "article_revisions_article_fk",
+          "tableFrom": "article_revisions",
+          "tableTo": "articles",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "article_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "article_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "article_revisions_tenant_id_revision_id_pk": {
+          "name": "article_revisions_tenant_id_revision_id_pk",
+          "columns": [
+            "tenant_id",
+            "revision_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "article_revisions_origin_check": {
+          "name": "article_revisions_origin_check",
+          "value": "\"blog_writer\".\"article_revisions\".\"origin\" in ('generated', 'edited', 'regenerated', 'imported')"
+        },
+        "article_revisions_number_check": {
+          "name": "article_revisions_number_check",
+          "value": "\"blog_writer\".\"article_revisions\".\"revision_number\" > 0"
+        },
+        "article_revisions_content_hash_check": {
+          "name": "article_revisions_content_hash_check",
+          "value": "\"blog_writer\".\"article_revisions\".\"content_hash\" ~ '^[0-9a-f]{64}$'"
+        },
+        "article_revisions_handle_check": {
+          "name": "article_revisions_handle_check",
+          "value": "\"blog_writer\".\"article_revisions\".\"handle\" = '' or \"blog_writer\".\"article_revisions\".\"handle\" ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "blog_writer.articles": {
+      "name": "articles",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "article_id": {
+          "name": "article_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "idea_id": {
+          "name": "idea_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "draft_id": {
+          "name": "draft_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "destination_blog_gid": {
+          "name": "destination_blog_gid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'draft'"
+        },
+        "current_revision_id": {
+          "name": "current_revision_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "published_revision_id": {
+          "name": "published_revision_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shopify_article_gid": {
+          "name": "shopify_article_gid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shopify_article_url": {
+          "name": "shopify_article_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "articles_draft_uidx": {
+          "name": "articles_draft_uidx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "draft_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"blog_writer\".\"articles\".\"draft_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_status_idx": {
+          "name": "articles_status_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "articles_updated_idx": {
+          "name": "articles_updated_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "articles_tenant_id_tenant_stores_tenant_id_fk": {
+          "name": "articles_tenant_id_tenant_stores_tenant_id_fk",
+          "tableFrom": "articles",
+          "tableTo": "tenant_stores",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "tenant_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "articles_idea_fk": {
+          "name": "articles_idea_fk",
+          "tableFrom": "articles",
+          "tableTo": "blog_ideas",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "idea_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "idea_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "articles_draft_fk": {
+          "name": "articles_draft_fk",
+          "tableFrom": "articles",
+          "tableTo": "blog_drafts",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "draft_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "draft_id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "articles_current_revision_fk": {
+          "name": "articles_current_revision_fk",
+          "tableFrom": "articles",
+          "tableTo": "article_revisions",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "current_revision_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "revision_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "articles_published_revision_fk": {
+          "name": "articles_published_revision_fk",
+          "tableFrom": "articles",
+          "tableTo": "article_revisions",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "published_revision_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "revision_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "articles_tenant_id_article_id_pk": {
+          "name": "articles_tenant_id_article_id_pk",
+          "columns": [
+            "tenant_id",
+            "article_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "articles_status_check": {
+          "name": "articles_status_check",
+          "value": "\"blog_writer\".\"articles\".\"status\" in ('draft', 'needs_review', 'ready_to_publish', 'published', 'needs_attention', 'failed')"
+        },
+        "articles_published_revision_check": {
+          "name": "articles_published_revision_check",
+          "value": "\"blog_writer\".\"articles\".\"published_revision_id\" is null or \"blog_writer\".\"articles\".\"current_revision_id\" is not null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "blog_writer.blog_drafts": {
+      "name": "blog_drafts",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "draft_id": {
+          "name": "draft_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "idea_id": {
+          "name": "idea_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_blog_gid": {
+          "name": "destination_blog_gid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "excerpt": {
+          "name": "excerpt",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'generating'"
+        },
+        "shopify_article_gid": {
+          "name": "shopify_article_gid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "blog_drafts_idea_uidx": {
+          "name": "blog_drafts_idea_uidx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "idea_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "blog_drafts_status_idx": {
+          "name": "blog_drafts_status_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "blog_drafts_tenant_id_tenant_stores_tenant_id_fk": {
+          "name": "blog_drafts_tenant_id_tenant_stores_tenant_id_fk",
+          "tableFrom": "blog_drafts",
+          "tableTo": "tenant_stores",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "tenant_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "blog_drafts_idea_fk": {
+          "name": "blog_drafts_idea_fk",
+          "tableFrom": "blog_drafts",
+          "tableTo": "blog_ideas",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "idea_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "idea_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "blog_drafts_tenant_id_draft_id_pk": {
+          "name": "blog_drafts_tenant_id_draft_id_pk",
+          "columns": [
+            "tenant_id",
+            "draft_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "blog_drafts_content_hash_check": {
+          "name": "blog_drafts_content_hash_check",
+          "value": "\"blog_writer\".\"blog_drafts\".\"content_hash\" ~ '^[0-9a-f]{64}$'"
+        },
+        "blog_drafts_status_check": {
+          "name": "blog_drafts_status_check",
+          "value": "\"blog_writer\".\"blog_drafts\".\"status\" in ('generating', 'review', 'approved', 'published', 'failed')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "blog_writer.blog_ideas": {
+      "name": "blog_ideas",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idea_id": {
+          "name": "idea_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "focus": {
+          "name": "focus",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "angle": {
+          "name": "angle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_keyword": {
+          "name": "target_keyword",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rationale": {
+          "name": "rationale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'proposed'"
+        },
+        "scheduled_for": {
+          "name": "scheduled_for",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "blog_ideas_title_uidx": {
+          "name": "blog_ideas_title_uidx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "title",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "blog_ideas_status_idx": {
+          "name": "blog_ideas_status_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "blog_ideas_scheduled_idx": {
+          "name": "blog_ideas_scheduled_idx",
+          "columns": [
+            {
+              "expression": "scheduled_for",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "blog_ideas_tenant_id_tenant_stores_tenant_id_fk": {
+          "name": "blog_ideas_tenant_id_tenant_stores_tenant_id_fk",
+          "tableFrom": "blog_ideas",
+          "tableTo": "tenant_stores",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "tenant_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "blog_ideas_tenant_id_idea_id_pk": {
+          "name": "blog_ideas_tenant_id_idea_id_pk",
+          "columns": [
+            "tenant_id",
+            "idea_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "blog_ideas_status_check": {
+          "name": "blog_ideas_status_check",
+          "value": "\"blog_writer\".\"blog_ideas\".\"status\" in ('proposed', 'selected', 'dismissed', 'drafted')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "blog_writer.blog_recommendations": {
+      "name": "blog_recommendations",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recommendation_id": {
+          "name": "recommendation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "article_id": {
+          "name": "article_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "draft_id": {
+          "name": "draft_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_resource_id": {
+          "name": "destination_resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "destination_type": {
+          "name": "destination_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "objective": {
+          "name": "objective",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_revision": {
+          "name": "source_revision",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "section_locator": {
+          "name": "section_locator",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "anchor_text": {
+          "name": "anchor_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rationale": {
+          "name": "rationale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "evidence": {
+          "name": "evidence",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "ranker": {
+          "name": "ranker",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'proposed'"
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "blog_recommendations_destination_uidx": {
+          "name": "blog_recommendations_destination_uidx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "draft_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "objective",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "destination_resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "blog_recommendations_article_destination_uidx": {
+          "name": "blog_recommendations_article_destination_uidx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "article_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "objective",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "destination_resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"blog_writer\".\"blog_recommendations\".\"article_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "blog_recommendations_article_review_idx": {
+          "name": "blog_recommendations_article_review_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "article_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "blog_recommendations_review_idx": {
+          "name": "blog_recommendations_review_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "draft_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "blog_recommendations_tenant_id_tenant_stores_tenant_id_fk": {
+          "name": "blog_recommendations_tenant_id_tenant_stores_tenant_id_fk",
+          "tableFrom": "blog_recommendations",
+          "tableTo": "tenant_stores",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "tenant_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "blog_recommendations_article_fk": {
+          "name": "blog_recommendations_article_fk",
+          "tableFrom": "blog_recommendations",
+          "tableTo": "articles",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "article_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "article_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "blog_recommendations_draft_fk": {
+          "name": "blog_recommendations_draft_fk",
+          "tableFrom": "blog_recommendations",
+          "tableTo": "blog_drafts",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "draft_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "draft_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "blog_recommendations_destination_fk": {
+          "name": "blog_recommendations_destination_fk",
+          "tableFrom": "blog_recommendations",
+          "tableTo": "tenant_resources",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "destination_resource_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "resource_id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "blog_recommendations_tenant_id_recommendation_id_pk": {
+          "name": "blog_recommendations_tenant_id_recommendation_id_pk",
+          "columns": [
+            "tenant_id",
+            "recommendation_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "blog_recommendations_objective_check": {
+          "name": "blog_recommendations_objective_check",
+          "value": "\"blog_writer\".\"blog_recommendations\".\"objective\" in ('commercial_crosslink', 'further_reading')"
+        },
+        "blog_recommendations_article_type_check": {
+          "name": "blog_recommendations_article_type_check",
+          "value": "(\"blog_writer\".\"blog_recommendations\".\"article_id\" is null and \"blog_writer\".\"blog_recommendations\".\"destination_type\" is null) or (\"blog_writer\".\"blog_recommendations\".\"article_id\" is not null and \"blog_writer\".\"blog_recommendations\".\"destination_type\" is not null)"
+        },
+        "blog_recommendations_destination_type_check": {
+          "name": "blog_recommendations_destination_type_check",
+          "value": "\"blog_writer\".\"blog_recommendations\".\"destination_type\" is null or \"blog_writer\".\"blog_recommendations\".\"destination_type\" in ('product', 'collection', 'blog', 'article', 'page')"
+        },
+        "blog_recommendations_further_reading_type_check": {
+          "name": "blog_recommendations_further_reading_type_check",
+          "value": "\"blog_writer\".\"blog_recommendations\".\"objective\" <> 'further_reading' or \"blog_writer\".\"blog_recommendations\".\"destination_type\" is null or \"blog_writer\".\"blog_recommendations\".\"destination_type\" = 'article'"
+        },
+        "blog_recommendations_revision_check": {
+          "name": "blog_recommendations_revision_check",
+          "value": "\"blog_writer\".\"blog_recommendations\".\"source_revision\" ~ '^[0-9a-f]{64}$'"
+        },
+        "blog_recommendations_status_check": {
+          "name": "blog_recommendations_status_check",
+          "value": "\"blog_writer\".\"blog_recommendations\".\"status\" in ('proposed', 'accepted', 'rejected', 'stale', 'applied')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.blogs": {
+      "name": "blogs",
+      "schema": "",
+      "columns": {
+        "hostname": {
+          "name": "hostname",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_sync": {
+          "name": "last_sync",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "blog_writer.keyword_cluster_dismissals": {
+      "name": "keyword_cluster_dismissals",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cluster_id": {
+          "name": "cluster_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "head_keyword": {
+          "name": "head_keyword",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "dismissed_at": {
+          "name": "dismissed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "keyword_cluster_dismissals_tenant_id_tenant_stores_tenant_id_fk": {
+          "name": "keyword_cluster_dismissals_tenant_id_tenant_stores_tenant_id_fk",
+          "tableFrom": "keyword_cluster_dismissals",
+          "tableTo": "tenant_stores",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "tenant_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "keyword_cluster_dismissals_tenant_id_cluster_id_pk": {
+          "name": "keyword_cluster_dismissals_tenant_id_cluster_id_pk",
+          "columns": [
+            "tenant_id",
+            "cluster_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "blog_writer.keyword_clusters": {
+      "name": "keyword_clusters",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "import_id": {
+          "name": "import_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cluster_id": {
+          "name": "cluster_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "head_keyword": {
+          "name": "head_keyword",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "head_demand": {
+          "name": "head_demand",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "demand": {
+          "name": "demand",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "keywords": {
+          "name": "keywords",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "keyword_demand": {
+          "name": "keyword_demand",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "proof_urls": {
+          "name": "proof_urls",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "competitor_top_ten": {
+          "name": "competitor_top_ten",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "our_best_position": {
+          "name": "our_best_position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "our_best_keyword": {
+          "name": "our_best_keyword",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "our_head_position": {
+          "name": "our_head_position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "our_ranking_urls": {
+          "name": "our_ranking_urls",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "largest_our_decline": {
+          "name": "largest_our_decline",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "main_intent": {
+          "name": "main_intent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "intents": {
+          "name": "intents",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "difficulty": {
+          "name": "difficulty",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "serp_average_domain_rank": {
+          "name": "serp_average_domain_rank",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "serp_item_types": {
+          "name": "serp_item_types",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "head_monthly_searches": {
+          "name": "head_monthly_searches",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "has_editorial_proof": {
+          "name": "has_editorial_proof",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_reachable": {
+          "name": "is_reachable",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "has_ai_overview": {
+          "name": "has_ai_overview",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "has_product_blocks": {
+          "name": "has_product_blocks",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "question_keywords": {
+          "name": "question_keywords",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        }
+      },
+      "indexes": {
+        "keyword_clusters_demand_idx": {
+          "name": "keyword_clusters_demand_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "import_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "demand",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "keyword_clusters_import_fk": {
+          "name": "keyword_clusters_import_fk",
+          "tableFrom": "keyword_clusters",
+          "tableTo": "keyword_imports",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "import_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "import_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "keyword_clusters_tenant_id_import_id_cluster_id_pk": {
+          "name": "keyword_clusters_tenant_id_import_id_cluster_id_pk",
+          "columns": [
+            "tenant_id",
+            "import_id",
+            "cluster_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "blog_writer.keyword_import_domains": {
+      "name": "keyword_import_domains",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "import_id": {
+          "name": "import_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "domain": {
+          "name": "domain",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_own_domain": {
+          "name": "is_own_domain",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "domain_rank": {
+          "name": "domain_rank",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'running'"
+        },
+        "row_count": {
+          "name": "row_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "available_row_count": {
+          "name": "available_row_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cost": {
+          "name": "cost",
+          "type": "numeric(12, 6)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "error_code": {
+          "name": "error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "keyword_import_domains_import_fk": {
+          "name": "keyword_import_domains_import_fk",
+          "tableFrom": "keyword_import_domains",
+          "tableTo": "keyword_imports",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "import_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "import_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "keyword_import_domains_tenant_id_import_id_domain_pk": {
+          "name": "keyword_import_domains_tenant_id_import_id_domain_pk",
+          "columns": [
+            "tenant_id",
+            "import_id",
+            "domain"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "keyword_import_domains_status_check": {
+          "name": "keyword_import_domains_status_check",
+          "value": "\"blog_writer\".\"keyword_import_domains\".\"status\" in ('running', 'succeeded', 'failed')"
+        },
+        "keyword_import_domains_row_count_check": {
+          "name": "keyword_import_domains_row_count_check",
+          "value": "\"blog_writer\".\"keyword_import_domains\".\"row_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "blog_writer.keyword_imports": {
+      "name": "keyword_imports",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "import_id": {
+          "name": "import_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "endpoint": {
+          "name": "endpoint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "location_name": {
+          "name": "location_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "language_code": {
+          "name": "language_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "trigger": {
+          "name": "trigger",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'running'"
+        },
+        "calibration": {
+          "name": "calibration",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cost": {
+          "name": "cost",
+          "type": "numeric(12, 6)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "row_count": {
+          "name": "row_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "error_code": {
+          "name": "error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "keyword_imports_requested_idx": {
+          "name": "keyword_imports_requested_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "requested_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "keyword_imports_tenant_id_tenant_stores_tenant_id_fk": {
+          "name": "keyword_imports_tenant_id_tenant_stores_tenant_id_fk",
+          "tableFrom": "keyword_imports",
+          "tableTo": "tenant_stores",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "tenant_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "keyword_imports_tenant_id_import_id_pk": {
+          "name": "keyword_imports_tenant_id_import_id_pk",
+          "columns": [
+            "tenant_id",
+            "import_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "keyword_imports_status_check": {
+          "name": "keyword_imports_status_check",
+          "value": "\"blog_writer\".\"keyword_imports\".\"status\" in ('running', 'succeeded', 'partial', 'failed')"
+        },
+        "keyword_imports_trigger_check": {
+          "name": "keyword_imports_trigger_check",
+          "value": "\"blog_writer\".\"keyword_imports\".\"trigger\" in ('scheduled', 'manual')"
+        },
+        "keyword_imports_row_count_check": {
+          "name": "keyword_imports_row_count_check",
+          "value": "\"blog_writer\".\"keyword_imports\".\"row_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "blog_writer.keyword_observations": {
+      "name": "keyword_observations",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "import_id": {
+          "name": "import_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "keyword": {
+          "name": "keyword",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "domain": {
+          "name": "domain",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_own_domain": {
+          "name": "is_own_domain",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rank_absolute": {
+          "name": "rank_absolute",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rank_group": {
+          "name": "rank_group",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ranking_url": {
+          "name": "ranking_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_rank_absolute": {
+          "name": "previous_rank_absolute",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "search_volume": {
+          "name": "search_volume",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "monthly_searches": {
+          "name": "monthly_searches",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "difficulty": {
+          "name": "difficulty",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "main_intent": {
+          "name": "main_intent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "foreign_intents": {
+          "name": "foreign_intents",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "serp_item_types": {
+          "name": "serp_item_types",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "serp_average_domain_rank": {
+          "name": "serp_average_domain_rank",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "serp_result_count": {
+          "name": "serp_result_count",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "estimated_traffic_volume": {
+          "name": "estimated_traffic_volume",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "field_freshness": {
+          "name": "field_freshness",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "keyword_observations_keyword_idx": {
+          "name": "keyword_observations_keyword_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "import_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "keyword",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "keyword_observations_domain_idx": {
+          "name": "keyword_observations_domain_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "import_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "domain",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "keyword_observations_import_fk": {
+          "name": "keyword_observations_import_fk",
+          "tableFrom": "keyword_observations",
+          "tableTo": "keyword_imports",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "import_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "import_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "keyword_observations_tenant_id_import_id_keyword_domain_pk": {
+          "name": "keyword_observations_tenant_id_import_id_keyword_domain_pk",
+          "columns": [
+            "tenant_id",
+            "import_id",
+            "keyword",
+            "domain"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "keyword_observations_rank_check": {
+          "name": "keyword_observations_rank_check",
+          "value": "\"blog_writer\".\"keyword_observations\".\"rank_absolute\" > 0"
+        },
+        "keyword_observations_previous_rank_check": {
+          "name": "keyword_observations_previous_rank_check",
+          "value": "\"blog_writer\".\"keyword_observations\".\"previous_rank_absolute\" is null or \"blog_writer\".\"keyword_observations\".\"previous_rank_absolute\" > 0"
+        },
+        "keyword_observations_volume_check": {
+          "name": "keyword_observations_volume_check",
+          "value": "\"blog_writer\".\"keyword_observations\".\"search_volume\" is null or \"blog_writer\".\"keyword_observations\".\"search_volume\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "blog_writer.keyword_opportunities": {
+      "name": "keyword_opportunities",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "import_id": {
+          "name": "import_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cluster_id": {
+          "name": "cluster_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "detector": {
+          "name": "detector",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "verdict": {
+          "name": "verdict",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "supporting": {
+          "name": "supporting",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "rank": {
+          "name": "rank",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_suppressed": {
+          "name": "is_suppressed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "score": {
+          "name": "score",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "score_components": {
+          "name": "score_components",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "evidence": {
+          "name": "evidence",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "scope": {
+          "name": "scope",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "keyword_opportunities_rank_idx": {
+          "name": "keyword_opportunities_rank_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "import_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_suppressed",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "rank",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "keyword_opportunities_cluster_fk": {
+          "name": "keyword_opportunities_cluster_fk",
+          "tableFrom": "keyword_opportunities",
+          "tableTo": "keyword_clusters",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "import_id",
+            "cluster_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "import_id",
+            "cluster_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "keyword_opportunities_tenant_id_import_id_cluster_id_pk": {
+          "name": "keyword_opportunities_tenant_id_import_id_cluster_id_pk",
+          "columns": [
+            "tenant_id",
+            "import_id",
+            "cluster_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "keyword_opportunities_verdict_check": {
+          "name": "keyword_opportunities_verdict_check",
+          "value": "\"blog_writer\".\"keyword_opportunities\".\"verdict\" in ('new_article', 'refresh', 'schedule', 'no_action')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "blog_writer.tenant_blog_subscriptions": {
+      "name": "tenant_blog_subscriptions",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "blog_hostname": {
+          "name": "blog_hostname",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tenant_blog_subscriptions_tenant_id_tenant_stores_tenant_id_fk": {
+          "name": "tenant_blog_subscriptions_tenant_id_tenant_stores_tenant_id_fk",
+          "tableFrom": "tenant_blog_subscriptions",
+          "tableTo": "tenant_stores",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "tenant_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "tenant_blog_subscriptions_blog_hostname_blogs_hostname_fk": {
+          "name": "tenant_blog_subscriptions_blog_hostname_blogs_hostname_fk",
+          "tableFrom": "tenant_blog_subscriptions",
+          "tableTo": "blogs",
+          "columnsFrom": [
+            "blog_hostname"
+          ],
+          "columnsTo": [
+            "hostname"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "tenant_blog_subscriptions_tenant_id_blog_hostname_pk": {
+          "name": "tenant_blog_subscriptions_tenant_id_blog_hostname_pk",
+          "columns": [
+            "tenant_id",
+            "blog_hostname"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "blog_writer.tenant_competitor_domains": {
+      "name": "tenant_competitor_domains",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hostname": {
+          "name": "hostname",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tenant_competitor_domains_tenant_id_tenant_stores_tenant_id_fk": {
+          "name": "tenant_competitor_domains_tenant_id_tenant_stores_tenant_id_fk",
+          "tableFrom": "tenant_competitor_domains",
+          "tableTo": "tenant_stores",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "tenant_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "tenant_competitor_domains_tenant_id_hostname_pk": {
+          "name": "tenant_competitor_domains_tenant_id_hostname_pk",
+          "columns": [
+            "tenant_id",
+            "hostname"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "tenant_competitor_domains_hostname_check": {
+          "name": "tenant_competitor_domains_hostname_check",
+          "value": "\"blog_writer\".\"tenant_competitor_domains\".\"hostname\" ~ '^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "blog_writer.tenant_jobs": {
+      "name": "tenant_jobs",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "job_id": {
+          "name": "job_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "job_type": {
+          "name": "job_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "idempotency_key": {
+          "name": "idempotency_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'queued'"
+        },
+        "cursor": {
+          "name": "cursor",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "attempt_count": {
+          "name": "attempt_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_error_code": {
+          "name": "last_error_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "tenant_jobs_idempotency_uidx": {
+          "name": "tenant_jobs_idempotency_uidx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "idempotency_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "tenant_jobs_status_idx": {
+          "name": "tenant_jobs_status_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "tenant_jobs_tenant_id_tenant_stores_tenant_id_fk": {
+          "name": "tenant_jobs_tenant_id_tenant_stores_tenant_id_fk",
+          "tableFrom": "tenant_jobs",
+          "tableTo": "tenant_stores",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "tenant_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "tenant_jobs_tenant_id_job_id_pk": {
+          "name": "tenant_jobs_tenant_id_job_id_pk",
+          "columns": [
+            "tenant_id",
+            "job_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "tenant_jobs_type_check": {
+          "name": "tenant_jobs_type_check",
+          "value": "\"blog_writer\".\"tenant_jobs\".\"job_type\" in ('onboarding', 'catalog_sync', 'content_sync', 'indexing', 'reconciliation', 'idea_generation', 'draft_generation', 'crosslinks', 'further_reading', 'keyword_import')"
+        },
+        "tenant_jobs_status_check": {
+          "name": "tenant_jobs_status_check",
+          "value": "\"blog_writer\".\"tenant_jobs\".\"status\" in ('queued', 'running', 'succeeded', 'failed', 'cancelled')"
+        },
+        "tenant_jobs_attempt_count_check": {
+          "name": "tenant_jobs_attempt_count_check",
+          "value": "\"blog_writer\".\"tenant_jobs\".\"attempt_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "blog_writer.tenant_resource_chunks": {
+      "name": "tenant_resource_chunks",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chunk_id": {
+          "name": "chunk_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "heading": {
+          "name": "heading",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_hash": {
+          "name": "source_hash",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "representation_version": {
+          "name": "representation_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "embedding_model": {
+          "name": "embedding_model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding_version": {
+          "name": "embedding_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "halfvec(512)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deactivated_at": {
+          "name": "deactivated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "tenant_resource_chunks_ordinal_uidx": {
+          "name": "tenant_resource_chunks_ordinal_uidx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "representation_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ordinal",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "tenant_resource_chunks_resource_idx": {
+          "name": "tenant_resource_chunks_resource_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "resource_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "tenant_resource_chunks_embedding_idx": {
+          "name": "tenant_resource_chunks_embedding_idx",
+          "columns": [
+            {
+              "expression": "embedding",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "halfvec_cosine_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "hnsw",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "tenant_resource_chunks_tenant_id_tenant_stores_tenant_id_fk": {
+          "name": "tenant_resource_chunks_tenant_id_tenant_stores_tenant_id_fk",
+          "tableFrom": "tenant_resource_chunks",
+          "tableTo": "tenant_stores",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "tenant_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "tenant_resource_chunks_resource_fk": {
+          "name": "tenant_resource_chunks_resource_fk",
+          "tableFrom": "tenant_resource_chunks",
+          "tableTo": "tenant_resources",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id",
+            "resource_id"
+          ],
+          "columnsTo": [
+            "tenant_id",
+            "resource_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "tenant_resource_chunks_tenant_id_chunk_id_pk": {
+          "name": "tenant_resource_chunks_tenant_id_chunk_id_pk",
+          "columns": [
+            "tenant_id",
+            "chunk_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "tenant_resource_chunks_ordinal_check": {
+          "name": "tenant_resource_chunks_ordinal_check",
+          "value": "\"blog_writer\".\"tenant_resource_chunks\".\"ordinal\" >= 0"
+        },
+        "tenant_resource_chunks_source_hash_check": {
+          "name": "tenant_resource_chunks_source_hash_check",
+          "value": "\"blog_writer\".\"tenant_resource_chunks\".\"source_hash\" ~ '^[0-9a-f]{64}$'"
+        },
+        "tenant_resource_chunks_representation_version_check": {
+          "name": "tenant_resource_chunks_representation_version_check",
+          "value": "\"blog_writer\".\"tenant_resource_chunks\".\"representation_version\" > 0"
+        },
+        "tenant_resource_chunks_embedding_check": {
+          "name": "tenant_resource_chunks_embedding_check",
+          "value": "(\"blog_writer\".\"tenant_resource_chunks\".\"embedding_model\" is null and \"blog_writer\".\"tenant_resource_chunks\".\"embedding_version\" is null and \"blog_writer\".\"tenant_resource_chunks\".\"embedding\" is null) or (\"blog_writer\".\"tenant_resource_chunks\".\"embedding_model\" is not null and \"blog_writer\".\"tenant_resource_chunks\".\"embedding_version\" is not null and \"blog_writer\".\"tenant_resource_chunks\".\"embedding\" is not null)"
+        },
+        "tenant_resource_chunks_deactivated_check": {
+          "name": "tenant_resource_chunks_deactivated_check",
+          "value": "(\"blog_writer\".\"tenant_resource_chunks\".\"is_active\" and \"blog_writer\".\"tenant_resource_chunks\".\"deactivated_at\" is null) or (not \"blog_writer\".\"tenant_resource_chunks\".\"is_active\" and \"blog_writer\".\"tenant_resource_chunks\".\"deactivated_at\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "blog_writer.tenant_resources": {
+      "name": "tenant_resources",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_id": {
+          "name": "resource_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "shopify_gid": {
+          "name": "shopify_gid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resource_type": {
+          "name": "resource_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "handle": {
+          "name": "handle",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonical_url": {
+          "name": "canonical_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "locale": {
+          "name": "locale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "content": {
+          "name": "content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "is_published": {
+          "name": "is_published",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_available": {
+          "name": "is_available",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "indexing_status": {
+          "name": "indexing_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "representation_version": {
+          "name": "representation_version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_created_at": {
+          "name": "source_created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_updated_at": {
+          "name": "source_updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "synchronized_at": {
+          "name": "synchronized_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "deactivated_at": {
+          "name": "deactivated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "tenant_resources_shopify_gid_uidx": {
+          "name": "tenant_resources_shopify_gid_uidx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "shopify_gid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "tenant_resources_canonical_url_uidx": {
+          "name": "tenant_resources_canonical_url_uidx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "canonical_url",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "tenant_resources_retrieval_idx": {
+          "name": "tenant_resources_retrieval_idx",
+          "columns": [
+            {
+              "expression": "tenant_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_published",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_available",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "resource_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "tenant_resources_tenant_id_tenant_stores_tenant_id_fk": {
+          "name": "tenant_resources_tenant_id_tenant_stores_tenant_id_fk",
+          "tableFrom": "tenant_resources",
+          "tableTo": "tenant_stores",
+          "schemaTo": "blog_writer",
+          "columnsFrom": [
+            "tenant_id"
+          ],
+          "columnsTo": [
+            "tenant_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "tenant_resources_tenant_id_resource_id_pk": {
+          "name": "tenant_resources_tenant_id_resource_id_pk",
+          "columns": [
+            "tenant_id",
+            "resource_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "tenant_resources_type_check": {
+          "name": "tenant_resources_type_check",
+          "value": "\"blog_writer\".\"tenant_resources\".\"resource_type\" in ('product', 'collection', 'blog', 'article', 'page')"
+        },
+        "tenant_resources_indexing_status_check": {
+          "name": "tenant_resources_indexing_status_check",
+          "value": "\"blog_writer\".\"tenant_resources\".\"indexing_status\" in ('pending', 'indexed', 'failed', 'stale')"
+        },
+        "tenant_resources_representation_version_check": {
+          "name": "tenant_resources_representation_version_check",
+          "value": "\"blog_writer\".\"tenant_resources\".\"representation_version\" > 0"
+        },
+        "tenant_resources_content_hash_check": {
+          "name": "tenant_resources_content_hash_check",
+          "value": "\"blog_writer\".\"tenant_resources\".\"content_hash\" ~ '^[0-9a-f]{64}$'"
+        },
+        "tenant_resources_deactivated_check": {
+          "name": "tenant_resources_deactivated_check",
+          "value": "(\"blog_writer\".\"tenant_resources\".\"is_active\" and \"blog_writer\".\"tenant_resources\".\"deactivated_at\" is null) or (not \"blog_writer\".\"tenant_resources\".\"is_active\" and \"blog_writer\".\"tenant_resources\".\"deactivated_at\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "blog_writer.tenant_stores": {
+      "name": "tenant_stores",
+      "schema": "blog_writer",
+      "columns": {
+        "tenant_id": {
+          "name": "tenant_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "shop_domain": {
+          "name": "shop_domain",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "shop_name": {
+          "name": "shop_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "owned_domains": {
+          "name": "owned_domains",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "brand_brief": {
+          "name": "brand_brief",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "market_country_code": {
+          "name": "market_country_code",
+          "type": "char(2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "market_language_code": {
+          "name": "market_language_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "market_source": {
+          "name": "market_source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "sync_status": {
+          "name": "sync_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "installed_at": {
+          "name": "installed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "last_synchronized_at": {
+          "name": "last_synchronized_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uninstalled_at": {
+          "name": "uninstalled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "tenant_stores_shop_domain_uidx": {
+          "name": "tenant_stores_shop_domain_uidx",
+          "columns": [
+            {
+              "expression": "shop_domain",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "tenant_stores_domain_check": {
+          "name": "tenant_stores_domain_check",
+          "value": "\"blog_writer\".\"tenant_stores\".\"shop_domain\" ~ '^[a-z0-9][a-z0-9-]*\\.myshopify\\.com$'"
+        },
+        "tenant_stores_status_check": {
+          "name": "tenant_stores_status_check",
+          "value": "\"blog_writer\".\"tenant_stores\".\"status\" in ('active', 'uninstalled')"
+        },
+        "tenant_stores_market_country_check": {
+          "name": "tenant_stores_market_country_check",
+          "value": "\"blog_writer\".\"tenant_stores\".\"market_country_code\" ~ '^[A-Z]{2}$'"
+        },
+        "tenant_stores_market_language_check": {
+          "name": "tenant_stores_market_language_check",
+          "value": "\"blog_writer\".\"tenant_stores\".\"market_language_code\" ~ '^[a-z]{2}(-[A-Z]{2})?$'"
+        },
+        "tenant_stores_market_source_check": {
+          "name": "tenant_stores_market_source_check",
+          "value": "\"blog_writer\".\"tenant_stores\".\"market_source\" is null or \"blog_writer\".\"tenant_stores\".\"market_source\" in ('shopify', 'merchant')"
+        },
+        "tenant_stores_market_complete_check": {
+          "name": "tenant_stores_market_complete_check",
+          "value": "(\"blog_writer\".\"tenant_stores\".\"market_country_code\" is null and \"blog_writer\".\"tenant_stores\".\"market_language_code\" is null and \"blog_writer\".\"tenant_stores\".\"market_source\" is null) or (\"blog_writer\".\"tenant_stores\".\"market_country_code\" is not null and \"blog_writer\".\"tenant_stores\".\"market_language_code\" is not null and \"blog_writer\".\"tenant_stores\".\"market_source\" is not null)"
+        },
+        "tenant_stores_sync_status_check": {
+          "name": "tenant_stores_sync_status_check",
+          "value": "\"blog_writer\".\"tenant_stores\".\"sync_status\" in ('pending', 'syncing', 'ready', 'failed')"
+        },
+        "tenant_stores_uninstalled_check": {
+          "name": "tenant_stores_uninstalled_check",
+          "value": "(\"blog_writer\".\"tenant_stores\".\"status\" = 'active' and \"blog_writer\".\"tenant_stores\".\"uninstalled_at\" is null) or (\"blog_writer\".\"tenant_stores\".\"status\" = 'uninstalled' and \"blog_writer\".\"tenant_stores\".\"uninstalled_at\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "blog_writer": "blog_writer"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

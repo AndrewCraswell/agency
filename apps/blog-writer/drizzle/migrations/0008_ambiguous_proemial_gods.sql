@@ -1,0 +1,1 @@
+ALTER TABLE "blog_writer"."tenant_stores" ADD COLUMN "owned_domains" text[] DEFAULT '{}'::text[] NOT NULL;

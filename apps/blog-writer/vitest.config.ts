@@ -12,7 +12,16 @@ export default defineConfig({
       reporter: ["text", "text-summary", "html", "lcov", "json-summary"],
       reportsDirectory: "coverage",
       include: ["app/components/**/*.{ts,tsx}"],
-      exclude: ["app/**/*.test.{ts,tsx}", "app/**/*.stories.{ts,tsx}"],
+      exclude: [
+        "app/**/*.test.{ts,tsx}",
+        "app/**/*.stories.{ts,tsx}",
+        "app/components/tiptap-extension/**",
+        "app/components/tiptap-icons/**",
+        "app/components/tiptap-node/**",
+        "app/components/tiptap-templates/**",
+        "app/components/tiptap-ui/**",
+        "app/components/tiptap-ui-primitive/**"
+      ],
       thresholds: {
         lines: 80,
         statements: 80,

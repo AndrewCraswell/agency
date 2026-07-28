@@ -1,0 +1,40 @@
+/* Six stages read as a balanced block of three by two next to the aside, and pair up on a phone. */
+.home-pipeline {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+/* A count reads first and its label second, in the pipeline tiles and in the store summary alike. */
+.home-stat {
+  display: grid;
+  align-content: start;
+  gap: 0.125rem;
+}
+
+.home-stat__value {
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+/* Two counts sit side by side and drop to a column only when the frame is too narrow for both. */
+.home-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+
+/* Chip rows carry a variable number of link suggestions, so they wrap rather than overflow the section. */
+.home-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (max-width: 30rem) {
+  .home-pipeline {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

@@ -1,4 +1,14 @@
 {
   "$schema": "../../node_modules/oxlint/configuration_schema.json",
-  "extends": ["../../packages/oxlint-config/base.json"]
+  "extends": ["../../packages/oxlint-config/base.json"],
+  "ignorePatterns": [
+    "app/components/tiptap-extension/**",
+    "app/components/tiptap-icons/**",
+    "app/components/tiptap-node/**",
+    "app/components/tiptap-templates/**",
+    "app/components/tiptap-ui/**",
+    "app/components/tiptap-ui-primitive/**",
+    "app/hooks/**",
+    "app/lib/tiptap-utils.ts"
+  ]
 }

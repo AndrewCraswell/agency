@@ -10,5 +10,13 @@
     "sortSpecifiers": true
   },
   "sortPackageJson": false,
-  "ignorePatterns": ["**/dist/**", "**/storybook-static/**", "**/coverage/**", "**/docs/**", "pnpm-lock.yaml"]
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/storybook-static/**",
+    "**/coverage/**",
+    "**/docs/**",
+    "**/drizzle/migrations/meta/**",
+    "**/*.shopify*.html",
+    "pnpm-lock.yaml"
+  ]
 }

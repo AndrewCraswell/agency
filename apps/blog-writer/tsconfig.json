@@ -7,6 +7,9 @@
     "declarationMap": false,
     "jsx": "react-jsx",
     "types": ["@react-router/node", "vite/client", "@shopify/polaris-types"],
-    "rootDirs": [".", "./.react-router/types"]
+    "rootDirs": [".", "./.react-router/types"],
+    "paths": {
+      "@/*": ["./app/*"]
+    }
   }
 }

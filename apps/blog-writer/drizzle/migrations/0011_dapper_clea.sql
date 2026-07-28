@@ -1,0 +1,2 @@
+ALTER TABLE "blog_writer"."keyword_observations" ALTER COLUMN "search_volume" SET DATA TYPE bigint;--> statement-breakpoint
+ALTER TABLE "blog_writer"."keyword_observations" ALTER COLUMN "serp_result_count" SET DATA TYPE bigint;

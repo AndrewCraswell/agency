@@ -1,0 +1,2 @@
+ALTER TABLE "blog_writer"."tenant_stores" DROP CONSTRAINT "tenant_stores_market_language_check";--> statement-breakpoint
+ALTER TABLE "blog_writer"."tenant_stores" ADD CONSTRAINT "tenant_stores_market_language_check" CHECK ("blog_writer"."tenant_stores"."market_language_code" ~ '^[a-z]{2}(-[A-Z]{2})?$');

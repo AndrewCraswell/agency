@@ -1,0 +1,2 @@
+ALTER TABLE "blog_writer"."tenant_resources" DROP CONSTRAINT "tenant_resources_indexing_status_check";--> statement-breakpoint
+ALTER TABLE "blog_writer"."tenant_resources" DROP COLUMN "indexing_status";

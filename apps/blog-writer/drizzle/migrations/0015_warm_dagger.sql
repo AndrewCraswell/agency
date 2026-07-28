@@ -1,0 +1,3 @@
+ALTER TABLE "blog_writer"."keyword_opportunities" DROP CONSTRAINT "keyword_opportunities_tenant_id_import_id_cluster_id_detector_pk";--> statement-breakpoint
+ALTER TABLE "blog_writer"."keyword_opportunities" ADD CONSTRAINT "keyword_opportunities_tenant_id_import_id_cluster_id_pk" PRIMARY KEY("tenant_id","import_id","cluster_id");--> statement-breakpoint
+ALTER TABLE "blog_writer"."keyword_opportunities" ADD COLUMN "supporting" jsonb DEFAULT '[]'::jsonb NOT NULL;

@@ -1,0 +1,146 @@
+/*
+ * The parts of the article editor Polaris has no public element for.
+ * Every value here was read off the admin's own blog post editor -- the field label type, the media drop frame, and
+ * the search listing preview -- so these areas read as part of the admin rather than as app-specific styling.
+ */
+
+/* Matches the label Polaris renders above `s-text-field`, so a labelled editor lines up with the fields around it. */
+.article-field-label {
+  font-size: 13px;
+  font-weight: 450;
+  line-height: 20px;
+  color: #303030;
+}
+
+.article-image-drop {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  min-height: 7.5rem;
+  padding: 2rem;
+  text-align: center;
+  background: #fdfdfd;
+  border: 1px dashed #8a8a8a;
+  border-radius: 0.5rem;
+}
+
+.article-image-drop[data-dragging="true"] {
+  background: #f0f6ff;
+  border-color: #005bd3;
+}
+
+.article-image-drop input[type="file"] {
+  display: none;
+}
+
+.article-image-hint {
+  font-size: 12px;
+  font-weight: 450;
+  line-height: 16px;
+  color: #616161;
+}
+
+/*
+ * Polaris has no combobox element, so the author suggestions are drawn the way the admin draws a popover: over the
+ * fields below rather than pushing them down the panel while someone is typing.
+ */
+.article-author {
+  position: relative;
+}
+
+.article-author__suggestions {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 100%;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  max-height: 12rem;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e3e3e3;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+}
+
+.article-author__suggestion {
+  padding: 0.375rem 0.5rem;
+  font: inherit;
+  font-size: 13px;
+  line-height: 20px;
+  color: #303030;
+  text-align: start;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-radius: 0.375rem;
+}
+
+.article-author__suggestion:hover,
+.article-author__suggestion:focus-visible {
+  background: #f1f1f1;
+}
+
+/* The listing preview repeats how the admin draws a search result, down to the type sizes and the link blue. */
+.article-listing-store {
+  font-size: 14px;
+  font-weight: 450;
+  line-height: 20px;
+  color: #303030;
+}
+
+.article-listing-url {
+  font-size: 12px;
+  font-weight: 450;
+  line-height: 16px;
+  color: #616161;
+  word-break: break-all;
+}
+
+.article-listing-title {
+  font-size: 18px;
+  font-weight: 450;
+  line-height: 24px;
+  color: #005bd3;
+}
+
+/*
+ * Fields still holding text a workflow wrote, before the merchant has saved it.
+ * The admin marks its own generated content in this purple, so borrowing it says "read this before you keep it"
+ * without spending another line of copy on the point. The mark clears on save or discard, not on the next keystroke,
+ * because a small correction does not make the rest of the paragraph the merchant's own writing.
+ */
+:root {
+  --article-ai-text: #5700d1;
+  --article-ai-border: #a68cff;
+  --article-ai-surface: #f4f0ff;
+  /* The admin shades a generated field rather than filling it flat, so a marked field here is shaded the same way. */
+  --article-ai-shading: linear-gradient(180deg, #efe9ff 0%, #fbf9ff 100%);
+}
+
+/*
+ * A generated picture carries no text to colour, so its mark is a ring around the image itself. An outline takes no
+ * space, and the width hugs the picture rather than the column it sits in.
+ */
+.article-ai-field--image {
+  border-radius: 0.5rem;
+  outline: 0.125rem solid var(--article-ai-border);
+  outline-offset: 0.25rem;
+  width: fit-content;
+}
+
+/*
+ * The editors render into the light DOM, so a rewrite can be coloured where it landed. Only the words that came back
+ * carry it: the rest of the paragraph is still the merchant's own writing and reads as such.
+ */
+.article-editor__ai-text {
+  background: var(--article-ai-surface);
+  border-radius: 0.125rem;
+  box-shadow: 0 0 0 0.0625rem var(--article-ai-border);
+  color: var(--article-ai-text);
+}

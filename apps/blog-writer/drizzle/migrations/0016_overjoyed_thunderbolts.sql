@@ -1,0 +1,1 @@
+ALTER TABLE "blog_writer"."blog_ideas" ADD COLUMN "cluster_id" text;
