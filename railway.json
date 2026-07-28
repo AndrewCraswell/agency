@@ -8,7 +8,8 @@
       "packages/typescript-config/**",
       "package.json",
       "pnpm-lock.yaml",
-      "pnpm-workspace.yaml"
+      "pnpm-workspace.yaml",
+      "railway.json"
     ]
   }
 }
