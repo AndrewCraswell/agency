@@ -30,7 +30,6 @@ Git hooks (lefthook): **pre-commit** runs `oxlint --fix` + `oxfmt` on staged fil
 ## Workspace layout
 
 - `apps/web/` — the React + Vite application.
-- `packages/ui/` — shared component library (`@repo/ui`).
 - **Reusable shared config** (extend these; don't redefine per package): `@repo/oxlint-config`,
   `@repo/storybook-config`, `@repo/typescript-config`.
 
