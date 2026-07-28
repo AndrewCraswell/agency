@@ -50,6 +50,10 @@
         "ts-pattern"
       ]
     },
+    "packages/fc-templates": {
+      "entry": ["src/**/*.stories.tsx", ".storybook/{main,preview}.ts"],
+      "ignoreDependencies": ["@repo/oxlint-config", "@storybook/react-vite"]
+    },
     "packages/storybook-config": {
       "ignoreDependencies": [
         "@repo/oxlint-config",
