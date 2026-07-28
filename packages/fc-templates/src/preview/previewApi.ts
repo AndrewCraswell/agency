@@ -5,6 +5,7 @@ import { escapeHtml } from "../liquid.ts"
 import { adminUrl, templates } from "../registry.ts"
 import { findTemplate, findVariation, render, stylesPath } from "../render.ts"
 import type { Template, TemplateVariation } from "../types.ts"
+import { withHighlightStyles } from "../variableHighlight.ts"
 import type { PreviewSummary, TemplateSummary } from "./contract.ts"
 import { wrapPrintout } from "./previewDocument.ts"
 
@@ -49,7 +50,9 @@ function resolveRoute(path: string): { template: Template; variation: TemplateVa
   return { template, variation: findVariation(template, variationId) }
 }
 
-async function respond(pathname: string, response: ServerResponse): Promise<void> {
+async function respond(url: URL, response: ServerResponse): Promise<void> {
+  const { pathname } = url
+
   if (pathname === TEMPLATES_ROUTE) {
     send(response, 200, "application/json; charset=utf-8", JSON.stringify(templates.map(summarize)))
     return
@@ -81,13 +84,10 @@ async function respond(pathname: string, response: ServerResponse): Promise<void
     send(response, 404, "text/plain; charset=utf-8", "Unknown template")
     return
   }
-  const { html } = await render(route.template.id, route.variation.id)
-  send(
-    response,
-    200,
-    "text/html; charset=utf-8",
-    route.template.type === "printout" ? wrapPrintout(route.template, html) : html
-  )
+  const highlightVariables = url.searchParams.get("variables") === "1"
+  const { html } = await render(route.template.id, route.variation.id, { highlightVariables })
+  const document = route.template.type === "printout" ? wrapPrintout(route.template, html) : html
+  send(response, 200, "text/html; charset=utf-8", highlightVariables ? withHighlightStyles(document) : document)
 }
 
 /**
@@ -101,12 +101,12 @@ export function previewApi(): Plugin {
       // Registered here so it runs ahead of Vite's SPA fallback, which would otherwise answer
       // /raw/... with index.html.
       server.middlewares.use((request, response, next) => {
-        const { pathname } = new URL(request.url ?? "/", "http://127.0.0.1")
-        if (!ownsRoute(pathname)) {
+        const url = new URL(request.url ?? "/", "http://127.0.0.1")
+        if (!ownsRoute(url.pathname)) {
           next()
           return
         }
-        void respond(pathname, response).catch((error: unknown) => {
+        void respond(url, response).catch((error: unknown) => {
           const message = error instanceof Error ? (error.stack ?? error.message) : String(error)
           send(response, 500, "text/html; charset=utf-8", `<pre>${escapeHtml(message)}</pre>`)
         })

@@ -1,4 +1,5 @@
 import { getRouteApi, Link } from "@tanstack/react-router"
+import { useState } from "react"
 import { rawUrl } from "../api.ts"
 import { AutoHeightFrame } from "../components/AutoHeightFrame.tsx"
 import { ThemeToggle } from "../components/ThemeToggle.tsx"
@@ -11,7 +12,8 @@ const TO_ADDRESS = "customer@gmail.com"
 
 export function ViewerPage() {
   const preview = route.useLoaderData()
-  const raw = rawUrl(preview.id, preview.variation.id)
+  const [showVariables, setShowVariables] = useState(false)
+  const raw = rawUrl(preview.id, preview.variation.id, showVariables)
 
   return (
     <div className="viewer">
@@ -35,6 +37,16 @@ export function ViewerPage() {
           </div>
         </div>
         <div className="actions">
+          <button
+            className="btn"
+            type="button"
+            aria-pressed={showVariables}
+            onClick={() => {
+              setShowVariables(!showVariables)
+            }}
+          >
+            Show variables
+          </button>
           <a className="btn" href={raw} target="_blank" rel="noopener noreferrer">
             Open raw
           </a>

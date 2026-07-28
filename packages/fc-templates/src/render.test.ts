@@ -105,6 +105,14 @@ describe("emails", () => {
 })
 
 describe("invoice", () => {
+  /* The PAYMENTS table lists one row per transaction that moved money, so its row count is what
+     tells us the settled-only filter ran. The two invoice transactions are otherwise identical. */
+  function paymentRowCount(html: string): number {
+    const table = /<table class="fc-payments">[\s\S]*?<\/table>/.exec(html)?.[0] ?? ""
+    const body = /<tbody>([\s\S]*?)<\/tbody>/.exec(table)?.[1] ?? ""
+    return body.split("<tr>").length - 1
+  }
+
   it("shows a balance due and no payments before capture", async () => {
     const { html } = await render("invoice", "unpaid")
     expect(html).toContain("BALANCE DUE")
@@ -115,8 +123,8 @@ describe("invoice", () => {
     const { html } = await render("invoice", "paid")
     expect(html).toContain("PAID IN FULL")
     expect(html).toContain("PAYMENTS")
-    expect(html).toContain("Capture")
-    expect(html).not.toContain("Authorization")
+    // The fixture holds an authorization and the capture that settled it. Only the capture is money.
+    expect(paymentRowCount(html)).toBe(1)
   })
 
   it("prices each line by unit and by amount", async () => {

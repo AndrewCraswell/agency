@@ -318,6 +318,13 @@ body {
   text-decoration: none;
 }
 
+/* `.btn` is worn by both a link and a toggle button, so the button is talked back to a link's look. */
+button.btn {
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+}
+
 .back {
   align-items: center;
   background: var(--surface-2);
@@ -339,6 +346,12 @@ body {
 }
 
 .tab[aria-current="page"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+.btn[aria-pressed="true"] {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--bg);

@@ -21,6 +21,7 @@ export function fetchPreview(templateId: string, variationId: string): Promise<P
 }
 
 /** The rendered template itself, which the viewer shows in an iframe. */
-export function rawUrl(templateId: string, variationId: string): string {
-  return `/raw/${templateId}/${variationId}`
+export function rawUrl(templateId: string, variationId: string, highlightVariables = false): string {
+  const path = `/raw/${templateId}/${variationId}`
+  return highlightVariables ? `${path}?variables=1` : path
 }

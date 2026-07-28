@@ -21,6 +21,16 @@
 {%- assign shipping_method = order.shipping_methods | first -%}
 
 {%- comment -%}
+  "Free" is a claim about a service the order actually bought, so the shipping row only appears when
+  the order ships at all. Digital goods and in-store collection have no shipping to be free of, and
+  a missing shipping price on one of those reads as 0 here, which would otherwise print the claim.
+{%- endcomment -%}
+{%- assign is_shipped = false -%}
+{%- if order.requires_shipping or shipping_total > 0 or shipping_method.title != blank -%}
+  {%- assign is_shipped = true -%}
+{%- endif -%}
+
+{%- comment -%}
   Only transactions that actually moved money belong under PAYMENTS. An authorization is a hold on the
   card, and pending, failed, or voided attempts never settled, so listing any of them would contradict
   the amount due. Counted up front so the whole section can be dropped when nothing has settled.
@@ -200,6 +210,13 @@
     padding-top: 2px;
   }
 
+  /* Every other rail labels a column of rows and so belongs beside the first one. Notes are a single
+     short block, where a top-aligned label reads as a dangling word instead of a heading. Both cells
+     carry the same top padding, so centring lands the label on the middle of the text. */
+  .fc-section--notes .fc-section__rail {
+    vertical-align: middle;
+  }
+
   .fc-parties {
     border-collapse: collapse;
     width: 100%;
@@ -256,18 +273,18 @@
   }
 
   /* Two money columns: what one costs, then what the line comes to. The amount column is the one
-     that adds up to the subtotal, so it carries no discount decoration. */
-  .fc-col-unit {
+     that adds up to the subtotal, so it carries no discount decoration. Both selectors name the cell
+     type so they outweigh the header rule above, which would otherwise strand the two headings on
+     the left while the figures they label sit on the right. */
+  .fc-items th.fc-col-unit,
+  .fc-items td.fc-col-unit {
+    padding-right: 24px;
     text-align: right;
     width: 110px;
   }
 
-  .fc-items th.fc-col-unit,
-  .fc-items td.fc-col-unit {
-    padding-right: 24px;
-  }
-
-  .fc-col-price {
+  .fc-items th.fc-col-price,
+  .fc-items td.fc-col-price {
     text-align: right;
     width: 110px;
   }
@@ -709,16 +726,18 @@
                   </tr>
                 {%- endfor %}
 
-                <tr>
-                  <th scope="row">Shipping{% if shipping_method.title != blank %} ({{ shipping_method.title }}){% endif %}</th>
-                  <td>
-                    {%- if shipping_total > 0 -%}
-                      {{ shipping_total | money }}
-                    {%- else -%}
-                      FREE
-                    {%- endif -%}
-                  </td>
-                </tr>
+                {%- if is_shipped %}
+                  <tr>
+                    <th scope="row">Shipping{% if shipping_method.title != blank %} ({{ shipping_method.title }}){% endif %}</th>
+                    <td>
+                      {%- if shipping_total == 0 -%}
+                        FREE
+                      {%- else -%}
+                        {{ shipping_total | money }}
+                      {%- endif -%}
+                    </td>
+                  </tr>
+                {%- endif %}
 
                 <tr class="fc-summary__divider">
                   <td colspan="2"></td>
@@ -763,7 +782,6 @@
                     <tr>
                       <th scope="col" style="width: 170px;">TYPE</th>
                       <th scope="col" style="width: 110px;">AMOUNT</th>
-                      <th scope="col">KIND</th>
                       <th scope="col" style="width: 120px;">DATE</th>
                       <th scope="col" style="text-align: right; width: 100px;">STATUS</th>
                     </tr>
@@ -781,7 +799,6 @@
                           {%- endif -%}
                         </td>
                         <td>{{ transaction.amount | money }}</td>
-                        <td>{{ transaction.kind | replace: "_", " " | capitalize }}</td>
                         <td>{{ transaction.created_at | date: "%b %e, %Y" }}</td>
                         <td style="text-align: right;">
                           {{- transaction.status_label | default: transaction.status | capitalize -}}
@@ -796,7 +813,7 @@
         {%- endif %}
 
         <!-- Notes -->
-        <table class="fc-section">
+        <table class="fc-section fc-section--notes">
           <tr>
             <td class="fc-section__rail" style="padding-top: 18px;">
               <div class="fc-label">NOTES</div>
@@ -805,10 +822,10 @@
               {%- if order.note != blank -%}
                 {{ order.note }}
               {%- elsif is_paid -%}
-                Payment received in full, so there's no balance remaining. Thanks for your business.
+                Payment received in full. Thanks for your business!
               {%- else -%}
-                To pay this invoice or ask a question, email {{ shop.email | default: "support@fencing.club" }} and
-                include the order number above. Thanks for your business.
+                For questions or modifications, email {{ shop.email | default: "support@fencing.club" }} and
+                include the order number above.
               {%- endif -%}
             </td>
           </tr>
