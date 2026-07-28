@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => ({
       : false
   ],
   resolve: {
+    dedupe: ["react", "react-dom"],
     tsconfigPaths: true
   },
   server: {

@@ -29,7 +29,7 @@
     "@mantine/hooks": "^9.4.1",
     "@nangohq/frontend": "0.70.9",
     "@t3-oss/env-core": "^0.13.11",
-    "@tanstack/react-router": "1.169.2",
+    "@tanstack/react-router": "0.0.1-rsc-tarball",
     "@xyflow/react": "12.11.2",
     "date-fns": "^4.4.0",
     "nuqs": "^2.9.0",
