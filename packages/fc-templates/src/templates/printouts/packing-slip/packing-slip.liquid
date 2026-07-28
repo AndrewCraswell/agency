@@ -1,0 +1,569 @@
+{%- comment -%}
+  Fencing Club — printable packing slip for the Shopify Order Printer app.
+
+  A warehouse document: what to pick, how many, and where it ships. No prices, because the
+  slip travels in the box and doubles as the customer's receipt of contents.
+
+  Variable reference:
+  https://help.shopify.com/en/manual/fulfillment/managing-orders/printing-orders/shopify-order-printer/liquid-variables-and-filters-reference
+{%- endcomment -%}
+
+{%- assign shipping_method = order.shipping_methods | first -%}
+{%- assign unit_count = 0 -%}
+{%- for line_item in order.line_items -%}
+  {%- assign unit_count = unit_count | plus: line_item.quantity -%}
+{%- endfor -%}
+
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;700;800&family=Inter:wght@400;600;700&display=swap"
+/>
+
+<style>
+  @page {
+    size: letter;
+    margin: 0.5in 0.6in;
+
+    @bottom-right {
+      color: #5a5a60;
+      content: "PAGE " counter(page) " OF " counter(pages);
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+    }
+  }
+
+  .fc-slip {
+    --ink: #101012;
+    --muted: #5a5a60;
+    --rule: #e3e3e0;
+    --tint: #f4f4f2;
+    --body: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --display: Archivo, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    border-collapse: collapse;
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 12.5px;
+    line-height: 1.35;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  /* Zero-specificity reset so the layout classes below still win. */
+  .fc-slip :where(td, th) {
+    padding: 0;
+    vertical-align: top;
+  }
+
+  /* Masthead */
+  .fc-mast {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .fc-mast__logo {
+    height: 66px;
+    text-align: center;
+    vertical-align: middle;
+    width: 54px;
+  }
+
+  .fc-mast__logo img {
+    display: block;
+    height: 66px;
+    margin: 0 auto;
+    width: 54px;
+  }
+
+  .fc-mast__identity {
+    padding-left: 14px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .fc-mast__doctype {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+
+  .fc-mast__tagline {
+    color: var(--muted);
+    font-size: 11px;
+    padding-top: 2px;
+  }
+
+  .fc-mast__meta {
+    text-align: right;
+    vertical-align: middle;
+  }
+
+  /* Meta band sits inline with the masthead, one cell per fact. */
+  .fc-meta {
+    border-collapse: collapse;
+    margin-left: auto;
+  }
+
+  .fc-meta td {
+    border-left: 1px solid var(--rule);
+    padding: 0 18px;
+    white-space: nowrap;
+  }
+
+  .fc-meta td:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .fc-meta td:last-child {
+    padding-right: 0;
+  }
+
+  .fc-meta__value {
+    font-size: 13px;
+    font-weight: 700;
+    padding-top: 4px;
+  }
+
+  .fc-label {
+    color: var(--muted);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+  }
+
+  .fc-rule {
+    background: var(--ink);
+    font-size: 0;
+    height: 2px;
+    line-height: 0;
+  }
+
+  /* Parties */
+  .fc-section {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .fc-section__rail {
+    padding-top: 20px;
+    width: 140px;
+  }
+
+  .fc-parties {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .fc-parties td {
+    padding-right: 32px;
+    width: 50%;
+  }
+
+  .fc-party__label {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+  }
+
+  .fc-party__name {
+    font-size: 12.5px;
+    font-weight: 700;
+    padding-top: 7px;
+  }
+
+  .fc-party__line {
+    color: var(--muted);
+    font-size: 11.5px;
+    padding-top: 2px;
+  }
+
+  /* Items */
+  .fc-items {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .fc-items th {
+    border-bottom: 1px solid var(--ink);
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 7px 0;
+    text-align: left;
+  }
+
+  .fc-items td {
+    border-bottom: 1px solid var(--rule);
+    padding: 8px 0;
+    vertical-align: middle;
+  }
+
+  .fc-items__thumb {
+    width: 56px;
+  }
+
+  .fc-items__thumb img {
+    background: var(--tint);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    display: block;
+    height: 44px;
+    object-fit: contain;
+    width: 44px;
+  }
+
+  .fc-items__placeholder {
+    background: var(--tint);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    height: 44px;
+    width: 44px;
+  }
+
+  .fc-item__title {
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  /* Variant options keep the document's label grammar: a small tracked name, then the value,
+     with space doing the separating instead of punctuation. */
+  .fc-item__meta {
+    padding-top: 2px;
+  }
+
+  .fc-item__meta-part {
+    color: var(--muted);
+    display: inline-block;
+    font-size: 11px;
+    padding-right: 14px;
+    white-space: nowrap;
+  }
+
+  .fc-item__meta-name {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding-right: 5px;
+    text-transform: uppercase;
+  }
+
+  .fc-col-qty {
+    text-align: right;
+    width: 60px;
+  }
+
+  .fc-item__qty {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .fc-count {
+    color: var(--muted);
+    font-size: 11px;
+    padding-top: 8px;
+    text-align: right;
+  }
+
+  .fc-count__units {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  /* Customer note */
+  .fc-note {
+    border: 1px solid var(--rule);
+    border-collapse: separate;
+    border-radius: 6px;
+    margin-top: 26px;
+    width: 100%;
+  }
+
+  .fc-note td {
+    padding: 10px 14px;
+  }
+
+  .fc-note__icon {
+    padding-right: 0;
+    vertical-align: top;
+    width: 24px;
+  }
+
+  .fc-note__text {
+    font-size: 12px;
+    font-style: italic;
+    line-height: 18px;
+    padding-top: 3px;
+  }
+
+  /* Repeated page footer: lives in <tfoot> so print engines render it at the
+     foot of every page of a multi-page slip. */
+  .fc-slip__footer td {
+    padding-top: 26px;
+  }
+
+  .fc-footer {
+    border-collapse: collapse;
+    border-top: 1px solid var(--ink);
+    width: 100%;
+  }
+
+  .fc-footer td {
+    padding-top: 9px;
+  }
+
+  .fc-footer__brand {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    white-space: nowrap;
+    width: 1%;
+  }
+
+  .fc-footer__contact {
+    color: var(--muted);
+    font-size: 10.5px;
+    white-space: nowrap;
+    width: 1%;
+  }
+
+  /* Beats the `.fc-footer td` padding shorthand on specificity, so the gap that used to come from a
+     divider cell now comes from the contact cell itself. */
+  .fc-footer td.fc-footer__contact {
+    padding-left: 24px;
+  }
+
+  .fc-footer__contact svg {
+    height: 11px;
+    margin-right: 5px;
+    vertical-align: -1px;
+    width: 11px;
+  }
+
+  .fc-footer__thanks {
+    font-size: 10.5px;
+    font-weight: 600;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  /* Keep a row, the address block, and the note from splitting across a page break. */
+  .fc-items tbody tr,
+  .fc-parties,
+  .fc-note {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+</style>
+
+<table class="fc-slip">
+  <tfoot class="fc-slip__footer">
+    <tr>
+      <td>
+        <table class="fc-footer">
+          <tr>
+            <td class="fc-footer__brand">{{ shop.name | default: "Fencing Club" | upcase }}</td>
+            <td class="fc-footer__contact">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+              </svg>{{ shop.email | default: "support@fencing.club" }}
+            </td>
+            <td class="fc-footer__contact">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                <path d="M2 12h20" />
+              </svg>{{ shop.url | default: "https://fencing.club" }}
+            </td>
+            <td class="fc-footer__thanks">Thanks for your business!</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </tfoot>
+  <tbody>
+    <tr>
+      <td>
+        <!-- Masthead -->
+        <table class="fc-mast">
+          <tr>
+            <td class="fc-mast__logo">
+              <img
+                src="https://cdn.shopify.com/s/files/1/0848/2527/6713/files/Fencing_Club-05.png"
+                alt="{{ shop.name | default: 'Fencing Club' }}"
+              />
+            </td>
+            <td class="fc-mast__identity">
+              <div class="fc-mast__doctype">PACKING SLIP</div>
+              <div class="fc-mast__tagline">Keep this slip &mdash; it doubles as your receipt.</div>
+            </td>
+            <td class="fc-mast__meta">
+              <table class="fc-meta">
+                <tr>
+                  <td>
+                    <div class="fc-label">ORDER &#8470;</div>
+                    <div class="fc-meta__value">{{ order.name }}</div>
+                  </td>
+                  <td>
+                    <div class="fc-label">DATE</div>
+                    <div class="fc-meta__value">{{ order.created_at | date: "%B %e, %Y" }}</div>
+                  </td>
+                  {%- if order.requires_shipping and shipping_method.title != blank %}
+                    <td>
+                      <div class="fc-label">SHIPPING</div>
+                      <div class="fc-meta__value">{{ shipping_method.title }}</div>
+                    </td>
+                  {%- endif %}
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td colspan="3" style="height: 14px; font-size: 0; line-height: 0;"></td>
+          </tr>
+          <tr>
+            <td class="fc-rule" colspan="3"></td>
+          </tr>
+        </table>
+
+        <!-- Parties -->
+        <table class="fc-section">
+          <tr>
+            <td class="fc-section__rail" style="padding-top: 20px;">
+              <div class="fc-party__label">PARTIES</div>
+            </td>
+            <td style="padding: 18px 0 16px;">
+              <table class="fc-parties">
+                <tr>
+                  <td>
+                    <div class="fc-party__label">BILL TO</div>
+                    {%- assign bill_to = order.billing_address | default: order.shipping_address -%}
+                    {%- if bill_to -%}
+                      <div class="fc-party__name">{{ bill_to.name }}</div>
+                      {%- if bill_to.company != blank %}<div class="fc-party__line">{{ bill_to.company }}</div>{% endif %}
+                      {%- if bill_to.address1 != blank %}<div class="fc-party__line">{{ bill_to.address1 }}</div>{% endif %}
+                      {%- if bill_to.address2 != blank %}<div class="fc-party__line">{{ bill_to.address2 }}</div>{% endif %}
+                      <div class="fc-party__line">{{ bill_to.city }} {{ bill_to.province_code }} {{ bill_to.zip }}</div>
+                      <div class="fc-party__line">{{ bill_to.country }}</div>
+                      {%- if bill_to.phone != blank %}<div class="fc-party__line">{{ bill_to.phone }}</div>{% endif %}
+                    {%- else -%}
+                      <div class="fc-party__line">{{ order.email }}</div>
+                    {%- endif -%}
+                  </td>
+                  <td>
+                    {%- if order.requires_shipping and order.shipping_address -%}
+                      <div class="fc-party__label">SHIP TO</div>
+                      <div class="fc-party__name">{{ order.shipping_address.name }}</div>
+                      {%- if order.shipping_address.company != blank %}<div class="fc-party__line">{{ order.shipping_address.company }}</div>{% endif %}
+                      {%- if order.shipping_address.address1 != blank %}<div class="fc-party__line">{{ order.shipping_address.address1 }}</div>{% endif %}
+                      {%- if order.shipping_address.address2 != blank %}<div class="fc-party__line">{{ order.shipping_address.address2 }}</div>{% endif %}
+                      <div class="fc-party__line">{{ order.shipping_address.city }} {{ order.shipping_address.province_code }} {{ order.shipping_address.zip }}</div>
+                      <div class="fc-party__line">{{ order.shipping_address.country }}</div>
+                      {%- if order.shipping_address.phone != blank %}<div class="fc-party__line">{{ order.shipping_address.phone }}</div>{% endif %}
+                    {%- endif -%}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Items -->
+        <table class="fc-items">
+          <thead>
+            <tr>
+              <th colspan="2" scope="col">ITEM</th>
+              <th class="fc-col-qty" scope="col">QTY</th>
+            </tr>
+          </thead>
+          <tbody>
+            {%- for line_item in order.line_items %}
+              <tr>
+                <td class="fc-items__thumb">
+                  {%- assign thumb = line_item.image | default: line_item.product.featured_image -%}
+                  {%- if thumb != blank -%}
+                    <img src="{{ thumb | img_url: '100x100' }}" alt="" />
+                  {%- else -%}
+                    <div class="fc-items__placeholder"></div>
+                  {%- endif -%}
+                </td>
+                <td>
+                  <div class="fc-item__title">{{ line_item.title }}</div>
+                  {%- assign has_options = false -%}
+                  {%- if line_item.options_with_values.size > 0 and line_item.product.has_only_default_variant != true -%}
+                    {%- assign has_options = true -%}
+                  {%- endif -%}
+                  {%- if has_options %}
+                    <div class="fc-item__meta">
+                      {%- for option in line_item.options_with_values %}
+                        <span class="fc-item__meta-part">
+                          <span class="fc-item__meta-name">{{ option.name }}</span>{{ option.value }}
+                        </span>
+                      {%- endfor %}
+                    </div>
+                  {%- endif %}
+                </td>
+                <td class="fc-col-qty">
+                  <span class="fc-item__qty">&times; {{ line_item.quantity }}</span>
+                </td>
+              </tr>
+            {%- endfor %}
+          </tbody>
+        </table>
+
+        <div class="fc-count">
+          {{ order.line_items.size }} line {% if order.line_items.size == 1 %}item{% else %}items{% endif %}
+          &mdash;
+          <span class="fc-count__units">{{ unit_count }} {% if unit_count == 1 %}unit{% else %}units{% endif %}</span>
+        </div>
+
+        <!-- Customer note -->
+        {%- if order.note != blank %}
+          <table class="fc-note">
+            <tr>
+              <td class="fc-note__icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"
+                    stroke="#5a5a60"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td>
+                <div class="fc-label">CUSTOMER NOTE</div>
+                <div class="fc-note__text">{{ order.note }}</div>
+              </td>
+            </tr>
+          </table>
+        {%- endif %}
+      </td>
+    </tr>
+  </tbody>
+</table>

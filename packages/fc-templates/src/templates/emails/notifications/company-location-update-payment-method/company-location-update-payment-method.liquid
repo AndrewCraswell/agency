@@ -1,0 +1,111 @@
+{% capture email_title %}Update your payment method for {{ shop.name }}'s {{ location_name }} location{% endcapture %}
+{% capture email_greeting %}Hi {{display_name}},{% endcapture %} {% capture email_body %} You’re receiving this message
+because you requested to update your payment method for {{ shop.name }}'s {{ location_name }} location, or because there
+was a problem processing your payments. Contact your financial institution to make sure your payment information is
+correct, or you can update your payment method. {% endcapture %}
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>{{ email_title }}</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" type="text/css" href="/assets/notifications/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" /><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      .button__cell { background: #101012; }
+      .actions-buttons .button__cell--primary { background-color: #101012; }
+      a, a:hover, a:active, a:visited { color: #A6192E; }
+    </style>
+  </head>
+
+  <body>
+    <table class="body">
+      <tr>
+        <td>
+          <table class="header row">
+            <tr>
+              <td class="header__cell">
+                <center>
+                  <table class="container">
+                    <tr>
+                      <td>
+                        <table class="row">
+                          <tr>
+                            <td class="shop-name__cell">
+                              <img
+                                src="https://cdn.shopify.com/s/files/1/0848/2527/6713/files/email-logo-white.png?v=1784929023"
+                                alt="{{ shop.name }}"
+                                width="100"
+                              />
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </center>
+              </td>
+            </tr>
+          </table>
+
+          <table class="row content">
+            <tr>
+              <td class="content__cell">
+                <center>
+                  <table class="container">
+                    <tr>
+                      <td>
+                        <h2>{{ email_title }}</h2>
+                        <p>{{ email_greeting }}</p>
+                        <p>{{ email_body }}</p>
+                        <table class="row actions">
+                          <tr>
+                            <td class="empty-line">&nbsp;</td>
+                          </tr>
+                          <tr>
+                            <td class="actions__cell">
+                              <table class="button main-action-cell">
+                                <tr>
+                                  <td class="button__cell">
+                                    <a href="{{ email_confirmation_url }}" class="button__text"
+                                      >Update payment information</a
+                                    >
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </center>
+              </td>
+            </tr>
+          </table>
+          <table class="row footer">
+            <tr>
+              <td class="footer__cell">
+                <center>
+                  <table class="container">
+                    <tr>
+                      <td>
+                        <p class="disclaimer__subtext">
+                          If you have any questions, reply to this email or contact us at
+                          <a href="mailto:{{ shop.email }}">{{ shop.email }}</a>
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </center>
+              </td>
+            </tr>
+          </table>
+
+          <img src="{{ 'notifications/spacer.png' | shopify_asset_url }}" class="spacer" height="1" />
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

@@ -1,0 +1,819 @@
+{%- comment -%}
+  Fencing Club — printable invoice for the Shopify Order Printer app.
+
+  One template covers both states:
+    * Balance outstanding  -> "BALANCE DUE" tag, amount due in ink.
+    * Nothing outstanding  -> "PAID IN FULL" tag, amount due in green.
+
+  Variable reference:
+  https://help.shopify.com/en/manual/fulfillment/managing-orders/printing-orders/shopify-order-printer/liquid-variables-and-filters-reference
+{%- endcomment -%}
+
+{%- assign amount_due = order.total_outstanding | default: 0 -%}
+{%- assign amount_paid = order.net_payment | default: 0 -%}
+{%- assign items_subtotal = order.line_items_subtotal_price | default: order.subtotal_price -%}
+{%- assign shipping_total = order.shipping_price | default: 0 -%}
+{%- assign duties_total = order.total_duties | default: 0 -%}
+{%- assign is_paid = false -%}
+{%- if amount_due <= 0 -%}
+  {%- assign is_paid = true -%}
+{%- endif -%}
+{%- assign shipping_method = order.shipping_methods | first -%}
+
+{%- comment -%}
+  Only transactions that actually moved money belong under PAYMENTS. An authorization is a hold on the
+  card, and pending, failed, or voided attempts never settled, so listing any of them would contradict
+  the amount due. Counted up front so the whole section can be dropped when nothing has settled.
+{%- endcomment -%}
+{%- assign settled_kinds = "sale,capture,refund" | split: "," -%}
+{%- assign settled_payments = 0 -%}
+{%- for transaction in order.transactions -%}
+  {%- if settled_kinds contains transaction.kind and transaction.status == "success" -%}
+    {%- assign settled_payments = settled_payments | plus: 1 -%}
+  {%- endif -%}
+{%- endfor -%}
+
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;700;800&family=Inter:wght@400;600;700&display=swap"
+/>
+
+<style>
+  @page {
+    size: letter;
+    margin: 0.5in 0.6in;
+
+    @bottom-right {
+      color: #5a5a60;
+      content: "PAGE " counter(page) " OF " counter(pages);
+      font-family: Inter, system-ui, sans-serif;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+    }
+  }
+
+  .fc-invoice {
+    --ink: #101012;
+    --muted: #5a5a60;
+    --rule: #e3e3e0;
+    --paid: #0f7a3d;
+    --body: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --display: Archivo, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+    border-collapse: collapse;
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 12.5px;
+    line-height: 1.35;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    table-layout: fixed;
+    width: 100%;
+  }
+
+  /* Zero-specificity reset so the layout classes below still win. */
+  .fc-invoice :where(td, th) {
+    padding: 0;
+    vertical-align: top;
+  }
+
+  .fc-invoice s {
+    text-decoration: line-through;
+  }
+
+  /* Masthead */
+  .fc-mast {
+    border-collapse: collapse;
+    margin-bottom: 10px;
+    width: 100%;
+  }
+
+  .fc-mast__logo {
+    height: 66px;
+    text-align: center;
+    vertical-align: middle;
+    width: 54px;
+  }
+
+  .fc-mast__logo img {
+    display: block;
+    height: 66px;
+    margin: 0 auto;
+    width: 54px;
+  }
+
+  .fc-mast__identity {
+    padding-left: 14px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .fc-mast__name {
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+  }
+
+  .fc-mast__contact {
+    color: var(--muted);
+    font-size: 11.5px;
+    padding-top: 2px;
+  }
+
+  .fc-mast__doctype {
+    font-family: var(--display);
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-align: right;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  .fc-rule {
+    background: var(--ink);
+    font-size: 0;
+    height: 2px;
+    line-height: 0;
+  }
+
+  .fc-rule--hair {
+    background: var(--rule);
+    height: 1px;
+  }
+
+  /* Meta band */
+  .fc-meta {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .fc-meta td {
+    border-left: 1px solid var(--rule);
+    padding: 16px 0 18px 22px;
+    width: 25%;
+  }
+
+  .fc-meta td:first-child {
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .fc-label {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+  }
+
+  .fc-meta__value {
+    font-size: 14px;
+    font-weight: 600;
+    padding-top: 5px;
+  }
+
+  .fc-meta__amount {
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 800;
+    padding-top: 5px;
+  }
+
+  .fc-paid {
+    color: var(--paid);
+  }
+
+  /* Section scaffold: label rail, then content */
+  .fc-section {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .fc-section__rail {
+    padding-top: 10px;
+    width: 104px;
+  }
+
+  .fc-section--parties .fc-section__rail {
+    padding-top: 2px;
+  }
+
+  .fc-parties {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .fc-parties td {
+    padding-right: 32px;
+    width: 50%;
+  }
+
+  .fc-party__name {
+    font-size: 12.5px;
+    font-weight: 700;
+    padding-top: 7px;
+  }
+
+  .fc-party__line {
+    color: var(--muted);
+    font-size: 11.5px;
+    padding-top: 2px;
+  }
+
+  /* Items */
+  .fc-items,
+  .fc-payments {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .fc-items th,
+  .fc-payments th {
+    border-bottom: 1px solid var(--ink);
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    padding: 8px 0;
+    text-align: left;
+  }
+
+  .fc-items td,
+  .fc-payments td {
+    border-bottom: 1px solid var(--rule);
+    font-size: 13px;
+    padding: 10px 0;
+  }
+
+  .fc-payments td {
+    padding: 9px 0;
+  }
+
+  .fc-col-qty {
+    width: 50px;
+  }
+
+  /* Two money columns: what one costs, then what the line comes to. The amount column is the one
+     that adds up to the subtotal, so it carries no discount decoration. */
+  .fc-col-unit {
+    text-align: right;
+    width: 110px;
+  }
+
+  .fc-items th.fc-col-unit,
+  .fc-items td.fc-col-unit {
+    padding-right: 24px;
+  }
+
+  .fc-col-price {
+    text-align: right;
+    width: 110px;
+  }
+
+  .fc-item__title {
+    font-size: 13px;
+  }
+
+  /* Variant options borrow the document's label grammar: a small tracked name, then the value, with space
+     doing the separating instead of punctuation. Each pair is one unbreakable unit, so a narrow column wraps
+     between options rather than through the middle of one. */
+  .fc-item__options {
+    padding-top: 3px;
+  }
+
+  .fc-item__option {
+    display: inline-block;
+    font-size: 11.5px;
+    padding-right: 20px;
+    white-space: nowrap;
+  }
+
+  .fc-item__option-name {
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding-right: 5px;
+    text-transform: uppercase;
+  }
+
+  .fc-item__note {
+    color: var(--muted);
+    font-size: 11.5px;
+    padding-top: 2px;
+  }
+
+  .fc-price__was {
+    color: var(--muted);
+    font-size: 11.5px;
+    padding-right: 8px;
+  }
+
+  .fc-price__now {
+    font-weight: 600;
+  }
+
+  /* Summary */
+  .fc-summary {
+    border-collapse: collapse;
+    margin-left: auto;
+  }
+
+  .fc-summary th {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 400;
+    padding: 5px 24px 5px 0;
+    text-align: right;
+  }
+
+  .fc-summary td {
+    font-size: 13px;
+    text-align: right;
+    width: 110px;
+  }
+
+  .fc-summary__divider td {
+    border-top: 1px solid var(--ink);
+    font-size: 0;
+    height: 9px;
+    line-height: 0;
+    padding: 0;
+    width: auto;
+  }
+
+  .fc-summary__total th,
+  .fc-summary__total td {
+    color: var(--ink);
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .fc-summary__due th {
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .fc-summary__due td {
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 800;
+  }
+
+  .fc-tag {
+    background: var(--ink);
+    border-radius: 3px;
+    color: #ffffff;
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    margin-right: 10px;
+    padding: 2px 8px;
+    vertical-align: middle;
+  }
+
+  .fc-tag--paid {
+    background: var(--paid);
+  }
+
+  .fc-notes {
+    color: var(--muted);
+    font-size: 12.5px;
+    line-height: 20px;
+  }
+
+  /* Repeated page footer: lives in <tfoot> so print engines
+     render it at the foot of every page of a multi-page invoice. */
+  .fc-invoice__footer td {
+    padding-top: 26px;
+  }
+
+  .fc-footer {
+    border-collapse: collapse;
+    border-top: 1px solid var(--ink);
+    padding-top: 8px;
+    width: 100%;
+  }
+
+  .fc-footer td {
+    padding-top: 8px;
+  }
+
+  .fc-footer__brand {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    white-space: nowrap;
+    width: 1%;
+  }
+
+  .fc-footer__contact {
+    color: var(--muted);
+    font-size: 10.5px;
+    white-space: nowrap;
+    width: 1%;
+  }
+
+  /* Beats the `.fc-footer td` rule on specificity so the contact cells sit apart from the brand. */
+  .fc-footer td.fc-footer__contact {
+    padding-left: 24px;
+  }
+
+  .fc-footer__contact svg {
+    height: 11px;
+    margin-right: 5px;
+    vertical-align: -1px;
+    width: 11px;
+  }
+
+  .fc-footer__ref {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .fc-spacer {
+    height: 22px;
+  }
+
+  .fc-spacer--tight {
+    height: 18px;
+  }
+
+  /* Keep rows and the totals block from splitting across a page break. */
+  .fc-items tbody tr,
+  .fc-payments tbody tr,
+  .fc-parties,
+  .fc-summary,
+  .fc-notes {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+</style>
+
+<table class="fc-invoice">
+  <tfoot class="fc-invoice__footer">
+    <tr>
+      <td>
+        <table class="fc-footer">
+          <tr>
+            <td class="fc-footer__brand">{{ shop.name | default: "Fencing Club" | upcase }}</td>
+            <td class="fc-footer__contact">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+              </svg>{{ shop.email | default: "support@fencing.club" }}
+            </td>
+            <td class="fc-footer__contact">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+                <path d="M2 12h20" />
+              </svg>{{ shop.url | default: "https://fencing.club" }}
+            </td>
+            <td class="fc-footer__ref">INVOICE {{ order.name }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </tfoot>
+  <tbody>
+    <tr>
+      <td>
+        <!-- Masthead -->
+        <table class="fc-mast">
+          <tr>
+            <td class="fc-mast__logo">
+              <img
+                src="https://cdn.shopify.com/s/files/1/0848/2527/6713/files/Fencing_Club-05.png"
+                alt="{{ shop.name | default: 'Fencing Club' }}"
+              />
+            </td>
+            <td class="fc-mast__identity">
+              <div class="fc-mast__name">{{ shop.name | default: "Fencing Club" | upcase }}</div>
+              <div class="fc-mast__contact">
+                {{ shop.address.address1 }}{% if shop.address.address2 != blank %}, {{ shop.address.address2 }}{% endif %}<br />
+                {{ shop.address.city }} {{ shop.address.province_code }} {{ shop.address.zip }}
+              </div>
+              {%- if shop.phone != blank %}
+                <div class="fc-mast__contact">{{ shop.phone }}</div>
+              {%- endif %}
+            </td>
+            <td class="fc-mast__doctype">INVOICE</td>
+          </tr>
+        </table>
+
+        <div class="fc-rule"></div>
+
+        <!-- Meta band -->
+        <table class="fc-meta">
+          <tr>
+            <td>
+              <div class="fc-label">ORDER</div>
+              <div class="fc-meta__value">{{ order.name }}</div>
+            </td>
+            <td>
+              <div class="fc-label">DATE</div>
+              <div class="fc-meta__value">{{ order.created_at | date: "%B %e, %Y" }}</div>
+            </td>
+            <td>
+              <div class="fc-label">PO NUMBER</div>
+              <div class="fc-meta__value">{{ order.po_number | default: "&mdash;" }}</div>
+            </td>
+            <td>
+              <div class="fc-label">AMOUNT DUE</div>
+              <div class="fc-meta__amount{% if is_paid %} fc-paid{% endif %}">{{ amount_due | money }}</div>
+            </td>
+          </tr>
+        </table>
+
+        <div class="fc-rule fc-rule--hair"></div>
+
+        <!-- Parties -->
+        <table class="fc-section fc-section--parties">
+          <tr>
+            <td class="fc-section__rail" style="padding-top: 24px;">
+              <div class="fc-label">PARTIES</div>
+            </td>
+            <td style="padding: 22px 0 18px;">
+              <table class="fc-parties">
+                <tr>
+                  <td>
+                    <div class="fc-label">BILL TO</div>
+                    {%- assign bill_to = order.billing_address | default: order.shipping_address -%}
+                    {%- if bill_to -%}
+                      <div class="fc-party__name">{{ bill_to.name }}</div>
+                      {%- if bill_to.company != blank %}<div class="fc-party__line">{{ bill_to.company }}</div>{% endif %}
+                      {%- if bill_to.address1 != blank %}<div class="fc-party__line">{{ bill_to.address1 }}</div>{% endif %}
+                      {%- if bill_to.address2 != blank %}<div class="fc-party__line">{{ bill_to.address2 }}</div>{% endif %}
+                      <div class="fc-party__line">{{ bill_to.city }} {{ bill_to.province_code }} {{ bill_to.zip }}</div>
+                      <div class="fc-party__line">{{ bill_to.country }}</div>
+                      {%- if bill_to.phone != blank %}<div class="fc-party__line">{{ bill_to.phone }}</div>{% endif %}
+                    {%- else -%}
+                      <div class="fc-party__line">{{ order.email }}</div>
+                    {%- endif -%}
+                  </td>
+                  <td>
+                    {%- if order.requires_shipping and order.shipping_address -%}
+                      <div class="fc-label">SHIP TO</div>
+                      <div class="fc-party__name">{{ order.shipping_address.name }}</div>
+                      {%- if order.shipping_address.company != blank %}<div class="fc-party__line">{{ order.shipping_address.company }}</div>{% endif %}
+                      {%- if order.shipping_address.address1 != blank %}<div class="fc-party__line">{{ order.shipping_address.address1 }}</div>{% endif %}
+                      {%- if order.shipping_address.address2 != blank %}<div class="fc-party__line">{{ order.shipping_address.address2 }}</div>{% endif %}
+                      <div class="fc-party__line">{{ order.shipping_address.city }} {{ order.shipping_address.province_code }} {{ order.shipping_address.zip }}</div>
+                      <div class="fc-party__line">{{ order.shipping_address.country }}</div>
+                      {%- if order.shipping_address.phone != blank %}<div class="fc-party__line">{{ order.shipping_address.phone }}</div>{% endif %}
+                    {%- endif -%}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="fc-rule fc-rule--hair" colspan="2"></td>
+          </tr>
+        </table>
+
+        <!-- Items -->
+        <table class="fc-section">
+          <tr>
+            <td class="fc-section__rail" style="padding-top: 32px;">
+              <div class="fc-label">ITEMS</div>
+            </td>
+            <td style="padding-top: 22px;">
+              <table class="fc-items">
+                <thead>
+                  <tr>
+                    <th class="fc-col-qty" scope="col">QTY</th>
+                    <th scope="col">DESCRIPTION</th>
+                    <th class="fc-col-unit" scope="col">UNIT PRICE</th>
+                    <th class="fc-col-price" scope="col">AMOUNT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {%- for line_item in order.line_items %}
+                    <tr>
+                      <td class="fc-col-qty">{{ line_item.quantity }}</td>
+                      <td>
+                        <div class="fc-item__title">{{ line_item.title }}</div>
+                        {%- comment %}
+                          One line for every option the merchant configured, named, so "Bayonet, 2 m" cannot be
+                          mistaken for two separate things. Skipped for a product that never had options, whose single
+                          option Shopify still reports as "Title: Default Title".
+                        {%- endcomment %}
+                        {%- if line_item.options_with_values.size > 0 and line_item.product.has_only_default_variant != true %}
+                          <div class="fc-item__options">
+                            {%- for option in line_item.options_with_values %}
+                              <span class="fc-item__option">
+                                <span class="fc-item__option-name">{{ option.name }}</span>{{ option.value }}
+                              </span>
+                            {%- endfor %}
+                          </div>
+                        {%- endif %}
+                        {%- for allocation in line_item.line_level_discount_allocations %}
+                          <div class="fc-item__note">
+                            {{ allocation.discount_application.title }} (&minus;{{ allocation.amount | money }})
+                          </div>
+                        {%- endfor %}
+                      </td>
+                      <td class="fc-col-unit">
+                        {%- if line_item.original_price != line_item.final_price %}
+                          <s class="fc-price__was">{{ line_item.original_price | money }}</s>
+                        {%- endif %}
+                        {{ line_item.final_price | money }}
+                      </td>
+                      <td class="fc-col-price">
+                        <span class="fc-price__now">{{ line_item.final_line_price | money }}</span>
+                      </td>
+                    </tr>
+                  {%- endfor %}
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Summary -->
+        <table class="fc-section">
+          <tr>
+            <td class="fc-section__rail" style="padding-top: 28px;">
+              <div class="fc-label">SUMMARY</div>
+            </td>
+            <td style="padding-top: 18px;">
+              <table class="fc-summary">
+                <tr>
+                  <th scope="row">Subtotal</th>
+                  <td>{{ items_subtotal | money }}</td>
+                </tr>
+
+                {%- for discount_application in order.cart_level_discount_applications %}
+                  <tr>
+                    <th scope="row">{{ discount_application.title | default: "Discount" }}</th>
+                    <td>&minus;{{ discount_application.total_allocated_amount | money }}</td>
+                  </tr>
+                {%- endfor %}
+
+                {%- if duties_total > 0 %}
+                  <tr>
+                    <th scope="row">Duties</th>
+                    <td>{{ duties_total | money }}</td>
+                  </tr>
+                {%- endif %}
+
+                {%- comment -%}
+                  One row per tax authority, so state, county, and city taxes are each itemized.
+                {%- endcomment -%}
+                {%- if order.tax_lines.size > 0 %}
+                  {%- for tax_line in order.tax_lines %}
+                    <tr>
+                      <th scope="row">
+                        {{ tax_line.title }}{% if tax_line.rate_percentage > 0 %} ({{ tax_line.rate_percentage }}%){% endif %}
+                      </th>
+                      <td>{{ tax_line.price | money }}</td>
+                    </tr>
+                  {%- endfor %}
+                {%- elsif order.tax_price > 0 %}
+                  <tr>
+                    <th scope="row">Tax</th>
+                    <td>{{ order.tax_price | money }}</td>
+                  </tr>
+                {%- endif %}
+
+                {%- for fee in order.fees %}
+                  <tr>
+                    <th scope="row">{{ fee.title }}</th>
+                    <td>{{ fee.subtotal | money }}</td>
+                  </tr>
+                {%- endfor %}
+
+                <tr>
+                  <th scope="row">Shipping{% if shipping_method.title != blank %} ({{ shipping_method.title }}){% endif %}</th>
+                  <td>
+                    {%- if shipping_total > 0 -%}
+                      {{ shipping_total | money }}
+                    {%- else -%}
+                      FREE
+                    {%- endif -%}
+                  </td>
+                </tr>
+
+                <tr class="fc-summary__divider">
+                  <td colspan="2"></td>
+                </tr>
+
+                <tr class="fc-summary__total">
+                  <th scope="row">Total</th>
+                  <td>{{ order.total_price | money }}</td>
+                </tr>
+
+                <tr>
+                  <th scope="row">Total paid</th>
+                  <td>{{ amount_paid | money }}</td>
+                </tr>
+
+                <tr class="fc-summary__due">
+                  <th scope="row">
+                    {%- if is_paid -%}
+                      <span class="fc-tag fc-tag--paid">PAID IN FULL</span>
+                    {%- else -%}
+                      <span class="fc-tag">BALANCE DUE</span>
+                    {%- endif -%}
+                    Amount due
+                  </th>
+                  <td class="{% if is_paid %}fc-paid{% endif %}">{{ amount_due | money }}</td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Payments -->
+        {%- if settled_payments > 0 %}
+          <table class="fc-section">
+            <tr>
+              <td class="fc-section__rail" style="padding-top: 32px;">
+                <div class="fc-label">PAYMENTS</div>
+              </td>
+              <td style="padding-top: 22px;">
+                <table class="fc-payments">
+                  <thead>
+                    <tr>
+                      <th scope="col" style="width: 170px;">TYPE</th>
+                      <th scope="col" style="width: 110px;">AMOUNT</th>
+                      <th scope="col">KIND</th>
+                      <th scope="col" style="width: 120px;">DATE</th>
+                      <th scope="col" style="text-align: right; width: 100px;">STATUS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {%- for transaction in order.transactions %}
+                      {%- unless settled_kinds contains transaction.kind and transaction.status == "success" -%}
+                        {%- continue -%}
+                      {%- endunless -%}
+                      <tr>
+                        <td>
+                          {{- transaction.payment_details.credit_card_company | default: transaction.gateway_display_name | default: transaction.gateway | capitalize -}}
+                          {%- if transaction.payment_details.credit_card_last_four != blank %}
+                            &nbsp;&bull;&bull;&bull;&bull;&nbsp;{{ transaction.payment_details.credit_card_last_four }}
+                          {%- endif -%}
+                        </td>
+                        <td>{{ transaction.amount | money }}</td>
+                        <td>{{ transaction.kind | replace: "_", " " | capitalize }}</td>
+                        <td>{{ transaction.created_at | date: "%b %e, %Y" }}</td>
+                        <td style="text-align: right;">
+                          {{- transaction.status_label | default: transaction.status | capitalize -}}
+                        </td>
+                      </tr>
+                    {%- endfor %}
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </table>
+        {%- endif %}
+
+        <!-- Notes -->
+        <table class="fc-section">
+          <tr>
+            <td class="fc-section__rail" style="padding-top: 18px;">
+              <div class="fc-label">NOTES</div>
+            </td>
+            <td class="fc-notes" style="padding-top: 18px;">
+              {%- if order.note != blank -%}
+                {{ order.note }}
+              {%- elsif is_paid -%}
+                Payment received in full, so there's no balance remaining. Thanks for your business.
+              {%- else -%}
+                To pay this invoice or ask a question, email {{ shop.email | default: "support@fencing.club" }} and
+                include the order number above. Thanks for your business.
+              {%- endif -%}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>

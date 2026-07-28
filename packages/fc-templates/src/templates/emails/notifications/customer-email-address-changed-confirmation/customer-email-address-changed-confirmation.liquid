@@ -1,0 +1,124 @@
+{% capture email_title %}Your email address has been changed{% endcapture %} {% capture email_body %}The email address
+associated with your account has been changed.{% endcapture %}
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>{{ email_title }}</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="stylesheet" type="text/css" href="/assets/notifications/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" /><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      .button__cell { background: #101012; }
+      .actions-buttons .button__cell--primary { background-color: #101012; }
+      a, a:hover, a:active, a:visited { color: #A6192E; }
+    </style>
+  </head>
+
+  <style>
+    body {
+      color: #5a5a60;
+      background-color: #f4f4f2;
+    }
+
+    p,
+    td,
+    th,
+    div,
+    span {
+      color: #5a5a60;
+    }
+
+    strong,
+    b {
+      color: #101012;
+    }
+
+    a {
+      color: #a6192e;
+      text-decoration: none;
+    }
+
+    a:hover,
+    a:focus {
+      color: #a6192e;
+      text-decoration: underline;
+    }
+  </style>
+  <body>
+    <table class="body">
+      <tr>
+        <td>
+          <table class="header row">
+            <tr>
+              <td class="header__cell">
+                <center>
+                  <table class="container">
+                    <tr>
+                      <td>
+                        <table class="row">
+                          <tr>
+                            <td class="shop-name__cell">
+                              <img
+                                src="https://cdn.shopify.com/s/files/1/0848/2527/6713/files/email-logo-white.png?v=1784929023"
+                                alt="{{ shop.name }}"
+                                width="100"
+                              />
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+                </center>
+              </td>
+            </tr>
+          </table>
+
+          <table class="row content">
+            <tr>
+              <td class="content__cell">
+                <center>
+                  <table class="container">
+                    <tr>
+                      <td>
+                        <p>{{ email_body }}</p>
+                        <p><strong>Previous email address:</strong> {{ previous_email }}</p>
+                        <p><strong>New email address:</strong> {{ new_email }}</p>
+                        <p>
+                          If you did not make these changes, please
+                          <a href="mailto:{{ email }}">contact us</a> immediately.
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </center>
+              </td>
+            </tr>
+          </table>
+          <table class="row footer">
+            <tr>
+              <td class="footer__cell">
+                <center>
+                  <table class="container">
+                    <tr>
+                      <td>
+                        <p class="disclaimer__subtext">
+                          If you have any questions, reply to this email or contact us at
+                          <a href="mailto:{{ shop.email }}">{{ shop.email }}</a>
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </center>
+              </td>
+            </tr>
+          </table>
+
+          <img src="{{ 'notifications/spacer.png' | shopify_asset_url }}" class="spacer" height="1" />
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

@@ -1,0 +1,111 @@
+/*
+ * Mirrors the palette the preview viewer uses, so a story reads the same in either theme. The
+ * rendered template keeps its own colours; only the card around it follows the toggle.
+ */
+
+:root {
+  color-scheme: light;
+  --preview-bg: #f4f4f2;
+  --preview-surface: #ffffff;
+  --preview-border: #e3e3e0;
+  --preview-text: #101012;
+  --preview-muted: #5a5a60;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --preview-bg: #0b0b0c;
+  --preview-surface: #141416;
+  --preview-border: #2e2e33;
+  --preview-text: #f7f7f5;
+  --preview-muted: #a0a0a6;
+}
+
+body {
+  background: var(--preview-bg);
+}
+
+.template-preview {
+  background: var(--preview-surface);
+  color: var(--preview-text);
+  font-family:
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    sans-serif;
+  margin: 0 auto;
+  max-width: 46rem;
+}
+
+.template-preview--printout {
+  background: none;
+  max-width: none;
+}
+
+.template-preview__head {
+  border: 1px solid var(--preview-border);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  padding: 14px 18px;
+}
+
+.template-preview__subject {
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.35;
+  margin: 0 0 10px;
+}
+
+.template-preview__fields {
+  display: grid;
+  font-size: 12.5px;
+  gap: 2px 10px;
+  grid-template-columns: auto 1fr;
+  margin: 0;
+}
+
+.template-preview__fields dt {
+  color: var(--preview-muted);
+}
+
+.template-preview__fields dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.template-preview__body {
+  border: 1px solid var(--preview-border);
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+}
+
+.template-preview--printout .template-preview__body {
+  border: 0;
+  border-radius: 0;
+  /* The sheet is a fixed 8.5in, so a narrow panel pans across it rather than cropping it. */
+  overflow-x: auto;
+}
+
+.template-preview__frame {
+  background: #ffffff;
+  border: 0;
+  display: block;
+  /* Replaced inline once the frame reports its content height. */
+  height: 480px;
+  width: 100%;
+}
+
+.template-preview--printout .template-preview__frame {
+  background: none;
+  width: 8.5in;
+}
+
+.template-preview__error {
+  border: 1px solid var(--preview-border);
+  border-radius: 12px;
+  color: #b42318;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 12.5px;
+  padding: 14px 18px;
+  white-space: pre-wrap;
+}
