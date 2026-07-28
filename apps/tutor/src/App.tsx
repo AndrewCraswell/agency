@@ -168,9 +168,8 @@ const storySteps: readonly StoryStep[] = [
   {
     title: "Resources attach at the moment of need",
     body: "Lessons and explanations remain separate from the knowledge graph. When more instruction is appropriate, the tutor can open a resource matched to the exact skill or outcome.",
-    nodeId: "khan",
-    anchorSelector: '[data-story-node="khan"]',
-    focusNodeIds: ["add-within-ten", "khan"]
+    nodeId: "add-within-ten",
+    anchorSelector: '[data-story-anchor="inspector-resources"]'
   }
 ]
 
@@ -626,7 +625,7 @@ export function App() {
             {connectionsHiddenForZoom ? (
               <Caption1 className={classes.legendZoomHint}>Zoom in to show connections</Caption1>
             ) : null}
-            {(["requires", "supports", "resource"] as const).map((relationship) => {
+            {(["requires", "supports"] as const).map((relationship) => {
               const label = relationshipLabel(relationship)
               return (
                 <Button

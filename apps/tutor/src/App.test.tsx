@@ -138,12 +138,16 @@ describe("Tutor skills atlas", () => {
 
     await user.click(screen.getByRole("tab", { name: "Guided story" }))
     await user.click(screen.getByRole("button", { name: "Show insight 8: Resources attach at the moment of need" }))
-    expect(screen.getByRole("heading", { name: "Addition and subtraction within 10" })).toBeVisible()
+    expect(screen.getByRole("heading", { name: /Add two one-digit numbers/ })).toBeVisible()
+    expect(screen.getByRole("heading", { name: "Learning resources" })).toBeVisible()
     expect(screen.getByRole("link", { name: "Addition and subtraction within 10" })).toHaveAttribute(
       "href",
       "https://en.khanacademy.org/math/early-math/cc-early-math-add-sub-basics/cc-early-math-together-apart/v/addition-and-subtraction-within-10"
     )
-    expect(screen.queryByRole("heading", { name: "Standards mappings" })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("article", { name: "Resource: Addition and subtraction within 10" })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Hide learning resources" })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "Finish moving graph" }))
     await user.click(screen.getByRole("button", { name: "Finish dragging node" }))

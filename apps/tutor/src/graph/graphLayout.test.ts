@@ -16,13 +16,9 @@ describe("graph layout", () => {
       expect(source?.y).toBeGreaterThan(target?.y ?? Number.POSITIVE_INFINITY)
     }
   })
-
-  it("keeps informational resources beside the skill they explain", () => {
-    const nodes = layoutKnowledgeNodes(initialNodes, initialEdges)
-    const outcome = nodes.find((node) => node.id === "add-within-ten")
-    const resource = nodes.find((node) => node.id === "khan")
-
-    expect(resource?.position.y).toBe(outcome?.position.y)
-    expect(resource?.position.x).toBeGreaterThan(outcome?.position.x ?? Number.POSITIVE_INFINITY)
+  it("keeps learning resources in node metadata rather than the canvas", () => {
+    expect(initialNodes.some((node) => node.data.kind === "resource")).toBe(false)
+    expect(initialEdges.some((edge) => edge.data?.relationship === "resource")).toBe(false)
+    expect(initialNodes.find((node) => node.id === "add-within-ten")?.data.resources).toHaveLength(1)
   })
 })

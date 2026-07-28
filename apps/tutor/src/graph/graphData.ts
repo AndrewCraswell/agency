@@ -158,30 +158,6 @@ const sourceNodes: KnowledgeNode[] = [
       stage: 5,
       confidence: 0.95
     }
-  },
-  {
-    id: "khan",
-    type: "knowledge",
-    position: { x: 760, y: 610 },
-    data: {
-      label: "Addition and subtraction within 10",
-      shortLabel: "Addition and subtraction within 10",
-      kind: "resource",
-      definition: "An external explanation and practice path for early addition.",
-      whyItMatters: "Gives a learner a balanced lesson when more explanation is useful.",
-      evidence: [],
-      mappings: [],
-      resources: [
-        {
-          provider: "Khan Academy",
-          title: "Addition and subtraction within 10",
-          format: "Lesson and practice",
-          url: khanUrl
-        }
-      ],
-      stage: 0,
-      confidence: 0.9
-    }
   }
 ]
 
@@ -257,14 +233,6 @@ export const initialEdges: KnowledgeEdge[] = [
     sourceHandle: "prerequisite-out",
     targetHandle: "prerequisite-in",
     data: { relationship: "requires", rationale: "Counting on supplies a general strategy for finding each sum." }
-  },
-  {
-    id: "outcome-khan",
-    source: "add-within-ten",
-    target: "khan",
-    sourceHandle: "resource-out",
-    targetHandle: "resource-in",
-    data: { relationship: "resource", rationale: "The lesson offers explanation and additional practice." }
   }
 ]
 
