@@ -13,3 +13,6 @@ public/dist
 .env
 artifacts/
 output
+
+# Orders pulled from a real store. Customer data, never committed.
+.fixtures/

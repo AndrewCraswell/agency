@@ -9,9 +9,7 @@ export default defineConfig({
       reporter: ["text", "text-summary", "html", "lcov", "json-summary"],
       reportsDirectory: "coverage",
       include: ["src/**/*.ts"],
-      // build.ts does its work on import, so it runs through `pnpm build` rather than under
-      // Vitest. The browser app and the dev-server middleware are exercised in the preview.
-      exclude: ["src/**/*.test.ts", "src/app/**", "src/preview/**", "src/build.ts"],
+      exclude: ["src/**/*.test.ts", "src/templates/**"],
       thresholds: {
         lines: 80,
         statements: 80,

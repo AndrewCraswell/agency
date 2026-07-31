@@ -1,0 +1,1 @@
+Payment receipt for order {{ order_name }}

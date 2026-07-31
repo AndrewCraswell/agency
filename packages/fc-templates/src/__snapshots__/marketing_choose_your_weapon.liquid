@@ -1,0 +1,1102 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html dir="ltr" lang="en">
+  <head>
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <title>Which weapon is yours?</title>
+    <meta
+      content="telephone=no, date=no, address=no, email=no"
+      name="format-detection" />
+    <meta content="light dark" name="color-scheme" />
+    <meta content="light dark" name="supported-color-schemes" />
+    <title>
+      A quick guide to the three weapons, plus the starter kits that get you on
+      the strip.
+    </title>
+    <style>
+      @font-face {
+        font-family: 'Archivo';
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        mso-font-alt: 'Arial';
+        mso-generic-font-family: swiss;
+        src: url(https://fonts.gstatic.com/s/archivo/v25/k3kPo8UDI-1M0wlSV9XAw6lQkqWY8Q82sLydOxI.woff2) format('woff2');
+      }
+      @font-face {
+        font-family: 'Archivo';
+        font-style: normal;
+        font-weight: 700;
+        font-display: swap;
+        mso-font-alt: 'Arial';
+        mso-generic-font-family: swiss;
+        src: url(https://fonts.gstatic.com/s/archivo/v25/k3kPo8UDI-1M0wlSV9XAw6lQkqWY8Q82sLydOxI.woff2) format('woff2');
+      }
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        mso-font-alt: 'Arial';
+        mso-generic-font-family: swiss;
+        src: url(https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2) format('woff2');
+      }
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 600;
+        font-display: swap;
+        mso-font-alt: 'Arial';
+        mso-generic-font-family: swiss;
+        src: url(https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2) format('woff2');
+      }
+      @font-face {
+        font-family: 'Inter';
+        font-style: normal;
+        font-weight: 700;
+        font-display: swap;
+        mso-font-alt: 'Arial';
+        mso-generic-font-family: swiss;
+        src: url(https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2) format('woff2');
+      }
+      @font-face {
+        font-family: 'Geist Mono';
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+        mso-font-alt: 'Courier New';
+        mso-generic-font-family: modern;
+        src: url(https://fonts.gstatic.com/s/geistmono/v6/or3nQ6H-1_WfwkMZI_qYFrcdmg.woff2) format('woff2');
+      }
+      @font-face {
+        font-family: 'Geist Mono';
+        font-style: normal;
+        font-weight: 600;
+        font-display: swap;
+        mso-font-alt: 'Courier New';
+        mso-generic-font-family: modern;
+        src: url(https://fonts.gstatic.com/s/geistmono/v6/or3nQ6H-1_WfwkMZI_qYFrcdmg.woff2) format('woff2');
+      }
+      :root { color-scheme: light dark; supported-color-schemes: light dark; }
+      body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+      table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse; }
+      img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; display: block; }
+      body { margin: 0 !important; padding: 0 !important; width: 100% !important; background-color: #ffffff; }
+      a { text-decoration: none; }
+      .appleLinks a, .appleLinks a:visited { color: inherit !important; text-decoration: none !important; }
+      .btn a { mso-line-height-rule: exactly; }
+
+      @media only screen and (max-width: 620px) {
+        .wrapper { width: 100% !important; max-width: 100% !important; }
+        /* React Email moves a section's padding onto its inner cell, so the gutter is narrowed there. */
+        .px > tbody > tr > td { padding-left: 20px !important; padding-right: 20px !important; }
+        .h1 { font-size: 26px !important; line-height: 32px !important; letter-spacing: -0.4px !important; }
+        /* Marketing heroes start larger than a notification title, so they step down to their own size. */
+        .h1-lg { font-size: 30px !important; line-height: 34px !important; letter-spacing: -0.6px !important; }
+        .big-stat { font-size: 36px !important; }
+        .fluid { width: 100% !important; max-width: 100% !important; height: auto !important; }
+        .sub { width: 100% !important; }
+        .stack { display: block !important; width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; }
+        /* The gap the two halves lose when they stop sitting side by side. */
+        .stack + .stack { padding-top: 18px !important; }
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body, .dk-page { background-color: #141416 !important; }
+        .dk-card { background-color: #141416 !important; }
+        .dk-band { background-color: #08080a !important; }
+        .dk-surface { background-color: #1c1c1f !important; }
+        .dk-border { border-color: #2e2e33 !important; }
+        .dk-text, .dk-text a { color: #f7f7f5 !important; }
+        .dk-muted, .dk-muted a { color: #a0a0a6 !important; }
+        .dk-chip { background-color: #f7f7f5 !important; color: #101012 !important; }
+        .dk-btn { background-color: #ffffff !important; }
+        .dk-btn a { color: #101012 !important; }
+        .dk-num { background-color: #f7f7f5 !important; color: #101012 !important; }
+        .dk-icon { background-color: #2a2a2e !important; }
+      }
+
+      [data-ogsb] .dk-page, [data-ogsc] .dk-page { background-color: #141416 !important; }
+      [data-ogsb] .dk-card { background-color: #141416 !important; }
+      [data-ogsb] .dk-band { background-color: #08080a !important; }
+      [data-ogsb] .dk-surface { background-color: #1c1c1f !important; }
+      [data-ogsb] .dk-border, [data-ogsc] .dk-border { border-color: #2e2e33 !important; }
+      [data-ogsc] .dk-text, [data-ogsc] .dk-text a { color: #f7f7f5 !important; }
+      [data-ogsc] .dk-muted, [data-ogsc] .dk-muted a { color: #a0a0a6 !important; }
+      [data-ogsb] .dk-chip { background-color: #f7f7f5 !important; }
+      [data-ogsc] .dk-chip { color: #101012 !important; }
+      [data-ogsb] .dk-btn { background-color: #ffffff !important; }
+      [data-ogsc] .dk-btn a { color: #101012 !important; }
+      [data-ogsb] .dk-icon { background-color: #2a2a2e !important; }
+    </style>
+  </head>
+  <body
+    class="dk-page"
+    dir="ltr"
+    lang="en"
+    style="background-color:#ffffff;margin:0;padding:0">
+    <!--$--><!--html--><!--head-->
+    <div
+      style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0"
+      data-skip-in-text="true">
+      A quick guide to the three weapons, plus the starter kits that get you on
+      the strip.
+      <div>
+         ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿ ‌​‍‎‏﻿
+      </div>
+    </div>
+    <!--body-->
+    <table
+      border="0"
+      width="100%"
+      cellpadding="0"
+      cellspacing="0"
+      role="presentation"
+      align="center">
+      <tbody>
+        <tr>
+          <td
+            dir="ltr"
+            lang="en"
+            style='background-color:#ffffff;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;margin:0;padding:0'>
+            <table
+              align="center"
+              width="100%"
+              class="wrapper dk-card"
+              border="0"
+              cellpadding="0"
+              cellspacing="0"
+              role="presentation"
+              style="max-width:600px;background-color:#ffffff;margin:0 auto;width:100%">
+              <tbody>
+                <tr style="width:100%">
+                  <td>
+                    <table
+                      align="center"
+                      width="100%"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      role="presentation"
+                      class="px dk-band"
+                      style="background-color:#0b0b0c;text-align:center">
+                      <tbody>
+                        <tr>
+                          <td style="padding:24px 32px">
+                            <table
+                              align="center"
+                              width="100%"
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              role="presentation"
+                              style="margin:0 auto;width:auto">
+                              <tbody style="width:100%">
+                                <tr style="width:100%">
+                                  <td
+                                    data-id="__react-email-column"
+                                    style="padding-right:12px;vertical-align:middle">
+                                    <img
+                                      alt="Fencing Club"
+                                      height="63"
+                                      src="https://cdn.shopify.com/s/files/1/0848/2527/6713/files/email-logo-white.png?v=1784929023"
+                                      style="display:block;outline:none;border:0;text-decoration:none"
+                                      width="52" />
+                                  </td>
+                                  <td
+                                    data-id="__react-email-column"
+                                    style="text-align:left;vertical-align:middle">
+                                    <div
+                                      style='color:#f7f7f5;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:18px;font-weight:700;letter-spacing:3px;line-height:22px'>
+                                      FENCING CLUB
+                                    </div>
+                                    <div
+                                      style='color:#a0a0a6;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:9px;font-weight:600;letter-spacing:1.5px;line-height:14px;padding-top:2px'>
+                                      GET STARTED / GUIDE
+                                    </div>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <table
+                      align="center"
+                      width="100%"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      role="presentation"
+                      class="px"
+                      style="background-color:#ffffff;text-align:center">
+                      <tbody>
+                        <tr>
+                          <td style="padding:36px 32px 28px">
+                            <span
+                              class="dk-chip"
+                              style='background-color:#101012;border-radius:20px;color:#f7f7f5;display:inline-block;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;line-height:14px;padding:5px 12px'
+                              >NEW TO FENCING?</span
+                            >
+                            <h1
+                              class="h1-lg dk-text"
+                              style='color:#101012;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:38px;font-weight:700;letter-spacing:-1px;line-height:40px;margin:14px 0 0'>
+                              Which weapon is yours?
+                            </h1>
+                            <div
+                              class="sub dk-muted"
+                              style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:15px;font-weight:400;line-height:24px;margin:14px auto 0;max-width:500px'>
+                              Foil, épée or sabre: every fencer starts by
+                              choosing one. Here’s a quick guide to help you
+                              pick, plus starter kits and bestsellers to get you
+                              on the strip.
+                            </div>
+                            <table
+                              align="center"
+                              width="100%"
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              role="presentation"
+                              class="px btn"
+                              style="text-align:center">
+                              <tbody>
+                                <tr>
+                                  <td style="padding:14px 32px 0">
+                                    <a
+                                      class="dk-btn"
+                                      href="https://fencing.club/collections/all"
+                                      style='line-height:18px;text-decoration:none;display:inline-block;max-width:100%;mso-padding-alt:0px;background-color:#101012;border:none;border-radius:14px;color:#ffffff;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:15px;font-weight:700;padding:13px 28px;padding-top:13px;padding-right:28px;padding-bottom:13px;padding-left:28px'
+                                      target="_blank"
+                                      ><span
+                                        ><!--[if mso]><i style="mso-font-width:466.6666666666667%;mso-text-raise:19.5px" hidden>&#8202;&#8202;&#8202;</i><![endif]--></span
+                                      ><span
+                                        style="max-width:100%;display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:9.75px"
+                                        >Explore all weapons</span
+                                      ><span
+                                        ><!--[if mso]><i style="mso-font-width:466.6666666666667%" hidden>&#8202;&#8202;&#8202;&#8203;</i><![endif]--></span
+                                      ></a
+                                    >
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            <img
+                              class="fluid"
+                              alt="Two fencers saluting before a bout"
+                              height="340"
+                              src="https://images.unsplash.com/photo-1648500128137-5d4210c9fe34?crop=entropy&amp;cs=tinysrgb&amp;fit=max&amp;fm=jpg&amp;q=80&amp;w=1080"
+                              style="display:block;outline:none;border:none;text-decoration:none;border-radius:14px;margin-top:14px;object-fit:cover;width:100%"
+                              width="536" />
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <table
+                      align="center"
+                      width="100%"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      role="presentation"
+                      class="px dk-surface"
+                      style="background-color:#f4f4f2;text-align:left">
+                      <tbody>
+                        <tr>
+                          <td style="padding:40px 32px">
+                            <div
+                              class="dk-muted"
+                              style='color:#5a5a60;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:11px;font-weight:600;letter-spacing:2.2px;line-height:16px'>
+                              THE THREE WEAPONS
+                            </div>
+                            <div
+                              class="dk-text"
+                              style='color:#101012;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:24px;font-weight:700;letter-spacing:-0.4px;line-height:28px;padding-top:10px'>
+                              Foil vs. épée vs. sabre
+                            </div>
+                            <table
+                              align="center"
+                              width="100%"
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              role="presentation">
+                              <tbody>
+                                <tr>
+                                  <td style="padding-top:20px">
+                                    <table
+                                      align="center"
+                                      width="100%"
+                                      border="0"
+                                      cellpadding="0"
+                                      cellspacing="0"
+                                      role="presentation"
+                                      class="dk-card dk-border"
+                                      style="background-color:#ffffff;border:1px solid #e3e3e0;border-radius:14px">
+                                      <tbody>
+                                        <tr>
+                                          <td style="padding:18px 20px">
+                                            <table
+                                              align="center"
+                                              width="100%"
+                                              border="0"
+                                              cellpadding="0"
+                                              cellspacing="0"
+                                              role="presentation">
+                                              <tbody style="width:100%">
+                                                <tr style="width:100%">
+                                                  <td
+                                                    data-id="__react-email-column"
+                                                    style="padding-right:12px;vertical-align:middle;width:42px">
+                                                    <table
+                                                      align="center"
+                                                      width="100%"
+                                                      border="0"
+                                                      cellpadding="0"
+                                                      cellspacing="0"
+                                                      role="presentation"
+                                                      style="border-collapse:separate;width:42px">
+                                                      <tbody style="width:100%">
+                                                        <tr style="width:100%">
+                                                          <td
+                                                            align="center"
+                                                            data-id="__react-email-column"
+                                                            style="background-color:#f4f4f2;border:none;border-radius:999px;height:40px;vertical-align:middle;width:40px">
+                                                            <img
+                                                              alt=""
+                                                              height="19"
+                                                              src="data:image/png;base64,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"
+                                                              style="display:block;outline:none;border:none;text-decoration:none;margin:0 auto"
+                                                              width="19" />
+                                                          </td>
+                                                        </tr>
+                                                      </tbody>
+                                                    </table>
+                                                  </td>
+                                                  <td
+                                                    data-id="__react-email-column"
+                                                    style="vertical-align:middle">
+                                                    <div
+                                                      class="dk-text"
+                                                      style='color:#101012;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:19px;font-weight:700;line-height:23px'>
+                                                      Foil
+                                                    </div>
+                                                    <div
+                                                      class="dk-muted"
+                                                      style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:10.5px;font-weight:700;letter-spacing:1.2px;line-height:15px;padding-top:3px'>
+                                                      TARGET / TORSO
+                                                    </div>
+                                                  </td>
+                                                </tr>
+                                              </tbody>
+                                            </table>
+                                            <div
+                                              class="dk-muted"
+                                              style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:13px;font-weight:400;line-height:20px;padding-top:10px'>
+                                              A light thrusting weapon with
+                                              right-of-way rules. Rewards
+                                              precision and timing, the classic
+                                              first weapon for learning control.
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            <table
+                              align="center"
+                              width="100%"
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              role="presentation">
+                              <tbody>
+                                <tr>
+                                  <td style="padding-top:12px">
+                                    <table
+                                      align="center"
+                                      width="100%"
+                                      border="0"
+                                      cellpadding="0"
+                                      cellspacing="0"
+                                      role="presentation"
+                                      class="dk-card dk-border"
+                                      style="background-color:#ffffff;border:1px solid #e3e3e0;border-radius:14px">
+                                      <tbody>
+                                        <tr>
+                                          <td style="padding:18px 20px">
+                                            <table
+                                              align="center"
+                                              width="100%"
+                                              border="0"
+                                              cellpadding="0"
+                                              cellspacing="0"
+                                              role="presentation">
+                                              <tbody style="width:100%">
+                                                <tr style="width:100%">
+                                                  <td
+                                                    data-id="__react-email-column"
+                                                    style="padding-right:12px;vertical-align:middle;width:42px">
+                                                    <table
+                                                      align="center"
+                                                      width="100%"
+                                                      border="0"
+                                                      cellpadding="0"
+                                                      cellspacing="0"
+                                                      role="presentation"
+                                                      style="border-collapse:separate;width:42px">
+                                                      <tbody style="width:100%">
+                                                        <tr style="width:100%">
+                                                          <td
+                                                            align="center"
+                                                            data-id="__react-email-column"
+                                                            style="background-color:#f4f4f2;border:none;border-radius:999px;height:40px;vertical-align:middle;width:40px">
+                                                            <img
+                                                              alt=""
+                                                              height="19"
+                                                              src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAE+ElEQVR4Aeybi1HjMBCGlVwDJnP9HFQWqAyuHwbUwOHbT7JMErx6+BmCGK+TyCtp9flfKUysvdn4r2kOj01z93xuv+83DstsBsYDObQC4GjMTkCc2kcHajtAm4ABijFGgMhZPQAFoMOj6rLghVXBAESsU0n2qI6kWbb3TI6rgREg3PmESrRR7e6B0zTrpdbiYAAiVqqSAUIhtZiolwe0GBiB4VYbGWGuSp6MaV/EP3EEQMvOPbOD8UBOV5vEOP3lJ2vfHq19f5CPAkjO6UPmnkO7VIrNAqaDIQoJQNKj6jwAsrMCpfts/Pu9AMpRD7WCgkixg8QwT5oVgWlk8vuEQCBYD+NImAUGFCbkL1WsfX2xZeqRNgDEVwC3xIuSgpoOAgsrA5YFpoPRGvPxLBEcvREIJp/KDkmV/YM9UYlW3fuUqOeyJRdfFy/A3I0cvBmXNZNgyGGpROPyMukQIMapBEXktoSvLVaP1roHxY3WPEJ5FIxvwDUW/Me+dkDesu7WUCfWKQz1GAHcZqxeQ630ZUzc0VhUMI3MJ9LMFKXIAJxCziZXaXP04dUTVi8gTQHU/okFooIx5kP+sYtVHbx2BsPf5UG//ELF00NieQ+ASiHxbVqfkCNglIhcMUFgyBpzk6lTxpIwXNcXpwDIyjxk7dvOGEBhxBfsolLGxwgYTWqtW0qtD0S+lCHt16k5nxFqnosH5Zd7HyOqyqt76hUBc+r2895XMMo9r2AqGIWAUlwVU8EoBJTiqpgKRiGgFFfFVDAKAaW4KqaCUQgoxQWKUVq40eIKRrmxFUwFoxBQiqtiKhiFgFJcFVPBKASU4qqYnwqm++FQGb5eHFHM7q9e7favRMDc/uBjIxwBZjfmp9tYDFd5bQSYqxzHqKD41VKrGAGzV3929Y+HaE1uVz7c87/jcDm/aw9foXTPachiNIf8b61MBeMHqlJV7oKvdS1nv1Rrc+IvHllRQ02A+e5LtpZGKo/+QgLM/pvPM5pa2pfUVLHvEQ28SVS+6nTyaTQwKFcUTyNcomBwEFNz8bpXp/FpJGNOb+Sy7mlJXAftKlXjb9j4NGKkOYrBL6KaOx6KxucqrEuhyA1LpxEDyQITVw1PPy67E4RA8y2WQm1y0g39ZIHpnFXVyPXkA8Xis/jhn2LXUoju89SCZzYY6+Ya9QsfbW0KJz6vEB4PY+c/XZoNxjVtksQ3geOVws4TH+XXcyspVPa4fhGY7ntNLKWISeCsNyF7KLH0AUr5s75FYBi1dSnF0+B80owJmS0w+iPpWs3cclJHrDVuz7aJ/CVVPli3GAytJOHg5AJmj9D8K5YAYedIZEl2AciJR/nz5xWp0B+jwFA7Dw6eRlKL3WbT1QMQMVFJbD5xfXJ66lKf98U2Ggw9FcARd9QzLr0EBtv3MoG08o8vSimbbCXAs2MSGFrycNjtwaeUMUnmAyoDQt+trD7vD1OUQivYZDA0QiDWbYnhblGSsgCIFDtXUQejQCF9X5I65atPX/vizSxgQpvWEliuekKtAAlAo3bkCpA3t1cqtDjH66xgCKhcPdTCAMRrkQGFFaqoUo7z7GBCp5/qyU2vUDPrFSCzq+S058XA0IlXT0ivWQAtDoS4sUXB0AE2A6DVgBAvtgoYOsICIOtWMCbpqIr4n2x1IMSJrQqGDoMFSMbtenX/ezkQcr2HIQAXmVilj+TxHwAA///1EYOfAAAABklEQVQDAOXQGed/JDGXAAAAAElFTkSuQmCC"
+                                                              style="display:block;outline:none;border:none;text-decoration:none;margin:0 auto"
+                                                              width="19" />
+                                                          </td>
+                                                        </tr>
+                                                      </tbody>
+                                                    </table>
+                                                  </td>
+                                                  <td
+                                                    data-id="__react-email-column"
+                                                    style="vertical-align:middle">
+                                                    <div
+                                                      class="dk-text"
+                                                      style='color:#101012;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:19px;font-weight:700;line-height:23px'>
+                                                      Épée
+                                                    </div>
+                                                    <div
+                                                      class="dk-muted"
+                                                      style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:10.5px;font-weight:700;letter-spacing:1.2px;line-height:15px;padding-top:3px'>
+                                                      TARGET / WHOLE BODY
+                                                    </div>
+                                                  </td>
+                                                </tr>
+                                              </tbody>
+                                            </table>
+                                            <div
+                                              class="dk-muted"
+                                              style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:13px;font-weight:400;line-height:20px;padding-top:10px'>
+                                              The heaviest point weapon, with no
+                                              right-of-way. Simple rules and a
+                                              patient, tactical style make it
+                                              very beginner-friendly.
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            <table
+                              align="center"
+                              width="100%"
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              role="presentation">
+                              <tbody>
+                                <tr>
+                                  <td style="padding-top:12px">
+                                    <table
+                                      align="center"
+                                      width="100%"
+                                      border="0"
+                                      cellpadding="0"
+                                      cellspacing="0"
+                                      role="presentation"
+                                      class="dk-card dk-border"
+                                      style="background-color:#ffffff;border:1px solid #e3e3e0;border-radius:14px">
+                                      <tbody>
+                                        <tr>
+                                          <td style="padding:18px 20px">
+                                            <table
+                                              align="center"
+                                              width="100%"
+                                              border="0"
+                                              cellpadding="0"
+                                              cellspacing="0"
+                                              role="presentation">
+                                              <tbody style="width:100%">
+                                                <tr style="width:100%">
+                                                  <td
+                                                    data-id="__react-email-column"
+                                                    style="padding-right:12px;vertical-align:middle;width:42px">
+                                                    <table
+                                                      align="center"
+                                                      width="100%"
+                                                      border="0"
+                                                      cellpadding="0"
+                                                      cellspacing="0"
+                                                      role="presentation"
+                                                      style="border-collapse:separate;width:42px">
+                                                      <tbody style="width:100%">
+                                                        <tr style="width:100%">
+                                                          <td
+                                                            align="center"
+                                                            data-id="__react-email-column"
+                                                            style="background-color:#f4f4f2;border:none;border-radius:999px;height:40px;vertical-align:middle;width:40px">
+                                                            <img
+                                                              alt=""
+                                                              height="19"
+                                                              src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEYAAABGCAYAAABxLuKEAAAEmklEQVR4AcybDXKkIBCFW/cCbir3SXKySU6W7H22Ei6wcfsBZkaHBlRomPLpjCjdfKH504zU4WeaHp+n6fe708PrND28arvZHRjAIPp+JxqenehCRBdtOF2BcVAAhFHcb6pwugGTgLJgQu1Zvlc9dgEmE4oFMXH7Y79U3jUH49oOMXwqF1/OvikYB8U2rrKHmxRj/n5sTlX52QzMEShM4I2lsjUBcxCKCpDFiDqYM1CM+VQb6KmCOQOF/5JqYcS2SA3MSSjwVVUqYDKhoEZAQQCaYQQHqoPJheILLoxsZ5UuGkAWVQWzB4o4orWeDn/sQXFXDcweKK683zybdt+2e1+btqer/q4CZj8UW8ZuwgjeFAdzBEpvYVQczBEocIJIDiOiUb3hhU8jdiV0HAqsz0/Yh6Q1adzaLgLmHBS4NEgNrziuwV01dRrMWSj+fqGMY5MwgjMjdkflC3VJ3P92tLttFUYoz2EwvicpAUXKo1kYHQbjoOARB7IQlawpLh/x/qYJu2uMK8x5KOlSz09YJD+uB/ugDuEeUsr+LjCTXaHXgAK30VOdkV1LRpgGxbBmlrjwlQ2mBhTXuOrPnIHdS3yIlwWmBhTvGB9+NW1k2YEgnCSYKxTOQtzmD3NwPdbVGmoM537knQRD9A8xKiIhmhnK10vkgmSScVAbwhmeXQW4uhoFgx6B7FsHJHzm01CWjA3DYQ38G4C80P6UFlvI2EQwmlBu/WQ4r1d9vRhTTkT5K4FBMK2gUMWP75ovkgnf1v0k34FxGQzSbJdvnIuFD2emsrky2XGNZA+hu0pbgfENkEiVCjS0K+sKPzKgkOH2bevKCgxFV9KIDMf7NoOef+dAIRqDPeoGzH1/fi14OINrel/f8qAQT3TDr5VswMQK9/3OxjC/qCE74YtZ35PGfmIOdEncw1DklwR2gEmYOZeMQgSH5nuzLQEFNjdg+py3wNEclYICWyswri/HSBNJzcQ15zEyXAj7VRIKLKzA4ITreVrDSc3P4OlVpaEg5zswOOngtJ7xwpO0bqFEro42tKH7gmBwoeFBD2sg28+jqy4hCxujTC+pZg5ZoVQLCsovgkEihHannD5vJojoKqVJnQQMHjnVhAILSTC4qKLQTQeyl4C5S9NTF3vd7vCxd/ldMzD+L+7dyD84KPUX5JuBiaHgtg0j17tLtKDAcEswQhjZBhq+raQJBYabgNkbRtpQmoGBYUnbMGoBBb41qTFsOCuM8qDMvKKIrp9zLbipg8kNo3wo5x7dSCzVwUiO4Lzh0TaOraHAhxZghDC6He2mxikzh0+dmgIokCoYVxNgNiQ32nWPbkLpy7n6UGBJFQxFFtsNh5GDEptAztVrCqBAdcAg57Au4dPzR09Q4KMamEQY8TJDHzUFUCA1MBQJIzgSk2nwPEsRTOyZVQwLFshi6XXSFMHEQkUq3PiCRTIpteZ5FTC5o911QdtBgR8qYGBon9pCga9KYMYd/xPQHooiGJjKUR9Q4OmIXW35BhSPTCKm+oECJ1XAwJDhIT8fA3AweewLCvup95/6MHYDhwEtQPDyYfgdFdzTSv8BAAD//7iJWIAAAAAGSURBVAMAJQXdc9rfbV0AAAAASUVORK5CYII="
+                                                              style="display:block;outline:none;border:none;text-decoration:none;margin:0 auto"
+                                                              width="19" />
+                                                          </td>
+                                                        </tr>
+                                                      </tbody>
+                                                    </table>
+                                                  </td>
+                                                  <td
+                                                    data-id="__react-email-column"
+                                                    style="vertical-align:middle">
+                                                    <div
+                                                      class="dk-text"
+                                                      style='color:#101012;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:19px;font-weight:700;line-height:23px'>
+                                                      Sabre
+                                                    </div>
+                                                    <div
+                                                      class="dk-muted"
+                                                      style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:10.5px;font-weight:700;letter-spacing:1.2px;line-height:15px;padding-top:3px'>
+                                                      TARGET / ABOVE THE WAIST
+                                                    </div>
+                                                  </td>
+                                                </tr>
+                                              </tbody>
+                                            </table>
+                                            <div
+                                              class="dk-muted"
+                                              style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:13px;font-weight:400;line-height:20px;padding-top:10px'>
+                                              A fast cut-and-thrust weapon with
+                                              right-of-way. Explosive,
+                                              aggressive and all about speed off
+                                              the line.
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            <table
+                              align="center"
+                              width="100%"
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              role="presentation">
+                              <tbody>
+                                <tr>
+                                  <td style="padding-top:12px">
+                                    <table
+                                      align="center"
+                                      width="100%"
+                                      border="0"
+                                      cellpadding="0"
+                                      cellspacing="0"
+                                      role="presentation"
+                                      class="dk-card dk-border"
+                                      style="background-color:#ffffff;border:1px solid #e3e3e0;border-radius:14px">
+                                      <tbody>
+                                        <tr>
+                                          <td style="padding:14px 18px">
+                                            <table
+                                              align="center"
+                                              width="100%"
+                                              border="0"
+                                              cellpadding="0"
+                                              cellspacing="0"
+                                              role="presentation">
+                                              <tbody style="width:100%">
+                                                <tr style="width:100%">
+                                                  <td
+                                                    data-id="__react-email-column"
+                                                    style="padding-right:12px;vertical-align:middle;width:42px">
+                                                    <table
+                                                      align="center"
+                                                      width="100%"
+                                                      border="0"
+                                                      cellpadding="0"
+                                                      cellspacing="0"
+                                                      role="presentation"
+                                                      style="border-collapse:separate;width:42px">
+                                                      <tbody style="width:100%">
+                                                        <tr style="width:100%">
+                                                          <td
+                                                            align="center"
+                                                            data-id="__react-email-column"
+                                                            style="background-color:#f4f4f2;border:none;border-radius:999px;height:40px;vertical-align:middle;width:40px">
+                                                            <img
+                                                              alt=""
+                                                              height="19"
+                                                              src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADsAAAA7CAYAAADFJfKzAAACyklEQVR4AexaUXajMAwU7gVo395nk5MlOVmy9+nL+gIb78jgBKhxwdhq3TjPCuDIGo3GwEek6Ik+z022bX/ttlqKzbI1B14/zeOubNu+HWGG6HbeahynbV/PLQo3BQxdYx3nwJYoj3EOliyDIIkDLOFodoTCIbb5jDR8eoJ0QAJsOKQY9xyOHE31iSQE4LBTu0HlV+yY8TxjgyhUtCTHP6a9svyg7D97kja2L1qDZ8GDMEii2nzL+HzTzzEeyLLU6YP7I3aEWVH8LlRkINlhfoOsPZt8qb3W1ybGiNSeyFwmAQeXjb2XBxO+0xMmTzH4vGYOf4YsoCKH1u8Xrf+C8GekvQCO4FHrK7a51yd6MjlZl8mDNLFKbjp0ZKLJCQ4Bs5F1IJ1CoW1tPbMTZZTsZBmE6CWgrsG2T79lO9zxtwhZ3tJj2OFV82d4lfNchGxPYEZdFXhy9ysTHVSiONFhwqpHh/UuFCSrxBT0MsWkgm0c5SyvZMvRal2mVdl19SrHuypbjlbrMq3KrqtXOd5V2XK0WpdpVXZdvcrxrsqWo9W6TKuy6+pVjvf3UFaoXpWsUKHFYaqy4iUXAqzKChVaHKYqS3TbcSvAVouRbismr5/DnVP2QHQ7b7W2fTNL+qHgZ1uDcDRbMbv1zc5HmMnO/Lvmc4+ZY2BXuI/rO4LZW4MA/HJSOkPvAiJ/s2Hwh/f7hZVFYmqPr586Tto2tBBZsvwfqdbXhoItPUXWAkQfLQyWrKOhUQEN0imMbD/U4k4ZlwInF9V/NZPzqPtmRNYhpjj2uwVgS24Rg3vKNpnBPwW6P0Y2sg6OSeM88MRnotwkBq/MIztZzl93T/wZwqG2IV69zJZ4iZBdkoiEjyBZ5W0g6be5BNfu1SOB5CdlvAXIlY/KFdgfl5/Md4J4zcg8mFwuomRZXf14l2d9zTiCw6Mo2SHwV5w/Fdn/AAAA//8gln7oAAAABklEQVQDAGFcEZWD4mgHAAAAAElFTkSuQmCC"
+                                                              style="display:block;outline:none;border:none;text-decoration:none;margin:0 auto"
+                                                              width="19" />
+                                                          </td>
+                                                        </tr>
+                                                      </tbody>
+                                                    </table>
+                                                  </td>
+                                                  <td
+                                                    class="appleLinks"
+                                                    data-id="__react-email-column"
+                                                    style="vertical-align:middle">
+                                                    <a
+                                                      class="dk-text"
+                                                      href="https://fencing.club/pages/buying-guides"
+                                                      style='color:#101012;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:14px;font-weight:700;line-height:19px;display:block'
+                                                      >Still deciding? Read the
+                                                      buying guides.</a
+                                                    >
+                                                    <div
+                                                      class="dk-muted"
+                                                      style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:12.5px;font-weight:400;line-height:18px;padding-top:2px'>
+                                                      Weapon comparisons, sizing
+                                                      charts and beginner FAQs.
+                                                    </div>
+                                                  </td>
+                                                </tr>
+                                              </tbody>
+                                            </table>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <table
+                      align="center"
+                      width="100%"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      role="presentation"
+                      class="px dk-band"
+                      style="background-color:#0b0b0c;text-align:center">
+                      <tbody>
+                        <tr>
+                          <td style="padding:40px 32px">
+                            <div
+                              style='color:#a0a0a6;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:12px;font-weight:600;letter-spacing:2.4px;line-height:16px'>
+                              THE EASY WAY IN
+                            </div>
+                            <div
+                              class="h1-lg"
+                              style='color:#f7f7f5;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:32px;font-weight:700;letter-spacing:-0.6px;line-height:36px;padding-top:10px'>
+                              Not sure? Start with a kit.
+                            </div>
+                            <div
+                              class="sub"
+                              style='color:#a0a0a6;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:14px;font-weight:400;line-height:22px;margin:14px auto 0;max-width:400px'>
+                              Our starter kits pair a weapon with a mask, jacket
+                              and glove: everything a beginner needs, matched
+                              and ready in one box.
+                            </div>
+                            <div class="btn" style="padding-top:24px">
+                              <a
+                                href="https://fencing.club/collections/starter-kits"
+                                style='line-height:18px;text-decoration:none;display:inline-block;max-width:100%;mso-padding-alt:0px;background-color:#ffffff;border-radius:14px;color:#101012;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:14px;font-weight:600;padding:14px 28px;padding-top:14px;padding-right:28px;padding-bottom:14px;padding-left:28px'
+                                target="_blank"
+                                ><span
+                                  ><!--[if mso]><i style="mso-font-width:466.6666666666667%;mso-text-raise:21px" hidden>&#8202;&#8202;&#8202;</i><![endif]--></span
+                                ><span
+                                  style="max-width:100%;display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:10.5px"
+                                  >Browse starter kits</span
+                                ><span
+                                  ><!--[if mso]><i style="mso-font-width:466.6666666666667%" hidden>&#8202;&#8202;&#8202;&#8203;</i><![endif]--></span
+                                ></a
+                              >
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <table
+                      align="center"
+                      width="100%"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      role="presentation"
+                      class="px"
+                      style="background-color:#ffffff;text-align:left">
+                      <tbody>
+                        <tr>
+                          <td style="padding:40px 32px">
+                            <div
+                              class="dk-muted"
+                              style='color:#5a5a60;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:11px;font-weight:600;letter-spacing:2.2px;line-height:16px'>
+                              FENCER FAVORITES
+                            </div>
+                            <div
+                              class="dk-text"
+                              style='color:#101012;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:24px;font-weight:700;letter-spacing:-0.4px;line-height:28px;padding-top:10px'>
+                              Bestsellers to get you started
+                            </div>
+                            <table
+                              align="center"
+                              width="100%"
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              role="presentation">
+                              <tbody>
+                                <tr>
+                                  <td style="padding-top:24px">
+                                    <table
+                                      align="center"
+                                      width="100%"
+                                      border="0"
+                                      cellpadding="0"
+                                      cellspacing="0"
+                                      role="presentation"
+                                      style="table-layout:fixed;width:100%">
+                                      <tbody style="width:100%">
+                                        <tr style="width:100%">
+                                          <td
+                                            class="stack"
+                                            data-id="__react-email-column"
+                                            style="padding-left:0;vertical-align:top;width:170px">
+                                            <a
+                                              href="https://fencing.club/products/signature-fie-foil"
+                                              ><img
+                                                class="fluid"
+                                                alt="Signature FIE Foil"
+                                                height="150"
+                                                src="https://images.unsplash.com/photo-1779831910265-589c9bcea696?crop=entropy&amp;cs=tinysrgb&amp;fit=crop&amp;fm=jpg&amp;h=352&amp;q=80&amp;w=400"
+                                                style="display:block;outline:none;border:none;text-decoration:none;border-radius:14px;object-fit:cover;width:100%"
+                                                width="170"
+                                            /></a>
+                                            <div style="padding-top:10px">
+                                              <span
+                                                class="dk-chip"
+                                                style='background-color:#101012;border-radius:100px;color:#f7f7f5;display:inline-block;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:10px;font-weight:600;letter-spacing:1px;line-height:14px;padding:4px 10px'
+                                                >BEST SELLER</span
+                                              >
+                                            </div>
+                                            <div
+                                              class="dk-muted"
+                                              style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:11px;font-weight:500;letter-spacing:1px;line-height:16px;padding-top:10px'>
+                                              FOILS
+                                            </div>
+                                            <a
+                                              class="dk-text"
+                                              href="https://fencing.club/products/signature-fie-foil"
+                                              style='color:#101012;display:block;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:15px;font-weight:600;line-height:20px;padding-top:4px'
+                                              >Signature FIE Foil</a
+                                            >
+                                            <div
+                                              class="dk-text"
+                                              style='color:#101012;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:14px;font-weight:600;line-height:19px;padding-top:6px'>
+                                              $189
+                                            </div>
+                                          </td>
+                                          <td
+                                            class="stack"
+                                            data-id="__react-email-column"
+                                            style="padding-left:13px;vertical-align:top;width:183px">
+                                            <a
+                                              href="https://fencing.club/products/fie-1600n-mask"
+                                              ><img
+                                                class="fluid"
+                                                alt="FIE 1600N Mask"
+                                                height="150"
+                                                src="https://images.unsplash.com/photo-1648500128138-53b62cbb1cf8?crop=entropy&amp;cs=tinysrgb&amp;fit=crop&amp;fm=jpg&amp;h=352&amp;q=80&amp;w=400"
+                                                style="display:block;outline:none;border:none;text-decoration:none;border-radius:14px;object-fit:cover;width:100%"
+                                                width="170"
+                                            /></a>
+                                            <div style="padding-top:10px">
+                                              <span
+                                                class="dk-chip"
+                                                style='background-color:#101012;border-radius:100px;color:#f7f7f5;display:inline-block;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:10px;font-weight:600;letter-spacing:1px;line-height:14px;padding:4px 10px'
+                                                >TOP RATED</span
+                                              >
+                                            </div>
+                                            <div
+                                              class="dk-muted"
+                                              style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:11px;font-weight:500;letter-spacing:1px;line-height:16px;padding-top:10px'>
+                                              MASKS
+                                            </div>
+                                            <a
+                                              class="dk-text"
+                                              href="https://fencing.club/products/fie-1600n-mask"
+                                              style='color:#101012;display:block;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:15px;font-weight:600;line-height:20px;padding-top:4px'
+                                              >FIE 1600N Mask</a
+                                            >
+                                            <div
+                                              class="dk-text"
+                                              style='color:#101012;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:14px;font-weight:600;line-height:19px;padding-top:6px'>
+                                              $149
+                                            </div>
+                                          </td>
+                                          <td
+                                            class="stack"
+                                            data-id="__react-email-column"
+                                            style="padding-left:13px;vertical-align:top;width:183px">
+                                            <a
+                                              href="https://fencing.club/products/350n-club-jacket"
+                                              ><img
+                                                class="fluid"
+                                                alt="350N Club Jacket"
+                                                height="150"
+                                                src="https://images.unsplash.com/photo-1648484859970-4bfa3acc96f2?crop=entropy&amp;cs=tinysrgb&amp;fit=crop&amp;fm=jpg&amp;h=352&amp;q=80&amp;w=400"
+                                                style="display:block;outline:none;border:none;text-decoration:none;border-radius:14px;object-fit:cover;width:100%"
+                                                width="170"
+                                            /></a>
+                                            <div style="padding-top:10px">
+                                              <span
+                                                class="dk-chip"
+                                                style='background-color:#101012;border-radius:100px;color:#f7f7f5;display:inline-block;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:10px;font-weight:600;letter-spacing:1px;line-height:14px;padding:4px 10px'
+                                                >POPULAR</span
+                                              >
+                                            </div>
+                                            <div
+                                              class="dk-muted"
+                                              style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:11px;font-weight:500;letter-spacing:1px;line-height:16px;padding-top:10px'>
+                                              JACKETS
+                                            </div>
+                                            <a
+                                              class="dk-text"
+                                              href="https://fencing.club/products/350n-club-jacket"
+                                              style='color:#101012;display:block;font-family:Archivo, "Helvetica Neue", Helvetica, Arial, sans-serif;font-size:15px;font-weight:600;line-height:20px;padding-top:4px'
+                                              >350N Club Jacket</a
+                                            >
+                                            <div
+                                              class="dk-text"
+                                              style='color:#101012;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:14px;font-weight:600;line-height:19px;padding-top:6px'>
+                                              $95
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      </tbody>
+                                    </table>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <table
+                      align="center"
+                      width="100%"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      role="presentation"
+                      class="px dk-surface"
+                      style="background-color:#f4f4f2;text-align:center">
+                      <tbody>
+                        <tr>
+                          <td style="padding:28px 32px">
+                            <div
+                              class="dk-muted"
+                              style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;line-height:16px'>
+                              FENCING CLUB
+                            </div>
+                            <div
+                              class="dk-muted"
+                              style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:11.5px;font-weight:400;line-height:18px;padding-top:6px'>
+                              {{ shop.address.address1 | escape }}<!-- -->,
+                              <!-- -->{{ shop.address.city | escape }}<!-- -->,
+                              <!-- -->{{ shop.address.province | escape }}<!-- -->
+                              <!-- -->{{ shop.address.zip | escape }}
+                            </div>
+                            <table
+                              align="center"
+                              width="100%"
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              role="presentation"
+                              style="margin:8px auto 0;width:auto">
+                              <tbody style="width:100%">
+                                <tr style="width:100%">
+                                  <td
+                                    class="dk-muted"
+                                    data-id="__react-email-column"
+                                    style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:18px;padding:4px 8px'>
+                                    <a
+                                      href="https://fencing.club/collections/all"
+                                      style="color:#5a5a60;text-decoration-line:none;text-decoration:none"
+                                      target="_blank"
+                                      >Shop</a
+                                    >
+                                  </td>
+                                  <td
+                                    class="dk-muted"
+                                    data-id="__react-email-column"
+                                    style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:18px;padding:4px 8px'>
+                                    <a
+                                      href="https://fencing.club/account"
+                                      style="color:#5a5a60;text-decoration-line:none;text-decoration:none"
+                                      target="_blank"
+                                      >Track order</a
+                                    >
+                                  </td>
+                                  <td
+                                    class="dk-muted"
+                                    data-id="__react-email-column"
+                                    style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:12px;line-height:18px;padding:4px 8px'>
+                                    <a
+                                      href="https://fencing.club/pages/contact"
+                                      style="color:#5a5a60;text-decoration-line:none;text-decoration:none"
+                                      target="_blank"
+                                      >Contact us</a
+                                    >
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            <div
+                              class="dk-muted appleLinks"
+                              style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:11px;font-weight:400;line-height:17px;margin:8px auto 0;max-width:460px'>
+                              You’re receiving this because you subscribed to
+                              Fencing Club. New to the sport? We’re glad you’re
+                              here.
+                            </div>
+                            <table
+                              align="center"
+                              width="100%"
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              role="presentation"
+                              style="margin:8px auto 0;width:auto">
+                              <tbody style="width:100%">
+                                <tr style="width:100%">
+                                  <td
+                                    class="dk-muted"
+                                    data-id="__react-email-column"
+                                    style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:11px;line-height:18px;padding:4px 8px'>
+                                    <a
+                                      href="{{ unsubscribe_url | escape }}"
+                                      style="color:#5a5a60;text-decoration-line:none;text-decoration:none"
+                                      target="_blank"
+                                      >Unsubscribe</a
+                                    >
+                                  </td>
+                                  <td
+                                    class="dk-muted"
+                                    data-id="__react-email-column"
+                                    style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:11px;line-height:18px;padding:4px 8px'>
+                                    <a
+                                      href="https://fencing.club/account"
+                                      style="color:#5a5a60;text-decoration-line:none;text-decoration:none"
+                                      target="_blank"
+                                      >Manage preferences</a
+                                    >
+                                  </td>
+                                  <td
+                                    class="dk-muted"
+                                    data-id="__react-email-column"
+                                    style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:11px;line-height:18px;padding:4px 8px'>
+                                    <a
+                                      href="https://fencing.club/policies/privacy-policy"
+                                      style="color:#5a5a60;text-decoration-line:none;text-decoration:none"
+                                      target="_blank"
+                                      >Privacy policy</a
+                                    >
+                                  </td>
+                                  <td
+                                    class="dk-muted"
+                                    data-id="__react-email-column"
+                                    style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:11px;line-height:18px;padding:4px 8px'>
+                                    <a
+                                      href="https://fencing.club/policies/terms-of-service"
+                                      style="color:#5a5a60;text-decoration-line:none;text-decoration:none"
+                                      target="_blank"
+                                      >Terms of service</a
+                                    >
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            <table
+                              align="center"
+                              width="100%"
+                              border="0"
+                              cellpadding="0"
+                              cellspacing="0"
+                              role="presentation"
+                              style="margin:12px auto 0;width:auto">
+                              <tbody style="width:100%">
+                                <tr style="width:100%">
+                                  <td
+                                    data-id="__react-email-column"
+                                    style="padding:0 5px">
+                                    <a
+                                      href="https://instagram.com/fencingclub"
+                                      style="color:#067df7;text-decoration-line:none"
+                                      target="_blank"
+                                      ><img
+                                        alt="Instagram"
+                                        height="30"
+                                        src="data:image/png;base64,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"
+                                        style="display:block;outline:none;border:none;text-decoration:none;border-radius:15px"
+                                        width="30"
+                                    /></a>
+                                  </td>
+                                  <td
+                                    data-id="__react-email-column"
+                                    style="padding:0 5px">
+                                    <a
+                                      href="https://facebook.com/fencingclub"
+                                      style="color:#067df7;text-decoration-line:none"
+                                      target="_blank"
+                                      ><img
+                                        alt="Facebook"
+                                        height="30"
+                                        src="data:image/png;base64,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"
+                                        style="display:block;outline:none;border:none;text-decoration:none;border-radius:15px"
+                                        width="30"
+                                    /></a>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+                            <div
+                              class="dk-muted"
+                              style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:11px;font-weight:400;line-height:17px;padding-top:12px'>
+                              ©
+                              <!-- -->{{ 'now' | date: '%Y' }}<!-- -->
+                              <!-- -->{{ shop.name | escape }}<!-- -->.
+                              All rights reserved.
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    {{ open_tracking_block }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <!--/$-->
+  </body>
+</html>

@@ -5,19 +5,24 @@ all 46 customer notifications.
 
 ## Layout
 
-| Path                       | Contents                                                                     |
-| -------------------------- | ---------------------------------------------------------------------------- |
-| `src/templates/`           | Templates grouped into `printouts/` and `emails/{marketing,notifications}/`. |
-| `src/templates/variables/` | Shared sample contexts the per-template variables files build on.            |
-| `src/images/`              | Brand artwork used by more than one template.                                |
-| `src/styles/`              | The shared email stylesheet the preview serves.                              |
-| `src/registry.ts`          | The typed list of every template, its group, and its variations.             |
+Templates exist in two forms while the React migration runs.
 
-`src/render.ts` renders a template against a variation, `src/liquid.ts` supplies the Shopify-only Liquid filters,
-`src/server.ts` is the preview server, and `src/build.ts` writes the upload-ready Liquid. Node runs the TypeScript
-directly, so there is no build step for the preview.
+| Path               | Contents                                                                       |
+| ------------------ | ------------------------------------------------------------------------------ |
+| `src/emails/`      | React definitions, in `notifications/` and `components/`. The target form.     |
+| `src/templates/`   | Shopify's verbatim Liquid, kept as the source for everything not yet migrated. |
+| `src/images/`      | Brand artwork used by more than one template.                                  |
+| `src/templates.ts` | The roster of React definitions every whole-library check runs over.           |
 
-See [docs/authoring.md](docs/authoring.md) for how a template folder is put together and how to add one.
+`src/liquid.ts` builds the Liquid engine the previews and tests render through, and `src/reactEmail.ts` is the harness
+the tests use to drive a definition down both the compiled and the resolved path.
+
+Each React notification is one file, `src/emails/notifications/<name>.tsx`, holding its definition and the default
+export the dev server renders. Its `type` names the Shopify notification, which is what decides the variables it can
+read and the sample it previews against. Add it to `src/templates.ts` and it joins every whole-library check.
+
+`pnpm build` compiles the React definitions in `src/emails/` into paste-ready Liquid under `dist/`, using the
+`shopify-emails` command from `@repo/shopify-emails`.
 
 ## Preview
 
@@ -25,13 +30,12 @@ See [docs/authoring.md](docs/authoring.md) for how a template folder is put toge
 pnpm --filter @repo/fc-templates dev
 ```
 
-Open `http://127.0.0.1:4180` for an index of all 53 templates, grouped into printouts, marketing emails, and customer
-notifications. Select `/` to jump to the filter. Each template opens in a viewer that matches its kind: a printout is
-framed as paper, and an email is framed as an inbox message with its rendered subject, From, and To. Templates with more
-than one variation get tabs to switch between them. Reload to pick up edits.
+Every notification appears in the sidebar, already resolved against the sample for its type, with each drop highlighted.
+The props panel edits the variables live. The viewer supplies the viewport presets, the linter, and the compatibility
+and spam reports.
 
-Routes: `/`, `/render/<template-id>/<variation-id>`, `/raw/<template-id>/<variation-id>`, `/api/templates`, and
-`/assets/notifications/styles.css`.
+The Liquid under `src/templates/` has no preview of its own. It is reference material: read it while porting a template
+into `src/emails/`, then delete it.
 
 ## Publishing to Shopify
 
@@ -52,15 +56,20 @@ theme files, so notification and Order Printer templates have no supported API. 
 pnpm --filter @repo/fc-templates test
 ```
 
-The suite renders every template against every variation and fails on any Liquid error, checks that each email produces
-a fully substituted subject, and asserts the content the invoice and packing slip are supposed to carry.
-`src/liquid.test.ts` covers the Shopify filter stand-ins. Both run under `pnpm verify` at the repo root.
+`src/valueMode.test.ts` asserts that the compiled Liquid and the resolved preview produce the same markup for every
+template, and `src/compiledOutput.test.ts` snapshots the Liquid and subject each one compiles to. Fifty templates hang
+off a handful of shared components, so a one-line change to a component rewrites most of the library at once; the
+snapshots turn that into a diff somebody reads. A failure there is not a defect on its own — read the diff, and if the
+change is the one you meant, run `pnpm --filter @repo/fc-templates test -- -u`.
+
+`src/liquid.test.ts` covers the Shopify filter stand-ins, and `src/escaping.test.ts`, `src/assign.test.ts`, and
+`src/forloop.test.ts` pin the Liquid the compiler emits for the constructs that are easiest to get wrong.
 
 ## Printout behavior
 
-`src/templates/invoice/` is the invoice for the
+`src/templates/printouts/invoice/` is the invoice for the
 [Shopify Order Printer app](https://help.shopify.com/en/manual/fulfillment/managing-orders/printing-orders/shopify-order-printer/liquid-variables-and-filters-reference)
-and `src/templates/packing-slip/` is the packing slip.
+and `src/templates/printouts/packing-slip/` is the packing slip. Neither has been ported to React yet.
 
 - One invoice template covers both states: an outstanding balance shows a `BALANCE DUE` tag, and a settled order shows
   `PAID IN FULL` with the amount paid in green.
@@ -74,9 +83,13 @@ and `src/templates/packing-slip/` is the packing slip.
 - The page footer lives in a `<tfoot>`, which print engines repeat at the foot of every page. Order Printer exposes no
   page-number variable, so a `@page` margin box supplies `PAGE n OF m` on engines that support it.
 
-The `multipage` variations exist to check the repeated header and footer across page breaks.
-
 ## Customer notifications
 
 See [docs/customer-notifications.md](docs/customer-notifications.md) for how the Shopify source was captured, which
 messages Shopify keeps to itself, and the two templates that need a preview-only parser shim.
+
+## Known gaps
+
+[docs/template-backlog.md](docs/template-backlog.md) records the work between a design that previews correctly and a
+library that survives a real inbox: message weight against Gmail's clip limit, the base64 icons, the Outlook rendering
+gaps, and the test config that leaves every `.tsx` file unmeasured.

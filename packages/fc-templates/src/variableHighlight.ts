@@ -198,28 +198,30 @@ export function highlightMarkedVariables(html: string, expressions: readonly str
 
 /*
  * Loud on purpose: the point of the mode is to see at a glance which parts of the page a merchant's
- * data drives. Highlights sit outside the page's own box model — a background and a ring on text,
- * an outline on an element whose attributes are variable-driven — so turning the mode on never
+ * data drives. Highlights sit outside the page's own box model — a background and a ring on text, a
+ * ring alone on an element whose attributes are variable-driven — so turning the mode on never
  * moves anything.
+ *
+ * The element ring is two-tone because buttons and the logo sit on near-black bands, where a single
+ * amber line disappears. White carries it against those, amber against the white page, and the pair
+ * follows whatever `border-radius` the element already has.
  */
 const HIGHLIGHT_CSS = `
 [data-fc-var] {
-  outline: 1px dashed rgba(180, 83, 9, 0.85);
-  outline-offset: 1px;
+  box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #d97706;
+  outline: 0;
 }
 span[data-fc-var] {
   background: rgba(253, 224, 71, 0.5);
   border-radius: 2px;
   box-shadow: 0 0 0 1px rgba(180, 83, 9, 0.65);
-  outline: 0;
 }
 @media print {
   [data-fc-var] {
-    outline: 0;
+    box-shadow: none;
   }
   span[data-fc-var] {
     background: transparent;
-    box-shadow: none;
   }
 }`
 

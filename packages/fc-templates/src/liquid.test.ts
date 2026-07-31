@@ -5,6 +5,13 @@ async function run(source: string, context: Record<string, unknown> = {}): Promi
   return engine.parseAndRender(source, context)
 }
 
+describe("strict filters", () => {
+  /* Off, a mistyped filter silently renders the raw value: `22600` reads as bad data, not bad code. */
+  it("refuses a filter it has no shim for", async () => {
+    await expect(run("{{ 18148 | mony }}")).rejects.toThrow(/undefined filter/i)
+  })
+})
+
 describe("money filters", () => {
   it("formats cents as US dollars", async () => {
     await expect(run("{{ 18148 | money }}")).resolves.toBe("$181.48")
@@ -31,7 +38,9 @@ describe("asset filters", () => {
   })
 
   it("passes an absolute url straight through", async () => {
-    await expect(run("{{ 'https://example.test/a.png' | cdn_asset_url }}")).resolves.toBe("https://example.test/a.png")
+    await expect(run("{{ 'https://example.test/a.png' | shopify_asset_url }}")).resolves.toBe(
+      "https://example.test/a.png"
+    )
   })
 
   it("returns the Visa artwork for a Visa card", async () => {
