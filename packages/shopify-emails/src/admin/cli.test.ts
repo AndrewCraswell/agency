@@ -2,6 +2,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { run } from "./cli.ts"
+import * as storeSource from "./store.ts"
 
 const root = join(import.meta.dirname, "..", "..")
 const made: string[] = []
@@ -102,6 +103,44 @@ describe("run probe", () => {
     expect(written).toContain("Empty for this order (1)\n  order_name")
     expect(written).toContain("Absent, yet a stock template reads it (1)\n  po_number")
     expect(written).toContain("Never answered, so the run was clipped (1)\n  gift_card")
+  })
+})
+
+describe("run pull", () => {
+  const loadOrderVariables = vi.fn<(id: string) => Promise<object>>()
+  const searchOrders = vi.fn<(search?: storeSource.OrderSearch) => Promise<readonly { id: string }[]>>()
+
+  beforeEach(() => {
+    loadOrderVariables.mockResolvedValue({ name: "#1001", shop: { name: "Fencing Club" } })
+    searchOrders.mockResolvedValue([{ id: "gid://shopify/Order/7" }])
+    vi.spyOn(storeSource, "createStoreSource").mockResolvedValue({
+      domain: "fencing.myshopify.com",
+      loadOrderVariables,
+      searchCustomers: vi.fn<() => Promise<void>>(),
+      searchOrders,
+      shop: vi.fn<() => Promise<void>>()
+    } as unknown as storeSource.StoreSource)
+  })
+
+  it("takes the most recent order when none is named", async () => {
+    await run(["pull"])
+
+    expect(searchOrders).toHaveBeenCalledWith({ first: 1 })
+    expect(JSON.parse(written).name).toBe("#1001")
+  })
+
+  it("looks an order up by the name a person reads, and passes a gid straight through", async () => {
+    await run(["pull", "--order", "#1001"])
+    expect(searchOrders).toHaveBeenCalledWith({ first: 1, query: "name:#1001" })
+
+    await run(["pull", "--order", "gid://shopify/Order/9"])
+    expect(loadOrderVariables).toHaveBeenLastCalledWith("gid://shopify/Order/9")
+  })
+
+  it("says which store had nothing readable rather than failing on an empty list", async () => {
+    searchOrders.mockResolvedValueOnce([])
+
+    await expect(run(["pull"])).rejects.toThrow(/No orders are readable on fencing.myshopify.com/)
   })
 })
 

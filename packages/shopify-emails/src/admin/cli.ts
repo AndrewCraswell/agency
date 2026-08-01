@@ -14,6 +14,7 @@ import { createAdminClient } from "./client.ts"
 import { parseStoreDomain, saveToken } from "./credentials.ts"
 import { shopResponse } from "./mapOrder.ts"
 import { SHOP_QUERY } from "./queries.ts"
+import { createStoreSource, type StoreSource } from "./store.ts"
 
 /*
  * `login` and `build`: authenticate once, then compile the templates into the files that get pasted
@@ -28,6 +29,7 @@ import { SHOP_QUERY } from "./queries.ts"
 const usage = `
 shopify-emails login --store <shop>.myshopify.com
 shopify-emails build [--dir <src>] [--out <dir>]
+shopify-emails pull [--store <shop>] [--order <name|gid>] [--out <file>]
 shopify-emails probe [--for notification|marketing|asset] [--names a,b] [--out <file>]
 shopify-emails probe --capture <file.html> [--for notification|marketing|asset] [--out <file>]
 
@@ -40,6 +42,9 @@ in the admin; preview it, save the rendered HTML, and pass it back with --captur
 
 \`--for asset\` asks what the CDN filters resolve to instead of what the drops hold, and its
 capture prints the resolved URLs as JSON rather than a present-or-absent report.
+
+\`pull\` writes what a live order hands a template, so a preview can be read against real
+values. Notification-only drops are not in it, because no API serves them: that is \`probe\`.
 `.trim()
 
 /** Never echoed, and never taken from an argument, so it cannot be recovered from shell history. */
@@ -160,6 +165,44 @@ const probe = async ({ capture, names, out, for: surface = "notification" }: Pro
   process.stdout.write(`${template}\n`)
 }
 
+type PullOptions = {
+  readonly store?: string
+  readonly order?: string
+  readonly out?: string
+}
+
+/* An order is named `#1001` everywhere a person sees it, and by `gid://` everywhere the API does. */
+const resolveOrderId = async (source: StoreSource, order?: string): Promise<string> => {
+  if (order?.startsWith("gid://")) {
+    return order
+  }
+  const found = await source.searchOrders(order ? { first: 1, query: `name:${order}` } : { first: 1 })
+  const id = found[0]?.id
+  if (!id) {
+    const which = order ? `No order ${order} is readable` : "No orders are readable"
+    throw new Error(`${which} on ${source.domain}. Only the last 60 days are, without read_all_orders.`)
+  }
+  return id
+}
+
+/*
+ * What a live order hands a template, so a preview can be read against real values.
+ *
+ * Only what the Admin API serves. The drops that exist solely inside a notification render — the
+ * branding the merchant set, and the CDN paths a filter computes — are `probe`'s to answer.
+ */
+const pull = async ({ order, out, store }: PullOptions): Promise<void> => {
+  const source = await createStoreSource(store)
+  const values = await source.loadOrderVariables(await resolveOrderId(source, order))
+  const json = `${JSON.stringify(values, null, 2)}\n`
+  if (out) {
+    await writeFile(out, json, "utf8")
+    process.stdout.write(`${relative(process.cwd(), out)}\n`)
+    return
+  }
+  process.stdout.write(json)
+}
+
 export const run = async (argv: readonly string[]): Promise<void> => {
   const { values, positionals } = parseArgs({
     args: [...argv],
@@ -168,6 +211,7 @@ export const run = async (argv: readonly string[]): Promise<void> => {
       store: { type: "string" },
       dir: { type: "string", default: "src/emails" },
       out: { type: "string" },
+      order: { type: "string" },
       for: { type: "string", default: "notification" },
       names: { type: "string" },
       capture: { type: "string" },
@@ -186,6 +230,10 @@ export const run = async (argv: readonly string[]): Promise<void> => {
   }
   if (command === "probe") {
     await probe(values)
+    return
+  }
+  if (command === "pull") {
+    await pull(values)
     return
   }
   if (command === "build") {

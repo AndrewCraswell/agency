@@ -765,6 +765,11 @@ shopify-emails probe --names line_items,shipping_address
 over — it is a different product with a different dialect — so the marketing list is the drops our own campaign
 templates read plus the ones worth testing an assumption about.
 
+`--for asset` asks a different kind of question: not what a drop holds, but what the CDN filters resolve to. The
+fingerprint in a path like `notifications/visa-e96781bb….png` is an artifact of Shopify's asset pipeline, and no Admin
+API resource exposes it, so a live render is the only authority. Its capture prints the resolved URLs as JSON rather
+than a present-or-absent report, because the values are the point of asking.
+
 The committed output of both lives in `packages/fc-templates/src/__snapshots__`, so the probe can be pasted without
 running anything first.
 
@@ -773,18 +778,21 @@ running anything first.
 ```
 shopify-emails login --store <shop>.myshopify.com
 shopify-emails build [--dir <src>] [--out <dir>]
-shopify-emails probe [--for notification|marketing] [--names a,b] [--out <file>]
-shopify-emails probe --capture <file.html> [--for notification|marketing]
+shopify-emails pull [--store <shop>] [--order <name|gid>] [--out <file>]
+shopify-emails probe [--for notification|marketing|asset] [--names a,b] [--out <file>]
+shopify-emails probe --capture <file.html> [--for notification|marketing|asset] [--out <file>]
 ```
 
 `login` stores an Admin API token for a store — see [Connecting a store](#connecting-a-store) for how to get one.
 `build` compiles every template under `--dir` into paste-ready files — see
 [Building the Liquid files](#building-the-liquid-files). `probe` prints the variable probe and reads its result back —
-see [Probing the notification variables](#probing-the-notification-variables).
+see [Probing the notification variables](#probing-the-notification-variables). `pull` writes what one live order hands a
+template.
 
-There is no `pull`. Exporting fixtures to render against is the problem the preview already solves, and a fixture goes
-stale the moment the order does. Read live data through
-[`@repo/shopify-emails/store`](#loading-live-orders-and-customers) instead.
+`pull` takes the most recent readable order, or the one named by `--order` — either as `#1001` or as a `gid://` — and
+writes its variables as JSON. It is for reading, and for seeding a dev-time lookup. It is not for committing: a fixture
+goes stale the moment the order does, so read live data through
+[`@repo/shopify-emails/store`](#loading-live-orders-and-customers) when you want the current thing.
 
 ## Limitations
 
