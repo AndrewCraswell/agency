@@ -55,18 +55,20 @@ export const ImageIcon = polarisIcon("image", "ImageIcon")
 export const VideoIcon = polarisIcon("video", "VideoIcon")
 export const TableIcon = polarisIcon("table", "TableIcon")
 export const SparkleIcon = polarisIcon("wand", "SparkleIcon")
-export const SearchIcon = polarisIcon("search", "SearchIcon")
 export const ProductIcon = polarisIcon("product", "ProductIcon")
 export const CollectionIcon = polarisIcon("collection", "CollectionIcon")
 export const PageIcon = polarisIcon("page", "PageIcon")
 export const ArticleIcon = polarisIcon("blog", "ArticleIcon")
 
-/* --- Replacements for the vendored Tiptap glyphs, exported under the names those components already import --- */
+/* --- Replacements for the vendored Tiptap glyphs, exported under the names those components already import.
+   Consumers that sit in the vendored tree are unreachable from any entry point, so knip cannot see them; the
+   tag on those exports says so. --- */
 
 export const BoldIcon = polarisIcon("text-bold", "BoldIcon")
 export const ItalicIcon = polarisIcon("text-italic", "ItalicIcon")
 export const UnderlineIcon = polarisIcon("text-underline", "UnderlineIcon")
 export const Code2Icon = polarisIcon("code", "Code2Icon")
+/** @vendored */
 export const BlockquoteIcon = polarisIcon("text-quote", "BlockquoteIcon")
 export const HighlighterIcon = polarisIcon("text-color", "HighlighterIcon")
 export const BanIcon = polarisIcon("color-none", "BanIcon")
@@ -79,8 +81,11 @@ export const ListTodoIcon = polarisIcon("checkbox", "ListTodoIcon")
 export const AlignLeftIcon = polarisIcon("text-align-left", "AlignLeftIcon")
 export const AlignCenterIcon = polarisIcon("text-align-center", "AlignCenterIcon")
 export const AlignRightIcon = polarisIcon("text-align-right", "AlignRightIcon")
+/** @vendored */
 export const HeadingIcon = polarisIcon("text-title", "HeadingIcon")
+/** @vendored */
 export const Undo2Icon = polarisIcon("undo", "Undo2Icon")
+/** @vendored */
 export const Redo2Icon = polarisIcon("redo", "Redo2Icon")
 /** Polaris draws its icons at a fixed size, so the chevron has to ask for the small one to fit a dropdown arrow. */
 export const ChevronDownIcon = polarisIcon("chevron-down", "ChevronDownIcon", "small")

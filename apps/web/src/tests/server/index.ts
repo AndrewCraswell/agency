@@ -7,5 +7,3 @@ export const server = setupServer(...handlers)
 
 /** Ergonomic per-test endpoint mocking bound to the MSW server. */
 export const ApiMock = createApiMock(server)
-
-export type { ApiMockInstance, MockOptions } from "./createApiMock"

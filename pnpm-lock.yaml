@@ -561,12 +561,12 @@ importers:
 
   packages/shopify-emails:
     dependencies:
-      jiti:
-        specifier: ^2.7.0
-        version: 2.7.0
       liquidjs:
         specifier: ^10.27.2
         version: 10.27.2
+      tsx:
+        specifier: ^4.23.0
+        version: 4.23.0
       zod:
         specifier: ^4.4.3
         version: 4.4.3
