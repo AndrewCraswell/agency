@@ -13,14 +13,14 @@ export const pendingPaymentSuccess = defineTemplate({
   subject: (vars) => `Your payment for ${liquidValue(vars.order.name)} has been received`,
   render: (vars) => (
     <EmailDocument
-      preview="We’ve received your payment. Your order is now fully paid and moving into production."
+      preview="We’ve received your payment. Your order is now fully paid and we’re preparing it now."
       title="Payment received"
     >
       <EmailHeader eyebrow="PAYMENT RECEIVED" />
       <EmailTitle>Payment received</EmailTitle>
       <EmailLead>
         Thanks, <Var path={vars.customer.first_name} />, we’ve received your payment for order{" "}
-        <Var path={vars.order.name} />. Your order is now fully paid and moving into production.
+        <Var path={vars.order.name} />. Your order is fully paid and we’re preparing it now.
       </EmailLead>
       <PaidBanner label="TOTAL PAID">
         <Var filters={["money"]} path={vars.total_price} />

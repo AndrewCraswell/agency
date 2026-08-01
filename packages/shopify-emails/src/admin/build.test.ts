@@ -4,8 +4,8 @@ import { afterAll, describe, expect, it } from "vitest"
 import { buildTemplates, GMAIL_CLIP_BYTES } from "./build.ts"
 
 /*
- * The fixtures live inside the package rather than in the OS temp folder, because jiti resolves a
- * definition's own imports from where the file sits and a folder outside the workspace can reach no
+ * The fixtures live inside the package rather than in the OS temp folder, because a definition's
+ * own imports resolve from where the file sits and a folder outside the workspace can reach no
  * `node_modules`.
  */
 const root = join(import.meta.dirname, "..", "..")
@@ -26,8 +26,8 @@ const workspace = async (files: Record<string, string>) => {
 
 /*
  * The fixtures declare a template as a plain object rather than importing `defineTemplate`, because
- * jiti transpiles what it loads and would pull a second, unexercised copy of the source into the
- * coverage report. What is under test here is the file plumbing, not the compiler.
+ * the loader transpiles what it loads and would pull a second, unexercised copy of the source into
+ * the coverage report. What is under test here is the file plumbing, not the compiler.
  */
 const definition = (id: string, greeting = "Thanks") => `
   export const template = {
@@ -60,10 +60,11 @@ describe("buildTemplates", () => {
   })
 
   /*
-   * jiti hands a definition its own copy of this package, so the render mode has to be readable
-   * across copies. If it were not, the subject would compile with `| escape` it must not carry.
+   * Vitest resolves the definition's import through its own graph rather than the registered
+   * loader, so this render crosses a module boundary the CLI does not have. If the render mode did
+   * not survive that crossing, the subject would compile with `| escape` it must not carry.
    */
-  it("leaves a subject drop unescaped, though the definition holds a second copy of the package", async () => {
+  it("leaves a subject drop unescaped, though the definition reaches the package by another route", async () => {
     const { dir, out } = await workspace({
       "welcome.tsx": `
         import { liquidValue, Var } from "../src/index.ts"

@@ -1,5 +1,5 @@
 import { Column, Img, Row, Section } from "react-email"
-import { color, font, radius } from "./tokens.ts"
+import { accentFill, color, font, radius } from "./tokens.ts"
 
 export type ProductCardItem = {
   readonly href: string
@@ -61,7 +61,7 @@ export const ProductCards = ({ items, spacing = 24 }: ProductCardsProps) => {
                 <span
                   className="dk-chip"
                   style={{
-                    backgroundColor: color.accent,
+                    backgroundColor: accentFill(),
                     borderRadius: 100,
                     color: color.onDark,
                     display: "inline-block",

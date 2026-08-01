@@ -30,9 +30,21 @@ export type Customer = {
   readonly verified_email: boolean | null
 }
 
+/*
+ * A store policy. It dumps as its body HTML, which is why a probe of `shop.privacy_policy` read a
+ * string back, but the drop answers `title` and `url` as well.
+ */
 export type ShopPolicy = {
+  readonly body: string
   readonly title: string
+  /** Relative, so mail has to put `shop.url` in front of it. */
   readonly url: string
+}
+
+/** A business buyer's location, which is who a B2B order and its store credit actually belong to. */
+export type CompanyLocation = {
+  readonly company: { readonly name: string }
+  readonly name: string
 }
 
 export type Shop = {
@@ -43,6 +55,12 @@ export type Shop = {
   readonly description: string
   readonly domain: string
   readonly email: string
+  /** The one colour the merchant picks in Customize email templates. There is no second one. */
+  readonly email_accent_color: string
+  /** Empty until the merchant uploads one, which is why the header keeps a logo of its own. */
+  readonly email_logo_url: string | null
+  /** Pixels, and width only: the height is whatever the aspect ratio makes it. */
+  readonly email_logo_width: number | null
   readonly id: number
   readonly locale: string
   readonly metafields: Metafields
@@ -52,13 +70,13 @@ export type Shop = {
   readonly name: string
   readonly permanent_domain: string
   readonly phone: string
-  /** Dumps as raw policy HTML, but each entry also answers `title` and `url`. */
+  /** Only the policies the merchant actually published, in the order the settings list them. */
   readonly policies: readonly ShopPolicy[]
-  readonly privacy_policy: string
-  readonly refund_policy: string
+  readonly privacy_policy: ShopPolicy
+  readonly refund_policy: ShopPolicy
   readonly secure_url: string
-  readonly shipping_policy: string
-  readonly terms_of_service: string
+  readonly shipping_policy: ShopPolicy
+  readonly terms_of_service: ShopPolicy
   readonly url: string
 }
 

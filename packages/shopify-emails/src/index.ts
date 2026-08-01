@@ -129,7 +129,7 @@ export type {
   ShipmentVariables,
   ShopVariables
 } from "./variables/shared.ts"
-export type { Customer, Routes, Shop, ShopPolicy } from "./variables/store.ts"
+export type { CompanyLocation, Customer, Routes, Shop, ShopPolicy } from "./variables/store.ts"
 export type { TemplateType, TemplateVariables, VariablesFor } from "./variables/templates.ts"
 export {
   and,

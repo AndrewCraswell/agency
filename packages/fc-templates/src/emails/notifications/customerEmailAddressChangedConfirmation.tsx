@@ -13,10 +13,7 @@ export const customerEmailAddressChangedConfirmation = defineTemplate({
     <EmailDocument preview="The email address on your account was just updated." title="Your email address was changed">
       <EmailHeader eyebrow="EMAIL UPDATED" />
       <EmailTitle>Your email address was changed</EmailTitle>
-      <EmailLead>
-        The email address on your Fencing Club account was just updated. If this wasn’t you, contact us right away so we
-        can secure your account.
-      </EmailLead>
+      <EmailLead>The email address on your Fencing Club account was just updated.</EmailLead>
       <HelpCard headline="Your email address" kicker="WHAT CHANGED">
         Previous: <Var path={vars.previous_email} />
         <br />

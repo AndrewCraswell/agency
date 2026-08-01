@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Column, Row, Section } from "react-email"
-import { color, font, gutter, radius } from "./tokens.ts"
+import { accentFill, color, font, gutter, radius } from "./tokens.ts"
 
 export type StatusStripProps = {
   readonly children: ReactNode
@@ -96,7 +96,7 @@ export const Checklist = ({ items, spacing = 20 }: ChecklistProps) => (
                 align="center"
                 className="dk-num"
                 style={{
-                  backgroundColor: color.accent,
+                  backgroundColor: accentFill(),
                   borderRadius: 999,
                   color: color.onDark,
                   fontFamily: font.body,

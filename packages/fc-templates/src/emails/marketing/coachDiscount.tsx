@@ -39,6 +39,7 @@ export const coachDiscount = defineTemplate({
       </MarketingHero>
       <OfferBand
         figure="15%"
+        flush
         label="Off Fencing Club branded products"
         note="Applied automatically at checkout. Excludes other name brands."
       />
@@ -88,6 +89,7 @@ export const coachDiscount = defineTemplate({
       </SupportBand>
       <MarketingFooter
         fine="You’re receiving this because your club signed up for the Fencing Club Coach Discount."
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

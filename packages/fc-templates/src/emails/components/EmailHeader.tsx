@@ -1,5 +1,9 @@
+import { binding, Else, If, isTruthy, liquidValue, Var } from "@repo/shopify-emails"
 import { Column, Img, Row, Section } from "react-email"
-import { color, font, gutter, logoUrl } from "./tokens.ts"
+import { brand, color, font, gutter, logoUrl } from "./tokens.ts"
+
+/* Every message names the same store, so the header reads the global drop rather than taking it. */
+const shopName = binding<string>("shop.name")
 
 export type EmailHeaderProps = {
   /** The small caps line under the wordmark that says which message this is. */
@@ -13,8 +17,25 @@ export const EmailHeader = ({ eyebrow }: EmailHeaderProps) => (
   >
     <Row style={{ margin: "0 auto", width: "auto" }}>
       <Column style={{ paddingRight: 12, verticalAlign: "middle" }}>
-        {/* The asset is 104x126, a 2x export, so this is its natural size. */}
-        <Img alt="Fencing Club" height={63} src={logoUrl} style={{ border: 0, display: "block" }} width={52} />
+        <If test={isTruthy(brand.logoUrl)}>
+          {/* The merchant's own upload sizes itself, so only the width they chose is set. */}
+          <Img
+            alt={liquidValue(shopName)}
+            src={liquidValue(brand.logoUrl)}
+            style={{ border: 0, display: "block" }}
+            width={liquidValue(brand.logoWidth)}
+          />
+          <Else>
+            {/* The asset is 104x126, a 2x export, so this is its natural size. */}
+            <Img
+              alt={liquidValue(shopName)}
+              height={63}
+              src={logoUrl}
+              style={{ border: 0, display: "block" }}
+              width={52}
+            />
+          </Else>
+        </If>
       </Column>
       <Column style={{ textAlign: "left", verticalAlign: "middle" }}>
         <div
@@ -27,7 +48,7 @@ export const EmailHeader = ({ eyebrow }: EmailHeaderProps) => (
             lineHeight: "22px"
           }}
         >
-          FENCING CLUB
+          <Var filters={["upcase"]} path={shopName} />
         </div>
         <div
           style={{

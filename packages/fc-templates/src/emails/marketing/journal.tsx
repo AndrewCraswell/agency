@@ -22,7 +22,7 @@ export const journal = defineTemplate({
     >
       <EmailHeader eyebrow="THE JOURNAL" />
       <MarketingHero
-        chip="THE JOURNAL / ISSUE 14"
+        chip="THE JOURNAL"
         chipTone="quiet"
         headline="This month on the strip"
         lead="Fresh technique breakdowns, gear guides, and athlete stories from the Fencing Club community."
@@ -77,6 +77,7 @@ export const journal = defineTemplate({
         />
       </Band>
       <CtaBand
+        flush
         headline="Read the full Journal"
         href={journalUrl}
         kicker="NEVER MISS AN ISSUE"
@@ -85,6 +86,7 @@ export const journal = defineTemplate({
       />
       <MarketingFooter
         fine="You’re receiving this because you subscribed to the Fencing Club Journal."
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

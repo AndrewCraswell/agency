@@ -17,6 +17,7 @@ import { EmailFooter } from "../components/EmailFooter.tsx"
 import { EmailHeader } from "../components/EmailHeader.tsx"
 import { EmailLead, EmailTitle } from "../components/EmailIntro.tsx"
 import { ItemList, ItemRow } from "../components/ItemRow.tsx"
+import { PaymentBrand } from "../components/PaymentBrand.tsx"
 import { SummaryCard, SummaryRow } from "../components/SummaryCard.tsx"
 
 /*
@@ -33,7 +34,7 @@ export const orderPaymentReceipt = defineTemplate({
       <EmailTitle>Payment received</EmailTitle>
       <EmailLead>
         Thanks, <Var path={vars.customer.first_name} />. We’ve received your payment for order{" "}
-        <Var path={vars.order_name} />. A summary of your payment is below.
+        <Var path={vars.order_name} />.
       </EmailLead>
       <ItemList>
         <For each={vars.subtotal_line_items}>{(line) => <ItemRow line={line} variantTitle={line.variant.title} />}</For>
@@ -57,8 +58,10 @@ export const orderPaymentReceipt = defineTemplate({
               </SummaryRow>
               <SummaryRow label="Payment method">
                 <If test={isTruthy(paid.payment_details.credit_card_company)}>
-                  <Var path={paid.payment_details.credit_card_company} /> ending{" "}
-                  <Var path={paid.payment_details.credit_card_last_four_digits} />
+                  <PaymentBrand
+                    company={paid.payment_details.credit_card_company}
+                    lastFour={paid.payment_details.credit_card_last_four_digits}
+                  />
                   <Else>
                     <Var path={paid.gateway_display_name} />
                   </Else>

@@ -148,6 +148,7 @@ export const novusLaunch = defineTemplate({
       />
       <MarketingFooter
         fine="You’re receiving this email because you subscribed to Fencing Club updates about new gear and product launches."
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

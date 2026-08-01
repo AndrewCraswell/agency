@@ -8,7 +8,7 @@ import { MarketingHero } from "../components/MarketingHero.tsx"
 import { NoticeBox, StatusStrip, Timeline } from "../components/Status.tsx"
 import { SpecStrip } from "../components/Strips.tsx"
 import { SupportBand } from "../components/SupportBand.tsx"
-import { color, font, gutter, radius, shopLinks } from "../components/tokens.ts"
+import { accentFill, color, font, gutter, radius, shopLinks } from "../components/tokens.ts"
 
 export const vacationDelay = defineTemplate({
   id: "marketing_vacation_delay",
@@ -84,7 +84,7 @@ export const vacationDelay = defineTemplate({
                 className="dk-btn"
                 href={shopLinks.trackOrder}
                 style={{
-                  backgroundColor: color.accent,
+                  backgroundColor: accentFill(),
                   borderRadius: 10,
                   color: color.accentInk,
                   display: "inline-block",
@@ -109,7 +109,7 @@ export const vacationDelay = defineTemplate({
       <SupportBand heading="We still read every email">
         Even while we’re away we check in daily. Reply anytime and we’ll get back to you as soon as we can.
       </SupportBand>
-      <MarketingFooter shop={vars.shop} unsubscribeUrl={liquidValue(vars.unsubscribe_url)} />
+      <MarketingFooter flush shop={vars.shop} unsubscribeUrl={liquidValue(vars.unsubscribe_url)} />
     </EmailDocument>
   )
 })

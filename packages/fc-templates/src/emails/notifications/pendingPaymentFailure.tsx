@@ -11,11 +11,11 @@ export const pendingPaymentFailure = defineTemplate({
   subject: (vars) => `We couldn’t process your payment for order ${liquidValue(vars.order_name)}`,
   render: (vars) => (
     <EmailDocument
-      preview="Return to your cart to complete your purchase."
-      title="There was a problem with your payment"
+      preview="Nothing was charged. Return to your cart to try again."
+      title="We couldn’t process your payment"
     >
       <EmailHeader eyebrow="PAYMENT FAILED" />
-      <EmailTitle>There was a problem with your payment</EmailTitle>
+      <EmailTitle>We couldn’t process your payment</EmailTitle>
       <EmailLead>
         We couldn’t process the payment for order <Var path={vars.order_name} />
         {/* A purchase order number is a B2B field, so most orders carry none. */}
@@ -23,7 +23,7 @@ export const pendingPaymentFailure = defineTemplate({
           {" "}
           (PO <Var path={vars.po_number} />)
         </If>
-        . Return to your cart to complete your purchase.
+        . You have not been charged. Return to your cart to complete your purchase.
       </EmailLead>
       <If test={isPresent(vars.checkout_payment_collection_url)}>
         <EmailButton href={liquidValue(vars.checkout_payment_collection_url)}>Return to cart</EmailButton>
@@ -31,7 +31,7 @@ export const pendingPaymentFailure = defineTemplate({
       <SupportBand heading="Trouble with your payment?">
         Our team can help sort it out fast. Just reply to this email or reach us anytime.
       </SupportBand>
-      <EmailFooter shop={vars.shop} />
+      <EmailFooter flush shop={vars.shop} />
     </EmailDocument>
   )
 })

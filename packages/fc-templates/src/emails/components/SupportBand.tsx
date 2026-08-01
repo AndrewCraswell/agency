@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 import { Button, Section } from "react-email"
+import { BandLead } from "./Band.tsx"
 import { color, font, gutter, radius, shopLinks } from "./tokens.ts"
 
 export type SupportBandProps = {
@@ -13,11 +14,7 @@ export type SupportBandProps = {
   readonly flush?: boolean
 }
 
-/*
- * The dark strip below the content that offers a human, used where no help card is needed. The
- * white band above it is the gap the design draws as the content block's bottom padding: a dark
- * table cannot hold white space of its own, so it is carried by a wrapper instead.
- */
+/* The dark strip below the content that offers a human, used where no help card is needed. */
 export const SupportBand = ({
   children,
   flush = false,
@@ -25,7 +22,7 @@ export const SupportBand = ({
   href = shopLinks.contact,
   label = "Contact support"
 }: SupportBandProps) => (
-  <Section style={{ backgroundColor: color.bg, padding: flush ? 0 : "28px 0 0" }}>
+  <BandLead flush={flush}>
     <Section
       className="px dk-band"
       style={{ backgroundColor: color.surfaceDark, padding: `28px ${gutter}px`, textAlign: "center" }}
@@ -66,5 +63,5 @@ export const SupportBand = ({
         </Button>
       </div>
     </Section>
-  </Section>
+  </BandLead>
 )

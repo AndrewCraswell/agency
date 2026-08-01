@@ -1,4 +1,6 @@
 import {
+  Assign,
+  binding,
   definePreview,
   defineTemplate,
   Else,
@@ -12,13 +14,16 @@ import {
   type PathRef,
   Var
 } from "@repo/shopify-emails"
-import { AddressDetail, AddressPair } from "../components/AddressBlock.tsx"
+import { AddressDetail } from "../components/AddressBlock.tsx"
+import { CustomerDetail, CustomerInfoCard } from "../components/CustomerInfoCard.tsx"
+import { DeliveryGroup } from "../components/DeliveryGroup.tsx"
 import { EmailButton } from "../components/EmailButton.tsx"
 import { EmailDocument } from "../components/EmailDocument.tsx"
 import { EmailFooter } from "../components/EmailFooter.tsx"
 import { EmailHeader } from "../components/EmailHeader.tsx"
 import { EmailLead, EmailTitle } from "../components/EmailIntro.tsx"
 import { ItemList, ItemRow } from "../components/ItemRow.tsx"
+import { PaymentBrand } from "../components/PaymentBrand.tsx"
 import { SupportBand } from "../components/SupportBand.tsx"
 import { Totals, TotalsRow, TotalsSum } from "../components/Totals.tsx"
 
@@ -26,6 +31,9 @@ type PartyProps = {
   readonly address: PathRef<OrderAddress>
   readonly kicker: string
 }
+
+/* Headings over each parcel only earn their place once an order arrives in more than one. */
+const deliveryGroupCount = binding<number>("delivery_group_count")
 
 /* A second address line is the exception, so it joins the first rather than claiming a line. */
 const Party = ({ address, kicker }: PartyProps) => (
@@ -68,7 +76,28 @@ export const orderConfirmation = defineTemplate({
       </EmailLead>
       <EmailButton href={liquidValue(vars.order_status_url, ["default: shop.url"])}>View your order</EmailButton>
       <ItemList label="ORDER SUMMARY">
-        <For each={vars.line_items}>{(line) => <ItemRow line={line} variantTitle={line.variant_title} />}</For>
+        <Assign to={deliveryGroupCount} value="delivery_agreements | size" />
+        <If test={gt(deliveryGroupCount, 1)}>
+          <For each={vars.delivery_agreements}>
+            {(agreement) => (
+              <>
+                <DeliveryGroup
+                  heading={
+                    <>
+                      <Var path={agreement.delivery_method_name} /> items
+                    </>
+                  }
+                />
+                <For each={agreement.line_items}>
+                  {(line) => <ItemRow line={line} variantTitle={line.variant_title} />}
+                </For>
+              </>
+            )}
+          </For>
+          <Else>
+            <For each={vars.line_items}>{(line) => <ItemRow line={line} variantTitle={line.variant_title} />}</For>
+          </Else>
+        </If>
       </ItemList>
       <Totals>
         <TotalsRow label="Subtotal">
@@ -94,33 +123,44 @@ export const orderConfirmation = defineTemplate({
           <Var filters={["money"]} path={vars.total_price} />
         </TotalsSum>
       </Totals>
-      <AddressPair
-        left={<Party address={vars.shipping_address} kicker="SHIP TO" />}
-        right={<Party address={vars.billing_address} kicker="BILL TO" />}
-      />
-      <AddressPair
-        label="SHIPPING & PAYMENT"
-        left={<AddressDetail headline={<Var path={vars.shipping_method.title} />} kicker="SHIPPING METHOD" />}
-        right={
-          <AddressDetail
-            headline={
-              <Find each={vars.transactions} match={(transaction) => isPresent(transaction.payment_details)}>
-                {(transaction) => (
-                  <>
-                    <Var path={transaction.payment_details.credit_card_company} /> ending{" "}
-                    <Var path={transaction.payment_details.credit_card_last_four_digits} />
-                  </>
-                )}
-              </Find>
+      <CustomerInfoCard
+        billTo={<Party address={vars.billing_address} kicker="BILLING ADDRESS" />}
+        label="CUSTOMER INFORMATION"
+        leftDetail={
+          <CustomerDetail
+            label="PAYMENT"
+            note={
+              <>
+                <Var path={vars.shipping_method.title} />, <Var filters={["money"]} path={vars.total_price} />
+              </>
             }
-            kicker="PAYMENT"
           >
-            Total <Var filters={["money"]} path={vars.total_price} />
-          </AddressDetail>
+            <Find each={vars.transactions} match={(transaction) => isPresent(transaction.payment_details)}>
+              {(transaction) => (
+                <PaymentBrand
+                  company={transaction.payment_details.credit_card_company}
+                  lastFour={transaction.payment_details.credit_card_last_four_digits}
+                />
+              )}
+            </Find>
+          </CustomerDetail>
         }
+        rightDetail={
+          <CustomerDetail
+            label="ORDER DATE"
+            note={
+              <>
+                Order <Var path={vars.name} />
+              </>
+            }
+          >
+            <Var filters={['date: "%B %-d, %Y"']} path={vars.created_at} />
+          </CustomerDetail>
+        }
+        shipTo={<Party address={vars.shipping_address} kicker="SHIPPING ADDRESS" />}
       />
       <SupportBand>Our team replies fast. Just reply to this email or reach us anytime.</SupportBand>
-      <EmailFooter shop={vars.shop} />
+      <EmailFooter flush shop={vars.shop} />
     </EmailDocument>
   )
 })

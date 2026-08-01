@@ -5,7 +5,7 @@ import { EmailFooter } from "../components/EmailFooter.tsx"
 import { EmailHeader } from "../components/EmailHeader.tsx"
 import { EmailLead, EmailTitle } from "../components/EmailIntro.tsx"
 import { fulfillmentBody, FulfillmentCopy, fulfillmentTitle } from "../components/FulfillmentCopy.tsx"
-import { ItemList, ItemRow } from "../components/ItemRow.tsx"
+import { ItemList, ItemRow, presentedTitle } from "../components/ItemRow.tsx"
 import { Tracking } from "../components/Tracking.tsx"
 
 export const shipmentOutForDelivery = defineTemplate({
@@ -47,7 +47,12 @@ export const shipmentOutForDelivery = defineTemplate({
       <ItemList label="ITEMS IN DELIVERY">
         <For each={vars.fulfillment.fulfillment_line_items}>
           {(line) => (
-            <ItemRow line={line.line_item} quantity={line.quantity} variantTitle={line.line_item.variant.title} />
+            <ItemRow
+              line={line.line_item}
+              quantity={line.quantity}
+              title={presentedTitle(line.line_item)}
+              variantTitle={line.line_item.variant.title}
+            />
           )}
         </For>
       </ItemList>

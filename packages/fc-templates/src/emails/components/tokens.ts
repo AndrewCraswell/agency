@@ -6,6 +6,8 @@
  * components spread them into inline styles.
  */
 
+import { binding, liquidValue, type PathRef } from "@repo/shopify-emails"
+
 export const color = {
   accent: "#101012",
   accentInk: "#ffffff",
@@ -48,21 +50,54 @@ export const radius = 14
 /** The gutter every band shares, so bands line up down the length of the email. */
 export const gutter = 32
 
+/*
+ * The gap between two stacked white sections. It always belongs to the section below: nothing adds
+ * bottom padding to open a gap, so a section's own top padding is the whole distance.
+ */
+export const sectionGap = 36
+
+/*
+ * The white gap above a full-bleed band. A tinted table cannot hold white space of its own, so a
+ * band carries this in a wrapper above itself rather than as its own padding.
+ */
+export const bandGap = 32
+
+/*
+ * Storefront destinations Liquid has no drop for. Policy links are not here: those come off the
+ * shop drop, so the merchant can retitle or move one without a redeploy.
+ */
 export const shopLinks = {
   contact: "https://fencing.club/pages/contact",
-  facebook: "https://facebook.com/fencingclub",
+  facebook: "https://www.facebook.com/fencingclubstore",
   faq: "https://fencing.club/pages/faq",
-  guides: "https://fencing.club/pages/buying-guides",
-  instagram: "https://instagram.com/fencingclub",
-  preferences: "https://fencing.club/account",
-  privacy: "https://fencing.club/policies/privacy-policy",
-  returns: "https://fencing.club/pages/returns",
+  /* The blog is where the buying guides live; there is no separate guides page. */
+  guides: "https://fencing.club/blogs/blog",
+  instagram: "https://www.instagram.com/fencingclub.shop",
+  preferences: "https://account.fencing.club/",
   reviews: "https://fencing.club/pages/reviews",
-  shipping: "https://fencing.club/pages/shipping",
   shop: "https://fencing.club/collections/all",
   starterKits: "https://fencing.club/collections/starter-kits",
-  terms: "https://fencing.club/policies/terms-of-service",
-  trackOrder: "https://fencing.club/account"
+  trackOrder: "https://account.fencing.club/"
 } as const
 
 export const logoUrl = "https://cdn.shopify.com/s/files/1/0848/2527/6713/files/email-logo-white.png?v=1784929023"
+
+/*
+ * The branding the merchant owns, set under Customize email templates in the admin. Shopify offers
+ * one accent colour and no second one, so the rest of the palette above stays fixed.
+ */
+export const brand: {
+  readonly accentColor: PathRef<string>
+  readonly logoUrl: PathRef<string>
+  readonly logoWidth: PathRef<number>
+} = {
+  accentColor: binding<string>("shop.email_accent_color"),
+  logoUrl: binding<string>("shop.email_logo_url"),
+  logoWidth: binding<number>("shop.email_logo_width")
+}
+
+/*
+ * The accent as a colour a style attribute can carry. The fallback is double-quoted because the
+ * font stack forces these attributes to be delimited with single quotes.
+ */
+export const accentFill = () => liquidValue(brand.accentColor, [`default: "${color.accent}"`])

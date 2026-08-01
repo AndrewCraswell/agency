@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Section } from "react-email"
-import { color, font, gutter, radius } from "./tokens.ts"
+import { color, font, gutter, radius, sectionGap } from "./tokens.ts"
 
 export type StatPanelProps = {
   /** The small caps line above the figure, such as CREDIT ADDED. */
@@ -15,7 +15,7 @@ export type StatPanelProps = {
  * figure. `big-stat` is what the mobile rules step down, so the number never wraps on a phone.
  */
 export const StatPanel = ({ children, label, note }: StatPanelProps) => (
-  <Section className="px" style={{ padding: `24px ${gutter}px 0` }}>
+  <Section className="px" style={{ padding: `${sectionGap}px ${gutter}px 0` }}>
     <Section
       className="dk-band"
       style={{

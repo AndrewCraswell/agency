@@ -1,5 +1,5 @@
 import { Column, Link, Row, Section } from "react-email"
-import { color, font, gutter } from "./tokens.ts"
+import { color, font, gutter, sectionGap } from "./tokens.ts"
 
 /*
  * The chip row that gives a reader somewhere to go when the message itself has no action left.
@@ -44,7 +44,7 @@ export const QuickLinks = ({ kicker = "WHILE YOU’RE HERE", tone = "page" }: Qu
     className={tone === "page" ? "px" : "px dk-surface"}
     style={{
       backgroundColor: tone === "page" ? color.bg : color.surface,
-      padding: `28px ${gutter}px 36px`
+      padding: `${sectionGap}px ${gutter}px 0`
     }}
   >
     <div

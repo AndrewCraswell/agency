@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { Column, Img, Row, Section } from "react-email"
 import { EmailButton } from "./EmailButton.tsx"
-import { color, font, radius } from "./tokens.ts"
+import { accentFill, color, font, radius } from "./tokens.ts"
 
 export type FeaturedArticleProps = {
   readonly href: string
@@ -32,7 +32,7 @@ export const FeaturedArticle = ({ badge, excerpt, href, image, label, meta, titl
         <span
           className="dk-chip"
           style={{
-            backgroundColor: color.accent,
+            backgroundColor: accentFill(),
             borderRadius: 100,
             color: color.accentInk,
             display: "inline-block",

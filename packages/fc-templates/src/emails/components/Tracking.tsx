@@ -1,6 +1,6 @@
 import { type Fulfillment, gt, If, isTruthy, liquidValue, type PathRef, Var } from "@repo/shopify-emails"
 import { Button, Column, Row, Section } from "react-email"
-import { color, font, gutter, radius } from "./tokens.ts"
+import { accentFill, color, font, gutter, radius, sectionGap } from "./tokens.ts"
 
 /*
  * The carrier and consignment number for a shipment, with a link straight to the carrier's page.
@@ -15,7 +15,7 @@ export type TrackingProps = {
 
 export const Tracking = ({ fulfillment }: TrackingProps) => (
   <If test={gt(fulfillment.tracking_numbers.size, 0)}>
-    <Section className="px" style={{ padding: `20px ${gutter}px 0` }}>
+    <Section className="px" style={{ padding: `${sectionGap}px ${gutter}px 0` }}>
       <Section
         className="dk-surface dk-border"
         style={{
@@ -71,7 +71,7 @@ export const Tracking = ({ fulfillment }: TrackingProps) => (
                 className="dk-btn"
                 href={liquidValue(fulfillment.tracking_url)}
                 style={{
-                  backgroundColor: color.accent,
+                  backgroundColor: accentFill(),
                   borderRadius: radius,
                   color: color.accentInk,
                   display: "inline-block",

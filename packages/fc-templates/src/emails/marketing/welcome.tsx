@@ -34,7 +34,7 @@ export const welcome = defineTemplate({
           Shop the collection
         </EmailButton>
       </MarketingHero>
-      <OfferBand code="WELCOME10" figure="10%" label="Off your first order" note="at checkout / valid 14 days" />
+      <OfferBand code="WELCOME10" figure="10%" flush label="Off your first order" note="at checkout / valid 14 days" />
       <Band heading="Fencing is all we do." kicker="OUR STORY">
         <BandCopy>
           Fencing Club started in 2023 with one idea: a shop run by fencers, for fencers. No generic sporting-goods
@@ -82,6 +82,7 @@ export const welcome = defineTemplate({
       />
       <MarketingFooter
         fine="You’re receiving this because you just subscribed to Fencing Club. Welcome aboard!"
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

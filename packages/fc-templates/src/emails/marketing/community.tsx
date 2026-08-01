@@ -92,6 +92,7 @@ export const community = defineTemplate({
       />
       <MarketingFooter
         fine="You’re receiving this because you subscribed to Fencing Club. See you on the strip."
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

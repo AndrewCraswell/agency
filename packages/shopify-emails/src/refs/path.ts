@@ -32,9 +32,9 @@ type PathMembers<T> = T extends readonly (infer TItem)[]
 export type PathRef<T> = { readonly [REF]: T } & PathMembers<T>
 
 /*
- * Registered rather than unique, because a ref has to be readable across module instances. The
- * build command loads template modules through jiti, which gives them their own copy of this
- * package; a plain `Symbol()` would make each copy blind to the other's refs.
+ * Registered rather than unique, because a ref has to be readable across module instances. A
+ * consumer can reach this package through a second graph — a bundler, a test runner, a mixed
+ * CJS and ESM tree — and a plain `Symbol()` would make each copy blind to the other's refs.
  */
 const PATH = Symbol.for("@repo/shopify-emails/path")
 const MARKUP = Symbol.for("@repo/shopify-emails/markup")

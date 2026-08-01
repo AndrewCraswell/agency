@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Column, Row, Section } from "react-email"
-import { color, font } from "./tokens.ts"
+import { accentFill, color, font } from "./tokens.ts"
 
 export type StepItem = {
   readonly title: string
@@ -28,7 +28,7 @@ export const StepList = ({ items, spacing = 20 }: StepListProps) => (
                 align="center"
                 className="dk-num"
                 style={{
-                  backgroundColor: color.accent,
+                  backgroundColor: accentFill(),
                   borderRadius: 999,
                   color: color.onDark,
                   fontFamily: font.body,

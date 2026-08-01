@@ -1,4 +1,4 @@
-import { definePreview, defineTemplate, Var } from "@repo/shopify-emails"
+import { definePreview, defineTemplate, Else, If, isPresent, Var } from "@repo/shopify-emails"
 import { EmailDocument } from "../components/EmailDocument.tsx"
 import { EmailFooter } from "../components/EmailFooter.tsx"
 import { EmailHeader } from "../components/EmailHeader.tsx"
@@ -13,12 +13,19 @@ export const contactBuyer = defineTemplate({
       <EmailHeader eyebrow="A MESSAGE FOR YOU" />
       <EmailTitle>A note from our team</EmailTitle>
       <EmailLead>
-        Hi <Var path={vars.customer.first_name} />, <Var path={vars.custom_message} />
+        {/* The merchant writes the whole paragraph, greeting included, so it replaces rather than follows ours. */}
+        <If test={isPresent(vars.custom_message)}>
+          <Var path={vars.custom_message} />
+          <Else>
+            Hi <Var filters={["default: 'there'"]} path={vars.customer.first_name} />, we wanted to check in about your
+            recent order.
+          </Else>
+        </If>
       </EmailLead>
       <SupportBand>
         Have a question about your order? Just reply to this email and a real person on our team will get back to you.
       </SupportBand>
-      <EmailFooter shop={vars.shop} />
+      <EmailFooter flush shop={vars.shop} />
     </EmailDocument>
   )
 })

@@ -109,6 +109,7 @@ export const seasonKickoff = defineTemplate({
         />
       </Band>
       <CtaBand
+        flush
         headline="Restock. Suit up. Score."
         href={seasonUrl}
         kicker="NEW SEASON"
@@ -117,6 +118,7 @@ export const seasonKickoff = defineTemplate({
       />
       <MarketingFooter
         fine="You’re receiving this because you subscribed to Fencing Club season updates."
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

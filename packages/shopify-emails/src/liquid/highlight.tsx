@@ -1,3 +1,6 @@
+/** @jsxRuntime automatic */
+/* The loader that runs the build command takes its JSX settings from the consumer's tsconfig, which
+ * says nothing about this package's own files, so each one states the runtime it needs. */
 import type { ReactElement } from "react"
 
 /*

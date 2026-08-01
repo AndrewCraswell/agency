@@ -42,6 +42,8 @@ export type PaymentSchedule = {
   readonly amount_due: Cents
   readonly completed_at: LiquidTime | null
   readonly due_at: LiquidTime
+  /** True while the due date is still ahead, which is a different message from being overdue. */
+  readonly "due_later?": boolean
   readonly issued_at: LiquidTime | null
   readonly number_of_days_overdue: number
   readonly "overdue?": boolean

@@ -16,13 +16,13 @@ export const backInStock = defineTemplate({
   id: "marketing_back_in_stock",
   subject: () => "It’s back: the Elite FIE 1600N Mask",
   render: (vars) => (
-    <EmailDocument preview="The mask you had your eye on is available again, in your size." title="Back in stock">
+    <EmailDocument preview="Only a limited run came back, and it went fast last time." title="Back in stock">
       <EmailHeader eyebrow="BACK IN STOCK" />
       <MarketingHero
         chip="BACK IN STOCK"
         chipTone="positive"
         headline="It’s back."
-        lead="Good news: the mask you had your eye on is available again. We restocked a limited run of the Elite FIE 1600N Mask in your size."
+        lead="The mask you had your eye on is available again. We restocked a limited run of the Elite FIE 1600N Mask."
       >
         <FeaturedProduct
           action="Buy it now"
@@ -33,7 +33,7 @@ export const backInStock = defineTemplate({
           price="$189"
           tag="MASKS / SABRE"
           title="Elite FIE 1600N Mask"
-          urgency="Only 8 left in your size, these sold out fast last time."
+          urgency="Only 8 left. They sold out fast last time."
         />
       </MarketingHero>
       <Band heading="Back on the rack" headingSize={24} kicker="ALSO RESTOCKED" padding={36} tone="surface">
@@ -68,10 +68,11 @@ export const backInStock = defineTemplate({
       </Band>
       <QuickLinks />
       <SupportBand flush>
-        Not the size you were after? Tell us what you fence and we’ll let you know the moment it lands.
+        Not quite what you were after? Tell us what you fence and we’ll let you know the moment it lands.
       </SupportBand>
       <MarketingFooter
         fine="You’re receiving this because you asked to be told when this item came back."
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

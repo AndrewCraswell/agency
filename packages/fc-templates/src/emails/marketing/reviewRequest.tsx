@@ -23,7 +23,7 @@ export const reviewRequest = defineTemplate({
       <MarketingHero
         chip="HOW’D WE DO?"
         headline="How’s your new gear?"
-        lead="You’ve had a couple weeks to put it to the test. A quick review helps other fencers choose their gear, and it only takes a minute."
+        lead="You’ve had a couple of weeks to put it to the test. A quick review helps other fencers choose their gear, and it only takes a minute."
       >
         <PurchasedCard
           href={productUrl}
@@ -44,6 +44,7 @@ export const reviewRequest = defineTemplate({
       </SupportBand>
       <MarketingFooter
         fine="You’re receiving this email because you recently purchased from Fencing Club."
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

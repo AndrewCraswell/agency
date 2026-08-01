@@ -77,6 +77,7 @@ export const productLaunch = defineTemplate({
       </SupportBand>
       <MarketingFooter
         fine="You’re receiving this because you subscribed to Fencing Club updates about product launches."
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

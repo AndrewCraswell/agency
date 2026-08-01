@@ -148,6 +148,7 @@ const backpackLine: LineItem = {
   item_updates: [],
   line_price: 18_890,
   original_line_price: 18_890,
+  presentment_title: "Ridgeline Backpack",
   price: 18_890,
   product: backpack,
   properties: [{ first: "Monogram", last: "A.R." }],
@@ -159,6 +160,7 @@ const backpackLine: LineItem = {
   taxable: true,
   title: "Ridgeline Backpack",
   title_without_variant: "Ridgeline Backpack",
+  unit_price: null,
   unit_price_measurement: null,
   url: "/products/ridgeline-backpack?variant=44101223119",
   variant: backpackVariant,
@@ -181,6 +183,7 @@ const sockLine: LineItem = {
   item_updates: [],
   line_price: 4400,
   original_line_price: 4400,
+  presentment_title: "Merino Crew Sock",
   price: 2200,
   product: sock,
   properties: [],
@@ -192,6 +195,7 @@ const sockLine: LineItem = {
   taxable: true,
   title: "Merino Crew Sock",
   title_without_variant: "Merino Crew Sock",
+  unit_price: null,
   unit_price_measurement: null,
   url: "/products/merino-crew-sock?variant=44101224887",
   variant: sockVariant,
@@ -251,7 +255,9 @@ const transactions: readonly Transaction[] = [
   }
 ]
 
-const deliveryAgreements: readonly DeliveryAgreement[] = [{ delivery_method_type: "shipping" }]
+const deliveryAgreements: readonly DeliveryAgreement[] = [
+  { delivery_method_name: "Shipping", delivery_method_type: "shipping", line_items: lineItemsSample }
+]
 
 const orderStatusUrl = "https://example-store.com/84825276713/orders/9f1c0e4a7b2d/authenticate?key=8c2b1f"
 

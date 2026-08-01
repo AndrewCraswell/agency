@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Section } from "react-email"
-import { color, font, gutter, radius } from "./tokens.ts"
+import { color, font, gutter, radius, sectionGap } from "./tokens.ts"
 
 export type GiftMessageProps = {
   /** Who wrote it, shown under the words. */
@@ -10,7 +10,7 @@ export type GiftMessageProps = {
 
 /** The words one person wrote for another, set apart so they do not read as ours. */
 export const GiftMessage = ({ children, from }: GiftMessageProps) => (
-  <Section className="px" style={{ padding: `22px ${gutter}px 0` }}>
+  <Section className="px" style={{ padding: `${sectionGap}px ${gutter}px 0` }}>
     <Section
       className="dk-surface"
       style={{ backgroundColor: color.surface, borderRadius: radius, padding: "24px 28px", textAlign: "center" }}

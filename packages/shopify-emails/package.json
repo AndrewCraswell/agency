@@ -64,8 +64,8 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "jiti": "^2.7.0",
     "liquidjs": "^10.27.2",
+    "tsx": "^4.23.0",
     "zod": "^4.4.3"
   },
   "peerDependencies": {

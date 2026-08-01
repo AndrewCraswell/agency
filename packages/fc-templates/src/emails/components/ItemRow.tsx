@@ -1,11 +1,15 @@
-import { and, For, If, isTruthy, liquidValue, neq, type PathRef, Var } from "@repo/shopify-emails"
+import { and, Else, For, gt, If, isTruthy, liquidValue, neq, type PathRef, pathOf, Var } from "@repo/shopify-emails"
 import type { ReactNode } from "react"
 import { Column, Img, Row, Section } from "react-email"
-import { color, font, gutter } from "./tokens.ts"
+import { color, font, gutter, sectionGap } from "./tokens.ts"
 
 /*
  * One purchased line: thumbnail, what it was, and what it cost. The rule sits on the row rather
  * than between rows so a loop can emit it without knowing where it stopped.
+ *
+ * How many were bought is a badge on the thumbnail rather than a figure in the money column. At a
+ * quantity of one the extended price equals the unit price, so a money column that carried both
+ * printed the same number twice, and a discounted line printed three.
  *
  * The row takes the line's path rather than rendered nodes. Whether there is an image or a
  * markdown is Liquid's to decide at send time, so the row emits the conditions itself; handing it
@@ -19,7 +23,7 @@ export type ItemListProps = {
 }
 
 export const ItemList = ({ children, label }: ItemListProps) => (
-  <Section className="px" style={{ padding: `24px ${gutter}px 0` }}>
+  <Section className="px" style={{ padding: `${sectionGap}px ${gutter}px 0` }}>
     {label === undefined ? null : (
       <div
         className="dk-muted"
@@ -43,10 +47,19 @@ export const ItemList = ({ children, label }: ItemListProps) => (
 /* The shape Shopify gives every purchased line, in the notifications that list what was bought. */
 export type LineItem = {
   readonly title: string
+  /** What the buyer saw at checkout, which a translated storefront makes differ from `title`. */
+  readonly presentment_title: string | null
   readonly image: string | null
   readonly quantity: number
+  /** One of them, which the row prints beside `each` once the buyer took more than one. */
+  readonly price: number
   readonly original_line_price: number
   readonly final_line_price: number
+  /** A bundle the line belongs to, or the parcel it was split into. Empty for an ordinary line. */
+  readonly groups: readonly {
+    readonly "deliverable?": boolean
+    readonly title: string
+  }[]
   readonly discount_allocations: readonly {
     readonly amount: number
     readonly discount_application: { readonly title: string }
@@ -63,40 +76,71 @@ export type ItemRowProps = {
   readonly title?: ReactNode
   /** A line going back to us, whose price is money returned rather than money charged. */
   readonly credit?: boolean
+  /** Write a nil price as `Free`, which only the carts and the returns designs ask for. */
+  readonly free?: boolean
 }
+
+/** What the buyer saw at checkout, which the shipping designs print in place of the internal title. */
+export const presentedTitle = (line: PathRef<LineItem>) => (
+  <Var filters={[`default: ${pathOf(line.title)}`]} path={line.presentment_title} />
+)
 
 export const ItemRow = ({
   credit = false,
+  free = false,
   line,
   quantity = line.quantity,
   title = <Var path={line.title} />,
   variantTitle
 }: ItemRowProps) => (
   <Row className="dk-border" style={{ borderBottom: `1px solid ${color.line}` }}>
-    <Column style={{ padding: "12px 0", verticalAlign: "top", width: 48 }}>
-      {/* The grey square is always drawn, so a line without a picture still lines up with one. */}
-      <div
-        className="dk-surface dk-border"
-        style={{
-          backgroundColor: color.surface,
-          border: `1px solid ${color.line}`,
-          borderRadius: 8,
-          height: 48,
-          width: 48
-        }}
-      >
-        <If test={isTruthy(line.image)}>
-          <Img
-            alt=""
-            height={48}
-            src={liquidValue(line.image)}
-            style={{ borderRadius: 8, display: "block" }}
-            width={48}
-          />
-        </If>
+    <Column style={{ padding: "12px 0", verticalAlign: "middle", width: 48 }}>
+      {/* The badge straddles the corner, so it needs a positioned box. Outlook drops it underneath. */}
+      <div style={{ height: 48, position: "relative", width: 48 }}>
+        {/* The grey square is always drawn, so a line without a picture still lines up with one. */}
+        <div
+          className="dk-surface dk-border"
+          style={{
+            backgroundColor: color.surface,
+            border: `1px solid ${color.line}`,
+            borderRadius: 8,
+            height: 48,
+            width: 48
+          }}
+        >
+          <If test={isTruthy(line.image)}>
+            <Img
+              alt=""
+              height={48}
+              src={liquidValue(line.image)}
+              style={{ borderRadius: 8, display: "block" }}
+              width={48}
+            />
+          </If>
+        </div>
+        <div
+          className="dk-chip"
+          style={{
+            backgroundColor: color.ink,
+            borderRadius: 9,
+            color: color.onDark,
+            fontFamily: font.body,
+            fontSize: 10,
+            fontWeight: 700,
+            height: 18,
+            left: 38,
+            lineHeight: "18px",
+            position: "absolute",
+            textAlign: "center",
+            top: -6,
+            width: 18
+          }}
+        >
+          <Var path={quantity} />
+        </div>
       </div>
     </Column>
-    <Column style={{ padding: "12px 0 12px 12px", verticalAlign: "top" }}>
+    <Column style={{ padding: "12px 0 12px 20px", verticalAlign: "middle" }}>
       <div
         className="dk-text"
         style={{ color: color.ink, fontFamily: font.body, fontSize: 14, fontWeight: 600, lineHeight: "19px" }}
@@ -105,26 +149,37 @@ export const ItemRow = ({
       </div>
       {/* Shopify names a single-variant product's only variant `Default Title`. */}
       <If test={and(isTruthy(variantTitle), neq(variantTitle, "Default Title"))}>
-        <ItemVariant>
+        <ItemNote>
           <Var path={variantTitle} />
-        </ItemVariant>
+        </ItemNote>
+      </If>
+      <For each={line.groups}>
+        {(group) => (
+          <ItemNote>
+            <If test={isTruthy(group["deliverable?"])}>
+              For:
+              <Else>Part of:</Else>
+            </If>{" "}
+            <Var path={group.title} />
+          </ItemNote>
+        )}
+      </For>
+      {/* What one costs, which only earns its line once the buyer took more than one. */}
+      <If test={gt(quantity, 1)}>
+        <ItemNote>
+          <Var filters={["money"]} path={line.price} /> each
+        </ItemNote>
       </If>
       <For each={line.discount_allocations}>
         {(allocation) => (
           <ItemDiscount>
-            <Var path={allocation.discount_application.title} /> −
-            <Var filters={["money"]} path={allocation.amount} />
+            <Var path={allocation.discount_application.title} /> (−
+            <Var filters={["money"]} path={allocation.amount} />)
           </ItemDiscount>
         )}
       </For>
     </Column>
-    <Column align="right" style={{ padding: "12px 0 12px 10px", textAlign: "right", verticalAlign: "top" }}>
-      <div
-        className="dk-muted"
-        style={{ color: color.inkSoft, fontFamily: font.body, fontSize: 12, fontWeight: 400, lineHeight: "17px" }}
-      >
-        Qty <Var path={quantity} />
-      </div>
+    <Column align="right" style={{ padding: "12px 0 12px 20px", textAlign: "right", verticalAlign: "middle" }}>
       <If test={neq(line.original_line_price, line.final_line_price)}>
         <ItemComparePrice>
           <Var filters={["money"]} path={line.original_line_price} />
@@ -142,7 +197,14 @@ export const ItemRow = ({
         }}
       >
         {credit ? "−" : null}
-        <Var filters={["money"]} path={line.final_line_price} />
+        {free ? (
+          <If test={gt(line.final_line_price, 0)}>
+            <Var filters={["money"]} path={line.final_line_price} />
+            <Else>Free</Else>
+          </If>
+        ) : (
+          <Var filters={["money"]} path={line.final_line_price} />
+        )}
       </div>
     </Column>
   </Row>
@@ -152,8 +214,8 @@ type ItemNoteProps = {
   readonly children: ReactNode
 }
 
-/** The variant line under a title, such as `Size 8 / Right-hand`. */
-const ItemVariant = ({ children }: ItemNoteProps) => (
+/** A quiet line under the title: the variant, the bundle it belongs to, or what one of them cost. */
+const ItemNote = ({ children }: ItemNoteProps) => (
   <div
     className="dk-muted"
     style={{

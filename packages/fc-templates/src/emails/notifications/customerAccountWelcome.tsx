@@ -1,4 +1,4 @@
-import { definePreview, defineTemplate, liquidValue } from "@repo/shopify-emails"
+import { definePreview, defineTemplate, If, isTruthy, liquidValue } from "@repo/shopify-emails"
 import { EmailButton } from "../components/EmailButton.tsx"
 import { EmailDocument } from "../components/EmailDocument.tsx"
 import { EmailFooter } from "../components/EmailFooter.tsx"
@@ -14,10 +14,13 @@ export const customerAccountWelcome = defineTemplate({
       <EmailHeader eyebrow="WELCOME" />
       <EmailTitle>Welcome to Fencing Club</EmailTitle>
       <EmailLead>
-        Your account is ready. Explore championship-grade blades, jackets, and club kit, all in one place, built for
-        fencers who take the piste seriously.
+        Your account is ready. Explore championship-grade blades, jackets, and club kit, all in one place, ready
+        whenever you are.
       </EmailLead>
-      <EmailButton href={liquidValue(vars.shop.url)}>Visit our store</EmailButton>
+      {/* A shop that has not published an online store has no URL to send anyone to. */}
+      <If test={isTruthy(vars.shop.url)}>
+        <EmailButton href={liquidValue(vars.shop.url)}>Visit our store</EmailButton>
+      </If>
       <QuickLinks />
       <EmailFooter shop={vars.shop} />
     </EmailDocument>

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Section } from "react-email"
-import { color, font, gutter, radius } from "./tokens.ts"
+import { color, font, gutter, radius, sectionGap } from "./tokens.ts"
 
 export type HelpCardProps = {
   /** The small caps line above the question, such as GOOD TO KNOW. */
@@ -11,7 +11,7 @@ export type HelpCardProps = {
 
 /** The quiet grey card that answers the question the message itself raises. */
 export const HelpCard = ({ children, headline, kicker }: HelpCardProps) => (
-  <Section className="px" style={{ padding: `28px ${gutter}px 36px` }}>
+  <Section className="px" style={{ padding: `${sectionGap}px ${gutter}px 0` }}>
     <Section
       className="dk-surface"
       style={{ backgroundColor: color.surface, borderRadius: radius, padding: "18px 20px" }}

@@ -22,8 +22,7 @@ export const posExchangeV2Receipt = defineTemplate({
       <EmailHeader eyebrow="EXCHANGE RECEIPT" />
       <EmailTitle>Your exchange is complete</EmailTitle>
       <EmailLead>
-        Here’s a summary of your in-store exchange for order <Var path={vars.order.name} />, processed at our
-        Woodinville shop.
+        Here’s a summary of your in-store exchange for order <Var path={vars.order.name} />, processed at the counter.
       </EmailLead>
       <ItemList label="RETURNED">
         <For each={vars.return_line_items}>

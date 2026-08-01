@@ -38,7 +38,7 @@ export const winBack = defineTemplate({
           Come back for $10 off
         </EmailButton>
       </MarketingHero>
-      <OfferBand code="WELCOMEBACK" figure="$10" label="Off your order" note="at checkout / valid 14 days" />
+      <OfferBand code="WELCOMEBACK" figure="$10" flush label="Off your order" note="at checkout / valid 14 days" />
       <Band heading="The parts that wear out" headingSize={24} kicker="TIME TO REPLACE">
         <BandCopy>
           If you’ve been away, these are the first things to check. Broken blades and dead cords are the top reasons
@@ -96,6 +96,7 @@ export const winBack = defineTemplate({
       />
       <MarketingFooter
         fine="You’re receiving this because you’ve shopped with Fencing Club before."
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

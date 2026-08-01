@@ -1,6 +1,17 @@
 import type { ReactNode } from "react"
 import { Section } from "react-email"
-import { color, font, gutter } from "./tokens.ts"
+import { bandGap, color, font, gutter } from "./tokens.ts"
+
+export type BandLeadProps = {
+  /** Set where the band above already has a colour, so the white gap does not read as a cut edge. */
+  readonly flush?: boolean
+  readonly children: ReactNode
+}
+
+/** The white space a band sits below, held by a wrapper because the band's own table is tinted. */
+export const BandLead = ({ children, flush = false }: BandLeadProps) => (
+  <Section style={{ backgroundColor: color.bg, padding: flush ? 0 : `${bandGap}px 0 0` }}>{children}</Section>
+)
 
 export type BandTone = "page" | "surface" | "dark"
 

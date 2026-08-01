@@ -1,7 +1,7 @@
 import { mkdir, readdir, rm, writeFile } from "node:fs/promises"
 import { join, resolve } from "node:path"
 import { pathToFileURL } from "node:url"
-import { createJiti } from "jiti"
+import { register } from "tsx/esm/api"
 import { compileSubject, compileTemplate, type TemplateDefinition } from "../template.ts"
 
 /*
@@ -12,7 +12,7 @@ import { compileSubject, compileTemplate, type TemplateDefinition } from "../tem
  * Subject and body are separate fields in that editor, which is why one definition emits two files
  * rather than one.
  *
- * Definitions are loaded with jiti so a consumer needs no bundler step of its own: the point of
+ * Definitions are loaded through tsx so a consumer needs no bundler step of its own: the point of
  * shipping this command is that a template folder is the whole build configuration.
  */
 
@@ -30,30 +30,32 @@ const isDefinitionModule = (name: string): boolean =>
   (name.endsWith(".ts") || name.endsWith(".tsx")) && !name.endsWith(".d.ts") && !/\.(test|spec|stories)\./.test(name)
 
 const collectDefinitions = async (dir: string): Promise<AnyTemplate[]> => {
-  /* jiti leaves JSX and .tsx out of its defaults, and a template folder is nothing but those. */
-  const jiti = createJiti(pathToFileURL(join(dir, "index.js")).href, {
-    jsx: { runtime: "automatic" },
-    extensions: [".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".tsx", ".jsx", ".json"]
-  })
   const entries = await readdir(dir, { recursive: true, withFileTypes: true })
   const found = new Map<string, AnyTemplate>()
+  /* Node's own loader hook, so a definition importing this package reaches the copy already
+   * running rather than a second one with its own render mode. */
+  const unregister = register()
 
-  for (const entry of entries) {
-    if (!entry.isFile() || !isDefinitionModule(entry.name)) {
-      continue
-    }
-    const modulePath = join(entry.parentPath, entry.name)
-    const loaded = await jiti.import<Record<string, unknown>>(modulePath)
-    for (const exported of Object.values(loaded)) {
-      if (!isTemplateDefinition(exported)) {
+  try {
+    for (const entry of entries) {
+      if (!entry.isFile() || !isDefinitionModule(entry.name)) {
         continue
       }
-      /* Two definitions sharing an id would quietly overwrite each other in the output folder. */
-      if (found.has(exported.id)) {
-        throw new Error(`Two templates both claim the id "${exported.id}". Ids name the file Shopify receives.`)
+      const modulePath = join(entry.parentPath, entry.name)
+      const loaded: Record<string, unknown> = await import(pathToFileURL(modulePath).href)
+      for (const exported of Object.values(loaded)) {
+        if (!isTemplateDefinition(exported)) {
+          continue
+        }
+        /* Two definitions sharing an id would quietly overwrite each other in the output folder. */
+        if (found.has(exported.id)) {
+          throw new Error(`Two templates both claim the id "${exported.id}". Ids name the file Shopify receives.`)
+        }
+        found.set(exported.id, exported)
       }
-      found.set(exported.id, exported)
     }
+  } finally {
+    await unregister()
   }
 
   return [...found.values()]

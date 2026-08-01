@@ -88,6 +88,16 @@ a { text-decoration: none; }
   .stack + .stack { padding-top: 18px !important; }
 }
 
+/*
+ * A pair of short blocks read against each other, such as two addresses. It holds its two-up past
+ * the point where the page goes fluid, because a column only has to stack once it is too narrow
+ * for an address line rather than as soon as the email stops being full width.
+ */
+@media only screen and (max-width: 480px) {
+  .pair { display: block !important; width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; }
+  .pair + .pair { padding-top: 18px !important; }
+}
+
 @media (prefers-color-scheme: dark) {
   body, .dk-page { background-color: ${darkColor.bg} !important; }
   .dk-card { background-color: ${darkColor.bg} !important; }

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Column, Row, Section } from "react-email"
-import { color, font, gutter, radius } from "./tokens.ts"
+import { color, font, gutter, radius, sectionGap } from "./tokens.ts"
 
 /*
  * The grey card that carries the figures — a subtotal, an amount due, the card that was charged.
@@ -14,7 +14,7 @@ export type SummaryCardProps = {
 }
 
 export const SummaryCard = ({ children }: SummaryCardProps) => (
-  <Section className="px" style={{ padding: `24px ${gutter}px 0` }}>
+  <Section className="px" style={{ padding: `${sectionGap}px ${gutter}px 0` }}>
     <Section
       className="dk-surface"
       style={{ backgroundColor: color.surface, borderRadius: radius, padding: "14px 24px" }}

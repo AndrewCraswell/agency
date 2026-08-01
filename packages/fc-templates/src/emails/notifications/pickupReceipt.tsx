@@ -19,8 +19,7 @@ export const pickupReceipt = defineTemplate({
       <EmailHeader eyebrow="PICKED UP" />
       <EmailTitle>Your order has been picked up</EmailTitle>
       <EmailLead>
-        Order <Var path={vars.name} /> was picked up at our Boston location. Thanks for choosing Fencing Club. Here’s
-        your receipt.
+        Order <Var path={vars.name} /> was picked up in store. Thanks for choosing Fencing Club. Here’s your receipt.
       </EmailLead>
       <ItemList label="ORDER SUMMARY">
         <For each={vars.line_items}>{(line) => <ItemRow line={line} variantTitle={line.variant_title} />}</For>
@@ -50,7 +49,7 @@ export const pickupReceipt = defineTemplate({
         </TotalsSum>
       </Totals>
       <SupportBand>Our team replies fast. Just reply to this email or reach us anytime.</SupportBand>
-      <EmailFooter shop={vars.shop} />
+      <EmailFooter flush shop={vars.shop} />
     </EmailDocument>
   )
 })

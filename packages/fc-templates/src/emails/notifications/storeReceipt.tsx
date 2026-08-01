@@ -16,6 +16,7 @@ import { EmailFooter } from "../components/EmailFooter.tsx"
 import { EmailHeader } from "../components/EmailHeader.tsx"
 import { EmailLead, EmailTitle } from "../components/EmailIntro.tsx"
 import { ItemList, ItemRow } from "../components/ItemRow.tsx"
+import { PaymentBrand } from "../components/PaymentBrand.tsx"
 import { SupportBand } from "../components/SupportBand.tsx"
 import { Totals, TotalsRow, TotalsSum } from "../components/Totals.tsx"
 
@@ -65,10 +66,10 @@ export const storeReceipt = defineTemplate({
           label={
             <Find each={vars.transactions} match={(transaction) => isPresent(transaction.payment_details)}>
               {(transaction) => (
-                <>
-                  <Var path={transaction.payment_details.credit_card_company} /> ending{" "}
-                  <Var path={transaction.payment_details.credit_card_last_four_digits} />
-                </>
+                <PaymentBrand
+                  company={transaction.payment_details.credit_card_company}
+                  lastFour={transaction.payment_details.credit_card_last_four_digits}
+                />
               )}
             </Find>
           }
@@ -77,7 +78,7 @@ export const storeReceipt = defineTemplate({
         </TotalsRow>
       </Totals>
       <SupportBand>Our team replies fast. Just reply to this email or reach us anytime.</SupportBand>
-      <EmailFooter shop={vars.shop} />
+      <EmailFooter flush shop={vars.shop} />
     </EmailDocument>
   )
 })

@@ -106,7 +106,7 @@ describe("run probe", () => {
 })
 
 describe("run build", () => {
-  /* Plain objects rather than `defineTemplate`, so jiti does not load a second copy of the source. */
+  /* Plain objects rather than `defineTemplate`, so the loader does not pull in a second copy of the source. */
   const definition = `
     export const template = {
       id: "welcome",

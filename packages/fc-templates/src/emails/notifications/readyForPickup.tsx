@@ -14,18 +14,19 @@ export const readyForPickup = defineTemplate({
   subject: (vars) => `Order ${liquidValue(vars.name)} is ready for pickup`,
   render: (vars) => (
     <EmailDocument
-      preview={`Order ${liquidValue(vars.name)} is packed and waiting at our Boston location.`}
+      preview={`Order ${liquidValue(vars.name)} is packed and waiting at ${liquidValue(vars.location_name, ["default: shop.name"])}.`}
       title="Your order is ready for pickup"
     >
       <EmailHeader eyebrow="READY FOR PICKUP" />
       <EmailTitle>Your order is ready for pickup</EmailTitle>
       <EmailLead>
-        Order <Var path={vars.name} /> is packed and waiting at our Boston location. Bring a photo ID and this email
-        when you come by.
+        Order <Var path={vars.name} /> is packed and waiting at{" "}
+        <Var filters={["default: shop.name"]} path={vars.location_name} />. Bring a photo ID and this email when you
+        come by.
       </EmailLead>
       <EmailButton href={liquidValue(vars.order_status_url)}>View pickup details</EmailButton>
       <AddressBlock
-        headline={<Var filters={["default: 'Fencing Club Boston'"]} path={vars.location_name} />}
+        headline={<Var filters={["default: shop.name"]} path={vars.location_name} />}
         kicker="PICKUP LOCATION"
       >
         <div>
@@ -35,13 +36,12 @@ export const readyForPickup = defineTemplate({
           <Var path={vars.shop.address.city} />, <Var path={vars.shop.address.province} />{" "}
           <Var path={vars.shop.address.zip} />
         </div>
-        <div>Open Mon to Sat, 10am to 6pm</div>
       </AddressBlock>
       <ItemList label="ORDER SUMMARY">
         <For each={vars.line_items}>{(line) => <ItemRow line={line} variantTitle={line.variant_title} />}</For>
       </ItemList>
       <SupportBand>Our team replies fast. Just reply to this email or reach us anytime.</SupportBand>
-      <EmailFooter shop={vars.shop} />
+      <EmailFooter flush shop={vars.shop} />
     </EmailDocument>
   )
 })

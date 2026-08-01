@@ -53,8 +53,7 @@ export const giftCardNotification = defineTemplate({
         <Var path={senderName} /> sent you a gift card
       </EmailTitle>
       <EmailLead>
-        Someone’s thinking of your next season on the piste. Use the code below at checkout to redeem your Fencing Club
-        gift card.
+        A gift card is waiting for your next season on the piste. Use the code below at checkout to redeem it.
       </EmailLead>
       <If test={isPresent(vars.gift_card.message)}>
         <GiftMessage from={<Var path={senderName} />}>
@@ -65,7 +64,7 @@ export const giftCardNotification = defineTemplate({
         label="GIFT CARD BALANCE"
         note={
           <If test={isTruthy(vars.gift_card.expires_on)}>
-            Expires <Var filters={["date: '%B %e, %Y'"]} path={vars.gift_card.expires_on} />
+            Expires <Var filters={["date: '%B %-d, %Y'"]} path={vars.gift_card.expires_on} />
           </If>
         }
       >

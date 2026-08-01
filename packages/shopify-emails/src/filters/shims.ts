@@ -75,12 +75,20 @@ const MONTHS = [
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
+/* Ruby's `Time#to_a`, which is how Shopify hands every timestamp to a template. */
+const isLiquidTime = (value: unknown): value is readonly [number, number, number, number, number, number] =>
+  Array.isArray(value) && value.length === 10 && value.slice(0, 8).every((part) => typeof part === "number")
+
 const toDate = (value: unknown): Date | null => {
   if (value === undefined || value === null || value === "") {
     return null
   }
   if (value instanceof Date) {
     return value
+  }
+  if (isLiquidTime(value)) {
+    const [second, minute, hour, day, month, year] = value
+    return new Date(year, month - 1, day, hour, minute, second)
   }
   if (value === "now" || value === "today") {
     return new Date()
@@ -93,6 +101,15 @@ const toDate = (value: unknown): Date | null => {
   }
   const parsed = new Date(source)
   return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+/* Ruby, and so Shopify, takes a flag between the % and the letter that changes how a value is padded. */
+const flagged: Record<string, (value: string) => string> = {
+  "": (value) => value,
+  "-": (value) => value.replace(/^[\s0]+(?=.)/, ""),
+  "0": (value) => value.replace(/^ +/, (spaces) => "0".repeat(spaces.length)),
+  "^": (value) => value.toUpperCase(),
+  _: (value) => value.replace(/^0+(?=.)/, (zeros) => " ".repeat(zeros.length))
 }
 
 /** Covers the strftime directives Shopify's own notification sources use. */
@@ -117,11 +134,15 @@ const strftime = (date: Date, format: string): string => {
     "%p": date.getHours() < 12 ? "AM" : "PM",
     "%y": pad(date.getFullYear() % 100)
   }
-  return format.replace(/%[A-Za-z%]/g, (token) => {
-    if (token === "%%") {
+  return format.replace(/%([-_0^]?)([A-Za-z%])/g, (token, flag: string, letter: string) => {
+    if (letter === "%") {
       return "%"
     }
-    return directives[token] ?? token
+    const value = directives[`%${letter}`]
+    if (value === undefined) {
+      return token
+    }
+    return flagged[flag](value)
   })
 }
 
@@ -166,6 +187,8 @@ const dateShims = ({ locale, timeZone }: ShimOptions): Record<string, FilterImpl
 
 const CDN = "https://cdn.shopify.com"
 
+const VISA_ICON = `${CDN}/shopifycloud/shopify/assets/themes_support/notifications/visa-e96781bbd9d5a604ec37ca3959c7200b62b58790536de883a9f29852191da219.png`
+
 /* Shopify serves the notification chrome from fixed, fingerprinted CDN paths. */
 const NOTIFICATION_ASSETS: Record<string, string> = {
   "gift-card/add-to-apple-wallet.png": `${CDN}/shopifycloud/shopify/assets/themes_support/gift_card/add-to-apple-wallet.png`,
@@ -173,10 +196,9 @@ const NOTIFICATION_ASSETS: Record<string, string> = {
   "mailer/shop_logo.png": `${CDN}/shopifycloud/shopify/assets/mailer/shop_logo-12af59b3a0fd7907df134f6385a95b0cc7334fd7323f245fc6d77c3445395d0d.png`,
   "notifications/discounttag.png": `${CDN}/shopifycloud/shopify/assets/themes_support/notifications/discounttag-23d3dd52a101179fb1461daaba6b77388b99b6154de85840a5245b8d3930a68e.png`,
   "notifications/no-image.png": `${CDN}/shopifycloud/shopify/assets/themes_support/notifications/no-image-f4b31b80de3984c0c3892c3c35d946963547e11331187e92cfb4e95de761b69b.png`,
-  "notifications/shop-pay.svg": `${CDN}/shopifycloud/checkout-web/assets/c1.en.shop-pay-logo.svg`
+  "notifications/shop-pay.svg": `${CDN}/shopifycloud/checkout-web/assets/c1.en.shop-pay-logo.svg`,
+  "notifications/visa.png": VISA_ICON
 }
-
-const VISA_ICON = `${CDN}/shopifycloud/shopify/assets/themes_support/notifications/visa-e96781bbd9d5a604ec37ca3959c7200b62b58790536de883a9f29852191da219.png`
 
 const assetUrl = (value: unknown): string => {
   const path = text(value).replace(/^\/+/, "")

@@ -45,6 +45,7 @@ export const abandonedCartReminder = defineTemplate({
       </SupportBand>
       <MarketingFooter
         fine="You’re receiving this because you started an order at fencing.club."
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

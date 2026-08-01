@@ -22,12 +22,31 @@ const shopAddress: ShopAddress = {
   zip: "98109"
 }
 
-const policies: readonly ShopPolicy[] = [
-  { title: "Refund policy", url: "/policies/refund-policy" },
-  { title: "Privacy policy", url: "/policies/privacy-policy" },
-  { title: "Terms of service", url: "/policies/terms-of-service" },
-  { title: "Shipping policy", url: "/policies/shipping-policy" }
-]
+const refundPolicy: ShopPolicy = {
+  body: "<p>Thirty days, unworn, and we pay the return shipping.</p>",
+  title: "Refund policy",
+  url: "/policies/refund-policy"
+}
+
+const privacyPolicy: ShopPolicy = {
+  body: "<p>We keep what you give us and nothing more.</p>",
+  title: "Privacy policy",
+  url: "/policies/privacy-policy"
+}
+
+const termsOfService: ShopPolicy = {
+  body: "<p>The usual terms, written plainly.</p>",
+  title: "Terms of service",
+  url: "/policies/terms-of-service"
+}
+
+const shippingPolicy: ShopPolicy = {
+  body: "<p>Orders leave the warehouse within one business day.</p>",
+  title: "Shipping policy",
+  url: "/policies/shipping-policy"
+}
+
+const policies: readonly ShopPolicy[] = [refundPolicy, privacyPolicy, termsOfService, shippingPolicy]
 
 export const shopSample: Shop = {
   address: shopAddress,
@@ -37,6 +56,9 @@ export const shopSample: Shop = {
   description: "Gear built for the people who use it hardest.",
   domain: "example-store.com",
   email: "support@example-store.com",
+  email_accent_color: "#101012",
+  email_logo_url: null,
+  email_logo_width: null,
   id: 84_825_276_713,
   locale: "en",
   metafields: {},
@@ -46,11 +68,11 @@ export const shopSample: Shop = {
   permanent_domain: "example-store.myshopify.com",
   phone: "+1 206 555 0142",
   policies,
-  privacy_policy: "<p>We keep what you give us and nothing more.</p>",
-  refund_policy: "<p>Thirty days, unworn, and we pay the return shipping.</p>",
+  privacy_policy: privacyPolicy,
+  refund_policy: refundPolicy,
   secure_url: "https://example-store.com",
-  shipping_policy: "<p>Orders leave the warehouse within one business day.</p>",
-  terms_of_service: "<p>The usual terms, written plainly.</p>",
+  shipping_policy: shippingPolicy,
+  terms_of_service: termsOfService,
   url: "https://example-store.com"
 }
 

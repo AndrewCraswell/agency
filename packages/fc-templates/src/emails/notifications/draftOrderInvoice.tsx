@@ -51,7 +51,7 @@ export const draftOrderInvoice = defineTemplate({
         </TotalsSum>
       </Totals>
       <SupportBand>Our team replies fast. Just reply to this email or reach us anytime.</SupportBand>
-      <EmailFooter shop={vars.shop} />
+      <EmailFooter flush shop={vars.shop} />
     </EmailDocument>
   )
 })

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Button, Section } from "react-email"
-import { color, font, gutter, radius } from "./tokens.ts"
+import { accentFill, color, font, gutter, radius } from "./tokens.ts"
 
 export type EmailButtonProps = {
   readonly href: string
@@ -11,10 +11,12 @@ export type EmailButtonProps = {
   readonly spacing?: number
 }
 
-const buttonBackground: Record<NonNullable<EmailButtonProps["variant"]>, string> = {
-  inverse: color.bg,
-  primary: color.accent,
-  secondary: "transparent"
+/* Read at render rather than declared once, because the accent resolves against the live values. */
+const buttonBackground = (variant: NonNullable<EmailButtonProps["variant"]>): string => {
+  if (variant === "primary") {
+    return accentFill()
+  }
+  return variant === "inverse" ? color.bg : "transparent"
 }
 
 /*
@@ -30,7 +32,7 @@ export const EmailButton = ({ children, href, spacing = 24, variant = "primary" 
         className={primary ? "dk-btn" : undefined}
         href={href}
         style={{
-          backgroundColor: buttonBackground[variant],
+          backgroundColor: buttonBackground(variant),
           border: variant === "secondary" ? `1px solid ${color.line}` : "none",
           borderRadius: radius,
           color: primary ? color.accentInk : color.ink,

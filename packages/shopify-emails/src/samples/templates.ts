@@ -90,6 +90,7 @@ const paymentSchedule: PaymentSchedule = {
   amount_due: 24_484,
   completed_at: null,
   due_at: [0, 0, 0, 10, 3, 2026, 2, 69, false, "PDT"],
+  "due_later?": false,
   issued_at: [0, 14, 10, 3, 3, 2026, 2, 62, false, "PST"],
   number_of_days_overdue: 3,
   "overdue?": true
@@ -286,6 +287,7 @@ export const templateSamples: TemplateVariables = {
   shipping_confirmation: shipmentSample,
   shipping_update: shipmentSample,
   store_credit_issued: {
+    company_location: { company: { name: "Piste Academy" }, name: "Boston" },
     customer: customerSample,
     issued_store_credit: issuedStoreCredit,
     routes: routesSample,

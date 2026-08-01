@@ -72,6 +72,7 @@ export const chooseYourWeapon = defineTemplate({
         />
       </Band>
       <CtaBand
+        flush
         headline="Not sure? Start with a kit."
         href={shopLinks.starterKits}
         kicker="THE EASY WAY IN"

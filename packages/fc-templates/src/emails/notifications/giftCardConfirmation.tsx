@@ -31,7 +31,7 @@ export const giftCardConfirmation = defineTemplate({
         label="GIFT CARD BALANCE"
         note={
           <If test={isTruthy(vars.gift_card.expires_on)}>
-            Expires <Var filters={["date: '%B %e, %Y'"]} path={vars.gift_card.expires_on} />
+            Expires <Var filters={["date: '%B %-d, %Y'"]} path={vars.gift_card.expires_on} />
           </If>
         }
       >

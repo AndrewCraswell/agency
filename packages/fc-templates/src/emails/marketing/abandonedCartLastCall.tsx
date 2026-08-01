@@ -27,7 +27,7 @@ export const abandonedCartLastCall = defineTemplate({
           Redeem discount
         </EmailButton>
       </MarketingHero>
-      <OfferBand code="CART5" figure="5%" label="Off your entire cart" note="at checkout / expires in 14 days" />
+      <OfferBand code="CART5" figure="5%" flush label="Off your entire cart" note="at checkout / expires in 14 days" />
       <Band heading="Your cart, one more time" headingSize={22} kicker="LAST CHANCE" padding={36} tone="surface">
         <CartLines
           lines={vars.abandoned_visit.products_added_to_cart}
@@ -39,6 +39,7 @@ export const abandonedCartLastCall = defineTemplate({
       </SupportBand>
       <MarketingFooter
         fine="You’re receiving this because you started an order at fencing.club. Discounts can’t be combined, so the largest one is applied."
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

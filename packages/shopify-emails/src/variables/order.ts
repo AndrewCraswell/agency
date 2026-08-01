@@ -62,11 +62,22 @@ export type PickupMethod = {
   readonly instructions: string | null
 }
 
+/*
+ * One parcel's worth of an order that arrives in several. `json` only reports the method type, but
+ * Shopify's own `order-edited` template reads the name and the lines off the same drop, so both are
+ * settled even though a dump of the order does not show them.
+ */
 export type DeliveryAgreement = {
   readonly delivery_method_type: string
+  /** How the buyer would say it: `Shipping`, `Local delivery`, `Pickup in store`. */
+  readonly delivery_method_name: string
+  readonly line_items: readonly LineItem[]
 }
 
 export type LineItemGroup = {
+  /** A group that ships on its own is labelled `For:`; one that is part of a bundle, `Part of:`. */
+  readonly "deliverable?": boolean
+  readonly display_title: string
   readonly title: string
 }
 
@@ -98,6 +109,8 @@ export type LineItem = {
   readonly line_price: Cents
   readonly original_line_price: Cents
   readonly price: Cents
+  /** The title as the buyer saw it at checkout, which a translated storefront makes differ. */
+  readonly presentment_title: string | null
   readonly product: Product
   readonly properties: readonly LineItemProperty[]
   readonly quantity: number
@@ -109,6 +122,8 @@ export type LineItem = {
   readonly title: string
   /** The product name on its own, so a variant can be printed on its own line. Computed. */
   readonly title_without_variant: string
+  /** Set only where the shop prices by measure, and meaningless without the measurement beside it. */
+  readonly unit_price: Cents | null
   readonly unit_price_measurement: OpaqueDrop | null
   readonly url: string
   readonly variant: ProductVariant

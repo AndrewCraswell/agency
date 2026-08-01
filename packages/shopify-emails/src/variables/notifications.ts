@@ -15,7 +15,7 @@ import type {
   ReturnVariables,
   ShipmentVariables
 } from "./shared.ts"
-import type { Customer, Routes } from "./store.ts"
+import type { CompanyLocation, Customer, Routes } from "./store.ts"
 
 /*
  * What each customer notification is rendered with, named after the template id Shopify itself uses
@@ -156,6 +156,8 @@ export type ShippingConfirmationVariables = ShipmentVariables
 export type ShippingUpdateVariables = ShipmentVariables
 
 export type StoreCreditIssuedVariables = CustomerVariables & {
+  /** Set when the credit belongs to a business account, which is named instead of the customer. */
+  readonly company_location: CompanyLocation | null
   readonly issued_store_credit: IssuedStoreCredit
   readonly routes: Routes
 }

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Section } from "react-email"
-import { color, font, gutter, radius } from "./tokens.ts"
+import { color, font, gutter, radius, sectionGap } from "./tokens.ts"
 
 export type CodeCardProps = {
   /** The small caps line above the code, such as GIFT CARD CODE. */
@@ -16,7 +16,7 @@ export type CodeCardProps = {
  * message.
  */
 export const CodeCard = ({ children, code, label }: CodeCardProps) => (
-  <Section className="px" style={{ padding: `22px ${gutter}px 0` }}>
+  <Section className="px" style={{ padding: `${sectionGap}px ${gutter}px 0` }}>
     <Section
       className="dk-surface dk-border"
       style={{

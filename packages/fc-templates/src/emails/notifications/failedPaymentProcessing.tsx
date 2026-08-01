@@ -11,7 +11,7 @@ export const failedPaymentProcessing = defineTemplate({
   subject: () => "We couldn’t process your payment",
   render: (vars) => (
     <EmailDocument
-      preview="Your payment didn’t go through and you have not been charged."
+      preview="Nothing was charged. Try another card to keep your order."
       title="We couldn’t process your payment"
     >
       <EmailHeader eyebrow="PAYMENT FAILED" />
@@ -27,7 +27,7 @@ export const failedPaymentProcessing = defineTemplate({
       <SupportBand heading="Trouble with your payment?">
         Our team can help sort it out fast. Just reply to this email or reach us anytime.
       </SupportBand>
-      <EmailFooter shop={vars.shop} />
+      <EmailFooter flush shop={vars.shop} />
     </EmailDocument>
   )
 })

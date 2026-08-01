@@ -85,8 +85,16 @@ and `src/templates/printouts/packing-slip/` is the packing slip. Neither has bee
 
 ## Customer notifications
 
-See [docs/customer-notifications.md](docs/customer-notifications.md) for how the Shopify source was captured, which
-messages Shopify keeps to itself, and the two templates that need a preview-only parser shim.
+The catalogue is 46 Shopify notifications, of which 36 are ported to React under `src/emails/notifications/`.
+
+[docs/stock-template-gaps.md](docs/stock-template-gaps.md) compares every stock template against its port. The short
+version: three quarters of the branching in the stock catalogue sits in the ten templates we have not built, and the 36
+we have are close to complete against their counterparts. [docs/ported-template-gaps.md](docs/ported-template-gaps.md)
+gives a verdict on each port, and [docs/unported-templates.md](docs/unported-templates.md) describes the ten that are
+missing.
+
+[docs/design-changes.md](docs/design-changes.md) records what the hand-authored designs owe the ports that have already
+moved ahead of them, and what they still owe before the remaining ten can be built.
 
 ## Known gaps
 

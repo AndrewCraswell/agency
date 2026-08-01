@@ -16,24 +16,26 @@ export const posSendCart = defineTemplate({
   subject: (vars) => `Buy online from ${liquidValue(vars.shop.name)} when you're ready!`,
   render: (vars) => (
     <EmailDocument
-      preview="Here’s the cart our team built for you at the shop. Complete your purchase online whenever you’re ready."
+      preview="Here’s the cart our team built for you in store. Complete your purchase online whenever you’re ready."
       title="Your cart is ready to check out"
     >
       <EmailHeader eyebrow="YOUR CART" />
       <EmailTitle>Your cart is ready to check out</EmailTitle>
       <EmailLead>
-        <Var path={vars.customer.first_name} />, thanks for stopping by the shop. Here’s the cart our team put together
-        for you. Complete your purchase online whenever you’re ready and we’ll ship it out.
+        <Var path={vars.customer.first_name} />, thanks for stopping by. Here’s the cart our team put together for you.
+        Complete your purchase online whenever you’re ready and we’ll ship it out.
       </EmailLead>
       <ItemList>
-        <For each={vars.subtotal_line_items}>{(line) => <ItemRow line={line} variantTitle={line.variant.title} />}</For>
+        <For each={vars.subtotal_line_items}>
+          {(line) => <ItemRow free line={line} variantTitle={line.variant.title} />}
+        </For>
       </ItemList>
       <Totals>
         <TotalsRow label="Subtotal">
           <Var filters={["money"]} path={vars.subtotal_price} />
         </TotalsRow>
         <If test={gt(vars.total_discounts, 0)}>
-          <TotalsRow credit label="Club discount">
+          <TotalsRow credit label="Discount">
             −<Var filters={["money"]} path={vars.total_discounts} />
           </TotalsRow>
         </If>
@@ -50,7 +52,7 @@ export const posSendCart = defineTemplate({
       <EmailButton href={liquidValue(vars.invoice_url, ["default: shop.url"])}>Complete your purchase</EmailButton>
       <QuickLinks />
       <SupportBand>Our team replies fast. Just reply to this email or reach us anytime.</SupportBand>
-      <MarketingFooter shop={vars.shop} unsubscribeUrl={shopLinks.preferences} />
+      <MarketingFooter flush shop={vars.shop} unsubscribeUrl={shopLinks.preferences} />
     </EmailDocument>
   )
 })

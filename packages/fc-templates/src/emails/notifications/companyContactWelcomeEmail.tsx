@@ -19,9 +19,9 @@ export const companyContactWelcomeEmail = defineTemplate({
       <EmailHeader eyebrow="B2B ACCESS" />
       <EmailTitle>Your ordering access is ready</EmailTitle>
       <EmailLead>
-        You’ve been granted ordering access for your organization on{" "}
+        Your organization now has ordering access at{" "}
         <Link href={liquidValue(vars.shop_link)} style={{ color: color.ink, textDecoration: "underline" }}>
-          <Var path={vars.shop_name} />
+          <Var path={vars.shop.name} />
         </Link>
         . Sign in to place orders, manage your roster, and view negotiated pricing.
       </EmailLead>

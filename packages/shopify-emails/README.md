@@ -534,8 +534,12 @@ shopify-emails build --dir src/emails --out dist
 ```
 
 Every `.ts`/`.tsx` module under `--dir` is loaded and any exported template definition is compiled. Test, spec, story,
-and declaration files are skipped. Definitions load through `jiti`, so consumers need no bundler configuration of their
-own. Duplicate `id`s are an error.
+and declaration files are skipped. Definitions load through `tsx`, which registers a Node loader rather than a registry
+of its own, so a definition and the command share one copy of this package and consumers need no bundler configuration.
+Duplicate `id`s are an error.
+
+`tsx` takes its JSX settings from the nearest `tsconfig.json`, so run the command from a directory whose config sets
+`"jsx": "react-jsx"` and covers your templates. That is the same config your editor and `tsc` already use.
 
 The output directory is cleared first, so a renamed or deleted template cannot leave a stale file behind for someone to
 paste.
@@ -585,9 +589,15 @@ type PreviewProps = { values: TemplateValues; highlight?: boolean }
 type PreviewOptions = { highlight?: boolean }
 ```
 
-`highlight` marks each resolved drop so a reader can tell it from typed copy, in text and in attributes alike. It is on
-by default and can be turned off per preview — `definePreview(orderLink, engine, { highlight: false })` — or toggled
-from the props panel.
+`highlight` marks each resolved drop so a reader can tell it from typed copy, in text and in attributes alike. It is on,
+because that is what this view offers that Shopify's own admin preview does not: the admin shows the finished message
+against real orders, while this shows which words came from data. Turn it off for one render in the props panel, or for
+every render of a preview with `definePreview(orderLink, engine, { highlight: false })`.
+
+Which way round to leave it is yours to decide, and the Send button is why. It posts the markup the viewer is showing
+rather than rendering the template again, so whatever is decorated on the page is decorated in the inbox. A preview kept
+for reading and a preview kept for test sends are the same setting held two ways. Nothing decorated ever reaches
+Shopify: `build` compiles the template afresh, and highlighting is a value-mode concern that Liquid mode never sees.
 
 Two things the harness does not give you:
 

@@ -128,6 +128,7 @@ export const tournamentPrep = defineTemplate({
       </SupportBand>
       <MarketingFooter
         fine="You’re receiving this because you asked for competition reminders from Fencing Club."
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

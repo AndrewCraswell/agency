@@ -53,6 +53,13 @@ describe("dates", () => {
     expect(apply("date", stamp, "%H:%M:%S %I%p %l")).toBe("14:05:09 02PM 2")
   })
 
+  it("takes the padding flag Ruby puts between the percent and the letter", () => {
+    const stamp = new Date(2027, 2, 5, 9, 5, 0)
+    expect(apply("date", stamp, "%B %-d, %Y")).toBe("March 5, 2027")
+    expect(apply("date", stamp, "%-m/%-d/%y")).toBe("3/5/27")
+    expect(apply("date", stamp, "%_d|%0e|%^b")).toBe(" 5|05|MAR")
+  })
+
   it("leaves an unknown directive and a literal percent as they are", () => {
     expect(apply("date", new Date(2027, 0, 1), "%Q %% %Y")).toBe("%Q % 2027")
   })
@@ -64,6 +71,11 @@ describe("dates", () => {
   it("resolves the relative names Liquid allows", () => {
     expect(apply("date", "now", "%Y")).toBe(String(new Date().getFullYear()))
     expect(apply("date", "today", "%Y")).toBe(String(new Date().getFullYear()))
+  })
+
+  it("reads the array form Shopify hands every timestamp over as", () => {
+    expect(apply("date", [9, 5, 14, 31, 12, 2027, 5, 365, false, "PST"], "%B %e, %Y")).toBe("December 31, 2027")
+    expect(apply("date", [9, 5, 14, 31, 12, 2027, 5, 365, false, "PST"], "%H:%M:%S")).toBe("14:05:09")
   })
 
   it("renders nothing for a value that is not a date", () => {

@@ -31,9 +31,9 @@ type ValueState = {
 }
 
 /*
- * Kept on a registered slot rather than in a module binding. The build command loads a consumer's
- * templates through jiti, which hands them their own copy of this module, and two copies would each
- * install an environment the other could not see.
+ * Kept on a registered slot rather than in a module binding, because a consumer can reach this
+ * package through a second graph — a bundler, a test runner, a mixed CJS and ESM tree — and two
+ * copies would each install an environment the other could not see.
  */
 const STATE = Symbol.for("@repo/shopify-emails/value-state")
 

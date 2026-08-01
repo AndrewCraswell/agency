@@ -13,7 +13,7 @@ export const orderInvoice = defineTemplate({
   subject: (vars) => `Invoice ${liquidValue(vars.name)} is ready`,
   render: (vars) => (
     <EmailDocument
-      preview={`Invoice ${liquidValue(vars.name)} is ready. Pay securely online in just a few clicks.`}
+      preview={`Invoice ${liquidValue(vars.name)} is ready. Pay securely online whenever you’re ready.`}
       title="Your invoice is ready"
     >
       <EmailHeader eyebrow="INVOICE" />
@@ -21,7 +21,7 @@ export const orderInvoice = defineTemplate({
         Payment of <Var filters={["money"]} path={vars.total_price} /> is due
       </EmailTitle>
       <EmailLead>
-        Invoice <Var path={vars.name} /> is ready. You can pay securely online in just a few clicks.
+        Invoice <Var path={vars.name} /> is ready. Pay securely online whenever you’re ready.
       </EmailLead>
       <EmailButton href={liquidValue(vars.checkout_payment_collection_url, ["default: shop.url"])}>Pay now</EmailButton>
       <ItemList label="ORDER SUMMARY">
@@ -52,7 +52,7 @@ export const orderInvoice = defineTemplate({
         </TotalsSum>
       </Totals>
       <SupportBand>Our team replies fast. Just reply to this email or reach us anytime.</SupportBand>
-      <EmailFooter shop={vars.shop} />
+      <EmailFooter flush shop={vars.shop} />
     </EmailDocument>
   )
 })

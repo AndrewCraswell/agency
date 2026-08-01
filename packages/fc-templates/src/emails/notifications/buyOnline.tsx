@@ -16,24 +16,26 @@ export const buyOnline = defineTemplate({
   subject: () => "Are you ready to complete your order?",
   render: (vars) => (
     <EmailDocument
-      preview="Your cart from the shop is saved. Finish your purchase online and we’ll ship it straight to you."
+      preview="Your in-store cart is saved. Finish your purchase online and we’ll ship it straight to you."
       title="Finish your purchase online"
     >
       <EmailHeader eyebrow="FINISH CHECKOUT" />
       <EmailTitle>Finish your purchase online</EmailTitle>
       <EmailLead>
-        You left a few things behind at our Woodinville shop. Your cart is saved, so complete your order online and
-        we’ll ship it straight to you.
+        You left a few things behind in store. Your cart is saved, so complete your order online and we’ll ship it
+        straight to you.
       </EmailLead>
       <ItemList>
-        <For each={vars.subtotal_line_items}>{(line) => <ItemRow line={line} variantTitle={line.variant.title} />}</For>
+        <For each={vars.subtotal_line_items}>
+          {(line) => <ItemRow free line={line} variantTitle={line.variant.title} />}
+        </For>
       </ItemList>
       <Totals>
         <TotalsRow label="Subtotal">
           <Var filters={["money"]} path={vars.subtotal_price} />
         </TotalsRow>
         <If test={gt(vars.total_discounts, 0)}>
-          <TotalsRow credit label="Club discount">
+          <TotalsRow credit label="Discount">
             −<Var filters={["money"]} path={vars.total_discounts} />
           </TotalsRow>
         </If>
@@ -55,7 +57,7 @@ export const buyOnline = defineTemplate({
       <EmailButton href={liquidValue(vars.invoice_url, ["default: shop.url"])}>Complete your purchase</EmailButton>
       <QuickLinks />
       <SupportBand>Our team replies fast. Just reply to this email or reach us anytime.</SupportBand>
-      <MarketingFooter shop={vars.shop} unsubscribeUrl={shopLinks.preferences} />
+      <MarketingFooter flush shop={vars.shop} unsubscribeUrl={shopLinks.preferences} />
     </EmailDocument>
   )
 })

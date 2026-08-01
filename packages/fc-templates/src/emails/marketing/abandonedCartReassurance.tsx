@@ -13,13 +13,13 @@ import { shopLinks } from "../components/tokens.ts"
 export const abandonedCartReassurance = defineTemplate({
   id: "marketing_abandoned_cart_reassurance",
   type: "abandonment",
-  subject: () => "Your cart misses you",
+  subject: () => "Everything’s still in your cart",
   render: (vars) => (
-    <EmailDocument preview="You still have items left in your cart." title="Your cart misses you">
+    <EmailDocument preview="You still have items left in your cart." title="Everything’s still here">
       <EmailHeader eyebrow="YOUR CART" />
       <MarketingHero
         chip="SAVED FOR YOU"
-        headline="Your cart misses you."
+        headline="Everything’s still here."
         lead="Everything you picked is still here, exactly as you left it. Pick up where you stopped and we’ll get it moving."
       >
         <EmailButton href={liquidValue(vars.abandoned_visit.url)} spacing={14}>
@@ -43,6 +43,7 @@ export const abandonedCartReassurance = defineTemplate({
       </SupportBand>
       <MarketingFooter
         fine="You’re receiving this because you started an order at fencing.club."
+        flush
         shop={vars.shop}
         unsubscribeUrl={liquidValue(vars.unsubscribe_url)}
       />

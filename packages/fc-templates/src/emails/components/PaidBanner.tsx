@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Column, Row, Section } from "react-email"
-import { color, font, gutter, radius } from "./tokens.ts"
+import { color, font, gutter, radius, sectionGap } from "./tokens.ts"
 
 export type PaidBannerProps = {
   /** The small caps line above the figure, such as TOTAL PAID. */
@@ -13,7 +13,7 @@ export type PaidBannerProps = {
  * cell rather than an image, so it survives the clients that block remote pictures by default.
  */
 export const PaidBanner = ({ children, label }: PaidBannerProps) => (
-  <Section className="px" style={{ padding: `24px ${gutter}px 0` }}>
+  <Section className="px" style={{ padding: `${sectionGap}px ${gutter}px 0` }}>
     <Section
       style={{
         backgroundColor: color.paidSoft,

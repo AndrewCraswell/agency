@@ -4,7 +4,7 @@ import { EmailDocument } from "../components/EmailDocument.tsx"
 import { EmailFooter } from "../components/EmailFooter.tsx"
 import { EmailHeader } from "../components/EmailHeader.tsx"
 import { EmailLead, EmailTitle } from "../components/EmailIntro.tsx"
-import { ItemList, ItemRow } from "../components/ItemRow.tsx"
+import { ItemList, ItemRow, presentedTitle } from "../components/ItemRow.tsx"
 import { Tracking } from "../components/Tracking.tsx"
 
 /* The headline does not branch on how much shipped: the news is the tracking, not the contents. */
@@ -13,12 +13,12 @@ export const shippingUpdate = defineTemplate({
   subject: (vars) => `Shipping update for order ${liquidValue(vars.order_name)}`,
   render: (vars) => (
     <EmailDocument
-      preview={`Tracking information for order ${liquidValue(vars.order_name)} has been updated.`}
-      title="Your shipping status has been updated"
+      preview={`Tracking information for order ${liquidValue(vars.order_name)} has changed.`}
+      title="Your delivery estimate has changed"
     >
       <EmailHeader eyebrow="SHIPPING UPDATE" />
-      <EmailTitle>Your shipping status has been updated</EmailTitle>
-      <EmailLead>The following items have been updated with new shipping information.</EmailLead>
+      <EmailTitle>Your delivery estimate has changed</EmailTitle>
+      <EmailLead>Here’s where these items stand now.</EmailLead>
       <If test={isTruthy(vars.fulfillment.estimated_delivery_at)}>
         <EmailLead>
           Estimated delivery date:{" "}
@@ -30,7 +30,12 @@ export const shippingUpdate = defineTemplate({
       <ItemList label="ITEMS IN DELIVERY">
         <For each={vars.fulfillment.fulfillment_line_items}>
           {(line) => (
-            <ItemRow line={line.line_item} quantity={line.quantity} variantTitle={line.line_item.variant.title} />
+            <ItemRow
+              line={line.line_item}
+              quantity={line.quantity}
+              title={presentedTitle(line.line_item)}
+              variantTitle={line.line_item.variant.title}
+            />
           )}
         </For>
       </ItemList>

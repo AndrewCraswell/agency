@@ -1,3 +1,6 @@
+/** @jsxRuntime automatic */
+/* The loader that runs the build command takes its JSX settings from the consumer's tsconfig, which
+ * says nothing about this package's own files, so each one states the runtime it needs. */
 import { createShopifyEngine } from "./filters/engine.ts"
 import type { LiquidEvaluator, TemplateValues } from "./liquid/mode.ts"
 import { renderTemplateValues } from "./renderValues.tsx"
@@ -20,6 +23,12 @@ import type { TemplateDefinition } from "./template.ts"
  * its ambient environment lives only for one synchronous render, and a returned tree would render
  * after that environment was gone. The dev server parses the result, so the email's own `html` and
  * `body` collapse into the surrounding document and the preview looks the way the message will.
+ *
+ * Drops are marked, because telling data from typed copy is what this view is for: a picture of the
+ * finished message is something Shopify's own admin already gives, against real orders. The Send
+ * button posts the very markup on the page rather than rendering again, so a test send from here
+ * carries the marks too. A consumer who would rather send than read passes `{ highlight: false }`,
+ * and the props panel switches either default for one render.
  */
 export type PreviewOptions = {
   /** Marks each drop so a reader can tell it from typed copy. On unless turned off. */

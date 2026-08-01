@@ -4,7 +4,7 @@ import { EmailDocument } from "../components/EmailDocument.tsx"
 import { EmailFooter } from "../components/EmailFooter.tsx"
 import { EmailHeader } from "../components/EmailHeader.tsx"
 import { EmailLead, EmailTitle } from "../components/EmailIntro.tsx"
-import { ItemList, ItemRow } from "../components/ItemRow.tsx"
+import { ItemList, ItemRow, presentedTitle } from "../components/ItemRow.tsx"
 
 /* Our own courier carries this one, so there is no carrier or consignment number to show. */
 export const localOutForDelivery = defineTemplate({
@@ -17,7 +17,7 @@ export const localOutForDelivery = defineTemplate({
     >
       <EmailHeader eyebrow="OUT FOR DELIVERY" />
       <EmailTitle>Your order is out for delivery</EmailTitle>
-      <EmailLead>Your order is on its way and will arrive soon.</EmailLead>
+      <EmailLead>Your order is out with our courier today.</EmailLead>
       <If test={isTruthy(vars.fulfillment.estimated_delivery_at)}>
         <EmailLead>
           Estimated delivery date:{" "}
@@ -28,7 +28,12 @@ export const localOutForDelivery = defineTemplate({
       <ItemList label="ITEMS IN DELIVERY">
         <For each={vars.fulfillment.fulfillment_line_items}>
           {(line) => (
-            <ItemRow line={line.line_item} quantity={line.quantity} variantTitle={line.line_item.variant.title} />
+            <ItemRow
+              line={line.line_item}
+              quantity={line.quantity}
+              title={presentedTitle(line.line_item)}
+              variantTitle={line.line_item.variant.title}
+            />
           )}
         </For>
       </ItemList>
