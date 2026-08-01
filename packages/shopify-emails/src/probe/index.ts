@@ -8,6 +8,7 @@
  */
 
 export {
+  assetQuestions,
   buildProbe,
   candidateNotificationDrops,
   marketingQuestions,

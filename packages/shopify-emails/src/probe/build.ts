@@ -72,16 +72,70 @@ export type ProbeQuestions = {
   readonly names: readonly string[]
   /** Drops `json` refuses, and the properties to ask for one at a time instead. */
   readonly opaque: Readonly<Record<string, readonly string[]>>
+  /** Liquid expressions, for values a filter computes at render time rather than a drop holding them. */
+  readonly expressions: Readonly<Record<string, string>>
 }
 
-export const notificationQuestions: ProbeQuestions = { names: candidateNotificationDrops, opaque: opaqueDropFields }
+export const notificationQuestions: ProbeQuestions = {
+  expressions: {},
+  names: candidateNotificationDrops,
+  opaque: opaqueDropFields
+}
 
 /*
  * Shopify Email is a different product from notifications, so none of the notification evidence
  * carries over. `customer` and `shop` are expanded the same way on the assumption they are the same
  * drop classes; if they answer `json` here, that assumption was the thing worth testing.
  */
-export const marketingQuestions: ProbeQuestions = { names: candidateMarketingDrops, opaque: opaqueDropFields }
+export const marketingQuestions: ProbeQuestions = {
+  expressions: {},
+  names: candidateMarketingDrops,
+  opaque: opaqueDropFields
+}
+
+/* How `credit_card_company` reads once downcased and underscored, which is how Shopify names the icon. */
+const cardBrands: readonly string[] = [
+  "american_express",
+  "bogus",
+  "diners_club",
+  "discover",
+  "elo",
+  "jcb",
+  "maestro",
+  "mastercard",
+  "unionpay",
+  "visa"
+]
+
+/** The chrome the templates reach for by fixed path. */
+const chromeAssets: readonly string[] = [
+  "gift-card/add-to-apple-wallet.png",
+  "gift-card/card.jpg",
+  "mailer/shop_logo.png",
+  "notifications/discounttag.png",
+  "notifications/no-image.png",
+  "notifications/shop-pay.svg"
+]
+
+const assetExpressions = (): Record<string, string> => {
+  const asked: Record<string, string> = {}
+  for (const path of [...chromeAssets, ...cardBrands.map((brand) => `notifications/${brand}.png`)]) {
+    asked[path] = `'${path}' | shopify_asset_url`
+  }
+  /* Both filters are shimmed from guesswork, and only a live render can say which one Shopify honours. */
+  for (const brand of cardBrands) {
+    asked[`payment_type_img_url: ${brand}`] = `'${brand}' | payment_type_img_url`
+    asked[`payment_icon_png_url: ${brand}`] = `'${brand}' | payment_icon_png_url`
+  }
+  return asked
+}
+
+/*
+ * The CDN paths a filter computes at render time. Nothing in the Admin API exposes them: the
+ * fingerprint in `visa-e96781bb….png` is an artifact of Shopify's asset pipeline, so a live render
+ * is the only authority on what the URL actually is.
+ */
+export const assetQuestions: ProbeQuestions = { expressions: assetExpressions(), names: [], opaque: {} }
 
 const probeLine = (name: string, opaque: ProbeQuestions["opaque"]): string => {
   const fields = opaque[name]
@@ -124,10 +178,15 @@ const probeLine = (name: string, opaque: ProbeQuestions["opaque"]): string => {
  * instead. And a full `line_items` dump is large, so a mail client may clip the message: the probe
  * ends with a closing brace, and if one never arrives, narrow `names` and go a few drops at a time.
  */
-export const buildProbe = ({ names, opaque }: ProbeQuestions = notificationQuestions): string =>
+export const buildProbe = ({ expressions, names, opaque }: ProbeQuestions = notificationQuestions): string =>
   [
     "{% comment %}Variable probe. Preview or send this notification, then copy the JSON below.{% endcomment %}",
     `<pre style="font: 12px/1.5 monospace; white-space: pre-wrap; word-break: break-all">{`,
-    names.map((name) => probeLine(name, opaque)).join(",\n"),
+    [
+      ...names.map((name) => probeLine(name, opaque)),
+      ...Object.entries(expressions).map(
+        ([label, expression]) => `  ${JSON.stringify(label)}: {{ ${expression} | json | escape | default: "null" }}`
+      )
+    ].join(",\n"),
     "}</pre>"
   ].join("\n")

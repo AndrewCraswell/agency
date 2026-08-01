@@ -4,7 +4,13 @@ import { deprecatedNotificationDrops, documentedNotificationDrops } from "../sam
 import { candidateMarketingDrops } from "../samples/marketingDrops.ts"
 import { observedNotificationDrops } from "../samples/observedDrops.ts"
 import { templateSamples } from "../samples/templates.ts"
-import { buildProbe, candidateNotificationDrops, marketingQuestions, notificationQuestions } from "./build.ts"
+import {
+  assetQuestions,
+  buildProbe,
+  candidateNotificationDrops,
+  marketingQuestions,
+  notificationQuestions
+} from "./build.ts"
 
 /** The probe escapes for HTML, so a browser hands back the JSON that a test has to undo by hand. */
 const decode = (html: string): string =>
@@ -84,5 +90,19 @@ describe("variable contracts", () => {
     const body = rendered.slice(rendered.indexOf(">") + 1, rendered.lastIndexOf("</pre>"))
 
     expect(JSON.parse(decode(body))).toEqual({ note: null })
+  })
+
+  it("asks the CDN filters what they resolve to, since no drop holds the answer", async () => {
+    const probe = buildProbe(assetQuestions)
+
+    expect(probe).toContain(`"notifications/visa.png": {{ 'notifications/visa.png' | shopify_asset_url | json`)
+    expect(probe).toContain(`"payment_type_img_url: visa": {{ 'visa' | payment_type_img_url | json`)
+
+    const rendered = await createShopifyEngine().parseAndRender(probe, {})
+    const body = rendered.slice(rendered.indexOf(">") + 1, rendered.lastIndexOf("</pre>"))
+    const answered = JSON.parse(decode(body))
+
+    expect(answered["notifications/visa.png"]).toContain("visa-")
+    expect(Object.keys(answered)).toHaveLength(Object.keys(assetQuestions.expressions).length)
   })
 })

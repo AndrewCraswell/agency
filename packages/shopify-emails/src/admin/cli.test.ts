@@ -68,7 +68,7 @@ describe("run probe", () => {
   })
 
   it("names the targets it knows when given one it does not", async () => {
-    await expect(run(["probe", "--for", "printout"])).rejects.toThrow(/Use notification or marketing/)
+    await expect(run(["probe", "--for", "printout"])).rejects.toThrow(/Use notification, marketing, or asset/)
   })
 
   it("probes only the names it is given, so a clipped run can be narrowed", async () => {

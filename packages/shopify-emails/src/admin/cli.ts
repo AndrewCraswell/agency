@@ -1,7 +1,13 @@
 import { readFile, writeFile } from "node:fs/promises"
 import { relative } from "node:path"
 import { parseArgs } from "node:util"
-import { buildProbe, marketingQuestions, notificationQuestions, type ProbeQuestions } from "../probe/build.ts"
+import {
+  assetQuestions,
+  buildProbe,
+  marketingQuestions,
+  notificationQuestions,
+  type ProbeQuestions
+} from "../probe/build.ts"
 import { parseProbe, summariseProbe } from "../probe/capture.ts"
 import { buildTemplates, GMAIL_CLIP_BYTES } from "./build.ts"
 import { createAdminClient } from "./client.ts"
@@ -22,8 +28,8 @@ import { SHOP_QUERY } from "./queries.ts"
 const usage = `
 shopify-emails login --store <shop>.myshopify.com
 shopify-emails build [--dir <src>] [--out <dir>]
-shopify-emails probe [--for notification|marketing] [--names a,b] [--out <file>]
-shopify-emails probe --capture <file.html> [--for notification|marketing]
+shopify-emails probe [--for notification|marketing|asset] [--names a,b] [--out <file>]
+shopify-emails probe --capture <file.html> [--for notification|marketing|asset] [--out <file>]
 
 Create the app under Settings > Apps > Develop apps, grant read_orders and read_customers,
 install it, and reveal the Admin API access token. Only the last 60 days of orders are
@@ -31,6 +37,9 @@ readable unless Shopify has granted the store read_all_orders.
 
 Notification templates have no API. \`probe\` prints a throwaway template to paste into one
 in the admin; preview it, save the rendered HTML, and pass it back with --capture.
+
+\`--for asset\` asks what the CDN filters resolve to instead of what the drops hold, and its
+capture prints the resolved URLs as JSON rather than a present-or-absent report.
 `.trim()
 
 /** Never echoed, and never taken from an argument, so it cannot be recovered from shell history. */
@@ -89,6 +98,7 @@ const login = async (store: string | undefined): Promise<void> => {
 }
 
 const questions: Readonly<Record<string, ProbeQuestions>> = {
+  asset: assetQuestions,
   marketing: marketingQuestions,
   notification: notificationQuestions
 }
@@ -106,12 +116,29 @@ const list = (label: string, names: readonly string[]): string =>
 const probe = async ({ capture, names, out, for: surface = "notification" }: ProbeOptions): Promise<void> => {
   const chosen = questions[surface]
   if (!chosen) {
-    throw new Error(`Unknown probe target "${surface}". Use notification or marketing.`)
+    throw new Error(`Unknown probe target "${surface}". Use notification, marketing, or asset.`)
   }
   const asked = names ? { ...chosen, names: names.split(",").map((name) => name.trim()) } : chosen
 
   if (capture) {
-    const report = summariseProbe(parseProbe(await readFile(capture, "utf8")), asked)
+    const captured = parseProbe(await readFile(capture, "utf8"))
+
+    /* An asset probe is asked for its values, so a present-or-absent report would throw them away. */
+    if (surface === "asset") {
+      const resolved = Object.fromEntries(
+        Object.keys(asked.expressions).map((label) => [label, captured[label] ?? null])
+      )
+      const json = `${JSON.stringify(resolved, null, 2)}\n`
+      if (out) {
+        await writeFile(out, json, "utf8")
+        process.stdout.write(`${relative(process.cwd(), out)}\n`)
+        return
+      }
+      process.stdout.write(json)
+      return
+    }
+
+    const report = summariseProbe(captured, asked)
     process.stdout.write(
       [
         list("Present", report.present),
