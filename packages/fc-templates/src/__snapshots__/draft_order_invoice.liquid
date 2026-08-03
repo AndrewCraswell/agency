@@ -100,6 +100,8 @@
         .stack { display: block !important; width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; }
         /* The gap the two halves lose when they stop sitting side by side. */
         .stack + .stack { padding-top: 18px !important; }
+        /* A paired button fills its half only while there is a half; stacked it reads as one long slab. */
+        .btn-fill { display: inline-block !important; width: auto !important; padding-left: 28px !important; padding-right: 28px !important; }
       }
 
       /*
@@ -304,7 +306,7 @@
                             <a
                               class="dk-btn"
                               href="{{ invoice_url | default: shop.url | escape }}"
-                              style='line-height:18px;text-decoration:none;display:inline-block;max-width:100%;mso-padding-alt:0px;background-color:{{ shop.email_accent_color | default: "#101012" | escape }};border:1px solid #ffffff;border-radius:14px;color:#ffffff;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:15px;font-weight:700;padding:13px 28px;padding-top:13px;padding-right:28px;padding-bottom:13px;padding-left:28px'
+                              style='line-height:18px;text-decoration:none;display:inline-block;max-width:100%;mso-padding-alt:0px;background-color:{{ shop.email_accent_color | default: "#101012" | escape }};border:1px solid #ffffff;border-radius:14px;box-sizing:border-box;color:#ffffff;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:15px;font-weight:700;padding:13px 28px;text-align:center;padding-top:13px;padding-right:28px;padding-bottom:13px;padding-left:28px'
                               target="_blank"
                               ><span
                                 ><!--[if mso]><i style="mso-font-width:466.6666666666667%;mso-text-raise:19.5px" hidden>&#8202;&#8202;&#8202;</i><![endif]--></span
@@ -365,6 +367,7 @@
                                   <td
                                     data-id="__react-email-column"
                                     style="padding:12px 0 12px 11px;vertical-align:middle">
+                                    {% assign line_order_wide_discount = 0 %}<!-- -->{% for line_items_item_discount_allocations_item in line_items_item.discount_allocations %}<!-- -->{% if line_items_item_discount_allocations_item.discount_application.target_selection == 'all' %}<!-- -->{% assign line_order_wide_discount = line_order_wide_discount | plus: line_items_item_discount_allocations_item.amount %}<!-- -->{% endif %}<!-- -->{% endfor %}<!-- -->{% assign line_shown_price = line_items_item.final_line_price | plus: line_order_wide_discount %}
                                     <div
                                       class="dk-text"
                                       style='color:#101012;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:14px;font-weight:600;line-height:19px'>
@@ -391,19 +394,19 @@
                                       {{ line_items_item.price | money | escape }}<!-- -->
                                       each
                                     </div>
-                                    {% endif %}<!-- -->{% for line_items_item_discount_allocations_item in line_items_item.discount_allocations %}
+                                    {% endif %}<!-- -->{% for line_items_item_discount_allocations_item in line_items_item.discount_allocations %}<!-- -->{% if line_items_item_discount_allocations_item.discount_application.target_selection != 'all' %}
                                     <div
                                       style='color:#1e7a46;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:11.5px;font-weight:600;line-height:16px;padding-top:3px'>
-                                      {{ line_items_item_discount_allocations_item.discount_application.title | escape }}<!-- -->
+                                      {{ line_items_item_discount_allocations_item.discount_application.title | default: 'Discount' | escape }}<!-- -->
                                       (−<!-- -->{{ line_items_item_discount_allocations_item.amount | money | escape }}<!-- -->)
                                     </div>
-                                    {% endfor %}
+                                    {% endif %}<!-- -->{% endfor %}
                                   </td>
                                   <td
                                     align="right"
                                     data-id="__react-email-column"
                                     style="padding:12px 0 12px 20px;text-align:right;vertical-align:middle">
-                                    {% if line_items_item.original_line_price != line_items_item.final_line_price %}
+                                    {% if line_items_item.original_line_price != line_shown_price %}
                                     <div
                                       class="dk-muted"
                                       style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:12px;font-weight:400;line-height:17px;padding-top:2px;text-decoration:line-through'>
@@ -413,7 +416,7 @@
                                     <div
                                       class="dk-text"
                                       style='color:#101012;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:14px;font-weight:600;line-height:19px;padding-top:2px'>
-                                      {{ line_items_item.final_line_price | money | escape }}
+                                      {{ line_shown_price | money | escape }}
                                     </div>
                                   </td>
                                 </tr>
@@ -446,6 +449,7 @@
                               <tbody>
                                 <tr>
                                   <td>
+                                    {% assign order_wide_discount = 0 %}<!-- -->{% for discount_applications_item in discount_applications %}<!-- -->{% if discount_applications_item.target_selection == 'all' %}<!-- -->{% assign order_wide_discount = order_wide_discount | plus: discount_applications_item.total_allocated_amount %}<!-- -->{% endif %}<!-- -->{% endfor %}
                                     <table
                                       align="center"
                                       width="100%"
@@ -467,12 +471,12 @@
                                             class="dk-text"
                                             data-id="__react-email-column"
                                             style='color:#101012;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:13px;font-weight:600;line-height:18px;padding:3px 0'>
-                                            {{ subtotal_price | money | escape }}
+                                            {{ subtotal_price | plus: order_wide_discount | money | escape }}
                                           </td>
                                         </tr>
                                       </tbody>
                                     </table>
-                                    {% if total_discounts > 0 %}
+                                    {% if order_wide_discount > 0 %}<!-- -->{% for discount_applications_item in discount_applications %}<!-- -->{% if discount_applications_item.target_selection == 'all' %}
                                     <table
                                       align="center"
                                       width="100%"
@@ -487,18 +491,18 @@
                                             class="dk-muted"
                                             data-id="__react-email-column"
                                             style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:13px;font-weight:400;line-height:18px;padding:3px 0'>
-                                            Discount
+                                            {{ discount_applications_item.title | default: 'Discount' | escape }}
                                           </td>
                                           <td
                                             align="right"
                                             data-id="__react-email-column"
                                             style='color:#1e7a46;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:13px;font-weight:600;line-height:18px;padding:3px 0'>
-                                            −<!-- -->{{ total_discounts | money | escape }}
+                                            −<!-- -->{{ discount_applications_item.total_allocated_amount | money | escape }}
                                           </td>
                                         </tr>
                                       </tbody>
                                     </table>
-                                    {% endif %}
+                                    {% endif %}<!-- -->{% endfor %}<!-- -->{% endif %}
                                     <table
                                       align="center"
                                       width="100%"

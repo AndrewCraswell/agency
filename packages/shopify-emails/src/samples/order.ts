@@ -319,6 +319,8 @@ export const placedOrderSample: PlacedOrderVariables = {
   pickup_methods: [],
   retail_delivery_only: false,
   shipping_methods: [shippingMethod],
+  shop_app_tracking_button_variant_key: "track_with_shop",
+  shop_app_tracking_url: "https://shop.app/orders/9f1c0e4a7b2d",
   total_tip: 0,
   transactions,
   unfulfilled_line_items: lineItemsSample,

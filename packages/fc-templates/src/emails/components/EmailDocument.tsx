@@ -86,6 +86,8 @@ a { text-decoration: none; }
   .stack { display: block !important; width: 100% !important; padding-left: 0 !important; padding-right: 0 !important; }
   /* The gap the two halves lose when they stop sitting side by side. */
   .stack + .stack { padding-top: 18px !important; }
+  /* A paired button fills its half only while there is a half; stacked it reads as one long slab. */
+  .btn-fill { display: inline-block !important; width: auto !important; padding-left: 28px !important; padding-right: 28px !important; }
 }
 
 /*

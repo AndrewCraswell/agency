@@ -64,6 +64,19 @@ const taxLineSchema = z.object({
   priceSet: money.nullable()
 })
 
+const discountApplicationSchema = z.object({
+  allocationMethod: z.string(),
+  code: z.string().optional(),
+  targetSelection: z.string(),
+  targetType: z.string(),
+  title: z.string().optional(),
+  value: z.object({
+    __typename: z.string(),
+    amount: z.string().optional(),
+    percentage: z.number().optional()
+  })
+})
+
 const lineItemSchema = z.object({
   id: z.string(),
   title: z.string(),
@@ -76,9 +89,10 @@ const lineItemSchema = z.object({
   taxable: z.boolean(),
   image: z.object({ url: z.string() }).nullable(),
   originalUnitPriceSet: money.nullable(),
-  discountedUnitPriceSet: money.nullable(),
   originalTotalSet: money.nullable(),
-  discountedTotalSet: money.nullable(),
+  discountAllocations: z.array(
+    z.object({ allocatedAmountSet: money.nullable(), discountApplication: discountApplicationSchema })
+  ),
   customAttributes: z.array(z.object({ key: z.string(), value: z.string().nullable() })),
   taxLines: z.array(taxLineSchema),
   variant: z
@@ -139,20 +153,7 @@ const orderSchema = z.object({
         nodes: z.array(z.object({ title: z.string(), originalPriceSet: money.nullable() }))
       }),
       discountApplications: z.object({
-        nodes: z.array(
-          z.object({
-            allocationMethod: z.string(),
-            code: z.string().optional(),
-            targetSelection: z.string(),
-            targetType: z.string(),
-            title: z.string().optional(),
-            value: z.object({
-              __typename: z.string(),
-              amount: z.string().optional(),
-              percentage: z.number().optional()
-            })
-          })
-        )
+        nodes: z.array(discountApplicationSchema)
       }),
       fulfillments: z.array(
         z.object({
@@ -552,21 +553,23 @@ const mapLineItem = (line: AdminLineItem): LineItem => {
   const variant = mapVariant(line)
   const product = mapProduct(line, variant)
   const handle = product.handle
+  const allocations = line.discountAllocations.map((allocation) => ({
+    amount: subunits(allocation.allocatedAmountSet),
+    discount_application: mapDiscount(allocation.discountApplication)
+  }))
+  /* The Admin API reports a discount as an allocation, so a line's price is its list price less those. */
+  const discounted = subunits(line.originalTotalSet) - allocations.reduce((total, one) => total + one.amount, 0)
   return {
     ...lineItemsSample[0]!,
     current_quantity: line.currentQuantity,
-    /*
-     * The Admin API reports discounts per allocation, but the notification only ever shows a
-     * title and an amount, so the line's own shortfall is the honest total to attribute.
-     */
-    discount_allocations: [],
-    final_line_price: subunits(line.discountedTotalSet),
+    discount_allocations: allocations,
+    final_line_price: discounted,
     gift_card: false,
     grams: 0,
     groups: [],
     id: idNumber(line.id),
     image: text(line.image?.url),
-    line_price: subunits(line.discountedTotalSet),
+    line_price: discounted,
     original_line_price: subunits(line.originalTotalSet),
     presentment_title: line.title,
     price: subunits(line.originalUnitPriceSet),

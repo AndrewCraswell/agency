@@ -282,6 +282,7 @@ export const shopifyFilterShims = (options: ShimOptions): Readonly<Record<string
       .split(/[\s_-]+/)
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(""),
+  cdn_asset_url: assetUrl,
   collection_img_url: sized,
   file_img_url: (value, ...args) => sized(`${CDN}/s/files/1/files/${text(value)}`, ...args),
   file_url: (value) => `${CDN}/s/files/1/files/${text(value)}`,

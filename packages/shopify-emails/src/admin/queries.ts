@@ -253,9 +253,24 @@ export const ORDER_QUERY = `
           taxable
           image { url }
           originalUnitPriceSet { shopMoney { amount } }
-          discountedUnitPriceSet { shopMoney { amount } }
           originalTotalSet { shopMoney { amount } }
-          discountedTotalSet { shopMoney { amount } }
+          discountAllocations {
+            allocatedAmountSet { shopMoney { amount } }
+            discountApplication {
+              allocationMethod
+              targetSelection
+              targetType
+              value {
+                __typename
+                ... on MoneyV2 { amount }
+                ... on PricingPercentageValue { percentage }
+              }
+              ... on DiscountCodeApplication { code }
+              ... on AutomaticDiscountApplication { title }
+              ... on ManualDiscountApplication { title }
+              ... on ScriptDiscountApplication { title }
+            }
+          }
           customAttributes { key value }
           taxLines { title rate ratePercentage priceSet { shopMoney { amount } } }
           variant {

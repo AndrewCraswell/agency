@@ -7,7 +7,7 @@ type DocumentedFilter = { readonly name: string; readonly category: string }
 const shopifyFilters = documented as readonly DocumentedFilter[]
 
 /* Not documented because notifications are not part of Shopify's Liquid reference. */
-const notificationOnly = ["attach_as_pdf", "format_code", "payment_icon_png_url", "t"]
+const notificationOnly = ["attach_as_pdf", "cdn_asset_url", "format_code", "payment_icon_png_url", "t"]
 
 describe("the filter catalog", () => {
   it("reads Shopify's own published list", () => {

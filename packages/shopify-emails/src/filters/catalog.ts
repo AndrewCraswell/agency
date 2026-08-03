@@ -36,6 +36,7 @@ const supported = [
   "base64_url_safe_encode",
   "camelize",
   "capitalize",
+  "cdn_asset_url",
   "ceil",
   "collection_img_url",
   "compact",

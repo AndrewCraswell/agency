@@ -15,12 +15,13 @@ import {
 import { AddressParty } from "../components/AddressBlock.tsx"
 import { CustomerDetail, CustomerInfoCard } from "../components/CustomerInfoCard.tsx"
 import { DeliveryGroup } from "../components/DeliveryGroup.tsx"
-import { EmailButton } from "../components/EmailButton.tsx"
 import { EmailDocument } from "../components/EmailDocument.tsx"
 import { EmailFooter } from "../components/EmailFooter.tsx"
 import { EmailHeader } from "../components/EmailHeader.tsx"
 import { EmailLead, EmailTitle } from "../components/EmailIntro.tsx"
 import { ItemList, ItemRow } from "../components/ItemRow.tsx"
+import { OrderActions } from "../components/OrderActions.tsx"
+import { OrderDiscountRows, OrderWideDiscount, SubtotalRow } from "../components/OrderDiscounts.tsx"
 import { PaymentBrand } from "../components/PaymentBrand.tsx"
 import { SupportBand } from "../components/SupportBand.tsx"
 import { Totals, TotalsRow, TotalsSum } from "../components/Totals.tsx"
@@ -41,7 +42,13 @@ export const orderConfirmation = defineTemplate({
         Hi <Var path={vars.customer.first_name} />, we’ve received order <Var path={vars.name} /> and we’re preparing it
         now. We’ll email you the moment it ships.
       </EmailLead>
-      <EmailButton href={liquidValue(vars.order_status_url, ["default: shop.url"])}>View your order</EmailButton>
+      <OrderActions
+        href={liquidValue(vars.order_status_url, ["default: shop.url"])}
+        shopUrl={vars.shop_app_tracking_url}
+        shopVariantKey={vars.shop_app_tracking_button_variant_key}
+      >
+        View your order
+      </OrderActions>
       <ItemList label="ORDER SUMMARY">
         <Assign to={deliveryGroupCount} value="delivery_agreements | size" />
         <If test={gt(deliveryGroupCount, 1)}>
@@ -67,14 +74,9 @@ export const orderConfirmation = defineTemplate({
         </If>
       </ItemList>
       <Totals>
-        <TotalsRow label="Subtotal">
-          <Var filters={["money"]} path={vars.subtotal_price} />
-        </TotalsRow>
-        <If test={gt(vars.total_discounts, 0)}>
-          <TotalsRow credit label="Discount">
-            −<Var filters={["money"]} path={vars.total_discounts} />
-          </TotalsRow>
-        </If>
+        <OrderWideDiscount order={vars} />
+        <SubtotalRow order={vars} />
+        <OrderDiscountRows order={vars} />
         <TotalsRow label="Shipping">
           <If test={gt(vars.shipping_price, 0)}>
             <Var filters={["money"]} path={vars.shipping_price} />

@@ -1,5 +1,6 @@
-import { Assign, binding, Else, For, gt, If, isTruthy, type PathRef, pathOf, Var } from "@repo/shopify-emails"
+import { Else, gt, If, isTruthy, type PathRef, Var } from "@repo/shopify-emails"
 import type { ReactNode } from "react"
+import { OrderDiscountRows, OrderWideDiscount, SubtotalRow } from "./OrderDiscounts.tsx"
 import { Totals, TotalsRow, TotalsSum } from "./Totals.tsx"
 
 /*
@@ -14,6 +15,7 @@ import { Totals, TotalsRow, TotalsSum } from "./Totals.tsx"
 export type OrderTotalsRef = {
   readonly discount_applications: PathRef<
     readonly {
+      readonly target_selection: string
       readonly title: string
       readonly total_allocated_amount: number
     }[]
@@ -34,31 +36,11 @@ export type OrderTotalsProps = {
   readonly children?: ReactNode
 }
 
-const discountCount = binding<number>("order_discount_count")
-
 export const OrderTotals = ({ children, order }: OrderTotalsProps) => (
   <Totals>
-    <TotalsRow label="Subtotal">
-      <Var filters={["money"]} path={order.subtotal_price} />
-    </TotalsRow>
-    <Assign to={discountCount} value={`${pathOf(order.discount_applications)} | size`} />
-    {/* Named one by one where there are several, because "Discount" twice reads as a mistake. */}
-    <If test={gt(discountCount, 0)}>
-      <For each={order.discount_applications}>
-        {(discount) => (
-          <TotalsRow credit label={<Var filters={["default: 'Discount'"]} path={discount.title} />}>
-            −<Var filters={["money"]} path={discount.total_allocated_amount} />
-          </TotalsRow>
-        )}
-      </For>
-      <Else>
-        <If test={gt(order.discounts_amount, 0)}>
-          <TotalsRow credit label="Discount">
-            −<Var filters={["money"]} path={order.discounts_amount} />
-          </TotalsRow>
-        </If>
-      </Else>
-    </If>
+    <OrderWideDiscount order={order} />
+    <SubtotalRow order={order} />
+    <OrderDiscountRows order={order} />
     <If test={isTruthy(order.requires_shipping)}>
       <TotalsRow label="Shipping">
         <If test={gt(order.shipping_price, 0)}>

@@ -255,9 +255,19 @@ const { order } = orderResponse.parse({
           taxable: true,
           image: { url: "https://cdn.shopify.com/screws.png" },
           originalUnitPriceSet: money("94.50"),
-          discountedUnitPriceSet: money("85.05"),
           originalTotalSet: money("189.00"),
-          discountedTotalSet: money("170.10"),
+          discountAllocations: [
+            {
+              allocatedAmountSet: money("18.90"),
+              discountApplication: {
+                allocationMethod: "ACROSS",
+                targetSelection: "ENTITLED",
+                targetType: "LINE_ITEM",
+                title: "Club rate",
+                value: { __typename: "PricingPercentageValue", percentage: 10 }
+              }
+            }
+          ],
           customAttributes: [{ key: "Engraving", value: "A.M." }],
           taxLines: [{ title: "State Tax", rate: 0.0625, ratePercentage: 6.25, priceSet: money("11.38") }],
           variant: {

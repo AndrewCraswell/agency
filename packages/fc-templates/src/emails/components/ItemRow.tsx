@@ -1,4 +1,19 @@
-import { and, Else, For, gt, If, isTruthy, liquidValue, neq, type PathRef, pathOf, Var } from "@repo/shopify-emails"
+import {
+  and,
+  Assign,
+  binding,
+  Else,
+  eq,
+  For,
+  gt,
+  If,
+  isTruthy,
+  liquidValue,
+  neq,
+  type PathRef,
+  pathOf,
+  Var
+} from "@repo/shopify-emails"
 import type { ReactNode } from "react"
 import { Column, Row, Section } from "react-email"
 import { color, font, gutter, sectionGap } from "./tokens.ts"
@@ -62,7 +77,11 @@ export type LineItem = {
   }[]
   readonly discount_allocations: readonly {
     readonly amount: number
-    readonly discount_application: { readonly title: string }
+    readonly discount_application: {
+      readonly title: string
+      /** `all` means the whole order was discounted, which the totals ladder names instead. */
+      readonly target_selection: string
+    }
   }[]
 }
 
@@ -86,6 +105,14 @@ export type ItemRowProps = {
 export const presentedTitle = (line: PathRef<LineItem>) => (
   <Var filters={[`default: ${pathOf(line.title)}`]} path={line.presentment_title} />
 )
+
+/*
+ * Shopify allocates an order-wide discount down to the lines it covers, so `final_line_price` is
+ * net of a reduction the line itself never announced. Adding that share back leaves each line
+ * showing only what its own discounts did, and leaves the ladder free to name the order-wide one.
+ */
+const orderWideShare = binding<number>("line_order_wide_discount")
+const shownLinePrice = binding<number>("line_shown_price")
 
 export const ItemRow = ({
   badge,
@@ -141,6 +168,15 @@ export const ItemRow = ({
     </Column>
     {/* The 20px gap to the thumbnail, less the 9px the column beside it took for the badge. */}
     <Column style={{ padding: "12px 0 12px 11px", verticalAlign: "middle" }}>
+      <Assign to={orderWideShare} value="0" />
+      <For each={line.discount_allocations}>
+        {(allocation) => (
+          <If test={eq(allocation.discount_application.target_selection, "all")}>
+            <Assign to={orderWideShare} value={`${pathOf(orderWideShare)} | plus: ${pathOf(allocation.amount)}`} />
+          </If>
+        )}
+      </For>
+      <Assign to={shownLinePrice} value={`${pathOf(line.final_line_price)} | plus: ${pathOf(orderWideShare)}`} />
       <div
         className="dk-text"
         style={{ color: color.ink, fontFamily: font.body, fontSize: 14, fontWeight: 600, lineHeight: "19px" }}
@@ -173,15 +209,17 @@ export const ItemRow = ({
       </If>
       <For each={line.discount_allocations}>
         {(allocation) => (
-          <ItemDiscount>
-            <Var path={allocation.discount_application.title} /> (−
-            <Var filters={["money"]} path={allocation.amount} />)
-          </ItemDiscount>
+          <If test={neq(allocation.discount_application.target_selection, "all")}>
+            <ItemDiscount>
+              <Var filters={["default: 'Discount'"]} path={allocation.discount_application.title} /> (−
+              <Var filters={["money"]} path={allocation.amount} />)
+            </ItemDiscount>
+          </If>
         )}
       </For>
     </Column>
     <Column align="right" style={{ padding: "12px 0 12px 20px", textAlign: "right", verticalAlign: "middle" }}>
-      <If test={neq(line.original_line_price, line.final_line_price)}>
+      <If test={neq(line.original_line_price, shownLinePrice)}>
         <ItemComparePrice>
           <Var filters={["money"]} path={line.original_line_price} />
         </ItemComparePrice>
@@ -199,12 +237,12 @@ export const ItemRow = ({
       >
         {credit ? "−" : null}
         {free ? (
-          <If test={gt(line.final_line_price, 0)}>
-            <Var filters={["money"]} path={line.final_line_price} />
+          <If test={gt(shownLinePrice, 0)}>
+            <Var filters={["money"]} path={shownLinePrice} />
             <Else>Free</Else>
           </If>
         ) : (
-          <Var filters={["money"]} path={line.final_line_price} />
+          <Var filters={["money"]} path={shownLinePrice} />
         )}
       </div>
     </Column>

@@ -78,6 +78,8 @@ export const observedNotificationDrops = [
   "shipping_methods",
   "shipping_price",
   "shop",
+  "shop_app_tracking_button_variant_key",
+  "shop_app_tracking_url",
   "shop_link",
   "shop_name",
   "subtotal_line_items",

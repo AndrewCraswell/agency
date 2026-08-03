@@ -98,6 +98,9 @@ export type PlacedOrderVariables = OrderSummaryVariables & {
   readonly pickup_methods: readonly PickupMethod[]
   readonly retail_delivery_only: boolean
   readonly shipping_methods: readonly ShippingMethod[]
+  /** Which of the two Shop labels to show, and the only thing that tells them apart. */
+  readonly shop_app_tracking_button_variant_key: string | null
+  readonly shop_app_tracking_url: string | null
   readonly total_tip: Cents
   readonly transactions: readonly Transaction[]
   readonly unfulfilled_line_items: readonly LineItem[]

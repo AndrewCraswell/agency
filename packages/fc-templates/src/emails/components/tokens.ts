@@ -22,6 +22,8 @@ export const color = {
   paid: "#1e7a46",
   paidLine: "#bfe3cc",
   paidSoft: "#e7f4ea",
+  /* Shop's own brand purple, which the Shop app button has to keep to stay recognisable. */
+  shop: "#5433eb",
   surface: "#f4f4f2",
   surfaceDark: "#0b0b0c"
 } as const

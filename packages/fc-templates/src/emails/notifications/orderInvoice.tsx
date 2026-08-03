@@ -5,6 +5,7 @@ import { EmailFooter } from "../components/EmailFooter.tsx"
 import { EmailHeader } from "../components/EmailHeader.tsx"
 import { EmailLead, EmailTitle } from "../components/EmailIntro.tsx"
 import { ItemList, ItemRow } from "../components/ItemRow.tsx"
+import { OrderDiscountRows, OrderWideDiscount, SubtotalRow } from "../components/OrderDiscounts.tsx"
 import { SupportBand } from "../components/SupportBand.tsx"
 import { Totals, TotalsRow, TotalsSum } from "../components/Totals.tsx"
 
@@ -28,14 +29,9 @@ export const orderInvoice = defineTemplate({
         <For each={vars.line_items}>{(line) => <ItemRow line={line} variantTitle={line.variant_title} />}</For>
       </ItemList>
       <Totals>
-        <TotalsRow label="Subtotal">
-          <Var filters={["money"]} path={vars.subtotal_price} />
-        </TotalsRow>
-        <If test={gt(vars.total_discounts, 0)}>
-          <TotalsRow credit label="Discount">
-            −<Var filters={["money"]} path={vars.total_discounts} />
-          </TotalsRow>
-        </If>
+        <OrderWideDiscount order={vars} />
+        <SubtotalRow order={vars} />
+        <OrderDiscountRows order={vars} />
         <TotalsRow label="Shipping">
           <If test={gt(vars.shipping_price, 0)}>
             <Var filters={["money"]} path={vars.shipping_price} />
