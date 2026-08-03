@@ -42,10 +42,10 @@ export const EmailHeader = ({ eyebrow }: EmailHeaderProps) => (
           style={{
             color: color.onDark,
             fontFamily: font.display,
-            fontSize: 18,
+            fontSize: 24,
             fontWeight: 700,
-            letterSpacing: 3,
-            lineHeight: "22px"
+            letterSpacing: 4,
+            lineHeight: "29px"
           }}
         >
           <Var filters={["upcase"]} path={shopName} />
@@ -54,11 +54,11 @@ export const EmailHeader = ({ eyebrow }: EmailHeaderProps) => (
           style={{
             color: color.onDarkSoft,
             fontFamily: font.body,
-            fontSize: 9,
+            fontSize: 11,
             fontWeight: 600,
-            letterSpacing: 1.5,
-            lineHeight: "14px",
-            paddingTop: 2
+            letterSpacing: 2,
+            lineHeight: "16px",
+            paddingTop: 3
           }}
         >
           {eyebrow}
