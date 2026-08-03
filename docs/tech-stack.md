@@ -32,9 +32,9 @@ For building publishable TypeScript libraries.
 
 For building command-line tools.
 
-- ◻️ **commander** — command / argument framework.
-- ◻️ **@clack/prompts** — interactive prompts.
-- ◻️ **picocolors** — terminal colors (tiny, fast).
+- ✅ **commander** — command / argument framework.
+- ✅ **@clack/prompts** — interactive prompts.
+- ✅ **picocolors** — terminal colors (tiny, fast).
 - ◻️ **ink** — React for the terminal, for rich interactive CLIs.
 - ◻️ **c12** — Configuration file management.
 

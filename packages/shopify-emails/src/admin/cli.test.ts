@@ -3,6 +3,7 @@ import { join } from "node:path"
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { run } from "./cli.ts"
 import * as storeSource from "./store.ts"
+import * as wizard from "./wizard.ts"
 
 const root = join(import.meta.dirname, "..", "..")
 const made: string[] = []
@@ -34,23 +35,43 @@ afterAll(async () => {
 describe("run", () => {
   it("prints the usage when asked for help, and when given nothing at all", async () => {
     await run(["--help"])
-    expect(written).toContain("shopify-emails login --store")
+    expect(written).toContain("Usage: shopify-emails")
+    expect(written).toContain("npm install -g @shopify/cli")
 
     written = ""
     await run([])
-    expect(written).toContain("shopify-emails build")
+    expect(written).toContain("build")
+    expect(written).toContain("probe")
   })
 
   it("names the unknown command and shows what is available", async () => {
-    await expect(run(["publish"])).rejects.toThrow(/Unknown command "publish"/)
+    await expect(run(["publish"])).rejects.toThrow(/unknown command 'publish'/)
   })
 
-  it("refuses to log in without a store, since the token is sent to that host", async () => {
+  it("walks a bare invocation through the wizard when there is a terminal to ask in", async () => {
+    const guided = vi.spyOn(wizard, "runWizard").mockResolvedValue()
+    Reflect.set(process.stdin, "isTTY", true)
+
+    try {
+      await run([])
+    } finally {
+      Reflect.set(process.stdin, "isTTY", undefined)
+    }
+
+    expect(guided).toHaveBeenCalled()
+    expect(written).toBe("")
+  })
+
+  it("refuses to log in without a store, since there is no terminal to choose one in", async () => {
     await expect(run(["login"])).rejects.toThrow(/--store/)
   })
 
+  it("refuses to log out without a store, rather than dropping a token nobody picked", async () => {
+    await expect(run(["logout"])).rejects.toThrow(/--store/)
+  })
+
   it("refuses a store that is not a myshopify domain", async () => {
-    await expect(run(["login", "--store", "fencing.club"])).rejects.toThrow(/not a myshopify.com store domain/)
+    await expect(run(["login", "--store", "fencing.club"])).rejects.toThrow(/not a store handle/)
   })
 })
 
@@ -108,11 +129,11 @@ describe("run probe", () => {
 
 describe("run pull", () => {
   const loadOrderVariables = vi.fn<(id: string) => Promise<object>>()
-  const searchOrders = vi.fn<(search?: storeSource.OrderSearch) => Promise<readonly { id: string }[]>>()
+  const searchOrders = vi.fn<(search?: storeSource.OrderSearch) => Promise<storeSource.OrderPage>>()
 
   beforeEach(() => {
     loadOrderVariables.mockResolvedValue({ name: "#1001", shop: { name: "Fencing Club" } })
-    searchOrders.mockResolvedValue([{ id: "gid://shopify/Order/7" }])
+    searchOrders.mockResolvedValue({ next: undefined, orders: [{ id: "gid://shopify/Order/7" }] as never })
     vi.spyOn(storeSource, "createStoreSource").mockResolvedValue({
       domain: "fencing.myshopify.com",
       loadOrderVariables,
@@ -138,7 +159,7 @@ describe("run pull", () => {
   })
 
   it("says which store had nothing readable rather than failing on an empty list", async () => {
-    searchOrders.mockResolvedValueOnce([])
+    searchOrders.mockResolvedValueOnce({ next: undefined, orders: [] })
 
     await expect(run(["pull"])).rejects.toThrow(/No orders are readable on fencing.myshopify.com/)
   })

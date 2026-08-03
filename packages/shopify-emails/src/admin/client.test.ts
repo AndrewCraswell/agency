@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { ADMIN_API_VERSION, createAdminClient } from "./client.ts"
+import { ADMIN_API_VERSION, createTokenClient } from "./client.ts"
 
-const client = createAdminClient({ store: "fencing.myshopify.com", token: "shpat_secret" })
+const client = createTokenClient({ store: "fencing.myshopify.com", token: "shpat_secret" })
 const schema = z.object({ shop: z.object({ name: z.string() }) })
 const ask = () => client({ query: "{ shop { name } }", schema })
 
@@ -15,7 +15,7 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe("createAdminClient", () => {
+describe("createTokenClient", () => {
   it("posts to the pinned API version and returns the parsed data", async () => {
     const fetched = respond({ data: { shop: { name: "Fencing Club" } } })
 

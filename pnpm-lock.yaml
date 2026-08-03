@@ -561,9 +561,18 @@ importers:
 
   packages/shopify-emails:
     dependencies:
+      '@clack/prompts':
+        specifier: ^1.7.0
+        version: 1.7.0
+      commander:
+        specifier: ^15.0.0
+        version: 15.0.0
       liquidjs:
         specifier: ^10.27.2
         version: 10.27.2
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
       tsx:
         specifier: ^4.23.0
         version: 4.23.0
@@ -859,6 +868,14 @@ packages:
     engines: {node: '>=20.0.0', yarn: '>=1.22.18'}
     peerDependencies:
       storybook: ^0.0.0-0 || ^10.1.0 || ^10.1.0-0 || ^10.2.0-0 || ^10.3.0-0 || ^10.4.0-0 || ^10.5.0-0 || ^10.6.0-0
+
+  '@clack/core@1.4.3':
+    resolution: {integrity: sha1-HoMZdPgR1zNwfsZQ5Y9pDX10xfo=}
+    engines: {node: '>= 20.12.0'}
+
+  '@clack/prompts@1.7.0':
+    resolution: {integrity: sha1-LWztNjpgi6I/a5YRIFuDBshbvw0=}
+    engines: {node: '>= 20.12.0'}
 
   '@ctrl/tinycolor@3.6.1':
     resolution: {integrity: sha1-tsdaVqGUfMkW6gWHctZmosiTLzE=}
@@ -5117,6 +5134,10 @@ packages:
     resolution: {integrity: sha1-d2Fn22jHjzjczh+bjXuLmkiKv0Y=}
     engines: {node: '>=18'}
 
+  commander@15.0.0:
+    resolution: {integrity: sha1-lvOWHxKtrBeZ7z+9i8YdQFctGxE=}
+    engines: {node: '>=22.12.0'}
+
   common-tags@1.8.2:
     resolution: {integrity: sha1-lOuzwHbSYDJ0X9VPrOf2iO9aycY=}
     engines: {node: '>=4.0.0'}
@@ -8359,6 +8380,18 @@ snapshots:
       - '@chromatic-com/cypress'
       - '@chromatic-com/playwright'
       - '@chromatic-com/vitest'
+
+  '@clack/core@1.4.3':
+    dependencies:
+      fast-wrap-ansi: 0.2.2
+      sisteransi: 1.0.5
+
+  '@clack/prompts@1.7.0':
+    dependencies:
+      '@clack/core': 1.4.3
+      fast-string-width: 3.0.2
+      fast-wrap-ansi: 0.2.2
+      sisteransi: 1.0.5
 
   '@ctrl/tinycolor@3.6.1': {}
 
@@ -12819,6 +12852,8 @@ snapshots:
   commander@10.0.1: {}
 
   commander@13.1.0: {}
+
+  commander@15.0.0: {}
 
   common-tags@1.8.2: {}
 

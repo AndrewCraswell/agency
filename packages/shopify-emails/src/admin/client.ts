@@ -1,5 +1,4 @@
 import type { z } from "zod"
-import type { StoreCredentials } from "./credentials.ts"
 
 /** Pinned so a schema change shows up as a validation failure here, not as silently missing fields. */
 export const ADMIN_API_VERSION = "2026-04"
@@ -12,12 +11,19 @@ export type AdminRequest<T> = {
 
 export type AdminClient = <T>(request: AdminRequest<T>) => Promise<T>
 
+export type StoreCredentials = {
+  store: string
+  token: string
+}
+
 /*
+ * The direct route, for CI and for stores the Shopify CLI cannot reach.
+ *
  * GraphQL errors arrive with HTTP 200, so a response is only usable once `errors` has been ruled
  * out. Messages are passed through but the token never is: a failure here is the most likely thing
  * to end up pasted into an issue.
  */
-export const createAdminClient = ({ store, token }: StoreCredentials): AdminClient => {
+export const createTokenClient = ({ store, token }: StoreCredentials): AdminClient => {
   const endpoint = `https://${store}/admin/api/${ADMIN_API_VERSION}/graphql.json`
 
   return async ({ query, variables, schema }) => {
@@ -43,10 +49,10 @@ export const createAdminClient = ({ store, token }: StoreCredentials): AdminClie
   }
 }
 
-const hasData = (body: unknown): body is { data: unknown } =>
+export const hasData = (body: unknown): body is { data: unknown } =>
   typeof body === "object" && body !== null && "data" in body
 
-const extractErrors = (body: unknown): string | undefined => {
+export const extractErrors = (body: unknown): string | undefined => {
   if (typeof body !== "object" || body === null || !("errors" in body)) {
     return undefined
   }

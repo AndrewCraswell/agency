@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises"
 import { relative } from "node:path"
-import { parseArgs } from "node:util"
+import { Command, CommanderError } from "commander"
 import {
   assetQuestions,
   buildProbe,
@@ -10,97 +10,17 @@ import {
 } from "../probe/build.ts"
 import { parseProbe, summariseProbe } from "../probe/capture.ts"
 import { buildTemplates, GMAIL_CLIP_BYTES } from "./build.ts"
-import { createAdminClient } from "./client.ts"
-import { parseStoreDomain, saveToken } from "./credentials.ts"
-import { shopResponse } from "./mapOrder.ts"
-import { SHOP_QUERY } from "./queries.ts"
+import { DEFAULT_VALUES, resetValues, startPreview } from "./preview.ts"
+import { READ_SCOPES } from "./shopifyCli.ts"
 import { createStoreSource, type StoreSource } from "./store.ts"
+import { login, logout } from "./storeSetup.ts"
+import { runWizard } from "./wizard.ts"
 
 /*
- * `login` and `build`: authenticate once, then compile the templates into the files that get pasted
- * into the admin. Reading live orders is the preview's job, not a command's — see `./store.ts`.
+ * Every command this package answers to, and the wizard a bare `pnpm cli` gets instead.
  *
- * Authentication is a custom app the merchant creates in their own admin, not OAuth. There is no
- * hosted app here to redirect to, and a merchant-created custom app already carries the customer
- * data access that a public app would have to apply for. The trade is that the token is long-lived,
- * which is why it never appears in an argument, a dotenv file, or this repository.
+ * Reading live orders is also the preview's job rather than only a command's — see `./store.ts`.
  */
-
-const usage = `
-shopify-emails login --store <shop>.myshopify.com
-shopify-emails build [--dir <src>] [--out <dir>]
-shopify-emails pull [--store <shop>] [--order <name|gid>] [--out <file>]
-shopify-emails probe [--for notification|marketing|asset] [--names a,b] [--out <file>]
-shopify-emails probe --capture <file.html> [--for notification|marketing|asset] [--out <file>]
-
-Create the app under Settings > Apps > Develop apps, grant read_orders and read_customers,
-install it, and reveal the Admin API access token. Only the last 60 days of orders are
-readable unless Shopify has granted the store read_all_orders.
-
-Notification templates have no API. \`probe\` prints a throwaway template to paste into one
-in the admin; preview it, save the rendered HTML, and pass it back with --capture.
-
-\`--for asset\` asks what the CDN filters resolve to instead of what the drops hold, and its
-capture prints the resolved URLs as JSON rather than a present-or-absent report.
-
-\`pull\` writes what a live order hands a template, so a preview can be read against real
-values. Notification-only drops are not in it, because no API serves them: that is \`probe\`.
-`.trim()
-
-/** Never echoed, and never taken from an argument, so it cannot be recovered from shell history. */
-const readToken = async (): Promise<string> => {
-  if (process.env.SHOPIFY_ADMIN_TOKEN) {
-    return process.env.SHOPIFY_ADMIN_TOKEN
-  }
-  if (!process.stdin.isTTY) {
-    const piped: Buffer[] = []
-    for await (const chunk of process.stdin) {
-      piped.push(Buffer.from(chunk))
-    }
-    return Buffer.concat(piped).toString("utf8").trim()
-  }
-
-  process.stdout.write("Admin API access token: ")
-  process.stdin.setRawMode(true)
-  process.stdin.resume()
-
-  let token = ""
-  for await (const chunk of process.stdin) {
-    const input = Buffer.from(chunk).toString("utf8")
-    if (input === "\r" || input === "\n" || input === "\u0004") {
-      break
-    }
-    if (input === "\u0003") {
-      process.stdin.setRawMode(false)
-      throw new Error("Cancelled. Run `login --store <shop>.myshopify.com` again when you have the token.")
-    }
-    token += input
-  }
-  process.stdin.setRawMode(false)
-  process.stdin.pause()
-  process.stdout.write("\n")
-  return token.trim()
-}
-
-const login = async (store: string | undefined): Promise<void> => {
-  if (!store) {
-    throw new Error("login needs --store <shop>.myshopify.com")
-  }
-  const domain = parseStoreDomain(store)
-  const token = await readToken()
-  if (!token) {
-    throw new Error(
-      "No token was provided. Reveal the Admin API access token under API credentials in the custom app, then paste it at the prompt."
-    )
-  }
-
-  // Proving the token works now beats a confusing failure the first time a preview loads an order.
-  const client = createAdminClient({ store: domain, token })
-  const { shop } = await client({ query: SHOP_QUERY, schema: shopResponse })
-
-  await saveToken(domain, token)
-  process.stdout.write(`Signed in to ${shop.name} (${domain})\n`)
-}
 
 const questions: Readonly<Record<string, ProbeQuestions>> = {
   asset: assetQuestions,
@@ -177,7 +97,7 @@ const resolveOrderId = async (source: StoreSource, order?: string): Promise<stri
     return order
   }
   const found = await source.searchOrders(order ? { first: 1, query: `name:${order}` } : { first: 1 })
-  const id = found[0]?.id
+  const id = found.orders[0]?.id
   if (!id) {
     const which = order ? `No order ${order} is readable` : "No orders are readable"
     throw new Error(`${which} on ${source.domain}. Only the last 60 days are, without read_all_orders.`)
@@ -203,55 +123,151 @@ const pull = async ({ order, out, store }: PullOptions): Promise<void> => {
   process.stdout.write(json)
 }
 
-export const run = async (argv: readonly string[]): Promise<void> => {
-  const { values, positionals } = parseArgs({
-    args: [...argv],
-    allowPositionals: true,
-    options: {
-      store: { type: "string" },
-      dir: { type: "string", default: "src/emails" },
-      out: { type: "string" },
-      order: { type: "string" },
-      for: { type: "string", default: "notification" },
-      names: { type: "string" },
-      capture: { type: "string" },
-      help: { type: "boolean", default: false }
-    }
-  })
-
-  const command = positionals[0]
-  if (values.help || !command) {
-    process.stdout.write(`${usage}\n`)
-    return
+const build = async (dir: string, out: string): Promise<void> => {
+  const built = await buildTemplates({ dir, out })
+  for (const template of built) {
+    process.stdout.write(`${relative(process.cwd(), template.body)}\n${relative(process.cwd(), template.subject)}\n`)
   }
-  if (command === "login") {
-    await login(values.store)
-    return
-  }
-  if (command === "probe") {
-    await probe(values)
-    return
-  }
-  if (command === "pull") {
-    await pull(values)
-    return
-  }
-  if (command === "build") {
-    const built = await buildTemplates({ dir: values.dir, out: values.out ?? "dist" })
-    for (const template of built) {
-      process.stdout.write(`${relative(process.cwd(), template.body)}\n${relative(process.cwd(), template.subject)}\n`)
-    }
-    const noun = built.length === 1 ? "template" : "templates"
+  const noun = built.length === 1 ? "template" : "templates"
+  process.stdout.write(
+    `\n${built.length} ${noun}. Paste each .liquid into the matching notification body and its .subject.txt into the subject.\n`
+  )
+  for (const template of built.filter(({ bytes }) => bytes > GMAIL_CLIP_BYTES)) {
+    const kb = Math.round(template.bytes / 1024)
     process.stdout.write(
-      `\n${built.length} ${noun}. Paste each .liquid into the matching notification body and its .subject.txt into the subject.\n`
+      `\n${template.id} compiles to ${kb} KB, past the ${Math.round(GMAIL_CLIP_BYTES / 1024)} KB where Gmail clips a message. Every loop only grows that.\n`
     )
-    for (const template of built.filter(({ bytes }) => bytes > GMAIL_CLIP_BYTES)) {
-      const kb = Math.round(template.bytes / 1024)
-      process.stdout.write(
-        `\n${template.id} compiles to ${kb} KB, past the ${Math.round(GMAIL_CLIP_BYTES / 1024)} KB where Gmail clips a message. Every loop only grows that.\n`
-      )
+  }
+}
+
+const setupNotes = `
+Run with no command at all to be walked through connecting a store and reading from it.
+
+A store is named by its handle — the 8f3f5f-3 in admin.shopify.com/store/8f3f5f-3 — though a
+whole URL or myshopify domain is accepted too.
+
+login authorises this store through the Shopify CLI, which opens a browser and keeps the
+grant itself. Nothing to create, and no token to paste. It needs the CLI on PATH:
+npm install -g @shopify/cli
+
+Only the last 60 days of orders are readable unless Shopify has granted the store
+read_all_orders. Set SHOPIFY_STORE and SHOPIFY_ADMIN_TOKEN to skip the browser entirely,
+which is how this runs unattended.
+
+Run login with no options to switch between the stores already set up.
+`
+
+/* Rebuilt per run, because a Command holds the values it last parsed. */
+const createProgram = (): Command => {
+  const program = new Command()
+    .name("shopify-emails")
+    .description("Compile typed React Email templates into Shopify notification Liquid.")
+    .configureOutput({ writeErr: () => undefined })
+    .exitOverride()
+    .addHelpText("after", setupNotes)
+
+  program
+    .command("login")
+    .description("authorise a store in the browser, or switch to one already set up")
+    .option("--store <handle>", "the store handle, which skips the prompt")
+    .addHelpText("after", `\nAsks the Shopify CLI for ${READ_SCOPES}. Nothing is ever written to the store.\n`)
+    .action(async ({ store }: { store?: string }) => {
+      await login(store)
+    })
+
+  program
+    .command("logout")
+    .description("forget a store, leaving its authorisation to the Shopify CLI")
+    .option("--store <handle>", "the store handle, which skips the prompt")
+    .action(async ({ store }: { store?: string }) => {
+      await logout(store)
+    })
+
+  program
+    .command("build")
+    .description("compile every template into paste-ready Liquid")
+    .option("--dir <src>", "where the templates are", "src/emails")
+    .option("--out <dir>", "where to write them", "dist")
+    .action(async ({ dir, out }: { dir: string; out: string }) => {
+      await build(dir, out)
+    })
+
+  program
+    .command("preview")
+    .description("open the templates in a browser, against a pulled order")
+    .option("--dir <src>", "where the templates are", "src/emails")
+    .option("--values <file>", "the JSON pull wrote", DEFAULT_VALUES)
+    .addHelpText(
+      "after",
+      "\nThe samples answer for anything the order does not carry, so a gift card or a campaign\nstill renders. Pull again and restart to pick up a newer order.\n"
+    )
+    .action(async (options: { dir: string; values: string }) => {
+      await startPreview(options)
+    })
+
+  program
+    .command("reset")
+    .description("throw away a pulled order and preview against the samples again")
+    .option("--values <file>", "the JSON to remove", DEFAULT_VALUES)
+    .addHelpText(
+      "after",
+      "\nOne real order rarely carries a discount, a gift card, a partial fulfilment and a second\nline at once. The samples were built to, which is why they are worth going back to.\n"
+    )
+    .action(async ({ values }: { values: string }) => {
+      await resetValues(values)
+    })
+
+  program
+    .command("pull")
+    .description("write what a live order hands a template, as JSON")
+    .option("--store <handle>", "which stored store to read, rather than the active one")
+    .option("--order <name|gid>", "an order name such as #1001, or a gid")
+    .option("--out <file>", "write to a file instead of stdout")
+    .addHelpText(
+      "after",
+      "\nNotification-only drops are not in it, because no API serves them: that is probe.\nA fixture goes stale the moment the order does, so this is for reading, not committing.\n"
+    )
+    .action(async (options: PullOptions) => {
+      await pull(options)
+    })
+
+  program
+    .command("probe")
+    .description("print the variable probe, or read a captured run back")
+    .option("--for <target>", "notification, marketing, or asset", "notification")
+    .option("--names <a,b>", "ask about only these drops")
+    .option("--capture <file.html>", "read a saved preview instead of printing the probe")
+    .option("--out <file>", "write to a file instead of stdout")
+    .addHelpText(
+      "after",
+      "\nNotification templates have no API. probe prints a throwaway template to paste into one\nin the admin; preview it, save the rendered HTML, and pass it back with --capture.\n\n--for asset asks what the CDN filters resolve to instead of what the drops hold, and its\ncapture prints the resolved URLs as JSON rather than a present-or-absent report.\n"
+    )
+    .action(async (options: ProbeOptions) => {
+      await probe(options)
+    })
+
+  return program
+}
+
+export const run = async (argv: readonly string[]): Promise<void> => {
+  const program = createProgram()
+  if (argv.length === 0) {
+    /* Nothing to guide anybody through without a terminal to prompt in, so a script still gets help. */
+    if (process.stdin.isTTY) {
+      await runWizard()
+      return
     }
+    program.outputHelp()
     return
   }
-  throw new Error(`Unknown command "${command}"\n\n${usage}`)
+
+  try {
+    await program.parseAsync([...argv], { from: "user" })
+  } catch (error) {
+    /* Help arrives here only because `exitOverride` turns commander's own exit into a throw. */
+    if (error instanceof CommanderError && error.code.startsWith("commander.help")) {
+      return
+    }
+    throw error
+  }
 }

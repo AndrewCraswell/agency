@@ -185,6 +185,6 @@ named after the id Shopify uses in the admin URL and in `gid://shopify/EmailTemp
 | `ShopSummary`       | type                                                   |
 | `OrderSearch`       | type                                                   |
 
-Credentials come from `shopify-emails login`, or from `SHOPIFY_STORE` and `SHOPIFY_ADMIN_TOKEN`. `shopify-emails pull`
-writes one order's variables out as JSON for reading; render through this API when you want data that has not gone
-stale.
+Access comes from `shopify-emails login`, which delegates to the Shopify CLI, or from `SHOPIFY_STORE` and
+`SHOPIFY_ADMIN_TOKEN`. `shopify-emails pull` writes one order's variables out as JSON for reading; render through this
+API when you want data that has not gone stale.

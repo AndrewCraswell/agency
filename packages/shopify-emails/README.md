@@ -578,11 +578,34 @@ Pass an engine as the second argument to render through your own; without one it
 across previews.
 
 ```bash
-pnpm exec email dev --dir src/emails
+shopify-emails preview --dir src/emails
 ```
 
+That starts `email dev` with the JSON `pull` wrote laid over the samples, so the preview shows the store it was read
+from. `--values <file>` names a different pull; `.fixtures/order.json` is assumed. Without one, the samples answer.
+
+The overlay is a merge rather than a swap, and the pull only writes what it actually found. A pull reads the order and
+everything hanging off it — the shipment, the return, the refund, the payment schedule, the business buyer and the
+pickup location — plus the store's newest gift card and abandoned cart, so most families render against live data. A
+name the store has none of is left out entirely rather than written as null, which is what keeps that template on its
+sample instead of blanking it. The read happens once as the server starts, so a newer pull needs a restart.
+
+What no pull can fill is the handful of values Shopify only computes as it sends: `unsubscribe_url`,
+`checkout_payment_collection_url`, `email_confirmation_url`, `invoice_url`, the customer account activation and reset
+links, `routes`, and the merchant's email logo and accent colour. Those keep the sample's, because there is no Admin API
+that answers them.
+
+```bash
+shopify-emails reset
+```
+
+That removes the pulled JSON and puts the samples back in charge. One real order rarely carries a discount, a gift card,
+a partial fulfilment and a second line at once, and the samples were built to, so going back is worth doing whenever you
+are reading layout rather than checking a particular order.
+
 The variables arrive as props, which makes the dev server's props panel an override for the drops: `PreviewProps` seeds
-the panel with the sample for the template's type, and editing that JSON re-renders against the edit.
+the panel with the sample for the template's type, or the pull laid over it, and editing that JSON re-renders against
+the edit.
 
 ```ts
 type PreviewProps = { values: TemplateValues; highlight?: boolean }
@@ -652,44 +675,72 @@ the doctype, react-email's marker comments, and whitespace the pretty-printer ad
 Previewing against invented data only proves the template renders. To see what a customer will see, point it at the
 store.
 
-Authentication is a **custom app you create in your own admin**, not OAuth. There is no hosted app here to redirect to,
-and a merchant-created custom app already carries the customer data access that a public app would have to apply for.
-
-1. In the Shopify admin, go to **Settings → Apps and sales channels → Develop apps**.
-2. **Create an app**, name it something like `Email previews`, and pick yourself as the developer.
-3. Open **Configuration → Admin API integration** and grant `read_orders` and `read_customers`. Nothing else is used,
-   and nothing is ever written.
-4. **Install app**, then under **API credentials** reveal the **Admin API access token**. It starts `shpat_`, and
-   Shopify shows it once.
-5. Run the login command and paste it at the prompt:
+If you would rather be asked than read, run the CLI with no command at all and it will walk you through everything below
+and out the other side with a real order on disk:
 
 ```bash
-shopify-emails login --store your-shop.myshopify.com
+pnpm cli          # from packages/fc-templates
 ```
 
-The token is read from a hidden prompt or from stdin, never from an argument, so it cannot be recovered from shell
-history. It is written to a per-user config directory — `%APPDATA%\shopify-emails` on Windows,
-`~/Library/Application Support/shopify-emails` on macOS, `$XDG_CONFIG_HOME/shopify-emails` otherwise — and never to the
-repository. The command calls the API once before saving, so a bad token fails at login rather than the first time a
-preview loads.
+There is **nothing to create and no token to paste**. Authorisation is delegated to the
+[Shopify CLI](https://shopify.dev/docs/api/shopify-cli), which opens a browser, signs you in with the account you
+already use, and keeps the resulting grant itself. Install it once if you do not have it:
 
-On macOS and Linux the file is created `0600`, owner-only. Windows has no equivalent mode bit, so the file inherits the
-ACL of your profile directory; on a shared machine, confirm that directory is not readable by other accounts.
+```bash
+npm install -g @shopify/cli
+```
 
-For CI, or anywhere you would rather not write a file, set `SHOPIFY_STORE` and `SHOPIFY_ADMIN_TOKEN` instead. The
-environment wins over the saved file.
+Then:
+
+```bash
+shopify-emails login --store 8f3f5f-3
+```
+
+A store is named by its **handle** — the `8f3f5f-3` in `admin.shopify.com/store/8f3f5f-3`. A whole admin URL or a
+`.myshopify.com` domain is accepted too and normalised down to the same thing, so it does not matter which one you
+happen to have copied.
+
+The browser asks you to authorise a list of `read_` scopes and nothing else — orders, customers, products, policies,
+fulfillment orders, returns, payment terms, companies, gift cards and store credit, which together are what the pull
+reads. Everything here is read-only. Afterwards the command runs one query to confirm the grant works, so a missing
+scope fails at login rather than the first time a preview loads. Widening the list means signing in again, because a
+grant only covers the scopes it was asked for.
+
+Because the CLI never hands the token over, this package stores **no secret at all**. The only thing written to the
+per-user config directory — `%APPDATA%\shopify-emails` on Windows, `~/Library/Application Support/shopify-emails` on
+macOS, `$XDG_CONFIG_HOME/shopify-emails` otherwise — is a list of store handles and which one you picked last. The grant
+is short-lived and belongs to the Shopify CLI, which is a better arrangement than this package holding a permanent key
+to a store's whole order history.
+
+Several stores can be set up at once. Whichever you set up last is the one every other command reads; run `login` with
+no options to list them and pick a different one, and `logout` to forget one.
+
+```bash
+shopify-emails login    # lists the stores already set up, and switches to the one you pick
+shopify-emails logout   # forgets one, leaving the authorisation to the Shopify CLI
+```
+
+Switching re-checks the store against the API, so a lapsed grant is caught while you are still thinking about access
+rather than halfway through a preview. Both commands need a terminal to prompt in; pass `--store` in a script.
+
+Queries run as `shopify store execute` subprocesses, which costs a second or two each. That is the price of not holding
+the credential, and it is only paid when a preview actually asks for an order.
+
+For CI, or anywhere a browser is not available, set `SHOPIFY_STORE` and `SHOPIFY_ADMIN_TOKEN` to a custom app's token
+instead. The environment wins, and skips the CLI entirely. It is also the escape hatch for a store the Shopify CLI
+cannot reach.
 
 > Only the last 60 days of orders are readable unless Shopify has granted the store `read_all_orders`.
 
 ## Loading live orders and customers
 
-`@repo/shopify-emails/store` is a separate entry point because it reads a token from disk and talks to the Admin API. It
-is Node-only by design: keeping it out of the main entry point means the template DSL stays bundlable for a browser.
+`@repo/shopify-emails/store` is a separate entry point because it spawns the Shopify CLI to talk to the Admin API. It is
+Node-only by design: keeping it out of the main entry point means the template DSL stays bundlable for a browser.
 
 ```ts
 import { createStoreSource } from "@repo/shopify-emails/store"
 
-const store = await createStoreSource() // or ("your-shop.myshopify.com") when several are logged in
+const store = await createStoreSource() // or ("8f3f5f-3") to override the store `login` selected
 
 const shop = await store.shop()
 const orders = await store.searchOrders({ query: "financial_status:paid", first: 20 })
@@ -699,8 +750,9 @@ const values = await store.loadOrderVariables(orders[0].id)
 ```
 
 `searchOrders` and `searchCustomers` take Shopify's own search syntax and return summaries meant for a picker — id,
-name, date, financial status, total for orders; name, email, order count for customers. `loadOrderVariables` returns the
-notification variables themselves, shaped the way Shopify shapes them, so they drop straight into a preview:
+name, date, financial status, item count, customer and total for orders; name, email, order count for customers.
+`loadOrderVariables` returns the notification variables themselves, shaped the way Shopify shapes them, so they drop
+straight into a preview:
 
 ```ts
 const html = renderTemplateValues(orderConfirmation, engine, values)
@@ -776,18 +828,41 @@ running anything first.
 ## The CLI
 
 ```
-shopify-emails login --store <shop>.myshopify.com
+shopify-emails                      # no command: the guided run
+shopify-emails login [--store <handle>]
+shopify-emails logout [--store <handle>]
 shopify-emails build [--dir <src>] [--out <dir>]
-shopify-emails pull [--store <shop>] [--order <name|gid>] [--out <file>]
+shopify-emails preview [--dir <src>] [--values <file>]
+shopify-emails reset [--values <file>]
+shopify-emails pull [--store <handle>] [--order <name|gid>] [--out <file>]
 shopify-emails probe [--for notification|marketing|asset] [--names a,b] [--out <file>]
 shopify-emails probe --capture <file.html> [--for notification|marketing|asset] [--out <file>]
 ```
 
-`login` stores an Admin API token for a store — see [Connecting a store](#connecting-a-store) for how to get one.
-`build` compiles every template under `--dir` into paste-ready files — see
-[Building the Liquid files](#building-the-liquid-files). `probe` prints the variable probe and reads its result back —
-see [Probing the notification variables](#probing-the-notification-variables). `pull` writes what one live order hands a
-template.
+With no command and a terminal to prompt in, the CLI connects a store and then offers the things worth doing with one:
+pull an order, write a probe, build the templates, switch store. It exists because the commands below are each clear on
+their own and say nothing about which to run first. Piped or scripted, the same invocation prints the usage instead,
+since there is nobody there to ask.
+
+`login` authorises a store through the Shopify CLI, or switches between the stores already set up — see
+[Connecting a store](#connecting-a-store). `logout` forgets one. `build` compiles every template under `--dir` into
+paste-ready files — see [Building the Liquid files](#building-the-liquid-files). `probe` prints the variable probe and
+reads its result back — see [Probing the notification variables](#probing-the-notification-variables). `pull` writes
+what one live order hands a template, and `preview` opens the templates against it — see
+[Previewing in the React Email dev server](#previewing-in-the-react-email-dev-server). `reset` throws the pulled order
+away again, which is how you get back to samples that cover more than any one order does.
+
+It is built on [commander](https://github.com/tj/commander.js) and
+[@clack/prompts](https://github.com/bombshell-dev/clack), so `--help` on any command is generated from that command
+rather than kept in step by hand.
+
+Inside this repo there is no installed binary, so the same commands run through a package script. Run them from the
+package that holds the templates, since `build` and the guided run both default to its `src/emails`:
+
+```bash
+pnpm cli probe --for asset                     # from packages/fc-templates
+pnpm --filter @repo/fc-templates cli build     # from anywhere
+```
 
 `pull` takes the most recent readable order, or the one named by `--order` — either as `#1001` or as a `gid://` — and
 writes its variables as JSON. It is for reading, and for seeding a dev-time lookup. It is not for committing: a fixture

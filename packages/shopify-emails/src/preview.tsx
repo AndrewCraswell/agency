@@ -3,6 +3,7 @@
  * says nothing about this package's own files, so each one states the runtime it needs. */
 import { createShopifyEngine } from "./filters/engine.ts"
 import type { LiquidEvaluator, TemplateValues } from "./liquid/mode.ts"
+import { previewValues } from "./previewValues.ts"
 import { renderTemplateValues } from "./renderValues.tsx"
 import { templateSamples } from "./samples/templates.ts"
 import type { TemplateDefinition } from "./template.ts"
@@ -12,9 +13,10 @@ import type { TemplateDefinition } from "./template.ts"
  * harness as any other React Email component.
  *
  * The variables arrive as props, which is what makes the dev server's props panel an override for
- * the drop: `PreviewProps` seeds the panel with the sample shipped for the template's type, and
- * editing that JSON re-renders against the edit. They sit under `values` so the panel can also carry
- * settings of its own, such as `highlight`, without either shadowing the other.
+ * the drop: `PreviewProps` seeds the panel with the sample shipped for the template's type, or with
+ * a pulled order laid over it, and editing that JSON re-renders against the edit. They sit under
+ * `values` so the panel can also carry settings of its own, such as `highlight`, without either
+ * shadowing the other.
  *
  * The subject is not shown here. React Email's render keeps only the email document, so anything
  * drawn beside it is discarded, and the harness has no subject chrome of its own.
@@ -54,6 +56,6 @@ export const definePreview = <TVariables extends object>(
     return <div dangerouslySetInnerHTML={{ __html: markup }} />
   }
   Preview.displayName = template.id
-  Preview.PreviewProps = { highlight, values: templateSamples[template.type] }
+  Preview.PreviewProps = { highlight, values: previewValues(templateSamples[template.type]) }
   return Preview
 }

@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "shopify-emails build --dir src/emails --out dist",
-    "dev": "email dev --dir src/emails",
+    "cli": "shopify-emails",
+    "dev": "shopify-emails preview --dir src/emails",
     "check:types": "tsc --noEmit",
     "check:unused": "knip --directory ../.. --workspace packages/fc-templates",
     "lint": "oxlint --max-warnings=0",

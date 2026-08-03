@@ -24,11 +24,30 @@ beforeEach(() => {
   vi.stubEnv("SHOPIFY_ADMIN_TOKEN", "shpat_secret")
   answers.Shop = {
     shop: {
+      id: "gid://shopify/Shop/84825276713",
       name: "Fencing Club",
       email: "hello@fencing.club",
+      contactEmail: null,
+      description: null,
       url: "https://fencing.club",
-      shopAddress: { address1: "1 Piste Way", city: "Boston", provinceCode: "MA", zip: "02110", country: "US" }
-    }
+      myshopifyDomain: "fencing.myshopify.com",
+      currencyCode: "USD",
+      currencyFormats: { moneyFormat: "${{amount}}", moneyWithCurrencyFormat: "${{amount}} USD" },
+      primaryDomain: { host: "fencing.club", url: "https://fencing.club" },
+      shopPolicies: [],
+      shopAddress: {
+        address1: "1 Piste Way",
+        address2: null,
+        city: "Boston",
+        province: "Massachusetts",
+        provinceCode: "MA",
+        zip: "02110",
+        country: "US",
+        phone: null
+      }
+    },
+    giftCards: { nodes: [] },
+    abandonedCheckouts: { nodes: [] }
   }
   fetched()
 })
@@ -55,12 +74,15 @@ describe("createStoreSource", () => {
   it("lower-cases financial status, because that is how a template compares it", async () => {
     answers.Orders = {
       orders: {
+        pageInfo: { hasNextPage: true, endCursor: "eyJsYXN0X2lkIjox" },
         nodes: [
           {
             id: "gid://shopify/Order/1",
             name: "#1001",
             createdAt: "2026-01-05T10:00:00Z",
             displayFinancialStatus: "PAID",
+            currentSubtotalLineItemsQuantity: 3,
+            customer: { displayName: "Alex Kim" },
             totalPriceSet: { shopMoney: { amount: "181.48", currencyCode: "USD" } }
           }
         ]
@@ -68,27 +90,35 @@ describe("createStoreSource", () => {
     }
     const store = await createStoreSource()
 
-    expect(await store.searchOrders({ query: "financial_status:paid" })).toEqual([
-      {
-        id: "gid://shopify/Order/1",
-        name: "#1001",
-        createdAt: "2026-01-05T10:00:00Z",
-        financialStatus: "paid",
-        total: "181.48",
-        currency: "USD"
-      }
-    ])
+    expect(await store.searchOrders({ query: "financial_status:paid" })).toEqual({
+      next: "eyJsYXN0X2lkIjox",
+      orders: [
+        {
+          id: "gid://shopify/Order/1",
+          name: "#1001",
+          createdAt: "2026-01-05T10:00:00Z",
+          financialStatus: "paid",
+          items: 3,
+          customer: "Alex Kim",
+          total: "181.48",
+          currency: "USD"
+        }
+      ]
+    })
   })
 
   it("fills in the fields the API may leave null, so a picker has something to show", async () => {
     answers.Orders = {
       orders: {
+        pageInfo: { hasNextPage: false, endCursor: null },
         nodes: [
           {
             id: "gid://shopify/Order/2",
             name: "#1002",
             createdAt: "2026-01-06T10:00:00Z",
             displayFinancialStatus: null,
+            currentSubtotalLineItemsQuantity: 1,
+            customer: null,
             totalPriceSet: null
           }
         ]
@@ -96,16 +126,21 @@ describe("createStoreSource", () => {
     }
     const store = await createStoreSource()
 
-    expect(await store.searchOrders()).toEqual([
-      {
-        id: "gid://shopify/Order/2",
-        name: "#1002",
-        createdAt: "2026-01-06T10:00:00Z",
-        financialStatus: "",
-        total: "0",
-        currency: ""
-      }
-    ])
+    expect(await store.searchOrders()).toEqual({
+      next: undefined,
+      orders: [
+        {
+          id: "gid://shopify/Order/2",
+          name: "#1002",
+          createdAt: "2026-01-06T10:00:00Z",
+          financialStatus: "",
+          items: 1,
+          customer: "",
+          total: "0",
+          currency: ""
+        }
+      ]
+    })
     expect(sent[0]).toContain(`"first":20`)
   })
 
