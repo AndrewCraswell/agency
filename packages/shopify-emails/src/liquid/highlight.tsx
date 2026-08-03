@@ -87,9 +87,7 @@ export const decorateAttributeDrops = (html: string): string => {
     .toSorted((left, right) => right.at - left.at)
     .reduce((carry, edit) => carry.slice(0, edit.at) + edit.insert + carry.slice(edit.at + edit.remove), html)
 
-  /* Two-tone because buttons and the logo sit on near-black bands, where a single amber line is
-   * lost. White carries the ring there, amber against the page, and both follow the element's own
-   * `border-radius`. `box-shadow` rather than `outline` so a client's `img { outline: none }` and
-   * the element's corners are both respected, and neither ring takes up space. */
-  return `${decorated}<style>[data-liquid]{box-shadow:0 0 0 2px #fff,0 0 0 4px ${RING};outline:0}</style>`
+  /* `box-shadow` rather than `outline` so a client's `img { outline: none }` and the element's own
+   * corners are both respected, and the ring takes up no space. */
+  return `${decorated}<style>[data-liquid]{box-shadow:0 0 0 2px ${RING};outline:0}</style>`
 }
