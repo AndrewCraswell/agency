@@ -481,6 +481,9 @@ describe("mapOrderToVariables", () => {
 
   it("leaves a name out where the order has none, so that template keeps its sample", () => {
     expect(vars).not.toHaveProperty("po_number")
-    expect(vars).not.toHaveProperty("line_items_including_zero_quantity")
+  })
+
+  it("writes every line to the edited-order drop, which Shopify sets whether or not one was removed", () => {
+    expect(vars.line_items_including_zero_quantity).toEqual(vars.line_items)
   })
 })

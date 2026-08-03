@@ -824,7 +824,8 @@ export const mapOrderToVariables = (order: AdminOrder, store: AdminStore): Pulle
       items_to_fulfill_count: unfulfilled.reduce((total, line) => total + line.quantity, 0),
       service_name: text(order.shippingLine?.title)
     }),
-    ...(allLines.length > lineItems.length && { line_items_including_zero_quantity: allLines }),
+    /* Shopify always sets this on an edited order, so it is written even when nothing was removed. */
+    line_items_including_zero_quantity: allLines,
     ...(order.poNumber && { po_number: order.poNumber }),
     ...(location && { location_name: location }),
     ...(companyLocation && { company_location: companyLocation }),
