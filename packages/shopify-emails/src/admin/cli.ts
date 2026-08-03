@@ -10,10 +10,12 @@ import {
 } from "../probe/build.ts"
 import { parseProbe, summariseProbe } from "../probe/capture.ts"
 import { buildTemplates, GMAIL_CLIP_BYTES } from "./build.ts"
+import { connectToStore } from "./connect.ts"
 import { DEFAULT_VALUES, resetValues, startPreview } from "./preview.ts"
-import { READ_SCOPES } from "./shopifyCli.ts"
+import { SCOPES } from "./shopifyCli.ts"
 import { createStoreSource, type StoreSource } from "./store.ts"
 import { login, logout } from "./storeSetup.ts"
+import { uploadAssets } from "./upload.ts"
 import { runWizard } from "./wizard.ts"
 
 /*
@@ -123,6 +125,21 @@ const pull = async ({ order, out, store }: PullOptions): Promise<void> => {
   process.stdout.write(json)
 }
 
+type UploadOptions = {
+  readonly store?: string
+}
+
+/*
+ * Gmail will not render a `data:` image, so an icon has to live somewhere with a URL. The store's
+ * own CDN is that somewhere: it is already serving the logo, and it outlives any template edit.
+ */
+const upload = async (files: readonly string[], { store }: UploadOptions): Promise<void> => {
+  const { client } = await connectToStore(store)
+  for (const asset of await uploadAssets(client, files)) {
+    process.stdout.write(`${asset.name}\n${asset.url}\n\n`)
+  }
+}
+
 const build = async (dir: string, out: string): Promise<void> => {
   const built = await buildTemplates({ dir, out })
   for (const template of built) {
@@ -170,7 +187,7 @@ const createProgram = (): Command => {
     .command("login")
     .description("authorise a store in the browser, or switch to one already set up")
     .option("--store <handle>", "the store handle, which skips the prompt")
-    .addHelpText("after", `\nAsks the Shopify CLI for ${READ_SCOPES}. Nothing is ever written to the store.\n`)
+    .addHelpText("after", `\nAsks the Shopify CLI for ${SCOPES}. Nothing is ever written to the store.\n`)
     .action(async ({ store }: { store?: string }) => {
       await login(store)
     })
@@ -229,6 +246,19 @@ const createProgram = (): Command => {
     )
     .action(async (options: PullOptions) => {
       await pull(options)
+    })
+
+  program
+    .command("upload")
+    .description("host image assets on the store's CDN and print their URLs")
+    .argument("<files...>", "the images to host")
+    .option("--store <handle>", "which stored store to write to, rather than the active one")
+    .addHelpText(
+      "after",
+      "\nGmail drops a `data:` image, so an icon carried inline as base64 never renders there.\nHost it here and name it by URL instead. Needs write_files: log in again if the store was\nauthorised before this command existed.\n"
+    )
+    .action(async (files: readonly string[], options: UploadOptions) => {
+      await upload(files, options)
     })
 
   program

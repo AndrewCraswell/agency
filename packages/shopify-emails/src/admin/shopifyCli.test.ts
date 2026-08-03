@@ -2,7 +2,7 @@ import { execFile } from "node:child_process"
 import { writeFileSync } from "node:fs"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { z } from "zod"
-import { createCliClient, READ_SCOPES } from "./shopifyCli.ts"
+import { createCliClient, SCOPES } from "./shopifyCli.ts"
 
 vi.mock("node:child_process", () => ({
   execFile: vi.fn<(...args: never[]) => void>(),
@@ -119,13 +119,14 @@ describe("createCliClient", () => {
   })
 })
 
-describe("READ_SCOPES", () => {
-  it("asks for reading and nothing else", () => {
-    expect(READ_SCOPES.split(",").every((scope) => scope.startsWith("read_"))).toBe(true)
+describe("SCOPES", () => {
+  it("writes nothing but files, which is where a hosted icon goes", () => {
+    const written = SCOPES.split(",").filter((scope) => !scope.startsWith("read_"))
+    expect(written).toEqual(["write_files"])
   })
 
   it("asks for the policies a footer links to and the shipments a tracking email is about", () => {
-    expect(READ_SCOPES).toContain("read_legal_policies")
-    expect(READ_SCOPES).toContain("read_merchant_managed_fulfillment_orders")
+    expect(SCOPES).toContain("read_legal_policies")
+    expect(SCOPES).toContain("read_merchant_managed_fulfillment_orders")
   })
 })

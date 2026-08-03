@@ -29,8 +29,8 @@ const commandLine = (args: readonly string[]): string => `shopify ${args.join(" 
 
 const INSTALL = "Install it with `npm install -g @shopify/cli`."
 
-/** The scopes a template needs, and no others: this reads orders and never writes. */
-export const READ_SCOPES = [
+/** The scopes a template needs. Reading is the whole job bar `upload`, which hosts an image. */
+export const SCOPES = [
   "read_orders",
   "read_customers",
   "read_products",
@@ -43,7 +43,9 @@ export const READ_SCOPES = [
   "read_companies",
   "read_gift_cards",
   "read_store_credit_accounts",
-  "read_store_credit_account_transactions"
+  "read_store_credit_account_transactions",
+  "read_files",
+  "write_files"
 ].join(",")
 
 type Flags = Readonly<Record<string, string>>
@@ -95,7 +97,7 @@ export const authenticateStore = (store: string): Promise<void> =>
   new Promise((resolve, reject) => {
     const args = ["store", "auth"]
     const options: SpawnOptions = {
-      env: { ...process.env, SHOPIFY_FLAG_SCOPES: READ_SCOPES, SHOPIFY_FLAG_STORE: store },
+      env: { ...process.env, SHOPIFY_FLAG_SCOPES: SCOPES, SHOPIFY_FLAG_STORE: store },
       stdio: "inherit"
     }
     const child = useShell ? spawn(commandLine(args), { ...options, shell: true }) : spawn("shopify", args, options)
@@ -125,7 +127,9 @@ export const createCliClient =
         SHOPIFY_FLAG_QUERY: query,
         SHOPIFY_FLAG_STORE: store,
         SHOPIFY_FLAG_VARIABLES: JSON.stringify(variables ?? {}),
-        SHOPIFY_FLAG_VERSION: ADMIN_API_VERSION
+        SHOPIFY_FLAG_VERSION: ADMIN_API_VERSION,
+        /* The CLI refuses to write unless a caller says so per run, and `upload` is the only one that does. */
+        ...(/^\s*mutation\b/.test(query.trim()) && { SHOPIFY_FLAG_ALLOW_MUTATIONS: "1" })
       })
 
       const body: unknown = JSON.parse(await readFile(output, "utf8"))
