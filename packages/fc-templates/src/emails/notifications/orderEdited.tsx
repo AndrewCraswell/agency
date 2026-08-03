@@ -70,7 +70,7 @@ export const orderEdited = defineTemplate({
         billTo={<AddressParty address={vars.billing_address} kicker="BILLING ADDRESS" />}
         label="CUSTOMER INFORMATION"
         leftDetail={
-          <CustomerDetail label="PAYMENT" note={<Var filters={["money"]} path={vars.total_price} />}>
+          <CustomerDetail label="PAYMENT">
             <Find each={vars.transactions} match={(transaction) => isPresent(transaction.payment_details)}>
               {(transaction) => (
                 <PaymentBrand
@@ -82,8 +82,8 @@ export const orderEdited = defineTemplate({
           </CustomerDetail>
         }
         rightDetail={
-          <CustomerDetail label="SHIPPING METHOD" note={<Var path={vars.shipping_method.title} />}>
-            <Var filters={['date: "%B %-d, %Y"']} path={vars.created_at} />
+          <CustomerDetail label="SHIPPING METHOD">
+            <Var path={vars.shipping_method.title} />
           </CustomerDetail>
         }
         shipTo={<AddressParty address={vars.shipping_address} kicker="SHIPPING ADDRESS" />}

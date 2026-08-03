@@ -20,6 +20,17 @@ const buttonBackground = (variant: NonNullable<EmailButtonProps["variant"]>): st
 }
 
 /*
+ * Gmail's dark mode rewrites a background but leaves a border alone, so a filled button it darkens
+ * to the page colour still shows its edge. The hairline is the page colour, so nothing else sees it.
+ */
+const buttonBorder = (variant: NonNullable<EmailButtonProps["variant"]>): string => {
+  if (variant === "secondary") {
+    return `1px solid ${color.line}`
+  }
+  return variant === "primary" ? `1px solid ${color.bg}` : "none"
+}
+
+/*
  * React Email builds the padding out of table cells so the hit area survives clients that ignore
  * padding on an anchor. Outlook still measures the label rather than the box, which the team has
  * accepted rather than carry a VML fallback in every template.
@@ -33,7 +44,7 @@ export const EmailButton = ({ children, href, spacing = 24, variant = "primary" 
         href={href}
         style={{
           backgroundColor: buttonBackground(variant),
-          border: variant === "secondary" ? `1px solid ${color.line}` : "none",
+          border: buttonBorder(variant),
           borderRadius: radius,
           color: primary ? color.accentInk : color.ink,
           fontFamily: font.body,

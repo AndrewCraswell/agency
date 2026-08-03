@@ -88,7 +88,12 @@ export type TotalsSumProps = {
 export const TotalsSum = ({ children, label = "Total" }: TotalsSumProps) => (
   <>
     <Section style={{ padding: "6px 0" }}>
-      <Section className="dk-text" style={{ backgroundColor: color.ink, fontSize: 0, height: 1, lineHeight: "1px" }} />
+      {/* Mid grey rather than ink: clients that darken a message without reporting a scheme leave a
+          near-black rule invisible, and this reads on both a white and a dark page. */}
+      <Section
+        className="dk-rule"
+        style={{ backgroundColor: color.inkSoft, fontSize: 0, height: 1, lineHeight: "1px" }}
+      />
     </Section>
     <Row>
       <Column

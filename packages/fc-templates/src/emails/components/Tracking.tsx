@@ -72,6 +72,7 @@ export const Tracking = ({ fulfillment }: TrackingProps) => (
                 href={liquidValue(fulfillment.tracking_url)}
                 style={{
                   backgroundColor: accentFill(),
+                  border: `1px solid ${color.bg}`,
                   borderRadius: radius,
                   color: color.accentInk,
                   display: "inline-block",

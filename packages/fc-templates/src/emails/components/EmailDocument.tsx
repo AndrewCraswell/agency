@@ -106,9 +106,13 @@ a { text-decoration: none; }
   .dk-border { border-color: ${darkColor.line} !important; }
   .dk-text, .dk-text a { color: ${color.onDark} !important; }
   .dk-muted, .dk-muted a { color: ${color.onDarkSoft} !important; }
+  /* A hairline is a filled block, so it takes a background rather than the text or border colour. */
+  .dk-rule { background-color: ${color.onDark} !important; }
+  .dk-hairline { background-color: ${darkColor.line} !important; }
   .dk-chip { background-color: ${color.onDark} !important; color: ${color.ink} !important; }
-  .dk-btn { background-color: ${color.bg} !important; }
-  .dk-btn a { color: ${color.ink} !important; }
+  /* The gap a chip keeps from whatever it overlaps, which has to darken with the page. */
+  .dk-ring { border-color: ${darkColor.bg} !important; }
+  .dk-btn { background-color: ${color.bg} !important; color: ${color.ink} !important; }
   .dk-num { background-color: ${color.onDark} !important; color: ${color.ink} !important; }
   .dk-icon { background-color: ${darkColor.icon} !important; }
 }
@@ -120,10 +124,13 @@ a { text-decoration: none; }
 [data-ogsb] .dk-border, [data-ogsc] .dk-border { border-color: ${darkColor.line} !important; }
 [data-ogsc] .dk-text, [data-ogsc] .dk-text a { color: ${color.onDark} !important; }
 [data-ogsc] .dk-muted, [data-ogsc] .dk-muted a { color: ${color.onDarkSoft} !important; }
+[data-ogsb] .dk-rule { background-color: ${color.onDark} !important; }
+[data-ogsb] .dk-hairline { background-color: ${darkColor.line} !important; }
 [data-ogsb] .dk-chip { background-color: ${color.onDark} !important; }
 [data-ogsc] .dk-chip { color: ${color.ink} !important; }
+[data-ogsb] .dk-ring, [data-ogsc] .dk-ring { border-color: ${darkColor.bg} !important; }
 [data-ogsb] .dk-btn { background-color: ${color.bg} !important; }
-[data-ogsc] .dk-btn a { color: ${color.ink} !important; }
+[data-ogsc] .dk-btn { color: ${color.ink} !important; }
 [data-ogsb] .dk-icon { background-color: ${darkColor.icon} !important; }
 `
 

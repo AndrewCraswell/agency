@@ -97,7 +97,7 @@ export const CustomerInfoCard = ({ billTo, label, leftDetail, rightDetail, shipT
       </Row>
       <Section style={{ padding: "16px 0" }}>
         <Section
-          className="dk-border"
+          className="dk-hairline"
           style={{ backgroundColor: color.line, fontSize: 0, height: 1, lineHeight: "1px" }}
         />
       </Section>

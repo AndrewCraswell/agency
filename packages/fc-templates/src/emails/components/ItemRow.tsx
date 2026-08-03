@@ -1,6 +1,6 @@
 import { and, Else, For, gt, If, isTruthy, liquidValue, neq, type PathRef, pathOf, Var } from "@repo/shopify-emails"
 import type { ReactNode } from "react"
-import { Column, Img, Row, Section } from "react-email"
+import { Column, Row, Section } from "react-email"
 import { color, font, gutter, sectionGap } from "./tokens.ts"
 
 /*
@@ -97,53 +97,50 @@ export const ItemRow = ({
   variantTitle
 }: ItemRowProps) => (
   <Row className="dk-border" style={{ borderBottom: `1px solid ${color.line}` }}>
-    <Column style={{ padding: "12px 0", verticalAlign: "middle", width: 48 }}>
-      {/* The badge straddles the corner, so it needs a positioned box. Outlook drops it underneath. */}
-      <div style={{ height: 48, position: "relative", width: 48 }}>
-        {/* The grey square is always drawn, so a line without a picture still lines up with one. */}
+    {/* 9px wider than the thumbnail and 9px shorter above it, which is what the badge hangs over. */}
+    <Column style={{ padding: "3px 0 12px", verticalAlign: "middle", width: 59 }}>
+      {/* Gmail drops both `position` and a negative margin, so the badge cannot be pulled back over
+          the corner. It sits in a strip too short to hold it and spills out of one instead. */}
+      <div style={{ fontSize: 0, height: 9, lineHeight: 0, textAlign: "right" }}>
         <div
-          className="dk-surface dk-border"
-          style={{
-            backgroundColor: color.surface,
-            border: `1px solid ${color.line}`,
-            borderRadius: 8,
-            height: 48,
-            width: 48
-          }}
-        >
-          <If test={isTruthy(line.image)}>
-            <Img
-              alt=""
-              height={48}
-              src={liquidValue(line.image)}
-              style={{ borderRadius: 8, display: "block" }}
-              width={48}
-            />
-          </If>
-        </div>
-        <div
-          className="dk-chip"
+          className="dk-chip dk-ring"
           style={{
             backgroundColor: color.ink,
+            border: `1px solid ${color.bg}`,
             borderRadius: 9,
             color: color.onDark,
+            display: "inline-block",
             fontFamily: font.body,
             fontSize: 10,
             fontWeight: 700,
-            height: 18,
-            left: 38,
-            lineHeight: "18px",
-            position: "absolute",
+            height: 16,
+            lineHeight: "16px",
             textAlign: "center",
-            top: -6,
-            width: 18
+            verticalAlign: "top",
+            width: 16
           }}
         >
           <Var path={quantity} />
         </div>
       </div>
+      {/* The grey square is always drawn, so a line without a picture still lines up with one. Its
+          background paints before the badge does, which is what keeps the badge on top. */}
+      <div
+        className="dk-surface dk-border"
+        style={{
+          backgroundColor: color.surface,
+          backgroundImage: `url(${liquidValue(line.image)})`,
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "48px 48px",
+          border: `1px solid ${color.line}`,
+          borderRadius: 8,
+          height: 48,
+          width: 48
+        }}
+      />
     </Column>
-    <Column style={{ padding: "12px 0 12px 20px", verticalAlign: "middle" }}>
+    {/* The 20px gap to the thumbnail, less the 9px the column beside it took for the badge. */}
+    <Column style={{ padding: "12px 0 12px 11px", verticalAlign: "middle" }}>
       <div
         className="dk-text"
         style={{ color: color.ink, fontFamily: font.body, fontSize: 14, fontWeight: 600, lineHeight: "19px" }}

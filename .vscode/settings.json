@@ -16,7 +16,6 @@
   },
   "files.saveConflictResolution": "askUser",
   "files.exclude": {
-    "**/dist": true,
     "**/node_modules": true,
     "**/tsconfig.tsbuildinfo": true,
     "**/coverage": true,
