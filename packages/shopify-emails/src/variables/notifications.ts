@@ -1,7 +1,7 @@
 import type { LineItem } from "./order.ts"
 import type { IssuedStoreCredit, PaymentSchedule, PaymentTerms } from "./payments.ts"
 import type { Cents, LiquidTime } from "./primitives.ts"
-import type { RefundLineItem } from "./returns.ts"
+import type { RefundLineItem, ReturnLabel } from "./returns.ts"
 import type {
   AccountVariables,
   BuyerMessageVariables,
@@ -148,7 +148,11 @@ export type RequestedEditDeclinedVariables = EditRequestVariables
 export type ReturnApprovedVariables = ReturnVariables
 export type ReturnCreatedVariables = ReturnVariables
 export type ReturnDeclinedVariables = ReturnVariables
-export type ReturnLabelNotificationVariables = OrderVariables
+
+/** The label is the whole point of this one, and it arrives on its own rather than on a delivery. */
+export type ReturnLabelNotificationVariables = OrderVariables & {
+  readonly return_label: ReturnLabel
+}
 export type ReturnRequestedVariables = ReturnVariables
 export type ShipmentDeliveredVariables = ShipmentVariables
 export type ShipmentOutForDeliveryVariables = ShipmentVariables

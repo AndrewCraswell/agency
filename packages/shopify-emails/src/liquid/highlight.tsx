@@ -16,26 +16,23 @@ const MARK_OPEN = "\u0001"
 const MARK_CLOSE = "\u0002"
 const MARK = new RegExp(`${MARK_OPEN}([^${MARK_CLOSE}]*)${MARK_CLOSE}`, "g")
 
-const SURFACE = "#fff4d6"
+/* Translucent, so the page's own colour still reads through it: a stated ink would flatten a green
+ * discount into black and lose light text on a dark band. */
+const SURFACE = "rgba(253, 224, 71, 0.5)"
 const EDGE = "#d9b45a"
-/* Stated rather than inherited: the pale surface hides light text where a drop sits on a dark panel. */
-const INK = "#3d2f08"
 /* An element ring has no surface behind it to carry the mark, so it is stronger than the text edge. */
 const RING = "#d97706"
 
 export const highlightedText = (expression: string, text: string): ReactElement => {
   if (text === "") {
     return (
-      <span
-        style={{ backgroundColor: SURFACE, color: "#8a6d1f", fontStyle: "italic", outline: `1px dashed ${EDGE}` }}
-        title={expression}
-      >
+      <span style={{ backgroundColor: SURFACE, fontStyle: "italic", outline: `1px dashed ${EDGE}` }} title={expression}>
         {expression}
       </span>
     )
   }
   return (
-    <span style={{ backgroundColor: SURFACE, color: INK, outline: `1px dashed ${EDGE}` }} title={expression}>
+    <span style={{ backgroundColor: SURFACE, outline: `1px dashed ${EDGE}` }} title={expression}>
       {text}
     </span>
   )

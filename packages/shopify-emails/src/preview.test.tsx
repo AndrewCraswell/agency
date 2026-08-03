@@ -45,16 +45,16 @@ describe("definePreview", () => {
   })
 
   it("marks the drops, which is what the view is for", () => {
-    expect(markupOf(Preview({ values: sample }))).toContain("background-color:#fff4d6")
+    expect(markupOf(Preview({ values: sample }))).toContain("background-color:rgba(253, 224, 71, 0.5)")
   })
 
   it("lets the panel turn the marking off, so a test send is worth reading", () => {
-    expect(markupOf(Preview({ highlight: false, values: sample }))).not.toContain("background-color:#fff4d6")
+    expect(markupOf(Preview({ highlight: false, values: sample }))).not.toContain("background-color:rgba")
   })
 
   it("takes its default from the definition when the props panel says nothing", () => {
     const plain = definePreview(orderConfirmation, undefined, { highlight: false })
     expect(plain.PreviewProps.highlight).toBe(false)
-    expect(markupOf(plain({ values: sample }))).not.toContain("background-color:#fff4d6")
+    expect(markupOf(plain({ values: sample }))).not.toContain("background-color:rgba")
   })
 })

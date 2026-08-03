@@ -114,7 +114,14 @@ export type {
   StoreCreditIssuedVariables,
   StoreReceiptVariables
 } from "./variables/notifications.ts"
-export type { RefundLineItem, RequestedEdit, ReturnDelivery, ReturnDrop, ReturnLabel } from "./variables/returns.ts"
+export type {
+  RefundLineItem,
+  RequestedEdit,
+  ReturnDelivery,
+  ReturnDrop,
+  ReturnFee,
+  ReturnLabel
+} from "./variables/returns.ts"
 export type {
   AccountVariables,
   BuyerMessageVariables,

@@ -5,14 +5,15 @@ all 46 customer notifications.
 
 ## Layout
 
-Templates exist in two forms while the React migration runs.
+Every template is React. Nothing here is a hand-maintained Liquid file any more, apart from the two printouts, which
+Order Printer renders rather than the notification system.
 
-| Path               | Contents                                                                       |
-| ------------------ | ------------------------------------------------------------------------------ |
-| `src/emails/`      | React definitions, in `notifications/` and `components/`. The target form.     |
-| `src/templates/`   | Shopify's verbatim Liquid, kept as the source for everything not yet migrated. |
-| `src/images/`      | Brand artwork used by more than one template.                                  |
-| `src/templates.ts` | The roster of React definitions every whole-library check runs over.           |
+| Path                    | Contents                                                                |
+| ----------------------- | ----------------------------------------------------------------------- |
+| `src/emails/`           | React definitions, in `notifications/`, `marketing/` and `components/`. |
+| `src/emails/printouts/` | The two Order Printer documents and the fixtures they preview against.  |
+| `src/images/`           | Brand artwork used by more than one template.                           |
+| `src/templates.ts`      | The roster of React definitions every whole-library check runs over.    |
 
 `src/liquid.ts` builds the Liquid engine the previews and tests render through, and `src/reactEmail.ts` is the harness
 the tests use to drive a definition down both the compiled and the resolved path.
@@ -34,8 +35,15 @@ Every notification appears in the sidebar, already resolved against the sample f
 The props panel edits the variables live. The viewer supplies the viewport presets, the linter, and the compatibility
 and spam reports.
 
-The Liquid under `src/templates/` has no preview of its own. It is reference material: read it while porting a template
-into `src/emails/`, then delete it.
+Run `pnpm cli` first and pull an order, and the preview answers from that store instead: the pulled values are laid over
+the samples, so the shop, customer and order are real and anything the order does not carry keeps its fixture. A newer
+pull needs the preview restarted.
+
+The two printouts under `src/emails/printouts/` preview here too, under **printouts** in the sidebar: the invoice paid,
+unpaid and run over two sheets, and the packing slip on one sheet and over several. Those entries render the `.liquid`
+file itself against the fixtures beside it, so what you read is what you paste. They are not emails, so the send button
+and the client-width presets mean nothing for them; use the browser's own print preview to judge the page. They are also
+the one preview without the drop highlighting, because Order Printer renders synchronously.
 
 ## Publishing to Shopify
 
@@ -67,9 +75,10 @@ change is the one you meant, run `pnpm --filter @repo/fc-templates test -- -u`.
 
 ## Printout behavior
 
-`src/templates/printouts/invoice/` is the invoice for the
+`src/emails/printouts/invoice/` is the invoice for the
 [Shopify Order Printer app](https://help.shopify.com/en/manual/fulfillment/managing-orders/printing-orders/shopify-order-printer/liquid-variables-and-filters-reference)
-and `src/templates/printouts/packing-slip/` is the packing slip. Neither has been ported to React yet.
+and `src/emails/printouts/packingSlip/` is the packing slip. Both stay hand-written Liquid, because Order Printer
+renders them rather than the notification system; the `.tsx` beside each one is only the preview.
 
 - One invoice template covers both states: an outstanding balance shows a `BALANCE DUE` tag, and a settled order shows
   `PAID IN FULL` with the amount paid in green.

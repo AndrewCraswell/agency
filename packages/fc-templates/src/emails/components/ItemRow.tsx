@@ -78,6 +78,8 @@ export type ItemRowProps = {
   readonly credit?: boolean
   /** Write a nil price as `Free`, which only the carts and the returns designs ask for. */
   readonly free?: boolean
+  /** An `ItemBadge` saying what happened to this line, on the notices that change part of an order. */
+  readonly badge?: ReactNode
 }
 
 /** What the buyer saw at checkout, which the shipping designs print in place of the internal title. */
@@ -86,6 +88,7 @@ export const presentedTitle = (line: PathRef<LineItem>) => (
 )
 
 export const ItemRow = ({
+  badge,
   credit = false,
   free = false,
   line,
@@ -147,6 +150,7 @@ export const ItemRow = ({
       >
         {title}
       </div>
+      {badge}
       {/* Shopify names a single-variant product's only variant `Default Title`. */}
       <If test={and(isTruthy(variantTitle), neq(variantTitle, "Default Title"))}>
         <ItemNote>
@@ -244,6 +248,33 @@ const ItemDiscount = ({ children }: ItemNoteProps) => (
     }}
   >
     {children}
+  </div>
+)
+
+/*
+ * A pill rather than another quiet note, so that a line whose state changed is picked out on sight.
+ * Exported so a caller can put it inside its own condition: the box has to disappear with the text,
+ * and a Liquid condition resolves too late for this component to see that it came out empty.
+ */
+export const ItemBadge = ({ children }: ItemNoteProps) => (
+  <div style={{ paddingTop: 5 }}>
+    <span
+      className="dk-surface dk-muted"
+      style={{
+        backgroundColor: color.surface,
+        borderRadius: 4,
+        color: color.inkSoft,
+        display: "inline-block",
+        fontFamily: font.body,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: "0.8px",
+        lineHeight: "14px",
+        padding: "2px 7px"
+      }}
+    >
+      {children}
+    </span>
   </div>
 )
 

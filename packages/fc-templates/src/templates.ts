@@ -17,6 +17,7 @@ import { vacationDelay } from "./emails/marketing/vacationDelay.tsx"
 import { welcome } from "./emails/marketing/welcome.tsx"
 import { winBack } from "./emails/marketing/winBack.tsx"
 import { buyOnline } from "./emails/notifications/buyOnline.tsx"
+import { changeRequested } from "./emails/notifications/changeRequested.tsx"
 import { companyContactWelcomeEmail } from "./emails/notifications/companyContactWelcomeEmail.tsx"
 import { companyLocationUpdatePaymentMethod } from "./emails/notifications/companyLocationUpdatePaymentMethod.tsx"
 import { contactBuyer } from "./emails/notifications/contactBuyer.tsx"
@@ -35,7 +36,9 @@ import { giftCardNotification } from "./emails/notifications/giftCardNotificatio
 import { localDelivered } from "./emails/notifications/localDelivered.tsx"
 import { localMissedDelivery } from "./emails/notifications/localMissedDelivery.tsx"
 import { localOutForDelivery } from "./emails/notifications/localOutForDelivery.tsx"
+import { orderCancelled } from "./emails/notifications/orderCancelled.tsx"
 import { orderConfirmation } from "./emails/notifications/orderConfirmation.tsx"
+import { orderEdited } from "./emails/notifications/orderEdited.tsx"
 import { orderInvoice } from "./emails/notifications/orderInvoice.tsx"
 import { orderLink } from "./emails/notifications/orderLink.tsx"
 import { orderPaymentReceipt } from "./emails/notifications/orderPaymentReceipt.tsx"
@@ -46,6 +49,13 @@ import { pickupReceipt } from "./emails/notifications/pickupReceipt.tsx"
 import { posExchangeV2Receipt } from "./emails/notifications/posExchangeV2Receipt.tsx"
 import { posSendCart } from "./emails/notifications/posSendCart.tsx"
 import { readyForPickup } from "./emails/notifications/readyForPickup.tsx"
+import { refundNotification } from "./emails/notifications/refundNotification.tsx"
+import { requestedEditDeclined } from "./emails/notifications/requestedEditDeclined.tsx"
+import { returnApproved } from "./emails/notifications/returnApproved.tsx"
+import { returnCreated } from "./emails/notifications/returnCreated.tsx"
+import { returnDeclined } from "./emails/notifications/returnDeclined.tsx"
+import { returnLabelNotification } from "./emails/notifications/returnLabelNotification.tsx"
+import { returnRequested } from "./emails/notifications/returnRequested.tsx"
 import { shipmentDelivered } from "./emails/notifications/shipmentDelivered.tsx"
 import { shipmentOutForDelivery } from "./emails/notifications/shipmentOutForDelivery.tsx"
 import { shippingConfirmation } from "./emails/notifications/shippingConfirmation.tsx"
@@ -88,6 +98,7 @@ export const allTemplates: readonly TemplateEntry[] = [
   entry(abandonedCartReminder),
   entry(backInStock),
   entry(buyOnline),
+  entry(changeRequested),
   entry(chooseYourWeapon),
   entry(coachDiscount),
   entry(community),
@@ -112,7 +123,9 @@ export const allTemplates: readonly TemplateEntry[] = [
   entry(localOutForDelivery),
   entry(newArrivals),
   entry(novusLaunch),
+  entry(orderCancelled),
   entry(orderConfirmation),
+  entry(orderEdited),
   entry(orderInvoice),
   entry(orderLink),
   entry(orderPaymentReceipt),
@@ -124,6 +137,13 @@ export const allTemplates: readonly TemplateEntry[] = [
   entry(posSendCart),
   entry(productLaunch),
   entry(readyForPickup),
+  entry(refundNotification),
+  entry(requestedEditDeclined),
+  entry(returnApproved),
+  entry(returnCreated),
+  entry(returnDeclined),
+  entry(returnLabelNotification),
+  entry(returnRequested),
   entry(reviewRequest),
   entry(seasonKickoff),
   entry(shipmentDelivered),

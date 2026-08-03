@@ -51,11 +51,8 @@
       ]
     },
     "packages/fc-templates": {
-      "entry": ["src/emails/notifications/*.tsx"],
-      "ignoreDependencies": ["@repo/oxlint-config"],
-      "ignoreIssues": {
-        "src/templates/**": ["files", "exports"]
-      }
+      "entry": ["src/emails/marketing/*.tsx", "src/emails/notifications/*.tsx", "src/emails/printouts/*/*.tsx"],
+      "ignoreDependencies": ["@repo/oxlint-config"]
     },
     "packages/shopify-emails": {
       "ignoreDependencies": ["@repo/oxlint-config"]

@@ -1,21 +1,19 @@
 # Stock template gaps
 
-Comparison of Shopify's 52 stock templates under `src/templates/emails/` against the 53 React templates under
-`src/emails/`, made on 2026-07-31. Every claim here was checked against the files rather than inferred from the
-designs.
+Comparison of Shopify's 52 stock templates against the 53 React templates under `src/emails/`, made on 2026-07-31.
+Every claim here was checked against the files rather than inferred from the designs. The stock Liquid itself has since
+been deleted: all 46 notifications are React now, so the last thing keeping it in the tree went away with them.
 
 Read that set as the store's current templates, not as Shopify's defaults. Some were already customised before they
 were captured: the header logo, for one, had its `{% if shop.email_logo_url %}` branch replaced with a hardcoded CDN
 URL. Absence of a drop here is evidence that this store stopped using it, not that Shopify never offered it.
 
-The stock set is 46 notifications and 6 marketing emails. We have ported 36 of the notifications one for one. Our 17
-marketing templates include the 6 stock designs and 11 originals with no counterpart, so marketing is out of scope
-below: there is nothing to be missing from.
+The stock set is 46 notifications and 6 marketing emails. All 46 notifications are ported one for one. Our 17 marketing
+templates include the 6 stock designs and 11 originals with no counterpart, so marketing is out of scope below: there
+is nothing to be missing from.
 
-Two companion pages carry the detail. [ported-template-gaps.md](ported-template-gaps.md) gives a verdict on each of the
-36 ports, listing the stock conditionals behind it so the verdict can be rechecked.
-[unported-templates.md](unported-templates.md) describes the 10 notifications we have not built, with the copy, the
-branch conditions and the components they need.
+[ported-template-gaps.md](ported-template-gaps.md) carries the detail, giving a verdict on each port and listing the
+stock conditionals behind it so the verdict can be rechecked.
 
 ## The finding
 

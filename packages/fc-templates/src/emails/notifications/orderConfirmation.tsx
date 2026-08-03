@@ -10,11 +10,9 @@ import {
   If,
   isPresent,
   liquidValue,
-  type OrderAddress,
-  type PathRef,
   Var
 } from "@repo/shopify-emails"
-import { AddressDetail } from "../components/AddressBlock.tsx"
+import { AddressParty } from "../components/AddressBlock.tsx"
 import { CustomerDetail, CustomerInfoCard } from "../components/CustomerInfoCard.tsx"
 import { DeliveryGroup } from "../components/DeliveryGroup.tsx"
 import { EmailButton } from "../components/EmailButton.tsx"
@@ -27,39 +25,8 @@ import { PaymentBrand } from "../components/PaymentBrand.tsx"
 import { SupportBand } from "../components/SupportBand.tsx"
 import { Totals, TotalsRow, TotalsSum } from "../components/Totals.tsx"
 
-type PartyProps = {
-  readonly address: PathRef<OrderAddress>
-  readonly kicker: string
-}
-
 /* Headings over each parcel only earn their place once an order arrives in more than one. */
 const deliveryGroupCount = binding<number>("delivery_group_count")
-
-/* A second address line is the exception, so it joins the first rather than claiming a line. */
-const Party = ({ address, kicker }: PartyProps) => (
-  <AddressDetail
-    headline={
-      <>
-        <Var path={address.first_name} /> <Var path={address.last_name} />
-      </>
-    }
-    kicker={kicker}
-  >
-    <div>
-      <Var path={address.address1} />
-      <If test={isPresent(address.address2)}>
-        , <Var path={address.address2} />
-      </If>
-    </div>
-    <div>
-      <Var path={address.city} />, <Var path={address.province_code} /> <Var path={address.zip} />
-    </div>
-    <div>
-      <Var path={address.country} />
-    </div>
-  </AddressDetail>
-)
-
 export const orderConfirmation = defineTemplate({
   type: "order_confirmation",
   subject: (vars) => `Order ${liquidValue(vars.name)} confirmed`,
@@ -124,7 +91,7 @@ export const orderConfirmation = defineTemplate({
         </TotalsSum>
       </Totals>
       <CustomerInfoCard
-        billTo={<Party address={vars.billing_address} kicker="BILLING ADDRESS" />}
+        billTo={<AddressParty address={vars.billing_address} kicker="BILLING ADDRESS" />}
         label="CUSTOMER INFORMATION"
         leftDetail={
           <CustomerDetail
@@ -157,7 +124,7 @@ export const orderConfirmation = defineTemplate({
             <Var filters={['date: "%B %-d, %Y"']} path={vars.created_at} />
           </CustomerDetail>
         }
-        shipTo={<Party address={vars.shipping_address} kicker="SHIPPING ADDRESS" />}
+        shipTo={<AddressParty address={vars.shipping_address} kicker="SHIPPING ADDRESS" />}
       />
       <SupportBand>Our team replies fast. Just reply to this email or reach us anytime.</SupportBand>
       <EmailFooter flush shop={vars.shop} />

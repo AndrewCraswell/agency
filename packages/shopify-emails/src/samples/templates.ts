@@ -123,9 +123,12 @@ const returnDrop: ReturnDrop = {
     }
   ],
   exchange_line_items: [],
+  fees: [{ subtotal: 750, title: "Restocking fee" }],
   line_items: [lineItemsSample[0]!],
   line_items_subtotal_price: -17_000,
-  order_total_outstanding: 0
+  order_total_outstanding: 0,
+  pre_return_order_total_outstanding: 0,
+  total_tax_price: -1105
 }
 
 const returnSample: ReturnVariables = {
@@ -273,14 +276,23 @@ export const templateSamples: TemplateVariables = {
     refund_line_items: refundLineItems,
     routes: routesSample
   },
-  requested_edit_declined: { ...editRequestSample, requested_edit: { ...requestedEdit, decline_note: null } },
+  requested_edit_declined: {
+    ...editRequestSample,
+    requested_edit: {
+      ...requestedEdit,
+      decline_note: "This order had already been packed when your cancellation request reached us."
+    }
+  },
   return_approved: returnSample,
   return_created: returnSample,
   return_declined: {
     ...returnSample,
     return: { ...returnDrop, decline: { note: "The window for this return closed on 20 March." }, deliveries: [] }
   },
-  return_label_notification: orderSample,
+  return_label_notification: {
+    ...orderSample,
+    return_label: { public_file_url: "https://example-store.com/returns/labels/9f1c0e4a7b2d.pdf" }
+  },
   return_requested: returnSample,
   shipment_delivered: shipmentSample,
   shipment_out_for_delivery: shipmentSample,

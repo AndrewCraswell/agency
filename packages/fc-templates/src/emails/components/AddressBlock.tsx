@@ -1,3 +1,4 @@
+import { If, isPresent, type OrderAddress, type PathRef, Var } from "@repo/shopify-emails"
 import type { ReactNode } from "react"
 import { Section } from "react-email"
 import { color, font, gutter, sectionGap } from "./tokens.ts"
@@ -59,4 +60,34 @@ export const AddressBlock = (props: AddressBlockProps) => (
   <Section className="px" style={{ padding: `${sectionGap}px ${gutter}px 0` }}>
     <AddressDetail {...props} />
   </Section>
+)
+
+export type AddressPartyProps = {
+  readonly address: PathRef<OrderAddress>
+  readonly kicker: string
+}
+
+/* A second address line is the exception, so it joins the first rather than claiming a line. */
+export const AddressParty = ({ address, kicker }: AddressPartyProps) => (
+  <AddressDetail
+    headline={
+      <>
+        <Var path={address.first_name} /> <Var path={address.last_name} />
+      </>
+    }
+    kicker={kicker}
+  >
+    <div>
+      <Var path={address.address1} />
+      <If test={isPresent(address.address2)}>
+        , <Var path={address.address2} />
+      </If>
+    </div>
+    <div>
+      <Var path={address.city} />, <Var path={address.province_code} /> <Var path={address.zip} />
+    </div>
+    <div>
+      <Var path={address.country} />
+    </div>
+  </AddressDetail>
 )

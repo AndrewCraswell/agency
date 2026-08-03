@@ -9,7 +9,7 @@ export default defineConfig({
       reporter: ["text", "text-summary", "html", "lcov", "json-summary"],
       reportsDirectory: "coverage",
       include: ["src/**/*.ts"],
-      exclude: ["src/**/*.test.ts", "src/templates/**"],
+      exclude: ["src/**/*.test.ts"],
       thresholds: {
         lines: 80,
         statements: 80,
