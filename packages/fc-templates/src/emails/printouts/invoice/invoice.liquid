@@ -54,19 +54,19 @@
     margin: 0.5in 0.6in;
 
     @bottom-right {
-      color: #5a5a60;
+      color: #3a3a42;
       content: "PAGE " counter(page) " OF " counter(pages);
       font-family: Inter, system-ui, sans-serif;
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 600;
       letter-spacing: 1.5px;
     }
   }
 
   .fc-invoice {
-    --ink: #101012;
-    --muted: #5a5a60;
-    --rule: #e3e3e0;
+    --ink: #000000;
+    --muted: #000000;
+    --rule: #8c8c94;
     --paid: #0f7a3d;
     --body: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
     --display: Archivo, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -74,7 +74,7 @@
     border-collapse: collapse;
     color: var(--ink);
     font-family: var(--body);
-    font-size: 12.5px;
+    font-size: 13.5px;
     line-height: 1.35;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
@@ -121,20 +121,20 @@
 
   .fc-mast__name {
     font-family: var(--display);
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 700;
     letter-spacing: 2.5px;
   }
 
   .fc-mast__contact {
     color: var(--muted);
-    font-size: 11.5px;
+    font-size: 13.5px;
     padding-top: 2px;
   }
 
   .fc-mast__doctype {
     font-family: var(--display);
-    font-size: 30px;
+    font-size: 34px;
     font-weight: 700;
     letter-spacing: 4px;
     text-align: right;
@@ -173,26 +173,26 @@
 
   .fc-label {
     color: var(--muted);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 1.8px;
   }
 
   .fc-meta__value {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
     padding-top: 5px;
   }
 
   .fc-meta__amount {
     font-family: var(--display);
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 800;
     padding-top: 5px;
   }
 
   .fc-paid {
-    color: var(--paid);
+    color: var(--ink);
   }
 
   /* Section scaffold: label rail, then content */
@@ -228,14 +228,14 @@
   }
 
   .fc-party__name {
-    font-size: 12.5px;
+    font-size: 14.5px;
     font-weight: 700;
     padding-top: 7px;
   }
 
   .fc-party__line {
     color: var(--muted);
-    font-size: 11.5px;
+    font-size: 13.5px;
     padding-top: 2px;
   }
 
@@ -250,7 +250,7 @@
   .fc-payments th {
     border-bottom: 1px solid var(--ink);
     color: var(--muted);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 1.2px;
     padding: 8px 0;
@@ -260,7 +260,7 @@
   .fc-items td,
   .fc-payments td {
     border-bottom: 1px solid var(--rule);
-    font-size: 13px;
+    font-size: 15px;
     padding: 10px 0;
   }
 
@@ -290,7 +290,7 @@
   }
 
   .fc-item__title {
-    font-size: 13px;
+    font-size: 15px;
   }
 
   /* Variant options borrow the document's label grammar: a small tracked name, then the value, with space
@@ -302,14 +302,14 @@
 
   .fc-item__option {
     display: inline-block;
-    font-size: 11.5px;
+    font-size: 13px;
     padding-right: 20px;
     white-space: nowrap;
   }
 
   .fc-item__option-name {
     color: var(--muted);
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 1px;
     padding-right: 5px;
@@ -318,13 +318,13 @@
 
   .fc-item__note {
     color: var(--muted);
-    font-size: 11.5px;
+    font-size: 13px;
     padding-top: 2px;
   }
 
   .fc-price__was {
     color: var(--muted);
-    font-size: 11.5px;
+    font-size: 13px;
     padding-right: 8px;
   }
 
@@ -340,14 +340,14 @@
 
   .fc-summary th {
     color: var(--muted);
-    font-size: 13px;
+    font-size: 14.5px;
     font-weight: 400;
     padding: 5px 24px 5px 0;
     text-align: right;
   }
 
   .fc-summary td {
-    font-size: 13px;
+    font-size: 15px;
     text-align: right;
     width: 110px;
   }
@@ -365,18 +365,18 @@
   .fc-summary__total td {
     color: var(--ink);
     font-family: var(--display);
-    font-size: 15px;
+    font-size: 16.5px;
     font-weight: 700;
   }
 
   .fc-summary__due th {
-    font-size: 14px;
+    font-size: 16.5px;
     font-weight: 700;
   }
 
   .fc-summary__due td {
     font-family: var(--display);
-    font-size: 15px;
+    font-size: 16.5px;
     font-weight: 800;
   }
 
@@ -385,7 +385,7 @@
     border-radius: 3px;
     color: #ffffff;
     display: inline-block;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.8px;
     margin-right: 10px;
@@ -399,7 +399,7 @@
 
   .fc-notes {
     color: var(--muted);
-    font-size: 12.5px;
+    font-size: 14px;
     line-height: 20px;
   }
 
@@ -421,7 +421,7 @@
   }
 
   .fc-footer__brand {
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 2px;
     white-space: nowrap;
@@ -430,7 +430,7 @@
 
   .fc-footer__contact {
     color: var(--muted);
-    font-size: 10.5px;
+    font-size: 12px;
     white-space: nowrap;
     width: 1%;
   }
@@ -441,15 +441,15 @@
   }
 
   .fc-footer__contact svg {
-    height: 11px;
+    height: 12px;
     margin-right: 5px;
     vertical-align: -1px;
-    width: 11px;
+    width: 12px;
   }
 
   .fc-footer__ref {
     color: var(--muted);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
     letter-spacing: 1.5px;
     text-align: right;
