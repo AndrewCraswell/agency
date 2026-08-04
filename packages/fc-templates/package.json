@@ -5,7 +5,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "shopify-emails build --dir src/emails --out dist",
+    "build": "shopify-emails build --dir src/emails --out dist && node --import tsx src/emails/signatures/build.mts",
+    "build:signatures": "node --import tsx src/emails/signatures/build.mts",
     "cli": "shopify-emails",
     "dev": "shopify-emails preview --dir src/emails",
     "check:types": "tsc --noEmit",
