@@ -25,6 +25,7 @@ export const pendingPaymentSuccess = defineTemplate({
       <PaidBanner label="TOTAL PAID">
         <Var filters={["money"]} path={vars.total_price} />
       </PaidBanner>
+      <EmailButton href={liquidValue(vars.order_status_url, ["default: shop.url"])}>View your order</EmailButton>
       <Totals full>
         <TotalsRow label="Order total">
           <Var filters={["money"]} path={vars.total_price} />
@@ -36,7 +37,6 @@ export const pendingPaymentSuccess = defineTemplate({
           <Var filters={["money"]} path={vars.total_outstanding} />
         </TotalsSum>
       </Totals>
-      <EmailButton href={liquidValue(vars.order_status_url, ["default: shop.url"])}>View your order</EmailButton>
       <EmailFooter shop={vars.shop} />
     </EmailDocument>
   )

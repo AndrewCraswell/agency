@@ -30,7 +30,7 @@ export const paymentReminder = defineTemplate({
       <EmailLead>
         {/* A merchant can replace the standard line from the admin, so the default is the fallback. */}
         <If test={isPresent(vars.custom_message)}>
-          <Var path={vars.custom_message} />
+          <Var raw path={vars.custom_message} />
           <Else>
             This is a reminder that your payment of{" "}
             <Var filters={["money_with_currency"]} path={vars.payment_schedule.amount_due} /> for order{" "}

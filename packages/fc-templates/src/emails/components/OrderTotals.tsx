@@ -16,6 +16,7 @@ export type OrderTotalsRef = {
   readonly discount_applications: PathRef<
     readonly {
       readonly target_selection: string
+      readonly target_type: string
       readonly title: string
       readonly total_allocated_amount: number
     }[]

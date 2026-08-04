@@ -362,6 +362,36 @@
                       cellpadding="0"
                       cellspacing="0"
                       role="presentation"
+                      class="px btn"
+                      style="text-align:center">
+                      <tbody>
+                        <tr>
+                          <td style="padding:24px 32px 0">
+                            <a
+                              class="dk-btn"
+                              href="{{ order_status_url | default: shop.url | escape }}"
+                              style='line-height:18px;text-decoration:none;display:inline-block;max-width:100%;mso-padding-alt:0px;background-color:{{ shop.email_accent_color | default: "#101012" | escape }};border:1px solid #ffffff;border-radius:14px;box-sizing:border-box;color:#ffffff;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:15px;font-weight:700;padding:13px 28px;text-align:center;padding-top:13px;padding-right:28px;padding-bottom:13px;padding-left:28px'
+                              target="_blank"
+                              ><span
+                                ><!--[if mso]><i style="mso-font-width:466.6666666666667%;mso-text-raise:19.5px" hidden>&#8202;&#8202;&#8202;</i><![endif]--></span
+                              ><span
+                                style="max-width:100%;display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:9.75px"
+                                >View your order</span
+                              ><span
+                                ><!--[if mso]><i style="mso-font-width:466.6666666666667%" hidden>&#8202;&#8202;&#8202;&#8203;</i><![endif]--></span
+                              ></a
+                            >
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <table
+                      align="center"
+                      width="100%"
+                      border="0"
+                      cellpadding="0"
+                      cellspacing="0"
+                      role="presentation"
                       class="px">
                       <tbody>
                         <tr>
@@ -487,36 +517,6 @@
                                 </tr>
                               </tbody>
                             </table>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                    <table
-                      align="center"
-                      width="100%"
-                      border="0"
-                      cellpadding="0"
-                      cellspacing="0"
-                      role="presentation"
-                      class="px btn"
-                      style="text-align:center">
-                      <tbody>
-                        <tr>
-                          <td style="padding:24px 32px 0">
-                            <a
-                              class="dk-btn"
-                              href="{{ order_status_url | default: shop.url | escape }}"
-                              style='line-height:18px;text-decoration:none;display:inline-block;max-width:100%;mso-padding-alt:0px;background-color:{{ shop.email_accent_color | default: "#101012" | escape }};border:1px solid #ffffff;border-radius:14px;box-sizing:border-box;color:#ffffff;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:15px;font-weight:700;padding:13px 28px;text-align:center;padding-top:13px;padding-right:28px;padding-bottom:13px;padding-left:28px'
-                              target="_blank"
-                              ><span
-                                ><!--[if mso]><i style="mso-font-width:466.6666666666667%;mso-text-raise:19.5px" hidden>&#8202;&#8202;&#8202;</i><![endif]--></span
-                              ><span
-                                style="max-width:100%;display:inline-block;line-height:120%;mso-padding-alt:0px;mso-text-raise:9.75px"
-                                >View your order</span
-                              ><span
-                                ><!--[if mso]><i style="mso-font-width:466.6666666666667%" hidden>&#8202;&#8202;&#8202;&#8203;</i><![endif]--></span
-                              ></a
-                            >
                           </td>
                         </tr>
                       </tbody>

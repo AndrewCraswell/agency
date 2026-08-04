@@ -1,4 +1,4 @@
-import { definePreview, defineTemplate, Else, For, gt, If, liquidValue, Var } from "@repo/shopify-emails"
+import { definePreview, defineTemplate, Else, For, gt, If, isPresent, liquidValue, Var } from "@repo/shopify-emails"
 import { EmailButton } from "../components/EmailButton.tsx"
 import { EmailDocument } from "../components/EmailDocument.tsx"
 import { MarketingFooter } from "../components/EmailFooter.tsx"
@@ -26,6 +26,12 @@ export const posSendCart = defineTemplate({
         <Var path={vars.customer.first_name} />, thanks for stopping by. Here’s the cart our team put together for you.
         Complete your purchase online whenever you’re ready and we’ll ship it out.
       </EmailLead>
+      <If test={isPresent(vars.custom_message)}>
+        <EmailLead>
+          <Var raw path={vars.custom_message} />
+        </EmailLead>
+      </If>
+      <EmailButton href={liquidValue(vars.invoice_url, ["default: shop.url"])}>Complete your purchase</EmailButton>
       <ItemList>
         <For each={vars.subtotal_line_items}>
           {(line) => <ItemRow free line={line} variantTitle={line.variant.title} />}
@@ -45,7 +51,6 @@ export const posSendCart = defineTemplate({
           <Var filters={["money"]} path={vars.total_price} />
         </TotalsSum>
       </Totals>
-      <EmailButton href={liquidValue(vars.invoice_url, ["default: shop.url"])}>Complete your purchase</EmailButton>
       <QuickLinks />
       <SupportBand>Our team replies fast. Just reply to this email or reach us anytime.</SupportBand>
       <MarketingFooter flush shop={vars.shop} unsubscribeUrl={shopLinks.preferences} />

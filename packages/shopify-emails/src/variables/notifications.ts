@@ -76,6 +76,8 @@ export type CustomerUpdatePaymentMethodVariables = CustomerAddPaymentMethodVaria
 /** The only notification for an order that has not been placed yet. */
 export type DraftOrderInvoiceVariables = OrderSummaryVariables & {
   readonly amount_due_now: Cents
+  /** Whatever the merchant typed into the admin before sending. */
+  readonly custom_message: string
   readonly invoice_url: string
   /** The draft's own sequence number, unrelated to any order number. */
   readonly number: number

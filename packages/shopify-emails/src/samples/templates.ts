@@ -1,6 +1,6 @@
 import type { CampaignVariables } from "../variables/campaign.ts"
 import type { GiftCard, IssuedStoreCredit, PaymentSchedule, PaymentTerms } from "../variables/payments.ts"
-import type { RefundLineItem, RequestedEdit, ReturnDrop } from "../variables/returns.ts"
+import type { RefundLineItem, RequestedEdit, RequestedEditLine, ReturnDrop } from "../variables/returns.ts"
 import type {
   AccountVariables,
   BuyerMessageVariables,
@@ -137,10 +137,15 @@ const returnSample: ReturnVariables = {
   return: returnDrop
 }
 
+const editedLine: RequestedEditLine = {
+  ...lineItemsSample[1]!,
+  variant: { ...lineItemsSample[1]!.variant, product: lineItemsSample[1]!.product }
+}
+
 const requestedEdit: RequestedEdit = {
-  affected_line_items: [lineItemsSample[1]!],
+  affected_line_items: [editedLine],
   decline_note: null,
-  line_items: [lineItemsSample[1]!]
+  line_items: [editedLine]
 }
 
 const editRequestSample: EditRequestVariables = {
@@ -153,6 +158,7 @@ const editRequestSample: EditRequestVariables = {
 const draftOrderInvoiceSample: VariablesFor<"draft_order_invoice"> = {
   ...orderSummarySample,
   amount_due_now: 24_484,
+  custom_message: "",
   invoice_url: "https://example-store.com/84825276713/invoices/9f1c0e4a7b2d",
   number: 24,
   payment_terms: paymentTerms,

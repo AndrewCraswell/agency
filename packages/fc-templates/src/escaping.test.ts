@@ -16,7 +16,11 @@ const attributeBreak = `https://fencing.club/"onmouseover="x`
 
 describe("a drop carrying markup", () => {
   it("reaches neither path as live markup from a text position", async () => {
-    const values = { ...templateSamples.contact_buyer, custom_message: markup }
+    const values = {
+      ...templateSamples.contact_buyer,
+      custom_message: "",
+      customer: { ...templateSamples.contact_buyer.customer, first_name: markup }
+    }
     const compiled = (await renderDefinition(contactBuyer, values)).html
     const resolved = renderDefinitionValues(contactBuyer, values)
     expect(compiled).not.toContain(markup)

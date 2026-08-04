@@ -1,4 +1,4 @@
-import { definePreview, defineTemplate, Else, For, gt, If, liquidValue, Var } from "@repo/shopify-emails"
+import { definePreview, defineTemplate, Else, For, gt, If, isPresent, liquidValue, Var } from "@repo/shopify-emails"
 import { EmailButton } from "../components/EmailButton.tsx"
 import { EmailDocument } from "../components/EmailDocument.tsx"
 import { EmailFooter } from "../components/EmailFooter.tsx"
@@ -23,6 +23,11 @@ export const draftOrderInvoice = defineTemplate({
       <EmailLead>
         Your invoice <Var path={vars.name} /> is ready. Review your order and check out whenever you’re ready.
       </EmailLead>
+      <If test={isPresent(vars.custom_message)}>
+        <EmailLead>
+          <Var raw path={vars.custom_message} />
+        </EmailLead>
+      </If>
       <EmailButton href={liquidValue(vars.invoice_url, ["default: shop.url"])}>Complete your purchase</EmailButton>
       <ItemList label="ORDER SUMMARY">
         <For each={vars.line_items}>{(line) => <ItemRow line={line} variantTitle={line.variant_title} />}</For>

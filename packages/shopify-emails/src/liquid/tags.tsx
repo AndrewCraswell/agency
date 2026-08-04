@@ -35,8 +35,9 @@ const outputTag = (expression: string): string => encodeLiquid(`{{ ${expression}
  * two paths disagree on the one case that matters: a preview would show a customer's own text as
  * inert while the delivered email treats it as markup. Compiling asks Liquid for React's behaviour.
  *
- * Two positions opt out. A `Capture` binds rendered markup, so escaping it would print the tags
- * rather than apply them, and the subject line is not HTML at all.
+ * Positions opt out. A `Capture` binds rendered markup, so escaping it would print the tags rather
+ * than apply them; the subject line is not HTML at all; and Shopify will not accept a body that
+ * puts a filter on a drop it writes itself, such as a merchant's `custom_message`.
  */
 const dropTag = (expression: string, raw: boolean): string =>
   outputTag(raw || plainTextOutput() ? expression : `${expression} | escape`)
@@ -61,6 +62,8 @@ const isElementOf = <TProps,>(node: ReactNode, component: (props: TProps) => Rea
 export type VarProps = {
   readonly path: PathRef<unknown>
   readonly filters?: readonly string[]
+  /* Shopify rejects a notification body that filters a merchant-written drop, so those read bare. */
+  readonly raw?: boolean
 }
 
 /*
@@ -70,14 +73,15 @@ export type VarProps = {
  */
 
 /* For attribute positions, where a React element cannot go, use `liquidValue` instead. */
-export const Var = ({ path, filters = [] }: VarProps): ReactNode => {
+export const Var = ({ path, filters = [], raw = false }: VarProps): ReactNode => {
   const expression = expressionFor(path, filters)
+  const unescaped = raw || isMarkupRef(path)
   if (!valueEnvironment()) {
-    return dropTag(expression, isMarkupRef(path))
+    return dropTag(expression, unescaped)
   }
   const text = toText(resolveExpression(expression))
   /* A captured name already holds rendered markup, including whatever its own drops highlighted. */
-  if (isMarkupRef(path)) {
+  if (unescaped) {
     return encodeLiquid(text, "raw")
   }
   return highlightEnabled() ? highlightedText(expression, text) : text

@@ -36,6 +36,7 @@ export const orderPaymentReceipt = defineTemplate({
         Thanks, <Var path={vars.customer.first_name} />. We’ve received your payment for order{" "}
         <Var path={vars.order_name} />.
       </EmailLead>
+      <EmailButton href={liquidValue(vars.order_status_url)}>View your order</EmailButton>
       <ItemList>
         <For each={vars.subtotal_line_items}>{(line) => <ItemRow line={line} variantTitle={line.variant.title} />}</For>
       </ItemList>
@@ -74,7 +75,6 @@ export const orderPaymentReceipt = defineTemplate({
           <Var path={vars.order_name} />
         </SummaryRow>
       </SummaryCard>
-      <EmailButton href={liquidValue(vars.order_status_url)}>View your order</EmailButton>
       <EmailFooter shop={vars.shop} />
     </EmailDocument>
   )

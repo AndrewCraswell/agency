@@ -26,6 +26,12 @@ export const buyOnline = defineTemplate({
         You left a few things behind in store. Your cart is saved, so complete your order online and we’ll ship it
         straight to you.
       </EmailLead>
+      <If test={isPresent(vars.custom_message)}>
+        <EmailLead>
+          <Var raw path={vars.custom_message} />
+        </EmailLead>
+      </If>
+      <EmailButton href={liquidValue(vars.invoice_url, ["default: shop.url"])}>Complete your purchase</EmailButton>
       <ItemList>
         <For each={vars.subtotal_line_items}>
           {(line) => <ItemRow free line={line} variantTitle={line.variant.title} />}
@@ -45,12 +51,6 @@ export const buyOnline = defineTemplate({
           <Var filters={["money"]} path={vars.total_price} />
         </TotalsSum>
       </Totals>
-      <If test={isPresent(vars.custom_message)}>
-        <EmailLead>
-          <Var path={vars.custom_message} />
-        </EmailLead>
-      </If>
-      <EmailButton href={liquidValue(vars.invoice_url, ["default: shop.url"])}>Complete your purchase</EmailButton>
       <QuickLinks />
       <SupportBand>Our team replies fast. Just reply to this email or reach us anytime.</SupportBand>
       <MarketingFooter flush shop={vars.shop} unsubscribeUrl={shopLinks.preferences} />

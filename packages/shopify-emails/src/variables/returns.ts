@@ -1,5 +1,6 @@
 import type { LineItem } from "./order.ts"
 import type { Cents } from "./primitives.ts"
+import type { Product, ProductVariant } from "./product.ts"
 
 /** Probed on `refund_notification`, where `json` dumps it as key/value pairs rather than a hash. */
 export type RefundLineItem = {
@@ -47,9 +48,18 @@ export type ReturnDrop = {
   readonly total_tax_price: Cents | null
 }
 
-/** Also unprobeable, and read from `change_requested` and `requested_edit_declined`. */
+/*
+ * A requested edit lists the variants the customer asked to drop, not order lines: the line's own
+ * `title`, `variant_title` and `price` all come back blank, and only the nested variant names the
+ * product. Probed on `change_requested` through the admin preview.
+ */
+export type RequestedEditLine = Omit<LineItem, "variant"> & {
+  readonly variant: ProductVariant & { readonly product: Product }
+}
+
+/** Read from `change_requested` and `requested_edit_declined`. */
 export type RequestedEdit = {
-  readonly affected_line_items: readonly LineItem[]
+  readonly affected_line_items: readonly RequestedEditLine[]
   readonly decline_note: string | null
-  readonly line_items: readonly LineItem[]
+  readonly line_items: readonly RequestedEditLine[]
 }

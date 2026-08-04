@@ -3,11 +3,12 @@ import {
   Assign,
   binding,
   Else,
-  eq,
   For,
   gt,
   If,
+  isPresent,
   isTruthy,
+  liquidExpression,
   liquidValue,
   neq,
   type PathRef,
@@ -15,7 +16,7 @@ import {
   Var
 } from "@repo/shopify-emails"
 import type { ReactNode } from "react"
-import { Column, Row, Section } from "react-email"
+import { Column, Img, Row, Section } from "react-email"
 import { color, font, gutter, sectionGap } from "./tokens.ts"
 
 /*
@@ -107,11 +108,11 @@ export const presentedTitle = (line: PathRef<LineItem>) => (
 )
 
 /*
- * Shopify allocates an order-wide discount down to the lines it covers, so `final_line_price` is
- * net of a reduction the line itself never announced. Adding that share back leaves each line
- * showing only what its own discounts did, and leaves the ladder free to name the order-wide one.
+ * A line's own discounts are the only ones it may announce, so its price is the list price less
+ * those. Working down from the original rather than up from `final_line_price` also keeps the
+ * struck price above the live one, which adding back an order-wide share could not guarantee.
  */
-const orderWideShare = binding<number>("line_order_wide_discount")
+const lineOwnDiscount = binding<number>("line_own_discount")
 const shownLinePrice = binding<number>("line_shown_price")
 
 export const ItemRow = ({
@@ -126,9 +127,39 @@ export const ItemRow = ({
   <Row className="dk-border" style={{ borderBottom: `1px solid ${color.line}` }}>
     {/* 9px wider than the thumbnail and 9px shorter above it, which is what the badge hangs over. */}
     <Column style={{ padding: "3px 0 12px", verticalAlign: "middle", width: 59 }}>
+      {/* Shopify's email pipeline strips CSS background images, so the picture has to be an img.
+          The grey square behind it is always drawn, to keep a line without one lined up. It comes
+          first because an image and the badge both paint as inline content, in document order. */}
+      <div style={{ fontSize: 0, height: 0, lineHeight: 0 }}>
+        <div
+          className="dk-surface dk-border"
+          style={{
+            backgroundColor: color.surface,
+            border: `1px solid ${color.line}`,
+            borderRadius: 8,
+            display: "inline-block",
+            fontSize: 0,
+            height: 48,
+            lineHeight: 0,
+            marginTop: 9,
+            width: 48
+          }}
+        >
+          <If test={isPresent(line.image)}>
+            {/* The raw drop is a store-relative path, so only `img_url` yields a URL an email client can fetch. */}
+            <Img
+              alt=""
+              height={48}
+              src={liquidValue(line.image, ["img_url: '96x96'"])}
+              style={{ borderRadius: 8, display: "block", objectFit: "cover" }}
+              width={48}
+            />
+          </If>
+        </div>
+      </div>
       {/* Gmail drops both `position` and a negative margin, so the badge cannot be pulled back over
-          the corner. It sits in a strip too short to hold it and spills out of one instead. */}
-      <div style={{ fontSize: 0, height: 9, lineHeight: 0, textAlign: "right" }}>
+          the corner. The thumbnail above holds no height, so this strip starts level with its top. */}
+      <div style={{ fontSize: 0, height: 57, lineHeight: 0, textAlign: "right" }}>
         <div
           className="dk-chip dk-ring"
           style={{
@@ -150,33 +181,18 @@ export const ItemRow = ({
           <Var path={quantity} />
         </div>
       </div>
-      {/* The grey square is always drawn, so a line without a picture still lines up with one. Its
-          background paints before the badge does, which is what keeps the badge on top. */}
-      <div
-        className="dk-surface dk-border"
-        style={{
-          backgroundColor: color.surface,
-          backgroundImage: `url(${liquidValue(line.image)})`,
-          backgroundRepeat: "no-repeat",
-          backgroundSize: "48px 48px",
-          border: `1px solid ${color.line}`,
-          borderRadius: 8,
-          height: 48,
-          width: 48
-        }}
-      />
     </Column>
     {/* The 20px gap to the thumbnail, less the 9px the column beside it took for the badge. */}
     <Column style={{ padding: "12px 0 12px 11px", verticalAlign: "middle" }}>
-      <Assign to={orderWideShare} value="0" />
+      <Assign to={lineOwnDiscount} value="0" />
       <For each={line.discount_allocations}>
         {(allocation) => (
-          <If test={eq(allocation.discount_application.target_selection, "all")}>
-            <Assign to={orderWideShare} value={`${pathOf(orderWideShare)} | plus: ${pathOf(allocation.amount)}`} />
+          <If test={neq(allocation.discount_application.target_selection, "all")}>
+            <Assign to={lineOwnDiscount} value={`${pathOf(lineOwnDiscount)} | plus: ${pathOf(allocation.amount)}`} />
           </If>
         )}
       </For>
-      <Assign to={shownLinePrice} value={`${pathOf(line.final_line_price)} | plus: ${pathOf(orderWideShare)}`} />
+      <Assign to={shownLinePrice} value={`${pathOf(line.original_line_price)} | minus: ${pathOf(lineOwnDiscount)}`} />
       <div
         className="dk-text"
         style={{ color: color.ink, fontFamily: font.body, fontSize: 14, fontWeight: 600, lineHeight: "19px" }}
@@ -201,8 +217,9 @@ export const ItemRow = ({
           </ItemNote>
         )}
       </For>
-      {/* What one costs, which only earns its line once the buyer took more than one. */}
-      <If test={gt(quantity, 1)}>
+      {/* What one costs, which only earns its line once the buyer took more than one. A requested
+          edit lists variants rather than order lines, and leaves the price blank. */}
+      <If test={and(gt(quantity, 1), isPresent(line.price))}>
         <ItemNote>
           <Var filters={["money"]} path={line.price} /> each
         </ItemNote>
@@ -282,6 +299,14 @@ const ItemDiscount = ({ children }: ItemNoteProps) => (
       paddingTop: 3
     }}
   >
+    {/* Shopify serves the tag its own notifications put beside a discount. */}
+    <Img
+      alt=""
+      height={13}
+      src={liquidExpression("'notifications/discounttag.png' | shopify_asset_url")}
+      style={{ display: "inline-block", marginRight: 5, verticalAlign: "-2px" }}
+      width={13}
+    />
     {children}
   </div>
 )

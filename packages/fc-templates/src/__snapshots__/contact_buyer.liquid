@@ -278,7 +278,7 @@
                             <div
                               class="sub dk-muted"
                               style='color:#5a5a60;font-family:Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;font-size:15px;font-weight:400;line-height:24px;margin:0 auto;max-width:472px'>
-                              {% if custom_message != blank %}<!-- -->{{ custom_message | escape }}<!-- -->{% else %}<!-- -->Hi
+                              {% if custom_message != blank %}<!-- -->{{ custom_message }}<!-- -->{% else %}<!-- -->Hi
                               <!-- -->{{ customer.first_name | default: 'there' | escape }}<!-- -->,
                               we wanted to check in about your recent order.<!-- -->{% endif %}
                             </div>

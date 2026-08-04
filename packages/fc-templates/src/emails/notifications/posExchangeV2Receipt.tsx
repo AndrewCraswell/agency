@@ -24,6 +24,7 @@ export const posExchangeV2Receipt = defineTemplate({
       <EmailLead>
         Here’s a summary of your in-store exchange for order <Var path={vars.order.name} />, processed at the counter.
       </EmailLead>
+      <EmailButton href={liquidValue(vars.order_status_url, ["default: shop.url"])}>View your order</EmailButton>
       <ItemList label="RETURNED">
         <For each={vars.return_line_items}>
           {(line) => (
@@ -58,7 +59,6 @@ export const posExchangeV2Receipt = defineTemplate({
           <Var filters={["money"]} path={vars.exchange_total} />
         </TotalsSum>
       </Totals>
-      <EmailButton href={liquidValue(vars.order_status_url, ["default: shop.url"])}>View your order</EmailButton>
       <EmailFooter shop={vars.shop} />
     </EmailDocument>
   )

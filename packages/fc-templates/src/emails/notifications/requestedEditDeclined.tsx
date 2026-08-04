@@ -1,4 +1,4 @@
-import { definePreview, defineTemplate, For, If, isPresent, liquidValue, Var } from "@repo/shopify-emails"
+import { definePreview, defineTemplate, For, If, isPresent, liquidValue, pathOf, Var } from "@repo/shopify-emails"
 import { EmailButton } from "../components/EmailButton.tsx"
 import { EmailDocument } from "../components/EmailDocument.tsx"
 import { EmailFooter } from "../components/EmailFooter.tsx"
@@ -35,7 +35,15 @@ export const requestedEditDeclined = defineTemplate({
       <EmailButton href={liquidValue(vars.order_status_url, ["default: shop.url"])}>View your order</EmailButton>
       <ItemList label="CANCELLATION REQUEST SUMMARY">
         <For each={vars.requested_edit.affected_line_items}>
-          {(line) => <ItemRow free line={line} variantTitle={line.variant_title} />}
+          {/* A requested edit lists variants, so `title` is blank and only the variant names the product. */}
+          {(line) => (
+            <ItemRow
+              free
+              line={line}
+              title={<Var filters={[`default: ${pathOf(line.variant.product.title)}`]} path={line.title} />}
+              variantTitle={line.variant.title}
+            />
+          )}
         </For>
       </ItemList>
       <SupportBand heading="Still need to change this order?">

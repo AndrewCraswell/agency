@@ -43,13 +43,16 @@ reads fine and still says so.
 
 ## Outputting values
 
-| Export             | Position  | Signature                                                     |
-| ------------------ | --------- | ------------------------------------------------------------- |
-| `Var`              | element   | `{ path: PathRef<unknown>; filters?: readonly string[] }`      |
-| `liquidValue`      | attribute | `(ref: PathRef<unknown>, filters?: readonly string[]) => string` |
-| `liquidExpression` | either    | `(expression: string) => string`                              |
+| Export             | Position  | Signature                                                                  |
+| ------------------ | --------- | -------------------------------------------------------------------------- |
+| `Var`              | element   | `{ path: PathRef<unknown>; filters?: readonly string[]; raw?: boolean }`    |
+| `liquidValue`      | attribute | `(ref: PathRef<unknown>, filters?: readonly string[]) => string`            |
+| `liquidExpression` | either    | `(expression: string) => string`                                           |
 
 `liquidExpression` is hand-written Liquid and is not type-checked against the variables. Its filters still are.
+
+`raw` drops the `| escape` a drop otherwise carries. Shopify refuses a notification body that filters a
+drop it writes itself, so `custom_message` has to be read this way.
 
 ## Conditions
 

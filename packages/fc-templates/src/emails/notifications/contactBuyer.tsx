@@ -15,7 +15,7 @@ export const contactBuyer = defineTemplate({
       <EmailLead>
         {/* The merchant writes the whole paragraph, greeting included, so it replaces rather than follows ours. */}
         <If test={isPresent(vars.custom_message)}>
-          <Var path={vars.custom_message} />
+          <Var raw path={vars.custom_message} />
           <Else>
             Hi <Var filters={["default: 'there'"]} path={vars.customer.first_name} />, we wanted to check in about your
             recent order.

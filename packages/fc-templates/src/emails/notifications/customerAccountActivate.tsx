@@ -16,7 +16,7 @@ export const customerAccountActivate = defineTemplate({
       <EmailLead>
         {/* A merchant can replace the standard line from the admin, so the default is the fallback. */}
         <If test={isPresent(vars.custom_message)}>
-          <Var path={vars.custom_message} />
+          <Var raw path={vars.custom_message} />
           <Else>
             You’re one step from a Fencing Club account. Activate it to track orders, save your kit list, and check out
             faster next time.
