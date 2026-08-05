@@ -24,7 +24,7 @@ jobs:
           # `pnpm verify` runs `beachball check`, which diffs against
           # origin/main, so the full git history must be available.
           fetch-depth: 0
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v4
         with:
           node-version: 24
