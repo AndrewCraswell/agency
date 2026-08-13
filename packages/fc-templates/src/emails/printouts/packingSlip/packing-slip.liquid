@@ -1,17 +1,21 @@
 {%- comment -%}
-  Fencing Club — printable packing slip for the Shopify Order Printer app.
+  Fencing Club — printable packing slip, pasted into Settings > Shipping and delivery >
+  Packing slip template. That editor renders one slip per shipment, not per order.
 
   A warehouse document: what to pick, how many, and where it ships. No prices, because the
   slip travels in the box and doubles as the customer's receipt of contents.
 
+  `line_items_in_shipment` is what goes in this box and `shipping_quantity` is how many of the
+  ordered units it carries, so a split order prints one slip per box instead of the whole order
+  on each. `order.line_items` would ignore the split.
+
   Variable reference:
-  https://help.shopify.com/en/manual/fulfillment/managing-orders/printing-orders/shopify-order-printer/liquid-variables-and-filters-reference
+  https://help.shopify.com/en/manual/fulfillment/managing-orders/printing-orders/packing-slips/variable-reference
 {%- endcomment -%}
 
-{%- assign shipping_method = order.shipping_methods | first -%}
 {%- assign unit_count = 0 -%}
-{%- for line_item in order.line_items -%}
-  {%- assign unit_count = unit_count | plus: line_item.quantity -%}
+{%- for line_item in line_items_in_shipment -%}
+  {%- assign unit_count = unit_count | plus: line_item.shipping_quantity -%}
 {%- endfor -%}
 
 <link
@@ -34,6 +38,11 @@
     }
   }
 
+  html,
+  body {
+    margin: 0;
+  }
+
   .fc-slip {
     --ink: #000000;
     --muted: #000000;
@@ -46,11 +55,16 @@
     color: var(--ink);
     font-family: var(--body);
     font-size: 13.5px;
+    height: 100vh;
     line-height: 1.35;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
     table-layout: fixed;
     width: 100%;
+  }
+
+  .fc-slip__content {
+    height: 1px;
   }
 
   /* Zero-specificity reset so the layout classes below still win. */
@@ -233,8 +247,6 @@
     font-weight: 600;
   }
 
-  /* Variant options keep the document's label grammar: a small tracked name, then the value,
-     with space doing the separating instead of punctuation. */
   .fc-item__meta {
     padding-top: 2px;
   }
@@ -247,14 +259,6 @@
     white-space: nowrap;
   }
 
-  .fc-item__meta-name {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    padding-right: 5px;
-    text-transform: uppercase;
-  }
-
   .fc-col-qty {
     text-align: right;
     width: 60px;
@@ -263,6 +267,14 @@
   .fc-item__qty {
     font-size: 16px;
     font-weight: 700;
+  }
+
+  .fc-item__qty-ordered {
+    color: var(--muted);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    padding-top: 2px;
   }
 
   .fc-count {
@@ -299,6 +311,12 @@
   .fc-note__text {
     font-size: 14px;
     font-style: italic;
+    line-height: 18px;
+    padding-top: 3px;
+  }
+
+  .fc-note__notice {
+    font-size: 14px;
     line-height: 18px;
     padding-top: 3px;
   }
@@ -397,7 +415,7 @@
                 <circle cx="12" cy="12" r="10" />
                 <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
                 <path d="M2 12h20" />
-              </svg>{{ shop.url | default: "https://fencing.club" }}
+              </svg>{{ shop.domain | default: "fencing.club" }}
             </td>
             <td class="fc-footer__thanks">Thanks for your business!</td>
           </tr>
@@ -406,7 +424,7 @@
     </tr>
   </tfoot>
   <tbody>
-    <tr>
+    <tr class="fc-slip__content">
       <td>
         <!-- Masthead -->
         <table class="fc-mast">
@@ -432,12 +450,6 @@
                     <div class="fc-label">DATE</div>
                     <div class="fc-meta__value">{{ order.created_at | date: "%B %e, %Y" }}</div>
                   </td>
-                  {%- if order.requires_shipping and shipping_method.title != blank %}
-                    <td>
-                      <div class="fc-label">SHIPPING</div>
-                      <div class="fc-meta__value">{{ shipping_method.title }}</div>
-                    </td>
-                  {%- endif %}
                 </tr>
               </table>
             </td>
@@ -461,8 +473,8 @@
                 <tr>
                   <td>
                     <div class="fc-party__label">BILL TO</div>
-                    {%- assign bill_to = order.billing_address | default: order.shipping_address -%}
-                    {%- if bill_to -%}
+                    {%- assign bill_to = billing_address | default: shipping_address -%}
+                    {%- if bill_to != blank -%}
                       <div class="fc-party__name">{{ bill_to.name }}</div>
                       {%- if bill_to.company != blank %}<div class="fc-party__line">{{ bill_to.company }}</div>{% endif %}
                       {%- if bill_to.address1 != blank %}<div class="fc-party__line">{{ bill_to.address1 }}</div>{% endif %}
@@ -471,19 +483,19 @@
                       <div class="fc-party__line">{{ bill_to.country }}</div>
                       {%- if bill_to.phone != blank %}<div class="fc-party__line">{{ bill_to.phone }}</div>{% endif %}
                     {%- else -%}
-                      <div class="fc-party__line">{{ order.email }}</div>
+                      <div class="fc-party__line">{{ customer.email }}</div>
                     {%- endif -%}
                   </td>
                   <td>
-                    {%- if order.requires_shipping and order.shipping_address -%}
+                    {%- if shipping_address != blank -%}
                       <div class="fc-party__label">SHIP TO</div>
-                      <div class="fc-party__name">{{ order.shipping_address.name }}</div>
-                      {%- if order.shipping_address.company != blank %}<div class="fc-party__line">{{ order.shipping_address.company }}</div>{% endif %}
-                      {%- if order.shipping_address.address1 != blank %}<div class="fc-party__line">{{ order.shipping_address.address1 }}</div>{% endif %}
-                      {%- if order.shipping_address.address2 != blank %}<div class="fc-party__line">{{ order.shipping_address.address2 }}</div>{% endif %}
-                      <div class="fc-party__line">{{ order.shipping_address.city }} {{ order.shipping_address.province_code }} {{ order.shipping_address.zip }}</div>
-                      <div class="fc-party__line">{{ order.shipping_address.country }}</div>
-                      {%- if order.shipping_address.phone != blank %}<div class="fc-party__line">{{ order.shipping_address.phone }}</div>{% endif %}
+                      <div class="fc-party__name">{{ shipping_address.name }}</div>
+                      {%- if shipping_address.company != blank %}<div class="fc-party__line">{{ shipping_address.company }}</div>{% endif %}
+                      {%- if shipping_address.address1 != blank %}<div class="fc-party__line">{{ shipping_address.address1 }}</div>{% endif %}
+                      {%- if shipping_address.address2 != blank %}<div class="fc-party__line">{{ shipping_address.address2 }}</div>{% endif %}
+                      <div class="fc-party__line">{{ shipping_address.city }} {{ shipping_address.province_code }} {{ shipping_address.zip }}</div>
+                      <div class="fc-party__line">{{ shipping_address.country }}</div>
+                      {%- if shipping_address.phone != blank %}<div class="fc-party__line">{{ shipping_address.phone }}</div>{% endif %}
                     {%- endif -%}
                   </td>
                 </tr>
@@ -501,34 +513,28 @@
             </tr>
           </thead>
           <tbody>
-            {%- for line_item in order.line_items %}
+            {%- for line_item in line_items_in_shipment %}
               <tr>
                 <td class="fc-items__thumb">
-                  {%- assign thumb = line_item.image | default: line_item.product.featured_image -%}
-                  {%- if thumb != blank -%}
-                    <img src="{{ thumb | img_url: '100x100' }}" alt="" />
+                  {%- if line_item.image != blank -%}
+                    <img src="{{ line_item.image | img_url: '100x100' }}" alt="" />
                   {%- else -%}
                     <div class="fc-items__placeholder"></div>
                   {%- endif -%}
                 </td>
                 <td>
                   <div class="fc-item__title">{{ line_item.title }}</div>
-                  {%- assign has_options = false -%}
-                  {%- if line_item.options_with_values.size > 0 and line_item.product.has_only_default_variant != true -%}
-                    {%- assign has_options = true -%}
-                  {%- endif -%}
-                  {%- if has_options %}
+                  {%- if line_item.variant_title != blank %}
                     <div class="fc-item__meta">
-                      {%- for option in line_item.options_with_values %}
-                        <span class="fc-item__meta-part">
-                          <span class="fc-item__meta-name">{{ option.name }}</span>{{ option.value }}
-                        </span>
-                      {%- endfor %}
+                      <span class="fc-item__meta-part">{{ line_item.variant_title }}</span>
                     </div>
                   {%- endif %}
                 </td>
                 <td class="fc-col-qty">
-                  <span class="fc-item__qty">&times; {{ line_item.quantity }}</span>
+                  <span class="fc-item__qty">&times; {{ line_item.shipping_quantity }}</span>
+                  {%- if line_item.shipping_quantity < line_item.quantity %}
+                    <div class="fc-item__qty-ordered">OF {{ line_item.quantity }}</div>
+                  {%- endif %}
                 </td>
               </tr>
             {%- endfor %}
@@ -536,10 +542,39 @@
         </table>
 
         <div class="fc-count">
-          {{ order.line_items.size }} line {% if order.line_items.size == 1 %}item{% else %}items{% endif %}
+          {{ line_items_in_shipment.size }} line {% if line_items_in_shipment.size == 1 %}item{% else %}items{% endif %}
           &mdash;
           <span class="fc-count__units">{{ unit_count }} {% if unit_count == 1 %}unit{% else %}units{% endif %}</span>
         </div>
+      </td>
+    </tr>
+    <tr class="fc-slip__spacer">
+      <td></td>
+    </tr>
+    <tr class="fc-slip__content">
+      <td>
+        <!-- Split shipment -->
+        {%- unless includes_all_line_items_in_order %}
+          <table class="fc-note">
+            <tr>
+              <td class="fc-note__icon">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M21 8 12 3 3 8v8l9 5 9-5zM3 8l9 5 9-5M12 13v8"
+                    stroke="#000000"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </td>
+              <td>
+                <div class="fc-label">SPLIT SHIPMENT</div>
+                <div class="fc-note__notice">This box holds part of the order. The rest ships separately.</div>
+              </td>
+            </tr>
+          </table>
+        {%- endunless %}
 
         <!-- Customer note -->
         {%- if order.note != blank %}
