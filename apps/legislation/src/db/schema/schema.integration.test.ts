@@ -1,0 +1,870 @@
+import { readFile } from "node:fs/promises"
+import { resolve } from "node:path"
+import { eq } from "drizzle-orm"
+import { drizzle } from "drizzle-orm/node-postgres"
+import { migrate } from "drizzle-orm/node-postgres/migrator"
+import pg from "pg"
+import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { generateCoverageReport } from "../../coverage/report.js"
+import { synchronizeCongress } from "../../ingestion/congress/sync.js"
+import type { ArtifactStore } from "../../ingestion/documents/artifact-store.js"
+import { processPendingDocuments } from "../../ingestion/documents/jobs.js"
+import { persistProcessedDocument } from "../../ingestion/documents/process.js"
+import { embedBills, embedDocumentSections } from "../../ingestion/embeddings/jobs.js"
+import { GovInfoClient } from "../../ingestion/govinfo/client.js"
+import { importGovInfoPackages } from "../../ingestion/govinfo/import.js"
+import { RetryingHttpClient } from "../../ingestion/http-client.js"
+import { importOpenStatesRecords } from "../../ingestion/openstates/import.js"
+import { openStatesBillSchema } from "../../ingestion/openstates/normalize.js"
+import { LegislationQueryService } from "../../legislation/query-service.js"
+import { EMBEDDING_MODEL } from "../../models/openrouter-embeddings.js"
+import { lexicalBillSearch, lexicalPassageSearch, semanticBillSearch } from "../../search/search.js"
+import { validateCorpus } from "../../validation/corpus.js"
+import { getBillById, upsertBillAggregate } from "../queries/bill-aggregates.js"
+import { isDatabaseAvailable, isDatabaseReady } from "../readiness.js"
+import * as schema from "./schema.js"
+
+const databaseUrl = process.env.LEGISLATION_TEST_DATABASE_URL
+const describePostgres = databaseUrl === undefined ? describe.skip : describe
+const migrationsFolder = resolve(process.cwd(), "src/db/migrations")
+const contentHash = "a".repeat(64)
+
+if (databaseUrl !== undefined && new URL(databaseUrl).pathname !== "/legislation_test") {
+  throw new Error("LEGISLATION_TEST_DATABASE_URL must target the legislation_test database")
+}
+
+describePostgres.sequential("legislation PostgreSQL schema", () => {
+  const pool = new pg.Pool({ connectionString: databaseUrl, max: 2 })
+  const database = drizzle(pool, { schema })
+
+  beforeAll(async () => {
+    await pool.query("drop schema if exists legislation cascade")
+    await pool.query("drop schema if exists legislation_migrations cascade")
+    await migrate(database, {
+      migrationsFolder,
+      migrationsSchema: "legislation_migrations",
+      migrationsTable: "migrations"
+    })
+  })
+
+  afterAll(async () => {
+    await pool.query("drop schema if exists legislation cascade")
+    await pool.query("drop schema if exists legislation_migrations cascade")
+    await pool.end()
+  })
+
+  it("installs pgvector and creates 1,536-dimensional vector columns", async () => {
+    await expect(isDatabaseAvailable(pool)).resolves.toBe(true)
+    await expect(isDatabaseReady(pool)).resolves.toBe(true)
+
+    const result = await pool.query<{ column_type: string }>(
+      "select format_type(a.atttypid, a.atttypmod) as column_type from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'legislation' and c.relname = 'bills' and a.attname = 'embedding'"
+    )
+
+    expect(result.rows).toEqual([{ column_type: "vector(1536)" }])
+  })
+
+  it("persists a canonical bill aggregate and cascades bill-owned records", async () => {
+    const jurisdictionId = "jurisdiction:wa"
+    const sessionId = "session:wa:2025-2026"
+    const billId = "bill:wa:2025-2026:hb:1234"
+    const relatedBillId = "bill:wa:2025-2026:sb:5678"
+    const personId = "person:openstates:person-1"
+    const actionId = `${billId}:action:1`
+    const voteId = `${billId}:vote:1`
+    const documentId = `${billId}:document:introduced`
+
+    await database.insert(schema.jurisdictions).values({
+      classification: "state",
+      countryCode: "US",
+      id: jurisdictionId,
+      name: "Washington",
+      subdivisionCode: "WA"
+    })
+    await database.insert(schema.legislativeSessions).values({
+      id: sessionId,
+      identifier: "2025-2026",
+      jurisdictionId,
+      name: "2025-2026 Regular Session"
+    })
+    await database.insert(schema.bills).values([
+      {
+        id: billId,
+        identifier: "HB 1234",
+        jurisdictionId,
+        sessionId,
+        sourceUrl: "https://example.test/hb-1234",
+        title: "An act relating to legislative data"
+      },
+      {
+        id: relatedBillId,
+        identifier: "SB 5678",
+        jurisdictionId,
+        sessionId,
+        sourceUrl: "https://example.test/sb-5678",
+        title: "A companion act relating to legislative data"
+      }
+    ])
+    await database.insert(schema.people).values({ id: personId, jurisdictionId, name: "Representative Example" })
+    await database.insert(schema.billSponsors).values({
+      billId,
+      classification: "primary",
+      id: `${billId}:sponsor:1`,
+      isPrimary: true,
+      name: "Representative Example",
+      personId
+    })
+    await database.insert(schema.billActions).values({
+      billId,
+      description: "Introduced in the House",
+      id: actionId,
+      ordinal: 0
+    })
+    await database.insert(schema.votes).values({ billId, id: voteId, motion: "Passage", yesCount: 50 })
+    await database.insert(schema.votePositions).values({ option: "yes", personId, voteId })
+    await database.insert(schema.billDocuments).values({
+      billId,
+      classification: "version",
+      id: documentId,
+      sourceUrl: "https://example.test/hb-1234/text",
+      title: "Introduced bill",
+      versionCode: "introduced"
+    })
+    await database.insert(schema.documentSections).values({
+      contentHash,
+      documentId,
+      id: `${documentId}:section:1`,
+      ordinal: 0,
+      sectionIdentifier: "1",
+      sourceEndOffset: 48,
+      sourceStartOffset: 0,
+      text: "Section 1. This act concerns legislative data."
+    })
+    await database.insert(schema.billRelations).values({
+      billId,
+      classification: "companion",
+      relatedBillId
+    })
+
+    await expect(database.select().from(schema.bills).where(eq(schema.bills.id, billId))).resolves.toHaveLength(1)
+
+    await database.delete(schema.bills).where(eq(schema.bills.id, billId))
+
+    await expect(
+      database.select().from(schema.billActions).where(eq(schema.billActions.billId, billId))
+    ).resolves.toHaveLength(0)
+    await expect(
+      database.select().from(schema.billDocuments).where(eq(schema.billDocuments.billId, billId))
+    ).resolves.toHaveLength(0)
+    await expect(database.select().from(schema.bills).where(eq(schema.bills.id, relatedBillId))).resolves.toHaveLength(
+      1
+    )
+  })
+
+  it("rejects a noncanonical bill identifier", async () => {
+    const operation = database.insert(schema.bills).values({
+      id: "not-canonical",
+      identifier: "HB 9999",
+      jurisdictionId: "jurisdiction:wa",
+      sessionId: "session:wa:2025-2026",
+      sourceUrl: "https://example.test/hb-9999",
+      title: "An invalid bill"
+    })
+    const rejection: unknown = await operation.then(
+      () => new Error("Expected the bill identifier constraint to reject the insert"),
+      (error: unknown) => error
+    )
+
+    expect(rejection).toMatchObject({ cause: { code: "23514", constraint: "bills_id_check" } })
+  })
+
+  it("upserts aggregates idempotently and rolls back a failed child replacement", async () => {
+    const billId = "bill:wa:2025-2026:hb:2468"
+    const actionId = `${billId}:action:1`
+    const aggregate = {
+      actions: [{ billId, description: "Introduced", id: actionId, ordinal: 0 }],
+      bill: {
+        id: billId,
+        identifier: "HB 2468",
+        jurisdictionId: "jurisdiction:wa",
+        sessionId: "session:wa:2025-2026",
+        sourceUrl: "https://example.test/hb-2468",
+        title: "A stable aggregate"
+      },
+      jurisdiction: {
+        classification: "state",
+        countryCode: "US",
+        id: "jurisdiction:wa",
+        name: "Washington",
+        subdivisionCode: "WA"
+      },
+      session: {
+        id: "session:wa:2025-2026",
+        identifier: "2025-2026",
+        jurisdictionId: "jurisdiction:wa",
+        name: "2025-2026 Regular Session"
+      }
+    }
+
+    await upsertBillAggregate(database, aggregate)
+    await upsertBillAggregate(database, aggregate)
+
+    await expect(
+      database.select().from(schema.billActions).where(eq(schema.billActions.billId, billId))
+    ).resolves.toHaveLength(1)
+    await expect(getBillById(database, billId)).resolves.toMatchObject({ title: "A stable aggregate" })
+
+    await expect(
+      upsertBillAggregate(database, {
+        ...aggregate,
+        actions: [{ billId, description: "Invalid action", id: actionId, ordinal: -1 }],
+        bill: { ...aggregate.bill, title: "This update must roll back" }
+      })
+    ).rejects.toMatchObject({ cause: { code: "23514", constraint: "bill_actions_ordinal_check" } })
+    await expect(getBillById(database, billId)).resolves.toMatchObject({ title: "A stable aggregate" })
+  })
+
+  it("merges federal provenance and preserves GovInfo documents during a Congress.gov update", async () => {
+    const billId = "bill:us:119:hr:1234"
+    const base = {
+      bill: {
+        id: billId,
+        identifier: "HR 1234",
+        jurisdictionId: "jurisdiction:us",
+        sessionId: "session:us:119",
+        sourceUrl: "https://www.govinfo.gov/example",
+        title: "Federal data access",
+        upstreamIds: { govinfo: "BILLSTATUS-119hr1234" }
+      },
+      jurisdiction: { classification: "country", countryCode: "US", id: "jurisdiction:us", name: "United States" },
+      session: { id: "session:us:119", identifier: "119", jurisdictionId: "jurisdiction:us", name: "119th Congress" }
+    }
+    const documentId = `${billId}:document:introduced`
+
+    await upsertBillAggregate(database, {
+      ...base,
+      documents: [
+        {
+          document: {
+            billId,
+            classification: "version",
+            id: documentId,
+            sourceUrl: "https://www.govinfo.gov/example.xml",
+            title: "Introduced",
+            versionCode: "ih"
+          }
+        }
+      ]
+    })
+    await database
+      .update(schema.billDocuments)
+      .set({
+        blobPath: "govinfo/introduced/source.xml",
+        contentHash,
+        processingAttempts: 1,
+        processingStatus: "processed",
+        text: "Existing official text"
+      })
+      .where(eq(schema.billDocuments.id, documentId))
+    await database.insert(schema.documentSections).values({
+      contentHash,
+      documentId,
+      id: `${documentId}:section:preserved`,
+      ordinal: 0,
+      sourceEndOffset: 22,
+      sourceStartOffset: 0,
+      text: "Existing official text"
+    })
+    await upsertBillAggregate(database, {
+      ...base,
+      bill: {
+        ...base.bill,
+        sourceUrl: "https://api.congress.gov/v3/bill/119/hr/1234",
+        title: "Federal data access, updated",
+        upstreamIds: { congress: "119-hr-1234" }
+      },
+      documents: [
+        {
+          document: {
+            billId,
+            classification: "version",
+            id: documentId,
+            sourceUrl: "https://www.govinfo.gov/example.xml",
+            title: "Introduced, refreshed metadata",
+            versionCode: "ih"
+          }
+        }
+      ]
+    })
+
+    await expect(getBillById(database, billId)).resolves.toMatchObject({
+      title: "Federal data access, updated",
+      upstreamIds: { congress: "119-hr-1234", govinfo: "BILLSTATUS-119hr1234" }
+    })
+    await expect(
+      database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, documentId) })
+    ).resolves.toMatchObject({
+      blobPath: "govinfo/introduced/source.xml",
+      processingAttempts: 1,
+      processingStatus: "processed",
+      text: "Existing official text",
+      title: "Introduced, refreshed metadata"
+    })
+    await expect(
+      database.select().from(schema.documentSections).where(eq(schema.documentSections.documentId, documentId))
+    ).resolves.toHaveLength(1)
+  })
+
+  it("atomically persists document sections and skips unchanged content", async () => {
+    const documentId = "bill:us:119:hr:1234:document:introduced"
+    const bytes = new TextEncoder().encode(
+      "SECTION 1. SHORT TITLE.\nThis Act may be cited.\n\nSEC. 2. DATA.\nData shall be open."
+    )
+
+    await expect(persistProcessedDocument(database, { bytes, contentType: "text/plain", documentId })).resolves.toBe(
+      "processed"
+    )
+    await expect(persistProcessedDocument(database, { bytes, contentType: "text/plain", documentId })).resolves.toBe(
+      "unchanged"
+    )
+    await expect(
+      database.select().from(schema.documentSections).where(eq(schema.documentSections.documentId, documentId))
+    ).resolves.toHaveLength(2)
+
+    await expect(
+      lexicalBillSearch(database, { jurisdictionIds: ["jurisdiction:us"], query: '"Federal data"' })
+    ).resolves.toMatchObject({ items: [{ id: "bill:us:119:hr:1234" }] })
+    await expect(lexicalPassageSearch(database, { query: '"data shall be open"' })).resolves.toMatchObject({
+      items: [{ billId: "bill:us:119:hr:1234", documentId }]
+    })
+
+    const embedding = Array.from({ length: 1536 }, () => 0.1)
+    const embeddingClient = {
+      embed: async (input: string[]) => ({ embeddings: input.map(() => embedding), model: EMBEDDING_MODEL })
+    }
+    await expect(embedBills(database, embeddingClient, { billId: "bill:us:119:hr:1234" })).resolves.toEqual({
+      embedded: 1,
+      skipped: 0
+    })
+    await expect(embedDocumentSections(database, embeddingClient, { documentId })).resolves.toEqual({
+      embedded: 2,
+      skipped: 0
+    })
+    await expect(embedDocumentSections(database, embeddingClient, { documentId })).resolves.toEqual({
+      embedded: 0,
+      skipped: 2
+    })
+    await expect(semanticBillSearch(database, { embedding })).resolves.toMatchObject({
+      items: [{ id: "bill:us:119:hr:1234" }]
+    })
+
+    const secondDocumentId = "bill:us:119:hr:1234:document:reported"
+    await database.insert(schema.billDocuments).values({
+      billId: "bill:us:119:hr:1234",
+      classification: "version",
+      id: secondDocumentId,
+      sourceUrl: "https://www.govinfo.gov/example-reported.xml",
+      title: "Reported",
+      versionCode: "rh"
+    })
+    await persistProcessedDocument(database, {
+      bytes: new TextEncoder().encode(
+        "SECTION 1. SHORT TITLE.\nThis Act may be cited as the Updated Act.\n\nSEC. 2. DATA.\nData shall be open."
+      ),
+      contentType: "text/plain",
+      documentId: secondDocumentId
+    })
+    await database.insert(schema.billRelations).values({
+      billId: "bill:us:119:hr:1234",
+      classification: "related",
+      relatedBillId: "bill:wa:2025-2026:sb:5678"
+    })
+
+    const service = new LegislationQueryService(database, embeddingClient)
+    await expect(service.searchBills({ mode: "lexical", query: "Federal data" })).resolves.toMatchObject({
+      items: [{ id: "bill:us:119:hr:1234" }]
+    })
+    await expect(service.getBill({ id: "bill:us:119:hr:1234" })).resolves.toMatchObject({
+      bill: { id: "bill:us:119:hr:1234" },
+      truncated: false
+    })
+    await expect(service.getBillTimeline({ id: "bill:us:119:hr:1234" })).resolves.toMatchObject({
+      billId: "bill:us:119:hr:1234"
+    })
+    await expect(
+      service.searchBillText({ billId: "bill:us:119:hr:1234", query: '"data shall be open"' })
+    ).resolves.toMatchObject({
+      items: expect.arrayContaining([expect.objectContaining({ billId: "bill:us:119:hr:1234" })])
+    })
+    await expect(service.getBillText({ id: "bill:us:119:hr:1234", versionCode: "ih" })).resolves.toMatchObject({
+      document: { id: documentId },
+      sections: expect.any(Array)
+    })
+    await expect(
+      service.compareBillVersions({ billId: "bill:us:119:hr:1234", documentIds: [documentId, secondDocumentId] })
+    ).resolves.toMatchObject({
+      changes: expect.arrayContaining([expect.objectContaining({ classification: "changed" })])
+    })
+    await expect(service.findRelatedBills({ id: "bill:us:119:hr:1234" })).resolves.toMatchObject({
+      items: [{ bill: { id: "bill:wa:2025-2026:sb:5678" }, classification: "related" }]
+    })
+    await expect(service.findRelatedBills({ id: "bill:wa:2025-2026:sb:5678" })).resolves.toMatchObject({
+      items: [{ bill: { id: "bill:us:119:hr:1234" }, classification: "related" }]
+    })
+  })
+
+  it("downloads, stores, and processes a pending document through the worker", async () => {
+    const documentId = "bill:us:119:hr:1234:document:worker-test"
+    await database.insert(schema.billDocuments).values({
+      billId: "bill:us:119:hr:1234",
+      classification: "analysis",
+      id: documentId,
+      sourceUrl: "https://example.test/worker-test.txt",
+      title: "Worker test document"
+    })
+    const artifacts = new Map<string, Uint8Array>()
+    const artifactStore: ArtifactStore = {
+      exists: async (path) => artifacts.has(path),
+      put: async (path, bytes) => {
+        artifacts.set(path, bytes)
+      },
+      read: async (path) => artifacts.get(path) ?? new Uint8Array()
+    }
+    const text = "SECTION 1. WORKER PATH.\nThe complete document worker is exercised."
+    const fetchDocument: typeof fetch = async () => {
+      const response = new Response(text, { headers: { "content-type": "text/plain; charset=utf-8" } })
+      Object.defineProperty(response, "url", { value: "https://example.test/worker-test.txt" })
+      return response
+    }
+
+    const result = await processPendingDocuments(database, {
+      artifactStore,
+      concurrency: 1,
+      documentId,
+      fetch: fetchDocument
+    })
+
+    expect(result).toMatchObject({ counts: { failed: 0, processed: 1, read: 1 } })
+    expect(artifacts.size).toBe(1)
+    await expect(
+      database.select().from(schema.documentSections).where(eq(schema.documentSections.documentId, documentId))
+    ).resolves.toHaveLength(1)
+
+    const failedReplacement = await processPendingDocuments(database, {
+      artifactStore,
+      concurrency: 1,
+      documentId,
+      fetch: async () => {
+        const response = new Response("not legislative text", {
+          headers: { "content-type": "application/octet-stream" }
+        })
+        Object.defineProperty(response, "url", { value: "https://example.test/worker-test.txt" })
+        return response
+      },
+      force: true
+    })
+    expect(failedReplacement).toMatchObject({ counts: { failed: 1, unsupported: 1 } })
+    await expect(
+      database.select().from(schema.documentSections).where(eq(schema.documentSections.documentId, documentId))
+    ).resolves.toHaveLength(1)
+
+    const targetedRetry = await processPendingDocuments(database, {
+      artifactStore,
+      concurrency: 1,
+      documentId,
+      fetch: async () => {
+        const response = new Response("SECTION 1. RETRIED PATH.\nThe targeted retry replaced the text safely.", {
+          headers: { "content-type": "text/plain" }
+        })
+        Object.defineProperty(response, "url", { value: "https://example.test/worker-test.txt" })
+        return response
+      },
+      force: true
+    })
+    expect(targetedRetry).toMatchObject({ counts: { failed: 0, processed: 1 } })
+    await expect(
+      database
+        .select({ text: schema.documentSections.text })
+        .from(schema.documentSections)
+        .where(eq(schema.documentSections.documentId, documentId))
+    ).resolves.toEqual([expect.objectContaining({ text: expect.stringContaining("targeted retry") })])
+  })
+
+  it("replays from the first failed Open States record without duplicating committed records", async () => {
+    const source = openStatesBillSchema.parse(
+      JSON.parse(await readFile(resolve(process.cwd(), "tests/fixtures/openstates/wa-hb-1234.json"), "utf8"))
+    )
+    const replacement = {
+      ...source,
+      id: "ocd-bill/wa-hb-9999",
+      identifier: "HB 9999",
+      related_bills: [],
+      sources: [{ url: "https://leg.wa.gov/billsummary?BillNumber=9999&Year=2025" }],
+      title: "A replayable legislative record"
+    }
+    const options = { concurrency: 2, contentHash: "b".repeat(64), stream: "wa-restart-test" }
+
+    const first = await importOpenStatesRecords(
+      database,
+      { jurisdictionCode: "wa", jurisdictionName: "Washington" },
+      [source, { identifier: "invalid" }],
+      options
+    )
+    expect(first).toMatchObject({ checkpoint: { complete: false, index: 1 }, counts: { failed: 1, inserted: 1 } })
+
+    const replay = await importOpenStatesRecords(
+      database,
+      { jurisdictionCode: "wa", jurisdictionName: "Washington" },
+      [source, replacement],
+      options
+    )
+    expect(replay).toMatchObject({ checkpoint: { complete: true, index: 2 }, counts: { inserted: 1, skipped: 1 } })
+    await expect(
+      database.select().from(schema.bills).where(eq(schema.bills.id, "bill:wa:2025-2026:hb:9999"))
+    ).resolves.toHaveLength(1)
+
+    const repeated = await importOpenStatesRecords(
+      database,
+      { jurisdictionCode: "wa", jurisdictionName: "Washington" },
+      [source, replacement],
+      options
+    )
+    expect(repeated).toMatchObject({ counts: { failed: 0, skipped: 2 } })
+
+    const changed = await importOpenStatesRecords(
+      database,
+      { jurisdictionCode: "wa", jurisdictionName: "Washington" },
+      [source, { ...replacement, title: "A changed legislative record" }],
+      { ...options, contentHash: "c".repeat(64) }
+    )
+    expect(changed).toMatchObject({ counts: { failed: 0, updated: 2 } })
+    await expect(
+      database
+        .select({ title: schema.bills.title })
+        .from(schema.bills)
+        .where(eq(schema.bills.id, "bill:wa:2025-2026:hb:9999"))
+    ).resolves.toEqual([{ title: "A changed legislative record" }])
+  })
+
+  it("keeps a GovInfo checkpoint before a transient failure and safely replays later packages", async () => {
+    const xml = await readFile(resolve(process.cwd(), "tests/fixtures/govinfo/BILLSTATUS-119hr1234.xml"), "utf8")
+    let currentXml = xml
+    let failFirstPackage = true
+    const client = new GovInfoClient(
+      new RetryingHttpClient({
+        fetch: async (input) => {
+          const url = String(input)
+          if (url.endsWith("first.xml") && failFirstPackage) {
+            failFirstPackage = false
+            return new Response("temporary", { status: 503 })
+          }
+          return new Response(currentXml, { headers: { "content-type": "application/xml" } })
+        },
+        maxAttempts: 1,
+        requestTimeoutMs: 1000
+      })
+    )
+    const packages = [
+      { billType: "hr", congress: 119, packageId: "first", url: new URL("https://example.test/first.xml") },
+      { billType: "hr", congress: 119, packageId: "second", url: new URL("https://example.test/second.xml") }
+    ]
+
+    const first = await importGovInfoPackages(database, client, packages, { stream: "govinfo-restart-test" })
+    expect(first).toMatchObject({ checkpoint: { complete: false, index: 0 }, counts: { failed: 1, read: 1 } })
+
+    const replay = await importGovInfoPackages(database, client, packages, { stream: "govinfo-restart-test" })
+    expect(replay).toMatchObject({ checkpoint: { complete: true, index: 2 }, counts: { failed: 0, read: 2 } })
+    await expect(
+      database
+        .select({ versionCode: schema.billDocuments.versionCode })
+        .from(schema.billDocuments)
+        .where(eq(schema.billDocuments.billId, "bill:us:119:hr:1234"))
+    ).resolves.toEqual(expect.arrayContaining([{ versionCode: "enr" }, { versionCode: "ih" }]))
+
+    const identical = await importGovInfoPackages(database, client, packages, { stream: "govinfo-restart-test" })
+    expect(identical).toMatchObject({ counts: { read: 0, skipped: 2 } })
+
+    currentXml = xml.replace("Legislative Data Access Act", "Legislative Data Access Act, updated")
+    const changed = await importGovInfoPackages(database, client, packages, {
+      force: true,
+      stream: "govinfo-restart-test"
+    })
+    expect(changed).toMatchObject({ counts: { failed: 0, updated: 2 } })
+    await expect(getBillById(database, "bill:us:119:hr:1234")).resolves.toMatchObject({
+      title: "Legislative Data Access Act, updated"
+    })
+    const versions = await database
+      .select({
+        documentDate: schema.billDocuments.documentDate,
+        id: schema.billDocuments.id,
+        versionCode: schema.billDocuments.versionCode
+      })
+      .from(schema.billDocuments)
+      .where(eq(schema.billDocuments.billId, "bill:us:119:hr:1234"))
+    expect(new Set(versions.map((version) => version.id)).size).toBe(versions.length)
+    expect(versions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ versionCode: "enr" }),
+        expect.objectContaining({ versionCode: "ih" })
+      ])
+    )
+    expect(
+      versions
+        .filter(
+          (version) => version.documentDate !== null && (version.versionCode === "ih" || version.versionCode === "enr")
+        )
+        .toSorted((left, right) => (left.documentDate ?? "").localeCompare(right.documentDate ?? ""))
+        .map((version) => version.versionCode)
+    ).toEqual(["ih", "enr"])
+  })
+
+  it("replays a partially failed Congress window without skipping or duplicating bills", async () => {
+    const fixture = JSON.parse(
+      await readFile(resolve(process.cwd(), "tests/fixtures/congress/119-hr-1234.json"), "utf8")
+    ) as {
+      actions: Array<Record<string, unknown>>
+      bill: Record<string, unknown>
+      cosponsors: Array<Record<string, unknown>>
+    } & Record<string, unknown>
+    const references = [
+      {
+        congress: 119,
+        number: "4321",
+        type: "HR",
+        updateDate: "2025-04-01T00:00:00Z",
+        url: "https://api.congress.gov/v3/bill/119/hr/4321"
+      },
+      {
+        congress: 119,
+        number: "1234",
+        type: "HR",
+        updateDate: "2025-04-02T00:00:00Z",
+        url: "https://api.congress.gov/v3/bill/119/hr/1234"
+      }
+    ]
+    let failFirst = true
+    let includeLaterUpdate = false
+    const client = {
+      getBillBundle: async (reference: (typeof references)[number]) => {
+        if (reference.number === "4321" && failFirst) {
+          failFirst = false
+          throw new Error("controlled record failure")
+        }
+        return {
+          ...fixture,
+          actions:
+            includeLaterUpdate && reference.number === "1234"
+              ? [...fixture.actions, { actionDate: "2025-04-03", text: "Passed House" }]
+              : fixture.actions,
+          bill: {
+            ...fixture.bill,
+            number: reference.number,
+            title: `Legislative Data Access Act ${reference.number}`,
+            updateDate: reference.updateDate,
+            url: reference.url
+          },
+          cosponsors:
+            includeLaterUpdate && reference.number === "1234"
+              ? [...fixture.cosponsors, { bioguideId: "E000003", fullName: "Representative Third" }]
+              : fixture.cosponsors,
+          textVersions:
+            includeLaterUpdate && reference.number === "1234"
+              ? [
+                  {
+                    date: "2025-04-03",
+                    formats: [
+                      {
+                        type: "application/xml",
+                        url: "https://www.govinfo.gov/content/pkg/BILLS-119hr1234eh/xml/BILLS-119hr1234eh.xml"
+                      }
+                    ],
+                    type: "eh"
+                  }
+                ]
+              : undefined
+        }
+      },
+      listUpdated: async function* () {
+        yield* references.map((reference) =>
+          includeLaterUpdate && reference.number === "1234"
+            ? { ...reference, updateDate: "2025-04-03T00:00:00Z" }
+            : reference
+        )
+      }
+    }
+    const progress: Array<Readonly<Record<string, unknown>>> = []
+    const options = {
+      from: new Date("2025-03-01T00:00:00Z"),
+      onProgress: (event: Readonly<Record<string, unknown>>) => progress.push(event),
+      stream: "congress-restart-test",
+      to: new Date("2025-05-01T00:00:00Z")
+    }
+
+    const first = await synchronizeCongress(database, client, options)
+    expect(first).toMatchObject({ counts: { failed: 1 }, failures: [{ identifier: "119-HR-4321" }] })
+    expect(first.checkpoint).toBeUndefined()
+    expect(progress.map((event) => event.event)).toEqual(
+      expect.arrayContaining(["checkpoint_start", "record_failed", "record_committed"])
+    )
+
+    const replay = await synchronizeCongress(database, client, options)
+    expect(replay).toMatchObject({
+      checkpoint: { canonicalId: "bill:us:119:hr:1234", updateDate: "2025-04-02T00:00:00Z" },
+      counts: { failed: 0 }
+    })
+    expect(progress.map((event) => event.event)).toContain("checkpoint_committed")
+    await expect(
+      database.select().from(schema.bills).where(eq(schema.bills.id, "bill:us:119:hr:4321"))
+    ).resolves.toHaveLength(1)
+
+    const beforeIdentical = await Promise.all([
+      database.select().from(schema.billActions).where(eq(schema.billActions.billId, "bill:us:119:hr:1234")),
+      database.select().from(schema.billSponsors).where(eq(schema.billSponsors.billId, "bill:us:119:hr:1234"))
+    ])
+    const identical = await synchronizeCongress(database, client, options)
+    expect(identical).toMatchObject({ counts: { failed: 0, unchanged: 2 } })
+    const afterIdentical = await Promise.all([
+      database.select().from(schema.billActions).where(eq(schema.billActions.billId, "bill:us:119:hr:1234")),
+      database.select().from(schema.billSponsors).where(eq(schema.billSponsors.billId, "bill:us:119:hr:1234"))
+    ])
+    expect(afterIdentical.map((rows) => rows.length)).toEqual(beforeIdentical.map((rows) => rows.length))
+
+    includeLaterUpdate = true
+    const later = await synchronizeCongress(database, client, options)
+    expect(later).toMatchObject({ counts: { failed: 0 } })
+    await expect(
+      database.select().from(schema.billActions).where(eq(schema.billActions.billId, "bill:us:119:hr:1234"))
+    ).resolves.toHaveLength(beforeIdentical[0].length + 1)
+    await expect(
+      database.select().from(schema.billSponsors).where(eq(schema.billSponsors.billId, "bill:us:119:hr:1234"))
+    ).resolves.toHaveLength(beforeIdentical[1].length + 1)
+    await expect(
+      database.select().from(schema.billDocuments).where(eq(schema.billDocuments.billId, "bill:us:119:hr:1234"))
+    ).resolves.toEqual(expect.arrayContaining([expect.objectContaining({ versionCode: "eh" })]))
+
+    let interruptAfterFirstRecord = true
+    const pageClient = {
+      getBillBundle: async (reference: (typeof references)[number]) => {
+        if (reference.number === "1234" && interruptAfterFirstRecord) {
+          interruptAfterFirstRecord = false
+          throw new Error("controlled page interruption")
+        }
+        return {
+          ...fixture,
+          bill: {
+            ...fixture.bill,
+            number: reference.number,
+            title: `Legislative Data Access Act ${reference.number}`,
+            updateDate: reference.updateDate,
+            url: reference.url
+          }
+        }
+      },
+      listUpdated: async function* () {
+        yield* references
+      }
+    }
+    const pageOptions = { ...options, onProgress: undefined, stream: "congress-page-commit-test" }
+    const interruptedPage = await synchronizeCongress(database, pageClient, pageOptions)
+    expect(interruptedPage).toMatchObject({ counts: { failed: 1 } })
+    await expect(
+      database.query.syncCheckpoints.findFirst({
+        where: (table, operators) =>
+          operators.and(operators.eq(table.source, "congress"), operators.eq(table.stream, pageOptions.stream))
+      })
+    ).resolves.toMatchObject({ cursor: { canonicalId: "bill:us:119:hr:4321" } })
+
+    const pageReplay = await synchronizeCongress(database, pageClient, pageOptions)
+    expect(pageReplay).toMatchObject({
+      checkpoint: { canonicalId: "bill:us:119:hr:1234" },
+      counts: { failed: 0 }
+    })
+    await expect(
+      database.select().from(schema.bills).where(eq(schema.bills.id, "bill:us:119:hr:1234"))
+    ).resolves.toHaveLength(1)
+  })
+
+  it("reports coverage and validates the assembled corpus", async () => {
+    const coverage = await generateCoverageReport(database)
+    expect(coverage).toMatchObject({
+      checkpoints: expect.any(Array),
+      documentProcessing: expect.arrayContaining([expect.objectContaining({ status: "processed" })]),
+      documentQuality: {
+        emptyText: expect.any(Number),
+        extractionFailures: expect.any(Number),
+        fallbackSegmentation: expect.any(Number),
+        lowText: expect.any(Number),
+        total: expect.any(Number)
+      },
+      embeddingCoverage: {
+        bills: { embedded: expect.any(Number), total: expect.any(Number) },
+        sections: { embedded: expect.any(Number), total: expect.any(Number) }
+      },
+      ingestionFailures: expect.any(Number),
+      totals: { bills: expect.any(Number), documents: expect.any(Number) },
+      version: 1
+    })
+    expect(coverage.totals.bills).toBeGreaterThan(0)
+    expect(coverage.federalBillTypes).toEqual(
+      expect.arrayContaining([expect.objectContaining({ billType: "hr", congress: "119" })])
+    )
+
+    await expect(validateCorpus(database)).resolves.toMatchObject({ criticalIssues: 0, valid: true })
+  })
+
+  it("inspects representative structured, lexical, semantic, and passage query plans within the latency gate", async () => {
+    const vector = `[${Array.from({ length: 1536 }, () => "0.1").join(",")}]`
+    const cases = [
+      {
+        indexes: ["bills_introduced_idx"],
+        query:
+          "select id from legislation.bills where jurisdiction_id = 'jurisdiction:us' and introduced_at >= '2025-01-01' order by introduced_at limit 20"
+      },
+      {
+        indexes: ["bills_search_vector_gin_idx"],
+        query:
+          "select id from legislation.bills where search_vector @@ websearch_to_tsquery('english', 'Federal data') order by ts_rank_cd(search_vector, websearch_to_tsquery('english', 'Federal data')) desc limit 20"
+      },
+      {
+        indexes: ["bills_embedding_hnsw_idx"],
+        query: `select id from legislation.bills where embedding is not null order by embedding <=> '${vector}'::vector limit 20`
+      },
+      {
+        indexes: ["document_sections_search_vector_gin_idx"],
+        query:
+          "select id from legislation.document_sections where search_vector @@ websearch_to_tsquery('english', 'data shall be open') order by ts_rank_cd(search_vector, websearch_to_tsquery('english', 'data shall be open')) desc limit 20"
+      },
+      {
+        indexes: ["bills_search_vector_gin_idx", "bills_embedding_hnsw_idx"],
+        query: `with lexical as (
+          select id from legislation.bills
+          where search_vector @@ websearch_to_tsquery('english', 'Federal data')
+          order by ts_rank_cd(search_vector, websearch_to_tsquery('english', 'Federal data')) desc limit 20
+        ), semantic as (
+          select id from legislation.bills where embedding is not null
+          order by embedding <=> '${vector}'::vector limit 20
+        ) select coalesce(lexical.id, semantic.id) from lexical full join semantic using (id)`
+      }
+    ]
+
+    await pool.query("begin")
+    try {
+      await pool.query("set local enable_seqscan = off")
+      for (const queryCase of cases) {
+        const result = await pool.query<{ "QUERY PLAN": Array<Record<string, unknown>> }>(
+          `explain (analyze, buffers, format json) ${queryCase.query}`
+        )
+        const plan = result.rows[0]?.["QUERY PLAN"]
+        expect(plan).toBeDefined()
+        const serialized = JSON.stringify(plan)
+        for (const index of queryCase.indexes) {
+          expect(serialized).toContain(index)
+        }
+        const executionTime = Number(plan?.[0]?.["Execution Time"])
+        expect(executionTime).toBeLessThan(2000)
+      }
+    } finally {
+      await pool.query("rollback")
+    }
+  })
+})

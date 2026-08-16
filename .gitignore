@@ -5,6 +5,7 @@ node_modules
 dist
 dist-ssr
 coverage
+!apps/legislation/src/coverage/
 storybook-static
 *.local
 .cache
@@ -13,6 +14,7 @@ public/dist
 .env
 artifacts/
 output
+apps/legislation/.container/
 
 # Orders pulled from a real store. Customer data, never committed.
 .fixtures/

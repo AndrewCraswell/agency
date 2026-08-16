@@ -1,0 +1,23 @@
+// MCP errors and latency by five-minute window
+ContainerAppConsoleLogs_CL
+| where ContainerAppName_s endswith "-mcp"
+| extend record = parse_json(Log_s)
+| summarize requests=count(), errors=countif(toint(record.statusCode) >= 500), p95=percentile(todouble(record.durationMs), 95) by bin(TimeGenerated, 5m)
+
+// Failed or partial ingestion jobs
+ContainerAppConsoleLogs_CL
+| extend record = parse_json(Log_s)
+| where record.status in ("failed", "partial")
+| project TimeGenerated, record.correlationId, record.ingestionRunId, record.operation, record.errorCategory
+
+// Document and embedding failures by category
+ContainerAppConsoleLogs_CL
+| extend record = parse_json(Log_s)
+| where record.operation in ("process-documents", "embed-bills", "embed-sections") and record.status == "failed"
+| summarize failures=count() by tostring(record.operation), tostring(record.errorCategory), bin(TimeGenerated, 1h)
+
+// Stalled checkpoints are emitted by the coverage workflow and compared with this 12-hour threshold.
+ContainerAppConsoleLogs_CL
+| extend record = parse_json(Log_s)
+| where isnotempty(record.checkpointAgeHours) and todouble(record.checkpointAgeHours) > 12
+| project TimeGenerated, record.source, record.stream, record.checkpointAgeHours

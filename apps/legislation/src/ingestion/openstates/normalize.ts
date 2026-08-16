@@ -1,0 +1,336 @@
+import { z } from "zod"
+import {
+  billId as createBillId,
+  childId,
+  jurisdictionId,
+  legislativeSessionId,
+  personId
+} from "../../legislation/identifiers.js"
+import type { CanonicalBillAggregate } from "../../legislation/model.js"
+
+const sourceSchema = z.object({ url: z.string().min(1) })
+const linkSchema = z.object({ media_type: z.string().optional(), text: z.string().optional(), url: z.string().min(1) })
+const documentSchema = z.object({
+  classification: z.string().optional(),
+  date: z.string().optional(),
+  links: z.array(linkSchema).default([]),
+  note: z.string().optional()
+})
+const actionSchema = z.object({
+  classification: z.array(z.string()).default([]),
+  date: z.string().optional(),
+  description: z.string().min(1),
+  organization_id: z.string().optional(),
+  order: z.number().int().nonnegative().optional()
+})
+const sponsorshipSchema = z.object({
+  classification: z.string().optional(),
+  entity_type: z.string().optional(),
+  name: z.string().min(1),
+  person_id: z.string().optional(),
+  primary: z.boolean().default(false)
+})
+const relationSchema = z.object({
+  identifier: z.string().min(1),
+  legislative_session: z.string().optional(),
+  relation_type: z.string().optional()
+})
+const voteSchema = z.object({
+  counts: z.array(z.object({ option: z.string(), value: z.number().int().nonnegative() })).default([]),
+  id: z.string().optional(),
+  identifier: z.string().optional(),
+  motion: z.string().optional(),
+  motion_text: z.string().optional(),
+  result: z.string().optional(),
+  sources: z.array(sourceSchema).default([]),
+  start_date: z.string().optional(),
+  votes: z
+    .array(z.object({ option: z.string(), voter_id: z.string().optional(), voter_name: z.string().min(1) }))
+    .default([])
+})
+
+export const openStatesBillSchema = z.object({
+  _id: z.string().optional(),
+  abstracts: z.array(z.object({ abstract: z.string().min(1), date: z.string().optional() })).default([]),
+  actions: z.array(actionSchema).default([]),
+  classification: z.array(z.string()).default([]),
+  documents: z.array(documentSchema).default([]),
+  from_organization: z.string().optional(),
+  id: z.string().optional(),
+  identifier: z.string().min(1),
+  legislative_session: z.string().min(1),
+  openstates_url: z.string().optional(),
+  related_bills: z.array(relationSchema).default([]),
+  sources: z.array(sourceSchema).default([]),
+  sponsorships: z.array(sponsorshipSchema).default([]),
+  subject: z.array(z.string()).default([]),
+  title: z.string().min(1),
+  updated_at: z.string().optional(),
+  versions: z.array(documentSchema).default([]),
+  votes: z.array(voteSchema).default([])
+})
+
+export interface OpenStatesContext {
+  jurisdictionCode: string
+  jurisdictionName: string
+  sessionName?: string
+}
+
+export interface NormalizationDiagnostic {
+  field: string
+  reason: string
+  value: unknown
+}
+
+export interface OpenStatesNormalizationResult {
+  aggregate: CanonicalBillAggregate
+  diagnostics: NormalizationDiagnostic[]
+}
+
+function parsePrintedIdentifier(identifier: string): { billNumber: string; billType: string } {
+  const match = /^\s*([a-z][a-z.\s-]*?)\s*(\d[\w-]*)\s*$/i.exec(identifier)
+  if (match?.[1] === undefined || match[2] === undefined) {
+    throw new Error(`Unsupported Open States bill identifier: ${identifier}`)
+  }
+  return { billNumber: match[2], billType: match[1] }
+}
+
+function exactDate(value: string | undefined, field: string, diagnostics: NormalizationDiagnostic[]) {
+  if (value === undefined) {
+    return undefined
+  }
+  const match = /^(\d{4}-\d{2}-\d{2})/.exec(value)
+  if (match?.[1] !== undefined) {
+    return match[1]
+  }
+  diagnostics.push({ field, reason: "fuzzy date was not fabricated", value })
+  return undefined
+}
+
+function chamberFromOrganization(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+  const normalized = value.toLowerCase()
+  if (normalized.includes("house") || normalized.includes("lower")) {
+    return "lower"
+  }
+  if (normalized.includes("senate") || normalized.includes("upper")) {
+    return "upper"
+  }
+  if (normalized.includes("unicameral")) {
+    return "unicameral"
+  }
+  if (normalized.includes("legislature")) {
+    return "legislature"
+  }
+  return undefined
+}
+
+function normalizeRelation(value: string | undefined): string {
+  const normalized = value?.toLowerCase().replaceAll("_", "-")
+  if (normalized === "companion" || normalized === "prior-session" || normalized === "replaced-by") {
+    return normalized
+  }
+  if (normalized === "replaces") {
+    return "replacement"
+  }
+  return "related"
+}
+
+function normalizeVoteOption(value: string): string {
+  const normalized = value.trim().toLowerCase().replaceAll("_", "-")
+  if (normalized === "yea" || normalized === "aye" || normalized === "yes") {
+    return "yes"
+  }
+  if (normalized === "nay" || normalized === "no") {
+    return "no"
+  }
+  if (normalized === "absent" || normalized === "abstain" || normalized === "not-voting") {
+    return normalized
+  }
+  return "other"
+}
+
+function sourceUrl(sources: Array<{ url: string }>, fallback?: string): string {
+  const url = sources[0]?.url ?? fallback
+  if (url === undefined) {
+    throw new Error("Open States bill has no source URL")
+  }
+  return url
+}
+
+function jurisdictionClassification(code: string): "district" | "state" | "territory" {
+  const normalized = code.toLowerCase()
+  if (normalized === "dc") {
+    return "district"
+  }
+  if (normalized === "pr") {
+    return "territory"
+  }
+  return "state"
+}
+
+function documentRecords(
+  billId: string,
+  collection: "document" | "version",
+  documents: Array<z.infer<typeof documentSchema>>,
+  diagnostics: NormalizationDiagnostic[]
+) {
+  return documents.flatMap((document, documentOrdinal) =>
+    document.links.map((link, linkOrdinal) => {
+      const identity = `${collection}:${documentOrdinal}:${linkOrdinal}:${link.url}`
+      return {
+        document: {
+          billId,
+          classification: collection,
+          contentType: link.media_type,
+          documentDate: exactDate(document.date, `${collection}.date`, diagnostics),
+          id: childId("document", billId, identity),
+          sourceUrl: link.url,
+          title: document.note ?? link.text ?? `${collection} ${documentOrdinal + 1}`,
+          versionCode: collection === "version" ? (document.classification ?? document.note) : undefined
+        }
+      }
+    })
+  )
+}
+
+export function normalizeOpenStatesBill(input: unknown, context: OpenStatesContext): OpenStatesNormalizationResult {
+  const source = openStatesBillSchema.parse(input)
+  const diagnostics: NormalizationDiagnostic[] = []
+  const jurisdiction = jurisdictionId(context.jurisdictionCode)
+  const session = legislativeSessionId(context.jurisdictionCode, source.legislative_session)
+  const printed = parsePrintedIdentifier(source.identifier)
+  const canonicalBillId = createBillId(
+    context.jurisdictionCode,
+    source.legislative_session,
+    printed.billType,
+    printed.billNumber
+  )
+  const upstreamId = source.id ?? source._id
+
+  const peopleById = new Map<string, NonNullable<CanonicalBillAggregate["people"]>[number]>()
+  const sponsors = source.sponsorships.map((sponsor, index) => {
+    const canonicalPersonId = sponsor.person_id === undefined ? undefined : personId("openstates", sponsor.person_id)
+    if (sponsor.person_id !== undefined && canonicalPersonId !== undefined) {
+      peopleById.set(canonicalPersonId, {
+        id: canonicalPersonId,
+        jurisdictionId: jurisdiction,
+        name: sponsor.name,
+        upstreamIds: { openstates: sponsor.person_id }
+      })
+    }
+    const identity = sponsor.person_id ?? `${sponsor.name}:${sponsor.classification ?? "sponsor"}:${index}`
+    return {
+      billId: canonicalBillId,
+      classification: sponsor.classification ?? (sponsor.primary ? "primary" : "sponsor"),
+      id: childId("sponsor", canonicalBillId, identity),
+      isPrimary: sponsor.primary,
+      name: sponsor.name,
+      personId: canonicalPersonId
+    }
+  })
+
+  const votes = source.votes.map((vote, voteOrdinal) => {
+    const voteIdentity = vote.id ?? vote.identifier ?? `${vote.start_date ?? "undated"}:${voteOrdinal}`
+    const canonicalVoteId = childId("vote", canonicalBillId, voteIdentity)
+    const counts = new Map(vote.counts.map((count) => [normalizeVoteOption(count.option), count.value]))
+    const positions = vote.votes.flatMap((position) => {
+      if (position.voter_id === undefined) {
+        diagnostics.push({ field: "votes.voter_id", reason: "unmatched vote position was omitted", value: position })
+        return []
+      }
+      const canonicalPersonId = personId("openstates", position.voter_id)
+      peopleById.set(canonicalPersonId, {
+        id: canonicalPersonId,
+        jurisdictionId: jurisdiction,
+        name: position.voter_name,
+        upstreamIds: { openstates: position.voter_id }
+      })
+      return [{ option: normalizeVoteOption(position.option), personId: canonicalPersonId, voteId: canonicalVoteId }]
+    })
+    return {
+      positions,
+      vote: {
+        billId: canonicalBillId,
+        chamber: undefined,
+        heldAt: undefined,
+        id: canonicalVoteId,
+        motion: vote.motion_text ?? vote.motion ?? vote.identifier ?? "Recorded vote",
+        noCount: counts.get("no"),
+        otherCount: counts.get("other"),
+        result: vote.result,
+        sourceUrl: vote.sources[0]?.url,
+        yesCount: counts.get("yes")
+      }
+    }
+  })
+
+  return {
+    aggregate: {
+      actions: source.actions.map((action, index) => ({
+        actionDate: exactDate(action.date, "actions.date", diagnostics),
+        billId: canonicalBillId,
+        chamber: chamberFromOrganization(action.organization_id),
+        classification: action.classification.map((value) => value.toLowerCase().replaceAll("_", "-")),
+        description: action.description,
+        id: childId(
+          "action",
+          canonicalBillId,
+          `${action.order ?? index}:${action.date ?? "undated"}:${action.description}`
+        ),
+        ordinal: action.order ?? index
+      })),
+      bill: {
+        chamber: chamberFromOrganization(source.from_organization),
+        classification: source.classification.map((value) => value.toLowerCase().replaceAll(" ", "-")),
+        id: canonicalBillId,
+        identifier: source.identifier,
+        jurisdictionId: jurisdiction,
+        sessionId: session,
+        sourceUpdatedAt: source.updated_at === undefined ? undefined : new Date(source.updated_at),
+        sourceUrl: sourceUrl(source.sources, source.openstates_url),
+        subjects: source.subject,
+        summary: source.abstracts[0]?.abstract,
+        title: source.title,
+        upstreamIds: upstreamId === undefined ? {} : { openstates: upstreamId }
+      },
+      documents: [
+        ...documentRecords(canonicalBillId, "version", source.versions, diagnostics),
+        ...documentRecords(canonicalBillId, "document", source.documents, diagnostics)
+      ],
+      jurisdiction: {
+        classification: jurisdictionClassification(context.jurisdictionCode),
+        countryCode: "US",
+        id: jurisdiction,
+        name: context.jurisdictionName,
+        subdivisionCode: context.jurisdictionCode.toUpperCase()
+      },
+      people: [...peopleById.values()],
+      relations: source.related_bills.map((relation) => {
+        const relatedPrinted = parsePrintedIdentifier(relation.identifier)
+        const relatedSession = relation.legislative_session ?? source.legislative_session
+        return {
+          billId: canonicalBillId,
+          classification: normalizeRelation(relation.relation_type),
+          relatedBillId: createBillId(
+            context.jurisdictionCode,
+            relatedSession,
+            relatedPrinted.billType,
+            relatedPrinted.billNumber
+          )
+        }
+      }),
+      session: {
+        id: session,
+        identifier: source.legislative_session,
+        jurisdictionId: jurisdiction,
+        name: context.sessionName ?? source.legislative_session
+      },
+      sponsors,
+      votes
+    },
+    diagnostics
+  }
+}

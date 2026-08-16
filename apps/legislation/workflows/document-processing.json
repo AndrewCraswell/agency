@@ -1,0 +1,55 @@
+{
+  "name": "Legislation - Document processing",
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Processing schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 15 }] } }
+    },
+    {
+      "id": "token",
+      "name": "Managed identity token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0],
+      "parameters": {
+        "url": "={{ $env.IDENTITY_ENDPOINT }}?api-version=2019-08-01&resource=https%3A%2F%2Fmanagement.azure.com%2F&client_id={{ $env.AZURE_CLIENT_ID }}",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [{ "name": "X-IDENTITY-HEADER", "value": "={{ $env.IDENTITY_HEADER }}" }] }
+      }
+    },
+    {
+      "id": "start",
+      "name": "Start ingestion job",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://management.azure.com{{ $env.AZURE_INGESTION_JOB_ID }}/start?api-version=2024-03-01",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $json.access_token }}" }]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"containers\":[{\"name\":\"legislation-ingestion\",\"image\":\"{{ $env.LEGISLATION_IMAGE }}\",\"command\":[\"node\"],\"args\":[\"dist/cli/main.js\",\"documents:process\",\"--limit\",\"100\"],\"env\":[{\"name\":\"NODE_ENV\",\"value\":\"production\"},{\"name\":\"DATABASE_URL\",\"secretRef\":\"database-url\"},{\"name\":\"AZURE_STORAGE_ACCOUNT\",\"value\":\"{{ $env.AZURE_STORAGE_ACCOUNT }}\"},{\"name\":\"AZURE_CLIENT_ID\",\"value\":\"{{ $env.AZURE_INGESTION_CLIENT_ID }}\"},{\"name\":\"WORKFLOW_EXECUTION_ID\",\"value\":\"{{ $execution.id }}\"}],\"resources\":{\"cpu\":1,\"memory\":\"2Gi\"}}]}"
+      }
+    }
+  ],
+  "connections": {
+    "Processing schedule": { "main": [[{ "node": "Managed identity token", "type": "main", "index": 0 }]] },
+    "Managed identity token": { "main": [[{ "node": "Start ingestion job", "type": "main", "index": 0 }]] }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "none",
+    "timezone": "UTC"
+  },
+  "active": false
+}

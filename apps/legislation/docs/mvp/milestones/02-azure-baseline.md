@@ -8,39 +8,39 @@ Create a minimal, secure, reproducible Azure environment for every MVP runtime.
 
 ### Environment design
 
-- [ ] **M2.1** Define development, staging, and production environment naming and isolation rules.
-- [ ] **M2.2** Define Azure regions and document any service-availability constraints.
-- [ ] **M2.3** Define resource naming, tagging, ownership, and cost-allocation conventions.
-- [ ] **M2.4** Define configuration values that differ by environment and parameters that must remain consistent.
+- [x] **M2.1** Define development, staging, and production environment naming and isolation rules.
+- [x] **M2.2** Define Azure regions and document any service-availability constraints.
+- [x] **M2.3** Define resource naming, tagging, ownership, and cost-allocation conventions.
+- [x] **M2.4** Define configuration values that differ by environment and parameters that must remain consistent.
 
 ### Bicep foundation
 
-- [ ] **M2.5** Create the Bicep entry point and environment parameter files under `apps/legislation/infra/bicep`.
-- [ ] **M2.6** Split reusable Bicep modules by Azure resource while keeping them inside the application.
-- [ ] **M2.7** Add deterministic deployment outputs for endpoints, resource IDs, and identity IDs.
-- [ ] **M2.8** Add Bicep validation and what-if checks to the infrastructure workflow.
-- [ ] **M2.9** Document bootstrap permissions required to deploy the stack.
+- [x] **M2.5** Create the Bicep entry point and environment parameter files under `apps/legislation/infra/bicep`.
+- [x] **M2.6** Split reusable Bicep modules by Azure resource while keeping them inside the application.
+- [x] **M2.7** Add deterministic deployment outputs for endpoints, resource IDs, and identity IDs.
+- [x] **M2.8** Add Bicep validation and what-if checks to the infrastructure workflow.
+- [x] **M2.9** Document bootstrap permissions required to deploy the stack.
 
 ### Core resources
 
-- [ ] **M2.10** Provision an Azure Container Registry.
-- [ ] **M2.11** Provision a Log Analytics workspace and Container Apps environment.
-- [ ] **M2.12** Provision the MCP Container App with a health probe and minimum scaling policy.
-- [ ] **M2.13** Provision the ingestion runtime as a Container App or Container Apps Jobs, according to command behavior.
-- [ ] **M2.14** Reserve the n8n Container App configuration without enabling production schedules yet.
-- [ ] **M2.15** Provision PostgreSQL Flexible Server with SSL, backups, connection limits, and supported maintenance settings.
-- [ ] **M2.16** Provision separate `policy` and `n8n` databases.
-- [ ] **M2.17** Enable pgvector through a repeatable database-bootstrap operation.
-- [ ] **M2.18** Provision Blob Storage containers for state sources, federal sources, and normalized documents.
-- [ ] **M2.19** Provision Key Vault and configure soft-delete and access controls.
+- [x] **M2.10** Provision an Azure Container Registry.
+- [x] **M2.11** Provision a Log Analytics workspace and Container Apps environment.
+- [x] **M2.12** Provision the MCP Container App with a health probe and minimum scaling policy.
+- [x] **M2.13** Provision the ingestion runtime as a Container App or Container Apps Jobs, according to command behavior.
+- [x] **M2.14** Reserve the n8n Container App configuration without enabling production schedules yet.
+- [x] **M2.15** Provision PostgreSQL Flexible Server with SSL, backups, connection limits, and supported maintenance settings.
+- [x] **M2.16** Provision separate `policy` and `n8n` databases.
+- [x] **M2.17** Enable pgvector through a repeatable database-bootstrap operation.
+- [x] **M2.18** Provision Blob Storage containers for state sources, federal sources, and normalized documents.
+- [x] **M2.19** Provision Key Vault and configure soft-delete and access controls.
 
 ### Identity and networking
 
-- [ ] **M2.20** Create managed identities for the MCP, ingestion, and n8n runtimes.
-- [ ] **M2.21** Grant least-privilege access to Blob Storage, Key Vault, registry, and monitoring resources.
-- [ ] **M2.22** Decide and document PostgreSQL network exposure for each environment.
-- [ ] **M2.23** Configure application ingress, TLS, and allowed origins or clients where applicable.
-- [ ] **M2.24** Verify that no Azure service credential must be embedded in an image or source-controlled configuration.
+- [x] **M2.20** Create managed identities for the MCP, ingestion, and n8n runtimes.
+- [x] **M2.21** Grant least-privilege access to Blob Storage, Key Vault, registry, and monitoring resources.
+- [x] **M2.22** Decide and document PostgreSQL network exposure for each environment.
+- [x] **M2.23** Configure application ingress, TLS, and allowed origins or clients where applicable.
+- [x] **M2.24** Verify that no Azure service credential must be embedded in an image or source-controlled configuration.
 
 ### Deployment proof
 
@@ -57,4 +57,3 @@ Create a minimal, secure, reproducible Azure environment for every MVP runtime.
 - A fresh Azure environment can be created from Bicep without manual resource configuration.
 - A minimal application reaches PostgreSQL, Blob Storage, Key Vault, and Azure logging through intended identities.
 - Deployment validation and rollback instructions are documented.
-

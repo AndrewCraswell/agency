@@ -1,0 +1,23 @@
+{
+  "bill": {
+    "congress": 119,
+    "type": "HR",
+    "number": "1234",
+    "title": "Legislative Data Access Act",
+    "introducedDate": "2025-02-03",
+    "originChamber": "House",
+    "updateDate": "2025-03-01T09:30:00Z",
+    "url": "https://api.congress.gov/v3/bill/119/hr/1234",
+    "policyArea": { "name": "Government Operations and Politics" },
+    "sponsors": [{ "bioguideId": "E000001", "fullName": "Representative Example" }]
+  },
+  "cosponsors": [{ "bioguideId": "E000002", "fullName": "Representative Second" }],
+  "actions": [
+    { "actionDate": "2025-02-03", "text": "Introduced in House" },
+    { "actionDate": "2025-02-04", "text": "Referred to the Committee on House Administration" },
+    { "actionDate": "2025-03-01", "text": "Ordered to be Reported" }
+  ],
+  "summaries": [{ "text": "Requires publication of structured legislative data and machine-readable updates." }],
+  "subjects": ["Government information"],
+  "relatedBills": [{ "congress": 119, "type": "S", "number": "567", "relationshipDetails": "Related bill" }]
+}

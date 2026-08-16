@@ -1,0 +1,23 @@
+name: legislation-local
+
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.6-pg18-bookworm
+    environment:
+      POSTGRES_DB: legislation
+      POSTGRES_PASSWORD: legislation
+      POSTGRES_USER: legislation
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U legislation -d legislation"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 5s
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - legislation-postgres:/var/lib/postgresql
+      - ./init:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  legislation-postgres:

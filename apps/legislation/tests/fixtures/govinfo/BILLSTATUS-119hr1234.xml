@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<billStatus>
+  <bill>
+    <congress>119</congress>
+    <type>HR</type>
+    <number>1234</number>
+    <originChamber>House</originChamber>
+    <introducedDate>2025-02-03</introducedDate>
+    <updateDate>2025-02-10T12:00:00Z</updateDate>
+    <titles>
+      <item><title>Legislative Data Access Act</title><titleType>Official Title as Introduced</titleType></item>
+      <item><title>Data Access Act</title><titleType>Short Title as Introduced</titleType></item>
+    </titles>
+    <summaries><item><text>Requires publication of structured legislative data.</text></item></summaries>
+    <policyArea><name>Government Operations and Politics</name></policyArea>
+    <sponsors><item><fullName>Representative Example</fullName><bioguideId>E000001</bioguideId></item></sponsors>
+    <cosponsors><item><fullName>Representative Second</fullName><bioguideId>E000002</bioguideId></item></cosponsors>
+    <committees><item><name>House Administration Committee</name><systemCode>hsha00</systemCode></item></committees>
+    <latestAction><actionDate>2025-02-04</actionDate><text>Referred to the House Administration Committee</text></latestAction>
+    <actions>
+      <item><actionDate>2025-02-03</actionDate><text>Introduced in House</text></item>
+      <item><actionDate>2025-02-04</actionDate><text>Referred to the Committee on House Administration</text></item>
+    </actions>
+    <relatedBills>
+      <item><congress>119</congress><type>S</type><number>567</number><relationshipDetails>Identical bill</relationshipDetails></item>
+    </relatedBills>
+    <textVersions>
+      <item>
+        <type>Enrolled Bill</type>
+        <date>2025-02-10T05:00:00Z</date>
+        <formats>
+          <item><url>https://www.govinfo.gov/content/pkg/BILLS-119hr1234enr/xml/BILLS-119hr1234enr.xml</url></item>
+        </formats>
+      </item>
+      <item>
+        <type>Introduced in House</type>
+        <date>2025-02-03T05:00:00Z</date>
+        <formats>
+          <item><url>https://www.govinfo.gov/content/pkg/BILLS-119hr1234ih/xml/BILLS-119hr1234ih.xml</url></item>
+        </formats>
+      </item>
+    </textVersions>
+  </bill>
+</billStatus>

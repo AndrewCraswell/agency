@@ -1,0 +1,79 @@
+[
+  {
+    "id": "known-federal",
+    "scenario": "known_bill",
+    "prompt": "Find H.R. 1234 in the 119th Congress and show its official source.",
+    "expectedTools": ["search_bills", "get_bill"],
+    "evidence": ["canonical bill ID", "official source URL"]
+  },
+  {
+    "id": "known-state",
+    "scenario": "known_bill",
+    "prompt": "Find Washington HB 1234 in the 2025-2026 session.",
+    "expectedTools": ["search_bills", "get_bill"],
+    "evidence": ["jurisdiction", "session", "official source URL"]
+  },
+  {
+    "id": "exact-topic",
+    "scenario": "lexical",
+    "prompt": "Find bills containing the exact phrase machine-readable legislative data.",
+    "expectedTools": ["search_bills", "search_bill_text"],
+    "evidence": ["matching snippet", "source URL"]
+  },
+  {
+    "id": "statutory-citation",
+    "scenario": "lexical",
+    "prompt": "Find passages that amend section 552 of title 5.",
+    "expectedTools": ["search_bill_text"],
+    "evidence": ["section identifier", "version", "source URL"]
+  },
+  {
+    "id": "conceptual",
+    "scenario": "semantic",
+    "prompt": "Find proposals that make government records easier for software to consume.",
+    "expectedTools": ["search_bills"],
+    "evidence": ["retrieval method", "relevant title or summary"]
+  },
+  {
+    "id": "timeline",
+    "scenario": "timeline",
+    "prompt": "Show the chronological progress of a known bill without inventing times for date-only actions.",
+    "expectedTools": ["get_bill_timeline"],
+    "evidence": ["ordered events", "source links"]
+  },
+  {
+    "id": "long-passage",
+    "scenario": "passage",
+    "prompt": "Locate the effective-date provision in a long processed bill version.",
+    "expectedTools": ["search_bill_text", "get_bill_text"],
+    "evidence": ["section", "paginated text", "official document"]
+  },
+  {
+    "id": "version-diff",
+    "scenario": "comparison",
+    "prompt": "Compare the introduced and enrolled versions and identify changed sections.",
+    "expectedTools": ["compare_bill_versions"],
+    "evidence": ["explicit documents", "added, removed, or changed sections"]
+  },
+  {
+    "id": "related",
+    "scenario": "relations",
+    "prompt": "Find explicit companions and optionally similar bills, labeling how each relation was found.",
+    "expectedTools": ["find_related_bills"],
+    "evidence": ["method", "canonical related ID"]
+  },
+  {
+    "id": "negative",
+    "scenario": "no_result",
+    "prompt": "Find bill ZZ 999999 in an unsupported jurisdiction.",
+    "expectedTools": ["search_bills"],
+    "evidence": ["empty result without fabricated bill"]
+  },
+  {
+    "id": "oversized",
+    "scenario": "limits",
+    "prompt": "Return every section of a very long bill.",
+    "expectedTools": ["get_bill_text"],
+    "evidence": ["bounded page", "next cursor", "truncation"]
+  }
+]

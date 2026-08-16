@@ -1,0 +1,157 @@
+import { z } from "zod"
+
+const optionalSecret = z.string().trim().min(1).optional()
+
+const configSchema = z
+  .object({
+    auth: z.discriminatedUnion("mode", [
+      z.object({ mode: z.literal("disabled") }),
+      z.object({
+        audience: z.string().trim().min(1),
+        issuer: z.url({ protocol: /^https$/ }),
+        jwksUrl: z.url({ protocol: /^https$/ }),
+        mode: z.literal("workos"),
+        requiredScopes: z.array(z.string().trim().min(1)).min(1)
+      })
+    ]),
+    azure: z.object({
+      federalSourceContainer: z.string().trim().min(1),
+      normalizedDocumentContainer: z.string().trim().min(1),
+      reportContainer: z.string().trim().min(1),
+      stateSourceContainer: z.string().trim().min(1),
+      storageAccount: z.string().trim().min(1).optional()
+    }),
+    database: z.object({
+      connectionTimeoutMs: z.coerce.number().int().positive(),
+      idleTimeoutMs: z.coerce.number().int().positive(),
+      maxConnections: z.coerce.number().int().positive(),
+      url: z.url({ protocol: /^postgres(?:ql)?$/ })
+    }),
+    environment: z.enum(["development", "test", "production"]),
+    ingestion: z.object({
+      congressApiKey: optionalSecret,
+      congressApiUrl: z.url({ protocol: /^https$/ }),
+      concurrency: z.coerce.number().int().min(1).max(32),
+      federalEndCongress: z.coerce.number().int().min(1),
+      federalStartCongress: z.coerce.number().int().min(1),
+      maxAttempts: z.coerce.number().int().min(1).max(10),
+      requestTimeoutMs: z.coerce.number().int().min(1000).max(300_000),
+      sourceDirectory: z.string().trim().min(1)
+    }),
+    logging: z.object({
+      level: z.enum(["debug", "info", "warn", "error"])
+    }),
+    model: z.object({
+      apiKey: optionalSecret,
+      baseUrl: z.url({ protocol: /^https$/ }),
+      dimensions: z.literal(1536),
+      embeddingModel: z.literal("openai/text-embedding-3-small")
+    }),
+    observability: z.object({
+      langfuseBaseUrl: z.url({ protocol: /^https$/ }),
+      langfusePublicKey: optionalSecret,
+      langfuseSecretKey: optionalSecret
+    }),
+    server: z.object({
+      host: z.string().trim().min(1),
+      port: z.coerce.number().int().min(1).max(65_535),
+      requestBodyBytes: z.coerce.number().int().min(1024).max(10_485_760),
+      shutdownTimeoutMs: z.coerce.number().int().min(1000).max(120_000)
+    })
+  })
+  .superRefine((config, context) => {
+    if (config.ingestion.federalStartCongress > config.ingestion.federalEndCongress) {
+      context.addIssue({
+        code: "custom",
+        message: "FEDERAL_START_CONGRESS must not exceed FEDERAL_END_CONGRESS",
+        path: ["ingestion", "federalStartCongress"]
+      })
+    }
+    const hasLangfusePublicKey = config.observability.langfusePublicKey !== undefined
+    const hasLangfuseSecretKey = config.observability.langfuseSecretKey !== undefined
+    if (hasLangfusePublicKey !== hasLangfuseSecretKey) {
+      context.addIssue({
+        code: "custom",
+        message: "Langfuse public and secret keys must be configured together",
+        path: ["observability"]
+      })
+    }
+  })
+
+export type LegislationConfig = z.infer<typeof configSchema>
+
+export class ConfigurationError extends Error {
+  readonly issues: string[]
+
+  constructor(error: z.ZodError) {
+    const issues = error.issues.map((issue) => `${issue.path.join(".") || "configuration"}: ${issue.message}`)
+    super(`Invalid legislation configuration: ${issues.join("; ")}`)
+    this.name = "ConfigurationError"
+    this.issues = issues
+  }
+}
+
+export function loadConfig(environment: NodeJS.ProcessEnv = process.env): LegislationConfig {
+  const auth =
+    (environment.AUTH_MODE ?? "disabled") === "workos"
+      ? {
+          audience: environment.WORKOS_AUDIENCE,
+          issuer: environment.WORKOS_ISSUER,
+          jwksUrl: environment.WORKOS_JWKS_URL,
+          mode: "workos" as const,
+          requiredScopes: (environment.AUTH_REQUIRED_SCOPES ?? "legislation:read")
+            .split(",")
+            .map((scope) => scope.trim())
+        }
+      : { mode: environment.AUTH_MODE ?? "disabled" }
+  const result = configSchema.safeParse({
+    auth,
+    azure: {
+      federalSourceContainer: environment.AZURE_FEDERAL_SOURCE_CONTAINER ?? "federal-sources",
+      normalizedDocumentContainer: environment.AZURE_NORMALIZED_DOCUMENT_CONTAINER ?? "normalized-documents",
+      reportContainer: environment.AZURE_REPORT_CONTAINER ?? "reports",
+      stateSourceContainer: environment.AZURE_STATE_SOURCE_CONTAINER ?? "state-sources",
+      storageAccount: environment.AZURE_STORAGE_ACCOUNT
+    },
+    database: {
+      connectionTimeoutMs: environment.DATABASE_CONNECTION_TIMEOUT_MS ?? "10000",
+      idleTimeoutMs: environment.DATABASE_IDLE_TIMEOUT_MS ?? "30000",
+      maxConnections: environment.DATABASE_MAX_CONNECTIONS ?? "10",
+      url: environment.DATABASE_URL ?? "postgresql://legislation:legislation@127.0.0.1:55432/legislation"
+    },
+    environment: environment.NODE_ENV ?? "development",
+    ingestion: {
+      congressApiKey: environment.CONGRESS_API_KEY,
+      congressApiUrl: environment.CONGRESS_API_URL ?? "https://api.congress.gov/v3",
+      concurrency: environment.INGESTION_CONCURRENCY ?? "4",
+      federalEndCongress: environment.FEDERAL_END_CONGRESS ?? "119",
+      federalStartCongress: environment.FEDERAL_START_CONGRESS ?? "113",
+      maxAttempts: environment.INGESTION_MAX_ATTEMPTS ?? "4",
+      requestTimeoutMs: environment.INGESTION_REQUEST_TIMEOUT_MS ?? "30000",
+      sourceDirectory: environment.LEGISLATION_SOURCE_DIRECTORY ?? ".data/sources"
+    },
+    logging: { level: environment.LOG_LEVEL ?? "info" },
+    model: {
+      apiKey: environment.OPENROUTER_API_KEY,
+      baseUrl: environment.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
+      dimensions: Number(environment.EMBEDDING_DIMENSIONS ?? "1536"),
+      embeddingModel: environment.EMBEDDING_MODEL ?? "openai/text-embedding-3-small"
+    },
+    observability: {
+      langfuseBaseUrl: environment.LANGFUSE_BASE_URL ?? "https://cloud.langfuse.com",
+      langfusePublicKey: environment.LANGFUSE_PUBLIC_KEY,
+      langfuseSecretKey: environment.LANGFUSE_SECRET_KEY
+    },
+    server: {
+      host: environment.LEGISLATION_HOST ?? "127.0.0.1",
+      port: environment.LEGISLATION_PORT ?? "3100",
+      requestBodyBytes: environment.LEGISLATION_REQUEST_BODY_BYTES ?? "1048576",
+      shutdownTimeoutMs: environment.LEGISLATION_SHUTDOWN_TIMEOUT_MS ?? "30000"
+    }
+  })
+
+  if (!result.success) {
+    throw new ConfigurationError(result.error)
+  }
+  return result.data
+}

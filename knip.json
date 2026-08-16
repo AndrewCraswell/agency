@@ -5,6 +5,9 @@
   "ignoreBinaries": ["artifacts-npm-credprovider"],
   "tags": ["-vendored"],
   "workspaces": {
+    "apps/legislation": {
+      "ignoreDependencies": ["@repo/oxlint-config"]
+    },
     "apps/blog-writer": {
       "entry": [
         "app/**/*.stories.tsx",

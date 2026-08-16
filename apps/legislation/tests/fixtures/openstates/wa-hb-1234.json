@@ -1,0 +1,81 @@
+{
+  "id": "ocd-bill/wa-hb-1234",
+  "legislative_session": "2025-2026",
+  "identifier": "HB 1234",
+  "title": "An act relating to legislative information",
+  "classification": ["bill"],
+  "subject": ["Government", "Public records"],
+  "abstracts": [{ "abstract": "Improves access to legislative information." }],
+  "from_organization": "Washington House of Representatives",
+  "actions": [
+    {
+      "description": "First reading, referred to State Government",
+      "date": "2025-01-13",
+      "organization_id": "Washington House of Representatives",
+      "classification": ["introduction", "referral"],
+      "order": 0
+    },
+    {
+      "description": "Passed the House",
+      "date": "2025",
+      "organization_id": "Washington House of Representatives",
+      "classification": ["passage"],
+      "order": 1
+    }
+  ],
+  "sponsorships": [
+    {
+      "name": "Representative Example",
+      "entity_type": "person",
+      "person_id": "ocd-person/example",
+      "classification": "author",
+      "primary": true
+    },
+    {
+      "name": "House State Government Committee",
+      "entity_type": "organization",
+      "classification": "sponsor",
+      "primary": false
+    }
+  ],
+  "votes": [
+    {
+      "id": "ocd-vote/example",
+      "identifier": "House floor vote 12",
+      "motion_text": "Third reading, final passage",
+      "result": "pass",
+      "start_date": "2025-03-01T10:30:00",
+      "counts": [
+        { "option": "yes", "value": 90 },
+        { "option": "no", "value": 8 }
+      ],
+      "votes": [
+        { "option": "yea", "voter_name": "Representative Example", "voter_id": "ocd-person/example" },
+        { "option": "nay", "voter_name": "Unmatched Member" }
+      ],
+      "sources": [{ "url": "https://leg.wa.gov/votes/12" }]
+    }
+  ],
+  "versions": [
+    {
+      "note": "Introduced",
+      "classification": "introduced",
+      "date": "2025-01-13",
+      "links": [
+        { "url": "https://leg.wa.gov/hb1234.xml", "media_type": "application/xml", "text": "XML" },
+        { "url": "https://leg.wa.gov/hb1234.pdf", "media_type": "application/pdf", "text": "PDF" }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "note": "Fiscal note",
+      "date": "2025-02-01",
+      "links": [{ "url": "https://leg.wa.gov/hb1234-fn.pdf", "media_type": "application/pdf" }]
+    }
+  ],
+  "related_bills": [{ "identifier": "SB 5678", "legislative_session": "2025-2026", "relation_type": "companion" }],
+  "sources": [{ "url": "https://leg.wa.gov/billsummary?BillNumber=1234&Year=2025" }],
+  "openstates_url": "https://openstates.org/wa/bills/2025-2026/HB1234/",
+  "updated_at": "2025-03-02T12:00:00Z"
+}

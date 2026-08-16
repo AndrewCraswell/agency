@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<billStatus>
+  <bill>
+    <congress>118</congress>
+    <type>S</type>
+    <number>77</number>
+    <originChamber>Senate</originChamber>
+    <introducedDate>2023-01-25</introducedDate>
+    <updateDate>2023-01-25T12:00:00Z</updateDate>
+    <titles>
+      <item><title>Sparse Federal Fixture Act</title><titleType>Official Title as Introduced</titleType></item>
+    </titles>
+    <sponsors>
+      <item><fullName>Senator Example</fullName><bioguideId>E000009</bioguideId></item>
+    </sponsors>
+  </bill>
+</billStatus>
