@@ -1,0 +1,1873 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "languageVersion": "2.0",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.46.1.21595",
+      "templateHash": "4885963864719193349"
+    }
+  },
+  "parameters": {
+    "environmentName": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]"
+    },
+    "owner": {
+      "type": "string"
+    },
+    "costCenter": {
+      "type": "string"
+    },
+    "image": {
+      "type": "string"
+    },
+    "policyDatabaseUrl": {
+      "type": "securestring"
+    },
+    "n8nDatabaseHost": {
+      "type": "string"
+    },
+    "n8nDatabasePort": {
+      "type": "string"
+    },
+    "n8nDatabaseName": {
+      "type": "string"
+    },
+    "n8nDatabaseUser": {
+      "type": "string"
+    },
+    "n8nDatabasePassword": {
+      "type": "securestring"
+    },
+    "n8nDatabaseSslEnabled": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "n8nEncryptionKey": {
+      "type": "securestring"
+    },
+    "congressApiKey": {
+      "type": "securestring"
+    },
+    "openStatesApiKey": {
+      "type": "securestring"
+    },
+    "openRouterApiKey": {
+      "type": "securestring"
+    },
+    "langfusePublicKey": {
+      "type": "securestring"
+    },
+    "langfuseSecretKey": {
+      "type": "securestring"
+    },
+    "enableN8n": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "deployRuntimes": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "authMode": {
+      "type": "string",
+      "defaultValue": "disabled",
+      "allowedValues": ["disabled", "workos"]
+    },
+    "workosIssuer": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "workosJwksUrl": {
+      "type": "string",
+      "defaultValue": ""
+    },
+    "langfuseBaseUrl": {
+      "type": "string",
+      "defaultValue": "https://cloud.langfuse.com"
+    },
+    "federalStartCongress": {
+      "type": "string",
+      "defaultValue": "113"
+    },
+    "federalEndCongress": {
+      "type": "string",
+      "defaultValue": "119"
+    },
+    "n8nImage": {
+      "type": "string",
+      "defaultValue": "docker.io/n8nio/n8n:2.5.2"
+    }
+  },
+  "variables": {
+    "namePrefix": "[format('leg-{0}', parameters('environmentName'))]",
+    "tags": {
+      "application": "legislation",
+      "environment": "[parameters('environmentName')]",
+      "owner": "[parameters('owner')]",
+      "costCenter": "[parameters('costCenter')]",
+      "managedBy": "bicep"
+    },
+    "jobsOperatorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b9a307c4-5aa3-4b52-ba60-2b17c136cd7b')]"
+  },
+  "resources": {
+    "ingestionJob": {
+      "condition": "[parameters('deployRuntimes')]",
+      "existing": true,
+      "type": "Microsoft.App/jobs",
+      "apiVersion": "2024-03-01",
+      "name": "[format('{0}-ingestion', variables('namePrefix'))]",
+      "dependsOn": ["runtimes"]
+    },
+    "n8nJobOperator": {
+      "condition": "[and(parameters('deployRuntimes'), parameters('enableN8n'))]",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.App/jobs', format('{0}-ingestion', variables('namePrefix')))]",
+      "name": "[guid(resourceId('Microsoft.App/jobs', format('{0}-ingestion', variables('namePrefix'))), variables('namePrefix'), variables('jobsOperatorRoleId'))]",
+      "properties": {
+        "principalId": "[reference('identities').outputs.n8nPrincipalId.value]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[variables('jobsOperatorRoleId')]"
+      },
+      "dependsOn": ["identities", "runtimes"]
+    },
+    "identities": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "identities",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "namePrefix": {
+            "value": "[variables('namePrefix')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "6723498322623602336"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "namePrefix": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[format('{0}-mcp-id', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[format('{0}-ingest-id', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]"
+            },
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[format('{0}-n8n-id', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]"
+            }
+          ],
+          "outputs": {
+            "mcpId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-mcp-id', parameters('namePrefix')))]"
+            },
+            "mcpPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-mcp-id', parameters('namePrefix'))), '2023-01-31').principalId]"
+            },
+            "mcpClientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-mcp-id', parameters('namePrefix'))), '2023-01-31').clientId]"
+            },
+            "ingestionId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-ingest-id', parameters('namePrefix')))]"
+            },
+            "ingestionPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-ingest-id', parameters('namePrefix'))), '2023-01-31').principalId]"
+            },
+            "ingestionClientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-ingest-id', parameters('namePrefix'))), '2023-01-31').clientId]"
+            },
+            "n8nId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-n8n-id', parameters('namePrefix')))]"
+            },
+            "n8nPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-n8n-id', parameters('namePrefix'))), '2023-01-31').principalId]"
+            },
+            "n8nClientId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-n8n-id', parameters('namePrefix'))), '2023-01-31').clientId]"
+            }
+          }
+        }
+      }
+    },
+    "network": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "network",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "namePrefix": {
+            "value": "[variables('namePrefix')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "12941278174301813436"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "namePrefix": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}-vnet', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": ["10.42.0.0/16"]
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks/subnets",
+              "apiVersion": "2023-11-01",
+              "name": "[format('{0}/{1}', format('{0}-vnet', parameters('namePrefix')), 'container-apps')]",
+              "properties": {
+                "addressPrefix": "10.42.0.0/23",
+                "delegations": [
+                  {
+                    "name": "container-apps",
+                    "properties": {
+                      "serviceName": "Microsoft.App/environments"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', parameters('namePrefix')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "containerAppsSubnetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks/subnets', format('{0}-vnet', parameters('namePrefix')), 'container-apps')]"
+            },
+            "virtualNetworkId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', format('{0}-vnet', parameters('namePrefix')))]"
+            }
+          }
+        }
+      }
+    },
+    "monitoring": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "monitoring",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "infrastructureSubnetId": {
+            "value": "[reference('network').outputs.containerAppsSubnetId.value]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "namePrefix": {
+            "value": "[variables('namePrefix')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "15995732403452465953"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "namePrefix": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "infrastructureSubnetId": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2023-09-01",
+              "name": "[format('{0}-logs', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "retentionInDays": 30,
+                "features": {
+                  "enableLogAccessUsingOnlyResourcePermissions": true
+                },
+                "sku": {
+                  "name": "PerGB2018"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.App/managedEnvironments",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}-cae', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "appLogsConfiguration": {
+                  "destination": "log-analytics",
+                  "logAnalyticsConfiguration": {
+                    "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('namePrefix'))), '2023-09-01').customerId]",
+                    "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('namePrefix'))), '2023-09-01').primarySharedKey]"
+                  }
+                },
+                "vnetConfiguration": {
+                  "infrastructureSubnetId": "[parameters('infrastructureSubnetId')]",
+                  "internal": false
+                },
+                "workloadProfiles": [
+                  {
+                    "name": "Consumption",
+                    "workloadProfileType": "Consumption"
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('namePrefix')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "environmentId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.App/managedEnvironments', format('{0}-cae', parameters('namePrefix')))]"
+            },
+            "environmentDefaultDomain": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/managedEnvironments', format('{0}-cae', parameters('namePrefix'))), '2024-03-01').defaultDomain]"
+            },
+            "environmentName": {
+              "type": "string",
+              "value": "[format('{0}-cae', parameters('namePrefix'))]"
+            },
+            "workspaceId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs', parameters('namePrefix')))]"
+            }
+          }
+        }
+      },
+      "dependsOn": ["network"]
+    },
+    "registry": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "registry",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "namePrefix": {
+            "value": "[variables('namePrefix')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "principalIds": {
+            "value": [
+              "[reference('identities').outputs.mcpPrincipalId.value]",
+              "[reference('identities').outputs.ingestionPrincipalId.value]",
+              "[reference('identities').outputs.n8nPrincipalId.value]"
+            ]
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "3735773882170977641"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "namePrefix": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "principalIds": {
+              "type": "array"
+            }
+          },
+          "variables": {
+            "normalizedName": "[take(replace(parameters('namePrefix'), '-', ''), 30)]",
+            "acrPullRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ContainerRegistry/registries",
+              "apiVersion": "2023-11-01-preview",
+              "name": "[format('acr{0}{1}', take(uniqueString(resourceGroup().id), 10), variables('normalizedName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Basic"
+              },
+              "properties": {
+                "adminUserEnabled": false,
+                "publicNetworkAccess": "Enabled"
+              }
+            },
+            {
+              "copy": {
+                "name": "pullAssignments",
+                "count": "[length(parameters('principalIds'))]"
+              },
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.ContainerRegistry/registries', format('acr{0}{1}', take(uniqueString(resourceGroup().id), 10), variables('normalizedName')))]",
+              "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', format('acr{0}{1}', take(uniqueString(resourceGroup().id), 10), variables('normalizedName'))), parameters('principalIds')[copyIndex()], variables('acrPullRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('principalIds')[copyIndex()]]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('acrPullRoleId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ContainerRegistry/registries', format('acr{0}{1}', take(uniqueString(resourceGroup().id), 10), variables('normalizedName')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ContainerRegistry/registries', format('acr{0}{1}', take(uniqueString(resourceGroup().id), 10), variables('normalizedName')))]"
+            },
+            "loginServer": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', format('acr{0}{1}', take(uniqueString(resourceGroup().id), 10), variables('normalizedName'))), '2023-11-01-preview').loginServer]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[format('acr{0}{1}', take(uniqueString(resourceGroup().id), 10), variables('normalizedName'))]"
+            }
+          }
+        }
+      },
+      "dependsOn": ["identities"]
+    },
+    "storage": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "storage",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "namePrefix": {
+            "value": "[variables('namePrefix')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "principalIds": {
+            "value": ["[reference('identities').outputs.ingestionPrincipalId.value]"]
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "9676858323192178144"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "namePrefix": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "principalIds": {
+              "type": "array"
+            }
+          },
+          "variables": {
+            "normalizedName": "[take(replace(parameters('namePrefix'), '-', ''), 8)]",
+            "blobContributorRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'ba92f5b4-2d11-453d-a403-e96b0029c9fe')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Storage/storageAccounts",
+              "apiVersion": "2023-05-01",
+              "name": "[format('st{0}{1}', take(uniqueString(resourceGroup().id), 12), variables('normalizedName'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "sku": {
+                "name": "Standard_LRS"
+              },
+              "kind": "StorageV2",
+              "properties": {
+                "allowBlobPublicAccess": false,
+                "allowSharedKeyAccess": false,
+                "defaultToOAuthAuthentication": true,
+                "minimumTlsVersion": "TLS1_2",
+                "publicNetworkAccess": "Enabled",
+                "supportsHttpsTrafficOnly": true
+              }
+            },
+            {
+              "type": "Microsoft.Storage/storageAccounts/blobServices",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}', format('st{0}{1}', take(uniqueString(resourceGroup().id), 12), variables('normalizedName')), 'default')]",
+              "properties": {
+                "deleteRetentionPolicy": {
+                  "enabled": true,
+                  "days": 7
+                },
+                "containerDeleteRetentionPolicy": {
+                  "enabled": true,
+                  "days": 7
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', format('st{0}{1}', take(uniqueString(resourceGroup().id), 12), variables('normalizedName')))]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "containers",
+                "count": "[length(createArray('state-sources', 'federal-sources', 'normalized-documents', 'reports'))]"
+              },
+              "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+              "apiVersion": "2023-05-01",
+              "name": "[format('{0}/{1}/{2}', format('st{0}{1}', take(uniqueString(resourceGroup().id), 12), variables('normalizedName')), 'default', createArray('state-sources', 'federal-sources', 'normalized-documents', 'reports')[copyIndex()])]",
+              "properties": {
+                "publicAccess": "None"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts/blobServices', format('st{0}{1}', take(uniqueString(resourceGroup().id), 12), variables('normalizedName')), 'default')]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "blobAssignments",
+                "count": "[length(parameters('principalIds'))]"
+              },
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.Storage/storageAccounts', format('st{0}{1}', take(uniqueString(resourceGroup().id), 12), variables('normalizedName')))]",
+              "name": "[guid(resourceId('Microsoft.Storage/storageAccounts', format('st{0}{1}', take(uniqueString(resourceGroup().id), 12), variables('normalizedName'))), parameters('principalIds')[copyIndex()], variables('blobContributorRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('principalIds')[copyIndex()]]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('blobContributorRoleId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', format('st{0}{1}', take(uniqueString(resourceGroup().id), 12), variables('normalizedName')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "accountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Storage/storageAccounts', format('st{0}{1}', take(uniqueString(resourceGroup().id), 12), variables('normalizedName')))]"
+            },
+            "accountName": {
+              "type": "string",
+              "value": "[format('st{0}{1}', take(uniqueString(resourceGroup().id), 12), variables('normalizedName'))]"
+            },
+            "blobEndpoint": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Storage/storageAccounts', format('st{0}{1}', take(uniqueString(resourceGroup().id), 12), variables('normalizedName'))), '2023-05-01').primaryEndpoints.blob]"
+            }
+          }
+        }
+      },
+      "dependsOn": ["identities"]
+    },
+    "keyVault": {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "key-vault",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "namePrefix": {
+            "value": "[variables('namePrefix')]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          },
+          "mcpPrincipalId": {
+            "value": "[reference('identities').outputs.mcpPrincipalId.value]"
+          },
+          "ingestionPrincipalId": {
+            "value": "[reference('identities').outputs.ingestionPrincipalId.value]"
+          },
+          "n8nPrincipalId": {
+            "value": "[reference('identities').outputs.n8nPrincipalId.value]"
+          },
+          "policyDatabaseUrl": {
+            "value": "[parameters('policyDatabaseUrl')]"
+          },
+          "n8nDatabasePassword": {
+            "value": "[parameters('n8nDatabasePassword')]"
+          },
+          "n8nEncryptionKey": {
+            "value": "[parameters('n8nEncryptionKey')]"
+          },
+          "congressApiKey": {
+            "value": "[parameters('congressApiKey')]"
+          },
+          "openStatesApiKey": {
+            "value": "[parameters('openStatesApiKey')]"
+          },
+          "openRouterApiKey": {
+            "value": "[parameters('openRouterApiKey')]"
+          },
+          "langfusePublicKey": {
+            "value": "[parameters('langfusePublicKey')]"
+          },
+          "langfuseSecretKey": {
+            "value": "[parameters('langfuseSecretKey')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "4588798958469792948"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "namePrefix": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "mcpPrincipalId": {
+              "type": "string"
+            },
+            "ingestionPrincipalId": {
+              "type": "string"
+            },
+            "n8nPrincipalId": {
+              "type": "string"
+            },
+            "policyDatabaseUrl": {
+              "type": "securestring"
+            },
+            "n8nDatabasePassword": {
+              "type": "securestring"
+            },
+            "n8nEncryptionKey": {
+              "type": "securestring"
+            },
+            "congressApiKey": {
+              "type": "securestring"
+            },
+            "openStatesApiKey": {
+              "type": "securestring"
+            },
+            "openRouterApiKey": {
+              "type": "securestring"
+            },
+            "langfusePublicKey": {
+              "type": "securestring"
+            },
+            "langfuseSecretKey": {
+              "type": "securestring"
+            }
+          },
+          "variables": {
+            "normalizedName": "[take(replace(parameters('namePrefix'), '-', ''), 18)]",
+            "secretsUserRoleId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.KeyVault/vaults",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "properties": {
+                "enablePurgeProtection": true,
+                "enableRbacAuthorization": true,
+                "enableSoftDelete": true,
+                "publicNetworkAccess": "Enabled",
+                "sku": {
+                  "family": "A",
+                  "name": "standard"
+                },
+                "softDeleteRetentionInDays": 90,
+                "tenantId": "[tenant().tenantId]"
+              }
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'policy-database-url')]",
+              "properties": {
+                "value": "[parameters('policyDatabaseUrl')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'n8n-database-password')]",
+              "properties": {
+                "value": "[parameters('n8nDatabasePassword')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'congress-api-key')]",
+              "properties": {
+                "value": "[parameters('congressApiKey')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'openstates-api-key')]",
+              "properties": {
+                "value": "[parameters('openStatesApiKey')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'openrouter-api-key')]",
+              "properties": {
+                "value": "[parameters('openRouterApiKey')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'langfuse-public-key')]",
+              "properties": {
+                "value": "[parameters('langfusePublicKey')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)))]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'langfuse-secret-key')]",
+              "properties": {
+                "value": "[parameters('langfuseSecretKey')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'policy-database-url')]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'policy-database-url'), parameters('mcpPrincipalId'), variables('secretsUserRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('mcpPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('secretsUserRoleId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'policy-database-url')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'openrouter-api-key')]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'openrouter-api-key'), parameters('mcpPrincipalId'), variables('secretsUserRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('mcpPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('secretsUserRoleId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'openrouter-api-key')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'langfuse-public-key')]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'langfuse-public-key'), parameters('mcpPrincipalId'), variables('secretsUserRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('mcpPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('secretsUserRoleId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'langfuse-public-key')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'langfuse-secret-key')]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'langfuse-secret-key'), parameters('mcpPrincipalId'), variables('secretsUserRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('mcpPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('secretsUserRoleId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'langfuse-secret-key')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'policy-database-url')]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'policy-database-url'), parameters('ingestionPrincipalId'), variables('secretsUserRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('ingestionPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('secretsUserRoleId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'policy-database-url')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'congress-api-key')]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'congress-api-key'), parameters('ingestionPrincipalId'), variables('secretsUserRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('ingestionPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('secretsUserRoleId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'congress-api-key')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'openstates-api-key')]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'openstates-api-key'), parameters('ingestionPrincipalId'), variables('secretsUserRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('ingestionPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('secretsUserRoleId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'openstates-api-key')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'openrouter-api-key')]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'openrouter-api-key'), parameters('ingestionPrincipalId'), variables('secretsUserRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('ingestionPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('secretsUserRoleId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'openrouter-api-key')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'n8n-database-password')]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'n8n-database-password'), parameters('n8nPrincipalId'), variables('secretsUserRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('n8nPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('secretsUserRoleId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'n8n-database-password')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'n8n-encryption-key')]",
+              "name": "[guid(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'n8n-encryption-key'), parameters('n8nPrincipalId'), variables('secretsUserRoleId'))]",
+              "properties": {
+                "principalId": "[parameters('n8nPrincipalId')]",
+                "principalType": "ServicePrincipal",
+                "roleDefinitionId": "[variables('secretsUserRoleId')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'n8n-encryption-key')]"
+              ]
+            },
+            {
+              "type": "Microsoft.KeyVault/vaults/secrets",
+              "apiVersion": "2023-07-01",
+              "name": "[format('{0}/{1}', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'n8n-encryption-key')]",
+              "properties": {
+                "value": "[parameters('n8nEncryptionKey')]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.KeyVault/vaults', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.KeyVault/vaults', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5))]"
+            },
+            "uri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5))), '2023-07-01').vaultUri]"
+            },
+            "policyDatabaseSecretUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'policy-database-url'), '2023-07-01').secretUriWithVersion]"
+            },
+            "n8nDbCredentialUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'n8n-database-password'), '2023-07-01').secretUriWithVersion]"
+            },
+            "n8nEncryptionSecretUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'n8n-encryption-key'), '2023-07-01').secretUriWithVersion]"
+            },
+            "congressApiKeySecretUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'congress-api-key'), '2023-07-01').secretUriWithVersion]"
+            },
+            "openStatesApiKeySecretUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'openstates-api-key'), '2023-07-01').secretUriWithVersion]"
+            },
+            "openRouterApiKeySecretUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'openrouter-api-key'), '2023-07-01').secretUriWithVersion]"
+            },
+            "langfusePublicKeySecretUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'langfuse-public-key'), '2023-07-01').secretUriWithVersion]"
+            },
+            "langfuseSecretKeySecretUri": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.KeyVault/vaults/secrets', format('{0}-{1}', variables('normalizedName'), take(uniqueString(resourceGroup().id), 5)), 'langfuse-secret-key'), '2023-07-01').secretUriWithVersion]"
+            }
+          }
+        }
+      },
+      "dependsOn": ["identities"]
+    },
+    "runtimes": {
+      "condition": "[parameters('deployRuntimes')]",
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "runtimes",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "databaseUrlSecretUri": {
+            "value": "[reference('keyVault').outputs.policyDatabaseSecretUri.value]"
+          },
+          "congressApiKeySecretUri": {
+            "value": "[reference('keyVault').outputs.congressApiKeySecretUri.value]"
+          },
+          "openStatesApiKeySecretUri": {
+            "value": "[reference('keyVault').outputs.openStatesApiKeySecretUri.value]"
+          },
+          "enableN8n": {
+            "value": "[parameters('enableN8n')]"
+          },
+          "environmentId": {
+            "value": "[reference('monitoring').outputs.environmentId.value]"
+          },
+          "image": {
+            "value": "[parameters('image')]"
+          },
+          "ingestionIdentityId": {
+            "value": "[reference('identities').outputs.ingestionId.value]"
+          },
+          "ingestionClientId": {
+            "value": "[reference('identities').outputs.ingestionClientId.value]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "mcpIdentityId": {
+            "value": "[reference('identities').outputs.mcpId.value]"
+          },
+          "mcpClientId": {
+            "value": "[reference('identities').outputs.mcpClientId.value]"
+          },
+          "openRouterApiKeySecretUri": {
+            "value": "[reference('keyVault').outputs.openRouterApiKeySecretUri.value]"
+          },
+          "langfusePublicKeySecretUri": {
+            "value": "[reference('keyVault').outputs.langfusePublicKeySecretUri.value]"
+          },
+          "langfuseSecretKeySecretUri": {
+            "value": "[reference('keyVault').outputs.langfuseSecretKeySecretUri.value]"
+          },
+          "langfuseBaseUrl": {
+            "value": "[parameters('langfuseBaseUrl')]"
+          },
+          "authMode": {
+            "value": "[parameters('authMode')]"
+          },
+          "workosAudience": "[if(equals(parameters('authMode'), 'workos'), createObject('value', format('https://{0}-mcp.{1}/mcp', variables('namePrefix'), reference('monitoring').outputs.environmentDefaultDomain.value)), createObject('value', ''))]",
+          "workosIssuer": {
+            "value": "[parameters('workosIssuer')]"
+          },
+          "workosJwksUrl": {
+            "value": "[parameters('workosJwksUrl')]"
+          },
+          "federalStartCongress": {
+            "value": "[parameters('federalStartCongress')]"
+          },
+          "federalEndCongress": {
+            "value": "[parameters('federalEndCongress')]"
+          },
+          "n8nIdentityId": {
+            "value": "[reference('identities').outputs.n8nId.value]"
+          },
+          "n8nClientId": {
+            "value": "[reference('identities').outputs.n8nClientId.value]"
+          },
+          "n8nImage": {
+            "value": "[parameters('n8nImage')]"
+          },
+          "n8nDatabaseHost": {
+            "value": "[parameters('n8nDatabaseHost')]"
+          },
+          "n8nDatabasePort": {
+            "value": "[parameters('n8nDatabasePort')]"
+          },
+          "n8nDatabaseName": {
+            "value": "[parameters('n8nDatabaseName')]"
+          },
+          "n8nDatabaseUser": {
+            "value": "[parameters('n8nDatabaseUser')]"
+          },
+          "n8nDatabaseSslEnabled": {
+            "value": "[parameters('n8nDatabaseSslEnabled')]"
+          },
+          "n8nDatabasePasswordSecretUri": {
+            "value": "[reference('keyVault').outputs.n8nDbCredentialUri.value]"
+          },
+          "n8nEncryptionSecretUri": {
+            "value": "[reference('keyVault').outputs.n8nEncryptionSecretUri.value]"
+          },
+          "namePrefix": {
+            "value": "[variables('namePrefix')]"
+          },
+          "registryServer": {
+            "value": "[reference('registry').outputs.loginServer.value]"
+          },
+          "storageAccountName": {
+            "value": "[reference('storage').outputs.accountName.value]"
+          },
+          "tags": {
+            "value": "[variables('tags')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.46.1.21595",
+              "templateHash": "16876489336371612109"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "namePrefix": {
+              "type": "string"
+            },
+            "tags": {
+              "type": "object"
+            },
+            "environmentId": {
+              "type": "string"
+            },
+            "registryServer": {
+              "type": "string"
+            },
+            "image": {
+              "type": "string"
+            },
+            "mcpIdentityId": {
+              "type": "string"
+            },
+            "mcpClientId": {
+              "type": "string"
+            },
+            "ingestionIdentityId": {
+              "type": "string"
+            },
+            "ingestionClientId": {
+              "type": "string"
+            },
+            "databaseUrlSecretUri": {
+              "type": "string"
+            },
+            "congressApiKeySecretUri": {
+              "type": "string"
+            },
+            "openStatesApiKeySecretUri": {
+              "type": "string"
+            },
+            "openRouterApiKeySecretUri": {
+              "type": "string"
+            },
+            "langfusePublicKeySecretUri": {
+              "type": "string"
+            },
+            "langfuseSecretKeySecretUri": {
+              "type": "string"
+            },
+            "langfuseBaseUrl": {
+              "type": "string"
+            },
+            "authMode": {
+              "type": "string"
+            },
+            "workosAudience": {
+              "type": "string"
+            },
+            "workosIssuer": {
+              "type": "string"
+            },
+            "workosJwksUrl": {
+              "type": "string"
+            },
+            "federalStartCongress": {
+              "type": "string"
+            },
+            "federalEndCongress": {
+              "type": "string"
+            },
+            "storageAccountName": {
+              "type": "string"
+            },
+            "enableN8n": {
+              "type": "bool",
+              "defaultValue": false
+            },
+            "n8nIdentityId": {
+              "type": "string"
+            },
+            "n8nClientId": {
+              "type": "string"
+            },
+            "n8nDatabaseHost": {
+              "type": "string"
+            },
+            "n8nDatabasePort": {
+              "type": "string"
+            },
+            "n8nDatabaseName": {
+              "type": "string"
+            },
+            "n8nDatabaseUser": {
+              "type": "string"
+            },
+            "n8nDatabaseSslEnabled": {
+              "type": "bool"
+            },
+            "n8nDatabasePasswordSecretUri": {
+              "type": "string"
+            },
+            "n8nEncryptionSecretUri": {
+              "type": "string"
+            },
+            "n8nImage": {
+              "type": "string",
+              "defaultValue": "docker.io/n8nio/n8n:2.5.2"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}-mcp', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('mcpIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "managedEnvironmentId": "[parameters('environmentId')]",
+                "configuration": {
+                  "activeRevisionsMode": "Single",
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 3100,
+                    "transport": "auto",
+                    "allowInsecure": false
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('registryServer')]",
+                      "identity": "[parameters('mcpIdentityId')]"
+                    }
+                  ],
+                  "secrets": [
+                    {
+                      "name": "database-url",
+                      "keyVaultUrl": "[parameters('databaseUrlSecretUri')]",
+                      "identity": "[parameters('mcpIdentityId')]"
+                    },
+                    {
+                      "name": "openrouter-api-key",
+                      "keyVaultUrl": "[parameters('openRouterApiKeySecretUri')]",
+                      "identity": "[parameters('mcpIdentityId')]"
+                    },
+                    {
+                      "name": "langfuse-public-key",
+                      "keyVaultUrl": "[parameters('langfusePublicKeySecretUri')]",
+                      "identity": "[parameters('mcpIdentityId')]"
+                    },
+                    {
+                      "name": "langfuse-secret-key",
+                      "keyVaultUrl": "[parameters('langfuseSecretKeySecretUri')]",
+                      "identity": "[parameters('mcpIdentityId')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "legislation",
+                      "image": "[parameters('image')]",
+                      "env": [
+                        {
+                          "name": "NODE_ENV",
+                          "value": "production"
+                        },
+                        {
+                          "name": "LEGISLATION_HOST",
+                          "value": "0.0.0.0"
+                        },
+                        {
+                          "name": "DATABASE_URL",
+                          "secretRef": "database-url"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_ACCOUNT",
+                          "value": "[parameters('storageAccountName')]"
+                        },
+                        {
+                          "name": "AZURE_CLIENT_ID",
+                          "value": "[parameters('mcpClientId')]"
+                        },
+                        {
+                          "name": "OPENROUTER_API_KEY",
+                          "secretRef": "openrouter-api-key"
+                        },
+                        {
+                          "name": "FEDERAL_START_CONGRESS",
+                          "value": "[parameters('federalStartCongress')]"
+                        },
+                        {
+                          "name": "FEDERAL_END_CONGRESS",
+                          "value": "[parameters('federalEndCongress')]"
+                        },
+                        {
+                          "name": "LANGFUSE_PUBLIC_KEY",
+                          "secretRef": "langfuse-public-key"
+                        },
+                        {
+                          "name": "LANGFUSE_SECRET_KEY",
+                          "secretRef": "langfuse-secret-key"
+                        },
+                        {
+                          "name": "LANGFUSE_BASE_URL",
+                          "value": "[parameters('langfuseBaseUrl')]"
+                        },
+                        {
+                          "name": "AUTH_MODE",
+                          "value": "[parameters('authMode')]"
+                        },
+                        {
+                          "name": "WORKOS_AUDIENCE",
+                          "value": "[parameters('workosAudience')]"
+                        },
+                        {
+                          "name": "WORKOS_ISSUER",
+                          "value": "[parameters('workosIssuer')]"
+                        },
+                        {
+                          "name": "WORKOS_JWKS_URL",
+                          "value": "[parameters('workosJwksUrl')]"
+                        }
+                      ],
+                      "probes": [
+                        {
+                          "type": "Liveness",
+                          "httpGet": {
+                            "path": "/health",
+                            "port": 3100
+                          },
+                          "initialDelaySeconds": 10,
+                          "periodSeconds": 30
+                        },
+                        {
+                          "type": "Readiness",
+                          "httpGet": {
+                            "path": "/ready",
+                            "port": 3100
+                          },
+                          "initialDelaySeconds": 5,
+                          "periodSeconds": 10
+                        }
+                      ],
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      }
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 1,
+                    "maxReplicas": 5
+                  }
+                }
+              }
+            },
+            {
+              "type": "Microsoft.App/jobs",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}-ingestion', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('ingestionIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "environmentId": "[parameters('environmentId')]",
+                "configuration": {
+                  "replicaRetryLimit": 1,
+                  "replicaTimeout": 86400,
+                  "triggerType": "Manual",
+                  "manualTriggerConfig": {
+                    "parallelism": 1,
+                    "replicaCompletionCount": 1
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('registryServer')]",
+                      "identity": "[parameters('ingestionIdentityId')]"
+                    }
+                  ],
+                  "secrets": [
+                    {
+                      "name": "database-url",
+                      "keyVaultUrl": "[parameters('databaseUrlSecretUri')]",
+                      "identity": "[parameters('ingestionIdentityId')]"
+                    },
+                    {
+                      "name": "congress-api-key",
+                      "keyVaultUrl": "[parameters('congressApiKeySecretUri')]",
+                      "identity": "[parameters('ingestionIdentityId')]"
+                    },
+                    {
+                      "name": "openstates-api-key",
+                      "keyVaultUrl": "[parameters('openStatesApiKeySecretUri')]",
+                      "identity": "[parameters('ingestionIdentityId')]"
+                    },
+                    {
+                      "name": "openrouter-api-key",
+                      "keyVaultUrl": "[parameters('openRouterApiKeySecretUri')]",
+                      "identity": "[parameters('ingestionIdentityId')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "legislation-ingestion",
+                      "image": "[parameters('image')]",
+                      "command": ["node"],
+                      "args": ["dist/cli/main.js", "--help"],
+                      "env": [
+                        {
+                          "name": "NODE_ENV",
+                          "value": "production"
+                        },
+                        {
+                          "name": "DATABASE_URL",
+                          "secretRef": "database-url"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_ACCOUNT",
+                          "value": "[parameters('storageAccountName')]"
+                        },
+                        {
+                          "name": "AZURE_CLIENT_ID",
+                          "value": "[parameters('ingestionClientId')]"
+                        },
+                        {
+                          "name": "CONGRESS_API_KEY",
+                          "secretRef": "congress-api-key"
+                        },
+                        {
+                          "name": "OPENSTATE_API_KEY",
+                          "secretRef": "openstates-api-key"
+                        },
+                        {
+                          "name": "OPENROUTER_API_KEY",
+                          "secretRef": "openrouter-api-key"
+                        }
+                      ],
+                      "resources": {
+                        "cpu": "[json('1.0')]",
+                        "memory": "2Gi"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "condition": "[parameters('enableN8n')]",
+              "type": "Microsoft.App/containerApps",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}-n8n', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('n8nIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "managedEnvironmentId": "[parameters('environmentId')]",
+                "configuration": {
+                  "activeRevisionsMode": "Single",
+                  "ingress": {
+                    "external": true,
+                    "targetPort": 5678,
+                    "transport": "auto",
+                    "allowInsecure": false
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('registryServer')]",
+                      "identity": "[parameters('n8nIdentityId')]"
+                    }
+                  ],
+                  "secrets": [
+                    {
+                      "name": "n8n-database-password",
+                      "keyVaultUrl": "[parameters('n8nDatabasePasswordSecretUri')]",
+                      "identity": "[parameters('n8nIdentityId')]"
+                    },
+                    {
+                      "name": "n8n-encryption-key",
+                      "keyVaultUrl": "[parameters('n8nEncryptionSecretUri')]",
+                      "identity": "[parameters('n8nIdentityId')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "n8n",
+                      "image": "[parameters('n8nImage')]",
+                      "env": [
+                        {
+                          "name": "DB_TYPE",
+                          "value": "postgresdb"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_DATABASE",
+                          "value": "[parameters('n8nDatabaseName')]"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_HOST",
+                          "value": "[parameters('n8nDatabaseHost')]"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_PORT",
+                          "value": "[parameters('n8nDatabasePort')]"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_USER",
+                          "value": "[parameters('n8nDatabaseUser')]"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_PASSWORD",
+                          "secretRef": "n8n-database-password"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_SSL_ENABLED",
+                          "value": "[if(parameters('n8nDatabaseSslEnabled'), 'true', 'false')]"
+                        },
+                        {
+                          "name": "N8N_ENCRYPTION_KEY",
+                          "secretRef": "n8n-encryption-key"
+                        },
+                        {
+                          "name": "AZURE_CLIENT_ID",
+                          "value": "[parameters('n8nClientId')]"
+                        },
+                        {
+                          "name": "AZURE_INGESTION_JOB_ID",
+                          "value": "[resourceId('Microsoft.App/jobs', format('{0}-ingestion', parameters('namePrefix')))]"
+                        },
+                        {
+                          "name": "AZURE_INGESTION_CLIENT_ID",
+                          "value": "[parameters('ingestionClientId')]"
+                        },
+                        {
+                          "name": "AZURE_STORAGE_ACCOUNT",
+                          "value": "[parameters('storageAccountName')]"
+                        },
+                        {
+                          "name": "LEGISLATION_IMAGE",
+                          "value": "[parameters('image')]"
+                        },
+                        {
+                          "name": "FEDERAL_START_CONGRESS",
+                          "value": "[parameters('federalStartCongress')]"
+                        },
+                        {
+                          "name": "FEDERAL_END_CONGRESS",
+                          "value": "[parameters('federalEndCongress')]"
+                        },
+                        {
+                          "name": "EXECUTIONS_MODE",
+                          "value": "regular"
+                        }
+                      ],
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      }
+                    }
+                  ],
+                  "scale": {
+                    "minReplicas": 0,
+                    "maxReplicas": 1
+                  }
+                }
+              },
+              "dependsOn": ["[resourceId('Microsoft.App/jobs', format('{0}-ingestion', parameters('namePrefix')))]"]
+            },
+            {
+              "condition": "[parameters('enableN8n')]",
+              "type": "Microsoft.App/jobs",
+              "apiVersion": "2024-03-01",
+              "name": "[format('{0}-n8n-bootstrap', parameters('namePrefix'))]",
+              "location": "[parameters('location')]",
+              "tags": "[parameters('tags')]",
+              "identity": {
+                "type": "UserAssigned",
+                "userAssignedIdentities": {
+                  "[format('{0}', parameters('n8nIdentityId'))]": {}
+                }
+              },
+              "properties": {
+                "environmentId": "[parameters('environmentId')]",
+                "configuration": {
+                  "replicaRetryLimit": 1,
+                  "replicaTimeout": 900,
+                  "triggerType": "Manual",
+                  "manualTriggerConfig": {
+                    "parallelism": 1,
+                    "replicaCompletionCount": 1
+                  },
+                  "registries": [
+                    {
+                      "server": "[parameters('registryServer')]",
+                      "identity": "[parameters('n8nIdentityId')]"
+                    }
+                  ],
+                  "secrets": [
+                    {
+                      "name": "n8n-database-password",
+                      "keyVaultUrl": "[parameters('n8nDatabasePasswordSecretUri')]",
+                      "identity": "[parameters('n8nIdentityId')]"
+                    },
+                    {
+                      "name": "n8n-encryption-key",
+                      "keyVaultUrl": "[parameters('n8nEncryptionSecretUri')]",
+                      "identity": "[parameters('n8nIdentityId')]"
+                    }
+                  ]
+                },
+                "template": {
+                  "containers": [
+                    {
+                      "name": "n8n-bootstrap",
+                      "image": "[parameters('n8nImage')]",
+                      "command": ["/bin/sh"],
+                      "args": [
+                        "-c",
+                        "n8n import:workflow --separate --input=/opt/legislation/workflows --activeState=false && n8n update:workflow --id=legislation-congress-sync --active=false && n8n update:workflow --id=legislation-congress-events-refresh --active=false && n8n update:workflow --id=legislation-congress-votes-refresh --active=false && n8n update:workflow --id=legislation-congress-amend-refresh --active=false && n8n update:workflow --id=legislation-congress-report-refresh --active=false && n8n update:workflow --id=legislation-coverage-report --active=false && n8n update:workflow --id=legislation-document-processing --active=false && n8n update:workflow --id=legislation-embedding-refresh --active=false && n8n update:workflow --id=legislation-govinfo-bootstrap --active=false && n8n update:workflow --id=legislation-openstates-refresh --active=false"
+                      ],
+                      "env": [
+                        {
+                          "name": "DB_TYPE",
+                          "value": "postgresdb"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_DATABASE",
+                          "value": "[parameters('n8nDatabaseName')]"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_HOST",
+                          "value": "[parameters('n8nDatabaseHost')]"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_PORT",
+                          "value": "[parameters('n8nDatabasePort')]"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_USER",
+                          "value": "[parameters('n8nDatabaseUser')]"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_PASSWORD",
+                          "secretRef": "n8n-database-password"
+                        },
+                        {
+                          "name": "DB_POSTGRESDB_SSL_ENABLED",
+                          "value": "[if(parameters('n8nDatabaseSslEnabled'), 'true', 'false')]"
+                        },
+                        {
+                          "name": "N8N_ENCRYPTION_KEY",
+                          "secretRef": "n8n-encryption-key"
+                        }
+                      ],
+                      "resources": {
+                        "cpu": "[json('0.5')]",
+                        "memory": "1Gi"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          "outputs": {
+            "mcpFqdn": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.App/containerApps', format('{0}-mcp', parameters('namePrefix'))), '2024-03-01').configuration.ingress.fqdn]"
+            },
+            "mcpId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.App/containerApps', format('{0}-mcp', parameters('namePrefix')))]"
+            },
+            "ingestionJobId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.App/jobs', format('{0}-ingestion', parameters('namePrefix')))]"
+            },
+            "n8nBootstrapJobId": {
+              "type": "string",
+              "value": "[if(parameters('enableN8n'), resourceId('Microsoft.App/jobs', format('{0}-n8n-bootstrap', parameters('namePrefix'))), '')]"
+            },
+            "n8nFqdn": {
+              "type": "string",
+              "value": "[if(parameters('enableN8n'), reference(resourceId('Microsoft.App/containerApps', format('{0}-n8n', parameters('namePrefix'))), '2024-03-01').configuration.ingress.fqdn, '')]"
+            }
+          }
+        }
+      },
+      "dependsOn": ["identities", "keyVault", "monitoring", "registry", "storage"]
+    }
+  },
+  "outputs": {
+    "containerRegistry": {
+      "type": "string",
+      "value": "[reference('registry').outputs.loginServer.value]"
+    },
+    "ingestionJobId": {
+      "type": "string",
+      "value": "[if(parameters('deployRuntimes'), reference('runtimes').outputs.ingestionJobId.value, '')]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[reference('keyVault').outputs.uri.value]"
+    },
+    "mcpEndpoint": {
+      "type": "string",
+      "value": "[if(parameters('deployRuntimes'), format('https://{0}/mcp', reference('runtimes').outputs.mcpFqdn.value), '')]"
+    },
+    "mcpIdentityId": {
+      "type": "string",
+      "value": "[reference('identities').outputs.mcpId.value]"
+    },
+    "n8nBootstrapJobId": {
+      "type": "string",
+      "value": "[if(and(parameters('deployRuntimes'), parameters('enableN8n')), reference('runtimes').outputs.n8nBootstrapJobId.value, '')]"
+    },
+    "n8nEndpoint": {
+      "type": "string",
+      "value": "[if(and(parameters('deployRuntimes'), parameters('enableN8n')), format('https://{0}', reference('runtimes').outputs.n8nFqdn.value), '')]"
+    },
+    "storageEndpoint": {
+      "type": "string",
+      "value": "[reference('storage').outputs.blobEndpoint.value]"
+    }
+  }
+}
