@@ -8,6 +8,21 @@ import { errorContext, type Logger } from "../observability/logger.js"
 import type { Telemetry } from "../observability/telemetry.js"
 
 const canonicalBillId = z.string().regex(/^bill:[a-z0-9-]+:[^:]+:[a-z0-9-]+:[a-z0-9-]+$/)
+const canonicalId = (prefix: string) => z.string().regex(new RegExp(`^${prefix}:[a-z0-9-]+(?::[^:]+)*$`))
+const entityLookupSchema = (prefix: string) =>
+  z.object({
+    cursor: z.string().optional(),
+    id: canonicalId(prefix),
+    limit: z.number().int().min(1).max(100).optional()
+  })
+const pageSchema = {
+  cursor: z.string().optional(),
+  limit: z.number().int().min(1).max(100).optional()
+}
+const optionalDateTime = z.iso
+  .datetime()
+  .transform((value) => new Date(value))
+  .optional()
 const searchFilters = {
   classifications: z.array(z.string()).optional(),
   cursor: z.string().optional(),
@@ -28,11 +43,24 @@ const TOOL_TIMEOUT_MILLISECONDS = 30_000
 export type LegislationQueryApi = Readonly<{
   compareBillVersions: (input: Parameters<LegislationQueryService["compareBillVersions"]>[0]) => Promise<unknown>
   findRelatedBills: (input: Parameters<LegislationQueryService["findRelatedBills"]>[0]) => Promise<unknown>
+  getAmendment: (input: Parameters<LegislationQueryService["getAmendment"]>[0]) => Promise<unknown>
   getBill: (input: Parameters<LegislationQueryService["getBill"]>[0]) => Promise<unknown>
   getBillText: (input: Parameters<LegislationQueryService["getBillText"]>[0]) => Promise<unknown>
   getBillTimeline: (input: Parameters<LegislationQueryService["getBillTimeline"]>[0]) => Promise<unknown>
+  getCalendar: (input: Parameters<LegislationQueryService["getCalendar"]>[0]) => Promise<unknown>
+  getEvent: (input: Parameters<LegislationQueryService["getEvent"]>[0]) => Promise<unknown>
+  getOrganization: (input: Parameters<LegislationQueryService["getOrganization"]>[0]) => Promise<unknown>
+  getPerson: (input: Parameters<LegislationQueryService["getPerson"]>[0]) => Promise<unknown>
+  getSupportingMaterial: (input: Parameters<LegislationQueryService["getSupportingMaterial"]>[0]) => Promise<unknown>
+  getVote: (input: Parameters<LegislationQueryService["getVote"]>[0]) => Promise<unknown>
+  searchAmendments: (input: Parameters<LegislationQueryService["searchAmendments"]>[0]) => Promise<unknown>
   searchBills: (input: Parameters<LegislationQueryService["searchBills"]>[0]) => Promise<unknown>
   searchBillText: (input: Parameters<LegislationQueryService["searchBillText"]>[0]) => Promise<unknown>
+  searchEvents: (input: Parameters<LegislationQueryService["searchEvents"]>[0]) => Promise<unknown>
+  searchSupportingMaterials: (
+    input: Parameters<LegislationQueryService["searchSupportingMaterials"]>[0]
+  ) => Promise<unknown>
+  searchVotes: (input: Parameters<LegislationQueryService["searchVotes"]>[0]) => Promise<unknown>
 }>
 
 function success(value: unknown) {
@@ -237,6 +265,139 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
           outputSchema
         },
         (input) => tool("find_related_bills", input, () => service.findRelatedBills(input), logger, telemetry)
+      )
+      server.registerTool(
+        "get_person",
+        {
+          description: "Get a canonical legislator with terms, memberships, and sponsored bills.",
+          inputSchema: entityLookupSchema("person"),
+          outputSchema
+        },
+        (input) => tool("get_person", input, () => service.getPerson(input), logger, telemetry)
+      )
+      server.registerTool(
+        "get_organization",
+        {
+          description:
+            "Get a canonical legislature, chamber, committee, or subcommittee with membership and bill activity.",
+          inputSchema: entityLookupSchema("organization"),
+          outputSchema
+        },
+        (input) => tool("get_organization", input, () => service.getOrganization(input), logger, telemetry)
+      )
+      server.registerTool(
+        "search_events",
+        {
+          description: "Search available legislative meetings and hearings in a bounded date range.",
+          inputSchema: z.object({
+            ...pageSchema,
+            from: optionalDateTime,
+            jurisdictionId: canonicalId("jurisdiction").optional(),
+            organizationId: canonicalId("organization").optional(),
+            to: optionalDateTime
+          }),
+          outputSchema
+        },
+        (input) => tool("search_events", input, () => service.searchEvents(input), logger, telemetry)
+      )
+      server.registerTool(
+        "get_event",
+        {
+          description: "Get a legislative event with agenda, participants, documents, and related bills.",
+          inputSchema: entityLookupSchema("event"),
+          outputSchema
+        },
+        (input) => tool("get_event", input, () => service.getEvent(input), logger, telemetry)
+      )
+      server.registerTool(
+        "get_calendar",
+        {
+          description: "Get available chamber calendar entries for a jurisdiction and date range.",
+          inputSchema: z.object({
+            ...pageSchema,
+            from: optionalDateTime,
+            jurisdictionId: canonicalId("jurisdiction").optional(),
+            organizationId: canonicalId("organization").optional(),
+            to: optionalDateTime
+          }),
+          outputSchema
+        },
+        (input) => tool("get_calendar", input, () => service.getCalendar(input), logger, telemetry)
+      )
+      server.registerTool(
+        "search_votes",
+        {
+          description: "Search roll calls by bill, member, organization, or observation window.",
+          inputSchema: z.object({
+            ...pageSchema,
+            billId: canonicalBillId.optional(),
+            from: optionalDateTime,
+            organizationId: canonicalId("organization").optional(),
+            personId: canonicalId("person").optional()
+          }),
+          outputSchema
+        },
+        (input) => tool("search_votes", input, () => service.searchVotes(input), logger, telemetry)
+      )
+      server.registerTool(
+        "get_vote",
+        {
+          description: "Get a roll call with normalized member positions.",
+          inputSchema: entityLookupSchema("vote"),
+          outputSchema
+        },
+        (input) => tool("get_vote", input, () => service.getVote(input), logger, telemetry)
+      )
+      server.registerTool(
+        "search_amendments",
+        {
+          description: "Search canonical amendments by text, bill, jurisdiction, or sponsor.",
+          inputSchema: z.object({
+            ...pageSchema,
+            billId: canonicalBillId.optional(),
+            jurisdictionId: canonicalId("jurisdiction").optional(),
+            query: z.string().trim().min(1).max(500).optional(),
+            sponsorPersonId: canonicalId("person").optional()
+          }),
+          outputSchema
+        },
+        (input) => tool("search_amendments", input, () => service.searchAmendments(input), logger, telemetry)
+      )
+      server.registerTool(
+        "get_amendment",
+        {
+          description: "Get an amendment with actions, votes, and supporting material.",
+          inputSchema: entityLookupSchema("amendment"),
+          outputSchema
+        },
+        (input) => tool("get_amendment", input, () => service.getAmendment(input), logger, telemetry)
+      )
+      server.registerTool(
+        "search_supporting_materials",
+        {
+          description: "Search reports, hearings, fiscal notes, analyses, testimony, and other supporting material.",
+          inputSchema: z.object({
+            ...pageSchema,
+            amendmentId: canonicalId("amendment").optional(),
+            billId: canonicalBillId.optional(),
+            classification: z.string().trim().min(1).optional(),
+            eventId: canonicalId("event").optional(),
+            jurisdictionId: canonicalId("jurisdiction").optional(),
+            query: z.string().trim().min(1).max(500).optional()
+          }),
+          outputSchema
+        },
+        (input) =>
+          tool("search_supporting_materials", input, () => service.searchSupportingMaterials(input), logger, telemetry)
+      )
+      server.registerTool(
+        "get_supporting_material",
+        {
+          description: "Get one supporting material record and its canonical links.",
+          inputSchema: entityLookupSchema("material"),
+          outputSchema
+        },
+        (input) => tool("get_supporting_material", input, () => service.getSupportingMaterial(input), logger, telemetry)
       )
       return server
     },

@@ -152,11 +152,22 @@ describe("createLegislationServer", () => {
     const service: LegislationQueryApi = {
       compareBillVersions: async () => ({ changes: [] }),
       findRelatedBills: async () => ({ items: [] }),
+      getAmendment: async () => ({ amendment: {} }),
       getBill: async () => ({ bill: { id: billId } }),
       getBillText: async () => ({ sections: [] }),
       getBillTimeline: async () => ({ events: [] }),
+      getCalendar: async () => ({ items: [] }),
+      getEvent: async () => ({ event: {} }),
+      getOrganization: async () => ({ organization: {} }),
+      getPerson: async () => ({ person: {} }),
+      getSupportingMaterial: async () => ({ material: {} }),
+      getVote: async () => ({ vote: {} }),
+      searchAmendments: async () => ({ items: [] }),
       searchBills: async () => ({ items: [] }),
-      searchBillText: async () => ({ items: [] })
+      searchBillText: async () => ({ items: [] }),
+      searchEvents: async () => ({ items: [] }),
+      searchSupportingMaterials: async () => ({ items: [] }),
+      searchVotes: async () => ({ items: [] })
     }
     const mcp = createLegislationMcpHandler(service, logger)
     let authenticationCalls = 0
@@ -174,7 +185,7 @@ describe("createLegislationServer", () => {
     try {
       await client.connect(transport)
       const tools = await client.listTools()
-      expect(tools.tools).toHaveLength(7)
+      expect(tools.tools).toHaveLength(18)
       for (const call of [
         { arguments: { mode: "lexical", query: "data" }, name: "search_bills" },
         { arguments: { id: billId }, name: "get_bill" },
@@ -182,7 +193,18 @@ describe("createLegislationServer", () => {
         { arguments: { mode: "lexical", query: "data" }, name: "search_bill_text" },
         { arguments: { id: billId, versionCode: "ih" }, name: "get_bill_text" },
         { arguments: { billId, documentIds: ["document:a", "document:b"] }, name: "compare_bill_versions" },
-        { arguments: { id: billId }, name: "find_related_bills" }
+        { arguments: { id: billId }, name: "find_related_bills" },
+        { arguments: { id: "person:congress:a000001" }, name: "get_person" },
+        { arguments: { id: "organization:congress:house" }, name: "get_organization" },
+        { arguments: { jurisdictionId: "jurisdiction:us" }, name: "search_events" },
+        { arguments: { id: "event:congress:meeting-1" }, name: "get_event" },
+        { arguments: { jurisdictionId: "jurisdiction:us" }, name: "get_calendar" },
+        { arguments: { billId }, name: "search_votes" },
+        { arguments: { id: "vote:congress:house-1" }, name: "get_vote" },
+        { arguments: { billId }, name: "search_amendments" },
+        { arguments: { id: "amendment:congress:119-hamdt-1" }, name: "get_amendment" },
+        { arguments: { billId }, name: "search_supporting_materials" },
+        { arguments: { id: "material:govinfo:crpt-1" }, name: "get_supporting_material" }
       ] as const) {
         await expect(client.callTool(call)).resolves.not.toMatchObject({ isError: true })
       }

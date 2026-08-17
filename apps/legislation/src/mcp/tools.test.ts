@@ -21,14 +21,27 @@ function createService(): LegislationQueryApi {
       bills: [],
       id: "bill:us:119:hr:1234"
     })),
+    getAmendment: vi.fn<LegislationQueryApi["getAmendment"]>(async ({ id }) => ({ amendment: { id } })),
     getBill: vi.fn<LegislationQueryApi["getBill"]>(async ({ id }) => ({ id, title: "A test bill" })),
     getBillText: vi.fn<LegislationQueryApi["getBillText"]>(async ({ id }) => ({ id, sections: [] })),
     getBillTimeline: vi.fn<LegislationQueryApi["getBillTimeline"]>(async ({ id }) => ({ events: [], id })),
+    getCalendar: vi.fn<LegislationQueryApi["getCalendar"]>(async () => ({ items: [] })),
+    getEvent: vi.fn<LegislationQueryApi["getEvent"]>(async ({ id }) => ({ event: { id } })),
+    getOrganization: vi.fn<LegislationQueryApi["getOrganization"]>(async ({ id }) => ({ organization: { id } })),
+    getPerson: vi.fn<LegislationQueryApi["getPerson"]>(async ({ id }) => ({ person: { id } })),
+    getSupportingMaterial: vi.fn<LegislationQueryApi["getSupportingMaterial"]>(async ({ id }) => ({
+      material: { id }
+    })),
+    getVote: vi.fn<LegislationQueryApi["getVote"]>(async ({ id }) => ({ vote: { id } })),
+    searchAmendments: vi.fn<LegislationQueryApi["searchAmendments"]>(async () => ({ items: [] })),
     searchBills: vi.fn<LegislationQueryApi["searchBills"]>(async (input) => ({ items: [], query: input.query })),
     searchBillText: vi.fn<LegislationQueryApi["searchBillText"]>(async (input) => ({
       items: [],
       query: input.query
-    }))
+    })),
+    searchEvents: vi.fn<LegislationQueryApi["searchEvents"]>(async () => ({ items: [] })),
+    searchSupportingMaterials: vi.fn<LegislationQueryApi["searchSupportingMaterials"]>(async () => ({ items: [] })),
+    searchVotes: vi.fn<LegislationQueryApi["searchVotes"]>(async () => ({ items: [] }))
   }
 }
 
@@ -52,11 +65,22 @@ describe("legislation MCP tools", () => {
     expect(result.tools.map((tool) => tool.name).sort()).toEqual([
       "compare_bill_versions",
       "find_related_bills",
+      "get_amendment",
       "get_bill",
       "get_bill_text",
       "get_bill_timeline",
+      "get_calendar",
+      "get_event",
+      "get_organization",
+      "get_person",
+      "get_supporting_material",
+      "get_vote",
+      "search_amendments",
       "search_bill_text",
-      "search_bills"
+      "search_bills",
+      "search_events",
+      "search_supporting_materials",
+      "search_votes"
     ])
     await transport.close()
   })
