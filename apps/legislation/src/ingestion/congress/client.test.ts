@@ -92,4 +92,37 @@ describe("CongressClient", () => {
     expect(bundle.textVersions).toHaveLength(2)
     expect(offsets).toHaveLength(14)
   })
+
+  it("skips empty amendment subcollections advertised by the detail record", async () => {
+    const paths: string[] = []
+    const request = vi.fn<typeof fetch>(async (input) => {
+      const url = new URL(String(input))
+      paths.push(url.pathname)
+      return Response.json({
+        amendment: {
+          actions: { count: 0 },
+          congress: 119,
+          number: "1",
+          textVersions: { count: 0 },
+          type: "SAMDT"
+        }
+      })
+    })
+    const client = new CongressClient({
+      apiKey: "secret-key",
+      baseUrl: new URL("https://api.congress.gov/v3/"),
+      http: new RetryingHttpClient({ fetch: request, maxAttempts: 1, requestTimeoutMs: 1000 })
+    })
+
+    const bundle = (await client.getAmendmentBundle({
+      congress: 119,
+      number: "1",
+      type: "SAMDT",
+      url: "https://api.congress.gov/v3/amendment/119/samdt/1"
+    })) as Record<string, unknown[]>
+
+    expect(paths).toEqual(["/v3/amendment/119/samdt/1"])
+    expect(bundle.actions).toEqual([])
+    expect(bundle.textVersions).toEqual([])
+  })
 })

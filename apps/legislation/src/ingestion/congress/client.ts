@@ -106,12 +106,14 @@ export class CongressClient {
 
   async getAmendmentBundle(reference: CongressAmendmentReference): Promise<unknown> {
     const path = `amendment/${reference.congress}/${reference.type.toLowerCase()}/${reference.number}`
-    const [detail, actions, textVersions] = await Promise.all([
-      this.#json(path),
-      this.#collection(`${path}/actions`, "actions"),
-      this.#collection(`${path}/text`, "textVersions")
-    ])
+    const detail = await this.#json(path)
     const amendment = z.object({ amendment: z.record(z.string(), z.unknown()) }).parse(detail).amendment
+    const collectionCount = (key: "actions" | "textVersions") =>
+      z.object({ count: z.number().int().nonnegative() }).safeParse(amendment[key]).data?.count ?? 0
+    const [actions, textVersions] = await Promise.all([
+      collectionCount("actions") === 0 ? [] : this.#collection(`${path}/actions`, "actions"),
+      collectionCount("textVersions") === 0 ? [] : this.#collection(`${path}/text`, "textVersions")
+    ])
     return { actions, amendment, sourceUrl: reference.url, textVersions }
   }
 
