@@ -16,6 +16,13 @@ cannot publish a change. Cancellation and deletion require explicit canonical st
 start or end time. Relationship changes are emitted only for structured canonical links; the system does not infer
 provider intent from text or timestamps.
 
+## Validation
+
+Fresh-schema integration replays the same event snapshot and confirms that it remains silent, then applies a correction,
+reschedule, cancellation, and deletion and verifies the exact ordered classifications. A deliberately invalid agenda
+replacement proves that the canonical event and its change event roll back together. Deterministic planning tests also
+cover relationship-only changes and repeated event identity.
+
 ## Query and retention
 
 The `search_changes` MCP operation provides cursor pagination and filters for canonical record, record type,

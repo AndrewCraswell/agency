@@ -17,11 +17,13 @@ import { importGovInfoPackages } from "../../ingestion/govinfo/import.js"
 import { RetryingHttpClient } from "../../ingestion/http-client.js"
 import { importOpenStatesRecords } from "../../ingestion/openstates/import.js"
 import { openStatesBillSchema } from "../../ingestion/openstates/normalize.js"
+import { withIngestionRun } from "../../ingestion/run-context.js"
 import { LegislationQueryService } from "../../legislation/query-service.js"
 import { EMBEDDING_MODEL } from "../../models/openrouter-embeddings.js"
 import { lexicalBillSearch, lexicalPassageSearch, semanticBillSearch } from "../../search/search.js"
 import { validateCorpus } from "../../validation/corpus.js"
 import { getBillById, upsertBillAggregate } from "../queries/bill-aggregates.js"
+import { upsertEventSnapshots } from "../queries/events.js"
 import { isDatabaseAvailable, isDatabaseReady } from "../readiness.js"
 import * as schema from "./schema.js"
 
@@ -580,6 +582,81 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       sections: [expect.objectContaining({ text: expect.stringContaining("public data access") })],
       truncated: false
     })
+  })
+
+  it("records committed event changes and keeps replays and rollbacks silent", async () => {
+    const insertedRun = await database
+      .insert(schema.ingestionRuns)
+      .values({ operation: "validate-change-events", source: "integration-test" })
+      .returning({ id: schema.ingestionRuns.id })
+    const runId = insertedRun[0]!.id
+    const eventId = "event:integration:wa-data-hearing"
+    const baseEvent = {
+      id: eventId,
+      jurisdictionId: "jurisdiction:wa",
+      name: "Data Committee Hearing",
+      sourceId: "wa-data-hearing",
+      startAt: new Date("2026-01-10T18:00:00Z"),
+      status: "scheduled"
+    }
+    const snapshot = (event: typeof baseEvent & { isDeleted?: boolean }) => ({
+      agendaItems: [],
+      documents: [],
+      event,
+      participants: []
+    })
+    await withIngestionRun(runId, () => upsertEventSnapshots(database, [snapshot(baseEvent)]))
+    await withIngestionRun(runId, () => upsertEventSnapshots(database, [snapshot(baseEvent)]))
+    await withIngestionRun(runId, () =>
+      upsertEventSnapshots(database, [snapshot({ ...baseEvent, name: "Corrected Data Committee Hearing" })])
+    )
+    const rescheduled = {
+      ...baseEvent,
+      name: "Corrected Data Committee Hearing",
+      startAt: new Date("2026-01-10T19:00:00Z")
+    }
+    await withIngestionRun(runId, () => upsertEventSnapshots(database, [snapshot(rescheduled)]))
+    const cancelled = { ...rescheduled, status: "cancelled" }
+    await withIngestionRun(runId, () => upsertEventSnapshots(database, [snapshot(cancelled)]))
+    await withIngestionRun(runId, () => upsertEventSnapshots(database, [snapshot({ ...cancelled, isDeleted: true })]))
+
+    await expect(
+      database
+        .select({ changeType: schema.changeEvents.changeType })
+        .from(schema.changeEvents)
+        .where(eq(schema.changeEvents.recordId, eventId))
+        .orderBy(schema.changeEvents.observedAt)
+    ).resolves.toEqual([
+      { changeType: "create" },
+      { changeType: "update" },
+      { changeType: "reschedule" },
+      { changeType: "cancel" },
+      { changeType: "delete" }
+    ])
+
+    const failedEvent = { ...baseEvent, id: "event:integration:failed", sourceId: "failed" }
+    await expect(
+      withIngestionRun(runId, () =>
+        upsertEventSnapshots(database, [
+          {
+            agendaItems: [
+              {
+                description: "Invalid agenda item",
+                eventId: failedEvent.id,
+                id: `${failedEvent.id}:agenda:1`,
+                ordinal: -1
+              }
+            ],
+            documents: [],
+            event: failedEvent,
+            participants: []
+          }
+        ])
+      )
+    ).rejects.toMatchObject({ cause: { code: "23514", constraint: "event_agenda_items_ordinal_check" } })
+    await expect(
+      database.select().from(schema.changeEvents).where(eq(schema.changeEvents.recordId, failedEvent.id))
+    ).resolves.toHaveLength(0)
   })
 
   it("replays from the first failed Open States record without duplicating committed records", async () => {

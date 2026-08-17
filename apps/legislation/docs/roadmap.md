@@ -210,7 +210,7 @@ building provenance, predictions, or AI-generated interpretation.
   of custody.
 - [x] **E5.8** Add query operations for changes by canonical record, jurisdiction, committee, person, and observation
   window.
-- [ ] **E5.9** Validate replay, correction, cancellation, rescheduling, deletion, and unchanged-import behavior.
+- [x] **E5.9** Validate replay, correction, cancellation, rescheduling, deletion, and unchanged-import behavior.
 
 ### Exit gate
 
