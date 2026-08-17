@@ -43,8 +43,15 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
 
       if (request.method === "GET" && requestUrl.pathname === "/ready") {
         const isServiceReady = await isReady()
+        const readinessDetails = dependencies.readinessDetails?.() ?? {}
+        if (!isServiceReady) {
+          dependencies.logger.warn("readiness check failed", {
+            correlationId: String(correlationId),
+            ...readinessDetails
+          })
+        }
         sendJson(response, isServiceReady ? 200 : 503, {
-          ...dependencies.readinessDetails?.(),
+          ...readinessDetails,
           status: isServiceReady ? "ready" : "unavailable"
         })
         return

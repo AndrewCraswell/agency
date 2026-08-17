@@ -29,10 +29,14 @@ export interface JobResult {
   correlationId: string
   counts: JobCounts
   failures: ReadonlyArray<Readonly<{ identifier?: string; message: string; retryable: boolean }>>
+  operation: string
   runId: string
+  source: string
   status: "failed" | "partial" | "succeeded"
   workflowExecutionId?: string
 }
+
+type JobOperationResult = Omit<JobResult, "correlationId" | "operation" | "runId" | "source" | "status">
 
 export class JobAlreadyRunningError extends Error {
   constructor(source: string, operation: string) {
@@ -92,7 +96,7 @@ export async function runIngestionJob(
     source: string
     workflowExecutionId?: string
   }>,
-  operation: (runId: string) => Promise<Omit<JobResult, "correlationId" | "runId" | "status">>
+  operation: (runId: string) => Promise<JobOperationResult>
 ): Promise<JobResult> {
   const ownerId = randomUUID()
   const lock = await database.execute<{ owner_id: string }>(sql`
@@ -177,7 +181,14 @@ export async function runIngestionJob(
         status
       })
       .where(eq(ingestionRuns.id, runId))
-    const completed = { ...result, correlationId: input.correlationId, runId, status }
+    const completed = {
+      ...result,
+      correlationId: input.correlationId,
+      operation: input.operation,
+      runId,
+      source: input.source,
+      status
+    }
     return input.workflowExecutionId === undefined
       ? completed
       : { ...completed, workflowExecutionId: input.workflowExecutionId }

@@ -21,7 +21,7 @@ Make failures and degraded behavior diagnosable across ingestion, processing, se
 - [x] **M13.8** Capture process restarts, CPU, memory, replica count, job duration, and job exit status.
 - [x] **M13.9** Capture PostgreSQL availability and connection-pool saturation signals without logging query parameters unsafely.
 - [x] **M13.10** Create queries or workbooks for MCP health, ingestion health, document failures, and embedding failures.
-- [ ] **M13.11** Add alerts for sustained MCP failures, failed scheduled syncs, stalled checkpoints, and unhealthy infrastructure.
+- [x] **M13.11** Add alerts for sustained MCP failures, failed scheduled syncs, stalled checkpoints, and unhealthy infrastructure.
 - [x] **M13.12** Document alert ownership, severity, acknowledgement, and recovery evidence.
 
 ### Langfuse

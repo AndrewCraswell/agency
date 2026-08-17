@@ -63,6 +63,7 @@ import { close, createLegislationServer, listen } from "../mcp/server.js"
 import { createLegislationMcpHandler } from "../mcp/tools.js"
 import { OpenRouterEmbeddingClient } from "../models/openrouter-embeddings.js"
 import { createLogger, errorContext } from "../observability/logger.js"
+import { operationalReadinessSignals } from "../observability/operational-signals.js"
 import { createTelemetry } from "../observability/telemetry.js"
 import { validateCorpus } from "../validation/corpus.js"
 
@@ -1573,6 +1574,7 @@ async function writeCoverageReport(options: { blobPath?: string; output: string 
       }
       await createArtifactStore(config, "reports").put(options.blobPath, bytes)
     }
+    createCommandLogger(config).info("operational readiness snapshot", { ...operationalReadinessSignals(report) })
     process.stdout.write(
       `${JSON.stringify({ blobPath: options.blobPath, output, status: "succeeded", totals: outputReport.totals })}\n`
     )

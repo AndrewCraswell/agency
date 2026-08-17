@@ -1,7 +1,7 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
 import { afterEach, describe, expect, it } from "vitest"
 import { getRequestContext } from "../auth/request-context.js"
-import { createLogger } from "../observability/logger.js"
+import { createLogger, type Logger } from "../observability/logger.js"
 import { close, createLegislationServer } from "./server.js"
 import { createLegislationMcpHandler, type LegislationQueryApi } from "./tools.js"
 
@@ -17,6 +17,7 @@ async function startServer(
   isReady = true,
   options: Readonly<{
     authenticate?: () => Promise<{ userId: string }>
+    logger?: Logger
     mcpHandler?: NonNullable<Parameters<typeof createLegislationServer>[0]["mcpHandler"]>
     protectedResourceMetadata?: NonNullable<Parameters<typeof createLegislationServer>[0]["protectedResourceMetadata"]>
     readinessDetails?: () => Readonly<Record<string, unknown>>
@@ -55,6 +56,30 @@ describe("createLegislationServer", () => {
     await expect(response.json()).resolves.toEqual({
       databasePool: { saturation: 1, waiting: 2 },
       status: "unavailable"
+    })
+  })
+
+  it("logs safe readiness diagnostics when a dependency is unavailable", async () => {
+    const lines: string[] = []
+    const diagnosticLogger = createLogger({
+      level: "warn",
+      service: "legislation-test",
+      write: (line) => lines.push(line)
+    })
+    const baseUrl = await startServer(false, {
+      logger: diagnosticLogger,
+      readinessDetails: () => ({ databasePool: { saturation: 1, waiting: 2 } })
+    })
+
+    const response = await fetch(`${baseUrl}/ready`, { headers: { "x-correlation-id": "ready-test" } })
+
+    expect(response.status).toBe(503)
+    expect(lines).toHaveLength(1)
+    expect(JSON.parse(lines[0]!)).toMatchObject({
+      correlationId: "ready-test",
+      databasePool: { saturation: 1, waiting: 2 },
+      level: "warn",
+      message: "readiness check failed"
     })
   })
 

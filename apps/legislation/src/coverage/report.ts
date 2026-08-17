@@ -32,8 +32,8 @@ export interface CoverageReport {
     total: number
   }
   embeddingCoverage: {
-    bills: { embedded: number; total: number }
-    sections: { embedded: number; total: number }
+    bills: { embedded: number; oldestMissingAt?: string; total: number }
+    sections: { embedded: number; oldestMissingAt?: string; total: number }
   }
   federalBillTypes: Array<{ billType: string; bills: number; congress: string; documents: number }>
   eventCoverage: Array<{
@@ -363,12 +363,14 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
     database
       .select({
         embedded: sql<number>`count(*) filter (where ${bills.embedding} is not null)::int`,
+        oldestMissingAt: sql<Date | null>`min(${bills.updatedAt}) filter (where ${bills.embedding} is null)`,
         total: sql<number>`count(*)::int`
       })
       .from(bills),
     database
       .select({
         embedded: sql<number>`count(*) filter (where ${documentSections.embedding} is not null)::int`,
+        oldestMissingAt: sql<Date | null>`min(${documentSections.updatedAt}) filter (where ${documentSections.embedding} is null)`,
         total: sql<number>`count(*)::int`
       })
       .from(documentSections),
@@ -398,8 +400,16 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       total: documentQualityResult.rows[0]?.total ?? 0
     },
     embeddingCoverage: {
-      bills: billEmbeddings[0] ?? { embedded: 0, total: 0 },
-      sections: sectionEmbeddings[0] ?? { embedded: 0, total: 0 }
+      bills: {
+        embedded: billEmbeddings[0]?.embedded ?? 0,
+        oldestMissingAt: timestamp(billEmbeddings[0]?.oldestMissingAt ?? null),
+        total: billEmbeddings[0]?.total ?? 0
+      },
+      sections: {
+        embedded: sectionEmbeddings[0]?.embedded ?? 0,
+        oldestMissingAt: timestamp(sectionEmbeddings[0]?.oldestMissingAt ?? null),
+        total: sectionEmbeddings[0]?.total ?? 0
+      }
     },
     federalBillTypes: federalBillTypes.rows.map((row) => ({
       billType: row.bill_type,

@@ -34,6 +34,7 @@
     "infra:lint": "az bicep lint --file infra/bicep/main.bicep",
     "infra:what-if": "node scripts/infra-what-if.mjs",
     "lint": "oxlint --max-warnings=0",
+    "operations:verify": "tsx src/cli/verify-operational-evidence.ts",
     "release:check": "node scripts/check-release-inputs.mjs",
     "start": "node dist/cli/main.js serve",
     "smoke:deployment": "node scripts/smoke-deployment.mjs",

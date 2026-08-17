@@ -22,3 +22,11 @@ Alert ownership belongs to the legislation on-call rotation. Page for sustained 
 missed Congress checkpoint beyond 12 hours. Create a ticket for a partial historical import, document extraction failure
 rate above 5 percent, embedding backlog above one day, or coverage regression. Recovery evidence includes the correlated
 run, cause, replay range, resulting checkpoint, coverage delta, and healthy query.
+
+The Bicep alert module creates seven rules: MCP 5xx, readiness failure, failed scheduled sync, stalled Congress
+checkpoint, document failure rate, embedding backlog age, and zero MCP replicas. Metric alerts use Container Apps
+metrics. Log alerts parse the structured readiness, ingestion-result, and daily operational-snapshot records in
+`ContainerAppConsoleLogs_CL`. Scheduled-sync and checkpoint rules stay disabled until the corresponding n8n schedules
+are deliberately activated. Alert rules can fire without notification receivers, but every release environment must
+pass at least one existing legislation on-call action group ID and prove each rule fires and resolves before D5.8 or
+M14.49 can close.

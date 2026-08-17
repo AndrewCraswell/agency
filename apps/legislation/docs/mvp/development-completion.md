@@ -150,7 +150,7 @@ The development environment is reproducible, observable, recoverable, and ready 
 
 ### Tasks
 
-- [ ] **D5.1** Add Azure alerts for sustained MCP failures, readiness failure, failed scheduled syncs, stalled
+- [x] **D5.1** Add Azure alerts for sustained MCP failures, readiness failure, failed scheduled syncs, stalled
   checkpoints, document failure rate, embedding backlog, and infrastructure health.
 - [ ] **D5.2** Inject controlled provider timeout, extraction failure, OpenRouter failure, and database outage scenarios;
   trace each from n8n through application diagnostics and its documented recovery action.

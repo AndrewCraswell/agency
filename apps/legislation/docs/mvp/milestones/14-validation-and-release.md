@@ -59,7 +59,8 @@ Prove that the corpus is correct, the tools are useful, and the Azure deployment
 - [ ] **M14.37** Validate provider rate-limit behavior and embedding batch throttling.
 - [ ] **M14.38** Validate timeout, cancellation, retry, and graceful-shutdown behavior.
 - [ ] **M14.39** Restore PostgreSQL and n8n configuration from backups in a non-production environment.
-- [ ] **M14.40** Verify recovery from a failed deployment and document rollback or forward-fix procedures.
+- [ ] **M14.40** Verify recovery from a failed deployment and document rollback or forward-fix procedures. The checked
+  evidence validator and runbook are ready; this task remains open until a disposable unhealthy revision is recovered.
 
 ### Production release
 
@@ -71,7 +72,8 @@ Prove that the corpus is correct, the tools are useful, and the Azure deployment
 - [ ] **M14.46** Run document processing and embedding workflows to the agreed completion threshold.
 - [ ] **M14.47** Enable Congress.gov incremental sync and other approved schedules.
 - [ ] **M14.48** Run authenticated production smoke tests for all seven MCP tools.
-- [ ] **M14.49** Verify Azure alerts, Langfuse traces, coverage reports, and operator runbooks.
+- [ ] **M14.49** Verify Azure alerts, Langfuse traces, coverage reports, and operator runbooks. The alert rules and
+  evidence validator are checked in; live fired-and-resolved evidence remains required.
 - [ ] **M14.50** Record release version, image digests, migration state, corpus coverage, evaluation baseline, and known limitations.
 
 ## Exit criteria

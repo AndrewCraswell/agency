@@ -28,6 +28,9 @@ param langfusePublicKey string
 param langfuseSecretKey string
 param enableN8n bool = false
 param deployRuntimes bool = true
+param operationalAlertsEnabled bool = true
+param scheduledSyncAlertsEnabled bool = false
+param alertActionGroupIds array = []
 @allowed(['disabled', 'workos'])
 param authMode string = 'disabled'
 param workosIssuer string = ''
@@ -129,7 +132,9 @@ module runtimes 'modules/runtimes.bicep' = if (deployRuntimes) {
     langfuseSecretKeySecretUri: keyVault.outputs.langfuseSecretKeySecretUri
     langfuseBaseUrl: langfuseBaseUrl
     authMode: authMode
-    workosAudience: authMode == 'workos' ? 'https://${namePrefix}-mcp.${monitoring.outputs.environmentDefaultDomain}/mcp' : ''
+    workosAudience: authMode == 'workos'
+      ? 'https://${namePrefix}-mcp.${monitoring.outputs.environmentDefaultDomain}/mcp'
+      : ''
     workosIssuer: workosIssuer
     workosJwksUrl: workosJwksUrl
     federalStartCongress: federalStartCongress
@@ -151,12 +156,31 @@ module runtimes 'modules/runtimes.bicep' = if (deployRuntimes) {
   }
 }
 
+module alerts 'modules/alerts.bicep' = if (deployRuntimes) {
+  name: 'alerts'
+  params: {
+    actionGroupIds: alertActionGroupIds
+    ingestionJobName: '${namePrefix}-ingestion'
+    location: location
+    mcpAppId: runtimes!.outputs.mcpId
+    mcpAppName: '${namePrefix}-mcp'
+    namePrefix: namePrefix
+    operationalAlertsEnabled: operationalAlertsEnabled
+    scheduledSyncAlertsEnabled: scheduledSyncAlertsEnabled
+    tags: tags
+    workspaceId: monitoring.outputs.workspaceId
+  }
+}
+
 resource ingestionJob 'Microsoft.App/jobs@2024-03-01' existing = if (deployRuntimes) {
   name: '${namePrefix}-ingestion'
   dependsOn: [runtimes]
 }
 
-var jobsOperatorRoleId = subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b9a307c4-5aa3-4b52-ba60-2b17c136cd7b')
+var jobsOperatorRoleId = subscriptionResourceId(
+  'Microsoft.Authorization/roleDefinitions',
+  'b9a307c4-5aa3-4b52-ba60-2b17c136cd7b'
+)
 resource n8nJobOperator 'Microsoft.Authorization/roleAssignments@2022-04-01' = if (deployRuntimes && enableN8n) {
   name: guid(ingestionJob.id, namePrefix, jobsOperatorRoleId)
   scope: ingestionJob
@@ -175,3 +199,4 @@ output mcpIdentityId string = identities.outputs.mcpId
 output n8nBootstrapJobId string = deployRuntimes && enableN8n ? runtimes!.outputs.n8nBootstrapJobId : ''
 output n8nEndpoint string = deployRuntimes && enableN8n ? 'https://${runtimes!.outputs.n8nFqdn}' : ''
 output storageEndpoint string = storage.outputs.blobEndpoint
+output operationalAlertNames array = deployRuntimes ? alerts!.outputs.alertNames : []

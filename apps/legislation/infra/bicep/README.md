@@ -41,3 +41,18 @@ unsupported connection-string variable. After deployment, run migrations as a on
 and `/ready`, write and delete a test blob, query `select extversion from pg_extension where extname = 'vector'`, and
 confirm structured logs in the Log Analytics workspace. Roll back application code by redeploying the preceding
 immutable image digest; database migrations use forward fixes.
+
+## Operational alerts
+
+The deployment creates metric and log-query alerts for MCP 5xx responses, dependency readiness, failed job executions,
+the Congress checkpoint, document failures, embedding backlog age, and MCP replica availability. Supply existing
+legislation on-call action groups through `alertActionGroupIds`; an empty array leaves the rules visible and evaluable
+but does not send notifications. `operationalAlertsEnabled` is the emergency global switch and defaults to `true`.
+
+`scheduledSyncAlertsEnabled` defaults to `false` because checked-in n8n schedules are inactive during corpus bootstrap.
+Set it to `true` in the same reviewed change that activates Congress synchronization. The checkpoint alert intentionally
+requires an observed `congress`/`bills` checkpoint, so a new empty environment does not claim a stalled checkpoint.
+
+After deployment, trigger and recover each alert in a disposable or staging target and retain the fired and resolved
+records. Validate the combined alert, diagnostic, restore, and revision-recovery record with
+`pnpm operations:verify -- <operational-evidence.json>`.
