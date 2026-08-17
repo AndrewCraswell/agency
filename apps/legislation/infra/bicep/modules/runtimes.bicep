@@ -93,7 +93,7 @@ resource ingestion 'Microsoft.App/jobs@2024-03-01' = {
     environmentId: environmentId
     configuration: {
       replicaRetryLimit: 1
-      replicaTimeout: 86400
+      replicaTimeout: 172800
       triggerType: 'Manual'
       manualTriggerConfig: { parallelism: 1, replicaCompletionCount: 1 }
       registries: [{ server: registryServer, identity: ingestionIdentityId }]
