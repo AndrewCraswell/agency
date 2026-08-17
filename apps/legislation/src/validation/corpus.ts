@@ -18,7 +18,7 @@ const validationQueries = {
   orphanSponsors: sql`select count(*)::int as count from legislation.bill_sponsors child left join legislation.bills parent on parent.id = child.bill_id where parent.id is null`,
   orphanSections: sql`select count(*)::int as count from legislation.document_sections child left join legislation.bill_documents parent on parent.id = child.document_id where parent.id is null`,
   orphanVotePositions: sql`select count(*)::int as count from legislation.vote_positions child left join legislation.votes parent on parent.id = child.vote_id where parent.id is null`,
-  orphanVotes: sql`select count(*)::int as count from legislation.votes child left join legislation.bills parent on parent.id = child.bill_id where parent.id is null`,
+  orphanVotes: sql`select count(*)::int as count from legislation.votes child left join legislation.bills parent on parent.id = child.bill_id where child.bill_id is not null and parent.id is null`,
   selfRelations: sql`select count(*)::int as count from legislation.bill_relations where bill_id = related_bill_id`
 } as const
 

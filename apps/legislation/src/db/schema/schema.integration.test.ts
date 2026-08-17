@@ -985,6 +985,12 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
   })
 
   it("reports coverage and validates the assembled corpus", async () => {
+    await database.insert(schema.votes).values({
+      id: "vote:openstates:organization-target",
+      motion: "Election of committee chair",
+      organizationId: "organization:openstates:wa-data-committee",
+      sourceId: "organization-target"
+    })
     const coverage = await generateCoverageReport(database)
     expect(coverage).toMatchObject({
       checkpoints: expect.any(Array),
