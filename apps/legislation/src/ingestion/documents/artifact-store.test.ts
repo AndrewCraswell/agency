@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { artifactPath, LocalArtifactStore } from "./artifact-store.js"
+import { artifactPath, isExistingBlobError, LocalArtifactStore } from "./artifact-store.js"
 
 const directories: string[] = []
 
@@ -22,5 +22,12 @@ describe("local artifact storage", () => {
     await expect(store.exists(path)).resolves.toBe(true)
     await expect(readFile(join(root, path), "utf8")).resolves.toBe("first")
     await expect(store.put("../outside", new Uint8Array())).rejects.toThrow("escapes")
+  })
+
+  it("recognizes Azure conditional-write conflicts used for immutable artifacts", () => {
+    expect(isExistingBlobError({ statusCode: 409 })).toBe(true)
+    expect(isExistingBlobError({ statusCode: 412 })).toBe(true)
+    expect(isExistingBlobError({ statusCode: 500 })).toBe(false)
+    expect(isExistingBlobError(new Error("network failure"))).toBe(false)
   })
 })

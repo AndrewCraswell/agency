@@ -4,7 +4,7 @@
 
 The primary user is a legislative researcher, policy analyst, journalist, or public-affairs professional who needs to
 find and verify state and federal legislation across jurisdictions without learning each source system. They need
-canonical records, official source links, complete provenance, and predictable retrieval through an MCP-capable agent.
+canonical records, official source links, and predictable retrieval through an MCP-capable agent.
 
 ## Research scenarios and success measures
 
@@ -15,7 +15,7 @@ canonical records, official source links, complete provenance, and predictable r
    documented evaluation set places a relevant bill in the first ten results for at least 90 percent of test prompts,
    with explicit pagination and no result outside the requested filters.
 3. Timeline review: explain the ordered actions and votes for a known bill. Success means all stored events are returned
-   in stable chronological and upstream order, ties are deterministic, and each event retains its source attribution.
+   in stable chronological and upstream order, ties are deterministic, and relevant official links remain available.
 4. Passage search: find bill sections containing a phrase or semantic concept. Success means exact phrases are found by
    lexical search, semantic evaluation queries reach 80 percent recall at ten, and every match identifies its bill,
    document version, section, and source URL.
@@ -33,7 +33,7 @@ requires repository or target-environment evidence, and all milestone exit crite
   approved.
 - Committee media, recordings, transcripts, Mux, and Deepgram remain deferred until a research scenario requires media
   evidence.
-- AI-generated summaries remain deferred until retrieval quality, provenance, and evaluation baselines are stable.
+- AI-generated summaries remain deferred until retrieval quality and evaluation baselines are stable.
 - Portfolios, watch lists, alerts, notifications, a web application, billing, and Novu remain deferred until the remote
   research interface demonstrates repeat use.
 - Temporal, LangChain, LangGraph, Redis, OpenSearch, dedicated vector stores, and graph databases remain deferred until

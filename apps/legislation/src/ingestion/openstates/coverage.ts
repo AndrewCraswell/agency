@@ -55,6 +55,62 @@ export const supportedOpenStatesJurisdictions = [
   "pr"
 ] as const
 
+export const openStatesJurisdictionNames: Readonly<Record<(typeof supportedOpenStatesJurisdictions)[number], string>> =
+  {
+    ak: "Alaska",
+    al: "Alabama",
+    ar: "Arkansas",
+    az: "Arizona",
+    ca: "California",
+    co: "Colorado",
+    ct: "Connecticut",
+    dc: "District of Columbia",
+    de: "Delaware",
+    fl: "Florida",
+    ga: "Georgia",
+    hi: "Hawaii",
+    ia: "Iowa",
+    id: "Idaho",
+    il: "Illinois",
+    in: "Indiana",
+    ks: "Kansas",
+    ky: "Kentucky",
+    la: "Louisiana",
+    ma: "Massachusetts",
+    md: "Maryland",
+    me: "Maine",
+    mi: "Michigan",
+    mn: "Minnesota",
+    mo: "Missouri",
+    ms: "Mississippi",
+    mt: "Montana",
+    nc: "North Carolina",
+    nd: "North Dakota",
+    ne: "Nebraska",
+    nh: "New Hampshire",
+    nj: "New Jersey",
+    nm: "New Mexico",
+    nv: "Nevada",
+    ny: "New York",
+    oh: "Ohio",
+    ok: "Oklahoma",
+    or: "Oregon",
+    pa: "Pennsylvania",
+    pr: "Puerto Rico",
+    ri: "Rhode Island",
+    sc: "South Carolina",
+    sd: "South Dakota",
+    tn: "Tennessee",
+    tx: "Texas",
+    ut: "Utah",
+    va: "Virginia",
+    vt: "Vermont",
+    wa: "Washington",
+    wi: "Wisconsin",
+    wv: "West Virginia",
+    wy: "Wyoming"
+  }
+
 function sessionStartYear(session: string): number | undefined {
   const match = /(?:^|\D)((?:19|20)\d{2})(?:\D|$)/.exec(session)
   return match?.[1] === undefined ? undefined : Number(match[1])

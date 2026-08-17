@@ -7,8 +7,17 @@ if (files.length !== 6) {
   throw new Error(`Expected six exported workflows, found ${files.length}`)
 }
 
+const workflowIds = new Set()
+
 for (const file of files) {
   const workflow = JSON.parse(await readFile(resolve(directory, file), "utf8"))
+  if (typeof workflow.id !== "string" || !workflow.id.startsWith("legislation-")) {
+    throw new Error(`${file} must have a stable legislation workflow ID`)
+  }
+  if (workflowIds.has(workflow.id)) {
+    throw new Error(`${file} duplicates workflow ID ${workflow.id}`)
+  }
+  workflowIds.add(workflow.id)
   const start = workflow.nodes?.find((node) => node.id === "start")
   if (start?.parameters?.body === undefined || !start.parameters.body.startsWith("=")) {
     throw new Error(`${file} has no raw Azure job start body`)

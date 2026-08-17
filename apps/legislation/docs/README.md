@@ -12,4 +12,7 @@
 
 ## Plans
 
-- [MVP implementation plan](mvp/README.md)
+- [Delivery plan and current status](mvp/README.md)
+- [Active development completion roadmap](mvp/development-completion.md)
+- [Legislative data expansion roadmap](roadmap.md)
+- [Data expansion feasibility review](data-expansion-feasibility.md)

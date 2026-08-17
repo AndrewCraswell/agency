@@ -9,7 +9,9 @@ job-specific application variables. The managed identity needs Container Apps Jo
 uses its own `n8n` PostgreSQL database and Key Vault-held encryption key. Queue mode, Redis, and separate workers remain
 disabled for MVP.
 
-Import each JSON through the n8n workflow import UI or CLI. Pause schedules by deactivating the workflow. Replay a
-bounded range through the CLI options in a manual Container Apps Job execution; application checkpoints and overlap
-windows remain authoritative. An exit code of `3` is a partial failure and must not be treated as success. Keep n8n's
-workflow-level retry disabled because provider retries and checkpoint safety are owned by the TypeScript job.
+The development deployment builds `Dockerfile.n8n`, creates the `leg-dev-n8n-bootstrap` Container Apps Job, and runs it
+after n8n is available. The job imports all six stable workflow IDs in the inactive state; importing again updates those
+same IDs instead of creating duplicates. Pause schedules by deactivating the workflow. Replay a bounded range through
+the CLI options in a manual Container Apps Job execution; application checkpoints and overlap windows remain
+authoritative. An exit code of `3` is a partial failure and must not be treated as success. Keep n8n's workflow-level
+retry disabled because provider retries and checkpoint safety are owned by the TypeScript job.

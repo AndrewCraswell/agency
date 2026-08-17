@@ -8,7 +8,7 @@ Automate schedules, sequencing, retries, and operational visibility while keepin
 
 ### n8n deployment
 
-- [ ] **M12.1** Provision one n8n instance in the legislation Azure environment.
+- [x] **M12.1** Provision one n8n instance in the legislation Azure environment.
 - [x] **M12.2** Configure n8n persistence in its dedicated PostgreSQL database.
 - [x] **M12.3** Store n8n encryption and runtime secrets in Key Vault.
 - [x] **M12.4** Restrict editor access and runtime network exposure appropriately.

@@ -10,8 +10,7 @@ const configSchema = z
         audience: z.string().trim().min(1),
         issuer: z.url({ protocol: /^https$/ }),
         jwksUrl: z.url({ protocol: /^https$/ }),
-        mode: z.literal("workos"),
-        requiredScopes: z.array(z.string().trim().min(1)).min(1)
+        mode: z.literal("workos")
       })
     ]),
     azure: z.object({
@@ -35,6 +34,8 @@ const configSchema = z
       federalEndCongress: z.coerce.number().int().min(1),
       federalStartCongress: z.coerce.number().int().min(1),
       maxAttempts: z.coerce.number().int().min(1).max(10),
+      openStatesApiKey: optionalSecret,
+      openStatesApiUrl: z.url({ protocol: /^https$/ }),
       requestTimeoutMs: z.coerce.number().int().min(1000).max(300_000),
       sourceDirectory: z.string().trim().min(1)
     }),
@@ -98,10 +99,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
           audience: environment.WORKOS_AUDIENCE,
           issuer: environment.WORKOS_ISSUER,
           jwksUrl: environment.WORKOS_JWKS_URL,
-          mode: "workos" as const,
-          requiredScopes: (environment.AUTH_REQUIRED_SCOPES ?? "legislation:read")
-            .split(",")
-            .map((scope) => scope.trim())
+          mode: "workos" as const
         }
       : { mode: environment.AUTH_MODE ?? "disabled" }
   const result = configSchema.safeParse({
@@ -127,6 +125,8 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       federalEndCongress: environment.FEDERAL_END_CONGRESS ?? "119",
       federalStartCongress: environment.FEDERAL_START_CONGRESS ?? "113",
       maxAttempts: environment.INGESTION_MAX_ATTEMPTS ?? "4",
+      openStatesApiKey: environment.OPENSTATE_API_KEY,
+      openStatesApiUrl: environment.OPENSTATES_API_URL ?? "https://v3.openstates.org",
       requestTimeoutMs: environment.INGESTION_REQUEST_TIMEOUT_MS ?? "30000",
       sourceDirectory: environment.LEGISLATION_SOURCE_DIRECTORY ?? ".data/sources"
     },

@@ -82,4 +82,47 @@ describe("Open States normalization", () => {
       )
     ).toThrow("source URL")
   })
+
+  it("deduplicates provider children that would violate persistence constraints", () => {
+    const source = structuredClone(fixture) as Record<string, unknown>
+    for (const field of ["actions", "documents", "related_bills", "sponsorships", "versions", "votes"] as const) {
+      const values = source[field]
+      if (Array.isArray(values) && values[0] !== undefined) {
+        values.push(structuredClone(values[0]))
+      }
+    }
+    const relatedBills = source.related_bills
+    if (Array.isArray(relatedBills)) {
+      relatedBills.push({ identifier: "HB 1234", relation_type: "related" })
+    }
+
+    const { aggregate } = normalizeOpenStatesBill(source, {
+      jurisdictionCode: "WA",
+      jurisdictionName: "Washington"
+    })
+
+    expect(new Set((aggregate.actions ?? []).map((action) => action.ordinal)).size).toBe(aggregate.actions?.length)
+    expect(new Set((aggregate.documents ?? []).map((item) => item.document.sourceUrl)).size).toBe(
+      aggregate.documents?.length
+    )
+    expect(new Set((aggregate.votes ?? []).map((vote) => vote.vote.id)).size).toBe(aggregate.votes?.length)
+    expect((aggregate.relations ?? []).every((relation) => relation.relatedBillId !== aggregate.bill.id)).toBe(true)
+  })
+
+  it("retains a bill when optional child records are malformed", () => {
+    const source = structuredClone(fixture) as Record<string, unknown>
+    source.related_bills = [{ relation_type: "related" }]
+    source.sponsorships = [{ primary: false }]
+    source.votes = [{ counts: "unavailable" }]
+
+    const { aggregate } = normalizeOpenStatesBill(source, {
+      jurisdictionCode: "WA",
+      jurisdictionName: "Washington"
+    })
+
+    expect(aggregate.bill.id).toBe("bill:wa:2025-2026:hb:1234")
+    expect(aggregate.relations).toEqual([])
+    expect(aggregate.sponsors).toEqual([])
+    expect(aggregate.votes).toEqual([expect.objectContaining({ positions: [] })])
+  })
 })

@@ -27,7 +27,8 @@ export async function discoverOpenStatesArchives(
     const fileName = parts.at(-1)?.replace(/\.(?:jsonl?|zip|gz)$/i, "") ?? ""
     const parent = parts.at(-2) ?? ""
     const grandparent = parts.at(-3) ?? ""
-    const fileMatch = /^([a-z]{2})[-_](.+)$/i.exec(fileName)
+    const currentArchiveMatch = /^([a-z]{2})_(.+)_json_[a-z0-9]+$/i.exec(fileName)
+    const fileMatch = currentArchiveMatch ?? /^([a-z]{2})[-_](.+)$/i.exec(fileName)
     let jurisdictionCode = fileMatch?.[1]?.toLowerCase() ?? ""
     let session = fileMatch?.[2] ?? ""
     if (/^[a-z]{2}$/i.test(parent)) {

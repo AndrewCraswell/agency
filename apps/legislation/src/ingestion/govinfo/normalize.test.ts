@@ -76,4 +76,103 @@ describe("GovInfo normalization", () => {
       session: { id: "session:us:118" }
     })
   })
+
+  it("accepts structured relationship details and removes identical duplicate actions", () => {
+    const currentShape = fixture
+      .replace(
+        "<relationshipDetails>Identical bill</relationshipDetails>",
+        "<relationshipDetails><item><type>Related bill</type><identifiedBy>CRS</identifiedBy></item></relationshipDetails>"
+      )
+      .replace(
+        "<item><actionDate>2025-02-03</actionDate><text>Introduced in House</text></item>",
+        "<item><actionDate>2025-02-03</actionDate><text>Introduced in House</text></item><item><actionDate>2025-02-03</actionDate><text>Introduced in House</text></item>"
+      )
+
+    const aggregate = normalizeGovInfoBillStatus(currentShape, {
+      sourceUrl: "https://www.govinfo.gov/bulkdata/BILLSTATUS/119/hr/BILLSTATUS-119hr1234.xml"
+    })
+
+    expect(aggregate.actions).toHaveLength(2)
+    expect(aggregate.relations).toEqual([
+      { billId: "bill:us:119:hr:1234", classification: "related", relatedBillId: "bill:us:119:s:567" }
+    ])
+  })
+
+  it("selects one preferred official format for each legislative version", () => {
+    const multipleFormats = fixture.replace(
+      "<item><url>https://www.govinfo.gov/content/pkg/BILLS-119hr1234enr/xml/BILLS-119hr1234enr.xml</url></item>",
+      "<item><url>https://www.govinfo.gov/content/pkg/BILLS-119hr1234enr/pdf/BILLS-119hr1234enr.pdf</url></item><item><url>https://www.govinfo.gov/content/pkg/BILLS-119hr1234enr/xml/BILLS-119hr1234enr.xml</url></item><item><url>https://www.govinfo.gov/content/pkg/BILLS-119hr1234enr/uslm/BILLS-119hr1234enr.xml</url></item>"
+    )
+
+    const aggregate = normalizeGovInfoBillStatus(multipleFormats, {
+      sourceUrl: "https://www.govinfo.gov/bulkdata/BILLSTATUS/119/hr/BILLSTATUS-119hr1234.xml"
+    })
+
+    expect(aggregate.documents).toHaveLength(2)
+    expect(aggregate.documents?.[0]?.document.sourceUrl).toContain("/uslm/")
+  })
+
+  it("ignores sparse empty formats and action records while retaining the bill", () => {
+    const sparseCollections = fixture
+      .replace(/<formats>[\s\S]*?<\/formats>/, "<formats></formats>")
+      .replace(
+        "<item><actionDate>2025-02-03</actionDate><text>Introduced in House</text></item>",
+        "<item><actionDate>2025-02-03</actionDate></item>"
+      )
+
+    const aggregate = normalizeGovInfoBillStatus(sparseCollections, {
+      sourceUrl: "https://www.govinfo.gov/bulkdata/BILLSTATUS/119/hr/BILLSTATUS-119hr1234.xml"
+    })
+
+    expect(aggregate.bill.id).toBe("bill:us:119:hr:1234")
+    expect(aggregate.actions).toHaveLength(1)
+    expect(aggregate.documents).toHaveLength(1)
+  })
+
+  it("normalizes an empty optional document date without rejecting the version", () => {
+    const emptyDate = fixture.replace("<date>2025-02-10T05:00:00Z</date>", "<date></date>")
+
+    const aggregate = normalizeGovInfoBillStatus(emptyDate, {
+      sourceUrl: "https://www.govinfo.gov/bulkdata/BILLSTATUS/119/hr/BILLSTATUS-119hr1234.xml"
+    })
+
+    expect(aggregate.documents?.[0]?.document.documentDate).toBeUndefined()
+  })
+
+  it("ignores malformed optional collections, duplicate sponsors, and self-relations", () => {
+    const repeatedSponsor = fixture.match(/<sponsors>([\s\S]*?)<\/sponsors>/)?.[1]
+    expect(repeatedSponsor).toBeDefined()
+    const inconsistent = fixture
+      .replace("<cosponsors>", `<cosponsors>${repeatedSponsor ?? ""}`)
+      .replace(
+        "<relatedBills>",
+        "<relatedBills><item><congress>119</congress><number>1234</number><type>HR</type></item>"
+      )
+      .replace(/<committees>[\s\S]*?<\/committees>/, "<committees>Unavailable</committees>")
+
+    const aggregate = normalizeGovInfoBillStatus(inconsistent, {
+      sourceUrl: "https://www.govinfo.gov/bulkdata/BILLSTATUS/119/hr/BILLSTATUS-119hr1234.xml"
+    })
+
+    expect(aggregate.bill.committees).toEqual([])
+    expect(new Set((aggregate.people ?? []).map((person) => person.id)).size).toBe(aggregate.people?.length)
+    expect((aggregate.relations ?? []).every((relation) => relation.relatedBillId !== aggregate.bill.id)).toBe(true)
+  })
+
+  it("filters malformed optional collection items and scalar policy areas", () => {
+    const inconsistent = fixture
+      .replace("<textVersions>", "<textVersions><item><type></type></item>")
+      .replace(
+        "<policyArea><name>Government Operations and Politics</name></policyArea>",
+        "<policyArea>None</policyArea>"
+      )
+
+    const aggregate = normalizeGovInfoBillStatus(inconsistent, {
+      sourceUrl: "https://www.govinfo.gov/bulkdata/BILLSTATUS/119/hr/BILLSTATUS-119hr1234.xml"
+    })
+
+    expect(aggregate.bill.id).toBe("bill:us:119:hr:1234")
+    expect(aggregate.bill.subjects).toEqual([])
+    expect(aggregate.documents).toHaveLength(2)
+  })
 })

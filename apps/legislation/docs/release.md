@@ -1,5 +1,14 @@
 # Release procedure
 
+## Current release target
+
+The active target is a development completion record, not a production launch. Complete steps 1 through 6 against the
+development environment, then satisfy phase D5 in the
+[development completion roadmap](mvp/development-completion.md). Production promotion in steps 7 and 8 is deferred and
+is not scheduled in the current [legislative data expansion roadmap](roadmap.md).
+
+## Procedure
+
 1. Run the app verification suite, Bicep build and lint, Docker build, migration-from-zero test, and workflow JSON parse.
 2. Produce state and federal coverage reports plus `corpus:validate`; explain every material upstream gap.
 3. Run retrieval and MCP evaluation cases in two supported MCP clients and record evidence, latency, and failures.

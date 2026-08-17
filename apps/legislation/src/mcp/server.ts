@@ -10,7 +10,7 @@ type ServerDependencies = Readonly<{
   isReady?: () => boolean | Promise<boolean>
   logger: Logger
   mcpHandler?: (request: IncomingMessage, response: ServerResponse) => Promise<void>
-  protectedResourceMetadata?: Readonly<{ authorizationServer: string; resource: string; scopes: string[] }>
+  protectedResourceMetadata?: Readonly<{ authorizationServer: string; resource: string }>
   readinessDetails?: () => Readonly<Record<string, unknown>>
   requestBodyBytes?: number
 }>
@@ -58,8 +58,7 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
       ) {
         sendJson(response, 200, {
           authorization_servers: [dependencies.protectedResourceMetadata.authorizationServer],
-          resource: dependencies.protectedResourceMetadata.resource,
-          scopes_supported: dependencies.protectedResourceMetadata.scopes
+          resource: dependencies.protectedResourceMetadata.resource
         })
         return
       }

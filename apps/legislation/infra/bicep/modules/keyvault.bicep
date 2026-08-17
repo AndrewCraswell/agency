@@ -13,6 +13,8 @@ param n8nEncryptionKey string
 @secure()
 param congressApiKey string
 @secure()
+param openStatesApiKey string
+@secure()
 param openRouterApiKey string
 @secure()
 param langfusePublicKey string
@@ -51,6 +53,12 @@ resource congressApiKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: vault
   name: 'congress-api-key'
   properties: { value: congressApiKey }
+}
+
+resource openStatesApiKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: vault
+  name: 'openstates-api-key'
+  properties: { value: openStatesApiKey }
 }
 
 resource openRouterApiKeySecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
@@ -102,6 +110,11 @@ resource ingestionCongressGrant 'Microsoft.Authorization/roleAssignments@2022-04
   scope: congressApiKeySecret
   properties: { principalId: ingestionPrincipalId, principalType: 'ServicePrincipal', roleDefinitionId: secretsUserRoleId }
 }
+resource ingestionOpenStatesGrant 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(openStatesApiKeySecret.id, ingestionPrincipalId, secretsUserRoleId)
+  scope: openStatesApiKeySecret
+  properties: { principalId: ingestionPrincipalId, principalType: 'ServicePrincipal', roleDefinitionId: secretsUserRoleId }
+}
 resource ingestionOpenRouterGrant 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
   name: guid(openRouterApiKeySecret.id, ingestionPrincipalId, secretsUserRoleId)
   scope: openRouterApiKeySecret
@@ -131,6 +144,7 @@ output policyDatabaseSecretUri string = policyDatabaseSecret.properties.secretUr
 output n8nDbCredentialUri string = n8nDatabasePasswordSecret.properties.secretUriWithVersion
 output n8nEncryptionSecretUri string = n8nEncryptionSecret.properties.secretUriWithVersion
 output congressApiKeySecretUri string = congressApiKeySecret.properties.secretUriWithVersion
+output openStatesApiKeySecretUri string = openStatesApiKeySecret.properties.secretUriWithVersion
 output openRouterApiKeySecretUri string = openRouterApiKeySecret.properties.secretUriWithVersion
 output langfusePublicKeySecretUri string = langfusePublicKeySecret.properties.secretUriWithVersion
 output langfuseSecretKeySecretUri string = langfuseSecretKeySecret.properties.secretUriWithVersion

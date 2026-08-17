@@ -16,8 +16,7 @@ beforeAll(async () => {
       audience,
       issuer,
       jwksUrl: "https://issuer.example/jwks",
-      mode: "workos",
-      requiredScopes: ["legislation:read"]
+      mode: "workos"
     },
     createLocalJWKSet({ keys: [{ ...publicJwk, alg: "RS256", kid: "test" }] })
   )
@@ -26,7 +25,7 @@ beforeAll(async () => {
 async function token(overrides: Readonly<Record<string, unknown>> = {}) {
   const tokenIssuer = typeof overrides.iss === "string" ? overrides.iss : issuer
   const tokenAudience = typeof overrides.aud === "string" ? overrides.aud : audience
-  return new SignJWT({ org_id: "org_test", scope: "legislation:read" })
+  return new SignJWT({ org_id: "org_test" })
     .setProtectedHeader({ alg: "RS256", kid: "test" })
     .setIssuedAt()
     .setIssuer(tokenIssuer)
@@ -57,21 +56,8 @@ describe("WorkOS authentication", () => {
     await expect(authenticator(`Bearer ${await token(claims)}`)).rejects.toMatchObject({ category: "invalid" })
   })
 
-  it("rejects a token without the required scope", async () => {
-    const unscoped = await new SignJWT({})
-      .setProtectedHeader({ alg: "RS256", kid: "test" })
-      .setIssuedAt()
-      .setIssuer(issuer)
-      .setAudience(audience)
-      .setSubject("user_test")
-      .setExpirationTime("5m")
-      .sign(privateKey)
-
-    await expect(authenticator(`Bearer ${unscoped}`)).rejects.toMatchObject({ category: "invalid" })
-  })
-
   it("rejects expired tokens without leaking token details", async () => {
-    const expired = await new SignJWT({ scope: "legislation:read" })
+    const expired = await new SignJWT({})
       .setProtectedHeader({ alg: "RS256", kid: "test" })
       .setIssuedAt()
       .setIssuer(issuer)

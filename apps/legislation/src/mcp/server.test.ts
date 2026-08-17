@@ -18,6 +18,7 @@ async function startServer(
   options: Readonly<{
     authenticate?: () => Promise<{ userId: string }>
     mcpHandler?: NonNullable<Parameters<typeof createLegislationServer>[0]["mcpHandler"]>
+    protectedResourceMetadata?: NonNullable<Parameters<typeof createLegislationServer>[0]["protectedResourceMetadata"]>
     readinessDetails?: () => Readonly<Record<string, unknown>>
     requestBodyBytes?: number
   }> = {}
@@ -89,12 +90,17 @@ describe("createLegislationServer", () => {
   })
 
   it("rejects anonymous MCP requests while leaving health public", async () => {
+    const resource = "https://legislation.example/mcp"
     const baseUrl = await startServer(true, {
       authenticate: async () => {
         const { AuthenticationError } = await import("../auth/workos.js")
         throw new AuthenticationError("missing")
       },
-      mcpHandler: async () => undefined
+      mcpHandler: async () => undefined,
+      protectedResourceMetadata: {
+        authorizationServer: "https://api.workos.com",
+        resource
+      }
     })
 
     const [health, mcp] = await Promise.all([
@@ -105,6 +111,16 @@ describe("createLegislationServer", () => {
     expect(health.status).toBe(200)
     expect(mcp.status).toBe(401)
     expect(mcp.headers.get("www-authenticate")).toContain("invalid_token")
+    expect(mcp.headers.get("www-authenticate")).toContain(
+      `resource_metadata="https://legislation.example/.well-known/oauth-protected-resource/mcp"`
+    )
+
+    const metadata = await fetch(`${baseUrl}/.well-known/oauth-protected-resource/mcp`)
+    expect(metadata.status).toBe(200)
+    await expect(metadata.json()).resolves.toEqual({
+      authorization_servers: ["https://api.workos.com"],
+      resource
+    })
   })
 
   it("carries authenticated user and organization identity into MCP handling", async () => {

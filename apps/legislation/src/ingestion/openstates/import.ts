@@ -1,8 +1,9 @@
 import { and, eq } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
-import { getBillById, upsertBillAggregate } from "../../db/queries/bill-aggregates.js"
+import { upsertBillAggregates } from "../../db/queries/bill-aggregates.js"
 import { syncCheckpoints } from "../../db/schema/schema.js"
-import { createJobCounts, mapConcurrent, type JobCounts } from "../job.js"
+import type { CanonicalBillAggregate } from "../../legislation/model.js"
+import { createJobCounts, type JobCounts } from "../job.js"
 import { normalizeOpenStatesBill, type NormalizationDiagnostic, type OpenStatesContext } from "./normalize.js"
 
 export interface OpenStatesImportResult {
@@ -13,11 +14,17 @@ export interface OpenStatesImportResult {
 }
 
 interface ImportOptions {
+  batchSize?: number
   concurrency: number
   contentHash: string
   force?: boolean
   stream: string
 }
+
+type PreparedRecord = { aggregate: CanonicalBillAggregate; identifier?: string; record: unknown }
+type RecordResult =
+  | { failure: { identifier?: string; message: string; retryable: boolean }; status: "failed" }
+  | { record: unknown; status: "inserted" | "prepared" | "updated" }
 
 export async function importOpenStatesRecords(
   database: LegislationDatabase,
@@ -42,35 +49,46 @@ export async function importOpenStatesRecords(
   }
   counts.skipped = startingIndex
   const pending = records.slice(startingIndex)
+  const batchSize = Math.max(options.concurrency, options.batchSize ?? 96)
   let canAdvanceCheckpoint = true
   let durableIndex = startingIndex
-  for (let offset = 0; offset < pending.length; offset += options.concurrency) {
-    const batch = pending.slice(offset, offset + options.concurrency)
-    const batchResults = await mapConcurrent(batch, options.concurrency, async (record) => {
+  for (let offset = 0; offset < pending.length; offset += batchSize) {
+    const batch = pending.slice(offset, offset + batchSize)
+    const prepared = batch.map((record): PreparedRecord | RecordResult => {
       try {
         const result = normalizeOpenStatesBill(record, context)
         diagnostics.push(...result.diagnostics)
-        counts.read += 1
-        const existing = await getBillById(database, result.aggregate.bill.id)
-        await upsertBillAggregate(database, result.aggregate)
-        if (existing === undefined) {
-          counts.inserted += 1
-        } else {
-          counts.updated += 1
-        }
-        return true
+        return { aggregate: result.aggregate, identifier: recordIdentifier(record), record }
       } catch (error) {
-        counts.failed += 1
-        failures.push({
-          identifier: recordIdentifier(record),
-          message: error instanceof Error ? error.message : "Unknown Open States record failure",
-          retryable: false
-        })
-        return false
+        return {
+          failure: {
+            identifier: recordIdentifier(record),
+            message: error instanceof Error ? error.message : "Unknown Open States record failure",
+            retryable: false
+          },
+          status: "failed"
+        }
       }
     })
+    const batchResults: RecordResult[] = prepared.map((result) =>
+      "aggregate" in result ? { record: result.record, status: "prepared" } : result
+    )
+    await persistPrepared(
+      database,
+      prepared.filter((result): result is PreparedRecord => "aggregate" in result),
+      batchResults
+    )
+    for (const result of batchResults) {
+      if (result.status === "failed") {
+        counts.failed += 1
+        failures.push(result.failure)
+      } else if (result.status !== "prepared") {
+        counts.read += 1
+        counts[result.status] += 1
+      }
+    }
     if (canAdvanceCheckpoint) {
-      const firstFailure = batchResults.indexOf(false)
+      const firstFailure = batchResults.findIndex((result) => result.status === "failed")
       if (firstFailure === -1) {
         durableIndex = startingIndex + offset + batch.length
       } else {
@@ -85,6 +103,50 @@ export async function importOpenStatesRecords(
   const checkpoint = { complete, contentHash: options.contentHash, index: complete ? records.length : durableIndex }
   await saveCheckpoint(database, options.stream, options.contentHash, checkpoint.index, complete)
   return { checkpoint, counts, diagnostics, failures }
+}
+
+async function persistPrepared(
+  database: LegislationDatabase,
+  prepared: readonly PreparedRecord[],
+  results: RecordResult[]
+): Promise<void> {
+  if (prepared.length === 0) {
+    return
+  }
+  try {
+    const existing = await upsertBillAggregates(
+      database,
+      prepared.map((item) => item.aggregate)
+    )
+    for (const item of prepared) {
+      const result = results.find((candidate) => "record" in candidate && candidate.record === item.record)
+      if (result !== undefined && "record" in result) {
+        result.status = existing.has(item.aggregate.bill.id) ? "updated" : "inserted"
+      }
+    }
+  } catch (error) {
+    if (prepared.length > 1) {
+      const midpoint = Math.ceil(prepared.length / 2)
+      await persistPrepared(database, prepared.slice(0, midpoint), results)
+      await persistPrepared(database, prepared.slice(midpoint), results)
+      return
+    }
+    const item = prepared[0]
+    if (item === undefined) {
+      return
+    }
+    const index = results.findIndex((candidate) => "record" in candidate && candidate.record === item.record)
+    if (index >= 0) {
+      results[index] = {
+        failure: {
+          identifier: item.identifier,
+          message: error instanceof Error ? error.message : "Unknown Open States persistence failure",
+          retryable: false
+        },
+        status: "failed"
+      }
+    }
+  }
 }
 
 async function saveCheckpoint(

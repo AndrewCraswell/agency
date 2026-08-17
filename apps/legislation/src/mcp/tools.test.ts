@@ -61,6 +61,16 @@ describe("legislation MCP tools", () => {
     await transport.close()
   })
 
+  it("publishes item schemas for every array-valued tool parameter", async () => {
+    const { client, transport } = await createClient()
+    const result = await client.listTools()
+
+    for (const advertisedTool of result.tools) {
+      expect(arraySchemasMissingItems(advertisedTool.inputSchema)).toEqual([])
+    }
+    await transport.close()
+  })
+
   it("returns structured canonical bill data", async () => {
     const { client, service, transport } = await createClient()
 
@@ -136,3 +146,18 @@ describe("legislation MCP tools", () => {
     await transport.close()
   })
 })
+
+function arraySchemasMissingItems(value: unknown, path = "$"): string[] {
+  if (Array.isArray(value)) {
+    return value.flatMap((item, index) => arraySchemasMissingItems(item, `${path}[${index}]`))
+  }
+  if (typeof value !== "object" || value === null) {
+    return []
+  }
+  const schema = value as Record<string, unknown>
+  const missing = schema.type === "array" && !("items" in schema) ? [path] : []
+  return [
+    ...missing,
+    ...Object.entries(schema).flatMap(([key, item]) => arraySchemasMissingItems(item, `${path}.${key}`))
+  ]
+}

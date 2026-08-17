@@ -46,16 +46,6 @@ export function createWorkosAuthenticator(
         maxTokenAge: "24h",
         requiredClaims: ["exp", "iat", "sub"]
       })
-      let scopeValues: string[] = []
-      if (typeof payload.scope === "string") {
-        scopeValues = payload.scope.split(/\s+/).filter(Boolean)
-      } else if (Array.isArray(payload.scp)) {
-        scopeValues = payload.scp.filter((scope): scope is string => typeof scope === "string")
-      }
-      const grantedScopes = new Set(scopeValues)
-      if (config.requiredScopes.some((scope) => !grantedScopes.has(scope))) {
-        throw new AuthenticationError("invalid")
-      }
       let organizationId: string | undefined
       if (typeof payload.org_id === "string") {
         organizationId = payload.org_id

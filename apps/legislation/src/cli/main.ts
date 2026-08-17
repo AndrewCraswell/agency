@@ -21,10 +21,13 @@ import { embedBills, embedDocumentSections } from "../ingestion/embeddings/jobs.
 import { GovInfoClient } from "../ingestion/govinfo/client.js"
 import { importGovInfoPackages } from "../ingestion/govinfo/import.js"
 import { RetryingHttpClient } from "../ingestion/http-client.js"
-import { createJobCounts, JOB_EXIT_CODE, runIngestionJob, type JobResult } from "../ingestion/job.js"
+import { createJobCounts, JOB_EXIT_CODE, mapConcurrent, runIngestionJob, type JobResult } from "../ingestion/job.js"
+import { OpenStatesClient } from "../ingestion/openstates/client.js"
 import { createOpenStatesCoverageManifest } from "../ingestion/openstates/coverage.js"
+import { openStatesJurisdictionNames, supportedOpenStatesJurisdictions } from "../ingestion/openstates/coverage.js"
 import { discoverOpenStatesArchives } from "../ingestion/openstates/discover.js"
 import { importOpenStatesRecords } from "../ingestion/openstates/import.js"
+import { parseOpenStatesManifest } from "../ingestion/openstates/manifest.js"
 import { ArtifactSourceStore, LocalSourceStore, type SourceStore } from "../ingestion/source-store.js"
 import { LegislationQueryService } from "../legislation/query-service.js"
 import { close, createLegislationServer, listen } from "../mcp/server.js"
@@ -69,6 +72,20 @@ program
   .action(importOpenStates)
 
 program
+  .command("openstates:sync")
+  .description("Synchronize changed state bills from the Open States API")
+  .option("--from <iso-date-time>")
+  .option("--jurisdiction <code>")
+  .action(syncOpenStates)
+
+program
+  .command("openstates:bootstrap")
+  .description("Import all state archives in an Azure Blob manifest")
+  .requiredOption("--manifest-blob <path>")
+  .option("--jurisdiction <code>")
+  .action(bootstrapOpenStates)
+
+program
   .command("govinfo:import")
   .description("Discover and import GovInfo BILLSTATUS XML")
   .option("--bill-types <types>", "comma-separated bill types", "hr,s,hjres,sjres,hconres,sconres,hres,sres")
@@ -90,6 +107,7 @@ program
   .description("Acquire and process pending official bill documents")
   .option("--bill-id <id>")
   .option("--document-id <id>")
+  .option("--all", "continue until every pending document has been attempted")
   .option("--force", "download and process even when an artifact is already complete")
   .option("--jurisdiction-id <id>")
   .option("--limit <number>", "maximum documents", "100")
@@ -101,6 +119,7 @@ program
   .description("Create missing or stale bill and passage embeddings")
   .option("--bill-id <id>", "limit bill and section work to one canonical bill")
   .option("--document-id <id>", "limit section work to one document")
+  .option("--all", "continue until every missing bill and section embedding is created")
   .option("--limit <number>", "maximum records per kind", "64")
   .action(runEmbeddings)
 
@@ -136,8 +155,7 @@ async function serve() {
       config.auth.mode === "workos"
         ? {
             authorizationServer: config.auth.issuer,
-            resource: config.auth.audience,
-            scopes: config.auth.requiredScopes
+            resource: config.auth.audience
           }
         : undefined,
     readinessDetails: () => ({ databasePool: databasePoolSnapshot(pool) }),
@@ -261,6 +279,143 @@ async function importOpenStates(options: {
   }, config)
 }
 
+async function syncOpenStates(options: { from?: string; jurisdiction?: string }) {
+  const config = loadConfig()
+  if (config.ingestion.openStatesApiKey === undefined) {
+    throw new InvalidJobInput("OPENSTATE_API_KEY is required for openstates:sync")
+  }
+  const from = options.from === undefined ? new Date(Date.now() - 7 * 86_400_000) : parseDate(options.from, "from")
+  const requestedCode = options.jurisdiction?.trim().toLowerCase()
+  const jurisdictions =
+    requestedCode === undefined
+      ? [...supportedOpenStatesJurisdictions]
+      : supportedOpenStatesJurisdictions.filter((code) => code === requestedCode)
+  if (jurisdictions.length === 0) {
+    throw new InvalidJobInput(`unsupported Open States jurisdiction: ${options.jurisdiction}`)
+  }
+  const providerHttp = httpClient(config)
+  const client = new OpenStatesClient({
+    apiKey: config.ingestion.openStatesApiKey,
+    baseUrl: new URL(config.ingestion.openStatesApiUrl),
+    http: providerHttp
+  })
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        correlationId: jobCorrelationId(),
+        operation: "incremental-sync",
+        scope: { from: from.toISOString(), jurisdictions },
+        source: "openstates"
+      },
+      async () => {
+        const counts = createJobCounts()
+        const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
+        for (const code of jurisdictions) {
+          let page = 1
+          for await (const records of client.bills({
+            from,
+            jurisdiction: openStatesJurisdictionNames[code]
+          })) {
+            const contentHash = createHash("sha256").update(JSON.stringify(records)).digest("hex")
+            const imported = await importOpenStatesRecords(
+              database,
+              { jurisdictionCode: code, jurisdictionName: openStatesJurisdictionNames[code] },
+              records,
+              {
+                concurrency: config.ingestion.concurrency,
+                contentHash,
+                stream: `api-${code}-${from.toISOString()}-${page}`
+              }
+            )
+            for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
+              counts[key] += imported.counts[key]
+            }
+            failures.push(...imported.failures)
+            page += 1
+          }
+        }
+        return { counts, failures }
+      }
+    )
+    printJobResult(result)
+  }, config)
+  createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "openstates" })
+}
+
+async function bootstrapOpenStates(options: { jurisdiction?: string; manifestBlob: string }) {
+  const config = loadConfig()
+  const manifestBytes = await createArtifactStore(config, "state").read(options.manifestBlob)
+  const manifest = parseOpenStatesManifest(new TextDecoder().decode(manifestBytes))
+  const requestedCode = options.jurisdiction?.trim().toLowerCase()
+  const archives = manifest.archives.filter(
+    (archive) =>
+      archive.jurisdictionCode in openStatesJurisdictionNames &&
+      (requestedCode === undefined || archive.jurisdictionCode === requestedCode)
+  )
+  if (archives.length === 0) {
+    throw new InvalidJobInput("Open States manifest contains no matching supported archives")
+  }
+  const providerHttp = httpClient(config)
+  const sourceStore = createSourceStore(config, "state")
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        correlationId: jobCorrelationId(),
+        operation: "historical-import",
+        scope: { archives: archives.length, jurisdiction: requestedCode },
+        source: "openstates"
+      },
+      async () => {
+        const counts = createJobCounts()
+        const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
+        const archiveResults = await mapConcurrent(archives, 4, async (archive) => {
+          try {
+            const url = new URL(archive.url)
+            const content = await providerHttp.getBytes(url, MAXIMUM_ARCHIVE_BYTES)
+            const contentHash = createHash("sha256").update(content).digest("hex")
+            const stream = `${archive.jurisdictionCode}-${archive.session}`
+            await sourceStore.put("openstates", stream, content, { sourceUrl: url.href })
+            return await importOpenStatesRecords(
+              database,
+              {
+                jurisdictionCode: archive.jurisdictionCode,
+                jurisdictionName:
+                  openStatesJurisdictionNames[archive.jurisdictionCode as keyof typeof openStatesJurisdictionNames]
+              },
+              decodeArchiveRecords(content),
+              { batchSize: 96, concurrency: config.ingestion.concurrency, contentHash, stream }
+            )
+          } catch (error) {
+            return {
+              failure: {
+                identifier: `${archive.jurisdictionCode}-${archive.session}`,
+                message: error instanceof Error ? error.message : "Unknown Open States archive failure",
+                retryable: true
+              }
+            }
+          }
+        })
+        for (const archiveResult of archiveResults) {
+          if ("failure" in archiveResult) {
+            counts.failed += 1
+            failures.push(archiveResult.failure)
+          } else {
+            for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
+              counts[key] += archiveResult.counts[key]
+            }
+            failures.push(...archiveResult.failures)
+          }
+        }
+        return { counts, failures }
+      }
+    )
+    printJobResult(result)
+  }, config)
+  createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "openstates" })
+}
+
 async function readLocalArchive(path: string): Promise<Uint8Array> {
   const metadata = await stat(path)
   if (metadata.size > MAXIMUM_ARCHIVE_BYTES) {
@@ -300,9 +455,10 @@ async function importGovInfo(options: {
       },
       async () =>
         importGovInfoPackages(database, client, packages, {
+          concurrency: config.ingestion.concurrency,
           force: options.force,
           sourceStore: createSourceStore(config, "federal"),
-          stream: `${start}-${end}`
+          stream: `${start}-${end}-${billTypes.join("-")}`
         })
     )
     printJobResult(result)
@@ -342,6 +498,7 @@ async function syncCongress(options: { dryRun?: boolean; from?: string; to?: str
 }
 
 async function processDocuments(options: {
+  all?: boolean
   billId?: string
   documentId?: string
   force?: boolean
@@ -350,30 +507,51 @@ async function processDocuments(options: {
   status?: string
 }) {
   const config = loadConfig()
+  if (options.all === true && options.status !== undefined) {
+    throw new InvalidJobInput("--all cannot be combined with --status")
+  }
   await withDatabase(async (database) => {
     const result = await runIngestionJob(
       database,
       { correlationId: jobCorrelationId(), operation: "process-documents", scope: { ...options }, source: "documents" },
       async () => {
-        const processed = await processPendingDocuments(database, {
-          artifactStore: createArtifactStore(config, "documents"),
-          billId: options.billId,
-          concurrency: config.ingestion.concurrency,
-          documentId: options.documentId,
-          force: options.force,
-          jurisdictionId: options.jurisdictionId,
-          limit: parseInteger(options.limit, "limit"),
-          status: options.status === undefined ? undefined : parseDocumentStatus(options.status),
-          timeoutMs: config.ingestion.requestTimeoutMs
-        })
-        return { counts: processed.counts, failures: processed.failures }
+        const limit = parseInteger(options.limit, "limit")
+        const counts = { ...createJobCounts(), processed: 0, unsupported: 0 }
+        const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
+        const artifactStore = createArtifactStore(config, "documents")
+        let status: "failed" | "pending" | "unsupported" | undefined
+        if (options.all === true) {
+          status = "pending"
+        } else if (options.status !== undefined) {
+          status = parseDocumentStatus(options.status)
+        }
+        let hasMoreDocuments = true
+        do {
+          const processed = await processPendingDocuments(database, {
+            artifactStore,
+            billId: options.billId,
+            concurrency: config.ingestion.concurrency,
+            documentId: options.documentId,
+            force: options.force,
+            jurisdictionId: options.jurisdictionId,
+            limit,
+            status,
+            timeoutMs: config.ingestion.requestTimeoutMs
+          })
+          for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
+            counts[key] += processed.counts[key]
+          }
+          failures.push(...processed.failures)
+          hasMoreDocuments = options.all === true && processed.counts.discovered === limit
+        } while (hasMoreDocuments)
+        return { counts, failures }
       }
     )
     printJobResult(result)
   }, config)
 }
 
-async function runEmbeddings(options: { billId?: string; documentId?: string; limit: string }) {
+async function runEmbeddings(options: { all?: boolean; billId?: string; documentId?: string; limit: string }) {
   const config = loadConfig()
   if (config.model.apiKey === undefined) {
     throw new InvalidJobInput("OPENROUTER_API_KEY is required for embeddings:run")
@@ -392,25 +570,33 @@ async function runEmbeddings(options: { billId?: string; documentId?: string; li
         database,
         { correlationId: jobCorrelationId(), operation: "refresh-embeddings", scope: { limit }, source: "openrouter" },
         async () => {
-          const bills = await telemetry.observe(
-            "embedding.bills",
-            { batchLimit: limit, model: config.model.embeddingModel },
-            () => embedBills(database, client, { billId: options.billId, limit })
-          )
-          const sections = await telemetry.observe(
-            "embedding.sections",
-            { batchLimit: limit, model: config.model.embeddingModel },
-            () =>
-              embedDocumentSections(database, client, {
-                billId: options.billId,
-                documentId: options.documentId,
-                limit
-              })
-          )
+          let embedded = 0
+          let skipped = 0
+          let hasMoreEmbeddings = true
+          do {
+            const bills = await telemetry.observe(
+              "embedding.bills",
+              { batchLimit: limit, model: config.model.embeddingModel },
+              () => embedBills(database, client, { billId: options.billId, limit })
+            )
+            const sections = await telemetry.observe(
+              "embedding.sections",
+              { batchLimit: limit, model: config.model.embeddingModel },
+              () =>
+                embedDocumentSections(database, client, {
+                  billId: options.billId,
+                  documentId: options.documentId,
+                  limit
+                })
+            )
+            embedded += bills.embedded + sections.embedded
+            skipped += bills.skipped + sections.skipped
+            hasMoreEmbeddings = options.all === true && (bills.embedded > 0 || sections.embedded > 0)
+          } while (hasMoreEmbeddings)
           return {
             counts: createJobCounts({
-              inserted: bills.embedded + sections.embedded,
-              skipped: bills.skipped + sections.skipped
+              inserted: embedded,
+              skipped
             }),
             failures: []
           }

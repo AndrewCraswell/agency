@@ -203,10 +203,27 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
         "compare_bill_versions",
         {
           description: "Compare two processed versions of the same canonical bill by legal section.",
-          inputSchema: z.object({ billId: canonicalBillId, documentIds: z.tuple([z.string(), z.string()]) }),
+          inputSchema: z.object({ billId: canonicalBillId, documentIds: z.array(z.string()).length(2) }),
           outputSchema
         },
-        (input) => tool("compare_bill_versions", input, () => service.compareBillVersions(input), logger, telemetry)
+        (input) =>
+          tool(
+            "compare_bill_versions",
+            input,
+            () => {
+              const leftDocumentId = input.documentIds[0]
+              const rightDocumentId = input.documentIds[1]
+              if (leftDocumentId === undefined || rightDocumentId === undefined) {
+                throw new LegislationError("invalid_request", "Exactly two document IDs are required")
+              }
+              return service.compareBillVersions({
+                billId: input.billId,
+                documentIds: [leftDocumentId, rightDocumentId]
+              })
+            },
+            logger,
+            telemetry
+          )
       )
       server.registerTool(
         "find_related_bills",

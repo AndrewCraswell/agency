@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { and, asc, eq } from "drizzle-orm"
+import { and, asc, eq, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
 import { billDocuments, bills, documentSections } from "../../db/schema/schema.js"
 import { EMBEDDING_MODEL } from "../../models/openrouter-embeddings.js"
@@ -41,7 +41,7 @@ export async function embedBills(
     })
     .from(bills)
     .where(options.billId === undefined ? undefined : eq(bills.id, options.billId))
-    .orderBy(asc(bills.id))
+    .orderBy(sql`${bills.embeddingInputHash} is null desc`, asc(bills.id))
     .limit(limit)
   const candidates = records
     .map((record) => ({ ...record, input: searchableBillText(record) }))
@@ -92,7 +92,7 @@ export async function embedDocumentSections(
         options.billId === undefined ? undefined : eq(billDocuments.billId, options.billId)
       )
     )
-    .orderBy(asc(documentSections.id))
+    .orderBy(sql`${documentSections.embeddingInputHash} is null desc`, asc(documentSections.id))
     .limit(limit)
   const candidates = records
     .map((record) => ({ ...record, input: searchableSectionText(record) }))

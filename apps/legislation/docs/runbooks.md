@@ -26,7 +26,7 @@ checkpoint and expired leases become recoverable after three hours.
 
 ## Authentication failures
 
-Verify the client uses the environment's HTTPS MCP resource, issuer, audience, and `legislation:read` scope. Refresh an
+Verify the client uses the environment's HTTPS MCP resource, issuer, and audience. Refresh an
 expired token. Check WorkOS JWKS availability if all valid clients fail. Never paste a bearer token into logs or tickets.
 
 ## Failed deployment

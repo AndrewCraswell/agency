@@ -108,10 +108,7 @@ export class ArtifactSourceStore implements SourceStore {
     const prefix = `${safeSegment(provider)}/${safeSegment(scope)}/${contentHash}`
     const contentPath = `${prefix}.source`
     const metadataPath = `${prefix}.json`
-    const unchanged = await this.#artifacts.exists(contentPath)
-    if (!unchanged) {
-      await this.#artifacts.put(contentPath, content)
-    }
+    const unchanged = !(await this.#artifacts.put(contentPath, content))
     await this.#artifacts.put(
       metadataPath,
       new TextEncoder().encode(

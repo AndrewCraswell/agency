@@ -8,10 +8,10 @@ if (shortEnvironment === undefined) {
 
 const requiredEnvironment = [
   "CONGRESS_API_KEY",
+  "DATABASE_URL",
   "LANGFUSE_PUBLIC_KEY",
   "LANGFUSE_SECRET_KEY",
   "LEGISLATION_N8N_ENCRYPTION_KEY",
-  "LEGISLATION_POSTGRES_ADMIN_PASSWORD",
   "OPENROUTER_API_KEY"
 ]
 const missing = requiredEnvironment.filter((name) => !process.env[name]?.trim())
@@ -19,15 +19,12 @@ if (missing.length > 0) {
   throw new Error(`Missing secure what-if inputs: ${missing.join(", ")}`)
 }
 
-const parameters = [
-  `infra/bicep/environments/${environment}.bicepparam`,
-  `postgresAdministratorPassword=${process.env.LEGISLATION_POSTGRES_ADMIN_PASSWORD}`,
-  `n8nEncryptionKey=${process.env.LEGISLATION_N8N_ENCRYPTION_KEY}`,
-  `congressApiKey=${process.env.CONGRESS_API_KEY}`,
-  `openRouterApiKey=${process.env.OPENROUTER_API_KEY}`,
-  `langfusePublicKey=${process.env.LANGFUSE_PUBLIC_KEY}`,
-  `langfuseSecretKey=${process.env.LANGFUSE_SECRET_KEY}`
-]
+const databaseUrl = new URL(process.env.DATABASE_URL)
+if (databaseUrl.protocol !== "postgres:" && databaseUrl.protocol !== "postgresql:") {
+  throw new Error("DATABASE_URL must be a PostgreSQL connection URL")
+}
+
+const parameters = [`infra/bicep/environments/${environment}.bicepparam`]
 const result = spawnSync(
   process.platform === "win32" ? "az.cmd" : "az",
   [
@@ -42,7 +39,18 @@ const result = spawnSync(
     ...parameters,
     "--only-show-errors"
   ],
-  { encoding: "utf8", stdio: "inherit" }
+  {
+    encoding: "utf8",
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      LEGISLATION_N8N_DATABASE_HOST: databaseUrl.hostname,
+      LEGISLATION_N8N_DATABASE_PORT: databaseUrl.port || "5432",
+      LEGISLATION_N8N_DATABASE_NAME: databaseUrl.pathname.slice(1),
+      LEGISLATION_N8N_DATABASE_USER: decodeURIComponent(databaseUrl.username),
+      LEGISLATION_N8N_DATABASE_PASSWORD: decodeURIComponent(databaseUrl.password)
+    }
+  }
 )
 if (result.error !== undefined) {
   throw result.error

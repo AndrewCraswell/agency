@@ -426,7 +426,9 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     const artifactStore: ArtifactStore = {
       exists: async (path) => artifacts.has(path),
       put: async (path, bytes) => {
+        const created = !artifacts.has(path)
         artifacts.set(path, bytes)
+        return created
       },
       read: async (path) => artifacts.get(path) ?? new Uint8Array()
     }

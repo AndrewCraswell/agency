@@ -46,8 +46,7 @@ describe("loadConfig", () => {
       audience: "https://legislation.example/mcp",
       issuer: "https://api.workos.com/user_management/client_test",
       jwksUrl: "https://api.workos.com/sso/jwks/client_test",
-      mode: "workos",
-      requiredScopes: ["legislation:read"]
+      mode: "workos"
     })
     expect(config.database).toEqual({
       connectionTimeoutMs: 5000,

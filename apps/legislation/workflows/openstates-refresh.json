@@ -1,13 +1,14 @@
 {
+  "id": "legislation-openstates-refresh",
   "name": "Legislation - Open States refresh",
   "nodes": [
     {
       "id": "trigger",
-      "name": "Manual trigger",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
+      "name": "Daily schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
       "position": [0, 0],
-      "parameters": {}
+      "parameters": { "rule": { "interval": [{ "field": "days", "daysInterval": 1, "triggerAtHour": 2 }] } }
     },
     {
       "id": "token",
@@ -37,14 +38,14 @@
         "sendBody": true,
         "contentType": "raw",
         "rawContentType": "application/json",
-        "body": "={\"containers\":[{\"name\":\"legislation-ingestion\",\"image\":\"{{ $env.LEGISLATION_IMAGE }}\",\"command\":[\"node\"],\"args\":[\"dist/cli/main.js\",\"openstates:import\",\"--url\",\"{{ $env.OPENSTATES_ARCHIVE_URL }}\",\"--jurisdiction\",\"{{ $env.OPENSTATES_JURISDICTION }}\",\"--jurisdiction-name\",\"{{ $env.OPENSTATES_JURISDICTION_NAME }}\",\"--stream\",\"{{ $env.OPENSTATES_STREAM }}\"],\"env\":[{\"name\":\"NODE_ENV\",\"value\":\"production\"},{\"name\":\"DATABASE_URL\",\"secretRef\":\"database-url\"},{\"name\":\"AZURE_STORAGE_ACCOUNT\",\"value\":\"{{ $env.AZURE_STORAGE_ACCOUNT }}\"},{\"name\":\"AZURE_CLIENT_ID\",\"value\":\"{{ $env.AZURE_INGESTION_CLIENT_ID }}\"},{\"name\":\"WORKFLOW_EXECUTION_ID\",\"value\":\"{{ $execution.id }}\"}],\"resources\":{\"cpu\":1,\"memory\":\"2Gi\"}}]}"
+        "body": "={\"containers\":[{\"name\":\"legislation-ingestion\",\"image\":\"{{ $env.LEGISLATION_IMAGE }}\",\"command\":[\"node\"],\"args\":[\"dist/cli/main.js\",\"openstates:sync\"],\"env\":[{\"name\":\"NODE_ENV\",\"value\":\"production\"},{\"name\":\"DATABASE_URL\",\"secretRef\":\"database-url\"},{\"name\":\"OPENSTATE_API_KEY\",\"secretRef\":\"openstates-api-key\"},{\"name\":\"AZURE_STORAGE_ACCOUNT\",\"value\":\"{{ $env.AZURE_STORAGE_ACCOUNT }}\"},{\"name\":\"AZURE_CLIENT_ID\",\"value\":\"{{ $env.AZURE_INGESTION_CLIENT_ID }}\"},{\"name\":\"WORKFLOW_EXECUTION_ID\",\"value\":\"{{ $execution.id }}\"}],\"resources\":{\"cpu\":1,\"memory\":\"2Gi\"}}]}"
       }
     }
   ],
   "connections": {
-    "Manual trigger": { "main": [[{ "node": "Managed identity token", "type": "main", "index": 0 }]] },
+    "Daily schedule": { "main": [[{ "node": "Managed identity token", "type": "main", "index": 0 }]] },
     "Managed identity token": { "main": [[{ "node": "Start ingestion job", "type": "main", "index": 0 }]] }
   },
   "settings": { "executionOrder": "v1", "saveDataErrorExecution": "all", "saveDataSuccessExecution": "none" },
-  "active": false
+  "active": true
 }

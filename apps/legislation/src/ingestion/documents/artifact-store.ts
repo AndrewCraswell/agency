@@ -6,7 +6,7 @@ import { BlobServiceClient } from "@azure/storage-blob"
 
 export interface ArtifactStore {
   exists(path: string): Promise<boolean>
-  put(path: string, bytes: Uint8Array): Promise<void>
+  put(path: string, bytes: Uint8Array): Promise<boolean>
   read(path: string): Promise<Uint8Array>
 }
 
@@ -29,15 +29,17 @@ export class LocalArtifactStore implements ArtifactStore {
     }
   }
 
-  async put(path: string, bytes: Uint8Array): Promise<void> {
+  async put(path: string, bytes: Uint8Array): Promise<boolean> {
     const target = this.#resolve(path)
     await mkdir(resolve(target, ".."), { recursive: true })
     try {
       await writeFile(target, bytes, { flag: "wx" })
+      return true
     } catch (error) {
       if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) {
         throw error
       }
+      return false
     }
   }
 
@@ -66,20 +68,31 @@ export class AzureBlobArtifactStore implements ArtifactStore {
     return this.#container.getBlockBlobClient(normalizeBlobPath(path)).exists()
   }
 
-  async put(path: string, bytes: Uint8Array): Promise<void> {
+  async put(path: string, bytes: Uint8Array): Promise<boolean> {
     const blob = this.#container.getBlockBlobClient(normalizeBlobPath(path))
     try {
       await blob.uploadData(bytes, { conditions: { ifNoneMatch: "*" } })
+      return true
     } catch (error) {
-      if (!(typeof error === "object" && error !== null && "statusCode" in error && error.statusCode === 412)) {
+      if (!isExistingBlobError(error)) {
         throw error
       }
+      return false
     }
   }
 
   async read(path: string): Promise<Uint8Array> {
     return new Uint8Array(await this.#container.getBlockBlobClient(normalizeBlobPath(path)).downloadToBuffer())
   }
+}
+
+export function isExistingBlobError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "statusCode" in error &&
+    (error.statusCode === 409 || error.statusCode === 412)
+  )
 }
 
 function normalizeBlobPath(path: string): string {

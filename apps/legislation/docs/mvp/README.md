@@ -1,123 +1,65 @@
-# Legislative intelligence MVP implementation plan
+# Legislative intelligence delivery plan
 
-## Objective
+## Current objective
 
-Deliver a production-deployed, WorkOS-authenticated remote MCP server that supports useful legislative research over a
-nationwide state and federal historical corpus.
+Complete and prove the development environment for a WorkOS-authenticated remote MCP server backed by a nationwide
+state and federal legislative corpus. Production provisioning and launch are not part of the current delivery target.
 
-## Definition of done
+## Implemented foundation
 
-The MVP is complete when it provides:
+The application foundation, Azure development baseline, canonical bill model, search, query service, and WorkOS staging
+authentication are implemented. Their completed milestone checklists have been removed. Architecture and operational
+decisions remain documented in the focused pages under `docs`.
 
-- Nationwide state legislative data from Open States for the supported historical range.
-- Federal historical data from GovInfo.
-- Incremental federal updates from Congress.gov.
-- One canonical model for bills, actions, sponsors, votes, versions, supplemental documents, full text, and related bills.
-- PostgreSQL full-text search and pgvector semantic search.
-- The seven locked legislative MCP tools over Streamable HTTP.
-- WorkOS authentication with organization identity propagated through each request.
-- n8n orchestration for ingestion, document processing, and embedding jobs.
-- OpenRouter embeddings pinned to `openai/text-embedding-3-small` at 1,536 dimensions.
-- Langfuse retrieval traces and Azure Monitor operational diagnostics.
-- Azure deployment reproducible through Bicep.
-- Automated validation and human evaluations proving that MCP-capable agents can perform useful legislative research.
+The remaining work from the partially complete ingestion, document-processing, MCP, orchestration, observability, and
+validation milestones is consolidated into the active roadmap rather than repeating completed tasks.
 
-## Application boundary
+## Active roadmap
 
-All implementation stays under `apps/legislation`:
+The canonical forward-looking task list is [Development completion roadmap](development-completion.md). It contains
+only work that remains for the development MVP:
 
-```text
-apps/legislation/
-├── docs/
-├── infra/
-│   └── bicep/
-│       └── modules/
-├── src/
-│   ├── auth/
-│   ├── cli/
-│   ├── config/
-│   ├── db/
-│   │   ├── migrations/
-│   │   ├── queries/
-│   │   └── schema/
-│   ├── ingestion/
-│   │   ├── congress/
-│   │   ├── documents/
-│   │   ├── embeddings/
-│   │   ├── govinfo/
-│   │   └── openstates/
-│   ├── legislation/
-│   │   └── normalize/
-│   ├── mcp/
-│   │   └── tools/
-│   ├── models/
-│   ├── observability/
-│   └── search/
-├── tests/
-│   ├── fixtures/
-│   └── integration/
-└── workflows/
-```
+1. Finish and prove automated orchestration.
+2. Ingest and validate the supported state and federal corpus.
+3. Process documents and embeddings to the agreed quality gates.
+4. Validate all seven MCP tools against the live corpus in two clients.
+5. Prove development operations and publish a completion record.
 
-Deployment may run multiple entry points from this application, but that does not require separate monorepo packages.
+## Next data phases
 
-## Locked scope
+After the development MVP passes its exit gate, begin the feasibility-gated
+[Legislative data expansion roadmap](../roadmap.md). It adds people and organizations, meetings and calendars, roll-call
+votes, amendments and supporting materials, canonical change tracking, and corresponding MCP capabilities before any
+web application or production commercialization work.
 
-### Sources
+## Development MVP definition of done
 
-| Purpose | Source |
-| --- | --- |
-| State historical corpus | Open States bulk data |
-| Federal historical corpus | GovInfo bulk data |
-| Federal incremental updates | Congress.gov API |
+The development MVP is complete when:
 
-### MCP tools
+- Open States data from 2017 onward for all supported jurisdictions is imported or every unavailable archive is recorded
+  as an upstream gap.
+- GovInfo data for the 113th through 119th Congresses is imported, and Congress.gov incremental synchronization updates
+  the same canonical bills.
+- Every available document is attempted, every failure is categorized and replayable, and searchable sections reach the
+  documented extraction and embedding thresholds.
+- All seven MCP tools return source-aware results through authenticated Streamable HTTP.
+- Two MCP-capable clients complete the evaluation set with recorded evidence and known limitations.
+- n8n can run the bootstrap-to-searchable-corpus sequence without manual data manipulation.
+- Azure Monitor, Langfuse, coverage reports, runbooks, and a development release record provide operational evidence.
 
-1. `search_bills`
-2. `get_bill`
-3. `get_bill_timeline`
-4. `search_bill_text`
-5. `get_bill_text`
-6. `compare_bill_versions`
-7. `find_related_bills`
+## Scope boundaries
 
-### Explicitly deferred
+All implementation remains under `apps/legislation`. PostgreSQL is hosted by Railway for development; Azure contains the
+application runtimes, n8n, Blob Storage, Key Vault, identities, and diagnostics in the legislation resource group.
+WorkOS staging is the only authentication environment currently required.
 
-- State real-time ingestion.
-- Committee meetings, media, recordings, and transcripts.
-- Mux and Deepgram.
-- AI-generated summaries.
-- Client portfolios, watch lists, notifications, and Novu.
-- Web application and billing.
-- Temporal, LangChain, and LangGraph.
-- Redis, OpenSearch, a dedicated vector database, and a graph database.
-
-## Milestone sequence
-
-| Milestone | Outcome | Depends on |
-| --- | --- | --- |
-| [0](milestones/00-mvp-contract.md) | MVP contract and decisions are frozen | None |
-| [1](milestones/01-application-foundation.md) | Local application foundation runs cleanly | 0 |
-| [2](milestones/02-azure-baseline.md) | Reproducible Azure baseline exists | 0, 1 |
-| [3](milestones/03-canonical-data-model.md) | Canonical legislative schema and IDs exist | 0, 1 |
-| [4](milestones/04-open-states-ingestion.md) | Historical state corpus is ingestible | 3 |
-| [5](milestones/05-govinfo-ingestion.md) | Historical federal corpus is ingestible | 3 |
-| [6](milestones/06-congress-sync.md) | Federal corpus receives incremental updates | 3, 5 |
-| [7](milestones/07-document-processing.md) | Legislative documents become structured text | 3-6 |
-| [8](milestones/08-search-and-embeddings.md) | Structured, lexical, and semantic retrieval work | 3, 7 |
-| [9](milestones/09-query-service.md) | Source-independent product operations work | 3, 8 |
-| [10](milestones/10-mcp-server.md) | Remote MCP exposes the seven tools | 9 |
-| [11](milestones/11-workos-auth.md) | Remote MCP access is authenticated | 10 |
-| [12](milestones/12-n8n-orchestration.md) | Production data workflows run automatically | 4-8 |
-| [13](milestones/13-observability.md) | Requests and jobs are diagnosable | 2, 4-12 |
-| [14](milestones/14-validation-and-release.md) | Corpus, MCP, deployment, and usefulness are proven | 2-13 |
-
-Milestones may overlap where their dependencies permit, but their exit criteria remain release gates.
+Production infrastructure, production WorkOS configuration, billing, and customer launch remain deferred until the
+development MVP exit gate is met.
 
 ## Task conventions
 
-- Every task has a stable milestone-scoped identifier such as `M4.7`.
-- A task is complete only when its stated evidence exists in the repository or the target environment.
-- Provider fixtures must be retained so parsers can be tested without calling external services.
-- Ingestion and processing work must be idempotent and restartable before production automation is enabled.
-- Implementation work follows the monorepo verification command: `pnpm verify`.
+- Active tasks use stable phase identifiers such as `D2.4`.
+- A task is complete only when its evidence exists in the repository or development environment.
+- Provider fixtures remain available so parsers can be tested without external calls.
+- Ingestion and processing operations are idempotent and restartable before schedules are enabled.
+- Repository changes follow the monorepo verification command: `pnpm verify`.

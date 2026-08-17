@@ -2,7 +2,7 @@
 
 ## Shared behavior
 
-All returned bill records contain canonical IDs and source attribution. Lookup inputs accept canonical bill IDs or an
+All returned bill records contain canonical IDs and relevant official links. Lookup inputs accept canonical bill IDs or an
 unambiguous jurisdiction, session, bill-type, and bill-number tuple. Provider IDs are metadata, not public identity.
 
 List operations use opaque cursors, default to 20 results, and allow at most 100. Text queries are limited to 500
@@ -49,4 +49,4 @@ classified as added, removed, or unchanged, with source links and truncation sig
 ### `find_related_bills`
 
 Input: bill lookup plus optional relation classifications, semantic expansion flag, cursor, and limit. Output: canonical
-related bills with relationship type, relevance score when applicable, and source attribution.
+related bills with relationship type, relevance score when applicable, and relevant official links.

@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "files": [
+    "dist",
+    "scripts/smoke-dependencies.mjs"
+  ],
   "engines": {
     "node": ">=24.0.0",
     "pnpm": ">=11.0.0 <12.0.0"
@@ -24,7 +28,8 @@
     "db:up": "docker compose -f infra/local/compose.yaml up -d --wait",
     "db:wait": "tsx src/cli/main.ts db:wait",
     "dev": "tsx watch src/cli/main.ts serve",
-    "docker:build": "docker build -f Dockerfile -t legislation:local ../..",
+    "container:prepare": "node scripts/prepare-container-context.mjs",
+    "docker:build": "pnpm container:prepare && docker build -f ../../.container/legislation/Dockerfile -t legislation:local ../../.container/legislation",
     "infra:build": "az bicep build --file infra/bicep/main.bicep --outfile infra/bicep/main.json",
     "infra:lint": "az bicep lint --file infra/bicep/main.bicep",
     "infra:what-if": "node scripts/infra-what-if.mjs",

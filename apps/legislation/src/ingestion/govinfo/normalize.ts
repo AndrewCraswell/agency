@@ -9,24 +9,58 @@ import {
 } from "../../legislation/identifiers.js"
 import type { CanonicalBillAggregate } from "../../legislation/model.js"
 
-const collection = <T extends z.ZodType>(item: T) => z.object({ item: z.array(item).default([]) }).optional()
-const sponsorSchema = z.object({ bioguideId: z.string().optional(), fullName: z.string().min(1) }).passthrough()
+const collection = <T extends z.ZodType>(item: T) =>
+  z.preprocess((value) => {
+    if (typeof value === "string") {
+      return undefined
+    }
+    if (typeof value !== "object" || value === null || !("item" in value) || !Array.isArray(value.item)) {
+      return value
+    }
+    return {
+      ...value,
+      item: value.item.flatMap((candidate) => {
+        const parsed = item.safeParse(candidate)
+        return parsed.success ? [parsed.data] : []
+      })
+    }
+  }, z.object({ item: z.array(item).default([]) }).optional())
+const optionalString = z.preprocess(
+  (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+  z.string().optional()
+)
+const optionalNonemptyString = z.preprocess(
+  (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+  z.string().min(1).optional()
+)
+const sponsorSchema = z.object({ bioguideId: optionalString, fullName: z.string().min(1) }).passthrough()
 const actionSchema = z
-  .object({ actionDate: z.string().optional(), actionTime: z.string().optional(), text: z.string().min(1) })
+  .object({ actionDate: optionalString, actionTime: optionalString, text: optionalNonemptyString })
   .passthrough()
 const committeeSchema = z.object({ name: z.string().min(1) }).passthrough()
+const relationshipDetailsSchema = z.union([
+  z.string(),
+  z
+    .object({
+      item: z.array(z.object({ type: z.string().optional() }).passthrough()).default([])
+    })
+    .passthrough()
+])
 const relatedBillSchema = z
   .object({
     congress: z.coerce.number().int().positive(),
     number: z.coerce.string(),
-    relationshipDetails: z.string().optional(),
+    relationshipDetails: relationshipDetailsSchema.optional(),
     type: z.string()
   })
   .passthrough()
 const textVersionSchema = z
   .object({
-    date: z.string().optional(),
-    formats: collection(z.object({ url: z.url() }).passthrough()),
+    date: optionalString,
+    formats: z.preprocess(
+      (value) => (typeof value === "string" ? undefined : value),
+      collection(z.object({ url: z.url() }).passthrough())
+    ),
     type: z.string().min(1)
   })
   .passthrough()
@@ -39,18 +73,21 @@ const billStatusSchema = z
           committees: collection(committeeSchema),
           congress: z.coerce.number().int().positive(),
           cosponsors: collection(sponsorSchema),
-          introducedDate: z.string().optional(),
+          introducedDate: optionalString,
           latestAction: actionSchema.optional(),
           number: z.coerce.string(),
           originChamber: z.string().optional(),
-          policyArea: z.object({ name: z.string() }).optional(),
+          policyArea: z.preprocess(
+            (value) => (typeof value === "string" ? undefined : value),
+            z.object({ name: z.string() }).optional()
+          ),
           relatedBills: collection(relatedBillSchema),
           sponsors: collection(sponsorSchema),
           summaries: collection(z.object({ text: z.string() }).passthrough()),
           textVersions: collection(textVersionSchema),
           titles: collection(z.object({ title: z.string(), titleType: z.string().optional() }).passthrough()),
           type: z.string().min(1),
-          updateDate: z.string().optional()
+          updateDate: optionalString
         })
         .passthrough()
     })
@@ -103,9 +140,43 @@ function classification(type: string): string[] {
   return ["resolution"]
 }
 
-function relationType(value: string | undefined): string {
-  const normalized = value?.toLowerCase() ?? ""
+function relationType(value: z.infer<typeof relationshipDetailsSchema> | undefined): string {
+  const normalized =
+    typeof value === "string"
+      ? value.toLowerCase()
+      : (value?.item
+          .map((detail) => detail.type)
+          .filter((type): type is string => type !== undefined)
+          .join(" ")
+          .toLowerCase() ?? "")
   return normalized.includes("companion") ? "companion" : "related"
+}
+
+function uniqueActions(actions: z.infer<typeof actionSchema>[] | undefined) {
+  const seen = new Set<string>()
+  return (actions ?? []).filter((action): action is typeof action & { text: string } => {
+    if (action.text === undefined || action.text.trim().length === 0) {
+      return false
+    }
+    const identity = `${action.actionDate ?? "undated"}:${action.actionTime ?? ""}:${action.text}`
+    if (seen.has(identity)) {
+      return false
+    }
+    seen.add(identity)
+    return true
+  })
+}
+
+function uniqueSponsors(sponsors: z.infer<typeof sponsorSchema>[]) {
+  const seen = new Set<string>()
+  return sponsors.filter((sponsor) => {
+    const identity = sponsor.bioguideId?.toLowerCase() ?? sponsor.fullName.trim().toLowerCase()
+    if (seen.has(identity)) {
+      return false
+    }
+    seen.add(identity)
+    return true
+  })
 }
 
 function contentType(url: URL): string | undefined {
@@ -119,12 +190,26 @@ function contentType(url: URL): string | undefined {
   }[extension ?? ""]
 }
 
+function documentFormatRank(url: URL): number {
+  if (url.pathname.toLowerCase().includes("/uslm/") && url.pathname.toLowerCase().endsWith(".xml")) {
+    return 0
+  }
+  return (
+    {
+      "application/pdf": 4,
+      "application/xml": 1,
+      "text/html": 3,
+      "text/plain": 2
+    }[contentType(url) ?? ""] ?? 5
+  )
+}
+
 function embeddedDocuments(
   textVersions: z.infer<typeof textVersionSchema>[] | undefined,
   packagePrefix: string
 ): GovInfoDocumentInput[] {
-  return (textVersions ?? []).flatMap((version) =>
-    (version.formats?.item ?? []).flatMap((format) => {
+  return (textVersions ?? []).flatMap((version) => {
+    const documents = (version.formats?.item ?? []).flatMap((format) => {
       const url = new URL(format.url)
       if (url.protocol !== "https:") {
         return []
@@ -144,10 +229,15 @@ function embeddedDocuments(
           sourceUrl: url.href,
           title: version.type,
           versionCode
-        }
+        } as GovInfoDocumentInput
       ]
     })
-  )
+    return (
+      documents.sort(
+        (left, right) => documentFormatRank(new URL(left.sourceUrl)) - documentFormatRank(new URL(right.sourceUrl))
+      )[0] ?? []
+    )
+  })
 }
 
 export function normalizeGovInfoBillStatus(xml: string, context: GovInfoNormalizationContext): CanonicalBillAggregate {
@@ -165,9 +255,9 @@ export function normalizeGovInfoBillStatus(xml: string, context: GovInfoNormaliz
     throw new Error("GovInfo bill status has no title")
   }
 
-  const primarySponsors = source.sponsors?.item ?? []
-  const cosponsors = source.cosponsors?.item ?? []
-  const sourcePeople = [...primarySponsors, ...cosponsors]
+  const primarySponsors = uniqueSponsors(source.sponsors?.item ?? [])
+  const cosponsors = uniqueSponsors(source.cosponsors?.item ?? [])
+  const sourcePeople = uniqueSponsors([...primarySponsors, ...cosponsors])
 
   const people = sourcePeople.flatMap((sponsor) => {
     if (sponsor.bioguideId === undefined) {
@@ -185,21 +275,22 @@ export function normalizeGovInfoBillStatus(xml: string, context: GovInfoNormaliz
   const documents = [
     ...(context.documents ?? []),
     ...embeddedDocuments(source.textVersions?.item, packagePrefix)
-  ].filter((document, index, all) => all.findIndex((candidate) => candidate.sourceUrl === document.sourceUrl) === index)
+  ].filter(
+    (document, index, all) => all.findIndex((candidate) => candidate.versionCode === document.versionCode) === index
+  )
 
   return {
-    actions:
-      source.actions?.item.map((action, index) => ({
-        actionDate: action.actionDate,
-        billId: canonicalBillId,
-        description: action.text,
-        id: childId(
-          "action",
-          canonicalBillId,
-          `${action.actionDate ?? "undated"}:${action.actionTime ?? ""}:${action.text}`
-        ),
-        ordinal: index
-      })) ?? [],
+    actions: uniqueActions(source.actions?.item).map((action, index) => ({
+      actionDate: action.actionDate,
+      billId: canonicalBillId,
+      description: action.text,
+      id: childId(
+        "action",
+        canonicalBillId,
+        `${action.actionDate ?? "undated"}:${action.actionTime ?? ""}:${action.text}`
+      ),
+      ordinal: index
+    })),
     bill: {
       chamber: chamber(source.originChamber),
       classification: classification(source.type),
@@ -236,12 +327,20 @@ export function normalizeGovInfoBillStatus(xml: string, context: GovInfoNormaliz
       name: "United States"
     },
     people,
-    relations:
-      source.relatedBills?.item.map((relation) => ({
+    relations: (source.relatedBills?.item ?? [])
+      .map((relation) => ({
         billId: canonicalBillId,
         classification: relationType(relation.relationshipDetails),
         relatedBillId: federalBillId(relation.congress, relation.type, relation.number)
-      })) ?? [],
+      }))
+      .filter(
+        (relation, index, all) =>
+          relation.relatedBillId !== canonicalBillId &&
+          all.findIndex(
+            (candidate) =>
+              candidate.relatedBillId === relation.relatedBillId && candidate.classification === relation.classification
+          ) === index
+      ),
     session: {
       id: sessionId,
       identifier: String(source.congress),

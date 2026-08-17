@@ -12,35 +12,36 @@
     //   "type": "http",
     //   "url": "https://mcp.figma.com/mcp"
     // },
-    // "fluent-agent": {
-    //   "type": "http",
-    //   "url": "https://chat.fluentui.dev/mcp/server"
-    // },
-    // "n8n-mcp": {
-    //   "type": "http",
-    //   "url": "https://fc-agency.app.n8n.cloud/mcp-server/http",
-    //   "headers": {
-    //     "Authorization": "Bearer ${input:n8n-access-token}"
-    //   }
-    // },
-    // "langfuse": {
-    //   "type": "http",
-    //   "url": "https://us.cloud.langfuse.com/api/public/mcp",
-    //   "headers": {
-    //     "Authorization": "Basic ${input:langfuse-basic-auth}"
-    //   }
-    // },
-    // "openrouter": {
-    //   "type": "http",
-    //   "url": "https://mcp.openrouter.ai/mcp"
-    // },
-    // "dataforseo": {
-    //   "type": "http",
-    //   "url": "https://mcp.dataforseo.com/mcp",
-    //   "headers": {
-    //     "Authorization": "Basic ${input:dataforseo-basic-auth}"
-    //   }
-    // },
+    "fluent-agent": {
+      "type": "http",
+      "url": "https://chat.fluentui.dev/mcp/server"
+    },
+    "n8n-mcp": {
+      "type": "http",
+      "url": "https://fc-agency.app.n8n.cloud/mcp-server/http",
+      "headers": {
+        "Authorization": "Bearer ${input:n8n-access-token}"
+      }
+    },
+    "langfuse": {
+      "type": "http",
+      "url": "https://us.cloud.langfuse.com/api/public/mcp",
+      "headers": {
+        "Authorization": "Basic ${input:langfuse-basic-auth}"
+      }
+    },
+    "openrouter": {
+      "type": "http",
+      "url": "https://mcp.openrouter.ai/mcp"
+    },
+    "workos": {
+      "type": "http",
+      "url": "https://mcp.workos.com/mcp"
+    },
+    "legislation": {
+      "type": "http",
+      "url": "https://leg-dev-mcp.orangemushroom-4d0319a3.westus2.azurecontainerapps.io/mcp"
+    },
     // "microsoft/playwright-mcp": {
     //   "type": "stdio",
     //   "command": "npx",
@@ -80,13 +81,6 @@
       "id": "langfuse-basic-auth",
       "type": "promptString",
       "description": "Base64-encoded Langfuse public key and secret key",
-      "password": true
-    },
-    // Base64-encode `login:password` from https://app.dataforseo.com/api-access, then paste it without `Basic `.
-    {
-      "id": "dataforseo-basic-auth",
-      "type": "promptString",
-      "description": "Base64-encoded DataForSEO API login and password",
       "password": true
     }
   ]
