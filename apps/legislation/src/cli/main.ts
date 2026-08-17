@@ -1307,7 +1307,7 @@ async function runEmbeddings(options: {
         database,
         {
           ...jobExecutionContext(),
-          operation: "refresh-embeddings",
+          operation: shardCount === 1 ? "refresh-embeddings" : `refresh-embeddings-shard-${shardIndex}`,
           scope: { limit, shardCount, shardIndex },
           source: "openrouter"
         },
