@@ -480,7 +480,8 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       artifactStore,
       concurrency: 1,
       documentId,
-      fetch: fetchDocument
+      fetch: fetchDocument,
+      maximumAttempts: 4
     })
 
     expect(result).toMatchObject({ counts: { failed: 0, processed: 1, read: 1 } })
@@ -500,7 +501,8 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
         Object.defineProperty(response, "url", { value: "https://example.test/worker-test.txt" })
         return response
       },
-      force: true
+      force: true,
+      maximumAttempts: 4
     })
     expect(failedReplacement).toMatchObject({ counts: { failed: 1, unsupported: 1 } })
     await expect(
@@ -518,7 +520,8 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
         Object.defineProperty(response, "url", { value: "https://example.test/worker-test.txt" })
         return response
       },
-      force: true
+      force: true,
+      maximumAttempts: 4
     })
     expect(targetedRetry).toMatchObject({ counts: { failed: 0, processed: 1 } })
     await expect(
@@ -527,6 +530,130 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
         .from(schema.documentSections)
         .where(eq(schema.documentSections.documentId, documentId))
     ).resolves.toEqual([expect.objectContaining({ text: expect.stringContaining("targeted retry") })])
+  })
+
+  it("claims pending documents once and enforces the configured attempt ceiling", async () => {
+    const documentId = "bill:us:119:hr:1234:document:atomic-claim"
+    const exhaustedDocumentId = "bill:us:119:hr:1234:document:attempts-exhausted"
+    await database.insert(schema.billDocuments).values([
+      {
+        billId: "bill:us:119:hr:1234",
+        classification: "analysis",
+        id: documentId,
+        sourceUrl: "https://example.test/atomic-claim.txt",
+        title: "Atomic claim document"
+      },
+      {
+        billId: "bill:us:119:hr:1234",
+        classification: "analysis",
+        id: exhaustedDocumentId,
+        processingAttempts: 2,
+        sourceUrl: "https://example.test/attempts-exhausted.txt",
+        title: "Attempts exhausted document"
+      }
+    ])
+    const artifacts = new Map<string, Uint8Array>()
+    const artifactStore: ArtifactStore = {
+      exists: async (path) => artifacts.has(path),
+      put: async (path, bytes) => {
+        const created = !artifacts.has(path)
+        artifacts.set(path, bytes)
+        return created
+      },
+      read: async (path) => artifacts.get(path) ?? new Uint8Array()
+    }
+    let fetches = 0
+    const fetchDocument: typeof fetch = async () => {
+      fetches += 1
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 50))
+      const response = new Response("SECTION 1. ATOMIC CLAIM.\nOnly one worker fetched this document.", {
+        headers: { "content-type": "text/plain" }
+      })
+      Object.defineProperty(response, "url", { value: "https://example.test/atomic-claim.txt" })
+      return response
+    }
+
+    const [first, overlapping] = await Promise.all([
+      processPendingDocuments(database, {
+        artifactStore,
+        concurrency: 1,
+        documentId,
+        fetch: fetchDocument,
+        maximumAttempts: 2
+      }),
+      processPendingDocuments(database, {
+        artifactStore,
+        concurrency: 1,
+        documentId,
+        fetch: fetchDocument,
+        maximumAttempts: 2
+      })
+    ])
+
+    expect([first.counts.processed, overlapping.counts.processed].sort()).toEqual([0, 1])
+    expect([first.counts.discovered, overlapping.counts.discovered].sort()).toEqual([0, 1])
+    expect(fetches).toBe(1)
+
+    let exhaustedFetches = 0
+    const exhausted = await processPendingDocuments(database, {
+      artifactStore,
+      concurrency: 1,
+      documentId: exhaustedDocumentId,
+      fetch: async () => {
+        exhaustedFetches += 1
+        return new Response("SECTION 1. SHOULD NOT RUN.", { headers: { "content-type": "text/plain" } })
+      },
+      maximumAttempts: 2
+    })
+    expect(exhausted).toMatchObject({ counts: { discovered: 0 } })
+    expect(exhaustedFetches).toBe(0)
+  })
+
+  it("records transient failure categories and honors durable retry timing", async () => {
+    const documentId = "bill:us:119:hr:1234:document:retry-backoff"
+    await database.insert(schema.billDocuments).values({
+      billId: "bill:us:119:hr:1234",
+      classification: "analysis",
+      id: documentId,
+      sourceUrl: "https://example.test/retry-backoff.txt",
+      title: "Retry backoff document"
+    })
+    const artifactStore: ArtifactStore = {
+      exists: async () => false,
+      put: async () => true,
+      read: async () => new Uint8Array()
+    }
+
+    const failed = await processPendingDocuments(database, {
+      artifactStore,
+      concurrency: 1,
+      documentId,
+      fetch: async () => {
+        throw new TypeError("fetch failed")
+      },
+      maximumAttempts: 3
+    })
+    expect(failed.failures).toEqual([
+      expect.objectContaining({ category: "download-transient", identifier: documentId, retryable: true })
+    ])
+    const persisted = await database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, documentId) })
+    expect(persisted).toMatchObject({
+      processingAttempts: 1,
+      processingErrorCategory: "download-transient",
+      processingStatus: "failed"
+    })
+    expect(persisted?.nextAttemptAt?.getTime()).toBeGreaterThan(Date.now())
+
+    const deferred = await processPendingDocuments(database, {
+      artifactStore,
+      concurrency: 1,
+      documentId,
+      failureCategory: "download-transient",
+      fetch: async () => new Response("SECTION 1. DEFERRED."),
+      maximumAttempts: 3,
+      status: "failed"
+    })
+    expect(deferred).toMatchObject({ counts: { discovered: 0 } })
   })
 
   it("processes, indexes, embeds, and retrieves supporting-material sections", async () => {

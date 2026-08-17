@@ -62,7 +62,7 @@ schedule. Use the smallest applicable scope:
 | Federal meetings and hearings   | `congress:events --start-congress <number> --end-congress <number> --domain both`; add `--restart` for a correction refresh                |
 | Federal House roll calls        | `congress:house-votes --start-congress <number> --end-congress <number>`; optionally select `--session 1` or `--session 2`                 |
 | Federal amendments              | `congress:amendments --start-congress <number> --end-congress <number>`; add `--restart` for a correction refresh                          |
-| Failed document replay          | `documents:process --status failed --limit <number>` and optionally one `--bill-id`, `--document-id`, or `--jurisdiction-id`               |
+| Failed document replay          | `documents:process --status failed --failure-category <category> --limit <number>` and optionally one `--bill-id` or `--jurisdiction-id`   |
 | Forced document refresh         | `documents:process --document-id <id> --force --limit 1`                                                                                   |
 | Bounded embeddings              | `embeddings:run --bill-id <id> --limit <number>` or `--document-id <id> --limit <number>`                                                  |
 | Confirmed interrupted lease     | `jobs:recover --source <source> --operation <operation> --before <ISO date-time>` after proving the external execution is terminal         |

@@ -3,18 +3,83 @@ import type { LegislationDatabase } from "../../db/database.js"
 import { billDocuments, documentSections } from "../../db/schema/schema.js"
 import { extractDocument, sanitizeDatabaseText } from "./extract.js"
 
+export const DOCUMENT_FAILURE_CATEGORIES = [
+  "download-permanent",
+  "download-transient",
+  "malformed-document",
+  "not-found",
+  "oversized",
+  "processing-transient",
+  "unsafe-url",
+  "unsupported-format"
+] as const
+
+export type DocumentFailureCategory = (typeof DOCUMENT_FAILURE_CATEGORIES)[number]
+
+export interface DocumentFailureClassification {
+  category: DocumentFailureCategory
+  message: string
+  retryable: boolean
+}
+
+export function classifyDocumentFailure(error: unknown): DocumentFailureClassification {
+  let failureMessage = "Unknown document processing failure"
+  if (error instanceof Error) {
+    failureMessage = error.message
+  } else if (typeof error === "string") {
+    failureMessage = error
+  }
+  const message = boundedProcessingError(failureMessage)
+  const normalized = message.toLowerCase()
+  const status = /document download failed with http (\d{3})/i.exec(message)?.[1]
+  const statusCode = status === undefined ? undefined : Number(status)
+
+  if (statusCode === 404 || statusCode === 410) {
+    return { category: "not-found", message, retryable: false }
+  }
+  if (statusCode !== undefined) {
+    const retryable = statusCode === 408 || statusCode === 425 || statusCode === 429 || statusCode >= 500
+    return { category: retryable ? "download-transient" : "download-permanent", message, retryable }
+  }
+  if (
+    normalized.includes("document url must use https") ||
+    normalized.includes("document redirect changed to an unsupported protocol")
+  ) {
+    return { category: "unsafe-url", message, retryable: false }
+  }
+  if (normalized.includes("document exceeds the")) {
+    return { category: "oversized", message, retryable: false }
+  }
+  if (normalized.includes("unsupported document content type")) {
+    return { category: "unsupported-format", message, retryable: false }
+  }
+  if (
+    normalized.includes("invalid pdf structure") ||
+    normalized.includes("image-only") ||
+    normalized.includes("document is empty") ||
+    normalized.includes("document produced no usable text")
+  ) {
+    return { category: "malformed-document", message, retryable: false }
+  }
+  if (
+    normalized.includes("fetch failed") ||
+    normalized.includes("timeout") ||
+    normalized.includes("timed out") ||
+    normalized.includes("terminated") ||
+    normalized.includes("econn") ||
+    normalized.includes("enotfound") ||
+    normalized.includes("eai_again")
+  ) {
+    return { category: "download-transient", message, retryable: true }
+  }
+  if (normalized.includes("california bill pdf download form is incomplete")) {
+    return { category: "download-permanent", message, retryable: false }
+  }
+  return { category: "processing-transient", message, retryable: true }
+}
+
 export function isTerminalDocumentFailure(message: string): boolean {
-  return [
-    "Document download failed with HTTP 404",
-    "Document redirect changed to an unsupported protocol",
-    "Document URL must use HTTPS",
-    "Document exceeds the",
-    "Document is empty",
-    "Document produced no usable text",
-    "Invalid PDF structure",
-    "Unsupported",
-    "image-only"
-  ].some((marker) => message.includes(marker))
+  return !classifyDocumentFailure(message).retryable
 }
 
 export function boundedProcessingError(value: string): string {
@@ -41,7 +106,9 @@ export async function persistProcessedDocument(
       .set({
         contentHash: extraction.contentHash,
         contentType: input.contentType,
+        nextAttemptAt: null,
         processingError: null,
+        processingErrorCategory: null,
         processingStatus: "processed",
         text: extraction.text,
         updatedAt: new Date()
@@ -70,14 +137,20 @@ export async function persistProcessedDocument(
 export async function markDocumentProcessingFailure(
   database: LegislationDatabase,
   documentId: string,
-  status: "failed" | "unsupported",
-  processingError?: string
+  input: Readonly<{
+    category: DocumentFailureCategory
+    nextAttemptAt?: Date
+    processingError: string
+    status: "failed" | "unsupported"
+  }>
 ): Promise<void> {
   await database
     .update(billDocuments)
     .set({
-      processingError: processingError === undefined ? undefined : boundedProcessingError(processingError),
-      processingStatus: status,
+      nextAttemptAt: input.nextAttemptAt ?? null,
+      processingError: boundedProcessingError(input.processingError),
+      processingErrorCategory: input.category,
+      processingStatus: input.status,
       updatedAt: new Date()
     })
     .where(eq(billDocuments.id, documentId))

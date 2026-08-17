@@ -25,9 +25,12 @@ hand. A second overlapping workflow should be rejected by the leased database lo
 
 ## Document extraction failure
 
-Locate the document ID and official source URL in the run summary. `unsupported` means the format or image-only PDF needs
-manual treatment; `failed` is retryable. Re-run `documents:process --document-id <id>`. The immutable artifact is reused
-unless `--force` is supplied. Compare the new section hashes and confirm stale embeddings are regenerated.
+Locate the document ID and official source URL in the run summary, then inspect its stored failure category, attempt count,
+and next-attempt time. `unsupported` is terminal and needs manual treatment. `failed` is eligible only when its recorded
+backoff has elapsed and the configured attempt ceiling has not been reached. Replay the smallest cohort with
+`documents:process --status failed --failure-category <category> --limit <number>` and optionally a jurisdiction or bill.
+Use `--document-id <id> --force` only for an intentional manual override. The immutable artifact is otherwise reused.
+Compare the new section hashes and confirm stale embeddings are regenerated.
 
 Supporting materials use the same recovery model. Re-run `materials:process --material-id <id>` for a single committee
 report, hearing document, fiscal note, analysis, or other material. Use `materials:process --all` only for the bounded

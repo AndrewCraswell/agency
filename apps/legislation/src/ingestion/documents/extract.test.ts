@@ -6,7 +6,8 @@ import {
   sanitizeDatabaseText,
   segmentLegalText
 } from "./extract.js"
-import { boundedProcessingError, isTerminalDocumentFailure } from "./process.js"
+import { documentRetryAt } from "./jobs.js"
+import { boundedProcessingError, classifyDocumentFailure, isTerminalDocumentFailure } from "./process.js"
 
 const encoder = new TextEncoder()
 const textPdf = Buffer.from(
@@ -116,6 +117,32 @@ describe("legislative document extraction", () => {
     expect(isTerminalDocumentFailure("Document produced no usable text")).toBe(true)
     expect(isTerminalDocumentFailure("Invalid PDF structure.")).toBe(true)
     expect(isTerminalDocumentFailure("Document download failed with HTTP 503")).toBe(false)
+  })
+
+  it("assigns stable categories and retryability to document failures", () => {
+    expect(classifyDocumentFailure(new TypeError("fetch failed"))).toMatchObject({
+      category: "download-transient",
+      retryable: true
+    })
+    expect(classifyDocumentFailure("Document download failed with HTTP 429")).toMatchObject({
+      category: "download-transient",
+      retryable: true
+    })
+    expect(classifyDocumentFailure("Document download failed with HTTP 403")).toMatchObject({
+      category: "download-permanent",
+      retryable: false
+    })
+    expect(classifyDocumentFailure("Invalid PDF structure.")).toMatchObject({
+      category: "malformed-document",
+      retryable: false
+    })
+  })
+
+  it("backs durable retries off exponentially with a fixed ceiling", () => {
+    const start = new Date("2026-08-17T00:00:00.000Z")
+    expect(documentRetryAt(1, start).toISOString()).toBe("2026-08-17T00:05:00.000Z")
+    expect(documentRetryAt(2, start).toISOString()).toBe("2026-08-17T00:10:00.000Z")
+    expect(documentRetryAt(20, start).toISOString()).toBe("2026-08-17T06:00:00.000Z")
   })
 
   it("bounds processing errors to database-safe summaries", () => {

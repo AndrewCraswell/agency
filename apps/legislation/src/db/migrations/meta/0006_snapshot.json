@@ -224,6 +224,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "next_attempt_at": {
+          "name": "next_attempt_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
         "processing_attempts": {
           "name": "processing_attempts",
           "type": "integer",
@@ -233,6 +239,12 @@
         },
         "processing_error": {
           "name": "processing_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "processing_error_category": {
+          "name": "processing_error_category",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -301,6 +313,50 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "bill_documents_pending_claim_idx": {
+          "name": "bill_documents_pending_claim_idx",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"legislation\".\"bill_documents\".\"processing_status\" = 'pending'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "bill_documents_failed_retry_idx": {
+          "name": "bill_documents_failed_retry_idx",
+          "columns": [
+            {
+              "expression": "processing_error_category",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "next_attempt_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"legislation\".\"bill_documents\".\"processing_status\" = 'failed'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -330,6 +386,10 @@
         "bill_documents_attempts_check": {
           "name": "bill_documents_attempts_check",
           "value": "\"legislation\".\"bill_documents\".\"processing_attempts\" >= 0"
+        },
+        "bill_documents_error_category_check": {
+          "name": "bill_documents_error_category_check",
+          "value": "\"legislation\".\"bill_documents\".\"processing_error_category\" is null or \"legislation\".\"bill_documents\".\"processing_error_category\" in ('download-permanent', 'download-transient', 'malformed-document', 'not-found', 'oversized', 'processing-transient', 'unsafe-url', 'unsupported-format')"
         },
         "bill_documents_processing_status_check": {
           "name": "bill_documents_processing_status_check",

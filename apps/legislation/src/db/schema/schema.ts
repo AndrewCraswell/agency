@@ -849,8 +849,10 @@ export const billDocuments = legislationSchema.table(
     text: text("text"),
     contentHash: char("content_hash", { length: 64 }),
     lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
     processingAttempts: integer("processing_attempts").notNull().default(0),
     processingError: text("processing_error"),
+    processingErrorCategory: text("processing_error_category"),
     processingStatus: text("processing_status").notNull().default("pending"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
@@ -860,11 +862,21 @@ export const billDocuments = legislationSchema.table(
     check("bill_documents_hash_check", sql`${table.contentHash} is null or ${table.contentHash} ~ '^[0-9a-f]{64}$'`),
     check("bill_documents_attempts_check", sql`${table.processingAttempts} >= 0`),
     check(
+      "bill_documents_error_category_check",
+      sql`${table.processingErrorCategory} is null or ${table.processingErrorCategory} in ('download-permanent', 'download-transient', 'malformed-document', 'not-found', 'oversized', 'processing-transient', 'unsafe-url', 'unsupported-format')`
+    ),
+    check(
       "bill_documents_processing_status_check",
       sql`${table.processingStatus} in ('pending', 'processing', 'processed', 'unsupported', 'failed')`
     ),
     uniqueIndex("bill_documents_source_uidx").on(table.billId, table.sourceUrl),
-    index("bill_documents_processing_idx").on(table.processingStatus, table.updatedAt)
+    index("bill_documents_processing_idx").on(table.processingStatus, table.updatedAt),
+    index("bill_documents_pending_claim_idx")
+      .on(table.id)
+      .where(sql`${table.processingStatus} = 'pending'`),
+    index("bill_documents_failed_retry_idx")
+      .on(table.processingErrorCategory, table.nextAttemptAt, table.id)
+      .where(sql`${table.processingStatus} = 'failed'`)
   ]
 )
 

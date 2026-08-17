@@ -26,9 +26,9 @@ import {
 import {
   classifyTerminalDocumentFailures,
   processPendingDocuments,
-  requeueFailedDocuments,
   requeueInterruptedDocuments
 } from "../ingestion/documents/jobs.js"
+import { DOCUMENT_FAILURE_CATEGORIES, type DocumentFailureCategory } from "../ingestion/documents/process.js"
 import {
   processPendingSupportingMaterials,
   requeueFailedSupportingMaterials
@@ -209,6 +209,7 @@ program
   .description("Acquire and process pending official bill documents")
   .option("--bill-id <id>")
   .option("--document-id <id>")
+  .option("--failure-category <category>", "limit failed retries to one recorded failure category")
   .option("--all", "continue until every pending document has been attempted")
   .option("--force", "download and process even when an artifact is already complete")
   .option("--jurisdiction-id <id>")
@@ -223,11 +224,6 @@ program
   .description("Move known non-retryable document failures to unsupported")
   .option("--limit <number>", "maximum failed documents to inspect", "100000")
   .action(classifyTerminalDocuments)
-
-program
-  .command("documents:requeue-failed")
-  .description("Move failed bill documents back to pending for one bounded replay")
-  .action(requeueDocuments)
 
 program
   .command("documents:recover-interrupted")
@@ -1208,6 +1204,7 @@ async function processDocuments(options: {
   all?: boolean
   billId?: string
   documentId?: string
+  failureCategory?: string
   force?: boolean
   jurisdictionId?: string
   limit: string
@@ -1219,6 +1216,9 @@ async function processDocuments(options: {
   const logger = createCommandLogger(config)
   if (options.all === true && options.status !== undefined) {
     throw new InvalidJobInput("--all cannot be combined with --status")
+  }
+  if (options.failureCategory !== undefined && options.status !== "failed") {
+    throw new InvalidJobInput("--failure-category requires --status failed")
   }
   const shardCount = parseInteger(options.shardCount, "shard count")
   const shardIndex = Number(options.shardIndex)
@@ -1243,6 +1243,8 @@ async function processDocuments(options: {
         const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
         const artifactStore = createArtifactStore(config, "documents")
         let status: "failed" | "pending" | "unsupported" | undefined
+        const failureCategory =
+          options.failureCategory === undefined ? undefined : parseDocumentFailureCategory(options.failureCategory)
         if (options.all === true) {
           status = "pending"
         } else if (options.status !== undefined) {
@@ -1256,9 +1258,11 @@ async function processDocuments(options: {
             billId: options.billId,
             concurrency: config.ingestion.concurrency,
             documentId: options.documentId,
+            failureCategory,
             force: options.force,
             jurisdictionId: options.jurisdictionId,
             limit,
+            maximumAttempts: config.ingestion.maxAttempts,
             shardCount,
             shardIndex,
             status,
@@ -1267,32 +1271,12 @@ async function processDocuments(options: {
           for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
             counts[key] += processed.counts[key]
           }
-          failures.push(...processed.failures)
+          failures.push(...processed.failures.slice(0, Math.max(0, 20 - failures.length)))
           batches += 1
           logger.info("document processing progress", { batches, counts, shardCount, shardIndex })
           hasMoreDocuments = options.all === true && processed.counts.discovered === limit
         } while (hasMoreDocuments)
         return { counts, failures }
-      }
-    )
-    printJobResult(result)
-  }, config)
-}
-
-async function requeueDocuments() {
-  const config = loadConfig()
-  await withDatabase(async (database) => {
-    const result = await runIngestionJob(
-      database,
-      {
-        ...jobExecutionContext(),
-        operation: "requeue-failed",
-        scope: {},
-        source: "documents"
-      },
-      async () => {
-        const requeued = await requeueFailedDocuments(database)
-        return { counts: createJobCounts({ discovered: requeued, updated: requeued }), failures: [] }
       }
     )
     printJobResult(result)
@@ -1677,6 +1661,13 @@ function parseDocumentStatus(value: string): "failed" | "pending" | "unsupported
     throw new InvalidJobInput("status must be pending, failed, or unsupported")
   }
   return value
+}
+
+function parseDocumentFailureCategory(value: string): DocumentFailureCategory {
+  if (!DOCUMENT_FAILURE_CATEGORIES.includes(value as DocumentFailureCategory)) {
+    throw new InvalidJobInput(`failure category must be one of ${DOCUMENT_FAILURE_CATEGORIES.join(", ")}`)
+  }
+  return value as DocumentFailureCategory
 }
 
 function parseHttpsUrl(value: string, name: string): URL {
