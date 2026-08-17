@@ -16,6 +16,19 @@ export interface SupportingMaterialJobResult {
   failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>>
 }
 
+export async function requeueFailedSupportingMaterials(database: LegislationDatabase): Promise<number> {
+  const result = await database.execute<{ requeued: number }>(sql`
+    with requeued as (
+      update legislation.supporting_materials
+      set processing_error = null, processing_status = 'pending', updated_at = now()
+      where processing_status = 'failed'
+      returning id
+    )
+    select count(*)::int as requeued from requeued
+  `)
+  return result.rows[0]?.requeued ?? 0
+}
+
 export async function processPendingSupportingMaterials(
   database: LegislationDatabase,
   options: Readonly<{

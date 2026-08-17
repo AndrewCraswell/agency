@@ -23,8 +23,11 @@ import {
   LocalArtifactStore,
   type ArtifactStore
 } from "../ingestion/documents/artifact-store.js"
-import { processPendingDocuments } from "../ingestion/documents/jobs.js"
-import { processPendingSupportingMaterials } from "../ingestion/documents/supporting-material-jobs.js"
+import { processPendingDocuments, requeueFailedDocuments } from "../ingestion/documents/jobs.js"
+import {
+  processPendingSupportingMaterials,
+  requeueFailedSupportingMaterials
+} from "../ingestion/documents/supporting-material-jobs.js"
 import { embedBills, embedDocumentSections, embedSupportingMaterialSections } from "../ingestion/embeddings/jobs.js"
 import { GovInfoClient } from "../ingestion/govinfo/client.js"
 import { importGovInfoPackages } from "../ingestion/govinfo/import.js"
@@ -210,6 +213,11 @@ program
   .action(processDocuments)
 
 program
+  .command("documents:requeue-failed")
+  .description("Move failed bill documents back to pending for one bounded replay")
+  .action(requeueDocuments)
+
+program
   .command("materials:process")
   .description("Acquire and process pending supporting materials")
   .option("--material-id <id>")
@@ -219,6 +227,11 @@ program
   .option("--limit <number>", "maximum supporting materials", "100")
   .option("--status <status>", "limit to pending, failed, or unsupported materials")
   .action(processSupportingMaterials)
+
+program
+  .command("materials:requeue-failed")
+  .description("Move failed supporting materials back to pending for one bounded replay")
+  .action(requeueSupportingMaterials)
 
 program
   .command("embeddings:run")
@@ -1247,6 +1260,26 @@ async function processDocuments(options: {
   }, config)
 }
 
+async function requeueDocuments() {
+  const config = loadConfig()
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: "requeue-failed",
+        scope: {},
+        source: "documents"
+      },
+      async () => {
+        const requeued = await requeueFailedDocuments(database)
+        return { counts: createJobCounts({ discovered: requeued, updated: requeued }), failures: [] }
+      }
+    )
+    printJobResult(result)
+  }, config)
+}
+
 async function processSupportingMaterials(options: {
   all?: boolean
   force?: boolean
@@ -1302,6 +1335,26 @@ async function processSupportingMaterials(options: {
           hasMoreMaterials = options.all === true && processed.counts.discovered === limit
         } while (hasMoreMaterials)
         return { counts, failures }
+      }
+    )
+    printJobResult(result)
+  }, config)
+}
+
+async function requeueSupportingMaterials() {
+  const config = loadConfig()
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: "requeue-failed",
+        scope: {},
+        source: "supporting-materials"
+      },
+      async () => {
+        const requeued = await requeueFailedSupportingMaterials(database)
+        return { counts: createJobCounts({ discovered: requeued, updated: requeued }), failures: [] }
       }
     )
     printJobResult(result)
