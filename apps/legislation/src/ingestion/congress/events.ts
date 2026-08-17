@@ -145,6 +145,8 @@ export function normalizeCongressCommitteeMeeting(input: unknown): CongressEvent
   const eventId = legislativeEventId("congress", `committee-meeting-${meeting.eventId}`)
   const date = meeting.date.slice(0, 10)
   const documents = uniqueDocuments([...meeting.meetingDocuments, ...meeting.witnessDocuments])
+  const status =
+    meeting.meetingStatus?.toLowerCase() === "canceled" ? "cancelled" : meeting.meetingStatus?.toLowerCase()
   return {
     agendaItems: [],
     billIds: meeting.relatedItems.bills.map((bill) => federalBillId(bill.congress, bill.type, bill.number)),
@@ -161,7 +163,7 @@ export function normalizeCongressCommitteeMeeting(input: unknown): CongressEvent
       allDay: false,
       classification: meeting.type?.toLowerCase() ?? "committee-meeting",
       id: eventId,
-      isDeleted: meeting.meetingStatus?.toLowerCase() === "cancelled",
+      isDeleted: false,
       jurisdictionId: jurisdictionId("us"),
       location: meeting.location,
       name: meeting.title,
@@ -169,7 +171,7 @@ export function normalizeCongressCommitteeMeeting(input: unknown): CongressEvent
       sourceUpdatedAt: meeting.updateDate === undefined ? undefined : new Date(meeting.updateDate),
       sourceUrl: source.sourceUrl,
       startAt: new Date(meeting.date),
-      status: meeting.meetingStatus?.toLowerCase() ?? "unknown",
+      status: status ?? "unknown",
       upstreamIds: { congress: meeting.eventId },
       virtualAccess: meeting.videos[0] === undefined ? undefined : { url: meeting.videos[0].url }
     },

@@ -74,4 +74,22 @@ describe("Congress event normalization", () => {
     })
     expect(snapshot.materials[0]?.material.classification).toBe("hearing-transcript")
   })
+
+  it("normalizes the provider's alternate cancellation spelling", () => {
+    const snapshot = normalizeCongressCommitteeMeeting({
+      meeting: {
+        chamber: "House",
+        committees: [],
+        congress: 119,
+        date: "2026-04-29T14:15:00Z",
+        eventId: "119190",
+        meetingStatus: "Canceled",
+        relatedItems: { bills: [] },
+        title: "Cancelled meeting"
+      },
+      sourceUrl: "https://api.congress.gov/v3/committee-meeting/119/house/119190"
+    })
+
+    expect(snapshot.event).toMatchObject({ isDeleted: false, status: "cancelled" })
+  })
 })

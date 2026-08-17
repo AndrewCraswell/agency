@@ -46,6 +46,11 @@ event snapshots were running. Historical session archives do not consume that AP
 Current entity and event expansion therefore remains restartable but blocked until the daily quota resets or the Open
 States plan is increased; repeated 429 responses with an explicit daily-limit detail are treated as non-retryable.
 
+Event refreshes converge on the stable provider event ID. Cancellation status is distinct from upstream deletion,
+schedule changes retain the same canonical event for reschedule tracking, and repeated agenda ordinals, document URLs,
+or participants are deduplicated before transactional child replacement. Continued meetings are linked only when a
+provider supplies a distinct structured continuation; similar names or nearby timestamps are never used to invent one.
+
 ## Congress.gov sample and range
 
 Every list endpoint was sampled for each Congress from the 113th through the 119th. All requests succeeded.

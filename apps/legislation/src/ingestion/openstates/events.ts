@@ -64,6 +64,18 @@ function exactDate(value: string | undefined): string | undefined {
   return value?.match(/^(\d{4}-\d{2}-\d{2})/)?.[1]
 }
 
+function uniqueBy<T>(values: T[], identity: (value: T) => string): T[] {
+  return [...new Map(values.map((value) => [identity(value), value])).values()]
+}
+
+function canonicalEventStatus(status: string, isDeleted: boolean): string {
+  if (isDeleted) {
+    return "deleted"
+  }
+  const normalized = status.trim().toLowerCase().replaceAll("_", "-")
+  return normalized === "canceled" ? "cancelled" : normalized
+}
+
 export function normalizeOpenStatesEvent(
   input: unknown,
   context: { jurisdictionCode: string }
@@ -73,23 +85,29 @@ export function normalizeOpenStatesEvent(
   const locationUrl =
     typeof source.location?.url === "string" && source.location.url.length > 0 ? source.location.url : undefined
   return {
-    agendaItems: source.agenda.map((item) => ({
-      classification: item.classification[0],
-      description: item.description,
-      eventId: canonicalEventId,
-      id: eventChildId("agenda", canonicalEventId, `${item.order}:${item.description}`),
-      ordinal: item.order
-    })),
-    documents: source.documents.flatMap((document, documentIndex) =>
-      document.links.map((link, linkIndex) => ({
-        classification: document.classification,
-        contentType: link.media_type,
-        documentDate: exactDate(document.date),
+    agendaItems: uniqueBy(
+      source.agenda.map((item) => ({
+        classification: item.classification[0],
+        description: item.description,
         eventId: canonicalEventId,
-        id: eventChildId("document", canonicalEventId, `${documentIndex}:${linkIndex}:${link.url}`),
-        sourceUrl: link.url,
-        title: document.note ?? link.text ?? `Event document ${documentIndex + 1}`
-      }))
+        id: eventChildId("agenda", canonicalEventId, `${item.order}:${item.description}`),
+        ordinal: item.order
+      })),
+      (item) => String(item.ordinal)
+    ),
+    documents: uniqueBy(
+      source.documents.flatMap((document, documentIndex) =>
+        document.links.map((link) => ({
+          classification: document.classification,
+          contentType: link.media_type,
+          documentDate: exactDate(document.date),
+          eventId: canonicalEventId,
+          id: eventChildId("document", canonicalEventId, link.url),
+          sourceUrl: link.url,
+          title: document.note ?? link.text ?? `Event document ${documentIndex + 1}`
+        }))
+      ),
+      (document) => document.sourceUrl
     ),
     event: {
       allDay: source.all_day,
@@ -105,22 +123,25 @@ export function normalizeOpenStatesEvent(
       sourceUpdatedAt: source.updated_at === undefined ? undefined : new Date(source.updated_at),
       sourceUrl: source.sources[0]?.url,
       startAt: new Date(source.start_date),
-      status: source.status,
+      status: canonicalEventStatus(source.status, source.deleted),
       upstreamIds: {
         openstates: source.id,
         ...(source.upstream_id === undefined ? {} : { provider: source.upstream_id })
       },
       virtualAccess: locationUrl === undefined ? undefined : { url: locationUrl }
     },
-    participants: source.participants.map((participant, index) => ({
-      eventId: canonicalEventId,
-      id: eventChildId(
-        "participant",
-        canonicalEventId,
-        `${index}:${participant.entity_type ?? "unknown"}:${participant.name}`
-      ),
-      name: participant.name,
-      role: participant.note ?? participant.entity_type
-    }))
+    participants: uniqueBy(
+      source.participants.map((participant) => ({
+        eventId: canonicalEventId,
+        id: eventChildId(
+          "participant",
+          canonicalEventId,
+          `${participant.entity_type ?? "unknown"}:${participant.name}`
+        ),
+        name: participant.name,
+        role: participant.note ?? participant.entity_type
+      })),
+      (participant) => participant.id
+    )
   }
 }

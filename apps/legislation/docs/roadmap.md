@@ -102,7 +102,7 @@ status changes.
   not appear as active meetings.
 - [ ] **E2.5** Import Congress.gov committee meetings and published hearings, including committees, witnesses, related
   legislation, meeting documents, and transcript references when supplied.
-- [ ] **E2.6** Normalize rescheduled, continued, cancelled, deleted, and duplicate event records without fabricating
+- [x] **E2.6** Normalize rescheduled, continued, cancelled, deleted, and duplicate event records without fabricating
   missing times or locations.
 - [x] **E2.7** Reconcile event-to-bill and event-to-committee links using stable IDs first and bounded normalized matching
   only when an upstream ID is unavailable.
