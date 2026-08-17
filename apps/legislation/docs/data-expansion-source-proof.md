@@ -50,6 +50,9 @@ Event refreshes converge on the stable provider event ID. Cancellation status is
 schedule changes retain the same canonical event for reschedule tracking, and repeated agenda ordinals, document URLs,
 or participants are deduplicated before transactional child replacement. Continued meetings are linked only when a
 provider supplies a distinct structured continuation; similar names or nearby timestamps are never used to invent one.
+Coverage reports include every configured jurisdiction, including those with no observed events, and report event
+totals, deletions, upcoming events, latest scheduled event, latest upstream update, and latest local observation. Empty
+coverage is labeled `observed-empty`; it is not presented as proof that the jurisdiction has no legislative events.
 
 ## Congress.gov sample and range
 

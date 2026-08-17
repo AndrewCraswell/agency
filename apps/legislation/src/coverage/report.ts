@@ -36,7 +36,16 @@ export interface CoverageReport {
     sections: { embedded: number; total: number }
   }
   federalBillTypes: Array<{ billType: string; bills: number; congress: string; documents: number }>
-  eventCoverage: Array<{ deleted: number; events: number; jurisdictionId: string }>
+  eventCoverage: Array<{
+    availability: "observed-data" | "observed-empty"
+    deleted: number
+    events: number
+    jurisdictionId: string
+    latestEventAt?: string
+    latestObservedAt?: string
+    latestSourceUpdatedAt?: string
+    upcomingEvents: number
+  }>
   generatedAt: string
   ingestionFailureCategories: Array<{
     failedRecords: number
@@ -278,12 +287,29 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       group by bills.jurisdiction_id, coalesce(documents.classification, 'unclassified')
       order by bills.jurisdiction_id, classification
     `),
-    database.execute<{ deleted: number; events: number; jurisdiction_id: string }>(sql`
-      select jurisdiction_id, count(*)::int as events,
-        count(*) filter (where is_deleted)::int as deleted
-      from legislation.legislative_events
-      group by jurisdiction_id
-      order by jurisdiction_id
+    database.execute<{
+      deleted: number
+      events: number
+      jurisdiction_id: string
+      latest_event_at: Date | null
+      latest_observed_at: Date | null
+      latest_source_updated_at: Date | null
+      upcoming_events: number
+    }>(sql`
+      select
+        jurisdictions.id as jurisdiction_id,
+        count(events.id)::int as events,
+        count(events.id) filter (where events.is_deleted)::int as deleted,
+        count(events.id) filter (
+          where events.start_at >= now() and not events.is_deleted
+        )::int as upcoming_events,
+        max(events.start_at) as latest_event_at,
+        max(events.source_updated_at) as latest_source_updated_at,
+        max(events.updated_at) as latest_observed_at
+      from legislation.jurisdictions jurisdictions
+      left join legislation.legislative_events events on events.jurisdiction_id = jurisdictions.id
+      group by jurisdictions.id
+      order by jurisdictions.id
     `),
     database.execute<{ classification: string; jurisdiction_id: string; materials: number }>(sql`
       select jurisdiction_id, classification, count(*)::int as materials
@@ -382,9 +408,14 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       documents: row.documents
     })),
     eventCoverage: eventCoverage.rows.map((row) => ({
+      availability: row.events === 0 ? "observed-empty" : "observed-data",
       deleted: row.deleted,
       events: row.events,
-      jurisdictionId: row.jurisdiction_id
+      jurisdictionId: row.jurisdiction_id,
+      latestEventAt: row.latest_event_at?.toISOString(),
+      latestObservedAt: row.latest_observed_at?.toISOString(),
+      latestSourceUpdatedAt: row.latest_source_updated_at?.toISOString(),
+      upcomingEvents: row.upcoming_events
     })),
     generatedAt: new Date().toISOString(),
     ingestionFailureCategories: failureCategories.rows.map((row) => ({
