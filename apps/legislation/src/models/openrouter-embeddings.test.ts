@@ -15,7 +15,11 @@ function successfulResponse(model = EMBEDDING_MODEL, dimensions = EMBEDDING_DIME
 describe("OpenRouter embedding client", () => {
   it("pins model, dimensions, privacy routing, and validates the response", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(successfulResponse())
-    const client = new OpenRouterEmbeddingClient({ apiKey: "secret", fetch: fetchMock })
+    const client = new OpenRouterEmbeddingClient({
+      apiKey: "secret",
+      baseUrl: new URL("https://openrouter.ai/api/v1"),
+      fetch: fetchMock
+    })
 
     await expect(client.embed(["legislative text"])).resolves.toMatchObject({
       embeddings: [expect.arrayContaining([0.5])],
@@ -23,6 +27,7 @@ describe("OpenRouter embedding client", () => {
       totalTokens: 3
     })
     const request = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
+    expect(fetchMock.mock.calls[0]?.[0]).toEqual(new URL("https://openrouter.ai/api/v1/embeddings"))
     expect(request).toMatchObject({
       dimensions: 1536,
       model: EMBEDDING_MODEL,

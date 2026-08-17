@@ -53,7 +53,8 @@ export class OpenRouterEmbeddingClient {
 
   constructor(options: OpenRouterEmbeddingClientOptions) {
     this.#apiKey = options.apiKey
-    this.#baseUrl = options.baseUrl ?? new URL("https://openrouter.ai/api/v1/")
+    const configuredBaseUrl = options.baseUrl ?? new URL("https://openrouter.ai/api/v1/")
+    this.#baseUrl = new URL(`${configuredBaseUrl.href.replace(/\/+$/, "")}/`)
     this.#fetch = options.fetch ?? fetch
     this.#maximumAttempts = options.maximumAttempts ?? 3
     this.#timeoutMs = options.timeoutMs ?? 30_000
