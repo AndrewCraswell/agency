@@ -11,6 +11,7 @@ export function isTerminalDocumentFailure(message: string): boolean {
     "Document exceeds the",
     "Document is empty",
     "Document produced no usable text",
+    "Invalid PDF structure",
     "Unsupported",
     "image-only"
   ].some((marker) => message.includes(marker))

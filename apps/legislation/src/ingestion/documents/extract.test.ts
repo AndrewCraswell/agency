@@ -114,6 +114,7 @@ describe("legislative document extraction", () => {
     expect(isTerminalDocumentFailure("Document redirect changed to an unsupported protocol")).toBe(true)
     expect(isTerminalDocumentFailure("Document exceeds the 26214400 byte limit")).toBe(true)
     expect(isTerminalDocumentFailure("Document produced no usable text")).toBe(true)
+    expect(isTerminalDocumentFailure("Invalid PDF structure.")).toBe(true)
     expect(isTerminalDocumentFailure("Document download failed with HTTP 503")).toBe(false)
   })
 
