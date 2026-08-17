@@ -775,7 +775,7 @@ async function syncCongress(options: { dryRun?: boolean; from?: string; to?: str
   if (config.ingestion.congressApiKey === undefined) {
     throw new InvalidJobInput("CONGRESS_API_KEY is required for congress:sync")
   }
-  const providerHttp = httpClient(config)
+  const providerHttp = congressBootstrapHttpClient(config)
   const logger = createCommandLogger(config)
   const client = new CongressClient({
     apiKey: config.ingestion.congressApiKey,
