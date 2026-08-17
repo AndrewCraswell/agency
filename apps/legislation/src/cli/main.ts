@@ -376,7 +376,7 @@ async function syncOpenStates(options: { from?: string; jurisdiction?: string })
   if (jurisdictions.length === 0) {
     throw new InvalidJobInput(`unsupported Open States jurisdiction: ${options.jurisdiction}`)
   }
-  const providerHttp = httpClient(config)
+  const providerHttp = openStatesHttpClient(config)
   const client = new OpenStatesClient({
     apiKey: config.ingestion.openStatesApiKey,
     baseUrl: new URL(config.ingestion.openStatesApiUrl),
@@ -439,7 +439,7 @@ async function syncOpenStatesEntities(options: { jurisdiction?: string }) {
   if (jurisdictionCodes.length === 0) {
     throw new InvalidJobInput(`unsupported Open States jurisdiction: ${options.jurisdiction}`)
   }
-  const providerHttp = httpClient(config)
+  const providerHttp = openStatesHttpClient(config)
   const client = new OpenStatesClient({
     apiKey: config.ingestion.openStatesApiKey,
     baseUrl: new URL(config.ingestion.openStatesApiUrl),
@@ -525,7 +525,7 @@ async function syncOpenStatesEvents(options: { from?: string; jurisdiction?: str
   if (jurisdictionCodes.length === 0) {
     throw new InvalidJobInput(`unsupported Open States jurisdiction: ${options.jurisdiction}`)
   }
-  const providerHttp = httpClient(config)
+  const providerHttp = openStatesHttpClient(config)
   const client = new OpenStatesClient({
     apiKey: config.ingestion.openStatesApiKey,
     baseUrl: new URL(config.ingestion.openStatesApiUrl),
@@ -598,7 +598,7 @@ async function bootstrapOpenStates(options: { force?: boolean; jurisdiction?: st
   if (archives.length === 0) {
     throw new InvalidJobInput("Open States manifest contains no matching supported archives")
   }
-  const providerHttp = httpClient(config)
+  const providerHttp = openStatesHttpClient(config)
   const sourceStore = createSourceStore(config, "state")
   await withDatabase(async (database) => {
     const result = await runIngestionJob(
@@ -1026,6 +1026,14 @@ async function validate() {
 function httpClient(config: LegislationConfig) {
   return new RetryingHttpClient({
     maxAttempts: config.ingestion.maxAttempts,
+    requestTimeoutMs: config.ingestion.requestTimeoutMs
+  })
+}
+
+function openStatesHttpClient(config: LegislationConfig) {
+  return new RetryingHttpClient({
+    maxAttempts: Math.max(config.ingestion.maxAttempts, 6),
+    minimumIntervalMs: 750,
     requestTimeoutMs: config.ingestion.requestTimeoutMs
   })
 }

@@ -38,6 +38,27 @@ describe("RetryingHttpClient", () => {
     await expect(readBounded(new Response("12345"), 4)).rejects.toBeInstanceOf(ProviderHttpError)
   })
 
+  it("serializes request starts when provider pacing is configured", async () => {
+    const requestTimes: number[] = []
+    const request = vi.fn<typeof fetch>().mockImplementation(() => {
+      requestTimes.push(Date.now())
+      return Promise.resolve(new Response("ok"))
+    })
+    const client = new RetryingHttpClient({
+      fetch: request,
+      maxAttempts: 1,
+      minimumIntervalMs: 20,
+      requestTimeoutMs: 1000
+    })
+
+    await Promise.all([
+      client.get(new URL("https://provider.example/first")),
+      client.get(new URL("https://provider.example/second"))
+    ])
+
+    expect((requestTimes[1] ?? 0) - (requestTimes[0] ?? 0)).toBeGreaterThanOrEqual(15)
+  })
+
   it("resumes a bounded streaming download after a partial transport failure", async () => {
     const request = vi
       .fn<typeof fetch>()

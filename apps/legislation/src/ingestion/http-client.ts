@@ -1,6 +1,7 @@
 export interface RetryingHttpClientOptions {
   fetch?: typeof fetch
   maxAttempts: number
+  minimumIntervalMs?: number
   requestTimeoutMs: number
 }
 
@@ -27,6 +28,7 @@ export class ProviderHttpError extends Error {
 export class RetryingHttpClient {
   readonly #fetch: typeof fetch
   readonly #maxAttempts: number
+  readonly #minimumIntervalMs: number
   readonly #metrics: HttpClientMetrics = {
     attempts: 0,
     failedRequests: 0,
@@ -35,10 +37,13 @@ export class RetryingHttpClient {
     successfulRequests: 0
   }
   readonly #requestTimeoutMs: number
+  #requestGate: Promise<void> = Promise.resolve()
+  #nextRequestAt = 0
 
   constructor(options: RetryingHttpClientOptions) {
     this.#fetch = options.fetch ?? fetch
     this.#maxAttempts = options.maxAttempts
+    this.#minimumIntervalMs = Math.max(0, options.minimumIntervalMs ?? 0)
     this.#requestTimeoutMs = options.requestTimeoutMs
   }
 
@@ -50,6 +55,7 @@ export class RetryingHttpClient {
     let lastError: unknown
     for (let attempt = 1; attempt <= this.#maxAttempts; attempt += 1) {
       try {
+        await this.#paceRequest()
         this.#metrics.attempts += 1
         const response = await this.#fetch(url, {
           ...init,
@@ -99,6 +105,7 @@ export class RetryingHttpClient {
     let receivedBytes = 0
     for (let attempt = 1; attempt <= this.#maxAttempts; attempt += 1) {
       try {
+        await this.#paceRequest()
         const headers = new Headers(init.headers)
         if (receivedBytes > 0) {
           headers.set("range", `bytes=${receivedBytes}-`)
@@ -182,6 +189,22 @@ export class RetryingHttpClient {
     }
     throw new ProviderHttpError("Provider download failed after retries", { retryable: true })
   }
+
+  async #paceRequest(): Promise<void> {
+    const previous = this.#requestGate
+    const gate = Promise.withResolvers<void>()
+    this.#requestGate = gate.promise
+    await previous
+    try {
+      const wait = this.#nextRequestAt - Date.now()
+      if (wait > 0) {
+        await delay(wait)
+      }
+      this.#nextRequestAt = Date.now() + this.#minimumIntervalMs
+    } finally {
+      gate.resolve()
+    }
+  }
 }
 
 function retryDelay(response: Response, attempt: number): number {
@@ -191,6 +214,9 @@ function retryDelay(response: Response, attempt: number): number {
     if (Number.isFinite(seconds) && seconds >= 0) {
       return Math.min(seconds * 1000, 30_000)
     }
+  }
+  if (response.status === 429) {
+    return Math.min(15_000 * 2 ** (attempt - 1), 120_000)
   }
   return Math.min(250 * 2 ** (attempt - 1), 4000)
 }
