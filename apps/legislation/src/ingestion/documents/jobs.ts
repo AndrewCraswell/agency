@@ -23,6 +23,8 @@ export async function processPendingDocuments(
     force?: boolean
     jurisdictionId?: string
     limit?: number
+    shardCount?: number
+    shardIndex?: number
     status?: "failed" | "pending" | "unsupported"
     timeoutMs?: number
   }>
@@ -48,7 +50,10 @@ export async function processPendingDocuments(
       and(
         processingSelection,
         options.billId === undefined ? undefined : eq(billDocuments.billId, options.billId),
-        options.jurisdictionId === undefined ? undefined : eq(bills.jurisdictionId, options.jurisdictionId)
+        options.jurisdictionId === undefined ? undefined : eq(bills.jurisdictionId, options.jurisdictionId),
+        (options.shardCount ?? 1) === 1
+          ? undefined
+          : sql`((hashtextextended(${billDocuments.id}, 0) % ${options.shardCount ?? 1}) + ${options.shardCount ?? 1}) % ${options.shardCount ?? 1} = ${options.shardIndex ?? 0}`
       )
     )
     .orderBy(asc(billDocuments.id))

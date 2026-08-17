@@ -204,6 +204,8 @@ program
   .option("--force", "download and process even when an artifact is already complete")
   .option("--jurisdiction-id <id>")
   .option("--limit <number>", "maximum documents", "100")
+  .option("--shard-count <number>", "number of disjoint document workers", "1")
+  .option("--shard-index <number>", "zero-based document worker index", "0")
   .option("--status <status>", "limit to pending, failed, or unsupported documents")
   .action(processDocuments)
 
@@ -1177,6 +1179,8 @@ async function processDocuments(options: {
   force?: boolean
   jurisdictionId?: string
   limit: string
+  shardCount: string
+  shardIndex: string
   status?: string
 }) {
   const config = loadConfig()
@@ -1184,10 +1188,23 @@ async function processDocuments(options: {
   if (options.all === true && options.status !== undefined) {
     throw new InvalidJobInput("--all cannot be combined with --status")
   }
+  const shardCount = parseInteger(options.shardCount, "shard count")
+  const shardIndex = Number(options.shardIndex)
+  if (!Number.isSafeInteger(shardIndex) || shardIndex < 0 || shardIndex >= shardCount) {
+    throw new InvalidJobInput("shard index must be a zero-based integer smaller than shard count")
+  }
+  if (shardCount > 1 && (options.all !== true || options.billId !== undefined || options.documentId !== undefined)) {
+    throw new InvalidJobInput("document sharding requires --all and cannot be combined with targeted IDs")
+  }
   await withDatabase(async (database) => {
     const result = await runIngestionJob(
       database,
-      { ...jobExecutionContext(), operation: "process-documents", scope: { ...options }, source: "documents" },
+      {
+        ...jobExecutionContext(),
+        operation: shardCount === 1 ? "process-documents" : `process-documents-shard-${shardIndex}`,
+        scope: { ...options },
+        source: "documents"
+      },
       async () => {
         const limit = parseInteger(options.limit, "limit")
         const counts = { ...createJobCounts(), processed: 0, unsupported: 0 }
@@ -1210,6 +1227,8 @@ async function processDocuments(options: {
             force: options.force,
             jurisdictionId: options.jurisdictionId,
             limit,
+            shardCount,
+            shardIndex,
             status,
             timeoutMs: config.ingestion.requestTimeoutMs
           })
@@ -1218,7 +1237,7 @@ async function processDocuments(options: {
           }
           failures.push(...processed.failures)
           batches += 1
-          logger.info("document processing progress", { batches, counts })
+          logger.info("document processing progress", { batches, counts, shardCount, shardIndex })
           hasMoreDocuments = options.all === true && processed.counts.discovered === limit
         } while (hasMoreDocuments)
         return { counts, failures }
