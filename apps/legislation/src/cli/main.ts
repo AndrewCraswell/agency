@@ -23,7 +23,11 @@ import {
   LocalArtifactStore,
   type ArtifactStore
 } from "../ingestion/documents/artifact-store.js"
-import { processPendingDocuments, requeueFailedDocuments } from "../ingestion/documents/jobs.js"
+import {
+  processPendingDocuments,
+  requeueFailedDocuments,
+  requeueInterruptedDocuments
+} from "../ingestion/documents/jobs.js"
 import {
   processPendingSupportingMaterials,
   requeueFailedSupportingMaterials
@@ -216,6 +220,12 @@ program
   .command("documents:requeue-failed")
   .description("Move failed bill documents back to pending for one bounded replay")
   .action(requeueDocuments)
+
+program
+  .command("documents:recover-interrupted")
+  .description("Move stale processing documents back to pending after a confirmed interrupted worker")
+  .requiredOption("--before <iso-date-time>")
+  .action(recoverInterruptedDocuments)
 
 program
   .command("materials:process")
@@ -1273,6 +1283,30 @@ async function requeueDocuments() {
       },
       async () => {
         const requeued = await requeueFailedDocuments(database)
+        return { counts: createJobCounts({ discovered: requeued, updated: requeued }), failures: [] }
+      }
+    )
+    printJobResult(result)
+  }, config)
+}
+
+async function recoverInterruptedDocuments(options: { before: string }) {
+  const config = loadConfig()
+  const before = parseDate(options.before, "before")
+  if (before > new Date()) {
+    throw new InvalidJobInput("before must not be in the future")
+  }
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: "recover-interrupted",
+        scope: { before: before.toISOString() },
+        source: "documents"
+      },
+      async () => {
+        const requeued = await requeueInterruptedDocuments(database, before)
         return { counts: createJobCounts({ discovered: requeued, updated: requeued }), failures: [] }
       }
     )

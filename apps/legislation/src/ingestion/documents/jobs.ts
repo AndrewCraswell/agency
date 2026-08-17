@@ -30,6 +30,19 @@ export async function requeueFailedDocuments(database: LegislationDatabase): Pro
   return result.rows[0]?.requeued ?? 0
 }
 
+export async function requeueInterruptedDocuments(database: LegislationDatabase, before: Date): Promise<number> {
+  const result = await database.execute<{ requeued: number }>(sql`
+    with requeued as (
+      update legislation.bill_documents
+      set processing_error = null, processing_status = 'pending', updated_at = now()
+      where processing_status = 'processing' and last_attempt_at < ${before}
+      returning id
+    )
+    select count(*)::int as requeued from requeued
+  `)
+  return result.rows[0]?.requeued ?? 0
+}
+
 export async function processPendingDocuments(
   database: LegislationDatabase,
   options: Readonly<{
