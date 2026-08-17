@@ -226,6 +226,8 @@ program
   .option("--material-id <id>", "limit supporting-material section work to one material")
   .option("--all", "continue until every missing bill and section embedding is created")
   .option("--limit <number>", "maximum records per kind", "64")
+  .option("--shard-count <number>", "number of disjoint embedding workers", "1")
+  .option("--shard-index <number>", "zero-based embedding worker index", "0")
   .action(runEmbeddings)
 
 program
@@ -1269,6 +1271,8 @@ async function runEmbeddings(options: {
   documentId?: string
   limit: string
   materialId?: string
+  shardCount: string
+  shardIndex: string
 }) {
   const config = loadConfig()
   if (config.model.apiKey === undefined) {
@@ -1281,21 +1285,42 @@ async function runEmbeddings(options: {
     timeoutMs: config.ingestion.requestTimeoutMs
   })
   const limit = parseInteger(options.limit, "limit")
+  const shardCount = parseInteger(options.shardCount, "shard count")
+  const shardIndex = Number(options.shardIndex)
+  if (!Number.isSafeInteger(shardIndex) || shardIndex < 0 || shardIndex >= shardCount) {
+    throw new InvalidJobInput("shard index must be a zero-based integer smaller than shard count")
+  }
+  if (
+    shardCount > 1 &&
+    (options.all !== true ||
+      options.billId !== undefined ||
+      options.documentId !== undefined ||
+      options.materialId !== undefined)
+  ) {
+    throw new InvalidJobInput("embedding sharding requires --all and cannot be combined with targeted IDs")
+  }
   const telemetry = createTelemetry(config)
+  const logger = createCommandLogger(config)
   await withDatabase(async (database) => {
     try {
       const result = await runIngestionJob(
         database,
-        { ...jobExecutionContext(), operation: "refresh-embeddings", scope: { limit }, source: "openrouter" },
+        {
+          ...jobExecutionContext(),
+          operation: "refresh-embeddings",
+          scope: { limit, shardCount, shardIndex },
+          source: "openrouter"
+        },
         async () => {
           let embedded = 0
+          let batches = 0
           let skipped = 0
           let hasMoreEmbeddings = true
           do {
             const bills = await telemetry.observe(
               "embedding.bills",
               { batchLimit: limit, model: config.model.embeddingModel },
-              () => embedBills(database, client, { billId: options.billId, limit })
+              () => embedBills(database, client, { billId: options.billId, limit, shardCount, shardIndex })
             )
             const sections = await telemetry.observe(
               "embedding.sections",
@@ -1304,18 +1329,30 @@ async function runEmbeddings(options: {
                 embedDocumentSections(database, client, {
                   billId: options.billId,
                   documentId: options.documentId,
-                  limit
+                  limit,
+                  shardCount,
+                  shardIndex
                 })
             )
             const materials = await telemetry.observe(
               "embedding.supporting_material_sections",
               { batchLimit: limit, model: config.model.embeddingModel },
-              () => embedSupportingMaterialSections(database, client, { limit, materialId: options.materialId })
+              () =>
+                embedSupportingMaterialSections(database, client, {
+                  limit,
+                  materialId: options.materialId,
+                  shardCount,
+                  shardIndex
+                })
             )
             embedded += bills.embedded + sections.embedded + materials.embedded
             skipped += bills.skipped + sections.skipped + materials.skipped
+            batches += 1
             hasMoreEmbeddings =
               options.all === true && (bills.embedded > 0 || sections.embedded > 0 || materials.embedded > 0)
+            if (batches % 10 === 0 || !hasMoreEmbeddings) {
+              logger.info("embedding progress", { batches, embedded, shardCount, shardIndex, skipped })
+            }
           } while (hasMoreEmbeddings)
           return {
             counts: createJobCounts({

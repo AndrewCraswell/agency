@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { and, asc, eq, sql } from "drizzle-orm"
+import { and, asc, eq, sql, type SQLWrapper } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
 import {
   billDocuments,
@@ -19,6 +19,17 @@ export interface EmbeddingJobResult {
   skipped: number
 }
 
+interface EmbeddingSelection {
+  shardCount?: number
+  shardIndex?: number
+}
+
+function shard(column: SQLWrapper, options: EmbeddingSelection) {
+  const count = options.shardCount ?? 1
+  const index = options.shardIndex ?? 0
+  return count === 1 ? undefined : sql`((hashtextextended(${column}, 0) % ${count}) + ${count}) % ${count} = ${index}`
+}
+
 function searchableBillText(bill: { subjects: string[]; summary: null | string; title: string }): string {
   return [bill.title, bill.summary, ...bill.subjects].filter((value): value is string => value !== null).join("\n")
 }
@@ -34,7 +45,7 @@ function inputHash(input: string): string {
 export async function embedBills(
   database: LegislationDatabase,
   client: EmbeddingClient,
-  options: { billId?: string; limit?: number } = {}
+  options: { billId?: string; limit?: number; shardCount?: number; shardIndex?: number } = {}
 ): Promise<EmbeddingJobResult> {
   const limit = options.limit ?? 64
   const records = await database
@@ -46,7 +57,7 @@ export async function embedBills(
       title: bills.title
     })
     .from(bills)
-    .where(options.billId === undefined ? undefined : eq(bills.id, options.billId))
+    .where(and(options.billId === undefined ? undefined : eq(bills.id, options.billId), shard(bills.id, options)))
     .orderBy(sql`${bills.embeddingInputHash} is null desc`, asc(bills.id))
     .limit(limit)
   const candidates = records
@@ -79,7 +90,13 @@ export async function embedBills(
 export async function embedDocumentSections(
   database: LegislationDatabase,
   client: EmbeddingClient,
-  options: { billId?: string; documentId?: string; limit?: number } = {}
+  options: {
+    billId?: string
+    documentId?: string
+    limit?: number
+    shardCount?: number
+    shardIndex?: number
+  } = {}
 ): Promise<EmbeddingJobResult> {
   const limit = options.limit ?? 64
   const records = await database
@@ -95,7 +112,8 @@ export async function embedDocumentSections(
     .where(
       and(
         options.documentId === undefined ? undefined : eq(documentSections.documentId, options.documentId),
-        options.billId === undefined ? undefined : eq(billDocuments.billId, options.billId)
+        options.billId === undefined ? undefined : eq(billDocuments.billId, options.billId),
+        shard(documentSections.id, options)
       )
     )
     .orderBy(sql`${documentSections.embeddingInputHash} is null desc`, asc(documentSections.id))
@@ -130,7 +148,7 @@ export async function embedDocumentSections(
 export async function embedSupportingMaterialSections(
   database: LegislationDatabase,
   client: EmbeddingClient,
-  options: { materialId?: string; limit?: number } = {}
+  options: { limit?: number; materialId?: string; shardCount?: number; shardIndex?: number } = {}
 ): Promise<EmbeddingJobResult> {
   const limit = options.limit ?? 64
   const records = await database
@@ -143,7 +161,12 @@ export async function embedSupportingMaterialSections(
     })
     .from(supportingMaterialSections)
     .innerJoin(supportingMaterials, eq(supportingMaterialSections.materialId, supportingMaterials.id))
-    .where(options.materialId === undefined ? undefined : eq(supportingMaterialSections.materialId, options.materialId))
+    .where(
+      and(
+        options.materialId === undefined ? undefined : eq(supportingMaterialSections.materialId, options.materialId),
+        shard(supportingMaterialSections.id, options)
+      )
+    )
     .orderBy(sql`${supportingMaterialSections.embeddingInputHash} is null desc`, asc(supportingMaterialSections.id))
     .limit(limit)
   const candidates = records
