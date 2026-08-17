@@ -19,6 +19,7 @@
     "check:types": "tsc --noEmit",
     "check:unused": "knip --directory ../.. --workspace apps/legislation",
     "cli": "tsx src/cli/main.ts",
+    "corpus:evidence": "tsx scripts/audit-corpus-evidence.ts",
     "db:check": "drizzle-kit check --config=drizzle.config.ts",
     "db:down": "docker compose -f infra/local/compose.yaml down",
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
