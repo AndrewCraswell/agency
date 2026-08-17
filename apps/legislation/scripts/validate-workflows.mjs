@@ -3,8 +3,8 @@ import { resolve } from "node:path"
 
 const directory = resolve("workflows")
 const files = (await readdir(directory)).filter((file) => file.endsWith(".json")).sort()
-if (files.length !== 6) {
-  throw new Error(`Expected six exported workflows, found ${files.length}`)
+if (files.length !== 9) {
+  throw new Error(`Expected nine exported workflows, found ${files.length}`)
 }
 
 const workflowIds = new Set()
@@ -52,7 +52,7 @@ for (const file of files) {
   if (environment.get("DATABASE_URL")?.secretRef !== "database-url") {
     throw new Error(`${file} must reference the configured database-url secret`)
   }
-  if (file === "congress-sync.json" && environment.get("CONGRESS_API_KEY")?.secretRef !== "congress-api-key") {
+  if (file.startsWith("congress-") && environment.get("CONGRESS_API_KEY")?.secretRef !== "congress-api-key") {
     throw new Error(`${file} must reference the configured Congress API secret`)
   }
   if (file === "embedding-refresh.json" && environment.get("OPENROUTER_API_KEY")?.secretRef !== "openrouter-api-key") {

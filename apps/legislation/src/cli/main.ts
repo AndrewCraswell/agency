@@ -160,6 +160,7 @@ program
   .description("Synchronize federal amendments, actions, sponsors, related bills, and available text")
   .option("--end-congress <number>")
   .option("--limit <number>", "maximum amendments per Congress")
+  .option("--restart", "restart each configured Congress from its first amendment")
   .option("--start-congress <number>")
   .action(syncCongressAmendmentData)
 
@@ -169,6 +170,7 @@ program
   .option("--domain <domain>", "meetings, hearings, or both", "both")
   .option("--end-congress <number>")
   .option("--limit <number>", "maximum records per domain and Congress")
+  .option("--restart", "restart each domain and Congress from its first record")
   .option("--start-congress <number>")
   .action(syncCongressEventData)
 
@@ -177,6 +179,7 @@ program
   .description("Synchronize House roll-call votes and member positions")
   .option("--end-congress <number>")
   .option("--limit <number>", "maximum votes per session and Congress")
+  .option("--restart", "restart each session and Congress from its first vote")
   .option("--session <number>", "limit to session 1 or 2")
   .option("--start-congress <number>")
   .action(syncCongressHouseVoteData)
@@ -886,7 +889,12 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
   createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "congress" })
 }
 
-async function syncCongressAmendmentData(options: { endCongress?: string; limit?: string; startCongress?: string }) {
+async function syncCongressAmendmentData(options: {
+  endCongress?: string
+  limit?: string
+  restart?: boolean
+  startCongress?: string
+}) {
   const config = loadConfig()
   if (config.ingestion.congressApiKey === undefined) {
     throw new InvalidJobInput("CONGRESS_API_KEY is required for congress:amendments")
@@ -919,6 +927,7 @@ async function syncCongressAmendmentData(options: { endCongress?: string; limit?
         for (let congress = start; congress <= end; congress += 1) {
           const synchronized = await synchronizeCongressAmendments(database, client, congress, {
             limit,
+            restart: options.restart,
             sourceStore: createSourceStore(config, "federal")
           })
           for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
@@ -939,6 +948,7 @@ async function syncCongressEventData(options: {
   domain: string
   endCongress?: string
   limit?: string
+  restart?: boolean
   startCongress?: string
 }) {
   const config = loadConfig()
@@ -984,6 +994,7 @@ async function syncCongressEventData(options: {
           for (const domain of domains) {
             const synchronized = await synchronizeCongressEvents(database, client, congress, domain, {
               limit,
+              restart: options.restart,
               sourceStore: createSourceStore(config, "federal")
             })
             for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
@@ -1004,6 +1015,7 @@ async function syncCongressEventData(options: {
 async function syncCongressHouseVoteData(options: {
   endCongress?: string
   limit?: string
+  restart?: boolean
   session?: string
   startCongress?: string
 }) {
@@ -1044,6 +1056,7 @@ async function syncCongressHouseVoteData(options: {
           for (const session of sessions) {
             const synchronized = await synchronizeCongressHouseVotes(database, client, congress, session, {
               limit,
+              restart: options.restart,
               sourceStore: createSourceStore(config, "federal")
             })
             for (const key of Object.keys(counts) as Array<keyof typeof counts>) {

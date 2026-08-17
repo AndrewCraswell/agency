@@ -195,7 +195,7 @@ resource n8nBootstrap 'Microsoft.App/jobs@2024-03-01' = if (enableN8n) {
         command: ['/bin/sh']
         args: [
           '-c'
-          'n8n import:workflow --separate --input=/opt/legislation/workflows --activeState=false && n8n update:workflow --id=legislation-congress-sync --active=false && n8n update:workflow --id=legislation-coverage-report --active=false && n8n update:workflow --id=legislation-document-processing --active=false && n8n update:workflow --id=legislation-embedding-refresh --active=false && n8n update:workflow --id=legislation-govinfo-bootstrap --active=false && n8n update:workflow --id=legislation-openstates-refresh --active=false'
+          'n8n import:workflow --separate --input=/opt/legislation/workflows --activeState=false && n8n update:workflow --id=legislation-congress-sync --active=false && n8n update:workflow --id=legislation-congress-events-refresh --active=false && n8n update:workflow --id=legislation-congress-house-votes-refresh --active=false && n8n update:workflow --id=legislation-congress-amendments-refresh --active=false && n8n update:workflow --id=legislation-coverage-report --active=false && n8n update:workflow --id=legislation-document-processing --active=false && n8n update:workflow --id=legislation-embedding-refresh --active=false && n8n update:workflow --id=legislation-govinfo-bootstrap --active=false && n8n update:workflow --id=legislation-openstates-refresh --active=false'
         ]
         env: [
           { name: 'DB_TYPE', value: 'postgresdb' }

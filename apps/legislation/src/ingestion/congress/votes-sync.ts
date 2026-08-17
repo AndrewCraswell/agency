@@ -19,14 +19,15 @@ export async function synchronizeCongressHouseVotes(
   client: Pick<CongressClient, "getHouseVoteBundle" | "houseVotes">,
   congress: number,
   session: number,
-  options: Readonly<{ limit?: number; sourceStore?: SourceStore }> = {}
+  options: Readonly<{ limit?: number; restart?: boolean; sourceStore?: SourceStore }> = {}
 ): Promise<CongressHouseVoteSyncResult> {
   const stream = `house-votes-${congress}-${session}`
   const checkpoint = await database.query.syncCheckpoints.findFirst({
     where: and(eq(syncCheckpoints.source, "congress"), eq(syncCheckpoints.stream, stream))
   })
   const checkpointOffset = checkpoint?.cursor.nextOffset
-  const startOffset = typeof checkpointOffset === "number" && checkpointOffset >= 0 ? checkpointOffset : 0
+  const startOffset =
+    options.restart !== true && typeof checkpointOffset === "number" && checkpointOffset >= 0 ? checkpointOffset : 0
   const counts = createJobCounts()
   const failures: CongressHouseVoteSyncResult["failures"] = []
   let nextOffset = startOffset

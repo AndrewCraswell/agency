@@ -21,14 +21,15 @@ export async function synchronizeCongressEvents(
   client: Pick<CongressClient, "committeeMeetings" | "getCommitteeMeeting" | "getHearing" | "hearings">,
   congress: number,
   domain: CongressEventDomain,
-  options: Readonly<{ limit?: number; sourceStore?: SourceStore }> = {}
+  options: Readonly<{ limit?: number; restart?: boolean; sourceStore?: SourceStore }> = {}
 ): Promise<CongressEventSyncResult> {
   const stream = `${domain}-${congress}`
   const checkpoint = await database.query.syncCheckpoints.findFirst({
     where: and(eq(syncCheckpoints.source, "congress"), eq(syncCheckpoints.stream, stream))
   })
   const checkpointOffset = checkpoint?.cursor.nextOffset
-  const startOffset = typeof checkpointOffset === "number" && checkpointOffset >= 0 ? checkpointOffset : 0
+  const startOffset =
+    options.restart !== true && typeof checkpointOffset === "number" && checkpointOffset >= 0 ? checkpointOffset : 0
   const counts = createJobCounts()
   const failures: CongressEventSyncResult["failures"] = []
   let nextOffset = startOffset
