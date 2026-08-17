@@ -53,6 +53,9 @@ export function classifyDocumentFailure(error: unknown): DocumentFailureClassifi
   if (normalized.includes("unsupported document content type")) {
     return { category: "unsupported-format", message, retryable: false }
   }
+  if (normalized.includes("document response contains html instead of advertised pdf")) {
+    return { category: "download-transient", message, retryable: true }
+  }
   if (
     normalized.includes("invalid pdf structure") ||
     normalized.includes("image-only") ||

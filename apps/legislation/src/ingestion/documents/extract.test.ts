@@ -136,6 +136,10 @@ describe("legislative document extraction", () => {
       category: "malformed-document",
       retryable: false
     })
+    expect(classifyDocumentFailure("Document response contains HTML instead of advertised PDF")).toMatchObject({
+      category: "download-transient",
+      retryable: true
+    })
   })
 
   it("backs durable retries off exponentially with a fixed ceiling", () => {

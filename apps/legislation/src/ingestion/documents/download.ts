@@ -23,6 +23,9 @@ export function detectDocumentContentType(bytes: Uint8Array, declaredContentType
     prefix.startsWith("<head") ||
     prefix.startsWith("<body")
   ) {
+    if (declaredMediaType === "application/pdf") {
+      throw new Error("Document response contains HTML instead of advertised PDF")
+    }
     return "text/html"
   }
   if (prefix.startsWith("<?xml")) {

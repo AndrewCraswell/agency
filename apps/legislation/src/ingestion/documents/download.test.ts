@@ -65,9 +65,9 @@ describe("document downloads", () => {
       })
     )
 
-    await expect(downloadDocument("https://example.gov/bill.pdf", { fetch: fetcher })).resolves.toMatchObject({
-      contentType: "text/html"
-    })
+    await expect(downloadDocument("https://example.gov/bill.pdf", { fetch: fetcher })).rejects.toThrow(
+      "HTML instead of advertised PDF"
+    )
   })
 
   it("rejects unknown binary content after bounded sniffing", () => {
