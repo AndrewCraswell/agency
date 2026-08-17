@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
 import { supportingMaterials, supportingMaterialSections } from "../../db/schema/schema.js"
 import { extractDocument } from "./extract.js"
+import { boundedProcessingError } from "./process.js"
 
 export async function persistProcessedSupportingMaterial(
   database: LegislationDatabase,
@@ -59,6 +60,10 @@ export async function markSupportingMaterialProcessingFailure(
 ): Promise<void> {
   await database
     .update(supportingMaterials)
-    .set({ processingError: processingError?.slice(0, 1000), processingStatus: status, updatedAt: new Date() })
+    .set({
+      processingError: processingError === undefined ? undefined : boundedProcessingError(processingError),
+      processingStatus: status,
+      updatedAt: new Date()
+    })
     .where(eq(supportingMaterials.id, materialId))
 }

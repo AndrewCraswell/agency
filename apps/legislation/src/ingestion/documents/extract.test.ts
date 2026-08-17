@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
-import { extractDocument, MAX_DOCUMENT_BYTES, normalizeLegalText, segmentLegalText } from "./extract.js"
-import { isTerminalDocumentFailure } from "./process.js"
+import {
+  extractDocument,
+  MAX_DOCUMENT_BYTES,
+  normalizeLegalText,
+  sanitizeDatabaseText,
+  segmentLegalText
+} from "./extract.js"
+import { boundedProcessingError, isTerminalDocumentFailure } from "./process.js"
 
 const encoder = new TextEncoder()
 const textPdf = Buffer.from(
@@ -92,7 +98,7 @@ describe("legislative document extraction", () => {
   })
 
   it("normalizes whitespace and rejects empty, oversized, and unsupported documents", async () => {
-    expect(normalizeLegalText(" A\r\n\tB \n\n\n C ")).toBe("A\nB\n\nC")
+    expect(normalizeLegalText(" A\r\n\tB\u0000\u0002 C \n\n\n D ")).toBe("A\nB C\n\nD")
     await expect(extractDocument("document:empty", new Uint8Array(), "text/plain")).rejects.toThrow("empty")
     await expect(
       extractDocument("document:large", new Uint8Array(MAX_DOCUMENT_BYTES + 1), "text/plain")
@@ -107,5 +113,14 @@ describe("legislative document extraction", () => {
     expect(isTerminalDocumentFailure("Document exceeds the 26214400 byte limit")).toBe(true)
     expect(isTerminalDocumentFailure("Document produced no usable text")).toBe(true)
     expect(isTerminalDocumentFailure("Document download failed with HTTP 503")).toBe(false)
+  })
+
+  it("bounds processing errors to database-safe summaries", () => {
+    const message = boundedProcessingError(`failed\u0000\u0002\n${"x".repeat(2_000)}`)
+    expect(message).not.toContain("\u0000")
+    expect(message).not.toContain("\u0002")
+    expect(message).toHaveLength(1000)
+    expect(message).toMatch(/^failed x+/)
+    expect(sanitizeDatabaseText("legal\u007ftext")).toBe("legal text")
   })
 })

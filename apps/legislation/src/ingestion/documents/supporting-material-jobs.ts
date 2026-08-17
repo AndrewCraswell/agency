@@ -5,7 +5,7 @@ import { supportingMaterials } from "../../db/schema/schema.js"
 import { createJobCounts, mapConcurrent, type JobCounts } from "../job.js"
 import { artifactPath, type ArtifactStore } from "./artifact-store.js"
 import { downloadDocument } from "./download.js"
-import { isTerminalDocumentFailure } from "./process.js"
+import { boundedProcessingError, isTerminalDocumentFailure } from "./process.js"
 import {
   markSupportingMaterialProcessingFailure,
   persistProcessedSupportingMaterial
@@ -119,7 +119,9 @@ export async function processPendingSupportingMaterials(
         counts.updated += 1
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown supporting-material processing failure"
+      const message = boundedProcessingError(
+        error instanceof Error ? error.message : "Unknown supporting-material processing failure"
+      )
       const unsupported = isTerminalDocumentFailure(message)
       await markSupportingMaterialProcessingFailure(
         database,

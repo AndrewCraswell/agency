@@ -28,8 +28,17 @@ function hash(value: string | Uint8Array): string {
   return createHash("sha256").update(value).digest("hex")
 }
 
+export function sanitizeDatabaseText(value: string): string {
+  let sanitized = ""
+  for (const character of value) {
+    const code = character.charCodeAt(0)
+    sanitized += code <= 8 || (code >= 11 && code <= 12) || (code >= 14 && code <= 31) || code === 127 ? " " : character
+  }
+  return sanitized
+}
+
 export function normalizeLegalText(value: string): string {
-  return value
+  return sanitizeDatabaseText(value)
     .normalize("NFC")
     .replaceAll("\r\n", "\n")
     .replaceAll("\r", "\n")

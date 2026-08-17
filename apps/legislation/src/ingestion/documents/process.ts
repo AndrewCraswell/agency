@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
 import { billDocuments, documentSections } from "../../db/schema/schema.js"
-import { extractDocument } from "./extract.js"
+import { extractDocument, sanitizeDatabaseText } from "./extract.js"
 
 export function isTerminalDocumentFailure(message: string): boolean {
   return [
@@ -12,6 +12,10 @@ export function isTerminalDocumentFailure(message: string): boolean {
     "Unsupported",
     "image-only"
   ].some((marker) => message.includes(marker))
+}
+
+export function boundedProcessingError(value: string): string {
+  return sanitizeDatabaseText(value).replaceAll(/\s+/g, " ").trim().slice(0, 1000)
 }
 
 export async function persistProcessedDocument(
@@ -68,6 +72,10 @@ export async function markDocumentProcessingFailure(
 ): Promise<void> {
   await database
     .update(billDocuments)
-    .set({ processingError: processingError?.slice(0, 1000), processingStatus: status, updatedAt: new Date() })
+    .set({
+      processingError: processingError === undefined ? undefined : boundedProcessingError(processingError),
+      processingStatus: status,
+      updatedAt: new Date()
+    })
     .where(eq(billDocuments.id, documentId))
 }
