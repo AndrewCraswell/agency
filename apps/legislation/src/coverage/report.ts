@@ -291,9 +291,9 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       deleted: number
       events: number
       jurisdiction_id: string
-      latest_event_at: Date | null
-      latest_observed_at: Date | null
-      latest_source_updated_at: Date | null
+      latest_event_at: Date | string | null
+      latest_observed_at: Date | string | null
+      latest_source_updated_at: Date | string | null
       upcoming_events: number
     }>(sql`
       select
@@ -412,9 +412,9 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       deleted: row.deleted,
       events: row.events,
       jurisdictionId: row.jurisdiction_id,
-      latestEventAt: row.latest_event_at?.toISOString(),
-      latestObservedAt: row.latest_observed_at?.toISOString(),
-      latestSourceUpdatedAt: row.latest_source_updated_at?.toISOString(),
+      latestEventAt: timestamp(row.latest_event_at),
+      latestObservedAt: timestamp(row.latest_observed_at),
+      latestSourceUpdatedAt: timestamp(row.latest_source_updated_at),
       upcomingEvents: row.upcoming_events
     })),
     generatedAt: new Date().toISOString(),
@@ -447,6 +447,10 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
 
 function countBySession(rows: Array<{ count: number; session_id: string }>): Map<string, number> {
   return new Map(rows.map((row) => [row.session_id, row.count]))
+}
+
+function timestamp(value: Date | string | null): string | undefined {
+  return value === null ? undefined : new Date(value).toISOString()
 }
 
 function coverageCount(database: LegislationDatabase, table: "bill_actions" | "bill_sponsors" | "bills" | "votes") {
