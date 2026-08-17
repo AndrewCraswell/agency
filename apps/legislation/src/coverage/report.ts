@@ -1,15 +1,11 @@
-import { eq, sql } from "drizzle-orm"
+import { sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
 import {
-  billActions,
   billDocuments,
   bills,
   documentSections,
   ingestionRuns,
-  jurisdictions,
-  legislativeSessions,
-  syncCheckpoints,
-  votes
+  syncCheckpoints
 } from "../db/schema/schema.js"
 
 export interface CoverageReport {
@@ -108,28 +104,59 @@ export function compareCoverageReports(previous: CoverageReport, current: Covera
 }
 
 export async function generateCoverageReport(database: LegislationDatabase): Promise<CoverageReport> {
-  const rows = await database
-    .select({
-      actions: sql<number>`count(distinct ${billActions.id})::int`,
-      bills: sql<number>`count(distinct ${bills.id})::int`,
-      documents: sql<number>`count(distinct ${billDocuments.id})::int`,
-      jurisdictionId: jurisdictions.id,
-      jurisdictionType: jurisdictions.classification,
-      processedDocuments: sql<number>`count(distinct ${billDocuments.id}) filter (where ${billDocuments.processingStatus} = 'processed')::int`,
-      sections: sql<number>`count(distinct ${documentSections.id})::int`,
-      sessionId: legislativeSessions.id,
-      sessionIdentifier: legislativeSessions.identifier,
-      votes: sql<number>`count(distinct ${votes.id})::int`
-    })
-    .from(legislativeSessions)
-    .innerJoin(jurisdictions, eq(jurisdictions.id, legislativeSessions.jurisdictionId))
-    .leftJoin(bills, eq(bills.sessionId, legislativeSessions.id))
-    .leftJoin(billActions, eq(billActions.billId, bills.id))
-    .leftJoin(votes, eq(votes.billId, bills.id))
-    .leftJoin(billDocuments, eq(billDocuments.billId, bills.id))
-    .leftJoin(documentSections, eq(documentSections.documentId, billDocuments.id))
-    .groupBy(jurisdictions.id, jurisdictions.classification, legislativeSessions.id, legislativeSessions.identifier)
-    .orderBy(jurisdictions.id, legislativeSessions.identifier)
+  const sessions = await database.execute<{
+    jurisdiction_id: string
+    jurisdiction_type: string
+    session_id: string
+    session_identifier: string
+  }>(sql`
+    select
+      jurisdictions.id as jurisdiction_id,
+      jurisdictions.classification as jurisdiction_type,
+      sessions.id as session_id,
+      sessions.identifier as session_identifier
+    from legislation.legislative_sessions sessions
+    join legislation.jurisdictions jurisdictions on jurisdictions.id = sessions.jurisdiction_id
+    order by jurisdictions.id, sessions.identifier
+  `)
+  // Run the full-table aggregates sequentially so reporting does not contend with ingestion on the development database.
+  const billCounts = await coverageCount(database, "bills")
+  const actionCounts = await coverageCount(database, "bill_actions")
+  const voteCounts = await coverageCount(database, "votes")
+  const documentCounts = await database.execute<{ count: number; processed: number; session_id: string }>(sql`
+    select
+      bills.session_id,
+      count(*)::int as count,
+      count(*) filter (where documents.processing_status = 'processed')::int as processed
+    from legislation.bill_documents documents
+    join legislation.bills bills on bills.id = documents.bill_id
+    group by bills.session_id
+  `)
+  const sectionCounts = await database.execute<{ count: number; session_id: string }>(sql`
+    select bills.session_id, count(*)::int as count
+    from legislation.document_sections sections
+    join legislation.bill_documents documents on documents.id = sections.document_id
+    join legislation.bills bills on bills.id = documents.bill_id
+    group by bills.session_id
+  `)
+  const billsBySession = countBySession(billCounts.rows)
+  const actionsBySession = countBySession(actionCounts.rows)
+  const votesBySession = countBySession(voteCounts.rows)
+  const documentsBySession = countBySession(documentCounts.rows)
+  const processedBySession = new Map(documentCounts.rows.map((row) => [row.session_id, row.processed]))
+  const sectionsBySession = countBySession(sectionCounts.rows)
+  const rows = sessions.rows.map((session) => ({
+    actions: actionsBySession.get(session.session_id) ?? 0,
+    bills: billsBySession.get(session.session_id) ?? 0,
+    documents: documentsBySession.get(session.session_id) ?? 0,
+    jurisdictionId: session.jurisdiction_id,
+    jurisdictionType: session.jurisdiction_type,
+    processedDocuments: processedBySession.get(session.session_id) ?? 0,
+    sections: sectionsBySession.get(session.session_id) ?? 0,
+    sessionId: session.session_id,
+    sessionIdentifier: session.session_identifier,
+    votes: votesBySession.get(session.session_id) ?? 0
+  }))
   const totals = rows.reduce(
     (result, row) => ({
       actions: result.actions + row.actions,
@@ -236,4 +263,23 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
     totals,
     version: 1
   }
+}
+
+function countBySession(rows: Array<{ count: number; session_id: string }>): Map<string, number> {
+  return new Map(rows.map((row) => [row.session_id, row.count]))
+}
+
+function coverageCount(database: LegislationDatabase, table: "bill_actions" | "bills" | "votes") {
+  if (table === "bills") {
+    return database.execute<{ count: number; session_id: string }>(sql`
+      select session_id, count(*)::int as count from legislation.bills group by session_id
+    `)
+  }
+  const identifier = sql.identifier(table)
+  return database.execute<{ count: number; session_id: string }>(sql`
+    select bills.session_id, count(*)::int as count
+    from legislation.${identifier} records
+    join legislation.bills bills on bills.id = records.bill_id
+    group by bills.session_id
+  `)
 }

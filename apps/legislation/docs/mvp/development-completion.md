@@ -14,11 +14,11 @@ logic, checkpoints, and retry decisions.
 
 ### Tasks
 
-- [ ] **D1.1** Reconcile the deployed n8n environment variables, managed identity, ingestion job resource ID, and
+- [x] **D1.1** Reconcile the deployed n8n environment variables, managed identity, ingestion job resource ID, and
   immutable application image reference with the checked-in deployment configuration.
-- [ ] **D1.2** Re-import the six checked-in workflows and verify that each stable workflow ID updates instead of creating
+- [x] **D1.2** Re-import the six checked-in workflows and verify that each stable workflow ID updates instead of creating
   duplicates.
-- [ ] **D1.3** Add bounded manual inputs for source range, jurisdiction, Congress, bill type, failed-record replay, force
+- [x] **D1.3** Add bounded manual inputs for source range, jurisdiction, Congress, bill type, failed-record replay, force
   refresh, and dry run where the underlying command supports them.
 - [ ] **D1.4** Implement the bootstrap sequence: source ingestion, pending-document processing, stale-embedding refresh,
   and final coverage reporting.
@@ -28,7 +28,7 @@ logic, checkpoints, and retry decisions.
   replay against disposable development data.
 - [ ] **D1.7** Run one bounded end-to-end orchestration and retain workflow execution links, job results, and the coverage
   report as evidence.
-- [ ] **D1.8** Keep schedules inactive until phases D2 and D3 pass; document the exact activation and pause procedure.
+- [x] **D1.8** Keep schedules inactive until phases D2 and D3 pass; document the exact activation and pause procedure.
 
 ### Exit gate
 
@@ -44,9 +44,9 @@ failure evidence.
 
 ### Open States tasks
 
-- [ ] **D2.1** Acquire the authenticated Open States session archive manifest programmatically and store the discovery
+- [x] **D2.1** Acquire the authenticated Open States session archive manifest programmatically and store the discovery
   result in Blob Storage.
-- [ ] **D2.2** Compare discovery with the policy set of all 50 states, Washington, D.C., and Puerto Rico from 2017 onward.
+- [x] **D2.2** Compare discovery with the policy set of all 50 states, Washington, D.C., and Puerto Rico from 2017 onward.
 - [ ] **D2.3** Run the restartable Open States import for every available in-policy archive with bounded concurrency.
 - [ ] **D2.4** Replay retryable archive and record failures, then classify the remaining failures as upstream gaps or
   implementation defects.
@@ -57,9 +57,9 @@ failure evidence.
 
 ### Federal tasks
 
-- [ ] **D2.7** Discover and retain the GovInfo BILLSTATUS package manifest for the 113th through 119th Congresses and the
+- [x] **D2.7** Discover and retain the GovInfo BILLSTATUS package manifest for the 113th through 119th Congresses and the
   configured bill types.
-- [ ] **D2.8** Run the restartable GovInfo bootstrap for all discovered packages and replay retryable failures.
+- [x] **D2.8** Run the restartable GovInfo bootstrap for all discovered packages and replay retryable failures.
 - [ ] **D2.9** Generate federal coverage by Congress, bill type, bill count, official version count, and failure category.
 - [ ] **D2.10** Compare a stratified federal sample with GovInfo metadata and official bill text.
 - [ ] **D2.11** Run Congress.gov incremental synchronization from the recorded checkpoint with the configured overlap

@@ -130,7 +130,9 @@ export function normalizeCongressBillBundle(input: unknown): CanonicalBillAggreg
     },
     people: [...uniqueMembers.values()].map((member) => ({
       id: personId("congress", member.bioguideId),
+      jurisdictionId: federalJurisdictionId,
       name: member.fullName,
+      sourceId: member.bioguideId,
       upstreamIds: { bioguide: member.bioguideId }
     })),
     relations: source.relatedBills.map((relation) => ({

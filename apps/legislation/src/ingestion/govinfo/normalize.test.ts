@@ -32,12 +32,16 @@ describe("GovInfo normalization", () => {
     expect(aggregate.people).toEqual([
       {
         id: "person:congress:e000001",
+        jurisdictionId: "jurisdiction:us",
         name: "Representative Example",
+        sourceId: "E000001",
         upstreamIds: { bioguide: "E000001" }
       },
       {
         id: "person:congress:e000002",
+        jurisdictionId: "jurisdiction:us",
         name: "Representative Second",
+        sourceId: "E000002",
         upstreamIds: { bioguide: "E000002" }
       }
     ])

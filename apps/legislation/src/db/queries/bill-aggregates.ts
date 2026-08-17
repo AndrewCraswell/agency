@@ -221,7 +221,10 @@ export async function upsertBillAggregates(
             jurisdictionId: sql`excluded.jurisdiction_id`,
             name: sql`excluded.name`,
             party: sql`excluded.party`,
+            sourceId: sql`excluded.source_id`,
+            sourceUpdatedAt: sql`excluded.source_updated_at`,
             sourceUrl: sql`excluded.source_url`,
+            isActive: sql`coalesce(excluded.is_active, ${people.isActive})`,
             updatedAt: new Date(),
             upstreamIds: sql`${people.upstreamIds} || excluded.upstream_ids`
           },

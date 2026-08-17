@@ -1,0 +1,1 @@
+ALTER TABLE "legislation"."vote_positions" ADD CONSTRAINT "vote_positions_normalized_option_check" CHECK ("legislation"."vote_positions"."option" in ('yes', 'no', 'absent', 'abstain', 'not-voting', 'present', 'proxy', 'paired', 'other'));

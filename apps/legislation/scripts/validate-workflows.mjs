@@ -18,6 +18,9 @@ for (const file of files) {
     throw new Error(`${file} duplicates workflow ID ${workflow.id}`)
   }
   workflowIds.add(workflow.id)
+  if (workflow.active !== false) {
+    throw new Error(`${file} must remain inactive until its bounded validation passes`)
+  }
   const start = workflow.nodes?.find((node) => node.id === "start")
   if (start?.parameters?.body === undefined || !start.parameters.body.startsWith("=")) {
     throw new Error(`${file} has no raw Azure job start body`)
@@ -33,6 +36,7 @@ for (const file of files) {
     "DATABASE_URL",
     "AZURE_STORAGE_ACCOUNT",
     "AZURE_CLIENT_ID",
+    "CORRELATION_ID",
     "WORKFLOW_EXECUTION_ID"
   ]) {
     if (!environment.has(name)) {
@@ -41,6 +45,9 @@ for (const file of files) {
   }
   if (environment.get("WORKFLOW_EXECUTION_ID")?.value !== "{{ $execution.id }}") {
     throw new Error(`${file} must propagate the n8n execution ID to the ingestion job`)
+  }
+  if (environment.get("CORRELATION_ID")?.value !== "{{ $workflow.id }}:{{ $execution.id }}") {
+    throw new Error(`${file} must propagate the stable workflow and execution correlation ID`)
   }
   if (environment.get("DATABASE_URL")?.secretRef !== "database-url") {
     throw new Error(`${file} must reference the configured database-url secret`)

@@ -111,6 +111,16 @@ export const openStatesJurisdictionNames: Readonly<Record<(typeof supportedOpenS
     wy: "Wyoming"
   }
 
+export function openStatesJurisdictionId(code: (typeof supportedOpenStatesJurisdictions)[number]): string {
+  let classification = "state"
+  if (code === "dc") {
+    classification = "district"
+  } else if (code === "pr") {
+    classification = "territory"
+  }
+  return `ocd-jurisdiction/country:us/${classification}:${code}/government`
+}
+
 function sessionStartYear(session: string): number | undefined {
   const match = /(?:^|\D)((?:19|20)\d{2})(?:\D|$)/.exec(session)
   return match?.[1] === undefined ? undefined : Number(match[1])

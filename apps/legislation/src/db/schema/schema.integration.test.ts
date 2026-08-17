@@ -121,7 +121,7 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       ordinal: 0
     })
     await database.insert(schema.votes).values({ billId, id: voteId, motion: "Passage", yesCount: 50 })
-    await database.insert(schema.votePositions).values({ option: "yes", personId, voteId })
+    await database.insert(schema.votePositions).values({ option: "yes", personId, sourceIdentity: personId, voteId })
     await database.insert(schema.billDocuments).values({
       billId,
       classification: "version",

@@ -7,9 +7,12 @@ import { loadConfig, type LegislationConfig } from "../config/config.js"
 import { compareCoverageReports, generateCoverageReport, isCoverageReport } from "../coverage/report.js"
 import { createDatabase, databasePoolSnapshot, type LegislationDatabase } from "../db/database.js"
 import { migrateDatabase } from "../db/migrate.js"
+import { replaceEntitySnapshot } from "../db/queries/entities.js"
+import { upsertEventSnapshots } from "../db/queries/events.js"
 import { isDatabaseReady, waitForDatabase } from "../db/readiness.js"
 import { decodeArchiveRecords, MAXIMUM_ARCHIVE_BYTES } from "../ingestion/archive.js"
 import { CongressClient } from "../ingestion/congress/client.js"
+import { normalizeCongressCommittees, normalizeCongressMembers } from "../ingestion/congress/entities.js"
 import { synchronizeCongress } from "../ingestion/congress/sync.js"
 import {
   AzureBlobArtifactStore,
@@ -21,11 +24,24 @@ import { embedBills, embedDocumentSections } from "../ingestion/embeddings/jobs.
 import { GovInfoClient } from "../ingestion/govinfo/client.js"
 import { importGovInfoPackages } from "../ingestion/govinfo/import.js"
 import { RetryingHttpClient } from "../ingestion/http-client.js"
-import { createJobCounts, JOB_EXIT_CODE, mapConcurrent, runIngestionJob, type JobResult } from "../ingestion/job.js"
+import {
+  createJobCounts,
+  JOB_EXIT_CODE,
+  mapConcurrent,
+  recoverInterruptedIngestionJob,
+  runIngestionJob,
+  type JobResult
+} from "../ingestion/job.js"
 import { OpenStatesClient } from "../ingestion/openstates/client.js"
-import { createOpenStatesCoverageManifest } from "../ingestion/openstates/coverage.js"
-import { openStatesJurisdictionNames, supportedOpenStatesJurisdictions } from "../ingestion/openstates/coverage.js"
+import {
+  createOpenStatesCoverageManifest,
+  openStatesJurisdictionId,
+  openStatesJurisdictionNames,
+  supportedOpenStatesJurisdictions
+} from "../ingestion/openstates/coverage.js"
 import { discoverOpenStatesArchives } from "../ingestion/openstates/discover.js"
+import { normalizeOpenStatesCommittees, normalizeOpenStatesPeople } from "../ingestion/openstates/entities.js"
+import { normalizeOpenStatesEvent } from "../ingestion/openstates/events.js"
 import { importOpenStatesRecords } from "../ingestion/openstates/import.js"
 import { parseOpenStatesManifest } from "../ingestion/openstates/manifest.js"
 import { ArtifactSourceStore, LocalSourceStore, type SourceStore } from "../ingestion/source-store.js"
@@ -39,8 +55,10 @@ import { validateCorpus } from "../validation/corpus.js"
 
 class InvalidJobInput extends Error {}
 
-function jobCorrelationId(): string {
-  return process.env.WORKFLOW_EXECUTION_ID?.trim() || randomUUID()
+function jobExecutionContext(): { correlationId: string; workflowExecutionId?: string } {
+  const workflowExecutionId = process.env.WORKFLOW_EXECUTION_ID?.trim() || undefined
+  const correlationId = process.env.CORRELATION_ID?.trim() || workflowExecutionId || randomUUID()
+  return workflowExecutionId === undefined ? { correlationId } : { correlationId, workflowExecutionId }
 }
 
 const program = new Command()
@@ -82,8 +100,33 @@ program
   .command("openstates:bootstrap")
   .description("Import all state archives in an Azure Blob manifest")
   .requiredOption("--manifest-blob <path>")
+  .option("--force", "restart matching archives from their first record")
   .option("--jurisdiction <code>")
   .action(bootstrapOpenStates)
+
+program
+  .command("openstates:entities")
+  .description("Synchronize current Open States people, terms, committees, and memberships")
+  .option("--jurisdiction <code>")
+  .action(syncOpenStatesEntities)
+
+program
+  .command("openstates:events")
+  .description("Synchronize a rolling Open States legislative event window")
+  .option("--from <iso-date-time>")
+  .option("--jurisdiction <code>")
+  .option("--to <iso-date-time>")
+  .action(syncOpenStatesEvents)
+
+program
+  .command("govinfo:discover")
+  .description("Discover and retain a GovInfo BILLSTATUS package manifest")
+  .option("--bill-types <types>", "comma-separated bill types", "hr,s,hjres,sjres,hconres,sconres,hres,sres")
+  .option("--blob-path <path>", "also store the manifest in the configured federal source container")
+  .option("--end-congress <number>")
+  .requiredOption("--output <path>")
+  .option("--start-congress <number>")
+  .action(discoverGovInfo)
 
 program
   .command("govinfo:import")
@@ -101,6 +144,13 @@ program
   .option("--from <iso-date-time>")
   .option("--to <iso-date-time>")
   .action(syncCongress)
+
+program
+  .command("congress:entities")
+  .description("Synchronize federal members, terms, committees, and subcommittees")
+  .option("--end-congress <number>")
+  .option("--start-congress <number>")
+  .action(syncCongressEntities)
 
 program
   .command("documents:process")
@@ -134,6 +184,14 @@ program
   .command("corpus:validate")
   .description("Run deterministic corpus integrity and completion checks")
   .action(validate)
+
+program
+  .command("jobs:recover")
+  .description("Release a bounded lease left by a confirmed interrupted job execution")
+  .requiredOption("--before <iso-date-time>")
+  .requiredOption("--operation <operation>")
+  .requiredOption("--source <source>")
+  .action(recoverJob)
 
 async function serve() {
   const config = loadConfig()
@@ -208,6 +266,31 @@ async function wait() {
   }
 }
 
+async function recoverJob(options: { before: string; operation: string; source: string }) {
+  const before = parseDate(options.before, "before")
+  if (before > new Date()) {
+    throw new InvalidJobInput("before must not be in the future")
+  }
+  await withDatabase(async (database) => {
+    const result = await recoverInterruptedIngestionJob(database, {
+      before,
+      operation: options.operation.trim(),
+      source: options.source.trim()
+    })
+    if (!result.releasedLease) {
+      throw new InvalidJobInput("no matching interrupted job lease was acquired before the cutoff")
+    }
+    process.stdout.write(
+      `${JSON.stringify({
+        before: before.toISOString(),
+        operation: options.operation.trim(),
+        recoveredRunIds: result.runIds,
+        source: options.source.trim()
+      })}\n`
+    )
+  })
+}
+
 async function discoverOpenStates(options: { indexUrl?: string; output: string; sinceYear: string }) {
   const config = loadConfig()
   const indexUrl =
@@ -255,7 +338,7 @@ async function importOpenStates(options: {
     const result = await runIngestionJob(
       database,
       {
-        correlationId: jobCorrelationId(),
+        ...jobExecutionContext(),
         operation: "historical-import",
         scope: { stream: options.stream },
         source: "openstates"
@@ -303,7 +386,7 @@ async function syncOpenStates(options: { from?: string; jurisdiction?: string })
     const result = await runIngestionJob(
       database,
       {
-        correlationId: jobCorrelationId(),
+        ...jobExecutionContext(),
         operation: "incremental-sync",
         scope: { from: from.toISOString(), jurisdictions },
         source: "openstates"
@@ -343,7 +426,166 @@ async function syncOpenStates(options: { from?: string; jurisdiction?: string })
   createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "openstates" })
 }
 
-async function bootstrapOpenStates(options: { jurisdiction?: string; manifestBlob: string }) {
+async function syncOpenStatesEntities(options: { jurisdiction?: string }) {
+  const config = loadConfig()
+  if (config.ingestion.openStatesApiKey === undefined) {
+    throw new InvalidJobInput("OPENSTATE_API_KEY is required for openstates:entities")
+  }
+  const requestedCode = options.jurisdiction?.trim().toLowerCase()
+  const jurisdictionCodes =
+    requestedCode === undefined
+      ? [...supportedOpenStatesJurisdictions]
+      : supportedOpenStatesJurisdictions.filter((code) => code === requestedCode)
+  if (jurisdictionCodes.length === 0) {
+    throw new InvalidJobInput(`unsupported Open States jurisdiction: ${options.jurisdiction}`)
+  }
+  const providerHttp = httpClient(config)
+  const client = new OpenStatesClient({
+    apiKey: config.ingestion.openStatesApiKey,
+    baseUrl: new URL(config.ingestion.openStatesApiUrl),
+    http: providerHttp
+  })
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: "current-entities",
+        scope: { jurisdictions: jurisdictionCodes },
+        source: "openstates"
+      },
+      async () => {
+        const counts = createJobCounts()
+        const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
+        for (const code of jurisdictionCodes) {
+          try {
+            const jurisdictionId = openStatesJurisdictionId(code)
+            const rawPeople: unknown[] = []
+            const rawCommittees: unknown[] = []
+            for await (const page of client.people({ jurisdictionId })) {
+              rawPeople.push(...page)
+            }
+            for await (const page of client.committees({ jurisdictionId })) {
+              rawCommittees.push(...page)
+            }
+            const normalizedPeople = normalizeOpenStatesPeople(rawPeople, { jurisdictionCode: code })
+            const normalizedCommittees = normalizeOpenStatesCommittees(rawCommittees, { jurisdictionCode: code })
+            const peopleById = new Map(
+              [...normalizedPeople.people, ...normalizedCommittees.people].map((person) => [person.id, person])
+            )
+            const termsById = new Map(
+              [...normalizedPeople.terms, ...normalizedCommittees.terms].map((term) => [term.id, term])
+            )
+            await replaceEntitySnapshot(database, `jurisdiction:${code}`, {
+              memberships: normalizedCommittees.memberships,
+              organizations: normalizedCommittees.organizations,
+              people: [...peopleById.values()],
+              terms: [...termsById.values()]
+            })
+            const records =
+              peopleById.size +
+              termsById.size +
+              normalizedCommittees.organizations.length +
+              normalizedCommittees.memberships.length
+            counts.discovered += records
+            counts.read += records
+            counts.updated += records
+          } catch (error) {
+            counts.failed += 1
+            failures.push({
+              identifier: code,
+              message: error instanceof Error ? error.message : "Unknown Open States entity synchronization failure",
+              retryable: true
+            })
+          }
+        }
+        return { counts, failures }
+      }
+    )
+    printJobResult(result)
+  }, config)
+  createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "openstates" })
+}
+
+async function syncOpenStatesEvents(options: { from?: string; jurisdiction?: string; to?: string }) {
+  const config = loadConfig()
+  if (config.ingestion.openStatesApiKey === undefined) {
+    throw new InvalidJobInput("OPENSTATE_API_KEY is required for openstates:events")
+  }
+  const from = options.from === undefined ? new Date(Date.now() - 30 * 86_400_000) : parseDate(options.from, "from")
+  const to = options.to === undefined ? new Date(Date.now() + 90 * 86_400_000) : parseDate(options.to, "to")
+  if (from >= to) {
+    throw new InvalidJobInput("event window start must precede its end")
+  }
+  const requestedCode = options.jurisdiction?.trim().toLowerCase()
+  const jurisdictionCodes =
+    requestedCode === undefined
+      ? [...supportedOpenStatesJurisdictions]
+      : supportedOpenStatesJurisdictions.filter((code) => code === requestedCode)
+  if (jurisdictionCodes.length === 0) {
+    throw new InvalidJobInput(`unsupported Open States jurisdiction: ${options.jurisdiction}`)
+  }
+  const providerHttp = httpClient(config)
+  const client = new OpenStatesClient({
+    apiKey: config.ingestion.openStatesApiKey,
+    baseUrl: new URL(config.ingestion.openStatesApiUrl),
+    http: providerHttp
+  })
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: "events-sync",
+        scope: { from: from.toISOString(), jurisdictions: jurisdictionCodes, to: to.toISOString() },
+        source: "openstates"
+      },
+      async () => {
+        const counts = createJobCounts()
+        const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
+        for (const code of jurisdictionCodes) {
+          try {
+            for await (const page of client.events({
+              from,
+              jurisdictionId: openStatesJurisdictionId(code),
+              to
+            })) {
+              counts.discovered += page.length
+              const snapshots = page.flatMap((record) => {
+                try {
+                  return [normalizeOpenStatesEvent(record, { jurisdictionCode: code })]
+                } catch (error) {
+                  counts.failed += 1
+                  failures.push({
+                    identifier: code,
+                    message: error instanceof Error ? error.message : "Unknown Open States event normalization failure",
+                    retryable: false
+                  })
+                  return []
+                }
+              })
+              await upsertEventSnapshots(database, snapshots)
+              counts.read += snapshots.length
+              counts.updated += snapshots.length
+            }
+          } catch (error) {
+            counts.failed += 1
+            failures.push({
+              identifier: code,
+              message: error instanceof Error ? error.message : "Unknown Open States event synchronization failure",
+              retryable: true
+            })
+          }
+        }
+        return { counts, failures }
+      }
+    )
+    printJobResult(result)
+  }, config)
+  createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "openstates" })
+}
+
+async function bootstrapOpenStates(options: { force?: boolean; jurisdiction?: string; manifestBlob: string }) {
   const config = loadConfig()
   const manifestBytes = await createArtifactStore(config, "state").read(options.manifestBlob)
   const manifest = parseOpenStatesManifest(new TextDecoder().decode(manifestBytes))
@@ -362,7 +604,7 @@ async function bootstrapOpenStates(options: { jurisdiction?: string; manifestBlo
     const result = await runIngestionJob(
       database,
       {
-        correlationId: jobCorrelationId(),
+        ...jobExecutionContext(),
         operation: "historical-import",
         scope: { archives: archives.length, jurisdiction: requestedCode },
         source: "openstates"
@@ -385,7 +627,7 @@ async function bootstrapOpenStates(options: { jurisdiction?: string; manifestBlo
                   openStatesJurisdictionNames[archive.jurisdictionCode as keyof typeof openStatesJurisdictionNames]
               },
               decodeArchiveRecords(content),
-              { batchSize: 96, concurrency: config.ingestion.concurrency, contentHash, stream }
+              { batchSize: 96, concurrency: config.ingestion.concurrency, contentHash, force: options.force, stream }
             )
           } catch (error) {
             return {
@@ -431,16 +673,7 @@ async function importGovInfo(options: {
   startCongress?: string
 }) {
   const config = loadConfig()
-  const start = parseInteger(options.startCongress ?? String(config.ingestion.federalStartCongress), "start Congress")
-  const end = parseInteger(options.endCongress ?? String(config.ingestion.federalEndCongress), "end Congress")
-  if (start > end) {
-    throw new InvalidJobInput("start Congress must not exceed end Congress")
-  }
-  const congresses = Array.from({ length: end - start + 1 }, (_, index) => start + index)
-  const billTypes = options.billTypes
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean)
+  const { billTypes, congresses, end, start } = parseGovInfoScope(options, config)
   const providerHttp = httpClient(config)
   const client = new GovInfoClient(providerHttp)
   const packages = await client.discover(congresses, billTypes)
@@ -448,7 +681,7 @@ async function importGovInfo(options: {
     const result = await runIngestionJob(
       database,
       {
-        correlationId: jobCorrelationId(),
+        ...jobExecutionContext(),
         operation: "historical-import",
         scope: { billTypes, end, start },
         source: "govinfo"
@@ -464,6 +697,68 @@ async function importGovInfo(options: {
     printJobResult(result)
   }, config)
   createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "govinfo" })
+}
+
+async function discoverGovInfo(options: {
+  billTypes: string
+  blobPath?: string
+  endCongress?: string
+  output: string
+  startCongress?: string
+}) {
+  const config = loadConfig()
+  const { billTypes, congresses, end, start } = parseGovInfoScope(options, config)
+  const providerHttp = httpClient(config)
+  const packages = await new GovInfoClient(providerHttp).discover(congresses, billTypes)
+  if (packages.length === 0) {
+    throw new InvalidJobInput("GovInfo discovery returned no BILLSTATUS packages")
+  }
+  const manifest = {
+    billTypes,
+    discoveredAt: new Date().toISOString(),
+    endCongress: end,
+    packages: packages.map((item) => ({
+      archiveEntry: item.archiveEntry,
+      archiveUrl: item.archiveUrl?.href,
+      billType: item.billType,
+      congress: item.congress,
+      packageId: item.packageId,
+      url: item.url.href
+    })),
+    source: "govinfo",
+    startCongress: start,
+    version: 1
+  } as const
+  const bytes = new TextEncoder().encode(`${JSON.stringify(manifest, null, 2)}\n`)
+  const output = resolve(options.output)
+  await mkdir(dirname(output), { recursive: true })
+  await writeFile(output, bytes)
+  const stored =
+    options.blobPath === undefined
+      ? undefined
+      : await createArtifactStore(config, "federal").put(options.blobPath, bytes)
+  process.stdout.write(`${JSON.stringify({ blobPath: options.blobPath, output, packages: packages.length, stored })}\n`)
+  createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "govinfo" })
+}
+
+function parseGovInfoScope(
+  options: { billTypes: string; endCongress?: string; startCongress?: string },
+  config: LegislationConfig
+) {
+  const start = parseInteger(options.startCongress ?? String(config.ingestion.federalStartCongress), "start Congress")
+  const end = parseInteger(options.endCongress ?? String(config.ingestion.federalEndCongress), "end Congress")
+  if (start > end) {
+    throw new InvalidJobInput("start Congress must not exceed end Congress")
+  }
+  const congresses = Array.from({ length: end - start + 1 }, (_, index) => start + index)
+  const billTypes = options.billTypes
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean)
+  if (billTypes.length === 0) {
+    throw new InvalidJobInput("at least one bill type is required")
+  }
+  return { billTypes, congresses, end, start }
 }
 
 async function syncCongress(options: { dryRun?: boolean; from?: string; to?: string }) {
@@ -482,7 +777,7 @@ async function syncCongress(options: { dryRun?: boolean; from?: string; to?: str
   await withDatabase(async (database) => {
     const result = await runIngestionJob(
       database,
-      { correlationId: jobCorrelationId(), operation: "incremental-sync", scope: { ...options }, source: "congress" },
+      { ...jobExecutionContext(), operation: "incremental-sync", scope: { ...options }, source: "congress" },
       async () =>
         synchronizeCongress(database, client, {
           dryRun: options.dryRun,
@@ -495,6 +790,71 @@ async function syncCongress(options: { dryRun?: boolean; from?: string; to?: str
     printJobResult(result)
   }, config)
   logger.info("provider request metrics", { ...providerHttp.metrics, source: "congress" })
+}
+
+async function syncCongressEntities(options: { endCongress?: string; startCongress?: string }) {
+  const config = loadConfig()
+  if (config.ingestion.congressApiKey === undefined) {
+    throw new InvalidJobInput("CONGRESS_API_KEY is required for congress:entities")
+  }
+  const start = parseInteger(options.startCongress ?? String(config.ingestion.federalStartCongress), "start Congress")
+  const end = parseInteger(options.endCongress ?? String(config.ingestion.federalEndCongress), "end Congress")
+  if (start > end) {
+    throw new InvalidJobInput("start Congress must not exceed end Congress")
+  }
+  const congresses = Array.from({ length: end - start + 1 }, (_value, index) => start + index)
+  const providerHttp = httpClient(config)
+  const client = new CongressClient({
+    apiKey: config.ingestion.congressApiKey,
+    baseUrl: new URL(config.ingestion.congressApiUrl),
+    http: providerHttp
+  })
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: "current-entities",
+        scope: { endCongress: end, startCongress: start },
+        source: "congress"
+      },
+      async () => {
+        const counts = createJobCounts()
+        const rawMembers: Array<{ congress: number; records: unknown[] }> = []
+        const rawCommittees: unknown[] = []
+        for (const congress of congresses) {
+          const members: unknown[] = []
+          for await (const page of client.members(congress)) {
+            members.push(...page)
+          }
+          rawMembers.push({ congress, records: members })
+          for await (const page of client.committees(congress)) {
+            rawCommittees.push(...page)
+          }
+        }
+        const memberSnapshots = rawMembers.map(({ congress, records }) => normalizeCongressMembers(records, congress))
+        const committeeSnapshot = normalizeCongressCommittees(rawCommittees)
+        const peopleById = new Map(
+          memberSnapshots.flatMap((snapshot) => snapshot.people).map((person) => [person.id, person])
+        )
+        const termsById = new Map(memberSnapshots.flatMap((snapshot) => snapshot.terms).map((term) => [term.id, term]))
+        const organizationsById = new Map(
+          committeeSnapshot.organizations.map((organization) => [organization.id, organization])
+        )
+        await replaceEntitySnapshot(database, "jurisdiction:us", {
+          memberships: [],
+          organizations: [...organizationsById.values()],
+          people: [...peopleById.values()],
+          terms: [...termsById.values()]
+        })
+        const records = peopleById.size + termsById.size + organizationsById.size
+        Object.assign(counts, { discovered: records, read: records, updated: records })
+        return { counts, failures: [] }
+      }
+    )
+    printJobResult(result)
+  }, config)
+  createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "congress" })
 }
 
 async function processDocuments(options: {
@@ -513,7 +873,7 @@ async function processDocuments(options: {
   await withDatabase(async (database) => {
     const result = await runIngestionJob(
       database,
-      { correlationId: jobCorrelationId(), operation: "process-documents", scope: { ...options }, source: "documents" },
+      { ...jobExecutionContext(), operation: "process-documents", scope: { ...options }, source: "documents" },
       async () => {
         const limit = parseInteger(options.limit, "limit")
         const counts = { ...createJobCounts(), processed: 0, unsupported: 0 }
@@ -568,7 +928,7 @@ async function runEmbeddings(options: { all?: boolean; billId?: string; document
     try {
       const result = await runIngestionJob(
         database,
-        { correlationId: jobCorrelationId(), operation: "refresh-embeddings", scope: { limit }, source: "openrouter" },
+        { ...jobExecutionContext(), operation: "refresh-embeddings", scope: { limit }, source: "openrouter" },
         async () => {
           let embedded = 0
           let skipped = 0

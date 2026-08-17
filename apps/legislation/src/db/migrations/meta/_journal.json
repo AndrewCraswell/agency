@@ -57,6 +57,48 @@
       "when": 1786877050368,
       "tag": "0007_silky_bloodaxe",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1786954948789,
+      "tag": "0008_outstanding_electro",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1786955402633,
+      "tag": "0009_sturdy_leo",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1786956692549,
+      "tag": "0010_daily_hydra",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1786957170669,
+      "tag": "0011_needy_the_watchers",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1786957247748,
+      "tag": "0012_foamy_gauntlet",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1786957392641,
+      "tag": "0013_free_nightcrawler",
+      "breakpoints": true
     }
   ]
 }

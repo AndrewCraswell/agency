@@ -22,9 +22,30 @@ const validationQueries = {
   selfRelations: sql`select count(*)::int as count from legislation.bill_relations where bill_id = related_bill_id`
 } as const
 
+const entityQualityQueries = {
+  ambiguousAmendments: sql`select count(*)::int as count from (select 1 from legislation.amendments group by jurisdiction_id, session_id, lower(printed_identifier) having count(*) > 1) duplicates`,
+  ambiguousOrganizationNames: sql`select count(*)::int as count from (select 1 from legislation.organizations group by jurisdiction_id, lower(name) having count(*) > 1) duplicates`,
+  impossibleMembershipDates: sql`select count(*)::int as count from legislation.organization_memberships where start_date is not null and end_date is not null and start_date > end_date`,
+  impossibleTermDates: sql`select count(*)::int as count from legislation.legislative_terms where start_date is not null and end_date is not null and start_date > end_date`,
+  missingActiveTermDistricts: sql`select count(*)::int as count from legislation.legislative_terms where is_active is true and district is null`,
+  materialsWithoutLinks: sql`select count(*)::int as count from legislation.supporting_materials material where not exists (select 1 from legislation.supporting_material_links link where link.material_id = material.id)`,
+  membershipsWithoutDates: sql`select count(*)::int as count from legislation.organization_memberships where start_date is null and end_date is null`,
+  overlappingTerms: sql`select count(*)::int as count from legislation.legislative_terms left_term join legislation.legislative_terms right_term on left_term.person_id = right_term.person_id and left_term.id < right_term.id where left_term.start_date is not null and right_term.start_date is not null and coalesce(left_term.end_date, 'infinity'::date) >= right_term.start_date and coalesce(right_term.end_date, 'infinity'::date) >= left_term.start_date`,
+  processedMaterialsWithoutText: sql`select count(*)::int as count from legislation.supporting_materials where processing_status = 'processed' and (text is null or btrim(text) = '')`,
+  unlinkedBillCommittees: sql`select count(*)::int as count from legislation.bills bill cross join lateral unnest(bill.committees) committee(name) where not exists (select 1 from legislation.organizations organization where organization.jurisdiction_id = bill.jurisdiction_id and lower(organization.name) = lower(committee.name))`,
+  unlinkedSponsors: sql`select count(*)::int as count from legislation.bill_sponsors where person_id is null`,
+  unsupportedSupportingMaterials: sql`select count(*)::int as count from legislation.supporting_materials where processing_status = 'unsupported'`,
+  votePositionTotalMismatches: sql`select count(*)::int as count from legislation.votes vote where exists (select 1 from legislation.vote_positions position where position.vote_id = vote.id) and coalesce(vote.yes_count, 0) + coalesce(vote.no_count, 0) + coalesce(vote.other_count, 0) <> (select count(*) from legislation.vote_positions position where position.vote_id = vote.id)`,
+  votesWithoutPositions: sql`select count(*)::int as count from legislation.votes vote where coalesce(vote.yes_count, 0) + coalesce(vote.no_count, 0) + coalesce(vote.other_count, 0) > 0 and not exists (select 1 from legislation.vote_positions position where position.vote_id = vote.id)`
+} as const
+
 export async function validateCorpus(database: LegislationDatabase): Promise<CorpusValidationReport> {
   const metrics: Record<string, number> = {}
   for (const [name, query] of Object.entries(validationQueries)) {
+    const result = await database.execute<{ count: number }>(query)
+    metrics[name] = result.rows[0]?.count ?? 0
+  }
+  for (const [name, query] of Object.entries(entityQualityQueries)) {
     const result = await database.execute<{ count: number }>(query)
     metrics[name] = result.rows[0]?.count ?? 0
   }

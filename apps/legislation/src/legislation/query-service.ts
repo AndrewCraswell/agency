@@ -1,13 +1,27 @@
-import { and, asc, eq, inArray } from "drizzle-orm"
+import { and, asc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
 import {
+  amendmentActions,
+  amendments,
   billActions,
   billDocuments,
   billRelations,
   billSponsors,
   bills,
+  calendarEntries,
   documentSections,
+  eventAgendaItems,
+  eventBills,
+  eventDocuments,
+  eventParticipants,
+  legislativeEvents,
+  legislativeTerms,
+  organizationMemberships,
+  organizations,
   people,
+  supportingMaterialLinks,
+  supportingMaterials,
+  votePositions,
   votes
 } from "../db/schema/schema.js"
 import type { PassageSearchInput, SearchInput } from "../search/search.js"
@@ -38,6 +52,57 @@ export interface BillLookup {
 export interface VersionComparisonInput {
   billId: string
   documentIds: [string, string]
+}
+
+export interface EntityLookup {
+  cursor?: string
+  id: string
+  limit?: number
+}
+
+export interface MembershipLookup {
+  cursor?: string
+  limit?: number
+  organizationId?: string
+  personId?: string
+}
+
+export interface EventSearchInput {
+  cursor?: string
+  from?: Date
+  jurisdictionId?: string
+  limit?: number
+  organizationId?: string
+  to?: Date
+}
+
+export interface VoteSearchInput {
+  billId?: string
+  cursor?: string
+  from?: Date
+  limit?: number
+  organizationId?: string
+  personId?: string
+}
+
+export interface AmendmentSearchInput {
+  billId?: string
+  cursor?: string
+  jurisdictionId?: string
+  limit?: number
+  query?: string
+  sponsorPersonId?: string
+}
+
+export interface SupportingMaterialSearchInput {
+  amendmentId?: string
+  billId?: string
+  classification?: string
+  cursor?: string
+  eventId?: string
+  jurisdictionId?: string
+  limit?: number
+  query?: string
 }
 
 interface FusedBillResult {
@@ -97,6 +162,366 @@ export class LegislationQueryService {
   constructor(database: LegislationDatabase, embeddingClient?: QueryEmbeddingClient) {
     this.#database = database
     this.#embeddingClient = embeddingClient
+  }
+
+  async getPerson(lookup: EntityLookup) {
+    const person = await this.#database.select().from(people).where(eq(people.id, lookup.id)).limit(1)
+    if (person[0] === undefined) {
+      throw new LegislationError("not_found", `Person ${lookup.id} was not found`)
+    }
+    const [terms, memberships, sponsoredBills] = await Promise.all([
+      this.#database
+        .select()
+        .from(legislativeTerms)
+        .where(eq(legislativeTerms.personId, lookup.id))
+        .orderBy(asc(legislativeTerms.startDate), asc(legislativeTerms.id)),
+      this.getMemberships({ limit: lookup.limit, personId: lookup.id }),
+      this.getSponsoredBills({ ...lookup, id: lookup.id })
+    ])
+    return { memberships, person: person[0], sponsoredBills, terms }
+  }
+
+  async getOrganization(lookup: EntityLookup) {
+    const organization = await this.#database
+      .select()
+      .from(organizations)
+      .where(eq(organizations.id, lookup.id))
+      .limit(1)
+    if (organization[0] === undefined) {
+      throw new LegislationError("not_found", `Organization ${lookup.id} was not found`)
+    }
+    const [children, memberships, billActivity] = await Promise.all([
+      this.#database
+        .select()
+        .from(organizations)
+        .where(eq(organizations.parentOrganizationId, lookup.id))
+        .orderBy(asc(organizations.name)),
+      this.getMemberships({ limit: lookup.limit, organizationId: lookup.id }),
+      this.getCommitteeBillActivity(lookup)
+    ])
+    return { billActivity, children, memberships, organization: organization[0] }
+  }
+
+  async getMemberships(input: MembershipLookup) {
+    if (input.organizationId === undefined && input.personId === undefined) {
+      throw new LegislationError("invalid_request", "Select a person or organization for membership lookup")
+    }
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const rows = await this.#database
+      .select({ membership: organizationMemberships, organization: organizations, person: people })
+      .from(organizationMemberships)
+      .innerJoin(organizations, eq(organizationMemberships.organizationId, organizations.id))
+      .innerJoin(people, eq(organizationMemberships.personId, people.id))
+      .where(
+        and(
+          input.organizationId === undefined
+            ? undefined
+            : eq(organizationMemberships.organizationId, input.organizationId),
+          input.personId === undefined ? undefined : eq(organizationMemberships.personId, input.personId)
+        )
+      )
+      .orderBy(asc(organizations.name), asc(people.name), asc(organizationMemberships.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated
+    }
+  }
+
+  async getSponsoredBills(lookup: EntityLookup) {
+    const limit = Math.min(Math.max(lookup.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(lookup.cursor)
+    const rows = await this.#database
+      .select({ bill: bills, sponsorship: billSponsors })
+      .from(billSponsors)
+      .innerJoin(bills, eq(billSponsors.billId, bills.id))
+      .where(eq(billSponsors.personId, lookup.id))
+      .orderBy(asc(bills.introducedAt), asc(bills.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated
+    }
+  }
+
+  async getCommitteeBillActivity(lookup: EntityLookup) {
+    const limit = Math.min(Math.max(lookup.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(lookup.cursor)
+    const organization = await this.#database
+      .select({ name: organizations.name })
+      .from(organizations)
+      .where(eq(organizations.id, lookup.id))
+      .limit(1)
+    if (organization[0] === undefined) {
+      throw new LegislationError("not_found", `Organization ${lookup.id} was not found`)
+    }
+    const rows = await this.#database
+      .select()
+      .from(bills)
+      .where(sql`${organization[0].name} = any(${bills.committees})`)
+      .orderBy(asc(bills.introducedAt), asc(bills.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated,
+      warnings: ["Bill activity uses bounded committee-name matching until source identifiers are linked"]
+    }
+  }
+
+  async searchEvents(input: EventSearchInput) {
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const rows = await this.#database
+      .selectDistinct({ event: legislativeEvents })
+      .from(legislativeEvents)
+      .leftJoin(eventParticipants, eq(eventParticipants.eventId, legislativeEvents.id))
+      .where(
+        and(
+          input.jurisdictionId === undefined ? undefined : eq(legislativeEvents.jurisdictionId, input.jurisdictionId),
+          input.organizationId === undefined ? undefined : eq(eventParticipants.organizationId, input.organizationId),
+          input.from === undefined ? undefined : gte(legislativeEvents.startAt, input.from),
+          input.to === undefined ? undefined : lte(legislativeEvents.startAt, input.to)
+        )
+      )
+      .orderBy(asc(legislativeEvents.startAt), asc(legislativeEvents.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit).map((row) => row.event),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated
+    }
+  }
+
+  async getEvent(lookup: EntityLookup) {
+    const event = await this.#database
+      .select()
+      .from(legislativeEvents)
+      .where(eq(legislativeEvents.id, lookup.id))
+      .limit(1)
+    if (event[0] === undefined) {
+      throw new LegislationError("not_found", `Event ${lookup.id} was not found`)
+    }
+    const [agendaItems, documents, participants, relatedBills] = await Promise.all([
+      this.#database
+        .select()
+        .from(eventAgendaItems)
+        .where(eq(eventAgendaItems.eventId, lookup.id))
+        .orderBy(asc(eventAgendaItems.ordinal)),
+      this.#database
+        .select()
+        .from(eventDocuments)
+        .where(eq(eventDocuments.eventId, lookup.id))
+        .orderBy(asc(eventDocuments.id)),
+      this.#database
+        .select({ participant: eventParticipants, organization: organizations, person: people })
+        .from(eventParticipants)
+        .leftJoin(organizations, eq(eventParticipants.organizationId, organizations.id))
+        .leftJoin(people, eq(eventParticipants.personId, people.id))
+        .where(eq(eventParticipants.eventId, lookup.id))
+        .orderBy(asc(eventParticipants.id)),
+      this.#database
+        .select({ bill: bills, classification: eventBills.classification })
+        .from(eventBills)
+        .innerJoin(bills, eq(eventBills.billId, bills.id))
+        .where(eq(eventBills.eventId, lookup.id))
+        .orderBy(asc(bills.id))
+    ])
+    return { agendaItems, documents, event: event[0], participants, relatedBills }
+  }
+
+  async getBillSchedule(input: EventSearchInput & { billId: string }) {
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const rows = await this.#database
+      .select({ event: legislativeEvents })
+      .from(eventBills)
+      .innerJoin(legislativeEvents, eq(eventBills.eventId, legislativeEvents.id))
+      .where(
+        and(
+          eq(eventBills.billId, input.billId),
+          input.from === undefined ? undefined : gte(legislativeEvents.startAt, input.from),
+          input.to === undefined ? undefined : lte(legislativeEvents.startAt, input.to)
+        )
+      )
+      .orderBy(asc(legislativeEvents.startAt), asc(legislativeEvents.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit).map((row) => row.event),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated
+    }
+  }
+
+  async getCalendar(input: EventSearchInput) {
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const rows = await this.#database
+      .select()
+      .from(calendarEntries)
+      .where(
+        and(
+          input.jurisdictionId === undefined ? undefined : eq(calendarEntries.jurisdictionId, input.jurisdictionId),
+          input.organizationId === undefined ? undefined : eq(calendarEntries.organizationId, input.organizationId),
+          input.from === undefined ? undefined : gte(calendarEntries.startAt, input.from),
+          input.to === undefined ? undefined : lte(calendarEntries.startAt, input.to)
+        )
+      )
+      .orderBy(asc(calendarEntries.startAt), asc(calendarEntries.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated
+    }
+  }
+
+  async searchVotes(input: VoteSearchInput) {
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const rows = await this.#database
+      .selectDistinct({ vote: votes })
+      .from(votes)
+      .leftJoin(votePositions, eq(votePositions.voteId, votes.id))
+      .where(
+        and(
+          input.billId === undefined ? undefined : eq(votes.billId, input.billId),
+          input.organizationId === undefined ? undefined : eq(votes.organizationId, input.organizationId),
+          input.personId === undefined ? undefined : eq(votePositions.personId, input.personId),
+          input.from === undefined ? undefined : gte(votes.heldAt, input.from)
+        )
+      )
+      .orderBy(asc(votes.heldAt), asc(votes.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit).map((row) => row.vote),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated
+    }
+  }
+
+  async getVote(lookup: EntityLookup) {
+    const vote = await this.#database.select().from(votes).where(eq(votes.id, lookup.id)).limit(1)
+    if (vote[0] === undefined) {
+      throw new LegislationError("not_found", `Vote ${lookup.id} was not found`)
+    }
+    const positions = await this.#database
+      .select({ person: people, position: votePositions })
+      .from(votePositions)
+      .leftJoin(people, eq(votePositions.personId, people.id))
+      .where(eq(votePositions.voteId, lookup.id))
+      .orderBy(asc(votePositions.option), asc(votePositions.sourceIdentity))
+    return { positions, vote: vote[0] }
+  }
+
+  async searchAmendments(input: AmendmentSearchInput) {
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const rows = await this.#database
+      .select()
+      .from(amendments)
+      .where(
+        and(
+          input.billId === undefined ? undefined : eq(amendments.billId, input.billId),
+          input.jurisdictionId === undefined ? undefined : eq(amendments.jurisdictionId, input.jurisdictionId),
+          input.sponsorPersonId === undefined ? undefined : eq(amendments.sponsorPersonId, input.sponsorPersonId),
+          input.query === undefined
+            ? undefined
+            : sql`(${amendments.printedIdentifier} ilike ${`%${input.query}%`} or ${amendments.purpose} ilike ${`%${input.query}%`} or ${amendments.description} ilike ${`%${input.query}%`})`
+        )
+      )
+      .orderBy(asc(amendments.submittedDate), asc(amendments.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated
+    }
+  }
+
+  async getAmendment(lookup: EntityLookup) {
+    const amendment = await this.#database.select().from(amendments).where(eq(amendments.id, lookup.id)).limit(1)
+    if (amendment[0] === undefined) {
+      throw new LegislationError("not_found", `Amendment ${lookup.id} was not found`)
+    }
+    const [actions, materials, amendmentVotes] = await Promise.all([
+      this.#database
+        .select()
+        .from(amendmentActions)
+        .where(eq(amendmentActions.amendmentId, lookup.id))
+        .orderBy(asc(amendmentActions.ordinal)),
+      this.#database
+        .select({ link: supportingMaterialLinks, material: supportingMaterials })
+        .from(supportingMaterialLinks)
+        .innerJoin(supportingMaterials, eq(supportingMaterialLinks.materialId, supportingMaterials.id))
+        .where(eq(supportingMaterialLinks.amendmentId, lookup.id))
+        .orderBy(asc(supportingMaterials.documentDate), asc(supportingMaterials.id)),
+      this.#database.select().from(votes).where(eq(votes.amendmentId, lookup.id)).orderBy(asc(votes.heldAt))
+    ])
+    return { actions, amendment: amendment[0], materials, votes: amendmentVotes }
+  }
+
+  async searchSupportingMaterials(input: SupportingMaterialSearchInput) {
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const rows = await this.#database
+      .selectDistinct({ material: supportingMaterials })
+      .from(supportingMaterials)
+      .leftJoin(supportingMaterialLinks, eq(supportingMaterialLinks.materialId, supportingMaterials.id))
+      .where(
+        and(
+          input.jurisdictionId === undefined ? undefined : eq(supportingMaterials.jurisdictionId, input.jurisdictionId),
+          input.classification === undefined ? undefined : eq(supportingMaterials.classification, input.classification),
+          input.billId === undefined ? undefined : eq(supportingMaterialLinks.billId, input.billId),
+          input.amendmentId === undefined ? undefined : eq(supportingMaterialLinks.amendmentId, input.amendmentId),
+          input.eventId === undefined ? undefined : eq(supportingMaterialLinks.eventId, input.eventId),
+          input.query === undefined ? undefined : ilike(supportingMaterials.title, `%${input.query}%`)
+        )
+      )
+      .orderBy(asc(supportingMaterials.documentDate), asc(supportingMaterials.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit).map((row) => row.material),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated
+    }
+  }
+
+  async getSupportingMaterial(lookup: EntityLookup) {
+    const material = await this.#database
+      .select()
+      .from(supportingMaterials)
+      .where(eq(supportingMaterials.id, lookup.id))
+      .limit(1)
+    if (material[0] === undefined) {
+      throw new LegislationError("not_found", `Supporting material ${lookup.id} was not found`)
+    }
+    const links = await this.#database
+      .select()
+      .from(supportingMaterialLinks)
+      .where(eq(supportingMaterialLinks.materialId, lookup.id))
+    return { links, material: material[0] }
   }
 
   async searchBills(input: SearchInput & { mode?: "hybrid" | "lexical" | "semantic" }) {

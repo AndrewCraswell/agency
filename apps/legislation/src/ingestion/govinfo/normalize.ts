@@ -266,7 +266,9 @@ export function normalizeGovInfoBillStatus(xml: string, context: GovInfoNormaliz
     return [
       {
         id: personId("congress", sponsor.bioguideId),
+        jurisdictionId: federalJurisdictionId,
         name: sponsor.fullName,
+        sourceId: sponsor.bioguideId,
         upstreamIds: { bioguide: sponsor.bioguideId }
       }
     ]

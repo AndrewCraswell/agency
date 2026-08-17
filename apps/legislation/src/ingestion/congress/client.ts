@@ -67,6 +67,14 @@ export class CongressClient {
     }
   }
 
+  async *members(congress: number): AsyncGenerator<readonly unknown[]> {
+    yield* this.#pages(`member/congress/${congress}`, "members")
+  }
+
+  async *committees(congress: number): AsyncGenerator<readonly unknown[]> {
+    yield* this.#pages(`committee/${congress}`, "committees")
+  }
+
   async getBillBundle(reference: CongressBillReference): Promise<unknown> {
     const path = `bill/${reference.congress}/${reference.type.toLowerCase()}/${reference.number}`
     const [bill, actions, committees, cosponsors, relatedBills, subjects, summaries, textVersions] = await Promise.all([
@@ -96,6 +104,13 @@ export class CongressClient {
 
   async #collection(path: string, key: string): Promise<unknown[]> {
     const records: unknown[] = []
+    for await (const page of this.#pages(path, key)) {
+      records.push(...page)
+    }
+    return records
+  }
+
+  async *#pages(path: string, key: string): AsyncGenerator<readonly unknown[]> {
     let offset = 0
     for (;;) {
       const response = z
@@ -103,10 +118,10 @@ export class CongressClient {
         .parse(await this.#json(path, { limit: "250", offset: String(offset) }))
       const value = response[key]
       const page = Array.isArray(value) ? value : []
-      records.push(...page)
+      yield page
       const pagination = paginationSchema.parse(response.pagination)
       if (pagination.next === undefined || page.length === 0) {
-        return records
+        return
       }
       offset += page.length
     }

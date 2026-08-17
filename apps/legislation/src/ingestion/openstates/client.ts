@@ -51,6 +51,62 @@ export class OpenStatesClient {
       page += 1
     }
   }
+
+  async *people(options: Readonly<{ jurisdictionId: string; page?: number }>): AsyncGenerator<readonly unknown[]> {
+    yield* this.#resourcePages("people", options)
+  }
+
+  async *committees(options: Readonly<{ jurisdictionId: string; page?: number }>): AsyncGenerator<readonly unknown[]> {
+    yield* this.#resourcePages("committees", options, ["memberships"])
+  }
+
+  async *events(
+    options: Readonly<{ from: Date; jurisdictionId: string; page?: number; to: Date }>
+  ): AsyncGenerator<readonly unknown[]> {
+    let page = options.page ?? 1
+    for (;;) {
+      const url = new URL("events", ensureTrailingSlash(this.#baseUrl))
+      url.searchParams.set("jurisdiction", options.jurisdictionId)
+      url.searchParams.set("start_date", options.from.toISOString())
+      url.searchParams.set("end_date", options.to.toISOString())
+      url.searchParams.set("page", String(page))
+      url.searchParams.set("per_page", "50")
+      for (const include of ["agenda", "documents", "participants"]) {
+        url.searchParams.append("include", include)
+      }
+      const response = await this.#http.get(url, { headers: { "x-api-key": this.#apiKey } })
+      const result = pageSchema.parse(await response.json())
+      yield result.results
+      if (page >= result.pagination.max_page) {
+        return
+      }
+      page += 1
+    }
+  }
+
+  async *#resourcePages(
+    resource: "committees" | "people",
+    options: Readonly<{ jurisdictionId: string; page?: number }>,
+    resourceIncludes: readonly string[] = []
+  ): AsyncGenerator<readonly unknown[]> {
+    let page = options.page ?? 1
+    for (;;) {
+      const url = new URL(resource, ensureTrailingSlash(this.#baseUrl))
+      url.searchParams.set("jurisdiction", options.jurisdictionId)
+      url.searchParams.set("page", String(page))
+      url.searchParams.set("per_page", "50")
+      for (const include of resourceIncludes) {
+        url.searchParams.append("include", include)
+      }
+      const response = await this.#http.get(url, { headers: { "x-api-key": this.#apiKey } })
+      const result = pageSchema.parse(await response.json())
+      yield result.results
+      if (page >= result.pagination.max_page) {
+        return
+      }
+      page += 1
+    }
+  }
 }
 
 function ensureTrailingSlash(url: URL): URL {

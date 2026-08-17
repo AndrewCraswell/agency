@@ -6,7 +6,10 @@ import {
   documentSectionId,
   federalBillId,
   jurisdictionId,
+  legislativeTermId,
   legislativeSessionId,
+  organizationId,
+  organizationMembershipId,
   personId
 } from "./identifiers.js"
 
@@ -27,6 +30,17 @@ describe("canonical legislative identifiers", () => {
     expect(first).toBe(second)
     expect(first).toMatch(/^bill:wa:2025-2026:hb:1234:action:[0-9a-f]{24}$/)
     expect(documentSectionId("document:1", 0, "a".repeat(64))).toMatch(/^document:1:section:[0-9a-f]{24}$/)
+  })
+
+  it("creates stable expansion entity identities", () => {
+    const person = personId("openstates", "ocd-person/ABC")
+    const organization = organizationId("openstates", "ocd-organization/XYZ")
+
+    expect(organization).toBe("organization:openstates:ocd-organization-xyz")
+    expect(legislativeTermId(person, "current:lower:14")).toMatch(/^person:openstates:.*:term:[0-9a-f]{24}$/)
+    expect(organizationMembershipId(organization, person, "member")).toMatch(
+      /^organization:openstates:.*:membership:[0-9a-f]{24}$/
+    )
   })
 
   it("rejects empty segments and invalid numeric inputs", () => {

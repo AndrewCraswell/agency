@@ -64,6 +64,38 @@ export function personId(provider: string, upstreamId: string): string {
   return `person:${normalizeSegment(provider, "provider")}:${normalizeSegment(upstreamId, "upstream ID")}`
 }
 
+export function organizationId(provider: string, upstreamId: string): string {
+  return `organization:${normalizeSegment(provider, "provider")}:${normalizeSegment(upstreamId, "upstream ID")}`
+}
+
+export function legislativeTermId(personCanonicalId: string, sourceIdentity: string): string {
+  return `${personCanonicalId}:term:${stableHash([personCanonicalId, sourceIdentity.normalize("NFKC").trim()])}`
+}
+
+export function organizationMembershipId(
+  organizationCanonicalId: string,
+  personCanonicalId: string,
+  sourceIdentity: string
+): string {
+  return `${organizationCanonicalId}:membership:${stableHash([
+    organizationCanonicalId,
+    personCanonicalId,
+    sourceIdentity.normalize("NFKC").trim()
+  ])}`
+}
+
+export function legislativeEventId(provider: string, upstreamId: string): string {
+  return `event:${normalizeSegment(provider, "provider")}:${normalizeSegment(upstreamId, "upstream ID")}`
+}
+
+export function eventChildId(
+  kind: "agenda" | "document" | "participant",
+  canonicalEventId: string,
+  sourceIdentity: string
+): string {
+  return `${canonicalEventId}:${kind}:${stableHash([kind, canonicalEventId, sourceIdentity.normalize("NFKC").trim()])}`
+}
+
 export function childId(
   kind: "action" | "document" | "relation" | "sponsor" | "vote",
   canonicalBillId: string,

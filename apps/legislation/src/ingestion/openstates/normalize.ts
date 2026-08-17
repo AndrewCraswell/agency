@@ -155,8 +155,18 @@ function normalizeVoteOption(value: string): string {
   if (normalized === "nay" || normalized === "no") {
     return "no"
   }
-  if (normalized === "absent" || normalized === "abstain" || normalized === "not-voting") {
+  if (
+    normalized === "absent" ||
+    normalized === "abstain" ||
+    normalized === "not-voting" ||
+    normalized === "present" ||
+    normalized === "proxy" ||
+    normalized === "paired"
+  ) {
     return normalized
+  }
+  if (normalized === "not voting") {
+    return "not-voting"
   }
   return "other"
 }
@@ -240,6 +250,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
           id: canonicalPersonId,
           jurisdictionId: jurisdiction,
           name: sponsor.name,
+          sourceId: sponsor.person_id,
           upstreamIds: { openstates: sponsor.person_id }
         })
       }
@@ -271,9 +282,19 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
           id: canonicalPersonId,
           jurisdictionId: jurisdiction,
           name: position.voter_name,
+          sourceId: position.voter_id,
           upstreamIds: { openstates: position.voter_id }
         })
-        return [{ option: normalizeVoteOption(position.option), personId: canonicalPersonId, voteId: canonicalVoteId }]
+        return [
+          {
+            option: normalizeVoteOption(position.option),
+            personId: canonicalPersonId,
+            sourceIdentity: position.voter_id,
+            sourceName: position.voter_name,
+            sourcePersonId: position.voter_id,
+            voteId: canonicalVoteId
+          }
+        ]
       }),
       (position) => position.personId
     )
