@@ -124,6 +124,23 @@ describe("Open States normalization", () => {
     ])
   })
 
+  it("sums provider vote-count aliases into canonical totals", () => {
+    const source = structuredClone(fixture) as Record<string, unknown>
+    const sourceVote = (source.votes as Array<Record<string, unknown>>)[0]
+    sourceVote.counts = [
+      { option: "yes", value: 40 },
+      { option: "yea", value: 50 },
+      { option: "absent", value: 4 },
+      { option: "not voting", value: 2 },
+      { option: "excused", value: 1 }
+    ]
+
+    const result = normalizeOpenStatesBill(source, { jurisdictionCode: "wa", jurisdictionName: "Washington" })
+
+    expect(result.aggregate.votes?.[0]?.vote).toMatchObject({ otherCount: 7, yesCount: 90 })
+    expect(result.aggregate.votes?.[0]?.vote.noCount).toBeUndefined()
+  })
+
   it("retains unstructured amendment links as classified bill documents", () => {
     const source = structuredClone(fixture) as Record<string, unknown>
     source.documents = [

@@ -323,7 +323,12 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
     const rollCallNumber = nonBlank(vote.identifier)
     const voteIdentity = providerVoteId ?? rollCallNumber ?? `${vote.start_date ?? "undated"}:${voteOrdinal}`
     const canonicalVoteId = childId("vote", canonicalBillId, voteIdentity)
-    const counts = new Map(vote.counts.map((count) => [normalizeVoteOption(count.option), count.value]))
+    const counts = new Map<string, number>()
+    for (const count of vote.counts) {
+      const normalizedOption = normalizeVoteOption(count.option)
+      const bucket = normalizedOption === "yes" || normalizedOption === "no" ? normalizedOption : "other"
+      counts.set(bucket, (counts.get(bucket) ?? 0) + count.value)
+    }
     const positions = uniqueBy(
       vote.votes.flatMap((position) => {
         const providerPersonId = nonBlank(position.voter_id)
