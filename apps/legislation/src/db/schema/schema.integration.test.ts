@@ -208,6 +208,10 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     await expect(
       service.searchOrganizations({ classification: "committee", jurisdictionId: "jurisdiction:wa", query: "Data" })
     ).resolves.toMatchObject({ items: [{ id: organizationId }], truncated: false })
+    await expect(service.searchPeople({ jurisdictionId: "jurisdiction:unavailable" })).resolves.toMatchObject({
+      items: [],
+      warnings: [expect.stringContaining("source-dependent")]
+    })
   })
 
   it("upserts aggregates idempotently and rolls back a failed child replacement", async () => {

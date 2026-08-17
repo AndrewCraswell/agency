@@ -42,6 +42,12 @@ import { LegislationError } from "./errors.js"
 const CHILD_LIMIT = 100
 const SECTION_LIMIT = 50
 
+function coverageWarnings(itemCount: number, domain: string): string[] {
+  return itemCount === 0
+    ? [`No ${domain} matched. Availability is source-dependent; an empty result does not prove none exist.`]
+    : []
+}
+
 interface QueryEmbeddingClient {
   embed(input: string[]): Promise<{ embeddings: number[][] }>
 }
@@ -289,10 +295,12 @@ export class LegislationQueryService {
       .limit(limit + 1)
       .offset(offset)
     const truncated = rows.length > limit
+    const items = rows.slice(0, limit).map((row) => row.person)
     return {
-      items: rows.slice(0, limit).map((row) => row.person),
+      items,
       nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
-      truncated
+      truncated,
+      warnings: coverageWarnings(items.length, "people")
     }
   }
 
@@ -338,10 +346,12 @@ export class LegislationQueryService {
       .limit(limit + 1)
       .offset(offset)
     const truncated = rows.length > limit
+    const items = rows.slice(0, limit)
     return {
-      items: rows.slice(0, limit),
+      items,
       nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
-      truncated
+      truncated,
+      warnings: coverageWarnings(items.length, "organizations")
     }
   }
 
@@ -452,10 +462,12 @@ export class LegislationQueryService {
       .limit(limit + 1)
       .offset(offset)
     const truncated = rows.length > limit
+    const items = rows.slice(0, limit).map((row) => row.event)
     return {
-      items: rows.slice(0, limit).map((row) => row.event),
+      items,
       nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
-      truncated
+      truncated,
+      warnings: coverageWarnings(items.length, "events")
     }
   }
 
@@ -539,10 +551,12 @@ export class LegislationQueryService {
       .limit(limit + 1)
       .offset(offset)
     const truncated = rows.length > limit
+    const items = rows.slice(0, limit)
     return {
-      items: rows.slice(0, limit),
+      items,
       nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
-      truncated
+      truncated,
+      warnings: coverageWarnings(items.length, "calendar entries")
     }
   }
 
@@ -565,10 +579,12 @@ export class LegislationQueryService {
       .limit(limit + 1)
       .offset(offset)
     const truncated = rows.length > limit
+    const items = rows.slice(0, limit).map((row) => row.vote)
     return {
-      items: rows.slice(0, limit).map((row) => row.vote),
+      items,
       nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
-      truncated
+      truncated,
+      warnings: coverageWarnings(items.length, "votes")
     }
   }
 
@@ -606,10 +622,12 @@ export class LegislationQueryService {
       .limit(limit + 1)
       .offset(offset)
     const truncated = rows.length > limit
+    const items = rows.slice(0, limit)
     return {
-      items: rows.slice(0, limit),
+      items,
       nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
-      truncated
+      truncated,
+      warnings: coverageWarnings(items.length, "amendments")
     }
   }
 
@@ -662,10 +680,12 @@ export class LegislationQueryService {
       .limit(limit + 1)
       .offset(offset)
     const truncated = rows.length > limit
+    const items = rows.slice(0, limit).map((row) => row.material)
     return {
-      items: rows.slice(0, limit).map((row) => row.material),
+      items,
       nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
-      truncated
+      truncated,
+      warnings: coverageWarnings(items.length, "supporting materials")
     }
   }
 

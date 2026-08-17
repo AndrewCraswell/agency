@@ -8,6 +8,8 @@ unambiguous jurisdiction, session, bill-type, and bill-number tuple. Provider ID
 List operations use opaque cursors, default to 20 results, and allow at most 100. Text queries are limited to 500
 characters. Snippets are limited to 500 characters, and a single response contains at most 100,000 text characters.
 Responses include `truncated: true` and a continuation cursor whenever a configured limit removes available content.
+Source-dependent expansion searches return a warning when no record matches; clients must not interpret an empty result
+as proof that the jurisdiction has no such people, committees, events, calendars, votes, amendments, or materials.
 
 Stable error categories are `invalid_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`, `rate_limited`,
 `dependency_unavailable`, and `internal`. Errors include a safe message and correlation ID and never include SQL,
