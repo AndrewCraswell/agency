@@ -114,7 +114,7 @@ try {
     {
       detail: "get_supporting_material",
       search: {
-        arguments: { jurisdictionId: "jurisdiction:us", limit: 1 },
+        arguments: { classification: "committee-report", jurisdictionId: "jurisdiction:us", limit: 1 },
         name: "search_supporting_materials"
       }
     }
