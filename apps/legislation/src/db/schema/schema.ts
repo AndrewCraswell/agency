@@ -149,6 +149,8 @@ export const billActions = legislationSchema.table(
     actionDate: date("action_date"),
     actionAt: timestamp("action_at", { withTimezone: true }),
     chamber: text("chamber"),
+    organizationId: text("organization_id").references(() => organizations.id, { onDelete: "set null" }),
+    sourceOrganizationId: text("source_organization_id"),
     sourceUrl: text("source_url"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
@@ -156,7 +158,8 @@ export const billActions = legislationSchema.table(
     check("bill_actions_ordinal_check", sql`${table.ordinal} >= 0`),
     check("bill_actions_description_check", sql`length(${table.description}) > 0`),
     uniqueIndex("bill_actions_ordinal_uidx").on(table.billId, table.ordinal),
-    index("bill_actions_timeline_idx").on(table.billId, table.actionDate, table.ordinal)
+    index("bill_actions_timeline_idx").on(table.billId, table.actionDate, table.ordinal),
+    index("bill_actions_organization_idx").on(table.organizationId, table.actionDate)
   ]
 )
 
@@ -494,6 +497,26 @@ export const billSponsors = legislationSchema.table(
       .on(table.billId, table.personId, table.classification)
       .where(sql`${table.personId} is not null`),
     index("bill_sponsors_bill_idx").on(table.billId, table.isPrimary)
+  ]
+)
+
+export const billOrganizations = legislationSchema.table(
+  "bill_organizations",
+  {
+    billId: text("bill_id")
+      .notNull()
+      .references(() => bills.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "cascade" }),
+    classification: text("classification").notNull(),
+    sourceName: text("source_name"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.billId, table.organizationId, table.classification] }),
+    check("bill_organizations_classification_check", sql`length(${table.classification}) > 0`),
+    index("bill_organizations_organization_idx").on(table.organizationId, table.billId)
   ]
 )
 

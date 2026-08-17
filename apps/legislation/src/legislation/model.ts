@@ -1,6 +1,7 @@
 import type {
   billActions,
   billDocuments,
+  billOrganizations,
   billRelations,
   billSponsors,
   bills,
@@ -28,6 +29,7 @@ export interface CanonicalBillAggregate {
   documents?: CanonicalDocument[]
   jurisdiction: typeof jurisdictions.$inferInsert
   people?: Array<typeof people.$inferInsert>
+  organizations?: Array<typeof billOrganizations.$inferInsert>
   relations?: Array<typeof billRelations.$inferInsert>
   session: typeof legislativeSessions.$inferInsert
   sponsors?: Array<typeof billSponsors.$inferInsert>

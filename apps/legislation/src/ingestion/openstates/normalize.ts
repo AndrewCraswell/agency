@@ -4,6 +4,7 @@ import {
   childId,
   jurisdictionId,
   legislativeSessionId,
+  organizationId,
   personId
 } from "../../legislation/identifiers.js"
 import type { CanonicalBillAggregate } from "../../legislation/model.js"
@@ -364,7 +365,10 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
         canonicalBillId,
         `${action.order ?? index}:${action.date ?? "undated"}:${action.description}`
       ),
-      ordinal: action.order ?? index
+      organizationId:
+        action.organization_id === undefined ? undefined : organizationId("openstates", action.organization_id),
+      ordinal: action.order ?? index,
+      sourceOrganizationId: action.organization_id
     })),
     (action) => String(action.ordinal)
   )
@@ -421,6 +425,16 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
         subdivisionCode: context.jurisdictionCode.toUpperCase()
       },
       people: [...peopleById.values()],
+      organizations: uniqueBy(
+        [source.from_organization, ...source.actions.map((action) => action.organization_id)]
+          .filter((value): value is string => value !== undefined)
+          .map((sourceOrganizationId) => ({
+            billId: canonicalBillId,
+            classification: sourceOrganizationId === source.from_organization ? "origin" : "action",
+            organizationId: organizationId("openstates", sourceOrganizationId)
+          })),
+        (organization) => `${organization.organizationId}:${organization.classification}`
+      ),
       relations,
       session: {
         id: session,

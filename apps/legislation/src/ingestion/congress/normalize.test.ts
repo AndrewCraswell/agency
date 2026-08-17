@@ -59,4 +59,21 @@ describe("Congress.gov normalization", () => {
 
     expect(new Set(aggregate.actions?.map((action) => action.id)).size).toBe(aggregate.actions?.length)
   })
+
+  it("links structured committee identifiers without replacing source names", () => {
+    const source = structuredClone(fixture) as Record<string, unknown>
+    source.committees = [{ name: "House Administration", systemCode: "hsha00" }]
+
+    const aggregate = normalizeCongressBillBundle(source)
+
+    expect(aggregate.bill.committees).toEqual(["House Administration"])
+    expect(aggregate.organizations).toEqual([
+      {
+        billId: "bill:us:119:hr:1234",
+        classification: "committee",
+        organizationId: "organization:congress:hsha00",
+        sourceName: "House Administration"
+      }
+    ])
+  })
 })

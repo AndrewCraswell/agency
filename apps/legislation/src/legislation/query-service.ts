@@ -6,6 +6,7 @@ import {
   amendments,
   billActions,
   billDocuments,
+  billOrganizations,
   billRelations,
   billSponsors,
   bills,
@@ -318,27 +319,39 @@ export class LegislationQueryService {
   async getCommitteeBillActivity(lookup: EntityLookup) {
     const limit = Math.min(Math.max(lookup.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeOffset(lookup.cursor)
-    const organization = await this.#database
-      .select({ name: organizations.name })
-      .from(organizations)
-      .where(eq(organizations.id, lookup.id))
-      .limit(1)
-    if (organization[0] === undefined) {
-      throw new LegislationError("not_found", `Organization ${lookup.id} was not found`)
-    }
-    const rows = await this.#database
-      .select()
-      .from(bills)
-      .where(sql`${organization[0].name} = any(${bills.committees})`)
+    const linkedRows = await this.#database
+      .select({ bill: bills })
+      .from(billOrganizations)
+      .innerJoin(bills, eq(billOrganizations.billId, bills.id))
+      .where(eq(billOrganizations.organizationId, lookup.id))
       .orderBy(asc(bills.introducedAt), asc(bills.id))
       .limit(limit + 1)
       .offset(offset)
+    const organization =
+      linkedRows.length > 0
+        ? undefined
+        : await this.#database
+            .select({ name: organizations.name })
+            .from(organizations)
+            .where(eq(organizations.id, lookup.id))
+            .limit(1)
+    const fallbackRows =
+      organization?.[0] === undefined
+        ? []
+        : await this.#database
+            .select({ bill: bills })
+            .from(bills)
+            .where(sql`${organization[0].name} = any(${bills.committees})`)
+            .orderBy(asc(bills.introducedAt), asc(bills.id))
+            .limit(limit + 1)
+            .offset(offset)
+    const rows = linkedRows.length > 0 ? linkedRows : fallbackRows
     const truncated = rows.length > limit
     return {
-      items: rows.slice(0, limit),
+      items: rows.slice(0, limit).map((row) => row.bill),
       nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
       truncated,
-      warnings: ["Bill activity uses bounded committee-name matching until source identifiers are linked"]
+      warnings: linkedRows.length > 0 ? [] : ["Unlinked records use bounded committee-name matching"]
     }
   }
 
@@ -619,7 +632,7 @@ export class LegislationQueryService {
     if (bill[0] === undefined) {
       throw new LegislationError("not_found", `Bill ${lookup.id} was not found`)
     }
-    const [actions, sponsors, billVotes, documents, relations] = await Promise.all([
+    const [actions, sponsors, billVotes, documents, relations, linkedOrganizations] = await Promise.all([
       this.#database
         .select()
         .from(billActions)
@@ -660,9 +673,17 @@ export class LegislationQueryService {
         .where(eq(billRelations.billId, lookup.id))
         .orderBy(asc(billRelations.relatedBillId))
         .limit(childLimit + 1)
+        .offset(childOffset),
+      this.#database
+        .select({ link: billOrganizations, organization: organizations })
+        .from(billOrganizations)
+        .innerJoin(organizations, eq(billOrganizations.organizationId, organizations.id))
+        .where(eq(billOrganizations.billId, lookup.id))
+        .orderBy(asc(organizations.name), asc(organizations.id))
+        .limit(childLimit + 1)
         .offset(childOffset)
     ])
-    const truncated = [actions, sponsors, billVotes, documents, relations].some(
+    const truncated = [actions, sponsors, billVotes, documents, relations, linkedOrganizations].some(
       (collection) => collection.length > childLimit
     )
     return {
@@ -670,6 +691,7 @@ export class LegislationQueryService {
       bill: bill[0],
       documents: documents.slice(0, childLimit),
       nextChildCursor: truncated ? encodeOffset(childOffset + childLimit) : undefined,
+      organizations: linkedOrganizations.slice(0, childLimit),
       relations: relations.slice(0, childLimit),
       sponsors: sponsors.slice(0, childLimit),
       truncated,

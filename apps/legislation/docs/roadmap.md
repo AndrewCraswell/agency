@@ -70,7 +70,7 @@ strings.
 - [ ] **E1.5** Import state people and current committee snapshots from Open States with per-jurisdiction coverage.
 - [x] **E1.6** Import federal members, terms, committees, subcommittees, and memberships from Congress.gov; report fields
   or historical ranges that Congress.gov does not supply.
-- [ ] **E1.7** Link existing bill sponsors, vote positions, committee-name arrays, and action organization identifiers to
+- [x] **E1.7** Link existing bill sponsors, vote positions, committee-name arrays, and action organization identifiers to
   canonical people and organizations without discarding unmatched source text.
 - [x] **E1.8** Prevent same-name people and renamed committees from merging without compatible upstream identity or
   jurisdiction context.
@@ -104,7 +104,7 @@ status changes.
   legislation, meeting documents, and transcript references when supplied.
 - [ ] **E2.6** Normalize rescheduled, continued, cancelled, deleted, and duplicate event records without fabricating
   missing times or locations.
-- [ ] **E2.7** Reconcile event-to-bill and event-to-committee links using stable IDs first and bounded normalized matching
+- [x] **E2.7** Reconcile event-to-bill and event-to-committee links using stable IDs first and bounded normalized matching
   only when an upstream ID is unavailable.
 - [ ] **E2.8** Add rolling refresh workflows whose overlap window captures corrections and late cancellations.
 - [ ] **E2.9** Report state event freshness and coverage by jurisdiction; do not treat an empty event response as proof

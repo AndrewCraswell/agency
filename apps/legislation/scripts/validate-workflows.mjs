@@ -14,6 +14,9 @@ for (const file of files) {
   if (typeof workflow.id !== "string" || !workflow.id.startsWith("legislation-")) {
     throw new Error(`${file} must have a stable legislation workflow ID`)
   }
+  if (workflow.id.length > 36) {
+    throw new Error(`${file} workflow ID exceeds n8n's 36-character database limit`)
+  }
   if (workflowIds.has(workflow.id)) {
     throw new Error(`${file} duplicates workflow ID ${workflow.id}`)
   }

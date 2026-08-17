@@ -4,12 +4,14 @@ import type { LegislationDatabase } from "../database.js"
 import {
   billActions,
   billDocuments,
+  billOrganizations,
   billRelations,
   billSponsors,
   bills,
   documentSections,
   jurisdictions,
   legislativeSessions,
+  organizations,
   people,
   votePositions,
   votes
@@ -29,7 +31,12 @@ function assertAggregateOwnership(aggregate: CanonicalBillAggregate): void {
     throw new Error("bill session does not match the aggregate session")
   }
 
-  for (const child of [...(aggregate.actions ?? []), ...(aggregate.sponsors ?? []), ...(aggregate.relations ?? [])]) {
+  for (const child of [
+    ...(aggregate.actions ?? []),
+    ...(aggregate.sponsors ?? []),
+    ...(aggregate.relations ?? []),
+    ...(aggregate.organizations ?? [])
+  ]) {
     if (child.billId !== billId) {
       throw new Error("bill child does not belong to the aggregate bill")
     }
@@ -91,6 +98,21 @@ export async function upsertBillAggregate(
       .onConflictDoUpdate({ set: aggregate.session, target: legislativeSessions.id })
     await transaction.insert(bills).values(bill).onConflictDoUpdate({ set: bill, target: bills.id })
 
+    const candidateOrganizationIds = [
+      ...(aggregate.actions ?? []).flatMap((action) =>
+        action.organizationId === undefined || action.organizationId === null ? [] : [action.organizationId]
+      ),
+      ...(aggregate.organizations ?? []).map((organization) => organization.organizationId)
+    ]
+    const existingOrganizations =
+      candidateOrganizationIds.length === 0
+        ? []
+        : await transaction
+            .select({ id: organizations.id })
+            .from(organizations)
+            .where(inArray(organizations.id, candidateOrganizationIds))
+    const validOrganizationIds = new Set(existingOrganizations.map((organization) => organization.id))
+
     if (aggregate.people !== undefined && aggregate.people.length > 0) {
       for (const person of aggregate.people) {
         await transaction.insert(people).values(person).onConflictDoUpdate({ set: person, target: people.id })
@@ -100,7 +122,27 @@ export async function upsertBillAggregate(
     if (aggregate.actions !== undefined) {
       await transaction.delete(billActions).where(eq(billActions.billId, aggregate.bill.id))
       if (aggregate.actions.length > 0) {
-        await transaction.insert(billActions).values(aggregate.actions)
+        await transaction.insert(billActions).values(
+          aggregate.actions.map((action) => ({
+            ...action,
+            organizationId:
+              action.organizationId !== undefined &&
+              action.organizationId !== null &&
+              validOrganizationIds.has(action.organizationId)
+                ? action.organizationId
+                : undefined
+          }))
+        )
+      }
+    }
+
+    if (aggregate.organizations !== undefined) {
+      await transaction.delete(billOrganizations).where(eq(billOrganizations.billId, aggregate.bill.id))
+      const linkedOrganizations = aggregate.organizations.filter((organization) =>
+        validOrganizationIds.has(organization.organizationId)
+      )
+      if (linkedOrganizations.length > 0) {
+        await transaction.insert(billOrganizations).values(linkedOrganizations)
       }
     }
 
@@ -174,6 +216,10 @@ export async function upsertBillAggregate(
         relationships: aggregate.relations?.map((relation) => ({
           classification: relation.classification,
           relatedBillId: relation.relatedBillId
+        })),
+        organizations: aggregate.organizations?.map((organization) => ({
+          classification: organization.classification,
+          organizationId: organization.organizationId
         })),
         status: bill.status,
         subjects: bill.subjects,
@@ -322,13 +368,42 @@ export async function upsertBillAggregates(
         target: bills.id
       })
 
+    const candidateOrganizationIds = aggregates.flatMap((aggregate) => [
+      ...(aggregate.actions ?? []).flatMap((action) =>
+        action.organizationId === undefined || action.organizationId === null ? [] : [action.organizationId]
+      ),
+      ...(aggregate.organizations ?? []).map((organization) => organization.organizationId)
+    ])
+    const existingOrganizations =
+      candidateOrganizationIds.length === 0
+        ? []
+        : await transaction
+            .select({ id: organizations.id })
+            .from(organizations)
+            .where(inArray(organizations.id, candidateOrganizationIds))
+    const validOrganizationIds = new Set(existingOrganizations.map((organization) => organization.id))
+
     await transaction.delete(billActions).where(inArray(billActions.billId, billIds))
     await transaction.delete(billSponsors).where(inArray(billSponsors.billId, billIds))
+    await transaction.delete(billOrganizations).where(inArray(billOrganizations.billId, billIds))
     await transaction.delete(votes).where(inArray(votes.billId, billIds))
     await transaction.delete(billRelations).where(inArray(billRelations.billId, billIds))
 
-    const actionValues = aggregates.flatMap((aggregate) => aggregate.actions ?? [])
+    const actionValues = aggregates.flatMap((aggregate) =>
+      (aggregate.actions ?? []).map((action) => ({
+        ...action,
+        organizationId:
+          action.organizationId !== undefined &&
+          action.organizationId !== null &&
+          validOrganizationIds.has(action.organizationId)
+            ? action.organizationId
+            : undefined
+      }))
+    )
     const sponsorValues = aggregates.flatMap((aggregate) => aggregate.sponsors ?? [])
+    const billOrganizationValues = aggregates
+      .flatMap((aggregate) => aggregate.organizations ?? [])
+      .filter((organization) => validOrganizationIds.has(organization.organizationId))
     const voteValues = aggregates.flatMap((aggregate) => aggregate.votes?.map((vote) => vote.vote) ?? [])
     const positionValues = aggregates.flatMap(
       (aggregate) => aggregate.votes?.flatMap((vote) => vote.positions ?? []) ?? []
@@ -339,6 +414,9 @@ export async function upsertBillAggregates(
     }
     if (sponsorValues.length > 0) {
       await transaction.insert(billSponsors).values(sponsorValues)
+    }
+    if (billOrganizationValues.length > 0) {
+      await transaction.insert(billOrganizations).values(billOrganizationValues)
     }
     if (voteValues.length > 0) {
       await transaction.insert(votes).values(voteValues)

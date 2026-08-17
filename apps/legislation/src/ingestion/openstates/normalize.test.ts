@@ -31,6 +31,17 @@ describe("Open States normalization", () => {
       upstreamIds: { openstates: "ocd-bill/wa-hb-1234" }
     })
     expect(result.aggregate.actions).toHaveLength(2)
+    expect(result.aggregate.actions?.[0]).toMatchObject({
+      organizationId: "organization:openstates:washington-house-of-representatives",
+      sourceOrganizationId: "Washington House of Representatives"
+    })
+    expect(result.aggregate.organizations).toEqual([
+      {
+        billId: "bill:wa:2025-2026:hb:1234",
+        classification: "origin",
+        organizationId: "organization:openstates:washington-house-of-representatives"
+      }
+    ])
     expect(result.aggregate.sponsors).toHaveLength(2)
     expect(result.aggregate.people).toHaveLength(1)
     expect(result.aggregate.votes?.[0]).toMatchObject({

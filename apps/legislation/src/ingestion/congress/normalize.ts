@@ -4,6 +4,7 @@ import {
   federalBillId,
   jurisdictionId,
   legislativeSessionId,
+  organizationId,
   personId
 } from "../../legislation/identifiers.js"
 import type { CanonicalBillAggregate } from "../../legislation/model.js"
@@ -60,7 +61,7 @@ export const congressBillBundleSchema = z.object({
       url: z.string().min(1)
     })
     .passthrough(),
-  committees: z.array(z.object({ name: z.string().min(1) }).passthrough()).default([]),
+  committees: z.array(z.object({ name: z.string().min(1), systemCode: optionalString }).passthrough()).default([]),
   cosponsors: z.array(memberSchema).default([]),
   relatedBills: z.array(relatedBillSchema).default([]),
   subjects: z.array(z.string()).default([]),
@@ -159,6 +160,18 @@ export function normalizeCongressBillBundle(input: unknown): CanonicalBillAggreg
       sourceId: member.bioguideId,
       upstreamIds: { bioguide: member.bioguideId }
     })),
+    organizations: source.committees.flatMap((committee) =>
+      committee.systemCode === undefined
+        ? []
+        : [
+            {
+              billId: canonicalBillId,
+              classification: "committee",
+              organizationId: organizationId("congress", committee.systemCode),
+              sourceName: committee.name
+            }
+          ]
+    ),
     relations: source.relatedBills.map((relation) => ({
       billId: canonicalBillId,
       classification:
