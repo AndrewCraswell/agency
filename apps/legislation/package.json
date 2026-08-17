@@ -77,5 +77,8 @@
     "tsx": "^4.23.0",
     "typescript": "catalog:",
     "vitest": "^4.1.9"
+  },
+  "optionalDependencies": {
+    "@napi-rs/canvas-linux-x64-gnu": "1.0.3"
   }
 }

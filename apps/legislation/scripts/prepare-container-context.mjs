@@ -45,7 +45,7 @@ const run = (command, args) => {
 
 rmSync(contextPath, { force: true, recursive: true })
 run(process.execPath, [pnpmCli, "run", "build"])
-run(process.execPath, [pnpmCli, "--filter", "legislation", "deploy", "--prod", "--legacy", contextPath])
+run(process.execPath, [pnpmCli, "--filter", "legislation", "deploy", "--prod", "--legacy", "--force", contextPath])
 
 const environmentFile = resolve(contextPath, ".env")
 if (existsSync(environmentFile)) {
