@@ -210,8 +210,11 @@ export class RetryingHttpClient {
     this.#requestGate = gate.promise
     await previous
     try {
-      const wait = Math.max(this.#nextRequestAt, this.#cooldownUntil) - Date.now()
-      if (wait > 0) {
+      for (;;) {
+        const wait = Math.max(this.#nextRequestAt, this.#cooldownUntil) - Date.now()
+        if (wait <= 0) {
+          break
+        }
         await delay(wait)
       }
       this.#nextRequestAt = Date.now() + this.#minimumIntervalMs
