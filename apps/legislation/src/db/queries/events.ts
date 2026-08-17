@@ -1,11 +1,17 @@
 import { inArray, sql } from "drizzle-orm"
-import type { OpenStatesEventSnapshot } from "../../ingestion/openstates/events.js"
 import type { LegislationDatabase } from "../database.js"
 import { eventAgendaItems, eventDocuments, eventParticipants, legislativeEvents } from "../schema/schema.js"
 
+export interface EventSnapshot {
+  agendaItems: Array<typeof eventAgendaItems.$inferInsert>
+  documents: Array<typeof eventDocuments.$inferInsert>
+  event: typeof legislativeEvents.$inferInsert
+  participants: Array<typeof eventParticipants.$inferInsert>
+}
+
 export async function upsertEventSnapshots(
   database: LegislationDatabase,
-  snapshots: readonly OpenStatesEventSnapshot[]
+  snapshots: readonly EventSnapshot[]
 ): Promise<void> {
   if (snapshots.length === 0) {
     return

@@ -103,6 +103,10 @@ export function amendmentChildId(
   return `${canonicalAmendmentId}:${kind}:${stableHash([kind, canonicalAmendmentId, sourceIdentity.normalize("NFKC").trim()])}`
 }
 
+export function supportingMaterialId(provider: string, sourceIdentity: string): string {
+  return `material:${normalizeSegment(provider, "provider")}:${stableHash([provider, sourceIdentity.normalize("NFKC").trim()])}`
+}
+
 export function eventChildId(
   kind: "agenda" | "document" | "participant",
   canonicalEventId: string,

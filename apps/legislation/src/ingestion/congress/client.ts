@@ -19,6 +19,20 @@ const amendmentReferenceSchema = z.object({
   updateDate: z.string().optional(),
   url: z.string().min(1)
 })
+const committeeMeetingReferenceSchema = z.object({
+  chamber: z.string().min(1),
+  congress: z.number().int().positive(),
+  eventId: z.string().min(1),
+  updateDate: z.string().optional(),
+  url: z.string().min(1)
+})
+const hearingReferenceSchema = z.object({
+  chamber: z.string().min(1),
+  congress: z.number().int().positive(),
+  jacketNumber: z.union([z.string(), z.number()]).transform(String),
+  updateDate: z.string().optional(),
+  url: z.string().min(1)
+})
 
 export type CongressBillReference = {
   congress: number
@@ -29,6 +43,8 @@ export type CongressBillReference = {
 }
 
 export type CongressAmendmentReference = z.infer<typeof amendmentReferenceSchema>
+export type CongressCommitteeMeetingReference = z.infer<typeof committeeMeetingReferenceSchema>
+export type CongressHearingReference = z.infer<typeof hearingReferenceSchema>
 
 export interface CongressClientOptions {
   apiKey: string
@@ -117,6 +133,37 @@ export class CongressClient {
     return { actions, amendment, sourceUrl: reference.url, textVersions }
   }
 
+  async *committeeMeetings(
+    congress: number,
+    startOffset = 0
+  ): AsyncGenerator<{ offset: number; reference: CongressCommitteeMeetingReference }> {
+    yield* this.#references(
+      `committee-meeting/${congress}`,
+      "committeeMeetings",
+      committeeMeetingReferenceSchema,
+      startOffset
+    )
+  }
+
+  async getCommitteeMeeting(reference: CongressCommitteeMeetingReference): Promise<unknown> {
+    const path = `committee-meeting/${reference.congress}/${reference.chamber.toLowerCase()}/${reference.eventId}`
+    const detail = z.object({ committeeMeeting: z.record(z.string(), z.unknown()) }).parse(await this.#json(path))
+    return { meeting: detail.committeeMeeting, sourceUrl: reference.url }
+  }
+
+  async *hearings(
+    congress: number,
+    startOffset = 0
+  ): AsyncGenerator<{ offset: number; reference: CongressHearingReference }> {
+    yield* this.#references(`hearing/${congress}`, "hearings", hearingReferenceSchema, startOffset)
+  }
+
+  async getHearing(reference: CongressHearingReference): Promise<unknown> {
+    const path = `hearing/${reference.congress}/${reference.chamber.toLowerCase()}/${reference.jacketNumber}`
+    const detail = z.object({ hearing: z.record(z.string(), z.unknown()) }).parse(await this.#json(path))
+    return { hearing: detail.hearing, sourceUrl: reference.url }
+  }
+
   async getBillBundle(reference: CongressBillReference): Promise<unknown> {
     const path = `bill/${reference.congress}/${reference.type.toLowerCase()}/${reference.number}`
     const [bill, actions, committees, cosponsors, relatedBills, subjects, summaries, textVersions] = await Promise.all([
@@ -166,6 +213,30 @@ export class CongressClient {
         return
       }
       offset += page.length
+    }
+  }
+
+  async *#references<T>(
+    path: string,
+    key: string,
+    schema: z.ZodType<T>,
+    startOffset: number
+  ): AsyncGenerator<{ offset: number; reference: T }> {
+    let offset = startOffset
+    for (;;) {
+      const response = z
+        .record(z.string(), z.unknown())
+        .parse(await this.#json(path, { limit: String(this.#pageSize), offset: String(offset) }))
+      const records = z.array(schema).parse(response[key] ?? [])
+      const pagination = paginationSchema.parse(response.pagination)
+      this.#onPage?.({ next: pagination.next !== undefined, offset, records: records.length })
+      for (const [index, reference] of records.entries()) {
+        yield { offset: offset + index, reference }
+      }
+      if (pagination.next === undefined || records.length === 0) {
+        return
+      }
+      offset += records.length
     }
   }
 
