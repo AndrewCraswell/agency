@@ -36,6 +36,9 @@ describe("Congress.gov normalization", () => {
     const bill = source.bill as Record<string, unknown>
     bill.introducedDate = null
     bill.originChamber = null
+    source.relatedBills = [
+      { congress: 119, number: 22, relationshipDetails: [{ identifiedBy: "CRS", type: "Identical bill" }], type: "S" }
+    ]
 
     const aggregate = normalizeCongressBillBundle(source)
 
@@ -44,5 +47,6 @@ describe("Congress.gov normalization", () => {
       documentDate: undefined,
       sourceUrl: "https://www.congress.gov/older.pdf"
     })
+    expect(aggregate.relations?.[0]?.relatedBillId).toBe("bill:us:119:s:22")
   })
 })

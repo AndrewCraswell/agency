@@ -21,10 +21,26 @@ const textVersionSchema = z.object({
   formats: z.array(z.object({ type: optionalString, url: z.string().min(1) }).passthrough()).default([]),
   type: z.string().min(1)
 })
+function normalizeRelationshipDetails(value: unknown): unknown {
+  if (!Array.isArray(value)) {
+    return value
+  }
+  return value
+    .flatMap((item) => {
+      if (typeof item === "string") {
+        return [item]
+      }
+      return typeof item === "object" && item !== null && "type" in item && typeof item.type === "string"
+        ? [item.type]
+        : []
+    })
+    .join(" ")
+}
+const relationshipDetailsSchema = z.preprocess(normalizeRelationshipDetails, optionalString)
 const relatedBillSchema = z.object({
   congress: z.number().int().positive(),
-  number: z.string().min(1),
-  relationshipDetails: optionalString,
+  number: z.union([z.string().min(1), z.number().int().nonnegative()]).transform(String),
+  relationshipDetails: relationshipDetailsSchema,
   type: z.string().min(1)
 })
 
