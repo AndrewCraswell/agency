@@ -4,7 +4,7 @@ import type { LegislationDatabase } from "../../db/database.js"
 import { billDocuments, bills } from "../../db/schema/schema.js"
 import { createJobCounts, mapConcurrent, type JobCounts } from "../job.js"
 import { artifactPath, type ArtifactStore } from "./artifact-store.js"
-import { downloadDocument } from "./download.js"
+import { detectDocumentContentType, downloadDocument } from "./download.js"
 import {
   classifyDocumentFailure,
   markDocumentProcessingFailure,
@@ -188,15 +188,12 @@ export async function processPendingDocuments(
       const existingArtifactPath = options.force === true ? null : record.blobPath
       const hasArtifact = existingArtifactPath !== null && (await options.artifactStore.exists(existingArtifactPath))
       const downloaded = hasArtifact
-        ? {
-            bytes: await options.artifactStore.read(existingArtifactPath),
-            contentType: record.contentType ?? "application/octet-stream",
+        ? await options.artifactStore.read(existingArtifactPath).then((bytes) => ({
+            bytes,
+            contentType: detectDocumentContentType(bytes, record.contentType ?? ""),
             sourceUrl: record.sourceUrl
-          }
-        : await downloadDocument(record.sourceUrl, {
-            fetch: options.fetch,
-            timeoutMs: options.timeoutMs
-          })
+          }))
+        : await downloadDocument(record.sourceUrl, { fetch: options.fetch, timeoutMs: options.timeoutMs })
       const contentHash = createHash("sha256").update(downloaded.bytes).digest("hex")
       const path = artifactPath("documents", record.id, contentHash, downloaded.sourceUrl)
       if (!hasArtifact) {

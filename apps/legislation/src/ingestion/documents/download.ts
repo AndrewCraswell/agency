@@ -10,6 +10,37 @@ const supportedMediaTypes = new Set([
   "text/xml"
 ])
 
+export function detectDocumentContentType(bytes: Uint8Array, declaredContentType = ""): string {
+  const declaredMediaType = declaredContentType.split(";", 1)[0]?.trim().toLowerCase() ?? ""
+  const prefixBytes = bytes.subarray(0, Math.min(bytes.byteLength, 512))
+  const prefix = new TextDecoder("utf-8", { fatal: false }).decode(prefixBytes).trimStart().toLowerCase()
+  if (prefix.startsWith("%pdf-")) {
+    return "application/pdf"
+  }
+  if (
+    prefix.startsWith("<!doctype html") ||
+    prefix.startsWith("<html") ||
+    prefix.startsWith("<head") ||
+    prefix.startsWith("<body")
+  ) {
+    return "text/html"
+  }
+  if (prefix.startsWith("<?xml")) {
+    return "application/xml"
+  }
+  if (supportedMediaTypes.has(declaredMediaType) || declaredMediaType.endsWith("+xml")) {
+    return declaredContentType
+  }
+  const containsNull = prefixBytes.includes(0)
+  const printableBytes = prefixBytes.filter(
+    (value) => value === 9 || value === 10 || value === 13 || (value >= 32 && value !== 127)
+  ).length
+  if (!containsNull && prefixBytes.length > 0 && printableBytes / prefixBytes.length >= 0.9) {
+    return "text/plain"
+  }
+  throw new Error(`Unsupported document content type: ${declaredContentType || "missing"}`)
+}
+
 export interface DownloadedDocument {
   bytes: Uint8Array
   contentType: string
@@ -87,14 +118,10 @@ export async function downloadDocument(
   if (Number.isFinite(contentLength) && contentLength > maximumBytes) {
     throw new Error(`Document exceeds the ${maximumBytes} byte limit`)
   }
-  const contentType = response.headers.get("content-type") ?? ""
-  const mediaType = contentType.split(";", 1)[0]?.trim().toLowerCase() ?? ""
-  if (!supportedMediaTypes.has(mediaType) && !mediaType.endsWith("+xml")) {
-    throw new Error(`Unsupported document content type: ${contentType || "missing"}`)
-  }
   const bytes = new Uint8Array(await response.arrayBuffer())
   if (bytes.byteLength > maximumBytes) {
     throw new Error(`Document exceeds the ${maximumBytes} byte limit`)
   }
+  const contentType = detectDocumentContentType(bytes, response.headers.get("content-type") ?? "")
   return { bytes, contentType, sourceUrl: finalUrl.href }
 }

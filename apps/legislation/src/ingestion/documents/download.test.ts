@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { downloadDocument } from "./download.js"
+import { detectDocumentContentType, downloadDocument } from "./download.js"
 
 describe("document downloads", () => {
   it("upgrades legacy HTTP source links to HTTPS", async () => {
@@ -48,5 +48,31 @@ describe("document downloads", () => {
       }),
       method: "POST"
     })
+  })
+
+  it("detects supported content when provider metadata is missing or generic", () => {
+    expect(detectDocumentContentType(new TextEncoder().encode("%PDF-1.7"), "application/octet-stream")).toBe(
+      "application/pdf"
+    )
+    expect(detectDocumentContentType(new TextEncoder().encode("SECTION 1. Text"))).toBe("text/plain")
+    expect(detectDocumentContentType(new TextEncoder().encode('<?xml version="1.0"?><bill/>'))).toBe("application/xml")
+  })
+
+  it("does not pass an HTML interstitial to the PDF extractor", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response("<!doctype html><html><body>Temporarily unavailable</body></html>", {
+        headers: { "content-type": "application/pdf" }
+      })
+    )
+
+    await expect(downloadDocument("https://example.gov/bill.pdf", { fetch: fetcher })).resolves.toMatchObject({
+      contentType: "text/html"
+    })
+  })
+
+  it("rejects unknown binary content after bounded sniffing", () => {
+    expect(() => detectDocumentContentType(new Uint8Array([0, 1, 2, 3]), "application/octet-stream")).toThrow(
+      "Unsupported document content type"
+    )
   })
 })
