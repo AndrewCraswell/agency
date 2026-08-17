@@ -97,14 +97,16 @@ export async function synchronizeCongress(
     } catch (error) {
       canAdvanceCheckpoint = false
       counts.failed += 1
+      const message = error instanceof Error ? error.message : "Unknown Congress.gov record failure"
       failures.push({
         identifier: `${reference.congress}-${reference.type}-${reference.number}`,
-        message: error instanceof Error ? error.message : "Unknown Congress.gov record failure",
+        message,
         retryable: error instanceof ProviderHttpError && error.retryable
       })
       options.onProgress?.({
         event: "record_failed",
-        identifier: `${reference.congress}-${reference.type}-${reference.number}`
+        identifier: `${reference.congress}-${reference.type}-${reference.number}`,
+        message
       })
     }
   }

@@ -112,7 +112,7 @@ export function normalizeCongressBillBundle(input: unknown): CanonicalBillAggreg
       id: childId(
         "action",
         canonicalBillId,
-        `${action.actionDate ?? "undated"}:${action.actionTime ?? ""}:${action.text}`
+        `${index}:${action.actionDate ?? "undated"}:${action.actionTime ?? ""}:${action.text}`
       ),
       ordinal: index
     })),

@@ -49,4 +49,14 @@ describe("Congress.gov normalization", () => {
     })
     expect(aggregate.relations?.[0]?.relatedBillId).toBe("bill:us:119:s:22")
   })
+
+  it("keeps duplicate provider actions distinct by their source order", () => {
+    const source = structuredClone(fixture) as Record<string, unknown>
+    const actions = source.actions as unknown[]
+    actions.push(structuredClone(actions[0]))
+
+    const aggregate = normalizeCongressBillBundle(source)
+
+    expect(new Set(aggregate.actions?.map((action) => action.id)).size).toBe(aggregate.actions?.length)
+  })
 })
