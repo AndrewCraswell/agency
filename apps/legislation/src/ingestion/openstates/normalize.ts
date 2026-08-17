@@ -195,6 +195,27 @@ function uniqueBy<T>(values: readonly T[], identity: (value: T) => string): T[] 
   })
 }
 
+function canonicalDocumentClassification(
+  collection: "document" | "version",
+  document: z.infer<typeof documentSchema>,
+  link: z.infer<typeof linkSchema>
+): "amendment" | "analysis" | "fiscal-note" | "supplemental" | "version" {
+  if (collection === "version") {
+    return "version"
+  }
+  const value = `${document.classification ?? ""} ${document.note ?? ""} ${link.text ?? ""}`.toLowerCase()
+  if (value.includes("amendment")) {
+    return "amendment"
+  }
+  if (value.includes("fiscal") && value.includes("note")) {
+    return "fiscal-note"
+  }
+  if (value.includes("analysis")) {
+    return "analysis"
+  }
+  return "supplemental"
+}
+
 function sourceUrl(sources: Array<{ url: string }>, fallback?: string): string {
   const url = sources[0]?.url ?? fallback
   if (url === undefined) {
@@ -230,7 +251,7 @@ function documentRecords(
       return {
         document: {
           billId,
-          classification: collection,
+          classification: canonicalDocumentClassification(collection, document, link),
           contentType: link.media_type,
           documentDate: exactDate(document.date, `${collection}.date`, diagnostics),
           id: childId("document", billId, identity),

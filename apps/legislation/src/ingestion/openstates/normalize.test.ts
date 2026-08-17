@@ -38,6 +38,11 @@ describe("Open States normalization", () => {
       vote: { noCount: 8, result: "pass", yesCount: 90 }
     })
     expect(result.aggregate.documents).toHaveLength(3)
+    expect(result.aggregate.documents?.map((item) => item.document.classification)).toEqual([
+      "version",
+      "version",
+      "fiscal-note"
+    ])
     expect(result.aggregate.relations).toEqual([
       {
         billId: "bill:wa:2025-2026:hb:1234",

@@ -23,6 +23,26 @@ describe("Congress entity normalization", () => {
     expect(result.terms[0]?.endDate).toBeUndefined()
   })
 
+  it("accepts null optional fields returned by Congress.gov", () => {
+    const result = normalizeCongressMembers(
+      [
+        {
+          bioguideId: "S001234",
+          district: null,
+          name: "Senator Example",
+          partyName: null,
+          terms: { item: [{ chamber: "Senate", endYear: null, startYear: 2025 }] },
+          updateDate: null,
+          url: null
+        }
+      ],
+      119
+    )
+
+    expect(result.people[0]).toMatchObject({ party: undefined, sourceId: "S001234" })
+    expect(result.terms[0]).toMatchObject({ chamber: "upper", district: undefined, isActive: true })
+  })
+
   it("creates legislature, chamber, committee, and subcommittee hierarchy", () => {
     const result = normalizeCongressCommittees([
       {

@@ -3,16 +3,21 @@ import type { legislativeTerms, organizations, people } from "../../db/schema/sc
 import { jurisdictionId, legislativeTermId, organizationId, personId } from "../../legislation/identifiers.js"
 
 const optionalString = z.preprocess(
-  (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+  (value) => (value === null || (typeof value === "string" && value.trim().length === 0) ? undefined : value),
   z.string().trim().min(1).optional()
 )
+const optionalInteger = z.preprocess((value) => (value === null ? undefined : value), z.number().int().optional())
+const optionalDistrict = z.preprocess(
+  (value) => (value === null ? undefined : value),
+  z.union([z.number().int(), z.string()]).optional()
+)
 const termSchema = z
-  .object({ chamber: z.string().trim().min(1), endYear: z.number().int().optional(), startYear: z.number().int() })
+  .object({ chamber: z.string().trim().min(1), endYear: optionalInteger, startYear: z.number().int() })
   .passthrough()
 const memberSchema = z
   .object({
     bioguideId: z.string().trim().min(1),
-    district: z.union([z.number().int(), z.string()]).optional(),
+    district: optionalDistrict,
     name: z.string().trim().min(1),
     partyName: optionalString,
     terms: z.object({ item: z.array(termSchema).default([]) }).default({ item: [] }),
