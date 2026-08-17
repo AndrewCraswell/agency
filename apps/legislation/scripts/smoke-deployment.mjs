@@ -32,12 +32,26 @@ try {
   const expected = [
     "compare_bill_versions",
     "find_related_bills",
+    "get_amendment",
     "get_bill",
     "get_bill_text",
     "get_bill_timeline",
+    "get_calendar",
+    "get_event",
+    "get_organization",
+    "get_person",
+    "get_supporting_material",
+    "get_vote",
+    "search_amendments",
     "search_bill_text",
-    "search_bills"
-  ]
+    "search_bills",
+    "search_changes",
+    "search_events",
+    "search_organizations",
+    "search_people",
+    "search_supporting_materials",
+    "search_votes"
+  ].sort()
   if (JSON.stringify(names) !== JSON.stringify(expected)) {
     throw new Error(`Unexpected MCP tool set: ${JSON.stringify(names)}`)
   }
@@ -51,16 +65,64 @@ try {
       arguments: { billId, documentIds: [firstDocumentId, secondDocumentId] },
       name: "compare_bill_versions"
     },
-    { arguments: { id: billId }, name: "find_related_bills" }
+    { arguments: { id: billId }, name: "find_related_bills" },
+    { arguments: { jurisdictionId: "jurisdiction:us", limit: 1 }, name: "get_calendar" },
+    { arguments: { jurisdictionId: "jurisdiction:us", limit: 1 }, name: "search_changes" }
   ]
-  for (const call of calls) {
-    const result = await client.callTool(call)
+  let toolCalls = 0
+  const call = async (request) => {
+    const result = await client.callTool(request)
+    toolCalls += 1
     if (result.isError === true) {
-      throw new Error(`Deployment smoke tool call failed: ${call.name}`)
+      throw new Error(`Deployment smoke tool call failed: ${request.name}`)
     }
+    return result.structuredContent?.data
+  }
+  for (const request of calls) {
+    await call(request)
+  }
+  const discoveryCalls = [
+    {
+      detail: "get_person",
+      search: { arguments: { jurisdictionId: "jurisdiction:us", limit: 1 }, name: "search_people" }
+    },
+    {
+      detail: "get_organization",
+      search: {
+        arguments: { classification: "committee", jurisdictionId: "jurisdiction:us", limit: 1 },
+        name: "search_organizations"
+      }
+    },
+    {
+      detail: "get_event",
+      search: { arguments: { jurisdictionId: "jurisdiction:us", limit: 1 }, name: "search_events" }
+    },
+    {
+      detail: "get_vote",
+      search: { arguments: { limit: 1 }, name: "search_votes" }
+    },
+    {
+      detail: "get_amendment",
+      search: { arguments: { jurisdictionId: "jurisdiction:us", limit: 1 }, name: "search_amendments" }
+    },
+    {
+      detail: "get_supporting_material",
+      search: {
+        arguments: { jurisdictionId: "jurisdiction:us", limit: 1 },
+        name: "search_supporting_materials"
+      }
+    }
+  ]
+  for (const discovery of discoveryCalls) {
+    const data = await call(discovery.search)
+    const item = data?.items?.[0]
+    if (typeof item?.id !== "string") {
+      throw new Error(`Deployment smoke fixture missing for ${discovery.detail}`)
+    }
+    await call({ arguments: { id: item.id, limit: 1 }, name: discovery.detail })
   }
   process.stdout.write(
-    `${JSON.stringify({ health: health.status, ready: ready.status, toolCalls: calls.length, tools: names.length })}\n`
+    `${JSON.stringify({ health: health.status, ready: ready.status, toolCalls, tools: names.length })}\n`
   )
 } finally {
   await transport.close()
