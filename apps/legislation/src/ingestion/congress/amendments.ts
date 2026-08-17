@@ -11,7 +11,8 @@ import {
   federalBillId,
   jurisdictionId,
   legislativeSessionId,
-  personId
+  personId,
+  supportingMaterialId
 } from "../../legislation/identifiers.js"
 
 const optionalString = z.preprocess(
@@ -155,7 +156,7 @@ export function normalizeCongressAmendmentBundle(input: unknown): CongressAmendm
     materials: source.textVersions.flatMap((version, versionIndex) =>
       version.formats.map((format, formatIndex) => {
         const identity = `${versionIndex}:${formatIndex}:${format.url}`
-        const materialId = amendmentChildId("material", canonicalAmendmentId, identity)
+        const materialId = supportingMaterialId("congress", `${canonicalAmendmentId}:${identity}`)
         return {
           link: { amendmentId: canonicalAmendmentId, billId: relatedBillId, materialId },
           material: {

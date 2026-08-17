@@ -105,7 +105,7 @@ try {
     },
     {
       detail: "get_vote",
-      search: { arguments: { limit: 1 }, name: "search_votes" }
+      search: { arguments: { billId, limit: 1 }, name: "search_votes" }
     },
     {
       detail: "get_amendment",

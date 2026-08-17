@@ -51,7 +51,11 @@ describe("Congress amendment normalization", () => {
     expect(snapshot.actions[1]).toMatchObject({ actionDate: "2025-01-03", classification: ["floor"] })
     expect(snapshot.materials[0]).toMatchObject({
       link: { amendmentId: "amendment:us:119:hamdt:1", billId: "bill:us:119:hres:1" },
-      material: { classification: "amendment-text", contentType: "application/pdf" }
+      material: {
+        classification: "amendment-text",
+        contentType: "application/pdf",
+        id: expect.stringMatching(/^material:congress:/)
+      }
     })
   })
 })

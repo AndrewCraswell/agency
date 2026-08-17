@@ -60,6 +60,21 @@ export async function upsertCongressAmendmentSnapshot(
     if (snapshot.actions.length > 0) {
       await transaction.insert(amendmentActions).values(snapshot.actions)
     }
+    const previousMaterials = await transaction
+      .select({ materialId: supportingMaterialLinks.materialId })
+      .from(supportingMaterialLinks)
+      .where(eq(supportingMaterialLinks.amendmentId, snapshot.amendment.id))
+    await transaction
+      .delete(supportingMaterialLinks)
+      .where(eq(supportingMaterialLinks.amendmentId, snapshot.amendment.id))
+    if (previousMaterials.length > 0) {
+      await transaction.delete(supportingMaterials).where(
+        inArray(
+          supportingMaterials.id,
+          previousMaterials.map((item) => item.materialId)
+        )
+      )
+    }
     const materialIds = snapshot.materials.map((item) => item.material.id)
     if (materialIds.length > 0) {
       await transaction
@@ -76,7 +91,6 @@ export async function upsertCongressAmendmentSnapshot(
           },
           target: supportingMaterials.id
         })
-      await transaction.delete(supportingMaterialLinks).where(inArray(supportingMaterialLinks.materialId, materialIds))
       await transaction.insert(supportingMaterialLinks).values(
         snapshot.materials.map((item) => ({
           ...item.link,
