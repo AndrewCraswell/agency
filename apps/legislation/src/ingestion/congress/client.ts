@@ -33,6 +33,19 @@ const hearingReferenceSchema = z.object({
   updateDate: z.string().optional(),
   url: z.string().min(1)
 })
+const houseVoteReferenceSchema = z
+  .object({
+    congress: z.number().int().positive(),
+    identifier: z.union([z.string(), z.number()]).transform(String),
+    legislationNumber: z.union([z.string(), z.number()]).transform(String).optional(),
+    legislationType: z.string().min(1).optional(),
+    rollCallNumber: z.number().int().positive(),
+    sessionNumber: z.number().int().positive(),
+    sourceDataURL: z.string().url(),
+    updateDate: z.string().optional(),
+    url: z.string().url()
+  })
+  .passthrough()
 
 export type CongressBillReference = {
   congress: number
@@ -45,6 +58,7 @@ export type CongressBillReference = {
 export type CongressAmendmentReference = z.infer<typeof amendmentReferenceSchema>
 export type CongressCommitteeMeetingReference = z.infer<typeof committeeMeetingReferenceSchema>
 export type CongressHearingReference = z.infer<typeof hearingReferenceSchema>
+export type CongressHouseVoteReference = z.infer<typeof houseVoteReferenceSchema>
 
 export interface CongressClientOptions {
   apiKey: string
@@ -162,6 +176,30 @@ export class CongressClient {
     const path = `hearing/${reference.congress}/${reference.chamber.toLowerCase()}/${reference.jacketNumber}`
     const detail = z.object({ hearing: z.record(z.string(), z.unknown()) }).parse(await this.#json(path))
     return { hearing: detail.hearing, sourceUrl: reference.url }
+  }
+
+  async *houseVotes(
+    congress: number,
+    session: number,
+    startOffset = 0
+  ): AsyncGenerator<{ offset: number; reference: CongressHouseVoteReference }> {
+    yield* this.#references(
+      `house-vote/${congress}/${session}`,
+      "houseRollCallVotes",
+      houseVoteReferenceSchema,
+      startOffset
+    )
+  }
+
+  async getHouseVoteBundle(reference: CongressHouseVoteReference): Promise<unknown> {
+    const path = `house-vote/${reference.congress}/${reference.sessionNumber}/${reference.rollCallNumber}`
+    const [detail, members] = await Promise.all([this.#json(path), this.#json(`${path}/members`)])
+    return {
+      members: z.object({ houseRollCallVoteMemberVotes: z.record(z.string(), z.unknown()) }).parse(members)
+        .houseRollCallVoteMemberVotes,
+      reference,
+      vote: z.object({ houseRollCallVote: z.record(z.string(), z.unknown()) }).parse(detail).houseRollCallVote
+    }
   }
 
   async getBillBundle(reference: CongressBillReference): Promise<unknown> {

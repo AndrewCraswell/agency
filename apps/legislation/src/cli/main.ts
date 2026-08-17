@@ -16,6 +16,7 @@ import { CongressClient } from "../ingestion/congress/client.js"
 import { normalizeCongressCommittees, normalizeCongressMembers } from "../ingestion/congress/entities.js"
 import { synchronizeCongressEvents } from "../ingestion/congress/events-sync.js"
 import { synchronizeCongress } from "../ingestion/congress/sync.js"
+import { synchronizeCongressHouseVotes } from "../ingestion/congress/votes-sync.js"
 import {
   AzureBlobArtifactStore,
   LocalArtifactStore,
@@ -170,6 +171,15 @@ program
   .option("--limit <number>", "maximum records per domain and Congress")
   .option("--start-congress <number>")
   .action(syncCongressEventData)
+
+program
+  .command("congress:house-votes")
+  .description("Synchronize House roll-call votes and member positions")
+  .option("--end-congress <number>")
+  .option("--limit <number>", "maximum votes per session and Congress")
+  .option("--session <number>", "limit to session 1 or 2")
+  .option("--start-congress <number>")
+  .action(syncCongressHouseVoteData)
 
 program
   .command("documents:process")
@@ -981,6 +991,66 @@ async function syncCongressEventData(options: {
             }
             failures.push(...synchronized.failures)
             checkpoint = { congress, domain, ...synchronized.checkpoint }
+          }
+        }
+        return checkpoint === undefined ? { counts, failures } : { checkpoint, counts, failures }
+      }
+    )
+    printJobResult(result)
+  }, config)
+  createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "congress" })
+}
+
+async function syncCongressHouseVoteData(options: {
+  endCongress?: string
+  limit?: string
+  session?: string
+  startCongress?: string
+}) {
+  const config = loadConfig()
+  if (config.ingestion.congressApiKey === undefined) {
+    throw new InvalidJobInput("CONGRESS_API_KEY is required for congress:house-votes")
+  }
+  const start = parseInteger(options.startCongress ?? String(config.ingestion.federalStartCongress), "start Congress")
+  const end = parseInteger(options.endCongress ?? String(config.ingestion.federalEndCongress), "end Congress")
+  if (start > end) {
+    throw new InvalidJobInput("start Congress must not exceed end Congress")
+  }
+  const sessions = options.session === undefined ? [1, 2] : [parseInteger(options.session, "session")]
+  if (sessions.some((session) => session !== 1 && session !== 2)) {
+    throw new InvalidJobInput("session must be 1 or 2")
+  }
+  const limit = options.limit === undefined ? undefined : parseInteger(options.limit, "limit")
+  const providerHttp = congressBootstrapHttpClient(config)
+  const client = new CongressClient({
+    apiKey: config.ingestion.congressApiKey,
+    baseUrl: new URL(config.ingestion.congressApiUrl),
+    http: providerHttp
+  })
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: "house-votes-bootstrap",
+        scope: { endCongress: end, sessions, startCongress: start },
+        source: "congress"
+      },
+      async () => {
+        const counts = createJobCounts()
+        const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
+        let checkpoint: Readonly<Record<string, unknown>> | undefined
+        for (let congress = start; congress <= end; congress += 1) {
+          for (const session of sessions) {
+            const synchronized = await synchronizeCongressHouseVotes(database, client, congress, session, {
+              limit,
+              sourceStore: createSourceStore(config, "federal")
+            })
+            for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
+              counts[key] += synchronized.counts[key]
+            }
+            failures.push(...synchronized.failures)
+            checkpoint = { congress, session, ...synchronized.checkpoint }
           }
         }
         return checkpoint === undefined ? { counts, failures } : { checkpoint, counts, failures }
