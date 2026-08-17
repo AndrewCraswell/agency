@@ -13,6 +13,7 @@ import {
 } from "./process.js"
 
 const MAX_REPORTED_FAILURES = 20
+const MAX_UPDATE_BATCH_SIZE = 1000
 const RETRY_BASE_DELAY_MS = 5 * 60 * 1000
 const RETRY_MAX_DELAY_MS = 6 * 60 * 60 * 1000
 
@@ -52,16 +53,19 @@ export async function classifyTerminalDocumentFailures(
   let updated = 0
   for (const [category, terminalRecords] of terminalByCategory) {
     const terminalIds = terminalRecords.map((record) => record.id)
-    updated += terminalIds.length
-    await database
-      .update(billDocuments)
-      .set({
-        nextAttemptAt: null,
-        processingErrorCategory: category,
-        processingStatus: "unsupported",
-        updatedAt: new Date()
-      })
-      .where(inArray(billDocuments.id, terminalIds))
+    for (let offset = 0; offset < terminalIds.length; offset += MAX_UPDATE_BATCH_SIZE) {
+      const batch = terminalIds.slice(offset, offset + MAX_UPDATE_BATCH_SIZE)
+      await database
+        .update(billDocuments)
+        .set({
+          nextAttemptAt: null,
+          processingErrorCategory: category,
+          processingStatus: "unsupported",
+          updatedAt: new Date()
+        })
+        .where(inArray(billDocuments.id, batch))
+      updated += batch.length
+    }
   }
   return { inspected: records.length, updated }
 }
