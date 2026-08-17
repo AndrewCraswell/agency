@@ -26,7 +26,7 @@ resource mcpFailures 'Microsoft.Insights/metricAlerts@2018-03-01' = {
           criterionType: 'StaticThresholdCriterion'
           dimensions: [
             {
-              name: 'Status Code Category'
+              name: 'statusCodeCategory'
               operator: 'Include'
               values: ['5xx']
             }
