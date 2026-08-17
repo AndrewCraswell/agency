@@ -15,6 +15,7 @@ import { synchronizeCongressAmendments } from "../ingestion/congress/amendments-
 import { CongressClient } from "../ingestion/congress/client.js"
 import { normalizeCongressCommittees, normalizeCongressMembers } from "../ingestion/congress/entities.js"
 import { synchronizeCongressEvents } from "../ingestion/congress/events-sync.js"
+import { synchronizeCongressCommitteeReports } from "../ingestion/congress/reports-sync.js"
 import { synchronizeCongress } from "../ingestion/congress/sync.js"
 import { synchronizeCongressHouseVotes } from "../ingestion/congress/votes-sync.js"
 import {
@@ -174,6 +175,15 @@ program
   .option("--restart", "restart each domain and Congress from its first record")
   .option("--start-congress <number>")
   .action(syncCongressEventData)
+
+program
+  .command("congress:reports")
+  .description("Synchronize federal committee reports, related bills, committees, and available text")
+  .option("--end-congress <number>")
+  .option("--limit <number>", "maximum committee reports per Congress")
+  .option("--restart", "restart each configured Congress from its first committee report")
+  .option("--start-congress <number>")
+  .action(syncCongressCommitteeReportData)
 
 program
   .command("congress:house-votes")
@@ -939,6 +949,61 @@ async function syncCongressAmendmentData(options: {
         let checkpoint: Readonly<Record<string, unknown>> | undefined
         for (let congress = start; congress <= end; congress += 1) {
           const synchronized = await synchronizeCongressAmendments(database, client, congress, {
+            limit,
+            restart: options.restart,
+            sourceStore: createSourceStore(config, "federal")
+          })
+          for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
+            counts[key] += synchronized.counts[key]
+          }
+          failures.push(...synchronized.failures)
+          checkpoint = { congress, ...synchronized.checkpoint }
+        }
+        return checkpoint === undefined ? { counts, failures } : { checkpoint, counts, failures }
+      }
+    )
+    printJobResult(result)
+  }, config)
+  createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "congress" })
+}
+
+async function syncCongressCommitteeReportData(options: {
+  endCongress?: string
+  limit?: string
+  restart?: boolean
+  startCongress?: string
+}) {
+  const config = loadConfig()
+  if (config.ingestion.congressApiKey === undefined) {
+    throw new InvalidJobInput("CONGRESS_API_KEY is required for congress:reports")
+  }
+  const start = parseInteger(options.startCongress ?? String(config.ingestion.federalStartCongress), "start Congress")
+  const end = parseInteger(options.endCongress ?? String(config.ingestion.federalEndCongress), "end Congress")
+  if (start > end) {
+    throw new InvalidJobInput("start Congress must not exceed end Congress")
+  }
+  const limit = options.limit === undefined ? undefined : parseInteger(options.limit, "limit")
+  const providerHttp = congressBootstrapHttpClient(config)
+  const client = new CongressClient({
+    apiKey: config.ingestion.congressApiKey,
+    baseUrl: new URL(config.ingestion.congressApiUrl),
+    http: providerHttp
+  })
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: "committee-reports-bootstrap",
+        scope: { endCongress: end, startCongress: start },
+        source: "congress"
+      },
+      async () => {
+        const counts = createJobCounts()
+        const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
+        let checkpoint: Readonly<Record<string, unknown>> | undefined
+        for (let congress = start; congress <= end; congress += 1) {
+          const synchronized = await synchronizeCongressCommitteeReports(database, client, congress, {
             limit,
             restart: options.restart,
             sourceStore: createSourceStore(config, "federal")

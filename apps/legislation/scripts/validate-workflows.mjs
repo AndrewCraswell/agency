@@ -3,8 +3,8 @@ import { resolve } from "node:path"
 
 const directory = resolve("workflows")
 const files = (await readdir(directory)).filter((file) => file.endsWith(".json")).sort()
-if (files.length !== 9) {
-  throw new Error(`Expected nine exported workflows, found ${files.length}`)
+if (files.length !== 10) {
+  throw new Error(`Expected ten exported workflows, found ${files.length}`)
 }
 
 const workflowIds = new Set()

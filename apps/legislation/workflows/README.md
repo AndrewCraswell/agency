@@ -11,18 +11,19 @@ The managed identity needs Container Apps Job Executor on the ingestion job. n8n
 and Key Vault-held encryption key. Queue mode, Redis, and separate workers remain disabled for MVP.
 
 The development deployment builds `Dockerfile.n8n`, creates the `leg-dev-n8n-bootstrap` Container Apps Job, and runs it
-after n8n is available. The job imports all nine stable workflow IDs in the inactive state; importing again updates
-those same IDs instead of creating duplicates. The bootstrap explicitly deactivates every workflow after import because
-n8n otherwise preserves the activation state of an existing workflow.
+after n8n is available. The job imports all ten stable workflow IDs in the inactive state; importing again updates those
+same IDs instead of creating duplicates. The bootstrap explicitly deactivates every workflow after import because n8n
+otherwise preserves the activation state of an existing workflow.
 
 ## Schedule activation and pause
 
 Schedules must remain inactive until the D2 corpus-ingestion and D3 document-corpus gates pass. After both gates pass:
 
-1. Open the development n8n instance and confirm that all nine `Legislation -` workflows are inactive.
-2. Manually run a bounded validation of Congress sync, Congress events, House votes, amendments, coverage report,
-   document processing, embedding refresh, and Open States refresh. Confirm each application run ID and terminal result.
-3. Activate those eight scheduled workflows. Keep `Legislation - GovInfo bootstrap` inactive because it is a manual,
+1. Open the development n8n instance and confirm that all ten `Legislation -` workflows are inactive.
+2. Manually run a bounded validation of Congress sync, Congress events, House votes, amendments, committee reports,
+   coverage report, document processing, embedding refresh, and Open States refresh. Confirm each application run ID and
+   terminal result.
+3. Activate those nine scheduled workflows. Keep `Legislation - GovInfo bootstrap` inactive because it is a manual,
    bounded bootstrap operation.
 4. Record the activation time, workflow IDs, application image digest, and validating run IDs in the development
    completion record.
@@ -30,7 +31,7 @@ Schedules must remain inactive until the D2 corpus-ingestion and D3 document-cor
 To pause ingestion, deactivate the eight scheduled workflows in n8n. Deactivation prevents new triggers but does not
 cancel an already-started Container Apps Job execution. Inspect active executions with
 `az containerapp job execution list --resource-group legislation-dev --name leg-dev-ingestion`; stop a specific run only
-after recording its execution name and application run ID. Re-importing the checked-in workflows also pauses all nine
+after recording its execution name and application run ID. Re-importing the checked-in workflows also pauses all ten
 workflows by design.
 
 Replay a bounded range through the CLI options in a manual Container Apps Job execution; application checkpoints and
@@ -69,5 +70,7 @@ On 2026-08-17, the authorized `legislation-dev` resource group was reconciled wi
 - n8n uses `leg-dev-n8n-id` and has `Container Apps Jobs Operator` on `leg-dev-ingestion`.
 - `AZURE_INGESTION_JOB_ID` points to `leg-dev-ingestion`, and `LEGISLATION_IMAGE` uses immutable digest
   `sha256:489fbf1acba532519669a8a8040d48fb6b41a1da577d98eaecc9228320308374`.
-- The bootstrap import contained exactly the nine stable `legislation-*` workflow IDs, with no duplicate IDs.
-- All nine imported workflows were confirmed inactive after bootstrap execution `leg-dev-n8n-bootstrap-5744k9a`.
+- The last recorded bootstrap imported nine stable `legislation-*` workflow IDs. The next bootstrap will add the
+  committee-report workflow and confirm all ten without duplicate IDs.
+- All nine previously imported workflows were confirmed inactive after bootstrap execution
+  `leg-dev-n8n-bootstrap-5744k9a`; the new committee-report workflow remains inactive by definition until validation.

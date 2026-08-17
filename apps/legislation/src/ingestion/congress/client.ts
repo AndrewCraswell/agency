@@ -46,6 +46,19 @@ const houseVoteReferenceSchema = z
     url: z.string().url()
   })
   .passthrough()
+const committeeReportReferenceSchema = z
+  .object({
+    chamber: z.string().min(1),
+    citation: z.string().min(1),
+    cmte_rpt_id: z.union([z.string(), z.number()]).transform(String),
+    congress: z.number().int().positive(),
+    number: z.union([z.string(), z.number()]).transform(String),
+    part: z.union([z.string(), z.number()]).transform(String).optional(),
+    type: z.string().min(1),
+    updateDate: z.string().optional(),
+    url: z.string().url()
+  })
+  .passthrough()
 
 export type CongressBillReference = {
   congress: number
@@ -59,6 +72,7 @@ export type CongressAmendmentReference = z.infer<typeof amendmentReferenceSchema
 export type CongressCommitteeMeetingReference = z.infer<typeof committeeMeetingReferenceSchema>
 export type CongressHearingReference = z.infer<typeof hearingReferenceSchema>
 export type CongressHouseVoteReference = z.infer<typeof houseVoteReferenceSchema>
+export type CongressCommitteeReportReference = z.infer<typeof committeeReportReferenceSchema>
 
 export interface CongressClientOptions {
   apiKey: string
@@ -176,6 +190,26 @@ export class CongressClient {
     const path = `hearing/${reference.congress}/${reference.chamber.toLowerCase()}/${reference.jacketNumber}`
     const detail = z.object({ hearing: z.record(z.string(), z.unknown()) }).parse(await this.#json(path))
     return { hearing: detail.hearing, sourceUrl: reference.url }
+  }
+
+  async *committeeReports(
+    congress: number,
+    startOffset = 0
+  ): AsyncGenerator<{ offset: number; reference: CongressCommitteeReportReference }> {
+    yield* this.#references(`committee-report/${congress}`, "reports", committeeReportReferenceSchema, startOffset)
+  }
+
+  async getCommitteeReportBundle(reference: CongressCommitteeReportReference): Promise<unknown> {
+    const path = `committee-report/${reference.congress}/${reference.type.toLowerCase()}/${reference.number}`
+    const detail = z
+      .object({ committeeReports: z.array(z.record(z.string(), z.unknown())).min(1) })
+      .parse(await this.#json(path))
+    const report =
+      detail.committeeReports.find((candidate) => String(candidate.part ?? "") === String(reference.part ?? "")) ??
+      detail.committeeReports[0]
+    const textCount = z.object({ count: z.number().int().nonnegative() }).safeParse(report?.text).data?.count ?? 0
+    const text = textCount === 0 ? [] : await this.#collection(`${path}/text`, "text")
+    return { reference, report, text }
   }
 
   async *houseVotes(

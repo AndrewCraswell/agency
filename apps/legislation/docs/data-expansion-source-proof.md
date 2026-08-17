@@ -74,6 +74,11 @@ The duration column assumes one detail request per list record and is therefore 
 retries, update overlap, and document acquisition increase elapsed time. Bootstraps must be checkpointed by domain and
 Congress rather than combined into one execution.
 
+The committee-report detail contract was validated against an official 119th Congress record. It supplied the report
+title, citation, issue date, reporting committees, associated legislation, update time, and a text subcollection with
+HTML and PDF representations. The importer retains each official representation as a searchable committee-report
+material and links it only to bills and committees already present in the canonical corpus.
+
 ## GovInfo inventory
 
 The GovInfo collection API accepted the existing data.gov API credential. Using an update-date window beginning

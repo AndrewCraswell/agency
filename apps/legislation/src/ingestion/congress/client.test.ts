@@ -126,4 +126,49 @@ describe("CongressClient", () => {
     expect(bundle.actions).toEqual([])
     expect(bundle.textVersions).toEqual([])
   })
+
+  it("loads committee report detail and every published text format", async () => {
+    const paths: string[] = []
+    const request = vi.fn<typeof fetch>(async (input) => {
+      const url = new URL(String(input))
+      paths.push(url.pathname)
+      if (url.pathname.endsWith("/text")) {
+        return Response.json({
+          pagination: { count: 1 },
+          text: [{ formats: [{ type: "PDF", url: "https://congress.gov/report.pdf" }] }]
+        })
+      }
+      return Response.json({
+        committeeReports: [
+          {
+            congress: 119,
+            number: 1,
+            part: 1,
+            text: { count: 1 },
+            title: "Test report",
+            type: "HRPT"
+          }
+        ]
+      })
+    })
+    const client = new CongressClient({
+      apiKey: "secret-key",
+      baseUrl: new URL("https://api.congress.gov/v3/"),
+      http: new RetryingHttpClient({ fetch: request, maxAttempts: 1, requestTimeoutMs: 1000 })
+    })
+
+    const bundle = (await client.getCommitteeReportBundle({
+      chamber: "House",
+      citation: "H. Rept. 119-1",
+      cmte_rpt_id: "289187",
+      congress: 119,
+      number: "1",
+      part: "1",
+      type: "HRPT",
+      url: "https://api.congress.gov/v3/committee-report/119/HRPT/1"
+    })) as Record<string, unknown>
+
+    expect(paths).toEqual(["/v3/committee-report/119/hrpt/1", "/v3/committee-report/119/hrpt/1/text"])
+    expect(bundle.text).toEqual([{ formats: [{ type: "PDF", url: "https://congress.gov/report.pdf" }] }])
+  })
 })
