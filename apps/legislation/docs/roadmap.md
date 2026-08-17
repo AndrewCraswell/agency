@@ -233,7 +233,7 @@ passes its data-quality gate.
 - [x] **E6.5** Add amendment and supporting-material discovery and retrieval tools after E4.
 - [x] **E6.6** Add recent-change queries after E5 without summaries, predictions, or notification delivery.
 - [x] **E6.7** Keep tool schemas narrow, paginated, and explicit about coverage gaps and unavailable fields.
-- [ ] **E6.8** Run contract, authorization, payload, latency, and two-client compatibility tests for every added tool.
+- [x] **E6.8** Run contract, authorization, payload, latency, and two-client compatibility tests for every added tool.
 - [ ] **E6.9** Run human-reviewed evaluation cases across federal and representative state coverage before declaring a
   domain supported.
 

@@ -48,13 +48,13 @@ function createService(): LegislationQueryApi {
   }
 }
 
-async function createClient(service = createService()) {
+async function createClient(service = createService(), name = "legislation-test") {
   const handler = createLegislationMcpHandler(service, logger)
   handlers.add(handler)
   const transport = new StreamableHTTPClientTransport(new URL("http://test.local/mcp"), {
     fetch: (input, init) => handler.fetch(new Request(input, init))
   })
-  const client = new Client({ name: "legislation-test", version: "1.0.0" }, { versionNegotiation: { mode: "auto" } })
+  const client = new Client({ name, version: "1.0.0" }, { versionNegotiation: { mode: "auto" } })
   await client.connect(transport)
   return { client, service, transport }
 }
@@ -174,6 +174,46 @@ describe("legislation MCP tools", () => {
     expect(result.isError).toBe(true)
     expect(JSON.stringify(result.content)).toContain("result_limit")
     await transport.close()
+  })
+
+  it("serves every expansion tool to two independent clients within the contract latency budget", async () => {
+    const calls = [
+      { arguments: { jurisdictionId: "jurisdiction:us", query: "Smith" }, name: "search_people" },
+      { arguments: { id: "person:congress:a000001" }, name: "get_person" },
+      { arguments: { classification: "committee", jurisdictionId: "jurisdiction:us" }, name: "search_organizations" },
+      { arguments: { id: "organization:congress:house" }, name: "get_organization" },
+      { arguments: { jurisdictionId: "jurisdiction:us" }, name: "search_events" },
+      { arguments: { id: "event:congress:meeting-1" }, name: "get_event" },
+      { arguments: { jurisdictionId: "jurisdiction:us" }, name: "get_calendar" },
+      { arguments: { billId: "bill:us:119:hr:1234" }, name: "search_votes" },
+      { arguments: { id: "vote:congress:house-1" }, name: "get_vote" },
+      { arguments: { billId: "bill:us:119:hr:1234" }, name: "search_amendments" },
+      { arguments: { id: "amendment:congress:119-hamdt-1" }, name: "get_amendment" },
+      { arguments: { billId: "bill:us:119:hr:1234" }, name: "search_supporting_materials" },
+      { arguments: { id: "material:govinfo:crpt-1" }, name: "get_supporting_material" },
+      { arguments: { jurisdictionId: "jurisdiction:us" }, name: "search_changes" }
+    ] as const
+    const clients = await Promise.all([
+      createClient(createService(), "legislation-compatibility-a"),
+      createClient(createService(), "legislation-compatibility-b")
+    ])
+    const durations: number[] = []
+    try {
+      for (const { client } of clients) {
+        for (const call of calls) {
+          const started = performance.now()
+          const result = await client.callTool(call)
+          durations.push(performance.now() - started)
+          expect(result.isError).not.toBe(true)
+          expect(Buffer.byteLength(JSON.stringify(result), "utf8")).toBeLessThan(900_000)
+        }
+      }
+      const sorted = durations.toSorted((left, right) => left - right)
+      const p95 = sorted[Math.ceil(sorted.length * 0.95) - 1] ?? Number.POSITIVE_INFINITY
+      expect(p95).toBeLessThan(2_000)
+    } finally {
+      await Promise.all(clients.map(async ({ transport }) => transport.close()))
+    }
   })
 })
 

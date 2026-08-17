@@ -40,3 +40,11 @@ The current coverage report selects the actual jurisdictions and records; no cas
 
 E6.1 covers definition of these scenarios. E6.8 requires automated contract, authorization, payload, latency, and
 two-client execution. E6.9 remains a separate human-reviewed evaluation and cannot be satisfied by these definitions.
+
+## Automated compatibility evidence
+
+The MCP test suite advertises and calls all 21 tools, validates that every array parameter publishes an item schema,
+rejects malformed canonical IDs before service execution, enforces the response byte ceiling, and calls every expansion
+tool through an authenticated server. Two independent MCP SDK client sessions each execute all 14 expansion calls while
+recording a two-second p95 contract budget. This is protocol compatibility evidence; it does not replace the live corpus
+and human-source review required by E6.9.
