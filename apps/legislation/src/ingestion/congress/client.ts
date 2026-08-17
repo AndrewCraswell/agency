@@ -12,6 +12,13 @@ const billReferenceSchema = z.object({
   url: z.string().min(1)
 })
 const billListSchema = z.object({ bills: z.array(billReferenceSchema).default([]), pagination: paginationSchema })
+const amendmentReferenceSchema = z.object({
+  congress: z.number().int().positive(),
+  number: z.string().min(1),
+  type: z.string().min(1),
+  updateDate: z.string().optional(),
+  url: z.string().min(1)
+})
 
 export type CongressBillReference = {
   congress: number
@@ -20,6 +27,8 @@ export type CongressBillReference = {
   updateDate?: string
   url: string
 }
+
+export type CongressAmendmentReference = z.infer<typeof amendmentReferenceSchema>
 
 export interface CongressClientOptions {
   apiKey: string
@@ -49,11 +58,11 @@ export class CongressClient {
     for (;;) {
       const response = billListSchema.parse(
         await this.#json("bill", {
-          fromDateTime: fromDateTime.toISOString(),
+          fromDateTime: congressDateTime(fromDateTime),
           limit: String(this.#pageSize),
           offset: String(offset),
           sort: "updateDate+asc",
-          toDateTime: toDateTime.toISOString()
+          toDateTime: congressDateTime(toDateTime)
         })
       )
       this.#onPage?.({ next: response.pagination.next !== undefined, offset, records: response.bills.length })
@@ -73,6 +82,37 @@ export class CongressClient {
 
   async *committees(congress: number): AsyncGenerator<readonly unknown[]> {
     yield* this.#pages(`committee/${congress}`, "committees")
+  }
+
+  async *amendments(
+    congress: number,
+    startOffset = 0
+  ): AsyncGenerator<{ offset: number; reference: CongressAmendmentReference }> {
+    let offset = startOffset
+    for (;;) {
+      const response = z
+        .object({ amendments: z.array(amendmentReferenceSchema).default([]), pagination: paginationSchema })
+        .parse(await this.#json(`amendment/${congress}`, { limit: String(this.#pageSize), offset: String(offset) }))
+      this.#onPage?.({ next: response.pagination.next !== undefined, offset, records: response.amendments.length })
+      for (const [index, reference] of response.amendments.entries()) {
+        yield { offset: offset + index, reference }
+      }
+      if (response.pagination.next === undefined || response.amendments.length === 0) {
+        return
+      }
+      offset += response.amendments.length
+    }
+  }
+
+  async getAmendmentBundle(reference: CongressAmendmentReference): Promise<unknown> {
+    const path = `amendment/${reference.congress}/${reference.type.toLowerCase()}/${reference.number}`
+    const [detail, actions, textVersions] = await Promise.all([
+      this.#json(path),
+      this.#collection(`${path}/actions`, "actions"),
+      this.#collection(`${path}/text`, "textVersions")
+    ])
+    const amendment = z.object({ amendment: z.record(z.string(), z.unknown()) }).parse(detail).amendment
+    return { actions, amendment, sourceUrl: reference.url, textVersions }
   }
 
   async getBillBundle(reference: CongressBillReference): Promise<unknown> {
@@ -137,4 +177,8 @@ export class CongressClient {
     const response = await this.#http.get(url)
     return response.json() as Promise<unknown>
   }
+}
+
+function congressDateTime(value: Date): string {
+  return value.toISOString().replace(/\.\d{3}Z$/, "Z")
 }

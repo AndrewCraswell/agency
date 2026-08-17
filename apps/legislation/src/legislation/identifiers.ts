@@ -88,6 +88,21 @@ export function legislativeEventId(provider: string, upstreamId: string): string
   return `event:${normalizeSegment(provider, "provider")}:${normalizeSegment(upstreamId, "upstream ID")}`
 }
 
+export function federalAmendmentId(congress: number, amendmentType: string, amendmentNumber: string | number): string {
+  if (!Number.isSafeInteger(congress) || congress < 1) {
+    throw new Error("congress must be a positive integer")
+  }
+  return `amendment:us:${congress}:${normalizeSegment(amendmentType, "amendment type")}:${normalizeBillNumber(amendmentNumber)}`
+}
+
+export function amendmentChildId(
+  kind: "action" | "material",
+  canonicalAmendmentId: string,
+  sourceIdentity: string
+): string {
+  return `${canonicalAmendmentId}:${kind}:${stableHash([kind, canonicalAmendmentId, sourceIdentity.normalize("NFKC").trim()])}`
+}
+
 export function eventChildId(
   kind: "agenda" | "document" | "participant",
   canonicalEventId: string,

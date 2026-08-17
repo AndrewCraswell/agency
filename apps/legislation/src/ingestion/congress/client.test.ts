@@ -8,6 +8,8 @@ describe("CongressClient", () => {
     const progress: Array<{ next: boolean; offset: number; records: number }> = []
     const request = vi.fn<typeof fetch>(async (input) => {
       const url = new URL(String(input))
+      expect(url.searchParams.get("fromDateTime")).toBe("2025-01-01T00:00:00Z")
+      expect(url.searchParams.get("toDateTime")).toBe("2025-02-01T00:00:00Z")
       const offset = url.searchParams.get("offset")
       return Response.json({
         bills:

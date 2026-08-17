@@ -11,6 +11,7 @@ import { replaceEntitySnapshot } from "../db/queries/entities.js"
 import { upsertEventSnapshots } from "../db/queries/events.js"
 import { isDatabaseReady, waitForDatabase } from "../db/readiness.js"
 import { decodeArchiveRecords, MAXIMUM_ARCHIVE_BYTES } from "../ingestion/archive.js"
+import { synchronizeCongressAmendments } from "../ingestion/congress/amendments-sync.js"
 import { CongressClient } from "../ingestion/congress/client.js"
 import { normalizeCongressCommittees, normalizeCongressMembers } from "../ingestion/congress/entities.js"
 import { synchronizeCongress } from "../ingestion/congress/sync.js"
@@ -151,6 +152,14 @@ program
   .option("--end-congress <number>")
   .option("--start-congress <number>")
   .action(syncCongressEntities)
+
+program
+  .command("congress:amendments")
+  .description("Synchronize federal amendments, actions, sponsors, related bills, and available text")
+  .option("--end-congress <number>")
+  .option("--limit <number>", "maximum amendments per Congress")
+  .option("--start-congress <number>")
+  .action(syncCongressAmendmentData)
 
 program
   .command("documents:process")
@@ -857,6 +866,55 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
   createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "congress" })
 }
 
+async function syncCongressAmendmentData(options: { endCongress?: string; limit?: string; startCongress?: string }) {
+  const config = loadConfig()
+  if (config.ingestion.congressApiKey === undefined) {
+    throw new InvalidJobInput("CONGRESS_API_KEY is required for congress:amendments")
+  }
+  const start = parseInteger(options.startCongress ?? String(config.ingestion.federalStartCongress), "start Congress")
+  const end = parseInteger(options.endCongress ?? String(config.ingestion.federalEndCongress), "end Congress")
+  if (start > end) {
+    throw new InvalidJobInput("start Congress must not exceed end Congress")
+  }
+  const limit = options.limit === undefined ? undefined : parseInteger(options.limit, "limit")
+  const providerHttp = congressBootstrapHttpClient(config)
+  const client = new CongressClient({
+    apiKey: config.ingestion.congressApiKey,
+    baseUrl: new URL(config.ingestion.congressApiUrl),
+    http: providerHttp
+  })
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: "amendments-bootstrap",
+        scope: { endCongress: end, startCongress: start },
+        source: "congress"
+      },
+      async () => {
+        const counts = createJobCounts()
+        const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
+        let checkpoint: Readonly<Record<string, unknown>> | undefined
+        for (let congress = start; congress <= end; congress += 1) {
+          const synchronized = await synchronizeCongressAmendments(database, client, congress, {
+            limit,
+            sourceStore: createSourceStore(config, "federal")
+          })
+          for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
+            counts[key] += synchronized.counts[key]
+          }
+          failures.push(...synchronized.failures)
+          checkpoint = { congress, ...synchronized.checkpoint }
+        }
+        return checkpoint === undefined ? { counts, failures } : { checkpoint, counts, failures }
+      }
+    )
+    printJobResult(result)
+  }, config)
+  createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "congress" })
+}
+
 async function processDocuments(options: {
   all?: boolean
   billId?: string
@@ -1033,6 +1091,14 @@ function httpClient(config: LegislationConfig) {
 function openStatesHttpClient(config: LegislationConfig) {
   return new RetryingHttpClient({
     maxAttempts: Math.max(config.ingestion.maxAttempts, 6),
+    minimumIntervalMs: 750,
+    requestTimeoutMs: config.ingestion.requestTimeoutMs
+  })
+}
+
+function congressBootstrapHttpClient(config: LegislationConfig) {
+  return new RetryingHttpClient({
+    maxAttempts: config.ingestion.maxAttempts,
     minimumIntervalMs: 750,
     requestTimeoutMs: config.ingestion.requestTimeoutMs
   })
