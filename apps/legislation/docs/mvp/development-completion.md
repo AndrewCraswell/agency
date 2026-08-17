@@ -50,7 +50,7 @@ failure evidence.
 - [x] **D2.3** Run the restartable Open States import for every available in-policy archive with bounded concurrency.
 - [x] **D2.4** Replay retryable archive and record failures, then classify the remaining failures as upstream gaps or
   implementation defects.
-- [ ] **D2.5** Generate state coverage by jurisdiction and session, including bills, actions, sponsors, votes, documents,
+- [x] **D2.5** Generate state coverage by jurisdiction and session, including bills, actions, sponsors, votes, documents,
   failures, missing archives, and empty archives.
 - [ ] **D2.6** Compare a stratified sample across large, small, recent, older, dense, and sparse jurisdictions with the
   original Open States records.
@@ -60,7 +60,7 @@ failure evidence.
 - [x] **D2.7** Discover and retain the GovInfo BILLSTATUS package manifest for the 113th through 119th Congresses and the
   configured bill types.
 - [x] **D2.8** Run the restartable GovInfo bootstrap for all discovered packages and replay retryable failures.
-- [ ] **D2.9** Generate federal coverage by Congress, bill type, bill count, official version count, and failure category.
+- [x] **D2.9** Generate federal coverage by Congress, bill type, bill count, official version count, and failure category.
 - [ ] **D2.10** Compare a stratified federal sample with GovInfo metadata and official bill text.
 - [ ] **D2.11** Run Congress.gov incremental synchronization from the recorded checkpoint with the configured overlap
   window.

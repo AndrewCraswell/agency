@@ -38,6 +38,13 @@ export interface CoverageReport {
   federalBillTypes: Array<{ billType: string; bills: number; congress: string; documents: number }>
   eventCoverage: Array<{ deleted: number; events: number; jurisdictionId: string }>
   generatedAt: string
+  ingestionFailureCategories: Array<{
+    failedRecords: number
+    failedRuns: number
+    operation: string
+    partialRuns: number
+    source: string
+  }>
   ingestionFailures: number
   scopes: Array<{
     actions: number
@@ -219,6 +226,24 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
   const failureResult = await database
     .select({ count: sql<number>`coalesce(sum((${ingestionRuns.counts}->>'failed')::int), 0)::int` })
     .from(ingestionRuns)
+  const failureCategories = await database.execute<{
+    failed_records: number
+    failed_runs: number
+    operation: string
+    partial_runs: number
+    source: string
+  }>(sql`
+    select
+      source,
+      operation,
+      coalesce(sum((counts->>'failed')::int), 0)::int as failed_records,
+      count(*) filter (where status = 'partial')::int as partial_runs,
+      count(*) filter (where status = 'failed')::int as failed_runs
+    from legislation.ingestion_runs
+    where status in ('partial', 'failed') or coalesce((counts->>'failed')::int, 0) > 0
+    group by source, operation
+    order by source, operation
+  `)
   const [
     documentProcessing,
     documentTypes,
@@ -362,6 +387,13 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       jurisdictionId: row.jurisdiction_id
     })),
     generatedAt: new Date().toISOString(),
+    ingestionFailureCategories: failureCategories.rows.map((row) => ({
+      failedRecords: row.failed_records,
+      failedRuns: row.failed_runs,
+      operation: row.operation,
+      partialRuns: row.partial_runs,
+      source: row.source
+    })),
     ingestionFailures: failureResult[0]?.count ?? 0,
     scopes: rows.map((row) => ({ ...row, availability: row.bills === 0 ? "empty" : "available" })),
     supportingMaterialTypes: supportingMaterialTypes.rows.map((row) => ({

@@ -133,7 +133,7 @@ amendment, committee, or chamber.
   classification when supplied.
 - [x] **E3.3** Extend vote positions with the source-provided member identity and normalized option; derive party totals
   from member terms only when the vote date resolves unambiguously.
-- [ ] **E3.4** Retain current Open States bill-vote ingestion and measure totals, member-position, and source-link coverage
+- [x] **E3.4** Retain current Open States bill-vote ingestion and measure totals, member-position, and source-link coverage
   per jurisdiction.
 - [ ] **E3.5** Import Congress.gov House roll-call data for its supported range and report Congresses or fields it does
   not supply.

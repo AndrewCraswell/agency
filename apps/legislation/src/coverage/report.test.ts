@@ -11,6 +11,7 @@ function report(bills: number, federalBills: number): CoverageReport {
     federalBillTypes: [{ billType: "hr", bills: federalBills, congress: "119", documents: 0 }],
     eventCoverage: [],
     generatedAt: "2026-08-16T00:00:00.000Z",
+    ingestionFailureCategories: [],
     ingestionFailures: 0,
     scopes: [
       {
