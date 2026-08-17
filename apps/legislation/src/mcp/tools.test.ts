@@ -39,6 +39,7 @@ function createService(): LegislationQueryApi {
       items: [],
       query: input.query
     })),
+    searchChanges: vi.fn<LegislationQueryApi["searchChanges"]>(async () => ({ items: [] })),
     searchEvents: vi.fn<LegislationQueryApi["searchEvents"]>(async () => ({ items: [] })),
     searchSupportingMaterials: vi.fn<LegislationQueryApi["searchSupportingMaterials"]>(async () => ({ items: [] })),
     searchVotes: vi.fn<LegislationQueryApi["searchVotes"]>(async () => ({ items: [] }))
@@ -78,6 +79,7 @@ describe("legislation MCP tools", () => {
       "search_amendments",
       "search_bill_text",
       "search_bills",
+      "search_changes",
       "search_events",
       "search_supporting_materials",
       "search_votes"

@@ -2,6 +2,7 @@ import { and, eq, inArray, sql } from "drizzle-orm"
 import type { OpenStatesEntitySnapshot } from "../../ingestion/openstates/entities.js"
 import type { LegislationDatabase } from "../database.js"
 import { legislativeTerms, organizationMemberships, organizations, people } from "../schema/schema.js"
+import { observeCanonicalRecord } from "./changes.js"
 
 function uniqueById<T extends { id: string }>(values: readonly T[]): T[] {
   return [...new Map(values.map((value) => [value.id, value])).values()]
@@ -122,6 +123,55 @@ export async function replaceEntitySnapshot(
           },
           target: organizationMemberships.id
         })
+    }
+    for (const person of personValues) {
+      await observeCanonicalRecord(transaction, {
+        fields: {
+          familyName: person.familyName,
+          givenName: person.givenName,
+          isActive: person.isActive,
+          name: person.name,
+          party: person.party
+        },
+        jurisdictionId,
+        personId: person.id,
+        recordId: person.id,
+        recordType: "person",
+        sourceUpdatedAt: person.sourceUpdatedAt ?? undefined
+      })
+    }
+    for (const organization of organizationValues) {
+      await observeCanonicalRecord(transaction, {
+        fields: {
+          chamber: organization.chamber,
+          classification: organization.classification,
+          isActive: organization.isActive,
+          name: organization.name,
+          parentOrganizationId: organization.parentOrganizationId
+        },
+        jurisdictionId,
+        organizationId: organization.id,
+        recordId: organization.id,
+        recordType: "organization",
+        sourceUpdatedAt: organization.sourceUpdatedAt ?? undefined
+      })
+    }
+    for (const membership of membershipValues) {
+      await observeCanonicalRecord(transaction, {
+        fields: {
+          classification: membership.classification,
+          endDate: membership.endDate,
+          isActive: membership.isActive,
+          rank: membership.rank,
+          startDate: membership.startDate,
+          title: membership.title
+        },
+        changeType: "relationship-change",
+        organizationId: membership.organizationId,
+        personId: membership.personId,
+        recordId: membership.id,
+        recordType: "organization-membership"
+      })
     }
   })
 }

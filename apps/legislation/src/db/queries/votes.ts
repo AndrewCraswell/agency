@@ -2,6 +2,7 @@ import { eq, inArray, sql } from "drizzle-orm"
 import type { CongressHouseVoteSnapshot } from "../../ingestion/congress/votes.js"
 import type { LegislationDatabase } from "../database.js"
 import { bills, legislativeSessions, organizations, people, votePositions, votes } from "../schema/schema.js"
+import { observeCanonicalRecord } from "./changes.js"
 
 export async function upsertCongressHouseVoteSnapshot(
   database: LegislationDatabase,
@@ -77,5 +78,20 @@ export async function upsertCongressHouseVoteSnapshot(
         }))
       )
     }
+    await observeCanonicalRecord(transaction, {
+      fields: {
+        billId: bill[0]?.id,
+        heldAt: snapshot.vote.heldAt,
+        motion: snapshot.vote.motion,
+        noCount: snapshot.vote.noCount,
+        otherCount: snapshot.vote.otherCount,
+        result: snapshot.vote.result,
+        yesCount: snapshot.vote.yesCount
+      },
+      jurisdictionId: "jurisdiction:us",
+      organizationId: organization[0]?.id,
+      recordId: snapshot.vote.id,
+      recordType: "vote"
+    })
   })
 }

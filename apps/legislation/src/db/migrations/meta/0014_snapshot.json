@@ -1,0 +1,5164 @@
+{
+  "id": "d308ed18-9372-45cc-8729-69d377a09bc2",
+  "prevId": "6dce9661-9e98-4792-b028-adf71cfde926",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "legislation.amendment_actions": {
+      "name": "amendment_actions",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "amendment_id": {
+          "name": "amendment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "action_date": {
+          "name": "action_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action_at": {
+          "name": "action_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "amendment_actions_ordinal_uidx": {
+          "name": "amendment_actions_ordinal_uidx",
+          "columns": [
+            {
+              "expression": "amendment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ordinal",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "amendment_actions_amendment_id_amendments_id_fk": {
+          "name": "amendment_actions_amendment_id_amendments_id_fk",
+          "tableFrom": "amendment_actions",
+          "tableTo": "amendments",
+          "schemaTo": "legislation",
+          "columnsFrom": ["amendment_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "amendment_actions_ordinal_check": {
+          "name": "amendment_actions_ordinal_check",
+          "value": "\"legislation\".\"amendment_actions\".\"ordinal\" >= 0"
+        },
+        "amendment_actions_description_check": {
+          "name": "amendment_actions_description_check",
+          "value": "length(\"legislation\".\"amendment_actions\".\"description\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.amendment_relations": {
+      "name": "amendment_relations",
+      "schema": "legislation",
+      "columns": {
+        "amendment_id": {
+          "name": "amendment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "related_amendment_id": {
+          "name": "related_amendment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "amendment_relations_related_idx": {
+          "name": "amendment_relations_related_idx",
+          "columns": [
+            {
+              "expression": "related_amendment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "classification",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "amendment_relations_amendment_id_amendments_id_fk": {
+          "name": "amendment_relations_amendment_id_amendments_id_fk",
+          "tableFrom": "amendment_relations",
+          "tableTo": "amendments",
+          "schemaTo": "legislation",
+          "columnsFrom": ["amendment_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "amendment_relations_related_amendment_id_amendments_id_fk": {
+          "name": "amendment_relations_related_amendment_id_amendments_id_fk",
+          "tableFrom": "amendment_relations",
+          "tableTo": "amendments",
+          "schemaTo": "legislation",
+          "columnsFrom": ["related_amendment_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "amendment_relations_amendment_id_related_amendment_id_classification_pk": {
+          "name": "amendment_relations_amendment_id_related_amendment_id_classification_pk",
+          "columns": ["amendment_id", "related_amendment_id", "classification"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "amendment_relations_distinct_check": {
+          "name": "amendment_relations_distinct_check",
+          "value": "\"legislation\".\"amendment_relations\".\"amendment_id\" <> \"legislation\".\"amendment_relations\".\"related_amendment_id\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.amendments": {
+      "name": "amendments",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "jurisdiction_id": {
+          "name": "jurisdiction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bill_id": {
+          "name": "bill_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sponsor_person_id": {
+          "name": "sponsor_person_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "printed_identifier": {
+          "name": "printed_identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amendment_type": {
+          "name": "amendment_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "amendment_number": {
+          "name": "amendment_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chamber": {
+          "name": "chamber",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "purpose": {
+          "name": "purpose",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sponsor_name": {
+          "name": "sponsor_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sponsor_source_id": {
+          "name": "sponsor_source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "submitted_date": {
+          "name": "submitted_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_updated_at": {
+          "name": "source_updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "upstream_ids": {
+          "name": "upstream_ids",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "amendments_jurisdiction_source_uidx": {
+          "name": "amendments_jurisdiction_source_uidx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "amendments_bill_idx": {
+          "name": "amendments_bill_idx",
+          "columns": [
+            {
+              "expression": "bill_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "submitted_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "amendments_sponsor_idx": {
+          "name": "amendments_sponsor_idx",
+          "columns": [
+            {
+              "expression": "sponsor_person_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "submitted_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "amendments_session_idx": {
+          "name": "amendments_session_idx",
+          "columns": [
+            {
+              "expression": "session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "chamber",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "submitted_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "amendments_jurisdiction_id_jurisdictions_id_fk": {
+          "name": "amendments_jurisdiction_id_jurisdictions_id_fk",
+          "tableFrom": "amendments",
+          "tableTo": "jurisdictions",
+          "schemaTo": "legislation",
+          "columnsFrom": ["jurisdiction_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "amendments_session_id_legislative_sessions_id_fk": {
+          "name": "amendments_session_id_legislative_sessions_id_fk",
+          "tableFrom": "amendments",
+          "tableTo": "legislative_sessions",
+          "schemaTo": "legislation",
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "amendments_bill_id_bills_id_fk": {
+          "name": "amendments_bill_id_bills_id_fk",
+          "tableFrom": "amendments",
+          "tableTo": "bills",
+          "schemaTo": "legislation",
+          "columnsFrom": ["bill_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "amendments_sponsor_person_id_people_id_fk": {
+          "name": "amendments_sponsor_person_id_people_id_fk",
+          "tableFrom": "amendments",
+          "tableTo": "people",
+          "schemaTo": "legislation",
+          "columnsFrom": ["sponsor_person_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "amendments_id_check": {
+          "name": "amendments_id_check",
+          "value": "length(\"legislation\".\"amendments\".\"id\") > 0"
+        },
+        "amendments_source_id_check": {
+          "name": "amendments_source_id_check",
+          "value": "length(\"legislation\".\"amendments\".\"source_id\") > 0"
+        },
+        "amendments_identifier_check": {
+          "name": "amendments_identifier_check",
+          "value": "length(\"legislation\".\"amendments\".\"printed_identifier\") > 0"
+        },
+        "amendments_type_check": {
+          "name": "amendments_type_check",
+          "value": "length(\"legislation\".\"amendments\".\"amendment_type\") > 0"
+        },
+        "amendments_number_check": {
+          "name": "amendments_number_check",
+          "value": "length(\"legislation\".\"amendments\".\"amendment_number\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.bill_actions": {
+      "name": "bill_actions",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "bill_id": {
+          "name": "bill_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "action_date": {
+          "name": "action_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action_at": {
+          "name": "action_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "chamber": {
+          "name": "chamber",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "bill_actions_ordinal_uidx": {
+          "name": "bill_actions_ordinal_uidx",
+          "columns": [
+            {
+              "expression": "bill_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ordinal",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "bill_actions_timeline_idx": {
+          "name": "bill_actions_timeline_idx",
+          "columns": [
+            {
+              "expression": "bill_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "action_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ordinal",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "bill_actions_bill_id_bills_id_fk": {
+          "name": "bill_actions_bill_id_bills_id_fk",
+          "tableFrom": "bill_actions",
+          "tableTo": "bills",
+          "schemaTo": "legislation",
+          "columnsFrom": ["bill_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "bill_actions_ordinal_check": {
+          "name": "bill_actions_ordinal_check",
+          "value": "\"legislation\".\"bill_actions\".\"ordinal\" >= 0"
+        },
+        "bill_actions_description_check": {
+          "name": "bill_actions_description_check",
+          "value": "length(\"legislation\".\"bill_actions\".\"description\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.bill_documents": {
+      "name": "bill_documents",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "bill_id": {
+          "name": "bill_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "version_code": {
+          "name": "version_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_date": {
+          "name": "document_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content_type": {
+          "name": "content_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "blob_path": {
+          "name": "blob_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_attempt_at": {
+          "name": "last_attempt_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "processing_attempts": {
+          "name": "processing_attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "processing_error": {
+          "name": "processing_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "processing_status": {
+          "name": "processing_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "bill_documents_source_uidx": {
+          "name": "bill_documents_source_uidx",
+          "columns": [
+            {
+              "expression": "bill_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_url",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "bill_documents_processing_idx": {
+          "name": "bill_documents_processing_idx",
+          "columns": [
+            {
+              "expression": "processing_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "bill_documents_bill_id_bills_id_fk": {
+          "name": "bill_documents_bill_id_bills_id_fk",
+          "tableFrom": "bill_documents",
+          "tableTo": "bills",
+          "schemaTo": "legislation",
+          "columnsFrom": ["bill_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "bill_documents_title_check": {
+          "name": "bill_documents_title_check",
+          "value": "length(\"legislation\".\"bill_documents\".\"title\") > 0"
+        },
+        "bill_documents_hash_check": {
+          "name": "bill_documents_hash_check",
+          "value": "\"legislation\".\"bill_documents\".\"content_hash\" is null or \"legislation\".\"bill_documents\".\"content_hash\" ~ '^[0-9a-f]{64}$'"
+        },
+        "bill_documents_attempts_check": {
+          "name": "bill_documents_attempts_check",
+          "value": "\"legislation\".\"bill_documents\".\"processing_attempts\" >= 0"
+        },
+        "bill_documents_processing_status_check": {
+          "name": "bill_documents_processing_status_check",
+          "value": "\"legislation\".\"bill_documents\".\"processing_status\" in ('pending', 'processing', 'processed', 'unsupported', 'failed')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.bill_relations": {
+      "name": "bill_relations",
+      "schema": "legislation",
+      "columns": {
+        "bill_id": {
+          "name": "bill_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "related_bill_id": {
+          "name": "related_bill_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "bill_relations_related_idx": {
+          "name": "bill_relations_related_idx",
+          "columns": [
+            {
+              "expression": "related_bill_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "classification",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "bill_relations_bill_id_bills_id_fk": {
+          "name": "bill_relations_bill_id_bills_id_fk",
+          "tableFrom": "bill_relations",
+          "tableTo": "bills",
+          "schemaTo": "legislation",
+          "columnsFrom": ["bill_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "bill_relations_bill_id_related_bill_id_classification_pk": {
+          "name": "bill_relations_bill_id_related_bill_id_classification_pk",
+          "columns": ["bill_id", "related_bill_id", "classification"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "bill_relations_distinct_check": {
+          "name": "bill_relations_distinct_check",
+          "value": "\"legislation\".\"bill_relations\".\"bill_id\" <> \"legislation\".\"bill_relations\".\"related_bill_id\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.bill_sponsors": {
+      "name": "bill_sponsors",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "bill_id": {
+          "name": "bill_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "person_id": {
+          "name": "person_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_primary": {
+          "name": "is_primary",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "bill_sponsors_person_uidx": {
+          "name": "bill_sponsors_person_uidx",
+          "columns": [
+            {
+              "expression": "bill_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "person_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "classification",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"legislation\".\"bill_sponsors\".\"person_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "bill_sponsors_bill_idx": {
+          "name": "bill_sponsors_bill_idx",
+          "columns": [
+            {
+              "expression": "bill_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_primary",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "bill_sponsors_bill_id_bills_id_fk": {
+          "name": "bill_sponsors_bill_id_bills_id_fk",
+          "tableFrom": "bill_sponsors",
+          "tableTo": "bills",
+          "schemaTo": "legislation",
+          "columnsFrom": ["bill_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "bill_sponsors_person_id_people_id_fk": {
+          "name": "bill_sponsors_person_id_people_id_fk",
+          "tableFrom": "bill_sponsors",
+          "tableTo": "people",
+          "schemaTo": "legislation",
+          "columnsFrom": ["person_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "bill_sponsors_name_check": {
+          "name": "bill_sponsors_name_check",
+          "value": "length(\"legislation\".\"bill_sponsors\".\"name\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.bills": {
+      "name": "bills",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "jurisdiction_id": {
+          "name": "jurisdiction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "summary": {
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "committees": {
+          "name": "committees",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "subjects": {
+          "name": "subjects",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "chamber": {
+          "name": "chamber",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "introduced_at": {
+          "name": "introduced_at",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_updated_at": {
+          "name": "source_updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "upstream_ids": {
+          "name": "upstream_ids",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "search_vector": {
+          "name": "search_vector",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "vector(1536)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding_input_hash": {
+          "name": "embedding_input_hash",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding_model": {
+          "name": "embedding_model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedded_at": {
+          "name": "embedded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "bills_identifier_uidx": {
+          "name": "bills_identifier_uidx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "identifier",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "bills_status_idx": {
+          "name": "bills_status_idx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "session_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "bills_introduced_idx": {
+          "name": "bills_introduced_idx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "introduced_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "bills_classification_gin_idx": {
+          "name": "bills_classification_gin_idx",
+          "columns": [
+            {
+              "expression": "classification",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        },
+        "bills_subjects_gin_idx": {
+          "name": "bills_subjects_gin_idx",
+          "columns": [
+            {
+              "expression": "subjects",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        },
+        "bills_search_vector_gin_idx": {
+          "name": "bills_search_vector_gin_idx",
+          "columns": [
+            {
+              "expression": "search_vector",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        },
+        "bills_embedding_hnsw_idx": {
+          "name": "bills_embedding_hnsw_idx",
+          "columns": [
+            {
+              "expression": "embedding",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "vector_cosine_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "hnsw",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "bills_session_fk": {
+          "name": "bills_session_fk",
+          "tableFrom": "bills",
+          "tableTo": "legislative_sessions",
+          "schemaTo": "legislation",
+          "columnsFrom": ["jurisdiction_id", "session_id"],
+          "columnsTo": ["jurisdiction_id", "id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "bills_id_check": {
+          "name": "bills_id_check",
+          "value": "\"legislation\".\"bills\".\"id\" ~ '^bill:[a-z0-9-]+:[^:]+:[a-z0-9-]+:[a-z0-9-]+$'"
+        },
+        "bills_identifier_check": {
+          "name": "bills_identifier_check",
+          "value": "length(\"legislation\".\"bills\".\"identifier\") > 0"
+        },
+        "bills_title_check": {
+          "name": "bills_title_check",
+          "value": "length(\"legislation\".\"bills\".\"title\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.calendar_entries": {
+      "name": "calendar_entries",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "jurisdiction_id": {
+          "name": "jurisdiction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "start_at": {
+          "name": "start_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_at": {
+          "name": "end_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_updated_at": {
+          "name": "source_updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "calendar_entries_jurisdiction_source_uidx": {
+          "name": "calendar_entries_jurisdiction_source_uidx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "calendar_entries_schedule_idx": {
+          "name": "calendar_entries_schedule_idx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "start_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "calendar_entries_jurisdiction_id_jurisdictions_id_fk": {
+          "name": "calendar_entries_jurisdiction_id_jurisdictions_id_fk",
+          "tableFrom": "calendar_entries",
+          "tableTo": "jurisdictions",
+          "schemaTo": "legislation",
+          "columnsFrom": ["jurisdiction_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "calendar_entries_organization_id_organizations_id_fk": {
+          "name": "calendar_entries_organization_id_organizations_id_fk",
+          "tableFrom": "calendar_entries",
+          "tableTo": "organizations",
+          "schemaTo": "legislation",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "calendar_entries_session_id_legislative_sessions_id_fk": {
+          "name": "calendar_entries_session_id_legislative_sessions_id_fk",
+          "tableFrom": "calendar_entries",
+          "tableTo": "legislative_sessions",
+          "schemaTo": "legislation",
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "calendar_entries_source_id_check": {
+          "name": "calendar_entries_source_id_check",
+          "value": "length(\"legislation\".\"calendar_entries\".\"source_id\") > 0"
+        },
+        "calendar_entries_title_check": {
+          "name": "calendar_entries_title_check",
+          "value": "length(\"legislation\".\"calendar_entries\".\"title\") > 0"
+        },
+        "calendar_entries_dates_check": {
+          "name": "calendar_entries_dates_check",
+          "value": "\"legislation\".\"calendar_entries\".\"end_at\" is null or \"legislation\".\"calendar_entries\".\"start_at\" <= \"legislation\".\"calendar_entries\".\"end_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.canonical_record_fingerprints": {
+      "name": "canonical_record_fingerprints",
+      "schema": "legislation",
+      "columns": {
+        "record_type": {
+          "name": "record_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "record_id": {
+          "name": "record_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fingerprint": {
+          "name": "fingerprint",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fields": {
+          "name": "fields",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "canonical_record_fingerprints_observed_idx": {
+          "name": "canonical_record_fingerprints_observed_idx",
+          "columns": [
+            {
+              "expression": "observed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "canonical_record_fingerprints_record_type_record_id_pk": {
+          "name": "canonical_record_fingerprints_record_type_record_id_pk",
+          "columns": ["record_type", "record_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "canonical_record_fingerprints_type_check": {
+          "name": "canonical_record_fingerprints_type_check",
+          "value": "length(\"legislation\".\"canonical_record_fingerprints\".\"record_type\") > 0"
+        },
+        "canonical_record_fingerprints_id_check": {
+          "name": "canonical_record_fingerprints_id_check",
+          "value": "length(\"legislation\".\"canonical_record_fingerprints\".\"record_id\") > 0"
+        },
+        "canonical_record_fingerprints_hash_check": {
+          "name": "canonical_record_fingerprints_hash_check",
+          "value": "\"legislation\".\"canonical_record_fingerprints\".\"fingerprint\" ~ '^[0-9a-f]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.change_events": {
+      "name": "change_events",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "ingestion_run_id": {
+          "name": "ingestion_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "record_type": {
+          "name": "record_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "record_id": {
+          "name": "record_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "change_type": {
+          "name": "change_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jurisdiction_id": {
+          "name": "jurisdiction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "person_id": {
+          "name": "person_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "changed_fields": {
+          "name": "changed_fields",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "before": {
+          "name": "before",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "after": {
+          "name": "after",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_updated_at": {
+          "name": "source_updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "change_events_record_idx": {
+          "name": "change_events_record_idx",
+          "columns": [
+            {
+              "expression": "record_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "record_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "observed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "change_events_jurisdiction_idx": {
+          "name": "change_events_jurisdiction_idx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "observed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "change_events_organization_idx": {
+          "name": "change_events_organization_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "observed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "change_events_person_idx": {
+          "name": "change_events_person_idx",
+          "columns": [
+            {
+              "expression": "person_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "observed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "change_events_run_idx": {
+          "name": "change_events_run_idx",
+          "columns": [
+            {
+              "expression": "ingestion_run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "observed_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "change_events_ingestion_run_id_ingestion_runs_id_fk": {
+          "name": "change_events_ingestion_run_id_ingestion_runs_id_fk",
+          "tableFrom": "change_events",
+          "tableTo": "ingestion_runs",
+          "schemaTo": "legislation",
+          "columnsFrom": ["ingestion_run_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "change_events_jurisdiction_id_jurisdictions_id_fk": {
+          "name": "change_events_jurisdiction_id_jurisdictions_id_fk",
+          "tableFrom": "change_events",
+          "tableTo": "jurisdictions",
+          "schemaTo": "legislation",
+          "columnsFrom": ["jurisdiction_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "change_events_organization_id_organizations_id_fk": {
+          "name": "change_events_organization_id_organizations_id_fk",
+          "tableFrom": "change_events",
+          "tableTo": "organizations",
+          "schemaTo": "legislation",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "change_events_person_id_people_id_fk": {
+          "name": "change_events_person_id_people_id_fk",
+          "tableFrom": "change_events",
+          "tableTo": "people",
+          "schemaTo": "legislation",
+          "columnsFrom": ["person_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "change_events_id_check": {
+          "name": "change_events_id_check",
+          "value": "length(\"legislation\".\"change_events\".\"id\") > 0"
+        },
+        "change_events_record_type_check": {
+          "name": "change_events_record_type_check",
+          "value": "length(\"legislation\".\"change_events\".\"record_type\") > 0"
+        },
+        "change_events_record_id_check": {
+          "name": "change_events_record_id_check",
+          "value": "length(\"legislation\".\"change_events\".\"record_id\") > 0"
+        },
+        "change_events_change_type_check": {
+          "name": "change_events_change_type_check",
+          "value": "\"legislation\".\"change_events\".\"change_type\" in ('create', 'update', 'delete', 'cancel', 'reschedule', 'relationship-change')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.document_sections": {
+      "name": "document_sections",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "section_identifier": {
+          "name": "section_identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "heading": {
+          "name": "heading",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_start_offset": {
+          "name": "source_start_offset",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_end_offset": {
+          "name": "source_end_offset",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "search_vector": {
+          "name": "search_vector",
+          "type": "tsvector",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "vector(1536)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding_input_hash": {
+          "name": "embedding_input_hash",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedding_model": {
+          "name": "embedding_model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "embedded_at": {
+          "name": "embedded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "document_sections_ordinal_uidx": {
+          "name": "document_sections_ordinal_uidx",
+          "columns": [
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ordinal",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "document_sections_identifier_idx": {
+          "name": "document_sections_identifier_idx",
+          "columns": [
+            {
+              "expression": "document_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "section_identifier",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "document_sections_search_vector_gin_idx": {
+          "name": "document_sections_search_vector_gin_idx",
+          "columns": [
+            {
+              "expression": "search_vector",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        },
+        "document_sections_embedding_hnsw_idx": {
+          "name": "document_sections_embedding_hnsw_idx",
+          "columns": [
+            {
+              "expression": "embedding",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last",
+              "opclass": "vector_cosine_ops"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "hnsw",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "document_sections_document_id_bill_documents_id_fk": {
+          "name": "document_sections_document_id_bill_documents_id_fk",
+          "tableFrom": "document_sections",
+          "tableTo": "bill_documents",
+          "schemaTo": "legislation",
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "document_sections_ordinal_check": {
+          "name": "document_sections_ordinal_check",
+          "value": "\"legislation\".\"document_sections\".\"ordinal\" >= 0"
+        },
+        "document_sections_offsets_check": {
+          "name": "document_sections_offsets_check",
+          "value": "\"legislation\".\"document_sections\".\"source_start_offset\" >= 0 and \"legislation\".\"document_sections\".\"source_end_offset\" >= \"legislation\".\"document_sections\".\"source_start_offset\""
+        },
+        "document_sections_text_check": {
+          "name": "document_sections_text_check",
+          "value": "length(\"legislation\".\"document_sections\".\"text\") > 0"
+        },
+        "document_sections_hash_check": {
+          "name": "document_sections_hash_check",
+          "value": "\"legislation\".\"document_sections\".\"content_hash\" ~ '^[0-9a-f]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.event_agenda_items": {
+      "name": "event_agenda_items",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ordinal": {
+          "name": "ordinal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bill_id": {
+          "name": "bill_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "document_id": {
+          "name": "document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "event_agenda_items_ordinal_uidx": {
+          "name": "event_agenda_items_ordinal_uidx",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ordinal",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_agenda_items_bill_idx": {
+          "name": "event_agenda_items_bill_idx",
+          "columns": [
+            {
+              "expression": "bill_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_agenda_items_event_id_legislative_events_id_fk": {
+          "name": "event_agenda_items_event_id_legislative_events_id_fk",
+          "tableFrom": "event_agenda_items",
+          "tableTo": "legislative_events",
+          "schemaTo": "legislation",
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "event_agenda_items_bill_id_bills_id_fk": {
+          "name": "event_agenda_items_bill_id_bills_id_fk",
+          "tableFrom": "event_agenda_items",
+          "tableTo": "bills",
+          "schemaTo": "legislation",
+          "columnsFrom": ["bill_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "event_agenda_items_organization_id_organizations_id_fk": {
+          "name": "event_agenda_items_organization_id_organizations_id_fk",
+          "tableFrom": "event_agenda_items",
+          "tableTo": "organizations",
+          "schemaTo": "legislation",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "event_agenda_items_document_id_event_documents_id_fk": {
+          "name": "event_agenda_items_document_id_event_documents_id_fk",
+          "tableFrom": "event_agenda_items",
+          "tableTo": "event_documents",
+          "schemaTo": "legislation",
+          "columnsFrom": ["document_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_agenda_items_ordinal_check": {
+          "name": "event_agenda_items_ordinal_check",
+          "value": "\"legislation\".\"event_agenda_items\".\"ordinal\" >= 0"
+        },
+        "event_agenda_items_description_check": {
+          "name": "event_agenda_items_description_check",
+          "value": "length(\"legislation\".\"event_agenda_items\".\"description\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.event_bills": {
+      "name": "event_bills",
+      "schema": "legislation",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bill_id": {
+          "name": "bill_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'related'"
+        }
+      },
+      "indexes": {
+        "event_bills_bill_idx": {
+          "name": "event_bills_bill_idx",
+          "columns": [
+            {
+              "expression": "bill_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_bills_event_id_legislative_events_id_fk": {
+          "name": "event_bills_event_id_legislative_events_id_fk",
+          "tableFrom": "event_bills",
+          "tableTo": "legislative_events",
+          "schemaTo": "legislation",
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "event_bills_bill_id_bills_id_fk": {
+          "name": "event_bills_bill_id_bills_id_fk",
+          "tableFrom": "event_bills",
+          "tableTo": "bills",
+          "schemaTo": "legislation",
+          "columnsFrom": ["bill_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "event_bills_event_id_bill_id_classification_pk": {
+          "name": "event_bills_event_id_bill_id_classification_pk",
+          "columns": ["event_id", "bill_id", "classification"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "legislation.event_continuations": {
+      "name": "event_continuations",
+      "schema": "legislation",
+      "columns": {
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "continuation_event_id": {
+          "name": "continuation_event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "continuation_at": {
+          "name": "continuation_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "event_continuations_event_id_legislative_events_id_fk": {
+          "name": "event_continuations_event_id_legislative_events_id_fk",
+          "tableFrom": "event_continuations",
+          "tableTo": "legislative_events",
+          "schemaTo": "legislation",
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "event_continuations_continuation_event_id_legislative_events_id_fk": {
+          "name": "event_continuations_continuation_event_id_legislative_events_id_fk",
+          "tableFrom": "event_continuations",
+          "tableTo": "legislative_events",
+          "schemaTo": "legislation",
+          "columnsFrom": ["continuation_event_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "event_continuations_event_id_source_id_pk": {
+          "name": "event_continuations_event_id_source_id_pk",
+          "columns": ["event_id", "source_id"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_continuations_source_id_check": {
+          "name": "event_continuations_source_id_check",
+          "value": "length(\"legislation\".\"event_continuations\".\"source_id\") > 0"
+        },
+        "event_continuations_distinct_check": {
+          "name": "event_continuations_distinct_check",
+          "value": "\"legislation\".\"event_continuations\".\"continuation_event_id\" is null or \"legislation\".\"event_continuations\".\"event_id\" <> \"legislation\".\"event_continuations\".\"continuation_event_id\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.event_documents": {
+      "name": "event_documents",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_date": {
+          "name": "document_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "content_type": {
+          "name": "content_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "event_documents_source_uidx": {
+          "name": "event_documents_source_uidx",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_url",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_documents_event_id_legislative_events_id_fk": {
+          "name": "event_documents_event_id_legislative_events_id_fk",
+          "tableFrom": "event_documents",
+          "tableTo": "legislative_events",
+          "schemaTo": "legislation",
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_documents_title_check": {
+          "name": "event_documents_title_check",
+          "value": "length(\"legislation\".\"event_documents\".\"title\") > 0"
+        },
+        "event_documents_source_url_check": {
+          "name": "event_documents_source_url_check",
+          "value": "length(\"legislation\".\"event_documents\".\"source_url\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.event_participants": {
+      "name": "event_participants",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "person_id": {
+          "name": "person_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "event_participants_event_idx": {
+          "name": "event_participants_event_idx",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "role",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_participants_person_idx": {
+          "name": "event_participants_person_idx",
+          "columns": [
+            {
+              "expression": "person_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "event_participants_organization_idx": {
+          "name": "event_participants_organization_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "event_participants_event_id_legislative_events_id_fk": {
+          "name": "event_participants_event_id_legislative_events_id_fk",
+          "tableFrom": "event_participants",
+          "tableTo": "legislative_events",
+          "schemaTo": "legislation",
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "event_participants_person_id_people_id_fk": {
+          "name": "event_participants_person_id_people_id_fk",
+          "tableFrom": "event_participants",
+          "tableTo": "people",
+          "schemaTo": "legislation",
+          "columnsFrom": ["person_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "event_participants_organization_id_organizations_id_fk": {
+          "name": "event_participants_organization_id_organizations_id_fk",
+          "tableFrom": "event_participants",
+          "tableTo": "organizations",
+          "schemaTo": "legislation",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "event_participants_name_check": {
+          "name": "event_participants_name_check",
+          "value": "length(\"legislation\".\"event_participants\".\"name\") > 0"
+        },
+        "event_participants_target_check": {
+          "name": "event_participants_target_check",
+          "value": "\"legislation\".\"event_participants\".\"person_id\" is not null or \"legislation\".\"event_participants\".\"organization_id\" is not null or length(\"legislation\".\"event_participants\".\"name\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.ingestion_locks": {
+      "name": "ingestion_locks",
+      "schema": "legislation",
+      "columns": {
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operation": {
+          "name": "operation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "owner_id": {
+          "name": "owner_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "acquired_at": {
+          "name": "acquired_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ingestion_locks_expiry_idx": {
+          "name": "ingestion_locks_expiry_idx",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "ingestion_locks_source_operation_pk": {
+          "name": "ingestion_locks_source_operation_pk",
+          "columns": ["source", "operation"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ingestion_locks_source_check": {
+          "name": "ingestion_locks_source_check",
+          "value": "length(\"legislation\".\"ingestion_locks\".\"source\") > 0"
+        },
+        "ingestion_locks_operation_check": {
+          "name": "ingestion_locks_operation_check",
+          "value": "length(\"legislation\".\"ingestion_locks\".\"operation\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.ingestion_runs": {
+      "name": "ingestion_runs",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "correlation_id": {
+          "name": "correlation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()::text"
+        },
+        "workflow_execution_id": {
+          "name": "workflow_execution_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operation": {
+          "name": "operation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'running'"
+        },
+        "scope": {
+          "name": "scope",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "counts": {
+          "name": "counts",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "error_summary": {
+          "name": "error_summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "ingestion_runs_source_idx": {
+          "name": "ingestion_runs_source_idx",
+          "columns": [
+            {
+              "expression": "source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "operation",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ingestion_runs_correlation_idx": {
+          "name": "ingestion_runs_correlation_idx",
+          "columns": [
+            {
+              "expression": "correlation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "ingestion_runs_workflow_execution_idx": {
+          "name": "ingestion_runs_workflow_execution_idx",
+          "columns": [
+            {
+              "expression": "workflow_execution_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "ingestion_runs_source_check": {
+          "name": "ingestion_runs_source_check",
+          "value": "length(\"legislation\".\"ingestion_runs\".\"source\") > 0"
+        },
+        "ingestion_runs_operation_check": {
+          "name": "ingestion_runs_operation_check",
+          "value": "length(\"legislation\".\"ingestion_runs\".\"operation\") > 0"
+        },
+        "ingestion_runs_correlation_id_check": {
+          "name": "ingestion_runs_correlation_id_check",
+          "value": "length(\"legislation\".\"ingestion_runs\".\"correlation_id\") > 0"
+        },
+        "ingestion_runs_status_check": {
+          "name": "ingestion_runs_status_check",
+          "value": "\"legislation\".\"ingestion_runs\".\"status\" in ('running', 'succeeded', 'partial', 'failed')"
+        },
+        "ingestion_runs_completion_check": {
+          "name": "ingestion_runs_completion_check",
+          "value": "(\"legislation\".\"ingestion_runs\".\"status\" = 'running' and \"legislation\".\"ingestion_runs\".\"completed_at\" is null) or (\"legislation\".\"ingestion_runs\".\"status\" <> 'running' and \"legislation\".\"ingestion_runs\".\"completed_at\" is not null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.jurisdictions": {
+      "name": "jurisdictions",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "country_code": {
+          "name": "country_code",
+          "type": "char(2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "subdivision_code": {
+          "name": "subdivision_code",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "jurisdictions_subdivision_uidx": {
+          "name": "jurisdictions_subdivision_uidx",
+          "columns": [
+            {
+              "expression": "country_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "subdivision_code",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"legislation\".\"jurisdictions\".\"subdivision_code\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "jurisdictions_id_check": {
+          "name": "jurisdictions_id_check",
+          "value": "length(\"legislation\".\"jurisdictions\".\"id\") > 0"
+        },
+        "jurisdictions_name_check": {
+          "name": "jurisdictions_name_check",
+          "value": "length(\"legislation\".\"jurisdictions\".\"name\") > 0"
+        },
+        "jurisdictions_classification_check": {
+          "name": "jurisdictions_classification_check",
+          "value": "\"legislation\".\"jurisdictions\".\"classification\" in ('country', 'state', 'district', 'territory')"
+        },
+        "jurisdictions_country_code_check": {
+          "name": "jurisdictions_country_code_check",
+          "value": "\"legislation\".\"jurisdictions\".\"country_code\" ~ '^[A-Z]{2}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.legislative_events": {
+      "name": "legislative_events",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "jurisdiction_id": {
+          "name": "jurisdiction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_at": {
+          "name": "start_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "end_at": {
+          "name": "end_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timezone": {
+          "name": "timezone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "all_day": {
+          "name": "all_day",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "location": {
+          "name": "location",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "virtual_access": {
+          "name": "virtual_access",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_updated_at": {
+          "name": "source_updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "upstream_ids": {
+          "name": "upstream_ids",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "legislative_events_jurisdiction_source_uidx": {
+          "name": "legislative_events_jurisdiction_source_uidx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "legislative_events_schedule_idx": {
+          "name": "legislative_events_schedule_idx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "start_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "legislative_events_deleted_idx": {
+          "name": "legislative_events_deleted_idx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_deleted",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "start_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "legislative_events_jurisdiction_id_jurisdictions_id_fk": {
+          "name": "legislative_events_jurisdiction_id_jurisdictions_id_fk",
+          "tableFrom": "legislative_events",
+          "tableTo": "jurisdictions",
+          "schemaTo": "legislation",
+          "columnsFrom": ["jurisdiction_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "legislative_events_id_check": {
+          "name": "legislative_events_id_check",
+          "value": "length(\"legislation\".\"legislative_events\".\"id\") > 0"
+        },
+        "legislative_events_source_id_check": {
+          "name": "legislative_events_source_id_check",
+          "value": "length(\"legislation\".\"legislative_events\".\"source_id\") > 0"
+        },
+        "legislative_events_name_check": {
+          "name": "legislative_events_name_check",
+          "value": "length(\"legislation\".\"legislative_events\".\"name\") > 0"
+        },
+        "legislative_events_status_check": {
+          "name": "legislative_events_status_check",
+          "value": "length(\"legislation\".\"legislative_events\".\"status\") > 0"
+        },
+        "legislative_events_dates_check": {
+          "name": "legislative_events_dates_check",
+          "value": "\"legislation\".\"legislative_events\".\"end_at\" is null or \"legislation\".\"legislative_events\".\"start_at\" <= \"legislation\".\"legislative_events\".\"end_at\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.legislative_sessions": {
+      "name": "legislative_sessions",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "jurisdiction_id": {
+          "name": "jurisdiction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identifier": {
+          "name": "identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_date": {
+          "name": "end_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "legislative_sessions_identifier_uidx": {
+          "name": "legislative_sessions_identifier_uidx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "identifier",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "legislative_sessions_jurisdiction_id_uidx": {
+          "name": "legislative_sessions_jurisdiction_id_uidx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "legislative_sessions_jurisdiction_id_jurisdictions_id_fk": {
+          "name": "legislative_sessions_jurisdiction_id_jurisdictions_id_fk",
+          "tableFrom": "legislative_sessions",
+          "tableTo": "jurisdictions",
+          "schemaTo": "legislation",
+          "columnsFrom": ["jurisdiction_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "legislative_sessions_id_check": {
+          "name": "legislative_sessions_id_check",
+          "value": "length(\"legislation\".\"legislative_sessions\".\"id\") > 0"
+        },
+        "legislative_sessions_identifier_check": {
+          "name": "legislative_sessions_identifier_check",
+          "value": "length(\"legislation\".\"legislative_sessions\".\"identifier\") > 0"
+        },
+        "legislative_sessions_dates_check": {
+          "name": "legislative_sessions_dates_check",
+          "value": "\"legislation\".\"legislative_sessions\".\"start_date\" is null or \"legislation\".\"legislative_sessions\".\"end_date\" is null or \"legislation\".\"legislative_sessions\".\"start_date\" <= \"legislation\".\"legislative_sessions\".\"end_date\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.legislative_terms": {
+      "name": "legislative_terms",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "person_id": {
+          "name": "person_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jurisdiction_id": {
+          "name": "jurisdiction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "chamber": {
+          "name": "chamber",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "district": {
+          "name": "district",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "party": {
+          "name": "party",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_date": {
+          "name": "end_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "legislative_terms_person_source_uidx": {
+          "name": "legislative_terms_person_source_uidx",
+          "columns": [
+            {
+              "expression": "person_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"legislation\".\"legislative_terms\".\"source_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "legislative_terms_person_dates_idx": {
+          "name": "legislative_terms_person_dates_idx",
+          "columns": [
+            {
+              "expression": "person_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "start_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "end_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "legislative_terms_jurisdiction_chamber_idx": {
+          "name": "legislative_terms_jurisdiction_chamber_idx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "chamber",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "district",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "legislative_terms_person_id_people_id_fk": {
+          "name": "legislative_terms_person_id_people_id_fk",
+          "tableFrom": "legislative_terms",
+          "tableTo": "people",
+          "schemaTo": "legislation",
+          "columnsFrom": ["person_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "legislative_terms_jurisdiction_id_jurisdictions_id_fk": {
+          "name": "legislative_terms_jurisdiction_id_jurisdictions_id_fk",
+          "tableFrom": "legislative_terms",
+          "tableTo": "jurisdictions",
+          "schemaTo": "legislation",
+          "columnsFrom": ["jurisdiction_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "legislative_terms_organization_id_organizations_id_fk": {
+          "name": "legislative_terms_organization_id_organizations_id_fk",
+          "tableFrom": "legislative_terms",
+          "tableTo": "organizations",
+          "schemaTo": "legislation",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "legislative_terms_id_check": {
+          "name": "legislative_terms_id_check",
+          "value": "length(\"legislation\".\"legislative_terms\".\"id\") > 0"
+        },
+        "legislative_terms_chamber_check": {
+          "name": "legislative_terms_chamber_check",
+          "value": "length(\"legislation\".\"legislative_terms\".\"chamber\") > 0"
+        },
+        "legislative_terms_dates_check": {
+          "name": "legislative_terms_dates_check",
+          "value": "\"legislation\".\"legislative_terms\".\"start_date\" is null or \"legislation\".\"legislative_terms\".\"end_date\" is null or \"legislation\".\"legislative_terms\".\"start_date\" <= \"legislation\".\"legislative_terms\".\"end_date\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.organization_memberships": {
+      "name": "organization_memberships",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "person_id": {
+          "name": "person_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rank": {
+          "name": "rank",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "start_date": {
+          "name": "start_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end_date": {
+          "name": "end_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "organization_memberships_source_uidx": {
+          "name": "organization_memberships_source_uidx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"legislation\".\"organization_memberships\".\"source_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "organization_memberships_person_idx": {
+          "name": "organization_memberships_person_idx",
+          "columns": [
+            {
+              "expression": "person_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "start_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "end_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "organization_memberships_organization_idx": {
+          "name": "organization_memberships_organization_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "is_active",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "organization_memberships_organization_id_organizations_id_fk": {
+          "name": "organization_memberships_organization_id_organizations_id_fk",
+          "tableFrom": "organization_memberships",
+          "tableTo": "organizations",
+          "schemaTo": "legislation",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "organization_memberships_person_id_people_id_fk": {
+          "name": "organization_memberships_person_id_people_id_fk",
+          "tableFrom": "organization_memberships",
+          "tableTo": "people",
+          "schemaTo": "legislation",
+          "columnsFrom": ["person_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "organization_memberships_id_check": {
+          "name": "organization_memberships_id_check",
+          "value": "length(\"legislation\".\"organization_memberships\".\"id\") > 0"
+        },
+        "organization_memberships_dates_check": {
+          "name": "organization_memberships_dates_check",
+          "value": "\"legislation\".\"organization_memberships\".\"start_date\" is null or \"legislation\".\"organization_memberships\".\"end_date\" is null or \"legislation\".\"organization_memberships\".\"start_date\" <= \"legislation\".\"organization_memberships\".\"end_date\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.organizations": {
+      "name": "organizations",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "jurisdiction_id": {
+          "name": "jurisdiction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "parent_organization_id": {
+          "name": "parent_organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "chamber": {
+          "name": "chamber",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_updated_at": {
+          "name": "source_updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "upstream_ids": {
+          "name": "upstream_ids",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "organizations_jurisdiction_source_uidx": {
+          "name": "organizations_jurisdiction_source_uidx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "organizations_parent_idx": {
+          "name": "organizations_parent_idx",
+          "columns": [
+            {
+              "expression": "parent_organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "organizations_jurisdiction_classification_idx": {
+          "name": "organizations_jurisdiction_classification_idx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "classification",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "chamber",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "organizations_jurisdiction_id_jurisdictions_id_fk": {
+          "name": "organizations_jurisdiction_id_jurisdictions_id_fk",
+          "tableFrom": "organizations",
+          "tableTo": "jurisdictions",
+          "schemaTo": "legislation",
+          "columnsFrom": ["jurisdiction_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "organizations_parent_organization_id_organizations_id_fk": {
+          "name": "organizations_parent_organization_id_organizations_id_fk",
+          "tableFrom": "organizations",
+          "tableTo": "organizations",
+          "schemaTo": "legislation",
+          "columnsFrom": ["parent_organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "organizations_id_check": {
+          "name": "organizations_id_check",
+          "value": "length(\"legislation\".\"organizations\".\"id\") > 0"
+        },
+        "organizations_source_id_check": {
+          "name": "organizations_source_id_check",
+          "value": "length(\"legislation\".\"organizations\".\"source_id\") > 0"
+        },
+        "organizations_name_check": {
+          "name": "organizations_name_check",
+          "value": "length(\"legislation\".\"organizations\".\"name\") > 0"
+        },
+        "organizations_classification_check": {
+          "name": "organizations_classification_check",
+          "value": "\"legislation\".\"organizations\".\"classification\" in ('legislature', 'chamber', 'committee', 'subcommittee')"
+        },
+        "organizations_parent_check": {
+          "name": "organizations_parent_check",
+          "value": "\"legislation\".\"organizations\".\"parent_organization_id\" is null or \"legislation\".\"organizations\".\"parent_organization_id\" <> \"legislation\".\"organizations\".\"id\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.people": {
+      "name": "people",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "jurisdiction_id": {
+          "name": "jurisdiction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "given_name": {
+          "name": "given_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "family_name": {
+          "name": "family_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "party": {
+          "name": "party",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_updated_at": {
+          "name": "source_updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_active": {
+          "name": "is_active",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "upstream_ids": {
+          "name": "upstream_ids",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "people_jurisdiction_source_uidx": {
+          "name": "people_jurisdiction_source_uidx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"legislation\".\"people\".\"jurisdiction_id\" is not null and \"legislation\".\"people\".\"source_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "people_jurisdiction_id_jurisdictions_id_fk": {
+          "name": "people_jurisdiction_id_jurisdictions_id_fk",
+          "tableFrom": "people",
+          "tableTo": "jurisdictions",
+          "schemaTo": "legislation",
+          "columnsFrom": ["jurisdiction_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "people_name_check": {
+          "name": "people_name_check",
+          "value": "length(\"legislation\".\"people\".\"name\") > 0"
+        },
+        "people_source_id_check": {
+          "name": "people_source_id_check",
+          "value": "\"legislation\".\"people\".\"source_id\" is null or length(\"legislation\".\"people\".\"source_id\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.supporting_material_links": {
+      "name": "supporting_material_links",
+      "schema": "legislation",
+      "columns": {
+        "material_id": {
+          "name": "material_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bill_id": {
+          "name": "bill_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amendment_id": {
+          "name": "amendment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'related'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "supporting_material_links_identity_uidx": {
+          "name": "supporting_material_links_identity_uidx",
+          "columns": [
+            {
+              "expression": "material_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "bill_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "amendment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "classification",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "supporting_material_links_bill_idx": {
+          "name": "supporting_material_links_bill_idx",
+          "columns": [
+            {
+              "expression": "bill_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "material_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "supporting_material_links_amendment_idx": {
+          "name": "supporting_material_links_amendment_idx",
+          "columns": [
+            {
+              "expression": "amendment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "material_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "supporting_material_links_event_idx": {
+          "name": "supporting_material_links_event_idx",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "material_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "supporting_material_links_material_id_supporting_materials_id_fk": {
+          "name": "supporting_material_links_material_id_supporting_materials_id_fk",
+          "tableFrom": "supporting_material_links",
+          "tableTo": "supporting_materials",
+          "schemaTo": "legislation",
+          "columnsFrom": ["material_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "supporting_material_links_bill_id_bills_id_fk": {
+          "name": "supporting_material_links_bill_id_bills_id_fk",
+          "tableFrom": "supporting_material_links",
+          "tableTo": "bills",
+          "schemaTo": "legislation",
+          "columnsFrom": ["bill_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "supporting_material_links_amendment_id_amendments_id_fk": {
+          "name": "supporting_material_links_amendment_id_amendments_id_fk",
+          "tableFrom": "supporting_material_links",
+          "tableTo": "amendments",
+          "schemaTo": "legislation",
+          "columnsFrom": ["amendment_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "supporting_material_links_event_id_legislative_events_id_fk": {
+          "name": "supporting_material_links_event_id_legislative_events_id_fk",
+          "tableFrom": "supporting_material_links",
+          "tableTo": "legislative_events",
+          "schemaTo": "legislation",
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "supporting_material_links_organization_id_organizations_id_fk": {
+          "name": "supporting_material_links_organization_id_organizations_id_fk",
+          "tableFrom": "supporting_material_links",
+          "tableTo": "organizations",
+          "schemaTo": "legislation",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "supporting_material_links_target_check": {
+          "name": "supporting_material_links_target_check",
+          "value": "\"legislation\".\"supporting_material_links\".\"bill_id\" is not null or \"legislation\".\"supporting_material_links\".\"amendment_id\" is not null or \"legislation\".\"supporting_material_links\".\"event_id\" is not null or \"legislation\".\"supporting_material_links\".\"organization_id\" is not null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.supporting_materials": {
+      "name": "supporting_materials",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "jurisdiction_id": {
+          "name": "jurisdiction_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "document_date": {
+          "name": "document_date",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "content_type": {
+          "name": "content_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "blob_path": {
+          "name": "blob_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "content_hash": {
+          "name": "content_hash",
+          "type": "char(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "processing_status": {
+          "name": "processing_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "processing_attempts": {
+          "name": "processing_attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "processing_error": {
+          "name": "processing_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_updated_at": {
+          "name": "source_updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "supporting_materials_jurisdiction_source_uidx": {
+          "name": "supporting_materials_jurisdiction_source_uidx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "source_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "supporting_materials_processing_idx": {
+          "name": "supporting_materials_processing_idx",
+          "columns": [
+            {
+              "expression": "processing_status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "updated_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "supporting_materials_classification_idx": {
+          "name": "supporting_materials_classification_idx",
+          "columns": [
+            {
+              "expression": "jurisdiction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "classification",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "document_date",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "supporting_materials_jurisdiction_id_jurisdictions_id_fk": {
+          "name": "supporting_materials_jurisdiction_id_jurisdictions_id_fk",
+          "tableFrom": "supporting_materials",
+          "tableTo": "jurisdictions",
+          "schemaTo": "legislation",
+          "columnsFrom": ["jurisdiction_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "supporting_materials_source_id_check": {
+          "name": "supporting_materials_source_id_check",
+          "value": "length(\"legislation\".\"supporting_materials\".\"source_id\") > 0"
+        },
+        "supporting_materials_classification_check": {
+          "name": "supporting_materials_classification_check",
+          "value": "length(\"legislation\".\"supporting_materials\".\"classification\") > 0"
+        },
+        "supporting_materials_title_check": {
+          "name": "supporting_materials_title_check",
+          "value": "length(\"legislation\".\"supporting_materials\".\"title\") > 0"
+        },
+        "supporting_materials_hash_check": {
+          "name": "supporting_materials_hash_check",
+          "value": "\"legislation\".\"supporting_materials\".\"content_hash\" is null or \"legislation\".\"supporting_materials\".\"content_hash\" ~ '^[0-9a-f]{64}$'"
+        },
+        "supporting_materials_attempts_check": {
+          "name": "supporting_materials_attempts_check",
+          "value": "\"legislation\".\"supporting_materials\".\"processing_attempts\" >= 0"
+        },
+        "supporting_materials_processing_status_check": {
+          "name": "supporting_materials_processing_status_check",
+          "value": "\"legislation\".\"supporting_materials\".\"processing_status\" in ('pending', 'processing', 'processed', 'unsupported', 'failed')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.sync_checkpoints": {
+      "name": "sync_checkpoints",
+      "schema": "legislation",
+      "columns": {
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "stream": {
+          "name": "stream",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cursor": {
+          "name": "cursor",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "watermark": {
+          "name": "watermark",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "sync_checkpoints_source_stream_pk": {
+          "name": "sync_checkpoints_source_stream_pk",
+          "columns": ["source", "stream"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "sync_checkpoints_source_check": {
+          "name": "sync_checkpoints_source_check",
+          "value": "length(\"legislation\".\"sync_checkpoints\".\"source\") > 0"
+        },
+        "sync_checkpoints_stream_check": {
+          "name": "sync_checkpoints_stream_check",
+          "value": "length(\"legislation\".\"sync_checkpoints\".\"stream\") > 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.vote_positions": {
+      "name": "vote_positions",
+      "schema": "legislation",
+      "columns": {
+        "vote_id": {
+          "name": "vote_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source_identity": {
+          "name": "source_identity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "person_id": {
+          "name": "person_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_person_id": {
+          "name": "source_person_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_name": {
+          "name": "source_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "option": {
+          "name": "option",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "vote_positions_person_idx": {
+          "name": "vote_positions_person_idx",
+          "columns": [
+            {
+              "expression": "person_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "option",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "vote_positions_source_person_idx": {
+          "name": "vote_positions_source_person_idx",
+          "columns": [
+            {
+              "expression": "source_person_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "option",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "vote_positions_vote_id_votes_id_fk": {
+          "name": "vote_positions_vote_id_votes_id_fk",
+          "tableFrom": "vote_positions",
+          "tableTo": "votes",
+          "schemaTo": "legislation",
+          "columnsFrom": ["vote_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "vote_positions_person_id_people_id_fk": {
+          "name": "vote_positions_person_id_people_id_fk",
+          "tableFrom": "vote_positions",
+          "tableTo": "people",
+          "schemaTo": "legislation",
+          "columnsFrom": ["person_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "vote_positions_vote_id_source_identity_pk": {
+          "name": "vote_positions_vote_id_source_identity_pk",
+          "columns": ["vote_id", "source_identity"]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "vote_positions_source_identity_check": {
+          "name": "vote_positions_source_identity_check",
+          "value": "length(\"legislation\".\"vote_positions\".\"source_identity\") > 0"
+        },
+        "vote_positions_option_check": {
+          "name": "vote_positions_option_check",
+          "value": "length(\"legislation\".\"vote_positions\".\"option\") > 0"
+        },
+        "vote_positions_normalized_option_check": {
+          "name": "vote_positions_normalized_option_check",
+          "value": "\"legislation\".\"vote_positions\".\"option\" in ('yes', 'no', 'absent', 'abstain', 'not-voting', 'present', 'proxy', 'paired', 'other')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "legislation.votes": {
+      "name": "votes",
+      "schema": "legislation",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "bill_id": {
+          "name": "bill_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amendment_id": {
+          "name": "amendment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "chamber": {
+          "name": "chamber",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "classification": {
+          "name": "classification",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_id": {
+          "name": "source_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "roll_call_number": {
+          "name": "roll_call_number",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "vote_type": {
+          "name": "vote_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "question": {
+          "name": "question",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "requirement": {
+          "name": "requirement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "motion": {
+          "name": "motion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "result": {
+          "name": "result",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "held_at": {
+          "name": "held_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "yes_count": {
+          "name": "yes_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "no_count": {
+          "name": "no_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "other_count": {
+          "name": "other_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_url": {
+          "name": "source_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "votes_bill_idx": {
+          "name": "votes_bill_idx",
+          "columns": [
+            {
+              "expression": "bill_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "held_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "votes_amendment_idx": {
+          "name": "votes_amendment_idx",
+          "columns": [
+            {
+              "expression": "amendment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "held_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "votes_event_idx": {
+          "name": "votes_event_idx",
+          "columns": [
+            {
+              "expression": "event_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "held_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "votes_organization_idx": {
+          "name": "votes_organization_idx",
+          "columns": [
+            {
+              "expression": "organization_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "held_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "votes_source_uidx": {
+          "name": "votes_source_uidx",
+          "columns": [
+            {
+              "expression": "source_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"legislation\".\"votes\".\"source_id\" is not null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "votes_bill_id_bills_id_fk": {
+          "name": "votes_bill_id_bills_id_fk",
+          "tableFrom": "votes",
+          "tableTo": "bills",
+          "schemaTo": "legislation",
+          "columnsFrom": ["bill_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "votes_amendment_id_amendments_id_fk": {
+          "name": "votes_amendment_id_amendments_id_fk",
+          "tableFrom": "votes",
+          "tableTo": "amendments",
+          "schemaTo": "legislation",
+          "columnsFrom": ["amendment_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "votes_event_id_legislative_events_id_fk": {
+          "name": "votes_event_id_legislative_events_id_fk",
+          "tableFrom": "votes",
+          "tableTo": "legislative_events",
+          "schemaTo": "legislation",
+          "columnsFrom": ["event_id"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "votes_organization_id_organizations_id_fk": {
+          "name": "votes_organization_id_organizations_id_fk",
+          "tableFrom": "votes",
+          "tableTo": "organizations",
+          "schemaTo": "legislation",
+          "columnsFrom": ["organization_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "votes_session_id_legislative_sessions_id_fk": {
+          "name": "votes_session_id_legislative_sessions_id_fk",
+          "tableFrom": "votes",
+          "tableTo": "legislative_sessions",
+          "schemaTo": "legislation",
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "votes_motion_check": {
+          "name": "votes_motion_check",
+          "value": "length(\"legislation\".\"votes\".\"motion\") > 0"
+        },
+        "votes_target_check": {
+          "name": "votes_target_check",
+          "value": "\"legislation\".\"votes\".\"bill_id\" is not null or \"legislation\".\"votes\".\"amendment_id\" is not null or \"legislation\".\"votes\".\"event_id\" is not null or \"legislation\".\"votes\".\"organization_id\" is not null or \"legislation\".\"votes\".\"chamber\" is not null"
+        },
+        "votes_yes_count_check": {
+          "name": "votes_yes_count_check",
+          "value": "\"legislation\".\"votes\".\"yes_count\" is null or \"legislation\".\"votes\".\"yes_count\" >= 0"
+        },
+        "votes_no_count_check": {
+          "name": "votes_no_count_check",
+          "value": "\"legislation\".\"votes\".\"no_count\" is null or \"legislation\".\"votes\".\"no_count\" >= 0"
+        },
+        "votes_other_count_check": {
+          "name": "votes_other_count_check",
+          "value": "\"legislation\".\"votes\".\"other_count\" is null or \"legislation\".\"votes\".\"other_count\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "legislation": "legislation"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

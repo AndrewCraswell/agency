@@ -165,6 +165,7 @@ describe("createLegislationServer", () => {
       searchAmendments: async () => ({ items: [] }),
       searchBills: async () => ({ items: [] }),
       searchBillText: async () => ({ items: [] }),
+      searchChanges: async () => ({ items: [] }),
       searchEvents: async () => ({ items: [] }),
       searchSupportingMaterials: async () => ({ items: [] }),
       searchVotes: async () => ({ items: [] })
@@ -185,7 +186,7 @@ describe("createLegislationServer", () => {
     try {
       await client.connect(transport)
       const tools = await client.listTools()
-      expect(tools.tools).toHaveLength(18)
+      expect(tools.tools).toHaveLength(19)
       for (const call of [
         { arguments: { mode: "lexical", query: "data" }, name: "search_bills" },
         { arguments: { id: billId }, name: "get_bill" },
@@ -204,7 +205,8 @@ describe("createLegislationServer", () => {
         { arguments: { billId }, name: "search_amendments" },
         { arguments: { id: "amendment:congress:119-hamdt-1" }, name: "get_amendment" },
         { arguments: { billId }, name: "search_supporting_materials" },
-        { arguments: { id: "material:govinfo:crpt-1" }, name: "get_supporting_material" }
+        { arguments: { id: "material:govinfo:crpt-1" }, name: "get_supporting_material" },
+        { arguments: { jurisdictionId: "jurisdiction:us" }, name: "search_changes" }
       ] as const) {
         await expect(client.callTool(call)).resolves.not.toMatchObject({ isError: true })
       }

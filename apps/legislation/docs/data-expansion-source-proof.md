@@ -50,6 +50,11 @@ States plan is increased; repeated 429 responses with an explicit daily-limit de
 
 Every list endpoint was sampled for each Congress from the 113th through the 119th. All requests succeeded.
 
+The Congress.gov House roll-call endpoint reports zero records for the 113th and 114th Congresses. Its supported data
+begins with the 115th Congress: 1,210 roll calls in the 115th, 954 in the 116th, 998 in the 117th, 1,241 in the 118th,
+and 645 currently reported for the 119th across both sessions. Detail and member-position endpoints were validated with
+an authenticated 119th Congress sample before enabling the restartable importer.
+
 | Resource | Records reported across sampled Congresses | List requests at 250 per page | Detail-request lower-bound time at 5,000 requests/hour | Range finding |
 | --- | ---: | ---: | ---: | --- |
 | Members | 3,876 term-scoped rows | 21 | 0.78 hours | Present in every Congress; people repeat across terms, so deduplication reduces detail requests. |

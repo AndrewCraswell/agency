@@ -1,5 +1,6 @@
 import { and, asc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
+import { findChangeEvents } from "../db/queries/changes.js"
 import {
   amendmentActions,
   amendments,
@@ -105,6 +106,16 @@ export interface SupportingMaterialSearchInput {
   query?: string
 }
 
+export interface ChangeSearchInput {
+  cursor?: string
+  jurisdictionId?: string
+  limit?: number
+  organizationId?: string
+  personId?: string
+  recordId?: string
+  recordType?: string
+}
+
 interface FusedBillResult {
   id: string
   identifier: string
@@ -155,6 +166,36 @@ function decodeOffset(cursor: string | undefined): number {
   }
 }
 
+function encodeChangeCursor(value: { id: string; observedAt: Date }): string {
+  return Buffer.from(JSON.stringify({ id: value.id, observedAt: value.observedAt.toISOString() })).toString("base64url")
+}
+
+function decodeChangeCursor(cursor: string | undefined): { id?: string; observedAt?: Date } {
+  if (cursor === undefined) {
+    return {}
+  }
+  try {
+    const parsed: unknown = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"))
+    if (
+      typeof parsed !== "object" ||
+      parsed === null ||
+      !("id" in parsed) ||
+      typeof parsed.id !== "string" ||
+      !("observedAt" in parsed) ||
+      typeof parsed.observedAt !== "string"
+    ) {
+      throw new Error("invalid")
+    }
+    const observedAt = new Date(parsed.observedAt)
+    if (Number.isNaN(observedAt.getTime())) {
+      throw new Error("invalid")
+    }
+    return { id: parsed.id, observedAt }
+  } catch {
+    throw new LegislationError("invalid_request", "Invalid change pagination cursor")
+  }
+}
+
 export class LegislationQueryService {
   readonly #database: LegislationDatabase
   readonly #embeddingClient?: QueryEmbeddingClient
@@ -162,6 +203,29 @@ export class LegislationQueryService {
   constructor(database: LegislationDatabase, embeddingClient?: QueryEmbeddingClient) {
     this.#database = database
     this.#embeddingClient = embeddingClient
+  }
+
+  async searchChanges(input: ChangeSearchInput) {
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const cursor = decodeChangeCursor(input.cursor)
+    const rows = await findChangeEvents(this.#database, {
+      before: cursor.observedAt,
+      beforeId: cursor.id,
+      jurisdictionId: input.jurisdictionId,
+      limit: limit + 1,
+      organizationId: input.organizationId,
+      personId: input.personId,
+      recordId: input.recordId,
+      recordType: input.recordType
+    })
+    const truncated = rows.length > limit
+    const items = rows.slice(0, limit)
+    const last = items.at(-1)
+    return {
+      items,
+      nextCursor: truncated && last !== undefined ? encodeChangeCursor(last) : undefined,
+      truncated
+    }
   }
 
   async getPerson(lookup: EntityLookup) {

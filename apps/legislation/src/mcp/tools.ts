@@ -56,6 +56,7 @@ export type LegislationQueryApi = Readonly<{
   searchAmendments: (input: Parameters<LegislationQueryService["searchAmendments"]>[0]) => Promise<unknown>
   searchBills: (input: Parameters<LegislationQueryService["searchBills"]>[0]) => Promise<unknown>
   searchBillText: (input: Parameters<LegislationQueryService["searchBillText"]>[0]) => Promise<unknown>
+  searchChanges: (input: Parameters<LegislationQueryService["searchChanges"]>[0]) => Promise<unknown>
   searchEvents: (input: Parameters<LegislationQueryService["searchEvents"]>[0]) => Promise<unknown>
   searchSupportingMaterials: (
     input: Parameters<LegislationQueryService["searchSupportingMaterials"]>[0]
@@ -398,6 +399,22 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
           outputSchema
         },
         (input) => tool("get_supporting_material", input, () => service.getSupportingMaterial(input), logger, telemetry)
+      )
+      server.registerTool(
+        "search_changes",
+        {
+          description: "Search observed canonical record changes by record, jurisdiction, committee, or person.",
+          inputSchema: z.object({
+            ...pageSchema,
+            jurisdictionId: canonicalId("jurisdiction").optional(),
+            organizationId: canonicalId("organization").optional(),
+            personId: canonicalId("person").optional(),
+            recordId: z.string().trim().min(1).optional(),
+            recordType: z.string().trim().min(1).max(100).optional()
+          }),
+          outputSchema
+        },
+        (input) => tool("search_changes", input, () => service.searchChanges(input), logger, telemetry)
       )
       return server
     },

@@ -847,6 +847,63 @@ export const ingestionRuns = legislationSchema.table(
   ]
 )
 
+export const canonicalRecordFingerprints = legislationSchema.table(
+  "canonical_record_fingerprints",
+  {
+    recordType: text("record_type").notNull(),
+    recordId: text("record_id").notNull(),
+    fingerprint: char("fingerprint", { length: 64 }).notNull(),
+    fields: jsonb("fields").$type<Record<string, unknown>>().notNull(),
+    observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.recordType, table.recordId] }),
+    check("canonical_record_fingerprints_type_check", sql`length(${table.recordType}) > 0`),
+    check("canonical_record_fingerprints_id_check", sql`length(${table.recordId}) > 0`),
+    check("canonical_record_fingerprints_hash_check", sql`${table.fingerprint} ~ '^[0-9a-f]{64}$'`),
+    index("canonical_record_fingerprints_observed_idx").on(table.observedAt)
+  ]
+)
+
+export const changeEvents = legislationSchema.table(
+  "change_events",
+  {
+    id: text("id").primaryKey(),
+    ingestionRunId: uuid("ingestion_run_id")
+      .notNull()
+      .references(() => ingestionRuns.id, { onDelete: "restrict" }),
+    recordType: text("record_type").notNull(),
+    recordId: text("record_id").notNull(),
+    changeType: text("change_type").notNull(),
+    jurisdictionId: text("jurisdiction_id").references(() => jurisdictions.id, { onDelete: "restrict" }),
+    organizationId: text("organization_id").references(() => organizations.id, { onDelete: "set null" }),
+    personId: text("person_id").references(() => people.id, { onDelete: "set null" }),
+    changedFields: text("changed_fields")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    before: jsonb("before").$type<Record<string, unknown>>(),
+    after: jsonb("after").$type<Record<string, unknown>>(),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("change_events_id_check", sql`length(${table.id}) > 0`),
+    check("change_events_record_type_check", sql`length(${table.recordType}) > 0`),
+    check("change_events_record_id_check", sql`length(${table.recordId}) > 0`),
+    check(
+      "change_events_change_type_check",
+      sql`${table.changeType} in ('create', 'update', 'delete', 'cancel', 'reschedule', 'relationship-change')`
+    ),
+    index("change_events_record_idx").on(table.recordType, table.recordId, table.observedAt),
+    index("change_events_jurisdiction_idx").on(table.jurisdictionId, table.observedAt),
+    index("change_events_organization_idx").on(table.organizationId, table.observedAt),
+    index("change_events_person_idx").on(table.personId, table.observedAt),
+    index("change_events_run_idx").on(table.ingestionRunId, table.observedAt)
+  ]
+)
+
 export const ingestionLocks = legislationSchema.table(
   "ingestion_locks",
   {

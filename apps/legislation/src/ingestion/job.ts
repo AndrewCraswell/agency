@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto"
 import { and, eq, lt, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
 import { ingestionLocks, ingestionRuns } from "../db/schema/schema.js"
+import { withIngestionRun } from "./run-context.js"
 
 const JOB_LEASE_DURATION = sql.raw("interval '5 minutes'")
 const JOB_LEASE_HEARTBEAT_MS = 60_000
@@ -156,7 +157,8 @@ export async function runIngestionJob(
       throw new Error("Unable to create ingestion run")
     }
 
-    const result = await operation(runId)
+    const currentRunId = runId
+    const result = await withIngestionRun(currentRunId, () => operation(currentRunId))
     await heartbeatInFlight
     if (heartbeatError !== undefined || !(await renewJobLease(database, input.source, input.operation, ownerId))) {
       throw heartbeatError ?? new Error("Ingestion job lost its renewable lease before completion")

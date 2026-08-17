@@ -1,6 +1,7 @@
 import { inArray, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../database.js"
 import { eventAgendaItems, eventDocuments, eventParticipants, legislativeEvents } from "../schema/schema.js"
+import { observeCanonicalRecord } from "./changes.js"
 
 export interface EventSnapshot {
   agendaItems: Array<typeof eventAgendaItems.$inferInsert>
@@ -56,6 +57,22 @@ export async function upsertEventSnapshots(
     }
     if (agendaItems.length > 0) {
       await transaction.insert(eventAgendaItems).values(agendaItems)
+    }
+    for (const snapshot of snapshots) {
+      await observeCanonicalRecord(transaction, {
+        fields: {
+          classification: snapshot.event.classification,
+          endAt: snapshot.event.endAt,
+          isDeleted: snapshot.event.isDeleted ?? false,
+          name: snapshot.event.name,
+          startAt: snapshot.event.startAt,
+          status: snapshot.event.status
+        },
+        jurisdictionId: snapshot.event.jurisdictionId,
+        recordId: snapshot.event.id,
+        recordType: "event",
+        sourceUpdatedAt: snapshot.event.sourceUpdatedAt ?? undefined
+      })
     }
   })
 }

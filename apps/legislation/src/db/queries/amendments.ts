@@ -9,6 +9,7 @@ import {
   supportingMaterialLinks,
   supportingMaterials
 } from "../schema/schema.js"
+import { observeCanonicalRecord } from "./changes.js"
 
 export async function upsertCongressAmendmentSnapshot(
   database: LegislationDatabase,
@@ -83,5 +84,20 @@ export async function upsertCongressAmendmentSnapshot(
         }))
       )
     }
+    await observeCanonicalRecord(transaction, {
+      fields: {
+        billId: persistedAmendment.billId,
+        description: persistedAmendment.description,
+        purpose: persistedAmendment.purpose,
+        sponsorPersonId: persistedAmendment.sponsorPersonId,
+        status: persistedAmendment.status,
+        submittedDate: persistedAmendment.submittedDate
+      },
+      jurisdictionId: persistedAmendment.jurisdictionId,
+      personId: persistedAmendment.sponsorPersonId,
+      recordId: persistedAmendment.id,
+      recordType: "amendment",
+      sourceUpdatedAt: persistedAmendment.sourceUpdatedAt ?? undefined
+    })
   })
 }

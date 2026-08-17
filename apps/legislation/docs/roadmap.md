@@ -194,21 +194,21 @@ building provenance, predictions, or AI-generated interpretation.
 
 ### Tasks
 
-- [ ] **E5.1** Define a bounded change-event contract for create, update, delete, cancel, reschedule, relationship change,
+- [x] **E5.1** Define a bounded change-event contract for create, update, delete, cancel, reschedule, relationship change,
   and document-content change.
-- [ ] **E5.2** Add current-record fingerprints and minimal before-and-after changed fields; do not copy complete provider
+- [x] **E5.2** Add current-record fingerprints and minimal before-and-after changed fields; do not copy complete provider
   payloads into a lineage store.
-- [ ] **E5.3** Emit change events from successful canonical transactions only, with the ingestion run and affected
+- [x] **E5.3** Emit change events from successful canonical transactions only, with the ingestion run and affected
   canonical identifiers needed for replay and debugging.
-- [ ] **E5.4** Make change-event identity deterministic so overlap windows, retries, and repeated imports do not duplicate
+- [x] **E5.4** Make change-event identity deterministic so overlap windows, retries, and repeated imports do not duplicate
   events.
-- [ ] **E5.5** Distinguish an upstream correction from a newly observed legislative event only when the source supplies
+- [x] **E5.5** Distinguish an upstream correction from a newly observed legislative event only when the source supplies
   enough information; otherwise classify it as a record update.
 - [ ] **E5.6** Link scheduled events to later actions or votes only through explicit relationships or deterministic
   identifiers, not semantic guessing.
-- [ ] **E5.7** Define retention based on operational and product needs; do not retain fields solely to establish a chain
+- [x] **E5.7** Define retention based on operational and product needs; do not retain fields solely to establish a chain
   of custody.
-- [ ] **E5.8** Add query operations for changes by canonical record, jurisdiction, committee, person, and observation
+- [x] **E5.8** Add query operations for changes by canonical record, jurisdiction, committee, person, and observation
   window.
 - [ ] **E5.9** Validate replay, correction, cancellation, rescheduling, deletion, and unchanged-import behavior.
 

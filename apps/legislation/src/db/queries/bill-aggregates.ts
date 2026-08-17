@@ -14,6 +14,7 @@ import {
   votePositions,
   votes
 } from "../schema/schema.js"
+import { observeCanonicalRecord } from "./changes.js"
 
 function assertAggregateOwnership(aggregate: CanonicalBillAggregate): void {
   const billId = aggregate.bill.id
@@ -162,6 +163,58 @@ export async function upsertBillAggregate(
       if (aggregate.relations.length > 0) {
         await transaction.insert(billRelations).values(aggregate.relations)
       }
+    }
+
+    await observeCanonicalRecord(transaction, {
+      fields: {
+        chamber: bill.chamber,
+        classification: bill.classification,
+        committees: bill.committees,
+        introducedAt: bill.introducedAt,
+        relationships: aggregate.relations?.map((relation) => ({
+          classification: relation.classification,
+          relatedBillId: relation.relatedBillId
+        })),
+        status: bill.status,
+        subjects: bill.subjects,
+        summary: bill.summary,
+        title: bill.title
+      },
+      jurisdictionId: bill.jurisdictionId,
+      recordId: bill.id,
+      recordType: "bill",
+      sourceUpdatedAt: bill.sourceUpdatedAt ?? undefined
+    })
+    for (const person of aggregate.people ?? []) {
+      await observeCanonicalRecord(transaction, {
+        fields: {
+          familyName: person.familyName,
+          givenName: person.givenName,
+          isActive: person.isActive,
+          name: person.name,
+          party: person.party
+        },
+        jurisdictionId: person.jurisdictionId ?? undefined,
+        personId: person.id,
+        recordId: person.id,
+        recordType: "person",
+        sourceUpdatedAt: person.sourceUpdatedAt ?? undefined
+      })
+    }
+    for (const vote of aggregate.votes ?? []) {
+      await observeCanonicalRecord(transaction, {
+        fields: {
+          heldAt: vote.vote.heldAt,
+          motion: vote.vote.motion,
+          noCount: vote.vote.noCount,
+          otherCount: vote.vote.otherCount,
+          result: vote.vote.result,
+          yesCount: vote.vote.yesCount
+        },
+        jurisdictionId: bill.jurisdictionId,
+        recordId: vote.vote.id,
+        recordType: "vote"
+      })
     }
   })
 }
