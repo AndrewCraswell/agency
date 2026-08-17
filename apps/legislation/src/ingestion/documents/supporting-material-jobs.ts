@@ -5,6 +5,7 @@ import { supportingMaterials } from "../../db/schema/schema.js"
 import { createJobCounts, mapConcurrent, type JobCounts } from "../job.js"
 import { artifactPath, type ArtifactStore } from "./artifact-store.js"
 import { downloadDocument } from "./download.js"
+import { isTerminalDocumentFailure } from "./process.js"
 import {
   markSupportingMaterialProcessingFailure,
   persistProcessedSupportingMaterial
@@ -106,7 +107,7 @@ export async function processPendingSupportingMaterials(
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown supporting-material processing failure"
-      const unsupported = message.includes("Unsupported") || message.includes("image-only")
+      const unsupported = isTerminalDocumentFailure(message)
       await markSupportingMaterialProcessingFailure(
         database,
         record.id,

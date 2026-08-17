@@ -3,6 +3,17 @@ import type { LegislationDatabase } from "../../db/database.js"
 import { billDocuments, documentSections } from "../../db/schema/schema.js"
 import { extractDocument } from "./extract.js"
 
+export function isTerminalDocumentFailure(message: string): boolean {
+  return [
+    "Document download failed with HTTP 404",
+    "Document exceeds the",
+    "Document is empty",
+    "Document produced no usable text",
+    "Unsupported",
+    "image-only"
+  ].some((marker) => message.includes(marker))
+}
+
 export async function persistProcessedDocument(
   database: LegislationDatabase,
   input: { bytes: Uint8Array; contentType: string; documentId: string }

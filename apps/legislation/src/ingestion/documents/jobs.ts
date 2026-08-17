@@ -5,7 +5,7 @@ import { billDocuments, bills } from "../../db/schema/schema.js"
 import { createJobCounts, mapConcurrent, type JobCounts } from "../job.js"
 import { artifactPath, type ArtifactStore } from "./artifact-store.js"
 import { downloadDocument } from "./download.js"
-import { markDocumentProcessingFailure, persistProcessedDocument } from "./process.js"
+import { isTerminalDocumentFailure, markDocumentProcessingFailure, persistProcessedDocument } from "./process.js"
 
 export interface DocumentJobResult {
   counts: JobCounts & { processed: number; unsupported: number }
@@ -108,7 +108,7 @@ export async function processPendingDocuments(
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown document processing failure"
-      const unsupported = message.includes("Unsupported") || message.includes("image-only")
+      const unsupported = isTerminalDocumentFailure(message)
       await markDocumentProcessingFailure(database, record.id, unsupported ? "unsupported" : "failed", message)
       counts.failed += 1
       if (unsupported) {

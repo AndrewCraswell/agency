@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { extractDocument, MAX_DOCUMENT_BYTES, normalizeLegalText, segmentLegalText } from "./extract.js"
+import { isTerminalDocumentFailure } from "./process.js"
 
 const encoder = new TextEncoder()
 const textPdf = Buffer.from(
@@ -99,5 +100,12 @@ describe("legislative document extraction", () => {
     await expect(
       extractDocument("document:binary", encoder.encode("data"), "application/octet-stream")
     ).rejects.toThrow("Unsupported")
+  })
+
+  it("classifies permanent processing exceptions as terminal", () => {
+    expect(isTerminalDocumentFailure("Document download failed with HTTP 404")).toBe(true)
+    expect(isTerminalDocumentFailure("Document exceeds the 26214400 byte limit")).toBe(true)
+    expect(isTerminalDocumentFailure("Document produced no usable text")).toBe(true)
+    expect(isTerminalDocumentFailure("Document download failed with HTTP 503")).toBe(false)
   })
 })
