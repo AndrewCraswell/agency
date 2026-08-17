@@ -61,3 +61,10 @@ tail was database contention from the intentionally heavy development bootstrap.
 This checkpoint proves live result correctness and the single-client development target, but it is not production
 capacity evidence. Repeat the concurrent benchmark after the bulk processors are idle and before accepting E6.9 or any
 production-readiness gate.
+
+A subsequent SDK smoke on 2026-08-17 exercised all 21 advertised tools through the production handler against the live
+Railway corpus. Health and readiness returned 200, and all 21 tool calls completed without a tool error. The run used a
+local server with authentication disabled, so it proves live corpus and tool-contract behavior but does not satisfy the
+authenticated-client checks. It exposed and drove corrections for state vote IDs, amendment material IDs, and smoke
+fixture selection; the corrected runtime image is
+`sha256:13f7bb8b081a53d4bbf2b157a04809f81bc6f24ca3b5274d9becb2e677495150`.
