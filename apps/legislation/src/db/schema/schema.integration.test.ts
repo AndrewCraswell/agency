@@ -179,6 +179,35 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     expect(rejection).toMatchObject({ cause: { code: "23514", constraint: "bills_id_check" } })
   })
 
+  it("discovers canonical people and organizations with bounded filters", async () => {
+    const organizationId = "organization:openstates:wa-data-committee"
+    await database.insert(schema.organizations).values({
+      classification: "committee",
+      id: organizationId,
+      isActive: true,
+      jurisdictionId: "jurisdiction:wa",
+      name: "House Data Committee",
+      sourceId: "wa-data-committee"
+    })
+    await database.insert(schema.organizationMemberships).values({
+      id: `${organizationId}:person:person-1`,
+      organizationId,
+      personId: "person:openstates:person-1",
+      title: "member"
+    })
+    const service = new LegislationQueryService(database)
+
+    await expect(
+      service.searchPeople({ jurisdictionId: "jurisdiction:wa", organizationId, query: "Example" })
+    ).resolves.toMatchObject({
+      items: [{ id: "person:openstates:person-1", name: "Representative Example" }],
+      truncated: false
+    })
+    await expect(
+      service.searchOrganizations({ classification: "committee", jurisdictionId: "jurisdiction:wa", query: "Data" })
+    ).resolves.toMatchObject({ items: [{ id: organizationId }], truncated: false })
+  })
+
   it("upserts aggregates idempotently and rolls back a failed child replacement", async () => {
     const billId = "bill:wa:2025-2026:hb:2468"
     const actionId = `${billId}:action:1`

@@ -70,6 +70,25 @@ export interface MembershipLookup {
   personId?: string
 }
 
+export interface PersonSearchInput {
+  cursor?: string
+  isActive?: boolean
+  jurisdictionId?: string
+  limit?: number
+  organizationId?: string
+  query?: string
+}
+
+export interface OrganizationSearchInput {
+  classification?: string
+  cursor?: string
+  isActive?: boolean
+  jurisdictionId?: string
+  limit?: number
+  parentOrganizationId?: string
+  query?: string
+}
+
 export interface EventSearchInput {
   cursor?: string
   from?: Date
@@ -247,6 +266,36 @@ export class LegislationQueryService {
     return { memberships, person: person[0], sponsoredBills, terms }
   }
 
+  async searchPeople(input: PersonSearchInput) {
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const rows = await this.#database
+      .selectDistinct({ person: people })
+      .from(people)
+      .leftJoin(organizationMemberships, eq(organizationMemberships.personId, people.id))
+      .where(
+        and(
+          input.jurisdictionId === undefined ? undefined : eq(people.jurisdictionId, input.jurisdictionId),
+          input.organizationId === undefined
+            ? undefined
+            : eq(organizationMemberships.organizationId, input.organizationId),
+          input.isActive === undefined ? undefined : eq(people.isActive, input.isActive),
+          input.query === undefined
+            ? undefined
+            : sql`(${people.name} ilike ${`%${input.query}%`} or ${people.givenName} ilike ${`%${input.query}%`} or ${people.familyName} ilike ${`%${input.query}%`} or ${people.party} ilike ${`%${input.query}%`})`
+        )
+      )
+      .orderBy(asc(people.name), asc(people.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit).map((row) => row.person),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated
+    }
+  }
+
   async getOrganization(lookup: EntityLookup) {
     const organization = await this.#database
       .select()
@@ -266,6 +315,34 @@ export class LegislationQueryService {
       this.getCommitteeBillActivity(lookup)
     ])
     return { billActivity, children, memberships, organization: organization[0] }
+  }
+
+  async searchOrganizations(input: OrganizationSearchInput) {
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const rows = await this.#database
+      .select()
+      .from(organizations)
+      .where(
+        and(
+          input.jurisdictionId === undefined ? undefined : eq(organizations.jurisdictionId, input.jurisdictionId),
+          input.parentOrganizationId === undefined
+            ? undefined
+            : eq(organizations.parentOrganizationId, input.parentOrganizationId),
+          input.classification === undefined ? undefined : eq(organizations.classification, input.classification),
+          input.isActive === undefined ? undefined : eq(organizations.isActive, input.isActive),
+          input.query === undefined ? undefined : sql`${organizations.name} ilike ${`%${input.query}%`}`
+        )
+      )
+      .orderBy(asc(organizations.name), asc(organizations.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated
+    }
   }
 
   async getMemberships(input: MembershipLookup) {

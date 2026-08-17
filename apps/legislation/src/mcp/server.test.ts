@@ -167,6 +167,8 @@ describe("createLegislationServer", () => {
       searchBillText: async () => ({ items: [] }),
       searchChanges: async () => ({ items: [] }),
       searchEvents: async () => ({ items: [] }),
+      searchOrganizations: async () => ({ items: [] }),
+      searchPeople: async () => ({ items: [] }),
       searchSupportingMaterials: async () => ({ items: [] }),
       searchVotes: async () => ({ items: [] })
     }
@@ -186,7 +188,7 @@ describe("createLegislationServer", () => {
     try {
       await client.connect(transport)
       const tools = await client.listTools()
-      expect(tools.tools).toHaveLength(19)
+      expect(tools.tools).toHaveLength(21)
       for (const call of [
         { arguments: { mode: "lexical", query: "data" }, name: "search_bills" },
         { arguments: { id: billId }, name: "get_bill" },
@@ -196,7 +198,9 @@ describe("createLegislationServer", () => {
         { arguments: { billId, documentIds: ["document:a", "document:b"] }, name: "compare_bill_versions" },
         { arguments: { id: billId }, name: "find_related_bills" },
         { arguments: { id: "person:congress:a000001" }, name: "get_person" },
+        { arguments: { jurisdictionId: "jurisdiction:us", query: "Smith" }, name: "search_people" },
         { arguments: { id: "organization:congress:house" }, name: "get_organization" },
+        { arguments: { classification: "committee", jurisdictionId: "jurisdiction:us" }, name: "search_organizations" },
         { arguments: { jurisdictionId: "jurisdiction:us" }, name: "search_events" },
         { arguments: { id: "event:congress:meeting-1" }, name: "get_event" },
         { arguments: { jurisdictionId: "jurisdiction:us" }, name: "get_calendar" },

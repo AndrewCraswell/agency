@@ -50,3 +50,25 @@ classified as added, removed, or unchanged, with source links and truncation sig
 
 Input: bill lookup plus optional relation classifications, semantic expansion flag, cursor, and limit. Output: canonical
 related bills with relationship type, relevance score when applicable, and relevant official links.
+
+## Data-expansion tools
+
+### `search_people` and `get_person`
+
+Discovery accepts bounded name or party text plus optional jurisdiction, organization-membership, and active-status
+filters. Detail returns the canonical person, legislative terms, memberships, and sponsored bills. Empty results may mean
+that a jurisdiction does not publish people through the configured source.
+
+### `search_organizations` and `get_organization`
+
+Discovery accepts bounded name text plus optional jurisdiction, classification, parent-organization, and active-status
+filters. Detail returns the canonical legislature, chamber, committee, or subcommittee with children, memberships, and
+bounded bill activity. Organization availability is source-dependent.
+
+### Events, calendars, votes, amendments, materials, and changes
+
+`search_events`, `get_event`, and `get_calendar` expose available meeting, hearing, agenda, participant, document, and
+calendar records. `search_votes` and `get_vote` expose normalized roll calls and positions. `search_amendments`,
+`get_amendment`, `search_supporting_materials`, and `get_supporting_material` expose their canonical records and links;
+material detail includes paginated extracted sections. `search_changes` exposes observed canonical changes without
+generating summaries or predictions. Every list is cursor-paginated and returns explicit truncation metadata.

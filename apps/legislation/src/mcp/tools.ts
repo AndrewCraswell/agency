@@ -58,6 +58,8 @@ export type LegislationQueryApi = Readonly<{
   searchBillText: (input: Parameters<LegislationQueryService["searchBillText"]>[0]) => Promise<unknown>
   searchChanges: (input: Parameters<LegislationQueryService["searchChanges"]>[0]) => Promise<unknown>
   searchEvents: (input: Parameters<LegislationQueryService["searchEvents"]>[0]) => Promise<unknown>
+  searchOrganizations: (input: Parameters<LegislationQueryService["searchOrganizations"]>[0]) => Promise<unknown>
+  searchPeople: (input: Parameters<LegislationQueryService["searchPeople"]>[0]) => Promise<unknown>
   searchSupportingMaterials: (
     input: Parameters<LegislationQueryService["searchSupportingMaterials"]>[0]
   ) => Promise<unknown>
@@ -268,6 +270,21 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
         (input) => tool("find_related_bills", input, () => service.findRelatedBills(input), logger, telemetry)
       )
       server.registerTool(
+        "search_people",
+        {
+          description: "Discover canonical legislators by name, party, jurisdiction, committee, or active status.",
+          inputSchema: z.object({
+            ...pageSchema,
+            isActive: z.boolean().optional(),
+            jurisdictionId: canonicalId("jurisdiction").optional(),
+            organizationId: canonicalId("organization").optional(),
+            query: z.string().trim().min(1).max(200).optional()
+          }),
+          outputSchema
+        },
+        (input) => tool("search_people", input, () => service.searchPeople(input), logger, telemetry)
+      )
+      server.registerTool(
         "get_person",
         {
           description: "Get a canonical legislator with terms, memberships, and sponsored bills.",
@@ -275,6 +292,22 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
           outputSchema
         },
         (input) => tool("get_person", input, () => service.getPerson(input), logger, telemetry)
+      )
+      server.registerTool(
+        "search_organizations",
+        {
+          description: "Discover canonical legislatures, chambers, committees, and subcommittees.",
+          inputSchema: z.object({
+            ...pageSchema,
+            classification: z.enum(["legislature", "chamber", "committee", "subcommittee"]).optional(),
+            isActive: z.boolean().optional(),
+            jurisdictionId: canonicalId("jurisdiction").optional(),
+            parentOrganizationId: canonicalId("organization").optional(),
+            query: z.string().trim().min(1).max(200).optional()
+          }),
+          outputSchema
+        },
+        (input) => tool("search_organizations", input, () => service.searchOrganizations(input), logger, telemetry)
       )
       server.registerTool(
         "get_organization",

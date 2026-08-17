@@ -227,7 +227,7 @@ passes its data-quality gate.
 ### Tasks
 
 - [ ] **E6.1** Define research scenarios and evaluation cases before selecting tool boundaries.
-- [ ] **E6.2** Add person and organization discovery and detail tools after E1.
+- [x] **E6.2** Add person and organization discovery and detail tools after E1.
 - [ ] **E6.3** Add meeting, hearing, and calendar discovery and detail tools after E2.
 - [ ] **E6.4** Add roll-call discovery and detail tools after E3.
 - [ ] **E6.5** Add amendment and supporting-material discovery and retrieval tools after E4.
