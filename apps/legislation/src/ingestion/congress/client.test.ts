@@ -171,4 +171,72 @@ describe("CongressClient", () => {
     expect(paths).toEqual(["/v3/committee-report/119/hrpt/1", "/v3/committee-report/119/hrpt/1/text"])
     expect(bundle.text).toEqual([{ formats: [{ type: "PDF", url: "https://congress.gov/report.pdf" }] }])
   })
+
+  it("loads every House vote member page and verifies the advertised count", async () => {
+    const offsets: string[] = []
+    const request = vi.fn<typeof fetch>(async (input) => {
+      const url = new URL(String(input))
+      if (!url.pathname.endsWith("/members")) {
+        return Response.json({ houseRollCallVote: { startDate: "2025-01-01", voteQuestion: "On Passage" } })
+      }
+      const offset = url.searchParams.get("offset") ?? "0"
+      offsets.push(offset)
+      return Response.json({
+        houseRollCallVoteMemberVotes: {
+          results:
+            offset === "0"
+              ? [{ bioguideID: "A000001", lastName: "First", voteCast: "Yea" }]
+              : [{ bioguideID: "B000002", lastName: "Second", voteCast: "Nay" }],
+          votePartyTotal: [{ party: "All", yea: 1, nay: 1 }]
+        },
+        pagination: offset === "0" ? { count: 2, next: "present" } : { count: 2 }
+      })
+    })
+    const client = new CongressClient({
+      apiKey: "secret-key",
+      baseUrl: new URL("https://api.congress.gov/v3/"),
+      http: new RetryingHttpClient({ fetch: request, maxAttempts: 1, requestTimeoutMs: 1000 })
+    })
+
+    const bundle = (await client.getHouseVoteBundle({
+      congress: 119,
+      identifier: "11912025240",
+      rollCallNumber: 240,
+      sessionNumber: 1,
+      sourceDataURL: "https://clerk.house.gov/evs/2025/roll240.xml",
+      url: "https://api.congress.gov/v3/house-vote/119/1/240"
+    })) as { members: { results: unknown[]; votePartyTotal: unknown[] } }
+
+    expect(offsets).toEqual(["0", "1"])
+    expect(bundle.members.results).toHaveLength(2)
+    expect(bundle.members.votePartyTotal).toHaveLength(1)
+  })
+
+  it("rejects an incomplete House vote member collection", async () => {
+    const request = vi.fn<typeof fetch>(async (input) => {
+      const url = new URL(String(input))
+      return url.pathname.endsWith("/members")
+        ? Response.json({
+            houseRollCallVoteMemberVotes: { results: [{ bioguideID: "A000001" }] },
+            pagination: { count: 2 }
+          })
+        : Response.json({ houseRollCallVote: {} })
+    })
+    const client = new CongressClient({
+      apiKey: "secret-key",
+      baseUrl: new URL("https://api.congress.gov/v3/"),
+      http: new RetryingHttpClient({ fetch: request, maxAttempts: 1, requestTimeoutMs: 1000 })
+    })
+
+    await expect(
+      client.getHouseVoteBundle({
+        congress: 119,
+        identifier: "11912025240",
+        rollCallNumber: 240,
+        sessionNumber: 1,
+        sourceDataURL: "https://clerk.house.gov/evs/2025/roll240.xml",
+        url: "https://api.congress.gov/v3/house-vote/119/1/240"
+      })
+    ).rejects.toThrow("expected 2, received 1")
+  })
 })

@@ -37,6 +37,7 @@ export class RetryingHttpClient {
     successfulRequests: 0
   }
   readonly #requestTimeoutMs: number
+  #cooldownUntil = 0
   #requestGate: Promise<void> = Promise.resolve()
   #nextRequestAt = 0
 
@@ -74,6 +75,7 @@ export class RetryingHttpClient {
           response.status === 408 || (response.status === 429 && !dailyQuotaExceeded) || response.status >= 500
         if (response.status === 429) {
           this.#metrics.rateLimited += 1
+          this.#extendCooldown(retryDelay(response, attempt))
         }
         if (!retryable || attempt === this.#maxAttempts) {
           this.#metrics.failedRequests += 1
@@ -133,6 +135,7 @@ export class RetryingHttpClient {
             response.status === 408 || (response.status === 429 && !dailyQuotaExceeded) || response.status >= 500
           if (response.status === 429) {
             this.#metrics.rateLimited += 1
+            this.#extendCooldown(retryDelay(response, attempt))
           }
           if (!retryable || attempt === this.#maxAttempts) {
             this.#metrics.failedRequests += 1
@@ -207,7 +210,7 @@ export class RetryingHttpClient {
     this.#requestGate = gate.promise
     await previous
     try {
-      const wait = this.#nextRequestAt - Date.now()
+      const wait = Math.max(this.#nextRequestAt, this.#cooldownUntil) - Date.now()
       if (wait > 0) {
         await delay(wait)
       }
@@ -216,6 +219,10 @@ export class RetryingHttpClient {
       gate.resolve()
     }
   }
+
+  #extendCooldown(milliseconds: number): void {
+    this.#cooldownUntil = Math.max(this.#cooldownUntil, Date.now() + milliseconds)
+  }
 }
 
 function retryDelay(response: Response, attempt: number): number {
@@ -223,7 +230,11 @@ function retryDelay(response: Response, attempt: number): number {
   if (retryAfter !== null) {
     const seconds = Number(retryAfter)
     if (Number.isFinite(seconds) && seconds >= 0) {
-      return Math.min(seconds * 1000, 30_000)
+      return Math.min(seconds * 1000, 120_000)
+    }
+    const date = Date.parse(retryAfter)
+    if (Number.isFinite(date)) {
+      return Math.min(Math.max(date - Date.now(), 0), 120_000)
     }
   }
   if (response.status === 429) {

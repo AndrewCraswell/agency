@@ -73,6 +73,28 @@ describe("RetryingHttpClient", () => {
     expect((requestTimes[1] ?? 0) - (requestTimes[0] ?? 0)).toBeGreaterThanOrEqual(15)
   })
 
+  it("honors an HTTP-date Retry-After value", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date("2026-08-17T18:00:00.000Z"))
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response("limited", {
+          headers: { "retry-after": "Mon, 17 Aug 2026 18:00:01 GMT" },
+          status: 429
+        })
+      )
+      .mockResolvedValueOnce(new Response("ok"))
+    const client = new RetryingHttpClient({ fetch: request, maxAttempts: 2, requestTimeoutMs: 1000 })
+
+    const response = client.get(new URL("https://provider.example/data"))
+    await vi.advanceTimersByTimeAsync(999)
+    expect(request).toHaveBeenCalledOnce()
+    await vi.advanceTimersByTimeAsync(1)
+    await expect(response).resolves.toMatchObject({ status: 200 })
+    vi.useRealTimers()
+  })
+
   it("resumes a bounded streaming download after a partial transport failure", async () => {
     const request = vi
       .fn<typeof fetch>()

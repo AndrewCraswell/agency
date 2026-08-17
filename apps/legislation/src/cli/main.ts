@@ -1184,6 +1184,7 @@ async function syncCongressHouseVoteData(options: {
         for (let congress = start; congress <= end; congress += 1) {
           for (const session of sessions) {
             const synchronized = await synchronizeCongressHouseVotes(database, client, congress, session, {
+              concurrency: config.ingestion.concurrency,
               limit,
               restart: options.restart,
               sourceStore: createSourceStore(config, "federal")

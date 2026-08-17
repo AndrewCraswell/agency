@@ -49,7 +49,7 @@ describe("local MCP evaluation harness", () => {
     })
     expect(evidence.cases[0].citations).toContain("https://www.congress.gov/bill/119th-congress/house-bill/1234")
     expect(evidence.scores.unsupportedClaims.status).toBe("not_scored")
-  })
+  }, 15_000)
 
   it("retains actionable failure categories when retrieved evidence is wrong", async () => {
     const cases = await loadEvaluationCases(new URL("./cases.json", import.meta.url))

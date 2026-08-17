@@ -227,13 +227,42 @@ export class CongressClient {
 
   async getHouseVoteBundle(reference: CongressHouseVoteReference): Promise<unknown> {
     const path = `house-vote/${reference.congress}/${reference.sessionNumber}/${reference.rollCallNumber}`
-    const [detail, members] = await Promise.all([this.#json(path), this.#json(`${path}/members`)])
+    const [detail, members] = await Promise.all([this.#json(path), this.#houseVoteMembers(`${path}/members`)])
     return {
-      members: z.object({ houseRollCallVoteMemberVotes: z.record(z.string(), z.unknown()) }).parse(members)
-        .houseRollCallVoteMemberVotes,
+      members,
       reference,
       vote: z.object({ houseRollCallVote: z.record(z.string(), z.unknown()) }).parse(detail).houseRollCallVote
     }
+  }
+
+  async #houseVoteMembers(path: string): Promise<Record<string, unknown>> {
+    const results: unknown[] = []
+    let metadata: Record<string, unknown> | undefined
+    let expectedCount: number | undefined
+    let offset = 0
+    for (;;) {
+      const response = z
+        .object({
+          houseRollCallVoteMemberVotes: z.record(z.string(), z.unknown()),
+          pagination: paginationSchema
+        })
+        .parse(await this.#json(path, { limit: "250", offset: String(offset) }))
+      const page = response.houseRollCallVoteMemberVotes
+      const pageResults = z.array(z.unknown()).parse(page.results ?? [])
+      metadata ??= page
+      expectedCount ??= response.pagination.count
+      results.push(...pageResults)
+      if (response.pagination.next === undefined || pageResults.length === 0) {
+        break
+      }
+      offset += pageResults.length
+    }
+    if (expectedCount !== undefined && results.length !== expectedCount) {
+      throw new Error(
+        `Congress.gov House vote member count mismatch: expected ${expectedCount}, received ${results.length}`
+      )
+    }
+    return { ...metadata, results }
   }
 
   async getBillBundle(reference: CongressBillReference): Promise<unknown> {
