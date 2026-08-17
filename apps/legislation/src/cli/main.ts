@@ -24,6 +24,7 @@ import {
   type ArtifactStore
 } from "../ingestion/documents/artifact-store.js"
 import {
+  classifyTerminalDocumentFailures,
   processPendingDocuments,
   requeueFailedDocuments,
   requeueInterruptedDocuments
@@ -215,6 +216,12 @@ program
   .option("--shard-index <number>", "zero-based document worker index", "0")
   .option("--status <status>", "limit to pending, failed, or unsupported documents")
   .action(processDocuments)
+
+program
+  .command("documents:classify-terminal")
+  .description("Move known non-retryable document failures to unsupported")
+  .option("--limit <number>", "maximum failed documents to inspect", "100000")
+  .action(classifyTerminalDocuments)
 
 program
   .command("documents:requeue-failed")
@@ -1284,6 +1291,34 @@ async function requeueDocuments() {
       async () => {
         const requeued = await requeueFailedDocuments(database)
         return { counts: createJobCounts({ discovered: requeued, updated: requeued }), failures: [] }
+      }
+    )
+    printJobResult(result)
+  }, config)
+}
+
+async function classifyTerminalDocuments(options: { limit: string }) {
+  const config = loadConfig()
+  const limit = parseInteger(options.limit, "limit")
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: "classify-terminal",
+        scope: { limit },
+        source: "documents"
+      },
+      async () => {
+        const classified = await classifyTerminalDocumentFailures(database, limit)
+        return {
+          counts: createJobCounts({
+            discovered: classified.inspected,
+            skipped: classified.inspected - classified.updated,
+            updated: classified.updated
+          }),
+          failures: []
+        }
       }
     )
     printJobResult(result)

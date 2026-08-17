@@ -17,6 +17,31 @@ export interface DocumentJobResult {
   failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>>
 }
 
+export async function classifyTerminalDocumentFailures(
+  database: LegislationDatabase,
+  limit = 100_000
+): Promise<{ inspected: number; updated: number }> {
+  const records = await database
+    .select({ id: billDocuments.id, processingError: billDocuments.processingError })
+    .from(billDocuments)
+    .where(eq(billDocuments.processingStatus, "failed"))
+    .orderBy(asc(billDocuments.id))
+    .limit(Math.min(Math.max(limit, 1), 100_000))
+  const terminalIds = records
+    .filter(
+      (record): record is typeof record & { processingError: string } =>
+        record.processingError !== null && isTerminalDocumentFailure(record.processingError)
+    )
+    .map((record) => record.id)
+  if (terminalIds.length > 0) {
+    await database
+      .update(billDocuments)
+      .set({ processingStatus: "unsupported", updatedAt: new Date() })
+      .where(inArray(billDocuments.id, terminalIds))
+  }
+  return { inspected: records.length, updated: terminalIds.length }
+}
+
 export async function requeueFailedDocuments(database: LegislationDatabase): Promise<number> {
   const result = await database.execute<{ requeued: number }>(sql`
     with requeued as (
