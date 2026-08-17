@@ -67,16 +67,23 @@ export class RetryingHttpClient {
           this.#metrics.successfulRequests += 1
           return response
         }
-        const retryable = response.status === 408 || response.status === 429 || response.status >= 500
+        const responseDetail = response.status === 429 ? await boundedErrorDetail(response) : undefined
+        const dailyQuotaExceeded =
+          responseDetail?.toLowerCase().includes("exceeded limit") === true && responseDetail.includes("/day")
+        const retryable =
+          response.status === 408 || (response.status === 429 && !dailyQuotaExceeded) || response.status >= 500
         if (response.status === 429) {
           this.#metrics.rateLimited += 1
         }
         if (!retryable || attempt === this.#maxAttempts) {
           this.#metrics.failedRequests += 1
-          throw new ProviderHttpError(`Provider request failed with HTTP ${response.status}`, {
-            retryable,
-            status: response.status
-          })
+          throw new ProviderHttpError(
+            `Provider request failed with HTTP ${response.status}${responseDetail === undefined ? "" : `: ${responseDetail}`}`,
+            {
+              retryable,
+              status: response.status
+            }
+          )
         }
         this.#metrics.retries += 1
         await delay(retryDelay(response, attempt))
@@ -119,16 +126,20 @@ export class RetryingHttpClient {
           signal: AbortSignal.timeout(this.#requestTimeoutMs)
         })
         if (!response.ok) {
-          const retryable = response.status === 408 || response.status === 429 || response.status >= 500
+          const responseDetail = response.status === 429 ? await boundedErrorDetail(response) : undefined
+          const dailyQuotaExceeded =
+            responseDetail?.toLowerCase().includes("exceeded limit") === true && responseDetail.includes("/day")
+          const retryable =
+            response.status === 408 || (response.status === 429 && !dailyQuotaExceeded) || response.status >= 500
           if (response.status === 429) {
             this.#metrics.rateLimited += 1
           }
           if (!retryable || attempt === this.#maxAttempts) {
             this.#metrics.failedRequests += 1
-            throw new ProviderHttpError(`Provider request failed with HTTP ${response.status}`, {
-              retryable,
-              status: response.status
-            })
+            throw new ProviderHttpError(
+              `Provider request failed with HTTP ${response.status}${responseDetail === undefined ? "" : `: ${responseDetail}`}`,
+              { retryable, status: response.status }
+            )
           }
           this.#metrics.retries += 1
           await delay(retryDelay(response, attempt))
@@ -219,6 +230,15 @@ function retryDelay(response: Response, attempt: number): number {
     return Math.min(15_000 * 2 ** (attempt - 1), 120_000)
   }
   return Math.min(250 * 2 ** (attempt - 1), 4000)
+}
+
+async function boundedErrorDetail(response: Response): Promise<string | undefined> {
+  try {
+    const detail = (await response.clone().text()).replaceAll(/\s+/g, " ").trim().slice(0, 300)
+    return detail.length === 0 ? undefined : detail
+  } catch {
+    return undefined
+  }
 }
 
 function delay(milliseconds: number): Promise<void> {

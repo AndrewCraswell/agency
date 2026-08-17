@@ -34,6 +34,20 @@ describe("RetryingHttpClient", () => {
     expect(client.metrics.failedRequests).toBe(1)
   })
 
+  it("fails fast when a provider reports an exhausted daily quota", async () => {
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('{"detail":"exceeded limit of 250/day: 948"}', { status: 429 }))
+    const client = new RetryingHttpClient({ fetch: request, maxAttempts: 4, requestTimeoutMs: 1000 })
+
+    await expect(client.get(new URL("https://provider.example/data"))).rejects.toMatchObject({
+      message: expect.stringContaining("250/day"),
+      retryable: false,
+      status: 429
+    })
+    expect(request).toHaveBeenCalledOnce()
+  })
+
   it("rejects oversized responses", async () => {
     await expect(readBounded(new Response("12345"), 4)).rejects.toBeInstanceOf(ProviderHttpError)
   })
