@@ -657,6 +657,7 @@ async function bootstrapOpenStates(options: { force?: boolean; jurisdiction?: st
   }
   const providerHttp = openStatesHttpClient(config)
   const sourceStore = createSourceStore(config, "state")
+  const logger = createCommandLogger(config)
   await withDatabase(async (database) => {
     const result = await runIngestionJob(
       database,
@@ -670,13 +671,14 @@ async function bootstrapOpenStates(options: { force?: boolean; jurisdiction?: st
         const counts = createJobCounts()
         const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
         const archiveResults = await mapConcurrent(archives, 4, async (archive) => {
+          const stream = `${archive.jurisdictionCode}-${archive.session}`
+          logger.info("openstates archive progress", { event: "archive_started", stream })
           try {
             const url = new URL(archive.url)
             const content = await providerHttp.getBytes(url, MAXIMUM_ARCHIVE_BYTES)
             const contentHash = createHash("sha256").update(content).digest("hex")
-            const stream = `${archive.jurisdictionCode}-${archive.session}`
             await sourceStore.put("openstates", stream, content, { sourceUrl: url.href })
-            return await importOpenStatesRecords(
+            const imported = await importOpenStatesRecords(
               database,
               {
                 jurisdictionCode: archive.jurisdictionCode,
@@ -686,7 +688,17 @@ async function bootstrapOpenStates(options: { force?: boolean; jurisdiction?: st
               decodeArchiveRecords(content),
               { batchSize: 96, concurrency: config.ingestion.concurrency, contentHash, force: options.force, stream }
             )
+            logger.info("openstates archive progress", {
+              counts: imported.counts,
+              event: "archive_completed",
+              stream
+            })
+            return imported
           } catch (error) {
+            logger.error("openstates archive failed", {
+              errorMessage: error instanceof Error ? error.message : "Unknown Open States archive failure",
+              stream
+            })
             return {
               failure: {
                 identifier: `${archive.jurisdictionCode}-${archive.session}`,
@@ -931,10 +943,12 @@ async function syncCongressAmendmentData(options: {
   }
   const limit = options.limit === undefined ? undefined : parseInteger(options.limit, "limit")
   const providerHttp = congressBootstrapHttpClient(config)
+  const logger = createCommandLogger(config)
   const client = new CongressClient({
     apiKey: config.ingestion.congressApiKey,
     baseUrl: new URL(config.ingestion.congressApiUrl),
-    http: providerHttp
+    http: providerHttp,
+    onPage: (progress) => logger.info("congress amendment page progress", progress)
   })
   await withDatabase(async (database) => {
     const result = await runIngestionJob(
@@ -966,7 +980,7 @@ async function syncCongressAmendmentData(options: {
     )
     printJobResult(result)
   }, config)
-  createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "congress" })
+  logger.info("provider request metrics", { ...providerHttp.metrics, source: "congress" })
 }
 
 async function syncCongressCommitteeReportData(options: {
@@ -986,10 +1000,12 @@ async function syncCongressCommitteeReportData(options: {
   }
   const limit = options.limit === undefined ? undefined : parseInteger(options.limit, "limit")
   const providerHttp = congressBootstrapHttpClient(config)
+  const logger = createCommandLogger(config)
   const client = new CongressClient({
     apiKey: config.ingestion.congressApiKey,
     baseUrl: new URL(config.ingestion.congressApiUrl),
-    http: providerHttp
+    http: providerHttp,
+    onPage: (progress) => logger.info("congress committee report page progress", progress)
   })
   await withDatabase(async (database) => {
     const result = await runIngestionJob(
@@ -1021,7 +1037,7 @@ async function syncCongressCommitteeReportData(options: {
     )
     printJobResult(result)
   }, config)
-  createCommandLogger(config).info("provider request metrics", { ...providerHttp.metrics, source: "congress" })
+  logger.info("provider request metrics", { ...providerHttp.metrics, source: "congress" })
 }
 
 async function syncCongressEventData(options: {
