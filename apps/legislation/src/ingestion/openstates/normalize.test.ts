@@ -51,6 +51,7 @@ describe("Open States normalization", () => {
       ],
       vote: { noCount: 8, result: "pass", yesCount: 90 }
     })
+    expect(result.aggregate.votes?.[0]?.vote.id).toMatch(/^vote:openstates:/)
     expect(result.aggregate.documents).toHaveLength(3)
     expect(result.aggregate.documents?.map((item) => item.document.classification)).toEqual([
       "version",

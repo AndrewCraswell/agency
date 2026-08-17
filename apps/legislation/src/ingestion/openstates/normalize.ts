@@ -4,6 +4,7 @@ import {
   childId,
   jurisdictionId,
   legislativeSessionId,
+  legislativeVoteId,
   organizationId,
   personId
 } from "../../legislation/identifiers.js"
@@ -322,7 +323,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
     const providerOrganizationId = nonBlank(vote.organization_id)
     const rollCallNumber = nonBlank(vote.identifier)
     const voteIdentity = providerVoteId ?? rollCallNumber ?? `${vote.start_date ?? "undated"}:${voteOrdinal}`
-    const canonicalVoteId = childId("vote", canonicalBillId, voteIdentity)
+    const canonicalVoteId = legislativeVoteId("openstates", childId("vote", canonicalBillId, voteIdentity))
     const counts = new Map<string, number>()
     for (const count of vote.counts) {
       const normalizedOption = normalizeVoteOption(count.option)

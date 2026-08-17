@@ -74,7 +74,13 @@ try {
     const result = await client.callTool(request)
     toolCalls += 1
     if (result.isError === true) {
-      throw new Error(`Deployment smoke tool call failed: ${request.name}`)
+      const details = result.content
+        .filter((content) => content.type === "text")
+        .map((content) => content.text)
+        .join(" ")
+      throw new Error(
+        `Deployment smoke tool call failed: ${request.name} ${JSON.stringify(request.arguments)}${details === "" ? "" : `: ${details}`}`
+      )
     }
     return result.structuredContent?.data
   }
