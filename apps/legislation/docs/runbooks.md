@@ -29,6 +29,10 @@ Locate the document ID and official source URL in the run summary, then inspect 
 and next-attempt time. `unsupported` is terminal and needs manual treatment. `failed` is eligible only when its recorded
 backoff has elapsed and the configured attempt ceiling has not been reached. Replay the smallest cohort with
 `documents:process --status failed --failure-category <category> --limit <number>` and optionally a jurisdiction or bill.
+Long-running, resumable development corpus loads may add `--async-commit` to avoid waiting for a synchronous WAL flush
+after every document transaction. Keep the option off for interactive and non-resumable writes. If PostgreSQL stops
+unexpectedly, recover the confirmed interrupted shard lease and requeue only stale `processing` rows before restarting;
+the durable pending-state selection and Blob artifacts make that replay idempotent.
 Use `--document-id <id> --force` only for an intentional manual override. The immutable artifact is otherwise reused.
 Compare the new section hashes and confirm stale embeddings are regenerated.
 

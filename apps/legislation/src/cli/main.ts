@@ -211,6 +211,7 @@ program
   .option("--document-id <id>")
   .option("--failure-category <category>", "limit failed retries to one recorded failure category")
   .option("--all", "continue until every pending document has been attempted")
+  .option("--async-commit", "use resumable asynchronous PostgreSQL commits for this ingestion run")
   .option("--force", "download and process even when an artifact is already complete")
   .option("--jurisdiction-id <id>")
   .option("--limit <number>", "maximum documents", "100")
@@ -1202,6 +1203,7 @@ async function syncCongressHouseVoteData(options: {
 
 async function processDocuments(options: {
   all?: boolean
+  asyncCommit?: boolean
   billId?: string
   documentId?: string
   failureCategory?: string
@@ -1228,59 +1230,63 @@ async function processDocuments(options: {
   if (shardCount > 1 && (options.all !== true || options.billId !== undefined || options.documentId !== undefined)) {
     throw new InvalidJobInput("document sharding requires --all and cannot be combined with targeted IDs")
   }
-  await withDatabase(async (database) => {
-    const result = await runIngestionJob(
-      database,
-      {
-        ...jobExecutionContext(),
-        operation: shardCount === 1 ? "process-documents" : `process-documents-shard-${shardIndex}`,
-        scope: { ...options },
-        source: "documents"
-      },
-      async () => {
-        const limit = parseInteger(options.limit, "limit")
-        const counts = { ...createJobCounts(), processed: 0, unsupported: 0 }
-        const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
-        const artifactStore = createArtifactStore(config, "documents")
-        let status: "failed" | "pending" | "unsupported" | undefined
-        const failureCategory =
-          options.failureCategory === undefined ? undefined : parseDocumentFailureCategory(options.failureCategory)
-        if (options.all === true) {
-          status = "pending"
-        } else if (options.status !== undefined) {
-          status = parseDocumentStatus(options.status)
-        }
-        let hasMoreDocuments = true
-        let batches = 0
-        do {
-          const processed = await processPendingDocuments(database, {
-            artifactStore,
-            billId: options.billId,
-            concurrency: config.ingestion.concurrency,
-            documentId: options.documentId,
-            failureCategory,
-            force: options.force,
-            jurisdictionId: options.jurisdictionId,
-            limit,
-            maximumAttempts: config.ingestion.maxAttempts,
-            shardCount,
-            shardIndex,
-            status,
-            timeoutMs: config.ingestion.requestTimeoutMs
-          })
-          for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
-            counts[key] += processed.counts[key]
+  await withDatabase(
+    async (database) => {
+      const result = await runIngestionJob(
+        database,
+        {
+          ...jobExecutionContext(),
+          operation: shardCount === 1 ? "process-documents" : `process-documents-shard-${shardIndex}`,
+          scope: { ...options },
+          source: "documents"
+        },
+        async () => {
+          const limit = parseInteger(options.limit, "limit")
+          const counts = { ...createJobCounts(), processed: 0, unsupported: 0 }
+          const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
+          const artifactStore = createArtifactStore(config, "documents")
+          let status: "failed" | "pending" | "unsupported" | undefined
+          const failureCategory =
+            options.failureCategory === undefined ? undefined : parseDocumentFailureCategory(options.failureCategory)
+          if (options.all === true) {
+            status = "pending"
+          } else if (options.status !== undefined) {
+            status = parseDocumentStatus(options.status)
           }
-          failures.push(...processed.failures.slice(0, Math.max(0, 20 - failures.length)))
-          batches += 1
-          logger.info("document processing progress", { batches, counts, shardCount, shardIndex })
-          hasMoreDocuments = options.all === true && processed.counts.discovered === limit
-        } while (hasMoreDocuments)
-        return { counts, failures }
-      }
-    )
-    printJobResult(result)
-  }, config)
+          let hasMoreDocuments = true
+          let batches = 0
+          do {
+            const processed = await processPendingDocuments(database, {
+              artifactStore,
+              billId: options.billId,
+              concurrency: config.ingestion.concurrency,
+              documentId: options.documentId,
+              failureCategory,
+              force: options.force,
+              jurisdictionId: options.jurisdictionId,
+              limit,
+              maximumAttempts: config.ingestion.maxAttempts,
+              shardCount,
+              shardIndex,
+              status,
+              timeoutMs: config.ingestion.requestTimeoutMs
+            })
+            for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
+              counts[key] += processed.counts[key]
+            }
+            failures.push(...processed.failures.slice(0, Math.max(0, 20 - failures.length)))
+            batches += 1
+            logger.info("document processing progress", { batches, counts, shardCount, shardIndex })
+            hasMoreDocuments = options.all === true && processed.counts.discovered === limit
+          } while (hasMoreDocuments)
+          return { counts, failures }
+        }
+      )
+      printJobResult(result)
+    },
+    config,
+    options.asyncCommit === true ? { synchronousCommit: "off" } : undefined
+  )
 }
 
 async function classifyTerminalDocuments(options: { limit: string }) {
@@ -1626,9 +1632,10 @@ function createSourceStore(config: LegislationConfig, kind: "federal" | "state")
 
 async function withDatabase<T>(
   operation: (database: LegislationDatabase) => Promise<T>,
-  config = loadConfig()
+  config = loadConfig(),
+  session?: Parameters<typeof createDatabase>[1]
 ): Promise<T> {
-  const { database, pool } = createDatabase(config.database)
+  const { database, pool } = createDatabase(config.database, session)
   try {
     return await operation(database)
   } finally {

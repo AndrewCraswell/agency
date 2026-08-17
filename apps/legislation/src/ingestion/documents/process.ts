@@ -91,22 +91,26 @@ export function boundedProcessingError(value: string): string {
 
 export async function persistProcessedDocument(
   database: LegislationDatabase,
-  input: { bytes: Uint8Array; contentType: string; documentId: string }
+  input: { blobPath?: string; bytes: Uint8Array; contentType: string; documentId: string },
+  options: Readonly<{ skipUnchangedCheck?: boolean }> = {}
 ): Promise<"processed" | "unchanged"> {
   const extraction = await extractDocument(input.documentId, input.bytes, input.contentType)
-  const existing = await database
-    .select({ contentHash: billDocuments.contentHash, processingStatus: billDocuments.processingStatus })
-    .from(billDocuments)
-    .where(eq(billDocuments.id, input.documentId))
-    .limit(1)
-  if (existing[0]?.contentHash === extraction.contentHash && existing[0].processingStatus === "processed") {
-    return "unchanged"
+  if (options.skipUnchangedCheck !== true) {
+    const existing = await database
+      .select({ contentHash: billDocuments.contentHash, processingStatus: billDocuments.processingStatus })
+      .from(billDocuments)
+      .where(eq(billDocuments.id, input.documentId))
+      .limit(1)
+    if (existing[0]?.contentHash === extraction.contentHash && existing[0].processingStatus === "processed") {
+      return "unchanged"
+    }
   }
 
   await database.transaction(async (transaction) => {
     await transaction
       .update(billDocuments)
       .set({
+        ...(input.blobPath === undefined ? {} : { blobPath: input.blobPath }),
         contentHash: extraction.contentHash,
         contentType: input.contentType,
         nextAttemptAt: null,
@@ -142,6 +146,8 @@ export async function markDocumentProcessingFailure(
   documentId: string,
   input: Readonly<{
     category: DocumentFailureCategory
+    blobPath?: string
+    contentType?: string
     nextAttemptAt?: Date
     processingError: string
     status: "failed" | "unsupported"
@@ -150,6 +156,8 @@ export async function markDocumentProcessingFailure(
   await database
     .update(billDocuments)
     .set({
+      ...(input.blobPath === undefined ? {} : { blobPath: input.blobPath }),
+      ...(input.contentType === undefined ? {} : { contentType: input.contentType }),
       nextAttemptAt: input.nextAttemptAt ?? null,
       processingError: boundedProcessingError(input.processingError),
       processingErrorCategory: input.category,

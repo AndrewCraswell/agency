@@ -22,7 +22,7 @@ import { LegislationQueryService } from "../../legislation/query-service.js"
 import { EMBEDDING_MODEL } from "../../models/openrouter-embeddings.js"
 import { lexicalBillSearch, lexicalPassageSearch, semanticBillSearch } from "../../search/search.js"
 import { validateCorpus } from "../../validation/corpus.js"
-import { getBillById, upsertBillAggregate } from "../queries/bill-aggregates.js"
+import { getBillById, upsertBillAggregate, upsertBillAggregates } from "../queries/bill-aggregates.js"
 import { linkEventOutcome } from "../queries/event-outcomes.js"
 import { upsertEventSnapshots } from "../queries/events.js"
 import { isDatabaseAvailable, isDatabaseReady } from "../readiness.js"
@@ -352,6 +352,51 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     ).resolves.toHaveLength(1)
   })
 
+  it("does not rewrite unchanged jurisdiction and session parents during bulk upserts", async () => {
+    const aggregate = {
+      bill: {
+        id: "bill:or:2025:hb:9001",
+        identifier: "HB 9001",
+        jurisdictionId: "jurisdiction:or",
+        sessionId: "session:or:2025",
+        sourceUrl: "https://example.test/or/hb-9001",
+        title: "A stable bulk aggregate"
+      },
+      jurisdiction: {
+        classification: "state",
+        countryCode: "US",
+        id: "jurisdiction:or",
+        name: "Oregon",
+        subdivisionCode: "OR"
+      },
+      session: {
+        id: "session:or:2025",
+        identifier: "2025",
+        jurisdictionId: "jurisdiction:or",
+        name: "2025 Regular Session"
+      }
+    }
+
+    await upsertBillAggregates(database, [aggregate])
+    const initialJurisdiction = await database.query.jurisdictions.findFirst({
+      where: eq(schema.jurisdictions.id, aggregate.jurisdiction.id)
+    })
+    const initialSession = await database.query.legislativeSessions.findFirst({
+      where: eq(schema.legislativeSessions.id, aggregate.session.id)
+    })
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 5))
+    await upsertBillAggregates(database, [aggregate])
+    const unchangedJurisdiction = await database.query.jurisdictions.findFirst({
+      where: eq(schema.jurisdictions.id, aggregate.jurisdiction.id)
+    })
+    const unchangedSession = await database.query.legislativeSessions.findFirst({
+      where: eq(schema.legislativeSessions.id, aggregate.session.id)
+    })
+
+    expect(unchangedJurisdiction?.updatedAt).toEqual(initialJurisdiction?.updatedAt)
+    expect(unchangedSession?.updatedAt).toEqual(initialSession?.updatedAt)
+  })
+
   it("atomically persists document sections and skips unchanged content", async () => {
     const documentId = "bill:us:119:hr:1234:document:introduced"
     const bytes = new TextEncoder().encode(
@@ -487,6 +532,9 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     expect(result).toMatchObject({ counts: { failed: 0, processed: 1, read: 1 } })
     expect(artifacts.size).toBe(1)
     await expect(
+      database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, documentId) })
+    ).resolves.toMatchObject({ blobPath: expect.any(String), processingStatus: "processed" })
+    await expect(
       database.select().from(schema.documentSections).where(eq(schema.documentSections.documentId, documentId))
     ).resolves.toHaveLength(1)
 
@@ -495,7 +543,7 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       concurrency: 1,
       documentId,
       fetch: async () => {
-        const response = new Response("not legislative text", {
+        const response = new Response(new Uint8Array([0, 1, 2, 3]), {
           headers: { "content-type": "application/octet-stream" }
         })
         Object.defineProperty(response, "url", { value: "https://example.test/worker-test.txt" })

@@ -184,6 +184,7 @@ export async function processPendingDocuments(
       counts.unchanged += 1
       return
     }
+    let persistedArtifact: { blobPath: string; contentType: string } | undefined
     try {
       const existingArtifactPath = options.force === true ? null : record.blobPath
       const hasArtifact = existingArtifactPath !== null && (await options.artifactStore.exists(existingArtifactPath))
@@ -199,15 +200,16 @@ export async function processPendingDocuments(
       if (!hasArtifact) {
         await options.artifactStore.put(path, downloaded.bytes)
       }
-      await database
-        .update(billDocuments)
-        .set({ blobPath: path, contentType: downloaded.contentType })
-        .where(eq(billDocuments.id, record.id))
-      const outcome = await persistProcessedDocument(database, {
-        bytes: downloaded.bytes,
-        contentType: downloaded.contentType,
-        documentId: record.id
-      })
+      persistedArtifact = { blobPath: path, contentType: downloaded.contentType }
+      const outcome = await persistProcessedDocument(
+        database,
+        {
+          ...persistedArtifact,
+          bytes: downloaded.bytes,
+          documentId: record.id
+        },
+        { skipUnchangedCheck: true }
+      )
       counts.read += 1
       if (outcome === "unchanged") {
         counts.unchanged += 1
@@ -221,6 +223,7 @@ export async function processPendingDocuments(
       const retryable = failure.retryable && attempt < options.maximumAttempts
       const unsupported = !failure.retryable
       await markDocumentProcessingFailure(database, record.id, {
+        ...persistedArtifact,
         category: failure.category,
         nextAttemptAt: retryable ? documentRetryAt(attempt) : undefined,
         processingError: failure.message,

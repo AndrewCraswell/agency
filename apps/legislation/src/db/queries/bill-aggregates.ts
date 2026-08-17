@@ -18,6 +18,42 @@ import {
 } from "../schema/schema.js"
 import { observeCanonicalRecord } from "./changes.js"
 
+function jurisdictionChanged() {
+  return sql`row(
+    ${jurisdictions.name},
+    ${jurisdictions.classification},
+    ${jurisdictions.countryCode},
+    ${jurisdictions.subdivisionCode},
+    ${jurisdictions.sourceUrl}
+  ) is distinct from row(
+    excluded.name,
+    excluded.classification,
+    excluded.country_code,
+    excluded.subdivision_code,
+    excluded.source_url
+  )`
+}
+
+function legislativeSessionChanged() {
+  return sql`row(
+    ${legislativeSessions.jurisdictionId},
+    ${legislativeSessions.identifier},
+    ${legislativeSessions.name},
+    ${legislativeSessions.startDate},
+    ${legislativeSessions.endDate},
+    ${legislativeSessions.isActive},
+    ${legislativeSessions.sourceUrl}
+  ) is distinct from row(
+    excluded.jurisdiction_id,
+    excluded.identifier,
+    excluded.name,
+    excluded.start_date,
+    excluded.end_date,
+    excluded.is_active,
+    excluded.source_url
+  )`
+}
+
 function assertAggregateOwnership(aggregate: CanonicalBillAggregate): void {
   const billId = aggregate.bill.id
 
@@ -88,14 +124,16 @@ export async function upsertBillAggregate(
       upstreamIds: { ...existingBill[0]?.upstreamIds, ...aggregate.bill.upstreamIds }
     }
 
-    await transaction
-      .insert(jurisdictions)
-      .values(aggregate.jurisdiction)
-      .onConflictDoUpdate({ set: aggregate.jurisdiction, target: jurisdictions.id })
-    await transaction
-      .insert(legislativeSessions)
-      .values(aggregate.session)
-      .onConflictDoUpdate({ set: aggregate.session, target: legislativeSessions.id })
+    await transaction.insert(jurisdictions).values(aggregate.jurisdiction).onConflictDoUpdate({
+      set: aggregate.jurisdiction,
+      setWhere: jurisdictionChanged(),
+      target: jurisdictions.id
+    })
+    await transaction.insert(legislativeSessions).values(aggregate.session).onConflictDoUpdate({
+      set: aggregate.session,
+      setWhere: legislativeSessionChanged(),
+      target: legislativeSessions.id
+    })
     await transaction.insert(bills).values(bill).onConflictDoUpdate({ set: bill, target: bills.id })
 
     const candidateOrganizationIds = [
@@ -307,6 +345,7 @@ export async function upsertBillAggregates(
           subdivisionCode: sql`excluded.subdivision_code`,
           updatedAt: new Date()
         },
+        setWhere: jurisdictionChanged(),
         target: jurisdictions.id
       })
 
@@ -325,6 +364,7 @@ export async function upsertBillAggregates(
           startDate: sql`excluded.start_date`,
           updatedAt: new Date()
         },
+        setWhere: legislativeSessionChanged(),
         target: legislativeSessions.id
       })
 

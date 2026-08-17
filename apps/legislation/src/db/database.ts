@@ -3,12 +3,17 @@ import pg from "pg"
 import type { LegislationConfig } from "../config/config.js"
 import * as schema from "./schema/schema.js"
 
-export function createDatabase(config: LegislationConfig["database"]) {
+export interface DatabaseSessionOptions {
+  synchronousCommit?: "off"
+}
+
+export function createDatabase(config: LegislationConfig["database"], session: DatabaseSessionOptions = {}) {
   const pool = new pg.Pool({
     connectionString: config.url,
     connectionTimeoutMillis: config.connectionTimeoutMs,
     idleTimeoutMillis: config.idleTimeoutMs,
-    max: config.maxConnections
+    max: config.maxConnections,
+    options: session.synchronousCommit === "off" ? "-c synchronous_commit=off" : undefined
   })
 
   return {
