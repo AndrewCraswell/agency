@@ -208,9 +208,9 @@ function documentRecords(
   documents: Array<z.infer<typeof documentSchema>>,
   diagnostics: NormalizationDiagnostic[]
 ) {
-  return documents.flatMap((document, documentOrdinal) =>
-    document.links.map((link, linkOrdinal) => {
-      const identity = `${collection}:${documentOrdinal}:${linkOrdinal}:${link.url}`
+  return documents.flatMap((document) =>
+    document.links.map((link) => {
+      const identity = `${collection}:${link.url}`
       return {
         document: {
           billId,
@@ -219,7 +219,7 @@ function documentRecords(
           documentDate: exactDate(document.date, `${collection}.date`, diagnostics),
           id: childId("document", billId, identity),
           sourceUrl: link.url,
-          title: document.note ?? link.text ?? `${collection} ${documentOrdinal + 1}`,
+          title: document.note ?? link.text ?? `${collection} document`,
           versionCode: collection === "version" ? (document.classification ?? document.note) : undefined
         }
       }

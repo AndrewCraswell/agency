@@ -109,6 +109,28 @@ describe("Open States normalization", () => {
     expect((aggregate.relations ?? []).every((relation) => relation.relatedBillId !== aggregate.bill.id)).toBe(true)
   })
 
+  it("keeps document identities stable when the provider reorders its arrays", () => {
+    const original = normalizeOpenStatesBill(fixture, {
+      jurisdictionCode: "WA",
+      jurisdictionName: "Washington"
+    }).aggregate
+    const reordered = structuredClone(fixture) as Record<string, unknown>
+    for (const field of ["documents", "versions"] as const) {
+      const values = reordered[field]
+      if (Array.isArray(values)) {
+        values.reverse()
+      }
+    }
+    const normalized = normalizeOpenStatesBill(reordered, {
+      jurisdictionCode: "WA",
+      jurisdictionName: "Washington"
+    }).aggregate
+    const identities = (aggregate: typeof original) =>
+      new Map((aggregate.documents ?? []).map((document) => [document.document.sourceUrl, document.document.id]))
+
+    expect(identities(normalized)).toEqual(identities(original))
+  })
+
   it("retains a bill when optional child records are malformed", () => {
     const source = structuredClone(fixture) as Record<string, unknown>
     source.related_bills = [{ relation_type: "related" }]

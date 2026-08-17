@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm"
+import { and, eq, inArray, or, sql } from "drizzle-orm"
 import type { CanonicalBillAggregate } from "../../legislation/model.js"
 import type { LegislationDatabase } from "../database.js"
 import {
@@ -123,10 +123,17 @@ export async function upsertBillAggregate(
     if (aggregate.documents !== undefined) {
       for (const document of aggregate.documents) {
         const existingDocument = await transaction.query.billDocuments.findFirst({
-          where: eq(billDocuments.id, document.document.id)
+          where: or(
+            eq(billDocuments.id, document.document.id),
+            and(
+              eq(billDocuments.billId, document.document.billId),
+              eq(billDocuments.sourceUrl, document.document.sourceUrl)
+            )
+          )
         })
         const persistedDocument = {
           ...document.document,
+          id: existingDocument?.id ?? document.document.id,
           blobPath: existingDocument?.blobPath ?? document.document.blobPath,
           contentHash: existingDocument?.contentHash ?? document.document.contentHash,
           lastAttemptAt: existingDocument?.lastAttemptAt ?? document.document.lastAttemptAt,
@@ -140,9 +147,11 @@ export async function upsertBillAggregate(
           .values(persistedDocument)
           .onConflictDoUpdate({ set: persistedDocument, target: billDocuments.id })
         if (document.sections !== undefined) {
-          await transaction.delete(documentSections).where(eq(documentSections.documentId, document.document.id))
+          await transaction.delete(documentSections).where(eq(documentSections.documentId, persistedDocument.id))
           if (document.sections.length > 0) {
-            await transaction.insert(documentSections).values(document.sections)
+            await transaction
+              .insert(documentSections)
+              .values(document.sections.map((section) => ({ ...section, documentId: persistedDocument.id })))
           }
         }
       }
@@ -288,9 +297,23 @@ export async function upsertBillAggregates(
       await transaction.insert(billRelations).values(relationValues)
     }
 
-    const documentValues = aggregates.flatMap((aggregate) =>
+    const candidateDocumentValues = aggregates.flatMap((aggregate) =>
       (aggregate.documents ?? []).map((document) => document.document)
     )
+    const existingDocuments =
+      candidateDocumentValues.length === 0
+        ? []
+        : await transaction
+            .select({ billId: billDocuments.billId, id: billDocuments.id, sourceUrl: billDocuments.sourceUrl })
+            .from(billDocuments)
+            .where(inArray(billDocuments.billId, billIds))
+    const existingDocumentIds = new Map(
+      existingDocuments.map((document) => [`${document.billId}\u001f${document.sourceUrl}`, document.id])
+    )
+    const documentValues = candidateDocumentValues.map((document) => ({
+      ...document,
+      id: existingDocumentIds.get(`${document.billId}\u001f${document.sourceUrl}`) ?? document.id
+    }))
     if (documentValues.length > 0) {
       await transaction
         .insert(billDocuments)
