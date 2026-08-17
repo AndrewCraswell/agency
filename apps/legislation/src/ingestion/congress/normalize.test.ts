@@ -27,4 +27,22 @@ describe("Congress.gov normalization", () => {
   it("rejects malformed API bundles", () => {
     expect(() => normalizeCongressBillBundle({ bill: { congress: 119 } })).toThrow("Invalid input")
   })
+
+  it("accepts null optional fields in older Congress records", () => {
+    const source = structuredClone(fixture) as Record<string, unknown>
+    source.textVersions = [
+      { date: null, formats: [{ type: "PDF", url: "https://www.congress.gov/older.pdf" }], type: "Introduced" }
+    ]
+    const bill = source.bill as Record<string, unknown>
+    bill.introducedDate = null
+    bill.originChamber = null
+
+    const aggregate = normalizeCongressBillBundle(source)
+
+    expect(aggregate.bill.introducedAt).toBeUndefined()
+    expect(aggregate.documents?.[0]?.document).toMatchObject({
+      documentDate: undefined,
+      sourceUrl: "https://www.congress.gov/older.pdf"
+    })
+  })
 })

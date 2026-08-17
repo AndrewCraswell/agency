@@ -8,19 +8,23 @@ import {
 } from "../../legislation/identifiers.js"
 import type { CanonicalBillAggregate } from "../../legislation/model.js"
 
+const optionalString = z.preprocess(
+  (value) => (value === null || (typeof value === "string" && value.trim().length === 0) ? undefined : value),
+  z.string().trim().min(1).optional()
+)
 const memberSchema = z.object({ bioguideId: z.string().min(1), fullName: z.string().min(1) }).passthrough()
 const actionSchema = z
-  .object({ actionDate: z.string().optional(), actionTime: z.string().optional(), text: z.string().min(1) })
+  .object({ actionDate: optionalString, actionTime: optionalString, text: z.string().min(1) })
   .passthrough()
 const textVersionSchema = z.object({
-  date: z.string().optional(),
-  formats: z.array(z.object({ type: z.string().optional(), url: z.string().min(1) }).passthrough()).default([]),
+  date: optionalString,
+  formats: z.array(z.object({ type: optionalString, url: z.string().min(1) }).passthrough()).default([]),
   type: z.string().min(1)
 })
 const relatedBillSchema = z.object({
   congress: z.number().int().positive(),
   number: z.string().min(1),
-  relationshipDetails: z.string().optional(),
+  relationshipDetails: optionalString,
   type: z.string().min(1)
 })
 
@@ -29,14 +33,14 @@ export const congressBillBundleSchema = z.object({
   bill: z
     .object({
       congress: z.number().int().positive(),
-      introducedDate: z.string().optional(),
+      introducedDate: optionalString,
       number: z.string().min(1),
-      originChamber: z.string().optional(),
+      originChamber: optionalString,
       policyArea: z.object({ name: z.string() }).optional(),
       sponsors: z.array(memberSchema).default([]),
       title: z.string().min(1),
       type: z.string().min(1),
-      updateDate: z.string().optional(),
+      updateDate: optionalString,
       url: z.string().min(1)
     })
     .passthrough(),
@@ -70,6 +74,10 @@ function canonicalChamber(value: string | undefined): string | undefined {
     return "upper"
   }
   return undefined
+}
+
+function dateOnly(value: string | undefined): string | undefined {
+  return value?.match(/^(\d{4}-\d{2}-\d{2})/)?.[1]
 }
 
 export function normalizeCongressBillBundle(input: unknown): CanonicalBillAggregate {
@@ -108,14 +116,14 @@ export function normalizeCongressBillBundle(input: unknown): CanonicalBillAggreg
       title: source.bill.title,
       upstreamIds: { congress: `${source.bill.congress}-${source.bill.type.toLowerCase()}-${source.bill.number}` }
     },
-    documents: source.textVersions?.flatMap((version, versionIndex) =>
-      version.formats.map((format, formatIndex) => ({
+    documents: source.textVersions?.flatMap((version) =>
+      version.formats.map((format) => ({
         document: {
           billId: canonicalBillId,
           classification: "version",
           contentType: format.type,
-          documentDate: version.date,
-          id: childId("document", canonicalBillId, `congress:${versionIndex}:${formatIndex}:${format.url}`),
+          documentDate: dateOnly(version.date),
+          id: childId("document", canonicalBillId, `congress:${format.url}`),
           sourceUrl: format.url,
           title: version.type,
           versionCode: version.type

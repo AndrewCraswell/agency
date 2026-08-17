@@ -132,7 +132,7 @@ export class CongressClient {
     const billObject = z.object({ bill: z.record(z.string(), z.unknown()) }).parse(bill).bill
     return {
       actions,
-      bill: billObject,
+      bill: { ...billObject, url: billObject.url ?? reference.url },
       committees,
       cosponsors,
       relatedBills,

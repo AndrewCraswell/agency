@@ -85,6 +85,7 @@ describe("CongressClient", () => {
     })) as Record<string, unknown[]>
 
     expect(bundle.actions).toHaveLength(2)
+    expect(bundle.bill).toMatchObject({ url: "https://api.congress.gov/v3/bill/119/hr/9" })
     expect(bundle.committees).toHaveLength(2)
     expect(bundle.cosponsors).toHaveLength(2)
     expect(bundle.relatedBills).toHaveLength(2)
