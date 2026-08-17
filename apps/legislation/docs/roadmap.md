@@ -204,7 +204,7 @@ building provenance, predictions, or AI-generated interpretation.
   events.
 - [x] **E5.5** Distinguish an upstream correction from a newly observed legislative event only when the source supplies
   enough information; otherwise classify it as a record update.
-- [ ] **E5.6** Link scheduled events to later actions or votes only through explicit relationships or deterministic
+- [x] **E5.6** Link scheduled events to later actions or votes only through explicit relationships or deterministic
   identifiers, not semantic guessing.
 - [x] **E5.7** Define retention based on operational and product needs; do not retain fields solely to establish a chain
   of custody.

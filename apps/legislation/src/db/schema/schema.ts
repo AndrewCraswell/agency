@@ -802,6 +802,36 @@ export const billRelations = legislationSchema.table(
   ]
 )
 
+export const eventOutcomeLinks = legislationSchema.table(
+  "event_outcome_links",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => legislativeEvents.id, { onDelete: "cascade" }),
+    actionId: text("action_id").references(() => billActions.id, { onDelete: "cascade" }),
+    voteId: text("vote_id").references(() => votes.id, { onDelete: "cascade" }),
+    linkMethod: text("link_method").notNull(),
+    sourceReference: text("source_reference").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check(
+      "event_outcome_links_target_check",
+      sql`(${table.actionId} is not null and ${table.voteId} is null) or (${table.actionId} is null and ${table.voteId} is not null)`
+    ),
+    check("event_outcome_links_method_check", sql`${table.linkMethod} in ('explicit', 'deterministic-id')`),
+    check("event_outcome_links_reference_check", sql`length(${table.sourceReference}) > 0`),
+    uniqueIndex("event_outcome_links_action_uidx")
+      .on(table.eventId, table.actionId)
+      .where(sql`${table.actionId} is not null`),
+    uniqueIndex("event_outcome_links_vote_uidx")
+      .on(table.eventId, table.voteId)
+      .where(sql`${table.voteId} is not null`),
+    index("event_outcome_links_event_idx").on(table.eventId, table.createdAt)
+  ]
+)
+
 export const billDocuments = legislationSchema.table(
   "bill_documents",
   {

@@ -23,6 +23,11 @@ reschedule, cancellation, and deletion and verifies the exact ordered classifica
 replacement proves that the canonical event and its change event roll back together. Deterministic planning tests also
 cover relationship-only changes and repeated event identity.
 
+Scheduled events link to later actions or votes through `event_outcome_links`. Every link names exactly one action or
+vote, records a nonempty upstream reference, and permits only `explicit` or `deterministic-id` methods. Database checks
+reject semantic linkage, and deterministic link IDs make replay silent. When no approved source relationship exists,
+the event remains unlinked rather than using similar text or nearby timestamps.
+
 ## Query and retention
 
 The `search_changes` MCP operation provides cursor pagination and filters for canonical record, record type,

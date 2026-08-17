@@ -15,6 +15,7 @@ import {
   eventAgendaItems,
   eventBills,
   eventDocuments,
+  eventOutcomeLinks,
   eventParticipants,
   legislativeEvents,
   legislativeTerms,
@@ -480,7 +481,7 @@ export class LegislationQueryService {
     if (event[0] === undefined) {
       throw new LegislationError("not_found", `Event ${lookup.id} was not found`)
     }
-    const [agendaItems, documents, participants, relatedBills] = await Promise.all([
+    const [agendaItems, documents, participants, relatedBills, outcomes] = await Promise.all([
       this.#database
         .select()
         .from(eventAgendaItems)
@@ -503,9 +504,14 @@ export class LegislationQueryService {
         .from(eventBills)
         .innerJoin(bills, eq(eventBills.billId, bills.id))
         .where(eq(eventBills.eventId, lookup.id))
-        .orderBy(asc(bills.id))
+        .orderBy(asc(bills.id)),
+      this.#database
+        .select()
+        .from(eventOutcomeLinks)
+        .where(eq(eventOutcomeLinks.eventId, lookup.id))
+        .orderBy(asc(eventOutcomeLinks.createdAt), asc(eventOutcomeLinks.id))
     ])
-    return { agendaItems, documents, event: event[0], participants, relatedBills }
+    return { agendaItems, documents, event: event[0], outcomes, participants, relatedBills }
   }
 
   async getBillSchedule(input: EventSearchInput & { billId: string }) {

@@ -23,6 +23,7 @@ import { EMBEDDING_MODEL } from "../../models/openrouter-embeddings.js"
 import { lexicalBillSearch, lexicalPassageSearch, semanticBillSearch } from "../../search/search.js"
 import { validateCorpus } from "../../validation/corpus.js"
 import { getBillById, upsertBillAggregate } from "../queries/bill-aggregates.js"
+import { linkEventOutcome } from "../queries/event-outcomes.js"
 import { upsertEventSnapshots } from "../queries/events.js"
 import { isDatabaseAvailable, isDatabaseReady } from "../readiness.js"
 import * as schema from "./schema.js"
@@ -661,6 +662,31 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     await expect(
       database.select().from(schema.changeEvents).where(eq(schema.changeEvents.recordId, failedEvent.id))
     ).resolves.toHaveLength(0)
+
+    const actionId = "bill:wa:2025-2026:sb:5678:action:event-outcome"
+    await database.insert(schema.billActions).values({
+      billId: "bill:wa:2025-2026:sb:5678",
+      description: "Committee recommendation adopted",
+      id: actionId,
+      ordinal: 0
+    })
+    const outcome = {
+      actionId,
+      eventId,
+      linkMethod: "explicit" as const,
+      sourceReference: "openstates:agenda-result:wa-data-hearing"
+    }
+    await expect(linkEventOutcome(database, outcome)).resolves.toBe("inserted")
+    await expect(linkEventOutcome(database, outcome)).resolves.toBe("unchanged")
+    await expect(
+      database.insert(schema.eventOutcomeLinks).values({
+        actionId,
+        eventId,
+        id: "event-outcome:semantic-not-allowed",
+        linkMethod: "semantic",
+        sourceReference: "similar text"
+      })
+    ).rejects.toMatchObject({ cause: { code: "23514", constraint: "event_outcome_links_method_check" } })
   })
 
   it("replays from the first failed Open States record without duplicating committed records", async () => {
