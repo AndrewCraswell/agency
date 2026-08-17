@@ -20,7 +20,7 @@ logic, checkpoints, and retry decisions.
   duplicates.
 - [x] **D1.3** Add bounded manual inputs for source range, jurisdiction, Congress, bill type, failed-record replay, force
   refresh, and dry run where the underlying command supports them.
-- [ ] **D1.4** Implement the bootstrap sequence: source ingestion, pending-document processing, stale-embedding refresh,
+- [x] **D1.4** Implement the bootstrap sequence: source ingestion, pending-document processing, stale-embedding refresh,
   and final coverage reporting.
 - [x] **D1.5** Pass the workflow execution ID and correlation ID through every Container Apps Job invocation and retain
   the resulting application run ID and summary.

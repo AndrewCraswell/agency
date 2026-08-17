@@ -1,0 +1,731 @@
+{
+  "id": "legislation-bootstrap-orchestration",
+  "name": "Legislation - Bootstrap orchestration",
+  "nodes": [
+    {
+      "id": "trigger",
+      "name": "Manual trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0],
+      "parameters": {}
+    },
+    {
+      "id": "inputs",
+      "name": "Bootstrap inputs",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [240, 0],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "manifest-blob",
+              "name": "openStatesManifestBlob",
+              "type": "string",
+              "value": "manifests/openstates/session-json-2017-onward-2026-08-17.json"
+            },
+            {
+              "id": "start-congress",
+              "name": "startCongress",
+              "type": "string",
+              "value": "={{ $env.FEDERAL_START_CONGRESS }}"
+            },
+            {
+              "id": "end-congress",
+              "name": "endCongress",
+              "type": "string",
+              "value": "={{ $env.FEDERAL_END_CONGRESS }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "token",
+      "name": "Managed identity token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 0],
+      "parameters": {
+        "url": "={{ $env.IDENTITY_ENDPOINT }}?api-version=2019-08-01&resource=https%3A%2F%2Fmanagement.azure.com%2F&client_id={{ $env.AZURE_CLIENT_ID }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "X-IDENTITY-HEADER", "value": "={{ $env.IDENTITY_HEADER }}" }]
+        }
+      }
+    },
+    {
+      "id": "start",
+      "name": "Start Open States bootstrap",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 0],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://management.azure.com{{ $env.AZURE_INGESTION_JOB_ID }}/start?api-version=2024-03-01",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Managed identity token').first().json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"containers\":[{\"name\":\"legislation-ingestion\",\"image\":\"{{ $env.LEGISLATION_IMAGE }}\",\"command\":[\"node\"],\"args\":[\"dist/cli/main.js\",\"openstates:bootstrap\",\"--manifest-blob\",\"{{ $('Bootstrap inputs').first().json.openStatesManifestBlob }}\"],\"env\":[{\"name\":\"NODE_ENV\",\"value\":\"production\"},{\"name\":\"DATABASE_URL\",\"secretRef\":\"database-url\"},{\"name\":\"AZURE_STORAGE_ACCOUNT\",\"value\":\"{{ $env.AZURE_STORAGE_ACCOUNT }}\"},{\"name\":\"AZURE_CLIENT_ID\",\"value\":\"{{ $env.AZURE_INGESTION_CLIENT_ID }}\"},{\"name\":\"WORKFLOW_EXECUTION_ID\",\"value\":\"{{ $execution.id }}\"},{\"name\":\"CORRELATION_ID\",\"value\":\"{{ $workflow.id }}:{{ $execution.id }}\"}],\"resources\":{\"cpu\":2,\"memory\":\"4Gi\"}}]}"
+      }
+    },
+    {
+      "id": "wait-openstates",
+      "name": "Wait for Open States",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [960, 0],
+      "parameters": { "amount": 30, "unit": "seconds" },
+      "webhookId": "legislation-bootstrap-openstates-wait"
+    },
+    {
+      "id": "inspect-openstates",
+      "name": "Inspect Open States execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1200, 0],
+      "parameters": {
+        "url": "=https://management.azure.com{{ $('Start Open States bootstrap').first().json.id }}?api-version=2024-03-01",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Managed identity token').first().json.access_token }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "openstates-succeeded",
+      "name": "Open States succeeded",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1440, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "openstates-succeeded-condition",
+              "leftValue": "={{ $json.properties.status }}",
+              "rightValue": "Succeeded",
+              "operator": { "type": "string", "operation": "equals", "name": "filter.operator.equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "openstates-running",
+      "name": "Open States still running",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1680, 120],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "openstates-running-condition",
+              "leftValue": "={{ $json.properties.status }}",
+              "rightValue": "Running",
+              "operator": { "type": "string", "operation": "equals", "name": "filter.operator.equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "start-govinfo",
+      "name": "Start GovInfo bootstrap",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1680, -120],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://management.azure.com{{ $env.AZURE_INGESTION_JOB_ID }}/start?api-version=2024-03-01",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Managed identity token').first().json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"containers\":[{\"name\":\"legislation-ingestion\",\"image\":\"{{ $env.LEGISLATION_IMAGE }}\",\"command\":[\"node\"],\"args\":[\"dist/cli/main.js\",\"govinfo:import\",\"--start-congress\",\"{{ $('Bootstrap inputs').first().json.startCongress }}\",\"--end-congress\",\"{{ $('Bootstrap inputs').first().json.endCongress }}\"],\"env\":[{\"name\":\"NODE_ENV\",\"value\":\"production\"},{\"name\":\"DATABASE_URL\",\"secretRef\":\"database-url\"},{\"name\":\"AZURE_STORAGE_ACCOUNT\",\"value\":\"{{ $env.AZURE_STORAGE_ACCOUNT }}\"},{\"name\":\"AZURE_CLIENT_ID\",\"value\":\"{{ $env.AZURE_INGESTION_CLIENT_ID }}\"},{\"name\":\"WORKFLOW_EXECUTION_ID\",\"value\":\"{{ $execution.id }}\"},{\"name\":\"CORRELATION_ID\",\"value\":\"{{ $workflow.id }}:{{ $execution.id }}\"}],\"resources\":{\"cpu\":2,\"memory\":\"4Gi\"}}]}"
+      }
+    },
+    {
+      "id": "wait-govinfo",
+      "name": "Wait for GovInfo",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [1920, -120],
+      "parameters": { "amount": 30, "unit": "seconds" },
+      "webhookId": "legislation-bootstrap-govinfo-wait"
+    },
+    {
+      "id": "inspect-govinfo",
+      "name": "Inspect GovInfo execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2160, -120],
+      "parameters": {
+        "url": "=https://management.azure.com{{ $('Start GovInfo bootstrap').first().json.id }}?api-version=2024-03-01",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Managed identity token').first().json.access_token }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "govinfo-succeeded",
+      "name": "GovInfo succeeded",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2400, -120],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "govinfo-succeeded-condition",
+              "leftValue": "={{ $json.properties.status }}",
+              "rightValue": "Succeeded",
+              "operator": { "type": "string", "operation": "equals", "name": "filter.operator.equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "govinfo-running",
+      "name": "GovInfo still running",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [2640, 0],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "govinfo-running-condition",
+              "leftValue": "={{ $json.properties.status }}",
+              "rightValue": "Running",
+              "operator": { "type": "string", "operation": "equals", "name": "filter.operator.equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "start-documents",
+      "name": "Start document processing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2640, -240],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://management.azure.com{{ $env.AZURE_INGESTION_JOB_ID }}/start?api-version=2024-03-01",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Managed identity token').first().json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"containers\":[{\"name\":\"legislation-ingestion\",\"image\":\"{{ $env.LEGISLATION_IMAGE }}\",\"command\":[\"node\"],\"args\":[\"dist/cli/main.js\",\"documents:process\",\"--all\",\"--limit\",\"1000\"],\"env\":[{\"name\":\"NODE_ENV\",\"value\":\"production\"},{\"name\":\"DATABASE_URL\",\"secretRef\":\"database-url\"},{\"name\":\"AZURE_STORAGE_ACCOUNT\",\"value\":\"{{ $env.AZURE_STORAGE_ACCOUNT }}\"},{\"name\":\"AZURE_CLIENT_ID\",\"value\":\"{{ $env.AZURE_INGESTION_CLIENT_ID }}\"},{\"name\":\"WORKFLOW_EXECUTION_ID\",\"value\":\"{{ $execution.id }}\"},{\"name\":\"CORRELATION_ID\",\"value\":\"{{ $workflow.id }}:{{ $execution.id }}\"}],\"resources\":{\"cpu\":2,\"memory\":\"4Gi\"}}]}"
+      }
+    },
+    {
+      "id": "wait-documents",
+      "name": "Wait for documents",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2880, -240],
+      "parameters": { "amount": 30, "unit": "seconds" },
+      "webhookId": "legislation-bootstrap-documents-wait"
+    },
+    {
+      "id": "inspect-documents",
+      "name": "Inspect document execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3120, -240],
+      "parameters": {
+        "url": "=https://management.azure.com{{ $('Start document processing').first().json.id }}?api-version=2024-03-01",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Managed identity token').first().json.access_token }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "documents-succeeded",
+      "name": "Documents succeeded",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3360, -240],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "documents-succeeded-condition",
+              "leftValue": "={{ $json.properties.status }}",
+              "rightValue": "Succeeded",
+              "operator": { "type": "string", "operation": "equals", "name": "filter.operator.equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "documents-running",
+      "name": "Documents still running",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [3600, -120],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "documents-running-condition",
+              "leftValue": "={{ $json.properties.status }}",
+              "rightValue": "Running",
+              "operator": { "type": "string", "operation": "equals", "name": "filter.operator.equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "start-embeddings",
+      "name": "Start embedding refresh",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3600, -360],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://management.azure.com{{ $env.AZURE_INGESTION_JOB_ID }}/start?api-version=2024-03-01",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Managed identity token').first().json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"containers\":[{\"name\":\"legislation-ingestion\",\"image\":\"{{ $env.LEGISLATION_IMAGE }}\",\"command\":[\"node\"],\"args\":[\"dist/cli/main.js\",\"embeddings:run\",\"--all\",\"--limit\",\"64\"],\"env\":[{\"name\":\"NODE_ENV\",\"value\":\"production\"},{\"name\":\"DATABASE_URL\",\"secretRef\":\"database-url\"},{\"name\":\"OPENROUTER_API_KEY\",\"secretRef\":\"openrouter-api-key\"},{\"name\":\"AZURE_STORAGE_ACCOUNT\",\"value\":\"{{ $env.AZURE_STORAGE_ACCOUNT }}\"},{\"name\":\"AZURE_CLIENT_ID\",\"value\":\"{{ $env.AZURE_INGESTION_CLIENT_ID }}\"},{\"name\":\"WORKFLOW_EXECUTION_ID\",\"value\":\"{{ $execution.id }}\"},{\"name\":\"CORRELATION_ID\",\"value\":\"{{ $workflow.id }}:{{ $execution.id }}\"}],\"resources\":{\"cpu\":2,\"memory\":\"4Gi\"}}]}"
+      }
+    },
+    {
+      "id": "wait-embeddings",
+      "name": "Wait for embeddings",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [3840, -360],
+      "parameters": { "amount": 30, "unit": "seconds" },
+      "webhookId": "legislation-bootstrap-embeddings-wait"
+    },
+    {
+      "id": "inspect-embeddings",
+      "name": "Inspect embedding execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4080, -360],
+      "parameters": {
+        "url": "=https://management.azure.com{{ $('Start embedding refresh').first().json.id }}?api-version=2024-03-01",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Managed identity token').first().json.access_token }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "embeddings-succeeded",
+      "name": "Embeddings succeeded",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [4320, -360],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "embeddings-succeeded-condition",
+              "leftValue": "={{ $json.properties.status }}",
+              "rightValue": "Succeeded",
+              "operator": { "type": "string", "operation": "equals", "name": "filter.operator.equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "embeddings-running",
+      "name": "Embeddings still running",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [4560, -240],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "embeddings-running-condition",
+              "leftValue": "={{ $json.properties.status }}",
+              "rightValue": "Running",
+              "operator": { "type": "string", "operation": "equals", "name": "filter.operator.equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "start-coverage",
+      "name": "Start coverage report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [4560, -480],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://management.azure.com{{ $env.AZURE_INGESTION_JOB_ID }}/start?api-version=2024-03-01",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Managed identity token').first().json.access_token }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\"containers\":[{\"name\":\"legislation-ingestion\",\"image\":\"{{ $env.LEGISLATION_IMAGE }}\",\"command\":[\"node\"],\"args\":[\"dist/cli/main.js\",\"coverage:report\",\"--output\",\"/tmp/coverage.json\",\"--blob-path\",\"coverage/orchestration/{{ $execution.id }}.json\"],\"env\":[{\"name\":\"NODE_ENV\",\"value\":\"production\"},{\"name\":\"DATABASE_URL\",\"secretRef\":\"database-url\"},{\"name\":\"AZURE_STORAGE_ACCOUNT\",\"value\":\"{{ $env.AZURE_STORAGE_ACCOUNT }}\"},{\"name\":\"AZURE_CLIENT_ID\",\"value\":\"{{ $env.AZURE_INGESTION_CLIENT_ID }}\"},{\"name\":\"WORKFLOW_EXECUTION_ID\",\"value\":\"{{ $execution.id }}\"},{\"name\":\"CORRELATION_ID\",\"value\":\"{{ $workflow.id }}:{{ $execution.id }}\"}],\"resources\":{\"cpu\":1,\"memory\":\"2Gi\"}}]}"
+      }
+    },
+    {
+      "id": "wait-coverage",
+      "name": "Wait for coverage",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [4800, -480],
+      "parameters": { "amount": 30, "unit": "seconds" },
+      "webhookId": "legislation-bootstrap-coverage-wait"
+    },
+    {
+      "id": "inspect-coverage",
+      "name": "Inspect coverage execution",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [5040, -480],
+      "parameters": {
+        "url": "=https://management.azure.com{{ $('Start coverage report').first().json.id }}?api-version=2024-03-01",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Managed identity token').first().json.access_token }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "coverage-succeeded",
+      "name": "Coverage succeeded",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [5280, -480],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "coverage-succeeded-condition",
+              "leftValue": "={{ $json.properties.status }}",
+              "rightValue": "Succeeded",
+              "operator": { "type": "string", "operation": "equals", "name": "filter.operator.equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "coverage-running",
+      "name": "Coverage still running",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [5520, -360],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "coverage-running-condition",
+              "leftValue": "={{ $json.properties.status }}",
+              "rightValue": "Running",
+              "operator": { "type": "string", "operation": "equals", "name": "filter.operator.equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "failed",
+      "name": "Stop failed bootstrap",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [5760, 120],
+      "parameters": {
+        "errorType": "errorMessage",
+        "errorMessage": "=Bootstrap phase ended with Azure Container Apps status {{ $json.properties.status }}"
+      }
+    },
+    {
+      "id": "summary",
+      "name": "Retain orchestration evidence",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [5520, -600],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "summary-status",
+              "name": "status",
+              "type": "string",
+              "value": "succeeded"
+            },
+            {
+              "id": "summary-workflow-execution",
+              "name": "workflowExecutionId",
+              "type": "string",
+              "value": "={{ $execution.id }}"
+            },
+            {
+              "id": "summary-correlation",
+              "name": "correlationId",
+              "type": "string",
+              "value": "={{ $workflow.id }}:{{ $execution.id }}"
+            },
+            {
+              "id": "summary-openstates",
+              "name": "openStatesExecutionId",
+              "type": "string",
+              "value": "={{ $('Start Open States bootstrap').first().json.id }}"
+            },
+            {
+              "id": "summary-govinfo",
+              "name": "govInfoExecutionId",
+              "type": "string",
+              "value": "={{ $('Start GovInfo bootstrap').first().json.id }}"
+            },
+            {
+              "id": "summary-documents",
+              "name": "documentExecutionId",
+              "type": "string",
+              "value": "={{ $('Start document processing').first().json.id }}"
+            },
+            {
+              "id": "summary-embeddings",
+              "name": "embeddingExecutionId",
+              "type": "string",
+              "value": "={{ $('Start embedding refresh').first().json.id }}"
+            },
+            {
+              "id": "summary-coverage",
+              "name": "coverageExecutionId",
+              "type": "string",
+              "value": "={{ $('Start coverage report').first().json.id }}"
+            },
+            {
+              "id": "summary-report",
+              "name": "coverageBlobPath",
+              "type": "string",
+              "value": "=coverage/orchestration/{{ $execution.id }}.json"
+            }
+          ]
+        },
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Manual trigger": { "main": [[{ "node": "Bootstrap inputs", "type": "main", "index": 0 }]] },
+    "Bootstrap inputs": { "main": [[{ "node": "Managed identity token", "type": "main", "index": 0 }]] },
+    "Managed identity token": {
+      "main": [[{ "node": "Start Open States bootstrap", "type": "main", "index": 0 }]]
+    },
+    "Start Open States bootstrap": {
+      "main": [[{ "node": "Wait for Open States", "type": "main", "index": 0 }]]
+    },
+    "Wait for Open States": {
+      "main": [[{ "node": "Inspect Open States execution", "type": "main", "index": 0 }]]
+    },
+    "Inspect Open States execution": {
+      "main": [[{ "node": "Open States succeeded", "type": "main", "index": 0 }]]
+    },
+    "Open States succeeded": {
+      "main": [
+        [{ "node": "Start GovInfo bootstrap", "type": "main", "index": 0 }],
+        [{ "node": "Open States still running", "type": "main", "index": 0 }]
+      ]
+    },
+    "Open States still running": {
+      "main": [
+        [{ "node": "Wait for Open States", "type": "main", "index": 0 }],
+        [{ "node": "Stop failed bootstrap", "type": "main", "index": 0 }]
+      ]
+    },
+    "Start GovInfo bootstrap": { "main": [[{ "node": "Wait for GovInfo", "type": "main", "index": 0 }]] },
+    "Wait for GovInfo": { "main": [[{ "node": "Inspect GovInfo execution", "type": "main", "index": 0 }]] },
+    "Inspect GovInfo execution": {
+      "main": [[{ "node": "GovInfo succeeded", "type": "main", "index": 0 }]]
+    },
+    "GovInfo succeeded": {
+      "main": [
+        [{ "node": "Start document processing", "type": "main", "index": 0 }],
+        [{ "node": "GovInfo still running", "type": "main", "index": 0 }]
+      ]
+    },
+    "GovInfo still running": {
+      "main": [
+        [{ "node": "Wait for GovInfo", "type": "main", "index": 0 }],
+        [{ "node": "Stop failed bootstrap", "type": "main", "index": 0 }]
+      ]
+    },
+    "Start document processing": {
+      "main": [[{ "node": "Wait for documents", "type": "main", "index": 0 }]]
+    },
+    "Wait for documents": {
+      "main": [[{ "node": "Inspect document execution", "type": "main", "index": 0 }]]
+    },
+    "Inspect document execution": {
+      "main": [[{ "node": "Documents succeeded", "type": "main", "index": 0 }]]
+    },
+    "Documents succeeded": {
+      "main": [
+        [{ "node": "Start embedding refresh", "type": "main", "index": 0 }],
+        [{ "node": "Documents still running", "type": "main", "index": 0 }]
+      ]
+    },
+    "Documents still running": {
+      "main": [
+        [{ "node": "Wait for documents", "type": "main", "index": 0 }],
+        [{ "node": "Stop failed bootstrap", "type": "main", "index": 0 }]
+      ]
+    },
+    "Start embedding refresh": {
+      "main": [[{ "node": "Wait for embeddings", "type": "main", "index": 0 }]]
+    },
+    "Wait for embeddings": {
+      "main": [[{ "node": "Inspect embedding execution", "type": "main", "index": 0 }]]
+    },
+    "Inspect embedding execution": {
+      "main": [[{ "node": "Embeddings succeeded", "type": "main", "index": 0 }]]
+    },
+    "Embeddings succeeded": {
+      "main": [
+        [{ "node": "Start coverage report", "type": "main", "index": 0 }],
+        [{ "node": "Embeddings still running", "type": "main", "index": 0 }]
+      ]
+    },
+    "Embeddings still running": {
+      "main": [
+        [{ "node": "Wait for embeddings", "type": "main", "index": 0 }],
+        [{ "node": "Stop failed bootstrap", "type": "main", "index": 0 }]
+      ]
+    },
+    "Start coverage report": { "main": [[{ "node": "Wait for coverage", "type": "main", "index": 0 }]] },
+    "Wait for coverage": { "main": [[{ "node": "Inspect coverage execution", "type": "main", "index": 0 }]] },
+    "Inspect coverage execution": {
+      "main": [[{ "node": "Coverage succeeded", "type": "main", "index": 0 }]]
+    },
+    "Coverage succeeded": {
+      "main": [
+        [{ "node": "Retain orchestration evidence", "type": "main", "index": 0 }],
+        [{ "node": "Coverage still running", "type": "main", "index": 0 }]
+      ]
+    },
+    "Coverage still running": {
+      "main": [
+        [{ "node": "Wait for coverage", "type": "main", "index": 0 }],
+        [{ "node": "Stop failed bootstrap", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "timezone": "UTC"
+  },
+  "active": false
+}

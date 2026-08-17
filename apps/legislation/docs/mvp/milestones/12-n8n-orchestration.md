@@ -32,8 +32,8 @@ Automate schedules, sequencing, retries, and operational visibility while keepin
 - [x] **M12.16** Create the pending-document processing workflow.
 - [x] **M12.17** Create the missing-or-stale embedding workflow.
 - [x] **M12.18** Create a coverage-report workflow after corpus-changing runs.
-- [ ] **M12.19** Sequence downstream document and embedding work without embedding business logic in n8n nodes.
-- [ ] **M12.20** Add manual inputs for bounded backfill, targeted retry, and dry-run operations.
+- [x] **M12.19** Sequence downstream document and embedding work without embedding business logic in n8n nodes.
+- [x] **M12.20** Add manual inputs for bounded backfill, targeted retry, and dry-run operations.
 
 ### Failure handling and operations
 

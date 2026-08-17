@@ -195,7 +195,7 @@ resource n8nBootstrap 'Microsoft.App/jobs@2024-03-01' = if (enableN8n) {
         command: ['/bin/sh']
         args: [
           '-c'
-          'n8n import:workflow --separate --input=/opt/legislation/workflows --activeState=false && n8n unpublish:workflow --id=legislation-congress-sync && n8n unpublish:workflow --id=legislation-congress-events-refresh && n8n unpublish:workflow --id=legislation-congress-votes-refresh && n8n unpublish:workflow --id=legislation-congress-amend-refresh && n8n unpublish:workflow --id=legislation-congress-report-refresh && n8n unpublish:workflow --id=legislation-coverage-report && n8n unpublish:workflow --id=legislation-document-processing && n8n unpublish:workflow --id=legislation-embedding-refresh && n8n unpublish:workflow --id=legislation-govinfo-bootstrap && n8n unpublish:workflow --id=legislation-openstates-refresh'
+          'n8n import:workflow --separate --input=/opt/legislation/workflows --activeState=false && n8n unpublish:workflow --id=legislation-bootstrap-orchestration && n8n unpublish:workflow --id=legislation-congress-sync && n8n unpublish:workflow --id=legislation-congress-events-refresh && n8n unpublish:workflow --id=legislation-congress-votes-refresh && n8n unpublish:workflow --id=legislation-congress-amend-refresh && n8n unpublish:workflow --id=legislation-congress-report-refresh && n8n unpublish:workflow --id=legislation-coverage-report && n8n unpublish:workflow --id=legislation-document-processing && n8n unpublish:workflow --id=legislation-embedding-refresh && n8n unpublish:workflow --id=legislation-govinfo-bootstrap && n8n unpublish:workflow --id=legislation-openstates-refresh'
         ]
         env: [
           { name: 'DB_TYPE', value: 'postgresdb' }
