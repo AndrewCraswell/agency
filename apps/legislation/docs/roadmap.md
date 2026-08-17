@@ -226,11 +226,11 @@ passes its data-quality gate.
 
 ### Tasks
 
-- [ ] **E6.1** Define research scenarios and evaluation cases before selecting tool boundaries.
+- [x] **E6.1** Define research scenarios and evaluation cases before selecting tool boundaries.
 - [x] **E6.2** Add person and organization discovery and detail tools after E1.
-- [ ] **E6.3** Add meeting, hearing, and calendar discovery and detail tools after E2.
-- [ ] **E6.4** Add roll-call discovery and detail tools after E3.
-- [ ] **E6.5** Add amendment and supporting-material discovery and retrieval tools after E4.
+- [x] **E6.3** Add meeting, hearing, and calendar discovery and detail tools after E2.
+- [x] **E6.4** Add roll-call discovery and detail tools after E3.
+- [x] **E6.5** Add amendment and supporting-material discovery and retrieval tools after E4.
 - [x] **E6.6** Add recent-change queries after E5 without summaries, predictions, or notification delivery.
 - [ ] **E6.7** Keep tool schemas narrow, paginated, and explicit about coverage gaps and unavailable fields.
 - [ ] **E6.8** Run contract, authorization, payload, latency, and two-client compatibility tests for every added tool.

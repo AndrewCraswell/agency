@@ -427,7 +427,7 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
       server.registerTool(
         "get_supporting_material",
         {
-          description: "Get one supporting material record and its canonical links.",
+          description: "Get one supporting material record, canonical links, and paginated extracted sections.",
           inputSchema: entityLookupSchema("material"),
           outputSchema
         },
