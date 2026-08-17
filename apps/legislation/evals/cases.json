@@ -4,76 +4,452 @@
     "scenario": "known_bill",
     "prompt": "Find H.R. 1234 in the 119th Congress and show its official source.",
     "expectedTools": ["search_bills", "get_bill"],
-    "evidence": ["canonical bill ID", "official source URL"]
+    "evidence": ["canonical bill ID", "official source URL"],
+    "local": {
+      "calls": [
+        { "name": "search_bills", "arguments": { "mode": "lexical", "query": "H.R. 1234" } },
+        { "name": "get_bill", "arguments": { "id": "bill:us:119:hr:1234" } }
+      ],
+      "assertions": [
+        {
+          "call": 0,
+          "source": "data",
+          "path": "items.0.id",
+          "operator": "equals",
+          "expected": "bill:us:119:hr:1234",
+          "metric": "known_item_recall",
+          "category": "retrieval"
+        },
+        {
+          "call": 1,
+          "source": "data",
+          "path": "bill.id",
+          "operator": "equals",
+          "expected": "bill:us:119:hr:1234",
+          "metric": "required_field_accuracy",
+          "category": "normalization"
+        },
+        {
+          "call": 1,
+          "source": "data",
+          "path": "bill.sourceUrl",
+          "operator": "is_official_url",
+          "metric": "source_use",
+          "category": "normalization"
+        }
+      ]
+    }
   },
   {
     "id": "known-state",
     "scenario": "known_bill",
     "prompt": "Find Washington HB 1234 in the 2025-2026 session.",
     "expectedTools": ["search_bills", "get_bill"],
-    "evidence": ["jurisdiction", "session", "official source URL"]
+    "evidence": ["jurisdiction", "session", "official source URL"],
+    "local": {
+      "calls": [
+        { "name": "search_bills", "arguments": { "mode": "lexical", "query": "Washington HB 1234" } },
+        { "name": "get_bill", "arguments": { "id": "bill:wa:2025-2026:hb:1234" } }
+      ],
+      "assertions": [
+        {
+          "call": 0,
+          "source": "data",
+          "path": "items.0.id",
+          "operator": "equals",
+          "expected": "bill:wa:2025-2026:hb:1234",
+          "metric": "known_item_recall",
+          "category": "retrieval"
+        },
+        {
+          "call": 1,
+          "source": "data",
+          "path": "bill.jurisdictionId",
+          "operator": "equals",
+          "expected": "jurisdiction:wa",
+          "metric": "required_field_accuracy",
+          "category": "normalization"
+        },
+        {
+          "call": 1,
+          "source": "data",
+          "path": "bill.sourceUrl",
+          "operator": "is_official_url",
+          "metric": "source_use",
+          "category": "normalization"
+        }
+      ]
+    }
   },
   {
     "id": "exact-topic",
     "scenario": "lexical",
     "prompt": "Find bills containing the exact phrase machine-readable legislative data.",
     "expectedTools": ["search_bills", "search_bill_text"],
-    "evidence": ["matching snippet", "source URL"]
+    "evidence": ["matching snippet", "source URL"],
+    "local": {
+      "calls": [
+        {
+          "name": "search_bills",
+          "arguments": { "mode": "lexical", "query": "machine-readable legislative data" }
+        },
+        {
+          "name": "search_bill_text",
+          "arguments": { "mode": "lexical", "query": "machine-readable legislative data" }
+        }
+      ],
+      "assertions": [
+        {
+          "call": 0,
+          "source": "data",
+          "path": "items.0.matchText",
+          "operator": "contains",
+          "expected": "machine-readable legislative data",
+          "metric": "exact_discovery",
+          "category": "retrieval"
+        },
+        {
+          "call": 1,
+          "source": "data",
+          "path": "items.0.sourceUrl",
+          "operator": "is_official_url",
+          "metric": "source_use",
+          "category": "normalization"
+        }
+      ]
+    }
   },
   {
     "id": "statutory-citation",
     "scenario": "lexical",
     "prompt": "Find passages that amend section 552 of title 5.",
     "expectedTools": ["search_bill_text"],
-    "evidence": ["section identifier", "version", "source URL"]
+    "evidence": ["section identifier", "version", "source URL"],
+    "local": {
+      "calls": [
+        {
+          "name": "search_bill_text",
+          "arguments": { "mode": "lexical", "query": "section 552 of title 5" }
+        }
+      ],
+      "assertions": [
+        {
+          "call": 0,
+          "source": "data",
+          "path": "items.0.sectionIdentifier",
+          "operator": "equals",
+          "expected": "SEC. 2",
+          "metric": "passage_relevance",
+          "category": "retrieval"
+        },
+        {
+          "call": 0,
+          "source": "data",
+          "path": "items.0.versionCode",
+          "operator": "equals",
+          "expected": "ih",
+          "metric": "required_field_accuracy",
+          "category": "processing"
+        },
+        {
+          "call": 0,
+          "source": "data",
+          "path": "items.0.sourceUrl",
+          "operator": "is_official_url",
+          "metric": "source_use",
+          "category": "normalization"
+        }
+      ]
+    }
   },
   {
     "id": "conceptual",
     "scenario": "semantic",
     "prompt": "Find proposals that make government records easier for software to consume.",
     "expectedTools": ["search_bills"],
-    "evidence": ["retrieval method", "relevant title or summary"]
+    "evidence": ["retrieval method", "relevant title or summary"],
+    "local": {
+      "calls": [
+        {
+          "name": "search_bills",
+          "arguments": {
+            "mode": "semantic",
+            "query": "proposals that make government records easier for software to consume"
+          }
+        }
+      ],
+      "assertions": [
+        {
+          "call": 0,
+          "source": "data",
+          "path": "items.0.retrievalMethod",
+          "operator": "equals",
+          "expected": "semantic",
+          "metric": "conceptual_discovery",
+          "category": "retrieval"
+        },
+        {
+          "call": 0,
+          "source": "data",
+          "path": "items.0.title",
+          "operator": "contains",
+          "expected": "machine-readable",
+          "metric": "conceptual_discovery",
+          "category": "retrieval"
+        }
+      ]
+    }
   },
   {
     "id": "timeline",
     "scenario": "timeline",
     "prompt": "Show the chronological progress of a known bill without inventing times for date-only actions.",
     "expectedTools": ["get_bill_timeline"],
-    "evidence": ["ordered events", "source links"]
+    "evidence": ["ordered events", "source links"],
+    "local": {
+      "calls": [{ "name": "get_bill_timeline", "arguments": { "id": "bill:us:119:hr:1234" } }],
+      "assertions": [
+        {
+          "call": 0,
+          "source": "data",
+          "path": "events",
+          "operator": "dates_ascending",
+          "metric": "timeline_accuracy",
+          "category": "normalization"
+        },
+        {
+          "call": 0,
+          "source": "data",
+          "path": "events.0.sourceUrl",
+          "operator": "is_official_url",
+          "metric": "source_use",
+          "category": "normalization"
+        }
+      ]
+    }
   },
   {
     "id": "long-passage",
     "scenario": "passage",
     "prompt": "Locate the effective-date provision in a long processed bill version.",
     "expectedTools": ["search_bill_text", "get_bill_text"],
-    "evidence": ["section", "paginated text", "official document"]
+    "evidence": ["section", "paginated text", "official document"],
+    "local": {
+      "calls": [
+        {
+          "name": "search_bill_text",
+          "arguments": {
+            "billId": "bill:us:119:hr:1234",
+            "mode": "lexical",
+            "query": "effective date"
+          }
+        },
+        {
+          "name": "get_bill_text",
+          "arguments": {
+            "documentId": "document:govinfo:119-hr-1234-enr",
+            "id": "bill:us:119:hr:1234"
+          }
+        }
+      ],
+      "assertions": [
+        {
+          "call": 0,
+          "source": "data",
+          "path": "items.0.snippet",
+          "operator": "contains",
+          "expected": "effective date",
+          "metric": "passage_relevance",
+          "category": "retrieval"
+        },
+        {
+          "call": 1,
+          "source": "data",
+          "path": "sections",
+          "operator": "non_empty",
+          "metric": "task_completion",
+          "category": "processing"
+        },
+        {
+          "call": 1,
+          "source": "data",
+          "path": "document.sourceUrl",
+          "operator": "is_official_url",
+          "metric": "source_use",
+          "category": "normalization"
+        }
+      ]
+    }
   },
   {
     "id": "version-diff",
     "scenario": "comparison",
     "prompt": "Compare the introduced and enrolled versions and identify changed sections.",
     "expectedTools": ["compare_bill_versions"],
-    "evidence": ["explicit documents", "added, removed, or changed sections"]
+    "evidence": ["explicit documents", "added, removed, or changed sections"],
+    "local": {
+      "calls": [
+        {
+          "name": "compare_bill_versions",
+          "arguments": {
+            "billId": "bill:us:119:hr:1234",
+            "documentIds": ["document:govinfo:119-hr-1234-ih", "document:govinfo:119-hr-1234-enr"]
+          }
+        }
+      ],
+      "assertions": [
+        {
+          "call": 0,
+          "source": "data",
+          "path": "documents",
+          "operator": "length_equals",
+          "expected": 2,
+          "metric": "version_comparison",
+          "category": "tool_contract"
+        },
+        {
+          "call": 0,
+          "source": "data",
+          "path": "changes.0.classification",
+          "operator": "equals",
+          "expected": "modified",
+          "metric": "version_comparison",
+          "category": "processing"
+        },
+        {
+          "call": 0,
+          "source": "data",
+          "path": "documents.0.sourceUrl",
+          "operator": "is_official_url",
+          "metric": "source_use",
+          "category": "normalization"
+        }
+      ]
+    }
   },
   {
     "id": "related",
     "scenario": "relations",
     "prompt": "Find explicit companions and optionally similar bills, labeling how each relation was found.",
     "expectedTools": ["find_related_bills"],
-    "evidence": ["method", "canonical related ID"]
+    "evidence": ["method", "canonical related ID"],
+    "local": {
+      "calls": [{ "name": "find_related_bills", "arguments": { "id": "bill:us:119:hr:1234" } }],
+      "assertions": [
+        {
+          "call": 0,
+          "source": "data",
+          "path": "items.0.method",
+          "operator": "equals",
+          "expected": "explicit",
+          "metric": "related_bill_relevance",
+          "category": "normalization"
+        },
+        {
+          "call": 0,
+          "source": "data",
+          "path": "items.0.bill.id",
+          "operator": "equals",
+          "expected": "bill:us:119:s:567",
+          "metric": "related_bill_relevance",
+          "category": "retrieval"
+        },
+        {
+          "call": 0,
+          "source": "data",
+          "path": "items.0.bill.sourceUrl",
+          "operator": "is_official_url",
+          "metric": "source_use",
+          "category": "normalization"
+        }
+      ]
+    }
   },
   {
     "id": "negative",
     "scenario": "no_result",
     "prompt": "Find bill ZZ 999999 in an unsupported jurisdiction.",
     "expectedTools": ["search_bills"],
-    "evidence": ["empty result without fabricated bill"]
+    "evidence": ["empty result without fabricated bill"],
+    "local": {
+      "calls": [{ "name": "search_bills", "arguments": { "mode": "lexical", "query": "ZZ 999999" } }],
+      "assertions": [
+        {
+          "call": 0,
+          "source": "data",
+          "path": "items",
+          "operator": "length_equals",
+          "expected": 0,
+          "metric": "no_result_honesty",
+          "category": "retrieval"
+        },
+        {
+          "call": 0,
+          "source": "data",
+          "path": "truncated",
+          "operator": "equals",
+          "expected": false,
+          "metric": "task_completion",
+          "category": "tool_contract"
+        }
+      ]
+    }
   },
   {
     "id": "oversized",
     "scenario": "limits",
     "prompt": "Return every section of a very long bill.",
     "expectedTools": ["get_bill_text"],
-    "evidence": ["bounded page", "next cursor", "truncation"]
+    "evidence": ["bounded page", "next cursor", "truncation"],
+    "local": {
+      "calls": [
+        {
+          "name": "get_bill_text",
+          "arguments": {
+            "documentId": "document:govinfo:119-hr-1234-ih",
+            "id": "bill:us:119:hr:1234"
+          }
+        }
+      ],
+      "assertions": [
+        {
+          "call": 0,
+          "source": "data",
+          "path": "truncated",
+          "operator": "equals",
+          "expected": true,
+          "metric": "pagination",
+          "category": "tool_contract"
+        },
+        {
+          "call": 0,
+          "source": "data",
+          "path": "nextCursor",
+          "operator": "non_empty",
+          "metric": "pagination",
+          "category": "tool_contract"
+        }
+      ]
+    }
+  },
+  {
+    "id": "malformed-input",
+    "scenario": "safe_error",
+    "prompt": "Reject a malformed canonical bill identifier without exposing implementation details.",
+    "expectedTools": ["get_bill"],
+    "evidence": ["stable safe error", "no provider or database details"],
+    "local": {
+      "calls": [{ "name": "get_bill", "arguments": { "id": "not-a-canonical-bill" }, "expectError": true }],
+      "assertions": [
+        {
+          "call": 0,
+          "source": "error",
+          "path": "",
+          "operator": "safe_error",
+          "metric": "safe_error",
+          "category": "tool_contract"
+        }
+      ]
+    }
   }
 ]

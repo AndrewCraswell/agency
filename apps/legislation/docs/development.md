@@ -55,6 +55,11 @@ database. It drops only the `legislation` and `legislation_migrations` schemas.
 Run the application startup smoke test with `pnpm --filter legislation smoke:local`. It starts the real server against
 local PostgreSQL, verifies health and readiness, and shuts the process down.
 
+Run `pnpm --filter legislation eval:local` for a credential-free MCP usefulness preflight. It exercises the seven
+original research tools through the production MCP handler with deterministic fixtures and writes an untracked evidence
+artifact to `apps/legislation/work/evaluation/local-mcp.json`. This preflight does not use the database, cloud services,
+provider credentials, or WorkOS, and it does not replace authenticated live-client evaluation.
+
 Stop the container while retaining data with `pnpm --filter legislation db:down`. To delete only the disposable
 legislation database volume and recreate it from zero, run:
 
