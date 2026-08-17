@@ -313,25 +313,28 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
     const counts = new Map(vote.counts.map((count) => [normalizeVoteOption(count.option), count.value]))
     const positions = uniqueBy(
       vote.votes.flatMap((position) => {
-        if (position.voter_id === undefined) {
-          diagnostics.push({ field: "votes.voter_id", reason: "unmatched vote position was omitted", value: position })
-          return []
-        }
-        const canonicalPersonId = personId("openstates", position.voter_id)
+        const sourcePersonId = position.voter_id ?? `vote-name:${context.jurisdictionCode}:${position.voter_name}`
+        const canonicalPersonId = personId(
+          position.voter_id === undefined ? "openstates-voter-name" : "openstates",
+          sourcePersonId
+        )
         peopleById.set(canonicalPersonId, {
           id: canonicalPersonId,
           jurisdictionId: jurisdiction,
           name: position.voter_name,
-          sourceId: position.voter_id,
-          upstreamIds: { openstates: position.voter_id }
+          sourceId: sourcePersonId,
+          upstreamIds:
+            position.voter_id === undefined
+              ? { openstatesVoteName: position.voter_name }
+              : { openstates: position.voter_id }
         })
         return [
           {
             option: normalizeVoteOption(position.option),
             personId: canonicalPersonId,
-            sourceIdentity: position.voter_id,
+            sourceIdentity: sourcePersonId,
             sourceName: position.voter_name,
-            sourcePersonId: position.voter_id,
+            sourcePersonId,
             voteId: canonicalVoteId
           }
         ]

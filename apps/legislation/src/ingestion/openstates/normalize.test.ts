@@ -43,9 +43,12 @@ describe("Open States normalization", () => {
       }
     ])
     expect(result.aggregate.sponsors).toHaveLength(2)
-    expect(result.aggregate.people).toHaveLength(1)
+    expect(result.aggregate.people).toHaveLength(2)
     expect(result.aggregate.votes?.[0]).toMatchObject({
-      positions: [{ option: "yes", personId: "person:openstates:ocd-person-example" }],
+      positions: [
+        { option: "yes", personId: "person:openstates:ocd-person-example" },
+        { option: "no", personId: "person:openstates-voter-name:vote-name-wa-unmatched-member" }
+      ],
       vote: { noCount: 8, result: "pass", yesCount: 90 }
     })
     expect(result.aggregate.documents).toHaveLength(3)
@@ -62,7 +65,6 @@ describe("Open States normalization", () => {
       }
     ])
     expect(result.diagnostics).toEqual([
-      { field: "votes.voter_id", reason: "unmatched vote position was omitted", value: expect.any(Object) },
       { field: "actions.date", reason: "fuzzy date was not fabricated", value: "2025" }
     ])
   })
