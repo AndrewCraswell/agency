@@ -106,6 +106,16 @@ function contentType(value: string | undefined): string | undefined {
   return undefined
 }
 
+function uniqueDocuments<T extends { url: string }>(values: T[]): T[] {
+  const unique = new Map<string, T>()
+  for (const value of values) {
+    if (!unique.has(value.url)) {
+      unique.set(value.url, value)
+    }
+  }
+  return [...unique.values()]
+}
+
 function materials(
   eventId: string,
   values: Array<{ description?: string; documentType?: string; format?: string; name?: string; url: string }>,
@@ -134,7 +144,7 @@ export function normalizeCongressCommitteeMeeting(input: unknown): CongressEvent
   const meeting = source.meeting
   const eventId = legislativeEventId("congress", `committee-meeting-${meeting.eventId}`)
   const date = meeting.date.slice(0, 10)
-  const documents = [...meeting.meetingDocuments, ...meeting.witnessDocuments]
+  const documents = uniqueDocuments([...meeting.meetingDocuments, ...meeting.witnessDocuments])
   return {
     agendaItems: [],
     billIds: meeting.relatedItems.bills.map((bill) => federalBillId(bill.congress, bill.type, bill.number)),
@@ -187,12 +197,14 @@ export function normalizeCongressHearing(input: unknown): CongressEventSnapshot 
   const hearing = source.hearing
   const eventId = legislativeEventId("congress", `published-hearing-${hearing.jacketNumber}`)
   const date = hearing.dates[0]?.date.slice(0, 10) ?? ""
-  const formats = hearing.formats.map((format) => ({
-    documentType: "Hearing transcript",
-    format: format.type,
-    name: hearing.title,
-    url: format.url
-  }))
+  const formats = uniqueDocuments(
+    hearing.formats.map((format) => ({
+      documentType: "Hearing transcript",
+      format: format.type,
+      name: hearing.title,
+      url: format.url
+    }))
+  )
   return {
     agendaItems: [],
     billIds: [],

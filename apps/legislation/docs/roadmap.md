@@ -68,7 +68,7 @@ strings.
 - [x] **E1.4** Add committee memberships with person, organization, title or rank, start, end, and active status when the
   source supplies those dates.
 - [ ] **E1.5** Import state people and current committee snapshots from Open States with per-jurisdiction coverage.
-- [ ] **E1.6** Import federal members, terms, committees, subcommittees, and memberships from Congress.gov; report fields
+- [x] **E1.6** Import federal members, terms, committees, subcommittees, and memberships from Congress.gov; report fields
   or historical ranges that Congress.gov does not supply.
 - [ ] **E1.7** Link existing bill sponsors, vote positions, committee-name arrays, and action organization identifiers to
   canonical people and organizations without discarding unmatched source text.

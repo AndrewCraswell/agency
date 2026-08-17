@@ -41,6 +41,11 @@ fields needed for the proposed model.
 Open States throttled burst traffic with HTTP 429 responses. Paced requests with bounded retry completed the sample.
 Importers must honor throttling and use jurisdiction-scoped pagination rather than concurrent full-corpus detail fetches.
 
+The development credential later reported a hard limit of 250 requests per day while current people, committee, and
+event snapshots were running. Historical session archives do not consume that API quota and completed independently.
+Current entity and event expansion therefore remains restartable but blocked until the daily quota resets or the Open
+States plan is increased; repeated 429 responses with an explicit daily-limit detail are treated as non-retryable.
+
 ## Congress.gov sample and range
 
 Every list endpoint was sampled for each Congress from the 113th through the 119th. All requests succeeded.

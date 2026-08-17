@@ -22,7 +22,7 @@ logic, checkpoints, and retry decisions.
   refresh, and dry run where the underlying command supports them.
 - [ ] **D1.4** Implement the bootstrap sequence: source ingestion, pending-document processing, stale-embedding refresh,
   and final coverage reporting.
-- [ ] **D1.5** Pass the workflow execution ID and correlation ID through every Container Apps Job invocation and retain
+- [x] **D1.5** Pass the workflow execution ID and correlation ID through every Container Apps Job invocation and retain
   the resulting application run ID and summary.
 - [ ] **D1.6** Test duplicate triggers, overlapping runs, interruption, retryable failure, partial failure, and targeted
   replay against disposable development data.
@@ -47,8 +47,8 @@ failure evidence.
 - [x] **D2.1** Acquire the authenticated Open States session archive manifest programmatically and store the discovery
   result in Blob Storage.
 - [x] **D2.2** Compare discovery with the policy set of all 50 states, Washington, D.C., and Puerto Rico from 2017 onward.
-- [ ] **D2.3** Run the restartable Open States import for every available in-policy archive with bounded concurrency.
-- [ ] **D2.4** Replay retryable archive and record failures, then classify the remaining failures as upstream gaps or
+- [x] **D2.3** Run the restartable Open States import for every available in-policy archive with bounded concurrency.
+- [x] **D2.4** Replay retryable archive and record failures, then classify the remaining failures as upstream gaps or
   implementation defects.
 - [ ] **D2.5** Generate state coverage by jurisdiction and session, including bills, actions, sponsors, votes, documents,
   failures, missing archives, and empty archives.

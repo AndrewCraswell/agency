@@ -24,6 +24,14 @@ describe("Congress event normalization", () => {
         title: "AI and the Grid",
         type: "Hearing",
         updateDate: "2026-08-14T22:26:43Z",
+        witnessDocuments: [
+          {
+            documentType: "Witness statement",
+            format: "PDF",
+            name: "Duplicate transcript URL",
+            url: "https://congress.gov/transcript.pdf"
+          }
+        ],
         witnesses: [{ name: "Ms. Example", organization: "Example Energy", position: "President" }]
       },
       sourceUrl: "https://api.congress.gov/v3/committee-meeting/119/house/119189"
@@ -35,6 +43,8 @@ describe("Congress event normalization", () => {
     })
     expect(snapshot.billIds).toEqual(["bill:us:119:hr:6336"])
     expect(snapshot.participants).toHaveLength(2)
+    expect(snapshot.documents).toHaveLength(1)
+    expect(snapshot.materials).toHaveLength(1)
     expect(snapshot.materials[0]?.material).toMatchObject({
       classification: "hearing-transcript",
       contentType: "application/pdf"
