@@ -48,11 +48,13 @@ const relationSchema = z.object({
   relation_type: z.string().optional()
 })
 const voteSchema = z.object({
+  classification: safeArray(z.string()),
   counts: safeArray(z.object({ option: z.string(), value: z.number().int().nonnegative() })),
   id: z.string().optional(),
   identifier: z.string().optional(),
   motion: z.string().optional(),
   motion_text: z.string().optional(),
+  organization_id: z.string().optional(),
   result: z.string().optional(),
   sources: safeArray(sourceSchema),
   start_date: z.string().optional(),
@@ -340,14 +342,23 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
       positions,
       vote: {
         billId: canonicalBillId,
-        chamber: undefined,
-        heldAt: undefined,
+        chamber: chamberFromOrganization(vote.organization_id),
+        classification: vote.classification[0]?.toLowerCase().replaceAll("_", "-") ?? "recorded",
+        heldAt:
+          vote.start_date !== undefined && /^\d{4}-\d{2}-\d{2}T/.test(vote.start_date)
+            ? new Date(vote.start_date)
+            : undefined,
         id: canonicalVoteId,
         motion: vote.motion_text ?? vote.motion ?? vote.identifier ?? "Recorded vote",
         noCount: counts.get("no"),
         otherCount: counts.get("other"),
+        organizationId:
+          vote.organization_id === undefined ? undefined : organizationId("openstates", vote.organization_id),
         result: vote.result,
+        rollCallNumber: vote.identifier,
+        sourceId: vote.id ?? vote.identifier,
         sourceUrl: vote.sources[0]?.url,
+        voteType: vote.classification.join(", ") || undefined,
         yesCount: counts.get("yes")
       }
     }
@@ -426,14 +437,26 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
       },
       people: [...peopleById.values()],
       organizations: uniqueBy(
-        [source.from_organization, ...source.actions.map((action) => action.organization_id)]
-          .filter((value): value is string => value !== undefined)
-          .map((sourceOrganizationId) => ({
-            billId: canonicalBillId,
-            classification: sourceOrganizationId === source.from_organization ? "origin" : "action",
-            organizationId: organizationId("openstates", sourceOrganizationId)
-          })),
-        (organization) => `${organization.organizationId}:${organization.classification}`
+        [
+          ...(source.from_organization === undefined
+            ? []
+            : [{ classification: "origin", sourceOrganizationId: source.from_organization }]),
+          ...source.actions.flatMap((action) =>
+            action.organization_id === undefined
+              ? []
+              : [{ classification: "action", sourceOrganizationId: action.organization_id }]
+          ),
+          ...source.votes.flatMap((vote) =>
+            vote.organization_id === undefined
+              ? []
+              : [{ classification: "vote", sourceOrganizationId: vote.organization_id }]
+          )
+        ].map(({ classification, sourceOrganizationId }) => ({
+          billId: canonicalBillId,
+          classification,
+          organizationId: organizationId("openstates", sourceOrganizationId)
+        })),
+        (organization) => organization.organizationId
       ),
       relations,
       session: {

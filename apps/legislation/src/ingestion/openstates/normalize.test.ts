@@ -73,6 +73,29 @@ describe("Open States normalization", () => {
     expect(result.aggregate.bill.id).toBe("bill:wa:2025-2026:hb:1234")
   })
 
+  it("retains structured committee vote organization links", () => {
+    const source = structuredClone(fixture) as Record<string, unknown>
+    const sourceVotes = source.votes as Array<Record<string, unknown>>
+    sourceVotes[0] = {
+      ...sourceVotes[0],
+      classification: ["committee-passage"],
+      organization_id: "ocd-organization/committee-health",
+      start_date: "2025-03-01T10:30:00-08:00"
+    }
+
+    const result = normalizeOpenStatesBill(source, { jurisdictionCode: "wa", jurisdictionName: "Washington" })
+
+    expect(result.aggregate.votes?.[0]?.vote).toMatchObject({
+      classification: "committee-passage",
+      organizationId: "organization:openstates:ocd-organization-committee-health"
+    })
+    expect(result.aggregate.organizations).toContainEqual({
+      billId: "bill:wa:2025-2026:hb:1234",
+      classification: "vote",
+      organizationId: "organization:openstates:ocd-organization-committee-health"
+    })
+  })
+
   it.each([
     ["1361XD", "bill:ia:2025-2026:xd:1361"],
     ["HJR BB", "bill:mi:2025-2026:hjr:bb"],

@@ -102,6 +102,9 @@ export async function upsertBillAggregate(
       ...(aggregate.actions ?? []).flatMap((action) =>
         action.organizationId === undefined || action.organizationId === null ? [] : [action.organizationId]
       ),
+      ...(aggregate.votes ?? []).flatMap((vote) =>
+        vote.vote.organizationId === undefined || vote.vote.organizationId === null ? [] : [vote.vote.organizationId]
+      ),
       ...(aggregate.organizations ?? []).map((organization) => organization.organizationId)
     ]
     const existingOrganizations =
@@ -156,7 +159,15 @@ export async function upsertBillAggregate(
     if (aggregate.votes !== undefined) {
       await transaction.delete(votes).where(eq(votes.billId, aggregate.bill.id))
       for (const vote of aggregate.votes) {
-        await transaction.insert(votes).values(vote.vote)
+        await transaction.insert(votes).values({
+          ...vote.vote,
+          organizationId:
+            vote.vote.organizationId !== undefined &&
+            vote.vote.organizationId !== null &&
+            validOrganizationIds.has(vote.vote.organizationId)
+              ? vote.vote.organizationId
+              : undefined
+        })
         if (vote.positions !== undefined && vote.positions.length > 0) {
           await transaction.insert(votePositions).values(vote.positions)
         }
@@ -372,6 +383,9 @@ export async function upsertBillAggregates(
       ...(aggregate.actions ?? []).flatMap((action) =>
         action.organizationId === undefined || action.organizationId === null ? [] : [action.organizationId]
       ),
+      ...(aggregate.votes ?? []).flatMap((vote) =>
+        vote.vote.organizationId === undefined || vote.vote.organizationId === null ? [] : [vote.vote.organizationId]
+      ),
       ...(aggregate.organizations ?? []).map((organization) => organization.organizationId)
     ])
     const existingOrganizations =
@@ -404,7 +418,18 @@ export async function upsertBillAggregates(
     const billOrganizationValues = aggregates
       .flatMap((aggregate) => aggregate.organizations ?? [])
       .filter((organization) => validOrganizationIds.has(organization.organizationId))
-    const voteValues = aggregates.flatMap((aggregate) => aggregate.votes?.map((vote) => vote.vote) ?? [])
+    const voteValues = aggregates.flatMap(
+      (aggregate) =>
+        aggregate.votes?.map((vote) => ({
+          ...vote.vote,
+          organizationId:
+            vote.vote.organizationId !== undefined &&
+            vote.vote.organizationId !== null &&
+            validOrganizationIds.has(vote.vote.organizationId)
+              ? vote.vote.organizationId
+              : undefined
+        })) ?? []
+    )
     const positionValues = aggregates.flatMap(
       (aggregate) => aggregate.votes?.flatMap((vote) => vote.positions ?? []) ?? []
     )

@@ -16,7 +16,7 @@ logic, checkpoints, and retry decisions.
 
 - [x] **D1.1** Reconcile the deployed n8n environment variables, managed identity, ingestion job resource ID, and
   immutable application image reference with the checked-in deployment configuration.
-- [x] **D1.2** Re-import the six checked-in workflows and verify that each stable workflow ID updates instead of creating
+- [x] **D1.2** Re-import the nine checked-in workflows and verify that each stable workflow ID updates instead of creating
   duplicates.
 - [x] **D1.3** Add bounded manual inputs for source range, jurisdiction, Congress, bill type, failed-record replay, force
   refresh, and dry run where the underlying command supports them.

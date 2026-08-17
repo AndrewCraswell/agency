@@ -106,7 +106,7 @@ status changes.
   missing times or locations.
 - [x] **E2.7** Reconcile event-to-bill and event-to-committee links using stable IDs first and bounded normalized matching
   only when an upstream ID is unavailable.
-- [ ] **E2.8** Add rolling refresh workflows whose overlap window captures corrections and late cancellations.
+- [x] **E2.8** Add rolling refresh workflows whose overlap window captures corrections and late cancellations.
 - [ ] **E2.9** Report state event freshness and coverage by jurisdiction; do not treat an empty event response as proof
   that the legislature has no scheduled activity.
 - [x] **E2.10** Add query operations for event search, event detail, committee schedules, bill schedules, and available
@@ -137,7 +137,7 @@ amendment, committee, or chamber.
   per jurisdiction.
 - [ ] **E3.5** Import Congress.gov House roll-call data for its supported range and report Congresses or fields it does
   not supply.
-- [ ] **E3.6** Import committee recorded votes only where Open States, Congress.gov, or GovInfo supplies a structured
+- [x] **E3.6** Import committee recorded votes only where Open States, Congress.gov, or GovInfo supplies a structured
   record or reliably classified meeting document; report them separately from floor-roll-call coverage.
 - [ ] **E3.7** Link votes to bills and amendments using structured references and retain unmatched votes as valid chamber
   activity.
@@ -231,7 +231,7 @@ passes its data-quality gate.
 - [ ] **E6.3** Add meeting, hearing, and calendar discovery and detail tools after E2.
 - [ ] **E6.4** Add roll-call discovery and detail tools after E3.
 - [ ] **E6.5** Add amendment and supporting-material discovery and retrieval tools after E4.
-- [ ] **E6.6** Add recent-change queries after E5 without summaries, predictions, or notification delivery.
+- [x] **E6.6** Add recent-change queries after E5 without summaries, predictions, or notification delivery.
 - [ ] **E6.7** Keep tool schemas narrow, paginated, and explicit about coverage gaps and unavailable fields.
 - [ ] **E6.8** Run contract, authorization, payload, latency, and two-client compatibility tests for every added tool.
 - [ ] **E6.9** Run human-reviewed evaluation cases across federal and representative state coverage before declaring a
