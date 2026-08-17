@@ -77,7 +77,8 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
     Path2D: { configurable: true, value: Path2D, writable: true }
   })
   const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs")
-  const loadingTask = getDocument({ data: Uint8Array.from(bytes) })
+  const standardFontDataUrl = new URL("standard_fonts/", import.meta.resolve("pdfjs-dist/package.json")).href
+  const loadingTask = getDocument({ data: Uint8Array.from(bytes), standardFontDataUrl })
   const document = await loadingTask.promise
   const pages: string[] = []
   try {
