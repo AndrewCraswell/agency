@@ -139,7 +139,7 @@ amendment, committee, or chamber.
   not supply.
 - [x] **E3.6** Import committee recorded votes only where Open States, Congress.gov, or GovInfo supplies a structured
   record or reliably classified meeting document; report them separately from floor-roll-call coverage.
-- [ ] **E3.7** Link votes to bills and amendments using structured references and retain unmatched votes as valid chamber
+- [x] **E3.7** Link votes to bills and amendments using structured references and retain unmatched votes as valid chamber
   activity.
 - [x] **E3.8** Validate reported totals against normalized positions and classify proxy, paired, present, absent,
   not-voting, and source-specific options without forcing them into yes or no.

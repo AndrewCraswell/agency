@@ -2,6 +2,7 @@ import { z } from "zod"
 import type { votePositions, votes } from "../../db/schema/schema.js"
 import {
   federalBillId,
+  federalAmendmentId,
   legislativeSessionId,
   legislativeVoteId,
   organizationId,
@@ -75,6 +76,20 @@ function normalizeOption(value: string): VotePositionInsert["option"] {
   return "other"
 }
 
+function structuredLegislationTarget(reference: z.infer<typeof referenceSchema>): {
+  amendmentId?: string
+  billId?: string
+} {
+  if (reference.legislationType === undefined || reference.legislationNumber === undefined) {
+    return {}
+  }
+  const type = reference.legislationType.toLowerCase().replaceAll(/[^a-z0-9]/g, "")
+  if (type === "hamdt" || type === "samdt") {
+    return { amendmentId: federalAmendmentId(reference.congress, type, reference.legislationNumber) }
+  }
+  return { billId: federalBillId(reference.congress, type, reference.legislationNumber) }
+}
+
 export function normalizeCongressHouseVote(input: unknown): CongressHouseVoteSnapshot {
   const source = bundleSchema.parse(input)
   const reference = source.reference
@@ -93,15 +108,12 @@ export function normalizeCongressHouseVote(input: unknown): CongressHouseVoteSna
   const yesCount = positions.filter((position) => position.option === "yes").length
   const noCount = positions.filter((position) => position.option === "no").length
   const otherCount = positions.length - yesCount - noCount
-  const billId =
-    reference.legislationType === undefined || reference.legislationNumber === undefined
-      ? undefined
-      : federalBillId(reference.congress, reference.legislationType, reference.legislationNumber)
+  const target = structuredLegislationTarget(reference)
 
   return {
     positions,
     vote: {
-      billId,
+      ...target,
       chamber: "lower",
       classification: "roll-call",
       heldAt: new Date(source.vote.startDate),

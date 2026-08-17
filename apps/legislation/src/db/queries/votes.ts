@@ -1,17 +1,29 @@
 import { eq, inArray, sql } from "drizzle-orm"
 import type { CongressHouseVoteSnapshot } from "../../ingestion/congress/votes.js"
 import type { LegislationDatabase } from "../database.js"
-import { bills, legislativeSessions, organizations, people, votePositions, votes } from "../schema/schema.js"
+import {
+  amendments,
+  bills,
+  legislativeSessions,
+  organizations,
+  people,
+  votePositions,
+  votes
+} from "../schema/schema.js"
 import { observeCanonicalRecord } from "./changes.js"
 
 export async function upsertCongressHouseVoteSnapshot(
   database: LegislationDatabase,
   snapshot: CongressHouseVoteSnapshot
 ): Promise<void> {
+  const amendmentId = snapshot.vote.amendmentId ?? undefined
   const billId = snapshot.vote.billId ?? undefined
   const organizationId = snapshot.vote.organizationId ?? undefined
   const sessionId = snapshot.vote.sessionId ?? undefined
-  const [bill, organization, session] = await Promise.all([
+  const [amendment, bill, organization, session] = await Promise.all([
+    amendmentId === undefined
+      ? []
+      : database.select({ id: amendments.id }).from(amendments).where(eq(amendments.id, amendmentId)).limit(1),
     billId === undefined ? [] : database.select({ id: bills.id }).from(bills).where(eq(bills.id, billId)).limit(1),
     organizationId === undefined
       ? []
@@ -42,12 +54,14 @@ export async function upsertCongressHouseVoteSnapshot(
       .insert(votes)
       .values({
         ...snapshot.vote,
+        amendmentId: amendment[0]?.id,
         billId: bill[0]?.id,
         organizationId: organization[0]?.id,
         sessionId: session[0]?.id
       })
       .onConflictDoUpdate({
         set: {
+          amendmentId: sql`excluded.amendment_id`,
           billId: sql`excluded.bill_id`,
           chamber: sql`excluded.chamber`,
           classification: sql`excluded.classification`,
@@ -80,6 +94,7 @@ export async function upsertCongressHouseVoteSnapshot(
     }
     await observeCanonicalRecord(transaction, {
       fields: {
+        amendmentId: amendment[0]?.id,
         billId: bill[0]?.id,
         heldAt: snapshot.vote.heldAt,
         motion: snapshot.vote.motion,
