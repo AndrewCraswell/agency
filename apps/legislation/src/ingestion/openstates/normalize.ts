@@ -186,6 +186,16 @@ function normalizeVoteOption(value: string): string {
   return "other"
 }
 
+function nonBlank(value: string | undefined): string | undefined {
+  const normalized = value?.trim()
+  return normalized === "" ? undefined : normalized
+}
+
+function optionalOrganizationId(value: string | undefined): string | undefined {
+  const providerOrganizationId = nonBlank(value)
+  return providerOrganizationId === undefined ? undefined : organizationId("openstates", providerOrganizationId)
+}
+
 function uniqueBy<T>(values: readonly T[], identity: (value: T) => string): T[] {
   const seen = new Set<string>()
   return values.filter((value) => {
@@ -308,14 +318,18 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
   )
 
   const votes = source.votes.map((vote, voteOrdinal) => {
-    const voteIdentity = vote.id ?? vote.identifier ?? `${vote.start_date ?? "undated"}:${voteOrdinal}`
+    const providerVoteId = nonBlank(vote.id)
+    const providerOrganizationId = nonBlank(vote.organization_id)
+    const rollCallNumber = nonBlank(vote.identifier)
+    const voteIdentity = providerVoteId ?? rollCallNumber ?? `${vote.start_date ?? "undated"}:${voteOrdinal}`
     const canonicalVoteId = childId("vote", canonicalBillId, voteIdentity)
     const counts = new Map(vote.counts.map((count) => [normalizeVoteOption(count.option), count.value]))
     const positions = uniqueBy(
       vote.votes.flatMap((position) => {
-        const sourcePersonId = position.voter_id ?? `vote-name:${context.jurisdictionCode}:${position.voter_name}`
+        const providerPersonId = nonBlank(position.voter_id)
+        const sourcePersonId = providerPersonId ?? `vote-name:${context.jurisdictionCode}:${position.voter_name}`
         const canonicalPersonId = personId(
-          position.voter_id === undefined ? "openstates-voter-name" : "openstates",
+          providerPersonId === undefined ? "openstates-voter-name" : "openstates",
           sourcePersonId
         )
         peopleById.set(canonicalPersonId, {
@@ -324,9 +338,9 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
           name: position.voter_name,
           sourceId: sourcePersonId,
           upstreamIds:
-            position.voter_id === undefined
+            providerPersonId === undefined
               ? { openstatesVoteName: position.voter_name }
-              : { openstates: position.voter_id }
+              : { openstates: providerPersonId }
         })
         return [
           {
@@ -346,20 +360,20 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
       vote: {
         billId: canonicalBillId,
         chamber: chamberFromOrganization(vote.organization_id),
-        classification: vote.classification[0]?.toLowerCase().replaceAll("_", "-") ?? "recorded",
+        classification: nonBlank(vote.classification[0])?.toLowerCase().replaceAll("_", "-") ?? "recorded",
         heldAt:
           vote.start_date !== undefined && /^\d{4}-\d{2}-\d{2}T/.test(vote.start_date)
             ? new Date(vote.start_date)
             : undefined,
         id: canonicalVoteId,
-        motion: vote.motion_text ?? vote.motion ?? vote.identifier ?? "Recorded vote",
+        motion: nonBlank(vote.motion_text) ?? nonBlank(vote.motion) ?? rollCallNumber ?? "Recorded vote",
         noCount: counts.get("no"),
         otherCount: counts.get("other"),
         organizationId:
-          vote.organization_id === undefined ? undefined : organizationId("openstates", vote.organization_id),
+          providerOrganizationId === undefined ? undefined : organizationId("openstates", providerOrganizationId),
         result: vote.result,
-        rollCallNumber: vote.identifier,
-        sourceId: vote.id ?? vote.identifier,
+        rollCallNumber,
+        sourceId: providerVoteId,
         sourceUrl: vote.sources[0]?.url,
         voteType: vote.classification.join(", ") || undefined,
         yesCount: counts.get("yes")
@@ -379,10 +393,9 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
         canonicalBillId,
         `${action.order ?? index}:${action.date ?? "undated"}:${action.description}`
       ),
-      organizationId:
-        action.organization_id === undefined ? undefined : organizationId("openstates", action.organization_id),
+      organizationId: optionalOrganizationId(action.organization_id),
       ordinal: action.order ?? index,
-      sourceOrganizationId: action.organization_id
+      sourceOrganizationId: nonBlank(action.organization_id)
     })),
     (action) => String(action.ordinal)
   )
@@ -412,6 +425,23 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
       .filter((relation) => relation.relatedBillId !== canonicalBillId),
     (relation) => `${relation.relatedBillId}:${relation.classification}`
   )
+  const organizationLinks: Array<{ classification: string; sourceOrganizationId: string }> = []
+  const sourceOrganizationId = nonBlank(source.from_organization)
+  if (sourceOrganizationId !== undefined) {
+    organizationLinks.push({ classification: "origin", sourceOrganizationId })
+  }
+  for (const action of source.actions) {
+    const actionOrganizationId = nonBlank(action.organization_id)
+    if (actionOrganizationId !== undefined) {
+      organizationLinks.push({ classification: "action", sourceOrganizationId: actionOrganizationId })
+    }
+  }
+  for (const vote of source.votes) {
+    const voteOrganizationId = nonBlank(vote.organization_id)
+    if (voteOrganizationId !== undefined) {
+      organizationLinks.push({ classification: "vote", sourceOrganizationId: voteOrganizationId })
+    }
+  }
 
   return {
     aggregate: {
@@ -440,21 +470,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
       },
       people: [...peopleById.values()],
       organizations: uniqueBy(
-        [
-          ...(source.from_organization === undefined
-            ? []
-            : [{ classification: "origin", sourceOrganizationId: source.from_organization }]),
-          ...source.actions.flatMap((action) =>
-            action.organization_id === undefined
-              ? []
-              : [{ classification: "action", sourceOrganizationId: action.organization_id }]
-          ),
-          ...source.votes.flatMap((vote) =>
-            vote.organization_id === undefined
-              ? []
-              : [{ classification: "vote", sourceOrganizationId: vote.organization_id }]
-          )
-        ].map(({ classification, sourceOrganizationId }) => ({
+        organizationLinks.map(({ classification, sourceOrganizationId }) => ({
           billId: canonicalBillId,
           classification,
           organizationId: organizationId("openstates", sourceOrganizationId)

@@ -98,6 +98,32 @@ describe("Open States normalization", () => {
     })
   })
 
+  it("treats blank historical vote identities as missing", () => {
+    const source = structuredClone(fixture) as Record<string, unknown>
+    const sourceVote = (source.votes as Array<Record<string, unknown>>)[0]
+    sourceVote.id = ""
+    sourceVote.identifier = " "
+    sourceVote.organization_id = ""
+    sourceVote.votes = (sourceVote.votes as Array<Record<string, unknown>>).map((position) => ({
+      ...position,
+      voter_id: ""
+    }))
+
+    const result = normalizeOpenStatesBill(source, { jurisdictionCode: "wa", jurisdictionName: "Washington" })
+
+    expect(result.aggregate.votes?.[0]?.vote).toMatchObject({
+      classification: "recorded",
+      motion: "Third reading, final passage"
+    })
+    expect(result.aggregate.votes?.[0]?.vote.sourceId).toBeUndefined()
+    expect(result.aggregate.votes?.[0]?.vote.rollCallNumber).toBeUndefined()
+    expect(result.aggregate.votes?.[0]?.vote.organizationId).toBeUndefined()
+    expect(result.aggregate.votes?.[0]?.positions).toEqual([
+      expect.objectContaining({ personId: "person:openstates-voter-name:vote-name-wa-representative-example" }),
+      expect.objectContaining({ personId: "person:openstates-voter-name:vote-name-wa-unmatched-member" })
+    ])
+  })
+
   it("retains unstructured amendment links as classified bill documents", () => {
     const source = structuredClone(fixture) as Record<string, unknown>
     source.documents = [
