@@ -54,3 +54,15 @@ the full replay reaches a terminal result and a final report records the resulti
 Current federal supporting-material cohorts include amendment text, hearing transcripts, meeting documents, member
 statements, testimony, and witness statements. These counts are expected to grow during the pending full event and
 amendment backfills.
+
+## Integrity checkpoint
+
+The deterministic corpus validator ran against the full live database at 2026-08-17T16:46:53Z. It found zero duplicate
+bill identifiers or document-section ordinals, zero invalid session dates, zero orphan actions, documents, sponsors,
+sections, votes, or vote positions, zero self-relations, and zero bills missing required text fields. The first run
+exposed a validator false positive for valid non-bill-targeted votes; commit `5ef957e` narrowed that check to votes that
+actually declare a bill target, after which the full validation passed with zero critical issues.
+
+Noncritical coverage diagnostics remain visible rather than being mislabeled as integrity failures. These include
+source-dependent votes without member positions, unresolved references to bills outside the imported policy range, and
+state committee names for which the provider has not supplied a matching organization snapshot.

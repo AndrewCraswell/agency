@@ -69,7 +69,7 @@ failure evidence.
 
 ### Corpus proof tasks
 
-- [ ] **D2.13** Run duplicate, orphan, required-field, relation, ordering, and impossible-date validation across the full
+- [x] **D2.13** Run duplicate, orphan, required-field, relation, ordering, and impossible-date validation across the full
   database.
 - [ ] **D2.14** Compare discovered upstream artifacts with database coverage and explain every material gap.
 - [ ] **D2.15** Store the final discovery manifests, coverage reports, failure reports, validation output, sample record,
