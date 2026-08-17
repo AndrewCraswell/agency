@@ -1180,6 +1180,7 @@ async function processDocuments(options: {
   status?: string
 }) {
   const config = loadConfig()
+  const logger = createCommandLogger(config)
   if (options.all === true && options.status !== undefined) {
     throw new InvalidJobInput("--all cannot be combined with --status")
   }
@@ -1199,6 +1200,7 @@ async function processDocuments(options: {
           status = parseDocumentStatus(options.status)
         }
         let hasMoreDocuments = true
+        let batches = 0
         do {
           const processed = await processPendingDocuments(database, {
             artifactStore,
@@ -1215,6 +1217,8 @@ async function processDocuments(options: {
             counts[key] += processed.counts[key]
           }
           failures.push(...processed.failures)
+          batches += 1
+          logger.info("document processing progress", { batches, counts })
           hasMoreDocuments = options.all === true && processed.counts.discovered === limit
         } while (hasMoreDocuments)
         return { counts, failures }
@@ -1233,6 +1237,7 @@ async function processSupportingMaterials(options: {
   status?: string
 }) {
   const config = loadConfig()
+  const logger = createCommandLogger(config)
   if (options.all === true && options.status !== undefined) {
     throw new InvalidJobInput("--all cannot be combined with --status")
   }
@@ -1257,6 +1262,7 @@ async function processSupportingMaterials(options: {
           status = parseDocumentStatus(options.status)
         }
         let hasMoreMaterials = true
+        let batches = 0
         do {
           const processed = await processPendingSupportingMaterials(database, {
             artifactStore,
@@ -1272,6 +1278,8 @@ async function processSupportingMaterials(options: {
             counts[key] += processed.counts[key]
           }
           failures.push(...processed.failures)
+          batches += 1
+          logger.info("supporting material processing progress", { batches, counts })
           hasMoreMaterials = options.all === true && processed.counts.discovered === limit
         } while (hasMoreMaterials)
         return { counts, failures }
