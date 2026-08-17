@@ -646,6 +646,43 @@ export const supportingMaterials = legislationSchema.table(
   ]
 )
 
+export const supportingMaterialSections = legislationSchema.table(
+  "supporting_material_sections",
+  {
+    id: text("id").primaryKey(),
+    materialId: text("material_id")
+      .notNull()
+      .references(() => supportingMaterials.id, { onDelete: "cascade" }),
+    ordinal: integer("ordinal").notNull(),
+    sectionIdentifier: text("section_identifier"),
+    heading: text("heading"),
+    sourceStartOffset: integer("source_start_offset").notNull(),
+    sourceEndOffset: integer("source_end_offset").notNull(),
+    text: text("text").notNull(),
+    contentHash: char("content_hash", { length: 64 }).notNull(),
+    searchVector: tsvector("search_vector"),
+    embedding: vector("embedding", { dimensions: 1536 }),
+    embeddingInputHash: char("embedding_input_hash", { length: 64 }),
+    embeddingModel: text("embedding_model"),
+    embeddedAt: timestamp("embedded_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("supporting_material_sections_ordinal_check", sql`${table.ordinal} >= 0`),
+    check(
+      "supporting_material_sections_offsets_check",
+      sql`${table.sourceStartOffset} >= 0 and ${table.sourceEndOffset} >= ${table.sourceStartOffset}`
+    ),
+    check("supporting_material_sections_text_check", sql`length(${table.text}) > 0`),
+    check("supporting_material_sections_hash_check", sql`${table.contentHash} ~ '^[0-9a-f]{64}$'`),
+    uniqueIndex("supporting_material_sections_ordinal_uidx").on(table.materialId, table.ordinal),
+    index("supporting_material_sections_identifier_idx").on(table.materialId, table.sectionIdentifier),
+    index("supporting_material_sections_search_vector_gin_idx").using("gin", table.searchVector),
+    index("supporting_material_sections_embedding_hnsw_idx").using("hnsw", table.embedding.op("vector_cosine_ops"))
+  ]
+)
+
 export const supportingMaterialLinks = legislationSchema.table(
   "supporting_material_links",
   {

@@ -10,7 +10,8 @@ import { synchronizeCongress } from "../../ingestion/congress/sync.js"
 import type { ArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import { processPendingDocuments } from "../../ingestion/documents/jobs.js"
 import { persistProcessedDocument } from "../../ingestion/documents/process.js"
-import { embedBills, embedDocumentSections } from "../../ingestion/embeddings/jobs.js"
+import { processPendingSupportingMaterials } from "../../ingestion/documents/supporting-material-jobs.js"
+import { embedBills, embedDocumentSections, embedSupportingMaterialSections } from "../../ingestion/embeddings/jobs.js"
 import { GovInfoClient } from "../../ingestion/govinfo/client.js"
 import { importGovInfoPackages } from "../../ingestion/govinfo/import.js"
 import { RetryingHttpClient } from "../../ingestion/http-client.js"
@@ -490,6 +491,66 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
         .from(schema.documentSections)
         .where(eq(schema.documentSections.documentId, documentId))
     ).resolves.toEqual([expect.objectContaining({ text: expect.stringContaining("targeted retry") })])
+  })
+
+  it("processes, indexes, embeds, and retrieves supporting-material sections", async () => {
+    const materialId = "material:us:119:committee-report:1"
+    await database.insert(schema.supportingMaterials).values({
+      classification: "committee-report",
+      id: materialId,
+      jurisdictionId: "jurisdiction:us",
+      sourceId: "committee-report-1",
+      sourceUrl: "https://example.test/committee-report.txt",
+      title: "Committee report on federal data"
+    })
+    const artifacts = new Map<string, Uint8Array>()
+    const artifactStore: ArtifactStore = {
+      exists: async (path) => artifacts.has(path),
+      put: async (path, bytes) => {
+        const created = !artifacts.has(path)
+        artifacts.set(path, bytes)
+        return created
+      },
+      read: async (path) => artifacts.get(path) ?? new Uint8Array()
+    }
+    const fetchMaterial: typeof fetch = async () => {
+      const response = new Response("SECTION 1. FINDINGS.\nThe committee found improved public data access.", {
+        headers: { "content-type": "text/plain; charset=utf-8" }
+      })
+      Object.defineProperty(response, "url", { value: "https://example.test/committee-report.txt" })
+      return response
+    }
+
+    await expect(
+      processPendingSupportingMaterials(database, {
+        artifactStore,
+        concurrency: 1,
+        fetch: fetchMaterial,
+        materialId
+      })
+    ).resolves.toMatchObject({ counts: { failed: 0, processed: 1, read: 1 } })
+    const embedding = Array.from({ length: 1536 }, () => 0.1)
+    const embeddingClient = {
+      embed: async (input: string[]) => ({ embeddings: input.map(() => embedding), model: EMBEDDING_MODEL })
+    }
+    await expect(embedSupportingMaterialSections(database, embeddingClient, { materialId })).resolves.toEqual({
+      embedded: 1,
+      skipped: 0
+    })
+    await expect(embedSupportingMaterialSections(database, embeddingClient, { materialId })).resolves.toEqual({
+      embedded: 0,
+      skipped: 1
+    })
+
+    const service = new LegislationQueryService(database, embeddingClient)
+    await expect(service.searchSupportingMaterials({ query: "improved public data access" })).resolves.toMatchObject({
+      items: [{ id: materialId }]
+    })
+    await expect(service.getSupportingMaterial({ id: materialId })).resolves.toMatchObject({
+      material: { id: materialId, processingStatus: "processed" },
+      sections: [expect.objectContaining({ text: expect.stringContaining("public data access") })],
+      truncated: false
+    })
   })
 
   it("replays from the first failed Open States record without duplicating committed records", async () => {

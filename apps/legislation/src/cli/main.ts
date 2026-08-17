@@ -23,7 +23,8 @@ import {
   type ArtifactStore
 } from "../ingestion/documents/artifact-store.js"
 import { processPendingDocuments } from "../ingestion/documents/jobs.js"
-import { embedBills, embedDocumentSections } from "../ingestion/embeddings/jobs.js"
+import { processPendingSupportingMaterials } from "../ingestion/documents/supporting-material-jobs.js"
+import { embedBills, embedDocumentSections, embedSupportingMaterialSections } from "../ingestion/embeddings/jobs.js"
 import { GovInfoClient } from "../ingestion/govinfo/client.js"
 import { importGovInfoPackages } from "../ingestion/govinfo/import.js"
 import { RetryingHttpClient } from "../ingestion/http-client.js"
@@ -197,10 +198,22 @@ program
   .action(processDocuments)
 
 program
+  .command("materials:process")
+  .description("Acquire and process pending supporting materials")
+  .option("--material-id <id>")
+  .option("--all", "continue until every pending supporting material has been attempted")
+  .option("--force", "download and process even when an artifact is already complete")
+  .option("--jurisdiction-id <id>")
+  .option("--limit <number>", "maximum supporting materials", "100")
+  .option("--status <status>", "limit to pending, failed, or unsupported materials")
+  .action(processSupportingMaterials)
+
+program
   .command("embeddings:run")
   .description("Create missing or stale bill and passage embeddings")
   .option("--bill-id <id>", "limit bill and section work to one canonical bill")
   .option("--document-id <id>", "limit section work to one document")
+  .option("--material-id <id>", "limit supporting-material section work to one material")
   .option("--all", "continue until every missing bill and section embedding is created")
   .option("--limit <number>", "maximum records per kind", "64")
   .action(runEmbeddings)
@@ -1128,7 +1141,70 @@ async function processDocuments(options: {
   }, config)
 }
 
-async function runEmbeddings(options: { all?: boolean; billId?: string; documentId?: string; limit: string }) {
+async function processSupportingMaterials(options: {
+  all?: boolean
+  force?: boolean
+  jurisdictionId?: string
+  limit: string
+  materialId?: string
+  status?: string
+}) {
+  const config = loadConfig()
+  if (options.all === true && options.status !== undefined) {
+    throw new InvalidJobInput("--all cannot be combined with --status")
+  }
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: "process-supporting-materials",
+        scope: { ...options },
+        source: "documents"
+      },
+      async () => {
+        const limit = parseInteger(options.limit, "limit")
+        const counts = { ...createJobCounts(), processed: 0, unsupported: 0 }
+        const failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>> = []
+        const artifactStore = createArtifactStore(config, "documents")
+        let status: "failed" | "pending" | "unsupported" | undefined
+        if (options.all === true) {
+          status = "pending"
+        } else if (options.status !== undefined) {
+          status = parseDocumentStatus(options.status)
+        }
+        let hasMoreMaterials = true
+        do {
+          const processed = await processPendingSupportingMaterials(database, {
+            artifactStore,
+            concurrency: config.ingestion.concurrency,
+            force: options.force,
+            jurisdictionId: options.jurisdictionId,
+            limit,
+            materialId: options.materialId,
+            status,
+            timeoutMs: config.ingestion.requestTimeoutMs
+          })
+          for (const key of Object.keys(counts) as Array<keyof typeof counts>) {
+            counts[key] += processed.counts[key]
+          }
+          failures.push(...processed.failures)
+          hasMoreMaterials = options.all === true && processed.counts.discovered === limit
+        } while (hasMoreMaterials)
+        return { counts, failures }
+      }
+    )
+    printJobResult(result)
+  }, config)
+}
+
+async function runEmbeddings(options: {
+  all?: boolean
+  billId?: string
+  documentId?: string
+  limit: string
+  materialId?: string
+}) {
   const config = loadConfig()
   if (config.model.apiKey === undefined) {
     throw new InvalidJobInput("OPENROUTER_API_KEY is required for embeddings:run")
@@ -1166,9 +1242,15 @@ async function runEmbeddings(options: { all?: boolean; billId?: string; document
                   limit
                 })
             )
-            embedded += bills.embedded + sections.embedded
-            skipped += bills.skipped + sections.skipped
-            hasMoreEmbeddings = options.all === true && (bills.embedded > 0 || sections.embedded > 0)
+            const materials = await telemetry.observe(
+              "embedding.supporting_material_sections",
+              { batchLimit: limit, model: config.model.embeddingModel },
+              () => embedSupportingMaterialSections(database, client, { limit, materialId: options.materialId })
+            )
+            embedded += bills.embedded + sections.embedded + materials.embedded
+            skipped += bills.skipped + sections.skipped + materials.skipped
+            hasMoreEmbeddings =
+              options.all === true && (bills.embedded > 0 || sections.embedded > 0 || materials.embedded > 0)
           } while (hasMoreEmbeddings)
           return {
             counts: createJobCounts({

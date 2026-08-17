@@ -12,6 +12,10 @@ Locate the document ID and official source URL in the run summary. `unsupported`
 manual treatment; `failed` is retryable. Re-run `documents:process --document-id <id>`. The immutable artifact is reused
 unless `--force` is supplied. Compare the new section hashes and confirm stale embeddings are regenerated.
 
+Supporting materials use the same recovery model. Re-run `materials:process --material-id <id>` for a single committee
+report, hearing document, fiscal note, analysis, or other material. Use `materials:process --all` only for the bounded
+pending queue; unsupported formats remain terminal until their extraction support changes.
+
 ## Embedding failure
 
 Confirm the OpenRouter status, pinned model, batch count, and retry exhaustion without inspecting full text. Retry

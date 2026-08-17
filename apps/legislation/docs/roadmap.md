@@ -174,7 +174,7 @@ committees, meetings, actions, and votes where the source provides those relatio
   official text packages.
 - [ ] **E4.7** Retain state fiscal notes, analyses, and supplemental documents from Open States with per-type coverage
   rather than promising uniform availability.
-- [ ] **E4.8** Reuse the existing artifact acquisition, extraction, sectioning, lexical search, and embedding pipeline for
+- [x] **E4.8** Reuse the existing artifact acquisition, extraction, sectioning, lexical search, and embedding pipeline for
   new searchable document types.
 - [x] **E4.9** Add quality checks for broken relationships, duplicate documents, missing text, unsupported formats, and
   amendment-to-bill ambiguity.

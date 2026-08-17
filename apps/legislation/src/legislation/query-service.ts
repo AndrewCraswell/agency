@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm"
+import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
 import { findChangeEvents } from "../db/queries/changes.js"
 import {
@@ -22,6 +22,7 @@ import {
   organizations,
   people,
   supportingMaterialLinks,
+  supportingMaterialSections,
   supportingMaterials,
   votePositions,
   votes
@@ -571,7 +572,13 @@ export class LegislationQueryService {
           input.billId === undefined ? undefined : eq(supportingMaterialLinks.billId, input.billId),
           input.amendmentId === undefined ? undefined : eq(supportingMaterialLinks.amendmentId, input.amendmentId),
           input.eventId === undefined ? undefined : eq(supportingMaterialLinks.eventId, input.eventId),
-          input.query === undefined ? undefined : ilike(supportingMaterials.title, `%${input.query}%`)
+          input.query === undefined
+            ? undefined
+            : sql`(${supportingMaterials.title} ilike ${`%${input.query}%`} or exists (
+                select 1 from ${supportingMaterialSections}
+                where ${supportingMaterialSections.materialId} = ${supportingMaterials.id}
+                  and ${supportingMaterialSections.searchVector} @@ websearch_to_tsquery('english', ${input.query})
+              ))`
         )
       )
       .orderBy(asc(supportingMaterials.documentDate), asc(supportingMaterials.id))
@@ -594,11 +601,26 @@ export class LegislationQueryService {
     if (material[0] === undefined) {
       throw new LegislationError("not_found", `Supporting material ${lookup.id} was not found`)
     }
-    const links = await this.#database
-      .select()
-      .from(supportingMaterialLinks)
-      .where(eq(supportingMaterialLinks.materialId, lookup.id))
-    return { links, material: material[0] }
+    const limit = Math.min(Math.max(lookup.limit ?? SECTION_LIMIT, 1), SECTION_LIMIT)
+    const offset = decodeOffset(lookup.cursor)
+    const [links, sections] = await Promise.all([
+      this.#database.select().from(supportingMaterialLinks).where(eq(supportingMaterialLinks.materialId, lookup.id)),
+      this.#database
+        .select()
+        .from(supportingMaterialSections)
+        .where(eq(supportingMaterialSections.materialId, lookup.id))
+        .orderBy(asc(supportingMaterialSections.ordinal))
+        .limit(limit + 1)
+        .offset(offset)
+    ])
+    const truncated = sections.length > limit
+    return {
+      links,
+      material: material[0],
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      sections: sections.slice(0, limit),
+      truncated
+    }
   }
 
   async searchBills(input: SearchInput & { mode?: "hybrid" | "lexical" | "semantic" }) {
