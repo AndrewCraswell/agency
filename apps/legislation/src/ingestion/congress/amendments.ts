@@ -23,7 +23,7 @@ const actionSchema = z
     actionCode: optionalString,
     actionDate: optionalString,
     actionTime: optionalString,
-    text: z.string().min(1),
+    text: optionalString,
     type: optionalString
   })
   .passthrough()
@@ -115,15 +115,22 @@ export function normalizeCongressAmendmentBundle(input: unknown): CongressAmendm
   const sponsor = amendment.sponsors[0]
   const printedIdentifier = `${amendment.type.toUpperCase()} ${amendment.number}`
   return {
-    actions: source.actions.map((action, ordinal) => ({
-      actionDate: dateOnly(action.actionDate),
-      amendmentId: canonicalAmendmentId,
-      classification: action.type === undefined ? [] : [action.type.toLowerCase()],
-      description: action.text,
-      id: amendmentChildId("action", canonicalAmendmentId, `${ordinal}:${action.actionCode ?? action.text}`),
-      ordinal,
-      sourceUrl: source.sourceUrl
-    })),
+    actions: source.actions.flatMap((action, ordinal) => {
+      const description = action.text ?? action.actionCode ?? action.type
+      return description === undefined
+        ? []
+        : [
+            {
+              actionDate: dateOnly(action.actionDate),
+              amendmentId: canonicalAmendmentId,
+              classification: action.type === undefined ? [] : [action.type.toLowerCase()],
+              description,
+              id: amendmentChildId("action", canonicalAmendmentId, `${ordinal}:${action.actionCode ?? description}`),
+              ordinal,
+              sourceUrl: source.sourceUrl
+            }
+          ]
+    }),
     amendment: {
       amendmentNumber: amendment.number,
       amendmentType: amendment.type.toLowerCase(),

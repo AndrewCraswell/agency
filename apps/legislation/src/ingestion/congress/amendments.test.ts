@@ -6,6 +6,11 @@ describe("Congress amendment normalization", () => {
     const snapshot = normalizeCongressAmendmentBundle({
       actions: [
         {
+          actionCode: "Intro-S",
+          actionDate: "2025-01-03",
+          type: "IntroReferral"
+        },
+        {
           actionCode: "73000",
           actionDate: "2025-01-03",
           actionTime: "15:40:08",
@@ -42,7 +47,8 @@ describe("Congress amendment normalization", () => {
       sponsorPersonId: "person:congress:a000371",
       status: "failed"
     })
-    expect(snapshot.actions[0]).toMatchObject({ actionDate: "2025-01-03", classification: ["floor"] })
+    expect(snapshot.actions[0]).toMatchObject({ description: "Intro-S", classification: ["introreferral"] })
+    expect(snapshot.actions[1]).toMatchObject({ actionDate: "2025-01-03", classification: ["floor"] })
     expect(snapshot.materials[0]).toMatchObject({
       link: { amendmentId: "amendment:us:119:hamdt:1", billId: "bill:us:119:hres:1" },
       material: { classification: "amendment-text", contentType: "application/pdf" }
