@@ -28,6 +28,7 @@
     "db:status": "docker compose -f infra/local/compose.yaml ps",
     "db:up": "docker compose -f infra/local/compose.yaml up -d --wait",
     "db:wait": "tsx src/cli/main.ts db:wait",
+    "development:evidence": "tsx scripts/audit-development-evidence.ts",
     "dev": "tsx watch src/cli/main.ts serve",
     "eval:local": "tsx scripts/evaluate-mcp-local.mjs",
     "container:prepare": "node scripts/prepare-container-context.mjs",

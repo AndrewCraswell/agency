@@ -7,6 +7,7 @@
 - [Canonical vocabulary](canonical-vocabulary.md)
 - [Product specification](product-spec.md)
 - [Coverage policy](coverage-policy.md)
+- [Development evidence audit](development-evidence-audit.md)
 - [MCP tool contracts](tool-contracts.md)
 - [Architecture decisions](architecture-decisions.md)
 
