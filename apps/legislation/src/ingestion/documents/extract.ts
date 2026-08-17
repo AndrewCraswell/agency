@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto"
+import { fileURLToPath } from "node:url"
 import * as cheerio from "cheerio"
 import { XMLParser } from "fast-xml-parser"
 import iconv from "iconv-lite"
@@ -77,7 +78,9 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
     Path2D: { configurable: true, value: Path2D, writable: true }
   })
   const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs")
-  const standardFontDataUrl = new URL("standard_fonts/", import.meta.resolve("pdfjs-dist/package.json")).href
+  const standardFontDataUrl = fileURLToPath(
+    new URL("standard_fonts/", import.meta.resolve("pdfjs-dist/package.json"))
+  ).replaceAll("\\", "/")
   const loadingTask = getDocument({ data: Uint8Array.from(bytes), standardFontDataUrl })
   const document = await loadingTask.promise
   const pages: string[] = []
