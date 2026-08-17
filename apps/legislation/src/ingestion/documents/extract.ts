@@ -70,6 +70,12 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
   // PDF.js loads optional canvas bindings at module initialization. Keep that
   // initialization off the server and CLI startup path so deployments that do
   // not process PDFs are not coupled to the native canvas package.
+  const { DOMMatrix, ImageData, Path2D } = await import("@napi-rs/canvas")
+  Object.defineProperties(globalThis, {
+    DOMMatrix: { configurable: true, value: DOMMatrix, writable: true },
+    ImageData: { configurable: true, value: ImageData, writable: true },
+    Path2D: { configurable: true, value: Path2D, writable: true }
+  })
   const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs")
   const loadingTask = getDocument({ data: Uint8Array.from(bytes) })
   const document = await loadingTask.promise

@@ -52,6 +52,7 @@
     "@langfuse/tracing": "^5.10.0",
     "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
+    "@napi-rs/canvas": "1.0.3",
     "@opentelemetry/sdk-node": "^0.221.0",
     "cheerio": "^1.2.0",
     "commander": "^15.0.0",
