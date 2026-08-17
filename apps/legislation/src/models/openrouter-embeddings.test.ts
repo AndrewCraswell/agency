@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest"
-import { EMBEDDING_DIMENSIONS, EMBEDDING_MODEL, OpenRouterEmbeddingClient } from "./openrouter-embeddings.js"
+import {
+  EMBEDDING_DIMENSIONS,
+  EMBEDDING_MODEL,
+  MAX_EMBEDDING_INPUT_CHARACTERS,
+  OpenRouterEmbeddingClient
+} from "./openrouter-embeddings.js"
 
 function successfulResponse(model = EMBEDDING_MODEL, dimensions = EMBEDDING_DIMENSIONS) {
   return new Response(
@@ -33,6 +38,16 @@ describe("OpenRouter embedding client", () => {
       model: EMBEDDING_MODEL,
       provider: { allow_fallbacks: false, data_collection: "deny" }
     })
+  })
+
+  it("caps inputs below the provider token ceiling", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(successfulResponse())
+    const client = new OpenRouterEmbeddingClient({ apiKey: "secret", fetch: fetchMock })
+
+    await client.embed(["A".repeat(MAX_EMBEDDING_INPUT_CHARACTERS + 1_000)])
+
+    const request = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
+    expect(request.input[0]).toHaveLength(MAX_EMBEDDING_INPUT_CHARACTERS)
   })
 
   it("retries transient failures and rejects model or dimension drift", async () => {
@@ -71,6 +86,7 @@ describe("OpenRouter embedding client", () => {
     })
     const rejection = await client.embed(["text"]).catch((error: unknown) => error)
     expect(String(rejection)).not.toContain("super-secret")
+    expect(String(rejection)).toContain("denied")
     expect(client.metrics.failed).toBe(1)
   })
 })

@@ -2,7 +2,12 @@ import { z } from "zod"
 
 export const EMBEDDING_MODEL = "openai/text-embedding-3-small"
 export const EMBEDDING_DIMENSIONS = 1_536
+export const MAX_EMBEDDING_INPUT_CHARACTERS = 16_000
 const MAXIMUM_BATCH_SIZE = 64
+
+export function limitEmbeddingInput(value: string): string {
+  return value.slice(0, MAX_EMBEDDING_INPUT_CHARACTERS)
+}
 
 const responseSchema = z.object({
   data: z.array(z.object({ embedding: z.array(z.number()), index: z.number().int().nonnegative() })),
@@ -70,13 +75,14 @@ export class OpenRouterEmbeddingClient {
     }
     this.#metrics.batches += 1
     this.#metrics.requested += input.length
+    const boundedInput = input.map(limitEmbeddingInput)
 
     for (let attempt = 1; attempt <= this.#maximumAttempts; attempt += 1) {
       const response = await this.#fetch(new URL("embeddings", this.#baseUrl), {
         body: JSON.stringify({
           dimensions: EMBEDDING_DIMENSIONS,
           encoding_format: "float",
-          input,
+          input: boundedInput,
           model: EMBEDDING_MODEL,
           provider: { allow_fallbacks: false, data_collection: "deny" }
         }),
@@ -114,7 +120,10 @@ export class OpenRouterEmbeddingClient {
       }
       if (!retryable || attempt === this.#maximumAttempts) {
         this.#metrics.failed += input.length
-        throw new Error(`OpenRouter embedding request failed with HTTP ${response.status}`)
+        const detail = (await response.text()).replaceAll(/\s+/g, " ").trim().slice(0, 500)
+        throw new Error(
+          `OpenRouter embedding request failed with HTTP ${response.status}${detail.length === 0 ? "" : `: ${detail}`}`
+        )
       }
       this.#metrics.retries += 1
       await new Promise((resolve) => setTimeout(resolve, Math.min(250 * 2 ** (attempt - 1), 2_000)))

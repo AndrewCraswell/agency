@@ -8,7 +8,7 @@ import {
   supportingMaterials,
   supportingMaterialSections
 } from "../../db/schema/schema.js"
-import { EMBEDDING_MODEL } from "../../models/openrouter-embeddings.js"
+import { EMBEDDING_MODEL, limitEmbeddingInput } from "../../models/openrouter-embeddings.js"
 
 interface EmbeddingClient {
   embed(input: string[]): Promise<{ embeddings: number[][]; model: string }>
@@ -31,11 +31,15 @@ function shard(column: SQLWrapper, options: EmbeddingSelection) {
 }
 
 function searchableBillText(bill: { subjects: string[]; summary: null | string; title: string }): string {
-  return [bill.title, bill.summary, ...bill.subjects].filter((value): value is string => value !== null).join("\n")
+  return limitEmbeddingInput(
+    [bill.title, bill.summary, ...bill.subjects].filter((value): value is string => value !== null).join("\n")
+  )
 }
 
 function searchableSectionText(section: { heading: null | string; text: string }): string {
-  return [section.heading, section.text].filter((value): value is string => value !== null).join("\n")
+  return limitEmbeddingInput(
+    [section.heading, section.text].filter((value): value is string => value !== null).join("\n")
+  )
 }
 
 function inputHash(input: string): string {
