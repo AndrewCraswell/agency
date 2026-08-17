@@ -96,6 +96,35 @@ describe("Open States normalization", () => {
     })
   })
 
+  it("retains unstructured amendment links as classified bill documents", () => {
+    const source = structuredClone(fixture) as Record<string, unknown>
+    source.documents = [
+      {
+        classification: "amendment",
+        date: "2025-03-02",
+        links: [
+          {
+            media_type: "application/pdf",
+            text: "Floor amendment 12",
+            url: "https://leg.wa.gov/amendments/12.pdf"
+          }
+        ],
+        note: "Floor amendment 12"
+      }
+    ]
+
+    const result = normalizeOpenStatesBill(source, { jurisdictionCode: "wa", jurisdictionName: "Washington" })
+
+    expect(result.aggregate.documents).toContainEqual({
+      document: expect.objectContaining({
+        classification: "amendment",
+        sourceUrl: "https://leg.wa.gov/amendments/12.pdf",
+        title: "Floor amendment 12"
+      })
+    })
+    expect(result.aggregate).not.toHaveProperty("amendments")
+  })
+
   it.each([
     ["1361XD", "bill:ia:2025-2026:xd:1361"],
     ["HJR BB", "bill:mi:2025-2026:hjr:bb"],

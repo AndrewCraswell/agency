@@ -166,7 +166,7 @@ committees, meetings, actions, and votes where the source provides those relatio
 - [x] **E4.2** Add amendment actions, text versions, amended-amendment relationships, and vote relationships without
   flattening amendments into bill documents.
 - [ ] **E4.3** Import federal amendments, actions, sponsors, related bills, and available text through Congress.gov.
-- [ ] **E4.4** Promote structured state amendment records only where Open States supplies them; otherwise retain Open
+- [x] **E4.4** Promote structured state amendment records only where Open States supplies them; otherwise retain Open
   States amendment links as classified bill documents.
 - [x] **E4.5** Add supporting-material records for committee reports, committee prints, hearing transcripts, fiscal notes,
   bill analyses, testimony, witness statements, and meeting documents.
