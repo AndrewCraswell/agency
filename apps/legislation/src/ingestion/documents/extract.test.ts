@@ -110,6 +110,8 @@ describe("legislative document extraction", () => {
 
   it("classifies permanent processing exceptions as terminal", () => {
     expect(isTerminalDocumentFailure("Document download failed with HTTP 404")).toBe(true)
+    expect(isTerminalDocumentFailure("Document URL must use HTTPS")).toBe(true)
+    expect(isTerminalDocumentFailure("Document redirect changed to an unsupported protocol")).toBe(true)
     expect(isTerminalDocumentFailure("Document exceeds the 26214400 byte limit")).toBe(true)
     expect(isTerminalDocumentFailure("Document produced no usable text")).toBe(true)
     expect(isTerminalDocumentFailure("Document download failed with HTTP 503")).toBe(false)

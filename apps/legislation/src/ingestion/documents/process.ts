@@ -6,6 +6,8 @@ import { extractDocument, sanitizeDatabaseText } from "./extract.js"
 export function isTerminalDocumentFailure(message: string): boolean {
   return [
     "Document download failed with HTTP 404",
+    "Document redirect changed to an unsupported protocol",
+    "Document URL must use HTTPS",
     "Document exceeds the",
     "Document is empty",
     "Document produced no usable text",
