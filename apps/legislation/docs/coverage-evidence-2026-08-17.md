@@ -15,19 +15,41 @@ The report includes failure categories by source and operation rather than only 
 failure runs remain visible even after a successful replay, so the category list is evidence to reconcile with terminal
 job results, not a count of currently missing records.
 
+## Recovery checkpoint
+
+A second live report generated at 2026-08-17T16:03Z captured the in-progress corrective replay:
+
+- 1,464,960 bills, 12,711,094 actions, 1,386,829 sponsors, 469,560 votes, and 4,243,845 documents.
+- 190,653 vote positions across seven sessions and three jurisdictions already replayed with position data.
+- 129,616 processed documents and 297,422 extracted sections.
+- 125,697 bill embeddings and 124,935 document-section embeddings.
+- State document classifications already include 7,675 fiscal notes across three jurisdictions, 3,509 analyses,
+  40,552 supplemental documents, and 2,733 unstructured amendment documents.
+
+The four-shard document processor, four-shard embedding processor, Congress incremental synchronization, and corrected
+Open States archive replay were still running at this checkpoint. These are progress measurements, not terminal totals.
+The corrected Alaska archives completed with zero failed records after blank provider vote IDs were normalized as
+missing rather than treated as one shared globally unique identifier.
+
+Current Open States people, committee, and event refreshes remain bounded by the provider credential's daily quota. A
+jurisdiction-scoped entity attempt returned HTTP 429 with `exceeded limit of 250/day`; E1.5, E2.4, and E2.9 remain open
+until a later daily window completes those programmatic refreshes. Historical bill, vote, and document archives do not
+consume that API quota and continue independently.
+
 ## State vote coverage
 
-The retained Open States corpus contains 464,252 state votes across 516 sessions and 52 jurisdictions. The historical
-archives did not supply usable member identities or vote source links for these normalized records, so the report shows
-zero member positions and zero source-linked state votes. This is an explicit coverage limitation, not an inference that
-no members participated. Current structured Open States responses can add positions and links where supplied.
+The original retained Open States corpus contained 464,252 state votes across 516 sessions and 52 jurisdictions but no
+member positions. That was partly a normalization defect: historical exports often use an empty string for an absent
+vote or voter ID. The importer now treats those values as missing, retains source names through stable jurisdiction-bound
+identities, and avoids global uniqueness collisions. The corrective replay had retained 190,653 positions by the second
+checkpoint. Sessions that genuinely omit position arrays remain explicitly reported with zero position coverage.
 
 ## Supporting documents
 
 State bill documents are included per jurisdiction with classification, processing status, and failure counts. The
-historical archive was imported before the narrower fiscal-note, analysis, amendment, and supplemental classifications
-were replayed, so most state supporting documents remain in the generic `document` cohort. E4.7 remains open until an
-offline replay applies the current classifier and the refreshed report proves per-type state coverage.
+corrective replay has begun applying the narrower fiscal-note, analysis, amendment, and supplemental classifications;
+the recovery checkpoint proves each observed type without implying uniform state availability. E4.7 remains open until
+the full replay reaches a terminal result and a final report records the resulting per-jurisdiction coverage.
 
 Current federal supporting-material cohorts include amendment text, hearing transcripts, meeting documents, member
 statements, testimony, and witness statements. These counts are expected to grow during the pending full event and
