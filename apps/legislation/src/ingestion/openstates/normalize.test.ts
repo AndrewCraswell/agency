@@ -57,6 +57,22 @@ describe("Open States normalization", () => {
     expect(result.aggregate.bill.id).toBe("bill:wa:2025-2026:hb:1234")
   })
 
+  it.each([
+    ["1361XD", "bill:ia:2025-2026:xd:1361"],
+    ["HJR BB", "bill:mi:2025-2026:hjr:bb"],
+    ["SS# 3 SB 1062", "bill:mo:2025-2026:ss3sb:1062"],
+    ["SENATE CONCURRENT RESOLUTION NO. 2154", "bill:ri:2025-2026:senateconcurrentresolutionno:2154"]
+  ])("preserves provider-specific printed identifier %s", (identifier, expectedId) => {
+    const source = { ...(fixture as Record<string, unknown>), identifier, legislative_session: "2025-2026" }
+    const result = normalizeOpenStatesBill(source, {
+      jurisdictionCode: expectedId.split(":")[1] ?? "wa",
+      jurisdictionName: "Test jurisdiction"
+    })
+
+    expect(result.aggregate.bill.id).toBe(expectedId)
+    expect(result.aggregate.bill.identifier).toBe(identifier)
+  })
+
   it("normalizes a sparse record from a second state without fabricating children", () => {
     const result = normalizeOpenStatesBill(sparseFixture, {
       jurisdictionCode: "ca",
@@ -81,6 +97,23 @@ describe("Open States normalization", () => {
         { jurisdictionCode: "WA", jurisdictionName: "Washington" }
       )
     ).toThrow("source URL")
+  })
+
+  it("uses the provider bill endpoint when an archived record has no source links", () => {
+    const source = {
+      ...(sparseFixture as Record<string, unknown>),
+      _id: "ocd-bill/af76bfbd-d58a-4af3-9213-1ffe62d2a74b",
+      id: undefined,
+      sources: []
+    }
+    const result = normalizeOpenStatesBill(source, {
+      jurisdictionCode: "ri",
+      jurisdictionName: "Rhode Island"
+    })
+
+    expect(result.aggregate.bill.sourceUrl).toBe(
+      "https://v3.openstates.org/bills/ocd-bill/af76bfbd-d58a-4af3-9213-1ffe62d2a74b"
+    )
   })
 
   it("deduplicates provider children that would violate persistence constraints", () => {

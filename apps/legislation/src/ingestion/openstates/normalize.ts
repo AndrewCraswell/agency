@@ -97,11 +97,23 @@ export interface OpenStatesNormalizationResult {
 }
 
 function parsePrintedIdentifier(identifier: string): { billNumber: string; billType: string } {
-  const match = /^\s*([a-z][a-z.\s-]*?)\s*(\d[\w-]*)\s*$/i.exec(identifier)
-  if (match?.[1] === undefined || match[2] === undefined) {
-    throw new Error(`Unsupported Open States bill identifier: ${identifier}`)
+  const normalized = identifier.normalize("NFKC").trim().replaceAll(/\s+/g, " ")
+  const numericPrefix = /^(\d+)([a-z][\w-]*)$/i.exec(normalized)
+  if (numericPrefix?.[1] !== undefined && numericPrefix[2] !== undefined) {
+    return { billNumber: numericPrefix[1], billType: numericPrefix[2] }
   }
-  return { billNumber: match[2], billType: match[1] }
+
+  const separated = /^(.+?)\s+([a-z0-9][\w-]*)$/i.exec(normalized)
+  if (separated?.[1] !== undefined && separated[2] !== undefined) {
+    return { billNumber: separated[2], billType: separated[1] }
+  }
+
+  const compact = /^([a-z][a-z.-]*?)(\d[\w-]*)$/i.exec(normalized)
+  if (compact?.[1] !== undefined && compact[2] !== undefined) {
+    return { billNumber: compact[2], billType: compact[1] }
+  }
+
+  throw new Error(`Unsupported Open States bill identifier: ${identifier}`)
 }
 
 function exactDate(value: string | undefined, field: string, diagnostics: NormalizationDiagnostic[]) {
@@ -189,6 +201,10 @@ function sourceUrl(sources: Array<{ url: string }>, fallback?: string): string {
     throw new Error("Open States bill has no source URL")
   }
   return url
+}
+
+function providerBillUrl(upstreamId: string | undefined): string | undefined {
+  return upstreamId?.startsWith("ocd-bill/") ? `https://v3.openstates.org/bills/${upstreamId}` : undefined
 }
 
 function jurisdictionClassification(code: string): "district" | "state" | "territory" {
@@ -369,7 +385,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
         jurisdictionId: jurisdiction,
         sessionId: session,
         sourceUpdatedAt: source.updated_at === undefined ? undefined : new Date(source.updated_at),
-        sourceUrl: sourceUrl(source.sources, source.openstates_url),
+        sourceUrl: sourceUrl(source.sources, source.openstates_url ?? providerBillUrl(upstreamId)),
         subjects: source.subject,
         summary: source.abstracts[0]?.abstract,
         title: source.title,
