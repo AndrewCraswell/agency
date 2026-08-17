@@ -48,3 +48,16 @@ rejects malformed canonical IDs before service execution, enforces the response 
 tool through an authenticated server. Two independent MCP SDK client sessions each execute all 14 expansion calls while
 recording a two-second p95 contract budget. This is protocol compatibility evidence; it does not replace the live corpus
 and human-source review required by E6.9.
+
+## Live development corpus checkpoint
+
+On 2026-08-17, the MCP SDK benchmark ran against the live Railway corpus through a local instance of the production
+handler while the Open States replay, Congress synchronization, four document shards, and four embedding shards were
+active. Twelve serial lexical calls completed with a 1,324 ms p95, including bill and extracted-text searches, and all
+returned valid MCP results. A 30-call run at concurrency five reached a 6,281 ms p95 and exceeded the two-second target.
+Direct query plans used the expected GIN indexes and completed representative searches in 99 to 321 ms; the concurrent
+tail was database contention from the intentionally heavy development bootstrap.
+
+This checkpoint proves live result correctness and the single-client development target, but it is not production
+capacity evidence. Repeat the concurrent benchmark after the bulk processors are idle and before accepting E6.9 or any
+production-readiness gate.
