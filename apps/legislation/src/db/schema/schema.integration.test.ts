@@ -502,7 +502,8 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       identifier: "HB 9999",
       related_bills: [],
       sources: [{ url: "https://leg.wa.gov/billsummary?BillNumber=9999&Year=2025" }],
-      title: "A replayable legislative record"
+      title: "A replayable legislative record",
+      votes: source.votes.map((vote, index) => ({ ...vote, id: `${vote.id ?? "vote"}-replay-${index}` }))
     }
     const options = { concurrency: 2, contentHash: "b".repeat(64), stream: "wa-restart-test" }
 

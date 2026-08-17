@@ -17,6 +17,13 @@ export interface CoverageReport {
     watermark?: string
   }>
   documentProcessing: Array<{ count: number; status: string }>
+  documentTypes: Array<{
+    classification: string
+    documents: number
+    failed: number
+    jurisdictionId: string
+    processed: number
+  }>
   documentQuality: {
     emptyText: number
     extractionFailures: number
@@ -29,6 +36,7 @@ export interface CoverageReport {
     sections: { embedded: number; total: number }
   }
   federalBillTypes: Array<{ billType: string; bills: number; congress: string; documents: number }>
+  eventCoverage: Array<{ deleted: number; events: number; jurisdictionId: string }>
   generatedAt: string
   ingestionFailures: number
   scopes: Array<{
@@ -42,10 +50,28 @@ export interface CoverageReport {
     sections: number
     sessionId: string
     sessionIdentifier: string
+    sponsors: number
     votes: number
   }>
-  totals: { actions: number; bills: number; documents: number; processedDocuments: number; sections: number; votes: number }
+  supportingMaterialTypes: Array<{ classification: string; jurisdictionId: string; materials: number }>
+  totals: {
+    actions: number
+    bills: number
+    documents: number
+    processedDocuments: number
+    sections: number
+    sponsors: number
+    votes: number
+  }
   version: 1
+  voteCoverage: Array<{
+    jurisdictionId: string
+    positions: number
+    sessionId: string
+    votes: number
+    votesWithPositions: number
+    votesWithSourceUrl: number
+  }>
 }
 
 export interface CoverageComparison {
@@ -123,6 +149,7 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
   const billCounts = await coverageCount(database, "bills")
   const actionCounts = await coverageCount(database, "bill_actions")
   const voteCounts = await coverageCount(database, "votes")
+  const sponsorCounts = await coverageCount(database, "bill_sponsors")
   const documentCounts = await database.execute<{ count: number; processed: number; session_id: string }>(sql`
     select
       bills.session_id,
@@ -142,6 +169,7 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
   const billsBySession = countBySession(billCounts.rows)
   const actionsBySession = countBySession(actionCounts.rows)
   const votesBySession = countBySession(voteCounts.rows)
+  const sponsorsBySession = countBySession(sponsorCounts.rows)
   const documentsBySession = countBySession(documentCounts.rows)
   const processedBySession = new Map(documentCounts.rows.map((row) => [row.session_id, row.processed]))
   const sectionsBySession = countBySession(sectionCounts.rows)
@@ -155,6 +183,7 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
     sections: sectionsBySession.get(session.session_id) ?? 0,
     sessionId: session.session_id,
     sessionIdentifier: session.session_identifier,
+    sponsors: sponsorsBySession.get(session.session_id) ?? 0,
     votes: votesBySession.get(session.session_id) ?? 0
   }))
   const totals = rows.reduce(
@@ -164,9 +193,10 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       documents: result.documents + row.documents,
       processedDocuments: result.processedDocuments + row.processedDocuments,
       sections: result.sections + row.sections,
+      sponsors: result.sponsors + row.sponsors,
       votes: result.votes + row.votes
     }),
-    { actions: 0, bills: 0, documents: 0, processedDocuments: 0, sections: 0, votes: 0 }
+    { actions: 0, bills: 0, documents: 0, processedDocuments: 0, sections: 0, sponsors: 0, votes: 0 }
   )
   const federalBillTypes = await database.execute<{
     bill_type: string
@@ -189,12 +219,74 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
   const failureResult = await database
     .select({ count: sql<number>`coalesce(sum((${ingestionRuns.counts}->>'failed')::int), 0)::int` })
     .from(ingestionRuns)
-  const [documentProcessing, documentQualityResult, billEmbeddings, sectionEmbeddings, checkpoints] = await Promise.all([
+  const [
+    documentProcessing,
+    documentTypes,
+    eventCoverage,
+    supportingMaterialTypes,
+    voteCoverage,
+    documentQualityResult,
+    billEmbeddings,
+    sectionEmbeddings,
+    checkpoints
+  ] = await Promise.all([
     database
       .select({ count: sql<number>`count(*)::int`, status: billDocuments.processingStatus })
       .from(billDocuments)
       .groupBy(billDocuments.processingStatus)
       .orderBy(billDocuments.processingStatus),
+    database.execute<{
+      classification: string
+      documents: number
+      failed: number
+      jurisdiction_id: string
+      processed: number
+    }>(sql`
+      select
+        bills.jurisdiction_id,
+        coalesce(documents.classification, 'unclassified') as classification,
+        count(*)::int as documents,
+        count(*) filter (where documents.processing_status = 'processed')::int as processed,
+        count(*) filter (where documents.processing_status in ('failed', 'unsupported'))::int as failed
+      from legislation.bill_documents documents
+      join legislation.bills bills on bills.id = documents.bill_id
+      group by bills.jurisdiction_id, coalesce(documents.classification, 'unclassified')
+      order by bills.jurisdiction_id, classification
+    `),
+    database.execute<{ deleted: number; events: number; jurisdiction_id: string }>(sql`
+      select jurisdiction_id, count(*)::int as events,
+        count(*) filter (where is_deleted)::int as deleted
+      from legislation.legislative_events
+      group by jurisdiction_id
+      order by jurisdiction_id
+    `),
+    database.execute<{ classification: string; jurisdiction_id: string; materials: number }>(sql`
+      select jurisdiction_id, classification, count(*)::int as materials
+      from legislation.supporting_materials
+      group by jurisdiction_id, classification
+      order by jurisdiction_id, classification
+    `),
+    database.execute<{
+      jurisdiction_id: string
+      positions: number
+      session_id: string
+      votes: number
+      votes_with_positions: number
+      votes_with_source_url: number
+    }>(sql`
+      select
+        bills.jurisdiction_id,
+        bills.session_id,
+        count(distinct votes.id)::int as votes,
+        count(positions.vote_id)::int as positions,
+        count(distinct votes.id) filter (where positions.vote_id is not null)::int as votes_with_positions,
+        count(distinct votes.id) filter (where votes.source_url is not null)::int as votes_with_source_url
+      from legislation.votes votes
+      join legislation.bills bills on bills.id = votes.bill_id
+      left join legislation.vote_positions positions on positions.vote_id = votes.id
+      group by bills.jurisdiction_id, bills.session_id
+      order by bills.jurisdiction_id, bills.session_id
+    `),
     database.execute<{
       empty_text: number
       extraction_failures: number
@@ -240,6 +332,13 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       watermark: checkpoint.watermark?.toISOString()
     })),
     documentProcessing,
+    documentTypes: documentTypes.rows.map((row) => ({
+      classification: row.classification,
+      documents: row.documents,
+      failed: row.failed,
+      jurisdictionId: row.jurisdiction_id,
+      processed: row.processed
+    })),
     documentQuality: {
       emptyText: documentQualityResult.rows[0]?.empty_text ?? 0,
       extractionFailures: documentQualityResult.rows[0]?.extraction_failures ?? 0,
@@ -257,11 +356,29 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       congress: row.congress,
       documents: row.documents
     })),
+    eventCoverage: eventCoverage.rows.map((row) => ({
+      deleted: row.deleted,
+      events: row.events,
+      jurisdictionId: row.jurisdiction_id
+    })),
     generatedAt: new Date().toISOString(),
     ingestionFailures: failureResult[0]?.count ?? 0,
     scopes: rows.map((row) => ({ ...row, availability: row.bills === 0 ? "empty" : "available" })),
+    supportingMaterialTypes: supportingMaterialTypes.rows.map((row) => ({
+      classification: row.classification,
+      jurisdictionId: row.jurisdiction_id,
+      materials: row.materials
+    })),
     totals,
-    version: 1
+    version: 1,
+    voteCoverage: voteCoverage.rows.map((row) => ({
+      jurisdictionId: row.jurisdiction_id,
+      positions: row.positions,
+      sessionId: row.session_id,
+      votes: row.votes,
+      votesWithPositions: row.votes_with_positions,
+      votesWithSourceUrl: row.votes_with_source_url
+    }))
   }
 }
 
@@ -269,7 +386,7 @@ function countBySession(rows: Array<{ count: number; session_id: string }>): Map
   return new Map(rows.map((row) => [row.session_id, row.count]))
 }
 
-function coverageCount(database: LegislationDatabase, table: "bill_actions" | "bills" | "votes") {
+function coverageCount(database: LegislationDatabase, table: "bill_actions" | "bill_sponsors" | "bills" | "votes") {
   if (table === "bills") {
     return database.execute<{ count: number; session_id: string }>(sql`
       select session_id, count(*)::int as count from legislation.bills group by session_id
