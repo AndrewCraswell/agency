@@ -45,6 +45,12 @@ describe("OpenRouter embedding client", () => {
     expect(transientFetch).toHaveBeenCalledTimes(2)
     expect(client.metrics).toMatchObject({ created: 1, rateLimited: 1, requested: 1, retries: 1 })
 
+    const unqualifiedProviderModel = new OpenRouterEmbeddingClient({
+      apiKey: "secret",
+      fetch: vi.fn<typeof fetch>().mockResolvedValue(successfulResponse("text-embedding-3-small"))
+    })
+    await expect(unqualifiedProviderModel.embed(["text"])).resolves.toMatchObject({ model: EMBEDDING_MODEL })
+
     const wrongModel = new OpenRouterEmbeddingClient({
       apiKey: "secret",
       fetch: vi.fn<typeof fetch>().mockResolvedValue(successfulResponse("another/model"))

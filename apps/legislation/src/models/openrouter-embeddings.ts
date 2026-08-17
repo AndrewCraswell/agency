@@ -87,7 +87,8 @@ export class OpenRouterEmbeddingClient {
 
       if (response.ok) {
         const result = responseSchema.parse(await response.json())
-        if (result.model !== EMBEDDING_MODEL) {
+        const providerModel = EMBEDDING_MODEL.split("/").at(-1)
+        if (result.model !== EMBEDDING_MODEL && result.model !== providerModel) {
           throw new Error(`Embedding response used unexpected model ${result.model}`)
         }
         const embeddings = result.data.toSorted((left, right) => left.index - right.index).map((item) => item.embedding)
@@ -101,7 +102,7 @@ export class OpenRouterEmbeddingClient {
         this.#metrics.created += embeddings.length
         return {
           embeddings,
-          model: result.model,
+          model: EMBEDDING_MODEL,
           promptTokens: result.usage?.prompt_tokens,
           totalTokens: result.usage?.total_tokens
         }
