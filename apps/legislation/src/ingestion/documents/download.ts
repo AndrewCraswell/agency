@@ -12,11 +12,22 @@ const supportedMediaTypes = new Set([
 
 const CALIFORNIA_LEGINFO_HOST = "leginfo.legislature.ca.gov"
 const CALIFORNIA_BILL_PDF_PATH = "/faces/billPdf.xhtml"
+const ARKANSAS_LEGISLATURE_HOST = "www.arkleg.state.ar.us"
 const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131 Safari/537.36"
 
 function isCaliforniaBillPdfUrl(url: URL): boolean {
   return url.hostname === CALIFORNIA_LEGINFO_HOST && url.pathname === CALIFORNIA_BILL_PDF_PATH
+}
+
+export function resolveApprovedDocumentUrl(sourceUrl: string): URL {
+  const url = new URL(sourceUrl)
+  if (url.protocol === "ftp:" && url.hostname === ARKANSAS_LEGISLATURE_HOST && url.pathname.startsWith("/Bills/")) {
+    const resolved = new URL("https://www.arkleg.state.ar.us/Home/FTPDocument")
+    resolved.searchParams.set("path", url.pathname)
+    return resolved
+  }
+  return url
 }
 
 function cookieHeader(response: Response): string | undefined {
@@ -148,7 +159,7 @@ export async function downloadDocument(
   sourceUrl: string,
   options: { allowHttp?: boolean; fetch?: typeof fetch; maximumBytes?: number; timeoutMs?: number } = {}
 ): Promise<DownloadedDocument> {
-  const url = new URL(sourceUrl)
+  const url = resolveApprovedDocumentUrl(sourceUrl)
   if (url.protocol === "http:" && options.allowHttp !== true) {
     url.protocol = "https:"
   } else if (url.protocol !== "https:" && !(options.allowHttp === true && url.protocol === "http:")) {

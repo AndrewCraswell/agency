@@ -19,6 +19,7 @@ const RETRY_MAX_DELAY_MS = 6 * 60 * 60 * 1000
 
 export const DOCUMENT_REMEDIATION_COHORTS = [
   "alaska-pdf-label",
+  "arkansas-ftp",
   "california-bill-pdf",
   "image-ocr",
   "inaccessible-hosts"
@@ -104,6 +105,33 @@ export async function prepareDocumentRemediation(
                   lower(coalesce(content_type, '')) = 'pdf'
                   or processing_error ilike '%unsupported document content type: pdf%'
                 )
+              limit ${boundedLimit}
+              for update skip locked
+            ), updated as (
+              update legislation.bill_documents documents
+              set last_attempt_at = null,
+                next_attempt_at = null,
+                processing_attempts = 0,
+                processing_error = null,
+                processing_error_category = null,
+                processing_status = 'pending',
+                updated_at = now()
+              from candidates
+              where documents.id = candidates.id
+              returning documents.id
+            )
+            select count(*)::int as prepared,
+              coalesce((array_agg(id order by id))[1:20], array[]::text[]) as identifiers
+            from updated
+          `)
+  } else if (cohort === "arkansas-ftp") {
+    result = await database.execute<{ identifiers: string[]; prepared: number }>(sql`
+            with candidates as materialized (
+              select id
+              from legislation.bill_documents
+              where processing_status = 'unsupported'
+                and processing_error_category = 'unsafe-url'
+                and lower(source_url) like 'ftp://www.arkleg.state.ar.us/bills/%'
               limit ${boundedLimit}
               for update skip locked
             ), updated as (

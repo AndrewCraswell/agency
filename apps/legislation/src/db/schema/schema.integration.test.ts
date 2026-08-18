@@ -707,9 +707,21 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
   it("prepares only the selected known document defect cohort for bounded reprocessing", async () => {
     const californiaId = "bill:us:119:hr:1234:document:california-false-success"
     const alaskaId = "bill:us:119:hr:1234:document:alaska-pdf-label"
+    const arkansasId = "bill:us:119:hr:1234:document:arkansas-ftp"
     const imageId = "bill:us:119:hr:1234:document:image-ocr"
     const inaccessibleId = "bill:us:119:hr:1234:document:inaccessible-host"
     await database.insert(schema.billDocuments).values([
+      {
+        billId: "bill:us:119:hr:1234",
+        classification: "bill-text",
+        id: arkansasId,
+        processingAttempts: 1,
+        processingError: "Document URL must use HTTPS",
+        processingErrorCategory: "unsafe-url",
+        processingStatus: "unsupported",
+        sourceUrl: "ftp://www.arkleg.state.ar.us/Bills/2017S1/Public/HB1001.pdf",
+        title: "Arkansas FTP document"
+      },
       {
         billId: "bill:us:119:hr:1234",
         blobPath: "documents/california.xml",
@@ -777,6 +789,10 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       identifiers: [alaskaId],
       prepared: 1
     })
+    await expect(prepareDocumentRemediation(database, "arkansas-ftp", 1)).resolves.toEqual({
+      identifiers: [arkansasId],
+      prepared: 1
+    })
     await expect(prepareDocumentRemediation(database, "image-ocr", 1)).resolves.toEqual({
       identifiers: [imageId],
       prepared: 1
@@ -790,6 +806,7 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       where: eq(schema.billDocuments.id, californiaId)
     })
     const alaska = await database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, alaskaId) })
+    const arkansas = await database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, arkansasId) })
     const image = await database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, imageId) })
     const inaccessible = await database.query.billDocuments.findFirst({
       where: eq(schema.billDocuments.id, inaccessibleId)
@@ -807,6 +824,12 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       contentType: "pdf",
       processingAttempts: 0,
       processingError: null,
+      processingStatus: "pending"
+    })
+    expect(arkansas).toMatchObject({
+      processingAttempts: 0,
+      processingError: null,
+      processingErrorCategory: null,
       processingStatus: "pending"
     })
     expect(image).toMatchObject({ processingErrorCategory: "ocr-required", processingStatus: "unsupported" })

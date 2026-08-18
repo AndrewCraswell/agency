@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { detectDocumentContentType, downloadDocument } from "./download.js"
+import { detectDocumentContentType, downloadDocument, resolveApprovedDocumentUrl } from "./download.js"
 
 describe("document downloads", () => {
   it("upgrades legacy HTTP source links to HTTPS", async () => {
@@ -14,6 +14,27 @@ describe("document downloads", () => {
       contentType: "text/plain"
     })
     expect(fetcher).toHaveBeenCalledWith(new URL("https://example.gov/bill.txt"), expect.any(Object))
+  })
+
+  it("maps the retired Arkansas FTP endpoint to its approved HTTPS download route", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response("%PDF-test", {
+        headers: { "content-type": "application/pdf" },
+        status: 200
+      })
+    )
+
+    await expect(
+      downloadDocument("ftp://www.arkleg.state.ar.us/Bills/2017S1/Public/HB1001.pdf", { fetch: fetcher })
+    ).resolves.toMatchObject({ contentType: "application/pdf" })
+    expect(fetcher).toHaveBeenCalledWith(
+      new URL("https://www.arkleg.state.ar.us/Home/FTPDocument?path=%2FBills%2F2017S1%2FPublic%2FHB1001.pdf"),
+      expect.any(Object)
+    )
+  })
+
+  it("does not permit arbitrary FTP URLs", () => {
+    expect(resolveApprovedDocumentUrl("ftp://example.gov/bill.pdf").protocol).toBe("ftp:")
   })
 
   it("submits the California bill PDF auto-download form", async () => {
