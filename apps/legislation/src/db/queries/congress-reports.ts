@@ -7,14 +7,13 @@ export async function upsertCongressCommitteeReportSnapshot(
   database: LegislationDatabase,
   snapshot: CongressCommitteeReportSnapshot
 ): Promise<void> {
-  const materialIds = snapshot.materials.map((item) => item.material.id)
+  const materials = [...new Map(snapshot.materials.map((item) => [item.material.id, item])).values()]
+  const materialIds = materials.map((item) => item.material.id)
   if (materialIds.length === 0) {
     return
   }
-  const proposedBillIds = snapshot.materials.flatMap((item) => item.links.flatMap((link) => link.billId ?? []))
-  const proposedOrganizationIds = snapshot.materials.flatMap((item) =>
-    item.links.flatMap((link) => link.organizationId ?? [])
-  )
+  const proposedBillIds = materials.flatMap((item) => item.links.flatMap((link) => link.billId ?? []))
+  const proposedOrganizationIds = materials.flatMap((item) => item.links.flatMap((link) => link.organizationId ?? []))
   const [knownBills, knownOrganizations] = await Promise.all([
     proposedBillIds.length === 0
       ? []
@@ -28,20 +27,28 @@ export async function upsertCongressCommitteeReportSnapshot(
   ])
   const knownBillIds = new Set(knownBills.map((bill) => bill.id))
   const knownOrganizationIds = new Set(knownOrganizations.map((organization) => organization.id))
-  const links = snapshot.materials.flatMap((item) =>
-    item.links.filter(
-      (link) =>
-        (link.billId !== undefined && link.billId !== null && knownBillIds.has(link.billId)) ||
-        (link.organizationId !== undefined &&
-          link.organizationId !== null &&
-          knownOrganizationIds.has(link.organizationId))
-    )
-  )
+  const links = [
+    ...new Map(
+      materials
+        .flatMap((item) => item.links)
+        .filter(
+          (link) =>
+            (link.billId !== undefined && link.billId !== null && knownBillIds.has(link.billId)) ||
+            (link.organizationId !== undefined &&
+              link.organizationId !== null &&
+              knownOrganizationIds.has(link.organizationId))
+        )
+        .map((link) => [
+          `${link.materialId}\0${link.classification}\0${link.billId ?? ""}\0${link.organizationId ?? ""}`,
+          link
+        ])
+    ).values()
+  ]
 
   await database.transaction(async (transaction) => {
     await transaction
       .insert(supportingMaterials)
-      .values(snapshot.materials.map((item) => item.material))
+      .values(materials.map((item) => item.material))
       .onConflictDoUpdate({
         set: {
           classification: sql`excluded.classification`,

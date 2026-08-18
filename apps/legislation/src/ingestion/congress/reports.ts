@@ -64,9 +64,15 @@ export function normalizeCongressCommitteeReportBundle(input: unknown): Congress
   const source = bundleSchema.parse(input)
   const sourceIdentity = source.reference.cmte_rpt_id
   const title = source.report.title ?? source.reference.citation
-  const billIds = source.report.associatedBill.map((bill) => federalBillId(bill.congress, bill.type, bill.number))
-  const organizationIds = source.report.committees.map((committee) => organizationId("congress", committee.systemCode))
-  const formats = source.text.flatMap((entry) => entry.formats)
+  const billIds = [
+    ...new Set(source.report.associatedBill.map((bill) => federalBillId(bill.congress, bill.type, bill.number)))
+  ]
+  const organizationIds = [
+    ...new Set(source.report.committees.map((committee) => organizationId("congress", committee.systemCode)))
+  ]
+  const formats = [
+    ...new Map(source.text.flatMap((entry) => entry.formats).map((format) => [format.url, format])).values()
+  ]
   const representations =
     formats.length === 0 ? [{ isErrata: undefined, type: "API record", url: source.reference.url }] : formats
 

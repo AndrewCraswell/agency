@@ -15,8 +15,14 @@ describe("Congress committee report normalization", () => {
         url: "https://api.congress.gov/v3/committee-report/119/HRPT/1?format=json"
       },
       report: {
-        associatedBill: [{ congress: 119, number: "53", type: "HRES" }],
-        committees: [{ name: "Rules Committee", systemCode: "hsru00" }],
+        associatedBill: [
+          { congress: 119, number: "53", type: "HRES" },
+          { congress: 119, number: "53", type: "HRES" }
+        ],
+        committees: [
+          { name: "Rules Committee", systemCode: "hsru00" },
+          { name: "Rules Committee", systemCode: "hsru00" }
+        ],
         issueDate: "2025-01-21T05:00:00Z",
         title: "Providing for consideration of legislation"
       },
@@ -27,6 +33,15 @@ describe("Congress committee report normalization", () => {
               isErrata: "N",
               type: "Formatted Text",
               url: "https://www.congress.gov/119/crpt/hrpt1/generated/CRPT-119hrpt1.htm"
+            }
+          ]
+        },
+        {
+          formats: [
+            {
+              isErrata: "N",
+              type: "PDF",
+              url: "https://www.congress.gov/119/crpt/hrpt1/CRPT-119hrpt1.pdf"
             }
           ]
         },
