@@ -24,8 +24,8 @@ canonical records, official source links, and predictable retrieval through an M
 
 ## Definition of done
 
-The definition of done is the release contract in [the MVP delivery plan](mvp/README.md). The active roadmap lists only
-the remaining work and its observable completion criteria.
+The product is ready when the package verification suite passes, the [data synchronization catalog](data-sync-catalog.md)
+accurately describes deployed capabilities, and required external services have been validated in the target environment.
 
 ## Explicit exclusions
 

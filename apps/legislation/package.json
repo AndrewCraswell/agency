@@ -13,7 +13,6 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs",
-    "benchmark:mcp": "node scripts/benchmark-mcp.mjs",
     "check:format": "oxfmt --check",
     "check:lint": "pnpm lint",
     "check:types": "tsc --noEmit",
@@ -28,14 +27,12 @@
     "db:up": "docker compose -f infra/local/compose.yaml up -d --wait",
     "db:wait": "tsx src/cli/main.ts db:wait",
     "dev": "tsx watch src/cli/main.ts serve",
-    "eval:local": "tsx scripts/evaluate-mcp-local.mjs",
     "container:prepare": "node scripts/prepare-container-context.mjs",
     "docker:build": "pnpm container:prepare && docker build -f ../../.container/legislation/Dockerfile -t legislation:local ../../.container/legislation",
     "infra:build": "az bicep build --file infra/bicep/main.bicep --outfile infra/bicep/main.json",
     "infra:lint": "az bicep lint --file infra/bicep/main.bicep",
     "infra:what-if": "node scripts/infra-what-if.mjs",
     "lint": "oxlint --max-warnings=0",
-    "release:check": "node scripts/check-release-inputs.mjs",
     "start": "node dist/cli/main.js serve",
     "smoke:deployment": "node scripts/smoke-deployment.mjs",
     "smoke:dependencies": "node scripts/smoke-dependencies.mjs",
@@ -43,8 +40,7 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "verify": "run-s check:format check:lint check:types check:unused workflows:check test:coverage",
-    "workflows:check": "node scripts/validate-workflows.mjs"
+    "verify": "run-s check:format check:lint check:types check:unused test:coverage"
   },
   "dependencies": {
     "@azure/identity": "^4.13.1",

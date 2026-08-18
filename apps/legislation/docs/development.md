@@ -55,11 +55,6 @@ database. It drops only the `legislation` and `legislation_migrations` schemas.
 Run the application startup smoke test with `pnpm --filter legislation smoke:local`. It starts the real server against
 local PostgreSQL, verifies health and readiness, and shuts the process down.
 
-Run `pnpm --filter legislation eval:local` for a credential-free MCP usefulness preflight. It exercises the seven
-original research tools through the production MCP handler with deterministic fixtures and writes an untracked evidence
-artifact to `apps/legislation/work/evaluation/local-mcp.json`. This preflight does not use the database, cloud services,
-provider credentials, or WorkOS, and it does not replace authenticated live-client evaluation.
-
 Stop the container while retaining data with `pnpm --filter legislation db:down`. To delete only the disposable
 legislation database volume and recreate it from zero, run:
 
@@ -72,18 +67,13 @@ pnpm --filter legislation db:migrate
 The Compose project and volume names are app-specific, so this reset does not target infrastructure belonging to
 other monorepo applications.
 
-## Local artifacts and optional n8n
+## Local artifacts
 
 When `AZURE_STORAGE_ACCOUNT` is unset, immutable source archives, normalized documents, and reports use the filesystem
 adapter rooted at `LEGISLATION_SOURCE_DIRECTORY` (default `.data/sources`). Paths are content-addressed and constrained
 to that app-owned directory. Set an Azure storage account to select the managed-identity Blob Storage adapter instead.
 
-n8n is not needed for application development or tests. To inspect the exported workflows locally, start an optional
-n8n 2.5.2 container with `docker run --rm -p 5678:5678 docker.io/n8nio/n8n:2.5.2`, open `http://127.0.0.1:5678`, and
-import JSON from `apps/legislation/workflows`. Keep the workflows inactive because their Azure job endpoints and managed
-identity variables are deployment-specific.
-
 ## Workspace boundary
 
-Database code, infrastructure, ingestion, workflows, MCP tools, authentication, and observability remain in this app.
+Database code, infrastructure, ingestion, Trigger.dev tasks, MCP tools, authentication, and observability remain in this app.
 Move code to a top-level monorepo package only after another application has a demonstrated need to consume it.
