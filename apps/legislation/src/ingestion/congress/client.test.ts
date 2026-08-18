@@ -239,4 +239,32 @@ describe("CongressClient", () => {
       })
     ).rejects.toThrow("expected 2, received 1")
   })
+
+  it("accepts House vote member pages returned as a bare array", async () => {
+    const request = vi.fn<typeof fetch>(async (input) => {
+      const url = new URL(String(input))
+      return url.pathname.endsWith("/members")
+        ? Response.json({
+            houseRollCallVoteMemberVotes: [{ bioguideID: "A000001", lastName: "First", voteCast: "Yea" }],
+            pagination: { count: 1 }
+          })
+        : Response.json({ houseRollCallVote: { startDate: "2025-01-01", voteQuestion: "On Passage" } })
+    })
+    const client = new CongressClient({
+      apiKey: "secret-key",
+      baseUrl: new URL("https://api.congress.gov/v3/"),
+      http: new RetryingHttpClient({ fetch: request, maxAttempts: 1, requestTimeoutMs: 1000 })
+    })
+
+    const bundle = (await client.getHouseVoteBundle({
+      congress: 119,
+      identifier: "11912025240",
+      rollCallNumber: 240,
+      sessionNumber: 1,
+      sourceDataURL: "https://clerk.house.gov/evs/2025/roll240.xml",
+      url: "https://api.congress.gov/v3/house-vote/119/1/240"
+    })) as { members: { results: unknown[] } }
+
+    expect(bundle.members.results).toHaveLength(1)
+  })
 })

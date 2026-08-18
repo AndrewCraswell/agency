@@ -243,11 +243,13 @@ export class CongressClient {
     for (;;) {
       const response = z
         .object({
-          houseRollCallVoteMemberVotes: z.record(z.string(), z.unknown()),
+          houseRollCallVoteMemberVotes: z.unknown(),
           pagination: paginationSchema
         })
         .parse(await this.#json(path, { limit: "250", offset: String(offset) }))
-      const page = response.houseRollCallVoteMemberVotes
+      const page = Array.isArray(response.houseRollCallVoteMemberVotes)
+        ? { results: response.houseRollCallVoteMemberVotes }
+        : z.record(z.string(), z.unknown()).parse(response.houseRollCallVoteMemberVotes)
       const pageResults = z.array(z.unknown()).parse(page.results ?? [])
       metadata ??= page
       expectedCount ??= response.pagination.count

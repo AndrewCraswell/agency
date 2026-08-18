@@ -81,4 +81,31 @@ describe("Congress House vote normalization", () => {
     expect(chamberVote.vote).not.toHaveProperty("amendmentId")
     expect(chamberVote.vote).not.toHaveProperty("billId")
   })
+
+  it("deduplicates repeated member identities before counting and persistence", () => {
+    const snapshot = normalizeCongressHouseVote({
+      members: {
+        results: [
+          { bioguideID: "A000055", firstName: "Robert", lastName: "Aderholt", voteCast: "Yea" },
+          { bioguideID: "A000055", firstName: "Robert", lastName: "Aderholt", voteCast: "Yea" }
+        ]
+      },
+      reference: {
+        congress: 119,
+        identifier: 11912025240,
+        rollCallNumber: 240,
+        sessionNumber: 1,
+        sourceDataURL: "https://clerk.house.gov/evs/2025/roll240.xml",
+        url: "https://api.congress.gov/v3/house-vote/119/1/240"
+      },
+      vote: {
+        sourceDataURL: "https://clerk.house.gov/evs/2025/roll240.xml",
+        startDate: "2025-09-08T18:56:00-04:00",
+        voteQuestion: "On Passage"
+      }
+    })
+
+    expect(snapshot.positions).toHaveLength(1)
+    expect(snapshot.vote).toMatchObject({ noCount: 0, otherCount: 0, yesCount: 1 })
+  })
 })

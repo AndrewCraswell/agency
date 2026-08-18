@@ -97,7 +97,8 @@ export function normalizeCongressHouseVote(input: unknown): CongressHouseVoteSna
     "congress",
     `house-${reference.congress}-${reference.sessionNumber}-${reference.rollCallNumber}`
   )
-  const positions = source.members.results.map((member) => ({
+  const uniqueMembers = [...new Map(source.members.results.map((member) => [member.bioguideID, member])).values()]
+  const positions = uniqueMembers.map((member) => ({
     option: normalizeOption(member.voteCast),
     personId: personId("congress", member.bioguideID),
     sourceIdentity: member.bioguideID,
