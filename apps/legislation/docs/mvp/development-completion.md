@@ -65,7 +65,8 @@ failure evidence.
 - [ ] **D2.11** Run Congress.gov incremental synchronization from the recorded checkpoint with the configured overlap
   window.
 - [ ] **D2.12** Compare synchronized bills and versions with current Congress.gov records and prove that GovInfo and
-  Congress.gov converge on the same canonical IDs.
+  Congress.gov converge on the same canonical IDs. Audit exact URL duplicates and semantic duplicates by canonical
+  bill, version code, and content hash; explain any distinct official formats retained for the same version.
 
 ### Corpus proof tasks
 
