@@ -142,6 +142,8 @@ export async function prepareDocumentRemediation(
                 processing_error = null,
                 processing_error_category = null,
                 processing_status = 'pending',
+                source_url = 'https://www.arkleg.state.ar.us/Home/FTPDocument?path='
+                  || substring(documents.source_url from 'ftp://www.arkleg.state.ar.us(.*)$'),
                 updated_at = now()
               from candidates
               where documents.id = candidates.id

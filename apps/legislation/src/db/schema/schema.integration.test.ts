@@ -830,7 +830,8 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       processingAttempts: 0,
       processingError: null,
       processingErrorCategory: null,
-      processingStatus: "pending"
+      processingStatus: "pending",
+      sourceUrl: "https://www.arkleg.state.ar.us/Home/FTPDocument?path=/Bills/2017S1/Public/HB1001.pdf"
     })
     expect(image).toMatchObject({ processingErrorCategory: "ocr-required", processingStatus: "unsupported" })
     expect(inaccessible).toMatchObject({
