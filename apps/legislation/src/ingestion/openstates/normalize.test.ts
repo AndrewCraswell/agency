@@ -173,6 +173,7 @@ describe("Open States normalization", () => {
 
   it.each([
     ["1361XD", "bill:ia:2025-2026:xd:1361"],
+    ["HJR CA0002", "bill:il:2025-2026:hjrca:2"],
     ["HJR BB", "bill:mi:2025-2026:hjr:bb"],
     ["SS# 3 SB 1062", "bill:mo:2025-2026:ss3sb:1062"],
     ["SENATE CONCURRENT RESOLUTION NO. 2154", "bill:ri:2025-2026:senateconcurrentresolutionno:2154"]

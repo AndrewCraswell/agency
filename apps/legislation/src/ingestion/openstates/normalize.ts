@@ -107,6 +107,18 @@ function parsePrintedIdentifier(identifier: string): { billNumber: string; billT
     return { billNumber: numericPrefix[1], billType: numericPrefix[2] }
   }
 
+  const separatedTypeSuffix = /^([a-z][a-z.-]*)\s+([a-z]+)(\d[\w-]*)$/i.exec(normalized)
+  if (
+    separatedTypeSuffix?.[1] !== undefined &&
+    separatedTypeSuffix[2] !== undefined &&
+    separatedTypeSuffix[3] !== undefined
+  ) {
+    return {
+      billNumber: separatedTypeSuffix[3],
+      billType: `${separatedTypeSuffix[1]}${separatedTypeSuffix[2]}`
+    }
+  }
+
   const separated = /^(.+?)\s+([a-z0-9][\w-]*)$/i.exec(normalized)
   if (separated?.[1] !== undefined && separated[2] !== undefined) {
     return { billNumber: separated[2], billType: separated[1] }

@@ -207,7 +207,11 @@ export async function upsertBillAggregate(
               : undefined
         })
         if (vote.positions !== undefined && vote.positions.length > 0) {
-          await transaction.insert(votePositions).values(vote.positions)
+          for (let offset = 0; offset < vote.positions.length; offset += votePositionInsertBatchSize) {
+            await transaction
+              .insert(votePositions)
+              .values(vote.positions.slice(offset, offset + votePositionInsertBatchSize))
+          }
         }
       }
     }
@@ -317,6 +321,8 @@ export async function upsertBillAggregate(
 function uniqueById<T extends { id: string }>(values: readonly T[]): T[] {
   return [...new Map(values.map((value) => [value.id, value])).values()]
 }
+
+const votePositionInsertBatchSize = 100
 
 export async function upsertBillAggregates(
   database: LegislationDatabase,
@@ -487,7 +493,11 @@ export async function upsertBillAggregates(
       await transaction.insert(votes).values(voteValues)
     }
     if (positionValues.length > 0) {
-      await transaction.insert(votePositions).values(positionValues)
+      for (let offset = 0; offset < positionValues.length; offset += votePositionInsertBatchSize) {
+        await transaction
+          .insert(votePositions)
+          .values(positionValues.slice(offset, offset + votePositionInsertBatchSize))
+      }
     }
     if (relationValues.length > 0) {
       await transaction.insert(billRelations).values(relationValues)
