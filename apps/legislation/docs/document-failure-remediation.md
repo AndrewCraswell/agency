@@ -52,6 +52,14 @@ progress evidence and do not satisfy the final corpus gate by themselves.
 Sixteen non-overlapping development document shards were started on 2026-08-18 against the immutable remediation
 image. D3.12 and D3.13 remain open until those shards finish and a database audit confirms terminal outcomes.
 
+The 4,375 Arkansas FTP records were normalized to the legislature's official HTTPS download route. A live canary then
+stored an `application/pdf` artifact and extracted 16,256 characters of searchable text, leaving no failure category.
+The remaining unsafe-URL count is zero.
+
+Bounded DOCX, PPTX, and XLSX extraction is deployed with archive-entry and expanded-size limits. Live canaries stored
+artifacts and extracted 2,197, 1,770, and 75,870 searchable characters respectively. D3.20 remains open until the full
+Office Open XML cohort finishes; legacy binary office and mail formats remain explicitly terminal.
+
 ## Required result contract
 
 Every non-successful document has one actionable disposition:

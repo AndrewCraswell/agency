@@ -124,7 +124,7 @@ Official documents become trustworthy searchable sections with complete, reprodu
   structural, and minimum-content checks before extraction.
 - [x] **D3.18** Record source 404 and 410 responses as terminal `not-found` results while allowing a later upstream URL
   change to make the document eligible again.
-- [ ] **D3.19** Resolve unsafe or unsupported URL schemes without weakening SSRF protections; use an approved HTTPS URL
+- [x] **D3.19** Resolve unsafe or unsupported URL schemes without weakening SSRF protections; use an approved HTTPS URL
   supplied by the existing provider when available, otherwise mark the artifact `source-inaccessible`.
 - [ ] **D3.20** Inventory unsupported office, rich-text, image, and archive formats by MIME type and extension, then add
   one bounded extractor at a time only where the corpus volume justifies it.
