@@ -114,8 +114,10 @@ Official documents become trustworthy searchable sections with complete, reprodu
   failures after D3.11 passes a representative canary.
 - [ ] **D3.13** Normalize non-standard source content-type labels such as Alaska's bare `pdf` value only when artifact
   signatures confirm the real format, then reprocess the affected records.
-- [x] **D3.14** Split transient download failures into timeout, DNS, connection, rate-limit, and upstream 5xx reasons;
-  retain bounded retry, host-fair scheduling, and per-host circuit breaking.
+- [ ] **D3.14** Split transient download failures into timeout, DNS, connection, rate-limit, and upstream 5xx reasons;
+  retain bounded retry, host-fair scheduling, and per-host circuit breaking. Failure taxonomy and bounded retry are
+  complete; fleet-wide host-fair selection and circuit-breaking evidence remain open because sorted shard queues can
+  still concentrate workers on one publisher.
 - [x] **D3.15** Add a `source-inaccessible` terminal disposition for documents whose recorded host is retired,
   unresolvable, or no longer serves the artifact; retain the source URL and last access result without repeatedly
   retrying it.
@@ -132,7 +134,7 @@ Official documents become trustworthy searchable sections with complete, reprodu
 - [x] **D3.21** Keep oversized artifacts terminal with the observed byte count and configured limit, and verify that a
   single oversized download cannot consume a worker or hold a processing lease indefinitely.
 - [x] **D3.22** Retry processing-transient failures without downloading an unchanged valid artifact again, and make
-  parser exceptions observable by extractor and format. The retained cohort audit found 39 deterministic corrupt
+  parser exceptions observable by extractor and format. The retained cohort audit found 42 deterministic corrupt
   archive/root-reference failures, moved them to terminal `malformed-document`, and left zero processing-transient rows.
 - [x] **D3.23** Deterministically classify legacy failed and unsupported rows that predate structured failure categories;
   requeue only rows mapped to a repaired, retryable class.

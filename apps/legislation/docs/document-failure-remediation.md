@@ -65,6 +65,10 @@ The repeated failures were deterministic corrupt archive/root-reference errors, 
 now terminal `malformed-document`. The live `processing-transient` count is zero. This closes that failure class without
 creating an unbounded retry loop; a later upstream document change can still make the record eligible again.
 
+The Office Open XML replay exposed three additional invalid ZIP artifacts. They were also terminally classified as
+`malformed-document`, bringing the audited deterministic parser-failure total to 42 while preserving a zero
+`processing-transient` backlog.
+
 ## Required result contract
 
 Every non-successful document has one actionable disposition:
