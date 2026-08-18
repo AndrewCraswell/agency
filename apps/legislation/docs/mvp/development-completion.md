@@ -131,7 +131,8 @@ Official documents become trustworthy searchable sections with complete, reprodu
 - [x] **D3.21** Keep oversized artifacts terminal with the observed byte count and configured limit, and verify that a
   single oversized download cannot consume a worker or hold a processing lease indefinitely.
 - [x] **D3.22** Retry processing-transient failures without downloading an unchanged valid artifact again, and make
-  parser exceptions observable by extractor and format.
+  parser exceptions observable by extractor and format. The retained cohort audit found 39 deterministic corrupt
+  archive/root-reference failures, moved them to terminal `malformed-document`, and left zero processing-transient rows.
 - [x] **D3.23** Deterministically classify legacy failed and unsupported rows that predate structured failure categories;
   requeue only rows mapped to a repaired, retryable class.
 - [ ] **D3.24** Publish a post-remediation document-quality report with counts by jurisdiction, host, format, failure

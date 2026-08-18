@@ -24,7 +24,7 @@ failed. The main known classes were:
 | Non-HTTPS source URL | 4,375 observed records | Use provider-supplied HTTPS URL when available; otherwise mark inaccessible |
 | Unsupported GIF and office formats | GIF was the largest observed non-PDF group; office formats were lower volume | Track by exact format and prioritize by volume |
 | Corrupt or truncated PDF | Mixed into the former malformed-document bucket | Re-download once when eligible, then retain terminal malformed reason |
-| Processing exception after valid acquisition | 37 classified processing-transient records in the snapshot | Retry extraction from the stored artifact |
+| Processing exception after valid acquisition | 39 classified processing-transient records in the snapshot | Retry extraction from the stored artifact, then terminally classify deterministic parser failures |
 | Legacy unclassified result | 15,914 failed and 50,685 unsupported rows | Classify deterministically before any retry |
 
 Counts are a diagnostic snapshot, not completion evidence. The report must be regenerated after each bounded repair.
@@ -59,6 +59,11 @@ The remaining unsafe-URL count is zero.
 Bounded DOCX, PPTX, and XLSX extraction is deployed with archive-entry and expanded-size limits. Live canaries stored
 artifacts and extracted 2,197, 1,770, and 75,870 searchable characters respectively. D3.20 remains open until the full
 Office Open XML cohort finishes; legacy binary office and mail formats remain explicitly terminal.
+
+All 39 records in the former `processing-transient` cohort were audited after the stored-artifact retry path was added.
+The repeated failures were deterministic corrupt archive/root-reference errors, not transient worker failures, and are
+now terminal `malformed-document`. The live `processing-transient` count is zero. This closes that failure class without
+creating an unbounded retry loop; a later upstream document change can still make the record eligible again.
 
 ## Required result contract
 
