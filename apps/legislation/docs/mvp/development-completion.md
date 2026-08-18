@@ -107,32 +107,32 @@ Official documents become trustworthy searchable sections with complete, reprodu
   affected slice.
 - [ ] **D3.10** Store the processing report, embedding report, sampled review, exceptions, model identifier, and content
   hashes in the development evidence bundle.
-- [ ] **D3.11** Fix California's JavaScript-driven `billPdf` acquisition so the stored artifact is the actual PDF, and
+- [x] **D3.11** Fix California's JavaScript-driven `billPdf` acquisition so the stored artifact is the actual PDF, and
   reject download forms, navigation shells, and other publisher chrome as successful bill text.
 - [ ] **D3.12** Identify and reprocess California `billPdf` false successes, malformed artifacts, and retryable download
   failures after D3.11 passes a representative canary.
 - [ ] **D3.13** Normalize non-standard source content-type labels such as Alaska's bare `pdf` value only when artifact
   signatures confirm the real format, then reprocess the affected records.
-- [ ] **D3.14** Split transient download failures into timeout, DNS, connection, rate-limit, and upstream 5xx reasons;
+- [x] **D3.14** Split transient download failures into timeout, DNS, connection, rate-limit, and upstream 5xx reasons;
   retain bounded retry, host-fair scheduling, and per-host circuit breaking.
-- [ ] **D3.15** Add a `source-inaccessible` terminal disposition for documents whose recorded host is retired,
+- [x] **D3.15** Add a `source-inaccessible` terminal disposition for documents whose recorded host is retired,
   unresolvable, or no longer serves the artifact; retain the source URL and last access result without repeatedly
   retrying it.
-- [ ] **D3.16** Reclassify image-only PDFs and raster documents as `ocr-required`, exclude them from ordinary text
+- [x] **D3.16** Reclassify image-only PDFs and raster documents as `ocr-required`, exclude them from ordinary text
   extraction retries, and defer OCR implementation to a later milestone.
-- [ ] **D3.17** Distinguish genuinely corrupt or truncated PDFs from HTML/XML publisher intermediaries using signature,
+- [x] **D3.17** Distinguish genuinely corrupt or truncated PDFs from HTML/XML publisher intermediaries using signature,
   structural, and minimum-content checks before extraction.
-- [ ] **D3.18** Record source 404 and 410 responses as terminal `not-found` results while allowing a later upstream URL
+- [x] **D3.18** Record source 404 and 410 responses as terminal `not-found` results while allowing a later upstream URL
   change to make the document eligible again.
 - [ ] **D3.19** Resolve unsafe or unsupported URL schemes without weakening SSRF protections; use an approved HTTPS URL
   supplied by the existing provider when available, otherwise mark the artifact `source-inaccessible`.
 - [ ] **D3.20** Inventory unsupported office, rich-text, image, and archive formats by MIME type and extension, then add
   one bounded extractor at a time only where the corpus volume justifies it.
-- [ ] **D3.21** Keep oversized artifacts terminal with the observed byte count and configured limit, and verify that a
+- [x] **D3.21** Keep oversized artifacts terminal with the observed byte count and configured limit, and verify that a
   single oversized download cannot consume a worker or hold a processing lease indefinitely.
-- [ ] **D3.22** Retry processing-transient failures without downloading an unchanged valid artifact again, and make
+- [x] **D3.22** Retry processing-transient failures without downloading an unchanged valid artifact again, and make
   parser exceptions observable by extractor and format.
-- [ ] **D3.23** Deterministically classify legacy failed and unsupported rows that predate structured failure categories;
+- [x] **D3.23** Deterministically classify legacy failed and unsupported rows that predate structured failure categories;
   requeue only rows mapped to a repaired, retryable class.
 - [ ] **D3.24** Publish a post-remediation document-quality report with counts by jurisdiction, host, format, failure
   reason, and disposition; require representative canaries before restoring full worker concurrency.

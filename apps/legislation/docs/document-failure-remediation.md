@@ -29,6 +29,29 @@ failed. The main known classes were:
 
 Counts are a diagnostic snapshot, not completion evidence. The report must be regenerated after each bounded repair.
 
+## Remediation progress
+
+As of 2026-08-18, commit `bb23ce8` and development image
+`sha256:b93cc7d1c0e09adcdd1735577e09ece836ea0422ec822160c8eb7ba124a0f21f` provide the corrected acquisition and
+classification behavior. Live development evidence currently includes:
+
+- California canaries: two current artifacts produced searchable PDFs and one publisher-missing historical artifact
+  reached terminal `not-found`.
+- Alaska canaries: the non-standard `pdf` label was accepted by artifact signature; three sampled image-only PDFs moved
+  to `ocr-required`.
+- 6,953 existing image-only or raster records moved to `ocr-required`.
+- 13,346 records on the verified retired Alabama host moved to `source-inaccessible`.
+- 46,525 legacy failed or unsupported rows received structured failure classifications.
+- A repeat legacy-classification audit returned zero unclassified candidates.
+- 262,075 California false-success or malformed intermediary records and 25,184 Alaska label records were prepared for
+  corrected reprocessing.
+
+Full California and Alaska reprocessing, the post-remediation report, and embeddings remain open. These counts are
+progress evidence and do not satisfy the final corpus gate by themselves.
+
+Sixteen non-overlapping development document shards were started on 2026-08-18 against the immutable remediation
+image. D3.12 and D3.13 remain open until those shards finish and a database audit confirms terminal outcomes.
+
 ## Required result contract
 
 Every non-successful document has one actionable disposition:
