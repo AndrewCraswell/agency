@@ -2,10 +2,13 @@ import { createHash } from "node:crypto"
 import { fileURLToPath } from "node:url"
 import * as cheerio from "cheerio"
 import { XMLParser } from "fast-xml-parser"
+import { unzipSync } from "fflate"
 import iconv from "iconv-lite"
 import { documentSectionId } from "../../legislation/identifiers.js"
 
 export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
+const MAX_OFFICE_ARCHIVE_ENTRIES = 5_000
+const MAX_OFFICE_UNCOMPRESSED_BYTES = 4 * MAX_DOCUMENT_BYTES
 
 export interface ExtractedSection {
   contentHash: string
@@ -88,6 +91,71 @@ function extractHtmlText(bytes: Uint8Array, contentType: string): string {
 function extractPlainText(bytes: Uint8Array, contentType: string): string {
   const charset = /charset=([^;\s]+)/i.exec(contentType)?.[1]?.replaceAll(/["']/g, "") ?? "utf-8"
   return iconv.decode(Buffer.from(bytes), iconv.encodingExists(charset) ? charset : "utf-8")
+}
+
+function officeXmlText(bytes: Uint8Array, mediaType: string): string {
+  let entries = 0
+  let uncompressedBytes = 0
+  const selected = (name: string): boolean => {
+    if (mediaType.endsWith("wordprocessingml.document")) {
+      return /^word\/(?:document|footnotes|endnotes|header\d+|footer\d+)\.xml$/i.test(name)
+    }
+    if (mediaType.endsWith("presentationml.presentation")) {
+      return /^ppt\/slides\/slide\d+\.xml$/i.test(name)
+    }
+    return name === "xl/sharedStrings.xml" || /^xl\/worksheets\/sheet\d+\.xml$/i.test(name)
+  }
+  const archive = unzipSync(bytes, {
+    filter: (entry) => {
+      entries += 1
+      uncompressedBytes += entry.originalSize
+      if (entries > MAX_OFFICE_ARCHIVE_ENTRIES || uncompressedBytes > MAX_OFFICE_UNCOMPRESSED_BYTES) {
+        throw new Error("Office document archive exceeds safe expansion limits")
+      }
+      return selected(entry.name)
+    }
+  })
+  const decoder = new TextDecoder("utf-8", { fatal: true })
+  if (mediaType.endsWith("spreadsheetml.sheet")) {
+    const sharedStringsBytes = archive["xl/sharedStrings.xml"]
+    const sharedStrings =
+      sharedStringsBytes === undefined
+        ? []
+        : cheerio
+            .load(decoder.decode(sharedStringsBytes), { xml: true })("si")
+            .toArray()
+            .map((element) => cheerio.load(element, { xml: true }).root().text())
+    return Object.entries(archive)
+      .filter(([name]) => /^xl\/worksheets\/sheet\d+\.xml$/i.test(name))
+      .sort(([left], [right]) => left.localeCompare(right, undefined, { numeric: true }))
+      .map(([, value]) => {
+        const $ = cheerio.load(decoder.decode(value), { xml: true })
+        return $("row")
+          .toArray()
+          .map((row) =>
+            $(row)
+              .find("c")
+              .toArray()
+              .map((cell) => {
+                const raw = $(cell).find("v").first().text() || $(cell).find("is").text()
+                return $(cell).attr("t") === "s" ? (sharedStrings[Number(raw)] ?? raw) : raw
+              })
+              .join("\t")
+          )
+          .join("\n")
+      })
+      .join("\n\n")
+  }
+  return Object.entries(archive)
+    .sort(([left], [right]) => left.localeCompare(right, undefined, { numeric: true }))
+    .map(([, value]) => {
+      const $ = cheerio.load(decoder.decode(value), { xml: true })
+      $("w\\:p,a\\:p").each((_index, element) => {
+        $(element).after("\n")
+      })
+      return $.root().text()
+    })
+    .join("\n\n")
 }
 
 async function extractPdfText(bytes: Uint8Array): Promise<string> {
@@ -250,6 +318,12 @@ export async function extractDocument(
     extracted = extractPlainText(bytes, contentType)
   } else if (mediaType === "application/pdf") {
     extracted = await extractPdfText(bytes)
+  } else if (
+    mediaType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    mediaType === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+    mediaType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  ) {
+    extracted = officeXmlText(bytes, mediaType)
   } else if (mediaType?.startsWith("image/") === true) {
     throw new Error(`Document is image-only (${mediaType}) and requires OCR`)
   } else {

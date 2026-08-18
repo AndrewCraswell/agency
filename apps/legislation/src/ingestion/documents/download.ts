@@ -3,6 +3,9 @@ import { MAX_DOCUMENT_BYTES } from "./extract.js"
 
 const supportedMediaTypes = new Set([
   "application/pdf",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/xhtml+xml",
   "application/xml",
   "text/html",

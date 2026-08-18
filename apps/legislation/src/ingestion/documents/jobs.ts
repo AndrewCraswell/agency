@@ -22,7 +22,8 @@ export const DOCUMENT_REMEDIATION_COHORTS = [
   "arkansas-ftp",
   "california-bill-pdf",
   "image-ocr",
-  "inaccessible-hosts"
+  "inaccessible-hosts",
+  "office-open-xml"
 ] as const
 export type DocumentRemediationCohort = (typeof DOCUMENT_REMEDIATION_COHORTS)[number]
 
@@ -144,6 +145,37 @@ export async function prepareDocumentRemediation(
                 processing_status = 'pending',
                 source_url = 'https://www.arkleg.state.ar.us/Home/FTPDocument?path='
                   || substring(documents.source_url from 'ftp://www.arkleg.state.ar.us(.*)$'),
+                updated_at = now()
+              from candidates
+              where documents.id = candidates.id
+              returning documents.id
+            )
+            select count(*)::int as prepared,
+              coalesce((array_agg(id order by id))[1:20], array[]::text[]) as identifiers
+            from updated
+          `)
+  } else if (cohort === "office-open-xml") {
+    result = await database.execute<{ identifiers: string[]; prepared: number }>(sql`
+            with candidates as materialized (
+              select id
+              from legislation.bill_documents
+              where processing_status = 'unsupported'
+                and processing_error_category = 'unsupported-format'
+                and lower(coalesce(content_type, '')) in (
+                  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                )
+              limit ${boundedLimit}
+              for update skip locked
+            ), updated as (
+              update legislation.bill_documents documents
+              set last_attempt_at = null,
+                next_attempt_at = null,
+                processing_attempts = 0,
+                processing_error = null,
+                processing_error_category = null,
+                processing_status = 'pending',
                 updated_at = now()
               from candidates
               where documents.id = candidates.id

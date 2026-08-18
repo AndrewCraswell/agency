@@ -1,3 +1,4 @@
+import { zipSync } from "fflate"
 import { describe, expect, it } from "vitest"
 import {
   extractDocument,
@@ -53,6 +54,41 @@ describe("legislative document extraction", () => {
     const pdf = await extractDocument("document:pdf", textPdf, "application/pdf")
     expect(pdf.text).toContain("PDF contains usable legislative text")
     expect(pdf.sections[0]?.identifier).toBe("1.")
+  })
+
+  it("extracts bounded text from modern Office documents", async () => {
+    const docx = zipSync({
+      "word/document.xml": encoder.encode(
+        '<w:document xmlns:w="word"><w:body><w:p><w:r><w:t>SECTION 1. DOCX TEXT.</w:t></w:r></w:p><w:p><w:r><w:t>Operative language.</w:t></w:r></w:p></w:body></w:document>'
+      )
+    })
+    const pptx = zipSync({
+      "ppt/slides/slide1.xml": encoder.encode(
+        '<p:sld xmlns:p="presentation" xmlns:a="drawing"><a:p><a:r><a:t>SECTION 2. SLIDE TEXT.</a:t></a:r></a:p><a:p><a:r><a:t>Presentation language.</a:t></a:r></a:p></p:sld>'
+      )
+    })
+    const xlsx = zipSync({
+      "xl/sharedStrings.xml": encoder.encode(
+        "<sst><si><t>SECTION 3. WORKBOOK TEXT.</t></si><si><t>Spreadsheet language.</t></si></sst>"
+      ),
+      "xl/worksheets/sheet1.xml": encoder.encode(
+        '<worksheet><sheetData><row><c t="s"><v>0</v></c><c t="s"><v>1</v></c></row></sheetData></worksheet>'
+      )
+    })
+
+    await expect(
+      extractDocument("document:docx", docx, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    ).resolves.toMatchObject({ text: expect.stringContaining("Operative language") })
+    await expect(
+      extractDocument(
+        "document:pptx",
+        pptx,
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+      )
+    ).resolves.toMatchObject({ text: expect.stringContaining("Presentation language") })
+    await expect(
+      extractDocument("document:xlsx", xlsx, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    ).resolves.toMatchObject({ text: expect.stringContaining("Spreadsheet language") })
   })
 
   it("creates deterministic overlapping fallback chunks", () => {

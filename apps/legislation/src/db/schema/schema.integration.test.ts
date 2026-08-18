@@ -710,7 +710,21 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     const arkansasId = "bill:us:119:hr:1234:document:arkansas-ftp"
     const imageId = "bill:us:119:hr:1234:document:image-ocr"
     const inaccessibleId = "bill:us:119:hr:1234:document:inaccessible-host"
+    const officeId = "bill:us:119:hr:1234:document:office-open-xml"
     await database.insert(schema.billDocuments).values([
+      {
+        billId: "bill:us:119:hr:1234",
+        classification: "bill-text",
+        contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        id: officeId,
+        processingAttempts: 1,
+        processingError:
+          "Unsupported document content type: application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        processingErrorCategory: "unsupported-format",
+        processingStatus: "unsupported",
+        sourceUrl: "https://example.test/bill.docx",
+        title: "Office Open XML document"
+      },
       {
         billId: "bill:us:119:hr:1234",
         classification: "bill-text",
@@ -801,6 +815,10 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       identifiers: [inaccessibleId],
       prepared: 1
     })
+    await expect(prepareDocumentRemediation(database, "office-open-xml", 1)).resolves.toEqual({
+      identifiers: [officeId],
+      prepared: 1
+    })
 
     const california = await database.query.billDocuments.findFirst({
       where: eq(schema.billDocuments.id, californiaId)
@@ -811,6 +829,7 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     const inaccessible = await database.query.billDocuments.findFirst({
       where: eq(schema.billDocuments.id, inaccessibleId)
     })
+    const office = await database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, officeId) })
     expect(california).toMatchObject({
       blobPath: null,
       contentHash: null,
@@ -837,6 +856,12 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     expect(inaccessible).toMatchObject({
       processingErrorCategory: "source-inaccessible",
       processingStatus: "unsupported"
+    })
+    expect(office).toMatchObject({
+      processingAttempts: 0,
+      processingError: null,
+      processingErrorCategory: null,
+      processingStatus: "pending"
     })
     await expect(
       database.query.documentSections.findFirst({ where: eq(schema.documentSections.documentId, californiaId) })
