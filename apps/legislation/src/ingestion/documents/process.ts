@@ -74,6 +74,9 @@ export function classifyDocumentFailure(error: unknown, sourceUrl?: string): Doc
   }
   if (
     normalized.includes("invalid pdf structure") ||
+    normalized.includes("invalid root reference") ||
+    normalized.includes("invalid zip data") ||
+    normalized.includes("reading 'addchild'") ||
     normalized.includes("document is empty") ||
     normalized.includes("document produced no usable text") ||
     normalized.includes("document produced too little usable text") ||

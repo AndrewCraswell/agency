@@ -172,6 +172,18 @@ describe("legislative document extraction", () => {
       category: "malformed-document",
       retryable: false
     })
+    expect(classifyDocumentFailure("Cannot read properties of undefined (reading 'addChild')")).toMatchObject({
+      category: "malformed-document",
+      retryable: false
+    })
+    expect(classifyDocumentFailure("Invalid Root reference.")).toMatchObject({
+      category: "malformed-document",
+      retryable: false
+    })
+    expect(classifyDocumentFailure("invalid zip data")).toMatchObject({
+      category: "malformed-document",
+      retryable: false
+    })
     expect(classifyDocumentFailure("Document response contains HTML instead of advertised PDF")).toMatchObject({
       category: "download-transient",
       retryable: true
