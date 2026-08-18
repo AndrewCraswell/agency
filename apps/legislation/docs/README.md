@@ -7,10 +7,19 @@
 - [Canonical vocabulary](canonical-vocabulary.md)
 - [Product specification](product-spec.md)
 - [Coverage policy](coverage-policy.md)
+- [Authentication](authentication.md)
 - [Document failure remediation](document-failure-remediation.md)
-- [Development evidence audit](development-evidence-audit.md)
+- [Supporting-material processing](supporting-material-processing.md)
+- [Change events](change-events.md)
 - [MCP tool contracts](tool-contracts.md)
+- [Research evaluation](research-evaluation.md)
 - [Architecture decisions](architecture-decisions.md)
+
+## Operations
+
+- [Observability](observability.md)
+- [Operator runbooks](runbooks.md)
+- [Release procedure](release.md)
 
 ## Plans
 

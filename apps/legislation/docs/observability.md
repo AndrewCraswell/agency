@@ -29,4 +29,4 @@ metrics. Log alerts parse the structured readiness, ingestion-result, and daily 
 `ContainerAppConsoleLogs_CL`. Scheduled-sync and checkpoint rules stay disabled until the corresponding n8n schedules
 are deliberately activated. Alert rules can fire without notification receivers, but every release environment must
 pass at least one existing legislation on-call action group ID and prove each rule fires and resolves before D5.8 or
-M14.49 can close.
+D5.8 can close.

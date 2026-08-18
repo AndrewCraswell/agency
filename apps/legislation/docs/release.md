@@ -16,8 +16,7 @@ is not scheduled in the current [legislative data expansion roadmap](roadmap.md)
 5. Deploy an immutable image digest to staging, migrate, import a bounded corpus, process documents and embeddings, and
    run the authenticated deployment smoke test.
 6. Validate alerts, Azure logs, Langfuse traces, checkpoint replay, provider throttling, shutdown, backup restore, and a
-   revision rollback in staging. Assemble the operational record described in the
-   [operator runbooks](runbooks.md#operational-evidence-gate) and run `pnpm operations:verify` against it.
+   revision rollback in staging. Record the tested revision, results, and recovery actions with the release record.
 7. Deploy production infrastructure and the same tested image digest, migrate, run historical bootstraps, enable approved
    schedules, and run all seven tools through authenticated smoke tests.
 8. Record release version, image digest, migration journal, coverage, completion rates, evaluation baseline, known

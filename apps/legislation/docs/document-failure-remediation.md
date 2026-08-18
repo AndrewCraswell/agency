@@ -161,7 +161,7 @@ Complete when each class has a deterministic terminal or retry policy and tests 
 - Never bulk-requeue the entire failed or unsupported population.
 - Run a small representative canary for each repaired class before increasing concurrency.
 - Publish counts by jurisdiction, host, format, normalized failure reason, and final disposition.
-- Manually compare a documented sample of extracted text with official documents before closing M7.32.
+- Manually compare a documented sample of extracted text with official documents before closing D3.4.
 
 The remediation is complete when every targeted row is processed or has an explicit terminal disposition, retry queues
 contain only eligible work, quality reports contain no known publisher-page false successes, and embeddings can resume

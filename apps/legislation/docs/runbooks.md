@@ -86,17 +86,3 @@ environment. Do not change the active connection or n8n encryption configuration
 migration state, pgvector version, restored workflow IDs, and both target fingerprints rather than database URLs.
 Verify health, readiness, all restored workflow IDs, and at least 21 deployment-smoke tool calls. Confirm the active
 target remained unchanged, then remove the disposable targets through the owning platform's approved cleanup process.
-
-## Operational evidence gate
-
-Assemble one JSON record with version `1`, environment, generation time, all seven fired-and-resolved alert records, all
-four diagnostic exercises, the disposable database and n8n restore, and the failed-deployment recovery. Each alert needs
-an action group and recovery reference. Run:
-
-```powershell
-pnpm operations:verify -- <operational-evidence.json>
-```
-
-The command returns `operational-evidence-valid` only when the complete matrix is present, targets are isolated, images
-are immutable, and post-recovery smoke gates pass. Validator success proves the record is internally complete; D5.8 and
-M14.49 still require an operator to confirm that referenced Azure, Langfuse, coverage, and runbook evidence is genuine.

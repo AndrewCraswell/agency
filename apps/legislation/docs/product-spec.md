@@ -24,8 +24,8 @@ canonical records, official source links, and predictable retrieval through an M
 
 ## Definition of done
 
-The definition of done is the release contract in [the MVP implementation plan](mvp/README.md). Each milestone task
-requires repository or target-environment evidence, and all milestone exit criteria are release gates.
+The definition of done is the release contract in [the MVP delivery plan](mvp/README.md). The active roadmap lists only
+the remaining work and its observable completion criteria.
 
 ## Explicit exclusions
 

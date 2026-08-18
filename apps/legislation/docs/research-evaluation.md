@@ -46,9 +46,8 @@ two-client execution. E6.9 remains a separate human-reviewed evaluation and cann
 For a credential-free preflight, run `pnpm --filter legislation eval:local`. The command exercises all seven original
 research tools through the production MCP handler with deterministic fixtures and records calls, arguments, structured
 evidence, latency, assertion scores, safe errors, and failure categories in
-`work/evaluation/local-mcp.json`. See the [MCP evaluation readiness audit](mvp/mcp-evaluation-audit.md) for the exact
-scope and remaining live gates. This local artifact is not authenticated corpus evidence and does not establish
-two-client compatibility.
+`work/evaluation/local-mcp.json`. This local fixture run checks contracts and error handling; it does not establish
+authenticated behavior, compatibility with a second client, live-corpus quality, or human source review.
 
 The MCP test suite advertises and calls all 21 tools, validates that every array parameter publishes an item schema,
 rejects malformed canonical IDs before service execution, enforces the response byte ceiling, and calls every expansion

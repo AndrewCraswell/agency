@@ -11,8 +11,8 @@ The application foundation, Azure development baseline, canonical bill model, se
 authentication are implemented. Their completed milestone checklists have been removed. Architecture and operational
 decisions remain documented in the focused pages under `docs`.
 
-The remaining work from the partially complete ingestion, document-processing, MCP, orchestration, observability, and
-validation milestones is consolidated into the active roadmap rather than repeating completed tasks.
+The remaining ingestion, document-processing, MCP, orchestration, observability, and validation work is consolidated
+into the active roadmap rather than repeating completed tasks.
 
 ## Active roadmap
 
@@ -27,10 +27,9 @@ only work that remains for the development MVP:
 
 ## Next data phases
 
-After the development MVP passes its exit gate, begin the feasibility-gated
-[Legislative data expansion roadmap](../roadmap.md). It adds people and organizations, meetings and calendars, roll-call
-votes, amendments and supporting materials, canonical change tracking, and corresponding MCP capabilities before any
-web application or production commercialization work.
+After the development MVP passes its exit gate, continue the remaining work in the
+[Legislative data expansion roadmap](../roadmap.md): state people and committees, meetings and hearings, amendments and
+supporting materials, and human review of the expanded MCP interface.
 
 ## Development MVP definition of done
 
@@ -59,7 +58,7 @@ development MVP exit gate is met.
 ## Task conventions
 
 - Active tasks use stable phase identifiers such as `D2.4`.
-- A task is complete only when its evidence exists in the repository or development environment.
+- A task is complete only when its observable result has been verified in the repository or development environment.
 - Provider fixtures remain available so parsers can be tested without external calls.
 - Ingestion and processing operations are idempotent and restartable before schedules are enabled.
 - Repository changes follow the monorepo verification command: `pnpm verify`.

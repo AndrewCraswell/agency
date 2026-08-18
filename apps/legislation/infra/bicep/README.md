@@ -53,6 +53,5 @@ but does not send notifications. `operationalAlertsEnabled` is the emergency glo
 Set it to `true` in the same reviewed change that activates Congress synchronization. The checkpoint alert intentionally
 requires an observed `congress`/`bills` checkpoint, so a new empty environment does not claim a stalled checkpoint.
 
-After deployment, trigger and recover each alert in a disposable or staging target and retain the fired and resolved
-records. Validate the combined alert, diagnostic, restore, and revision-recovery record with
-`pnpm operations:verify -- <operational-evidence.json>`.
+After deployment, trigger and recover each alert in a disposable or staging target. Record the fired and resolved
+timestamps, action group, diagnosis, recovery action, and final healthy query in the release record.

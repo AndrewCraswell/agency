@@ -20,7 +20,7 @@ downloaded artifact, extracted text, and searchable sections are retained separa
 `search_supporting_materials` searches both titles and extracted section text. `get_supporting_material` returns the
 material, its canonical links, and paginated sections with explicit truncation metadata.
 
-## Development evidence
+## Current validation status
 
 Migration 0016 creates the section index and its lexical-search trigger. Fresh-schema integration exercises acquisition,
 artifact retention, extraction, sectioning, embedding idempotency, lexical retrieval, and paginated detail retrieval. A
