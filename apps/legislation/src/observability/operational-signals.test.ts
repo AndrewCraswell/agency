@@ -12,8 +12,16 @@ function report(): CoverageReport {
         updatedAt: "2026-08-16T12:00:00.000Z"
       }
     ],
+    documentFailures: [],
     documentProcessing: [],
-    documentQuality: { emptyText: 0, extractionFailures: 6, fallbackSegmentation: 0, lowText: 0, total: 100 },
+    documentQuality: {
+      emptyText: 0,
+      extractionFailures: 6,
+      fallbackSegmentation: 0,
+      lowText: 0,
+      publisherPageFalseSuccesses: 0,
+      total: 100
+    },
     documentTypes: [],
     embeddingCoverage: {
       bills: { embedded: 8, oldestMissingAt: "2026-08-15T00:00:00.000Z", total: 10 },

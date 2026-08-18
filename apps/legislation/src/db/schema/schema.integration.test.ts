@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { generateCoverageReport } from "../../coverage/report.js"
 import { synchronizeCongress } from "../../ingestion/congress/sync.js"
 import type { ArtifactStore } from "../../ingestion/documents/artifact-store.js"
-import { processPendingDocuments } from "../../ingestion/documents/jobs.js"
+import { prepareDocumentRemediation, processPendingDocuments } from "../../ingestion/documents/jobs.js"
 import { persistProcessedDocument } from "../../ingestion/documents/process.js"
 import { processPendingSupportingMaterials } from "../../ingestion/documents/supporting-material-jobs.js"
 import { embedBills, embedDocumentSections, embedSupportingMaterialSections } from "../../ingestion/embeddings/jobs.js"
@@ -702,6 +702,121 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       status: "failed"
     })
     expect(deferred).toMatchObject({ counts: { discovered: 0 } })
+  })
+
+  it("prepares only the selected known document defect cohort for bounded reprocessing", async () => {
+    const californiaId = "bill:us:119:hr:1234:document:california-false-success"
+    const alaskaId = "bill:us:119:hr:1234:document:alaska-pdf-label"
+    const imageId = "bill:us:119:hr:1234:document:image-ocr"
+    const inaccessibleId = "bill:us:119:hr:1234:document:inaccessible-host"
+    await database.insert(schema.billDocuments).values([
+      {
+        billId: "bill:us:119:hr:1234",
+        blobPath: "documents/california.xml",
+        classification: "bill-text",
+        contentHash,
+        contentType: "application/pdf",
+        id: californiaId,
+        processingAttempts: 2,
+        processingStatus: "processed",
+        sourceUrl:
+          "https://leginfo.legislature.ca.gov/faces/billPdf.xhtml?bill_id=202320240SB681&version=20230SB68198AMD",
+        text: "Download Bill PDF",
+        title: "California false success"
+      },
+      {
+        billId: "bill:us:119:hr:1234",
+        blobPath: "documents/alaska.pdf",
+        classification: "bill-text",
+        contentType: "pdf",
+        id: alaskaId,
+        processingAttempts: 1,
+        processingError: "Unsupported document content type: pdf",
+        processingStatus: "unsupported",
+        sourceUrl: "https://www.akleg.gov/basis/Bill/Text/34?Hsid=HB0001A",
+        title: "Alaska PDF label"
+      },
+      {
+        billId: "bill:us:119:hr:1234",
+        classification: "bill-text",
+        contentType: "image/gif",
+        id: imageId,
+        processingError: "Unsupported document content type: image/gif",
+        processingErrorCategory: "unsupported-format",
+        processingStatus: "unsupported",
+        sourceUrl: "https://example.test/bill.gif",
+        title: "Image document"
+      },
+      {
+        billId: "bill:us:119:hr:1234",
+        classification: "bill-text",
+        id: inaccessibleId,
+        processingError: "fetch failed: getaddrinfo ENOTFOUND alisondb.legislature.state.al.us",
+        processingErrorCategory: "download-transient",
+        processingStatus: "failed",
+        sourceUrl:
+          "https://alisondb.legislature.state.al.us/ALISON/SearchableInstruments/2017RS/PrintFiles/HB1-int.pdf",
+        title: "Unavailable Alabama document"
+      }
+    ])
+    await database.insert(schema.documentSections).values({
+      contentHash,
+      documentId: californiaId,
+      id: `${californiaId}:section:0`,
+      ordinal: 0,
+      sourceEndOffset: 17,
+      sourceStartOffset: 0,
+      text: "Download Bill PDF"
+    })
+
+    await expect(prepareDocumentRemediation(database, "california-bill-pdf", 1)).resolves.toEqual({
+      identifiers: [californiaId],
+      prepared: 1
+    })
+    await expect(prepareDocumentRemediation(database, "alaska-pdf-label", 1)).resolves.toEqual({
+      identifiers: [alaskaId],
+      prepared: 1
+    })
+    await expect(prepareDocumentRemediation(database, "image-ocr", 1)).resolves.toEqual({
+      identifiers: [imageId],
+      prepared: 1
+    })
+    await expect(prepareDocumentRemediation(database, "inaccessible-hosts", 1)).resolves.toEqual({
+      identifiers: [inaccessibleId],
+      prepared: 1
+    })
+
+    const california = await database.query.billDocuments.findFirst({
+      where: eq(schema.billDocuments.id, californiaId)
+    })
+    const alaska = await database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, alaskaId) })
+    const image = await database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, imageId) })
+    const inaccessible = await database.query.billDocuments.findFirst({
+      where: eq(schema.billDocuments.id, inaccessibleId)
+    })
+    expect(california).toMatchObject({
+      blobPath: null,
+      contentHash: null,
+      contentType: null,
+      processingAttempts: 0,
+      processingStatus: "pending",
+      text: null
+    })
+    expect(alaska).toMatchObject({
+      blobPath: "documents/alaska.pdf",
+      contentType: "pdf",
+      processingAttempts: 0,
+      processingError: null,
+      processingStatus: "pending"
+    })
+    expect(image).toMatchObject({ processingErrorCategory: "ocr-required", processingStatus: "unsupported" })
+    expect(inaccessible).toMatchObject({
+      processingErrorCategory: "source-inaccessible",
+      processingStatus: "unsupported"
+    })
+    await expect(
+      database.query.documentSections.findFirst({ where: eq(schema.documentSections.documentId, californiaId) })
+    ).resolves.toBeUndefined()
   })
 
   it("processes, indexes, embeds, and retrieves supporting-material sections", async () => {

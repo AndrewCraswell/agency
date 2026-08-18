@@ -48,6 +48,20 @@ export function normalizeLegalText(value: string): string {
     .trim()
 }
 
+function assertUsefulDocumentText(text: string): void {
+  if (text.length < 20) {
+    throw new Error("Document produced too little usable text")
+  }
+  const normalized = text.toLowerCase()
+  if (
+    normalized === "download bill pdf" ||
+    (normalized.includes("for full functionality of this site it is necessary to enable javascript") &&
+      normalized.includes("california legislative information"))
+  ) {
+    throw new Error("Document contains publisher navigation instead of legislative text")
+  }
+}
+
 function extractXmlText(bytes: Uint8Array): string {
   const xml = new TextDecoder("utf-8", { fatal: true }).decode(bytes)
   const parser = new XMLParser({ preserveOrder: true, processEntities: false, trimValues: false })
@@ -236,13 +250,13 @@ export async function extractDocument(
     extracted = extractPlainText(bytes, contentType)
   } else if (mediaType === "application/pdf") {
     extracted = await extractPdfText(bytes)
+  } else if (mediaType?.startsWith("image/") === true) {
+    throw new Error(`Document is image-only (${mediaType}) and requires OCR`)
   } else {
     throw new Error(`Unsupported document content type: ${contentType}`)
   }
 
   const text = normalizeLegalText(extracted)
-  if (text.length === 0) {
-    throw new Error("Document produced no usable text")
-  }
+  assertUsefulDocumentText(text)
   return { contentHash: hash(bytes), sections: segmentLegalText(documentId, text), text }
 }

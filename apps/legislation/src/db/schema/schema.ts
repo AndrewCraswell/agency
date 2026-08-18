@@ -863,7 +863,7 @@ export const billDocuments = legislationSchema.table(
     check("bill_documents_attempts_check", sql`${table.processingAttempts} >= 0`),
     check(
       "bill_documents_error_category_check",
-      sql`${table.processingErrorCategory} is null or ${table.processingErrorCategory} in ('download-permanent', 'download-transient', 'malformed-document', 'not-found', 'oversized', 'processing-transient', 'unsafe-url', 'unsupported-format')`
+      sql`${table.processingErrorCategory} is null or ${table.processingErrorCategory} in ('download-permanent', 'download-transient', 'malformed-document', 'not-found', 'ocr-required', 'oversized', 'processing-transient', 'source-inaccessible', 'unsafe-url', 'unsupported-format')`
     ),
     check(
       "bill_documents_processing_status_check",

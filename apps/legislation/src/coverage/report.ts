@@ -17,6 +17,15 @@ export interface CoverageReport {
     watermark?: string
   }>
   documentProcessing: Array<{ count: number; status: string }>
+  documentFailures: Array<{
+    contentType: string
+    count: number
+    failureCategory: string
+    failureReason: string
+    host: string
+    jurisdictionId: string
+    status: string
+  }>
   documentTypes: Array<{
     classification: string
     documents: number
@@ -29,6 +38,7 @@ export interface CoverageReport {
     extractionFailures: number
     fallbackSegmentation: number
     lowText: number
+    publisherPageFalseSuccesses: number
     total: number
   }
   embeddingCoverage: {
@@ -255,6 +265,7 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
   `)
   const [
     documentProcessing,
+    documentFailures,
     documentTypes,
     eventCoverage,
     supportingMaterialTypes,
@@ -269,6 +280,65 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       .from(billDocuments)
       .groupBy(billDocuments.processingStatus)
       .orderBy(billDocuments.processingStatus),
+    database.execute<{
+      content_type: string
+      count: number
+      failure_category: string
+      failure_reason: string
+      host: string
+      jurisdiction_id: string
+      status: string
+    }>(sql`
+      select
+        bills.jurisdiction_id,
+        documents.processing_status as status,
+        coalesce(documents.processing_error_category, 'unclassified') as failure_category,
+        case
+          when documents.processing_error ilike '%image-only%' then 'image-only'
+          when documents.processing_error ilike '%invalid pdf structure%' then 'invalid-pdf'
+          when documents.processing_error ilike '%publisher navigation%'
+            or documents.processing_error ilike '%california bill pdf is not available from publisher%'
+            then 'publisher-intermediary'
+          when documents.processing_error ilike '%http 404%' then 'http-404'
+          when documents.processing_error ilike '%http 410%' then 'http-410'
+          when documents.processing_error ilike '%http 429%' then 'rate-limit'
+          when documents.processing_error ilike '%http 5__%' then 'upstream-5xx'
+          when documents.processing_error ilike '%timeout%'
+            or documents.processing_error ilike '%timed out%'
+            or documents.processing_error ilike '%terminated%'
+            then 'timeout'
+          when documents.processing_error ilike '%enotfound%'
+            or documents.processing_error ilike '%eai_again%'
+            then 'dns'
+          when documents.processing_error ilike '%econn%'
+            or documents.processing_error ilike '%fetch failed%'
+            then 'connection'
+          when documents.processing_error ilike '%exceeds the%byte limit%' then 'oversized'
+          when documents.processing_error ilike '%must use https%'
+            or documents.processing_error ilike '%unsupported protocol%'
+            then 'unsafe-url'
+          when documents.processing_error ilike '%unsupported document content type%'
+            then 'unsupported-content-type'
+          when documents.processing_error ilike '%too little usable text%'
+            or documents.processing_error ilike '%no usable text%'
+            then 'too-little-text'
+          else 'other'
+        end as failure_reason,
+        coalesce(nullif(split_part(split_part(documents.source_url, '://', 2), '/', 1), ''), 'invalid-url') as host,
+        coalesce(documents.content_type, 'unknown') as content_type,
+        count(*)::int as count
+      from legislation.bill_documents documents
+      join legislation.bills bills on bills.id = documents.bill_id
+      where documents.processing_status in ('failed', 'unsupported')
+      group by
+        bills.jurisdiction_id,
+        documents.processing_status,
+        failure_category,
+        failure_reason,
+        host,
+        content_type
+      order by count desc, bills.jurisdiction_id, host, failure_reason
+    `),
     database.execute<{
       classification: string
       documents: number
@@ -343,12 +413,20 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       extraction_failures: number
       fallback_segmentation: number
       low_text: number
+      publisher_page_false_successes: number
       total: number
     }>(sql`
       select
         count(*)::int as total,
         count(*) filter (where processing_error ilike '%empty%' or processing_error ilike '%no usable text%')::int as empty_text,
         count(*) filter (where processing_error ilike '%image-only%' or processing_error ilike '%too little usable text%')::int as low_text,
+        count(*) filter (
+          where processing_status = 'processed'
+          and (
+            lower(btrim(coalesce(text, ''))) = 'download bill pdf'
+            or lower(coalesce(text, '')) like '%for full functionality of this site it is necessary to enable javascript%california legislative information%'
+          )
+        )::int as publisher_page_false_successes,
         count(*) filter (where processing_status in ('failed', 'unsupported'))::int as extraction_failures,
         count(*) filter (
           where processing_status = 'processed'
@@ -385,6 +463,15 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       watermark: checkpoint.watermark?.toISOString()
     })),
     documentProcessing,
+    documentFailures: documentFailures.rows.map((row) => ({
+      contentType: row.content_type,
+      count: row.count,
+      failureCategory: row.failure_category,
+      failureReason: row.failure_reason,
+      host: row.host,
+      jurisdictionId: row.jurisdiction_id,
+      status: row.status
+    })),
     documentTypes: documentTypes.rows.map((row) => ({
       classification: row.classification,
       documents: row.documents,
@@ -397,6 +484,7 @@ export async function generateCoverageReport(database: LegislationDatabase): Pro
       extractionFailures: documentQualityResult.rows[0]?.extraction_failures ?? 0,
       fallbackSegmentation: documentQualityResult.rows[0]?.fallback_segmentation ?? 0,
       lowText: documentQualityResult.rows[0]?.low_text ?? 0,
+      publisherPageFalseSuccesses: documentQualityResult.rows[0]?.publisher_page_false_successes ?? 0,
       total: documentQualityResult.rows[0]?.total ?? 0
     },
     embeddingCoverage: {

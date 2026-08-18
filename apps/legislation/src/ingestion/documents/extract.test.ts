@@ -140,6 +140,50 @@ describe("legislative document extraction", () => {
       category: "download-transient",
       retryable: true
     })
+    expect(
+      classifyDocumentFailure("California bill PDF is not available from publisher (received application/xml)")
+    ).toMatchObject({ category: "not-found", retryable: false })
+    expect(classifyDocumentFailure("PDF is image-only or contains too little usable text")).toMatchObject({
+      category: "ocr-required",
+      retryable: false
+    })
+    expect(
+      classifyDocumentFailure(
+        new TypeError("fetch failed: getaddrinfo ENOTFOUND alisondb.legislature.state.al.us"),
+        "https://alisondb.legislature.state.al.us/ALISON/SearchableInstruments/2017RS/PrintFiles/HB1-int.pdf"
+      )
+    ).toMatchObject({ category: "source-inaccessible", retryable: false })
+    expect(
+      classifyDocumentFailure(
+        new TypeError("fetch failed: getaddrinfo ENOTFOUND temporary.example.gov"),
+        "https://temporary.example.gov/bill.pdf"
+      )
+    ).toMatchObject({ category: "download-transient", retryable: true })
+  })
+
+  it("rejects publisher chrome and unusably short extracted text", async () => {
+    await expect(
+      extractDocument("document:placeholder", encoder.encode("Download Bill PDF"), "text/plain")
+    ).rejects.toThrow("too little usable text")
+    await expect(
+      extractDocument(
+        "document:publisher-page",
+        encoder.encode(
+          "For full functionality of this site it is necessary to enable JavaScript. California Legislative Information"
+        ),
+        "text/plain"
+      )
+    ).rejects.toThrow("publisher navigation")
+  })
+
+  it("classifies raster artifacts as deferred OCR work", async () => {
+    await expect(
+      extractDocument("document:image", new Uint8Array([0xff, 0xd8, 0xff, 0xe0]), "image/jpeg")
+    ).rejects.toThrow("requires OCR")
+    expect(classifyDocumentFailure("Document is image-only (image/jpeg) and requires OCR")).toMatchObject({
+      category: "ocr-required",
+      retryable: false
+    })
   })
 
   it("backs durable retries off exponentially with a fixed ceiling", () => {

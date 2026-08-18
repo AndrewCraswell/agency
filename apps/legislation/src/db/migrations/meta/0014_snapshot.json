@@ -886,7 +886,7 @@
         },
         "bill_documents_error_category_check": {
           "name": "bill_documents_error_category_check",
-          "value": "\"legislation\".\"bill_documents\".\"processing_error_category\" is null or \"legislation\".\"bill_documents\".\"processing_error_category\" in ('download-permanent', 'download-transient', 'malformed-document', 'not-found', 'oversized', 'processing-transient', 'unsafe-url', 'unsupported-format')"
+          "value": "\"legislation\".\"bill_documents\".\"processing_error_category\" is null or \"legislation\".\"bill_documents\".\"processing_error_category\" in ('download-permanent', 'download-transient', 'malformed-document', 'not-found', 'ocr-required', 'oversized', 'processing-transient', 'source-inaccessible', 'unsafe-url', 'unsupported-format')"
         },
         "bill_documents_processing_status_check": {
           "name": "bill_documents_processing_status_check",

@@ -5,8 +5,16 @@ function report(bills: number, federalBills: number): CoverageReport {
   return {
     checkpoints: [],
     documentProcessing: [],
+    documentFailures: [],
     documentTypes: [],
-    documentQuality: { emptyText: 0, extractionFailures: 0, fallbackSegmentation: 0, lowText: 0, total: 0 },
+    documentQuality: {
+      emptyText: 0,
+      extractionFailures: 0,
+      fallbackSegmentation: 0,
+      lowText: 0,
+      publisherPageFalseSuccesses: 0,
+      total: 0
+    },
     embeddingCoverage: { bills: { embedded: 0, total: bills }, sections: { embedded: 0, total: 0 } },
     federalBillTypes: [{ billType: "hr", bills: federalBills, congress: "119", documents: 0 }],
     eventCoverage: [],

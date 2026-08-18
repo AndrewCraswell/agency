@@ -25,8 +25,11 @@ import {
 } from "../ingestion/documents/artifact-store.js"
 import {
   classifyTerminalDocumentFailures,
+  DOCUMENT_REMEDIATION_COHORTS,
+  prepareDocumentRemediation,
   processPendingDocuments,
-  requeueInterruptedDocuments
+  requeueInterruptedDocuments,
+  type DocumentRemediationCohort
 } from "../ingestion/documents/jobs.js"
 import { DOCUMENT_FAILURE_CATEGORIES, type DocumentFailureCategory } from "../ingestion/documents/process.js"
 import {
@@ -222,9 +225,16 @@ program
 
 program
   .command("documents:classify-terminal")
-  .description("Move known non-retryable document failures to unsupported")
-  .option("--limit <number>", "maximum failed documents to inspect", "100000")
+  .description("Classify legacy failed and unsupported documents and make terminal dispositions explicit")
+  .option("--limit <number>", "maximum unclassified documents to inspect", "100000")
   .action(classifyTerminalDocuments)
+
+program
+  .command("documents:prepare-remediation")
+  .description("Prepare one known document defect cohort for bounded reprocessing")
+  .requiredOption("--cohort <cohort>", `one of ${DOCUMENT_REMEDIATION_COHORTS.join(", ")}`)
+  .option("--limit <number>", "maximum documents to prepare", "10000")
+  .action(prepareKnownDocumentRemediation)
 
 program
   .command("documents:recover-interrupted")
@@ -1317,6 +1327,32 @@ async function classifyTerminalDocuments(options: { limit: string }) {
   }, config)
 }
 
+async function prepareKnownDocumentRemediation(options: { cohort: string; limit: string }) {
+  const config = loadConfig()
+  const cohort = parseDocumentRemediationCohort(options.cohort)
+  const limit = parseInteger(options.limit, "limit")
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: `prepare-remediation-${cohort}`,
+        scope: { cohort, limit },
+        source: "documents"
+      },
+      async () => {
+        const prepared = await prepareDocumentRemediation(database, cohort, limit)
+        return {
+          checkpoint: { cohort, identifiers: prepared.identifiers },
+          counts: createJobCounts({ discovered: prepared.prepared, updated: prepared.prepared }),
+          failures: []
+        }
+      }
+    )
+    printJobResult(result)
+  }, config)
+}
+
 async function recoverInterruptedDocuments(options: { before: string }) {
   const config = loadConfig()
   const before = parseDate(options.before, "before")
@@ -1675,6 +1711,13 @@ function parseDocumentFailureCategory(value: string): DocumentFailureCategory {
     throw new InvalidJobInput(`failure category must be one of ${DOCUMENT_FAILURE_CATEGORIES.join(", ")}`)
   }
   return value as DocumentFailureCategory
+}
+
+function parseDocumentRemediationCohort(value: string): DocumentRemediationCohort {
+  if (!DOCUMENT_REMEDIATION_COHORTS.includes(value as DocumentRemediationCohort)) {
+    throw new InvalidJobInput(`remediation cohort must be one of ${DOCUMENT_REMEDIATION_COHORTS.join(", ")}`)
+  }
+  return value as DocumentRemediationCohort
 }
 
 function parseHttpsUrl(value: string, name: string): URL {

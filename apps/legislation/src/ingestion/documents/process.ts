@@ -8,8 +8,10 @@ export const DOCUMENT_FAILURE_CATEGORIES = [
   "download-transient",
   "malformed-document",
   "not-found",
+  "ocr-required",
   "oversized",
   "processing-transient",
+  "source-inaccessible",
   "unsafe-url",
   "unsupported-format"
 ] as const
@@ -22,7 +24,9 @@ export interface DocumentFailureClassification {
   retryable: boolean
 }
 
-export function classifyDocumentFailure(error: unknown): DocumentFailureClassification {
+const KNOWN_INACCESSIBLE_DOCUMENT_HOSTS = new Set(["alisondb.legislature.state.al.us"])
+
+export function classifyDocumentFailure(error: unknown, sourceUrl?: string): DocumentFailureClassification {
   let failureMessage = "Unknown document processing failure"
   if (error instanceof Error) {
     failureMessage = error.message
@@ -33,8 +37,17 @@ export function classifyDocumentFailure(error: unknown): DocumentFailureClassifi
   const normalized = message.toLowerCase()
   const status = /document download failed with http (\d{3})/i.exec(message)?.[1]
   const statusCode = status === undefined ? undefined : Number(status)
+  let sourceHost: string | undefined
+  try {
+    sourceHost = sourceUrl === undefined ? undefined : new URL(sourceUrl).hostname.toLowerCase()
+  } catch {
+    sourceHost = undefined
+  }
 
   if (statusCode === 404 || statusCode === 410) {
+    return { category: "not-found", message, retryable: false }
+  }
+  if (normalized.includes("california bill pdf is not available from publisher")) {
     return { category: "not-found", message, retryable: false }
   }
   if (statusCode !== undefined) {
@@ -56,13 +69,27 @@ export function classifyDocumentFailure(error: unknown): DocumentFailureClassifi
   if (normalized.includes("document response contains html instead of advertised pdf")) {
     return { category: "download-transient", message, retryable: true }
   }
+  if (normalized.includes("image-only")) {
+    return { category: "ocr-required", message, retryable: false }
+  }
   if (
     normalized.includes("invalid pdf structure") ||
-    normalized.includes("image-only") ||
     normalized.includes("document is empty") ||
-    normalized.includes("document produced no usable text")
+    normalized.includes("document produced no usable text") ||
+    normalized.includes("document produced too little usable text") ||
+    normalized.includes("document contains publisher navigation instead of legislative text")
   ) {
     return { category: "malformed-document", message, retryable: false }
+  }
+  if (
+    sourceHost !== undefined &&
+    KNOWN_INACCESSIBLE_DOCUMENT_HOSTS.has(sourceHost) &&
+    (normalized.includes("fetch failed") ||
+      normalized.includes("enotfound") ||
+      normalized.includes("eai_again") ||
+      normalized.includes("timeout"))
+  ) {
+    return { category: "source-inaccessible", message, retryable: false }
   }
   if (
     normalized.includes("fetch failed") ||

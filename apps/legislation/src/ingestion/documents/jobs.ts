@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { and, asc, eq, inArray, isNull, lt, lte, or, sql } from "drizzle-orm"
+import { and, asc, eq, inArray, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
 import { billDocuments, bills } from "../../db/schema/schema.js"
 import { createJobCounts, mapConcurrent, type JobCounts } from "../job.js"
@@ -17,6 +17,14 @@ const MAX_UPDATE_BATCH_SIZE = 1000
 const RETRY_BASE_DELAY_MS = 5 * 60 * 1000
 const RETRY_MAX_DELAY_MS = 6 * 60 * 60 * 1000
 
+export const DOCUMENT_REMEDIATION_COHORTS = [
+  "alaska-pdf-label",
+  "california-bill-pdf",
+  "image-ocr",
+  "inaccessible-hosts"
+] as const
+export type DocumentRemediationCohort = (typeof DOCUMENT_REMEDIATION_COHORTS)[number]
+
 export interface DocumentJobResult {
   counts: JobCounts & { processed: number; unsupported: number }
   failures: Array<
@@ -30,44 +38,187 @@ export function documentRetryAt(attempt: number, from = new Date()): Date {
   return new Date(from.getTime() + delay)
 }
 
+export async function prepareDocumentRemediation(
+  database: LegislationDatabase,
+  cohort: DocumentRemediationCohort,
+  limit = 10_000
+): Promise<{ identifiers: string[]; prepared: number }> {
+  const boundedLimit = Math.min(Math.max(limit, 1), 100_000)
+  let result
+  if (cohort === "california-bill-pdf") {
+    result = await database.execute<{ identifiers: string[]; prepared: number }>(sql`
+          with candidates as materialized (
+            select id
+            from legislation.bill_documents
+            where source_url like 'https://leginfo.legislature.ca.gov/faces/billPdf.xhtml?%'
+              and (
+                (
+                  processing_status = 'processed'
+                  and (
+                    lower(btrim(coalesce(text, ''))) = 'download bill pdf'
+                    or lower(coalesce(text, '')) like '%for full functionality of this site it is necessary to enable javascript%california legislative information%'
+                  )
+                )
+                or (
+                  processing_status = 'unsupported'
+                  and (
+                    coalesce(processing_error, '') ilike '%invalid pdf structure%'
+                    or coalesce(processing_error, '') ilike '%publisher navigation%'
+                  )
+                )
+              )
+            limit ${boundedLimit}
+            for update skip locked
+          ), removed_sections as (
+            delete from legislation.document_sections sections
+            using candidates
+            where sections.document_id = candidates.id
+          ), updated as (
+            update legislation.bill_documents documents
+            set blob_path = null,
+              content_hash = null,
+              content_type = null,
+              last_attempt_at = null,
+              next_attempt_at = null,
+              processing_attempts = 0,
+              processing_error = null,
+              processing_error_category = null,
+              processing_status = 'pending',
+              text = null,
+              updated_at = now()
+            from candidates
+            where documents.id = candidates.id
+            returning documents.id
+          )
+          select count(*)::int as prepared,
+            coalesce((array_agg(id order by id))[1:20], array[]::text[]) as identifiers
+          from updated
+        `)
+  } else if (cohort === "alaska-pdf-label") {
+    result = await database.execute<{ identifiers: string[]; prepared: number }>(sql`
+            with candidates as materialized (
+              select id
+              from legislation.bill_documents
+              where processing_status = 'unsupported'
+                and (
+                  lower(coalesce(content_type, '')) = 'pdf'
+                  or processing_error ilike '%unsupported document content type: pdf%'
+                )
+              limit ${boundedLimit}
+              for update skip locked
+            ), updated as (
+              update legislation.bill_documents documents
+              set last_attempt_at = null,
+                next_attempt_at = null,
+                processing_attempts = 0,
+                processing_error = null,
+                processing_error_category = null,
+                processing_status = 'pending',
+                updated_at = now()
+              from candidates
+              where documents.id = candidates.id
+              returning documents.id
+            )
+            select count(*)::int as prepared,
+              coalesce((array_agg(id order by id))[1:20], array[]::text[]) as identifiers
+            from updated
+          `)
+  } else {
+    const terminalCategory = cohort === "image-ocr" ? "ocr-required" : "source-inaccessible"
+    const terminalSelection =
+      cohort === "image-ocr"
+        ? sql`(
+            coalesce(processing_error, '') ilike '%image-only%'
+            or lower(coalesce(content_type, '')) like 'image/%'
+            or coalesce(processing_error, '') ~* 'unsupported document content type: (image/)?(gif|jpe?g|png|tiff?|bmp|webp)'
+          )`
+        : sql`lower(split_part(split_part(source_url, '://', 2), '/', 1)) = 'alisondb.legislature.state.al.us'`
+    result = await database.execute<{ identifiers: string[]; prepared: number }>(sql`
+            with candidates as materialized (
+              select id
+              from legislation.bill_documents
+              where processing_status in ('failed', 'unsupported')
+                and processing_error_category is distinct from ${terminalCategory}
+                and ${terminalSelection}
+              limit ${boundedLimit}
+              for update skip locked
+            ), updated as (
+              update legislation.bill_documents documents
+              set next_attempt_at = null,
+                processing_error_category = ${terminalCategory},
+                processing_status = 'unsupported',
+                updated_at = now()
+              from candidates
+              where documents.id = candidates.id
+              returning documents.id
+            )
+            select count(*)::int as prepared,
+              coalesce((array_agg(id order by id))[1:20], array[]::text[]) as identifiers
+            from updated
+          `)
+  }
+  return result.rows[0] ?? { identifiers: [], prepared: 0 }
+}
+
 export async function classifyTerminalDocumentFailures(
   database: LegislationDatabase,
   limit = 100_000
-): Promise<{ inspected: number; updated: number }> {
+): Promise<{ inspected: number; retryable: number; terminal: number; updated: number }> {
   const records = await database
-    .select({ id: billDocuments.id, processingError: billDocuments.processingError })
+    .select({
+      id: billDocuments.id,
+      processingError: billDocuments.processingError,
+      sourceUrl: billDocuments.sourceUrl
+    })
     .from(billDocuments)
-    .where(eq(billDocuments.processingStatus, "failed"))
+    .where(
+      and(
+        inArray(billDocuments.processingStatus, ["failed", "unsupported"]),
+        isNull(billDocuments.processingErrorCategory),
+        isNotNull(billDocuments.processingError)
+      )
+    )
     .orderBy(asc(billDocuments.id))
     .limit(Math.min(Math.max(limit, 1), 100_000))
-  const terminalByCategory = Map.groupBy(
+  const classifiedByDisposition = Map.groupBy(
     records.flatMap((record) => {
       if (record.processingError === null) {
         return []
       }
-      const failure = classifyDocumentFailure(record.processingError)
-      return failure.retryable ? [] : [{ category: failure.category, id: record.id }]
+      const failure = classifyDocumentFailure(record.processingError, record.sourceUrl)
+      return [{ category: failure.category, id: record.id, retryable: failure.retryable }]
     }),
-    (record) => record.category
+    (record) => `${record.retryable ? "retryable" : "terminal"}:${record.category}`
   )
   let updated = 0
-  for (const [category, terminalRecords] of terminalByCategory) {
-    const terminalIds = terminalRecords.map((record) => record.id)
-    for (let offset = 0; offset < terminalIds.length; offset += MAX_UPDATE_BATCH_SIZE) {
-      const batch = terminalIds.slice(offset, offset + MAX_UPDATE_BATCH_SIZE)
+  let retryable = 0
+  let terminal = 0
+  for (const recordsForDisposition of classifiedByDisposition.values()) {
+    const first = recordsForDisposition[0]
+    if (first === undefined) {
+      continue
+    }
+    const ids = recordsForDisposition.map((record) => record.id)
+    for (let offset = 0; offset < ids.length; offset += MAX_UPDATE_BATCH_SIZE) {
+      const batch = ids.slice(offset, offset + MAX_UPDATE_BATCH_SIZE)
       await database
         .update(billDocuments)
         .set({
           nextAttemptAt: null,
-          processingErrorCategory: category,
-          processingStatus: "unsupported",
+          processingErrorCategory: first.category,
+          processingStatus: first.retryable ? "failed" : "unsupported",
           updatedAt: new Date()
         })
         .where(inArray(billDocuments.id, batch))
       updated += batch.length
+      if (first.retryable) {
+        retryable += batch.length
+      } else {
+        terminal += batch.length
+      }
     }
   }
-  return { inspected: records.length, updated }
+  return { inspected: records.length, retryable, terminal, updated }
 }
 
 export async function requeueInterruptedDocuments(database: LegislationDatabase, before: Date): Promise<number> {
@@ -218,7 +369,7 @@ export async function processPendingDocuments(
         counts.updated += 1
       }
     } catch (error) {
-      const failure = classifyDocumentFailure(error)
+      const failure = classifyDocumentFailure(error, record.sourceUrl)
       const attempt = record.processingAttempts + 1
       const retryable = failure.retryable && attempt < options.maximumAttempts
       const unsupported = !failure.retryable
