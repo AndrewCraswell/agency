@@ -161,10 +161,13 @@ export async function prepareDocumentRemediation(
               from legislation.bill_documents
               where processing_status = 'unsupported'
                 and processing_error_category = 'unsupported-format'
-                and lower(coalesce(content_type, '')) in (
-                  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                and (
+                  lower(coalesce(content_type, '')) in (
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                  )
+                  or coalesce(processing_error, '') ~* 'unsupported document content type: application/vnd\\.openxmlformats-officedocument\\.(presentationml\\.presentation|spreadsheetml\\.sheet|wordprocessingml\\.document)'
                 )
               limit ${boundedLimit}
               for update skip locked
