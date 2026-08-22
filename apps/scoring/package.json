@@ -18,6 +18,10 @@
     "./epee-resistance": {
       "types": "./dist/epee-resistance.d.ts",
       "default": "./dist/epee-resistance.js"
+    },
+    "./foil": {
+      "types": "./dist/foil.d.ts",
+      "default": "./dist/foil.js"
     }
   },
   "engines": {
