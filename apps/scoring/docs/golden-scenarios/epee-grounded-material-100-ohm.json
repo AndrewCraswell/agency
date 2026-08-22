@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.0.0",
+  "scenarioId": "epee.grounded-material-100-ohm",
+  "title": "Epee grounded material through a 100 ohm earth path does not suppress the opposing normal contact",
+  "weapon": "epee",
+  "ruleRevision": "fie-2026-epee",
+  "sources": [
+    { "authority": "fie", "id": "EPEE-04", "document": "fie-material-rules-2026-08-en.pdf", "page": 80, "locator": "Annex B, B(d)" },
+    { "authority": "implementation", "id": "EPEE-TEST-RESISTANCE", "document": "src/epee-resistance.test.ts", "page": null, "locator": "100 ohm grounded material rejection" }
+  ],
+  "lineModel": {
+    "revision": "epee-logical-resistance-lines-1",
+    "names": ["left.tip-loop", "left.ground-reference", "right.tip-loop", "right.ground-reference"]
+  },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": {
+    "clock": "virtual",
+    "timeUnit": "us",
+    "initialState": "fresh-bout",
+    "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-epee-grounded-100-ohm", "transportSequenceStart": 0, "captureId": null }
+  },
+  "inputs": [
+    {
+      "id": "grounded-and-opposing-start",
+      "atUs": 0,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.tip-loop", "state": "closed", "resistanceMilliOhms": 100000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "left.ground-reference", "state": "grounded", "resistanceMilliOhms": 100000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.tip-loop", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "grounded-and-opposing-qualified",
+      "atUs": 2000,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.tip-loop", "state": "closed", "resistanceMilliOhms": 100000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "left.ground-reference", "state": "grounded", "resistanceMilliOhms": 100000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.tip-loop", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    }
+  ],
+  "expect": {
+    "status": "accepted",
+    "decisions": [
+      { "id": "right-normal-hit", "decisionAtUs": 2000, "disposition": "qualified-hit", "side": "right", "weapon": "epee", "hitStartedAtUs": 0, "qualifiedAtUs": 2000, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["grounded-and-opposing-start", "grounded-and-opposing-qualified"] }
+    ],
+    "nonEvents": [
+      { "id": "left-grounded-no-hit", "window": { "fromUs": 0, "throughUs": 2000 }, "assertion": "no-decision", "side": "left", "assertionReasonCode": "grounded-material-rejected" }
+    ],
+    "uncertainty": [],
+    "finalState": { "hitCount": 1, "isLocked": false }
+  }
+}

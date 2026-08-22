@@ -14,6 +14,10 @@
     "./device": {
       "types": "./dist/device.d.ts",
       "default": "./dist/device.js"
+    },
+    "./epee-resistance": {
+      "types": "./dist/epee-resistance.d.ts",
+      "default": "./dist/epee-resistance.js"
     }
   },
   "engines": {

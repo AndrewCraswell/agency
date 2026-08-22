@@ -8,14 +8,17 @@
   "scenarios": [
     { "scenarioId": "epee.contact-boundaries", "path": "golden-scenarios/epee-contact-boundaries.json", "weapon": "epee", "status": "active", "sourceIds": ["EPEE-03", "EPEE-TEST-CONTACT-MINIMUM"] },
     { "scenarioId": "epee.double-lockout-boundary", "path": "golden-scenarios/epee-double-lockout-boundary.json", "weapon": "epee", "status": "active", "sourceIds": ["EPEE-02", "EPEE-TEST-LOCKOUT-BOUNDARY"] },
+    { "scenarioId": "epee.exceptional-resistance-duration", "path": "golden-scenarios/epee-exceptional-resistance-duration.json", "weapon": "epee", "status": "active", "sourceIds": ["EPEE-03", "EPEE-TEST-RESISTANCE"] },
+    { "scenarioId": "epee.grounded-material-100-ohm", "path": "golden-scenarios/epee-grounded-material-100-ohm.json", "weapon": "epee", "status": "active", "sourceIds": ["EPEE-04", "EPEE-TEST-RESISTANCE"] },
     { "scenarioId": "epee.grounded-rejection", "path": "golden-scenarios/epee-grounded-rejection.json", "weapon": "epee", "status": "active", "sourceIds": ["EPEE-04", "EPEE-TEST-GROUNDED"] },
-    { "scenarioId": "epee.non-monotonic-time", "path": "golden-scenarios/epee-non-monotonic-time.json", "weapon": "epee", "status": "active", "sourceIds": ["EPEE-TEST-MONOTONIC-TIME"] }
+    { "scenarioId": "epee.non-monotonic-time", "path": "golden-scenarios/epee-non-monotonic-time.json", "weapon": "epee", "status": "active", "sourceIds": ["EPEE-TEST-MONOTONIC-TIME"] },
+    { "scenarioId": "epee.resistance-uncertainty-near-lockout", "path": "golden-scenarios/epee-resistance-uncertainty-near-lockout.json", "weapon": "epee", "status": "active", "sourceIds": ["EPEE-02", "EPEE-03", "EPEE-TEST-RESISTANCE"] }
   ],
   "coverage": [
     { "traceabilityId": "EPEE-01", "status": "covered", "scenarioIds": ["epee.contact-boundaries", "epee.grounded-rejection"] },
     { "traceabilityId": "EPEE-02", "status": "covered", "scenarioIds": ["epee.double-lockout-boundary"] },
-    { "traceabilityId": "EPEE-03", "status": "covered", "scenarioIds": ["epee.contact-boundaries"] },
-    { "traceabilityId": "EPEE-04", "status": "covered", "scenarioIds": ["epee.grounded-rejection"] },
+    { "traceabilityId": "EPEE-03", "status": "covered", "scenarioIds": ["epee.contact-boundaries", "epee.exceptional-resistance-duration", "epee.resistance-uncertainty-near-lockout"] },
+    { "traceabilityId": "EPEE-04", "status": "covered", "scenarioIds": ["epee.grounded-material-100-ohm", "epee.grounded-rejection"] },
     { "traceabilityId": "EPEE-05", "status": "planned", "scenarioIds": [] },
     { "traceabilityId": "FOIL-01", "status": "planned", "scenarioIds": [] },
     { "traceabilityId": "FOIL-02", "status": "planned", "scenarioIds": [] },

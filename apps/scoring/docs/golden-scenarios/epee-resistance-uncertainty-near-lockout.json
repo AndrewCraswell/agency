@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.0.0",
+  "scenarioId": "epee.resistance-uncertainty-near-lockout",
+  "title": "Epee resistance uncertainty near the retained lockout boundary is not converted into a second contact",
+  "weapon": "epee",
+  "ruleRevision": "fie-2026-epee",
+  "sources": [
+    { "authority": "fie", "id": "EPEE-02", "document": "fie-material-rules-2026-08-en.pdf", "page": 80, "locator": "Annex B, B(b)" },
+    { "authority": "fie", "id": "EPEE-03", "document": "fie-material-rules-2026-08-en.pdf", "page": 80, "locator": "Annex B, B(c)" },
+    { "authority": "implementation", "id": "EPEE-TEST-RESISTANCE", "document": "src/epee-resistance.test.ts", "page": null, "locator": "resistance uncertainty does not become an ungrounded false" }
+  ],
+  "lineModel": {
+    "revision": "epee-logical-resistance-lines-1",
+    "names": ["left.tip-loop", "left.ground-reference", "right.tip-loop", "right.ground-reference"]
+  },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": {
+    "clock": "virtual",
+    "timeUnit": "us",
+    "initialState": "fresh-bout",
+    "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-epee-resistance-uncertainty", "transportSequenceStart": 0, "captureId": null }
+  },
+  "inputs": [
+    {
+      "id": "left-start",
+      "atUs": 0,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.tip-loop", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "left.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.tip-loop", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "left-qualified",
+      "atUs": 2000,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.tip-loop", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "left.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.tip-loop", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "right-uncertain-at-boundary",
+      "atUs": 45000,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.tip-loop", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "left.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.tip-loop", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 1 },
+        { "line": "right.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    }
+  ],
+  "expect": {
+    "status": "accepted",
+    "decisions": [
+      { "id": "left-hit", "decisionAtUs": 2000, "disposition": "qualified-hit", "side": "left", "weapon": "epee", "hitStartedAtUs": 0, "qualifiedAtUs": 2000, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["left-start", "left-qualified"] }
+    ],
+    "nonEvents": [
+      { "id": "right-uncertain-no-hit", "window": { "fromUs": 45000, "throughUs": 45000 }, "assertion": "no-decision", "side": "right", "assertionReasonCode": "resistance-uncertainty" }
+    ],
+    "uncertainty": [
+      { "id": "right-resistance-range", "atUs": 45000, "scope": "right.tip-loop", "outcome": "indeterminate", "assertionReasonCode": "resistance-interval-is-not-a-released-test-point", "rangeMilliOhms": { "min": 9999, "max": 10001 } }
+    ],
+    "finalState": { "hitCount": 1, "isLocked": false }
+  }
+}
