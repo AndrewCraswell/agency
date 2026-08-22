@@ -19,6 +19,7 @@
     "**/.trigger/**",
     "**/.data/**",
     "**/*.shopify*.html",
+    "**/fixtures/golden-vector-export.json",
     "pnpm-lock.yaml"
   ]
 }

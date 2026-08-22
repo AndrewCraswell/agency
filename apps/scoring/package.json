@@ -51,14 +51,16 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "check:format": "oxfmt --check",
+    "check:golden-vectors": "pnpm build && node scripts/export-golden-vectors.mjs --check",
     "check:lint": "pnpm lint",
     "check:types": "tsc --noEmit",
     "check:unused": "knip --directory ../.. --workspace apps/scoring",
+    "export:golden-vectors": "pnpm build && node scripts/export-golden-vectors.mjs",
     "lint": "oxlint --max-warnings=0",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "verify": "run-s check:format check:lint check:types check:unused test:coverage"
+    "verify": "run-s check:format check:lint check:types check:unused check:golden-vectors test:coverage"
   },
   "devDependencies": {
     "@repo/oxlint-config": "workspace:*",
