@@ -22,6 +22,10 @@
     "./foil": {
       "types": "./dist/foil.d.ts",
       "default": "./dist/foil.js"
+    },
+    "./foil-insulation": {
+      "types": "./dist/foil-insulation.d.ts",
+      "default": "./dist/foil-insulation.js"
     }
   },
   "engines": {
