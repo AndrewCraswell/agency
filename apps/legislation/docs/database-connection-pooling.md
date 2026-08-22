@@ -60,6 +60,16 @@ scaling efficiency remains at least 60 percent, and none of the safety gates bel
 stage improves throughput by less than 10 percent; that is the measured saturation point even if Trigger still has
 unused task capacity.
 
+The 160- and 200-worker stages are temporary benchmark stages only. After the curve is measured, restore the embedding
+queue to a steady-state ceiling of 128 Trigger tasks even if throughput continues to improve at 160 or 200. This leaves
+72 of the project's 200 ordinary concurrency slots available for recurring Congress and state synchronization, OCR,
+and operational repairs. A future decision to exceed 128 for routine embedding work requires an explicit maintenance
+window or a separate Trigger concurrency allocation; it is not implied by a successful benchmark.
+
+Do not confuse Trigger task concurrency with PostgreSQL connections. The steady-state 128-task ceiling remains behind
+PgBouncer's 500-client admission limit and 20-backend database ceiling. Returning from the benchmark to 128 tasks does
+not require changing either PgBouncer setting.
+
 Do not compare different products directly. Bills, amendments, document sections, and supporting-material sections use
 different input lengths, model routes, and persistence costs. Record a separate concurrency curve for every product
 that is expected to run at the higher ceiling.

@@ -21,6 +21,9 @@ in [database connection pooling](database-connection-pooling.md). Each increase 
 completed-vector throughput gain on the same product. The documented benchmark records vectors per minute, provider
 latency and errors, database and PgBouncer pressure, retries, cost per successful vector, speedup, and scaling
 efficiency. A stage that adds less than 10 percent throughput is the measured saturation point and is not promoted.
+The 160- and 200-worker stages are temporary measurements. After the benchmark, set the embedding queue to 128 tasks
+so 72 of Trigger's 200 ordinary concurrency slots remain available for daily synchronization, OCR, and repairs, even
+if the higher stages continue to scale efficiently.
 
 ## Canary status
 
