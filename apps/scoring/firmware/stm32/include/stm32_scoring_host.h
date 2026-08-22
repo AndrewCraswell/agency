@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "stm32_transport.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -20,6 +22,7 @@ typedef enum scoring_status {
   SCORING_STATUS_INVALID_ARGUMENT,
   SCORING_STATUS_NOT_READY,
   SCORING_STATUS_OVERFLOW,
+  SCORING_STATUS_BACKPRESSURE,
   SCORING_STATUS_HARDWARE_FAULT,
   SCORING_STATUS_INTEGRITY_FAILURE
 } scoring_status_t;
@@ -105,6 +108,7 @@ typedef struct scoring_stm32_hardware {
 
 typedef struct scoring_stm32_host {
   const scoring_stm32_hardware_t *hardware;
+  scoring_stm32_transport_t transport;
   scoring_stm32_state_t state;
   uint64_t started_at_us;
 } scoring_stm32_host_t;
@@ -135,6 +139,37 @@ scoring_status_t scoring_stm32_host_start(scoring_stm32_host_t *host);
  * qualification core; this scaffold intentionally emits no decision.
  */
 scoring_status_t scoring_stm32_host_poll(scoring_stm32_host_t *host);
+
+/**
+ * Frames an already-authoritative payload and publishes it through the
+ * substitutable transport adapter. A failed write blocks further output until
+ * the owner establishes a recovery stream; this function makes no decision.
+ */
+scoring_status_t scoring_stm32_host_publish_transport_frame(
+  scoring_stm32_host_t *host,
+  scoring_stm32_transport_message_type_t message_type,
+  const uint8_t *payload,
+  size_t payload_length
+);
+
+/**
+ * Gives a bounded raw link fragment to the C17 transport adapter. Only an
+ * inbound request frame can be delivered to this STM32 role; no payload is
+ * parsed as a scoring decision.
+ */
+scoring_stm32_transport_result_t scoring_stm32_host_receive_transport_fragment(
+  scoring_stm32_host_t *host,
+  const uint8_t *bytes,
+  size_t byte_count,
+  scoring_stm32_transport_frame_t *out_frame
+);
+
+/** Explicitly clears link-failure state at an owning recovery boundary. */
+void scoring_stm32_host_recover_transport(
+  scoring_stm32_host_t *host,
+  uint32_t first_receive_sequence,
+  uint32_t first_transmit_sequence
+);
 
 #ifdef __cplusplus
 }

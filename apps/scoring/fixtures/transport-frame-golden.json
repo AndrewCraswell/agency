@@ -1,0 +1,25 @@
+{
+  "fixtures": [
+    {
+      "name": "decision-record",
+      "receiver": "esp32",
+      "messageType": "decision-record",
+      "payloadHex": "007f80ff",
+      "sequence": 16909060
+    },
+    {
+      "name": "request-empty",
+      "receiver": "stm32",
+      "messageType": "request",
+      "payloadHex": "",
+      "sequence": 0
+    },
+    {
+      "name": "status-max-sequence",
+      "receiver": "esp32",
+      "messageType": "status",
+      "payloadHex": "a5",
+      "sequence": 4294967295
+    }
+  ]
+}

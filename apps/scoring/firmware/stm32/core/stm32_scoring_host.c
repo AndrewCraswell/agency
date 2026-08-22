@@ -119,9 +119,89 @@ scoring_status_t scoring_stm32_host_init(
   }
 
   host->hardware = hardware;
+  scoring_stm32_transport_init(
+    &host->transport,
+    SCORING_STM32_TRANSPORT_RECEIVER_STM32,
+    0U,
+    0U
+  );
   host->state = SCORING_STM32_STATE_UNAVAILABLE;
   host->started_at_us = 0U;
   return SCORING_STATUS_OK;
+}
+
+scoring_status_t scoring_stm32_host_publish_transport_frame(
+  scoring_stm32_host_t *host,
+  scoring_stm32_transport_message_type_t message_type,
+  const uint8_t *payload,
+  size_t payload_length
+) {
+  const uint8_t *bytes = NULL;
+  size_t byte_count = 0U;
+  scoring_stm32_transport_result_t transport_result;
+  scoring_status_t status;
+
+  if (host == NULL || host->hardware == NULL) {
+    return SCORING_STATUS_INVALID_ARGUMENT;
+  }
+
+  if (
+    message_type == SCORING_STM32_TRANSPORT_DECISION_RECORD &&
+    host->state != SCORING_STM32_STATE_READY
+  ) {
+    return SCORING_STATUS_NOT_READY;
+  }
+
+  transport_result = scoring_stm32_transport_prepare_transmit(
+    &host->transport,
+    message_type,
+    payload,
+    payload_length,
+    &bytes,
+    &byte_count
+  );
+  if (transport_result == SCORING_STM32_TRANSPORT_BACKPRESSURE) {
+    return SCORING_STATUS_BACKPRESSURE;
+  }
+  if (transport_result != SCORING_STM32_TRANSPORT_OK) {
+    return SCORING_STATUS_INTEGRITY_FAILURE;
+  }
+
+  status = host->hardware->transport.publish(host->hardware->transport.context, bytes, byte_count);
+  if (status != SCORING_STATUS_OK) {
+    scoring_stm32_transport_fail_backpressure(&host->transport);
+    return status;
+  }
+
+  scoring_stm32_transport_commit_transmit(&host->transport);
+  return SCORING_STATUS_OK;
+}
+
+scoring_stm32_transport_result_t scoring_stm32_host_receive_transport_fragment(
+  scoring_stm32_host_t *host,
+  const uint8_t *bytes,
+  size_t byte_count,
+  scoring_stm32_transport_frame_t *out_frame
+) {
+  if (host == NULL) {
+    return SCORING_STM32_TRANSPORT_INVALID_ARGUMENT;
+  }
+
+  return scoring_stm32_transport_receive(&host->transport, bytes, byte_count, out_frame);
+}
+
+void scoring_stm32_host_recover_transport(
+  scoring_stm32_host_t *host,
+  uint32_t first_receive_sequence,
+  uint32_t first_transmit_sequence
+) {
+  if (host != NULL) {
+    scoring_stm32_transport_recover(
+      &host->transport,
+      first_receive_sequence,
+      first_transmit_sequence
+    );
+  }
 }
 
 scoring_status_t scoring_stm32_host_start(scoring_stm32_host_t *host) {

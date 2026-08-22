@@ -7,6 +7,7 @@ const firmwareRoot = new URL("../", import.meta.url)
 const buildRoot = new URL("../out/host-native/", import.meta.url)
 const scoringAppRoot = new URL("../../../", import.meta.url)
 const fixtureCheck = new URL("generate-golden-fixture.mjs", import.meta.url)
+const transportFixtureCheck = new URL("generate-transport-fixture.mjs", import.meta.url)
 const isWindows = process.platform === "win32"
 
 function run(command, args, environment = process.env) {
@@ -90,6 +91,7 @@ if (isWindows) {
 mkdirSync(buildRootPath, { recursive: true })
 runPnpm(["check:golden-vectors"])
 run("node", [fileURLToPath(fixtureCheck), "--check"])
+run("node", [fileURLToPath(transportFixtureCheck), "--check"])
 run("cmake", configureArgs, toolchainEnvironment)
-run("cmake", ["--build", buildRootPath, "--config", "Debug"], toolchainEnvironment)
-run("ctest", ["--test-dir", buildRootPath, "--build-config", "Debug", "--output-on-failure"], toolchainEnvironment)
+run("cmake", ["--build", buildRootPath, "--config", "Release"], toolchainEnvironment)
+run("ctest", ["--test-dir", buildRootPath, "--build-config", "Release", "--output-on-failure"], toolchainEnvironment)
