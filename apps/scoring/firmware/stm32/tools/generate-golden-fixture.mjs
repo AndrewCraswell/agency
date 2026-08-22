@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 const fixtureUrl = new URL("../../../fixtures/golden-vector-export.json", import.meta.url)
 const outputUrl = new URL("../generated/stm32_golden_vectors.h", import.meta.url)
 const mode = process.argv[2] ?? "write"
+const HOST_FIRMWARE_DIGEST = `sha256:${"01".repeat(32)}`
 
 if (mode !== "write" && mode !== "--check") {
   throw new Error("Usage: node firmware/stm32/tools/generate-golden-fixture.mjs [--check]")
@@ -32,7 +33,80 @@ function asUs(value, label) {
   return value
 }
 
-function renderVector(vector) {
+function asEnum(value, choices, label) {
+  const index = choices.indexOf(value)
+  assert(index >= 0, `${label} is unsupported`)
+  return index
+}
+
+function renderSideContact(weapon, contact) {
+  if (weapon === "epee") {
+    assert(contact.lineIntegrity === "intact", "Epee fixture line integrity must be intact")
+    assert(contact.groundedMaterial === "not-grounded", "Epee fixture must not be grounded")
+    const closed = contact.circuitComplete === "closed"
+    assert(closed || contact.circuitComplete === "open", "Epee fixture circuit state is unsupported")
+    const resistance = contact.contactResistance.resistanceMilliOhms
+    const uncertainty = contact.contactResistance.resistanceUncertaintyMilliOhms
+    assert(
+      (closed && resistance === 10_000 && uncertainty === 0) ||
+        (!closed && resistance === null && uncertainty === null),
+      "Epee fixture resistance is unsupported"
+    )
+    return `{ ${closed ? 1 : 0}U, 0U, 0U, 0U, 0U }`
+  }
+
+  if (weapon === "foil") {
+    assert(contact.integrity === "intact", "Foil fixture integrity must be intact")
+    assert(contact.insulationDiagnostic === "unavailable", "Foil fixture diagnostic is unsupported")
+    return `{ 0U, ${asEnum(contact.circuitBreak, ["closed", "open"], "Foil circuit break")}U, ${asEnum(contact.targetContext, ["target", "nonTarget"], "Foil target context")}U, 0U, 0U }`
+  }
+
+  assert(contact.externalPathEligibility === "eligible", "Sabre fixture external path must be eligible")
+  assert(contact.ownEquipmentFault === "absent", "Sabre fixture own-equipment state is unsupported")
+  return `{ 0U, 0U, ${asEnum(contact.targetContact, ["target", "nonConductiveSurface"], "Sabre target contact")}U, ${asEnum(contact.bladeContact, ["absent", "present"], "Sabre blade contact")}U, ${asEnum(contact.circuitBCFault, ["normal", "controlBreak"], "Sabre B/C state")}U }`
+}
+
+function renderSample(weapon, sample) {
+  return `{ ${asUs(sample.atUs, "sample timestamp")}U, ${renderSideContact(weapon, sample.left)}, ${renderSideContact(weapon, sample.right)} }`
+}
+
+function renderHit(hit) {
+  return `{ ${asEnum(hit.side, ["left", "right"], "hit side")}U, ${asEnum(hit.classification, [null, "on-target", "off-target"], "hit classification")}U, ${asUs(hit.startedAtUs, "hit start")}U, ${asUs(hit.qualifiedAtUs, "hit qualification")}U }`
+}
+
+function renderDiagnostic(diagnostic) {
+  assert(diagnostic.code === "sabre-white", "Diagnostic code is unsupported")
+  return `{ ${asEnum(diagnostic.side, ["left", "right"], "diagnostic side")}U, ${asEnum(diagnostic.value, ["white-off", "white-on"], "white diagnostic")}U }`
+}
+
+function recordIdentity(vector, index) {
+  return {
+    captureId: `${vector.id}.capture`,
+    recordId: `${vector.id}.decision-${index + 1}`
+  }
+}
+
+function renderRecordContext(vector, index, digest) {
+  const identity = recordIdentity(vector, index)
+  const first = vector.stimulus.samples[0]
+  const last = vector.stimulus.samples.at(-1)
+  return `{ ${cString(identity.recordId)}, ${cString(identity.captureId)}, ${cString(digest)}, ${cString(HOST_FIRMWARE_DIGEST)}, "golden-boot-1", 0U, ${vector.stimulus.samples.length - 1}U, ${asUs(first.atUs, "capture start")}U, ${asUs(last.atUs, "capture end")}U, ${vector.stimulus.samples.length}U }`
+}
+
+function renderRecord(vector, hit, index, digest) {
+  const identity = recordIdentity(vector, index)
+  const first = vector.stimulus.samples[0]
+  const last = vector.stimulus.samples.at(-1)
+  const disposition = hit.classification === "off-target" ? 1 : 0
+  return `{ 1U, ${cString(identity.recordId)}, ${asUs(hit.qualifiedAtUs, "record decision")}U, ${asUs(first.atUs, "record capture start")}U, ${asUs(last.atUs, "record capture end")}U, 0U, ${vector.stimulus.samples.length - 1}U, "stm32-scoring-core", ${cString(HOST_FIRMWARE_DIGEST)}, "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", ${cString(identity.captureId)}, ${cString(digest)}, "golden-vector-1", ${vector.stimulus.samples.length}U, 1U, 0U, ${asUs(first.atUs, "raw capture start")}U, ${asUs(last.atUs, "raw capture end")}U, 0U, ${vector.stimulus.samples.length - 1}U, ${asEnum(vector.weapon, ["epee", "foil", "sabre"], "record weapon")}U, ${asEnum(hit.side, ["left", "right"], "record side")}U, ${disposition}U, ${disposition}U, 1U, 1U, ${asUs(hit.startedAtUs, "record hit start")}U, ${asUs(hit.qualifiedAtUs, "record qualification")}U }`
+}
+
+function paddedRows(values, limit, renderValue, emptyValue) {
+  assert(values.length <= limit, `Fixture array exceeds ${limit} entries`)
+  return [...values.map(renderValue), ...Array.from({ length: limit - values.length }, () => emptyValue)].join(", ")
+}
+
+function renderVector(vector, digest) {
   assert(vector && typeof vector === "object", "Vector must be an object")
   assert(vector.expected && typeof vector.expected === "object", "Vector expected result must be an object")
   assert(vector.stimulus && typeof vector.stimulus === "object", "Vector stimulus must be an object")
@@ -40,10 +114,27 @@ function renderVector(vector) {
   assert(Array.isArray(vector.expected.hits), "Vector hits must be an array")
   assert(Array.isArray(vector.expected.diagnostics), "Vector diagnostics must be an array")
 
+  assert(["epee", "foil", "sabre"].includes(vector.weapon), "Vector weapon is unsupported")
+  const samples = paddedRows(
+    vector.stimulus.samples,
+    4,
+    (sample) => renderSample(vector.weapon, sample),
+    "{ 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }"
+  )
+  const hits = paddedRows(vector.expected.hits, 2, renderHit, "{ 0U, 0U, 0U, 0U }")
+  const diagnostics = paddedRows(vector.expected.diagnostics, 2, renderDiagnostic, "{ 0U, 0U }")
+  const recordContexts = paddedRows(
+    vector.expected.hits,
+    2,
+    (_hit, index) => renderRecordContext(vector, index, digest),
+    "{ NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }"
+  )
+  const records = paddedRows(vector.expected.hits, 2, (hit, index) => renderRecord(vector, hit, index, digest), "{ 0 }")
+
   return [
     "  {",
     `    ${cString(vector.id)},`,
-    `    ${cString(vector.weapon)},`,
+    `    ${asEnum(vector.weapon, ["epee", "foil", "sabre"], "weapon")}U,`,
     `    ${cString(vector.boundary)},`,
     `    ${cString(vector.position)},`,
     `    ${cString(vector.side)},`,
@@ -51,7 +142,12 @@ function renderVector(vector) {
     `    ${asUs(vector.elapsedUs, "elapsedUs")}U,`,
     `    ${asCount(vector.stimulus.samples.length, "sample count")}U,`,
     `    ${asCount(vector.expected.hits.length, "hit count")}U,`,
-    `    ${asCount(vector.expected.diagnostics.length, "diagnostic count")}U`,
+    `    ${asCount(vector.expected.diagnostics.length, "diagnostic count")}U,`,
+    `    { ${samples} },`,
+    `    { ${hits} },`,
+    `    { ${diagnostics} },`,
+    `    { ${recordContexts} },`,
+    `    { ${records} }`,
     "  }"
   ].join("\n")
 }
@@ -65,7 +161,7 @@ function render(checkedArtifact) {
   assert(checkedArtifact.resistanceUnit === "milliOhm", "Unexpected fixture resistance unit")
   assert(Array.isArray(checkedArtifact.vectors) && checkedArtifact.vectors.length > 0, "Fixture has no vectors")
 
-  const vectorRows = checkedArtifact.vectors.map(renderVector).join(",\n")
+  const vectorRows = checkedArtifact.vectors.map((vector) => renderVector(vector, checkedArtifact.digest)).join(",\n")
 
   return `/* Generated from fixtures/golden-vector-export.json. Do not edit. */
 #ifndef STM32_GOLDEN_VECTORS_H
@@ -73,10 +169,11 @@ function render(checkedArtifact) {
 
 #include <stddef.h>
 #include <stdint.h>
+#include "stm32_scoring_core.h"
 
 typedef struct scoring_golden_vector_fixture {
   const char *id;
-  const char *weapon;
+  uint8_t weapon;
   const char *boundary;
   const char *position;
   const char *side;
@@ -85,6 +182,11 @@ typedef struct scoring_golden_vector_fixture {
   uint8_t stimulus_sample_count;
   uint8_t hit_count;
   uint8_t diagnostic_count;
+  scoring_core_sample_t samples[SCORING_CORE_MAX_SAMPLES_PER_VECTOR];
+  scoring_core_hit_t hits[SCORING_CORE_MAX_HITS];
+  scoring_core_diagnostic_t diagnostics[SCORING_CORE_SIDE_COUNT];
+  scoring_core_record_context_t record_contexts[SCORING_CORE_MAX_HITS];
+  scoring_core_decision_record_t records[SCORING_CORE_MAX_HITS];
 } scoring_golden_vector_fixture_t;
 
 #define SCORING_GOLDEN_VECTOR_FORMAT ${cString(checkedArtifact.format)}

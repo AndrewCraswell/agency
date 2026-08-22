@@ -2,12 +2,11 @@
 
 **Delivery-plan task:** M3-03
 
-This is the portable C17 boundary for the future STM32G474 scoring firmware.
-It is deliberately a scaffold, not the M3-04 qualification core, an
+This is the portable C17 boundary for the STM32G474 scoring firmware. M3-04 now
+implements the host-qualified scoring core inside this boundary. It is not an
 STM32Cube project, a peripheral implementation, or a target pin configuration.
-The authoritative scoring implementation will live in this STM32-only C
-boundary. The ESP32 may receive already-authoritative records, but it cannot
-link, invoke, or reproduce the scoring core.
+The ESP32 may receive already-authoritative records, but it cannot link, invoke,
+or reproduce the scoring core.
 
 ## Portable C boundary
 
@@ -46,13 +45,11 @@ The checked TypeScript artifact
 [`fixtures/golden-vector-export.json`](../fixtures/golden-vector-export.json)
 is translated deterministically into the checked C header
 `firmware/stm32/generated/stm32_golden_vectors.h`. The generator copies
-fixture metadata and each vector's identifier, identity fields, timing values,
-sample count, expected hit count, and expected diagnostic count. It contains
-no hand-copied timing table. The native C test consumes that header only as a
-fixture-shape smoke boundary: metadata, count, timing fields, sample counts,
-and expected hit/diagnostic counts. It does not yet carry each normalized
-sample or each full expected decision. M3-04 must extend the translation and
-consume those full stimuli before claiming golden-vector parity.
+fixture metadata, normalized samples, expected hits and diagnostics, and the
+deterministic full decision-record envelope for every emitted hit or off-target
+decision. It contains no hand-copied fixture timing. The native C test replays
+all 54 vectors and compares every emitted field. Detailed M3-04 evidence is in
+[`../firmware/stm32/docs/scoring-core-host-evidence.md`](../firmware/stm32/docs/scoring-core-host-evidence.md).
 
 Regenerate after an approved TypeScript fixture change:
 

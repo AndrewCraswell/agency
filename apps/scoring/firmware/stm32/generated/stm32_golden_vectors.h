@@ -4,10 +4,11 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "stm32_scoring_core.h"
 
 typedef struct scoring_golden_vector_fixture {
   const char *id;
-  const char *weapon;
+  uint8_t weapon;
   const char *boundary;
   const char *position;
   const char *side;
@@ -16,6 +17,11 @@ typedef struct scoring_golden_vector_fixture {
   uint8_t stimulus_sample_count;
   uint8_t hit_count;
   uint8_t diagnostic_count;
+  scoring_core_sample_t samples[SCORING_CORE_MAX_SAMPLES_PER_VECTOR];
+  scoring_core_hit_t hits[SCORING_CORE_MAX_HITS];
+  scoring_core_diagnostic_t diagnostics[SCORING_CORE_SIDE_COUNT];
+  scoring_core_record_context_t record_contexts[SCORING_CORE_MAX_HITS];
+  scoring_core_decision_record_t records[SCORING_CORE_MAX_HITS];
 } scoring_golden_vector_fixture_t;
 
 #define SCORING_GOLDEN_VECTOR_FORMAT "scoring-firmware-golden-vectors"
@@ -28,7 +34,7 @@ typedef struct scoring_golden_vector_fixture {
 static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLDEN_VECTOR_COUNT] = {
   {
     "epee.contact-minimum.left.below",
-    "epee",
+    0U,
     "contact-minimum",
     "below",
     "left",
@@ -36,11 +42,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     1999U,
     2U,
     0U,
-    0U
+    0U,
+    { { 0U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 1999U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "epee.contact-minimum.left.at",
-    "epee",
+    0U,
     "contact-minimum",
     "at",
     "left",
@@ -48,11 +59,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     2000U,
     2U,
     1U,
-    0U
+    0U,
+    { { 0U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 2000U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 2000U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "epee.contact-minimum.left.at.decision-1", "epee.contact-minimum.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 1U, 0U, 2000U, 2U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "epee.contact-minimum.left.at.decision-1", 2000U, 0U, 2000U, 0U, 1U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.contact-minimum.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 2U, 1U, 0U, 0U, 2000U, 0U, 1U, 0U, 0U, 0U, 0U, 1U, 1U, 0U, 2000U }, { 0 } }
   },
   {
     "epee.contact-minimum.left.above",
-    "epee",
+    0U,
     "contact-minimum",
     "above",
     "left",
@@ -60,11 +76,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     2001U,
     2U,
     1U,
-    0U
+    0U,
+    { { 0U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 2001U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 2001U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "epee.contact-minimum.left.above.decision-1", "epee.contact-minimum.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 1U, 0U, 2001U, 2U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "epee.contact-minimum.left.above.decision-1", 2001U, 0U, 2001U, 0U, 1U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.contact-minimum.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 2U, 1U, 0U, 0U, 2001U, 0U, 1U, 0U, 0U, 0U, 0U, 1U, 1U, 0U, 2001U }, { 0 } }
   },
   {
     "epee.contact-minimum.right.below",
-    "epee",
+    0U,
     "contact-minimum",
     "below",
     "right",
@@ -72,11 +93,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     1999U,
     2U,
     0U,
-    0U
+    0U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 1999U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "epee.contact-minimum.right.at",
-    "epee",
+    0U,
     "contact-minimum",
     "at",
     "right",
@@ -84,11 +110,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     2000U,
     2U,
     1U,
-    0U
+    0U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 2000U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 0U, 0U, 2000U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "epee.contact-minimum.right.at.decision-1", "epee.contact-minimum.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 1U, 0U, 2000U, 2U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "epee.contact-minimum.right.at.decision-1", 2000U, 0U, 2000U, 0U, 1U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.contact-minimum.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 2U, 1U, 0U, 0U, 2000U, 0U, 1U, 0U, 1U, 0U, 0U, 1U, 1U, 0U, 2000U }, { 0 } }
   },
   {
     "epee.contact-minimum.right.above",
-    "epee",
+    0U,
     "contact-minimum",
     "above",
     "right",
@@ -96,11 +127,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     2001U,
     2U,
     1U,
-    0U
+    0U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 2001U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 0U, 0U, 2001U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "epee.contact-minimum.right.above.decision-1", "epee.contact-minimum.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 1U, 0U, 2001U, 2U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "epee.contact-minimum.right.above.decision-1", 2001U, 0U, 2001U, 0U, 1U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.contact-minimum.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 2U, 1U, 0U, 0U, 2001U, 0U, 1U, 0U, 1U, 0U, 0U, 1U, 1U, 0U, 2001U }, { 0 } }
   },
   {
     "epee.double-hit-window.left.below",
-    "epee",
+    0U,
     "double-hit-window",
     "below",
     "left",
@@ -108,11 +144,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     44999U,
     4U,
     2U,
-    0U
+    0U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 2000U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 44999U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 46999U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 0U, 0U, 2000U }, { 0U, 0U, 44999U, 46999U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "epee.double-hit-window.left.below.decision-1", "epee.double-hit-window.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 46999U, 4U }, { "epee.double-hit-window.left.below.decision-2", "epee.double-hit-window.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 46999U, 4U } },
+    { { 1U, "epee.double-hit-window.left.below.decision-1", 2000U, 0U, 46999U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.double-hit-window.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 46999U, 0U, 3U, 0U, 1U, 0U, 0U, 1U, 1U, 0U, 2000U }, { 1U, "epee.double-hit-window.left.below.decision-2", 46999U, 0U, 46999U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.double-hit-window.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 46999U, 0U, 3U, 0U, 0U, 0U, 0U, 1U, 1U, 44999U, 46999U } }
   },
   {
     "epee.double-hit-window.left.at",
-    "epee",
+    0U,
     "double-hit-window",
     "at",
     "left",
@@ -120,11 +161,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     45000U,
     4U,
     2U,
-    0U
+    0U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 2000U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 45000U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 47000U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 0U, 0U, 2000U }, { 0U, 0U, 45000U, 47000U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "epee.double-hit-window.left.at.decision-1", "epee.double-hit-window.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 47000U, 4U }, { "epee.double-hit-window.left.at.decision-2", "epee.double-hit-window.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 47000U, 4U } },
+    { { 1U, "epee.double-hit-window.left.at.decision-1", 2000U, 0U, 47000U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.double-hit-window.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 47000U, 0U, 3U, 0U, 1U, 0U, 0U, 1U, 1U, 0U, 2000U }, { 1U, "epee.double-hit-window.left.at.decision-2", 47000U, 0U, 47000U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.double-hit-window.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 47000U, 0U, 3U, 0U, 0U, 0U, 0U, 1U, 1U, 45000U, 47000U } }
   },
   {
     "epee.double-hit-window.left.above",
-    "epee",
+    0U,
     "double-hit-window",
     "above",
     "left",
@@ -132,11 +178,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     45001U,
     4U,
     1U,
-    0U
+    0U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 2000U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 45001U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 47001U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 0U, 0U, 2000U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "epee.double-hit-window.left.above.decision-1", "epee.double-hit-window.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 47001U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "epee.double-hit-window.left.above.decision-1", 2000U, 0U, 47001U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.double-hit-window.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 47001U, 0U, 3U, 0U, 1U, 0U, 0U, 1U, 1U, 0U, 2000U }, { 0 } }
   },
   {
     "epee.double-hit-window.right.below",
-    "epee",
+    0U,
     "double-hit-window",
     "below",
     "right",
@@ -144,11 +195,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     44999U,
     4U,
     2U,
-    0U
+    0U,
+    { { 0U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 2000U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 44999U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 46999U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 2000U }, { 1U, 0U, 44999U, 46999U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "epee.double-hit-window.right.below.decision-1", "epee.double-hit-window.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 46999U, 4U }, { "epee.double-hit-window.right.below.decision-2", "epee.double-hit-window.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 46999U, 4U } },
+    { { 1U, "epee.double-hit-window.right.below.decision-1", 2000U, 0U, 46999U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.double-hit-window.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 46999U, 0U, 3U, 0U, 0U, 0U, 0U, 1U, 1U, 0U, 2000U }, { 1U, "epee.double-hit-window.right.below.decision-2", 46999U, 0U, 46999U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.double-hit-window.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 46999U, 0U, 3U, 0U, 1U, 0U, 0U, 1U, 1U, 44999U, 46999U } }
   },
   {
     "epee.double-hit-window.right.at",
-    "epee",
+    0U,
     "double-hit-window",
     "at",
     "right",
@@ -156,11 +212,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     45000U,
     4U,
     2U,
-    0U
+    0U,
+    { { 0U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 2000U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 45000U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 47000U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 2000U }, { 1U, 0U, 45000U, 47000U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "epee.double-hit-window.right.at.decision-1", "epee.double-hit-window.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 47000U, 4U }, { "epee.double-hit-window.right.at.decision-2", "epee.double-hit-window.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 47000U, 4U } },
+    { { 1U, "epee.double-hit-window.right.at.decision-1", 2000U, 0U, 47000U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.double-hit-window.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 47000U, 0U, 3U, 0U, 0U, 0U, 0U, 1U, 1U, 0U, 2000U }, { 1U, "epee.double-hit-window.right.at.decision-2", 47000U, 0U, 47000U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.double-hit-window.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 47000U, 0U, 3U, 0U, 1U, 0U, 0U, 1U, 1U, 45000U, 47000U } }
   },
   {
     "epee.double-hit-window.right.above",
-    "epee",
+    0U,
     "double-hit-window",
     "above",
     "right",
@@ -168,11 +229,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     45001U,
     4U,
     1U,
-    0U
+    0U,
+    { { 0U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 2000U, { 1U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 45001U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } }, { 47001U, { 0U, 0U, 0U, 0U, 0U }, { 1U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 2000U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "epee.double-hit-window.right.above.decision-1", "epee.double-hit-window.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 47001U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "epee.double-hit-window.right.above.decision-1", 2000U, 0U, 47001U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "epee.double-hit-window.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 47001U, 0U, 3U, 0U, 0U, 0U, 0U, 1U, 1U, 0U, 2000U }, { 0 } }
   },
   {
     "foil.contact-break-minimum.left.below",
-    "foil",
+    1U,
     "contact-break-minimum",
     "below",
     "left",
@@ -180,11 +246,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     12999U,
     2U,
     0U,
-    0U
+    0U,
+    { { 0U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 12999U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "foil.contact-break-minimum.left.at",
-    "foil",
+    1U,
     "contact-break-minimum",
     "at",
     "left",
@@ -192,11 +263,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     13000U,
     2U,
     1U,
-    0U
+    0U,
+    { { 0U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 13000U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 1U, 0U, 13000U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "foil.contact-break-minimum.left.at.decision-1", "foil.contact-break-minimum.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 1U, 0U, 13000U, 2U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "foil.contact-break-minimum.left.at.decision-1", 13000U, 0U, 13000U, 0U, 1U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "foil.contact-break-minimum.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 2U, 1U, 0U, 0U, 13000U, 0U, 1U, 1U, 0U, 0U, 0U, 1U, 1U, 0U, 13000U }, { 0 } }
   },
   {
     "foil.contact-break-minimum.left.above",
-    "foil",
+    1U,
     "contact-break-minimum",
     "above",
     "left",
@@ -204,11 +280,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     13001U,
     2U,
     1U,
-    0U
+    0U,
+    { { 0U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 13001U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 1U, 0U, 13001U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "foil.contact-break-minimum.left.above.decision-1", "foil.contact-break-minimum.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 1U, 0U, 13001U, 2U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "foil.contact-break-minimum.left.above.decision-1", 13001U, 0U, 13001U, 0U, 1U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "foil.contact-break-minimum.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 2U, 1U, 0U, 0U, 13001U, 0U, 1U, 1U, 0U, 0U, 0U, 1U, 1U, 0U, 13001U }, { 0 } }
   },
   {
     "foil.contact-break-minimum.right.below",
-    "foil",
+    1U,
     "contact-break-minimum",
     "below",
     "right",
@@ -216,11 +297,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     12999U,
     2U,
     0U,
-    0U
+    0U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 12999U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "foil.contact-break-minimum.right.at",
-    "foil",
+    1U,
     "contact-break-minimum",
     "at",
     "right",
@@ -228,11 +314,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     13000U,
     2U,
     1U,
-    0U
+    0U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 13000U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 1U, 0U, 13000U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "foil.contact-break-minimum.right.at.decision-1", "foil.contact-break-minimum.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 1U, 0U, 13000U, 2U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "foil.contact-break-minimum.right.at.decision-1", 13000U, 0U, 13000U, 0U, 1U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "foil.contact-break-minimum.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 2U, 1U, 0U, 0U, 13000U, 0U, 1U, 1U, 1U, 0U, 0U, 1U, 1U, 0U, 13000U }, { 0 } }
   },
   {
     "foil.contact-break-minimum.right.above",
-    "foil",
+    1U,
     "contact-break-minimum",
     "above",
     "right",
@@ -240,11 +331,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     13001U,
     2U,
     1U,
-    0U
+    0U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 13001U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 1U, 0U, 13001U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "foil.contact-break-minimum.right.above.decision-1", "foil.contact-break-minimum.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 1U, 0U, 13001U, 2U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "foil.contact-break-minimum.right.above.decision-1", 13001U, 0U, 13001U, 0U, 1U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "foil.contact-break-minimum.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 2U, 1U, 0U, 0U, 13001U, 0U, 1U, 1U, 1U, 0U, 0U, 1U, 1U, 0U, 13001U }, { 0 } }
   },
   {
     "foil.lockout.left.below",
-    "foil",
+    1U,
     "lockout",
     "below",
     "left",
@@ -252,11 +348,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     299999U,
     4U,
     2U,
-    0U
+    0U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 13000U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 299999U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 312999U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 1U, 0U, 13000U }, { 0U, 1U, 299999U, 312999U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "foil.lockout.left.below.decision-1", "foil.lockout.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 312999U, 4U }, { "foil.lockout.left.below.decision-2", "foil.lockout.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 312999U, 4U } },
+    { { 1U, "foil.lockout.left.below.decision-1", 13000U, 0U, 312999U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "foil.lockout.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 312999U, 0U, 3U, 1U, 1U, 0U, 0U, 1U, 1U, 0U, 13000U }, { 1U, "foil.lockout.left.below.decision-2", 312999U, 0U, 312999U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "foil.lockout.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 312999U, 0U, 3U, 1U, 0U, 0U, 0U, 1U, 1U, 299999U, 312999U } }
   },
   {
     "foil.lockout.left.at",
-    "foil",
+    1U,
     "lockout",
     "at",
     "left",
@@ -264,11 +365,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     300000U,
     4U,
     1U,
-    0U
+    0U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 13000U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 300000U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 313000U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 1U, 0U, 13000U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "foil.lockout.left.at.decision-1", "foil.lockout.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 313000U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "foil.lockout.left.at.decision-1", 13000U, 0U, 313000U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "foil.lockout.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 313000U, 0U, 3U, 1U, 1U, 0U, 0U, 1U, 1U, 0U, 13000U }, { 0 } }
   },
   {
     "foil.lockout.left.above",
-    "foil",
+    1U,
     "lockout",
     "above",
     "left",
@@ -276,11 +382,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     300001U,
     4U,
     1U,
-    0U
+    0U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 13000U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 300001U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 313001U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 1U, 0U, 13000U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "foil.lockout.left.above.decision-1", "foil.lockout.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 313001U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "foil.lockout.left.above.decision-1", 13000U, 0U, 313001U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "foil.lockout.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 313001U, 0U, 3U, 1U, 1U, 0U, 0U, 1U, 1U, 0U, 13000U }, { 0 } }
   },
   {
     "foil.lockout.right.below",
-    "foil",
+    1U,
     "lockout",
     "below",
     "right",
@@ -288,11 +399,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     299999U,
     4U,
     2U,
-    0U
+    0U,
+    { { 0U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 13000U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 299999U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 312999U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } } },
+    { { 0U, 1U, 0U, 13000U }, { 1U, 1U, 299999U, 312999U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "foil.lockout.right.below.decision-1", "foil.lockout.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 312999U, 4U }, { "foil.lockout.right.below.decision-2", "foil.lockout.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 312999U, 4U } },
+    { { 1U, "foil.lockout.right.below.decision-1", 13000U, 0U, 312999U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "foil.lockout.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 312999U, 0U, 3U, 1U, 0U, 0U, 0U, 1U, 1U, 0U, 13000U }, { 1U, "foil.lockout.right.below.decision-2", 312999U, 0U, 312999U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "foil.lockout.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 312999U, 0U, 3U, 1U, 1U, 0U, 0U, 1U, 1U, 299999U, 312999U } }
   },
   {
     "foil.lockout.right.at",
-    "foil",
+    1U,
     "lockout",
     "at",
     "right",
@@ -300,11 +416,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     300000U,
     4U,
     1U,
-    0U
+    0U,
+    { { 0U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 13000U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 300000U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 313000U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } } },
+    { { 0U, 1U, 0U, 13000U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "foil.lockout.right.at.decision-1", "foil.lockout.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 313000U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "foil.lockout.right.at.decision-1", 13000U, 0U, 313000U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "foil.lockout.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 313000U, 0U, 3U, 1U, 0U, 0U, 0U, 1U, 1U, 0U, 13000U }, { 0 } }
   },
   {
     "foil.lockout.right.above",
-    "foil",
+    1U,
     "lockout",
     "above",
     "right",
@@ -312,11 +433,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     300001U,
     4U,
     1U,
-    0U
+    0U,
+    { { 0U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 13000U, { 0U, 1U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 300001U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } }, { 313001U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 1U, 0U, 0U, 0U } } },
+    { { 0U, 1U, 0U, 13000U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 0U, 0U } },
+    { { "foil.lockout.right.above.decision-1", "foil.lockout.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 313001U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "foil.lockout.right.above.decision-1", 13000U, 0U, 313001U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "foil.lockout.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 313001U, 0U, 3U, 1U, 0U, 0U, 0U, 1U, 1U, 0U, 13000U }, { 0 } }
   },
   {
     "sabre.minimum-contact.left.below",
-    "sabre",
+    2U,
     "minimum-contact",
     "below",
     "left",
@@ -324,11 +450,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     99U,
     2U,
     0U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 99U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "sabre.minimum-contact.left.at",
-    "sabre",
+    2U,
     "minimum-contact",
     "at",
     "left",
@@ -336,11 +467,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     100U,
     2U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 100U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 100U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.minimum-contact.left.at.decision-1", "sabre.minimum-contact.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 1U, 0U, 100U, 2U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.minimum-contact.left.at.decision-1", 100U, 0U, 100U, 0U, 1U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.minimum-contact.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 2U, 1U, 0U, 0U, 100U, 0U, 1U, 2U, 0U, 0U, 0U, 1U, 1U, 0U, 100U }, { 0 } }
   },
   {
     "sabre.minimum-contact.left.above",
-    "sabre",
+    2U,
     "minimum-contact",
     "above",
     "left",
@@ -348,11 +484,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     101U,
     2U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 101U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 101U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.minimum-contact.left.above.decision-1", "sabre.minimum-contact.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 1U, 0U, 101U, 2U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.minimum-contact.left.above.decision-1", 101U, 0U, 101U, 0U, 1U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.minimum-contact.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 2U, 1U, 0U, 0U, 101U, 0U, 1U, 2U, 0U, 0U, 0U, 1U, 1U, 0U, 101U }, { 0 } }
   },
   {
     "sabre.minimum-contact.right.below",
-    "sabre",
+    2U,
     "minimum-contact",
     "below",
     "right",
@@ -360,11 +501,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     99U,
     2U,
     0U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 99U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "sabre.minimum-contact.right.at",
-    "sabre",
+    2U,
     "minimum-contact",
     "at",
     "right",
@@ -372,11 +518,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     100U,
     2U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 100U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 0U, 0U, 100U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.minimum-contact.right.at.decision-1", "sabre.minimum-contact.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 1U, 0U, 100U, 2U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.minimum-contact.right.at.decision-1", 100U, 0U, 100U, 0U, 1U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.minimum-contact.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 2U, 1U, 0U, 0U, 100U, 0U, 1U, 2U, 1U, 0U, 0U, 1U, 1U, 0U, 100U }, { 0 } }
   },
   {
     "sabre.minimum-contact.right.above",
-    "sabre",
+    2U,
     "minimum-contact",
     "above",
     "right",
@@ -384,11 +535,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     101U,
     2U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 101U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 0U, 0U, 101U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.minimum-contact.right.above.decision-1", "sabre.minimum-contact.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 1U, 0U, 101U, 2U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.minimum-contact.right.above.decision-1", 101U, 0U, 101U, 0U, 1U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.minimum-contact.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 2U, 1U, 0U, 0U, 101U, 0U, 1U, 2U, 1U, 0U, 0U, 1U, 1U, 0U, 101U }, { 0 } }
   },
   {
     "sabre.blade-registration-latest.left.below",
-    "sabre",
+    2U,
     "blade-registration-latest",
     "below",
     "left",
@@ -396,11 +552,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     4999U,
     4U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 0U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 99U, { 0U, 0U, 1U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 4899U, { 0U, 0U, 0U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 4999U, { 0U, 0U, 0U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } } },
+    { { 0U, 0U, 4899U, 4999U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.blade-registration-latest.left.below.decision-1", "sabre.blade-registration-latest.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 4999U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.blade-registration-latest.left.below.decision-1", 4999U, 0U, 4999U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.blade-registration-latest.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 4999U, 0U, 3U, 2U, 0U, 0U, 0U, 1U, 1U, 4899U, 4999U }, { 0 } }
   },
   {
     "sabre.blade-registration-latest.left.at",
-    "sabre",
+    2U,
     "blade-registration-latest",
     "at",
     "left",
@@ -408,11 +569,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     5000U,
     4U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 0U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 99U, { 0U, 0U, 1U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 4900U, { 0U, 0U, 0U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 5000U, { 0U, 0U, 0U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } } },
+    { { 0U, 0U, 4900U, 5000U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.blade-registration-latest.left.at.decision-1", "sabre.blade-registration-latest.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 5000U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.blade-registration-latest.left.at.decision-1", 5000U, 0U, 5000U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.blade-registration-latest.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 5000U, 0U, 3U, 2U, 0U, 0U, 0U, 1U, 1U, 4900U, 5000U }, { 0 } }
   },
   {
     "sabre.blade-registration-latest.left.above",
-    "sabre",
+    2U,
     "blade-registration-latest",
     "above",
     "left",
@@ -420,11 +586,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     5001U,
     4U,
     0U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 0U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 99U, { 0U, 0U, 1U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 4901U, { 0U, 0U, 0U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 5001U, { 0U, 0U, 0U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "sabre.blade-registration-latest.right.below",
-    "sabre",
+    2U,
     "blade-registration-latest",
     "below",
     "right",
@@ -432,11 +603,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     4999U,
     4U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 1U, 0U } }, { 99U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 1U, 1U, 0U } }, { 4899U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 1U, 0U } }, { 4999U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 1U, 0U } } },
+    { { 1U, 0U, 4899U, 4999U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.blade-registration-latest.right.below.decision-1", "sabre.blade-registration-latest.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 4999U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.blade-registration-latest.right.below.decision-1", 4999U, 0U, 4999U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.blade-registration-latest.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 4999U, 0U, 3U, 2U, 1U, 0U, 0U, 1U, 1U, 4899U, 4999U }, { 0 } }
   },
   {
     "sabre.blade-registration-latest.right.at",
-    "sabre",
+    2U,
     "blade-registration-latest",
     "at",
     "right",
@@ -444,11 +620,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     5000U,
     4U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 1U, 0U } }, { 99U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 1U, 1U, 0U } }, { 4900U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 1U, 0U } }, { 5000U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 1U, 0U } } },
+    { { 1U, 0U, 4900U, 5000U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.blade-registration-latest.right.at.decision-1", "sabre.blade-registration-latest.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 5000U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.blade-registration-latest.right.at.decision-1", 5000U, 0U, 5000U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.blade-registration-latest.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 5000U, 0U, 3U, 2U, 1U, 0U, 0U, 1U, 1U, 4900U, 5000U }, { 0 } }
   },
   {
     "sabre.blade-registration-latest.right.above",
-    "sabre",
+    2U,
     "blade-registration-latest",
     "above",
     "right",
@@ -456,11 +637,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     5001U,
     4U,
     0U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 1U, 0U } }, { 99U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 1U, 1U, 0U } }, { 4901U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 1U, 0U } }, { 5001U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 1U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "sabre.blade-recovery.left.below",
-    "sabre",
+    2U,
     "blade-recovery",
     "below",
     "left",
@@ -468,11 +654,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     19999U,
     4U,
     0U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 0U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 99U, { 0U, 0U, 1U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 19999U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 20099U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "sabre.blade-recovery.left.at",
-    "sabre",
+    2U,
     "blade-recovery",
     "at",
     "left",
@@ -480,11 +671,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     20000U,
     4U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 0U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 99U, { 0U, 0U, 1U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 20000U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 20100U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } } },
+    { { 0U, 0U, 20000U, 20100U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.blade-recovery.left.at.decision-1", "sabre.blade-recovery.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 20100U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.blade-recovery.left.at.decision-1", 20100U, 0U, 20100U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.blade-recovery.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 20100U, 0U, 3U, 2U, 0U, 0U, 0U, 1U, 1U, 20000U, 20100U }, { 0 } }
   },
   {
     "sabre.blade-recovery.left.above",
-    "sabre",
+    2U,
     "blade-recovery",
     "above",
     "left",
@@ -492,11 +688,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     20001U,
     4U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 0U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 99U, { 0U, 0U, 1U, 1U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 20001U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 20101U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } } },
+    { { 0U, 0U, 20001U, 20101U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.blade-recovery.left.above.decision-1", "sabre.blade-recovery.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 20101U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.blade-recovery.left.above.decision-1", 20101U, 0U, 20101U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.blade-recovery.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 20101U, 0U, 3U, 2U, 0U, 0U, 0U, 1U, 1U, 20001U, 20101U }, { 0 } }
   },
   {
     "sabre.blade-recovery.right.below",
-    "sabre",
+    2U,
     "blade-recovery",
     "below",
     "right",
@@ -504,11 +705,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     19999U,
     4U,
     0U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 1U, 0U } }, { 99U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 1U, 1U, 0U } }, { 19999U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 20099U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "sabre.blade-recovery.right.at",
-    "sabre",
+    2U,
     "blade-recovery",
     "at",
     "right",
@@ -516,11 +722,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     20000U,
     4U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 1U, 0U } }, { 99U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 1U, 1U, 0U } }, { 20000U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 20100U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 0U, 20000U, 20100U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.blade-recovery.right.at.decision-1", "sabre.blade-recovery.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 20100U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.blade-recovery.right.at.decision-1", 20100U, 0U, 20100U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.blade-recovery.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 20100U, 0U, 3U, 2U, 1U, 0U, 0U, 1U, 1U, 20000U, 20100U }, { 0 } }
   },
   {
     "sabre.blade-recovery.right.above",
-    "sabre",
+    2U,
     "blade-recovery",
     "above",
     "right",
@@ -528,11 +739,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     20001U,
     4U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 1U, 0U } }, { 99U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 1U, 1U, 0U } }, { 20001U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 20101U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 1U, 0U, 20001U, 20101U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.blade-recovery.right.above.decision-1", "sabre.blade-recovery.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 20101U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.blade-recovery.right.above.decision-1", 20101U, 0U, 20101U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.blade-recovery.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 20101U, 0U, 3U, 2U, 1U, 0U, 0U, 1U, 1U, 20001U, 20101U }, { 0 } }
   },
   {
     "sabre.control-break.left.below",
-    "sabre",
+    2U,
     "control-break",
     "below",
     "left",
@@ -540,11 +756,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     2999U,
     2U,
     0U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 1U }, { 0U, 0U, 1U, 0U, 0U } }, { 2999U, { 0U, 0U, 1U, 0U, 1U }, { 0U, 0U, 1U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "sabre.control-break.left.at",
-    "sabre",
+    2U,
     "control-break",
     "at",
     "left",
@@ -552,11 +773,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     3000U,
     2U,
     0U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 1U }, { 0U, 0U, 1U, 0U, 0U } }, { 3000U, { 0U, 0U, 1U, 0U, 1U }, { 0U, 0U, 1U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 1U }, { 1U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "sabre.control-break.left.above",
-    "sabre",
+    2U,
     "control-break",
     "above",
     "left",
@@ -564,11 +790,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     3001U,
     2U,
     0U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 1U }, { 0U, 0U, 1U, 0U, 0U } }, { 3001U, { 0U, 0U, 1U, 0U, 1U }, { 0U, 0U, 1U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 1U }, { 1U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "sabre.control-break.right.below",
-    "sabre",
+    2U,
     "control-break",
     "below",
     "right",
@@ -576,11 +807,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     2999U,
     2U,
     0U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 1U, 0U, 1U } }, { 2999U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 1U, 0U, 1U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "sabre.control-break.right.at",
-    "sabre",
+    2U,
     "control-break",
     "at",
     "right",
@@ -588,11 +824,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     3000U,
     2U,
     0U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 1U, 0U, 1U } }, { 3000U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 1U, 0U, 1U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 1U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "sabre.control-break.right.above",
-    "sabre",
+    2U,
     "control-break",
     "above",
     "right",
@@ -600,11 +841,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     3001U,
     2U,
     0U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 1U, 0U, 1U } }, { 3001U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 1U, 0U, 1U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 0U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 1U } },
+    { { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 0 }, { 0 } }
   },
   {
     "sabre.lockout.left.below",
-    "sabre",
+    2U,
     "lockout",
     "below",
     "left",
@@ -612,11 +858,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     169999U,
     4U,
     2U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 100U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 169999U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 170099U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } } },
+    { { 1U, 0U, 0U, 100U }, { 0U, 0U, 169999U, 170099U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.lockout.left.below.decision-1", "sabre.lockout.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 170099U, 4U }, { "sabre.lockout.left.below.decision-2", "sabre.lockout.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 170099U, 4U } },
+    { { 1U, "sabre.lockout.left.below.decision-1", 100U, 0U, 170099U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.lockout.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 170099U, 0U, 3U, 2U, 1U, 0U, 0U, 1U, 1U, 0U, 100U }, { 1U, "sabre.lockout.left.below.decision-2", 170099U, 0U, 170099U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.lockout.left.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 170099U, 0U, 3U, 2U, 0U, 0U, 0U, 1U, 1U, 169999U, 170099U } }
   },
   {
     "sabre.lockout.left.at",
-    "sabre",
+    2U,
     "lockout",
     "at",
     "left",
@@ -624,11 +875,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     170000U,
     4U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 100U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 170000U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 170100U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } } },
+    { { 1U, 0U, 0U, 100U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.lockout.left.at.decision-1", "sabre.lockout.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 170100U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.lockout.left.at.decision-1", 100U, 0U, 170100U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.lockout.left.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 170100U, 0U, 3U, 2U, 1U, 0U, 0U, 1U, 1U, 0U, 100U }, { 0 } }
   },
   {
     "sabre.lockout.left.above",
-    "sabre",
+    2U,
     "lockout",
     "above",
     "left",
@@ -636,11 +892,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     170001U,
     4U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 100U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 170001U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 170101U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } } },
+    { { 1U, 0U, 0U, 100U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.lockout.left.above.decision-1", "sabre.lockout.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 170101U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.lockout.left.above.decision-1", 100U, 0U, 170101U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.lockout.left.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 170101U, 0U, 3U, 2U, 1U, 0U, 0U, 1U, 1U, 0U, 100U }, { 0 } }
   },
   {
     "sabre.lockout.right.below",
-    "sabre",
+    2U,
     "lockout",
     "below",
     "right",
@@ -648,11 +909,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     169999U,
     4U,
     2U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 100U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 169999U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 170099U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 100U }, { 1U, 0U, 169999U, 170099U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.lockout.right.below.decision-1", "sabre.lockout.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 170099U, 4U }, { "sabre.lockout.right.below.decision-2", "sabre.lockout.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 170099U, 4U } },
+    { { 1U, "sabre.lockout.right.below.decision-1", 100U, 0U, 170099U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.lockout.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 170099U, 0U, 3U, 2U, 0U, 0U, 0U, 1U, 1U, 0U, 100U }, { 1U, "sabre.lockout.right.below.decision-2", 170099U, 0U, 170099U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.lockout.right.below.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 170099U, 0U, 3U, 2U, 1U, 0U, 0U, 1U, 1U, 169999U, 170099U } }
   },
   {
     "sabre.lockout.right.at",
-    "sabre",
+    2U,
     "lockout",
     "at",
     "right",
@@ -660,11 +926,16 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     170000U,
     4U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 100U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 170000U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 170100U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 100U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.lockout.right.at.decision-1", "sabre.lockout.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 170100U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.lockout.right.at.decision-1", 100U, 0U, 170100U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.lockout.right.at.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 170100U, 0U, 3U, 2U, 0U, 0U, 0U, 1U, 1U, 0U, 100U }, { 0 } }
   },
   {
     "sabre.lockout.right.above",
-    "sabre",
+    2U,
     "lockout",
     "above",
     "right",
@@ -672,7 +943,12 @@ static const scoring_golden_vector_fixture_t SCORING_GOLDEN_VECTORS[SCORING_GOLD
     170001U,
     4U,
     1U,
-    2U
+    2U,
+    { { 0U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 100U, { 0U, 0U, 0U, 0U, 0U }, { 0U, 0U, 1U, 0U, 0U } }, { 170001U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } }, { 170101U, { 0U, 0U, 1U, 0U, 0U }, { 0U, 0U, 0U, 0U, 0U } } },
+    { { 0U, 0U, 0U, 100U }, { 0U, 0U, 0U, 0U } },
+    { { 0U, 0U }, { 1U, 0U } },
+    { { "sabre.lockout.right.above.decision-1", "sabre.lockout.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", 0U, 3U, 0U, 170101U, 4U }, { NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U } },
+    { { 1U, "sabre.lockout.right.above.decision-1", 100U, 0U, 170101U, 0U, 3U, "stm32-scoring-core", "sha256:0101010101010101010101010101010101010101010101010101010101010101", "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", "sabre.lockout.right.above.capture", "sha256:c29dbc40a4c6742dfc2ef7a3a8f23ec82913ee2cee875494fdb83c12275ebc63", "golden-vector-1", 4U, 1U, 0U, 0U, 170101U, 0U, 3U, 2U, 0U, 0U, 0U, 1U, 1U, 0U, 100U }, { 0 } }
   }
 };
 
