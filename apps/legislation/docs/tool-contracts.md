@@ -95,6 +95,9 @@ search embeds the query with `openai/text-embedding-3-small` at 1,536 dimensions
 amendment-classified document sections independently, then merges them with reciprocal-rank fusion without reranking.
 Supporting-material semantic search uses `voyageai/voyage-4` at 1,024 dimensions with `input_type=query` and preserves
 the embedding rank without reranking. Exact and batch relationship lookups never create embeddings.
+Material search and relationship results omit the complete extracted `text` field so one large attachment cannot exceed
+the MCP response ceiling. `get_supporting_material` returns the same bounded material metadata plus paginated sections;
+section text is the canonical content-delivery surface.
 
 `search_amendments_for_bills` accepts 1-25 bill IDs and returns a separate bounded search result for each bill.
 `get_amendments` accepts 1-25 amendment IDs. Batch lookups deduplicate repeated IDs and isolate `not_found` and other

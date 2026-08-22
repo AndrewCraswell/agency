@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises"
 import { loadConfig } from "../src/config/config.js"
 import { createDatabase } from "../src/db/database.js"
 import { embedBills, embedDocumentSections } from "../src/ingestion/embeddings/jobs.js"
+import { embeddingRouteFor, type EmbeddingRouteProduct } from "../src/models/embedding-routing.js"
 import { OpenRouterEmbeddingClient } from "../src/models/openrouter-embeddings.js"
 
 interface CanaryManifest {
@@ -49,31 +50,49 @@ if (config.model.apiKey === undefined) {
   throw new Error("OPENROUTER_API_KEY is required")
 }
 const { database, pool } = createDatabase({ ...config.database, maxConnections: 1 })
-const provider = new OpenRouterEmbeddingClient({
-  apiKey: config.model.apiKey,
-  baseUrl: new URL(config.model.baseUrl)
-})
 let promptTokens = 0
-const client = {
-  embed: async (input: string[]) => {
-    const result = await provider.embed(input)
-    promptTokens += result.promptTokens ?? result.totalTokens ?? 0
-    return result
+const createClient = (product: EmbeddingRouteProduct) => {
+  const provider = new OpenRouterEmbeddingClient({
+    apiKey: config.model.apiKey,
+    baseUrl: new URL(config.model.baseUrl),
+    route: embeddingRouteFor(product)
+  })
+  return {
+    client: {
+      embed: async (input: string[], inputType?: "document" | "query") => {
+        const result = await provider.embed(input, inputType)
+        promptTokens += result.promptTokens ?? result.totalTokens ?? 0
+        return result
+      }
+    },
+    provider
   }
 }
+const bill = createClient("bill")
+const section = createClient("document-section")
 
 try {
   let embeddedBills = 0
   let embeddedDocumentSections = 0
   for (const billId of manifest.treatmentBillIds) {
-    const result = await embedBills(database, client, { billId, limit: 1, scanLimit: 1 })
+    const result = await embedBills(database, bill.client, {
+      billId,
+      limit: 1,
+      rolloutId: manifest.rolloutId,
+      scanLimit: 1
+    })
     if (result.scanned !== 1) {
       throw new Error(`Treatment bill was not found: ${billId}`)
     }
     embeddedBills += result.embedded
   }
   for (const sectionId of manifest.treatmentSectionIds) {
-    const result = await embedDocumentSections(database, client, { limit: 1, scanLimit: 1, sectionId })
+    const result = await embedDocumentSections(database, section.client, {
+      limit: 1,
+      rolloutId: manifest.rolloutId,
+      scanLimit: 1,
+      sectionId
+    })
     if (result.scanned !== 1) {
       throw new Error(`Treatment document section was not found: ${sectionId}`)
     }
@@ -84,7 +103,11 @@ try {
       embeddedBills,
       embeddedDocumentSections,
       promptTokens,
-      providerMetrics: provider.metrics,
+      models: {
+        bills: embeddingRouteFor("bill").model,
+        documentSections: embeddingRouteFor("document-section").model
+      },
+      providerMetrics: { bills: bill.provider.metrics, documentSections: section.provider.metrics },
       rolloutId: manifest.rolloutId,
       supportingMaterialSections: 0
     })}\n`

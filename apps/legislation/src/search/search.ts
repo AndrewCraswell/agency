@@ -1,5 +1,5 @@
 import { and, arrayOverlaps, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm"
-import type { SQL } from "drizzle-orm"
+import { getTableColumns, type SQL } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
 import {
   amendmentEmbeddings,
@@ -20,6 +20,7 @@ import { embeddingRouteFor } from "../models/embedding-routing.js"
 const DEFAULT_LIMIT = 20
 const MAXIMUM_LIMIT = 100
 const MAXIMUM_QUERY_LENGTH = 500
+const { text: _supportingMaterialText, ...supportingMaterialSummaryColumns } = getTableColumns(supportingMaterials)
 
 export interface SearchFilters {
   classifications?: string[]
@@ -336,7 +337,7 @@ export async function semanticSupportingMaterialSearch(
   const limit = Math.min(Math.max(input.limit ?? DEFAULT_LIMIT, 1), MAXIMUM_LIMIT)
   const distance = sql<number>`${supportingMaterialSectionEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
   return database
-    .select({ distance, material: supportingMaterials, sectionId: supportingMaterialSections.id })
+    .select({ distance, material: supportingMaterialSummaryColumns, sectionId: supportingMaterialSections.id })
     .from(supportingMaterialSections)
     .innerJoin(
       supportingMaterialSectionEmbeddings,

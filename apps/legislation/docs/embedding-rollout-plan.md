@@ -53,6 +53,14 @@ input contract. See the
 [model and input bakeoff](../evals/embedding-model-bakeoff.md). Full rollout
 remains paused until the broader human-graded and deployed MCP gates pass.
 
+The routed production canary then stored 2,560 rows through Trigger.dev and
+replayed the frozen MCP treatment/control manifest. The embedded treatment
+reached 100 percent Recall@10 and 0.929 nDCG@10 with no tool error; intentionally
+unembedded controls remained absent from pure semantic search. It also verified
+amendment rank fusion, supporting-material retrieval, canonical identity
+projection, and query-time selective reranking. See the
+[routed MCP canary report](../evals/embedding-canary-v7.md).
+
 ## Retrieval products and embedding inputs
 
 The rollout is not one undifferentiated vectorization job. Each search product
@@ -170,7 +178,10 @@ tasks:
 - `embedding-sync` starts one bounded embedding wave;
 - `embedding-sync-shard-controller` serially advances a shard checkpoint; and
 - `embedding-sync-shard-worker` embeds amendments, bills, document sections,
-  and supporting-material sections for one bounded shard batch.
+  and supporting-material sections for one bounded shard batch; and
+- `embedding-index-maintenance` refreshes PostgreSQL planner statistics after a
+  canary or completed wave so a newly populated vector table cannot cause a
+  filtered passage query to choose a full-corpus join.
 
 `embedding-sync` accepts an explicit `products` array containing `bills`,
 `sections`, `amendments`, or `materials`. Product names are part of the durable

@@ -1,0 +1,472 @@
+{
+  "endpoint": "http://127.0.0.1:3101/mcp",
+  "evaluatedAt": "2026-08-22T17:44:19.567Z",
+  "metrics": {
+    "all": {
+      "errors": 0,
+      "meanLatencyMs": 658.8835888888888,
+      "meanReciprocalRank": 0.7037037037037037,
+      "missingSourceAttribution": 0,
+      "ndcgAt10": 0.7222222222222222,
+      "precisionAt10": 0.5648148148148148,
+      "queries": 9,
+      "capacityAdjustedRecallAt5": 0.7777777777777778,
+      "capacityAdjustedRecallAt10": 0.7777777777777778,
+      "capacityAdjustedRecallAt25": 0.7777777777777778,
+      "recallAt5": 0.7777777777777778,
+      "recallAt10": 0.7777777777777778,
+      "recallAt25": 0.7777777777777778
+    },
+    "control": {
+      "errors": 0,
+      "meanLatencyMs": 360.48415,
+      "meanReciprocalRank": 0,
+      "missingSourceAttribution": 0,
+      "ndcgAt10": 0,
+      "precisionAt10": 0,
+      "queries": 2,
+      "capacityAdjustedRecallAt5": 0,
+      "capacityAdjustedRecallAt10": 0,
+      "capacityAdjustedRecallAt25": 0,
+      "recallAt5": 0,
+      "recallAt10": 0,
+      "recallAt25": 0
+    },
+    "treatment": {
+      "errors": 0,
+      "meanLatencyMs": 744.1405714285712,
+      "meanReciprocalRank": 0.9047619047619048,
+      "missingSourceAttribution": 0,
+      "ndcgAt10": 0.9285714285714286,
+      "precisionAt10": 0.7261904761904762,
+      "queries": 7,
+      "capacityAdjustedRecallAt5": 1,
+      "capacityAdjustedRecallAt10": 1,
+      "capacityAdjustedRecallAt25": 1,
+      "recallAt5": 1,
+      "recallAt10": 1,
+      "recallAt25": 1
+    }
+  },
+  "mode": "semantic",
+  "queries": [
+    {
+      "elapsedMs": 1551.4595,
+      "error": false,
+      "expectedIds": ["bill:us:119:hr:9183"],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:us:119:hr:9183",
+          "relevance": 1
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 1,
+          "precisionAt10": 1,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 1,
+          "precisionAt10": 1,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        }
+      },
+      "id": "bill-ai-infrastructure-resources",
+      "missingSourceAttribution": 0,
+      "queryClass": "known-item",
+      "resultIds": ["bill:us:119:hr:9183"],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 342.1098999999999,
+      "error": false,
+      "expectedIds": ["bill:ca:20252026:sb:925"],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:ca:20252026:sb:925",
+          "relevance": 1
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 1,
+          "precisionAt10": 1,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 1,
+          "precisionAt10": 1,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        }
+      },
+      "id": "bill-fusion-commercialization",
+      "missingSourceAttribution": 0,
+      "queryClass": "known-item",
+      "resultIds": ["bill:ca:20252026:sb:925"],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 357.2931999999996,
+      "error": false,
+      "expectedIds": ["bill:tx:89r:sb:583"],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:tx:89r:sb:583",
+          "relevance": 1
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 1,
+          "precisionAt10": 1,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 1,
+          "precisionAt10": 1,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        }
+      },
+      "id": "bill-public-land-affordable-homes",
+      "missingSourceAttribution": 0,
+      "queryClass": "known-item",
+      "resultIds": ["bill:tx:89r:sb:583"],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 361.7977000000001,
+      "error": false,
+      "expectedIds": ["bill:fl:2026:sb:142"],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:fl:2026:sb:142",
+          "relevance": 1
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 1,
+          "precisionAt10": 1,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 1,
+          "precisionAt10": 1,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        }
+      },
+      "id": "bill-abuse-rental-termination",
+      "missingSourceAttribution": 0,
+      "queryClass": "known-item",
+      "resultIds": ["bill:fl:2026:sb:142"],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 372.7572,
+      "error": false,
+      "expectedIds": ["bill:us:119:hr:6130"],
+      "judgments": [
+        {
+          "cohort": "control",
+          "id": "bill:us:119:hr:6130",
+          "relevance": 1
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 1,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "control": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 1,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        }
+      },
+      "id": "bill-dementia-blood-screening",
+      "missingSourceAttribution": 0,
+      "queryClass": "known-item",
+      "resultIds": ["bill:us:119:hr:9183"],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 348.2111,
+      "error": false,
+      "expectedIds": ["bill:tx:89r:hb:267"],
+      "judgments": [
+        {
+          "cohort": "control",
+          "id": "bill:tx:89r:hb:267",
+          "relevance": 1
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 1,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "control": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 1,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        }
+      },
+      "id": "bill-online-obscenity-defense",
+      "missingSourceAttribution": 0,
+      "queryClass": "known-item",
+      "resultIds": ["bill:tx:89r:sb:583"],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 1299.0228999999995,
+      "error": false,
+      "expectedIds": ["bill:us:119:hr:9183:document:16f66fc743c4b59ce3a5b55d:section:7cb9ee3fcace484959ac2a59"],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:us:119:hr:9183:document:16f66fc743c4b59ce3a5b55d:section:7cb9ee3fcace484959ac2a59",
+          "relevance": 1
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 3,
+          "meanReciprocalRank": 0.3333333333333333,
+          "ndcgAt10": 0.5,
+          "precisionAt10": 0.25,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 3,
+          "meanReciprocalRank": 0.3333333333333333,
+          "ndcgAt10": 0.5,
+          "precisionAt10": 0.25,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        }
+      },
+      "id": "passage-ai-water-energy-study",
+      "missingSourceAttribution": 0,
+      "queryClass": "passage-paraphrase",
+      "resultIds": [
+        "bill:us:119:hr:9183:document:16f66fc743c4b59ce3a5b55d:section:79cc6fdb4287fafc28b4a59d",
+        "bill:us:119:hr:9183:document:16f66fc743c4b59ce3a5b55d:section:22aa4413fe1f8382adec1e80",
+        "bill:us:119:hr:9183:document:16f66fc743c4b59ce3a5b55d:section:7cb9ee3fcace484959ac2a59",
+        "bill:us:119:hr:9183:document:16f66fc743c4b59ce3a5b55d:section:accff5250ef28509ab9be8f0"
+      ],
+      "tool": "search_bill_text"
+    },
+    {
+      "elapsedMs": 592.2388000000001,
+      "error": false,
+      "expectedIds": ["bill:ca:20252026:sb:925:document:11681190964e062fdd56b3f1:section:a8e5a7f77adbbdeced2f7ca2"],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:ca:20252026:sb:925:document:11681190964e062fdd56b3f1:section:a8e5a7f77adbbdeced2f7ca2",
+          "relevance": 1
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 1,
+          "precisionAt10": 0.3333333333333333,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 1,
+          "precisionAt10": 0.3333333333333333,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        }
+      },
+      "id": "passage-fusion-clean-energy",
+      "missingSourceAttribution": 0,
+      "queryClass": "passage-paraphrase",
+      "resultIds": [
+        "bill:ca:20252026:sb:925:document:11681190964e062fdd56b3f1:section:a8e5a7f77adbbdeced2f7ca2",
+        "bill:ca:20252026:sb:925:document:11681190964e062fdd56b3f1:section:008ee680497d06ca770aa9c9",
+        "bill:ca:20252026:sb:925:document:11681190964e062fdd56b3f1:section:0f540dff407ed39eccb99ab5"
+      ],
+      "tool": "search_bill_text"
+    },
+    {
+      "elapsedMs": 705.0619999999999,
+      "error": false,
+      "expectedIds": ["bill:tx:89r:sb:583:document:5f6b0237649394797ea0a622:section:6df646c783f588ddaccd90c6"],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:tx:89r:sb:583:document:5f6b0237649394797ea0a622:section:6df646c783f588ddaccd90c6",
+          "relevance": 1
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 1,
+          "precisionAt10": 0.5,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 1,
+          "capacityAdjustedRecallAt10": 1,
+          "capacityAdjustedRecallAt25": 1,
+          "expectedCount": 1,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 1,
+          "precisionAt10": 0.5,
+          "recallAt5": 1,
+          "recallAt10": 1,
+          "recallAt25": 1
+        }
+      },
+      "id": "passage-affordable-housing-public-property",
+      "missingSourceAttribution": 0,
+      "queryClass": "passage-paraphrase",
+      "resultIds": [
+        "bill:tx:89r:sb:583:document:5f6b0237649394797ea0a622:section:6df646c783f588ddaccd90c6",
+        "bill:tx:89r:sb:583:document:c2716f31afd21d353678d91a:section:f37bcf60801d1b6aa67c634b"
+      ],
+      "tool": "search_bill_text"
+    }
+  ],
+  "rolloutId": "embedding-canary-v1"
+}

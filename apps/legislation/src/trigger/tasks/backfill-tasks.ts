@@ -523,6 +523,22 @@ export const embeddingSyncShardController = task({
   }
 })
 
+export const embeddingIndexMaintenance = task({
+  id: "embedding-index-maintenance",
+  maxDuration: 3_600,
+  queue: { concurrencyLimit: 1, name: "legislation-embedding-index-maintenance" },
+  run: async (unparsedPayload: unknown) => {
+    const payload = baseWorkerSchema.strict().parse(unparsedPayload)
+    await withDerivedBackfillDatabase("embeddings", async (database) => {
+      await database.execute(sql.raw("analyze legislation.bill_embeddings"))
+      await database.execute(sql.raw("analyze legislation.document_section_embeddings"))
+      await database.execute(sql.raw("analyze legislation.amendment_embeddings"))
+      await database.execute(sql.raw("analyze legislation.supporting_material_section_embeddings"))
+    })
+    return { rebuildId: payload.rebuildId, status: "completed" as const }
+  }
+})
+
 export const embeddingSync = task({
   id: "embedding-sync",
   maxDuration: 14_400,
@@ -542,6 +558,14 @@ export const embeddingSync = task({
       })
     }
     const result = await embeddingSyncShardController.batchTriggerAndWait(items)
+    await embeddingIndexMaintenance
+      .triggerAndWait(payload, {
+        idempotencyKey: await globalIdempotencyKey(
+          payload.rebuildId,
+          `embedding-index-maintenance:${payload.products.slice().sort().join("+")}`
+        )
+      })
+      .unwrap()
     assertBatchSucceeded(result, "embedding sync")
     return { checkpoint: { complete: true }, shardCount: payload.shardCount, status: "completed" as const }
   }

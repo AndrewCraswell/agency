@@ -1408,14 +1408,16 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     })
 
     const service = new LegislationQueryService(database)
-    await expect(service.searchSupportingMaterials({ query: "improved public data access" })).resolves.toMatchObject({
-      items: [{ id: materialId }]
-    })
-    await expect(service.getSupportingMaterial({ id: materialId })).resolves.toMatchObject({
+    const searchResult = await service.searchSupportingMaterials({ query: "improved public data access" })
+    expect(searchResult).toMatchObject({ items: [{ id: materialId }] })
+    expect(searchResult.items[0]).not.toHaveProperty("text")
+    const detailResult = await service.getSupportingMaterial({ id: materialId })
+    expect(detailResult).toMatchObject({
       material: { id: materialId, processingStatus: "processed" },
       sections: [expect.objectContaining({ text: expect.stringContaining("public data access") })],
       truncated: false
     })
+    expect(detailResult.material).not.toHaveProperty("text")
   })
 
   it("records committed event changes and keeps replays and rollbacks silent", async () => {

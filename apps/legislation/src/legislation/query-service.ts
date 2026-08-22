@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm"
+import { and, asc, eq, getTableColumns, gte, inArray, lte, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
 import { findChangeEvents } from "../db/queries/changes.js"
 import {
@@ -198,7 +198,9 @@ export interface SupportingMaterialSearchInput {
   query?: string
 }
 
-type SupportingMaterialSearchItem = typeof supportingMaterials.$inferSelect & { distance?: number; score?: number }
+const { text: _supportingMaterialText, ...supportingMaterialSummaryColumns } = getTableColumns(supportingMaterials)
+type SupportingMaterialSummary = Omit<typeof supportingMaterials.$inferSelect, "text">
+type SupportingMaterialSearchItem = SupportingMaterialSummary & { distance?: number; score?: number }
 
 interface SupportingMaterialSearchResult {
   items: SupportingMaterialSearchItem[]
@@ -866,7 +868,7 @@ export class LegislationQueryService {
         .where(eq(amendmentActions.amendmentId, lookup.id))
         .orderBy(asc(amendmentActions.ordinal)),
       this.#database
-        .select({ link: supportingMaterialLinks, material: supportingMaterials })
+        .select({ link: supportingMaterialLinks, material: supportingMaterialSummaryColumns })
         .from(supportingMaterialLinks)
         .innerJoin(supportingMaterials, eq(supportingMaterialLinks.materialId, supportingMaterials.id))
         .where(eq(supportingMaterialLinks.amendmentId, lookup.id))
@@ -925,7 +927,7 @@ export class LegislationQueryService {
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeOffset(input.cursor)
     const rows = await this.#database
-      .selectDistinct({ material: supportingMaterials })
+      .selectDistinct({ material: supportingMaterialSummaryColumns })
       .from(supportingMaterials)
       .leftJoin(supportingMaterialLinks, eq(supportingMaterialLinks.materialId, supportingMaterials.id))
       .where(
@@ -959,7 +961,7 @@ export class LegislationQueryService {
 
   async getSupportingMaterial(lookup: EntityLookup) {
     const material = await this.#database
-      .select()
+      .select(supportingMaterialSummaryColumns)
       .from(supportingMaterials)
       .where(eq(supportingMaterials.id, lookup.id))
       .limit(1)
