@@ -26,6 +26,10 @@
     "./foil-insulation": {
       "types": "./dist/foil-insulation.d.ts",
       "default": "./dist/foil-insulation.js"
+    },
+    "./sabre": {
+      "types": "./dist/sabre.d.ts",
+      "default": "./dist/sabre.js"
     }
   },
   "engines": {
