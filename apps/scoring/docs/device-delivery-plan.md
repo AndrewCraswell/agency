@@ -1,0 +1,299 @@
+# Scoring apparatus delivery plan
+
+## Outcome
+
+Deliver a premium three-weapon scoring apparatus in controlled increments:
+
+1. an executable, source-traceable scoring specification;
+2. a deterministic two-processor simulator with event replay and fault injection;
+3. host-tested STM32 and ESP32 firmware;
+4. an independently reviewed EVT design package that is safe to fabricate;
+5. validated EVT and DVT units; and
+6. a production release supported by manufacturing, compliance, reliability, and FIE evidence.
+
+Fabrication readiness is the exit criterion for Milestone 5. It is not a claim of product, regulatory, or FIE approval.
+Software emulation can retire rule, protocol, replay, recovery, and application risks before boards arrive, but it cannot
+prove analog thresholds, EMC behavior, connector life, thermal performance, or real-time peripheral behavior.
+
+## Planning rules
+
+- Keep product-specific work inside `apps/scoring` and hardware design inside `packages/scoring-circuit`. Extract a
+  shared package only after a second real consumer exists.
+- Give an agent one task ID at a time. A task should normally produce one reviewable commit in one to three focused
+  working days.
+- A task owns the files named in its task packet. Changes to a shared contract require a separate contract task or
+  coordination with every dependent task.
+- Every completed task must include evidence: tests, generated artifacts, measurements, review notes, or an explicit
+  documentation-only acceptance check.
+- Do not hide open hardware decisions behind placeholder footprints, generic CAD bodies, guessed values, or supplier
+  search results.
+- Do not add production mechanisms merely to improve an emulator. Simulate only behavior required by a contract,
+  failure mode, acceptance test, or diagnosed risk.
+- Hardware-in-the-loop begins after EVT boards exist. A small analog coupon and socketed resistance/timing fixture may
+  be built earlier because they answer the analog questions needed to release the EVT schematic.
+
+## Repository boundaries
+
+| Area | Canonical location | Ownership |
+| --- | --- | --- |
+| Rules, deterministic simulator, golden vectors | `apps/scoring/src`, `apps/scoring/tests`, `apps/scoring/fixtures` | Software specification |
+| Protocol and replay documentation | `apps/scoring/docs` | Cross-processor contract |
+| STM32 firmware | `apps/scoring/firmware/stm32` | Authoritative acquisition and scoring |
+| ESP32 firmware | `apps/scoring/firmware/esp32` | UI, storage, networking, identity, and updates |
+| Circuit, parts evidence, analog model, fabrication outputs | `packages/scoring-circuit` | Electrical and PCB design |
+| Enclosure and connector-module CAD | `packages/scoring-circuit/mechanical` | Mechanical integration |
+| Test evidence | `apps/scoring/evidence` and `packages/scoring-circuit/evidence` | Immutable generated or measured results |
+
+The proposed folders are created by the first task that needs them. Empty scaffolding is not a deliverable.
+
+## Task states and completion contract
+
+Use `backlog`, `ready`, `in-progress`, `review`, `blocked`, and `done`. A task is `ready` only when every dependency is
+`done`, its input documents are available, and no unresolved design choice can materially change its output.
+
+Every agent task packet must state:
+
+- **Objective:** one observable outcome.
+- **Allowed files:** the smallest exclusive file set the task may change.
+- **Inputs:** exact documents, contracts, generated artifacts, and predecessor task IDs.
+- **Deliverables:** files or physical evidence expected at review.
+- **Acceptance:** commands, measurements, or reviewer checks that must pass.
+- **Non-goals:** adjacent work that must remain untouched.
+- **Handoff:** decisions, remaining risks, and the next task IDs unblocked.
+
+Repository-wide validation remains required before a milestone closes. A task may use focused checks during
+development, but its handoff must identify any unrelated repository failures rather than silently broadening its scope.
+
+## Milestone overview
+
+| Milestone | Exit outcome | Starts when | Can run alongside |
+| --- | --- | --- | --- |
+| M0: Baseline contracts | Traceable rules, system boundaries, task-ready contracts | Immediately | Nothing depends on unfinished M0 contracts |
+| M1: Executable scoring specification | Foil, epee, and sabre behavior proven by golden vectors | Relevant M0 contracts are stable | M2 infrastructure and M4 research |
+| M2: Full virtual apparatus | Deterministic STM32/ESP32 simulation, replay, recovery, and fault injection | Event and protocol contracts exist | M1 weapon modules and M4 analog work |
+| M3: Firmware foundations | Host-tested firmware implements the same vectors and protocol | M1 rule tables and M2 transport are stable | M4 and mechanical work |
+| M4: Analog and mechanical proof | Measured sensing cell and frozen board/enclosure interfaces | M0 pin/power contracts exist | M1 through M3 |
+| M5: EVT fabrication release | Reviewed schematic, PCB, BOM, and manufacturing package | M3 interfaces and M4 evidence are accepted | Final software features not tied to board interfaces |
+| M6: EVT integration | Boards score correctly and survive defined faults | EVT boards assembled | Application feature development |
+| M7: DVT and approval | Design passes reliability, compliance, venue, and FIE evidence gates | EVT defects closed | Manufacturing fixture development |
+| M8: Production validation | Repeatable, traceable manufacturing release | DVT design frozen | Field-service preparation |
+
+## M0: Baseline contracts
+
+**Exit criterion:** every downstream team can implement against versioned rules, signals, messages, and acceptance
+evidence without inventing missing behavior.
+
+| ID | Deliverable | Depends on | Acceptance |
+| --- | --- | --- | --- |
+| M0-01 | FIE traceability matrix for foil, epee, sabre, lamps, buzzer, lockout, faults, and power | None | Every normative behavior cites article/page in the local FIE PDF; Favero differences are labeled prior art, not authority |
+| M0-02 | Glossary and units contract for line names, sides, timestamps, resistance, and timing boundaries | M0-01 | No overloaded names; all internal time uses integer microseconds; all electrical units are explicit |
+| M0-03 | Seven-conductor logical signal contract, weapon excitation phases, and safe inactive state | M0-01, M0-02 | Reviewed by software and electrical owners; every illegal or indeterminate state has a diagnostic outcome |
+| M0-04 | STM32/ESP32 responsibility and fault-containment contract | M0-02 | Scoring authority, reset ownership, watchdog behavior, degraded modes, and forbidden ESP32 decisions are explicit |
+| M0-05 | Versioned decision-record schema covering hits, rejections, line faults, calibration, and uncertainty | M0-01, M0-04 | Schema examples round-trip and reject unknown incompatible versions |
+| M0-06 | Binary transport frame specification with sequence, length, CRC-32C, message type, and compatibility policy | M0-04, M0-05 | Golden encoded frames exist; corruption, truncation, duplication, reordering, and version mismatch outcomes are defined |
+| M0-07 | Golden scenario file format and corpus manifest | M0-01, M0-02, M0-05 | A scenario can express line transitions, expected events, expected non-events, and boundary uncertainty without code |
+| M0-08 | Candidate STM32 GPIO/ADC/comparator/timer/DMA allocation | M0-03 | Every used signal maps to a real MCU function; conflicts and alternate-function constraints are checked |
+| M0-09 | Candidate ESP32 GPIO and peripheral allocation | M0-04, M0-06 | Strapping, boot, USB, Ethernet SPI, display, audio, I2C, debug, and antenna constraints are reviewed |
+| M0-10 | Power-state and reset-state contract | M0-04 | Cold boot, brownout, independent reset, watchdog reset, update, and power-loss persistence behavior are defined |
+| M0-11 | Product threat model and firmware trust boundaries | M0-04, M0-06, M0-10 | Covers signed updates, rollback, device identity, debug access, network isolation, malformed frames, and recovery |
+| M0-12 | Requirements-to-evidence ledger | M0-01 through M0-11 | Every product requirement names its planned unit, simulation, bench, EVT, DVT, compliance, or production evidence |
+
+## M1: Executable three-weapon scoring specification
+
+**Exit criterion:** deterministic host tests prove every rule boundary for both sides and all three weapons. The
+implementation has no dependency on an MCU SDK or wall-clock time.
+
+| ID | Deliverable | Depends on | Acceptance |
+| --- | --- | --- | --- |
+| M1-01 | Audit current epee state machine against the traceability matrix | M0-01, M0-07 | Existing behavior is either cited and retained or corrected with boundary tests |
+| M1-02 | Epee exceptional-resistance and grounded-material logical cases | M1-01, M0-03 | Golden scenarios cover valid, invalid, simultaneous, and near-lockout contacts on both sides |
+| M1-03 | Foil contact-break and on/off-target state machine | M0-01, M0-03, M0-07 | Tests cover 13/14/15 ms boundaries, target grounding, lame/weapon faults, and lockout |
+| M1-04 | Foil insulation-warning and 450/475 ohm decision contract | M1-03 | Boundary vectors distinguish scoring behavior from diagnostic indication |
+| M1-05 | Sabre contact and control-break state machine | M0-01, M0-03, M0-07 | Tests cover 0.1 ms minimum, 1 ms capture, 3 ms control break, whipover-related sequences, and lockout |
+| M1-06 | Weapon-neutral bout reset and state-transition API | M1-02, M1-03, M1-05 | Reset cannot leak hits, pending contacts, or lockout state across bouts or weapon changes |
+| M1-07 | Versioned immutable timing-table loader | M1-02, M1-03, M1-05 | Unknown revisions fail closed; values outside approved bounds are rejected |
+| M1-08 | Generated boundary-vector suite | M1-02 through M1-07 | Every timing boundary runs below, at, and above the limit for both sides with deterministic ordering |
+| M1-09 | Property tests for monotonic time, symmetry, determinism, and no-hit safety | M1-06, M1-08 | Seeded runs reproduce exactly; left/right mirroring produces mirrored decisions |
+| M1-10 | Reference-machine comparison capture format | M0-07 | Favero or other machine observations can be stored with provenance without becoming normative rules |
+| M1-11 | Scoring specification release `rules-1` | M1-01 through M1-10 | Focused verification and independent rule review pass; traceability ledger is complete |
+
+## M2: Deterministic virtual apparatus and replay
+
+**Exit criterion:** CI can run a complete virtual bout, inject processor/link/storage faults, and reproduce every
+accepted or rejected electrical event from its immutable record.
+
+| ID | Deliverable | Depends on | Acceptance |
+| --- | --- | --- | --- |
+| M2-01 | Explicit virtual microsecond clock and scheduler | M0-02 | No simulator behavior reads wall-clock time; equal seeds produce byte-identical output |
+| M2-02 | Seven-line virtual front-end reading model | M0-03, M2-01 | Expresses open, closed, grounded, cross-line, resistance bucket, and indeterminate/fault readings |
+| M2-03 | Virtual STM32 device shell independent of epee-specific types | M1-06, M2-01, M2-02 | Selects weapon tables and emits no application-owned decisions |
+| M2-04 | Hit, rejection, short, late-hit, parry, whipover, and line-fault event capture | M0-05, M2-03 | Each record contains bounded pre/post samples, reason, rule revision, firmware identity, boot ID, and sequence range |
+| M2-05 | Canonical binary encoder and decoder | M0-06 | Golden frames match byte-for-byte; malformed length, CRC, type, and version are rejected |
+| M2-06 | Fault-injectable virtual processor link | M2-05 | Supports delay, loss, duplication, reordering, corruption, disconnect, and bounded backpressure |
+| M2-07 | Virtual ESP32 receiver and authority guard | M0-04, M2-06 | Accepts valid records exactly once and cannot create, alter, or reclassify a scoring decision |
+| M2-08 | Event journal and power-fail transaction model | M0-05, M0-10, M2-07 | Power loss at every write boundary yields either the old or new valid state, never a partial record |
+| M2-09 | Application boot ID, RTC uncertainty, and network-time metadata | M0-05, M2-08 | Offline and resynchronized timelines remain ordered and explicitly uncertain where required |
+| M2-10 | Processor reset, watchdog, brownout, and recovery scenarios | M0-10, M2-06 through M2-09 | Independent resets never change STM32 scoring authority; recovery produces explicit diagnostics |
+| M2-11 | Replay renderer data contract | M2-04, M2-09 | A stored record renders without rerunning or re-deciding the scoring algorithm |
+| M2-12 | Scenario-runner CLI and machine-readable report | M0-07, M2-10 | Runs one file or a corpus, returns nonzero on mismatch, and emits stable JSON evidence |
+| M2-13 | Seeded protocol and record fuzz suite | M2-05, M2-07, M2-08 | Crashes, unbounded allocations, duplicate acceptance, and silent corruption are absent across the fixed corpus |
+| M2-14 | Full virtual-apparatus release | M2-01 through M2-13, M1-11 | All golden vectors and fault scenarios pass with required coverage and reproducible evidence |
+
+## M3: Firmware foundations
+
+**Exit criterion:** host-tested STM32 and ESP32 firmware implement the frozen contracts. Emulator and firmware consume
+the same vectors even if they do not share a programming language implementation.
+
+| ID | Deliverable | Depends on | Acceptance |
+| --- | --- | --- | --- |
+| M3-01 | Firmware-language and portability decision record | M1-11, M2-05 | Compares C, C++, and Rust against STM32 tooling, ESP-IDF integration, qualification, debugging, and team support |
+| M3-02 | Golden-vector exporter usable by host firmware tests | M0-07, M1-11 | Firmware tests consume generated fixtures without manually copying timing constants |
+| M3-03 | STM32 host-build scaffold with hardware interfaces | M3-01, M3-02 | Builds without STM32 hardware and substitutes clock, ADC, comparator, DMA, flash, watchdog, and transport interfaces |
+| M3-04 | STM32 scoring core implementation | M3-03 | Passes the complete three-weapon golden corpus and matches decision records field-for-field |
+| M3-05 | STM32 binary transport implementation | M2-05, M3-03 | Passes golden frames, fragmentation, corruption, sequence, and backpressure tests |
+| M3-06 | STM32 target startup, clocks, MPU, watchdog, supervisor, and safe outputs | M0-08, M0-10, M3-03 | Target build and static checks pass; reset defaults cannot indicate a hit |
+| M3-07 | STM32 acquisition scheduler and DMA buffer adapter | M0-08, M3-04, M4-08 | Host timing tests pass; target timing budget is instrumented for later board measurement |
+| M3-08 | ESP-IDF host-build scaffold with service interfaces | M3-01, M3-02 | Storage, clock, identity, network, display, audio, update, and scoring-link dependencies are substitutable |
+| M3-09 | ESP32 receiver, journal, and replay implementation | M2-07 through M2-11, M3-08 | Passes virtual power-loss, duplicate, corruption, reset, and replay scenarios |
+| M3-10 | ESP32 identity, secure boot, signed update, rollback, and recovery design | M0-11, M3-08 | Threat-model tests and documented provisioning/recovery flow pass review |
+| M3-11 | Display/audio/network load-isolation tests | M0-04, M3-08 | Maximum simulated application load cannot modify scoring records or STM32 timestamps |
+| M3-12 | STM32 Renode feasibility spike | M3-06, M3-07 | A bounded report identifies supported peripherals and value beyond host tests; no permanent dependency without evidence |
+| M3-13 | ESP32 QEMU feasibility spike | M3-08 through M3-10 | A bounded report identifies supported ESP-IDF behavior and value beyond host tests |
+| M3-14 | Dual-virtual-firmware integration runner | M3-05, M3-09, accepted M3-12/M3-13 results | Runs the highest-value supported firmware paths together; unsupported peripherals remain host fakes, not hidden omissions |
+| M3-15 | Firmware-foundation release | M3-01 through M3-14 | Host verification passes; target builds are reproducible; remaining board-only tests are listed explicitly |
+
+## M4: Analog and mechanical proof
+
+**Exit criterion:** measured evidence supports the analog component values and the electrical/mechanical interfaces are
+frozen enough to complete the EVT schematic and layout.
+
+| ID | Deliverable | Depends on | Acceptance |
+| --- | --- | --- | --- |
+| M4-01 | Analog simulation audit against all rule boundaries | M0-01, M0-03 | Model cases cover 0-500 ohm paths, declared capacitance range, tolerances, temperature, and pulse widths |
+| M4-02 | Final candidate clamp diode and rail-protection network | M4-01 | Leakage, charge injection, capacitance, surge path, and MCU injected-current limits are calculated with vendor models |
+| M4-03 | Source/sink switch, resistor, reference, and ADC error budget | M4-01, M4-02 | Worst-case threshold error meets the fixture target with explicit calibration assumptions |
+| M4-04 | Single-channel sensing coupon schematic and verified footprints | M4-02, M4-03 | ERC passes; footprints are checked against manufacturer drawings by a second reviewer |
+| M4-05 | Socketed resistance, capacitance, and pulse fixture design | M0-07, M4-01 | Covers the matrix in `packages/scoring-circuit/docs/analog-front-end.md` with calibrated uncertainty |
+| M4-06 | Coupon and fixture fabrication package | M4-04, M4-05 | Gerbers, drills, BOM, placement, assembly notes, drawings, and inspection checklist pass independent review |
+| M4-07 | Coupon procurement and incoming inspection | M4-06 | Measured parts, pad geometry, shorts/opens, fixture resistance, and relay bounce are recorded before power-on |
+| M4-08 | Analog threshold, timing, and calibration report | M4-07 | Required resistance and pulse boundaries pass across input tolerance and planned temperature range |
+| M4-09 | Sacrificial ESD/EFT/surge and cable-fault report | M4-07, M4-08 | Failures are contained; protection changes are fed back into the model and retested |
+| M4-10 | Exact reel-socket selection and physical plug-fit study | None | Color suffixes, retention, contact resistance, sweat/salt exposure plan, harness termination, and cycle target are recorded |
+| M4-11 | Communications and power connector CAD/footprint verification | None | RJ45, USB-C, locking power, shield tabs, fasteners, service access, and strain relief match manufacturer drawings |
+| M4-12 | Enclosure architecture, board outlines, keepouts, and thermal assumptions | M4-10, M4-11 | VESA mounting, antenna clearance, airflow, display, speaker, connector modules, harness bend radii, and service sequence fit |
+| M4-13 | Harness pinout, keying, bonding, and current-rating release | M0-03, M0-10, M4-10 through M4-12 | No reversible connector can apply destructive power or swap left/right scoring lines; chassis/ESD paths are explicit |
+| M4-14 | Critical-parts readiness manifest update | M4-08 through M4-13 | Selected parts, verified footprints, manufacturer CAD, mechanical review, and blockers are accurately machine-checked |
+
+## M5: EVT fabrication release
+
+**Exit criterion:** an independent reviewer agrees that the released files describe the intended circuit and board, pass
+the defined electrical/layout rules, and are safe to order as a small EVT build.
+
+| ID | Deliverable | Depends on | Acceptance |
+| --- | --- | --- | --- |
+| M5-01 | Hierarchical schematic sheet plan and net naming | M0-03, M0-04, M4-13 | Sheets separate power, scoring AFE, STM32, isolation, ESP32, Ethernet, display/audio, service, and connectors |
+| M5-02 | Complete power entry, protection, conversion, sequencing, and telemetry schematic | M0-10, M4-13 | Worst-case ratings, derating, inrush, reverse polarity, brownout, and test points are reviewed |
+| M5-03 | Complete seven-channel analog front-end schematic | M4-08, M4-09 | Exact values/models, calibration paths, safe defaults, ADC/comparator mapping, and test points match evidence |
+| M5-04 | Complete STM32, reference, debug, watchdog, and primary-output schematic | M0-08, M3-06, M5-03 | Pin map, clocks, decoupling, reset, SWD, lamps, buzzer, and fault defaults are complete |
+| M5-05 | Complete isolation and processor-link schematic | M0-04, M0-06, M3-05 | Directions, defaults, power domains, creepage intent, and reset/heartbeat paths match the contract |
+| M5-06 | Complete ESP32, Ethernet, storage, RTC, identity, display, audio, and debug schematic | M0-09, M3-15, M4-11 | Pin map, strapping, decoupling, clocks, antenna keepout, magnetics, terminations, and service paths are complete |
+| M5-07 | Complete connector-module and harness schematics | M4-10 through M4-13 | Panel parts are not represented as generic headers; module and harness part numbers are explicit |
+| M5-08 | Production BOM and approved alternatives | M5-02 through M5-07 | Lifecycle, stock risk, temperature grade, tolerance, voltage/current derating, and alternates are reviewed |
+| M5-09 | Independent schematic and ERC review | M5-01 through M5-08 | No unexplained ERC waiver; every review comment is resolved or recorded as an accepted risk |
+| M5-10 | Controlled stack-up and layout constraint specification | M5-09, M4-12 | Defines impedance, copper, material, isolation, return paths, analog zones, RF keepout, current, and manufacturing limits |
+| M5-11 | Placement release | M5-10 | Connectors, mounting, antenna, isolation, analog cells, clocks, decoupling, power loops, test access, and thermal parts pass review |
+| M5-12 | Critical power and analog routing | M5-11 | Current loops, Kelvin paths, ESD returns, references, ADC inputs, and domain boundaries match the reviewed strategy |
+| M5-13 | Ethernet, clocks, SPI, display, audio, and remaining routing | M5-11, M5-12 | Length/return constraints pass; unrouted count is zero |
+| M5-14 | Copper, planes, thermal relief, stitching, creepage, and silkscreen completion | M5-13 | Plane integrity, isolation slots, chassis strategy, polarity, pin-one, warning, revision, and service labels pass review |
+| M5-15 | PCB DRC, schematic-to-layout, and netlist audit | M5-14 | Zero unexplained violations and zero schematic/layout mismatches |
+| M5-16 | SI, PI, thermal, EMC, and safety pre-fabrication review | M5-15 | Reviewers issue bounded actions; required corrections are implemented and checks rerun |
+| M5-17 | Design-for-manufacture and design-for-test review | M5-15 | Fabricator/assembler constraints, panelization, fiducials, tooling, test pads, programming, and inspection are accepted |
+| M5-18 | Fabrication and assembly output generation | M5-16, M5-17 | Gerbers or ODB++, drills, IPC netlist, BOM, centroid, drawings, stack-up, notes, and 3D assembly are generated from one revision |
+| M5-19 | Independent output viewer and source comparison | M5-18 | Apertures, layers, holes, outlines, text, mask/paste, polarity, rotations, and BOM references match source files |
+| M5-20 | EVT release candidate archive and checksums | M5-19 | Immutable archive includes source revision, tool versions, outputs, checksums, open risks, and quantity/build instructions |
+| M5-21 | Fabrication-readiness sign-off | M5-20 | Electrical, layout, mechanical, firmware, manufacturing, and product owners approve a five-to-ten-unit EVT order |
+
+## M6: EVT integration
+
+**Exit criterion:** assembled boards satisfy core scoring, replay, fault-containment, power, thermal, and service
+requirements sufficiently to freeze DVT corrections.
+
+| ID | Deliverable | Depends on | Acceptance |
+| --- | --- | --- | --- |
+| M6-01 | Incoming bare-board and assembly inspection | M5-21 | Stack-up, impedance coupon, dimensions, finish, X-ray/AOI findings, substitutions, and workmanship are recorded |
+| M6-02 | Current-limited staged power bring-up | M6-01 | Every rail, reset, clock, reference, isolation barrier, and idle current is within its budget before processors run |
+| M6-03 | Programming, identity provisioning, and factory self-test bring-up | M6-02, M3-15 | Both processors program and recover; device identity and test results are serialized without exposing secrets |
+| M6-04 | Seven-channel calibration and analog correlation | M6-02, M4-08 | Board measurements correlate with coupon model and fixture uncertainty; coefficients remain bounded |
+| M6-05 | Three-weapon golden-vector hardware execution | M6-03, M6-04 | Board decisions and records match the host corpus at every rule boundary |
+| M6-06 | Replay and power-loss integrity testing | M6-03 | Completed records survive resets and interrupted writes; corrupt or partial records are rejected explicitly |
+| M6-07 | Processor/link/watchdog/brownout fault injection | M6-03 | ESP32 failure never changes scoring authority; STM32 failure produces safe unavailable output and diagnostics |
+| M6-08 | Ethernet, radio, display, audio, storage, and maximum-load coexistence | M6-03 | Worst application load cannot alter scoring timing, thresholds, records, or processor stability |
+| M6-09 | Thermal characterization and power budget closure | M6-08 | Full-load temperatures and derating meet limits at declared ambient and blocked-vent assumptions |
+| M6-10 | EMC pre-scan and ESD/EFT/surge engineering tests | M6-08, M6-09 | Failures are reproducible, corrected, and regression-tested before DVT layout freeze |
+| M6-11 | Connector, harness, enclosure, drop, and service trial | M6-01 | Loads reach chassis supports; modules replace without soldering or damage; discovered wear risks have actions |
+| M6-12 | EVT defect ledger and DVT change review | M6-04 through M6-11 | Every defect has severity, root cause, correction, regression evidence, and disposition |
+
+## M7: DVT, compliance, reliability, and FIE approval
+
+**Exit criterion:** the frozen design passes the qualification matrix and has the approvals required for its intended
+markets and competition claims.
+
+| ID | Deliverable | Depends on | Acceptance |
+| --- | --- | --- | --- |
+| M7-01 | DVT design update and release review | M6-12 | All release-blocking EVT defects are corrected and independently reviewed |
+| M7-02 | DVT build and golden-unit correlation | M7-01 | Units correlate with fixture and EVT golden unit before destructive testing |
+| M7-03 | Formal timing and resistance qualification | M7-02 | All three weapons pass boundary matrix across temperature, input tolerance, cable, and UPS transfer |
+| M7-04 | EMC emissions and immunity qualification | M7-02 | Intended-market radiated/conducted emissions and immunity, ESD, EFT, and surge requirements pass |
+| M7-05 | Electrical safety assessment | M7-02 | External supply, enclosure, materials, wiring, temperature, abnormal operation, and markings meet the selected standard |
+| M7-06 | Environmental, vibration, drop, spill-path, and corrosion program | M7-02 | Predefined functional and cosmetic acceptance criteria pass after exposure |
+| M7-07 | Connector and control endurance program | M7-02 | Reel, USB-C, Ethernet, power, buttons, and module fasteners meet target cycles with bounded resistance/retention drift |
+| M7-08 | Firmware security, update, rollback, recovery, and penetration review | M7-02, M3-10 | Signed updates, key handling, parser boundaries, recovery, and service access meet the threat model |
+| M7-09 | Long-duration burn-in and accelerated cycling | M7-02 | Reset, corruption, timing drift, thermal, and intermittent-connection rates meet the reliability target |
+| M7-10 | Venue trial and operational workflow report | M7-03 through M7-09 | Referees, armorers, organizers, and service staff complete realistic bouts, setup, diagnostics, and recovery |
+| M7-11 | 24 V FIE SEMI evidence package and engagement | M7-03 through M7-10 | Complete prototype, construction drawings, proposed rule wording, and test evidence are submitted on the required schedule |
+| M7-12 | DVT release decision | M7-03 through M7-11 | Claims are limited to obtained approvals; unresolved FIE power disposition is treated as a product gate |
+
+## M8: Production validation and release
+
+**Exit criterion:** approved suppliers and fixtures repeatedly build traceable units that meet the golden-unit limits,
+and field service can diagnose and replace wear modules without factory-only knowledge.
+
+| ID | Deliverable | Depends on | Acceptance |
+| --- | --- | --- | --- |
+| M8-01 | Supplier control plan and approved-vendor list | M7-12 | PCN/EOL monitoring, incoming criteria, alternates, counterfeit controls, and lot traceability are active |
+| M8-02 | Programming, provisioning, and key-custody station | M7-08, M8-01 | Audit proves unique identity, protected secrets, signed firmware, recovery, and serialized results |
+| M8-03 | Production test fixture and coverage analysis | M7-03, M8-01 | Covers rails, reference, every scoring line, lamps, audio, display, communications, storage, identity, and watchdogs |
+| M8-04 | Golden limits and fixture correlation | M8-03 | Multiple fixtures and operators reproduce accepted measurements against DVT golden units |
+| M8-05 | Pilot build | M8-01 through M8-04 | Yield, defects, cycle time, rework, substitutions, and test escapes meet launch criteria |
+| M8-06 | Burn-in sampling and reliability-monitoring plan | M8-05 | Sampling detects defined early-life failures and feeds a controlled corrective-action process |
+| M8-07 | Service manual, diagnostics, spares, and repair limits | M8-05 | Authorized service can identify and replace wear modules while preserving calibration and safety |
+| M8-08 | Release archive and configuration baseline | M8-05 through M8-07 | Hardware, firmware, rules, BOM, suppliers, fixtures, approvals, manuals, checksums, and known risks share one release identity |
+| M8-09 | Production release decision | M8-08 | Product, engineering, quality, manufacturing, security, compliance, and service owners sign the launch record |
+
+## Recommended initial agent queue
+
+Start with tasks that unblock multiple lanes and have non-overlapping files:
+
+1. **M0-01:** create the FIE traceability matrix in a new document.
+2. **M0-05:** draft the expanded decision-record schema after M0-01 identifies every event class.
+3. **M0-07:** define the golden scenario format against the current epee tests.
+4. **M0-08:** audit the STM32 peripheral and pin allocation in the circuit documentation.
+5. **M0-09:** audit the ESP32 allocation, strapping pins, and peripheral conflicts.
+6. **M4-01:** expand the existing analog model matrix without changing production component claims.
+
+After M0-01, M0-05, and M0-07 merge, separate agents can safely take M1-01, M1-03, M1-05, M2-01, and M4-01 in
+parallel because their primary files and acceptance evidence do not overlap.
+
+Do not start detailed PCB routing, target firmware peripheral code, or enclosure-detail CAD yet. Those tasks depend on
+contracts or measurements that are intentionally still open.
+
+## Milestone closure checklist
+
+A milestone closes only when:
+
+1. every required task is `done` or explicitly removed through a reviewed scope decision;
+2. focused validation and repository-wide verification pass at the milestone revision;
+3. generated and measured evidence is archived with source revision and tool versions;
+4. documents and machine-readable manifests agree with the implementation;
+5. an independent reviewer has resolved every release-blocking comment; and
+6. remaining risks, assumptions, and deferred work are named in the next milestone entry criteria.

@@ -1,5 +1,9 @@
 # Rules source
 
+The cross-software-and-hardware execution plan is in [device-delivery-plan.md](device-delivery-plan.md). It defines the
+milestones, dependencies, granular agent-sized tasks, acceptance evidence, and the boundary between emulation,
+fabrication readiness, EVT, DVT, and production validation.
+
 `fie-material-rules-2026-08-en.pdf` is the English FIE Material Rules, Book 3, dated August 2026.
 
 - Official index: https://fie.org/documents/rules

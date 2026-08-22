@@ -3,6 +3,9 @@
 The executable scoring specification and two-processor device emulator. The scoring state machine is independent of
 vendor SDKs so its timing rules can be replayed deterministically on a developer machine and in CI.
 
+See `docs/device-delivery-plan.md` for the coordinated implementation plan from executable rules and emulation through
+fabrication readiness, EVT, DVT, FIE evidence, and production validation.
+
 `src/device.ts` models the production boundary:
 
 - A virtual STM32G474 consumes protected electrical readings, owns the scoring state, and emits versioned, sequenced hit
