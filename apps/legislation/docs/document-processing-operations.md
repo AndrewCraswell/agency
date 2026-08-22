@@ -32,7 +32,7 @@ publisher fixes live in the
 | Bill documents | 64 deterministic jurisdiction lanes; a large jurisdiction may replace its lane with 2-8 ID partitions | 100 rows | 1 | 64 |
 | Supporting materials | 24 deterministic material-ID shards | 25 rows | 2 | 64 |
 | OCR | Explicit IDs handed off by document or material workers | 100 IDs | 1 | 12 |
-| Embeddings | 4 deterministic shards | Provider-bounded | 1 | 64 shared derived queue |
+| Embeddings | 16 deterministic shards for each of four independently resumable products | 64 rows per provider request | 1 | 64 shared embedding queue |
 
 A document partition is not a publisher allowance. Every partition and every
 Trigger deployment shares the durable host slots in PostgreSQL. Adding workers
@@ -109,8 +109,10 @@ or deferred retryable failures, interrupted claims, and eligible material OCR
 rows. The material controller waits for OCR children before declaring its shard
 complete.
 
-Embeddings stay paused until both gates are clean, validation passes, and an
-explicit cost-controlled rollout is approved.
+Those gates passed and the cost-controlled embedding rollout was explicitly
+approved on 2026-08-22. Embedding completion is now tracked independently for
+bills, document sections, amendments, and supporting-material sections; it
+does not reopen a completed document or material gate.
 
 ## Observing progress
 

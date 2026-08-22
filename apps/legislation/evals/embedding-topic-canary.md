@@ -2,9 +2,10 @@
 
 ## Decision
 
-Promote pure semantic bill retrieval to the next bounded rollout stage. Do not add reranking or make hybrid retrieval
-the default. Keep the full-corpus rollout paused until embeddings move to dedicated tables and the existing partial
-embedding coverage is reconciled.
+The result promoted pure semantic bill retrieval to the next bounded rollout stage. It did not add reranking or make
+hybrid retrieval the default. At the time, it kept the full-corpus rollout paused until embeddings moved to dedicated
+tables and the existing partial coverage was reconciled; those later gates are recorded in
+[`embedding-canary.md`](embedding-canary.md).
 
 ## Cohort
 

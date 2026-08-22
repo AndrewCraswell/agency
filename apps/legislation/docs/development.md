@@ -55,6 +55,26 @@ database. It drops only the `legislation` and `legislation_migrations` schemas.
 Run the application startup smoke test with `pnpm --filter legislation smoke:local`. It starts the real server against
 local PostgreSQL, verifies health and readiness, and shuts the process down.
 
+## Permanent operator and evaluation scripts
+
+The `scripts` directory contains reusable entry points, not deployed background
+jobs. Keep their ownership explicit so completed rollouts do not leave
+unexplained one-off files:
+
+| Script group | Purpose | Retention rule |
+| --- | --- | --- |
+| `smoke-local.mjs` | Start the real local service and verify health and readiness. | Permanent release check. |
+| `smoke-deployment.mjs` | Verify a deployed MCP endpoint, representative bill and document calls, and protocol behavior. | Permanent post-deployment check. |
+| `smoke-dependencies.mjs` | Verify production PostgreSQL, pgvector, managed identity, and Blob read/write behavior. | Permanent infrastructure check; packaged with the build intentionally. |
+| `build-embedding-*`, `run-embedding-*`, `evaluate-embedding-canary.ts`, `rerank-embedding-bakeoff.ts` | Rebuild frozen evaluation inputs, seed a bounded treatment, compare retrieval, and reproduce model or reranker decisions. | Keep as regression tooling; remove superseded generated outputs instead. |
+| `run-trigger-backfill.ts` | Plan or explicitly launch a resumable historical rebuild. | Permanent disaster-recovery and future-rebuild entry point. |
+| `reconcile-trigger-schedules.ts` | Diff or explicitly reconcile managed Trigger schedules. | Permanent schedule-control entry point. |
+| `copy-migrations.mjs`, `prepare-container-context.mjs`, `infra-what-if.mjs` | Build packaging, container context, and infrastructure preview. | Permanent build and deployment tooling. |
+
+There is no standalone historical OCR sweep script or task. Native document
+and material ingestion own OCR handoff, and a later unowned OCR accumulation
+is treated as a defect rather than hidden by polling.
+
 Stop the container while retaining data with `pnpm --filter legislation db:down`. To delete only the disposable
 legislation database volume and recreate it from zero, run:
 

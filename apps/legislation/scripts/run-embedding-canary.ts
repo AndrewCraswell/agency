@@ -27,7 +27,7 @@ function requireUnique(values: string[], label: string): void {
   }
 }
 
-const manifestPath = argument("--manifest", "evals/embedding-canary-v1.json")
+const manifestPath = argument("--manifest", "evals/embedding-canary.json")
 if (manifestPath === undefined) {
   throw new Error("Missing --manifest")
 }

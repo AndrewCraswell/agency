@@ -2,19 +2,21 @@
 
 Embeddings are an optional retrieval enhancement, not an ingestion-completion
 requirement. The historical corpus remains available through structured and
-PostgreSQL lexical search while this rollout is paused.
+PostgreSQL lexical search while the complete corpus pass is running.
 
-The full embedding phase must not start merely because document and material
-processing has finished. It starts only after the corpus gate, storage design,
-cost estimate, and MCP retrieval canary below are accepted.
+The corpus, storage, cost, model, and MCP treatment/control gates below passed,
+and the complete embedding phase was approved on 2026-08-22. Deployment
+`20260822.5` runs four concurrent product waves with 16 deterministic shards
+per product. This page remains the source of truth for the accepted routing,
+quality gates, incremental ownership, and completion audit.
 
 ## Canary status
 
-The first bounded canary ran on 2026-08-22. It created or reused vectors for
+The bounded canary program began on 2026-08-22. Its first treatment created or reused vectors for
 four treatment bills and ten treatment document sections, while the two clean
 control bills remained unembedded and supporting-material sections were
-excluded. See [the canary report](../evals/embedding-canary-v1.md) and its
-machine-readable result files.
+excluded. The later [routed canary report](../evals/embedding-canary.md) records
+the accepted multi-product contract and machine-readable result files.
 
 With canonical jurisdiction and session filters, the treatment cohort reached
 100 percent recall at 10 for both known-item bill discovery and judged document
@@ -27,10 +29,9 @@ single-target evaluation artifact rather than a valid topical-relevance score.
 Richer bill vectors and passage-to-bill candidate projection were tested and
 removed because they did not improve this cohort. The expanded bakeoff showed
 material reranking gains for bill and document ranking while it hurt
-amendments and Voyage-current supporting materials. Selective reranking is now
-implemented in the MCP query service but remains inactive in production until
-migration `0022`, deployment, and the deployed treatment/control canary are
-complete.
+amendments and Voyage-current supporting materials. Selective reranking is
+active only for bill and document-section retrieval; migration `0022` and the
+deployed treatment/control canary verified that boundary.
 
 A second canary then tested ten broad topics using 148 exhaustive source-
 taxonomy judgments in fixed jurisdiction and session scopes. Pure semantic
@@ -51,7 +52,7 @@ and structured amendments. The experiment also rejected raw leading document
 excerpts as a sparse-bill fallback and showed that each product needs its own
 input contract. See the
 [model and input bakeoff](../evals/embedding-model-bakeoff.md). Full rollout
-remains paused until the broader human-graded and deployed MCP gates pass.
+was held until the broader human-graded and deployed MCP gates passed.
 
 The routed production canary then stored 2,560 rows through Trigger.dev and
 replayed the frozen MCP treatment/control manifest. The embedded treatment
@@ -59,7 +60,9 @@ reached 100 percent Recall@10 and 0.929 nDCG@10 with no tool error; intentionall
 unembedded controls remained absent from pure semantic search. It also verified
 amendment rank fusion, supporting-material retrieval, canonical identity
 projection, and query-time selective reranking. See the
-[routed MCP canary report](../evals/embedding-canary-v7.md).
+[routed MCP canary report](../evals/embedding-canary.md). That result authorized
+the current complete pass while retaining lexical and hybrid fallbacks until
+all four products finish.
 
 ## Retrieval products and embedding inputs
 

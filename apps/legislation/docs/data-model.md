@@ -53,3 +53,9 @@ duplicate records and a child constraint failure rolls the parent update back.
 Before a provider batch is persisted, its canonical and source identities are checked as a set. Repeated references to
 the same source record are allowed, while two distinct source identities that normalize to one canonical ID fail with an
 explicit collision error instead of silently overwriting each other.
+
+The planned expansion from source people to durable officials, offices, service intervals, districts, aliases, external
+identifiers, extracted mentions, and canonical links is specified in the
+[identity, entity, and representative roadmap](identity-and-representative-roadmap.md). Those records will remain in the
+`legislation` schema because they are part of the same transactional civic graph; embeddings also remain in that schema
+as derived indexes with foreign keys to their canonical source rows.

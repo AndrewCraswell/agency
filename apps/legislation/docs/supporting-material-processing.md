@@ -79,8 +79,9 @@ Material completion requires all of the following:
 5. a separate review of exhausted failures and evidence-based unsupported
    outcomes.
 
-Embeddings remain paused until this gate is complete and a cost-controlled
-embedding rollout is explicitly approved.
+This gate passed, and the cost-controlled embedding rollout was explicitly
+approved on 2026-08-22. New or changed material sections are now responsible
+for their own incremental embedding refresh after durable text persistence.
 
 ## Operational settings
 
@@ -110,6 +111,6 @@ under DRV-010 through DRV-026.
 `search_supporting_materials` searches titles and extracted section text.
 `get_supporting_material` returns the material, canonical links, and paginated
 sections with explicit truncation metadata. Supporting-material sections have
-generated English lexical-search vectors. The standard embedding job can later
-refresh 1,536-dimensional material-section embeddings after the paused rollout
-is approved.
+generated English lexical-search vectors. The accepted semantic route stores
+1,024-dimensional `voyageai/voyage-4` vectors in the dedicated
+`supporting_material_section_embeddings` table.

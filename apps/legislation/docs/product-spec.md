@@ -22,6 +22,14 @@ canonical records, official source links, and predictable retrieval through an M
 5. Version comparison: compare two official versions of a bill. Success means added, removed, and unchanged passages
    are distinguished, input versions are identified unambiguously, and truncated output reports that fact.
 
+## Planned representative experience
+
+After the current embedding program, the next product program adds address-to-representative discovery in the web
+application, current and historical office service, official profiles, sponsorship, amendments, votes, committee and
+event activity, and linked mentions in legislative text. Raw address input is not an MCP contract and is not retained by
+default. The complete data, extraction, privacy, API, and rollout tasks live in the
+[identity, entity, and representative roadmap](identity-and-representative-roadmap.md).
+
 ## Definition of done
 
 The product is ready when the package verification suite passes, the [data synchronization catalog](data-sync-catalog.md)

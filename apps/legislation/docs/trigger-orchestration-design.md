@@ -216,9 +216,9 @@ daily GovInfo schedule active. The 156 transitional Open States API schedules
 remain inactive because the provider's 250-request daily quota cannot support
 freshness; they will be replaced jurisdiction by jurisdiction by the
 self-hosted scraper milestone. Historical documents and OCR run as manual,
-bounded Trigger workflows rather than recurring schedules. Embeddings remain
-paused until ingestion, OCR, supporting materials, and cost planning are
-complete. A dry-run reconciliation reports remote drift without changing
+bounded Trigger workflows rather than recurring schedules. Embeddings use
+their own explicitly approved product waves after ingestion, OCR, supporting
+materials, and cost gates pass. A dry-run reconciliation reports remote drift without changing
 Trigger.dev, and production state should still be verified after every applied
 schedule reconciliation.
 

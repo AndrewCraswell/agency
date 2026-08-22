@@ -104,7 +104,7 @@ const mode = argument("--mode", "lexical") as SearchMode
 if (!(["hybrid", "lexical", "semantic", "semantic-rerank"] as const).includes(mode)) {
   throw new Error("--mode must be lexical, semantic, semantic-rerank, or hybrid")
 }
-const manifestPath = argument("--manifest", new URL("../evals/embedding-canary-v1.json", import.meta.url).pathname)
+const manifestPath = argument("--manifest", new URL("../evals/embedding-canary.json", import.meta.url).pathname)
 const outputPath = argument("--output")
 const endpoint = argument("--endpoint", "http://127.0.0.1:3100/mcp")
 if (manifestPath === undefined || endpoint === undefined) {

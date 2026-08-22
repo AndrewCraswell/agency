@@ -1,7 +1,8 @@
 # Routed embedding and MCP canary
 
 Evaluated 2026-08-22 against the production PostgreSQL corpus. This canary used the dedicated embedding tables
-introduced by migration `0022`; it did not authorize the complete embedding pass.
+introduced by migration `0022`. It was initially a bounded gate; the user subsequently approved the complete pass after
+the runtime, retrieval, identity, and cost findings below passed review.
 
 ## Exact runtime contract
 
@@ -47,8 +48,8 @@ The deployed MCP contracts were also exercised against the bounded runtime rows:
   omit the material's complete inline text; callers retrieve bounded content through the section-based material detail
   contract, avoiding the MCP response-size ceiling.
 
-Machine-readable lexical and semantic results are in the adjacent `embedding-canary-v7.lexical.json` and
-`embedding-canary-v7.semantic.json` files.
+Machine-readable lexical and semantic results are in the adjacent `embedding-canary.lexical.json` and
+`embedding-canary.semantic.json` files. The frozen input manifest is `embedding-canary.json`.
 
 ## Promotion decision
 
