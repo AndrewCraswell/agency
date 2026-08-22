@@ -11,6 +11,11 @@ import { createElement } from "react"
 import { Circuit } from "tscircuit"
 import { componentDecisions } from "./component-decisions.js"
 import ScoringCircuit from "./index.circuit.js"
+import {
+  criticalPartReadiness,
+  summarizeCriticalPartReadiness,
+  validateCriticalPartReadiness
+} from "./part-readiness.js"
 
 type PlatformPartsEngine = NonNullable<Parameters<InstanceType<typeof Circuit>["setPlatform"]>[0]["partsEngine"]>
 
@@ -43,7 +48,8 @@ const resolvedSupplierPartCount = circuitJson.filter(
     "supplier_part_numbers" in element &&
     Object.values(element.supplier_part_numbers ?? {}).some((partNumbers) => partNumbers.length > 0)
 ).length
-const cadModelCount = circuitJson.filter(
+const renderedCadComponentCount = circuitJson.filter((element) => element.type === "cad_component").length
+const externallySourcedCadModelCount = circuitJson.filter(
   (element) =>
     element.type === "cad_component" &&
     (element.model_obj_url !== undefined ||
@@ -51,6 +57,11 @@ const cadModelCount = circuitJson.filter(
       element.model_gltf_url !== undefined ||
       element.model_glb_url !== undefined)
 ).length
+const partReadinessErrors = validateCriticalPartReadiness(criticalPartReadiness)
+if (partReadinessErrors.length > 0) {
+  throw new Error(`Critical-part readiness validation failed:\n${partReadinessErrors.join("\n")}`)
+}
+const partReadinessSummary = summarizeCriticalPartReadiness(criticalPartReadiness)
 const pcbSvg = convertCircuitJsonToPcbSvg(circuitJson, {
   backgroundColor: "#101820",
   includeVersion: true,
@@ -114,10 +125,13 @@ const readiness = {
     unresolvedConnectionCount
   },
   partsResolution: {
-    cadModelCount,
     engine: "JLC parts engine with EasyEDA footprint and CAD import",
+    criticalParts: partReadinessSummary,
+    externallySourcedCadModelCount,
+    renderedCadComponentCount,
     resolvedSupplierPartCount,
-    status: "Candidate lookup only; production parts still require qualification and pinning"
+    status:
+      "Rendered supplier geometry is a candidate aid only; manufacturer evidence and production approval are tracked separately"
   },
   openGates: [
     "Complete and characterize the three-weapon analog front end",
@@ -194,9 +208,11 @@ const previewHtml = `<!doctype html>
     <li><strong>${unresolvedConnectionCount}</strong> unresolved connections</li>
     <li><strong>4</strong> functional placement zones</li>
     <li><strong>${resolvedSupplierPartCount}</strong> candidate supplier matches</li>
-    <li><strong>${cadModelCount}</strong> candidate CAD model</li>
+    <li><strong>${renderedCadComponentCount}</strong> rendered CAD bodies</li>
+    <li><strong>${partReadinessSummary.manufacturerVerifiedCad}</strong> manufacturer-verified critical CAD models</li>
+    <li><strong>${partReadinessSummary.productionApproved}</strong> fabrication-approved critical parts</li>
   </ul>
-  <p class="resources"><a href="../docs/production-board-plan.md">Production plan</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="bom.csv">Component decisions</a></p>
+  <p class="resources"><a href="../docs/production-board-plan.md">Production plan</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="critical-part-readiness.json">Critical-part evidence</a><a href="bom.csv">Component decisions</a></p>
   <div class="tabs" role="tablist" aria-label="Circuit views">
     <button id="tab-pcb" role="tab" aria-selected="true" aria-controls="view-pcb" tabindex="0">PCB</button>
     <button id="tab-schematic" role="tab" aria-selected="false" aria-controls="view-schematic" tabindex="-1">Schematic</button>
@@ -309,5 +325,6 @@ await Promise.all([
   writeFile("dist/board-3d.svg", threeDimensionalSvg),
   writeFile("dist/pcb.svg", pcbSvg),
   writeFile("dist/readiness-report.json", `${JSON.stringify(readiness, null, 2)}\n`),
+  writeFile("dist/critical-part-readiness.json", `${JSON.stringify(criticalPartReadiness, null, 2)}\n`),
   writeFile("dist/schematic.svg", schematicSvg)
 ])

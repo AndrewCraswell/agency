@@ -86,6 +86,12 @@ The canonical, machine-checked list is `src/component-decisions.ts`. Important c
 | Device identity | STSAFE-A110 | Non-exportable device key and authenticated service identity |
 | Audio | TAS2505-Q1 | Automotive-qualified amplifier with load diagnostics; acoustic output remains a system test |
 
+The machine-enforced critical-part register is `src/part-readiness.ts`. It distinguishes selection, footprint, CAD, and
+mechanical evidence instead of treating a supplier search result or a visible 3D body as production approval. Current
+external-I/O selections are Würth 7499011121A for 10/100 Ethernet, Amphenol 10177070-00011LF for the high-cycle USB-C
+service port, and Neutrik NC4MD-LX for the locking chassis power inlet. Stäubli XUB-G 66.9684-* remains a reel-socket
+family candidate until exact colors, fencing plug fit, sweat exposure, and cycle life are tested.
+
 Connector families, magnetics, TVS arrays, speaker, LED modules, inductors, capacitors, and the exact analog line
 protection network remain controlled selections rather than guessed values. They must be chosen with supplier samples,
 FIE resistance thresholds, capacitance budgets, surge testing, acoustic measurements, and two qualified sources where
@@ -155,7 +161,9 @@ The current tscircuit output is an architectural placement and connectivity mode
 ownership, isolation, and connector topology. It is **not ready for PCB fabrication**. Gerbers must not be ordered until
 the analog and layout gates above are complete and signed off by an experienced mixed-signal hardware engineer.
 Unresolved analog blocks and the ESP32 module are intentionally marked do-not-place rather than being represented by
-invented production footprints.
+invented production footprints. The W5500 architecture symbol now uses its actual LQFP-48 package and pin numbering;
+the ESP32 symbol uses the manufacturer 41-pad map and official 3D model, but remains do-not-place until its land pattern,
+antenna keepout, and candidate GPIO allocation receive independent review.
 
 The preview enables tscircuit's JLC parts engine, part-orientation analysis, board identification, local autorouting,
 and fetched CAD geometry. Service results are candidate data only: a supplier match or rendered model does not place a

@@ -136,6 +136,33 @@ export const componentDecisions = [
     qualification: "10/100 Ethernet controller; validate magnetics, ESD, emissions, and thermal limits"
   },
   {
+    category: "ethernet-connector",
+    lifecycle: "active",
+    manufacturer: "Wurth Elektronik",
+    manufacturerUrl: "https://www.we-online.com/en/components/products/WE-LAN-RJ45",
+    mpn: "7499011121A",
+    purpose: "Chassis-supported 10/100 Ethernet connector with integrated magnetics and status LEDs",
+    qualification: "Through-hole shielded RJ45; -40 C to 85 C; footprint, EMC, and surge validation remain open"
+  },
+  {
+    category: "service-connector",
+    lifecycle: "active",
+    manufacturer: "Amphenol Communications Solutions",
+    manufacturerUrl: "https://www.amphenol-cs.com/product/1017707000011lf.html",
+    mpn: "10177070-00011LF",
+    purpose: "Replaceable USB 2.0 Type-C service and limited service-power connection",
+    qualification: "20,000 mating cycles; 5 A; 20 V; -40 C to 105 C; chassis strain relief remains required"
+  },
+  {
+    category: "primary-power-connector",
+    lifecycle: "active",
+    manufacturer: "Neutrik",
+    manufacturerUrl: "https://www.neutrik.com/en/product/nc4md-lx",
+    mpn: "NC4MD-LX",
+    purpose: "Locking chassis inlet for the external certified 24 V supply",
+    qualification: "10 A per contact below 50 V; above 1,000 mating cycles; keyed harness validation remains open"
+  },
+  {
     category: "field-serial",
     lifecycle: "active",
     manufacturer: "Texas Instruments",
