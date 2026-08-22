@@ -31,6 +31,9 @@ recovery decision is specified in [esp32-production-security-recovery-adr.md](es
 The M3-09 SDK-free receiver, atomic journal, power-loss recovery, and opaque
 byte replay evidence is specified in
 [`firmware/esp32/docs/receiver-journal-replay-evidence.md`](../firmware/esp32/docs/receiver-journal-replay-evidence.md).
+The M3-13 bounded ESP32-S3 QEMU feasibility result and optional smoke probe are
+specified in
+[`firmware/esp32/docs/qemu-feasibility-evidence.md`](../firmware/esp32/docs/qemu-feasibility-evidence.md).
 
 `fie-material-rules-2026-08-en.pdf` is the English FIE Material Rules, Book 3, dated August 2026.
 
