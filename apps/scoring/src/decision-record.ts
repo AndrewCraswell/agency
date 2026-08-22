@@ -11,6 +11,34 @@ export const MAX_RAW_CAPTURE_REFERENCES = 8
 
 export type DecisionSide = "left" | "right"
 export type Weapon = "epee" | "foil" | "sabre"
+type UncertaintySubject =
+  | "calibration"
+  | "capture-completeness"
+  | "clock"
+  | "identity"
+  | "line-state"
+  | "resistance"
+  | "timing"
+
+const UNCERTAINTY_SUBJECTS = [
+  "calibration",
+  "capture-completeness",
+  "clock",
+  "identity",
+  "line-state",
+  "resistance",
+  "timing"
+] as const satisfies readonly UncertaintySubject[]
+
+const UNCERTAINTY_UNIT_BY_SUBJECT = {
+  calibration: "none",
+  "capture-completeness": "none",
+  clock: "us",
+  identity: "none",
+  "line-state": "none",
+  resistance: "milliOhm",
+  timing: "us"
+} as const satisfies Record<UncertaintySubject, "milliOhm" | "none" | "us">
 
 export type RawCaptureReference = Readonly<{
   captureId: string
@@ -109,8 +137,8 @@ export type DecisionRecordOutcome =
       lowerBound: number
       observedAtUs: number
       signal: SignalSnapshot
-      subject: "calibration" | "capture-completeness" | "clock" | "identity" | "line-state" | "resistance" | "timing"
-      unit: "none" | "ohm" | "us"
+      subject: UncertaintySubject
+      unit: "milliOhm" | "none" | "us"
       upperBound: number
     }>
   | Readonly<{
@@ -263,21 +291,11 @@ function isDecisionRecordOutcome(value: unknown): value is DecisionRecordOutcome
     case "uncertainty":
       return (
         isOneOf(value.effect, ["decision-with-caveat", "diagnostic-only", "not-qualified", "unavailable"]) &&
-        typeof value.lowerBound === "number" &&
-        Number.isFinite(value.lowerBound) &&
+        isNonnegativeSafeInteger(value.lowerBound) &&
         isNonnegativeSafeInteger(value.observedAtUs) &&
-        isOneOf(value.subject, [
-          "calibration",
-          "capture-completeness",
-          "clock",
-          "identity",
-          "line-state",
-          "resistance",
-          "timing"
-        ]) &&
-        isOneOf(value.unit, ["none", "ohm", "us"]) &&
-        typeof value.upperBound === "number" &&
-        Number.isFinite(value.upperBound) &&
+        isOneOf(value.subject, UNCERTAINTY_SUBJECTS) &&
+        value.unit === UNCERTAINTY_UNIT_BY_SUBJECT[value.subject] &&
+        isNonnegativeSafeInteger(value.upperBound) &&
         value.upperBound >= value.lowerBound
       )
     case "calibration":

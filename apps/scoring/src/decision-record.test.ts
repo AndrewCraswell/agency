@@ -45,6 +45,17 @@ function record(outcome: DecisionRecordOutcome): DecisionRecord {
   }
 }
 
+const uncertaintyOutcome = {
+  disposition: "uncertainty",
+  effect: "not-qualified",
+  lowerBound: 450_000,
+  observedAtUs: 10_500,
+  signal: { audible: "none", latched: false, visual: "diagnostic" },
+  subject: "resistance",
+  unit: "milliOhm",
+  upperBound: 475_000
+} satisfies DecisionRecordOutcome
+
 const outcomes: readonly DecisionRecordOutcome[] = [
   {
     disposition: "qualified-hit",
@@ -85,16 +96,7 @@ const outcomes: readonly DecisionRecordOutcome[] = [
     scope: "scoring-apparatus",
     signal: { audible: "none", latched: false, visual: "none" }
   },
-  {
-    disposition: "uncertainty",
-    effect: "not-qualified",
-    lowerBound: 450,
-    observedAtUs: 10_500,
-    signal: { audible: "none", latched: false, visual: "diagnostic" },
-    subject: "resistance",
-    unit: "ohm",
-    upperBound: 475
-  },
+  uncertaintyOutcome,
   {
     calibrationId: "fixture-run-026",
     disposition: "calibration",
@@ -146,6 +148,24 @@ describe("decision record schema", () => {
       parseDecisionRecord({
         ...record(outcomes[0]!),
         outcome: { ...outcomes[0]!, disposition: "future-outcome" }
+      })
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
+    expect(() =>
+      parseDecisionRecord({
+        ...record(uncertaintyOutcome),
+        outcome: { ...uncertaintyOutcome, lowerBound: 450_000.5 }
+      })
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
+    expect(() =>
+      parseDecisionRecord({
+        ...record(uncertaintyOutcome),
+        outcome: { ...uncertaintyOutcome, upperBound: Number.MAX_SAFE_INTEGER + 1 }
+      })
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
+    expect(() =>
+      parseDecisionRecord({
+        ...record(uncertaintyOutcome),
+        outcome: { ...uncertaintyOutcome, unit: "us" }
       })
     ).toThrow(new TypeError("Unsupported or invalid decision record"))
   })

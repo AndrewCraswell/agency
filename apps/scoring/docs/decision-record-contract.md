@@ -93,8 +93,10 @@ Valid `weapon` values are `epee`, `foil`, and `sabre`; valid sides are `left` an
 
 `uncertainty.subject` is one of `calibration`, `capture-completeness`, `clock`, `identity`, `line-state`, `resistance`,
 or `timing`; `effect` is `decision-with-caveat`, `diagnostic-only`, `not-qualified`, or `unavailable`; `unit` is
-`none`, `ohm`, or `us`. Bounds are finite and ordered. This preserves unresolved cases such as the foil 450-475 ohm band
-without treating an ambiguous state as a hit.
+`milliOhm`, `none`, or `us`. Bounds are non-negative safe integers and ordered. The subject determines the required
+unit: `resistance` uses `milliOhm`; `timing` and `clock` use `us`; `calibration`, `capture-completeness`, `identity`,
+and `line-state` use `none`. The foil 450-475 ohm band is therefore `450_000` through `475_000 milliOhm`. This
+preserves that unresolved band without treating an ambiguous state as a hit.
 
 `reset.scope` is `stm32`, `esp32`, or `scoring-apparatus`; `cause` is `brownout`, `firmware-update`, `operator`,
 `power-on`, or `watchdog`. `calibration.status` is `passed`, `failed`, `expired`, or `unavailable`.
