@@ -74,6 +74,32 @@ This requires semantic and hybrid modes for `search_amendments` and
 bill-document passages already have semantic consumers, but their input
 contracts must be upgraded before the broad rollout.
 
+## Provisional model and reranker routing
+
+A model switch or reranking stage advances when it improves nDCG@10 by at
+least 0.02 absolute on the product-specific evaluation without a meaningful
+recall regression. This is a canary-routing threshold, not permission to embed
+the full corpus. The pooled, graded MCP evaluation must reproduce each gain.
+
+| Data indexed | Embedding input | Embedding model | Reranker | Expanded-bakeoff basis |
+| --- | --- | --- | --- | --- |
+| Bills | Current title, summary, and subjects | `voyageai/voyage-4` | `cohere/rerank-v3.5` for natural-language discovery | Voyage improved nDCG@10 by 0.027 over OpenAI Small; reranking added another 0.041. |
+| Bill-document sections | Section heading and text | `openai/text-embedding-3-small` | `cohere/rerank-v3.5` for natural-language passage search | Reranking improved OpenAI nDCG@10 by 0.069 and reached the same 0.856 as reranked Voyage, avoiding Voyage's higher document-corpus generation cost. |
+| Structured amendments | Purpose and description, with the printed identifier as the sparse fallback | `openai/text-embedding-3-small` | None | Voyage contextual improved only 0.007 over OpenAI; reranking reduced nDCG@10 by 0.030 or more. |
+| Document-backed amendment sections | Bill and amendment document context, section heading, and text | `openai/text-embedding-3-small` | `cohere/rerank-v3.5` provisionally | These share the document-passage retrieval path; the graded canary must report them separately before promotion. |
+| Supporting-material sections | Material title and classification, section heading, and text | `voyageai/voyage-4` | None | Voyage improved nDCG@10 by 0.263 and Recall@10 by 0.400; reranking reduced the strongest Voyage configuration. |
+
+Exact identifiers, structured filters, bill actions, votes, people,
+organizations, events, dates, and other relational metadata are not embedded
+or reranked. They remain database filters, joins, and canonical lookups. OCR
+and native text use the same product route while preserving extraction
+provenance as metadata.
+
+A search spanning products embeds the query once in each model space required
+by those products, runs the product indexes in parallel, reranks only the bill
+and document candidate sets, and fuses normalized product ranks. Identifier
+lookups and filtered collection retrieval bypass both embedding and reranking.
+
 ## MCP access plan
 
 Embedding work is not promoted until the MCP can retrieve, traverse, and
