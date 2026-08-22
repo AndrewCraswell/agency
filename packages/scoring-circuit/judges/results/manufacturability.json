@@ -1,0 +1,71 @@
+{
+  "role": "manufacturability",
+  "verdict": "fail",
+  "score": 38,
+  "summary": "The documentation correctly blocks fabrication ordering: it says the tscircuit output is architectural only and that Gerbers must not be ordered until analog and layout gates are signed off. Manufacturability still fails because the reviewed files do not contain a fabrication-complete schematic/PCB, use placeholder or dishonest footprints, do not prove isolation layout, and treat supplier/certification claims as string metadata rather than verified primary-source evidence.",
+  "findings": [
+    {
+      "severity": "high",
+      "location": "packages/scoring-circuit/src/index.test.tsx:8, packages/scoring-circuit/src/index.test.tsx:9, packages/scoring-circuit/src/index.test.tsx:10, packages/scoring-circuit/docs/production-board-plan.md:147",
+      "claim": "Schematic and PCB completeness are represented as an architectural model, while tests explicitly disable PCB, routing, and schematic generation.",
+      "correction": "Keep the fabrication block in place and require a real schematic, ERC, routed PCB, stack-up, DRC, assembly outputs, and independent mixed-signal review before any board order.",
+      "evidenceNeeded": "Renderable schematic, complete PCB database, ERC/DRC reports, stack-up, fabrication notes, assembly drawing, pick-and-place, and signed layout review."
+    },
+    {
+      "severity": "high",
+      "location": "packages/scoring-circuit/src/index.circuit.tsx:18, packages/scoring-circuit/src/index.circuit.tsx:122, packages/scoring-circuit/src/index.circuit.tsx:185",
+      "claim": "Footprints are not honest enough for manufacturing: TBD analog/LDO parts have guessed package footprints, and the ESP32-S3-WROOM module is modeled as soic28 rather than its real module land pattern and keep-out requirements.",
+      "correction": "Use manufacturer land patterns or explicitly mark these as non-fabrication placeholders that cannot appear in production CAM output.",
+      "evidenceNeeded": "Manufacturer package drawings, IPC land-pattern derivations, antenna keep-out documentation, footprint review checklist, and approved CAD footprints tied to exact MPNs."
+    },
+    {
+      "severity": "high",
+      "location": "packages/scoring-circuit/src/index.circuit.tsx:130, packages/scoring-circuit/src/index.circuit.tsx:246, packages/scoring-circuit/src/index.test.tsx:56",
+      "claim": "Isolation is asserted by net names and isolator parts, but the layout model does not prove creepage, clearance, slots, return paths, or absence of accidental copper across domains.",
+      "correction": "Make isolation a physical layout requirement with slots/keepouts, per-net classes, creepage/clearance constraints, and DRC rules for scoring/application/field domains.",
+      "evidenceNeeded": "PCB cross-section, isolation barrier drawing, creepage/clearance calculation, slot geometry, DRC constraint report, and review of copper, pours, vias, mounting hardware, shields, and connector shells."
+    },
+    {
+      "severity": "medium",
+      "location": "packages/scoring-circuit/src/component-decisions.ts:14, packages/scoring-circuit/src/component-decisions.ts:19, packages/scoring-circuit/src/component-decisions.ts:50, packages/scoring-circuit/src/component-decisions.ts:55, packages/scoring-circuit/src/index.test.tsx:67, packages/scoring-circuit/src/index.test.tsx:68",
+      "claim": "Lifecycle, temperature, memory, current, isolation, UL, AEC-Q100, and preferred-through-2033 claims are treated as free-text qualifications; the tests only reject two forbidden strings and check that URLs start with https.",
+      "correction": "Do not accept lifecycle or certification metadata until it is machine-linked to primary manufacturer evidence and reviewed against current supplier availability.",
+      "evidenceNeeded": "Dated manufacturer datasheets or product pages, PCN/EOL status, authorized-distributor availability, package/orderable validation, certification file numbers where claimed, and a BOM qualification record per MPN."
+    },
+    {
+      "severity": "medium",
+      "location": "packages/scoring-circuit/src/index.circuit.tsx:6, packages/scoring-circuit/src/index.circuit.tsx:237, packages/scoring-circuit/src/index.circuit.tsx:262, packages/scoring-circuit/src/index.circuit.tsx:330, packages/scoring-circuit/src/index.circuit.tsx:417",
+      "claim": "Connector mechanics are not production-resolved: body-cord, Ethernet, field serial, speaker, and USB-C are generic connectors or pin headers, while only four board holes are modeled for mounting.",
+      "correction": "Select exact connector families and mechanically decouple cable/insertion loads from solder joints with panel mounts, stakes, strain relief, keyed harnesses, service modules, and retention hardware.",
+      "evidenceNeeded": "Connector datasheets, cycle ratings, salt/sweat and insertion-force test plan, enclosure interface drawings, harness drawings, strain-relief details, and mechanical FEA or fixture test results."
+    },
+    {
+      "severity": "medium",
+      "location": "packages/scoring-circuit/src/index.circuit.tsx:417, packages/scoring-circuit/docs/production-board-plan.md:111",
+      "claim": "Testability is required in prose, but the circuit model does not include labeled test pads, SWD/programming access, boundary-scan strategy, factory fixture registration beyond simple holes, or production measurement points.",
+      "correction": "Add explicit production-test features to the design database and make fixture coverage a release gate.",
+      "evidenceNeeded": "ICT/FCT point map, SWD/programming connector or pads, bed-of-nails registration scheme, boundary-scan plan, golden-unit limits, serialized test record format, and coverage report."
+    },
+    {
+      "severity": "medium",
+      "location": "packages/scoring-circuit/docs/production-board-plan.md:48, apps/scoring/src/device.ts:175, apps/scoring/src/device.ts:235",
+      "claim": "The processor link is documented as framed SPI with CRC-32C, but the reviewed emulator serializes events as newline-delimited JSON and validation only checks shape, sequence, and simple ranges.",
+      "correction": "Treat the current app protocol model as a functional emulator only; require the production transport framing, CRC, timing, reset, and fault-injection behavior before firmware release.",
+      "evidenceNeeded": "Binary frame specification, CRC-32C test vectors, SPI timing budget, isolated-channel direction review, malformed-frame tests, reset/heartbeat fault tests, and golden hardware/firmware conformance logs."
+    },
+    {
+      "severity": "medium",
+      "location": "packages/scoring-circuit/docs/production-board-plan.md:29, packages/scoring-circuit/src/component-decisions.ts:136",
+      "claim": "Favero compatibility is cautiously scoped to a separately validated adapter and the ISO1410 entry says it is not claimed as Favero wire compatibility; no incompatibility finding should be treated as proven from these files alone.",
+      "correction": "Keep avoiding compatibility or incompatibility claims until the actual electrical protocol and mixed-device behavior are verified.",
+      "evidenceNeeded": "Oscilloscope captures, protocol conformance corpus, cable-length tests, mixed-device tests, adapter schematic/layout review, and documented acceptance criteria."
+    },
+    {
+      "severity": "low",
+      "location": "packages/scoring-circuit/docs/production-board-plan.md:147, packages/scoring-circuit/docs/production-board-plan.md:148",
+      "claim": "The fabrication-readiness statement is appropriately conservative and prevents unsafe ordering by saying the output is not ready for PCB fabrication and Gerbers must not be ordered before analog and layout gates are complete.",
+      "correction": "Preserve this blocker until objective analog, layout, compliance, and production evidence exists.",
+      "evidenceNeeded": "Signed gate checklist showing analog gate, layout gate, EVT, DVT/compliance assessment, and production validation are complete."
+    }
+  ]
+}

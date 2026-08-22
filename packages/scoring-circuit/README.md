@@ -1,27 +1,20 @@
 # Scoring circuit
 
-A tscircuit Rev-A carrier for a deterministic STM32G474 scoring controller and a separate ESP32-S3 application
-controller. It exposes A, B, and C for each fencer through current-limiting and RC filtering, routes the six protected
-lines only to the STM32 side, and connects STM32 to ESP32 through SPI, interrupt, heartbeat, and reset signals.
+A tscircuit architecture model for a premium, serviceable competition scoring apparatus. The STM32G474 scoring domain
+owns electrical acquisition, timing, touch qualification, primary lamps, and the buzzer. A galvanically isolated
+ESP32-S3 application domain owns the display, Ethernet, radio, storage, remote control, cloud services, and OTA.
 
-The first physical prototype uses a `NUCLEO-G474RE` and an ESP32-S3 development board on the two headers. That lets us
-validate firmware and the analog topology before committing the exact STM32G474RET6 support circuit and ESP32-S3 module
-to a fabrication-ready integrated PCB.
+Run `pnpm --filter @repo/scoring-circuit build`, then open `dist/index.html` to inspect the generated PCB placement and
+logical schematic. The build also emits Circuit JSON, a BOM in JSON and CSV formats, and a machine-readable readiness
+report. The canonical component choices live in `src/component-decisions.ts`.
 
-Run `pnpm --filter @repo/scoring-circuit build` to generate `dist/circuit.json`, or use `dev` to regenerate it while
-editing. The Circuit JSON can be inspected with tscircuit-compatible schematic, PCB, and 3D viewers. Run the package
-tests to verify that both processor interfaces and both fencing channels remain present.
+Read `docs/production-board-plan.md` for the requirements matrix, event replay design, component rationale, reliability
+program, compliance work, and release gates. The read-only LLM review workflows are documented in `judges/README.md`.
 
-## Ownership boundary
+## Fabrication status
 
-- STM32G474: electrical acquisition, hardware timestamps, hit qualification, primary lights, and buzzer.
-- ESP32-S3: display, fencer identity, BLE/Wi-Fi, local storage, cloud sync, and OTA.
-- The ESP32 displays STM32 decisions; it does not decide whether a contact scores.
-
-## Prototype limits
-
-This is a bench prototype, not a fabrication-ready competition scoring apparatus. The resistor and capacitor network
-demonstrates the topology but does not yet implement the complete resistance classification, programmable excitation,
-comparator thresholds, or transient protection required for all three weapons. Before fabrication, choose real
-FIE-spaced body-cord sockets, design and simulate those analog stages, add IEC-rated ESD protection, run PCB DRC, and
-verify every threshold and timing with physical weapons, cords, guards, lamés, and a conductive piste.
+This is an architectural placement and connectivity model, not a production schematic or routed PCB. It intentionally
+marks the weapon analog front end and scoring-domain low-noise regulator as unselected because guessing those parts or
+values would make the design look more complete than it is. Do not order boards from these outputs. Analog validation,
+complete pin mapping, passives and protection selection, ERC, routing, DRC, SI/PI, thermal, EMC, safety, mechanical,
+manufacturing, and independent mixed-signal review gates remain open.

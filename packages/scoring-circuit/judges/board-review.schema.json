@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["role", "verdict", "score", "summary", "findings"],
+  "properties": {
+    "role": { "type": "string", "enum": ["reliability", "manufacturability"] },
+    "verdict": { "type": "string", "enum": ["pass", "conditional-pass", "fail"] },
+    "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "summary": { "type": "string", "minLength": 1 },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "location", "claim", "correction", "evidenceNeeded"],
+        "properties": {
+          "severity": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+          "location": { "type": "string", "minLength": 1 },
+          "claim": { "type": "string", "minLength": 1 },
+          "correction": { "type": "string", "minLength": 1 },
+          "evidenceNeeded": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

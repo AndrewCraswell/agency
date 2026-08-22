@@ -12,12 +12,15 @@
     "check:types": "tsc --noEmit",
     "check:unused": "knip --directory ../.. --workspace packages/scoring-circuit",
     "dev": "tsx --watch src/build.ts",
+    "judge:manufacturability": "node scripts/run-judge.mjs manufacturability",
+    "judge:reliability": "node scripts/run-judge.mjs reliability",
     "lint": "oxlint --max-warnings=0",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@tscircuit/soup-util": "0.0.41",
+    "circuit-to-svg": "0.0.400",
     "react": "^19.2.0",
     "tscircuit": "0.0.2271",
     "zod": "3.25.76"

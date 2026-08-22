@@ -9,8 +9,15 @@ vendor SDKs so its timing rules can be replayed deterministically on a developer
   events.
 - A virtual ESP32-S3 accepts those events for display, storage, identity, and cloud work. It never re-decides a touch.
 
-The initial event encoding is newline-delimited JSON because it is easy to inspect and fuzz. The production SPI encoding
-can later become a fixed binary frame while preserving the same version, sequence, and event semantics.
+The emulator delays a decision record for a bounded post-touch capture window. Each immutable record includes packed
+input samples, the qualified hit, capture bounds, timing-table revision, firmware digest, scoring boot ID, sequence
+range, and CRC-32C. The ESP32 rejects corrupt, duplicated, unordered, or structurally invalid records; it does not
+reconstruct or re-decide the touch. The current event encoding is newline-delimited JSON because it is easy to inspect
+and fuzz. Production firmware will use a fixed binary frame while preserving the versioned decision-record semantics.
+
+This increment records qualified epee touches. Rejected-touch and line-fault records, application-controller boot IDs,
+and RTC uncertainty belong to the next transport/persistence increment; they are target-model fields, not claims about
+the current emulator.
 
 ## Emulation layers
 
