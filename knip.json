@@ -5,6 +5,9 @@
   "ignoreBinaries": ["artifacts-npm-credprovider"],
   "tags": ["-vendored"],
   "workspaces": {
+    "apps/scoring": {
+      "ignoreDependencies": ["@repo/oxlint-config"]
+    },
     "apps/legislation": {
       "ignoreDependencies": ["@repo/oxlint-config"]
     },
@@ -56,6 +59,10 @@
     "packages/fc-templates": {
       "entry": ["src/emails/marketing/*.tsx", "src/emails/notifications/*.tsx", "src/emails/printouts/*/*.tsx"],
       "ignoreDependencies": ["@repo/oxlint-config"]
+    },
+    "packages/scoring-circuit": {
+      "entry": ["src/index.circuit.tsx"],
+      "ignoreDependencies": ["@repo/oxlint-config", "@tscircuit/soup-util", "zod"]
     },
     "packages/shopify-emails": {
       "ignoreDependencies": ["@repo/oxlint-config"]

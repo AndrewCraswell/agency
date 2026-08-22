@@ -1,0 +1,44 @@
+{
+  "name": "scoring",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/epee.d.ts",
+      "default": "./dist/epee.js"
+    },
+    "./device": {
+      "types": "./dist/device.d.ts",
+      "default": "./dist/device.js"
+    }
+  },
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.0.0 <12.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check:format": "oxfmt --check",
+    "check:lint": "pnpm lint",
+    "check:types": "tsc --noEmit",
+    "check:unused": "knip --directory ../.. --workspace apps/scoring",
+    "lint": "oxlint --max-warnings=0",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "verify": "run-s check:format check:lint check:types check:unused test:coverage"
+  },
+  "devDependencies": {
+    "@repo/oxlint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "catalog:",
+    "@vitest/coverage-v8": "^4.1.9",
+    "oxlint": "^1.72.0",
+    "typescript": "catalog:",
+    "vitest": "^4.1.9"
+  }
+}

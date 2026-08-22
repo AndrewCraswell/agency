@@ -1,0 +1,25 @@
+# Rules source
+
+`fie-material-rules-2026-08-en.pdf` is the English FIE Material Rules, Book 3, dated August 2026.
+
+- Official index: https://fie.org/documents/rules
+- Official PDF: https://static.fie.org/uploads/40/204157-book%20material%20August%202026%20ang.pdf
+- Downloaded: 2026-08-22
+- SHA-256: `1489D28ED6F3C91E27ECDF75BB29B4ED65C688A012F544D37D946A9DA81AFC26`
+
+The scoring implementation should cite the relevant article or Annex B section in test names or nearby comments. Keep the original PDF unchanged; replace it only when the FIE publishes a newer edition, then update the filename, date, checksum, and rule-derived tests together.
+
+## Favero FA-15 reference
+
+These official Favero files document the current comparison machine identified for this project:
+
+| File | Official source | SHA-256 |
+| --- | --- | --- |
+| `favero-fa15-user-manual-en.pdf` | https://www.favero.com/get_file.php?id=398 | `C4AC240F4E81795D966EDE9909450CAE8AD9FCC7A19E138C83AB999664D33D20` |
+| `favero-fa15-t2016-specifications-en.pdf` | https://www.favero.com/get_file.php?id=399 | `F575C8A7630FBF104CA8AFA4CD28544CB2D75A35A4FF4C5716A19C31513DB72F` |
+| `favero-fa15-fie-homologation.pdf` | https://www.favero.com/get_file.php?id=391 | `1314E203ED3E0B5890B1EE9FF826778DDF6A6E4345439534128342AD2E0EE529` |
+
+- Official product page: https://www.favero.com/en2_fencing_sport_fencing_apparatus_fa_15-319-17.html
+- Downloaded: 2026-08-22
+
+The T2016 document records the FA-15's published timing profile, but the August 2026 FIE Material Rules remain the normative source for our implementation. Favero does not publish the internal weapon-line voltages or complete analog schematic in these documents, so those values still require bench measurement rather than assumption.
