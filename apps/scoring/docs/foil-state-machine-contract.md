@@ -1,6 +1,6 @@
 # Foil contact-break state-machine contract
 
-**Task:** M1-03  
+**Task:** M1-03
 **Status:** host-only logical scorer; timing-table endpoints remain provisional
 
 ## Scope and authority
