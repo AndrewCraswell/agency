@@ -17,7 +17,10 @@ completion audit.
 Future full recreations use the sequential 68-shard coordinator documented below. PgBouncer is now available for a
 separate pooled-concurrency canary at 96, 128, 160, and finally 200 workers. Do not raise the task ceiling merely
 because PgBouncer accepts more clients: promotion still requires the database, pool-wait, Trigger, and provider gates
-in [database connection pooling](database-connection-pooling.md).
+in [database connection pooling](database-connection-pooling.md). Each increase must also demonstrate an end-to-end
+completed-vector throughput gain on the same product. The documented benchmark records vectors per minute, provider
+latency and errors, database and PgBouncer pressure, retries, cost per successful vector, speedup, and scaling
+efficiency. A stage that adds less than 10 percent throughput is the measured saturation point and is not promoted.
 
 ## Canary status
 

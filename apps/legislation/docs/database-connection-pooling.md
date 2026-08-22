@@ -37,8 +37,35 @@ hold a database transaction only while selecting or persisting a bounded batch. 
 require the same number of PostgreSQL backends. Increase the backend ceiling only when PgBouncer wait metrics, rather
 than provider latency or database query time, are the measured bottleneck.
 
-Scale a new pooled embedding deployment through 96, 128, 160, and 200 workers. Hold each step long enough to inspect
-PgBouncer clients and waits, PostgreSQL sessions and locks, query latency, Trigger failures, and provider throttling.
+Scale a new pooled embedding deployment through 68, 96, 128, 160, and 200 workers. The first 68-worker pooled stage is
+the comparison baseline; the older direct-connection run is retained only as historical context because changing both
+the pool and concurrency at once would make its throughput incomparable. Run each stage against the same embedding
+product and input contract until it has completed at least 15 minutes and 25,000 vectors, unless the product has less
+remaining work. Capture the following measurements for every stage:
+
+| Measurement | Why it matters |
+| --- | --- |
+| Completed vectors per minute | Primary end-to-end speed measurement |
+| Scanned and skipped records per minute | Separates database traversal from paid model work |
+| Trigger task starts, successes, retries, and failures | Detects orchestration overhead and instability |
+| Embedding-request p50 and p95 latency | Identifies provider saturation |
+| PgBouncer active clients, waiting clients, and maximum wait | Identifies pool saturation |
+| PostgreSQL total and active sessions, lock waits, and query latency | Protects database health |
+| Provider 429, 5xx, and timeout counts | Prevents apparent speedups caused by retry churn |
+| Input tokens and estimated cost per 1,000 successful vectors | Confirms concurrency does not change unit economics |
+
+For each stage, report absolute throughput, speedup versus the 68-worker pooled baseline, and scaling efficiency:
+`throughput speedup / concurrency increase`. Promote when completed-vector throughput improves by at least 10 percent,
+scaling efficiency remains at least 60 percent, and none of the safety gates below regress. Stop increasing when a
+stage improves throughput by less than 10 percent; that is the measured saturation point even if Trigger still has
+unused task capacity.
+
+Do not compare different products directly. Bills, amendments, document sections, and supporting-material sections use
+different input lengths, model routes, and persistence costs. Record a separate concurrency curve for every product
+that is expected to run at the higher ceiling.
+
+Inspect PgBouncer clients and waits, PostgreSQL sessions and locks, query latency, Trigger failures, and provider
+throttling throughout each stage.
 Stop or scale back when any of these conditions holds:
 
 - PostgreSQL reaches 80 total sessions for a sustained interval;
