@@ -5,10 +5,14 @@ requirement. The historical corpus remains available through structured and
 PostgreSQL lexical search while the complete corpus pass is running.
 
 The corpus, storage, cost, model, and MCP treatment/control gates below passed,
-and the complete embedding phase was approved on 2026-08-22. Deployment
-`20260822.5` runs four concurrent product waves with 16 deterministic shards
-per product. This page remains the source of truth for the accepted routing,
-quality gates, incremental ownership, and completion audit.
+and the complete embedding phase was approved on 2026-08-22. The pass began
+with four concurrent product waves at 16 deterministic shards per product.
+Structured amendments then completed, releasing 16 worker slots. The
+document-section wave is approved for a controlled 16-to-32-shard cutover,
+supporting-material sections increase from 16 to 20, and bills remain at 16.
+This keeps the shared queue bounded at 68 workers. This page remains the source of
+truth for the accepted routing, quality gates, incremental ownership, and
+completion audit.
 
 ## Canary status
 
@@ -513,9 +517,12 @@ single cheaper model for every product: the measured supporting-material gain
 from Voyage is large, while OpenAI Small is the cost-effective winner for
 document passages and structured amendments.
 
-Run all four products concurrently with 16 checkpointed shards per product,
-using the four-slot embedding root-controller queue and filling the 64-worker
-derived queue. The model contract remains:
+Begin all four products concurrently with 16 checkpointed shards per product.
+After a product completes, its released capacity may be assigned to one
+remaining product without exceeding 32 shards for that product or the
+68-worker derived queue. The first approved scale-up uses 32 section shards,
+16 bill shards, and 20 material shards. Retain it only while database sessions
+remain below the 80-session operational threshold. The model contract remains:
 
 1. bills with `voyageai/voyage-4` and query-time
    `cohere/rerank-v3.5`;

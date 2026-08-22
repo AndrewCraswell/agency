@@ -39,6 +39,8 @@ import {
   backfillPhases,
   createBackfillUnits,
   derivedBackfillShardCountFor,
+  EMBEDDING_BACKFILL_MAX_SHARD_COUNT,
+  maximumDerivedBackfillShardCountFor,
   type BackfillPhase
 } from "../backfill-contract.js"
 import { parseSynchronizationIdentity } from "../identities.js"
@@ -51,8 +53,8 @@ const historyQueue = queue({ concurrencyLimit: 3, name: "legislation-history-bac
 const federalHistoryQueue = queue({ concurrencyLimit: 2, name: "legislation-federal-history-backfill" })
 const derivedQueue = queue({
   // Documents use the bounded 64-lane jurisdiction drain. Four concurrent
-  // 16-shard embedding products deliberately fill this queue during the
-  // approved bulk pass; every worker retains a one-connection database pool.
+  // embedding products share this queue during the approved bulk pass; every
+  // worker retains a one-connection database pool.
   concurrencyLimit: backfillExecutionPolicy.derivedQueueConcurrencyLimit,
   name: "legislation-derived-backfill"
 })
@@ -148,7 +150,7 @@ export const derivedPayloadSchema = baseWorkerSchema
   })
   .strict()
   .superRefine((payload, context) => {
-    const maximumShardCount = derivedBackfillShardCountFor(payload.kind)
+    const maximumShardCount = maximumDerivedBackfillShardCountFor(payload.kind)
     if (payload.shardCount > maximumShardCount) {
       context.addIssue({
         code: "custom",
@@ -224,11 +226,16 @@ const embeddingSyncPayloadSchema = baseWorkerSchema
       .array(z.enum(EMBEDDING_JOB_KINDS))
       .min(1)
       .default([...EMBEDDING_JOB_KINDS]),
-    shardCount: z.number().int().positive().max(16).default(derivedBackfillShardCountFor("embeddings"))
+    shardCount: z
+      .number()
+      .int()
+      .positive()
+      .max(EMBEDDING_BACKFILL_MAX_SHARD_COUNT)
+      .default(derivedBackfillShardCountFor("embeddings"))
   })
   .strict()
   .superRefine((payload, context) => {
-    const maximum = derivedBackfillShardCountFor("embeddings")
+    const maximum = maximumDerivedBackfillShardCountFor("embeddings")
     if (payload.shardCount > maximum) {
       context.addIssue({
         code: "custom",
@@ -238,7 +245,13 @@ const embeddingSyncPayloadSchema = baseWorkerSchema
     }
   })
 const embeddingShardPayloadSchema = embeddingSyncPayloadSchema
-  .extend({ shardIndex: z.number().int().nonnegative().max(15) })
+  .extend({
+    shardIndex: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(EMBEDDING_BACKFILL_MAX_SHARD_COUNT - 1)
+  })
   .strict()
   .superRefine((payload, context) => {
     if (payload.shardIndex >= payload.shardCount) {

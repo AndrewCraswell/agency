@@ -47,23 +47,23 @@ describe("derived backfill task payload", () => {
 
     expect(
       derivedPayloadSchema.parse({
-        correlationId: "backfill:embedding-lane-16",
+        correlationId: "backfill:embedding-lane-32",
         kind: "embeddings",
-        rebuildId: "embedding-lane-16",
-        shardCount: 16,
-        shardIndex: 15
+        rebuildId: "embedding-lane-32",
+        shardCount: 32,
+        shardIndex: 31
       })
-    ).toMatchObject({ kind: "embeddings", shardCount: 16, shardIndex: 15 })
+    ).toMatchObject({ kind: "embeddings", shardCount: 32, shardIndex: 31 })
 
     expect(() =>
       derivedPayloadSchema.parse({
-        correlationId: "backfill:embedding-lane-17",
+        correlationId: "backfill:embedding-lane-33",
         kind: "embeddings",
-        rebuildId: "embedding-lane-17",
-        shardCount: 17,
-        shardIndex: 16
+        rebuildId: "embedding-lane-33",
+        shardCount: 33,
+        shardIndex: 32
       })
-    ).toThrow("embeddings supports at most 16 backfill shards")
+    ).toThrow("embeddings supports at most 32 backfill shards")
 
     expect(
       derivedPayloadSchema.parse({

@@ -18,17 +18,20 @@ export const defaultGovInfoBillTypes = ["hr", "s", "hjres", "sjres", "hconres", 
  * Document work is safely partitioned by canonical jurisdiction and uses a
  * bounded 64-lane drain with durable publisher slots. Supporting materials use
  * deterministic ID shards behind the same publisher limiter. Each embedding
- * product uses 16 deterministic shards. Running the four products together
- * therefore fills the 64-worker derived queue while keeping every worker on a
- * one-connection database pool. Provider and database telemetry determine
- * whether operators retain that fan-out or cut it back.
+ * product defaults to 16 deterministic shards. Operators may increase a
+ * single embedding product to 32 shards when another product has completed.
+ * The approved bulk pass uses at most 68 workers with one-connection database
+ * pools and an 80-session operational stop threshold.
  */
 export const backfillExecutionPolicy = {
-  derivedQueueConcurrencyLimit: DOCUMENT_BACKFILL_SHARD_COUNT,
-  derivedShardControllerQueueConcurrencyLimit: DOCUMENT_BACKFILL_SHARD_COUNT,
+  derivedQueueConcurrencyLimit: 68,
+  derivedShardControllerQueueConcurrencyLimit: 68,
   documentBackfillShardCount: DOCUMENT_BACKFILL_SHARD_COUNT,
   supportingMaterialBackfillShardCount: 24
 } as const
+
+export const EMBEDDING_BACKFILL_DEFAULT_SHARD_COUNT = 16
+export const EMBEDDING_BACKFILL_MAX_SHARD_COUNT = 32
 
 const positiveInteger = z.number().int().positive()
 const nonemptyIdentifier = z.string().trim().min(1).max(200)
@@ -70,14 +73,23 @@ export type BackfillPhase = (typeof backfillPhases)[number]
  * Derived workers partition their candidate sets and hold a lease per shard.
  * Documents use 64 jurisdiction lanes, supporting materials use deterministic
  * ID shards sized to keep large-PDF extraction parallel without widening the
- * shared publisher cadence, and each embedding product uses 16 deterministic
- * shards so a complete four-product pass can occupy the 64-worker queue.
+ * shared publisher cadence. Each embedding product defaults to 16
+ * deterministic shards, with an explicit 32-shard maximum for controlled
+ * product-specific scale-up after another product releases queue capacity.
  */
 export function derivedBackfillShardCountFor(kind: "bill-documents" | "embeddings" | "supporting-materials"): number {
   if (kind === "bill-documents") {
     return backfillExecutionPolicy.documentBackfillShardCount
   }
-  return kind === "embeddings" ? 16 : backfillExecutionPolicy.supportingMaterialBackfillShardCount
+  return kind === "embeddings"
+    ? EMBEDDING_BACKFILL_DEFAULT_SHARD_COUNT
+    : backfillExecutionPolicy.supportingMaterialBackfillShardCount
+}
+
+export function maximumDerivedBackfillShardCountFor(
+  kind: "bill-documents" | "embeddings" | "supporting-materials"
+): number {
+  return kind === "embeddings" ? EMBEDDING_BACKFILL_MAX_SHARD_COUNT : derivedBackfillShardCountFor(kind)
 }
 
 export type BackfillUnit = Readonly<{

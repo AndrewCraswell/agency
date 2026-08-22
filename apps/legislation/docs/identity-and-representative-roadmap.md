@@ -29,7 +29,7 @@ user's home address.
 | Canonical legislation ingestion | Complete | Bills, actions, sponsors, amendments, votes, people, organizations, terms, memberships, events, documents, and supporting materials are persisted under the `legislation` schema. |
 | Document, OCR, and supporting-material processing | Complete | Ordinary ingestion invokes managed OCR, completion gates include retryable and OCR work, and the one-time polling sweep is removed. |
 | Embedding model selection and retrieval canary | Complete | The accepted mixed-model contract, dedicated vector tables, Trigger tasks, MCP retrieval, selective reranking, and treatment/control evaluations pass. |
-| Complete embedding corpus pass | In progress | Four product waves use 16 shards each. Completion requires every product controller and index-maintenance task to finish with the documented quality and operational gates. |
+| Complete embedding corpus pass | In progress | Structured amendments are complete. Bills retain 16 shards, material sections use 20, and document sections use 32 within a 68-worker queue and an 80-session database stop threshold. Completion requires every product controller and index-maintenance task to finish with the documented quality and operational gates. |
 | Canonical official identity expansion | Planned | Phase 1. |
 | District and address resolution | Planned | Phase 3. |
 | Unstructured entity extraction and linking | Planned | Phase 4. |
@@ -171,7 +171,7 @@ Dependency: none. Status: in progress.
 | EMB-002 | Complete | Persist four dedicated embedding tables with exact model, dimensions, input contract, hash, and rollout identity. |
 | EMB-003 | Complete | Deploy `embedding-sync`, shard controller, shard worker, and index-maintenance tasks. |
 | EMB-004 | Complete | Verify MCP treatment/control recall, canonical projection, amendment fusion, material search, and selective reranking. |
-| EMB-005 | In progress | Complete bills, document sections, structured amendments, and material sections at 16 shards per product with zero unexplained failures. |
+| EMB-005 | In progress | Structured amendments are complete. Finish bills at 16 shards, material sections at 20, and document sections at 32, with no overlap and zero unexplained failures. |
 | EMB-006 | Planned | Run final `ANALYZE`, record counts and provider spend, rerun the frozen evaluation, and publish the promotion decision. |
 | EMB-007 | Planned | Verify daily ingestion creates or refreshes only affected embeddings and does not require a historical sweep. |
 
