@@ -3,7 +3,10 @@
 # no ESP-IDF headers.
 if(ESP_PLATFORM)
   idf_component_register(
-    SRCS "src/scoring_esp32_services.c"
+    SRCS
+      "src/scoring_esp32_services.c"
+      "src/scoring_esp32_journal.c"
+      "src/scoring_esp32_receiver.c"
     INCLUDE_DIRS "include"
   )
 else()
@@ -15,7 +18,13 @@ else()
   set(CMAKE_C_STANDARD_REQUIRED ON)
   set(CMAKE_C_EXTENSIONS OFF)
 
-  add_library(scoring_esp32_services STATIC src/scoring_esp32_services.c)
+  add_library(
+    scoring_esp32_services
+    STATIC
+      src/scoring_esp32_services.c
+      src/scoring_esp32_journal.c
+      src/scoring_esp32_receiver.c
+  )
   target_include_directories(scoring_esp32_services PUBLIC include)
 
   add_executable(scoring_esp32_services_host_test tests/scoring_esp32_services_host_test.c)
@@ -24,7 +33,10 @@ else()
   add_executable(scoring_esp32_load_isolation_host_test tests/scoring_esp32_load_isolation_host_test.c)
   target_link_libraries(scoring_esp32_load_isolation_host_test PRIVATE scoring_esp32_services)
 
-  foreach(target scoring_esp32_services scoring_esp32_services_host_test scoring_esp32_load_isolation_host_test)
+  add_executable(scoring_esp32_receiver_host_test tests/scoring_esp32_receiver_host_test.c)
+  target_link_libraries(scoring_esp32_receiver_host_test PRIVATE scoring_esp32_services)
+
+  foreach(target scoring_esp32_services scoring_esp32_services_host_test scoring_esp32_load_isolation_host_test scoring_esp32_receiver_host_test)
     if(MSVC)
       target_compile_options(${target} PRIVATE /W4 /WX /permissive-)
     else()
@@ -34,4 +46,5 @@ else()
 
   add_test(NAME scoring_esp32_services_host_test COMMAND scoring_esp32_services_host_test)
   add_test(NAME scoring_esp32_load_isolation_host_test COMMAND scoring_esp32_load_isolation_host_test)
+  add_test(NAME scoring_esp32_receiver_host_test COMMAND scoring_esp32_receiver_host_test)
 endif()
