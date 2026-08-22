@@ -1,0 +1,7 @@
+{
+  "type": "minor",
+  "comment": "Add the Shopify notification email framework, CLI, preview tooling, and typed Liquid compilation API.",
+  "packageName": "@repo/shopify-emails",
+  "email": "andcra@microsoft.com",
+  "dependentChangeType": "patch"
+}
