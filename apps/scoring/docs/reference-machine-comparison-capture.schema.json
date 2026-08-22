@@ -1,0 +1,853 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agency:scoring:reference-machine-comparison-capture",
+  "title": "Scoring reference-machine comparison capture",
+  "description": "A bounded, provenance-rich record of observed inputs and outputs from one or more fencing scoring machines. It is evidence only and never a rule table or golden expected result.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "format",
+    "schemaVersion",
+    "captureId",
+    "title",
+    "recordedAt",
+    "session",
+    "scenarioRef",
+    "sources",
+    "machines",
+    "instruments",
+    "setup",
+    "inputs",
+    "outputs",
+    "artifacts",
+    "comparisons"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://json-schema.org/draft/2020-12/schema"
+    },
+    "format": {
+      "const": "scoring-reference-machine-comparison-capture"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "captureId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "maxLength": 96
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "recordedAt": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "session": {
+      "$ref": "#/$defs/session"
+    },
+    "scenarioRef": {
+      "$ref": "#/$defs/scenarioRef"
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "$ref": "#/$defs/sourceRef"
+      }
+    },
+    "machines": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 4,
+      "items": {
+        "$ref": "#/$defs/machine"
+      }
+    },
+    "instruments": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "$ref": "#/$defs/instrument"
+      }
+    },
+    "setup": {
+      "$ref": "#/$defs/setup"
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "$ref": "#/$defs/inputObservation"
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 128,
+      "items": {
+        "$ref": "#/$defs/outputObservation"
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "maxItems": 24,
+      "items": {
+        "$ref": "#/$defs/artifact"
+      }
+    },
+    "comparisons": {
+      "type": "array",
+      "maxItems": 128,
+      "items": {
+        "$ref": "#/$defs/comparison"
+      }
+    },
+    "notes": {
+      "type": "string",
+      "maxLength": 4000
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$",
+      "maxLength": 96
+    },
+    "nonNegativeInteger": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$",
+      "maxLength": 32
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["startedAt", "endedAt", "timeUnit", "clockOrigin", "wallClockUncertaintyUs"],
+      "properties": {
+        "startedAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "endedAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "timeUnit": {
+          "const": "us"
+        },
+        "clockOrigin": {
+          "enum": ["capture-start", "fixture-trigger", "machine-power-on", "unknown"]
+        },
+        "wallClockUncertaintyUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        }
+      }
+    },
+    "scenarioRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenarioId", "path", "schemaVersion", "contentDigest", "inputIds"],
+      "properties": {
+        "scenarioId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^golden-scenarios/[a-z0-9]+(?:[._-][a-z0-9]+)*\\.json$",
+          "maxLength": 240
+        },
+        "schemaVersion": {
+          "const": "1.0.0"
+        },
+        "contentDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "inputIds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        }
+      }
+    },
+    "sourceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "authority", "document", "contentDigest", "page", "locator", "use"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "authority": {
+          "enum": ["fie", "implementation", "fixture", "prior-art"]
+        },
+        "document": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "contentDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "use": {
+          "enum": ["normative-context", "contract-context", "machine-identity", "fixture-context", "comparison-context"]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "authority": {
+                "enum": ["fie", "prior-art"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "page": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "authority": {
+                "enum": ["implementation", "fixture"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "page": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "firmware": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identityStatus", "identity", "version", "buildDigest", "identityBasis"],
+      "properties": {
+        "identityStatus": {
+          "enum": ["identified", "unknown", "not-applicable"]
+        },
+        "identity": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "version": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 96
+        },
+        "buildDigest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "identityBasis": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        }
+      }
+    },
+    "machine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "role", "manufacturer", "model", "serialNumber", "hardwareRevision", "firmware", "sourceIds"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "role": {
+          "enum": ["reference-machine", "system-under-test", "fixture", "repeater"]
+        },
+        "manufacturer": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "model": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "serialNumber": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "hardwareRevision": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 96
+        },
+        "firmware": {
+          "$ref": "#/$defs/firmware"
+        },
+        "sourceIds": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        }
+      }
+    },
+    "calibration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "calibratedAt", "validThrough", "certificateDigest"],
+      "properties": {
+        "status": {
+          "enum": ["current", "expired", "unknown", "not-applicable"]
+        },
+        "calibratedAt": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "validThrough": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/timestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "certificateDigest": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/digest"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "instrument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "manufacturer", "model", "serialNumber", "firmwareVersion", "calibration"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "kind": {
+          "enum": ["oscilloscope", "logic-analyzer", "multimeter", "audio-meter", "video-camera", "thermometer", "other"]
+        },
+        "manufacturer": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "model": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "serialNumber": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "firmwareVersion": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 96
+        },
+        "calibration": {
+          "$ref": "#/$defs/calibration"
+        }
+      }
+    },
+    "measurementUncertainty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": {
+          "enum": ["absolute", "expanded", "unknown"]
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/nonNegativeInteger"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "unknown"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": ["absolute", "expanded"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "$ref": "#/$defs/nonNegativeInteger"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "measurement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit", "uncertainty", "instrumentId", "method"],
+      "properties": {
+        "value": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+        },
+        "unit": {
+          "enum": ["milliOhm", "milliVolt", "us", "milliCelsius", "basisPoint", "count"]
+        },
+        "uncertainty": {
+          "$ref": "#/$defs/measurementUncertainty"
+        },
+        "instrumentId": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 96
+        },
+        "method": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "unit": {
+                "enum": ["milliOhm", "us", "count"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "value": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "setup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["weapon", "mode", "fixtureId", "lineConnections", "environment", "operatorNotes"],
+      "properties": {
+        "weapon": {
+          "enum": ["epee", "foil", "sabre"]
+        },
+        "mode": {
+          "enum": ["bench", "venue", "fixture", "training"]
+        },
+        "fixtureId": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 96
+        },
+        "lineConnections": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "$ref": "#/$defs/lineConnection"
+          }
+        },
+        "environment": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "$ref": "#/$defs/environmentReading"
+          }
+        },
+        "operatorNotes": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      }
+    },
+    "lineConnection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "logicalLine", "endpoint", "state", "verification"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "logicalLine": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[._:-][a-z0-9]+)*$",
+          "maxLength": 120
+        },
+        "endpoint": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "state": {
+          "enum": ["connected", "disconnected", "unknown"]
+        },
+        "verification": {
+          "enum": ["not-checked", "operator", "instrument"]
+        }
+      }
+    },
+    "environmentReading": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "measurement"],
+      "properties": {
+        "name": {
+          "enum": ["temperature", "relative-humidity", "supply-voltage", "other"]
+        },
+        "measurement": {
+          "$ref": "#/$defs/measurement"
+        }
+      }
+    },
+    "inputObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceId", "atUs", "atUncertaintyUs", "sourceInputIds", "channel", "state", "artifactIds"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "sourceId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "atUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "atUncertaintyUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "sourceInputIds": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "channel": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "state": {
+          "enum": ["open", "closed", "grounded", "shorted", "disconnected", "indeterminate", "not-applicable"]
+        },
+        "measurement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/measurement"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "artifactIds": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    },
+    "indication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["visual", "audible", "latched"],
+      "properties": {
+        "visual": {
+          "enum": ["red", "green", "white", "yellow", "both", "none", "unknown"]
+        },
+        "audible": {
+          "enum": ["heard", "not-heard", "none", "unknown"]
+        },
+        "latched": {
+          "type": ["boolean", "null"]
+        }
+      }
+    },
+    "decisionRecordRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["recordId", "schemaVersion", "contentDigest"],
+      "properties": {
+        "recordId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "schemaVersion": {
+          "const": 1
+        },
+        "contentDigest": {
+          "$ref": "#/$defs/digest"
+        }
+      }
+    },
+    "outputObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "machineId", "atUs", "atUncertaintyUs", "kind", "observationQuality", "reportedDisposition", "indication", "measurement", "artifactIds"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "machineId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "atUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "atUncertaintyUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "kind": {
+          "enum": ["panel-indication", "audible-indication", "decision-observation", "diagnostic-indication", "no-indication", "measurement"]
+        },
+        "observationQuality": {
+          "enum": ["clear", "partial", "ambiguous", "unavailable"]
+        },
+        "reportedDisposition": {
+          "anyOf": [
+            {
+              "enum": ["qualified-hit", "off-target", "rejected-contact", "line-fault", "reset", "uncertainty", "calibration"]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "indication": {
+          "$ref": "#/$defs/indication"
+        },
+        "measurement": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/measurement"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "artifactIds": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "decisionRecordRef": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/decisionRecordRef"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "contentDigest", "contentFormat", "byteLength", "capturedAt", "fromUs", "throughUs", "description"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "kind": {
+          "enum": ["video", "oscilloscope", "logic-analyzer", "instrument-export", "audio", "photo", "setup-photo", "report", "firmware-image"]
+        },
+        "contentDigest": {
+          "$ref": "#/$defs/digest"
+        },
+        "contentFormat": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.+-]{0,31}$"
+        },
+        "byteLength": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "capturedAt": {
+          "$ref": "#/$defs/timestamp"
+        },
+        "fromUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "throughUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        }
+      }
+    },
+    "observationRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["machineId", "observationId"],
+      "properties": {
+        "machineId": {
+          "$ref": "#/$defs/identifier"
+        },
+        "observationId": {
+          "$ref": "#/$defs/identifier"
+        }
+      }
+    },
+    "comparison": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "basis", "left", "right", "dimension", "relationship", "delta", "evidenceArtifactIds", "annotation"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "basis": {
+          "const": "observed-pair"
+        },
+        "left": {
+          "$ref": "#/$defs/observationRef"
+        },
+        "right": {
+          "$ref": "#/$defs/observationRef"
+        },
+        "dimension": {
+          "enum": ["input-state", "disposition", "visual-signal", "audible-signal", "event-time", "diagnostic", "measurement"]
+        },
+        "relationship": {
+          "enum": ["same", "different", "left-only", "right-only", "inconclusive", "not-observed", "not-comparable"]
+        },
+        "delta": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/measurement"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "evidenceArtifactIds": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/identifier"
+          }
+        },
+        "annotation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        }
+      }
+    }
+  }
+}

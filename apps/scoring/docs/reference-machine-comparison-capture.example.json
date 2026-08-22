@@ -1,0 +1,376 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-reference-machine-comparison-capture",
+  "schemaVersion": "1.0.0",
+  "captureId": "capture-fa15-epee-contact-boundary-001",
+  "title": "FA-15 and prototype observation of the epee contact-boundary scenario",
+  "recordedAt": "2026-08-22T18:00:00Z",
+  "session": {
+    "startedAt": "2026-08-22T17:59:00Z",
+    "endedAt": "2026-08-22T18:00:00Z",
+    "timeUnit": "us",
+    "clockOrigin": "fixture-trigger",
+    "wallClockUncertaintyUs": 1000000
+  },
+  "scenarioRef": {
+    "scenarioId": "epee.contact-boundaries",
+    "path": "golden-scenarios/epee-contact-boundaries.json",
+    "schemaVersion": "1.0.0",
+    "contentDigest": "sha256:0f72d433fb0fd14a847ac3c8c04adc5008f928f002f498f9c358b2a5cef0c7fb",
+    "inputIds": ["right-start", "left-short-start", "left-short-break", "right-at-two-ms"]
+  },
+  "sources": [
+    {
+      "id": "golden-scenario-contract",
+      "authority": "implementation",
+      "document": "golden-scenario-contract.md",
+      "contentDigest": "sha256:a8d8b5920141d4bb8ac4c88bbb259f26801ff3073f879a79dce5d0bad55cbbfd",
+      "page": null,
+      "locator": "M0-07 inputs, expected results, and replay hooks",
+      "use": "contract-context"
+    },
+    {
+      "id": "decision-record-contract",
+      "authority": "implementation",
+      "document": "decision-record-contract.md",
+      "contentDigest": "sha256:f57413c314074c80671ec3df8a7e5e1a726638074e2ded000845fb3922084005",
+      "page": null,
+      "locator": "M0-05 outcome vocabulary and immutable raw-capture references",
+      "use": "contract-context"
+    },
+    {
+      "id": "fie-material-rules",
+      "authority": "fie",
+      "document": "fie-material-rules-2026-08-en.pdf",
+      "contentDigest": "sha256:1489d28ed6f3c91e27ecdf75bb29b4ed65c688a012f544d37d946a9da81afc26",
+      "page": 80,
+      "locator": "Annex B, B(a)-B(c)",
+      "use": "normative-context"
+    },
+    {
+      "id": "favero-t2016",
+      "authority": "prior-art",
+      "document": "favero-fa15-t2016-specifications-en.pdf",
+      "contentDigest": "sha256:f575c8a7630fbf104ca8afa4cd28544cb2d75a35a4ff4c5716a19c31513db72f",
+      "page": 1,
+      "locator": "T2016 operation times and power-on identity display",
+      "use": "comparison-context"
+    },
+    {
+      "id": "favero-homologation",
+      "authority": "prior-art",
+      "document": "favero-fa15-fie-homologation.pdf",
+      "contentDigest": "sha256:1314e203ed3e0b5890b1ee9ff826778ddf6a6e4345439534128342ad2e0ee529",
+      "page": 1,
+      "locator": "FA-15 certificate serial and three-weapon identity",
+      "use": "machine-identity"
+    },
+    {
+      "id": "favero-manual",
+      "authority": "prior-art",
+      "document": "favero-fa15-user-manual-en.pdf",
+      "contentDigest": "sha256:c4ac240f4e81795d966ede9909450cae8ad9fcc7a19e138c83ab999664d33d20",
+      "page": 11,
+      "locator": "FA-15 specifications and operating environment",
+      "use": "fixture-context"
+    }
+  ],
+  "machines": [
+    {
+      "id": "fixture",
+      "role": "fixture",
+      "manufacturer": null,
+      "model": "resistance-pulse-fixture",
+      "serialNumber": "fixture-001",
+      "hardwareRevision": "fixture-1",
+      "firmware": {
+        "identityStatus": "not-applicable",
+        "identity": null,
+        "version": null,
+        "buildDigest": null,
+        "identityBasis": "Passive fixture; no firmware is present."
+      },
+      "sourceIds": []
+    },
+    {
+      "id": "favero-fa15",
+      "role": "reference-machine",
+      "manufacturer": "Favero Electronics",
+      "model": "FA-15",
+      "serialNumber": "SM5FAX2020",
+      "hardwareRevision": null,
+      "firmware": {
+        "identityStatus": "identified",
+        "identity": "T2016",
+        "version": "T2016",
+        "buildDigest": null,
+        "identityBasis": "Published T2016 specification says the power-on display shows t16 while the T2016 program is running."
+      },
+      "sourceIds": ["favero-t2016", "favero-homologation", "favero-manual"]
+    },
+    {
+      "id": "scoring-prototype",
+      "role": "system-under-test",
+      "manufacturer": "Agency",
+      "model": "scoring-prototype",
+      "serialNumber": "sut-evt-001",
+      "hardwareRevision": "evt-a",
+      "firmware": {
+        "identityStatus": "identified",
+        "identity": "stm32-scoring",
+        "version": "rules-1-candidate",
+        "buildDigest": null,
+        "identityBasis": "Operator-recorded device identity; build digest was not available at capture time."
+      },
+      "sourceIds": []
+    }
+  ],
+  "instruments": [
+    {
+      "id": "scope-001",
+      "kind": "oscilloscope",
+      "manufacturer": "Example Instruments",
+      "model": "Scope-1000",
+      "serialNumber": "scope-001",
+      "firmwareVersion": null,
+      "calibration": {
+        "status": "unknown",
+        "calibratedAt": null,
+        "validThrough": null,
+        "certificateDigest": null
+      }
+    },
+    {
+      "id": "meter-001",
+      "kind": "multimeter",
+      "manufacturer": "Example Instruments",
+      "model": "Meter-200",
+      "serialNumber": "meter-001",
+      "firmwareVersion": null,
+      "calibration": {
+        "status": "unknown",
+        "calibratedAt": null,
+        "validThrough": null,
+        "certificateDigest": null
+      }
+    },
+    {
+      "id": "camera-001",
+      "kind": "video-camera",
+      "manufacturer": "Example Instruments",
+      "model": "Camera-300",
+      "serialNumber": "camera-001",
+      "firmwareVersion": null,
+      "calibration": {
+        "status": "unknown",
+        "calibratedAt": null,
+        "validThrough": null,
+        "certificateDigest": null
+      }
+    }
+  ],
+  "setup": {
+    "weapon": "epee",
+    "mode": "bench",
+    "fixtureId": "fixture",
+    "lineConnections": [
+      {
+        "id": "left-weapon-connection",
+        "logicalLine": "left.weapon-circuit",
+        "endpoint": "fixture channel A to FA-15 left weapon socket",
+        "state": "connected",
+        "verification": "instrument"
+      },
+      {
+        "id": "right-weapon-connection",
+        "logicalLine": "right.weapon-circuit",
+        "endpoint": "fixture channel B to FA-15 right weapon socket",
+        "state": "connected",
+        "verification": "instrument"
+      },
+      {
+        "id": "piste-reference-connection",
+        "logicalLine": "piste-ground",
+        "endpoint": "fixture reference to common apparatus reference",
+        "state": "connected",
+        "verification": "operator"
+      }
+    ],
+    "environment": [
+      {
+        "name": "supply-voltage",
+        "measurement": {
+          "value": 5000,
+          "unit": "milliVolt",
+          "uncertainty": { "kind": "absolute", "value": 50 },
+          "instrumentId": "meter-001",
+          "method": "Measured at the FA-15 supply input before the scenario run."
+        }
+      },
+      {
+        "name": "temperature",
+        "measurement": {
+          "value": 23500,
+          "unit": "milliCelsius",
+          "uncertainty": { "kind": "unknown", "value": null },
+          "instrumentId": null,
+          "method": "Room temperature noted by operator; no calibrated thermometer was available."
+        }
+      }
+    ],
+    "operatorNotes": "Both machines were reset before the listed scenario inputs. No threshold or pass/fail judgment was assigned in this capture."
+  },
+  "inputs": [
+    {
+      "id": "input-right-start",
+      "sourceId": "fixture",
+      "atUs": 0,
+      "atUncertaintyUs": 25,
+      "sourceInputIds": ["right-start"],
+      "channel": "right.weapon-circuit",
+      "state": "closed",
+      "measurement": {
+        "value": 10000,
+        "unit": "milliOhm",
+        "uncertainty": { "kind": "absolute", "value": 100 },
+        "instrumentId": "scope-001",
+        "method": "Fixture resistance observation at trigger."
+      },
+      "artifactIds": ["scope-capture-001"]
+    },
+    {
+      "id": "input-left-short",
+      "sourceId": "fixture",
+      "atUs": 1,
+      "atUncertaintyUs": 25,
+      "sourceInputIds": ["left-short-start"],
+      "channel": "left.weapon-circuit",
+      "state": "closed",
+      "measurement": {
+        "value": 10000,
+        "unit": "milliOhm",
+        "uncertainty": { "kind": "absolute", "value": 100 },
+        "instrumentId": "scope-001",
+        "method": "Fixture resistance observation at trigger."
+      },
+      "artifactIds": ["scope-capture-001"]
+    },
+    {
+      "id": "input-left-break",
+      "sourceId": "fixture",
+      "atUs": 1999,
+      "atUncertaintyUs": 25,
+      "sourceInputIds": ["left-short-break"],
+      "channel": "left.weapon-circuit",
+      "state": "open",
+      "measurement": null,
+      "artifactIds": ["scope-capture-001"]
+    },
+    {
+      "id": "input-right-two-ms",
+      "sourceId": "fixture",
+      "atUs": 2000,
+      "atUncertaintyUs": 25,
+      "sourceInputIds": ["right-at-two-ms"],
+      "channel": "right.weapon-circuit",
+      "state": "closed",
+      "measurement": {
+        "value": 10000,
+        "unit": "milliOhm",
+        "uncertainty": { "kind": "absolute", "value": 100 },
+        "instrumentId": "scope-001",
+        "method": "Fixture resistance observation at trigger."
+      },
+      "artifactIds": ["scope-capture-001"]
+    }
+  ],
+  "outputs": [
+    {
+      "id": "favero-output-001",
+      "machineId": "favero-fa15",
+      "atUs": 2150,
+      "atUncertaintyUs": 200,
+      "kind": "decision-observation",
+      "observationQuality": "clear",
+      "reportedDisposition": "qualified-hit",
+      "indication": { "visual": "green", "audible": "heard", "latched": true },
+      "measurement": null,
+      "artifactIds": ["panel-video-001", "scope-capture-001"],
+      "decisionRecordRef": null,
+      "notes": "Front-panel and audible indication observed; no machine-native decision record was exported."
+    },
+    {
+      "id": "prototype-output-001",
+      "machineId": "scoring-prototype",
+      "atUs": 2300,
+      "atUncertaintyUs": 50,
+      "kind": "decision-observation",
+      "observationQuality": "clear",
+      "reportedDisposition": "qualified-hit",
+      "indication": { "visual": "green", "audible": "heard", "latched": true },
+      "measurement": null,
+      "artifactIds": ["panel-video-001", "scope-capture-001"],
+      "decisionRecordRef": {
+        "recordId": "record-prototype-right-hit-001",
+        "schemaVersion": 1,
+        "contentDigest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "notes": "The referenced record is a separately stored M0-05-shaped authority record; this capture does not rewrite it."
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "scope-capture-001",
+      "kind": "oscilloscope",
+      "contentDigest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "contentFormat": "bin",
+      "byteLength": 4096,
+      "capturedAt": "2026-08-22T17:59:01Z",
+      "fromUs": 0,
+      "throughUs": 3000,
+      "description": "Bounded scope export covering the fixture-triggered contact."
+    },
+    {
+      "id": "panel-video-001",
+      "kind": "video",
+      "contentDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "contentFormat": "mp4",
+      "byteLength": 8192,
+      "capturedAt": "2026-08-22T17:59:01Z",
+      "fromUs": 0,
+      "throughUs": 5000,
+      "description": "Camera view of both front panels and the fixture trigger LED."
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "comparison-disposition-001",
+      "basis": "observed-pair",
+      "left": { "machineId": "favero-fa15", "observationId": "favero-output-001" },
+      "right": { "machineId": "scoring-prototype", "observationId": "prototype-output-001" },
+      "dimension": "disposition",
+      "relationship": "same",
+      "delta": null,
+      "evidenceArtifactIds": ["panel-video-001"],
+      "annotation": "Both machines reported a qualified-hit observation for the selected scenario input. This is descriptive correlation, not an expected result or acceptance limit."
+    },
+    {
+      "id": "comparison-event-time-001",
+      "basis": "observed-pair",
+      "left": { "machineId": "favero-fa15", "observationId": "favero-output-001" },
+      "right": { "machineId": "scoring-prototype", "observationId": "prototype-output-001" },
+      "dimension": "event-time",
+      "relationship": "different",
+      "delta": {
+        "value": 150,
+        "unit": "us",
+        "uncertainty": { "kind": "expanded", "value": 250 },
+        "instrumentId": "camera-001",
+        "method": "Difference between observed panel-indication timestamps; camera timing uncertainty is expanded and retained."
+      },
+      "evidenceArtifactIds": ["panel-video-001"],
+      "annotation": "The observed timing difference is retained for later investigation. No pass/fail interpretation is attached."
+    }
+  ],
+  "notes": "This example intentionally has no expected-result, threshold, or promotion field. To use an observation in a rule release, create a separately reviewed decision or golden-scenario change with independent authority and provenance."
+}
