@@ -13,7 +13,9 @@ import {
   fiveTauSourceSettlingUs,
   conservativeBlankingUs,
   fullDiagnosticAcquisitionUs,
+  m403ScreenedStaticErrorOhms,
   resistanceErrorForVoltageErrorOhms,
+  sourceResistorTemperatureErrorOhms,
   switchChargeErrorOhms
 } from "./analog-model.js"
 
@@ -58,5 +60,13 @@ describe("three-weapon analog model", () => {
     expect(fullDiagnosticAcquisitionUs(500, 10_000)).toBeCloseTo(31.44, 2)
     expect(switchChargeErrorOhms(450, 500)).toBeCloseTo(4.2, 1)
     expect(resistanceErrorForVoltageErrorOhms(450, analogBudget.adcLsbVolts / 2)).toBeCloseTo(0.43, 2)
+  })
+
+  it("keeps the M4-03 temperature screen explicitly denied at the 450-ohm boundary", () => {
+    expect(analogBudget.adcSingleEndedIntegralLinearityTypicalLsb).toBe(3.1)
+    expect(sourceResistorTemperatureErrorOhms(450, -40)).toBeCloseTo(0.29, 2)
+    expect(sourceResistorTemperatureErrorOhms(450, 125)).toBeCloseTo(0.44, 2)
+    expect(m403ScreenedStaticErrorOhms(450, 125)).toBeCloseTo(7.17, 2)
+    expect(m403ScreenedStaticErrorOhms(450, 125)).toBeGreaterThan(analogBudget.fixtureTargetOhms)
   })
 })

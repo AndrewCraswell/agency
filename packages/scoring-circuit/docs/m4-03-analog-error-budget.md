@@ -7,20 +7,26 @@ This is the M4-03 calculation record for the repeated sensing cell in M4-01 and 
 an unsupported claim that seven leakage paths add to one channel. It is a coupon budget, not a released schematic,
 footprint, BOM, fabrication package, compliance result, or FIE approval.
 
-**Result:** the passive topology and 47.5-cycle ADC acquisition are analytically adequate for a static sample after the
-defined blanking interval. The committed M4-02 leakage candidate plus the STM32's published ADC linearity proxy does
-**not** meet the `+/- 5 ohm` M4-01 fixture target at 450 ohms: the bounded subtotal is 6.74 ohms, failing by 1.74 ohms.
-The ADC data are for an LQFP100 characterization condition, not this LQFP64 part, so that subtotal is a conservative
-screen rather than an LQFP64 guarantee. A conditional pass requires per-channel measured residual ADC plus
-temperature/source-series error no greater than 0.92 ohm after calibration. Until that is measured, the threshold
-budget is open and the product must report boundary overlap as `indeterminate` as required by the signal contract.
+**Verdict: DENY.** The passive topology and 47.5-cycle ADC acquisition are analytically adequate for a static sample
+after the defined blanking interval, but the proposed component set does **not** meet the `+/- 5 ohm` M4-01 fixture
+target at the 450 ohm foil boundary. At 125 C after a 25 C calibration, the absolute-sum screen is 7.17 ohms, failing by
+2.17 ohms. That screen uses only stated clamp gates, a published ADC EL typical-characterization screen, a selected source-resistor
+temperature coefficient, fixture allocation, and settled typical switch charge. It excludes unproven switch drift,
+board leakage, reference dynamics, and LQFP64 ADC/comparator limits, so it is not a passable guarantee by omission.
 
-This result deliberately does not choose a different clamp, resistor, comparator threshold circuit, or physical
-seven-conductor phase map. Those are M4-02, M4-04, M4-05, and SIG gates, respectively.
+The ADC linearity data are for an LQFP100 characterization condition, not this LQFP64 part. The comparator/DAC path has
+no applicable numeric threshold guarantee for the proposed operating point and is prohibited from classifying the
+450/475 ohm boundary. M4-03 can become a **conditional measurement pass**, not a release, only if M4-08 establishes a
+replacement full-corner per-channel bound of 5.00 ohms or less. Until then, the threshold budget is open and the product
+must report boundary overlap as `indeterminate` as required by the signal contract.
+
+This result deliberately does not choose a different clamp, comparator threshold circuit, or physical seven-conductor
+phase map. Those are M4-02, M4-04, M4-05, and SIG gates, respectively. It does name a coupon-only source-resistor
+candidate because its temperature coefficient is a material term in this budget; it does not add it to a production BOM.
 
 ## Inputs and primary sources
 
-The M4-01 cell is a 2.5 V `REF5025`-derived source, 2.49 kohm source resistor, `TMUX1112` source and sink switches,
+The M4-01 cell is a 2.5 V `REF5025AQDRQ1`-derived source, 2.49 kohm source resistor, `TMUX1112` source and sink switches,
 22 ohm connector-side series resistor, then a 1.00 kohm ADC resistor and 470 pF C0G capacitor. M4-02 fixes the coupon
 candidate `TPD4E05U06DQAR`, `BAV199-7-F`, `BAT54T1G`, and `LM4040C20QDBZR`. The calculation uses their M4-02 limits
 without promoting a candidate to a production selection.
@@ -28,7 +34,17 @@ without promoting a candidate to a production selection.
 The relevant manufacturer limits are:
 
 - [TI TMUX1112 Rev. C](https://www.ti.com/lit/ds/symlink/tmux1112.pdf): 9.8 ohms maximum on resistance over -40 C to
-  125 C at 3.3 V, 2 nA maximum on leakage over that range, 17 pF typical on capacitance, and -1.5 pC charge injection.
+  125 C at 3.3 V +/- 10%, 2 nA maximum on leakage over that range, 17 pF typical on capacitance, and -1.5 pC charge
+  injection. The selected 3V3A screen is 3.3 V +/- 5%, inside this supply condition.
+- [TI REF5025A-Q1 Rev. H](https://www.ti.com/lit/ds/symlink/ref5025a-q1.pdf): active automotive 2.5 V series reference,
+  0.1% maximum initial accuracy, 8 ppm/C maximum temperature coefficient, 2.7 V to 18 V input range, and +/-10 mA
+  output capability. The reference's initial accuracy, drift, input-line regulation, and load regulation cancel only
+  when the excitation and ADC `VREF+` observe the same settled reference node at the conversion instant.
+- [Panasonic ERA-3A](https://na.industrial.panasonic.com/whats-new/era-3a-series): coupon source-resistor candidate,
+  2.49 kohm, 0.05%, 10 ppm/C thin film. Its initial tolerance is calibrated out; its 10 ppm/C TCR produces the explicit
+  post-calibration 0.44 ohm 25 C to 125 C term below. The family is high-reliability and AEC-Q200 applicable. Its
+  endurance and exact orderable MPN are service and M4-04 land-pattern verification inputs, not credits in this
+  one-cycle thermal budget.
 - [TI TPD4E05U06 Rev. O](https://www.ti.com/lit/ds/symlink/tpd4e05u06.pdf): 10 nA maximum leakage at 2.5 V and 0.5 pF
   typical line capacitance. The data-sheet ESD rating is not a system ESD result.
 - [ST STM32G474xB/xC/xE DS12288 Rev. 6](https://www.st.com/resource/en/datasheet/stm32g474rc.pdf): `CADC` is 5 pF
@@ -72,19 +88,32 @@ pulldowns must dominate reset, debug, and an unpowered STM32. No physical phase 
 
 ## Static transfer function and calibration
 
-At the limiting foil diagnostic point, M4-02 supplies the conservative source path:
+At the limiting foil diagnostic point, M4-02 supplies the corrected conservative source path. Its maintenance correction
+does not change the clamp decision or the stated coupon measurement gates.
 
 ```text
-R_S,max = 2490 x 1.0005 + 9.8 + 23.1 = 2534.145 ohm
-V_450   = 2.5 x 450 / (2534.145 + 450) = 0.376997 V
-R_TH    = R_S,max || 450 = 382.14 ohm
-dR/dV   = R_S,max x 2.5 / (2.5 - V_450)^2 = 1405.0 ohm/V
+R_S,max = 2490 x 1.0005 + 9.8 + 23.1 = 2524.145 ohm
+V_450   = 2.5 x 450 / (2524.145 + 450) = 0.378260 V
+R_TH    = R_S,max || 450 = 381.91 ohm
+dR/dV   = R_S,max x 2.5 / (2.5 - V_450)^2 = 1401.7 ohm/V
 ```
 
+This is the **source-on, sink-off** resistance-reading phase. The sink TMUX has the same 3.3 V +/- 10%, 9.8 ohm, and
+2 nA published limits, but no sink-resistor value or final return topology is assigned until SIG-02 freezes the phase
+map. Its on-resistance is therefore deliberately absent from the source transfer function. A phase must never enable a
+source and sink on the same conductor; an enabled sink is a separately calibrated continuity/fault stimulus, not a
+hidden correction to this source measurement. M4-08 must record sink-on voltage/current, off leakage, switch-control
+state, and temperature at every phase that uses it. Until that result exists, no sink-path threshold or timing credit is
+claimed.
+
 The calculation is ratiometric only if the source amplitude and `VREF+` are both valid, settled, and derived from the
-same `REF5025` output. Reference drift and initial voltage tolerance then cancel in the resistance ratio; reference
-startup, reference load, VREF+ routing, and a missing reference do not cancel and must force `unavailable`. The
-existing allocation has not released that supply and routing, so there is no unconditional reference-accuracy credit.
+same `REF5025AQDRQ1` output. Reference drift and initial voltage tolerance then cancel in the resistance ratio. The
+24 V input does not appear directly in the transfer function. Its only possible error credit is through a released
+regulator and the reference input: those must maintain `3V3A` at 3.135 V to 3.465 V and keep the reference in its
+2.7 V to 18 V operating range. Reference startup, source/VREF+ impedance mismatch, ADC reference-load transients,
+reference load regulation, routing drop, and a missing reference do not cancel and must force `unavailable`. The existing
+allocation has not released the regulator, reference buffer/decoupling, or `VREF+` routing, so there is no unconditional
+reference-accuracy credit and no claimed 24 V input-tolerance result.
 
 The STM32 performs its internal ADC self-calibration after power-up and after any relevant ADC reset or configuration
 reinitialization, as the ST data sheet recommends. That is not an external resistance calibration. A channel-local
@@ -108,41 +137,62 @@ released electrical thresholds until SIG-02 and the weapon phase map specify the
 
 ## Error budget at 450 ohms
 
-The following is a worst-case absolute sum, not RSS. It is intentionally pessimistic because a false threshold claim is
-less acceptable than a coupon measurement gate. `mV` values use 1405.0 ohm/V.
+The following is an absolute-sum screen, not RSS. Its clamp, quantization, fixture, and source-resistor terms use the
+stated limits, while the 3.1 LSB ADC EL term is only a typical LQFP100 characterization value. It is therefore neither
+an LQFP64 worst-case guarantee nor a pass claim. `mV` values use 1401.7 ohm/V. The source-resistor term is calibrated
+at 25 C and evaluated at the worst 125 C endpoint. No term marked a measurement gate receives an unearned numeric credit.
 
 | Contributor | Bound and treatment | Error, ohms | Status |
 | --- | --- | ---: | --- |
 | Source 0.05%, TMUX resistance, 22 ohm resistor | Removed only by complete channel two-point calibration | 0 after calibration | calibration condition |
-| REF5025 initial error and drift | Ratiometrically removed only with common valid source and VREF+ | 0 after calibration | reference-health gate |
+| Source-resistor TCR | 2.49 kohm, 10 ppm/C, 25 C calibration to 125 C; exact ratio calculation | 0.44 | bounded coupon candidate |
+| TMUX/22 ohm temperature and voltage drift | 9.8 ohm is a maximum, not a calibrated drift envelope at the approximately 1 mA source current | unbounded | measurement gate |
+| REF5025A-Q1 initial error and drift | Ratiometrically removed only with common valid source and VREF+ | 0 after calibration | reference-health gate |
+| 3V3A and 24 V input variation | No direct transfer term only after regulator/reference health proves the stated input range; source/switch behavior must be measured | unbounded | measurement gate |
 | M4-02 clamp leakage | M4-02 coupon screen: `|I_D_NEG(0.45 V)| <= 1.50 uA` and `|I_D_POS(2.1 V)| <= 0.10 uA` | 3.12 | measurement gate |
 | ADC half-code quantization | 0.5 x 2.5 V / 4095 = 0.305 mV | 0.43 | bounded |
-| ADC integral linearity proxy | 3.1 LSB x 2.5 V / 4095 = 1.892 mV | 2.66 | LQFP100 full-temperature proxy only |
+| ADC EL integral-linearity typical screen | Table 72: 3.1 LSB typical x 2.5 V / 4095 = 1.892 mV | 2.65 | LQFP100 characterization only |
 | Two-point fixture interpolation and standard uncertainty | Allocation, not an achieved result | 0.50 | M4-05 acceptance allocation |
-| TMUX charge after five local time constants | 4.20 ohms initial two-edge pedestal x exp(-5) | 0.03 | only after blanking |
-| Temperature drift of source, protection, switch, board, and ADC after calibration | No committed source-resistor temperature coefficient or LQFP64 result | unbounded | measurement gate |
-| Comparator threshold offset and DAC error | Not used for resistance classification | 0 | architectural restriction |
+| TMUX charge after five local time constants | 4.19 ohms initial two-edge pedestal x exp(-5) | 0.03 | only after blanking |
+| ADC residual, PCB leakage, and reference dynamics | No LQFP64 full-corner bound or assembled-coupon result | unbounded | measurement gate |
+| Comparator/DAC resistance threshold | Prohibited from resistance classification; see the separate non-credit screen below | 0 | architectural restriction |
 
-The bounded subtotal is `3.12 + 0.43 + 2.66 + 0.50 + 0.03 = 6.74 ohms`. It fails the 5.00 ohm target by 1.74 ohms
-before the unbounded temperature term. Even granting external two-point gain and offset correction, integral
-non-linearity is not automatically removed. The 3.1-LSB value must not be treated as an LQFP64 guarantee because ST
-labels its full-temperature multi-ADC table as LQFP100.
+The displayed static screen is `0.44 + 3.12 + 0.43 + 2.65 + 0.50 + 0.03 = 7.17 ohms`. It fails the 5.00 ohm target by
+2.17 ohms before the unbounded switch, board, reference, LQFP64 ADC, supply, and input terms. Even granting external
+two-point gain and offset correction, integral non-linearity is not automatically removed. The 3.1 LSB is specifically
+ST's **EL, single-ended integral-linearity, typical** result in DS12288 Table 72: multiple-ADC operation, <=52 MHz,
+`VDDA >= 2.7 V`, `VREF+ >= 1.62 V`, -40 C to 125 C, 2.5/6.5-cycle sampling, and LQFP100. It is characterized after
+internal calibration, not production-tested, and is neither a total-unadjusted-error value nor an LQFP64 guarantee.
 
 The remaining conditional allocation is:
 
 ```text
-5.00 - 3.12 clamp - 0.43 quantization - 0.50 fixture - 0.03 settled charge = 0.92 ohm
+5.00 - 3.12 clamp - 0.43 quantization - 0.50 fixture - 0.03 settled charge - 0.44 source TCR = 0.48 ohm
 ```
 
-Thus the **sum** of measured residual ADC non-linearity, post-calibration source/switch/protection temperature drift,
-PCB leakage, and any comparator-to-ADC correlation error must be at most 0.92 ohms at each required temperature and
-line bank. This is a narrow conditional margin, not a design release. A larger measured term fails M4-03 and requires a
-new M4-02/M4-03 candidate or a revised, reviewed acquisition method.
+Thus, if M4-08 replaces the unsuitable ADC EL typical screen with a measurement, the **sum** of measured residual ADC non-linearity,
+post-calibration switch/protection temperature and supply drift, PCB leakage, reference dynamics, and any
+comparator-to-ADC correlation error must be at most 0.48 ohms at each required temperature and line bank. This is a
+narrow conditional margin, not a design release. A larger measured term fails M4-03 and requires a new M4-02/M4-03
+candidate or a revised, reviewed acquisition method.
 
-For context, the uncalibrated screen also fails: the M4-02 pre-screened 4.08 ohm clamp estimate, the 2.66 ohm ADC
-linearity proxy, and the 4.20 ohm initial two-edge switch pedestal already exceed 10 ohms, before ADC gain/offset,
+For context, the uncalibrated screen also fails: the M4-02 pre-screened 4.06 ohm clamp estimate, the 2.65 ohm ADC EL
+typical screen, and the 4.19 ohm initial two-edge switch pedestal already exceed 10 ohms, before ADC gain/offset,
 resistor temperature coefficient, or reference routing. Calibration and blanking are mandatory controls, not optional
 refinements.
+
+### Comparator threshold non-credit
+
+The comparator is a capture aid, not a calibrated resistance instrument. ST's DAC table gives an after-calibration
+total-unadjusted-error figure of +/-23 LSB for a buffered DAC under a stated 3.6 V reference and load condition; mapping
+that count to this 2.5 V reference is a **non-applicable sanity screen** of +/-14.0 mV or +/-19.6 ohms at 450 ohms before
+comparator offset, hysteresis, propagation, input-overdrive, routing, and temperature terms. It exceeds the entire
+12.5 ohm foil decision guard, so neither that mapping nor the DAC result can support a 450/475 ohm decision.
+
+For a comparator to timestamp a transition, M4-08 must measure the actual comparator input crossing versus the ADC
+resistance estimate at each selected threshold, VDD and 24 V input extreme, -40 C, 25 C, 85 C, and 125 C. It must also
+bound propagation delay and HRTIM capture skew under the actual overdrive and phase mask. The resulting threshold must
+remain a prequalification/timestamp threshold only unless a separate reviewed budget changes this restriction.
 
 ## Sampling capacitor, source impedance, and line banks
 
@@ -154,7 +204,7 @@ the actual pad, trace, diode C-V, and sample kickback contribution.
 At 500 ohms, the maximum ADC driving impedance is:
 
 ```text
-R_ADC,drive = (2534.145 || 500) + 1010 = 1427.6 ohm
+R_ADC,drive = (2524.145 || 500) + 1010 = 1427.3 ohm
 ```
 
 The selected 47.5-cycle, 52 MHz two-ADC acquisition uses DS12288's more conservative 1.8 kohm slow-channel limit from
@@ -201,7 +251,7 @@ Each completed acquisition phase must follow this hardware-facing order:
 
 The TMUX's specified charge injection is a typical curve-based characteristic, not a full-corner maximum. With the
 minimum declared 0.5 nF line bank plus 504.5 pF local capacitance, two 1.5 pC same-polarity edges produce 2.986 mV or
-4.20 ohms at 450 ohms before settling. The five-time-constant blank allocates 0.03 ohm residual, but the coupon must
+4.19 ohms at 450 ohms before settling. The five-time-constant blank allocates 0.03 ohm residual, but the coupon must
 measure charge injection and comparator behavior across temperature, VDD, source voltage, and actual phase masks.
 
 Comparator timestamp resolution remains a 1 us target from the allocation. It has no error-budget credit until the
@@ -212,13 +262,13 @@ are demonstrated. An ADC/HRTIM schedule cannot infer a 0.1 ms sabre contact from
 
 | Gate | Required result | State |
 | --- | --- | --- |
-| M4-03 analytical error target | Conditional pass only if the 0.92 ohm residual allocation is demonstrated; current published-proxy sum fails by 1.74 ohms | open |
-| M4-03 static acquisition impedance | 47.5-cycle sample time supports 1427.6 ohms against 1800 ohms slow-channel limit | analytic pass |
+| M4-03 analytical error target | **DENY**: 7.17 ohm 125 C absolute-sum screen fails the 5.00 ohm target by 2.17 ohms; an M4-08 full-corner per-channel result must close the 0.48 ohm residual allocation | open |
+| M4-03 static acquisition impedance | 47.5-cycle sample time supports 1427.3 ohms against 1800 ohms slow-channel limit | analytic pass |
 | M4-03 100 ohm, 10 nF sabre phase | Two ADC1 ranks after a 7.60 us conservative blank require 9.96 us before comparator and phase-mask uncertainty | open scheduling gate |
 | M4-03 500 ohm, 10 nF full diagnostic timing | Six ADC1 ranks after 24.47 us conservative cascaded allocation require 31.44 us | fail against 25 us target by 6.44 us |
-| M4-04 coupon schematic | Do not release until a reviewer captures the external clamp return, VREF+/VDDA/VSSA, pad type, pulldowns, exact resistor temperature coefficient, and sample/blank configuration | blocked by open M4-03 gates |
+| M4-04 coupon schematic | Do not release until a reviewer captures the external clamp return, VREF+/VDDA/VSSA, regulator/reference health path, pad type, pulldowns, source-resistor candidate/TCR, and sample/blank configuration | blocked by open M4-03 gates |
 | M4-05 fixture | Must provide Kelvin 0/500 ohm standards, all four capacitance banks, source/sink phase masks, pulse capture, temperature points, current probes, and uncertainty less than or equal to the 0.50 ohm allocation | open |
-| M4-08 report | Must demonstrate each of seven channels meets the conditional residual and timing limits at -40 C, 25 C, 85 C, and 125 C or the qualified product range | future measurement gate |
+| M4-08 report | Must demonstrate each of seven channels meets the 5.00 ohm all-in interval and timing limits at 3V3A and 24 V input extremes, -40 C, 25 C, 85 C, and 125 C or the qualified product range | future measurement gate |
 
 Coupon measurements must include normal and fault conditions: source or sink stuck on, both enables commanded, reset and
 brownout, ADC saturation or overrun, reference absent or outside tolerance, all seven clamp paths stressed, and a

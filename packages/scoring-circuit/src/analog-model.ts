@@ -21,6 +21,7 @@ export const analogBudget = {
   adcFilterCapacitancePf: 470,
   adcFilterCapacitanceWithClampsAndSamplePf: 504.5,
   adcInputSeriesResistanceMaximumOhms: 1_010,
+  adcSingleEndedIntegralLinearityTypicalLsb: 3.1,
   adcLsbVolts: 2.5 / (2 ** 12 - 1),
   adc1DiagnosticRankCount: 6,
   // DS12288 Table 66 tLATR maximum for CKMODE = 00. The two active ADCs use 52 MHz.
@@ -30,9 +31,13 @@ export const analogBudget = {
   adcSampleClockMhz: 52,
   adcSlowChannelMaximumInputResistanceOhms: 1_800,
   clampLeakageGateOhms: 3.12,
+  calibrationTemperatureC: 25,
+  fixtureInterpolationAndStandardUncertaintyOhms: 0.5,
   fixtureTargetOhms: 5,
   lineCapacitanceBanksPf: [500, 2_000, 5_000, 10_000],
   sourceResistanceMaximumOhms: 2_490 * 1.0005 + 9.8 + 23.1,
+  sourceResistorNominalOhms: 2_490,
+  sourceResistorTemperatureCoefficientPpmPerC: 10,
   switchChargeInjectionPc: 1.5,
   switchEdgesPerPhase: 2
 } as const
@@ -159,4 +164,46 @@ export function switchChargeErrorOhms(externalResistanceOhms: number, lineCapaci
   const capacitancePf = lineCapacitancePf + analogBudget.adcFilterCapacitanceWithClampsAndSamplePf
   const voltageError = (analogBudget.switchChargeInjectionPc * analogBudget.switchEdgesPerPhase) / capacitancePf
   return resistanceErrorForVoltageErrorOhms(externalResistanceOhms, voltageError)
+}
+
+/**
+ * The post-calibration error caused by the proposed source resistor's
+ * temperature coefficient. This intentionally covers only the resistor: the
+ * switch, clamps, ADC, board leakage, and reference routing remain coupon
+ * measurement gates.
+ */
+export function sourceResistorTemperatureErrorOhms(externalResistanceOhms: number, temperatureC: number): number {
+  const resistanceChangeOhms =
+    analogBudget.sourceResistorNominalOhms *
+    analogBudget.sourceResistorTemperatureCoefficientPpmPerC *
+    Math.abs(temperatureC - analogBudget.calibrationTemperatureC) *
+    1e-6
+
+  return (
+    (externalResistanceOhms * resistanceChangeOhms) / (analogBudget.sourceResistanceMaximumOhms + resistanceChangeOhms)
+  )
+}
+
+/**
+ * Absolute-sum M4-03 screening calculation at a fixed calibration temperature.
+ * The ADC EL term is an LQFP100 typical characterization result, not an LQFP64
+ * guarantee; this function is deliberately a regression screen, never a release
+ * claim.
+ */
+export function m403ScreenedStaticErrorOhms(externalResistanceOhms: number, temperatureC: number): number {
+  const adcQuantizationError = resistanceErrorForVoltageErrorOhms(externalResistanceOhms, analogBudget.adcLsbVolts / 2)
+  const adcIntegralLinearityTypicalError = resistanceErrorForVoltageErrorOhms(
+    externalResistanceOhms,
+    analogBudget.adcSingleEndedIntegralLinearityTypicalLsb * analogBudget.adcLsbVolts
+  )
+  const settledSwitchChargeError = switchChargeErrorOhms(externalResistanceOhms, 500) * Math.exp(-5)
+
+  return (
+    analogBudget.clampLeakageGateOhms +
+    adcQuantizationError +
+    adcIntegralLinearityTypicalError +
+    analogBudget.fixtureInterpolationAndStandardUncertaintyOhms +
+    settledSwitchChargeError +
+    sourceResistorTemperatureErrorOhms(externalResistanceOhms, temperatureC)
+  )
 }
