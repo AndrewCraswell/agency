@@ -1,6 +1,6 @@
 # Virtual ESP32 receiver and authority guard
 
-**Task:** M2-07  
+**Task:** M2-07
 **Status:** executable virtual-device contract
 
 ## Boundary
