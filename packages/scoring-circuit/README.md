@@ -4,9 +4,9 @@ A tscircuit architecture model for a premium, serviceable competition scoring ap
 owns electrical acquisition, timing, touch qualification, primary lamps, and the buzzer. A galvanically isolated
 ESP32-S3 application domain owns the display, Ethernet, radio, storage, remote control, cloud services, and OTA.
 
-Run `pnpm --filter @repo/scoring-circuit build`, then open `dist/index.html` to inspect the generated PCB placement and
-logical schematic. The build also emits Circuit JSON, a BOM in JSON and CSV formats, and a machine-readable readiness
-report. The canonical component choices live in `src/component-decisions.ts`.
+Run `pnpm --filter @repo/scoring-circuit build`, then open `dist/index.html` to inspect the generated PCB placement,
+logical schematic, and 3D board model in a tabbed preview. The build also emits Circuit JSON, a BOM in JSON and CSV
+formats, and a machine-readable readiness report. The canonical component choices live in `src/component-decisions.ts`.
 
 Read `docs/production-board-plan.md` for the requirements matrix, event replay design, component rationale, reliability
 program, compliance work, and release gates. The read-only LLM review workflows are documented in `judges/README.md`.
