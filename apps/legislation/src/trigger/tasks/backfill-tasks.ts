@@ -50,8 +50,9 @@ const openStatesHistoryQueue = queue({ concurrencyLimit: 8, name: "legislation-o
 const historyQueue = queue({ concurrencyLimit: 3, name: "legislation-history-backfill" })
 const federalHistoryQueue = queue({ concurrencyLimit: 2, name: "legislation-federal-history-backfill" })
 const derivedQueue = queue({
-  // Documents use the bounded 64-lane jurisdiction drain. Embeddings
-  // deliberately use four shards, leaving capacity for independent work.
+  // Documents use the bounded 64-lane jurisdiction drain. Four concurrent
+  // 16-shard embedding products deliberately fill this queue during the
+  // approved bulk pass; every worker retains a one-connection database pool.
   concurrencyLimit: backfillExecutionPolicy.derivedQueueConcurrencyLimit,
   name: "legislation-derived-backfill"
 })

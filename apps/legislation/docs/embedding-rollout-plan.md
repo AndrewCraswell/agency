@@ -510,7 +510,8 @@ single cheaper model for every product: the measured supporting-material gain
 from Voyage is large, while OpenAI Small is the cost-effective winner for
 document passages and structured amendments.
 
-Run four checkpointed shards initially and process product waves in this order:
+Run all four products concurrently with 16 checkpointed shards per product,
+filling the 64-worker derived queue. The model contract remains:
 
 1. bills with `voyageai/voyage-4` and query-time
    `cohere/rerank-v3.5`;
@@ -520,9 +521,10 @@ Run four checkpointed shards initially and process product waves in this order:
    reranker; and
 4. supporting-material sections with `voyageai/voyage-4` and no reranker.
 
-Pause after the first 100,000 generated or reconciled rows to compare observed
-spend, p95 task duration, database connections, index growth, retry rate, and
-deployed MCP quality against the projection. The current corpus estimate is
+Evaluate after the first 100,000 generated or reconciled rows and reduce the
+fan-out if provider throttling, retries, or database pressure appear. Compare
+observed spend, p95 task duration, database connections, index growth, retry
+rate, and deployed MCP quality against the projection. The current corpus estimate is
 approximately $444 for the mixed generation pass, compared with approximately
 $292 for all OpenAI Small and approximately $943 for all Voyage 4. Cohere
 Rerank 3.5 is query-time spend, approximately $0.001 per reranked request, and

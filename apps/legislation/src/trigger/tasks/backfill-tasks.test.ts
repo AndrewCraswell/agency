@@ -24,7 +24,7 @@ describe("derived backfill task payload", () => {
     expect(derivedBatchSizeFor("embeddings")).toBeUndefined()
   })
 
-  it("accepts the final 64-lane bill-document worker and keeps other drains bounded", () => {
+  it("accepts the final document and embedding lanes while keeping drains bounded", () => {
     expect(
       derivedPayloadSchema.parse({
         correlationId: "backfill:lane-64",
@@ -35,15 +35,25 @@ describe("derived backfill task payload", () => {
       })
     ).toMatchObject({ kind: "bill-documents", shardCount: 64, shardIndex: 63 })
 
+    expect(
+      derivedPayloadSchema.parse({
+        correlationId: "backfill:embedding-lane-16",
+        kind: "embeddings",
+        rebuildId: "embedding-lane-16",
+        shardCount: 16,
+        shardIndex: 15
+      })
+    ).toMatchObject({ kind: "embeddings", shardCount: 16, shardIndex: 15 })
+
     expect(() =>
       derivedPayloadSchema.parse({
-        correlationId: "backfill:embedding-lane-5",
+        correlationId: "backfill:embedding-lane-17",
         kind: "embeddings",
-        rebuildId: "embedding-lane-5",
-        shardCount: 5,
-        shardIndex: 4
+        rebuildId: "embedding-lane-17",
+        shardCount: 17,
+        shardIndex: 16
       })
-    ).toThrow("embeddings supports at most 4 backfill shards")
+    ).toThrow("embeddings supports at most 16 backfill shards")
 
     expect(
       derivedPayloadSchema.parse({

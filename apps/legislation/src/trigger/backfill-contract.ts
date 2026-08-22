@@ -17,11 +17,11 @@ export const defaultGovInfoBillTypes = ["hr", "s", "hjres", "sjres", "hconres", 
 /**
  * Document work is safely partitioned by canonical jurisdiction and uses a
  * bounded 64-lane drain with durable publisher slots. Supporting materials use
- * deterministic ID shards behind the same publisher limiter. Embeddings stay
- * at four shards: they fan out across three record kinds and are bounded by the
- * model provider rather than database selection throughput. The queue has
- * headroom for these bounded derived phases without changing the embedding
- * fan-out.
+ * deterministic ID shards behind the same publisher limiter. Each embedding
+ * product uses 16 deterministic shards. Running the four products together
+ * therefore fills the 64-worker derived queue while keeping every worker on a
+ * one-connection database pool. Provider and database telemetry determine
+ * whether operators retain that fan-out or cut it back.
  */
 export const backfillExecutionPolicy = {
   derivedQueueConcurrencyLimit: DOCUMENT_BACKFILL_SHARD_COUNT,
@@ -70,14 +70,14 @@ export type BackfillPhase = (typeof backfillPhases)[number]
  * Derived workers partition their candidate sets and hold a lease per shard.
  * Documents use 64 jurisdiction lanes, supporting materials use deterministic
  * ID shards sized to keep large-PDF extraction parallel without widening the
- * shared publisher cadence, and embeddings remain at four shards to bound
- * concurrent model-provider calls.
+ * shared publisher cadence, and each embedding product uses 16 deterministic
+ * shards so a complete four-product pass can occupy the 64-worker queue.
  */
 export function derivedBackfillShardCountFor(kind: "bill-documents" | "embeddings" | "supporting-materials"): number {
   if (kind === "bill-documents") {
     return backfillExecutionPolicy.documentBackfillShardCount
   }
-  return kind === "embeddings" ? 4 : backfillExecutionPolicy.supportingMaterialBackfillShardCount
+  return kind === "embeddings" ? 16 : backfillExecutionPolicy.supportingMaterialBackfillShardCount
 }
 
 export type BackfillUnit = Readonly<{

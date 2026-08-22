@@ -79,8 +79,10 @@ jurisdictions can replace one lane with two to eight disjoint document-ID
 partitions, but only after the original lane is terminal and its lease has been
 released. Publisher download leases remain global across lanes, partitions,
 and deployment versions, so more Trigger workers do not bypass a website's host
-limit. Embeddings intentionally remain at four shards to cap concurrent
-model-provider requests. Supporting-material history uses 24 deterministic ID
+limit. Each embedding product uses 16 deterministic shards; the approved
+four-product bulk pass can therefore fill all 64 derived-worker slots. Operators
+reduce that fan-out if provider throttling, retries, or database pressure appear.
+Supporting-material history uses 24 deterministic ID
 shards; each 25-row child has two database connections and a renewable
 60-minute lease, while publisher traffic remains globally limited. OCR uses a
 separate 12-worker queue. Its one-time historical controller has been removed;
