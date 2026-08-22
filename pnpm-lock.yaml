@@ -686,12 +686,18 @@ importers:
 
   packages/scoring-circuit:
     dependencies:
+      '@tscircuit/parts-engine':
+        specifier: 0.0.28
+        version: 0.0.28(typescript@7.0.1-rc)
       '@tscircuit/simple-3d-svg':
         specifier: 0.0.41
         version: 0.0.41
       '@tscircuit/soup-util':
         specifier: 0.0.41
         version: 0.0.41(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(transformation-matrix@3.1.0)(zod@3.25.76)
+      circuit-json:
+        specifier: 0.0.465
+        version: 0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc))
       circuit-json-to-simple-3d:
         specifier: 0.0.9
         version: 0.0.9(typescript@7.0.1-rc)
@@ -5818,6 +5824,11 @@ packages:
       '@tscircuit/props': '*'
       circuit-json: '*'
       spicets: '*'
+      typescript: ^5
+
+  '@tscircuit/parts-engine@0.0.28':
+    resolution: {integrity: sha1-HuAMOD8TSzy6THp6uIaYRxTvV0A=}
+    peerDependencies:
       typescript: ^5
 
   '@tscircuit/props@0.0.618':
@@ -16197,6 +16208,10 @@ snapshots:
       '@tscircuit/props': 0.0.618(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(react@19.2.7)(zod@3.25.76)
       circuit-json: 0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc))
       spicets: 0.0.4(typescript@7.0.1-rc)
+      typescript: 7.0.1-rc
+
+  '@tscircuit/parts-engine@0.0.28(typescript@7.0.1-rc)':
+    dependencies:
       typescript: 7.0.1-rc
 
   '@tscircuit/props@0.0.618(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(react@19.2.7)(zod@3.25.76)':

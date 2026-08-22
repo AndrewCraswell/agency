@@ -156,3 +156,8 @@ ownership, isolation, and connector topology. It is **not ready for PCB fabricat
 the analog and layout gates above are complete and signed off by an experienced mixed-signal hardware engineer.
 Unresolved analog blocks and the ESP32 module are intentionally marked do-not-place rather than being represented by
 invented production footprints.
+
+The preview enables tscircuit's JLC parts engine, part-orientation analysis, board identification, local autorouting,
+and fetched CAD geometry. Service results are candidate data only: a supplier match or rendered model does not place a
+part on the approved vendor list. The External I/O view shows the replaceable reel, communications, and power modules
+separately from the main PCB so chassis-supported connectors are not mistaken for solder-supported board connectors.

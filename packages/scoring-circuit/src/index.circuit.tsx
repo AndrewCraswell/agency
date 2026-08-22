@@ -2,14 +2,14 @@ const weaponConnectorPins = { pin1: "A", pin2: "B", pin3: "C" } as const
 
 function WeaponInput({ side, x }: { side: "L" | "R"; x: number }) {
   return (
-    <group>
+    <group name={`G_WEAPON_${side}`} pcbX={x} pcbY={35}>
       <pinheader
         name={`J_${side}`}
         pinCount={3}
         pinLabels={weaponConnectorPins}
         gender="female"
-        pcbX={x}
-        pcbY={35}
+        pcbX={0}
+        pcbY={0}
         pcbRotation={90}
         showSilkscreenPinLabels
       />
@@ -18,8 +18,8 @@ function WeaponInput({ side, x }: { side: "L" | "R"; x: number }) {
         manufacturerPartNumber="TPD4E05U06DQAR"
         doNotPlace
         pinLabels={{ pin1: "CH_A", pin2: "CH_B", pin3: "CH_C", pin4: "SPARE", pin5: "ESD_RETURN" }}
-        pcbX={x}
-        pcbY={29}
+        pcbX={0}
+        pcbY={-6}
       />
       <chip
         name={`U_FRONTEND_${side}`}
@@ -36,8 +36,8 @@ function WeaponInput({ side, x }: { side: "L" | "R"; x: number }) {
           pin7: "SENSE_B",
           pin8: "SENSE_C"
         }}
-        pcbX={x}
-        pcbY={22}
+        pcbX={0}
+        pcbY={-13}
       />
       <trace from={`J_${side}.A`} to={`U_ESD_${side}.CH_A`} />
       <trace from={`J_${side}.B`} to={`U_ESD_${side}.CH_B`} />
@@ -377,7 +377,7 @@ function ScoringCircuit() {
         pcbY={-29}
       />
 
-      <connector name="J_USB_C" standard="usb_c" pcbX={70} pcbY={-39} />
+      <connector name="J_USB_C" standard="usb_c" pcbX={52} pcbY={-46} pcbRotation={180} />
       <pinheader name="J_POWER_24V" pinCount={3} pinLabels={["V24_IN", "GND", "CHASSIS"]} pcbX={67} pcbY={-31} />
       <chip
         name="U_EFUSE"

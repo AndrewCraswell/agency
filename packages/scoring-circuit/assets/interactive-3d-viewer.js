@@ -5,16 +5,18 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js"
 async function initializeViewer() {
   const canvas = document.querySelector("#board-3d-canvas")
   const resetButton = document.querySelector("#reset-3d-view")
+  const sceneElement = document.querySelector("#board-3d-scene")
 
-  if (!(canvas instanceof HTMLCanvasElement) || !(resetButton instanceof HTMLButtonElement)) {
+  if (
+    !(canvas instanceof HTMLCanvasElement) ||
+    !(resetButton instanceof HTMLButtonElement) ||
+    !(sceneElement instanceof HTMLScriptElement)
+  ) {
     throw new Error("Interactive 3D viewer controls are missing")
   }
   canvas.dataset.viewerState = "loading"
 
-  const sceneData = await fetch("./board-3d-scene.json").then((response) => {
-    if (!response.ok) throw new Error(`Unable to load the 3D scene (${response.status})`)
-    return response.json()
-  })
+  const sceneData = JSON.parse(sceneElement.textContent ?? "")
 
   const scene = new THREE.Scene()
   scene.background = new THREE.Color("#101820")

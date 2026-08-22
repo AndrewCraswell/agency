@@ -20,8 +20,10 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@tscircuit/parts-engine": "0.0.28",
     "@tscircuit/simple-3d-svg": "0.0.41",
     "@tscircuit/soup-util": "0.0.41",
+    "circuit-json": "0.0.465",
     "circuit-json-to-simple-3d": "0.0.9",
     "circuit-to-svg": "0.0.400",
     "react": "^19.2.0",

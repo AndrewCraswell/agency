@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
+import { jlcPartsEngine } from "@tscircuit/parts-engine"
 import { renderScene } from "@tscircuit/simple-3d-svg"
+import { any_circuit_element } from "circuit-json"
 import { convertCircuitJsonToSimple3dScene } from "circuit-json-to-simple-3d"
 import { convertCircuitJsonToPcbSvg, convertCircuitJsonToSchematicSvg } from "circuit-to-svg"
 import { build as bundle } from "esbuild"
@@ -9,8 +11,24 @@ import { Circuit } from "tscircuit"
 import { componentDecisions } from "./component-decisions.js"
 import ScoringCircuit from "./index.circuit.js"
 
+type PlatformPartsEngine = NonNullable<Parameters<InstanceType<typeof Circuit>["setPlatform"]>[0]["partsEngine"]>
+
+const partsEngine = {
+  fetchPartCircuitJson: async (parameters) => {
+    const circuitJson = await jlcPartsEngine.fetchPartCircuitJson(parameters)
+    return circuitJson === undefined ? undefined : any_circuit_element.array().parse(circuitJson)
+  },
+  findPart: (parameters) => jlcPartsEngine.findPart(parameters)
+} satisfies PlatformPartsEngine
+
 const circuit = new Circuit()
-circuit.setPlatform({ partsEngineDisabled: true })
+circuit.setPlatform({
+  enablePartOrientationAnalysis: true,
+  partsEngine,
+  printBoardInformationToSilkscreen: true,
+  projectName: "Competition scoring apparatus",
+  unitPreference: "mm"
+})
 circuit.add(createElement(ScoringCircuit))
 await circuit.renderUntilSettled()
 
@@ -18,6 +36,20 @@ const circuitJson = circuit.getCircuitJson()
 const routeCount = circuitJson.filter((element) => element.type === "pcb_trace").length
 const connectionCount = circuitJson.filter((element) => element.type === "source_trace").length
 const unresolvedConnectionCount = circuitJson.filter((element) => element.type === "pcb_trace_missing_error").length
+const resolvedSupplierPartCount = circuitJson.filter(
+  (element) =>
+    element.type === "source_component" &&
+    "supplier_part_numbers" in element &&
+    Object.values(element.supplier_part_numbers ?? {}).some((partNumbers) => partNumbers.length > 0)
+).length
+const cadModelCount = circuitJson.filter(
+  (element) =>
+    element.type === "cad_component" &&
+    (element.model_obj_url !== undefined ||
+      element.model_stl_url !== undefined ||
+      element.model_gltf_url !== undefined ||
+      element.model_glb_url !== undefined)
+).length
 const pcbSvg = convertCircuitJsonToPcbSvg(circuitJson, {
   backgroundColor: "#101820",
   includeVersion: true,
@@ -29,23 +61,13 @@ const threeDimensionalScene = await convertCircuitJsonToSimple3dScene(circuitJso
   anglePreset: "right-raised",
   defaultZoomMultiplier: 1.6
 })
-const threeDimensionalSvg = await renderScene(
-  {
-    ...threeDimensionalScene,
-    boxes: threeDimensionalScene.boxes.map((box) => ({
-      ...box,
-      objUrl: undefined,
-      stlUrl: undefined,
-      threeMfUrl: undefined,
-      topLabel: undefined
-    }))
-  },
-  { backgroundColor: "#101820", height: 900, width: 1440 }
-)
-const interactiveThreeDimensionalScene = {
-  boxes: threeDimensionalScene.boxes.map(({ center, color, rotation, size }) => ({ center, color, rotation, size })),
-  camera: threeDimensionalScene.camera
-}
+const threeDimensionalSvg = await renderScene(threeDimensionalScene, {
+  backgroundColor: "#101820",
+  height: 900,
+  width: 1440
+})
+const interactiveThreeDimensionalScene = threeDimensionalScene
+const embeddedThreeDimensionalScene = JSON.stringify(interactiveThreeDimensionalScene).replaceAll("<", "\\u003c")
 const interactiveViewerBuild = await bundle({
   bundle: true,
   entryPoints: [fileURLToPath(new URL("../assets/interactive-3d-viewer.js", import.meta.url))],
@@ -84,6 +106,12 @@ const readiness = {
     connectionCount,
     routeCount,
     unresolvedConnectionCount
+  },
+  partsResolution: {
+    cadModelCount,
+    engine: "JLC parts engine with EasyEDA footprint and CAD import",
+    resolvedSupplierPartCount,
+    status: "Candidate lookup only; production parts still require qualification and pinning"
   },
   openGates: [
     "Complete and characterize the three-weapon analog front end",
@@ -126,6 +154,18 @@ const previewHtml = `<!doctype html>
     .viewer-controls { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; }
     .viewer-controls button { border: 1px solid #60788a; border-radius: 6px; padding: 8px 12px; background: #172630; color: #eef4f8; font: inherit; font-weight: 700; cursor: pointer; }
     .viewer-help { margin: 10px 0 0; color: #b7c7d3; }
+    .io-assembly { display: grid; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: 16px; }
+    .io-module { border: 1px solid #60788a; border-radius: 10px; padding: 18px; background: #172630; }
+    .io-module h2 { margin: 0 0 6px; font-size: 1.05rem; }
+    .io-module p { margin: 0 0 16px; color: #b7c7d3; }
+    .socket-row { display: flex; gap: 18px; align-items: end; }
+    .banana-socket { display: grid; gap: 6px; justify-items: center; font-weight: 700; }
+    .banana-socket span:first-child { width: 34px; height: 34px; border: 7px solid #c6ccd1; border-radius: 50%; background: #111820; box-shadow: inset 0 0 0 3px #677581; }
+    .port-row { display: flex; flex-wrap: wrap; gap: 22px; align-items: end; }
+    .port-model { display: grid; gap: 8px; justify-items: center; font-weight: 700; text-align: center; }
+    .rj45-model { width: 70px; height: 56px; border: 6px solid #aeb7bd; border-radius: 5px; background: linear-gradient(#243a47 65%, #c8a95b 65%); }
+    .usb-c-model { width: 70px; height: 28px; border: 6px solid #aeb7bd; border-radius: 18px; background: #111820; }
+    .power-model { width: 54px; height: 54px; border: 7px solid #c6ccd1; border-radius: 50%; background: radial-gradient(circle, #111820 0 34%, #83919a 36% 45%, #111820 47%); }
     a { color: #7cc4ff; margin-right: 16px; }
     @media (max-width: 640px) {
       body { padding: 16px; }
@@ -134,6 +174,7 @@ const previewHtml = `<!doctype html>
       figure { padding: 10px; }
       img { min-height: 220px; max-height: none; }
       .viewer-shell { min-height: 300px; height: 52vh; }
+      .io-assembly { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -144,12 +185,15 @@ const previewHtml = `<!doctype html>
     <li><strong>${routeCount}</strong> prototype routes</li>
     <li><strong>${unresolvedConnectionCount}</strong> unresolved connections</li>
     <li><strong>4</strong> functional placement zones</li>
+    <li><strong>${resolvedSupplierPartCount}</strong> candidate supplier matches</li>
+    <li><strong>${cadModelCount}</strong> candidate CAD model</li>
   </ul>
   <p class="resources"><a href="../docs/production-board-plan.md">Production plan</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="bom.csv">Component decisions</a></p>
   <div class="tabs" role="tablist" aria-label="Circuit views">
     <button id="tab-pcb" role="tab" aria-selected="true" aria-controls="view-pcb" tabindex="0">PCB</button>
     <button id="tab-schematic" role="tab" aria-selected="false" aria-controls="view-schematic" tabindex="-1">Schematic</button>
     <button id="tab-3d" role="tab" aria-selected="false" aria-controls="view-3d" tabindex="-1">3D</button>
+    <button id="tab-io" role="tab" aria-selected="false" aria-controls="view-io" tabindex="-1">External I/O</button>
   </div>
   <main>
     <section id="view-pcb" role="tabpanel" aria-labelledby="tab-pcb">
@@ -168,7 +212,48 @@ const previewHtml = `<!doctype html>
         <p class="viewer-help">Drag to rotate. Scroll to zoom. Use the arrow keys when the model is focused. <a href="board-3d.svg">Open the static 3D export</a>.</p>
       </figure>
     </section>
+    <section id="view-io" role="tabpanel" aria-labelledby="tab-io" hidden>
+      <figure>
+        <figcaption>Replaceable, chassis-supported connector modules. Cable insertion loads are carried by the enclosure, not PCB solder joints.</figcaption>
+        <div class="io-assembly">
+          <article class="io-module">
+            <h2>Left reel</h2>
+            <p>Three panel-mounted 4 mm banana sockets</p>
+            <div class="socket-row" aria-label="Left reel banana sockets A, B, and C">
+              <span class="banana-socket"><span aria-hidden="true"></span><span>A</span></span>
+              <span class="banana-socket"><span aria-hidden="true"></span><span>B</span></span>
+              <span class="banana-socket"><span aria-hidden="true"></span><span>C</span></span>
+            </div>
+          </article>
+          <article class="io-module">
+            <h2>Right reel</h2>
+            <p>Three panel-mounted 4 mm banana sockets</p>
+            <div class="socket-row" aria-label="Right reel banana sockets A, B, and C">
+              <span class="banana-socket"><span aria-hidden="true"></span><span>A</span></span>
+              <span class="banana-socket"><span aria-hidden="true"></span><span>B</span></span>
+              <span class="banana-socket"><span aria-hidden="true"></span><span>C</span></span>
+            </div>
+          </article>
+          <article class="io-module">
+            <h2>Communications</h2>
+            <p>Replaceable high-cycle connector module</p>
+            <div class="port-row">
+              <span class="port-model"><span class="rj45-model" aria-hidden="true"></span><span>Ethernet RJ45</span></span>
+              <span class="port-model"><span class="usb-c-model" aria-hidden="true"></span><span>USB-C service and limited service power</span></span>
+            </div>
+          </article>
+          <article class="io-module">
+            <h2>Primary power</h2>
+            <p>Scoring power does not depend on USB negotiation</p>
+            <div class="port-row">
+              <span class="port-model"><span class="power-model" aria-hidden="true"></span><span>Locking 24 V DC input</span></span>
+            </div>
+          </article>
+        </div>
+      </figure>
+    </section>
   </main>
+  <script id="board-3d-scene" type="application/json">${embeddedThreeDimensionalScene}</script>
   <script>
     const tabs = Array.from(document.querySelectorAll('[role="tab"]'))
     const panels = Array.from(document.querySelectorAll('[role="tabpanel"]'))
