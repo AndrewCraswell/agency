@@ -1,0 +1,14 @@
+{
+  "armGnuToolchain": {
+    "version": "14.2.Rel1",
+    "archive": "arm-gnu-toolchain-14.2.rel1-mingw-w64-x86_64-arm-none-eabi.zip",
+    "sha256": "F074615953F76036E9A51B87F6577FDB4ED8E77D3322A6F68214E92E7859888F",
+    "url": "https://developer.arm.com/-/media/Files/downloads/gnu/14.2.rel1/binrel/arm-gnu-toolchain-14.2.rel1-mingw-w64-x86_64-arm-none-eabi.zip"
+  },
+  "stm32CubeG4": {
+    "tag": "v1.6.3",
+    "commit": "d11b194a9f05d1b143d154771f3dbc282c8052a5",
+    "cmsisDeviceCommit": "25664ddc3a7624ae9627ae8c4c672073dc5b2539",
+    "url": "https://github.com/STMicroelectronics/STM32CubeG4.git"
+  }
+}

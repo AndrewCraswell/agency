@@ -8,6 +8,7 @@ const buildRoot = new URL("../out/host-native/", import.meta.url)
 const scoringAppRoot = new URL("../../../", import.meta.url)
 const fixtureCheck = new URL("generate-golden-fixture.mjs", import.meta.url)
 const transportFixtureCheck = new URL("generate-transport-fixture.mjs", import.meta.url)
+const targetCheck = new URL("test-target.mjs", import.meta.url)
 const isWindows = process.platform === "win32"
 
 function run(command, args, environment = process.env) {
@@ -95,3 +96,4 @@ run("node", [fileURLToPath(transportFixtureCheck), "--check"])
 run("cmake", configureArgs, toolchainEnvironment)
 run("cmake", ["--build", buildRootPath, "--config", "Release"], toolchainEnvironment)
 run("ctest", ["--test-dir", buildRootPath, "--build-config", "Release", "--output-on-failure"], toolchainEnvironment)
+run("node", [fileURLToPath(targetCheck)])
