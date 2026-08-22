@@ -18,11 +18,16 @@ accidental deletion. Composite constraints prevent a bill from referencing a ses
 
 ## Search storage
 
-Bill and document-section records include PostgreSQL `tsvector` columns for lexical search and 1,536-dimensional
-pgvector columns for semantic search. Those inline vector columns describe the current migrated schema, but
-[ADR-012](architecture-decisions.md) requires the paid broad rollout to use dedicated, foreign-keyed embedding tables
-after the [retrieval-quality canary](embedding-rollout-plan.md). This avoids treating the current storage shape as
-approval to populate every vector. Index selection and any later physical isolation remain evidence-based decisions.
+Bill and document-section records retain PostgreSQL `tsvector` columns for lexical search. Semantic search reads four
+dedicated, foreign-keyed embedding tables in the same `legislation` schema: `bill_embeddings` uses
+`voyageai/voyage-4` at 1,024 dimensions; `document_section_embeddings` and `amendment_embeddings` use
+`openai/text-embedding-3-small` at 1,536 dimensions; and `supporting_material_section_embeddings` uses
+`voyageai/voyage-4` at 1,024 dimensions. Every row pins its model, dimensions, input-contract ID, canonical input hash,
+rollout ID, and timestamps. HNSW indexes are dimension-specific.
+
+Older inline vector columns are migration residue and are not query-authoritative. A bounded reconciliation may reuse a
+document-section vector only when its exact model, input, dimensions, and legacy hash match the selected route. See
+[ADR-012](architecture-decisions.md) and the [embedding rollout plan](embedding-rollout-plan.md).
 
 ## Migrations
 

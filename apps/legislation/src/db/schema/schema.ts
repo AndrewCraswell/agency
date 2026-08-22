@@ -951,6 +951,114 @@ export const documentSections = legislationSchema.table(
   ]
 )
 
+export const billEmbeddings = legislationSchema.table(
+  "bill_embeddings",
+  {
+    billId: text("bill_id")
+      .notNull()
+      .references(() => bills.id, { onDelete: "cascade" }),
+    model: text("model").notNull(),
+    dimensions: integer("dimensions").notNull(),
+    inputContract: text("input_contract").notNull(),
+    inputHash: char("input_hash", { length: 64 }).notNull(),
+    embedding: vector("embedding", { dimensions: 1024 }).notNull(),
+    rolloutId: text("rollout_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.billId, table.model, table.inputContract] }),
+    check("bill_embeddings_dimensions_check", sql`${table.dimensions} = 1024`),
+    check("bill_embeddings_hash_check", sql`${table.inputHash} ~ '^[0-9a-f]{64}$'`),
+    check("bill_embeddings_model_check", sql`length(${table.model}) > 0`),
+    check("bill_embeddings_contract_check", sql`length(${table.inputContract}) > 0`),
+    check("bill_embeddings_rollout_check", sql`length(${table.rolloutId}) > 0`),
+    index("bill_embeddings_lookup_idx").on(table.model, table.inputContract, table.billId),
+    index("bill_embeddings_hnsw_idx").using("hnsw", table.embedding.op("vector_cosine_ops"))
+  ]
+)
+
+export const documentSectionEmbeddings = legislationSchema.table(
+  "document_section_embeddings",
+  {
+    sectionId: text("section_id")
+      .notNull()
+      .references(() => documentSections.id, { onDelete: "cascade" }),
+    model: text("model").notNull(),
+    dimensions: integer("dimensions").notNull(),
+    inputContract: text("input_contract").notNull(),
+    inputHash: char("input_hash", { length: 64 }).notNull(),
+    embedding: vector("embedding", { dimensions: 1536 }).notNull(),
+    rolloutId: text("rollout_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.sectionId, table.model, table.inputContract] }),
+    check("document_section_embeddings_dimensions_check", sql`${table.dimensions} = 1536`),
+    check("document_section_embeddings_hash_check", sql`${table.inputHash} ~ '^[0-9a-f]{64}$'`),
+    check("document_section_embeddings_model_check", sql`length(${table.model}) > 0`),
+    check("document_section_embeddings_contract_check", sql`length(${table.inputContract}) > 0`),
+    check("document_section_embeddings_rollout_check", sql`length(${table.rolloutId}) > 0`),
+    index("document_section_embeddings_lookup_idx").on(table.model, table.inputContract, table.sectionId),
+    index("document_section_embeddings_hnsw_idx").using("hnsw", table.embedding.op("vector_cosine_ops"))
+  ]
+)
+
+export const amendmentEmbeddings = legislationSchema.table(
+  "amendment_embeddings",
+  {
+    amendmentId: text("amendment_id")
+      .notNull()
+      .references(() => amendments.id, { onDelete: "cascade" }),
+    model: text("model").notNull(),
+    dimensions: integer("dimensions").notNull(),
+    inputContract: text("input_contract").notNull(),
+    inputHash: char("input_hash", { length: 64 }).notNull(),
+    embedding: vector("embedding", { dimensions: 1536 }).notNull(),
+    rolloutId: text("rollout_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.amendmentId, table.model, table.inputContract] }),
+    check("amendment_embeddings_dimensions_check", sql`${table.dimensions} = 1536`),
+    check("amendment_embeddings_hash_check", sql`${table.inputHash} ~ '^[0-9a-f]{64}$'`),
+    check("amendment_embeddings_model_check", sql`length(${table.model}) > 0`),
+    check("amendment_embeddings_contract_check", sql`length(${table.inputContract}) > 0`),
+    check("amendment_embeddings_rollout_check", sql`length(${table.rolloutId}) > 0`),
+    index("amendment_embeddings_lookup_idx").on(table.model, table.inputContract, table.amendmentId),
+    index("amendment_embeddings_hnsw_idx").using("hnsw", table.embedding.op("vector_cosine_ops"))
+  ]
+)
+
+export const supportingMaterialSectionEmbeddings = legislationSchema.table(
+  "supporting_material_section_embeddings",
+  {
+    sectionId: text("section_id")
+      .notNull()
+      .references(() => supportingMaterialSections.id, { onDelete: "cascade" }),
+    model: text("model").notNull(),
+    dimensions: integer("dimensions").notNull(),
+    inputContract: text("input_contract").notNull(),
+    inputHash: char("input_hash", { length: 64 }).notNull(),
+    embedding: vector("embedding", { dimensions: 1024 }).notNull(),
+    rolloutId: text("rollout_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.sectionId, table.model, table.inputContract] }),
+    check("supporting_material_section_embeddings_dimensions_check", sql`${table.dimensions} = 1024`),
+    check("supporting_material_section_embeddings_hash_check", sql`${table.inputHash} ~ '^[0-9a-f]{64}$'`),
+    check("supporting_material_section_embeddings_model_check", sql`length(${table.model}) > 0`),
+    check("supporting_material_section_embeddings_contract_check", sql`length(${table.inputContract}) > 0`),
+    check("supporting_material_section_embeddings_rollout_check", sql`length(${table.rolloutId}) > 0`),
+    index("supporting_material_section_embeddings_lookup_idx").on(table.model, table.inputContract, table.sectionId),
+    index("supporting_material_section_embeddings_hnsw_idx").using("hnsw", table.embedding.op("vector_cosine_ops"))
+  ]
+)
+
 export const ingestionRuns = legislationSchema.table(
   "ingestion_runs",
   {

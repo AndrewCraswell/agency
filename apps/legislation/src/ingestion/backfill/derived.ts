@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm"
 import type { LegislationConfig } from "../../config/config.js"
 import type { LegislationDatabase } from "../../db/database.js"
 import { syncCheckpoints } from "../../db/schema/schema.js"
+import { embeddingRouteFor, type EmbeddingRouteProduct } from "../../models/embedding-routing.js"
 import { OpenRouterEmbeddingClient } from "../../models/openrouter-embeddings.js"
 import { AzureBlobArtifactStore, LocalArtifactStore, type ArtifactStore } from "../documents/artifact-store.js"
 import {
@@ -25,9 +26,11 @@ import {
   type SupportingMaterialJobResult
 } from "../documents/supporting-material-jobs.js"
 import {
+  embedAmendments,
   embedBills,
   embedDocumentSections,
   embedSupportingMaterialSections,
+  type EmbeddingClient,
   type EmbeddingJobResult
 } from "../embeddings/jobs.js"
 import { createJobCounts, runIngestionJob, type JobCounts, type JobResult } from "../job.js"
@@ -95,11 +98,13 @@ export interface SupportingMaterialDrainOptions {
 }
 
 export interface EmbeddingDrainOptions {
+  amendmentId?: string
   batchSize?: number
   billId?: string
   documentId?: string
   materialId?: string
   maxBatches?: number
+  products?: EmbeddingJobKind[]
   shardCount?: number
   shardIndex?: number
 }
@@ -109,16 +114,16 @@ export type DerivedBackfillRequest =
   | Readonly<{ kind: "supporting-materials"; options?: SupportingMaterialDrainOptions }>
   | Readonly<{ kind: "embeddings"; options?: EmbeddingDrainOptions }>
 
-export interface EmbeddingClient {
-  embed(input: string[]): Promise<{ embeddings: number[][]; model: string }>
-}
+export const EMBEDDING_JOB_KINDS = ["amendments", "bills", "materials", "sections"] as const
+export type EmbeddingJobKind = (typeof EMBEDDING_JOB_KINDS)[number]
 
 export interface DerivedBackfillDependencies {
   artifactStore?: ArtifactStore
+  embedAmendments?: typeof embedAmendments
   embedBills?: typeof embedBills
   embedDocumentSections?: typeof embedDocumentSections
   embedSupportingMaterialSections?: typeof embedSupportingMaterialSections
-  embeddingClient?: EmbeddingClient
+  embeddingClients?: Partial<Record<EmbeddingJobKind, EmbeddingClient>>
   loadEmbeddingCheckpoint?: (database: LegislationDatabase, stream: string) => Promise<EmbeddingDrainCheckpoint>
   documentHostLimiter?: DocumentHostLimiter
   classifyKnownUnavailableCaliforniaBillPdfs?: typeof classifyKnownUnavailableCaliforniaBillPdfs
@@ -140,12 +145,14 @@ export function createDerivedDocumentHostLimiter(
 }
 
 export interface EmbeddingDrainCheckpoint {
+  amendments: Readonly<{ complete: boolean; cursor: string }>
   bills: Readonly<{ complete: boolean; cursor: string }>
   materials: Readonly<{ complete: boolean; cursor: string }>
   sections: Readonly<{ complete: boolean; cursor: string }>
 }
 
 const initialEmbeddingCheckpoint: EmbeddingDrainCheckpoint = {
+  amendments: { complete: false, cursor: "" },
   bills: { complete: false, cursor: "" },
   materials: { complete: false, cursor: "" },
   sections: { complete: false, cursor: "" }
@@ -399,25 +406,35 @@ export async function drainEmbeddings(
   options: EmbeddingDrainOptions = {},
   dependencies: DerivedBackfillDependencies = {}
 ): Promise<JobResult> {
-  if (input.config.model.apiKey === undefined && dependencies.embeddingClient === undefined) {
+  if (input.config.model.apiKey === undefined && dependencies.embeddingClients === undefined) {
     throw new Error("OPENROUTER_API_KEY is required for embedding backfill")
   }
   const batchSize = boundedPositiveInteger(options.batchSize ?? 64, "batch size")
   const maxBatches = boundedPositiveInteger(options.maxBatches ?? 1, "max batches")
   const shard = normalizeShard(options)
+  const products = [...new Set(options.products ?? EMBEDDING_JOB_KINDS)].sort()
+  if (products.length === 0) {
+    throw new Error("Embedding backfill requires at least one product")
+  }
   if (
     shard.count > 1 &&
-    (options.billId !== undefined || options.documentId !== undefined || options.materialId !== undefined)
+    (options.amendmentId !== undefined ||
+      options.billId !== undefined ||
+      options.documentId !== undefined ||
+      options.materialId !== undefined)
   ) {
     throw new Error("Embedding sharding cannot be combined with targeted IDs")
   }
-  const client = dependencies.embeddingClient ?? createEmbeddingClient(input.config)
+  const clients = dependencies.embeddingClients ?? createEmbeddingClients(input.config)
+  const embedAmendmentRecords = dependencies.embedAmendments ?? embedAmendments
   const embedBillRecords = dependencies.embedBills ?? embedBills
   const embedDocumentSectionRecords = dependencies.embedDocumentSections ?? embedDocumentSections
   const embedSupportingMaterialSectionRecords =
     dependencies.embedSupportingMaterialSections ?? embedSupportingMaterialSections
-  const operation = shard.count === 1 ? "refresh-embeddings" : `refresh-embeddings-shard-${shard.index}`
-  const scopeKey = shard.count === 1 ? "all" : `shard:${shard.index}-of-${shard.count}`
+  const productScope = products.join("+")
+  const operation =
+    shard.count === 1 ? `refresh-embeddings-${productScope}` : `refresh-embeddings-${productScope}-shard-${shard.index}`
+  const scopeKey = shard.count === 1 ? productScope : `${productScope}:shard:${shard.index}-of-${shard.count}`
   const checkpointStream = `embeddings:${scopeKey}`
 
   return runBackfillJob(
@@ -439,37 +456,55 @@ export async function drainEmbeddings(
     },
     dependencies.runIngestionJob,
     async () => {
-      const checkpoint = await (dependencies.loadEmbeddingCheckpoint ?? loadEmbeddingCheckpoint)(
+      const loadedCheckpoint = await (dependencies.loadEmbeddingCheckpoint ?? loadEmbeddingCheckpoint)(
         input.database,
         checkpointStream
       )
+      const enabled = new Set<EmbeddingJobKind>(products)
+      const checkpoint: EmbeddingDrainCheckpoint = {
+        amendments: enabled.has("amendments") ? loadedCheckpoint.amendments : { complete: true, cursor: "" },
+        bills: enabled.has("bills") ? loadedCheckpoint.bills : { complete: true, cursor: "" },
+        materials: enabled.has("materials") ? loadedCheckpoint.materials : { complete: true, cursor: "" },
+        sections: enabled.has("sections") ? loadedCheckpoint.sections : { complete: true, cursor: "" }
+      }
       const drained = await drainEmbeddingBatches(maxBatches, checkpoint, async (progress) => {
         const selection = { limit: batchSize, shardCount: shard.count, shardIndex: shard.index }
-        const [bills, sections, materials] = await Promise.all([
+        const [amendments, bills, sections, materials] = await Promise.all([
+          progress.amendments.complete
+            ? completedEmbeddingJobResult()
+            : embedAmendmentRecords(input.database, requireEmbeddingClient(clients, "amendments"), {
+                ...selection,
+                afterId: progress.amendments.cursor,
+                amendmentId: options.amendmentId,
+                rolloutId: input.correlationId
+              }),
           progress.bills.complete
             ? completedEmbeddingJobResult()
-            : embedBillRecords(input.database, client, {
+            : embedBillRecords(input.database, requireEmbeddingClient(clients, "bills"), {
                 ...selection,
                 afterId: progress.bills.cursor,
-                billId: options.billId
+                billId: options.billId,
+                rolloutId: input.correlationId
               }),
           progress.sections.complete
             ? completedEmbeddingJobResult()
-            : embedDocumentSectionRecords(input.database, client, {
+            : embedDocumentSectionRecords(input.database, requireEmbeddingClient(clients, "sections"), {
                 ...selection,
                 afterId: progress.sections.cursor,
                 billId: options.billId,
-                documentId: options.documentId
+                documentId: options.documentId,
+                rolloutId: input.correlationId
               }),
           progress.materials.complete
             ? completedEmbeddingJobResult()
-            : embedSupportingMaterialSectionRecords(input.database, client, {
+            : embedSupportingMaterialSectionRecords(input.database, requireEmbeddingClient(clients, "materials"), {
                 ...selection,
                 afterId: progress.materials.cursor,
-                materialId: options.materialId
+                materialId: options.materialId,
+                rolloutId: input.correlationId
               })
         ])
-        return { bills, materials, sections }
+        return { amendments, bills, materials, sections }
       })
       return {
         checkpoint: { ...drainCheckpoint("embeddings", drained), embedding: drained.checkpoint },
@@ -582,9 +617,14 @@ function productiveBatchCount(result: DrainResult): number {
 async function drainEmbeddingBatches(
   maxBatches: number,
   initialCheckpoint: EmbeddingDrainCheckpoint,
-  embed: (
-    checkpoint: EmbeddingDrainCheckpoint
-  ) => Promise<Readonly<{ bills: EmbeddingJobResult; materials: EmbeddingJobResult; sections: EmbeddingJobResult }>>
+  embed: (checkpoint: EmbeddingDrainCheckpoint) => Promise<
+    Readonly<{
+      amendments: EmbeddingJobResult
+      bills: EmbeddingJobResult
+      materials: EmbeddingJobResult
+      sections: EmbeddingJobResult
+    }>
+  >
 ): Promise<DrainResult & { checkpoint: EmbeddingDrainCheckpoint }> {
   const counts = createJobCounts()
   let batches = 0
@@ -592,12 +632,15 @@ async function drainEmbeddingBatches(
   let hasMore = !embeddingCheckpointComplete(checkpoint)
   while (batches < maxBatches && hasMore) {
     const result = await embed(checkpoint)
-    const embedded = result.bills.embedded + result.sections.embedded + result.materials.embedded
-    const skipped = result.bills.skipped + result.sections.skipped + result.materials.skipped
+    const embedded =
+      result.amendments.embedded + result.bills.embedded + result.sections.embedded + result.materials.embedded
+    const skipped =
+      result.amendments.skipped + result.bills.skipped + result.sections.skipped + result.materials.skipped
     counts.inserted += embedded
     counts.skipped += skipped
     batches += 1
     checkpoint = {
+      amendments: nextEmbeddingProgress(checkpoint.amendments, result.amendments),
       bills: nextEmbeddingProgress(checkpoint.bills, result.bills),
       materials: nextEmbeddingProgress(checkpoint.materials, result.materials),
       sections: nextEmbeddingProgress(checkpoint.sections, result.sections)
@@ -619,7 +662,12 @@ function nextEmbeddingProgress(
 }
 
 function embeddingCheckpointComplete(checkpoint: EmbeddingDrainCheckpoint): boolean {
-  return checkpoint.bills.complete && checkpoint.sections.complete && checkpoint.materials.complete
+  return (
+    checkpoint.amendments.complete &&
+    checkpoint.bills.complete &&
+    checkpoint.sections.complete &&
+    checkpoint.materials.complete
+  )
 }
 
 async function loadEmbeddingCheckpoint(
@@ -641,6 +689,7 @@ function parseEmbeddingCheckpoint(value: unknown): EmbeddingDrainCheckpoint {
     return initialEmbeddingCheckpoint
   }
   return {
+    amendments: parseEmbeddingProgress(embedding, "amendments"),
     bills: parseEmbeddingProgress(embedding, "bills"),
     materials: parseEmbeddingProgress(embedding, "materials"),
     sections: parseEmbeddingProgress(embedding, "sections")
@@ -653,7 +702,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function parseEmbeddingProgress(
   value: Record<string, unknown>,
-  key: "bills" | "materials" | "sections"
+  key: "amendments" | "bills" | "materials" | "sections"
 ): Readonly<{ complete: boolean; cursor: string }> {
   const progress = value[key]
   if (typeof progress !== "object" || progress === null) {
@@ -714,16 +763,36 @@ function documentExecutionSettings(
   }
 }
 
-function createEmbeddingClient(config: LegislationConfig): EmbeddingClient {
-  if (config.model.apiKey === undefined) {
+function createEmbeddingClients(config: LegislationConfig): Record<EmbeddingJobKind, EmbeddingClient> {
+  const apiKey = config.model.apiKey
+  if (apiKey === undefined) {
     throw new Error("OPENROUTER_API_KEY is required for embedding backfill")
   }
-  return new OpenRouterEmbeddingClient({
-    apiKey: config.model.apiKey,
-    baseUrl: new URL(config.model.baseUrl),
-    maximumAttempts: config.ingestion.maxAttempts,
-    timeoutMs: config.ingestion.requestTimeoutMs
-  })
+  const create = (product: EmbeddingRouteProduct) =>
+    new OpenRouterEmbeddingClient({
+      apiKey,
+      baseUrl: new URL(config.model.baseUrl),
+      maximumAttempts: config.ingestion.maxAttempts,
+      route: embeddingRouteFor(product),
+      timeoutMs: config.ingestion.requestTimeoutMs
+    })
+  return {
+    amendments: create("structured-amendment"),
+    bills: create("bill"),
+    materials: create("supporting-material-section"),
+    sections: create("document-section")
+  }
+}
+
+function requireEmbeddingClient(
+  clients: Partial<Record<EmbeddingJobKind, EmbeddingClient>>,
+  kind: EmbeddingJobKind
+): EmbeddingClient {
+  const client = clients[kind]
+  if (client === undefined) {
+    throw new Error(`Embedding client for ${kind} is not configured`)
+  }
+  return client
 }
 
 function normalizeShard(input: Readonly<{ shardCount?: number; shardIndex?: number }>): {

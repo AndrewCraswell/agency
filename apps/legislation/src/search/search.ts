@@ -1,12 +1,25 @@
-import { and, arrayOverlaps, asc, desc, eq, gte, inArray, isNotNull, lte, sql } from "drizzle-orm"
+import { and, arrayOverlaps, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm"
 import type { SQL } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
-import { billDocuments, billSponsors, bills, documentSections } from "../db/schema/schema.js"
+import {
+  amendmentEmbeddings,
+  amendments,
+  billDocuments,
+  billEmbeddings,
+  billSponsors,
+  bills,
+  documentSectionEmbeddings,
+  documentSections,
+  supportingMaterialLinks,
+  supportingMaterialSectionEmbeddings,
+  supportingMaterialSections,
+  supportingMaterials
+} from "../db/schema/schema.js"
+import { embeddingRouteFor } from "../models/embedding-routing.js"
 
 const DEFAULT_LIMIT = 20
 const MAXIMUM_LIMIT = 100
 const MAXIMUM_QUERY_LENGTH = 500
-const SEMANTIC_DIMENSIONS = 1_536
 
 export interface SearchFilters {
   classifications?: string[]
@@ -135,6 +148,7 @@ export async function lexicalPassageSearch(database: LegislationDatabase, input:
       documentId: billDocuments.id,
       heading: documentSections.heading,
       rank,
+      rerankText: sql<string>`left(concat_ws(E'\n', ${documentSections.heading}, ${documentSections.text}), 4000)`,
       sectionId: documentSections.id,
       snippet: sql<string>`ts_headline('english', ${documentSections.text}, ${searchQuery}, 'MaxFragments=3, MaxWords=45, MinWords=12')`,
       sourceUrl: billDocuments.sourceUrl,
@@ -157,9 +171,9 @@ export async function lexicalPassageSearch(database: LegislationDatabase, input:
   return paginateSearchRows(rows, limit, 0)
 }
 
-function embeddingLiteral(embedding: number[]): SQL {
-  if (embedding.length !== SEMANTIC_DIMENSIONS || embedding.some((value) => !Number.isFinite(value))) {
-    throw new Error(`Embedding must contain ${SEMANTIC_DIMENSIONS} finite numbers`)
+function embeddingLiteral(embedding: number[], dimensions: number): SQL {
+  if (embedding.length !== dimensions || embedding.some((value) => !Number.isFinite(value))) {
+    throw new Error(`Embedding must contain ${dimensions} finite numbers`)
   }
   return sql`${JSON.stringify(embedding)}::vector`
 }
@@ -168,12 +182,13 @@ export async function semanticBillSearch(
   database: LegislationDatabase,
   input: Omit<SearchInput, "query"> & { embedding: number[] }
 ) {
+  const route = embeddingRouteFor("bill")
   const limit = input.limit ?? DEFAULT_LIMIT
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAXIMUM_LIMIT) {
     throw new Error(`Search limit must be between 1 and ${MAXIMUM_LIMIT}`)
   }
   const offset = decodeSearchCursor(input.cursor)
-  const distance = sql<number>`${bills.embedding} <=> ${embeddingLiteral(input.embedding)}`
+  const distance = sql<number>`${billEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
   const rows = await database
     .select({
       distance,
@@ -188,7 +203,14 @@ export async function semanticBillSearch(
       title: bills.title
     })
     .from(bills)
-    .where(and(isNotNull(bills.embedding), ...billFilters(input)))
+    .innerJoin(billEmbeddings, eq(billEmbeddings.billId, bills.id))
+    .where(
+      and(
+        eq(billEmbeddings.model, route.model),
+        eq(billEmbeddings.inputContract, route.embeddingInputContract),
+        ...billFilters(input)
+      )
+    )
     .orderBy(asc(distance), asc(bills.id))
     .limit(limit + 1)
     .offset(offset)
@@ -199,29 +221,33 @@ export async function semanticPassageSearch(
   database: LegislationDatabase,
   input: Omit<PassageSearchInput, "query"> & { embedding: number[] }
 ) {
+  const route = embeddingRouteFor("document-section")
   const limit = input.limit ?? DEFAULT_LIMIT
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAXIMUM_LIMIT) {
     throw new Error(`Search limit must be between 1 and ${MAXIMUM_LIMIT}`)
   }
   const offset = decodeSearchCursor(input.cursor)
-  const distance = sql<number>`${documentSections.embedding} <=> ${embeddingLiteral(input.embedding)}`
+  const distance = sql<number>`${documentSectionEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
   const rows = await database
     .select({
       billId: bills.id,
       distance,
       documentId: billDocuments.id,
       heading: documentSections.heading,
+      rerankText: sql<string>`left(concat_ws(E'\n', ${documentSections.heading}, ${documentSections.text}), 4000)`,
       sectionId: documentSections.id,
       snippet: sql<string>`left(${documentSections.text}, 1200)`,
       sourceUrl: billDocuments.sourceUrl,
       versionCode: billDocuments.versionCode
     })
     .from(documentSections)
+    .innerJoin(documentSectionEmbeddings, eq(documentSectionEmbeddings.sectionId, documentSections.id))
     .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
     .innerJoin(bills, eq(billDocuments.billId, bills.id))
     .where(
       and(
-        isNotNull(documentSections.embedding),
+        eq(documentSectionEmbeddings.model, route.model),
+        eq(documentSectionEmbeddings.inputContract, route.embeddingInputContract),
         input.billId === undefined ? undefined : eq(bills.id, input.billId),
         input.documentIds === undefined ? undefined : inArray(billDocuments.id, input.documentIds),
         ...billFilters(input)
@@ -231,6 +257,106 @@ export async function semanticPassageSearch(
     .limit(limit + 1)
     .offset(offset)
   return paginateSearchRows(rows, limit, 0)
+}
+
+export async function semanticStructuredAmendmentSearch(
+  database: LegislationDatabase,
+  input: Readonly<{
+    billId?: string
+    embedding: number[]
+    jurisdictionId?: string
+    limit?: number
+    sponsorPersonId?: string
+  }>
+) {
+  const route = embeddingRouteFor("structured-amendment")
+  const limit = Math.min(Math.max(input.limit ?? DEFAULT_LIMIT, 1), MAXIMUM_LIMIT)
+  const distance = sql<number>`${amendmentEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
+  return database
+    .select({ amendment: amendments, distance })
+    .from(amendments)
+    .innerJoin(amendmentEmbeddings, eq(amendmentEmbeddings.amendmentId, amendments.id))
+    .where(
+      and(
+        eq(amendmentEmbeddings.model, route.model),
+        eq(amendmentEmbeddings.inputContract, route.embeddingInputContract),
+        input.billId === undefined ? undefined : eq(amendments.billId, input.billId),
+        input.jurisdictionId === undefined ? undefined : eq(amendments.jurisdictionId, input.jurisdictionId),
+        input.sponsorPersonId === undefined ? undefined : eq(amendments.sponsorPersonId, input.sponsorPersonId)
+      )
+    )
+    .orderBy(asc(distance), asc(amendments.id))
+    .limit(limit)
+}
+
+export async function semanticDocumentAmendmentSearch(
+  database: LegislationDatabase,
+  input: Readonly<{ billId?: string; embedding: number[]; jurisdictionId?: string; limit?: number }>
+) {
+  const route = embeddingRouteFor("document-backed-amendment-section")
+  const limit = Math.min(Math.max(input.limit ?? DEFAULT_LIMIT, 1), MAXIMUM_LIMIT)
+  const distance = sql<number>`${documentSectionEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
+  return database
+    .select({
+      distance,
+      document: billDocuments,
+      jurisdictionId: bills.jurisdictionId,
+      sectionId: documentSections.id
+    })
+    .from(documentSections)
+    .innerJoin(documentSectionEmbeddings, eq(documentSectionEmbeddings.sectionId, documentSections.id))
+    .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
+    .innerJoin(bills, eq(billDocuments.billId, bills.id))
+    .where(
+      and(
+        eq(documentSectionEmbeddings.model, route.model),
+        eq(documentSectionEmbeddings.inputContract, route.embeddingInputContract),
+        eq(billDocuments.classification, "amendment"),
+        input.billId === undefined ? undefined : eq(billDocuments.billId, input.billId),
+        input.jurisdictionId === undefined ? undefined : eq(bills.jurisdictionId, input.jurisdictionId)
+      )
+    )
+    .orderBy(asc(distance), asc(documentSections.id))
+    .limit(limit)
+}
+
+export async function semanticSupportingMaterialSearch(
+  database: LegislationDatabase,
+  input: Readonly<{
+    amendmentId?: string
+    billId?: string
+    classification?: string
+    embedding: number[]
+    eventId?: string
+    jurisdictionId?: string
+    limit?: number
+  }>
+) {
+  const route = embeddingRouteFor("supporting-material-section")
+  const limit = Math.min(Math.max(input.limit ?? DEFAULT_LIMIT, 1), MAXIMUM_LIMIT)
+  const distance = sql<number>`${supportingMaterialSectionEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
+  return database
+    .select({ distance, material: supportingMaterials, sectionId: supportingMaterialSections.id })
+    .from(supportingMaterialSections)
+    .innerJoin(
+      supportingMaterialSectionEmbeddings,
+      eq(supportingMaterialSectionEmbeddings.sectionId, supportingMaterialSections.id)
+    )
+    .innerJoin(supportingMaterials, eq(supportingMaterialSections.materialId, supportingMaterials.id))
+    .leftJoin(supportingMaterialLinks, eq(supportingMaterialLinks.materialId, supportingMaterials.id))
+    .where(
+      and(
+        eq(supportingMaterialSectionEmbeddings.model, route.model),
+        eq(supportingMaterialSectionEmbeddings.inputContract, route.embeddingInputContract),
+        input.jurisdictionId === undefined ? undefined : eq(supportingMaterials.jurisdictionId, input.jurisdictionId),
+        input.classification === undefined ? undefined : eq(supportingMaterials.classification, input.classification),
+        input.billId === undefined ? undefined : eq(supportingMaterialLinks.billId, input.billId),
+        input.amendmentId === undefined ? undefined : eq(supportingMaterialLinks.amendmentId, input.amendmentId),
+        input.eventId === undefined ? undefined : eq(supportingMaterialLinks.eventId, input.eventId)
+      )
+    )
+    .orderBy(asc(distance), asc(supportingMaterialSections.id))
+    .limit(limit)
 }
 
 export function reciprocalRankFusion<T extends { id: string }>(lexical: T[], semantic: T[], limit: number): T[] {

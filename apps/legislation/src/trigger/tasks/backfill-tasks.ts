@@ -15,6 +15,7 @@ import {
   DERIVED_DOCUMENT_BATCH_SIZE,
   DERIVED_DOCUMENT_WORKER_MAX_DURATION_SECONDS,
   DERIVED_SUPPORTING_MATERIAL_BATCH_SIZE,
+  EMBEDDING_JOB_KINDS,
   executeDerivedBackfill
 } from "../../ingestion/backfill/derived.js"
 import { requeueInterruptedDocuments } from "../../ingestion/documents/jobs.js"
@@ -132,6 +133,7 @@ export const derivedPayloadSchema = baseWorkerSchema
     batchSize: z.number().int().positive().max(1_000).optional(),
     documentPartitionCount: z.number().int().positive().max(8).optional(),
     documentPartitionIndex: z.number().int().nonnegative().max(7).optional(),
+    embeddingProducts: z.array(z.enum(EMBEDDING_JOB_KINDS)).min(1).optional(),
     jurisdictionId: z.string().trim().min(1).max(200).optional(),
     kind: z.enum(DERIVED_BACKFILL_KINDS),
     maxBatches: z.number().int().positive().max(100).default(10),
@@ -167,6 +169,13 @@ export const derivedPayloadSchema = baseWorkerSchema
         code: "custom",
         message: "jurisdictionId is supported only for bill-document backfills",
         path: ["jurisdictionId"]
+      })
+    }
+    if (payload.embeddingProducts !== undefined && payload.kind !== "embeddings") {
+      context.addIssue({
+        code: "custom",
+        message: "embeddingProducts is supported only for embedding backfills",
+        path: ["embeddingProducts"]
       })
     }
     if (partitionsConfigured && payload.kind !== "bill-documents") {
@@ -207,6 +216,34 @@ const derivedShardControllerPayloadSchema = derivedPayloadSchema
   })
   .strict()
 const validationPayloadSchema = baseWorkerSchema.strict()
+const embeddingSyncPayloadSchema = baseWorkerSchema
+  .extend({
+    maxContinuations: z.number().int().positive().max(1_000).default(1_000),
+    products: z
+      .array(z.enum(EMBEDDING_JOB_KINDS))
+      .min(1)
+      .default([...EMBEDDING_JOB_KINDS]),
+    shardCount: z.number().int().positive().max(16).default(derivedBackfillShardCountFor("embeddings"))
+  })
+  .strict()
+  .superRefine((payload, context) => {
+    const maximum = derivedBackfillShardCountFor("embeddings")
+    if (payload.shardCount > maximum) {
+      context.addIssue({
+        code: "custom",
+        message: `Embedding sync supports at most ${maximum} shards`,
+        path: ["shardCount"]
+      })
+    }
+  })
+const embeddingShardPayloadSchema = embeddingSyncPayloadSchema
+  .extend({ shardIndex: z.number().int().nonnegative().max(15) })
+  .strict()
+  .superRefine((payload, context) => {
+    if (payload.shardIndex >= payload.shardCount) {
+      context.addIssue({ code: "custom", message: "shardIndex must be less than shardCount", path: ["shardIndex"] })
+    }
+  })
 
 export function createDerivedLeaseHandoffResult(
   payload: Pick<z.output<typeof derivedPayloadSchema>, "kind" | "shardCount" | "shardIndex">,
@@ -426,6 +463,90 @@ export const derivedShardBackfillController = task({
   }
 })
 
+export const embeddingSyncShardWorker = task({
+  id: "embedding-sync-shard-worker",
+  maxDuration: DERIVED_DOCUMENT_WORKER_MAX_DURATION_SECONDS,
+  queue: derivedQueue,
+  run: async (unparsedPayload: unknown, { ctx }) => {
+    const payload = embeddingShardPayloadSchema.parse(unparsedPayload)
+    return withDerivedBackfillDatabase("embeddings", async (database) => {
+      try {
+        return requireSuccessfulJobResult(
+          await executeDerivedTask(database, ctx.run.id, {
+            batchSize: undefined,
+            correlationId: payload.correlationId,
+            documentPartitionCount: undefined,
+            documentPartitionIndex: undefined,
+            jurisdictionId: undefined,
+            kind: "embeddings",
+            embeddingProducts: payload.products,
+            maxBatches: derivedWorkerMaxBatchesFor("embeddings"),
+            rebuildId: payload.rebuildId,
+            shardCount: payload.shardCount,
+            shardIndex: payload.shardIndex
+          })
+        )
+      } catch (error) {
+        if (!(error instanceof JobAlreadyRunningError)) {
+          throw error
+        }
+        const retryAt = await ingestionJobHandoffRetryAt(database, error)
+        return createDerivedLeaseHandoffResult(
+          { kind: "embeddings", shardCount: payload.shardCount, shardIndex: payload.shardIndex },
+          retryAt
+        )
+      }
+    })
+  }
+})
+
+export const embeddingSyncShardController = task({
+  id: "embedding-sync-shard-controller",
+  maxDuration: 14_400,
+  queue: derivedShardControllerQueue,
+  run: async (unparsedPayload: unknown) => {
+    const payload = embeddingShardPayloadSchema.parse(unparsedPayload)
+    await runDerivedShardLoop({
+      maxContinuations: payload.maxContinuations,
+      runContinuation: async (continuation) =>
+        await embeddingSyncShardWorker.triggerAndWait(payload, {
+          idempotencyKey: await globalIdempotencyKey(
+            payload.rebuildId,
+            `embedding-sync:${payload.products.slice().sort().join("+")}:${continuation}:${payload.shardIndex}`
+          )
+        }),
+      shardCount: payload.shardCount,
+      shardIndex: payload.shardIndex,
+      waitUntil: async (date) => await wait.until({ date })
+    })
+    return { checkpoint: { complete: true }, shardIndex: payload.shardIndex, status: "completed" as const }
+  }
+})
+
+export const embeddingSync = task({
+  id: "embedding-sync",
+  maxDuration: 14_400,
+  queue: { concurrencyLimit: 1, name: "legislation-embedding-sync-controller" },
+  run: async (unparsedPayload: unknown) => {
+    const payload = embeddingSyncPayloadSchema.parse(unparsedPayload)
+    const items = []
+    for (let shardIndex = 0; shardIndex < payload.shardCount; shardIndex += 1) {
+      items.push({
+        options: {
+          idempotencyKey: await globalIdempotencyKey(
+            payload.rebuildId,
+            `embedding-sync:${payload.products.slice().sort().join("+")}:controller:${shardIndex}`
+          )
+        },
+        payload: { ...payload, shardIndex }
+      })
+    }
+    const result = await embeddingSyncShardController.batchTriggerAndWait(items)
+    assertBatchSucceeded(result, "embedding sync")
+    return { checkpoint: { complete: true }, shardCount: payload.shardCount, status: "completed" as const }
+  }
+})
+
 export const validateBackfill = task({
   id: "backfill-validate",
   maxDuration: 3_600,
@@ -565,12 +686,17 @@ async function runBackfillPhase(
     return
   }
   if (phase === "embeddings") {
-    await runDerivedToCompletion(
-      payload.rebuildId,
-      correlationId,
-      "embeddings",
-      derivedBackfillShardCountFor("embeddings")
-    )
+    await embeddingSync
+      .triggerAndWait(
+        {
+          correlationId,
+          maxContinuations: 1_000,
+          rebuildId: payload.rebuildId,
+          shardCount: derivedBackfillShardCountFor("embeddings")
+        },
+        { idempotencyKey: await globalIdempotencyKey(payload.rebuildId, "embedding-sync") }
+      )
+      .unwrap()
     return
   }
   await validateBackfill
@@ -708,6 +834,7 @@ async function executeDerivedTask(
                     jurisdictionId: payload.jurisdictionId
                   }
                 : {}),
+              ...(payload.kind === "embeddings" ? { products: payload.embeddingProducts } : {}),
               maxBatches: payload.maxBatches,
               shardCount: payload.shardCount,
               shardIndex: payload.shardIndex

@@ -373,6 +373,9 @@ describe("derived backfill drains", () => {
 
   it("embeds all derived record types in one bounded cycle and preserves the shard lease", async () => {
     const inputs: Parameters<typeof runIngestionJob>[1][] = []
+    const amendments = vi
+      .fn<NonNullable<DerivedBackfillDependencies["embedAmendments"]>>()
+      .mockResolvedValue({ complete: false, cursor: "amendment:1", embedded: 1, scanned: 2, skipped: 1 })
     const bills = vi
       .fn<NonNullable<DerivedBackfillDependencies["embedBills"]>>()
       .mockResolvedValue({ complete: false, cursor: "bill:1", embedded: 1, scanned: 3, skipped: 2 })
@@ -387,11 +390,13 @@ describe("derived backfill drains", () => {
       executionInput(),
       { batchSize: 2, maxBatches: 1, shardCount: 2, shardIndex: 0 },
       {
+        embedAmendments: amendments,
         embedBills: bills,
         embedDocumentSections: sections,
         embedSupportingMaterialSections: materials,
-        embeddingClient: embeddingClient(),
+        embeddingClients: embeddingClients(),
         loadEmbeddingCheckpoint: async () => ({
+          amendments: { complete: false, cursor: "" },
           bills: { complete: false, cursor: "" },
           materials: { complete: false, cursor: "" },
           sections: { complete: false, cursor: "" }
@@ -404,6 +409,7 @@ describe("derived backfill drains", () => {
       afterId: "",
       billId: undefined,
       limit: 2,
+      rolloutId: "trigger-run",
       shardCount: 2,
       shardIndex: 0
     })
@@ -412,8 +418,8 @@ describe("derived backfill drains", () => {
     expect(inputs[0]).toEqual(
       expect.objectContaining({
         leaseDurationMinutes: 30,
-        operation: "refresh-embeddings-shard-0",
-        scopeKey: "shard:0-of-2",
+        operation: "refresh-embeddings-amendments+bills+materials+sections-shard-0",
+        scopeKey: "amendments+bills+materials+sections:shard:0-of-2",
         source: "openrouter"
       })
     )
@@ -421,17 +427,21 @@ describe("derived backfill drains", () => {
       batches: 1,
       complete: false,
       embedding: {
+        amendments: { complete: false, cursor: "amendment:1" },
         bills: { complete: false, cursor: "bill:1" },
         materials: { complete: false, cursor: "material:1" },
         sections: { complete: false, cursor: "section:1" }
       },
       kind: "embeddings"
     })
-    expect(result.counts).toMatchObject({ inserted: 1, skipped: 9 })
+    expect(result.counts).toMatchObject({ inserted: 2, skipped: 10 })
   })
 
   it("resumes each embedding kind from its durable shard cursor", async () => {
     const inputs: Parameters<typeof runIngestionJob>[1][] = []
+    const amendments = vi
+      .fn<NonNullable<DerivedBackfillDependencies["embedAmendments"]>>()
+      .mockResolvedValue({ complete: true, cursor: "", embedded: 0, scanned: 1, skipped: 1 })
     const bills = vi
       .fn<NonNullable<DerivedBackfillDependencies["embedBills"]>>()
       .mockResolvedValue({ complete: true, cursor: "", embedded: 0, scanned: 1, skipped: 1 })
@@ -446,11 +456,13 @@ describe("derived backfill drains", () => {
       executionInput(),
       { batchSize: 2, maxBatches: 1, shardCount: 2, shardIndex: 1 },
       {
+        embedAmendments: amendments,
         embedBills: bills,
         embedDocumentSections: sections,
         embedSupportingMaterialSections: materials,
-        embeddingClient: embeddingClient(),
+        embeddingClients: embeddingClients(),
         loadEmbeddingCheckpoint: async () => ({
+          amendments: { complete: false, cursor: "amendment:500" },
           bills: { complete: false, cursor: "bill:500" },
           materials: { complete: false, cursor: "material:500" },
           sections: { complete: false, cursor: "section:500" }
@@ -460,6 +472,11 @@ describe("derived backfill drains", () => {
     )
 
     expect(bills).toHaveBeenCalledWith(database, expect.anything(), expect.objectContaining({ afterId: "bill:500" }))
+    expect(amendments).toHaveBeenCalledWith(
+      database,
+      expect.anything(),
+      expect.objectContaining({ afterId: "amendment:500" })
+    )
     expect(sections).toHaveBeenCalledWith(
       database,
       expect.anything(),
@@ -470,7 +487,49 @@ describe("derived backfill drains", () => {
       expect.anything(),
       expect.objectContaining({ afterId: "material:500" })
     )
-    expect(inputs[0]).toEqual(expect.objectContaining({ checkpointStream: "embeddings:shard:1-of-2" }))
+    expect(inputs[0]).toEqual(
+      expect.objectContaining({
+        checkpointStream: "embeddings:amendments+bills+materials+sections:shard:1-of-2"
+      })
+    )
+  })
+
+  it("runs only the selected embedding products with an isolated checkpoint stream", async () => {
+    const inputs: Parameters<typeof runIngestionJob>[1][] = []
+    const amendments = vi.fn<NonNullable<DerivedBackfillDependencies["embedAmendments"]>>()
+    const bills = vi
+      .fn<NonNullable<DerivedBackfillDependencies["embedBills"]>>()
+      .mockResolvedValue({ complete: true, cursor: "", embedded: 1, scanned: 1, skipped: 0 })
+    const sections = vi.fn<NonNullable<DerivedBackfillDependencies["embedDocumentSections"]>>()
+    const materials = vi.fn<NonNullable<DerivedBackfillDependencies["embedSupportingMaterialSections"]>>()
+
+    const result = await drainEmbeddings(
+      executionInput(),
+      { batchSize: 2, maxBatches: 1, products: ["bills"] },
+      {
+        embedAmendments: amendments,
+        embedBills: bills,
+        embedDocumentSections: sections,
+        embedSupportingMaterialSections: materials,
+        embeddingClients: embeddingClients(),
+        loadEmbeddingCheckpoint: async () => ({
+          amendments: { complete: false, cursor: "" },
+          bills: { complete: false, cursor: "" },
+          materials: { complete: false, cursor: "" },
+          sections: { complete: false, cursor: "" }
+        }),
+        runIngestionJob: createJobRunner(inputs)
+      }
+    )
+
+    expect(bills).toHaveBeenCalledOnce()
+    expect(amendments).not.toHaveBeenCalled()
+    expect(sections).not.toHaveBeenCalled()
+    expect(materials).not.toHaveBeenCalled()
+    expect(inputs[0]).toEqual(
+      expect.objectContaining({ checkpointStream: "embeddings:bills", operation: "refresh-embeddings-bills" })
+    )
+    expect(result.checkpoint?.complete).toBe(true)
   })
 
   it("dispatches each derived kind without a CLI child process", async () => {
@@ -535,6 +594,11 @@ function artifactStore() {
 
 function embeddingClient() {
   return { embed: async () => ({ embeddings: [], model: "openai/text-embedding-3-small" }) }
+}
+
+function embeddingClients() {
+  const client = embeddingClient()
+  return { amendments: client, bills: client, materials: client, sections: client }
 }
 
 function terminalClassifier(): NonNullable<DerivedBackfillDependencies["classifyKnownUnavailableCaliforniaBillPdfs"]> {

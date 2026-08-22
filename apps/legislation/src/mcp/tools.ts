@@ -455,6 +455,7 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
             ...pageSchema,
             billId: canonicalBillId.optional(),
             jurisdictionId: canonicalId("jurisdiction").optional(),
+            mode: z.enum(["lexical", "semantic", "hybrid"]).default("lexical"),
             query: z.string().trim().min(1).max(500).optional(),
             sponsorPersonId: canonicalId("person").optional()
           }),
@@ -532,6 +533,7 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
             classification: z.string().trim().min(1).optional(),
             eventId: canonicalId("event").optional(),
             jurisdictionId: canonicalId("jurisdiction").optional(),
+            mode: z.enum(["lexical", "semantic", "hybrid"]).default("lexical"),
             query: z.string().trim().min(1).max(500).optional()
           }),
           outputSchema

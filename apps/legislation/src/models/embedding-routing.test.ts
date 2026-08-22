@@ -64,6 +64,7 @@ describe("embedding routing contract", () => {
     })
     expect(embeddingQueryRouteFor("search_bill_text").rerank).toEqual(embeddingQueryRouteFor("search_bills").rerank)
     expect(embeddingQueryRouteFor("search_amendments")).toEqual({
+      candidateLimit: 25,
       candidateMerge: "reciprocal-rank-fusion",
       queryEmbeddingProduct: "structured-amendment",
       searchedProducts: ["structured-amendment", "document-backed-amendment-section"]

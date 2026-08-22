@@ -41,7 +41,12 @@ import {
   processPendingSupportingMaterials,
   requeueFailedSupportingMaterials
 } from "../ingestion/documents/supporting-material-jobs.js"
-import { embedBills, embedDocumentSections, embedSupportingMaterialSections } from "../ingestion/embeddings/jobs.js"
+import {
+  embedAmendments,
+  embedBills,
+  embedDocumentSections,
+  embedSupportingMaterialSections
+} from "../ingestion/embeddings/jobs.js"
 import { GovInfoClient } from "../ingestion/govinfo/client.js"
 import { importGovInfoPackages } from "../ingestion/govinfo/import.js"
 import { RetryingHttpClient } from "../ingestion/http-client.js"
@@ -70,7 +75,9 @@ import { ArtifactSourceStore, LocalSourceStore, type SourceStore } from "../inge
 import { LegislationQueryService } from "../legislation/query-service.js"
 import { close, createLegislationServer, listen } from "../mcp/server.js"
 import { createLegislationMcpHandler } from "../mcp/tools.js"
+import { embeddingRouteFor } from "../models/embedding-routing.js"
 import { OpenRouterEmbeddingClient } from "../models/openrouter-embeddings.js"
+import { OpenRouterRetrievalClient } from "../models/openrouter-retrieval.js"
 import { createLogger, errorContext } from "../observability/logger.js"
 import { createTelemetry } from "../observability/telemetry.js"
 import { validateCorpus } from "../validation/corpus.js"
@@ -283,7 +290,8 @@ program
 
 program
   .command("embeddings:run")
-  .description("Create missing or stale bill and passage embeddings")
+  .description("Create missing or stale embeddings using the canonical per-product model routes")
+  .option("--amendment-id <id>", "limit structured amendment work to one canonical amendment")
   .option("--bill-id <id>", "limit bill and section work to one canonical bill")
   .option("--document-id <id>", "limit section work to one document")
   .option("--material-id <id>", "limit supporting-material section work to one material")
@@ -319,11 +327,11 @@ async function serve() {
   const logger = createLogger({ level: config.logging.level, service: "legislation" })
   const telemetry = createTelemetry(config)
   const { database, pool } = createDatabase(config.database)
-  const embeddingClient =
+  const retrievalClient =
     config.model.apiKey === undefined
       ? undefined
-      : new OpenRouterEmbeddingClient({ apiKey: config.model.apiKey, baseUrl: new URL(config.model.baseUrl) })
-  const mcp = createLegislationMcpHandler(new LegislationQueryService(database, embeddingClient), logger, telemetry)
+      : new OpenRouterRetrievalClient({ apiKey: config.model.apiKey, baseUrl: new URL(config.model.baseUrl) })
+  const mcp = createLegislationMcpHandler(new LegislationQueryService(database, retrievalClient), logger, telemetry)
   const authenticate = config.auth.mode === "workos" ? createWorkosAuthenticator(config.auth) : undefined
   const server = createLegislationServer({
     authenticate,
@@ -1645,6 +1653,7 @@ async function requeueSupportingMaterials() {
 
 async function runEmbeddings(options: {
   all?: boolean
+  amendmentId?: string
   billId?: string
   documentId?: string
   limit: string
@@ -1656,12 +1665,21 @@ async function runEmbeddings(options: {
   if (config.model.apiKey === undefined) {
     throw new InvalidJobInput("OPENROUTER_API_KEY is required for embeddings:run")
   }
-  const client = new OpenRouterEmbeddingClient({
-    apiKey: config.model.apiKey,
-    baseUrl: new URL(config.model.baseUrl),
-    maximumAttempts: config.ingestion.maxAttempts,
-    timeoutMs: config.ingestion.requestTimeoutMs
-  })
+  const apiKey = config.model.apiKey
+  const createClient = (product: Parameters<typeof embeddingRouteFor>[0]) =>
+    new OpenRouterEmbeddingClient({
+      apiKey,
+      baseUrl: new URL(config.model.baseUrl),
+      maximumAttempts: config.ingestion.maxAttempts,
+      route: embeddingRouteFor(product),
+      timeoutMs: config.ingestion.requestTimeoutMs
+    })
+  const clients = {
+    amendments: createClient("structured-amendment"),
+    bills: createClient("bill"),
+    materials: createClient("supporting-material-section"),
+    sections: createClient("document-section")
+  }
   const limit = parseInteger(options.limit, "limit")
   const shardCount = parseInteger(options.shardCount, "shard count")
   const shardIndex = Number(options.shardIndex)
@@ -1671,6 +1689,7 @@ async function runEmbeddings(options: {
   if (
     shardCount > 1 &&
     (options.all !== true ||
+      options.amendmentId !== undefined ||
       options.billId !== undefined ||
       options.documentId !== undefined ||
       options.materialId !== undefined)
@@ -1679,12 +1698,13 @@ async function runEmbeddings(options: {
   }
   const telemetry = createTelemetry(config)
   const logger = createCommandLogger(config)
+  const executionContext = jobExecutionContext()
   await withDatabase(async (database) => {
     try {
       const result = await runIngestionJob(
         database,
         {
-          ...jobExecutionContext(),
+          ...executionContext,
           operation: shardCount === 1 ? "refresh-embeddings" : `refresh-embeddings-shard-${shardIndex}`,
           scope: { limit, shardCount, shardIndex },
           scopeKey: shardCount === 1 ? "all" : `shard:${shardIndex}-of-${shardCount}`,
@@ -1692,6 +1712,7 @@ async function runEmbeddings(options: {
         },
         async () => {
           let embedded = 0
+          let amendmentCursor = ""
           let batches = 0
           let billCursor = ""
           let materialCursor = ""
@@ -1699,50 +1720,73 @@ async function runEmbeddings(options: {
           let skipped = 0
           let hasMoreEmbeddings = true
           do {
-            const bills = await telemetry.observe(
-              "embedding.bills",
-              { batchLimit: limit, model: config.model.embeddingModel },
+            const amendmentRoute = embeddingRouteFor("structured-amendment")
+            const amendmentRows = await telemetry.observe(
+              "embedding.amendments",
+              { batchLimit: limit, model: amendmentRoute.model },
               () =>
-                embedBills(database, client, {
-                  afterId: billCursor,
-                  billId: options.billId,
+                embedAmendments(database, clients.amendments, {
+                  afterId: amendmentCursor,
+                  amendmentId: options.amendmentId,
                   limit,
+                  rolloutId: executionContext.correlationId,
                   shardCount,
                   shardIndex
                 })
             )
+            const billRoute = embeddingRouteFor("bill")
+            const bills = await telemetry.observe(
+              "embedding.bills",
+              { batchLimit: limit, model: billRoute.model },
+              () =>
+                embedBills(database, clients.bills, {
+                  afterId: billCursor,
+                  billId: options.billId,
+                  limit,
+                  rolloutId: executionContext.correlationId,
+                  shardCount,
+                  shardIndex
+                })
+            )
+            const sectionRoute = embeddingRouteFor("document-section")
             const sections = await telemetry.observe(
               "embedding.sections",
-              { batchLimit: limit, model: config.model.embeddingModel },
+              { batchLimit: limit, model: sectionRoute.model },
               () =>
-                embedDocumentSections(database, client, {
+                embedDocumentSections(database, clients.sections, {
                   afterId: sectionCursor,
                   billId: options.billId,
                   documentId: options.documentId,
                   limit,
+                  rolloutId: executionContext.correlationId,
                   shardCount,
                   shardIndex
                 })
             )
+            const materialRoute = embeddingRouteFor("supporting-material-section")
             const materials = await telemetry.observe(
               "embedding.supporting_material_sections",
-              { batchLimit: limit, model: config.model.embeddingModel },
+              { batchLimit: limit, model: materialRoute.model },
               () =>
-                embedSupportingMaterialSections(database, client, {
+                embedSupportingMaterialSections(database, clients.materials, {
                   afterId: materialCursor,
                   limit,
                   materialId: options.materialId,
+                  rolloutId: executionContext.correlationId,
                   shardCount,
                   shardIndex
                 })
             )
-            embedded += bills.embedded + sections.embedded + materials.embedded
-            skipped += bills.skipped + sections.skipped + materials.skipped
+            embedded += amendmentRows.embedded + bills.embedded + sections.embedded + materials.embedded
+            skipped += amendmentRows.skipped + bills.skipped + sections.skipped + materials.skipped
             batches += 1
+            amendmentCursor = amendmentRows.cursor
             billCursor = bills.cursor
             materialCursor = materials.cursor
             sectionCursor = sections.cursor
-            hasMoreEmbeddings = options.all === true && !(bills.complete && sections.complete && materials.complete)
+            hasMoreEmbeddings =
+              options.all === true &&
+              !(amendmentRows.complete && bills.complete && sections.complete && materials.complete)
             if (batches % 10 === 0 || !hasMoreEmbeddings) {
               logger.info("embedding progress", { batches, embedded, shardCount, shardIndex, skipped })
             }
@@ -1757,8 +1801,11 @@ async function runEmbeddings(options: {
         }
       )
       createCommandLogger(config).info("embedding request metrics", {
-        ...client.metrics,
+        amendments: clients.amendments.metrics,
+        bills: clients.bills.metrics,
+        materials: clients.materials.metrics,
         reused: result.counts.skipped,
+        sections: clients.sections.metrics,
         source: "openrouter"
       })
       printJobResult(result)

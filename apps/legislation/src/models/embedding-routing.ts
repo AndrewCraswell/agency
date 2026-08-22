@@ -37,6 +37,7 @@ export type EmbeddingSearchTool =
   | "search_supporting_materials"
 
 export interface EmbeddingQueryRoute {
+  candidateLimit: 25
   candidateMerge: "reciprocal-rank-fusion" | "single-index"
   queryEmbeddingProduct: EmbeddingRouteProduct
   rerank?: RerankRoute
@@ -113,23 +114,27 @@ export const EMBEDDING_ROUTES = {
  */
 export const EMBEDDING_QUERY_ROUTES = {
   search_amendments: {
+    candidateLimit: 25,
     candidateMerge: "reciprocal-rank-fusion",
     queryEmbeddingProduct: "structured-amendment",
     searchedProducts: ["structured-amendment", "document-backed-amendment-section"]
   },
   search_bill_text: {
+    candidateLimit: 25,
     candidateMerge: "single-index",
     queryEmbeddingProduct: "document-section",
     rerank: COHERE_RERANK,
     searchedProducts: ["document-section", "document-backed-amendment-section"]
   },
   search_bills: {
+    candidateLimit: 25,
     candidateMerge: "single-index",
     queryEmbeddingProduct: "bill",
     rerank: COHERE_RERANK,
     searchedProducts: ["bill"]
   },
   search_supporting_materials: {
+    candidateLimit: 25,
     candidateMerge: "single-index",
     queryEmbeddingProduct: "supporting-material-section",
     searchedProducts: ["supporting-material-section"]

@@ -1,11 +1,14 @@
 import { sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
 import {
+  amendmentEmbeddingInputHash,
   billEmbeddingInputHash,
+  materialSectionEmbeddingInputHash,
   needsEmbeddingRefresh,
   sectionEmbeddingInputHash,
   type EmbeddingFreshnessState
 } from "../ingestion/embeddings/jobs.js"
+import { embeddingRouteFor, type EmbeddingRoute } from "../models/embedding-routing.js"
 
 export interface CorpusValidationReport {
   checkedAt: string
@@ -47,13 +50,22 @@ const entityQualityQueries = {
 
 const EMBEDDING_INTEGRITY_PAGE_SIZE = 1_000
 const embeddingIntegrityMetricNames = new Set([
+  "missingAmendmentEmbeddings",
   "missingBillEmbeddings",
   "missingDocumentSectionEmbeddings",
   "missingSupportingMaterialSectionEmbeddings",
+  "staleAmendmentEmbeddings",
   "staleBillEmbeddings",
   "staleDocumentSectionEmbeddings",
   "staleSupportingMaterialSectionEmbeddings"
 ])
+
+interface AmendmentEmbeddingRow extends EmbeddingFreshnessState, Record<string, unknown> {
+  description: null | string
+  id: string
+  printedIdentifier: string
+  purpose: null | string
+}
 
 interface BillEmbeddingRow extends EmbeddingFreshnessState, Record<string, unknown> {
   id: string
@@ -74,11 +86,12 @@ interface EmbeddingIntegrityCounts {
 }
 
 export function countEmbeddingIntegrity(
-  records: readonly Readonly<{ inputHash: string } & EmbeddingFreshnessState>[]
+  records: readonly Readonly<{ inputHash: string } & EmbeddingFreshnessState>[],
+  route: EmbeddingRoute
 ): EmbeddingIntegrityCounts {
   return records.reduce(
     (counts, record) => {
-      if (!needsEmbeddingRefresh(record.inputHash, record)) {
+      if (!needsEmbeddingRefresh(record.inputHash, record, route)) {
         return counts
       }
       if (record.embedding === null) {
@@ -102,30 +115,47 @@ export async function validateCorpus(database: LegislationDatabase): Promise<Cor
     const result = await database.execute<{ count: number }>(query)
     metrics[name] = result.rows[0]?.count ?? 0
   }
-  const billEmbeddingIntegrity = await scanEmbeddingIntegrity(database, loadBillEmbeddingRows, (row) => ({
-    ...row,
-    inputHash: billEmbeddingInputHash(row)
-  }))
+  const amendmentEmbeddingIntegrity = await scanEmbeddingIntegrity(
+    database,
+    loadAmendmentEmbeddingRows,
+    (row) => ({ ...row, inputHash: amendmentEmbeddingInputHash(row) }),
+    embeddingRouteFor("structured-amendment")
+  )
+  const billEmbeddingIntegrity = await scanEmbeddingIntegrity(
+    database,
+    loadBillEmbeddingRows,
+    (row) => ({
+      ...row,
+      inputHash: billEmbeddingInputHash(row)
+    }),
+    embeddingRouteFor("bill")
+  )
   const documentSectionEmbeddingIntegrity = await scanEmbeddingIntegrity(
     database,
     loadDocumentSectionEmbeddingRows,
-    (row) => ({ ...row, inputHash: sectionEmbeddingInputHash(row) })
+    (row) => ({ ...row, inputHash: sectionEmbeddingInputHash(row) }),
+    embeddingRouteFor("document-section")
   )
   const supportingMaterialSectionEmbeddingIntegrity = await scanEmbeddingIntegrity(
     database,
     loadSupportingMaterialSectionEmbeddingRows,
-    (row) => ({ ...row, inputHash: sectionEmbeddingInputHash(row) })
+    (row) => ({ ...row, inputHash: materialSectionEmbeddingInputHash(row) }),
+    embeddingRouteFor("supporting-material-section")
   )
   Object.assign(metrics, {
+    missingAmendmentEmbeddings: amendmentEmbeddingIntegrity.missing,
     missingBillEmbeddings: billEmbeddingIntegrity.missing,
     missingDocumentSectionEmbeddings: documentSectionEmbeddingIntegrity.missing,
     missingSupportingMaterialSectionEmbeddings: supportingMaterialSectionEmbeddingIntegrity.missing,
+    staleAmendmentEmbeddings: amendmentEmbeddingIntegrity.stale,
     staleBillEmbeddings: billEmbeddingIntegrity.stale,
     staleDocumentSectionEmbeddings: documentSectionEmbeddingIntegrity.stale,
     staleSupportingMaterialSectionEmbeddings: supportingMaterialSectionEmbeddingIntegrity.stale
   })
   const completion = await database.execute<{
+    amendments: number
     documents: number
+    embedded_amendments: number
     embedded_bills: number
     embedded_sections: number
     processed_documents: number
@@ -134,16 +164,20 @@ export async function validateCorpus(database: LegislationDatabase): Promise<Cor
   }>(sql`
     select
       (select count(*)::int from legislation.bills) as total_bills,
-      (select count(*)::int from legislation.bills where embedding is not null) as embedded_bills,
+      (select count(*)::int from legislation.bill_embeddings) as embedded_bills,
+      (select count(*)::int from legislation.amendments) as amendments,
+      (select count(*)::int from legislation.amendment_embeddings) as embedded_amendments,
       (select count(*)::int from legislation.bill_documents) as documents,
       (select count(*)::int from legislation.bill_documents where processing_status = 'processed') as processed_documents,
       (select count(*)::int from legislation.document_sections) as sections,
-      (select count(*)::int from legislation.document_sections where embedding is not null) as embedded_sections
+      (select count(*)::int from legislation.document_section_embeddings) as embedded_sections
   `)
   const row = completion.rows[0]
   if (row !== undefined) {
     Object.assign(metrics, {
+      amendments: row.amendments,
       documents: row.documents,
+      embeddedAmendments: row.embedded_amendments,
       embeddedBills: row.embedded_bills,
       embeddedSections: row.embedded_sections,
       processedDocuments: row.processed_documents,
@@ -167,13 +201,14 @@ export async function validateCorpus(database: LegislationDatabase): Promise<Cor
 async function scanEmbeddingIntegrity<Row extends Readonly<{ id: string }>>(
   database: LegislationDatabase,
   load: (database: LegislationDatabase, afterId: string) => Promise<Row[]>,
-  toFreshnessState: (row: Row) => Readonly<{ inputHash: string } & EmbeddingFreshnessState>
+  toFreshnessState: (row: Row) => Readonly<{ inputHash: string } & EmbeddingFreshnessState>,
+  route: EmbeddingRoute
 ): Promise<EmbeddingIntegrityCounts> {
   const counts: EmbeddingIntegrityCounts = { missing: 0, stale: 0 }
   let afterId = ""
   while (true) {
     const rows = await load(database, afterId)
-    const pageCounts = countEmbeddingIntegrity(rows.map(toFreshnessState))
+    const pageCounts = countEmbeddingIntegrity(rows.map(toFreshnessState), route)
     counts.missing += pageCounts.missing
     counts.stale += pageCounts.stale
     if (rows.length < EMBEDDING_INTEGRITY_PAGE_SIZE) {
@@ -187,19 +222,52 @@ async function scanEmbeddingIntegrity<Row extends Readonly<{ id: string }>>(
   }
 }
 
+async function loadAmendmentEmbeddingRows(
+  database: LegislationDatabase,
+  afterId: string
+): Promise<AmendmentEmbeddingRow[]> {
+  const route = embeddingRouteFor("structured-amendment")
+  const result = await database.execute<AmendmentEmbeddingRow>(sql`
+    select
+      source.id,
+      source.purpose,
+      source.description,
+      source.printed_identifier as "printedIdentifier",
+      stored.embedding,
+      stored.input_hash as "embeddingInputHash",
+      stored.input_contract as "embeddingInputContract",
+      stored.model as "embeddingModel"
+    from legislation.amendments source
+    left join legislation.amendment_embeddings stored
+      on stored.amendment_id = source.id
+      and stored.model = ${route.model}
+      and stored.input_contract = ${route.embeddingInputContract}
+    where source.id > ${afterId}
+    order by source.id
+    limit ${EMBEDDING_INTEGRITY_PAGE_SIZE}
+  `)
+  return result.rows
+}
+
 async function loadBillEmbeddingRows(database: LegislationDatabase, afterId: string): Promise<BillEmbeddingRow[]> {
+  const route = embeddingRouteFor("bill")
   const result = await database.execute<BillEmbeddingRow>(sql`
     select
-      id,
-      title,
-      summary,
-      subjects,
-      embedding,
-      embedding_input_hash as "embeddingInputHash",
-      embedding_model as "embeddingModel"
-    from legislation.bills
-    where id > ${afterId}
-    order by id
+      source.id,
+      source.title,
+      source.summary,
+      source.subjects,
+      stored.embedding,
+      stored.input_hash as "embeddingInputHash",
+      stored.input_contract as "embeddingInputContract",
+      stored.model as "embeddingModel"
+    from legislation.bills source
+    left join legislation.bill_embeddings stored
+      on stored.bill_id = source.id
+      and stored.model = ${route.model}
+      and stored.input_contract = ${route.embeddingInputContract}
+    where source.id > ${afterId}
+    order by source.id
     limit ${EMBEDDING_INTEGRITY_PAGE_SIZE}
   `)
   return result.rows
@@ -209,17 +277,23 @@ async function loadDocumentSectionEmbeddingRows(
   database: LegislationDatabase,
   afterId: string
 ): Promise<SectionEmbeddingRow[]> {
+  const route = embeddingRouteFor("document-section")
   const result = await database.execute<SectionEmbeddingRow>(sql`
     select
-      id,
-      heading,
-      text,
-      embedding,
-      embedding_input_hash as "embeddingInputHash",
-      embedding_model as "embeddingModel"
-    from legislation.document_sections
-    where id > ${afterId}
-    order by id
+      source.id,
+      source.heading,
+      source.text,
+      stored.embedding,
+      stored.input_hash as "embeddingInputHash",
+      stored.input_contract as "embeddingInputContract",
+      stored.model as "embeddingModel"
+    from legislation.document_sections source
+    left join legislation.document_section_embeddings stored
+      on stored.section_id = source.id
+      and stored.model = ${route.model}
+      and stored.input_contract = ${route.embeddingInputContract}
+    where source.id > ${afterId}
+    order by source.id
     limit ${EMBEDDING_INTEGRITY_PAGE_SIZE}
   `)
   return result.rows
@@ -229,17 +303,23 @@ async function loadSupportingMaterialSectionEmbeddingRows(
   database: LegislationDatabase,
   afterId: string
 ): Promise<SectionEmbeddingRow[]> {
+  const route = embeddingRouteFor("supporting-material-section")
   const result = await database.execute<SectionEmbeddingRow>(sql`
     select
-      id,
-      heading,
-      text,
-      embedding,
-      embedding_input_hash as "embeddingInputHash",
-      embedding_model as "embeddingModel"
-    from legislation.supporting_material_sections
-    where id > ${afterId}
-    order by id
+      source.id,
+      source.heading,
+      source.text,
+      stored.embedding,
+      stored.input_hash as "embeddingInputHash",
+      stored.input_contract as "embeddingInputContract",
+      stored.model as "embeddingModel"
+    from legislation.supporting_material_sections source
+    left join legislation.supporting_material_section_embeddings stored
+      on stored.section_id = source.id
+      and stored.model = ${route.model}
+      and stored.input_contract = ${route.embeddingInputContract}
+    where source.id > ${afterId}
+    order by source.id
     limit ${EMBEDDING_INTEGRITY_PAGE_SIZE}
   `)
   return result.rows

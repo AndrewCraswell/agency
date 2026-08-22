@@ -25,13 +25,12 @@ returned relevant but unlabeled bills, so their earlier 57 percent score was a
 single-target evaluation artifact rather than a valid topical-relevance score.
 
 Richer bill vectors and passage-to-bill candidate projection were tested and
-removed because they did not improve this cohort. Query-time reranking remains
-disabled in the deployed MCP. Although it reduced quality in the first small
-canary, the expanded bakeoff showed material gains for bill and document
-ranking while it hurt amendments and Voyage-current supporting materials. It
-therefore advances only as a selective bill/document candidate pending pooled,
-graded judgments. Full-corpus embedding remains paused until dedicated
-embedding tables exist and the larger evaluation is complete.
+removed because they did not improve this cohort. The expanded bakeoff showed
+material reranking gains for bill and document ranking while it hurt
+amendments and Voyage-current supporting materials. Selective reranking is now
+implemented in the MCP query service but remains inactive in production until
+migration `0022`, deployment, and the deployed treatment/control canary are
+complete.
 
 A second canary then tested ten broad topics using 148 exhaustive source-
 taxonomy judgments in fixed jurisdiction and session scopes. Pure semantic
@@ -39,9 +38,10 @@ retrieval filled every available top-10 position with a judged relevant bill,
 reached 100 percent treatment Recall@25, and averaged 347 ms warm latency.
 Hybrid retrieval was slightly worse and slower. See the
 [broad-topic canary report](../evals/embedding-topic-canary.md). This clears the
-bounded retrieval-quality gate for pure semantic search, but full rollout is
-still blocked on dedicated storage and reconciliation of 429,261 historical
-inline vectors discovered during the preflight.
+bounded retrieval-quality gate for pure semantic search. Dedicated storage and
+strict reconciliation are now implemented; the 429,261 historical inline bill
+vectors cannot be reused for the selected Voyage bill route and remain
+non-authoritative.
 
 The expanded isolated bakeoff then evaluated 3,989 records and 40 queries
 across bills, document passages, amendments, and supporting materials. It
@@ -63,7 +63,7 @@ joins. They are not a substitute for searchable prose.
 
 | Search product | Embedding input | Result returned to the caller |
 | --- | --- | --- |
-| Bill discovery | Labeled bill title, summary, and subjects. When summary and subjects are absent, use a short deterministic synopsis from the preferred bill document when one exists. Do not embed a bare identifier as if it described the policy. | Canonical bill with jurisdiction, session, sponsors, committees, actions, source links, and coverage metadata. |
+| Bill discovery | Bill title, summary, and subjects. Do not append a raw document excerpt or embed a bare identifier as if it described the policy. | Canonical bill with jurisdiction, session, sponsors, committees, actions, source links, and coverage metadata. |
 | Bill-document passage search | Bill title and identifier, document title, version/classification, section heading, and section text. OCR text uses the same contract as native text while retaining OCR provenance. | Canonical document section plus its document and bill, agency URL, and stored-object reference. |
 | Structured amendment search | Bill context, printed amendment identifier and type, purpose, and description. If the structured row contains only an identifier, associate proven amendment document text instead of inventing a synopsis. | Canonical amendment, sponsor and dates, related bill, and any supporting document passages. |
 | Document-backed amendment search | Bill context, amendment document title/classification, section heading, and section text. | Canonical `amendment:document:` result projected back to its bill and source document. |
@@ -84,6 +84,20 @@ The machine-readable source of truth is
 [`src/models/embedding-routing.ts`](../src/models/embedding-routing.ts). Index
 creation, embedding jobs, and query code must consume that contract rather
 than repeat model names or dimensions.
+
+The exact external model identifiers are part of the production contract:
+
+- OpenAI embeddings: `openai/text-embedding-3-small`, requested through the
+  OpenRouter embeddings endpoint with exactly 1,536 dimensions;
+- Voyage embeddings: `voyageai/voyage-4`, requested through the OpenRouter
+  embeddings endpoint with exactly 1,024 dimensions and the route-specific
+  `document` or `query` input role; and
+- Cohere reranking: `cohere/rerank-v3.5`, requested through the OpenRouter
+  rerank endpoint.
+
+These are full provider/model IDs, not family names or aliases. Environment
+variables provide credentials and the OpenRouter base URL, but they do not
+override the selected model IDs, dimensions, input contracts, or reranker.
 
 | Data indexed | Embedding input | Embedding model | Reranker | Expanded-bakeoff basis |
 | --- | --- | --- | --- | --- |
@@ -123,10 +137,10 @@ model directly.
 
 | MCP tool | Query embedding | Vector rows searched | Candidate handling | Result projection |
 | --- | --- | --- | --- | --- |
-| `search_bills` | Voyage 4 with `input_type=query` | `bill_embeddings` rows matching `voyageai/voyage-4`, 1,024 dimensions, and `bill-title-summary-subjects` | Retrieve 25, rerank with Cohere Rerank 3.5, then apply the requested result limit | Canonical bill |
-| `search_bill_text` | OpenAI Small, 1,536 dimensions | `document_section_embeddings` rows matching `document-section-heading-text`, including ordinary and amendment-classified documents | Retrieve 25, rerank with Cohere Rerank 3.5, then apply the requested result limit | Canonical section, document, bill, and amendment identity when applicable |
-| `search_amendments` | OpenAI Small, 1,536 dimensions | Search `amendment_embeddings` with `amendment-purpose-description-identifier-fallback` and amendment-classified `document_section_embeddings` with `document-section-heading-text` separately | Do not rerank. Merge the two ranked lists with reciprocal-rank fusion and deduplicate by canonical amendment identity | Canonical amendment, related bill, and supporting document passages |
-| `search_supporting_materials` | Voyage 4 with `input_type=query` | `supporting_material_section_embeddings` rows matching `voyageai/voyage-4`, 1,024 dimensions, and `supporting-material-section-heading-text` | Preserve embedding rank; do not rerank | Canonical material section, material, and related bill |
+| `search_bills` | `voyageai/voyage-4`, 1,024 dimensions, `input_type=query` | `bill_embeddings` rows matching `voyageai/voyage-4`, 1,024 dimensions, and `bill-title-summary-subjects` | Retrieve 25, rerank with `cohere/rerank-v3.5`, then apply the requested result limit | Canonical bill |
+| `search_bill_text` | `openai/text-embedding-3-small`, 1,536 dimensions | `document_section_embeddings` rows matching `document-section-heading-text`, including ordinary and amendment-classified documents | Retrieve 25, rerank with `cohere/rerank-v3.5`, then apply the requested result limit | Canonical section, document, bill, and amendment identity when applicable |
+| `search_amendments` | `openai/text-embedding-3-small`, 1,536 dimensions | Search `amendment_embeddings` with `amendment-purpose-description-identifier-fallback` and amendment-classified `document_section_embeddings` with `document-section-heading-text` separately | Do not rerank. Merge the two ranked lists with reciprocal-rank fusion and deduplicate by canonical amendment identity | Canonical amendment, related bill, and supporting document passages |
+| `search_supporting_materials` | `voyageai/voyage-4`, 1,024 dimensions, `input_type=query` | `supporting_material_section_embeddings` rows matching `voyageai/voyage-4`, 1,024 dimensions, and `supporting-material-section-heading-text` | Preserve embedding rank; do not rerank | Canonical material section, material, and related bill |
 
 `search_amendments_for_bills` is a structured relationship lookup, not a
 semantic search surface. It continues to fetch amendments for the supplied
@@ -147,6 +161,34 @@ provenance as metadata.
 
 Identifier lookups and filtered collection retrieval bypass both embedding and
 reranking.
+
+### Runtime ownership
+
+Trigger.dev owns asynchronous embedding generation through three explicit
+tasks:
+
+- `embedding-sync` starts one bounded embedding wave;
+- `embedding-sync-shard-controller` serially advances a shard checkpoint; and
+- `embedding-sync-shard-worker` embeds amendments, bills, document sections,
+  and supporting-material sections for one bounded shard batch.
+
+`embedding-sync` accepts an explicit `products` array containing `bills`,
+`sections`, `amendments`, or `materials`. Product names are part of the durable
+lease, checkpoint stream, and idempotency keys, so the staged waves below can
+run independently without reusing another product's completion state.
+
+The historical `embeddings` phase calls `embedding-sync`; it no longer relies
+on an implicit branch inside the general document worker. The same entry task
+is the future recurring refresh boundary, but its production schedule remains
+disabled until the historical pass is complete and daily cost is measured.
+
+Reranking stays in `LegislationQueryService`, synchronously inside the MCP
+request after PostgreSQL returns at most 25 first-stage candidates. It is not a
+Trigger.dev task because it changes the ordering of one interactive response,
+and it does not need a separate public API because the MCP HTTP service is
+already the retrieval API. If retrieval later becomes an independently scaled
+service, move the complete search-and-rerank operation behind an internal API;
+do not expose a raw reranker endpoint that callers could apply inconsistently.
 
 ## MCP access plan
 
@@ -247,10 +289,18 @@ Before creating canary vectors:
 
 ## Storage contract
 
-Embedding records belong to the legislation domain but should not remain
-inline on the primary corpus rows for the broad rollout. Use dedicated,
-foreign-keyed tables for bills, document sections, and any later approved
-supporting-material sections. Each record includes:
+Embedding records belong to the legislation domain and do not remain inline on
+the primary corpus rows for the broad rollout. Migration `0022` creates four
+dedicated, foreign-keyed tables under the `legislation` schema:
+
+| Table | Exact model | Dimensions | Input contract |
+| --- | --- | ---: | --- |
+| `bill_embeddings` | `voyageai/voyage-4` | 1,024 | `bill-title-summary-subjects` |
+| `document_section_embeddings` | `openai/text-embedding-3-small` | 1,536 | `document-section-heading-text` |
+| `amendment_embeddings` | `openai/text-embedding-3-small` | 1,536 | `amendment-purpose-description-identifier-fallback` |
+| `supporting_material_section_embeddings` | `voyageai/voyage-4` | 1,024 | `supporting-material-section-heading-text` |
+
+Each record includes:
 
 - source-record ID;
 - model and dimensions;
@@ -263,6 +313,13 @@ A separate PostgreSQL schema would provide only namespace and permission
 separation. It would not isolate storage, index maintenance, backups, or query
 compute. Use a separate database or vector service only after measurements show
 that PostgreSQL resource isolation is required.
+
+The older inline vector columns are not query-authoritative. A historical
+document-section vector may be copied into the dedicated table only when its
+exact model, canonical input, dimensions, and legacy input hash all match the
+new route. Bills and supporting materials changed model routes and must be
+generated with their selected model. Unverifiable inline vectors are ignored,
+not silently mixed with the new index.
 
 ## Canary cohort
 
@@ -420,9 +477,10 @@ Do not expand the rollout to compensate for an inconclusive evaluation.
    amendment, and supporting-material configurations.
 4. Review per-product quality, sparse-stratum quality, cost, storage, and
    latency evidence.
-5. Reconcile the 429,261 historical inline bill vectors by input hash and model
-   before making any provider call; reuse matching vectors and regenerate only
-   records that do not satisfy the selected contract.
+5. Inventory the 429,261 historical inline bill vectors and leave them
+   non-authoritative because their OpenAI model does not match the selected
+   Voyage bill route. Reuse only document-section vectors whose exact model,
+   dimensions, canonical input, and legacy hash satisfy the selected contract.
 6. If approved, expand in bounded, checkpointed waves while retaining a
    nonembedded holdout long enough to detect regressions.
 7. Roll out bills and bill-document passages first, then amendments, then
@@ -432,3 +490,35 @@ Do not expand the rollout to compensate for an inconclusive evaluation.
    complete and its daily cost is measured.
 10. Keep the model-bakeoff corpus and judgments as a regression suite for model,
     input, chunking, index, and reranker changes.
+
+## Complete-pass recommendation
+
+After the deployed MCP treatment/control canary reproduces the product gates,
+run the complete corpus with the mixed routing contract above. Do not choose a
+single cheaper model for every product: the measured supporting-material gain
+from Voyage is large, while OpenAI Small is the cost-effective winner for
+document passages and structured amendments.
+
+Run four checkpointed shards initially and process product waves in this order:
+
+1. bills with `voyageai/voyage-4` and query-time
+   `cohere/rerank-v3.5`;
+2. bill-document sections with `openai/text-embedding-3-small` and
+   query-time `cohere/rerank-v3.5`;
+3. structured amendments with `openai/text-embedding-3-small` and no
+   reranker; and
+4. supporting-material sections with `voyageai/voyage-4` and no reranker.
+
+Pause after the first 100,000 generated or reconciled rows to compare observed
+spend, p95 task duration, database connections, index growth, retry rate, and
+deployed MCP quality against the projection. The current corpus estimate is
+approximately $444 for the mixed generation pass, compared with approximately
+$292 for all OpenAI Small and approximately $943 for all Voyage 4. Cohere
+Rerank 3.5 is query-time spend, approximately $0.001 per reranked request, and
+is not part of generation cost. Refresh these prices immediately before the
+paid pass.
+
+The broad pass is recommended only if the frozen graded evaluation and the
+deployed MCP canary both retain an absolute nDCG@10 improvement greater than
+0.02 for every promoted model or reranker, all result identities resolve to
+canonical database rows, and no sparse cohort has a material recall regression.

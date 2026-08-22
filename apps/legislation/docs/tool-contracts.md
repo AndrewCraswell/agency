@@ -43,6 +43,8 @@ dates or timestamps, description, result, source link, and a continuation cursor
 
 Input: query plus optional bill, jurisdiction, session, document-version, date, cursor, and limit filters. Output: ranked
 section matches with bill and document IDs, heading, snippet, lexical and semantic scores, source link, and next cursor.
+Semantic and hybrid modes embed the query with `openai/text-embedding-3-small` at 1,536 dimensions, retrieve at most 25
+matching document-section candidates, and rerank them with `cohere/rerank-v3.5` before applying the requested limit.
 
 ### `get_bill_text`
 
@@ -87,6 +89,12 @@ finer control is needed.
 `get_supporting_material` expose their canonical records and links;
 material detail includes paginated extracted sections. `search_changes` exposes observed canonical changes without
 generating summaries or predictions. Every list is cursor-paginated and returns explicit truncation metadata.
+
+`search_amendments` and `search_supporting_materials` accept `lexical`, `semantic`, or `hybrid` mode. Amendment semantic
+search embeds the query with `openai/text-embedding-3-small` at 1,536 dimensions, searches structured amendments and
+amendment-classified document sections independently, then merges them with reciprocal-rank fusion without reranking.
+Supporting-material semantic search uses `voyageai/voyage-4` at 1,024 dimensions with `input_type=query` and preserves
+the embedding rank without reranking. Exact and batch relationship lookups never create embeddings.
 
 `search_amendments_for_bills` accepts 1-25 bill IDs and returns a separate bounded search result for each bill.
 `get_amendments` accepts 1-25 amendment IDs. Batch lookups deduplicate repeated IDs and isolate `not_found` and other

@@ -27,7 +27,7 @@ describe("loadConfig", () => {
         requestTimeoutMs: 30_000
       },
       logging: { level: "info" },
-      model: { dimensions: 1536, embeddingModel: "openai/text-embedding-3-small" },
+      model: { baseUrl: "https://openrouter.ai/api/v1" },
       ocr: { maximumAttempts: 5 },
       server: { host: "127.0.0.1", port: 3100, requestBodyBytes: 1_048_576 }
     })

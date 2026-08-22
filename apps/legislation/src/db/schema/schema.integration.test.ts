@@ -26,7 +26,7 @@ import { importOpenStatesRecords } from "../../ingestion/openstates/import.js"
 import { openStatesBillSchema } from "../../ingestion/openstates/normalize.js"
 import { withIngestionRun } from "../../ingestion/run-context.js"
 import { LegislationQueryService } from "../../legislation/query-service.js"
-import { EMBEDDING_MODEL } from "../../models/openrouter-embeddings.js"
+import { embeddingRouteFor } from "../../models/embedding-routing.js"
 import { lexicalBillSearch, lexicalPassageSearch, semanticBillSearch } from "../../search/search.js"
 import { validateCorpus } from "../../validation/corpus.js"
 import { getBillById, upsertBillAggregate, upsertBillAggregates } from "../queries/bill-aggregates.js"
@@ -64,15 +64,20 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     await pool.end()
   })
 
-  it("installs pgvector and creates 1,536-dimensional vector columns", async () => {
+  it("installs pgvector and creates each pinned embedding dimension", async () => {
     await expect(isDatabaseAvailable(pool)).resolves.toBe(true)
     await expect(isDatabaseReady(pool)).resolves.toBe(true)
 
-    const result = await pool.query<{ column_type: string }>(
-      "select format_type(a.atttypid, a.atttypmod) as column_type from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'legislation' and c.relname = 'bills' and a.attname = 'embedding'"
+    const result = await pool.query<{ column_type: string; table_name: string }>(
+      "select c.relname as table_name, format_type(a.atttypid, a.atttypmod) as column_type from pg_attribute a join pg_class c on c.oid = a.attrelid join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'legislation' and c.relname in ('bill_embeddings', 'document_section_embeddings', 'amendment_embeddings', 'supporting_material_section_embeddings') and a.attname = 'embedding' order by c.relname"
     )
 
-    expect(result.rows).toEqual([{ column_type: "vector(1536)" }])
+    expect(result.rows).toEqual([
+      { column_type: "vector(1536)", table_name: "amendment_embeddings" },
+      { column_type: "vector(1024)", table_name: "bill_embeddings" },
+      { column_type: "vector(1536)", table_name: "document_section_embeddings" },
+      { column_type: "vector(1024)", table_name: "supporting_material_section_embeddings" }
+    ])
   })
 
   it("records a budget handoff as deferred without advancing a generic checkpoint or retaining the lease", async () => {
@@ -468,23 +473,35 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       items: [{ billId: "bill:us:119:hr:1234", documentId }]
     })
 
-    const embedding = Array.from({ length: 1536 }, () => 0.1)
-    const embeddingClient = {
-      embed: async (input: string[]) => ({ embeddings: input.map(() => embedding), model: EMBEDDING_MODEL })
+    const billRoute = embeddingRouteFor("bill")
+    const sectionRoute = embeddingRouteFor("document-section")
+    const billEmbedding = Array.from({ length: billRoute.dimensions }, () => 0.1)
+    const sectionEmbedding = Array.from({ length: sectionRoute.dimensions }, () => 0.1)
+    const billEmbeddingClient = {
+      embed: async (input: string[]) => ({ embeddings: input.map(() => billEmbedding), model: billRoute.model })
     }
-    await expect(embedBills(database, embeddingClient, { billId: "bill:us:119:hr:1234" })).resolves.toEqual({
+    const sectionEmbeddingClient = {
+      embed: async (input: string[]) => ({ embeddings: input.map(() => sectionEmbedding), model: sectionRoute.model })
+    }
+    await expect(
+      embedBills(database, billEmbeddingClient, { billId: "bill:us:119:hr:1234", rolloutId: "test" })
+    ).resolves.toEqual({
       embedded: 1,
       skipped: 0
     })
-    await expect(embedDocumentSections(database, embeddingClient, { documentId })).resolves.toEqual({
+    await expect(
+      embedDocumentSections(database, sectionEmbeddingClient, { documentId, rolloutId: "test" })
+    ).resolves.toEqual({
       embedded: 2,
       skipped: 0
     })
-    await expect(embedDocumentSections(database, embeddingClient, { documentId })).resolves.toEqual({
+    await expect(
+      embedDocumentSections(database, sectionEmbeddingClient, { documentId, rolloutId: "test" })
+    ).resolves.toEqual({
       embedded: 0,
       skipped: 2
     })
-    await expect(semanticBillSearch(database, { embedding })).resolves.toMatchObject({
+    await expect(semanticBillSearch(database, { embedding: billEmbedding })).resolves.toMatchObject({
       items: [{ id: "bill:us:119:hr:1234" }]
     })
 
@@ -543,7 +560,12 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       voteId: "vote:congress:119:house:1"
     })
 
-    const service = new LegislationQueryService(database, embeddingClient)
+    const retrievalClient = {
+      embed: async () => ({ embeddings: [billEmbedding], model: billRoute.model }),
+      rerank: async (_tool: string, _query: string, candidates: Array<{ id: string; text: string }>) =>
+        candidates.map((candidate, index) => ({ ...candidate, relevanceScore: 1 - index / 100 }))
+    }
+    const service = new LegislationQueryService(database, retrievalClient)
     await expect(service.searchBills({ mode: "lexical", query: "Federal data" })).resolves.toMatchObject({
       items: [{ id: "bill:us:119:hr:1234" }]
     })
@@ -1367,20 +1389,25 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
         materialId
       })
     ).resolves.toMatchObject({ counts: { failed: 0, processed: 1, read: 1 } })
-    const embedding = Array.from({ length: 1536 }, () => 0.1)
+    const route = embeddingRouteFor("supporting-material-section")
+    const embedding = Array.from({ length: route.dimensions }, () => 0.1)
     const embeddingClient = {
-      embed: async (input: string[]) => ({ embeddings: input.map(() => embedding), model: EMBEDDING_MODEL })
+      embed: async (input: string[]) => ({ embeddings: input.map(() => embedding), model: route.model })
     }
-    await expect(embedSupportingMaterialSections(database, embeddingClient, { materialId })).resolves.toEqual({
+    await expect(
+      embedSupportingMaterialSections(database, embeddingClient, { materialId, rolloutId: "test" })
+    ).resolves.toEqual({
       embedded: 1,
       skipped: 0
     })
-    await expect(embedSupportingMaterialSections(database, embeddingClient, { materialId })).resolves.toEqual({
+    await expect(
+      embedSupportingMaterialSections(database, embeddingClient, { materialId, rolloutId: "test" })
+    ).resolves.toEqual({
       embedded: 0,
       skipped: 1
     })
 
-    const service = new LegislationQueryService(database, embeddingClient)
+    const service = new LegislationQueryService(database)
     await expect(service.searchSupportingMaterials({ query: "improved public data access" })).resolves.toMatchObject({
       items: [{ id: materialId }]
     })

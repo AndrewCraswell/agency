@@ -55,9 +55,7 @@ const configSchema = z
     }),
     model: z.object({
       apiKey: optionalSecret,
-      baseUrl: z.url({ protocol: /^https$/ }),
-      dimensions: z.literal(1536),
-      embeddingModel: z.literal("openai/text-embedding-3-small")
+      baseUrl: z.url({ protocol: /^https$/ })
     }),
     observability: z.object({
       langfuseBaseUrl: z.url({ protocol: /^https$/ }),
@@ -159,9 +157,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
     logging: { level: environment.LOG_LEVEL ?? "info" },
     model: {
       apiKey: environment.OPENROUTER_API_KEY,
-      baseUrl: environment.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
-      dimensions: Number(environment.EMBEDDING_DIMENSIONS ?? "1536"),
-      embeddingModel: environment.EMBEDDING_MODEL ?? "openai/text-embedding-3-small"
+      baseUrl: environment.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1"
     },
     observability: {
       langfuseBaseUrl: environment.LANGFUSE_BASE_URL ?? "https://cloud.langfuse.com",

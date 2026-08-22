@@ -6,6 +6,7 @@ import {
   amendments,
   billActions,
   billDocuments,
+  billEmbeddings,
   billOrganizations,
   billRelations,
   billSponsors,
@@ -28,6 +29,8 @@ import {
   votePositions,
   votes
 } from "../db/schema/schema.js"
+import { embeddingQueryRouteFor, embeddingRouteFor, type EmbeddingSearchTool } from "../models/embedding-routing.js"
+import type { RetrievalModelClient } from "../models/openrouter-retrieval.js"
 import type { PassageSearchInput, SearchInput } from "../search/search.js"
 import {
   lexicalBillSearch,
@@ -35,7 +38,10 @@ import {
   paginateSearchRows,
   reciprocalRankFusionWithScores,
   semanticBillSearch,
+  semanticDocumentAmendmentSearch,
   semanticPassageSearch,
+  semanticStructuredAmendmentSearch,
+  semanticSupportingMaterialSearch,
   validateSearchInput
 } from "../search/search.js"
 import { LegislationError } from "./errors.js"
@@ -49,10 +55,6 @@ function coverageWarnings(itemCount: number, domain: string): string[] {
   return itemCount === 0
     ? [`No ${domain} matched. Availability is source-dependent; an empty result does not prove none exist.`]
     : []
-}
-
-interface QueryEmbeddingClient {
-  embed(input: string[]): Promise<{ embeddings: number[][] }>
 }
 
 export interface BillLookup {
@@ -121,6 +123,7 @@ export interface AmendmentSearchInput {
   cursor?: string
   jurisdictionId?: string
   limit?: number
+  mode?: "hybrid" | "lexical" | "semantic"
   query?: string
   sponsorPersonId?: string
 }
@@ -135,6 +138,17 @@ export interface DocumentBackedAmendment {
   sourceUrl: string
   submittedDate: null | string
   title: string
+}
+
+type AmendmentSearchItem =
+  | (DocumentBackedAmendment & { distance?: number; score?: number })
+  | (typeof amendments.$inferSelect & { distance?: number; recordType: "structured"; score?: number })
+
+interface AmendmentSearchResult {
+  items: AmendmentSearchItem[]
+  nextCursor?: string
+  truncated: boolean
+  warnings: string[]
 }
 
 export function documentBackedAmendmentId(documentId: string): string {
@@ -180,7 +194,17 @@ export interface SupportingMaterialSearchInput {
   eventId?: string
   jurisdictionId?: string
   limit?: number
+  mode?: "hybrid" | "lexical" | "semantic"
   query?: string
+}
+
+type SupportingMaterialSearchItem = typeof supportingMaterials.$inferSelect & { distance?: number; score?: number }
+
+interface SupportingMaterialSearchResult {
+  items: SupportingMaterialSearchItem[]
+  nextCursor?: string
+  truncated: boolean
+  warnings: string[]
 }
 
 export interface ChangeSearchInput {
@@ -275,11 +299,11 @@ function decodeChangeCursor(cursor: string | undefined): { id?: string; observed
 
 export class LegislationQueryService {
   readonly #database: LegislationDatabase
-  readonly #embeddingClient?: QueryEmbeddingClient
+  readonly #retrievalClient?: RetrievalModelClient
 
-  constructor(database: LegislationDatabase, embeddingClient?: QueryEmbeddingClient) {
+  constructor(database: LegislationDatabase, retrievalClient?: RetrievalModelClient) {
     this.#database = database
-    this.#embeddingClient = embeddingClient
+    this.#retrievalClient = retrievalClient
   }
 
   async searchChanges(input: ChangeSearchInput) {
@@ -684,7 +708,74 @@ export class LegislationQueryService {
     }
   }
 
-  async searchAmendments(input: AmendmentSearchInput) {
+  async searchAmendments(input: AmendmentSearchInput): Promise<AmendmentSearchResult> {
+    const mode = input.mode ?? "lexical"
+    if (input.query !== undefined && mode !== "lexical") {
+      const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+      const offset = decodeOffset(input.cursor)
+      const candidateLimit = embeddingQueryRouteFor("search_amendments").candidateLimit
+      const embedding = await this.#embedQuery("search_amendments", input.query)
+      const [structuredRows, documentRows] = await Promise.all([
+        semanticStructuredAmendmentSearch(this.#database, {
+          billId: input.billId,
+          embedding,
+          jurisdictionId: input.jurisdictionId,
+          limit: candidateLimit,
+          sponsorPersonId: input.sponsorPersonId
+        }),
+        input.sponsorPersonId === undefined
+          ? semanticDocumentAmendmentSearch(this.#database, {
+              billId: input.billId,
+              embedding,
+              jurisdictionId: input.jurisdictionId,
+              limit: candidateLimit
+            })
+          : Promise.resolve([])
+      ])
+      const structured = structuredRows.map(({ amendment, distance }) => ({
+        ...amendment,
+        distance,
+        id: amendment.id,
+        recordType: "structured" as const
+      }))
+      const documents = [
+        ...new Map(
+          documentRows.map(({ distance, document, jurisdictionId }) => {
+            const amendment = projectDocumentBackedAmendment(document, jurisdictionId)
+            return [amendment.id, { ...amendment, distance }] as const
+          })
+        ).values()
+      ]
+      const semantic = reciprocalRankFusionWithScores<AmendmentSearchItem>(structured, documents, candidateLimit)
+      const ranked =
+        mode === "semantic"
+          ? semantic
+          : reciprocalRankFusionWithScores(
+              (
+                await this.searchAmendments({
+                  ...input,
+                  cursor: undefined,
+                  limit: candidateLimit,
+                  mode: "lexical"
+                })
+              ).items.map((item) => ({ ...item, id: item.id })),
+              semantic,
+              candidateLimit
+            )
+      const page = paginateSearchRows(ranked, limit, offset, ranked.length === candidateLimit)
+      const includesDocumentBackedAmendment = page.items.some((item) => item.recordType === "document")
+      return {
+        ...page,
+        warnings: [
+          ...coverageWarnings(page.items.length, "amendments"),
+          ...(includesDocumentBackedAmendment
+            ? [
+                "Some state amendments are document-backed records. They include the published file metadata but do not claim normalized sponsors, actions, or votes."
+              ]
+            : [])
+        ]
+      }
+    }
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeOffset(input.cursor)
     const candidateLimit = offset + limit + 1
@@ -790,7 +881,47 @@ export class LegislationQueryService {
     }
   }
 
-  async searchSupportingMaterials(input: SupportingMaterialSearchInput) {
+  async searchSupportingMaterials(input: SupportingMaterialSearchInput): Promise<SupportingMaterialSearchResult> {
+    const mode = input.mode ?? "lexical"
+    if (input.query !== undefined && mode !== "lexical") {
+      const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+      const offset = decodeOffset(input.cursor)
+      const candidateLimit = embeddingQueryRouteFor("search_supporting_materials").candidateLimit
+      const embedding = await this.#embedQuery("search_supporting_materials", input.query)
+      const semanticRows = await semanticSupportingMaterialSearch(this.#database, {
+        amendmentId: input.amendmentId,
+        billId: input.billId,
+        classification: input.classification,
+        embedding,
+        eventId: input.eventId,
+        jurisdictionId: input.jurisdictionId,
+        limit: candidateLimit
+      })
+      const semantic: SupportingMaterialSearchItem[] = [
+        ...new Map(
+          semanticRows.map(
+            ({ distance, material }) => [material.id, { ...material, distance, id: material.id }] as const
+          )
+        ).values()
+      ]
+      const ranked: SupportingMaterialSearchItem[] =
+        mode === "semantic"
+          ? semantic
+          : reciprocalRankFusionWithScores(
+              (
+                await this.searchSupportingMaterials({
+                  ...input,
+                  cursor: undefined,
+                  limit: candidateLimit,
+                  mode: "lexical"
+                })
+              ).items.map((item) => ({ ...item, id: item.id })),
+              semantic,
+              candidateLimit
+            )
+      const page = paginateSearchRows(ranked, limit, offset, ranked.length === candidateLimit)
+      return { ...page, warnings: coverageWarnings(page.items.length, "supporting materials") }
+    }
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeOffset(input.cursor)
     const rows = await this.#database
@@ -862,12 +993,25 @@ export class LegislationQueryService {
     if (mode === "lexical") {
       return lexicalBillSearch(this.#database, input)
     }
-    const embedding = await this.#embedQuery(input.query)
-    if (mode === "semantic") {
-      return semanticBillSearch(this.#database, { ...input, embedding })
-    }
+    const embedding = await this.#embedQuery("search_bills", input.query)
     const { limit, offset } = validateSearchInput(input)
-    const candidateLimit = Math.min((offset + limit) * 5, 100)
+    const candidateLimit = embeddingQueryRouteFor("search_bills").candidateLimit
+    if (mode === "semantic") {
+      const semantic = await semanticBillSearch(this.#database, {
+        ...input,
+        cursor: undefined,
+        embedding,
+        limit: candidateLimit
+      })
+      const reranked = await this.#rerank(
+        "search_bills",
+        input.query,
+        semantic.items,
+        (item) => item.id,
+        (item) => [item.title, item.summary].filter((value): value is string => value !== null).join("\n")
+      )
+      return paginateSearchRows(reranked, limit, offset, semantic.truncated)
+    }
     const [lexical, semantic] = await Promise.all([
       lexicalBillSearch(this.#database, { ...input, cursor: undefined, limit: candidateLimit }),
       semanticBillSearch(this.#database, { ...input, cursor: undefined, embedding, limit: candidateLimit })
@@ -877,8 +1021,15 @@ export class LegislationQueryService {
       ...item,
       score: 1 - item.distance
     }))
-    const candidates = reciprocalRankFusionWithScores(lexicalItems, semanticItems, Math.min(offset + limit + 1, 100))
-    return paginateSearchRows(candidates, limit, offset, lexical.truncated || semantic.truncated)
+    const candidates = reciprocalRankFusionWithScores(lexicalItems, semanticItems, candidateLimit)
+    const reranked = await this.#rerank(
+      "search_bills",
+      input.query,
+      candidates,
+      (item) => item.id,
+      (item) => [item.title, item.summary].filter((value): value is string => value !== null).join("\n")
+    )
+    return paginateSearchRows(reranked, limit, offset, lexical.truncated || semantic.truncated)
   }
 
   async getBill(lookup: BillLookup) {
@@ -1019,12 +1170,30 @@ export class LegislationQueryService {
     if (mode === "lexical") {
       return lexicalPassageSearch(this.#database, input)
     }
-    const embedding = await this.#embedQuery(input.query)
-    if (mode === "semantic") {
-      return semanticPassageSearch(this.#database, { ...input, embedding })
-    }
+    const embedding = await this.#embedQuery("search_bill_text", input.query)
     const { limit, offset } = validateSearchInput(input)
-    const candidateLimit = Math.min((offset + limit) * 5, 100)
+    const candidateLimit = embeddingQueryRouteFor("search_bill_text").candidateLimit
+    if (mode === "semantic") {
+      const semantic = await semanticPassageSearch(this.#database, {
+        ...input,
+        cursor: undefined,
+        embedding,
+        limit: candidateLimit
+      })
+      const reranked = await this.#rerank(
+        "search_bill_text",
+        input.query,
+        semantic.items,
+        (item) => item.sectionId,
+        (item) => item.rerankText
+      )
+      return paginateSearchRows(
+        reranked.map(({ rerankText: _rerankText, ...item }) => item),
+        limit,
+        offset,
+        semantic.truncated
+      )
+    }
     const [lexical, semantic] = await Promise.all([
       lexicalPassageSearch(this.#database, { ...input, cursor: undefined, limit: candidateLimit }),
       semanticPassageSearch(this.#database, { ...input, cursor: undefined, embedding, limit: candidateLimit })
@@ -1034,12 +1203,22 @@ export class LegislationQueryService {
       ...item,
       id: item.sectionId
     }))
-    const candidates = reciprocalRankFusionWithScores(
-      lexicalCandidates,
-      semanticCandidates,
-      Math.min(offset + limit + 1, 100)
-    ).map(({ id: _id, ...item }) => item)
-    return paginateSearchRows(candidates, limit, offset, lexical.truncated || semantic.truncated)
+    const candidates = reciprocalRankFusionWithScores(lexicalCandidates, semanticCandidates, candidateLimit).map(
+      ({ id: _id, ...item }) => item
+    )
+    const reranked = await this.#rerank(
+      "search_bill_text",
+      input.query,
+      candidates,
+      (item) => item.sectionId,
+      (item) => item.rerankText
+    )
+    return paginateSearchRows(
+      reranked.map(({ rerankText: _rerankText, ...item }) => item),
+      limit,
+      offset,
+      lexical.truncated || semantic.truncated
+    )
   }
 
   async getBillText(input: BillLookup & { cursor?: string; documentId?: string; versionCode?: string }) {
@@ -1151,10 +1330,17 @@ export class LegislationQueryService {
     if (input.includeSemantic !== true || explicit.length >= limit) {
       return { items: explicit, truncated: relations.length > limit }
     }
+    const route = embeddingRouteFor("bill")
     const source = await this.#database
-      .select({ embedding: bills.embedding })
-      .from(bills)
-      .where(eq(bills.id, input.id))
+      .select({ embedding: billEmbeddings.embedding })
+      .from(billEmbeddings)
+      .where(
+        and(
+          eq(billEmbeddings.billId, input.id),
+          eq(billEmbeddings.model, route.model),
+          eq(billEmbeddings.inputContract, route.embeddingInputContract)
+        )
+      )
       .limit(1)
     if (source[0]?.embedding === null || source[0]?.embedding === undefined) {
       return { items: explicit, truncated: relations.length > limit, warnings: ["Source bill has no embedding"] }
@@ -1176,15 +1362,41 @@ export class LegislationQueryService {
     return { items: [...explicit, ...semanticItems], truncated: relations.length > limit || semantic.truncated }
   }
 
-  async #embedQuery(query: string): Promise<number[]> {
-    if (this.#embeddingClient === undefined) {
+  async #embedQuery(tool: EmbeddingSearchTool, query: string): Promise<number[]> {
+    if (this.#retrievalClient === undefined) {
       throw new LegislationError("dependency_unavailable", "Semantic search is not configured")
     }
-    const response = await this.#embeddingClient.embed([query])
+    const route = embeddingQueryRouteFor(tool)
+    const response = await this.#retrievalClient.embed(route.queryEmbeddingProduct, [query])
     const embedding = response.embeddings[0]
     if (embedding === undefined) {
       throw new LegislationError("dependency_unavailable", "Embedding provider returned no query vector")
     }
     return embedding
+  }
+
+  async #rerank<Item>(
+    tool: EmbeddingSearchTool,
+    query: string,
+    items: Item[],
+    identify: (item: Item) => string,
+    text: (item: Item) => string
+  ): Promise<Array<Item & { rerankScore: number }>> {
+    if (items.length === 0) {
+      return []
+    }
+    if (this.#retrievalClient === undefined) {
+      throw new LegislationError("dependency_unavailable", "Reranking is not configured")
+    }
+    const reranked = await this.#retrievalClient.rerank(
+      tool,
+      query,
+      items.map((item) => ({ id: identify(item), text: text(item) }))
+    )
+    const byId = new Map(items.map((item) => [identify(item), item]))
+    return reranked.flatMap((candidate) => {
+      const item = byId.get(candidate.id)
+      return item === undefined ? [] : [{ ...item, rerankScore: candidate.relevanceScore }]
+    })
   }
 }

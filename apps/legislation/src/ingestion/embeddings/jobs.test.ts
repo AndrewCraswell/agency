@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest"
+import { embeddingRouteFor } from "../../models/embedding-routing.js"
 import {
   billEmbeddingInputHash,
+  legacyEmbeddingInputHash,
   needsEmbeddingRefresh,
   sectionEmbeddingInputHash,
   selectEmbeddingCandidates
@@ -8,28 +10,44 @@ import {
 
 describe("embedding freshness", () => {
   it("requires a vector and current model even when the input hash is current", () => {
+    const route = embeddingRouteFor("bill")
     const inputHash = billEmbeddingInputHash({ subjects: ["budget"], summary: "A summary", title: "A bill" })
 
     expect(
-      needsEmbeddingRefresh(inputHash, {
-        embedding: null,
-        embeddingInputHash: inputHash,
-        embeddingModel: "openai/text-embedding-3-small"
-      })
+      needsEmbeddingRefresh(
+        inputHash,
+        {
+          embedding: null,
+          embeddingInputContract: route.embeddingInputContract,
+          embeddingInputHash: inputHash,
+          embeddingModel: route.model
+        },
+        route
+      )
     ).toBe(true)
     expect(
-      needsEmbeddingRefresh(inputHash, {
-        embedding: "[0.1]",
-        embeddingInputHash: inputHash,
-        embeddingModel: null
-      })
+      needsEmbeddingRefresh(
+        inputHash,
+        {
+          embedding: "[0.1]",
+          embeddingInputContract: route.embeddingInputContract,
+          embeddingInputHash: inputHash,
+          embeddingModel: null
+        },
+        route
+      )
     ).toBe(true)
     expect(
-      needsEmbeddingRefresh(inputHash, {
-        embedding: "[0.1]",
-        embeddingInputHash: inputHash,
-        embeddingModel: "openai/text-embedding-3-small"
-      })
+      needsEmbeddingRefresh(
+        inputHash,
+        {
+          embedding: "[0.1]",
+          embeddingInputContract: route.embeddingInputContract,
+          embeddingInputHash: inputHash,
+          embeddingModel: route.model
+        },
+        route
+      )
     ).toBe(false)
   })
 
@@ -42,13 +60,24 @@ describe("embedding freshness", () => {
     )
   })
 
+  it("keeps the legacy inline-vector hash distinct from the canonical route hash", () => {
+    const route = embeddingRouteFor("document-section")
+    const input = "Section 1\nText"
+
+    expect(legacyEmbeddingInputHash(route.model, input)).not.toBe(
+      sectionEmbeddingInputHash({ heading: "Section 1", text: "Text" })
+    )
+  })
+
   it("advances past fresh records to find a later stale record instead of falsely completing", () => {
+    const route = embeddingRouteFor("bill")
     const freshInput = billEmbeddingInputHash({ subjects: [], summary: null, title: "Fresh" })
     const records = [
       ...Array.from({ length: 64 }, (_, index) => ({
         embedding: "[0.1]",
+        embeddingInputContract: route.embeddingInputContract,
         embeddingInputHash: freshInput,
-        embeddingModel: "openai/text-embedding-3-small",
+        embeddingModel: route.model,
         id: `bill:${String(index).padStart(3, "0")}`,
         subjects: [],
         summary: null,
@@ -56,8 +85,9 @@ describe("embedding freshness", () => {
       })),
       {
         embedding: "[0.1]",
+        embeddingInputContract: route.embeddingInputContract,
         embeddingInputHash: "stale",
-        embeddingModel: "openai/text-embedding-3-small",
+        embeddingModel: route.model,
         id: "bill:064",
         subjects: [],
         summary: null,
@@ -67,7 +97,7 @@ describe("embedding freshness", () => {
 
     const selection = selectEmbeddingCandidates(
       records,
-      { afterId: "", limit: 64, scanLimit: 512 },
+      { afterId: "", limit: 64, route, scanLimit: 512 },
       (record) => record.title
     )
 
@@ -76,10 +106,12 @@ describe("embedding freshness", () => {
   })
 
   it("keeps an incomplete cursor after scanning a full fresh page", () => {
+    const route = embeddingRouteFor("bill")
     const records = Array.from({ length: 512 }, (_, index) => ({
       embedding: "[0.1]",
+      embeddingInputContract: route.embeddingInputContract,
       embeddingInputHash: billEmbeddingInputHash({ subjects: [], summary: null, title: "Fresh" }),
-      embeddingModel: "openai/text-embedding-3-small",
+      embeddingModel: route.model,
       id: `bill:${String(index).padStart(3, "0")}`,
       subjects: [],
       summary: null,
@@ -88,7 +120,7 @@ describe("embedding freshness", () => {
 
     const selection = selectEmbeddingCandidates(
       records,
-      { afterId: "", limit: 64, scanLimit: 512 },
+      { afterId: "", limit: 64, route, scanLimit: 512 },
       (record) => record.title
     )
 
@@ -96,8 +128,10 @@ describe("embedding freshness", () => {
   })
 
   it("keeps a cursor when a short page holds more stale records than one embedding batch", () => {
+    const route = embeddingRouteFor("bill")
     const records = Array.from({ length: 65 }, (_, index) => ({
       embedding: null,
+      embeddingInputContract: null,
       embeddingInputHash: null,
       embeddingModel: null,
       id: `bill:${String(index).padStart(3, "0")}`,
@@ -108,7 +142,7 @@ describe("embedding freshness", () => {
 
     const selection = selectEmbeddingCandidates(
       records,
-      { afterId: "", limit: 64, scanLimit: 512 },
+      { afterId: "", limit: 64, route, scanLimit: 512 },
       (record) => record.title
     )
 
