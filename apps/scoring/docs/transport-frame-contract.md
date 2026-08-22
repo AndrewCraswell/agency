@@ -7,7 +7,7 @@
 
 This contract defines one bounded binary envelope between the STM32 scoring controller and ESP32 application controller. It carries opaque payload bytes. It does not define decision-record serialization, storage, cryptography, authentication, retry policy, link reset, electrical isolation, or physical SPI timing.
 
-The STM32 remains the sole scoring authority under the [processor fault-containment contract](processor-fault-containment-contract.md). A valid frame never authorizes the ESP32 to create, alter, promote, suppress, reclassify, reorder, or clear an STM32 scoring decision. M0-05 defines the immutable logical payload of a `decision-record`; M2-05 will choose and validate its canonical payload encoding.
+The STM32 remains the sole scoring authority under the [processor fault-containment contract](processor-fault-containment-contract.md). A valid frame never authorizes the ESP32 to create, alter, promote, suppress, reclassify, reorder, or clear an STM32 scoring decision. M0-05 defines the immutable logical payload of a `decision-record`; M2-05 reuses and validates this canonical binary frame without changing payload semantics.
 
 ## Canonical frame
 
@@ -69,11 +69,18 @@ These vectors are hexadecimal complete frames, including CRC-32C.
 
 | Meaning | Hex |
 | --- | --- |
-| `decision-record`, sequence `0x01020304`, payload `00 7F 80 FF` | `5343010100000102030400000004007F80FF01DE6ABE` |
+| `decision-record` frame with opaque test payload `00 7F 80 FF`, sequence `0x01020304` | `5343010100000102030400000004007F80FF01DE6ABE` |
 | empty `request`, sequence `0` | `5343010300000000000000000000452025EA` |
 | `status`, sequence `0xFFFFFFFF`, payload `A5` | `534301020000FFFFFFFF00000001A52B9989F7` |
 
-The executable vectors and malformed-frame cases are in `src/transport-frame.test.ts`.
+The executable vectors and malformed-frame cases are in `src/transport-frame.test.ts`. The decoder also rejects any
+input larger than the 4,114-byte complete-frame bound before reading payload bytes; M2-05 acceptance evidence is in
+[`m2-05-transport-codec-evidence.md`](m2-05-transport-codec-evidence.md).
+
+At the public decoder boundary, any value that is not a `Uint8Array` is rejected with the stable `frame-input` error
+before its length or contents are inspected. The decoder error vocabulary is `frame-input`, `truncated`,
+`frame-length`, `magic`, `version`, `message-type`, `direction`, `flags`, `payload-length`, `trailing-bytes`, and
+`crc`.
 
 ## Acceptance and non-goals
 

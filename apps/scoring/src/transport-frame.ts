@@ -30,6 +30,8 @@ export type TransportFrame = Readonly<{
 export type TransportFrameErrorCode =
   | "crc"
   | "direction"
+  | "frame-input"
+  | "frame-length"
   | "flags"
   | "magic"
   | "message-type"
@@ -178,8 +180,16 @@ export function encodeTransportFrame(frame: TransportFrame): Uint8Array {
  * duplicates or reorders.
  */
 export function decodeTransportFrame(receiver: TransportReceiver, bytes: Uint8Array): TransportFrame {
+  if (!(bytes instanceof Uint8Array)) {
+    throw new TransportFrameError("frame-input")
+  }
+
   if (bytes.length < TRANSPORT_FRAME_HEADER_BYTES) {
     throw new TransportFrameError("truncated")
+  }
+
+  if (bytes.length > MAX_TRANSPORT_FRAME_BYTES) {
+    throw new TransportFrameError("frame-length")
   }
 
   if (bytes[0] !== TRANSPORT_FRAME_MAGIC[0] || bytes[1] !== TRANSPORT_FRAME_MAGIC[1]) {
