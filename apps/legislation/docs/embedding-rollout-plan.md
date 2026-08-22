@@ -74,20 +74,46 @@ This requires semantic and hybrid modes for `search_amendments` and
 bill-document passages already have semantic consumers, but their input
 contracts must be upgraded before the broad rollout.
 
-## Provisional model and reranker routing
+## Canonical canary routing contract
 
 A model switch or reranking stage advances when it improves nDCG@10 by at
 least 0.02 absolute on the product-specific evaluation without a meaningful
 recall regression. This is a canary-routing threshold, not permission to embed
 the full corpus. The pooled, graded MCP evaluation must reproduce each gain.
+The machine-readable source of truth is
+[`src/models/embedding-routing.ts`](../src/models/embedding-routing.ts). Index
+creation, embedding jobs, and query code must consume that contract rather
+than repeat model names or dimensions.
 
 | Data indexed | Embedding input | Embedding model | Reranker | Expanded-bakeoff basis |
 | --- | --- | --- | --- | --- |
 | Bills | Current title, summary, and subjects | `voyageai/voyage-4` | `cohere/rerank-v3.5` for natural-language discovery | Voyage improved nDCG@10 by 0.027 over OpenAI Small; reranking added another 0.041. |
 | Bill-document sections | Section heading and text | `openai/text-embedding-3-small` | `cohere/rerank-v3.5` for natural-language passage search | Reranking improved OpenAI nDCG@10 by 0.069 and reached the same 0.856 as reranked Voyage, avoiding Voyage's higher document-corpus generation cost. |
 | Structured amendments | Purpose and description, with the printed identifier as the sparse fallback | `openai/text-embedding-3-small` | None | Voyage contextual improved only 0.007 over OpenAI; reranking reduced nDCG@10 by 0.030 or more. |
-| Document-backed amendment sections | Bill and amendment document context, section heading, and text | `openai/text-embedding-3-small` | `cohere/rerank-v3.5` provisionally | These share the document-passage retrieval path; the graded canary must report them separately before promotion. |
-| Supporting-material sections | Material title and classification, section heading, and text | `voyageai/voyage-4` | None | Voyage improved nDCG@10 by 0.263 and Recall@10 by 0.400; reranking reduced the strongest Voyage configuration. |
+| Document-backed amendment sections | Section heading and text | `openai/text-embedding-3-small` | `cohere/rerank-v3.5` for natural-language passage search | These use the same tested document-section model space and index; the graded canary reports the amendment classification separately. |
+| Supporting-material sections | Section heading and text | `voyageai/voyage-4` | None | Voyage improved nDCG@10 by 0.263 and Recall@10 by 0.400; reranking reduced the strongest Voyage configuration. |
+
+| Product route | Storage table | Dimensions | Index-time input role | Query-time input role | First-stage candidates |
+| --- | --- | ---: | --- | --- | ---: |
+| Bills | `bill_embeddings` | 1,024 | Voyage `document` | Voyage `query` | 25 |
+| Bill-document and document-backed amendment sections | `document_section_embeddings` | 1,536 | OpenAI default | OpenAI default | 25 |
+| Structured amendments | `amendment_embeddings` | 1,536 | OpenAI default | OpenAI default | 25 |
+| Supporting-material sections | `supporting_material_section_embeddings` | 1,024 | Voyage `document` | Voyage `query` | 25 |
+
+Every stored vector records its exact model ID, dimensions, input-contract ID,
+canonical input hash, source-record ID, and creation time. Query code selects
+one route from the MCP tool and result kind, embeds the query with that route's
+model and query role, and searches only rows with the same model and input
+contract. It must reject dimension or model drift rather than compare vectors
+from different spaces.
+
+Natural-language bill and document searches send the first-stage top 25 to
+`cohere/rerank-v3.5`, using at most 4,000 characters per candidate. Structured
+amendments and supporting materials retain the embedding order. Exact
+identifiers and structured filters bypass both embedding and reranking. The
+MCP currently exposes product-specific search tools, so it does not compare
+raw similarity scores across the OpenAI and Voyage spaces. Any future unified
+search must validate rank fusion independently before launch.
 
 Exact identifiers, structured filters, bill actions, votes, people,
 organizations, events, dates, and other relational metadata are not embedded
@@ -95,10 +121,8 @@ or reranked. They remain database filters, joins, and canonical lookups. OCR
 and native text use the same product route while preserving extraction
 provenance as metadata.
 
-A search spanning products embeds the query once in each model space required
-by those products, runs the product indexes in parallel, reranks only the bill
-and document candidate sets, and fuses normalized product ranks. Identifier
-lookups and filtered collection retrieval bypass both embedding and reranking.
+Identifier lookups and filtered collection retrieval bypass both embedding and
+reranking.
 
 ## MCP access plan
 
