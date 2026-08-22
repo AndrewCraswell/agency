@@ -105,7 +105,7 @@ async function embed(
       }),
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       method: "POST",
-      signal: AbortSignal.timeout(60_000)
+      signal: AbortSignal.timeout(configuration.model === "qwen/qwen3-embedding-8b" ? 180_000 : 60_000)
     })
     if (response.ok) {
       const parsed = responseSchema.parse(await response.json())
@@ -173,7 +173,7 @@ for (const configuration of configurations) {
   )
 
   const batchSize = configuration.model === "voyageai/voyage-4-large" ? 32 : 64
-  const parallelBatches = 4
+  const parallelBatches = configuration.model === "qwen/qwen3-embedding-8b" ? 2 : 4
   for (let offset = 0; offset < manifest.records.length; offset += batchSize * parallelBatches) {
     const batches = Array.from({ length: parallelBatches }, (_, index) =>
       manifest.records.slice(offset + index * batchSize, offset + (index + 1) * batchSize)

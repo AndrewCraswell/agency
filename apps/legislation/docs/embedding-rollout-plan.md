@@ -40,6 +40,16 @@ bounded retrieval-quality gate for pure semantic search, but full rollout is
 still blocked on dedicated storage and reconciliation of 429,261 historical
 inline vectors discovered during the preflight.
 
+The expanded isolated bakeoff then evaluated 3,989 records and 40 queries
+across bills, document passages, amendments, and supporting materials. Voyage 4
+is the provisional canary model because it combined 98 percent
+capacity-adjusted bill Recall@10, strong per-product ranking, 1,024-dimensional
+vectors, and low evaluation latency. The experiment also rejected raw leading
+document excerpts as a sparse-bill fallback and showed that each product needs
+its own input contract. See the
+[model and input bakeoff](../evals/embedding-model-bakeoff.md). Full rollout
+remains paused until the broader human-graded and deployed MCP gates pass.
+
 ## Retrieval products and embedding inputs
 
 The rollout is not one undifferentiated vectorization job. Each search product
