@@ -16,9 +16,11 @@ harness-keying, plug-fit, salt/sweat, and endurance evidence.
 The final production selection **cannot close in M4-10**. The open work is
 material, not procurement paperwork:
 
-1. M0-03 has not defined the electrical meaning or physical ordering of A, B,
-   and C. In particular, the FIE rules name pin geometry and weapon functions,
-   but they do not assign the project labels A/B/C or panel colors.
+1. M0-03 defines the logical A/B/C conductors but expressly does not bind them
+   to connector contacts, harness wires, or panel order. SIG-01 through
+   SIG-06 and M4-13 own that physical binding. FIE names pin geometry and
+   weapon functions, but does not assign the project labels A/B/C or panel
+   colours.
 2. FIE specifies the spool-end body-cord plug as a three-pin male plug with a
    centre pin, a pin 15 mm from it, and a pin 20 mm from it. It does not
    identify the plug's contact construction as a Stäubli-compatible
@@ -37,7 +39,8 @@ material, not procurement paperwork:
 The M4-10 sample order is intentionally simple: red identifies the left
 fencer's three-socket cluster and green the right fencer's cluster. It does
 not encode A/B/C. The physical positions remain `P15`, `P0`, and `P20` until
-M0-03 and M4-13 freeze their electrical map and harness pinout.
+M4-13 closes the SIG-01 physical map and harness pinout under the M0-03
+logical contract.
 
 | Fencer | Positions | Exact manufacturer part number | Colour | Quantity fitted per apparatus |
 | --- | --- | --- | --- | ---: |
@@ -54,10 +57,10 @@ consistency gate.
 Red/left and green/right are product conventions only. FIE prescribes neither
 this side assignment nor socket colours. Do not order production material or
 update the readiness manifest from this table. Production remains denied until
-M0-03 freezes the A/B/C map and every physical gate below passes on the
-intended body-cord plugs. If the product convention later changes to a colour
-per circuit, that is a reviewed M0-03/M4-13 decision, not an inferred fencing
-standard.
+M4-13 closes the A/B/C physical binding and every physical gate below passes
+on the intended body-cord plugs. If the product convention later changes to a
+colour per circuit, that is an M4-13 decision constrained by M0-03, not an
+inferred fencing standard.
 
 ## Manufacturer evidence
 
@@ -134,13 +137,13 @@ a source for this selection and no Favero or Skewered compatibility is claimed.
 
 ## Panel and harness proposal
 
-Until M0-03 closes, call the physical locations `P15`, `P0`, and `P20`, based
-on the FIE plug geometry, rather than silently declaring which is A, B, or C.
-Build each three-socket cluster from a hardened locating template validated
-against the samples, with a recessed non-conductive bezel that protects the
-insulating sleeves and makes the cluster orientation unambiguous. Give the
-front panel durable `LEFT`/`RIGHT` and A/B/C markings only after the M0-03 map
-is signed off.
+Until M4-13 closes the SIG-01 physical binding, call the physical locations
+`P15`, `P0`, and `P20`, based on the FIE plug geometry, rather than silently
+declaring which is A, B, or C. Build each three-socket cluster from a hardened
+locating template validated against the samples, with a recessed
+non-conductive bezel that protects the insulating sleeves and makes the
+cluster orientation unambiguous. Give the front panel durable `LEFT`/`RIGHT`
+and A/B/C markings only after the M4-13 map review is signed off.
 
 Each socket's M4 stud should join a short, serviceable internal lead through a
 ring terminal, a serrated locking washer, a torque-marked nut, and insulated
@@ -285,7 +288,8 @@ unexplained resistance step is a failure.
 
 M4-10 can be reviewed as an exact sample-selection and test-plan deliverable.
 It does not unblock M4-12, M4-13, or M4-14 for fabrication. The next actions
-are to close M0-03's line and panel-order contract, obtain manufacturer CAD
-plus representative foil, epee, and sabre body-cord plug samples, build the
-fixture panel and retainer, and archive measured evidence before changing
+are to close the M4-13 SIG-01 line, panel-order, and keying release under the
+committed M0-03 logical contract, obtain manufacturer CAD plus representative
+foil, epee, and sabre body-cord plug samples, build the fixture panel and
+retainer, and archive measured evidence before changing
 `src/part-readiness.ts` or ordering production material.
