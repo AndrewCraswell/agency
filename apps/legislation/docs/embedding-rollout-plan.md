@@ -44,12 +44,12 @@ still blocked on dedicated storage and reconciliation of 429,261 historical
 inline vectors discovered during the preflight.
 
 The expanded isolated bakeoff then evaluated 3,989 records and 40 queries
-across bills, document passages, amendments, and supporting materials. Voyage 4
-is the provisional canary model because it combined 98 percent
-capacity-adjusted bill Recall@10, strong per-product ranking, 1,024-dimensional
-vectors, and low evaluation latency. The experiment also rejected raw leading
-document excerpts as a sparse-bill fallback and showed that each product needs
-its own input contract. See the
+across bills, document passages, amendments, and supporting materials. It
+selected a mixed per-product arrangement rather than one global model: Voyage
+4 for bills and supporting materials, and OpenAI Small for document sections
+and structured amendments. The experiment also rejected raw leading document
+excerpts as a sparse-bill fallback and showed that each product needs its own
+input contract. See the
 [model and input bakeoff](../evals/embedding-model-bakeoff.md). Full rollout
 remains paused until the broader human-graded and deployed MCP gates pass.
 
@@ -90,7 +90,7 @@ than repeat model names or dimensions.
 | Bills | Current title, summary, and subjects | `voyageai/voyage-4` | `cohere/rerank-v3.5` for natural-language discovery | Voyage improved nDCG@10 by 0.027 over OpenAI Small; reranking added another 0.041. |
 | Bill-document sections | Section heading and text | `openai/text-embedding-3-small` | `cohere/rerank-v3.5` for natural-language passage search | Reranking improved OpenAI nDCG@10 by 0.069 and reached the same 0.856 as reranked Voyage, avoiding Voyage's higher document-corpus generation cost. |
 | Structured amendments | Purpose and description, with the printed identifier as the sparse fallback | `openai/text-embedding-3-small` | None | Voyage contextual improved only 0.007 over OpenAI; reranking reduced nDCG@10 by 0.030 or more. |
-| Document-backed amendment sections | Section heading and text | `openai/text-embedding-3-small` | `cohere/rerank-v3.5` for natural-language passage search | These use the same tested document-section model space and index; the graded canary reports the amendment classification separately. |
+| Document-backed amendment sections | Section heading and text | `openai/text-embedding-3-small` | `cohere/rerank-v3.5` only when returned by `search_bill_text`; none in `search_amendments` | These use the same tested document-section model space and index; the graded canary reports the amendment classification separately. |
 | Supporting-material sections | Section heading and text | `voyageai/voyage-4` | None | Voyage improved nDCG@10 by 0.263 and Recall@10 by 0.400; reranking reduced the strongest Voyage configuration. |
 
 | Product route | Storage table | Dimensions | Index-time input role | Query-time input role | First-stage candidates |
@@ -114,6 +114,30 @@ identifiers and structured filters bypass both embedding and reranking. The
 MCP currently exposes product-specific search tools, so it does not compare
 raw similarity scores across the OpenAI and Voyage spaces. Any future unified
 search must validate rank fusion independently before launch.
+
+### Exact MCP query dispatch
+
+This is the lookup table the MCP implementation must follow after vectors are
+created. The MCP tool selects the query route; callers never choose a provider
+model directly.
+
+| MCP tool | Query embedding | Vector rows searched | Candidate handling | Result projection |
+| --- | --- | --- | --- | --- |
+| `search_bills` | Voyage 4 with `input_type=query` | `bill_embeddings` rows matching `voyageai/voyage-4`, 1,024 dimensions, and `bill-title-summary-subjects` | Retrieve 25, rerank with Cohere Rerank 3.5, then apply the requested result limit | Canonical bill |
+| `search_bill_text` | OpenAI Small, 1,536 dimensions | `document_section_embeddings` rows matching `document-section-heading-text`, including ordinary and amendment-classified documents | Retrieve 25, rerank with Cohere Rerank 3.5, then apply the requested result limit | Canonical section, document, bill, and amendment identity when applicable |
+| `search_amendments` | OpenAI Small, 1,536 dimensions | Search `amendment_embeddings` with `amendment-purpose-description-identifier-fallback` and amendment-classified `document_section_embeddings` with `document-section-heading-text` separately | Do not rerank. Merge the two ranked lists with reciprocal-rank fusion and deduplicate by canonical amendment identity | Canonical amendment, related bill, and supporting document passages |
+| `search_supporting_materials` | Voyage 4 with `input_type=query` | `supporting_material_section_embeddings` rows matching `voyageai/voyage-4`, 1,024 dimensions, and `supporting-material-section-heading-text` | Preserve embedding rank; do not rerank | Canonical material section, material, and related bill |
+
+`search_amendments_for_bills` is a structured relationship lookup, not a
+semantic search surface. It continues to fetch amendments for the supplied
+bill IDs without creating a query embedding. Exact bill numbers, amendment
+identifiers, and other structured filters similarly bypass semantic retrieval.
+
+The same dispatch is encoded in `EMBEDDING_QUERY_ROUTES` next to the index-time
+contract. A model, dimension, input-contract, candidate count, reranker, or
+merge-strategy change must update that contract, its tests, and this table in
+the same commit. This prevents indexing with one model and later querying with
+another.
 
 Exact identifiers, structured filters, bill actions, votes, people,
 organizations, events, dates, and other relational metadata are not embedded

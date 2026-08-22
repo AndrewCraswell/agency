@@ -1,7 +1,9 @@
 import { z } from "zod"
+import { EMBEDDING_ROUTES, type EmbeddingRoute } from "./embedding-routing.js"
 
-export const EMBEDDING_MODEL = "openai/text-embedding-3-small"
-export const EMBEDDING_DIMENSIONS = 1_536
+const DEFAULT_EMBEDDING_ROUTE = EMBEDDING_ROUTES["document-section"]
+export const EMBEDDING_MODEL = DEFAULT_EMBEDDING_ROUTE.model
+export const EMBEDDING_DIMENSIONS = DEFAULT_EMBEDDING_ROUTE.dimensions
 export const MAX_EMBEDDING_INPUT_CHARACTERS = 16_000
 const MAXIMUM_BATCH_SIZE = 64
 
@@ -29,6 +31,7 @@ export interface OpenRouterEmbeddingClientOptions {
   baseUrl?: URL
   fetch?: typeof fetch
   maximumAttempts?: number
+  route?: EmbeddingRoute
   timeoutMs?: number
 }
 
@@ -54,6 +57,7 @@ export class OpenRouterEmbeddingClient {
     requested: 0,
     retries: 0
   }
+  readonly #route: EmbeddingRoute
   readonly #timeoutMs: number
 
   constructor(options: OpenRouterEmbeddingClientOptions) {
@@ -62,6 +66,7 @@ export class OpenRouterEmbeddingClient {
     this.#baseUrl = new URL(`${configuredBaseUrl.href.replace(/\/+$/, "")}/`)
     this.#fetch = options.fetch ?? fetch
     this.#maximumAttempts = options.maximumAttempts ?? 3
+    this.#route = options.route ?? DEFAULT_EMBEDDING_ROUTE
     this.#timeoutMs = options.timeoutMs ?? 30_000
   }
 
@@ -69,7 +74,7 @@ export class OpenRouterEmbeddingClient {
     return { ...this.#metrics }
   }
 
-  async embed(input: string[]): Promise<EmbeddingResult> {
+  async embed(input: string[], inputType: "document" | "query" = "document"): Promise<EmbeddingResult> {
     if (input.length < 1 || input.length > MAXIMUM_BATCH_SIZE || input.some((value) => value.trim().length === 0)) {
       throw new Error(`Embedding batch must contain 1 to ${MAXIMUM_BATCH_SIZE} nonempty inputs`)
     }
@@ -80,10 +85,13 @@ export class OpenRouterEmbeddingClient {
     for (let attempt = 1; attempt <= this.#maximumAttempts; attempt += 1) {
       const response = await this.#fetch(new URL("embeddings", this.#baseUrl), {
         body: JSON.stringify({
-          dimensions: EMBEDDING_DIMENSIONS,
+          ...(this.#route.dimensionsParameter ? { dimensions: this.#route.dimensions } : {}),
           encoding_format: "float",
           input: boundedInput,
-          model: EMBEDDING_MODEL,
+          ...(this.#route.documentInputType
+            ? { input_type: inputType === "query" ? this.#route.queryInputType : this.#route.documentInputType }
+            : {}),
+          model: this.#route.model,
           provider: { allow_fallbacks: false, data_collection: "deny" }
         }),
         headers: { Authorization: `Bearer ${this.#apiKey}`, "Content-Type": "application/json" },
@@ -93,22 +101,22 @@ export class OpenRouterEmbeddingClient {
 
       if (response.ok) {
         const result = responseSchema.parse(await response.json())
-        const providerModel = EMBEDDING_MODEL.split("/").at(-1)
-        if (result.model !== EMBEDDING_MODEL && result.model !== providerModel) {
+        const providerModel = this.#route.model.split("/").at(-1)
+        if (result.model !== this.#route.model && result.model !== providerModel) {
           throw new Error(`Embedding response used unexpected model ${result.model}`)
         }
         const embeddings = result.data.toSorted((left, right) => left.index - right.index).map((item) => item.embedding)
         if (
           embeddings.length !== input.length ||
-          embeddings.some((embedding) => embedding.length !== EMBEDDING_DIMENSIONS)
+          embeddings.some((embedding) => embedding.length !== this.#route.dimensions)
         ) {
           this.#metrics.failed += input.length
-          throw new Error(`Embedding response must contain one ${EMBEDDING_DIMENSIONS}-dimensional vector per input`)
+          throw new Error(`Embedding response must contain one ${this.#route.dimensions}-dimensional vector per input`)
         }
         this.#metrics.created += embeddings.length
         return {
           embeddings,
-          model: EMBEDDING_MODEL,
+          model: this.#route.model,
           promptTokens: result.usage?.prompt_tokens,
           totalTokens: result.usage?.total_tokens
         }

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+import { EMBEDDING_ROUTES } from "./embedding-routing.js"
 import {
   EMBEDDING_DIMENSIONS,
   EMBEDDING_MODEL,
@@ -6,7 +7,7 @@ import {
   OpenRouterEmbeddingClient
 } from "./openrouter-embeddings.js"
 
-function successfulResponse(model = EMBEDDING_MODEL, dimensions = EMBEDDING_DIMENSIONS) {
+function successfulResponse(model: string = EMBEDDING_MODEL, dimensions: number = EMBEDDING_DIMENSIONS) {
   return new Response(
     JSON.stringify({
       data: [{ embedding: Array.from({ length: dimensions }, () => 0.5), index: 0 }],
@@ -48,6 +49,24 @@ describe("OpenRouter embedding client", () => {
 
     const request = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
     expect(request.input[0]).toHaveLength(MAX_EMBEDDING_INPUT_CHARACTERS)
+  })
+
+  it("uses the canonical Voyage model space and input roles", async () => {
+    const voyage = EMBEDDING_ROUTES.bill
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(successfulResponse("voyage-4", voyage.dimensions))
+      .mockResolvedValueOnce(successfulResponse("voyage-4", voyage.dimensions))
+    const client = new OpenRouterEmbeddingClient({ apiKey: "secret", fetch: fetchMock, route: voyage })
+
+    await expect(client.embed(["bill text"])).resolves.toMatchObject({ model: voyage.model })
+    await expect(client.embed(["bill query"], "query")).resolves.toMatchObject({ model: voyage.model })
+
+    const documentRequest = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
+    const queryRequest = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))
+    expect(documentRequest).toMatchObject({ input_type: "document", model: voyage.model })
+    expect(documentRequest).not.toHaveProperty("dimensions")
+    expect(queryRequest).toMatchObject({ input_type: "query", model: voyage.model })
   })
 
   it("retries transient failures and rejects model or dimension drift", async () => {

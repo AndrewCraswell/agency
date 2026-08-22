@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest"
 import {
   EMBEDDING_ROUTES,
+  EMBEDDING_QUERY_ROUTES,
   EMBEDDING_ROUTE_MINIMUM_NDCG_IMPROVEMENT,
   EMBEDDING_ROUTE_PRODUCTS,
+  embeddingQueryRouteFor,
   embeddingRouteFor
 } from "./embedding-routing.js"
 
@@ -27,14 +29,12 @@ describe("embedding routing contract", () => {
       model: "openai/text-embedding-3-small",
       storageTable: "amendment_embeddings"
     })
-    expect(amendment.rerank).toBeUndefined()
     const supportingMaterial = embeddingRouteFor("supporting-material-section")
     expect(supportingMaterial).toMatchObject({
       dimensions: 1024,
       model: "voyageai/voyage-4",
       storageTable: "supporting_material_section_embeddings"
     })
-    expect(supportingMaterial.rerank).toBeUndefined()
   })
 
   it("shares the tested document route with document-backed amendments", () => {
@@ -45,18 +45,29 @@ describe("embedding routing contract", () => {
       embeddingInput: document.embeddingInput,
       embeddingInputContract: document.embeddingInputContract,
       model: document.model,
-      rerank: document.rerank,
       storageTable: document.storageTable
     })
   })
 
-  it("pins the selective rerank boundary and promotion threshold", () => {
+  it("pins query dispatch, merge behavior, selective reranking, and the promotion threshold", () => {
     expect(EMBEDDING_ROUTE_MINIMUM_NDCG_IMPROVEMENT).toBe(0.02)
-    expect(embeddingRouteFor("bill").rerank).toEqual({
+    expect(Object.keys(EMBEDDING_QUERY_ROUTES).toSorted()).toEqual([
+      "search_amendments",
+      "search_bill_text",
+      "search_bills",
+      "search_supporting_materials"
+    ])
+    expect(embeddingQueryRouteFor("search_bills").rerank).toEqual({
       candidateLimit: 25,
       inputMaximumCharacters: 4000,
       model: "cohere/rerank-v3.5"
     })
-    expect(embeddingRouteFor("document-section").rerank).toEqual(embeddingRouteFor("bill").rerank)
+    expect(embeddingQueryRouteFor("search_bill_text").rerank).toEqual(embeddingQueryRouteFor("search_bills").rerank)
+    expect(embeddingQueryRouteFor("search_amendments")).toEqual({
+      candidateMerge: "reciprocal-rank-fusion",
+      queryEmbeddingProduct: "structured-amendment",
+      searchedProducts: ["structured-amendment", "document-backed-amendment-section"]
+    })
+    expect(embeddingQueryRouteFor("search_supporting_materials").rerank).toBeUndefined()
   })
 })
