@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url"
 import { jlcPartsEngine } from "@tscircuit/parts-engine"
 import { renderScene } from "@tscircuit/simple-3d-svg"
 import { any_circuit_element } from "circuit-json"
+import { convertCircuitJsonToGltf } from "circuit-json-to-gltf"
 import { convertCircuitJsonToSimple3dScene } from "circuit-json-to-simple-3d"
 import { convertCircuitJsonToPcbSvg, convertCircuitJsonToSchematicSvg } from "circuit-to-svg"
 import { build as bundle } from "esbuild"
@@ -66,8 +67,13 @@ const threeDimensionalSvg = await renderScene(threeDimensionalScene, {
   height: 900,
   width: 1440
 })
-const interactiveThreeDimensionalScene = threeDimensionalScene
-const embeddedThreeDimensionalScene = JSON.stringify(interactiveThreeDimensionalScene).replaceAll("<", "\\u003c")
+const boardGlb = await convertCircuitJsonToGltf(circuitJson, {
+  boardTextureResolution: 1024,
+  format: "glb",
+  includeModels: true
+})
+if (!(boardGlb instanceof ArrayBuffer)) throw new Error("The interactive 3D board model was not generated")
+const embeddedBoardGlb = Buffer.from(boardGlb).toString("base64")
 const interactiveViewerBuild = await bundle({
   bundle: true,
   entryPoints: [fileURLToPath(new URL("../assets/interactive-3d-viewer.js", import.meta.url))],
@@ -151,6 +157,8 @@ const previewHtml = `<!doctype html>
     .viewer-shell canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
     .viewer-shell canvas:active { cursor: grabbing; }
     .viewer-shell canvas:focus-visible { outline: 3px solid #7cc4ff; outline-offset: -3px; }
+    .viewer-status { position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); margin: 0; padding: 10px 14px; border-radius: 6px; background: rgb(11 17 23 / 88%); color: #eef4f8; font-weight: 700; }
+    .viewer-status[hidden] { display: none; }
     .viewer-controls { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; }
     .viewer-controls button { border: 1px solid #60788a; border-radius: 6px; padding: 8px 12px; background: #172630; color: #eef4f8; font: inherit; font-weight: 700; cursor: pointer; }
     .viewer-help { margin: 10px 0 0; color: #b7c7d3; }
@@ -207,6 +215,7 @@ const previewHtml = `<!doctype html>
         <figcaption>Interactive 3D board model.</figcaption>
         <div class="viewer-shell">
           <canvas id="board-3d-canvas" tabindex="0" aria-label="Interactive three-dimensional board model. Drag to rotate and scroll to zoom."></canvas>
+          <p id="board-3d-status" class="viewer-status" role="status">Loading detailed board model</p>
           <div class="viewer-controls"><button id="reset-3d-view" type="button">Reset view</button></div>
         </div>
         <p class="viewer-help">Drag to rotate. Scroll to zoom. Use the arrow keys when the model is focused. <a href="board-3d.svg">Open the static 3D export</a>.</p>
@@ -253,7 +262,7 @@ const previewHtml = `<!doctype html>
       </figure>
     </section>
   </main>
-  <script id="board-3d-scene" type="application/json">${embeddedThreeDimensionalScene}</script>
+  <script id="board-3d-model" type="application/octet-stream">${embeddedBoardGlb}</script>
   <script>
     const tabs = Array.from(document.querySelectorAll('[role="tab"]'))
     const panels = Array.from(document.querySelectorAll('[role="tabpanel"]'))
@@ -291,7 +300,7 @@ const previewHtml = `<!doctype html>
 
 await mkdir("dist", { recursive: true })
 await Promise.all([
-  writeFile("dist/board-3d-scene.json", `${JSON.stringify(interactiveThreeDimensionalScene)}\n`),
+  writeFile("dist/board.glb", new Uint8Array(boardGlb)),
   writeFile("dist/bom.csv", `${bomCsv}\n`),
   writeFile("dist/bom.json", `${JSON.stringify(componentDecisions, null, 2)}\n`),
   writeFile("dist/circuit.json", `${JSON.stringify(circuitJson, null, 2)}\n`),

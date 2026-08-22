@@ -1,22 +1,23 @@
 // Browser-only viewer copied into the generated preview by src/build.ts.
 import * as THREE from "three"
 import { OrbitControls } from "three/addons/controls/OrbitControls.js"
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js"
 
 async function initializeViewer() {
   const canvas = document.querySelector("#board-3d-canvas")
   const resetButton = document.querySelector("#reset-3d-view")
-  const sceneElement = document.querySelector("#board-3d-scene")
+  const modelElement = document.querySelector("#board-3d-model")
+  const statusElement = document.querySelector("#board-3d-status")
 
   if (
     !(canvas instanceof HTMLCanvasElement) ||
     !(resetButton instanceof HTMLButtonElement) ||
-    !(sceneElement instanceof HTMLScriptElement)
+    !(modelElement instanceof HTMLScriptElement) ||
+    !(statusElement instanceof HTMLParagraphElement)
   ) {
     throw new Error("Interactive 3D viewer controls are missing")
   }
   canvas.dataset.viewerState = "loading"
-
-  const sceneData = JSON.parse(sceneElement.textContent ?? "")
 
   const scene = new THREE.Scene()
   scene.background = new THREE.Color("#101820")
@@ -30,35 +31,31 @@ async function initializeViewer() {
   fillLight.position.set(-120, 80, -100)
   scene.add(fillLight)
 
-  function materialFor(colorValue) {
-    const match = typeof colorValue === "string" ? colorValue.match(/rgba?\(([^)]+)\)/) : null
-    if (!match) return new THREE.MeshStandardMaterial({ color: colorValue || "#808080", roughness: 0.72 })
-
-    const [red, green, blue, alpha = 1] = match[1].split(",").map(Number)
-    return new THREE.MeshStandardMaterial({
-      color: new THREE.Color(red / 255, green / 255, blue / 255),
-      opacity: alpha,
-      roughness: 0.72,
-      transparent: alpha < 1
-    })
+  function decodeModel(encodedModel) {
+    const binary = atob(encodedModel.trim())
+    const bytes = new Uint8Array(binary.length)
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index)
+    return bytes.buffer
   }
 
-  for (const box of sceneData.boxes) {
-    const geometry = new THREE.BoxGeometry(box.size.x, box.size.y, box.size.z)
-    const mesh = new THREE.Mesh(geometry, materialFor(box.color))
-    mesh.position.set(box.center.x, box.center.y, box.center.z)
-    if (box.rotation) mesh.rotation.set(box.rotation.x || 0, box.rotation.y || 0, box.rotation.z || 0)
-    scene.add(mesh)
-  }
+  const boardModel = await new Promise((resolve, reject) => {
+    new GLTFLoader().parse(decodeModel(modelElement.textContent ?? ""), "", (gltf) => resolve(gltf.scene), reject)
+  })
+  scene.add(boardModel)
+
+  const bounds = new THREE.Box3().setFromObject(boardModel)
+  const target = bounds.getCenter(new THREE.Vector3())
+  const modelSize = bounds.getSize(new THREE.Vector3())
+  const maximumDimension = Math.max(modelSize.x, modelSize.y, modelSize.z)
 
   const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 2000)
-  const initialCameraPosition = new THREE.Vector3(
-    sceneData.camera.position.x,
-    sceneData.camera.position.y,
-    sceneData.camera.position.z
-  )
-  const target = new THREE.Vector3(sceneData.camera.lookAt.x, sceneData.camera.lookAt.y, sceneData.camera.lookAt.z)
+  const viewingDistance = maximumDimension * 1.45
+  const initialCameraPosition = target
+    .clone()
+    .add(new THREE.Vector3(viewingDistance * 0.72, viewingDistance * 0.6, viewingDistance * 0.72))
   camera.position.copy(initialCameraPosition)
+  camera.near = Math.max(maximumDimension / 1000, 0.01)
+  camera.far = maximumDimension * 100
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, canvas })
   renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -66,9 +63,9 @@ async function initializeViewer() {
 
   const controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = false
-  controls.maxDistance = 700
+  controls.maxDistance = maximumDimension * 8
   controls.maxPolarAngle = Math.PI * 0.95
-  controls.minDistance = 75
+  controls.minDistance = maximumDimension * 0.25
   controls.target.copy(target)
   controls.update()
 
@@ -112,7 +109,15 @@ async function initializeViewer() {
     if (event.detail === "view-3d") requestAnimationFrame(resize)
   })
   canvas.dataset.viewerState = "ready"
+  statusElement.hidden = true
   requestAnimationFrame(resize)
 }
 
-void initializeViewer()
+void initializeViewer().catch((error) => {
+  const canvas = document.querySelector("#board-3d-canvas")
+  const statusElement = document.querySelector("#board-3d-status")
+  if (canvas instanceof HTMLCanvasElement) canvas.dataset.viewerState = "error"
+  if (statusElement instanceof HTMLParagraphElement)
+    statusElement.textContent = "The detailed board model could not be displayed"
+  console.error(error)
+})
