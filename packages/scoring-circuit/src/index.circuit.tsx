@@ -367,7 +367,7 @@ function ScoringCircuit() {
         pinCount={5}
         pinLabels={["S3_3", "SWDIO", "SWCLK", "NRST", "SGND"]}
         pcbX={-62}
-        pcbY={-32}
+        pcbY={-41}
       />
       <pinheader
         name="J_ESP_DEBUG"

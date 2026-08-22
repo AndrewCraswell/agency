@@ -1,19 +1,23 @@
 import { mkdir, writeFile } from "node:fs/promises"
+import { fileURLToPath } from "node:url"
 import { renderScene } from "@tscircuit/simple-3d-svg"
 import { convertCircuitJsonToSimple3dScene } from "circuit-json-to-simple-3d"
 import { convertCircuitJsonToPcbSvg, convertCircuitJsonToSchematicSvg } from "circuit-to-svg"
+import { build as bundle } from "esbuild"
 import { createElement } from "react"
 import { Circuit } from "tscircuit"
 import { componentDecisions } from "./component-decisions.js"
 import ScoringCircuit from "./index.circuit.js"
 
 const circuit = new Circuit()
-circuit.pcbRoutingDisabled = true
 circuit.setPlatform({ partsEngineDisabled: true })
 circuit.add(createElement(ScoringCircuit))
-circuit.render()
+await circuit.renderUntilSettled()
 
 const circuitJson = circuit.getCircuitJson()
+const routeCount = circuitJson.filter((element) => element.type === "pcb_trace").length
+const connectionCount = circuitJson.filter((element) => element.type === "source_trace").length
+const unresolvedConnectionCount = circuitJson.filter((element) => element.type === "pcb_trace_missing_error").length
 const pcbSvg = convertCircuitJsonToPcbSvg(circuitJson, {
   backgroundColor: "#101820",
   includeVersion: true,
@@ -38,6 +42,21 @@ const threeDimensionalSvg = await renderScene(
   },
   { backgroundColor: "#101820", height: 900, width: 1440 }
 )
+const interactiveThreeDimensionalScene = {
+  boxes: threeDimensionalScene.boxes.map(({ center, color, rotation, size }) => ({ center, color, rotation, size })),
+  camera: threeDimensionalScene.camera
+}
+const interactiveViewerBuild = await bundle({
+  bundle: true,
+  entryPoints: [fileURLToPath(new URL("../assets/interactive-3d-viewer.js", import.meta.url))],
+  format: "iife",
+  minify: true,
+  platform: "browser",
+  target: "es2022",
+  write: false
+})
+const interactiveViewerModule = interactiveViewerBuild.outputFiles[0]?.text
+if (!interactiveViewerModule) throw new Error("Interactive 3D viewer bundle was not generated")
 const bomHeader = ["category", "manufacturer", "mpn", "lifecycle", "purpose", "qualification", "manufacturer_url"]
 const quoteCsv = (value: string) => `"${value.replaceAll('"', '""')}"`
 const bomCsv = [
@@ -59,7 +78,13 @@ const bomCsv = [
 const readiness = {
   fabricationReady: false,
   generatedAt: new Date().toISOString(),
-  modelPurpose: "Architecture, placement, ownership, connector topology, and isolation review",
+  modelPurpose:
+    "Architecture, constrained functional placement, prototype autorouting, connector topology, and isolation review",
+  prototypeRouting: {
+    connectionCount,
+    routeCount,
+    unresolvedConnectionCount
+  },
   openGates: [
     "Complete and characterize the three-weapon analog front end",
     "Select every connector, protection device, passive, magnetics part, and power inductor",
@@ -82,6 +107,8 @@ const previewHtml = `<!doctype html>
     .warning { border-left: 4px solid #ffb000; padding: 12px 16px; background: #2a210e; }
     .resources { display: flex; flex-wrap: wrap; gap: 8px 16px; }
     .resources a { margin: 0; }
+    .metrics { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
+    .metrics li { border: 1px solid #33424f; border-radius: 6px; padding: 8px 12px; background: #101820; }
     .tabs { display: flex; gap: 4px; margin-top: 24px; border-bottom: 1px solid #33424f; overflow-x: auto; }
     [role="tab"] { border: 1px solid transparent; border-bottom: 0; border-radius: 8px 8px 0 0; padding: 10px 16px; background: transparent; color: #a8c5d8; font: inherit; font-weight: 700; cursor: pointer; }
     [role="tab"][aria-selected="true"] { border-color: #33424f; background: #101820; color: #eef4f8; }
@@ -92,6 +119,13 @@ const previewHtml = `<!doctype html>
     figcaption { margin-bottom: 12px; font-weight: 700; }
     img { display: block; width: 100%; min-height: 320px; max-height: calc(100vh - 310px); object-fit: contain; background: white; }
     img.dark-render { background: #101820; }
+    .viewer-shell { position: relative; min-height: 320px; height: min(58vh, 620px); overflow: hidden; background: #101820; }
+    .viewer-shell canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+    .viewer-shell canvas:active { cursor: grabbing; }
+    .viewer-shell canvas:focus-visible { outline: 3px solid #7cc4ff; outline-offset: -3px; }
+    .viewer-controls { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; }
+    .viewer-controls button { border: 1px solid #60788a; border-radius: 6px; padding: 8px 12px; background: #172630; color: #eef4f8; font: inherit; font-weight: 700; cursor: pointer; }
+    .viewer-help { margin: 10px 0 0; color: #b7c7d3; }
     a { color: #7cc4ff; margin-right: 16px; }
     @media (max-width: 640px) {
       body { padding: 16px; }
@@ -99,12 +133,18 @@ const previewHtml = `<!doctype html>
       [role="tab"] { flex: 1 0 auto; padding-inline: 12px; }
       figure { padding: 10px; }
       img { min-height: 220px; max-height: none; }
+      .viewer-shell { min-height: 300px; height: 52vh; }
     }
   </style>
 </head>
 <body>
   <h1>Competition scoring apparatus board model</h1>
   <p class="warning"><strong>Architecture review only.</strong> This model is not ready for fabrication. See the readiness report and production plan before ordering hardware.</p>
+  <ul class="metrics" aria-label="Prototype routing summary">
+    <li><strong>${routeCount}</strong> prototype routes</li>
+    <li><strong>${unresolvedConnectionCount}</strong> unresolved connections</li>
+    <li><strong>4</strong> functional placement zones</li>
+  </ul>
   <p class="resources"><a href="../docs/production-board-plan.md">Production plan</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="bom.csv">Component decisions</a></p>
   <div class="tabs" role="tablist" aria-label="Circuit views">
     <button id="tab-pcb" role="tab" aria-selected="true" aria-controls="view-pcb" tabindex="0">PCB</button>
@@ -113,13 +153,20 @@ const previewHtml = `<!doctype html>
   </div>
   <main>
     <section id="view-pcb" role="tabpanel" aria-labelledby="tab-pcb">
-      <figure><figcaption>PCB placement and unrouted connectivity. Select the image to open it full size.</figcaption><a href="pcb.svg"><img class="dark-render" src="pcb.svg" alt="PCB placement model"></a></figure>
+      <figure><figcaption>Constrained component placement with prototype autorouting. Select the image to open it full size.</figcaption><a href="pcb.svg"><img class="dark-render" src="pcb.svg" alt="PCB placement with prototype autorouting"></a></figure>
     </section>
     <section id="view-schematic" role="tabpanel" aria-labelledby="tab-schematic" hidden>
       <figure><figcaption>Logical schematic. Select the image to open it full size.</figcaption><a href="schematic.svg"><img src="schematic.svg" alt="Logical schematic model"></a></figure>
     </section>
     <section id="view-3d" role="tabpanel" aria-labelledby="tab-3d" hidden>
-      <figure><figcaption>Generated 3D board model. Select the image to open it full size.</figcaption><a href="board-3d.svg"><img class="dark-render" src="board-3d.svg" alt="Three-dimensional board model"></a></figure>
+      <figure>
+        <figcaption>Interactive 3D board model.</figcaption>
+        <div class="viewer-shell">
+          <canvas id="board-3d-canvas" tabindex="0" aria-label="Interactive three-dimensional board model. Drag to rotate and scroll to zoom."></canvas>
+          <div class="viewer-controls"><button id="reset-3d-view" type="button">Reset view</button></div>
+        </div>
+        <p class="viewer-help">Drag to rotate. Scroll to zoom. Use the arrow keys when the model is focused. <a href="board-3d.svg">Open the static 3D export</a>.</p>
+      </figure>
     </section>
   </main>
   <script>
@@ -133,6 +180,7 @@ const previewHtml = `<!doctype html>
         tab.tabIndex = selected ? 0 : -1
       }
       for (const panel of panels) panel.hidden = panel.id !== nextTab.getAttribute('aria-controls')
+      window.dispatchEvent(new CustomEvent('circuit-view-changed', { detail: nextTab.getAttribute('aria-controls') }))
       if (moveFocus) nextTab.focus()
     }
 
@@ -151,16 +199,19 @@ const previewHtml = `<!doctype html>
       })
     }
   </script>
+  <script defer src="interactive-3d-viewer.js?v=interactive"></script>
 </body>
 </html>
 `
 
 await mkdir("dist", { recursive: true })
 await Promise.all([
+  writeFile("dist/board-3d-scene.json", `${JSON.stringify(interactiveThreeDimensionalScene)}\n`),
   writeFile("dist/bom.csv", `${bomCsv}\n`),
   writeFile("dist/bom.json", `${JSON.stringify(componentDecisions, null, 2)}\n`),
   writeFile("dist/circuit.json", `${JSON.stringify(circuitJson, null, 2)}\n`),
   writeFile("dist/index.html", previewHtml),
+  writeFile("dist/interactive-3d-viewer.js", interactiveViewerModule),
   writeFile("dist/board-3d.svg", threeDimensionalSvg),
   writeFile("dist/pcb.svg", pcbSvg),
   writeFile("dist/readiness-report.json", `${JSON.stringify(readiness, null, 2)}\n`),

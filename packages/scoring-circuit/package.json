@@ -25,6 +25,7 @@
     "circuit-json-to-simple-3d": "0.0.9",
     "circuit-to-svg": "0.0.400",
     "react": "^19.2.0",
+    "three": "0.179.1",
     "tscircuit": "0.0.2271",
     "zod": "3.25.76"
   },
@@ -34,6 +35,7 @@
     "@types/node": "catalog:",
     "@types/react": "^19.2.0",
     "@vitest/coverage-v8": "^4.1.9",
+    "esbuild": "0.28.1",
     "oxlint": "^1.72.0",
     "tsx": "^4.23.0",
     "typescript": "catalog:",

@@ -697,10 +697,13 @@ importers:
         version: 0.0.9(typescript@7.0.1-rc)
       circuit-to-svg:
         specifier: 0.0.400
-        version: 0.0.400(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(typescript@7.0.1-rc)
+        version: 0.0.400(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(supports-color@10.2.2)(typescript@7.0.1-rc)
       react:
         specifier: 19.2.7
         version: 19.2.7
+      three:
+        specifier: 0.179.1
+        version: 0.179.1
       tscircuit:
         specifier: 0.0.2271
         version: 0.0.2271(@tscircuit/schematic-corpus@0.0.114(typescript@7.0.1-rc))(bun-match-svg@0.0.16(typescript@7.0.1-rc))(looks-same@9.0.1)(supports-color@10.2.2)(three@0.179.1)(typescript@7.0.1-rc)
@@ -723,6 +726,9 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.9
         version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
+      esbuild:
+        specifier: 0.28.1
+        version: 0.28.1
       oxlint:
         specifier: ^1.72.0
         version: 1.76.0
@@ -17162,12 +17168,12 @@ snapshots:
       '@tscircuit/math-utils': 0.0.9(typescript@7.0.1-rc)
       typescript: 7.0.1-rc
 
-  circuit-json-to-gltf@0.0.111(@resvg/resvg-js@2.6.2)(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(@tscircuit/circuit-json-util@0.0.104(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(transformation-matrix@2.16.1)(zod@3.25.76))(@tscircuit/footprinter@0.0.409(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(typescript@7.0.1-rc))(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(circuit-to-svg@0.0.400(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(typescript@7.0.1-rc))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.179.1)(typescript@7.0.1-rc):
+  circuit-json-to-gltf@0.0.111(@resvg/resvg-js@2.6.2)(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(@tscircuit/circuit-json-util@0.0.104(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(transformation-matrix@2.16.1)(zod@3.25.76))(@tscircuit/footprinter@0.0.409(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(typescript@7.0.1-rc))(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(circuit-to-svg@0.0.400(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(supports-color@10.2.2)(typescript@7.0.1-rc))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.179.1)(typescript@7.0.1-rc):
     dependencies:
       '@jscad/modeling': 2.13.0
       '@tscircuit/circuit-json-util': 0.0.104(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(transformation-matrix@3.1.0)(zod@3.25.76)
       circuit-json: 0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc))
-      circuit-to-svg: 0.0.400(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(typescript@7.0.1-rc)
+      circuit-to-svg: 0.0.400(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(supports-color@10.2.2)(typescript@7.0.1-rc)
       earcut: 3.2.3
       jscad-electronics: 0.0.135(@jscad/modeling@2.13.0)(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(@tscircuit/footprinter@0.0.409(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(typescript@7.0.1-rc))(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.179.1)
       jscad-planner: 0.0.14(typescript@7.0.1-rc)
@@ -17206,7 +17212,7 @@ snapshots:
     dependencies:
       format-si-unit: 0.0.7(typescript@7.0.1-rc)
 
-  circuit-to-svg@0.0.400(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(typescript@7.0.1-rc):
+  circuit-to-svg@0.0.400(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(supports-color@10.2.2)(typescript@7.0.1-rc):
     dependencies:
       '@tscircuit/alphabet': 0.0.25(typescript@7.0.1-rc)
       '@types/node': 22.20.1
@@ -21155,11 +21161,11 @@ snapshots:
       circuit-json: 0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc))
       circuit-json-to-bpc: 0.0.13(bpc-graph@0.0.57(@tscircuit/schematic-corpus@0.0.114(typescript@7.0.1-rc))(typescript@7.0.1-rc))(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(typescript@7.0.1-rc)
       circuit-json-to-connectivity-map: 0.0.27(typescript@7.0.1-rc)
-      circuit-json-to-gltf: 0.0.111(@resvg/resvg-js@2.6.2)(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(@tscircuit/circuit-json-util@0.0.104(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(transformation-matrix@2.16.1)(zod@3.25.76))(@tscircuit/footprinter@0.0.409(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(typescript@7.0.1-rc))(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(circuit-to-svg@0.0.400(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(typescript@7.0.1-rc))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.179.1)(typescript@7.0.1-rc)
+      circuit-json-to-gltf: 0.0.111(@resvg/resvg-js@2.6.2)(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(@tscircuit/circuit-json-util@0.0.104(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(transformation-matrix@2.16.1)(zod@3.25.76))(@tscircuit/footprinter@0.0.409(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(typescript@7.0.1-rc))(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(circuit-to-svg@0.0.400(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(supports-color@10.2.2)(typescript@7.0.1-rc))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(three@0.179.1)(typescript@7.0.1-rc)
       circuit-json-to-pnp-csv: 0.0.8(@tscircuit/soup-util@0.0.41(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(transformation-matrix@3.1.0)(zod@3.25.76))(typescript@7.0.1-rc)
       circuit-json-to-simple-3d: 0.0.9(typescript@7.0.1-rc)
       circuit-json-to-spice: 0.0.45(@tscircuit/circuit-json-util@0.0.104(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(transformation-matrix@2.16.1)(zod@3.25.76))(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(spicets@0.0.4(typescript@7.0.1-rc))(typescript@7.0.1-rc)
-      circuit-to-svg: 0.0.400(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(typescript@7.0.1-rc)
+      circuit-to-svg: 0.0.400(@tscircuit/alphabet@0.0.25(typescript@7.0.1-rc))(supports-color@10.2.2)(typescript@7.0.1-rc)
       comlink: 4.4.2
       connectivity-map: 1.0.0(typescript@7.0.1-rc)
       css-select: 5.1.0
