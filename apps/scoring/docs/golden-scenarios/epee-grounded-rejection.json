@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.0.0",
+  "scenarioId": "epee.grounded-rejection",
+  "title": "Epee tip closure to grounded material does not signal",
+  "weapon": "epee",
+  "ruleRevision": "fie-2026-epee",
+  "sources": [
+    { "authority": "fie", "id": "EPEE-04", "document": "fie-material-rules-2026-08-en.pdf", "page": 80, "locator": "Annex B, B(d)" },
+    { "authority": "implementation", "id": "EPEE-TEST-GROUNDED", "document": "src/epee.test.ts", "page": null, "locator": "does not register a grounded tip contact" }
+  ],
+  "lineModel": {
+    "revision": "epee-logical-lines-1",
+    "names": ["left.weapon-circuit", "left.guard-or-piste", "right.weapon-circuit", "right.guard-or-piste"]
+  },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": {
+    "clock": "virtual",
+    "timeUnit": "us",
+    "initialState": "fresh-bout",
+    "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-epee-grounded", "transportSequenceStart": 0, "captureId": null }
+  },
+  "inputs": [
+    {
+      "id": "grounded-start",
+      "atUs": 0,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.weapon-circuit", "state": "grounded", "resistanceMilliOhms": 100000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "left.guard-or-piste", "state": "grounded", "resistanceMilliOhms": 100000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "grounded-held",
+      "atUs": 10000,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.weapon-circuit", "state": "grounded", "resistanceMilliOhms": 100000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "left.guard-or-piste", "state": "grounded", "resistanceMilliOhms": 100000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    }
+  ],
+  "expect": {
+    "status": "accepted",
+    "decisions": [],
+    "nonEvents": [
+      { "id": "grounded-no-hit", "window": { "fromUs": 0, "throughUs": 10000 }, "assertion": "no-decision", "side": "left", "assertionReasonCode": "grounded-material-rejected" }
+    ],
+    "uncertainty": [],
+    "finalState": { "hitCount": 0, "isLocked": false }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agency:scoring:golden-scenario-manifest",
+  "title": "Scoring golden scenario corpus manifest",
+  "description": "Stable index and traceability coverage for scenario files validated by golden-scenario.schema.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "format", "schemaVersion", "corpusId", "scenarioSchema", "ordering", "scenarios", "coverage"],
+  "properties": {
+    "$schema": {
+      "const": "https://json-schema.org/draft/2020-12/schema"
+    },
+    "format": {
+      "const": "scoring-golden-corpus"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "corpusId": {
+      "const": "scoring-golden-corpus"
+    },
+    "scenarioSchema": {
+      "const": "golden-scenario.schema.json"
+    },
+    "ordering": {
+      "const": "scenarioId-ascending"
+    },
+    "scenarios": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/scenarioEntry"
+      }
+    },
+    "coverage": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/coverageEntry"
+      }
+    }
+  },
+  "$defs": {
+    "scenarioEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scenarioId", "path", "weapon", "status", "sourceIds"],
+      "properties": {
+        "scenarioId": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^golden-scenarios/[a-z0-9]+(?:[._-][a-z0-9]+)*\\.json$"
+        },
+        "weapon": {
+          "enum": ["epee", "foil", "sabre"]
+        },
+        "status": {
+          "enum": ["active", "planned"]
+        },
+        "sourceIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z0-9]+(?:[-_.][A-Z0-9]+)*$"
+          }
+        }
+      }
+    },
+    "coverageEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["traceabilityId", "status", "scenarioIds"],
+      "properties": {
+        "traceabilityId": {
+          "type": "string",
+          "pattern": "^[A-Z0-9]+(?:[-_.][A-Z0-9]+)*$"
+        },
+        "status": {
+          "enum": ["covered", "planned", "not-applicable"]
+        },
+        "scenarioIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+          }
+        }
+      }
+    }
+  }
+}

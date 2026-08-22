@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-corpus",
+  "schemaVersion": "1.0.0",
+  "corpusId": "scoring-golden-corpus",
+  "scenarioSchema": "golden-scenario.schema.json",
+  "ordering": "scenarioId-ascending",
+  "scenarios": [
+    { "scenarioId": "epee.contact-boundaries", "path": "golden-scenarios/epee-contact-boundaries.json", "weapon": "epee", "status": "active", "sourceIds": ["EPEE-03", "EPEE-TEST-CONTACT-MINIMUM"] },
+    { "scenarioId": "epee.double-lockout-boundary", "path": "golden-scenarios/epee-double-lockout-boundary.json", "weapon": "epee", "status": "active", "sourceIds": ["EPEE-02", "EPEE-TEST-LOCKOUT-BOUNDARY"] },
+    { "scenarioId": "epee.grounded-rejection", "path": "golden-scenarios/epee-grounded-rejection.json", "weapon": "epee", "status": "active", "sourceIds": ["EPEE-04", "EPEE-TEST-GROUNDED"] },
+    { "scenarioId": "epee.non-monotonic-time", "path": "golden-scenarios/epee-non-monotonic-time.json", "weapon": "epee", "status": "active", "sourceIds": ["EPEE-TEST-MONOTONIC-TIME"] }
+  ],
+  "coverage": [
+    { "traceabilityId": "EPEE-01", "status": "covered", "scenarioIds": ["epee.contact-boundaries", "epee.grounded-rejection"] },
+    { "traceabilityId": "EPEE-02", "status": "covered", "scenarioIds": ["epee.double-lockout-boundary"] },
+    { "traceabilityId": "EPEE-03", "status": "covered", "scenarioIds": ["epee.contact-boundaries"] },
+    { "traceabilityId": "EPEE-04", "status": "covered", "scenarioIds": ["epee.grounded-rejection"] },
+    { "traceabilityId": "EPEE-05", "status": "planned", "scenarioIds": [] },
+    { "traceabilityId": "FOIL-01", "status": "planned", "scenarioIds": [] },
+    { "traceabilityId": "FOIL-02", "status": "planned", "scenarioIds": [] },
+    { "traceabilityId": "FOIL-03", "status": "planned", "scenarioIds": [] },
+    { "traceabilityId": "FOIL-04", "status": "planned", "scenarioIds": [] },
+    { "traceabilityId": "FOIL-05", "status": "planned", "scenarioIds": [] },
+    { "traceabilityId": "SABRE-01", "status": "planned", "scenarioIds": [] },
+    { "traceabilityId": "SABRE-02", "status": "planned", "scenarioIds": [] },
+    { "traceabilityId": "SABRE-03", "status": "planned", "scenarioIds": [] },
+    { "traceabilityId": "SABRE-04", "status": "planned", "scenarioIds": [] },
+    { "traceabilityId": "SABRE-05", "status": "planned", "scenarioIds": [] },
+    { "traceabilityId": "SABRE-06", "status": "planned", "scenarioIds": [] },
+    { "traceabilityId": "SABRE-07", "status": "planned", "scenarioIds": [] }
+  ]
+}

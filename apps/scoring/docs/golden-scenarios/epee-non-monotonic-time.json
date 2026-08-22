@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.0.0",
+  "scenarioId": "epee.non-monotonic-time",
+  "title": "Epee replay rejects a timestamp that moves backward",
+  "weapon": "epee",
+  "ruleRevision": "fie-2026-epee",
+  "sources": [
+    { "authority": "implementation", "id": "EPEE-TEST-MONOTONIC-TIME", "document": "src/epee.test.ts", "page": null, "locator": "rejects timestamps that move backward" }
+  ],
+  "lineModel": {
+    "revision": "epee-logical-lines-1",
+    "names": ["left.weapon-circuit", "left.guard-or-piste", "right.weapon-circuit", "right.guard-or-piste"]
+  },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": {
+    "clock": "virtual",
+    "timeUnit": "us",
+    "initialState": "fresh-bout",
+    "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-epee-monotonic-time", "transportSequenceStart": 0, "captureId": null }
+  },
+  "inputs": [
+    {
+      "id": "first-sample",
+      "atUs": 10,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "left.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "backward-sample",
+      "atUs": 9,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "left.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    }
+  ],
+  "expect": {
+    "status": "rejected",
+    "decisions": [],
+    "nonEvents": [],
+    "uncertainty": [],
+    "error": { "code": "non-monotonic-time", "atInputId": "backward-sample" }
+  }
+}

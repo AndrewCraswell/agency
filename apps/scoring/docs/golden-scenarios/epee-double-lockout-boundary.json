@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.0.0",
+  "scenarioId": "epee.double-lockout-boundary",
+  "title": "Epee opposing contact beginning at the selected 45,000 microsecond boundary is retained",
+  "weapon": "epee",
+  "ruleRevision": "fie-2026-epee",
+  "sources": [
+    { "authority": "fie", "id": "EPEE-02", "document": "fie-material-rules-2026-08-en.pdf", "page": 80, "locator": "Annex B, B(b)" },
+    { "authority": "implementation", "id": "EPEE-TEST-LOCKOUT-BOUNDARY", "document": "src/epee.test.ts", "page": null, "locator": "registers a double touch at the selected lockout boundary" }
+  ],
+  "lineModel": {
+    "revision": "epee-logical-lines-1",
+    "names": ["left.weapon-circuit", "left.guard-or-piste", "right.weapon-circuit", "right.guard-or-piste"]
+  },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": {
+    "clock": "virtual",
+    "timeUnit": "us",
+    "initialState": "fresh-bout",
+    "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-epee-double-boundary", "transportSequenceStart": 0, "captureId": null }
+  },
+  "inputs": [
+    {
+      "id": "left-start",
+      "atUs": 0,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.weapon-circuit", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "left.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "left-qualified",
+      "atUs": 2000,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.weapon-circuit", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "left.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "right-boundary-start",
+      "atUs": 45000,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "left.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.weapon-circuit", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "right-qualified",
+      "atUs": 47000,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "left.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.weapon-circuit", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    }
+  ],
+  "expect": {
+    "status": "accepted",
+    "decisions": [
+      { "id": "left-hit", "decisionAtUs": 2000, "disposition": "qualified-hit", "side": "left", "weapon": "epee", "hitStartedAtUs": 0, "qualifiedAtUs": 2000, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["left-start", "left-qualified"] },
+      { "id": "right-hit", "decisionAtUs": 47000, "disposition": "qualified-hit", "side": "right", "weapon": "epee", "hitStartedAtUs": 45000, "qualifiedAtUs": 47000, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["right-boundary-start", "right-qualified"] }
+    ],
+    "nonEvents": [],
+    "uncertainty": [],
+    "finalState": { "hitCount": 2, "isLocked": true }
+  }
+}

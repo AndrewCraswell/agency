@@ -1,0 +1,676 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agency:scoring:golden-scenario",
+  "title": "Scoring golden scenario",
+  "description": "A deterministic, replayable electrical-input vector and expected scoring outcomes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "format",
+    "schemaVersion",
+    "scenarioId",
+    "title",
+    "weapon",
+    "ruleRevision",
+    "sources",
+    "lineModel",
+    "determinism",
+    "replay",
+    "inputs",
+    "expect"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://json-schema.org/draft/2020-12/schema"
+    },
+    "format": {
+      "const": "scoring-golden-scenario"
+    },
+    "schemaVersion": {
+      "const": "1.0.0"
+    },
+    "scenarioId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "weapon": {
+      "enum": ["epee", "foil", "sabre"]
+    },
+    "ruleRevision": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/source"
+      }
+    },
+    "lineModel": {
+      "$ref": "#/$defs/lineModel"
+    },
+    "determinism": {
+      "$ref": "#/$defs/determinism"
+    },
+    "replay": {
+      "$ref": "#/$defs/replay"
+    },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/inputFrame"
+      }
+    },
+    "expect": {
+      "$ref": "#/$defs/expectation"
+    }
+  },
+  "$defs": {
+    "nonNegativeInteger": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "id", "document", "page", "locator"],
+      "properties": {
+        "authority": {
+          "enum": ["fie", "implementation", "fixture", "prior-art"]
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z0-9]+(?:[-_.][A-Z0-9]+)*$"
+        },
+        "document": {
+          "type": "string",
+          "minLength": 1
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "locator": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "authority": {
+                "enum": ["fie", "prior-art"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "page": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "authority": {
+                "enum": ["implementation", "fixture"]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "page": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "lineModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "names"],
+      "properties": {
+        "revision": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+        },
+        "names": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._:-][a-z0-9]+)*$"
+          }
+        }
+      }
+    },
+    "determinism": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seed", "inputOrder", "resultOrder"],
+      "properties": {
+        "seed": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "inputOrder": {
+          "const": "listed"
+        },
+        "resultOrder": {
+          "const": "decision-atUs-then-id"
+        }
+      }
+    },
+    "replay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["clock", "timeUnit", "initialState", "hooks"],
+      "properties": {
+        "clock": {
+          "const": "virtual"
+        },
+        "timeUnit": {
+          "const": "us"
+        },
+        "initialState": {
+          "enum": ["fresh-bout", "snapshot"]
+        },
+        "snapshotRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hooks": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["firmwareIdentity", "firmwareDigest", "scoringBootId", "transportSequenceStart"],
+          "properties": {
+            "firmwareIdentity": {
+              "type": ["string", "null"],
+              "minLength": 1
+            },
+            "firmwareDigest": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "scoringBootId": {
+              "type": ["string", "null"],
+              "minLength": 1
+            },
+            "transportSequenceStart": {
+              "$ref": "#/$defs/nonNegativeInteger"
+            },
+            "captureId": {
+              "type": ["string", "null"],
+              "minLength": 1
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "initialState": {
+                "const": "snapshot"
+              }
+            }
+          },
+          "then": {
+            "required": ["snapshotRef"]
+          }
+        }
+      ]
+    },
+    "inputFrame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "atUs", "atUncertaintyUs", "mode", "lines"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+        },
+        "atUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "atUncertaintyUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "mode": {
+          "const": "snapshot"
+        },
+        "lines": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/lineReading"
+          }
+        }
+      }
+    },
+    "lineReading": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["line", "state", "resistanceMilliOhms", "resistanceUncertaintyMilliOhms"],
+      "properties": {
+        "line": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[._:-][a-z0-9]+)*$"
+        },
+        "state": {
+          "enum": ["open", "closed", "grounded", "shorted", "disconnected", "indeterminate", "not-applicable"]
+        },
+        "resistanceMilliOhms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resistanceUncertaintyMilliOhms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "faultCode": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "resistanceMilliOhms": { "type": "null" },
+            "resistanceUncertaintyMilliOhms": { "type": "null" }
+          }
+        },
+        {
+          "properties": {
+            "resistanceMilliOhms": { "type": "integer", "minimum": 0 },
+            "resistanceUncertaintyMilliOhms": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "expectation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "decisions", "nonEvents", "uncertainty"],
+      "properties": {
+        "status": {
+          "enum": ["accepted", "rejected"]
+        },
+        "decisions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/decision"
+          }
+        },
+        "nonEvents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/nonEvent"
+          }
+        },
+        "uncertainty": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/uncertainty"
+          }
+        },
+        "finalState": {
+          "$ref": "#/$defs/finalState"
+        },
+        "error": {
+          "$ref": "#/$defs/error"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "rejected"
+              }
+            }
+          },
+          "then": {
+            "required": ["error"]
+          },
+          "else": {
+            "not": {
+              "required": ["error"]
+            }
+          }
+        }
+      ]
+    },
+    "signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["visual", "audible", "latched"],
+      "properties": {
+        "visual": {
+          "enum": ["diagnostic", "none", "off-target", "valid-hit"]
+        },
+        "audible": {
+          "enum": ["none", "requested"]
+        },
+        "latched": {
+          "type": "boolean"
+        }
+      }
+    },
+    "decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "decisionAtUs", "disposition", "sourceInputIds"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+        },
+        "decisionAtUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "disposition": {
+          "enum": ["qualified-hit", "off-target", "rejected-contact", "line-fault", "reset", "uncertainty", "calibration"]
+        },
+        "weapon": {
+          "enum": ["epee", "foil", "sabre"]
+        },
+        "side": {
+          "anyOf": [
+            { "enum": ["left", "right"] },
+            { "type": "null" }
+          ]
+        },
+        "attemptedSide": {
+          "enum": ["left", "right"]
+        },
+        "hitStartedAtUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "qualifiedAtUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "attemptedAtUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "reason": {
+          "enum": [
+            "candidate-cancelled-before-qualification",
+            "contact-below-minimum-duration",
+            "contact-inside-lockout",
+            "grounded-contact",
+            "invalid-line-state",
+            "measurement-outside-qualified-range",
+            "non-target-surface",
+            "reset-in-progress",
+            "same-side-inhibit",
+            "whipover-while-blade-contact"
+          ]
+        },
+        "lineId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "diagnostic": {
+          "enum": [
+            "acquisition-gap",
+            "cross-line",
+            "excitation-invalid",
+            "open-circuit",
+            "out-of-range-resistance",
+            "safe-state",
+            "sample-overrun",
+            "short-to-ground"
+          ]
+        },
+        "detectedAtUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "persistence": {
+          "enum": ["transient", "latched-until-reset"]
+        },
+        "cause": {
+          "enum": ["brownout", "firmware-update", "operator", "power-on", "watchdog"]
+        },
+        "resetAtUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "scope": {
+          "enum": ["esp32", "scoring-apparatus", "stm32"]
+        },
+        "effect": {
+          "enum": ["decision-with-caveat", "diagnostic-only", "not-qualified", "unavailable"]
+        },
+        "lowerBound": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "observedAtUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "subject": {
+          "enum": ["calibration", "capture-completeness", "clock", "identity", "line-state", "resistance", "timing"]
+        },
+        "unit": {
+          "enum": ["none", "milliOhm", "us"]
+        },
+        "upperBound": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "calibrationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "performedAtUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "status": {
+          "enum": ["expired", "failed", "passed", "unavailable"]
+        },
+        "signal": {
+          "$ref": "#/$defs/signal"
+        },
+        "sourceInputIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "required": ["signal", "weapon", "side", "hitStartedAtUs", "qualifiedAtUs"],
+          "properties": { "disposition": { "const": "qualified-hit" } }
+        },
+        {
+          "required": ["signal", "weapon", "side", "qualifiedAtUs"],
+          "properties": { "disposition": { "const": "off-target" }, "weapon": { "const": "foil" } }
+        },
+        {
+          "required": ["signal", "weapon", "attemptedSide", "attemptedAtUs", "reason"],
+          "properties": { "disposition": { "const": "rejected-contact" } }
+        },
+        {
+          "required": ["signal", "lineId", "diagnostic", "detectedAtUs", "persistence", "side"],
+          "properties": { "disposition": { "const": "line-fault" } }
+        },
+        {
+          "required": ["signal", "cause", "resetAtUs", "scope"],
+          "properties": { "disposition": { "const": "reset" } }
+        },
+        {
+          "required": ["signal", "effect", "lowerBound", "observedAtUs", "subject", "unit", "upperBound"],
+          "properties": { "disposition": { "const": "uncertainty" } },
+          "oneOf": [
+            {
+              "properties": {
+                "subject": { "const": "resistance" },
+                "unit": { "const": "milliOhm" }
+              }
+            },
+            {
+              "properties": {
+                "subject": { "enum": ["timing", "clock"] },
+                "unit": { "const": "us" }
+              }
+            },
+            {
+              "properties": {
+                "subject": { "enum": ["calibration", "capture-completeness", "identity", "line-state"] },
+                "unit": { "const": "none" }
+              }
+            }
+          ]
+        },
+        {
+          "required": ["signal", "calibrationId", "performedAtUs", "status"],
+          "properties": { "disposition": { "const": "calibration" } }
+        }
+      ]
+    },
+    "nonEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "window", "assertion", "assertionReasonCode"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+        },
+        "window": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fromUs", "throughUs"],
+          "properties": {
+            "fromUs": {
+              "$ref": "#/$defs/nonNegativeInteger"
+            },
+            "throughUs": {
+              "$ref": "#/$defs/nonNegativeInteger"
+            }
+          }
+        },
+        "assertion": {
+          "const": "no-decision"
+        },
+        "side": {
+          "enum": ["left", "right", "both", "none"]
+        },
+        "assertionReasonCode": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+        }
+      }
+    },
+    "uncertainty": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "atUs", "scope", "outcome", "assertionReasonCode"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+        },
+        "atUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcome": {
+          "enum": ["indeterminate", "accept", "reject", "diagnostic"]
+        },
+        "assertionReasonCode": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+        },
+        "rangeMilliOhms": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {
+            "min": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "finalState": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "hitCount": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "isLocked": {
+          "type": "boolean"
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code"],
+      "properties": {
+        "code": {
+          "enum": ["non-monotonic-time", "unknown-rule-revision", "invalid-line-state", "duplicate-line-reading"]
+        },
+        "atInputId": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+        }
+      }
+    }
+  }
+}
