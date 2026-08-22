@@ -34,11 +34,11 @@ export class OpenStatesClient {
     let page = options.page ?? 1
     for (;;) {
       const url = new URL("bills", ensureTrailingSlash(this.#baseUrl))
-      url.searchParams.set("updated_since", options.from.toISOString())
+      url.searchParams.set("updated_since", openStatesDateTime(options.from))
       url.searchParams.set("jurisdiction", options.jurisdiction)
       url.searchParams.set("sort", "updated_asc")
       url.searchParams.set("page", String(page))
-      url.searchParams.set("per_page", "50")
+      url.searchParams.set("per_page", "20")
       for (const include of includes) {
         url.searchParams.append("include", include)
       }
@@ -67,10 +67,10 @@ export class OpenStatesClient {
     for (;;) {
       const url = new URL("events", ensureTrailingSlash(this.#baseUrl))
       url.searchParams.set("jurisdiction", options.jurisdictionId)
-      url.searchParams.set("start_date", options.from.toISOString())
-      url.searchParams.set("end_date", options.to.toISOString())
+      url.searchParams.set("start_date", openStatesDateTime(options.from))
+      url.searchParams.set("end_date", openStatesDateTime(options.to))
       url.searchParams.set("page", String(page))
-      url.searchParams.set("per_page", "50")
+      url.searchParams.set("per_page", "20")
       for (const include of ["agenda", "documents", "participants"]) {
         url.searchParams.append("include", include)
       }
@@ -94,7 +94,7 @@ export class OpenStatesClient {
       const url = new URL(resource, ensureTrailingSlash(this.#baseUrl))
       url.searchParams.set("jurisdiction", options.jurisdictionId)
       url.searchParams.set("page", String(page))
-      url.searchParams.set("per_page", "50")
+      url.searchParams.set("per_page", "20")
       for (const include of resourceIncludes) {
         url.searchParams.append("include", include)
       }
@@ -111,4 +111,8 @@ export class OpenStatesClient {
 
 function ensureTrailingSlash(url: URL): URL {
   return new URL(url.href.endsWith("/") ? url.href : `${url.href}/`)
+}
+
+function openStatesDateTime(value: Date): string {
+  return value.toISOString().slice(0, 19)
 }

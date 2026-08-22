@@ -42,6 +42,8 @@ import { LegislationError } from "./errors.js"
 
 const CHILD_LIMIT = 100
 const SECTION_LIMIT = 50
+const DETAIL_RESPONSE_TARGET_BYTES = 750_000
+const DOCUMENT_AMENDMENT_ID_PREFIX = "amendment:document:"
 
 function coverageWarnings(itemCount: number, domain: string): string[] {
   return itemCount === 0
@@ -121,6 +123,53 @@ export interface AmendmentSearchInput {
   limit?: number
   query?: string
   sponsorPersonId?: string
+}
+
+export interface DocumentBackedAmendment {
+  billId: string
+  documentId: string
+  id: string
+  jurisdictionId: string
+  printedIdentifier: string
+  recordType: "document"
+  sourceUrl: string
+  submittedDate: null | string
+  title: string
+}
+
+export function documentBackedAmendmentId(documentId: string): string {
+  return `${DOCUMENT_AMENDMENT_ID_PREFIX}${documentId}`
+}
+
+function documentIdFromAmendmentId(amendmentId: string): string | undefined {
+  return amendmentId.startsWith(DOCUMENT_AMENDMENT_ID_PREFIX)
+    ? amendmentId.slice(DOCUMENT_AMENDMENT_ID_PREFIX.length)
+    : undefined
+}
+
+export function projectDocumentBackedAmendment(
+  document: typeof billDocuments.$inferSelect,
+  jurisdictionId: string
+): DocumentBackedAmendment {
+  return {
+    billId: document.billId,
+    documentId: document.id,
+    id: documentBackedAmendmentId(document.id),
+    jurisdictionId,
+    printedIdentifier: document.title,
+    recordType: "document",
+    sourceUrl: document.sourceUrl,
+    submittedDate: document.documentDate,
+    title: document.title
+  }
+}
+
+function amendmentSortKey(amendment: {
+  id: string
+  recordType: "document" | "structured"
+  submittedDate?: null | string
+}) {
+  return `${amendment.submittedDate ?? ""}\u0000${amendment.id}`
 }
 
 export interface SupportingMaterialSearchInput {
@@ -608,36 +657,113 @@ export class LegislationQueryService {
     return { positions, vote: vote[0] }
   }
 
+  async getBillVotes(input: Readonly<{ billId: string; cursor?: string; limit?: number }>) {
+    const offset = decodeOffset(input.cursor)
+    const page = await this.searchVotes({
+      billId: input.billId,
+      cursor: input.cursor,
+      limit: Math.min(input.limit ?? 25, 25)
+    })
+    const items = []
+    let responseBytes = 0
+    for (const vote of page.items) {
+      const detail = await this.getVote({ id: vote.id })
+      const itemBytes = Buffer.byteLength(JSON.stringify(detail), "utf8")
+      if (items.length > 0 && responseBytes + itemBytes > DETAIL_RESPONSE_TARGET_BYTES) {
+        break
+      }
+      items.push(detail)
+      responseBytes += itemBytes
+    }
+    const truncated = page.truncated || items.length < page.items.length
+    return {
+      ...page,
+      items,
+      nextCursor: truncated ? encodeOffset(offset + items.length) : undefined,
+      truncated
+    }
+  }
+
   async searchAmendments(input: AmendmentSearchInput) {
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeOffset(input.cursor)
-    const rows = await this.#database
-      .select()
-      .from(amendments)
-      .where(
-        and(
-          input.billId === undefined ? undefined : eq(amendments.billId, input.billId),
-          input.jurisdictionId === undefined ? undefined : eq(amendments.jurisdictionId, input.jurisdictionId),
-          input.sponsorPersonId === undefined ? undefined : eq(amendments.sponsorPersonId, input.sponsorPersonId),
-          input.query === undefined
-            ? undefined
-            : sql`(${amendments.printedIdentifier} ilike ${`%${input.query}%`} or ${amendments.purpose} ilike ${`%${input.query}%`} or ${amendments.description} ilike ${`%${input.query}%`})`
+    const candidateLimit = offset + limit + 1
+    const [structuredRows, documentRows] = await Promise.all([
+      this.#database
+        .select()
+        .from(amendments)
+        .where(
+          and(
+            input.billId === undefined ? undefined : eq(amendments.billId, input.billId),
+            input.jurisdictionId === undefined ? undefined : eq(amendments.jurisdictionId, input.jurisdictionId),
+            input.sponsorPersonId === undefined ? undefined : eq(amendments.sponsorPersonId, input.sponsorPersonId),
+            input.query === undefined
+              ? undefined
+              : sql`(${amendments.printedIdentifier} ilike ${`%${input.query}%`} or ${amendments.purpose} ilike ${`%${input.query}%`} or ${amendments.description} ilike ${`%${input.query}%`})`
+          )
         )
-      )
-      .orderBy(asc(amendments.submittedDate), asc(amendments.id))
-      .limit(limit + 1)
-      .offset(offset)
-    const truncated = rows.length > limit
-    const items = rows.slice(0, limit)
+        .orderBy(asc(amendments.submittedDate), asc(amendments.id))
+        .limit(candidateLimit),
+      input.sponsorPersonId === undefined
+        ? this.#database
+            .select({ document: billDocuments, jurisdictionId: bills.jurisdictionId })
+            .from(billDocuments)
+            .innerJoin(bills, eq(billDocuments.billId, bills.id))
+            .where(
+              and(
+                eq(billDocuments.classification, "amendment"),
+                input.billId === undefined ? undefined : eq(billDocuments.billId, input.billId),
+                input.jurisdictionId === undefined ? undefined : eq(bills.jurisdictionId, input.jurisdictionId),
+                input.query === undefined ? undefined : sql`${billDocuments.title} ilike ${`%${input.query}%`}`
+              )
+            )
+            .orderBy(asc(billDocuments.documentDate), asc(billDocuments.id))
+            .limit(candidateLimit)
+        : Promise.resolve([])
+    ])
+    const merged = [
+      ...structuredRows.map((amendment) => ({ ...amendment, recordType: "structured" as const })),
+      ...documentRows.map(({ document, jurisdictionId }) => projectDocumentBackedAmendment(document, jurisdictionId))
+    ].sort((left, right) => amendmentSortKey(left).localeCompare(amendmentSortKey(right)))
+    const items = merged.slice(offset, offset + limit)
+    const truncated = merged.length > offset + limit
+    const includesDocumentBackedAmendment = items.some((item) => item.recordType === "document")
     return {
       items,
       nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
       truncated,
-      warnings: coverageWarnings(items.length, "amendments")
+      warnings: [
+        ...coverageWarnings(items.length, "amendments"),
+        ...(includesDocumentBackedAmendment
+          ? [
+              "Some state amendments are document-backed records. They include the published file metadata but do not claim normalized sponsors, actions, or votes."
+            ]
+          : [])
+      ]
     }
   }
 
   async getAmendment(lookup: EntityLookup) {
+    const documentId = documentIdFromAmendmentId(lookup.id)
+    if (documentId !== undefined) {
+      const rows = await this.#database
+        .select({ document: billDocuments, jurisdictionId: bills.jurisdictionId })
+        .from(billDocuments)
+        .innerJoin(bills, eq(billDocuments.billId, bills.id))
+        .where(and(eq(billDocuments.id, documentId), eq(billDocuments.classification, "amendment")))
+        .limit(1)
+      const row = rows[0]
+      if (row === undefined) {
+        throw new LegislationError("not_found", `Amendment ${lookup.id} was not found`)
+      }
+      return {
+        actions: [],
+        amendment: projectDocumentBackedAmendment(row.document, row.jurisdictionId),
+        document: row.document,
+        materials: [],
+        votes: []
+      }
+    }
     const amendment = await this.#database.select().from(amendments).where(eq(amendments.id, lookup.id)).limit(1)
     if (amendment[0] === undefined) {
       throw new LegislationError("not_found", `Amendment ${lookup.id} was not found`)
@@ -656,7 +782,12 @@ export class LegislationQueryService {
         .orderBy(asc(supportingMaterials.documentDate), asc(supportingMaterials.id)),
       this.#database.select().from(votes).where(eq(votes.amendmentId, lookup.id)).orderBy(asc(votes.heldAt))
     ])
-    return { actions, amendment: amendment[0], materials, votes: amendmentVotes }
+    return {
+      actions,
+      amendment: { ...amendment[0], recordType: "structured" as const },
+      materials,
+      votes: amendmentVotes
+    }
   }
 
   async searchSupportingMaterials(input: SupportingMaterialSearchInput) {
@@ -757,7 +888,16 @@ export class LegislationQueryService {
     if (bill[0] === undefined) {
       throw new LegislationError("not_found", `Bill ${lookup.id} was not found`)
     }
-    const [actions, sponsors, billVotes, documents, relations, linkedOrganizations] = await Promise.all([
+    const [
+      actions,
+      sponsors,
+      billVotes,
+      documents,
+      relations,
+      linkedOrganizations,
+      structuredBillAmendments,
+      documentBillAmendments
+    ] = await Promise.all([
       this.#database
         .select()
         .from(billActions)
@@ -806,13 +946,32 @@ export class LegislationQueryService {
         .where(eq(billOrganizations.billId, lookup.id))
         .orderBy(asc(organizations.name), asc(organizations.id))
         .limit(childLimit + 1)
-        .offset(childOffset)
+        .offset(childOffset),
+      this.#database
+        .select()
+        .from(amendments)
+        .where(eq(amendments.billId, lookup.id))
+        .orderBy(asc(amendments.submittedDate), asc(amendments.id))
+        .limit(childOffset + childLimit + 1),
+      this.#database
+        .select()
+        .from(billDocuments)
+        .where(and(eq(billDocuments.billId, lookup.id), eq(billDocuments.classification, "amendment")))
+        .orderBy(asc(billDocuments.documentDate), asc(billDocuments.id))
+        .limit(childOffset + childLimit + 1)
     ])
-    const truncated = [actions, sponsors, billVotes, documents, relations, linkedOrganizations].some(
+    const billAmendments = [
+      ...structuredBillAmendments.map((amendment) => ({ ...amendment, recordType: "structured" as const })),
+      ...documentBillAmendments.map((document) => projectDocumentBackedAmendment(document, bill[0].jurisdictionId))
+    ]
+      .sort((left, right) => amendmentSortKey(left).localeCompare(amendmentSortKey(right)))
+      .slice(childOffset, childOffset + childLimit + 1)
+    const truncated = [actions, sponsors, billVotes, documents, relations, linkedOrganizations, billAmendments].some(
       (collection) => collection.length > childLimit
     )
     return {
       actions: actions.slice(0, childLimit),
+      amendments: billAmendments.slice(0, childLimit),
       bill: bill[0],
       documents: documents.slice(0, childLimit),
       nextChildCursor: truncated ? encodeOffset(childOffset + childLimit) : undefined,

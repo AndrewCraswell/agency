@@ -70,6 +70,89 @@ describe("Open States normalization", () => {
     ])
   })
 
+  it("maps the Open States v3 bill shape with resolved sessions and organizations", () => {
+    const source = structuredClone(fixture) as Record<string, unknown>
+    source.session = "2025-2026"
+    delete source.legislative_session
+    source.from_organization = {
+      classification: "lower",
+      id: "ocd-organization/wa-house",
+      name: "Washington House of Representatives"
+    }
+    source.actions = (source.actions as Array<Record<string, unknown>>).map((action) => {
+      const { organization_id: _organizationId, ...rest } = action
+      return {
+        ...rest,
+        organization: {
+          classification: "lower",
+          id: "ocd-organization/wa-house",
+          name: "Washington House of Representatives"
+        }
+      }
+    })
+    source.votes = (source.votes as Array<Record<string, unknown>>).map((vote) => {
+      const { classification: _classification, ...rest } = vote
+      return {
+        ...rest,
+        motion_classification: ["passage"],
+        organization: {
+          classification: "lower",
+          id: "ocd-organization/wa-house",
+          name: "Washington House of Representatives"
+        },
+        votes: (vote.votes as Array<Record<string, unknown>>).map((position) => {
+          if (position.voter_id !== "ocd-person/example") {
+            return position
+          }
+          const { voter_id: _voterId, ...positionRest } = position
+          return { ...positionRest, voter: { id: "ocd-person/example", name: "Representative Example" } }
+        })
+      }
+    })
+    source.sponsorships = (source.sponsorships as Array<Record<string, unknown>>).map((sponsor) => {
+      if (sponsor.person_id !== "ocd-person/example") {
+        return sponsor
+      }
+      const { person_id: _personId, ...rest } = sponsor
+      return { ...rest, person: { id: "ocd-person/example", name: "Representative Example" } }
+    })
+
+    const { aggregate } = normalizeOpenStatesBill(source, {
+      jurisdictionCode: "WA",
+      jurisdictionName: "Washington"
+    })
+
+    expect(aggregate.bill).toMatchObject({
+      chamber: "lower",
+      id: "bill:wa:2025-2026:hb:1234",
+      sessionId: "session:wa:2025-2026"
+    })
+    expect(aggregate.actions?.[0]).toMatchObject({
+      chamber: "lower",
+      organizationId: "organization:openstates:ocd-organization-wa-house",
+      sourceOrganizationId: "ocd-organization/wa-house"
+    })
+    expect(aggregate.votes?.[0]?.vote).toMatchObject({
+      chamber: "lower",
+      classification: "passage",
+      organizationId: "organization:openstates:ocd-organization-wa-house"
+    })
+    expect(aggregate.votes?.[0]?.positions).toContainEqual(
+      expect.objectContaining({ personId: "person:openstates:ocd-person-example" })
+    )
+    expect(aggregate.organizations).toContainEqual({
+      billId: "bill:wa:2025-2026:hb:1234",
+      classification: "origin",
+      organizationId: "organization:openstates:ocd-organization-wa-house"
+    })
+    expect(aggregate.people).toContainEqual(
+      expect.objectContaining({
+        id: "person:openstates:ocd-person-example",
+        sourceId: "ocd-person/example"
+      })
+    )
+  })
+
   it("converges formatting variations on the same canonical bill", () => {
     const source = { ...(fixture as Record<string, unknown>), identifier: " h.b. 001234 " }
     const result = normalizeOpenStatesBill(source, { jurisdictionCode: "wa", jurisdictionName: "Washington" })

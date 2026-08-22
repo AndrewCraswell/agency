@@ -2925,6 +2925,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "scope_key": {
+          "name": "scope_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "owner_id": {
           "name": "owner_id",
           "type": "uuid",
@@ -2964,9 +2970,9 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {
-        "ingestion_locks_source_operation_pk": {
-          "name": "ingestion_locks_source_operation_pk",
-          "columns": ["source", "operation"]
+        "ingestion_locks_source_operation_scope_key_pk": {
+          "name": "ingestion_locks_source_operation_scope_key_pk",
+          "columns": ["source", "operation", "scope_key"]
         }
       },
       "uniqueConstraints": {},
@@ -2979,6 +2985,10 @@
         "ingestion_locks_operation_check": {
           "name": "ingestion_locks_operation_check",
           "value": "length(\"legislation\".\"ingestion_locks\".\"operation\") > 0"
+        },
+        "ingestion_locks_scope_key_check": {
+          "name": "ingestion_locks_scope_key_check",
+          "value": "length(\"legislation\".\"ingestion_locks\".\"scope_key\") > 0"
         }
       },
       "isRLSEnabled": false

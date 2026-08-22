@@ -1,8 +1,9 @@
+import { createHash } from "node:crypto"
 import { eq } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
 import { supportingMaterials, supportingMaterialSections } from "../../db/schema/schema.js"
 import { extractDocument } from "./extract.js"
-import { boundedProcessingError } from "./process.js"
+import { boundedProcessingError, type DocumentFailureCategory } from "./process.js"
 
 export async function persistProcessedSupportingMaterial(
   database: LegislationDatabase,
@@ -18,24 +19,66 @@ export async function persistProcessedSupportingMaterial(
     return "unchanged"
   }
 
+  await persistSupportingMaterialExtraction(database, {
+    contentType: input.contentType,
+    extraction,
+    materialId: input.materialId
+  })
+  return "processed"
+}
+
+export async function persistOcrSupportingMaterial(
+  database: LegislationDatabase,
+  input: {
+    blobPath: string
+    contentType: string
+    materialId: string
+    sourceBytes: Uint8Array
+    text: string
+  }
+): Promise<void> {
+  const extractedText = await extractDocument(input.materialId, new TextEncoder().encode(input.text), "text/plain")
+  await persistSupportingMaterialExtraction(database, {
+    blobPath: input.blobPath,
+    contentType: input.contentType,
+    extraction: {
+      ...extractedText,
+      contentHash: createHash("sha256").update(input.sourceBytes).digest("hex")
+    },
+    materialId: input.materialId
+  })
+}
+
+async function persistSupportingMaterialExtraction(
+  database: LegislationDatabase,
+  input: {
+    blobPath?: string
+    contentType: string
+    extraction: Awaited<ReturnType<typeof extractDocument>>
+    materialId: string
+  }
+): Promise<void> {
   await database.transaction(async (transaction) => {
     await transaction
       .update(supportingMaterials)
       .set({
-        contentHash: extraction.contentHash,
+        ...(input.blobPath === undefined ? {} : { blobPath: input.blobPath }),
+        contentHash: input.extraction.contentHash,
         contentType: input.contentType,
+        nextAttemptAt: null,
         processingError: null,
+        processingErrorCategory: null,
         processingStatus: "processed",
-        text: extraction.text,
+        text: input.extraction.text,
         updatedAt: new Date()
       })
       .where(eq(supportingMaterials.id, input.materialId))
     await transaction
       .delete(supportingMaterialSections)
       .where(eq(supportingMaterialSections.materialId, input.materialId))
-    if (extraction.sections.length > 0) {
+    if (input.extraction.sections.length > 0) {
       await transaction.insert(supportingMaterialSections).values(
-        extraction.sections.map((section) => ({
+        input.extraction.sections.map((section) => ({
           contentHash: section.contentHash,
           heading: section.heading,
           id: section.id,
@@ -49,20 +92,25 @@ export async function persistProcessedSupportingMaterial(
       )
     }
   })
-  return "processed"
 }
 
 export async function markSupportingMaterialProcessingFailure(
   database: LegislationDatabase,
   materialId: string,
-  status: "failed" | "unsupported",
-  processingError?: string
+  input: Readonly<{
+    category: DocumentFailureCategory
+    nextAttemptAt?: Date
+    processingError: string
+    status: "failed" | "unsupported"
+  }>
 ): Promise<void> {
   await database
     .update(supportingMaterials)
     .set({
-      processingError: processingError === undefined ? undefined : boundedProcessingError(processingError),
-      processingStatus: status,
+      processingError: boundedProcessingError(input.processingError),
+      processingErrorCategory: input.category,
+      nextAttemptAt: input.nextAttemptAt ?? null,
+      processingStatus: input.status,
       updatedAt: new Date()
     })
     .where(eq(supportingMaterials.id, materialId))

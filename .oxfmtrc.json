@@ -16,6 +16,8 @@
     "**/coverage/**",
     "**/docs/**",
     "**/drizzle/migrations/meta/**",
+    "**/.trigger/**",
+    "**/.data/**",
     "**/*.shopify*.html",
     "pnpm-lock.yaml"
   ]

@@ -19,3 +19,7 @@ apps/legislation/.container/
 
 # Orders pulled from a real store. Customer data, never committed.
 .fixtures/
+.trigger/
+.data/
+/tmp/
+/apps/legislation/infra/bicep/main.json

@@ -1,0 +1,78 @@
+import { describe, expect, it, vi } from "vitest"
+import { AzureDocumentIntelligenceClient, AzureDocumentIntelligenceError } from "./ocr-client.js"
+
+const credential = { getToken: async () => ({ token: "test-token" }) }
+
+describe("AzureDocumentIntelligenceClient", () => {
+  it("submits source bytes and returns the prebuilt Read text and page count", async () => {
+    let requestCount = 0
+    const mockFetch = vi.fn<typeof fetch>(async () => {
+      requestCount += 1
+      if (requestCount === 1) {
+        return new Response(null, {
+          headers: { "operation-location": "https://ocr.example/operations/123?api-version=2024-11-30" },
+          status: 202
+        })
+      }
+      return Response.json({
+        analyzeResult: { content: "Recognized legislative text", pages: [{ pageNumber: 1 }, { pageNumber: 2 }] },
+        status: "succeeded"
+      })
+    })
+    const client = new AzureDocumentIntelligenceClient("https://ocr.example", {
+      credential,
+      fetch: mockFetch as typeof fetch,
+      pollIntervalMs: 0
+    })
+
+    await expect(
+      client.recognize({
+        bytes: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+        contentType: "application/pdf",
+        documentId: "doc-1"
+      })
+    ).resolves.toEqual({
+      pageCount: 2,
+      provider: "azure-document-intelligence",
+      text: "Recognized legislative text"
+    })
+    expect(mockFetch).toHaveBeenCalledTimes(2)
+    expect(mockFetch.mock.calls[0]?.[1]?.headers).toMatchObject({
+      authorization: "Bearer test-token",
+      "content-type": "application/json"
+    })
+    expect(JSON.parse(String(mockFetch.mock.calls[0]?.[1]?.body))).toEqual({ base64Source: "JVBERg==" })
+  })
+
+  it("marks throttling as retryable and retains Retry-After", async () => {
+    const client = new AzureDocumentIntelligenceClient("https://ocr.example", {
+      credential,
+      fetch: vi.fn<typeof fetch>(async () => new Response("busy", { headers: { "retry-after": "7" }, status: 429 })),
+      pollIntervalMs: 0
+    })
+
+    const error = await client
+      .recognize({ bytes: new Uint8Array([1]), contentType: "image/png", documentId: "doc-1" })
+      .catch((caught: unknown) => caught)
+    expect(error).toBeInstanceOf(AzureDocumentIntelligenceError)
+    expect(error).toMatchObject({ retryAfterMs: 7_000, retryable: true, status: 429 })
+  })
+
+  it("rejects an operation location on another origin", async () => {
+    const client = new AzureDocumentIntelligenceClient("https://ocr.example", {
+      credential,
+      fetch: vi.fn<typeof fetch>(
+        async () =>
+          new Response(null, {
+            headers: { "operation-location": "https://attacker.example/operations/123" },
+            status: 202
+          })
+      ),
+      pollIntervalMs: 0
+    })
+
+    await expect(
+      client.recognize({ bytes: new Uint8Array([1]), contentType: "application/pdf", documentId: "doc-1" })
+    ).rejects.toThrow("untrusted operation location")
+  })
+})

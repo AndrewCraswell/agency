@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto"
+import { createReadStream } from "node:fs"
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import { Command } from "commander"
@@ -23,6 +24,8 @@ import {
   LocalArtifactStore,
   type ArtifactStore
 } from "../ingestion/documents/artifact-store.js"
+import { processCaliforniaPubinfoArchive } from "../ingestion/documents/california-pubinfo-job.js"
+import { downloadDocument } from "../ingestion/documents/download.js"
 import {
   classifyTerminalDocumentFailures,
   DOCUMENT_REMEDIATION_COHORTS,
@@ -31,6 +34,8 @@ import {
   requeueInterruptedDocuments,
   type DocumentRemediationCohort
 } from "../ingestion/documents/jobs.js"
+import { AzureDocumentIntelligenceClient } from "../ingestion/documents/ocr-client.js"
+import { processOcrRequiredDocuments } from "../ingestion/documents/ocr-jobs.js"
 import { DOCUMENT_FAILURE_CATEGORIES, type DocumentFailureCategory } from "../ingestion/documents/process.js"
 import {
   processPendingSupportingMaterials,
@@ -42,6 +47,7 @@ import { importGovInfoPackages } from "../ingestion/govinfo/import.js"
 import { RetryingHttpClient } from "../ingestion/http-client.js"
 import {
   createJobCounts,
+  JobAlreadyRunningError,
   JOB_EXIT_CODE,
   mapConcurrent,
   recoverInterruptedIngestionJob,
@@ -223,6 +229,22 @@ program
   .action(processDocuments)
 
 program
+  .command("documents:process-california-pubinfo")
+  .description("Process California documents from one official PUBINFO session archive")
+  .requiredOption("--archive <path>", "local PUBINFO session ZIP")
+  .requiredOption("--session-start-year <year>", "odd first year of the two-year session")
+  .option("--concurrency <number>", "parallel artifact persistence operations", "4")
+  .option("--limit <number>", "maximum matching documents", "50000")
+  .action(processCaliforniaPubinfo)
+
+program
+  .command("documents:ocr")
+  .description("OCR retained image-only bill documents")
+  .option("--document-id <id>", "process one exact document")
+  .option("--limit <number>", "maximum documents", "10")
+  .action(processOcrDocuments)
+
+program
   .command("documents:classify-terminal")
   .description("Classify legacy failed and unsupported documents and make terminal dispositions explicit")
   .option("--limit <number>", "maximum unclassified documents to inspect", "100000")
@@ -239,6 +261,8 @@ program
   .command("documents:recover-interrupted")
   .description("Move stale processing documents back to pending after a confirmed interrupted worker")
   .requiredOption("--before <iso-date-time>")
+  .option("--shard-count <number>", "document backfill shard count", "1")
+  .option("--shard-index <number>", "zero-based document backfill shard index", "0")
   .action(recoverInterruptedDocuments)
 
 program
@@ -286,6 +310,7 @@ program
   .description("Release a bounded lease left by a confirmed interrupted job execution")
   .requiredOption("--before <iso-date-time>")
   .requiredOption("--operation <operation>")
+  .requiredOption("--scope-key <scope-key>")
   .requiredOption("--source <source>")
   .action(recoverJob)
 
@@ -302,6 +327,18 @@ async function serve() {
   const authenticate = config.auth.mode === "workos" ? createWorkosAuthenticator(config.auth) : undefined
   const server = createLegislationServer({
     authenticate,
+    documentFetchRelay:
+      process.env.DOCUMENT_FETCH_RELAY_TOKEN === undefined
+        ? undefined
+        : {
+            fetch: async (sourceUrl) =>
+              await downloadDocument(sourceUrl, {
+                detectContentType: false,
+                fetch,
+                timeoutMs: config.ingestion.requestTimeoutMs
+              }),
+            token: process.env.DOCUMENT_FETCH_RELAY_TOKEN
+          },
     isReady: () => isDatabaseReady(pool),
     logger,
     mcpHandler: mcp.nodeHandler,
@@ -362,7 +399,7 @@ async function wait() {
   }
 }
 
-async function recoverJob(options: { before: string; operation: string; source: string }) {
+async function recoverJob(options: { before: string; operation: string; scopeKey: string; source: string }) {
   const before = parseDate(options.before, "before")
   if (before > new Date()) {
     throw new InvalidJobInput("before must not be in the future")
@@ -371,6 +408,7 @@ async function recoverJob(options: { before: string; operation: string; source: 
     const result = await recoverInterruptedIngestionJob(database, {
       before,
       operation: options.operation.trim(),
+      scopeKey: options.scopeKey.trim(),
       source: options.source.trim()
     })
     if (!result.releasedLease) {
@@ -381,6 +419,7 @@ async function recoverJob(options: { before: string; operation: string; source: 
         before: before.toISOString(),
         operation: options.operation.trim(),
         recoveredRunIds: result.runIds,
+        scopeKey: options.scopeKey.trim(),
         source: options.source.trim()
       })}\n`
     )
@@ -437,6 +476,7 @@ async function importOpenStates(options: {
         ...jobExecutionContext(),
         operation: "historical-import",
         scope: { stream: options.stream },
+        scopeKey: `stream:${options.stream}`,
         source: "openstates"
       },
       async () => {
@@ -485,6 +525,7 @@ async function syncOpenStates(options: { from?: string; jurisdiction?: string })
         ...jobExecutionContext(),
         operation: "incremental-sync",
         scope: { from: from.toISOString(), jurisdictions },
+        scopeKey: `bills:${requestedCode ?? "all"}`,
         source: "openstates"
       },
       async () => {
@@ -548,6 +589,7 @@ async function syncOpenStatesEntities(options: { jurisdiction?: string }) {
         ...jobExecutionContext(),
         operation: "current-entities",
         scope: { jurisdictions: jurisdictionCodes },
+        scopeKey: `entities:${requestedCode ?? "all"}`,
         source: "openstates"
       },
       async () => {
@@ -634,6 +676,7 @@ async function syncOpenStatesEvents(options: { from?: string; jurisdiction?: str
         ...jobExecutionContext(),
         operation: "events-sync",
         scope: { from: from.toISOString(), jurisdictions: jurisdictionCodes, to: to.toISOString() },
+        scopeKey: `events:${requestedCode ?? "all"}`,
         source: "openstates"
       },
       async () => {
@@ -704,6 +747,7 @@ async function bootstrapOpenStates(options: { force?: boolean; jurisdiction?: st
         ...jobExecutionContext(),
         operation: "historical-import",
         scope: { archives: archives.length, jurisdiction: requestedCode },
+        scopeKey: `bootstrap:${requestedCode ?? "all"}`,
         source: "openstates"
       },
       async () => {
@@ -792,6 +836,7 @@ async function importGovInfo(options: {
         ...jobExecutionContext(),
         operation: "historical-import",
         scope: { billTypes, end, start },
+        scopeKey: `congress:${start}-${end}`,
         source: "govinfo"
       },
       async () =>
@@ -885,7 +930,13 @@ async function syncCongress(options: { dryRun?: boolean; from?: string; to?: str
   await withDatabase(async (database) => {
     const result = await runIngestionJob(
       database,
-      { ...jobExecutionContext(), operation: "incremental-sync", scope: { ...options }, source: "congress" },
+      {
+        ...jobExecutionContext(),
+        operation: "incremental-sync",
+        scope: { ...options },
+        scopeKey: "bills:current",
+        source: "congress"
+      },
       async () =>
         synchronizeCongress(database, client, {
           dryRun: options.dryRun,
@@ -924,6 +975,7 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
         ...jobExecutionContext(),
         operation: "current-entities",
         scope: { endCongress: end, startCongress: start },
+        scopeKey: start === end ? `entities:${start}` : "entities:all",
         source: "congress"
       },
       async () => {
@@ -996,6 +1048,7 @@ async function syncCongressAmendmentData(options: {
         ...jobExecutionContext(),
         operation: "amendments-bootstrap",
         scope: { endCongress: end, startCongress: start },
+        scopeKey: start === end ? `amendments:${start}` : "amendments:all",
         source: "congress"
       },
       async () => {
@@ -1053,6 +1106,7 @@ async function syncCongressCommitteeReportData(options: {
         ...jobExecutionContext(),
         operation: "committee-reports-bootstrap",
         scope: { endCongress: end, startCongress: start },
+        scopeKey: start === end ? `committee-reports:${start}` : "committee-reports:all",
         source: "congress"
       },
       async () => {
@@ -1119,6 +1173,7 @@ async function syncCongressEventData(options: {
         ...jobExecutionContext(),
         operation: "events-bootstrap",
         scope: { domains, endCongress: end, startCongress: start },
+        scopeKey: start === end ? `events:${start}` : "events:all",
         source: "congress"
       },
       async () => {
@@ -1181,6 +1236,7 @@ async function syncCongressHouseVoteData(options: {
         ...jobExecutionContext(),
         operation: "house-votes-bootstrap",
         scope: { endCongress: end, sessions, startCongress: start },
+        scopeKey: start === end ? `house-votes:${start}` : "house-votes:all",
         source: "congress"
       },
       async () => {
@@ -1247,6 +1303,7 @@ async function processDocuments(options: {
           ...jobExecutionContext(),
           operation: shardCount === 1 ? "process-documents" : `process-documents-shard-${shardIndex}`,
           scope: { ...options },
+          scopeKey: shardCount === 1 ? "all" : `shard:${shardIndex}-of-${shardCount}`,
           source: "documents"
         },
         async () => {
@@ -1298,6 +1355,117 @@ async function processDocuments(options: {
   )
 }
 
+async function processCaliforniaPubinfo(options: {
+  archive: string
+  concurrency: string
+  limit: string
+  sessionStartYear: string
+}) {
+  const config = loadConfig()
+  const archivePath = resolve(options.archive)
+  const archiveStat = await stat(archivePath)
+  if (!archiveStat.isFile() || archiveStat.size === 0) {
+    throw new InvalidJobInput("California PUBINFO archive must be a non-empty file")
+  }
+  const sessionStartYear = parseInteger(options.sessionStartYear, "session start year")
+  const concurrency = parseInteger(options.concurrency, "concurrency")
+  const limit = parseInteger(options.limit, "limit")
+  if (concurrency > 32) {
+    throw new InvalidJobInput("concurrency must not exceed 32")
+  }
+  if (limit > 50_000) {
+    throw new InvalidJobInput("limit must not exceed 50000")
+  }
+
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: `process-california-pubinfo-${sessionStartYear}`,
+        scope: { archivePath, concurrency, limit, sessionStartYear },
+        scopeKey: `california-pubinfo:${sessionStartYear}`,
+        source: "documents"
+      },
+      async () => {
+        const processed = await processCaliforniaPubinfoArchive(
+          database,
+          createArtifactStore(config, "documents"),
+          () => createReadStream(archivePath),
+          {
+            concurrency,
+            limit,
+            maximumAttempts: config.ingestion.maxAttempts,
+            sessionStartYear
+          }
+        )
+        return {
+          checkpoint: { complete: processed.claimed < limit, sessionStartYear },
+          counts: createJobCounts({
+            discovered: processed.claimed,
+            failed: processed.failed,
+            read: processed.processed + processed.failed,
+            skipped: processed.missing,
+            updated: processed.processed
+          }),
+          failures:
+            processed.failed === 0
+              ? []
+              : [
+                  {
+                    message: `${processed.failed} California PUBINFO documents failed processing`,
+                    retryable: false
+                  }
+                ]
+        }
+      }
+    )
+    printJobResult(result)
+  }, config)
+}
+
+async function processOcrDocuments(options: { documentId?: string; limit: string }) {
+  const config = loadConfig()
+  const limit = parseInteger(options.limit, "limit")
+  if (config.ocr.endpoint === undefined) {
+    throw new InvalidJobInput("AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT is required for OCR")
+  }
+  const ocrEndpoint = config.ocr.endpoint
+  await withDatabase(async (database) => {
+    const result = await runIngestionJob(
+      database,
+      {
+        ...jobExecutionContext(),
+        operation: "ocr-documents",
+        scope: { ...options, limit },
+        scopeKey: options.documentId ?? "all",
+        source: "documents"
+      },
+      async () => {
+        const ocr = await processOcrRequiredDocuments(database, {
+          artifactStore: createArtifactStore(config, "documents"),
+          batchSize: limit,
+          concurrency: 1,
+          documentId: options.documentId,
+          maximumAttempts: config.ocr.maximumAttempts,
+          ocr: new AzureDocumentIntelligenceClient(ocrEndpoint)
+        })
+        return {
+          checkpoint: { complete: ocr.claimed < limit, pages: ocr.pages },
+          counts: createJobCounts({
+            discovered: ocr.claimed,
+            failed: ocr.failed,
+            read: ocr.processed + ocr.failed,
+            updated: ocr.processed
+          }),
+          failures: ocr.failures
+        }
+      }
+    )
+    printJobResult(result)
+  }, config)
+}
+
 async function classifyTerminalDocuments(options: { limit: string }) {
   const config = loadConfig()
   const limit = parseInteger(options.limit, "limit")
@@ -1308,6 +1476,7 @@ async function classifyTerminalDocuments(options: { limit: string }) {
         ...jobExecutionContext(),
         operation: "classify-terminal",
         scope: { limit },
+        scopeKey: "all",
         source: "documents"
       },
       async () => {
@@ -1337,6 +1506,7 @@ async function prepareKnownDocumentRemediation(options: { cohort: string; limit:
         ...jobExecutionContext(),
         operation: `prepare-remediation-${cohort}`,
         scope: { cohort, limit },
+        scopeKey: cohort,
         source: "documents"
       },
       async () => {
@@ -1352,11 +1522,19 @@ async function prepareKnownDocumentRemediation(options: { cohort: string; limit:
   }, config)
 }
 
-async function recoverInterruptedDocuments(options: { before: string }) {
+async function recoverInterruptedDocuments(options: { before: string; shardCount: string; shardIndex: string }) {
   const config = loadConfig()
   const before = parseDate(options.before, "before")
   if (before > new Date()) {
     throw new InvalidJobInput("before must not be in the future")
+  }
+  const shardCount = parseInteger(options.shardCount, "shard count")
+  const shardIndex = parseInteger(options.shardIndex, "shard index")
+  if (shardCount < 1) {
+    throw new InvalidJobInput("shard count must be at least 1")
+  }
+  if (shardIndex < 0 || shardIndex >= shardCount) {
+    throw new InvalidJobInput("shard index must be non-negative and less than shard count")
   }
   await withDatabase(async (database) => {
     const result = await runIngestionJob(
@@ -1364,11 +1542,15 @@ async function recoverInterruptedDocuments(options: { before: string }) {
       {
         ...jobExecutionContext(),
         operation: "recover-interrupted",
-        scope: { before: before.toISOString() },
+        scope: { before: before.toISOString(), shardCount, shardIndex },
+        scopeKey: `shard:${shardIndex}-of-${shardCount}`,
         source: "documents"
       },
       async () => {
-        const requeued = await requeueInterruptedDocuments(database, before)
+        const requeued = await requeueInterruptedDocuments(database, before, 10_000, {
+          count: shardCount,
+          index: shardIndex
+        })
         return { counts: createJobCounts({ discovered: requeued, updated: requeued }), failures: [] }
       }
     )
@@ -1396,6 +1578,7 @@ async function processSupportingMaterials(options: {
         ...jobExecutionContext(),
         operation: "process-supporting-materials",
         scope: { ...options },
+        scopeKey: "all",
         source: "documents"
       },
       async () => {
@@ -1405,7 +1588,9 @@ async function processSupportingMaterials(options: {
         const artifactStore = createArtifactStore(config, "documents")
         let status: "failed" | "pending" | "unsupported" | undefined
         if (options.all === true) {
-          status = "pending"
+          // The default selection includes pending records and only the due,
+          // retryable failed records that still have an attempt remaining.
+          status = undefined
         } else if (options.status !== undefined) {
           status = parseDocumentStatus(options.status)
         }
@@ -1446,10 +1631,11 @@ async function requeueSupportingMaterials() {
         ...jobExecutionContext(),
         operation: "requeue-failed",
         scope: {},
+        scopeKey: "all",
         source: "supporting-materials"
       },
       async () => {
-        const requeued = await requeueFailedSupportingMaterials(database)
+        const requeued = await requeueFailedSupportingMaterials(database, config.ingestion.maxAttempts)
         return { counts: createJobCounts({ discovered: requeued, updated: requeued }), failures: [] }
       }
     )
@@ -1501,24 +1687,36 @@ async function runEmbeddings(options: {
           ...jobExecutionContext(),
           operation: shardCount === 1 ? "refresh-embeddings" : `refresh-embeddings-shard-${shardIndex}`,
           scope: { limit, shardCount, shardIndex },
+          scopeKey: shardCount === 1 ? "all" : `shard:${shardIndex}-of-${shardCount}`,
           source: "openrouter"
         },
         async () => {
           let embedded = 0
           let batches = 0
+          let billCursor = ""
+          let materialCursor = ""
+          let sectionCursor = ""
           let skipped = 0
           let hasMoreEmbeddings = true
           do {
             const bills = await telemetry.observe(
               "embedding.bills",
               { batchLimit: limit, model: config.model.embeddingModel },
-              () => embedBills(database, client, { billId: options.billId, limit, shardCount, shardIndex })
+              () =>
+                embedBills(database, client, {
+                  afterId: billCursor,
+                  billId: options.billId,
+                  limit,
+                  shardCount,
+                  shardIndex
+                })
             )
             const sections = await telemetry.observe(
               "embedding.sections",
               { batchLimit: limit, model: config.model.embeddingModel },
               () =>
                 embedDocumentSections(database, client, {
+                  afterId: sectionCursor,
                   billId: options.billId,
                   documentId: options.documentId,
                   limit,
@@ -1531,6 +1729,7 @@ async function runEmbeddings(options: {
               { batchLimit: limit, model: config.model.embeddingModel },
               () =>
                 embedSupportingMaterialSections(database, client, {
+                  afterId: materialCursor,
                   limit,
                   materialId: options.materialId,
                   shardCount,
@@ -1540,8 +1739,10 @@ async function runEmbeddings(options: {
             embedded += bills.embedded + sections.embedded + materials.embedded
             skipped += bills.skipped + sections.skipped + materials.skipped
             batches += 1
-            hasMoreEmbeddings =
-              options.all === true && (bills.embedded > 0 || sections.embedded > 0 || materials.embedded > 0)
+            billCursor = bills.cursor
+            materialCursor = materials.cursor
+            sectionCursor = sections.cursor
+            hasMoreEmbeddings = options.all === true && !(bills.complete && sections.complete && materials.complete)
             if (batches % 10 === 0 || !hasMoreEmbeddings) {
               logger.info("embedding progress", { batches, embedded, shardCount, shardIndex, skipped })
             }
@@ -1736,6 +1937,13 @@ function printJobResult(result: JobResult) {
 }
 
 program.parseAsync().catch((error: unknown) => {
+  if (error instanceof JobAlreadyRunningError) {
+    process.stdout.write(
+      `${JSON.stringify({ operation: error.operation, scopeKey: error.scopeKey, source: error.source, status: "overlap_skipped" })}\n`
+    )
+    process.exitCode = JOB_EXIT_CODE.succeeded
+    return
+  }
   const logger = createLogger({ level: "error", service: "legislation" })
   logger.error("command failed", errorContext(error))
   process.exitCode = error instanceof InvalidJobInput ? JOB_EXIT_CODE.invalid : JOB_EXIT_CODE.failed

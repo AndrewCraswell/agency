@@ -58,4 +58,24 @@ describe("Congress amendment normalization", () => {
       }
     })
   })
+
+  it("retains an identified sponsor name when Congress.gov omits its bioguide ID", () => {
+    const snapshot = normalizeCongressAmendmentBundle({
+      actions: [],
+      amendment: {
+        congress: 119,
+        number: "2",
+        sponsors: [{ fullName: "Sen. Example, Pat [I-EX]" }],
+        type: "SAMDT"
+      },
+      sourceUrl: "https://api.congress.gov/v3/amendment/119/samdt/2",
+      textVersions: []
+    })
+
+    expect(snapshot.amendment).toMatchObject({
+      sponsorName: "Sen. Example, Pat [I-EX]",
+      sponsorPersonId: undefined,
+      sponsorSourceId: undefined
+    })
+  })
 })

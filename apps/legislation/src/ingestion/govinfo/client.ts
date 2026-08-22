@@ -12,6 +12,7 @@ export interface GovInfoBillStatusPackage {
   billType: string
   congress: number
   packageId: string
+  lastModified?: Date
   url: URL
 }
 

@@ -19,7 +19,10 @@ accidental deletion. Composite constraints prevent a bill from referencing a ses
 ## Search storage
 
 Bill and document-section records include PostgreSQL `tsvector` columns for lexical search and 1,536-dimensional
-pgvector columns for semantic search. Index selection is deferred until corpus size and query plans can be measured.
+pgvector columns for semantic search. Those inline vector columns describe the current migrated schema, but
+[ADR-012](architecture-decisions.md) requires the paid broad rollout to use dedicated, foreign-keyed embedding tables
+after the [retrieval-quality canary](embedding-rollout-plan.md). This avoids treating the current storage shape as
+approval to populate every vector. Index selection and any later physical isolation remain evidence-based decisions.
 
 ## Migrations
 

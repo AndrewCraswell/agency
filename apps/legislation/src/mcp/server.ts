@@ -3,10 +3,17 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { runWithRequestContext, type RequestIdentity } from "../auth/request-context.js"
 import { AuthenticationError } from "../auth/workos.js"
 import type { LegislationConfig } from "../config/config.js"
+import { isApprovedDocumentRelayUrl } from "../ingestion/documents/trusted-document-transport.js"
 import { errorContext, type Logger } from "../observability/logger.js"
+
+type RelayedDocument = Readonly<{ bytes: Uint8Array; contentType: string; sourceUrl: string }>
 
 type ServerDependencies = Readonly<{
   authenticate?: (authorizationHeader: string | string[] | undefined) => Promise<RequestIdentity>
+  documentFetchRelay?: Readonly<{
+    fetch: (sourceUrl: string) => Promise<RelayedDocument>
+    token: string
+  }>
   isReady?: () => boolean | Promise<boolean>
   logger: Logger
   mcpHandler?: (request: IncomingMessage, response: ServerResponse) => Promise<void>
@@ -70,6 +77,34 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
         return
       }
 
+      if (request.method === "POST" && requestUrl.pathname === "/internal/document-fetch") {
+        const relay = dependencies.documentFetchRelay
+        if (relay === undefined || request.headers.authorization !== `Bearer ${relay.token}`) {
+          sendJson(response, 401, { error: "unauthorized" })
+          return
+        }
+        const body = await readJsonBody(request, Math.min(requestBodyBytes, 4096))
+        const sourceUrl = typeof body.sourceUrl === "string" ? body.sourceUrl : undefined
+        let approvedUrl: URL | undefined
+        try {
+          approvedUrl = sourceUrl === undefined ? undefined : new URL(sourceUrl)
+        } catch {
+          approvedUrl = undefined
+        }
+        if (approvedUrl === undefined || !isApprovedDocumentRelayUrl(approvedUrl)) {
+          sendJson(response, 400, { error: "unsupported_document_url" })
+          return
+        }
+        const document = await relay.fetch(approvedUrl.href)
+        response.writeHead(200, {
+          "content-length": String(document.bytes.byteLength),
+          "content-type": document.contentType,
+          "x-legislation-relayed-source": document.sourceUrl
+        })
+        response.end(document.bytes)
+        return
+      }
+
       if (requestUrl.pathname === "/mcp" && dependencies.mcpHandler !== undefined) {
         let identity: RequestIdentity | undefined
         if (dependencies.authenticate !== undefined) {
@@ -112,6 +147,24 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
   server.keepAliveTimeout = 5000
   server.requestTimeout = 60_000
   return server
+}
+
+async function readJsonBody(request: IncomingMessage, maximumBytes: number): Promise<Record<string, unknown>> {
+  const chunks: Buffer[] = []
+  let bytes = 0
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+    bytes += buffer.byteLength
+    if (bytes > maximumBytes) {
+      throw new Error("Request body exceeds the document relay limit")
+    }
+    chunks.push(buffer)
+  }
+  const value: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"))
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("Document relay request body must be an object")
+  }
+  return value as Record<string, unknown>
 }
 
 export async function listen(server: Server, config: LegislationConfig["server"]): Promise<void> {

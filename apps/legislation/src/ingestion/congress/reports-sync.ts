@@ -7,6 +7,7 @@ import { createJobCounts, type JobCounts } from "../job.js"
 import type { SourceStore } from "../source-store.js"
 import type { CongressClient } from "./client.js"
 import { normalizeCongressCommitteeReportBundle } from "./reports.js"
+import { isCongressRequestBudgetExhaustedError } from "./request-budget.js"
 
 export interface CongressCommitteeReportSyncResult {
   checkpoint?: Readonly<Record<string, unknown>>
@@ -70,6 +71,9 @@ export async function synchronizeCongressCommitteeReports(
         break
       }
     } catch (error) {
+      if (isCongressRequestBudgetExhaustedError(error)) {
+        throw error
+      }
       counts.failed += 1
       failures.push({
         identifier: `${item.reference.congress}-${item.reference.type}-${item.reference.number}`,

@@ -1,8 +1,10 @@
 import { zipSync } from "fflate"
 import { describe, expect, it } from "vitest"
 import {
+  assertPdfTextExtractionPageCount,
   extractDocument,
   MAX_DOCUMENT_BYTES,
+  MAX_PDF_TEXT_EXTRACTION_PAGES,
   normalizeLegalText,
   sanitizeDatabaseText,
   segmentLegalText
@@ -54,6 +56,15 @@ describe("legislative document extraction", () => {
     const pdf = await extractDocument("document:pdf", textPdf, "application/pdf")
     expect(pdf.text).toContain("PDF contains usable legislative text")
     expect(pdf.sections[0]?.identifier).toBe("1.")
+  }, 15_000)
+
+  it("routes PDFs above the local page limit to OCR", () => {
+    expect(() => assertPdfTextExtractionPageCount(MAX_PDF_TEXT_EXTRACTION_PAGES)).not.toThrow()
+    expect(() => assertPdfTextExtractionPageCount(MAX_PDF_TEXT_EXTRACTION_PAGES + 1)).toThrow("requires OCR")
+    expect(classifyDocumentFailure(`PDF has 751 pages and requires OCR`)).toMatchObject({
+      category: "ocr-required",
+      retryable: false
+    })
   })
 
   it("extracts bounded text from modern Office documents", async () => {
@@ -180,6 +191,10 @@ describe("legislative document extraction", () => {
       category: "malformed-document",
       retryable: false
     })
+    expect(classifyDocumentFailure("Bad (uncompressed) XRef entry: 57R")).toMatchObject({
+      category: "malformed-document",
+      retryable: false
+    })
     expect(classifyDocumentFailure("invalid zip data")).toMatchObject({
       category: "malformed-document",
       retryable: false
@@ -187,6 +202,10 @@ describe("legislative document extraction", () => {
     expect(classifyDocumentFailure("Document response contains HTML instead of advertised PDF")).toMatchObject({
       category: "download-transient",
       retryable: true
+    })
+    expect(classifyDocumentFailure("Congress committee repository reports document not found")).toMatchObject({
+      category: "not-found",
+      retryable: false
     })
     expect(
       classifyDocumentFailure("California bill PDF is not available from publisher (received application/xml)")

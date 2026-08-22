@@ -33,16 +33,21 @@ try {
     "compare_bill_versions",
     "find_related_bills",
     "get_amendment",
+    "get_amendments",
     "get_bill",
     "get_bill_text",
     "get_bill_timeline",
+    "get_bill_votes",
+    "get_bills",
     "get_calendar",
     "get_event",
     "get_organization",
     "get_person",
     "get_supporting_material",
     "get_vote",
+    "get_votes",
     "search_amendments",
+    "search_amendments_for_bills",
     "search_bill_text",
     "search_bills",
     "search_changes",
@@ -58,7 +63,9 @@ try {
   const calls = [
     { arguments: { mode: "lexical", query: "legislative" }, name: "search_bills" },
     { arguments: { id: billId }, name: "get_bill" },
+    { arguments: { childLimit: 5, ids: [billId] }, name: "get_bills" },
     { arguments: { id: billId }, name: "get_bill_timeline" },
+    { arguments: { billId, limit: 5 }, name: "get_bill_votes" },
     { arguments: { billId, mode: "lexical", query: "section" }, name: "search_bill_text" },
     { arguments: { documentId: firstDocumentId, id: billId }, name: "get_bill_text" },
     {
@@ -66,6 +73,7 @@ try {
       name: "compare_bill_versions"
     },
     { arguments: { id: billId }, name: "find_related_bills" },
+    { arguments: { billIds: [billId], limit: 5 }, name: "search_amendments_for_bills" },
     { arguments: { jurisdictionId: "jurisdiction:us", limit: 1 }, name: "get_calendar" },
     { arguments: { jurisdictionId: "jurisdiction:us", limit: 1 }, name: "search_changes" }
   ]
@@ -126,6 +134,11 @@ try {
       throw new Error(`Deployment smoke fixture missing for ${discovery.detail}`)
     }
     await call({ arguments: { id: item.id, limit: 1 }, name: discovery.detail })
+    if (discovery.detail === "get_vote") {
+      await call({ arguments: { ids: [item.id] }, name: "get_votes" })
+    } else if (discovery.detail === "get_amendment") {
+      await call({ arguments: { ids: [item.id] }, name: "get_amendments" })
+    }
   }
   process.stdout.write(
     `${JSON.stringify({ health: health.status, ready: ready.status, toolCalls, tools: names.length })}\n`

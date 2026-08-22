@@ -9,6 +9,7 @@
       "ignoreDependencies": ["@repo/oxlint-config"]
     },
     "apps/legislation": {
+      "entry": ["trigger.config.ts", "src/trigger/tasks/**/*.ts"],
       "ignoreDependencies": ["@repo/oxlint-config"]
     },
     "apps/blog-writer": {

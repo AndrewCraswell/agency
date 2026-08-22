@@ -17,6 +17,7 @@ async function startServer(
   isReady = true,
   options: Readonly<{
     authenticate?: () => Promise<{ userId: string }>
+    documentFetchRelay?: NonNullable<Parameters<typeof createLegislationServer>[0]["documentFetchRelay"]>
     logger?: Logger
     mcpHandler?: NonNullable<Parameters<typeof createLegislationServer>[0]["mcpHandler"]>
     protectedResourceMetadata?: NonNullable<Parameters<typeof createLegislationServer>[0]["protectedResourceMetadata"]>
@@ -57,6 +58,60 @@ describe("createLegislationServer", () => {
       databasePool: { saturation: 1, waiting: 2 },
       status: "unavailable"
     })
+  })
+
+  it("serves only authenticated, approved document relay requests", async () => {
+    const relay = {
+      fetch: async (sourceUrl: string) => ({
+        bytes: new TextEncoder().encode("%PDF-relayed"),
+        contentType: "application/pdf",
+        sourceUrl
+      }),
+      token: "relay-secret"
+    }
+    const baseUrl = await startServer(true, { documentFetchRelay: relay })
+    const artifactUrl = "https://www.palegis.us/legislation/bills/text/PDF/2021/0/HB0209/PN0175"
+
+    const anonymous = await fetch(`${baseUrl}/internal/document-fetch`, {
+      body: JSON.stringify({ sourceUrl: artifactUrl }),
+      method: "POST"
+    })
+    expect(anonymous.status).toBe(401)
+
+    const unsupported = await fetch(`${baseUrl}/internal/document-fetch`, {
+      body: JSON.stringify({ sourceUrl: "https://example.gov/document.pdf" }),
+      headers: { authorization: "Bearer relay-secret", "content-type": "application/json" },
+      method: "POST"
+    })
+    expect(unsupported.status).toBe(400)
+
+    const fiscalNote = await fetch(`${baseUrl}/internal/document-fetch`, {
+      body: JSON.stringify({
+        sourceUrl: "https://www.legis.state.pa.us/WU01/LI/BI/FN/2021/0/HB1013P1052.pdf"
+      }),
+      headers: { authorization: "Bearer relay-secret", "content-type": "application/json" },
+      method: "POST"
+    })
+    expect(fiscalNote.status).toBe(200)
+
+    const senateFiscalNote = await fetch(`${baseUrl}/internal/document-fetch`, {
+      body: JSON.stringify({
+        sourceUrl: "https://www.legis.state.pa.us/WU01/LI/BI/SFN/2021/0/HB0326P0388.pdf"
+      }),
+      headers: { authorization: "Bearer relay-secret", "content-type": "application/json" },
+      method: "POST"
+    })
+    expect(senateFiscalNote.status).toBe(200)
+
+    const response = await fetch(`${baseUrl}/internal/document-fetch`, {
+      body: JSON.stringify({ sourceUrl: artifactUrl }),
+      headers: { authorization: "Bearer relay-secret", "content-type": "application/json" },
+      method: "POST"
+    })
+    expect(response.status).toBe(200)
+    expect(response.headers.get("content-type")).toBe("application/pdf")
+    expect(response.headers.get("x-legislation-relayed-source")).toBe(artifactUrl)
+    await expect(response.text()).resolves.toBe("%PDF-relayed")
   })
 
   it("logs safe readiness diagnostics when a dependency is unavailable", async () => {
@@ -179,6 +234,7 @@ describe("createLegislationServer", () => {
       findRelatedBills: async () => ({ items: [] }),
       getAmendment: async () => ({ amendment: {} }),
       getBill: async () => ({ bill: { id: billId } }),
+      getBillVotes: async () => ({ billId, items: [] }),
       getBillText: async () => ({ sections: [] }),
       getBillTimeline: async () => ({ events: [] }),
       getCalendar: async () => ({ items: [] }),
@@ -213,10 +269,11 @@ describe("createLegislationServer", () => {
     try {
       await client.connect(transport)
       const tools = await client.listTools()
-      expect(tools.tools).toHaveLength(21)
+      expect(tools.tools).toHaveLength(26)
       for (const call of [
         { arguments: { mode: "lexical", query: "data" }, name: "search_bills" },
         { arguments: { id: billId }, name: "get_bill" },
+        { arguments: { ids: [billId] }, name: "get_bills" },
         { arguments: { id: billId }, name: "get_bill_timeline" },
         { arguments: { mode: "lexical", query: "data" }, name: "search_bill_text" },
         { arguments: { id: billId, versionCode: "ih" }, name: "get_bill_text" },
@@ -230,9 +287,13 @@ describe("createLegislationServer", () => {
         { arguments: { id: "event:congress:meeting-1" }, name: "get_event" },
         { arguments: { jurisdictionId: "jurisdiction:us" }, name: "get_calendar" },
         { arguments: { billId }, name: "search_votes" },
+        { arguments: { billId }, name: "get_bill_votes" },
         { arguments: { id: "vote:congress:house-1" }, name: "get_vote" },
+        { arguments: { ids: ["vote:congress:house-1"] }, name: "get_votes" },
         { arguments: { billId }, name: "search_amendments" },
         { arguments: { id: "amendment:congress:119-hamdt-1" }, name: "get_amendment" },
+        { arguments: { ids: ["amendment:congress:119-hamdt-1"] }, name: "get_amendments" },
+        { arguments: { billIds: [billId] }, name: "search_amendments_for_bills" },
         { arguments: { billId }, name: "search_supporting_materials" },
         { arguments: { id: "material:govinfo:crpt-1" }, name: "get_supporting_material" },
         { arguments: { jurisdictionId: "jurisdiction:us" }, name: "search_changes" }

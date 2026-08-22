@@ -7,6 +7,7 @@ import iconv from "iconv-lite"
 import { documentSectionId } from "../../legislation/identifiers.js"
 
 export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024
+export const MAX_PDF_TEXT_EXTRACTION_PAGES = 750
 const MAX_OFFICE_ARCHIVE_ENTRIES = 5_000
 const MAX_OFFICE_UNCOMPRESSED_BYTES = 4 * MAX_DOCUMENT_BYTES
 
@@ -176,6 +177,7 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
   const document = await loadingTask.promise
   const pages: string[] = []
   try {
+    assertPdfTextExtractionPageCount(document.numPages)
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
       const page = await document.getPage(pageNumber)
       const content = await page.getTextContent()
@@ -189,6 +191,14 @@ async function extractPdfText(bytes: Uint8Array): Promise<string> {
     throw new Error("PDF is image-only or contains too little usable text")
   }
   return text
+}
+
+export function assertPdfTextExtractionPageCount(pageCount: number): void {
+  if (pageCount > MAX_PDF_TEXT_EXTRACTION_PAGES) {
+    throw new Error(
+      `PDF has ${pageCount} pages, exceeding the ${MAX_PDF_TEXT_EXTRACTION_PAGES}-page local extraction limit, and requires OCR`
+    )
+  }
 }
 
 function headingMatch(line: string): { heading: string; identifier?: string } | undefined {

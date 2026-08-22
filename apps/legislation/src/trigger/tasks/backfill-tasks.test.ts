@@ -1,0 +1,164 @@
+import { describe, expect, it } from "vitest"
+import { DERIVED_SUPPORTING_MATERIAL_BATCH_SIZE } from "../../ingestion/backfill/derived.js"
+import {
+  createDerivedLeaseHandoffResult,
+  derivedBatchSizeFor,
+  derivedDatabaseConnectionsFor,
+  derivedPayloadSchema,
+  derivedWorkerMaxBatchesFor,
+  isMaterialPhaseGateOpen,
+  reconcileSupportingMaterialOcrCheckpoint
+} from "./backfill-tasks.js"
+
+describe("derived backfill task payload", () => {
+  it("keeps material children inside the renewable ingestion lease", () => {
+    expect(derivedWorkerMaxBatchesFor("bill-documents")).toBe(1)
+    expect(derivedWorkerMaxBatchesFor("supporting-materials")).toBe(1)
+    expect(derivedWorkerMaxBatchesFor("embeddings")).toBe(10)
+    expect(derivedDatabaseConnectionsFor("bill-documents")).toBe(1)
+    expect(derivedDatabaseConnectionsFor("supporting-materials")).toBe(2)
+    expect(derivedDatabaseConnectionsFor("embeddings")).toBe(1)
+    expect(DERIVED_SUPPORTING_MATERIAL_BATCH_SIZE).toBe(25)
+    expect(derivedBatchSizeFor("bill-documents")).toBe(100)
+    expect(derivedBatchSizeFor("supporting-materials")).toBe(25)
+    expect(derivedBatchSizeFor("embeddings")).toBeUndefined()
+  })
+
+  it("accepts the final 64-lane bill-document worker and keeps other drains bounded", () => {
+    expect(
+      derivedPayloadSchema.parse({
+        correlationId: "backfill:lane-64",
+        kind: "bill-documents",
+        rebuildId: "lane-64",
+        shardCount: 64,
+        shardIndex: 63
+      })
+    ).toMatchObject({ kind: "bill-documents", shardCount: 64, shardIndex: 63 })
+
+    expect(() =>
+      derivedPayloadSchema.parse({
+        correlationId: "backfill:embedding-lane-5",
+        kind: "embeddings",
+        rebuildId: "embedding-lane-5",
+        shardCount: 5,
+        shardIndex: 4
+      })
+    ).toThrow("embeddings supports at most 4 backfill shards")
+
+    expect(
+      derivedPayloadSchema.parse({
+        correlationId: "backfill:material-lane-24",
+        kind: "supporting-materials",
+        rebuildId: "material-lane-24",
+        shardCount: 24,
+        shardIndex: 23
+      })
+    ).toMatchObject({ kind: "supporting-materials", shardCount: 24, shardIndex: 23 })
+  })
+
+  it("reports a lease overlap as a resumable shard checkpoint", () => {
+    const retryAt = new Date("2026-08-18T16:00:00.000Z")
+
+    expect(
+      createDerivedLeaseHandoffResult({ kind: "bill-documents", shardCount: 64, shardIndex: 16 }, retryAt)
+    ).toEqual({
+      checkpoint: { complete: false, handoff: "ingestion-lease", nextAttemptAt: retryAt.toISOString() },
+      kind: "bill-documents",
+      shard: { shardCount: 64, shardIndex: 16 },
+      status: "waiting-for-lease"
+    })
+  })
+
+  it("accepts independent exact-jurisdiction document partitions and rejects ambiguous payloads", () => {
+    expect(
+      derivedPayloadSchema.parse({
+        correlationId: "backfill:illinois:partition-3",
+        documentPartitionCount: 4,
+        documentPartitionIndex: 3,
+        jurisdictionId: "jurisdiction:il",
+        kind: "bill-documents",
+        rebuildId: "illinois-partitions",
+        shardCount: 64,
+        shardIndex: 12
+      })
+    ).toMatchObject({
+      documentPartitionCount: 4,
+      documentPartitionIndex: 3,
+      jurisdictionId: "jurisdiction:il"
+    })
+
+    expect(() =>
+      derivedPayloadSchema.parse({
+        correlationId: "backfill:illinois:missing-jurisdiction",
+        documentPartitionCount: 4,
+        documentPartitionIndex: 0,
+        kind: "bill-documents",
+        rebuildId: "illinois-partitions"
+      })
+    ).toThrow("Document partitioning requires an exact jurisdictionId")
+
+    expect(() =>
+      derivedPayloadSchema.parse({
+        correlationId: "backfill:illinois:partition-overflow",
+        documentPartitionCount: 4,
+        documentPartitionIndex: 4,
+        jurisdictionId: "jurisdiction:il",
+        kind: "bill-documents",
+        rebuildId: "illinois-partitions"
+      })
+    ).toThrow("documentPartitionIndex must be less than documentPartitionCount")
+  })
+
+  it("opens the material phase only after its federal document prerequisites are terminal", () => {
+    expect(
+      isMaterialPhaseGateOpen({
+        ocrRequiredDocuments: 0,
+        pendingDocuments: 0,
+        processingDocuments: 0,
+        retryableFailedDocuments: 0
+      })
+    ).toBe(true)
+
+    for (const blocker of [
+      "ocrRequiredDocuments",
+      "pendingDocuments",
+      "processingDocuments",
+      "retryableFailedDocuments"
+    ] as const) {
+      expect(
+        isMaterialPhaseGateOpen({
+          ocrRequiredDocuments: 0,
+          pendingDocuments: 0,
+          processingDocuments: 0,
+          retryableFailedDocuments: 0,
+          [blocker]: 1
+        })
+      ).toBe(false)
+    }
+  })
+
+  it("keeps a material shard active when OCR reroutes work back to the drain", () => {
+    const result = {
+      checkpoint: { complete: true, kind: "supporting-materials" },
+      correlationId: "backfill:materials",
+      counts: { discovered: 1, failed: 1, inserted: 0, read: 0, skipped: 0, unchanged: 0, updated: 0 },
+      failures: [],
+      operation: "process-supporting-materials-shard-0",
+      runId: "material-run",
+      source: "documents",
+      status: "partial" as const
+    }
+    const nextAttemptAt = new Date("2026-08-21T01:00:00.000Z")
+
+    expect(reconcileSupportingMaterialOcrCheckpoint(result, { hasWork: true, nextAttemptAt }).checkpoint).toEqual({
+      complete: false,
+      kind: "supporting-materials",
+      nextAttemptAt: nextAttemptAt.toISOString()
+    })
+    expect(reconcileSupportingMaterialOcrCheckpoint(result, { hasWork: false }).checkpoint).toEqual({
+      complete: true,
+      kind: "supporting-materials",
+      nextAttemptAt: undefined
+    })
+  })
+})

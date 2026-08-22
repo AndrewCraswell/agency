@@ -1,5 +1,11 @@
 import { sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
+import {
+  billEmbeddingInputHash,
+  needsEmbeddingRefresh,
+  sectionEmbeddingInputHash,
+  type EmbeddingFreshnessState
+} from "../ingestion/embeddings/jobs.js"
 
 export interface CorpusValidationReport {
   checkedAt: string
@@ -39,6 +45,53 @@ const entityQualityQueries = {
   votesWithoutPositions: sql`select count(*)::int as count from legislation.votes vote where coalesce(vote.yes_count, 0) + coalesce(vote.no_count, 0) + coalesce(vote.other_count, 0) > 0 and not exists (select 1 from legislation.vote_positions position where position.vote_id = vote.id)`
 } as const
 
+const EMBEDDING_INTEGRITY_PAGE_SIZE = 1_000
+const embeddingIntegrityMetricNames = new Set([
+  "missingBillEmbeddings",
+  "missingDocumentSectionEmbeddings",
+  "missingSupportingMaterialSectionEmbeddings",
+  "staleBillEmbeddings",
+  "staleDocumentSectionEmbeddings",
+  "staleSupportingMaterialSectionEmbeddings"
+])
+
+interface BillEmbeddingRow extends EmbeddingFreshnessState, Record<string, unknown> {
+  id: string
+  subjects: string[]
+  summary: null | string
+  title: string
+}
+
+interface SectionEmbeddingRow extends EmbeddingFreshnessState, Record<string, unknown> {
+  heading: null | string
+  id: string
+  text: string
+}
+
+interface EmbeddingIntegrityCounts {
+  missing: number
+  stale: number
+}
+
+export function countEmbeddingIntegrity(
+  records: readonly Readonly<{ inputHash: string } & EmbeddingFreshnessState>[]
+): EmbeddingIntegrityCounts {
+  return records.reduce(
+    (counts, record) => {
+      if (!needsEmbeddingRefresh(record.inputHash, record)) {
+        return counts
+      }
+      if (record.embedding === null) {
+        counts.missing += 1
+      } else {
+        counts.stale += 1
+      }
+      return counts
+    },
+    { missing: 0, stale: 0 }
+  )
+}
+
 export async function validateCorpus(database: LegislationDatabase): Promise<CorpusValidationReport> {
   const metrics: Record<string, number> = {}
   for (const [name, query] of Object.entries(validationQueries)) {
@@ -49,6 +102,28 @@ export async function validateCorpus(database: LegislationDatabase): Promise<Cor
     const result = await database.execute<{ count: number }>(query)
     metrics[name] = result.rows[0]?.count ?? 0
   }
+  const billEmbeddingIntegrity = await scanEmbeddingIntegrity(database, loadBillEmbeddingRows, (row) => ({
+    ...row,
+    inputHash: billEmbeddingInputHash(row)
+  }))
+  const documentSectionEmbeddingIntegrity = await scanEmbeddingIntegrity(
+    database,
+    loadDocumentSectionEmbeddingRows,
+    (row) => ({ ...row, inputHash: sectionEmbeddingInputHash(row) })
+  )
+  const supportingMaterialSectionEmbeddingIntegrity = await scanEmbeddingIntegrity(
+    database,
+    loadSupportingMaterialSectionEmbeddingRows,
+    (row) => ({ ...row, inputHash: sectionEmbeddingInputHash(row) })
+  )
+  Object.assign(metrics, {
+    missingBillEmbeddings: billEmbeddingIntegrity.missing,
+    missingDocumentSectionEmbeddings: documentSectionEmbeddingIntegrity.missing,
+    missingSupportingMaterialSectionEmbeddings: supportingMaterialSectionEmbeddingIntegrity.missing,
+    staleBillEmbeddings: billEmbeddingIntegrity.stale,
+    staleDocumentSectionEmbeddings: documentSectionEmbeddingIntegrity.stale,
+    staleSupportingMaterialSectionEmbeddings: supportingMaterialSectionEmbeddingIntegrity.stale
+  })
   const completion = await database.execute<{
     documents: number
     embedded_bills: number
@@ -84,7 +159,88 @@ export async function validateCorpus(database: LegislationDatabase): Promise<Cor
   `)
   metrics.unresolvedRelations = unresolvedRelations.rows[0]?.count ?? 0
   const criticalIssues = Object.entries(metrics)
-    .filter(([name]) => name in validationQueries)
+    .filter(([name]) => name in validationQueries || embeddingIntegrityMetricNames.has(name))
     .reduce((total, [, count]) => total + count, 0)
   return { checkedAt: new Date().toISOString(), criticalIssues, metrics, valid: criticalIssues === 0 }
+}
+
+async function scanEmbeddingIntegrity<Row extends Readonly<{ id: string }>>(
+  database: LegislationDatabase,
+  load: (database: LegislationDatabase, afterId: string) => Promise<Row[]>,
+  toFreshnessState: (row: Row) => Readonly<{ inputHash: string } & EmbeddingFreshnessState>
+): Promise<EmbeddingIntegrityCounts> {
+  const counts: EmbeddingIntegrityCounts = { missing: 0, stale: 0 }
+  let afterId = ""
+  while (true) {
+    const rows = await load(database, afterId)
+    const pageCounts = countEmbeddingIntegrity(rows.map(toFreshnessState))
+    counts.missing += pageCounts.missing
+    counts.stale += pageCounts.stale
+    if (rows.length < EMBEDDING_INTEGRITY_PAGE_SIZE) {
+      return counts
+    }
+    const lastRow = rows.at(-1)
+    if (lastRow === undefined) {
+      return counts
+    }
+    afterId = lastRow.id
+  }
+}
+
+async function loadBillEmbeddingRows(database: LegislationDatabase, afterId: string): Promise<BillEmbeddingRow[]> {
+  const result = await database.execute<BillEmbeddingRow>(sql`
+    select
+      id,
+      title,
+      summary,
+      subjects,
+      embedding,
+      embedding_input_hash as "embeddingInputHash",
+      embedding_model as "embeddingModel"
+    from legislation.bills
+    where id > ${afterId}
+    order by id
+    limit ${EMBEDDING_INTEGRITY_PAGE_SIZE}
+  `)
+  return result.rows
+}
+
+async function loadDocumentSectionEmbeddingRows(
+  database: LegislationDatabase,
+  afterId: string
+): Promise<SectionEmbeddingRow[]> {
+  const result = await database.execute<SectionEmbeddingRow>(sql`
+    select
+      id,
+      heading,
+      text,
+      embedding,
+      embedding_input_hash as "embeddingInputHash",
+      embedding_model as "embeddingModel"
+    from legislation.document_sections
+    where id > ${afterId}
+    order by id
+    limit ${EMBEDDING_INTEGRITY_PAGE_SIZE}
+  `)
+  return result.rows
+}
+
+async function loadSupportingMaterialSectionEmbeddingRows(
+  database: LegislationDatabase,
+  afterId: string
+): Promise<SectionEmbeddingRow[]> {
+  const result = await database.execute<SectionEmbeddingRow>(sql`
+    select
+      id,
+      heading,
+      text,
+      embedding,
+      embedding_input_hash as "embeddingInputHash",
+      embedding_model as "embeddingModel"
+    from legislation.supporting_material_sections
+    where id > ${afterId}
+    order by id
+    limit ${EMBEDDING_INTEGRITY_PAGE_SIZE}
+  `)
+  return result.rows
 }

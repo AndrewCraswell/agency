@@ -620,9 +620,12 @@ export const supportingMaterials = legislationSchema.table(
     blobPath: text("blob_path"),
     text: text("text"),
     contentHash: char("content_hash", { length: 64 }),
+    lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
     processingStatus: text("processing_status").notNull().default("pending"),
     processingAttempts: integer("processing_attempts").notNull().default(0),
     processingError: text("processing_error"),
+    processingErrorCategory: text("processing_error_category"),
     sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
@@ -637,11 +640,18 @@ export const supportingMaterials = legislationSchema.table(
     ),
     check("supporting_materials_attempts_check", sql`${table.processingAttempts} >= 0`),
     check(
+      "supporting_materials_error_category_check",
+      sql`${table.processingErrorCategory} is null or ${table.processingErrorCategory} in ('download-permanent', 'download-transient', 'malformed-document', 'not-found', 'ocr-required', 'oversized', 'processing-transient', 'source-inaccessible', 'unsafe-url', 'unsupported-format')`
+    ),
+    check(
       "supporting_materials_processing_status_check",
       sql`${table.processingStatus} in ('pending', 'processing', 'processed', 'unsupported', 'failed')`
     ),
     uniqueIndex("supporting_materials_jurisdiction_source_uidx").on(table.jurisdictionId, table.sourceId),
     index("supporting_materials_processing_idx").on(table.processingStatus, table.updatedAt),
+    index("supporting_materials_failed_retry_idx")
+      .on(table.processingErrorCategory, table.nextAttemptAt, table.id)
+      .where(sql`${table.processingStatus} = 'failed'`),
     index("supporting_materials_classification_idx").on(table.jurisdictionId, table.classification, table.documentDate)
   ]
 )
@@ -880,6 +890,30 @@ export const billDocuments = legislationSchema.table(
   ]
 )
 
+/**
+ * Globally shared publisher slots for document-derived workers. A slot is
+ * claimed for one HTTP download and expires if the Trigger worker disappears.
+ */
+export const documentDownloadLeases = legislationSchema.table(
+  "document_download_leases",
+  {
+    host: text("host").notNull(),
+    slot: integer("slot").notNull(),
+    ownerId: uuid("owner_id"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    acquiredAt: timestamp("acquired_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.host, table.slot] }),
+    check(
+      "document_download_leases_host_check",
+      sql`length(${table.host}) > 0 and ${table.host} = lower(${table.host})`
+    ),
+    check("document_download_leases_slot_check", sql`${table.slot} > 0`),
+    index("document_download_leases_expiry_idx").on(table.expiresAt)
+  ]
+)
+
 export const documentSections = legislationSchema.table(
   "document_sections",
   {
@@ -938,7 +972,10 @@ export const ingestionRuns = legislationSchema.table(
     check("ingestion_runs_source_check", sql`length(${table.source}) > 0`),
     check("ingestion_runs_operation_check", sql`length(${table.operation}) > 0`),
     check("ingestion_runs_correlation_id_check", sql`length(${table.correlationId}) > 0`),
-    check("ingestion_runs_status_check", sql`${table.status} in ('running', 'succeeded', 'partial', 'failed')`),
+    check(
+      "ingestion_runs_status_check",
+      sql`${table.status} in ('running', 'succeeded', 'partial', 'failed', 'deferred')`
+    ),
     check(
       "ingestion_runs_completion_check",
       sql`(${table.status} = 'running' and ${table.completedAt} is null) or (${table.status} <> 'running' and ${table.completedAt} is not null)`
@@ -1011,14 +1048,16 @@ export const ingestionLocks = legislationSchema.table(
   {
     source: text("source").notNull(),
     operation: text("operation").notNull(),
+    scopeKey: text("scope_key").notNull(),
     ownerId: uuid("owner_id").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     acquiredAt: timestamp("acquired_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
-    primaryKey({ columns: [table.source, table.operation] }),
+    primaryKey({ columns: [table.source, table.operation, table.scopeKey] }),
     check("ingestion_locks_source_check", sql`length(${table.source}) > 0`),
     check("ingestion_locks_operation_check", sql`length(${table.operation}) > 0`),
+    check("ingestion_locks_scope_key_check", sql`length(${table.scopeKey}) > 0`),
     index("ingestion_locks_expiry_idx").on(table.expiresAt)
   ]
 )

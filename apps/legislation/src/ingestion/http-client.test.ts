@@ -22,6 +22,35 @@ describe("RetryingHttpClient", () => {
     })
   })
 
+  it("reports safe per-attempt latency, status, and provider rate-limit telemetry", async () => {
+    const telemetry: unknown[] = []
+    const client = new RetryingHttpClient({
+      fetch: vi.fn<typeof fetch>().mockResolvedValue(
+        new Response("ok", {
+          headers: { "retry-after": "2", "x-ratelimit-limit": "20000", "x-ratelimit-remaining": "19999" }
+        })
+      ),
+      maxAttempts: 1,
+      onAttemptComplete: (event) => telemetry.push(event),
+      requestTimeoutMs: 1000
+    })
+
+    await client.get(new URL("https://provider.example/data?api_key=do-not-log"))
+
+    expect(telemetry).toEqual([
+      expect.objectContaining({
+        attempt: 1,
+        durationMs: expect.any(Number),
+        method: "GET",
+        rateLimitLimit: 20_000,
+        rateLimitRemaining: 19_999,
+        retryAfterMs: 2000,
+        status: 200,
+        url: "https://provider.example/data"
+      })
+    ])
+  })
+
   it("does not retry invalid credentials", async () => {
     const request = vi.fn<typeof fetch>().mockResolvedValue(new Response("unauthorized", { status: 401 }))
     const client = new RetryingHttpClient({ fetch: request, maxAttempts: 3, requestTimeoutMs: 1000 })
@@ -46,6 +75,19 @@ describe("RetryingHttpClient", () => {
       status: 429
     })
     expect(request).toHaveBeenCalledOnce()
+  })
+
+  it("retains a bounded provider error detail for terminal server errors", async () => {
+    const request = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response(`{"error":"'NoneType' object has no attribute 'date'"}`, { status: 500 }))
+    const client = new RetryingHttpClient({ fetch: request, maxAttempts: 1, requestTimeoutMs: 1000 })
+
+    await expect(client.get(new URL("https://provider.example/data"))).rejects.toMatchObject({
+      message: expect.stringContaining("NoneType"),
+      retryable: true,
+      status: 500
+    })
   })
 
   it("rejects oversized responses", async () => {

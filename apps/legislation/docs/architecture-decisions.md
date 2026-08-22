@@ -13,6 +13,20 @@
 | ADR-008 | Use Langfuse for retrieval and model traces and Azure Monitor for runtime, infrastructure, and operational diagnostics. | Research-quality traces and platform operations have different retention and access concerns. |
 | ADR-009 | Use a Railway-managed PostgreSQL 18 service with the pgvector image for development. | It avoids a second database control plane in Azure while preserving the PostgreSQL and pgvector application contract. The current public proxy does not support PostgreSQL TLS, so this is a development-only exception; staging and production require a TLS-capable endpoint. |
 | ADR-010 | Use Trigger.dev Cloud for recurring synchronization, dispatch, retries, and run visibility. | The application retains normalization, checkpoints, idempotency, and leases while Trigger.dev owns execution. |
+| ADR-011 | Use retained Open States archives for state history and self-hosted jurisdiction scrapers for recurring state freshness; do not depend on the Open States API in production. | The available 250-request daily API quota cannot support even one nationwide polling cycle at the required cadence, and a discretionary quota increase is not a viable dependency for a competing data product. |
+| ADR-012 | Store broad-rollout vectors in dedicated, foreign-keyed tables under the `legislation` schema and require a treatment/control MCP retrieval canary before expansion. | A separate schema does not provide physical isolation, inline vectors would enlarge hot corpus rows, and a partially embedded corpus can bias hybrid ranking. Dedicated tables make model versions, canary cleanup, index rebuilds, and measured promotion safer. |
 
 No blocking architecture decision remains open. New decisions use the next ADR number and record status, evidence,
 consequences, owner, and reconsideration trigger.
+
+## ADR-011 operational consequences
+
+- Status: accepted.
+- Evidence: the production key is limited to 250 requests per day; the configured minimum cadence requires at least
+  3,172 requests per day before pagination, retries, or high-volume jurisdictions.
+- Consequences: keep all Open States API schedules inactive; retain session JSON archives for rebuilds; onboard
+  self-hosted scrapers one jurisdiction at a time; retain raw scraper output in `state-sources`; and normalize scraper
+  output through the canonical ingestion layer.
+- Owner: legislation data platform.
+- Reconsideration trigger: none for a discretionary API quota increase. Reconsider only if the provider offers a
+  contractual production feed with sufficient quota, availability, and commercial redistribution rights.

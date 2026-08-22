@@ -5,6 +5,8 @@
 - Open States session JSON archives are the state historical source. Import every discoverable archive for all 50
   states, Washington, D.C., and Puerto Rico from 2017 onward. Older or missing archives are reported as source gaps,
   never inferred as empty sessions.
+- Self-hosted jurisdiction scrapers are the state recurring-freshness source. The Open States API is not a production
+  freshness dependency because its daily quota cannot support the required nationwide cadence.
 - GovInfo BILLSTATUS bulk XML is the federal historical metadata source. When a version record includes an official XML
   URL, it is retained and the document worker acquires that artifact separately. BILLSTATUS sometimes reports a version
   count without format URLs; Congress.gov supplies complementary current-version references without fabricated links.

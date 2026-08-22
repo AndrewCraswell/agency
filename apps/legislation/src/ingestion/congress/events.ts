@@ -14,7 +14,7 @@ const optionalString = z.preprocess(
   (value) => (value === null || (typeof value === "string" && value.trim().length === 0) ? undefined : value),
   z.string().trim().min(1).optional()
 )
-const committeeSchema = z.object({ name: z.string().min(1), systemCode: z.string().min(1) }).passthrough()
+const committeeSchema = z.object({ name: optionalString, systemCode: z.string().min(1) }).passthrough()
 const documentSchema = z
   .object({
     description: optionalString,
@@ -37,14 +37,14 @@ const meetingBundleSchema = z.object({
       date: z.string().min(1),
       eventId: z.string().min(1),
       location: z.record(z.string(), z.unknown()).optional(),
-      meetingDocuments: z.array(documentSchema).default([]),
+      meetingDocuments: z.array(z.unknown()).default([]),
       meetingStatus: optionalString,
       relatedItems: z.object({ bills: z.array(billSchema).default([]) }).default({ bills: [] }),
       title: z.string().min(1),
       type: optionalString,
       updateDate: optionalString,
       videos: z.array(z.object({ name: optionalString, url: z.string().url() }).passthrough()).default([]),
-      witnessDocuments: z.array(documentSchema).default([]),
+      witnessDocuments: z.array(z.unknown()).default([]),
       witnesses: z
         .array(
           z.object({ name: z.string().min(1), organization: optionalString, position: optionalString }).passthrough()
@@ -60,10 +60,10 @@ const hearingBundleSchema = z.object({
       chamber: z.string().min(1),
       committees: z.array(committeeSchema).default([]),
       congress: z.number().int().positive(),
-      dates: z.array(z.object({ date: z.string().min(1) }).passthrough()).min(1),
+      dates: z.array(z.object({ date: z.string().min(1) }).passthrough()).default([]),
       formats: z.array(materialFormatSchema).default([]),
       jacketNumber: z.union([z.string(), z.number()]).transform(String),
-      title: z.string().min(1),
+      title: optionalString,
       updateDate: optionalString
     })
     .passthrough(),
@@ -76,6 +76,25 @@ type MaterialLinkInsert = typeof supportingMaterialLinks.$inferInsert
 export interface CongressEventSnapshot extends EventSnapshot {
   billIds: string[]
   materials: Array<{ link: MaterialLinkInsert; material: MaterialInsert }>
+}
+
+function committeeName(committee: z.infer<typeof committeeSchema>): string {
+  return committee.name ?? committee.systemCode
+}
+
+/**
+ * Congress.gov can repeat the same committee in a meeting or hearing payload.
+ * Participant IDs are derived from the committee system code, so retain the
+ * first occurrence before building durable child records.
+ */
+function uniqueCommittees(values: z.infer<typeof committeeSchema>[]): z.infer<typeof committeeSchema>[] {
+  const unique = new Map<string, z.infer<typeof committeeSchema>>()
+  for (const committee of values) {
+    if (!unique.has(committee.systemCode)) {
+      unique.set(committee.systemCode, committee)
+    }
+  }
+  return [...unique.values()]
 }
 
 function materialClassification(value: string | undefined): string {
@@ -116,6 +135,13 @@ function uniqueDocuments<T extends { url: string }>(values: T[]): T[] {
   return [...unique.values()]
 }
 
+function usableDocuments(values: unknown[]): z.infer<typeof documentSchema>[] {
+  return values.flatMap((value) => {
+    const parsed = documentSchema.safeParse(value)
+    return parsed.success ? [parsed.data] : []
+  })
+}
+
 function materials(
   eventId: string,
   values: Array<{ description?: string; documentType?: string; format?: string; name?: string; url: string }>,
@@ -144,7 +170,11 @@ export function normalizeCongressCommitteeMeeting(input: unknown): CongressEvent
   const meeting = source.meeting
   const eventId = legislativeEventId("congress", `committee-meeting-${meeting.eventId}`)
   const date = meeting.date.slice(0, 10)
-  const documents = uniqueDocuments([...meeting.meetingDocuments, ...meeting.witnessDocuments])
+  const committees = uniqueCommittees(meeting.committees)
+  // Congress.gov occasionally includes placeholder document objects without a
+  // usable URL. They cannot become a durable material or event child, but must
+  // not prevent the meeting itself from checkpointing and the replay advancing.
+  const documents = uniqueDocuments(usableDocuments([...meeting.meetingDocuments, ...meeting.witnessDocuments]))
   const status =
     meeting.meetingStatus?.toLowerCase() === "canceled" ? "cancelled" : meeting.meetingStatus?.toLowerCase()
   return {
@@ -177,10 +207,10 @@ export function normalizeCongressCommitteeMeeting(input: unknown): CongressEvent
     },
     materials: materials(eventId, documents, date),
     participants: [
-      ...meeting.committees.map((committee) => ({
+      ...committees.map((committee) => ({
         eventId,
         id: eventChildId("participant", eventId, `committee:${committee.systemCode}`),
-        name: committee.name,
+        name: committeeName(committee),
         organizationId: organizationId("congress", committee.systemCode),
         role: "committee"
       })),
@@ -194,16 +224,22 @@ export function normalizeCongressCommitteeMeeting(input: unknown): CongressEvent
   }
 }
 
-export function normalizeCongressHearing(input: unknown): CongressEventSnapshot {
+export function normalizeCongressHearing(input: unknown): CongressEventSnapshot | undefined {
   const source = hearingBundleSchema.parse(input)
   const hearing = source.hearing
+  const hearingDate = hearing.dates[0]?.date
+  const title = hearing.title
+  if (hearingDate === undefined || title === undefined) {
+    return undefined
+  }
   const eventId = legislativeEventId("congress", `published-hearing-${hearing.jacketNumber}`)
-  const date = hearing.dates[0]?.date.slice(0, 10) ?? ""
+  const date = hearingDate.slice(0, 10)
+  const committees = uniqueCommittees(hearing.committees)
   const formats = uniqueDocuments(
     hearing.formats.map((format) => ({
       documentType: "Hearing transcript",
       format: format.type,
-      name: hearing.title,
+      name: title,
       url: format.url
     }))
   )
@@ -217,7 +253,7 @@ export function normalizeCongressHearing(input: unknown): CongressEventSnapshot 
       eventId,
       id: eventChildId("document", eventId, format.url),
       sourceUrl: format.url,
-      title: hearing.title
+      title
     })),
     event: {
       allDay: true,
@@ -225,7 +261,7 @@ export function normalizeCongressHearing(input: unknown): CongressEventSnapshot 
       id: eventId,
       isDeleted: false,
       jurisdictionId: jurisdictionId("us"),
-      name: hearing.title,
+      name: title,
       sourceId: hearing.jacketNumber,
       sourceUpdatedAt: hearing.updateDate === undefined ? undefined : new Date(hearing.updateDate),
       sourceUrl: source.sourceUrl,
@@ -234,10 +270,10 @@ export function normalizeCongressHearing(input: unknown): CongressEventSnapshot 
       upstreamIds: { congress: hearing.jacketNumber }
     },
     materials: materials(eventId, formats, date),
-    participants: hearing.committees.map((committee) => ({
+    participants: committees.map((committee) => ({
       eventId,
       id: eventChildId("participant", eventId, `committee:${committee.systemCode}`),
-      name: committee.name,
+      name: committeeName(committee),
       organizationId: organizationId("congress", committee.systemCode),
       role: "committee"
     }))

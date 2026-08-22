@@ -65,6 +65,9 @@ describe("Congress event normalization", () => {
       },
       sourceUrl: "https://api.congress.gov/v3/hearing/119/house/58978"
     })
+    if (snapshot === undefined) {
+      throw new Error("Expected a dated hearing snapshot")
+    }
 
     expect(snapshot.event).toMatchObject({
       allDay: true,
@@ -91,5 +94,88 @@ describe("Congress event normalization", () => {
     })
 
     expect(snapshot.event).toMatchObject({ isDeleted: false, status: "cancelled" })
+  })
+
+  it("keeps a committee participant when Congress.gov provides only its system code", () => {
+    const snapshot = normalizeCongressCommitteeMeeting({
+      meeting: {
+        chamber: "House",
+        committees: [{ systemCode: "hsgo00" }],
+        congress: 113,
+        date: "2014-12-09T14:30:00Z",
+        eventId: "102796",
+        title: "Full Committee Hearing"
+      },
+      sourceUrl: "https://api.congress.gov/v3/committee-meeting/113/house/102796"
+    })
+
+    expect(snapshot.participants).toContainEqual(
+      expect.objectContaining({
+        name: "hsgo00",
+        organizationId: "organization:congress:hsgo00",
+        role: "committee"
+      })
+    )
+  })
+
+  it("deduplicates the repeated committee in the live meeting 338700 payload", () => {
+    const snapshot = normalizeCongressCommitteeMeeting({
+      meeting: {
+        chamber: "Senate",
+        committees: [
+          { name: "Senate Judiciary", systemCode: "ssju00" },
+          { name: "Senate Judiciary", systemCode: "ssju00" }
+        ],
+        congress: 119,
+        date: "2026-08-05T14:00:00Z",
+        eventId: "338700",
+        title: "Nomination hearing"
+      },
+      sourceUrl: "https://api.congress.gov/v3/committee-meeting/119/senate/338700"
+    })
+
+    expect(snapshot.participants).toEqual([
+      expect.objectContaining({
+        id: "event:congress:committee-meeting-338700:participant:fc940c00409c359a9a9de501",
+        organizationId: "organization:congress:ssju00"
+      })
+    ])
+  })
+
+  it("ignores a meeting document without a URL while retaining usable material", () => {
+    const snapshot = normalizeCongressCommitteeMeeting({
+      meeting: {
+        chamber: "House",
+        committees: [],
+        congress: 113,
+        date: "2014-12-09T14:30:00Z",
+        eventId: "102797",
+        meetingDocuments: [
+          { documentType: "Placeholder", name: "Unavailable" },
+          { documentType: "Witness statement", name: "Statement", url: "https://congress.gov/statement.pdf" }
+        ],
+        title: "Full Committee Hearing"
+      },
+      sourceUrl: "https://api.congress.gov/v3/committee-meeting/113/house/102797"
+    })
+
+    expect(snapshot.documents).toHaveLength(1)
+    expect(snapshot.materials).toHaveLength(1)
+    expect(snapshot.documents[0]?.sourceUrl).toBe("https://congress.gov/statement.pdf")
+  })
+
+  it("skips a published hearing when Congress.gov does not provide an event date", () => {
+    const snapshot = normalizeCongressHearing({
+      hearing: {
+        chamber: "House",
+        congress: 113,
+        jacketNumber: 80170,
+        title: "Undated published hearing",
+        updateDate: "2025-08-14T15:26:25Z"
+      },
+      sourceUrl: "https://api.congress.gov/v3/hearing/113/house/80170"
+    })
+
+    expect(snapshot).toBeUndefined()
   })
 })

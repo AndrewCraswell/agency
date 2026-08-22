@@ -6,15 +6,22 @@ import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { generateCoverageReport } from "../../coverage/report.js"
+import { CongressRequestBudgetExhaustedError } from "../../ingestion/congress/request-budget.js"
 import { synchronizeCongress } from "../../ingestion/congress/sync.js"
 import type { ArtifactStore } from "../../ingestion/documents/artifact-store.js"
-import { prepareDocumentRemediation, processPendingDocuments } from "../../ingestion/documents/jobs.js"
+import {
+  nextDocumentBackfillAttempt,
+  prepareDocumentRemediation,
+  processPendingDocuments,
+  requeueInterruptedDocuments
+} from "../../ingestion/documents/jobs.js"
 import { persistProcessedDocument } from "../../ingestion/documents/process.js"
 import { processPendingSupportingMaterials } from "../../ingestion/documents/supporting-material-jobs.js"
 import { embedBills, embedDocumentSections, embedSupportingMaterialSections } from "../../ingestion/embeddings/jobs.js"
 import { GovInfoClient } from "../../ingestion/govinfo/client.js"
 import { importGovInfoPackages } from "../../ingestion/govinfo/import.js"
 import { RetryingHttpClient } from "../../ingestion/http-client.js"
+import { recoverRetriedIngestionJob, runIngestionJob } from "../../ingestion/job.js"
 import { importOpenStatesRecords } from "../../ingestion/openstates/import.js"
 import { openStatesBillSchema } from "../../ingestion/openstates/normalize.js"
 import { withIngestionRun } from "../../ingestion/run-context.js"
@@ -66,6 +73,47 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     )
 
     expect(result.rows).toEqual([{ column_type: "vector(1536)" }])
+  })
+
+  it("records a budget handoff as deferred without advancing a generic checkpoint or retaining the lease", async () => {
+    const retryAt = new Date("2026-08-18T13:00:00.000Z")
+    const result = await runIngestionJob(
+      database,
+      {
+        checkpointStream: "congress:bills:current",
+        correlationId: "deferred-budget-test",
+        operation: "incremental-sync",
+        scope: { identity: "congress:bills:current" },
+        scopeKey: "bills:current",
+        source: "congress"
+      },
+      async () => {
+        throw new CongressRequestBudgetExhaustedError(retryAt, "allocation_exhausted")
+      }
+    )
+
+    expect(result).toMatchObject({ deferKind: "allocation_exhausted", failures: [], retryAt, status: "deferred" })
+    const persisted = await database
+      .select({ scope: schema.ingestionRuns.scope, status: schema.ingestionRuns.status })
+      .from(schema.ingestionRuns)
+      .where(eq(schema.ingestionRuns.id, result.runId))
+    expect(persisted).toEqual([
+      {
+        scope: {
+          identity: "congress:bills:current",
+          deferKind: "allocation_exhausted",
+          retryAt: retryAt.toISOString(),
+          scopeKey: "bills:current"
+        },
+        status: "deferred"
+      }
+    ])
+    await expect(
+      database.select().from(schema.syncCheckpoints).where(eq(schema.syncCheckpoints.stream, "congress:bills:current"))
+    ).resolves.toEqual([])
+    await expect(
+      database.select().from(schema.ingestionLocks).where(eq(schema.ingestionLocks.scopeKey, "bills:current"))
+    ).resolves.toEqual([])
   })
 
   it("persists a canonical bill aggregate and cascades bill-owned records", async () => {
@@ -461,17 +509,88 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       classification: "related",
       relatedBillId: "bill:wa:2025-2026:sb:5678"
     })
+    await database.insert(schema.amendments).values({
+      amendmentNumber: "1",
+      amendmentType: "House amendment",
+      billId: "bill:us:119:hr:1234",
+      id: "amendment:us:119:hamdt:1",
+      jurisdictionId: "jurisdiction:us",
+      printedIdentifier: "H.Amdt. 1",
+      sourceId: "congress:119:hamdt:1",
+      sourceUrl: "https://www.congress.gov/amendment/119th-congress/house-amendment/1"
+    })
+    const stateAmendmentDocumentId = "bill:wa:2025-2026:sb:5678:document:floor-amendment"
+    await database.insert(schema.billDocuments).values({
+      billId: "bill:wa:2025-2026:sb:5678",
+      classification: "amendment",
+      documentDate: "2025-02-14",
+      id: stateAmendmentDocumentId,
+      sourceUrl: "https://leg.wa.gov/amendments/sb5678-floor.pdf",
+      title: "Floor amendment 001"
+    })
+    await database.insert(schema.votes).values({
+      billId: "bill:us:119:hr:1234",
+      id: "vote:congress:119:house:1",
+      motion: "On passage",
+      noCount: 1,
+      yesCount: 1
+    })
+    await database.insert(schema.votePositions).values({
+      option: "yes",
+      sourceIdentity: "congress:member:a000001",
+      sourceName: "Representative Example",
+      sourcePersonId: "A000001",
+      voteId: "vote:congress:119:house:1"
+    })
 
     const service = new LegislationQueryService(database, embeddingClient)
     await expect(service.searchBills({ mode: "lexical", query: "Federal data" })).resolves.toMatchObject({
       items: [{ id: "bill:us:119:hr:1234" }]
     })
     await expect(service.getBill({ id: "bill:us:119:hr:1234" })).resolves.toMatchObject({
+      amendments: [{ id: "amendment:us:119:hamdt:1", recordType: "structured" }],
       bill: { id: "bill:us:119:hr:1234" },
       truncated: false
     })
+    await expect(service.searchAmendments({ billId: "bill:wa:2025-2026:sb:5678" })).resolves.toMatchObject({
+      items: [
+        {
+          billId: "bill:wa:2025-2026:sb:5678",
+          documentId: stateAmendmentDocumentId,
+          id: `amendment:document:${stateAmendmentDocumentId}`,
+          recordType: "document"
+        }
+      ],
+      truncated: false
+    })
+    await expect(service.getBill({ id: "bill:wa:2025-2026:sb:5678" })).resolves.toMatchObject({
+      amendments: [{ documentId: stateAmendmentDocumentId, recordType: "document" }]
+    })
+    await expect(service.getAmendment({ id: `amendment:document:${stateAmendmentDocumentId}` })).resolves.toMatchObject(
+      {
+        actions: [],
+        amendment: { documentId: stateAmendmentDocumentId, recordType: "document" },
+        document: { id: stateAmendmentDocumentId },
+        materials: [],
+        votes: []
+      }
+    )
     await expect(service.getBillTimeline({ id: "bill:us:119:hr:1234" })).resolves.toMatchObject({
       billId: "bill:us:119:hr:1234"
+    })
+    await expect(service.getBillVotes({ billId: "bill:us:119:hr:1234" })).resolves.toMatchObject({
+      items: [
+        {
+          positions: [
+            {
+              person: null,
+              position: { option: "yes", sourceName: "Representative Example", sourcePersonId: "A000001" }
+            }
+          ],
+          vote: { id: "vote:congress:119:house:1" }
+        }
+      ],
+      truncated: false
     })
     await expect(
       service.searchBillText({ billId: "bill:us:119:hr:1234", query: '"data shall be open"' })
@@ -657,6 +776,304 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     expect(exhaustedFetches).toBe(0)
   })
 
+  it("shards bill documents by canonical jurisdiction without omission or overlap", async () => {
+    const shardCount = 64
+    const california = {
+      jurisdictionId: "jurisdiction:ca",
+      sessionId: "session:ca:2025-2026",
+      billId: "bill:ca:2025-2026:ab:1"
+    }
+    const texas = {
+      jurisdictionId: "jurisdiction:tx",
+      sessionId: "session:tx:2025-2026",
+      billId: "bill:tx:2025-2026:hb:1"
+    }
+    const unknown = {
+      jurisdictionId: "jurisdiction:unknown",
+      sessionId: "session:unknown:2025-2026",
+      billId: "bill:unknown:2025-2026:hb:1"
+    }
+    await database.insert(schema.jurisdictions).values([
+      {
+        classification: "state",
+        countryCode: "US",
+        id: california.jurisdictionId,
+        name: "California",
+        subdivisionCode: "CA"
+      },
+      {
+        classification: "state",
+        countryCode: "US",
+        id: texas.jurisdictionId,
+        name: "Texas",
+        subdivisionCode: "TX"
+      },
+      {
+        classification: "territory",
+        countryCode: "US",
+        id: unknown.jurisdictionId,
+        name: "Unknown jurisdiction"
+      }
+    ])
+    await database.insert(schema.legislativeSessions).values([
+      {
+        id: california.sessionId,
+        identifier: "2025-2026",
+        jurisdictionId: california.jurisdictionId,
+        name: "2025-2026 Regular Session"
+      },
+      {
+        id: texas.sessionId,
+        identifier: "2025-2026",
+        jurisdictionId: texas.jurisdictionId,
+        name: "2025-2026 Regular Session"
+      },
+      {
+        id: unknown.sessionId,
+        identifier: "2025-2026",
+        jurisdictionId: unknown.jurisdictionId,
+        name: "2025-2026 Regular Session"
+      }
+    ])
+    await database.insert(schema.bills).values([
+      {
+        id: california.billId,
+        identifier: "AB 1",
+        jurisdictionId: california.jurisdictionId,
+        sessionId: california.sessionId,
+        sourceUrl: "https://example.test/ca/ab-1",
+        title: "California test bill"
+      },
+      {
+        id: texas.billId,
+        identifier: "HB 1",
+        jurisdictionId: texas.jurisdictionId,
+        sessionId: texas.sessionId,
+        sourceUrl: "https://example.test/tx/hb-1",
+        title: "Texas test bill"
+      },
+      {
+        id: unknown.billId,
+        identifier: "HB 1",
+        jurisdictionId: unknown.jurisdictionId,
+        sessionId: unknown.sessionId,
+        sourceUrl: "https://example.test/unknown/hb-1",
+        title: "Unknown jurisdiction test bill"
+      }
+    ])
+    const documents = [
+      ...["one", "two"].map((suffix) => ({
+        billId: california.billId,
+        classification: "bill-text",
+        id: `${california.billId}:document:${suffix}`,
+        sourceUrl: `https://example.test/ca/${suffix}.txt`,
+        title: `California document ${suffix}`
+      })),
+      ...["one", "two"].map((suffix) => ({
+        billId: texas.billId,
+        classification: "bill-text",
+        id: `${texas.billId}:document:${suffix}`,
+        sourceUrl: `https://example.test/tx/${suffix}.txt`,
+        title: `Texas document ${suffix}`
+      })),
+      {
+        billId: unknown.billId,
+        classification: "bill-text",
+        id: `${unknown.billId}:document:retry`,
+        nextAttemptAt: new Date("2026-08-19T00:00:00.000Z"),
+        processingAttempts: 1,
+        processingStatus: "failed" as const,
+        sourceUrl: "https://example.test/unknown/retry.txt",
+        title: "Unknown jurisdiction retry document"
+      }
+    ]
+    await database.insert(schema.billDocuments).values(documents)
+
+    const routedShards = new Map<string, number>()
+    for (const jurisdiction of [california, texas, unknown]) {
+      const matchingShards: number[] = []
+      for (let shardIndex = 0; shardIndex < shardCount; shardIndex += 1) {
+        const next = await nextDocumentBackfillAttempt(database, {
+          jurisdictionId: jurisdiction.jurisdictionId,
+          maximumAttempts: 4,
+          shardCount,
+          shardIndex
+        })
+        if (next.hasWork) {
+          matchingShards.push(shardIndex)
+        }
+      }
+      expect(matchingShards).toHaveLength(1)
+      routedShards.set(jurisdiction.jurisdictionId, matchingShards[0]!)
+    }
+    expect(routedShards.get(california.jurisdictionId)).not.toBe(routedShards.get(texas.jurisdictionId))
+    await expect(
+      nextDocumentBackfillAttempt(database, {
+        jurisdictionId: california.jurisdictionId,
+        maximumAttempts: 4,
+        shardCount,
+        shardIndex: routedShards.get(california.jurisdictionId)!
+      })
+    ).resolves.toEqual({ hasWork: true })
+    const unknownShard = routedShards.get(unknown.jurisdictionId)!
+    await expect(
+      nextDocumentBackfillAttempt(database, {
+        maximumAttempts: 4,
+        shardCount,
+        shardIndex: unknownShard
+      })
+    ).resolves.toMatchObject({ hasWork: true })
+    await expect(
+      nextDocumentBackfillAttempt(database, {
+        jurisdictionId: unknown.jurisdictionId,
+        maximumAttempts: 4,
+        shardCount,
+        shardIndex: unknownShard
+      })
+    ).resolves.toMatchObject({ hasWork: true, nextAttemptAt: new Date("2026-08-19T00:00:00.000Z") })
+
+    const fetchedUrls: string[] = []
+    const artifactStore: ArtifactStore = {
+      exists: async () => false,
+      put: async () => true,
+      read: async () => new Uint8Array()
+    }
+    const fetchDocument: typeof fetch = async (input) => {
+      fetchedUrls.push(String(input))
+      return new Response("SECTION 1. JURISDICTION SHARD.", { headers: { "content-type": "text/plain" } })
+    }
+    for (const jurisdiction of [california, texas]) {
+      const shardIndex = routedShards.get(jurisdiction.jurisdictionId)
+      await processPendingDocuments(database, {
+        artifactStore,
+        concurrency: 2,
+        fetch: fetchDocument,
+        jurisdictionId: jurisdiction.jurisdictionId,
+        limit: 10,
+        maximumAttempts: 4,
+        shardCount,
+        shardIndex: shardIndex!
+      })
+    }
+    expect(fetchedUrls.sort()).toEqual(
+      documents
+        .filter((document) => document.billId !== unknown.billId)
+        .map((document) => document.sourceUrl)
+        .sort()
+    )
+    await expect(
+      database
+        .select({ id: schema.billDocuments.id })
+        .from(schema.billDocuments)
+        .where(eq(schema.billDocuments.processingStatus, "pending"))
+        .then((records) =>
+          records.filter(
+            (record) =>
+              record.id !== `${unknown.billId}:document:retry` &&
+              documents.some((document) => document.id === record.id)
+          )
+        )
+    ).resolves.toEqual([])
+  })
+
+  it("returns an interrupted claim to pending without consuming a provider attempt", async () => {
+    const documentId = "bill:ca:2025-2026:ab:1:document:interrupted-claim"
+    await database.insert(schema.billDocuments).values({
+      billId: "bill:ca:2025-2026:ab:1",
+      classification: "bill-text",
+      id: documentId,
+      lastAttemptAt: new Date("2026-08-18T00:00:00.000Z"),
+      processingAttempts: 2,
+      processingStatus: "processing",
+      sourceUrl: "https://example.test/ca/interrupted.txt",
+      title: "Interrupted California document"
+    })
+
+    const cutoff = new Date("2026-08-18T00:01:00.000Z")
+    await expect(requeueInterruptedDocuments(database, cutoff)).resolves.toBe(1)
+    await expect(requeueInterruptedDocuments(database, cutoff)).resolves.toBe(0)
+    await expect(
+      database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, documentId) })
+    ).resolves.toMatchObject({
+      processingAttempts: 1,
+      processingStatus: "pending"
+    })
+  })
+
+  it("recovers only the current Trigger run's interrupted document attempt", async () => {
+    const workflowExecutionId = "run_retry_owns_interrupted_lease"
+    const operation = "process-documents-shard-4"
+    const scopeKey = "shard:4-of-64"
+    const startedAt = new Date("2026-08-18T01:00:00.000Z")
+    const ownedDocumentId = "bill:ca:2025-2026:ab:1:document:owned-retry-claim"
+    const olderDocumentId = "bill:ca:2025-2026:ab:1:document:older-unowned-claim"
+    await database.insert(schema.billDocuments).values([
+      {
+        billId: "bill:ca:2025-2026:ab:1",
+        classification: "bill-text",
+        id: olderDocumentId,
+        lastAttemptAt: new Date("2026-08-18T00:59:00.000Z"),
+        processingAttempts: 1,
+        processingStatus: "processing",
+        sourceUrl: "https://example.test/ca/older.txt",
+        title: "Older unrelated interrupted document"
+      },
+      {
+        billId: "bill:ca:2025-2026:ab:1",
+        classification: "bill-text",
+        id: ownedDocumentId,
+        lastAttemptAt: new Date("2026-08-18T01:00:01.000Z"),
+        processingAttempts: 1,
+        processingStatus: "processing",
+        sourceUrl: "https://example.test/ca/owned.txt",
+        title: "Current retry interrupted document"
+      }
+    ])
+    await database.insert(schema.ingestionRuns).values({
+      correlationId: "retry-recovery-test",
+      operation,
+      scope: { scopeKey },
+      source: "documents",
+      startedAt,
+      workflowExecutionId
+    })
+    await database.insert(schema.ingestionLocks).values({
+      acquiredAt: new Date("2026-08-18T00:59:59.000Z"),
+      expiresAt: new Date("2026-08-18T01:30:00.000Z"),
+      operation,
+      ownerId: "00000000-0000-4000-8000-000000000001",
+      scopeKey,
+      source: "documents"
+    })
+
+    const recovered = await recoverRetriedIngestionJob(database, {
+      operation,
+      scopeKey,
+      source: "documents",
+      workflowExecutionId
+    })
+    expect(recovered).toMatchObject({ releasedLease: true, startedAt })
+    await expect(
+      requeueInterruptedDocuments(
+        database,
+        new Date("2026-08-18T01:01:00.000Z"),
+        10,
+        { count: 64, index: 4 },
+        {},
+        startedAt
+      )
+    ).resolves.toBe(1)
+    await expect(
+      database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, ownedDocumentId) })
+    ).resolves.toMatchObject({ processingAttempts: 0, processingStatus: "pending" })
+    await expect(
+      database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, olderDocumentId) })
+    ).resolves.toMatchObject({ processingAttempts: 1, processingStatus: "processing" })
+    await expect(
+      database.select().from(schema.ingestionLocks).where(eq(schema.ingestionLocks.scopeKey, scopeKey))
+    ).resolves.toEqual([])
+  })
+
   it("records transient failure categories and honors durable retry timing", async () => {
     const documentId = "bill:us:119:hr:1234:document:retry-backoff"
     await database.insert(schema.billDocuments).values({
@@ -708,6 +1125,8 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     const californiaId = "bill:us:119:hr:1234:document:california-false-success"
     const alaskaId = "bill:us:119:hr:1234:document:alaska-pdf-label"
     const arkansasId = "bill:us:119:hr:1234:document:arkansas-ftp"
+    const hawaiiId = "bill:us:119:hr:1234:document:hawaii-data-archive"
+    const hawaiiNonCandidateId = "bill:us:119:hr:1234:document:hawaii-non-candidate"
     const imageId = "bill:us:119:hr:1234:document:image-ocr"
     const inaccessibleId = "bill:us:119:hr:1234:document:inaccessible-host"
     const officeId = "bill:us:119:hr:1234:document:office-open-xml"
@@ -776,6 +1195,28 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       {
         billId: "bill:us:119:hr:1234",
         classification: "bill-text",
+        id: hawaiiId,
+        processingAttempts: 3,
+        processingError: "Document download failed with HTTP 403",
+        processingErrorCategory: "download-permanent",
+        processingStatus: "unsupported",
+        sourceUrl: "https://www.capitol.hawaii.gov/session2020/commreports/GM501_SSCR3593_.PDF",
+        title: "Hawaii committee report"
+      },
+      {
+        billId: "bill:us:119:hr:1234",
+        classification: "bill-text",
+        id: hawaiiNonCandidateId,
+        processingAttempts: 3,
+        processingError: "Document download failed with HTTP 403",
+        processingErrorCategory: "download-permanent",
+        processingStatus: "unsupported",
+        sourceUrl: "https://www.capitol.hawaii.gov/session2020/House/GM501_SSCR3593_.PDF",
+        title: "Hawaii navigation page"
+      },
+      {
+        billId: "bill:us:119:hr:1234",
+        classification: "bill-text",
         id: inaccessibleId,
         processingError: "fetch failed: getaddrinfo ENOTFOUND alisondb.legislature.state.al.us",
         processingErrorCategory: "download-transient",
@@ -807,6 +1248,10 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       identifiers: [arkansasId],
       prepared: 1
     })
+    await expect(prepareDocumentRemediation(database, "hawaii-data-archive", 10)).resolves.toEqual({
+      identifiers: [hawaiiId],
+      prepared: 1
+    })
     await expect(prepareDocumentRemediation(database, "image-ocr", 1)).resolves.toEqual({
       identifiers: [imageId],
       prepared: 1
@@ -825,6 +1270,10 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     })
     const alaska = await database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, alaskaId) })
     const arkansas = await database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, arkansasId) })
+    const hawaii = await database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, hawaiiId) })
+    const hawaiiNonCandidate = await database.query.billDocuments.findFirst({
+      where: eq(schema.billDocuments.id, hawaiiNonCandidateId)
+    })
     const image = await database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, imageId) })
     const inaccessible = await database.query.billDocuments.findFirst({
       where: eq(schema.billDocuments.id, inaccessibleId)
@@ -850,7 +1299,21 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       processingError: null,
       processingErrorCategory: null,
       processingStatus: "pending",
-      sourceUrl: "https://www.arkleg.state.ar.us/Home/FTPDocument?path=/Bills/2017S1/Public/HB1001.pdf"
+      sourceUrl: "ftp://www.arkleg.state.ar.us/Bills/2017S1/Public/HB1001.pdf"
+    })
+    expect(hawaii).toMatchObject({
+      processingAttempts: 0,
+      processingError: null,
+      processingErrorCategory: null,
+      processingStatus: "pending",
+      sourceUrl: "https://www.capitol.hawaii.gov/session2020/commreports/GM501_SSCR3593_.PDF"
+    })
+    expect(hawaiiNonCandidate).toMatchObject({
+      processingAttempts: 3,
+      processingError: "Document download failed with HTTP 403",
+      processingErrorCategory: "download-permanent",
+      processingStatus: "unsupported",
+      sourceUrl: "https://www.capitol.hawaii.gov/session2020/House/GM501_SSCR3593_.PDF"
     })
     expect(image).toMatchObject({ processingErrorCategory: "ocr-required", processingStatus: "unsupported" })
     expect(inaccessible).toMatchObject({

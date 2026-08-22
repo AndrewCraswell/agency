@@ -39,12 +39,14 @@ const searchFilters = {
 const outputSchema = z.object({ data: z.json() })
 const MAXIMUM_RESPONSE_BYTES = 900_000
 const TOOL_TIMEOUT_MILLISECONDS = 30_000
+const MAXIMUM_BATCH_LOOKUPS = 25
 
 export type LegislationQueryApi = Readonly<{
   compareBillVersions: (input: Parameters<LegislationQueryService["compareBillVersions"]>[0]) => Promise<unknown>
   findRelatedBills: (input: Parameters<LegislationQueryService["findRelatedBills"]>[0]) => Promise<unknown>
   getAmendment: (input: Parameters<LegislationQueryService["getAmendment"]>[0]) => Promise<unknown>
   getBill: (input: Parameters<LegislationQueryService["getBill"]>[0]) => Promise<unknown>
+  getBillVotes: (input: Parameters<LegislationQueryService["getBillVotes"]>[0]) => Promise<unknown>
   getBillText: (input: Parameters<LegislationQueryService["getBillText"]>[0]) => Promise<unknown>
   getBillTimeline: (input: Parameters<LegislationQueryService["getBillTimeline"]>[0]) => Promise<unknown>
   getCalendar: (input: Parameters<LegislationQueryService["getCalendar"]>[0]) => Promise<unknown>
@@ -159,6 +161,23 @@ async function tool<T>(
   }
 }
 
+async function batchLookup<T>(ids: readonly string[], operation: (id: string) => Promise<T>) {
+  const uniqueIds = [...new Set(ids)]
+  const items = await Promise.all(
+    uniqueIds.map(async (id) => {
+      try {
+        return { data: await operation(id), id }
+      } catch (error) {
+        if (error instanceof LegislationError) {
+          return { error: { category: error.category, message: error.message }, id }
+        }
+        throw error
+      }
+    })
+  )
+  return { items }
+}
+
 export function createLegislationMcpHandler(service: LegislationQueryApi, logger: Logger, telemetry?: Telemetry) {
   const handler = createMcpHandler(
     () => {
@@ -179,7 +198,8 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
       server.registerTool(
         "get_bill",
         {
-          description: "Get bounded canonical bill details with sponsors, actions, votes, documents, and relations.",
+          description:
+            "Get bounded canonical bill details with sponsors, actions, votes, documents, relations, and structured or document-backed amendments.",
           inputSchema: z.object({
             childCursor: z.string().optional(),
             childLimit: z.number().int().min(1).max(100).optional(),
@@ -188,6 +208,26 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
           outputSchema
         },
         (input) => tool("get_bill", input, () => service.getBill(input), logger, telemetry)
+      )
+      server.registerTool(
+        "get_bills",
+        {
+          description:
+            "Get multiple canonical bills, including bounded sponsors, actions, votes, documents, relations, organizations, and amendments, in one tool call.",
+          inputSchema: z.object({
+            childLimit: z.number().int().min(1).max(25).optional(),
+            ids: z.array(canonicalBillId).min(1).max(MAXIMUM_BATCH_LOOKUPS)
+          }),
+          outputSchema
+        },
+        (input) =>
+          tool(
+            "get_bills",
+            input,
+            () => batchLookup(input.ids, (id) => service.getBill({ childLimit: input.childLimit, id })),
+            logger,
+            telemetry
+          )
       )
       server.registerTool(
         "get_bill_timeline",
@@ -374,6 +414,20 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
         (input) => tool("search_votes", input, () => service.searchVotes(input), logger, telemetry)
       )
       server.registerTool(
+        "get_bill_votes",
+        {
+          description:
+            "Get a bill's roll calls and normalized member positions in one bounded call, including a continuation cursor when more roll calls exist.",
+          inputSchema: z.object({
+            billId: canonicalBillId,
+            cursor: z.string().optional(),
+            limit: z.number().int().min(1).max(MAXIMUM_BATCH_LOOKUPS).optional()
+          }),
+          outputSchema
+        },
+        (input) => tool("get_bill_votes", input, () => service.getBillVotes(input), logger, telemetry)
+      )
+      server.registerTool(
         "get_vote",
         {
           description: "Get a roll call with normalized member positions.",
@@ -383,9 +437,20 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
         (input) => tool("get_vote", input, () => service.getVote(input), logger, telemetry)
       )
       server.registerTool(
+        "get_votes",
+        {
+          description: "Get multiple roll calls and their normalized member positions in one call.",
+          inputSchema: z.object({ ids: z.array(canonicalId("vote")).min(1).max(MAXIMUM_BATCH_LOOKUPS) }),
+          outputSchema
+        },
+        (input) =>
+          tool("get_votes", input, () => batchLookup(input.ids, (id) => service.getVote({ id })), logger, telemetry)
+      )
+      server.registerTool(
         "search_amendments",
         {
-          description: "Search canonical amendments by text, bill, jurisdiction, or sponsor.",
+          description:
+            "Search amendments by text, bill, jurisdiction, or sponsor. Results include structured federal amendments and explicitly labeled state amendment documents.",
           inputSchema: z.object({
             ...pageSchema,
             billId: canonicalBillId.optional(),
@@ -400,11 +465,61 @@ export function createLegislationMcpHandler(service: LegislationQueryApi, logger
       server.registerTool(
         "get_amendment",
         {
-          description: "Get an amendment with actions, votes, and supporting material.",
+          description:
+            "Get a structured amendment with actions, votes, and supporting material, or a document-backed state amendment with its published file metadata.",
           inputSchema: entityLookupSchema("amendment"),
           outputSchema
         },
         (input) => tool("get_amendment", input, () => service.getAmendment(input), logger, telemetry)
+      )
+      server.registerTool(
+        "get_amendments",
+        {
+          description:
+            "Get multiple structured or document-backed amendments in one call. Structured records include actions, votes, and supporting material when available.",
+          inputSchema: z.object({ ids: z.array(canonicalId("amendment")).min(1).max(MAXIMUM_BATCH_LOOKUPS) }),
+          outputSchema
+        },
+        (input) =>
+          tool(
+            "get_amendments",
+            input,
+            () => batchLookup(input.ids, (id) => service.getAmendment({ id })),
+            logger,
+            telemetry
+          )
+      )
+      server.registerTool(
+        "search_amendments_for_bills",
+        {
+          description:
+            "Return structured and document-backed amendments for each of several canonical bill IDs in one call.",
+          inputSchema: z.object({
+            billIds: z.array(canonicalBillId).min(1).max(MAXIMUM_BATCH_LOOKUPS),
+            jurisdictionId: canonicalId("jurisdiction").optional(),
+            limit: z.number().int().min(1).max(25).optional(),
+            query: z.string().trim().min(1).max(500).optional(),
+            sponsorPersonId: canonicalId("person").optional()
+          }),
+          outputSchema
+        },
+        (input) =>
+          tool(
+            "search_amendments_for_bills",
+            input,
+            () =>
+              batchLookup(input.billIds, (billId) =>
+                service.searchAmendments({
+                  billId,
+                  jurisdictionId: input.jurisdictionId,
+                  limit: input.limit,
+                  query: input.query,
+                  sponsorPersonId: input.sponsorPersonId
+                })
+              ),
+            logger,
+            telemetry
+          )
       )
       server.registerTool(
         "search_supporting_materials",

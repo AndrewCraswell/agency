@@ -7,6 +7,7 @@ import { createJobCounts, type JobCounts } from "../job.js"
 import type { SourceStore } from "../source-store.js"
 import type { CongressClient } from "./client.js"
 import { normalizeCongressCommitteeMeeting, normalizeCongressHearing } from "./events.js"
+import { isCongressRequestBudgetExhaustedError } from "./request-budget.js"
 
 type CongressEventDomain = "hearings" | "meetings"
 
@@ -45,6 +46,12 @@ export async function synchronizeCongressEvents(
       })
       const snapshot =
         domain === "meetings" ? normalizeCongressCommitteeMeeting(source) : normalizeCongressHearing(source)
+      if (snapshot === undefined) {
+        counts.skipped += 1
+        nextOffset = item.offset + 1
+        await saveCheckpoint(database, stream, nextOffset)
+        return false
+      }
       const existing = await database
         .select({ sourceUpdatedAt: legislativeEvents.sourceUpdatedAt })
         .from(legislativeEvents)
@@ -71,6 +78,9 @@ export async function synchronizeCongressEvents(
       await saveCheckpoint(database, stream, nextOffset)
       return options.limit !== undefined && counts.read >= options.limit
     } catch (error) {
+      if (isCongressRequestBudgetExhaustedError(error)) {
+        throw error
+      }
       counts.failed += 1
       failures.push({
         identifier: `${congress}-${domain}-${item.offset}`,

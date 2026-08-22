@@ -10,6 +10,16 @@ export interface ArtifactStore {
   read(path: string): Promise<Uint8Array>
 }
 
+export class ArtifactNotFoundError extends Error {
+  readonly path: string
+
+  constructor(path: string, options: ErrorOptions = {}) {
+    super(`Stored document artifact was not found: ${path}`, options)
+    this.name = "ArtifactNotFoundError"
+    this.path = path
+  }
+}
+
 export class LocalArtifactStore implements ArtifactStore {
   readonly #root: string
 
@@ -44,7 +54,14 @@ export class LocalArtifactStore implements ArtifactStore {
   }
 
   async read(path: string): Promise<Uint8Array> {
-    return new Uint8Array(await readFile(this.#resolve(path)))
+    try {
+      return new Uint8Array(await readFile(this.#resolve(path)))
+    } catch (error) {
+      if (isMissingArtifactError(error)) {
+        throw new ArtifactNotFoundError(path, { cause: error })
+      }
+      throw error
+    }
   }
 
   #resolve(path: string): string {
@@ -82,7 +99,14 @@ export class AzureBlobArtifactStore implements ArtifactStore {
   }
 
   async read(path: string): Promise<Uint8Array> {
-    return new Uint8Array(await this.#container.getBlockBlobClient(normalizeBlobPath(path)).downloadToBuffer())
+    try {
+      return new Uint8Array(await this.#container.getBlockBlobClient(normalizeBlobPath(path)).downloadToBuffer())
+    } catch (error) {
+      if (isMissingArtifactError(error)) {
+        throw new ArtifactNotFoundError(path, { cause: error })
+      }
+      throw error
+    }
   }
 }
 
@@ -92,6 +116,14 @@ export function isExistingBlobError(error: unknown): boolean {
     error !== null &&
     "statusCode" in error &&
     (error.statusCode === 409 || error.statusCode === 412)
+  )
+}
+
+export function isMissingArtifactError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (("statusCode" in error && error.statusCode === 404) || ("code" in error && error.code === "ENOENT"))
   )
 }
 

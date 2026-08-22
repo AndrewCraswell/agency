@@ -1,0 +1,1483 @@
+{
+  "endpoint": "http://127.0.0.1:3100/mcp",
+  "evaluatedAt": "2026-08-22T13:37:08.548Z",
+  "metrics": {
+    "all": {
+      "errors": 0,
+      "meanLatencyMs": 72.14061,
+      "meanReciprocalRank": 0.3,
+      "missingSourceAttribution": 0,
+      "ndcgAt10": 0.09380001866413495,
+      "precisionAt10": 0.3,
+      "queries": 10,
+      "capacityAdjustedRecallAt5": 0.1,
+      "capacityAdjustedRecallAt10": 0.05,
+      "capacityAdjustedRecallAt25": 0.03333333333333333,
+      "recallAt5": 0.03333333333333333,
+      "recallAt10": 0.03333333333333333,
+      "recallAt25": 0.03333333333333333
+    },
+    "control": {
+      "errors": 0,
+      "meanLatencyMs": 72.14061,
+      "meanReciprocalRank": 0.25,
+      "missingSourceAttribution": 0,
+      "ndcgAt10": 0.12483893090049399,
+      "precisionAt10": 0.2,
+      "queries": 10,
+      "capacityAdjustedRecallAt5": 0.10333333333333332,
+      "capacityAdjustedRecallAt10": 0.10333333333333332,
+      "capacityAdjustedRecallAt25": 0.10333333333333332,
+      "recallAt5": 0.10333333333333332,
+      "recallAt10": 0.10333333333333332,
+      "recallAt25": 0.10333333333333332
+    },
+    "treatment": {
+      "errors": 0,
+      "meanLatencyMs": 72.14061,
+      "meanReciprocalRank": 0.15,
+      "missingSourceAttribution": 0,
+      "ndcgAt10": 0.03589542101716347,
+      "precisionAt10": 0.1,
+      "queries": 10,
+      "capacityAdjustedRecallAt5": 0.04,
+      "capacityAdjustedRecallAt10": 0.02,
+      "capacityAdjustedRecallAt25": 0.018333333333333333,
+      "recallAt5": 0.018333333333333333,
+      "recallAt10": 0.018333333333333333,
+      "recallAt25": 0.018333333333333333
+    }
+  },
+  "mode": "lexical",
+  "queries": [
+    {
+      "elapsedMs": 240.19350000000009,
+      "error": false,
+      "expectedIds": [
+        "bill:ky:2026rs:hb:198",
+        "bill:ky:2026rs:hb:199",
+        "bill:ky:2026rs:hb:401",
+        "bill:ky:2026rs:hb:403",
+        "bill:ky:2026rs:hb:482",
+        "bill:ky:2026rs:hb:894",
+        "bill:ky:2026rs:hb:895",
+        "bill:ky:2026rs:hb:896",
+        "bill:ky:2026rs:hb:913",
+        "bill:ky:2026rs:sb:164",
+        "bill:ky:2026rs:sb:168",
+        "bill:ky:2026rs:sb:18",
+        "bill:ky:2026rs:sb:223",
+        "bill:ky:2026rs:sb:253",
+        "bill:ky:2026rs:scr:124"
+      ],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:ky:2026rs:hb:198",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:ky:2026rs:hb:199",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:ky:2026rs:hb:401",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:ky:2026rs:hb:403",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:ky:2026rs:hb:482",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:ky:2026rs:hb:894",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:ky:2026rs:hb:895",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:ky:2026rs:hb:896",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:ky:2026rs:hb:913",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:ky:2026rs:sb:164",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:ky:2026rs:sb:168",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:ky:2026rs:sb:18",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:ky:2026rs:sb:223",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:ky:2026rs:sb:253",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:ky:2026rs:scr:124",
+          "relevance": 3
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 15,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "control": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 2,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 13,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        }
+      },
+      "id": "topic-cannabis-regulation",
+      "missingSourceAttribution": 0,
+      "queryClass": "broad-topic",
+      "resultIds": [],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 52.08240000000001,
+      "error": false,
+      "expectedIds": [
+        "bill:va:2017:hb:1422",
+        "bill:va:2017:hb:1539",
+        "bill:va:2017:hb:1678",
+        "bill:va:2017:hb:1679",
+        "bill:va:2017:hb:1932",
+        "bill:va:2017:hb:2073",
+        "bill:va:2017:hb:2143",
+        "bill:va:2017:hb:2144",
+        "bill:va:2017:hb:2402",
+        "bill:va:2017:hb:2465",
+        "bill:va:2017:sb:1040",
+        "bill:va:2017:sb:1102",
+        "bill:va:2017:sb:1226",
+        "bill:va:2017:sb:1291",
+        "bill:va:2017:sb:839"
+      ],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2017:hb:1422",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:va:2017:hb:1539",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2017:hb:1678",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2017:hb:1679",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2017:hb:1932",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2017:hb:2073",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2017:hb:2143",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2017:hb:2144",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2017:hb:2402",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2017:hb:2465",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2017:sb:1040",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2017:sb:1102",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:va:2017:sb:1226",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2017:sb:1291",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2017:sb:839",
+          "relevance": 3
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 15,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "control": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 2,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 13,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        }
+      },
+      "id": "topic-consumer-protection",
+      "missingSourceAttribution": 0,
+      "queryClass": "broad-topic",
+      "resultIds": [],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 48.94309999999996,
+      "error": false,
+      "expectedIds": [
+        "bill:in:2025:hb:1002",
+        "bill:in:2025:hb:1201",
+        "bill:in:2025:hb:1210",
+        "bill:in:2025:hb:1282",
+        "bill:in:2025:hb:1285",
+        "bill:in:2025:hb:1404",
+        "bill:in:2025:hb:1405",
+        "bill:in:2025:hb:1539",
+        "bill:in:2025:hb:1540",
+        "bill:in:2025:sb:16",
+        "bill:in:2025:sb:255",
+        "bill:in:2025:sb:319",
+        "bill:in:2025:sb:482",
+        "bill:in:2025:sb:483",
+        "bill:in:2025:sb:531"
+      ],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1002",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1201",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2025:hb:1210",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1282",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1285",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2025:hb:1404",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1405",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1539",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1540",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2025:sb:16",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:sb:255",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:sb:319",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2025:sb:482",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2025:sb:483",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:sb:531",
+          "relevance": 3
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 0.4,
+          "capacityAdjustedRecallAt10": 0.2,
+          "capacityAdjustedRecallAt25": 0.13333333333333333,
+          "expectedCount": 15,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 0.3589542101716347,
+          "precisionAt10": 1,
+          "recallAt5": 0.13333333333333333,
+          "recallAt10": 0.13333333333333333,
+          "recallAt25": 0.13333333333333333
+        },
+        "control": {
+          "capacityAdjustedRecallAt5": 0.2,
+          "capacityAdjustedRecallAt10": 0.2,
+          "capacityAdjustedRecallAt25": 0.2,
+          "expectedCount": 5,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 0.3391602052736161,
+          "precisionAt10": 0.5,
+          "recallAt5": 0.2,
+          "recallAt10": 0.2,
+          "recallAt25": 0.2
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 0.2,
+          "capacityAdjustedRecallAt10": 0.1,
+          "capacityAdjustedRecallAt25": 0.1,
+          "expectedCount": 10,
+          "firstRank": 2,
+          "meanReciprocalRank": 0.5,
+          "ndcgAt10": 0.13886244387355454,
+          "precisionAt10": 0.5,
+          "recallAt5": 0.1,
+          "recallAt10": 0.1,
+          "recallAt25": 0.1
+        }
+      },
+      "id": "topic-school-discipline",
+      "missingSourceAttribution": 0,
+      "queryClass": "broad-topic",
+      "resultIds": ["bill:in:2025:sb:482", "bill:in:2025:hb:1201"],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 53.5761,
+      "error": false,
+      "expectedIds": [
+        "bill:in:2021:hb:1195",
+        "bill:in:2021:hb:1226",
+        "bill:in:2021:hb:1288",
+        "bill:in:2021:hb:1290",
+        "bill:in:2021:hb:1301",
+        "bill:in:2021:hb:1330",
+        "bill:in:2021:hb:1361",
+        "bill:in:2021:hb:1382",
+        "bill:in:2021:hb:1477",
+        "bill:in:2021:hb:1504",
+        "bill:in:2021:hb:1512",
+        "bill:in:2021:sb:353",
+        "bill:in:2021:sb:398",
+        "bill:in:2021:sb:402",
+        "bill:in:2021:sb:58"
+      ],
+      "judgments": [
+        {
+          "cohort": "control",
+          "id": "bill:in:2021:hb:1195",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2021:hb:1226",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2021:hb:1288",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2021:hb:1290",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2021:hb:1301",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2021:hb:1330",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2021:hb:1361",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2021:hb:1382",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2021:hb:1477",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2021:hb:1504",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2021:hb:1512",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2021:sb:353",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2021:sb:398",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2021:sb:402",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2021:sb:58",
+          "relevance": 3
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 15,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "control": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 2,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 13,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        }
+      },
+      "id": "topic-voter-registration",
+      "missingSourceAttribution": 0,
+      "queryClass": "broad-topic",
+      "resultIds": [],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 68.07770000000005,
+      "error": false,
+      "expectedIds": [
+        "bill:va:2018:hb:1155",
+        "bill:va:2018:hb:1372",
+        "bill:va:2018:hb:1558",
+        "bill:va:2018:hb:508",
+        "bill:va:2018:hj:101",
+        "bill:va:2018:sb:179",
+        "bill:va:2018:sb:218",
+        "bill:va:2018:sb:311",
+        "bill:va:2018:sb:312",
+        "bill:va:2018:sb:429",
+        "bill:va:2018:sb:573",
+        "bill:va:2018:sb:894",
+        "bill:va:2018:sb:902",
+        "bill:va:2018:sb:966",
+        "bill:va:2018:sb:967"
+      ],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2018:hb:1155",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2018:hb:1372",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:va:2018:hb:1558",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2018:hb:508",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2018:hj:101",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2018:sb:179",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2018:sb:218",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:va:2018:sb:311",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2018:sb:312",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2018:sb:429",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:va:2018:sb:573",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2018:sb:894",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2018:sb:902",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2018:sb:966",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2018:sb:967",
+          "relevance": 3
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 0.4,
+          "capacityAdjustedRecallAt10": 0.2,
+          "capacityAdjustedRecallAt25": 0.13333333333333333,
+          "expectedCount": 15,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 0.3589542101716347,
+          "precisionAt10": 1,
+          "recallAt5": 0.13333333333333333,
+          "recallAt10": 0.13333333333333333,
+          "recallAt25": 0.13333333333333333
+        },
+        "control": {
+          "capacityAdjustedRecallAt5": 0.3333333333333333,
+          "capacityAdjustedRecallAt10": 0.3333333333333333,
+          "capacityAdjustedRecallAt25": 0.3333333333333333,
+          "expectedCount": 3,
+          "firstRank": 2,
+          "meanReciprocalRank": 0.5,
+          "ndcgAt10": 0.2960819109658653,
+          "precisionAt10": 0.5,
+          "recallAt5": 0.3333333333333333,
+          "recallAt10": 0.3333333333333333,
+          "recallAt25": 0.3333333333333333
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 0.2,
+          "capacityAdjustedRecallAt10": 0.1,
+          "capacityAdjustedRecallAt25": 0.08333333333333333,
+          "expectedCount": 12,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 0.22009176629808017,
+          "precisionAt10": 0.5,
+          "recallAt5": 0.08333333333333333,
+          "recallAt10": 0.08333333333333333,
+          "recallAt25": 0.08333333333333333
+        }
+      },
+      "id": "topic-energy-conservation",
+      "missingSourceAttribution": 0,
+      "queryClass": "broad-topic",
+      "resultIds": ["bill:va:2018:sb:966", "bill:va:2018:hb:1558"],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 52.33230000000003,
+      "error": false,
+      "expectedIds": [
+        "bill:in:2026:hb:1004",
+        "bill:in:2026:hb:1089",
+        "bill:in:2026:hb:1221",
+        "bill:in:2026:hb:1249",
+        "bill:in:2026:hb:1274",
+        "bill:in:2026:hb:1375",
+        "bill:in:2026:sb:11",
+        "bill:in:2026:sb:128",
+        "bill:in:2026:sb:130",
+        "bill:in:2026:sb:148",
+        "bill:in:2026:sb:16",
+        "bill:in:2026:sb:176",
+        "bill:in:2026:sb:177",
+        "bill:in:2026:sb:62",
+        "bill:in:2026:sb:82"
+      ],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:hb:1004",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:hb:1089",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:hb:1221",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:hb:1249",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:hb:1274",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:hb:1375",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2026:sb:11",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:128",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2026:sb:130",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:148",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:16",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:176",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2026:sb:177",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:62",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2026:sb:82",
+          "relevance": 3
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 15,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "control": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 4,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 11,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        }
+      },
+      "id": "topic-firearms",
+      "missingSourceAttribution": 0,
+      "queryClass": "broad-topic",
+      "resultIds": [],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 50.47379999999998,
+      "error": false,
+      "expectedIds": [
+        "bill:in:2025:hb:1140",
+        "bill:in:2025:hb:1165",
+        "bill:in:2025:hb:1240",
+        "bill:in:2025:hb:1293",
+        "bill:in:2025:hb:1349",
+        "bill:in:2025:hb:1395",
+        "bill:in:2025:hb:1421",
+        "bill:in:2025:hb:1519",
+        "bill:in:2025:hb:1578",
+        "bill:in:2025:hb:1621",
+        "bill:in:2025:hb:1662",
+        "bill:in:2025:sb:397",
+        "bill:in:2025:sb:402",
+        "bill:in:2025:sb:454",
+        "bill:in:2025:sb:522"
+      ],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1140",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1165",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1240",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1293",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1349",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2025:hb:1395",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2025:hb:1421",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1519",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1578",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1621",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:hb:1662",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:sb:397",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:sb:402",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:sb:454",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2025:sb:522",
+          "relevance": 3
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 0.2,
+          "capacityAdjustedRecallAt10": 0.1,
+          "capacityAdjustedRecallAt25": 0.06666666666666667,
+          "expectedCount": 15,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 0.22009176629808017,
+          "precisionAt10": 1,
+          "recallAt5": 0.06666666666666667,
+          "recallAt10": 0.06666666666666667,
+          "recallAt25": 0.06666666666666667
+        },
+        "control": {
+          "capacityAdjustedRecallAt5": 0.5,
+          "capacityAdjustedRecallAt10": 0.5,
+          "capacityAdjustedRecallAt25": 0.5,
+          "expectedCount": 2,
+          "firstRank": 1,
+          "meanReciprocalRank": 1,
+          "ndcgAt10": 0.6131471927654584,
+          "precisionAt10": 1,
+          "recallAt5": 0.5,
+          "recallAt10": 0.5,
+          "recallAt25": 0.5
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 13,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        }
+      },
+      "id": "topic-housing-development",
+      "missingSourceAttribution": 0,
+      "queryClass": "broad-topic",
+      "resultIds": ["bill:in:2025:hb:1421"],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 52.24339999999984,
+      "error": false,
+      "expectedIds": [
+        "bill:oh:136:hb:200",
+        "bill:oh:136:hb:26",
+        "bill:oh:136:hb:281",
+        "bill:oh:136:hb:282",
+        "bill:oh:136:hb:42",
+        "bill:oh:136:hb:616",
+        "bill:oh:136:hb:700",
+        "bill:oh:136:hb:753",
+        "bill:oh:136:hb:801",
+        "bill:oh:136:hb:826",
+        "bill:oh:136:hb:859",
+        "bill:oh:136:hb:929",
+        "bill:oh:136:sb:153",
+        "bill:oh:136:sb:172"
+      ],
+      "judgments": [
+        {
+          "cohort": "control",
+          "id": "bill:oh:136:hb:200",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:oh:136:hb:26",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:oh:136:hb:281",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:oh:136:hb:282",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:oh:136:hb:42",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:oh:136:hb:616",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:oh:136:hb:700",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:oh:136:hb:753",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:oh:136:hb:801",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:oh:136:hb:826",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:oh:136:hb:859",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:oh:136:hb:929",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:oh:136:sb:153",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:oh:136:sb:172",
+          "relevance": 3
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 14,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "control": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 1,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 13,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        }
+      },
+      "id": "topic-immigration",
+      "missingSourceAttribution": 0,
+      "queryClass": "broad-topic",
+      "resultIds": [],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 52.703500000000076,
+      "error": false,
+      "expectedIds": [
+        "bill:va:2019:hb:1735",
+        "bill:va:2019:hb:1849",
+        "bill:va:2019:hb:1933",
+        "bill:va:2019:hb:1942",
+        "bill:va:2019:hb:2006",
+        "bill:va:2019:hb:2014",
+        "bill:va:2019:hb:2494",
+        "bill:va:2019:hb:2499",
+        "bill:va:2019:hb:2652",
+        "bill:va:2019:hb:2693",
+        "bill:va:2019:sb:1135",
+        "bill:va:2019:sb:1195",
+        "bill:va:2019:sb:1644",
+        "bill:va:2019:sb:1685"
+      ],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2019:hb:1735",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2019:hb:1849",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2019:hb:1933",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2019:hb:1942",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2019:hb:2006",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:va:2019:hb:2014",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2019:hb:2494",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2019:hb:2499",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2019:hb:2652",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2019:hb:2693",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2019:sb:1135",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:va:2019:sb:1195",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:va:2019:sb:1644",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:va:2019:sb:1685",
+          "relevance": 3
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 14,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "control": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 3,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 11,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        }
+      },
+      "id": "topic-behavioral-health",
+      "missingSourceAttribution": 0,
+      "queryClass": "broad-topic",
+      "resultIds": [],
+      "tool": "search_bills"
+    },
+    {
+      "elapsedMs": 50.7802999999999,
+      "error": false,
+      "expectedIds": [
+        "bill:in:2026:hb:1013",
+        "bill:in:2026:hb:1020",
+        "bill:in:2026:hb:1087",
+        "bill:in:2026:hb:1114",
+        "bill:in:2026:hb:1328",
+        "bill:in:2026:sb:150",
+        "bill:in:2026:sb:157",
+        "bill:in:2026:sb:173",
+        "bill:in:2026:sb:198",
+        "bill:in:2026:sb:221",
+        "bill:in:2026:sb:236",
+        "bill:in:2026:sb:262",
+        "bill:in:2026:sb:282",
+        "bill:in:2026:sb:60",
+        "bill:in:2026:sb:91"
+      ],
+      "judgments": [
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:hb:1013",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2026:hb:1020",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:hb:1087",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:hb:1114",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:hb:1328",
+          "relevance": 3
+        },
+        {
+          "cohort": "control",
+          "id": "bill:in:2026:sb:150",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:157",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:173",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:198",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:221",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:236",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:262",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:282",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:60",
+          "relevance": 3
+        },
+        {
+          "cohort": "treatment",
+          "id": "bill:in:2026:sb:91",
+          "relevance": 3
+        }
+      ],
+      "metrics": {
+        "all": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 15,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "control": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 2,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        },
+        "treatment": {
+          "capacityAdjustedRecallAt5": 0,
+          "capacityAdjustedRecallAt10": 0,
+          "capacityAdjustedRecallAt25": 0,
+          "expectedCount": 13,
+          "firstRank": null,
+          "meanReciprocalRank": 0,
+          "ndcgAt10": 0,
+          "precisionAt10": 0,
+          "recallAt5": 0,
+          "recallAt10": 0,
+          "recallAt25": 0
+        }
+      },
+      "id": "topic-prescription-drugs",
+      "missingSourceAttribution": 0,
+      "queryClass": "broad-topic",
+      "resultIds": [],
+      "tool": "search_bills"
+    }
+  ],
+  "rolloutId": "embedding-topic-canary"
+}

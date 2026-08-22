@@ -25,8 +25,14 @@ cursor, and limit. Output: ranked bill summaries with match explanation, source 
 ### `get_bill`
 
 Input: canonical ID plus optional `childCursor` and `childLimit`. Output: canonical metadata, sponsors, latest status,
-subjects, documents, relations, upstream attribution, source links, and `nextChildCursor` when any child collection has
-another bounded page.
+subjects, documents, relations, amendments, upstream attribution, source links, and `nextChildCursor` when
+any child collection has another bounded page.
+
+### `get_bills`
+
+Input: 1-25 canonical bill IDs plus an optional per-bill `childLimit` of at most 25. Output: one independent bill-detail
+result per unique ID, including each bill's bounded amendments. A missing bill is reported on that item and
+does not discard successful results for the other IDs.
 
 ### `get_bill_timeline`
 
@@ -70,7 +76,35 @@ bounded bill activity. Organization availability is source-dependent.
 ### Events, calendars, votes, amendments, materials, and changes
 
 `search_events`, `get_event`, and `get_calendar` expose available meeting, hearing, agenda, participant, document, and
-calendar records. `search_votes` and `get_vote` expose normalized roll calls and positions. `search_amendments`,
-`get_amendment`, `search_supporting_materials`, and `get_supporting_material` expose their canonical records and links;
+calendar records. `get_bill_votes` is the preferred one-call path for answering who voted for or against a bill. It
+returns up to 25 roll calls per page with every normalized member position and a continuation cursor. The service stops
+the page early before it approaches the response-size ceiling, so unusually large House vote histories continue safely.
+`search_votes`, `get_vote`, and `get_votes` expose the same records as separate discovery and detail operations when
+finer control is needed.
+`get_votes` accepts 1-25 roll-call IDs so a client can resolve every vote returned for a bill in one follow-up call.
+`search_amendments`,
+`search_amendments_for_bills`, `get_amendment`, `get_amendments`, `search_supporting_materials`, and
+`get_supporting_material` expose their canonical records and links;
 material detail includes paginated extracted sections. `search_changes` exposes observed canonical changes without
 generating summaries or predictions. Every list is cursor-paginated and returns explicit truncation metadata.
+
+`search_amendments_for_bills` accepts 1-25 bill IDs and returns a separate bounded search result for each bill.
+`get_amendments` accepts 1-25 amendment IDs. Batch lookups deduplicate repeated IDs and isolate `not_found` and other
+safe domain errors to the affected item.
+
+Federal amendments are returned as structured records with `recordType: "structured"`. State publishers often expose
+an amendment only as a labeled bill document. Those files are also returned by the amendment tools with
+`recordType: "document"`, a stable `amendment:document:...` ID, the original `documentId`, bill and jurisdiction IDs,
+title, date, and source URL. The document-backed representation deliberately does not invent a sponsor, status, actions,
+or votes. The original file remains present in the bill's `documents` collection as well.
+
+### Finding who voted yes or no on a bill
+
+1. Call `get_bill_votes` with the canonical `billId`. A bill may have multiple roll calls, including procedural,
+   amendment, and final-passage votes. Use each result's `motion`, `question`, `classification`, `heldAt`, and `result`
+   to select or label the relevant votes.
+2. Each result contains the roll call plus `positions`. The normalized `position.option` is `yes`, `no`, `absent`,
+   `abstain`, `not-voting`, `present`, `proxy`, `paired`, or `other`; `person` contains the matched canonical legislator
+   when one is available, while `position.sourceName` and `position.sourcePersonId` preserve the publisher identity.
+3. If the result is truncated, call `get_bill_votes` again with `nextCursor` until every roll call has been collected
+   before presenting the bill's complete voting history.

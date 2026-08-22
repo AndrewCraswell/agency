@@ -2,7 +2,13 @@ import { mkdtemp, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, describe, expect, it } from "vitest"
-import { artifactPath, isExistingBlobError, LocalArtifactStore } from "./artifact-store.js"
+import {
+  ArtifactNotFoundError,
+  artifactPath,
+  isExistingBlobError,
+  isMissingArtifactError,
+  LocalArtifactStore
+} from "./artifact-store.js"
 
 const directories: string[] = []
 
@@ -29,5 +35,20 @@ describe("local artifact storage", () => {
     expect(isExistingBlobError({ statusCode: 412 })).toBe(true)
     expect(isExistingBlobError({ statusCode: 500 })).toBe(false)
     expect(isExistingBlobError(new Error("network failure"))).toBe(false)
+  })
+
+  it("turns missing local artifacts into a diagnostic typed error", async () => {
+    const root = await mkdtemp(join(tmpdir(), "legislation-artifacts-"))
+    directories.push(root)
+    const store = new LocalArtifactStore(root)
+
+    await expect(store.read("documents/missing/source.pdf")).rejects.toMatchObject({
+      message: "Stored document artifact was not found: documents/missing/source.pdf",
+      name: "ArtifactNotFoundError",
+      path: "documents/missing/source.pdf"
+    } satisfies Partial<ArtifactNotFoundError>)
+    expect(isMissingArtifactError({ statusCode: 404 })).toBe(true)
+    expect(isMissingArtifactError({ code: "ENOENT" })).toBe(true)
+    expect(isMissingArtifactError({ statusCode: 500 })).toBe(false)
   })
 })

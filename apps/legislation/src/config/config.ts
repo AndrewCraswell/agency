@@ -13,6 +13,15 @@ const configSchema = z
         mode: z.literal("workos")
       })
     ]),
+    backfill: z.object({
+      // Derived Trigger workers are intentionally restricted to one database
+      // connection each. This leaves safe headroom below PostgreSQL's
+      // 100-connection ceiling even when documents later fan out to 64 shards.
+      derivedDatabaseMaxConnections: z.coerce.number().int().min(1).max(1),
+      documentHostAcquireTimeoutMs: z.coerce.number().int().min(1_000).max(300_000),
+      documentHostDefaultSlots: z.coerce.number().int().min(1).max(8),
+      documentHostLeaseMs: z.coerce.number().int().min(30_000).max(600_000)
+    }),
     azure: z.object({
       federalSourceContainer: z.string().trim().min(1),
       normalizedDocumentContainer: z.string().trim().min(1),
@@ -33,6 +42,8 @@ const configSchema = z
       concurrency: z.coerce.number().int().min(1).max(32),
       federalEndCongress: z.coerce.number().int().min(1),
       federalStartCongress: z.coerce.number().int().min(1),
+      govInfoApiKey: optionalSecret,
+      govInfoApiUrl: z.url({ protocol: /^https$/ }),
       maxAttempts: z.coerce.number().int().min(1).max(10),
       openStatesApiKey: optionalSecret,
       openStatesApiUrl: z.url({ protocol: /^https$/ }),
@@ -52,6 +63,13 @@ const configSchema = z
       langfuseBaseUrl: z.url({ protocol: /^https$/ }),
       langfusePublicKey: optionalSecret,
       langfuseSecretKey: optionalSecret
+    }),
+    ocr: z.object({
+      endpoint: z.url({ protocol: /^https$/ }).optional(),
+      maximumAttempts: z.preprocess((value) => {
+        const parsed = Number(value)
+        return Number.isFinite(parsed) ? Math.min(parsed, 5) : value
+      }, z.number().int().min(1).max(5))
     }),
     server: z.object({
       host: z.string().trim().min(1),
@@ -104,6 +122,12 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       : { mode: environment.AUTH_MODE ?? "disabled" }
   const result = configSchema.safeParse({
     auth,
+    backfill: {
+      derivedDatabaseMaxConnections: environment.DERIVED_BACKFILL_DATABASE_MAX_CONNECTIONS ?? "1",
+      documentHostAcquireTimeoutMs: environment.DOCUMENT_HOST_ACQUIRE_TIMEOUT_MS ?? "120000",
+      documentHostDefaultSlots: environment.DOCUMENT_HOST_DEFAULT_SLOTS ?? "2",
+      documentHostLeaseMs: environment.DOCUMENT_HOST_LEASE_MS ?? "90000"
+    },
     azure: {
       federalSourceContainer: environment.AZURE_FEDERAL_SOURCE_CONTAINER ?? "federal-sources",
       normalizedDocumentContainer: environment.AZURE_NORMALIZED_DOCUMENT_CONTAINER ?? "normalized-documents",
@@ -124,6 +148,8 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       concurrency: environment.INGESTION_CONCURRENCY ?? "4",
       federalEndCongress: environment.FEDERAL_END_CONGRESS ?? "119",
       federalStartCongress: environment.FEDERAL_START_CONGRESS ?? "113",
+      govInfoApiKey: environment.GOVINFO_API_KEY,
+      govInfoApiUrl: environment.GOVINFO_API_URL ?? "https://api.govinfo.gov",
       maxAttempts: environment.INGESTION_MAX_ATTEMPTS ?? "4",
       openStatesApiKey: environment.OPENSTATE_API_KEY,
       openStatesApiUrl: environment.OPENSTATES_API_URL ?? "https://v3.openstates.org",
@@ -141,6 +167,10 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       langfuseBaseUrl: environment.LANGFUSE_BASE_URL ?? "https://cloud.langfuse.com",
       langfusePublicKey: environment.LANGFUSE_PUBLIC_KEY,
       langfuseSecretKey: environment.LANGFUSE_SECRET_KEY
+    },
+    ocr: {
+      endpoint: environment.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT,
+      maximumAttempts: environment.OCR_MAXIMUM_ATTEMPTS ?? "5"
     },
     server: {
       host: environment.LEGISLATION_HOST ?? "127.0.0.1",

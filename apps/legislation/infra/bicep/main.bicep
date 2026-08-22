@@ -23,6 +23,7 @@ param workosJwksUrl string = ''
 param langfuseBaseUrl string = 'https://cloud.langfuse.com'
 param federalStartCongress string = '113'
 param federalEndCongress string = '119'
+param triggerPrincipalId string = ''
 
 var namePrefix = 'leg-${environmentName}'
 var tags = {
@@ -70,6 +71,16 @@ module storage 'modules/storage.bicep' = {
     namePrefix: namePrefix
     tags: tags
     principalIds: [identity.outputs.principalId]
+  }
+}
+
+module documentIntelligence 'modules/document-intelligence.bicep' = {
+  name: 'document-intelligence'
+  params: {
+    location: location
+    namePrefix: namePrefix
+    principalIds: concat([identity.outputs.principalId], empty(triggerPrincipalId) ? [] : [triggerPrincipalId])
+    tags: tags
   }
 }
 
@@ -130,6 +141,7 @@ module alerts 'modules/alerts.bicep' = if (deployRuntime) {
 }
 
 output containerRegistry string = registry.outputs.loginServer
+output documentIntelligenceEndpoint string = documentIntelligence.outputs.endpoint
 output keyVaultUri string = keyVault.outputs.uri
 output mcpEndpoint string = deployRuntime ? 'https://${runtime!.outputs.fqdn}/mcp' : ''
 output mcpIdentityId string = identity.outputs.id

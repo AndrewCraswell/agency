@@ -7,9 +7,10 @@ import { createJobCounts, type JobCounts } from "../job.js"
 import type { SourceStore } from "../source-store.js"
 import { normalizeCongressAmendmentBundle } from "./amendments.js"
 import type { CongressClient } from "./client.js"
+import { isCongressRequestBudgetExhaustedError } from "./request-budget.js"
 
 export interface CongressAmendmentSyncResult {
-  checkpoint?: Readonly<Record<string, unknown>>
+  checkpoint?: Readonly<{ complete: boolean; nextOffset: number }>
   counts: JobCounts
   failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>>
 }
@@ -30,6 +31,7 @@ export async function synchronizeCongressAmendments(
   const counts = createJobCounts()
   const failures: CongressAmendmentSyncResult["failures"] = []
   let nextOffset = startOffset
+  let complete = true
 
   for await (const item of client.amendments(congress, startOffset)) {
     counts.discovered += 1
@@ -64,9 +66,13 @@ export async function synchronizeCongressAmendments(
       nextOffset = item.offset + 1
       await saveCheckpoint(database, stream, nextOffset)
       if (options.limit !== undefined && counts.read >= options.limit) {
+        complete = false
         break
       }
     } catch (error) {
+      if (isCongressRequestBudgetExhaustedError(error)) {
+        throw error
+      }
       counts.failed += 1
       failures.push({
         identifier: `${item.reference.congress}-${item.reference.type}-${item.reference.number}`,
@@ -77,7 +83,7 @@ export async function synchronizeCongressAmendments(
     }
   }
 
-  const cursor = { nextOffset }
+  const cursor = { complete, nextOffset }
   return { checkpoint: cursor, counts, failures }
 }
 

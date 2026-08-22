@@ -1,7 +1,10 @@
 import { gunzipSync, unzipSync } from "fflate"
 
 const textDecoder = new TextDecoder("utf-8", { fatal: true })
-export const MAXIMUM_ARCHIVE_BYTES = 256 * 1024 * 1024
+// Current Open States session archives can exceed 256 MiB (New York is about
+// 291 MB) without meaningfully expanding when decoded. Keep the download cap
+// below the separate 512 MiB decoded-content guard.
+export const MAXIMUM_ARCHIVE_BYTES = 384 * 1024 * 1024
 export const MAXIMUM_DECODED_ARCHIVE_BYTES = 512 * 1024 * 1024
 
 export function decodeArchiveRecords(

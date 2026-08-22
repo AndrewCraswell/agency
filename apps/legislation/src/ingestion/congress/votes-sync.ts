@@ -6,6 +6,7 @@ import { ProviderHttpError } from "../http-client.js"
 import { createJobCounts, mapConcurrent, type JobCounts } from "../job.js"
 import type { SourceStore } from "../source-store.js"
 import type { CongressClient } from "./client.js"
+import { isCongressRequestBudgetExhaustedError } from "./request-budget.js"
 import { normalizeCongressHouseVote } from "./votes.js"
 
 export interface CongressHouseVoteSyncResult {
@@ -74,6 +75,9 @@ export async function synchronizeCongressHouseVotes(
         }
         return { item, succeeded: true as const }
       } catch (error) {
+        if (isCongressRequestBudgetExhaustedError(error)) {
+          throw error
+        }
         counts.failed += 1
         return {
           failure: {

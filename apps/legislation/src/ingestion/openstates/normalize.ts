@@ -29,10 +29,19 @@ const documentSchema = z.object({
   links: safeArray(linkSchema),
   note: z.string().optional()
 })
+/** The resolved organization shape returned by the Open States v3 API. */
+const organizationSchema = z.object({
+  classification: z.string().min(1),
+  id: z.string().min(1),
+  name: z.string().min(1)
+})
+const organizationReferenceSchema = z.union([organizationSchema, z.string().min(1)])
+const personReferenceSchema = z.object({ id: z.string().min(1), name: z.string().min(1).optional() })
 const actionSchema = z.object({
   classification: z.array(z.string()).default([]),
   date: z.string().optional(),
   description: z.string().min(1),
+  organization: organizationSchema.optional(),
   organization_id: z.string().optional(),
   order: z.number().int().nonnegative().optional()
 })
@@ -40,6 +49,8 @@ const sponsorshipSchema = z.object({
   classification: z.string().optional(),
   entity_type: z.string().optional(),
   name: z.string().min(1),
+  organization: organizationSchema.optional(),
+  person: personReferenceSchema.optional(),
   person_id: z.string().optional(),
   primary: z.boolean().default(false)
 })
@@ -54,34 +65,49 @@ const voteSchema = z.object({
   id: z.string().optional(),
   identifier: z.string().optional(),
   motion: z.string().optional(),
+  motion_classification: safeArray(z.string()),
   motion_text: z.string().optional(),
+  organization: organizationSchema.optional(),
   organization_id: z.string().optional(),
   result: z.string().optional(),
   sources: safeArray(sourceSchema),
   start_date: z.string().optional(),
-  votes: safeArray(z.object({ option: z.string(), voter_id: z.string().optional(), voter_name: z.string().min(1) }))
+  votes: safeArray(
+    z.object({
+      option: z.string(),
+      voter: personReferenceSchema.optional(),
+      voter_id: z.string().optional(),
+      voter_name: z.string().min(1)
+    })
+  )
 })
 
-export const openStatesBillSchema = z.object({
-  _id: z.string().optional(),
-  abstracts: safeArray(z.object({ abstract: z.string().min(1), date: z.string().optional() })),
-  actions: safeArray(actionSchema),
-  classification: safeArray(z.string()),
-  documents: safeArray(documentSchema),
-  from_organization: z.string().optional(),
-  id: z.string().optional(),
-  identifier: z.string().min(1),
-  legislative_session: z.string().min(1),
-  openstates_url: z.string().optional(),
-  related_bills: safeArray(relationSchema),
-  sources: safeArray(sourceSchema),
-  sponsorships: safeArray(sponsorshipSchema),
-  subject: safeArray(z.string()),
-  title: z.string().min(1),
-  updated_at: z.string().optional(),
-  versions: safeArray(documentSchema),
-  votes: safeArray(voteSchema)
-})
+export const openStatesBillSchema = z
+  .object({
+    _id: z.string().optional(),
+    abstracts: safeArray(z.object({ abstract: z.string().min(1), date: z.string().optional() })),
+    actions: safeArray(actionSchema),
+    classification: safeArray(z.string()),
+    documents: safeArray(documentSchema),
+    from_organization: organizationReferenceSchema.optional(),
+    id: z.string().optional(),
+    identifier: z.string().min(1),
+    legislative_session: z.string().min(1).optional(),
+    openstates_url: z.string().optional(),
+    related_bills: safeArray(relationSchema),
+    session: z.string().min(1).optional(),
+    sources: safeArray(sourceSchema),
+    sponsorships: safeArray(sponsorshipSchema),
+    subject: safeArray(z.string()),
+    title: z.string().min(1),
+    updated_at: z.string().optional(),
+    versions: safeArray(documentSchema),
+    votes: safeArray(voteSchema)
+  })
+  .refine((bill) => bill.session !== undefined || bill.legislative_session !== undefined, {
+    message: "Open States bill must include a session",
+    path: ["session"]
+  })
 
 export interface OpenStatesContext {
   jurisdictionCode: string
@@ -144,11 +170,17 @@ function exactDate(value: string | undefined, field: string, diagnostics: Normal
   return undefined
 }
 
-function chamberFromOrganization(value: string | undefined): string | undefined {
+type OrganizationReference = z.infer<typeof organizationReferenceSchema>
+
+function organizationReferenceId(value: OrganizationReference | undefined): string | undefined {
+  return nonBlank(typeof value === "string" ? value : value?.id)
+}
+
+function chamberFromOrganization(value: OrganizationReference | undefined): string | undefined {
   if (value === undefined) {
     return undefined
   }
-  const normalized = value.toLowerCase()
+  const normalized = (typeof value === "string" ? value : value.classification).toLowerCase()
   if (normalized.includes("house") || normalized.includes("lower")) {
     return "lower"
   }
@@ -160,6 +192,9 @@ function chamberFromOrganization(value: string | undefined): string | undefined 
   }
   if (normalized.includes("legislature")) {
     return "legislature"
+  }
+  if (typeof value !== "string") {
+    return chamberFromOrganization(value.name)
   }
   return undefined
 }
@@ -294,11 +329,15 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
   const source = openStatesBillSchema.parse(input)
   const diagnostics: NormalizationDiagnostic[] = []
   const jurisdiction = jurisdictionId(context.jurisdictionCode)
-  const session = legislativeSessionId(context.jurisdictionCode, source.legislative_session)
+  const legislativeSession = source.session ?? source.legislative_session
+  if (legislativeSession === undefined) {
+    throw new Error("Open States bill must include a session")
+  }
+  const session = legislativeSessionId(context.jurisdictionCode, legislativeSession)
   const printed = parsePrintedIdentifier(source.identifier)
   const canonicalBillId = createBillId(
     context.jurisdictionCode,
-    source.legislative_session,
+    legislativeSession,
     printed.billType,
     printed.billNumber
   )
@@ -307,17 +346,18 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
   const peopleById = new Map<string, NonNullable<CanonicalBillAggregate["people"]>[number]>()
   const sponsors = uniqueBy(
     source.sponsorships.map((sponsor, index) => {
-      const canonicalPersonId = sponsor.person_id === undefined ? undefined : personId("openstates", sponsor.person_id)
-      if (sponsor.person_id !== undefined && canonicalPersonId !== undefined) {
+      const providerPersonId = nonBlank(sponsor.person?.id ?? sponsor.person_id)
+      const canonicalPersonId = providerPersonId === undefined ? undefined : personId("openstates", providerPersonId)
+      if (providerPersonId !== undefined && canonicalPersonId !== undefined) {
         peopleById.set(canonicalPersonId, {
           id: canonicalPersonId,
           jurisdictionId: jurisdiction,
           name: sponsor.name,
-          sourceId: sponsor.person_id,
-          upstreamIds: { openstates: sponsor.person_id }
+          sourceId: providerPersonId,
+          upstreamIds: { openstates: providerPersonId }
         })
       }
-      const identity = sponsor.person_id ?? `${sponsor.name}:${sponsor.classification ?? "sponsor"}:${index}`
+      const identity = providerPersonId ?? `${sponsor.name}:${sponsor.classification ?? "sponsor"}:${index}`
       return {
         billId: canonicalBillId,
         classification: sponsor.classification ?? (sponsor.primary ? "primary" : "sponsor"),
@@ -332,7 +372,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
 
   const votes = source.votes.map((vote, voteOrdinal) => {
     const providerVoteId = nonBlank(vote.id)
-    const providerOrganizationId = nonBlank(vote.organization_id)
+    const providerOrganizationId = organizationReferenceId(vote.organization ?? vote.organization_id)
     const rollCallNumber = nonBlank(vote.identifier)
     const voteIdentity = providerVoteId ?? rollCallNumber ?? `${vote.start_date ?? "undated"}:${voteOrdinal}`
     const canonicalVoteId = legislativeVoteId("openstates", childId("vote", canonicalBillId, voteIdentity))
@@ -344,7 +384,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
     }
     const positions = uniqueBy(
       vote.votes.flatMap((position) => {
-        const providerPersonId = nonBlank(position.voter_id)
+        const providerPersonId = nonBlank(position.voter?.id ?? position.voter_id)
         const sourcePersonId = providerPersonId ?? `vote-name:${context.jurisdictionCode}:${position.voter_name}`
         const canonicalPersonId = personId(
           providerPersonId === undefined ? "openstates-voter-name" : "openstates",
@@ -377,8 +417,11 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
       positions,
       vote: {
         billId: canonicalBillId,
-        chamber: chamberFromOrganization(vote.organization_id),
-        classification: nonBlank(vote.classification[0])?.toLowerCase().replaceAll("_", "-") ?? "recorded",
+        chamber: chamberFromOrganization(vote.organization ?? vote.organization_id),
+        classification:
+          nonBlank(vote.motion_classification[0] ?? vote.classification[0])
+            ?.toLowerCase()
+            .replaceAll("_", "-") ?? "recorded",
         heldAt:
           vote.start_date !== undefined && /^\d{4}-\d{2}-\d{2}T/.test(vote.start_date)
             ? new Date(vote.start_date)
@@ -393,28 +436,33 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
         rollCallNumber,
         sourceId: providerVoteId,
         sourceUrl: vote.sources[0]?.url,
-        voteType: vote.classification.join(", ") || undefined,
+        voteType:
+          (vote.motion_classification.length > 0 ? vote.motion_classification : vote.classification).join(", ") ||
+          undefined,
         yesCount: counts.get("yes")
       }
     }
   })
   const uniqueVotes = uniqueBy(votes, (vote) => vote.vote.id)
   const actions = uniqueBy(
-    source.actions.map((action, index) => ({
-      actionDate: exactDate(action.date, "actions.date", diagnostics),
-      billId: canonicalBillId,
-      chamber: chamberFromOrganization(action.organization_id),
-      classification: action.classification.map((value) => value.toLowerCase().replaceAll("_", "-")),
-      description: action.description,
-      id: childId(
-        "action",
-        canonicalBillId,
-        `${action.order ?? index}:${action.date ?? "undated"}:${action.description}`
-      ),
-      organizationId: optionalOrganizationId(action.organization_id),
-      ordinal: action.order ?? index,
-      sourceOrganizationId: nonBlank(action.organization_id)
-    })),
+    source.actions.map((action, index) => {
+      const sourceOrganizationId = organizationReferenceId(action.organization ?? action.organization_id)
+      return {
+        actionDate: exactDate(action.date, "actions.date", diagnostics),
+        billId: canonicalBillId,
+        chamber: chamberFromOrganization(action.organization ?? action.organization_id),
+        classification: action.classification.map((value) => value.toLowerCase().replaceAll("_", "-")),
+        description: action.description,
+        id: childId(
+          "action",
+          canonicalBillId,
+          `${action.order ?? index}:${action.date ?? "undated"}:${action.description}`
+        ),
+        organizationId: optionalOrganizationId(sourceOrganizationId),
+        ordinal: action.order ?? index,
+        sourceOrganizationId
+      }
+    }),
     (action) => String(action.ordinal)
   )
   const documents = uniqueBy(
@@ -428,7 +476,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
     source.related_bills
       .map((relation) => {
         const relatedPrinted = parsePrintedIdentifier(relation.identifier)
-        const relatedSession = relation.legislative_session ?? source.legislative_session
+        const relatedSession = relation.legislative_session ?? legislativeSession
         return {
           billId: canonicalBillId,
           classification: normalizeRelation(relation.relation_type),
@@ -444,18 +492,18 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
     (relation) => `${relation.relatedBillId}:${relation.classification}`
   )
   const organizationLinks: Array<{ classification: string; sourceOrganizationId: string }> = []
-  const sourceOrganizationId = nonBlank(source.from_organization)
+  const sourceOrganizationId = organizationReferenceId(source.from_organization)
   if (sourceOrganizationId !== undefined) {
     organizationLinks.push({ classification: "origin", sourceOrganizationId })
   }
   for (const action of source.actions) {
-    const actionOrganizationId = nonBlank(action.organization_id)
+    const actionOrganizationId = organizationReferenceId(action.organization ?? action.organization_id)
     if (actionOrganizationId !== undefined) {
       organizationLinks.push({ classification: "action", sourceOrganizationId: actionOrganizationId })
     }
   }
   for (const vote of source.votes) {
-    const voteOrganizationId = nonBlank(vote.organization_id)
+    const voteOrganizationId = organizationReferenceId(vote.organization ?? vote.organization_id)
     if (voteOrganizationId !== undefined) {
       organizationLinks.push({ classification: "vote", sourceOrganizationId: voteOrganizationId })
     }
@@ -498,9 +546,9 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
       relations,
       session: {
         id: session,
-        identifier: source.legislative_session,
+        identifier: legislativeSession,
         jurisdictionId: jurisdiction,
-        name: context.sessionName ?? source.legislative_session
+        name: context.sessionName ?? legislativeSession
       },
       sponsors,
       votes: uniqueVotes

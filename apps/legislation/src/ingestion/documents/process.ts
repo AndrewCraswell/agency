@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm"
+import { createHash } from "node:crypto"
+import { and, eq, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
 import { billDocuments, documentSections } from "../../db/schema/schema.js"
 import { extractDocument, sanitizeDatabaseText } from "./extract.js"
@@ -24,7 +25,7 @@ export interface DocumentFailureClassification {
   retryable: boolean
 }
 
-const KNOWN_INACCESSIBLE_DOCUMENT_HOSTS = new Set(["alisondb.legislature.state.al.us"])
+const KNOWN_INACCESSIBLE_DOCUMENT_HOSTS = new Set(["alisondb.legislature.state.al.us", "www.lrc.ky.gov"])
 
 export function classifyDocumentFailure(error: unknown, sourceUrl?: string): DocumentFailureClassification {
   let failureMessage = "Unknown document processing failure"
@@ -50,6 +51,9 @@ export function classifyDocumentFailure(error: unknown, sourceUrl?: string): Doc
   if (normalized.includes("california bill pdf is not available from publisher")) {
     return { category: "not-found", message, retryable: false }
   }
+  if (normalized.includes("congress committee repository reports document not found")) {
+    return { category: "not-found", message, retryable: false }
+  }
   if (statusCode !== undefined) {
     const retryable = statusCode === 408 || statusCode === 425 || statusCode === 429 || statusCode >= 500
     return { category: retryable ? "download-transient" : "download-permanent", message, retryable }
@@ -66,15 +70,23 @@ export function classifyDocumentFailure(error: unknown, sourceUrl?: string): Doc
   if (normalized.includes("unsupported document content type")) {
     return { category: "unsupported-format", message, retryable: false }
   }
+  if (normalized.includes("document source is inaccessible")) {
+    return { category: "source-inaccessible", message, retryable: false }
+  }
   if (normalized.includes("document response contains html instead of advertised pdf")) {
     return { category: "download-transient", message, retryable: true }
   }
-  if (normalized.includes("image-only")) {
+  if (normalized.includes("document host limiter timed out")) {
+    return { category: "download-transient", message, retryable: true }
+  }
+  if (normalized.includes("image-only") || normalized.includes("requires ocr")) {
     return { category: "ocr-required", message, retryable: false }
   }
   if (
     normalized.includes("invalid pdf structure") ||
     normalized.includes("invalid root reference") ||
+    normalized.includes("bad uncompressed block length in flate stream") ||
+    normalized.includes("bad (uncompressed) xref entry") ||
     normalized.includes("invalid zip data") ||
     normalized.includes("reading 'addchild'") ||
     normalized.includes("document is empty") ||
@@ -136,6 +148,42 @@ export async function persistProcessedDocument(
     }
   }
 
+  await persistDocumentExtraction(database, input, extraction)
+  return "processed"
+}
+
+export async function persistOcrDocument(
+  database: LegislationDatabase,
+  input: {
+    blobPath: string
+    contentType: string
+    documentId: string
+    sourceBytes: Uint8Array
+    text: string
+  }
+): Promise<void> {
+  const textBytes = new TextEncoder().encode(input.text)
+  const extractedText = await extractDocument(input.documentId, textBytes, "text/plain")
+  await persistDocumentExtraction(
+    database,
+    {
+      blobPath: input.blobPath,
+      bytes: input.sourceBytes,
+      contentType: input.contentType,
+      documentId: input.documentId
+    },
+    {
+      ...extractedText,
+      contentHash: createHash("sha256").update(input.sourceBytes).digest("hex")
+    }
+  )
+}
+
+async function persistDocumentExtraction(
+  database: LegislationDatabase,
+  input: { blobPath?: string; bytes: Uint8Array; contentType: string; documentId: string },
+  extraction: Awaited<ReturnType<typeof extractDocument>>
+): Promise<void> {
   await database.transaction(async (transaction) => {
     await transaction
       .update(billDocuments)
@@ -168,7 +216,6 @@ export async function persistProcessedDocument(
       )
     }
   })
-  return "processed"
 }
 
 export async function markDocumentProcessingFailure(
@@ -195,4 +242,28 @@ export async function markDocumentProcessingFailure(
       updatedAt: new Date()
     })
     .where(eq(billDocuments.id, documentId))
+}
+
+/**
+ * Return a row claimed by a worker to the durable queue when host backpressure
+ * prevents a download. This is not an HTTP attempt, so it must not consume a
+ * publisher retry or produce a failed ingestion run.
+ */
+export async function deferDocumentProcessing(
+  database: LegislationDatabase,
+  documentId: string,
+  nextAttemptAt: Date
+): Promise<void> {
+  await database
+    .update(billDocuments)
+    .set({
+      lastAttemptAt: null,
+      nextAttemptAt,
+      processingAttempts: sql`greatest(${billDocuments.processingAttempts} - 1, 0)`,
+      processingError: null,
+      processingErrorCategory: null,
+      processingStatus: "pending",
+      updatedAt: new Date()
+    })
+    .where(and(eq(billDocuments.id, documentId), eq(billDocuments.processingStatus, "processing")))
 }

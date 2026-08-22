@@ -16,6 +16,8 @@ export interface GovInfoImportResult {
   failures: Array<Readonly<{ identifier?: string; message: string; retryable: boolean }>>
 }
 
+export type GovInfoPackageClient = Pick<GovInfoClient, "getBillStatus">
+
 type ImportFailure = { failure: { identifier: string; message: string; retryable: boolean }; status: "failed" }
 type PreparedPackage = { aggregate: CanonicalBillAggregate; source: GovInfoBillStatusPackage }
 type SkippedPackage = { source: GovInfoBillStatusPackage; status: "skipped" }
@@ -34,9 +36,15 @@ function packageBillId(source: GovInfoBillStatusPackage): string | undefined {
 
 export async function importGovInfoPackages(
   database: LegislationDatabase,
-  client: GovInfoClient,
+  client: GovInfoPackageClient,
   packages: readonly GovInfoBillStatusPackage[],
-  options: Readonly<{ concurrency?: number; force?: boolean; sourceStore?: SourceStore; stream: string }>
+  options: Readonly<{
+    concurrency?: number
+    force?: boolean
+    persistCheckpoint?: boolean
+    sourceStore?: SourceStore
+    stream: string
+  }>
 ): Promise<GovInfoImportResult> {
   const counts = createJobCounts({ discovered: packages.length })
   const failures: GovInfoImportResult["failures"] = []
@@ -121,12 +129,16 @@ export async function importGovInfoPackages(
     } else {
       canAdvanceCheckpoint = false
     }
-    await saveCheckpoint(database, options.stream, durableIndex, false)
+    if (options.persistCheckpoint !== false) {
+      await saveCheckpoint(database, options.stream, durableIndex, false)
+    }
   }
 
   const complete = failures.length === 0
   const completed = { complete, index: complete ? packages.length : durableIndex }
-  await saveCheckpoint(database, options.stream, completed.index, complete)
+  if (options.persistCheckpoint !== false) {
+    await saveCheckpoint(database, options.stream, completed.index, complete)
+  }
   return { checkpoint: completed, counts, failures }
 }
 

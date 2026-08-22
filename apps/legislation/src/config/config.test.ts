@@ -7,6 +7,12 @@ describe("loadConfig", () => {
 
     expect(config).toMatchObject({
       auth: { mode: "disabled" },
+      backfill: {
+        derivedDatabaseMaxConnections: 1,
+        documentHostAcquireTimeoutMs: 120_000,
+        documentHostDefaultSlots: 2,
+        documentHostLeaseMs: 90_000
+      },
       database: {
         connectionTimeoutMs: 10_000,
         idleTimeoutMs: 30_000,
@@ -22,6 +28,7 @@ describe("loadConfig", () => {
       },
       logging: { level: "info" },
       model: { dimensions: 1536, embeddingModel: "openai/text-embedding-3-small" },
+      ocr: { maximumAttempts: 5 },
       server: { host: "127.0.0.1", port: 3100, requestBodyBytes: 1_048_576 }
     })
   })
@@ -33,6 +40,8 @@ describe("loadConfig", () => {
       DATABASE_IDLE_TIMEOUT_MS: "15000",
       DATABASE_MAX_CONNECTIONS: "20",
       DATABASE_URL: "postgresql://user:password@database.example/policy",
+      GOVINFO_API_KEY: "govinfo-key",
+      GOVINFO_API_URL: "https://govinfo.example/api/",
       LEGISLATION_HOST: "0.0.0.0",
       LEGISLATION_PORT: "8080",
       LOG_LEVEL: "debug",
@@ -55,6 +64,10 @@ describe("loadConfig", () => {
       url: "postgresql://user:password@database.example/policy"
     })
     expect(config.environment).toBe("production")
+    expect(config.ingestion).toMatchObject({
+      govInfoApiKey: "govinfo-key",
+      govInfoApiUrl: "https://govinfo.example/api/"
+    })
     expect(config.server).toMatchObject({ host: "0.0.0.0", port: 8080 })
   })
 
@@ -85,5 +98,13 @@ describe("loadConfig", () => {
 
   it("rejects non-PostgreSQL database URLs", () => {
     expect(() => loadConfig({ DATABASE_URL: "https://database.example" })).toThrow(ConfigurationError)
+  })
+
+  it("keeps high-fanout derived workers on a one-connection pool", () => {
+    expect(() => loadConfig({ DERIVED_BACKFILL_DATABASE_MAX_CONNECTIONS: "2" })).toThrow(ConfigurationError)
+  })
+
+  it("caps an older OCR attempt setting at five", () => {
+    expect(loadConfig({ OCR_MAXIMUM_ATTEMPTS: "10" }).ocr.maximumAttempts).toBe(5)
   })
 })
