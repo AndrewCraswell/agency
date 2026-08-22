@@ -140,12 +140,12 @@ export const derivedPayloadSchema = baseWorkerSchema
     jurisdictionId: z.string().trim().min(1).max(200).optional(),
     kind: z.enum(DERIVED_BACKFILL_KINDS),
     maxBatches: z.number().int().positive().max(100).default(10),
-    shardCount: z.number().int().positive().max(backfillExecutionPolicy.documentBackfillShardCount).default(1),
+    shardCount: z.number().int().positive().max(EMBEDDING_BACKFILL_MAX_SHARD_COUNT).default(1),
     shardIndex: z
       .number()
       .int()
       .nonnegative()
-      .max(backfillExecutionPolicy.documentBackfillShardCount - 1)
+      .max(EMBEDDING_BACKFILL_MAX_SHARD_COUNT - 1)
       .default(0)
   })
   .strict()
@@ -258,6 +258,18 @@ const embeddingShardPayloadSchema = embeddingSyncPayloadSchema
       context.addIssue({ code: "custom", message: "shardIndex must be less than shardCount", path: ["shardIndex"] })
     }
   })
+const embeddingFullSyncPayloadSchema = baseWorkerSchema
+  .extend({ maxContinuations: z.number().int().positive().max(1_000).default(1_000) })
+  .strict()
+
+export const FULL_EMBEDDING_PRODUCT_ORDER = ["amendments", "bills", "materials", "sections"] as const
+
+export function createFullEmbeddingSyncStages() {
+  return FULL_EMBEDDING_PRODUCT_ORDER.map((product) => ({
+    product,
+    shardCount: backfillExecutionPolicy.derivedQueueConcurrencyLimit
+  }))
+}
 
 export function embeddingIndexMaintenancePayload(
   payload: Pick<z.output<typeof embeddingSyncPayloadSchema>, "correlationId" | "rebuildId">
@@ -532,7 +544,7 @@ export const embeddingSyncShardController = task({
         await embeddingSyncShardWorker.triggerAndWait(payload, {
           idempotencyKey: await globalIdempotencyKey(
             payload.rebuildId,
-            `embedding-sync:${payload.products.slice().sort().join("+")}:${continuation}:${payload.shardIndex}`
+            `embedding-sync:${payload.products.slice().sort().join("+")}:${continuation}:${payload.shardIndex}-of-${payload.shardCount}`
           )
         }),
       shardCount: payload.shardCount,
@@ -571,7 +583,7 @@ export const embeddingSync = task({
         options: {
           idempotencyKey: await globalIdempotencyKey(
             payload.rebuildId,
-            `embedding-sync:${payload.products.slice().sort().join("+")}:controller:${shardIndex}`
+            `embedding-sync:${payload.products.slice().sort().join("+")}:controller:${shardIndex}-of-${payload.shardCount}`
           )
         },
         payload: { ...payload, shardIndex }
@@ -588,6 +600,37 @@ export const embeddingSync = task({
       .unwrap()
     assertBatchSucceeded(result, "embedding sync")
     return { checkpoint: { complete: true }, shardCount: payload.shardCount, status: "completed" as const }
+  }
+})
+
+export const embeddingFullSync = task({
+  id: "embedding-full-sync",
+  maxDuration: 14_400,
+  queue: { concurrencyLimit: 1, name: "legislation-embedding-full-sync-controller" },
+  run: async (unparsedPayload: unknown) => {
+    const payload = embeddingFullSyncPayloadSchema.parse(unparsedPayload)
+    const completedProducts = []
+    for (const stage of createFullEmbeddingSyncStages()) {
+      await embeddingSync
+        .triggerAndWait(
+          {
+            correlationId: `${payload.correlationId}:${stage.product}`,
+            maxContinuations: payload.maxContinuations,
+            products: [stage.product],
+            rebuildId: payload.rebuildId,
+            shardCount: stage.shardCount
+          },
+          {
+            idempotencyKey: await globalIdempotencyKey(
+              payload.rebuildId,
+              `embedding-full-sync:${stage.product}:${stage.shardCount}`
+            )
+          }
+        )
+        .unwrap()
+      completedProducts.push(stage.product)
+    }
+    return { checkpoint: { complete: true }, completedProducts, status: "completed" as const }
   }
 })
 
@@ -730,15 +773,14 @@ async function runBackfillPhase(
     return
   }
   if (phase === "embeddings") {
-    await embeddingSync
+    await embeddingFullSync
       .triggerAndWait(
         {
           correlationId,
           maxContinuations: 1_000,
-          rebuildId: payload.rebuildId,
-          shardCount: derivedBackfillShardCountFor("embeddings")
+          rebuildId: payload.rebuildId
         },
-        { idempotencyKey: await globalIdempotencyKey(payload.rebuildId, "embedding-sync") }
+        { idempotencyKey: await globalIdempotencyKey(payload.rebuildId, "embedding-full-sync") }
       )
       .unwrap()
     return

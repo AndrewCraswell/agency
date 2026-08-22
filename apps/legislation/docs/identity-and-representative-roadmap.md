@@ -174,6 +174,7 @@ Dependency: none. Status: in progress.
 | EMB-005 | In progress | Structured amendments are complete. Finish bills at 16 shards, material sections at 20, and document sections at 32, with no overlap and zero unexplained failures. |
 | EMB-006 | Planned | Run final `ANALYZE`, record counts and provider spend, rerun the frozen evaluation, and publish the promotion decision. |
 | EMB-007 | Planned | Verify daily ingestion creates or refreshes only affected embeddings and does not require a historical sweep. |
+| EMB-008 | Complete | Add `embedding-full-sync` so future complete recreations run amendments, bills, material sections, and document sections sequentially at the 68-worker cap and transfer capacity automatically at each product boundary. |
 
 Exit gate: all four embedding products are complete, indexes have current
 statistics, daily incremental behavior passes, observed spend is reconciled,

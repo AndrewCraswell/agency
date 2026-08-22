@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest"
 import { DERIVED_SUPPORTING_MATERIAL_BATCH_SIZE } from "../../ingestion/backfill/derived.js"
 import {
+  createFullEmbeddingSyncStages,
   createDerivedLeaseHandoffResult,
   derivedBatchSizeFor,
   derivedDatabaseConnectionsFor,
   derivedPayloadSchema,
   derivedWorkerMaxBatchesFor,
   embeddingIndexMaintenancePayload,
+  FULL_EMBEDDING_PRODUCT_ORDER,
   isMaterialPhaseGateOpen,
   reconcileSupportingMaterialOcrCheckpoint
 } from "./backfill-tasks.js"
@@ -47,23 +49,23 @@ describe("derived backfill task payload", () => {
 
     expect(
       derivedPayloadSchema.parse({
-        correlationId: "backfill:embedding-lane-32",
+        correlationId: "backfill:embedding-lane-68",
         kind: "embeddings",
-        rebuildId: "embedding-lane-32",
-        shardCount: 32,
-        shardIndex: 31
+        rebuildId: "embedding-lane-68",
+        shardCount: 68,
+        shardIndex: 67
       })
-    ).toMatchObject({ kind: "embeddings", shardCount: 32, shardIndex: 31 })
+    ).toMatchObject({ kind: "embeddings", shardCount: 68, shardIndex: 67 })
 
     expect(() =>
       derivedPayloadSchema.parse({
-        correlationId: "backfill:embedding-lane-33",
+        correlationId: "backfill:embedding-lane-69",
         kind: "embeddings",
-        rebuildId: "embedding-lane-33",
-        shardCount: 33,
-        shardIndex: 32
+        rebuildId: "embedding-lane-69",
+        shardCount: 69,
+        shardIndex: 68
       })
-    ).toThrow("embeddings supports at most 32 backfill shards")
+    ).toThrow("Too big")
 
     expect(
       derivedPayloadSchema.parse({
@@ -74,6 +76,16 @@ describe("derived backfill task payload", () => {
         shardIndex: 23
       })
     ).toMatchObject({ kind: "supporting-materials", shardCount: 24, shardIndex: 23 })
+  })
+
+  it("moves a complete embedding rebuild through products at the full worker cap", () => {
+    expect(FULL_EMBEDDING_PRODUCT_ORDER).toEqual(["amendments", "bills", "materials", "sections"])
+    expect(createFullEmbeddingSyncStages()).toEqual([
+      { product: "amendments", shardCount: 68 },
+      { product: "bills", shardCount: 68 },
+      { product: "materials", shardCount: 68 },
+      { product: "sections", shardCount: 68 }
+    ])
   })
 
   it("reports a lease overlap as a resumable shard checkpoint", () => {

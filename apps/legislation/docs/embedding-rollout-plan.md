@@ -179,9 +179,11 @@ reranking.
 
 ### Runtime ownership
 
-Trigger.dev owns asynchronous embedding generation through three explicit
+Trigger.dev owns asynchronous embedding generation through five explicit
 tasks:
 
+- `embedding-full-sync` recreates every product sequentially at the full
+  68-worker cap and advances automatically when a product completes;
 - `embedding-sync` starts one bounded embedding wave;
 - `embedding-sync-shard-controller` serially advances a shard checkpoint; and
 - `embedding-sync-shard-worker` embeds amendments, bills, document sections,
@@ -195,10 +197,15 @@ tasks:
 lease, checkpoint stream, and idempotency keys, so the staged waves below can
 run independently without reusing another product's completion state.
 
-The historical `embeddings` phase calls `embedding-sync`; it no longer relies
-on an implicit branch inside the general document worker. The same entry task
-is the future recurring refresh boundary, but its production schedule remains
-disabled until the historical pass is complete and daily cost is measured.
+The historical `embeddings` phase calls `embedding-full-sync`; it no longer
+relies on an implicit branch inside the general document worker. A complete
+recreation runs amendments, bills, supporting-material sections, and document
+sections sequentially, with 68 shards in every stage. Completion of one stage
+durably gates the next, so all capacity transfers automatically without
+canceling live shards or changing a product's modulo partition while it runs.
+Product-specific `embedding-sync` remains the targeted repair and future
+incremental refresh boundary. Its production schedule remains disabled until
+the historical pass is complete and daily cost is measured.
 
 Reranking stays in `LegislationQueryService`, synchronously inside the MCP
 request after PostgreSQL returns at most 25 first-stage candidates. It is not a

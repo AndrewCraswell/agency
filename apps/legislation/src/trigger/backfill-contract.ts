@@ -18,10 +18,9 @@ export const defaultGovInfoBillTypes = ["hr", "s", "hjres", "sjres", "hconres", 
  * Document work is safely partitioned by canonical jurisdiction and uses a
  * bounded 64-lane drain with durable publisher slots. Supporting materials use
  * deterministic ID shards behind the same publisher limiter. Each embedding
- * product defaults to 16 deterministic shards. Operators may increase a
- * single embedding product to 32 shards when another product has completed.
- * The approved bulk pass uses at most 68 workers with one-connection database
- * pools and an 80-session operational stop threshold.
+ * product defaults to 16 deterministic shards for targeted work. A complete
+ * recreation runs products sequentially at the 68-worker cap with
+ * one-connection database pools and an 80-session operational stop threshold.
  */
 export const backfillExecutionPolicy = {
   derivedQueueConcurrencyLimit: 68,
@@ -31,7 +30,7 @@ export const backfillExecutionPolicy = {
 } as const
 
 export const EMBEDDING_BACKFILL_DEFAULT_SHARD_COUNT = 16
-export const EMBEDDING_BACKFILL_MAX_SHARD_COUNT = 32
+export const EMBEDDING_BACKFILL_MAX_SHARD_COUNT = 68
 
 const positiveInteger = z.number().int().positive()
 const nonemptyIdentifier = z.string().trim().min(1).max(200)
@@ -73,9 +72,9 @@ export type BackfillPhase = (typeof backfillPhases)[number]
  * Derived workers partition their candidate sets and hold a lease per shard.
  * Documents use 64 jurisdiction lanes, supporting materials use deterministic
  * ID shards sized to keep large-PDF extraction parallel without widening the
- * shared publisher cadence. Each embedding product defaults to 16
- * deterministic shards, with an explicit 32-shard maximum for controlled
- * product-specific scale-up after another product releases queue capacity.
+ * shared publisher cadence. Targeted embedding work defaults to 16
+ * deterministic shards, while a complete recreation may give one product the
+ * full 68-worker queue after the previous product completes.
  */
 export function derivedBackfillShardCountFor(kind: "bill-documents" | "embeddings" | "supporting-materials"): number {
   if (kind === "bill-documents") {
