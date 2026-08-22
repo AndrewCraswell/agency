@@ -16,6 +16,9 @@ The bounded three-weapon sensing topology, ngspice model, and socketed fixture p
 `docs/analog-front-end.md`. The present-rule compatibility strategy and proposed FIE update are in
 `docs/fie-modern-power-proposal.md`.
 
+The M4-03 source, switch, reference, acquisition, timing, and error budget is in `docs/m4-03-analog-error-budget.md`. It
+records conditional measurement gates and does not release the candidate front end for fabrication.
+
 The candidate processor allocations and their unresolved electrical conflicts are documented in
 `docs/stm32-pin-allocation.md` and `docs/esp32-pin-allocation.md`. Exact connector evidence and remaining physical
 verification gates are tracked in `docs/reel-socket-selection.md` and `docs/connector-cad-verification.md`.

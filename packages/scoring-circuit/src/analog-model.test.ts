@@ -1,11 +1,20 @@
 import { describe, expect, it } from "vitest"
 import {
   adcCodeForResistance,
+  adcInputResistanceOhms,
+  acquisitionUs,
+  analogBudget,
   analogFrontEnd,
   estimateExternalResistance,
   expectedSenseVoltage,
   fieResistanceBoundaries,
-  fieTimingBoundariesUs
+  fieTimingBoundariesUs,
+  fiveTauAdcSettlingUs,
+  fiveTauSourceSettlingUs,
+  conservativeBlankingUs,
+  fullDiagnosticAcquisitionUs,
+  resistanceErrorForVoltageErrorOhms,
+  switchChargeErrorOhms
 } from "./analog-model.js"
 
 describe("three-weapon analog model", () => {
@@ -37,5 +46,17 @@ describe("three-weapon analog model", () => {
     expect(analogFrontEnd.maximumRelevantSabreScanUs).toBeLessThanOrEqual(
       fieTimingBoundariesUs.sabreMinimumContactUs / 10
     )
+  })
+
+  it("bounds the M4-03 source, ADC, and switch-transient calculations", () => {
+    expect(adcInputResistanceOhms(500)).toBeLessThan(analogBudget.adcSlowChannelMaximumInputResistanceOhms)
+    expect(fiveTauSourceSettlingUs(100, 10_000)).toBeCloseTo(4.81, 2)
+    expect(fiveTauSourceSettlingUs(500, 10_000)).toBeCloseTo(20.87, 2)
+    expect(fiveTauAdcSettlingUs(450)).toBeCloseTo(3.51, 2)
+    expect(conservativeBlankingUs(100, 10_000)).toBeCloseTo(7.6, 2)
+    expect(acquisitionUs(100, 10_000, 2)).toBeCloseTo(9.96, 2)
+    expect(fullDiagnosticAcquisitionUs(500, 10_000)).toBeCloseTo(31.44, 2)
+    expect(switchChargeErrorOhms(450, 500)).toBeCloseTo(4.2, 1)
+    expect(resistanceErrorForVoltageErrorOhms(450, analogBudget.adcLsbVolts / 2)).toBeCloseTo(0.43, 2)
   })
 })

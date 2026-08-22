@@ -52,7 +52,7 @@ const capacitanceCases = [2_000, 5_000, 10_000].flatMap((capacitancePf) =>
     loadOhms
   }))
 )
-const pulseCases = [50, 1_000, 2_000, 10_000, 14_000].map((contactWidthUs) => ({
+const pulseCases = [50, 100, 1_000, 2_000, 10_000, 14_000].map((contactWidthUs) => ({
   ...nominalComponents,
   budgetUs: 10,
   capacitance: "10n",

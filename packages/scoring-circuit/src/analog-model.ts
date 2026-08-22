@@ -12,6 +12,31 @@ export const analogFrontEnd = {
   switchResistanceOhms: 2
 } as const
 
+/**
+ * M4-03 calculation inputs. These are deliberately separate from the nominal
+ * architecture model above: they are the maximum or minimum values claimed by
+ * the M4-01 topology and M4-02 clamp candidate, not released schematic values.
+ */
+export const analogBudget = {
+  adcFilterCapacitancePf: 470,
+  adcFilterCapacitanceWithClampsAndSamplePf: 504.5,
+  adcInputSeriesResistanceMaximumOhms: 1_010,
+  adcLsbVolts: 2.5 / (2 ** 12 - 1),
+  adc1DiagnosticRankCount: 6,
+  // DS12288 Table 66 tLATR maximum for CKMODE = 00. The two active ADCs use 52 MHz.
+  adcMaximumTriggerLatencyUs: 2.5 / 52,
+  adcOneRankConversionUs: (47.5 + 12.5) / 52,
+  adcSampleCycles: 47.5,
+  adcSampleClockMhz: 52,
+  adcSlowChannelMaximumInputResistanceOhms: 1_800,
+  clampLeakageGateOhms: 3.12,
+  fixtureTargetOhms: 5,
+  lineCapacitanceBanksPf: [500, 2_000, 5_000, 10_000],
+  sourceResistanceMaximumOhms: 2_490 * 1.0005 + 9.8 + 23.1,
+  switchChargeInjectionPc: 1.5,
+  switchEdgesPerPhase: 2
+} as const
+
 export const fieResistanceBoundaries = {
   epeeExceptionalExternalOhms: 100,
   foilClosedCircuitToleranceOhms: 200,
@@ -66,4 +91,72 @@ export function estimateExternalResistance(senseVoltage: number): number {
 export function adcCodeForResistance(externalResistanceOhms: number): number {
   const maximumCode = 2 ** analogFrontEnd.adcBits - 1
   return Math.round((expectedSenseVoltage(externalResistanceOhms) / analogFrontEnd.excitationVoltage) * maximumCode)
+}
+
+export function sourceTheveninResistanceOhms(externalResistanceOhms: number): number {
+  return (
+    (analogBudget.sourceResistanceMaximumOhms * externalResistanceOhms) /
+    (analogBudget.sourceResistanceMaximumOhms + externalResistanceOhms)
+  )
+}
+
+export function adcInputResistanceOhms(externalResistanceOhms: number): number {
+  return sourceTheveninResistanceOhms(externalResistanceOhms) + analogBudget.adcInputSeriesResistanceMaximumOhms
+}
+
+export function resistanceSensitivityOhmsPerVolt(externalResistanceOhms: number): number {
+  const senseVoltage =
+    (analogFrontEnd.excitationVoltage * externalResistanceOhms) /
+    (analogBudget.sourceResistanceMaximumOhms + externalResistanceOhms)
+  return (
+    (analogBudget.sourceResistanceMaximumOhms * analogFrontEnd.excitationVoltage) /
+    (analogFrontEnd.excitationVoltage - senseVoltage) ** 2
+  )
+}
+
+export function resistanceErrorForVoltageErrorOhms(externalResistanceOhms: number, voltageErrorVolts: number): number {
+  return resistanceSensitivityOhmsPerVolt(externalResistanceOhms) * voltageErrorVolts
+}
+
+export function fiveTauSourceSettlingUs(externalResistanceOhms: number, lineCapacitancePf: number): number {
+  return sourceTheveninResistanceOhms(externalResistanceOhms) * lineCapacitancePf * 1e-6 * 5
+}
+
+export function fiveTauAdcSettlingUs(externalResistanceOhms: number): number {
+  return (
+    adcInputResistanceOhms(externalResistanceOhms) * analogBudget.adcFilterCapacitanceWithClampsAndSamplePf * 1e-6 * 5
+  )
+}
+
+/**
+ * Conservative cascaded allocation. The connector-side source pole and the
+ * ADC-filter pole are not independent parallel delays, so both settle before
+ * sampling is permitted. This is a bound, not a fitted two-pole waveform.
+ */
+export function conservativeBlankingUs(externalResistanceOhms: number, lineCapacitancePf: number): number {
+  return (
+    fiveTauSourceSettlingUs(externalResistanceOhms, lineCapacitancePf) + fiveTauAdcSettlingUs(externalResistanceOhms)
+  )
+}
+
+export function acquisitionUs(
+  externalResistanceOhms: number,
+  lineCapacitancePf: number,
+  adc1RankCount: number
+): number {
+  return (
+    conservativeBlankingUs(externalResistanceOhms, lineCapacitancePf) +
+    analogBudget.adcMaximumTriggerLatencyUs +
+    analogBudget.adcOneRankConversionUs * adc1RankCount
+  )
+}
+
+export function fullDiagnosticAcquisitionUs(externalResistanceOhms: number, lineCapacitancePf: number): number {
+  return acquisitionUs(externalResistanceOhms, lineCapacitancePf, analogBudget.adc1DiagnosticRankCount)
+}
+
+export function switchChargeErrorOhms(externalResistanceOhms: number, lineCapacitancePf: number): number {
+  const capacitancePf = lineCapacitancePf + analogBudget.adcFilterCapacitanceWithClampsAndSamplePf
+  const voltageError = (analogBudget.switchChargeInjectionPc * analogBudget.switchEdgesPerPhase) / capacitancePf
+  return resistanceErrorForVoltageErrorOhms(externalResistanceOhms, voltageError)
 }
