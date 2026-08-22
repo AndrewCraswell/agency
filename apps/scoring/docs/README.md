@@ -24,6 +24,8 @@ The M2-05 canonical binary frame implementation and acceptance evidence are
 specified in [m2-05-transport-codec-evidence.md](m2-05-transport-codec-evidence.md).
 The bounded M2-13 seeded protocol, decision-record, and journal fuzz evidence
 is specified in [m2-13-seeded-fuzz-evidence.md](m2-13-seeded-fuzz-evidence.md).
+The M3-10 ESP32-S3 production identity, signed-update, rollback, and locked
+recovery decision is specified in [esp32-production-security-recovery-adr.md](esp32-production-security-recovery-adr.md).
 
 `fie-material-rules-2026-08-en.pdf` is the English FIE Material Rules, Book 3, dated August 2026.
 
