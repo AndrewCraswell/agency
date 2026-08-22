@@ -32,6 +32,7 @@
     "eval:embeddings:build-bakeoff": "tsx scripts/build-embedding-bakeoff.ts",
     "eval:embeddings:build-judgments": "tsx scripts/build-embedding-judgment-pool.ts",
     "eval:embeddings:build-topics": "tsx scripts/build-embedding-topic-canary.ts",
+    "eval:embeddings:rerank-bakeoff": "tsx scripts/rerank-embedding-bakeoff.ts",
     "eval:embeddings:seed": "tsx scripts/run-embedding-canary.ts",
     "container:prepare": "node scripts/prepare-container-context.mjs",
     "docker:build": "pnpm container:prepare && docker build -f ../../.container/legislation/Dockerfile -t legislation:local ../../.container/legislation",

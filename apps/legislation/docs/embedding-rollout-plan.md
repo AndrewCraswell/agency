@@ -25,10 +25,13 @@ returned relevant but unlabeled bills, so their earlier 57 percent score was a
 single-target evaluation artifact rather than a valid topical-relevance score.
 
 Richer bill vectors and passage-to-bill candidate projection were tested and
-removed because they did not improve this cohort. Query-time reranking also
-remains disabled because it reduced MRR and nDCG and increased latency. Full-
-corpus embedding remains paused until dedicated embedding tables exist and a
-larger broad-topic evaluation uses pooled, graded relevance judgments.
+removed because they did not improve this cohort. Query-time reranking remains
+disabled in the deployed MCP. Although it reduced quality in the first small
+canary, the expanded bakeoff showed material gains for bill and document
+ranking while it hurt amendments and Voyage-current supporting materials. It
+therefore advances only as a selective bill/document candidate pending pooled,
+graded judgments. Full-corpus embedding remains paused until dedicated
+embedding tables exist and the larger evaluation is complete.
 
 A second canary then tested ten broad topics using 148 exhaustive source-
 taxonomy judgments in fixed jurisdiction and session scopes. Pure semantic

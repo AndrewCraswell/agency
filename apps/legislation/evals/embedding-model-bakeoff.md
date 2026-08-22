@@ -67,6 +67,31 @@ $292 for OpenAI Small everywhere, $943 for Voyage 4 everywhere, or $433 for Open
 amendments with Voyage 4 on supporting materials. These are planning estimates, not invoices, and exclude database
 storage and index costs.
 
+## Expanded reranking test
+
+Cohere Rerank 3.5 reranked each finalist configuration's top 25 candidates using the same 40 frozen queries. It cannot
+recover a relevant record missing from the first-stage top 25; it only changes their order. The strongest current-input
+comparison was:
+
+| Product            | OpenAI baseline | OpenAI reranked | Voyage baseline | Voyage reranked |
+| ------------------ | --------------: | --------------: | --------------: | --------------: |
+| Bill nDCG@10       |           0.901 |           0.963 |           0.928 |           0.969 |
+| Bill Recall@10     |           0.519 |           0.543 |           0.526 |           0.550 |
+| Document nDCG@10   |           0.787 |           0.856 |           0.835 |           0.856 |
+| Amendment nDCG@10  |           0.943 |           0.913 |           0.926 |           0.913 |
+| Material nDCG@10   |           0.302 |           0.438 |           0.565 |           0.542 |
+| Material Recall@10 |           0.400 |           0.600 |           0.800 |           0.700 |
+
+Reranking is therefore not a universal pipeline stage. It advances as a bill and document-search candidate only.
+Amendments and Voyage-current supporting materials must not be reranked based on this evidence. OpenAI plus reranking
+matched Voyage plus reranking for documents, which makes OpenAI a credible lower-cost document-index candidate if the
+gain survives graded broad queries.
+
+The gateway reported one search unit and $0.001 for each 25-candidate rerank request. Forty queries cost $0.04 per
+configuration. Sequential observed latency averaged roughly 260 to 430 milliseconds per query. At that rate, reranking
+one million searches costs about $1,000, so selective activation and query-volume projections matter more than its small
+bakeoff cost.
+
 ## Decision
 
 Use Voyage 4 as the provisional canary model:
@@ -104,7 +129,8 @@ Before broad embedding:
    projection;
 4. run Voyage 4 through that deployed MCP boundary with an unembedded control;
 5. evaluate Voyage 4 Large only as a supporting-material challenger; and
-6. test reranking only after retrieval recall is stable, using the same frozen candidate sets and judgments.
+6. confirm selective bill/document reranking after retrieval recall is stable, using the same frozen candidate sets and
+   graded judgments.
 
 Machine-readable inputs and complete per-query rankings are in
 [`embedding-model-bakeoff.json`](embedding-model-bakeoff.json) and
