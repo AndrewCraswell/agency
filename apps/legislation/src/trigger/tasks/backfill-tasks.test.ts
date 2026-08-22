@@ -6,11 +6,21 @@ import {
   derivedDatabaseConnectionsFor,
   derivedPayloadSchema,
   derivedWorkerMaxBatchesFor,
+  embeddingIndexMaintenancePayload,
   isMaterialPhaseGateOpen,
   reconcileSupportingMaterialOcrCheckpoint
 } from "./backfill-tasks.js"
 
 describe("derived backfill task payload", () => {
+  it("narrows an embedding wave to the strict index-maintenance contract", () => {
+    expect(
+      embeddingIndexMaintenancePayload({
+        correlationId: "backfill:embedding-wave",
+        rebuildId: "embedding-wave"
+      })
+    ).toEqual({ correlationId: "backfill:embedding-wave", rebuildId: "embedding-wave" })
+  })
+
   it("keeps material children inside the renewable ingestion lease", () => {
     expect(derivedWorkerMaxBatchesFor("bill-documents")).toBe(1)
     expect(derivedWorkerMaxBatchesFor("supporting-materials")).toBe(1)

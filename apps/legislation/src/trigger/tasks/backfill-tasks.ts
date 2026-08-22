@@ -246,6 +246,12 @@ const embeddingShardPayloadSchema = embeddingSyncPayloadSchema
     }
   })
 
+export function embeddingIndexMaintenancePayload(
+  payload: Pick<z.output<typeof embeddingSyncPayloadSchema>, "correlationId" | "rebuildId">
+) {
+  return baseWorkerSchema.strict().parse({ correlationId: payload.correlationId, rebuildId: payload.rebuildId })
+}
+
 export function createDerivedLeaseHandoffResult(
   payload: Pick<z.output<typeof derivedPayloadSchema>, "kind" | "shardCount" | "shardIndex">,
   retryAt: Date
@@ -560,7 +566,7 @@ export const embeddingSync = task({
     }
     const result = await embeddingSyncShardController.batchTriggerAndWait(items)
     await embeddingIndexMaintenance
-      .triggerAndWait(payload, {
+      .triggerAndWait(embeddingIndexMaintenancePayload(payload), {
         idempotencyKey: await globalIdempotencyKey(
           payload.rebuildId,
           `embedding-index-maintenance:${payload.products.slice().sort().join("+")}`
