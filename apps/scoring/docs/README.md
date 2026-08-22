@@ -13,6 +13,8 @@ Immutable replay payloads and portable test vectors are specified in
 [decision-record-contract.md](decision-record-contract.md) and [golden-scenario-contract.md](golden-scenario-contract.md).
 Stored-record replay rendering is specified in
 [replay-renderer-contract.md](replay-renderer-contract.md).
+The bounded M2-12 scenario-runner CLI and stable JSON report are specified in
+[scenario-runner-contract.md](scenario-runner-contract.md).
 The released scalar timing selections, strict revision loading, and M1-08
 boundary-vector handoff are specified in
 [timing-table-contract.md](timing-table-contract.md).

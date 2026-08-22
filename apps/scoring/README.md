@@ -22,6 +22,20 @@ This increment records qualified epee touches. Rejected-touch and line-fault rec
 and RTC uncertainty belong to the next transport/persistence increment; they are target-model fields, not claims about
 the current emulator.
 
+## Golden scenario runner
+
+Run one M0-07 scenario or the corpus manifest after building the package:
+
+```text
+pnpm run:scenarios -- docs/golden-scenario-manifest.json
+pnpm run:scenarios -- docs/golden-scenarios/epee-contact-boundaries.json
+```
+
+The command writes one deterministic JSON report to standard output. Exit code `0` means every selected expectation
+passed, `1` means a scorer result differed from an expectation, and `2` means the input path or contract was invalid.
+The runner executes the selected host weapon scorer; it does not claim physical hardware evidence or replay stored
+decision records.
+
 ## Emulation layers
 
 1. Run Vitest for exhaustive timing, transport, duplication, and fault scenarios.

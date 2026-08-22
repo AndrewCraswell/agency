@@ -401,6 +401,10 @@ importers:
         version: 1.0.3
 
   apps/scoring:
+    dependencies:
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
     devDependencies:
       '@repo/oxlint-config':
         specifier: workspace:*

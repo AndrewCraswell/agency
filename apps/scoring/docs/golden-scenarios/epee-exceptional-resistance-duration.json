@@ -63,7 +63,7 @@
     "status": "accepted",
     "decisions": [
       { "id": "right-exceptional-hit", "decisionAtUs": 2000, "disposition": "qualified-hit", "side": "right", "weapon": "epee", "hitStartedAtUs": 0, "qualifiedAtUs": 2000, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["simultaneous-start", "exceptional-at-two-ms"] },
-      { "id": "left-normal-hit", "decisionAtUs": 10000, "disposition": "qualified-hit", "side": "left", "weapon": "epee", "hitStartedAtUs": 0, "qualifiedAtUs": 10000, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["simultaneous-start", "normal-at-ten-ms"] }
+      { "id": "left-normal-hit", "decisionAtUs": 2000, "disposition": "qualified-hit", "side": "left", "weapon": "epee", "hitStartedAtUs": 0, "qualifiedAtUs": 2000, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["simultaneous-start", "exceptional-at-two-ms"] }
     ],
     "nonEvents": [],
     "uncertainty": [],
