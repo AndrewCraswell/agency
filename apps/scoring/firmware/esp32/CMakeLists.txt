@@ -21,7 +21,10 @@ else()
   add_executable(scoring_esp32_services_host_test tests/scoring_esp32_services_host_test.c)
   target_link_libraries(scoring_esp32_services_host_test PRIVATE scoring_esp32_services)
 
-  foreach(target scoring_esp32_services scoring_esp32_services_host_test)
+  add_executable(scoring_esp32_load_isolation_host_test tests/scoring_esp32_load_isolation_host_test.c)
+  target_link_libraries(scoring_esp32_load_isolation_host_test PRIVATE scoring_esp32_services)
+
+  foreach(target scoring_esp32_services scoring_esp32_services_host_test scoring_esp32_load_isolation_host_test)
     if(MSVC)
       target_compile_options(${target} PRIVATE /W4 /WX /permissive-)
     else()
@@ -30,4 +33,5 @@ else()
   endforeach()
 
   add_test(NAME scoring_esp32_services_host_test COMMAND scoring_esp32_services_host_test)
+  add_test(NAME scoring_esp32_load_isolation_host_test COMMAND scoring_esp32_load_isolation_host_test)
 endif()
