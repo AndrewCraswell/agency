@@ -66,6 +66,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.7.0",
+    "@shopify/cli": "^4.6.1",
     "commander": "^15.0.0",
     "liquidjs": "^10.27.2",
     "picocolors": "^1.1.1",

@@ -753,6 +753,9 @@ importers:
       '@clack/prompts':
         specifier: ^1.7.0
         version: 1.7.0
+      '@shopify/cli':
+        specifier: ^4.6.1
+        version: 4.6.1
       commander:
         specifier: ^15.0.0
         version: 15.0.0
@@ -858,6 +861,68 @@ packages:
     resolution: {integrity: sha1-iX3GsMoiyfX7B+UKVqpDQX9uwgg=}
     peerDependencies:
       graphql: '*'
+
+  '@ast-grep/napi-darwin-arm64@0.43.0':
+    resolution: {integrity: sha1-UroJ0Kl+rSklBdbkDheuVYEQVdM=}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@ast-grep/napi-darwin-x64@0.43.0':
+    resolution: {integrity: sha1-BNvC0B3anHymyOBgh/QF/cpYfDM=}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@ast-grep/napi-linux-arm64-gnu@0.43.0':
+    resolution: {integrity: sha1-RCCYTwGLQ0GGZvuChUofYfLpsLU=}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@ast-grep/napi-linux-arm64-musl@0.43.0':
+    resolution: {integrity: sha1-W1sv0WcG99Zbkr+y0UJazDbimbE=}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@ast-grep/napi-linux-x64-gnu@0.43.0':
+    resolution: {integrity: sha1-1OWl634t69rPGytVG5CrA1dmSHQ=}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@ast-grep/napi-linux-x64-musl@0.43.0':
+    resolution: {integrity: sha1-+UltZOv9vFvpXGmg7+P4HHrPy24=}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@ast-grep/napi-win32-arm64-msvc@0.43.0':
+    resolution: {integrity: sha1-nijsmdA1Bls9q/ZPuEhsAJ1GC5E=}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@ast-grep/napi-win32-ia32-msvc@0.43.0':
+    resolution: {integrity: sha1-yKBpfEbygQYY4txw+HrseXvjI9c=}
+    engines: {node: '>= 10'}
+    cpu: [ia32]
+    os: [win32]
+
+  '@ast-grep/napi-win32-x64-msvc@0.43.0':
+    resolution: {integrity: sha1-3C3WbB1n/gx9dynkdRPrI2cKkAQ=}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@ast-grep/napi@0.43.0':
+    resolution: {integrity: sha1-3JQlEpeWNm/mMP5hyurM2w0xa9c=}
+    engines: {node: '>= 10'}
 
   '@axe-core/playwright@4.12.1':
     resolution: {integrity: sha1-ShTNQe7MH/Ae3Nw9sSouiKzTQYA=}
@@ -5212,6 +5277,12 @@ packages:
   '@shopify/app-bridge-types@0.7.2':
     resolution: {integrity: sha1-70BPrcHp+/vH8OnlPu+Le/cBtGA=}
 
+  '@shopify/cli@4.6.1':
+    resolution: {integrity: sha1-kHO/E4IX1Hqd4kGtZlCsSn2n+28=}
+    engines: {node: '>=22.12.0'}
+    os: [darwin, linux, win32]
+    hasBin: true
+
   '@shopify/graphql-client@1.4.2':
     resolution: {integrity: sha1-vXJCh3InwVInBLU5OsgaN6dyDeA=}
 
@@ -6501,6 +6572,9 @@ packages:
   boolbase@1.0.0:
     resolution: {integrity: sha1-aN/1++YMUes3cl6p4+0xDcwed24=}
 
+  boolean@3.2.0:
+    resolution: {integrity: sha1-nlKUr06YMUSUy7F5efpUyhWfEWs=}
+
   bpc-graph@0.0.57:
     resolution: {integrity: sha1-QKUQ2fJkAXjZflBoRy2GZ3PW06c=}
     peerDependencies:
@@ -7149,6 +7223,10 @@ packages:
     resolution: {integrity: sha1-27Ga37dG1/xtc0oGty9KANAhJV8=}
     engines: {node: '>=12'}
 
+  define-properties@1.2.1:
+    resolution: {integrity: sha1-EHgcxhbrlRqAoDS6/Kpzd/avK2w=}
+    engines: {node: '>= 0.4'}
+
   defu@6.1.7:
     resolution: {integrity: sha1-clQ1Z8jp+X/xPOQCttvgmsWuTSM=}
 
@@ -7189,6 +7267,9 @@ packages:
 
   detect-node-es@1.1.0:
     resolution: {integrity: sha1-FjrN9kMzDKoLTNfCHn7ndV1vpJM=}
+
+  detect-node@2.1.0:
+    resolution: {integrity: sha1-yccHdaScPQO8LAbZpzvlUPl4+LE=}
 
   diff@9.0.0:
     resolution: {integrity: sha1-KXwxzXwoDxPf4zV5HsIGO9SnOm8=}
@@ -7476,6 +7557,9 @@ packages:
   es-set-tostringtag@2.1.0:
     resolution: {integrity: sha1-8x274MGDsAptJutjJcgQwP0YvU0=}
     engines: {node: '>= 0.4'}
+
+  es6-error@4.1.1:
+    resolution: {integrity: sha1-njr0B0Wd7tR+mpH5uIWoTrBcVh0=}
 
   esbuild@0.18.20:
     resolution: {integrity: sha1-Rwn1o0gBtDt5mrfW2C9yhKm3p6Y=}
@@ -7813,6 +7897,14 @@ packages:
   glob@13.0.6:
     resolution: {integrity: sha1-B4ZmVmpCUUfMrPvS4zLetmor5x0=}
     engines: {node: 18 || 20 || >=22}
+
+  global-agent@3.0.0:
+    resolution: {integrity: sha1-rnzTG9NYO5PFoWQ3oa/ifMM6GrY=}
+    engines: {node: '>=10.0'}
+
+  globalthis@1.0.4:
+    resolution: {integrity: sha1-dDDtOpddl7+1m8zkH1yruvplEjY=}
+    engines: {node: '>= 0.4'}
 
   globby@11.1.0:
     resolution: {integrity: sha1-vUvpi7BC+D15b344EZkfvoKg00s=}
@@ -8298,6 +8390,9 @@ packages:
     resolution: {integrity: sha1-iQPPrELqGg+X811jpM4FGPDManA=}
     engines: {node: '>= 0.4'}
 
+  json-stringify-safe@5.0.1:
+    resolution: {integrity: sha1-Epai1Y/UXxmg9s4B1lcB4sc1tus=}
+
   json-to-pretty-yaml@1.2.2:
     resolution: {integrity: sha1-9M0L0KXo/h3yWq9boRiwmf2ZLVs=}
     engines: {node: '>= 0.2.0'}
@@ -8619,6 +8714,10 @@ packages:
     resolution: {integrity: sha1-MHIsc0bhLQotAgermwxPAQLYbE4=}
     engines: {node: '>= 18'}
     hasBin: true
+
+  matcher@3.0.0:
+    resolution: {integrity: sha1-vZBg9MW3CqgEHMxvgDaHYJlPMMo=}
+    engines: {node: '>=10'}
 
   math-intrinsics@1.1.0:
     resolution: {integrity: sha1-oN10voHiqlwvJ+Zc4oNgXuTit/k=}
@@ -9662,6 +9761,10 @@ packages:
   rfdc@1.4.1:
     resolution: {integrity: sha1-d492xPtzHZNBTo+SX77PZMzn9so=}
 
+  roarr@2.15.4:
+    resolution: {integrity: sha1-9f55W3uDjM/jXcYI4Cgrnrouev0=}
+    engines: {node: '>=8.0'}
+
   rolldown@1.1.5:
     resolution: {integrity: sha1-M5quJQhENR/FW3TiZS0+vW+6OJ0=}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -9871,6 +9974,9 @@ packages:
   selderee@0.11.0:
     resolution: {integrity: sha1-avDHmD4HOtPjV4f/4gzv2drw7Io=}
 
+  semver-compare@1.0.0:
+    resolution: {integrity: sha1-De4hahyUGrN+nvsXiPavxf9VN/w=}
+
   semver@6.3.1:
     resolution: {integrity: sha1-VW0u+GiRRuRtzqS/3QlfNDTf/LQ=}
     hasBin: true
@@ -9890,6 +9996,10 @@ packages:
 
   sentence-case@3.0.4:
     resolution: {integrity: sha1-NkWnuMEXx4f96HAgViJbtipFEx8=}
+
+  serialize-error@7.0.1:
+    resolution: {integrity: sha1-8TYLBEf2H/tIPsQVfHN/q313jhg=}
+    engines: {node: '>=10'}
 
   seroval-plugins@1.5.6:
     resolution: {integrity: sha1-e8pJWs61skKLnLRLSwnmfC3hyUg=}
@@ -10056,6 +10166,9 @@ packages:
 
   sponge-case@1.0.1:
     resolution: {integrity: sha1-JggzuGRTiD2XT4SFTNtjrsxa70w=}
+
+  sprintf-js@1.1.3:
+    resolution: {integrity: sha1-SRS5A6L4toXRf994pw6RfocuREo=}
 
   stack-svgs@0.0.1:
     resolution: {integrity: sha1-iGK9PXWn8Y8XcT76YtyhdtAeDZo=}
@@ -10423,6 +10536,10 @@ packages:
   turbo@2.10.7:
     resolution: {integrity: sha1-TF3s4fR5mEHjpuN/IeHYN5EESMA=}
     hasBin: true
+
+  type-fest@0.13.1:
+    resolution: {integrity: sha1-AXLLW86AsL1ULqNI21DH4hg02TQ=}
+    engines: {node: '>=10'}
 
   type-fest@4.41.0:
     resolution: {integrity: sha1-auHI5XMSc8K/H1itOcuuLJGkbFg=}
@@ -10938,6 +11055,45 @@ snapshots:
       graphql: 16.14.2
       immutable: 5.1.9
       invariant: 2.2.4
+
+  '@ast-grep/napi-darwin-arm64@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-darwin-x64@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-linux-arm64-gnu@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-linux-arm64-musl@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-linux-x64-gnu@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-linux-x64-musl@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-win32-arm64-msvc@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-win32-ia32-msvc@0.43.0':
+    optional: true
+
+  '@ast-grep/napi-win32-x64-msvc@0.43.0':
+    optional: true
+
+  '@ast-grep/napi@0.43.0':
+    optionalDependencies:
+      '@ast-grep/napi-darwin-arm64': 0.43.0
+      '@ast-grep/napi-darwin-x64': 0.43.0
+      '@ast-grep/napi-linux-arm64-gnu': 0.43.0
+      '@ast-grep/napi-linux-arm64-musl': 0.43.0
+      '@ast-grep/napi-linux-x64-gnu': 0.43.0
+      '@ast-grep/napi-linux-x64-musl': 0.43.0
+      '@ast-grep/napi-win32-arm64-msvc': 0.43.0
+      '@ast-grep/napi-win32-ia32-msvc': 0.43.0
+      '@ast-grep/napi-win32-x64-msvc': 0.43.0
 
   '@axe-core/playwright@4.12.1(playwright-core@1.62.0)':
     dependencies:
@@ -15478,6 +15634,12 @@ snapshots:
     dependencies:
       '@standard-schema/spec': 1.1.0
 
+  '@shopify/cli@4.6.1':
+    dependencies:
+      '@ast-grep/napi': 0.43.0
+      esbuild: 0.28.1
+      global-agent: 3.0.0
+
   '@shopify/graphql-client@1.4.2': {}
 
   '@shopify/graphql-codegen@0.1.0(graphql@16.14.2)':
@@ -16909,6 +17071,8 @@ snapshots:
 
   boolbase@1.0.0: {}
 
+  boolean@3.2.0: {}
+
   bpc-graph@0.0.57(@tscircuit/schematic-corpus@0.0.114(typescript@7.0.1-rc))(typescript@7.0.1-rc):
     dependencies:
       '@tscircuit/schematic-corpus': 0.0.114(typescript@7.0.1-rc)
@@ -17575,6 +17739,12 @@ snapshots:
 
   define-lazy-prop@3.0.0: {}
 
+  define-properties@1.2.1:
+    dependencies:
+      define-data-property: 1.1.4
+      has-property-descriptors: 1.0.2
+      object-keys: 1.1.1
+
   defu@6.1.7: {}
 
   delayed-stream@1.0.0: {}
@@ -17596,6 +17766,8 @@ snapshots:
   detect-libc@2.1.2: {}
 
   detect-node-es@1.1.0: {}
+
+  detect-node@2.1.0: {}
 
   diff@9.0.0: {}
 
@@ -17816,6 +17988,8 @@ snapshots:
       get-intrinsic: 1.3.0
       has-tostringtag: 1.0.2
       hasown: 2.0.4
+
+  es6-error@4.1.1: {}
 
   esbuild@0.18.20:
     optionalDependencies:
@@ -18315,6 +18489,20 @@ snapshots:
       minipass: 7.1.3
       path-scurry: 2.0.2
 
+  global-agent@3.0.0:
+    dependencies:
+      boolean: 3.2.0
+      es6-error: 4.1.1
+      matcher: 3.0.0
+      roarr: 2.15.4
+      semver: 7.8.5
+      serialize-error: 7.0.1
+
+  globalthis@1.0.4:
+    dependencies:
+      define-properties: 1.2.1
+      gopd: 1.2.0
+
   globby@11.1.0:
     dependencies:
       array-union: 2.1.0
@@ -18773,6 +18961,8 @@ snapshots:
       jsonify: 0.0.1
       object-keys: 1.1.1
 
+  json-stringify-safe@5.0.1: {}
+
   json-to-pretty-yaml@1.2.2:
     dependencies:
       remedial: 1.0.8
@@ -19081,6 +19271,10 @@ snapshots:
   map-cache@0.2.2: {}
 
   marked@15.0.12: {}
+
+  matcher@3.0.0:
+    dependencies:
+      escape-string-regexp: 4.0.0
 
   math-intrinsics@1.1.0: {}
 
@@ -20199,6 +20393,15 @@ snapshots:
 
   rfdc@1.4.1: {}
 
+  roarr@2.15.4:
+    dependencies:
+      boolean: 3.2.0
+      detect-node: 2.1.0
+      globalthis: 1.0.4
+      json-stringify-safe: 5.0.1
+      semver-compare: 1.0.0
+      sprintf-js: 1.1.3
+
   rolldown@1.1.5:
     dependencies:
       '@oxc-project/types': 0.139.0
@@ -20428,6 +20631,8 @@ snapshots:
     dependencies:
       parseley: 0.12.1
 
+  semver-compare@1.0.0: {}
+
   semver@6.3.1: {}
 
   semver@7.8.5: {}
@@ -20471,6 +20676,10 @@ snapshots:
       no-case: 3.0.4
       tslib: 2.8.1
       upper-case-first: 2.0.2
+
+  serialize-error@7.0.1:
+    dependencies:
+      type-fest: 0.13.1
 
   seroval-plugins@1.5.6(seroval@1.5.6):
     dependencies:
@@ -20720,6 +20929,8 @@ snapshots:
   sponge-case@1.0.1:
     dependencies:
       tslib: 2.8.1
+
+  sprintf-js@1.1.3: {}
 
   stack-svgs@0.0.1(typescript@7.0.1-rc):
     dependencies:
@@ -21251,6 +21462,8 @@ snapshots:
       '@turbo/linux-arm64': 2.10.7
       '@turbo/windows-64': 2.10.7
       '@turbo/windows-arm64': 2.10.7
+
+  type-fest@0.13.1: {}
 
   type-fest@4.41.0: {}
 
