@@ -66,10 +66,24 @@ switch and protection resistance using per-channel calibration rather than assum
 ## Executable model
 
 `spice/line-sense.cir` models the reference, source resistor, switch resistance, connector protection resistance, cable
-capacitance, ADC isolation resistor, C0G filter, and a timed external contact. `pnpm analog:simulate` runs four bounded
-ngspice cases, including a 50 us pulse and a 500 ohm contact with 10 nF of line capacitance. Sabre-relevant 100 ohm
-paths get a 10 us response budget; the 500 ohm foil path gets 50 us. Applying the sabre budget to the foil-only
-resistance range would add bandwidth without improving conformance.
+capacitance, ADC isolation resistor, C0G filter, and a timed external contact. `pnpm analog:simulate` now runs a bounded
+audit matrix rather than a few representative examples:
+
+| Case family | Coverage | Acceptance purpose |
+| --- | --- | --- |
+| Resistance boundary | 0, 10, 95/100/105, 195/200/205, 245/250/255, 445/450/455, 470/475/480, and 495/500 ohms | Exercise the rule boundaries and their +/- 5 ohm fixture points |
+| Line capacitance | 0.5, 2, 5, and 10 nF at 100 and 500 ohms | Bound fast sabre/epee paths and the high-resistance foil path |
+| Pulse width | 50 us, 100 us, 1 ms, 2 ms, 10 ms, and 14 ms | Prove that the analog node settles for sub-rule stress pulses and all relevant rule-scale pulses |
+| Slow resistance corner proxy | High source, switch, protection, ADC resistance, and ADC capacitance at 100, 250, 450, 475, and 500 ohms | Detect loss of response margin before vendor temperature models are available |
+
+Sabre-relevant paths at or below 100 ohms get a 10 us response budget; higher-resistance foil diagnostic paths get a
+50 us budget. Every case also compares the settled voltage with the resistor-network calculation within 2 mV. Applying
+the sabre budget to the foil-only resistance range would add bandwidth without improving conformance.
+
+The slow corner is explicitly a resistance proxy, not a temperature simulation. It cannot close M4-01 by itself:
+vendor switch, clamp, and protection models across voltage and temperature, ADC sampling kickback, extracted PCB
+parasitics, and cable coupling remain required. The generated `dist/analog-sim/summary.json` records the exact cases,
+coverage, limitations, response time, voltage error, and pass/fail result for review.
 
 This is a topology and timing model. It does not prove ESD survival, ADC accuracy, switch charge injection, cable
 coupling, or all three-weapon classification sequences. Vendor transistor and diode models plus extracted PCB
