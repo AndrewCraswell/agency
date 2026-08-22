@@ -43,6 +43,30 @@ bills. Capacity-adjusted bill Recall@10 is reported separately.
 The cost column is the observed provider cost for this 3,989-record evaluation, including queries. It is not a
 full-corpus estimate.
 
+## Expanded candidate stress test
+
+The two finalists were rerun against 23,127 candidates: 4,127 bills, 10,000 bill-document sections, 3,000 amendments,
+and 6,000 supporting-material sections. This test retained the original 40 frozen queries and increased the number of
+plausible distractors. Inputs were capped identically at 16,000 characters after the larger pool exposed that the former
+24,000-character guard could exceed OpenAI's 8,192-token request limit.
+
+| Model          | Input      |   Cost | Bill adjusted R@10 | Bill nDCG@10 | Document nDCG@10 | Amendment nDCG@10 | Material R@10 | Material nDCG@10 |
+| -------------- | ---------- | -----: | -----------------: | -----------: | ---------------: | ----------------: | ------------: | ---------------: |
+| OpenAI 3 Small | current    | $0.236 |              0.910 |        0.901 |            0.787 |             0.943 |         0.400 |            0.302 |
+| OpenAI 3 Small | contextual | $0.255 |              0.880 |        0.882 |            0.609 |             0.849 |         0.400 |            0.299 |
+| Voyage 4       | current    | $0.772 |              0.920 |        0.928 |            0.835 |             0.926 |         0.800 |            0.565 |
+| Voyage 4       | contextual | $0.833 |              0.870 |        0.891 |            0.792 |             0.950 |         0.700 |            0.562 |
+
+The larger pool confirms that supporting materials are Voyage 4's only dramatic improvement. Voyage also improved bill
+and document ranking modestly, while amendments remained effectively tied after choosing each model's stronger input.
+The next decision therefore focuses on whether the document-ranking improvement survives broad, graded judgments; bill
+and amendment model choice has little effect on projected provider cost compared with the document and material corpora.
+
+At the sampled per-product text lengths and the current corpus counts, estimated one-time provider charges are about
+$292 for OpenAI Small everywhere, $943 for Voyage 4 everywhere, or $433 for OpenAI Small on bills, documents, and
+amendments with Voyage 4 on supporting materials. These are planning estimates, not invoices, and exclude database
+storage and index costs.
+
 ## Decision
 
 Use Voyage 4 as the provisional canary model:
@@ -74,7 +98,7 @@ relevant passages for broad questions. The bill topics are exhaustive only insid
 
 Before broad embedding:
 
-1. add human-graded broad and confusable-negative queries for every product;
+1. grade the pooled top results from both finalists, including broad and confusable-negative queries for every product;
 2. split results by native/OCR, sparse/rich, jurisdiction, session age, and document length;
 3. implement semantic/hybrid amendment and supporting-material MCP tools plus document-content retrieval and source
    projection;

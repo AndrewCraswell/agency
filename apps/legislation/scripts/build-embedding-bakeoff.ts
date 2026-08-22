@@ -246,11 +246,23 @@ function argument(name: string, fallback: string): string {
   return index === -1 ? fallback : (process.argv[index + 1] ?? fallback)
 }
 
+function positiveIntegerArgument(name: string, fallback: number): number {
+  const value = Number.parseInt(argument(name, String(fallback)), 10)
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new Error(`${name} must be a positive integer`)
+  }
+  return value
+}
+
 function addRecord(records: Map<string, CandidateRecord>, record: CandidateRecord): void {
   records.set(record.id, record)
 }
 
 const outputPath = argument("--output", "evals/embedding-model-bakeoff.json")
+const billLimit = positiveIntegerArgument("--bills-per-topic", 100)
+const documentLimit = positiveIntegerArgument("--documents-per-jurisdiction", 200)
+const amendmentLimit = positiveIntegerArgument("--amendments", 500)
+const materialLimit = positiveIntegerArgument("--materials", 500)
 const config = loadConfig()
 const { pool } = createDatabase({ ...config.database, maxConnections: 1 })
 const records = new Map<string, CandidateRecord>()
@@ -264,8 +276,8 @@ try {
        from legislation.bills b
        where b.jurisdiction_id = $1 and b.session_id = $2
        order by b.id
-       limit 100`,
-      [topic.jurisdictionId, topic.sessionId]
+       limit $3`,
+      [topic.jurisdictionId, topic.sessionId, billLimit]
     )
     const relevantResult = await pool.query<Omit<BillRow, "documentSynopsis">>(
       `select b.id, b.identifier, b.jurisdiction_id as "jurisdictionId", b.session_id as "sessionId",
@@ -273,8 +285,8 @@ try {
        from legislation.bills b
        where b.jurisdiction_id = $1 and b.session_id = $2 and b.subjects && $3::text[]
        order by b.id
-       limit 100`,
-      [topic.jurisdictionId, topic.sessionId, topic.primarySubjects]
+       limit $4`,
+      [topic.jurisdictionId, topic.sessionId, topic.primarySubjects, billLimit]
     )
     const relevant = relevantResult.rows
     const selected = new Map(result.rows.map((bill) => [bill.id, bill]))
@@ -329,8 +341,8 @@ try {
        join legislation.document_sections s on s.document_id = d.id
        where b.jurisdiction_id = $1
        order by b.id, d.id, s.ordinal
-       limit 200`,
-      [`jurisdiction:${jurisdiction}`]
+       limit $2`,
+      [`jurisdiction:${jurisdiction}`, documentLimit]
     )
     for (const row of result.rows) {
       let lengthStratum = "median"
@@ -393,7 +405,8 @@ try {
      from legislation.amendments a
      left join legislation.bills b on b.id = a.bill_id
      order by a.id
-     limit 500`
+     limit $1`,
+    [amendmentLimit]
   )
   for (const row of amendments.rows) {
     const prose = [row.purpose, row.description].filter(Boolean).join("\n")
@@ -422,7 +435,8 @@ try {
      from legislation.supporting_material_sections s
      join legislation.supporting_materials m on m.id = s.material_id
      order by s.id
-     limit 500`
+     limit $1`,
+    [materialLimit]
   )
   for (const row of materials.rows) {
     addRecord(records, {
@@ -455,11 +469,12 @@ try {
   }
 
   const manifest = {
+    build: { amendmentLimit, billLimit, documentLimit, materialLimit },
     builtAt: new Date().toISOString(),
     queries,
     records: [...records.values()],
-    seed: "legislation-embedding-model-bakeoff-2026-08-22",
-    version: 1
+    seed: `legislation-embedding-model-bakeoff-2026-08-22:${billLimit}:${documentLimit}:${amendmentLimit}:${materialLimit}`,
+    version: 2
   }
   await writeFile(outputPath, `${JSON.stringify(manifest)}\n`, "utf8")
   const counts = Object.groupBy(manifest.records, (record) => record.kind)

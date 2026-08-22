@@ -30,6 +30,7 @@
     "eval:embeddings": "tsx scripts/evaluate-embedding-canary.ts",
     "eval:embeddings:bakeoff": "tsx scripts/run-embedding-bakeoff.ts",
     "eval:embeddings:build-bakeoff": "tsx scripts/build-embedding-bakeoff.ts",
+    "eval:embeddings:build-judgments": "tsx scripts/build-embedding-judgment-pool.ts",
     "eval:embeddings:build-topics": "tsx scripts/build-embedding-topic-canary.ts",
     "eval:embeddings:seed": "tsx scripts/run-embedding-canary.ts",
     "container:prepare": "node scripts/prepare-container-context.mjs",

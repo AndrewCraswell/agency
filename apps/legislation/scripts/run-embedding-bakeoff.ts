@@ -68,6 +68,8 @@ const responseSchema = z.object({
     .optional()
 })
 
+const MAXIMUM_BAKEOFF_INPUT_CHARACTERS = 16_000
+
 function argument(name: string, fallback: string): string {
   const index = process.argv.indexOf(name)
   return index === -1 ? fallback : (process.argv[index + 1] ?? fallback)
@@ -135,6 +137,12 @@ function mean(values: number[]): number {
 
 const manifestPath = argument("--manifest", "evals/embedding-model-bakeoff.json")
 const outputPath = argument("--output", "evals/embedding-model-bakeoff-results.json")
+const requestedModels = new Set(
+  argument("--models", "")
+    .split(",")
+    .map((model) => model.trim())
+    .filter(Boolean)
+)
 const apiKey = process.env.OPENROUTER_API_KEY
 if (!apiKey) {
   throw new Error("OPENROUTER_API_KEY is required")
@@ -145,8 +153,13 @@ const prior = await readFile(outputPath, "utf8")
   .then((value) => JSON.parse(value) as { results?: BakeoffResult[] })
   .catch(() => ({ results: [] as BakeoffResult[] }))
 const results = prior.results ?? []
+const selectedConfigurations =
+  requestedModels.size === 0 ? configurations : configurations.filter(({ model }) => requestedModels.has(model))
+if (selectedConfigurations.length === 0) {
+  throw new Error(`No embedding configurations matched --models=${[...requestedModels].join(",")}`)
+}
 
-for (const configuration of configurations) {
+for (const configuration of selectedConfigurations) {
   if (
     results.some(
       (result) =>
@@ -185,7 +198,7 @@ for (const configuration of configurations) {
           apiKey,
           baseUrl,
           configuration,
-          batch.map((record) => record[configuration.input].slice(0, 24_000)),
+          batch.map((record) => record[configuration.input].slice(0, MAXIMUM_BAKEOFF_INPUT_CHARACTERS)),
           "document"
         )
       }))
