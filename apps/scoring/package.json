@@ -15,6 +15,10 @@
       "types": "./dist/device.d.ts",
       "default": "./dist/device.js"
     },
+    "./bout-state": {
+      "types": "./dist/bout-state.d.ts",
+      "default": "./dist/bout-state.js"
+    },
     "./epee-resistance": {
       "types": "./dist/epee-resistance.d.ts",
       "default": "./dist/epee-resistance.js"
