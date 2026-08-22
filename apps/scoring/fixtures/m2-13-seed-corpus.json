@@ -1,0 +1,17 @@
+{
+  "format": "m2-13-seeded-fuzz-v1",
+  "seeds": [
+    "0x53435031",
+    "0x4a4f5552",
+    "0x44454352",
+    "0x4c494e4b",
+    "0x45535033",
+    "0x46555a5a",
+    "0x52454344",
+    "0x4d325f31"
+  ],
+  "iterationsPerSeed": 32,
+  "maxPayloadBytes": 4096,
+  "maxJournalRecords": 2,
+  "reportDigest": "sha256:41e516c3dabd3d32ab2d14e5900cb057fc967eb0d48b10a6d2ec2e149159a2a5"
+}

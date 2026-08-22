@@ -22,6 +22,8 @@ The bounded, replayable M1-09 property corpus and safety properties are
 specified in [scoring-property-test-contract.md](scoring-property-test-contract.md).
 The M2-05 canonical binary frame implementation and acceptance evidence are
 specified in [m2-05-transport-codec-evidence.md](m2-05-transport-codec-evidence.md).
+The bounded M2-13 seeded protocol, decision-record, and journal fuzz evidence
+is specified in [m2-13-seeded-fuzz-evidence.md](m2-13-seeded-fuzz-evidence.md).
 
 `fie-material-rules-2026-08-en.pdf` is the English FIE Material Rules, Book 3, dated August 2026.
 
