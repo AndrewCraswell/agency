@@ -1,7 +1,9 @@
 # Epee state-machine audit
 
-**Task:** M1-01  
-**Status:** audited baseline; no released endpoint policy  
+**Task:** M1-01
+
+**Status:** audited baseline; no released endpoint policy
+
 **Scope:** [`epee.ts`](../src/epee.ts) and its direct unit tests. This is not an
 analogue qualification, a seven-conductor implementation, or M1-02
 exceptional-resistance work.
