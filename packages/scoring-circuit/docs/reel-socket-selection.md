@@ -7,13 +7,13 @@ panel assembly has been received or tested for this project.
 ## Decision status
 
 `Stäubli XUB-G 66.9684-*` remains the candidate family for the six body-cord
-panel sockets: left A/B/C and right A/B/C. It is not a selected or
-production-approved part. The current machine-readable readiness manifest
-correctly continues to identify it as a generic candidate with pending CAD and
-the blockers for color selection, harness keying, plug fit, salt/sweat
-exposure, and endurance.
+panel sockets: left A/B/C and right A/B/C. This study now fixes the exact
+**bench-sample candidates**, while deliberately not selecting a
+production-approved part or advancing the machine-readable readiness manifest.
+That manifest correctly remains a generic candidate with pending CAD and open
+harness-keying, plug-fit, salt/sweat, and endurance evidence.
 
-The final ordered suffixes **cannot close in M4-10**. The open work is
+The final production selection **cannot close in M4-10**. The open work is
 material, not procurement paperwork:
 
 1. M0-03 has not defined the electrical meaning or physical ordering of A, B,
@@ -32,22 +32,32 @@ material, not procurement paperwork:
    designed and tested cord retainer or shroud before the sockets can claim to
    meet that requirement as an assembly.
 
-### Conditional procurement proposal, not a released BOM
+### Exact bench-order candidates, not a released BOM
 
-If the product owner adopts red for the left fencer and green for the right
-fencer, the color-only procurement proposal is three `66.9684-22` red sockets
-for left A/B/C and three `66.9684-25` green sockets for right A/B/C. The panel
-silkscreen and the eventual locating template, rather than socket color, must
-identify A, B, and C. FIE prescribes red/green hit indication, not a
-left/right assignment or socket color, so this is a project convention only.
+The M4-10 sample order is intentionally simple: red identifies the left
+fencer's three-socket cluster and green the right fencer's cluster. It does
+not encode A/B/C. The physical positions remain `P15`, `P0`, and `P20` until
+M0-03 and M4-13 freeze their electrical map and harness pinout.
 
-Do not order this as production material and do not update the readiness
-manifest from this proposal. It becomes the exact selection only after M0-03
-freezes the A/B/C map and the plug-fit, retention, and environmental tests
-below pass on the intended body-cord plugs. If the product convention instead
-uses one color per circuit, the current Stäubli palette is sufficient, but the
-mapping must be a reviewed M0-03/M4-13 decision rather than an inferred
-fencing standard.
+| Fencer | Positions | Exact manufacturer part number | Colour | Quantity fitted per apparatus |
+| --- | --- | --- | --- | ---: |
+| Left | P15, P0, P20 | Stäubli XUB-G `66.9684-22` | Red | 3 |
+| Right | P15, P0, P20 | Stäubli XUB-G `66.9684-25` | Green | 3 |
+
+For the study, buy 12 of each MPN, split across two received lot/date codes
+where that is available: nine per colour build three paired panel assemblies;
+the remaining three per colour are one mated-corrosion coupon, one
+unmated/capped-corrosion coupon, and one destructive-inspection coupon. A
+single available lot is a recorded limitation and cannot close the supply
+consistency gate.
+
+Red/left and green/right are product conventions only. FIE prescribes neither
+this side assignment nor socket colours. Do not order production material or
+update the readiness manifest from this table. Production remains denied until
+M0-03 freezes the A/B/C map and every physical gate below passes on the
+intended body-cord plugs. If the product convention later changes to a colour
+per circuit, that is a reviewed M0-03/M4-13 decision, not an inferred fencing
+standard.
 
 ## Manufacturer evidence
 
@@ -60,6 +70,7 @@ The following information is from Stäubli primary documentation, checked on
 | Construction | Machined brass; electrical contact base material CuZn and nickel surface treatment. Stäubli does not state the insulating-body polymer or a nickel thickness in the cited family data, so neither is a controlled material or corrosion claim. |
 | Electrical rating | The family datasheet states 1000 V CAT II and 20 A. The current main catalogue qualifies that as 600 V CAT II/20 A when surface-mounted and 1000 V CAT II/20 A when flush-mounted or pressed in. These ratings do not establish fencing signal accuracy, low-level contact resistance, or sweat durability. |
 | Rear termination | M4 threaded bolt. Use a ring terminal and locking hardware on a replaceable harness. Do not solder a panel socket or let a PCB pad carry body-cord insertion load. |
+| Assembly torque | XUB-G assembly instruction MAH507 states a tightening torque no greater than 40 N cm. Treat that as a socket-assembly limit, record the actual value, and do not use it as the torque for an unselected ring-terminal hardware stack. M4-13 must set that stack's fastener specification. |
 | Mounting | Surface mounting, flush assembly, or press-in installation in a pre-drilled plastic or metal panel; Stäubli lists press-in tool MB4-S. The drawing calls out a 4 mm plug system, M4 rear stud, 40 mm overall axial envelope, 1.5-12 mm panel-thickness range, and mounting bores of 8 mm, 12 mm, and 11.5 mm for its shown variants. The final drawing must be imported and dimension-checked for the chosen mounting mode before enclosure release; this document does not turn the catalogue illustration into a production hole callout. |
 | Unused-socket protection | Optional SD-XUB cap is described as closing an unplugged, unconnected socket to IP67. This does not rate the assembled apparatus, a mated body-cord connection, or a sweat-exposed live socket as IP67. |
 | Color suffixes | Standard: `-20` green-yellow, `-21` black, `-22` red, `-23` blue, `-24` yellow, `-25` green, `-27` brown, and `-29` white. Optional: `-26` violet and `-28` grey. Ask Stäubli for lead time and regional availability before purchase; optional status is not stock confirmation. |
@@ -72,6 +83,31 @@ Primary sources:
 - [Stäubli color-code assembly instruction](https://www.staubli.com/content/dam/ecs/technical-documentation/assembly-instructions/TM/TM_MA153-de.pdf)
 - [Stäubli XUB-G assembly instruction MAH507](https://www.staubli.com/content/dam/ecs/technical-documentation/assembly-instructions/TM/TM_MAH507-de.pdf)
 - [Stäubli CAD catalogue](https://standstep.ec.staubli.com/catalog/show/caddata/%7CTM%7CTMline%7C)
+
+### Supply, lifecycle, and counterfeit controls
+
+The manufacturer is still publishing XUB-G and its assembly instruction; that
+is evidence of an orderable current family, not a formal longevity commitment.
+Stäubli's test-and-measurement distributor page names regional distributors.
+At the 2026-08-22 check, Bürklin listed the exact red `66.9684-22` and green
+`66.9684-25` variants, including the 12 mm installation diameter, M4 screw
+termination, nickel-plated contact, 20 A rating, and an availability snapshot.
+That snapshot is not an allocation, lead-time commitment, or lifetime buy
+recommendation.
+
+For sample and any later production purchase, use Stäubli direct or a seller
+confirmed by Stäubli as authorised for the purchase region. Retain the order
+confirmation, distributor name, MPN, received lot/date code, country of
+origin, packaging, and photographs of markings. Reject broker, marketplace,
+or mixed-lot material without traceability. At EVT and before a production
+release, obtain written availability/PCN/EOL contact information for both exact
+suffixes and re-check a second authorised channel. This is a counterfeit and
+supply-continuity control; it is not evidence that a second source is
+intermateable or approved.
+
+- [Stäubli test-and-measurement distributor list](https://www.staubli.com/de/de/electrical-connectors/produkte/t-m-products/t-m-distributors.html)
+- [Bürklin `66.9684-22` listing](https://www.buerklin.com/de/p/staeubli-electrical-connectors/laborsteckverbinder/66-9684-22/86F9165/)
+- [Bürklin `66.9684-25` listing](https://www.buerklin.com/en/p/staeubli-electrical-connectors/laboratory-connectors/66-9684-25/86F9168/)
 
 ## Fencing-interface constraints and evidence limits
 
@@ -90,6 +126,11 @@ is prior art only. Its printed page 17 describes a seven rear-socket
 short-circuit test. It is useful as a fixture idea, but provides no XUB-G
 part number, plug drawing, contact-plating evidence, retention target, or
 compatibility evidence. Do not infer any of those facts from the FA-15.
+
+The repository's Skewered reference is limited to an explicit product boundary:
+our replay UI must not copy it. It contains no local Skewered connector drawing,
+part number, plug-fit observation, or corrosion evidence. It is therefore not
+a source for this selection and no Favero or Skewered compatibility is claimed.
 
 ## Panel and harness proposal
 
@@ -126,6 +167,22 @@ when available, plus two sacrificial socket-and-harness coupons for destructive
 inspection. Record socket suffix, lot/date code, plug manufacturer and model,
 panel material, mounting method, M4 torque, harness parts, test operator,
 instrument serial/calibration, ambient temperature/humidity, and photographs.
+
+### Sample and gate matrix
+
+| Gate | Samples and conditions | Required record | Pass outcome | Deny outcome |
+| --- | --- | --- | --- | --- |
+| Drawing and incoming | All 24 received sockets; official STEP/drawing; markings, colour, M4 stud, and received lots | Drawing revision/checksum, source, lot/date, photos, dimensions | Chosen mounting variant independently matches sample and drawing | Any marking, geometry, or traceability discrepancy; no enclosure tooling |
+| Whole-plug fit | Three paired panels (P15/P0/P20); each intended foil, epee, and sabre body-cord make/model, three plugs per population where obtainable | Pin and sleeve dimensions, insertion depth, orientation, 20 manual mates/socket, photos | Every three-pin plug seats together without force, exposed contact, rotation, or a possible reversed/single-pin connection | One intended plug does not safely mate as a three-pin assembly; do not claim fit |
+| Baseline and flex | Every fitted path, ten mates per position, plus 60-second maximum-angle flex | Calibrated four-wire 1 A readings and continuity trace | Each reading at or below 50 milliohms and no path drifts more than 20 milliohms from its pre-stress median | Open, intermittent, or resistance failure |
+| Retention | Each of the three paired panels with the candidate chassis retainer; 100 axial/lateral load cycles | Breakaway force, applied force, 1 kHz continuity trace, deformation photos | No separation, partial withdrawal, or electrical failure at lower of 40 N and 80% of measured retainer breakaway | Any separation, partial withdrawal, or unreviewed reduction of target |
+| Sweat and salt screen | One mated and one unmated/capped coupon of each colour | Method, solution, exposure, recovery, before/after resistance and photos | Existing resistance, mating, retention, material, and marking criteria all pass after 24 h 35 C artificial sweat plus 24 h recovery and 48 h 35 C neutral salt fog | Green/red corrosion product, nickel blistering, crack, swelling, torque loss, or electrical failure |
+| Endurance | One socket at each P15/P0/P20 position in both colours with actual intended plug | 1,000-cycle EVT screen; 10,000-cycle DVT run; readings each 1,000 cycles and retention/flex each 2,500 | All interval electrical and retention criteria pass without base-metal exposure or fretting debris | Any unexplained resistance step, wear-through, loosening, or retention failure |
+
+The gate result is binary for readiness: an untested row is **deny**, not a
+pass by analysis. A passing M4-10 study still does not release the CAD,
+connector-module drawing, harness, or production BOM; those remain M4-11
+through M4-14 work.
 
 ### 1. Incoming inspection and mechanical fit
 
@@ -219,16 +276,16 @@ unexplained resistance step is a failure.
 
 | Item | Current generic model/readiness manifest | M4-10 result |
 | --- | --- | --- |
-| MPN | `XUB-G 66.9684-*`, candidate | Family evidence retained; exact ordered suffixes remain blocked. |
-| Selection | Candidate; not production-approved | Conditional red-left/green-right six-socket proposal only. |
+| MPN | `XUB-G 66.9684-*`, candidate | Exact bench candidates are `66.9684-22` left/red and `66.9684-25` right/green; production MPN remains unapproved. |
+| Selection | Candidate; not production-approved | Exact sample order is defined, but all production decisions remain blocked by physical evidence. |
 | Footprint | Not applicable; chassis panel part with M4 harness termination | No change. The enclosure drawing and template still require official CAD/drawing review. |
 | CAD | Pending | Official CAD catalogue entry found, but no file has been downloaded, versioned, or independently checked. Keep pending. |
 | Mechanical | Source identified | Catalogue dimensions/mounting are now recorded, but no actual plug or panel fit has been verified. Keep source-identified. |
-| Blockers | Color suffixes/keyed harnesses; body-cord fit; salt/sweat and cycle validation | All remain open, with the responsible test plan and closure evidence now stated. |
+| Blockers | Color suffixes/keyed harnesses; body-cord fit; salt/sweat and cycle validation | Side-colour suffixes are now fixed for samples. Harness, plug fit, retention, CAD, supply consistency, corrosion, and cycle validation remain open. |
 
-M4-10 can be reviewed as research and a test-plan deliverable. It does not
-unblock M4-12, M4-13, or M4-14 for fabrication. The next actions are to close
-M0-03's line and panel-order contract, obtain manufacturer CAD plus at least
-two representative body-cord plug samples, build the fixture panel and
-retainer, and archive the measured evidence before changing
+M4-10 can be reviewed as an exact sample-selection and test-plan deliverable.
+It does not unblock M4-12, M4-13, or M4-14 for fabrication. The next actions
+are to close M0-03's line and panel-order contract, obtain manufacturer CAD
+plus representative foil, epee, and sabre body-cord plug samples, build the
+fixture panel and retainer, and archive measured evidence before changing
 `src/part-readiness.ts` or ordering production material.
