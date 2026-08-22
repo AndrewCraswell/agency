@@ -14,6 +14,11 @@ This keeps the shared queue bounded at 68 workers. This page remains the source 
 truth for the accepted routing, quality gates, incremental ownership, and
 completion audit.
 
+Future full recreations use the sequential 68-shard coordinator documented below. PgBouncer is now available for a
+separate pooled-concurrency canary at 96, 128, 160, and finally 200 workers. Do not raise the task ceiling merely
+because PgBouncer accepts more clients: promotion still requires the database, pool-wait, Trigger, and provider gates
+in [database connection pooling](database-connection-pooling.md).
+
 ## Canary status
 
 The bounded canary program began on 2026-08-22. Its first treatment created or reused vectors for

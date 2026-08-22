@@ -22,6 +22,7 @@
 ## Operations
 
 - [Observability](observability.md)
+- [Database connection pooling](database-connection-pooling.md)
 - [Document-processing operations](document-processing-operations.md)
 - [Ingestion remediation catalog](ingestion-remediation-catalog.md)
 - [OpenStates scraper runtime and storage cost comparison](openstates-runtime-cost-comparison.md)
