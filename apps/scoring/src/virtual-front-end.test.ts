@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   advanceVirtualFrontEnd,
   createVirtualFrontEndState,
+  validateVirtualFrontEndSnapshot,
   VIRTUAL_FRONT_END_CONDUCTOR_IDS,
   type VirtualFrontEndFrame,
   type VirtualFrontEndPhase,
@@ -287,6 +288,43 @@ describe("virtual front-end", () => {
         )
       )
     )
+
+    validateVirtualFrontEndSnapshot(first.current!)
+    validateVirtualFrontEndSnapshot(second.current!)
+    validateVirtualFrontEndSnapshot(third.current!)
+
+    const added = first.current!
+    const changed = second.current!
+    const removed = third.current!
+    for (const invalidSnapshot of [
+      null,
+      {},
+      { ...added, extra: true },
+      { ...added, transitions: null },
+      { ...added, relations: Array.from({ length: 33 }, () => added.relations[0]!) },
+      { ...added, transitions: [null] },
+      { ...added, transitions: [{ ...added.transitions[0]!, extra: true }] },
+      { ...added, transitions: [{ ...added.transitions[0]!, atUs: 99 }] },
+      { ...added, transitions: [{ ...added.transitions[0]!, kind: "unknown" }] },
+      { ...added, transitions: [{ ...added.transitions[0]!, id: "not-tip-loop" }] },
+      {
+        ...added,
+        transitions: [
+          {
+            ...added.transitions[0]!,
+            next: {
+              ...added.transitions[0]!.next!,
+              provenance: { ...added.transitions[0]!.next!.provenance, observedAtUs: 11 }
+            }
+          }
+        ]
+      },
+      { ...changed, transitions: [{ ...changed.transitions[1]!, previous: null }] },
+      { ...removed, transitions: [{ ...removed.transitions[0]!, next: removed.transitions[0]!.previous }] },
+      { ...removed, transitions: [...removed.transitions].reverse() }
+    ]) {
+      expect(() => validateVirtualFrontEndSnapshot(invalidSnapshot)).toThrow()
+    }
   })
 
   it("contains history and relation collections without mutating retained snapshots", () => {

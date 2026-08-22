@@ -58,3 +58,16 @@ M2-03 may consume a snapshot only through an explicit weapon input adapter.
 That adapter owns phase completeness for a proposed input and any selected
 weapon-table projection. This module never determines hits, qualification,
 lockout, target context, or analogue threshold outcomes.
+
+## Canonical snapshot validation
+
+`validateVirtualFrontEndSnapshot` is the M2-02 authority check for a snapshot
+leaving this boundary. It reuses the front-end normalizer and rejects a shape
+that does not exactly preserve canonical phase/excitation, conductor relations,
+provenance, resistance bucket/interval, fault state, contradiction IDs, trust,
+and transition evidence. Transition entries must be bounded, ordered, and
+consistent with their current or removed relation. Without a prior snapshot,
+this stateless check cannot authenticate a transition's historical `previous`
+relation. M2-03 relies only on the current canonical phase and relations for a
+weapon decision; historical capture remains M2-04. It does not define a second
+partial front-end schema.

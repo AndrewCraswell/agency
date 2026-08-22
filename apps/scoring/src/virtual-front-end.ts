@@ -10,6 +10,7 @@
 const DEFAULT_HISTORY_LIMIT = 64
 const DEFAULT_MAX_RELATIONS_PER_SNAPSHOT = 32
 const MAX_IDENTIFIER_LENGTH = 120
+const MAX_TRANSITIONS_PER_SNAPSHOT = DEFAULT_MAX_RELATIONS_PER_SNAPSHOT * 2
 
 export const VIRTUAL_FRONT_END_CONDUCTOR_IDS = [
   "left.A",
@@ -165,6 +166,23 @@ function assertNonNegativeSafeInteger(value: number, description: string): void 
   if (!Number.isSafeInteger(value) || value < 0) {
     throw new RangeError(`${description} must be a non-negative safe integer`)
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
+function hasSnapshotMembers(
+  value: Record<string, unknown>
+): value is Record<string, unknown> & VirtualFrontEndSnapshot {
+  return (
+    Object.hasOwn(value, "atUs") &&
+    Object.hasOwn(value, "contradictoryRelationIds") &&
+    Object.hasOwn(value, "phase") &&
+    Object.hasOwn(value, "relations") &&
+    Object.hasOwn(value, "transitions") &&
+    Object.hasOwn(value, "trust")
+  )
 }
 
 function assertIdentifier(value: string, description: string): void {
@@ -442,6 +460,114 @@ function compareTransitionIds(left: VirtualFrontEndTransition, right: VirtualFro
   return 1
 }
 
+function valuesAreEqual(left: unknown, right: unknown): boolean {
+  if (Object.is(left, right)) {
+    return true
+  }
+
+  if (Array.isArray(left) || Array.isArray(right)) {
+    return (
+      Array.isArray(left) &&
+      Array.isArray(right) &&
+      left.length === right.length &&
+      left.every((value, index) => valuesAreEqual(value, right[index]))
+    )
+  }
+
+  if (!isRecord(left) || !isRecord(right)) {
+    return false
+  }
+
+  const leftKeys = Reflect.ownKeys(left).sort()
+  const rightKeys = Reflect.ownKeys(right).sort()
+  return (
+    leftKeys.length === rightKeys.length &&
+    leftKeys.every(
+      (key, index) =>
+        key === rightKeys[index] &&
+        typeof key === "string" &&
+        Object.hasOwn(right, key) &&
+        valuesAreEqual(left[key], right[key])
+    )
+  )
+}
+
+function toRelationInput(reading: VirtualFrontEndRelationReading): VirtualFrontEndRelationInput {
+  return {
+    endpoints: reading.endpoints,
+    faultCode: reading.faultCode,
+    id: reading.id,
+    provenance: reading.provenance,
+    resistanceMilliOhms: reading.resistance.resistanceMilliOhms,
+    resistanceUncertaintyMilliOhms: reading.resistance.uncertaintyMilliOhms,
+    state: reading.state
+  }
+}
+
+function canonicalizeReading(
+  reading: VirtualFrontEndRelationReading,
+  throughUs: number
+): VirtualFrontEndRelationReading {
+  const canonical = normalizeRelation(toRelationInput(reading))
+  if (canonical.provenance.observedAtUs > throughUs || !valuesAreEqual(reading, canonical)) {
+    throw new RangeError("Virtual front-end snapshot relations must be canonical and observed by their snapshot")
+  }
+
+  return canonical
+}
+
+function assertCanonicalTransition(
+  transition: VirtualFrontEndTransition,
+  snapshotAtUs: number,
+  currentRelations: ReadonlyMap<string, VirtualFrontEndRelationReading>
+): void {
+  if (!isRecord(transition)) {
+    throw new TypeError("Virtual front-end snapshot transitions must be objects")
+  }
+
+  const keys = Reflect.ownKeys(transition)
+  if (
+    keys.length !== 5 ||
+    keys.some((key) => key !== "atUs" && key !== "id" && key !== "kind" && key !== "next" && key !== "previous")
+  ) {
+    throw new TypeError("Virtual front-end snapshot transitions have missing or unrecognized fields")
+  }
+
+  if (transition.atUs !== snapshotAtUs) {
+    throw new RangeError("Virtual front-end snapshot transitions must occur at their snapshot timestamp")
+  }
+
+  assertIdentifier(transition.id, "Virtual front-end transition IDs")
+  if (transition.kind !== "added" && transition.kind !== "changed" && transition.kind !== "removed") {
+    throw new RangeError("Virtual front-end snapshot transitions must use a declared kind")
+  }
+
+  const next = transition.next === null ? null : canonicalizeReading(transition.next, snapshotAtUs)
+  const previous = transition.previous === null ? null : canonicalizeReading(transition.previous, snapshotAtUs)
+  if ((next !== null && next.id !== transition.id) || (previous !== null && previous.id !== transition.id)) {
+    throw new RangeError("Virtual front-end snapshot transitions must retain their relation identifier")
+  }
+
+  const current = currentRelations.get(transition.id)
+  if (transition.kind === "added") {
+    if (next === null || previous !== null || current === undefined || !valuesAreEqual(next, current)) {
+      throw new RangeError("Added virtual front-end transitions must introduce the current relation")
+    }
+    return
+  }
+
+  if (transition.kind === "changed") {
+    if (next === null || previous === null || current === undefined || !valuesAreEqual(next, current)) {
+      throw new RangeError("Changed virtual front-end transitions must retain the prior and current relation")
+    }
+    return
+  }
+
+  if (next !== null || previous === null || current !== undefined) {
+    throw new RangeError("Removed virtual front-end transitions must retain only an absent prior relation")
+  }
+}
+
 function collectTransitions(
   previous: VirtualFrontEndSnapshot | null,
   nextRelations: readonly VirtualFrontEndRelationReading[],
@@ -519,6 +645,78 @@ function normalizeFrame(
 
 export function createVirtualFrontEndState(): VirtualFrontEndState {
   return { current: null, lastAtUs: null, snapshots: [] }
+}
+
+/**
+ * Rejects a forged or stale snapshot before a scoring adapter can consume it.
+ * It reuses the front end's phase, relation, resistance, fault, contradiction,
+ * and trust normalization, then verifies the resulting canonical snapshot
+ * shape and transition consistency without mutating front-end history.
+ */
+export function validateVirtualFrontEndSnapshot(snapshot: unknown): asserts snapshot is VirtualFrontEndSnapshot {
+  if (!isRecord(snapshot)) {
+    throw new TypeError("Virtual front-end snapshots must be objects")
+  }
+
+  if (!hasSnapshotMembers(snapshot)) {
+    throw new TypeError("Virtual front-end snapshots have missing required fields")
+  }
+
+  const snapshotKeys = Reflect.ownKeys(snapshot)
+  if (
+    snapshotKeys.length !== 6 ||
+    snapshotKeys.some(
+      (key) =>
+        key !== "atUs" &&
+        key !== "contradictoryRelationIds" &&
+        key !== "phase" &&
+        key !== "relations" &&
+        key !== "transitions" &&
+        key !== "trust"
+    )
+  ) {
+    throw new TypeError("Virtual front-end snapshots have missing or unrecognized fields")
+  }
+
+  if (!Array.isArray(snapshot.relations) || snapshot.relations.length > DEFAULT_MAX_RELATIONS_PER_SNAPSHOT) {
+    throw new RangeError(
+      `Virtual front-end snapshots may contain at most ${DEFAULT_MAX_RELATIONS_PER_SNAPSHOT} relations`
+    )
+  }
+
+  const canonical = normalizeFrame(
+    {
+      atUs: snapshot.atUs,
+      phase: snapshot.phase,
+      relations: snapshot.relations.map(toRelationInput)
+    },
+    null,
+    DEFAULT_MAX_RELATIONS_PER_SNAPSHOT
+  )
+  if (
+    !valuesAreEqual(snapshot.phase, canonical.phase) ||
+    !valuesAreEqual(snapshot.relations, canonical.relations) ||
+    !valuesAreEqual(snapshot.contradictoryRelationIds, canonical.contradictoryRelationIds) ||
+    snapshot.trust !== canonical.trust
+  ) {
+    throw new RangeError(
+      "Virtual front-end snapshots must preserve canonical phase, relations, contradictions, and trust"
+    )
+  }
+
+  if (!Array.isArray(snapshot.transitions) || snapshot.transitions.length > MAX_TRANSITIONS_PER_SNAPSHOT) {
+    throw new RangeError(`Virtual front-end snapshots may contain at most ${MAX_TRANSITIONS_PER_SNAPSHOT} transitions`)
+  }
+
+  const currentRelations = new Map(canonical.relations.map((relation) => [relation.id, relation]))
+  let previousId: string | null = null
+  for (const transition of snapshot.transitions) {
+    assertCanonicalTransition(transition, canonical.atUs, currentRelations)
+    if (previousId !== null && transition.id <= previousId) {
+      throw new RangeError("Virtual front-end snapshot transitions must be ordered by unique identifier")
+    }
+    previousId = transition.id
+  }
 }
 
 /**
