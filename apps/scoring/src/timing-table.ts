@@ -203,3 +203,17 @@ export function loadTimingTable(revision: unknown): TimingTable {
   validateTimingTable(table)
   return table
 }
+
+/**
+ * Resolves an optional scorer timing argument. A missing argument keeps the
+ * direct scorer API deterministic at the approved timing-1 table; an explicit
+ * table is validated before it can affect a decision.
+ */
+export function resolveTimingTable(argument: TimingTable | undefined): TimingTable {
+  if (argument === undefined) {
+    return loadTimingTable("timing-1")
+  }
+
+  validateTimingTable(argument)
+  return argument
+}

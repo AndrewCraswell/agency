@@ -51,7 +51,7 @@ function oppositeSide(side: Side): Side {
 }
 
 function replay(samples: readonly EpeeSample[], initialState = createEpeeScoringState()) {
-  return samples.reduce<EpeeScoringState>(advanceEpeeScoring, initialState)
+  return samples.reduce<EpeeScoringState>((state, sample) => advanceEpeeScoring(state, sample), initialState)
 }
 
 describe("epée scoring", () => {

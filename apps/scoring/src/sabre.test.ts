@@ -30,7 +30,7 @@ function forSide(side: SabreSide, contact: SabreContact, atUs: number): SabreSam
 }
 
 function replay(samples: readonly SabreSample[]): SabreScoringState {
-  return samples.reduce(advanceSabreScoring, createSabreScoringState())
+  return samples.reduce((state, sample) => advanceSabreScoring(state, sample), createSabreScoringState())
 }
 
 function oppositeSide(side: SabreSide): SabreSide {

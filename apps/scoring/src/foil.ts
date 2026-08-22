@@ -1,3 +1,5 @@
+import { loadTimingTable, resolveTimingTable, type TimingTable } from "./timing-table.js"
+
 export type FoilSide = "left" | "right"
 
 export type FoilCircuitBreak = "closed" | "open" | "indeterminate" | "unavailable"
@@ -66,17 +68,17 @@ export type FoilScoringState = {
   right: FoilSideState
 }
 
+const DEFAULT_TIMING_TABLE = loadTimingTable("timing-1")
+
+/** Compatibility names for existing callers; runtime decisions use a loaded table. */
 export const FOIL_RULES = {
   /** Conservative product floor at the start of FIE FOIL-02's guaranteed registration band. */
-  minimumBreakUs: 13_000,
+  minimumBreakUs: DEFAULT_TIMING_TABLE.foil.contactBreakMinimumUs,
   /** FIE FOIL-05 tolerance band, retained as references rather than active endpoints. */
   eventWindowEarliestUs: 275_000,
   eventWindowLatestUs: 325_000,
-  /**
-   * Provisional product choice inside FIE's 300 ms +/- 25 ms tolerance.
-   * M1-07 must replace this with a released timing-table endpoint policy.
-   */
-  provisionalLockoutUs: 300_000
+  /** Selected endpoint inside FIE's 300 ms +/- 25 ms tolerance. */
+  provisionalLockoutUs: DEFAULT_TIMING_TABLE.foil.lockoutUs
 } as const
 
 const INITIAL_SIDE_STATE: FoilSideState = {
@@ -139,7 +141,13 @@ function toObservationStatus(contact: FoilContact): FoilObservationStatus {
   return "ready"
 }
 
-function advanceContact(side: FoilSide, state: FoilSideState, contact: FoilContact, atUs: number): ContactAdvance {
+function advanceContact(
+  side: FoilSide,
+  state: FoilSideState,
+  contact: FoilContact,
+  atUs: number,
+  contactBreakMinimumUs: number
+): ContactAdvance {
   const observationStatus = toObservationStatus(contact)
   const nextState = {
     insulationDiagnostic: contact.insulationDiagnostic,
@@ -156,7 +164,7 @@ function advanceContact(side: FoilSide, state: FoilSideState, contact: FoilConta
   const candidate =
     state.candidate?.classification === classification ? state.candidate : { classification, startedAtUs: atUs }
 
-  if (atUs - candidate.startedAtUs < FOIL_RULES.minimumBreakUs) {
+  if (atUs - candidate.startedAtUs < contactBreakMinimumUs) {
     return { contact: { ...nextState, candidate }, hit: null }
   }
 
@@ -178,7 +186,13 @@ function isValidAtUs(atUs: number) {
   return Number.isSafeInteger(atUs) && atUs >= 0
 }
 
-export function advanceFoilScoring(state: FoilScoringState, sample: FoilSample): FoilScoringState {
+export function advanceFoilScoring(
+  state: FoilScoringState,
+  sample: FoilSample,
+  timingTable?: TimingTable
+): FoilScoringState {
+  const resolvedTimingTable = resolveTimingTable(timingTable)
+
   if (!isValidAtUs(sample.atUs)) {
     throw new RangeError("Foil samples must use non-negative safe integer timestamps")
   }
@@ -199,14 +213,26 @@ export function advanceFoilScoring(state: FoilScoringState, sample: FoilSample):
     }
   }
 
-  const leftAdvance = advanceContact("left", state.left, sample.left, sample.atUs)
-  const rightAdvance = advanceContact("right", state.right, sample.right, sample.atUs)
+  const leftAdvance = advanceContact(
+    "left",
+    state.left,
+    sample.left,
+    sample.atUs,
+    resolvedTimingTable.foil.contactBreakMinimumUs
+  )
+  const rightAdvance = advanceContact(
+    "right",
+    state.right,
+    sample.right,
+    sample.atUs,
+    resolvedTimingTable.foil.contactBreakMinimumUs
+  )
   const newHits = [leftAdvance.hit, rightAdvance.hit].filter((hit): hit is FoilHit => hit !== null).sort(compareHits)
   const firstHit = newHits.at(0)
   const firstHitSignalledAtUs = state.firstHitSignalledAtUs ?? firstHit?.qualifiedAtUs ?? null
   const lockoutEndsAtUs =
     state.lockoutEndsAtUs ??
-    (firstHitSignalledAtUs === null ? null : firstHitSignalledAtUs + FOIL_RULES.provisionalLockoutUs)
+    (firstHitSignalledAtUs === null ? null : firstHitSignalledAtUs + resolvedTimingTable.foil.lockoutUs)
 
   return {
     firstHitSignalledAtUs,

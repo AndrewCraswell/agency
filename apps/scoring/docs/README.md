@@ -14,6 +14,8 @@ Immutable replay payloads and portable test vectors are specified in
 The released scalar timing selections, strict revision loading, and M1-08
 boundary-vector handoff are specified in
 [timing-table-contract.md](timing-table-contract.md).
+The generated M1-08 coverage, stable ordering, and unresolved exclusions are
+specified in [timing-boundary-vector-contract.md](timing-boundary-vector-contract.md).
 
 `fie-material-rules-2026-08-en.pdf` is the English FIE Material Rules, Book 3, dated August 2026.
 

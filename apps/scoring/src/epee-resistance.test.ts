@@ -68,7 +68,10 @@ function sample(atUs: number, left = OPEN, right = OPEN): EpeeResistanceSample {
 }
 
 function replay(samples: readonly EpeeResistanceSample[]) {
-  return samples.reduce(advanceEpeeResistanceScoring, createEpeeResistanceScoringState())
+  return samples.reduce(
+    (state, sample) => advanceEpeeResistanceScoring(state, sample),
+    createEpeeResistanceScoringState()
+  )
 }
 
 function oppositeSide(side: Side): Side {

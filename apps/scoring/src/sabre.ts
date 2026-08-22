@@ -1,3 +1,5 @@
+import { loadTimingTable, resolveTimingTable, type TimingTable } from "./timing-table.js"
+
 export type SabreSide = "left" | "right"
 
 /** A trusted projection of the acting sabre onto the opposing return path. */
@@ -77,34 +79,27 @@ export type SabreScoringState = {
   right: SabreSideState
 }
 
+const DEFAULT_TIMING_TABLE = loadTimingTable("timing-1")
+
+/** Compatibility names for existing callers; runtime decisions use a loaded table. */
 export const SABRE_RULES = {
   /** FIE SABRE-03: contacts below this duration must not signal. */
-  minimumContactUs: 100,
+  minimumContactUs: DEFAULT_TIMING_TABLE.sabre.minimumContactUs,
   /** FIE SABRE-03 sensitivity upper test point. It is not an expiry timer. */
-  sensitivityTestPointUs: 1_000,
+  sensitivityTestPointUs: DEFAULT_TIMING_TABLE.sabre.sensitivityTestPointUs,
   /** FIE SABRE-07's nominal control-break duration. */
-  provisionalControlBreakUs: 3_000,
-  /**
-   * Provisional inclusive product endpoint for SABRE-06's 0-4 ms (+1 ms)
-   * registration region. M1-07 must replace it with a released rule-table.
-   */
-  provisionalBladeRegistrationLatestUs: 5_000,
-  /**
-   * Provisional recovery endpoint for SABRE-06's 15 ms +/- 5 ms behaviour.
-   * A retained unsignalled blade-mediated sequence suppresses candidates below
-   * this instant.
-   */
-  provisionalBladeRecoveryUs: 20_000,
+  provisionalControlBreakUs: DEFAULT_TIMING_TABLE.sabre.controlBreakUs,
+  /** Selected inclusive endpoint for SABRE-06's 0-4 ms (+1 ms) region. */
+  provisionalBladeRegistrationLatestUs: DEFAULT_TIMING_TABLE.sabre.bladeRegistrationLatestUs,
+  /** Selected recovery endpoint for SABRE-06's 15 ms +/- 5 ms behaviour. A retained unsignalled blade-mediated sequence suppresses candidates below this instant. */
+  provisionalBladeRecoveryUs: DEFAULT_TIMING_TABLE.sabre.bladeRecoveryUs,
   /** SABRE-06's stated maximum number of blade-contact interruptions. */
-  maximumBladeContactInterruptions: 10,
+  maximumBladeContactInterruptions: DEFAULT_TIMING_TABLE.sabre.maximumBladeContactInterruptions,
   /** FIE SABRE-05 tolerance references, not active product endpoints. */
   eventWindowEarliestUs: 160_000,
   eventWindowLatestUs: 180_000,
-  /**
-   * Provisional product choice inside FIE SABRE-05's 170 ms +/- 10 ms band.
-   * M1-07 must replace this with a reviewed timing-table endpoint policy.
-   */
-  provisionalLockoutUs: 170_000
+  /** Selected endpoint inside FIE SABRE-05's 170 ms +/- 10 ms band. */
+  provisionalLockoutUs: DEFAULT_TIMING_TABLE.sabre.lockoutUs
 } as const
 
 const INITIAL_SIDE_STATE: SabreSideState = {
@@ -144,7 +139,8 @@ function toYellowDiagnostic(ownEquipmentFault: SabreOwnEquipmentFault): SabreYel
 function advanceBladeMediatedHistory(
   state: SabreSideState,
   contact: SabreContact,
-  atUs: number
+  atUs: number,
+  bladeRecoveryUs: number
 ): SabreBladeMediatedHistory | null {
   if (contact.bladeContact === "indeterminate" || contact.bladeContact === "unavailable") {
     return null
@@ -160,7 +156,7 @@ function advanceBladeMediatedHistory(
       : null
   }
 
-  if (atUs - history.startedAtUs >= SABRE_RULES.provisionalBladeRecoveryUs) {
+  if (atUs - history.startedAtUs >= bladeRecoveryUs) {
     return null
   }
 
@@ -179,7 +175,9 @@ function advanceBladeMediatedHistory(
 function toObservationStatus(
   contact: SabreContact,
   bladeMediated: SabreBladeMediatedHistory | null,
-  atUs: number
+  atUs: number,
+  bladeRegistrationLatestUs: number,
+  maximumBladeContactInterruptions: number
 ): SabreObservationStatus {
   if (contact.targetContact === "indeterminate" || contact.externalPathEligibility === "indeterminate") {
     return "indeterminate"
@@ -211,11 +209,11 @@ function toObservationStatus(
 
   const elapsedUs = atUs - bladeMediated.startedAtUs
 
-  if (elapsedUs <= SABRE_RULES.provisionalBladeRegistrationLatestUs) {
+  if (elapsedUs <= bladeRegistrationLatestUs) {
     return "ready"
   }
 
-  if (bladeMediated.interruptionCount > SABRE_RULES.maximumBladeContactInterruptions) {
+  if (bladeMediated.interruptionCount > maximumBladeContactInterruptions) {
     return "indeterminate"
   }
 
@@ -227,13 +225,28 @@ type ContactAdvance = {
   hit: SabreHit | null
 }
 
-function advanceContact(side: SabreSide, state: SabreSideState, contact: SabreContact, atUs: number): ContactAdvance {
-  const bladeMediated = advanceBladeMediatedHistory(state, contact, atUs)
-  const observationStatus = toObservationStatus(contact, bladeMediated, atUs)
+function advanceContact(
+  side: SabreSide,
+  state: SabreSideState,
+  contact: SabreContact,
+  atUs: number,
+  minimumContactUs: number,
+  bladeRegistrationLatestUs: number,
+  bladeRecoveryUs: number,
+  maximumBladeContactInterruptions: number,
+  controlBreakUs: number
+): ContactAdvance {
+  const bladeMediated = advanceBladeMediatedHistory(state, contact, atUs, bladeRecoveryUs)
+  const observationStatus = toObservationStatus(
+    contact,
+    bladeMediated,
+    atUs,
+    bladeRegistrationLatestUs,
+    maximumBladeContactInterruptions
+  )
   const yellowDiagnostic = toYellowDiagnostic(contact.ownEquipmentFault)
   const controlBreakSinceUs = contact.circuitBCFault === "controlBreak" ? (state.controlBreakSinceUs ?? atUs) : null
-  const controlBreakQualified =
-    controlBreakSinceUs !== null && atUs - controlBreakSinceUs >= SABRE_RULES.provisionalControlBreakUs
+  const controlBreakQualified = controlBreakSinceUs !== null && atUs - controlBreakSinceUs >= controlBreakUs
   const hasWhiteDiagnostic =
     state.whiteDiagnostic === "white-on" || contact.circuitBCFault === "abnormalChange" || controlBreakQualified
   const whiteDiagnostic: SabreWhiteDiagnostic = hasWhiteDiagnostic
@@ -257,7 +270,7 @@ function advanceContact(side: SabreSide, state: SabreSideState, contact: SabreCo
 
   const candidateSinceUs = state.candidateSinceUs ?? atUs
 
-  if (atUs - candidateSinceUs < SABRE_RULES.minimumContactUs) {
+  if (atUs - candidateSinceUs < minimumContactUs) {
     return { contact: { ...nextState, candidateSinceUs }, hit: null }
   }
 
@@ -279,7 +292,13 @@ function isValidAtUs(atUs: number) {
   return Number.isSafeInteger(atUs) && atUs >= 0
 }
 
-export function advanceSabreScoring(state: SabreScoringState, sample: SabreSample): SabreScoringState {
+export function advanceSabreScoring(
+  state: SabreScoringState,
+  sample: SabreSample,
+  timingTable?: TimingTable
+): SabreScoringState {
+  const resolvedTimingTable = resolveTimingTable(timingTable)
+
   if (!isValidAtUs(sample.atUs)) {
     throw new RangeError("Sabre samples must use non-negative safe integer timestamps")
   }
@@ -300,14 +319,34 @@ export function advanceSabreScoring(state: SabreScoringState, sample: SabreSampl
     }
   }
 
-  const leftAdvance = advanceContact("left", state.left, sample.left, sample.atUs)
-  const rightAdvance = advanceContact("right", state.right, sample.right, sample.atUs)
+  const leftAdvance = advanceContact(
+    "left",
+    state.left,
+    sample.left,
+    sample.atUs,
+    resolvedTimingTable.sabre.minimumContactUs,
+    resolvedTimingTable.sabre.bladeRegistrationLatestUs,
+    resolvedTimingTable.sabre.bladeRecoveryUs,
+    resolvedTimingTable.sabre.maximumBladeContactInterruptions,
+    resolvedTimingTable.sabre.controlBreakUs
+  )
+  const rightAdvance = advanceContact(
+    "right",
+    state.right,
+    sample.right,
+    sample.atUs,
+    resolvedTimingTable.sabre.minimumContactUs,
+    resolvedTimingTable.sabre.bladeRegistrationLatestUs,
+    resolvedTimingTable.sabre.bladeRecoveryUs,
+    resolvedTimingTable.sabre.maximumBladeContactInterruptions,
+    resolvedTimingTable.sabre.controlBreakUs
+  )
   const newHits = [leftAdvance.hit, rightAdvance.hit].filter((hit): hit is SabreHit => hit !== null).sort(compareHits)
   const firstHit = newHits.at(0)
   const firstHitSignalledAtUs = state.firstHitSignalledAtUs ?? firstHit?.qualifiedAtUs ?? null
   const lockoutEndsAtUs =
     state.lockoutEndsAtUs ??
-    (firstHitSignalledAtUs === null ? null : firstHitSignalledAtUs + SABRE_RULES.provisionalLockoutUs)
+    (firstHitSignalledAtUs === null ? null : firstHitSignalledAtUs + resolvedTimingTable.sabre.lockoutUs)
 
   return {
     firstHitSignalledAtUs,

@@ -43,14 +43,18 @@ by this loader.
 
 ## M1-08 handoff
 
-M1-08 must introduce an explicit mapping from each golden scenario's
-`ruleRevision` to `timing-1`, call `loadTimingTable` before replay, and reject
-an unknown mapping or timing revision with the scenario's
-`unknown-rule-revision` outcome. It must generate below, at, and above vectors
-from the loaded scalar values for both sides, retaining the published envelope
-limits as reference vectors where they are not runtime endpoints. M1-08 then
-updates the weapon scorers in one coordinated change so no runtime path mixes a
-loaded table with the current standalone constants.
+The M1-08 implementation in [`timing-boundary.ts`](../src/timing-boundary.ts)
+loads `timing-1` directly for the all-weapon boundary corpus and validates an
+explicit table before reading it. Its separate rule-revision resolver maps the
+currently committed golden scenario `ruleRevision` `fie-2026-epee` to
+`timing-1`, and rejects an unknown mapping or timing revision with the
+`unknown-rule-revision` outcome. Future foil and sabre golden identities
+remain fail-closed until reviewed. The suite generates below, at, and above
+vectors from the loaded scalar values for both sides, retaining published
+envelope limits as reference vectors where they are not runtime endpoints. The
+epee, foil, and sabre scorers consume the same validated table in one
+coordinated runtime path; no scorer uses a parallel standalone timing
+constant.
 
 ## Evidence
 

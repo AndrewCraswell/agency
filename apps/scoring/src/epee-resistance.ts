@@ -1,4 +1,5 @@
-import { EPEE_RULES, type EpeeHit, type Side } from "./epee.js"
+import { type EpeeHit, type Side } from "./epee.js"
+import { resolveTimingTable, type TimingTable } from "./timing-table.js"
 
 export type EpeeCircuitComplete = "closed" | "indeterminate" | "open" | "unavailable"
 
@@ -240,7 +241,8 @@ function advanceContact(
   side: Side,
   state: ResistanceContactState,
   contact: EpeeResistanceContact,
-  atUs: number
+  atUs: number,
+  contactMinimumUs: number
 ): ContactAdvance {
   const classification = classifyContact(side, contact, atUs)
 
@@ -268,7 +270,7 @@ function advanceContact(
     }
   }
 
-  if (atUs - state.candidateSinceUs < EPEE_RULES.contactTimeUs) {
+  if (atUs - state.candidateSinceUs < contactMinimumUs) {
     return { contact: state, decisions: [], hit: null }
   }
 
@@ -293,8 +295,8 @@ function compareHits(
   return left.hit.side.localeCompare(right.hit.side)
 }
 
-function isPendingInsideLockout(contact: ResistanceContactState, firstHitAtUs: number) {
-  return contact.candidateSinceUs !== null && contact.candidateSinceUs - firstHitAtUs <= EPEE_RULES.lockoutTimeUs
+function isPendingInsideLockout(contact: ResistanceContactState, firstHitAtUs: number, doubleHitWindowUs: number) {
+  return contact.candidateSinceUs !== null && contact.candidateSinceUs - firstHitAtUs <= doubleHitWindowUs
 }
 
 function validateSample(sample: EpeeResistanceSample) {
@@ -310,8 +312,11 @@ function validateSample(sample: EpeeResistanceSample) {
 
 export function advanceEpeeResistanceScoring(
   state: EpeeResistanceScoringState,
-  sample: EpeeResistanceSample
+  sample: EpeeResistanceSample,
+  timingTable?: TimingTable
 ): EpeeResistanceScoringState {
+  const resolvedTimingTable = resolveTimingTable(timingTable)
+
   validateSample(sample)
 
   if (state.lastSampleAtUs !== null && sample.atUs < state.lastSampleAtUs) {
@@ -322,8 +327,20 @@ export function advanceEpeeResistanceScoring(
     return { ...state, lastSampleAtUs: sample.atUs }
   }
 
-  const leftAdvance = advanceContact("left", state.left, sample.left, sample.atUs)
-  const rightAdvance = advanceContact("right", state.right, sample.right, sample.atUs)
+  const leftAdvance = advanceContact(
+    "left",
+    state.left,
+    sample.left,
+    sample.atUs,
+    resolvedTimingTable.epee.contactMinimumUs
+  )
+  const rightAdvance = advanceContact(
+    "right",
+    state.right,
+    sample.right,
+    sample.atUs,
+    resolvedTimingTable.epee.contactMinimumUs
+  )
   const newHits = [leftAdvance.hit, rightAdvance.hit]
     .filter((hit): hit is { hit: EpeeHit; resistanceClass: EpeeResistanceClass } => hit !== null)
     .sort(compareHits)
@@ -340,7 +357,7 @@ export function advanceEpeeResistanceScoring(
       continue
     }
 
-    if (qualified.hit.startedAtUs - firstHitAtUs <= EPEE_RULES.lockoutTimeUs) {
+    if (qualified.hit.startedAtUs - firstHitAtUs <= resolvedTimingTable.epee.doubleHitWindowUs) {
       hits.push(qualified.hit)
       decisions.push({ disposition: "qualified-hit", hit: qualified.hit, resistanceClass: qualified.resistanceClass })
     }
@@ -348,9 +365,10 @@ export function advanceEpeeResistanceScoring(
 
   const hasPendingHit =
     firstHitAtUs !== null &&
-    (isPendingInsideLockout(leftAdvance.contact, firstHitAtUs) ||
-      isPendingInsideLockout(rightAdvance.contact, firstHitAtUs))
-  const isLocked = firstHitAtUs !== null && sample.atUs - firstHitAtUs > EPEE_RULES.lockoutTimeUs && !hasPendingHit
+    (isPendingInsideLockout(leftAdvance.contact, firstHitAtUs, resolvedTimingTable.epee.doubleHitWindowUs) ||
+      isPendingInsideLockout(rightAdvance.contact, firstHitAtUs, resolvedTimingTable.epee.doubleHitWindowUs))
+  const isLocked =
+    firstHitAtUs !== null && sample.atUs - firstHitAtUs > resolvedTimingTable.epee.doubleHitWindowUs && !hasPendingHit
 
   return {
     decisions,

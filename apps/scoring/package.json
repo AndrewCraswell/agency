@@ -38,6 +38,10 @@
     "./timing-table": {
       "types": "./dist/timing-table.d.ts",
       "default": "./dist/timing-table.js"
+    },
+    "./timing-boundary": {
+      "types": "./dist/timing-boundary.d.ts",
+      "default": "./dist/timing-boundary.js"
     }
   },
   "engines": {

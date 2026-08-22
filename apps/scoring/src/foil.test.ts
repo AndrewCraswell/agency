@@ -27,7 +27,7 @@ function forSide(side: FoilSide, contact: FoilContact, atUs: number): FoilSample
 }
 
 function replay(samples: readonly FoilSample[]): FoilScoringState {
-  return samples.reduce(advanceFoilScoring, createFoilScoringState())
+  return samples.reduce((state, sample) => advanceFoilScoring(state, sample), createFoilScoringState())
 }
 
 describe("foil scoring state machine", () => {

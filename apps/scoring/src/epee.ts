@@ -1,3 +1,5 @@
+import { loadTimingTable, resolveTimingTable, type TimingTable } from "./timing-table.js"
+
 export type EpeeContact = {
   isGrounded: boolean
   isTipClosed: boolean
@@ -31,9 +33,12 @@ export type EpeeScoringState = {
   right: ContactState
 }
 
+const DEFAULT_TIMING_TABLE = loadTimingTable("timing-1")
+
+/** Compatibility names for existing callers; runtime decisions use a loaded table. */
 export const EPEE_RULES = {
-  contactTimeUs: 2_000,
-  lockoutTimeUs: 45_000
+  contactTimeUs: DEFAULT_TIMING_TABLE.epee.contactMinimumUs,
+  lockoutTimeUs: DEFAULT_TIMING_TABLE.epee.doubleHitWindowUs
 } as const
 
 const INITIAL_CONTACT_STATE: ContactState = {
@@ -57,7 +62,13 @@ type ContactAdvance = {
   hit: EpeeHit | null
 }
 
-function advanceContact(side: Side, state: ContactState, contact: EpeeContact, atUs: number): ContactAdvance {
+function advanceContact(
+  side: Side,
+  state: ContactState,
+  contact: EpeeContact,
+  atUs: number,
+  contactMinimumUs: number
+): ContactAdvance {
   if (state.isRegistered) {
     return { contact: state, hit: null }
   }
@@ -78,7 +89,7 @@ function advanceContact(side: Side, state: ContactState, contact: EpeeContact, a
     }
   }
 
-  if (atUs - state.candidateSinceUs < EPEE_RULES.contactTimeUs) {
+  if (atUs - state.candidateSinceUs < contactMinimumUs) {
     return { contact: state, hit: null }
   }
 
@@ -100,11 +111,17 @@ function compareHits(left: EpeeHit, right: EpeeHit) {
   return left.side.localeCompare(right.side)
 }
 
-function isPendingInsideLockout(contact: ContactState, firstHitAtUs: number) {
-  return contact.candidateSinceUs !== null && contact.candidateSinceUs - firstHitAtUs <= EPEE_RULES.lockoutTimeUs
+function isPendingInsideLockout(contact: ContactState, firstHitAtUs: number, doubleHitWindowUs: number) {
+  return contact.candidateSinceUs !== null && contact.candidateSinceUs - firstHitAtUs <= doubleHitWindowUs
 }
 
-export function advanceEpeeScoring(state: EpeeScoringState, sample: EpeeSample): EpeeScoringState {
+export function advanceEpeeScoring(
+  state: EpeeScoringState,
+  sample: EpeeSample,
+  timingTable?: TimingTable
+): EpeeScoringState {
+  const resolvedTimingTable = resolveTimingTable(timingTable)
+
   if (!Number.isSafeInteger(sample.atUs) || sample.atUs < 0) {
     throw new RangeError("Epee samples must use non-negative safe integer timestamps")
   }
@@ -117,8 +134,20 @@ export function advanceEpeeScoring(state: EpeeScoringState, sample: EpeeSample):
     return { ...state, lastSampleAtUs: sample.atUs }
   }
 
-  const leftAdvance = advanceContact("left", state.left, sample.left, sample.atUs)
-  const rightAdvance = advanceContact("right", state.right, sample.right, sample.atUs)
+  const leftAdvance = advanceContact(
+    "left",
+    state.left,
+    sample.left,
+    sample.atUs,
+    resolvedTimingTable.epee.contactMinimumUs
+  )
+  const rightAdvance = advanceContact(
+    "right",
+    state.right,
+    sample.right,
+    sample.atUs,
+    resolvedTimingTable.epee.contactMinimumUs
+  )
   const newHits = [leftAdvance.hit, rightAdvance.hit].filter((hit): hit is EpeeHit => hit !== null).sort(compareHits)
 
   let firstHitAtUs = state.firstHitAtUs
@@ -131,16 +160,17 @@ export function advanceEpeeScoring(state: EpeeScoringState, sample: EpeeSample):
       continue
     }
 
-    if (hit.startedAtUs - firstHitAtUs <= EPEE_RULES.lockoutTimeUs) {
+    if (hit.startedAtUs - firstHitAtUs <= resolvedTimingTable.epee.doubleHitWindowUs) {
       hits.push(hit)
     }
   }
 
   const hasPendingHit =
     firstHitAtUs !== null &&
-    (isPendingInsideLockout(leftAdvance.contact, firstHitAtUs) ||
-      isPendingInsideLockout(rightAdvance.contact, firstHitAtUs))
-  const isLocked = firstHitAtUs !== null && sample.atUs - firstHitAtUs > EPEE_RULES.lockoutTimeUs && !hasPendingHit
+    (isPendingInsideLockout(leftAdvance.contact, firstHitAtUs, resolvedTimingTable.epee.doubleHitWindowUs) ||
+      isPendingInsideLockout(rightAdvance.contact, firstHitAtUs, resolvedTimingTable.epee.doubleHitWindowUs))
+  const isLocked =
+    firstHitAtUs !== null && sample.atUs - firstHitAtUs > resolvedTimingTable.epee.doubleHitWindowUs && !hasPendingHit
 
   return {
     firstHitAtUs,
