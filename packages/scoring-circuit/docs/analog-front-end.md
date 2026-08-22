@@ -1,0 +1,105 @@
+# Three-weapon analog front-end specification
+
+## Scope and status
+
+This document defines the next prototype boundary: protected acquisition of the seven external conductors used by the
+left and right A/B/C body-cord sockets and the conductive piste. It supplies values for simulation and fixture design,
+but it does not release a schematic or PCB for fabrication.
+
+The FIE source is `apps/scoring/docs/fie-material-rules-2026-08-en.pdf`, August 2026. The local Favero comparison is
+`apps/scoring/docs/favero-fa15-t2016-specifications-en.pdf`. Page numbers below are printed PDF page numbers.
+
+## Governing limits
+
+| Behavior | Required boundary | Source |
+| --- | ---: | --- |
+| Foil contact break | 14 ms +/- 1 ms | FIE pp. 78-79; Favero p. 1 |
+| Foil external circuit | valid registration through 500 ohms | FIE p. 78 |
+| Foil closed circuit | tolerate 200 ohms without a false off-target indication | FIE p. 78 |
+| Foil insulation warning | always on at no more than 450 ohms; always off above 475 ohms | FIE p. 79 |
+| Epee contact | reject below 2 ms; register in the 2-10 ms range at 10 ohms | FIE p. 80; Favero p. 1 |
+| Epee exceptional circuit | still register at 100 ohms | FIE p. 80 |
+| Epee grounded material | reject with as much as 100 ohms in the earth path | FIE p. 80 |
+| Sabre contact | capture 0.1-1.0 ms; reject below 0.1 ms | FIE p. 82; Favero p. 1 |
+| Sabre exterior circuit | tolerate 100 ohms | FIE p. 82 |
+| Sabre control break | more than 250 ohms for 3 ms +/- 2 ms | FIE p. 82 |
+
+The current FIE rules still prescribe a 12 V supply (+/- 5%) and, for official competition, an external battery or UPS
+with at least five minutes of backup (FIE pp. 42, 44-45, and 49). That requirement applies to apparatus power, not to
+the voltage presented to the weapon conductors. The sensing cell therefore does not depend on a 12 V analog rail: its
+protected 2.5 V excitation is derived from a precision reference after the product's regulated power stages.
+
+The product instead uses one locking 24 V DC input. It does not make 12 V, USB Power Delivery, or VRLA chemistry an
+architectural dependency. See `fie-modern-power-proposal.md` for the proposed standards path and the resulting FIE
+approval gate.
+
+## Proposed Rev-B sensing cell
+
+Each external conductor gets the same replaceable and calibratable cell:
+
+1. A TPD4E05U06DQAR shunts IEC ESD/EFT energy at the connector to a short, dedicated ESD-return path. Two quad devices
+   cover the seven conductors and leave one channel spare.
+2. A 22 ohm pulse-rated series resistor separates the connector clamp from the precision node.
+3. One active-high TMUX1112PWR channel connects the node to the 2.5 V reference through a 2.49 kohm, 0.05% source
+   resistor. A second TMUX1112PWR channel connects it to scoring ground through a matched low-value sink path. Four
+   packages provide independently controlled source and sink paths for all seven conductors, with defaults held off by
+   hardware pulldowns.
+4. A 1 kohm resistor and 470 pF C0G capacitor protect and settle the STM32 ADC input. Low-leakage Schottky clamps protect
+   the MCU pin; the final diode and rail-clamp network remains a prototype measurement because leakage and injected
+   current affect the 450/475 ohm decision band.
+5. STM32G474 ADCs sample the relevant weapon matrix while internal comparators timestamp fast transitions. The target is
+   no more than 10 us for the weapon-specific sabre phase set, no more than 25 us for a full diagnostic scan, and 1 us or
+   better comparator timestamps.
+
+The 2.49 kohm source resistor limits a normal short to about 1 mA. Because excitation and ADC reference both derive from
+REF5025, the resistance calculation is ratiometric and largely rejects reference drift. Firmware subtracts measured
+switch and protection resistance using per-channel calibration rather than assuming typical switch resistance.
+
+## Why this is not over-engineered
+
+- It uses the STM32's existing ADCs, comparators, timers, reference, and DMA instead of adding a precision ADC.
+- Four quad switches replace a serial crosspoint and avoid an SPI-controlled single point of failure.
+- One repeated cell covers every weapon; weapon differences live in source/sink patterns and immutable timing tables.
+- The model excludes exact clamp diodes, connector contact construction, and extra EMC filtering until fixture evidence
+  shows they are necessary.
+
+## Executable model
+
+`spice/line-sense.cir` models the reference, source resistor, switch resistance, connector protection resistance, cable
+capacitance, ADC isolation resistor, C0G filter, and a timed external contact. `pnpm analog:simulate` runs four bounded
+ngspice cases, including a 50 us pulse and a 500 ohm contact with 10 nF of line capacitance. Sabre-relevant 100 ohm
+paths get a 10 us response budget; the 500 ohm foil path gets 50 us. Applying the sabre budget to the foil-only
+resistance range would add bandwidth without improving conformance.
+
+This is a topology and timing model. It does not prove ESD survival, ADC accuracy, switch charge injection, cable
+coupling, or all three-weapon classification sequences. Vendor transistor and diode models plus extracted PCB
+parasitics are required at the analog gate.
+
+## Socketed fixture plan
+
+Build one reusable fixture before the scoring PCB:
+
+- six 3-pin body-cord connectors plus a piste terminal, wired as two fencers and a scoring-box port;
+- Kelvin-characterized resistance paths at 0, 10, 100, 200, 250, 450, 475, and 500 ohms;
+- switchable 0.5, 2, 5, and 10 nF line-capacitance banks;
+- a pulse generator producing 50 us, 100 us, 1 ms, 2 ms, 10 ms, 13 ms, 14 ms, and 15 ms contacts;
+- break-before-make relays whose closed resistance and bounce are recorded separately from the simulated external path;
+- oscilloscope points at the connector, protected node, ADC pin, comparator output, reference, and scoring ground;
+- a calibrated 24 V input at its declared tolerance limits, brownout ramps, external-UPS transfer, and scoring-domain
+  current measurement.
+
+The fixture first validates one sensing cell on a socketed coupon. Only after its threshold error is within +/- 5 ohms
+from 0 to 500 ohms across the selected temperature range do we populate all seven cells. ESD, EFT, surge, sweat/salt,
+and cable-fault testing occur on sacrificial coupons before they are allowed near a scoring MCU.
+
+## Acceptance matrix
+
+1. Every resistance boundary is tested at nominal, boundary - 5 ohms, and boundary + 5 ohms.
+2. Every timing boundary is tested at boundary - fixture uncertainty, boundary, and boundary + fixture uncertainty.
+3. Open, short, cross-line, blade/guard, opponent target, self-lame, and piste combinations are exercised for both sides.
+4. Results are repeated at minimum, room, and maximum qualified ambient temperature and at the declared 24 V input
+   tolerance limits.
+5. No single open switch-control line, stuck switch, ADC saturation, missing reference, or MCU reset may produce a
+   qualified touch; faults must become diagnostics or a safe unavailable state.
+
+Passing this fixture plan opens detailed schematic capture. It does not by itself open PCB fabrication.

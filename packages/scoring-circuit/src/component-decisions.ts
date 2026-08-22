@@ -64,6 +64,24 @@ export const componentDecisions = [
     qualification: "AEC-Q100; -40 C to 125 C; exact analog values remain gated by weapon testing"
   },
   {
+    category: "line-switch",
+    lifecycle: "active",
+    manufacturer: "Texas Instruments",
+    manufacturerUrl: "https://www.ti.com/product/TMUX1112",
+    mpn: "TMUX1112PWR",
+    purpose: "Independently controlled source and sink paths for the seven external scoring conductors",
+    qualification: "Use four; active-high fail-safe control; 2 ohm typical; 3 pA typical leakage; -40 C to 125 C"
+  },
+  {
+    category: "line-protection",
+    lifecycle: "active",
+    manufacturer: "Texas Instruments",
+    manufacturerUrl: "https://www.ti.com/product/TPD4E05U06",
+    mpn: "TPD4E05U06DQAR",
+    purpose: "Connector-adjacent low-capacitance ESD and EFT shunt for the seven scoring conductors",
+    qualification: "Use two; 0.5 pF typical; 12 kV IEC contact ESD; 2.5 A 8/20 us surge; -40 C to 125 C"
+  },
+  {
     category: "hardware-watchdog",
     lifecycle: "active",
     manufacturer: "Texas Instruments",
@@ -82,15 +100,6 @@ export const componentDecisions = [
     qualification: "One-percent threshold accuracy; -40 C to 125 C"
   },
   {
-    category: "usb-c-power",
-    lifecycle: "active",
-    manufacturer: "STMicroelectronics",
-    manufacturerUrl: "https://www.st.com/en/interfaces-and-transceivers/stusb4500.html",
-    mpn: "STUSB4500QTR",
-    purpose: "Autonomous USB-C PD sink with 15 V preferred and 5 V reduced-brightness operation",
-    qualification: "Volume production; -40 C to 105 C; dead-battery support"
-  },
-  {
     category: "system-regulator",
     lifecycle: "active",
     manufacturer: "Texas Instruments",
@@ -103,10 +112,10 @@ export const componentDecisions = [
     category: "power-protection",
     lifecycle: "active",
     manufacturer: "Texas Instruments",
-    manufacturerUrl: "https://www.ti.com/product/TPS25947",
-    mpn: "TPS259474LRPWR",
-    purpose: "Reverse blocking, inrush limiting, overvoltage, and overcurrent protection",
-    qualification: "5.5 A maximum; use separate protected rails if the display budget exceeds it"
+    manufacturerUrl: "https://www.ti.com/product/TPS2663",
+    mpn: "TPS26631PWPT",
+    purpose: "Industrial surge, inrush, overvoltage, reverse-polarity, and overcurrent protection for the 24 V input",
+    qualification: "Active; 4.5 V to 60 V; 6 A; -40 C to 125 C; IEC 62368-1 certified"
   },
   {
     category: "power-monitor",

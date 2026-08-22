@@ -71,7 +71,7 @@ const previewHtml = `<!doctype html>
 <body>
   <h1>Competition scoring apparatus board model</h1>
   <p class="warning"><strong>Architecture review only.</strong> This model is not ready for fabrication. See the readiness report and production plan before ordering hardware.</p>
-  <p><a href="../docs/production-board-plan.md">Production plan</a><a href="readiness-report.json">Readiness report</a><a href="bom.csv">Component decisions</a></p>
+  <p><a href="../docs/production-board-plan.md">Production plan</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="bom.csv">Component decisions</a></p>
   <main class="views">
     <figure><figcaption>PCB placement and unrouted connectivity. Select to open full size.</figcaption><a href="pcb.svg"><img src="pcb.svg" alt="PCB placement model"></a></figure>
     <figure><figcaption>Logical schematic. Select to open full size.</figcaption><a href="schematic.svg"><img src="schematic.svg" alt="Logical schematic model"></a></figure>

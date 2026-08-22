@@ -8,6 +8,7 @@
     "pnpm": ">=11.0.0 <12.0.0"
   },
   "scripts": {
+    "analog:simulate": "node scripts/run-analog-sim.mjs",
     "build": "tsx src/build.ts",
     "check:types": "tsc --noEmit",
     "check:unused": "knip --directory ../.. --workspace packages/scoring-circuit",

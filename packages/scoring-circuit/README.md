@@ -10,6 +10,9 @@ report. The canonical component choices live in `src/component-decisions.ts`.
 
 Read `docs/production-board-plan.md` for the requirements matrix, event replay design, component rationale, reliability
 program, compliance work, and release gates. The read-only LLM review workflows are documented in `judges/README.md`.
+The bounded three-weapon sensing topology, ngspice model, and socketed fixture plan are documented in
+`docs/analog-front-end.md`. The present-rule compatibility strategy and proposed FIE update are in
+`docs/fie-modern-power-proposal.md`.
 
 ## Fabrication status
 

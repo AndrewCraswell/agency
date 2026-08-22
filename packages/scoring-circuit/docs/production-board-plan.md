@@ -79,7 +79,7 @@ The canonical, machine-checked list is `src/component-decisions.ts`. Important c
 | Processor barrier | ISO7762FDWR plus ISO7721FDR | Reinforced, fast, correct channel directions, wide operating range |
 | Scoring power | NXE1S0505MC plus local regulation | Certified one-watt isolated source; separation from display/network noise |
 | ADC reference | REF5025AQDRQ1 | Automotive-qualified, low drift, and specified through 125 C |
-| Power entry | STUSB4500QTR, TPS55288RPMR, TPS259474LRPWR | Autonomous PD negotiation, buck-boost operation, controlled inrush and fault isolation |
+| Power entry | Locking 24 V DC, TPS26631PWPT, TPS55288RPMR | One robust input, industrial surge and fault protection, and regulated five-volt conversion |
 | Ethernet | W5500 with integrated-magnetics RJ45 | Stable dedicated controller; networking cannot consume the scoring SPI bus |
 | Field serial | ISO1410BDWR | Isolated protected RS-485 for our documented long-cable protocol |
 | Journal | CY15B104Q-LHXIT | High-endurance F-RAM for atomic metadata and configuration transactions |
@@ -93,11 +93,15 @@ the interface permits it.
 
 ## Power and thermal budgets
 
-USB-C PD negotiates 15 V at up to 3 A as the normal operating point. A certified locking adapter may feed the same
-protected DC bus. Five-volt-only USB sources support service and reduced display brightness, not guaranteed full-output
-operation. The TPS25947 is limited to 5.5 A, so display and logic receive separate protected branches if the measured
-worst-case HUB75 current exceeds a single branch's derated limit. INA238 telemetry lets firmware reduce brightness
-before brownout without affecting the scoring domain.
+The apparatus has one protected, locking nominal 24 V DC input from a certified external Class II supply or UPS. USB-C
+is a service and data port, not an alternate scoring-power path. This deliberately removes USB-PD negotiation,
+dual-source arbitration, a wide-input promise, and an internal battery from the production board. TPS26631 provides
+industrial 4.5-60 V fault and surge headroom but the product qualification remains narrowly specified around 24 V.
+
+The internal scoring and reference rails must produce identical rule-test results across input tolerance, brownout, and
+external-UPS transfer. INA238 telemetry lets firmware reduce display brightness before brownout without affecting the
+scoring domain. Because present FIE m.58 prescribes 12 V, approval of the 24 V apparatus is a release gate. The standards
+case is in `fie-modern-power-proposal.md`.
 
 Every rail gets a worst-case spreadsheet using maximum current, minimum conversion efficiency, 50 C ambient, blocked
 vent assumptions, capacitor DC-bias derating, and supplier tolerance. Production release requires thermal-camera and

@@ -14,6 +14,14 @@ function WeaponInput({ side, x }: { side: "L" | "R"; x: number }) {
         showSilkscreenPinLabels
       />
       <chip
+        name={`U_ESD_${side}`}
+        manufacturerPartNumber="TPD4E05U06DQAR"
+        doNotPlace
+        pinLabels={{ pin1: "CH_A", pin2: "CH_B", pin3: "CH_C", pin4: "SPARE", pin5: "ESD_RETURN" }}
+        pcbX={x}
+        pcbY={29}
+      />
+      <chip
         name={`U_FRONTEND_${side}`}
         manufacturerPartNumber="ANALOG-FRONT-END-TBD"
         doNotPlace
@@ -31,9 +39,13 @@ function WeaponInput({ side, x }: { side: "L" | "R"; x: number }) {
         pcbX={x}
         pcbY={22}
       />
-      <trace from={`J_${side}.A`} to={`U_FRONTEND_${side}.RAW_A`} />
-      <trace from={`J_${side}.B`} to={`U_FRONTEND_${side}.RAW_B`} />
-      <trace from={`J_${side}.C`} to={`U_FRONTEND_${side}.RAW_C`} />
+      <trace from={`J_${side}.A`} to={`U_ESD_${side}.CH_A`} />
+      <trace from={`J_${side}.B`} to={`U_ESD_${side}.CH_B`} />
+      <trace from={`J_${side}.C`} to={`U_ESD_${side}.CH_C`} />
+      <trace from={`U_ESD_${side}.CH_A`} to={`U_FRONTEND_${side}.RAW_A`} />
+      <trace from={`U_ESD_${side}.CH_B`} to={`U_FRONTEND_${side}.RAW_B`} />
+      <trace from={`U_ESD_${side}.CH_C`} to={`U_FRONTEND_${side}.RAW_C`} />
+      <trace from={`U_ESD_${side}.ESD_RETURN`} to="net.ESD_RETURN" />
       <trace from={`U_FRONTEND_${side}.SGND`} to="net.SGND" />
       <trace from={`U_FRONTEND_${side}.S3_3`} to="net.S3_3" />
     </group>
@@ -137,6 +149,17 @@ function ScoringCircuit() {
         pcbX={-42}
         pcbY={-36}
       />
+      {(["SOURCE_A", "SOURCE_B", "SINK_A", "SINK_B"] as const).map((bank, index) => (
+        <chip
+          key={bank}
+          name={`U_LINE_${bank}`}
+          manufacturerPartNumber="TMUX1112PWR"
+          footprint="tssop16"
+          pinLabels={{ pin1: "S3_3", pin2: "SGND", pin3: "CH1", pin4: "CH2", pin5: "CH3", pin6: "CH4" }}
+          pcbX={-63 + index * 11}
+          pcbY={-29}
+        />
+      ))}
 
       <chip
         name="U_ISO_MAIN"
@@ -355,18 +378,11 @@ function ScoringCircuit() {
       />
 
       <connector name="J_USB_C" standard="usb_c" pcbX={70} pcbY={-39} />
-      <chip
-        name="U_PD_SINK"
-        manufacturerPartNumber="STUSB4500QTR"
-        footprint="qfn24"
-        pinLabels={{ pin1: "VBUS", pin2: "GND", pin3: "CC1", pin4: "CC2", pin5: "PD_OK", pin6: "POWER_EN" }}
-        pcbX={51}
-        pcbY={-38}
-      />
+      <pinheader name="J_POWER_24V" pinCount={3} pinLabels={["V24_IN", "GND", "CHASSIS"]} pcbX={67} pcbY={-31} />
       <chip
         name="U_EFUSE"
-        manufacturerPartNumber="TPS259474LRPWR"
-        footprint="qfn10"
+        manufacturerPartNumber="TPS26631PWPT"
+        footprint="tssop20"
         pinLabels={{ pin1: "VIN", pin2: "GND", pin3: "EN", pin4: "FAULT", pin5: "VOUT" }}
         pcbX={36}
         pcbY={-38}
@@ -394,7 +410,9 @@ function ScoringCircuit() {
       <trace from="U_FRONTEND_R.SENSE_A" to="U_STM32.RIGHT_A" />
       <trace from="U_FRONTEND_R.SENSE_B" to="U_STM32.RIGHT_B" />
       <trace from="U_FRONTEND_R.SENSE_C" to="U_STM32.RIGHT_C" />
-      <trace from="J_PISTE.PISTE" to="U_PISTE_FRONTEND.RAW_PISTE" />
+      <trace from="J_PISTE.PISTE" to="U_ESD_L.SPARE" />
+      <trace from="U_ESD_L.SPARE" to="U_PISTE_FRONTEND.RAW_PISTE" />
+      <trace from="J_POWER_24V.CHASSIS" to="net.ESD_RETURN" />
       <trace from="U_PISTE_FRONTEND.SENSE_PISTE" to="U_STM32.PISTE" />
       <trace from="U_VREF.VOUT" to="U_STM32.VREF" />
       <trace from="U_STM32.WD_KICK" to="U_STM_WATCHDOG.WDI" />

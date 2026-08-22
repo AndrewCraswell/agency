@@ -28,6 +28,8 @@ describe("production scoring architecture", () => {
         "J_L",
         "J_R",
         "J_PISTE",
+        "U_ESD_L",
+        "U_ESD_R",
         "U_STM32",
         "U_STM_WATCHDOG",
         "U_STM_SUPERVISOR",
@@ -43,7 +45,11 @@ describe("production scoring architecture", () => {
         "U_FRAM",
         "U_RTC",
         "U_SECURE_ELEMENT",
-        "U_PD_SINK",
+        "J_POWER_24V",
+        "U_LINE_SOURCE_A",
+        "U_LINE_SOURCE_B",
+        "U_LINE_SINK_A",
+        "U_LINE_SINK_B",
         "U_EFUSE",
         "U_BUCK_BOOST"
       ])
@@ -64,8 +70,10 @@ describe("production scoring architecture", () => {
     expect(serialized).not.toContain("J_STM32")
     expect(serialized).not.toContain("J_ESP32")
     expect(traceNames.some((name) => name.includes("U_STM32") && name.includes("U_ESP32"))).toBe(false)
-    expect(traceNames).toContain("J_PISTE.PISTE to U_PISTE_FRONTEND.RAW_PISTE")
+    expect(traceNames).toContain("J_PISTE.PISTE to U_ESD_L.SPARE")
+    expect(traceNames).toContain("U_ESD_L.SPARE to U_PISTE_FRONTEND.RAW_PISTE")
     expect(traceNames).not.toContain("J_PISTE.PISTE to U_STM32.PISTE")
+    expect(traceNames).toContain("J_POWER_24V.CHASSIS to net.ESD_RETURN")
     expect(traceNames).toEqual(
       expect.arrayContaining([
         "U_STM_WATCHDOG.RESET to U_STM32.NRST",
@@ -96,5 +104,10 @@ describe("production scoring architecture", () => {
     expect(applicationController?.qualification).toContain("-40 C to 85 C")
     expect(scoringController?.mpn).toBe("STM32G474RET3TR")
     expect(scoringController?.qualification).toContain("-40 C to 125 C")
+  })
+
+  it("selects repeated low-leakage line switching and connector-adjacent protection", () => {
+    expect(componentDecisions.find((component) => component.category === "line-switch")?.mpn).toBe("TMUX1112PWR")
+    expect(componentDecisions.find((component) => component.category === "line-protection")?.mpn).toBe("TPD4E05U06DQAR")
   })
 })
