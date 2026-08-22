@@ -34,6 +34,10 @@
     "./sabre": {
       "types": "./dist/sabre.d.ts",
       "default": "./dist/sabre.js"
+    },
+    "./timing-table": {
+      "types": "./dist/timing-table.d.ts",
+      "default": "./dist/timing-table.js"
     }
   },
   "engines": {

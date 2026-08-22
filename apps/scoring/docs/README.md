@@ -11,6 +11,9 @@ electrical observations, decisions, and diagnostics are defined in [scoring-glos
 [processor fault-containment contract](processor-fault-containment-contract.md) define the hardware/software boundary.
 Immutable replay payloads and portable test vectors are specified in
 [decision-record-contract.md](decision-record-contract.md) and [golden-scenario-contract.md](golden-scenario-contract.md).
+The released scalar timing selections, strict revision loading, and M1-08
+boundary-vector handoff are specified in
+[timing-table-contract.md](timing-table-contract.md).
 
 `fie-material-rules-2026-08-en.pdf` is the English FIE Material Rules, Book 3, dated August 2026.
 
