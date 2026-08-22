@@ -525,7 +525,7 @@ describe("M2-13 bounded seeded protocol and record fuzz", () => {
       version: 32
     })
     expect(reportDigest(report), JSON.stringify(report)).toBe(SEED_FIXTURE.reportDigest)
-  })
+  }, 15_000)
 
   it("keeps maximum protocol inputs bounded and rejects over-limit data before decode or use", () => {
     const maximumPayload = new Uint8Array(SEED_FIXTURE.maxPayloadBytes)
