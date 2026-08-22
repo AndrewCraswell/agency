@@ -100,11 +100,15 @@ function compareHits(left: EpeeHit, right: EpeeHit) {
   return left.side.localeCompare(right.side)
 }
 
-function isPendingInsideLockout(contact: ContactState, lockoutEndsAtUs: number) {
-  return contact.candidateSinceUs !== null && contact.candidateSinceUs <= lockoutEndsAtUs
+function isPendingInsideLockout(contact: ContactState, firstHitAtUs: number) {
+  return contact.candidateSinceUs !== null && contact.candidateSinceUs - firstHitAtUs <= EPEE_RULES.lockoutTimeUs
 }
 
 export function advanceEpeeScoring(state: EpeeScoringState, sample: EpeeSample): EpeeScoringState {
+  if (!Number.isSafeInteger(sample.atUs) || sample.atUs < 0) {
+    throw new RangeError("Epee samples must use non-negative safe integer timestamps")
+  }
+
   if (state.lastSampleAtUs !== null && sample.atUs < state.lastSampleAtUs) {
     throw new RangeError("Epee samples must use monotonic timestamps")
   }
@@ -132,12 +136,11 @@ export function advanceEpeeScoring(state: EpeeScoringState, sample: EpeeSample):
     }
   }
 
-  const lockoutEndsAtUs = firstHitAtUs === null ? null : firstHitAtUs + EPEE_RULES.lockoutTimeUs
   const hasPendingHit =
-    lockoutEndsAtUs !== null &&
-    (isPendingInsideLockout(leftAdvance.contact, lockoutEndsAtUs) ||
-      isPendingInsideLockout(rightAdvance.contact, lockoutEndsAtUs))
-  const isLocked = lockoutEndsAtUs !== null && sample.atUs > lockoutEndsAtUs && !hasPendingHit
+    firstHitAtUs !== null &&
+    (isPendingInsideLockout(leftAdvance.contact, firstHitAtUs) ||
+      isPendingInsideLockout(rightAdvance.contact, firstHitAtUs))
+  const isLocked = firstHitAtUs !== null && sample.atUs - firstHitAtUs > EPEE_RULES.lockoutTimeUs && !hasPendingHit
 
   return {
     firstHitAtUs,
