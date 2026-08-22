@@ -511,7 +511,8 @@ from Voyage is large, while OpenAI Small is the cost-effective winner for
 document passages and structured amendments.
 
 Run all four products concurrently with 16 checkpointed shards per product,
-filling the 64-worker derived queue. The model contract remains:
+using the four-slot embedding root-controller queue and filling the 64-worker
+derived queue. The model contract remains:
 
 1. bills with `voyageai/voyage-4` and query-time
    `cohere/rerank-v3.5`;

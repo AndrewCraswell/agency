@@ -82,6 +82,8 @@ and deployment versions, so more Trigger workers do not bypass a website's host
 limit. Each embedding product uses 16 deterministic shards; the approved
 four-product bulk pass can therefore fill all 64 derived-worker slots. Operators
 reduce that fan-out if provider throttling, retries, or database pressure appear.
+The embedding root-controller queue permits exactly four concurrent product
+waves so waiting shard controllers do not serialize unrelated products.
 Supporting-material history uses 24 deterministic ID
 shards; each 25-row child has two database connections and a renewable
 60-minute lease, while publisher traffic remains globally limited. OCR uses a

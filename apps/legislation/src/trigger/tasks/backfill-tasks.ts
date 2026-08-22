@@ -543,7 +543,7 @@ export const embeddingIndexMaintenance = task({
 export const embeddingSync = task({
   id: "embedding-sync",
   maxDuration: 14_400,
-  queue: { concurrencyLimit: 1, name: "legislation-embedding-sync-controller" },
+  queue: { concurrencyLimit: 4, name: "legislation-embedding-sync-controller" },
   run: async (unparsedPayload: unknown) => {
     const payload = embeddingSyncPayloadSchema.parse(unparsedPayload)
     const items = []
