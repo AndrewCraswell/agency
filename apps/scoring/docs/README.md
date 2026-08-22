@@ -4,6 +4,14 @@ The cross-software-and-hardware execution plan is in [device-delivery-plan.md](d
 milestones, dependencies, granular agent-sized tasks, acceptance evidence, and the boundary between emulation,
 fabrication readiness, EVT, DVT, and production validation.
 
+The normative requirements are decomposed in
+[fie-traceability-matrix.md](fie-traceability-matrix.md). Project terminology and the distinction between rule terms,
+electrical observations, decisions, and diagnostics are defined in [scoring-glossary.md](scoring-glossary.md). The
+[seven-conductor contract](seven-conductor-signal-contract.md) and
+[processor fault-containment contract](processor-fault-containment-contract.md) define the hardware/software boundary.
+Immutable replay payloads and portable test vectors are specified in
+[decision-record-contract.md](decision-record-contract.md) and [golden-scenario-contract.md](golden-scenario-contract.md).
+
 `fie-material-rules-2026-08-en.pdf` is the English FIE Material Rules, Book 3, dated August 2026.
 
 - Official index: https://fie.org/documents/rules

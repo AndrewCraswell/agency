@@ -16,6 +16,10 @@ The bounded three-weapon sensing topology, ngspice model, and socketed fixture p
 `docs/analog-front-end.md`. The present-rule compatibility strategy and proposed FIE update are in
 `docs/fie-modern-power-proposal.md`.
 
+The candidate processor allocations and their unresolved electrical conflicts are documented in
+`docs/stm32-pin-allocation.md` and `docs/esp32-pin-allocation.md`. Exact connector evidence and remaining physical
+verification gates are tracked in `docs/reel-socket-selection.md` and `docs/connector-cad-verification.md`.
+
 ## Fabrication status
 
 This is an architectural placement and connectivity model, not a production schematic or routed PCB. It intentionally
