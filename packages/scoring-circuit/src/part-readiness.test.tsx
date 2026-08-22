@@ -147,7 +147,38 @@ describe("critical-part readiness", () => {
 
     expect(powerInput?.assembly).toBe("external-panel-module")
     expect(powerInput?.footprint.status).toBe("not-applicable")
+    expect(powerInput?.cad.status).toBe("pending")
+    if (powerInput !== undefined && "url" in powerInput.cad) {
+      expect(powerInput.cad.url).toContain("NC4MD-LX.stp")
+    } else {
+      throw new Error("The selected power inlet must retain its manufacturer CAD source")
+    }
     expect(reelSockets?.assembly).toBe("external-panel-module")
     expect(reelSockets?.footprint.status).toBe("not-applicable")
+  })
+
+  it("keeps generic connector models from passing selected-part verification", () => {
+    const circuitJson = renderArchitecture()
+    const sourceComponents = circuitJson.filter((element) => element.type === "source_component")
+    const ethernet = sourceComponents.find((component) => component.name === "J_ETHERNET_MAGJACK")
+    const usb = sourceComponents.find((component) => component.name === "J_USB_C")
+    const power = sourceComponents.find((component) => component.name === "J_POWER_24V")
+
+    expect(ethernet?.ftype).toBe("simple_pin_header")
+    expect(ethernet !== undefined && "pin_count" in ethernet ? ethernet.pin_count : undefined).toBe(8)
+    expect(usb?.ftype).toBe("simple_connector")
+    expect(usb !== undefined && "standard" in usb ? usb.standard : undefined).toBe("usb_c")
+    expect(power?.ftype).toBe("simple_pin_header")
+    expect(power !== undefined && "pin_count" in power ? power.pin_count : undefined).toBe(3)
+
+    for (const reference of ["J_ETHERNET_MAGJACK", "J_USB_C", "J_POWER_24V"]) {
+      const part = criticalPartReadiness.find((candidate) =>
+        candidate.references.some((candidateReference) => candidateReference === reference)
+      )
+
+      expect(part?.productionApproved).toBe(false)
+      expect(part?.footprint.status).not.toBe("verified")
+      expect(part?.mechanical.status).not.toBe("verified")
+    }
   })
 })

@@ -8,16 +8,53 @@
 
 ## Evidence status
 
-This is a drawing-source audit, not physical verification. No manufacturer CAD
-file, footprint library, or sample has been downloaded, imported, or reviewed
-against a board or enclosure model in this task. Therefore none of the facts
-below verifies a released footprint, module outline, panel fit, fastener
-engagement, cable load path, or service reach. Those gates remain open.
+This is a drawing-source audit, not physical verification. The exact Würth
+STEP file and the exact Neutrik STEP, DXF, and dimensional PDF were acquired
+and identity-checked on the evidence date. They were not imported into a board
+or enclosure assembly, and no manufacturer footprint library or sample was
+reviewed. Amphenol's drawing and 3D download remained access-controlled from
+this review environment. Therefore none of the facts below verifies a released
+footprint, module outline, panel fit, fastener engagement, cable load path, or
+service reach. Those gates remain open.
 
 Only manufacturer-owned pages, drawings, and downloads are cited. Dimensions
 are in mm unless stated otherwise. A blank numeric field is intentionally not a
 guess: it means the official source exists but its drawing geometry has not yet
 been transcribed from a downloaded and model-reviewed file.
+
+## Acquired source record
+
+The following SHA-256 values identify the exact manufacturer files retrieved
+on 2026-08-22. The files are deliberately not vendored: the source URL remains
+the manufacturer-controlled record, and a later import must compare its hash
+before using it. A successful download proves file identity only. It is not a
+CAD-overlay, footprint, or enclosure approval.
+
+| Selected part | Manufacturer source | SHA-256 | Result |
+| --- | --- | --- | --- |
+| Würth 7499011121A | [STEP, rev1](https://www.we-online.com/components/products/download/7499011121A%20%28rev1%29.stp) | `44143609DA5D63A01551C85B343134BA5F027136C04CEBEFEA9ABA05AE6AFCD1` | File identifies `7499011121A`; not imported. |
+| Würth 7499011121A | [datasheet](https://www.we-online.com/components/products/datasheet/7499011121A.pdf) | `05B718A55907F45D2388BEA0EBEAADB60C7C93CE2C4C5CA582637936E890E350` | Drawing revision 2023-07-11; not overlaid. |
+| Amphenol 10177070-00011LF | [drawing](https://cdn.amphenol-cs.com/media/wysiwyg/files/drawing/10177070.pdf) | Not acquired: manufacturer CDN returned HTTP 403. | **DENY.** No checksum or import evidence. |
+| Neutrik NC4MD-LX | [STEP](https://www.neutrik.com/media/12908/download/3-D%20NC4MD-LX.stp?v=2) | `0CADDF86BC61FC63D350223895D9E3C6652D40A1533C6BF0469EDA82871F0030` | File identifies `D-NC4MD-LX`; not imported. |
+| Neutrik NC4MD-LX | [DXF](https://www.neutrik.com/media/11869/download/nc4md-lx-3.dxf?v=1) | `E23234A8FFB7F2C0D461BCA6EADDCD97EB551F530E1C97DD0DC724719968A779` | File identifies `st-nc4md-lx.dxf`; not imported. |
+| Neutrik NC4MD-LX | [dimensional PDF](https://www.neutrik.com/media/8420/download/nc4md-lx-2.pdf?v=1) | `0E0E958D00907EF1A5FED029048C01546ACCE1621869DBBB18FEDDFFB99D1078` | Not overlaid against a panel model. |
+
+The Würth drawing's product identifier and recommended-hole drawing, and the
+part identifiers inside both acquired STEP files, were inspected. The current
+tscircuit model contains no imported source geometry to compare with them, so
+that inspection can only establish the mismatch described below.
+
+## Supply and lifecycle gate
+
+No purchase-time lifecycle or supply approval was produced by this task. The
+static `active` labels in `src/component-decisions.ts` are a research snapshot,
+not confirmation of factory allocation, authorized distribution stock, lead
+time, last-time-buy status, or an approved alternate. In particular, the Würth
+datasheet directs customers to verify availability with its sales channel at
+design-in and before ordering. The Amphenol 403 response also prevents treating
+a public product page as a deliverable CAD source. M4-14 must retain all three
+connectors as non-production-approved until a dated authorized-source and
+PCN/PTN review is recorded with the approved manufacturing BOM.
 
 ## Selected connector audit
 
@@ -119,11 +156,11 @@ gaps that M4-14 must reconcile rather than masking them with a generic model.
 | `J_USB_C` | Generic `connector` with `standard="usb_c"`; no selected MPN footprint or shell geometry | 10177070-00011LF right-angle SMT footprint, its exact contact pads, all shield/stake pads, and 0.80 board-thickness constraint | **Mismatch.** A generic USB-C symbol/shape is not its footprint or retention strategy. |
 | `J_POWER_24V` | Generic three-pin `pinheader` with `V24_IN`, `GND`, and `CHASSIS` | NC4MD-LX four-pole D-size, panel-mounted solder-cup connector and keyed internal harness; shell/duplex ground treated as a mechanical and bonding interface | **Mismatch.** Three PCB pins cannot model four power contacts, D-panel cutout, latch, fasteners, or chassis shell. |
 
-The readiness manifest labels the RJ45 and USB-C CAD as `pending`; that remains
-accurate because no file was imported or independently reviewed. It labels the
-power inlet CAD and footprint `not-applicable`, which is only correct for PCB
-placement. It is **not** correct for M4-11 mechanical CAD: the selected
-NC4MD-LX has official STEP and DXF files that must be used for the chassis,
+The readiness manifest labels all three connector CAD records as `pending`.
+That remains accurate: acquired source files have not been imported or
+independently reviewed, and the Amphenol sources could not be acquired in this
+environment. The power inlet's PCB footprint is `not-applicable`, but its CAD
+is not: the selected NC4MD-LX STEP and DXF are required for the chassis,
 cutout, fastener, harness, and service review.
 
 ## Verification checklist and open gates
@@ -150,7 +187,8 @@ cutout, fastener, harness, and service review.
   bonding, fault current, temperature rise, and service-safe disconnect
   sequence with M4-13.
 
-**M4-11 disposition:** documentation evidence identifies the exact selected
-parts and manufacturer design sources, but CAD import, footprint comparison,
-physical plug fit, chassis strain relief, and service access are still open.
-No connector is fabrication-approved or physically verified by this document.
+**M4-11 disposition: DENY fabrication readiness.** Documentation evidence
+identifies the exact selected parts and manufacturer design sources, but CAD
+import, footprint comparison, physical plug fit, chassis strain relief, supply
+approval, lifecycle confirmation, and service access are still open. No
+connector is fabrication-approved or physically verified by this document.

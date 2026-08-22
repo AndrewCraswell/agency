@@ -126,11 +126,19 @@ export const criticalPartReadiness = [
   {
     assembly: "external-panel-module",
     blockers: [
+      "Import the manufacturer STEP and DXF into the enclosure review and verify the exact selected-variant cutout and fasteners",
       "Define the keyed harness and chassis bonding pinout",
-      "Validate supply connector temperature rise, misuse behavior, and service access"
+      "Validate supply connector temperature rise, misuse behavior, service access, and purchase-time lifecycle"
     ],
-    cad: { status: "not-applicable" },
-    evidenceUrls: ["https://www.neutrik.com/en/product/nc4md-lx"],
+    cad: {
+      status: "pending",
+      url: "https://www.neutrik.com/media/12908/download/3-D%20NC4MD-LX.stp?v=2"
+    },
+    evidenceUrls: [
+      "https://www.neutrik.com/en/product/nc4md-lx",
+      "https://www.neutrik.com/media/8420/download/nc4md-lx-2.pdf?v=1",
+      "https://www.neutrik.com/media/11869/download/nc4md-lx-3.dxf?v=1"
+    ],
     footprint: {
       status: "not-applicable",
       description: "Chassis-mounted connector wired to a keyed internal harness"
