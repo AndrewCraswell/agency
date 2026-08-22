@@ -40,8 +40,9 @@ than provider latency or database query time, are the measured bottleneck.
 Scale a new pooled embedding deployment through 68, 96, 128, 160, and 200 workers. The first 68-worker pooled stage is
 the comparison baseline; the older direct-connection run is retained only as historical context because changing both
 the pool and concurrency at once would make its throughput incomparable. Run each stage against the same embedding
-product and input contract until it has completed at least 15 minutes and 25,000 vectors, unless the product has less
-remaining work. Capture the following measurements for every stage:
+product and input contract for 10 minutes. Treat the first minute as warm-up and calculate comparative throughput from
+the remaining nine minutes. A safety-gate breach ends the stage immediately. Capture the following measurements for
+every stage:
 
 | Measurement | Why it matters |
 | --- | --- |
