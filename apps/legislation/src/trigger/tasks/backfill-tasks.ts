@@ -54,7 +54,7 @@ const federalHistoryQueue = queue({ concurrencyLimit: 2, name: "legislation-fede
 const derivedQueue = queue({
   // Documents use the bounded 64-lane jurisdiction drain. Four concurrent
   // embedding products share this queue during the approved bulk pass; every
-  // worker retains a one-connection database pool.
+  // embedding worker reserves a second PgBouncer client for lease heartbeats.
   concurrencyLimit: backfillExecutionPolicy.derivedQueueConcurrencyLimit,
   name: "legislation-derived-backfill"
 })
@@ -561,35 +561,71 @@ export const embeddingIndexMaintenance = task({
   queue: { concurrencyLimit: 1, name: "legislation-embedding-index-maintenance" },
   run: async (unparsedPayload: unknown) => {
     const payload = baseWorkerSchema.strict().parse(unparsedPayload)
-    await withDerivedBackfillDatabase("embeddings", async (database) => {
-      await database.execute(
-        sql.raw(
-          "create index concurrently if not exists bill_embeddings_hnsw_idx on legislation.bill_embeddings using hnsw (embedding vector_cosine_ops)"
-        )
-      )
-      await database.execute(
-        sql.raw(
-          "create index concurrently if not exists document_section_embeddings_hnsw_idx on legislation.document_section_embeddings using hnsw (embedding vector_cosine_ops)"
-        )
-      )
-      await database.execute(
-        sql.raw(
-          "create index concurrently if not exists amendment_embeddings_hnsw_idx on legislation.amendment_embeddings using hnsw (embedding vector_cosine_ops)"
-        )
-      )
-      await database.execute(
-        sql.raw(
-          "create index concurrently if not exists supporting_material_section_embeddings_hnsw_idx on legislation.supporting_material_section_embeddings using hnsw (embedding vector_cosine_ops)"
-        )
-      )
-      await database.execute(sql.raw("analyze legislation.bill_embeddings"))
-      await database.execute(sql.raw("analyze legislation.document_section_embeddings"))
-      await database.execute(sql.raw("analyze legislation.amendment_embeddings"))
-      await database.execute(sql.raw("analyze legislation.supporting_material_section_embeddings"))
+    await withDerivedBackfillDatabase("embeddings", async (_database, pool) => {
+      const client = await pool.connect()
+      try {
+        // Railway's PostgreSQL container has a 64 MiB POSIX shared-memory
+        // segment. A parallel HNSW build requests almost all of it and fails
+        // before indexing begins, so keep this maintenance session serial.
+        await client.query("set max_parallel_maintenance_workers = 0")
+        const invalidIndexes = await client.query<{ index_name: string }>(INVALID_EMBEDDING_INDEX_QUERY)
+        for (const statement of embeddingIndexMaintenanceStatements(
+          invalidIndexes.rows.map(({ index_name }) => index_name)
+        )) {
+          await client.query(statement)
+        }
+        await client.query("analyze legislation.bill_embeddings")
+        await client.query("analyze legislation.document_section_embeddings")
+        await client.query("analyze legislation.amendment_embeddings")
+        await client.query("analyze legislation.supporting_material_section_embeddings")
+      } finally {
+        client.release()
+      }
     })
     return { rebuildId: payload.rebuildId, status: "completed" as const }
   }
 })
+
+const EMBEDDING_HNSW_INDEXES = [
+  {
+    create:
+      "create index concurrently if not exists bill_embeddings_hnsw_idx on legislation.bill_embeddings using hnsw (embedding vector_cosine_ops)",
+    name: "bill_embeddings_hnsw_idx"
+  },
+  {
+    create:
+      "create index concurrently if not exists document_section_embeddings_hnsw_idx on legislation.document_section_embeddings using hnsw (embedding vector_cosine_ops)",
+    name: "document_section_embeddings_hnsw_idx"
+  },
+  {
+    create:
+      "create index concurrently if not exists amendment_embeddings_hnsw_idx on legislation.amendment_embeddings using hnsw (embedding vector_cosine_ops)",
+    name: "amendment_embeddings_hnsw_idx"
+  },
+  {
+    create:
+      "create index concurrently if not exists supporting_material_section_embeddings_hnsw_idx on legislation.supporting_material_section_embeddings using hnsw (embedding vector_cosine_ops)",
+    name: "supporting_material_section_embeddings_hnsw_idx"
+  }
+] as const
+
+const INVALID_EMBEDDING_INDEX_QUERY = `
+  select index_class.relname as index_name
+  from pg_index index_state
+  join pg_class index_class on index_class.oid = index_state.indexrelid
+  join pg_namespace index_namespace on index_namespace.oid = index_class.relnamespace
+  where index_namespace.nspname = 'legislation'
+    and not index_state.indisvalid
+    and index_class.relname in (${EMBEDDING_HNSW_INDEXES.map(({ name }) => `'${name}'`).join(", ")})
+`
+
+export function embeddingIndexMaintenanceStatements(invalidIndexNames: readonly string[]): string[] {
+  const invalid = new Set(invalidIndexNames)
+  return EMBEDDING_HNSW_INDEXES.flatMap(({ create, name }) => [
+    ...(invalid.has(name) ? [`drop index concurrently if exists legislation.${name}`] : []),
+    create
+  ])
+}
 
 export const embeddingSync = task({
   id: "embedding-sync",
@@ -1067,7 +1103,7 @@ async function withDatabase<Result>(execute: (database: LegislationDatabase) => 
 
 async function withDerivedBackfillDatabase<Result>(
   kind: (typeof DERIVED_BACKFILL_KINDS)[number],
-  execute: (database: LegislationDatabase) => Promise<Result>
+  execute: (database: LegislationDatabase, pool: ReturnType<typeof createDatabase>["pool"]) => Promise<Result>
 ): Promise<Result> {
   const config = loadConfig()
   const { database, pool } = createDatabase({
@@ -1079,7 +1115,7 @@ async function withDerivedBackfillDatabase<Result>(
     maxConnections: Math.max(config.backfill.derivedDatabaseMaxConnections, derivedDatabaseConnectionsFor(kind))
   })
   try {
-    return await execute(database)
+    return await execute(database, pool)
   } finally {
     await pool.end()
   }

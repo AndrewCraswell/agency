@@ -594,6 +594,13 @@ local pool connection. Such a loss is resumable and does not duplicate vectors,
 but it terminates that shard controller and requires a checkpointed replacement
 wave.
 
+Index maintenance must not rely on `CREATE INDEX CONCURRENTLY IF NOT EXISTS`
+alone. PostgreSQL retains an invalid zero-byte catalog entry when a concurrent
+build fails, and `IF NOT EXISTS` will skip that name. The maintenance task
+detects `pg_index.indisvalid = false`, drops only the four fixed invalid HNSW
+indexes concurrently, and recreates them before `ANALYZE` and retrieval
+acceptance.
+
 The broad pass is recommended only if the frozen graded evaluation and the
 deployed MCP canary both retain an absolute nDCG@10 improvement greater than
 0.02 for every promoted model or reranker, all result identities resolve to

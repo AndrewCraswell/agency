@@ -7,6 +7,7 @@ import {
   derivedDatabaseConnectionsFor,
   derivedPayloadSchema,
   derivedWorkerMaxBatchesFor,
+  embeddingIndexMaintenanceStatements,
   embeddingIndexMaintenancePayload,
   FULL_EMBEDDING_PRODUCT_ORDER,
   isMaterialPhaseGateOpen,
@@ -21,6 +22,18 @@ describe("derived backfill task payload", () => {
         rebuildId: "embedding-wave"
       })
     ).toEqual({ correlationId: "backfill:embedding-wave", rebuildId: "embedding-wave" })
+  })
+
+  it("drops invalid concurrent indexes before recreating them", () => {
+    const statements = embeddingIndexMaintenanceStatements([
+      "bill_embeddings_hnsw_idx",
+      "document_section_embeddings_hnsw_idx"
+    ])
+
+    expect(statements).toContain("drop index concurrently if exists legislation.bill_embeddings_hnsw_idx")
+    expect(statements).toContain("drop index concurrently if exists legislation.document_section_embeddings_hnsw_idx")
+    expect(statements).not.toContain("drop index concurrently if exists legislation.amendment_embeddings_hnsw_idx")
+    expect(statements.filter((statement) => statement.startsWith("create index concurrently"))).toHaveLength(4)
   })
 
   it("keeps material children inside the renewable ingestion lease", () => {
