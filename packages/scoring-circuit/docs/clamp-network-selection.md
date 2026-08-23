@@ -22,27 +22,27 @@ No fitted alternate is selected. `TPD4E05U06-Q1` is only a contingency because i
 
 ## Reproducible error, capacitance, and charge calculations
 
-The limiting calculation uses the 450 ohm foil diagnostic band, a powered 3.3 V scoring domain, 2.5 V excitation, and the current M4-01 topology. Use 2.49 kohm at +0.05%, `R_MUX = 9.8 ohm` from the TMUX1112 -40 C to 125 C maximum, and `R_ESD = 23.1 ohm` as a conservative +5% allowance. TI specifies the switch at 2 nA maximum on-leakage over temperature and -1.5 pC charge injection ([TMUX1112](https://www.ti.com/lit/ds/symlink/tmux1112.pdf)).
+The limiting calculation uses the 450 ohm foil diagnostic band, a powered 3.3 V scoring domain, 2.5 V excitation, and the current M4-01 topology. The selected `CRCW060322R0FKEAHP` is 1%, not 5%: using its published 100 ppm/C TCR from 25 C to 125 C gives `R_ESD,max = 22 x 1.01 x 1.01 = 22.442 ohm`. Use the declared 2.49 kohm source candidate at +0.05% and 10 ppm/C, and `R_MUX = 9.8 ohm` from the TMUX1112 3.3 V +/-10%, -40 C to 125 C maximum. TI specifies the switch at 2 nA maximum on-leakage over temperature and -1.5 pC charge injection ([TMUX1112](https://www.ti.com/lit/ds/symlink/tmux1112.pdf)).
 
 ```text
-R_S,max = 2490 x 1.0005 + 9.8 + 23.1 = 2524.145 ohm
-V_450   = 2.5 x 450 / (2524.145 + 450) = 0.378260 V
-R_TH    = R_S,max || 450 = 381.91 ohm
-R_LEAK  = R_TH + 1010 = 1391.91 ohm
-dR/dV   = R_S,max x 2.5 / (2.5 - V_450)^2 = 1401.7 ohm/V
+R_S,max = 2490 x 1.0005 x 1.001 + 9.8 + 22 x 1.01 x 1.01 = 2525.978 ohm
+V_450   = 2.5 x 450 / (2525.978 + 450) = 0.378027 V
+R_TH    = R_S,max || 450 = 381.955 ohm
+R_LEAK  = R_TH + (1000 x 1.01 x 1.01) = 1402.055 ohm
+dR/dV   = R_S,max x 2.5 / (2.5 - V_450)^2 = 1402.5 ohm/V
 ```
 
 | Contributor | Bound used | Voltage error | Equivalent resistance error |
 | --- | ---: | ---: | ---: |
 | `D_ESD` | 10 nA at 2.5 V | 3.82 uV | 0.0054 ohm |
-| `D_POS` BAV199-7-F | 80 nA, conservatively using its 150 C, 75 V bound | 111 uV | 0.16 ohm |
-| `D_NEG` BAT54 | 2.0 uA at 25 V, 25 C | 2.784 mV | 3.90 ohm |
+| `D_POS` BAV199-7-F | 80 nA, conservatively using its 150 C, 75 V bound | 112 uV | 0.16 ohm |
+| `D_NEG` BAT54 | 2.0 uA at 25 V, 25 C | 2.804 mV | 3.93 ohm |
 | TMUX1112 source path | 2 nA | 0.76 uV | 0.0011 ohm |
-| **Total stated bound** | **2.092 uA** | **2.900 mV** | **4.06 ohm** |
+| **Total stated bound** | **2.092 uA** | **2.921 mV** | **4.10 ohm** |
 
-The 4.06 ohm allocation is below the current 5 ohm fixture target by only 0.94 ohm. BAT54 does not publish a full-temperature maximum at its actual 0.38 V reverse bias, so its 25 C, 25 V figure is not a valid full-range guarantee. The coupon must measure `|I_D_NEG(0.45 V)| <= 1.50 uA` and `|I_D_POS(2.1 V)| <= 0.10 uA` at -40 C, 25 C, 85 C, and 125 C. Those limits produce 3.12 ohm of clamp contribution; if either fails, reject or redesign the candidate rather than hiding it in calibration.
+The 4.10 ohm allocation is below the current 5 ohm fixture target by only 0.90 ohm. BAT54 does not publish a full-temperature maximum at its actual 0.38 V reverse bias, so its 25 C, 25 V figure is not a valid full-range guarantee. The coupon must measure `|I_D_NEG(0.45 V)| <= 1.50 uA` and `|I_D_POS(2.1 V)| <= 0.10 uA` at -40 C, 25 C, 85 C, and 125 C. With the revised `R_LEAK` and `dR/dV`, those limits produce 3.15 ohm of clamp contribution; if either fails, reject or redesign the candidate rather than hiding it in calibration.
 
-The TPD adds 0.5 pF typical at the cable node, just 0.1% of the 0.5 nF minimum fixture bank. BAV199 adds 2 pF typical and BAT54 10 pF maximum beside the 470 pF C0G capacitor. `1010 ohm x 482 pF = 0.487 us`; including `R_TH` gives 0.671 us, or 3.35 us for five time constants. This is inside the 10 us sabre scan budget but is only an RC estimate. M4-03 must use the STM32 sample capacitor, selected acquisition time, diode C-V curves, and PCB extraction.
+The TPD adds 0.5 pF typical at the cable node, just 0.1% of the 0.5 nF minimum fixture bank. BAV199 adds 2 pF typical and BAT54 10 pF maximum beside the 470 pF C0G capacitor. `1020.1 ohm x 482 pF = 0.492 us`; including `R_TH` gives 0.676 us, or 3.38 us for five time constants. This is inside the 10 us sabre scan budget but is only an RC estimate. M4-03 must use the STM32 sample capacitor, selected acquisition time, diode C-V curves, and PCB extraction.
 
 One TMUX edge gives `1.5 pC / (500 pF + 470 pF) = 1.55 mV`, or 2.17 ohm at 450 ohms. Two same-polarity edges can reach 4.34 ohm before settling. Comparator qualification and ADC classification must therefore be blanked for at least 3.5 us after every source/sink state change, then proven to retain the 100 us sabre minimum contact. This is a phase-control requirement, not a passive-protection claim.
 

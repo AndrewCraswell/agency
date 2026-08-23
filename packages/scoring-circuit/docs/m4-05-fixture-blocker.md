@@ -25,7 +25,7 @@ block this audit, because the blocking gap is M4-01's analog evidence.
    behavior. M4-01 requires declared tolerances and temperature coverage; the current
    result cannot establish them.
 2. **The DUT error budget remains open, but that is not a fixture-accuracy blocker.**
-   The M4-03 record reports a 7.17 ohm baseline screen at 125 C after a 25 C calibration
+   The M4-03 record reports a 7.20 ohm baseline screen at 125 C after a 25 C calibration
    against a 5.00 ohm target, with switch, board, reference, and ADC terms still open.
    This is context for later DUT correlation, not a reason to prevent an independently
    calibrated resistance, capacitance, and timing fixture. The fixture's standard,
@@ -74,7 +74,7 @@ M4-07.
 
 ## Downstream DUT timing context
 
-The current M4-03 screen records 9.96 us for the 100 ohm/10 nF sabre path and 31.44 us
+The current M4-03 screen records 9.98 us for the 100 ohm/10 nF sabre path and 31.47 us
 for the 500 ohm/10 nF full diagnostic path before comparator and phase-mask uncertainty.
 This belongs to M4-03, M3-07, and later DUT timing work; it is not an M4-01 or M4-05
 dependency gate.

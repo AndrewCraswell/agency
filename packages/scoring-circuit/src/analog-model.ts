@@ -20,7 +20,7 @@ export const analogFrontEnd = {
 export const analogBudget = {
   adcFilterCapacitancePf: 470,
   adcFilterCapacitanceWithClampsAndSamplePf: 504.5,
-  adcInputSeriesResistanceMaximumOhms: 1_010,
+  adcInputSeriesResistanceMaximumOhms: 1_000 * 1.01 * 1.01,
   adcSingleEndedIntegralLinearityTypicalLsb: 3.1,
   adcLsbVolts: 2.5 / (2 ** 12 - 1),
   adc1DiagnosticRankCount: 6,
@@ -30,7 +30,7 @@ export const analogBudget = {
   adcSampleCycles: 47.5,
   adcSampleClockMhz: 52,
   adcSlowChannelMaximumInputResistanceOhms: 1_800,
-  clampLeakageGateOhms: 3.12,
+  clampLeakageGateOhms: 3.15,
   // Leakage-only BAV199 experiment: one diode replaces the BAT54 negative
   // clamp. The 80 nA value is the vendor maximum at 75 V and TJ = 150 C,
   // not a guaranteed assembled-coupon value at the actual low reverse
@@ -41,7 +41,14 @@ export const analogBudget = {
   fixtureInterpolationAndStandardUncertaintyOhms: 0.5,
   fixtureTargetOhms: 5,
   lineCapacitanceBanksPf: [500, 2_000, 5_000, 10_000],
-  sourceResistanceMaximumOhms: 2_490 * 1.0005 + 9.8 + 23.1,
+  // This is not a nominal "slow corner". It is the 125 C series-path
+  // envelope using the declared source-resistor candidate, the TMUX1112
+  // 3.3 V +/-10 % full-temperature RON maximum, and the selected Vishay
+  // CRCW0603-HP 22 ohm 1 % / 100 ppm/C resistor. It remains insufficient
+  // for M4-01 because the ADC, clamps, and assembled parasitics have no
+  // applicable full-corner bound.
+  sourceResistanceMaximumOhms: 2_490 * 1.0005 * 1.001 + 9.8 + 22 * 1.01 * 1.01,
+  sourceResistanceAtCalibrationMaximumOhms: 2_490 * 1.0005 + 9.8 + 22 * 1.01 * 1.01,
   sourceResistorNominalOhms: 2_490,
   sourceResistorTemperatureCoefficientPpmPerC: 10,
   switchChargeInjectionPc: 1.5,
@@ -213,7 +220,8 @@ export function sourceResistorTemperatureErrorOhms(externalResistanceOhms: numbe
     1e-6
 
   return (
-    (externalResistanceOhms * resistanceChangeOhms) / (analogBudget.sourceResistanceMaximumOhms + resistanceChangeOhms)
+    (externalResistanceOhms * resistanceChangeOhms) /
+    (analogBudget.sourceResistanceAtCalibrationMaximumOhms + resistanceChangeOhms)
   )
 }
 

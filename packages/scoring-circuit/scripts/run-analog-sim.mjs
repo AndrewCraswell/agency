@@ -30,6 +30,19 @@ const nominalComponents = {
   switchOhms: 2
 }
 
+const declaredSupplyCornersVolts = [3.135, 3.465]
+const vendorBoundedSeriesResistance = (temperatureC) => ({
+  // The source-resistor candidate is a declared 0.05 %, 10 ppm/C design
+  // input. Its manufacturer part number still needs release evidence, so it
+  // is intentionally not counted as a primary-data closure input.
+  sourceOhms: 2_490 * 1.0005 * (1 + Math.abs(temperatureC - 25) * 10e-6),
+  // TMUX1112: 9.8 ohms maximum at VDD = 3.3 V +/-10 %, -40 C to 125 C.
+  switchOhms: 9.8,
+  // Selected CRCW0603-HP: 1 % tolerance and 100 ppm/C TCR.
+  protectionOhms: 22 * 1.01 * (1 + Math.abs(temperatureC - 25) * 100e-6),
+  adcSeriesOhms: 1_000 * 1.01 * (1 + Math.abs(temperatureC - 25) * 100e-6)
+})
+
 const boundaryCases = resistanceBoundariesOhms.map((loadOhms) => ({
   ...nominalComponents,
   budgetUs: loadOhms <= 100 ? 10 : 50,
@@ -62,21 +75,26 @@ const pulseCases = [50, 100, 1_000, 2_000, 10_000, 14_000].map((contactWidthUs) 
   id: `pulse-${contactWidthUs}-us`,
   loadOhms: 100
 }))
-const resistanceCornerCases = [100, 250, 450, 475, 500].map((loadOhms) => ({
-  adcCapacitancePf: 494,
-  adcSeriesOhms: 1_010,
-  budgetUs: loadOhms <= 100 ? 10 : 50,
-  capacitance: "10n",
-  capacitancePf: 10_000,
-  contactWidthUs: 100,
-  family: "slow-resistance-corner-proxy",
-  id: `slow-corner-${loadOhms}-ohm`,
-  loadOhms,
-  protectionOhms: 23.1,
-  sourceOhms: 2_491.25,
-  switchOhms: 4
-}))
-const cases = [...boundaryCases, ...capacitanceCases, ...pulseCases, ...resistanceCornerCases]
+const selectedDeviceBoundedCases = [-40, 125].flatMap((temperatureC) =>
+  declaredSupplyCornersVolts.flatMap((supply3v3Volts) =>
+    [100, 250, 450, 475, 500].map((loadOhms) => ({
+      ...vendorBoundedSeriesResistance(temperatureC),
+      // The 470 pF C0G part has no selected MPN or applicable tolerance yet.
+      // Do not turn this nominal value into a corner claim.
+      adcCapacitancePf: 470,
+      budgetUs: loadOhms <= 100 ? 10 : 50,
+      capacitance: "10n",
+      capacitancePf: 10_000,
+      contactWidthUs: 100,
+      family: "selected-device-bounded-series-screen",
+      id: `bounded-${temperatureC}c-${supply3v3Volts.toFixed(3)}v-${loadOhms}-ohm`,
+      loadOhms,
+      supply3v3Volts,
+      temperatureC
+    }))
+  )
+)
+const cases = [...boundaryCases, ...capacitanceCases, ...pulseCases, ...selectedDeviceBoundedCases]
 
 const results = []
 for (const [index, simulationCase] of cases.entries()) {
@@ -92,6 +110,8 @@ for (const [index, simulationCase] of cases.entries()) {
     LINE_CAPACITANCE: simulationCase.capacitance,
     LOAD_OHMS: String(simulatedLoadOhms),
     PROTECTION_OHMS: String(simulationCase.protectionOhms),
+    REFERENCE_VOLTS: "2.5",
+    CROSSING_VOLTS: String(2.5 * 0.168),
     SOURCE_OHMS: String(simulationCase.sourceOhms),
     STOP_TIME: `${stopTimeUs}u`,
     SWITCH_OHMS: String(simulationCase.switchOhms)
@@ -127,11 +147,13 @@ for (const [index, simulationCase] of cases.entries()) {
     id: simulationCase.id,
     loadOhms: simulationCase.loadOhms,
     responseUs,
-    steadyStateErrorMv
+    steadyStateErrorMv,
+    supply3v3Volts: simulationCase.supply3v3Volts ?? null,
+    temperatureC: simulationCase.temperatureC ?? null
   })
 }
 
-const acceptance = {
+const transientScreen = {
   maximumSteadyStateErrorMv: 2,
   passed: results.every(
     (result) => result.responseUs >= 0 && result.responseUs <= result.budgetUs && result.steadyStateErrorMv <= 2
@@ -144,15 +166,33 @@ const coverage = {
   loadOhms: [...new Set(results.map((result) => result.loadOhms))].sort((left, right) => left - right),
   pulseWidthUs: [...new Set(results.map((result) => result.contactWidthUs))].sort((left, right) => left - right)
 }
+const m401Closure = {
+  fullCornerPass: false,
+  status: "DENY",
+  vendorBoundedInputs: [
+    "TMUX1112PWR: 9.8 ohms maximum at 3.3 V +/-10 % and -40 C to 125 C",
+    "CRCW060322R0FKEAHP and CRCW06031K00FKEAHP: 1 % tolerance and 100 ppm/C TCR",
+    "TPD4E05U06DQAR: 10 nA maximum leakage at 2.5 V"
+  ],
+  couponOnlyGates: [
+    "clamp low-voltage leakage and external-clamp priority",
+    "LQFP64 ADC residual and sampling kickback",
+    "assembled PCB and cable parasitics",
+    "MCU injection and cross-channel crosstalk"
+  ]
+}
 await writeFile(
   join(outputDirectory, "summary.json"),
   `${JSON.stringify(
     {
-      acceptance,
+      m401Closure,
+      transientScreen,
       coverage,
       modelLimitations: [
-        "The switch and protection devices use resistance-corner proxies rather than vendor temperature and charge-injection models",
-        "The model does not include PCB parasitics, cable coupling, ADC sampling kickback, ESD clamps, or MCU rail injection",
+        "This is a selected-device bounded series-resistance transient screen, not a full-corner pass or a release result",
+        "The 3V3A endpoint labels share one TMUX worst-case RON envelope; they are not independent supply-transfer simulations. The REF5025 source and ADC reference are represented as a ratiometric ideal source; reference load, startup, and dynamic mismatch are not bounded",
+        "The selected 470 pF C0G capacitor has no released part number or tolerance in this model",
+        "The model does not include low-voltage clamp leakage or priority, LQFP64 ADC sampling kickback or residual, assembled PCB/cable parasitics, MCU rail injection, or cross-channel crosstalk",
         "Long pulse cases prove settling only; rule qualification and lockout remain digital scoring-core tests"
       ],
       results
@@ -162,8 +202,8 @@ await writeFile(
   )}\n`
 )
 
-if (!acceptance.passed) {
+if (!transientScreen.passed) {
   throw new Error("The analog transient model exceeded its response-time budget")
 }
 
-console.log(JSON.stringify({ acceptance, coverage }, null, 2))
+console.log(JSON.stringify({ m401Closure, transientScreen, coverage }, null, 2))

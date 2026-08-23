@@ -1,5 +1,8 @@
-* Scoring line transient model. Architecture validation only.
-VREF vref 0 2.5
+* Scoring line transient model. Bounded series-path screen only.
+* Temperature and 3V3A labels are expanded into resistor values by the runner.
+* This netlist deliberately has no unqualified clamp, ADC, PCB/cable, or MCU
+* injection model. Its results must never be read as a full-corner pass.
+VREF vref 0 {{REFERENCE_VOLTS}}
 RSOURCE vref drive {{SOURCE_OHMS}}
 RSWITCH drive protected {{SWITCH_OHMS}}
 RPROTECTION protected line {{PROTECTION_OHMS}}
@@ -10,6 +13,6 @@ VCONTROL control 0 PULSE(0 3.3 10u 10n 10n {{CONTACT_WIDTH}} {{CONTACT_PERIOD}})
 SCONTACT line 0 control 0 CONTACT
 .model CONTACT SW(Ron={{LOAD_OHMS}} Roff=1e9 Vt=1.65 Vh=0.1)
 .tran 0.05u {{STOP_TIME}}
-.measure tran t_cross WHEN v(adc)=0.42 FALL=1
+.measure tran t_cross WHEN v(adc)={{CROSSING_VOLTS}} FALL=1
 .measure tran v_contact FIND v(adc) AT={{CONTACT_SAMPLE_TIME}}
 .end

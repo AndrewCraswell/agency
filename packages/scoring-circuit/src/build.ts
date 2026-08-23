@@ -368,7 +368,7 @@ const previewHtml = `<!doctype html>
       const chartWidth = width - margin.left - margin.right
       const chartHeight = height - margin.top - margin.bottom
       const boundary = results.filter((result) => result.family === 'resistance-boundary')
-      const slow = results.filter((result) => result.family === 'slow-resistance-corner-proxy')
+      const slow = results.filter((result) => result.family === 'selected-device-bounded-series-screen')
       const maximumResponse = Math.max(30, ...results.map((result) => result.responseUs))
       const x = (loadOhms) => margin.left + (loadOhms / 500) * chartWidth
       const y = (responseUs) => margin.top + chartHeight - (responseUs / maximumResponse) * chartHeight
@@ -416,7 +416,8 @@ const previewHtml = `<!doctype html>
       cards.className = 'simulation-summary'
       cards.append(
         metricCard('Simulated cases', String(results.length)),
-        metricCard('Nominal steady-state check', summary.acceptance?.passed ? 'Pass' : 'Fail', !summary.acceptance?.passed),
+        metricCard('Transient screen', summary.transientScreen?.passed ? 'Pass' : 'Fail', !summary.transientScreen?.passed),
+        metricCard('M4-01 corner closure', summary.m401Closure?.status ?? 'DENY', true),
         metricCard('Slowest response', maximumResponse.toFixed(2) + ' us'),
         metricCard('Fabrication status', 'Blocked', true)
       )
@@ -427,7 +428,7 @@ const previewHtml = `<!doctype html>
       const boundaryLegend = document.createElement('span')
       boundaryLegend.textContent = '500 pF resistance boundary sweep'
       const slowLegend = document.createElement('span')
-      slowLegend.textContent = '10 nF slow-corner proxy'
+      slowLegend.textContent = '10 nF selected-device bounded screen'
       legend.append(boundaryLegend, slowLegend)
 
       const details = document.createElement('div')

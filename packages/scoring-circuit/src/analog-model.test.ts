@@ -59,10 +59,10 @@ describe("three-weapon analog model", () => {
     expect(adcInputResistanceOhms(500)).toBeLessThan(analogBudget.adcSlowChannelMaximumInputResistanceOhms)
     expect(fiveTauSourceSettlingUs(100, 10_000)).toBeCloseTo(4.81, 2)
     expect(fiveTauSourceSettlingUs(500, 10_000)).toBeCloseTo(20.87, 2)
-    expect(fiveTauAdcSettlingUs(450)).toBeCloseTo(3.51, 2)
-    expect(conservativeBlankingUs(100, 10_000)).toBeCloseTo(7.6, 2)
-    expect(acquisitionUs(100, 10_000, 2)).toBeCloseTo(9.96, 2)
-    expect(fullDiagnosticAcquisitionUs(500, 10_000)).toBeCloseTo(31.44, 2)
+    expect(fiveTauAdcSettlingUs(450)).toBeCloseTo(3.54, 2)
+    expect(conservativeBlankingUs(100, 10_000)).toBeCloseTo(7.63, 2)
+    expect(acquisitionUs(100, 10_000, 2)).toBeCloseTo(9.98, 2)
+    expect(fullDiagnosticAcquisitionUs(500, 10_000)).toBeCloseTo(31.47, 2)
     expect(switchChargeErrorOhms(450, 500)).toBeCloseTo(4.2, 1)
     expect(resistanceErrorForVoltageErrorOhms(450, analogBudget.adcLsbVolts / 2)).toBeCloseTo(0.43, 2)
   })
@@ -71,18 +71,19 @@ describe("three-weapon analog model", () => {
     expect(analogBudget.adcSingleEndedIntegralLinearityTypicalLsb).toBe(3.1)
     expect(sourceResistorTemperatureErrorOhms(450, -40)).toBeCloseTo(0.29, 2)
     expect(sourceResistorTemperatureErrorOhms(450, 125)).toBeCloseTo(0.44, 2)
-    expect(m403ScreenedStaticErrorOhms(450, 125)).toBeCloseTo(7.17, 2)
+    expect(m403ScreenedStaticErrorOhms(450, 125)).toBeCloseTo(7.2, 2)
     expect(m403ScreenedStaticErrorOhms(450, 125)).toBeGreaterThan(analogBudget.fixtureTargetOhms)
   })
 
   it("identifies the unqualified clamp and ADC terms as the static-screen dominants", () => {
     const screen = m403StaticScreenBreakdownOhms(450, 125)
 
-    expect(screen.clampLeakage).toBeCloseTo(3.12, 2)
+    expect(screen.clampLeakage).toBeCloseTo(3.15, 2)
     expect(screen.adcIntegralLinearityTypical).toBeCloseTo(2.65, 2)
     expect(screen.clampLeakage).toBeGreaterThan(screen.adcQuantization)
     expect(screen.adcIntegralLinearityTypical).toBeGreaterThan(screen.sourceResistorTemperature)
-    expect(Object.values(screen).reduce((total, errorOhms) => total + errorOhms, 0)).toBeCloseTo(7.17, 2)
+    expect(screen.clampLeakage).toBe(3.15)
+    expect(Object.values(screen).reduce((total, errorOhms) => total + errorOhms, 0)).toBeCloseTo(7.2, 2)
   })
 
   it("reserves the fixture allocation from the M4-04 coupon-capture half-width", () => {
@@ -94,7 +95,7 @@ describe("three-weapon analog model", () => {
       0.31,
       2
     )
-    expect(m403LowLeakageClampExperimentScreenOhms(450, 125)).toBeCloseTo(4.36, 2)
+    expect(m403LowLeakageClampExperimentScreenOhms(450, 125)).toBeCloseTo(4.37, 2)
     expect(m403LowLeakageClampExperimentScreenOhms(450, 125)).toBeLessThanOrEqual(analogBudget.fixtureTargetOhms)
   })
 

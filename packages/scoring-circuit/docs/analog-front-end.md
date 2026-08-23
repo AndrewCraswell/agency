@@ -66,28 +66,37 @@ switch and protection resistance using per-channel calibration rather than assum
 ## Executable model
 
 `spice/line-sense.cir` models the reference, source resistor, switch resistance, connector protection resistance, cable
-capacitance, ADC isolation resistor, C0G filter, and a timed external contact. `pnpm analog:simulate` now runs a bounded
-audit matrix rather than a few representative examples:
+capacitance, ADC isolation resistor, C0G filter, and a timed external contact. `pnpm analog:simulate` runs a bounded
+transient audit matrix rather than a few representative examples:
 
 | Case family | Coverage | Acceptance purpose |
 | --- | --- | --- |
 | Resistance boundary | 0, 10, 95/100/105, 195/200/205, 245/250/255, 445/450/455, 470/475/480, and 495/500 ohms | Exercise the rule boundaries and their +/- 5 ohm fixture points |
 | Line capacitance | 0.5, 2, 5, and 10 nF at 100 and 500 ohms | Bound fast sabre/epee paths and the high-resistance foil path |
 | Pulse width | 50 us, 100 us, 1 ms, 2 ms, 10 ms, and 14 ms | Prove that the analog node settles for sub-rule stress pulses and all relevant rule-scale pulses |
-| Slow resistance corner proxy | High source, switch, protection, ADC resistance, and ADC capacitance at 100, 250, 450, 475, and 500 ohms | Detect loss of response margin before vendor temperature models are available |
+| Selected-device bounded series screen | 100, 250, 450, 475, and 500 ohms at -40 C and 125 C, with 3V3A at 3.135 V and 3.465 V | Screen the published TMUX and selected resistor bounds without calling them a full-corner pass |
 
 Sabre-relevant paths at or below 100 ohms get a 10 us response budget; higher-resistance foil diagnostic paths get a
 50 us budget. Every case also compares the settled voltage with the resistor-network calculation within 2 mV. Applying
 the sabre budget to the foil-only resistance range would add bandwidth without improving conformance.
 
-The slow corner is explicitly a resistance proxy, not a temperature simulation. It cannot close M4-01 by itself:
-vendor switch, clamp, and protection models across voltage and temperature, ADC sampling kickback, extracted PCB
-parasitics, and cable coupling remain required. The generated `dist/analog-sim/summary.json` records the exact cases,
-coverage, limitations, response time, voltage error, and pass/fail result for review.
+The selected-device screen uses the published `TMUX1112PWR` 9.8 ohm maximum at 3.3 V +/-10% and -40 C to 125 C, plus
+the selected `CRCW060322R0FKEAHP` and `CRCW06031K00FKEAHP` 1% tolerance and 100 ppm/C TCR. It also records the
+`TPD4E05U06DQAR` 10 nA maximum leakage at 2.5 V as an input, but the transient netlist has no justified low-voltage
+clamp model. Both declared 3V3A endpoints share the same worst-case TMUX RON envelope; they are coverage labels, not
+independent supply-transfer simulations. The 2.49 kohm source-resistor candidate is a declared 0.05%, 10 ppm/C
+constraint, not a released manufacturer selection. The 470 pF C0G capacitor likewise has no selected MPN or applicable
+tolerance in the netlist.
+
+Consequently, the generated `dist/analog-sim/summary.json` has two separate outcomes: `transientScreen` can pass its
+response and nominal-voltage checks, while `m401Closure.status` is mechanically `DENY` and `fullCornerPass` is `false`.
+No consumer may promote the bounded series screen to a temperature, supply, or tolerance full-corner pass. The report
+lists the exact cases, inputs, limitations, and coupon-only gates: low-voltage clamp leakage and external-clamp priority,
+LQFP64 ADC residual and sampling kickback, assembled PCB/cable parasitics, and MCU injection/cross-channel crosstalk.
 
 This is a topology and timing model. It does not prove ESD survival, ADC accuracy, switch charge injection, cable
-coupling, or all three-weapon classification sequences. Vendor transistor and diode models plus extracted PCB
-parasitics are required at the analog gate.
+coupling, or all three-weapon classification sequences. Low-voltage diode behavior, ADC effects, rail injection, and
+assembled parasitics are coupon gates unless an applicable package-and-condition vendor maximum becomes available.
 
 ## Socketed fixture plan
 
@@ -112,7 +121,7 @@ and cable-fault testing occur on sacrificial coupons before they are allowed nea
 2. Every timing boundary is tested at boundary - fixture uncertainty, boundary, and boundary + fixture uncertainty.
 3. Open, short, cross-line, blade/guard, opponent target, self-lame, and piste combinations are exercised for both sides.
 4. Results are repeated at minimum, room, and maximum qualified ambient temperature and at the declared 24 V input
-   tolerance limits.
+   tolerance limits. The simulation's two endpoints do not replace this coupon requirement.
 5. No single open switch-control line, stuck switch, ADC saturation, missing reference, or MCU reset may produce a
    qualified touch; faults must become diagnostics or a safe unavailable state.
 
