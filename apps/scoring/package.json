@@ -58,6 +58,7 @@
     "check:unused": "knip --directory ../.. --workspace apps/scoring",
     "export:golden-vectors": "pnpm build && node scripts/export-golden-vectors.mjs",
     "lint": "oxlint --max-warnings=0",
+    "observe:scenarios": "pnpm build && node scripts/serve-scenario-observatory.mjs",
     "run:scenarios": "pnpm build && node scripts/run-scenarios.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",

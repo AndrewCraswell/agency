@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bout test observatory</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+        background: #091017;
+        color: #eef5f8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-width: 320px;
+        background: #091017;
+      }
+      button {
+        font: inherit;
+      }
+      button:focus-visible {
+        outline: 3px solid #74c7ff;
+        outline-offset: 2px;
+      }
+      .shell {
+        max-width: 1600px;
+        margin: auto;
+        padding: 20px;
+      }
+      .topbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(1.45rem, 3vw, 2.15rem);
+      }
+      h2,
+      h3 {
+        margin: 0;
+      }
+      .subtitle {
+        margin: 5px 0 0;
+        color: #aebfca;
+      }
+      .run-all,
+      .case-run,
+      .playback-button {
+        border: 1px solid #557183;
+        border-radius: 7px;
+        padding: 9px 13px;
+        background: #172733;
+        color: #eef5f8;
+        cursor: pointer;
+      }
+      .run-all {
+        border-color: #79ca99;
+        background: #173326;
+        font-weight: 700;
+      }
+      button:disabled {
+        cursor: wait;
+        opacity: 0.55;
+      }
+      .summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      .summary-item {
+        min-width: 118px;
+        padding: 10px 13px;
+        border: 1px solid #314654;
+        border-radius: 8px;
+        background: #101b24;
+      }
+      .summary-item strong {
+        display: block;
+        margin-top: 3px;
+        font-size: 1.3rem;
+      }
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(300px, 0.72fr) minmax(0, 1.7fr);
+        gap: 16px;
+        align-items: start;
+      }
+      .case-browser,
+      .detail {
+        border: 1px solid #314654;
+        border-radius: 10px;
+        background: #101b24;
+        overflow: hidden;
+      }
+      .section-heading {
+        padding: 14px 16px;
+        border-bottom: 1px solid #314654;
+      }
+      .section-heading p {
+        margin: 4px 0 0;
+        color: #aebfca;
+      }
+      .case-list {
+        display: grid;
+        max-height: 72vh;
+        overflow-y: auto;
+      }
+      .case-item {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+        border: 0;
+        border-bottom: 1px solid #263946;
+        padding: 11px 13px;
+        background: transparent;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .case-item:hover {
+        background: #162632;
+      }
+      .case-item[aria-selected="true"] {
+        background: #1c3040;
+        box-shadow: inset 4px 0 #74c7ff;
+      }
+      .status-emoji {
+        font-size: 1.25rem;
+      }
+      .case-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-weight: 650;
+      }
+      .case-meta {
+        display: block;
+        margin-top: 3px;
+        color: #9db0bc;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+      }
+      .case-duration {
+        color: #9db0bc;
+        font-variant-numeric: tabular-nums;
+      }
+      .detail {
+        min-height: 640px;
+      }
+      .detail-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        padding: 16px;
+        border-bottom: 1px solid #314654;
+      }
+      .detail-title {
+        overflow-wrap: anywhere;
+      }
+      .detail-subtitle {
+        margin: 5px 0 0;
+        color: #aebfca;
+      }
+      .detail-body {
+        display: grid;
+        gap: 18px;
+        padding: 16px;
+      }
+      .empty {
+        padding: 46px 20px;
+        color: #aebfca;
+        text-align: center;
+      }
+      .playback-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .playback-state {
+        margin-left: auto;
+        color: #aebfca;
+        font-variant-numeric: tabular-nums;
+      }
+      .timeline-wrap {
+        position: relative;
+        padding: 26px 12px 12px;
+      }
+      .timeline-track {
+        position: relative;
+        height: 8px;
+        border-radius: 4px;
+        background: #293b47;
+      }
+      .timeline-progress {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 0;
+        border-radius: 4px;
+        background: #74c7ff;
+        transition: width 160ms ease;
+      }
+      .timeline-marker {
+        position: absolute;
+        top: 50%;
+        width: 18px;
+        height: 18px;
+        border: 3px solid #101b24;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        background: #7f94a1;
+        cursor: pointer;
+      }
+      .timeline-marker[data-kind="input"] {
+        background: #74c7ff;
+      }
+      .timeline-marker[data-kind="actual"] {
+        background: #79ca99;
+      }
+      .timeline-marker[data-kind="expected"] {
+        width: 14px;
+        height: 14px;
+        background: #e9ad55;
+      }
+      .timeline-marker.is-current {
+        outline: 3px solid #eef5f8;
+        outline-offset: 2px;
+      }
+      .timeline-axis {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 11px;
+        color: #9db0bc;
+        font-size: 0.82rem;
+        font-variant-numeric: tabular-nums;
+      }
+      .current-event {
+        min-height: 92px;
+        border-left: 4px solid #74c7ff;
+        padding: 12px 14px;
+        background: #132530;
+      }
+      .current-event h3 {
+        margin-bottom: 5px;
+        font-size: 1rem;
+      }
+      .current-event p {
+        margin: 4px 0;
+        color: #c9d5dc;
+      }
+      .event-lines {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+        margin-top: 9px;
+      }
+      .line-chip {
+        border: 1px solid #496372;
+        border-radius: 6px;
+        padding: 5px 8px;
+        background: #0f1d26;
+        font-size: 0.86rem;
+      }
+      .evaluations {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .evaluations th,
+      .evaluations td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #2b3f4c;
+        text-align: left;
+        vertical-align: top;
+      }
+      .evaluations th {
+        color: #9db0bc;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+      }
+      .evaluations td:first-child {
+        width: 32px;
+        font-size: 1.05rem;
+      }
+      .evaluations code {
+        white-space: pre-wrap;
+        color: #cde9fb;
+        overflow-wrap: anywhere;
+      }
+      .event-stream {
+        display: grid;
+        gap: 7px;
+        max-height: 250px;
+        overflow-y: auto;
+      }
+      .event-row {
+        display: grid;
+        grid-template-columns: 80px 90px minmax(0, 1fr);
+        gap: 10px;
+        padding: 8px 0;
+        border-bottom: 1px solid #263946;
+      }
+      .event-time {
+        color: #9db0bc;
+        font-variant-numeric: tabular-nums;
+      }
+      .event-kind {
+        color: #b9dff5;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+      }
+      .event-row.is-played {
+        color: #eef5f8;
+      }
+      .event-row:not(.is-played) {
+        color: #728895;
+      }
+      .error-message {
+        color: #ff9f9f;
+      }
+      @media (max-width: 850px) {
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+        .case-list {
+          max-height: 360px;
+        }
+        .detail {
+          min-height: 0;
+        }
+      }
+      @media (max-width: 520px) {
+        .shell {
+          padding: 12px;
+        }
+        .summary-item {
+          flex: 1 1 42%;
+        }
+        .event-row {
+          grid-template-columns: 68px minmax(0, 1fr);
+        }
+        .event-row span:last-child {
+          grid-column: 1 / -1;
+        }
+        .evaluations th:nth-child(3),
+        .evaluations td:nth-child(3) {
+          display: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .timeline-progress {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Bout test observatory</h1>
+          <p class="subtitle">Canonical scoring cases with executable results and event playback</p>
+        </div>
+        <button id="run-all" class="run-all" type="button">Run all cases</button>
+      </header>
+      <section id="summary" class="summary" aria-label="Test summary"></section>
+      <div class="workspace">
+        <section class="case-browser" aria-labelledby="case-list-title">
+          <header class="section-heading">
+            <h2 id="case-list-title">Test cases</h2>
+            <p>✅ passed, ⏭️ skipped, ❌ failed</p>
+          </header>
+          <div id="case-list" class="case-list" role="listbox" aria-label="Bout test cases"></div>
+        </section>
+        <section id="detail" class="detail" aria-live="polite">
+          <p class="empty">Run the corpus to inspect a bout timeline.</p>
+        </section>
+      </div>
+    </main>
+    <script>
+      const state = { cases: [], selectedId: null, events: [], eventIndex: -1, timer: null }
+      const summaryRoot = document.querySelector("#summary")
+      const listRoot = document.querySelector("#case-list")
+      const detailRoot = document.querySelector("#detail")
+      const runAllButton = document.querySelector("#run-all")
+      const emoji = { passed: "✅", skipped: "⏭️", failed: "❌" }
+
+      function formatTime(atUs) {
+        if (atUs >= 1000) return (atUs / 1000).toFixed(atUs % 1000 === 0 ? 0 : 2) + " ms"
+        return atUs + " us"
+      }
+
+      function compactJson(value) {
+        return value === undefined ? "none" : JSON.stringify(value)
+      }
+
+      function createSummaryItem(label, value) {
+        const item = document.createElement("div")
+        item.className = "summary-item"
+        const labelNode = document.createElement("span")
+        labelNode.textContent = label
+        const valueNode = document.createElement("strong")
+        valueNode.textContent = value
+        item.append(labelNode, valueNode)
+        return item
+      }
+
+      function renderSummary(report) {
+        summaryRoot.replaceChildren(
+          createSummaryItem("✅ Passed", String(report.summary.passed)),
+          createSummaryItem("⏭️ Skipped", String(report.summary.skipped)),
+          createSummaryItem("❌ Failed", String(report.summary.failed)),
+          createSummaryItem("Total", String(report.summary.total))
+        )
+      }
+
+      function caseDuration(testCase) {
+        const inputs = testCase.scenario.inputs ?? []
+        return inputs.length === 0 ? "" : formatTime(Math.max(...inputs.map((input) => input.atUs)))
+      }
+
+      function renderCaseList() {
+        listRoot.replaceChildren()
+        for (const testCase of state.cases) {
+          const button = document.createElement("button")
+          button.type = "button"
+          button.className = "case-item"
+          button.setAttribute("role", "option")
+          button.setAttribute("aria-selected", String(testCase.scenario.scenarioId === state.selectedId))
+          const icon = document.createElement("span")
+          icon.className = "status-emoji"
+          icon.textContent = emoji[testCase.status]
+          const name = document.createElement("span")
+          name.className = "case-name"
+          name.textContent = testCase.scenario.scenarioId
+          const meta = document.createElement("span")
+          meta.className = "case-meta"
+          meta.textContent = testCase.scenario.weapon + " " + testCase.status
+          name.append(meta)
+          const duration = document.createElement("span")
+          duration.className = "case-duration"
+          duration.textContent = caseDuration(testCase)
+          button.append(icon, name, duration)
+          button.addEventListener("click", () => selectCase(testCase.scenario.scenarioId))
+          listRoot.append(button)
+        }
+      }
+
+      function buildEvents(testCase) {
+        if (testCase.status === "skipped") return []
+        const events = []
+        for (const input of testCase.scenario.inputs) {
+          events.push({ atUs: input.atUs, id: input.id, kind: "input", label: "Input " + input.id, lines: input.lines })
+        }
+        for (const decision of testCase.expected.decisions) {
+          events.push({
+            atUs: decision.decisionAtUs,
+            id: decision.id,
+            kind: "expected",
+            label: "Expected " + decision.disposition,
+            value: decision
+          })
+        }
+        for (const decision of testCase.result.decisions) {
+          events.push({
+            atUs: decision.decisionAtUs,
+            id: "actual-" + decision.side + "-" + decision.decisionAtUs,
+            kind: "actual",
+            label: "Actual " + decision.disposition,
+            value: decision
+          })
+        }
+        for (const uncertainty of testCase.result.uncertainty) {
+          events.push({
+            atUs: uncertainty.atUs,
+            id: "uncertainty-" + uncertainty.atUs,
+            kind: "actual",
+            label: "Actual uncertainty",
+            value: uncertainty
+          })
+        }
+        return events.sort(
+          (left, right) =>
+            left.atUs - right.atUs ||
+            ["input", "expected", "actual"].indexOf(left.kind) - ["input", "expected", "actual"].indexOf(right.kind)
+        )
+      }
+
+      function evaluationRows(testCase) {
+        if (testCase.status === "skipped") return []
+        const rows = [
+          [
+            "Status",
+            testCase.expected.status,
+            testCase.result.actualStatus,
+            testCase.expected.status === testCase.result.actualStatus
+          ],
+          [
+            "Decisions",
+            testCase.expected.decisions,
+            testCase.result.decisions,
+            !testCase.result.mismatches.some((item) => item.kind === "decision")
+          ],
+          [
+            "Non-events",
+            testCase.expected.nonEvents,
+            testCase.result.nonEvents,
+            !testCase.result.mismatches.some((item) => item.kind === "non-event")
+          ],
+          [
+            "Uncertainty",
+            testCase.expected.uncertainty,
+            testCase.result.uncertainty,
+            !testCase.result.mismatches.some((item) => item.kind === "uncertainty")
+          ],
+          [
+            "Final state",
+            testCase.expected.finalState,
+            testCase.result.finalState,
+            !testCase.result.mismatches.some((item) => item.kind === "final-state")
+          ]
+        ]
+        if (testCase.expected.status === "rejected")
+          rows.push([
+            "Rejection",
+            testCase.expected.error,
+            testCase.result.error,
+            !testCase.result.mismatches.some((item) => item.kind === "error")
+          ])
+        return rows
+      }
+
+      function renderEvaluations(testCase) {
+        const table = document.createElement("table")
+        table.className = "evaluations"
+        table.innerHTML = "<thead><tr><th>Result</th><th>Evaluation</th><th>Expected</th><th>Actual</th></tr></thead>"
+        const body = document.createElement("tbody")
+        for (const [label, expected, actual, passed] of evaluationRows(testCase)) {
+          const row = document.createElement("tr")
+          const result = document.createElement("td")
+          result.textContent = passed ? "✅" : "❌"
+          const labelCell = document.createElement("td")
+          labelCell.textContent = label
+          const expectedCell = document.createElement("td")
+          const expectedCode = document.createElement("code")
+          expectedCode.textContent = compactJson(expected)
+          expectedCell.append(expectedCode)
+          const actualCell = document.createElement("td")
+          const actualCode = document.createElement("code")
+          actualCode.textContent = compactJson(actual)
+          actualCell.append(actualCode)
+          row.append(result, labelCell, expectedCell, actualCell)
+          body.append(row)
+        }
+        table.append(body)
+        return table
+      }
+
+      function stopPlayback() {
+        if (state.timer !== null) window.clearInterval(state.timer)
+        state.timer = null
+      }
+
+      function setEventIndex(nextIndex) {
+        state.eventIndex = Math.max(-1, Math.min(nextIndex, state.events.length - 1))
+        const event = state.events[state.eventIndex]
+        const progress = document.querySelector("#timeline-progress")
+        const stateLabel = document.querySelector("#playback-state")
+        const current = document.querySelector("#current-event")
+        const maximumTime = Math.max(1, ...state.events.map((item) => item.atUs))
+        const progressPercent = event === undefined ? 0 : (event.atUs / maximumTime) * 100
+        if (progress) progress.style.width = progressPercent + "%"
+        if (stateLabel)
+          stateLabel.textContent =
+            event === undefined
+              ? "Ready"
+              : formatTime(event.atUs) + " " + (state.eventIndex + 1) + "/" + state.events.length
+        document
+          .querySelectorAll(".timeline-marker")
+          .forEach((marker, index) => marker.classList.toggle("is-current", index === state.eventIndex))
+        document
+          .querySelectorAll(".event-row")
+          .forEach((row, index) => row.classList.toggle("is-played", index <= state.eventIndex))
+        if (!current) return
+        current.replaceChildren()
+        if (event === undefined) {
+          const message = document.createElement("p")
+          message.textContent = "Press Play timeline or select an event marker."
+          current.append(message)
+          return
+        }
+        const heading = document.createElement("h3")
+        heading.textContent = emojiForEvent(event.kind) + " " + event.label
+        const time = document.createElement("p")
+        time.textContent = "At " + formatTime(event.atUs)
+        current.append(heading, time)
+        if (event.lines) {
+          const lines = document.createElement("div")
+          lines.className = "event-lines"
+          for (const line of event.lines) {
+            const chip = document.createElement("span")
+            chip.className = "line-chip"
+            const resistance = line.resistanceMilliOhms === null ? "" : " " + line.resistanceMilliOhms / 1000 + " ohms"
+            chip.textContent = line.line + ": " + line.state + resistance
+            lines.append(chip)
+          }
+          current.append(lines)
+        } else {
+          const value = document.createElement("p")
+          value.textContent = compactJson(event.value)
+          current.append(value)
+        }
+      }
+
+      function emojiForEvent(kind) {
+        return kind === "input" ? "▶️" : kind === "expected" ? "🔎" : "✅"
+      }
+
+      function playTimeline() {
+        stopPlayback()
+        if (state.eventIndex >= state.events.length - 1) setEventIndex(-1)
+        state.timer = window.setInterval(() => {
+          if (state.eventIndex >= state.events.length - 1) {
+            stopPlayback()
+            return
+          }
+          setEventIndex(state.eventIndex + 1)
+        }, 650)
+      }
+
+      function renderTimeline(testCase) {
+        state.events = buildEvents(testCase)
+        state.eventIndex = -1
+        const section = document.createElement("section")
+        const controls = document.createElement("div")
+        controls.className = "playback-controls"
+        const play = document.createElement("button")
+        play.type = "button"
+        play.className = "playback-button"
+        play.textContent = "Play timeline"
+        play.addEventListener("click", playTimeline)
+        const next = document.createElement("button")
+        next.type = "button"
+        next.className = "playback-button"
+        next.textContent = "Next event"
+        next.addEventListener("click", () => {
+          stopPlayback()
+          setEventIndex(state.eventIndex + 1)
+        })
+        const playbackState = document.createElement("span")
+        playbackState.id = "playback-state"
+        playbackState.className = "playback-state"
+        playbackState.textContent = "Ready"
+        controls.append(play, next, playbackState)
+
+        const timeline = document.createElement("div")
+        timeline.className = "timeline-wrap"
+        const track = document.createElement("div")
+        track.className = "timeline-track"
+        const progress = document.createElement("div")
+        progress.id = "timeline-progress"
+        progress.className = "timeline-progress"
+        track.append(progress)
+        const maximumTime = Math.max(1, ...state.events.map((event) => event.atUs))
+        state.events.forEach((event, index) => {
+          const marker = document.createElement("button")
+          marker.type = "button"
+          marker.className = "timeline-marker"
+          marker.dataset.kind = event.kind
+          marker.style.left = (event.atUs / maximumTime) * 100 + "%"
+          marker.setAttribute("aria-label", event.label + " at " + formatTime(event.atUs))
+          marker.addEventListener("click", () => {
+            stopPlayback()
+            setEventIndex(index)
+          })
+          track.append(marker)
+        })
+        const axis = document.createElement("div")
+        axis.className = "timeline-axis"
+        axis.innerHTML = "<span>0 us</span><span>" + formatTime(maximumTime) + "</span>"
+        timeline.append(track, axis)
+
+        const current = document.createElement("div")
+        current.id = "current-event"
+        current.className = "current-event"
+        const currentMessage = document.createElement("p")
+        currentMessage.textContent = "Press Play timeline or select an event marker."
+        current.append(currentMessage)
+        section.append(controls, timeline, current)
+        return section
+      }
+
+      function renderEventStream() {
+        const section = document.createElement("section")
+        const heading = document.createElement("h3")
+        heading.textContent = "Execution stream"
+        const stream = document.createElement("div")
+        stream.className = "event-stream"
+        state.events.forEach((event) => {
+          const row = document.createElement("div")
+          row.className = "event-row"
+          const time = document.createElement("span")
+          time.className = "event-time"
+          time.textContent = formatTime(event.atUs)
+          const kind = document.createElement("span")
+          kind.className = "event-kind"
+          kind.textContent = event.kind
+          const label = document.createElement("span")
+          label.textContent = event.label
+          row.append(time, kind, label)
+          stream.append(row)
+        })
+        section.append(heading, stream)
+        return section
+      }
+
+      function renderDetail(testCase) {
+        stopPlayback()
+        detailRoot.replaceChildren()
+        const header = document.createElement("header")
+        header.className = "detail-header"
+        const titleGroup = document.createElement("div")
+        const title = document.createElement("h2")
+        title.className = "detail-title"
+        title.textContent = emoji[testCase.status] + " " + testCase.scenario.scenarioId
+        const subtitle = document.createElement("p")
+        subtitle.className = "detail-subtitle"
+        subtitle.textContent = testCase.scenario.weapon + " " + testCase.status
+        titleGroup.append(title, subtitle)
+        header.append(titleGroup)
+
+        if (testCase.status !== "skipped") {
+          const run = document.createElement("button")
+          run.type = "button"
+          run.className = "case-run"
+          run.textContent = "Run this case"
+          run.addEventListener("click", () => runSingle(testCase.scenario.scenarioId, run))
+          header.append(run)
+        }
+        detailRoot.append(header)
+
+        const body = document.createElement("div")
+        body.className = "detail-body"
+        if (testCase.status === "skipped") {
+          const message = document.createElement("p")
+          message.className = "empty"
+          message.textContent = testCase.scenario.description
+          body.append(message)
+        } else {
+          body.append(renderTimeline(testCase), renderEvaluations(testCase), renderEventStream())
+        }
+        detailRoot.append(body)
+      }
+
+      function selectCase(scenarioId) {
+        state.selectedId = scenarioId
+        renderCaseList()
+        const testCase = state.cases.find((candidate) => candidate.scenario.scenarioId === scenarioId)
+        if (testCase) renderDetail(testCase)
+      }
+
+      async function fetchReport(path, options) {
+        const response = await fetch(path, options)
+        if (!response.ok) throw new Error("The scenario runner returned " + response.status)
+        return response.json()
+      }
+
+      function applyReport(report, preserveSelection = true) {
+        const previous = preserveSelection ? state.selectedId : null
+        state.cases = report.cases
+        renderSummary(report)
+        const nextSelection = state.cases.some((testCase) => testCase.scenario.scenarioId === previous)
+          ? previous
+          : state.cases.find((testCase) => testCase.status !== "skipped")?.scenario.scenarioId
+        state.selectedId = nextSelection ?? state.cases[0]?.scenario.scenarioId ?? null
+        renderCaseList()
+        if (state.selectedId) selectCase(state.selectedId)
+      }
+
+      async function runAll() {
+        runAllButton.disabled = true
+        runAllButton.textContent = "Running cases"
+        try {
+          applyReport(await fetchReport("/api/run", { method: "POST" }))
+        } catch (error) {
+          detailRoot.innerHTML = '<p class="empty error-message"></p>'
+          detailRoot.querySelector("p").textContent = error instanceof Error ? error.message : "The run failed"
+        } finally {
+          runAllButton.disabled = false
+          runAllButton.textContent = "Run all cases"
+        }
+      }
+
+      async function runSingle(scenarioId, button) {
+        button.disabled = true
+        button.textContent = "Running case"
+        try {
+          const report = await fetchReport("/api/run/" + encodeURIComponent(scenarioId), { method: "POST" })
+          const updated = report.cases[0]
+          state.cases = state.cases.map((testCase) =>
+            testCase.scenario.scenarioId === scenarioId ? updated : testCase
+          )
+          renderCaseList()
+          renderDetail(updated)
+        } catch (error) {
+          button.disabled = false
+          button.textContent = error instanceof Error ? error.message : "Run failed"
+        }
+      }
+
+      runAllButton.addEventListener("click", runAll)
+      fetchReport("/api/run")
+        .then((report) => applyReport(report, false))
+        .catch((error) => {
+          detailRoot.innerHTML = '<p class="empty error-message"></p>'
+          detailRoot.querySelector("p").textContent =
+            error instanceof Error ? error.message : "The runner is unavailable"
+        })
+    </script>
+  </body>
+</html>
