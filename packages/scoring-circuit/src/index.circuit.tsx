@@ -1,3 +1,5 @@
+import { manufacturerFootprintProps } from "./manufacturer-footprint-adapter.js"
+
 const weaponConnectorPins = { pin1: "A", pin2: "B", pin3: "C" } as const
 
 function WeaponInput({ side, x }: { side: "L" | "R"; x: number }) {
@@ -616,11 +618,12 @@ function ScoringCircuit() {
 
       <connector
         name="J_USB_C"
+        manufacturerPartNumber="10177070-00011LF"
         standard="usb_c"
         // This is a logical USB-C interface only. The selected Amphenol
         // receptacle has a manufacturer-specific contact, shell-stake, and
         // board-edge pattern; a generic USB-C model must never enter fab data.
-        doNotPlace
+        {...manufacturerFootprintProps("10177070-00011LF")}
         pinLabels={{
           pin1: "USB_DN_PORT",
           pin2: "USB_DP_PORT",
@@ -637,7 +640,7 @@ function ScoringCircuit() {
       <chip
         name="U_USB_PORT_PROTECT"
         manufacturerPartNumber="TPD4S201TRGRRQ1"
-        footprint="qfn20"
+        {...manufacturerFootprintProps("TPD4S201TRGRRQ1")}
         pinLabels={{
           pin1: "USB_DN_PORT",
           pin2: "USB_DP_PORT",
@@ -676,7 +679,7 @@ function ScoringCircuit() {
       <chip
         name="D_USB_PD_VBUS_TVS"
         manufacturerPartNumber="TVS2200DRVR"
-        footprint="wson6"
+        {...manufacturerFootprintProps("TVS2200DRVR")}
         pinLabels={{ pin1: "VBUS_PORT", pin2: "ESD_RETURN" }}
         pcbX={44}
         pcbY={-34}
@@ -686,7 +689,7 @@ function ScoringCircuit() {
         manufacturerPartNumber="TPS25730ADREFR"
         // The 38-pin DRE package needs its TI thermal-pad/paste definition.
         // Keep this non-placeable until the manufacturer pattern is imported.
-        doNotPlace
+        {...manufacturerFootprintProps("TPS25730ADREFR")}
         pinLabels={{
           pin1: "VBUS_PORT",
           pin2: "CC1_PROTECTED",
@@ -714,7 +717,7 @@ function ScoringCircuit() {
         manufacturerPartNumber="T55A106M010C0200"
         // A generic 1206 does not carry this polymer capacitor's polarity,
         // paste, or courtyard definition.
-        doNotPlace
+        {...manufacturerFootprintProps("T55A106M010C0200")}
         pinLabels={{ pin1: "PD_LDO_3V3", pin2: "GND" }}
         pcbX={21}
         pcbY={-44}
@@ -756,7 +759,7 @@ function ScoringCircuit() {
         manufacturerPartNumber="T523H107M035APE070"
         // A generic 2924 does not carry this polymer capacitor's polarity,
         // paste, or courtyard definition.
-        doNotPlace
+        {...manufacturerFootprintProps("T523H107M035APE070")}
         pinLabels={{ pin1: "PD_PPHV_20V", pin2: "GND" }}
         pcbX={25}
         pcbY={-44}
@@ -780,7 +783,7 @@ function ScoringCircuit() {
       <chip
         name="D_USB_PD_VBUS_DISCONNECT"
         manufacturerPartNumber="B340A-13-F"
-        footprint="sma"
+        {...manufacturerFootprintProps("B340A-13-F")}
         pinLabels={{ pin1: "ANODE_GND", pin2: "CATHODE_VBUS" }}
         pcbX={48}
         pcbY={-30}
@@ -802,7 +805,7 @@ function ScoringCircuit() {
         name="U_EFUSE"
         manufacturerPartNumber="TPS259474ARPWR"
         // The RPW VQFN-HR exposed-pad geometry is not a generic qfn10.
-        doNotPlace
+        {...manufacturerFootprintProps("TPS259474ARPWR")}
         pinLabels={{
           pin1: "EN_UVLO",
           pin2: "OVLO",
@@ -846,7 +849,7 @@ function ScoringCircuit() {
         name="C_EFUSE_OUT"
         manufacturerPartNumber="T523H107M035APE070"
         // See C_USB_PD_PPHV: exact polymer land pattern is a release gate.
-        doNotPlace
+        {...manufacturerFootprintProps("T523H107M035APE070")}
         pinLabels={{ pin1: "VOUT", pin2: "GND" }}
         pcbX={36}
         pcbY={-34}
@@ -855,7 +858,7 @@ function ScoringCircuit() {
         name="U_V5_BUCK"
         manufacturerPartNumber="TPS56A37RPAR"
         // The RPA VQFN-HR exposed-pad geometry is not a generic qfn10.
-        doNotPlace
+        {...manufacturerFootprintProps("TPS56A37RPAR")}
         pinLabels={{
           pin1: "EN",
           pin2: "FB",
@@ -876,7 +879,7 @@ function ScoringCircuit() {
         manufacturerPartNumber="744325330"
         // The WE-HCI land pattern must come from the exact manufacturer
         // drawing; the unresolved we-pad alias is not fabrication evidence.
-        doNotPlace
+        {...manufacturerFootprintProps("744325330")}
         pinLabels={{ pin1: "SW", pin2: "V5_SENSE_IN" }}
         pcbX={12}
         pcbY={-26}
@@ -885,7 +888,7 @@ function ScoringCircuit() {
         name="R_V5_SENSE"
         manufacturerPartNumber="CRE2512-FZ-R002E-3"
         // The high-current Kelvin shunt must not use a generic 2512 pattern.
-        doNotPlace
+        {...manufacturerFootprintProps("CRE2512-FZ-R002E-3")}
         pinLabels={{ pin1: "V5_SENSE_IN", pin2: "V5" }}
         pcbX={6}
         pcbY={-38}
@@ -893,7 +896,7 @@ function ScoringCircuit() {
       <chip
         name="C_V5_BUCK_IN_A"
         manufacturerPartNumber="GRM32ER7YA106KA12L"
-        footprint="1210"
+        {...manufacturerFootprintProps("GRM32ER7YA106KA12L")}
         pinLabels={{ pin1: "VIN", pin2: "GND" }}
         pcbX={22}
         pcbY={-32}
@@ -901,7 +904,7 @@ function ScoringCircuit() {
       <chip
         name="C_V5_BUCK_IN_B"
         manufacturerPartNumber="GRM32ER7YA106KA12L"
-        footprint="1210"
+        {...manufacturerFootprintProps("GRM32ER7YA106KA12L")}
         pinLabels={{ pin1: "VIN", pin2: "GND" }}
         pcbX={18}
         pcbY={-32}
@@ -925,7 +928,7 @@ function ScoringCircuit() {
       <chip
         name="C_V5_BUCK_OUT_A"
         manufacturerPartNumber="GRM32ER71E226KE15L"
-        footprint="1210"
+        {...manufacturerFootprintProps("GRM32ER71E226KE15L")}
         pinLabels={{ pin1: "V5", pin2: "GND" }}
         pcbX={2}
         pcbY={-32}
@@ -933,7 +936,7 @@ function ScoringCircuit() {
       <chip
         name="C_V5_BUCK_OUT_B"
         manufacturerPartNumber="GRM32ER71E226KE15L"
-        footprint="1210"
+        {...manufacturerFootprintProps("GRM32ER71E226KE15L")}
         pinLabels={{ pin1: "V5", pin2: "GND" }}
         pcbX={-2}
         pcbY={-32}
@@ -967,7 +970,7 @@ function ScoringCircuit() {
         manufacturerPartNumber="LMR43620MSC3RPERQ1"
         // The 9-pin RPE VQFN-HR package needs its exact HotRod copper,
         // thermal-pad, mask, paste, and courtyard implementation.
-        doNotPlace
+        {...manufacturerFootprintProps("LMR43620MSC3RPERQ1")}
         pinLabels={{
           pin1: "MODE_SYNC",
           pin2: "PGOOD",
@@ -988,7 +991,7 @@ function ScoringCircuit() {
         // Intentionally non-placeable until the exact Coilcraft XGL4030 land
         // pattern is imported and independently verified. A generic passive
         // footprint would make the generated fabrication output unsafe.
-        doNotPlace
+        {...manufacturerFootprintProps("XGL4030-222MEC")}
         pinLabels={{ pin1: "SW", pin2: "V3_3" }}
         pcbX={12}
         pcbY={-38}
@@ -1004,7 +1007,7 @@ function ScoringCircuit() {
       <chip
         name="C_APP_REG_IN_HF"
         manufacturerPartNumber="C0603C104K3RACTU"
-        footprint="0603"
+        {...manufacturerFootprintProps("C0603C104K3RACTU")}
         pinLabels={{ pin1: "VIN", pin2: "GND" }}
         pcbX={4}
         pcbY={-44}
@@ -1012,7 +1015,7 @@ function ScoringCircuit() {
       <chip
         name="C_APP_REG_BOOT"
         manufacturerPartNumber="C0603C104K3RACTU"
-        footprint="0603"
+        {...manufacturerFootprintProps("C0603C104K3RACTU")}
         pinLabels={{ pin1: "BOOT", pin2: "SW" }}
         pcbX={8}
         pcbY={-44}
@@ -1020,7 +1023,7 @@ function ScoringCircuit() {
       <chip
         name="C_APP_REG_VCC"
         manufacturerPartNumber="GRM188R71A105KA61"
-        footprint="0603"
+        {...manufacturerFootprintProps("GRM188R71A105KA61")}
         pinLabels={{ pin1: "VCC", pin2: "GND" }}
         pcbX={12}
         pcbY={-44}
@@ -1028,7 +1031,7 @@ function ScoringCircuit() {
       <chip
         name="C_APP_REG_OUT_A"
         manufacturerPartNumber="C2012X7S1A226M125AC"
-        footprint="0805"
+        {...manufacturerFootprintProps("C2012X7S1A226M125AC")}
         pinLabels={{ pin1: "V3_3", pin2: "GND" }}
         pcbX={16}
         pcbY={-44}
@@ -1036,7 +1039,7 @@ function ScoringCircuit() {
       <chip
         name="C_APP_REG_OUT_B"
         manufacturerPartNumber="C2012X7S1A226M125AC"
-        footprint="0805"
+        {...manufacturerFootprintProps("C2012X7S1A226M125AC")}
         pinLabels={{ pin1: "V3_3", pin2: "GND" }}
         pcbX={20}
         pcbY={-44}
@@ -1044,7 +1047,7 @@ function ScoringCircuit() {
       <chip
         name="C_APP_REG_OUT_C"
         manufacturerPartNumber="C2012X7S1A226M125AC"
-        footprint="0805"
+        {...manufacturerFootprintProps("C2012X7S1A226M125AC")}
         pinLabels={{ pin1: "V3_3", pin2: "GND" }}
         pcbX={24}
         pcbY={-44}

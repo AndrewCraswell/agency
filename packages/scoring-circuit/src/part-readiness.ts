@@ -101,7 +101,8 @@ export const criticalPartReadiness = [
     blockers: [
       "Confirm the exact assembled CT capacitor retains at least 61.2 nF effective capacitance across initial tolerance, temperature, DC bias, and lifetime aging",
       "Measure TPS389033 reset-release delay at voltage, temperature, and lot corners and verify the 53.04 ms calculated minimum",
-      "Independently verify the Yageo KEMET 0603 land pattern and assembly substitution controls"
+      "Import the exact part-specific Yageo KEMET 0603 land pattern, solder mask, stencil, and courtyard before any PCB artwork is enabled",
+      "Independently verify the regulator input, bootstrap, reset-timing, and bypass assembly placements"
     ],
     cad: { status: "not-applicable" },
     evidenceUrls: ["https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en"],
@@ -117,7 +118,14 @@ export const criticalPartReadiness = [
     },
     mpn: "C0603C104K3RACTU",
     productionApproved: false,
-    references: ["C_STM_SUPERVISOR_CT", "C_STM_SUPERVISOR_BYPASS", "C_ESP_SUPERVISOR_CT", "C_ESP_SUPERVISOR_BYPASS"],
+    references: [
+      "C_STM_SUPERVISOR_CT",
+      "C_STM_SUPERVISOR_BYPASS",
+      "C_ESP_SUPERVISOR_CT",
+      "C_ESP_SUPERVISOR_BYPASS",
+      "C_APP_REG_IN_HF",
+      "C_APP_REG_BOOT"
+    ],
     selectionStatus: "selected"
   },
   {

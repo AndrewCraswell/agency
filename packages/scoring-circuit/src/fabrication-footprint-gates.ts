@@ -21,6 +21,57 @@ export type FabricationFootprintGate = {
 // A component listed here must have doNotPlace and emit no copper pads.
 export const fabricationFootprintGates = [
   {
+    references: ["U_USB_PORT_PROTECT"],
+    manufacturer: "Texas Instruments",
+    mpn: "TPD4S201TRGRRQ1",
+    primaryEvidenceUrl: "https://www.ti.com/lit/ds/symlink/tpd4s201-q1.pdf",
+    packageEvidence: {
+      body: "RGR VQFN, 20 terminals plus exposed ground pad",
+      terminals: 20,
+      orientation: "pin-1",
+      thermalPad: "required"
+    },
+    prohibitedGenericFootprints: ["qfn20", "qfn", "vqfn"],
+    releaseEvidence: [
+      "Complete and independently review the manufacturer copper, solder mask, stencil, thermal-pad, and courtyard data as one CAD object",
+      "Review the connector-side CC escape and VBUS ESD return before fabrication output"
+    ]
+  },
+  {
+    references: ["D_USB_PD_VBUS_TVS"],
+    manufacturer: "Texas Instruments",
+    mpn: "TVS2200DRVR",
+    primaryEvidenceUrl: "https://www.ti.com/lit/ds/symlink/tvs2200.pdf",
+    packageEvidence: {
+      body: "DRV WSON, 6 terminals plus exposed ground pad",
+      terminals: 6,
+      orientation: "pin-1",
+      thermalPad: "required"
+    },
+    prohibitedGenericFootprints: ["wson6", "qfn6", "qfn"],
+    releaseEvidence: [
+      "Complete and independently review the manufacturer copper, solder mask, stencil, thermal-pad, and courtyard data as one CAD object",
+      "Verify VBUS surge return and chip-pin clamp waveform in the released layout"
+    ]
+  },
+  {
+    references: ["D_USB_PD_VBUS_DISCONNECT"],
+    manufacturer: "Diodes Incorporated",
+    mpn: "B340A-13-F",
+    primaryEvidenceUrl: "https://www.diodes.com/datasheet/download/B340A.pdf",
+    packageEvidence: {
+      body: "SMA Schottky diode",
+      terminals: 2,
+      orientation: "polarized",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["sma", "smb", "sod123"],
+    releaseEvidence: [
+      "Complete and independently review the manufacturer copper, solder mask, stencil, courtyard, and cathode-band orientation data",
+      "Verify the assembled cathode band against the exact reel before release"
+    ]
+  },
+  {
     references: ["L_APP_REGULATOR"],
     manufacturer: "Coilcraft",
     mpn: "XGL4030-222MEC",
@@ -197,6 +248,91 @@ export const fabricationFootprintGates = [
       "KEMET case drawing and polarity marking verified for the exact MPN",
       "Anode/cathode pad mapping, paste apertures, courtyard, and polarized assembly orientation independently reviewed",
       "PD/eFuse output capacitor ripple-current, surge, and temperature validation completed"
+    ]
+  },
+  {
+    references: ["C_V5_BUCK_IN_A", "C_V5_BUCK_IN_B"],
+    manufacturer: "Murata",
+    mpn: "GRM32ER7YA106KA12L",
+    primaryEvidenceUrl: "https://search.murata.co.jp/Ceramy/image/img/A01X/EN/GRM32ER7YA106KA12-01.pdf",
+    packageEvidence: {
+      body: "1210 MLCC",
+      terminals: 2,
+      orientation: "symmetric",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["1210", "1206", "0805"],
+    releaseEvidence: [
+      "Import the exact part-specific Murata land pattern, solder mask, stencil, and courtyard from a primary source",
+      "Verify effective capacitance, reflow process, and high-current input-loop placement"
+    ]
+  },
+  {
+    references: ["C_V5_BUCK_OUT_A", "C_V5_BUCK_OUT_B"],
+    manufacturer: "Murata",
+    mpn: "GRM32ER71E226KE15L",
+    primaryEvidenceUrl: "https://search.murata.co.jp/Ceramy/image/img/A01X/EN/GRM32ER71E226KE15-01.pdf",
+    packageEvidence: {
+      body: "1210 MLCC",
+      terminals: 2,
+      orientation: "symmetric",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["1210", "1206", "0805"],
+    releaseEvidence: [
+      "Import the exact part-specific Murata land pattern, solder mask, stencil, and courtyard from a primary source",
+      "Verify effective capacitance, reflow process, and output-loop placement"
+    ]
+  },
+  {
+    references: ["C_APP_REG_OUT_A", "C_APP_REG_OUT_B", "C_APP_REG_OUT_C"],
+    manufacturer: "TDK",
+    mpn: "C2012X7S1A226M125AC",
+    primaryEvidenceUrl: "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C2012X7S1A226M125AC",
+    packageEvidence: {
+      body: "0805 MLCC",
+      terminals: 2,
+      orientation: "symmetric",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["0805", "0603", "1206"],
+    releaseEvidence: [
+      "Import the exact part-specific TDK land pattern, solder mask, stencil, and courtyard from a primary source",
+      "Verify effective capacitance, reflow process, and regulator output-loop placement"
+    ]
+  },
+  {
+    references: ["C_APP_REG_IN_HF", "C_APP_REG_BOOT"],
+    manufacturer: "Yageo KEMET",
+    mpn: "C0603C104K3RACTU",
+    primaryEvidenceUrl: "https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en",
+    packageEvidence: {
+      body: "0603 MLCC",
+      terminals: 2,
+      orientation: "symmetric",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["0603", "0402", "0805"],
+    releaseEvidence: [
+      "Import the exact part-specific Yageo KEMET land pattern, solder mask, stencil, and courtyard from a primary source",
+      "Verify reflow process and regulator high-frequency-loop placement"
+    ]
+  },
+  {
+    references: ["C_APP_REG_VCC"],
+    manufacturer: "Murata",
+    mpn: "GRM188R71A105KA61",
+    primaryEvidenceUrl: "https://search.murata.co.jp/Ceramy/image/img/A01X/EN/GRM188R71A105KA61-01.pdf",
+    packageEvidence: {
+      body: "0603 MLCC",
+      terminals: 2,
+      orientation: "symmetric",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["0603", "0402", "0805"],
+    releaseEvidence: [
+      "Import the exact part-specific Murata land pattern, solder mask, stencil, and courtyard from a primary source",
+      "Verify reflow process and regulator VCC bypass placement"
     ]
   }
 ] as const satisfies readonly FabricationFootprintGate[]
