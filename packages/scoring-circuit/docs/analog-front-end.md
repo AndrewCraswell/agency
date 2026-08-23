@@ -55,10 +55,19 @@ The 2.49 kohm source resistor limits a normal short to about 1 mA. Because excit
 REF5025, the resistance calculation is ratiometric and largely rejects reference drift. Firmware subtracts measured
 switch and protection resistance using per-channel calibration rather than assuming typical switch resistance.
 
+## Topology decision status
+
+The Rev-B cell remains the baseline model. The bounded topology review in
+[`m4-03-minimal-topology-decision.md`](m4-03-minimal-topology-decision.md) found no compliant no-new-rail,
+component-only isolation revision. In particular, `ADG7421FBCPZ-RL7` protects a low-voltage source pin to +/-60 V but
+guarantees normal operation only from `VSS + 0.1 V`, excluding the normative 0 ohm path on `3V3A`. It is rejected, not a
+coupon or production candidate. The smallest credible protected-switch route currently needs a separately supervised
+8 V or higher rail, so it is deferred rather than added without a measured necessity case.
+
 ## Why this is not over-engineered
 
 - It uses the STM32's existing ADCs, comparators, timers, reference, and DMA instead of adding a precision ADC.
-- Four quad switches replace a serial crosspoint and avoid an SPI-controlled single point of failure.
+- The current topology avoids a new rail, serial crosspoint, and an SPI-controlled single point of failure.
 - One repeated cell covers every weapon; weapon differences live in source/sink patterns and immutable timing tables.
 - The model excludes exact clamp diodes, connector contact construction, and extra EMC filtering until fixture evidence
   shows they are necessary.

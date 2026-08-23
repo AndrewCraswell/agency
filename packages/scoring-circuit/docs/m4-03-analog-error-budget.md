@@ -142,6 +142,11 @@ supportable. M4-03 remains denied until M4-08 supplies low-voltage temperature l
 negative-path injection, and a full-corner per-channel LQFP64 ADC residual bound. No comparator threshold credit,
 typical-only ADC credit, or weakened fixture requirement is used.
 
+The bounded topology decision in
+[`m4-03-minimal-topology-decision.md`](m4-03-minimal-topology-decision.md) found no compliant no-new-rail isolation
+revision. It therefore does not change this error budget, permit a fault-isolator coupon, close M4-01 or M4-03, or
+release a schematic, board, BOM, or fabrication output.
+
 ## Inputs and primary sources
 
 The M4-01 cell is a 2.5 V `REF5025AQDRQ1`-derived source, 2.49 kohm source resistor, `TMUX1112` source and sink switches,
