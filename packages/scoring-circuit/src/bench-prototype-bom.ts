@@ -1,4 +1,5 @@
 import { defaultBenchPrototypePowerInputs } from "./bench-prototype-power.js"
+import { findCommunicationsFootprintEvidence } from "./communications-footprint-evidence.js"
 import { componentDecisions } from "./component-decisions.js"
 import { ethernetSupportNetwork } from "./ethernet-support-network.js"
 import { usbPdFootprints } from "./usb-pd-footprints.js"
@@ -52,7 +53,7 @@ const packageByMpn = {
   ISO7721FDR: "SOIC-8, 5.0mm body",
   NXE1S0505MC: "SMD isolated DC-DC converter, 7-pin case",
   REF5025AQDRQ1: "VSON-8, 3mm x 3mm",
-  W5500: "QFN-48, 6mm x 6mm, 0.4mm pitch",
+  W5500: "LQFP-48, 7mm x 7mm body, 0.5mm pitch",
   "7499011121A": "Shielded through-hole RJ45 with integrated magnetics and LEDs",
   SN74AHCT245PWR: "TSSOP-20",
   TPS3431SDRBR: "VSON-8, 2mm x 2mm",
@@ -69,6 +70,15 @@ const packageByMpn = {
   TPS25730ADREFR: "VQFN-38 (REF), 6mm x 4mm",
   TPS259474ARPWR: "VQFN-HR-10 (RPW), 2mm x 2mm"
 } as const
+
+const w5500FootprintEvidence = findCommunicationsFootprintEvidence("W5500")
+if (
+  w5500FootprintEvidence?.package !== "LQFP-48" ||
+  !w5500FootprintEvidence.body.includes("7 mm x 7 mm") ||
+  !w5500FootprintEvidence.body.includes("0.5 mm pitch")
+) {
+  throw new Error("W5500 BP-020 package must remain bound to the manufacturer footprint evidence")
+}
 
 const usbPdPackageByMpn = {
   "B340A-13-F": "SMA (DO-214AC)",

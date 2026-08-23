@@ -24,7 +24,7 @@ validated on the bench:
 | Auxiliary processor isolation | `U_ISO_AUX` | `ISO7721FDR` |
 | Isolated scoring power | `U_ISO_POWER` | `NXE1S0505MC` |
 | Scoring reference | `U_REF` | `REF5025AQDRQ1` |
-| Ethernet controller | `U_W5500` | `W5500` |
+| Ethernet controller | `U_W5500` | `W5500`, LQFP-48, 7 mm by 7 mm body, 0.5 mm pitch |
 | Integrated-magnetics Ethernet jack | `J_ETH` | `7499011121A` |
 | USB-C power and service receptacle | `J_USB_C` | `10177070-00011LF` |
 | USB-PD sink controller | `U_USB_PD` | `TPS25730ADREFR` |
@@ -44,6 +44,11 @@ as selected rows. Their source and package data are reused from the committed
 Ethernet support-network record. Ethernet is therefore part of this prototype
 even though final EMC, surge, shield, and production-layout evidence remains
 open.
+
+The `U_W5500` package identity is also checked against the existing WIZnet
+manufacturer footprint evidence. It is the 48-pin LQFP package, not a QFN
+package. Its manufacturer CAD still requires independent import, overlay, and
+lot/package-revision review before footprint closure.
 
 Adafruit product `2277`, the 64-by-32 1/16-scan HUB75 panel, is recorded as a
 selected external item. It is not assigned a PCB reference because it remains

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { benchPrototypeBom, validateBenchPrototypeBom } from "./bench-prototype-bom.js"
+import { findCommunicationsFootprintEvidence } from "./communications-footprint-evidence.js"
 import { componentDecisions } from "./component-decisions.js"
 import { ethernetSupportNetwork } from "./ethernet-support-network.js"
 import { usbPdFootprints } from "./usb-pd-footprints.js"
@@ -86,6 +87,21 @@ describe("bench prototype BOM baseline", () => {
     ]) {
       expect(selectedReferences.has(reference)).toBe(true)
     }
+  })
+
+  it("binds U_W5500 to the exact manufacturer-backed LQFP package", () => {
+    const row = benchPrototypeBom.rows.find((candidate) => candidate.reference === "U_W5500")
+    const evidence = findCommunicationsFootprintEvidence("W5500")
+
+    expect(row).toMatchObject({
+      mpn: "W5500",
+      package: "LQFP-48, 7mm x 7mm body, 0.5mm pitch"
+    })
+    expect(evidence).toMatchObject({
+      mpn: "W5500",
+      package: "LQFP-48",
+      body: "7 mm x 7 mm, 48-pin LQFP; 0.5 mm pitch"
+    })
   })
 
   it("keeps unresolved analog, connector, and USB power scope explicit", () => {
