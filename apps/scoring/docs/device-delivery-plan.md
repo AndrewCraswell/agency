@@ -162,6 +162,12 @@ the same vectors even if they do not share a programming language implementation
 | M3-14 | Dual-virtual-firmware integration runner | M3-05, M3-09, accepted M3-12/M3-13 results | Runs the highest-value supported firmware paths together; unsupported peripherals remain host fakes, not hidden omissions |
 | M3-15 | Firmware-foundation release | M3-01 through M3-14 | Host verification passes; target builds are reproducible; remaining board-only tests are listed explicitly |
 
+M3-10 is part of the ESP32 half of the launch update requirement. The independently verified STM32 image, dual-bank
+rollback, product compatibility manifest, ESP32 candidate health/rollback, interrupted-update matrix, and
+cohort-release controls are sequenced as `EVO-09` through `EVO-16` in
+[software-product-evolution-roadmap.md](software-product-evolution-roadmap.md). None of those
+tasks permits the ESP32 to decide or unilaterally activate STM32 scoring firmware.
+
 ## M4: Analog and mechanical proof
 
 **Exit criterion:** measured evidence supports the analog component values and the electrical/mechanical interfaces are
@@ -247,7 +253,7 @@ markets and competition claims.
 | M7-05 | Electrical safety assessment | M7-02 | External supply, enclosure, materials, wiring, temperature, abnormal operation, and markings meet the selected standard |
 | M7-06 | Environmental, vibration, drop, spill-path, and corrosion program | M7-02 | Predefined functional and cosmetic acceptance criteria pass after exposure |
 | M7-07 | Connector and control endurance program | M7-02 | Reel, USB-C, Ethernet, power, buttons, and module fasteners meet target cycles with bounded resistance/retention drift |
-| M7-08 | Firmware security, update, rollback, recovery, and penetration review | M7-02, M3-10 | Signed updates, key handling, parser boundaries, recovery, and service access meet the threat model |
+| M7-08 | Firmware security, two-chip update, rollback, recovery, and penetration review | M7-02, M3-10, EVO-09 through EVO-16 | Signed ESP32 and STM32 updates, key handling, compatibility, parser boundaries, recovery, and service access meet the threat model |
 | M7-09 | Long-duration burn-in and accelerated cycling | M7-02 | Reset, corruption, timing drift, thermal, and intermittent-connection rates meet the reliability target |
 | M7-10 | Venue trial and operational workflow report | M7-03 through M7-09 | Referees, armorers, organizers, and service staff complete realistic bouts, setup, diagnostics, and recovery |
 | M7-11 | 24 V FIE SEMI evidence package and engagement | M7-03 through M7-10 | Complete prototype, construction drawings, proposed rule wording, and test evidence are submitted on the required schedule |
@@ -261,7 +267,7 @@ and field service can diagnose and replace wear modules without factory-only kno
 | ID | Deliverable | Depends on | Acceptance |
 | --- | --- | --- | --- |
 | M8-01 | Supplier control plan and approved-vendor list | M7-12 | PCN/EOL monitoring, incoming criteria, alternates, counterfeit controls, and lot traceability are active |
-| M8-02 | Programming, provisioning, and key-custody station | M7-08, M8-01 | Audit proves unique identity, protected secrets, signed firmware, recovery, and serialized results |
+| M8-02 | Programming, provisioning, and key-custody station | M7-08, M8-01 | Audit proves unique identity, protected secrets, signed firmware, two-chip recovery, and serialized results |
 | M8-03 | Production test fixture and coverage analysis | M7-03, M8-01 | Covers rails, reference, every scoring line, lamps, audio, display, communications, storage, identity, and watchdogs |
 | M8-04 | Golden limits and fixture correlation | M8-03 | Multiple fixtures and operators reproduce accepted measurements against DVT golden units |
 | M8-05 | Pilot build | M8-01 through M8-04 | Yield, defects, cycle time, rework, substitutions, and test escapes meet launch criteria |

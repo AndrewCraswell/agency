@@ -4,6 +4,12 @@ The cross-software-and-hardware execution plan is in [device-delivery-plan.md](d
 milestones, dependencies, granular agent-sized tasks, acceptance evidence, and the boundary between emulation,
 fabrication readiness, EVT, DVT, and production validation.
 
+The approved sequencing for the immediate RGB LED web player, two-chip OTA launch gate, Rust proof after the current
+code-complete baseline, and open-source preparation is in
+[software-product-evolution-roadmap.md](software-product-evolution-roadmap.md). It keeps the current
+TypeScript/C17/ESP-IDF implementation and its test corpus as the oracle until equivalence evidence supports a separate
+migration decision; neither that proof nor public source publication requires commercial hardware launch first.
+
 The normative requirements are decomposed in
 [fie-traceability-matrix.md](fie-traceability-matrix.md). Project terminology and the distinction between rule terms,
 electrical observations, decisions, and diagnostics are defined in [scoring-glossary.md](scoring-glossary.md). The

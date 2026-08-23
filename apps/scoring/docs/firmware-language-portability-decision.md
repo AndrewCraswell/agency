@@ -1,6 +1,6 @@
 # ADR: firmware language and portability
 
-- **Status:** accepted for firmware foundations
+- **Status:** accepted for the current firmware baseline; Rust migration deferred until code-complete equivalence evidence
 - **Decision date:** 2026-08-22
 - **Applies to:** M3-03 through M3-15
 - **Revisit when:** a named safety, certification, customer, or hiring requirement materially changes this trade-off
@@ -88,7 +88,7 @@ rather than rely on current defaults.
 | --- | --- | --- |
 | Strict C17 STM32 scoring core, C protocol-domain libraries, and pinned vendor C adapters | Direct fit for ST-generated C and ESP-IDF C APIs; one scoring authority; straightforward native host tests; widest embedded hiring and support pool | **Selected** |
 | C++ STM32 scoring core or C++ on both processors | Better encapsulation tools and supported by both vendor environments | Rejected for foundations. It adds language-linkage and language-version policy without reducing the C peripheral boundary. ESP-IDF's documented exception, RTTI, designated-initializer, and IRAM constraints create avoidable qualification-path rules. It also cannot justify an ESP scoring implementation. |
-| Rust STM32 scoring core and Rust firmware | Stronger memory-safety defaults and attractive host tooling | Rejected for foundations. It would add a separate embedded HAL, linker, debugger, crate, and C-FFI supply chain alongside STM32CubeG4 and ESP-IDF. Rust may be reconsidered after a bounded, measured proof shows lower lifecycle risk for a named component; no current product requirement justifies that migration cost. It does not authorize scoring logic on the ESP32. |
+| Rust `no_std` STM32 scoring core with native and WebAssembly targets | Stronger memory-safety defaults and a potential shared core for browser simulation | Deferred until the C17/ESP-IDF release is validated. The staged proof in [the software product evolution roadmap](software-product-evolution-roadmap.md) must first show oracle equivalence on native, WebAssembly, and STM32 targets, with measured timing, memory, toolchain, debugging, and supply-chain evidence. It does not authorize scoring logic on the ESP32. |
 | A production scoring implementation on ESP32 | Could appear to simplify local rendering | Prohibited by M0-04. It would violate the authority boundary regardless of language and make replay a second decision path. |
 | Keep TypeScript in the firmware path | Reuses the current implementation text | Rejected. It would complicate deterministic bounded-memory target behavior and displace the vendor-supported firmware toolchains. The TypeScript rules remain the oracle and fixture producer. |
 
@@ -143,7 +143,9 @@ disciplined review and dynamic testing. The ESP32 remains a record consumer, not
 STM32 interrupt latency, ADC/comparator timing, DMA behavior, ESP32 load isolation, ESD resilience, or FIE
 acceptance; those remain M3 target, M4, and EVT/DVT evidence items.
 
-The only planned language boundary is TypeScript fixture generation to versioned data files. It is intentionally a
-test-artifact boundary, not an in-product FFI boundary. Rust and C++ remain options for later isolated,
-non-authoritative components, but introducing either into STM32 scoring authority requires a new decision record and
-equivalence evidence. Neither may authorize an ESP32 scoring implementation.
+The only planned language boundary in the current baseline is TypeScript fixture generation to versioned data files. It
+is intentionally a test-artifact boundary, not an in-product FFI boundary. Rust migration is explicitly deferred
+until the current C17/ESP-IDF baseline is complete (`EVO-17`) and the `EVO-18` through `EVO-23` gates in the
+[software product evolution roadmap](software-product-evolution-roadmap.md) are met. The proof may run before
+commercial hardware launch; no production cutover follows without its own approved release plan. C++ remains an option
+for later isolated, non-authoritative components. Neither may authorize an ESP32 scoring implementation.
