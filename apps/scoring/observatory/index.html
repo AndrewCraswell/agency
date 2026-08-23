@@ -51,6 +51,12 @@
         margin: 5px 0 0;
         color: #aebfca;
       }
+      .authority-note {
+        max-width: 900px;
+        margin: 10px 0 0;
+        color: #c8d7df;
+        font-size: 0.88rem;
+      }
       .run-all,
       .case-run,
       .playback-button {
@@ -114,6 +120,17 @@
         max-height: 72vh;
         overflow-y: auto;
       }
+      .case-group-heading {
+        margin: 0;
+        padding: 10px 13px;
+        border-bottom: 1px solid #263946;
+        background: #0c161e;
+        color: #9db0bc;
+        font-size: 0.78rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
       .case-item {
         display: grid;
         grid-template-columns: auto minmax(0, 1fr) auto;
@@ -131,7 +148,7 @@
       .case-item:hover {
         background: #162632;
       }
-      .case-item[aria-pressed="true"] {
+      .case-item[aria-current="true"] {
         background: #1c3040;
         box-shadow: inset 4px 0 #74c7ff;
       }
@@ -315,6 +332,9 @@
       .player-marker.lockout {
         background: #ad8cff;
       }
+      .player-marker.decision {
+        background: #79ca99;
+      }
       .player-cursor {
         position: absolute;
         top: -4px;
@@ -350,27 +370,29 @@
       }
       .timeline-wrap {
         position: relative;
-        padding: 26px 12px 12px;
+        padding: 40px 16px 12px;
       }
       .timeline-track {
         position: relative;
-        height: 8px;
+        height: 72px;
         border-radius: 4px;
         background: #293b47;
       }
       .timeline-progress {
         position: absolute;
-        inset: 0 auto 0 0;
+        top: 50%;
+        left: 0;
+        height: 8px;
         width: 0;
         border-radius: 4px;
         background: #74c7ff;
+        transform: translateY(-50%);
         transition: width 160ms ease;
       }
       .timeline-marker {
         position: absolute;
-        top: 50%;
-        width: 18px;
-        height: 18px;
+        width: 24px;
+        height: 24px;
         border: 3px solid #101b24;
         border-radius: 50%;
         transform: translate(-50%, -50%);
@@ -383,10 +405,17 @@
       .timeline-marker[data-kind="actual"] {
         background: #79ca99;
       }
+      .timeline-marker[data-kind="output"] {
+        background: #79ca99;
+      }
       .timeline-marker[data-kind="expected"] {
-        width: 14px;
-        height: 14px;
         background: #e9ad55;
+      }
+      .timeline-marker[data-kind="uncertainty"] {
+        background: #f0c46a;
+      }
+      .timeline-marker[data-kind="rejection"] {
+        background: #eb4b55;
       }
       .timeline-marker.is-current {
         outline: 3px solid #eef5f8;
@@ -462,8 +491,14 @@
         display: grid;
         grid-template-columns: 80px 90px minmax(0, 1fr);
         gap: 10px;
+        width: 100%;
+        border: 0;
         padding: 8px 0;
         border-bottom: 1px solid #263946;
+        background: transparent;
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
       }
       .event-time {
         color: #9db0bc;
@@ -482,6 +517,35 @@
       }
       .error-message {
         color: #ff9f9f;
+      }
+      .rejection-notice,
+      .mismatch-details {
+        border: 1px solid #8a524f;
+        border-radius: 7px;
+        padding: 12px 14px;
+        background: #2a1719;
+        color: #ffd1d1;
+      }
+      .rejection-notice p,
+      .mismatch-details p {
+        margin: 6px 0 0;
+      }
+      .mismatch-details {
+        margin-top: 12px;
+      }
+      .mismatch-details summary {
+        cursor: pointer;
+        font-weight: 700;
+      }
+      .mismatch-details ul {
+        display: grid;
+        gap: 6px;
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+      .mismatch-details code {
+        color: #ffd1d1;
+        overflow-wrap: anywhere;
       }
       @media (max-width: 850px) {
         .workspace {
@@ -506,6 +570,9 @@
         }
         .event-row span:last-child {
           grid-column: 1 / -1;
+        }
+        .timeline-wrap {
+          padding-inline: 12px;
         }
         .evaluations th:nth-child(3),
         .evaluations td:nth-child(3) {
@@ -537,6 +604,10 @@
         <div>
           <h1>Bout test observatory</h1>
           <p class="subtitle">Canonical scoring cases with executable results and event playback</p>
+          <p class="authority-note">
+            Host-scorer simulation. The 64 x 32 developer visualization is derived from host output, not STM32, ESP32,
+            physical-output, or FIE evidence.
+          </p>
         </div>
         <button id="run-all" class="run-all" type="button">Run all cases</button>
       </header>
@@ -545,7 +616,7 @@
         <section class="case-browser" aria-labelledby="case-list-title">
           <header class="section-heading">
             <h2 id="case-list-title">Test cases</h2>
-            <p>✅ passed, ⏭️ skipped, ❌ failed</p>
+            <p>Executable scenarios report pass or fail. Planned requirements are not executable tests.</p>
           </header>
           <div id="case-list" class="case-list"></div>
         </section>
@@ -555,7 +626,16 @@
       </div>
     </main>
     <script>
-      const state = { cases: [], selectedId: null, selectedCase: null, events: [], eventIndex: -1, timer: null }
+      const state = {
+        cases: [],
+        eventIndex: -1,
+        events: [],
+        playing: false,
+        selectedCase: null,
+        selectedId: null,
+        timer: null,
+        timelineMarkerObserver: null
+      }
       const summaryRoot = document.querySelector("#summary")
       const listRoot = document.querySelector("#case-list")
       const detailRoot = document.querySelector("#detail")
@@ -563,6 +643,7 @@
       const emoji = { passed: "✅", skipped: "⏭️", failed: "❌" }
 
       function formatTime(atUs) {
+        if (atUs < 10_000 && atUs % 1000 !== 0) return atUs + " us"
         if (atUs >= 1000) return (atUs / 1000).toFixed(atUs % 1000 === 0 ? 0 : 2) + " ms"
         return atUs + " us"
       }
@@ -582,12 +663,14 @@
         return item
       }
 
-      function renderSummary(report) {
+      function renderSummary() {
+        const executable = state.cases.filter((testCase) => testCase.status !== "skipped")
+        const planned = state.cases.filter((testCase) => testCase.status === "skipped")
         summaryRoot.replaceChildren(
-          createSummaryItem("✅ Passed", String(report.summary.passed)),
-          createSummaryItem("⏭️ Skipped", String(report.summary.skipped)),
-          createSummaryItem("❌ Failed", String(report.summary.failed)),
-          createSummaryItem("Total", String(report.summary.total))
+          createSummaryItem("Executed scenarios", String(executable.length)),
+          createSummaryItem("✅ Passed", String(executable.filter((testCase) => testCase.status === "passed").length)),
+          createSummaryItem("❌ Failed", String(executable.filter((testCase) => testCase.status === "failed").length)),
+          createSummaryItem("Planned requirements", String(planned.length))
         )
       }
 
@@ -598,55 +681,121 @@
 
       function renderCaseList() {
         listRoot.replaceChildren()
-        for (const testCase of state.cases) {
-          const button = document.createElement("button")
-          button.type = "button"
-          button.className = "case-item"
-          button.setAttribute("aria-pressed", String(testCase.scenario.scenarioId === state.selectedId))
-          const icon = document.createElement("span")
-          icon.className = "status-emoji"
-          icon.textContent = emoji[testCase.status]
-          const name = document.createElement("span")
-          name.className = "case-name"
-          name.textContent = testCase.scenario.scenarioId
-          const description = document.createElement("span")
-          description.className = "case-description"
-          description.textContent =
-            testCase.scenario.title ?? testCase.scenario.description ?? "No case description is available."
-          const meta = document.createElement("span")
-          meta.className = "case-meta"
-          meta.textContent = testCase.scenario.weapon + " " + testCase.status
-          name.append(description, meta)
-          const duration = document.createElement("span")
-          duration.className = "case-duration"
-          duration.textContent = caseDuration(testCase)
-          button.append(icon, name, duration)
-          button.addEventListener("click", () => selectCase(testCase.scenario.scenarioId))
-          listRoot.append(button)
+        const groups = [
+          ["Executable scenarios", state.cases.filter((testCase) => testCase.status !== "skipped")],
+          ["Planned requirements (not executable)", state.cases.filter((testCase) => testCase.status === "skipped")]
+        ]
+        for (const [label, testCases] of groups) {
+          if (testCases.length === 0) continue
+          const heading = document.createElement("h3")
+          heading.className = "case-group-heading"
+          heading.textContent = label
+          listRoot.append(heading)
+          for (const testCase of testCases) {
+            const button = document.createElement("button")
+            button.type = "button"
+            button.className = "case-item"
+            if (testCase.scenario.scenarioId === state.selectedId) button.setAttribute("aria-current", "true")
+            const icon = document.createElement("span")
+            icon.className = "status-emoji"
+            icon.textContent = emoji[testCase.status]
+            const name = document.createElement("span")
+            name.className = "case-name"
+            name.textContent = testCase.scenario.scenarioId
+            const description = document.createElement("span")
+            description.className = "case-description"
+            description.textContent =
+              testCase.scenario.title ?? testCase.scenario.description ?? "No case description is available."
+            const meta = document.createElement("span")
+            meta.className = "case-meta"
+            meta.textContent =
+              testCase.status === "skipped"
+                ? testCase.scenario.weapon + " planned, not executable"
+                : testCase.scenario.weapon + " " + testCase.status
+            name.append(description, meta)
+            const duration = document.createElement("span")
+            duration.className = "case-duration"
+            duration.textContent = caseDuration(testCase)
+            button.append(icon, name, duration)
+            button.addEventListener("click", () => selectCase(testCase.scenario.scenarioId))
+            listRoot.append(button)
+          }
         }
+      }
+
+      function eventLabel(kind) {
+        return {
+          expected: "Expected assertion",
+          input: "Input",
+          output: "Host-scorer output",
+          rejection: "Rejection",
+          uncertainty: "Uncertainty"
+        }[kind]
+      }
+
+      function isRejectedCase(testCase) {
+        return testCase.expected?.status === "rejected" || testCase.result?.actualStatus === "rejected"
       }
 
       function buildEvents(testCase) {
         if (testCase.status === "skipped") return []
         const events = []
-        for (const input of testCase.scenario.inputs) {
-          events.push({ atUs: input.atUs, id: input.id, kind: "input", label: "Input " + input.id, lines: input.lines })
+        for (const [inputIndex, input] of testCase.scenario.inputs.entries()) {
+          events.push({
+            atUs: input.atUs,
+            id: input.id,
+            inputIndex,
+            kind: "input",
+            label: "Declared input " + (inputIndex + 1) + ": " + input.id,
+            lines: input.lines
+          })
+        }
+        if (isRejectedCase(testCase)) {
+          const error = testCase.result.error ?? testCase.expected.error
+          const rejectedInputIndex = testCase.scenario.inputs.findIndex((input) => input.id === error?.atInputId)
+          events.push({
+            atUs: rejectedInputIndex < 0 ? 0 : testCase.scenario.inputs[rejectedInputIndex].atUs,
+            id: "rejection-" + (error?.atInputId ?? "scenario"),
+            kind: "rejection",
+            label: "Host-scorer rejection: " + (error?.code ?? "rejected scenario"),
+            value: error,
+            sequence: testCase.scenario.inputs.length
+          })
+          return events
         }
         for (const decision of testCase.expected.decisions) {
           events.push({
             atUs: decision.decisionAtUs,
             id: decision.id,
             kind: "expected",
-            label: "Expected " + decision.disposition,
+            label: decision.disposition,
             value: decision
+          })
+        }
+        for (const nonEvent of testCase.expected.nonEvents) {
+          events.push({
+            atUs: nonEvent.window.throughUs,
+            id: nonEvent.id,
+            kind: "expected",
+            label: nonEvent.assertion + " (" + nonEvent.assertionReasonCode + ")",
+            value: nonEvent
+          })
+        }
+        for (const uncertainty of testCase.expected.uncertainty) {
+          events.push({
+            atUs: uncertainty.atUs,
+            id: "expected-" + uncertainty.id,
+            kind: "expected",
+            label: "uncertainty",
+            value: uncertainty
           })
         }
         for (const decision of testCase.result.decisions) {
           events.push({
             atUs: decision.decisionAtUs,
             id: "actual-" + decision.side + "-" + decision.decisionAtUs,
-            kind: "actual",
-            label: "Actual " + decision.disposition,
+            kind: "output",
+            label: decision.disposition,
             value: decision
           })
         }
@@ -654,15 +803,16 @@
           events.push({
             atUs: uncertainty.atUs,
             id: "uncertainty-" + uncertainty.atUs,
-            kind: "actual",
-            label: "Actual uncertainty",
+            kind: "uncertainty",
+            label: "Host-scorer reported uncertainty",
             value: uncertainty
           })
         }
         return events.sort(
           (left, right) =>
             left.atUs - right.atUs ||
-            ["input", "expected", "actual"].indexOf(left.kind) - ["input", "expected", "actual"].indexOf(right.kind)
+            ["input", "expected", "output", "uncertainty"].indexOf(left.kind) -
+              ["input", "expected", "output", "uncertainty"].indexOf(right.kind)
         )
       }
 
@@ -711,6 +861,7 @@
       }
 
       function renderEvaluations(testCase) {
+        const section = document.createElement("section")
         const table = document.createElement("table")
         table.className = "evaluations"
         table.innerHTML = "<thead><tr><th>Result</th><th>Evaluation</th><th>Expected</th><th>Actual</th></tr></thead>"
@@ -733,12 +884,83 @@
           body.append(row)
         }
         table.append(body)
-        return table
+        section.append(table)
+        if (testCase.result.mismatches.length > 0) {
+          const details = document.createElement("details")
+          details.className = "mismatch-details"
+          details.open = true
+          const summary = document.createElement("summary")
+          summary.textContent = testCase.result.mismatches.length + " mismatch detail(s)"
+          const list = document.createElement("ul")
+          for (const mismatch of testCase.result.mismatches) {
+            const item = document.createElement("li")
+            const code = document.createElement("code")
+            code.textContent = compactJson(mismatch)
+            item.append(code)
+            list.append(item)
+          }
+          details.append(summary, list)
+          section.append(details)
+        }
+        return section
       }
 
       function stopPlayback() {
         if (state.timer !== null) window.clearInterval(state.timer)
         state.timer = null
+        state.playing = false
+        updatePlaybackControls()
+      }
+
+      function updatePlaybackControls() {
+        const play = document.querySelector("#playback-play")
+        const previous = document.querySelector("#playback-previous")
+        const next = document.querySelector("#playback-next")
+        const restart = document.querySelector("#playback-restart")
+        const hasEvents = state.events.length > 0
+        if (play) {
+          play.textContent = state.playing ? "Pause" : "Play"
+          play.disabled = !hasEvents
+        }
+        if (previous) previous.disabled = state.eventIndex < 0
+        if (next) next.disabled = !hasEvents || state.eventIndex >= state.events.length - 1
+        if (restart) restart.disabled = state.eventIndex < 0
+      }
+
+      function layoutTimelineMarkers(track) {
+        const markers = [...track.querySelectorAll(".timeline-marker")]
+        if (track.clientWidth === 0 || markers.length === 0) return
+        const minimumHorizontalGap = 28
+        const verticalGap = 28
+        const clusters = []
+        const markerPosition = (marker) => (Number.parseFloat(marker.style.left) / 100) * track.clientWidth
+        for (const marker of markers.sort((left, right) => markerPosition(left) - markerPosition(right))) {
+          const position = markerPosition(marker)
+          const previousCluster = clusters.at(-1)
+          if (
+            previousCluster !== undefined &&
+            position - markerPosition(previousCluster.at(-1)) < minimumHorizontalGap
+          ) {
+            previousCluster.push(marker)
+          } else {
+            clusters.push([marker])
+          }
+        }
+        const largestCluster = Math.max(...clusters.map((cluster) => cluster.length))
+        track.style.height = Math.max(72, 24 + (largestCluster - 1) * verticalGap) + "px"
+        for (const cluster of clusters) {
+          const firstTop = (track.clientHeight - (cluster.length - 1) * verticalGap) / 2
+          cluster.forEach((marker, index) => {
+            marker.style.top = firstTop + index * verticalGap + "px"
+          })
+        }
+      }
+
+      function observeTimelineMarkers(track) {
+        state.timelineMarkerObserver?.disconnect()
+        state.timelineMarkerObserver = new ResizeObserver(() => layoutTimelineMarkers(track))
+        state.timelineMarkerObserver.observe(track)
+        window.requestAnimationFrame(() => layoutTimelineMarkers(track))
       }
 
       function setEventIndex(nextIndex) {
@@ -747,7 +969,7 @@
         const progress = document.querySelector("#timeline-progress")
         const stateLabel = document.querySelector("#playback-state")
         const current = document.querySelector("#current-event")
-        const maximumTime = Math.max(1, ...state.events.map((item) => item.atUs))
+        const maximumTime = state.selectedCase ? playerTiming(state.selectedCase).maximumTime : 1
         const progressPercent = event === undefined ? 0 : (event.atUs / maximumTime) * 100
         if (progress) progress.style.width = progressPercent + "%"
         if (stateLabel)
@@ -758,20 +980,29 @@
         document
           .querySelectorAll(".timeline-marker")
           .forEach((marker, index) => marker.classList.toggle("is-current", index === state.eventIndex))
+        document.querySelectorAll(".timeline-marker").forEach((marker, index) => {
+          if (index === state.eventIndex) marker.setAttribute("aria-current", "true")
+          else marker.removeAttribute("aria-current")
+        })
         document
           .querySelectorAll(".event-row")
           .forEach((row, index) => row.classList.toggle("is-played", index <= state.eventIndex))
+        document.querySelectorAll(".event-row").forEach((row, index) => {
+          if (index === state.eventIndex) row.setAttribute("aria-current", "true")
+          else row.removeAttribute("aria-current")
+        })
+        updatePlaybackControls()
         updateBoxPlayer(event)
         if (!current) return
         current.replaceChildren()
         if (event === undefined) {
           const message = document.createElement("p")
-          message.textContent = "Press Play timeline or select an event marker."
+          message.textContent = "Select a marker or execution-stream row, or use the playback controls."
           current.append(message)
           return
         }
         const heading = document.createElement("h3")
-        heading.textContent = emojiForEvent(event.kind) + " " + event.label
+        heading.textContent = emojiForEvent(event.kind) + " " + eventLabel(event.kind) + ": " + event.label
         const time = document.createElement("p")
         time.textContent = "At " + formatTime(event.atUs)
         current.append(heading, time)
@@ -794,12 +1025,21 @@
       }
 
       function emojiForEvent(kind) {
-        return kind === "input" ? "▶️" : kind === "expected" ? "🔎" : "✅"
+        return kind === "input" ? "▶️" : kind === "expected" ? "🔎" : kind === "output" ? "✅" : "⚠️"
       }
 
       function playTimeline() {
-        stopPlayback()
+        if (state.playing) {
+          stopPlayback()
+          return
+        }
         if (state.eventIndex >= state.events.length - 1) setEventIndex(-1)
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+          setEventIndex(state.eventIndex + 1)
+          return
+        }
+        state.playing = true
+        updatePlaybackControls()
         state.timer = window.setInterval(() => {
           if (state.eventIndex >= state.events.length - 1) {
             stopPlayback()
@@ -837,7 +1077,16 @@
       }
 
       function playerTiming(testCase) {
-        const decisions = testCase.result.decisions
+        if (isRejectedCase(testCase))
+          return {
+            authoritativeDecisionAtUs: null,
+            candidateContactAtUs: null,
+            contactMinimumUs: null,
+            cutoffAtUs: null,
+            maximumTime: Math.max(1, ...(testCase.scenario.inputs ?? []).map((input) => input.atUs)),
+            timingAvailable: false
+          }
+        const decisions = testCase.result.decisions.filter((decision) => decision.side !== undefined)
         const timing = testCase.timing?.status === "available" ? testCase.timing : null
         const firstDecision =
           decisions.length === 0
@@ -845,16 +1094,24 @@
             : decisions.reduce((earliest, decision) =>
                 decision.decisionAtUs < earliest.decisionAtUs ? decision : earliest
               )
-        const firstScoredContactAtUs =
+        const candidateContactAtUs =
           firstDecision === null ? null : (firstDecision.hitStartedAtUs ?? firstDecision.qualifiedAtUs)
-        const lockoutAtUs =
-          firstScoredContactAtUs === null || timing === null ? null : firstScoredContactAtUs + timing.lockoutUs
+        const cutoffAtUs =
+          candidateContactAtUs === null || timing === null ? null : candidateContactAtUs + timing.lockoutUs
         const lastInputAtUs = Math.max(0, ...(testCase.scenario.inputs ?? []).map((input) => input.atUs))
+        const lastResultAtUs = Math.max(
+          0,
+          ...testCase.expected.decisions.map((decision) => decision.decisionAtUs),
+          ...testCase.result.decisions.map((decision) => decision.decisionAtUs),
+          ...testCase.expected.uncertainty.map((uncertainty) => uncertainty.atUs),
+          ...testCase.result.uncertainty.map((uncertainty) => uncertainty.atUs)
+        )
         return {
+          authoritativeDecisionAtUs: firstDecision?.decisionAtUs ?? null,
+          candidateContactAtUs,
           contactMinimumUs: timing?.contactMinimumUs ?? null,
-          firstScoredContactAtUs,
-          lockoutAtUs,
-          maximumTime: Math.max(1, lastInputAtUs, lockoutAtUs ?? 0),
+          cutoffAtUs,
+          maximumTime: Math.max(1, lastInputAtUs, lastResultAtUs, cutoffAtUs ?? 0),
           timingAvailable: timing !== null
         }
       }
@@ -987,7 +1244,16 @@
         paintMatrixRegion(context, 2, 25, 60, 1, "#1d2b33", false)
         for (const event of state.events) {
           const eventColumn = Math.min(61, 2 + Math.round((event.atUs / maximumTime) * 59))
-          const eventColor = event.kind === "input" ? "#74c7ff" : event.kind === "expected" ? "#e9ad55" : "#79ca99"
+          const eventColor =
+            event.kind === "input"
+              ? "#74c7ff"
+              : event.kind === "expected"
+                ? "#e9ad55"
+                : event.kind === "output"
+                  ? "#79ca99"
+                  : event.kind === "uncertainty"
+                    ? "#f0c46a"
+                    : "#eb4b55"
           paintMatrixRegion(context, eventColumn, 24, 1, 3, eventColor, true)
         }
         const cursorColumn = Math.min(61, 2 + Math.round((snapshot.cursorAtUs / maximumTime) * 59))
@@ -1009,10 +1275,10 @@
       function playerSnapshot(testCase) {
         const playedEvents = state.events.slice(0, state.eventIndex + 1)
         const latestInput = [...playedEvents].reverse().find((candidate) => candidate.kind === "input")
-        const actualDecisions = playedEvents.filter((candidate) => candidate.kind === "actual" && candidate.value?.side)
+        const actualDecisions = playedEvents.filter((candidate) => candidate.kind === "output" && candidate.value?.side)
         const latestDecisionEvent = [...playedEvents]
           .reverse()
-          .find((candidate) => candidate.kind === "actual" && candidate.value?.side)
+          .find((candidate) => candidate.kind === "output" && candidate.value?.side)
         const lines = latestInput?.lines ?? []
         const leftDecision = latestSideDecision(actualDecisions, "left")
         const rightDecision = latestSideDecision(actualDecisions, "right")
@@ -1037,21 +1303,21 @@
       function renderBoutPlayer(testCase) {
         const player = document.createElement("section")
         player.className = "box-player"
-        player.setAttribute("aria-label", "Scoring-box visual player")
+        player.setAttribute("aria-label", "64 by 32 developer visualization")
         const face = document.createElement("div")
         face.className = "box-face"
         const frame = document.createElement("div")
         frame.className = "matrix-frame"
         const topLine = document.createElement("div")
         topLine.className = "matrix-topline"
-        topLine.innerHTML = '<span>64 x 32 RGB matrix</span><span id="matrix-cursor">Ready</span>'
+        topLine.innerHTML = '<span>64 x 32 developer visualization</span><span id="matrix-cursor">Ready</span>'
         const canvas = document.createElement("canvas")
         canvas.id = "player-matrix"
         canvas.className = "rgb-matrix"
         canvas.width = 640
         canvas.height = 320
         canvas.setAttribute("role", "img")
-        canvas.setAttribute("aria-label", "64 by 32 RGB scoring-box matrix, ready to replay")
+        canvas.setAttribute("aria-label", "64 by 32 developer visualization, ready to replay")
         const summary = document.createElement("p")
         summary.id = "player-summary"
         summary.className = "matrix-summary"
@@ -1103,24 +1369,34 @@
           track.className = "lane-track"
           inputs.forEach((input, index) => {
             if (!laneActive(input.lines, laneId)) return
-            const nextAtUs = inputs[index + 1]?.atUs ?? timing.maximumTime
+            const nextAtUs = inputs[index + 1]?.atUs ?? input.atUs
             const segment = document.createElement("span")
             segment.className = "lane-segment"
             segment.style.left = (input.atUs / timing.maximumTime) * 100 + "%"
             segment.style.width = Math.max(0.5, ((nextAtUs - input.atUs) / timing.maximumTime) * 100) + "%"
+            if (inputs[index + 1] === undefined) segment.title = "Final declared snapshot"
             track.append(segment)
           })
-          if (timing.firstScoredContactAtUs !== null) {
+          if (timing.candidateContactAtUs !== null) {
             const marker = document.createElement("span")
             marker.className = "player-marker"
-            marker.style.left = (timing.firstScoredContactAtUs / timing.maximumTime) * 100 + "%"
+            marker.title = "Candidate contact start"
+            marker.style.left = (timing.candidateContactAtUs / timing.maximumTime) * 100 + "%"
             track.append(marker)
           }
-          if (timing.lockoutAtUs !== null) {
-            const lockout = document.createElement("span")
-            lockout.className = "player-marker lockout"
-            lockout.style.left = (timing.lockoutAtUs / timing.maximumTime) * 100 + "%"
-            track.append(lockout)
+          if (timing.authoritativeDecisionAtUs !== null) {
+            const decision = document.createElement("span")
+            decision.className = "player-marker decision"
+            decision.title = "Authoritative host-scorer decision"
+            decision.style.left = (timing.authoritativeDecisionAtUs / timing.maximumTime) * 100 + "%"
+            track.append(decision)
+          }
+          if (timing.cutoffAtUs !== null) {
+            const cutoff = document.createElement("span")
+            cutoff.className = "player-marker lockout"
+            cutoff.title = "Opposing-contact cutoff"
+            cutoff.style.left = (timing.cutoffAtUs / timing.maximumTime) * 100 + "%"
+            track.append(cutoff)
           }
           const cursor = document.createElement("span")
           cursor.className = "player-cursor"
@@ -1132,11 +1408,17 @@
         const legend = document.createElement("div")
         legend.className = timing.timingAvailable ? "player-legend" : "player-legend player-unavailable"
         legend.textContent = timing.timingAvailable
-          ? "Blue marker: first scored contact. Purple marker: lockout end at " +
-            formatTime(timing.lockoutAtUs ?? timing.maximumTime) +
-            ". Contact qualification minimum: " +
-            formatTime(timing.contactMinimumUs) +
-            "."
+          ? timing.candidateContactAtUs === null
+            ? "No authoritative host-scorer decision. Shared timeline horizon: " +
+              formatTime(timing.maximumTime) +
+              ". Line segments end at the next declared snapshot; final snapshots are ticks."
+            : "Blue: candidate contact start. Green: authoritative host-scorer decision. Purple: opposing-contact cutoff at " +
+              formatTime(timing.cutoffAtUs) +
+              ". Shared timeline horizon: " +
+              formatTime(timing.maximumTime) +
+              ". Contact qualification minimum: " +
+              formatTime(timing.contactMinimumUs) +
+              ". Line segments end at the next declared snapshot; final snapshots are ticks."
           : "Timing unavailable for this rule revision. Input playback remains available without timing markers."
         player.append(face, lanes, legend)
         return player
@@ -1162,8 +1444,13 @@
         const cursorAtUs = snapshot.cursorAtUs
         const latestDecision = snapshot.latestDecision
         const decisionDescription = latestDecision
-          ? latestDecision.disposition + " on " + latestDecision.side + " at " + formatTime(latestDecision.decisionAtUs)
-          : "no actual decision"
+          ? "authoritative host-scorer " +
+            latestDecision.disposition +
+            " on " +
+            latestDecision.side +
+            " at " +
+            formatTime(latestDecision.decisionAtUs)
+          : "no host-scorer decision"
         const stateDescription = event?.label ?? "Ready to replay"
         const summary = document.querySelector("#player-summary")
         if (summary)
@@ -1197,7 +1484,7 @@
           canvasLabel.setAttribute(
             "aria-label",
             snapshot.weapon +
-              " scoring-box matrix. " +
+              " developer visualization. " +
               describeLamp(snapshot.leftLamp) +
               " left, " +
               describeLamp(snapshot.rightLamp) +
@@ -1232,29 +1519,56 @@
       }
 
       function renderTimeline(testCase) {
+        state.timelineMarkerObserver?.disconnect()
+        state.timelineMarkerObserver = null
         state.events = buildEvents(testCase)
         state.eventIndex = -1
+        state.playing = false
         const section = document.createElement("section")
         const controls = document.createElement("div")
         controls.className = "playback-controls"
         const play = document.createElement("button")
         play.type = "button"
+        play.id = "playback-play"
         play.className = "playback-button"
-        play.textContent = "Play timeline"
+        play.textContent = "Play"
         play.addEventListener("click", playTimeline)
+        const previous = document.createElement("button")
+        previous.type = "button"
+        previous.id = "playback-previous"
+        previous.className = "playback-button"
+        previous.textContent = "Previous"
+        previous.addEventListener("click", () => {
+          stopPlayback()
+          setEventIndex(state.eventIndex - 1)
+        })
         const next = document.createElement("button")
         next.type = "button"
+        next.id = "playback-next"
         next.className = "playback-button"
-        next.textContent = "Next event"
+        next.textContent = "Next"
         next.addEventListener("click", () => {
           stopPlayback()
           setEventIndex(state.eventIndex + 1)
+        })
+        const restart = document.createElement("button")
+        restart.type = "button"
+        restart.id = "playback-restart"
+        restart.className = "playback-button"
+        restart.textContent = "Restart"
+        restart.addEventListener("click", () => {
+          stopPlayback()
+          setEventIndex(-1)
         })
         const playbackState = document.createElement("span")
         playbackState.id = "playback-state"
         playbackState.className = "playback-state"
         playbackState.textContent = "Ready"
-        controls.append(play, next, playbackState)
+        play.disabled = state.events.length === 0
+        previous.disabled = true
+        next.disabled = state.events.length === 0
+        restart.disabled = true
+        controls.append(play, previous, next, restart, playbackState)
 
         const timeline = document.createElement("div")
         timeline.className = "timeline-wrap"
@@ -1264,14 +1578,17 @@
         progress.id = "timeline-progress"
         progress.className = "timeline-progress"
         track.append(progress)
-        const maximumTime = Math.max(1, ...state.events.map((event) => event.atUs))
+        const maximumTime = playerTiming(testCase).maximumTime
         state.events.forEach((event, index) => {
           const marker = document.createElement("button")
           marker.type = "button"
           marker.className = "timeline-marker"
           marker.dataset.kind = event.kind
           marker.style.left = (event.atUs / maximumTime) * 100 + "%"
-          marker.setAttribute("aria-label", event.label + " at " + formatTime(event.atUs))
+          marker.setAttribute(
+            "aria-label",
+            eventLabel(event.kind) + ": " + event.label + " at " + formatTime(event.atUs)
+          )
           marker.addEventListener("click", () => {
             stopPlayback()
             setEventIndex(index)
@@ -1287,10 +1604,30 @@
         current.id = "current-event"
         current.className = "current-event"
         const currentMessage = document.createElement("p")
-        currentMessage.textContent = "Press Play timeline or select an event marker."
+        currentMessage.textContent = "Select a marker or execution-stream row, or use the playback controls."
         current.append(currentMessage)
-        section.append(renderBoutPlayer(testCase), controls, timeline, current)
+        if (isRejectedCase(testCase)) section.append(renderRejectionNotice(testCase))
+        else section.append(renderBoutPlayer(testCase))
+        section.append(controls, timeline, current)
+        observeTimelineMarkers(track)
+        updatePlaybackControls()
         return section
+      }
+
+      function renderRejectionNotice(testCase) {
+        const notice = document.createElement("section")
+        notice.className = "rejection-notice"
+        const heading = document.createElement("h3")
+        heading.textContent = "Host-scorer rejection"
+        const detail = document.createElement("p")
+        const error = testCase.result.error ?? testCase.expected.error
+        detail.textContent =
+          "Declared input order is preserved. The host scorer rejected this scenario" +
+          (error?.atInputId ? " at " + error.atInputId : "") +
+          (error?.code ? " with " + error.code : "") +
+          ". No scoring display or cutoff is inferred."
+        notice.append(heading, detail)
+        return notice
       }
 
       function renderEventStream() {
@@ -1299,18 +1636,23 @@
         heading.textContent = "Execution stream"
         const stream = document.createElement("div")
         stream.className = "event-stream"
-        state.events.forEach((event) => {
-          const row = document.createElement("div")
+        state.events.forEach((event, index) => {
+          const row = document.createElement("button")
+          row.type = "button"
           row.className = "event-row"
           const time = document.createElement("span")
           time.className = "event-time"
           time.textContent = formatTime(event.atUs)
           const kind = document.createElement("span")
           kind.className = "event-kind"
-          kind.textContent = event.kind
+          kind.textContent = eventLabel(event.kind)
           const label = document.createElement("span")
           label.textContent = event.label
           row.append(time, kind, label)
+          row.addEventListener("click", () => {
+            stopPlayback()
+            setEventIndex(index)
+          })
           stream.append(row)
         })
         section.append(heading, stream)
@@ -1373,7 +1715,7 @@
       function applyReport(report, preserveSelection = true) {
         const previous = preserveSelection ? state.selectedId : null
         state.cases = report.cases
-        renderSummary(report)
+        renderSummary()
         const nextSelection = state.cases.some((testCase) => testCase.scenario.scenarioId === previous)
           ? previous
           : state.cases.find((testCase) => testCase.status !== "skipped")?.scenario.scenarioId
@@ -1405,6 +1747,7 @@
           state.cases = state.cases.map((testCase) =>
             testCase.scenario.scenarioId === scenarioId ? updated : testCase
           )
+          renderSummary()
           renderCaseList()
           renderDetail(updated)
         } catch (error) {
