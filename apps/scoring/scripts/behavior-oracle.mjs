@@ -53,6 +53,10 @@ const fixedArtifacts = [
   ["golden-corpus", "apps/scoring/src/sabre-scenario-evidence.test.ts"],
   ["display-projection", "apps/scoring/src/scenario-display-projection.ts"],
   ["display-projection", "apps/scoring/src/scenario-display-projection.test.ts"],
+  ["display-projection", "apps/scoring/src/scenario-display-fixtures.ts"],
+  ["display-projection", "apps/scoring/src/scenario-display-fixtures.test.ts"],
+  ["display-projection", "apps/scoring/fixtures/scenario-display-states.json"],
+  ["display-projection", "apps/scoring/docs/observatory-display-projection-contract.md"],
   ["display-projection", "apps/scoring/src/observatory-integration.test.ts"],
   ["display-projection", "apps/scoring/observatory/index.html"],
   ["display-projection", "apps/scoring/scripts/serve-scenario-observatory.mjs"],
@@ -68,7 +72,7 @@ const testCommands = [
   "node apps/scoring/scripts/behavior-oracle.mjs --check",
   "pnpm --filter scoring test -- src/epee.test.ts src/foil.test.ts src/foil-evidence.test.ts src/foil-insulation.test.ts src/sabre.test.ts src/bout-state.test.ts src/timing-table.test.ts src/timing-boundary.test.ts src/scoring-property-harness.test.ts",
   "pnpm --filter scoring test -- src/scenario-runner.test.ts src/foil-scenario-evidence.test.ts src/sabre-scenario-evidence.test.ts",
-  "pnpm --filter scoring test -- src/decision-record.test.ts src/transport-frame.test.ts src/scenario-display-projection.test.ts src/observatory-integration.test.ts",
+  "pnpm --filter scoring test -- src/decision-record.test.ts src/transport-frame.test.ts src/scenario-display-projection.test.ts src/scenario-display-fixtures.test.ts src/observatory-integration.test.ts",
   "pnpm --filter scoring run:scenarios -- docs/golden-scenario-manifest.json",
   "pnpm --filter scoring check:golden-vectors"
 ]

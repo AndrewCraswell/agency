@@ -9,6 +9,7 @@ const applicationDirectory = resolve(dirname(fileURLToPath(import.meta.url)), ".
 const manifestPath = resolve(applicationDirectory, "docs/golden-scenario-manifest.json")
 const observatoryPath = resolve(applicationDirectory, "observatory/index.html")
 const projectionModulePath = resolve(applicationDirectory, "dist/scenario-display-projection.js")
+const identityModulePath = resolve(applicationDirectory, "dist/observatory-identity.js")
 const host = "127.0.0.1"
 const portArgument = process.argv.find((argument) => argument.startsWith("--port="))
 const port = Number(portArgument?.slice("--port=".length) ?? 4178)
@@ -22,6 +23,7 @@ const activeById = new Map(activeEntries.map((entry) => [entry.scenarioId, entry
 const plannedCoverage = manifest.coverage.filter((entry) => entry.status === "planned")
 const observatoryHtml = await readFile(observatoryPath, "utf8")
 const projectionModule = await readFile(projectionModulePath, "utf8")
+const identityModule = await readFile(identityModulePath, "utf8")
 
 async function loadScenario(entry) {
   return JSON.parse(await readFile(resolve(applicationDirectory, "docs", entry.path), "utf8"))
@@ -82,7 +84,7 @@ async function executeReport(selectedScenarioId) {
           scenario: {
             description:
               entry.description ?? "No executable golden scenario has been approved for this requirement yet.",
-            scenarioId: entry.traceabilityId,
+            traceabilityId: entry.traceabilityId,
             weapon: entry.traceabilityId.startsWith("FOIL")
               ? "foil"
               : entry.traceabilityId.startsWith("SABRE")
@@ -132,6 +134,15 @@ const server = createServer(async (request, response) => {
         "X-Content-Type-Options": "nosniff"
       })
       response.end(projectionModule)
+      return
+    }
+    if (request.method === "GET" && url.pathname === "/assets/observatory-identity.js") {
+      response.writeHead(200, {
+        "Cache-Control": "no-store",
+        "Content-Type": "text/javascript; charset=utf-8",
+        "X-Content-Type-Options": "nosniff"
+      })
+      response.end(identityModule)
       return
     }
     if ((request.method === "GET" || request.method === "POST") && url.pathname === "/api/run") {

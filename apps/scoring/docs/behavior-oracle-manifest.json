@@ -166,9 +166,19 @@
       "sha256": "sha256:ce56349b4efda272219abd98144c0b0992daff6ffab129e6ee61228a46f6dc82"
     },
     {
+      "category": "display-projection",
+      "path": "apps/scoring/docs/observatory-display-projection-contract.md",
+      "sha256": "sha256:eeed3eda963d26d575cc03a76528895e1fc3d336462be4ca2e8564b58a68c7ac"
+    },
+    {
       "category": "rules-1",
       "path": "apps/scoring/docs/rules-1-release-review.md",
       "sha256": "sha256:ea36362a413b35ec321024bd9b96798258169a5a59992d9a4f8ca5be00bb0782"
+    },
+    {
+      "category": "display-projection",
+      "path": "apps/scoring/fixtures/scenario-display-states.json",
+      "sha256": "sha256:7fdeb45e61ebe633abba218dd1a46bb950f46c8d816c0572cc09fd9b308458a9"
     },
     {
       "category": "transport-frames",
@@ -178,7 +188,7 @@
     {
       "category": "display-projection",
       "path": "apps/scoring/observatory/index.html",
-      "sha256": "sha256:3aa868fee986c237090673c3140246ed94bcba9304fd4604919cfa638afad880"
+      "sha256": "sha256:b919a12a5dd4ebbffa53aeb3a733325e027f3b48a023acb7a811ba680299389e"
     },
     {
       "category": "environment",
@@ -198,7 +208,7 @@
     {
       "category": "display-projection",
       "path": "apps/scoring/scripts/serve-scenario-observatory.mjs",
-      "sha256": "sha256:bd117a23dc55efc88c6ca89ce13edd15659161f56d73ddc727c927736529250f"
+      "sha256": "sha256:185c9d66bec88ba64e89d0069de88672d202ab71c7ec3b2e68d136ca022d60ef"
     },
     {
       "category": "rules-1",
@@ -273,7 +283,7 @@
     {
       "category": "display-projection",
       "path": "apps/scoring/src/observatory-integration.test.ts",
-      "sha256": "sha256:717f32815d25e0eb9a04f2a31def60aefbe3ef20b50735aa9e322bf112eb1730"
+      "sha256": "sha256:5980e0835a03b1053c460564f66329d01ecba717cdc50ef0d8a9d9b4e1b72cd7"
     },
     {
       "category": "golden-corpus",
@@ -297,13 +307,23 @@
     },
     {
       "category": "display-projection",
+      "path": "apps/scoring/src/scenario-display-fixtures.test.ts",
+      "sha256": "sha256:3957e35b49a52ff2fb963f7cd860cf9ab6cb9b4c594e8fcfe0f9251fbf6d4e1a"
+    },
+    {
+      "category": "display-projection",
+      "path": "apps/scoring/src/scenario-display-fixtures.ts",
+      "sha256": "sha256:f31f6f7274f68c97d7821a89cfc63914641b8d4d503e4413e6e60df3343e3fa4"
+    },
+    {
+      "category": "display-projection",
       "path": "apps/scoring/src/scenario-display-projection.test.ts",
-      "sha256": "sha256:20bf1c1468987106754d939b266927b93ae239acfc82d5427fa1664bb855be6b"
+      "sha256": "sha256:914cf040ac3d1b968d92f564d4e8e24abb83ba19190f71ea0e306773b082d8d5"
     },
     {
       "category": "display-projection",
       "path": "apps/scoring/src/scenario-display-projection.ts",
-      "sha256": "sha256:2db36c04e4b31bac313397da6e5a01c8b80e49e824805553537d3d979eefbe29"
+      "sha256": "sha256:b9edcd85a79d6a1cf8a67f3ba8c2105c761b31578715573b87051698d92dfa3c"
     },
     {
       "category": "golden-corpus",
@@ -405,7 +425,7 @@
     "node apps/scoring/scripts/behavior-oracle.mjs --check",
     "pnpm --filter scoring test -- src/epee.test.ts src/foil.test.ts src/foil-evidence.test.ts src/foil-insulation.test.ts src/sabre.test.ts src/bout-state.test.ts src/timing-table.test.ts src/timing-boundary.test.ts src/scoring-property-harness.test.ts",
     "pnpm --filter scoring test -- src/scenario-runner.test.ts src/foil-scenario-evidence.test.ts src/sabre-scenario-evidence.test.ts",
-    "pnpm --filter scoring test -- src/decision-record.test.ts src/transport-frame.test.ts src/scenario-display-projection.test.ts src/observatory-integration.test.ts",
+    "pnpm --filter scoring test -- src/decision-record.test.ts src/transport-frame.test.ts src/scenario-display-projection.test.ts src/scenario-display-fixtures.test.ts src/observatory-integration.test.ts",
     "pnpm --filter scoring run:scenarios -- docs/golden-scenario-manifest.json",
     "pnpm --filter scoring check:golden-vectors"
   ],
@@ -413,5 +433,5 @@
   "hashPolicy": "sha256 over UTF-8 text after CRLF-to-LF normalization",
   "oracleRevision": "rules-1",
   "schemaVersion": 1,
-  "digest": "sha256:ef6c68c9e696b07d8e00ad0ffdb68b1d07c4f44b5c29e8ac1dababd57acd0286"
+  "digest": "sha256:26388dc044df48c19c42738391250759a1506c990dfb12eec4c9f88fc5da8755"
 }

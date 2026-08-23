@@ -201,6 +201,28 @@
         margin: 5px 0 0;
         color: #aebfca;
       }
+      .detail-identity {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        margin: 10px 0 0;
+      }
+      .detail-identity div {
+        display: grid;
+        gap: 2px;
+      }
+      .detail-identity dt {
+        color: #91a5b0;
+        font-size: 0.7rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .detail-identity dd {
+        margin: 0;
+        overflow-wrap: anywhere;
+        color: #dce8ed;
+        font-size: 0.86rem;
+      }
       .detail-body {
         display: grid;
         gap: 18px;
@@ -408,6 +430,9 @@
       }
       .timeline-marker[data-kind="output"] {
         background: #79ca99;
+      }
+      .timeline-marker[data-kind="diagnostic"] {
+        background: #f0c46a;
       }
       .timeline-marker[data-kind="expected"] {
         background: #e9ad55;
@@ -630,9 +655,11 @@
       import {
         createScenarioDisplayTimeline,
         isActualAcceptedScenarioDisplay,
+        isScenarioDisplayDecision,
         projectScenarioDisplay,
         projectScenarioLines
       } from "/assets/scenario-display-projection.js"
+      import { projectObservatoryIdentity } from "/assets/observatory-identity.js"
 
       const state = {
         cases: [],
@@ -640,7 +667,7 @@
         events: [],
         playing: false,
         selectedCase: null,
-        selectedId: null,
+        selectedKey: null,
         timer: null,
         timelineMarkerObserver: null
       }
@@ -687,6 +714,12 @@
         return inputs.length === 0 ? "" : formatTime(Math.max(...inputs.map((input) => input.atUs)))
       }
 
+      function caseKey(testCase) {
+        const index = state.cases.indexOf(testCase)
+        const identity = projectObservatoryIdentity(testCase)
+        return identity.kind + ":" + identity.id + ":" + index
+      }
+
       function renderCaseList() {
         listRoot.replaceChildren()
         const groups = [
@@ -700,16 +733,18 @@
           heading.textContent = label
           listRoot.append(heading)
           for (const testCase of testCases) {
+            const identity = projectObservatoryIdentity(testCase)
+            const key = caseKey(testCase)
             const button = document.createElement("button")
             button.type = "button"
             button.className = "case-item"
-            if (testCase.scenario.scenarioId === state.selectedId) button.setAttribute("aria-current", "true")
+            if (key === state.selectedKey) button.setAttribute("aria-current", "true")
             const icon = document.createElement("span")
             icon.className = "status-emoji"
             icon.textContent = emoji[testCase.status]
             const name = document.createElement("span")
             name.className = "case-name"
-            name.textContent = testCase.scenario.scenarioId
+            name.textContent = identity.id
             const description = document.createElement("span")
             description.className = "case-description"
             description.textContent =
@@ -725,7 +760,7 @@
             duration.className = "case-duration"
             duration.textContent = caseDuration(testCase)
             button.append(icon, name, duration)
-            button.addEventListener("click", () => selectCase(testCase.scenario.scenarioId))
+            button.addEventListener("click", () => selectCase(key))
             listRoot.append(button)
           }
         }
@@ -733,6 +768,7 @@
 
       function eventLabel(kind) {
         return {
+          diagnostic: "Host-scorer diagnostic",
           expected: "Expected assertion",
           input: "Input",
           output: "Host-scorer output",
@@ -894,14 +930,14 @@
         const progress = document.querySelector("#timeline-progress")
         const stateLabel = document.querySelector("#playback-state")
         const current = document.querySelector("#current-event")
-        const maximumTime = state.selectedCase ? playerTiming(state.selectedCase).maximumTime : 1
-        const progressPercent = event === undefined ? 0 : (event.atUs / maximumTime) * 100
+        const maximumTime = state.selectedCase ? playerMaximumTime(state.selectedCase) : 1
+        const progressPercent = event === undefined ? 0 : (event.playbackAtUs / maximumTime) * 100
         if (progress) progress.style.width = progressPercent + "%"
         if (stateLabel)
           stateLabel.textContent =
             event === undefined
               ? "Ready"
-              : formatTime(event.atUs) + " " + (state.eventIndex + 1) + "/" + state.events.length
+              : formatEventTime(event) + " " + (state.eventIndex + 1) + "/" + state.events.length
         document
           .querySelectorAll(".timeline-marker")
           .forEach((marker, index) => marker.classList.toggle("is-current", index === state.eventIndex))
@@ -929,7 +965,7 @@
         const heading = document.createElement("h3")
         heading.textContent = emojiForEvent(event.kind) + " " + eventLabel(event.kind) + ": " + event.label
         const time = document.createElement("p")
-        time.textContent = "At " + formatTime(event.atUs)
+        time.textContent = "At " + formatEventTime(event)
         current.append(heading, time)
         if (event.lines) {
           const lines = document.createElement("div")
@@ -950,7 +986,31 @@
       }
 
       function emojiForEvent(kind) {
-        return kind === "input" ? "▶️" : kind === "expected" ? "🔎" : kind === "output" ? "✅" : "⚠️"
+        return kind === "input"
+          ? "▶️"
+          : kind === "expected"
+            ? "🔎"
+            : kind === "output"
+              ? "✅"
+              : kind === "diagnostic"
+                ? "🟡"
+                : "⚠️"
+      }
+
+      function formatEventTime(event) {
+        return event.playbackAtUs === event.atUs
+          ? formatTime(event.atUs)
+          : formatTime(event.playbackAtUs) + " playback, declared " + formatTime(event.atUs)
+      }
+
+      function playerMaximumTime(testCase) {
+        return Math.max(1, playerTiming(testCase).maximumTime, ...state.events.map((event) => event.playbackAtUs))
+      }
+
+      function displayCoordinateAtUs(atUs) {
+        return state.events
+          .filter((event) => event.atUs <= atUs)
+          .reduce((coordinate, event) => Math.max(coordinate, event.playbackAtUs), atUs)
       }
 
       function playTimeline() {
@@ -993,7 +1053,9 @@
             maximumTime: Math.max(1, ...(testCase.scenario.inputs ?? []).map((input) => input.atUs)),
             timingAvailable: false
           }
-        const decisions = testCase.result.decisions.filter((decision) => decision.side !== undefined)
+        const decisions = testCase.result.decisions.filter(
+          (decision) => isScenarioDisplayDecision(decision) && decision.side !== undefined
+        )
         const timing = testCase.timing?.status === "available" ? testCase.timing : null
         const firstDecision =
           decisions.length === 0
@@ -1114,25 +1176,61 @@
         drawCenteredMatrixText(context, snapshot.weapon, 1, "#d9e7ed", 1)
         drawMatrixText(context, "L", 5, 5, "#91a5b0")
         drawMatrixText(context, "R", 56, 5, "#91a5b0")
+        drawMatrixText(
+          context,
+          snapshot.authoritativeResult === "available" ? "A" : "U",
+          30,
+          5,
+          snapshot.authoritativeResult === "available" ? "#79ca99" : "#eb4b55"
+        )
 
         const leftColor =
-          snapshot.leftLamp === "valid-hit"
-            ? "#eb4b55"
-            : snapshot.leftLamp === "off-target"
-              ? "#e9ad55"
-              : snapshot.leftLamp === "diagnostic"
-                ? "#f0c46a"
-                : "#18242b"
+          snapshot.leftLamp === "valid-hit" ? "#eb4b55" : snapshot.leftLamp === "off-target" ? "#e9ad55" : "#18242b"
         const rightColor =
-          snapshot.rightLamp === "valid-hit"
-            ? "#40ce79"
-            : snapshot.rightLamp === "off-target"
-              ? "#e9ad55"
-              : snapshot.rightLamp === "diagnostic"
-                ? "#f0c46a"
-                : "#18242b"
+          snapshot.rightLamp === "valid-hit" ? "#40ce79" : snapshot.rightLamp === "off-target" ? "#e9ad55" : "#18242b"
         paintMatrixRegion(context, 2, 8, 13, 9, leftColor, snapshot.leftLamp !== "off")
         paintMatrixRegion(context, 49, 8, 13, 9, rightColor, snapshot.rightLamp !== "off")
+
+        paintMatrixRegion(
+          context,
+          2,
+          18,
+          5,
+          3,
+          snapshot.leftYellowDiagnostic === "on" ? "#f0c46a" : "#18242b",
+          snapshot.leftYellowDiagnostic === "on"
+        )
+        paintMatrixRegion(
+          context,
+          9,
+          18,
+          5,
+          3,
+          snapshot.leftWhiteDiagnostic === "on" ? "#eef5f8" : "#18242b",
+          snapshot.leftWhiteDiagnostic === "on"
+        )
+        paintMatrixRegion(
+          context,
+          49,
+          18,
+          5,
+          3,
+          snapshot.rightYellowDiagnostic === "on" ? "#f0c46a" : "#18242b",
+          snapshot.rightYellowDiagnostic === "on"
+        )
+        paintMatrixRegion(
+          context,
+          56,
+          18,
+          5,
+          3,
+          snapshot.rightWhiteDiagnostic === "on" ? "#eef5f8" : "#18242b",
+          snapshot.rightWhiteDiagnostic === "on"
+        )
+        drawMatrixText(context, "Y", 3, 22, snapshot.leftYellowDiagnostic === "on" ? "#f0c46a" : "#41525c")
+        drawMatrixText(context, "W", 10, 22, snapshot.leftWhiteDiagnostic === "on" ? "#eef5f8" : "#41525c")
+        drawMatrixText(context, "Y", 50, 22, snapshot.rightYellowDiagnostic === "on" ? "#f0c46a" : "#41525c")
+        drawMatrixText(context, "W", 57, 22, snapshot.rightWhiteDiagnostic === "on" ? "#eef5f8" : "#41525c")
 
         paintMatrixRegion(context, 18, 10, 5, 3, snapshot.leftContact ? "#75c8f2" : "#18242b", snapshot.leftContact)
         paintMatrixRegion(context, 41, 10, 5, 3, snapshot.rightContact ? "#75c8f2" : "#18242b", snapshot.rightContact)
@@ -1156,9 +1254,9 @@
         drawMatrixText(context, "F", 42, 21, snapshot.rightFault ? "#f0c46a" : "#41525c")
 
         const maximumTime = Math.max(1, snapshot.timing.maximumTime)
-        paintMatrixRegion(context, 2, 25, 60, 1, "#1d2b33", false)
+        paintMatrixRegion(context, 2, 29, 60, 1, "#1d2b33", false)
         for (const event of state.events) {
-          const eventColumn = Math.min(61, 2 + Math.round((event.atUs / maximumTime) * 59))
+          const eventColumn = Math.min(61, 2 + Math.round((event.playbackAtUs / maximumTime) * 59))
           const eventColor =
             event.kind === "input"
               ? "#74c7ff"
@@ -1166,20 +1264,23 @@
                 ? "#e9ad55"
                 : event.kind === "output"
                   ? "#79ca99"
-                  : event.kind === "uncertainty"
+                  : event.kind === "diagnostic"
                     ? "#f0c46a"
-                    : "#eb4b55"
-          paintMatrixRegion(context, eventColumn, 24, 1, 3, eventColor, true)
+                    : event.kind === "uncertainty"
+                      ? "#f0c46a"
+                      : "#eb4b55"
+          paintMatrixRegion(context, eventColumn, 28, 1, 3, eventColor, true)
         }
         const cursorColumn = Math.min(61, 2 + Math.round((snapshot.cursorAtUs / maximumTime) * 59))
-        paintMatrixRegion(context, cursorColumn, 23, 1, 5, "#eef5f8", true)
+        paintMatrixRegion(context, cursorColumn, 27, 1, 5, "#eef5f8", true)
         drawMatrixText(context, snapshot.audibleRequested ? "B" : "", 31, 19, "#f4c65d")
       }
 
       function playerSnapshot(testCase) {
+        const timing = playerTiming(testCase)
         return {
           ...projectScenarioDisplay(testCase, state.eventIndex),
-          timing: playerTiming(testCase)
+          timing: { ...timing, maximumTime: playerMaximumTime(testCase) }
         }
       }
 
@@ -1212,8 +1313,13 @@
         const readout = document.createElement("dl")
         readout.className = "signal-readout"
         for (const [id, label, value] of [
-          ["player-left-readout", "Left lamp", "Off"],
-          ["player-right-readout", "Right lamp", "Off"],
+          ["player-result-readout", "Authoritative result", "Available"],
+          ["player-left-readout", "Left primary lamp", "Off"],
+          ["player-left-yellow-readout", "Left yellow", "Off"],
+          ["player-left-white-readout", "Left white", "Off"],
+          ["player-right-readout", "Right primary lamp", "Off"],
+          ["player-right-yellow-readout", "Right yellow", "Off"],
+          ["player-right-white-readout", "Right white", "Off"],
           ["player-contact-readout", "Contact and fault", "Idle"],
           ["player-buzzer-readout", "Buzzer", "Inactive"]
         ]) {
@@ -1239,8 +1345,11 @@
           ["right-contact", "Right contact"],
           ["right-fault", "Right fault"]
         ]
-        const timing = playerTiming(testCase)
+        const timing = { ...playerTiming(testCase), maximumTime: playerMaximumTime(testCase) }
         const inputs = testCase.scenario.inputs ?? []
+        const inputPlaybackById = new Map(
+          state.events.filter((event) => event.kind === "input").map((event) => [event.id, event.playbackAtUs])
+        )
         for (const [laneId, laneName] of laneDefinitions) {
           const lane = document.createElement("div")
           lane.className = "bout-lane"
@@ -1252,11 +1361,16 @@
           track.className = "lane-track"
           inputs.forEach((input, index) => {
             if (!laneActive(input.lines, laneId)) return
-            const nextAtUs = inputs[index + 1]?.atUs ?? input.atUs
+            const inputAtUs = inputPlaybackById.get(input.id) ?? displayCoordinateAtUs(input.atUs)
+            const nextInput = inputs[index + 1]
+            const nextAtUs =
+              nextInput === undefined
+                ? inputAtUs
+                : (inputPlaybackById.get(nextInput.id) ?? displayCoordinateAtUs(nextInput.atUs))
             const segment = document.createElement("span")
             segment.className = "lane-segment"
-            segment.style.left = (input.atUs / timing.maximumTime) * 100 + "%"
-            segment.style.width = Math.max(0.5, ((nextAtUs - input.atUs) / timing.maximumTime) * 100) + "%"
+            segment.style.left = (inputAtUs / timing.maximumTime) * 100 + "%"
+            segment.style.width = Math.max(0.5, ((nextAtUs - inputAtUs) / timing.maximumTime) * 100) + "%"
             if (inputs[index + 1] === undefined) segment.title = "Final declared snapshot"
             track.append(segment)
           })
@@ -1264,21 +1378,22 @@
             const marker = document.createElement("span")
             marker.className = "player-marker"
             marker.title = "Candidate contact start"
-            marker.style.left = (timing.candidateContactAtUs / timing.maximumTime) * 100 + "%"
+            marker.style.left = (displayCoordinateAtUs(timing.candidateContactAtUs) / timing.maximumTime) * 100 + "%"
             track.append(marker)
           }
           if (timing.authoritativeDecisionAtUs !== null) {
             const decision = document.createElement("span")
             decision.className = "player-marker decision"
             decision.title = "Authoritative host-scorer decision"
-            decision.style.left = (timing.authoritativeDecisionAtUs / timing.maximumTime) * 100 + "%"
+            decision.style.left =
+              (displayCoordinateAtUs(timing.authoritativeDecisionAtUs) / timing.maximumTime) * 100 + "%"
             track.append(decision)
           }
           if (timing.cutoffAtUs !== null) {
             const cutoff = document.createElement("span")
             cutoff.className = "player-marker lockout"
             cutoff.title = "Opposing-contact cutoff"
-            cutoff.style.left = (timing.cutoffAtUs / timing.maximumTime) * 100 + "%"
+            cutoff.style.left = (displayCoordinateAtUs(timing.cutoffAtUs) / timing.maximumTime) * 100 + "%"
             track.append(cutoff)
           }
           const cursor = document.createElement("span")
@@ -1308,13 +1423,7 @@
       }
 
       function describeLamp(lamp) {
-        return lamp === "valid-hit"
-          ? "Valid hit"
-          : lamp === "off-target"
-            ? "Off-target"
-            : lamp === "diagnostic"
-              ? "Diagnostic"
-              : "Off"
+        return lamp === "valid-hit" ? "Valid hit" : lamp === "off-target" ? "Off-target" : "Off"
       }
 
       function updateBoxPlayer(event) {
@@ -1335,14 +1444,22 @@
             formatTime(latestDecision.decisionAtUs)
           : "no host-scorer decision"
         const stateDescription = event?.label ?? "Ready to replay"
+        const declaredCursorDescription =
+          event !== undefined && event.atUs !== event.playbackAtUs
+            ? ", declared event time " + formatTime(event.atUs)
+            : ""
         const summary = document.querySelector("#player-summary")
         if (summary)
           summary.textContent =
+            "Authoritative result " +
+            snapshot.authoritativeResult +
+            ". " +
             stateDescription +
             ". " +
             decisionDescription +
             ". Cursor " +
             formatTime(cursorAtUs) +
+            declaredCursorDescription +
             ", event " +
             (state.eventIndex < 0 ? "0" : String(state.eventIndex + 1)) +
             "/" +
@@ -1361,17 +1478,31 @@
         const matrixCursor = document.querySelector("#matrix-cursor")
         if (matrixCursor)
           matrixCursor.textContent =
-            formatTime(cursorAtUs) + "  event " + (state.eventIndex + 1) + "/" + state.events.length
+            (event === undefined ? formatTime(cursorAtUs) : formatEventTime(event)) +
+            "  event " +
+            (state.eventIndex + 1) +
+            "/" +
+            state.events.length
         const canvasLabel = document.querySelector("#player-matrix")
         if (canvasLabel)
           canvasLabel.setAttribute(
             "aria-label",
             snapshot.weapon +
-              " developer visualization. " +
+              " developer visualization. Authoritative result " +
+              snapshot.authoritativeResult +
+              ". " +
               describeLamp(snapshot.leftLamp) +
-              " left, " +
+              " left primary, left yellow " +
+              snapshot.leftYellowDiagnostic +
+              ", left white " +
+              snapshot.leftWhiteDiagnostic +
+              ". " +
               describeLamp(snapshot.rightLamp) +
-              " right. " +
+              " right primary, right yellow " +
+              snapshot.rightYellowDiagnostic +
+              ", right white " +
+              snapshot.rightWhiteDiagnostic +
+              ". " +
               (snapshot.leftContact ? "Left contact closed. " : "Left contact open. ") +
               (snapshot.rightContact ? "Right contact closed. " : "Right contact open. ") +
               (snapshot.leftFault || snapshot.rightFault ? "Fault present. " : "No fault. ") +
@@ -1379,16 +1510,30 @@
               (snapshot.audibleRequested ? "Buzzer requested. " : "Buzzer inactive. ") +
               "Cursor at " +
               formatTime(cursorAtUs) +
+              (event !== undefined && event.atUs !== event.playbackAtUs
+                ? ". Declared event time " + formatTime(event.atUs)
+                : "") +
               "."
           )
         const leftReadout = document.querySelector("#player-left-readout")
         const rightReadout = document.querySelector("#player-right-readout")
+        const resultReadout = document.querySelector("#player-result-readout")
+        const leftYellowReadout = document.querySelector("#player-left-yellow-readout")
+        const leftWhiteReadout = document.querySelector("#player-left-white-readout")
+        const rightYellowReadout = document.querySelector("#player-right-yellow-readout")
+        const rightWhiteReadout = document.querySelector("#player-right-white-readout")
         const contactReadout = document.querySelector("#player-contact-readout")
         const buzzerReadout = document.querySelector("#player-buzzer-readout")
         if (leftReadout)
           leftReadout.textContent = describeLamp(snapshot.leftLamp) + (snapshot.leftFault ? "; fault" : "")
         if (rightReadout)
           rightReadout.textContent = describeLamp(snapshot.rightLamp) + (snapshot.rightFault ? "; fault" : "")
+        if (resultReadout)
+          resultReadout.textContent = snapshot.authoritativeResult === "available" ? "Available" : "Unavailable"
+        if (leftYellowReadout) leftYellowReadout.textContent = snapshot.leftYellowDiagnostic === "on" ? "On" : "Off"
+        if (leftWhiteReadout) leftWhiteReadout.textContent = snapshot.leftWhiteDiagnostic === "on" ? "On" : "Off"
+        if (rightYellowReadout) rightYellowReadout.textContent = snapshot.rightYellowDiagnostic === "on" ? "On" : "Off"
+        if (rightWhiteReadout) rightWhiteReadout.textContent = snapshot.rightWhiteDiagnostic === "on" ? "On" : "Off"
         if (contactReadout)
           contactReadout.textContent =
             (snapshot.leftContact ? "Left closed" : "Left open") +
@@ -1461,16 +1606,16 @@
         progress.id = "timeline-progress"
         progress.className = "timeline-progress"
         track.append(progress)
-        const maximumTime = playerTiming(testCase).maximumTime
+        const maximumTime = playerMaximumTime(testCase)
         state.events.forEach((event, index) => {
           const marker = document.createElement("button")
           marker.type = "button"
           marker.className = "timeline-marker"
           marker.dataset.kind = event.kind
-          marker.style.left = (event.atUs / maximumTime) * 100 + "%"
+          marker.style.left = (event.playbackAtUs / maximumTime) * 100 + "%"
           marker.setAttribute(
             "aria-label",
-            eventLabel(event.kind) + ": " + event.label + " at " + formatTime(event.atUs)
+            eventLabel(event.kind) + ": " + event.label + " at " + formatEventTime(event)
           )
           marker.addEventListener("click", () => {
             stopPlayback()
@@ -1501,11 +1646,11 @@
         const notice = document.createElement("section")
         notice.className = "rejection-notice"
         const heading = document.createElement("h3")
-        heading.textContent = "Host-scorer rejection"
+        heading.textContent = "Authoritative result unavailable"
         const detail = document.createElement("p")
         const error = testCase.result.error
         detail.textContent =
-          "Declared execution order is preserved. Later inputs are labeled not processed, and backward timestamps are labeled as input-order violations. The host scorer rejected this scenario" +
+          "Authoritative result unavailable. Declared execution order is preserved. Later inputs are labeled not processed, and backward timestamps are labeled as input-order violations. The host scorer rejected this scenario" +
           (error?.atInputId ? " at " + error.atInputId : "") +
           (error?.code ? " with " + error.code : "") +
           ". No scoring display or cutoff is inferred."
@@ -1525,7 +1670,7 @@
           row.className = "event-row"
           const time = document.createElement("span")
           time.className = "event-time"
-          time.textContent = formatTime(event.atUs)
+          time.textContent = formatEventTime(event)
           const kind = document.createElement("span")
           kind.className = "event-kind"
           kind.textContent = eventLabel(event.kind)
@@ -1545,26 +1690,43 @@
       function renderDetail(testCase) {
         stopPlayback()
         state.selectedCase = testCase
+        const projectedIdentity = projectObservatoryIdentity(testCase)
         detailRoot.replaceChildren()
         const header = document.createElement("header")
         header.className = "detail-header"
         const titleGroup = document.createElement("div")
         const title = document.createElement("h2")
         title.className = "detail-title"
-        title.textContent = emoji[testCase.status] + " " + testCase.scenario.scenarioId
+        title.textContent = emoji[testCase.status] + " " + projectedIdentity.id
         const subtitle = document.createElement("p")
         subtitle.className = "detail-subtitle"
         subtitle.textContent =
           testCase.scenario.title ?? testCase.scenario.description ?? testCase.scenario.weapon + " " + testCase.status
-        titleGroup.append(title, subtitle)
+        const identity = document.createElement("dl")
+        identity.className = "detail-identity"
+        identity.setAttribute("aria-label", `Selected ${projectedIdentity.kind}`)
+        const identityItem = (label, value) => {
+          const item = document.createElement("div")
+          const term = document.createElement("dt")
+          term.textContent = label
+          const detail = document.createElement("dd")
+          detail.textContent = value
+          item.append(term, detail)
+          return item
+        }
+        identity.append(
+          identityItem(projectedIdentity.idLabel, projectedIdentity.id),
+          identityItem("Rule revision", projectedIdentity.ruleRevision)
+        )
+        titleGroup.append(title, subtitle, identity)
         header.append(titleGroup)
 
-        if (testCase.status !== "skipped") {
+        if (projectedIdentity.canRun) {
           const run = document.createElement("button")
           run.type = "button"
           run.className = "case-run"
           run.textContent = "Run this case"
-          run.addEventListener("click", () => runSingle(testCase.scenario.scenarioId, run))
+          run.addEventListener("click", () => runSingle(projectedIdentity.id, run))
           header.append(run)
         }
         detailRoot.append(header)
@@ -1582,10 +1744,10 @@
         detailRoot.append(body)
       }
 
-      function selectCase(scenarioId) {
-        state.selectedId = scenarioId
+      function selectCase(key) {
+        state.selectedKey = key
         renderCaseList()
-        const testCase = state.cases.find((candidate) => candidate.scenario.scenarioId === scenarioId)
+        const testCase = state.cases.find((candidate) => caseKey(candidate) === key)
         if (testCase) renderDetail(testCase)
       }
 
@@ -1596,15 +1758,20 @@
       }
 
       function applyReport(report, preserveSelection = true) {
-        const previous = preserveSelection ? state.selectedId : null
+        const previous = preserveSelection ? state.selectedKey : null
         state.cases = report.cases
         renderSummary()
-        const nextSelection = state.cases.some((testCase) => testCase.scenario.scenarioId === previous)
+        const firstExecutable = state.cases.find((testCase) => testCase.status !== "skipped")
+        const nextSelection = state.cases.some((testCase) => caseKey(testCase) === previous)
           ? previous
-          : state.cases.find((testCase) => testCase.status !== "skipped")?.scenario.scenarioId
-        state.selectedId = nextSelection ?? state.cases[0]?.scenario.scenarioId ?? null
+          : firstExecutable
+            ? caseKey(firstExecutable)
+            : state.cases[0]
+              ? caseKey(state.cases[0])
+              : null
+        state.selectedKey = nextSelection
         renderCaseList()
-        if (state.selectedId) selectCase(state.selectedId)
+        if (state.selectedKey) selectCase(state.selectedKey)
       }
 
       async function runAll() {
@@ -1627,9 +1794,10 @@
         try {
           const report = await fetchReport("/api/run/" + encodeURIComponent(scenarioId), { method: "POST" })
           const updated = report.cases[0]
-          state.cases = state.cases.map((testCase) =>
-            testCase.scenario.scenarioId === scenarioId ? updated : testCase
-          )
+          state.cases = state.cases.map((testCase) => {
+            const identity = projectObservatoryIdentity(testCase)
+            return identity.canRun && identity.id === scenarioId ? updated : testCase
+          })
           renderSummary()
           renderCaseList()
           renderDetail(updated)

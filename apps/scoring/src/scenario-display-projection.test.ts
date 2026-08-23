@@ -6,7 +6,8 @@ import {
   isActualAcceptedScenarioDisplay,
   projectScenarioDisplay,
   projectScenarioLines,
-  type ScenarioDisplayCase
+  type ScenarioDisplayCase,
+  type ScenarioDisplayDiagnostic
 } from "./scenario-display-projection.js"
 
 function displayCase(
@@ -124,6 +125,7 @@ describe("scenario report display projection", () => {
 
     expect(expectedMarker).toMatchObject({ audibleRequested: false, leftLamp: "off", rightLamp: "off" })
     expect(actualOutput).toMatchObject({
+      authoritativeResult: "available",
       audibleRequested: true,
       cursorAtUs: 2_000,
       eventCount: 4,
@@ -135,7 +137,7 @@ describe("scenario report display projection", () => {
       rightLamp: "valid-hit"
     })
     expect(actualOutput.accessibleLabel).toBe(
-      "epee; left off; right valid-hit; buzzer requested; event 4/4; cursor 2000 us"
+      "epee; authoritative result available; left primary off; left yellow off; left white off; right primary valid-hit; right yellow off; right white off; buzzer requested; event 4/4; cursor 2000 us"
     )
   })
 
@@ -150,6 +152,7 @@ describe("scenario report display projection", () => {
     const timeline = createScenarioDisplayTimeline(rejected)
     expect(timeline.map(({ kind }) => kind)).toEqual(["input", "input", "rejection"])
     expect(projectScenarioDisplay(rejected, 2)).toMatchObject({ audibleRequested: false, rightLamp: "off" })
+    expect(projectScenarioDisplay(rejected, 2).authoritativeResult).toBe("unavailable")
   })
 
   it("projects accepted actual decisions even when the expectation was rejection", () => {
@@ -221,6 +224,282 @@ describe("scenario report display projection", () => {
     expect(timeline[1]?.label).toBe(
       "Input-order violation at declared input 2: backward-sample moves backward from 10 us to 9 us"
     )
+    expect(timeline.map(({ playbackAtUs }) => playbackAtUs)).toEqual([10, 10, 10])
+    expect(projectScenarioDisplay(report, 1)).toMatchObject({ cursorAtUs: 10 })
+    expect(projectScenarioDisplay(report, 1).accessibleLabel).toContain("declared event time 9 us")
+  })
+
+  it("advances playback only when raw evidence catches up after a backward timestamp", () => {
+    const base = displayCase({ actualStatus: "rejected", error: { atInputId: "qualified", code: "invalid-time" } })
+    const report: ScenarioDisplayCase = {
+      ...base,
+      scenario: {
+        ...base.scenario,
+        inputs: [
+          { ...base.scenario.inputs[0]!, atUs: 10 },
+          { ...base.scenario.inputs[1]!, atUs: 9 },
+          { atUs: 12, id: "recovered-time", lines: [] }
+        ]
+      }
+    }
+
+    expect(createScenarioDisplayTimeline(report).map(({ atUs, playbackAtUs }) => [atUs, playbackAtUs])).toEqual([
+      [10, 10],
+      [9, 10],
+      [9, 10],
+      [12, 12]
+    ])
+  })
+
+  it("keeps accepted monotonic event and playback coordinates equal", () => {
+    const timeline = createScenarioDisplayTimeline(displayCase())
+    expect(timeline.every((event) => event.atUs === event.playbackAtUs)).toBe(true)
+  })
+
+  it("keeps missing-status playback nondecreasing and excludes result outputs", () => {
+    const timeline = createScenarioDisplayTimeline(displayCase({ omitActualStatus: true }))
+    expect(timeline.some(({ kind }) => kind === "output")).toBe(false)
+    expect(timeline.map(({ playbackAtUs }) => playbackAtUs)).toEqual(
+      timeline.map(({ playbackAtUs }) => playbackAtUs).toSorted((left, right) => left - right)
+    )
+  })
+
+  it("projects validated sabre diagnostics as side-local non-scoring output", () => {
+    const base = displayCase({ omitValidDecision: true })
+    const report: ScenarioDisplayCase = {
+      ...base,
+      result: {
+        ...base.result,
+        diagnostics: [
+          {
+            atUs: 100,
+            audible: "none",
+            indication: "yellow-on",
+            latched: false,
+            reason: "own-equipment-fault",
+            side: "left",
+            sourceInputIds: ["contact"]
+          },
+          {
+            atUs: 200,
+            audible: "none",
+            indication: "yellow-off",
+            latched: false,
+            reason: "own-equipment-clear",
+            side: "left",
+            sourceInputIds: ["contact", "qualified"]
+          },
+          {
+            atUs: 300,
+            audible: "requested",
+            indication: "white-on",
+            latched: true,
+            reason: "control-break-qualified",
+            side: "right",
+            sourceInputIds: ["contact", "qualified"]
+          }
+        ]
+      },
+      scenario: { ...base.scenario, weapon: "sabre" }
+    }
+    const timeline = createScenarioDisplayTimeline(report)
+    const yellowOnIndex = timeline.findIndex(({ label }) => label === "yellow-on")
+    const yellowOffIndex = timeline.findIndex(({ label }) => label === "yellow-off")
+    const whiteOnIndex = timeline.findIndex(({ label }) => label === "white-on")
+
+    expect(projectScenarioDisplay(report, yellowOnIndex)).toMatchObject({
+      leftLamp: "off",
+      leftYellowDiagnostic: "on",
+      rightLamp: "off"
+    })
+    expect(projectScenarioDisplay(report, yellowOffIndex - 1)).toMatchObject({ leftYellowDiagnostic: "on" })
+    expect(projectScenarioDisplay(report, yellowOffIndex)).toMatchObject({
+      leftLamp: "off",
+      leftYellowDiagnostic: "off",
+      rightLamp: "off"
+    })
+    expect(projectScenarioDisplay(report, whiteOnIndex)).toMatchObject({
+      audibleRequested: true,
+      latestDecision: null,
+      rightLamp: "off",
+      rightWhiteDiagnostic: "on"
+    })
+  })
+
+  it("keeps primary, yellow, and white channels independent and clears only yellow", () => {
+    const base = displayCase({ omitValidDecision: true })
+    const report: ScenarioDisplayCase = {
+      ...base,
+      result: {
+        ...base.result,
+        decisions: [
+          {
+            decisionAtUs: 100,
+            disposition: "qualified-hit",
+            side: "left",
+            signal: { audible: "requested", latched: true, visual: "valid-hit" }
+          }
+        ],
+        diagnostics: [
+          {
+            atUs: 150,
+            audible: "none",
+            indication: "yellow-on",
+            latched: false,
+            reason: "own-equipment-fault",
+            side: "left",
+            sourceInputIds: ["contact"]
+          },
+          {
+            atUs: 200,
+            audible: "requested",
+            indication: "white-on",
+            latched: true,
+            reason: "circuit-bc-abnormal-change",
+            side: "left",
+            sourceInputIds: ["contact"]
+          },
+          {
+            atUs: 300,
+            audible: "none",
+            indication: "yellow-off",
+            latched: false,
+            reason: "own-equipment-clear",
+            side: "left",
+            sourceInputIds: ["contact", "clear"]
+          }
+        ]
+      },
+      scenario: {
+        ...base.scenario,
+        inputs: [
+          { ...base.scenario.inputs[0]!, atUs: 0, id: "contact" },
+          { atUs: 300, id: "clear", lines: [] }
+        ],
+        weapon: "sabre"
+      }
+    }
+    const timeline = createScenarioDisplayTimeline(report)
+    const whiteIndex = timeline.findIndex(({ label }) => label === "white-on")
+    const yellowOffIndex = timeline.findIndex(({ label }) => label === "yellow-off")
+
+    expect(projectScenarioDisplay(report, whiteIndex)).toMatchObject({
+      leftLamp: "valid-hit",
+      leftWhiteDiagnostic: "on",
+      leftYellowDiagnostic: "on"
+    })
+    expect(projectScenarioDisplay(report, yellowOffIndex)).toMatchObject({
+      leftLamp: "valid-hit",
+      leftWhiteDiagnostic: "on",
+      leftYellowDiagnostic: "off"
+    })
+  })
+
+  it("contains an adversarial non-latched decision visual to its projection event", () => {
+    const base = displayCase({ omitValidDecision: true })
+    const report: ScenarioDisplayCase = {
+      ...base,
+      result: {
+        ...base.result,
+        decisions: [
+          {
+            decisionAtUs: 100,
+            disposition: "qualified-hit",
+            side: "right",
+            signal: { audible: "requested", latched: false, visual: "valid-hit" }
+          }
+        ],
+        uncertainty: [{ atUs: 200, id: "later-projection-event" }]
+      },
+      scenario: { ...base.scenario, inputs: [{ ...base.scenario.inputs[0]!, atUs: 0 }] }
+    }
+    const timeline = createScenarioDisplayTimeline(report)
+    const outputIndex = timeline.findIndex(({ kind }) => kind === "output")
+    const laterIndex = timeline.findIndex(({ kind }) => kind === "uncertainty")
+
+    expect(projectScenarioDisplay(report, outputIndex)).toMatchObject({
+      audibleRequested: true,
+      rightLamp: "valid-hit"
+    })
+    expect(projectScenarioDisplay(report, laterIndex)).toMatchObject({ audibleRequested: false, rightLamp: "off" })
+  })
+
+  it("does not convert a strict diagnostic decision visual into a primary lamp", () => {
+    const base = displayCase({ omitValidDecision: true })
+    const report: ScenarioDisplayCase = {
+      ...base,
+      result: {
+        ...base.result,
+        decisions: [
+          {
+            decisionAtUs: 100,
+            disposition: "line-fault",
+            side: "left",
+            signal: { audible: "none", latched: true, visual: "diagnostic" }
+          }
+        ]
+      }
+    }
+
+    expect(projectScenarioDisplay(report, Number.MAX_SAFE_INTEGER)).toMatchObject({
+      leftLamp: "off",
+      leftWhiteDiagnostic: "off",
+      leftYellowDiagnostic: "off"
+    })
+  })
+
+  it("rejects malformed or incoherent sabre diagnostics", () => {
+    const base = displayCase({ omitValidDecision: true })
+    const report: ScenarioDisplayCase = {
+      ...base,
+      result: {
+        ...base.result,
+        diagnostics: [
+          {
+            atUs: 100,
+            audible: "requested",
+            indication: "yellow-on",
+            latched: false,
+            reason: "own-equipment-fault",
+            side: "left",
+            sourceInputIds: ["contact"]
+          }
+        ]
+      },
+      scenario: { ...base.scenario, weapon: "sabre" }
+    }
+    expect(() => createScenarioDisplayTimeline(report)).toThrowError("Invalid scenario display projection")
+
+    const validDiagnostic: ScenarioDisplayDiagnostic = {
+      atUs: 100,
+      audible: "none",
+      indication: "yellow-on",
+      latched: false,
+      reason: "own-equipment-fault",
+      side: "left",
+      sourceInputIds: ["contact"]
+    }
+    const invalidSource: ScenarioDisplayCase = {
+      ...report,
+      result: { ...report.result, diagnostics: [{ ...validDiagnostic, sourceInputIds: ["undeclared"] }] }
+    }
+    expect(() => createScenarioDisplayTimeline(invalidSource)).toThrowError("Invalid scenario display projection")
+
+    const unordered: ScenarioDisplayCase = {
+      ...report,
+      result: {
+        ...report.result,
+        diagnostics: [{ ...validDiagnostic, atUs: 200 }, validDiagnostic]
+      }
+    }
+    expect(() => createScenarioDisplayTimeline(unordered)).toThrowError("Invalid scenario display projection")
+
+    const wrongWeapon: ScenarioDisplayCase = {
+      ...report,
+      result: { ...report.result, diagnostics: [validDiagnostic] },
+      scenario: { ...report.scenario, weapon: "epee" }
+    }
+    expect(() => createScenarioDisplayTimeline(wrongWeapon)).toThrowError("Invalid scenario display projection")
   })
 
   it("projects blade state independently from target contact", () => {
@@ -276,16 +555,47 @@ describe("scenario report display projection", () => {
       invalidDecisions: [
         null,
         { decisionAtUs: "bad", disposition: "qualified-hit" },
+        {
+          decisionAtUs: -1,
+          disposition: "qualified-hit",
+          signal: { audible: "none", latched: true, visual: "valid-hit" }
+        },
+        {
+          decisionAtUs: 1.5,
+          disposition: "qualified-hit",
+          signal: { audible: "none", latched: true, visual: "valid-hit" }
+        },
+        {
+          decisionAtUs: Number.MAX_SAFE_INTEGER + 1,
+          disposition: "qualified-hit",
+          signal: { audible: "none", latched: true, visual: "valid-hit" }
+        },
         { decisionAtUs: 1_000, disposition: 7 },
+        { decisionAtUs: 1_000, disposition: "", signal: { audible: "none", latched: true, visual: "valid-hit" } },
         { decisionAtUs: 1_000, disposition: "qualified-hit", side: "centre" },
-        { decisionAtUs: 1_000, disposition: "qualified-hit", signal: "requested" }
+        { decisionAtUs: 1_000, disposition: "qualified-hit", signal: "requested" },
+        {
+          decisionAtUs: 1_000,
+          disposition: "qualified-hit",
+          signal: { audible: "future", latched: true, visual: "valid-hit" }
+        },
+        {
+          decisionAtUs: 1_000,
+          disposition: "qualified-hit",
+          signal: { audible: "none", latched: "true", visual: "valid-hit" }
+        },
+        {
+          decisionAtUs: 1_000,
+          disposition: "qualified-hit",
+          signal: { audible: "none", latched: true, visual: "future" }
+        }
       ],
       omitValidDecision: true,
       sideLessDecision: true
     })
     const timeline = createScenarioDisplayTimeline(testCase)
 
-    expect(timeline.filter(({ kind }) => kind === "output").map(({ id }) => id)).toEqual(["actual-none-1900-5"])
+    expect(timeline.filter(({ kind }) => kind === "output")).toHaveLength(1)
     expect(projectScenarioDisplay(testCase, timeline.length - 1)).toMatchObject({
       audibleRequested: false,
       leftLamp: "off",

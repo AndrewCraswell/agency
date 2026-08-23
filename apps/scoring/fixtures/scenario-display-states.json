@@ -1,0 +1,408 @@
+{
+  "format": "scoring-display-state-fixtures",
+  "schemaVersion": "1.0.0",
+  "cases": [
+    {
+      "id": "available-safe-inactive",
+      "description": "An accepted input with no output keeps both primary lamps and the buzzer inactive.",
+      "eventIndex": 0,
+      "case": {
+        "expected": { "decisions": [], "nonEvents": [], "uncertainty": [] },
+        "result": { "actualStatus": "accepted", "decisions": [], "error": null, "uncertainty": [] },
+        "scenario": {
+          "weapon": "epee",
+          "inputs": [{ "id": "idle", "atUs": 0, "lines": [{ "line": "left.tip-loop", "state": "open" }] }]
+        }
+      },
+      "expectedProjection": {
+        "authoritativeResult": "available",
+        "audibleRequested": false,
+        "leftLamp": "off",
+        "rightLamp": "off",
+        "leftYellowDiagnostic": "off",
+        "leftWhiteDiagnostic": "off",
+        "rightYellowDiagnostic": "off",
+        "rightWhiteDiagnostic": "off",
+        "eventKind": "input",
+        "eventLabel": "Declared input 1: idle",
+        "accessibleLabel": "epee; authoritative result available; left primary off; left yellow off; left white off; right primary off; right yellow off; right white off; buzzer idle; event 1/1; cursor 0 us"
+      }
+    },
+    {
+      "id": "left-valid-hit-with-buzzer",
+      "description": "An authoritative left valid-hit output lights only the left primary lamp and requests the buzzer.",
+      "eventIndex": 1,
+      "case": {
+        "expected": { "decisions": [], "nonEvents": [], "uncertainty": [] },
+        "result": {
+          "actualStatus": "accepted",
+          "decisions": [
+            {
+              "decisionAtUs": 100,
+              "disposition": "qualified-hit",
+              "side": "left",
+              "signal": { "audible": "requested", "latched": true, "visual": "valid-hit" }
+            }
+          ],
+          "error": null,
+          "uncertainty": []
+        },
+        "scenario": {
+          "weapon": "sabre",
+          "inputs": [{ "id": "left-contact", "atUs": 0, "lines": [{ "line": "left.target", "state": "closed" }] }]
+        }
+      },
+      "expectedProjection": {
+        "authoritativeResult": "available",
+        "audibleRequested": true,
+        "leftLamp": "valid-hit",
+        "rightLamp": "off",
+        "leftYellowDiagnostic": "off",
+        "leftWhiteDiagnostic": "off",
+        "rightYellowDiagnostic": "off",
+        "rightWhiteDiagnostic": "off",
+        "eventKind": "output",
+        "eventLabel": "qualified-hit",
+        "accessibleLabel": "sabre; authoritative result available; left primary valid-hit; left yellow off; left white off; right primary off; right yellow off; right white off; buzzer requested; event 2/2; cursor 100 us"
+      }
+    },
+    {
+      "id": "right-valid-hit-side-mapping",
+      "description": "An authoritative right valid-hit output lights only the right primary lamp.",
+      "eventIndex": 1,
+      "case": {
+        "expected": { "decisions": [], "nonEvents": [], "uncertainty": [] },
+        "result": {
+          "actualStatus": "accepted",
+          "decisions": [
+            {
+              "decisionAtUs": 2000,
+              "disposition": "qualified-hit",
+              "side": "right",
+              "signal": { "audible": "requested", "latched": true, "visual": "valid-hit" }
+            }
+          ],
+          "error": null,
+          "uncertainty": []
+        },
+        "scenario": {
+          "weapon": "epee",
+          "inputs": [{ "id": "right-contact", "atUs": 0, "lines": [{ "line": "right.tip-loop", "state": "closed" }] }]
+        }
+      },
+      "expectedProjection": {
+        "authoritativeResult": "available",
+        "audibleRequested": true,
+        "leftLamp": "off",
+        "rightLamp": "valid-hit",
+        "leftYellowDiagnostic": "off",
+        "leftWhiteDiagnostic": "off",
+        "rightYellowDiagnostic": "off",
+        "rightWhiteDiagnostic": "off",
+        "eventKind": "output",
+        "eventLabel": "qualified-hit",
+        "accessibleLabel": "epee; authoritative result available; left primary off; left yellow off; left white off; right primary valid-hit; right yellow off; right white off; buzzer requested; event 2/2; cursor 2000 us"
+      }
+    },
+    {
+      "id": "foil-off-target",
+      "description": "An authoritative foil off-target output uses the off-target lamp state without changing sides.",
+      "eventIndex": 1,
+      "case": {
+        "expected": { "decisions": [], "nonEvents": [], "uncertainty": [] },
+        "result": {
+          "actualStatus": "accepted",
+          "decisions": [
+            {
+              "decisionAtUs": 13000,
+              "disposition": "off-target",
+              "side": "left",
+              "signal": { "audible": "requested", "latched": true, "visual": "off-target" }
+            }
+          ],
+          "error": null,
+          "uncertainty": []
+        },
+        "scenario": {
+          "weapon": "foil",
+          "inputs": [{ "id": "left-break", "atUs": 0, "lines": [{ "line": "left.weapon-circuit", "state": "closed" }] }]
+        }
+      },
+      "expectedProjection": {
+        "authoritativeResult": "available",
+        "audibleRequested": true,
+        "leftLamp": "off-target",
+        "rightLamp": "off",
+        "leftYellowDiagnostic": "off",
+        "leftWhiteDiagnostic": "off",
+        "rightYellowDiagnostic": "off",
+        "rightWhiteDiagnostic": "off",
+        "eventKind": "output",
+        "eventLabel": "off-target",
+        "accessibleLabel": "foil; authoritative result available; left primary off-target; left yellow off; left white off; right primary off; right yellow off; right white off; buzzer requested; event 2/2; cursor 13000 us"
+      }
+    },
+    {
+      "id": "sabre-yellow-diagnostic-on",
+      "description": "An accepted sabre yellow-on diagnostic is side-local and produces no score or audio request.",
+      "eventIndex": 1,
+      "case": {
+        "expected": { "decisions": [], "nonEvents": [], "uncertainty": [] },
+        "result": {
+          "actualStatus": "accepted",
+          "decisions": [],
+          "diagnostics": [
+            {
+              "atUs": 100,
+              "audible": "none",
+              "indication": "yellow-on",
+              "latched": false,
+              "reason": "own-equipment-fault",
+              "side": "right",
+              "sourceInputIds": ["right-fault"]
+            }
+          ],
+          "error": null,
+          "uncertainty": []
+        },
+        "scenario": {
+          "weapon": "sabre",
+          "inputs": [{ "id": "right-fault", "atUs": 0, "lines": [{ "line": "right.fault", "state": "closed" }] }]
+        }
+      },
+      "expectedProjection": {
+        "authoritativeResult": "available",
+        "audibleRequested": false,
+        "leftLamp": "off",
+        "rightLamp": "off",
+        "leftYellowDiagnostic": "off",
+        "leftWhiteDiagnostic": "off",
+        "rightYellowDiagnostic": "on",
+        "rightWhiteDiagnostic": "off",
+        "eventKind": "diagnostic",
+        "eventLabel": "yellow-on",
+        "accessibleLabel": "sabre; authoritative result available; left primary off; left yellow off; left white off; right primary off; right yellow on; right white off; buzzer idle; event 2/2; cursor 100 us"
+      }
+    },
+    {
+      "id": "sabre-yellow-diagnostic-off",
+      "description": "A side-local yellow-off diagnostic clears the earlier yellow-on indication without scoring.",
+      "eventIndex": 3,
+      "case": {
+        "expected": { "decisions": [], "nonEvents": [], "uncertainty": [] },
+        "result": {
+          "actualStatus": "accepted",
+          "decisions": [],
+          "diagnostics": [
+            {
+              "atUs": 100,
+              "audible": "none",
+              "indication": "yellow-on",
+              "latched": false,
+              "reason": "own-equipment-fault",
+              "side": "left",
+              "sourceInputIds": ["left-fault"]
+            },
+            {
+              "atUs": 200,
+              "audible": "none",
+              "indication": "yellow-off",
+              "latched": false,
+              "reason": "own-equipment-clear",
+              "side": "left",
+              "sourceInputIds": ["left-fault", "left-clear"]
+            }
+          ],
+          "error": null,
+          "uncertainty": []
+        },
+        "scenario": {
+          "weapon": "sabre",
+          "inputs": [
+            { "id": "left-fault", "atUs": 0, "lines": [{ "line": "left.fault", "state": "closed" }] },
+            { "id": "left-clear", "atUs": 200, "lines": [{ "line": "left.fault", "state": "open" }] }
+          ]
+        }
+      },
+      "expectedProjection": {
+        "authoritativeResult": "available",
+        "audibleRequested": false,
+        "leftLamp": "off",
+        "rightLamp": "off",
+        "leftYellowDiagnostic": "off",
+        "leftWhiteDiagnostic": "off",
+        "rightYellowDiagnostic": "off",
+        "rightWhiteDiagnostic": "off",
+        "eventKind": "diagnostic",
+        "eventLabel": "yellow-off",
+        "accessibleLabel": "sabre; authoritative result available; left primary off; left yellow off; left white off; right primary off; right yellow off; right white off; buzzer idle; event 4/4; cursor 200 us"
+      }
+    },
+    {
+      "id": "sabre-white-diagnostic-latched",
+      "description": "An accepted white-on diagnostic requests audio only at its event and its latched visual persists.",
+      "eventIndex": 2,
+      "case": {
+        "expected": { "decisions": [], "nonEvents": [], "uncertainty": [] },
+        "result": {
+          "actualStatus": "accepted",
+          "decisions": [],
+          "diagnostics": [
+            {
+              "atUs": 100,
+              "audible": "requested",
+              "indication": "white-on",
+              "latched": true,
+              "reason": "circuit-bc-abnormal-change",
+              "side": "right",
+              "sourceInputIds": ["right-control"]
+            }
+          ],
+          "error": null,
+          "uncertainty": []
+        },
+        "scenario": {
+          "weapon": "sabre",
+          "inputs": [
+            { "id": "right-control", "atUs": 0, "lines": [{ "line": "right.control", "state": "shorted" }] },
+            { "id": "later-input", "atUs": 200, "lines": [{ "line": "right.control", "state": "open" }] }
+          ]
+        }
+      },
+      "expectedProjection": {
+        "authoritativeResult": "available",
+        "audibleRequested": false,
+        "leftLamp": "off",
+        "rightLamp": "off",
+        "leftYellowDiagnostic": "off",
+        "leftWhiteDiagnostic": "off",
+        "rightYellowDiagnostic": "off",
+        "rightWhiteDiagnostic": "on",
+        "eventKind": "input",
+        "eventLabel": "Declared input 2: later-input",
+        "accessibleLabel": "sabre; authoritative result available; left primary off; left yellow off; left white off; right primary off; right yellow off; right white on; buzzer idle; event 3/3; cursor 200 us"
+      }
+    },
+    {
+      "id": "latched-output-persists-through-later-input",
+      "description": "A latched output remains visible while a later electrical input advances the virtual cursor.",
+      "eventIndex": 2,
+      "case": {
+        "expected": { "decisions": [], "nonEvents": [], "uncertainty": [] },
+        "result": {
+          "actualStatus": "accepted",
+          "decisions": [
+            {
+              "decisionAtUs": 100,
+              "disposition": "qualified-hit",
+              "side": "left",
+              "signal": { "audible": "requested", "latched": true, "visual": "valid-hit" }
+            }
+          ],
+          "error": null,
+          "uncertainty": []
+        },
+        "scenario": {
+          "weapon": "sabre",
+          "inputs": [
+            { "id": "hit-input", "atUs": 0, "lines": [{ "line": "left.target", "state": "closed" }] },
+            { "id": "later-input", "atUs": 200, "lines": [{ "line": "left.target", "state": "open" }] }
+          ]
+        }
+      },
+      "expectedProjection": {
+        "authoritativeResult": "available",
+        "audibleRequested": false,
+        "leftLamp": "valid-hit",
+        "rightLamp": "off",
+        "leftYellowDiagnostic": "off",
+        "leftWhiteDiagnostic": "off",
+        "rightYellowDiagnostic": "off",
+        "rightWhiteDiagnostic": "off",
+        "eventKind": "input",
+        "eventLabel": "Declared input 2: later-input",
+        "accessibleLabel": "sabre; authoritative result available; left primary valid-hit; left yellow off; left white off; right primary off; right yellow off; right white off; buzzer idle; event 3/3; cursor 200 us"
+      }
+    },
+    {
+      "id": "reset-result-unavailable",
+      "description": "A reset with an unavailable authoritative result suppresses prior outputs and exposes the causal reason.",
+      "eventIndex": 2,
+      "case": {
+        "expected": { "decisions": [], "nonEvents": [], "uncertainty": [] },
+        "result": {
+          "actualStatus": "rejected",
+          "decisions": [
+            {
+              "decisionAtUs": 100,
+              "disposition": "qualified-hit",
+              "side": "left",
+              "signal": { "audible": "requested", "latched": true, "visual": "valid-hit" }
+            }
+          ],
+          "error": { "atInputId": "warm-reset", "code": "warm-reset-latch-unresolved" },
+          "uncertainty": []
+        },
+        "scenario": {
+          "weapon": "epee",
+          "inputs": [
+            { "id": "before-reset", "atUs": 0, "lines": [{ "line": "left.tip-loop", "state": "closed" }] },
+            { "id": "warm-reset", "atUs": 100, "lines": [{ "line": "left.tip-loop", "state": "disconnected" }] }
+          ]
+        }
+      },
+      "expectedProjection": {
+        "authoritativeResult": "unavailable",
+        "audibleRequested": false,
+        "leftLamp": "off",
+        "rightLamp": "off",
+        "leftYellowDiagnostic": "off",
+        "leftWhiteDiagnostic": "off",
+        "rightYellowDiagnostic": "off",
+        "rightWhiteDiagnostic": "off",
+        "eventKind": "rejection",
+        "eventLabel": "Authoritative result unavailable: warm-reset-latch-unresolved",
+        "accessibleLabel": "epee; authoritative result unavailable; left primary off; left yellow off; left white off; right primary off; right yellow off; right white off; buzzer idle; event 3/3; cursor 100 us"
+      }
+    },
+    {
+      "id": "missing-authoritative-result-unavailable",
+      "description": "A missing actual status is explicitly unavailable and cannot project an output decision.",
+      "eventIndex": 0,
+      "case": {
+        "expected": { "decisions": [], "nonEvents": [], "uncertainty": [] },
+        "result": {
+          "decisions": [
+            {
+              "decisionAtUs": 100,
+              "disposition": "qualified-hit",
+              "side": "right",
+              "signal": { "audible": "requested", "latched": true, "visual": "valid-hit" }
+            }
+          ],
+          "error": null,
+          "uncertainty": []
+        },
+        "scenario": {
+          "weapon": "foil",
+          "inputs": [
+            { "id": "unavailable-input", "atUs": 0, "lines": [{ "line": "right.weapon-circuit", "state": "closed" }] }
+          ]
+        }
+      },
+      "expectedProjection": {
+        "authoritativeResult": "unavailable",
+        "audibleRequested": false,
+        "leftLamp": "off",
+        "rightLamp": "off",
+        "leftYellowDiagnostic": "off",
+        "leftWhiteDiagnostic": "off",
+        "rightYellowDiagnostic": "off",
+        "rightWhiteDiagnostic": "off",
+        "eventKind": "rejection",
+        "eventLabel": "Authoritative result unavailable: actual status is not accepted",
+        "accessibleLabel": "foil; authoritative result unavailable; left primary off; left yellow off; left white off; right primary off; right yellow off; right white off; buzzer idle; event 1/2; cursor 0 us"
+      }
+    }
+  ]
+}
