@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
 import {
+  SABRE_EXTERNAL_PATH_MAXIMUM_MILLI_OHMS,
   SABRE_RULES,
   advanceSabreScoring,
+  classifySabreExternalPath,
   createSabreScoringState,
   type SabreContact,
   type SabreSample,
@@ -50,6 +52,44 @@ function unsignalledBladeMediatedSequence(side: SabreSide, interruptionCount: nu
 
 describe("sabre scoring state machine", () => {
   it.each([
+    [SABRE_EXTERNAL_PATH_MAXIMUM_MILLI_OHMS - 1, 0, "eligible"],
+    [SABRE_EXTERNAL_PATH_MAXIMUM_MILLI_OHMS, 0, "eligible"],
+    [SABRE_EXTERNAL_PATH_MAXIMUM_MILLI_OHMS + 1, 0, "ineligible"],
+    [SABRE_EXTERNAL_PATH_MAXIMUM_MILLI_OHMS, 1, "indeterminate"],
+    [SABRE_EXTERNAL_PATH_MAXIMUM_MILLI_OHMS - 1, 2, "indeterminate"]
+  ] as const)(
+    "classifies %i +/- %i milli-ohms at the 100-ohm external-path boundary as %s",
+    (resistanceMilliOhms, resistanceUncertaintyMilliOhms, expected) => {
+      expect(classifySabreExternalPath({ resistanceMilliOhms, resistanceUncertaintyMilliOhms })).toBe(expected)
+    }
+  )
+
+  it("returns unavailable when no external-path resistance measurement exists", () => {
+    expect(classifySabreExternalPath({ resistanceMilliOhms: null, resistanceUncertaintyMilliOhms: null })).toBe(
+      "unavailable"
+    )
+  })
+
+  it("rejects incomplete or invalid external-path resistance measurements", () => {
+    expect(() => classifySabreExternalPath({ resistanceMilliOhms: null, resistanceUncertaintyMilliOhms: 0 })).toThrow(
+      TypeError
+    )
+    expect(() => classifySabreExternalPath({ resistanceMilliOhms: 0, resistanceUncertaintyMilliOhms: null })).toThrow(
+      TypeError
+    )
+
+    for (const measurement of [
+      { resistanceMilliOhms: -1, resistanceUncertaintyMilliOhms: 0 },
+      { resistanceMilliOhms: 0.5, resistanceUncertaintyMilliOhms: 0 },
+      { resistanceMilliOhms: 0, resistanceUncertaintyMilliOhms: -1 },
+      { resistanceMilliOhms: 0, resistanceUncertaintyMilliOhms: 0.5 },
+      { resistanceMilliOhms: Number.MAX_SAFE_INTEGER, resistanceUncertaintyMilliOhms: 1 }
+    ]) {
+      expect(() => classifySabreExternalPath(measurement)).toThrow(RangeError)
+    }
+  })
+
+  it.each([
     ["left", 99, false],
     ["left", 100, true],
     ["left", 101, true],
@@ -87,8 +127,56 @@ describe("sabre scoring state machine", () => {
 
       expect(state.hits).toEqual([{ qualifiedAtUs: 100, side, startedAtUs: 0 }])
       expect(state[side].yellowDiagnostic).toBe("yellow-on")
+      expect(state.diagnostics).toEqual([
+        {
+          atUs: 0,
+          audible: "none",
+          indication: "yellow-on",
+          latched: false,
+          reason: "own-equipment-fault",
+          side
+        }
+      ])
     }
   )
+
+  it("records a non-latched yellow clear after an own-equipment fault clears", () => {
+    const ownEquipment: SabreContact = { ...NON_CONDUCTIVE, ownEquipmentFault: "present" }
+    const state = replay([forSide("left", ownEquipment, 0), forSide("left", NON_CONDUCTIVE, 1)])
+
+    expect(state.diagnostics).toEqual([
+      {
+        atUs: 0,
+        audible: "none",
+        indication: "yellow-on",
+        latched: false,
+        reason: "own-equipment-fault",
+        side: "left"
+      },
+      {
+        atUs: 1,
+        audible: "none",
+        indication: "yellow-off",
+        latched: false,
+        reason: "own-equipment-clear",
+        side: "left"
+      }
+    ])
+  })
+
+  it("orders equal-time diagnostics by side while retaining equal-side submission order", () => {
+    const rightOwnEquipment: SabreContact = { ...NON_CONDUCTIVE, ownEquipmentFault: "present" }
+    const leftAbnormal: SabreContact = { ...NON_CONDUCTIVE, circuitBCFault: "abnormalChange" }
+    const leftOwnEquipment: SabreContact = { ...leftAbnormal, ownEquipmentFault: "present" }
+    const first = advanceSabreScoring(createSabreScoringState(), sample(0, NON_CONDUCTIVE, rightOwnEquipment))
+    const state = advanceSabreScoring(first, sample(0, leftOwnEquipment, rightOwnEquipment))
+
+    expect(state.diagnostics.map(({ indication, side }) => ({ indication, side }))).toEqual([
+      { indication: "yellow-on", side: "left" },
+      { indication: "white-on", side: "left" },
+      { indication: "yellow-on", side: "right" }
+    ])
+  })
 
   it("does not let an own-equipment diagnostic suppress an independent opponent hit", () => {
     const ownEquipment: SabreContact = { ...READY, ownEquipmentFault: "present" }
@@ -227,25 +315,58 @@ describe("sabre scoring state machine", () => {
     }
   )
 
-  it("asserts a white B/C abnormal-change diagnostic without promoting it to a hit", () => {
-    const abnormal: SabreContact = { ...NON_CONDUCTIVE, circuitBCFault: "abnormalChange" }
-    const state = replay([forSide("left", abnormal, 0)])
+  it.each(["left", "right"] as const)(
+    "asserts a %s white B/C abnormal-change diagnostic without promoting it to a hit",
+    (side) => {
+      const abnormal: SabreContact = { ...NON_CONDUCTIVE, circuitBCFault: "abnormalChange" }
+      const state = replay([forSide(side, abnormal, 0)])
 
-    expect(state.hits).toEqual([])
-    expect(state.left.whiteDiagnostic).toBe("white-on")
-  })
+      expect(state.hits).toEqual([])
+      expect(state[side].whiteDiagnostic).toBe("white-on")
+      expect(state.diagnostics).toEqual([
+        {
+          atUs: 0,
+          audible: "requested",
+          indication: "white-on",
+          latched: true,
+          reason: "circuit-bc-abnormal-change",
+          side
+        }
+      ])
+    }
+  )
 
   it.each([
-    [2_999, false],
-    [3_000, true],
-    [3_001, true]
-  ] as const)("qualifies the 3 millisecond B/C control-break diagnostic at %i microseconds: %s", (atUs, whiteOn) => {
-    const controlBreak: SabreContact = { ...NON_CONDUCTIVE, circuitBCFault: "controlBreak" }
-    const state = replay([forSide("left", controlBreak, 0), forSide("left", controlBreak, atUs)])
+    ["left", 2_999, false],
+    ["left", 3_000, true],
+    ["left", 3_001, true],
+    ["right", 2_999, false],
+    ["right", 3_000, true],
+    ["right", 3_001, true]
+  ] as const)(
+    "qualifies the %s 3 millisecond B/C control-break diagnostic at %i microseconds: %s",
+    (side, atUs, whiteOn) => {
+      const controlBreak: SabreContact = { ...NON_CONDUCTIVE, circuitBCFault: "controlBreak" }
+      const state = replay([forSide(side, controlBreak, 0), forSide(side, controlBreak, atUs)])
 
-    expect(state.hits).toEqual([])
-    expect(state.left.whiteDiagnostic).toBe(whiteOn ? "white-on" : "white-off")
-  })
+      expect(state.hits).toEqual([])
+      expect(state[side].whiteDiagnostic).toBe(whiteOn ? "white-on" : "white-off")
+      expect(state.diagnostics).toEqual(
+        whiteOn
+          ? [
+              {
+                atUs,
+                audible: "requested",
+                indication: "white-on",
+                latched: true,
+                reason: "control-break-qualified",
+                side
+              }
+            ]
+          : []
+      )
+    }
+  )
 
   it.each(["normal", "indeterminate", "unavailable"] as const)(
     "clears an unqualified control-break candidate when B/C becomes %s",
@@ -268,6 +389,7 @@ describe("sabre scoring state machine", () => {
     ])
 
     expect(state.left.whiteDiagnostic).toBe("white-on")
+    expect(state.diagnostics).toHaveLength(1)
   })
 
   it.each(["left", "right"] as const)(
@@ -296,6 +418,61 @@ describe("sabre scoring state machine", () => {
       expect(referenceUs).not.toBe(SABRE_RULES.provisionalLockoutUs)
     }
   )
+
+  it("continues yellow and qualified white diagnostics after lockout without registering another hit", () => {
+    const firstHit = replay([forSide("left", READY, 0), forSide("left", READY, 100)])
+    const lockoutAtUs = 100 + SABRE_RULES.provisionalLockoutUs
+    const faultStarts: SabreContact = {
+      ...READY,
+      circuitBCFault: "controlBreak",
+      ownEquipmentFault: "present"
+    }
+    const controlBreakContinues: SabreContact = {
+      ...READY,
+      circuitBCFault: "controlBreak",
+      ownEquipmentFault: "absent"
+    }
+    const locked = advanceSabreScoring(firstHit, forSide("right", faultStarts, lockoutAtUs))
+    const diagnosed = advanceSabreScoring(
+      locked,
+      forSide("right", controlBreakContinues, lockoutAtUs + SABRE_RULES.provisionalControlBreakUs)
+    )
+
+    expect(diagnosed).toMatchObject({ isLocked: true, lockoutEndsAtUs: lockoutAtUs })
+    expect(diagnosed.hits).toEqual([{ qualifiedAtUs: 100, side: "left", startedAtUs: 0 }])
+    expect(diagnosed.right).toMatchObject({
+      candidateSinceUs: null,
+      isRegistered: false,
+      whiteDiagnostic: "white-on",
+      yellowDiagnostic: "yellow-off"
+    })
+    expect(diagnosed.diagnostics).toEqual([
+      {
+        atUs: lockoutAtUs,
+        audible: "none",
+        indication: "yellow-on",
+        latched: false,
+        reason: "own-equipment-fault",
+        side: "right"
+      },
+      {
+        atUs: lockoutAtUs + SABRE_RULES.provisionalControlBreakUs,
+        audible: "none",
+        indication: "yellow-off",
+        latched: false,
+        reason: "own-equipment-clear",
+        side: "right"
+      },
+      {
+        atUs: lockoutAtUs + SABRE_RULES.provisionalControlBreakUs,
+        audible: "requested",
+        indication: "white-on",
+        latched: true,
+        reason: "control-break-qualified",
+        side: "right"
+      }
+    ])
+  })
 
   it("orders simultaneous qualifying hits by side for deterministic records", () => {
     const state = replay([sample(0, READY, READY), sample(100, READY, READY)])

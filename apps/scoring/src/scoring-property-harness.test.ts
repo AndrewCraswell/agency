@@ -19,6 +19,7 @@ import {
   advanceSabreScoring,
   createSabreScoringState,
   type SabreContact,
+  type SabreDiagnosticDecision,
   type SabreSample,
   type SabreScoringState
 } from "./sabre.js"
@@ -122,6 +123,10 @@ function compareDecision(left: EpeeResistanceDecision, right: EpeeResistanceDeci
   return decisionAtUs(left) - decisionAtUs(right) || compareSide(decisionSide(left), decisionSide(right))
 }
 
+function compareSabreDiagnostic(left: SabreDiagnosticDecision, right: SabreDiagnosticDecision): number {
+  return left.atUs - right.atUs || compareSide(left.side, right.side)
+}
+
 function mirrorEpeeDecision(decision: EpeeResistanceDecision): EpeeResistanceDecision {
   if (decision.disposition === "qualified-hit") {
     return { ...decision, hit: { ...decision.hit, side: swapSide(decision.hit.side) } }
@@ -152,6 +157,9 @@ function mirrorFoilState(state: FoilScoringState): FoilScoringState {
 function mirrorSabreState(state: SabreScoringState): SabreScoringState {
   return {
     ...state,
+    diagnostics: state.diagnostics
+      .map((diagnostic) => ({ ...diagnostic, side: swapSide(diagnostic.side) }))
+      .sort(compareSabreDiagnostic),
     hits: state.hits.map((hit) => ({ ...hit, side: swapSide(hit.side) })).sort(compareHit),
     left: state.right,
     right: state.left

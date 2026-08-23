@@ -11,6 +11,11 @@ export type SabreTargetContact = "target" | "nonConductiveSurface" | "indetermin
  */
 export type SabreExternalPathEligibility = "eligible" | "ineligible" | "indeterminate" | "unavailable"
 
+export type SabreExternalPathMeasurement = {
+  resistanceMilliOhms: number | null
+  resistanceUncertaintyMilliOhms: number | null
+}
+
 export type SabreOwnEquipmentFault = "present" | "absent" | "indeterminate" | "unavailable"
 
 export type SabreBladeContact = "present" | "absent" | "indeterminate" | "unavailable"
@@ -39,6 +44,15 @@ export type SabreHit = {
   qualifiedAtUs: number
   side: SabreSide
   startedAtUs: number
+}
+
+export type SabreDiagnosticDecision = {
+  atUs: number
+  audible: "none" | "requested"
+  indication: "white-on" | "yellow-off" | "yellow-on"
+  latched: boolean
+  reason: "circuit-bc-abnormal-change" | "control-break-qualified" | "own-equipment-clear" | "own-equipment-fault"
+  side: SabreSide
 }
 
 export type SabreYellowDiagnostic = "yellow-on" | "yellow-off" | "indeterminate" | "unavailable"
@@ -70,6 +84,7 @@ export type SabreBladeMediatedHistory = {
 }
 
 export type SabreScoringState = {
+  diagnostics: readonly SabreDiagnosticDecision[]
   firstHitSignalledAtUs: number | null
   hits: readonly SabreHit[]
   isLocked: boolean
@@ -102,6 +117,8 @@ export const SABRE_RULES = {
   provisionalLockoutUs: DEFAULT_TIMING_TABLE.sabre.lockoutUs
 } as const
 
+export const SABRE_EXTERNAL_PATH_MAXIMUM_MILLI_OHMS = 100_000
+
 const INITIAL_SIDE_STATE: SabreSideState = {
   bladeMediated: null,
   candidateSinceUs: null,
@@ -114,6 +131,7 @@ const INITIAL_SIDE_STATE: SabreSideState = {
 
 export function createSabreScoringState(): SabreScoringState {
   return {
+    diagnostics: [],
     firstHitSignalledAtUs: null,
     hits: [],
     isLocked: false,
@@ -122,6 +140,46 @@ export function createSabreScoringState(): SabreScoringState {
     lockoutEndsAtUs: null,
     right: INITIAL_SIDE_STATE
   }
+}
+
+/**
+ * Classifies a supplied host-level external-path measurement at the FIE
+ * 100-ohm boundary. This does not select an ADC threshold or prove a physical
+ * acquisition path.
+ */
+export function classifySabreExternalPath(measurement: SabreExternalPathMeasurement): SabreExternalPathEligibility {
+  const { resistanceMilliOhms, resistanceUncertaintyMilliOhms } = measurement
+
+  if (resistanceMilliOhms === null && resistanceUncertaintyMilliOhms === null) {
+    return "unavailable"
+  }
+
+  if (resistanceMilliOhms === null || resistanceUncertaintyMilliOhms === null) {
+    throw new TypeError("Sabre external-path resistance and uncertainty must both be present or both be null")
+  }
+
+  if (
+    !Number.isSafeInteger(resistanceMilliOhms) ||
+    resistanceMilliOhms < 0 ||
+    !Number.isSafeInteger(resistanceUncertaintyMilliOhms) ||
+    resistanceUncertaintyMilliOhms < 0 ||
+    resistanceMilliOhms + resistanceUncertaintyMilliOhms > Number.MAX_SAFE_INTEGER
+  ) {
+    throw new RangeError("Sabre external-path resistance values must be non-negative safe integers")
+  }
+
+  const lowerBound = Math.max(0, resistanceMilliOhms - resistanceUncertaintyMilliOhms)
+  const upperBound = resistanceMilliOhms + resistanceUncertaintyMilliOhms
+
+  if (upperBound <= SABRE_EXTERNAL_PATH_MAXIMUM_MILLI_OHMS) {
+    return "eligible"
+  }
+
+  if (lowerBound > SABRE_EXTERNAL_PATH_MAXIMUM_MILLI_OHMS) {
+    return "ineligible"
+  }
+
+  return "indeterminate"
 }
 
 function toYellowDiagnostic(ownEquipmentFault: SabreOwnEquipmentFault): SabreYellowDiagnostic {
@@ -222,7 +280,52 @@ function toObservationStatus(
 
 type ContactAdvance = {
   contact: SabreSideState
+  diagnostics: SabreDiagnosticDecision[]
   hit: SabreHit | null
+}
+
+function collectDiagnosticDecisions(
+  side: SabreSide,
+  state: SabreSideState,
+  contact: SabreContact,
+  yellowDiagnostic: SabreYellowDiagnostic,
+  whiteDiagnostic: SabreWhiteDiagnostic,
+  atUs: number
+): SabreDiagnosticDecision[] {
+  const diagnostics: SabreDiagnosticDecision[] = []
+
+  if (yellowDiagnostic === "yellow-on" && state.yellowDiagnostic !== "yellow-on") {
+    diagnostics.push({
+      atUs,
+      audible: "none",
+      indication: "yellow-on",
+      latched: false,
+      reason: "own-equipment-fault",
+      side
+    })
+  } else if (yellowDiagnostic === "yellow-off" && state.yellowDiagnostic === "yellow-on") {
+    diagnostics.push({
+      atUs,
+      audible: "none",
+      indication: "yellow-off",
+      latched: false,
+      reason: "own-equipment-clear",
+      side
+    })
+  }
+
+  if (whiteDiagnostic === "white-on" && state.whiteDiagnostic !== "white-on") {
+    diagnostics.push({
+      atUs,
+      audible: "requested",
+      indication: "white-on",
+      latched: true,
+      reason: contact.circuitBCFault === "abnormalChange" ? "circuit-bc-abnormal-change" : "control-break-qualified",
+      side
+    })
+  }
+
+  return diagnostics
 }
 
 function advanceContact(
@@ -234,7 +337,8 @@ function advanceContact(
   bladeRegistrationLatestUs: number,
   bladeRecoveryUs: number,
   maximumBladeContactInterruptions: number,
-  controlBreakUs: number
+  controlBreakUs: number,
+  hitRegistrationBlocked: boolean
 ): ContactAdvance {
   const bladeMediated = advanceBladeMediatedHistory(state, contact, atUs, bladeRecoveryUs)
   const observationStatus = toObservationStatus(
@@ -254,6 +358,7 @@ function advanceContact(
     : contact.circuitBCFault === "indeterminate" || contact.circuitBCFault === "unavailable"
       ? contact.circuitBCFault
       : "white-off"
+  const diagnostics = collectDiagnosticDecisions(side, state, contact, yellowDiagnostic, whiteDiagnostic, atUs)
 
   const nextState = {
     bladeMediated,
@@ -264,18 +369,19 @@ function advanceContact(
     yellowDiagnostic
   }
 
-  if (state.isRegistered || observationStatus !== "ready") {
-    return { contact: { ...nextState, candidateSinceUs: null }, hit: null }
+  if (state.isRegistered || hitRegistrationBlocked || observationStatus !== "ready") {
+    return { contact: { ...nextState, candidateSinceUs: null }, diagnostics, hit: null }
   }
 
   const candidateSinceUs = state.candidateSinceUs ?? atUs
 
   if (atUs - candidateSinceUs < minimumContactUs) {
-    return { contact: { ...nextState, candidateSinceUs }, hit: null }
+    return { contact: { ...nextState, candidateSinceUs }, diagnostics, hit: null }
   }
 
   return {
     contact: { ...nextState, candidateSinceUs: null, isRegistered: true },
+    diagnostics,
     hit: { qualifiedAtUs: atUs, side, startedAtUs: candidateSinceUs }
   }
 }
@@ -286,6 +392,21 @@ function compareHits(left: SabreHit, right: SabreHit) {
   }
 
   return left.side.localeCompare(right.side)
+}
+
+function compareDiagnostics(left: SabreDiagnosticDecision, right: SabreDiagnosticDecision) {
+  if (left.atUs !== right.atUs) {
+    return left.atUs - right.atUs
+  }
+
+  return left.side.localeCompare(right.side)
+}
+
+function appendDiagnostics(
+  existing: readonly SabreDiagnosticDecision[],
+  additions: readonly SabreDiagnosticDecision[]
+): SabreDiagnosticDecision[] {
+  return [...existing, ...additions].sort(compareDiagnostics)
 }
 
 function isValidAtUs(atUs: number) {
@@ -308,16 +429,7 @@ export function advanceSabreScoring(
   }
 
   const hasReachedLockout = state.lockoutEndsAtUs !== null && sample.atUs >= state.lockoutEndsAtUs
-
-  if (state.isLocked || hasReachedLockout) {
-    return {
-      ...state,
-      isLocked: true,
-      lastSampleAtUs: sample.atUs,
-      left: { ...state.left, candidateSinceUs: null },
-      right: { ...state.right, candidateSinceUs: null }
-    }
-  }
+  const hitRegistrationBlocked = state.isLocked || hasReachedLockout
 
   const leftAdvance = advanceContact(
     "left",
@@ -328,7 +440,8 @@ export function advanceSabreScoring(
     resolvedTimingTable.sabre.bladeRegistrationLatestUs,
     resolvedTimingTable.sabre.bladeRecoveryUs,
     resolvedTimingTable.sabre.maximumBladeContactInterruptions,
-    resolvedTimingTable.sabre.controlBreakUs
+    resolvedTimingTable.sabre.controlBreakUs,
+    hitRegistrationBlocked
   )
   const rightAdvance = advanceContact(
     "right",
@@ -339,8 +452,22 @@ export function advanceSabreScoring(
     resolvedTimingTable.sabre.bladeRegistrationLatestUs,
     resolvedTimingTable.sabre.bladeRecoveryUs,
     resolvedTimingTable.sabre.maximumBladeContactInterruptions,
-    resolvedTimingTable.sabre.controlBreakUs
+    resolvedTimingTable.sabre.controlBreakUs,
+    hitRegistrationBlocked
   )
+  const newDiagnostics = [...leftAdvance.diagnostics, ...rightAdvance.diagnostics]
+
+  if (hitRegistrationBlocked) {
+    return {
+      ...state,
+      diagnostics: appendDiagnostics(state.diagnostics, newDiagnostics),
+      isLocked: true,
+      lastSampleAtUs: sample.atUs,
+      left: leftAdvance.contact,
+      right: rightAdvance.contact
+    }
+  }
+
   const newHits = [leftAdvance.hit, rightAdvance.hit].filter((hit): hit is SabreHit => hit !== null).sort(compareHits)
   const firstHit = newHits.at(0)
   const firstHitSignalledAtUs = state.firstHitSignalledAtUs ?? firstHit?.qualifiedAtUs ?? null
@@ -349,6 +476,7 @@ export function advanceSabreScoring(
     (firstHitSignalledAtUs === null ? null : firstHitSignalledAtUs + resolvedTimingTable.sabre.lockoutUs)
 
   return {
+    diagnostics: appendDiagnostics(state.diagnostics, newDiagnostics),
     firstHitSignalledAtUs,
     hits: [...state.hits, ...newHits],
     isLocked: false,

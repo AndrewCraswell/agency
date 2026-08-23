@@ -29,7 +29,7 @@ or priority. The acquisition boundary has already classified every input.
 | Input | Values | Rule-layer meaning |
 | --- | --- | --- |
 | `targetContact` | `target`, `nonConductiveSurface`, `indeterminate`, `unavailable` | Only `target` may begin or continue a target candidate. A non-conductive surface is an explicit rejection. |
-| `externalPathEligibility` | `eligible`, `ineligible`, `indeterminate`, `unavailable` | A trusted logical result for SABRE-03's external connection up to 100 ohms. It intentionally carries no raw resistance or analogue threshold. Only `eligible` can score. |
+| `externalPathEligibility` | `eligible`, `ineligible`, `indeterminate`, `unavailable` | A trusted logical result for SABRE-03's external connection up to 100 ohms. Only `eligible` can score. `classifySabreExternalPath` can derive this result from an already acquired host measurement, but it does not define an ADC or comparator threshold. |
 | `bladeContact` | `present`, `absent`, `indeterminate`, `unavailable` | A trusted blade/guard relation used to start and retain a blade-mediated history. `present` is not, by itself, a hit or rejection. Indeterminate and unavailable fail closed. |
 | `ownEquipmentFault` | `present`, `absent`, `indeterminate`, `unavailable` | A side-local yellow diagnostic only. It never creates, suppresses, or reclassifies a target hit. |
 | `circuitBCFault` | `normal`, `controlBreak`, `abnormalChange`, `indeterminate`, `unavailable` | A side-local white diagnostic path only. It never creates, suppresses, or reclassifies a target hit. |
@@ -41,6 +41,20 @@ separate logical phases; their indeterminate or unavailable values assert no
 diagnostic and do not coerce a trusted target input into a different result.
 The acquisition profile must itself fail unavailable before presenting an
 incomplete set as a trusted `target` contact.
+
+### Host external-path classification
+
+`classifySabreExternalPath` applies the inclusive 100-ohm logical boundary to
+an already supplied resistance and uncertainty in integer milli-ohms. A range
+wholly at or below `100_000 milliOhm` is `eligible`; a range wholly above it is
+`ineligible`; and a range crossing the boundary is `indeterminate`. Two null
+values mean `unavailable`. Partially absent, negative, fractional, overflowing,
+or otherwise unsafe values are rejected instead of coerced.
+
+This helper is host software evidence for boundary classification only. It
+does not select excitation, ADC, comparator, filtering, calibration, or wiring;
+it does not establish that physical equipment at 100 ohms was acquired
+correctly. Those remain M0-03, M4, and M6 evidence.
 
 ## Contact qualification and blade-mediated whipover history
 
@@ -98,11 +112,34 @@ nominal choice within SABRE-07's `3 ms +/- 2 ms` tolerance. The input already
 means a break strictly above 250 ohms, so equality and analogue uncertainty are
 not decided in this module. A completed white diagnostic is latched in the
 host state pending bout reset; M0-04/M0-05 own physical white-lamp persistence,
-audio, record shape, reset authority, and recovery behaviour.
+audio delivery, portable decision-record integration, reset authority, and
+recovery behaviour.
+
+The host state also retains ordered `SabreDiagnosticDecision` values. A yellow
+transition to on emits `own-equipment-fault`; clearing an asserted yellow state
+emits `own-equipment-clear`. Both are non-latched and request no audio. A B/C
+`abnormalChange` emits a latched white decision immediately. A sustained
+`controlBreak` emits the same latched white indication at exactly `3_000 us`,
+with reason `control-break-qualified`; 2,999 us emits none, and later samples do
+not duplicate the latched decision. White decisions carry
+`audible: requested` as a host authority request only.
+
+Diagnostic records are ordered by `atUs`, then `left` before `right`. Stable
+submission order is retained for multiple same-side transitions at one
+timestamp. This makes the output deterministic without assigning priority or
+changing equal-time electrical state semantics.
+
+These typed decisions prove deterministic software outcome, side, reason,
+timestamp, latch intent, and audio-request intent. They do not prove a physical
+lamp, buzzer, channel persistence through reset, the B/C resistance acquisition
+above 250 ohms, or composite apparatus timing.
 
 Yellow and white diagnostic values are not hits, off-target hits, or referee
 decisions. They create no `SabreHit` and cannot prevent an independent trusted
-opponent target contact.
+opponent target contact. Scoring lockout blocks new hit registration and clears
+hit candidates, but it does not freeze these side-local diagnostic inputs.
+Yellow transitions, control-break qualification, and the white latch continue
+to advance at and after lockout.
 
 ## Inhibition and provisional event window
 
@@ -144,4 +181,8 @@ trusted blade-mediated history at 0/4/5/15/20 ms, interruption counts 0/10/11,
 recovery without a fabricated hit, external-path eligibility,
 indeterminate/unavailable containment, provisional lockout, deterministic
 ordering, same-side inhibition, and safe-integer monotonic timestamps. The
+tests also cover exact, below, above, uncertain, unavailable, malformed, and
+overflowing host measurements around the inclusive 100-ohm external-path
+boundary; yellow onset and clear decisions; immediate abnormal-change white
+decisions; and single-emission white latch behavior at the 3-ms endpoint. The
 scoring package retains 100% coverage thresholds.
