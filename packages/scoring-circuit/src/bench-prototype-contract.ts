@@ -22,20 +22,6 @@ export type BenchPrototypeZone = {
   readonly position: number
 }
 
-export type BenchPrototypeConnector = {
-  readonly edge: "left" | "right" | "top"
-  readonly id:
-    | "J_LAB_INJECTION"
-    | "J_USB_C"
-    | "J_WEAPON_FIXTURE"
-    | "J_PRIMARY_OUTPUTS"
-    | "J_STM_SWD"
-    | "J_ESP_SERVICE"
-    | "J_ETHERNET_MAGJACK"
-    | "J_HUB75"
-  readonly purpose: string
-}
-
 const benchPrototypeContractDefinition = {
   architecture: {
     boardCount: 1,
