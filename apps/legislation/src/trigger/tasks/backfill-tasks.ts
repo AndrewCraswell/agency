@@ -565,9 +565,11 @@ export const embeddingIndexMaintenance = task({
       const client = await pool.connect()
       try {
         // Railway's PostgreSQL container has a 64 MiB POSIX shared-memory
-        // segment. A parallel HNSW build requests almost all of it and fails
-        // before indexing begins, so keep this maintenance session serial.
-        await client.query("set max_parallel_maintenance_workers = 0")
+        // segment. The default 64 MiB maintenance allocation consumed almost
+        // all of it before indexing began. A 32 MiB session allocation leaves
+        // headroom while retaining two bounded parallel maintenance workers.
+        await client.query("set maintenance_work_mem = '32MB'")
+        await client.query("set max_parallel_maintenance_workers = 2")
         const invalidIndexes = await client.query<{ index_name: string }>(INVALID_EMBEDDING_INDEX_QUERY)
         for (const statement of embeddingIndexMaintenanceStatements(
           invalidIndexes.rows.map(({ index_name }) => index_name)

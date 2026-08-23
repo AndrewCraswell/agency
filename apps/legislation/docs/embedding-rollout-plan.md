@@ -599,7 +599,10 @@ alone. PostgreSQL retains an invalid zero-byte catalog entry when a concurrent
 build fails, and `IF NOT EXISTS` will skip that name. The maintenance task
 detects `pg_index.indisvalid = false`, drops only the four fixed invalid HNSW
 indexes concurrently, and recreates them before `ANALYZE` and retrieval
-acceptance.
+acceptance. Each index builds sequentially with two internal PostgreSQL workers
+and a 32 MiB session-local maintenance allocation, which fits the hosted
+64 MiB shared-memory segment without making three large builds compete for
+volume I/O.
 
 The broad pass is recommended only if the frozen graded evaluation and the
 deployed MCP canary both retain an absolute nDCG@10 improvement greater than
