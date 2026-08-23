@@ -246,11 +246,16 @@ function assertRuntimeVector(vector: TimingBoundaryVector): void {
 }
 
 describe("generated timing boundary vectors", () => {
-  it("maps only the approved golden rule revision and fails closed otherwise", () => {
-    expect(approvedRuleRevisionMappings()).toEqual({ "fie-2026-epee": "timing-1" })
+  it("maps only the approved golden rule revisions and fails closed otherwise", () => {
+    expect(approvedRuleRevisionMappings()).toEqual({
+      "fie-2026-epee": "timing-1",
+      "fie-2026-foil": "timing-1",
+      "fie-2026-sabre": "timing-1"
+    })
     expect(Object.isFrozen(approvedRuleRevisionMappings())).toBe(true)
     expect(loadTimingTableForRuleRevision("fie-2026-epee")).toBe(table)
-    expect(() => loadTimingTableForRuleRevision("fie-2026-foil")).toThrow(new RangeError("unknown-rule-revision"))
+    expect(loadTimingTableForRuleRevision("fie-2026-foil")).toBe(table)
+    expect(loadTimingTableForRuleRevision("fie-2026-sabre")).toBe(table)
     expect(() => loadTimingTableForRuleRevision("toString")).toThrow(new RangeError("unknown-rule-revision"))
     expect(() => loadTimingTableForRuleRevision(undefined)).toThrow(new RangeError("unknown-rule-revision"))
   })

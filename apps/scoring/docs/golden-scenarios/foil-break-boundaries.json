@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.0.0",
+  "scenarioId": "foil.break-boundaries",
+  "title": "Foil 13 millisecond breaks qualify at observations 13 and 15 milliseconds while 12,999 microseconds does not",
+  "weapon": "foil",
+  "ruleRevision": "fie-2026-foil",
+  "sources": [
+    { "authority": "fie", "id": "FOIL-01", "document": "fie-material-rules-2026-08-en.pdf", "page": 77, "locator": "Annex B, A.1(a).1-A.1(a).3" },
+    { "authority": "fie", "id": "FOIL-02", "document": "fie-material-rules-2026-08-en.pdf", "page": 78, "locator": "Annex B, A.1(b).1-A.1(b).3" },
+    { "authority": "implementation", "id": "FOIL-TEST-BREAK-DURATION", "document": "src/foil.test.ts", "page": null, "locator": "does not invent a maximum break duration after the guaranteed 15 millisecond region" }
+  ],
+  "lineModel": { "revision": "foil-logical-lines-1", "names": ["left.weapon-circuit", "left.target", "right.weapon-circuit", "right.target"] },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": { "clock": "virtual", "timeUnit": "us", "initialState": "fresh-bout", "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-foil-break-boundaries", "transportSequenceStart": 0, "captureId": null } },
+  "inputs": [
+    { "id": "both-start", "atUs": 0, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+      { "line": "right.weapon-circuit", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "right-start", "atUs": 2000, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+      { "line": "right.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "left-below-minimum", "atUs": 12999, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+      { "line": "right.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "left-at-minimum", "atUs": 13000, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+      { "line": "right.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "right-at-offset-minimum", "atUs": 15000, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+      { "line": "right.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] }
+  ],
+  "expect": { "status": "accepted", "decisions": [
+    { "id": "left-at-minimum-hit", "decisionAtUs": 13000, "disposition": "qualified-hit", "side": "left", "weapon": "foil", "hitStartedAtUs": 0, "qualifiedAtUs": 13000, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["both-start", "left-at-minimum"] },
+    { "id": "right-offset-minimum-hit", "decisionAtUs": 15000, "disposition": "qualified-hit", "side": "right", "weapon": "foil", "hitStartedAtUs": 2000, "qualifiedAtUs": 15000, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["right-start", "right-at-offset-minimum"] }
+  ], "nonEvents": [{ "id": "left-below-minimum-no-hit", "window": { "fromUs": 0, "throughUs": 12999 }, "assertion": "no-decision", "side": "left", "assertionReasonCode": "contact-shorter-than-minimum" }], "uncertainty": [], "finalState": { "hitCount": 2, "isLocked": false } }
+}

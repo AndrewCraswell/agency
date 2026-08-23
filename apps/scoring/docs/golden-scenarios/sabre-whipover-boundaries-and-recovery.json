@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.0.0",
+  "scenarioId": "sabre.whipover-boundaries-and-recovery",
+  "title": "Sabre logical blade history retains the five-millisecond registration endpoint, prevents a later candidate, and recovers at 20 milliseconds",
+  "weapon": "sabre",
+  "ruleRevision": "fie-2026-sabre",
+  "sources": [
+    { "authority": "fie", "id": "SABRE-03", "document": "fie-material-rules-2026-08-en.pdf", "page": 81, "locator": "Annex B, C(a).7 and C(b).1-C(b).2" },
+    { "authority": "fie", "id": "SABRE-06", "document": "fie-material-rules-2026-08-en.pdf", "page": 82, "locator": "Annex B, C(b).5-C(b).6" },
+    { "authority": "implementation", "id": "SABRE-TEST-WHIPOVER-ENDPOINTS", "document": "src/sabre.test.ts", "page": null, "locator": "includes exactly five milliseconds in the provisional blade-mediated registration region; allows a normal later contact to recover at 20 milliseconds" }
+  ],
+  "lineModel": { "revision": "sabre-logical-lines-1", "names": ["left.target", "left.blade", "right.target", "right.blade"] },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": { "clock": "virtual", "timeUnit": "us", "initialState": "fresh-bout", "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-sabre-whipover", "transportSequenceStart": 0, "captureId": null } },
+  "inputs": [
+    { "id": "both-blade-history-start", "atUs": 0, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "both-unsignalled-target-loss", "atUs": 99, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "grounded", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "grounded", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "left-five-ms-candidate", "atUs": 4900, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "grounded", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "left-five-ms-qualified-right-prevention-start", "atUs": 5000, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "right-prevented-after-five-ms", "atUs": 5100, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "grounded", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "right-prevented-at-fifteen-ms", "atUs": 15000, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "grounded", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "right-recovery-start", "atUs": 20000, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "grounded", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "right-recovery-qualified", "atUs": 20100, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "grounded", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.blade", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] }
+  ],
+  "expect": {
+    "status": "accepted",
+    "decisions": [
+      { "id": "left-five-ms-hit", "decisionAtUs": 5000, "disposition": "qualified-hit", "weapon": "sabre", "side": "left", "hitStartedAtUs": 4900, "qualifiedAtUs": 5000, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["left-five-ms-candidate", "left-five-ms-qualified-right-prevention-start"] },
+      { "id": "right-recovery-hit", "decisionAtUs": 20100, "disposition": "qualified-hit", "weapon": "sabre", "side": "right", "hitStartedAtUs": 20000, "qualifiedAtUs": 20100, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["right-recovery-start", "right-recovery-qualified"] }
+    ],
+    "nonEvents": [{ "id": "right-whipover-prevention-no-hit", "window": { "fromUs": 0, "throughUs": 19999 }, "assertion": "no-decision", "side": "right", "assertionReasonCode": "whipover-while-blade-contact" }],
+    "uncertainty": [],
+    "finalState": { "hitCount": 2, "isLocked": false }
+  }
+}

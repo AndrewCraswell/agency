@@ -342,7 +342,7 @@ function mapEpeeResistance(input: ScenarioInput): EpeeResistanceSample {
   return { atUs: input.atUs, left: contact("left"), right: contact("right") }
 }
 
-function mapFoil(input: ScenarioInput): FoilSample {
+export function projectFoilScenarioInput(input: ScenarioInput): FoilSample {
   const contact = (side: Side): FoilContact => {
     const circuit = firstLine(input, side, ["weapon-circuit", "circuit", "tip-loop"])
     const target = firstLine(input, side, ["target", "lame"])
@@ -350,11 +350,13 @@ function mapFoil(input: ScenarioInput): FoilSample {
     const integrity =
       target?.state === "shorted"
         ? "lameFault"
-        : circuit?.state === "disconnected"
-          ? "unavailable"
-          : circuit?.state === "indeterminate"
-            ? "indeterminate"
-            : "intact"
+        : circuit?.state === "shorted"
+          ? "weaponFault"
+          : circuit?.state === "disconnected"
+            ? "unavailable"
+            : circuit?.state === "indeterminate"
+              ? "indeterminate"
+              : "intact"
     const circuitBreak =
       circuit?.state === "open"
         ? "open"
@@ -386,18 +388,19 @@ function mapFoil(input: ScenarioInput): FoilSample {
   return { atUs: input.atUs, left: contact("left"), right: contact("right") }
 }
 
-function mapSabre(input: ScenarioInput): SabreSample {
+export function projectSabreScenarioInput(input: ScenarioInput): SabreSample {
   const contact = (side: Side): SabreContact => {
-    const target = firstLine(input, side, ["target", "blade", "weapon-circuit"])
+    const target = firstLine(input, side, ["target", "weapon-circuit"])
+    const blade = firstLine(input, side, ["blade"])
     const control = firstLine(input, side, ["control", "circuit-bc"])
     const external = firstLine(input, side, ["external", "guard-or-piste"])
     const fault = firstLine(input, side, ["fault", "equipment"])
     const bladeContact =
-      target?.state === "closed"
-        ? "present"
-        : target?.state === "open"
-          ? "absent"
-          : target?.state === "disconnected"
+      blade === undefined || blade.state === "open"
+        ? "absent"
+        : blade.state === "closed"
+          ? "present"
+          : blade.state === "disconnected"
             ? "unavailable"
             : "indeterminate"
     const targetContact =
@@ -645,11 +648,19 @@ function executeScenario(scenario: Scenario, path: string): ScenarioRunResult {
         const nextHits = (scorer as ReturnType<typeof createEpeeScoringState>).hits
         hits.push(...nextHits.slice(hits.length).map((hit) => ({ ...hit })))
       } else if (scenario.weapon === "foil") {
-        scorer = advanceFoilScoring(scorer as ReturnType<typeof createFoilScoringState>, mapFoil(input), timingTable)
+        scorer = advanceFoilScoring(
+          scorer as ReturnType<typeof createFoilScoringState>,
+          projectFoilScenarioInput(input),
+          timingTable
+        )
         const nextHits = (scorer as ReturnType<typeof createFoilScoringState>).hits
         hits.push(...nextHits.slice(hits.length).map((hit) => ({ ...hit })))
       } else {
-        scorer = advanceSabreScoring(scorer as ReturnType<typeof createSabreScoringState>, mapSabre(input), timingTable)
+        scorer = advanceSabreScoring(
+          scorer as ReturnType<typeof createSabreScoringState>,
+          projectSabreScenarioInput(input),
+          timingTable
+        )
         const nextHits = (scorer as ReturnType<typeof createSabreScoringState>).hits
         hits.push(...nextHits.slice(hits.length).map((hit) => ({ ...hit })))
       }

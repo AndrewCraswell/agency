@@ -38,7 +38,9 @@ const POSITIONS: readonly TimingBoundaryPosition[] = ["below", "at", "above"]
  * to a timing table; they are intentionally not guessed here.
  */
 const APPROVED_RULE_TO_TIMING: Readonly<Record<string, TimingTableRevision>> = Object.freeze({
-  "fie-2026-epee": "timing-1"
+  "fie-2026-epee": "timing-1",
+  "fie-2026-foil": "timing-1",
+  "fie-2026-sabre": "timing-1"
 })
 
 const BOUNDARIES: readonly BoundaryDefinition[] = [

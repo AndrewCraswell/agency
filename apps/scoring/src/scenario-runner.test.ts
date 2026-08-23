@@ -16,6 +16,8 @@ import {
   MAX_SCENARIO_INPUTS,
   MAX_SOURCE_IDS_PER_ENTRY,
   MAX_SOURCE_RECORDS,
+  projectFoilScenarioInput,
+  projectSabreScenarioInput,
   runScenario,
   serializeScenarioRunReport,
   type ScenarioRunReport
@@ -79,6 +81,57 @@ afterEach(() => {
 })
 
 describe("golden scenario runner", () => {
+  it("projects a shorted foil weapon circuit as a weapon fault", () => {
+    const projection = projectFoilScenarioInput({
+      atUs: 7,
+      id: "shorted-weapon-circuit",
+      lines: [
+        {
+          line: "left.weapon-circuit",
+          resistanceMilliOhms: null,
+          resistanceUncertaintyMilliOhms: null,
+          state: "shorted"
+        },
+        {
+          line: "left.target",
+          resistanceMilliOhms: null,
+          resistanceUncertaintyMilliOhms: null,
+          state: "closed"
+        }
+      ]
+    })
+
+    expect(projection.left).toMatchObject({ circuitBreak: "closed", integrity: "weaponFault" })
+  })
+
+  it.each([
+    ["open", "absent"],
+    ["closed", "present"],
+    ["disconnected", "unavailable"],
+    ["indeterminate", "indeterminate"]
+  ] as const)("projects a %s sabre blade independently as %s", (state, expected) => {
+    const projection = projectSabreScenarioInput({
+      atUs: 7,
+      id: `sabre-blade-${state}`,
+      lines: [
+        {
+          line: "left.blade",
+          resistanceMilliOhms: null,
+          resistanceUncertaintyMilliOhms: null,
+          state
+        },
+        {
+          line: "left.target",
+          resistanceMilliOhms: null,
+          resistanceUncertaintyMilliOhms: null,
+          state: "closed"
+        }
+      ]
+    })
+
+    expect(projection.left).toMatchObject({ bladeContact: expected, targetContact: "target" })
+  })
+
   it("executes a valid scenario with the selected scorer", () => {
     const directory = temporaryDirectory()
     const path = join(directory, "contact.json")
@@ -89,6 +142,46 @@ describe("golden scenario runner", () => {
     expect(run.exitCode).toBe(0)
     expect(run.report.status).toBe("passed")
     expect(run.report.scenarios[0]).toMatchObject({ scenarioId: "epee.contact-boundaries", status: "passed" })
+  })
+
+  it.each([
+    "foil-break-boundaries.json",
+    "foil-grounded-contact.json",
+    "foil-insulation-handoff.json",
+    "foil-integrity-and-uncertainty.json",
+    "foil-lockout-cutoff.json",
+    "foil-nominal-break.json",
+    "foil-same-side-and-lockout.json",
+    "foil-target-context.json"
+  ])("executes the foil scenario %s with its declared rule revision", (fixtureName) => {
+    const directory = temporaryDirectory()
+    const path = join(directory, fixtureName)
+    const scenario = readFixture(fixtureName)
+    writeJson(path, scenario)
+
+    const run = runScenario(path)
+
+    expect(run.exitCode).toBe(0)
+    expect(run.report.scenarios[0]).toMatchObject({ scenarioId: scenario.scenarioId, status: "passed" })
+  })
+
+  it.each([
+    "sabre-contact-floor-boundaries.json",
+    "sabre-external-path-containment.json",
+    "sabre-lockout-boundary.json",
+    "sabre-lockout-cutoff.json",
+    "sabre-own-equipment-hit-continuity.json",
+    "sabre-whipover-boundaries-and-recovery.json"
+  ])("executes the sabre scenario %s with its declared rule revision", (fixtureName) => {
+    const directory = temporaryDirectory()
+    const path = join(directory, fixtureName)
+    const scenario = readFixture(fixtureName)
+    writeJson(path, scenario)
+
+    const run = runScenario(path)
+
+    expect(run.exitCode).toBe(0)
+    expect(run.report.scenarios[0]).toMatchObject({ scenarioId: scenario.scenarioId, status: "passed" })
   })
 
   it("returns exit code one and a stable mismatch when output differs", () => {
@@ -912,16 +1005,31 @@ describe("golden scenario runner", () => {
     const secondRun = runScenario(manifestPath)
 
     expect(firstRun.exitCode).toBe(0)
-    expect(firstRun.report.summary).toEqual({ failed: 0, passed: 7, scenarioCount: 7 })
+    expect(firstRun.report.summary).toEqual({ failed: 0, passed: 22, scenarioCount: 22 })
     expect(firstRun.report.scenarios.every((scenario) => scenario.status === "passed")).toBe(true)
     expect(firstRun.report.scenarios.map((scenario) => scenario.scenarioId)).toEqual([
+      "epee.audio-visual-correlation",
       "epee.contact-boundaries",
       "epee.double-lockout-boundary",
       "epee.exceptional-resistance-duration",
       "epee.grounded-material-100-ohm",
       "epee.grounded-rejection",
       "epee.non-monotonic-time",
-      "epee.resistance-uncertainty-near-lockout"
+      "epee.resistance-uncertainty-near-lockout",
+      "foil.break-boundaries",
+      "foil.grounded-contact",
+      "foil.insulation-handoff",
+      "foil.integrity-and-uncertainty",
+      "foil.lockout-cutoff",
+      "foil.nominal-break",
+      "foil.same-side-and-lockout",
+      "foil.target-context",
+      "sabre.contact-floor-boundaries",
+      "sabre.external-path-containment",
+      "sabre.lockout-boundary",
+      "sabre.lockout-cutoff",
+      "sabre.own-equipment-hit-continuity",
+      "sabre.whipover-boundaries-and-recovery"
     ])
     expect(reportBytes(firstRun.report)).toBe(reportBytes(secondRun.report))
   })

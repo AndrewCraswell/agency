@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.0.0",
+  "scenarioId": "foil.nominal-break",
+  "title": "Foil registers a trusted break at the 14 millisecond nominal point",
+  "weapon": "foil",
+  "ruleRevision": "fie-2026-foil",
+  "sources": [
+    { "authority": "fie", "id": "FOIL-02", "document": "fie-material-rules-2026-08-en.pdf", "page": 78, "locator": "Annex B, A.1(b).1-A.1(b).3" },
+    { "authority": "implementation", "id": "FOIL-TEST-BREAK-DURATION", "document": "src/foil.test.ts", "page": null, "locator": "does not invent a maximum break duration after the guaranteed 15 millisecond region" }
+  ],
+  "lineModel": { "revision": "foil-logical-lines-1", "names": ["left.weapon-circuit", "left.target", "right.weapon-circuit", "right.target"] },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": { "clock": "virtual", "timeUnit": "us", "initialState": "fresh-bout", "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-foil-nominal-break", "transportSequenceStart": 0, "captureId": null } },
+  "inputs": [
+    { "id": "left-start", "atUs": 0, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [{ "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.weapon-circuit", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }] },
+    { "id": "left-at-nominal", "atUs": 14000, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [{ "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.weapon-circuit", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }] }
+  ],
+  "expect": { "status": "accepted", "decisions": [{ "id": "left-nominal-hit", "decisionAtUs": 14000, "disposition": "qualified-hit", "side": "left", "weapon": "foil", "hitStartedAtUs": 0, "qualifiedAtUs": 14000, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["left-start", "left-at-nominal"] }], "nonEvents": [], "uncertainty": [], "finalState": { "hitCount": 1, "isLocked": false } }
+}

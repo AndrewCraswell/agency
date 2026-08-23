@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.0.0",
+  "scenarioId": "sabre.lockout-cutoff",
+  "title": "Sabre opposing candidate that would qualify exactly at the selected 170,000 microsecond cutoff is rejected by lockout",
+  "weapon": "sabre",
+  "ruleRevision": "fie-2026-sabre",
+  "sources": [
+    { "authority": "fie", "id": "SABRE-05", "document": "fie-material-rules-2026-08-en.pdf", "page": 81, "locator": "Annex B, C(a).8-C(a).9" },
+    { "authority": "implementation", "id": "SABRE-TEST-LOCKOUT-CUTOFF", "document": "src/sabre.test.ts", "page": null, "locator": "uses the first signalled hit and the provisional 170 millisecond inclusive lockout" }
+  ],
+  "lineModel": { "revision": "sabre-logical-lines-1", "names": ["left.target", "right.target"] },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": { "clock": "virtual", "timeUnit": "us", "initialState": "fresh-bout", "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-sabre-lockout-cutoff", "transportSequenceStart": 0, "captureId": null } },
+  "inputs": [
+    { "id": "left-start", "atUs": 0, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "grounded", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "left-qualified", "atUs": 100, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "grounded", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "right-start-for-cutoff", "atUs": 170000, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "grounded", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "right-would-qualify-at-cutoff", "atUs": 170100, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "grounded", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] }
+  ],
+  "expect": {
+    "status": "accepted",
+    "decisions": [{ "id": "left-hit", "decisionAtUs": 100, "disposition": "qualified-hit", "weapon": "sabre", "side": "left", "hitStartedAtUs": 0, "qualifiedAtUs": 100, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["left-start", "left-qualified"] }],
+    "nonEvents": [{ "id": "right-cutoff-no-hit", "window": { "fromUs": 170000, "throughUs": 170100 }, "assertion": "no-decision", "side": "right", "assertionReasonCode": "contact-inside-lockout" }],
+    "uncertainty": [],
+    "finalState": { "hitCount": 1, "isLocked": true }
+  }
+}

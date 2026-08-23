@@ -85,7 +85,7 @@ The following checks were run at the review revision:
 | `pnpm --filter scoring check:unused` | Pass. |
 | Reference-machine comparison schema and example | Pass. |
 | Reference measurement signed-unit guard | Pass. |
-| Golden manifest paths and declared identities | Pass: 7 epee scenarios, as the current M0-07 corpus scope declares. |
+| Golden manifest paths and declared identities | Pass: 22 active host scenarios across epee, foil, and sabre. Composite traceability rows remain planned wherever the active vectors provide only partial evidence. |
 | `pnpm --filter scoring verify` | Pass: formatting, lint, type check, unused-export check, and 18 Vitest files with 330 tests and 100% statement, branch, function, and line coverage. |
 
 This host scoring-specification approval does not claim analog acquisition,

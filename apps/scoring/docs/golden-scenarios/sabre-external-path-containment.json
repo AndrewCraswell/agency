@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.0.0",
+  "scenarioId": "sabre.external-path-containment",
+  "title": "Sabre ineligible external path fails closed without disturbing an opponent target hit",
+  "weapon": "sabre",
+  "ruleRevision": "fie-2026-sabre",
+  "sources": [
+    { "authority": "fie", "id": "SABRE-03", "document": "fie-material-rules-2026-08-en.pdf", "page": 81, "locator": "Annex B, C(a).7 and C(b).1-C(b).2" },
+    { "authority": "implementation", "id": "SABRE-TEST-EXTERNAL-PATH", "document": "src/sabre.test.ts", "page": null, "locator": "fails closed for an external path that is ineligible" },
+    { "authority": "implementation", "id": "SABRE-TEST-OPPOSITE-INDEPENDENCE", "document": "src/sabre.test.ts", "page": null, "locator": "fails closed for a target projection without disturbing the other side" }
+  ],
+  "lineModel": { "revision": "sabre-logical-lines-1", "names": ["left.target", "left.external", "right.target", "right.external"] },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": { "clock": "virtual", "timeUnit": "us", "initialState": "fresh-bout", "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-sabre-external-path", "transportSequenceStart": 0, "captureId": null } },
+  "inputs": [
+    { "id": "start", "atUs": 0, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.external", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.external", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "qualified", "atUs": 100, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "left.external", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.external", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] }
+  ],
+  "expect": {
+    "status": "accepted",
+    "decisions": [{ "id": "right-hit", "decisionAtUs": 100, "disposition": "qualified-hit", "weapon": "sabre", "side": "right", "hitStartedAtUs": 0, "qualifiedAtUs": 100, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["start", "qualified"] }],
+    "nonEvents": [{ "id": "left-ineligible-no-hit", "window": { "fromUs": 0, "throughUs": 100 }, "assertion": "no-decision", "side": "left", "assertionReasonCode": "external-path-ineligible" }],
+    "uncertainty": [],
+    "finalState": { "hitCount": 1, "isLocked": false }
+  }
+}

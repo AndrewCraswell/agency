@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.0.0",
+  "scenarioId": "sabre.contact-floor-boundaries",
+  "title": "Sabre target contact does not register at 99 microseconds and registers at exactly 100 microseconds",
+  "weapon": "sabre",
+  "ruleRevision": "fie-2026-sabre",
+  "sources": [
+    { "authority": "fie", "id": "SABRE-01", "document": "fie-material-rules-2026-08-en.pdf", "page": 81, "locator": "Annex B, C(a).1-C(a).4" },
+    { "authority": "fie", "id": "SABRE-03", "document": "fie-material-rules-2026-08-en.pdf", "page": 81, "locator": "Annex B, C(a).7 and C(b).1-C(b).2" },
+    { "authority": "implementation", "id": "SABRE-TEST-CONTACT-FLOOR", "document": "src/sabre.test.ts", "page": null, "locator": "qualifies a target contact only at the 100 microsecond floor" }
+  ],
+  "lineModel": { "revision": "sabre-logical-lines-1", "names": ["left.target", "right.target"] },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": { "clock": "virtual", "timeUnit": "us", "initialState": "fresh-bout", "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-sabre-contact-floor", "transportSequenceStart": 0, "captureId": null } },
+  "inputs": [
+    { "id": "both-start", "atUs": 0, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "below-floor", "atUs": 99, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "left-break-right-at-floor", "atUs": 100, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.target", "state": "grounded", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.target", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] }
+  ],
+  "expect": {
+    "status": "accepted",
+    "decisions": [{ "id": "right-floor-hit", "decisionAtUs": 100, "disposition": "qualified-hit", "weapon": "sabre", "side": "right", "hitStartedAtUs": 0, "qualifiedAtUs": 100, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["both-start", "left-break-right-at-floor"] }],
+    "nonEvents": [
+      { "id": "below-floor-no-hit", "window": { "fromUs": 0, "throughUs": 99 }, "assertion": "no-decision", "side": "both", "assertionReasonCode": "contact-shorter-than-minimum" },
+      { "id": "left-non-conductive-no-hit", "window": { "fromUs": 100, "throughUs": 100 }, "assertion": "no-decision", "side": "left", "assertionReasonCode": "non-target-surface" }
+    ],
+    "uncertainty": [],
+    "finalState": { "hitCount": 1, "isLocked": false }
+  }
+}

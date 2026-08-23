@@ -98,19 +98,21 @@ here. `insulationDiagnostic` is carried unchanged so M1-04 can add a separate
 diagnostic decision without changing an already-qualified M1-03 contact.
 `withinRange` and `outsideRange` have no yellow-lamp meaning in this task.
 
-## Proposed golden scenarios for later manifest integration
+## Golden scenario evidence
 
-This task deliberately does not modify the shared golden manifest. The later
-integration task should add these entries and scenario files after aligning
-them with the corpus runner:
+These host-logical vectors exercise the declared scorer and rule table. They do
+not establish analogue, lamp, audio, or physical-apparatus evidence.
 
 | Scenario ID | Traceability | Required vector result |
 | --- | --- | --- |
-| `foil.break-boundaries` | FOIL-01, FOIL-02 | Both sides: no hit at 12,999 us; on-target hits at 13,000, 14,000, and 15,000 us; no artificial upper-duration rejection. |
-| `foil.target-context` | FOIL-01, FOIL-03 | Both sides: target becomes `qualified-hit`, non-target becomes `off-target`, grounded produces no hit, and a context transition restarts the candidate. |
-| `foil.integrity-and-uncertainty` | FOIL-03, GEN-03 | Both sides: lame fault, weapon fault, indeterminate, and unavailable clear only the affected candidate while an independent opponent hit remains eligible. |
-| `foil.same-side-and-lockout` | FOIL-05 | Same-side inhibition, opposite-side registration before cutoff, first-signalled-hit anchor, and provisional 300,000-us inclusive cutoff. Include FIE reference points 275,000 and 325,000 us as non-endpoint evidence. |
-| `foil.insulation-handoff` | FOIL-04 | The four M1-04 diagnostic input values do not alter an M1-03 hit. Later M1-04 vectors add resistance intervals and yellow-indication expectations. |
+| `foil.break-boundaries` | FOIL-01, FOIL-02 | A left break has no hit at 12,999 us and qualifies at 13,000 us. A separate right break starts at 2,000 us and qualifies 13,000 us later at the 15,000-us observation. This is not a 15-ms-duration or upper-duration vector. |
+| `foil.nominal-break` | FOIL-02 | A trusted left break qualifies at the 14,000-us nominal duration. |
+| `foil.target-context` | FOIL-01 | A stable target contact becomes `qualified-hit`, a stable non-target contact becomes `off-target`, and changing target context restarts that side's candidate. |
+| `foil.grounded-contact` | FOIL-03 | A grounded left contact produces no decision while an independent trusted right contact qualifies. |
+| `foil.integrity-and-uncertainty` | FOIL-03, GEN-03 | Lame-fault, indeterminate, and unavailable observations each interrupt a freshly started left candidate while an independent trusted right contact remains eligible. The runner projection test separately proves that a `shorted` weapon-circuit input maps to the scorer's `weaponFault` state. |
+| `foil.same-side-and-lockout` | FOIL-05 | A real close/rearm/open attempt remains same-side inhibited. The opposing hit qualifies at `firstHitSignalledAtUs + 275,000 us`, which is 288,000 us in this fixture. |
+| `foil.lockout-cutoff` | FOIL-05 | A candidate is still below qualification before the product cutoff, then is ignored at the inclusive `firstHitSignalledAtUs + 300,000 us` cutoff. The `+325,000 us` reference observation is 338,000 us in this fixture. |
+| `foil.insulation-handoff` | FOIL-04 | Changes across the four M1-04 insulation handoff values do not alter M1-03 contact scoring. The vector makes no resistance-band or yellow-diagnostic output claim. |
 
 ## Acceptance evidence
 

@@ -4,7 +4,7 @@ M0-07 defines the portable input and expected-result format for scoring vectors.
 The machine-readable contract is [`golden-scenario.schema.json`](golden-scenario.schema.json).
 The corpus index is [`golden-scenario-manifest.json`](golden-scenario-manifest.json), validated by
 [`golden-scenario-manifest.schema.json`](golden-scenario-manifest.schema.json).
-The active epee examples are in [`golden-scenarios`](golden-scenarios).
+The active epee, foil, and sabre examples are in [`golden-scenarios`](golden-scenarios).
 
 ## Version and determinism
 
@@ -61,13 +61,15 @@ an optional capture ID. Null values mean that the producer is not yet available,
 execution. `initialState: snapshot` is reserved for later restored-state and fault-recovery scenarios and must name a
 `snapshotRef`.
 
-## Current epee and FIE coverage
+## Current corpus and FIE coverage
 
 The active examples cover the existing epee tests for the two-millisecond boundary, grounded rejection, the selected
-45,000 microsecond lockout boundary, and monotonic-time validation. The manifest maps those examples to EPEE-01 through
-EPEE-04. EPEE-05 and all FOIL and SABRE rows are explicitly `planned`, so the corpus does not imply that unimplemented
-weapon behavior has been proven. New foil, sabre, and fault scenarios should add files under `golden-scenarios/`, cite
-the relevant matrix row, and retain this same schema version unless the format itself changes.
+45,000 microsecond lockout boundary, and monotonic-time validation. Additional active scenarios exercise bounded host
+projections for epee audio/visual correlation, foil break/target/lockout behavior, and sabre contact/lockout/whipover
+behavior. A scenario may therefore be active while its composite traceability row remains `planned`: it is partial
+executable evidence, not a claim that physical outputs, resistance acquisition, diagnostics, or the complete FIE
+requirement have been proven. New scenarios should cite the relevant matrix row and retain this schema version unless
+the format itself changes.
 
 ## Validation and acceptance
 
@@ -82,5 +84,6 @@ For every corpus revision, validation must:
 5. Confirm that an identical scenario, seed, rule revision, and runner identity produces byte-identical machine-readable
    results. A changed rule revision or firmware identity is evidence metadata, not permission to alter expected output.
 
-M0-07 acceptance is met by schema-valid examples, manifest coverage, and the checks above. Runtime loading, corpus
-execution, foil and sabre rules, and binary transport remain later M1-M3 tasks.
+M0-07 acceptance is met by schema-valid examples, manifest coverage, and the checks above. Host corpus execution now
+includes all three weapon scorers. Target-firmware correlation, physical acquisition/output evidence, incomplete
+composite traceability rows, and binary transport remain separate later-stage gates.

@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.0.0",
+  "scenarioId": "epee.audio-visual-correlation",
+  "title": "Epee qualified hit requests the buzzer with the matching latched visual signal",
+  "weapon": "epee",
+  "ruleRevision": "fie-2026-epee",
+  "sources": [
+    {
+      "authority": "implementation",
+      "id": "EPEE-05",
+      "document": "docs/golden-scenario-manifest.json",
+      "page": null,
+      "locator": "planned EPEE-05 audio and visual correlation requirement"
+    },
+    {
+      "authority": "implementation",
+      "id": "EPEE-TEST-AUDIO-VISUAL",
+      "document": "src/scenario-runner.ts",
+      "page": null,
+      "locator": "authoritative host-projection evidence for an epee qualified-hit signal"
+    }
+  ],
+  "lineModel": {
+    "revision": "epee-logical-lines-1",
+    "names": ["left.weapon-circuit", "left.guard-or-piste", "right.weapon-circuit", "right.guard-or-piste"]
+  },
+  "determinism": {
+    "seed": 0,
+    "inputOrder": "listed",
+    "resultOrder": "decision-atUs-then-id"
+  },
+  "replay": {
+    "clock": "virtual",
+    "timeUnit": "us",
+    "initialState": "fresh-bout",
+    "hooks": {
+      "firmwareIdentity": "golden-scenario-runner",
+      "firmwareDigest": null,
+      "scoringBootId": "golden-epee-audio-visual",
+      "transportSequenceStart": 0,
+      "captureId": null
+    }
+  },
+  "inputs": [
+    {
+      "id": "right-start",
+      "atUs": 0,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "left.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.weapon-circuit", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "left-short-start",
+      "atUs": 1,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.weapon-circuit", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "left.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.weapon-circuit", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "left-short-break",
+      "atUs": 1999,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "left.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.weapon-circuit", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "right-qualified",
+      "atUs": 2000,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.weapon-circuit", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "left.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.weapon-circuit", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.guard-or-piste", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    }
+  ],
+  "expect": {
+    "status": "accepted",
+    "decisions": [
+      {
+        "id": "right-hit",
+        "decisionAtUs": 2000,
+        "disposition": "qualified-hit",
+        "side": "right",
+        "weapon": "epee",
+        "hitStartedAtUs": 0,
+        "qualifiedAtUs": 2000,
+        "signal": { "visual": "valid-hit", "audible": "requested", "latched": true },
+        "sourceInputIds": ["right-start", "right-qualified"]
+      }
+    ],
+    "nonEvents": [
+      {
+        "id": "left-short-contact-no-hit",
+        "window": { "fromUs": 1, "throughUs": 1999 },
+        "assertion": "no-decision",
+        "side": "left",
+        "assertionReasonCode": "contact-shorter-than-minimum"
+      }
+    ],
+    "uncertainty": [],
+    "finalState": { "hitCount": 1, "isLocked": false }
+  }
+}
