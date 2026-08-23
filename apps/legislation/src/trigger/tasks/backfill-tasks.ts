@@ -557,11 +557,31 @@ export const embeddingSyncShardController = task({
 
 export const embeddingIndexMaintenance = task({
   id: "embedding-index-maintenance",
-  maxDuration: 3_600,
+  maxDuration: 14_400,
   queue: { concurrencyLimit: 1, name: "legislation-embedding-index-maintenance" },
   run: async (unparsedPayload: unknown) => {
     const payload = baseWorkerSchema.strict().parse(unparsedPayload)
     await withDerivedBackfillDatabase("embeddings", async (database) => {
+      await database.execute(
+        sql.raw(
+          "create index concurrently if not exists bill_embeddings_hnsw_idx on legislation.bill_embeddings using hnsw (embedding vector_cosine_ops)"
+        )
+      )
+      await database.execute(
+        sql.raw(
+          "create index concurrently if not exists document_section_embeddings_hnsw_idx on legislation.document_section_embeddings using hnsw (embedding vector_cosine_ops)"
+        )
+      )
+      await database.execute(
+        sql.raw(
+          "create index concurrently if not exists amendment_embeddings_hnsw_idx on legislation.amendment_embeddings using hnsw (embedding vector_cosine_ops)"
+        )
+      )
+      await database.execute(
+        sql.raw(
+          "create index concurrently if not exists supporting_material_section_embeddings_hnsw_idx on legislation.supporting_material_section_embeddings using hnsw (embedding vector_cosine_ops)"
+        )
+      )
       await database.execute(sql.raw("analyze legislation.bill_embeddings"))
       await database.execute(sql.raw("analyze legislation.document_section_embeddings"))
       await database.execute(sql.raw("analyze legislation.amendment_embeddings"))

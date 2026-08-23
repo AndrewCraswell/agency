@@ -32,17 +32,16 @@ A bounded read-only test then completed 200 concurrent client transactions throu
 about 2.0 seconds, and PostgreSQL peaked at 86 sessions while 66 older workers were still connected directly. The
 pooler released its idle backends after the test.
 
-The 20-backend ceiling is intentional. Embedding workers spend most of their lifetime calling the model provider and
-hold a database transaction only while selecting or persisting a bounded batch. More Trigger workers therefore do not
-require the same number of PostgreSQL backends. Increase the backend ceiling only when PgBouncer wait metrics, rather
-than provider latency or database query time, are the measured bottleneck.
+The original 20-backend ceiling was intentionally conservative. The pooled 68-worker baseline then showed 43 waiting
+clients and a maximum wait above three seconds while PostgreSQL itself remained below 30 sessions. The controlled
+canary therefore raised both `default_pool_size` and `max_db_connections` to 60. Embedding workers spend most of their
+lifetime calling the model provider and hold a database transaction only while selecting or persisting a bounded batch,
+so more Trigger workers still do not require one PostgreSQL backend each.
 
-Scale a new pooled embedding deployment through 68, 96, 128, 160, and 200 workers. The first 68-worker pooled stage is
-the comparison baseline; the older direct-connection run is retained only as historical context because changing both
-the pool and concurrency at once would make its throughput incomparable. Run each stage against the same embedding
-product and input contract for 10 minutes. Treat the first minute as warm-up and calculate comparative throughput from
-the remaining nine minutes. A safety-gate breach ends the stage immediately. Capture the following measurements for
-every stage:
+Scale the pooled embedding deployment through 128, 160, and 200 workers. The 128-worker stage is both the first measured
+stage and the intended steady state. Run each stage against the same embedding product and input contract for 10
+minutes. Treat the first minute as warm-up and calculate comparative throughput from the remaining nine minutes. A
+safety-gate breach ends the stage immediately. Capture the following measurements for every stage:
 
 | Measurement | Why it matters |
 | --- | --- |
@@ -55,7 +54,7 @@ every stage:
 | Provider 429, 5xx, and timeout counts | Prevents apparent speedups caused by retry churn |
 | Input tokens and estimated cost per 1,000 successful vectors | Confirms concurrency does not change unit economics |
 
-For each stage, report absolute throughput, speedup versus the 68-worker pooled baseline, and scaling efficiency:
+For each stage, report absolute throughput, speedup versus the preceding measured stage, and scaling efficiency:
 `throughput speedup / concurrency increase`. Promote when completed-vector throughput improves by at least 10 percent,
 scaling efficiency remains at least 60 percent, and none of the safety gates below regress. Stop increasing when a
 stage improves throughput by less than 10 percent; that is the measured saturation point even if Trigger still has
@@ -68,7 +67,7 @@ and operational repairs. A future decision to exceed 128 for routine embedding w
 window or a separate Trigger concurrency allocation; it is not implied by a successful benchmark.
 
 Do not confuse Trigger task concurrency with PostgreSQL connections. The steady-state 128-task ceiling remains behind
-PgBouncer's 500-client admission limit and 20-backend database ceiling. Returning from the benchmark to 128 tasks does
+PgBouncer's 500-client admission limit and 60-backend database ceiling. Returning from the benchmark to 128 tasks does
 not require changing either PgBouncer setting.
 
 Do not compare different products directly. Bills, amendments, document sections, and supporting-material sections use

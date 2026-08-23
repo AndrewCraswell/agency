@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { embeddingRouteFor } from "../../models/embedding-routing.js"
 import {
   billEmbeddingInputHash,
+  embedSelected,
   legacyEmbeddingInputHash,
   needsEmbeddingRefresh,
   sectionEmbeddingInputHash,
@@ -9,6 +10,37 @@ import {
 } from "./jobs.js"
 
 describe("embedding freshness", () => {
+  it("chunks bulk candidates for the provider and groups persistence writes", async () => {
+    const route = embeddingRouteFor("bill")
+    const candidates = Array.from({ length: 5 }, (_, index) => ({
+      embedding: null,
+      embeddingInputContract: null,
+      embeddingInputHash: null,
+      embeddingModel: null,
+      id: `bill:${index}`,
+      input: `Bill ${index}`,
+      inputHash: String(index).padStart(64, "0")
+    }))
+    const embed = vi.fn<(input: string[]) => Promise<{ embeddings: number[][]; model: string }>>(async (input) => ({
+      embeddings: input.map(() => [0.1]),
+      model: route.model
+    }))
+    const persistedBatchSizes: number[] = []
+    const persist = vi.fn<(records: unknown[]) => Promise<void>>(async (records) => {
+      persistedBatchSizes.push(records.length)
+    })
+
+    await expect(
+      embedSelected({ embed }, route, { candidates, complete: false, cursor: "bill:4", scanned: 5 }, persist, {
+        persistenceBatchSize: 4,
+        providerBatchSize: 2
+      })
+    ).resolves.toMatchObject({ embedded: 5, scanned: 5 })
+
+    expect(embed.mock.calls.map(([input]) => input)).toEqual([["Bill 0", "Bill 1"], ["Bill 2", "Bill 3"], ["Bill 4"]])
+    expect(persistedBatchSizes).toEqual([4, 1])
+  })
+
   it("requires a vector and current model even when the input hash is current", () => {
     const route = embeddingRouteFor("bill")
     const inputHash = billEmbeddingInputHash({ subjects: ["budget"], summary: "A summary", title: "A bill" })

@@ -19,18 +19,19 @@ export const defaultGovInfoBillTypes = ["hr", "s", "hjres", "sjres", "hconres", 
  * bounded 64-lane drain with durable publisher slots. Supporting materials use
  * deterministic ID shards behind the same publisher limiter. Each embedding
  * product defaults to 16 deterministic shards for targeted work. A complete
- * recreation runs products sequentially at the 68-worker cap with
- * one-connection database pools and an 80-session operational stop threshold.
+ * recreation runs products sequentially at the 128-worker steady-state cap
+ * through PgBouncer. Temporary throughput canaries may raise the named queues
+ * as high as 200 workers while retaining an 80-session PostgreSQL stop threshold.
  */
 export const backfillExecutionPolicy = {
-  derivedQueueConcurrencyLimit: 68,
-  derivedShardControllerQueueConcurrencyLimit: 68,
+  derivedQueueConcurrencyLimit: 128,
+  derivedShardControllerQueueConcurrencyLimit: 128,
   documentBackfillShardCount: DOCUMENT_BACKFILL_SHARD_COUNT,
   supportingMaterialBackfillShardCount: 24
 } as const
 
 export const EMBEDDING_BACKFILL_DEFAULT_SHARD_COUNT = 16
-export const EMBEDDING_BACKFILL_MAX_SHARD_COUNT = 68
+export const EMBEDDING_BACKFILL_MAX_SHARD_COUNT = 200
 
 const positiveInteger = z.number().int().positive()
 const nonemptyIdentifier = z.string().trim().min(1).max(200)
@@ -74,7 +75,7 @@ export type BackfillPhase = (typeof backfillPhases)[number]
  * ID shards sized to keep large-PDF extraction parallel without widening the
  * shared publisher cadence. Targeted embedding work defaults to 16
  * deterministic shards, while a complete recreation may give one product the
- * full 68-worker queue after the previous product completes.
+ * full current embedding queue after the previous product completes.
  */
 export function derivedBackfillShardCountFor(kind: "bill-documents" | "embeddings" | "supporting-materials"): number {
   if (kind === "bill-documents") {

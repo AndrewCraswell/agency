@@ -6,16 +6,15 @@ PostgreSQL lexical search while the complete corpus pass is running.
 
 The corpus, storage, cost, model, and MCP treatment/control gates below passed,
 and the complete embedding phase was approved on 2026-08-22. The pass began
-with four concurrent product waves at 16 deterministic shards per product.
-Structured amendments then completed, releasing 16 worker slots. The
-document-section wave is approved for a controlled 16-to-32-shard cutover,
-supporting-material sections increase from 16 to 20, and bills remain at 16.
-This keeps the shared queue bounded at 68 workers. This page remains the source of
-truth for the accepted routing, quality gates, incremental ownership, and
-completion audit.
+with four concurrent product waves at 16 deterministic shards per product,
+then used 32 document-section, 20 material-section, and 16 bill shards after
+structured amendments completed. The remaining pass now uses PgBouncer and a
+128-worker steady-state ceiling, with 160 and 200 reserved for temporary
+throughput canaries. This page remains the source of truth for the accepted
+routing, quality gates, incremental ownership, and completion audit.
 
-Future full recreations use the sequential 68-shard coordinator documented below. PgBouncer is now available for a
-separate pooled-concurrency canary at 96, 128, 160, and finally 200 workers. Do not raise the task ceiling merely
+Future full recreations use the sequential 128-shard coordinator documented below. PgBouncer is now available for a
+separate pooled-concurrency canary at 128, 160, and finally 200 workers. Do not raise the task ceiling merely
 because PgBouncer accepts more clients: promotion still requires the database, pool-wait, Trigger, and provider gates
 in [database connection pooling](database-connection-pooling.md). Each increase must also demonstrate an end-to-end
 completed-vector throughput gain on the same product. The documented benchmark records vectors per minute, provider
@@ -195,7 +194,7 @@ Trigger.dev owns asynchronous embedding generation through five explicit
 tasks:
 
 - `embedding-full-sync` recreates every product sequentially at the full
-  68-worker cap and advances automatically when a product completes;
+  128-worker steady-state cap and advances automatically when a product completes;
 - `embedding-sync` starts one bounded embedding wave;
 - `embedding-sync-shard-controller` serially advances a shard checkpoint; and
 - `embedding-sync-shard-worker` embeds amendments, bills, document sections,
@@ -212,7 +211,7 @@ run independently without reusing another product's completion state.
 The historical `embeddings` phase calls `embedding-full-sync`; it no longer
 relies on an implicit branch inside the general document worker. A complete
 recreation runs amendments, bills, supporting-material sections, and document
-sections sequentially, with 68 shards in every stage. Completion of one stage
+sections sequentially, with 128 shards in every stage. Completion of one stage
 durably gates the next, so all capacity transfers automatically without
 canceling live shards or changing a product's modulo partition while it runs.
 Product-specific `embedding-sync` remains the targeted repair and future
@@ -536,12 +535,14 @@ single cheaper model for every product: the measured supporting-material gain
 from Voyage is large, while OpenAI Small is the cost-effective winner for
 document passages and structured amendments.
 
-Begin all four products concurrently with 16 checkpointed shards per product.
-After a product completes, its released capacity may be assigned to one
-remaining product without exceeding 32 shards for that product or the
-68-worker derived queue. The first approved scale-up uses 32 section shards,
-16 bill shards, and 20 material shards. Retain it only while database sessions
-remain below the 80-session operational threshold. The model contract remains:
+Begin the historical pass with all approved products sharing 200 deterministic
+shards and a 128-worker Trigger queue. A historical worker selects up to 640
+candidates per product in one query, sends provider requests in batches of 64,
+and persists generated vectors in batches of 128. Incremental and daily syncs
+keep their normal 64-record selection and persistence path, so the bulk tuning
+does not increase their database footprint. Retain 128 workers only while
+database sessions remain below the 80-session operational threshold and
+PgBouncer wait time remains acceptable. The model contract remains:
 
 1. bills with `voyageai/voyage-4` and query-time
    `cohere/rerank-v3.5`;
@@ -560,6 +561,29 @@ $292 for all OpenAI Small and approximately $943 for all Voyage 4. Cohere
 Rerank 3.5 is query-time spend, approximately $0.001 per reranked request, and
 is not part of generation cost. Refresh these prices immediately before the
 paid pass.
+
+### Historical throughput canary, 2026-08-23
+
+The original 128-worker pass produced 184,690 vectors during its nine-minute
+measured window, or 20,521 vectors per minute. A bulk database-access canary at
+the same 128-worker limit produced 403,638 vectors from 01:31:41Z through
+01:40:41Z, or 44,849 vectors per minute. That is a 2.19 times throughput
+increase without raising Trigger concurrency or provider batch size.
+
+The 160- and 200-worker stages were not run after this optimization. At 128,
+PgBouncer used all 60 server connections, PostgreSQL reached the 80-session
+safety boundary, and Railway reported pgvector memory at essentially 100
+percent of its 24 GiB limit. Increasing Trigger concurrency under those
+conditions would add waiting clients and failure risk rather than safe
+capacity. Keep the historical queue at 128 and reserve the remaining 72
+Trigger slots for recurring ingestion. Reconsider a higher limit only after
+increasing database memory or materially reducing database work per vector,
+then repeat the same 10-minute staged canary.
+
+HNSW indexes may be omitted during the historical load to avoid write
+amplification. Recreate them concurrently once after the historical pass and
+then run `ANALYZE`. Daily incremental inserts update the indexes automatically;
+they do not require daily index rebuilds.
 
 The broad pass is recommended only if the frozen graded evaluation and the
 deployed MCP canary both retain an absolute nDCG@10 improvement greater than

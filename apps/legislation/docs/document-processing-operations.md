@@ -32,7 +32,7 @@ publisher fixes live in the
 | Bill documents | 64 deterministic jurisdiction lanes; a large jurisdiction may replace its lane with 2-8 ID partitions | 100 rows | 1 | 64 |
 | Supporting materials | 24 deterministic material-ID shards | 25 rows | 2 | 64 |
 | OCR | Explicit IDs handed off by document or material workers | 100 IDs | 1 | 12 |
-| Embeddings | Current pass uses 32 document-section, 20 material-section, and 16 bill shards; future full recreations run one product at a time with 68 shards through `embedding-full-sync` | 64 rows per provider request | 1 | 68 shared embedding queue |
+| Embeddings | Current pass is moving to pooled concurrency; future full recreations run one product at a time with 128 shards through `embedding-full-sync`, with 160 and 200 reserved for temporary canaries | 64 rows per provider request | 1 | 128 steady-state shared embedding queue |
 
 A document partition is not a publisher allowance. Every partition and every
 Trigger deployment shares the durable host slots in PostgreSQL. Adding workers

@@ -56,9 +56,9 @@ describe("backfill contract", () => {
   it("uses deterministic parallel shards only for safely partitioned derived drains", () => {
     expect(derivedBackfillShardCountFor("bill-documents")).toBe(64)
     expect(derivedBackfillShardCountFor("embeddings")).toBe(16)
-    expect(maximumDerivedBackfillShardCountFor("embeddings")).toBe(68)
+    expect(maximumDerivedBackfillShardCountFor("embeddings")).toBe(200)
     expect(derivedBackfillShardCountFor("supporting-materials")).toBe(24)
-    expect(backfillExecutionPolicy.derivedQueueConcurrencyLimit).toBe(68)
-    expect(backfillExecutionPolicy.derivedShardControllerQueueConcurrencyLimit).toBe(68)
+    expect(backfillExecutionPolicy.derivedQueueConcurrencyLimit).toBe(128)
+    expect(backfillExecutionPolicy.derivedShardControllerQueueConcurrencyLimit).toBe(128)
   })
 })

@@ -532,6 +532,49 @@ describe("derived backfill drains", () => {
     expect(result.checkpoint?.complete).toBe(true)
   })
 
+  it("prefetches a bounded bulk page while preserving 64-input provider batches", async () => {
+    const inputs: Parameters<typeof runIngestionJob>[1][] = []
+    const bills = vi
+      .fn<NonNullable<DerivedBackfillDependencies["embedBills"]>>()
+      .mockResolvedValue({ complete: false, cursor: "bill:640", embedded: 640, scanned: 640, skipped: 0 })
+
+    const result = await drainEmbeddings(
+      executionInput(),
+      { batchSize: 64, maxBatches: 10, products: ["bills"], shardCount: 200, shardIndex: 12 },
+      {
+        embedBills: bills,
+        embeddingClients: embeddingClients(),
+        loadEmbeddingCheckpoint: async () => ({
+          amendments: { complete: true, cursor: "" },
+          bills: { complete: false, cursor: "bill:0" },
+          materials: { complete: true, cursor: "" },
+          sections: { complete: true, cursor: "" }
+        }),
+        runIngestionJob: createJobRunner(inputs)
+      }
+    )
+
+    expect(bills).toHaveBeenCalledOnce()
+    expect(bills).toHaveBeenCalledWith(database, expect.anything(), {
+      afterId: "bill:0",
+      billId: undefined,
+      limit: 640,
+      persistenceBatchSize: 128,
+      providerBatchSize: 64,
+      rolloutId: "trigger-run",
+      shardCount: 200,
+      shardIndex: 12
+    })
+    expect(inputs[0]).toMatchObject({
+      scope: {
+        batchSize: 640,
+        executionSettings: { persistenceBatchSize: 128, providerBatchSize: 64 },
+        maxBatches: 1
+      }
+    })
+    expect(result.counts.inserted).toBe(640)
+  })
+
   it("dispatches each derived kind without a CLI child process", async () => {
     const processor = vi
       .fn<NonNullable<DerivedBackfillDependencies["processSupportingMaterials"]>>()

@@ -49,21 +49,21 @@ describe("derived backfill task payload", () => {
 
     expect(
       derivedPayloadSchema.parse({
-        correlationId: "backfill:embedding-lane-68",
+        correlationId: "backfill:embedding-lane-200",
         kind: "embeddings",
-        rebuildId: "embedding-lane-68",
-        shardCount: 68,
-        shardIndex: 67
+        rebuildId: "embedding-lane-200",
+        shardCount: 200,
+        shardIndex: 199
       })
-    ).toMatchObject({ kind: "embeddings", shardCount: 68, shardIndex: 67 })
+    ).toMatchObject({ kind: "embeddings", shardCount: 200, shardIndex: 199 })
 
     expect(() =>
       derivedPayloadSchema.parse({
-        correlationId: "backfill:embedding-lane-69",
+        correlationId: "backfill:embedding-lane-201",
         kind: "embeddings",
-        rebuildId: "embedding-lane-69",
-        shardCount: 69,
-        shardIndex: 68
+        rebuildId: "embedding-lane-201",
+        shardCount: 201,
+        shardIndex: 200
       })
     ).toThrow("Too big")
 
@@ -81,10 +81,10 @@ describe("derived backfill task payload", () => {
   it("moves a complete embedding rebuild through products at the full worker cap", () => {
     expect(FULL_EMBEDDING_PRODUCT_ORDER).toEqual(["amendments", "bills", "materials", "sections"])
     expect(createFullEmbeddingSyncStages()).toEqual([
-      { product: "amendments", shardCount: 68 },
-      { product: "bills", shardCount: 68 },
-      { product: "materials", shardCount: 68 },
-      { product: "sections", shardCount: 68 }
+      { product: "amendments", shardCount: 128 },
+      { product: "bills", shardCount: 128 },
+      { product: "materials", shardCount: 128 },
+      { product: "sections", shardCount: 128 }
     ])
   })
 

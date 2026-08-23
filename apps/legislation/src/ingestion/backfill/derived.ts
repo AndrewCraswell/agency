@@ -105,6 +105,8 @@ export interface EmbeddingDrainOptions {
   materialId?: string
   maxBatches?: number
   products?: EmbeddingJobKind[]
+  persistenceBatchSize?: number
+  providerBatchSize?: number
   shardCount?: number
   shardIndex?: number
 }
@@ -411,6 +413,17 @@ export async function drainEmbeddings(
   }
   const batchSize = boundedPositiveInteger(options.batchSize ?? 64, "batch size")
   const maxBatches = boundedPositiveInteger(options.maxBatches ?? 1, "max batches")
+  const bulkMode =
+    maxBatches > 1 &&
+    options.amendmentId === undefined &&
+    options.billId === undefined &&
+    options.documentId === undefined &&
+    options.materialId === undefined
+  const selectionBatchSize = bulkMode ? batchSize * maxBatches : batchSize
+  const drainIterations = bulkMode ? 1 : maxBatches
+  const providerBatchSize = options.providerBatchSize ?? batchSize
+  const persistenceBatchSize =
+    options.persistenceBatchSize ?? (bulkMode ? Math.min(selectionBatchSize, 128) : batchSize)
   const shard = normalizeShard(options)
   const products = [...new Set(options.products ?? EMBEDDING_JOB_KINDS)].sort()
   if (products.length === 0) {
@@ -440,16 +453,18 @@ export async function drainEmbeddings(
   return runBackfillJob(
     input,
     {
-      batchSize,
+      batchSize: selectionBatchSize,
       checkpointStream,
       executionSettings: {
         databasePoolMaxConnections: input.config.backfill.derivedDatabaseMaxConnections,
+        ...(bulkMode || options.persistenceBatchSize !== undefined ? { persistenceBatchSize } : {}),
+        ...(bulkMode || options.providerBatchSize !== undefined ? { providerBatchSize } : {}),
         shardCount: shard.count,
         shardIndex: shard.index
       },
       kind: "embeddings",
       leaseDurationMinutes: DERIVED_JOB_LEASE_DURATION_MINUTES,
-      maxBatches,
+      maxBatches: drainIterations,
       operation,
       scopeKey,
       source: "openrouter"
@@ -467,43 +482,47 @@ export async function drainEmbeddings(
         materials: enabled.has("materials") ? loadedCheckpoint.materials : { complete: true, cursor: "" },
         sections: enabled.has("sections") ? loadedCheckpoint.sections : { complete: true, cursor: "" }
       }
-      const drained = await drainEmbeddingBatches(maxBatches, checkpoint, async (progress) => {
-        const selection = { limit: batchSize, shardCount: shard.count, shardIndex: shard.index }
-        const [amendments, bills, sections, materials] = await Promise.all([
-          progress.amendments.complete
-            ? completedEmbeddingJobResult()
-            : embedAmendmentRecords(input.database, requireEmbeddingClient(clients, "amendments"), {
-                ...selection,
-                afterId: progress.amendments.cursor,
-                amendmentId: options.amendmentId,
-                rolloutId: input.correlationId
-              }),
-          progress.bills.complete
-            ? completedEmbeddingJobResult()
-            : embedBillRecords(input.database, requireEmbeddingClient(clients, "bills"), {
-                ...selection,
-                afterId: progress.bills.cursor,
-                billId: options.billId,
-                rolloutId: input.correlationId
-              }),
-          progress.sections.complete
-            ? completedEmbeddingJobResult()
-            : embedDocumentSectionRecords(input.database, requireEmbeddingClient(clients, "sections"), {
-                ...selection,
-                afterId: progress.sections.cursor,
-                billId: options.billId,
-                documentId: options.documentId,
-                rolloutId: input.correlationId
-              }),
-          progress.materials.complete
-            ? completedEmbeddingJobResult()
-            : embedSupportingMaterialSectionRecords(input.database, requireEmbeddingClient(clients, "materials"), {
-                ...selection,
-                afterId: progress.materials.cursor,
-                materialId: options.materialId,
-                rolloutId: input.correlationId
-              })
-        ])
+      const drained = await drainEmbeddingBatches(drainIterations, checkpoint, async (progress) => {
+        const selection = {
+          limit: selectionBatchSize,
+          ...(bulkMode || options.persistenceBatchSize !== undefined ? { persistenceBatchSize } : {}),
+          ...(bulkMode || options.providerBatchSize !== undefined ? { providerBatchSize } : {}),
+          shardCount: shard.count,
+          shardIndex: shard.index
+        }
+        const amendments = progress.amendments.complete
+          ? completedEmbeddingJobResult()
+          : await embedAmendmentRecords(input.database, requireEmbeddingClient(clients, "amendments"), {
+              ...selection,
+              afterId: progress.amendments.cursor,
+              amendmentId: options.amendmentId,
+              rolloutId: input.correlationId
+            })
+        const bills = progress.bills.complete
+          ? completedEmbeddingJobResult()
+          : await embedBillRecords(input.database, requireEmbeddingClient(clients, "bills"), {
+              ...selection,
+              afterId: progress.bills.cursor,
+              billId: options.billId,
+              rolloutId: input.correlationId
+            })
+        const sections = progress.sections.complete
+          ? completedEmbeddingJobResult()
+          : await embedDocumentSectionRecords(input.database, requireEmbeddingClient(clients, "sections"), {
+              ...selection,
+              afterId: progress.sections.cursor,
+              billId: options.billId,
+              documentId: options.documentId,
+              rolloutId: input.correlationId
+            })
+        const materials = progress.materials.complete
+          ? completedEmbeddingJobResult()
+          : await embedSupportingMaterialSectionRecords(input.database, requireEmbeddingClient(clients, "materials"), {
+              ...selection,
+              afterId: progress.materials.cursor,
+              materialId: options.materialId,
+              rolloutId: input.correlationId
+            })
         return { amendments, bills, materials, sections }
       })
       return {

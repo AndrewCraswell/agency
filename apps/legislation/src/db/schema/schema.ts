@@ -115,6 +115,7 @@ export const bills = legislationSchema.table(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
+    index("bills_embedding_shard_idx").on(sql`(((hashtextextended(${table.id}, 0) % 200) + 200) % 200)`, table.id),
     foreignKey({
       columns: [table.jurisdictionId, table.sessionId],
       foreignColumns: [legislativeSessions.jurisdictionId, legislativeSessions.id],
@@ -548,6 +549,7 @@ export const amendments = legislationSchema.table(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
+    index("amendments_embedding_shard_idx").on(sql`(((hashtextextended(${table.id}, 0) % 200) + 200) % 200)`, table.id),
     check("amendments_id_check", sql`length(${table.id}) > 0`),
     check("amendments_source_id_check", sql`length(${table.sourceId}) > 0`),
     check("amendments_identifier_check", sql`length(${table.printedIdentifier}) > 0`),
@@ -679,6 +681,10 @@ export const supportingMaterialSections = legislationSchema.table(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
+    index("supporting_material_sections_embedding_shard_idx").on(
+      sql`(((hashtextextended(${table.id}, 0) % 200) + 200) % 200)`,
+      table.id
+    ),
     check("supporting_material_sections_ordinal_check", sql`${table.ordinal} >= 0`),
     check(
       "supporting_material_sections_offsets_check",
@@ -937,6 +943,10 @@ export const documentSections = legislationSchema.table(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
+    index("document_sections_embedding_shard_idx").on(
+      sql`(((hashtextextended(${table.id}, 0) % 200) + 200) % 200)`,
+      table.id
+    ),
     check("document_sections_ordinal_check", sql`${table.ordinal} >= 0`),
     check(
       "document_sections_offsets_check",

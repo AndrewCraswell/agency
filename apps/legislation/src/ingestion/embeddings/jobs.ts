@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { and, asc, eq, gt, sql, type SQLWrapper } from "drizzle-orm"
+import { and, asc, eq, gt, inArray, isNotNull, sql, type SQLWrapper } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
 import {
   amendmentEmbeddings,
@@ -18,6 +18,9 @@ import { limitEmbeddingInput } from "../../models/openrouter-embeddings.js"
 export interface EmbeddingClient {
   embed(input: string[], inputType?: "document" | "query"): Promise<{ embeddings: number[][]; model: string }>
 }
+
+const MAXIMUM_PROVIDER_BATCH_SIZE = 64
+const MAXIMUM_PERSISTENCE_BATCH_SIZE = 256
 
 export interface EmbeddingJobResult {
   complete: boolean
@@ -39,6 +42,10 @@ export interface EmbeddingFreshnessState {
   embeddingInputHash: null | string
   embeddingInputContract: null | string
   embeddingModel: null | string
+}
+
+function embeddingPresence(column: SQLWrapper) {
+  return sql<null | true>`case when ${column} is null then null else true end`
 }
 
 interface ScannedEmbeddingRecord extends EmbeddingFreshnessState {
@@ -155,17 +162,38 @@ export function needsEmbeddingRefresh(
 
 interface CommonEmbeddingOptions extends EmbeddingSelection {
   limit?: number
+  persistenceBatchSize?: number
+  providerBatchSize?: number
   rolloutId: string
 }
 
 function selectionOptions(route: EmbeddingRoute, options: CommonEmbeddingOptions) {
-  const limit = options.limit ?? 64
+  const limit = positiveBatchSize(options.limit ?? MAXIMUM_PROVIDER_BATCH_SIZE, "embedding selection batch size")
+  const providerBatchSize = positiveBatchSize(
+    options.providerBatchSize ?? Math.min(limit, MAXIMUM_PROVIDER_BATCH_SIZE),
+    "embedding provider batch size",
+    MAXIMUM_PROVIDER_BATCH_SIZE
+  )
+  const persistenceBatchSize = positiveBatchSize(
+    options.persistenceBatchSize ?? providerBatchSize,
+    "embedding persistence batch size",
+    MAXIMUM_PERSISTENCE_BATCH_SIZE
+  )
   return {
     afterId: options.afterId ?? "",
     limit,
+    persistenceBatchSize,
+    providerBatchSize,
     route,
     scanLimit: Math.max(limit, options.scanLimit ?? 512)
   }
+}
+
+function positiveBatchSize(value: number, name: string, maximum?: number): number {
+  if (!Number.isSafeInteger(value) || value < 1 || (maximum !== undefined && value > maximum)) {
+    throw new Error(`${name} must be a positive integer${maximum === undefined ? "" : ` no greater than ${maximum}`}`)
+  }
+  return value
 }
 
 function assertCompatibleResponse(
@@ -191,29 +219,62 @@ function resultFromSelection<Record extends ScannedEmbeddingRecord>(
   }
 }
 
-async function embedSelected<Record extends ScannedEmbeddingRecord>(
+export async function embedSelected<Record extends ScannedEmbeddingRecord>(
   client: EmbeddingClient,
   route: EmbeddingRoute,
   selection: EmbeddingCandidateSelection<Record>,
-  persist: (records: Array<{ candidate: EmbeddingCandidate<Record>; embedding: number[] }>) => Promise<void>
+  persist: (records: Array<{ candidate: EmbeddingCandidate<Record>; embedding: number[] }>) => Promise<void>,
+  options: Readonly<{ persistenceBatchSize?: number; providerBatchSize?: number }> = {}
 ): Promise<EmbeddingJobResult> {
   if (selection.candidates.length === 0) {
     return resultFromSelection(selection, 0)
   }
-  const response = await client.embed(
-    selection.candidates.map((candidate) => candidate.input),
-    "document"
+  const providerBatchSize = positiveBatchSize(
+    options.providerBatchSize ?? MAXIMUM_PROVIDER_BATCH_SIZE,
+    "embedding provider batch size",
+    MAXIMUM_PROVIDER_BATCH_SIZE
   )
-  assertCompatibleResponse(response, route, selection.candidates.length)
-  const records = selection.candidates.map((candidate, index) => {
-    const embedding = response.embeddings[index]
-    if (embedding === undefined) {
-      throw new Error(`Embedding response omitted ${route.product} candidate ${candidate.id}`)
+  const persistenceBatchSize = positiveBatchSize(
+    options.persistenceBatchSize ?? providerBatchSize,
+    "embedding persistence batch size",
+    MAXIMUM_PERSISTENCE_BATCH_SIZE
+  )
+  let pending: Array<{ candidate: EmbeddingCandidate<Record>; embedding: number[] }> = []
+  for (let offset = 0; offset < selection.candidates.length; offset += providerBatchSize) {
+    const candidates = selection.candidates.slice(offset, offset + providerBatchSize)
+    const response = await client.embed(
+      candidates.map((candidate) => candidate.input),
+      "document"
+    )
+    assertCompatibleResponse(response, route, candidates.length)
+    pending.push(
+      ...candidates.map((candidate, index) => {
+        const embedding = response.embeddings[index]
+        if (embedding === undefined) {
+          throw new Error(`Embedding response omitted ${route.product} candidate ${candidate.id}`)
+        }
+        return { candidate, embedding }
+      })
+    )
+    if (pending.length >= persistenceBatchSize) {
+      await persist(pending)
+      pending = []
     }
-    return { candidate, embedding }
-  })
-  await persist(records)
+  }
+  if (pending.length > 0) {
+    await persist(pending)
+  }
   return resultFromSelection(selection, selection.candidates.length)
+}
+
+async function persistInBatches<Record>(
+  records: readonly Record[],
+  batchSize: number,
+  persist: (records: Record[]) => Promise<void>
+): Promise<void> {
+  for (let offset = 0; offset < records.length; offset += batchSize) {
+    await persist(records.slice(offset, offset + batchSize))
+  }
 }
 
 export async function embedBills(
@@ -225,7 +286,7 @@ export async function embedBills(
   const selected = selectionOptions(route, options)
   const records = await database
     .select({
-      embedding: billEmbeddings.embedding,
+      embedding: embeddingPresence(billEmbeddings.embedding),
       embeddingInputContract: billEmbeddings.inputContract,
       embeddingInputHash: billEmbeddings.inputHash,
       embeddingModel: billEmbeddings.model,
@@ -252,12 +313,16 @@ export async function embedBills(
     .orderBy(asc(bills.id))
     .limit(selected.scanLimit)
   const selection = selectEmbeddingCandidates(records, selected, searchableBillText)
-  return embedSelected(client, route, selection, async (embeddedRecords) => {
-    await database.transaction(async (transaction) => {
-      for (const { candidate, embedding } of embeddedRecords) {
-        await transaction
-          .insert(billEmbeddings)
-          .values({
+  return embedSelected(
+    client,
+    route,
+    selection,
+    async (embeddedRecords) => {
+      const updatedAt = new Date()
+      await database
+        .insert(billEmbeddings)
+        .values(
+          embeddedRecords.map(({ candidate, embedding }) => ({
             billId: candidate.id,
             dimensions: route.dimensions,
             embedding,
@@ -265,20 +330,21 @@ export async function embedBills(
             inputHash: candidate.inputHash,
             model: route.model,
             rolloutId: options.rolloutId
-          })
-          .onConflictDoUpdate({
-            set: {
-              dimensions: route.dimensions,
-              embedding,
-              inputHash: candidate.inputHash,
-              rolloutId: options.rolloutId,
-              updatedAt: new Date()
-            },
-            target: [billEmbeddings.billId, billEmbeddings.model, billEmbeddings.inputContract]
-          })
-      }
-    })
-  })
+          }))
+        )
+        .onConflictDoUpdate({
+          set: {
+            dimensions: route.dimensions,
+            embedding: sql`excluded.embedding`,
+            inputHash: sql`excluded.input_hash`,
+            rolloutId: sql`excluded.rollout_id`,
+            updatedAt
+          },
+          target: [billEmbeddings.billId, billEmbeddings.model, billEmbeddings.inputContract]
+        })
+    },
+    selected
+  )
 }
 
 export async function embedDocumentSections(
@@ -291,13 +357,13 @@ export async function embedDocumentSections(
   const records = await database
     .select({
       documentId: documentSections.documentId,
-      embedding: documentSectionEmbeddings.embedding,
+      embedding: embeddingPresence(documentSectionEmbeddings.embedding),
       embeddingInputContract: documentSectionEmbeddings.inputContract,
       embeddingInputHash: documentSectionEmbeddings.inputHash,
       embeddingModel: documentSectionEmbeddings.model,
       heading: documentSections.heading,
       id: documentSections.id,
-      legacyEmbedding: documentSections.embedding,
+      legacyEmbeddingAvailable: sql<boolean>`${documentSections.embedding} is not null`,
       legacyEmbeddingInputHash: documentSections.embeddingInputHash,
       legacyEmbeddingModel: documentSections.embeddingModel,
       text: documentSections.text
@@ -332,54 +398,73 @@ export async function embedDocumentSections(
       embedding: number[]
     }>
   ) => {
-    await database.transaction(async (transaction) => {
-      for (const { candidate, embedding } of embeddedRecords) {
-        await transaction
-          .insert(documentSectionEmbeddings)
-          .values({
-            dimensions: route.dimensions,
-            embedding,
-            inputContract: route.embeddingInputContract,
-            inputHash: candidate.inputHash,
-            model: route.model,
-            rolloutId: options.rolloutId,
-            sectionId: candidate.id
-          })
-          .onConflictDoUpdate({
-            set: {
-              dimensions: route.dimensions,
-              embedding,
-              inputHash: candidate.inputHash,
-              rolloutId: options.rolloutId,
-              updatedAt: new Date()
-            },
-            target: [
-              documentSectionEmbeddings.sectionId,
-              documentSectionEmbeddings.model,
-              documentSectionEmbeddings.inputContract
-            ]
-          })
-      }
-    })
+    const updatedAt = new Date()
+    await database
+      .insert(documentSectionEmbeddings)
+      .values(
+        embeddedRecords.map(({ candidate, embedding }) => ({
+          dimensions: route.dimensions,
+          embedding,
+          inputContract: route.embeddingInputContract,
+          inputHash: candidate.inputHash,
+          model: route.model,
+          rolloutId: options.rolloutId,
+          sectionId: candidate.id
+        }))
+      )
+      .onConflictDoUpdate({
+        set: {
+          dimensions: route.dimensions,
+          embedding: sql`excluded.embedding`,
+          inputHash: sql`excluded.input_hash`,
+          rolloutId: sql`excluded.rollout_id`,
+          updatedAt
+        },
+        target: [
+          documentSectionEmbeddings.sectionId,
+          documentSectionEmbeddings.model,
+          documentSectionEmbeddings.inputContract
+        ]
+      })
   }
-  const reusable = selection.candidates
-    .filter(
-      (candidate) =>
-        candidate.legacyEmbedding !== null &&
-        candidate.legacyEmbedding.length === route.dimensions &&
-        candidate.legacyEmbeddingModel === route.model &&
-        candidate.legacyEmbeddingInputHash?.trim() === legacyEmbeddingInputHash(route.model, candidate.input)
-    )
-    .map((candidate) => ({ candidate, embedding: candidate.legacyEmbedding as number[] }))
+  const reusableCandidates = selection.candidates.filter(
+    (candidate) =>
+      candidate.legacyEmbeddingAvailable &&
+      candidate.legacyEmbeddingModel === route.model &&
+      candidate.legacyEmbeddingInputHash?.trim() === legacyEmbeddingInputHash(route.model, candidate.input)
+  )
+  const reusableRows =
+    reusableCandidates.length === 0
+      ? []
+      : await database
+          .select({ embedding: documentSections.embedding, id: documentSections.id })
+          .from(documentSections)
+          .where(
+            and(
+              inArray(
+                documentSections.id,
+                reusableCandidates.map((candidate) => candidate.id)
+              ),
+              isNotNull(documentSections.embedding)
+            )
+          )
+  const reusableCandidatesById = new Map(reusableCandidates.map((candidate) => [candidate.id, candidate]))
+  const reusable = reusableRows.flatMap(({ embedding, id }) => {
+    const candidate = reusableCandidatesById.get(id)
+    return candidate === undefined || embedding === null || embedding.length !== route.dimensions
+      ? []
+      : [{ candidate, embedding }]
+  })
   if (reusable.length > 0) {
-    await persist(reusable)
+    await persistInBatches(reusable, selected.persistenceBatchSize, persist)
   }
   const reusableIds = new Set(reusable.map(({ candidate }) => candidate.id))
   const generated = await embedSelected(
     client,
     route,
     { ...selection, candidates: selection.candidates.filter((candidate) => !reusableIds.has(candidate.id)) },
-    persist
+    persist,
+    selected
   )
   const embedded = generated.embedded + reusable.length
   return { ...generated, embedded, skipped: selection.scanned - embedded }
@@ -395,7 +480,7 @@ export async function embedAmendments(
   const records = await database
     .select({
       description: amendments.description,
-      embedding: amendmentEmbeddings.embedding,
+      embedding: embeddingPresence(amendmentEmbeddings.embedding),
       embeddingInputContract: amendmentEmbeddings.inputContract,
       embeddingInputHash: amendmentEmbeddings.inputHash,
       embeddingModel: amendmentEmbeddings.model,
@@ -423,12 +508,16 @@ export async function embedAmendments(
     .orderBy(asc(amendments.id))
     .limit(selected.scanLimit)
   const selection = selectEmbeddingCandidates(records, selected, searchableAmendmentText)
-  return embedSelected(client, route, selection, async (embeddedRecords) => {
-    await database.transaction(async (transaction) => {
-      for (const { candidate, embedding } of embeddedRecords) {
-        await transaction
-          .insert(amendmentEmbeddings)
-          .values({
+  return embedSelected(
+    client,
+    route,
+    selection,
+    async (embeddedRecords) => {
+      const updatedAt = new Date()
+      await database
+        .insert(amendmentEmbeddings)
+        .values(
+          embeddedRecords.map(({ candidate, embedding }) => ({
             amendmentId: candidate.id,
             dimensions: route.dimensions,
             embedding,
@@ -436,20 +525,21 @@ export async function embedAmendments(
             inputHash: candidate.inputHash,
             model: route.model,
             rolloutId: options.rolloutId
-          })
-          .onConflictDoUpdate({
-            set: {
-              dimensions: route.dimensions,
-              embedding,
-              inputHash: candidate.inputHash,
-              rolloutId: options.rolloutId,
-              updatedAt: new Date()
-            },
-            target: [amendmentEmbeddings.amendmentId, amendmentEmbeddings.model, amendmentEmbeddings.inputContract]
-          })
-      }
-    })
-  })
+          }))
+        )
+        .onConflictDoUpdate({
+          set: {
+            dimensions: route.dimensions,
+            embedding: sql`excluded.embedding`,
+            inputHash: sql`excluded.input_hash`,
+            rolloutId: sql`excluded.rollout_id`,
+            updatedAt
+          },
+          target: [amendmentEmbeddings.amendmentId, amendmentEmbeddings.model, amendmentEmbeddings.inputContract]
+        })
+    },
+    selected
+  )
 }
 
 export async function embedSupportingMaterialSections(
@@ -461,7 +551,7 @@ export async function embedSupportingMaterialSections(
   const selected = selectionOptions(route, options)
   const records = await database
     .select({
-      embedding: supportingMaterialSectionEmbeddings.embedding,
+      embedding: embeddingPresence(supportingMaterialSectionEmbeddings.embedding),
       embeddingInputContract: supportingMaterialSectionEmbeddings.inputContract,
       embeddingInputHash: supportingMaterialSectionEmbeddings.inputHash,
       embeddingModel: supportingMaterialSectionEmbeddings.model,
@@ -490,12 +580,16 @@ export async function embedSupportingMaterialSections(
     .orderBy(asc(supportingMaterialSections.id))
     .limit(selected.scanLimit)
   const selection = selectEmbeddingCandidates(records, selected, searchableSectionText)
-  return embedSelected(client, route, selection, async (embeddedRecords) => {
-    await database.transaction(async (transaction) => {
-      for (const { candidate, embedding } of embeddedRecords) {
-        await transaction
-          .insert(supportingMaterialSectionEmbeddings)
-          .values({
+  return embedSelected(
+    client,
+    route,
+    selection,
+    async (embeddedRecords) => {
+      const updatedAt = new Date()
+      await database
+        .insert(supportingMaterialSectionEmbeddings)
+        .values(
+          embeddedRecords.map(({ candidate, embedding }) => ({
             dimensions: route.dimensions,
             embedding,
             inputContract: route.embeddingInputContract,
@@ -503,22 +597,23 @@ export async function embedSupportingMaterialSections(
             model: route.model,
             rolloutId: options.rolloutId,
             sectionId: candidate.id
-          })
-          .onConflictDoUpdate({
-            set: {
-              dimensions: route.dimensions,
-              embedding,
-              inputHash: candidate.inputHash,
-              rolloutId: options.rolloutId,
-              updatedAt: new Date()
-            },
-            target: [
-              supportingMaterialSectionEmbeddings.sectionId,
-              supportingMaterialSectionEmbeddings.model,
-              supportingMaterialSectionEmbeddings.inputContract
-            ]
-          })
-      }
-    })
-  })
+          }))
+        )
+        .onConflictDoUpdate({
+          set: {
+            dimensions: route.dimensions,
+            embedding: sql`excluded.embedding`,
+            inputHash: sql`excluded.input_hash`,
+            rolloutId: sql`excluded.rollout_id`,
+            updatedAt
+          },
+          target: [
+            supportingMaterialSectionEmbeddings.sectionId,
+            supportingMaterialSectionEmbeddings.model,
+            supportingMaterialSectionEmbeddings.inputContract
+          ]
+        })
+    },
+    selected
+  )
 }

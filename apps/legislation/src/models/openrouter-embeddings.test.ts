@@ -51,6 +51,40 @@ describe("OpenRouter embedding client", () => {
     expect(request.input[0]).toHaveLength(MAX_EMBEDDING_INPUT_CHARACTERS)
   })
 
+  it("retries only the provider-identified oversized input with a smaller bound", async () => {
+    const requests: Array<{ input: string[] }> = []
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockImplementationOnce(async (_input, init) => {
+        requests.push(JSON.parse(String(init?.body)) as { input: string[] })
+        return new Response(
+          JSON.stringify({ error: { message: "Invalid 'input[1]': maximum input length is 8192 tokens." } }),
+          { status: 400 }
+        )
+      })
+      .mockImplementationOnce(async (_input, init) => {
+        requests.push(JSON.parse(String(init?.body)) as { input: string[] })
+        return new Response(
+          JSON.stringify({
+            data: [
+              { embedding: Array.from({ length: 1536 }, () => 0), index: 0 },
+              { embedding: Array.from({ length: 1536 }, () => 0), index: 1 }
+            ],
+            model: "openai/text-embedding-3-small"
+          }),
+          { status: 200 }
+        )
+      })
+    const client = new OpenRouterEmbeddingClient({ apiKey: "test", fetch: fetchMock })
+
+    await client.embed(["short", "x".repeat(MAX_EMBEDDING_INPUT_CHARACTERS)])
+
+    expect(requests).toHaveLength(2)
+    expect(requests[1]?.input[0]).toBe("short")
+    expect(requests[1]?.input[1]).toHaveLength(MAX_EMBEDDING_INPUT_CHARACTERS / 2)
+    expect(client.metrics.retries).toBe(1)
+  })
+
   it("uses the canonical Voyage model space and input roles", async () => {
     const voyage = EMBEDDING_ROUTES.bill
     const fetchMock = vi

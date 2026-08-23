@@ -122,13 +122,25 @@ export class OpenRouterEmbeddingClient {
         }
       }
 
+      const detail = (await response.text()).replaceAll(/\s+/g, " ").trim().slice(0, 500)
+      const oversizedInputIndex =
+        response.status === 400 ? /Invalid 'input\[(\d+)]': maximum input length/.exec(detail)?.[1] : undefined
+      if (oversizedInputIndex !== undefined && attempt < this.#maximumAttempts) {
+        const index = Number.parseInt(oversizedInputIndex, 10)
+        const oversizedInput = boundedInput[index]
+        if (oversizedInput !== undefined && oversizedInput.length > 1) {
+          boundedInput[index] = oversizedInput.slice(0, Math.floor(oversizedInput.length / 2))
+          this.#metrics.retries += 1
+          continue
+        }
+      }
+
       const retryable = response.status === 429 || response.status >= 500
       if (response.status === 429) {
         this.#metrics.rateLimited += 1
       }
       if (!retryable || attempt === this.#maximumAttempts) {
         this.#metrics.failed += input.length
-        const detail = (await response.text()).replaceAll(/\s+/g, " ").trim().slice(0, 500)
         throw new Error(
           `OpenRouter embedding request failed with HTTP ${response.status}${detail.length === 0 ? "" : `: ${detail}`}`
         )
