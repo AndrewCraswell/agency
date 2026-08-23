@@ -97,7 +97,7 @@ export function derivedWorkerMaxBatchesFor(kind: (typeof DERIVED_BACKFILL_KINDS)
 }
 
 export function derivedDatabaseConnectionsFor(kind: (typeof DERIVED_BACKFILL_KINDS)[number]): number {
-  return kind === "supporting-materials" ? 2 : 1
+  return kind === "supporting-materials" || kind === "embeddings" ? 2 : 1
 }
 
 export function derivedBatchSizeFor(kind: (typeof DERIVED_BACKFILL_KINDS)[number]): number | undefined {
@@ -1072,10 +1072,9 @@ async function withDerivedBackfillDatabase<Result>(
   const config = loadConfig()
   const { database, pool } = createDatabase({
     ...config.database,
-    // Material workers use a second connection so their renewable ingestion
-    // lease can heartbeat while the processing connection persists a batch.
-    // The 24-shard ceiling bounds this at 48 material sessions. Documents and
-    // embeddings retain the configured one-connection ceiling.
+    // Material and embedding workers use a second client connection so their
+    // renewable ingestion lease can heartbeat while the processing connection
+    // persists a batch. PgBouncer still caps aggregate PostgreSQL backends.
     connectionTimeoutMs: Math.max(config.database.connectionTimeoutMs, config.backfill.documentHostAcquireTimeoutMs),
     maxConnections: Math.max(config.backfill.derivedDatabaseMaxConnections, derivedDatabaseConnectionsFor(kind))
   })

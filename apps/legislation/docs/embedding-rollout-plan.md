@@ -585,6 +585,15 @@ amplification. Recreate them concurrently once after the historical pass and
 then run `ANALYZE`. Daily incremental inserts update the indexes automatically;
 they do not require daily index rebuilds.
 
+Each historical embedding worker reserves two PgBouncer client connections:
+one for batch selection and persistence and one for the renewable ingestion
+lease heartbeat. This does not raise PgBouncer's 60-server PostgreSQL ceiling.
+The separate heartbeat connection is required because a single-client worker
+can lose its lease while a long document-section transaction occupies its only
+local pool connection. Such a loss is resumable and does not duplicate vectors,
+but it terminates that shard controller and requires a checkpointed replacement
+wave.
+
 The broad pass is recommended only if the frozen graded evaluation and the
 deployed MCP canary both retain an absolute nDCG@10 improvement greater than
 0.02 for every promoted model or reranker, all result identities resolve to

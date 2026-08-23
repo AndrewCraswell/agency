@@ -29,7 +29,7 @@ describe("derived backfill task payload", () => {
     expect(derivedWorkerMaxBatchesFor("embeddings")).toBe(10)
     expect(derivedDatabaseConnectionsFor("bill-documents")).toBe(1)
     expect(derivedDatabaseConnectionsFor("supporting-materials")).toBe(2)
-    expect(derivedDatabaseConnectionsFor("embeddings")).toBe(1)
+    expect(derivedDatabaseConnectionsFor("embeddings")).toBe(2)
     expect(DERIVED_SUPPORTING_MATERIAL_BATCH_SIZE).toBe(25)
     expect(derivedBatchSizeFor("bill-documents")).toBe(100)
     expect(derivedBatchSizeFor("supporting-materials")).toBe(25)
