@@ -1,7 +1,9 @@
 # V5 power-stage selection and closure gate
 
 **Decision date:** 2026-08-23
-**Status:** selected components, but **DENY** for fabrication and for the present 100 ms peak envelope.
+**Status:** selected components; **DENY** for fabrication and for the generic
+9.01 A, 100 ms envelope. The narrower selected bench load passes only the
+eFuse arithmetic screen described below.
 
 This page covers the non-isolated 20 V USB-PD to V5 stage only. It does not select a HUB75 panel, establish an enclosure thermal path, or alter the provisional USB-PD SPR 20 V, 3 A, 60 W contract.
 
@@ -35,6 +37,26 @@ The selected replacement is TI `TPS56A37RPAR`, a fixed-frequency 500 kHz synchro
 | Input-MLCC ripple at 17.65 V minimum input | 4.06 A RMS bank current, 2.03 A RMS per selected 1210 | **DENY gate.** The selected MLCC's ripple/temperature/DC-bias qualification is not evidenced. This calculation is a required per-part screen, not a capacitor-rating claim. |
 | Current-limit protection | low-side valley minimum 10 A, high-side peak minimum 12.75 A | These are fault limits, not a promised 10 A regulation/load-step guarantee. Validate overload, short, restart, and panel startup on the assembled board. |
 | D-CAP3 compensation | 3.3 uH with 35 uF effective V5 capacitance and 150 pF feed-forward network | This is the exact 5 V EVM combination. It becomes invalid if capacitance, shunt placement, cable, panel capacitance, or layout parasitics change without a loop/transient review. |
+
+## Generic allocation versus selected bench load
+
+The 7.99 A continuous and 9.01 A, 100 ms figures above are the unchanged
+generic rail allocation. That maximum remains **DENY** because its 9.01 A
+peak exceeds the upstream eFuse worst-low envelope and because MLCC, inrush,
+thermal, and layout evidence is still open.
+
+BP-050 instead freezes the selected Adafruit 2277 bench-panel configuration at
+5.392 A continuous and 6.093 A for 100 ms on post-shunt V5, or 26.96 W and
+30.465 W. Including the selected-system conversion and path-loss screen
+requires 1.639 A continuous and 1.846 A peak at 20 V. Both are below
+the upstream eFuse's 2.395 A worst-low current limit, and both post-shunt loads
+are below its 40.60 W ceiling. The selected bench envelope therefore passes
+this eFuse arithmetic screen.
+
+That selected-load pass neither erases the generic 7.99 A/9.01 A DENY nor
+approves the panel, converter layout, effective capacitance, inrush, or
+thermal behavior. BP-050 keeps the panel disconnected until those assembled
+measurements pass and adds a separate display-branch limiter.
 
 ## Source coordination blocks the short peak
 
