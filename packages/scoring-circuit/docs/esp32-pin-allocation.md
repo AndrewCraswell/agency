@@ -96,29 +96,35 @@ bounded polling load cannot affect scoring. `INTn` receives its required
 inactive pull-up at the W5500 and is available as a local test point. This
 frees GPIO1 for display output and removes the former GPIO3 strap conflict.
 
-### Reserved USB capability and bench debug
+### USB service and bench debug
 
 | Module pad | GPIO | Candidate function | Direction | Reset-safe requirement |
 | --- | ---: | --- | --- | --- |
-| 13 | 19 | Reserved future USB D- capability | bidirectional | No receptacle, series part, test point, or trace is populated on the bench prototype. Do not share with Ethernet. |
-| 14 | 20 | Reserved future USB D+ capability | bidirectional | No receptacle, series part, test point, or trace is populated on the bench prototype. Preserve the option for a later reviewed USB design. |
+| 13 | 19 | USB D- to the required USB-C power/service receptacle | bidirectional | Route through exact `TPD2EUSB30DRTR` and exactly one module-side 22 Ohm series resistor matched to the D+ part. Do not share with Ethernet. |
+| 14 | 20 | USB D+ to the required USB-C power/service receptacle | bidirectional | Route through the other `TPD2EUSB30DRTR` channel and exactly one module-side 22 Ohm series resistor matched to the D- part. Route the pair at 90 Ohm differential impedance over a continuous reference plane with matched lengths and minimal vias. |
 | 36 | 44 | UART0 RX, service-header receive | input | Keep the existing six-pin service-header function. Use a high-impedance header/bridge so it cannot disturb boot. |
 | 37 | 43 | UART0 TX, service-header transmit | output | Fit the Espressif-recommended TX series resistor and keep the trace short. |
 | 3 | `EN` | hardware reset input | input | `R_ESP_EN_PULLUP` 10 kOhm to `V3_3`, `C_ESP_EN_DELAY` 1 uF to GND, supervisor and watchdog open-drain pulls, reset-combiner sink, and physical service reset access. Never leave floating. |
 | 27 | 0 | `BOOT_N`, service-header only | input at reset | Pull up. Physical service control may pull low only while `EN` is held low to enter download mode. Do not attach a functional load. |
 
-USB Serial/JTAG remains a future fixed-function capability, not an implemented
-bench interface. USB-OTG and USB Serial/JTAG share the internal PHY, so a later
-OTG product feature needs an external PHY or a deliberate service-mode
-tradeoff. The bench prototype uses the UART0, `EN`, and `BOOT_N` service header
-for programming and recovery and defers USB-C entirely. The retained
-`usb-c-service-power-architecture.md` record describes a possible future
-USB-C service/data implementation, but it is outside the active bench board.
+USB Serial/JTAG is an implemented fixed-function bench service path, not a
+general application USB device. USB-OTG and USB Serial/JTAG share the internal
+PHY, so a later OTG product feature needs an external PHY or a deliberate
+service-mode tradeoff. The bench prototype also retains the UART0, `EN`, and
+`BOOT_N` service header as an independent recovery path. The required USB-C
+receptacle is the normal PD power input and carries this native USB2 service
+pair through independently reviewed power and data protection paths.
+
+`TPD4S201TRGRRQ1` belongs only to the receptacle's CC1, CC2, SBU1, and SBU2
+protection path. USB D-/D+ do not pass through it: they use exact
+`TPD2EUSB30DRTR`, then one matched 22 Ohm resistor per line before GPIO19 and
+GPIO20. There is no second series resistor or alternate data-protection path
+on either line.
 
 External JTAG on GPIO39 to GPIO42 is not allocated. Those four pads are needed
 for HUB75 output. Do not burn JTAG-selection eFuses merely to recover this
-header: eFuses are irreversible. Recover the bench board through the selected
-UART0, `EN`, and `BOOT_N` service header.
+header: eFuses are irreversible. The bench board retains both USB Serial/JTAG
+and the selected UART0, `EN`, and `BOOT_N` service header.
 
 ### I2C, watchdog, and controls
 
@@ -205,7 +211,7 @@ change the now-complete GPIO allocation.
 | GPIO3 | Keep electrically quiet at reset because it selects the JTAG source when the relevant eFuse is used. | Reserved and unconnected. External JTAG and its selection eFuse are not part of this product allocation. |
 | GPIO45 | Default weak pull-down selects 3.3 V VDD_SPI when eFuse forcing is not used. | Drives HUB75 `D` only after reset. The pull-down and a high-impedance AHCT input preserve the required strap. |
 | GPIO46 | Default weak pull-down participates in boot mode and ROM-message controls. | Drives HUB75 `CLK` only after reset. The pull-down and a high-impedance AHCT input preserve the required strap. |
-| GPIO19/GPIO20 | Reserved for future USB D-/D+ and USB Serial/JTAG. | The bench board leaves these pads unrouted and uses UART0/`EN`/`BOOT_N` recovery. Reassign Ethernet as above. |
+| GPIO19/GPIO20 | Dedicated to USB D-/D+ and USB Serial/JTAG. | The bench board routes these pads to the required USB-C power/service receptacle and uses separate GPIOs for Ethernet. |
 | GPIO26 to GPIO32 | Not exposed and occupied by flash/PSRAM. | Never allocate. |
 | GPIO35 to GPIO37 | Available on N16R2 but unavailable on Octal-PSRAM R8/R16 modules. | Candidate uses them for audio; module substitutions require a pin-map review. |
 | `EN` | Hardware reset only, held high only after 3.3 V is stable. | `EN_RESET` is pulled up with 10 kOhm and delayed with 1 uF; TPS389033 (3.170 V falling / 3.189 V rising, 100 nF CT about 107 ms) and TPS3431 open-drain outputs, a BSS138 service sink, and the isolated active-high STM32 request sink it independently. No GPIO16 reset request exists. |
@@ -235,7 +241,7 @@ That does not remove RF placement work. The carrier must:
   unbranched, outer-layer 50 ohm RF route;
 - keep the IPEX connector clear on every copper layer as Espressif specifies,
   avoid vias in the RF path, and use the manufacturer reference layout;
-- keep the UART header, display clocks, W5500, switching power loops, and
+- keep USB2, the UART header, display clocks, W5500, switching power loops, and
   their test points away from the RF trace and external antenna volume;
 - preserve continuous adjacent ground reference, dense ground vias around the
   RF route where specified, and the module exposed-pad ground-via pattern;
@@ -252,7 +258,7 @@ with these constraints.
 
 | ID | Decision now represented in the circuit model | Remaining proof before schematic acceptance |
 | --- | --- | --- |
-| ESP-01 | GPIO19/GPIO20 are reserved and unrouted for future USB D-/D+; W5500 and F-RAM use GPIO18/GPIO8/GPIO9 with GPIO2 and GPIO47 chip selects. | USB-C implementation and testing are outside the active bench-prototype backlog. |
+| ESP-01 | GPIO19/GPIO20 are dedicated to USB D-/D+; W5500 and F-RAM use GPIO18/GPIO8/GPIO9 with GPIO2 and GPIO47 chip selects. | Complete exact receptacle, `TPD2EUSB30DRTR`, one matched 22 Ohm resistor on each D-/D+ line, differential-pair, shield, PD-power coexistence, and service-mode review; keep `TPD4S201TRGRRQ1` limited to CC/SBU. |
 | ESP-02 | W5500 `INTn` is locally pulled inactive and polled; GPIO3 is reserved for its strap. | Verify W5500 polling latency/load and `INTn` bias against the selected W5500 revision. |
 | ESP-03 | The complete 13-signal HUB75 bus is routed through two AHCT245 buffers with 10 kOhm input pulldowns, a 10 kOhm `OE_N_IN` pull-up to `V3_3`, reset-gated buffer enables, and a 10 kOhm panel `OE_N_OUT` pull-up to `V5`. | Verify the exact panel power return, scan/DMA choice, current, buffer drive, ghosting, cable behavior, and SI on EVT. |
 | ESP-04 | GPIO45 is `D` and GPIO46 is `CLK`; both have 10 kOhm pulldowns and high-impedance AHCT loading at reset. | Verify resistor leakage, flash-voltage/eFuse policy, strap levels, and boot measurements on the exact N16R2 module. |
@@ -260,7 +266,7 @@ with these constraints.
 | ESP-06 | The STM32 reset assertion exits isolation at active-high `RESET_REQUEST`, not GPIO16 or `EN`, and drives a BSS138 low-side sink into `EN_RESET`. | Prove ISO output-side rise, injected current, reset release, and no unpowered-domain back-powering in the power-off test before schematic acceptance. |
 | ESP-07 | Both heartbeat directions are allocated. STM32-to-ESP32 reset is one-way; no ESP32 automatic `NRST` path exists. | Freeze failure polarity, timeout, bias, and isolator power-loss behavior in the reset schematic and bench plan. |
 | ESP-08 | Shared SPI now reaches F-RAM and W5500; I2C reaches RTC, secure element, monitor, converter, and audio codec; W5500 reset follows the application supervisor. | Check bus voltage, addresses, capacitance, pull-ups, W5500 reset timing, and application brownout ordering. |
-| ESP-09 | UART0/`EN`/`BOOT_N` is the bench recovery path; GPIO19/GPIO20 remain reserved and GPIO39-GPIO42 stay assigned to HUB75. | Complete the service-header review; do not burn JTAG-selection eFuses. USB-C remains future work. |
+| ESP-09 | USB Serial/JTAG and UART0/`EN`/`BOOT_N` are independent bench recovery paths; GPIO39-GPIO42 stay assigned to HUB75. | Complete both service-path reviews and do not burn JTAG-selection eFuses. |
 | ESP-10 | Audio allocation locks the ESP32-S3-WROOM-1U-N16R2 module configuration. | Any module substitution requires pin, temperature, and RF review. |
 | ESP-11 | None. | The module, W5500, connectors, land patterns, RF route, Ethernet physical layer, and mechanical interfaces still need their M4/M5 evidence. |
 
@@ -273,7 +279,8 @@ with these constraints.
    arrangement, 3.3 V decoupling/LC filtering, `EN` timing, and external
    antenna connector reference layout against the actual stack-up.
 3. Build a reset-state table for every ESP32-attached device at cold boot,
-   watchdog reset, supervisor brownout, STM32-requested reset, service-header use,
+   watchdog reset, supervisor brownout, STM32-requested reset, USB insertion,
+   USB service use, UART service-header use,
    and application firmware absence. Check that every output is inactive,
    especially W5500 CS/reset, F-RAM CS, display enables, I2S, and the isolated
    link MISO output.
@@ -284,22 +291,22 @@ with these constraints.
    RTC backup domain, secure-element provisioning, and whether rail telemetry
    must remain reachable during watchdog handling.
 6. Verify ESP-IDF peripheral routing and simultaneous DMA load for the two SPI
-   buses, UART recovery, I2C, I2S, radio, W5500 traffic, display refresh,
+   buses, USB Serial/JTAG, UART recovery, I2C, I2S, radio, W5500 traffic, display refresh,
    and PSRAM. Software scheduling must not be used as evidence of scoring
    timing because scoring remains isolated on the STM32.
-7. Execute RF, Ethernet, display-emissions, audio, thermal, ESD/EFT,
+7. Execute RF, USB, Ethernet, display-emissions, audio, thermal, ESD/EFT,
    brownout, and recovery measurements on EVT hardware. These are later
    evidence gates, not assumptions discharged by this document.
 
 ## M0-09 acceptance record
 
 This note identifies a real pad for the isolated link, W5500 SPI, journal SPI,
-reserved USB capability, I2C, watchdog, UART recovery, and candidate audio signals. It also
+USB service, I2C, watchdog, UART recovery, and candidate audio signals. It also
 documents why the current display allocation is over-subscribed and cannot be
 accepted. The strapping, flash/PSRAM, `EN`, and RF constraints are recorded
 with their required verification actions.
 
-M0-09 has a coherent candidate GPIO allocation: reserved USB pads, Ethernet, straps,
+M0-09 has a coherent candidate GPIO allocation: USB, Ethernet, straps,
 HUB75, audio, reset, and heartbeat collisions above are resolved at the
 architectural-net level. It remains in review until the listed electrical,
 firmware-routing, RF, mechanical, and bench gates pass. Nothing in this

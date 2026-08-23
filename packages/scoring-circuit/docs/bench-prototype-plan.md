@@ -24,6 +24,8 @@ One board must let the team:
   `ISO7721FDR`, with scoring power isolated by `NXE1S0505MC`;
 - run the exact `ESP32-S3-WROOM-1U-N16R2`, the W5500 Ethernet path, and the
   Würth `7499011121A` integrated-magnetics RJ45;
+- accept normal operating power from a USB-C PD adapter through the selected
+  Amphenol receptacle, TPS25730A sink, protection, eFuse, and conversion path;
 - drive the selected Adafruit product 2277 64-by-32 HUB75 panel through the
   existing `SN74AHCT245PWR` safe-blanking architecture;
 - program, reset, recover, and observe both processors without removing parts;
@@ -43,8 +45,6 @@ This prototype does not close or require:
   or final connector panel;
 - miniaturization, final component density, or the production three-board
   split;
-- USB-PD as the mandatory prototype input, the Amphenol USB-C receptacle, or
-  hot-plug power negotiation;
 - production battery/UPS or the standards proposal needed to reconcile the
   final product with current FIE supply requirements;
 - FCC, CE, IEC/UL 62368-1, FIE homologation, ESD/EFT/surge certification, or a
@@ -83,8 +83,9 @@ Organize the board from left to right:
 4. a clearly marked isolation corridor containing only the exact isolators and
    isolated-power crossing;
 5. ESP32, application watchdog/supervisor, service header, storage, and audio;
-6. W5500, crystal/support network, and the board-edge MagJack;
-7. HUB75 logic buffers, display signal header, and separately fused display
+6. USB-C receptacle, PD sink/protection/eFuse, W5500, crystal/support network,
+   and the board-edge MagJack;
+7. HUB75 logic buffers, display signal header, and separately protected display
    power branch.
 
 Keep `SCORING_SGND` and `APP_GND` separate on every layer. The bench board may
@@ -105,25 +106,42 @@ electrical isolation boundary or scoring authority.
 | Ethernet jack | Würth `7499011121A` | W5500 MDI pairs remain entirely on this PCB; chassis/shield node is separately observable. |
 | Display | Adafruit product `2277`, 64-by-32, 1/16 scan | External panel only. Board provides 13 buffered HUB75 signals and a separately protected 5 V branch. |
 | Display buffers | Two `SN74AHCT245PWR` | Reset-gated high impedance plus panel `OE` pull-up must hold the panel blank during reset, absence, and brownout. |
-| Bench power | Molex `43045-0400`, mate `43025-0400`, terminals `43030-0007` | Regulated 5.0 V current-limited bench input, two V5 and two return contacts, 20 AWG equal-length pairs, de-energized mating only. |
+| Normal power and USB service | Amphenol `10177070-00011LF`, `TPD4S201TRGRRQ1`, `TPD2EUSB30DRTR`, `TPS25730ADREFR`, `TVS2200DRVR`, `B340A-13-F`, `TPS259474ARPWR` | Required USB-C PD sink input from a standard adapter. The normal operating contract is SPR 20 V/3 A. `TPD4S201TRGRRQ1` protects CC1, CC2, SBU1, and SBU2; exact `TPD2EUSB30DRTR` protects D-/D+. Native USB 2.0 service reaches ESP32 GPIO19/GPIO20 through one matched 22 Ohm series resistor on each data line. |
+| Diagnostic power injection | Test-only `LAB_POST_EFUSE_20V`, 20 V/2.3 A input on the alternate throw of C&K `7101SYZQE` | The laboratory source bypasses the PD controller and eFuse only for staged bring-up. The normal `PD_EFUSE_OUT_20V` and diagnostic source occupy opposite selector throws, the common feeds `V20_TO_V5_BUCK`, selector changes occur de-energized, and simultaneous drive is prohibited. It is not a second product input. |
 | Weapon fixture | Molex `43045-1200`, mate `43025-1200`, terminals `43030-0007` | Carries seven named conductors plus reviewed fixture/ESD returns; unused positions are NC. It never becomes the production body-cord connector. |
 | Body-cord sockets | External fixture using sample `66.9684-22` and `66.9684-25` where applicable | Samples remain candidates. Plug fit, line mapping, sweat/salt, retention, and cycle evidence remain separate. |
 | STM32 debug | Samtec `FTSH-105-01-L-DV-K` ten-contact Cortex-style SWD header candidate | Expose SWDIO, SWCLK, NRST, scoring 3.3 V sense, scoring ground, and keyed orientation. Exact pinout is frozen before schematic review. |
 | ESP32 service | Samtec `TSW-106-07-G-S` six-contact header candidate | Expose isolated 3.3 V-compatible UART RX/TX, `BOOT_N`, active-high manual reset request, 3.3 V sense, and APP_GND. Use an external isolated or approved-level adapter. |
 | RF | WROOM-1U module connector and an external test antenna | Radio acceptance is deferred until the exact antenna/coax is selected; Ethernet is sufficient for prototype-ready connectivity. |
 
-The fixture and power harnesses reuse already selected Micro-Fit parts for
-bench convenience. This does not authorize those parts for the final external
-product interface. The exact HUB75 header, lamp connector, speaker connector,
-and debug mating cables remain explicit prototype BOM tasks below.
+The fixture harness reuses already selected Micro-Fit parts for bench
+convenience. This does not authorize those parts for the final external product
+interface. The exact diagnostic-injection interlock, HUB75 header, lamp
+connector, speaker connector, and debug mating cables remain explicit
+prototype BOM tasks below.
 
-## Simple bench power contract
+## USB-C PD and diagnostic-power contract
 
-Use one regulated 5.0 V laboratory supply through `J_BENCH_5V`. Set a documented
-current limit before attachment. There is no battery, charging circuit, raw
-USB VBUS, USB-PD negotiation, 20 V rail, or hot-plug claim on this board.
+Normal operation uses a standard USB-C PD adapter. The selected sink requests
+an SPR 20 V/3 A contract; raw 5 V before negotiation must not energize the
+post-contract apparatus rail. `TPD4S201TRGRRQ1` protects only CC1, CC2, SBU1,
+and SBU2. Exact `TPD2EUSB30DRTR` protects USB D-/D+, followed by exactly one
+matched 22 Ohm series resistor on each line before ESP32 GPIO19/GPIO20. The
+exact receptacle, protection networks, disconnect behavior, TVS,
+reverse-current path, eFuse, V5 converter, and USB 2.0 data path are part of
+the prototype schematic and layout.
 
-The bench input feeds three separately measurable branches:
+Staged bring-up may use a current-limited 20 V laboratory supply capped at
+2.3 A on `LAB_POST_EFUSE_20V`. That diagnostic source deliberately bypasses
+the PD controller and eFuse and reaches only the alternate throw of exact
+`7101SYZQE`; normal `PD_EFUSE_OUT_20V` reaches the other throw, and the common
+feeds `V20_TO_V5_BUCK`. Selector changes occur only while both sources are
+de-energized. The selector physically prevents simultaneous USB-C and
+laboratory drive. This is not automatic dual-input arbitration and the
+diagnostic connection is not an externally supported product interface.
+
+The protected and converted power tree feeds three separately measurable
+branches:
 
 - display V5 through a fuse or resettable current limiter and a removable
   current-measurement link;
@@ -133,8 +151,10 @@ The bench input feeds three separately measurable branches:
   analog filtering.
 
 Provide a physical display-branch disconnect so processor bring-up never
-requires powering the panel. Provide branch test points and zero-ohm links or
-current shunts for input, display, application, and isolated scoring current.
+requires powering the panel. Provide branch test points and removable links or
+current shunts for USB-PD output, V5 input, display, application, and isolated
+scoring current. Diagnostic injection and normal USB-C power must never be
+enabled together.
 The panel branch must be wired for the purchased panel's measured startup and
 full-white current; the published approximate 4 A value is a starting screen,
 not a harness release.
@@ -181,7 +201,7 @@ their paper designs and test assets. No lane may waive another lane's evidence.
 | `BP-034` | Complete pre-order connector sample, mate, fit, pinout, and continuity review. | `BP-050`, `BP-104`, `BP-124`, `BP-141`, `BP-143` | Received sample identities, mating-part checks, orientation/photos, mechanical fit, harness pinout, strain relief, and continuity archive. No automated scoring fixture is required yet. |
 | `BP-035` | Converge the lane BOMs into an order-candidate BOM. | `BP-031`, `BP-032`, `BP-033`, `BP-034` | Every proposed populated row is exact and footprint-approved; no proposed populated `TBD` remains; every omitted option is explicit DNP; lane netlists and reference sets are ready for schematic integration. |
 | `BP-040` | Freeze net classes and ground/shield names. | `BP-010` | Reviewed `APP_GND`, `SCORING_SGND`, ESD-return, chassis, analog, high-current, and differential-pair rules. |
-| `BP-050` | Define bench supply limits and branch fusing/current measurement. | `BP-020` | Power tree, fuse/limiter values, connector rating, wire gauge, and current-limit procedure. |
+| `BP-050` | Freeze USB-C PD power, protection, conversion, diagnostic injection, and branch measurement. | `BP-020` | Exact USB-C/PD/protection/eFuse/V5 parts and support values, 20 V/3 A contract behavior, USB2 data routing, branch protection/current links, display disconnect, diagnostic-injection points, hard source mutual exclusion, and current-limited bring-up procedure. |
 
 ### Analog and external fixture lane
 
@@ -200,7 +220,7 @@ their paper designs and test assets. No lane may waive another lane's evidence.
 | ID | Work unit | Dependencies | Acceptance evidence |
 | --- | --- | --- | --- |
 | `BP-120` | Reconcile the STM32 pin allocation with the selected seven-channel topology. | `BP-100` | Exact LQFP64 pad/net table with ADC, comparator, timer, SPI, lamp, buzzer, SWD, and strap checks. |
-| `BP-121` | Reconcile the ESP32 N16R2 allocation. | `BP-000` | Exact module-pad table covering isolated SPI, Ethernet SPI, HUB75, USB/UART recovery, I2C, I2S, watchdog, straps, and NC pads. |
+| `BP-121` | Reconcile the ESP32 N16R2 allocation. | `BP-000` | Exact module-pad table covering isolated SPI, Ethernet SPI, HUB75, native USB2 service, UART recovery, I2C, I2S, watchdog, straps, and NC pads. |
 | `BP-122` | Freeze isolation channel directions and default levels. | `BP-120`, `BP-121` | Pin-level ISO7762/ISO7721 map and powered/unpowered truth table. |
 | `BP-123` | Close both supervisor/watchdog/reset networks. | `BP-120`, `BP-121` | Exact MPN/value schematic and cold-start, brownout, watchdog, manual-reset, cross-domain, and power-off tests. |
 | `BP-124` | Freeze STM32 SWD and ESP32 UART/boot service headers. | `BP-120`, `BP-121` | Header pinouts, mating cable IDs, voltage constraints, reset procedure, and recovery demonstration plan. |
@@ -226,7 +246,7 @@ their paper designs and test assets. No lane may waive another lane's evidence.
 | `BP-302` | Freeze test points, removable links, current shunts, and labels. | `BP-300`, `BP-106` | Probe map covers every rail, reset, heartbeat, SPI, analog stage, fixture line, reference, and display-enable state. |
 | `BP-303` | Freeze the final prototype order BOM against the accepted schematic. | `BP-035`, `BP-301`, `BP-302` | BOM and schematic reference sets, quantities, MPNs, packages, population/DNP states, footprint evidence, and approved substitutions match exactly; zero populated TBDs remain. |
 | `BP-400` | Freeze board outline, stack-up, mounting, and placement. | `BP-010`, `BP-301`, `BP-302`, `BP-303` | Dimensioned drawing, fabricator stack-up, placement review, hand/probe clearance, and strain-relief plan. |
-| `BP-401` | Route analog, isolation, clocks, USB/UART service, Ethernet, HUB75, and high-current branches. | `BP-400` | Routed source with reviewed return paths, differential constraints, isolation clearance, and no unrouted nets. |
+| `BP-401` | Route analog, isolation, clocks, USB-C PD and USB2 service, UART recovery, Ethernet, HUB75, and high-current branches. | `BP-400` | Routed source with reviewed return paths, USB/Ethernet differential constraints, PD/power layout rules, isolation clearance, and no unrouted nets. |
 | `BP-402` | Run ERC, DRC, SI/PI, thermal, and fabrication-output review. | `BP-401` | Clean reports or reviewed waivers; Gerber/drill/ODB++, IPC-356, BOM, centroid, assembly, and impedance artifacts share one revision digest. |
 | `BP-403` | Perform independent pre-order release review. | `BP-402` | Signed prototype-only release record explicitly excluding production authority. |
 
@@ -238,9 +258,9 @@ their paper designs and test assets. No lane may waive another lane's evidence.
 | `BP-501` | Implement fixture-safe manufacturing self-test. | `BP-105`, `BP-302`, `BP-500` | Test enumerates rails, reference, resets, isolation, seven lines, lamps, buzzer, Ethernet, and display; failures cannot be reported as passes. |
 | `BP-502` | Assemble and inspect the first boards. | `BP-403` | Serialized as-built BOM, X-ray where required, AOI/manual inspection, unpowered continuity/isolation, and rework record. |
 | `BP-503` | Conduct the ready-to-apply-power review. | `BP-050`, `BP-105`, `BP-106`, `BP-500`, `BP-501`, `BP-502` | Approved power procedure, current limits, stop conditions, calibrated equipment, fixture-interlock certificate, firmware digests, unpowered inspection, and signed external power permit. |
-| `BP-504` | Bring up power with processors and display disconnected. | `BP-503` | Current-limited rail sequence, ripple, temperature, and stop-condition archive. |
+| `BP-504` | Bring up power with processors and display disconnected. | `BP-503` | Capture successful 20 V/3 A PD negotiation; prove raw 5 V/non-PD attachment cannot energize the post-contract apparatus rail; verify PD and `LAB_POST_EFUSE_20V` selector throws, de-energized change procedure, and physical source mutual exclusion; execute the current-limited 20 V/2.3 A diagnostic bring-up; archive rail sequence, ripple, temperature, and stop conditions. |
 | `BP-505` | Bring up STM32, reset, SWD, and isolated link. | `BP-504`, `BP-500` | Clock/debug, watchdog, supervisor, heartbeat, malformed-link, and ESP32-absent evidence. |
-| `BP-506` | Bring up ESP32, Ethernet, and recovery. | `BP-504`, `BP-500`, `BP-141` | UART/boot recovery, W5500 reset, link, traffic, polling, and fault-injection captures. |
+| `BP-506` | Bring up ESP32, Ethernet, USB service, and recovery. | `BP-504`, `BP-500`, `BP-141` | Capture USB Serial/JTAG enumeration, console/service traffic, JTAG access, disconnect/reconnect, and recovery; prove independent UART/`BOOT_N` recovery; archive W5500 reset, link, traffic, polling, and fault-injection captures. |
 | `BP-507` | Bring up HUB75 with the purchased panel. | `BP-504`, `BP-144` | Blank/reset behavior, all signals, refresh, full-white current, inrush, cable drop, ghosting, and connector temperature. |
 | `BP-508` | Execute one-channel analog characterization before seven-channel scoring. | `BP-504`, `BP-106` | Complete calibrated archive; unavailable conditions remain unavailable. |
 | `BP-509` | Execute all-channel rules and interaction corpus. | `BP-505`, `BP-508` | Foil, epee, sabre, simultaneous-event, shorts, grounds, lockout, timing-boundary, replay, and failure-case results. |
@@ -302,7 +322,8 @@ true:
 4. The schematic has zero unexplained ERC errors, the PCB has zero unexplained
    DRC/unrouted errors, and stack-up, impedance, isolation, return paths,
    high-current copper, thermals, and probe access are reviewed.
-5. Exact fixture, bench-power, SWD, ESP32 service, Ethernet, HUB75, and panel
+5. Exact fixture, USB-C power/service, diagnostic-injection, SWD, ESP32 UART,
+   Ethernet, HUB75, and panel
    harness drawings are frozen, and normal versus guarded/fault connections are
    physically incompatible where required.
 6. The test matrix, fixture behavior, evidence schemas, current-limit procedure,
