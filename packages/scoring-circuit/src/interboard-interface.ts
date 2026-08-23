@@ -17,7 +17,12 @@ export type InterboardConnector = {
 export type HarnessPin = {
   readonly assignment: string
   readonly contact: number
-  readonly direction: "application-to-communications" | "communications-to-application" | "power" | "return"
+  readonly direction:
+    | "application-to-communications"
+    | "communications-to-application"
+    | "power"
+    | "reserved-test-only"
+    | "return"
   readonly rule: string
 }
 
@@ -123,8 +128,8 @@ export const controlHarnessPins = [
   {
     assignment: "COMM_RESET_ASSERT",
     contact: 10,
-    direction: "application-to-communications",
-    rule: "active-high carrier request drives only the gate of a module-local BSS138AKA reset sink"
+    direction: "reserved-test-only",
+    rule: "reserved active-high fixture request; carrier firmware has no allocated GPIO; carrier test pad and 100 kOhm pull-down only; drives the gate of a module-local BSS138AKA reset sink"
   },
   {
     assignment: "COMM_PRESENT_N",
@@ -162,7 +167,8 @@ export const communicationsPowerBoundary = {
     INT_N: "W5500 active-low push-pull output; carrier-side 100 kOhm pull-up to V3_3 defines disconnected state only",
     MISO: "100 kOhm pull-down to APP_GND",
     MOSI: "default low; 33 ohm source-series resistor",
-    RESET_ASSERT: "default low; 100 kOhm module-side gate pull-down",
+    RESET_ASSERT:
+      "reserved test-only, not firmware-driven; carrier test pad with 100 kOhm pull-down and module-side 100 kOhm gate pull-down",
     SCK: "default low; 33 ohm source-series resistor",
     W5500_CS_N: "default high; 33 ohm source-series resistor"
   },
@@ -204,13 +210,13 @@ export const communicationsPowerBoundary = {
   },
   resetCombiner: {
     externalRequest:
-      "COMM_RESET_ASSERT drives a module-local BSS138AKA gate; 100 kOhm gate pull-down; drain connects only to W5500_RST_N; source to module GND.",
+      "Reserved test-only COMM_RESET_ASSERT may be driven only from the carrier fixture pad; no application GPIO is allocated. It drives a module-local BSS138AKA gate with 100 kOhm pull-down; drain connects only to W5500_RST_N; source to module GND.",
     releaseRule:
       "W5500_RST_N may rise through its 10 kOhm COMM_3V3 pull-up only when TPS389033DSER RESET_N is released and COMM_RESET_ASSERT is low.",
     supervisorMpn: "TPS389033DSER"
   },
   statusRule:
-    "COMM_PRESENT_N reports electrical presence only. It never enables buffers or releases W5500 reset; the module-local supervisor does both."
+    "COMM_PRESENT_N is test-point-only electrical presence and W5500_INT_N is polling/test-point-only because no application GPIO is allocated. COMM_PRESENT_N never enables buffers or releases W5500 reset; the module-local supervisor does both."
 } as const
 
 export const interboardReleaseGates = [

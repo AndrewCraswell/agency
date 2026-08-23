@@ -19,7 +19,7 @@ export type BoardEnvelope = {
 
 export const mechanicalDatumContract = {
   architectureAuthority:
-    "Communications boundary connectivity is integrated; the physical scoring, application, and communications PCB models do not yet implement the three-board envelope",
+    "Communications boundary connectivity is integrated. Separate scoring I/O and application/display physical planning models implement their reviewed envelopes; the communications model still needs its reviewed 110 mm by 55 mm four-layer 0.8 mm envelope.",
   coordinateSystem:
     "+X is enclosure-view right, +Y is enclosure-view down, and +Z points from the display rear toward the service cover",
   primaryDatumA:
@@ -32,19 +32,18 @@ export const mechanicalDatumContract = {
 
 export const currentPhysicalPreviewMismatch = {
   communicationsBoundaryConnectivity: "integrated",
-  physicalThreeBoardLayout: "not-integrated",
+  physicalThreeBoardLayout: "partially-integrated",
   communicationsPreview: {
-    current: { widthMm: 100, heightMm: 70, layers: 6, finishedThicknessMm: "not-modeled" },
+    current: { widthMm: 100, heightMm: 70, layers: 4, finishedThicknessMm: "not-modeled" },
     planned: { widthMm: 110, heightMm: 55, layers: 4, finishedThicknessMm: 0.8 },
     matchesEnvelope: false
   },
-  combinedMainPreview: {
+  separateMainBoardModels: {
     current: {
-      widthMm: 160,
-      heightMm: 100,
-      layers: 4,
-      physicalAssemblyCount: 1,
-      modeledOwnership: "combined scoring and application preview"
+      physicalAssemblyCount: 2,
+      scoringBoard: { widthMm: 290, heightMm: 70, layers: 6, finishedThicknessMm: 1.6 },
+      applicationBoard: { widthMm: 290, heightMm: 135, layers: 6, finishedThicknessMm: 1.6 },
+      modeledOwnership: "separate scoring I/O and application/display physical planning models"
     },
     planned: {
       physicalAssemblyCount: 2,
@@ -52,7 +51,7 @@ export const currentPhysicalPreviewMismatch = {
       applicationBoardLayers: 6,
       ownership: "separate scoring I/O and application/display PCBs"
     },
-    matchesEnvelope: false
+    matchesEnvelope: true
   }
 } as const
 
@@ -172,7 +171,7 @@ export const harnessServiceContract = {
 } as const
 
 export const mechanicalReleaseGates = [
-  "Reconcile the physical previews with the three-board contract: replace the combined 160 mm by 100 mm four-layer main preview with separate six-layer scoring and application boards, and change the communications preview from 100 mm by 70 mm six-layer to the reviewed four-layer 0.8 mm envelope.",
+  "Reconcile the remaining communications physical preview with the three-board contract: change its 100 mm by 70 mm planning rectangle to the reviewed 110 mm by 55 mm envelope, model or otherwise control the 0.8 mm finished thickness, and release all three exact board outlines rather than treating planning dimensions as drawings.",
   "Import revision-controlled manufacturer drawings and STEP models for USB-C, RJ45, HSEC8/ECDP, Micro-Fit, HUB75 headers, U.FL/coax, Stäubli sockets, and the purchased panel revision.",
   "Measure purchased panel outline, thickness, mounting holes, input connectors, rear components, and cable exits; overlay the measurements against a released enclosure assembly drawing.",
   "Release dimensioned PCB outlines, hole tables, datum targets, tolerances, component-height maps, courtyards, tooling rails, and keepouts for all three boards.",

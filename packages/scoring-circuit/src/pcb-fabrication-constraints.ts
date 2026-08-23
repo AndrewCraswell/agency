@@ -12,11 +12,14 @@ export type PcbFabricationInput = {
   readonly physicalAssemblyCount: number
   readonly scoringBoardLayerCount: number
   readonly scoringBoardThicknessMm: number
+  readonly scoringBoardThicknessModeled: boolean
   readonly applicationBoardLayerCount: number
   readonly applicationBoardThicknessMm: number
+  readonly applicationBoardThicknessModeled: boolean
   readonly communicationsModuleLayerCount: number
   /** Finished thickness at the selected USB-C receptacle carrier. */
   readonly usbCModuleThicknessMm: number
+  readonly communicationsModuleThicknessModeled: boolean
   readonly assemblyBoundaryReviewed: boolean
   readonly highSpeedInterconnectQualified: boolean
   readonly exactFootprintsImported: boolean
@@ -273,13 +276,16 @@ export const pcbFabricationContract = {
 } as const
 
 export const currentPcbModelInput = {
-  physicalAssemblyCount: 1,
-  scoringBoardLayerCount: 4,
+  physicalAssemblyCount: 3,
+  scoringBoardLayerCount: 6,
   scoringBoardThicknessMm: 1.6,
-  applicationBoardLayerCount: 4,
+  scoringBoardThicknessModeled: false,
+  applicationBoardLayerCount: 6,
   applicationBoardThicknessMm: 1.6,
+  applicationBoardThicknessModeled: false,
   communicationsModuleLayerCount: 4,
-  usbCModuleThicknessMm: 1.6,
+  usbCModuleThicknessMm: 0.8,
+  communicationsModuleThicknessModeled: false,
   assemblyBoundaryReviewed: false,
   highSpeedInterconnectQualified: false,
   exactFootprintsImported: false,
@@ -302,6 +308,9 @@ function assertBoolean(value: boolean, name: string) {
 
 const booleanInputFields = [
   "assemblyBoundaryReviewed",
+  "scoringBoardThicknessModeled",
+  "applicationBoardThicknessModeled",
+  "communicationsModuleThicknessModeled",
   "highSpeedInterconnectQualified",
   "exactFootprintsImported",
   "isolationSlotPresent",
@@ -344,10 +353,14 @@ export function evaluatePcbFabricationConstraints(
     },
     {
       id: "scoring-board-thickness",
-      status: within(input.scoringBoardThicknessMm, scoringBoard.thicknessMm, scoringBoard.thicknessToleranceMm)
-        ? "pass"
-        : "deny",
-      evidence: `Scoring I/O board finished thickness ${input.scoringBoardThicknessMm} mm; target is 1.60 +/- 0.10 mm`
+      status: !within(input.scoringBoardThicknessMm, scoringBoard.thicknessMm, scoringBoard.thicknessToleranceMm)
+        ? "deny"
+        : input.scoringBoardThicknessModeled
+          ? "pass"
+          : "open",
+      evidence: input.scoringBoardThicknessModeled
+        ? `Scoring I/O board emits finished thickness ${input.scoringBoardThicknessMm} mm; target is 1.60 +/- 0.10 mm`
+        : `Scoring I/O board declares the ${input.scoringBoardThicknessMm} mm planning contract; finished thickness is not emitted by the circuit model`
     },
     {
       id: "application-board-stackup",
@@ -356,14 +369,18 @@ export function evaluatePcbFabricationConstraints(
     },
     {
       id: "application-board-thickness",
-      status: within(
+      status: !within(
         input.applicationBoardThicknessMm,
         applicationBoard.thicknessMm,
         applicationBoard.thicknessToleranceMm
       )
-        ? "pass"
-        : "deny",
-      evidence: `Application/display carrier finished thickness ${input.applicationBoardThicknessMm} mm; target is 1.60 +/- 0.10 mm`
+        ? "deny"
+        : input.applicationBoardThicknessModeled
+          ? "pass"
+          : "open",
+      evidence: input.applicationBoardThicknessModeled
+        ? `Application/display carrier emits finished thickness ${input.applicationBoardThicknessMm} mm; target is 1.60 +/- 0.10 mm`
+        : `Application/display carrier declares the ${input.applicationBoardThicknessMm} mm planning contract; finished thickness is not emitted by the circuit model`
     },
     {
       id: "communications-module-stackup",
@@ -372,21 +389,25 @@ export function evaluatePcbFabricationConstraints(
     },
     {
       id: "usb-c-carrier-thickness",
-      status: within(
+      status: !within(
         input.usbCModuleThicknessMm,
         communicationsModule.thicknessMm,
         communicationsModule.thicknessToleranceMm
       )
-        ? "pass"
-        : "deny",
-      evidence: `USB-C carrier finished thickness ${input.usbCModuleThicknessMm} mm; the selected receptacle requires an approximately 0.80 mm board`
+        ? "deny"
+        : input.communicationsModuleThicknessModeled
+          ? "pass"
+          : "open",
+      evidence: input.communicationsModuleThicknessModeled
+        ? `USB-C carrier emits finished thickness ${input.usbCModuleThicknessMm} mm; the selected receptacle requires an approximately 0.80 mm board`
+        : `USB-C carrier declares the ${input.usbCModuleThicknessMm} mm planning contract; finished thickness is not emitted by the circuit model`
     },
     {
       id: "assembly-boundary",
       status: input.assemblyBoundaryReviewed ? "pass" : "deny",
       evidence: input.assemblyBoundaryReviewed
         ? "Power, ground, isolation, scoring, display, and service ownership is reviewed across all three assemblies"
-        : "The present combined architectural preview does not implement or review the three physical assembly boundaries"
+        : "The three planning models exist, but the physical assembly boundaries have not completed independent layout review"
     },
     {
       id: "high-speed-interconnect",

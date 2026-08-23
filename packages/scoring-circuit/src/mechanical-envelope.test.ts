@@ -30,18 +30,22 @@ describe("three-board provisional mechanical envelope", () => {
     expect(provisionalBoardEnvelopes[1].mounting).toContain("VESA 100")
   })
 
-  it("records that current PCB previews do not implement the physical envelope", () => {
+  it("records the separate main-board planning models and the unresolved communications model", () => {
     expect(currentPhysicalPreviewMismatch.communicationsBoundaryConnectivity).toBe("integrated")
-    expect(currentPhysicalPreviewMismatch.physicalThreeBoardLayout).toBe("not-integrated")
+    expect(currentPhysicalPreviewMismatch.physicalThreeBoardLayout).toBe("partially-integrated")
     expect(currentPhysicalPreviewMismatch.communicationsPreview).toMatchObject({
-      current: { widthMm: 100, heightMm: 70, layers: 6, finishedThicknessMm: "not-modeled" },
+      current: { widthMm: 100, heightMm: 70, layers: 4, finishedThicknessMm: "not-modeled" },
       planned: { widthMm: 110, heightMm: 55, layers: 4, finishedThicknessMm: 0.8 },
       matchesEnvelope: false
     })
-    expect(currentPhysicalPreviewMismatch.combinedMainPreview).toMatchObject({
-      current: { widthMm: 160, heightMm: 100, layers: 4, physicalAssemblyCount: 1 },
+    expect(currentPhysicalPreviewMismatch.separateMainBoardModels).toMatchObject({
+      current: {
+        physicalAssemblyCount: 2,
+        scoringBoard: { widthMm: 290, heightMm: 70, layers: 6, finishedThicknessMm: 1.6 },
+        applicationBoard: { widthMm: 290, heightMm: 135, layers: 6, finishedThicknessMm: 1.6 }
+      },
       planned: { physicalAssemblyCount: 2, scoringBoardLayers: 6, applicationBoardLayers: 6 },
-      matchesEnvelope: false
+      matchesEnvelope: true
     })
   })
 
@@ -89,7 +93,7 @@ describe("three-board provisional mechanical envelope", () => {
     })
   })
 
-  it("cannot pass while the physical PCB models disagree with the envelope", () => {
+  it("cannot pass while any physical PCB model disagrees with the envelope", () => {
     const otherwiseComplete = Object.fromEntries(Object.keys(currentMechanicalEvidence).map((key) => [key, true]))
     const mismatched = { ...otherwiseComplete, physicalBoardModelsMatchEnvelope: false }
     expect(evaluateMechanicalEnvelope(mismatched)).toEqual({

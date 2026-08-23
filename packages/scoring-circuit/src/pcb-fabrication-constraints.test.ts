@@ -28,7 +28,12 @@ describe("PCB fabrication constraints", () => {
 
     expect(result.constraintStatus).toBe("deny")
     expect(result.fabricationApproved).toBe(false)
-    expect(result.checks.find((check) => check.id === "physical-topology")?.status).toBe("deny")
+    expect(result.checks.find((check) => check.id === "physical-topology")?.status).toBe("pass")
+    expect(result.checks.find((check) => check.id === "scoring-board-stackup")?.status).toBe("pass")
+    expect(result.checks.find((check) => check.id === "application-board-stackup")?.status).toBe("pass")
+    expect(result.checks.find((check) => check.id === "scoring-board-thickness")?.status).toBe("open")
+    expect(result.checks.find((check) => check.id === "application-board-thickness")?.status).toBe("open")
+    expect(result.checks.find((check) => check.id === "usb-c-carrier-thickness")?.status).toBe("open")
     expect(result.checks.find((check) => check.id === "assembly-boundary")?.status).toBe("deny")
     expect(result.checks.find((check) => check.id === "high-speed-interconnect")?.status).toBe("open")
     expect(result.checks.find((check) => check.id === "exact-footprints")?.status).toBe("deny")
@@ -41,10 +46,13 @@ describe("PCB fabrication constraints", () => {
       physicalAssemblyCount: 3,
       scoringBoardLayerCount: 6,
       scoringBoardThicknessMm: 1.6,
+      scoringBoardThicknessModeled: true,
       applicationBoardLayerCount: 6,
       applicationBoardThicknessMm: 1.6,
+      applicationBoardThicknessModeled: true,
       communicationsModuleLayerCount: 4,
       usbCModuleThicknessMm: 0.8,
+      communicationsModuleThicknessModeled: true,
       assemblyBoundaryReviewed: true,
       highSpeedInterconnectQualified: true,
       exactFootprintsImported: true,

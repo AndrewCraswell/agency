@@ -8,10 +8,12 @@ panel drawing, or a production enclosure assembly. The numeric board envelopes b
 shrink or move after CAD overlay; they must not be copied into Gerbers or enclosure tooling.
 
 The communications boundary and connector connectivity are integrated in the architecture model. The physical
-three-PCB layout is not. The communications preview is currently 100 mm by 70 mm and six layers, with no modeled
+three-PCB layout is not fully complete. The scoring I/O and application/display carrier now have separate six-layer
+physical planning models. The communications preview is currently 100 mm by 70 mm and four layers, with no modeled
 finished thickness; the planned envelope is 110 mm by 55 mm, four layers, and 0.80 mm finished thickness. The main
-preview remains one combined 160 mm by 100 mm four-layer board, while the production plan requires separate six-layer
-scoring I/O and application/display PCBs. Neither preview matches this mechanical contract.
+preview has been replaced with separate 290 mm by 70 mm and 290 mm by 135 mm six-layer planning models that match the
+provisional main-board envelope. The circuit renderer does not emit finished thickness. The complete three-board gate
+therefore remains false because the communications preview still disagrees and no exact board outline is released.
 
 The common coordinate system is enclosure view: +X right, +Y down, and +Z from the display rear toward the service
 cover. Datum A is a provisional rear-envelope face inferred from the panel's published 318 mm by 158 mm by 15 mm
@@ -67,8 +69,9 @@ qualification; this contract does not invent a universal bend radius.
 
 ## Evidence required before layout or tooling release
 
-1. Reconcile the physical PCB models: separate the scoring/application preview into two six-layer boards and change
-   the communications preview to the reviewed four-layer, 0.80 mm envelope.
+1. Change the communications preview to the reviewed 110 mm by 55 mm envelope, model or otherwise control its 0.80 mm
+   thickness, then release exact outlines for all three boards. All three model rectangles are planning envelopes, not
+   released drawings.
 2. Import revision-controlled manufacturer drawings and STEP models for USB-C, RJ45, ECDP/HSEC8, Micro-Fit,
    HUB75, U.FL/coax, Stäubli sockets, and the purchased panel revision.
 3. Measure multiple purchased panels: outline, thickness, mounting holes, rear components, connectors, and cable exits.

@@ -54,9 +54,14 @@ function WeaponInput({ side, x }: { side: "L" | "R"; x: number }) {
   )
 }
 
+/**
+ * Canonical end-to-end connectivity model. This is intentionally not one PCB:
+ * use scoring-io-board.circuit.tsx and application-display-carrier.circuit.tsx
+ * for the separate physical planning models.
+ */
 function ScoringCircuit() {
   return (
-    <board title="Competition scoring apparatus architecture" width="160mm" height="100mm" layers={4}>
+    <board title="Competition scoring apparatus logical connectivity" width="160mm" height="100mm" layers={4}>
       <WeaponInput side="L" x={-68} />
       <WeaponInput side="R" x={-48} />
       <pinheader

@@ -71,10 +71,14 @@ describe("inter-board interface contract", () => {
       mpn: "SN74LVC2G126DCUR"
     })
     expect(controlHarnessPins.find((pin) => pin.contact === 10)?.assignment).toBe("COMM_RESET_ASSERT")
+    expect(controlHarnessPins.find((pin) => pin.contact === 10)?.direction).toBe("reserved-test-only")
+    expect(controlHarnessPins.find((pin) => pin.contact === 10)?.rule).toContain("no allocated GPIO")
     expect(communicationsPowerBoundary.moduleIoEnable.rampDefault).toContain("100 kOhm")
     expect(communicationsPowerBoundary.moduleInputStates.W5500_MISO).toContain("prevents")
     expect(communicationsPowerBoundary.moduleInputStates.W5500_INT_N).toContain("push-pull")
     expect(communicationsPowerBoundary.carrierDefaults.INT_N).toContain("disconnected state only")
+    expect(communicationsPowerBoundary.carrierDefaults.RESET_ASSERT).toContain("test-only")
+    expect(communicationsPowerBoundary.statusRule).toContain("polling/test-point-only")
   })
 
   it("separates chassis shield from application ground and prohibits internal hot-plug", () => {

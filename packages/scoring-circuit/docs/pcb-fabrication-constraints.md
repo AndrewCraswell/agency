@@ -18,7 +18,10 @@ Use the production plan's three physical assemblies:
 Use high-Tg FR-4 with 2 oz outer copper and 1 oz inner copper on the two six-layer boards. The communications module
 needs its own fabricator-approved four-layer construction and current/thermal proof. Passive socket modules transfer
 body-cord insertion loads into the chassis and join the scoring I/O board through keyed harnesses; they are not treated
-as a fourth logic PCB. The current single four-layer preview does not implement these boundaries and remains denied.
+as a fourth logic PCB. Separate six-layer scoring I/O and application/display physical planning models now represent
+the two main envelopes. The legacy combined model remains the logical end-to-end connectivity view, not a fabrication
+preview. The communications model, released outlines, connector placement, stack-up, routing, and every other evidence
+gate remain denied.
 
 The six-layer choices provide two continuous reference layers, a dedicated power-distribution layer, and enough signal
 layers to keep the USB2, Ethernet, isolation, analog, and HUB75 paths from borrowing one another's return paths. It is
@@ -26,8 +29,9 @@ a manufacturability target, not evidence that the current four-layer preview has
 
 The executable contract is in [`src/pcb-fabrication-constraints.ts`](../src/pcb-fabrication-constraints.ts), with
 regression coverage in [`src/pcb-fabrication-constraints.test.ts`](../src/pcb-fabrication-constraints.test.ts). The
-default result intentionally denies the current model because it combines the assemblies, has four layers, generic or
-do-not-place critical footprints, no physical isolation barrier, and no routed/DRC/thermal evidence.
+default result now recognizes three separate planning assemblies and the declared six/six/four layer counts. It remains
+denied because finished thickness is a contract datum rather than emitted model evidence, critical footprints are
+generic or DNP, the isolation endpoints are not a released connector/slot, and routed/DRC/thermal evidence is absent.
 
 ## Proposed manufacturer-neutral stack-ups
 
@@ -98,8 +102,9 @@ Place by current ownership and return path, not by visual symmetry:
    Ethernet PHY, field, chassis, and control interconnect between it and the application carrier. Plug, latch, insertion,
    and cable loads must reach chassis fasteners rather than relying on SMT pads or a generic PCB header.
 
-The current 160 mm by 100 mm board rectangle is a placement-preview parameter only. It is not an enclosure dimension,
-mounting-hole callout, connector panel drawing, or final board outline.
+The legacy 160 mm by 100 mm logical board rectangle is not a physical-board preview, enclosure dimension, mounting-hole
+callout, connector panel drawing, or final board outline. The separate physical planning models use only the provisional
+290 mm by 70 mm scoring and 290 mm by 135 mm application envelopes; they are not released outlines.
 
 ## Grounding, isolation, and ESD contract
 

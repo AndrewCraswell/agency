@@ -20,7 +20,11 @@ The external USB-C port negotiates the provisional 20 V, 3 A contract. The eFuse
 
 `COMM_3V3` is supervised by `TPS389033DSER`. The 10 kOhm reset pull-up drives only W5500 reset and the high-impedance input of `SN74LVC1G34DCKR`; the buffer drives the separate `COMM_IO_ENABLE` net and its five 100 kOhm OE pull-downs. A separate 1 MOhm buffer-input pull-down keeps the enable source defined while unpowered. At 3.135 V minimum rail, 10.1 kOhm maximum pull-up, and 0.99 MOhm minimum pull-down, reset release is at least 3.103 V. This exceeds a conservative 2.426 V W5500 input-high limit at 3.465 V maximum rail by 0.677 V. The buffer's output drives less than 0.18 mA through all five worst-case OE pull-downs, far below its rated output test current. Therefore no J_CTRL signal can back-power the unpowered module through W5500 I/O. `W5500_MISO` also has a local 100 kOhm pull-down.
 
-`COMM_RESET_ASSERT` is an active-high carrier request. It drives only the gate of module-local `BSS138AKA`; the FET source goes to module ground and its drain only pulls `W5500_RST_N` low. It cannot drive the W5500 reset high or bypass the local supervisor.
+`COMM_RESET_ASSERT` is a reserved active-high fixture request, not a firmware-driven carrier signal. The carrier has no
+allocated GPIO: it exposes only a test pad and 100 kOhm pull-down. A fixture assertion drives the gate of module-local
+`BSS138AKA`; the FET source goes to module ground and its drain only pulls `W5500_RST_N` low. It cannot drive the W5500
+reset high or bypass the local supervisor. `COMM_PRESENT_N` is test-point-only status and `W5500_INT_N` is
+polling/test-point-only on the carrier.
 
 ## Ground and shield boundary
 

@@ -49,10 +49,13 @@ ties to `GND` through 1 kOhm. On the carrier it has a 100 kOhm pull-up to `V3_3`
 mating only; it does not detect latch engagement. It is status-only and cannot enable SPI, release W5500 reset, or
 bypass local power-good sequencing by itself.
 
-`COMM_RESET_ASSERT` is active-high and reaches only the gate of a module-local `BSS138AKA`; a 100 kOhm gate pull-down
-holds the sink off when the carrier is absent. Its drain joins the local W5500 reset node and its source is module
-`GND`. A module-local `TPS389033DSER` also holds that reset node low until `COMM_3V3` is valid. The W5500 reset node can
-rise through its 10 kOhm `COMM_3V3` pull-up only when the supervisor releases and `COMM_RESET_ASSERT` is low.
+`COMM_RESET_ASSERT` is reserved for fixture testing because no application GPIO is allocated. The carrier exposes a
+test pad and holds the line low with 100 kOhm; firmware cannot assert it. A fixture-driven high reaches only the gate of
+a module-local `BSS138AKA`; a module-side 100 kOhm gate pull-down holds the sink off when the carrier is absent. Its
+drain joins the local W5500 reset node and its source is module `GND`. A module-local `TPS389033DSER` also holds that
+reset node low until `COMM_3V3` is valid. The W5500 reset node can rise through its 10 kOhm `COMM_3V3` pull-up only when
+the supervisor releases and `COMM_RESET_ASSERT` is low. `COMM_PRESENT_N` is test-point-only presence status, while
+`W5500_INT_N` is polling/test-point-only; neither has an application GPIO allocation.
 
 Module-side `SN74LVC2G126DCUR` gates SCK and MOSI, and `SN74LVC1G126DCKR` gates chip select. A second
 `SN74LVC2G126DCUR` gates MISO and interrupt. These exact active TI parts specify `IOFF` partial-power-down protection.
