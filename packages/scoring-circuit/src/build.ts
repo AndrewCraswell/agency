@@ -176,6 +176,27 @@ const previewHtml = `<!doctype html>
     .viewer-controls { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; }
     .viewer-controls button { border: 1px solid #60788a; border-radius: 6px; padding: 8px 12px; background: #172630; color: #eef4f8; font: inherit; font-weight: 700; cursor: pointer; }
     .viewer-help { margin: 10px 0 0; color: #b7c7d3; }
+    .simulation-layout { display: grid; gap: 16px; }
+    .simulation-summary { display: grid; grid-template-columns: repeat(4, minmax(150px, 1fr)); gap: 12px; }
+    .simulation-card { border: 1px solid #33424f; border-radius: 8px; padding: 14px; background: #172630; }
+    .simulation-card strong { display: block; margin-top: 5px; font-size: 1.35rem; }
+    .simulation-card span { color: #b7c7d3; font-size: 0.9rem; }
+    .simulation-card.blocked { border-color: #d99124; background: #2a210e; }
+    .simulation-chart { width: 100%; min-height: 360px; border: 1px solid #33424f; border-radius: 8px; background: #0d161d; }
+    .simulation-chart text { fill: #b7c7d3; font-family: system-ui, sans-serif; font-size: 12px; }
+    .simulation-chart .grid { stroke: #33424f; stroke-width: 1; }
+    .simulation-chart .boundary-series { fill: none; stroke: #55c2ff; stroke-width: 3; }
+    .simulation-chart .slow-series { fill: none; stroke: #ffb84d; stroke-width: 3; }
+    .simulation-legend { display: flex; flex-wrap: wrap; gap: 16px; color: #b7c7d3; }
+    .simulation-legend span::before { display: inline-block; width: 18px; height: 3px; margin: 0 7px 3px 0; background: #55c2ff; content: ""; }
+    .simulation-legend span:last-child::before { background: #ffb84d; }
+    .simulation-details { display: grid; grid-template-columns: minmax(260px, 0.8fr) minmax(320px, 1.2fr); gap: 16px; }
+    .simulation-details article { border: 1px solid #33424f; border-radius: 8px; padding: 16px; background: #172630; }
+    .simulation-details h2 { margin-top: 0; font-size: 1.05rem; }
+    .pulse-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; list-style: none; }
+    .pulse-list li { border: 1px solid #60788a; border-radius: 999px; padding: 6px 10px; }
+    .limitation-list { margin-bottom: 0; color: #d5dde3; }
+    .simulation-status { padding: 40px 16px; text-align: center; color: #b7c7d3; }
     .io-assembly { display: grid; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: 16px; }
     .io-module { border: 1px solid #60788a; border-radius: 10px; padding: 18px; background: #172630; }
     .io-module h2 { margin: 0 0 6px; font-size: 1.05rem; }
@@ -197,6 +218,8 @@ const previewHtml = `<!doctype html>
       img { min-height: 220px; max-height: none; }
       .viewer-shell { min-height: 300px; height: 52vh; }
       .io-assembly { grid-template-columns: 1fr; }
+      .simulation-summary { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
+      .simulation-details { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -217,6 +240,7 @@ const previewHtml = `<!doctype html>
     <button id="tab-pcb" role="tab" aria-selected="true" aria-controls="view-pcb" tabindex="0">PCB</button>
     <button id="tab-schematic" role="tab" aria-selected="false" aria-controls="view-schematic" tabindex="-1">Schematic</button>
     <button id="tab-3d" role="tab" aria-selected="false" aria-controls="view-3d" tabindex="-1">3D</button>
+    <button id="tab-simulation" role="tab" aria-selected="false" aria-controls="view-simulation" tabindex="-1">Simulation</button>
     <button id="tab-io" role="tab" aria-selected="false" aria-controls="view-io" tabindex="-1">External I/O</button>
   </div>
   <main>
@@ -235,6 +259,14 @@ const previewHtml = `<!doctype html>
           <div class="viewer-controls"><button id="reset-3d-view" type="button">Reset view</button></div>
         </div>
         <p class="viewer-help">Drag to rotate. Scroll to zoom. Use the arrow keys when the model is focused. <a href="board-3d.svg">Open the static 3D export</a>.</p>
+      </figure>
+    </section>
+    <section id="view-simulation" role="tabpanel" aria-labelledby="tab-simulation" hidden>
+      <figure>
+        <figcaption>Analog front-end simulation. This is nominal model evidence, not fabrication approval.</figcaption>
+        <div id="simulation-visual" class="simulation-layout">
+          <p class="simulation-status" role="status">Loading simulation results</p>
+        </div>
       </figure>
     </section>
     <section id="view-io" role="tabpanel" aria-labelledby="tab-io" hidden>
@@ -308,6 +340,137 @@ const previewHtml = `<!doctype html>
         selectTab(tabs[nextIndex], true)
       })
     }
+
+    const simulationRoot = document.querySelector('#simulation-visual')
+    const svgNamespace = 'http://www.w3.org/2000/svg'
+
+    function metricCard(label, value, blocked = false) {
+      const card = document.createElement('div')
+      card.className = blocked ? 'simulation-card blocked' : 'simulation-card'
+      const labelNode = document.createElement('span')
+      labelNode.textContent = label
+      const valueNode = document.createElement('strong')
+      valueNode.textContent = value
+      card.append(labelNode, valueNode)
+      return card
+    }
+
+    function svgNode(name, attributes = {}) {
+      const node = document.createElementNS(svgNamespace, name)
+      for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, String(value))
+      return node
+    }
+
+    function renderResponseChart(results) {
+      const width = 960
+      const height = 380
+      const margin = { left: 62, right: 22, top: 24, bottom: 50 }
+      const chartWidth = width - margin.left - margin.right
+      const chartHeight = height - margin.top - margin.bottom
+      const boundary = results.filter((result) => result.family === 'resistance-boundary')
+      const slow = results.filter((result) => result.family === 'slow-resistance-corner-proxy')
+      const maximumResponse = Math.max(30, ...results.map((result) => result.responseUs))
+      const x = (loadOhms) => margin.left + (loadOhms / 500) * chartWidth
+      const y = (responseUs) => margin.top + chartHeight - (responseUs / maximumResponse) * chartHeight
+      const svg = svgNode('svg', {
+        'aria-label': 'Response time by simulated line resistance',
+        class: 'simulation-chart',
+        role: 'img',
+        viewBox: '0 0 ' + width + ' ' + height
+      })
+
+      for (const resistance of [0, 100, 200, 300, 400, 500]) {
+        svg.append(svgNode('line', { class: 'grid', x1: x(resistance), x2: x(resistance), y1: margin.top, y2: margin.top + chartHeight }))
+        const label = svgNode('text', { 'text-anchor': 'middle', x: x(resistance), y: height - 18 })
+        label.textContent = String(resistance)
+        svg.append(label)
+      }
+      for (const response of [0, 10, 20, 30]) {
+        svg.append(svgNode('line', { class: 'grid', x1: margin.left, x2: width - margin.right, y1: y(response), y2: y(response) }))
+        const label = svgNode('text', { 'text-anchor': 'end', x: margin.left - 10, y: y(response) + 4 })
+        label.textContent = String(response)
+        svg.append(label)
+      }
+      const xLabel = svgNode('text', { 'text-anchor': 'middle', x: margin.left + chartWidth / 2, y: height - 2 })
+      xLabel.textContent = 'Line resistance (ohms)'
+      const yLabel = svgNode('text', { 'text-anchor': 'middle', transform: 'rotate(-90 14 190)', x: 14, y: 190 })
+      yLabel.textContent = 'Response time (microseconds)'
+      svg.append(xLabel, yLabel)
+
+      const points = (series) => series.map((result) => x(result.loadOhms) + ',' + y(result.responseUs)).join(' ')
+      svg.append(
+        svgNode('polyline', { class: 'boundary-series', points: points(boundary) }),
+        svgNode('polyline', { class: 'slow-series', points: points(slow) })
+      )
+      return svg
+    }
+
+    function renderSimulation(summary) {
+      const results = Array.isArray(summary.results) ? summary.results : []
+      if (results.length === 0) throw new Error('The simulation report contains no cases')
+      const maximumResponse = Math.max(...results.map((result) => result.responseUs))
+      const maximumError = Math.max(...results.map((result) => result.steadyStateErrorMv))
+      simulationRoot.replaceChildren()
+
+      const cards = document.createElement('div')
+      cards.className = 'simulation-summary'
+      cards.append(
+        metricCard('Simulated cases', String(results.length)),
+        metricCard('Nominal steady-state check', summary.acceptance?.passed ? 'Pass' : 'Fail', !summary.acceptance?.passed),
+        metricCard('Slowest response', maximumResponse.toFixed(2) + ' us'),
+        metricCard('Fabrication status', 'Blocked', true)
+      )
+
+      const chart = renderResponseChart(results)
+      const legend = document.createElement('div')
+      legend.className = 'simulation-legend'
+      const boundaryLegend = document.createElement('span')
+      boundaryLegend.textContent = '500 pF resistance boundary sweep'
+      const slowLegend = document.createElement('span')
+      slowLegend.textContent = '10 nF slow-corner proxy'
+      legend.append(boundaryLegend, slowLegend)
+
+      const details = document.createElement('div')
+      details.className = 'simulation-details'
+      const coverage = document.createElement('article')
+      const coverageTitle = document.createElement('h2')
+      coverageTitle.textContent = 'Pulse coverage'
+      const pulseList = document.createElement('ul')
+      pulseList.className = 'pulse-list'
+      for (const widthUs of summary.coverage?.pulseWidthUs ?? []) {
+        const item = document.createElement('li')
+        item.textContent = widthUs >= 1000 ? widthUs / 1000 + ' ms' : widthUs + ' us'
+        pulseList.append(item)
+      }
+      const errorNote = document.createElement('p')
+      errorNote.textContent = 'Largest nominal steady-state error: ' + maximumError.toFixed(4) + ' mV.'
+      coverage.append(coverageTitle, pulseList, errorNote)
+
+      const limitations = document.createElement('article')
+      const limitationsTitle = document.createElement('h2')
+      limitationsTitle.textContent = 'Why fabrication is still blocked'
+      const limitationList = document.createElement('ul')
+      limitationList.className = 'limitation-list'
+      for (const limitation of summary.modelLimitations ?? []) {
+        const item = document.createElement('li')
+        item.textContent = limitation
+        limitationList.append(item)
+      }
+      limitations.append(limitationsTitle, limitationList)
+      details.append(coverage, limitations)
+      simulationRoot.append(cards, chart, legend, details)
+    }
+
+    fetch('analog-sim/summary.json')
+      .then((response) => {
+        if (!response.ok) throw new Error('Simulation results are unavailable')
+        return response.json()
+      })
+      .then(renderSimulation)
+      .catch((error) => {
+        const status = simulationRoot.querySelector('.simulation-status')
+        if (status) status.textContent = error instanceof Error ? error.message : 'Simulation results are unavailable'
+      })
   </script>
   <script defer src="interactive-3d-viewer.js?v=interactive"></script>
 </body>
