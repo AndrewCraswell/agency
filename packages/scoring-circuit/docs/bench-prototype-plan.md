@@ -55,6 +55,19 @@ This prototype does not close or require:
 Those are production gates. The bench board must preserve the architecture
 needed to test them later without pretending it already satisfies them.
 
+## Documentation authority
+
+This page is the only active hardware backlog. Earlier roadmaps for a
+three-board apparatus, communications carrier, enclosure envelope, production
+stack-up, and factory fabrication release have been removed so they cannot
+compete with this prototype sequence.
+
+Component-selection records, manufacturer-footprint evidence, analog studies,
+pin-allocation audits, Ethernet support calculations, and connector test
+records remain reusable technical evidence. Their production-oriented status
+language does not add work to this backlog unless a `BP-*` task explicitly
+uses that evidence.
+
 ## One-board architecture
 
 Use a provisional four- or six-layer rectangular board on standoffs, with no

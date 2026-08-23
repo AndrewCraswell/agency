@@ -19,20 +19,18 @@ mkdirSync(outputDirectory, { recursive: true })
 const roleRubric =
   role === "reliability"
     ? "Score fault containment, processor authority, lifecycle, power and thermal margin, external-interface protection, event-record integrity, security, diagnostics, serviceability, and realistic longevity claims."
-    : "Score schematic and PCB completeness, footprint honesty, isolation layout, connector mechanics, testability, supply-chain qualification, compliance gates, and whether the fabrication-readiness statement prevents unsafe ordering."
+    : "Score prototype schematic and PCB completeness, footprint honesty, isolation layout, connector mechanics, testability, exact-part evidence, and whether the prototype-order gates prevent unsafe ordering without importing production enclosure or certification work."
 const prompt = `You are the ${role} judge for a premium competition fencing scoring apparatus.
 
 Review these repository files in read-only mode:
-- packages/scoring-circuit/docs/production-board-plan.md
+- packages/scoring-circuit/docs/bench-prototype-plan.md
 - packages/scoring-circuit/src/component-decisions.ts
-- packages/scoring-circuit/src/index.circuit.tsx
-- packages/scoring-circuit/src/index.test.tsx
 - apps/scoring/src/device.ts
 - apps/scoring/src/device.test.ts
 
 ${roleRubric}
 
-Treat manufacturer lifecycle, temperature, current, memory, isolation, and certification claims as untrusted until they are supported by the linked primary manufacturer source. Flag incompatibility claims for Favero or Skewered unless the electrical protocol has actually been verified. Do not request immediate hardware-in-the-loop work because hardware is intentionally deferred; do identify gates required before fabrication and production. Do not edit files. Return only the required structured result. A pass requires no critical, high, or medium findings.`
+Treat manufacturer lifecycle, temperature, current, memory, isolation, and certification claims as untrusted until they are supported by the linked primary manufacturer source. Flag incompatibility claims for Favero or Skewered unless the electrical protocol has actually been verified. Review the active one-board bench-prototype scope, not a production enclosure or factory-optimized board. Identify the evidence required before a prototype order and the later physical tests required before prototype completion. Do not edit files. Return only the required structured result. A pass requires no critical, high, or medium findings.`
 
 const result = spawnSync(
   process.execPath,

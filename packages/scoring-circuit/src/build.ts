@@ -115,11 +115,13 @@ const bomCsv = [
   )
 ].join("\n")
 const readiness = {
+  canonicalBenchPrototype: false,
   fabricationReady: false,
   generatedAt: new Date().toISOString(),
+  modelAuthority: "retained-multi-assembly-evidence",
   modelPurpose:
-    "Architecture, constrained functional placement, prototype autorouting, connector topology, and isolation review",
-  prototypeRouting: {
+    "Retained multi-assembly architecture, constrained placement, connector topology, and isolation review; not the canonical one-board bench prototype",
+  retainedArchitectureRouting: {
     connectionCount,
     routeCount,
     unresolvedConnectionCount
@@ -136,10 +138,10 @@ const readiness = {
   openGates: [
     "Complete and characterize the three-weapon analog front end",
     "Select every connector, protection device, passive, magnetics part, and power inductor",
-    "Complete the full production pin map and decoupling network",
+    "Complete the exact bench-prototype pin maps and decoupling networks",
     "Run schematic ERC and independent mixed-signal review",
-    "Route the controlled four-layer stack-up and pass PCB DRC",
-    "Complete SI, PI, thermal, EMC, safety, mechanical, and manufacturing reviews"
+    "Select the prototype four- or six-layer stack-up, route the board, and pass PCB DRC",
+    "Complete the BP-300 through BP-403 schematic, layout, output, and independent prototype-order reviews"
   ]
 } as const
 const previewHtml = `<!doctype html>
@@ -225,9 +227,9 @@ const previewHtml = `<!doctype html>
 </head>
 <body>
   <h1>Competition scoring apparatus board model</h1>
-  <p class="warning"><strong>Architecture review only.</strong> This model is not ready for fabrication. See the readiness report and production plan before ordering hardware.</p>
+  <p class="warning"><strong>Retained architecture evidence only.</strong> This generated model is not the canonical one-board bench schematic and is not ready for fabrication. Follow the bench prototype plan and BP-300 through BP-403 before ordering hardware.</p>
   <ul class="metrics" aria-label="Prototype routing summary">
-    <li><strong>${routeCount}</strong> prototype routes</li>
+    <li><strong>${routeCount}</strong> retained architecture routes</li>
     <li><strong>${unresolvedConnectionCount}</strong> unresolved connections</li>
     <li><strong>4</strong> functional placement zones</li>
     <li><strong>${resolvedSupplierPartCount}</strong> candidate supplier matches</li>
@@ -235,7 +237,7 @@ const previewHtml = `<!doctype html>
     <li><strong>${partReadinessSummary.manufacturerVerifiedCad}</strong> manufacturer-verified critical CAD models</li>
     <li><strong>${partReadinessSummary.productionApproved}</strong> fabrication-approved critical parts</li>
   </ul>
-  <p class="resources"><a href="../docs/production-board-plan.md">Production plan</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="critical-part-readiness.json">Critical-part evidence</a><a href="bom.csv">Component decisions</a><a href="http://127.0.0.1:4178/">Bout test simulator</a></p>
+  <p class="resources"><a href="../docs/bench-prototype-plan.md">Bench prototype plan</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="critical-part-readiness.json">Critical-part evidence</a><a href="bom.csv">Component decisions</a><a href="http://127.0.0.1:4178/">Bout test simulator</a></p>
   <div class="tabs" role="tablist" aria-label="Circuit views">
     <button id="tab-pcb" role="tab" aria-selected="true" aria-controls="view-pcb" tabindex="0">PCB</button>
     <button id="tab-schematic" role="tab" aria-selected="false" aria-controls="view-schematic" tabindex="-1">Schematic</button>

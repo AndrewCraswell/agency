@@ -10,13 +10,15 @@ formats, and a machine-readable readiness report. The canonical component choice
 Critical connector and processor evidence is tracked separately in `src/part-readiness.ts`; the build exports that
 manifest as `dist/critical-part-readiness.json` and refuses invalid approval claims.
 
+The current generated `dist` board remains retained multi-assembly architecture evidence. It is not the canonical
+one-board bench schematic or PCB described by the active prototype backlog.
+
 Read `docs/bench-prototype-plan.md` for the active one-board prototype backlog, dependency graph, and physical-test
 acceptance evidence. It keeps the exact STM32, ESP32-S3, isolation, and W5500 Ethernet silicon while deferring the
-enclosure and factory-optimized three-board implementation. Read `docs/production-board-plan.md` for that longer-term
-factory architecture, requirements matrix, event replay design, component rationale, reliability program, compliance
-work, and release gates. The read-only LLM review workflows are documented in `judges/README.md`. The bounded
-three-weapon sensing topology, ngspice model, and socketed fixture plan are documented in `docs/analog-front-end.md`.
-The present-rule compatibility strategy and proposed FIE update are in `docs/fie-modern-power-proposal.md`.
+enclosure and factory-optimized implementation. The read-only LLM review workflows are documented in `judges/README.md`.
+The bounded three-weapon sensing topology, ngspice model, and socketed fixture plan are documented in
+`docs/analog-front-end.md`. The present-rule compatibility strategy and proposed FIE update are in
+`docs/fie-modern-power-proposal.md`.
 
 The M4-03 source, switch, reference, acquisition, timing, and error budget is in `docs/m4-03-analog-error-budget.md`. It
 records conditional measurement gates and does not release the candidate front end for fabrication.
@@ -34,10 +36,9 @@ remaining service-port gates are in `docs/usb-c-service-power-architecture.md`. 
 regulator, exact support network, supervisor threshold margin, and thermal/startup calculation are in
 `docs/application-3v3-rail.md`. The selected V5 buck stage, its explicit eFuse peak conflict, and its thermal/layout
 release gates are in `docs/v5-power-stage.md`. The selected Adafruit 2277 EVT panel's end-to-end USB-PD,
-application-rail, V5, shunt, and startup/inrush screen is in `docs/selected-panel-power-closure.md`. The proposed
-three-assembly PCB topology, stack-ups, split-ground and isolated-domain contract, impedance targets, placement zones,
-HUB75 harness rules, connector ESD strategy, and fabrication release checklist are in
-`docs/pcb-fabrication-constraints.md`. Its executable constraint screen is in `src/pcb-fabrication-constraints.ts`.
+application-rail, V5, shunt, and startup/inrush screen is in `docs/selected-panel-power-closure.md`. Production-oriented
+mechanical roadmaps are intentionally excluded from the active backlog. Reusable component, footprint, analog, Ethernet,
+connector, and power evidence remains available as technical input to the bench-prototype tasks.
 
 ## Fabrication status
 

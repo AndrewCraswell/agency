@@ -2,7 +2,7 @@
 
 ## Status
 
-This M0-08 document is a candidate allocation, not a schematic release, CubeMX project, hardware approval, or fabrication authorization. It audits the selected STM32G474RET3TR, its 64-pin LQFP package, the current circuit architecture, the analog-front-end proposal, and the production-board plan.
+This M0-08 document is a candidate allocation, not a schematic release, CubeMX project, hardware approval, or fabrication authorization. It audits the selected STM32G474RET3TR, its 64-pin LQFP package, the current circuit architecture, the analog-front-end proposal, and the bench-prototype plan.
 
 The allocation preserves STM32-exclusive acquisition, scoring, lamps, and buzzer. It does not give the ESP32 an unisolated scoring signal or authority to decide a touch.
 

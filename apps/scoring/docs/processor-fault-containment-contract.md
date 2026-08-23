@@ -6,8 +6,8 @@
 transport-frame specification, electrical schematic, or power-sequencing design.
 
 This contract applies the terminology in [the scoring glossary](scoring-glossary.md), the FIE mappings in
-[the traceability matrix](fie-traceability-matrix.md), and the intended three-assembly boundary in
-[the production board plan](../../../packages/scoring-circuit/docs/production-board-plan.md). The STM32G474 and
+[the traceability matrix](fie-traceability-matrix.md), and the intended processor boundary in
+[the bench prototype plan](../../../packages/scoring-circuit/docs/bench-prototype-plan.md). The STM32G474 and
 ESP32-S3 allocation audits are candidate evidence, not proof that every control path exists.
 
 ## Authority boundary

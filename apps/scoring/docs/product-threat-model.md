@@ -7,7 +7,7 @@ This contract covers the scoring apparatus, its two processor domains, isolated 
 flow, firmware delivery, and event records. It is read with the [device delivery plan](device-delivery-plan.md),
 [processor fault-containment contract](processor-fault-containment-contract.md), [transport-frame
 contract](transport-frame-contract.md), [power and reset-state contract](power-reset-state-contract.md), and
-[decision-record contract](decision-record-contract.md). The [production board plan](../../../packages/scoring-circuit/docs/production-board-plan.md),
+[decision-record contract](decision-record-contract.md). The [bench prototype plan](../../../packages/scoring-circuit/docs/bench-prototype-plan.md),
 [candidate ESP32 allocation](../../../packages/scoring-circuit/docs/esp32-pin-allocation.md), and [candidate STM32
 allocation](../../../packages/scoring-circuit/docs/stm32-pin-allocation.md) are design inputs, not proof that hardware
 paths exist.
@@ -92,7 +92,7 @@ firmware/boot provenance context. Identity is checked during provisioning, servi
 creation. Missing identity produces an uncertainty/reset record, not a fabricated value. Timing-affecting configuration
 still requires an approved STM32 manifest and local confirmation.
 
-The production plan names STSAFE-A110 as a candidate for a non-exportable device key and authenticated service identity.
+The component decision register names STSAFE-A110 as a candidate for a non-exportable device key and authenticated service identity.
 Its final circuit, key slots, protocol, attestation, and provisioning flow are not established by the part name. M3-10,
 M6-03, and M8-02 must demonstrate unique identity, protected secrets, read-back, revocation/recovery, and serialized
 results without exporting private keys.
@@ -163,7 +163,7 @@ latch; that external-latch or retained/revalidated-output decision is a release 
 | Rollback and anti-rollback | Sections 3 and 6; M0-10 `updateReset`; M3-10 recovery design; M6-06/M6-07 interruption/fault tests; M7-08/M7-09; M8-02. |
 | Device identity | Section 3; M0-05 provenance; M3-10 identity design; M6-03 unique provisioning; M8-02 protected-secret audit. |
 | Debug access | Section 4; candidate STM32/ESP32 allocations; M5-04/M5-06 schematics; M6-03 programming/recovery; M7-08 service review; M8-02 debug-state audit. |
-| Network isolation | Authority/trust zones, Sections 2 and 5; M0-04; production-board isolation/watchdog plan; M2-06/M2-07; M3-11; M6-07/M6-08; M7-08. |
+| Network isolation | Authority/trust zones, Sections 2 and 5; M0-04; bench-prototype isolation/watchdog tasks; M2-06/M2-07; M3-11; M6-07/M6-08; M7-08. |
 | Malformed frames | Section 5; M0-06 exact bounds/outcomes; M2-05 decoder and M2-13 fuzz; M3-05/M3-09 firmware parser tests; M7-08 penetration review. |
 | Recovery | Section 6; M0-04/M0-10 degraded/unavailable/safe-state contracts; M2-08 power-fail transactions; M3-10 update recovery; M6-06/M6-07; M7-08/M7-09; M8-02/M8-07 service recovery. |
 
