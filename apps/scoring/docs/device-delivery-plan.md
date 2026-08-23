@@ -242,7 +242,7 @@ markets and competition claims.
 | --- | --- | --- | --- |
 | M7-01 | DVT design update and release review | M6-12 | All release-blocking EVT defects are corrected and independently reviewed |
 | M7-02 | DVT build and golden-unit correlation | M7-01 | Units correlate with fixture and EVT golden unit before destructive testing |
-| M7-03 | Formal timing and resistance qualification | M7-02 | All three weapons pass boundary matrix across temperature, input tolerance, cable, and UPS transfer |
+| M7-03 | Formal timing and resistance qualification | M7-02, BT-10 | All three weapons pass boundary matrix across temperature, input tolerance, cable, and UPS transfer using the correlated independent box tester |
 | M7-04 | EMC emissions and immunity qualification | M7-02 | Intended-market radiated/conducted emissions and immunity, ESD, EFT, and surge requirements pass |
 | M7-05 | Electrical safety assessment | M7-02 | External supply, enclosure, materials, wiring, temperature, abnormal operation, and markings meet the selected standard |
 | M7-06 | Environmental, vibration, drop, spill-path, and corrosion program | M7-02 | Predefined functional and cosmetic acceptance criteria pass after exposure |
@@ -251,7 +251,7 @@ markets and competition claims.
 | M7-09 | Long-duration burn-in and accelerated cycling | M7-02 | Reset, corruption, timing drift, thermal, and intermittent-connection rates meet the reliability target |
 | M7-10 | Venue trial and operational workflow report | M7-03 through M7-09 | Referees, armorers, organizers, and service staff complete realistic bouts, setup, diagnostics, and recovery |
 | M7-11 | 24 V FIE SEMI evidence package and engagement | M7-03 through M7-10 | Complete prototype, construction drawings, proposed rule wording, and test evidence are submitted on the required schedule |
-| M7-12 | DVT release decision | M7-03 through M7-11 | Claims are limited to obtained approvals; unresolved FIE power disposition is treated as a product gate |
+| M7-12 | DVT release decision | M7-03 through M7-11, BT-11 | Claims are limited to obtained approvals; unresolved FIE power disposition is treated as a product gate; full operational tester failures are resolved or explicitly denied |
 
 ## M8: Production validation and release
 
@@ -269,6 +269,33 @@ and field service can diagnose and replace wear modules without factory-only kno
 | M8-07 | Service manual, diagnostics, spares, and repair limits | M8-05 | Authorized service can identify and replace wear modules while preserving calibration and safety |
 | M8-08 | Release archive and configuration baseline | M8-05 through M8-07 | Hardware, firmware, rules, BOM, suppliers, fixtures, approvals, manuals, checksums, and known risks share one release identity |
 | M8-09 | Production release decision | M8-08 | Product, engineering, quality, manufacturing, security, compliance, and service owners sign the launch record |
+
+## BT: Independent scoring-box tester program
+
+**Exit criterion:** an independently powered and calibrated tester can drive both reel interfaces plus the piste/ground
+reference, observe the applicable complete-apparatus response, and produce immutable, reviewable evidence for each
+approved three-weapon and operational-behavior case within its declared scope. This is a parallel verification-instrument
+track, not another scoring-box feature and not an automatic FIE approval claim. See [box-tester-roadmap.md](box-tester-roadmap.md).
+
+| ID | Deliverable | Depends on | Acceptance |
+| --- | --- | --- | --- |
+| BT-01 | Tester requirements, independence, and coverage contract | M0-01 through M0-07 | Every normative and product behavior maps to stimulus, independent observation, uncertainty, and evidence; unsupported behavior is explicit |
+| BT-02 | Reel, piste, output-sensor, and safety interface contract | M0-03, M0-10, BT-01 | Two three-contact reel cables, piste/ground, voltage/current range, floating boundaries, misuse, and no-back-power behavior are reviewed |
+| BT-03 | Switch-matrix and programmable-impedance architecture | M4-01, M4-05, BT-02 | Coverage proof chooses the minimum justified topology; resistance, leakage, capacitance, switching time, skew, and fault energy fit allocated limits |
+| BT-04 | Tester sequence language and canonical-scenario compiler | M0-07, M2-12, BT-01 | Scenarios compile deterministically without copied timing constants; invalid, unsupported, or unsafe steps fail closed |
+| BT-05 | Virtual tester and bout-observatory integration | M2-12, BT-04 | Commands, measured transitions, expected/actual outputs, evaluations, and pass/fail/skipped/indeterminate/infrastructure-error states replay on one timeline |
+| BT-06 | Tester schematic, PCB, harness, enclosure, and fabrication review | M4-05, M4-13, BT-02 through BT-05 | Safe defaults, isolation, calibration paths, connectors, test access, strain relief, schematic/layout checks, and manufacturing outputs pass independent review |
+| BT-07 | Prototype bring-up, self-test, and calibration | BT-06 | Incoming inspection, switch topology, resistance/capacitance/timing, delay/skew, leakage, and observer thresholds are measured and archived |
+| BT-08 | Tester fault-containment and uncertainty report | BT-07 | Welded/open switch, wrong cable, DUT overvoltage, power loss, communication loss, and sensor failure force an indeterminate or infrastructure-error result before a pass is issued |
+| BT-09 | Physical-output observer correlation | BT-07, BT-08 | Lamp, buzzer, extension, reset, and unavailable observations correlate with traceable electrical, optical, and acoustic instruments |
+| BT-10 | Three-weapon golden-scenario hardware correlation | M6-05, BT-09 | Commands, measured line states, physical outputs, decision/replay records, and host expectations align for every approved case |
+| BT-11 | Full operational-behavior qualification suite | M6-06 through M6-11, BT-10 | Power/reset, degraded cable, replay, display/audio, coexistence, service, and long-run behavior produce complete reviewable evidence |
+| BT-12 | Tester release, service, and correlation program | M7-03, BT-11 | Multiple testers reproduce limits; a drift-backed calibration interval, golden unit, firmware update, service, and periodic correlation are controlled |
+
+BT-01, BT-04, and BT-05 may proceed before scoring-box PCB fabrication. BT-06 remains blocked until the physical
+seven-conductor, fixture-uncertainty, and harness boundaries are stable. M6 may use calibrated laboratory fixtures before
+BT-12 productization, but formal M7 timing qualification requires BT-10 correlation. M8-03 remains a separate production
+coverage decision even if it reuses validated tester modules or protocols.
 
 ## Recommended initial agent queue
 
