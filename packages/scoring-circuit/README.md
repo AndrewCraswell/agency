@@ -32,6 +32,7 @@ complete pin mapping, passives and protection selection, ERC, routing, DRC, SI/P
 manufacturing, and independent mixed-signal review gates remain open.
 
 The current critical-part manifest selects the ESP32-S3 module, W5500, Würth integrated-magnetics RJ45, Amphenol
-high-cycle USB-C receptacle, and Neutrik locking power connector. The Stäubli reel socket family remains a candidate
-until its exact color variants and fencing-plug fit are verified. None of these parts is marked fabrication-approved:
-manufacturer land-pattern review, mechanical integration, and qualification evidence are still open gates.
+high-cycle USB-C receptacle, and Neutrik locking power connector. The Stäubli reel socket family remains a candidate;
+the manifest records `66.9684-22` and `66.9684-25` as exact left/right bench samples only. None of these parts is marked
+fabrication-approved: manufacturer land-pattern or CAD review, chassis load paths, sample fit, and qualification
+evidence are still open gates.

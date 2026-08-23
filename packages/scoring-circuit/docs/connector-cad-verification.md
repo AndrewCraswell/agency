@@ -6,6 +6,10 @@
 
 **Scope:** selected Ethernet, USB-C service, and 24 V power connectors only.
 
+The manufacturer product pages and primary downloads were rechecked on
+2026-08-23. No source-access or CAD-import status changed; the dated hashes
+below remain the acquired-file record.
+
 ## Evidence status
 
 This is a drawing-source audit, not physical verification. The exact Würth
@@ -149,12 +153,27 @@ The source-of-truth readiness register is
 [`src/part-readiness.ts`](../src/part-readiness.ts). It correctly leaves every
 selected connector unapproved, but the M4-11 source audit exposes the following
 gaps that M4-14 must reconcile rather than masking them with a generic model.
+Its `physical` records now carry the manufacturer-published contact, cycle,
+shield, and retention claims without turning those claims into product
+qualification. `panel-chassis` is used for the XUB-G sockets and NC4MD-LX;
+`pcb-with-chassis-support` is used for the RJ45 and USB-C board parts. Every
+external-panel record carries physical evidence. Current records retain
+non-empty `openGates`; a reviewed record may clear them only with its other
+CAD, footprint, mechanical, and blocker gates closed. The validator rejects
+production approval while any physical gate remains open.
 
 | Reference | Current representation | Required selected-part representation | Status |
 | --- | --- | --- | --- |
 | `J_ETHERNET_MAGJACK` | Generic eight-pin `pinheader` with logical TX, RX, LED, shield, and chassis labels | 7499011121A THT footprint: eight signal holes, four LED holes, two additional diameter-1.6 features, and two diameter-3.25 shell-tab holes, plus panel cutout | **Mismatch.** The header cannot represent the manufacturer hole pattern, LED pins, or shell tabs. |
 | `J_USB_C` | Generic `connector` with `standard="usb_c"`; no selected MPN footprint or shell geometry | 10177070-00011LF right-angle SMT footprint, its exact contact pads, all shield/stake pads, and 0.80 board-thickness constraint | **Mismatch.** A generic USB-C symbol/shape is not its footprint or retention strategy. |
 | `J_POWER_24V` | Generic three-pin `pinheader` with `V24_IN`, `GND`, and `CHASSIS` | NC4MD-LX four-pole D-size, panel-mounted solder-cup connector and keyed internal harness; shell/duplex ground treated as a mechanical and bonding interface | **Mismatch.** Three PCB pins cannot model four power contacts, D-panel cutout, latch, fasteners, or chassis shell. |
+
+The two reel references share one family candidate but have exact bench suffixes
+in the readiness record: `J_L` samples `66.9684-22` (red), and `J_R` samples
+`66.9684-25` (green). These are sample suffixes, not a production BOM choice;
+Stäubli's family evidence does not publish a socket contact-resistance or cycle
+rating, and body-cord plug fit plus the independent chassis retainer remain
+project gates.
 
 The readiness manifest labels all three connector CAD records as `pending`.
 That remains accurate: acquired source files have not been imported or

@@ -128,6 +128,39 @@ describe("critical-part readiness", () => {
 
     expect(validateCriticalPartReadiness([basePart])).toEqual([])
     expect(validateCriticalPartReadiness(incompleteParts)).toHaveLength(incompleteParts.length)
+    const physicalGatePart: CriticalPartReadiness = {
+      ...basePart,
+      assembly: "external-panel-module",
+      mpn: "OPEN-PHYSICAL-GATE",
+      physical: {
+        contactRating: "5 milliohms",
+        cycleRating: "1000 cycles",
+        interface: "locking-power",
+        mounting: "panel-chassis",
+        openGates: ["CAD overlay"],
+        retention: "Latch",
+        shield: "Metal shell"
+      },
+      references: ["J_OPEN_PHYSICAL_GATE"]
+    }
+    expect(validateCriticalPartReadiness([physicalGatePart])).toContain(
+      "OPEN-PHYSICAL-GATE: production approval requires every readiness gate to pass"
+    )
+    const reviewedExternalPart: CriticalPartReadiness = {
+      ...basePart,
+      assembly: "external-panel-module",
+      physical: {
+        contactRating: "5 milliohms",
+        cycleRating: "1000 cycles",
+        interface: "locking-power",
+        mounting: "panel-chassis",
+        openGates: [],
+        retention: "Latch",
+        shield: "Metal shell"
+      },
+      references: ["J_REVIEWED"]
+    }
+    expect(validateCriticalPartReadiness([reviewedExternalPart])).toEqual([])
     expect(summarizeCriticalPartReadiness([basePart])).toEqual({
       candidateSelections: 0,
       manufacturerVerifiedCad: 1,
@@ -137,6 +170,60 @@ describe("critical-part readiness", () => {
       verifiedFootprints: 1,
       verifiedMechanical: 1
     })
+  })
+
+  it("requires physical evidence for external modules and rejects blank or duplicate claims", () => {
+    const readiness: readonly CriticalPartReadiness[] = criticalPartReadiness
+    const powerInput = readiness.find((part) => part.references.some((reference) => reference === "J_POWER_24V"))
+    if (powerInput === undefined || powerInput.physical === undefined) {
+      throw new Error("The selected power input must carry physical evidence")
+    }
+
+    const missingPhysical = { ...powerInput, physical: undefined }
+    expect(validateCriticalPartReadiness([missingPhysical])).toContain(
+      "NC4MD-LX: external-panel-module requires physical evidence"
+    )
+
+    const missingReelSamples: CriticalPartReadiness = {
+      ...powerInput,
+      mpn: "REEL-MISSING-SAMPLES",
+      physical: {
+        ...powerInput.physical,
+        exactSampleMpns: [],
+        interface: "reel-socket"
+      }
+    }
+    expect(validateCriticalPartReadiness([missingReelSamples])).toEqual(
+      expect.arrayContaining([
+        "REEL-MISSING-SAMPLES: reel-socket physical evidence requires exact sample MPNs",
+        "REEL-MISSING-SAMPLES: exactSampleMpns must not be empty when present"
+      ])
+    )
+
+    const malformedPhysical: CriticalPartReadiness = {
+      ...powerInput,
+      mpn: "MALFORMED-PHYSICAL",
+      physical: {
+        ...powerInput.physical,
+        contactRating: " ",
+        cycleRating: "",
+        exactSampleMpns: ["66.9684-22", "", "66.9684-22"],
+        openGates: [""],
+        retention: "\t",
+        shield: ""
+      }
+    }
+    expect(validateCriticalPartReadiness([malformedPhysical])).toEqual(
+      expect.arrayContaining([
+        "MALFORMED-PHYSICAL: physical contactRating must be nonblank",
+        "MALFORMED-PHYSICAL: physical cycleRating must be nonblank",
+        "MALFORMED-PHYSICAL: physical open gate must be nonblank",
+        "MALFORMED-PHYSICAL: exact sample MPN must be nonblank",
+        "MALFORMED-PHYSICAL: exact sample MPN is duplicated",
+        "MALFORMED-PHYSICAL: physical retention must be nonblank",
+        "MALFORMED-PHYSICAL: physical shield must be nonblank"
+      ])
+    )
   })
 
   it("keeps chassis connectors off the main-board footprint approval path", () => {
@@ -155,6 +242,29 @@ describe("critical-part readiness", () => {
     }
     expect(reelSockets?.assembly).toBe("external-panel-module")
     expect(reelSockets?.footprint.status).toBe("not-applicable")
+  })
+
+  it("records exact reel sample suffixes and keeps every physical interface gated", () => {
+    const readiness: readonly CriticalPartReadiness[] = criticalPartReadiness
+    const reelSockets = readiness.find((part) => part.references.some((reference) => reference === "J_L"))
+    const ethernet = readiness.find((part) => part.references.some((reference) => reference === "J_ETHERNET_MAGJACK"))
+    const usb = readiness.find((part) => part.references.some((reference) => reference === "J_USB_C"))
+    const power = readiness.find((part) => part.references.some((reference) => reference === "J_POWER_24V"))
+
+    expect(reelSockets?.physical?.exactSampleMpns).toEqual(["66.9684-22", "66.9684-25"])
+    expect(reelSockets?.physical?.mounting).toBe("panel-chassis")
+    expect(reelSockets?.physical?.cycleRating).toContain("Not published")
+    expect(ethernet?.physical?.shield).toContain("shell-tab")
+    expect(ethernet?.physical?.cycleRating).toBe("750 mating cycles")
+    expect(usb?.physical?.contactRating).toContain("40 milliohms")
+    expect(usb?.physical?.cycleRating).toBe("20,000 mating cycles")
+    expect(power?.physical?.retention).toContain("Latch lock")
+    expect(power?.physical?.contactRating).toContain("5 milliohms")
+
+    for (const part of [reelSockets, ethernet, usb, power]) {
+      expect(part?.physical?.openGates.length).toBeGreaterThan(0)
+      expect(part?.productionApproved).toBe(false)
+    }
   })
 
   it("keeps generic connector models from passing selected-part verification", () => {

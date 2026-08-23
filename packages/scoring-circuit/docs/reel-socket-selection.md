@@ -8,10 +8,10 @@ panel assembly has been received or tested for this project.
 
 `Stäubli XUB-G 66.9684-*` remains the candidate family for the six body-cord
 panel sockets: left A/B/C and right A/B/C. This study now fixes the exact
-**bench-sample candidates**, while deliberately not selecting a
-production-approved part or advancing the machine-readable readiness manifest.
-That manifest correctly remains a generic candidate with pending CAD and open
-harness-keying, plug-fit, salt/sweat, and endurance evidence.
+**bench-sample candidates** and records them in the machine-readable readiness
+manifest as sample suffixes only. The manifest still does not select a
+production-approved part: CAD, harness-keying, plug-fit, salt/sweat, retention,
+and endurance evidence remain open.
 
 The final production selection **cannot close in M4-10**. The open work is
 material, not procurement paperwork:
@@ -56,16 +56,21 @@ consistency gate.
 
 Red/left and green/right are product conventions only. FIE prescribes neither
 this side assignment nor socket colours. Do not order production material or
-update the readiness manifest from this table. Production remains denied until
-M4-13 closes the A/B/C physical binding and every physical gate below passes
-on the intended body-cord plugs. If the product convention later changes to a
-colour per circuit, that is an M4-13 decision constrained by M0-03, not an
-inferred fencing standard.
+change the readiness manifest's candidate or approval state from this table;
+the manifest records these two suffixes as bench samples only. Production
+remains denied until M4-13 closes the A/B/C physical binding and every physical
+gate below passes on the intended body-cord plugs. If the product convention
+later changes to a colour per circuit, that is an M4-13 decision constrained by
+M0-03, not an inferred fencing standard.
 
 ## Manufacturer evidence
 
 The following information is from Stäubli primary documentation, checked on
-2026-08-22:
+2026-08-22.
+
+The Stäubli family page, datasheet, and catalogue were rechecked on 2026-08-23;
+no manufacturer-published XUB-G socket contact-resistance or cycle rating was
+found, so the open physical gates remain unchanged.
 
 | Property | Evidence and selection consequence |
 | --- | --- |
@@ -282,7 +287,7 @@ unexplained resistance step is a failure.
 | MPN | `XUB-G 66.9684-*`, candidate | Exact bench candidates are `66.9684-22` left/red and `66.9684-25` right/green; production MPN remains unapproved. |
 | Selection | Candidate; not production-approved | Exact sample order is defined, but all production decisions remain blocked by physical evidence. |
 | Footprint | Not applicable; chassis panel part with M4 harness termination | No change. The enclosure drawing and template still require official CAD/drawing review. |
-| CAD | Pending | Official CAD catalogue entry found, but no file has been downloaded, versioned, or independently checked. Keep pending. |
+| CAD | Pending | Official CAD catalogue entry found and recorded in the readiness manifest, but no file has been downloaded, versioned, or independently checked. Keep pending. |
 | Mechanical | Source identified | Catalogue dimensions/mounting are now recorded, but no actual plug or panel fit has been verified. Keep source-identified. |
 | Blockers | Color suffixes/keyed harnesses; body-cord fit; salt/sweat and cycle validation | Side-colour suffixes are now fixed for samples. Harness, plug fit, retention, CAD, supply consistency, corrosion, and cycle validation remain open. |
 
@@ -291,5 +296,5 @@ It does not unblock M4-12, M4-13, or M4-14 for fabrication. The next actions
 are to close the M4-13 SIG-01 line, panel-order, and keying release under the
 committed M0-03 logical contract, obtain manufacturer CAD plus representative
 foil, epee, and sabre body-cord plug samples, build the fixture panel and
-retainer, and archive measured evidence before changing
-`src/part-readiness.ts` or ordering production material.
+retainer, and archive measured evidence before changing the candidate to a
+production selection or ordering production material.
