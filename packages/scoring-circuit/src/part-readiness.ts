@@ -1,12 +1,23 @@
 export type ReadinessStatus = "pending" | "source-identified" | "verified"
 
 export type ConnectorPhysicalEvidence = {
+  cableMpn?: string
   connectorGender?: string
   contactRating: string
   cycleRating: string
   exactSampleMpns?: readonly string[]
-  interface: "ethernet-rj45" | "interboard-power" | "interboard-usb2" | "locking-power" | "reel-socket" | "usb-c"
+  interface:
+    | "ethernet-rj45"
+    | "interboard-power"
+    | "interboard-usb2"
+    | "locking-power"
+    | "piste-harness"
+    | "primary-output-harness"
+    | "reel-socket"
+    | "usb-c"
+    | "weapon-harness"
   keying?: string
+  mateHousingMpn?: string
   mateMpn?: string
   mounting: "panel-chassis" | "pcb-harness" | "pcb-with-chassis-support"
   openGates: readonly string[]
@@ -15,10 +26,11 @@ export type ConnectorPhysicalEvidence = {
   retention: string
   service?: string
   shield: string
+  terminalMpn?: string
 }
 
 export type CriticalPartReadiness = {
-  assembly: "application-carrier" | "communications-module" | "external-panel-module"
+  assembly: "application-carrier" | "communications-module" | "external-panel-module" | "scoring-io-board"
   blockers: readonly string[]
   cad: {
     status: "manufacturer-verified" | "supplier-candidate" | "not-applicable" | "pending"
@@ -44,6 +56,199 @@ export type CriticalPartReadiness = {
 }
 
 export const criticalPartReadiness = [
+  {
+    assembly: "scoring-io-board",
+    blockers: [
+      "Obtain the configured Molex 43650-0300 and 43645-0300 drawings and exact CAD, then review pin one, copper, solder mask, paste, courtyard, board edge, latch, and exit clearance",
+      "Release the three-conductor 45003 harness drawing with 43030-0007 crimp tooling, pull force, continuity, pinout, label, chassis clamp, vibration, ESD, and analog-fault tests"
+    ],
+    cad: { status: "pending", url: "https://www.molex.com/en-us/products/part-detail/436500300" },
+    evidenceUrls: [
+      "https://www.molex.com/en-us/products/part-detail/436500300",
+      "https://www.molex.com/en-us/products/part-detail/436450300",
+      "https://www.molex.com/en-us/products/part-detail/430300007",
+      "https://www.alphawire.com/products/cable/xtra-guard-performance-cable/xtra-guard-4/45003"
+    ],
+    footprint: {
+      status: "pending",
+      description: "Exact right-angle three-circuit Micro-Fit 3.0 header artwork remains unimported"
+    },
+    manufacturer: "Molex",
+    mechanical: {
+      status: "pending",
+      description: "Chassis clamp and socket-module harness load path remain unverified"
+    },
+    mpn: "43650-0300",
+    physical: {
+      cableMpn: "45003",
+      connectorGender: "male right-angle PCB header",
+      contactRating: "7 A per contact component candidate; system current and temperature remain qualification gates",
+      cycleRating: "30 mating cycles component candidate; configured drawing and qualification remain gates",
+      interface: "weapon-harness",
+      keying: "Three-circuit polarized Micro-Fit 3.0 latch; header size is the left-weapon noninterchange feature",
+      mateHousingMpn: "43645-0300",
+      mateMpn: "43645-0300 housing with 43030-0007 female crimp terminals",
+      mounting: "pcb-harness",
+      openGates: [
+        "Configured drawing, CAD, copper, solder mask, paste, courtyard, and board-edge review",
+        "Controlled 45003 harness build, chassis clamp, pull, vibration, ESD, analog-fault, and de-energized service tests"
+      ],
+      pinAssignment: "1 WEAPON_A, 2 WEAPON_B, 3 WEAPON_C",
+      retention:
+        "Chassis clamp within 25 mm transfers all body-cord socket and cable load; latch and PCB solder joints are not load paths",
+      service: "De-energize the apparatus before mating; J_L is a distinct off-board chassis socket cluster",
+      shield: "No cable shield or chassis bond; A, B, and C enter connector-side ESD and analog-fault protection",
+      terminalMpn: "43030-0007"
+    },
+    productionApproved: false,
+    references: ["J_WEAPON_HARNESS_L"],
+    selectionStatus: "selected"
+  },
+  {
+    assembly: "scoring-io-board",
+    blockers: [
+      "Obtain the configured Molex 43650-0400 and 43645-0400 drawings and exact CAD, then review pin one, copper, solder mask, paste, courtyard, board edge, latch, and exit clearance",
+      "Release the four-conductor 45004 harness drawing with cavity four empty, orange core insulated and floating, 43030-0007 crimp tooling, pull force, continuity, pinout, label, chassis clamp, vibration, ESD, and analog-fault tests"
+    ],
+    cad: { status: "pending", url: "https://www.molex.com/en-us/products/part-detail/436500400" },
+    evidenceUrls: [
+      "https://www.molex.com/en-us/products/part-detail/436500400",
+      "https://www.molex.com/en-us/products/part-detail/436450400",
+      "https://www.molex.com/en-us/products/part-detail/430300007",
+      "https://www.alphawire.com/products/cable/xtra-guard-performance-cable/xtra-guard-4/45004"
+    ],
+    footprint: {
+      status: "pending",
+      description: "Exact right-angle four-circuit Micro-Fit 3.0 header artwork remains unimported"
+    },
+    manufacturer: "Molex",
+    mechanical: {
+      status: "pending",
+      description: "Chassis clamp and socket-module harness load path remain unverified"
+    },
+    mpn: "43650-0400",
+    physical: {
+      cableMpn: "45004",
+      connectorGender: "male right-angle PCB header",
+      contactRating: "7 A per contact component candidate; system current and temperature remain qualification gates",
+      cycleRating: "30 mating cycles component candidate; configured drawing and qualification remain gates",
+      interface: "weapon-harness",
+      keying:
+        "Four-circuit polarized Micro-Fit 3.0 latch; header size is the right-weapon noninterchange feature and empty cavity four is not a key",
+      mateHousingMpn: "43645-0400",
+      mateMpn: "43645-0400 housing with 43030-0007 female crimp terminals",
+      mounting: "pcb-harness",
+      openGates: [
+        "Configured drawing, CAD, copper, solder mask, paste, courtyard, and board-edge review",
+        "Controlled 45004 harness build, empty-cavity and floating-orange-core inspection, chassis clamp, pull, vibration, ESD, analog-fault, and de-energized service tests"
+      ],
+      pinAssignment: "1 WEAPON_A, 2 WEAPON_B, 3 WEAPON_C, 4 EMPTY_CAVITY_NO_TERMINAL",
+      retention:
+        "Chassis clamp within 25 mm transfers all body-cord socket and cable load; latch and PCB solder joints are not load paths",
+      service: "De-energize the apparatus before mating; J_R is a distinct off-board chassis socket cluster",
+      shield:
+        "No cable shield or chassis bond; the trimmed orange core stays insulated and floating and does not enter cavity four",
+      terminalMpn: "43030-0007"
+    },
+    productionApproved: false,
+    references: ["J_WEAPON_HARNESS_R"],
+    selectionStatus: "selected"
+  },
+  {
+    assembly: "scoring-io-board",
+    blockers: [
+      "Obtain the configured Molex 43650-0200 and 43645-0200 drawings and exact CAD, then review pin one, copper, solder mask, paste, courtyard, board edge, latch, and exit clearance",
+      "Release the 45002 harness drawing with 43030-0007 crimp tooling, pull force, continuity, return mapping, chassis clamp, ESD, cable-coupling, and de-energized service tests"
+    ],
+    cad: { status: "pending", url: "https://www.molex.com/en-us/products/part-detail/436500200" },
+    evidenceUrls: [
+      "https://www.molex.com/en-us/products/part-detail/436500200",
+      "https://www.molex.com/en-us/products/part-detail/436450200",
+      "https://www.molex.com/en-us/products/part-detail/430300007",
+      "https://www.alphawire.com/products/cable/xtra-guard-performance-cable/xtra-guard-4/45002"
+    ],
+    footprint: {
+      status: "pending",
+      description: "Exact right-angle two-circuit Micro-Fit 3.0 header artwork remains unimported"
+    },
+    manufacturer: "Molex",
+    mechanical: { status: "pending", description: "Chassis clamp and harness service clearance remain unverified" },
+    mpn: "43650-0200",
+    physical: {
+      cableMpn: "45002",
+      connectorGender: "male right-angle PCB header",
+      contactRating: "7 A per contact component candidate; system current and temperature remain qualification gates",
+      cycleRating: "30 mating cycles component candidate; configured drawing and qualification remain gates",
+      interface: "piste-harness",
+      keying: "Two-circuit polarized Micro-Fit 3.0 latch; header size is the piste noninterchange feature",
+      mateHousingMpn: "43645-0200",
+      mateMpn: "43645-0200 housing with 43030-0007 female crimp terminals",
+      mounting: "pcb-harness",
+      openGates: [
+        "Configured drawing, CAD, copper, solder mask, paste, courtyard, and board-edge review",
+        "Controlled 45002 harness build, chassis clamp, ESD-return, cable-coupling, pull, vibration, and de-energized service tests"
+      ],
+      pinAssignment: "1 PISTE, 2 PISTE_RETURN",
+      retention: "Chassis clamp within 25 mm transfers cable load; latch and PCB solder joints are not load paths",
+      service: "De-energize the apparatus before mating or unmating",
+      shield:
+        "No cable shield, drain, or chassis bond; pin two is insulated PISTE_RETURN into connector-side ESD_RETURN",
+      terminalMpn: "43030-0007"
+    },
+    productionApproved: false,
+    references: ["J_PISTE_HARNESS"],
+    selectionStatus: "selected"
+  },
+  {
+    assembly: "scoring-io-board",
+    blockers: [
+      "Obtain the configured Molex 39-29-1067 and 39-01-2060 drawings and exact CAD, then review pin one, copper, solder mask, paste, courtyard, board edge, latch, and exit clearance",
+      "Release the 45066 harness drawing with 39-00-0039 crimp tooling, contact-temperature, load-current, lamp and buzzer fault, common-return, chassis clamp, EMC, pull, vibration, and de-energized service tests"
+    ],
+    cad: { status: "pending", url: "https://www.molex.com/en-us/products/part-detail/39291067" },
+    evidenceUrls: [
+      "https://www.molex.com/en-us/products/part-detail/39291067",
+      "https://www.molex.com/en-us/products/part-detail/39012060",
+      "https://www.molex.com/en-us/products/part-detail/39000039",
+      "https://www.alphawire.com/disteAPI/SpecPDF/DownloadProductSpecPdf?productPartNumber=45066"
+    ],
+    footprint: {
+      status: "pending",
+      description: "Exact right-angle six-circuit Mini-Fit Jr. header artwork remains unimported"
+    },
+    manufacturer: "Molex",
+    mechanical: {
+      status: "pending",
+      description: "Chassis clamp, lamp-module harness load path, and service clearance remain unverified"
+    },
+    mpn: "39-29-1067",
+    physical: {
+      cableMpn: "45066",
+      connectorGender: "male right-angle PCB header",
+      contactRating:
+        "9 A per contact component candidate; channel and common-return current plus temperature remain qualification gates",
+      cycleRating: "30 mating cycles component candidate; configured drawing and qualification remain gates",
+      interface: "primary-output-harness",
+      keying: "Six-circuit dual-row Mini-Fit Jr. polarized latch is distinct from all Micro-Fit scoring harnesses",
+      mateHousingMpn: "39-01-2060",
+      mateMpn: "39-01-2060 housing with 39-00-0039 female crimp terminals",
+      mounting: "pcb-harness",
+      openGates: [
+        "Configured drawing, CAD, copper, solder mask, paste, courtyard, and board-edge review",
+        "Controlled 45066 harness build, chassis clamp, pull, vibration, contact-temperature, lamp and buzzer load, fault, EMC, and de-energized service tests"
+      ],
+      pinAssignment: "1 LAMP_RED, 2 LAMP_GREEN, 3 LAMP_WHITE_L, 4 LAMP_WHITE_R, 5 BUZZER, 6 PRIMARY_RETURN",
+      retention:
+        "Chassis clamp within 25 mm transfers all lamp and buzzer cable load; latch, mounting flange, and PCB solder joints are not load paths",
+      service:
+        "De-energize the apparatus before mating or unmating; primary outputs retain five outputs and one dedicated return",
+      shield: "No cable shield, drain, or chassis bond; pin six is the dedicated primary-output return",
+      terminalMpn: "39-00-0039"
+    },
+    productionApproved: false,
+    references: ["J_PRIMARY_OUTPUTS_HARNESS"],
+    selectionStatus: "selected"
+  },
   {
     assembly: "application-carrier",
     blockers: [
@@ -534,6 +739,14 @@ export function validateCriticalPartReadiness(parts: readonly CriticalPartReadin
         errors.push(`${part.mpn}: reel-socket physical evidence belongs to the external-panel-module assembly`)
       }
       if (
+        ["weapon-harness", "piste-harness", "primary-output-harness"].includes(part.physical.interface) &&
+        part.assembly !== "scoring-io-board"
+      ) {
+        errors.push(
+          `${part.mpn}: ${part.physical.interface} physical evidence belongs to the scoring-io-board assembly`
+        )
+      }
+      if (
         ["interboard-power", "interboard-usb2"].includes(part.physical.interface) &&
         part.assembly !== "application-carrier"
       ) {
@@ -558,6 +771,25 @@ export function validateCriticalPartReadiness(parts: readonly CriticalPartReadin
           ["pairAssignment", part.physical.pairAssignment],
           ["pinAssignment", part.physical.pinAssignment],
           ["service", part.physical.service]
+        ] as const) {
+          if (value === undefined || value.trim().length === 0) {
+            errors.push(`${part.mpn}: ${part.physical.interface} physical ${field} must be nonblank`)
+          }
+        }
+        if (part.physical.openGates.length === 0) {
+          errors.push(`${part.mpn}: ${part.physical.interface} physical openGates must not be empty before release`)
+        }
+      }
+      if (["weapon-harness", "piste-harness", "primary-output-harness"].includes(part.physical.interface)) {
+        for (const [field, value] of [
+          ["cableMpn", part.physical.cableMpn],
+          ["connectorGender", part.physical.connectorGender],
+          ["keying", part.physical.keying],
+          ["mateHousingMpn", part.physical.mateHousingMpn],
+          ["mateMpn", part.physical.mateMpn],
+          ["pinAssignment", part.physical.pinAssignment],
+          ["service", part.physical.service],
+          ["terminalMpn", part.physical.terminalMpn]
         ] as const) {
           if (value === undefined || value.trim().length === 0) {
             errors.push(`${part.mpn}: ${part.physical.interface} physical ${field} must be nonblank`)

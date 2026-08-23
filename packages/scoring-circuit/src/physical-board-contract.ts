@@ -1,3 +1,5 @@
+import { productionHarnessSelection } from "./production-harness-selection.js"
+
 /**
  * Physical-board ownership is deliberately separate from the logical
  * architecture. The latter preserves end-to-end net connectivity; these
@@ -38,6 +40,62 @@ export const isolatedInterboardPinLabels = {
   pin10: "STM_HEARTBEAT",
   pin11: "ESP_HEARTBEAT"
 } as const
+
+/**
+ * The scoring I/O board terminates only the internal keyed harnesses.  The
+ * body-cord sockets J_L and J_R stay on their separately serviceable chassis
+ * modules; they are intentionally not PCB references or PCB load paths.
+ */
+export const scoringHarnessBoardIntegration = [
+  {
+    boardReference: "J_WEAPON_HARNESS_L",
+    cableMpn: "45003",
+    headerMpn: "43650-0300",
+    mateHousingMpn: "43645-0300",
+    mateTerminalMpn: "43030-0007",
+    pinLabels: { pin1: "WEAPON_A", pin2: "WEAPON_B", pin3: "WEAPON_C" },
+    chassisSocketReferences: ["J_L"]
+  },
+  {
+    boardReference: "J_WEAPON_HARNESS_R",
+    cableMpn: "45004",
+    headerMpn: "43650-0400",
+    mateHousingMpn: "43645-0400",
+    mateTerminalMpn: "43030-0007",
+    pinLabels: {
+      pin1: "WEAPON_A",
+      pin2: "WEAPON_B",
+      pin3: "WEAPON_C",
+      pin4: "EMPTY_CAVITY_NO_TERMINAL"
+    },
+    chassisSocketReferences: ["J_R"]
+  },
+  {
+    boardReference: "J_PISTE_HARNESS",
+    cableMpn: "45002",
+    headerMpn: "43650-0200",
+    mateHousingMpn: "43645-0200",
+    mateTerminalMpn: "43030-0007",
+    pinLabels: { pin1: "PISTE", pin2: "PISTE_RETURN" },
+    chassisSocketReferences: []
+  },
+  {
+    boardReference: "J_PRIMARY_OUTPUTS_HARNESS",
+    cableMpn: "45066",
+    headerMpn: "39-29-1067",
+    mateHousingMpn: "39-01-2060",
+    mateTerminalMpn: "39-00-0039",
+    pinLabels: {
+      pin1: "LAMP_RED",
+      pin2: "LAMP_GREEN",
+      pin3: "LAMP_WHITE_L",
+      pin4: "LAMP_WHITE_R",
+      pin5: "BUZZER",
+      pin6: "PRIMARY_RETURN"
+    },
+    chassisSocketReferences: []
+  }
+] as const
 
 export const scoringIoOwnedReferences = [
   "J_WEAPON_HARNESS_L",
@@ -180,5 +238,60 @@ export function validatePhysicalBoardContract(): void {
   const boundaryPins = Object.values(isolatedInterboardPinLabels)
   if (boundaryPins.length !== 11 || new Set(boundaryPins).size !== boundaryPins.length) {
     throw new RangeError("The isolation boundary must contain eleven unique reviewed conductors")
+  }
+  const expectedHeaders = ["43650-0300", "43650-0400", "43650-0200", "39-29-1067"]
+  if (
+    scoringHarnessBoardIntegration.length !== expectedHeaders.length ||
+    scoringHarnessBoardIntegration.some((harness, index) => harness.headerMpn !== expectedHeaders[index])
+  ) {
+    throw new RangeError("The scoring I/O harness boundary must retain the reviewed exact header selection")
+  }
+  const boardReferences = scoringHarnessBoardIntegration.map((harness) => harness.boardReference)
+  if (
+    new Set(boardReferences).size !== boardReferences.length ||
+    boardReferences.some((reference) => !scoring.has(reference)) ||
+    scoringHarnessBoardIntegration.some((harness) =>
+      harness.chassisSocketReferences.some((reference) => scoring.has(reference))
+    )
+  ) {
+    throw new RangeError(
+      "Chassis socket clusters must remain off-board and harness references must remain scoring-owned"
+    )
+  }
+  const selectedPinLabels = {
+    "intentional empty cavity": "EMPTY_CAVITY_NO_TERMINAL",
+    "piste return to connector-side ESD return": "PISTE_RETURN",
+    "piste signal": "PISTE",
+    "primary output return": "PRIMARY_RETURN",
+    "red lamp output": "LAMP_RED",
+    "green lamp output": "LAMP_GREEN",
+    "left white lamp output": "LAMP_WHITE_L",
+    "right white lamp output": "LAMP_WHITE_R",
+    "buzzer output": "BUZZER",
+    "weapon A": "WEAPON_A",
+    "weapon B": "WEAPON_B",
+    "weapon C": "WEAPON_C"
+  } as const
+  for (const harness of scoringHarnessBoardIntegration) {
+    const selection = productionHarnessSelection.find(
+      (candidate) => candidate.boardReference === harness.boardReference
+    )
+    if (
+      selection === undefined ||
+      selection.boardIntegrationState !== "integrated-dnp" ||
+      selection.cable.mpn !== harness.cableMpn ||
+      selection.connector.headerMpn !== harness.headerMpn ||
+      selection.connector.mateHousingMpn !== harness.mateHousingMpn ||
+      selection.connector.mateTerminalMpn !== harness.mateTerminalMpn ||
+      selection.pins.length !== Object.keys(harness.pinLabels).length ||
+      selection.pins.some(
+        (pin) =>
+          harness.pinLabels[`pin${pin.pin}` as keyof typeof harness.pinLabels] !== selectedPinLabels[pin.function]
+      )
+    ) {
+      throw new RangeError(
+        "The scoring I/O board harness data must exactly integrate the reviewed production selection"
+      )
+    }
   }
 }

@@ -1,7 +1,7 @@
 # Production scoring harness selection
 
-**Status:** source-only connector and cable selection. It does not place a connector, enable a footprint, authorize a
-harness build, or approve PCB fabrication.
+**Status:** selected connectors are integrated in the scoring I/O planning model as DNP only. This does not enable a
+footprint, authorize a harness build, or approve PCB fabrication.
 
 This document turns the separate scoring I/O board's four external harness placeholders into a controlled selection
 record. The executable record is
@@ -76,7 +76,9 @@ Fabrication remains **DENY** until all of these are complete:
 1. Configured two-, three-, and four-circuit Micro-Fit drawings and the configured six-circuit Mini-Fit drawing plus
    manufacturer CAD establish the exact header orientation, pin one, land pattern, solder mask, paste, courtyard,
    connector edge clearance, and cable exit volume. The family drawings cited above do not close this acquisition gate.
-2. The released scoring I/O circuit replaces the current DNP placeholders only after review against this controlled pinout.
+2. The scoring I/O physical model names the selected headers and controlled pinout, but each header remains DNP with zero
+   PCB copper, solder mask, paste, hole, or courtyard output until the configured drawings, CAD, and independent layout
+   review close the gate.
 3. A controlled harness drawing specifies stripped length, exact production crimp tool and die, crimp-height and
    pull-force acceptance, terminal insertion, right-cavity empty inspection, floating orange-core insulation, color map,
    labels, cable length, clamp hardware, bend radius, and service clearance.

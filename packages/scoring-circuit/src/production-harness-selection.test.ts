@@ -116,7 +116,7 @@ describe("production scoring harness selection", () => {
   it("keeps the exact manufacturer terminal URL and a hard fabrication deny", () => {
     for (const harness of productionHarnessSelection.slice(0, 3)) {
       expect(harness.primarySourceUrls).toContain("https://www.molex.com/en-us/products/part-detail/430300007")
-      expect(harness.boardIntegrationState).toBe("not-integrated")
+      expect(harness.boardIntegrationState).toBe("integrated-dnp")
       expect(harness.harnessBuildState).toBe("unbuilt")
     }
     expect(productionHarnessFabricationState).toEqual(

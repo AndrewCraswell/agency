@@ -4,6 +4,7 @@ import CommunicationsModuleCircuit from "./communications-module.circuit.js"
 import { fabricationFootprintGates } from "./fabrication-footprint-gates.js"
 import ScoringCircuit from "./index.circuit.js"
 import { criticalPartReadiness } from "./part-readiness.js"
+import ScoringIoBoardCircuit from "./scoring-io-board.circuit.js"
 
 function renderPcbPlacements(circuitElement: React.ReactElement) {
   const circuit = new Circuit()
@@ -26,19 +27,28 @@ const communicationsReferences = new Set([
   "C_USB_PD_PPHV",
   "C_EFUSE_OUT"
 ])
+const scoringIoReferences = new Set([
+  "J_WEAPON_HARNESS_L",
+  "J_WEAPON_HARNESS_R",
+  "J_PISTE_HARNESS",
+  "J_PRIMARY_OUTPUTS_HARNESS"
+])
 
 function circuitForReference(
   carrierJson: ReturnType<typeof renderPcbPlacements>,
   communicationsJson: ReturnType<typeof renderPcbPlacements>,
+  scoringIoJson: ReturnType<typeof renderPcbPlacements>,
   reference: string
 ) {
-  return communicationsReferences.has(reference) ? communicationsJson : carrierJson
+  if (communicationsReferences.has(reference)) return communicationsJson
+  return scoringIoReferences.has(reference) ? scoringIoJson : carrierJson
 }
 
 describe("fabrication-critical footprint gates", () => {
   it("makes every generic or incomplete selected footprint non-placeable", () => {
     const carrierJson = renderPcbPlacements(<ScoringCircuit />)
     const communicationsJson = renderPcbPlacements(<CommunicationsModuleCircuit />)
+    const scoringIoJson = renderPcbPlacements(<ScoringIoBoardCircuit />)
     const gatedArtifactTypes = new Set(["pcb_smtpad", "pcb_plated_hole", "pcb_hole", "pcb_solder_paste"])
 
     for (const gate of fabricationFootprintGates) {
@@ -47,7 +57,7 @@ describe("fabrication-critical footprint gates", () => {
       expect(gate.releaseEvidence.length).toBeGreaterThan(1)
 
       for (const reference of gate.references) {
-        const circuitJson = circuitForReference(carrierJson, communicationsJson, reference)
+        const circuitJson = circuitForReference(carrierJson, communicationsJson, scoringIoJson, reference)
         const source = circuitJson.find((element) => element.type === "source_component" && element.name === reference)
         const sourceComponentId =
           source !== undefined && "source_component_id" in source ? source.source_component_id : undefined
@@ -104,10 +114,11 @@ describe("fabrication-critical footprint gates", () => {
   it("maps every footprint gate to the exact selected circuit MPN", () => {
     const carrierJson = renderPcbPlacements(<ScoringCircuit />)
     const communicationsJson = renderPcbPlacements(<CommunicationsModuleCircuit />)
+    const scoringIoJson = renderPcbPlacements(<ScoringIoBoardCircuit />)
 
     for (const gate of fabricationFootprintGates) {
       for (const reference of gate.references) {
-        const circuitJson = circuitForReference(carrierJson, communicationsJson, reference)
+        const circuitJson = circuitForReference(carrierJson, communicationsJson, scoringIoJson, reference)
         const source = circuitJson.find((element) => element.type === "source_component" && element.name === reference)
         expect(source).toBeDefined()
 
@@ -120,6 +131,37 @@ describe("fabrication-critical footprint gates", () => {
           expect(source).toMatchObject({ manufacturer_part_number: gate.mpn })
         }
       }
+    }
+  })
+
+  it("keeps every selected scoring harness header DNP until physical and harness evidence closes", () => {
+    const scoringIoJson = renderPcbPlacements(<ScoringIoBoardCircuit />)
+    const expected = [
+      ["J_WEAPON_HARNESS_L", "43650-0300"],
+      ["J_WEAPON_HARNESS_R", "43650-0400"],
+      ["J_PISTE_HARNESS", "43650-0200"],
+      ["J_PRIMARY_OUTPUTS_HARNESS", "39-29-1067"]
+    ] as const
+    for (const [reference, mpn] of expected) {
+      const gate = fabricationFootprintGates.find((candidate) => candidate.mpn === mpn)
+      const source = scoringIoJson.find((element) => element.type === "source_component" && element.name === reference)
+      expect(gate?.references).toEqual([reference])
+      expect(gate?.packageEvidence.thermalPad).toBe("not-applicable")
+      expect(gate?.releaseEvidence.join(" ")).toMatch(/copper.*solder mask.*paste.*courtyard/u)
+      expect(source).toMatchObject({ manufacturer_part_number: mpn })
+      const sourceId = source?.type === "source_component" ? source.source_component_id : undefined
+      const pcb = scoringIoJson.find(
+        (element) => element.type === "pcb_component" && element.source_component_id === sourceId
+      )
+      const artifacts = scoringIoJson.filter(
+        (element) =>
+          ["pcb_smtpad", "pcb_plated_hole", "pcb_hole", "pcb_solder_paste"].includes(element.type) &&
+          pcb?.type === "pcb_component" &&
+          "pcb_component_id" in element &&
+          element.pcb_component_id === pcb.pcb_component_id
+      )
+      expect(pcb).toMatchObject({ do_not_place: true })
+      expect(artifacts).toEqual([])
     }
   })
 

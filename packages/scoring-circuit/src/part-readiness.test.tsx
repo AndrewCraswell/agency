@@ -9,9 +9,11 @@ import {
   validateCriticalPartReadiness,
   type CriticalPartReadiness
 } from "./part-readiness.js"
+import ScoringIoBoardCircuit from "./scoring-io-board.circuit.js"
 
 let architectureJson: ReturnType<InstanceType<typeof Circuit>["getCircuitJson"]> | undefined
 let communicationsModuleJson: ReturnType<InstanceType<typeof Circuit>["getCircuitJson"]> | undefined
+let scoringIoBoardJson: ReturnType<InstanceType<typeof Circuit>["getCircuitJson"]> | undefined
 
 function renderArchitecture() {
   if (architectureJson !== undefined) return architectureJson
@@ -37,12 +39,31 @@ function renderCommunicationsModule() {
   return communicationsModuleJson
 }
 
+function renderScoringIoBoard() {
+  if (scoringIoBoardJson !== undefined) return scoringIoBoardJson
+  const circuit = new Circuit()
+  circuit.pcbRoutingDisabled = true
+  circuit.schematicDisabled = true
+  circuit.setPlatform({ partsEngineDisabled: true })
+  circuit.add(<ScoringIoBoardCircuit />)
+  circuit.render()
+  scoringIoBoardJson = circuit.getCircuitJson()
+  return scoringIoBoardJson
+}
+
+function selectedEsp32(): CriticalPartReadiness {
+  const part = criticalPartReadiness.find((candidate) => candidate.mpn === "ESP32-S3-WROOM-1U-N16R2")
+  if (part === undefined) throw new Error("Expected the selected ESP32 readiness record")
+  return part
+}
+
 beforeAll(() => {
   // The two rendered circuit fixtures are intentionally cached before the
   // assertions run. Rendering them together can exceed Vitest's per-test
   // default even though neither render is an asynchronous test operation.
   renderArchitecture()
   renderCommunicationsModule()
+  renderScoringIoBoard()
 }, 20_000)
 
 describe("critical-part readiness", () => {
@@ -52,8 +73,8 @@ describe("critical-part readiness", () => {
       candidateSelections: 1,
       manufacturerVerifiedCad: 1,
       productionApproved: 0,
-      selectedParts: 12,
-      total: 13,
+      selectedParts: 16,
+      total: 17,
       verifiedFootprints: 0,
       verifiedMechanical: 0
     })
@@ -62,12 +83,14 @@ describe("critical-part readiness", () => {
   it("covers critical references in their declared assembly without masking duplicate board ownership", () => {
     const circuitJson = renderArchitecture()
     const communicationsCircuitJson = renderCommunicationsModule()
+    const scoringIoCircuitJson = renderScoringIoBoard()
     const carrierComponents = circuitJson.filter((element) => element.type === "source_component")
     const communicationsComponents = communicationsCircuitJson.filter((element) => element.type === "source_component")
     const sourceComponents = [...carrierComponents, ...communicationsComponents]
     const sourcesByAssembly = {
       "application-carrier": carrierComponents,
       "communications-module": communicationsComponents,
+      "scoring-io-board": scoringIoCircuitJson.filter((element) => element.type === "source_component"),
       // The external-panel module has no independent circuit artifact yet.
       // Its electrical entry points remain represented on the carrier model.
       "external-panel-module": carrierComponents
@@ -113,9 +136,76 @@ describe("critical-part readiness", () => {
     })
   })
 
+  it("records selected scoring harness headers, mates, terminals, cables, and fail-closed board ownership", () => {
+    const scoringHarnesses = criticalPartReadiness.filter((part) => part.assembly === "scoring-io-board")
+    expect(
+      scoringHarnesses.map((part) => ({
+        cableMpn: part.physical?.cableMpn,
+        interface: part.physical?.interface,
+        mateHousingMpn: part.physical?.mateHousingMpn,
+        mpn: part.mpn,
+        pinAssignment: part.physical?.pinAssignment,
+        terminalMpn: part.physical?.terminalMpn
+      }))
+    ).toEqual([
+      {
+        cableMpn: "45003",
+        interface: "weapon-harness",
+        mateHousingMpn: "43645-0300",
+        mpn: "43650-0300",
+        pinAssignment: "1 WEAPON_A, 2 WEAPON_B, 3 WEAPON_C",
+        terminalMpn: "43030-0007"
+      },
+      {
+        cableMpn: "45004",
+        interface: "weapon-harness",
+        mateHousingMpn: "43645-0400",
+        mpn: "43650-0400",
+        pinAssignment: "1 WEAPON_A, 2 WEAPON_B, 3 WEAPON_C, 4 EMPTY_CAVITY_NO_TERMINAL",
+        terminalMpn: "43030-0007"
+      },
+      {
+        cableMpn: "45002",
+        interface: "piste-harness",
+        mateHousingMpn: "43645-0200",
+        mpn: "43650-0200",
+        pinAssignment: "1 PISTE, 2 PISTE_RETURN",
+        terminalMpn: "43030-0007"
+      },
+      {
+        cableMpn: "45066",
+        interface: "primary-output-harness",
+        mateHousingMpn: "39-01-2060",
+        mpn: "39-29-1067",
+        pinAssignment: "1 LAMP_RED, 2 LAMP_GREEN, 3 LAMP_WHITE_L, 4 LAMP_WHITE_R, 5 BUZZER, 6 PRIMARY_RETURN",
+        terminalMpn: "39-00-0039"
+      }
+    ])
+    for (const harness of scoringHarnesses) {
+      expect(harness.productionApproved).toBe(false)
+      expect(harness.footprint.status).toBe("pending")
+      expect(harness.physical?.openGates.length).toBeGreaterThan(0)
+      expect(harness.physical?.retention).toContain("not load paths")
+    }
+    const malformedHarness: CriticalPartReadiness = {
+      ...scoringHarnesses[0],
+      physical: { ...scoringHarnesses[0].physical!, cableMpn: "", pinAssignment: "", terminalMpn: "" }
+    }
+    expect(validateCriticalPartReadiness([malformedHarness])).toEqual(
+      expect.arrayContaining([
+        "43650-0300: weapon-harness physical cableMpn must be nonblank",
+        "43650-0300: weapon-harness physical pinAssignment must be nonblank",
+        "43650-0300: weapon-harness physical terminalMpn must be nonblank"
+      ])
+    )
+    expect(validateCriticalPartReadiness([{ ...scoringHarnesses[0], assembly: "application-carrier" }])).toContain(
+      "43650-0300: weapon-harness physical evidence belongs to the scoring-io-board assembly"
+    )
+  })
+
   it("rejects premature production approval", () => {
     const incompletePart: CriticalPartReadiness = {
-      ...criticalPartReadiness[0],
+      ...selectedEsp32(),
       productionApproved: true
     }
 
@@ -125,7 +215,7 @@ describe("critical-part readiness", () => {
   })
 
   it("rejects malformed records and duplicate assignments", () => {
-    const basePart: CriticalPartReadiness = criticalPartReadiness[0]
+    const basePart: CriticalPartReadiness = selectedEsp32()
     const malformedParts: CriticalPartReadiness[] = [
       { ...basePart, mpn: "NO-REFERENCE", references: [] },
       { ...basePart, mpn: "DUPLICATE", references: ["U_DUPLICATE"] },
@@ -153,7 +243,7 @@ describe("critical-part readiness", () => {
 
   it("requires each production-approval gate and accepts a fully verified record", () => {
     const basePart: CriticalPartReadiness = {
-      ...criticalPartReadiness[0],
+      ...selectedEsp32(),
       blockers: [],
       cad: { status: "manufacturer-verified" },
       evidenceUrls: ["https://example.invalid/evidence"],

@@ -1,7 +1,7 @@
 /**
- * Harness selection is intentionally a source-only contract. It names the
- * production connector families and wire construction without turning any
- * currently DNP scoring-board connector into a fabrication artifact.
+ * Harness selection is intentionally an integrated-DNP contract. It names the
+ * production connector families and wire construction on the scoring I/O
+ * model without turning any connector into a fabrication artifact.
  */
 
 export type HarnessPin = {
@@ -12,7 +12,7 @@ export type HarnessPin = {
 }
 
 export type ProductionHarness = {
-  readonly boardIntegrationState: "not-integrated"
+  readonly boardIntegrationState: "integrated-dnp"
   readonly boardReference: "J_WEAPON_HARNESS_L" | "J_WEAPON_HARNESS_R" | "J_PISTE_HARNESS" | "J_PRIMARY_OUTPUTS_HARNESS"
   readonly cable: {
     readonly conductorCount: number
@@ -83,7 +83,7 @@ const microFitSources = [
 
 export const productionHarnessSelection = [
   {
-    boardIntegrationState: "not-integrated",
+    boardIntegrationState: "integrated-dnp",
     boardReference: "J_WEAPON_HARNESS_L",
     cable: {
       conductorCount: 3,
@@ -143,7 +143,7 @@ export const productionHarnessSelection = [
       "A chassis-mounted cable clamp within 25 mm of the board connector is required. The Micro-Fit latch and through-hole solder joints are electrical interconnects, not the load path."
   },
   {
-    boardIntegrationState: "not-integrated",
+    boardIntegrationState: "integrated-dnp",
     boardReference: "J_WEAPON_HARNESS_R",
     cable: {
       conductorCount: 4,
@@ -210,7 +210,7 @@ export const productionHarnessSelection = [
       "A chassis-mounted cable clamp within 25 mm of the board connector is required. The Micro-Fit latch and through-hole solder joints are electrical interconnects, not the load path."
   },
   {
-    boardIntegrationState: "not-integrated",
+    boardIntegrationState: "integrated-dnp",
     boardReference: "J_PISTE_HARNESS",
     cable: {
       conductorCount: 2,
@@ -274,7 +274,7 @@ export const productionHarnessSelection = [
       "A chassis-mounted cable clamp within 25 mm of the board connector is required. The Micro-Fit latch and through-hole solder joints are electrical interconnects, not the load path."
   },
   {
-    boardIntegrationState: "not-integrated",
+    boardIntegrationState: "integrated-dnp",
     boardReference: "J_PRIMARY_OUTPUTS_HARNESS",
     cable: {
       conductorCount: 6,
@@ -431,7 +431,7 @@ export const productionHarnessFabricationState = {
   fabricationAuthorized: false,
   state: "deny" as const,
   reason:
-    "The selected connector and cable families are source-only. Configured drawings, CAD, footprints, harness build, strain relief, EMC, and bench evidence remain mandatory."
+    "The selected connector and cable families are integrated DNP only. Configured drawings, CAD, footprints, harness build, strain relief, EMC, and bench evidence remain mandatory."
 } as const
 
 validateProductionHarnessSelection()

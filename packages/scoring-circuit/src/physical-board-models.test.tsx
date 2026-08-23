@@ -8,6 +8,7 @@ import {
   isolatedInterboardPinLabels,
   physicalBoardContract,
   physicalBoardOpenFunctionalRoutingGates,
+  scoringHarnessBoardIntegration,
   scoringIoOwnedReferences,
   validatePhysicalBoardContract
 } from "./physical-board-contract.js"
@@ -267,7 +268,77 @@ describe("separate physical-board planning models", () => {
     )
   })
 
-  it("keeps unselected isolation, weapon, piste, and primary-output interfaces DNP with zero PCB artifacts", () => {
+  it("integrates only selected internal harness headers while chassis socket clusters stay off-board", () => {
+    expect(scoringHarnessBoardIntegration).toEqual([
+      expect.objectContaining({
+        boardReference: "J_WEAPON_HARNESS_L",
+        cableMpn: "45003",
+        headerMpn: "43650-0300",
+        mateHousingMpn: "43645-0300",
+        mateTerminalMpn: "43030-0007",
+        pinLabels: { pin1: "WEAPON_A", pin2: "WEAPON_B", pin3: "WEAPON_C" },
+        chassisSocketReferences: ["J_L"]
+      }),
+      expect.objectContaining({
+        boardReference: "J_WEAPON_HARNESS_R",
+        cableMpn: "45004",
+        headerMpn: "43650-0400",
+        mateHousingMpn: "43645-0400",
+        mateTerminalMpn: "43030-0007",
+        pinLabels: {
+          pin1: "WEAPON_A",
+          pin2: "WEAPON_B",
+          pin3: "WEAPON_C",
+          pin4: "EMPTY_CAVITY_NO_TERMINAL"
+        },
+        chassisSocketReferences: ["J_R"]
+      }),
+      expect.objectContaining({
+        boardReference: "J_PISTE_HARNESS",
+        cableMpn: "45002",
+        headerMpn: "43650-0200",
+        pinLabels: { pin1: "PISTE", pin2: "PISTE_RETURN" }
+      }),
+      expect.objectContaining({
+        boardReference: "J_PRIMARY_OUTPUTS_HARNESS",
+        cableMpn: "45066",
+        headerMpn: "39-29-1067",
+        mateHousingMpn: "39-01-2060",
+        mateTerminalMpn: "39-00-0039",
+        pinLabels: {
+          pin1: "LAMP_RED",
+          pin2: "LAMP_GREEN",
+          pin3: "LAMP_WHITE_L",
+          pin4: "LAMP_WHITE_R",
+          pin5: "BUZZER",
+          pin6: "PRIMARY_RETURN"
+        }
+      })
+    ])
+    const scoringReferences = new Set(sourceNames(scoringSource))
+    expect(scoringReferences.has("J_L")).toBe(false)
+    expect(scoringReferences.has("J_R")).toBe(false)
+    for (const harness of scoringHarnessBoardIntegration) {
+      const source = scoringSource.find(
+        (element) => element.type === "source_component" && element.name === harness.boardReference
+      )
+      expect(source).toMatchObject({ manufacturer_part_number: harness.headerMpn })
+      const sourceId = source?.type === "source_component" ? source.source_component_id : undefined
+      const ports = scoringSource.flatMap((element) =>
+        element.type === "source_port" && element.source_component_id === sourceId ? element.port_hints : []
+      )
+      expect(ports).toEqual(expect.arrayContaining(Object.values(harness.pinLabels)))
+    }
+    expect(traceNames(scoringSource)).toEqual(
+      expect.arrayContaining([
+        "J_PISTE_HARNESS.PISTE_RETURN to U_PISTE_FRONTEND.PISTE_RETURN",
+        "U_PISTE_FRONTEND.PISTE_RETURN to net.ESD_RETURN",
+        "J_PRIMARY_OUTPUTS_HARNESS.PRIMARY_RETURN to net.SGND"
+      ])
+    )
+  })
+
+  it("keeps gated isolation, selected harness headers, and unresolved primary driver DNP with zero PCB artifacts", () => {
     for (const reference of [
       "J_ISO_APP_BOUNDARY",
       "J_WEAPON_HARNESS_L",

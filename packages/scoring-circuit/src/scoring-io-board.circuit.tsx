@@ -1,17 +1,26 @@
 import { manufacturerFootprintProps } from "./manufacturer-footprint-adapter.js"
-import { isolatedInterboardPinLabels, physicalBoardContract } from "./physical-board-contract.js"
+import {
+  isolatedInterboardPinLabels,
+  physicalBoardContract,
+  scoringHarnessBoardIntegration
+} from "./physical-board-contract.js"
 
-const weaponPins = { pin1: "A", pin2: "B", pin3: "C" } as const
+function selectedHarness(reference: (typeof scoringHarnessBoardIntegration)[number]["boardReference"]) {
+  const harness = scoringHarnessBoardIntegration.find((candidate) => candidate.boardReference === reference)
+  if (harness === undefined) throw new RangeError(`Missing selected harness integration for ${reference}`)
+  return harness
+}
 
 function WeaponInput({ side, x }: { readonly side: "L" | "R"; readonly x: number }) {
+  const harness = selectedHarness(`J_WEAPON_HARNESS_${side}`)
   return (
     <group name={`G_SCORING_WEAPON_${side}`} pcbX={x} pcbY={25}>
       <chip
         name={`J_WEAPON_HARNESS_${side}`}
-        manufacturerPartNumber="WEAPON-HARNESS-CONNECTOR-TBD"
+        manufacturerPartNumber={harness.headerMpn}
         doNotPlace
         footprint={[]}
-        pinLabels={weaponPins}
+        pinLabels={harness.pinLabels}
       />
       <chip
         name={`U_ESD_${side}`}
@@ -36,9 +45,9 @@ function WeaponInput({ side, x }: { readonly side: "L" | "R"; readonly x: number
           pin8: "SENSE_C"
         }}
       />
-      <trace from={`J_WEAPON_HARNESS_${side}.A`} to={`U_ESD_${side}.CH_A`} />
-      <trace from={`J_WEAPON_HARNESS_${side}.B`} to={`U_ESD_${side}.CH_B`} />
-      <trace from={`J_WEAPON_HARNESS_${side}.C`} to={`U_ESD_${side}.CH_C`} />
+      <trace from={`J_WEAPON_HARNESS_${side}.WEAPON_A`} to={`U_ESD_${side}.CH_A`} />
+      <trace from={`J_WEAPON_HARNESS_${side}.WEAPON_B`} to={`U_ESD_${side}.CH_B`} />
+      <trace from={`J_WEAPON_HARNESS_${side}.WEAPON_C`} to={`U_ESD_${side}.CH_C`} />
       <trace from={`U_ESD_${side}.CH_A`} to={`U_FRONTEND_${side}.RAW_A`} />
       <trace from={`U_ESD_${side}.CH_B`} to={`U_FRONTEND_${side}.RAW_B`} />
       <trace from={`U_ESD_${side}.CH_C`} to={`U_FRONTEND_${side}.RAW_C`} />
@@ -52,16 +61,18 @@ function WeaponInput({ side, x }: { readonly side: "L" | "R"; readonly x: number
 /** Separate physical planning model; no generated outline or connector footprint is a release artifact. */
 export default function ScoringIoBoardCircuit() {
   const board = physicalBoardContract.scoringIoBoard
+  const pisteHarness = selectedHarness("J_PISTE_HARNESS")
+  const primaryOutputsHarness = selectedHarness("J_PRIMARY_OUTPUTS_HARNESS")
   return (
     <board title={board.title} width={`${board.widthMm}mm`} height={`${board.heightMm}mm`} layers={board.layers}>
       <WeaponInput side="L" x={-125} />
       <WeaponInput side="R" x={-95} />
       <chip
         name="J_PISTE_HARNESS"
-        manufacturerPartNumber="PISTE-HARNESS-CONNECTOR-TBD"
+        manufacturerPartNumber={pisteHarness.headerMpn}
         doNotPlace
         footprint={[]}
-        pinLabels={{ pin1: "PISTE", pin2: "SHIELD" }}
+        pinLabels={pisteHarness.pinLabels}
         pcbX={-60}
         pcbY={25}
       />
@@ -70,7 +81,7 @@ export default function ScoringIoBoardCircuit() {
         manufacturerPartNumber="PISTE-PROTECTION-TBD"
         doNotPlace
         footprint={[]}
-        pinLabels={{ pin1: "RAW_PISTE", pin2: "SHIELD", pin3: "SGND", pin4: "S3_3", pin5: "SENSE_PISTE" }}
+        pinLabels={{ pin1: "RAW_PISTE", pin2: "PISTE_RETURN", pin3: "SGND", pin4: "S3_3", pin5: "SENSE_PISTE" }}
         pcbX={-55}
         pcbY={10}
       />
@@ -275,23 +286,16 @@ export default function ScoringIoBoardCircuit() {
       />
       <chip
         name="J_PRIMARY_OUTPUTS_HARNESS"
-        manufacturerPartNumber="PRIMARY-OUTPUT-HARNESS-CONNECTOR-TBD"
+        manufacturerPartNumber={primaryOutputsHarness.headerMpn}
         doNotPlace
         footprint={[]}
-        pinLabels={{
-          pin1: "LAMP_RED",
-          pin2: "LAMP_GREEN",
-          pin3: "LAMP_WHITE_L",
-          pin4: "LAMP_WHITE_R",
-          pin5: "BUZZER",
-          pin6: "RETURN"
-        }}
+        pinLabels={primaryOutputsHarness.pinLabels}
         pcbX={45}
         pcbY={25}
       />
       <trace from="J_PISTE_HARNESS.PISTE" to="U_PISTE_FRONTEND.RAW_PISTE" />
-      <trace from="J_PISTE_HARNESS.SHIELD" to="U_PISTE_FRONTEND.SHIELD" />
-      <trace from="U_PISTE_FRONTEND.SHIELD" to="net.ESD_RETURN" />
+      <trace from="J_PISTE_HARNESS.PISTE_RETURN" to="U_PISTE_FRONTEND.PISTE_RETURN" />
+      <trace from="U_PISTE_FRONTEND.PISTE_RETURN" to="net.ESD_RETURN" />
       <trace from="U_PISTE_FRONTEND.SGND" to="net.SGND" />
       <trace from="U_PISTE_FRONTEND.S3_3" to="net.S3_3" />
       <trace from="U_PISTE_FRONTEND.SENSE_PISTE" to="U_STM32.PISTE" />
@@ -371,7 +375,7 @@ export default function ScoringIoBoardCircuit() {
       <trace from="U_PRIMARY_OUTPUT_DRIVER.LAMP_WHITE_L_OUT" to="J_PRIMARY_OUTPUTS_HARNESS.LAMP_WHITE_L" />
       <trace from="U_PRIMARY_OUTPUT_DRIVER.LAMP_WHITE_R_OUT" to="J_PRIMARY_OUTPUTS_HARNESS.LAMP_WHITE_R" />
       <trace from="U_PRIMARY_OUTPUT_DRIVER.BUZZER_OUT" to="J_PRIMARY_OUTPUTS_HARNESS.BUZZER" />
-      <trace from="J_PRIMARY_OUTPUTS_HARNESS.RETURN" to="net.SGND" />
+      <trace from="J_PRIMARY_OUTPUTS_HARNESS.PRIMARY_RETURN" to="net.SGND" />
     </board>
   )
 }

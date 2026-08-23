@@ -21,6 +21,74 @@ export type FabricationFootprintGate = {
 // A component listed here must have doNotPlace and emit no copper pads.
 export const fabricationFootprintGates = [
   {
+    references: ["J_WEAPON_HARNESS_L"],
+    manufacturer: "Molex",
+    mpn: "43650-0300",
+    primaryEvidenceUrl: "https://www.molex.com/en-us/products/part-detail/436500300",
+    packageEvidence: {
+      body: "Micro-Fit 3.0 three-circuit right-angle through-hole PCB header",
+      terminals: 3,
+      orientation: "pin-1",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["pinheader", "micro-fit", "microfit", "molex-3pin"],
+    releaseEvidence: [
+      "Configured Molex drawing and CAD establish exact pin one, copper, solder mask, paste, courtyard, edge clearance, and right-angle cable exit",
+      "Controlled 45003 and 43645-0300/43030-0007 harness build, chassis clamp, pull, vibration, ESD, analog-fault, and service evidence are accepted"
+    ]
+  },
+  {
+    references: ["J_WEAPON_HARNESS_R"],
+    manufacturer: "Molex",
+    mpn: "43650-0400",
+    primaryEvidenceUrl: "https://www.molex.com/en-us/products/part-detail/436500400",
+    packageEvidence: {
+      body: "Micro-Fit 3.0 four-circuit right-angle through-hole PCB header",
+      terminals: 4,
+      orientation: "pin-1",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["pinheader", "micro-fit", "microfit", "molex-4pin"],
+    releaseEvidence: [
+      "Configured Molex drawing and CAD establish exact pin one, copper, solder mask, paste, courtyard, edge clearance, and right-angle cable exit",
+      "Controlled 45004 and 43645-0400/43030-0007 harness build proves empty cavity four, insulated floating orange core, chassis clamp, pull, vibration, ESD, analog-fault, and service evidence"
+    ]
+  },
+  {
+    references: ["J_PISTE_HARNESS"],
+    manufacturer: "Molex",
+    mpn: "43650-0200",
+    primaryEvidenceUrl: "https://www.molex.com/en-us/products/part-detail/436500200",
+    packageEvidence: {
+      body: "Micro-Fit 3.0 two-circuit right-angle through-hole PCB header",
+      terminals: 2,
+      orientation: "pin-1",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["pinheader", "micro-fit", "microfit", "molex-2pin"],
+    releaseEvidence: [
+      "Configured Molex drawing and CAD establish exact pin one, copper, solder mask, paste, courtyard, edge clearance, and right-angle cable exit",
+      "Controlled 45002 and 43645-0200/43030-0007 harness build proves PISTE_RETURN-to-ESD_RETURN, chassis clamp, ESD, cable-coupling, vibration, and service evidence"
+    ]
+  },
+  {
+    references: ["J_PRIMARY_OUTPUTS_HARNESS"],
+    manufacturer: "Molex",
+    mpn: "39-29-1067",
+    primaryEvidenceUrl: "https://www.molex.com/en-us/products/part-detail/39291067",
+    packageEvidence: {
+      body: "Mini-Fit Jr. six-circuit dual-row right-angle through-hole PCB header",
+      terminals: 6,
+      orientation: "pin-1",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["pinheader", "mini-fit", "minifit", "molex-6pin"],
+    releaseEvidence: [
+      "Configured Molex drawing and CAD establish exact pin one, copper, solder mask, paste, courtyard, edge clearance, and right-angle cable exit",
+      "Controlled 45066 and 39-01-2060/39-00-0039 harness build proves five outputs plus dedicated return, chassis clamp, contact-temperature, load, fault, EMC, vibration, and service evidence"
+    ]
+  },
+  {
     references: ["U_USB_PORT_PROTECT"],
     manufacturer: "Texas Instruments",
     mpn: "TPD4S201TRGRRQ1",
