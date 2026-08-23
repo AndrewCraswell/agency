@@ -10,20 +10,22 @@ and later physical work must not start from the current analog evidence.
 
 | Dependency | Result | Evidence | Consequence |
 | --- | --- | --- | --- |
-| M0-07 golden scenario format and corpus manifest | Satisfied for the current dependency scope | `apps/scoring/docs/golden-scenario-contract.md` defines the schema and acceptance; the manifest contains seven active epee scenarios; the scenario-runner test passes 62 tests and the manifest run passes all 7 scenarios | The fixture may reference the current logical scenario contract after an analog release; the contract does not claim a physical pin map or three-weapon corpus |
+| M0-07 golden scenario format and corpus manifest | Satisfied for the current dependency scope | `apps/scoring/docs/golden-scenario-contract.md` defines the schema and acceptance; the manifest contains 28 active scenarios across epee, foil, and sabre, and the canonical runner executes all 28 | The fixture may reference the current logical scenario contract after an analog release; the contract does not claim a physical pin map or physical apparatus evidence |
 | M4-01 analog simulation audit | **Not satisfied** | The executable audit now runs 51 cases, including a passing 20-case selected-device bounded transient screen for the TMUX1112 and selected resistors. Its separate mechanical closure remains `DENY` because low-voltage clamp behavior, ADC residual and kickback, PCB and cable parasitics, rail injection, and cross-channel coupling are not bounded by the model | M4-05 cannot yet be reviewed as covering an accepted analog model. Fixture metrology can be designed independently; it must remain distinct from later DUT correlation |
 
-M0-07 is only satisfied for its declared current scope. It contains an epee-only active
-corpus, while foil and sabre rows remain planned. That limitation does not by itself
-block this audit, because the blocking gap is M4-01's analog evidence.
+M0-07 is only satisfied for its declared host-logical scope. Composite physical coverage
+rows remain planned where acquisition, output, or apparatus evidence is absent. That
+limitation does not by itself block this audit, because the blocking gap is M4-01's
+analog evidence.
 
 ## Blocking findings
 
-1. **Temperature is not modeled.** The slow corner is a resistance proxy, not a
-   temperature simulation. The current model has a source-resistor TCR calculation, but
-   no full-corner switch, clamp, protection, reference, ADC, leakage, or input-voltage
-   behavior. M4-01 requires declared tolerances and temperature coverage; the current
-   result cannot establish them.
+1. **Temperature and device behavior are only partially modeled.** The selected-device
+   transient screen applies vendor-guaranteed temperature and tolerance bounds to the
+   TMUX1112 and selected series resistors. It does not bound the low-voltage clamp,
+   reference dynamics, ADC residual and kickback, PCB and cable parasitics, rail
+   injection, or cross-channel coupling. M4-01 requires the complete declared corner
+   behavior; the current result cannot establish it.
 2. **The DUT error budget remains open, but that is not a fixture-accuracy blocker.**
    The M4-03 record reports a 7.20 ohm baseline screen at 125 C after a 25 C calibration
    against a 5.00 ohm target, with switch, board, reference, and ADC terms still open.
@@ -50,9 +52,10 @@ M4-01 can be re-audited when the following are archived with the model revision:
 - the normative M4-01 resistance and capacitance boundary cases, plus a reviewed
   representative/property sweep over interior values and resistance-capacitance
   interactions; this does not require simulating every integer resistance;
-- declared resistor, switch, clamp, protection, reference, ADC, and supply tolerances
-  with vendor-guaranteed or reviewed modelled temperature and input-voltage corners
-  sufficient for the M4-01 simulation audit;
+- the existing selected-resistor and switch bounds plus clamp, protection, reference,
+  ADC, supply, parasitic, rail-injection, and cross-channel terms supported by
+  vendor-guaranteed models or explicit coupon measurements at the declared temperature
+  and input-voltage corners;
 - explicit simulation cases for the M4-01 table's declared pulse widths (50 us, 100 us,
   1 ms, 2 ms, 10 ms, and 14 ms), with the model assumptions and limitations retained
   in the generated evidence.
