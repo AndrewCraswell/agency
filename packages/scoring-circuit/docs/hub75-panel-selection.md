@@ -65,7 +65,11 @@ candidate V5 converter/power stage, eFuse, output capacitance, cable, and panel
 connected. The current V5/eFuse short-peak power-stage envelope remains
 **DENY** pending its separate electrical and thermal closure. Therefore the
 33.16 W and 34.79 W figures are provisional allocations, not demonstrated
-deliverable rail capacity and not permission to release the PCB.
+deliverable rail capacity and not permission to release the PCB. The selected
+20 W panel's end-to-end arithmetic screen is recorded in
+[selected-panel-power-closure.md](selected-panel-power-closure.md); that page
+retains the generic maximum-allocation **DENY** while showing the selected
+panel's fit against the 40.60 W post-shunt ceiling.
 
 ## Fabrication and EVT gates
 

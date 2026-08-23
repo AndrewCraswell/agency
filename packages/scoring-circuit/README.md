@@ -27,7 +27,8 @@ schematic-level ESP32 reset combiner, reset-gated HUB75 buffers, exact pull valu
 remaining service-port gates are in `docs/usb-c-service-power-architecture.md`. The selected application 3.3 V
 regulator, exact support network, supervisor threshold margin, and thermal/startup calculation are in
 `docs/application-3v3-rail.md`. The selected V5 buck stage, its explicit eFuse peak conflict, and its thermal/layout
-release gates are in `docs/v5-power-stage.md`.
+release gates are in `docs/v5-power-stage.md`. The selected Adafruit 2277 EVT panel's end-to-end USB-PD,
+application-rail, V5, shunt, and startup/inrush screen is in `docs/selected-panel-power-closure.md`.
 
 ## Fabrication status
 

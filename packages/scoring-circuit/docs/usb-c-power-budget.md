@@ -1,6 +1,9 @@
 # Preliminary USB-C power and thermal envelope
 
-**Status:** preliminary allocation only. No HUB75 panel, speaker, PCB layout, or assembled-board thermal measurement has been selected. This page must not be used as fabrication approval or as a claim that a panel is compatible.
+**Status:** preliminary allocation only. Adafruit product ID `2277` is the
+selected EVT panel candidate, but no production-approved panel, speaker, PCB
+layout, or assembled-board thermal measurement exists. This page must not be
+used as fabrication approval or as a claim that a panel is compatible.
 
 ## Result
 
@@ -55,7 +58,14 @@ Do not pick a panel from nominal pixel count, a reseller's “average” current
 - Measure cable drop and panel-end voltage at the same worst-case current. The panel must still meet its 5 V operating minimum, and connector/cable temperature must be recorded.
 - Repeat with audio at its declared maximum and Ethernet/Wi-Fi traffic active. The system must remain inside the fixed-load assumptions and the source envelopes at 50 °C ambient with the intended enclosure and blocked-vent condition.
 
-Until those measurements exist, the design has a **6.63 A continuous display allocation**, not a selected panel and not a final thermal closure. A panel that needs more capacity is a product-load conflict; do not silently raise the contract to 5 A or 28 V EPR.
+Until those measurements exist, the design has a **6.63 A continuous display allocation** and an EVT panel candidate, not a production-approved panel or final thermal closure. A panel that needs more capacity is a product-load conflict; do not silently raise the contract to 5 A or 28 V EPR.
+
+The current EVT selection is Adafruit product ID `2277`. Its end-to-end
+published-load screen through the application rail, V5 buck, 2 mOhm shunt, and
+eFuse is recorded in [selected-panel-power-closure.md](selected-panel-power-closure.md).
+That selected-panel screen fits the 40.60 W guaranteed post-shunt ceiling, but
+it does not change this generic maximum-allocation **DENY** or close startup,
+inrush, thermal, CAD, or measurement gates.
 
 ## Manufacturer evidence
 
