@@ -4,7 +4,7 @@
 
 **Evidence date:** 2026-08-22
 
-**Scope:** selected Ethernet, USB-C service, and 24 V power connectors only.
+**Scope:** selected Ethernet and USB-C PD power/service connectors only.
 
 The manufacturer product pages and primary downloads were rechecked on
 2026-08-23. No source-access or CAD-import status changed; the dated hashes
@@ -13,8 +13,8 @@ below remain the acquired-file record.
 ## Evidence status
 
 This is a drawing-source audit, not physical verification. The exact Würth
-STEP file and the exact Neutrik STEP, DXF, and dimensional PDF were acquired
-and identity-checked on the evidence date. They were not imported into a board
+STEP file was acquired and identity-checked on the evidence date. It was not
+imported into a board
 or enclosure assembly, and no manufacturer footprint library or sample was
 reviewed. Amphenol's drawing and 3D download remained access-controlled from
 this review environment. Therefore none of the facts below verifies a released
@@ -39,12 +39,9 @@ CAD-overlay, footprint, or enclosure approval.
 | Würth 7499011121A | [STEP, rev1](https://www.we-online.com/components/products/download/7499011121A%20%28rev1%29.stp) | `44143609DA5D63A01551C85B343134BA5F027136C04CEBEFEA9ABA05AE6AFCD1` | File identifies `7499011121A`; not imported. |
 | Würth 7499011121A | [datasheet](https://www.we-online.com/components/products/datasheet/7499011121A.pdf) | `05B718A55907F45D2388BEA0EBEAADB60C7C93CE2C4C5CA582637936E890E350` | Drawing revision 2023-07-11; not overlaid. |
 | Amphenol 10177070-00011LF | [drawing](https://cdn.amphenol-cs.com/media/wysiwyg/files/drawing/10177070.pdf) | Not acquired: manufacturer CDN returned HTTP 403. | **DENY.** No checksum or import evidence. |
-| Neutrik NC4MD-LX | [STEP](https://www.neutrik.com/media/12908/download/3-D%20NC4MD-LX.stp?v=2) | `0CADDF86BC61FC63D350223895D9E3C6652D40A1533C6BF0469EDA82871F0030` | File identifies `D-NC4MD-LX`; not imported. |
-| Neutrik NC4MD-LX | [DXF](https://www.neutrik.com/media/11869/download/nc4md-lx-3.dxf?v=1) | `E23234A8FFB7F2C0D461BCA6EADDCD97EB551F530E1C97DD0DC724719968A779` | File identifies `st-nc4md-lx.dxf`; not imported. |
-| Neutrik NC4MD-LX | [dimensional PDF](https://www.neutrik.com/media/8420/download/nc4md-lx-2.pdf?v=1) | `0E0E958D00907EF1A5FED029048C01546ACCE1621869DBBB18FEDDFFB99D1078` | Not overlaid against a panel model. |
 
-The Würth drawing's product identifier and recommended-hole drawing, and the
-part identifiers inside both acquired STEP files, were inspected. The current
+The Würth drawing's product identifier and recommended-hole drawing were
+inspected. The current
 tscircuit model contains no imported source geometry to compare with them, so
 that inspection can only establish the mismatch described below.
 
@@ -56,7 +53,7 @@ not confirmation of factory allocation, authorized distribution stock, lead
 time, last-time-buy status, or an approved alternate. In particular, the Würth
 datasheet directs customers to verify availability with its sales channel at
 design-in and before ordering. The Amphenol 403 response also prevents treating
-a public product page as a deliverable CAD source. M4-14 must retain all three
+a public product page as a deliverable CAD source. M4-14 must retain both
 connectors as non-production-approved until a dated authorized-source and
 PCN/PTN review is recorded with the approved manufacturing BOM.
 
@@ -120,33 +117,6 @@ PCN/PTN review is recorded with the approved manufacturing BOM.
   download the 3D model. CAD and footprint availability are therefore
   manufacturer-confirmed, while acquisition and review are **open**.
 
-### Neutrik NC4MD-LX, locking power inlet
-
-- **Mounting:** four-pole male, D-shape chassis receptacle with solder cups.
-  It is panel-mounted and must be wired to an internal keyed harness; it has no
-  PCB footprint. The manufacturer describes an all-metal housing, latch lock,
-  duplex ground contact between chassis and mating cable connector, and an
-  optional connection from pin 1 to chassis ground.
-- **Panel, fasteners, and keepout:** the official dimensional PDF, DXF, and
-  STEP are available below, but the D-cutout contour, mounting-hole diameter
-  and spacing, rear depth, fastener type, and tool clearance have not been
-  measured from a downloaded/model-reviewed source. They remain **open**.
-  Do not substitute a generic three-position header or assume M3 threads: M3
-  threaded holes are specified for the separate `NC4MD-LX-M3` variant, not for
-  the selected `NC4MD-LX` page.
-- **Ratings:** 10 A per contact, rated voltage below 50 V, contact resistance
-  at most 5 milliohm, dielectric strength 1.5 kVdc, more than 1,000 mating
-  cycles, and latch locking. Maximum wire size is 1.5 mm2 (16 AWG); operating
-  range is -30 to +80 C; protection class is IP40. The selected 24 V use fits
-  the stated voltage limit but does not close the product's supply-temperature,
-  miswiring, bonding, or access gates.
-- **Official design data:** [product page](https://www.neutrik.com/en/product/nc4md-lx),
-  [dimensional data sheet](https://www.neutrik.com/media/8420/download/nc4md-lx-2.pdf?v=1),
-  [DXF](https://www.neutrik.com/media/11869/download/nc4md-lx-3.dxf?v=1),
-  and [STEP](https://www.neutrik.com/media/12908/download/3-D%20NC4MD-LX.stp?v=2).
-  These files are manufacturer-published and available; their import and
-  enclosure review are **open**.
-
 ## Current manifest and circuit-model comparison
 
 The source-of-truth readiness register is
@@ -155,7 +125,7 @@ selected connector unapproved, but the M4-11 source audit exposes the following
 gaps that M4-14 must reconcile rather than masking them with a generic model.
 Its `physical` records now carry the manufacturer-published contact, cycle,
 shield, and retention claims without turning those claims into product
-qualification. `panel-chassis` is used for the XUB-G sockets and NC4MD-LX;
+qualification. `panel-chassis` is used for the XUB-G sockets;
 `pcb-with-chassis-support` is used for the RJ45 and USB-C board parts. Every
 external-panel record carries physical evidence. Current records retain
 non-empty `openGates`; a reviewed record may clear them only with its other
@@ -166,7 +136,6 @@ production approval while any physical gate remains open.
 | --- | --- | --- | --- |
 | `J_ETHERNET_MAGJACK` | Generic eight-pin `pinheader` with logical TX, RX, LED, shield, and chassis labels | 7499011121A THT footprint: eight signal holes, four LED holes, two additional diameter-1.6 features, and two diameter-3.25 shell-tab holes, plus panel cutout | **Mismatch.** The header cannot represent the manufacturer hole pattern, LED pins, or shell tabs. |
 | `J_USB_C` | Generic `connector` with `standard="usb_c"`; no selected MPN footprint or shell geometry | 10177070-00011LF right-angle SMT footprint, its exact contact pads, all shield/stake pads, and 0.80 board-thickness constraint | **Mismatch.** A generic USB-C symbol/shape is not its footprint or retention strategy. |
-| `J_POWER_24V` | Generic three-pin `pinheader` with `V24_IN`, `GND`, and `CHASSIS` | NC4MD-LX four-pole D-size, panel-mounted solder-cup connector and keyed internal harness; shell/duplex ground treated as a mechanical and bonding interface | **Mismatch.** Three PCB pins cannot model four power contacts, D-panel cutout, latch, fasteners, or chassis shell. |
 
 The two reel references share one family candidate but have exact bench suffixes
 in the readiness record: `J_L` samples `66.9684-22` (red), and `J_R` samples
@@ -175,12 +144,11 @@ Stäubli's family evidence does not publish a socket contact-resistance or cycle
 rating, and body-cord plug fit plus the independent chassis retainer remain
 project gates.
 
-The readiness manifest labels all three connector CAD records as `pending`.
+The readiness manifest labels all connector CAD records as `pending`.
 That remains accurate: acquired source files have not been imported or
 independently reviewed, and the Amphenol sources could not be acquired in this
-environment. The power inlet's PCB footprint is `not-applicable`, but its CAD
-is not: the selected NC4MD-LX STEP and DXF are required for the chassis,
-cutout, fastener, harness, and service review.
+environment. USB-C is the sole input and its selected Amphenol footprint,
+shell stakes, chassis load path, and cable thermal behavior remain open.
 
 ## Verification checklist and open gates
 
@@ -193,18 +161,13 @@ cutout, fastener, harness, and service review.
   compare every signal, shell/stake, paste, and board-edge feature against the
   actual 10177070-00011LF footprint. Check the 0.80 board requirement against
   the selected communications-module stack-up.
-- [ ] Import the Neutrik DXF and STEP; measure selected-variant cutout,
-  fastener, rear-depth, latch, mating-cable, tool, bend-radius, and service
-  clearances. Select and document actual fasteners; do not inherit M3 hardware
-  from the `-M3` variant.
 - [ ] Build an enclosure/module assembly that transfers RJ45 and USB-C plug
-  loads to chassis supports and verifies that the NC4MD-LX panel fasteners,
-  not solder cups or internal harness conductors, carry insertion/cable load.
+  loads to chassis supports rather than PCB solder joints.
 - [ ] Perform sample plug-fit, repeated insertion, cable-pull, harness
   bend/strain-relief, and module-replacement trials before production approval.
-- [ ] Review the four-pole power pinout, keying, pin-1/chassis option, shell
-  bonding, fault current, temperature rise, and service-safe disconnect
-  sequence with M4-13.
+- [ ] Review USB-C PD shell bonding, 20 V/3 A input current, connector
+  temperature rise, cable identification, fault current, and service-safe
+  disconnect sequence with M4-13.
 
 **M4-11 disposition: DENY fabrication readiness.** Documentation evidence
 identifies the exact selected parts and manufacturer design sources, but CAD

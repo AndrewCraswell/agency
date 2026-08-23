@@ -9,10 +9,10 @@ safe, deterministic scoring and electrical behavior at the weapon interfaces, no
 
 Our product should use a simpler modern architecture and take its power specification through FIE approval:
 
-- one protected locking input accepts nominal 24 V DC from a certified external supply or UPS;
-- USB-C carries service data and limited service power only, so scoring cannot depend on negotiation;
+- one protected USB-C PD SPR sink accepts a 20 V, 3 A contract from a certified external adapter;
+- USB-C also carries native USB 2.0 service data; the PD controller prevents the apparatus rails from receiving initial 5 V or an inadequate contract;
 - regulated system, scoring, and 2.5 V reference rails isolate scoring behavior from input variation;
-- backup power is monitored and tested by runtime and switchover performance, not by battery chemistry;
+- any required backup function is an external qualified USB-PD UPS or adapter capability; the apparatus contains no battery or charger;
 - there is no 12 V compatibility path, input-source multiplexer, or internal battery pack.
 
 This is not compliant with the present m.58 voltage wording. FIE acceptance of the exact design is therefore a product
@@ -38,7 +38,7 @@ obsolete voltage and chemistry mandate rather than renegotiating competition ope
 The FIE rules allow the SEMI Committee to examine a constructor's prototype even before a specific competition and
 require a complete apparatus and detailed construction drawing for event approval. Submit:
 
-- the complete 24 V prototype, certified external supply, declared UPS, spools, and connections;
+- the complete USB-PD prototype, certified 20 V, 3 A adapter, declared UPS if one is required, spools, and connections;
 - automated timing and resistance reports at input tolerance limits and during source transfer;
 - oscilloscope evidence showing no scoring interruption during source removal and transfer;
 - input fault, brownout, overvoltage, reverse-polarity, thermal, EMC, ESD, and runtime reports;
@@ -51,6 +51,6 @@ before the intended competition, as required by m.46.
 
 ## Product gate
 
-Do not claim that the 24 V source is approved for official FIE competition until the SEMI Committee has accepted that
+Do not claim that the USB-PD source is approved for official FIE competition until the SEMI Committee has accepted that
 exact apparatus design. If FIE will not approve it or amend m.58, the power-entry design must be revisited before an
 official-event release; the production board will not carry dormant 12 V complexity as insurance.

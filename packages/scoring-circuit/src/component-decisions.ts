@@ -95,9 +95,10 @@ export const componentDecisions = [
     lifecycle: "active",
     manufacturer: "Texas Instruments",
     manufacturerUrl: "https://www.ti.com/product/TPS3890",
-    mpn: "TPS389018DSER",
-    purpose: "Precision brownout and delayed reset supervision",
-    qualification: "One-percent threshold accuracy; -40 C to 125 C"
+    mpn: "TPS389033DSER",
+    purpose: "Precision 3.3 V brownout and delayed reset supervision",
+    qualification:
+      "3.170 V falling and 3.189 V rising nominal thresholds; +/-1% threshold accuracy; open-drain reset; 100 nF CT selected for approximately 107 ms nominal delay; -40 C to 125 C"
   },
   {
     category: "system-regulator",
@@ -105,17 +106,18 @@ export const componentDecisions = [
     manufacturer: "Texas Instruments",
     manufacturerUrl: "https://www.ti.com/product/TPS55288",
     mpn: "TPS55288RPMR",
-    purpose: "Four-switch buck-boost for the five-volt system and display rail",
+    purpose: "Four-switch buck-boost from the negotiated USB-PD input to the five-volt system and display rail",
     qualification: "2.7 V to 36 V input; -40 C to 150 C junction; thermally validate the selected inductor"
   },
   {
     category: "power-protection",
     lifecycle: "active",
     manufacturer: "Texas Instruments",
-    manufacturerUrl: "https://www.ti.com/product/TPS2663",
-    mpn: "TPS26631PWPT",
-    purpose: "Industrial surge, inrush, overvoltage, reverse-polarity, and overcurrent protection for the 24 V input",
-    qualification: "Active; 4.5 V to 60 V; 6 A; -40 C to 125 C; IEC 62368-1 certified"
+    manufacturerUrl: "https://www.ti.com/product/TPS25947",
+    mpn: "TPS259474ARPWR",
+    purpose: "Post-contract integrated reverse-current-blocking eFuse and overcurrent protection for the USB-PD input",
+    qualification:
+      "Active production, 10-pin RPW VQFN-HR; TPS259474A circuit-breaker auto-retry behavior with integrated back-to-back reverse-current blocking FETs. Model UVLO, OVLO, ILM (1 percent 1.24 kOhm: 2.69 A nominal, 2.99 A maximum with TI plus or minus 10 percent), ITIMER, DVDT (20 to 22 ms), PGTH (1 percent 698 kOhm/49.9 kOhm: 17.65 to 18.32 V), PG and output capacitance for the 3 A contract"
   },
   {
     category: "power-monitor",
@@ -145,22 +147,44 @@ export const componentDecisions = [
     qualification: "Through-hole shielded RJ45; -40 C to 85 C; footprint, EMC, and surge validation remain open"
   },
   {
-    category: "service-connector",
+    category: "usb-c-power-and-service-connector",
     lifecycle: "active",
     manufacturer: "Amphenol Communications Solutions",
     manufacturerUrl: "https://www.amphenol-cs.com/product/1017707000011lf.html",
     mpn: "10177070-00011LF",
-    purpose: "Replaceable USB 2.0 Type-C service and limited service-power connection",
-    qualification: "20,000 mating cycles; 5 A; 20 V; -40 C to 105 C; chassis strain relief remains required"
+    purpose: "Replaceable USB 2.0 Type-C UFP port; sole apparatus USB-PD power input and native service data",
+    qualification:
+      "20,000 mating cycles; 5 A; 20 V; -40 C to 105 C; exact 0.80 mm-board footprint and chassis strain relief remain required"
   },
   {
-    category: "primary-power-connector",
+    category: "usb-pd-port-protection",
     lifecycle: "active",
-    manufacturer: "Neutrik",
-    manufacturerUrl: "https://www.neutrik.com/en/product/nc4md-lx",
-    mpn: "NC4MD-LX",
-    purpose: "Locking chassis inlet for the external certified 24 V supply",
-    qualification: "10 A per contact below 50 V; above 1,000 mating cycles; keyed harness validation remains open"
+    manufacturer: "Texas Instruments",
+    manufacturerUrl: "https://www.ti.com/product/TPD4S201-Q1/part-details/TPD4S201TRGRRQ1",
+    mpn: "TPD4S201TRGRRQ1",
+    purpose: "Connector-side CC1, CC2, D+, and D- short-to-VBUS and IEC ESD protection for 20 V SPR",
+    qualification:
+      "Active AEC-Q100 device; 28 V CC/D+/D- short-to-VBUS tolerance; 8 kV IEC contact ESD; -40 C to 105 C; connector CC enters C_CC1/C_CC2, RPD_G1/G2 return there, protected CC1/CC2 route to TPS25730A, and /FLT routes to FAULT_IN"
+  },
+  {
+    category: "usb-pd-vbus-transient-protection",
+    lifecycle: "active",
+    manufacturer: "Texas Instruments",
+    manufacturerUrl: "https://www.ti.com/product/TVS2200/part-details/TVS2200DRVR",
+    mpn: "TVS2200DRVR",
+    purpose: "22 V flat-clamp connector-side VBUS TVS for the 20 V USB-PD SPR input",
+    qualification:
+      "Active; 22 V standoff; connector-side nominal transient clamp only. Its 28.35 V worst-case 35 A, 125 C clamp exceeds TPS25730A 28 V absolute maximum before layout inductance, so chip-pin surge survival remains a release gate"
+  },
+  {
+    category: "usb-pd-controller",
+    lifecycle: "active",
+    manufacturer: "Texas Instruments",
+    manufacturerUrl: "https://www.ti.com/product/TPS25730A/part-details/TPS25730ADREFR",
+    mpn: "TPS25730ADREFR",
+    purpose: "Standalone USB-PD sink-only UFP controller with internal 20 V, 5 A protected power path",
+    qualification:
+      "Active production; USB-IF PD3.2 TID 15340; -40 C to 125 C; ADCIN1=4 minimum 20 V, ADCIN2=6 with PD5VMAX low maximum 20 V plus mismatch auto-disable, ADCIN3=3 operating 3 A, ADCIN4=1 maximum 3 A"
   },
   {
     category: "field-serial",
@@ -180,6 +204,15 @@ export const componentDecisions = [
     purpose:
       "Three-volt to five-volt HUB75 signal buffering with a required schematic-level default-blank pull network",
     qualification: "Use two devices; -40 C to 125 C"
+  },
+  {
+    category: "reset-combiner",
+    lifecycle: "active",
+    manufacturer: "Nexperia",
+    manufacturerUrl: "https://www.nexperia.com/product/BSS138AKA",
+    mpn: "BSS138AKA",
+    purpose: "Low-side open-drain sinks for the isolated STM32 reset request and reset-gated HUB75 buffers",
+    qualification: "60 V N-channel logic-level MOSFET; AEC-Q101 qualified; -55 C to 150 C"
   },
   {
     category: "event-journal",

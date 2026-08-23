@@ -29,9 +29,8 @@ with at least five minutes of backup (FIE pp. 42, 44-45, and 49). That requireme
 the voltage presented to the weapon conductors. The sensing cell therefore does not depend on a 12 V analog rail: its
 protected 2.5 V excitation is derived from a precision reference after the product's regulated power stages.
 
-The product instead uses one locking 24 V DC input. It does not make 12 V, USB Power Delivery, or VRLA chemistry an
-architectural dependency. See `fie-modern-power-proposal.md` for the proposed standards path and the resulting FIE
-approval gate.
+The product instead uses one USB-PD SPR 20 V, 3 A input. It does not make 12 V or VRLA chemistry an architectural
+dependency. See `fie-modern-power-proposal.md` for the proposed standards path and the resulting FIE approval gate.
 
 ## Proposed Rev-B sensing cell
 
@@ -117,7 +116,7 @@ Build one reusable fixture before the scoring PCB:
 - a pulse generator producing 50 us, 100 us, 1 ms, 2 ms, 10 ms, 13 ms, 14 ms, and 15 ms contacts;
 - break-before-make relays whose closed resistance and bounce are recorded separately from the simulated external path;
 - oscilloscope points at the connector, protected node, ADC pin, comparator output, reference, and scoring ground;
-- a calibrated 24 V input at its declared tolerance limits, brownout ramps, external-UPS transfer, and scoring-domain
+- a calibrated negotiated 20 V USB-PD input at its declared tolerance limits, brownout ramps, external-UPS transfer, and scoring-domain
   current measurement.
 
 The fixture first validates one sensing cell on a socketed coupon. Only after its threshold error is within +/- 5 ohms
@@ -129,7 +128,7 @@ and cable-fault testing occur on sacrificial coupons before they are allowed nea
 1. Every resistance boundary is tested at nominal, boundary - 5 ohms, and boundary + 5 ohms.
 2. Every timing boundary is tested at boundary - fixture uncertainty, boundary, and boundary + fixture uncertainty.
 3. Open, short, cross-line, blade/guard, opponent target, self-lame, and piste combinations are exercised for both sides.
-4. Results are repeated at minimum, room, and maximum qualified ambient temperature and at the declared 24 V input
+4. Results are repeated at minimum, room, and maximum qualified ambient temperature and at the declared 20 V PD input
    tolerance limits. The simulation's two endpoints do not replace this coupon requirement.
 5. No single open switch-control line, stuck switch, ADC saturation, missing reference, or MCU reset may produce a
    qualified touch; faults must become diagnostics or a safe unavailable state.

@@ -25,8 +25,8 @@ describe("critical-part readiness", () => {
       candidateSelections: 1,
       manufacturerVerifiedCad: 1,
       productionApproved: 0,
-      selectedParts: 5,
-      total: 6,
+      selectedParts: 4,
+      total: 5,
       verifiedFootprints: 0,
       verifiedMechanical: 0
     })
@@ -174,14 +174,14 @@ describe("critical-part readiness", () => {
 
   it("requires physical evidence for external modules and rejects blank or duplicate claims", () => {
     const readiness: readonly CriticalPartReadiness[] = criticalPartReadiness
-    const powerInput = readiness.find((part) => part.references.some((reference) => reference === "J_POWER_24V"))
+    const powerInput = readiness.find((part) => part.references.some((reference) => reference === "J_USB_C"))
     if (powerInput === undefined || powerInput.physical === undefined) {
       throw new Error("The selected power input must carry physical evidence")
     }
 
     const missingPhysical = { ...powerInput, physical: undefined }
     expect(validateCriticalPartReadiness([missingPhysical])).toContain(
-      "NC4MD-LX: external-panel-module requires physical evidence"
+      "10177070-00011LF: external-panel-module requires physical evidence"
     )
 
     const missingReelSamples: CriticalPartReadiness = {
@@ -228,15 +228,15 @@ describe("critical-part readiness", () => {
 
   it("keeps chassis connectors off the main-board footprint approval path", () => {
     const powerInput = criticalPartReadiness.find((part) =>
-      part.references.some((reference) => reference === "J_POWER_24V")
+      part.references.some((reference) => reference === "J_USB_C")
     )
     const reelSockets = criticalPartReadiness.find((part) => part.references.some((reference) => reference === "J_L"))
 
     expect(powerInput?.assembly).toBe("external-panel-module")
-    expect(powerInput?.footprint.status).toBe("not-applicable")
+    expect(powerInput?.footprint.status).toBe("source-identified")
     expect(powerInput?.cad.status).toBe("pending")
     if (powerInput !== undefined && "url" in powerInput.cad) {
-      expect(powerInput.cad.url).toContain("NC4MD-LX.stp")
+      expect(powerInput.cad.url).toContain("s10177070c.zip")
     } else {
       throw new Error("The selected power inlet must retain its manufacturer CAD source")
     }
@@ -249,7 +249,7 @@ describe("critical-part readiness", () => {
     const reelSockets = readiness.find((part) => part.references.some((reference) => reference === "J_L"))
     const ethernet = readiness.find((part) => part.references.some((reference) => reference === "J_ETHERNET_MAGJACK"))
     const usb = readiness.find((part) => part.references.some((reference) => reference === "J_USB_C"))
-    const power = readiness.find((part) => part.references.some((reference) => reference === "J_POWER_24V"))
+    const power = readiness.find((part) => part.references.some((reference) => reference === "J_USB_C"))
 
     expect(reelSockets?.physical?.exactSampleMpns).toEqual(["66.9684-22", "66.9684-25"])
     expect(reelSockets?.physical?.mounting).toBe("panel-chassis")
@@ -258,8 +258,8 @@ describe("critical-part readiness", () => {
     expect(ethernet?.physical?.cycleRating).toBe("750 mating cycles")
     expect(usb?.physical?.contactRating).toContain("40 milliohms")
     expect(usb?.physical?.cycleRating).toBe("20,000 mating cycles")
-    expect(power?.physical?.retention).toContain("Latch lock")
-    expect(power?.physical?.contactRating).toContain("5 milliohms")
+    expect(power?.physical?.retention).toContain("communications module")
+    expect(power?.physical?.contactRating).toContain("40 milliohms")
 
     for (const part of [reelSockets, ethernet, usb, power]) {
       expect(part?.physical?.openGates.length).toBeGreaterThan(0)
@@ -272,16 +272,12 @@ describe("critical-part readiness", () => {
     const sourceComponents = circuitJson.filter((element) => element.type === "source_component")
     const ethernet = sourceComponents.find((component) => component.name === "J_ETHERNET_MAGJACK")
     const usb = sourceComponents.find((component) => component.name === "J_USB_C")
-    const power = sourceComponents.find((component) => component.name === "J_POWER_24V")
 
     expect(ethernet?.ftype).toBe("simple_pin_header")
     expect(ethernet !== undefined && "pin_count" in ethernet ? ethernet.pin_count : undefined).toBe(8)
     expect(usb?.ftype).toBe("simple_connector")
     expect(usb !== undefined && "standard" in usb ? usb.standard : undefined).toBe("usb_c")
-    expect(power?.ftype).toBe("simple_pin_header")
-    expect(power !== undefined && "pin_count" in power ? power.pin_count : undefined).toBe(3)
-
-    for (const reference of ["J_ETHERNET_MAGJACK", "J_USB_C", "J_POWER_24V"]) {
+    for (const reference of ["J_ETHERNET_MAGJACK", "J_USB_C"]) {
       const part = criticalPartReadiness.find((candidate) =>
         candidate.references.some((candidateReference) => candidateReference === reference)
       )

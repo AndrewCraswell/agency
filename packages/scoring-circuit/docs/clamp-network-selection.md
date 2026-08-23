@@ -101,7 +101,7 @@ Direct `R_BIAS` does create a possible back-power path from a positive-driven `C
 
 ## Return strategy and coupon gates
 
-Place `D_ESD` directly behind the connector with a short, wide conductor-to-TVS-to-`ESD_RETURN` loop. `R_ESD` is on the quiet side, never in the return loop. Route `ESD_RETURN` on its own island to the connector shield or chassis bonding choice from M4-13; do not inject it through `SGND` or the reference return. The architectural `J_POWER_24V.CHASSIS -> ESD_RETURN` net is a placeholder, not a proven bonding design.
+Place `D_ESD` directly behind the connector with a short, wide conductor-to-TVS-to-`ESD_RETURN` loop. `R_ESD` is on the quiet side, never in the return loop. Route `ESD_RETURN` on its own island to the USB-C connector shield or chassis bonding choice from M4-13; do not inject it through `SGND` or the reference return. The architectural `J_USB_C.SHIELD -> ESD_RETURN` net is a placeholder, not a proven bonding design.
 
 Place `R_ADC`, both pad clamps, the 470 pF C0G capacitor, and the MCU pad together on a small `SGND`-referenced island. Place `V_CLAMP` and `R_BIAS` beside it. Keep the guard rail separate from `REF5025`.
 

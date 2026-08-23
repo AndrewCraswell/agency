@@ -121,18 +121,31 @@ function ScoringCircuit() {
         name="U_STM_WATCHDOG"
         manufacturerPartNumber="TPS3431SDRBR"
         footprint="qfn8"
-        pinLabels={{ pin1: "S3_3", pin2: "SGND", pin3: "WDI", pin4: "RESET" }}
+        pinLabels={{
+          pin1: "S3_3",
+          pin2: "CWD",
+          pin3: "EN",
+          pin4: "SGND",
+          pin5: "SET1",
+          pin6: "WDI",
+          pin7: "RESET",
+          pin8: "ENOUT"
+        }}
         pcbX={-66}
         pcbY={-12}
       />
       <chip
         name="U_STM_SUPERVISOR"
-        manufacturerPartNumber="TPS389018DSER"
+        manufacturerPartNumber="TPS389033DSER"
         footprint="wson6"
-        pinLabels={{ pin1: "SENSE", pin2: "SGND", pin3: "RESET", pin4: "S3_3" }}
+        pinLabels={{ pin1: "SENSE", pin2: "SGND", pin3: "MR", pin4: "S3_3", pin5: "CT", pin6: "RESET" }}
         pcbX={-66}
         pcbY={-22}
       />
+      <resistor name="R_STM_WD_CWD" resistance="10k" tolerance="1%" footprint="0603" pcbX={-72} pcbY={-12} />
+      <capacitor name="C_STM_WD_BYPASS" capacitance="100nF" footprint="0603" pcbX={-75} pcbY={-12} />
+      <capacitor name="C_STM_SUPERVISOR_CT" capacitance="100nF" footprint="0603" pcbX={-72} pcbY={-22} />
+      <capacitor name="C_STM_SUPERVISOR_BYPASS" capacitance="100nF" footprint="0603" pcbX={-75} pcbY={-22} />
       <chip
         name="U_ISOLATED_POWER"
         manufacturerPartNumber="NXE1S0505MC"
@@ -171,14 +184,14 @@ function ScoringCircuit() {
           pin2: "S_SCK",
           pin3: "S_MOSI",
           pin4: "S_CS",
-          pin5: "S_ESP_RESET_ASSERT_N",
+          pin5: "S_ESP_RESET_ASSERT",
           pin6: "S_MISO",
           pin7: "S_ESP_HEARTBEAT",
           pin8: "SGND",
           pin9: "GND",
           pin10: "A_ESP_HEARTBEAT",
           pin11: "A_MISO",
-          pin12: "A_ESP_RESET_ASSERT_N",
+          pin12: "A_ESP_RESET_ASSERT",
           pin13: "A_CS",
           pin14: "A_MOSI",
           pin15: "A_SCK",
@@ -262,18 +275,77 @@ function ScoringCircuit() {
         name="U_ESP_WATCHDOG"
         manufacturerPartNumber="TPS3431SDRBR"
         footprint="qfn8"
-        pinLabels={{ pin1: "V3_3", pin2: "GND", pin3: "WDI", pin4: "RESET" }}
+        pinLabels={{
+          pin1: "V3_3",
+          pin2: "CWD",
+          pin3: "EN",
+          pin4: "GND",
+          pin5: "SET1",
+          pin6: "WDI",
+          pin7: "RESET",
+          pin8: "ENOUT"
+        }}
         pcbX={13}
         pcbY={-19}
       />
       <chip
         name="U_ESP_SUPERVISOR"
-        manufacturerPartNumber="TPS389018DSER"
+        manufacturerPartNumber="TPS389033DSER"
         footprint="wson6"
-        pinLabels={{ pin1: "SENSE", pin2: "GND", pin3: "RESET", pin4: "V3_3" }}
+        pinLabels={{ pin1: "SENSE", pin2: "GND", pin3: "MR", pin4: "V3_3", pin5: "CT", pin6: "RESET" }}
         pcbX={26}
         pcbY={-19}
       />
+      <resistor name="R_ESP_EN_PULLUP" resistance="10k" tolerance="1%" footprint="0603" pcbX={34} pcbY={-9} />
+      <capacitor name="C_ESP_EN_DELAY" capacitance="1uF" footprint="0603" pcbX={39} pcbY={-9} />
+      <chip
+        name="Q_ESP_RESET_STM"
+        manufacturerPartNumber="BSS138AKA"
+        footprint="sot23"
+        pinLabels={{ pin1: "G", pin2: "S", pin3: "D" }}
+        pcbX={31}
+        pcbY={-2}
+      />
+      <chip
+        name="Q_ESP_DEBUG_RESET"
+        manufacturerPartNumber="BSS138AKA"
+        footprint="sot23"
+        pinLabels={{ pin1: "G", pin2: "S", pin3: "D" }}
+        pcbX={46}
+        pcbY={-29}
+      />
+      <resistor name="R_STM_RESET_GATE" resistance="10k" tolerance="1%" footprint="0603" pcbX={24} pcbY={-2} />
+      <resistor name="R_STM_RESET_GATE_PD" resistance="100k" tolerance="1%" footprint="0603" pcbX={28} pcbY={3} />
+      <resistor name="R_DEBUG_RESET_GATE" resistance="10k" tolerance="1%" footprint="0603" pcbX={42} pcbY={-29} />
+      <resistor name="R_DEBUG_RESET_GATE_PD" resistance="100k" tolerance="1%" footprint="0603" pcbX={46} pcbY={-25} />
+      <resistor name="R_STM_RESET_ISO_SERIES" resistance="10k" tolerance="1%" footprint="0603" pcbX={-5} pcbY={-8} />
+      <resistor name="R_STM_RESET_ISO_PD" resistance="100k" tolerance="1%" footprint="0603" pcbX={-1} pcbY={-8} />
+      <resistor name="R_ESP_WD_CWD" resistance="10k" tolerance="1%" footprint="0603" pcbX={9} pcbY={-24} />
+      <capacitor name="C_ESP_WD_BYPASS" capacitance="100nF" footprint="0603" pcbX={5} pcbY={-24} />
+      <capacitor name="C_ESP_SUPERVISOR_CT" capacitance="100nF" footprint="0603" pcbX={30} pcbY={-25} />
+      <capacitor name="C_ESP_SUPERVISOR_BYPASS" capacitance="100nF" footprint="0603" pcbX={35} pcbY={-25} />
+      <chip
+        name="Q_DISPLAY_BUFFER_A_ENABLE"
+        manufacturerPartNumber="BSS138AKA"
+        footprint="sot23"
+        pinLabels={{ pin1: "G", pin2: "S", pin3: "D" }}
+        pcbX={9}
+        pcbY={24}
+      />
+      <chip
+        name="Q_DISPLAY_BUFFER_B_ENABLE"
+        manufacturerPartNumber="BSS138AKA"
+        footprint="sot23"
+        pinLabels={{ pin1: "G", pin2: "S", pin3: "D" }}
+        pcbX={35}
+        pcbY={24}
+      />
+      <resistor name="R_BUFFER_A_ENABLE_PULLUP" resistance="10k" tolerance="1%" footprint="0603" pcbX={9} pcbY={20} />
+      <resistor name="R_BUFFER_B_ENABLE_PULLUP" resistance="10k" tolerance="1%" footprint="0603" pcbX={35} pcbY={20} />
+      <resistor name="R_BUFFER_A_GATE" resistance="10k" tolerance="1%" footprint="0603" pcbX={14} pcbY={24} />
+      <resistor name="R_BUFFER_B_GATE" resistance="10k" tolerance="1%" footprint="0603" pcbX={40} pcbY={24} />
+      <resistor name="R_BUFFER_A_GATE_PD" resistance="100k" tolerance="1%" footprint="0603" pcbX={14} pcbY={28} />
+      <resistor name="R_BUFFER_B_GATE_PD" resistance="100k" tolerance="1%" footprint="0603" pcbX={40} pcbY={28} />
 
       <chip
         name="U_ETHERNET"
@@ -443,6 +515,20 @@ function ScoringCircuit() {
         pcbX={28}
         pcbY={29}
       />
+      <resistor name="R_HUB75_R1_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={8} pcbY={34} />
+      <resistor name="R_HUB75_G1_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={11} pcbY={34} />
+      <resistor name="R_HUB75_B1_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={14} pcbY={34} />
+      <resistor name="R_HUB75_R2_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={17} pcbY={34} />
+      <resistor name="R_HUB75_G2_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={20} pcbY={34} />
+      <resistor name="R_HUB75_B2_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={23} pcbY={34} />
+      <resistor name="R_HUB75_A_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={26} pcbY={34} />
+      <resistor name="R_HUB75_B_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={29} pcbY={34} />
+      <resistor name="R_HUB75_C_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={32} pcbY={34} />
+      <resistor name="R_HUB75_D_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={35} pcbY={34} />
+      <resistor name="R_HUB75_CLK_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={38} pcbY={34} />
+      <resistor name="R_HUB75_LAT_PD" resistance="10k" tolerance="1%" footprint="0603" pcbX={41} pcbY={34} />
+      <resistor name="R_HUB75_OE_PULLUP" resistance="10k" tolerance="1%" footprint="0603" pcbX={44} pcbY={34} />
+      <resistor name="R_HUB75_PANEL_OE_PULLUP" resistance="10k" tolerance="1%" footprint="0603" pcbX={47} pcbY={34} />
       <pinheader
         name="J_HUB75"
         pinCount={16}
@@ -486,21 +572,21 @@ function ScoringCircuit() {
       <pinheader
         name="J_ESP_DEBUG"
         pinCount={6}
-        pinLabels={["V3_3", "TX", "RX", "EN_RESET", "BOOT", "GND"]}
+        pinLabels={["V3_3", "TX", "RX", "MANUAL_RESET_ASSERT", "BOOT", "GND"]}
         pcbX={34}
         pcbY={-29}
       />
-      <pinheader name="TP_ESP_RESET_REQUEST_N" pinCount={1} pinLabels={["RESET_REQUEST_N"]} pcbX={5} pcbY={-11} />
+      <pinheader name="TP_ESP_RESET_REQUEST" pinCount={1} pinLabels={["RESET_REQUEST"]} pcbX={5} pcbY={-11} />
 
       <connector
         name="J_USB_C"
         standard="usb_c"
         pinLabels={{
-          pin1: "USB_DN",
-          pin2: "USB_DP",
-          pin3: "CC1",
-          pin4: "CC2",
-          pin5: "VBUS",
+          pin1: "USB_DN_PORT",
+          pin2: "USB_DP_PORT",
+          pin3: "CC1_PORT",
+          pin4: "CC2_PORT",
+          pin5: "VBUS_PORT",
           pin6: "GND",
           pin7: "SHIELD"
         }}
@@ -508,14 +594,214 @@ function ScoringCircuit() {
         pcbY={-46}
         pcbRotation={180}
       />
-      <pinheader name="J_POWER_24V" pinCount={3} pinLabels={["V24_IN", "GND", "CHASSIS"]} pcbX={67} pcbY={-31} />
+      <chip
+        name="U_USB_PORT_PROTECT"
+        manufacturerPartNumber="TPD4S201TRGRRQ1"
+        footprint="qfn20"
+        pinLabels={{
+          pin1: "USB_DN_PORT",
+          pin2: "USB_DP_PORT",
+          pin3: "CC1_PORT",
+          pin4: "CC2_PORT",
+          pin5: "USB_DN_PROTECTED",
+          pin6: "USB_DP_PROTECTED",
+          pin7: "CC1",
+          pin8: "CC2",
+          pin9: "PD_LDO_3V3",
+          pin10: "GND",
+          pin11: "RPD_G1",
+          pin12: "RPD_G2",
+          pin13: "VBIAS",
+          pin14: "FLT_N"
+        }}
+        pcbX={44}
+        pcbY={-46}
+      />
+      <chip
+        name="R_USB_DN"
+        manufacturerPartNumber="22R_1PCT_0402"
+        footprint="0402"
+        pinLabels={{ pin1: "USB_DN_PROTECTED", pin2: "USB_DN" }}
+        pcbX={38}
+        pcbY={-44}
+      />
+      <chip
+        name="R_USB_DP"
+        manufacturerPartNumber="22R_1PCT_0402"
+        footprint="0402"
+        pinLabels={{ pin1: "USB_DP_PROTECTED", pin2: "USB_DP" }}
+        pcbX={38}
+        pcbY={-48}
+      />
+      <chip
+        name="D_USB_PD_VBUS_TVS"
+        manufacturerPartNumber="TVS2200DRVR"
+        footprint="wson6"
+        pinLabels={{ pin1: "VBUS_PORT", pin2: "ESD_RETURN" }}
+        pcbX={44}
+        pcbY={-34}
+      />
+      <chip
+        name="U_USB_PD"
+        manufacturerPartNumber="TPS25730ADREFR"
+        footprint="qfn38"
+        pinLabels={{
+          pin1: "VBUS_PORT",
+          pin2: "CC1_PROTECTED",
+          pin3: "CC2_PROTECTED",
+          pin4: "PD_PPHV_20V",
+          pin5: "VIN_3V3",
+          pin6: "LDO_3V3",
+          pin7: "LDO_1V5",
+          pin8: "ADCIN1",
+          pin9: "ADCIN2",
+          pin10: "ADCIN3",
+          pin11: "ADCIN4",
+          pin12: "PD5VMAX_N",
+          pin13: "CC1_PROTECTED",
+          pin14: "CC2_PROTECTED",
+          pin15: "FAULT_IN_N",
+          pin16: "CAP_MIS_N",
+          pin17: "GND"
+        }}
+        pcbX={31}
+        pcbY={-39}
+      />
+      <chip
+        name="C_USB_PD_LDO"
+        manufacturerPartNumber="T55A106M010C0200"
+        footprint="1206"
+        pinLabels={{ pin1: "PD_LDO_3V3", pin2: "GND" }}
+        pcbX={21}
+        pcbY={-44}
+      />
+      <chip
+        name="C_USB_PORT_PROTECT_BIAS"
+        manufacturerPartNumber="100NF_10PCT_50V_X7R_0402"
+        footprint="0402"
+        pinLabels={{ pin1: "VBIAS", pin2: "GND" }}
+        pcbX={21}
+        pcbY={-48}
+      />
+      <chip
+        name="C_USB_PD_LDO_1V5"
+        manufacturerPartNumber="GRM21BR71A106KA73K"
+        footprint="0805"
+        pinLabels={{ pin1: "LDO_1V5", pin2: "GND" }}
+        pcbX={17}
+        pcbY={-44}
+      />
+      <chip
+        name="C_USB_PD_VIN_3V3"
+        manufacturerPartNumber="10UF_10PCT_10V_X7R_0805"
+        footprint="0805"
+        pinLabels={{ pin1: "VIN_3V3", pin2: "GND" }}
+        pcbX={17}
+        pcbY={-40}
+      />
+      <chip
+        name="C_USB_PD_VBUS"
+        manufacturerPartNumber="4U7_10PCT_50V_X7R_0805"
+        footprint="0805"
+        pinLabels={{ pin1: "VBUS_PORT", pin2: "GND" }}
+        pcbX={45}
+        pcbY={-30}
+      />
+      <chip
+        name="C_USB_PD_PPHV"
+        manufacturerPartNumber="T523H107M035APE070"
+        footprint="2924"
+        pinLabels={{ pin1: "PD_PPHV_20V", pin2: "GND" }}
+        pcbX={25}
+        pcbY={-44}
+      />
+      <chip
+        name="C_USB_PD_CC1"
+        manufacturerPartNumber="330PF_5PCT_50V_C0G_0402"
+        footprint="0402"
+        pinLabels={{ pin1: "CC1_PROTECTED", pin2: "GND" }}
+        pcbX={28}
+        pcbY={-48}
+      />
+      <chip
+        name="C_USB_PD_CC2"
+        manufacturerPartNumber="330PF_5PCT_50V_C0G_0402"
+        footprint="0402"
+        pinLabels={{ pin1: "CC2_PROTECTED", pin2: "GND" }}
+        pcbX={31}
+        pcbY={-48}
+      />
+      <chip
+        name="D_USB_PD_VBUS_DISCONNECT"
+        manufacturerPartNumber="B340A-13-F"
+        footprint="sma"
+        pinLabels={{ pin1: "ANODE_GND", pin2: "CATHODE_VBUS" }}
+        pcbX={48}
+        pcbY={-30}
+      />
+      <resistor name="R_USB_PD_ADCIN1_UP" resistance={24900} footprint="0402" pcbX={25} pcbY={-30} />
+      <resistor name="R_USB_PD_ADCIN1_DOWN" resistance={10000} footprint="0402" pcbX={21} pcbY={-30} />
+      <resistor name="R_USB_PD_ADCIN2_UP" resistance={10000} footprint="0402" pcbX={25} pcbY={-26} />
+      <resistor name="R_USB_PD_ADCIN2_DOWN" resistance={68100} footprint="0402" pcbX={21} pcbY={-26} />
+      <resistor name="R_USB_PD_ADCIN3_UP" resistance={162000} footprint="0402" pcbX={25} pcbY={-22} />
+      <resistor name="R_USB_PD_ADCIN3_DOWN" resistance={38000} footprint="0402" pcbX={21} pcbY={-22} />
+      <resistor name="R_USB_PD_ADCIN4_UP" resistance={191000} footprint="0402" pcbX={25} pcbY={-18} />
+      <resistor name="R_USB_PD_ADCIN4_DOWN" resistance={9500} footprint="0402" pcbX={21} pcbY={-18} />
+      <resistor name="R_USB_PD_PD5VMAX" resistance={10000} footprint="0402" pcbX={17} pcbY={-18} />
+      <resistor name="R_USB_PORT_PROTECT_FLT_PULLUP" resistance={10000} footprint="0402" pcbX={17} pcbY={-22} />
+      <pinheader name="TP_USB_VBUS_PORT" pinCount={1} pinLabels={["VBUS_PORT"]} pcbX={50} pcbY={-36} />
+      <pinheader name="TP_USB_PD_PPHV" pinCount={1} pinLabels={["PD_PPHV_20V"]} pcbX={25} pcbY={-48} />
+      <pinheader name="TP_USB_PD_CAP_MIS" pinCount={1} pinLabels={["CAP_MIS_N"]} pcbX={13} pcbY={-48} />
       <chip
         name="U_EFUSE"
-        manufacturerPartNumber="TPS26631PWPT"
-        footprint="tssop20"
-        pinLabels={{ pin1: "VIN", pin2: "GND", pin3: "EN", pin4: "FAULT", pin5: "VOUT" }}
+        manufacturerPartNumber="TPS259474ARPWR"
+        footprint="qfn10"
+        pinLabels={{
+          pin1: "EN_UVLO",
+          pin2: "OVLO",
+          pin3: "PG",
+          pin4: "PGTH",
+          pin5: "VIN",
+          pin6: "VOUT",
+          pin7: "DVDT",
+          pin8: "GND",
+          pin9: "ILM",
+          pin10: "ITIMER"
+        }}
         pcbX={36}
         pcbY={-38}
+      />
+      <resistor name="R_EFUSE_UVLO_UP" resistance={475000} footprint="0402" pcbX={40} pcbY={-26} />
+      <resistor name="R_EFUSE_UVLO_DOWN" resistance={38300} footprint="0402" pcbX={36} pcbY={-26} />
+      <resistor name="R_EFUSE_OVLO_UP" resistance={499000} footprint="0402" pcbX={32} pcbY={-26} />
+      <resistor name="R_EFUSE_OVLO_DOWN" resistance={28700} footprint="0402" pcbX={28} pcbY={-26} />
+      <resistor name="R_EFUSE_ILM" resistance={1240} tolerance="1%" footprint="0402" pcbX={40} pcbY={-30} />
+      <chip
+        name="C_EFUSE_ITIMER"
+        manufacturerPartNumber="2N2_5PCT_50V_C0G_0402"
+        footprint="0402"
+        pinLabels={{ pin1: "ITIMER", pin2: "GND" }}
+        pcbX={36}
+        pcbY={-30}
+      />
+      <chip
+        name="C_EFUSE_DVDT"
+        manufacturerPartNumber="2N2_5PCT_50V_C0G_0402"
+        footprint="0402"
+        pinLabels={{ pin1: "DVDT", pin2: "GND" }}
+        pcbX={32}
+        pcbY={-30}
+      />
+      <resistor name="R_EFUSE_PGTH_UP" resistance={698000} tolerance="1%" footprint="0402" pcbX={28} pcbY={-30} />
+      <resistor name="R_EFUSE_PGTH_DOWN" resistance={49900} tolerance="1%" footprint="0402" pcbX={24} pcbY={-30} />
+      <resistor name="R_EFUSE_PG_PULLUP" resistance={10000} footprint="0402" pcbX={40} pcbY={-34} />
+      <chip
+        name="C_EFUSE_OUT"
+        manufacturerPartNumber="T523H107M035APE070"
+        footprint="2924"
+        pinLabels={{ pin1: "VOUT", pin2: "GND" }}
+        pcbX={36}
+        pcbY={-34}
       />
       <chip
         name="U_BUCK_BOOST"
@@ -542,11 +828,23 @@ function ScoringCircuit() {
       <trace from="U_FRONTEND_R.SENSE_C" to="U_STM32.RIGHT_C" />
       <trace from="J_PISTE.PISTE" to="U_ESD_L.SPARE" />
       <trace from="U_ESD_L.SPARE" to="U_PISTE_FRONTEND.RAW_PISTE" />
-      <trace from="J_POWER_24V.CHASSIS" to="net.ESD_RETURN" />
       <trace from="U_PISTE_FRONTEND.SENSE_PISTE" to="U_STM32.PISTE" />
       <trace from="U_VREF.VOUT" to="U_STM32.VREF" />
       <trace from="U_STM32.WD_KICK" to="U_STM_WATCHDOG.WDI" />
+      <trace from="U_STM_WATCHDOG.EN" to="net.S3_3" />
+      <trace from="U_STM_WATCHDOG.SET1" to="net.S3_3" />
+      <trace from="U_STM_WATCHDOG.CWD" to="R_STM_WD_CWD.pin1" />
+      <trace from="R_STM_WD_CWD.pin2" to="net.S3_3" />
+      <trace from="U_STM_WATCHDOG.ENOUT" to="U_STM_WATCHDOG.RESET" />
+      <trace from="C_STM_WD_BYPASS.pin1" to="net.S3_3" />
+      <trace from="C_STM_WD_BYPASS.pin2" to="net.SGND" />
       <trace from="U_STM_WATCHDOG.RESET" to="U_STM32.NRST" />
+      <trace from="U_STM_SUPERVISOR.SENSE" to="net.S3_3" />
+      <trace from="U_STM_SUPERVISOR.MR" to="net.S3_3" />
+      <trace from="U_STM_SUPERVISOR.CT" to="C_STM_SUPERVISOR_CT.pin1" />
+      <trace from="C_STM_SUPERVISOR_CT.pin2" to="net.SGND" />
+      <trace from="C_STM_SUPERVISOR_BYPASS.pin1" to="net.S3_3" />
+      <trace from="C_STM_SUPERVISOR_BYPASS.pin2" to="net.SGND" />
       <trace from="U_STM_SUPERVISOR.RESET" to="U_STM32.NRST" />
       <trace from="J_STM_SWD.NRST" to="U_STM32.NRST" />
 
@@ -554,19 +852,113 @@ function ScoringCircuit() {
       <trace from="U_STM32.SPI_MOSI" to="U_ISO_MAIN.S_MOSI" />
       <trace from="U_STM32.SPI_CS" to="U_ISO_MAIN.S_CS" />
       <trace from="U_STM32.SPI_MISO" to="U_ISO_MAIN.S_MISO" />
-      <trace from="U_STM32.ESP_RESET" to="U_ISO_MAIN.S_ESP_RESET_ASSERT_N" />
+      <trace from="U_STM32.ESP_RESET" to="R_STM_RESET_ISO_SERIES.pin1" />
+      <trace from="R_STM_RESET_ISO_SERIES.pin2" to="U_ISO_MAIN.S_ESP_RESET_ASSERT" />
+      <trace from="U_ISO_MAIN.S_ESP_RESET_ASSERT" to="R_STM_RESET_ISO_PD.pin1" />
+      <trace from="R_STM_RESET_ISO_PD.pin2" to="net.SGND" />
       <trace from="U_STM32.HEARTBEAT" to="U_ISO_AUX.S_HEARTBEAT" />
       <trace from="U_ISO_MAIN.A_SCK" to="U_ESP32.SCORE_SCK" />
       <trace from="U_ISO_MAIN.A_MOSI" to="U_ESP32.SCORE_MOSI" />
       <trace from="U_ISO_MAIN.A_CS" to="U_ESP32.SCORE_CS" />
       <trace from="U_ISO_MAIN.A_MISO" to="U_ESP32.SCORE_MISO" />
-      <trace from="U_ISO_MAIN.A_ESP_RESET_ASSERT_N" to="TP_ESP_RESET_REQUEST_N.RESET_REQUEST_N" />
+      <trace from="U_ISO_MAIN.A_ESP_RESET_ASSERT" to="TP_ESP_RESET_REQUEST.RESET_REQUEST" />
+      <trace from="U_ISO_MAIN.A_ESP_RESET_ASSERT" to="R_STM_RESET_GATE.pin1" />
+      <trace from="R_STM_RESET_GATE.pin2" to="Q_ESP_RESET_STM.G" />
+      <trace from="Q_ESP_RESET_STM.G" to="R_STM_RESET_GATE_PD.pin1" />
+      <trace from="R_STM_RESET_GATE_PD.pin2" to="net.GND" />
       <trace from="U_ISO_AUX.A_HEARTBEAT" to="U_ESP32.STM_HEARTBEAT" />
       <trace from="U_ESP32.ESP_HEARTBEAT" to="U_ISO_MAIN.A_ESP_HEARTBEAT" />
       <trace from="U_ISO_MAIN.S_ESP_HEARTBEAT" to="U_STM32.ESP_HEARTBEAT" />
 
-      <trace from="U_ESP32.USB_DN" to="J_USB_C.USB_DN" />
-      <trace from="U_ESP32.USB_DP" to="J_USB_C.USB_DP" />
+      <trace from="J_USB_C.USB_DN_PORT" to="U_USB_PORT_PROTECT.USB_DN_PORT" />
+      <trace from="J_USB_C.USB_DP_PORT" to="U_USB_PORT_PROTECT.USB_DP_PORT" />
+      <trace from="U_USB_PORT_PROTECT.USB_DN_PROTECTED" to="R_USB_DN.USB_DN_PROTECTED" />
+      <trace from="U_USB_PORT_PROTECT.USB_DP_PROTECTED" to="R_USB_DP.USB_DP_PROTECTED" />
+      <trace from="R_USB_DN.USB_DN" to="U_ESP32.USB_DN" />
+      <trace from="R_USB_DP.USB_DP" to="U_ESP32.USB_DP" />
+      <trace from="J_USB_C.CC1_PORT" to="U_USB_PORT_PROTECT.CC1_PORT" />
+      <trace from="J_USB_C.CC2_PORT" to="U_USB_PORT_PROTECT.CC2_PORT" />
+      <trace from="U_USB_PORT_PROTECT.RPD_G1" to="U_USB_PORT_PROTECT.CC1_PORT" />
+      <trace from="U_USB_PORT_PROTECT.RPD_G2" to="U_USB_PORT_PROTECT.CC2_PORT" />
+      <trace from="U_USB_PORT_PROTECT.CC1" to="U_USB_PD.CC1_PROTECTED" />
+      <trace from="U_USB_PORT_PROTECT.CC2" to="U_USB_PD.CC2_PROTECTED" />
+      <trace from="U_USB_PORT_PROTECT.PD_LDO_3V3" to="U_USB_PD.LDO_3V3" />
+      <trace from="U_USB_PORT_PROTECT.GND" to="net.GND" />
+      <trace from="U_USB_PORT_PROTECT.VBIAS" to="C_USB_PORT_PROTECT_BIAS.VBIAS" />
+      <trace from="C_USB_PORT_PROTECT_BIAS.GND" to="net.GND" />
+      <trace from="U_USB_PORT_PROTECT.FLT_N" to="U_USB_PD.FAULT_IN_N" />
+      <trace from="U_USB_PORT_PROTECT.FLT_N" to="R_USB_PORT_PROTECT_FLT_PULLUP.pin1" />
+      <trace from="R_USB_PORT_PROTECT_FLT_PULLUP.pin2" to="U_USB_PD.LDO_3V3" />
+      <trace from="J_USB_C.GND" to="net.GND" />
+      <trace from="J_USB_C.SHIELD" to="net.ESD_RETURN" />
+      <trace from="J_USB_C.VBUS_PORT" to="D_USB_PD_VBUS_TVS.VBUS_PORT" />
+      <trace from="D_USB_PD_VBUS_TVS.ESD_RETURN" to="net.ESD_RETURN" />
+      <trace from="J_USB_C.VBUS_PORT" to="U_USB_PD.VBUS_PORT" />
+      <trace from="J_USB_C.VBUS_PORT" to="C_USB_PD_VBUS.VBUS_PORT" />
+      <trace from="C_USB_PD_VBUS.GND" to="net.GND" />
+      <trace from="D_USB_PD_VBUS_DISCONNECT.CATHODE_VBUS" to="J_USB_C.VBUS_PORT" />
+      <trace from="D_USB_PD_VBUS_DISCONNECT.ANODE_GND" to="net.GND" />
+      <trace from="J_USB_C.VBUS_PORT" to="TP_USB_VBUS_PORT.VBUS_PORT" />
+      <trace from="U_USB_PD.PD_PPHV_20V" to="TP_USB_PD_PPHV.PD_PPHV_20V" />
+      <trace from="U_USB_PD.PD_PPHV_20V" to="U_EFUSE.VIN" />
+      <trace from="U_USB_PD.PD_PPHV_20V" to="C_USB_PD_PPHV.PD_PPHV_20V" />
+      <trace from="C_USB_PD_PPHV.GND" to="net.GND" />
+      <trace from="U_USB_PD.VIN_3V3" to="net.V3_3" />
+      <trace from="U_USB_PD.VIN_3V3" to="C_USB_PD_VIN_3V3.VIN_3V3" />
+      <trace from="C_USB_PD_VIN_3V3.GND" to="net.GND" />
+      <trace from="U_USB_PD.LDO_3V3" to="C_USB_PD_LDO.PD_LDO_3V3" />
+      <trace from="C_USB_PD_LDO.GND" to="net.GND" />
+      <trace from="U_USB_PD.LDO_1V5" to="C_USB_PD_LDO_1V5.LDO_1V5" />
+      <trace from="C_USB_PD_LDO_1V5.GND" to="net.GND" />
+      <trace from="U_USB_PD.CC1_PROTECTED" to="C_USB_PD_CC1.CC1_PROTECTED" />
+      <trace from="C_USB_PD_CC1.GND" to="net.GND" />
+      <trace from="U_USB_PD.CC2_PROTECTED" to="C_USB_PD_CC2.CC2_PROTECTED" />
+      <trace from="C_USB_PD_CC2.GND" to="net.GND" />
+      <trace from="U_USB_PD.ADCIN1" to="R_USB_PD_ADCIN1_UP.pin2" />
+      <trace from="U_USB_PD.ADCIN1" to="R_USB_PD_ADCIN1_DOWN.pin1" />
+      <trace from="R_USB_PD_ADCIN1_DOWN.pin2" to="net.GND" />
+      <trace from="R_USB_PD_ADCIN1_UP.pin1" to="U_USB_PD.LDO_3V3" />
+      <trace from="U_USB_PD.ADCIN2" to="R_USB_PD_ADCIN2_UP.pin2" />
+      <trace from="U_USB_PD.ADCIN2" to="R_USB_PD_ADCIN2_DOWN.pin1" />
+      <trace from="R_USB_PD_ADCIN2_DOWN.pin2" to="net.GND" />
+      <trace from="R_USB_PD_ADCIN2_UP.pin1" to="U_USB_PD.LDO_3V3" />
+      <trace from="U_USB_PD.ADCIN3" to="R_USB_PD_ADCIN3_UP.pin2" />
+      <trace from="U_USB_PD.ADCIN3" to="R_USB_PD_ADCIN3_DOWN.pin1" />
+      <trace from="R_USB_PD_ADCIN3_DOWN.pin2" to="net.GND" />
+      <trace from="R_USB_PD_ADCIN3_UP.pin1" to="U_USB_PD.LDO_3V3" />
+      <trace from="U_USB_PD.ADCIN4" to="R_USB_PD_ADCIN4_UP.pin2" />
+      <trace from="U_USB_PD.ADCIN4" to="R_USB_PD_ADCIN4_DOWN.pin1" />
+      <trace from="R_USB_PD_ADCIN4_DOWN.pin2" to="net.GND" />
+      <trace from="R_USB_PD_ADCIN4_UP.pin1" to="U_USB_PD.LDO_3V3" />
+      <trace from="U_USB_PD.PD5VMAX_N" to="R_USB_PD_PD5VMAX.pin1" />
+      <trace from="R_USB_PD_PD5VMAX.pin2" to="net.GND" />
+      <trace from="U_USB_PD.CAP_MIS_N" to="TP_USB_PD_CAP_MIS.CAP_MIS_N" />
+      <trace from="U_USB_PD.GND" to="net.GND" />
+      <trace from="U_EFUSE.GND" to="net.GND" />
+      <trace from="U_EFUSE.VIN" to="R_EFUSE_UVLO_UP.pin1" />
+      <trace from="R_EFUSE_UVLO_UP.pin2" to="U_EFUSE.EN_UVLO" />
+      <trace from="U_EFUSE.EN_UVLO" to="R_EFUSE_UVLO_DOWN.pin1" />
+      <trace from="R_EFUSE_UVLO_DOWN.pin2" to="net.GND" />
+      <trace from="U_EFUSE.VIN" to="R_EFUSE_OVLO_UP.pin1" />
+      <trace from="R_EFUSE_OVLO_UP.pin2" to="U_EFUSE.OVLO" />
+      <trace from="U_EFUSE.OVLO" to="R_EFUSE_OVLO_DOWN.pin1" />
+      <trace from="R_EFUSE_OVLO_DOWN.pin2" to="net.GND" />
+      <trace from="U_EFUSE.ILM" to="R_EFUSE_ILM.pin1" />
+      <trace from="R_EFUSE_ILM.pin2" to="net.GND" />
+      <trace from="U_EFUSE.ITIMER" to="C_EFUSE_ITIMER.ITIMER" />
+      <trace from="C_EFUSE_ITIMER.GND" to="net.GND" />
+      <trace from="U_EFUSE.DVDT" to="C_EFUSE_DVDT.DVDT" />
+      <trace from="C_EFUSE_DVDT.GND" to="net.GND" />
+      <trace from="U_EFUSE.VOUT" to="R_EFUSE_PGTH_UP.pin1" />
+      <trace from="R_EFUSE_PGTH_UP.pin2" to="U_EFUSE.PGTH" />
+      <trace from="U_EFUSE.PGTH" to="R_EFUSE_PGTH_DOWN.pin1" />
+      <trace from="R_EFUSE_PGTH_DOWN.pin2" to="net.GND" />
+      <trace from="U_EFUSE.PG" to="R_EFUSE_PG_PULLUP.pin1" />
+      <trace from="R_EFUSE_PG_PULLUP.pin2" to="net.V3_3" />
+      <trace from="U_EFUSE.VOUT" to="C_EFUSE_OUT.VOUT" />
+      <trace from="C_EFUSE_OUT.GND" to="net.GND" />
+      <trace from="U_EFUSE.VOUT" to="U_BUCK_BOOST.VIN" />
+      <trace from="U_BUCK_BOOST.VOUT" to="net.V5" />
 
       <trace from="U_ESP32.APP_SPI_SCK" to="U_ETHERNET.SCK" />
       <trace from="U_ESP32.APP_SPI_MOSI" to="U_ETHERNET.MOSI" />
@@ -602,16 +994,83 @@ function ScoringCircuit() {
       <trace from="U_DISPLAY_BUFFER_B.CLK_OUT" to="J_HUB75.CLK" />
       <trace from="U_DISPLAY_BUFFER_B.LAT_OUT" to="J_HUB75.LAT" />
       <trace from="U_DISPLAY_BUFFER_B.OE_N_OUT" to="J_HUB75.OE" />
+      <trace from="U_DISPLAY_BUFFER_A.R1_IN" to="R_HUB75_R1_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.G1_IN" to="R_HUB75_G1_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.B1_IN" to="R_HUB75_B1_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.R2_IN" to="R_HUB75_R2_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.G2_IN" to="R_HUB75_G2_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.B2_IN" to="R_HUB75_B2_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.A_IN" to="R_HUB75_A_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_A.B_IN" to="R_HUB75_B_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_B.C_IN" to="R_HUB75_C_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_B.D_IN" to="R_HUB75_D_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_B.CLK_IN" to="R_HUB75_CLK_PD.pin1" />
+      <trace from="U_DISPLAY_BUFFER_B.LAT_IN" to="R_HUB75_LAT_PD.pin1" />
+      <trace from="R_HUB75_R1_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_G1_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_B1_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_R2_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_G2_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_B2_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_A_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_B_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_C_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_D_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_CLK_PD.pin2" to="net.GND" />
+      <trace from="R_HUB75_LAT_PD.pin2" to="net.GND" />
+      <trace from="U_DISPLAY_BUFFER_B.OE_N_IN" to="R_HUB75_OE_PULLUP.pin1" />
+      <trace from="R_HUB75_OE_PULLUP.pin2" to="net.V3_3" />
+      <trace from="U_DISPLAY_BUFFER_B.OE_N_OUT" to="R_HUB75_PANEL_OE_PULLUP.pin1" />
+      <trace from="R_HUB75_PANEL_OE_PULLUP.pin2" to="net.V5" />
       <trace from="U_DISPLAY_BUFFER_A.DIR_TO_PANEL" to="net.V5" />
       <trace from="U_DISPLAY_BUFFER_B.DIR_TO_PANEL" to="net.V5" />
-      <trace from="U_DISPLAY_BUFFER_A.BUFFER_ENABLE_N" to="net.GND" />
-      <trace from="U_DISPLAY_BUFFER_B.BUFFER_ENABLE_N" to="net.GND" />
+      <trace from="U_DISPLAY_BUFFER_A.BUFFER_ENABLE_N" to="R_BUFFER_A_ENABLE_PULLUP.pin1" />
+      <trace from="R_BUFFER_A_ENABLE_PULLUP.pin2" to="net.V5" />
+      <trace from="U_DISPLAY_BUFFER_B.BUFFER_ENABLE_N" to="R_BUFFER_B_ENABLE_PULLUP.pin1" />
+      <trace from="R_BUFFER_B_ENABLE_PULLUP.pin2" to="net.V5" />
+      <trace from="U_ESP32.EN_RESET" to="R_ESP_EN_PULLUP.pin1" />
+      <trace from="R_ESP_EN_PULLUP.pin2" to="net.V3_3" />
+      <trace from="U_ESP32.EN_RESET" to="C_ESP_EN_DELAY.pin1" />
+      <trace from="C_ESP_EN_DELAY.pin2" to="net.GND" />
+      <trace from="Q_ESP_RESET_STM.D" to="U_ESP32.EN_RESET" />
+      <trace from="Q_ESP_RESET_STM.S" to="net.GND" />
+      <trace from="U_ESP32.EN_RESET" to="U_ESP_SUPERVISOR.RESET" />
+      <trace from="J_ESP_DEBUG.MANUAL_RESET_ASSERT" to="R_DEBUG_RESET_GATE.pin1" />
+      <trace from="R_DEBUG_RESET_GATE.pin2" to="Q_ESP_DEBUG_RESET.G" />
+      <trace from="Q_ESP_DEBUG_RESET.G" to="R_DEBUG_RESET_GATE_PD.pin1" />
+      <trace from="R_DEBUG_RESET_GATE_PD.pin2" to="net.GND" />
+      <trace from="Q_ESP_DEBUG_RESET.D" to="U_ESP32.EN_RESET" />
+      <trace from="Q_ESP_DEBUG_RESET.S" to="net.GND" />
+      <trace from="Q_DISPLAY_BUFFER_A_ENABLE.D" to="U_DISPLAY_BUFFER_A.BUFFER_ENABLE_N" />
+      <trace from="Q_DISPLAY_BUFFER_A_ENABLE.S" to="net.GND" />
+      <trace from="Q_DISPLAY_BUFFER_B_ENABLE.D" to="U_DISPLAY_BUFFER_B.BUFFER_ENABLE_N" />
+      <trace from="Q_DISPLAY_BUFFER_B_ENABLE.S" to="net.GND" />
+      <trace from="U_ESP32.EN_RESET" to="R_BUFFER_A_GATE.pin1" />
+      <trace from="R_BUFFER_A_GATE.pin2" to="Q_DISPLAY_BUFFER_A_ENABLE.G" />
+      <trace from="Q_DISPLAY_BUFFER_A_ENABLE.G" to="R_BUFFER_A_GATE_PD.pin1" />
+      <trace from="R_BUFFER_A_GATE_PD.pin2" to="net.GND" />
+      <trace from="U_ESP32.EN_RESET" to="R_BUFFER_B_GATE.pin1" />
+      <trace from="R_BUFFER_B_GATE.pin2" to="Q_DISPLAY_BUFFER_B_ENABLE.G" />
+      <trace from="Q_DISPLAY_BUFFER_B_ENABLE.G" to="R_BUFFER_B_GATE_PD.pin1" />
+      <trace from="R_BUFFER_B_GATE_PD.pin2" to="net.GND" />
       <trace from="U_AUDIO.SPK_P" to="J_SPEAKER.SPK_P" />
       <trace from="U_AUDIO.SPK_N" to="J_SPEAKER.SPK_N" />
       <trace from="U_ESP32.WD_KICK" to="U_ESP_WATCHDOG.WDI" />
+      <trace from="U_ESP_WATCHDOG.EN" to="net.V3_3" />
+      <trace from="U_ESP_WATCHDOG.SET1" to="net.V3_3" />
+      <trace from="U_ESP_WATCHDOG.CWD" to="R_ESP_WD_CWD.pin1" />
+      <trace from="R_ESP_WD_CWD.pin2" to="net.V3_3" />
+      <trace from="U_ESP_WATCHDOG.ENOUT" to="U_ESP_WATCHDOG.RESET" />
+      <trace from="C_ESP_WD_BYPASS.pin1" to="net.V3_3" />
+      <trace from="C_ESP_WD_BYPASS.pin2" to="net.GND" />
+      <trace from="U_ESP_SUPERVISOR.SENSE" to="net.V3_3" />
+      <trace from="U_ESP_SUPERVISOR.MR" to="net.V3_3" />
+      <trace from="U_ESP_SUPERVISOR.CT" to="C_ESP_SUPERVISOR_CT.pin1" />
+      <trace from="C_ESP_SUPERVISOR_CT.pin2" to="net.GND" />
+      <trace from="C_ESP_SUPERVISOR_BYPASS.pin1" to="net.V3_3" />
+      <trace from="C_ESP_SUPERVISOR_BYPASS.pin2" to="net.GND" />
       <trace from="U_ESP_WATCHDOG.RESET" to="U_ESP32.EN_RESET" />
       <trace from="U_ESP_SUPERVISOR.RESET" to="U_ESP32.EN_RESET" />
-      <trace from="J_ESP_DEBUG.EN_RESET" to="U_ESP32.EN_RESET" />
       <trace from="U_ESP32.I2C_SDA" to="U_RTC.SDA" />
       <trace from="U_ESP32.I2C_SCL" to="U_RTC.SCL" />
       <trace from="U_ESP32.I2C_SDA" to="U_SECURE_ELEMENT.SDA" />

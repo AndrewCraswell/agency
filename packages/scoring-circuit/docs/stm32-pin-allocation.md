@@ -12,7 +12,7 @@ ST's [STM32G474xB/xC/xE datasheet](https://www.st.com/resource/en/datasheet/stm3
 
 The [STM32G4 reference manual](https://www.st.com/resource/en/reference_manual/rm0440-stm32g4-series-advanced-armbased-32bit-mcus-stmicroelectronics.pdf), RM0440 Rev 9, is the primary source for comparator/DAC routing, ADC and HRTIM triggering, DMA requests, and reset behavior. [STM32CubeMX](https://www.st.com/content/st_com/en/stm32cubemx.html) must solve and validate the package-level peripheral allocation before schematic capture.
 
-The circuit model presently labels functional STM32 nets rather than physical package pins. It now reserves both heartbeat directions and a one-way STM32-to-ESP32 reset assertion, but it does not show physical reference supply pins, switch-enable nets, primary-output driver circuits, reset-combiner circuitry, or the required bias networks.
+The circuit model presently labels functional STM32 nets rather than physical package pins. It now reserves both heartbeat directions and a one-way STM32-to-ESP32 reset assertion. The STM32 portion still does not show physical reference supply pins, switch-enable nets, or primary-output driver circuits; the reset combiner and its bias network are represented at the ESP32-side boundary and remain subject to the power-off and timing gates below.
 
 ## Analog acquisition and reference
 
@@ -123,7 +123,7 @@ PA4, PA5, and PA6 are also DAC output pads. SPI1 on them prevents external DAC o
 | Comparator threshold topology | DAC calibration and COMP5/COMP7 threshold sharing are not proven. | Blocks acceptance of comparator allocation. |
 | HRTIM event capture matrix | Seven-channel internal capture has not been demonstrated. | Blocks the one-microsecond timestamp claim. |
 | Physical reference, supply, and clamp schematic | Circuit model has a VREF label but not VREF+, VDDA, VSSA, or final protection. | Blocks ADC-accuracy and schematic acceptance. |
-| Heartbeat and ESP reset electrical implementation | The architectural map now reserves both heartbeats and a one-way reset assertion, but it has no selected reset combiner, unpowered-channel behavior, timeout values, or bias components. | Blocks isolation/reset schematic acceptance. |
+| Heartbeat and ESP reset electrical implementation | The map now reserves both heartbeats and an active-high one-way reset assertion. The ESP32 side uses the ISO7762F low-default output, 10 kOhm source/gate resistors, 100 kOhm pulldowns, BSS138 low-side sinks, TPS389033 at 3.170 V falling / 3.189 V rising, a 100 nF CT for about 107 ms nominal delay, TPS3431 WDO, and a 10 kOhm plus 1 uF EN network. | Schematic candidate is represented. The application V3_3 regulator is absent from this model and must be specified separately to guarantee 3.30 V +/-1% at the supervisor pins; otherwise select a lower-threshold or adjustable supervisor. ISO output-side rise, power-off injection, reset timing, and unpowered-domain fault tests remain open; see [reset-and-display-safing.md](reset-and-display-safing.md). |
 | Output drivers and pull networks | Lamps and buzzer are logical nets only. | Blocks safe-output acceptance. |
 | Oscillator decision | HSE is reserved; LSE is displaced; tolerance and startup are unproven. | Blocks target clock configuration. |
 | CubeMX package proof | This is manual audit, not solver output. | Blocks declaring AF conflicts closed. |

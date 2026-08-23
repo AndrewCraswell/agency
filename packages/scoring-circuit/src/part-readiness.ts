@@ -138,7 +138,8 @@ export const criticalPartReadiness = [
     assembly: "external-panel-module",
     blockers: [
       "Download and independently verify the official footprint and STEP model",
-      "Design and cycle-test chassis strain relief and the replaceable communications module"
+      "Design and cycle-test chassis strain relief and the replaceable communications module",
+      "Validate 5 V-before-contract isolation, 20 V/3 A PD negotiation, capability-mismatch shutdown, detach, ESD, EFT, and USB attach behavior in the released module"
     ],
     cad: {
       status: "pending",
@@ -167,7 +168,7 @@ export const criticalPartReadiness = [
       openGates: [
         "Acquire and import the exact manufacturer drawing and STP model",
         "Verify all contact, shell-stake, paste, board-edge, and 0.80 mm PCB-thickness features",
-        "Provide chassis strain relief and complete service-module cable-load and ESD review"
+        "Provide chassis strain relief and complete service-module cable-load, USB-PD power-path, 60 W adapter and cable thermal, ESD, and EFT review"
       ],
       retention:
         "SMT termination is not a panel load path; the communications module must transfer plug load to chassis supports",
@@ -175,51 +176,6 @@ export const criticalPartReadiness = [
     },
     productionApproved: false,
     references: ["J_USB_C"],
-    selectionStatus: "selected"
-  },
-  {
-    assembly: "external-panel-module",
-    blockers: [
-      "Import the manufacturer STEP and DXF into the enclosure review and verify the exact selected-variant cutout and fasteners",
-      "Define the keyed harness and chassis bonding pinout",
-      "Validate supply connector temperature rise, misuse behavior, service access, and purchase-time lifecycle"
-    ],
-    cad: {
-      status: "pending",
-      url: "https://www.neutrik.com/media/12908/download/3-D%20NC4MD-LX.stp?v=2"
-    },
-    evidenceUrls: [
-      "https://www.neutrik.com/en/product/nc4md-lx",
-      "https://www.neutrik.com/media/8420/download/nc4md-lx-2.pdf?v=1",
-      "https://www.neutrik.com/media/11869/download/nc4md-lx-3.dxf?v=1"
-    ],
-    footprint: {
-      status: "not-applicable",
-      description: "Chassis-mounted connector wired to a keyed internal harness"
-    },
-    manufacturer: "Neutrik",
-    mechanical: {
-      status: "source-identified",
-      description: "Locking four-pole metal panel connector rated 10 A per contact and above 1,000 cycles"
-    },
-    mpn: "NC4MD-LX",
-    physical: {
-      contactRating: "At most 5 milliohms contact resistance; 10 A per contact; below 50 V",
-      cycleRating: "More than 1,000 mating cycles",
-      interface: "locking-power",
-      mounting: "panel-chassis",
-      openGates: [
-        "Import the exact NC4MD-LX STEP, DXF, and dimensional PDF and verify the selected-variant cutout",
-        "Select actual panel fasteners and verify rear depth, latch, tool, bend-radius, and service clearances",
-        "Review four-pole keying, shell bonding, pin-1/chassis treatment, temperature rise, and safe disconnect"
-      ],
-      retention:
-        "Latch lock; manufacturer insertion and withdrawal force are each at most 20 N; panel fastener load path remains open",
-      shield:
-        "All-metal nickel housing with duplex ground contact; optional pin-1 to chassis connection requires project bonding review"
-    },
-    productionApproved: false,
-    references: ["J_POWER_24V"],
     selectionStatus: "selected"
   },
   {

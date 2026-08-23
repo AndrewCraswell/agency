@@ -231,12 +231,12 @@ claimed.
 
 The calculation is ratiometric only if the source amplitude and `VREF+` are both valid, settled, and derived from the
 same `REF5025AQDRQ1` output. Reference drift and initial voltage tolerance then cancel in the resistance ratio. The
-24 V input does not appear directly in the transfer function. Its only possible error credit is through a released
+20 V USB-PD input does not appear directly in the transfer function. Its only possible error credit is through a released
 regulator and the reference input: those must maintain `3V3A` at 3.135 V to 3.465 V and keep the reference in its
 2.7 V to 18 V operating range. Reference startup, source/VREF+ impedance mismatch, ADC reference-load transients,
 reference load regulation, routing drop, and a missing reference do not cancel and must force `unavailable`. The existing
 allocation has not released the regulator, reference buffer/decoupling, or `VREF+` routing, so there is no unconditional
-reference-accuracy credit and no claimed 24 V input-tolerance result.
+reference-accuracy credit and no claimed 20 V USB-PD input-tolerance result.
 
 The STM32 performs its internal ADC self-calibration after power-up and after any relevant ADC reset or configuration
 reinitialization, as the ST data sheet recommends. That is not an external resistance calibration. A channel-local
@@ -271,7 +271,7 @@ at 25 C and evaluated at the worst 125 C endpoint. No term marked a measurement 
 | Source-resistor TCR | 2.49 kohm, 10 ppm/C, 25 C calibration to 125 C; exact ratio calculation | 0.44 | bounded coupon candidate |
 | TMUX/22 ohm temperature and voltage drift | 9.8 ohm is a maximum, not a calibrated drift envelope at the approximately 1 mA source current | unbounded | measurement gate |
 | REF5025A-Q1 initial error and drift | Ratiometrically removed only with common valid source and VREF+ | 0 after calibration | reference-health gate |
-| 3V3A and 24 V input variation | No direct transfer term only after regulator/reference health proves the stated input range; source/switch behavior must be measured | unbounded | measurement gate |
+| 3V3A and 20 V USB-PD input variation | No direct transfer term only after regulator/reference health proves the stated input range; source/switch behavior must be measured | unbounded | measurement gate |
 | M4-02 clamp leakage | M4-02 coupon screen: `|I_D_NEG(0.45 V)| <= 1.50 uA` and `|I_D_POS(2.1 V)| <= 0.10 uA` | 3.15 | measurement gate |
 | ADC half-code quantization | 0.5 x 2.5 V / 4095 = 0.305 mV | 0.43 | bounded |
 | ADC EL integral-linearity typical screen | Table 72: 3.1 LSB typical x 2.5 V / 4095 = 1.892 mV | 2.65 | LQFP100 characterization only |
@@ -390,7 +390,7 @@ comparator offset, hysteresis, propagation, input-overdrive, routing, and temper
 12.5 ohm foil decision guard, so neither that mapping nor the DAC result can support a 450/475 ohm decision.
 
 For a comparator to timestamp a transition, M4-08 must measure the actual comparator input crossing versus the ADC
-resistance estimate at each selected threshold, VDD and 24 V input extreme, -40 C, 25 C, 85 C, and 125 C. It must also
+resistance estimate at each selected threshold, VDD and 20 V USB-PD input extreme, -40 C, 25 C, 85 C, and 125 C. It must also
 bound propagation delay and HRTIM capture skew under the actual overdrive and phase mask. The resulting threshold must
 remain a prequalification/timestamp threshold only unless a separate reviewed budget changes this restriction.
 
@@ -471,7 +471,7 @@ are demonstrated. An ADC/HRTIM schedule cannot infer a 0.1 ms sabre contact from
 | M4-03 500 ohm, 10 nF full diagnostic timing | Six ADC1 ranks after 24.50 us conservative cascaded allocation require 31.47 us | fail against 25 us target by 6.47 us |
 | M4-04 coupon schematic | Do not release until a reviewer captures the external clamp return, VREF+/VDDA/VSSA, regulator/reference health path, pad type, pulldowns, source-resistor candidate/TCR, and sample/blank configuration | blocked by open M4-03 gates |
 | M4-05 fixture | Must provide Kelvin 0/500 ohm standards, all four capacitance banks, source/sink phase masks, pulse capture, temperature points, current probes, and uncertainty less than or equal to the 0.50 ohm allocation | open |
-| M4-08 report | Must demonstrate each of seven channels meets the 5.00 ohm all-in interval and timing limits at 3V3A and 24 V input extremes, -40 C, 25 C, 85 C, and 125 C or the qualified product range | future measurement gate |
+| M4-08 report | Must demonstrate each of seven channels meets the 5.00 ohm all-in interval and timing limits at 3V3A and 20 V USB-PD input extremes, -40 C, 25 C, 85 C, and 125 C or the qualified product range | future measurement gate |
 
 Coupon measurements must include normal and fault conditions: source or sink stuck on, both enables commanded, reset and
 brownout, ADC saturation or overrun, reference absent or outside tolerance, all seven clamp paths stressed, and a

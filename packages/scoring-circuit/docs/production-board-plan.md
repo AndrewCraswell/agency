@@ -81,7 +81,7 @@ The canonical, machine-checked list is `src/component-decisions.ts`. Important c
 | Processor barrier | ISO7762FDWR plus ISO7721FDR | Reinforced, fast, correct channel directions, wide operating range |
 | Scoring power | NXE1S0505MC plus local regulation | Certified one-watt isolated source; separation from display/network noise |
 | ADC reference | REF5025AQDRQ1 | Automotive-qualified, low drift, and specified through 125 C |
-| Power entry | Locking 24 V DC, TPS26631PWPT, TPS55288RPMR | One robust input, industrial surge and fault protection, and regulated five-volt conversion |
+| Power entry and service | 10177070-00011LF, TPS25730ADREFR, TPD4S201TRGRRQ1, TVS2200DRVR, B340A-13-F, TPS259474ARPWR, TPS55288RPMR | Sole USB-PD SPR 20 V/3 A input with native USB 2.0 service data; no battery, charger, or dual-input arbitration |
 | Ethernet | W5500 with integrated-magnetics RJ45 | Stable dedicated controller; networking cannot consume the scoring SPI bus |
 | Field serial | ISO1410BDWR | Isolated protected RS-485 for our documented long-cable protocol |
 | Journal | CY15B104Q-LHXIT | High-endurance F-RAM for atomic metadata and configuration transactions |
@@ -90,8 +90,8 @@ The canonical, machine-checked list is `src/component-decisions.ts`. Important c
 
 The machine-enforced critical-part register is `src/part-readiness.ts`. It distinguishes selection, footprint, CAD, and
 mechanical evidence instead of treating a supplier search result or a visible 3D body as production approval. Current
-external-I/O selections are Würth 7499011121A for 10/100 Ethernet, Amphenol 10177070-00011LF for the high-cycle USB-C
-service port, and Neutrik NC4MD-LX for the locking chassis power inlet. Stäubli XUB-G 66.9684-* remains a reel-socket
+external-I/O selections are Würth 7499011121A for 10/100 Ethernet and Amphenol 10177070-00011LF for the high-cycle USB-C
+power-and-service port. Stäubli XUB-G 66.9684-* remains a reel-socket
 family candidate until exact colors, fencing plug fit, sweat exposure, and cycle life are tested.
 
 Connector families, magnetics, TVS arrays, speaker, LED modules, inductors, capacitors, and the exact analog line
@@ -101,18 +101,21 @@ the interface permits it.
 
 ## Power and thermal budgets
 
-The apparatus has one protected, locking nominal 24 V DC input from a certified external Class II supply or UPS. USB-C
-is a service and data port, not an alternate scoring-power path. This deliberately removes USB-PD negotiation,
-dual-source arbitration, a wide-input promise, and an internal battery from the production board. TPS26631 provides
-industrial 4.5-60 V fault and surge headroom but the product qualification remains narrowly specified around 24 V.
+The apparatus has one USB-PD SPR 20 V, 3 A input through its USB-C receptacle. It is also a USB 2.0 UFP service port.
+The sink-only PD controller negotiates the contract and isolates the apparatus from the mandatory initial 5 V and an
+insufficient adapter. There is no battery, charger, PD source role, locking 24 V inlet, or dual-source arbitration.
+`usb-c-service-power-architecture.md` controls the selected connector, PD controller, protection parts, test points,
+grounding approach, provisional 60 W envelope, and remaining port-specific gates. TPS259474A remains the post-contract
+apparatus fault barrier and TPS55288 converts the negotiated input to V5.
 
-The internal scoring and reference rails must produce identical rule-test results across input tolerance, brownout, and
-external-UPS transfer. INA238 telemetry lets firmware reduce display brightness before brownout without affecting the
-scoring domain. Because present FIE m.58 prescribes 12 V, approval of the 24 V apparatus is a release gate. The standards
-case is in `fie-modern-power-proposal.md`.
+The internal scoring and reference rails must produce identical rule-test results across the negotiated input range,
+brownout, adapter removal, and PD hard reset. INA238 telemetry lets firmware reduce display brightness before brownout
+without affecting the scoring domain. Because present FIE m.58 prescribes 12 V, approval of this PD-powered apparatus is
+a release gate. The standards case is in `fie-modern-power-proposal.md`.
 
-Every rail gets a worst-case spreadsheet using maximum current, minimum conversion efficiency, 50 C ambient, blocked
-vent assumptions, capacitor DC-bias derating, and supplier tolerance. Production release requires thermal-camera and
+Every rail gets a signed worst-case spreadsheet proving no more than the provisional 60 W contract after maximum current,
+minimum conversion efficiency, PD/eFuse loss, 50 C ambient, blocked-vent assumptions, capacitor DC-bias derating, and
+supplier tolerance. Production release requires thermal-camera and
 thermocouple evidence at full-white display, maximum audio, Ethernet traffic, radio traffic, and continuous scoring.
 
 ## Mechanical and service design

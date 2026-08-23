@@ -296,14 +296,7 @@ const previewHtml = `<!doctype html>
             <p>Replaceable high-cycle connector module</p>
             <div class="port-row">
               <span class="port-model"><span class="rj45-model" aria-hidden="true"></span><span>Ethernet RJ45</span></span>
-              <span class="port-model"><span class="usb-c-model" aria-hidden="true"></span><span>USB-C service and limited service power</span></span>
-            </div>
-          </article>
-          <article class="io-module">
-            <h2>Primary power</h2>
-            <p>Scoring power does not depend on USB negotiation</p>
-            <div class="port-row">
-              <span class="port-model"><span class="power-model" aria-hidden="true"></span><span>Locking 24 V DC input</span></span>
+              <span class="port-model"><span class="usb-c-model" aria-hidden="true"></span><span>USB-C PD power and service data</span></span>
             </div>
           </article>
         </div>
