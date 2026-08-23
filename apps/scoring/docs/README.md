@@ -10,6 +10,9 @@ code-complete baseline, and open-source preparation is in
 TypeScript/C17/ESP-IDF implementation and its test corpus as the oracle until equivalence evidence supports a separate
 migration decision; neither that proof nor public source publication requires commercial hardware launch first.
 
+The production UX brief for the Shadcn-based test selector, 64 × 32 scoring display, bout state, and synchronized event
+timeline is in [simulator-product-design-spec.md](simulator-product-design-spec.md).
+
 The reproducible `rules-1` baseline, its pinned executable inputs and toolchain,
 and its review-sensitive digest workflow are defined in
 [behavior-oracle-contract.md](behavior-oracle-contract.md).
