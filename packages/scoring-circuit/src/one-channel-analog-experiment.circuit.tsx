@@ -9,7 +9,7 @@ export default function OneChannelAnalogExperimentCircuit() {
         name="J_FIXTURE"
         pinCount={3}
         pinLabels={{ pin1: "LINE", pin2: "SGND", pin3: "ESD_RETURN" }}
-        gender="female"
+        gender="male"
         pcbX={-32}
         pcbY={23}
       />
@@ -17,7 +17,7 @@ export default function OneChannelAnalogExperimentCircuit() {
         name="J_GUARDED_FORCE"
         pinCount={2}
         pinLabels={{ pin1: "FORCE", pin2: "SGND" }}
-        gender="female"
+        gender="male"
         pcbX={-32}
         pcbY={12}
       />

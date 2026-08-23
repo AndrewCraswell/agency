@@ -19,6 +19,10 @@ The bounded three-weapon sensing topology, ngspice model, and socketed fixture p
 The M4-03 source, switch, reference, acquisition, timing, and error budget is in `docs/m4-03-analog-error-budget.md`. It
 records conditional measurement gates and does not release the candidate front end for fabrication.
 
+The one-channel protected experiment's exact candidate BOM, DNP footprint gates, fixture boundary, calibration evidence,
+and controlled bring-up contract are in `docs/m4-one-channel-readiness-package.md`. It remains a denied characterization
+package, not a production BOM or fabrication release.
+
 The candidate processor allocations and their unresolved electrical conflicts are documented in
 `docs/stm32-pin-allocation.md` and `docs/esp32-pin-allocation.md`. Exact connector evidence and remaining physical
 verification gates are tracked in `docs/reel-socket-selection.md` and `docs/connector-cad-verification.md`. The
