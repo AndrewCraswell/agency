@@ -1,7 +1,11 @@
+import { readFileSync } from "node:fs"
+import { resolve } from "node:path"
 import { describe, expect, it } from "vitest"
 import {
   createScenarioDisplayTimeline,
+  isActualAcceptedScenarioDisplay,
   projectScenarioDisplay,
+  projectScenarioLines,
   type ScenarioDisplayCase
 } from "./scenario-display-projection.js"
 
@@ -126,6 +130,7 @@ describe("scenario report display projection", () => {
       eventNumber: 4,
       leftFault: true,
       leftLamp: "off",
+      latestDecision: { decisionAtUs: 2_000, side: "right" },
       rightContact: true,
       rightLamp: "valid-hit"
     })
@@ -149,6 +154,7 @@ describe("scenario report display projection", () => {
 
   it("projects accepted actual decisions even when the expectation was rejection", () => {
     const mismatch = displayCase({ expectedStatus: "rejected" })
+    expect(isActualAcceptedScenarioDisplay(mismatch)).toBe(true)
     expect(createScenarioDisplayTimeline(mismatch).map(({ kind }) => kind)).toEqual([
       "input",
       "input",
@@ -166,12 +172,55 @@ describe("scenario report display projection", () => {
     { label: "unknown", options: { actualStatus: "unknown" } }
   ])("fails closed when actual report status is $label", ({ options }) => {
     const report = displayCase(options)
-    expect(createScenarioDisplayTimeline(report).map(({ kind }) => kind)).toEqual(["input", "rejection", "input"])
+    expect(isActualAcceptedScenarioDisplay(report)).toBe(false)
+    expect(createScenarioDisplayTimeline(report).map(({ kind }) => kind)).toEqual(["rejection", "input", "input"])
     expect(projectScenarioDisplay(report, 2)).toMatchObject({
       audibleRequested: false,
       leftLamp: "off",
       rightLamp: "off"
     })
+  })
+
+  it("inserts an early rejection at its causal input and marks later inputs unprocessed", () => {
+    const report = displayCase({
+      actualStatus: "rejected",
+      error: { atInputId: "contact", code: "invalid-first-input" }
+    })
+    const timeline = createScenarioDisplayTimeline(report)
+
+    expect(timeline.map(({ atUs, id, kind }) => [atUs, id, kind])).toEqual([
+      [0, "contact", "input"],
+      [0, "rejection-contact", "rejection"],
+      [2_000, "qualified", "input"]
+    ])
+    expect(timeline.filter(({ kind }) => kind === "input").map(({ id }) => id)).toEqual(["contact", "qualified"])
+    expect(timeline[2]?.label).toBe("Declared, not processed input 2: qualified")
+  })
+
+  it("preserves the real non-monotonic vector's execution order and labels its backward timestamp", () => {
+    const scenario = JSON.parse(
+      readFileSync(resolve(import.meta.dirname, "../docs/golden-scenarios/epee-non-monotonic-time.json"), "utf8")
+    )
+    const report: ScenarioDisplayCase = {
+      expected: scenario.expect,
+      result: {
+        actualStatus: "rejected",
+        decisions: [],
+        error: scenario.expect.error,
+        uncertainty: []
+      },
+      scenario
+    }
+    const timeline = createScenarioDisplayTimeline(report)
+
+    expect(timeline.map(({ atUs, id, kind }) => [atUs, id, kind])).toEqual([
+      [10, "first-sample", "input"],
+      [9, "backward-sample", "input"],
+      [9, "rejection-backward-sample", "rejection"]
+    ])
+    expect(timeline[1]?.label).toBe(
+      "Input-order violation at declared input 2: backward-sample moves backward from 10 us to 9 us"
+    )
   })
 
   it("projects blade state independently from target contact", () => {
@@ -181,6 +230,22 @@ describe("scenario report display projection", () => {
       bladeContact: true,
       leftContact: true,
       rightContact: true
+    })
+  })
+
+  it("projects line context without requiring a report", () => {
+    expect(
+      projectScenarioLines([
+        { line: "left.target", state: "closed" },
+        { line: "right.blade", state: "closed" },
+        { line: "right.external", state: "indeterminate" }
+      ])
+    ).toEqual({
+      bladeContact: true,
+      leftContact: true,
+      leftFault: false,
+      rightContact: true,
+      rightFault: true
     })
   })
 

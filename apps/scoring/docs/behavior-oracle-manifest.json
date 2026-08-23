@@ -13,7 +13,7 @@
     {
       "category": "golden-corpus",
       "path": "apps/scoring/docs/golden-scenario-manifest.json",
-      "sha256": "sha256:7edaf11e90a49833c68a08b3bec271cbeda5122cf96c4b50ea526cedd7b6c303"
+      "sha256": "sha256:758e3275953f98a29cc7b7f20790cb6bb61728cca8cd36bccf7803af98a760d9"
     },
     {
       "category": "golden-corpus",
@@ -23,7 +23,7 @@
     {
       "category": "golden-corpus",
       "path": "apps/scoring/docs/golden-scenario.schema.json",
-      "sha256": "sha256:27d2161a9c513cc90c0c0d5fece28a9f17ee1f22fe499911328ea063724599ed"
+      "sha256": "sha256:65ac206bff130fd3a4b2265622ecc9032a46c831c22998e00e12f289d05c59f8"
     },
     {
       "category": "golden-scenario",
@@ -77,6 +77,16 @@
     },
     {
       "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/foil-host-logical-contexts.json",
+      "sha256": "sha256:77b91bc45486a22bf20315703200c9a0f2018a9185971be0fc954208c420cd13"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/foil-host-resistance-classifications.json",
+      "sha256": "sha256:24fb40d08a994bcd54644fb494760262d5cd087e14b4f460a38d603988023c64"
+    },
+    {
+      "category": "golden-scenario",
       "path": "apps/scoring/docs/golden-scenarios/foil-insulation-handoff.json",
       "sha256": "sha256:ee32fa35910cf40c5f820c1ef63a3629e39eefaedde5309440e889c387cfc38f"
     },
@@ -112,6 +122,16 @@
     },
     {
       "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/sabre-control-break-diagnostic-boundaries.json",
+      "sha256": "sha256:79623caba90de96a1907d2a5aa4890655aadf832f1330745df14136289cb77e3"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/sabre-external-100-ohm-host-boundary.json",
+      "sha256": "sha256:6c8748aaf674e1a0938bc76a169a27d5f79f1f9167d309cdb423a5466dada1a8"
+    },
+    {
+      "category": "golden-scenario",
       "path": "apps/scoring/docs/golden-scenarios/sabre-external-path-containment.json",
       "sha256": "sha256:c8344dc737b8311f75eaaf1b277de6574fd4d672b1347af5b975b393a03228dd"
     },
@@ -136,6 +156,16 @@
       "sha256": "sha256:46aee27229ffb976e69b3cb51e5dedd5ad39418e55da35d2f57940782334f65d"
     },
     {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/sabre-white-abnormal-change-latch.json",
+      "sha256": "sha256:7f3f5d1932929902276bde8f54c52259cb22bd4b6d4e71ae6dc768fc2bd2022c"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/sabre-yellow-onset-clear.json",
+      "sha256": "sha256:ce56349b4efda272219abd98144c0b0992daff6ffab129e6ee61228a46f6dc82"
+    },
+    {
       "category": "rules-1",
       "path": "apps/scoring/docs/rules-1-release-review.md",
       "sha256": "sha256:ea36362a413b35ec321024bd9b96798258169a5a59992d9a4f8ca5be00bb0782"
@@ -144,6 +174,11 @@
       "category": "transport-frames",
       "path": "apps/scoring/fixtures/transport-frame-golden.json",
       "sha256": "sha256:894cf5fe1a3d4dd34d69a602d95b8482aaf0716ae2b17daf1f854ade3eb27a9c"
+    },
+    {
+      "category": "display-projection",
+      "path": "apps/scoring/observatory/index.html",
+      "sha256": "sha256:3aa868fee986c237090673c3140246ed94bcba9304fd4604919cfa638afad880"
     },
     {
       "category": "environment",
@@ -158,7 +193,12 @@
     {
       "category": "golden-corpus",
       "path": "apps/scoring/scripts/run-scenarios.mjs",
-      "sha256": "sha256:63c8cb50db3d71d4193d121be69c89f7d10181620407d7af86804e5d657097ff"
+      "sha256": "sha256:a2c59f6d9c0f5e93f36a6c5bfd24de6920b5ad5e881fb78f67d0d5b817a7a36c"
+    },
+    {
+      "category": "display-projection",
+      "path": "apps/scoring/scripts/serve-scenario-observatory.mjs",
+      "sha256": "sha256:bd117a23dc55efc88c6ca89ce13edd15659161f56d73ddc727c927736529250f"
     },
     {
       "category": "rules-1",
@@ -192,6 +232,36 @@
     },
     {
       "category": "rules-1",
+      "path": "apps/scoring/src/foil-evidence.test.ts",
+      "sha256": "sha256:bc8efc157af11ab0d627ad7fd01b53377fbb894c67e999595b05e7529e8f2870"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/foil-evidence.ts",
+      "sha256": "sha256:bbb5a6ea804bc96be9dbde2fb3b62bdcefdb3382501716815d0606d2952b425f"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/foil-insulation.test.ts",
+      "sha256": "sha256:b0c4f18a1062ca0a6b5e5e0b752163ef8a9b1eccf469a8896844aa1da63a7110"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/foil-insulation.ts",
+      "sha256": "sha256:5ec955627dfc40ce2f301c5c66d21ac504aa4064c3cfbfcf15a1fb4f27da5ea5"
+    },
+    {
+      "category": "golden-corpus",
+      "path": "apps/scoring/src/foil-scenario-evidence.test.ts",
+      "sha256": "sha256:3c3935cd5f3c6583a440ef8497c208ec43295ef9bec3c3a56a9664b78c3ef4a8"
+    },
+    {
+      "category": "golden-corpus",
+      "path": "apps/scoring/src/foil-scenario-evidence.ts",
+      "sha256": "sha256:7c3e1fd05f224e24a9759fa7ff8a1f9a9f47c7596ce42e43772be20b8205a9a2"
+    },
+    {
+      "category": "rules-1",
       "path": "apps/scoring/src/foil.test.ts",
       "sha256": "sha256:4459f63c11c0cfe838e7ae6449fea919ee8b436ffffe1acf8da69eab9028eb36"
     },
@@ -199,6 +269,21 @@
       "category": "rules-1",
       "path": "apps/scoring/src/foil.ts",
       "sha256": "sha256:fe233ff0d3c3f5bab15b059fc4746dbac5d9c82f8cd0c095922320da2bfbf8b9"
+    },
+    {
+      "category": "display-projection",
+      "path": "apps/scoring/src/observatory-integration.test.ts",
+      "sha256": "sha256:717f32815d25e0eb9a04f2a31def60aefbe3ef20b50735aa9e322bf112eb1730"
+    },
+    {
+      "category": "golden-corpus",
+      "path": "apps/scoring/src/sabre-scenario-evidence.test.ts",
+      "sha256": "sha256:4674cb896fab65b56599278af0e229f7308f0acc9106271505f4c42a8ec7f6d1"
+    },
+    {
+      "category": "golden-corpus",
+      "path": "apps/scoring/src/sabre-scenario-evidence.ts",
+      "sha256": "sha256:c1eac3e104bbd209e38366ec3f1a6be2ccfd60859a70cbd8d318e895dd43d4f0"
     },
     {
       "category": "rules-1",
@@ -213,22 +298,22 @@
     {
       "category": "display-projection",
       "path": "apps/scoring/src/scenario-display-projection.test.ts",
-      "sha256": "sha256:972fbc6144e41b95b2b022055397c32280c149fab5084e2360b7a51c2a29612b"
+      "sha256": "sha256:20bf1c1468987106754d939b266927b93ae239acfc82d5427fa1664bb855be6b"
     },
     {
       "category": "display-projection",
       "path": "apps/scoring/src/scenario-display-projection.ts",
-      "sha256": "sha256:7fbe34449ad1b5ccca38577dea608d5becd5bf295304242772409d8d34fbc4f5"
+      "sha256": "sha256:2db36c04e4b31bac313397da6e5a01c8b80e49e824805553537d3d979eefbe29"
     },
     {
       "category": "golden-corpus",
       "path": "apps/scoring/src/scenario-runner.test.ts",
-      "sha256": "sha256:1a482c438dee53afa788a5f106faaff87f6d10579bb8ee306175c3e5d065a7f1"
+      "sha256": "sha256:32f1c70181a4aec730b7b300d84c57bec899905308f15239b56ea0d3ca4e573f"
     },
     {
       "category": "golden-corpus",
       "path": "apps/scoring/src/scenario-runner.ts",
-      "sha256": "sha256:502180b829cb66b196638e733f8fccd9c24c23820a2d498b46571fbb3cd1327b"
+      "sha256": "sha256:cd4b9baff3e8f3f21e865d14ac856d44572d5dbb24f6539435d07f9b5a2613a5"
     },
     {
       "category": "rules-1",
@@ -318,8 +403,9 @@
   ],
   "commands": [
     "node apps/scoring/scripts/behavior-oracle.mjs --check",
-    "pnpm --filter scoring test -- src/epee.test.ts src/foil.test.ts src/sabre.test.ts src/bout-state.test.ts src/timing-table.test.ts src/timing-boundary.test.ts src/scoring-property-harness.test.ts",
-    "pnpm --filter scoring test -- src/decision-record.test.ts src/transport-frame.test.ts src/scenario-display-projection.test.ts",
+    "pnpm --filter scoring test -- src/epee.test.ts src/foil.test.ts src/foil-evidence.test.ts src/foil-insulation.test.ts src/sabre.test.ts src/bout-state.test.ts src/timing-table.test.ts src/timing-boundary.test.ts src/scoring-property-harness.test.ts",
+    "pnpm --filter scoring test -- src/scenario-runner.test.ts src/foil-scenario-evidence.test.ts src/sabre-scenario-evidence.test.ts",
+    "pnpm --filter scoring test -- src/decision-record.test.ts src/transport-frame.test.ts src/scenario-display-projection.test.ts src/observatory-integration.test.ts",
     "pnpm --filter scoring run:scenarios -- docs/golden-scenario-manifest.json",
     "pnpm --filter scoring check:golden-vectors"
   ],
@@ -327,5 +413,5 @@
   "hashPolicy": "sha256 over UTF-8 text after CRLF-to-LF normalization",
   "oracleRevision": "rules-1",
   "schemaVersion": 1,
-  "digest": "sha256:b1ff641b598d92d3a8386db6f1d77a6bbdf8c39fd44865f71d77d31f4e51494e"
+  "digest": "sha256:ef6c68c9e696b07d8e00ad0ffdb68b1d07c4f44b5c29e8ac1dababd57acd0286"
 }

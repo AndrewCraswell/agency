@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:," />
     <title>Bout test observatory</title>
     <style>
       :root {
@@ -625,7 +626,14 @@
         </section>
       </div>
     </main>
-    <script>
+    <script type="module">
+      import {
+        createScenarioDisplayTimeline,
+        isActualAcceptedScenarioDisplay,
+        projectScenarioDisplay,
+        projectScenarioLines
+      } from "/assets/scenario-display-projection.js"
+
       const state = {
         cases: [],
         eventIndex: -1,
@@ -731,89 +739,6 @@
           rejection: "Rejection",
           uncertainty: "Uncertainty"
         }[kind]
-      }
-
-      function isRejectedCase(testCase) {
-        return testCase.expected?.status === "rejected" || testCase.result?.actualStatus === "rejected"
-      }
-
-      function buildEvents(testCase) {
-        if (testCase.status === "skipped") return []
-        const events = []
-        for (const [inputIndex, input] of testCase.scenario.inputs.entries()) {
-          events.push({
-            atUs: input.atUs,
-            id: input.id,
-            inputIndex,
-            kind: "input",
-            label: "Declared input " + (inputIndex + 1) + ": " + input.id,
-            lines: input.lines
-          })
-        }
-        if (isRejectedCase(testCase)) {
-          const error = testCase.result.error ?? testCase.expected.error
-          const rejectedInputIndex = testCase.scenario.inputs.findIndex((input) => input.id === error?.atInputId)
-          events.push({
-            atUs: rejectedInputIndex < 0 ? 0 : testCase.scenario.inputs[rejectedInputIndex].atUs,
-            id: "rejection-" + (error?.atInputId ?? "scenario"),
-            kind: "rejection",
-            label: "Host-scorer rejection: " + (error?.code ?? "rejected scenario"),
-            value: error,
-            sequence: testCase.scenario.inputs.length
-          })
-          return events
-        }
-        for (const decision of testCase.expected.decisions) {
-          events.push({
-            atUs: decision.decisionAtUs,
-            id: decision.id,
-            kind: "expected",
-            label: decision.disposition,
-            value: decision
-          })
-        }
-        for (const nonEvent of testCase.expected.nonEvents) {
-          events.push({
-            atUs: nonEvent.window.throughUs,
-            id: nonEvent.id,
-            kind: "expected",
-            label: nonEvent.assertion + " (" + nonEvent.assertionReasonCode + ")",
-            value: nonEvent
-          })
-        }
-        for (const uncertainty of testCase.expected.uncertainty) {
-          events.push({
-            atUs: uncertainty.atUs,
-            id: "expected-" + uncertainty.id,
-            kind: "expected",
-            label: "uncertainty",
-            value: uncertainty
-          })
-        }
-        for (const decision of testCase.result.decisions) {
-          events.push({
-            atUs: decision.decisionAtUs,
-            id: "actual-" + decision.side + "-" + decision.decisionAtUs,
-            kind: "output",
-            label: decision.disposition,
-            value: decision
-          })
-        }
-        for (const uncertainty of testCase.result.uncertainty) {
-          events.push({
-            atUs: uncertainty.atUs,
-            id: "uncertainty-" + uncertainty.atUs,
-            kind: "uncertainty",
-            label: "Host-scorer reported uncertainty",
-            value: uncertainty
-          })
-        }
-        return events.sort(
-          (left, right) =>
-            left.atUs - right.atUs ||
-            ["input", "expected", "output", "uncertainty"].indexOf(left.kind) -
-              ["input", "expected", "output", "uncertainty"].indexOf(right.kind)
-        )
       }
 
       function evaluationRows(testCase) {
@@ -1049,35 +974,17 @@
         }, 650)
       }
 
-      function isContactLine(line, side) {
-        return (
-          line.line.startsWith(side + ".") &&
-          ["weapon-circuit", "tip-loop", "target", "blade"].some((name) => line.line.includes(name)) &&
-          line.state === "closed"
-        )
-      }
-
-      function isBladeContactLine(line) {
-        return (line.line.includes("blade") || line.line.includes("parry")) && line.state === "closed"
-      }
-
-      function isFaultLine(line, side) {
-        return (
-          line.line.startsWith(side + ".") &&
-          ["grounded", "shorted", "disconnected", "indeterminate"].includes(line.state)
-        )
-      }
-
       function laneActive(lines, lane) {
-        if (lane === "left-contact") return lines.some((line) => isContactLine(line, "left"))
-        if (lane === "right-contact") return lines.some((line) => isContactLine(line, "right"))
-        if (lane === "left-fault") return lines.some((line) => isFaultLine(line, "left"))
-        if (lane === "right-fault") return lines.some((line) => isFaultLine(line, "right"))
-        return lines.some((line) => line.line.includes("blade") && line.state === "closed")
+        const projection = projectScenarioLines(lines)
+        if (lane === "left-contact") return projection.leftContact
+        if (lane === "right-contact") return projection.rightContact
+        if (lane === "left-fault") return projection.leftFault
+        if (lane === "right-fault") return projection.rightFault
+        return projection.bladeContact
       }
 
       function playerTiming(testCase) {
-        if (isRejectedCase(testCase))
+        if (!isActualAcceptedScenarioDisplay(testCase))
           return {
             authoritativeDecisionAtUs: null,
             candidateContactAtUs: null,
@@ -1232,7 +1139,15 @@
         paintMatrixRegion(context, 27, 10, 10, 3, snapshot.bladeContact ? "#ed8a43" : "#18242b", snapshot.bladeContact)
         paintMatrixRegion(context, 18, 17, 5, 3, snapshot.leftFault ? "#f0c46a" : "#18242b", snapshot.leftFault)
         paintMatrixRegion(context, 41, 17, 5, 3, snapshot.rightFault ? "#f0c46a" : "#18242b", snapshot.rightFault)
-        paintMatrixRegion(context, 30, 15, 4, 4, snapshot.audible ? "#f4c65d" : "#18242b", snapshot.audible)
+        paintMatrixRegion(
+          context,
+          30,
+          15,
+          4,
+          4,
+          snapshot.audibleRequested ? "#f4c65d" : "#18242b",
+          snapshot.audibleRequested
+        )
 
         drawMatrixText(context, "C", 19, 14, snapshot.leftContact ? "#75c8f2" : "#41525c")
         drawMatrixText(context, "C", 42, 14, snapshot.rightContact ? "#75c8f2" : "#41525c")
@@ -1258,45 +1173,13 @@
         }
         const cursorColumn = Math.min(61, 2 + Math.round((snapshot.cursorAtUs / maximumTime) * 59))
         paintMatrixRegion(context, cursorColumn, 23, 1, 5, "#eef5f8", true)
-        drawMatrixText(context, snapshot.audible ? "B" : "", 31, 19, "#f4c65d")
-      }
-
-      function latestSideDecision(actualDecisions, side) {
-        const decisions = actualDecisions.filter((candidate) => candidate.value.side === side)
-        return decisions.length === 0 ? null : decisions[decisions.length - 1].value
-      }
-
-      function lampForDecision(decision) {
-        if (decision === null) return "off"
-        const visual = decision.signal?.visual ?? "diagnostic"
-        return visual === "none" ? "off" : visual
+        drawMatrixText(context, snapshot.audibleRequested ? "B" : "", 31, 19, "#f4c65d")
       }
 
       function playerSnapshot(testCase) {
-        const playedEvents = state.events.slice(0, state.eventIndex + 1)
-        const latestInput = [...playedEvents].reverse().find((candidate) => candidate.kind === "input")
-        const actualDecisions = playedEvents.filter((candidate) => candidate.kind === "output" && candidate.value?.side)
-        const latestDecisionEvent = [...playedEvents]
-          .reverse()
-          .find((candidate) => candidate.kind === "output" && candidate.value?.side)
-        const lines = latestInput?.lines ?? []
-        const leftDecision = latestSideDecision(actualDecisions, "left")
-        const rightDecision = latestSideDecision(actualDecisions, "right")
-        const timing = playerTiming(testCase)
         return {
-          audible: actualDecisions.some((candidate) => candidate.value.signal?.audible === "requested"),
-          bladeContact: lines.some(isBladeContactLine),
-          cursorAtUs: state.events[state.eventIndex]?.atUs ?? 0,
-          event: state.events[state.eventIndex] ?? null,
-          latestDecision: latestDecisionEvent?.value ?? null,
-          leftContact: lines.some((line) => isContactLine(line, "left")),
-          leftFault: lines.some((line) => isFaultLine(line, "left")),
-          leftLamp: lampForDecision(leftDecision),
-          rightContact: lines.some((line) => isContactLine(line, "right")),
-          rightFault: lines.some((line) => isFaultLine(line, "right")),
-          rightLamp: lampForDecision(rightDecision),
-          timing,
-          weapon: testCase.scenario.weapon
+          ...projectScenarioDisplay(testCase, state.eventIndex),
+          timing: playerTiming(testCase)
         }
       }
 
@@ -1473,7 +1356,7 @@
             "; " +
             (snapshot.bladeContact ? "blade/parry contact" : "no blade/parry contact") +
             "; " +
-            (snapshot.audible ? "buzzer requested" : "buzzer inactive") +
+            (snapshot.audibleRequested ? "buzzer requested" : "buzzer inactive") +
             "."
         const matrixCursor = document.querySelector("#matrix-cursor")
         if (matrixCursor)
@@ -1493,7 +1376,7 @@
               (snapshot.rightContact ? "Right contact closed. " : "Right contact open. ") +
               (snapshot.leftFault || snapshot.rightFault ? "Fault present. " : "No fault. ") +
               (snapshot.bladeContact ? "Blade contact. " : "No blade contact. ") +
-              (snapshot.audible ? "Buzzer requested. " : "Buzzer inactive. ") +
+              (snapshot.audibleRequested ? "Buzzer requested. " : "Buzzer inactive. ") +
               "Cursor at " +
               formatTime(cursorAtUs) +
               "."
@@ -1512,7 +1395,7 @@
             ", " +
             (snapshot.rightContact ? "right closed" : "right open") +
             (snapshot.bladeContact ? "; blade/parry closed" : "")
-        if (buzzerReadout) buzzerReadout.textContent = snapshot.audible ? "Requested" : "Inactive"
+        if (buzzerReadout) buzzerReadout.textContent = snapshot.audibleRequested ? "Requested" : "Inactive"
         document.querySelectorAll(".player-cursor").forEach((cursor) => {
           cursor.style.left = Math.min(100, (cursorAtUs / timing.maximumTime) * 100) + "%"
         })
@@ -1521,7 +1404,7 @@
       function renderTimeline(testCase) {
         state.timelineMarkerObserver?.disconnect()
         state.timelineMarkerObserver = null
-        state.events = buildEvents(testCase)
+        state.events = testCase.status === "skipped" ? [] : createScenarioDisplayTimeline(testCase)
         state.eventIndex = -1
         state.playing = false
         const section = document.createElement("section")
@@ -1606,7 +1489,7 @@
         const currentMessage = document.createElement("p")
         currentMessage.textContent = "Select a marker or execution-stream row, or use the playback controls."
         current.append(currentMessage)
-        if (isRejectedCase(testCase)) section.append(renderRejectionNotice(testCase))
+        if (!isActualAcceptedScenarioDisplay(testCase)) section.append(renderRejectionNotice(testCase))
         else section.append(renderBoutPlayer(testCase))
         section.append(controls, timeline, current)
         observeTimelineMarkers(track)
@@ -1620,9 +1503,9 @@
         const heading = document.createElement("h3")
         heading.textContent = "Host-scorer rejection"
         const detail = document.createElement("p")
-        const error = testCase.result.error ?? testCase.expected.error
+        const error = testCase.result.error
         detail.textContent =
-          "Declared input order is preserved. The host scorer rejected this scenario" +
+          "Declared execution order is preserved. Later inputs are labeled not processed, and backward timestamps are labeled as input-order violations. The host scorer rejected this scenario" +
           (error?.atInputId ? " at " + error.atInputId : "") +
           (error?.code ? " with " + error.code : "") +
           ". No scoring display or cutoff is inferred."

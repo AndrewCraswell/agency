@@ -28,6 +28,10 @@ const fixedArtifacts = [
   ["rules-1", "apps/scoring/src/epee.test.ts"],
   ["rules-1", "apps/scoring/src/foil.ts"],
   ["rules-1", "apps/scoring/src/foil.test.ts"],
+  ["rules-1", "apps/scoring/src/foil-evidence.ts"],
+  ["rules-1", "apps/scoring/src/foil-evidence.test.ts"],
+  ["rules-1", "apps/scoring/src/foil-insulation.ts"],
+  ["rules-1", "apps/scoring/src/foil-insulation.test.ts"],
   ["rules-1", "apps/scoring/src/sabre.ts"],
   ["rules-1", "apps/scoring/src/sabre.test.ts"],
   ["rules-1", "apps/scoring/src/scoring-property-harness.ts"],
@@ -43,8 +47,15 @@ const fixedArtifacts = [
   ["golden-corpus", "apps/scoring/scripts/export-golden-vectors.mjs"],
   ["golden-corpus", "apps/scoring/src/scenario-runner.ts"],
   ["golden-corpus", "apps/scoring/src/scenario-runner.test.ts"],
+  ["golden-corpus", "apps/scoring/src/foil-scenario-evidence.ts"],
+  ["golden-corpus", "apps/scoring/src/foil-scenario-evidence.test.ts"],
+  ["golden-corpus", "apps/scoring/src/sabre-scenario-evidence.ts"],
+  ["golden-corpus", "apps/scoring/src/sabre-scenario-evidence.test.ts"],
   ["display-projection", "apps/scoring/src/scenario-display-projection.ts"],
   ["display-projection", "apps/scoring/src/scenario-display-projection.test.ts"],
+  ["display-projection", "apps/scoring/src/observatory-integration.test.ts"],
+  ["display-projection", "apps/scoring/observatory/index.html"],
+  ["display-projection", "apps/scoring/scripts/serve-scenario-observatory.mjs"],
   ["decision-schema", "apps/scoring/docs/decision-record-contract.md"],
   ["decision-schema", "apps/scoring/src/decision-record.ts"],
   ["decision-schema", "apps/scoring/src/decision-record.test.ts"],
@@ -55,8 +66,9 @@ const fixedArtifacts = [
 
 const testCommands = [
   "node apps/scoring/scripts/behavior-oracle.mjs --check",
-  "pnpm --filter scoring test -- src/epee.test.ts src/foil.test.ts src/sabre.test.ts src/bout-state.test.ts src/timing-table.test.ts src/timing-boundary.test.ts src/scoring-property-harness.test.ts",
-  "pnpm --filter scoring test -- src/decision-record.test.ts src/transport-frame.test.ts src/scenario-display-projection.test.ts",
+  "pnpm --filter scoring test -- src/epee.test.ts src/foil.test.ts src/foil-evidence.test.ts src/foil-insulation.test.ts src/sabre.test.ts src/bout-state.test.ts src/timing-table.test.ts src/timing-boundary.test.ts src/scoring-property-harness.test.ts",
+  "pnpm --filter scoring test -- src/scenario-runner.test.ts src/foil-scenario-evidence.test.ts src/sabre-scenario-evidence.test.ts",
+  "pnpm --filter scoring test -- src/decision-record.test.ts src/transport-frame.test.ts src/scenario-display-projection.test.ts src/observatory-integration.test.ts",
   "pnpm --filter scoring run:scenarios -- docs/golden-scenario-manifest.json",
   "pnpm --filter scoring check:golden-vectors"
 ]

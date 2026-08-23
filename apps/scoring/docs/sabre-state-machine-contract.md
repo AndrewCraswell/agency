@@ -51,6 +51,14 @@ wholly at or below `100_000 milliOhm` is `eligible`; a range wholly above it is
 values mean `unavailable`. Partially absent, negative, fractional, overflowing,
 or otherwise unsafe values are rejected instead of coerced.
 
+The scenario adapter also requires the declared line state to cohere with the
+measurement. Only a `closed` line is resistance-classified. `disconnected` and
+`indeterminate` take precedence and project to their matching contained result,
+even if a numeric value is present. An `open` line is eligible only with both
+measurement fields absent; an `open` line carrying measurement data is
+`indeterminate`. A closed line with both fields absent is `unavailable`, while
+a partially absent pair is rejected by the classifier.
+
 This helper is host software evidence for boundary classification only. It
 does not select excitation, ADC, comparator, filtering, calibration, or wiring;
 it does not establish that physical equipment at 100 ohms was acquired
@@ -161,15 +169,35 @@ replace this with a reviewed, versioned timing-table rule.
 
 ## Golden-scenario handoff
 
-This task intentionally adds no shared golden scenarios or manifest rows;
-M1-08 owns corpus integration. It should add both-side vectors for:
+`sabre-scenario-evidence.ts` is the sabre-only adapter from declared logical
+lines to the host scorer. It keeps target and blade lines independent, uses a
+supplied external-path resistance only through `classifySabreExternalPath`, and
+attaches input provenance to emitted diagnostics.
+
+Golden scenario `1.1.0` is a backward-compatible sabre diagnostic extension.
+It requires `expect.diagnostics` for sabre vectors and is rejected for other
+weapons; existing `1.0.0` vectors remain valid and cannot silently add that
+field. Diagnostic expectations carry side, timestamp, indication, reason,
+host audio request, latch intent, and source input IDs. They remain host-only
+evidence and do not represent physical lamp, buzzer, or acquisition results.
+The version `1.1.0` shape admits exactly four semantic diagnostic tuples:
+yellow onset, yellow clear, immediate B/C abnormal-change white, and qualified
+control-break white. It caps diagnostics at 4,096 per scenario and source input
+IDs at two unique entries per diagnostic. Canonical runner integration must
+mirror those limits as `MAX_EXPECTED_DIAGNOSTICS = 4096` and
+`MAX_DIAGNOSTIC_SOURCE_INPUT_IDS = 2`; version `1.0.0` has no changed shape.
+
+The sabre corpus includes host vectors for yellow onset and clear, immediate
+abnormal-change white latch, the 2,999/3,000/3,001-us control-break sequence,
+and supplied measurements at 100 and 100.001 ohms. Broader corpus integration
+continues to track:
 
 | Scenario topic | Traceability and expected result |
 | --- | --- |
 | Target duration | SABRE-01/SABRE-03: reject 99 us; qualify 100 and 101 us; retain 999/1,000/1,001-us sensitivity evidence. |
 | Target and fault containment | SABRE-01/SABRE-04: non-conductive rejection, own-equipment yellow with a valid hit, external eligibility, uncertainty, and opposite-side independence. |
 | Whipover history | SABRE-03/SABRE-06: trusted early blade-mediated registration; no false hit at 5 and 15 ms; recovery at 20 ms; interruption counts 0, 10, and 11 with the over-10 case explicitly indeterminate. |
-| B/C diagnostics | SABRE-02/SABRE-07: abnormal change, and control break at 2,999/3,000/3,001 us, separately from hit decisions. |
+| B/C diagnostics | SABRE-02/SABRE-07: retain both-side and reset vectors beyond the current host onset/latch cases. |
 | Lockout | SABRE-05: both sides, deterministic simultaneous ordering, first-qualified-signal anchor, 160/170/180-ms references, and the provisional 170,000-us inclusive cutoff. |
 
 ## Acceptance evidence

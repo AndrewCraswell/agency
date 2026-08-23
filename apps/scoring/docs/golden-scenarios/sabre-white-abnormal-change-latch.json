@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.1.0",
+  "scenarioId": "sabre.white-abnormal-change-latch",
+  "title": "Sabre host abnormal B/C change emits one latched white diagnostic request",
+  "weapon": "sabre",
+  "ruleRevision": "fie-2026-sabre",
+  "sources": [
+    { "authority": "fie", "id": "SABRE-02", "document": "fie-material-rules-2026-08-en.pdf", "page": 81, "locator": "Annex B, C(a).5-C(a).6" },
+    { "authority": "implementation", "id": "SABRE-TEST-GOLDEN-ABNORMAL-CHANGE", "document": "src/sabre-scenario-evidence.test.ts", "page": null, "locator": "replays one latched host white request for an abnormal B/C change" }
+  ],
+  "lineModel": { "revision": "sabre-logical-lines-1", "names": ["left.control", "right.control"] },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": { "clock": "virtual", "timeUnit": "us", "initialState": "fresh-bout", "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-sabre-abnormal-change", "transportSequenceStart": 0, "captureId": null } },
+  "inputs": [
+    { "id": "right-abnormal-change", "atUs": 0, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.control", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.control", "state": "shorted", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "right-control-normal", "atUs": 1, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.control", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.control", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] }
+  ],
+  "expect": {
+    "status": "accepted",
+    "decisions": [],
+    "diagnostics": [
+      { "id": "right-white-abnormal-change", "atUs": 0, "side": "right", "indication": "white-on", "reason": "circuit-bc-abnormal-change", "audible": "requested", "latched": true, "sourceInputIds": ["right-abnormal-change"] }
+    ],
+    "nonEvents": [],
+    "uncertainty": [],
+    "finalState": { "hitCount": 0, "isLocked": false }
+  }
+}

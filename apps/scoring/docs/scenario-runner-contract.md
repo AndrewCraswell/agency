@@ -20,13 +20,20 @@ pnpm run:scenarios -- docs/golden-scenario-manifest.json
 ```
 
 The command emits exactly one pretty-printed JSON report on standard output.
-The report has format `scoring-golden-run-report`, schema version `1.0.0`, a
+The report has format `scoring-golden-run-report`, schema version `1.1.0`, a
 stable lexicographic scenario order, deterministic actual results, mismatch
 details, and a summary. Qualified-hit and off-target comparisons include the
 canonical signal snapshot and exact listed `sourceInputIds`; descriptive
 decision `id` values are not runtime identities. Planned manifest entries are not executed; active
 entries must resolve to files and agree with their manifest IDs, weapons, and
 source IDs.
+
+Report `1.1.0` emits Sabre host `diagnostics` for canonical scenario version
+`1.1.0` and Foil host `classifications` for canonical scenario version `1.2.0`.
+The runner derives both from the listed inputs rather than replaying expectation
+records. Sabre diagnostics are ordered by timestamp and side, and include only
+the one or two input IDs that establish their onset, clearing edge, or qualified
+duration.
 
 Exit status is part of the interface:
 
@@ -42,8 +49,10 @@ claim physical hardware, analog, firmware, or FIE approval evidence.
 
 The runner rejects an input file larger than 4 MiB before parsing. It also
 enforces fixed limits for manifest entries, source records and IDs, line names,
-scenario snapshots, lines per snapshot, expected decisions, non-events,
-uncertainties, and coverage references. These limits are exported by the
-runner module so tests and tooling can exercise the exact boundaries. A
+scenario snapshots, lines per snapshot, expected decisions, diagnostics,
+diagnostic source input IDs, classifications, non-events, uncertainties, and
+coverage references. The diagnostic limits are 4,096 records per scenario and
+two source input IDs per record. These limits are exported by the runner module
+so tests and tooling can exercise the exact boundaries. A
 malformed or over-limit document is exit status `2`; an unexpected internal
 failure is reported as `execution-error`, also with exit status `2`.

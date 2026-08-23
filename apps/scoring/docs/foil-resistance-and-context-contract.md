@@ -26,6 +26,27 @@ These are normative or product-policy classifications over trusted host
 inputs. Physical conductor acquisition, uncertainty budgets, analogue
 thresholds, lamps, and complete-apparatus correlation remain open.
 
+## Golden host-classification scenarios
+
+Canonical golden scenario version `1.2.0` adds foil-only typed
+`expect.classifications` without relabeling host results as hits, line faults,
+or physical diagnostics. Version `1.0.0` remains unchanged, and the sabre-only
+diagnostic extension remains isolated at `1.1.0`.
+
+`foil.host-resistance-classifications` covers exterior zero, 200-ohm,
+immediately-above-200-ohm, 500-ohm, and boundary-overlap inputs, plus the
+closed-circuit and earth-path endpoints and overlapping intervals. Exterior
+cases use an explicitly named timing-qualified open break at or after the
+selected 13,000-us minimum.
+`foil.host-logical-contexts` covers each accepted context in standard and
+anti-blocking modes.
+
+The two scenarios are active in the canonical manifest. The runner derives one
+classification from every listed input in declared order and compares it with a
+unique expectation/input reference. It rejects incompatible line state and
+classification kind pairings. FOIL-02, FOIL-03, and FOIL-04 remain planned
+because host classifications do not close their physical apparatus evidence.
+
 ## Standard exterior resistance
 
 `classifyFoilExteriorResistance` returns permitted indication vocabulary. It

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.1.0",
+  "scenarioId": "sabre.control-break-diagnostic-boundaries",
+  "title": "Sabre host control-break diagnostic qualifies and latches at exactly 3,000 microseconds",
+  "weapon": "sabre",
+  "ruleRevision": "fie-2026-sabre",
+  "sources": [
+    { "authority": "fie", "id": "SABRE-07", "document": "fie-material-rules-2026-08-en.pdf", "page": 82, "locator": "Annex B, C(b).7" },
+    { "authority": "implementation", "id": "SABRE-TEST-GOLDEN-CONTROL-BREAK", "document": "src/sabre-scenario-evidence.test.ts", "page": null, "locator": "replays the 2,999, 3,000, and 3,001 microsecond control-break points" }
+  ],
+  "lineModel": { "revision": "sabre-logical-lines-1", "names": ["left.control", "right.control"] },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": { "clock": "virtual", "timeUnit": "us", "initialState": "fresh-bout", "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-sabre-control-break", "transportSequenceStart": 0, "captureId": null } },
+  "inputs": [
+    { "id": "control-break-start", "atUs": 0, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.control", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.control", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "control-break-below", "atUs": 2999, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.control", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.control", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "control-break-at", "atUs": 3000, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.control", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.control", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "control-break-above", "atUs": 3001, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.control", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.control", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] }
+  ],
+  "expect": {
+    "status": "accepted",
+    "decisions": [],
+    "diagnostics": [
+      { "id": "left-white-control-break", "atUs": 3000, "side": "left", "indication": "white-on", "reason": "control-break-qualified", "audible": "requested", "latched": true, "sourceInputIds": ["control-break-start", "control-break-at"] }
+    ],
+    "nonEvents": [],
+    "uncertainty": [],
+    "finalState": { "hitCount": 0, "isLocked": false }
+  }
+}

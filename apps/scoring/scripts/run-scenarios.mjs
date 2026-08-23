@@ -7,7 +7,7 @@ if (inputPath === undefined || process.argv.length !== 3) {
     format: "scoring-golden-run-report",
     input: { kind: "scenario", path: "" },
     runner: "golden-scenario-runner",
-    schemaVersion: "1.0.0",
+    schemaVersion: "1.1.0",
     scenarios: [],
     status: "invalid-input",
     summary: { failed: 0, passed: 0, scenarioCount: 0 }

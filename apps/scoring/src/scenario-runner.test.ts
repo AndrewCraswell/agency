@@ -6,8 +6,11 @@ import { afterEach, describe, expect, it } from "vitest"
 import {
   MAX_COVERAGE_SCENARIO_IDS,
   MAX_EXPECTED_DECISIONS,
+  MAX_EXPECTED_CLASSIFICATIONS,
   MAX_EXPECTED_NON_EVENTS,
   MAX_EXPECTED_UNCERTAINTIES,
+  MAX_EXPECTED_DIAGNOSTICS,
+  MAX_DIAGNOSTIC_SOURCE_INPUT_IDS,
   MAX_INPUT_FILE_BYTES,
   MAX_LINE_NAMES,
   MAX_LINES_PER_INPUT,
@@ -163,6 +166,225 @@ describe("golden scenario runner", () => {
 
     expect(run.exitCode).toBe(0)
     expect(run.report.scenarios[0]).toMatchObject({ scenarioId: scenario.scenarioId, status: "passed" })
+  })
+
+  it.each(["foil-host-logical-contexts.json", "foil-host-resistance-classifications.json"])(
+    "derives every foil host classification from the listed inputs in %s",
+    (fixtureName) => {
+      const directory = temporaryDirectory()
+      const path = join(directory, fixtureName)
+      const scenario = readFixture(fixtureName)
+      writeJson(path, scenario)
+
+      const run = runScenario(path)
+      const inputs = scenario.inputs as { atUs: number; id: string }[]
+      const actual = run.report.scenarios[0]?.classifications
+
+      expect(run.exitCode).toBe(0)
+      expect(actual).toHaveLength(((scenario.expect as Record<string, unknown>).classifications as unknown[]).length)
+      expect(actual?.map(({ atUs, sourceInputId }) => ({ atUs, sourceInputId }))).toEqual(
+        inputs.map(({ atUs, id }) => ({ atUs, sourceInputId: id }))
+      )
+    }
+  )
+
+  it("reports one stable mismatch when a foil classification expectation differs from input-derived output", () => {
+    const directory = temporaryDirectory()
+    const path = join(directory, "foil-classification-mismatch.json")
+    const scenario = readFixture("foil-host-resistance-classifications.json")
+    const expectation = scenario.expect as Record<string, unknown>
+    const classifications = expectation.classifications as Record<string, unknown>[]
+    writeJson(path, {
+      ...scenario,
+      expect: {
+        ...expectation,
+        classifications: classifications.map((classification, index) =>
+          index === 0
+            ? {
+                ...classification,
+                disposition: "outside-published-range",
+                permittedIndications: []
+              }
+            : classification
+        )
+      }
+    })
+
+    expect(runScenario(path)).toMatchObject({
+      exitCode: 1,
+      report: { scenarios: [{ mismatches: [{ kind: "classification", message: "classification output differs" }] }] }
+    })
+  })
+
+  it.each([
+    "sabre-control-break-diagnostic-boundaries.json",
+    "sabre-white-abnormal-change-latch.json",
+    "sabre-yellow-onset-clear.json"
+  ])("derives and emits the declared Sabre diagnostics for %s", (fixtureName) => {
+    const directory = temporaryDirectory()
+    const path = join(directory, fixtureName)
+    const scenario = readFixture(fixtureName)
+    writeJson(path, scenario)
+
+    const run = runScenario(path)
+    const expected = ((scenario.expect as Record<string, unknown>).diagnostics as Record<string, unknown>[]).map(
+      ({ id: _id, ...diagnostic }) => diagnostic
+    )
+
+    expect(run.exitCode).toBe(0)
+    expect(run.report.scenarios[0]?.diagnostics).toEqual(expected)
+    expect(run.report.scenarios[0]?.classifications).toBeUndefined()
+  })
+
+  it("keeps Sabre evidence absent from version 1.0 reports", () => {
+    const run = runScenario(join(fixtureDirectory, "sabre-external-100-ohm-host-boundary.json"))
+
+    expect(run.exitCode).toBe(0)
+    expect(run.report.scenarios[0]?.diagnostics).toBeUndefined()
+  })
+
+  it.each([
+    ["rule revision", { ruleRevision: "fie-2026-epee" }],
+    ["line model revision", { lineModel: { revision: "m0-07", names: ["left.fault", "right.fault"] } }]
+  ])("rejects a Sabre 1.1 scenario with the wrong %s", (_field, replacement) => {
+    const directory = temporaryDirectory()
+    const path = join(directory, "invalid-sabre-evidence-contract.json")
+    writeJson(path, { ...readFixture("sabre-yellow-onset-clear.json"), ...replacement })
+
+    expect(runScenario(path)).toMatchObject({
+      exitCode: 2,
+      report: { error: { code: "invalid-schema" }, status: "invalid-input" }
+    })
+  })
+
+  it("rejects invalid foil classification provenance, ranges, bounds, and state pairings", () => {
+    const directory = temporaryDirectory()
+    const scenario = readFixture("foil-host-resistance-classifications.json")
+    const expectation = scenario.expect as Record<string, unknown>
+    const classifications = expectation.classifications as Record<string, unknown>[]
+    const inputs = scenario.inputs as Record<string, unknown>[]
+    const secondKindInput = inputs[5]
+    if (secondKindInput === undefined) throw new Error("foil resistance fixture is incomplete")
+    const cases = [
+      {
+        ...scenario,
+        expect: {
+          ...expectation,
+          classifications: classifications.map((value, index) =>
+            index === 0 ? { ...value, sourceInputId: "exterior-two-hundred" } : value
+          )
+        }
+      },
+      {
+        ...scenario,
+        expect: {
+          ...expectation,
+          classifications: classifications.map((value, index) =>
+            index === 0 ? { ...value, rangeMilliOhms: { min: 1, max: 0 } } : value
+          )
+        }
+      },
+      {
+        ...scenario,
+        expect: {
+          ...expectation,
+          classifications: Array.from({ length: MAX_EXPECTED_CLASSIFICATIONS + 1 }, () => classifications[0])
+        }
+      },
+      { ...scenario, inputs: inputs.map((value, index) => (index === 0 ? { ...value, atUs: 12_999 } : value)) },
+      {
+        ...scenario,
+        inputs: inputs.map((value, index) =>
+          index === 0
+            ? { ...value, lines: [{ ...(value.lines as Record<string, unknown>[])[0], state: "closed" }] }
+            : value
+        )
+      },
+      {
+        ...scenario,
+        inputs: inputs.map((value, index) =>
+          index === 0
+            ? {
+                ...value,
+                lines: [
+                  ...(value.lines as Record<string, unknown>[]),
+                  { ...((secondKindInput.lines as Record<string, unknown>[])[0] as Record<string, unknown>) }
+                ]
+              }
+            : value
+        )
+      },
+      {
+        ...scenario,
+        inputs: inputs.map((value, index) =>
+          index === 0
+            ? { ...value, lines: [{ ...(value.lines as Record<string, unknown>[])[0], line: "left.undeclared" }] }
+            : value
+        )
+      },
+      {
+        ...scenario,
+        inputs: inputs.map((value, index) =>
+          index === 5
+            ? { ...value, lines: [{ ...(value.lines as Record<string, unknown>[])[0], state: "open" }] }
+            : value
+        )
+      },
+      {
+        ...scenario,
+        inputs: inputs.map((value, index) =>
+          index === 7
+            ? { ...value, lines: [{ ...(value.lines as Record<string, unknown>[])[0], state: "closed" }] }
+            : value
+        )
+      },
+      { ...scenario, ruleRevision: "fie-2026-sabre" },
+      {
+        ...scenario,
+        lineModel: { ...(scenario.lineModel as Record<string, unknown>), revision: "foil-logical-lines-1" }
+      }
+    ]
+
+    for (const [index, value] of cases.entries()) {
+      const path = join(directory, `invalid-classification-${index}.json`)
+      writeJson(path, value)
+      expect(runScenario(path).exitCode).toBe(2)
+    }
+
+    const logicalScenario = readFixture("foil-host-logical-contexts.json")
+    const logicalInputs = logicalScenario.inputs as Record<string, unknown>[]
+    const logicalCases = [
+      {
+        ...logicalScenario,
+        inputs: logicalInputs.map((value, index) =>
+          index === 0
+            ? { ...value, lines: [{ ...(value.lines as Record<string, unknown>[])[0], state: "closed" }] }
+            : value
+        )
+      },
+      {
+        ...logicalScenario,
+        inputs: logicalInputs.map((value, index) =>
+          index === 0
+            ? {
+                ...value,
+                lines: [
+                  {
+                    ...(value.lines as Record<string, unknown>[])[0],
+                    resistanceMilliOhms: 0,
+                    resistanceUncertaintyMilliOhms: 0
+                  }
+                ]
+              }
+            : value
+        )
+      }
+    ]
+    for (const [index, value] of logicalCases.entries()) {
+      const path = join(directory, `invalid-logical-classification-${index}.json`)
+      writeJson(path, value)
+      expect(runScenario(path).exitCode).toBe(2)
+    }
   })
 
   it.each([
@@ -877,6 +1099,182 @@ describe("golden scenario runner", () => {
     })
   })
 
+  it("reports one stable mismatch when Sabre diagnostics differ", () => {
+    const directory = temporaryDirectory()
+    const path = join(directory, "diagnostic-mismatch.json")
+    const scenario = readFixture("sabre-yellow-onset-clear.json")
+    const expectation = scenario.expect as Record<string, unknown>
+    const diagnostics = expectation.diagnostics as Record<string, unknown>[]
+    writeJson(path, {
+      ...scenario,
+      expect: {
+        ...expectation,
+        diagnostics: diagnostics.map((diagnostic, index) => (index === 0 ? { ...diagnostic, atUs: 2 } : diagnostic))
+      }
+    })
+
+    expect(runScenario(path)).toMatchObject({
+      exitCode: 1,
+      report: { scenarios: [{ mismatches: [{ kind: "diagnostic", message: "diagnostic output differs" }] }] }
+    })
+  })
+
+  it("orders simultaneous Sabre diagnostics deterministically by side", () => {
+    const directory = temporaryDirectory()
+    const path = join(directory, "simultaneous-sabre-diagnostics.json")
+    const scenario = readFixture("sabre-yellow-onset-clear.json")
+    const expectation = scenario.expect as Record<string, unknown>
+    const inputs = scenario.inputs as Record<string, unknown>[]
+    const withRightFault = inputs.map((input, index) => {
+      if (index < 1) return input
+      const lines = (input.lines as Record<string, unknown>[]).map((line) =>
+        line.line === "right.fault" ? { ...line, state: index === inputs.length - 1 ? "open" : "closed" } : line
+      )
+      return { ...input, lines }
+    })
+    writeJson(path, {
+      ...scenario,
+      inputs: withRightFault,
+      expect: {
+        ...expectation,
+        diagnostics: [
+          {
+            id: "left-yellow-on",
+            atUs: 1,
+            side: "left",
+            indication: "yellow-on",
+            reason: "own-equipment-fault",
+            audible: "none",
+            latched: false,
+            sourceInputIds: ["fault-onset"]
+          },
+          {
+            id: "right-yellow-on",
+            atUs: 1,
+            side: "right",
+            indication: "yellow-on",
+            reason: "own-equipment-fault",
+            audible: "none",
+            latched: false,
+            sourceInputIds: ["fault-onset"]
+          },
+          {
+            id: "left-yellow-off",
+            atUs: 3,
+            side: "left",
+            indication: "yellow-off",
+            reason: "own-equipment-clear",
+            audible: "none",
+            latched: false,
+            sourceInputIds: ["fault-onset", "fault-cleared"]
+          },
+          {
+            id: "right-yellow-off",
+            atUs: 3,
+            side: "right",
+            indication: "yellow-off",
+            reason: "own-equipment-clear",
+            audible: "none",
+            latched: false,
+            sourceInputIds: ["fault-onset", "fault-cleared"]
+          }
+        ]
+      }
+    })
+
+    expect(runScenario(path)).toMatchObject({
+      exitCode: 0,
+      report: {
+        scenarios: [
+          {
+            diagnostics: [
+              { atUs: 1, side: "left" },
+              { atUs: 1, side: "right" },
+              { atUs: 3, side: "left" },
+              { atUs: 3, side: "right" }
+            ]
+          }
+        ]
+      }
+    })
+  })
+
+  it("attributes a wrapped Sabre evidence rejection to the failing input", () => {
+    const directory = temporaryDirectory()
+    const path = join(directory, "sabre-non-monotonic.json")
+    const scenario = readFixture("sabre-yellow-onset-clear.json")
+    const expectation = scenario.expect as Record<string, unknown>
+    const rejectedExpectation = { ...expectation }
+    delete rejectedExpectation.finalState
+    const inputs = scenario.inputs as Record<string, unknown>[]
+    writeJson(path, {
+      ...scenario,
+      inputs: inputs.map((input, index) => (index === 2 ? { ...input, atUs: 0 } : input)),
+      expect: {
+        ...rejectedExpectation,
+        status: "rejected",
+        diagnostics: [],
+        error: { code: "non-monotonic-time", atInputId: "fault-retained" }
+      }
+    })
+
+    expect(runScenario(path)).toMatchObject({
+      exitCode: 0,
+      report: {
+        scenarios: [
+          {
+            actualStatus: "rejected",
+            error: { code: "non-monotonic-time", atInputId: "fault-retained" },
+            status: "passed"
+          }
+        ]
+      }
+    })
+  })
+
+  it("rejects Sabre diagnostic and provenance bounds", () => {
+    const directory = temporaryDirectory()
+    const scenario = readFixture("sabre-yellow-onset-clear.json")
+    const expectation = scenario.expect as Record<string, unknown>
+    const diagnostics = expectation.diagnostics as Record<string, unknown>[]
+    const overDiagnostics = join(directory, "diagnostic-bound.json")
+    writeJson(overDiagnostics, {
+      ...scenario,
+      expect: {
+        ...expectation,
+        diagnostics: Array.from({ length: MAX_EXPECTED_DIAGNOSTICS + 1 }, (_, index) => ({
+          ...diagnostics[0],
+          id: `diagnostic-${index}`
+        }))
+      }
+    })
+    const overSources = join(directory, "diagnostic-source-bound.json")
+    writeJson(overSources, {
+      ...scenario,
+      expect: {
+        ...expectation,
+        diagnostics: [
+          {
+            ...diagnostics[0],
+            sourceInputIds: Array.from({ length: MAX_DIAGNOSTIC_SOURCE_INPUT_IDS + 1 }, (_, index) => `input-${index}`)
+          }
+        ]
+      }
+    })
+    const unknownSource = join(directory, "diagnostic-unknown-source.json")
+    writeJson(unknownSource, {
+      ...scenario,
+      expect: {
+        ...expectation,
+        diagnostics: [{ ...diagnostics[0], sourceInputIds: ["not-a-declared-input"] }]
+      }
+    })
+
+    expect(runScenario(overDiagnostics)).toMatchObject({ exitCode: 2, report: { status: "invalid-input" } })
+    expect(runScenario(overSources)).toMatchObject({ exitCode: 2, report: { status: "invalid-input" } })
+    expect(runScenario(unknownSource)).toMatchObject({ exitCode: 2, report: { status: "invalid-input" } })
+  })
+
   it("runs active manifest entries in scenario-id order and serializes deterministically", () => {
     const directory = temporaryDirectory()
     const goldenDirectory = join(directory, "golden-scenarios")
@@ -1005,7 +1403,7 @@ describe("golden scenario runner", () => {
     const secondRun = runScenario(manifestPath)
 
     expect(firstRun.exitCode).toBe(0)
-    expect(firstRun.report.summary).toEqual({ failed: 0, passed: 22, scenarioCount: 22 })
+    expect(firstRun.report.summary).toEqual({ failed: 0, passed: 28, scenarioCount: 28 })
     expect(firstRun.report.scenarios.every((scenario) => scenario.status === "passed")).toBe(true)
     expect(firstRun.report.scenarios.map((scenario) => scenario.scenarioId)).toEqual([
       "epee.audio-visual-correlation",
@@ -1018,6 +1416,8 @@ describe("golden scenario runner", () => {
       "epee.resistance-uncertainty-near-lockout",
       "foil.break-boundaries",
       "foil.grounded-contact",
+      "foil.host-logical-contexts",
+      "foil.host-resistance-classifications",
       "foil.insulation-handoff",
       "foil.integrity-and-uncertainty",
       "foil.lockout-cutoff",
@@ -1025,12 +1425,38 @@ describe("golden scenario runner", () => {
       "foil.same-side-and-lockout",
       "foil.target-context",
       "sabre.contact-floor-boundaries",
+      "sabre.control-break-diagnostic-boundaries",
+      "sabre.external-100-ohm-host-boundary",
       "sabre.external-path-containment",
       "sabre.lockout-boundary",
       "sabre.lockout-cutoff",
       "sabre.own-equipment-hit-continuity",
-      "sabre.whipover-boundaries-and-recovery"
+      "sabre.whipover-boundaries-and-recovery",
+      "sabre.white-abnormal-change-latch",
+      "sabre.yellow-onset-clear"
     ])
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+      coverage: { scenarioIds: string[]; status: string; traceabilityId: string }[]
+    }
+    const coverage = (traceabilityId: string) =>
+      manifest.coverage.find((entry) => entry.traceabilityId === traceabilityId)
+    expect(coverage("SABRE-02")).toMatchObject({
+      status: "planned",
+      scenarioIds: ["sabre.white-abnormal-change-latch", "sabre.yellow-onset-clear"]
+    })
+    expect(coverage("SABRE-03")).toMatchObject({
+      status: "planned",
+      scenarioIds: [
+        "sabre.contact-floor-boundaries",
+        "sabre.external-100-ohm-host-boundary",
+        "sabre.external-path-containment",
+        "sabre.whipover-boundaries-and-recovery"
+      ]
+    })
+    expect(coverage("SABRE-07")).toMatchObject({
+      status: "planned",
+      scenarioIds: ["sabre.control-break-diagnostic-boundaries"]
+    })
     expect(reportBytes(firstRun.report)).toBe(reportBytes(secondRun.report))
   })
 

@@ -28,7 +28,7 @@
       "const": "scoring-golden-scenario"
     },
     "schemaVersion": {
-      "const": "1.0.0"
+      "enum": ["1.0.0", "1.1.0", "1.2.0"]
     },
     "scenarioId": {
       "type": "string",
@@ -72,6 +72,34 @@
       "$ref": "#/$defs/expectation"
     }
   },
+  "allOf": [
+    {
+      "if": { "properties": { "schemaVersion": { "const": "1.0.0" } } },
+      "then": { "properties": { "expect": { "not": { "anyOf": [{ "required": ["diagnostics"] }, { "required": ["classifications"] }] } } } }
+    },
+    {
+      "if": { "properties": { "schemaVersion": { "const": "1.1.0" } } },
+      "then": {
+        "properties": {
+          "weapon": { "const": "sabre" },
+          "ruleRevision": { "const": "fie-2026-sabre" },
+          "lineModel": { "properties": { "revision": { "const": "sabre-logical-lines-1" } } },
+          "expect": { "required": ["diagnostics"], "not": { "required": ["classifications"] } }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "schemaVersion": { "const": "1.2.0" } } },
+      "then": {
+        "properties": {
+          "weapon": { "const": "foil" },
+          "ruleRevision": { "const": "fie-2026-foil" },
+          "lineModel": { "properties": { "revision": { "const": "foil-host-evidence-lines-1" } } },
+          "expect": { "required": ["classifications"], "not": { "required": ["diagnostics"] } }
+        }
+      }
+    }
+  ],
   "$defs": {
     "nonNegativeInteger": {
       "type": "integer",
@@ -343,6 +371,18 @@
             "$ref": "#/$defs/decision"
           }
         },
+        "diagnostics": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": {
+            "$ref": "#/$defs/sabreDiagnostic"
+          }
+        },
+        "classifications": {
+          "type": "array",
+          "maxItems": 4096,
+          "items": { "$ref": "#/$defs/foilClassification" }
+        },
         "nonEvents": {
           "type": "array",
           "items": {
@@ -378,6 +418,152 @@
             "not": {
               "required": ["error"]
             }
+          }
+        }
+      ]
+    },
+    "sabreDiagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "atUs", "side", "indication", "reason", "audible", "latched", "sourceInputIds"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+        },
+        "atUs": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "side": {
+          "enum": ["left", "right"]
+        },
+        "indication": {
+          "enum": ["white-on", "yellow-off", "yellow-on"]
+        },
+        "reason": {
+          "enum": ["circuit-bc-abnormal-change", "control-break-qualified", "own-equipment-clear", "own-equipment-fault"]
+        },
+        "audible": {
+          "enum": ["none", "requested"]
+        },
+        "latched": {
+          "type": "boolean"
+        },
+        "sourceInputIds": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"
+          }
+        }
+      },
+      "oneOf": [
+        {
+          "properties": {
+            "indication": { "const": "yellow-on" },
+            "reason": { "const": "own-equipment-fault" },
+            "audible": { "const": "none" },
+            "latched": { "const": false }
+          }
+        },
+        {
+          "properties": {
+            "indication": { "const": "yellow-off" },
+            "reason": { "const": "own-equipment-clear" },
+            "audible": { "const": "none" },
+            "latched": { "const": false }
+          }
+        },
+        {
+          "properties": {
+            "indication": { "const": "white-on" },
+            "reason": { "const": "circuit-bc-abnormal-change" },
+            "audible": { "const": "requested" },
+            "latched": { "const": true }
+          }
+        },
+        {
+          "properties": {
+            "indication": { "const": "white-on" },
+            "reason": { "const": "control-break-qualified" },
+            "audible": { "const": "requested" },
+            "latched": { "const": true }
+          }
+        }
+      ]
+    },
+    "foilClassificationRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max"],
+      "properties": {
+        "min": { "type": "integer", "minimum": 0 },
+        "max": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "foilClassification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "atUs", "sourceInputId", "kind", "disposition"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$" },
+        "atUs": { "$ref": "#/$defs/nonNegativeInteger" },
+        "sourceInputId": { "type": "string", "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$" },
+        "kind": { "enum": ["exterior-resistance", "closed-circuit-resistance", "earth-contact-resistance", "logical-context"] },
+        "disposition": { "type": "string" },
+        "permittedIndications": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["valid", "valid-and-non-valid", "non-valid"] }
+        },
+        "rangeMilliOhms": { "anyOf": [{ "$ref": "#/$defs/foilClassificationRange" }, { "type": "null" }] }
+      },
+      "oneOf": [
+        {
+          "required": ["permittedIndications", "rangeMilliOhms"],
+          "properties": {
+            "kind": { "const": "exterior-resistance" },
+            "disposition": { "enum": ["required-indication", "permitted-indications", "indeterminate", "outside-published-range", "unavailable"] }
+          },
+          "oneOf": [
+            { "properties": { "disposition": { "const": "required-indication" }, "permittedIndications": { "const": ["valid"] }, "rangeMilliOhms": { "$ref": "#/$defs/foilClassificationRange" } } },
+            { "properties": { "disposition": { "const": "permitted-indications" }, "permittedIndications": { "const": ["valid", "valid-and-non-valid", "non-valid"] }, "rangeMilliOhms": { "$ref": "#/$defs/foilClassificationRange" } } },
+            { "properties": { "disposition": { "enum": ["indeterminate", "outside-published-range"] }, "permittedIndications": { "const": [] }, "rangeMilliOhms": { "$ref": "#/$defs/foilClassificationRange" } } },
+            { "properties": { "disposition": { "const": "unavailable" }, "permittedIndications": { "const": [] }, "rangeMilliOhms": { "type": "null" } } }
+          ]
+        },
+        {
+          "required": ["rangeMilliOhms"],
+          "not": { "required": ["permittedIndications"] },
+          "properties": {
+            "kind": { "const": "closed-circuit-resistance" },
+            "disposition": { "enum": ["must-not-produce-non-valid", "indeterminate", "outside-published-range", "unavailable"] }
+          },
+          "oneOf": [
+            { "properties": { "disposition": { "enum": ["must-not-produce-non-valid", "indeterminate", "outside-published-range"] }, "rangeMilliOhms": { "$ref": "#/$defs/foilClassificationRange" } } },
+            { "properties": { "disposition": { "const": "unavailable" }, "rangeMilliOhms": { "type": "null" } } }
+          ]
+        },
+        {
+          "required": ["rangeMilliOhms"],
+          "not": { "required": ["permittedIndications"] },
+          "properties": {
+            "kind": { "const": "earth-contact-resistance" },
+            "disposition": { "enum": ["must-not-signal", "indeterminate", "outside-published-range", "unavailable"] }
+          },
+          "oneOf": [
+            { "properties": { "disposition": { "enum": ["must-not-signal", "indeterminate", "outside-published-range"] }, "rangeMilliOhms": { "$ref": "#/$defs/foilClassificationRange" } } },
+            { "properties": { "disposition": { "const": "unavailable" }, "rangeMilliOhms": { "type": "null" } } }
+          ]
+        },
+        {
+          "not": { "anyOf": [{ "required": ["permittedIndications"] }, { "required": ["rangeMilliOhms"] }] },
+          "properties": {
+            "kind": { "const": "logical-context" },
+            "disposition": { "enum": ["does-not-block-contact-scorer", "must-not-signal", "normal-contact-rules-apply", "not-specified"] }
           }
         }
       ]

@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.1.0",
+  "scenarioId": "sabre.yellow-onset-clear",
+  "title": "Sabre host own-equipment input emits a non-latched yellow onset and clear",
+  "weapon": "sabre",
+  "ruleRevision": "fie-2026-sabre",
+  "sources": [
+    { "authority": "fie", "id": "SABRE-02", "document": "fie-material-rules-2026-08-en.pdf", "page": 81, "locator": "Annex B, C(a).5-C(a).6" },
+    { "authority": "implementation", "id": "SABRE-TEST-GOLDEN-YELLOW", "document": "src/sabre-scenario-evidence.test.ts", "page": null, "locator": "replays yellow onset and clear without claiming a physical lamp" }
+  ],
+  "lineModel": { "revision": "sabre-logical-lines-1", "names": ["left.fault", "right.fault"] },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": { "clock": "virtual", "timeUnit": "us", "initialState": "fresh-bout", "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-sabre-yellow", "transportSequenceStart": 0, "captureId": null } },
+  "inputs": [
+    { "id": "fault-clear", "atUs": 0, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.fault", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.fault", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "fault-onset", "atUs": 1, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.fault", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.fault", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "fault-retained", "atUs": 2, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.fault", "state": "closed", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.fault", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] },
+    { "id": "fault-cleared", "atUs": 3, "atUncertaintyUs": 0, "mode": "snapshot", "lines": [
+      { "line": "left.fault", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }, { "line": "right.fault", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+    ] }
+  ],
+  "expect": {
+    "status": "accepted",
+    "decisions": [],
+    "diagnostics": [
+      { "id": "left-yellow-on", "atUs": 1, "side": "left", "indication": "yellow-on", "reason": "own-equipment-fault", "audible": "none", "latched": false, "sourceInputIds": ["fault-onset"] },
+      { "id": "left-yellow-off", "atUs": 3, "side": "left", "indication": "yellow-off", "reason": "own-equipment-clear", "audible": "none", "latched": false, "sourceInputIds": ["fault-onset", "fault-cleared"] }
+    ],
+    "nonEvents": [],
+    "uncertainty": [],
+    "finalState": { "hitCount": 0, "isLocked": false }
+  }
+}
