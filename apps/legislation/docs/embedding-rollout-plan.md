@@ -602,7 +602,9 @@ indexes concurrently, and recreates them before `ANALYZE` and retrieval
 acceptance. Each index builds sequentially with two internal PostgreSQL workers
 and a 32 MiB session-local maintenance allocation, which fits the hosted
 64 MiB shared-memory segment without making three large builds compete for
-volume I/O.
+volume I/O. The maintenance task has a 24-hour execution allowance because the
+15.3-million-row document index cannot fit inside the ordinary four-hour task
+window.
 
 The broad pass is recommended only if the frozen graded evaluation and the
 deployed MCP canary both retain an absolute nDCG@10 improvement greater than

@@ -557,7 +557,7 @@ export const embeddingSyncShardController = task({
 
 export const embeddingIndexMaintenance = task({
   id: "embedding-index-maintenance",
-  maxDuration: 14_400,
+  maxDuration: 86_400,
   queue: { concurrencyLimit: 1, name: "legislation-embedding-index-maintenance" },
   run: async (unparsedPayload: unknown) => {
     const payload = baseWorkerSchema.strict().parse(unparsedPayload)
