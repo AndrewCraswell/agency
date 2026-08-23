@@ -658,9 +658,9 @@ importers:
         specifier: ^6.9.1
         version: 6.9.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(supports-color@10.2.2)
     devDependencies:
-      '@react-email/ui':
-        specifier: ^6.9.1
-        version: 6.9.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(sass@1.100.0)
+      '@react-email/render':
+        specifier: ^2.1.0
+        version: 2.1.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@repo/oxlint-config':
         specifier: workspace:*
         version: link:../oxlint-config
@@ -679,6 +679,9 @@ importers:
       oxlint:
         specifier: ^1.72.0
         version: 1.76.0
+      tsx:
+        specifier: ^4.23.0
+        version: 4.23.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.1-rc
@@ -4786,9 +4789,6 @@ packages:
     peerDependencies:
       react: 19.2.7
       react-dom: 19.2.7
-
-  '@react-email/ui@6.9.1':
-    resolution: {integrity: sha1-2hRAXBCU3jhJMBuKu4FhZjoM1oQ=}
 
   '@react-hook/latest@1.0.3':
     resolution: {integrity: sha1-wtHQsK+LaexuKzokEroHaKyC24A=}
@@ -14163,7 +14163,8 @@ snapshots:
 
   '@neoconfetti/react@1.0.0': {}
 
-  '@next/env@16.2.6': {}
+  '@next/env@16.2.6':
+    optional: true
 
   '@next/swc-darwin-arm64@16.2.6':
     optional: true
@@ -15237,20 +15238,6 @@ snapshots:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
-  '@react-email/ui@6.9.1(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(sass@1.100.0)':
-    dependencies:
-      esbuild: 0.28.1
-      next: 16.2.6(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.62.0)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(sass@1.100.0)
-    transitivePeerDependencies:
-      - '@babel/core'
-      - '@opentelemetry/api'
-      - '@playwright/test'
-      - babel-plugin-macros
-      - babel-plugin-react-compiler
-      - react
-      - react-dom
-      - sass
-
   '@react-hook/latest@1.0.3(react@19.2.7)':
     dependencies:
       react: 19.2.7
@@ -15832,6 +15819,7 @@ snapshots:
   '@swc/helpers@0.5.15':
     dependencies:
       tslib: 2.8.1
+    optional: true
 
   '@swc/helpers@0.5.23':
     dependencies:
@@ -17450,7 +17438,8 @@ snapshots:
 
   cli-width@4.1.0: {}
 
-  client-only@0.0.1: {}
+  client-only@0.0.1:
+    optional: true
 
   cliui@8.0.1:
     dependencies:
@@ -19487,6 +19476,7 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
+    optional: true
 
   no-case@3.0.4:
     dependencies:
@@ -19990,6 +19980,7 @@ snapshots:
       nanoid: 3.3.16
       picocolors: 1.1.1
       source-map-js: 1.2.1
+    optional: true
 
   postcss@8.5.23:
     dependencies:
@@ -21058,6 +21049,7 @@ snapshots:
       react: 19.2.7
     optionalDependencies:
       '@babel/core': 7.29.7
+    optional: true
 
   stylis@4.4.0: {}
 

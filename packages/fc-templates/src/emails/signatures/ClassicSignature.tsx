@@ -13,7 +13,7 @@ import { ContactRow, SignatureLogo, Socials, SignatureShell } from "./signatureS
 
 const contact = { fontSize: 13, gap: 8, iconSize: 14 } as const
 
-export const ClassicSignature = () => (
+const ClassicSignature = () => (
   <SignatureShell title="Fencing Club — Classic signature">
     <Container style={{ margin: 0, maxWidth: 470, width: 470 }}>
       <Row>

@@ -14,7 +14,7 @@ import { ContactRow, SignatureLogo, Socials, SignatureShell } from "./signatureS
 const contact = { fontSize: 11.5, gap: 7, iconSize: 13 } as const
 const cell = { verticalAlign: "middle", width: "50%" } as const
 
-export const CompactSignature = () => (
+const CompactSignature = () => (
   <SignatureShell title="Fencing Club — Compact signature">
     <Container style={{ margin: 0, maxWidth: 520, width: 520 }}>
       <Row>
