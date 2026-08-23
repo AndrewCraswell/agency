@@ -1,3 +1,5 @@
+import { physicalBoardContract } from "./physical-board-contract.js"
+
 /**
  * Provisional mechanical planning contract for the three-board architecture.
  *
@@ -19,7 +21,7 @@ export type BoardEnvelope = {
 
 export const mechanicalDatumContract = {
   architectureAuthority:
-    "Communications boundary connectivity is integrated. Separate scoring I/O and application/display physical planning models implement their reviewed envelopes; the communications model still needs its reviewed 110 mm by 55 mm four-layer 0.8 mm envelope.",
+    "Communications boundary connectivity is integrated. All three physical planning models implement their reviewed width, height, and layer-count envelopes; finished thickness remains a contract datum because the circuit renderer does not emit it.",
   coordinateSystem:
     "+X is enclosure-view right, +Y is enclosure-view down, and +Z points from the display rear toward the service cover",
   primaryDatumA:
@@ -30,25 +32,47 @@ export const mechanicalDatumContract = {
     "Planning dimensions carry no fabrication tolerance. Released drawings must use measured connector datums and a reviewed tolerance stack."
 } as const
 
-export const currentPhysicalPreviewMismatch = {
+export const currentPhysicalBoardModels = {
   communicationsBoundaryConnectivity: "integrated",
-  physicalThreeBoardLayout: "partially-integrated",
-  communicationsPreview: {
-    current: { widthMm: 100, heightMm: 70, layers: 4, finishedThicknessMm: "not-modeled" },
-    planned: { widthMm: 110, heightMm: 55, layers: 4, finishedThicknessMm: 0.8 },
-    matchesEnvelope: false
+  physicalAssemblyCount: 3,
+  physicalThreeBoardLayout: "integrated-planning-models",
+  communicationsModule: {
+    current: {
+      widthMm: physicalBoardContract.communicationsModule.widthMm,
+      heightMm: physicalBoardContract.communicationsModule.heightMm,
+      layers: physicalBoardContract.communicationsModule.layers,
+      finishedThicknessMm: "not-modeled"
+    },
+    contract: {
+      widthMm: physicalBoardContract.communicationsModule.widthMm,
+      heightMm: physicalBoardContract.communicationsModule.heightMm,
+      layers: physicalBoardContract.communicationsModule.layers,
+      finishedThicknessMm: physicalBoardContract.communicationsModule.finishedThicknessMm
+    },
+    matchesEnvelope: true,
+    thicknessModeling: "contract-only-unmodeled"
   },
   separateMainBoardModels: {
     current: {
       physicalAssemblyCount: 2,
-      scoringBoard: { widthMm: 290, heightMm: 70, layers: 6, finishedThicknessMm: 1.6 },
-      applicationBoard: { widthMm: 290, heightMm: 135, layers: 6, finishedThicknessMm: 1.6 },
+      scoringBoard: {
+        widthMm: physicalBoardContract.scoringIoBoard.widthMm,
+        heightMm: physicalBoardContract.scoringIoBoard.heightMm,
+        layers: physicalBoardContract.scoringIoBoard.layers,
+        finishedThicknessMm: "not-modeled"
+      },
+      applicationBoard: {
+        widthMm: physicalBoardContract.applicationDisplayCarrier.widthMm,
+        heightMm: physicalBoardContract.applicationDisplayCarrier.heightMm,
+        layers: physicalBoardContract.applicationDisplayCarrier.layers,
+        finishedThicknessMm: "not-modeled"
+      },
       modeledOwnership: "separate scoring I/O and application/display physical planning models"
     },
-    planned: {
+    contract: {
       physicalAssemblyCount: 2,
-      scoringBoardLayers: 6,
-      applicationBoardLayers: 6,
+      scoringBoard: physicalBoardContract.scoringIoBoard,
+      applicationBoard: physicalBoardContract.applicationDisplayCarrier,
       ownership: "separate scoring I/O and application/display PCBs"
     },
     matchesEnvelope: true
@@ -58,8 +82,11 @@ export const currentPhysicalPreviewMismatch = {
 export const provisionalBoardEnvelopes = [
   {
     board: "SCORING_IO_BOARD",
-    planningMaximumMm: { width: 290, height: 70 },
-    finishedThicknessMm: 1.6,
+    planningMaximumMm: {
+      width: physicalBoardContract.scoringIoBoard.widthMm,
+      height: physicalBoardContract.scoringIoBoard.heightMm
+    },
+    finishedThicknessMm: physicalBoardContract.scoringIoBoard.finishedThicknessMm,
     finishedThicknessToleranceMm: 0.1,
     outlineAuthority: "provisional-planning-only",
     datum: "lower-left board corner, referenced to chassis datums B and C by the released carrier drawing",
@@ -68,8 +95,11 @@ export const provisionalBoardEnvelopes = [
   },
   {
     board: "APPLICATION_DISPLAY_CARRIER",
-    planningMaximumMm: { width: 290, height: 135 },
-    finishedThicknessMm: 1.6,
+    planningMaximumMm: {
+      width: physicalBoardContract.applicationDisplayCarrier.widthMm,
+      height: physicalBoardContract.applicationDisplayCarrier.heightMm
+    },
+    finishedThicknessMm: physicalBoardContract.applicationDisplayCarrier.finishedThicknessMm,
     finishedThicknessToleranceMm: 0.1,
     outlineAuthority: "provisional-planning-only",
     datum: "upper-left board corner, behind and inside the selected panel envelope",
@@ -78,8 +108,11 @@ export const provisionalBoardEnvelopes = [
   },
   {
     board: "REPLACEABLE_COMMUNICATIONS_MODULE",
-    planningMaximumMm: { width: 110, height: 55 },
-    finishedThicknessMm: 0.8,
+    planningMaximumMm: {
+      width: physicalBoardContract.communicationsModule.widthMm,
+      height: physicalBoardContract.communicationsModule.heightMm
+    },
+    finishedThicknessMm: physicalBoardContract.communicationsModule.finishedThicknessMm,
     finishedThicknessToleranceMm: 0.08,
     outlineAuthority: "provisional-planning-only",
     datum: "external connector mating face at chassis datum B; board edge datum comes from released connector drawings",
@@ -171,7 +204,7 @@ export const harnessServiceContract = {
 } as const
 
 export const mechanicalReleaseGates = [
-  "Reconcile the remaining communications physical preview with the three-board contract: change its 100 mm by 70 mm planning rectangle to the reviewed 110 mm by 55 mm envelope, model or otherwise control the 0.8 mm finished thickness, and release all three exact board outlines rather than treating planning dimensions as drawings.",
+  "Release exact board outlines, hole tables, connector datums, tolerances, height maps, and keepouts for all three boards. The current planning rectangles match the width, height, and layer contracts, but their finished thicknesses remain contract-only values rather than renderer output.",
   "Import revision-controlled manufacturer drawings and STEP models for USB-C, RJ45, HSEC8/ECDP, Micro-Fit, HUB75 headers, U.FL/coax, Stäubli sockets, and the purchased panel revision.",
   "Measure purchased panel outline, thickness, mounting holes, input connectors, rear components, and cable exits; overlay the measurements against a released enclosure assembly drawing.",
   "Release dimensioned PCB outlines, hole tables, datum targets, tolerances, component-height maps, courtyards, tooling rails, and keepouts for all three boards.",
@@ -194,7 +227,7 @@ export type MechanicalEvidence = {
 }
 
 export const currentMechanicalEvidence = {
-  physicalBoardModelsMatchEnvelope: false,
+  physicalBoardModelsMatchEnvelope: true,
   connectorDrawingsImported: false,
   panelMeasured: false,
   pcbDrawingsReleased: false,

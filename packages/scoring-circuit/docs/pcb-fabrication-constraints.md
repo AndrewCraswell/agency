@@ -24,8 +24,9 @@ preview. The communications model, released outlines, connector placement, stack
 gate remain denied.
 
 The six-layer choices provide two continuous reference layers, a dedicated power-distribution layer, and enough signal
-layers to keep the USB2, Ethernet, isolation, analog, and HUB75 paths from borrowing one another's return paths. It is
-a manufacturability target, not evidence that the current four-layer preview has been converted or routed.
+layers to keep the USB2, Ethernet, isolation, analog, and HUB75 paths from borrowing one another's return paths. The
+three planning models match their reviewed width, height, and layer-count contracts; that is not evidence that any
+model is routed or fabricated.
 
 The executable contract is in [`src/pcb-fabrication-constraints.ts`](../src/pcb-fabrication-constraints.ts), with
 regression coverage in [`src/pcb-fabrication-constraints.test.ts`](../src/pcb-fabrication-constraints.test.ts). The

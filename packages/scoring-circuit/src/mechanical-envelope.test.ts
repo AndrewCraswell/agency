@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   connectorPlacementContract,
-  currentPhysicalPreviewMismatch,
+  currentPhysicalBoardModels,
   currentMechanicalEvidence,
   evaluateMechanicalEnvelope,
   harnessServiceContract,
@@ -30,21 +30,27 @@ describe("three-board provisional mechanical envelope", () => {
     expect(provisionalBoardEnvelopes[1].mounting).toContain("VESA 100")
   })
 
-  it("records the separate main-board planning models and the unresolved communications model", () => {
-    expect(currentPhysicalPreviewMismatch.communicationsBoundaryConnectivity).toBe("integrated")
-    expect(currentPhysicalPreviewMismatch.physicalThreeBoardLayout).toBe("partially-integrated")
-    expect(currentPhysicalPreviewMismatch.communicationsPreview).toMatchObject({
-      current: { widthMm: 100, heightMm: 70, layers: 4, finishedThicknessMm: "not-modeled" },
-      planned: { widthMm: 110, heightMm: 55, layers: 4, finishedThicknessMm: 0.8 },
-      matchesEnvelope: false
+  it("records all three planning models with thickness remaining contract-only", () => {
+    expect(currentPhysicalBoardModels.communicationsBoundaryConnectivity).toBe("integrated")
+    expect(currentPhysicalBoardModels.physicalAssemblyCount).toBe(3)
+    expect(currentPhysicalBoardModels.physicalThreeBoardLayout).toBe("integrated-planning-models")
+    expect(currentPhysicalBoardModels.communicationsModule).toMatchObject({
+      current: { widthMm: 110, heightMm: 55, layers: 4, finishedThicknessMm: "not-modeled" },
+      contract: { widthMm: 110, heightMm: 55, layers: 4, finishedThicknessMm: 0.8 },
+      matchesEnvelope: true,
+      thicknessModeling: "contract-only-unmodeled"
     })
-    expect(currentPhysicalPreviewMismatch.separateMainBoardModels).toMatchObject({
+    expect(currentPhysicalBoardModels.separateMainBoardModels).toMatchObject({
       current: {
+        physicalAssemblyCount: 2,
+        scoringBoard: { widthMm: 290, heightMm: 70, layers: 6, finishedThicknessMm: "not-modeled" },
+        applicationBoard: { widthMm: 290, heightMm: 135, layers: 6, finishedThicknessMm: "not-modeled" }
+      },
+      contract: {
         physicalAssemblyCount: 2,
         scoringBoard: { widthMm: 290, heightMm: 70, layers: 6, finishedThicknessMm: 1.6 },
         applicationBoard: { widthMm: 290, heightMm: 135, layers: 6, finishedThicknessMm: 1.6 }
       },
-      planned: { physicalAssemblyCount: 2, scoringBoardLayers: 6, applicationBoardLayers: 6 },
       matchesEnvelope: true
     })
   })
@@ -79,7 +85,7 @@ describe("three-board provisional mechanical envelope", () => {
     expect(evaluateMechanicalEnvelope()).toEqual({
       fabricationApproved: false,
       status: "deny",
-      failedGates: Object.keys(currentMechanicalEvidence)
+      failedGates: Object.keys(currentMechanicalEvidence).filter((key) => key !== "physicalBoardModelsMatchEnvelope")
     })
     expect(mechanicalReleaseGates).toHaveLength(8)
   })

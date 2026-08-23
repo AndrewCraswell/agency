@@ -33,6 +33,7 @@ const communicationsSource = render(<CommunicationsModuleCircuit />, false)
 const logicalSource = render(<LogicalArchitectureCircuit />, false)
 const scoringPcb = render(<ScoringIoBoardCircuit />, true)
 const applicationPcb = render(<ApplicationDisplayCarrierCircuit />, true)
+const communicationsPcb = render(<CommunicationsModuleCircuit />, true)
 
 function sourceNames(json: CircuitJson): string[] {
   return json.flatMap((element) =>
@@ -74,7 +75,7 @@ function expectDnpWithoutFabricationArtifacts(json: CircuitJson, reference: stri
 }
 
 describe("separate physical-board planning models", () => {
-  it("keeps the reviewed six-layer envelopes while thickness remains a contract datum", () => {
+  it("renders all three reviewed planning envelopes while thickness remains a contract datum", () => {
     validatePhysicalBoardContract()
     expect(physicalBoardContract.scoringIoBoard).toMatchObject({
       widthMm: 290,
@@ -88,6 +89,12 @@ describe("separate physical-board planning models", () => {
       layers: 6,
       finishedThicknessMm: 1.6
     })
+    expect(physicalBoardContract.communicationsModule).toMatchObject({
+      widthMm: 110,
+      heightMm: 55,
+      layers: 4,
+      finishedThicknessMm: 0.8
+    })
     expect(scoringPcb.find((element) => element.type === "pcb_board")).toMatchObject({
       width: 290,
       height: 70,
@@ -98,14 +105,20 @@ describe("separate physical-board planning models", () => {
       height: 135,
       num_layers: 6
     })
-    expect(JSON.stringify([scoringPcb, applicationPcb])).not.toContain("finished_thickness")
+    expect(communicationsPcb.find((element) => element.type === "pcb_board")).toMatchObject({
+      width: 110,
+      height: 55,
+      num_layers: 4
+    })
+    expect(JSON.stringify([scoringPcb, applicationPcb, communicationsPcb])).not.toContain("finished_thickness")
   })
 
-  it("renders both physical source models without connectivity or property errors", () => {
+  it("renders all three physical source models without connectivity or property errors", () => {
     expectNoRenderErrors(scoringSource)
     expectNoRenderErrors(applicationSource)
     expectNoRenderErrors(scoringPcb)
     expectNoRenderErrors(applicationPcb)
+    expectNoRenderErrors(communicationsPcb)
   })
 
   it("uses an identical complete isolation-boundary pin contract on both boards", () => {

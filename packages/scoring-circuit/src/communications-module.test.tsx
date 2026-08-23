@@ -64,8 +64,10 @@ describe("communications-module circuit", () => {
     expect(communicationsModuleBoardContract).toMatchObject({
       ethernetDecouplingStatus: "incomplete",
       fabricationRelease: "deny",
+      heightMm: 55,
       layerCount: 4,
-      nominalThicknessMm: 0.8
+      nominalThicknessMm: 0.8,
+      widthMm: 110
     })
   })
 
@@ -184,6 +186,7 @@ describe("communications-module circuit", () => {
 
   it("keeps fabrication-critical module parts non-placeable", () => {
     const json = renderModule()
+    const artifactTypes = new Set(["pcb_smtpad", "pcb_plated_hole", "pcb_hole", "pcb_solder_paste"])
     const critical = new Set([
       "J_USB_C",
       "U_USB_PORT_PROTECT",
@@ -205,14 +208,22 @@ describe("communications-module circuit", () => {
     ])
     for (const component of json) {
       if (component.type !== "source_component" || !critical.has(component.name)) continue
+      const pcbComponent = json.find(
+        (candidate) =>
+          candidate.type === "pcb_component" &&
+          "source_component_id" in candidate &&
+          candidate.source_component_id === component.source_component_id
+      )
+      expect(pcbComponent).toMatchObject({ do_not_place: true })
+      const pcbComponentId = pcbComponent?.type === "pcb_component" ? pcbComponent.pcb_component_id : undefined
       expect(
-        json.find(
+        json.filter(
           (candidate) =>
-            candidate.type === "pcb_component" &&
-            "source_component_id" in candidate &&
-            candidate.source_component_id === component.source_component_id
+            artifactTypes.has(candidate.type) &&
+            "pcb_component_id" in candidate &&
+            candidate.pcb_component_id === pcbComponentId
         )
-      ).toMatchObject({ do_not_place: true })
+      ).toEqual([])
     }
   })
 

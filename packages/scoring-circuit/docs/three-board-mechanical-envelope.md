@@ -7,13 +7,12 @@ fabrication release. The repository does not contain released manufacturer geome
 panel drawing, or a production enclosure assembly. The numeric board envelopes below are planning maxima that may
 shrink or move after CAD overlay; they must not be copied into Gerbers or enclosure tooling.
 
-The communications boundary and connector connectivity are integrated in the architecture model. The physical
-three-PCB layout is not fully complete. The scoring I/O and application/display carrier now have separate six-layer
-physical planning models. The communications preview is currently 100 mm by 70 mm and four layers, with no modeled
-finished thickness; the planned envelope is 110 mm by 55 mm, four layers, and 0.80 mm finished thickness. The main
-preview has been replaced with separate 290 mm by 70 mm and 290 mm by 135 mm six-layer planning models that match the
-provisional main-board envelope. The circuit renderer does not emit finished thickness. The complete three-board gate
-therefore remains false because the communications preview still disagrees and no exact board outline is released.
+The communications boundary and connector connectivity are integrated in the architecture model. The scoring I/O,
+application/display carrier, and communications module now have separate planning models that match their reviewed
+width, height, and layer-count contracts: 290 mm by 70 mm/six layers, 290 mm by 135 mm/six layers, and 110 mm by
+55 mm/four layers. The circuit renderer does not emit finished thickness, so 1.60 mm, 1.60 mm, and 0.80 mm remain
+contract-only values. This closes the former communications preview dimension mismatch; it does not release an exact
+board outline, fabrication drawing, fit check, or any other evidence gate.
 
 The common coordinate system is enclosure view: +X right, +Y down, and +Z from the display rear toward the service
 cover. Datum A is a provisional rear-envelope face inferred from the panel's published 318 mm by 158 mm by 15 mm
@@ -69,9 +68,9 @@ qualification; this contract does not invent a universal bend radius.
 
 ## Evidence required before layout or tooling release
 
-1. Change the communications preview to the reviewed 110 mm by 55 mm envelope, model or otherwise control its 0.80 mm
-   thickness, then release exact outlines for all three boards. All three model rectangles are planning envelopes, not
-   released drawings.
+1. Release exact outlines for all three boards, including hole tables, connector datums, tolerances, height maps,
+   courtyards, tooling rails, and keepouts. All three model rectangles are planning envelopes, not released drawings;
+   finished thickness is a contract-only value until the CAD/export path carries it.
 2. Import revision-controlled manufacturer drawings and STEP models for USB-C, RJ45, ECDP/HSEC8, Micro-Fit,
    HUB75, U.FL/coax, Stäubli sockets, and the purchased panel revision.
 3. Measure multiple purchased panels: outline, thickness, mounting holes, rear components, connectors, and cable exits.

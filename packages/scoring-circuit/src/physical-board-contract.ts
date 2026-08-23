@@ -24,6 +24,16 @@ export const physicalBoardContract = {
     finishedThicknessMm: 1.6,
     owner: "APPLICATION_DISPLAY_CARRIER",
     isolatedBoundary: "J_ISO_SCORING_BOUNDARY is DNP until connector, slot, creepage, and placement are released"
+  },
+  communicationsModule: {
+    title: "Replaceable communications module planning model",
+    widthMm: 110,
+    heightMm: 55,
+    layers: 4,
+    finishedThicknessMm: 0.8,
+    owner: "REPLACEABLE_COMMUNICATIONS_MODULE",
+    isolatedBoundary:
+      "USB-C, Ethernet, power, control, and USB2 boundaries remain DNP or routing-disabled until their footprint, channel, chassis, and placement evidence is released"
   }
 } as const
 
@@ -231,9 +241,11 @@ export function validatePhysicalBoardContract(): void {
     physicalBoardContract.scoringIoBoard.layers !== 6 ||
     physicalBoardContract.applicationDisplayCarrier.layers !== 6 ||
     physicalBoardContract.scoringIoBoard.finishedThicknessMm !== 1.6 ||
-    physicalBoardContract.applicationDisplayCarrier.finishedThicknessMm !== 1.6
+    physicalBoardContract.applicationDisplayCarrier.finishedThicknessMm !== 1.6 ||
+    physicalBoardContract.communicationsModule.layers !== 4 ||
+    physicalBoardContract.communicationsModule.finishedThicknessMm !== 0.8
   ) {
-    throw new RangeError("The two main physical-board contracts must retain the reviewed six-layer 1.6 mm envelope")
+    throw new RangeError("The three physical-board contracts must retain the reviewed six/six/four layer envelopes")
   }
   const boundaryPins = Object.values(isolatedInterboardPinLabels)
   if (boundaryPins.length !== 11 || new Set(boundaryPins).size !== boundaryPins.length) {

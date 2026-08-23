@@ -1,3 +1,5 @@
+import { physicalBoardContract } from "./physical-board-contract.js"
+
 export type PcbLayer = "L1" | "L2" | "L3" | "L4" | "L5" | "L6"
 
 export type PcbConstraintStatus = "pass" | "open" | "deny"
@@ -44,24 +46,24 @@ export const pcbFabricationContract = {
     assemblies: [
       {
         id: "SCORING_IO_BOARD",
-        layerCount: 6,
-        thicknessMm: 1.6,
+        layerCount: physicalBoardContract.scoringIoBoard.layers,
+        thicknessMm: physicalBoardContract.scoringIoBoard.finishedThicknessMm,
         thicknessToleranceMm: 0.1,
         scope:
           "STM32 scoring authority, isolated scoring power, reference, line acquisition/protection, primary lamps, buzzer, and passive body-cord-module harnesses"
       },
       {
         id: "APPLICATION_DISPLAY_CARRIER",
-        layerCount: 6,
-        thicknessMm: 1.6,
+        layerCount: physicalBoardContract.applicationDisplayCarrier.layers,
+        thicknessMm: physicalBoardContract.applicationDisplayCarrier.finishedThicknessMm,
         thicknessToleranceMm: 0.1,
         scope:
           "ESP32-S3-WROOM-1U, external-antenna feed, V5/V3_3 conversion, storage, Ethernet controller, audio, HUB75 buffers, and display power connector"
       },
       {
         id: "REPLACEABLE_COMMUNICATIONS_MODULE",
-        layerCount: 4,
-        thicknessMm: 0.8,
+        layerCount: physicalBoardContract.communicationsModule.layers,
+        thicknessMm: physicalBoardContract.communicationsModule.finishedThicknessMm,
         thicknessToleranceMm: 0.08,
         scope:
           "USB-C receptacle, connector-side protection, PD controller, eFuse, RJ45 integrated magnetics, field connector, chassis shield bonds, and qualified carrier interconnect"
