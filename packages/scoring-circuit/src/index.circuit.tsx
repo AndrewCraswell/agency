@@ -617,6 +617,10 @@ function ScoringCircuit() {
       <connector
         name="J_USB_C"
         standard="usb_c"
+        // This is a logical USB-C interface only. The selected Amphenol
+        // receptacle has a manufacturer-specific contact, shell-stake, and
+        // board-edge pattern; a generic USB-C model must never enter fab data.
+        doNotPlace
         pinLabels={{
           pin1: "USB_DN_PORT",
           pin2: "USB_DP_PORT",
@@ -680,7 +684,9 @@ function ScoringCircuit() {
       <chip
         name="U_USB_PD"
         manufacturerPartNumber="TPS25730ADREFR"
-        footprint="qfn38"
+        // The 38-pin DRE package needs its TI thermal-pad/paste definition.
+        // Keep this non-placeable until the manufacturer pattern is imported.
+        doNotPlace
         pinLabels={{
           pin1: "VBUS_PORT",
           pin2: "CC1_PROTECTED",
@@ -706,7 +712,9 @@ function ScoringCircuit() {
       <chip
         name="C_USB_PD_LDO"
         manufacturerPartNumber="T55A106M010C0200"
-        footprint="1206"
+        // A generic 1206 does not carry this polymer capacitor's polarity,
+        // paste, or courtyard definition.
+        doNotPlace
         pinLabels={{ pin1: "PD_LDO_3V3", pin2: "GND" }}
         pcbX={21}
         pcbY={-44}
@@ -746,7 +754,9 @@ function ScoringCircuit() {
       <chip
         name="C_USB_PD_PPHV"
         manufacturerPartNumber="T523H107M035APE070"
-        footprint="2924"
+        // A generic 2924 does not carry this polymer capacitor's polarity,
+        // paste, or courtyard definition.
+        doNotPlace
         pinLabels={{ pin1: "PD_PPHV_20V", pin2: "GND" }}
         pcbX={25}
         pcbY={-44}
@@ -791,7 +801,8 @@ function ScoringCircuit() {
       <chip
         name="U_EFUSE"
         manufacturerPartNumber="TPS259474ARPWR"
-        footprint="qfn10"
+        // The RPW VQFN-HR exposed-pad geometry is not a generic qfn10.
+        doNotPlace
         pinLabels={{
           pin1: "EN_UVLO",
           pin2: "OVLO",
@@ -834,7 +845,8 @@ function ScoringCircuit() {
       <chip
         name="C_EFUSE_OUT"
         manufacturerPartNumber="T523H107M035APE070"
-        footprint="2924"
+        // See C_USB_PD_PPHV: exact polymer land pattern is a release gate.
+        doNotPlace
         pinLabels={{ pin1: "VOUT", pin2: "GND" }}
         pcbX={36}
         pcbY={-34}
@@ -842,7 +854,8 @@ function ScoringCircuit() {
       <chip
         name="U_V5_BUCK"
         manufacturerPartNumber="TPS56A37RPAR"
-        footprint="qfn10"
+        // The RPA VQFN-HR exposed-pad geometry is not a generic qfn10.
+        doNotPlace
         pinLabels={{
           pin1: "EN",
           pin2: "FB",
@@ -861,7 +874,9 @@ function ScoringCircuit() {
       <chip
         name="L_V5_BUCK"
         manufacturerPartNumber="744325330"
-        footprint="we-pad-12mm"
+        // The WE-HCI land pattern must come from the exact manufacturer
+        // drawing; the unresolved we-pad alias is not fabrication evidence.
+        doNotPlace
         pinLabels={{ pin1: "SW", pin2: "V5_SENSE_IN" }}
         pcbX={12}
         pcbY={-26}
@@ -869,7 +884,8 @@ function ScoringCircuit() {
       <chip
         name="R_V5_SENSE"
         manufacturerPartNumber="CRE2512-FZ-R002E-3"
-        footprint="2512"
+        // The high-current Kelvin shunt must not use a generic 2512 pattern.
+        doNotPlace
         pinLabels={{ pin1: "V5_SENSE_IN", pin2: "V5" }}
         pcbX={6}
         pcbY={-38}
@@ -949,7 +965,9 @@ function ScoringCircuit() {
       <chip
         name="U_APP_REGULATOR"
         manufacturerPartNumber="LMR43620MSC3RPERQ1"
-        footprint="qfn9"
+        // The 9-pin RPE VQFN-HR package needs its exact HotRod copper,
+        // thermal-pad, mask, paste, and courtyard implementation.
+        doNotPlace
         pinLabels={{
           pin1: "MODE_SYNC",
           pin2: "PGOOD",
