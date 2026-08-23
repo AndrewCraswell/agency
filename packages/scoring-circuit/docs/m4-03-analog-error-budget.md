@@ -7,18 +7,25 @@ This is the M4-03 calculation record for the repeated sensing cell in M4-01 and 
 an unsupported claim that seven leakage paths add to one channel. It is a coupon budget, not a released schematic,
 footprint, BOM, fabrication package, compliance result, or FIE approval.
 
-**Verdict: DENY.** The passive topology and 47.5-cycle ADC acquisition are analytically adequate for a static sample
-after the defined blanking interval, but the proposed component set does **not** meet the `+/- 5 ohm` M4-01 fixture
-target at the 450 ohm foil boundary. At 125 C after a 25 C calibration, the absolute-sum screen is 7.17 ohms, failing by
-2.17 ohms. That screen uses only stated clamp gates, a published ADC EL typical-characterization screen, a selected source-resistor
-temperature coefficient, fixture allocation, and settled typical switch charge. It excludes unproven switch drift,
-board leakage, reference dynamics, and LQFP64 ADC/comparator limits, so it is not a passable guarantee by omission.
+**Verdict: DENY. M4-01 is also an unsatisfied predecessor gate.** The passive topology and 47.5-cycle ADC acquisition
+are analytically adequate only for a static sample after the defined blanking interval. The M4-01 ngspice run is a
+36-case nominal/proxy transient screen, not vendor/full-corner proof: its switch and protection corner uses resistance
+proxies and it omits the clamps, ADC sampling kickback, PCB/cable parasitics, and MCU rail injection. It therefore
+cannot establish the temperature, input-voltage, or tolerance coverage required by M4-01, and cannot support an M4-03
+release.
+
+Independently, the proposed component set does **not** meet the `+/- 5 ohm` M4-01 fixture target at the 450 ohm foil
+boundary. At 125 C after a 25 C calibration, the absolute-sum screen is 7.17 ohms, failing by 2.17 ohms. That screen
+uses only stated clamp gates, a published ADC EL typical-characterization screen, a selected source-resistor temperature
+coefficient, fixture allocation, and settled typical switch charge. It excludes unproven switch drift, board leakage,
+reference dynamics, and LQFP64 ADC/comparator limits, so it is not a passable guarantee by omission.
 
 The ADC linearity data are for an LQFP100 characterization condition, not this LQFP64 part. The comparator/DAC path has
 no applicable numeric threshold guarantee for the proposed operating point and is prohibited from classifying the
-450/475 ohm boundary. M4-03 can become a **conditional measurement pass**, not a release, only if M4-08 establishes a
-replacement full-corner per-channel bound of 5.00 ohms or less. Until then, the threshold budget is open and the product
-must report boundary overlap as `indeterminate` as required by the signal contract.
+450/475 ohm boundary. M4-08 validates a coupon after M4-04, but it cannot waive M4-01/M4-03. The current candidate has
+not met the conditional analytical gate for M4-04 coupon capture described below, so this result does not authorize its
+fabrication. Until an analytical redesign or reviewed corner model closes that gate, the threshold budget is open and the
+product must report boundary overlap as `indeterminate` as required by the signal contract.
 
 This baseline result does not release a different clamp, comparator threshold circuit, or physical seven-conductor phase
 map. Those are M4-02, M4-04, M4-05, and SIG gates, respectively. It records a bounded leakage-only experiment below for
@@ -287,6 +294,83 @@ comparator-to-ADC correlation error must be at most 0.48 ohms at each required t
 narrow conditional margin, not a design release. A larger measured term fails M4-03 and requires a new M4-02/M4-03
 candidate or a revised, reviewed acquisition method.
 
+## Minimum credible closure path
+
+No component or calibration-only change is released by this audit. Replacing the negative clamp with BAV199 makes the
+leakage-only arithmetic 4.36 ohms, but it does not prove external-clamp priority, and a third calibration point cannot
+turn an LQFP100 typical ADC result or temperature-dependent leakage into an LQFP64 guarantee. An external precision ADC
+or comparator threshold scheme would be a materially different topology with no supporting error or timing evidence;
+neither is a smallest defensible change.
+
+### Non-circular coupon-capture gate
+
+M4-04 may capture a **single-channel, non-release coupon** only when a reviewed M4-01/M4-03 model has a bounded
+post-calibration DUT residual half-width of at most 4.50 ohms at every declared corner, a bounded safety screen, and a
+reviewed measurement plan for every remaining accuracy variable. This is a conditional analytical threshold for learning
+from the coupon, not an M4-03 threshold-release claim. The current candidate fails it: its 7.17 ohm screen already
+exceeds 5.00 ohms, and the negative-clamp priority has no bounded safety screen.
+
+For each standard and corner, define the signed residual as `e = R_DUT - R_standard`. The reviewed pre-coupon model must
+bound both signs, `-E_minus <= e <= E_plus`, and use `E_DUT = max(E_minus, E_plus)`. It permits M4-04 only if:
+
+```text
+E_MODEL = worst-case half-width of analytically bounded DUT contributors <= 4.50 ohms
+every unbounded accuracy contributor is an explicit coupon-measurement variable, not a budget credit
+every safety contributor is bounded for coupon capture
+```
+
+The 4.50 ohm half-width is `5.00 ohms - 0.50 ohms`. The 0.50 ohm term is the maximum allowed expanded fixture-standard
+and measurement uncertainty, `U_FIX`, at the stated coverage factor; it is not a signed DUT residual, a second
+calibration error, or a 1.00 ohm full-width interval. M4-05 must define the coverage factor and include the standard,
+instrument, relay/contact, temperature, and repeatability contributions. An unbounded accuracy term may justify coupon
+characterization only when it is excluded from `E_MODEL` and cannot produce a qualified touch during the experiment; it
+can never be silently treated as zero.
+
+M4-08 separately closes a measured condition only when, for every required standard and corner, its estimated signed
+bias and repeatability envelope produce `E_DUT,measured`, and the demonstrated fixture uncertainty produces `U_FIX`,
+such that:
+
+```text
+max over all corners (absolute signed DUT bias plus its repeatability allowance) + U_FIX <= 5.00 ohms
+```
+
+Equivalently, if a symmetric DUT interval is reported with full width `W_DUT`, use `W_DUT / 2 + U_FIX <= 5.00 ohms`.
+Do not compare a full width directly to 5.00 ohms, and do not treat the 450 to 475 ohm indeterminate band as a pass by
+choosing a favorable residual sign.
+
+The minimum predecessor correction is to re-audit M4-01 with the selected devices rather than resistance proxies. At
+the 450/475 ohm boundary and all four declared line-capacitance banks, vendor bounds can model source-resistor tolerance
+and TCR, `R_ESD`/`R_ADC` tolerance, TMUX on resistance and off leakage, REF5025 initial/drift/load limits, declared
+capacitance limits, and supply ranges. Those inputs are necessary but not sufficient. The re-audit must include:
+
+1. the available vendor-guaranteed temperature and supply corners for the TMUX source and sink paths, `R_ESD`,
+   `R_ADC`, REF5025 source and `VREF+` load, and the passive input network;
+2. the actual clamp topology, ADC sample-and-hold/kickback, and a reviewed PCB/cable parasitic envelope; and
+3. the M4-01 resistance, capacitance, and stated pulse-width matrix, retaining the model's limitations in generated
+   evidence.
+
+The following effects are necessarily coupon gates unless a package- and condition-applicable maximum is obtained:
+low-voltage clamp leakage and forward priority, TPD negative residual, LQFP64 ADC residual, ADC kickback, TMUX charge
+injection, assembled PCB/cable parasitics, reference-node dynamic mismatch, MCU-pad injection, and cross-channel ADC
+effect. A vendor typical curve does not convert any of these into a bound. This correction may leave M4-01 denied, which
+is a valid outcome. It is the smallest honest change because it changes neither the BOM nor the topology while
+establishing whether a component change is actually needed.
+
+Only after that M4-01 re-audit and an M4-03 candidate review can a single-channel coupon make the following minimum
+measurements. They separate the present dominant terms and avoid treating a fixture allocation as a DUT result:
+
+| Measurement set | Minimum conditions | Acceptance use |
+| --- | --- | --- |
+| Calibrated resistance residual | 0, 450, 475, and 500 ohms after the defined two-point calibration; 3V3A and 24 V extremes; -40 C, 25 C, 85 C, and 125 C; each line-capacitance bank | At each standard/corner, report signed bias and its repeatability allowance. Let `E_DUT,measured` be the maximum absolute signed bias plus that allowance, and `U_FIX` the separately demonstrated expanded fixture uncertainty. Accept only `E_DUT,measured + U_FIX <= 5.00 ohms`, or equivalently `W_DUT / 2 + U_FIX <= 5.00 ohms` for a symmetric full-width interval. |
+| Clamp leakage and priority | `D_NEG` at the actual approximately 0.45 V reverse condition and `D_POS` at approximately 2.1 V; powered, brownout, and unpowered rails; the same temperatures | Replace the 3.12 ohm clamp screen with measured maxima and prove that the external path, not the STM32 pad, carries current. |
+| Negative fault path | Connector, post-TPD conductor, quiet ADC node, MCU pad, `SGND`, `VDDA`, and `3V3A` differential traces plus a calibrated current probe; both rail limits and temperatures | Establish a one-sided pad-current upper bound of `abs(mean current) + expanded current uncertainty <= I_INJ_ALLOC`, with the mean consistent with zero within its stated uncertainty. `I_INJ_ALLOC` and the corresponding cross-channel `DeltaR_ADC_ALLOC` must be allocated inside `E_DUT`; prove `abs(mean DeltaR_ADC) + expanded uncertainty <= DeltaR_ADC_ALLOC`. A current below the absolute maximum alone is not a pass. |
+| Reference and ADC behavior | Excitation and `VREF+` at the conversion instant, reference startup/absence, raw ADC codes, internal calibration state, and repeated conversions | Verify ratiometric cancellation rather than assuming it, and obtain the applicable LQFP64 residual. |
+| Source/sink and comparator timing | Every intended source/sink phase mask, switch-control edge, 0.5/2/5/10 nF banks, comparator input/output, and HRTIM capture | Bound charge injection, settling, sink-path behavior, comparator threshold, and propagation. Comparator evidence may timestamp only; it receives no 450/475 ohm classification credit. |
+
+These are M4-04/M4-05/M4-08 execution inputs, not evidence that the current unreviewed circuit can be fabricated. Until
+the M4-01 correction and M4-03 review produce a candidate suitable for a coupon, the product has no analytical
+threshold closure.
+
 For context, the uncalibrated screen also fails: the M4-02 pre-screened 4.06 ohm clamp estimate, the 2.65 ohm ADC EL
 typical screen, and the 4.19 ohm initial two-edge switch pedestal already exceed 10 ohms, before ADC gain/offset,
 resistor temperature coefficient, or reference routing. Calibration and blanking are mandatory controls, not optional
@@ -373,7 +457,9 @@ are demonstrated. An ADC/HRTIM schedule cannot infer a 0.1 ms sabre contact from
 
 | Gate | Required result | State |
 | --- | --- | --- |
-| M4-03 analytical error target | **DENY**: 7.17 ohm 125 C absolute-sum screen fails the 5.00 ohm target by 2.17 ohms; an M4-08 full-corner per-channel result must close the 0.48 ohm residual allocation | open |
+| M4-01 predecessor audit | **DENY**: 36-case nominal/proxy transient pass omits selected clamp, ADC, parasitic, rail-injection, and full-corner device behavior; it cannot satisfy the required temperature/tolerance audit | blocks M4-03 release |
+| M4-03 conditional coupon-capture gate | A reviewed candidate must have `E_MODEL <= 4.50 ohms`, an explicit measurement variable for each remaining accuracy term, and a bounded coupon-safety screen, reserving `U_FIX <= 0.50 ohms`; the current 7.17 ohm screen and negative-clamp priority do not qualify | blocked |
+| M4-03 measured threshold closure | M4-08 must establish `E_DUT,measured + U_FIX <= 5.00 ohms` at each declared corner. It validates a captured coupon and does not retroactively waive M4-01/M4-03. | future measurement gate |
 | M4-03 BAV199 leakage experiment | 4.36 ohm leakage-only arithmetic screen; external-clamp priority, low-voltage leakage, TPD negative residual, MCU injection, and LQFP64 ADC residual remain unmeasured | unresolved, still denied |
 | M4-03 static acquisition impedance | 47.5-cycle sample time supports 1427.3 ohms against 1800 ohms slow-channel limit | analytic pass |
 | M4-03 100 ohm, 10 nF sabre phase | Two ADC1 ranks after a 7.60 us conservative blank require 9.96 us before comparator and phase-mask uncertainty | open scheduling gate |

@@ -224,21 +224,39 @@ export function sourceResistorTemperatureErrorOhms(externalResistanceOhms: numbe
  * claim.
  */
 export function m403ScreenedStaticErrorOhms(externalResistanceOhms: number, temperatureC: number): number {
-  const adcQuantizationError = resistanceErrorForVoltageErrorOhms(externalResistanceOhms, analogBudget.adcLsbVolts / 2)
-  const adcIntegralLinearityTypicalError = resistanceErrorForVoltageErrorOhms(
-    externalResistanceOhms,
-    analogBudget.adcSingleEndedIntegralLinearityTypicalLsb * analogBudget.adcLsbVolts
+  return Object.values(m403StaticScreenBreakdownOhms(externalResistanceOhms, temperatureC)).reduce(
+    (total, errorOhms) => total + errorOhms,
+    0
   )
-  const settledSwitchChargeError = switchChargeErrorOhms(externalResistanceOhms, 500) * Math.exp(-5)
+}
 
-  return (
-    analogBudget.clampLeakageGateOhms +
-    adcQuantizationError +
-    adcIntegralLinearityTypicalError +
-    analogBudget.fixtureInterpolationAndStandardUncertaintyOhms +
-    settledSwitchChargeError +
-    sourceResistorTemperatureErrorOhms(externalResistanceOhms, temperatureC)
-  )
+/**
+ * Numeric contributors to the non-release M4-03 static screen. The ADC term is
+ * an LQFP100 typical characterization result, while the clamp term remains a
+ * coupon gate. This breakdown must not be interpreted as a worst-case LQFP64
+ * error budget or a component-selection pass.
+ */
+export function m403StaticScreenBreakdownOhms(externalResistanceOhms: number, temperatureC: number) {
+  return {
+    adcIntegralLinearityTypical: resistanceErrorForVoltageErrorOhms(
+      externalResistanceOhms,
+      analogBudget.adcSingleEndedIntegralLinearityTypicalLsb * analogBudget.adcLsbVolts
+    ),
+    adcQuantization: resistanceErrorForVoltageErrorOhms(externalResistanceOhms, analogBudget.adcLsbVolts / 2),
+    clampLeakage: analogBudget.clampLeakageGateOhms,
+    fixture: analogBudget.fixtureInterpolationAndStandardUncertaintyOhms,
+    sourceResistorTemperature: sourceResistorTemperatureErrorOhms(externalResistanceOhms, temperatureC),
+    switchChargeAfterBlanking: switchChargeErrorOhms(externalResistanceOhms, 500) * Math.exp(-5)
+  }
+}
+
+/**
+ * Before M4-04 may capture a coupon, the bounded DUT residual must fit inside
+ * this one-sided half-width. The remaining fixture allocation is an expanded
+ * uncertainty, not another DUT-error contributor or an interval full width.
+ */
+export function m403CouponCaptureDutHalfWidthAllocationOhms(): number {
+  return analogBudget.fixtureTargetOhms - analogBudget.fixtureInterpolationAndStandardUncertaintyOhms
 }
 
 /**

@@ -15,6 +15,8 @@ import {
   conservativeBlankingUs,
   fullDiagnosticAcquisitionUs,
   m403ScreenedStaticErrorOhms,
+  m403StaticScreenBreakdownOhms,
+  m403CouponCaptureDutHalfWidthAllocationOhms,
   m403LowLeakageClampExperimentScreenOhms,
   negativeInjectionScreenMa,
   resistanceErrorForVoltageErrorOhms,
@@ -23,7 +25,7 @@ import {
 } from "./analog-model.js"
 
 describe("three-weapon analog model", () => {
-  it("round-trips every FIE resistance boundary within the design error budget", () => {
+  it("round-trips every FIE resistance boundary in the ideal resistor-network model", () => {
     for (const resistance of Object.values(fieResistanceBoundaries)) {
       const estimated = estimateExternalResistance(expectedSenseVoltage(resistance))
       expect(Math.abs(estimated - resistance)).toBeLessThan(analogFrontEnd.maximumClassificationErrorOhms)
@@ -71,6 +73,20 @@ describe("three-weapon analog model", () => {
     expect(sourceResistorTemperatureErrorOhms(450, 125)).toBeCloseTo(0.44, 2)
     expect(m403ScreenedStaticErrorOhms(450, 125)).toBeCloseTo(7.17, 2)
     expect(m403ScreenedStaticErrorOhms(450, 125)).toBeGreaterThan(analogBudget.fixtureTargetOhms)
+  })
+
+  it("identifies the unqualified clamp and ADC terms as the static-screen dominants", () => {
+    const screen = m403StaticScreenBreakdownOhms(450, 125)
+
+    expect(screen.clampLeakage).toBeCloseTo(3.12, 2)
+    expect(screen.adcIntegralLinearityTypical).toBeCloseTo(2.65, 2)
+    expect(screen.clampLeakage).toBeGreaterThan(screen.adcQuantization)
+    expect(screen.adcIntegralLinearityTypical).toBeGreaterThan(screen.sourceResistorTemperature)
+    expect(Object.values(screen).reduce((total, errorOhms) => total + errorOhms, 0)).toBeCloseTo(7.17, 2)
+  })
+
+  it("reserves the fixture allocation from the M4-04 coupon-capture half-width", () => {
+    expect(m403CouponCaptureDutHalfWidthAllocationOhms()).toBe(4.5)
   })
 
   it("screens the BAV199 leakage-only experiment below 5 ohms without calling it a release", () => {
