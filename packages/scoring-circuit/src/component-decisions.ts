@@ -42,7 +42,7 @@ export const componentDecisions = [
     manufacturer: "Texas Instruments",
     manufacturerUrl: "https://www.ti.com/product/ISO7721",
     mpn: "ISO7721FDR",
-    purpose: "One channel in each direction for reset, heartbeat, and protocol expansion",
+    purpose: "STM32 heartbeat plus an opposite-direction service-only spare across the reinforced boundary",
     qualification: "100 Mbps; reinforced isolation; -55 C to 125 C"
   },
   {
@@ -177,7 +177,8 @@ export const componentDecisions = [
     manufacturer: "Texas Instruments",
     manufacturerUrl: "https://www.ti.com/product/SN74AHCT245",
     mpn: "SN74AHCT245PWR",
-    purpose: "Three-volt to five-volt HUB75 signal buffering with display output default-off",
+    purpose:
+      "Three-volt to five-volt HUB75 signal buffering with a required schematic-level default-blank pull network",
     qualification: "Use two devices; -40 C to 125 C"
   },
   {
@@ -212,7 +213,7 @@ export const componentDecisions = [
     lifecycle: "active",
     manufacturer: "Texas Instruments",
     manufacturerUrl: "https://www.ti.com/product/TAS2505-Q1",
-    mpn: "TAS2505QDCARQ1",
+    mpn: "TAS2505TRGERQ1",
     purpose: "Diagnostic-capable mono Class-D scoring audio",
     qualification: "AEC-Q100; -40 C to 105 C; final SPL depends on the speaker and enclosure"
   }

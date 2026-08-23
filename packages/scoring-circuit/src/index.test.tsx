@@ -84,6 +84,34 @@ describe("production scoring architecture", () => {
     )
   })
 
+  it("maps the pin-safe application buses without an impossible isolator direction", () => {
+    const circuitJson = renderArchitecture()
+    const traceNames = circuitJson.flatMap((element) =>
+      element.type === "source_trace" && "display_name" in element && typeof element.display_name === "string"
+        ? [element.display_name]
+        : []
+    )
+
+    expect(traceNames).toEqual(
+      expect.arrayContaining([
+        "U_STM32.ESP_RESET to U_ISO_MAIN.S_ESP_RESET_ASSERT_N",
+        "U_ISO_MAIN.A_ESP_RESET_ASSERT_N to TP_ESP_RESET_REQUEST_N.RESET_REQUEST_N",
+        "U_ESP32.ESP_HEARTBEAT to U_ISO_MAIN.A_ESP_HEARTBEAT",
+        "U_ISO_MAIN.S_ESP_HEARTBEAT to U_STM32.ESP_HEARTBEAT",
+        "U_ESP32.USB_DN to J_USB_C.USB_DN",
+        "U_ESP32.USB_DP to J_USB_C.USB_DP",
+        "U_ESP32.APP_SPI_SCK to U_ETHERNET.SCK",
+        "U_ESP32.APP_SPI_SCK to U_FRAM.SCK",
+        "U_ESP_SUPERVISOR.RESET to U_ETHERNET.RSTn",
+        "U_ESP32.HUB75_R1 to U_DISPLAY_BUFFER_A.R1_IN",
+        "U_DISPLAY_BUFFER_B.OE_N_OUT to J_HUB75.OE"
+      ])
+    )
+    expect(traceNames.some((name) => name.includes("SCORE_EVENT_IRQ"))).toBe(false)
+    expect(traceNames.some((name) => name.includes("U_ESP32.STM_RESET"))).toBe(false)
+    expect(traceNames.some((name) => name.includes("U_ISO_MAIN.A_ESP_RESET_ASSERT_N to U_ESP32.EN_RESET"))).toBe(false)
+  })
+
   it("pins every approved component to an active lifecycle", () => {
     const decisions = componentDecisions.map((component) => `${component.manufacturer}:${component.mpn}`)
     const lifecycles = componentDecisions.map((component) => component.lifecycle as string)
@@ -109,5 +137,17 @@ describe("production scoring architecture", () => {
   it("selects repeated low-leakage line switching and connector-adjacent protection", () => {
     expect(componentDecisions.find((component) => component.category === "line-switch")?.mpn).toBe("TMUX1112PWR")
     expect(componentDecisions.find((component) => component.category === "line-protection")?.mpn).toBe("TPD4E05U06DQAR")
+  })
+
+  it("uses the active TAS2505-Q1 orderable in the circuit model", () => {
+    const audio = componentDecisions.find((component) => component.category === "audio-amplifier")
+    const circuitJson = renderArchitecture()
+    const sourceComponents = circuitJson.filter(
+      (element) => element.type === "source_component" && "name" in element && element.name === "U_AUDIO"
+    )
+
+    expect(audio?.mpn).toBe("TAS2505TRGERQ1")
+    expect(sourceComponents).toHaveLength(1)
+    expect(sourceComponents[0]).toMatchObject({ manufacturer_part_number: "TAS2505TRGERQ1" })
   })
 })

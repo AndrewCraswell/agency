@@ -12,7 +12,7 @@ ST's [STM32G474xB/xC/xE datasheet](https://www.st.com/resource/en/datasheet/stm3
 
 The [STM32G4 reference manual](https://www.st.com/resource/en/reference_manual/rm0440-stm32g4-series-advanced-armbased-32bit-mcus-stmicroelectronics.pdf), RM0440 Rev 9, is the primary source for comparator/DAC routing, ADC and HRTIM triggering, DMA requests, and reset behavior. [STM32CubeMX](https://www.st.com/content/st_com/en/stm32cubemx.html) must solve and validate the package-level peripheral allocation before schematic capture.
 
-The circuit model presently labels functional STM32 nets rather than physical package pins. It does not yet show physical reference supply pins, switch-enable nets, primary-output driver circuits, both heartbeats, or the ESP32-to-STM32 reset path.
+The circuit model presently labels functional STM32 nets rather than physical package pins. It now reserves both heartbeat directions and a one-way STM32-to-ESP32 reset assertion, but it does not show physical reference supply pins, switch-enable nets, primary-output driver circuits, reset-combiner circuitry, or the required bias networks.
 
 ## Analog acquisition and reference
 
@@ -88,13 +88,13 @@ SPI1 uses AF5. DMA1 channel 3 is reserved for SPI1 RX and DMA1 channel 4 for SPI
 | SCORE_SPI_SCK | STM32 to ESP32 | PA5, pin 19 | SPI1 SCK, AF5 | External pull-down keeps clock inactive. |
 | SCORE_SPI_MISO | ESP32 to STM32 | PA6, pin 20 | SPI1 MISO, AF5 | Receiver-side bias must be defined. |
 | SCORE_SPI_MOSI | STM32 to ESP32 | PA7, pin 21 | SPI1 MOSI, AF5 | External pull-down keeps data inactive. |
-| SCORE_EVENT_IRQ | STM32 to ESP32 | PC13, pin 2 | GPIO through isolator | Protocol must freeze one inactive polarity and external bias. |
 | STM32_HEARTBEAT | STM32 to ESP32 | PB8-BOOT0, pin 49 | GPIO through ISO7721 | Boot0 has a permanent pull-down; isolator sees inactive state during boot. |
-| ESP32_HEARTBEAT | ESP32 to STM32 | PC14, pin 3 | GPIO input through ISO7721 | Consumes an LSE-capable pad. |
+| ESP32_HEARTBEAT | ESP32 to STM32 | PC14, pin 3 | GPIO input through ISO7762 | Consumes an LSE-capable pad. The isolator default and input bias must represent a failed heartbeat. |
 | ESP32_RESET_N | STM32 to ESP32 | PC15, pin 4 | GPIO through ISO7762 | Isolator and ESP reset network must be defined when STM32 is unpowered or resetting. |
-| STM32_RESET_N | ESP32 to STM32 | NRST, pin 7 | Isolated external reset input | Must not back-power or defeat supervisor, TPS3431, or SWD reset. |
 
-The architectural circuit contains one heartbeat and STM32-to-ESP reset only. The production plan requires two heartbeats and independent reset directions. This candidate identifies the missing STM32 input heartbeat and ESP32-to-STM32 reset schematic nets; it does not implement them.
+`ISO7762FDWR` is a fixed four-forward/two-reverse device. Its four STM32-to-ESP32 channels are SPI SCK, MOSI, CS, and the reset assertion. Its two ESP32-to-STM32 channels are SPI MISO and the ESP32 heartbeat. `ISO7721FDR` carries the STM32 heartbeat and retains its reverse channel as an unconnected future service-only spare. There is intentionally no ESP32-to-STM32 automatic reset channel: the ESP32 must never assert `NRST` for an application, link, storage, display, or network fault. STM32 and ESP32 local supervisors, watchdogs, and service interfaces remain independent reset sources in their own domains.
+
+The event interrupt was removed from the physical link to make the allocation conform to the isolator's actual direction count. The STM32 is the SPI master and delivers a bounded frame under `SCORE_CS_N`; the ESP32 treats a complete CRC-checked frame as the only event indication. No interrupt level is authoritative.
 
 PA4, PA5, and PA6 are also DAC output pads. SPI1 on them prevents external DAC output there. CubeMX and RM0440 must prove the selected internal comparator-DAC routes coexist with the pad mux. If they do not, moving SPI1 creates a new collision with the source/sink allocation and requires a revised design.
 
@@ -113,7 +113,7 @@ PA4, PA5, and PA6 are also DAC output pads. SPI1 on them prevents external DAC o
 3. Confirm HRTIM comparator-event routing, capture capacity, ADC trigger timing, timestamp resolution, and DMA mapping for all seven inputs.
 4. Confirm ADC synchronization, rank ordering, sample time with the 1 kohm and 470 pF input filter, calibration, overrun behavior, DMA circular buffering, and reference startup.
 5. Check absolute maximum, injection current, analog-input, VREF+, VDDA, and reset limits against final clamps. The analog document intentionally leaves its clamp network unresolved.
-6. Check PB3/PB4 debug release, PB8 boot bias, PC13 drive, PC14/PC15 loss of LSE, PA4 through PA6 SPI versus DAC pads, and all listed alternate functions.
+6. Check PB3/PB4 debug release, PB8 boot bias, PC14/PC15 loss of LSE, PA4 through PA6 SPI versus DAC pads, and all listed alternate functions.
 7. Use the coupon and fixture to prove reset, brownout, watchdog reset, missing reference, stuck source/sink enable, ADC saturation, and isolator power loss cannot qualify a touch. Capture lamps and buzzer in the same tests.
 
 ## Open items and blockers
@@ -123,11 +123,11 @@ PA4, PA5, and PA6 are also DAC output pads. SPI1 on them prevents external DAC o
 | Comparator threshold topology | DAC calibration and COMP5/COMP7 threshold sharing are not proven. | Blocks acceptance of comparator allocation. |
 | HRTIM event capture matrix | Seven-channel internal capture has not been demonstrated. | Blocks the one-microsecond timestamp claim. |
 | Physical reference, supply, and clamp schematic | Circuit model has a VREF label but not VREF+, VDDA, VSSA, or final protection. | Blocks ADC-accuracy and schematic acceptance. |
-| Second heartbeat and reverse reset | Required by production plan but absent from circuit model. | Blocks isolation/reset contract acceptance. |
+| Heartbeat and ESP reset electrical implementation | The architectural map now reserves both heartbeats and a one-way reset assertion, but it has no selected reset combiner, unpowered-channel behavior, timeout values, or bias components. | Blocks isolation/reset schematic acceptance. |
 | Output drivers and pull networks | Lamps and buzzer are logical nets only. | Blocks safe-output acceptance. |
 | Oscillator decision | HSE is reserved; LSE is displaced; tolerance and startup are unproven. | Blocks target clock configuration. |
 | CubeMX package proof | This is manual audit, not solver output. | Blocks declaring AF conflicts closed. |
 
 ## Documentation-only acceptance
 
-Every seven-conductor signal maps to a real LQFP64 ADC and comparator positive input. The candidate also maps 14 independent analog switch enables, reference pins, timer roles, DMA roles, isolated SPI, event/reset/heartbeat controls, lamps, buzzer, watchdog, reset, and SWD. It explicitly names unresolved alternate-function, schematic, timing, and analog risks and makes no electrical, regulatory, FIE, CubeMX, or fabrication approval claim.
+Every seven-conductor signal maps to a real LQFP64 ADC and comparator positive input. The candidate also maps 14 independent analog switch enables, reference pins, timer roles, DMA roles, isolated SPI, two directional heartbeats, a one-way application-reset assertion, lamps, buzzer, watchdog, reset, and SWD. It explicitly names unresolved alternate-function, schematic, timing, and analog risks and makes no electrical, regulatory, FIE, CubeMX, or fabrication approval claim.

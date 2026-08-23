@@ -36,10 +36,12 @@ storage, identity, and signed updates. It may request configuration changes, but
 read-only timing-table manifest and acknowledges the exact applied revision.
 
 The processor link uses framed SPI with sequence number, monotonic timestamp, payload length, CRC-32C, message type,
-and protocol version. An event interrupt, two heartbeats, and independently controlled resets use separate isolated
-channels. ISO7762 plus ISO7721 supplies the required directions without silently sharing a ground. Each processor has
-its own TPS3431 watchdog and TPS3890 supervisor. Link loss freezes the last valid display state, records a fault, and
-leaves STM32 scoring operational.
+and protocol version. `ISO7762` carries four STM32-to-ESP32 signals (SCK, MOSI, CS, and the application reset
+assertion) and two ESP32-to-STM32 signals (MISO and the ESP32 heartbeat); `ISO7721` carries the STM32 heartbeat.
+The STM32 is SPI master, so a separate event-interrupt wire is not required. Each processor has its own TPS3431
+watchdog and TPS3890 supervisor. The STM32 may assert the ESP32 `EN` reset through a reset-qualified isolated stage;
+the ESP32 has no automatic electrical path to STM32 `NRST`. Link loss freezes the last valid display state, records a
+fault, and leaves STM32 scoring operational.
 
 The isolated NXE1S0505MC is followed by a low-noise scoring-domain regulator and filtered analog rail. Its one-watt
 budget must be proven with worst-case STM32 clocking, excitation, lamps-driver control, temperature, and converter
@@ -84,7 +86,7 @@ The canonical, machine-checked list is `src/component-decisions.ts`. Important c
 | Field serial | ISO1410BDWR | Isolated protected RS-485 for our documented long-cable protocol |
 | Journal | CY15B104Q-LHXIT | High-endurance F-RAM for atomic metadata and configuration transactions |
 | Device identity | STSAFE-A110 | Non-exportable device key and authenticated service identity |
-| Audio | TAS2505-Q1 | Automotive-qualified amplifier with load diagnostics; acoustic output remains a system test |
+| Audio | TAS2505TRGERQ1 | Active automotive-qualified TAS2505-Q1, VQFN RGE0024K; acoustic output remains a system test |
 
 The machine-enforced critical-part register is `src/part-readiness.ts`. It distinguishes selection, footprint, CAD, and
 mechanical evidence instead of treating a supplier search result or a visible 3D body as production approval. Current
