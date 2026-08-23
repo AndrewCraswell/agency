@@ -144,8 +144,13 @@ typical-only ADC credit, or weakened fixture requirement is used.
 
 The bounded topology decision in
 [`m4-03-minimal-topology-decision.md`](m4-03-minimal-topology-decision.md) found no compliant no-new-rail isolation
-revision. It therefore does not change this error budget, permit a fault-isolator coupon, close M4-01 or M4-03, or
-release a schematic, board, BOM, or fabrication output.
+revision. Its follow-up [`12 V fault-isolation study`](m4-03-12v-fault-isolation.md) finds that the supervised
+`ADG5412F` route is voltage-domain valid but still denied: it specifies 340 pC typical at its 12 V condition but no
+maximum, while the model carries 640 pC from another condition as a conservative typical screen. The output-only
+five-time-constant screen fails the coupon gate. Ten-time-constant arithmetic reaches about 4.49 ohms, but remains
+unqualified; the separate 100 ohm sabre arithmetic is about 8.47 us before switch-on and other unbounded delays.
+Neither study changes this error budget, permits a fault-isolator coupon, closes M4-01 or M4-03, or releases a schematic,
+board, BOM, or fabrication output.
 
 ## Inputs and primary sources
 

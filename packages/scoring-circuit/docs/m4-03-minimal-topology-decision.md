@@ -8,7 +8,8 @@ range on existing rails, an applicable 125 C leakage bound, and sustained negati
 minimal `ADG7421FBCPZ-RL7` route is rejected because its guaranteed normal range excludes the normative 0 ohm path.
 
 This record does not change production BOM, readiness, schematic, fabrication status, calibration policy, or FIE claims.
-It adds no executable model because no new operating topology is qualified even as a coupon candidate.
+The deferred 12 V alternative is now modeled separately as a coupon-only **DENY** in
+[`m4-03-12v-fault-isolation.md`](m4-03-12v-fault-isolation.md); it remains outside the apparatus circuit and BOM.
 
 ## Current failure mode
 
@@ -31,7 +32,7 @@ release or a stand-alone M4-04 topology. [BAV199 data sheet](https://www.diodes.
 | `ADG7421FBCPZ-RL7` x4 plus BAV199 clamps on `3V3A` | ±60 V protected Sx, 23 ohm maximum on resistance, 15 nA maximum on leakage at 125 C, and 40 pC typical enable charge. However normal signal range starts at `VSS + 0.1 V`; 0 ohm is an in-spec normal state and cannot be deferred to coupon characterization. | Manufacturer lists recommended-for-new-design and $2.77 at 1ku, $11.08 for four before assembly. No stock confirmation. [Product page](https://www.analog.com/en/products/adg7421f.html), [data sheet](https://www.analog.com/media/en/technical-documentation/data-sheets/adg7421f.pdf) | **Reject: out-of-spec normal operation.** |
 | `TMUX2821` x4 plus BAV199 clamps on `3V3A` | Rail-to-rail 0 V normal range and powered-off protection, but only to +/-5.5 V. It does not establish the M4-09 sustained 24 V connector-fault barrier after the existing ESD array. Its 1 uA maximum on leakage also exceeds this error budget. | Active TI part; no price or stock credited. [Product page](https://www.ti.com/product/TMUX2821) | Reject: fault range and leakage. |
 | `TMUX1102` x7 plus BAV199 clamps on `3V3A` | 0 V to `VDD` normal range, 3 pA stated low leakage, and 1.8 ohm typical resistance, but no powered-off or ±24 V input fault isolation. It cannot stop back-power or injection under the required fault. | Active TI part; no price or stock credited. [Product page](https://www.ti.com/product/TMUX1102) | Reject: no fault barrier. |
-| `ADG5412FBRUZ-RL7` x2 plus BAV199 clamps, new supervised 12 V rail | 0 V to 10 V normal signal range with a 12 V supply, ±55 V protected source, 37 ohm maximum on resistance and 4.5 nA maximum on leakage at 125 C. A prior screen is 4.41 ohms, but it retains ADC typical-INL and transient gates. | $5.37 at 1ku, $10.74 for two before regulator, supervisor, decoupling, startup interlock, assembly, reliability qualification, or stock confirmation. [Product page](https://www.analog.com/en/products/adg5412f.html), [data sheet](https://www.analog.com/media/en/technical-documentation/data-sheets/adg5412f_5413f.pdf) | Defer: smallest credible protected-switch architecture, but not minimal under the no-new-rail product constraint. |
+| `ADG5412FBRUZ-RL7` x2 plus BAV199 clamps, new supervised 12 V rail | 0 V to 10 V normal signal range with a 12 V supply, ±55 V protected source, 37 ohm maximum on resistance and 4.5 nA maximum on leakage at 125 C. The recalculation carries 340 pC typical at the published 12 V condition and a conservative 640 pC typical from a different condition. The fail-closed output-capacitance-only screen fails at five time constants. Ten-time-constant arithmetic reaches about 4.49 ohms, but has no maximum charge bound; separate 100 ohm sabre arithmetic is 8.47 us before omitted delays. Fault-source current is typical only. | $5.37 at 1ku, $10.74 for two before regulator, supervisor, decoupling, startup interlock, assembly, reliability qualification, or stock confirmation. [Product page](https://www.analog.com/en/products/adg5412f.html), [data sheet](https://www.analog.com/media/en/technical-documentation/data-sheets/adg5412f_5413f.pdf) | **DENY:** in-spec voltage range, but no bounded error, timing, sustained-fault power, or isolated-supply closure. See the dedicated 12 V study. |
 | `AD4696BCPZ` external 16-channel ADC | Guaranteed +/-1 LSB INL over temperature and 5 mA active clamps, but serialized 1 MSPS acquisition, a 1.14 V to 1.98 V logic rail, and no sufficient negative-fault path proof for this topology. | $16.18 at 1ku before rail and integration. [Product page](https://www.analog.com/en/products/ad4696.html) | Reject as over-scoped. |
 | `AD7616BSTZ` external 16-channel ADC | Existing 5 V / 3.3 V domains, but +/-4 uA input current in the applicable range overwhelms this resistance-error budget and changes architecture. | $16.92 at 1ku. [Data sheet](https://www.analog.com/media/en/technical-documentation/data-sheets/AD7616.pdf) | Reject: leakage and scope. |
 
@@ -42,14 +43,11 @@ Manufacturer price pages are dated research snapshots, not procurement approval 
 The smallest reviewed path that accommodates 0 V without relying on out-of-spec behavior is a fault-isolated switch on a
 new supervised 8 V or higher rail, represented by `ADG5412FBRUZ-RL7` x2 and a 12 V scoring-domain rail. It must add the
 regulator, reverse and surge protection, rail supervisor or monitor, decoupling, reset/startup interlock, fault-flag
-aggregation, and independent verification of fault behavior with that rail absent, ramping, and brownout. This is more
-than a part substitution, so it is explicitly deferred rather than silently becoming the Rev-C baseline.
-
-At the 450 ohm boundary its *conditional* screen uses 2525.978 ohms existing source maximum plus 37 ohms switch
-resistance: `V = 0.373385 V`, `dR/dV = 1416.795 ohm/V`, and `R_ADC,input = 1402.891 ohm`. With BAV199 plus ADG leakage,
-quantization, typical ADC INL, fixture uncertainty, source TCR, and settled TMUX charge, it totals 4.406 ohms. That
-0.094 ohm margin is a coupon-capture calculation only, not a necessity proof or release case; it omits actual LQFP64
-INL, ADC kickback, board leakage, rail dynamics, fault-transient injection, and cable parasitics.
+aggregation, and independent verification of fault behavior with that rail absent, ramping, and brownout. The dedicated
+study selected all of those coupon-level pieces and found an additional blocker: ADG's 340 pC typical charge injection
+at 12 V has no maximum, while a 640 pC typical from a different condition is only a conservative screen. Output-only
+charge is too large at the current blanking. This is more than a part substitution, and is explicitly denied rather than
+silently becoming the Rev-C baseline.
 
 ## Coupon gates before any architecture selection
 
