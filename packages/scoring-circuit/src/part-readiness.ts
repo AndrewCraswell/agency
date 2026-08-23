@@ -1,13 +1,19 @@
 export type ReadinessStatus = "pending" | "source-identified" | "verified"
 
 export type ConnectorPhysicalEvidence = {
+  connectorGender?: string
   contactRating: string
   cycleRating: string
   exactSampleMpns?: readonly string[]
-  interface: "ethernet-rj45" | "locking-power" | "reel-socket" | "usb-c"
-  mounting: "panel-chassis" | "pcb-with-chassis-support"
+  interface: "ethernet-rj45" | "interboard-power" | "interboard-usb2" | "locking-power" | "reel-socket" | "usb-c"
+  keying?: string
+  mateMpn?: string
+  mounting: "panel-chassis" | "pcb-harness" | "pcb-with-chassis-support"
   openGates: readonly string[]
+  pairAssignment?: string
+  pinAssignment?: string
   retention: string
+  service?: string
   shield: string
 }
 
@@ -246,6 +252,98 @@ export const criticalPartReadiness = [
     selectionStatus: "selected"
   },
   {
+    assembly: "application-carrier",
+    blockers: [
+      "Import and independently review the exact Molex header land pattern, solder mask, paste, courtyard, keying, and pin one against the controlled harness drawing",
+      "Verify equal-length 20 AWG parallel conductors, copper escapes, voltage drop, current sharing, contact temperature, and de-energized service at the 3 A apparatus limit"
+    ],
+    cad: {
+      status: "pending",
+      url: "https://www.molex.com/en-us/products/connectors/wire-to-board-connectors/micro-fit-30-connectors"
+    },
+    evidenceUrls: ["https://www.molex.com/en-us/products/connectors/wire-to-board-connectors/micro-fit-30-connectors"],
+    footprint: {
+      status: "pending",
+      description:
+        "Exact Molex Micro-Fit 3.0 four-circuit carrier header land pattern, mask, paste, and courtyard remain unimported"
+    },
+    manufacturer: "Molex",
+    mechanical: {
+      status: "pending",
+      description: "Header keying, harness strain relief, and enclosure service clearance remain unverified"
+    },
+    mpn: "43045-0400",
+    physical: {
+      connectorGender: "male right-angle PCB header",
+      contactRating: "Two 20 AWG positive contacts and two 20 AWG returns; project limit 1.5 A per contact",
+      cycleRating: "30-cycle project qualification minimum; manufacturer durability and derating remain drawing gates",
+      interface: "interboard-power",
+      keying: "Micro-Fit 3.0 four-circuit polarized latch; exact key and orientation require drawing overlay",
+      mateMpn: "43025-0400 housing with 43030-0007 female crimp terminals",
+      mounting: "pcb-harness",
+      openGates: [
+        "Obtain configured header, housing, terminal, and harness drawings and overlay pin one, latch, copper, mask, paste, and courtyard",
+        "Complete current-sharing, voltage-drop, contact-temperature, retention, vibration, mis-mate, and de-energized service tests"
+      ],
+      pairAssignment: "not applicable; equal-length parallel power and return conductors",
+      pinAssignment: "1 V20_EFUSE_OUT_A, 2 GND_A, 3 V20_EFUSE_OUT_B, 4 GND_B",
+      retention:
+        "Positive Micro-Fit latch plus harness tie-down within 25 mm; PCB solder joints are not the service load path",
+      service: "External USB-C removed and V20_EFUSE_OUT discharged before mating or unmating",
+      shield: "No shield and no chassis contact; both returns are APP_GND"
+    },
+    productionApproved: false,
+    references: ["J_PWR_CARRIER"],
+    selectionStatus: "selected"
+  },
+  {
+    assembly: "application-carrier",
+    blockers: [
+      "Obtain the configured Samtec Series Print and independently review carrier-socket pair assignment, 0.80 mm board geometry, copper, mask, paste, courtyard, and latch orientation",
+      "Pass USB 2.0 high-speed eye, attach/detach, ESD, shield-current, common-mode emission, and de-energized service tests on the released 7.87 inch assembly"
+    ],
+    cad: {
+      status: "pending",
+      url: "https://www.samtec.com/products/hsec8"
+    },
+    evidenceUrls: ["https://www.samtec.com/products/hsec8", "https://www.samtec.com/products/ecdp-08-07.87-l1-l2-1-3"],
+    footprint: {
+      status: "pending",
+      description:
+        "Exact Samtec HSEC8 carrier socket land pattern, mask, paste, courtyard, and pair assignment remain controlled release data"
+    },
+    manufacturer: "Samtec",
+    mechanical: {
+      status: "pending",
+      description: "Latch clearance, harness retention, chassis contact, and service access remain unverified"
+    },
+    mpn: "HSEC8-113-01-L-DV-A-L2",
+    physical: {
+      connectorGender: "female vertical latching edge-card socket",
+      contactRating: "USB 2.0 signal pair only; no power or signal-ground conductor is assigned",
+      cycleRating: "Production cycle rating remains a configured Series Print and qualification gate",
+      interface: "interboard-usb2",
+      keying: "L2 latch orientation at both sockets; configured Series Print controls mating orientation",
+      mateMpn: "ECDP-08-07.87-L1-L2-1-3",
+      mounting: "pcb-harness",
+      openGates: [
+        "Obtain the configured ECDP and HSEC8 Series Prints and overlay contacts, latch, board thickness, copper, mask, paste, and courtyard",
+        "Complete retention, USB high-speed eye, ESD, common-mode, shield-current, vibration, and de-energized service tests"
+      ],
+      pairAssignment:
+        "One 100 ohm twinax pair: negative conductor USB_DN, positive conductor USB_DP; shield is CHASSIS only",
+      pinAssignment:
+        "Logical endpoint 1 USB_DN, 2 USB_DP, 3 SHIELD; exact physical contacts require configured Series Print",
+      retention:
+        "Latching sockets at both ends plus harness tie-down within 25 mm; solder joints are not the service load path",
+      service: "External USB-C removed and V20_EFUSE_OUT discharged before mating or unmating",
+      shield: "Cable shield and both HSEC8 metalwork bond to CHASSIS; no APP_GND conductor is present"
+    },
+    productionApproved: false,
+    references: ["J_USB2_CARRIER"],
+    selectionStatus: "selected"
+  },
+  {
     assembly: "communications-module",
     blockers: [
       "Independently verify the LQFP-48 land pattern and exposed fabrication output on the communications module",
@@ -427,9 +525,6 @@ export function validateCriticalPartReadiness(parts: readonly CriticalPartReadin
     }
 
     if (part.physical !== undefined) {
-      if (part.assembly === "application-carrier") {
-        errors.push(`${part.mpn}: connector physical evidence cannot be assigned to the application-carrier assembly`)
-      }
       if (["ethernet-rj45", "usb-c"].includes(part.physical.interface) && part.assembly !== "communications-module") {
         errors.push(
           `${part.mpn}: ${part.physical.interface} physical evidence belongs to the communications-module assembly`
@@ -437,6 +532,64 @@ export function validateCriticalPartReadiness(parts: readonly CriticalPartReadin
       }
       if (part.physical.interface === "reel-socket" && part.assembly !== "external-panel-module") {
         errors.push(`${part.mpn}: reel-socket physical evidence belongs to the external-panel-module assembly`)
+      }
+      if (
+        ["interboard-power", "interboard-usb2"].includes(part.physical.interface) &&
+        part.assembly !== "application-carrier"
+      ) {
+        errors.push(
+          `${part.mpn}: ${part.physical.interface} carrier evidence belongs to the application-carrier assembly`
+        )
+      }
+      const requiredInterboardMpn =
+        part.physical.interface === "interboard-power"
+          ? "43045-0400"
+          : part.physical.interface === "interboard-usb2"
+            ? "HSEC8-113-01-L-DV-A-L2"
+            : undefined
+      if (requiredInterboardMpn !== undefined && part.mpn !== requiredInterboardMpn) {
+        errors.push(`${part.mpn}: ${part.physical.interface} requires exact MPN ${requiredInterboardMpn}`)
+      }
+      if (requiredInterboardMpn !== undefined) {
+        for (const [field, value] of [
+          ["connectorGender", part.physical.connectorGender],
+          ["keying", part.physical.keying],
+          ["mateMpn", part.physical.mateMpn],
+          ["pairAssignment", part.physical.pairAssignment],
+          ["pinAssignment", part.physical.pinAssignment],
+          ["service", part.physical.service]
+        ] as const) {
+          if (value === undefined || value.trim().length === 0) {
+            errors.push(`${part.mpn}: ${part.physical.interface} physical ${field} must be nonblank`)
+          }
+        }
+        if (part.physical.openGates.length === 0) {
+          errors.push(`${part.mpn}: ${part.physical.interface} physical openGates must not be empty before release`)
+        }
+      }
+      if (
+        part.physical.interface === "interboard-power" &&
+        !(
+          part.physical.mateMpn?.includes("43025-0400") &&
+          part.physical.mateMpn.includes("43030-0007") &&
+          part.physical.pinAssignment?.includes("1 V20_EFUSE_OUT_A") &&
+          part.physical.pinAssignment.includes("4 GND_B")
+        )
+      ) {
+        errors.push(`${part.mpn}: interboard-power mate and four-contact assignment changed`)
+      }
+      if (
+        part.physical.interface === "interboard-usb2" &&
+        !(
+          part.physical.mateMpn === "ECDP-08-07.87-L1-L2-1-3" &&
+          part.physical.pairAssignment?.includes("100 ohm") &&
+          part.physical.pairAssignment.includes("USB_DN") &&
+          part.physical.pairAssignment.includes("USB_DP") &&
+          part.physical.pairAssignment.includes("CHASSIS") &&
+          part.physical.contactRating.includes("no power or signal-ground conductor")
+        )
+      ) {
+        errors.push(`${part.mpn}: interboard-usb2 mate, pair, shield, or no-ground assignment changed`)
       }
       const physicalScalars = [
         ["contactRating", part.physical.contactRating],
@@ -496,7 +649,7 @@ export function validateCriticalPartReadiness(parts: readonly CriticalPartReadin
         !["manufacturer-verified", "not-applicable"].includes(part.cad.status) ||
         part.mechanical.status !== "verified" ||
         part.blockers.length > 0 ||
-        (part.assembly === "external-panel-module" &&
+        (part.references.some((reference) => reference.startsWith("J_")) &&
           (part.physical === undefined || part.physical.openGates.length > 0)))
     ) {
       errors.push(`${part.mpn}: production approval requires every readiness gate to pass`)

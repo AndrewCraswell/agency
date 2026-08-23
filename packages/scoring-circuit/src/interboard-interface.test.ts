@@ -31,6 +31,10 @@ describe("inter-board interface contract", () => {
     expect(usb2HarnessSpecification.nominalOverallLengthMm).toBeCloseTo(217.4, 1)
     expect(usb2HarnessSpecification.differentialImpedanceOhm).toBe(100)
     expect(usb2HarnessSpecification.usbHighSpeedMbps).toBe(480)
+    expect(usb2HarnessSpecification.signalGroundConductor).toBe("none")
+    expect(usb2HarnessSpecification.differentialPairAssignment).toContain("USB_DN")
+    expect(usb2HarnessSpecification.differentialPairAssignment).toContain("USB_DP")
+    expect(usb2HarnessSpecification.shieldAssignment).toContain("CHASSIS only")
   })
 
   it("defines complete unique pins, parallel power contacts, and return allocation", () => {
@@ -82,8 +86,8 @@ describe("inter-board interface contract", () => {
   })
 
   it("keeps the integrated isolated module fail-closed for fabrication", () => {
-    expect(interboardArchitectureVerdict.canonicalCircuitStatus).toBe("carrier-ownership-conflict")
-    expect(interboardArchitectureVerdict.integrationStatus).toBe("not-integrated")
+    expect(interboardArchitectureVerdict.canonicalCircuitStatus).toBe("carrier-boundary-integrated")
+    expect(interboardArchitectureVerdict.integrationStatus).toBe("integrated")
     expect(interboardArchitectureVerdict.releaseState).toBe("deny")
     expect(interboardArchitectureVerdict.proposedPlacement).toContain("COMM_3V3")
     expect(interboardReleaseGates.join(" ")).toContain("MDI must not traverse")

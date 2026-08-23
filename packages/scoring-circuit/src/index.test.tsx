@@ -62,12 +62,12 @@ describe("production scoring architecture", () => {
         "U_FRAM",
         "U_RTC",
         "U_SECURE_ELEMENT",
-        "U_USB_PD",
+        "J_PWR_CARRIER",
+        "J_USB2_CARRIER",
         "U_LINE_SOURCE_A",
         "U_LINE_SOURCE_B",
         "U_LINE_SINK_A",
         "U_LINE_SINK_B",
-        "U_EFUSE",
         "U_V5_BUCK",
         "U_APP_REGULATOR"
       ])
@@ -91,7 +91,8 @@ describe("production scoring architecture", () => {
     expect(traceNames).toContain("J_PISTE.PISTE to U_ESD_L.SPARE")
     expect(traceNames).toContain("U_ESD_L.SPARE to U_PISTE_FRONTEND.RAW_PISTE")
     expect(traceNames).not.toContain("J_PISTE.PISTE to U_STM32.PISTE")
-    expect(traceNames).toContain("J_USB_C.SHIELD to net.ESD_RETURN")
+    expect(traceNames).toContain("J_USB2_CARRIER.SHIELD to net.CHASSIS")
+    expect(traceNames.some((name) => name.includes("CHASSIS") && name.includes("net.GND"))).toBe(false)
     expect(traceNames).toEqual(
       expect.arrayContaining([
         "U_STM_WATCHDOG.RESET to U_STM32.NRST",
@@ -118,8 +119,8 @@ describe("production scoring architecture", () => {
         "U_ISO_MAIN.A_ESP_RESET_ASSERT to R_STM_RESET_GATE.pin1",
         "U_ESP32.ESP_HEARTBEAT to U_ISO_MAIN.A_ESP_HEARTBEAT",
         "U_ISO_MAIN.S_ESP_HEARTBEAT to U_STM32.ESP_HEARTBEAT",
-        "R_USB_DN.USB_DN to U_ESP32.USB_DN",
-        "R_USB_DP.USB_DP to U_ESP32.USB_DP",
+        "R_USB_DN_CARRIER.USB_DN to U_ESP32.USB_DN",
+        "R_USB_DP_CARRIER.USB_DP to U_ESP32.USB_DP",
         "U_ESP32.APP_SPI_SCK to R_COMM_SCK_SERIES.pin1",
         "R_COMM_SCK_SERIES.pin2 to J_CTRL_CARRIER.W5500_SCK",
         "U_ESP32.APP_SPI_SCK to U_FRAM.SCK",
@@ -331,121 +332,34 @@ describe("production scoring architecture", () => {
     expect(componentDecisions.find((component) => component.category === "line-protection")?.mpn).toBe("TPD4E05U06DQAR")
   })
 
-  it("implements USB-C as the protected sole USB-PD power input while preserving USB2 UFP data", () => {
+  it("uses only the approved post-eFuse and USB2 carrier endpoints", () => {
     const circuitJson = renderArchitecture()
     const traceNames = circuitJson.flatMap((element) =>
       element.type === "source_trace" && "display_name" in element && typeof element.display_name === "string"
         ? [element.display_name]
         : []
     )
-    const serialized = JSON.stringify(circuitJson)
-    const sourceComponents = circuitJson.filter((element) => element.type === "source_component")
-    const sourceByName = (name: string) => sourceComponents.find((element) => element.name === name)
+    const sourceNames = circuitJson.flatMap((element) =>
+      element.type === "source_component" && typeof element.name === "string" ? [element.name] : []
+    )
 
     expect(traceNames).toEqual(
       expect.arrayContaining([
-        "J_USB_C.CC1_PORT to U_USB_PORT_PROTECT.CC1_PORT",
-        "J_USB_C.CC2_PORT to U_USB_PORT_PROTECT.CC2_PORT",
-        "U_USB_PORT_PROTECT.RPD_G1 to U_USB_PORT_PROTECT.CC1_PORT",
-        "U_USB_PORT_PROTECT.RPD_G2 to U_USB_PORT_PROTECT.CC2_PORT",
-        "J_USB_C.VBUS_PORT to U_USB_PD.VBUS_PORT",
-        "U_USB_PD.PD_PPHV_20V to U_EFUSE.VIN",
-        "U_USB_PORT_PROTECT.VBIAS to C_USB_PORT_PROTECT_BIAS.VBIAS",
-        "U_USB_PORT_PROTECT.CC1 to U_USB_PD.CC1_PROTECTED",
-        "U_USB_PORT_PROTECT.CC2 to U_USB_PD.CC2_PROTECTED",
-        "U_USB_PORT_PROTECT.FLT_N to U_USB_PD.FAULT_IN_N",
-        "U_USB_PORT_PROTECT.FLT_N to R_USB_PORT_PROTECT_FLT_PULLUP.pin1",
-        "D_USB_PD_VBUS_DISCONNECT.CATHODE_VBUS to J_USB_C.VBUS_PORT",
-        "D_USB_PD_VBUS_DISCONNECT.ANODE_GND to net.GND",
-        "U_USB_PD.PD_PPHV_20V to C_USB_PD_PPHV.PD_PPHV_20V",
-        "U_EFUSE.VOUT to U_V5_BUCK.VIN",
-        "U_V5_BUCK.SW to L_V5_BUCK.SW",
-        "L_V5_BUCK.V5_SENSE_IN to R_V5_SENSE.V5_SENSE_IN",
-        "R_V5_SENSE.V5 to net.V5",
-        "J_USB_C.SHIELD to net.ESD_RETURN"
+        "J_USB2_CARRIER.USB_DN to R_USB_DN_CARRIER.USB_DN_FROM_COMM",
+        "J_USB2_CARRIER.USB_DP to R_USB_DP_CARRIER.USB_DP_FROM_COMM",
+        "R_USB_DN_CARRIER.USB_DN to U_ESP32.USB_DN",
+        "R_USB_DP_CARRIER.USB_DP to U_ESP32.USB_DP",
+        "J_PWR_CARRIER.V20_EFUSE_OUT_A to U_V5_BUCK.VIN",
+        "J_PWR_CARRIER.V20_EFUSE_OUT_B to U_V5_BUCK.VIN",
+        "J_PWR_CARRIER.GND_A to net.GND",
+        "J_PWR_CARRIER.GND_B to net.GND",
+        "J_USB2_CARRIER.SHIELD to net.CHASSIS"
       ])
     )
-    expect(serialized).toContain("TPS25730ADREFR")
-    expect(serialized).toContain("TPD4S201TRGRRQ1")
-    expect(serialized).toContain("TVS2200DRVR")
-    expect(serialized).toContain("TPS259474ARPWR")
-    expect(serialized).toContain("TPS56A37RPAR")
-    expect(serialized).not.toContain("TPS55288RPMR")
-    expect(serialized).toContain("B340A-13-F")
-    expect(serialized).toContain("100NF_10PCT_50V_X7R_0402")
-    expect(serialized).not.toContain("J_POWER_24V")
-    expect(serialized).not.toContain("NC4MD-LX")
-    expect(serialized).not.toContain("TPS26631PWPT")
-    expect(sourceByName("C_USB_PD_LDO")).toMatchObject({ manufacturer_part_number: "T55A106M010C0200" })
-    expect(sourceByName("C_USB_PD_LDO_1V5")).toMatchObject({ manufacturer_part_number: "GRM21BR71A106KA73K" })
-    expect(sourceByName("C_USB_PD_PPHV")).toMatchObject({ manufacturer_part_number: "T523H107M035APE070" })
-    expect(sourceByName("R_USB_PD_ADCIN1_UP")).toMatchObject({ resistance: 24900 })
-    expect(sourceByName("R_USB_PD_ADCIN1_DOWN")).toMatchObject({ resistance: 10000 })
-    expect(sourceByName("R_USB_PD_ADCIN2_UP")).toMatchObject({ resistance: 10000 })
-    expect(sourceByName("R_USB_PD_ADCIN2_DOWN")).toMatchObject({ resistance: 68100 })
-    expect(sourceByName("R_USB_PD_ADCIN3_UP")).toMatchObject({ resistance: 162000 })
-    expect(sourceByName("R_USB_PD_ADCIN3_DOWN")).toMatchObject({ resistance: 38000 })
-    expect(sourceByName("R_USB_PD_ADCIN4_UP")).toMatchObject({ resistance: 191000 })
-    expect(sourceByName("R_USB_PD_ADCIN4_DOWN")).toMatchObject({ resistance: 9500 })
-    expect(sourceByName("U_EFUSE")).toMatchObject({ manufacturer_part_number: "TPS259474ARPWR" })
-    expect(sourceByName("R_EFUSE_UVLO_UP")).toMatchObject({ resistance: 475000 })
-    expect(sourceByName("R_EFUSE_OVLO_UP")).toMatchObject({ resistance: 499000 })
-    expect(sourceByName("R_EFUSE_ILM")).toMatchObject({ resistance: 1240 })
-    expect(sourceByName("C_EFUSE_ITIMER")).toMatchObject({ manufacturer_part_number: "2N2_5PCT_50V_C0G_0402" })
-    expect(sourceByName("C_EFUSE_DVDT")).toMatchObject({ manufacturer_part_number: "2N2_5PCT_50V_C0G_0402" })
-    expect(sourceByName("R_EFUSE_PGTH_UP")).toMatchObject({ resistance: 698000 })
-    expect(sourceByName("R_EFUSE_PGTH_DOWN")).toMatchObject({ resistance: 49900 })
-    const resistanceTolerance = 0.01
-    const currentLimitMaximum = (3334 / (1240 * (1 - resistanceTolerance))) * 1.1
-    const pgThresholdNominal = 1.2 * ((698000 + 49900) / 49900)
-    const pgThresholdMinimum =
-      1.2 *
-      ((698000 * (1 - resistanceTolerance) + 49900 * (1 + resistanceTolerance)) / (49900 * (1 + resistanceTolerance)))
-    const pgThresholdMaximum =
-      1.2 *
-      ((698000 * (1 + resistanceTolerance) + 49900 * (1 - resistanceTolerance)) / (49900 * (1 - resistanceTolerance)))
-    const pgDividerCurrentAt20V = 20 / (698000 + 49900)
-    expect(currentLimitMaximum).toBeCloseTo(2.99, 2)
-    expect(currentLimitMaximum).toBeLessThan(3)
-    expect(pgThresholdNominal).toBeCloseTo(17.99, 2)
-    expect(pgThresholdMinimum).toBeGreaterThan(17.6)
-    expect(pgThresholdMaximum).toBeLessThan(18.4)
-    expect(pgDividerCurrentAt20V).toBeGreaterThan(20e-6)
-    expect(sourceByName("C_EFUSE_OUT")).toMatchObject({ manufacturer_part_number: "T523H107M035APE070" })
-    expect(sourceByName("L_V5_BUCK")).toMatchObject({ manufacturer_part_number: "744325330" })
-    expect(sourceByName("C_V5_BUCK_IN_A")).toMatchObject({ manufacturer_part_number: "GRM32ER7YA106KA12L" })
-    expect(sourceByName("C_V5_BUCK_OUT_A")).toMatchObject({ manufacturer_part_number: "GRM32ER71E226KE15L" })
-    expect(sourceByName("R_V5_SENSE")).toMatchObject({ manufacturer_part_number: "CRE2512-FZ-R002E-3" })
-    const pcbCircuitJson = renderPcbPlacements()
-    const pcbCenterForSource = (name: string) => {
-      const source = pcbCircuitJson.find((element) => element.type === "source_component" && element.name === name)
-      const sourceComponentId =
-        source !== undefined && "source_component_id" in source ? source.source_component_id : undefined
-      const placed = pcbCircuitJson.find(
-        (element) => element.type === "pcb_component" && element.source_component_id === sourceComponentId
-      )
-      return placed !== undefined && "center" in placed ? placed.center : undefined
+    for (const legacyReference of ["J_USB_C", "U_USB_PORT_PROTECT", "U_USB_PD", "U_EFUSE"]) {
+      expect(sourceNames).not.toContain(legacyReference)
     }
-    // These are provisional schematic-placement coordinates only, but they must not collide in circuit JSON.
-    expect(pcbCenterForSource("L_V5_BUCK")).toEqual({ x: 12, y: -26 })
-    expect(pcbCenterForSource("L_APP_REGULATOR")).toEqual({ x: 12, y: -38 })
-    expect(pcbCenterForSource("L_V5_BUCK")).not.toEqual(pcbCenterForSource("L_APP_REGULATOR"))
-    expect(traceNames).toEqual(
-      expect.arrayContaining([
-        "U_EFUSE.EN_UVLO to R_EFUSE_UVLO_DOWN.pin1",
-        "U_EFUSE.OVLO to R_EFUSE_OVLO_DOWN.pin1",
-        "U_EFUSE.ILM to R_EFUSE_ILM.pin1",
-        "U_EFUSE.ITIMER to C_EFUSE_ITIMER.ITIMER",
-        "U_EFUSE.DVDT to C_EFUSE_DVDT.DVDT",
-        "U_EFUSE.PG to R_EFUSE_PG_PULLUP.pin1",
-        "D_USB_PD_VBUS_DISCONNECT.ANODE_GND to net.GND",
-        "D_USB_PD_VBUS_DISCONNECT.CATHODE_VBUS to J_USB_C.VBUS_PORT"
-      ])
-    )
-    expect(traceNames.some((name) => /RPD_G[12].*net\.GND/.test(name))).toBe(false)
-    expect(serialized).toContain("ANODE_GND")
-    expect(serialized).toContain("CATHODE_VBUS")
-    expect(traceNames.some((name) => name.includes("VBUS_PORT") && name.includes("net.V5"))).toBe(false)
+    expect(traceNames.some((name) => name.includes("CHASSIS") && name.includes("net.GND"))).toBe(false)
     expect(componentDecisions.find((component) => component.category === "usb-pd-controller")?.mpn).toBe(
       "TPS25730ADREFR"
     )

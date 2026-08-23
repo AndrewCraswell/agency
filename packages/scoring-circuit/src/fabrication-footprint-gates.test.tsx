@@ -1,22 +1,44 @@
 import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
+import CommunicationsModuleCircuit from "./communications-module.circuit.js"
 import { fabricationFootprintGates } from "./fabrication-footprint-gates.js"
 import ScoringCircuit from "./index.circuit.js"
 import { criticalPartReadiness } from "./part-readiness.js"
 
-function renderPcbPlacements() {
+function renderPcbPlacements(circuitElement: React.ReactElement) {
   const circuit = new Circuit()
   circuit.pcbRoutingDisabled = true
   circuit.schematicDisabled = true
   circuit.setPlatform({ partsEngineDisabled: true })
-  circuit.add(<ScoringCircuit />)
+  circuit.add(circuitElement)
   circuit.render()
   return circuit.getCircuitJson()
 }
 
+const communicationsReferences = new Set([
+  "U_USB_PORT_PROTECT",
+  "D_USB_PD_VBUS_TVS",
+  "D_USB_PD_VBUS_DISCONNECT",
+  "J_USB_C",
+  "U_USB_PD",
+  "U_EFUSE",
+  "C_USB_PD_LDO",
+  "C_USB_PD_PPHV",
+  "C_EFUSE_OUT"
+])
+
+function circuitForReference(
+  carrierJson: ReturnType<typeof renderPcbPlacements>,
+  communicationsJson: ReturnType<typeof renderPcbPlacements>,
+  reference: string
+) {
+  return communicationsReferences.has(reference) ? communicationsJson : carrierJson
+}
+
 describe("fabrication-critical footprint gates", () => {
   it("makes every generic or incomplete selected footprint non-placeable", () => {
-    const circuitJson = renderPcbPlacements()
+    const carrierJson = renderPcbPlacements(<ScoringCircuit />)
+    const communicationsJson = renderPcbPlacements(<CommunicationsModuleCircuit />)
     const gatedArtifactTypes = new Set(["pcb_smtpad", "pcb_plated_hole", "pcb_hole", "pcb_solder_paste"])
 
     for (const gate of fabricationFootprintGates) {
@@ -25,6 +47,7 @@ describe("fabrication-critical footprint gates", () => {
       expect(gate.releaseEvidence.length).toBeGreaterThan(1)
 
       for (const reference of gate.references) {
+        const circuitJson = circuitForReference(carrierJson, communicationsJson, reference)
         const source = circuitJson.find((element) => element.type === "source_component" && element.name === reference)
         const sourceComponentId =
           source !== undefined && "source_component_id" in source ? source.source_component_id : undefined
@@ -57,17 +80,17 @@ describe("fabrication-critical footprint gates", () => {
       }
     }
 
-    const controlSource = circuitJson.find(
-      (element) => element.type === "source_component" && element.name === "R_USB_DN"
+    const controlSource = carrierJson.find(
+      (element) => element.type === "source_component" && element.name === "R_USB_DN_CARRIER"
     )
-    const controlPcb = circuitJson.find(
+    const controlPcb = carrierJson.find(
       (element) =>
         element.type === "pcb_component" &&
         controlSource !== undefined &&
         "source_component_id" in controlSource &&
         element.source_component_id === controlSource.source_component_id
     )
-    const controlPads = circuitJson.filter(
+    const controlPads = carrierJson.filter(
       (element) =>
         element.type === "pcb_smtpad" &&
         controlPcb !== undefined &&
@@ -76,13 +99,15 @@ describe("fabrication-critical footprint gates", () => {
     )
     expect(controlPcb).not.toMatchObject({ do_not_place: true })
     expect(controlPads.length).toBeGreaterThan(0)
-  })
+  }, 20_000)
 
   it("maps every footprint gate to the exact selected circuit MPN", () => {
-    const circuitJson = renderPcbPlacements()
+    const carrierJson = renderPcbPlacements(<ScoringCircuit />)
+    const communicationsJson = renderPcbPlacements(<CommunicationsModuleCircuit />)
 
     for (const gate of fabricationFootprintGates) {
       for (const reference of gate.references) {
+        const circuitJson = circuitForReference(carrierJson, communicationsJson, reference)
         const source = circuitJson.find((element) => element.type === "source_component" && element.name === reference)
         expect(source).toBeDefined()
 

@@ -605,243 +605,42 @@ function ScoringCircuit() {
       />
       <pinheader name="TP_ESP_RESET_REQUEST" pinCount={1} pinLabels={["RESET_REQUEST"]} pcbX={5} pcbY={-11} />
 
-      <connector
-        name="J_USB_C"
-        manufacturerPartNumber="10177070-00011LF"
-        standard="usb_c"
-        // This is a logical USB-C interface only. The selected Amphenol
-        // receptacle has a manufacturer-specific contact, shell-stake, and
-        // board-edge pattern; a generic USB-C model must never enter fab data.
-        {...manufacturerFootprintProps("10177070-00011LF")}
-        pinLabels={{
-          pin1: "USB_DN_PORT",
-          pin2: "USB_DP_PORT",
-          pin3: "CC1_PORT",
-          pin4: "CC2_PORT",
-          pin5: "VBUS_PORT",
-          pin6: "GND",
-          pin7: "SHIELD"
-        }}
+      <chip
+        name="J_PWR_CARRIER"
+        manufacturerPartNumber="Molex 43045-0400"
+        // The same exact header is specified at both ends of the de-energized
+        // J_PWR harness. Its land pattern remains deliberately absent from
+        // fabrication output until the controlled Molex geometry is reviewed.
+        {...manufacturerFootprintProps("Molex 43045-0400")}
+        pinLabels={{ pin1: "V20_EFUSE_OUT_A", pin2: "GND_A", pin3: "V20_EFUSE_OUT_B", pin4: "GND_B" }}
         pcbX={52}
         pcbY={-46}
-        pcbRotation={180}
       />
       <chip
-        name="U_USB_PORT_PROTECT"
-        manufacturerPartNumber="TPD4S201TRGRRQ1"
-        {...manufacturerFootprintProps("TPD4S201TRGRRQ1")}
-        pinLabels={{
-          pin1: "USB_DN_PORT",
-          pin2: "USB_DP_PORT",
-          pin3: "CC1_PORT",
-          pin4: "CC2_PORT",
-          pin5: "USB_DN_PROTECTED",
-          pin6: "USB_DP_PROTECTED",
-          pin7: "CC1",
-          pin8: "CC2",
-          pin9: "PD_LDO_3V3",
-          pin10: "GND",
-          pin11: "RPD_G1",
-          pin12: "RPD_G2",
-          pin13: "VBIAS",
-          pin14: "FLT_N"
-        }}
+        name="J_USB2_CARRIER"
+        manufacturerPartNumber="HSEC8-113-01-L-DV-A-L2"
+        // The Samtec pair assignment, edge-card geometry, mask, paste, and
+        // courtyard remain a controlled harness release gate.
+        {...manufacturerFootprintProps("HSEC8-113-01-L-DV-A-L2")}
+        pinLabels={{ pin1: "USB_DN", pin2: "USB_DP", pin3: "SHIELD" }}
         pcbX={44}
         pcbY={-46}
       />
       <chip
-        name="R_USB_DN"
+        name="R_USB_DN_CARRIER"
         manufacturerPartNumber="22R_1PCT_0402"
         footprint="0402"
-        pinLabels={{ pin1: "USB_DN_PROTECTED", pin2: "USB_DN" }}
+        pinLabels={{ pin1: "USB_DN_FROM_COMM", pin2: "USB_DN" }}
         pcbX={38}
         pcbY={-44}
       />
       <chip
-        name="R_USB_DP"
+        name="R_USB_DP_CARRIER"
         manufacturerPartNumber="22R_1PCT_0402"
         footprint="0402"
-        pinLabels={{ pin1: "USB_DP_PROTECTED", pin2: "USB_DP" }}
+        pinLabels={{ pin1: "USB_DP_FROM_COMM", pin2: "USB_DP" }}
         pcbX={38}
         pcbY={-48}
-      />
-      <chip
-        name="D_USB_PD_VBUS_TVS"
-        manufacturerPartNumber="TVS2200DRVR"
-        {...manufacturerFootprintProps("TVS2200DRVR")}
-        pinLabels={{ pin1: "VBUS_PORT", pin2: "ESD_RETURN" }}
-        pcbX={44}
-        pcbY={-34}
-      />
-      <chip
-        name="U_USB_PD"
-        manufacturerPartNumber="TPS25730ADREFR"
-        // The 38-pin DRE package needs its TI thermal-pad/paste definition.
-        // Keep this non-placeable until the manufacturer pattern is imported.
-        {...manufacturerFootprintProps("TPS25730ADREFR")}
-        pinLabels={{
-          pin1: "VBUS_PORT",
-          pin2: "CC1_PROTECTED",
-          pin3: "CC2_PROTECTED",
-          pin4: "PD_PPHV_20V",
-          pin5: "VIN_3V3",
-          pin6: "LDO_3V3",
-          pin7: "LDO_1V5",
-          pin8: "ADCIN1",
-          pin9: "ADCIN2",
-          pin10: "ADCIN3",
-          pin11: "ADCIN4",
-          pin12: "PD5VMAX_N",
-          pin13: "CC1_PROTECTED",
-          pin14: "CC2_PROTECTED",
-          pin15: "FAULT_IN_N",
-          pin16: "CAP_MIS_N",
-          pin17: "GND"
-        }}
-        pcbX={31}
-        pcbY={-39}
-      />
-      <chip
-        name="C_USB_PD_LDO"
-        manufacturerPartNumber="T55A106M010C0200"
-        // A generic 1206 does not carry this polymer capacitor's polarity,
-        // paste, or courtyard definition.
-        {...manufacturerFootprintProps("T55A106M010C0200")}
-        pinLabels={{ pin1: "PD_LDO_3V3", pin2: "GND" }}
-        pcbX={21}
-        pcbY={-44}
-      />
-      <chip
-        name="C_USB_PORT_PROTECT_BIAS"
-        manufacturerPartNumber="100NF_10PCT_50V_X7R_0402"
-        footprint="0402"
-        pinLabels={{ pin1: "VBIAS", pin2: "GND" }}
-        pcbX={21}
-        pcbY={-48}
-      />
-      <chip
-        name="C_USB_PD_LDO_1V5"
-        manufacturerPartNumber="GRM21BR71A106KA73K"
-        footprint="0805"
-        pinLabels={{ pin1: "LDO_1V5", pin2: "GND" }}
-        pcbX={17}
-        pcbY={-44}
-      />
-      <chip
-        name="C_USB_PD_VIN_3V3"
-        manufacturerPartNumber="10UF_10PCT_10V_X7R_0805"
-        footprint="0805"
-        pinLabels={{ pin1: "VIN_3V3", pin2: "GND" }}
-        pcbX={17}
-        pcbY={-40}
-      />
-      <chip
-        name="C_USB_PD_VBUS"
-        manufacturerPartNumber="4U7_10PCT_50V_X7R_0805"
-        footprint="0805"
-        pinLabels={{ pin1: "VBUS_PORT", pin2: "GND" }}
-        pcbX={45}
-        pcbY={-30}
-      />
-      <chip
-        name="C_USB_PD_PPHV"
-        manufacturerPartNumber="T523H107M035APE070"
-        // A generic 2924 does not carry this polymer capacitor's polarity,
-        // paste, or courtyard definition.
-        {...manufacturerFootprintProps("T523H107M035APE070")}
-        pinLabels={{ pin1: "PD_PPHV_20V", pin2: "GND" }}
-        pcbX={25}
-        pcbY={-44}
-      />
-      <chip
-        name="C_USB_PD_CC1"
-        manufacturerPartNumber="330PF_5PCT_50V_C0G_0402"
-        footprint="0402"
-        pinLabels={{ pin1: "CC1_PROTECTED", pin2: "GND" }}
-        pcbX={28}
-        pcbY={-48}
-      />
-      <chip
-        name="C_USB_PD_CC2"
-        manufacturerPartNumber="330PF_5PCT_50V_C0G_0402"
-        footprint="0402"
-        pinLabels={{ pin1: "CC2_PROTECTED", pin2: "GND" }}
-        pcbX={31}
-        pcbY={-48}
-      />
-      <chip
-        name="D_USB_PD_VBUS_DISCONNECT"
-        manufacturerPartNumber="B340A-13-F"
-        {...manufacturerFootprintProps("B340A-13-F")}
-        pinLabels={{ pin1: "ANODE_GND", pin2: "CATHODE_VBUS" }}
-        pcbX={48}
-        pcbY={-30}
-      />
-      <resistor name="R_USB_PD_ADCIN1_UP" resistance={24900} footprint="0402" pcbX={25} pcbY={-30} />
-      <resistor name="R_USB_PD_ADCIN1_DOWN" resistance={10000} footprint="0402" pcbX={21} pcbY={-30} />
-      <resistor name="R_USB_PD_ADCIN2_UP" resistance={10000} footprint="0402" pcbX={25} pcbY={-26} />
-      <resistor name="R_USB_PD_ADCIN2_DOWN" resistance={68100} footprint="0402" pcbX={21} pcbY={-26} />
-      <resistor name="R_USB_PD_ADCIN3_UP" resistance={162000} footprint="0402" pcbX={25} pcbY={-22} />
-      <resistor name="R_USB_PD_ADCIN3_DOWN" resistance={38000} footprint="0402" pcbX={21} pcbY={-22} />
-      <resistor name="R_USB_PD_ADCIN4_UP" resistance={191000} footprint="0402" pcbX={25} pcbY={-18} />
-      <resistor name="R_USB_PD_ADCIN4_DOWN" resistance={9500} footprint="0402" pcbX={21} pcbY={-18} />
-      <resistor name="R_USB_PD_PD5VMAX" resistance={10000} footprint="0402" pcbX={17} pcbY={-18} />
-      <resistor name="R_USB_PORT_PROTECT_FLT_PULLUP" resistance={10000} footprint="0402" pcbX={17} pcbY={-22} />
-      <pinheader name="TP_USB_VBUS_PORT" pinCount={1} pinLabels={["VBUS_PORT"]} pcbX={50} pcbY={-36} />
-      <pinheader name="TP_USB_PD_PPHV" pinCount={1} pinLabels={["PD_PPHV_20V"]} pcbX={25} pcbY={-48} />
-      <pinheader name="TP_USB_PD_CAP_MIS" pinCount={1} pinLabels={["CAP_MIS_N"]} pcbX={13} pcbY={-48} />
-      <chip
-        name="U_EFUSE"
-        manufacturerPartNumber="TPS259474ARPWR"
-        // The RPW VQFN-HR exposed-pad geometry is not a generic qfn10.
-        {...manufacturerFootprintProps("TPS259474ARPWR")}
-        pinLabels={{
-          pin1: "EN_UVLO",
-          pin2: "OVLO",
-          pin3: "PG",
-          pin4: "PGTH",
-          pin5: "VIN",
-          pin6: "VOUT",
-          pin7: "DVDT",
-          pin8: "GND",
-          pin9: "ILM",
-          pin10: "ITIMER"
-        }}
-        pcbX={36}
-        pcbY={-38}
-      />
-      <resistor name="R_EFUSE_UVLO_UP" resistance={475000} footprint="0402" pcbX={40} pcbY={-26} />
-      <resistor name="R_EFUSE_UVLO_DOWN" resistance={38300} footprint="0402" pcbX={36} pcbY={-26} />
-      <resistor name="R_EFUSE_OVLO_UP" resistance={499000} footprint="0402" pcbX={32} pcbY={-26} />
-      <resistor name="R_EFUSE_OVLO_DOWN" resistance={28700} footprint="0402" pcbX={28} pcbY={-26} />
-      <resistor name="R_EFUSE_ILM" resistance={1240} tolerance="1%" footprint="0402" pcbX={40} pcbY={-30} />
-      <chip
-        name="C_EFUSE_ITIMER"
-        manufacturerPartNumber="2N2_5PCT_50V_C0G_0402"
-        footprint="0402"
-        pinLabels={{ pin1: "ITIMER", pin2: "GND" }}
-        pcbX={36}
-        pcbY={-30}
-      />
-      <chip
-        name="C_EFUSE_DVDT"
-        manufacturerPartNumber="2N2_5PCT_50V_C0G_0402"
-        footprint="0402"
-        pinLabels={{ pin1: "DVDT", pin2: "GND" }}
-        pcbX={32}
-        pcbY={-30}
-      />
-      <resistor name="R_EFUSE_PGTH_UP" resistance={698000} tolerance="1%" footprint="0402" pcbX={28} pcbY={-30} />
-      <resistor name="R_EFUSE_PGTH_DOWN" resistance={49900} tolerance="1%" footprint="0402" pcbX={24} pcbY={-30} />
-      <resistor name="R_EFUSE_PG_PULLUP" resistance={10000} footprint="0402" pcbX={40} pcbY={-34} />
-      <chip
-        name="C_EFUSE_OUT"
-        manufacturerPartNumber="T523H107M035APE070"
-        // See C_USB_PD_PPHV: exact polymer land pattern is a release gate.
-        {...manufacturerFootprintProps("T523H107M035APE070")}
-        pinLabels={{ pin1: "VOUT", pin2: "GND" }}
-        pcbX={36}
-        pcbY={-34}
       />
       <chip
         name="U_V5_BUCK"
@@ -1118,98 +917,19 @@ function ScoringCircuit() {
       <trace from="U_ESP32.ESP_HEARTBEAT" to="U_ISO_MAIN.A_ESP_HEARTBEAT" />
       <trace from="U_ISO_MAIN.S_ESP_HEARTBEAT" to="U_STM32.ESP_HEARTBEAT" />
 
-      <trace from="J_USB_C.USB_DN_PORT" to="U_USB_PORT_PROTECT.USB_DN_PORT" />
-      <trace from="J_USB_C.USB_DP_PORT" to="U_USB_PORT_PROTECT.USB_DP_PORT" />
-      <trace from="U_USB_PORT_PROTECT.USB_DN_PROTECTED" to="R_USB_DN.USB_DN_PROTECTED" />
-      <trace from="U_USB_PORT_PROTECT.USB_DP_PROTECTED" to="R_USB_DP.USB_DP_PROTECTED" />
-      <trace from="R_USB_DN.USB_DN" to="U_ESP32.USB_DN" />
-      <trace from="R_USB_DP.USB_DP" to="U_ESP32.USB_DP" />
-      <trace from="J_USB_C.CC1_PORT" to="U_USB_PORT_PROTECT.CC1_PORT" />
-      <trace from="J_USB_C.CC2_PORT" to="U_USB_PORT_PROTECT.CC2_PORT" />
-      <trace from="U_USB_PORT_PROTECT.RPD_G1" to="U_USB_PORT_PROTECT.CC1_PORT" />
-      <trace from="U_USB_PORT_PROTECT.RPD_G2" to="U_USB_PORT_PROTECT.CC2_PORT" />
-      <trace from="U_USB_PORT_PROTECT.CC1" to="U_USB_PD.CC1_PROTECTED" />
-      <trace from="U_USB_PORT_PROTECT.CC2" to="U_USB_PD.CC2_PROTECTED" />
-      <trace from="U_USB_PORT_PROTECT.PD_LDO_3V3" to="U_USB_PD.LDO_3V3" />
-      <trace from="U_USB_PORT_PROTECT.GND" to="net.GND" />
-      <trace from="U_USB_PORT_PROTECT.VBIAS" to="C_USB_PORT_PROTECT_BIAS.VBIAS" />
-      <trace from="C_USB_PORT_PROTECT_BIAS.GND" to="net.GND" />
-      <trace from="U_USB_PORT_PROTECT.FLT_N" to="U_USB_PD.FAULT_IN_N" />
-      <trace from="U_USB_PORT_PROTECT.FLT_N" to="R_USB_PORT_PROTECT_FLT_PULLUP.pin1" />
-      <trace from="R_USB_PORT_PROTECT_FLT_PULLUP.pin2" to="U_USB_PD.LDO_3V3" />
-      <trace from="J_USB_C.GND" to="net.GND" />
-      <trace from="J_USB_C.SHIELD" to="net.ESD_RETURN" />
-      <trace from="J_USB_C.VBUS_PORT" to="D_USB_PD_VBUS_TVS.VBUS_PORT" />
-      <trace from="D_USB_PD_VBUS_TVS.ESD_RETURN" to="net.ESD_RETURN" />
-      <trace from="J_USB_C.VBUS_PORT" to="U_USB_PD.VBUS_PORT" />
-      <trace from="J_USB_C.VBUS_PORT" to="C_USB_PD_VBUS.VBUS_PORT" />
-      <trace from="C_USB_PD_VBUS.GND" to="net.GND" />
-      <trace from="D_USB_PD_VBUS_DISCONNECT.CATHODE_VBUS" to="J_USB_C.VBUS_PORT" />
-      <trace from="D_USB_PD_VBUS_DISCONNECT.ANODE_GND" to="net.GND" />
-      <trace from="J_USB_C.VBUS_PORT" to="TP_USB_VBUS_PORT.VBUS_PORT" />
-      <trace from="U_USB_PD.PD_PPHV_20V" to="TP_USB_PD_PPHV.PD_PPHV_20V" />
-      <trace from="U_USB_PD.PD_PPHV_20V" to="U_EFUSE.VIN" />
-      <trace from="U_USB_PD.PD_PPHV_20V" to="C_USB_PD_PPHV.PD_PPHV_20V" />
-      <trace from="C_USB_PD_PPHV.GND" to="net.GND" />
-      <trace from="U_USB_PD.VIN_3V3" to="net.V3_3" />
-      <trace from="U_USB_PD.VIN_3V3" to="C_USB_PD_VIN_3V3.VIN_3V3" />
-      <trace from="C_USB_PD_VIN_3V3.GND" to="net.GND" />
-      <trace from="U_USB_PD.LDO_3V3" to="C_USB_PD_LDO.PD_LDO_3V3" />
-      <trace from="C_USB_PD_LDO.GND" to="net.GND" />
-      <trace from="U_USB_PD.LDO_1V5" to="C_USB_PD_LDO_1V5.LDO_1V5" />
-      <trace from="C_USB_PD_LDO_1V5.GND" to="net.GND" />
-      <trace from="U_USB_PD.CC1_PROTECTED" to="C_USB_PD_CC1.CC1_PROTECTED" />
-      <trace from="C_USB_PD_CC1.GND" to="net.GND" />
-      <trace from="U_USB_PD.CC2_PROTECTED" to="C_USB_PD_CC2.CC2_PROTECTED" />
-      <trace from="C_USB_PD_CC2.GND" to="net.GND" />
-      <trace from="U_USB_PD.ADCIN1" to="R_USB_PD_ADCIN1_UP.pin2" />
-      <trace from="U_USB_PD.ADCIN1" to="R_USB_PD_ADCIN1_DOWN.pin1" />
-      <trace from="R_USB_PD_ADCIN1_DOWN.pin2" to="net.GND" />
-      <trace from="R_USB_PD_ADCIN1_UP.pin1" to="U_USB_PD.LDO_3V3" />
-      <trace from="U_USB_PD.ADCIN2" to="R_USB_PD_ADCIN2_UP.pin2" />
-      <trace from="U_USB_PD.ADCIN2" to="R_USB_PD_ADCIN2_DOWN.pin1" />
-      <trace from="R_USB_PD_ADCIN2_DOWN.pin2" to="net.GND" />
-      <trace from="R_USB_PD_ADCIN2_UP.pin1" to="U_USB_PD.LDO_3V3" />
-      <trace from="U_USB_PD.ADCIN3" to="R_USB_PD_ADCIN3_UP.pin2" />
-      <trace from="U_USB_PD.ADCIN3" to="R_USB_PD_ADCIN3_DOWN.pin1" />
-      <trace from="R_USB_PD_ADCIN3_DOWN.pin2" to="net.GND" />
-      <trace from="R_USB_PD_ADCIN3_UP.pin1" to="U_USB_PD.LDO_3V3" />
-      <trace from="U_USB_PD.ADCIN4" to="R_USB_PD_ADCIN4_UP.pin2" />
-      <trace from="U_USB_PD.ADCIN4" to="R_USB_PD_ADCIN4_DOWN.pin1" />
-      <trace from="R_USB_PD_ADCIN4_DOWN.pin2" to="net.GND" />
-      <trace from="R_USB_PD_ADCIN4_UP.pin1" to="U_USB_PD.LDO_3V3" />
-      <trace from="U_USB_PD.PD5VMAX_N" to="R_USB_PD_PD5VMAX.pin1" />
-      <trace from="R_USB_PD_PD5VMAX.pin2" to="net.GND" />
-      <trace from="U_USB_PD.CAP_MIS_N" to="TP_USB_PD_CAP_MIS.CAP_MIS_N" />
-      <trace from="U_USB_PD.GND" to="net.GND" />
-      <trace from="U_EFUSE.GND" to="net.GND" />
-      <trace from="U_EFUSE.VIN" to="R_EFUSE_UVLO_UP.pin1" />
-      <trace from="R_EFUSE_UVLO_UP.pin2" to="U_EFUSE.EN_UVLO" />
-      <trace from="U_EFUSE.EN_UVLO" to="R_EFUSE_UVLO_DOWN.pin1" />
-      <trace from="R_EFUSE_UVLO_DOWN.pin2" to="net.GND" />
-      <trace from="U_EFUSE.VIN" to="R_EFUSE_OVLO_UP.pin1" />
-      <trace from="R_EFUSE_OVLO_UP.pin2" to="U_EFUSE.OVLO" />
-      <trace from="U_EFUSE.OVLO" to="R_EFUSE_OVLO_DOWN.pin1" />
-      <trace from="R_EFUSE_OVLO_DOWN.pin2" to="net.GND" />
-      <trace from="U_EFUSE.ILM" to="R_EFUSE_ILM.pin1" />
-      <trace from="R_EFUSE_ILM.pin2" to="net.GND" />
-      <trace from="U_EFUSE.ITIMER" to="C_EFUSE_ITIMER.ITIMER" />
-      <trace from="C_EFUSE_ITIMER.GND" to="net.GND" />
-      <trace from="U_EFUSE.DVDT" to="C_EFUSE_DVDT.DVDT" />
-      <trace from="C_EFUSE_DVDT.GND" to="net.GND" />
-      <trace from="U_EFUSE.VOUT" to="R_EFUSE_PGTH_UP.pin1" />
-      <trace from="R_EFUSE_PGTH_UP.pin2" to="U_EFUSE.PGTH" />
-      <trace from="U_EFUSE.PGTH" to="R_EFUSE_PGTH_DOWN.pin1" />
-      <trace from="R_EFUSE_PGTH_DOWN.pin2" to="net.GND" />
-      <trace from="U_EFUSE.PG" to="R_EFUSE_PG_PULLUP.pin1" />
-      <trace from="R_EFUSE_PG_PULLUP.pin2" to="net.V3_3" />
-      <trace from="U_EFUSE.VOUT" to="C_EFUSE_OUT.VOUT" />
-      <trace from="C_EFUSE_OUT.GND" to="net.GND" />
-      <trace from="U_EFUSE.VOUT" to="U_V5_BUCK.VIN" />
-      <trace from="U_EFUSE.VOUT" to="C_V5_BUCK_IN_A.VIN" />
-      <trace from="U_EFUSE.VOUT" to="C_V5_BUCK_IN_B.VIN" />
-      <trace from="U_EFUSE.VOUT" to="C_V5_BUCK_IN_HF.VIN" />
-      <trace from="U_EFUSE.VOUT" to="R_V5_BUCK_EN_UP.pin1" />
+      <trace from="J_USB2_CARRIER.USB_DN" to="R_USB_DN_CARRIER.USB_DN_FROM_COMM" />
+      <trace from="J_USB2_CARRIER.USB_DP" to="R_USB_DP_CARRIER.USB_DP_FROM_COMM" />
+      <trace from="R_USB_DN_CARRIER.USB_DN" to="U_ESP32.USB_DN" />
+      <trace from="R_USB_DP_CARRIER.USB_DP" to="U_ESP32.USB_DP" />
+      <trace from="J_USB2_CARRIER.SHIELD" to="net.CHASSIS" />
+      <trace from="J_PWR_CARRIER.V20_EFUSE_OUT_A" to="U_V5_BUCK.VIN" />
+      <trace from="J_PWR_CARRIER.V20_EFUSE_OUT_B" to="U_V5_BUCK.VIN" />
+      <trace from="J_PWR_CARRIER.V20_EFUSE_OUT_A" to="C_V5_BUCK_IN_A.VIN" />
+      <trace from="J_PWR_CARRIER.V20_EFUSE_OUT_B" to="C_V5_BUCK_IN_B.VIN" />
+      <trace from="J_PWR_CARRIER.V20_EFUSE_OUT_A" to="C_V5_BUCK_IN_HF.VIN" />
+      <trace from="J_PWR_CARRIER.V20_EFUSE_OUT_B" to="R_V5_BUCK_EN_UP.pin1" />
+      <trace from="J_PWR_CARRIER.GND_A" to="net.GND" />
+      <trace from="J_PWR_CARRIER.GND_B" to="net.GND" />
       <trace from="R_V5_BUCK_EN_UP.pin2" to="U_V5_BUCK.EN" />
       <trace from="U_V5_BUCK.EN" to="R_V5_BUCK_EN_DOWN.pin1" />
       <trace from="R_V5_BUCK_EN_DOWN.pin2" to="net.GND" />

@@ -64,11 +64,14 @@ export const controlHarnessSpecification = {
 
 export const usb2HarnessSpecification = {
   cableMpn: "ECDP-08-07.87-L1-L2-1-3",
+  differentialPairAssignment: "twinax pair 1: negative conductor USB_DN, positive conductor USB_DP",
   differentialImpedanceOhm: 100,
   maximumPublishedDataRateGbps: 14,
   nominalOverallLengthMm: 217.4,
   nominalWireLengthIn: 7.87,
   nominalWireLengthMm: 199.9,
+  signalGroundConductor: "none",
+  shieldAssignment: "cable shield and both HSEC8 metalwork bond to CHASSIS only",
   socketMpn: "HSEC8-113-01-L-DV-A-L2",
   socketQuantity: 2,
   usbHighSpeedMbps: 480,
@@ -140,7 +143,7 @@ export const shieldAndGroundContract = {
   communicationsTermination:
     "USB-C shell, RJ45 shield, ECDP shield, and communications-side HSEC8 metalwork bond to CHASSIS at the connector-entry zone.",
   usbSignalReturn:
-    "USB D+ and D- use one 100 ohm twinax pair. APP_GND reference continuity is provided only by the J_PWR GND conductors; shield is never signal return."
+    "USB D+ and D- use one 100 ohm twinax pair with no separate signal-ground conductor. APP_GND reference continuity is provided only by the J_PWR GND conductors; shield is CHASSIS and never signal return."
 } as const
 
 export const serviceAndSequencingContract = {
@@ -225,12 +228,12 @@ export const interboardReleaseGates = [
 ] as const
 
 export const interboardArchitectureVerdict = {
-  canonicalCircuitStatus: "carrier-ownership-conflict" as const,
-  integrationStatus: "not-integrated" as const,
+  canonicalCircuitStatus: "carrier-boundary-integrated" as const,
+  integrationStatus: "integrated" as const,
   proposedPlacement:
     "Communications module: USB-C entry and PD protection, W5500 with locally generated COMM_3V3, integrated-magnetics RJ45, and chassis/shield bond. Application carrier: ESP32 and V5/V3_3 conversion.",
   reason:
-    "The isolated communications-module model owns the intended USB-C, PD/eFuse, W5500, MagJack, and MDI functions, but the canonical application carrier still contains the legacy USB-C/PD chain. Release remains denied until that duplicate ownership is removed and the carrier exposes only J_PWR and J_USB2 at this boundary.",
+    "The canonical application carrier exposes only J_PWR_CARRIER for post-eFuse 20 V and J_USB2_CARRIER for native USB 2.0. The communications module owns USB-C entry, PD/eFuse, W5500, MagJack, and MDI. Fabrication remains denied pending the controlled connector CAD, USB/Ethernet signal-integrity, power/thermal, chassis, and bench evidence.",
   releaseState: "deny" as const
 }
 
@@ -308,6 +311,10 @@ export function validateInterboardContract(input: unknown): void {
   if (
     usb2HarnessSpecification.differentialImpedanceOhm !== 100 ||
     usb2HarnessSpecification.maximumPublishedDataRateGbps !== 14 ||
+    usb2HarnessSpecification.signalGroundConductor !== "none" ||
+    !usb2HarnessSpecification.differentialPairAssignment.includes("USB_DN") ||
+    !usb2HarnessSpecification.differentialPairAssignment.includes("USB_DP") ||
+    !usb2HarnessSpecification.shieldAssignment.includes("CHASSIS only") ||
     usb2HarnessSpecification.usbHighSpeedMbps !== 480 ||
     usb2HarnessSpecification.wireGaugeAwg !== 30
   ) {

@@ -2,17 +2,17 @@
 
 ## Decision
 
-This page is a review-only contract for a future communications-module split. The canonical circuit has not moved
-`U_ETHERNET`, `J_ETHERNET_MAGJACK`, USB-PD, or any other component, and it does not yet contain `COMM_3V3`. This page
-cannot be cited as PCB, readiness, or fabrication evidence until a separate integration change updates the circuit and
-the canonical readiness registers.
+This page defines the reviewed communications-module to application-carrier boundary. The canonical carrier owns
+`J_PWR_CARRIER` and `J_USB2_CARRIER`; the canonical communications module owns the external USB-C entry, USB-PD/eFuse,
+`U_ETHERNET`, `J_ETHERNET_MAGJACK`, and `COMM_3V3`. This integration is architecture evidence only and cannot be cited
+as PCB, readiness, or fabrication release evidence.
 
 The proposed architecture uses three communications-module to application-carrier harnesses:
 
 | Interface | Selected exact orderable items | Signals and power | Boundaries |
 | --- | --- | --- | --- |
 | `J_PWR` | Molex `43045-0400` header, `43025-0400` receptacle, `43030-0007` female crimp terminal | Two `V20_EFUSE_OUT`, two `GND`, 20 AWG | Post-eFuse 20 V only. No raw USB VBUS, CC, data, shield, or scoring ground. 3 A source input is limited to 1.5 A per contact before derating. No energized mating. |
-| `J_USB2` | Samtec `ECDP-08-07.87-L1-L2-1-3` Edge Card twinax assembly and two `HSEC8-113-01-L-DV-A-L2` vertical latch sockets | One 100 ohm twinax pair for USB `D+` and `D-`; cable shield | `07.87` is wire length in inches: nominally 199.9 mm wire and about 217.4 mm overall reference length. Dedicated USB 2.0 path; final Series Prints control pair assignment and geometry. |
+| `J_USB2` | Samtec `ECDP-08-07.87-L1-L2-1-3` Edge Card twinax assembly and two `HSEC8-113-01-L-DV-A-L2` vertical latch sockets | One 100 ohm twinax pair: negative conductor `USB_DN`, positive conductor `USB_DP`; cable shield; no signal-ground conductor | `07.87` is wire length in inches: nominally 199.9 mm wire and about 217.4 mm overall reference length. Dedicated USB 2.0 path; final Series Prints control the physical contact assignment and geometry. |
 | `J_CTRL` | Molex `43045-1200` header, `43025-1200` receptacle, `43030-0007` female crimp terminal | W5500 SPI, chip select, reset, interrupt, communications-module present, and five ground returns | 3.3 V low-speed logic only. No Ethernet MDI or USB. SPI SCK is capped at 10 MHz pending SI release. |
 
 The exact wires, contact-plating option, and harness jacket must be purchased and qualified as one drawing-controlled
@@ -23,16 +23,18 @@ resistors; default pulls are 100 kOhm. These are controlled starting values and 
 
 ## Ethernet placement
 
-The proposed integration moves `U_ETHERNET` (W5500), line-side protection, and `J_ETHERNET_MAGJACK` together onto the
-replaceable communications module. The change is not present in `index.circuit.tsx` today. When implemented, the W5500
-MDI pairs must remain short, impedance-controlled routes on that one PCB. They must not cross `J_PWR`, `J_USB2`,
+The integration places `U_ETHERNET` (W5500), line-side protection, and `J_ETHERNET_MAGJACK` together onto the
+replaceable communications module. W5500 MDI pairs must remain short, impedance-controlled routes on that one PCB.
+They must not cross `J_PWR`, `J_USB2`,
 `J_CTRL`, a ribbon cable, or another board connector.
 
-The existing canonical placement therefore remains **DENY** for this three-assembly architecture. The future
-communications module must derive `COMM_3V3` locally from post-eFuse 20 V rather than borrow an unallocated 3.3 V
-conductor from `J_CTRL`. The regulator selection, footprint, decoupling, power-good, reset sequencing, Ethernet power
-integrity, and thermal behavior remain entirely unmodeled and open. The application carrier retains the ESP32 and a
-future integration may connect it to W5500 through `J_CTRL` only after the 10 MHz SPI channel passes SI review.
+The canonical architecture remains **DENY** for fabrication even though its ownership boundary is integrated. The
+communications module derives `COMM_3V3` locally from post-eFuse 20 V rather than borrow an unallocated 3.3 V
+conductor from `J_CTRL`. The regulator and its support network, power-good path, supervisor, reset sink, I/O gates, and
+control pulls are present in the connectivity model. Their footprints, placement, power integrity, signal integrity,
+thermal behavior, and bench validation remain unreleased and unverified; W5500 supply decoupling is still incomplete.
+The application carrier retains the ESP32 and connects it to W5500 through `J_CTRL`, but the 10 MHz SPI channel remains
+a signal-integrity release gate.
 
 ## Pin allocation
 
@@ -64,10 +66,12 @@ only the disconnected state. Carrier defaults are SCK/MOSI/reset-assert low, chi
 These states and the `IOFF` gates prevent an unpowered communications module from being back-powered through control
 or status pins.
 
-The `J_USB2` pair map is intentionally controlled by the ordered Samtec Series Print rather than reconstructed from a
-generic edge-card drawing. It must use two `HSEC8-113-01-L-DV-A-L2` latch sockets and assign a complete 100 ohm twinax
-pair to USB `D+` and `D-`. The selected cable's `07.87` length field is inches, not centimetres or millimetres: it is
-199.9 mm nominal wire length and approximately 217.4 mm overall reference length per the family drawing.
+The `J_USB2` physical contact map is intentionally controlled by the ordered Samtec Series Print rather than
+reconstructed from a generic edge-card drawing. It must use two `HSEC8-113-01-L-DV-A-L2` latch sockets and assign one
+complete 100 ohm twinax pair with the negative conductor as `USB_DN` and the positive conductor as `USB_DP`. It assigns
+no separate signal-ground conductor. The cable shield and both connector metalwork terminations are `CHASSIS` only.
+The selected cable's `07.87` length field is inches, not centimetres or millimetres: it is 199.9 mm nominal wire length
+and approximately 217.4 mm overall reference length per the family drawing.
 
 ## Grounding, shield, ESD, and service
 
@@ -94,9 +98,9 @@ fasteners take insertion load. No PCB solder joint may be the mechanical retenti
   recovery at full display load and 50 C blocked vent. The 3 A round-trip drop limit is 100 mV.
 - Perform latching, keying, mis-mate, crimp pull, vibration, mating-cycle, module replacement, and servicing trials in
   the released enclosure. Confirm clearances and creepage for 20 V in the actual cable and board geometry.
-- Integrate W5500/MagJack relocation, select and model `COMM_3V3`, and update canonical fabrication/readiness records.
-- Model and validate the exact supervisor, reset sink, input/output gates, pulls, source-series resistors, and power-off
-  leakage before any signal is connected to an unpowered module.
+- Close the selected W5500/MagJack, `COMM_3V3`, carrier connector, and canonical fabrication/readiness evidence.
+- Independently review and release the modeled supervisor, reset sink, input/output gates, pulls, source-series
+  resistors, and their exact footprints; validate sequencing and power-off leakage on hardware before fabrication.
 
 Logic sources: [TI SN74LVC2G126](https://www.ti.com/lit/ds/symlink/sn74lvc2g126.pdf),
 [TI SN74LVC1G126DCKR](https://www.ti.com/product/SN74LVC1G126/part-details/SN74LVC1G126DCKR), and
@@ -109,6 +113,6 @@ Primary sources: [Samtec selected Edge Card twinax cable](https://www.samtec.com
 
 ## Release status
 
-**DENY.** This is only a proposed interface contract. It does not alter the canonical circuit, readiness register, or
-fabrication output. W5500/MagJack relocation, `COMM_3V3`, cable Series Prints, mechanical CAD, signal-integrity,
-power/thermal, grounding/ESD, and service evidence must all close in later reviewed changes.
+**DENY.** This is an integrated architecture contract, not a fabrication output. Cable Series Prints, mechanical CAD,
+connector copper/mask/paste/courtyard, signal-integrity, power/thermal, grounding/ESD, and service evidence must all
+close in later reviewed changes.

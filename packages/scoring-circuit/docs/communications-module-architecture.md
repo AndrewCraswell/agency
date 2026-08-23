@@ -12,7 +12,7 @@ The module owns the only external powered attachment point and the external Ethe
 - `W5500` and Würth `7499011121A` integrated-magnetics RJ45, including all MDI pairs on this PCB
 - Molex Micro-Fit power and control harnesses and the Samtec USB2 harness endpoint
 
-The target application carrier owns the ESP32, display, audio, and application `V3_3`; it will not own a W5500, RJ45, USB-C entry, or PD chain. The current canonical carrier still contains the legacy USB-C/PD/eFuse circuit and lacks `J_PWR_CARRIER` and `J_USB2_CARRIER`, so ownership integration remains explicitly incomplete and fabrication remains denied.
+The target application carrier owns the ESP32, display, audio, and application `V3_3`; it does not own a W5500, RJ45, USB-C entry, or PD chain. Its canonical circuit has `J_PWR_CARRIER` for post-eFuse 20 V and `J_USB2_CARRIER` for the native USB2 pair. The carrier has no raw VBUS, CC, USB-C shell, or PD/eFuse circuit. This resolves the ownership boundary but does not release fabrication.
 
 ## Power and reset safety
 
@@ -24,7 +24,7 @@ The external USB-C port negotiates the provisional 20 V, 3 A contract. The eFuse
 
 ## Ground and shield boundary
 
-The USB-C shell, RJ45 shield, USB2 harness metalwork, and connector-entry TVS return bond to `CHASSIS`. Signal grounds go only to `GND`. The architecture has no `CHASSIS` to `GND` trace or link. The USB2 shield is not a signal return; the paired J_PWR conductors provide the supply return.
+The USB-C shell, RJ45 shield, USB2 harness metalwork, and connector-entry TVS return bond to `CHASSIS`. Signal grounds go only to `GND`. The architecture has no `CHASSIS` to `GND` trace or link. `J_USB2` assigns only `USB_DN`, `USB_DP`, and `SHIELD`: it has no separate signal-ground conductor. The USB2 shield is not a signal return; application-ground reference continuity comes only through the paired `J_PWR` return conductors.
 
 ## Test access
 
@@ -37,3 +37,4 @@ The connectivity model defines test points for port VBUS, PD PPHV, eFuse output,
 3. Complete W5500 supply-decoupling allocation and placement against the released layout; the current three AVDD capacitors plus one VDD capacitor are an incomplete connectivity model, not decoupling closure.
 4. Validate power-off I/O leakage, supervisor sequencing, W5500 reset, SPI timing, USB high-speed eye, Ethernet SI, ESD, surge, EFT, common-mode emissions, chassis current, and thermals on the released four-layer, 0.8 mm stack-up.
 5. Verify no signal or shield return creates an uncontrolled `GND` to `CHASSIS` bond, and validate the de-energized-only internal service procedure.
+6. Confirm that the communications-module USB protector remains a shunt on the connector nets and that the only 22 ohm series pair is carrier-local between `J_USB2_CARRIER` and the ESP32.

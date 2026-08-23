@@ -51,6 +51,8 @@ export default function CommunicationsModuleCircuit() {
           pin8: "SBU2_PORT",
           pin9: "SHIELD"
         }}
+        pcbX={-44}
+        pcbY={0}
       />
       <chip
         name="U_USB_PORT_PROTECT"
@@ -79,6 +81,8 @@ export default function CommunicationsModuleCircuit() {
           pin20: "NC_20",
           pin21: "THERMAL_GND"
         }}
+        pcbX={-36}
+        pcbY={0}
       />
       <chip
         name="U_USB2_ESD"
@@ -86,8 +90,6 @@ export default function CommunicationsModuleCircuit() {
         doNotPlace
         pinLabels={{ pin1: "IO1_USB_DN", pin2: "GND", pin3: "IO2_USB_DP" }}
       />
-      <resistor name="R_USB_DN" resistance="22" tolerance="1%" footprint="0402" />
-      <resistor name="R_USB_DP" resistance="22" tolerance="1%" footprint="0402" />
       <chip
         name="U_USB_PD"
         manufacturerPartNumber="TPS25730ADREFR"
@@ -134,18 +136,24 @@ export default function CommunicationsModuleCircuit() {
           pin39: "THERMAL_GND",
           pin40: "THERMAL_DRAIN"
         }}
+        pcbX={-20}
+        pcbY={0}
       />
       <chip
         name="D_USB_PD_VBUS_TVS"
         manufacturerPartNumber="TVS2200DRVR"
         {...manufacturerFootprintProps("TVS2200DRVR")}
         pinLabels={{ pin1: "VBUS_PORT", pin2: "CHASSIS" }}
+        pcbX={-36}
+        pcbY={-10}
       />
       <chip
         name="D_USB_PD_VBUS_DISCONNECT"
         manufacturerPartNumber="B340A-13-F"
         {...manufacturerFootprintProps("B340A-13-F")}
         pinLabels={{ pin1: "ANODE_GND", pin2: "CATHODE_VBUS" }}
+        pcbX={-28}
+        pcbY={-10}
       />
       <chip
         name="C_USB_PORT_PROTECT_BIAS"
@@ -164,6 +172,8 @@ export default function CommunicationsModuleCircuit() {
         manufacturerPartNumber="T55A106M010C0200"
         {...manufacturerFootprintProps("T55A106M010C0200")}
         pinLabels={{ pin1: "LDO_3V3", pin2: "GND" }}
+        pcbX={-14}
+        pcbY={-10}
       />
       <chip
         name="C_USB_PD_LDO_1V5"
@@ -188,6 +198,8 @@ export default function CommunicationsModuleCircuit() {
         manufacturerPartNumber="T523H107M035APE070"
         {...manufacturerFootprintProps("T523H107M035APE070")}
         pinLabels={{ pin1: "PD_PPHV_20V", pin2: "GND" }}
+        pcbX={-6}
+        pcbY={-10}
       />
       <chip
         name="C_USB_PD_CC1"
@@ -229,6 +241,8 @@ export default function CommunicationsModuleCircuit() {
           pin9: "ILM",
           pin10: "ITIMER"
         }}
+        pcbX={0}
+        pcbY={0}
       />
       <resistor name="R_EFUSE_UVLO_UP" resistance={475000} footprint="0402" />
       <resistor name="R_EFUSE_UVLO_DOWN" resistance={38300} footprint="0402" />
@@ -245,6 +259,8 @@ export default function CommunicationsModuleCircuit() {
         manufacturerPartNumber="T523H107M035APE070"
         {...manufacturerFootprintProps("T523H107M035APE070")}
         pinLabels={{ pin1: "VOUT", pin2: "GND" }}
+        pcbX={8}
+        pcbY={-10}
       />
       <chip
         name="U_COMM_3V3"
@@ -495,7 +511,7 @@ export default function CommunicationsModuleCircuit() {
         name="J_USB2"
         manufacturerPartNumber="HSEC8-113-01-L-DV-A-L2"
         doNotPlace
-        pinLabels={{ pin1: "USB_DN", pin2: "USB_DP", pin3: "GND", pin4: "SHIELD" }}
+        pinLabels={{ pin1: "USB_DN", pin2: "USB_DP", pin3: "SHIELD" }}
       />
 
       <trace from="J_USB_C.CC1_PORT" to="U_USB_PORT_PROTECT.C_CC1" />
@@ -507,13 +523,10 @@ export default function CommunicationsModuleCircuit() {
       <trace from="U_USB_PORT_PROTECT.RPD_G1" to="J_USB_C.CC1_PORT" />
       <trace from="U_USB_PORT_PROTECT.RPD_G2" to="J_USB_C.CC2_PORT" />
       <trace from="J_USB_C.USB_DN_PORT" to="U_USB2_ESD.IO1_USB_DN" />
-      <trace from="J_USB_C.USB_DN_PORT" to="R_USB_DN.pin1" />
       <trace from="J_USB_C.USB_DP_PORT" to="U_USB2_ESD.IO2_USB_DP" />
-      <trace from="J_USB_C.USB_DP_PORT" to="R_USB_DP.pin1" />
-      <trace from="R_USB_DN.pin2" to="J_USB2.USB_DN" />
-      <trace from="R_USB_DP.pin2" to="J_USB2.USB_DP" />
+      <trace from="J_USB_C.USB_DN_PORT" to="J_USB2.USB_DN" />
+      <trace from="J_USB_C.USB_DP_PORT" to="J_USB2.USB_DP" />
       <trace from="U_USB2_ESD.GND" to="net.GND" />
-      <trace from="J_USB2.GND" to="net.GND" />
       <trace from="J_USB2.SHIELD" to="net.CHASSIS" />
       {(["VBUS_32", "VBUS_33", "VBUS_IN_23", "VBUS_IN_24", "VBUS_IN_25"] as const).map((pin) => (
         <trace key={pin} from="J_USB_C.VBUS_PORT" to={`U_USB_PD.${pin}`} />

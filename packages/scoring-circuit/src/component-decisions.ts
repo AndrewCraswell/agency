@@ -106,7 +106,7 @@ export const componentDecisions = [
     manufacturer: "Texas Instruments",
     manufacturerUrl: "https://www.ti.com/product/TPS56A37/part-details/TPS56A37RPAR",
     mpn: "TPS56A37RPAR",
-    purpose: "Ten-ampere synchronous buck from the negotiated USB-PD input to the five-volt system and display rail",
+    purpose: "Ten-ampere synchronous buck from J_PWR_CARRIER post-eFuse 20 V to the five-volt system and display rail",
     qualification:
       "4.5 V to 28 V input; 10 A continuous output; integrated MOSFETs; -40 C to 150 C junction. The 7.99 A continuous and 9.01 A short-peak envelopes retain only 2.01 A and 0.99 A nominal headroom, so layout, thermal, panel-inrush, and bench-current evidence remain release gates"
   },
@@ -116,8 +116,7 @@ export const componentDecisions = [
     manufacturer: "Texas Instruments",
     manufacturerUrl: "https://www.ti.com/product/LMR43620-Q1",
     mpn: "LMR43620MSC3RPERQ1",
-    purpose:
-      "Fixed 3.3 V, 2 A synchronous buck for the ESP32 application rail and the replaceable communications-module local rail",
+    purpose: "Fixed 3.3 V, 2 A synchronous buck for the ESP32 application rail",
     qualification:
       "Active automotive orderable; 3.6 V to 36 V startup input, 2 A, fixed 2.2 MHz, spread spectrum, 3.27 V to 3.33 V fixed-output accuracy over line/load/temperature in FPWM; 2 mm x 2 mm VQFN-HR RPE; thermal layout and transient validation required"
   },
@@ -127,7 +126,8 @@ export const componentDecisions = [
     manufacturer: "Texas Instruments",
     manufacturerUrl: "https://www.ti.com/product/TPS25947",
     mpn: "TPS259474ARPWR",
-    purpose: "Post-contract integrated reverse-current-blocking eFuse and overcurrent protection for the USB-PD input",
+    purpose:
+      "Communications-module post-contract reverse-current-blocking eFuse and overcurrent protection for USB-PD input",
     qualification:
       "Active production, 10-pin RPW VQFN-HR; TPS259474A circuit-breaker auto-retry behavior with integrated back-to-back reverse-current blocking FETs. Model UVLO, OVLO, ILM (1 percent 1.24 kOhm: 2.69 A nominal, 2.99 A maximum with TI plus or minus 10 percent), ITIMER, DVDT (20 to 22 ms), PGTH (1 percent 698 kOhm/49.9 kOhm: 17.65 to 18.32 V), PG and output capacitance for the 3 A contract"
   },
@@ -194,7 +194,7 @@ export const componentDecisions = [
     manufacturer: "Amphenol Communications Solutions",
     manufacturerUrl: "https://www.amphenol-cs.com/product/1017707000011lf.html",
     mpn: "10177070-00011LF",
-    purpose: "Replaceable USB 2.0 Type-C UFP port; sole apparatus USB-PD power input and native service data",
+    purpose: "Communications-module USB 2.0 Type-C UFP port; sole apparatus USB-PD power input and native service data",
     qualification:
       "20,000 mating cycles; 5 A; 20 V; -40 C to 105 C; exact 0.80 mm-board footprint and chassis strain relief remain required"
   },
@@ -216,7 +216,7 @@ export const componentDecisions = [
     mpn: "TPD2EUSB30DRTR",
     purpose: "Three-pin low-capacitance shunt protection for native USB 2.0 D-minus and D-plus",
     qualification:
-      "DRT SOT-3 pin 1 IO1, pin 2 ground, and pin 3 IO2; both data nets continue independently to their 22 Ohm series resistors; footprint, USB eye, and IEC ESD tests remain release gates"
+      "DRT SOT-3 pin 1 IO1, pin 2 ground, and pin 3 IO2; both connector data nets continue unchanged through J_USB2 to the only 22 ohm series resistors on the carrier; footprint, USB eye, and IEC ESD tests remain release gates"
   },
   {
     category: "usb-pd-vbus-transient-protection",

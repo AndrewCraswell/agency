@@ -52,8 +52,8 @@ describe("critical-part readiness", () => {
       candidateSelections: 1,
       manufacturerVerifiedCad: 1,
       productionApproved: 0,
-      selectedParts: 10,
-      total: 11,
+      selectedParts: 12,
+      total: 13,
       verifiedFootprints: 0,
       verifiedMechanical: 0
     })
@@ -103,12 +103,12 @@ describe("critical-part readiness", () => {
     const duplicatedAcrossCircuitArtifacts = [...carrierReferenceNames].filter((reference) =>
       communicationsReferenceNames.has(reference)
     )
-    expect(duplicatedAcrossCircuitArtifacts).toEqual(expect.arrayContaining(["J_USB_C", "U_USB_PD", "U_EFUSE"]))
-    expect(carrierReferenceNames.has("J_PWR")).toBe(false)
-    expect(carrierReferenceNames.has("J_USB2")).toBe(false)
+    expect(duplicatedAcrossCircuitArtifacts).toEqual([])
+    expect(carrierReferenceNames.has("J_PWR_CARRIER")).toBe(true)
+    expect(carrierReferenceNames.has("J_USB2_CARRIER")).toBe(true)
     expect(interboardArchitectureVerdict).toMatchObject({
-      canonicalCircuitStatus: "carrier-ownership-conflict",
-      integrationStatus: "not-integrated",
+      canonicalCircuitStatus: "carrier-boundary-integrated",
+      integrationStatus: "integrated",
       releaseState: "deny"
     })
   })
@@ -304,6 +304,67 @@ describe("critical-part readiness", () => {
     expect(reelSockets?.footprint.status).toBe("not-applicable")
   })
 
+  it("binds carrier interboard physical evidence to exact interfaces and MPNs", () => {
+    const readiness: readonly CriticalPartReadiness[] = criticalPartReadiness
+    const power = readiness.find((part) => part.references.includes("J_PWR_CARRIER"))
+    const usb2 = readiness.find((part) => part.references.includes("J_USB2_CARRIER"))
+    if (power?.physical === undefined || usb2?.physical === undefined) {
+      throw new Error("Carrier interboard connectors must retain structured physical evidence")
+    }
+
+    expect(power).toMatchObject({ assembly: "application-carrier", mpn: "43045-0400", productionApproved: false })
+    expect(power.physical).toMatchObject({
+      connectorGender: expect.stringContaining("male"),
+      interface: "interboard-power",
+      mateMpn: expect.stringContaining("43025-0400"),
+      mounting: "pcb-harness",
+      pinAssignment: expect.stringContaining("4 GND_B")
+    })
+    expect(usb2).toMatchObject({
+      assembly: "application-carrier",
+      mpn: "HSEC8-113-01-L-DV-A-L2",
+      productionApproved: false
+    })
+    expect(usb2.physical).toMatchObject({
+      connectorGender: expect.stringContaining("female"),
+      interface: "interboard-usb2",
+      mateMpn: "ECDP-08-07.87-L1-L2-1-3",
+      mounting: "pcb-harness",
+      pairAssignment: expect.stringContaining("100 ohm")
+    })
+    expect(usb2.physical.contactRating).toContain("no power or signal-ground conductor")
+    expect(power.physical.openGates.length).toBeGreaterThan(0)
+    expect(usb2.physical.openGates.length).toBeGreaterThan(0)
+
+    const wrongPowerMpn: CriticalPartReadiness = {
+      ...power,
+      mpn: "43045-0600",
+      references: ["J_WRONG_POWER"]
+    }
+    const missingUsbMate: CriticalPartReadiness = {
+      ...usb2,
+      physical: { ...usb2.physical, mateMpn: "" },
+      references: ["J_WRONG_USB2"]
+    }
+    const missingPowerServiceGate: CriticalPartReadiness = {
+      ...power,
+      physical: { ...power.physical, openGates: [] },
+      references: ["J_WRONG_POWER_GATES"]
+    }
+    expect(validateCriticalPartReadiness([wrongPowerMpn])).toContain(
+      "43045-0600: interboard-power requires exact MPN 43045-0400"
+    )
+    expect(validateCriticalPartReadiness([missingUsbMate])).toEqual(
+      expect.arrayContaining([
+        "HSEC8-113-01-L-DV-A-L2: interboard-usb2 physical mateMpn must be nonblank",
+        "HSEC8-113-01-L-DV-A-L2: interboard-usb2 mate, pair, shield, or no-ground assignment changed"
+      ])
+    )
+    expect(validateCriticalPartReadiness([missingPowerServiceGate])).toContain(
+      "43045-0400: interboard-power physical openGates must not be empty before release"
+    )
+  })
+
   it("rejects physical-interface ownership on the wrong assembly", () => {
     const usb: CriticalPartReadiness | undefined = criticalPartReadiness.find((part) =>
       part.references.some((reference) => reference === "J_USB_C")
@@ -317,7 +378,6 @@ describe("critical-part readiness", () => {
 
     expect(validateCriticalPartReadiness([{ ...usb, assembly: "application-carrier" }])).toEqual(
       expect.arrayContaining([
-        "10177070-00011LF: connector physical evidence cannot be assigned to the application-carrier assembly",
         "10177070-00011LF: usb-c physical evidence belongs to the communications-module assembly"
       ])
     )

@@ -1,5 +1,6 @@
 import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
+import CommunicationsModuleCircuit from "./communications-module.circuit.js"
 import ScoringCircuit from "./index.circuit.js"
 import { manufacturerFootprintEligibility, manufacturerFootprintProps } from "./manufacturer-footprint-adapter.js"
 
@@ -9,6 +10,16 @@ function renderPcbPlacements() {
   circuit.schematicDisabled = true
   circuit.setPlatform({ partsEngineDisabled: true })
   circuit.add(<ScoringCircuit />)
+  circuit.render()
+  return circuit.getCircuitJson()
+}
+
+function renderCommunicationsPcbPlacements() {
+  const circuit = new Circuit()
+  circuit.pcbRoutingDisabled = true
+  circuit.schematicDisabled = true
+  circuit.setPlatform({ partsEngineDisabled: true })
+  circuit.add(<CommunicationsModuleCircuit />)
   circuit.render()
   return circuit.getCircuitJson()
 }
@@ -120,8 +131,8 @@ describe("manufacturer footprint adapter", () => {
 
   it("emits no review geometry into the actual PCB model and retains all relevant circuit nets", () => {
     const circuitJson = renderPcbPlacements()
-    const placementCenters = new Set<string>()
-    for (const reference of [
+    const communicationsJson = renderCommunicationsPcbPlacements()
+    const communicationsReferences = new Set([
       "J_USB_C",
       "U_USB_PORT_PROTECT",
       "D_USB_PD_VBUS_TVS",
@@ -130,7 +141,22 @@ describe("manufacturer footprint adapter", () => {
       "C_USB_PD_PPHV",
       "D_USB_PD_VBUS_DISCONNECT",
       "U_EFUSE",
-      "C_EFUSE_OUT",
+      "C_EFUSE_OUT"
+    ])
+    const communicationsPlacementCenters = new Set<string>()
+    const carrierPlacementCenters = new Set<string>()
+    const communicationsPlacementReferences = [
+      "J_USB_C",
+      "U_USB_PORT_PROTECT",
+      "D_USB_PD_VBUS_TVS",
+      "U_USB_PD",
+      "C_USB_PD_LDO",
+      "C_USB_PD_PPHV",
+      "D_USB_PD_VBUS_DISCONNECT",
+      "U_EFUSE",
+      "C_EFUSE_OUT"
+    ] as const
+    const carrierPlacementReferences = [
       "U_V5_BUCK",
       "L_V5_BUCK",
       "R_V5_SENSE",
@@ -139,17 +165,25 @@ describe("manufacturer footprint adapter", () => {
       "U_APP_REGULATOR",
       "L_APP_REGULATOR",
       "C_APP_REG_OUT_A"
-    ]) {
-      const { fabricationArtifacts, pcbComponent, source } = pcbArtifactsFor(circuitJson, reference)
+    ] as const
+    for (const reference of [...communicationsPlacementReferences, ...carrierPlacementReferences]) {
+      const sourceJson = communicationsReferences.has(reference) ? communicationsJson : circuitJson
+      const { fabricationArtifacts, pcbComponent, source } = pcbArtifactsFor(sourceJson, reference)
       expect(source).not.toHaveProperty("footprint")
       expect(pcbComponent).toMatchObject({ do_not_place: true })
       expect(fabricationArtifacts).toHaveLength(0)
       const center = pcbComponent !== undefined && "center" in pcbComponent ? pcbComponent.center : undefined
       expect(center).toBeDefined()
-      if (center !== undefined) placementCenters.add(`${center.x}:${center.y}`)
+      if (center !== undefined) {
+        const centers = communicationsReferences.has(reference)
+          ? communicationsPlacementCenters
+          : carrierPlacementCenters
+        centers.add(`${center.x}:${center.y}`)
+      }
     }
-    expect(placementCenters.size).toBe(17)
-    expect(pcbArtifactsFor(circuitJson, "J_USB_C").source).toMatchObject({
+    expect(communicationsPlacementCenters.size).toBe(communicationsPlacementReferences.length)
+    expect(carrierPlacementCenters.size).toBe(carrierPlacementReferences.length)
+    expect(pcbArtifactsFor(communicationsJson, "J_USB_C").source).toMatchObject({
       manufacturer_part_number: "10177070-00011LF"
     })
 
@@ -158,13 +192,18 @@ describe("manufacturer footprint adapter", () => {
         ? [element.display_name]
         : []
     )
-    expect(traceNames).toEqual(
+    const communicationsTraceNames = communicationsJson.flatMap((element) =>
+      element.type === "source_trace" && "display_name" in element && typeof element.display_name === "string"
+        ? [element.display_name]
+        : []
+    )
+    expect([...traceNames, ...communicationsTraceNames]).toEqual(
       expect.arrayContaining([
-        "U_USB_PORT_PROTECT.CC1 to U_USB_PD.CC1_PROTECTED",
-        "U_EFUSE.VOUT to U_V5_BUCK.VIN",
+        "U_USB_PORT_PROTECT.CC1 to U_USB_PD.CC1",
+        "U_EFUSE.VOUT to J_PWR.V20_EFUSE_OUT_A",
         "U_V5_BUCK.SW to L_V5_BUCK.SW",
         "L_APP_REGULATOR.V3_3 to net.V3_3"
       ])
     )
-  })
+  }, 20_000)
 })

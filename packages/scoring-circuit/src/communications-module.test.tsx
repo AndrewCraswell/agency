@@ -97,12 +97,13 @@ describe("communications-module circuit", () => {
     expect(traceNames(json)).toEqual(
       expect.arrayContaining([
         "J_USB_C.USB_DN_PORT to U_USB2_ESD.IO1_USB_DN",
-        "J_USB_C.USB_DN_PORT to R_USB_DN.pin1",
         "J_USB_C.USB_DP_PORT to U_USB2_ESD.IO2_USB_DP",
-        "J_USB_C.USB_DP_PORT to R_USB_DP.pin1",
+        "J_USB_C.USB_DN_PORT to J_USB2.USB_DN",
+        "J_USB_C.USB_DP_PORT to J_USB2.USB_DP",
         "U_USB2_ESD.GND to net.GND"
       ])
     )
+    expect(sourceNames(json)).not.toEqual(expect.arrayContaining(["R_USB_DN", "R_USB_DP"]))
   })
 
   it("separates supervised W5500 reset from the loaded IO-enable net", () => {
@@ -215,10 +216,31 @@ describe("communications-module circuit", () => {
     }
   })
 
-  it("keeps the canonical carrier ownership conflict explicit until J_PWR and J_USB2 replace legacy circuits", () => {
-    const names = sourceNames(render(<ScoringCircuit />))
-    expect(names).toEqual(expect.arrayContaining(["J_USB_C", "U_USB_PD", "U_EFUSE"]))
-    expect(names).not.toContain("J_PWR_CARRIER")
-    expect(names).not.toContain("J_USB2_CARRIER")
+  it("keeps the canonical carrier boundary free of duplicate USB-PD ownership", () => {
+    const carrierJson = render(<ScoringCircuit />)
+    const moduleJson = renderModule()
+    const names = sourceNames(carrierJson)
+    expect(names).toEqual(expect.arrayContaining(["J_PWR_CARRIER", "J_USB2_CARRIER"]))
+    for (const legacyReference of ["J_USB_C", "U_USB_PORT_PROTECT", "U_USB_PD", "U_EFUSE"]) {
+      expect(names).not.toContain(legacyReference)
+    }
+    expect(traceNames(moduleJson)).toEqual(
+      expect.arrayContaining([
+        "J_USB_C.USB_DN_PORT to U_USB2_ESD.IO1_USB_DN",
+        "J_USB_C.USB_DP_PORT to U_USB2_ESD.IO2_USB_DP",
+        "J_USB_C.USB_DN_PORT to J_USB2.USB_DN",
+        "J_USB_C.USB_DP_PORT to J_USB2.USB_DP"
+      ])
+    )
+    expect(traceNames(carrierJson)).toEqual(
+      expect.arrayContaining([
+        "J_USB2_CARRIER.USB_DN to R_USB_DN_CARRIER.USB_DN_FROM_COMM",
+        "J_USB2_CARRIER.USB_DP to R_USB_DP_CARRIER.USB_DP_FROM_COMM",
+        "R_USB_DN_CARRIER.USB_DN to U_ESP32.USB_DN",
+        "R_USB_DP_CARRIER.USB_DP to U_ESP32.USB_DP"
+      ])
+    )
+    expect(traceNames(moduleJson).some((name) => name.includes("J_USB2.GND"))).toBe(false)
+    expect(traceNames(carrierJson).some((name) => name.includes("J_USB2_CARRIER.GND"))).toBe(false)
   })
 })
