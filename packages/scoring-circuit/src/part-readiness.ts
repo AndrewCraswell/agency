@@ -12,7 +12,7 @@ export type ConnectorPhysicalEvidence = {
 }
 
 export type CriticalPartReadiness = {
-  assembly: "application-carrier" | "external-panel-module"
+  assembly: "application-carrier" | "communications-module" | "external-panel-module"
   blockers: readonly string[]
   cad: {
     status: "manufacturer-verified" | "supplier-candidate" | "not-applicable" | "pending"
@@ -246,9 +246,9 @@ export const criticalPartReadiness = [
     selectionStatus: "selected"
   },
   {
-    assembly: "application-carrier",
+    assembly: "communications-module",
     blockers: [
-      "Independently verify the LQFP-48 land pattern and exposed fabrication output",
+      "Independently verify the LQFP-48 land pattern and exposed fabrication output on the communications module",
       "Complete magnetics, termination, clock, decoupling, and Ethernet SI review"
     ],
     cad: { status: "supplier-candidate" },
@@ -271,7 +271,7 @@ export const criticalPartReadiness = [
     selectionStatus: "selected"
   },
   {
-    assembly: "external-panel-module",
+    assembly: "communications-module",
     blockers: [
       "Download and independently verify the official PCB footprint and STEP model",
       "Complete magnetics topology, LED, shield, chassis, emissions, and surge review"
@@ -313,7 +313,7 @@ export const criticalPartReadiness = [
     selectionStatus: "selected"
   },
   {
-    assembly: "external-panel-module",
+    assembly: "communications-module",
     blockers: [
       "Download and independently verify the official footprint and STEP model",
       "Design and cycle-test chassis strain relief and the replaceable communications module",
@@ -403,14 +403,21 @@ export const criticalPartReadiness = [
 
 export function validateCriticalPartReadiness(parts: readonly CriticalPartReadiness[]): readonly string[] {
   const errors: string[] = []
-  const references = new Set<string>()
+  const referenceOwners = new Map<string, { assembly: CriticalPartReadiness["assembly"]; mpn: string }>()
   const selectedMpns = new Set<string>()
 
   for (const part of parts) {
     if (part.references.length === 0) errors.push(`${part.mpn}: at least one circuit reference is required`)
     for (const reference of part.references) {
-      if (references.has(reference)) errors.push(`${reference}: circuit reference is assigned more than once`)
-      references.add(reference)
+      const owner = referenceOwners.get(reference)
+      if (owner !== undefined) {
+        errors.push(`${reference}: circuit reference is assigned more than once`)
+        errors.push(
+          `${reference}: circuit reference ownership conflicts between ${owner.assembly}/${owner.mpn} and ${part.assembly}/${part.mpn}`
+        )
+      } else {
+        referenceOwners.set(reference, { assembly: part.assembly, mpn: part.mpn })
+      }
     }
 
     if (part.selectionStatus === "selected") {
@@ -420,8 +427,16 @@ export function validateCriticalPartReadiness(parts: readonly CriticalPartReadin
     }
 
     if (part.physical !== undefined) {
-      if (part.assembly !== "external-panel-module") {
-        errors.push(`${part.mpn}: connector physical evidence must be assigned to the external-panel-module assembly`)
+      if (part.assembly === "application-carrier") {
+        errors.push(`${part.mpn}: connector physical evidence cannot be assigned to the application-carrier assembly`)
+      }
+      if (["ethernet-rj45", "usb-c"].includes(part.physical.interface) && part.assembly !== "communications-module") {
+        errors.push(
+          `${part.mpn}: ${part.physical.interface} physical evidence belongs to the communications-module assembly`
+        )
+      }
+      if (part.physical.interface === "reel-socket" && part.assembly !== "external-panel-module") {
+        errors.push(`${part.mpn}: reel-socket physical evidence belongs to the external-panel-module assembly`)
       }
       const physicalScalars = [
         ["contactRating", part.physical.contactRating],
@@ -462,8 +477,8 @@ export function validateCriticalPartReadiness(parts: readonly CriticalPartReadin
           if (/\bTBD\b/i.test(sampleMpn)) errors.push(`${part.mpn}: exact sample MPN cannot use a placeholder`)
         }
       }
-    } else if (part.assembly === "external-panel-module") {
-      errors.push(`${part.mpn}: external-panel-module requires physical evidence`)
+    } else if (part.references.some((reference) => reference.startsWith("J_"))) {
+      errors.push(`${part.mpn}: connector references require physical evidence`)
     }
 
     for (const url of [

@@ -386,70 +386,59 @@ function ScoringCircuit() {
       <resistor name="R_BUFFER_B_GATE_PD" resistance="100k" tolerance="1%" footprint="0603" pcbX={40} pcbY={28} />
 
       <chip
-        name="U_ETHERNET"
-        manufacturerPartNumber="W5500"
-        footprint="lqfp48"
+        name="J_CTRL_CARRIER"
+        manufacturerPartNumber="Molex 43045-1200"
+        doNotPlace
         pinLabels={{
-          pin1: "TXN",
-          pin2: "TXP",
-          pin3: "AGND1",
-          pin4: "AVDD1",
-          pin5: "RXN",
-          pin6: "RXP",
-          pin7: "DNC",
-          pin8: "AVDD2",
-          pin9: "AGND2",
-          pin10: "EXRES1",
-          pin11: "AVDD3",
-          pin12: "NC1",
-          pin13: "NC2",
-          pin14: "AGND3",
-          pin15: "AVDD4",
-          pin16: "AGND4",
-          pin17: "AVDD5",
-          pin18: "VBG",
-          pin19: "AGND5",
-          pin20: "TOCAP",
-          pin21: "AVDD6",
-          pin22: "1V2O",
-          pin23: "RSVD1",
-          pin24: "SPDLED",
-          pin25: "LINKLED",
-          pin26: "DUPLED",
-          pin27: "ACTLED",
-          pin28: ["VDD", "V3_3"],
-          pin29: "GND",
-          pin30: "XI",
-          pin31: "XO",
-          pin32: ["SCSn", "CS"],
-          pin33: ["SCLK", "SCK"],
-          pin34: "MISO",
-          pin35: "MOSI",
-          pin36: ["INTn", "IRQ"],
-          pin37: "RSTn",
-          pin38: "RSVD2",
-          pin39: "RSVD3",
-          pin40: "RSVD4",
-          pin41: "RSVD5",
-          pin42: "RSVD6",
-          pin43: "PMODE2",
-          pin44: "PMODE1",
-          pin45: "PMODE0",
-          pin46: "NC3",
-          pin47: "NC4",
-          pin48: "AGND6"
+          pin1: "GND_1",
+          pin2: "W5500_SCK",
+          pin3: "GND_2",
+          pin4: "W5500_MOSI",
+          pin5: "GND_3",
+          pin6: "W5500_MISO",
+          pin7: "GND_4",
+          pin8: "W5500_CS_N",
+          pin9: "W5500_INT_N",
+          pin10: "COMM_RESET_ASSERT",
+          pin11: "COMM_PRESENT_N",
+          pin12: "GND_5"
         }}
-        pcbX={48}
+        pcbX={55}
         pcbY={25}
       />
-      <pinheader
-        name="J_ETHERNET_MAGJACK"
-        pinCount={8}
-        pinLabels={["TXP", "TXN", "RXP", "RXN", "LED_A", "LED_B", "SHIELD", "CHASSIS"]}
-        pcbX={70}
-        pcbY={28}
-        pcbRotation={90}
+      {/*
+       * The ESP32 has no spare GPIO for the communications-board status pins.
+       * INT is therefore intentionally polling-only. Presence and reset stay
+       * electrically fail-closed: an unplugged harness reads absent, while a
+       * disconnected reset request cannot assert reset. Neither status signal
+       * is silently repurposed as an ESP32 input.
+       */}
+      <resistor name="R_COMM_SCK_SERIES" resistance="33" tolerance="1%" footprint="0603" pcbX={45} pcbY={21} />
+      <resistor name="R_COMM_MOSI_SERIES" resistance="33" tolerance="1%" footprint="0603" pcbX={45} pcbY={25} />
+      <resistor name="R_COMM_CS_SERIES" resistance="33" tolerance="1%" footprint="0603" pcbX={45} pcbY={29} />
+      <resistor name="R_COMM_SCK_DEFAULT_LOW" resistance="100k" tolerance="1%" footprint="0603" pcbX={50} pcbY={21} />
+      <resistor name="R_COMM_MOSI_DEFAULT_LOW" resistance="100k" tolerance="1%" footprint="0603" pcbX={50} pcbY={25} />
+      <resistor name="R_COMM_CS_N_DEFAULT_HIGH" resistance="100k" tolerance="1%" footprint="0603" pcbX={50} pcbY={29} />
+      <resistor name="R_COMM_MISO_DEFAULT_LOW" resistance="100k" tolerance="1%" footprint="0603" pcbX={55} pcbY={21} />
+      <resistor
+        name="R_COMM_RESET_ASSERT_DEFAULT_LOW"
+        resistance="100k"
+        tolerance="1%"
+        footprint="0603"
+        pcbX={60}
+        pcbY={19}
       />
+      <resistor
+        name="R_COMM_PRESENT_N_ABSENT_PULLUP"
+        resistance="100k"
+        tolerance="1%"
+        footprint="0603"
+        pcbX={64}
+        pcbY={19}
+      />
+      <resistor name="R_COMM_INT_N_IDLE_PULLUP" resistance="100k" tolerance="1%" footprint="0603" pcbX={68} pcbY={19} />
+      <pinheader name="TP_COMM_PRESENT_N" pinCount={1} pinLabels={["COMM_PRESENT_N"]} pcbX={67} pcbY={14} />
+      <pinheader name="TP_COMM_INT_N" pinCount={1} pinLabels={["W5500_INT_N_POLLING_ONLY"]} pcbX={72} pcbY={14} />
       <chip
         name="U_FIELD_SERIAL"
         manufacturerPartNumber="ISO1410BDWR"
@@ -1283,14 +1272,32 @@ function ScoringCircuit() {
       <trace from="C_APP_REG_OUT_C.GND" to="net.GND" />
       <trace from="R_APP_REG_DISCHARGE.GND" to="net.GND" />
 
-      <trace from="U_ESP32.APP_SPI_SCK" to="U_ETHERNET.SCK" />
-      <trace from="U_ESP32.APP_SPI_MOSI" to="U_ETHERNET.MOSI" />
-      <trace from="U_ESP32.APP_SPI_MISO" to="U_ETHERNET.MISO" />
-      <trace from="U_ESP32.ETH_CS" to="U_ETHERNET.CS" />
-      <trace from="U_ETHERNET.TXP" to="J_ETHERNET_MAGJACK.TXP" />
-      <trace from="U_ETHERNET.TXN" to="J_ETHERNET_MAGJACK.TXN" />
-      <trace from="U_ETHERNET.RXP" to="J_ETHERNET_MAGJACK.RXP" />
-      <trace from="U_ETHERNET.RXN" to="J_ETHERNET_MAGJACK.RXN" />
+      <trace from="U_ESP32.APP_SPI_SCK" to="R_COMM_SCK_SERIES.pin1" />
+      <trace from="R_COMM_SCK_SERIES.pin2" to="J_CTRL_CARRIER.W5500_SCK" />
+      <trace from="J_CTRL_CARRIER.W5500_SCK" to="R_COMM_SCK_DEFAULT_LOW.pin1" />
+      <trace from="R_COMM_SCK_DEFAULT_LOW.pin2" to="net.GND" />
+      <trace from="U_ESP32.APP_SPI_MOSI" to="R_COMM_MOSI_SERIES.pin1" />
+      <trace from="R_COMM_MOSI_SERIES.pin2" to="J_CTRL_CARRIER.W5500_MOSI" />
+      <trace from="J_CTRL_CARRIER.W5500_MOSI" to="R_COMM_MOSI_DEFAULT_LOW.pin1" />
+      <trace from="R_COMM_MOSI_DEFAULT_LOW.pin2" to="net.GND" />
+      <trace from="U_ESP32.APP_SPI_MISO" to="J_CTRL_CARRIER.W5500_MISO" />
+      <trace from="J_CTRL_CARRIER.W5500_MISO" to="R_COMM_MISO_DEFAULT_LOW.pin1" />
+      <trace from="R_COMM_MISO_DEFAULT_LOW.pin2" to="net.GND" />
+      <trace from="U_ESP32.ETH_CS" to="R_COMM_CS_SERIES.pin1" />
+      <trace from="R_COMM_CS_SERIES.pin2" to="J_CTRL_CARRIER.W5500_CS_N" />
+      <trace from="J_CTRL_CARRIER.W5500_CS_N" to="R_COMM_CS_N_DEFAULT_HIGH.pin1" />
+      <trace from="R_COMM_CS_N_DEFAULT_HIGH.pin2" to="net.V3_3" />
+      {(["GND_1", "GND_2", "GND_3", "GND_4", "GND_5"] as const).map((pin) => (
+        <trace key={pin} from={`J_CTRL_CARRIER.${pin}`} to="net.GND" />
+      ))}
+      <trace from="J_CTRL_CARRIER.COMM_RESET_ASSERT" to="R_COMM_RESET_ASSERT_DEFAULT_LOW.pin1" />
+      <trace from="R_COMM_RESET_ASSERT_DEFAULT_LOW.pin2" to="net.GND" />
+      <trace from="J_CTRL_CARRIER.COMM_PRESENT_N" to="R_COMM_PRESENT_N_ABSENT_PULLUP.pin1" />
+      <trace from="R_COMM_PRESENT_N_ABSENT_PULLUP.pin2" to="net.V3_3" />
+      <trace from="J_CTRL_CARRIER.COMM_PRESENT_N" to="TP_COMM_PRESENT_N.COMM_PRESENT_N" />
+      <trace from="J_CTRL_CARRIER.W5500_INT_N" to="R_COMM_INT_N_IDLE_PULLUP.pin1" />
+      <trace from="R_COMM_INT_N_IDLE_PULLUP.pin2" to="net.V3_3" />
+      <trace from="J_CTRL_CARRIER.W5500_INT_N" to="TP_COMM_INT_N.W5500_INT_N_POLLING_ONLY" />
       <trace from="U_ESP32.HUB75_R1" to="U_DISPLAY_BUFFER_A.R1_IN" />
       <trace from="U_ESP32.HUB75_G1" to="U_DISPLAY_BUFFER_A.G1_IN" />
       <trace from="U_ESP32.HUB75_B1" to="U_DISPLAY_BUFFER_A.B1_IN" />
@@ -1409,7 +1416,6 @@ function ScoringCircuit() {
       <trace from="U_ESP32.APP_SPI_MOSI" to="U_FRAM.MOSI" />
       <trace from="U_ESP32.APP_SPI_MISO" to="U_FRAM.MISO" />
       <trace from="U_ESP32.FRAM_CS" to="U_FRAM.CS" />
-      <trace from="U_ESP_SUPERVISOR.RESET" to="U_ETHERNET.RSTn" />
       <trace from="U_ESP_SUPERVISOR.RESET" to="U_AUDIO.RESET_N" />
 
       <trace from="U_ISOLATED_POWER.GND" to="net.GND" />

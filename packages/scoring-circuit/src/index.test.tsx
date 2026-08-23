@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest"
 import { componentDecisions, componentEvidenceAsOf, forbiddenLifecycleStates } from "./component-decisions.js"
 import ScoringCircuit from "./index.circuit.js"
 
+let architectureJson: ReturnType<InstanceType<typeof Circuit>["getCircuitJson"]> | undefined
+let pcbPlacementJson: ReturnType<InstanceType<typeof Circuit>["getCircuitJson"]> | undefined
+
 function renderArchitecture() {
+  if (architectureJson !== undefined) return architectureJson
   const circuit = new Circuit()
   circuit.pcbDisabled = true
   circuit.pcbRoutingDisabled = true
@@ -12,10 +16,12 @@ function renderArchitecture() {
   circuit.add(<ScoringCircuit />)
   circuit.render()
 
-  return circuit.getCircuitJson()
+  architectureJson = circuit.getCircuitJson()
+  return architectureJson
 }
 
 function renderPcbPlacements() {
+  if (pcbPlacementJson !== undefined) return pcbPlacementJson
   const circuit = new Circuit()
   circuit.pcbRoutingDisabled = true
   circuit.schematicDisabled = true
@@ -23,7 +29,8 @@ function renderPcbPlacements() {
   circuit.add(<ScoringCircuit />)
   circuit.render()
 
-  return circuit.getCircuitJson()
+  pcbPlacementJson = circuit.getCircuitJson()
+  return pcbPlacementJson
 }
 
 describe("production scoring architecture", () => {
@@ -49,8 +56,7 @@ describe("production scoring architecture", () => {
         "U_ESP32",
         "U_ESP_WATCHDOG",
         "U_ESP_SUPERVISOR",
-        "U_ETHERNET",
-        "J_ETHERNET_MAGJACK",
+        "J_CTRL_CARRIER",
         "U_FIELD_SERIAL",
         "J_HUB75",
         "U_FRAM",
@@ -114,9 +120,9 @@ describe("production scoring architecture", () => {
         "U_ISO_MAIN.S_ESP_HEARTBEAT to U_STM32.ESP_HEARTBEAT",
         "R_USB_DN.USB_DN to U_ESP32.USB_DN",
         "R_USB_DP.USB_DP to U_ESP32.USB_DP",
-        "U_ESP32.APP_SPI_SCK to U_ETHERNET.SCK",
+        "U_ESP32.APP_SPI_SCK to R_COMM_SCK_SERIES.pin1",
+        "R_COMM_SCK_SERIES.pin2 to J_CTRL_CARRIER.W5500_SCK",
         "U_ESP32.APP_SPI_SCK to U_FRAM.SCK",
-        "U_ESP_SUPERVISOR.RESET to U_ETHERNET.RSTn",
         "U_ESP32.HUB75_R1 to U_DISPLAY_BUFFER_A.R1_IN",
         "U_DISPLAY_BUFFER_B.OE_N_OUT to J_HUB75.OE"
       ])
@@ -124,6 +130,86 @@ describe("production scoring architecture", () => {
     expect(traceNames.some((name) => name.includes("SCORE_EVENT_IRQ"))).toBe(false)
     expect(traceNames.some((name) => name.includes("U_ESP32.STM_RESET"))).toBe(false)
     expect(traceNames.some((name) => name.includes("U_ISO_MAIN.A_ESP_RESET_ASSERT to U_ESP32.EN_RESET"))).toBe(false)
+    expect(traceNames.some((name) => name.includes("U_ETHERNET"))).toBe(false)
+  })
+
+  it("contains the fail-closed, polling-only communications-carrier boundary", () => {
+    const circuitJson = renderArchitecture()
+    const sourceNames = circuitJson.flatMap((element) =>
+      element.type === "source_component" && "name" in element && typeof element.name === "string" ? [element.name] : []
+    )
+    const sourceComponents = circuitJson.filter((element) => element.type === "source_component")
+    const sourceByName = (name: string) => sourceComponents.find((element) => element.name === name)
+    const traceNames = circuitJson.flatMap((element) =>
+      element.type === "source_trace" && "display_name" in element && typeof element.display_name === "string"
+        ? [element.display_name]
+        : []
+    )
+
+    expect(sourceNames).toEqual(
+      expect.arrayContaining([
+        "R_COMM_SCK_SERIES",
+        "R_COMM_MOSI_SERIES",
+        "R_COMM_CS_SERIES",
+        "R_COMM_SCK_DEFAULT_LOW",
+        "R_COMM_MOSI_DEFAULT_LOW",
+        "R_COMM_CS_N_DEFAULT_HIGH",
+        "R_COMM_MISO_DEFAULT_LOW",
+        "R_COMM_RESET_ASSERT_DEFAULT_LOW",
+        "R_COMM_PRESENT_N_ABSENT_PULLUP",
+        "R_COMM_INT_N_IDLE_PULLUP",
+        "TP_COMM_PRESENT_N",
+        "TP_COMM_INT_N"
+      ])
+    )
+    expect(traceNames).toEqual(
+      expect.arrayContaining([
+        "U_ESP32.APP_SPI_SCK to R_COMM_SCK_SERIES.pin1",
+        "R_COMM_SCK_SERIES.pin2 to J_CTRL_CARRIER.W5500_SCK",
+        "J_CTRL_CARRIER.W5500_SCK to R_COMM_SCK_DEFAULT_LOW.pin1",
+        "R_COMM_SCK_DEFAULT_LOW.pin2 to net.GND",
+        "U_ESP32.APP_SPI_MOSI to R_COMM_MOSI_SERIES.pin1",
+        "R_COMM_MOSI_SERIES.pin2 to J_CTRL_CARRIER.W5500_MOSI",
+        "J_CTRL_CARRIER.W5500_MOSI to R_COMM_MOSI_DEFAULT_LOW.pin1",
+        "R_COMM_MOSI_DEFAULT_LOW.pin2 to net.GND",
+        "U_ESP32.APP_SPI_MISO to J_CTRL_CARRIER.W5500_MISO",
+        "J_CTRL_CARRIER.W5500_MISO to R_COMM_MISO_DEFAULT_LOW.pin1",
+        "R_COMM_MISO_DEFAULT_LOW.pin2 to net.GND",
+        "U_ESP32.ETH_CS to R_COMM_CS_SERIES.pin1",
+        "R_COMM_CS_SERIES.pin2 to J_CTRL_CARRIER.W5500_CS_N",
+        "J_CTRL_CARRIER.W5500_CS_N to R_COMM_CS_N_DEFAULT_HIGH.pin1",
+        "R_COMM_CS_N_DEFAULT_HIGH.pin2 to net.V3_3",
+        "U_ESP32.APP_SPI_SCK to U_FRAM.SCK",
+        "J_CTRL_CARRIER.GND_1 to net.GND",
+        "J_CTRL_CARRIER.GND_2 to net.GND",
+        "J_CTRL_CARRIER.GND_3 to net.GND",
+        "J_CTRL_CARRIER.GND_4 to net.GND",
+        "J_CTRL_CARRIER.GND_5 to net.GND",
+        "J_CTRL_CARRIER.COMM_RESET_ASSERT to R_COMM_RESET_ASSERT_DEFAULT_LOW.pin1",
+        "R_COMM_RESET_ASSERT_DEFAULT_LOW.pin2 to net.GND",
+        "J_CTRL_CARRIER.COMM_PRESENT_N to R_COMM_PRESENT_N_ABSENT_PULLUP.pin1",
+        "R_COMM_PRESENT_N_ABSENT_PULLUP.pin2 to net.V3_3",
+        "J_CTRL_CARRIER.W5500_INT_N to R_COMM_INT_N_IDLE_PULLUP.pin1",
+        "R_COMM_INT_N_IDLE_PULLUP.pin2 to net.V3_3"
+      ])
+    )
+    expect(traceNames.some((name) => name.includes("COMM_PRESENT_N") && name.includes("U_ESP32"))).toBe(false)
+    expect(traceNames.some((name) => name.includes("W5500_INT_N") && name.includes("U_ESP32"))).toBe(false)
+    expect(traceNames.some((name) => name.includes("COMM_RESET_ASSERT") && name.includes("U_ESP32"))).toBe(false)
+    for (const reference of ["R_COMM_SCK_SERIES", "R_COMM_MOSI_SERIES", "R_COMM_CS_SERIES"]) {
+      expect(sourceByName(reference)).toMatchObject({ resistance: 33 })
+    }
+    for (const reference of [
+      "R_COMM_RESET_ASSERT_DEFAULT_LOW",
+      "R_COMM_PRESENT_N_ABSENT_PULLUP",
+      "R_COMM_INT_N_IDLE_PULLUP",
+      "R_COMM_SCK_DEFAULT_LOW",
+      "R_COMM_MOSI_DEFAULT_LOW",
+      "R_COMM_CS_N_DEFAULT_HIGH",
+      "R_COMM_MISO_DEFAULT_LOW"
+    ]) {
+      expect(sourceByName(reference)).toMatchObject({ resistance: 100000 })
+    }
   })
 
   it("implements hardware reset combining and reset-gated display defaults", () => {

@@ -1,6 +1,8 @@
 import { Circuit } from "tscircuit"
-import { describe, expect, it } from "vitest"
+import { beforeAll, describe, expect, it } from "vitest"
+import CommunicationsModuleCircuit from "./communications-module.circuit.js"
 import ScoringCircuit from "./index.circuit.js"
+import { interboardArchitectureVerdict } from "./interboard-interface.js"
 import {
   criticalPartReadiness,
   summarizeCriticalPartReadiness,
@@ -8,15 +10,40 @@ import {
   type CriticalPartReadiness
 } from "./part-readiness.js"
 
+let architectureJson: ReturnType<InstanceType<typeof Circuit>["getCircuitJson"]> | undefined
+let communicationsModuleJson: ReturnType<InstanceType<typeof Circuit>["getCircuitJson"]> | undefined
+
 function renderArchitecture() {
+  if (architectureJson !== undefined) return architectureJson
   const circuit = new Circuit()
   circuit.pcbRoutingDisabled = true
   circuit.schematicDisabled = true
   circuit.setPlatform({ partsEngineDisabled: true })
   circuit.add(<ScoringCircuit />)
   circuit.render()
-  return circuit.getCircuitJson()
+  architectureJson = circuit.getCircuitJson()
+  return architectureJson
 }
+
+function renderCommunicationsModule() {
+  if (communicationsModuleJson !== undefined) return communicationsModuleJson
+  const circuit = new Circuit()
+  circuit.pcbRoutingDisabled = true
+  circuit.schematicDisabled = true
+  circuit.setPlatform({ partsEngineDisabled: true })
+  circuit.add(<CommunicationsModuleCircuit />)
+  circuit.render()
+  communicationsModuleJson = circuit.getCircuitJson()
+  return communicationsModuleJson
+}
+
+beforeAll(() => {
+  // The two rendered circuit fixtures are intentionally cached before the
+  // assertions run. Rendering them together can exceed Vitest's per-test
+  // default even though neither render is an asynchronous test operation.
+  renderArchitecture()
+  renderCommunicationsModule()
+}, 20_000)
 
 describe("critical-part readiness", () => {
   it("passes the readiness contract without claiming fabrication approval", () => {
@@ -32,34 +59,58 @@ describe("critical-part readiness", () => {
     })
   })
 
-  it("covers every critical circuit reference and matches placed part numbers", () => {
+  it("covers critical references in their declared assembly without masking duplicate board ownership", () => {
     const circuitJson = renderArchitecture()
-    const sourceComponents = circuitJson.filter((element) => element.type === "source_component")
-    const sourceNames = new Set(sourceComponents.map((component) => component.name))
+    const communicationsCircuitJson = renderCommunicationsModule()
+    const carrierComponents = circuitJson.filter((element) => element.type === "source_component")
+    const communicationsComponents = communicationsCircuitJson.filter((element) => element.type === "source_component")
+    const sourceComponents = [...carrierComponents, ...communicationsComponents]
+    const sourcesByAssembly = {
+      "application-carrier": carrierComponents,
+      "communications-module": communicationsComponents,
+      // The external-panel module has no independent circuit artifact yet.
+      // Its electrical entry points remain represented on the carrier model.
+      "external-panel-module": carrierComponents
+    } as const
 
     for (const part of criticalPartReadiness) {
-      for (const reference of part.references) expect(sourceNames).toContain(reference)
+      const assemblySources = new Set(sourcesByAssembly[part.assembly].map((component) => component.name))
+      for (const reference of part.references) expect(assemblySources).toContain(reference)
     }
 
     const esp32 = sourceComponents.find((component) => component.name === "U_ESP32")
     const ethernet = sourceComponents.find((component) => component.name === "U_ETHERNET")
     const v5Buck = sourceComponents.find((component) => component.name === "U_V5_BUCK")
     const v5Sense = sourceComponents.find((component) => component.name === "R_V5_SENSE")
-    const ethernetPcbComponent = circuitJson.find(
+    const ethernetPcbComponent = communicationsCircuitJson.find(
       (element) => element.type === "pcb_component" && element.source_component_id === ethernet?.source_component_id
     )
     const ethernetPcbComponentId =
       ethernetPcbComponent !== undefined && "pcb_component_id" in ethernetPcbComponent
         ? ethernetPcbComponent.pcb_component_id
         : undefined
-    const ethernetPads = circuitJson.filter(
+    const ethernetPads = communicationsCircuitJson.filter(
       (element) => element.type === "pcb_smtpad" && element.pcb_component_id === ethernetPcbComponentId
     )
     expect(esp32?.manufacturer_part_number).toBe("ESP32-S3-WROOM-1U-N16R2")
     expect(v5Buck?.manufacturer_part_number).toBe("TPS56A37RPAR")
     expect(v5Sense?.manufacturer_part_number).toBe("CRE2512-FZ-R002E-3")
     expect(ethernet?.manufacturer_part_number).toBe("W5500")
-    expect(ethernetPads).toHaveLength(48)
+    expect(ethernetPads).toHaveLength(0)
+
+    const carrierReferenceNames = new Set(carrierComponents.map((component) => component.name))
+    const communicationsReferenceNames = new Set(communicationsComponents.map((component) => component.name))
+    const duplicatedAcrossCircuitArtifacts = [...carrierReferenceNames].filter((reference) =>
+      communicationsReferenceNames.has(reference)
+    )
+    expect(duplicatedAcrossCircuitArtifacts).toEqual(expect.arrayContaining(["J_USB_C", "U_USB_PD", "U_EFUSE"]))
+    expect(carrierReferenceNames.has("J_PWR")).toBe(false)
+    expect(carrierReferenceNames.has("J_USB2")).toBe(false)
+    expect(interboardArchitectureVerdict).toMatchObject({
+      canonicalCircuitStatus: "carrier-ownership-conflict",
+      integrationStatus: "not-integrated",
+      releaseState: "deny"
+    })
   })
 
   it("rejects premature production approval", () => {
@@ -92,6 +143,7 @@ describe("critical-part readiness", () => {
       expect.arrayContaining([
         "NO-REFERENCE: at least one circuit reference is required",
         "U_DUPLICATE: circuit reference is assigned more than once",
+        "U_DUPLICATE: circuit reference ownership conflicts between application-carrier/DUPLICATE and application-carrier/DUPLICATE",
         "DUPLICATE: selected MPN is duplicated",
         "TBD MODULE: selected parts cannot use a placeholder MPN",
         "BAD-EVIDENCE: evidence URL must use HTTPS"
@@ -176,7 +228,7 @@ describe("critical-part readiness", () => {
     })
   })
 
-  it("requires physical evidence for external modules and rejects blank or duplicate claims", () => {
+  it("requires physical evidence for physical connectors and rejects blank or duplicate claims", () => {
     const readiness: readonly CriticalPartReadiness[] = criticalPartReadiness
     const powerInput = readiness.find((part) => part.references.some((reference) => reference === "J_USB_C"))
     if (powerInput === undefined || powerInput.physical === undefined) {
@@ -185,7 +237,7 @@ describe("critical-part readiness", () => {
 
     const missingPhysical = { ...powerInput, physical: undefined }
     expect(validateCriticalPartReadiness([missingPhysical])).toContain(
-      "10177070-00011LF: external-panel-module requires physical evidence"
+      "10177070-00011LF: connector references require physical evidence"
     )
 
     const missingReelSamples: CriticalPartReadiness = {
@@ -230,13 +282,17 @@ describe("critical-part readiness", () => {
     )
   })
 
-  it("keeps chassis connectors off the main-board footprint approval path", () => {
+  it("assigns Ethernet and USB-C physical interfaces to the communications module", () => {
     const powerInput = criticalPartReadiness.find((part) =>
       part.references.some((reference) => reference === "J_USB_C")
     )
     const reelSockets = criticalPartReadiness.find((part) => part.references.some((reference) => reference === "J_L"))
 
-    expect(powerInput?.assembly).toBe("external-panel-module")
+    const ethernet = criticalPartReadiness.find((part) =>
+      part.references.some((reference) => reference === "J_ETHERNET_MAGJACK")
+    )
+    expect(powerInput?.assembly).toBe("communications-module")
+    expect(ethernet?.assembly).toBe("communications-module")
     expect(powerInput?.footprint.status).toBe("source-identified")
     expect(powerInput?.cad.status).toBe("pending")
     if (powerInput !== undefined && "url" in powerInput.cad) {
@@ -246,6 +302,28 @@ describe("critical-part readiness", () => {
     }
     expect(reelSockets?.assembly).toBe("external-panel-module")
     expect(reelSockets?.footprint.status).toBe("not-applicable")
+  })
+
+  it("rejects physical-interface ownership on the wrong assembly", () => {
+    const usb: CriticalPartReadiness | undefined = criticalPartReadiness.find((part) =>
+      part.references.some((reference) => reference === "J_USB_C")
+    )
+    const reelSocket: CriticalPartReadiness | undefined = criticalPartReadiness.find((part) =>
+      part.references.some((reference) => reference === "J_L")
+    )
+    if (usb?.physical === undefined || reelSocket?.physical === undefined) {
+      throw new Error("Selected physical interfaces must retain physical evidence")
+    }
+
+    expect(validateCriticalPartReadiness([{ ...usb, assembly: "application-carrier" }])).toEqual(
+      expect.arrayContaining([
+        "10177070-00011LF: connector physical evidence cannot be assigned to the application-carrier assembly",
+        "10177070-00011LF: usb-c physical evidence belongs to the communications-module assembly"
+      ])
+    )
+    expect(validateCriticalPartReadiness([{ ...reelSocket, assembly: "communications-module" }])).toContain(
+      "XUB-G 66.9684-*: reel-socket physical evidence belongs to the external-panel-module assembly"
+    )
   })
 
   it("records exact reel sample suffixes and keeps every physical interface gated", () => {
@@ -272,15 +350,22 @@ describe("critical-part readiness", () => {
   })
 
   it("keeps generic connector models from passing selected-part verification", () => {
-    const circuitJson = renderArchitecture()
+    const circuitJson = renderCommunicationsModule()
     const sourceComponents = circuitJson.filter((element) => element.type === "source_component")
     const ethernet = sourceComponents.find((component) => component.name === "J_ETHERNET_MAGJACK")
     const usb = sourceComponents.find((component) => component.name === "J_USB_C")
 
-    expect(ethernet?.ftype).toBe("simple_pin_header")
-    expect(ethernet !== undefined && "pin_count" in ethernet ? ethernet.pin_count : undefined).toBe(8)
-    expect(usb?.ftype).toBe("simple_connector")
-    expect(usb !== undefined && "standard" in usb ? usb.standard : undefined).toBe("usb_c")
+    expect(ethernet).toMatchObject({ manufacturer_part_number: "7499011121A" })
+    expect(usb).toMatchObject({ manufacturer_part_number: "10177070-00011LF" })
+    for (const source of [ethernet, usb]) {
+      const pcbComponent = circuitJson.find(
+        (element) =>
+          element.type === "pcb_component" &&
+          source !== undefined &&
+          element.source_component_id === source.source_component_id
+      )
+      expect(pcbComponent).toMatchObject({ do_not_place: true })
+    }
     for (const reference of ["J_ETHERNET_MAGJACK", "J_USB_C"]) {
       const part = criticalPartReadiness.find((candidate) =>
         candidate.references.some((candidateReference) => candidateReference === reference)
