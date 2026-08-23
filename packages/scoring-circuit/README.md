@@ -24,7 +24,10 @@ The candidate processor allocations and their unresolved electrical conflicts ar
 verification gates are tracked in `docs/reel-socket-selection.md` and `docs/connector-cad-verification.md`. The
 schematic-level ESP32 reset combiner, reset-gated HUB75 buffers, exact pull values, and power-off/SI test gates are in
 `docs/reset-and-display-safing.md`. The USB-C UFP role, VBUS-only protection path, ESP32 USB mapping, test points, and
-remaining service-port gates are in `docs/usb-c-service-power-architecture.md`.
+remaining service-port gates are in `docs/usb-c-service-power-architecture.md`. The selected application 3.3 V
+regulator, exact support network, supervisor threshold margin, and thermal/startup calculation are in
+`docs/application-3v3-rail.md`. The selected V5 buck stage, its explicit eFuse peak conflict, and its thermal/layout
+release gates are in `docs/v5-power-stage.md`.
 
 ## Fabrication status
 

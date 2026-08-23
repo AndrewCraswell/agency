@@ -47,20 +47,34 @@ represented, rather than treating pin 4 as a reset output. The `ENOUT` and
 `WDO` open-drain outputs are tied as permitted by TI when the watchdog is
 enabled.
 
-The application `V3_3` regulator is not present in this architecture model;
-its future regulator is a separate power-design decision and must be
-specified before schematic release. The `TPS389033DSER` choice is valid only if the application `V3_3` rail is
-guaranteed at the supervisor pins, after regulator tolerance, load drop,
-temperature, and connector or plane loss, to remain within 3.30 V +/-1%
-(3.267 V to 3.333 V). That requirement leaves at least 46 mV above the
-worst-case 3.189 V rising threshold when the datasheet +/-1% threshold
-accuracy is included. A falling rail below the 3.170 V nominal threshold must
-assert reset before the ESP32 operating margin is exhausted. The current
-model has no application regulator to prove this requirement; regulator
-selection, tolerance analysis, and measurement are release gates.
-If the released V3_3 path cannot guarantee this window, replace the fixed
-3.3 V supervisor with a lower-threshold or adjustable supervisor before
-schematic acceptance rather than relying on firmware or nominal voltage.
+The application `V3_3` rail is now represented by the selected
+`LMR43620MSC3RPERQ1` fixed 3.3 V buck. Its guaranteed 3.27 V to 3.33 V
+fixed-output range in FPWM mode is carried through a 5 mV DC and 15 mV
+transient allowance to the supervisor SENSE/VDD pins. The resulting 3.250 V
+pin minimum leaves 29.1 mV above the `TPS389033DSER` worst-case rising
+threshold of 3.189 V x 1.01 = 3.2209 V.
+The V5 input screen is 4.75 V to 5.25 V, above the regulator's 3.6 V startup
+minimum. The exact `C0603C104K3RACTU` CT capacitor is screened to 61.2 nF
+effective minimum. Using the TPS3890 1.17 V minimum CT threshold, 1.35 uA
+maximum charge current, and no credit for its nominal-only baseline delay
+gives a 53.04 ms guaranteed-minimum calculation. This exceeds the 4.6 ms
+maximum soft start, 10 ms engineering settling requirement, and Espressif
+50 us power-stable minimum by 38.39 ms. The approximately 106.98 ms nominal
+delay is reference information only. This is a calculation using datasheet
+limits, not an assembled-board measurement; see
+[application-3v3-rail.md](application-3v3-rail.md).
+
+The ESP32 pin budget is 3.200 V during regulation, 200 mV above its 3.0 V
+minimum. At the latest supervisor assertion threshold of 3.1383 V, the
+calculation reserves 10 mV supervisor-to-ESP32 mismatch and 50 mV local
+transient droop, leaving 3.0783 V or 78.3 mV above the ESP32 minimum. TI does
+not specify a maximum TPS3890 falling propagation delay, so rail-collapse
+slew-rate and assertion timing remain physical validation gates.
+V5 regulation at the regulator pins, output-capacitor DC-bias, load transient,
+power-removal, and thermal measurements remain release gates. If the released
+V3_3 path cannot meet the 3.27 V minimum, replace the fixed 3.3 V supervisor
+with a lower-threshold or adjustable supervisor before schematic acceptance
+rather than relying on firmware or nominal voltage.
 
 ## HUB75 default blanking
 

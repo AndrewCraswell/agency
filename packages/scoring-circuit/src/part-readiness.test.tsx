@@ -25,8 +25,8 @@ describe("critical-part readiness", () => {
       candidateSelections: 1,
       manufacturerVerifiedCad: 1,
       productionApproved: 0,
-      selectedParts: 4,
-      total: 5,
+      selectedParts: 10,
+      total: 11,
       verifiedFootprints: 0,
       verifiedMechanical: 0
     })
@@ -43,6 +43,8 @@ describe("critical-part readiness", () => {
 
     const esp32 = sourceComponents.find((component) => component.name === "U_ESP32")
     const ethernet = sourceComponents.find((component) => component.name === "U_ETHERNET")
+    const v5Buck = sourceComponents.find((component) => component.name === "U_V5_BUCK")
+    const v5Sense = sourceComponents.find((component) => component.name === "R_V5_SENSE")
     const ethernetPcbComponent = circuitJson.find(
       (element) => element.type === "pcb_component" && element.source_component_id === ethernet?.source_component_id
     )
@@ -54,6 +56,8 @@ describe("critical-part readiness", () => {
       (element) => element.type === "pcb_smtpad" && element.pcb_component_id === ethernetPcbComponentId
     )
     expect(esp32?.manufacturer_part_number).toBe("ESP32-S3-WROOM-1U-N16R2")
+    expect(v5Buck?.manufacturer_part_number).toBe("TPS56A37RPAR")
+    expect(v5Sense?.manufacturer_part_number).toBe("CRE2512-FZ-R002E-3")
     expect(ethernet?.manufacturer_part_number).toBe("W5500")
     expect(ethernetPads).toHaveLength(48)
   })

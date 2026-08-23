@@ -15,6 +15,17 @@ function renderArchitecture() {
   return circuit.getCircuitJson()
 }
 
+function renderPcbPlacements() {
+  const circuit = new Circuit()
+  circuit.pcbRoutingDisabled = true
+  circuit.schematicDisabled = true
+  circuit.setPlatform({ partsEngineDisabled: true })
+  circuit.add(<ScoringCircuit />)
+  circuit.render()
+
+  return circuit.getCircuitJson()
+}
+
 describe("production scoring architecture", () => {
   it("contains the independent scoring and application domains", () => {
     const circuitJson = renderArchitecture()
@@ -51,7 +62,8 @@ describe("production scoring architecture", () => {
         "U_LINE_SINK_A",
         "U_LINE_SINK_B",
         "U_EFUSE",
-        "U_BUCK_BOOST"
+        "U_V5_BUCK",
+        "U_APP_REGULATOR"
       ])
     )
   })
@@ -180,14 +192,29 @@ describe("production scoring architecture", () => {
     expect(sourceByName("R_STM_RESET_GATE_PD")).toMatchObject({ resistance: 100000 })
     expect(sourceByName("R_DEBUG_RESET_GATE")).toMatchObject({ resistance: 10000 })
     expect(sourceByName("R_DEBUG_RESET_GATE_PD")).toMatchObject({ resistance: 100000 })
-    expect(sourceByName("R_ESP_EN_PULLUP")).toMatchObject({ resistance: 10000 })
+    expect(sourceByName("R_ESP_EN_PULLUP")).toMatchObject({
+      manufacturer_part_number: "RC0603FR-0710KL",
+      resistance: 10000
+    })
     expect(sourceByName("C_ESP_EN_DELAY")).toMatchObject({ capacitance: 1e-6 })
-    expect(sourceByName("C_ESP_SUPERVISOR_CT")).toMatchObject({ capacitance: 1e-7 })
+    expect(sourceByName("C_ESP_SUPERVISOR_CT")).toMatchObject({
+      capacitance: 1e-7,
+      manufacturer_part_number: "C0603C104K3RACTU"
+    })
+    expect(sourceByName("C_ESP_SUPERVISOR_BYPASS")).toMatchObject({
+      manufacturer_part_number: "C0603C104K3RACTU"
+    })
+    expect(sourceByName("C_STM_SUPERVISOR_CT")).toMatchObject({
+      manufacturer_part_number: "C0603C104K3RACTU"
+    })
+    expect(sourceByName("C_STM_SUPERVISOR_BYPASS")).toMatchObject({
+      manufacturer_part_number: "C0603C104K3RACTU"
+    })
     expect(componentDecisions.find((component) => component.mpn === "TPS389033DSER")?.qualification).toContain(
       "3.170 V falling and 3.189 V rising"
     )
     expect(componentDecisions.find((component) => component.mpn === "TPS389033DSER")?.qualification).toContain(
-      "approximately 107 ms nominal delay"
+      "53.04 ms calculated minimum"
     )
   })
 
@@ -245,8 +272,10 @@ describe("production scoring architecture", () => {
         "D_USB_PD_VBUS_DISCONNECT.CATHODE_VBUS to J_USB_C.VBUS_PORT",
         "D_USB_PD_VBUS_DISCONNECT.ANODE_GND to net.GND",
         "U_USB_PD.PD_PPHV_20V to C_USB_PD_PPHV.PD_PPHV_20V",
-        "U_EFUSE.VOUT to U_BUCK_BOOST.VIN",
-        "U_BUCK_BOOST.VOUT to net.V5",
+        "U_EFUSE.VOUT to U_V5_BUCK.VIN",
+        "U_V5_BUCK.SW to L_V5_BUCK.SW",
+        "L_V5_BUCK.V5_SENSE_IN to R_V5_SENSE.V5_SENSE_IN",
+        "R_V5_SENSE.V5 to net.V5",
         "J_USB_C.SHIELD to net.ESD_RETURN"
       ])
     )
@@ -254,6 +283,8 @@ describe("production scoring architecture", () => {
     expect(serialized).toContain("TPD4S201TRGRRQ1")
     expect(serialized).toContain("TVS2200DRVR")
     expect(serialized).toContain("TPS259474ARPWR")
+    expect(serialized).toContain("TPS56A37RPAR")
+    expect(serialized).not.toContain("TPS55288RPMR")
     expect(serialized).toContain("B340A-13-F")
     expect(serialized).toContain("100NF_10PCT_50V_X7R_0402")
     expect(serialized).not.toContain("J_POWER_24V")
@@ -295,6 +326,24 @@ describe("production scoring architecture", () => {
     expect(pgThresholdMaximum).toBeLessThan(18.4)
     expect(pgDividerCurrentAt20V).toBeGreaterThan(20e-6)
     expect(sourceByName("C_EFUSE_OUT")).toMatchObject({ manufacturer_part_number: "T523H107M035APE070" })
+    expect(sourceByName("L_V5_BUCK")).toMatchObject({ manufacturer_part_number: "744325330" })
+    expect(sourceByName("C_V5_BUCK_IN_A")).toMatchObject({ manufacturer_part_number: "GRM32ER7YA106KA12L" })
+    expect(sourceByName("C_V5_BUCK_OUT_A")).toMatchObject({ manufacturer_part_number: "GRM32ER71E226KE15L" })
+    expect(sourceByName("R_V5_SENSE")).toMatchObject({ manufacturer_part_number: "CRE2512-FZ-R002E-3" })
+    const pcbCircuitJson = renderPcbPlacements()
+    const pcbCenterForSource = (name: string) => {
+      const source = pcbCircuitJson.find((element) => element.type === "source_component" && element.name === name)
+      const sourceComponentId =
+        source !== undefined && "source_component_id" in source ? source.source_component_id : undefined
+      const placed = pcbCircuitJson.find(
+        (element) => element.type === "pcb_component" && element.source_component_id === sourceComponentId
+      )
+      return placed !== undefined && "center" in placed ? placed.center : undefined
+    }
+    // These are provisional schematic-placement coordinates only, but they must not collide in circuit JSON.
+    expect(pcbCenterForSource("L_V5_BUCK")).toEqual({ x: 12, y: -26 })
+    expect(pcbCenterForSource("L_APP_REGULATOR")).toEqual({ x: 12, y: -38 })
+    expect(pcbCenterForSource("L_V5_BUCK")).not.toEqual(pcbCenterForSource("L_APP_REGULATOR"))
     expect(traceNames).toEqual(
       expect.arrayContaining([
         "U_EFUSE.EN_UVLO to R_EFUSE_UVLO_DOWN.pin1",
@@ -326,5 +375,73 @@ describe("production scoring architecture", () => {
     expect(audio?.mpn).toBe("TAS2505TRGERQ1")
     expect(sourceComponents).toHaveLength(1)
     expect(sourceComponents[0]).toMatchObject({ manufacturer_part_number: "TAS2505TRGERQ1" })
+  })
+
+  it("models the selected application 3.3 V regulator and its safe support network", () => {
+    const circuitJson = renderArchitecture()
+    const sourceComponents = circuitJson.filter((element) => element.type === "source_component")
+    const sourceByName = (name: string) => sourceComponents.find((element) => element.name === name)
+    const traceNames = circuitJson.flatMap((element) =>
+      element.type === "source_trace" && "display_name" in element && typeof element.display_name === "string"
+        ? [element.display_name]
+        : []
+    )
+
+    expect(sourceByName("U_APP_REGULATOR")).toMatchObject({
+      manufacturer_part_number: "LMR43620MSC3RPERQ1"
+    })
+    expect(sourceByName("L_APP_REGULATOR")).toMatchObject({ manufacturer_part_number: "XGL4030-222MEC" })
+    const pcbCircuitJson = renderPcbPlacements()
+    const applicationInductor = pcbCircuitJson.find(
+      (element) => element.type === "source_component" && element.name === "L_APP_REGULATOR"
+    )
+    const applicationInductorSourceId =
+      applicationInductor !== undefined && "source_component_id" in applicationInductor
+        ? applicationInductor.source_component_id
+        : undefined
+    const applicationInductorPcb = pcbCircuitJson.find(
+      (element) =>
+        element.type === "pcb_component" &&
+        applicationInductorSourceId !== undefined &&
+        element.source_component_id === applicationInductorSourceId
+    )
+    const applicationInductorPcbId =
+      applicationInductorPcb !== undefined && "pcb_component_id" in applicationInductorPcb
+        ? applicationInductorPcb.pcb_component_id
+        : undefined
+    const applicationInductorPads = pcbCircuitJson.filter(
+      (element) =>
+        element.type === "pcb_smtpad" &&
+        applicationInductorPcbId !== undefined &&
+        element.pcb_component_id === applicationInductorPcbId
+    )
+    // Keep the exact selected inductor non-fabricable until its Coilcraft land pattern is verified.
+    // A generic 0402 (or any other footprint) would add footprint metadata and emit pads.
+    expect(applicationInductor).toMatchObject({ manufacturer_part_number: "XGL4030-222MEC" })
+    expect(applicationInductor).not.toHaveProperty("footprint")
+    expect(JSON.stringify(applicationInductor)).not.toContain("0402")
+    expect(applicationInductorPcb).toMatchObject({ do_not_place: true })
+    expect(applicationInductorPads).toHaveLength(0)
+    expect(sourceByName("C_APP_REG_IN")).toMatchObject({ manufacturer_part_number: "C2012X7R1E475K125AB" })
+    expect(sourceByName("C_APP_REG_OUT_A")).toMatchObject({
+      manufacturer_part_number: "C2012X7S1A226M125AC"
+    })
+    expect(sourceByName("R_APP_REG_DISCHARGE")).toMatchObject({ manufacturer_part_number: "RC0603FR-071KL" })
+    expect(sourceByName("R_APP_REG_PGOOD")).toMatchObject({ manufacturer_part_number: "RC0603FR-0710KL" })
+    expect(traceNames).toEqual(
+      expect.arrayContaining([
+        "U_APP_REGULATOR.VIN to net.V5",
+        "U_APP_REGULATOR.EN_UVLO to net.V5",
+        "U_APP_REGULATOR.MODE_SYNC to U_APP_REGULATOR.VCC",
+        "U_APP_REGULATOR.SW to L_APP_REGULATOR.SW",
+        "L_APP_REGULATOR.V3_3 to net.V3_3",
+        "U_APP_REGULATOR.VOUT_FB to net.V3_3",
+        "U_APP_REGULATOR.PGOOD to TP_APP_REG_PGOOD.APP_PGOOD",
+        "U_APP_REGULATOR.GND to net.GND"
+      ])
+    )
+    expect(componentDecisions.find((component) => component.category === "application-rail-regulator")?.mpn).toBe(
+      "LMR43620MSC3RPERQ1"
+    )
   })
 })

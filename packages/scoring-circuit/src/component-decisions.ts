@@ -98,16 +98,27 @@ export const componentDecisions = [
     mpn: "TPS389033DSER",
     purpose: "Precision 3.3 V brownout and delayed reset supervision",
     qualification:
-      "3.170 V falling and 3.189 V rising nominal thresholds; +/-1% threshold accuracy; open-drain reset; 100 nF CT selected for approximately 107 ms nominal delay; -40 C to 125 C"
+      "3.170 V falling and 3.189 V rising nominal thresholds; +/-1% threshold accuracy; open-drain reset; exact C0603C104K3RACTU 100 nF CT gives approximately 107 ms nominal but the release proof uses 61.2 nF effective, 1.17 V minimum CT threshold, 1.35 uA maximum charge current, and no baseline-delay credit for a 53.04 ms calculated minimum; -40 C to 125 C"
   },
   {
     category: "system-regulator",
     lifecycle: "active",
     manufacturer: "Texas Instruments",
-    manufacturerUrl: "https://www.ti.com/product/TPS55288",
-    mpn: "TPS55288RPMR",
-    purpose: "Four-switch buck-boost from the negotiated USB-PD input to the five-volt system and display rail",
-    qualification: "2.7 V to 36 V input; -40 C to 150 C junction; thermally validate the selected inductor"
+    manufacturerUrl: "https://www.ti.com/product/TPS56A37/part-details/TPS56A37RPAR",
+    mpn: "TPS56A37RPAR",
+    purpose: "Ten-ampere synchronous buck from the negotiated USB-PD input to the five-volt system and display rail",
+    qualification:
+      "4.5 V to 28 V input; 10 A continuous output; integrated MOSFETs; -40 C to 150 C junction. The 7.99 A continuous and 9.01 A short-peak envelopes retain only 2.01 A and 0.99 A nominal headroom, so layout, thermal, panel-inrush, and bench-current evidence remain release gates"
+  },
+  {
+    category: "application-rail-regulator",
+    lifecycle: "active",
+    manufacturer: "Texas Instruments",
+    manufacturerUrl: "https://www.ti.com/product/LMR43620-Q1",
+    mpn: "LMR43620MSC3RPERQ1",
+    purpose: "Fixed 3.3 V, 2 A synchronous buck for the ESP32 application rail and reset supervisor",
+    qualification:
+      "Active automotive orderable; 3.6 V to 36 V startup input, 2 A, fixed 2.2 MHz, spread spectrum, 3.27 V to 3.33 V fixed-output accuracy over line/load/temperature in FPWM; 2 mm x 2 mm VQFN-HR RPE; thermal layout and transient validation required"
   },
   {
     category: "power-protection",

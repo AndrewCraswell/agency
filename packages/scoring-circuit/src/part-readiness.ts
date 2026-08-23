@@ -70,6 +70,176 @@ export const criticalPartReadiness = [
   {
     assembly: "application-carrier",
     blockers: [
+      "Import and independently verify the TI RPE VQFN-HR land pattern, exposed pad, stencil, and thermal copper",
+      "Prove the TPS56A37-generated V5 rail remains 4.75 V to 5.25 V at the regulator across source, load, and temperature corners",
+      "Measure effective output capacitance under DC bias and temperature, load transient response, startup, discharge, and blocked-vent thermal performance",
+      "Verify at the TPS389033 SENSE/VDD and ESP32 3V3 pins that DC distribution loss and transient droop remain inside the executable 20 mV and 70 mV budgets",
+      "Scope brownout assertion across the allowed rail-collapse slopes because TPS3890 falling propagation delay has no guaranteed maximum"
+    ],
+    cad: {
+      status: "pending",
+      url: "https://www.ti.com/product/LMR43620-Q1"
+    },
+    evidenceUrls: ["https://www.ti.com/product/LMR43620-Q1", "https://www.ti.com/lit/ds/symlink/lmr43620-q1.pdf"],
+    footprint: {
+      status: "source-identified",
+      description: "TI RPE VQFN-HR 2 mm x 2 mm, 9-pin HotRod package with exposed thermal pad",
+      url: "https://www.ti.com/lit/ds/symlink/lmr43620-q1.pdf"
+    },
+    manufacturer: "Texas Instruments",
+    mechanical: {
+      status: "source-identified",
+      description: "TI package outline and land-pattern guidance for the 2 mm x 2 mm RPE package"
+    },
+    mpn: "LMR43620MSC3RPERQ1",
+    productionApproved: false,
+    references: ["U_APP_REGULATOR"],
+    selectionStatus: "selected"
+  },
+  {
+    assembly: "application-carrier",
+    blockers: [
+      "Confirm the exact assembled CT capacitor retains at least 61.2 nF effective capacitance across initial tolerance, temperature, DC bias, and lifetime aging",
+      "Measure TPS389033 reset-release delay at voltage, temperature, and lot corners and verify the 53.04 ms calculated minimum",
+      "Independently verify the Yageo KEMET 0603 land pattern and assembly substitution controls"
+    ],
+    cad: { status: "not-applicable" },
+    evidenceUrls: ["https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en"],
+    footprint: {
+      status: "source-identified",
+      description: "Yageo KEMET 0603 / 1608 MLCC package dimensions",
+      url: "https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en"
+    },
+    manufacturer: "Yageo KEMET",
+    mechanical: {
+      status: "source-identified",
+      description: "Manufacturer specification identifies the 1.6 mm by 0.8 mm 0603 body"
+    },
+    mpn: "C0603C104K3RACTU",
+    productionApproved: false,
+    references: ["C_STM_SUPERVISOR_CT", "C_STM_SUPERVISOR_BYPASS", "C_ESP_SUPERVISOR_CT", "C_ESP_SUPERVISOR_BYPASS"],
+    selectionStatus: "selected"
+  },
+  {
+    assembly: "application-carrier",
+    blockers: [
+      "Import the exact Coilcraft XGL4030 recommended land pattern and independently verify terminal, mask, paste, courtyard, and polarity-independent pin mapping",
+      "Replace the intentional do-not-place no-footprint circuit representation before generating fabrication outputs",
+      "Measure inductor temperature and regulator transient response with the released copper geometry at the declared load and 50 C blocked-vent ambient"
+    ],
+    cad: {
+      status: "pending",
+      url: "https://www.coilcraft.com/en-us/products/power/shielded-inductors/molded-inductor/xgl/xgl4030/xgl4030-222/"
+    },
+    evidenceUrls: [
+      "https://www.coilcraft.com/en-us/products/power/shielded-inductors/molded-inductor/xgl/xgl4030/xgl4030-222/",
+      "https://www.coilcraft.com/getmedia/032d9c73-4222-482f-b6bc-7808590e27c9/xgl4030.pdf"
+    ],
+    footprint: {
+      status: "pending",
+      description:
+        "Exact Coilcraft XGL4030 land pattern is intentionally absent; generic 0402 substitution is prohibited",
+      url: "https://www.coilcraft.com/getmedia/032d9c73-4222-482f-b6bc-7808590e27c9/xgl4030.pdf"
+    },
+    manufacturer: "Coilcraft",
+    mechanical: {
+      status: "source-identified",
+      description: "Manufacturer XGL4030 drawing controls the body, terminal, and height envelope"
+    },
+    mpn: "XGL4030-222MEC",
+    productionApproved: false,
+    references: ["L_APP_REGULATOR"],
+    selectionStatus: "selected"
+  },
+  {
+    assembly: "application-carrier",
+    blockers: [
+      "Independently verify the Yageo 0603 land pattern and assembly substitution controls",
+      "Measure APP_PGOOD low level and ESP32 EN_RESET release level and rise time at voltage and temperature corners"
+    ],
+    cad: { status: "not-applicable" },
+    evidenceUrls: ["https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"],
+    footprint: {
+      status: "source-identified",
+      description: "Yageo RC 0603 / 1608 thick-film resistor package dimensions",
+      url: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
+    },
+    manufacturer: "Yageo",
+    mechanical: {
+      status: "source-identified",
+      description: "Manufacturer specification identifies the 1.6 mm by 0.8 mm 0603 body"
+    },
+    mpn: "RC0603FR-0710KL",
+    productionApproved: false,
+    references: ["R_ESP_EN_PULLUP", "R_APP_REG_PGOOD"],
+    selectionStatus: "selected"
+  },
+  {
+    assembly: "application-carrier",
+    blockers: [
+      "Resolve the eFuse worst-low current-limit conflict with the declared 100 ms V5 peak without changing the USB-PD contract by assumption",
+      "Import and independently verify the TI RPA VQFN-HR land pattern, exposed pad, stencil, and thermal copper",
+      "Prove regulator VIN remains within 28 V recommended and 32 V absolute maximum at its pins during PD, eFuse, ESD, EFT, and surge events",
+      "Measure V5 load-step, panel startup, short-circuit recovery, effective MLCC capacitance, and blocked-vent thermal performance with the selected HUB75 panel"
+    ],
+    cad: {
+      status: "pending",
+      url: "https://www.ti.com/product/TPS56A37/part-details/TPS56A37RPAR"
+    },
+    evidenceUrls: [
+      "https://www.ti.com/product/TPS56A37/part-details/TPS56A37RPAR",
+      "https://www.ti.com/lit/ds/symlink/tps56a37.pdf",
+      "https://www.ti.com/lit/ug/slvuct3/slvuct3.pdf"
+    ],
+    footprint: {
+      status: "source-identified",
+      description: "TI RPA VQFN-HR 3 mm x 3 mm, 10-pin HotRod package with exposed thermal pad",
+      url: "https://www.ti.com/lit/ds/symlink/tps56a37.pdf"
+    },
+    manufacturer: "Texas Instruments",
+    mechanical: {
+      status: "source-identified",
+      description: "TI package outline and EVM layout identify the 3 mm x 3 mm RPA package and thermal-pad dependency"
+    },
+    mpn: "TPS56A37RPAR",
+    productionApproved: false,
+    references: ["U_V5_BUCK"],
+    selectionStatus: "selected"
+  },
+  {
+    assembly: "application-carrier",
+    blockers: [
+      "Import and independently verify the Bourns 2512 land pattern, copper keepout, solder paste, and Kelvin sense escape",
+      "Verify the selected 3 W shunt's temperature coefficient, pulse/overload behavior, and terminal temperature at continuous and repeated peak V5 load",
+      "Calibrate INA238 current telemetry after the shunt, routing, and production assembly are fixed"
+    ],
+    cad: {
+      status: "pending",
+      url: "https://www.bourns.com/docs/product-datasheets/cre.pdf"
+    },
+    evidenceUrls: [
+      "https://www.bourns.com/docs/product-datasheets/cre.pdf",
+      "https://www.bourns.com/products/resistors/current-sense-resistors/surface-mount-current-sense-resistors/cre"
+    ],
+    footprint: {
+      status: "source-identified",
+      description:
+        "Bourns CRE 2512 two-terminal current-sense resistor land-pattern evidence is pending independent CAD import; separate Kelvin PCB traces must reach its terminal pads",
+      url: "https://www.bourns.com/docs/product-datasheets/cre.pdf"
+    },
+    manufacturer: "Bourns",
+    mechanical: {
+      status: "source-identified",
+      description: "Bourns CRE data sheet identifies the 2512 package and 3 W rated resistor option"
+    },
+    mpn: "CRE2512-FZ-R002E-3",
+    productionApproved: false,
+    references: ["R_V5_SENSE"],
+    selectionStatus: "selected"
+  },
+  {
+    assembly: "application-carrier",
+    blockers: [
       "Independently verify the LQFP-48 land pattern and exposed fabrication output",
       "Complete magnetics, termination, clock, decoupling, and Ethernet SI review"
     ],

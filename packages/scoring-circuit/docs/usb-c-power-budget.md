@@ -13,14 +13,14 @@ With the declared assumptions, the remaining display allocation is:
 | Continuous | 48.0 W input, 2.4 A | 8.05 W | 39.95 W | 6.79 W | **33.16 W** | **6.63 A** |
 | Short peak screen | 54.0 W input, 2.7 A | 8.95 W | 45.05 W | 10.26 W | **34.79 W** | **6.96 A** |
 
-The short-peak line is a provisional **100 ms screen** (`peakDurationMs: 100` in the executable inputs), not a converter, connector, cable, or panel inrush rating. The released panel must fit the continuous allocation at its declared worst operating image. A measured short peak may be considered only after output-capacitor droop, TPS55288 current-limit behavior, USB-C source response, cable drop, and connector temperature are measured together.
+The short-peak line is a provisional **100 ms screen** (`peakDurationMs: 100` in the executable inputs), not a converter, connector, cable, or panel inrush rating. The released panel must fit the continuous allocation at its declared worst operating image. The selected TPS56A37 V5 buck can carry the 9.01 A arithmetic peak, but the current eFuse has only about 2.40 A worst-low current limit while the 45.05 W post-shunt peak plus 0.162 W full-rail telemetry-shunt loss needs 2.66 A at this 85 percent floor. The peak line is therefore **DENY** until the source-protection or load conflict is resolved. `v5-power-stage.md` records the exact 40.73 W pre-shunt and 40.60 W post-shunt eFuse-bounded limits. A measured short peak may be considered only after output-capacitor droop, current-limit behavior, USB-C source response, cable drop, and connector temperature are measured together.
 
 These numbers are the result of:
 
 1. `20 V × 3 A = 60 W` contract power.
 2. A 0.80 continuous and 0.90 short-peak source utilization cap. This reserves source, connector, cable, ambient, and thermal margin without requesting a 5 A cable or EPR contract.
 3. A 1.0 W allowance before the buck-boost for PD/eFuse path loss and housekeeping.
-4. An 0.85 buck-boost efficiency floor. This is a conservative design assumption for the 20 V to 5 V operating point, not a TPS55288 datasheet guarantee; measure the chosen inductor, layout, switching frequency, and thermal corner.
+4. An 0.85 V5 buck efficiency floor. This is a conservative design assumption for the 20 V to 5 V operating point, not a TPS56A37 datasheet guarantee; measure the chosen inductor, layout, switching frequency, and thermal corner.
 5. A 0.90 efficiency assumption for the 5 V-to-3.3 V branch. Replace it with the selected regulator's measured worst-case efficiency before release.
 
 The calculation intentionally does not claim that the entire 60 W contract can be consumed continuously. `60 W × 0.80` is the continuous source envelope, and the converter and fixed loads are then deducted. Do not spend the resulting display allocation twice for panel brightness and audio transients.
@@ -50,7 +50,7 @@ Do not pick a panel from nominal pixel count, a reseller's “average” current
 
 - At the specified minimum panel voltage, record 5 V current for black, normal content, and the declared worst-case full-white/static test pattern at maximum allowed brightness and refresh settings.
 - Record the highest repeatable steady current after warm-up. This must be **at or below 6.63 A at 5 V** for the panel alone under the continuous system envelope; use the lower value if the panel manufacturer specifies a stricter limit.
-- Record turn-on/inrush current and duration separately. The 6.96 A short-peak screen is not an inrush approval. Any panel whose startup exceeds the output-capacitor, eFuse, or TPS55288 transient limits requires a reviewed startup/blanking strategy.
+- Record turn-on/inrush current and duration separately. The 6.96 A short-peak screen is not an inrush approval. Any panel whose startup exceeds the output-capacitor, eFuse, or TPS56A37 transient limits requires a reviewed startup/blanking strategy.
 - Include panel controller, receiving card, level shifter, fan, local regulator, and any chained panel in the panel measurement. Their current is part of `displayAllocation`.
 - Measure cable drop and panel-end voltage at the same worst-case current. The panel must still meet its 5 V operating minimum, and connector/cable temperature must be recorded.
 - Repeat with audio at its declared maximum and Ethernet/Wi-Fi traffic active. The system must remain inside the fixed-load assumptions and the source envelopes at 50 °C ambient with the intended enclosure and blocked-vent condition.
@@ -67,7 +67,7 @@ Until those measurements exist, the design has a **6.63 A continuous display all
 - [ST STSAFE-A110 datasheet](https://www.st.com/resource/en/datasheet/stsafe-a110.pdf), Table 3: 21 mA maximum command-processing current.
 - [Murata NXE1S0505MC NXE1 datasheet](https://www.murata.com/en-us/products/productdata/8807031865374/kdc-nxe1.pdf): 1 W rating and 64% minimum efficiency.
 - [TI TAS2505-Q1 datasheet](https://www.ti.com/lit/ds/symlink/tas2505-q1.pdf): 2.6 W-class mono Class-D output stage.
-- [TI TPS55288 product page](https://www.ti.com/product/TPS55288) and [TPS55288 reference design](https://www.ti.com/tool/PMP40801): converter capability and the need to consider efficiency and thermal load together.
+- [TI TPS56A37 product page](https://www.ti.com/product/TPS56A37/part-details/TPS56A37RPAR) and [TPS56A37EVM user guide](https://www.ti.com/lit/ug/slvuct3/slvuct3.pdf): selected 5 V, 10 A buck capability, exact reference components, and the need to consider efficiency and thermal load together.
 - [TI TPS25947 datasheet](https://www.ti.com/lit/ds/symlink/tps25947.pdf): eFuse loss and quiescent-current context.
 - [TI SN74AHCT245 datasheet](https://www.ti.com/lit/gpn/sn74ahct245): static ICC does not replace switching-current measurement.
 

@@ -144,8 +144,22 @@ function ScoringCircuit() {
       />
       <resistor name="R_STM_WD_CWD" resistance="10k" tolerance="1%" footprint="0603" pcbX={-72} pcbY={-12} />
       <capacitor name="C_STM_WD_BYPASS" capacitance="100nF" footprint="0603" pcbX={-75} pcbY={-12} />
-      <capacitor name="C_STM_SUPERVISOR_CT" capacitance="100nF" footprint="0603" pcbX={-72} pcbY={-22} />
-      <capacitor name="C_STM_SUPERVISOR_BYPASS" capacitance="100nF" footprint="0603" pcbX={-75} pcbY={-22} />
+      <capacitor
+        name="C_STM_SUPERVISOR_CT"
+        manufacturerPartNumber="C0603C104K3RACTU"
+        capacitance="100nF"
+        footprint="0603"
+        pcbX={-72}
+        pcbY={-22}
+      />
+      <capacitor
+        name="C_STM_SUPERVISOR_BYPASS"
+        manufacturerPartNumber="C0603C104K3RACTU"
+        capacitance="100nF"
+        footprint="0603"
+        pcbX={-75}
+        pcbY={-22}
+      />
       <chip
         name="U_ISOLATED_POWER"
         manufacturerPartNumber="NXE1S0505MC"
@@ -296,7 +310,15 @@ function ScoringCircuit() {
         pcbX={26}
         pcbY={-19}
       />
-      <resistor name="R_ESP_EN_PULLUP" resistance="10k" tolerance="1%" footprint="0603" pcbX={34} pcbY={-9} />
+      <resistor
+        name="R_ESP_EN_PULLUP"
+        manufacturerPartNumber="RC0603FR-0710KL"
+        resistance="10k"
+        tolerance="1%"
+        footprint="0603"
+        pcbX={34}
+        pcbY={-9}
+      />
       <capacitor name="C_ESP_EN_DELAY" capacitance="1uF" footprint="0603" pcbX={39} pcbY={-9} />
       <chip
         name="Q_ESP_RESET_STM"
@@ -322,8 +344,22 @@ function ScoringCircuit() {
       <resistor name="R_STM_RESET_ISO_PD" resistance="100k" tolerance="1%" footprint="0603" pcbX={-1} pcbY={-8} />
       <resistor name="R_ESP_WD_CWD" resistance="10k" tolerance="1%" footprint="0603" pcbX={9} pcbY={-24} />
       <capacitor name="C_ESP_WD_BYPASS" capacitance="100nF" footprint="0603" pcbX={5} pcbY={-24} />
-      <capacitor name="C_ESP_SUPERVISOR_CT" capacitance="100nF" footprint="0603" pcbX={30} pcbY={-25} />
-      <capacitor name="C_ESP_SUPERVISOR_BYPASS" capacitance="100nF" footprint="0603" pcbX={35} pcbY={-25} />
+      <capacitor
+        name="C_ESP_SUPERVISOR_CT"
+        manufacturerPartNumber="C0603C104K3RACTU"
+        capacitance="100nF"
+        footprint="0603"
+        pcbX={30}
+        pcbY={-25}
+      />
+      <capacitor
+        name="C_ESP_SUPERVISOR_BYPASS"
+        manufacturerPartNumber="C0603C104K3RACTU"
+        capacitance="100nF"
+        footprint="0603"
+        pcbX={35}
+        pcbY={-25}
+      />
       <chip
         name="Q_DISPLAY_BUFFER_A_ENABLE"
         manufacturerPartNumber="BSS138AKA"
@@ -804,13 +840,215 @@ function ScoringCircuit() {
         pcbY={-34}
       />
       <chip
-        name="U_BUCK_BOOST"
-        manufacturerPartNumber="TPS55288RPMR"
-        footprint="qfn26"
-        pinLabels={{ pin1: "VIN", pin2: "GND", pin3: "VOUT", pin4: "SDA", pin5: "SCL", pin6: "FAULT" }}
+        name="U_V5_BUCK"
+        manufacturerPartNumber="TPS56A37RPAR"
+        footprint="qfn10"
+        pinLabels={{
+          pin1: "EN",
+          pin2: "FB",
+          pin3: "AGND",
+          pin4: "PG",
+          pin5: "SS",
+          pin6: "SW",
+          pin7: "BOOT",
+          pin8: "VIN",
+          pin9: "PGND",
+          pin10: "MODE"
+        }}
         pcbX={20}
         pcbY={-38}
       />
+      <chip
+        name="L_V5_BUCK"
+        manufacturerPartNumber="744325330"
+        footprint="we-pad-12mm"
+        pinLabels={{ pin1: "SW", pin2: "V5_SENSE_IN" }}
+        pcbX={12}
+        pcbY={-26}
+      />
+      <chip
+        name="R_V5_SENSE"
+        manufacturerPartNumber="CRE2512-FZ-R002E-3"
+        footprint="2512"
+        pinLabels={{ pin1: "V5_SENSE_IN", pin2: "V5" }}
+        pcbX={6}
+        pcbY={-38}
+      />
+      <chip
+        name="C_V5_BUCK_IN_A"
+        manufacturerPartNumber="GRM32ER7YA106KA12L"
+        footprint="1210"
+        pinLabels={{ pin1: "VIN", pin2: "GND" }}
+        pcbX={22}
+        pcbY={-32}
+      />
+      <chip
+        name="C_V5_BUCK_IN_B"
+        manufacturerPartNumber="GRM32ER7YA106KA12L"
+        footprint="1210"
+        pinLabels={{ pin1: "VIN", pin2: "GND" }}
+        pcbX={18}
+        pcbY={-32}
+      />
+      <chip
+        name="C_V5_BUCK_IN_HF"
+        manufacturerPartNumber="885012206095"
+        footprint="0603"
+        pinLabels={{ pin1: "VIN", pin2: "GND" }}
+        pcbX={14}
+        pcbY={-32}
+      />
+      <chip
+        name="C_V5_BUCK_BOOT"
+        manufacturerPartNumber="885012206095"
+        footprint="0603"
+        pinLabels={{ pin1: "BOOT", pin2: "SW" }}
+        pcbX={10}
+        pcbY={-32}
+      />
+      <chip
+        name="C_V5_BUCK_OUT_A"
+        manufacturerPartNumber="GRM32ER71E226KE15L"
+        footprint="1210"
+        pinLabels={{ pin1: "V5", pin2: "GND" }}
+        pcbX={2}
+        pcbY={-32}
+      />
+      <chip
+        name="C_V5_BUCK_OUT_B"
+        manufacturerPartNumber="GRM32ER71E226KE15L"
+        footprint="1210"
+        pinLabels={{ pin1: "V5", pin2: "GND" }}
+        pcbX={-2}
+        pcbY={-32}
+      />
+      <resistor name="R_V5_BUCK_EN_UP" resistance="88.7k" tolerance="1%" footprint="0603" pcbX={28} pcbY={-38} />
+      <resistor name="R_V5_BUCK_EN_DOWN" resistance="6.04k" tolerance="1%" footprint="0603" pcbX={28} pcbY={-42} />
+      <resistor name="R_V5_BUCK_MODE" resistance="52.3k" tolerance="1%" footprint="0603" pcbX={24} pcbY={-46} />
+      <chip
+        name="C_V5_BUCK_SS"
+        manufacturerPartNumber="C1608X7R1H473K080AA"
+        footprint="0603"
+        pinLabels={{ pin1: "SS", pin2: "GND" }}
+        pcbX={18}
+        pcbY={-46}
+      />
+      <resistor name="R_V5_BUCK_FB_TOP" resistance="73.2k" tolerance="0.5%" footprint="0603" pcbX={2} pcbY={-46} />
+      <resistor name="R_V5_BUCK_FB_BOTTOM" resistance="10k" tolerance="0.5%" footprint="0603" pcbX={-2} pcbY={-46} />
+      <resistor name="R_V5_BUCK_FF" resistance="49.9" tolerance="0.5%" footprint="0603" pcbX={6} pcbY={-50} />
+      <chip
+        name="C_V5_BUCK_FF"
+        manufacturerPartNumber="GRM1885C1H151JA01D"
+        footprint="0603"
+        pinLabels={{ pin1: "FF", pin2: "FB" }}
+        pcbX={10}
+        pcbY={-50}
+      />
+      <resistor name="R_V5_BUCK_PG_PULLUP" resistance="100k" tolerance="1%" footprint="0603" pcbX={14} pcbY={-50} />
+      <pinheader name="TP_V5_BUCK_PG" pinCount={1} pinLabels={["V5_PG"]} pcbX={20} pcbY={-50} />
+      <chip
+        name="U_APP_REGULATOR"
+        manufacturerPartNumber="LMR43620MSC3RPERQ1"
+        footprint="qfn9"
+        pinLabels={{
+          pin1: "MODE_SYNC",
+          pin2: "PGOOD",
+          pin3: "EN_UVLO",
+          pin4: "VIN",
+          pin5: "SW",
+          pin6: "BOOT",
+          pin7: "VCC",
+          pin8: "VOUT_FB",
+          pin9: "GND"
+        }}
+        pcbX={7}
+        pcbY={-38}
+      />
+      <chip
+        name="L_APP_REGULATOR"
+        manufacturerPartNumber="XGL4030-222MEC"
+        // Intentionally non-placeable until the exact Coilcraft XGL4030 land
+        // pattern is imported and independently verified. A generic passive
+        // footprint would make the generated fabrication output unsafe.
+        doNotPlace
+        pinLabels={{ pin1: "SW", pin2: "V3_3" }}
+        pcbX={12}
+        pcbY={-38}
+      />
+      <chip
+        name="C_APP_REG_IN"
+        manufacturerPartNumber="C2012X7R1E475K125AB"
+        footprint="0805"
+        pinLabels={{ pin1: "VIN", pin2: "GND" }}
+        pcbX={1}
+        pcbY={-44}
+      />
+      <chip
+        name="C_APP_REG_IN_HF"
+        manufacturerPartNumber="C0603C104K3RACTU"
+        footprint="0603"
+        pinLabels={{ pin1: "VIN", pin2: "GND" }}
+        pcbX={4}
+        pcbY={-44}
+      />
+      <chip
+        name="C_APP_REG_BOOT"
+        manufacturerPartNumber="C0603C104K3RACTU"
+        footprint="0603"
+        pinLabels={{ pin1: "BOOT", pin2: "SW" }}
+        pcbX={8}
+        pcbY={-44}
+      />
+      <chip
+        name="C_APP_REG_VCC"
+        manufacturerPartNumber="GRM188R71A105KA61"
+        footprint="0603"
+        pinLabels={{ pin1: "VCC", pin2: "GND" }}
+        pcbX={12}
+        pcbY={-44}
+      />
+      <chip
+        name="C_APP_REG_OUT_A"
+        manufacturerPartNumber="C2012X7S1A226M125AC"
+        footprint="0805"
+        pinLabels={{ pin1: "V3_3", pin2: "GND" }}
+        pcbX={16}
+        pcbY={-44}
+      />
+      <chip
+        name="C_APP_REG_OUT_B"
+        manufacturerPartNumber="C2012X7S1A226M125AC"
+        footprint="0805"
+        pinLabels={{ pin1: "V3_3", pin2: "GND" }}
+        pcbX={20}
+        pcbY={-44}
+      />
+      <chip
+        name="C_APP_REG_OUT_C"
+        manufacturerPartNumber="C2012X7S1A226M125AC"
+        footprint="0805"
+        pinLabels={{ pin1: "V3_3", pin2: "GND" }}
+        pcbX={24}
+        pcbY={-44}
+      />
+      <chip
+        name="R_APP_REG_DISCHARGE"
+        manufacturerPartNumber="RC0603FR-071KL"
+        footprint="0603"
+        pinLabels={{ pin1: "V3_3", pin2: "GND" }}
+        pcbX={28}
+        pcbY={-44}
+      />
+      <resistor
+        name="R_APP_REG_PGOOD"
+        manufacturerPartNumber="RC0603FR-0710KL"
+        resistance={10000}
+        tolerance="1%"
+        footprint="0603"
+        pcbX={32}
+        pcbY={-44}
+      />
+      <pinheader name="TP_APP_REG_PGOOD" pinCount={1} pinLabels={["APP_PGOOD"]} pcbX={36} pcbY={-44} />
       <chip
         name="U_POWER_MONITOR"
         manufacturerPartNumber="INA238AIDGSR"
@@ -957,8 +1195,72 @@ function ScoringCircuit() {
       <trace from="R_EFUSE_PG_PULLUP.pin2" to="net.V3_3" />
       <trace from="U_EFUSE.VOUT" to="C_EFUSE_OUT.VOUT" />
       <trace from="C_EFUSE_OUT.GND" to="net.GND" />
-      <trace from="U_EFUSE.VOUT" to="U_BUCK_BOOST.VIN" />
-      <trace from="U_BUCK_BOOST.VOUT" to="net.V5" />
+      <trace from="U_EFUSE.VOUT" to="U_V5_BUCK.VIN" />
+      <trace from="U_EFUSE.VOUT" to="C_V5_BUCK_IN_A.VIN" />
+      <trace from="U_EFUSE.VOUT" to="C_V5_BUCK_IN_B.VIN" />
+      <trace from="U_EFUSE.VOUT" to="C_V5_BUCK_IN_HF.VIN" />
+      <trace from="U_EFUSE.VOUT" to="R_V5_BUCK_EN_UP.pin1" />
+      <trace from="R_V5_BUCK_EN_UP.pin2" to="U_V5_BUCK.EN" />
+      <trace from="U_V5_BUCK.EN" to="R_V5_BUCK_EN_DOWN.pin1" />
+      <trace from="R_V5_BUCK_EN_DOWN.pin2" to="net.GND" />
+      <trace from="U_V5_BUCK.AGND" to="net.GND" />
+      <trace from="U_V5_BUCK.PGND" to="net.GND" />
+      <trace from="C_V5_BUCK_IN_A.GND" to="net.GND" />
+      <trace from="C_V5_BUCK_IN_B.GND" to="net.GND" />
+      <trace from="C_V5_BUCK_IN_HF.GND" to="net.GND" />
+      <trace from="U_V5_BUCK.BOOT" to="C_V5_BUCK_BOOT.BOOT" />
+      <trace from="C_V5_BUCK_BOOT.SW" to="U_V5_BUCK.SW" />
+      <trace from="U_V5_BUCK.MODE" to="R_V5_BUCK_MODE.pin1" />
+      <trace from="R_V5_BUCK_MODE.pin2" to="net.GND" />
+      <trace from="U_V5_BUCK.SS" to="C_V5_BUCK_SS.SS" />
+      <trace from="C_V5_BUCK_SS.GND" to="net.GND" />
+      <trace from="U_V5_BUCK.SW" to="L_V5_BUCK.SW" />
+      <trace from="L_V5_BUCK.V5_SENSE_IN" to="R_V5_SENSE.V5_SENSE_IN" />
+      <trace from="R_V5_SENSE.V5" to="net.V5" />
+      <trace from="net.V5" to="C_V5_BUCK_OUT_A.V5" />
+      <trace from="net.V5" to="C_V5_BUCK_OUT_B.V5" />
+      <trace from="C_V5_BUCK_OUT_A.GND" to="net.GND" />
+      <trace from="C_V5_BUCK_OUT_B.GND" to="net.GND" />
+      <trace from="net.V5" to="R_V5_BUCK_FB_TOP.pin1" />
+      <trace from="R_V5_BUCK_FB_TOP.pin2" to="U_V5_BUCK.FB" />
+      <trace from="U_V5_BUCK.FB" to="R_V5_BUCK_FB_BOTTOM.pin1" />
+      <trace from="R_V5_BUCK_FB_BOTTOM.pin2" to="net.GND" />
+      <trace from="net.V5" to="R_V5_BUCK_FF.pin1" />
+      <trace from="R_V5_BUCK_FF.pin2" to="C_V5_BUCK_FF.FF" />
+      <trace from="C_V5_BUCK_FF.FB" to="U_V5_BUCK.FB" />
+      <trace from="U_V5_BUCK.PG" to="TP_V5_BUCK_PG.V5_PG" />
+      <trace from="U_V5_BUCK.PG" to="R_V5_BUCK_PG_PULLUP.pin1" />
+      <trace from="R_V5_BUCK_PG_PULLUP.pin2" to="net.V3_3" />
+      <trace from="L_V5_BUCK.V5_SENSE_IN" to="U_POWER_MONITOR.VIN_P" />
+      <trace from="net.V5" to="U_POWER_MONITOR.VIN_N" />
+      <trace from="U_POWER_MONITOR.GND" to="net.GND" />
+      <trace from="U_POWER_MONITOR.V3_3" to="net.V3_3" />
+      <trace from="U_APP_REGULATOR.VIN" to="net.V5" />
+      <trace from="U_APP_REGULATOR.EN_UVLO" to="net.V5" />
+      <trace from="U_APP_REGULATOR.MODE_SYNC" to="U_APP_REGULATOR.VCC" />
+      <trace from="U_APP_REGULATOR.PGOOD" to="R_APP_REG_PGOOD.pin1" />
+      <trace from="U_APP_REGULATOR.PGOOD" to="TP_APP_REG_PGOOD.APP_PGOOD" />
+      <trace from="R_APP_REG_PGOOD.pin2" to="net.V5" />
+      <trace from="U_APP_REGULATOR.SW" to="L_APP_REGULATOR.SW" />
+      <trace from="L_APP_REGULATOR.V3_3" to="net.V3_3" />
+      <trace from="U_APP_REGULATOR.BOOT" to="C_APP_REG_BOOT.BOOT" />
+      <trace from="C_APP_REG_BOOT.SW" to="U_APP_REGULATOR.SW" />
+      <trace from="U_APP_REGULATOR.VCC" to="C_APP_REG_VCC.VCC" />
+      <trace from="U_APP_REGULATOR.VOUT_FB" to="net.V3_3" />
+      <trace from="C_APP_REG_IN.VIN" to="U_APP_REGULATOR.VIN" />
+      <trace from="C_APP_REG_IN_HF.VIN" to="U_APP_REGULATOR.VIN" />
+      <trace from="C_APP_REG_OUT_A.V3_3" to="net.V3_3" />
+      <trace from="C_APP_REG_OUT_B.V3_3" to="net.V3_3" />
+      <trace from="C_APP_REG_OUT_C.V3_3" to="net.V3_3" />
+      <trace from="R_APP_REG_DISCHARGE.V3_3" to="net.V3_3" />
+      <trace from="U_APP_REGULATOR.GND" to="net.GND" />
+      <trace from="C_APP_REG_IN.GND" to="net.GND" />
+      <trace from="C_APP_REG_IN_HF.GND" to="net.GND" />
+      <trace from="C_APP_REG_VCC.GND" to="net.GND" />
+      <trace from="C_APP_REG_OUT_A.GND" to="net.GND" />
+      <trace from="C_APP_REG_OUT_B.GND" to="net.GND" />
+      <trace from="C_APP_REG_OUT_C.GND" to="net.GND" />
+      <trace from="R_APP_REG_DISCHARGE.GND" to="net.GND" />
 
       <trace from="U_ESP32.APP_SPI_SCK" to="U_ETHERNET.SCK" />
       <trace from="U_ESP32.APP_SPI_MOSI" to="U_ETHERNET.MOSI" />
@@ -1077,8 +1379,6 @@ function ScoringCircuit() {
       <trace from="U_ESP32.I2C_SCL" to="U_SECURE_ELEMENT.SCL" />
       <trace from="U_ESP32.I2C_SDA" to="U_POWER_MONITOR.SDA" />
       <trace from="U_ESP32.I2C_SCL" to="U_POWER_MONITOR.SCL" />
-      <trace from="U_ESP32.I2C_SDA" to="U_BUCK_BOOST.SDA" />
-      <trace from="U_ESP32.I2C_SCL" to="U_BUCK_BOOST.SCL" />
       <trace from="U_ESP32.I2C_SDA" to="U_AUDIO.I2C_SDA" />
       <trace from="U_ESP32.I2C_SCL" to="U_AUDIO.I2C_SCL" />
       <trace from="U_ESP32.I2S_BCLK" to="U_AUDIO.I2S_BCLK" />

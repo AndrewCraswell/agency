@@ -81,7 +81,7 @@ The canonical, machine-checked list is `src/component-decisions.ts`. Important c
 | Processor barrier | ISO7762FDWR plus ISO7721FDR | Reinforced, fast, correct channel directions, wide operating range |
 | Scoring power | NXE1S0505MC plus local regulation | Certified one-watt isolated source; separation from display/network noise |
 | ADC reference | REF5025AQDRQ1 | Automotive-qualified, low drift, and specified through 125 C |
-| Power entry and service | 10177070-00011LF, TPS25730ADREFR, TPD4S201TRGRRQ1, TVS2200DRVR, B340A-13-F, TPS259474ARPWR, TPS55288RPMR | Sole USB-PD SPR 20 V/3 A input with native USB 2.0 service data; no battery, charger, or dual-input arbitration |
+| Power entry and service | 10177070-00011LF, TPS25730ADREFR, TPD4S201TRGRRQ1, TVS2200DRVR, B340A-13-F, TPS259474ARPWR, TPS56A37RPAR | Sole USB-PD SPR 20 V/3 A input with native USB 2.0 service data; no battery, charger, or dual-input arbitration |
 | Ethernet | W5500 with integrated-magnetics RJ45 | Stable dedicated controller; networking cannot consume the scoring SPI bus |
 | Field serial | ISO1410BDWR | Isolated protected RS-485 for our documented long-cable protocol |
 | Journal | CY15B104Q-LHXIT | High-endurance F-RAM for atomic metadata and configuration transactions |
@@ -106,7 +106,9 @@ The sink-only PD controller negotiates the contract and isolates the apparatus f
 insufficient adapter. There is no battery, charger, PD source role, locking 24 V inlet, or dual-source arbitration.
 `usb-c-service-power-architecture.md` controls the selected connector, PD controller, protection parts, test points,
 grounding approach, provisional 60 W envelope, and remaining port-specific gates. TPS259474A remains the post-contract
-apparatus fault barrier and TPS55288 converts the negotiated input to V5.
+apparatus fault barrier and TPS56A37 converts the negotiated input to V5. The present eFuse current-limit tolerance
+does not support the declared 100 ms peak envelope; `v5-power-stage.md` records the denied condition and the required
+resolution before power release.
 
 The internal scoring and reference rails must produce identical rule-test results across the negotiated input range,
 brownout, adapter removal, and PD hard reset. INA238 telemetry lets firmware reduce display brightness before brownout
