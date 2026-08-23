@@ -196,84 +196,66 @@
       }
       .box-face {
         display: grid;
-        grid-template-columns: 1fr minmax(150px, 0.55fr) 1fr;
-        gap: 14px;
-        align-items: stretch;
-        min-height: 160px;
+        gap: 12px;
         padding: 15px;
       }
-      .fencer-display {
+      .matrix-frame {
         display: grid;
-        align-content: center;
-        gap: 10px;
-        padding: 12px;
+        gap: 9px;
+        padding: 10px;
+        border: 1px solid #263843;
+        border-radius: 7px;
+        background: #0a1117;
+      }
+      .matrix-topline {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        color: #aebfca;
+        font-size: 0.76rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .rgb-matrix {
+        display: block;
+        width: 100%;
+        max-width: 960px;
+        height: auto;
+        aspect-ratio: 2 / 1;
+        border: 1px solid #314654;
+        background: #05090c;
+        image-rendering: pixelated;
+      }
+      .matrix-summary {
+        min-height: 1.35em;
+        margin: 0;
+        color: #d3e0e6;
+        font-size: 0.86rem;
+      }
+      .signal-readout {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 8px;
+        margin: 0;
+      }
+      .signal-readout div {
+        min-width: 0;
+        padding: 8px 9px;
         border: 1px solid #263843;
         background: #0d141a;
       }
-      .fencer-display header {
-        display: flex;
-        justify-content: space-between;
-        gap: 8px;
-        color: #aebfca;
-        font-size: 0.82rem;
+      .signal-readout dt {
+        color: #91a5b0;
+        font-size: 0.7rem;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
       }
-      .lamp-matrix {
-        display: grid;
-        grid-template-columns: repeat(8, 1fr);
-        gap: 4px;
-      }
-      .lamp-pixel {
-        aspect-ratio: 1;
-        border-radius: 3px;
-        background: #1b2329;
-        box-shadow: inset 0 0 0 1px #28353d;
-      }
-      .fencer-display[data-side="left"][data-hit="true"] .lamp-pixel {
-        background: #eb4b55;
-        box-shadow: 0 0 10px rgb(235 75 85 / 65%);
-      }
-      .fencer-display[data-side="right"][data-hit="true"] .lamp-pixel {
-        background: #40ce79;
-        box-shadow: 0 0 10px rgb(64 206 121 / 65%);
-      }
-      .fencer-display[data-fault="true"] {
-        border-color: #f0c46a;
-      }
-      .fencer-display[data-contact="true"] header::after {
-        color: #75c8f2;
-        content: "Contact";
-      }
-      .player-center {
-        display: grid;
-        place-items: center;
-        align-content: center;
-        gap: 10px;
-        text-align: center;
-      }
-      .weapon-label {
-        color: #c5d3da;
-        font-size: 0.86rem;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-      }
-      .buzzer-indicator {
-        width: 50px;
-        height: 50px;
-        border: 7px double #40515b;
-        border-radius: 50%;
-        background: #141d23;
-      }
-      .buzzer-indicator[data-active="true"] {
-        border-color: #f4c65d;
-        background: #7d5d16;
-        box-shadow: 0 0 18px rgb(244 198 93 / 65%);
-      }
-      .player-state {
-        min-height: 2.5em;
-        margin: 0;
-        color: #aebfca;
+      .signal-readout dd {
+        margin: 4px 0 0;
+        overflow-wrap: anywhere;
+        color: #eef5f8;
         font-size: 0.84rem;
+        font-variant-numeric: tabular-nums;
       }
       .player-unavailable {
         margin: 0;
@@ -530,11 +512,10 @@
           display: none;
         }
         .box-face {
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr;
         }
-        .player-center {
-          grid-column: 1 / -1;
-          grid-row: 1;
+        .signal-readout {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
         }
         .bout-lane {
           grid-template-columns: 70px minmax(0, 1fr);
@@ -828,36 +809,16 @@
         }, 650)
       }
 
-      function createFencerDisplay(side) {
-        const display = document.createElement("section")
-        display.className = "fencer-display"
-        display.dataset.side = side
-        display.dataset.hit = "false"
-        display.dataset.contact = "false"
-        display.dataset.fault = "false"
-        display.setAttribute("aria-label", (side === "left" ? "Left fencer" : "Right fencer") + ": idle")
-        const heading = document.createElement("header")
-        const label = document.createElement("strong")
-        label.textContent = side === "left" ? "Left fencer" : "Right fencer"
-        heading.append(label)
-        const matrix = document.createElement("div")
-        matrix.className = "lamp-matrix"
-        for (let index = 0; index < 24; index += 1) {
-          const pixel = document.createElement("span")
-          pixel.className = "lamp-pixel"
-          pixel.setAttribute("aria-hidden", "true")
-          matrix.append(pixel)
-        }
-        display.append(heading, matrix)
-        return display
-      }
-
       function isContactLine(line, side) {
         return (
           line.line.startsWith(side + ".") &&
           ["weapon-circuit", "tip-loop", "target", "blade"].some((name) => line.line.includes(name)) &&
           line.state === "closed"
         )
+      }
+
+      function isBladeContactLine(line) {
+        return (line.line.includes("blade") || line.line.includes("parry")) && line.state === "closed"
       }
 
       function isFaultLine(line, side) {
@@ -898,34 +859,227 @@
         }
       }
 
+      const matrixFont = {
+        " ": ["00000", "00000", "00000", "00000", "00000"],
+        "?": ["11110", "00001", "00110", "00000", "00100"],
+        A: ["01110", "10001", "11111", "10001", "10001"],
+        B: ["11110", "10001", "11110", "10001", "11110"],
+        C: ["01111", "10000", "10000", "10000", "01111"],
+        D: ["11110", "10001", "10001", "10001", "11110"],
+        E: ["11111", "10000", "11110", "10000", "11111"],
+        F: ["11111", "10000", "11110", "10000", "10000"],
+        G: ["01111", "10000", "10111", "10001", "01111"],
+        H: ["10001", "10001", "11111", "10001", "10001"],
+        I: ["11111", "00100", "00100", "00100", "11111"],
+        L: ["10000", "10000", "10000", "10000", "11111"],
+        M: ["10001", "11011", "10101", "10001", "10001"],
+        N: ["10001", "11001", "10101", "10011", "10001"],
+        O: ["01110", "10001", "10001", "10001", "01110"],
+        P: ["11110", "10001", "11110", "10000", "10000"],
+        R: ["11110", "10001", "11110", "10100", "10010"],
+        S: ["01111", "10000", "01110", "00001", "11110"],
+        T: ["11111", "00100", "00100", "00100", "00100"],
+        U: ["10001", "10001", "10001", "10001", "01110"],
+        X: ["10001", "01010", "00100", "01010", "10001"],
+        Y: ["10001", "01010", "00100", "00100", "00100"],
+        0: ["01110", "10011", "10101", "11001", "01110"],
+        1: ["00100", "01100", "00100", "00100", "01110"],
+        2: ["01110", "10001", "00010", "00100", "11111"],
+        3: ["11110", "00001", "01110", "00001", "11110"],
+        4: ["10010", "10010", "11111", "00010", "00010"],
+        5: ["11111", "10000", "11110", "00001", "11110"],
+        6: ["01110", "10000", "11110", "10001", "01110"],
+        7: ["11111", "00001", "00010", "00100", "00100"],
+        8: ["01110", "10001", "01110", "10001", "01110"],
+        9: ["01110", "10001", "01111", "00001", "01110"]
+      }
+
+      function drawMatrixText(context, value, x, y, color, scale = 1) {
+        const text = String(value).toUpperCase()
+        const spacing = scale
+        let cursor = x
+        context.fillStyle = color
+        for (const character of text) {
+          const glyph = matrixFont[character] ?? matrixFont["?"]
+          for (let row = 0; row < glyph.length; row += 1) {
+            for (let column = 0; column < glyph[row].length; column += 1) {
+              if (glyph[row][column] === "1") context.fillRect(cursor + column * scale, y + row * scale, scale, scale)
+            }
+          }
+          cursor += 6 * scale + spacing
+        }
+        return cursor - x - spacing
+      }
+
+      function matrixTextWidth(value, scale = 1) {
+        const text = String(value).toUpperCase()
+        return text.length === 0 ? 0 : text.length * (6 * scale + scale) - scale
+      }
+
+      function drawCenteredMatrixText(context, value, y, color, scale = 1) {
+        const width = matrixTextWidth(value, scale)
+        drawMatrixText(context, value, Math.max(0, Math.floor((64 - width) / 2)), y, color, scale)
+      }
+
+      function paintMatrixCell(context, column, row, color, active = true) {
+        context.fillStyle = color
+        context.fillRect(column * 10 + 1, row * 10 + 1, 8, 8)
+        if (active) {
+          context.fillStyle = "rgb(255 255 255 / 18%)"
+          context.fillRect(column * 10 + 2, row * 10 + 2, 2, 2)
+        }
+      }
+
+      function paintMatrixRegion(context, left, top, width, height, color, active) {
+        for (let row = top; row < top + height; row += 1) {
+          for (let column = left; column < left + width; column += 1)
+            paintMatrixCell(context, column, row, color, active)
+        }
+      }
+
+      function drawMatrix(canvas, snapshot) {
+        const context = canvas.getContext("2d")
+        if (!context) return
+        context.clearRect(0, 0, canvas.width, canvas.height)
+        context.fillStyle = "#05090c"
+        context.fillRect(0, 0, canvas.width, canvas.height)
+        for (let row = 0; row < 32; row += 1) {
+          for (let column = 0; column < 64; column += 1) paintMatrixCell(context, column, row, "#111a20", false)
+        }
+
+        drawCenteredMatrixText(context, snapshot.weapon, 1, "#d9e7ed", 1)
+        drawMatrixText(context, "L", 5, 5, "#91a5b0")
+        drawMatrixText(context, "R", 56, 5, "#91a5b0")
+
+        const leftColor =
+          snapshot.leftLamp === "valid-hit"
+            ? "#eb4b55"
+            : snapshot.leftLamp === "off-target"
+              ? "#e9ad55"
+              : snapshot.leftLamp === "diagnostic"
+                ? "#f0c46a"
+                : "#18242b"
+        const rightColor =
+          snapshot.rightLamp === "valid-hit"
+            ? "#40ce79"
+            : snapshot.rightLamp === "off-target"
+              ? "#e9ad55"
+              : snapshot.rightLamp === "diagnostic"
+                ? "#f0c46a"
+                : "#18242b"
+        paintMatrixRegion(context, 2, 8, 13, 9, leftColor, snapshot.leftLamp !== "off")
+        paintMatrixRegion(context, 49, 8, 13, 9, rightColor, snapshot.rightLamp !== "off")
+
+        paintMatrixRegion(context, 18, 10, 5, 3, snapshot.leftContact ? "#75c8f2" : "#18242b", snapshot.leftContact)
+        paintMatrixRegion(context, 41, 10, 5, 3, snapshot.rightContact ? "#75c8f2" : "#18242b", snapshot.rightContact)
+        paintMatrixRegion(context, 27, 10, 10, 3, snapshot.bladeContact ? "#ed8a43" : "#18242b", snapshot.bladeContact)
+        paintMatrixRegion(context, 18, 17, 5, 3, snapshot.leftFault ? "#f0c46a" : "#18242b", snapshot.leftFault)
+        paintMatrixRegion(context, 41, 17, 5, 3, snapshot.rightFault ? "#f0c46a" : "#18242b", snapshot.rightFault)
+        paintMatrixRegion(context, 30, 15, 4, 4, snapshot.audible ? "#f4c65d" : "#18242b", snapshot.audible)
+
+        drawMatrixText(context, "C", 19, 14, snapshot.leftContact ? "#75c8f2" : "#41525c")
+        drawMatrixText(context, "C", 42, 14, snapshot.rightContact ? "#75c8f2" : "#41525c")
+        drawMatrixText(context, "B", 31, 14, snapshot.bladeContact ? "#ed8a43" : "#41525c")
+        drawMatrixText(context, "F", 19, 21, snapshot.leftFault ? "#f0c46a" : "#41525c")
+        drawMatrixText(context, "F", 42, 21, snapshot.rightFault ? "#f0c46a" : "#41525c")
+
+        const maximumTime = Math.max(1, snapshot.timing.maximumTime)
+        paintMatrixRegion(context, 2, 25, 60, 1, "#1d2b33", false)
+        for (const event of state.events) {
+          const eventColumn = Math.min(61, 2 + Math.round((event.atUs / maximumTime) * 59))
+          const eventColor = event.kind === "input" ? "#74c7ff" : event.kind === "expected" ? "#e9ad55" : "#79ca99"
+          paintMatrixRegion(context, eventColumn, 24, 1, 3, eventColor, true)
+        }
+        const cursorColumn = Math.min(61, 2 + Math.round((snapshot.cursorAtUs / maximumTime) * 59))
+        paintMatrixRegion(context, cursorColumn, 23, 1, 5, "#eef5f8", true)
+        drawMatrixText(context, snapshot.audible ? "B" : "", 31, 19, "#f4c65d")
+      }
+
+      function latestSideDecision(actualDecisions, side) {
+        const decisions = actualDecisions.filter((candidate) => candidate.value.side === side)
+        return decisions.length === 0 ? null : decisions[decisions.length - 1].value
+      }
+
+      function lampForDecision(decision) {
+        if (decision === null) return "off"
+        const visual = decision.signal?.visual ?? "diagnostic"
+        return visual === "none" ? "off" : visual
+      }
+
+      function playerSnapshot(testCase) {
+        const playedEvents = state.events.slice(0, state.eventIndex + 1)
+        const latestInput = [...playedEvents].reverse().find((candidate) => candidate.kind === "input")
+        const actualDecisions = playedEvents.filter((candidate) => candidate.kind === "actual" && candidate.value?.side)
+        const latestDecisionEvent = [...playedEvents]
+          .reverse()
+          .find((candidate) => candidate.kind === "actual" && candidate.value?.side)
+        const lines = latestInput?.lines ?? []
+        const leftDecision = latestSideDecision(actualDecisions, "left")
+        const rightDecision = latestSideDecision(actualDecisions, "right")
+        const timing = playerTiming(testCase)
+        return {
+          audible: actualDecisions.some((candidate) => candidate.value.signal?.audible === "requested"),
+          bladeContact: lines.some(isBladeContactLine),
+          cursorAtUs: state.events[state.eventIndex]?.atUs ?? 0,
+          event: state.events[state.eventIndex] ?? null,
+          latestDecision: latestDecisionEvent?.value ?? null,
+          leftContact: lines.some((line) => isContactLine(line, "left")),
+          leftFault: lines.some((line) => isFaultLine(line, "left")),
+          leftLamp: lampForDecision(leftDecision),
+          rightContact: lines.some((line) => isContactLine(line, "right")),
+          rightFault: lines.some((line) => isFaultLine(line, "right")),
+          rightLamp: lampForDecision(rightDecision),
+          timing,
+          weapon: testCase.scenario.weapon
+        }
+      }
+
       function renderBoutPlayer(testCase) {
         const player = document.createElement("section")
         player.className = "box-player"
         player.setAttribute("aria-label", "Scoring-box visual player")
         const face = document.createElement("div")
         face.className = "box-face"
-        const left = createFencerDisplay("left")
-        left.id = "player-left"
-        const right = createFencerDisplay("right")
-        right.id = "player-right"
-        const center = document.createElement("div")
-        center.className = "player-center"
-        const weapon = document.createElement("strong")
-        weapon.className = "weapon-label"
-        weapon.textContent = testCase.scenario.weapon
-        const buzzer = document.createElement("div")
-        buzzer.id = "player-buzzer"
-        buzzer.className = "buzzer-indicator"
-        buzzer.dataset.active = "false"
-        buzzer.setAttribute("aria-label", "Buzzer inactive")
-        const status = document.createElement("p")
-        status.id = "player-state"
-        status.className = "player-state"
-        status.setAttribute("role", "status")
-        status.setAttribute("aria-live", "polite")
-        status.textContent = "Ready to replay"
-        center.append(weapon, buzzer, status)
-        face.append(left, center, right)
+        const frame = document.createElement("div")
+        frame.className = "matrix-frame"
+        const topLine = document.createElement("div")
+        topLine.className = "matrix-topline"
+        topLine.innerHTML = '<span>64 x 32 RGB matrix</span><span id="matrix-cursor">Ready</span>'
+        const canvas = document.createElement("canvas")
+        canvas.id = "player-matrix"
+        canvas.className = "rgb-matrix"
+        canvas.width = 640
+        canvas.height = 320
+        canvas.setAttribute("role", "img")
+        canvas.setAttribute("aria-label", "64 by 32 RGB scoring-box matrix, ready to replay")
+        const summary = document.createElement("p")
+        summary.id = "player-summary"
+        summary.className = "matrix-summary"
+        summary.setAttribute("role", "status")
+        summary.setAttribute("aria-live", "polite")
+        summary.textContent = "Ready to replay. Select an event marker or play the timeline."
+        frame.append(topLine, canvas, summary)
+
+        const readout = document.createElement("dl")
+        readout.className = "signal-readout"
+        for (const [id, label, value] of [
+          ["player-left-readout", "Left lamp", "Off"],
+          ["player-right-readout", "Right lamp", "Off"],
+          ["player-contact-readout", "Contact and fault", "Idle"],
+          ["player-buzzer-readout", "Buzzer", "Inactive"]
+        ]) {
+          const item = document.createElement("div")
+          const term = document.createElement("dt")
+          term.textContent = label
+          const detail = document.createElement("dd")
+          detail.id = id
+          detail.textContent = value
+          item.append(term, detail)
+          readout.append(item)
+        }
+        face.append(frame, readout)
+
+        drawMatrix(canvas, playerSnapshot(testCase))
 
         const lanes = document.createElement("div")
         lanes.className = "bout-lanes"
@@ -988,47 +1142,90 @@
         return player
       }
 
-      function updateFencerLabel(display, label) {
-        const states = []
-        if (display.dataset.hit === "true") states.push("hit latched")
-        if (display.dataset.contact === "true") states.push("contact")
-        if (display.dataset.fault === "true") states.push("fault")
-        display.setAttribute("aria-label", label + ": " + (states.length === 0 ? "idle" : states.join(", ")))
+      function describeLamp(lamp) {
+        return lamp === "valid-hit"
+          ? "Valid hit"
+          : lamp === "off-target"
+            ? "Off-target"
+            : lamp === "diagnostic"
+              ? "Diagnostic"
+              : "Off"
       }
 
       function updateBoxPlayer(event) {
         const testCase = state.selectedCase
         if (!testCase || testCase.status === "skipped") return
-        const playedEvents = state.events.slice(0, state.eventIndex + 1)
-        const latestInput = [...playedEvents].reverse().find((candidate) => candidate.kind === "input")
-        const actualDecisions = playedEvents.filter((candidate) => candidate.kind === "actual" && candidate.value?.side)
-        const leftHit = actualDecisions.some((candidate) => candidate.value.side === "left")
-        const rightHit = actualDecisions.some((candidate) => candidate.value.side === "right")
-        const buzzerActive = actualDecisions.some((candidate) => candidate.value.signal?.audible === "requested")
-        const lines = latestInput?.lines ?? []
-        const left = document.querySelector("#player-left")
-        const right = document.querySelector("#player-right")
-        const buzzer = document.querySelector("#player-buzzer")
-        const status = document.querySelector("#player-state")
-        if (left) {
-          left.dataset.hit = String(leftHit)
-          left.dataset.contact = String(lines.some((line) => isContactLine(line, "left")))
-          left.dataset.fault = String(lines.some((line) => isFaultLine(line, "left")))
-          updateFencerLabel(left, "Left fencer")
-        }
-        if (right) {
-          right.dataset.hit = String(rightHit)
-          right.dataset.contact = String(lines.some((line) => isContactLine(line, "right")))
-          right.dataset.fault = String(lines.some((line) => isFaultLine(line, "right")))
-          updateFencerLabel(right, "Right fencer")
-        }
-        if (buzzer) {
-          buzzer.dataset.active = String(buzzerActive)
-          buzzer.setAttribute("aria-label", buzzerActive ? "Buzzer requested" : "Buzzer inactive")
-        }
-        if (status) status.textContent = event?.label ?? "Ready to replay"
-        const timing = playerTiming(testCase)
-        const cursorAtUs = event?.atUs ?? 0
+        const snapshot = playerSnapshot(testCase)
+        const canvas = document.querySelector("#player-matrix")
+        if (canvas instanceof HTMLCanvasElement) drawMatrix(canvas, snapshot)
+        const timing = snapshot.timing
+        const cursorAtUs = snapshot.cursorAtUs
+        const latestDecision = snapshot.latestDecision
+        const decisionDescription = latestDecision
+          ? latestDecision.disposition + " on " + latestDecision.side + " at " + formatTime(latestDecision.decisionAtUs)
+          : "no actual decision"
+        const stateDescription = event?.label ?? "Ready to replay"
+        const summary = document.querySelector("#player-summary")
+        if (summary)
+          summary.textContent =
+            stateDescription +
+            ". " +
+            decisionDescription +
+            ". Cursor " +
+            formatTime(cursorAtUs) +
+            ", event " +
+            (state.eventIndex < 0 ? "0" : String(state.eventIndex + 1)) +
+            "/" +
+            state.events.length +
+            ". Left " +
+            (snapshot.leftContact ? "contact" : "open") +
+            (snapshot.leftFault ? " with fault" : "") +
+            "; right " +
+            (snapshot.rightContact ? "contact" : "open") +
+            (snapshot.rightFault ? " with fault" : "") +
+            "; " +
+            (snapshot.bladeContact ? "blade/parry contact" : "no blade/parry contact") +
+            "; " +
+            (snapshot.audible ? "buzzer requested" : "buzzer inactive") +
+            "."
+        const matrixCursor = document.querySelector("#matrix-cursor")
+        if (matrixCursor)
+          matrixCursor.textContent =
+            formatTime(cursorAtUs) + "  event " + (state.eventIndex + 1) + "/" + state.events.length
+        const canvasLabel = document.querySelector("#player-matrix")
+        if (canvasLabel)
+          canvasLabel.setAttribute(
+            "aria-label",
+            snapshot.weapon +
+              " scoring-box matrix. " +
+              describeLamp(snapshot.leftLamp) +
+              " left, " +
+              describeLamp(snapshot.rightLamp) +
+              " right. " +
+              (snapshot.leftContact ? "Left contact closed. " : "Left contact open. ") +
+              (snapshot.rightContact ? "Right contact closed. " : "Right contact open. ") +
+              (snapshot.leftFault || snapshot.rightFault ? "Fault present. " : "No fault. ") +
+              (snapshot.bladeContact ? "Blade contact. " : "No blade contact. ") +
+              (snapshot.audible ? "Buzzer requested. " : "Buzzer inactive. ") +
+              "Cursor at " +
+              formatTime(cursorAtUs) +
+              "."
+          )
+        const leftReadout = document.querySelector("#player-left-readout")
+        const rightReadout = document.querySelector("#player-right-readout")
+        const contactReadout = document.querySelector("#player-contact-readout")
+        const buzzerReadout = document.querySelector("#player-buzzer-readout")
+        if (leftReadout)
+          leftReadout.textContent = describeLamp(snapshot.leftLamp) + (snapshot.leftFault ? "; fault" : "")
+        if (rightReadout)
+          rightReadout.textContent = describeLamp(snapshot.rightLamp) + (snapshot.rightFault ? "; fault" : "")
+        if (contactReadout)
+          contactReadout.textContent =
+            (snapshot.leftContact ? "Left closed" : "Left open") +
+            ", " +
+            (snapshot.rightContact ? "right closed" : "right open") +
+            (snapshot.bladeContact ? "; blade/parry closed" : "")
+        if (buzzerReadout) buzzerReadout.textContent = snapshot.audible ? "Requested" : "Inactive"
         document.querySelectorAll(".player-cursor").forEach((cursor) => {
           cursor.style.left = Math.min(100, (cursorAtUs / timing.maximumTime) * 100) + "%"
         })
