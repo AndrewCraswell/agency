@@ -10,11 +10,13 @@ formats, and a machine-readable readiness report. The canonical component choice
 Critical connector and processor evidence is tracked separately in `src/part-readiness.ts`; the build exports that
 manifest as `dist/critical-part-readiness.json` and refuses invalid approval claims.
 
-Read `docs/production-board-plan.md` for the requirements matrix, event replay design, component rationale, reliability
-program, compliance work, and release gates. The read-only LLM review workflows are documented in `judges/README.md`.
-The bounded three-weapon sensing topology, ngspice model, and socketed fixture plan are documented in
-`docs/analog-front-end.md`. The present-rule compatibility strategy and proposed FIE update are in
-`docs/fie-modern-power-proposal.md`.
+Read `docs/bench-prototype-plan.md` for the active one-board prototype backlog, dependency graph, and physical-test
+acceptance evidence. It keeps the exact STM32, ESP32-S3, isolation, and W5500 Ethernet silicon while deferring the
+enclosure and factory-optimized three-board implementation. Read `docs/production-board-plan.md` for that longer-term
+factory architecture, requirements matrix, event replay design, component rationale, reliability program, compliance
+work, and release gates. The read-only LLM review workflows are documented in `judges/README.md`. The bounded
+three-weapon sensing topology, ngspice model, and socketed fixture plan are documented in `docs/analog-front-end.md`.
+The present-rule compatibility strategy and proposed FIE update are in `docs/fie-modern-power-proposal.md`.
 
 The M4-03 source, switch, reference, acquisition, timing, and error budget is in `docs/m4-03-analog-error-budget.md`. It
 records conditional measurement gates and does not release the candidate front end for fabrication.

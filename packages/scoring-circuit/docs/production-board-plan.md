@@ -1,5 +1,23 @@
 # Production scoring board plan
 
+## Relationship to the bench prototype
+
+This page remains the long-term factory architecture. It is not the execution plan for the first physical validation
+board. The first hardware objective is a deliberately accessible bench prototype that proves the product's selected
+silicon, weapon interfaces, isolation boundary, display control, firmware, and wired networking before the factory
+optimizes mechanics and manufacture.
+
+The bench prototype must use the same `STM32G474RET3TR`, `ESP32-S3-WROOM-1U-N16R2`, `W5500`, processor-isolation
+parts, and externally visible electrical behavior intended for production. Ethernet is a required prototype function,
+not an optional production refinement. The prototype may combine the production assemblies onto one oversized PCB,
+use bench power instead of making USB-PD the only power path, expose additional test points and configuration links,
+and use accessible harness connectors in place of final chassis integration.
+
+The prototype does not need an enclosure, production board dimensions, replaceable communication modules, final
+connector load paths, minimized layout, cosmetic integration, certification evidence, or factory-optimized assembly.
+Those remain requirements for the production track and must not delay the first weapon-and-firmware validation loop.
+The granular prototype backlog and its acceptance evidence are defined in `bench-prototype-plan.md`.
+
 ## Decision
 
 Build one serviceable apparatus from three electrically and mechanically distinct assemblies:
