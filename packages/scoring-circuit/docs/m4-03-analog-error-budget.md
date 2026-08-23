@@ -20,9 +20,120 @@ no applicable numeric threshold guarantee for the proposed operating point and i
 replacement full-corner per-channel bound of 5.00 ohms or less. Until then, the threshold budget is open and the product
 must report boundary overlap as `indeterminate` as required by the signal contract.
 
-This result deliberately does not choose a different clamp, comparator threshold circuit, or physical seven-conductor
-phase map. Those are M4-02, M4-04, M4-05, and SIG gates, respectively. It does name a coupon-only source-resistor
-candidate because its temperature coefficient is a material term in this budget; it does not add it to a production BOM.
+This baseline result does not release a different clamp, comparator threshold circuit, or physical seven-conductor phase
+map. Those are M4-02, M4-04, M4-05, and SIG gates, respectively. It records a bounded leakage-only experiment below for
+M4-02 review; it is not a recommended redesign and is not added to a production BOM.
+
+## Bounded leakage-only experiment (not a supportable redesign)
+
+Replacing the `BAT54T1G` negative clamp with one diode of the already-used `BAV199-7-F` low-leakage dual diode is
+retained only as a coupon leakage experiment. The existing positive clamp is also a BAV199 diode. This keeps the source,
+switch, 1 kohm ADC isolation, 470 pF filter, external TPD, and two-point calibration architecture unchanged, but it does
+not establish that the external negative clamp conducts before an STM32G474 pad protection path. It is not a supportable
+component-only release direction and does not change the current M4-02 candidate decision.
+
+The [Diodes BAV199 Rev. 11 data sheet](https://www.diodes.com/datasheet/download/BAV199.pdf) specifies 5 nA maximum
+reverse leakage at 75 V and 25 C and 80 nA maximum at 75 V and 150 C, 0.90 V maximum forward voltage at 1 mA, 160 mA
+forward continuous current, and 3 us maximum reverse-recovery time. The 80 nA value is an upper-temperature vendor
+maximum, not an all-temperature leakage characterization, and it is tested at 75 V rather than the actual approximately
+0.45 V negative-clamp reverse voltage or approximately 1.67 V positive-clamp reverse voltage. Therefore it is used only
+as a bounded screening input; a low-voltage assembled
+coupon result is still required. The 0.90 V value is a maximum at one current point, not a minimum forward-voltage or
+low-current knee guarantee.
+
+The [onsemi BAT54T1G data sheet](https://www.onsemi.com/pdf/datasheet/bat54t1-d.pdf) specifies 2 uA maximum reverse
+leakage at 25 V and 25 C and 0.32 V maximum forward voltage at 1 mA. Those bounds explain the tradeoff: BAT54 is more
+favorable for a low-voltage negative clamp, while BAV199 is more favorable for the static leakage screen.
+
+At 450 ohms, screening both BAV199 clamp diodes at 80 nA gives 0.16 uA total and 0.31 ohm through the same ADC-node
+leakage path used by the existing screen:
+
+```text
+I_CLAMP,experiment = 80 nA + 80 nA = 0.16 uA
+R_CLAMP,experiment = 0.31 ohm
+E_SCREEN,experiment = 0.31 + 0.43 + 2.65 + 0.50 + 0.03 + 0.44 = 4.36 ohm
+```
+
+This is 0.64 ohm below the 5.00 ohm target, compared with the baseline 3.12 ohm clamp term and 7.17 ohm screen. It is a
+leakage-term screen only, not a release margin: it still includes the LQFP100 typical ADC EL screen, the unmeasured
+switch/protection/board/reference residual, and the allocated fixture uncertainty.
+
+### External-clamp priority and conditional negative-current screen
+
+The negative event path is `TPD lower steering diode -> R_ESD (22 ohm) -> R_ADC (1 kohm) -> D_NEG -> SGND`. Define
+`V_RES_NEG` as the voltage from the post-TPD conductor (after the TPD lower steering diode and upstream of `R_ESD`) to
+`SGND`. For a negative `V_RES_NEG`, conventional current flows from `SGND` through the negative clamp, `R_ADC`, and
+`R_ESD` toward that post-TPD conductor. The
+[STM32G474 DS12288 Rev. 6](https://www.st.com/resource/en/datasheet/stm32g474rc.pdf) gives all TT_xx pins a `V_IN`
+minimum of `VSS - 0.3 V` in its absolute-maximum table. It gives negative injection of `-5 mA` per eligible pin and an
+absolute sum of `25 mA`; the I/O susceptibility table repeats the `-5 mA / 0 mA` TT_a polarity. These are stress or
+susceptibility limits, not a functional accuracy allowance. ST also warns that negative injection can reduce the
+accuracy of another ADC conversion and recommends an external Schottky to ground. The data sheet does not specify an
+internal pad-clamp knee or its forward-voltage tolerance.
+
+The BAV199's `0.90 V` maximum at `1 mA` is therefore not enough to prove external priority: at the specified test point,
+the external diode may allow the MCU pin to be as low as `-0.90 V`, beyond ST's `-0.30 V` input boundary, and no BAV199
+minimum forward-voltage curve is specified near zero current. The [TI TPD4E05U06 Rev. O data sheet](https://www.ti.com/lit/ds/symlink/tpd4e05u06.pdf)
+specifies `3 V` typical from GND to I/O at `1 A` and `7 V` typical at `5 A`, but supplies no maximum negative residual
+voltage. Its `2.5 A` surge rating and typical clamp values cannot prove either external-clamp priority or a bounded MCU
+injection current.
+
+For a measured `V_RES_NEG` at that post-TPD conductor, a conditional current screen through the existing 22 ohm plus
+1 kohm path is:
+
+```text
+I_INJ,screen = max(0, (-V_RES_NEG - 0.30 V) / (22 ohm + 1,000 ohm))
+```
+
+The `0.30 V` endpoint is the ST input boundary, not an assumed internal-diode knee. It produces the following scale
+values if `V_RES_NEG` reaches the post-TPD conductor and the MCU pin is held at `-0.30 V`:
+
+| Conditional post-TPD conductor residual | Current screen through 1,022 ohm | Interpretation |
+| ---: | ---: | --- |
+| `-0.5 V` | `0.196 mA` | Non-zero internal-injection risk even for a small residual |
+| `-1 V` | `0.685 mA` | Below the ST absolute maximum, but not the project's 0 mA target |
+| `-3 V` | `2.642 mA` | Below the per-pin absolute maximum, but still non-zero; 3 V is only a TPD typical value |
+| `-7 V` | `6.556 mA` | Exceeds the ST `-5 mA` per-pin absolute maximum; 7 V is only a TPD typical value |
+| `-24 V` | `23.19 mA` | Exceeds the per-pin limit; a continuous 24 V body-cord miswire remains unbounded until measured |
+
+These values are conditional screens, not claims that the TPD produces those post-TPD residuals. They show why merely staying
+below the STM32 absolute maximum is insufficient: the project requires 0 mA internal injection and no cross-channel
+ADC disturbance. Until the low-voltage BAV199 forward path, TPD negative residual, and MCU pin current are measured
+together, external priority cannot be guaranteed. If the residual is instead measured at the downstream quiet ADC node,
+the 22 ohm resistor has already been crossed and this 1,022 ohm screen must not be reused; measure the actual pad current
+with the node definition recorded.
+
+| Property | Existing BAT54T1G | BAV199 leakage experiment | Release implication |
+| --- | --- | --- | --- |
+| Reverse leakage guarantee | `2 uA` max at 25 V, 25 C | `80 nA` max at 75 V, TJ 150 C | BAV199 improves the arithmetic leakage screen, but both values require actual low-voltage measurement |
+| Forward-voltage guarantee | `0.32 V` max at 1 mA | `0.90 V` max at 1 mA | BAT54 has the more favorable published endpoint; BAV199 cannot prove clamping within the STM32 `-0.30 V` boundary |
+| External-priority evidence | No MCU-priority proof | No MCU-priority proof; no low-current minimum-VF guarantee | Neither component-only path closes the 0 mA injection requirement without coupon evidence |
+| TPD negative path | `3 V/1 A` and `7 V/5 A` are typical only | Same TPD path | No TPD maximum negative residual is available for a release bound |
+
+No genuinely supportable component-only redesign is identified in this bounded audit. BAT54 has a more favorable
+published forward-voltage endpoint but fails the leakage screen; BAV199 improves leakage but cannot prove external-clamp
+priority. A replacement would need full-temperature vendor bounds for low-current forward voltage and leakage at the
+actual pin voltages, plus a measured or guaranteed TPD negative residual. The BAV199 remains an **unresolved,
+leakage-only experiment**, not the recommended candidate. M4-08 must measure negative residual voltage, actual clamp
+current and energy, MCU pin injection, and no cross-channel ADC disturbance at -40 C, 25 C, 85 C, and 125 C, with both
+rail limits and every declared line-capacitance bank.
+
+The STM32G474 hardware oversampler is not a compatible way to close the remaining error. ST documents hardware
+oversampling and up to 16-bit output in the [STM32G474 DS12288 Rev. 6](https://www.st.com/resource/en/datasheet/stm32g474rc.pdf),
+and the [RM0440 ADC reference manual](https://www.st.com/resource/en/reference_manual/rm0440-stm32g4-series-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
+defines 2x through 256x averaging. Averaging improves noise and quantization resolution; it does not turn the Table 72
+LQFP100 typical integral-linearity result into an LQFP64 guarantee. The current six-rank diagnostic conversion is
+`6 x 1.154 us = 6.92 us`; even 2x oversampling adds approximately 6.92 us and moves the 31.44 us full-diagnostic
+acquisition farther beyond the 25 us target. A 2x two-rank 100-ohm sabre sample likewise moves the 9.96 us allocation
+past the 10 us target. Oversampling therefore receives no error or timing credit. Two-point calibration removes static
+offset and gain only; a multi-point production correction could be evaluated after a measured coupon result, but it
+cannot close the current analytical gate by assumption.
+
+**Leakage-experiment disposition: STILL DENY.** The BAV199 arithmetic screen is below 5.00 ohms, but it is not an
+electrically justified redesign because external-clamp priority is unproven. No component-only redesign is currently
+supportable. M4-03 remains denied until M4-08 supplies low-voltage temperature leakage/transient evidence, measured
+negative-path injection, and a full-corner per-channel LQFP64 ADC residual bound. No comparator threshold credit,
+typical-only ADC credit, or weakened fixture requirement is used.
 
 ## Inputs and primary sources
 
@@ -263,6 +374,7 @@ are demonstrated. An ADC/HRTIM schedule cannot infer a 0.1 ms sabre contact from
 | Gate | Required result | State |
 | --- | --- | --- |
 | M4-03 analytical error target | **DENY**: 7.17 ohm 125 C absolute-sum screen fails the 5.00 ohm target by 2.17 ohms; an M4-08 full-corner per-channel result must close the 0.48 ohm residual allocation | open |
+| M4-03 BAV199 leakage experiment | 4.36 ohm leakage-only arithmetic screen; external-clamp priority, low-voltage leakage, TPD negative residual, MCU injection, and LQFP64 ADC residual remain unmeasured | unresolved, still denied |
 | M4-03 static acquisition impedance | 47.5-cycle sample time supports 1427.3 ohms against 1800 ohms slow-channel limit | analytic pass |
 | M4-03 100 ohm, 10 nF sabre phase | Two ADC1 ranks after a 7.60 us conservative blank require 9.96 us before comparator and phase-mask uncertainty | open scheduling gate |
 | M4-03 500 ohm, 10 nF full diagnostic timing | Six ADC1 ranks after 24.47 us conservative cascaded allocation require 31.44 us | fail against 25 us target by 6.44 us |

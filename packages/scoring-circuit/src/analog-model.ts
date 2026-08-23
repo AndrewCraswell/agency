@@ -31,6 +31,12 @@ export const analogBudget = {
   adcSampleClockMhz: 52,
   adcSlowChannelMaximumInputResistanceOhms: 1_800,
   clampLeakageGateOhms: 3.12,
+  // Leakage-only BAV199 experiment: one diode replaces the BAT54 negative
+  // clamp. The 80 nA value is the vendor maximum at 75 V and TJ = 150 C,
+  // not a guaranteed assembled-coupon value at the actual low reverse
+  // voltages or a guarantee that the external diode conducts before the MCU
+  // pad protection path.
+  leakageExperimentClampReverseLeakageMaximumNa: 80,
   calibrationTemperatureC: 25,
   fixtureInterpolationAndStandardUncertaintyOhms: 0.5,
   fixtureTargetOhms: 5,
@@ -123,6 +129,33 @@ export function resistanceErrorForVoltageErrorOhms(externalResistanceOhms: numbe
   return resistanceSensitivityOhmsPerVolt(externalResistanceOhms) * voltageErrorVolts
 }
 
+/**
+ * Convert a bounded clamp leakage current into the resistance error at the
+ * ADC pin. This is a screen for a declared leakage bound, not an assembled
+ * board result; diode leakage must still be measured at the actual pin
+ * voltages and temperature corners.
+ */
+export function clampLeakageErrorOhms(externalResistanceOhms: number, leakageCurrentNa: number): number {
+  const leakageVoltageError = adcInputResistanceOhms(externalResistanceOhms) * leakageCurrentNa * 1e-9
+  return resistanceErrorForVoltageErrorOhms(externalResistanceOhms, leakageVoltageError)
+}
+
+/**
+ * Conditional negative-injection screen through the existing 22 ohm + 1 kohm
+ * path. The input is the post-TPD conductor residual, after the TPD lower
+ * steering diode and upstream of both resistors. The STM32's -0.3 V input
+ * boundary is used as a screening endpoint, not as an internal-clamp knee. A
+ * measured post-TPD residual and the actual MCU clamp voltage are still
+ * required before this can describe a guaranteed injected current.
+ */
+export function negativeInjectionScreenMa(postTpdResidualVolts: number): number {
+  const negativePathResistanceOhms =
+    analogFrontEnd.protectionSeriesResistanceOhms + analogFrontEnd.adcSeriesResistanceOhms
+  const residualBeyondInputBoundaryVolts = -postTpdResidualVolts - 0.3
+
+  return Math.max(0, (residualBeyondInputBoundaryVolts / negativePathResistanceOhms) * 1_000)
+}
+
 export function fiveTauSourceSettlingUs(externalResistanceOhms: number, lineCapacitancePf: number): number {
   return sourceTheveninResistanceOhms(externalResistanceOhms) * lineCapacitancePf * 1e-6 * 5
 }
@@ -200,6 +233,34 @@ export function m403ScreenedStaticErrorOhms(externalResistanceOhms: number, temp
 
   return (
     analogBudget.clampLeakageGateOhms +
+    adcQuantizationError +
+    adcIntegralLinearityTypicalError +
+    analogBudget.fixtureInterpolationAndStandardUncertaintyOhms +
+    settledSwitchChargeError +
+    sourceResistorTemperatureErrorOhms(externalResistanceOhms, temperatureC)
+  )
+}
+
+/**
+ * Leakage-only BAV199 experiment. Both positive and negative clamp diodes are
+ * screened at the BAV199 80 nA vendor maximum. This remains conditional: the
+ * reverse-leakage test point, external-clamp priority, negative transient
+ * behavior, and LQFP64 ADC accuracy are not closed by this arithmetic.
+ */
+export function m403LowLeakageClampExperimentScreenOhms(externalResistanceOhms: number, temperatureC: number): number {
+  const adcQuantizationError = resistanceErrorForVoltageErrorOhms(externalResistanceOhms, analogBudget.adcLsbVolts / 2)
+  const adcIntegralLinearityTypicalError = resistanceErrorForVoltageErrorOhms(
+    externalResistanceOhms,
+    analogBudget.adcSingleEndedIntegralLinearityTypicalLsb * analogBudget.adcLsbVolts
+  )
+  const settledSwitchChargeError = switchChargeErrorOhms(externalResistanceOhms, 500) * Math.exp(-5)
+  const experimentClampLeakageError = clampLeakageErrorOhms(
+    externalResistanceOhms,
+    analogBudget.leakageExperimentClampReverseLeakageMaximumNa * 2
+  )
+
+  return (
+    experimentClampLeakageError +
     adcQuantizationError +
     adcIntegralLinearityTypicalError +
     analogBudget.fixtureInterpolationAndStandardUncertaintyOhms +

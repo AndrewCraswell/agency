@@ -5,6 +5,7 @@ import {
   acquisitionUs,
   analogBudget,
   analogFrontEnd,
+  clampLeakageErrorOhms,
   estimateExternalResistance,
   expectedSenseVoltage,
   fieResistanceBoundaries,
@@ -14,6 +15,8 @@ import {
   conservativeBlankingUs,
   fullDiagnosticAcquisitionUs,
   m403ScreenedStaticErrorOhms,
+  m403LowLeakageClampExperimentScreenOhms,
+  negativeInjectionScreenMa,
   resistanceErrorForVoltageErrorOhms,
   sourceResistorTemperatureErrorOhms,
   switchChargeErrorOhms
@@ -68,5 +71,23 @@ describe("three-weapon analog model", () => {
     expect(sourceResistorTemperatureErrorOhms(450, 125)).toBeCloseTo(0.44, 2)
     expect(m403ScreenedStaticErrorOhms(450, 125)).toBeCloseTo(7.17, 2)
     expect(m403ScreenedStaticErrorOhms(450, 125)).toBeGreaterThan(analogBudget.fixtureTargetOhms)
+  })
+
+  it("screens the BAV199 leakage-only experiment below 5 ohms without calling it a release", () => {
+    expect(clampLeakageErrorOhms(450, analogBudget.leakageExperimentClampReverseLeakageMaximumNa * 2)).toBeCloseTo(
+      0.31,
+      2
+    )
+    expect(m403LowLeakageClampExperimentScreenOhms(450, 125)).toBeCloseTo(4.36, 2)
+    expect(m403LowLeakageClampExperimentScreenOhms(450, 125)).toBeLessThanOrEqual(analogBudget.fixtureTargetOhms)
+  })
+
+  it("screens negative-path current against the STM32 input boundary", () => {
+    expect(negativeInjectionScreenMa(0.5)).toBe(0)
+    expect(negativeInjectionScreenMa(-0.5)).toBeCloseTo(0.196, 3)
+    expect(negativeInjectionScreenMa(-1)).toBeCloseTo(0.685, 3)
+    expect(negativeInjectionScreenMa(-3)).toBeCloseTo(2.642, 3)
+    expect(negativeInjectionScreenMa(-7)).toBeCloseTo(6.556, 3)
+    expect(negativeInjectionScreenMa(-24)).toBeCloseTo(23.19, 2)
   })
 })
