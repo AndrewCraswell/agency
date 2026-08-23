@@ -96,10 +96,11 @@ ownership, diagnostic persistence, and the selected anti-blocking apparatus
 mode are reviewed. It must preserve `indeterminate` and `unavailable` rather
 than coercing them to `yellow-on` or `yellow-off`.
 
-No golden scenario files are changed by M1-04. The future corpus integration
-must use integer milli-ohm values and uncertainty intervals, preserve separate
-scoring-eligibility and yellow-diagnostic assertions, and include both sides at
-199,999, 200,000, 200,001, 449,999, 450,000, 475,000, and 475,001
+The current `foil.insulation-handoff` golden scenario proves only that the
+diagnostic handoff does not alter contact scoring. It does not assert these
+resistance decisions or a physical yellow output. Focused host tests preserve
+separate scoring-eligibility and yellow-diagnostic assertions at 0, 199,999,
+200,000, 200,001, 449,999, 450,000, 475,000, 475,001, and 500,000
 milli-ohms.
 
 ## Open interpretations

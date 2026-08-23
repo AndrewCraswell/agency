@@ -66,7 +66,7 @@ function isNonNegativeSafeInteger(value: number) {
   return Number.isSafeInteger(value) && value >= 0
 }
 
-function validateMeasurement(measurement: FoilInsulationResistanceMeasurement) {
+export function validateFoilResistanceMeasurement(measurement: FoilInsulationResistanceMeasurement) {
   const { resistanceMilliOhms, resistanceUncertaintyMilliOhms } = measurement
 
   if (resistanceMilliOhms === null && resistanceUncertaintyMilliOhms === null) {
@@ -86,7 +86,10 @@ function validateMeasurement(measurement: FoilInsulationResistanceMeasurement) {
   }
 }
 
-function toRange(measurement: FoilInsulationResistanceMeasurement): FoilInsulationResistanceRange | null {
+export function foilResistanceRange(
+  measurement: FoilInsulationResistanceMeasurement
+): FoilInsulationResistanceRange | null {
+  validateFoilResistanceMeasurement(measurement)
   const { resistanceMilliOhms, resistanceUncertaintyMilliOhms } = measurement
 
   if (resistanceMilliOhms === null || resistanceUncertaintyMilliOhms === null) {
@@ -100,7 +103,7 @@ function toRange(measurement: FoilInsulationResistanceMeasurement): FoilInsulati
 }
 
 function decideReturnCircuit(measurement: FoilInsulationResistanceMeasurement): FoilInsulationDecision["scoring"] {
-  const rangeMilliOhms = toRange(measurement)
+  const rangeMilliOhms = foilResistanceRange(measurement)
 
   if (rangeMilliOhms === null) {
     return { disposition: "unavailable", rangeMilliOhms }
@@ -120,7 +123,7 @@ function decideReturnCircuit(measurement: FoilInsulationResistanceMeasurement): 
 function decideYellowDiagnostic(
   measurement: FoilInsulationResistanceMeasurement
 ): FoilInsulationDecision["diagnostic"] {
-  const rangeMilliOhms = toRange(measurement)
+  const rangeMilliOhms = foilResistanceRange(measurement)
 
   if (rangeMilliOhms === null) {
     return { disposition: "unavailable", rangeMilliOhms }
@@ -152,11 +155,6 @@ function decideSide(side: FoilSide, observation: FoilInsulationObservation): Foi
 export function evaluateFoilAntiBlockingInsulation(sample: FoilInsulationSample): FoilInsulationEvaluation {
   if (!isNonNegativeSafeInteger(sample.atUs)) {
     throw new RangeError("Foil insulation samples must use non-negative safe integer timestamps")
-  }
-
-  for (const observation of [sample.left, sample.right]) {
-    validateMeasurement(observation.opponentReturnResistance)
-    validateMeasurement(observation.ownWeaponToJacketInsulation)
   }
 
   return {

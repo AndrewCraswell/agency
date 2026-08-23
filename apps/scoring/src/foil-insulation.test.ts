@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   evaluateFoilAntiBlockingInsulation,
+  foilResistanceRange,
   type FoilInsulationObservation,
   type FoilInsulationResistanceMeasurement,
   type FoilInsulationSample
@@ -33,10 +34,23 @@ function sample(
 }
 
 describe("foil anti-blocking insulation decisions", () => {
+  it("validates malformed input at the public resistance-range boundary", () => {
+    expect(foilResistanceRange(UNAVAILABLE)).toBeNull()
+    expect(foilResistanceRange(measured(0, 2))).toEqual({ max: 2, min: 0 })
+    expect(() => foilResistanceRange({ resistanceMilliOhms: null, resistanceUncertaintyMilliOhms: 0 })).toThrow(
+      new RangeError("Foil insulation measurements must provide a value and uncertainty together")
+    )
+    expect(() => foilResistanceRange(measured(-1))).toThrow(
+      new RangeError("Foil insulation measurements must use non-negative safe integer milli-ohms")
+    )
+  })
+
   it.each([
+    [0, "valid-hit-eligible"],
     [199_999, "valid-hit-eligible"],
     [200_000, "valid-hit-eligible"],
-    [200_001, "non-valid-hit-eligible"]
+    [200_001, "non-valid-hit-eligible"],
+    [500_000, "non-valid-hit-eligible"]
   ] as const)("uses the documented 200 ohm scoring endpoint at %i milli-ohms", (resistanceMilliOhms, disposition) => {
     const result = evaluateFoilAntiBlockingInsulation(sample(observation(measured(resistanceMilliOhms), UNAVAILABLE)))
 
