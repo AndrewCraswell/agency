@@ -76,6 +76,10 @@
           "type": "string",
           "pattern": "^[A-Z0-9]+(?:[-_.][A-Z0-9]+)*$"
         },
+        "description": {
+          "type": "string",
+          "minLength": 1
+        },
         "status": {
           "enum": ["covered", "planned", "not-applicable"]
         },

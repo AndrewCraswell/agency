@@ -3,6 +3,7 @@ import { createServer } from "node:http"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { runScenario } from "../dist/scenario-runner.js"
+import { loadTimingTableForRuleRevision } from "../dist/timing-boundary.js"
 
 const applicationDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "..")
 const manifestPath = resolve(applicationDirectory, "docs/golden-scenario-manifest.json")
@@ -24,6 +25,32 @@ async function loadScenario(entry) {
   return JSON.parse(await readFile(resolve(applicationDirectory, "docs", entry.path), "utf8"))
 }
 
+function timingForScenario(scenario) {
+  try {
+    const timingTable = loadTimingTableForRuleRevision(scenario.ruleRevision)
+    return {
+      contactMinimumUs:
+        scenario.weapon === "epee"
+          ? timingTable.epee.contactMinimumUs
+          : scenario.weapon === "foil"
+            ? timingTable.foil.contactBreakMinimumUs
+            : timingTable.sabre.minimumContactUs,
+      lockoutUs:
+        scenario.weapon === "epee"
+          ? timingTable.epee.doubleHitWindowUs
+          : scenario.weapon === "foil"
+            ? timingTable.foil.lockoutUs
+            : timingTable.sabre.lockoutUs,
+      status: "available"
+    }
+  } catch (error) {
+    return {
+      reason: error instanceof Error ? error.message : "unknown-rule-revision",
+      status: "unavailable"
+    }
+  }
+}
+
 async function executeActiveEntry(entry) {
   const scenarioPath = resolve(applicationDirectory, "docs", entry.path)
   const run = runScenario(scenarioPath)
@@ -34,7 +61,8 @@ async function executeActiveEntry(entry) {
     expected: scenario.expect,
     result,
     scenario,
-    status: result.status
+    status: result.status,
+    timing: timingForScenario(scenario)
   }
 }
 
@@ -50,7 +78,8 @@ async function executeReport(selectedScenarioId) {
           expected: null,
           result: null,
           scenario: {
-            description: "No executable golden scenario has been approved for this requirement yet.",
+            description:
+              entry.description ?? "No executable golden scenario has been approved for this requirement yet.",
             scenarioId: entry.traceabilityId,
             weapon: entry.traceabilityId.startsWith("FOIL")
               ? "foil"
@@ -58,7 +87,8 @@ async function executeReport(selectedScenarioId) {
                 ? "sabre"
                 : "epee"
           },
-          status: "skipped"
+          status: "skipped",
+          timing: { reason: "scenario-not-executable", status: "unavailable" }
         }))
       : []
   const cases = [...activeCases, ...skippedCases]

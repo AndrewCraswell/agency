@@ -131,7 +131,7 @@
       .case-item:hover {
         background: #162632;
       }
-      .case-item[aria-selected="true"] {
+      .case-item[aria-pressed="true"] {
         background: #1c3040;
         box-shadow: inset 4px 0 #74c7ff;
       }
@@ -142,6 +142,16 @@
         overflow: hidden;
         text-overflow: ellipsis;
         font-weight: 650;
+      }
+      .case-description {
+        display: -webkit-box;
+        margin-top: 4px;
+        overflow: hidden;
+        color: #c1ced5;
+        font-size: 0.88rem;
+        font-weight: 400;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
       }
       .case-meta {
         display: block;
@@ -177,6 +187,168 @@
         display: grid;
         gap: 18px;
         padding: 16px;
+      }
+      .box-player {
+        overflow: hidden;
+        border: 1px solid #314654;
+        border-radius: 9px;
+        background: #070b0f;
+      }
+      .box-face {
+        display: grid;
+        grid-template-columns: 1fr minmax(150px, 0.55fr) 1fr;
+        gap: 14px;
+        align-items: stretch;
+        min-height: 160px;
+        padding: 15px;
+      }
+      .fencer-display {
+        display: grid;
+        align-content: center;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid #263843;
+        background: #0d141a;
+      }
+      .fencer-display header {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        color: #aebfca;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+      }
+      .lamp-matrix {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 4px;
+      }
+      .lamp-pixel {
+        aspect-ratio: 1;
+        border-radius: 3px;
+        background: #1b2329;
+        box-shadow: inset 0 0 0 1px #28353d;
+      }
+      .fencer-display[data-side="left"][data-hit="true"] .lamp-pixel {
+        background: #eb4b55;
+        box-shadow: 0 0 10px rgb(235 75 85 / 65%);
+      }
+      .fencer-display[data-side="right"][data-hit="true"] .lamp-pixel {
+        background: #40ce79;
+        box-shadow: 0 0 10px rgb(64 206 121 / 65%);
+      }
+      .fencer-display[data-fault="true"] {
+        border-color: #f0c46a;
+      }
+      .fencer-display[data-contact="true"] header::after {
+        color: #75c8f2;
+        content: "Contact";
+      }
+      .player-center {
+        display: grid;
+        place-items: center;
+        align-content: center;
+        gap: 10px;
+        text-align: center;
+      }
+      .weapon-label {
+        color: #c5d3da;
+        font-size: 0.86rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .buzzer-indicator {
+        width: 50px;
+        height: 50px;
+        border: 7px double #40515b;
+        border-radius: 50%;
+        background: #141d23;
+      }
+      .buzzer-indicator[data-active="true"] {
+        border-color: #f4c65d;
+        background: #7d5d16;
+        box-shadow: 0 0 18px rgb(244 198 93 / 65%);
+      }
+      .player-state {
+        min-height: 2.5em;
+        margin: 0;
+        color: #aebfca;
+        font-size: 0.84rem;
+      }
+      .player-unavailable {
+        margin: 0;
+        color: #f0c46a;
+        font-size: 0.84rem;
+      }
+      .bout-lanes {
+        display: grid;
+        gap: 4px;
+        padding: 10px 15px 15px;
+        border-top: 1px solid #263843;
+      }
+      .bout-lane {
+        display: grid;
+        grid-template-columns: 92px minmax(0, 1fr);
+        gap: 9px;
+        align-items: center;
+      }
+      .lane-label {
+        color: #91a5b0;
+        font-size: 0.76rem;
+        text-align: right;
+        text-transform: uppercase;
+      }
+      .lane-track {
+        position: relative;
+        height: 13px;
+        background: #151e24;
+      }
+      .lane-segment {
+        position: absolute;
+        top: 2px;
+        bottom: 2px;
+        min-width: 3px;
+        background: #75c8f2;
+      }
+      .bout-lane[data-lane="left-contact"] .lane-segment {
+        background: #eb4b55;
+      }
+      .bout-lane[data-lane="right-contact"] .lane-segment {
+        background: #40ce79;
+      }
+      .bout-lane[data-lane$="fault"] .lane-segment {
+        background: #f0c46a;
+      }
+      .bout-lane[data-lane="blade"] .lane-segment {
+        background: #ed8a43;
+      }
+      .player-marker {
+        position: absolute;
+        top: -3px;
+        bottom: -3px;
+        width: 2px;
+        z-index: 2;
+        background: #75c8f2;
+      }
+      .player-marker.lockout {
+        background: #ad8cff;
+      }
+      .player-cursor {
+        position: absolute;
+        top: -4px;
+        bottom: -4px;
+        width: 2px;
+        z-index: 3;
+        background: #eef5f8;
+        box-shadow: 0 0 5px #eef5f8;
+      }
+      .player-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 0 15px 13px 116px;
+        color: #91a5b0;
+        font-size: 0.78rem;
       }
       .empty {
         padding: 46px 20px;
@@ -357,6 +529,19 @@
         .evaluations td:nth-child(3) {
           display: none;
         }
+        .box-face {
+          grid-template-columns: 1fr 1fr;
+        }
+        .player-center {
+          grid-column: 1 / -1;
+          grid-row: 1;
+        }
+        .bout-lane {
+          grid-template-columns: 70px minmax(0, 1fr);
+        }
+        .player-legend {
+          padding-left: 94px;
+        }
       }
       @media (prefers-reduced-motion: reduce) {
         .timeline-progress {
@@ -381,7 +566,7 @@
             <h2 id="case-list-title">Test cases</h2>
             <p>✅ passed, ⏭️ skipped, ❌ failed</p>
           </header>
-          <div id="case-list" class="case-list" role="listbox" aria-label="Bout test cases"></div>
+          <div id="case-list" class="case-list"></div>
         </section>
         <section id="detail" class="detail" aria-live="polite">
           <p class="empty">Run the corpus to inspect a bout timeline.</p>
@@ -389,7 +574,7 @@
       </div>
     </main>
     <script>
-      const state = { cases: [], selectedId: null, events: [], eventIndex: -1, timer: null }
+      const state = { cases: [], selectedId: null, selectedCase: null, events: [], eventIndex: -1, timer: null }
       const summaryRoot = document.querySelector("#summary")
       const listRoot = document.querySelector("#case-list")
       const detailRoot = document.querySelector("#detail")
@@ -436,18 +621,21 @@
           const button = document.createElement("button")
           button.type = "button"
           button.className = "case-item"
-          button.setAttribute("role", "option")
-          button.setAttribute("aria-selected", String(testCase.scenario.scenarioId === state.selectedId))
+          button.setAttribute("aria-pressed", String(testCase.scenario.scenarioId === state.selectedId))
           const icon = document.createElement("span")
           icon.className = "status-emoji"
           icon.textContent = emoji[testCase.status]
           const name = document.createElement("span")
           name.className = "case-name"
           name.textContent = testCase.scenario.scenarioId
+          const description = document.createElement("span")
+          description.className = "case-description"
+          description.textContent =
+            testCase.scenario.title ?? testCase.scenario.description ?? "No case description is available."
           const meta = document.createElement("span")
           meta.className = "case-meta"
           meta.textContent = testCase.scenario.weapon + " " + testCase.status
-          name.append(meta)
+          name.append(description, meta)
           const duration = document.createElement("span")
           duration.className = "case-duration"
           duration.textContent = caseDuration(testCase)
@@ -592,6 +780,7 @@
         document
           .querySelectorAll(".event-row")
           .forEach((row, index) => row.classList.toggle("is-played", index <= state.eventIndex))
+        updateBoxPlayer(event)
         if (!current) return
         current.replaceChildren()
         if (event === undefined) {
@@ -637,6 +826,212 @@
           }
           setEventIndex(state.eventIndex + 1)
         }, 650)
+      }
+
+      function createFencerDisplay(side) {
+        const display = document.createElement("section")
+        display.className = "fencer-display"
+        display.dataset.side = side
+        display.dataset.hit = "false"
+        display.dataset.contact = "false"
+        display.dataset.fault = "false"
+        display.setAttribute("aria-label", (side === "left" ? "Left fencer" : "Right fencer") + ": idle")
+        const heading = document.createElement("header")
+        const label = document.createElement("strong")
+        label.textContent = side === "left" ? "Left fencer" : "Right fencer"
+        heading.append(label)
+        const matrix = document.createElement("div")
+        matrix.className = "lamp-matrix"
+        for (let index = 0; index < 24; index += 1) {
+          const pixel = document.createElement("span")
+          pixel.className = "lamp-pixel"
+          pixel.setAttribute("aria-hidden", "true")
+          matrix.append(pixel)
+        }
+        display.append(heading, matrix)
+        return display
+      }
+
+      function isContactLine(line, side) {
+        return (
+          line.line.startsWith(side + ".") &&
+          ["weapon-circuit", "tip-loop", "target", "blade"].some((name) => line.line.includes(name)) &&
+          line.state === "closed"
+        )
+      }
+
+      function isFaultLine(line, side) {
+        return (
+          line.line.startsWith(side + ".") &&
+          ["grounded", "shorted", "disconnected", "indeterminate"].includes(line.state)
+        )
+      }
+
+      function laneActive(lines, lane) {
+        if (lane === "left-contact") return lines.some((line) => isContactLine(line, "left"))
+        if (lane === "right-contact") return lines.some((line) => isContactLine(line, "right"))
+        if (lane === "left-fault") return lines.some((line) => isFaultLine(line, "left"))
+        if (lane === "right-fault") return lines.some((line) => isFaultLine(line, "right"))
+        return lines.some((line) => line.line.includes("blade") && line.state === "closed")
+      }
+
+      function playerTiming(testCase) {
+        const decisions = testCase.result.decisions
+        const timing = testCase.timing?.status === "available" ? testCase.timing : null
+        const firstDecision =
+          decisions.length === 0
+            ? null
+            : decisions.reduce((earliest, decision) =>
+                decision.decisionAtUs < earliest.decisionAtUs ? decision : earliest
+              )
+        const firstScoredContactAtUs =
+          firstDecision === null ? null : (firstDecision.hitStartedAtUs ?? firstDecision.qualifiedAtUs)
+        const lockoutAtUs =
+          firstScoredContactAtUs === null || timing === null ? null : firstScoredContactAtUs + timing.lockoutUs
+        const lastInputAtUs = Math.max(0, ...(testCase.scenario.inputs ?? []).map((input) => input.atUs))
+        return {
+          contactMinimumUs: timing?.contactMinimumUs ?? null,
+          firstScoredContactAtUs,
+          lockoutAtUs,
+          maximumTime: Math.max(1, lastInputAtUs, lockoutAtUs ?? 0),
+          timingAvailable: timing !== null
+        }
+      }
+
+      function renderBoutPlayer(testCase) {
+        const player = document.createElement("section")
+        player.className = "box-player"
+        player.setAttribute("aria-label", "Scoring-box visual player")
+        const face = document.createElement("div")
+        face.className = "box-face"
+        const left = createFencerDisplay("left")
+        left.id = "player-left"
+        const right = createFencerDisplay("right")
+        right.id = "player-right"
+        const center = document.createElement("div")
+        center.className = "player-center"
+        const weapon = document.createElement("strong")
+        weapon.className = "weapon-label"
+        weapon.textContent = testCase.scenario.weapon
+        const buzzer = document.createElement("div")
+        buzzer.id = "player-buzzer"
+        buzzer.className = "buzzer-indicator"
+        buzzer.dataset.active = "false"
+        buzzer.setAttribute("aria-label", "Buzzer inactive")
+        const status = document.createElement("p")
+        status.id = "player-state"
+        status.className = "player-state"
+        status.setAttribute("role", "status")
+        status.setAttribute("aria-live", "polite")
+        status.textContent = "Ready to replay"
+        center.append(weapon, buzzer, status)
+        face.append(left, center, right)
+
+        const lanes = document.createElement("div")
+        lanes.className = "bout-lanes"
+        const laneDefinitions = [
+          ["left-fault", "Left fault"],
+          ["left-contact", "Left contact"],
+          ["blade", "Blade contact"],
+          ["right-contact", "Right contact"],
+          ["right-fault", "Right fault"]
+        ]
+        const timing = playerTiming(testCase)
+        const inputs = testCase.scenario.inputs ?? []
+        for (const [laneId, laneName] of laneDefinitions) {
+          const lane = document.createElement("div")
+          lane.className = "bout-lane"
+          lane.dataset.lane = laneId
+          const label = document.createElement("span")
+          label.className = "lane-label"
+          label.textContent = laneName
+          const track = document.createElement("div")
+          track.className = "lane-track"
+          inputs.forEach((input, index) => {
+            if (!laneActive(input.lines, laneId)) return
+            const nextAtUs = inputs[index + 1]?.atUs ?? timing.maximumTime
+            const segment = document.createElement("span")
+            segment.className = "lane-segment"
+            segment.style.left = (input.atUs / timing.maximumTime) * 100 + "%"
+            segment.style.width = Math.max(0.5, ((nextAtUs - input.atUs) / timing.maximumTime) * 100) + "%"
+            track.append(segment)
+          })
+          if (timing.firstScoredContactAtUs !== null) {
+            const marker = document.createElement("span")
+            marker.className = "player-marker"
+            marker.style.left = (timing.firstScoredContactAtUs / timing.maximumTime) * 100 + "%"
+            track.append(marker)
+          }
+          if (timing.lockoutAtUs !== null) {
+            const lockout = document.createElement("span")
+            lockout.className = "player-marker lockout"
+            lockout.style.left = (timing.lockoutAtUs / timing.maximumTime) * 100 + "%"
+            track.append(lockout)
+          }
+          const cursor = document.createElement("span")
+          cursor.className = "player-cursor"
+          cursor.style.left = "0%"
+          track.append(cursor)
+          lane.append(label, track)
+          lanes.append(lane)
+        }
+        const legend = document.createElement("div")
+        legend.className = timing.timingAvailable ? "player-legend" : "player-legend player-unavailable"
+        legend.textContent = timing.timingAvailable
+          ? "Blue marker: first scored contact. Purple marker: lockout end at " +
+            formatTime(timing.lockoutAtUs ?? timing.maximumTime) +
+            ". Contact qualification minimum: " +
+            formatTime(timing.contactMinimumUs) +
+            "."
+          : "Timing unavailable for this rule revision. Input playback remains available without timing markers."
+        player.append(face, lanes, legend)
+        return player
+      }
+
+      function updateFencerLabel(display, label) {
+        const states = []
+        if (display.dataset.hit === "true") states.push("hit latched")
+        if (display.dataset.contact === "true") states.push("contact")
+        if (display.dataset.fault === "true") states.push("fault")
+        display.setAttribute("aria-label", label + ": " + (states.length === 0 ? "idle" : states.join(", ")))
+      }
+
+      function updateBoxPlayer(event) {
+        const testCase = state.selectedCase
+        if (!testCase || testCase.status === "skipped") return
+        const playedEvents = state.events.slice(0, state.eventIndex + 1)
+        const latestInput = [...playedEvents].reverse().find((candidate) => candidate.kind === "input")
+        const actualDecisions = playedEvents.filter((candidate) => candidate.kind === "actual" && candidate.value?.side)
+        const leftHit = actualDecisions.some((candidate) => candidate.value.side === "left")
+        const rightHit = actualDecisions.some((candidate) => candidate.value.side === "right")
+        const buzzerActive = actualDecisions.some((candidate) => candidate.value.signal?.audible === "requested")
+        const lines = latestInput?.lines ?? []
+        const left = document.querySelector("#player-left")
+        const right = document.querySelector("#player-right")
+        const buzzer = document.querySelector("#player-buzzer")
+        const status = document.querySelector("#player-state")
+        if (left) {
+          left.dataset.hit = String(leftHit)
+          left.dataset.contact = String(lines.some((line) => isContactLine(line, "left")))
+          left.dataset.fault = String(lines.some((line) => isFaultLine(line, "left")))
+          updateFencerLabel(left, "Left fencer")
+        }
+        if (right) {
+          right.dataset.hit = String(rightHit)
+          right.dataset.contact = String(lines.some((line) => isContactLine(line, "right")))
+          right.dataset.fault = String(lines.some((line) => isFaultLine(line, "right")))
+          updateFencerLabel(right, "Right fencer")
+        }
+        if (buzzer) {
+          buzzer.dataset.active = String(buzzerActive)
+          buzzer.setAttribute("aria-label", buzzerActive ? "Buzzer requested" : "Buzzer inactive")
+        }
+        if (status) status.textContent = event?.label ?? "Ready to replay"
+        const timing = playerTiming(testCase)
+        const cursorAtUs = event?.atUs ?? 0
+        document.querySelectorAll(".player-cursor").forEach((cursor) => {
+          cursor.style.left = Math.min(100, (cursorAtUs / timing.maximumTime) * 100) + "%"
+        })
       }
 
       function renderTimeline(testCase) {
@@ -697,7 +1092,7 @@
         const currentMessage = document.createElement("p")
         currentMessage.textContent = "Press Play timeline or select an event marker."
         current.append(currentMessage)
-        section.append(controls, timeline, current)
+        section.append(renderBoutPlayer(testCase), controls, timeline, current)
         return section
       }
 
@@ -727,6 +1122,7 @@
 
       function renderDetail(testCase) {
         stopPlayback()
+        state.selectedCase = testCase
         detailRoot.replaceChildren()
         const header = document.createElement("header")
         header.className = "detail-header"
@@ -736,7 +1132,8 @@
         title.textContent = emoji[testCase.status] + " " + testCase.scenario.scenarioId
         const subtitle = document.createElement("p")
         subtitle.className = "detail-subtitle"
-        subtitle.textContent = testCase.scenario.weapon + " " + testCase.status
+        subtitle.textContent =
+          testCase.scenario.title ?? testCase.scenario.description ?? testCase.scenario.weapon + " " + testCase.status
         titleGroup.append(title, subtitle)
         header.append(titleGroup)
 
@@ -755,7 +1152,7 @@
         if (testCase.status === "skipped") {
           const message = document.createElement("p")
           message.className = "empty"
-          message.textContent = testCase.scenario.description
+          message.textContent = "Scenario not executable yet. This requirement remains in the planned corpus."
           body.append(message)
         } else {
           body.append(renderTimeline(testCase), renderEvaluations(testCase), renderEventStream())
