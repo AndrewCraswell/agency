@@ -63,9 +63,10 @@
     "run:scenarios": "pnpm build && node scripts/run-scenarios.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:product-release-host": "powershell -ExecutionPolicy Bypass -File firmware/product-update/scripts/run-host-tests.ps1 -Configuration Release",
     "test:stm32-host": "node firmware/stm32/tools/test-host.mjs",
     "test:watch": "vitest",
-    "verify": "run-s check:format check:lint check:types check:unused check:behavior-oracle check:golden-vectors test:coverage test:stm32-host"
+    "verify": "run-s check:format check:lint check:types check:unused check:behavior-oracle check:golden-vectors test:coverage test:product-release-host test:stm32-host"
   },
   "devDependencies": {
     "@repo/oxlint-config": "workspace:*",

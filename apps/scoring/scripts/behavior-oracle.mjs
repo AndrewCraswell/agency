@@ -60,6 +60,12 @@ const fixedArtifacts = [
   ["display-projection", "apps/scoring/src/observatory-integration.test.ts"],
   ["display-projection", "apps/scoring/observatory/index.html"],
   ["display-projection", "apps/scoring/scripts/serve-scenario-observatory.mjs"],
+  ["product-release", "apps/scoring/docs/product-release-manifest-contract.md"],
+  ["product-release", "apps/scoring/firmware/product-update/CMakeLists.txt"],
+  ["product-release", "apps/scoring/firmware/product-update/include/scoring_product_release.h"],
+  ["product-release", "apps/scoring/firmware/product-update/src/scoring_product_release.c"],
+  ["product-release", "apps/scoring/firmware/product-update/tests/scoring_product_release_host_test.c"],
+  ["product-release", "apps/scoring/firmware/product-update/scripts/run-host-tests.ps1"],
   ["decision-schema", "apps/scoring/docs/decision-record-contract.md"],
   ["decision-schema", "apps/scoring/src/decision-record.ts"],
   ["decision-schema", "apps/scoring/src/decision-record.test.ts"],
@@ -74,7 +80,8 @@ const testCommands = [
   "pnpm --filter scoring test -- src/scenario-runner.test.ts src/foil-scenario-evidence.test.ts src/sabre-scenario-evidence.test.ts",
   "pnpm --filter scoring test -- src/decision-record.test.ts src/transport-frame.test.ts src/scenario-display-projection.test.ts src/scenario-display-fixtures.test.ts src/observatory-integration.test.ts",
   "pnpm --filter scoring run:scenarios -- docs/golden-scenario-manifest.json",
-  "pnpm --filter scoring check:golden-vectors"
+  "pnpm --filter scoring check:golden-vectors",
+  "pnpm --filter scoring test:product-release-host"
 ]
 
 function fail(message) {

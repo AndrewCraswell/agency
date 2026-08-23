@@ -44,6 +44,9 @@ The bounded M2-13 seeded protocol, decision-record, and journal fuzz evidence
 is specified in [m2-13-seeded-fuzz-evidence.md](m2-13-seeded-fuzz-evidence.md).
 The M3-10 ESP32-S3 production identity, signed-update, rollback, and locked
 recovery decision is specified in [esp32-production-security-recovery-adr.md](esp32-production-security-recovery-adr.md).
+The bounded EVO-09 C17 product-release manifest decoder, original-byte signature-verifier boundary, pair compatibility,
+and host-only rejection evidence are specified in
+[product-release-manifest-contract.md](product-release-manifest-contract.md).
 The M3-09 SDK-free receiver, atomic journal, power-loss recovery, and opaque
 byte replay evidence is specified in
 [`firmware/esp32/docs/receiver-journal-replay-evidence.md`](../firmware/esp32/docs/receiver-journal-replay-evidence.md).

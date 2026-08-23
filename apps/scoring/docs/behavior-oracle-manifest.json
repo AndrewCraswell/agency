@@ -171,9 +171,39 @@
       "sha256": "sha256:eeed3eda963d26d575cc03a76528895e1fc3d336462be4ca2e8564b58a68c7ac"
     },
     {
+      "category": "product-release",
+      "path": "apps/scoring/docs/product-release-manifest-contract.md",
+      "sha256": "sha256:2960816ee927c5ab046dc00d166813ee42e548e11955025f96b6fd22ecb425f3"
+    },
+    {
       "category": "rules-1",
       "path": "apps/scoring/docs/rules-1-release-review.md",
       "sha256": "sha256:ea36362a413b35ec321024bd9b96798258169a5a59992d9a4f8ca5be00bb0782"
+    },
+    {
+      "category": "product-release",
+      "path": "apps/scoring/firmware/product-update/CMakeLists.txt",
+      "sha256": "sha256:6c10b689990b6c5307b9947f8dc081431ce2d60bab0192ae3fb19c7300470563"
+    },
+    {
+      "category": "product-release",
+      "path": "apps/scoring/firmware/product-update/include/scoring_product_release.h",
+      "sha256": "sha256:3633a4e3d097687a514d83309eaad57f937717527375b5d58674bc8dbc6f29d2"
+    },
+    {
+      "category": "product-release",
+      "path": "apps/scoring/firmware/product-update/scripts/run-host-tests.ps1",
+      "sha256": "sha256:07d32f40acd9b9b4233f01433097a72a446a0e384a62a7a085b2380395f57782"
+    },
+    {
+      "category": "product-release",
+      "path": "apps/scoring/firmware/product-update/src/scoring_product_release.c",
+      "sha256": "sha256:73cc8a38ba30b1ad2e407f187833c2cb74b4658c491be32507e25d100aee359c"
+    },
+    {
+      "category": "product-release",
+      "path": "apps/scoring/firmware/product-update/tests/scoring_product_release_host_test.c",
+      "sha256": "sha256:c2426513059f6266ea909fc8382031f51d0932c5a263115b2cd53f3f9df3783f"
     },
     {
       "category": "display-projection",
@@ -193,7 +223,7 @@
     {
       "category": "environment",
       "path": "apps/scoring/package.json",
-      "sha256": "sha256:2a879e301dc466687166a386ba841832952a9c73ecc964232fbc4c218dddd8b4"
+      "sha256": "sha256:d400c175a63c1390509d667222480bf75cb2c5ad32eb33350ae6c57caf46a4c6"
     },
     {
       "category": "golden-corpus",
@@ -427,11 +457,12 @@
     "pnpm --filter scoring test -- src/scenario-runner.test.ts src/foil-scenario-evidence.test.ts src/sabre-scenario-evidence.test.ts",
     "pnpm --filter scoring test -- src/decision-record.test.ts src/transport-frame.test.ts src/scenario-display-projection.test.ts src/scenario-display-fixtures.test.ts src/observatory-integration.test.ts",
     "pnpm --filter scoring run:scenarios -- docs/golden-scenario-manifest.json",
-    "pnpm --filter scoring check:golden-vectors"
+    "pnpm --filter scoring check:golden-vectors",
+    "pnpm --filter scoring test:product-release-host"
   ],
   "format": "scoring-behavior-oracle",
   "hashPolicy": "sha256 over UTF-8 text after CRLF-to-LF normalization",
   "oracleRevision": "rules-1",
   "schemaVersion": 1,
-  "digest": "sha256:26388dc044df48c19c42738391250759a1506c990dfb12eec4c9f88fc5da8755"
+  "digest": "sha256:a1cda2dbd1617bab3706db528542c7a1f5f08ba3adad2790ce13cf752996cac7"
 }
