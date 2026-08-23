@@ -402,5 +402,173 @@ export const fabricationFootprintGates = [
       "Import the exact part-specific Murata land pattern, solder mask, stencil, and courtyard from a primary source",
       "Verify reflow process and regulator VCC bypass placement"
     ]
+  },
+  {
+    references: ["Y_W5500"],
+    manufacturer: "ECS Inc.",
+    mpn: "ECS-250-18-33B-JGN-TR",
+    primaryEvidenceUrl: "https://www.ecsxtal.com/store/pdf/ECS-33B2.pdf",
+    packageEvidence: {
+      body: "ECS-33B2 3.2 mm by 2.5 mm four-pad crystal package",
+      terminals: 4,
+      orientation: "pin-1",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["crystal", "3225", "2520"],
+    releaseEvidence: [
+      "Exact ECS copper, solder mask, paste, courtyard, and pin mapping are imported and independently reviewed",
+      "Crystal, load capacitors, and feedback network placement and released-layout parasitics are reviewed before oscillator qualification"
+    ]
+  },
+  {
+    references: ["C_W5500_XI", "C_W5500_XO"],
+    manufacturer: "TDK",
+    mpn: "CGA3E2C0G1H180J080AA",
+    primaryEvidenceUrl: "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=CGA3E2C0G1H180J080AA",
+    packageEvidence: {
+      body: "CGA3 0603 C0G MLCC",
+      terminals: 2,
+      orientation: "symmetric",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["0603", "0402", "0805"],
+    releaseEvidence: [
+      "Exact TDK copper, solder mask, paste, and courtyard are approved for the fabricator and assembly process",
+      "The two capacitors are placed against the crystal pins and released-layout stray capacitance is reviewed"
+    ]
+  },
+  {
+    references: ["R_W5500_XTAL"],
+    manufacturer: "Panasonic Industry",
+    mpn: "ERJ3EKF1004V",
+    primaryEvidenceUrl:
+      "https://industrial.panasonic.com/ww/products/pt/general-purpose-chip-resistors/models/ERJ3EKF1004V",
+    packageEvidence: {
+      body: "ERJ-3EK 0603 chip resistor",
+      terminals: 2,
+      orientation: "symmetric",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["0603", "0402", "0805"],
+    releaseEvidence: [
+      "Exact Panasonic copper, solder mask, paste, and courtyard are approved for the fabricator and assembly process",
+      "Crystal feedback placement is reviewed together with the released oscillator loop"
+    ]
+  },
+  {
+    references: ["R_W5500_XO"],
+    manufacturer: "Panasonic Industry",
+    mpn: "ERJ3GEY0R00V",
+    primaryEvidenceUrl:
+      "https://industrial.panasonic.com/ww/products/pt/general-purpose-chip-resistors/models/ERJ3GEY0R00V",
+    packageEvidence: {
+      body: "ERJ-3GEY 0603 chip jumper",
+      terminals: 2,
+      orientation: "symmetric",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["0603", "0402", "0805"],
+    releaseEvidence: [
+      "Exact Panasonic copper, solder mask, paste, courtyard, and delivery rating are approved for the release build",
+      "Crystal series-link placement and current estimate are reviewed with the released oscillator loop"
+    ]
+  },
+  {
+    references: ["R_W5500_EXRES"],
+    manufacturer: "Panasonic Industry",
+    mpn: "ERJ3EKF1242V",
+    primaryEvidenceUrl:
+      "https://industrial.panasonic.com/ww/products/pt/general-purpose-chip-resistors/models/ERJ3EKF1242V",
+    packageEvidence: {
+      body: "ERJ-3EK 0603 chip resistor",
+      terminals: 2,
+      orientation: "symmetric",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["0603", "0402", "0805"],
+    releaseEvidence: [
+      "Exact Panasonic copper, solder mask, paste, and courtyard are approved for the fabricator and assembly process",
+      "EXRES analog-ground return and PHY behavior are independently reviewed on the released layout"
+    ]
+  },
+  {
+    references: ["C_W5500_TOCAP"],
+    manufacturer: "Murata",
+    mpn: "GRM21BR71C475KA73L",
+    primaryEvidenceUrl:
+      "https://www.murata.com/-/media/webrenewal/tool/library/common-pdf/dynamic-model/component-list-d-mlcc-2504.ashx?cvid=20250523010405000000&la=en",
+    packageEvidence: {
+      body: "0805 X7R MLCC",
+      terminals: 2,
+      orientation: "symmetric",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["0805", "0603", "1206"],
+    releaseEvidence: [
+      "Exact Murata copper, solder mask, paste, and courtyard are approved for the fabricator and assembly process",
+      "TOCAP has a reviewed short trace to the W5500 and its analog behavior is verified on hardware"
+    ]
+  },
+  {
+    references: ["C_W5500_1V2O"],
+    manufacturer: "Murata",
+    mpn: "GRM188R71H103KA01D",
+    primaryEvidenceUrl:
+      "https://www.murata.com/-/media/webrenewal/tool/library/common-pdf/dynamic-model/component-list-d-mlcc-2504.ashx?cvid=20250523010405000000&la=en",
+    packageEvidence: {
+      body: "0603 X7R MLCC",
+      terminals: 2,
+      orientation: "symmetric",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["0603", "0402", "0805"],
+    releaseEvidence: [
+      "Exact Murata copper, solder mask, paste, and courtyard are approved for the fabricator and assembly process",
+      "1V2O has a reviewed short trace and W5500 bring-up validates its required decoupling"
+    ]
+  },
+  {
+    references: [
+      "C_ETH_AVDD_FERRITE_INPUT",
+      "C_W5500_VDD",
+      "C_W5500_AVDD_1",
+      "C_W5500_AVDD_2",
+      "C_W5500_AVDD_3",
+      "C_W5500_AVDD_4",
+      "C_W5500_AVDD_5",
+      "C_W5500_AVDD_6"
+    ],
+    manufacturer: "Murata",
+    mpn: "GRM188R71C104KA01D",
+    primaryEvidenceUrl:
+      "https://www.murata.com/-/media/webrenewal/tool/library/common-pdf/dynamic-model/component-list-d-mlcc-2504.ashx?cvid=20250523010405000000&la=en",
+    packageEvidence: {
+      body: "0603 X7R MLCC",
+      terminals: 2,
+      orientation: "symmetric",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["0603", "0402", "0805"],
+    releaseEvidence: [
+      "Exact Murata copper, solder mask, paste, and courtyard are approved for the fabricator and assembly process",
+      "Ferrite-input, VDD, and each AVDD bypass location are placement-reviewed and their AVDD/VDD impedance is measured"
+    ]
+  },
+  {
+    references: ["FB_W5500_AVDD"],
+    manufacturer: "Murata",
+    mpn: "BLM21PG221SN1D",
+    primaryEvidenceUrl: "https://www.murata.com/en-eu/api/pdfdownloadapi?cate=cgsubChipFerriBead&partno=BLM21PG221SN1D",
+    packageEvidence: {
+      body: "0805 chip ferrite bead",
+      terminals: 2,
+      orientation: "symmetric",
+      thermalPad: "not-applicable"
+    },
+    prohibitedGenericFootprints: ["0805", "0603", "1206"],
+    releaseEvidence: [
+      "Exact Murata copper, solder mask, paste, and courtyard are approved for the fabricator and assembly process",
+      "Ferrite current, heating, AVDD impedance, Ethernet SI, and EMC behavior are verified on released hardware"
+    ]
   }
 ] as const satisfies readonly FabricationFootprintGate[]

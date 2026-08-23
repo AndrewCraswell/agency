@@ -8,9 +8,10 @@ decoupling. The executable record is
 `src/ethernet-support-network.ts` and its focused tests are
 `src/ethernet-support-network.test.ts`.
 
-This is a component-selection and constraint record, not an integrated
-communications-module release. `integrationRelease`, `fabricationRelease`,
-and `releaseState` remain `false`, `false`, and `deny`.
+This record is now integrated into the communications-module connectivity
+model. It remains a selected, unplaced network, not a communications-module
+release. `integrationRelease`, `fabricationRelease`, and `releaseState` remain
+`false`, `false`, and `deny`.
 
 ## Primary-source requirements
 
@@ -39,13 +40,15 @@ as proof that five capacitors are sufficient for this design.
 | External reference resistor | `R_W5500_EXRES` | Panasonic Industry `ERJ3EKF1242V` | 12.4 kOhm ±1%, ±100 ppm/°C TCR, 100 mW, 75 V, 0603, -55 °C to 155 °C, AEC-Q200 |
 | TOCAP reference capacitor | `C_W5500_TOCAP` | Murata `GRM21BR71C475KA73L` | 4.7 uF ±10%, X7R, 16 V, 0805, -55 °C to 125 °C |
 | 1V2O capacitor | `C_W5500_1V2O` | Murata `GRM188R71H103KA01D` | 10 nF ±10%, X7R, 50 V, 0603, -55 °C to 125 °C |
-| W5500 VDD and each AVDD decoupler | `C_W5500_VDD`, `C_W5500_AVDD_1` through `C_W5500_AVDD_6` | Murata `GRM188R71C104KA01D` | 100 nF ±10%, X7R, 16 V, 0603, -55 °C to 125 °C |
+| Ferrite-input decoupler and W5500 VDD and AVDD decouplers | `C_ETH_AVDD_FERRITE_INPUT`, `C_W5500_VDD`, `C_W5500_AVDD_1` through `C_W5500_AVDD_6` | Murata `GRM188R71C104KA01D` | 100 nF ±10%, X7R, 16 V, 0603, -55 °C to 125 °C |
 | Ferrite candidate | `FB_W5500_AVDD` | Murata `BLM21PG221SN1D` | 220 Ohm at 100 MHz ±25%, 0.045 Ohm maximum DCR, 2.0 A at 85 °C, 1.25 A at 125 °C, 0805, -55 °C to 125 °C |
 
 The six AVDD pins are treated as six local decoupling locations. The model
-therefore allocates one 100 nF capacitor per AVDD pin, one for VDD, and one
-upstream of the AVDD ferrite. This is a conservative allocation, not a claim
-that all eight capacitors are already placed or routed.
+therefore connects one selected 100 nF capacitor per AVDD pin, one to VDD, and
+one upstream of the AVDD ferrite. Every selected support reference is owned by
+the 110 mm by 55 mm, four-layer, 0.8 mm communications module. These are
+connectivity references only: no support component emits copper, mask, paste,
+or other fabrication artifacts, and none is approved for placement.
 
 The WIZnet reference clock network uses a 1 MOhm feedback resistor and a 0 Ohm
 series link. The selected Panasonic parts preserve those reference values. The
@@ -96,8 +99,8 @@ merely above 40 Ohm is not a pass.
 
 ## Open closure gates
 
-- Integrate the exact MPNs into the communications-module schematic and verify every W5500 pin, including all six AVDD pins and the VDD pin.
 - Confirm the actual W5500 package revision and release its copper, mask, paste, courtyard, and thermal-pad treatment.
+- Release exact footprints, copper, mask, paste, courtyard, placement, and return paths for the crystal, capacitors, resistors, and ferrite. Do not infer a released 0603 or 0805 land pattern from a package label.
 - Place the crystal and both load capacitors according to the WIZnet guidance; extract or measure the resulting stray capacitance.
 - Measure startup, steady-state clock amplitude, frequency, drive level, and at least 200 Ohm negative-resistance magnitude across temperature, supply, tolerance, and released-layout corners.
 - Validate AVDD/VDD impedance, ferrite current and heating, W5500 supply ripple, PHY emissions, Ethernet SI, ESD, surge, and common-mode behavior on the intended four-layer 0.8 mm stack-up.

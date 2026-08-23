@@ -5,7 +5,9 @@ import CommunicationsModuleCircuit, {
   communicationsResetBiasContract
 } from "./communications-module.circuit.js"
 import { componentDecisions } from "./component-decisions.js"
+import { ethernetCrystalQualification, ethernetSupportNetwork } from "./ethernet-support-network.js"
 import ScoringCircuit from "./index.circuit.js"
+import { criticalPartReadiness } from "./part-readiness.js"
 
 function render(circuitElement: React.ReactElement) {
   const circuit = new Circuit()
@@ -62,7 +64,7 @@ describe("communications-module circuit", () => {
       ])
     )
     expect(communicationsModuleBoardContract).toMatchObject({
-      ethernetDecouplingStatus: "incomplete",
+      ethernetDecouplingStatus: "selected-not-released",
       fabricationRelease: "deny",
       heightMm: 55,
       layerCount: 4,
@@ -167,6 +169,99 @@ describe("communications-module circuit", () => {
     )
     for (const pin of ["NC_38", "NC_39", "NC_40", "NC_41", "NC_42"])
       expect(names.some((name) => name.includes(`U_ETHERNET.${pin}`))).toBe(false)
+  })
+
+  it("integrates every selected W5500 support reference without granting PCB artwork or release", () => {
+    const json = renderModule()
+    const sources = new Map(
+      json.filter((element) => element.type === "source_component").map((element) => [element.name, element])
+    )
+    const artifactTypes = new Set(["pcb_smtpad", "pcb_plated_hole", "pcb_hole", "pcb_solder_paste"])
+
+    expect(ethernetSupportNetwork).toMatchObject({
+      assembly: "communications-module",
+      fabricationRelease: false,
+      integrationRelease: false,
+      releaseState: "deny"
+    })
+    expect([...ethernetSupportNetwork.references].sort()).toEqual(
+      ethernetSupportNetwork.supportNetworkComponents.map((component) => component.reference).sort()
+    )
+
+    const expectedElectricalValues = new Map<string, { readonly capacitance?: number; readonly resistance?: number }>([
+      ["C_ETH_AVDD_FERRITE_INPUT", { capacitance: 1e-7 }],
+      ["C_W5500_1V2O", { capacitance: 1e-8 }],
+      ["C_W5500_TOCAP", { capacitance: 4.7e-6 }],
+      ["C_W5500_VDD", { capacitance: 1e-7 }],
+      ["C_W5500_XI", { capacitance: 18e-12 }],
+      ["C_W5500_XO", { capacitance: 18e-12 }],
+      ["R_W5500_EXRES", { resistance: 12_400 }],
+      ["R_W5500_XO", { resistance: 0 }],
+      ["R_W5500_XTAL", { resistance: 1_000_000 }],
+      ...(["1", "2", "3", "4", "5", "6"] as const).map(
+        (suffix) => [`C_W5500_AVDD_${suffix}`, { capacitance: 1e-7 }] as const
+      )
+    ])
+    for (const support of ethernetSupportNetwork.supportNetworkComponents) {
+      const source = sources.get(support.reference)
+      const sourceId = source?.type === "source_component" ? source.source_component_id : undefined
+      const pcb = json.find((element) => element.type === "pcb_component" && element.source_component_id === sourceId)
+      const artifacts = json.filter(
+        (element) =>
+          artifactTypes.has(element.type) &&
+          pcb?.type === "pcb_component" &&
+          "pcb_component_id" in element &&
+          element.pcb_component_id === pcb.pcb_component_id
+      )
+      expect(source).toMatchObject({
+        manufacturer_part_number: support.mpn,
+        ...expectedElectricalValues.get(support.reference)
+      })
+      expect(pcb).toMatchObject({ do_not_place: true })
+      expect(artifacts).toEqual([])
+    }
+
+    const supportTraces = [
+      "U_ETHERNET.VDD to net.COMM_3V3",
+      "U_ETHERNET.VDD to C_W5500_VDD.pin1",
+      "C_W5500_VDD.pin2 to net.GND",
+      "C_ETH_AVDD_FERRITE_INPUT.pin1 to net.COMM_3V3",
+      "C_ETH_AVDD_FERRITE_INPUT.pin2 to net.GND",
+      "FB_W5500_AVDD.COMM_3V3 to net.COMM_3V3",
+      "FB_W5500_AVDD.ETH_AVDD to net.ETH_AVDD",
+      "U_ETHERNET.EXRES1 to R_W5500_EXRES.pin1",
+      "R_W5500_EXRES.pin2 to net.GND",
+      "U_ETHERNET.TOCAP to C_W5500_TOCAP.pin1",
+      "C_W5500_TOCAP.pin2 to net.GND",
+      "U_ETHERNET.1V2O to C_W5500_1V2O.pin1",
+      "C_W5500_1V2O.pin2 to net.GND",
+      "U_ETHERNET.XI to Y_W5500.XI",
+      "Y_W5500.XO to R_W5500_XO.pin1",
+      "R_W5500_XO.pin2 to U_ETHERNET.XO",
+      "Y_W5500.XI to R_W5500_XTAL.pin1",
+      "Y_W5500.XO to R_W5500_XTAL.pin2",
+      "Y_W5500.XI to C_W5500_XI.pin1",
+      "C_W5500_XI.pin2 to net.GND",
+      "Y_W5500.XO to C_W5500_XO.pin1",
+      "C_W5500_XO.pin2 to net.GND",
+      "Y_W5500.GND_2 to net.GND",
+      "Y_W5500.GND_4 to net.GND",
+      ...(["1", "2", "3", "4", "5", "6"] as const).flatMap((suffix) => [
+        `U_ETHERNET.AVDD${suffix} to net.ETH_AVDD`,
+        `C_W5500_AVDD_${suffix}.pin1 to net.ETH_AVDD`,
+        `C_W5500_AVDD_${suffix}.pin2 to net.GND`
+      ])
+    ]
+    expect(traceNames(json)).toEqual(expect.arrayContaining(supportTraces))
+    expect(ethernetCrystalQualification).toMatchObject({
+      negativeResistanceProductionMinimumOhm: 200,
+      overallPass: false,
+      releasePass: false
+    })
+    expect(criticalPartReadiness.find((part) => part.mpn === "W5500")).toMatchObject({
+      productionApproved: false,
+      blockers: expect.arrayContaining([expect.stringContaining("200 Ohm")])
+    })
   })
 
   it("provides every control return and never bonds chassis to signal ground", () => {

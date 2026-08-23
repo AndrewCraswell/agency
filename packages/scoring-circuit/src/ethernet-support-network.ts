@@ -308,11 +308,31 @@ export const ethernetSupportSources: readonly EthernetSupportSource[] = [
 ]
 
 export const ethernetSupportNetwork = {
+  assembly: "communications-module",
   avddPinCount: 6,
   fabricationRelease: false,
   integrationRelease: false,
   releaseState: "deny",
   requiredLocalSupplyCapacitors: 7,
+  references: [
+    "Y_W5500",
+    "C_W5500_XI",
+    "R_W5500_XTAL",
+    "R_W5500_XO",
+    "C_W5500_XO",
+    "R_W5500_EXRES",
+    "C_W5500_TOCAP",
+    "C_W5500_1V2O",
+    "C_ETH_AVDD_FERRITE_INPUT",
+    "C_W5500_VDD",
+    "C_W5500_AVDD_1",
+    "C_W5500_AVDD_2",
+    "C_W5500_AVDD_3",
+    "C_W5500_AVDD_4",
+    "C_W5500_AVDD_5",
+    "C_W5500_AVDD_6",
+    "FB_W5500_AVDD"
+  ] as const,
   supportNetworkComponents,
   sources: ethernetSupportSources,
   w5500: {

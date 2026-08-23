@@ -552,7 +552,8 @@ export const criticalPartReadiness = [
     assembly: "communications-module",
     blockers: [
       "Independently verify the LQFP-48 land pattern and exposed fabrication output on the communications module",
-      "Complete magnetics, termination, clock, decoupling, and Ethernet SI review"
+      "Release exact footprints and placement for the selected crystal, clock loads, resistors, TOCAP, 1V2O, ferrite, upstream ferrite-input bypass, VDD bypass, and six AVDD bypasses",
+      "Complete magnetics, termination, clock, AVDD/VDD power-integrity, Ethernet SI, and EMC review; measured crystal negative-resistance magnitude must be at least 200 Ohm at every released-layout corner"
     ],
     cad: { status: "supplier-candidate" },
     evidenceUrls: [

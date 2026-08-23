@@ -10,6 +10,7 @@ The module owns the only external powered attachment point and the external Ethe
 - `TPD4S201TRGRRQ1`, `TPS25730ADREFR`, `TVS2200DRVR`, and `TPS259474ARPWR` USB-PD/eFuse chain
 - a local 20 V-to-`COMM_3V3` conversion stage using the valid fixed-output `LMR43620MSC3RPERQ1` with its required support network
 - `W5500` and Würth `7499011121A` integrated-magnetics RJ45, including all MDI pairs on this PCB
+- the selected W5500 oscillator, EXRES, TOCAP, 1V2O, ferrite-input bypass, ferrite, VDD bypass, and six AVDD bypass references
 - Molex Micro-Fit power and control harnesses and the Samtec USB2 harness endpoint
 
 The target application carrier owns the ESP32, display, audio, and application `V3_3`; it does not own a W5500, RJ45, USB-C entry, or PD chain. Its canonical circuit has `J_PWR_CARRIER` for post-eFuse 20 V and `J_USB2_CARRIER` for the native USB2 pair. The carrier has no raw VBUS, CC, USB-C shell, or PD/eFuse circuit. This resolves the ownership boundary but does not release fabrication.
@@ -38,7 +39,7 @@ The connectivity model defines test points for port VBUS, PD PPHV, eFuse output,
 
 1. Independently close the `LMR43620MSC3RPERQ1` power stage: exact footprint, inductor and capacitor ratings, layout, thermal, surge, and current tests.
 2. Import manufacturer footprints, mask, paste, courtyard, pin one, shell/stake, and enclosure data for USB-C, PD protection, eFuse, regulator, W5500, MagJack, Molex, and Samtec parts. Keep them DNP until each record is released.
-3. Complete W5500 supply-decoupling allocation and placement against the released layout; the current three AVDD capacitors plus one VDD capacitor are an incomplete connectivity model, not decoupling closure.
+3. Close the W5500 support layout on the released 110 mm by 55 mm, four-layer, 0.8 mm module: the already modeled regulator-output capacitors provide the `COMM_3V3` bulk supply upstream of the selected ferrite-input bypass, while all six AVDD pins and VDD have a selected local 100 nF reference. These references are DNP with zero fabrication artifacts until exact passive footprints, placement, AVDD/VDD impedance, oscillator, PI, SI, and EMC review close.
 4. Validate power-off I/O leakage, supervisor sequencing, W5500 reset, SPI timing, USB high-speed eye, Ethernet SI, ESD, surge, EFT, common-mode emissions, chassis current, and thermals on the released four-layer, 0.8 mm stack-up.
 5. Verify no signal or shield return creates an uncontrolled `GND` to `CHASSIS` bond, and validate the de-energized-only internal service procedure.
 6. Confirm that the communications-module USB protector remains a shunt on the connector nets and that the only 22 ohm series pair is carrier-local between `J_USB2_CARRIER` and the ESP32.

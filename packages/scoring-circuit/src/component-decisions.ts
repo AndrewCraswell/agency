@@ -150,6 +150,99 @@ export const componentDecisions = [
     qualification: "10/100 Ethernet controller; validate magnetics, ESD, emissions, and thermal limits"
   },
   {
+    category: "ethernet-clock-crystal",
+    lifecycle: "active-preferred",
+    manufacturer: "ECS Inc.",
+    manufacturerUrl: "https://ecsxtal.com/products/crystals/surface-mount-crystals/ecs-250-18-33b-jgn-tr/",
+    mpn: "ECS-250-18-33B-JGN-TR",
+    purpose: "W5500 25 MHz clock at Y_W5500",
+    qualification:
+      "Paper requirement match only: 18 pF load, 40 Ohm maximum ESR, 200 uW maximum drive, and 2 ppm first-year aging. Released-layout startup and at least 200 Ohm negative-resistance magnitude remain mandatory gates"
+  },
+  {
+    category: "ethernet-clock-load-capacitor",
+    lifecycle: "active-preferred",
+    manufacturer: "TDK",
+    manufacturerUrl: "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=CGA3E2C0G1H180J080AA",
+    mpn: "CGA3E2C0G1H180J080AA",
+    purpose: "Matched 18 pF C0G loads at C_W5500_XI and C_W5500_XO",
+    qualification:
+      "Released-layout stray capacitance, oscillator startup, drive, frequency, and temperature measurements remain mandatory gates"
+  },
+  {
+    category: "ethernet-clock-feedback-resistor",
+    lifecycle: "active-preferred",
+    manufacturer: "Panasonic Industry",
+    manufacturerUrl:
+      "https://industrial.panasonic.com/ww/products/pt/general-purpose-chip-resistors/models/ERJ3EKF1004V",
+    mpn: "ERJ3EKF1004V",
+    purpose: "One megaohm W5500 crystal feedback at R_W5500_XTAL",
+    qualification: "Exact land pattern, oscillator placement, and bench validation remain mandatory gates"
+  },
+  {
+    category: "ethernet-clock-series-link",
+    lifecycle: "active-preferred",
+    manufacturer: "Panasonic Industry",
+    manufacturerUrl:
+      "https://industrial.panasonic.com/ww/products/pt/general-purpose-chip-resistors/models/ERJ3GEY0R00V",
+    mpn: "ERJ3GEY0R00V",
+    purpose: "Zero-ohm W5500 crystal series link at R_W5500_XO",
+    qualification:
+      "Exact delivery rating, land pattern, layout current estimate, and oscillator bench validation remain mandatory gates"
+  },
+  {
+    category: "ethernet-exres-resistor",
+    lifecycle: "active-preferred",
+    manufacturer: "Panasonic Industry",
+    manufacturerUrl:
+      "https://industrial.panasonic.com/ww/products/pt/general-purpose-chip-resistors/models/ERJ3EKF1242V",
+    mpn: "ERJ3EKF1242V",
+    purpose: "W5500 12.4 kiloohm EXRES1 reference at R_W5500_EXRES",
+    qualification:
+      "Analog-ground placement, exact land pattern, and Ethernet PHY bench verification remain mandatory gates"
+  },
+  {
+    category: "ethernet-tocap-capacitor",
+    lifecycle: "active-preferred",
+    manufacturer: "Murata",
+    manufacturerUrl:
+      "https://www.murata.com/-/media/webrenewal/tool/library/common-pdf/dynamic-model/component-list-d-mlcc-2504.ashx?cvid=20250523010405000000&la=en",
+    mpn: "GRM21BR71C475KA73L",
+    purpose: "W5500 4.7 microfarad TOCAP reference at C_W5500_TOCAP",
+    qualification: "Short-trace placement, exact land pattern, and W5500 analog-supply behavior remain mandatory gates"
+  },
+  {
+    category: "ethernet-1v2o-capacitor",
+    lifecycle: "active-preferred",
+    manufacturer: "Murata",
+    manufacturerUrl:
+      "https://www.murata.com/-/media/webrenewal/tool/library/common-pdf/dynamic-model/component-list-d-mlcc-2504.ashx?cvid=20250523010405000000&la=en",
+    mpn: "GRM188R71H103KA01D",
+    purpose: "W5500 10 nF internal 1V2O capacitor at C_W5500_1V2O",
+    qualification: "Short-trace placement, exact land pattern, and W5500 bring-up validation remain mandatory gates"
+  },
+  {
+    category: "ethernet-supply-bypass-capacitor",
+    lifecycle: "active-preferred",
+    manufacturer: "Murata",
+    manufacturerUrl:
+      "https://www.murata.com/-/media/webrenewal/tool/library/common-pdf/dynamic-model/component-list-d-mlcc-2504.ashx?cvid=20250523010405000000&la=en",
+    mpn: "GRM188R71C104KA01D",
+    purpose:
+      "W5500 ferrite-input, VDD, and six AVDD 100 nF bypasses at C_ETH_AVDD_FERRITE_INPUT, C_W5500_VDD, and C_W5500_AVDD_1 through C_W5500_AVDD_6",
+    qualification:
+      "Exact land patterns, placement, AVDD/VDD impedance, ripple, and Ethernet EMC validation remain mandatory gates"
+  },
+  {
+    category: "ethernet-avdd-ferrite",
+    lifecycle: "active-preferred",
+    manufacturer: "Murata",
+    manufacturerUrl: "https://www.murata.com/en-global/products/productdetail?partno=BLM21PG221SN1%23",
+    mpn: "BLM21PG221SN1D",
+    purpose: "W5500 AVDD supply ferrite at FB_W5500_AVDD",
+    qualification: "Exact land pattern, current, heating, AVDD impedance, SI, and EMC validation remain mandatory gates"
+  },
+  {
     category: "communications-io-dual-power-off-isolation",
     lifecycle: "active",
     manufacturer: "Texas Instruments",

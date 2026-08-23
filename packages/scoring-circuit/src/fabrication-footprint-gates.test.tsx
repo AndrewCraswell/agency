@@ -1,6 +1,7 @@
 import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
 import CommunicationsModuleCircuit from "./communications-module.circuit.js"
+import { ethernetSupportNetwork } from "./ethernet-support-network.js"
 import { fabricationFootprintGates } from "./fabrication-footprint-gates.js"
 import ScoringCircuit from "./index.circuit.js"
 import { criticalPartReadiness } from "./part-readiness.js"
@@ -25,7 +26,24 @@ const communicationsReferences = new Set([
   "U_EFUSE",
   "C_USB_PD_LDO",
   "C_USB_PD_PPHV",
-  "C_EFUSE_OUT"
+  "C_EFUSE_OUT",
+  "Y_W5500",
+  "C_W5500_XI",
+  "C_W5500_XO",
+  "R_W5500_XTAL",
+  "R_W5500_XO",
+  "R_W5500_EXRES",
+  "C_W5500_TOCAP",
+  "C_W5500_1V2O",
+  "C_ETH_AVDD_FERRITE_INPUT",
+  "C_W5500_VDD",
+  "C_W5500_AVDD_1",
+  "C_W5500_AVDD_2",
+  "C_W5500_AVDD_3",
+  "C_W5500_AVDD_4",
+  "C_W5500_AVDD_5",
+  "C_W5500_AVDD_6",
+  "FB_W5500_AVDD"
 ])
 const scoringIoReferences = new Set([
   "J_WEAPON_HARNESS_L",
@@ -192,6 +210,38 @@ describe("fabrication-critical footprint gates", () => {
     })
     for (const mpn of ["T55A106M010C0200", "T523H107M035APE070"] as const) {
       expect(byMpn.get(mpn)?.packageEvidence.orientation).toBe("polarized")
+    }
+  })
+
+  it("keeps every selected W5500 support reference DNP until its footprint and layout gates close", () => {
+    const communicationsJson = renderPcbPlacements(<CommunicationsModuleCircuit />)
+    const supportReferences = new Set<string>(ethernetSupportNetwork.references)
+    const supportGates = fabricationFootprintGates.filter((gate) =>
+      gate.references.some((reference) => supportReferences.has(reference))
+    )
+    expect(supportGates).toHaveLength(9)
+
+    for (const gate of supportGates) {
+      expect(gate.releaseEvidence.join(" ")).toMatch(/copper.*solder mask.*paste.*courtyard/u)
+      for (const reference of gate.references) {
+        const source = communicationsJson.find(
+          (element) => element.type === "source_component" && element.name === reference
+        )
+        const sourceId = source?.type === "source_component" ? source.source_component_id : undefined
+        const pcb = communicationsJson.find(
+          (element) => element.type === "pcb_component" && element.source_component_id === sourceId
+        )
+        const artifacts = communicationsJson.filter(
+          (element) =>
+            ["pcb_smtpad", "pcb_plated_hole", "pcb_hole", "pcb_solder_paste"].includes(element.type) &&
+            pcb?.type === "pcb_component" &&
+            "pcb_component_id" in element &&
+            element.pcb_component_id === pcb.pcb_component_id
+        )
+        expect(source).toMatchObject({ manufacturer_part_number: gate.mpn })
+        expect(pcb).toMatchObject({ do_not_place: true })
+        expect(artifacts).toEqual([])
+      }
     }
   })
 })

@@ -1,3 +1,4 @@
+import { ethernetSupportNetwork } from "./ethernet-support-network.js"
 import { manufacturerFootprintProps } from "./manufacturer-footprint-adapter.js"
 import { physicalBoardContract } from "./physical-board-contract.js"
 
@@ -8,7 +9,7 @@ function unreleasedFootprintProps(mpn: string) {
 }
 
 export const communicationsModuleBoardContract = {
-  ethernetDecouplingStatus: "incomplete",
+  ethernetDecouplingStatus: "selected-not-released",
   fabricationRelease: "deny",
   heightMm: communicationsPhysicalBoard.heightMm,
   layerCount: communicationsPhysicalBoard.layers,
@@ -16,6 +17,12 @@ export const communicationsModuleBoardContract = {
   owner: communicationsPhysicalBoard.owner,
   widthMm: communicationsPhysicalBoard.widthMm
 } as const
+
+function ethernetSupportPart(reference: string) {
+  const part = ethernetSupportNetwork.supportNetworkComponents.find((candidate) => candidate.reference === reference)
+  if (part === undefined) throw new Error(`Missing selected W5500 support part for ${reference}`)
+  return part
+}
 
 export const communicationsResetBiasContract = {
   minimumRailV: 3.135,
@@ -460,29 +467,80 @@ export default function CommunicationsModuleCircuit() {
           pin48: "AGND6"
         }}
       />
-      <resistor name="R_W5500_EXRES" resistance="12.4k" tolerance="1%" footprint="0603" />
-      <capacitor name="C_W5500_TOCAP" capacitance="4.7uF" footprint="0805" />
-      <capacitor name="C_W5500_1V2O" capacitance="10nF" footprint="0603" />
-      <capacitor name="C_W5500_VDD" capacitance="100nF" footprint="0603" />
-      {(["A", "B", "C"] as const).map((suffix) => (
-        <capacitor key={suffix} name={`C_W5500_AVDD_${suffix}`} capacitance="100nF" footprint="0603" />
+      <resistor
+        name="R_W5500_EXRES"
+        manufacturerPartNumber={ethernetSupportPart("R_W5500_EXRES").mpn}
+        resistance="12.4k"
+        tolerance="1%"
+        {...unreleasedFootprintProps(ethernetSupportPart("R_W5500_EXRES").mpn)}
+      />
+      <capacitor
+        name="C_W5500_TOCAP"
+        manufacturerPartNumber={ethernetSupportPart("C_W5500_TOCAP").mpn}
+        capacitance="4.7uF"
+        {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_TOCAP").mpn)}
+      />
+      <capacitor
+        name="C_W5500_1V2O"
+        manufacturerPartNumber={ethernetSupportPart("C_W5500_1V2O").mpn}
+        capacitance="10nF"
+        {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_1V2O").mpn)}
+      />
+      <capacitor
+        name="C_W5500_VDD"
+        manufacturerPartNumber={ethernetSupportPart("C_W5500_VDD").mpn}
+        capacitance="100nF"
+        {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_VDD").mpn)}
+      />
+      {(["1", "2", "3", "4", "5", "6"] as const).map((suffix) => (
+        <capacitor
+          key={suffix}
+          name={`C_W5500_AVDD_${suffix}`}
+          manufacturerPartNumber={ethernetSupportPart(`C_W5500_AVDD_${suffix}`).mpn}
+          capacitance="100nF"
+          {...unreleasedFootprintProps(ethernetSupportPart(`C_W5500_AVDD_${suffix}`).mpn)}
+        />
       ))}
+      <capacitor
+        name="C_ETH_AVDD_FERRITE_INPUT"
+        manufacturerPartNumber={ethernetSupportPart("C_ETH_AVDD_FERRITE_INPUT").mpn}
+        capacitance="100nF"
+        {...unreleasedFootprintProps(ethernetSupportPart("C_ETH_AVDD_FERRITE_INPUT").mpn)}
+      />
       <chip
         name="Y_W5500"
-        manufacturerPartNumber="25MHZ_CRYSTAL_TBD"
-        doNotPlace
-        footprint={[]}
-        pinLabels={{ pin1: "XI", pin2: "XO" }}
+        manufacturerPartNumber={ethernetSupportPart("Y_W5500").mpn}
+        {...unreleasedFootprintProps(ethernetSupportPart("Y_W5500").mpn)}
+        pinLabels={{ pin1: "XI", pin2: "GND_2", pin3: "XO", pin4: "GND_4" }}
       />
-      <resistor name="R_W5500_XTAL" resistance="1M" footprint="0603" />
-      <resistor name="R_W5500_XO" resistance="0" footprint="0603" />
-      <capacitor name="C_W5500_XI" capacitance="18pF" footprint="0603" />
-      <capacitor name="C_W5500_XO" capacitance="18pF" footprint="0603" />
+      <resistor
+        name="R_W5500_XTAL"
+        manufacturerPartNumber={ethernetSupportPart("R_W5500_XTAL").mpn}
+        resistance="1M"
+        {...unreleasedFootprintProps(ethernetSupportPart("R_W5500_XTAL").mpn)}
+      />
+      <resistor
+        name="R_W5500_XO"
+        manufacturerPartNumber={ethernetSupportPart("R_W5500_XO").mpn}
+        resistance="0"
+        {...unreleasedFootprintProps(ethernetSupportPart("R_W5500_XO").mpn)}
+      />
+      <capacitor
+        name="C_W5500_XI"
+        manufacturerPartNumber={ethernetSupportPart("C_W5500_XI").mpn}
+        capacitance="18pF"
+        {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_XI").mpn)}
+      />
+      <capacitor
+        name="C_W5500_XO"
+        manufacturerPartNumber={ethernetSupportPart("C_W5500_XO").mpn}
+        capacitance="18pF"
+        {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_XO").mpn)}
+      />
       <chip
         name="FB_W5500_AVDD"
-        manufacturerPartNumber="ETHERNET_FERRITE_TBD"
-        doNotPlace
-        footprint={[]}
+        manufacturerPartNumber={ethernetSupportPart("FB_W5500_AVDD").mpn}
+        {...unreleasedFootprintProps(ethernetSupportPart("FB_W5500_AVDD").mpn)}
         pinLabels={{ pin1: "COMM_3V3", pin2: "ETH_AVDD" }}
       />
       <chip
@@ -729,6 +787,8 @@ export default function CommunicationsModuleCircuit() {
       <trace from="U_ETHERNET.VDD" to="net.COMM_3V3" />
       <trace from="U_ETHERNET.VDD" to="C_W5500_VDD.pin1" />
       <trace from="C_W5500_VDD.pin2" to="net.GND" />
+      <trace from="net.COMM_3V3" to="C_ETH_AVDD_FERRITE_INPUT.pin1" />
+      <trace from="C_ETH_AVDD_FERRITE_INPUT.pin2" to="net.GND" />
       <trace from="net.COMM_3V3" to="FB_W5500_AVDD.COMM_3V3" />
       <trace from="FB_W5500_AVDD.ETH_AVDD" to="net.ETH_AVDD" />
       {(["AVDD1", "AVDD2", "AVDD3", "AVDD4", "AVDD5", "AVDD6"] as const).map((pin) => (
@@ -740,12 +800,12 @@ export default function CommunicationsModuleCircuit() {
       <trace from="U_ETHERNET.PMODE2" to="net.COMM_3V3" />
       <trace from="U_ETHERNET.PMODE1" to="net.COMM_3V3" />
       <trace from="U_ETHERNET.PMODE0" to="net.COMM_3V3" />
-      <trace from="net.ETH_AVDD" to="C_W5500_AVDD_A.pin1" />
-      <trace from="net.ETH_AVDD" to="C_W5500_AVDD_B.pin1" />
-      <trace from="net.ETH_AVDD" to="C_W5500_AVDD_C.pin1" />
-      <trace from="C_W5500_AVDD_A.pin2" to="net.GND" />
-      <trace from="C_W5500_AVDD_B.pin2" to="net.GND" />
-      <trace from="C_W5500_AVDD_C.pin2" to="net.GND" />
+      {(["1", "2", "3", "4", "5", "6"] as const).map((suffix) => (
+        <trace key={suffix} from="net.ETH_AVDD" to={`C_W5500_AVDD_${suffix}.pin1`} />
+      ))}
+      {(["1", "2", "3", "4", "5", "6"] as const).map((suffix) => (
+        <trace key={suffix} from={`C_W5500_AVDD_${suffix}.pin2`} to="net.GND" />
+      ))}
       <trace from="U_ETHERNET.EXRES1" to="R_W5500_EXRES.pin1" />
       <trace from="R_W5500_EXRES.pin2" to="net.GND" />
       <trace from="U_ETHERNET.TOCAP" to="C_W5500_TOCAP.pin1" />
@@ -761,6 +821,8 @@ export default function CommunicationsModuleCircuit() {
       <trace from="C_W5500_XI.pin2" to="net.GND" />
       <trace from="Y_W5500.XO" to="C_W5500_XO.pin1" />
       <trace from="C_W5500_XO.pin2" to="net.GND" />
+      <trace from="Y_W5500.GND_2" to="net.GND" />
+      <trace from="Y_W5500.GND_4" to="net.GND" />
       <trace from="U_ETHERNET.TXP" to="J_ETHERNET_MAGJACK.TD_P" />
       <trace from="U_ETHERNET.TXN" to="J_ETHERNET_MAGJACK.TD_N" />
       <trace from="U_ETHERNET.RXP" to="J_ETHERNET_MAGJACK.RD_P" />
