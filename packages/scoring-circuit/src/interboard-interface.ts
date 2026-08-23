@@ -1,9 +1,8 @@
 /**
- * Review-only contract for a future communications-module split.
+ * Fail-closed inter-board contract for the isolated communications module.
  *
- * This does not move any component in index.circuit.tsx, add COMM_3V3, clear
- * DNP, or authorize artwork. The canonical circuit remains unchanged until a
- * separately reviewed integration change implements this contract.
+ * The module connectivity model implements this boundary, but no connector or
+ * IC footprint is released. This contract is never fabrication evidence.
  */
 
 export type InterfaceReleaseState = "deny"
@@ -212,7 +211,6 @@ export const communicationsPowerBoundary = {
 } as const
 
 export const interboardReleaseGates = [
-  "Integrate the proposed relocation of U_ETHERNET and J_ETHERNET_MAGJACK onto the communications module; until then the canonical circuit remains unchanged and this contract cannot be used as fabrication evidence.",
   "Keep all W5500 MDI pairs on the communications-module PCB. MDI must not traverse J_PWR, J_CTRL, J_USB2, or another inter-board harness.",
   "Select and model the communications-module V20-to-COMM_3V3 regulator, decoupling, power-good, reset sequencing, footprint, and thermal behavior.",
   "Implement module-local TPS389033DSER supervision, BSS138AKA reset assertion, SN74LVC2G126DCUR plus SN74LVC1G126DCKR input gating, and SN74LVC2G126DCUR output gating; verify IOFF behavior prevents back-power with COMM_3V3 absent.",
@@ -227,12 +225,12 @@ export const interboardReleaseGates = [
 ] as const
 
 export const interboardArchitectureVerdict = {
-  canonicalCircuitStatus: "unchanged" as const,
+  canonicalCircuitStatus: "carrier-ownership-conflict" as const,
   integrationStatus: "not-integrated" as const,
   proposedPlacement:
-    "Future communications module: USB-C entry and PD protection, W5500 with locally generated COMM_3V3, integrated-magnetics RJ45, and chassis/shield bond. Application carrier: ESP32 and V5/V3_3 conversion.",
+    "Communications module: USB-C entry and PD protection, W5500 with locally generated COMM_3V3, integrated-magnetics RJ45, and chassis/shield bond. Application carrier: ESP32 and V5/V3_3 conversion.",
   reason:
-    "The canonical circuit still places W5500 and MagJack on the application carrier. Extending its MDI pairs to a replaceable module is not approved, so a later integration must move both parts together.",
+    "The isolated communications-module model owns the intended USB-C, PD/eFuse, W5500, MagJack, and MDI functions, but the canonical application carrier still contains the legacy USB-C/PD chain. Release remains denied until that duplicate ownership is removed and the carrier exposes only J_PWR and J_USB2 at this boundary.",
   releaseState: "deny" as const
 }
 

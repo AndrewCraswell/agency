@@ -81,12 +81,12 @@ describe("inter-board interface contract", () => {
     expect(interboardReleaseGates.join(" ")).toContain("de-energized internal service")
   })
 
-  it("keeps the proposal fail-closed until canonical integration", () => {
-    expect(interboardArchitectureVerdict.canonicalCircuitStatus).toBe("unchanged")
+  it("keeps the integrated isolated module fail-closed for fabrication", () => {
+    expect(interboardArchitectureVerdict.canonicalCircuitStatus).toBe("carrier-ownership-conflict")
     expect(interboardArchitectureVerdict.integrationStatus).toBe("not-integrated")
     expect(interboardArchitectureVerdict.releaseState).toBe("deny")
     expect(interboardArchitectureVerdict.proposedPlacement).toContain("COMM_3V3")
-    expect(interboardReleaseGates.join(" ")).toContain("canonical circuit remains unchanged")
+    expect(interboardReleaseGates.join(" ")).toContain("MDI must not traverse")
   })
 
   it("fails closed for malformed and forged runtime contracts", () => {

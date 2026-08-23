@@ -28,7 +28,7 @@ export const componentDecisions = [
     qualification: "16 MB flash; 2 MB PSRAM; external antenna; -40 C to 85 C"
   },
   {
-    category: "processor-isolation",
+    category: "processor-main-isolation",
     lifecycle: "active",
     manufacturer: "Texas Instruments",
     manufacturerUrl: "https://www.ti.com/product/ISO7762",
@@ -37,7 +37,7 @@ export const componentDecisions = [
     qualification: "100 Mbps; wide SOIC; reinforced isolation; -55 C to 125 C"
   },
   {
-    category: "processor-isolation",
+    category: "processor-aux-isolation",
     lifecycle: "active",
     manufacturer: "Texas Instruments",
     manufacturerUrl: "https://www.ti.com/product/ISO7721",
@@ -116,7 +116,8 @@ export const componentDecisions = [
     manufacturer: "Texas Instruments",
     manufacturerUrl: "https://www.ti.com/product/LMR43620-Q1",
     mpn: "LMR43620MSC3RPERQ1",
-    purpose: "Fixed 3.3 V, 2 A synchronous buck for the ESP32 application rail and reset supervisor",
+    purpose:
+      "Fixed 3.3 V, 2 A synchronous buck for the ESP32 application rail and the replaceable communications-module local rail",
     qualification:
       "Active automotive orderable; 3.6 V to 36 V startup input, 2 A, fixed 2.2 MHz, spread spectrum, 3.27 V to 3.33 V fixed-output accuracy over line/load/temperature in FPWM; 2 mm x 2 mm VQFN-HR RPE; thermal layout and transient validation required"
   },
@@ -149,6 +150,36 @@ export const componentDecisions = [
     qualification: "10/100 Ethernet controller; validate magnetics, ESD, emissions, and thermal limits"
   },
   {
+    category: "communications-io-dual-power-off-isolation",
+    lifecycle: "active",
+    manufacturer: "Texas Instruments",
+    manufacturerUrl: "https://www.ti.com/product/SN74LVC2G126",
+    mpn: "SN74LVC2G126DCUR",
+    purpose: "IOFF-protected dual gates on communications-module SPI input and output directions",
+    qualification:
+      "Each OE has a local 100 kOhm pull-down and may be released only from supervised COMM_IO_ENABLE; package/footprint and power-off leakage verification remain release gates"
+  },
+  {
+    category: "communications-io-single-power-off-isolation",
+    lifecycle: "active",
+    manufacturer: "Texas Instruments",
+    manufacturerUrl: "https://www.ti.com/product/SN74LVC1G126/part-details/SN74LVC1G126DCKR",
+    mpn: "SN74LVC1G126DCKR",
+    purpose: "IOFF-protected single gate for the communications-module W5500 chip select",
+    qualification:
+      "Local 100 kOhm OE pull-down holds the gate high impedance through COMM_3V3 ramp; package/footprint and power-off leakage verification remain release gates"
+  },
+  {
+    category: "communications-oe-enable-buffer",
+    lifecycle: "active",
+    manufacturer: "Texas Instruments",
+    manufacturerUrl: "https://www.ti.com/product/SN74LVC1G34",
+    mpn: "SN74LVC1G34DCKR",
+    purpose: "Separates the supervisor and W5500 reset net from the five IOFF output-enable pull-down loads",
+    qualification:
+      "A 1 MOhm input pull-down and the non-inverting buffer preserve reset high-level margin while driving five local 100 kOhm OE pull-downs; exact footprint and bench sequencing remain release gates"
+  },
+  {
     category: "ethernet-connector",
     lifecycle: "active",
     manufacturer: "Wurth Elektronik",
@@ -168,14 +199,24 @@ export const componentDecisions = [
       "20,000 mating cycles; 5 A; 20 V; -40 C to 105 C; exact 0.80 mm-board footprint and chassis strain relief remain required"
   },
   {
-    category: "usb-pd-port-protection",
+    category: "usb-c-cc-sbu-protection",
     lifecycle: "active",
     manufacturer: "Texas Instruments",
     manufacturerUrl: "https://www.ti.com/product/TPD4S201-Q1/part-details/TPD4S201TRGRRQ1",
     mpn: "TPD4S201TRGRRQ1",
-    purpose: "Connector-side CC1, CC2, D+, and D- short-to-VBUS and IEC ESD protection for 20 V SPR",
+    purpose: "Connector-side CC1, CC2, SBU1, and SBU2 short-to-VBUS and IEC ESD protection for 20 V SPR",
     qualification:
-      "Active AEC-Q100 device; 28 V CC/D+/D- short-to-VBUS tolerance; 8 kV IEC contact ESD; -40 C to 105 C; connector CC enters C_CC1/C_CC2, RPD_G1/G2 return there, protected CC1/CC2 route to TPS25730A, and /FLT routes to FAULT_IN"
+      "Active AEC-Q100 device; 28 V CC/SBU short-to-VBUS tolerance; 8 kV IEC contact ESD; -40 C to 105 C; connector CC enters C_CC1/C_CC2, RPD_G1/G2 return there, protected CC1/CC2 route to TPS25730A, SBU remains unused, and /FLT routes to FAULT_IN"
+  },
+  {
+    category: "usb2-esd-protection",
+    lifecycle: "active",
+    manufacturer: "Texas Instruments",
+    manufacturerUrl: "https://www.ti.com/product/TPD2EUSB30",
+    mpn: "TPD2EUSB30DRTR",
+    purpose: "Three-pin low-capacitance shunt protection for native USB 2.0 D-minus and D-plus",
+    qualification:
+      "DRT SOT-3 pin 1 IO1, pin 2 ground, and pin 3 IO2; both data nets continue independently to their 22 Ohm series resistors; footprint, USB eye, and IEC ESD tests remain release gates"
   },
   {
     category: "usb-pd-vbus-transient-protection",
