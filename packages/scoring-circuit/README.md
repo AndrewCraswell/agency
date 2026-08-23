@@ -28,7 +28,10 @@ remaining service-port gates are in `docs/usb-c-service-power-architecture.md`. 
 regulator, exact support network, supervisor threshold margin, and thermal/startup calculation are in
 `docs/application-3v3-rail.md`. The selected V5 buck stage, its explicit eFuse peak conflict, and its thermal/layout
 release gates are in `docs/v5-power-stage.md`. The selected Adafruit 2277 EVT panel's end-to-end USB-PD,
-application-rail, V5, shunt, and startup/inrush screen is in `docs/selected-panel-power-closure.md`.
+application-rail, V5, shunt, and startup/inrush screen is in `docs/selected-panel-power-closure.md`. The proposed
+three-assembly PCB topology, stack-ups, split-ground and isolated-domain contract, impedance targets, placement zones,
+HUB75 harness rules, connector ESD strategy, and fabrication release checklist are in
+`docs/pcb-fabrication-constraints.md`. Its executable constraint screen is in `src/pcb-fabrication-constraints.ts`.
 
 ## Fabrication status
 
