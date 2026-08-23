@@ -16,6 +16,18 @@ describe("PCB fabrication constraints", () => {
     expect(pcbFabricationContract.stackups.applicationDisplayCarrier.map((layer) => layer.copperOz)).toEqual([
       2, 1, 1, 1, 1, 2
     ])
+    expect(pcbFabricationContract.designRules).toMatchObject({
+      minimumTrackWidthMm: 0.25,
+      minimumClearanceMm: 0.25,
+      minimumViaDrillMm: 0.3,
+      minimumFinishedAnnularRingMm: 0.3,
+      minimumComponentAnnularRingMm: 0.35,
+      minimumPlatedSlotWidthMm: 0.75,
+      minimumNonPlatedSlotWidthMm: 1.5,
+      minimumCopperToRoutedEdgeMm: 0.3,
+      minimumSoldermaskBridgeMm: 0.25,
+      maximumBoardOutlineToleranceMm: 0.2
+    })
     expect(pcbFabricationContract.stackups.scoringIoBoard[1].role).toContain("APP_GND")
     expect(pcbFabricationContract.stackups.scoringIoBoard[1].role).toContain("SCORING_SGND")
     expect(pcbFabricationContract.designRules.projectIsolationCreepageTargetMm).toBeGreaterThan(

@@ -76,9 +76,33 @@ weights do not prove a 90 ohm USB2 or 100 ohm Ethernet pair. The released stack-
 thickness, finished copper, etch compensation, solder-mask assumptions, impedance coupon locations, and the fabricator's
 controlled-impedance tolerance.
 
-Baseline manufacturer-neutral rules are 0.15 mm minimum trace/space, 0.30 mm around the PD power-entry copper, 0.20 mm
-minimum finished via drill, 0.10 mm minimum finished annular ring, and 1.0 mm component-to-edge clearance unless an
-exact connector drawing says otherwise. These are design floors; the selected fabricator may require larger values.
+The cross-vendor six-layer DFM floor is intentionally more conservative than
+either candidate's minimum. For both JLCPCB and PCBWay, route at least 0.25 mm
+trace and 0.25 mm space on both 2 oz outer and 1 oz inner layers; use a 0.30 mm
+finished via/PTH hole, 0.30 mm 2 oz via ring, 0.35 mm 2 oz component-hole ring,
+0.75 mm plated slots, and 1.5 mm non-plated slots. Keep copper at least
+0.30 mm from a routed edge, preserve a 0.25 mm 2 oz soldermask dam/bridge, and
+use rounded slots with a 2:1 length-to-width ratio. The dimensional envelopes
+are +/-20% trace-width tolerance, +0.13/-0.08 mm finished PTH-hole tolerance,
+ +/-0.10 mm hole-position tolerance, and +/-0.20 mm routed-outline tolerance.
+These are design floors and maximum allowed process envelopes, not supplier
+acceptance. The exact connector drawing, fabricator CAM review, and final
+stackup may require larger values.
+
+The source-backed basis is the current [JLCPCB rigid capability page](https://jlcpcb.com/capabilities/pcb-capabilities/)
+and the current [PCBWay capability page](https://www.pcbway.com/capabilities.html),
+[advanced capability page](https://www.pcbway.com/advanced-pcb-capabilities.html),
+and [manufacturing-tolerance page](https://www.pcbway.com/pcb_prototype/PCB_Manufacturing_tolerances.html),
+retrieved 2026-08-23. JLCPCB publishes 0.15/0.15 mm multilayer 2 oz trace/space,
+0.254 mm 2 oz PTH annular ring, 0.15 mm minimum hole, 0.20 mm routed-edge
+clearance, 0.20 mm 2 oz soldermask bridge, 0.35 mm multilayer plated slot,
+and 1.0 mm non-plated slot. PCBWay publishes conventional 70 um outer 7/8 mil
+trace/space, 7 mil via ring, 12 mil component ring, 0.15 mm CNC/finished hole,
+0.30 mm normal CNC profile-to-copper spacing with 0.25 mm as the published
+minimum, 5 mil 2 oz soldermask bridge,
+0.50 mm plated slot, and 0.80 mm non-plated slot. Both publish CNC outline
+tolerance of +/-0.20 mm; their hole-size and hole-position tolerances are
+covered by the project envelopes above.
 
 ## Functional zoning and placement order
 

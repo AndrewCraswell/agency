@@ -111,11 +111,23 @@ export const pcbFabricationContract = {
     }[]
   },
   designRules: {
-    minimumTrackWidthMm: 0.15,
-    minimumClearanceMm: 0.15,
+    // Cross-vendor 6-layer 2 oz outer/1 oz inner floors.  These sit above
+    // the published minima and are the only geometry this project should route.
+    minimumTrackWidthMm: 0.25,
+    minimumClearanceMm: 0.25,
     powerEntryClearanceMm: 0.3,
-    minimumViaDrillMm: 0.2,
-    minimumFinishedAnnularRingMm: 0.1,
+    minimumViaDrillMm: 0.3,
+    minimumFinishedAnnularRingMm: 0.3,
+    minimumComponentAnnularRingMm: 0.35,
+    minimumPlatedSlotWidthMm: 0.75,
+    minimumNonPlatedSlotWidthMm: 1.5,
+    minimumCopperToRoutedEdgeMm: 0.3,
+    minimumSoldermaskBridgeMm: 0.25,
+    maximumTraceWidthTolerancePercent: 20,
+    maximumFinishedPthHoleTolerancePositiveMm: 0.13,
+    maximumFinishedPthHoleToleranceNegativeMm: 0.08,
+    maximumHolePositionToleranceMm: 0.1,
+    maximumBoardOutlineToleranceMm: 0.2,
     componentToBoardEdgeMm: 1.0,
     mountingHoleCopperKeepoutMm: 1.0,
     mountingHoleCourtyardKeepoutMm: 3.0,

@@ -22,6 +22,11 @@ export type VendorCapability = {
   readonly maxBoardHeightMm: number
   readonly minViaDrillMm: number
   readonly minCncHoleMm: number
+  readonly minFinishedHoleMm: number
+  readonly finishedPthHoleTolerancePositiveMm: number
+  readonly finishedPthHoleToleranceNegativeMm: number
+  readonly holePositionToleranceMm: number
+  readonly traceWidthTolerancePercent: number
   readonly twoOzOuterGeometry: {
     readonly releaseBaseline: {
       readonly minTraceWidthMm: number
@@ -44,6 +49,7 @@ export type VendorCapability = {
     readonly capabilityClass: string
   }
   readonly minSoldermaskBridgeMm: number | null
+  readonly minCopperToRoutedEdgeMm: number | null
   readonly outerCopperOz: readonly number[]
   readonly innerCopperOz: readonly number[]
   readonly highTgOptionsC: readonly number[]
@@ -52,6 +58,7 @@ export type VendorCapability = {
   readonly soldermaskProcess: string
   readonly surfaceFinishes: readonly string[]
   readonly outlineToleranceMm: number | null
+  readonly minPlatedSlotWidthMm: number
   readonly minNonPlatedSlotWidthMm: number
   readonly nonPlatedSlotWidthToleranceMm: number | null
   readonly slotPositionToleranceMm: number | null
@@ -74,6 +81,11 @@ export const fabricationVendors = {
     maxBoardHeightMm: 475,
     minViaDrillMm: 0.15,
     minCncHoleMm: 0.15,
+    minFinishedHoleMm: 0.15,
+    finishedPthHoleTolerancePositiveMm: 0.13,
+    finishedPthHoleToleranceNegativeMm: 0.08,
+    holePositionToleranceMm: 0.05,
+    traceWidthTolerancePercent: 20,
     twoOzOuterGeometry: {
       releaseBaseline: {
         minTraceWidthMm: 0.16,
@@ -96,6 +108,7 @@ export const fabricationVendors = {
       capabilityClass: "published multilayer 1 oz minimum"
     },
     minSoldermaskBridgeMm: 0.2,
+    minCopperToRoutedEdgeMm: 0.2,
     outerCopperOz: [1, 2],
     innerCopperOz: [0.5, 1, 2],
     highTgOptionsC: [135, 155],
@@ -103,7 +116,8 @@ export const fabricationVendors = {
     impedanceTolerancePercent: 10,
     soldermaskProcess: "Published soldermask colors; process and mask expansion require supplier confirmation",
     surfaceFinishes: ["ENIG"],
-    outlineToleranceMm: 0.1,
+    outlineToleranceMm: 0.2,
+    minPlatedSlotWidthMm: 0.35,
     minNonPlatedSlotWidthMm: 1,
     nonPlatedSlotWidthToleranceMm: 0.2,
     slotPositionToleranceMm: null
@@ -111,7 +125,11 @@ export const fabricationVendors = {
   PCBWAY: {
     id: "PCBWAY",
     displayName: "PCBWay",
-    sourceUrls: ["https://www.pcbway.com/capabilities.html", "https://www.pcbway.com/advanced-pcb-capabilities.html"],
+    sourceUrls: [
+      "https://www.pcbway.com/capabilities.html",
+      "https://www.pcbway.com/advanced-pcb-capabilities.html",
+      "https://www.pcbway.com/pcb_prototype/PCB_Manufacturing_tolerances.html"
+    ],
     sourceRetrievedOn: "2026-08-23",
     maxLayersPublished: 14,
     supportedThicknessesMm: [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.6, 2.0, 2.4, 2.6, 2.8, 3.0, 3.2],
@@ -120,6 +138,11 @@ export const fabricationVendors = {
     maxBoardHeightMm: 1150,
     minViaDrillMm: 0.15,
     minCncHoleMm: 0.15,
+    minFinishedHoleMm: 0.15,
+    finishedPthHoleTolerancePositiveMm: 0.08,
+    finishedPthHoleToleranceNegativeMm: 0.08,
+    holePositionToleranceMm: 0.075,
+    traceWidthTolerancePercent: 20,
     twoOzOuterGeometry: {
       releaseBaseline: {
         minTraceWidthMm: 0.1778,
@@ -142,6 +165,7 @@ export const fabricationVendors = {
       capabilityClass: "published conventional 35 um inner copper; medium class is 0.1016/0.1016 mm"
     },
     minSoldermaskBridgeMm: 0.0762,
+    minCopperToRoutedEdgeMm: 0.25,
     outerCopperOz: [1, 2, 3, 4, 5, 6, 7, 8],
     innerCopperOz: [1, 1.5, 2, 3, 4],
     highTgOptionsC: [170, 210, 220],
@@ -150,6 +174,7 @@ export const fabricationVendors = {
     soldermaskProcess: "LPI",
     surfaceFinishes: ["ENIG", "HASL", "HASL lead free", "OSP", "Immersion Ag", "Immersion Sn", "Hard Gold"],
     outlineToleranceMm: 0.2,
+    minPlatedSlotWidthMm: 0.5,
     minNonPlatedSlotWidthMm: 0.8,
     nonPlatedSlotWidthToleranceMm: null,
     slotPositionToleranceMm: null
@@ -173,10 +198,23 @@ export const sixLayerBoardReleaseRequirements = {
     { layer: "L5", copperOz: 1, role: "continuous domain-local reference plane" },
     { layer: "L6", copperOz: 2, role: "secondary signals, test access, and local high-current copper" }
   ] as const,
-  minimumTraceWidthMm: 0.15,
-  minimumClearanceMm: 0.15,
-  minimumViaDrillMm: 0.2,
-  minimumFinishedAnnularRingMm: 0.1,
+  // These are project floors, deliberately above the published minima so the
+  // same 2 oz/1 oz files remain manufacturable at either candidate.
+  minimumTraceWidthMm: 0.25,
+  minimumClearanceMm: 0.25,
+  minimumViaDrillMm: 0.3,
+  minimumFinishedHoleMm: 0.3,
+  minimumFinishedAnnularRingMm: 0.3,
+  minimumComponentAnnularRingMm: 0.35,
+  minimumPlatedSlotWidthMm: 0.75,
+  minimumNonPlatedSlotWidthMm: 1.5,
+  minimumCopperToRoutedEdgeMm: 0.3,
+  minimumSoldermaskBridgeMm: 0.25,
+  maximumTraceWidthTolerancePercent: 20,
+  maximumFinishedPthHoleTolerancePositiveMm: 0.13,
+  maximumFinishedPthHoleToleranceNegativeMm: 0.08,
+  maximumHolePositionToleranceMm: 0.1,
+  maximumBoardOutlineToleranceMm: 0.2,
   soldermask: "LPI soldermask with supplier-confirmed expansion, sliver, dam, and registration limits",
   surfaceFinishPolicy:
     "ENIG on connector/contact geometry; any alternate finish requires assembly and corrosion review",
@@ -327,6 +365,13 @@ export function comparePcbVendorCapabilities(requirements = sixLayerBoardRelease
   readonly thicknessToleranceFit: boolean
   readonly copperFit: boolean
   readonly geometryFit: boolean
+  readonly traceSpaceFit: boolean
+  readonly finishedHoleFit: boolean
+  readonly annularRingFit: boolean
+  readonly copperToEdgeFit: boolean
+  readonly soldermaskFit: boolean
+  readonly slotWidthFit: boolean
+  readonly dimensionalToleranceFit: boolean
   readonly impedanceFit: boolean
   readonly highTgFit: boolean
   readonly gaps: readonly string[]
@@ -343,13 +388,41 @@ export function comparePcbVendorCapabilities(requirements = sixLayerBoardRelease
       vendor.outerCopperOz.includes(requirements.outerCopperOz) &&
       vendor.innerCopperOz.includes(requirements.innerCopperOz)
     const twoOzReleaseGeometry = vendor.twoOzOuterGeometry.releaseBaseline
-    const geometryFit =
+    const traceSpaceFit =
       twoOzReleaseGeometry.minTraceWidthMm <= requirements.minimumTraceWidthMm &&
       twoOzReleaseGeometry.minTraceSpaceMm <= requirements.minimumClearanceMm &&
       vendor.oneOzInnerGeometry.minTraceWidthMm <= requirements.minimumTraceWidthMm &&
-      vendor.oneOzInnerGeometry.minTraceSpaceMm <= requirements.minimumClearanceMm &&
+      vendor.oneOzInnerGeometry.minTraceSpaceMm <= requirements.minimumClearanceMm
+    const finishedHoleFit =
       vendor.minViaDrillMm <= requirements.minimumViaDrillMm &&
-      twoOzReleaseGeometry.minViaAnnularRingMm <= requirements.minimumFinishedAnnularRingMm
+      vendor.minCncHoleMm <= requirements.minimumFinishedHoleMm &&
+      vendor.minFinishedHoleMm <= requirements.minimumFinishedHoleMm
+    const annularRingFit =
+      twoOzReleaseGeometry.minViaAnnularRingMm <= requirements.minimumFinishedAnnularRingMm &&
+      twoOzReleaseGeometry.minComponentAnnularRingMm <= requirements.minimumComponentAnnularRingMm
+    const copperToEdgeFit =
+      vendor.minCopperToRoutedEdgeMm !== null &&
+      vendor.minCopperToRoutedEdgeMm <= requirements.minimumCopperToRoutedEdgeMm
+    const soldermaskFit =
+      vendor.minSoldermaskBridgeMm !== null && vendor.minSoldermaskBridgeMm <= requirements.minimumSoldermaskBridgeMm
+    const slotWidthFit =
+      vendor.minPlatedSlotWidthMm <= requirements.minimumPlatedSlotWidthMm &&
+      vendor.minNonPlatedSlotWidthMm <= requirements.minimumNonPlatedSlotWidthMm
+    const dimensionalToleranceFit =
+      vendor.traceWidthTolerancePercent <= requirements.maximumTraceWidthTolerancePercent &&
+      vendor.finishedPthHoleTolerancePositiveMm <= requirements.maximumFinishedPthHoleTolerancePositiveMm &&
+      vendor.finishedPthHoleToleranceNegativeMm <= requirements.maximumFinishedPthHoleToleranceNegativeMm &&
+      vendor.holePositionToleranceMm <= requirements.maximumHolePositionToleranceMm &&
+      vendor.outlineToleranceMm !== null &&
+      vendor.outlineToleranceMm <= requirements.maximumBoardOutlineToleranceMm
+    const geometryFit =
+      traceSpaceFit &&
+      finishedHoleFit &&
+      annularRingFit &&
+      copperToEdgeFit &&
+      soldermaskFit &&
+      slotWidthFit &&
+      dimensionalToleranceFit
     const impedanceFit = vendor.controlledImpedance && vendor.impedanceTolerancePercent !== null
     const highTgFit = vendor.highTgOptionsC.some((tg) => tg >= requirements.minimumTgC)
     const gaps: string[] = []
@@ -358,7 +431,7 @@ export function comparePcbVendorCapabilities(requirements = sixLayerBoardRelease
     if (!thicknessNominalFit) gaps.push("1.60 mm nominal thickness")
     if (!thicknessToleranceFit) gaps.push("supplier acceptance of the +/-0.10 mm finished-thickness target")
     if (!copperFit) gaps.push("2 oz outer and 1 oz inner copper")
-    if (!geometryFit) gaps.push("2 oz outer/1 oz inner trace, space, drill, or annular-ring rule")
+    if (!geometryFit) gaps.push("cross-vendor 2 oz outer/1 oz inner DFM geometry or dimensional-tolerance rule")
     if (!impedanceFit) gaps.push("controlled-impedance tolerance")
     if (!highTgFit) gaps.push("minimum Tg 155 C material")
     if (vendor.minNonPlatedSlotWidthMm > requirements.isolation.slotWidthTargetMm)
@@ -372,6 +445,13 @@ export function comparePcbVendorCapabilities(requirements = sixLayerBoardRelease
       thicknessToleranceFit,
       copperFit,
       geometryFit,
+      traceSpaceFit,
+      finishedHoleFit,
+      annularRingFit,
+      copperToEdgeFit,
+      soldermaskFit,
+      slotWidthFit,
+      dimensionalToleranceFit,
       impedanceFit,
       highTgFit,
       gaps

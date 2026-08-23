@@ -57,13 +57,45 @@ against primary manufacturer pages on 2026-08-23 and are encoded in
 
 | Candidate | Useful published capability | Release gap that prevents silent selection |
 | --- | --- | --- |
-| [JLCPCB 6-layer capability](https://jlcpcb.com/resources/6-layer-pcbs), [rigid PCB capability](https://jlcpcb.com/capabilities/pcb-capabilities/), and [copper-weight guide](https://jlcpcb.com/help/article/jlcpcb-copper-weight) | Current rigid capability covers up to 32 layers. Six-layer service includes 1.60 mm, 2 oz outer and 1 oz inner copper, high-Tg options, impedance control, and ENIG. The copper-dependent multilayer 2 oz minimum is published as 0.15/0.15 mm trace/space on the capability page, while the copper guide gives 0.16/0.16 mm. Multilayer 2 oz PTH annular ring is 0.254 mm. The minimum non-plated slot is 1.0 mm with +/-0.2 mm slot-size tolerance. | The 0.254 mm 2 oz annular-ring rule exceeds the current 0.10 mm project rule, and the two official trace/space pages require supplier reconciliation. The published +/-0.16 mm thickness band exceeds the +/-0.10 mm project target. No isolation-slot position tolerance is published. |
-| [PCBWay standard capability](https://www.pcbway.com/capabilities.html) and [advanced capability](https://www.pcbway.com/advanced-pcb-capabilities.html) | Six layers are within the standard 1-14 layer range; 1.60 mm; standard +/-10% thickness tolerance and advanced 1.0-2.5 mm +/-7%; 0.15 mm CNC hole; LPI; ENIG; sourced high-Tg options; controlled impedance +/-10%. For conventional 70 um outer copper, the published rule is 7/8 mil trace/space with a 7 mil via ring and 12 mil component ring; medium capability is 6/7 mil with a 6 mil via ring. The minimum non-plated slot is 0.8 mm. | Both conventional and medium 2 oz geometry exceed at least one current 0.15 mm trace/space or 0.10 mm annular-ring project rule. The thickness tolerance is wider than +/-0.10 mm, and no isolation-slot position tolerance is published. The supplier must accept exact geometry, stackup, slot/creepage, coupons, and outline/DFM evidence. |
+| [JLCPCB 6-layer capability](https://jlcpcb.com/resources/6-layer-pcbs) and [current rigid PCB capability](https://jlcpcb.com/capabilities/pcb-capabilities/) | Current rigid capability covers up to 32 layers, six-layer 1.60 mm, 2 oz outer and 1 oz inner copper, LPI, ENIG, and controlled impedance. For the relevant multilayer 2 oz class it publishes 0.15/0.15 mm trace/space, 0.254 mm PTH annular ring, 0.15 mm minimum finished/drill hole, 0.20 mm routed-edge copper clearance, 0.20 mm 2 oz soldermask bridge, 0.35 mm plated slot, 1.0 mm non-plated slot, and +/-0.2 mm non-plated slot-size tolerance. It publishes +/-0.13/-0.08 mm through-hole size, +/-0.05 mm hole position, and +/-0.2 mm regular routed-outline tolerance. | The cross-vendor project floor is intentionally larger than each minimum. JLCPCB still does not publish a positional tolerance for the routed isolation slot, and its published +/-10% 1.60 mm thickness band is wider than the project +/-0.10 mm target. The exact dielectric build and impedance coupon remain open. |
+| [PCBWay standard capability](https://www.pcbway.com/capabilities.html), [advanced capability](https://www.pcbway.com/advanced-pcb-capabilities.html), and [manufacturing tolerances](https://www.pcbway.com/pcb_prototype/PCB_Manufacturing_tolerances.html) | Six layers are within the standard 1-14 layer range; 1.60 mm, 2 oz outer and 1 oz inner copper, LPI, ENIG, and controlled impedance are published. For 70 um outer copper, the conventional rule is 7/8 mil trace/space, 7 mil via ring, and 12 mil component ring; the standard tolerance page also publishes 0.15 mm 2 oz trace/space. It publishes 0.15 mm minimum CNC/finished hole, +/-0.08 mm PTH hole size, +/-0.075 mm hole position, 0.30 mm normal CNC profile-to-copper spacing with 0.25 mm as the published minimum, 5 mil 2 oz soldermask bridge, 0.5 mm plated slot, 0.8 mm non-plated slot, and +/-0.2 mm CNC outline tolerance. | The cross-vendor project floor is intentionally larger than each minimum. PCBWay does not publish a positional tolerance for the routed isolation slot or a slot-specific width tolerance. Its standard +/-10% 1.60 mm thickness band is wider than the project +/-0.10 mm target. The exact dielectric build and impedance coupon remain open. |
 
-The model therefore compares both candidates and leaves `vendor: null` in the
-current release input. Selecting a vendor requires a recorded decision and a
-supplier-reviewed quote/stackup; changing the default to a vendor is not
-permitted as an implementation shortcut.
+### Cross-vendor geometry contract
+
+The following floors are the geometry allowed in either six-layer 1.60 mm
+board. They are project rules, not claims that a vendor has accepted the
+routed design. The values are deliberately above the published minima where a
+larger rule improves yield or avoids a narrow process class.
+
+| Rule | JLCPCB published reference | PCBWay published reference | Project floor or envelope |
+| --- | --- | --- | ---: |
+| 2 oz outer trace and space | 0.15 / 0.15 mm multilayer | 7 / 8 mil conventional 70 um outer | 0.25 / 0.25 mm |
+| 1 oz inner trace and space | 0.09 / 0.09 mm multilayer | 5 / 6 mil conventional 35 um inner | 0.25 / 0.25 mm |
+| Finished via/PTH hole | 0.15 mm minimum | 0.15 mm minimum | 0.30 mm minimum |
+| 2 oz via annular ring | 0.254 mm | 7 mil conventional | 0.30 mm minimum |
+| 2 oz component-hole ring | 0.254 mm PTH rule | 12 mil conventional | 0.35 mm minimum |
+| Plated slot width | 0.35 mm multilayer | 0.50 mm | 0.75 mm minimum |
+| Non-plated slot width | 1.0 mm | 0.8 mm, machine slot above 1.0 mm | 1.5 mm minimum |
+| Copper to routed edge | 0.20 mm | 0.30 mm normal CNC profile rule; 0.25 mm published minimum | 0.30 mm minimum |
+| 2 oz soldermask dam/bridge | 0.20 mm | 5 mil | 0.25 mm minimum |
+| Trace-width tolerance | +/-20% | +/-20% normal-width class | +/-20% maximum |
+| Finished PTH-hole tolerance | +0.13 / -0.08 mm | +/-0.08 mm | +0.13 / -0.08 mm maximum |
+| Hole-position tolerance | +/-0.05 mm | +/-0.075 mm | +/-0.10 mm maximum |
+| Routed board-outline tolerance | +/-0.2 mm regular CNC | +/-0.2 mm CNC | +/-0.2 mm maximum |
+
+All slots use rounded ends and a length-to-width ratio of at least 2:1. A
+rectangular slot without rounded corners is not accepted by the JLCPCB
+capability page. The 4.0 mm project isolation slot therefore exceeds both
+published non-plated-slot widths, but its positional tolerance is still an
+open supplier gate. `geometryFit` is true only when every row above is
+source-backed by both candidates; it does not select a vendor or authorize
+fabrication.
+
+The model therefore compares both candidates, reports cross-vendor
+`geometryFit: true`, and leaves `vendor: null` in the current release input.
+Selecting a vendor requires a recorded decision and a supplier-reviewed
+quote/stackup; changing the default to a vendor is not permitted as an
+implementation shortcut.
 
 The 4.0 mm isolation slot is wider than both published minimum slot widths.
 That width check is separate from slot location: neither candidate publishes a

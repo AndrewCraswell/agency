@@ -14,6 +14,15 @@ describe("six-layer PCB stackup release decision", () => {
     expect(sixLayerBoardReleaseRequirements.layerCount).toBe(6)
     expect(sixLayerBoardReleaseRequirements.finishedThicknessMm).toBe(1.6)
     expect(sixLayerBoardReleaseRequirements.finishedThicknessToleranceMm).toBe(0.1)
+    expect(sixLayerBoardReleaseRequirements.minimumTraceWidthMm).toBe(0.25)
+    expect(sixLayerBoardReleaseRequirements.minimumClearanceMm).toBe(0.25)
+    expect(sixLayerBoardReleaseRequirements.minimumFinishedHoleMm).toBe(0.3)
+    expect(sixLayerBoardReleaseRequirements.minimumFinishedAnnularRingMm).toBe(0.3)
+    expect(sixLayerBoardReleaseRequirements.minimumComponentAnnularRingMm).toBe(0.35)
+    expect(sixLayerBoardReleaseRequirements.minimumCopperToRoutedEdgeMm).toBe(0.3)
+    expect(sixLayerBoardReleaseRequirements.minimumSoldermaskBridgeMm).toBe(0.25)
+    expect(sixLayerBoardReleaseRequirements.minimumNonPlatedSlotWidthMm).toBe(1.5)
+    expect(sixLayerBoardReleaseRequirements.maximumBoardOutlineToleranceMm).toBe(0.2)
     expect(sixLayerBoardReleaseRequirements.layerOrder.map((layer) => layer.copperOz)).toEqual([2, 1, 1, 1, 1, 2])
     expect(sixLayerBoardReleaseRequirements.minimumTgC).toBe(155)
     expect(sixLayerBoardReleaseRequirements.controlledImpedance).toEqual(
@@ -47,18 +56,21 @@ describe("six-layer PCB stackup release decision", () => {
     const comparison = comparePcbVendorCapabilities()
     expect(comparison.map((candidate) => candidate.vendor)).toEqual(["JLCPCB", "PCBWAY"])
     expect(comparison.every((candidate) => candidate.layerCountFit && candidate.thicknessNominalFit)).toBe(true)
-    expect(comparison.every((candidate) => candidate.geometryFit === false)).toBe(true)
+    expect(comparison.every((candidate) => candidate.geometryFit)).toBe(true)
+    expect(comparison.every((candidate) => candidate.traceSpaceFit)).toBe(true)
+    expect(comparison.every((candidate) => candidate.finishedHoleFit)).toBe(true)
+    expect(comparison.every((candidate) => candidate.annularRingFit)).toBe(true)
+    expect(comparison.every((candidate) => candidate.copperToEdgeFit)).toBe(true)
+    expect(comparison.every((candidate) => candidate.soldermaskFit)).toBe(true)
+    expect(comparison.every((candidate) => candidate.slotWidthFit)).toBe(true)
+    expect(comparison.every((candidate) => candidate.dimensionalToleranceFit)).toBe(true)
     expect(comparison.every((candidate) => candidate.gaps.length > 0)).toBe(true)
     expect(comparison.find((candidate) => candidate.vendor === "JLCPCB")?.gaps).toEqual(
-      expect.arrayContaining([
-        "2 oz outer/1 oz inner trace, space, drill, or annular-ring rule",
-        "supplier-confirmed isolation-slot position tolerance"
-      ])
+      expect.arrayContaining(["supplier-confirmed isolation-slot position tolerance"])
     )
     expect(comparison.find((candidate) => candidate.vendor === "PCBWAY")?.gaps).toEqual(
       expect.arrayContaining([
         "supplier acceptance of the +/-0.10 mm finished-thickness target",
-        "2 oz outer/1 oz inner trace, space, drill, or annular-ring rule",
         "supplier-confirmed isolation-slot position tolerance"
       ])
     )
@@ -82,8 +94,36 @@ describe("six-layer PCB stackup release decision", () => {
       minTraceSpaceMm: 0.1778,
       minViaAnnularRingMm: 0.1524
     })
+    expect(fabricationVendors.JLCPCB.minCopperToRoutedEdgeMm).toBe(0.2)
+    expect(fabricationVendors.PCBWAY.minCopperToRoutedEdgeMm).toBe(0.25)
+    expect(fabricationVendors.JLCPCB.minSoldermaskBridgeMm).toBe(0.2)
+    expect(fabricationVendors.PCBWAY.minSoldermaskBridgeMm).toBe(0.0762)
+    expect(fabricationVendors.JLCPCB.minPlatedSlotWidthMm).toBe(0.35)
+    expect(fabricationVendors.PCBWAY.minPlatedSlotWidthMm).toBe(0.5)
+    expect(fabricationVendors.JLCPCB.finishedPthHoleTolerancePositiveMm).toBe(0.13)
+    expect(fabricationVendors.PCBWAY.finishedPthHoleTolerancePositiveMm).toBe(0.08)
     expect(fabricationVendors.JLCPCB.slotPositionToleranceMm).toBeNull()
     expect(fabricationVendors.PCBWAY.slotPositionToleranceMm).toBeNull()
+  })
+
+  it("does not call unsupported cross-vendor geometry a fit", () => {
+    const tooTight = {
+      ...sixLayerBoardReleaseRequirements,
+      minimumCopperToRoutedEdgeMm: 0.15
+    }
+    const comparison = comparePcbVendorCapabilities(tooTight as typeof sixLayerBoardReleaseRequirements)
+    expect(comparison.every((candidate) => candidate.geometryFit === false)).toBe(true)
+    expect(comparison.every((candidate) => candidate.copperToEdgeFit === false)).toBe(true)
+  })
+
+  it("keeps drill-tool capability separate from finished-hole capability", () => {
+    const tooTight = {
+      ...sixLayerBoardReleaseRequirements,
+      minimumViaDrillMm: 0.1
+    }
+    const comparison = comparePcbVendorCapabilities(tooTight as typeof sixLayerBoardReleaseRequirements)
+    expect(comparison.every((candidate) => candidate.finishedHoleFit === false)).toBe(true)
+    expect(comparison.every((candidate) => candidate.geometryFit === false)).toBe(true)
   })
 
   it("fails closed before vendor, stackup, outline, and supplier review are explicit", () => {
