@@ -63,7 +63,7 @@
     },
     "packages/scoring-circuit": {
       "entry": ["src/index.circuit.tsx"],
-      "ignoreDependencies": ["@repo/oxlint-config", "@tscircuit/soup-util", "zod"]
+      "ignoreDependencies": ["@repo/oxlint-config", "@tscircuit/soup-util"]
     },
     "packages/shopify-emails": {
       "ignoreDependencies": ["@repo/oxlint-config"]
