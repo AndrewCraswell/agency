@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest"
 import {
   assessOneChannelExperimentPhysicalEvidence,
+  mandatoryExperimentSupportParts,
   oneChannelAnalogExperimentBom,
   oneChannelAnalogExperimentReadiness,
-  requiredUnmodeledSupportParts
+  ref5025OutputCapacitorRequirement,
+  supportCircuitReconciled
 } from "./one-channel-analog-readiness.js"
 
 const partEvidence = oneChannelAnalogExperimentBom.map((part, index) => ({
@@ -176,18 +178,19 @@ const physicalEvidence = {
     revision: "FIXTURE-A"
   },
   partEvidence,
-  supportCircuitReconciled: false as const
+  supportCircuitReconciled
 }
 
 describe("one-channel analog experiment readiness", () => {
-  it("tracks all 36 physical references individually and keeps every release state false", () => {
-    expect(oneChannelAnalogExperimentBom).toHaveLength(36)
-    expect(new Set(oneChannelAnalogExperimentBom.map((part) => part.reference)).size).toBe(36)
+  it("tracks all 43 physical references individually and keeps every release state false", () => {
+    expect(oneChannelAnalogExperimentBom).toHaveLength(43)
+    expect(new Set(oneChannelAnalogExperimentBom.map((part) => part.reference)).size).toBe(43)
     expect(oneChannelAnalogExperimentBom.every((part) => part.dnp)).toBe(true)
     expect(oneChannelAnalogExperimentReadiness.authorization).toBe(false)
     expect(oneChannelAnalogExperimentReadiness.fabrication.couponBomReleased).toBe(false)
     expect(oneChannelAnalogExperimentReadiness.fabrication.copperReleased).toBe(false)
     expect(oneChannelAnalogExperimentReadiness.fabrication.fabricationAuthorized).toBe(false)
+    expect(oneChannelAnalogExperimentReadiness.poweredTestingAuthorized).toBe(false)
   })
 
   it("selects shrouded, polarized, locking, mutually incompatible fixture families with the correct orientation", () => {
@@ -205,32 +208,71 @@ describe("one-channel analog experiment readiness", () => {
     expect(safety.guarded).toMatchObject({ boardMpn: "B2B-PH-K-S(LF)(SN)", mateMpn: "PHR-2", pitchMm: 2, positions: 2 })
   })
 
-  it("fails closed on exact but unmodeled support networks and the optional NXE filter", () => {
-    expect(requiredUnmodeledSupportParts.map((part) => part.reference)).toEqual(
-      expect.arrayContaining([
-        "C_REF_IN",
-        "C_REF_OUT_HF",
-        "C_BUFFER_POS",
-        "C_BUFFER_NEG",
-        "C_NEG_IN",
-        "C_ISO_IN",
-        "C_ISO_OUT"
-      ])
-    )
-    expect(requiredUnmodeledSupportParts.every((part) => part.dnp && !part.circuitPresent)).toBe(true)
-    expect(oneChannelAnalogExperimentReadiness.supportReconciliation.circuitReconciled).toBe(false)
+  it("reconciles exact source-circuit support networks without opening any release gate", () => {
+    expect(mandatoryExperimentSupportParts.map((part) => part.reference)).toEqual([
+      "C_REF_IN",
+      "C_REF_OUT_HF",
+      "C_BUFFER_POS",
+      "C_BUFFER_NEG",
+      "C_NEG_IN",
+      "C_ISO_IN",
+      "C_ISO_OUT"
+    ])
+    expect(mandatoryExperimentSupportParts.every((part) => part.dnp && part.circuitPresent)).toBe(true)
+    expect(
+      mandatoryExperimentSupportParts.every((part) => part.sourceCircuit === "one-channel-analog-experiment")
+    ).toBe(true)
+    expect(oneChannelAnalogExperimentReadiness.supportReconciliation.circuitReconciled).toBe(true)
+    expect(Object.fromEntries(mandatoryExperimentSupportParts.map((part) => [part.reference, part.mpn]))).toEqual({
+      C_BUFFER_NEG: "C0603C104K3RACTU",
+      C_BUFFER_POS: "C0603C104K3RACTU",
+      C_ISO_IN: "GRM188R71A225KE15D",
+      C_ISO_OUT: "GRM188R71A225KE15D",
+      C_NEG_IN: "GRM188R71A105KA12D",
+      C_REF_IN: "GRM188R71A105KA12D",
+      C_REF_OUT_HF: "C0603C104K3RACTU"
+    })
     expect(oneChannelAnalogExperimentReadiness.supportReconciliation.nxeOptionalEmiFilter.population).toBe(
       "dnp-not-selected"
     )
   })
 
-  it("accepts only unpowered evidence as incomplete while support remains unreconciled", () => {
+  it("selects the exact REF5025A-Q1 output capacitor within the manufacturer ESR limit", () => {
+    const selectedPart = oneChannelAnalogExperimentBom.find(
+      (part) => part.reference === ref5025OutputCapacitorRequirement.reference
+    )
+
+    expect(selectedPart).toMatchObject({
+      mpn: "T521B106M025ATE100",
+      package: "1411 / 3528 B case"
+    })
+    expect(ref5025OutputCapacitorRequirement).toMatchObject({
+      requiredMaximumCapacitanceUf: 50,
+      requiredMaximumEsrOhms: 1.5,
+      requiredMinimumCapacitanceUf: 1,
+      selectedCapacitanceUf: 10,
+      selectedManufacturerMaximumEsrOhms: 0.1,
+      selectedMpn: "T521B106M025ATE100"
+    })
+    expect(ref5025OutputCapacitorRequirement.selectedCapacitanceUf).toBeGreaterThanOrEqual(
+      ref5025OutputCapacitorRequirement.requiredMinimumCapacitanceUf
+    )
+    expect(ref5025OutputCapacitorRequirement.selectedCapacitanceUf).toBeLessThanOrEqual(
+      ref5025OutputCapacitorRequirement.requiredMaximumCapacitanceUf
+    )
+    expect(ref5025OutputCapacitorRequirement.selectedManufacturerMaximumEsrOhms).toBeLessThanOrEqual(
+      ref5025OutputCapacitorRequirement.requiredMaximumEsrOhms
+    )
+  })
+
+  it("accepts only unpowered evidence as incomplete while physical release evidence is absent", () => {
     const assessment = assessOneChannelExperimentPhysicalEvidence(physicalEvidence)
 
     expect(assessment.evidenceCompleteForReview).toBe(false)
     expect(assessment.authorization).toBe(false)
     expect(assessment.fabricationAuthorized).toBe(false)
-    expect(assessment.supportCircuitReconciled).toBe(false)
+    expect(assessment.supportCircuitReconciled).toBe(true)
+    expect(assessment.poweredTestingAuthorized).toBe(false)
     expect(assessment.state).toBe("deny")
   })
 
@@ -289,10 +331,10 @@ describe("one-channel analog experiment readiness", () => {
     ).toThrow("current at every step")
   })
 
-  it("rejects powered evidence until support is reconciled and requires a prior permit", () => {
+  it("rejects powered evidence until footprint and fixture evidence is released, even with a source-reconciled circuit", () => {
     expect(() =>
       assessOneChannelExperimentPhysicalEvidence({ ...physicalEvidence, bringUpResults: bringUpResults.slice(0, 3) })
-    ).toThrow("unreconciled support parts")
+    ).toThrow("unreleased footprint and fixture evidence")
     expect(() =>
       assessOneChannelExperimentPhysicalEvidence({
         ...physicalEvidence,

@@ -16,7 +16,19 @@ const kemetOneHundredNfEvidence =
   "https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en"
 const keystoneTestPointEvidence = "https://www.keyelco.com/product.cfm/product_id/13550"
 
-/** Exactly one row for each of the 36 physical references in the committed experiment circuit. */
+/** REF5025A-Q1 output-capacitor limits and the selected exact candidate. */
+export const ref5025OutputCapacitorRequirement = {
+  manufacturerEsrTestCondition: "25 C, 100 kHz",
+  reference: "C_REF",
+  requiredMaximumCapacitanceUf: 50,
+  requiredMaximumEsrOhms: 1.5,
+  requiredMinimumCapacitanceUf: 1,
+  selectedCapacitanceUf: 10,
+  selectedManufacturerMaximumEsrOhms: 0.1,
+  selectedMpn: "T521B106M025ATE100"
+} as const
+
+/** Exactly one row for each physical reference in the committed experiment circuit. */
 const physicalPartSeeds = [
   [
     "U_ISO",
@@ -98,18 +110,60 @@ const physicalPartSeeds = [
   [
     "C_REF",
     "KEMET",
-    "T491A106K010AT",
-    "1206 A case",
-    "10 uF, 10 V tantalum",
-    "https://yageogroup.com/component-documentation/download/specsheet/T491A106K010AT?lang=en"
+    "T521B106M025ATE100",
+    "1411 / 3528 B case",
+    "10 uF, 25 V polymer tantalum; 100 mOhm maximum ESR at 25 C, 100 kHz",
+    "https://search.kemet.com/download/specsheet/T521B106M025ATE100"
+  ],
+  ["C_REF_IN", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V REF5025A-Q1 input bypass", murataOneUfEvidence],
+  [
+    "C_REF_OUT_HF",
+    "KEMET",
+    "C0603C104K3RACTU",
+    "0603",
+    "100 nF X7R, 25 V REF5025A-Q1 high-frequency output bypass in parallel with C_REF",
+    kemetOneHundredNfEvidence
+  ],
+  [
+    "C_BUFFER_POS",
+    "KEMET",
+    "C0603C104K3RACTU",
+    "0603",
+    "100 nF X7R, 25 V ADA4177-1 positive-rail local bypass",
+    kemetOneHundredNfEvidence
+  ],
+  [
+    "C_BUFFER_NEG",
+    "KEMET",
+    "C0603C104K3RACTU",
+    "0603",
+    "100 nF X7R, 25 V ADA4177-1 negative-rail local bypass",
+    kemetOneHundredNfEvidence
   ],
   ["C_SAR_AVDD", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V", murataOneUfEvidence],
   ["C_SAR_DVDD", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V", murataOneUfEvidence],
   ["C_MUX", "KEMET", "C0603C104K3RACTU", "0603", "100 nF X7R, 25 V", kemetOneHundredNfEvidence],
   ["C_NEG_FLY", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V", murataOneUfEvidence],
+  ["C_NEG_IN", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V TPS60400 input bypass", murataOneUfEvidence],
   ["C_NEG_OUT", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V", murataOneUfEvidence],
   ["C_3V3_IN", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V", murataOneUfEvidence],
   ["C_3V3_OUT", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V", murataOneUfEvidence],
+  [
+    "C_ISO_IN",
+    "Murata",
+    "GRM188R71A225KE15D",
+    "0603",
+    "2.2 uF X7R, 10 V NXE1 input characterization bypass",
+    "https://search.murata.co.jp/Ceramy/image/img/A01X/EN/GRM188R71A225KE15-01.pdf"
+  ],
+  [
+    "C_ISO_OUT",
+    "Murata",
+    "GRM188R71A225KE15D",
+    "0603",
+    "2.2 uF X7R, 10 V NXE1 output characterization bypass",
+    "https://search.murata.co.jp/Ceramy/image/img/A01X/EN/GRM188R71A225KE15-01.pdf"
+  ],
   [
     "J_FIXTURE",
     "Molex",
@@ -212,42 +266,48 @@ export const oneChannelAnalogExperimentBom = physicalPartSeeds.map(
     valueOrDescription,
     primaryEvidenceUrl,
     circuitPresent: true as const,
+    sourceCircuit: "one-channel-analog-experiment" as const,
     dnp: true as const
   })
 )
 
-function missingSupport(reference: string, mpn: string, purpose: string, primaryEvidenceUrl: string) {
-  return {
-    reference,
-    mpn,
-    package: "0603" as const,
-    purpose,
-    primaryEvidenceUrl,
-    circuitPresent: false as const,
-    dnp: true as const
-  }
+const mandatorySupportReferences = [
+  "C_REF_IN",
+  "C_REF_OUT_HF",
+  "C_BUFFER_POS",
+  "C_BUFFER_NEG",
+  "C_NEG_IN",
+  "C_ISO_IN",
+  "C_ISO_OUT"
+] as const
+
+/** The seven support references are present only in the standalone source circuit. */
+export const mandatoryExperimentSupportParts = oneChannelAnalogExperimentBom.filter((part) =>
+  (mandatorySupportReferences as readonly string[]).includes(part.reference)
+)
+
+const structurallyReconciled =
+  mandatoryExperimentSupportParts.length === mandatorySupportReferences.length &&
+  mandatoryExperimentSupportParts.every(
+    (part) => part.circuitPresent && part.sourceCircuit === "one-channel-analog-experiment"
+  )
+
+if (!structurallyReconciled) {
+  throw new Error("the standalone experiment source circuit is missing a mandatory support reference")
 }
 
-/** Exact selections which must be reconciled into the experiment circuit before any layout review. */
-export const requiredUnmodeledSupportParts = [
-  missingSupport("C_REF_IN", "GRM188R71A105KA12D", "REF5025A-Q1 1 uF input bypass", murataOneUfEvidence),
-  missingSupport("C_REF_OUT_HF", "C0603C104K3RACTU", "REF5025A-Q1 100 nF output bypass", kemetOneHundredNfEvidence),
-  missingSupport("C_BUFFER_POS", "C0603C104K3RACTU", "ADA4177-1 positive-rail bypass", kemetOneHundredNfEvidence),
-  missingSupport("C_BUFFER_NEG", "C0603C104K3RACTU", "ADA4177-1 negative-rail bypass", kemetOneHundredNfEvidence),
-  missingSupport("C_NEG_IN", "GRM188R71A105KA12D", "TPS60400 required 1 uF input bypass", murataOneUfEvidence),
-  missingSupport(
-    "C_ISO_IN",
-    "GRM188R71A225KE15D",
-    "NXE1 input 2.2 uF characterization candidate",
-    "https://search.murata.co.jp/Ceramy/image/img/A01X/EN/GRM188R71A225KE15-01.pdf"
-  ),
-  missingSupport(
-    "C_ISO_OUT",
-    "GRM188R71A225KE15D",
-    "NXE1 output 2.2 uF characterization candidate",
-    "https://search.murata.co.jp/Ceramy/image/img/A01X/EN/GRM188R71A225KE15-01.pdf"
-  )
-] as const
+if (
+  ref5025OutputCapacitorRequirement.selectedCapacitanceUf <
+    ref5025OutputCapacitorRequirement.requiredMinimumCapacitanceUf ||
+  ref5025OutputCapacitorRequirement.selectedCapacitanceUf >
+    ref5025OutputCapacitorRequirement.requiredMaximumCapacitanceUf ||
+  ref5025OutputCapacitorRequirement.selectedManufacturerMaximumEsrOhms >
+    ref5025OutputCapacitorRequirement.requiredMaximumEsrOhms
+) {
+  throw new Error("the selected REF5025A-Q1 output capacitor violates the capacitance or ESR requirement")
+}
+
+export const supportCircuitReconciled = true as const
 
 const equipmentCategories = [
   "isolated-supply",
@@ -280,7 +340,7 @@ export const oneChannelAnalogExperimentReadiness = {
     fabricationAuthorized: false,
     footprintState: "all-unreleased-dnp" as const
   },
-  circuitPhysicalReferenceCount: 36,
+  circuitPhysicalReferenceCount: 43,
   connectorSafety: {
     circuitGender: "male" as const,
     guarded: { boardMpn: "B2B-PH-K-S(LF)(SN)", mateMpn: "PHR-2", pitchMm: 2, positions: 2 },
@@ -296,14 +356,16 @@ export const oneChannelAnalogExperimentReadiness = {
     physicallyMutuallyIncompatible: true
   },
   supportReconciliation: {
-    circuitReconciled: false,
-    missingExactParts: requiredUnmodeledSupportParts,
+    circuitReconciled: supportCircuitReconciled,
+    sourceCircuit: "one-channel-analog-experiment" as const,
+    supportParts: mandatoryExperimentSupportParts,
     nxeOptionalEmiFilter: {
       population: "dnp-not-selected" as const,
       reason:
         "No optional NXE external EMI filter receives credit until isolated-harness ripple, startup, leakage, and emissions measurements select a topology without bridging isolation."
     }
   },
+  poweredTestingAuthorized: false,
   footprintGate:
     "Every reference remains DNP until exact drawing, CAD, artwork, assembly, and independent-review evidence is bound to its MPN and package.",
   equipmentCategories,
@@ -441,7 +503,7 @@ const physicalEvidenceSchema = z
       })
       .strict(),
     partEvidence: z.array(partEvidenceSchema).length(oneChannelAnalogExperimentBom.length),
-    supportCircuitReconciled: z.literal(false)
+    supportCircuitReconciled: z.literal(supportCircuitReconciled)
   })
   .strict()
   .superRefine((evidence, context) => {
@@ -512,10 +574,10 @@ const physicalEvidenceSchema = z
       }
     })
 
-    if (evidence.bringUpResults.length > 2) {
+    if (!oneChannelAnalogExperimentReadiness.poweredTestingAuthorized && evidence.bringUpResults.length > 2) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "unreconciled support parts prohibit powered or guarded evidence",
+        message: "unreleased footprint and fixture evidence prohibit powered or guarded evidence",
         path: ["bringUpResults"]
       })
     }
@@ -630,8 +692,9 @@ export function assessOneChannelExperimentPhysicalEvidence(evidence: unknown) {
     authorization: false as const,
     evidenceCompleteForReview: false as const,
     fabricationAuthorized: false as const,
+    poweredTestingAuthorized: false as const,
     reviewedBoardId: parsed.boardId,
     state: "deny" as const,
-    supportCircuitReconciled: false as const
+    supportCircuitReconciled
   }
 }

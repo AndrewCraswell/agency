@@ -15,6 +15,7 @@ import {
   validateOneChannelExperimentRun,
   type OneChannelExperimentRecord
 } from "./one-channel-analog-experiment.js"
+import { oneChannelAnalogExperimentBom } from "./one-channel-analog-readiness.js"
 
 function renderCircuit() {
   const circuit = new Circuit()
@@ -153,12 +154,21 @@ describe("one-channel protected analog experiment", () => {
         "U_OVP_BUFFER",
         "U_SAR",
         "R_SAR",
-        "C_SAR"
+        "C_SAR",
+        "C_REF_IN",
+        "C_REF_OUT_HF",
+        "C_BUFFER_POS",
+        "C_BUFFER_NEG",
+        "C_NEG_IN",
+        "C_ISO_IN",
+        "C_ISO_OUT"
       ])
     )
+    expect(new Set(names)).toEqual(new Set(oneChannelAnalogExperimentBom.map((part) => part.reference)))
     expect(serialized).toContain("NXE1S0505MC")
     expect(serialized).toContain("ADA4177-1BRZ")
     expect(serialized).toContain("ADS8881IDGS")
+    expect(serialized).toContain("T521B106M025ATE100")
     expect(serialized).toContain("TP_AINN")
     expect(serialized).toContain("MUTEX_OBS")
     expect(serialized).toContain("BUFFER_INVERTING")
@@ -216,6 +226,13 @@ describe("one-channel protected analog experiment", () => {
         "U_ESD.SGND_3 to net.SGND",
         "U_ESD.SGND_8 to net.SGND",
         "U_NEGATIVE_RAIL.CFLY_NEG to C_NEG_FLY.pin1",
+        "U_NEGATIVE_RAIL.S5V_ISO to C_NEG_IN.pin1",
+        "U_OVP_BUFFER.S5V_ISO to C_BUFFER_POS.pin1",
+        "U_OVP_BUFFER.S5V_NEG to C_BUFFER_NEG.pin1",
+        "U_REF.S5V_ISO to C_REF_IN.pin1",
+        "U_REF.REF_2V5 to C_REF_OUT_HF.pin1",
+        "U_ISO.SYSTEM_5V to C_ISO_IN.pin1",
+        "U_ISO.S5V_ISO to C_ISO_OUT.pin1",
         "U_SOURCE_SWITCH.UNUSED_SEL2 to net.SGND"
       ])
     )

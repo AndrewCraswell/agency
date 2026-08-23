@@ -9,10 +9,11 @@ replication, or a scoring/FIE claim.
 
 The executable contract is
 [`src/one-channel-analog-readiness.ts`](../src/one-channel-analog-readiness.ts).
-It contains exactly one row for each of the 36 physical references in the
+It contains exactly one row for each of the 43 physical references in the
 committed experiment circuit. Every row is DNP and every release flag remains
-false. While the seven support references are absent, only the two unpowered
-steps can be archived and `evidenceCompleteForReview` remains false.
+false. The source circuit is electrically reconciled, but only the two
+unpowered steps can be archived while footprint and fixture evidence remain
+absent, and `evidenceCompleteForReview` remains false.
 
 ## Connector safety
 
@@ -31,36 +32,50 @@ remain mandatory evidence before a fixture may be attached.
 
 ## Circuit reconciliation gate
 
-The circuit's 36 rows include the converter, regulator, reference, protection,
+The circuit's 43 rows include the converter, regulator, reference, protection,
 source switch, buffer, SAR, passives, six headers, and eight individual test
 points. Part-specific manufacturer evidence replaces generic capacitor-family
 pages for the KEMET MPNs.
 
-The review also found support parts missing from the committed experiment
-circuit. Exact DNP 0603 candidates and their part-specific evidence are now
-selected, but they are not silently treated as present:
+The seven previously missing support references are now in the standalone
+source circuit and in its same-reference BOM. All are DNP, tied to the listed
+device pins and isolated-domain return, and remain unreleased:
 
-| Missing reference | Exact candidate | Required role |
+| Reference | Exact candidate | Pin/net connection and required role |
 | --- | --- | --- |
-| `C_REF_IN` | `GRM188R71A105KA12D` | REF5025A-Q1 1 uF input bypass |
-| `C_REF_OUT_HF` | `C0603C104K3RACTU` | REF5025A-Q1 local 100 nF output bypass in parallel with `C_REF` |
-| `C_BUFFER_POS`, `C_BUFFER_NEG` | `C0603C104K3RACTU` | ADA4177-1 local positive- and negative-rail bypass |
-| `C_NEG_IN` | `GRM188R71A105KA12D` | TPS60400 required 1 uF input capacitor, completing its three-capacitor network |
-| `C_ISO_IN`, `C_ISO_OUT` | `GRM188R71A225KE15D` | NXE1 2.2 uF characterization candidates pending startup, ripple, and stability measurement |
+| `C_REF_IN` | Murata `GRM188R71A105KA12D`, 1 uF X7R, 10 V, 0603 | `U_REF` input pin 2 (`S5V_ISO`) to `SGND` |
+| `C_REF_OUT_HF` | KEMET `C0603C104K3RACTU`, 100 nF X7R, 25 V, 0603 | `U_REF` output pin 6 (`REF_2V5`) to `SGND`, in parallel with 10-uF `C_REF` |
+| `C_BUFFER_POS` | KEMET `C0603C104K3RACTU`, 100 nF X7R, 25 V, 0603 | ADA4177-1 pin 7 (`S5V_ISO`) to `SGND` |
+| `C_BUFFER_NEG` | KEMET `C0603C104K3RACTU`, 100 nF X7R, 25 V, 0603 | ADA4177-1 pin 4 (`S5V_NEG`) to `SGND` |
+| `C_NEG_IN` | Murata `GRM188R71A105KA12D`, 1 uF X7R, 10 V, 0603 | TPS60400 input pin 2 (`S5V_ISO`) to pin 4 (`SGND`) |
+| `C_ISO_IN` | Murata `GRM188R71A225KE15D`, 2.2 uF X7R, 10 V, 0603 | NXE1 input pin 1 (`SYSTEM_5V`) to pin 2 (`SYSTEM_GND`); it does not cross isolation |
+| `C_ISO_OUT` | Murata `GRM188R71A225KE15D`, 2.2 uF X7R, 10 V, 0603 | NXE1 output pin 6 (`S5V_ISO`) to pin 7 (`SGND`) |
 
-`supportCircuitReconciled` is therefore required to remain false. The optional
-NXE EMI filter is also DNP and unselected until isolated-harness ripple,
-startup, leakage, and emissions evidence selects a topology without bridging
-the isolation boundary. No layout or fabrication review may proceed while
-these gates remain open.
+TI requires a 1-uF to 10-uF input bypass for `REF5025A-Q1` and a 1-uF to
+50-uF low-ESR output capacitor with ESR no greater than 1.5 ohm. `C_REF` is
+KEMET `T521B106M025ATE100`: 10 uF, 25 V polymer tantalum in a 1411 / 3528 B
+case. Its [manufacturer datasheet](https://search.kemet.com/download/specsheet/T521B106M025ATE100)
+specifies 100 milliohms maximum ESR at 25 C and 100 kHz, which is below the
+1.5-ohm requirement. `C_REF_OUT_HF` is only the local high-frequency parallel
+bypass. TI specifies three 1-uF ceramic capacitors for `TPS60400`: flying,
+input, and output. The MLCC manufacturers publish impedance/ESR curves rather
+than a single DC ESR maximum, so their impedance and dc-bias behavior are
+unresolved physical characterization gates, not a claim that an unmeasured ESR
+value is acceptable.
 
-The evidence validator mechanically rejects isolated-rail, reference, normal,
-or guarded results while this reconciliation flag is false. Digests and review
-records cannot substitute for the absent electrical parts.
+`supportCircuitReconciled` is structurally true only because all seven exact
+references are populated in the standalone source circuit and match the
+one-to-one BOM. It does not authorize assembly, an energized test, copper,
+Gerbers, or fabrication. `poweredTestingAuthorized` remains false until each
+exact footprint and the fixture have physical evidence; the validator rejects
+isolated-rail, reference, normal, and guarded records before then. The optional
+NXE EMI filter remains DNP and unselected until isolated-harness ripple,
+startup, leakage, and emissions evidence selects a topology that preserves the
+isolation boundary.
 
 ## Per-part physical evidence
 
-Each of the 36 physical references requires its own record. The schema rejects
+Each of the 43 physical references requires its own record. The schema rejects
 missing, extra, duplicate, substituted, or package-mismatched rows. Each row
 binds:
 
