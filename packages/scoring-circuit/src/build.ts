@@ -235,7 +235,7 @@ const previewHtml = `<!doctype html>
     <li><strong>${partReadinessSummary.manufacturerVerifiedCad}</strong> manufacturer-verified critical CAD models</li>
     <li><strong>${partReadinessSummary.productionApproved}</strong> fabrication-approved critical parts</li>
   </ul>
-  <p class="resources"><a href="../docs/production-board-plan.md">Production plan</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="critical-part-readiness.json">Critical-part evidence</a><a href="bom.csv">Component decisions</a></p>
+  <p class="resources"><a href="../docs/production-board-plan.md">Production plan</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="critical-part-readiness.json">Critical-part evidence</a><a href="bom.csv">Component decisions</a><a href="http://127.0.0.1:4178/">Bout test simulator</a></p>
   <div class="tabs" role="tablist" aria-label="Circuit views">
     <button id="tab-pcb" role="tab" aria-selected="true" aria-controls="view-pcb" tabindex="0">PCB</button>
     <button id="tab-schematic" role="tab" aria-selected="false" aria-controls="view-schematic" tabindex="-1">Schematic</button>
