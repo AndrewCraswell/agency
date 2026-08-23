@@ -10,6 +10,10 @@ code-complete baseline, and open-source preparation is in
 TypeScript/C17/ESP-IDF implementation and its test corpus as the oracle until equivalence evidence supports a separate
 migration decision; neither that proof nor public source publication requires commercial hardware launch first.
 
+The reproducible `rules-1` baseline, its pinned executable inputs and toolchain,
+and its review-sensitive digest workflow are defined in
+[behavior-oracle-contract.md](behavior-oracle-contract.md).
+
 The normative requirements are decomposed in
 [fie-traceability-matrix.md](fie-traceability-matrix.md). Project terminology and the distinction between rule terms,
 electrical observations, decisions, and diagnostics are defined in [scoring-glossary.md](scoring-glossary.md). The
@@ -28,6 +32,9 @@ The generated M1-08 coverage, stable ordering, and unresolved exclusions are
 specified in [timing-boundary-vector-contract.md](timing-boundary-vector-contract.md).
 The bounded, replayable M1-09 property corpus and safety properties are
 specified in [scoring-property-test-contract.md](scoring-property-test-contract.md).
+The host-only foil resistance boundaries and logical contact-context results
+are specified in
+[foil-resistance-and-context-contract.md](foil-resistance-and-context-contract.md).
 The M2-05 canonical binary frame implementation and acceptance evidence are
 specified in [m2-05-transport-codec-evidence.md](m2-05-transport-codec-evidence.md).
 The bounded M2-13 seeded protocol, decision-record, and journal fuzz evidence

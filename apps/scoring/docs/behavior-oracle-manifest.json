@@ -1,0 +1,331 @@
+{
+  "artifacts": [
+    {
+      "category": "environment",
+      "path": ".nvmrc",
+      "sha256": "sha256:2722b61f414f07f08be7f1f1316012813818f26f1c40d6a24a748686cec7d2ff"
+    },
+    {
+      "category": "decision-schema",
+      "path": "apps/scoring/docs/decision-record-contract.md",
+      "sha256": "sha256:f57413c314074c80671ec3df8a7e5e1a726638074e2ded000845fb3922084005"
+    },
+    {
+      "category": "golden-corpus",
+      "path": "apps/scoring/docs/golden-scenario-manifest.json",
+      "sha256": "sha256:7edaf11e90a49833c68a08b3bec271cbeda5122cf96c4b50ea526cedd7b6c303"
+    },
+    {
+      "category": "golden-corpus",
+      "path": "apps/scoring/docs/golden-scenario-manifest.schema.json",
+      "sha256": "sha256:3b7478e401eb98d0b74a6033937214fac303c1e5b3743b1ad6912e8b4e9ae0f8"
+    },
+    {
+      "category": "golden-corpus",
+      "path": "apps/scoring/docs/golden-scenario.schema.json",
+      "sha256": "sha256:27d2161a9c513cc90c0c0d5fece28a9f17ee1f22fe499911328ea063724599ed"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/epee-audio-visual-correlation.json",
+      "sha256": "sha256:d9ef70338b36662e5d3e1e38d431d53d5f8f6a9700a099f9b2bd71683858cc98"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/epee-contact-boundaries.json",
+      "sha256": "sha256:0f72d433fb0fd14a847ac3c8c04adc5008f928f002f498f9c358b2a5cef0c7fb"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/epee-double-lockout-boundary.json",
+      "sha256": "sha256:76977a52720e49ba098e29e83ba06e99703490ccb4989f55578bddbf217cf6a0"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/epee-exceptional-resistance-duration.json",
+      "sha256": "sha256:75418115ba9de92e985940e612bce429dcced962b57e17929ad1b78dae5a5237"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/epee-grounded-material-100-ohm.json",
+      "sha256": "sha256:2bfa019c00d3e1b412b50f97543b42e40aaac1ab0cc99ade1d1285b410c35848"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/epee-grounded-rejection.json",
+      "sha256": "sha256:50ba1c5d4006296e85883697b1c72795addec48f7859d2a45233a05a41b93264"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/epee-non-monotonic-time.json",
+      "sha256": "sha256:8cc02fd15c48e59314471c82323f517ba14c97d565ce37b266f5b8801116ede4"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/epee-resistance-uncertainty-near-lockout.json",
+      "sha256": "sha256:958682677ae24403a6ca2a09c21a50131a3cf06f5f862a6537a2e96f44dfa736"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/foil-break-boundaries.json",
+      "sha256": "sha256:8d6bd05c5c9e34591802813e5df2a69424a4fd294228305afd73256a8d8528f2"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/foil-grounded-contact.json",
+      "sha256": "sha256:cb409c47b38adc0fcfb19a956e00e7e7305891ba60ee1bd308e59c080eb4b407"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/foil-insulation-handoff.json",
+      "sha256": "sha256:ee32fa35910cf40c5f820c1ef63a3629e39eefaedde5309440e889c387cfc38f"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/foil-integrity-and-uncertainty.json",
+      "sha256": "sha256:4ef08f0a396e346bec1931b678cc2c2e73656493a272d478f154ab25f4d2a0f6"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/foil-lockout-cutoff.json",
+      "sha256": "sha256:3d84129bba34bff625f9950bfc9efc78044a070f12e643fbdaf2f4accb78063b"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/foil-nominal-break.json",
+      "sha256": "sha256:521b13422aec0dd7416d6551df46af30072d4189b39ce0da067e57324c34d0f4"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/foil-same-side-and-lockout.json",
+      "sha256": "sha256:e07d1ecdab9bfbdc95e64355f5273cfb54c5ed8f197d5136e2abad31e2c88b42"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/foil-target-context.json",
+      "sha256": "sha256:ea02eb7ac4f3434def797575426f91971d63b7e5fd8ddf4bea04f5c630ebf5f9"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/sabre-contact-floor-boundaries.json",
+      "sha256": "sha256:ad594bab795a9b08fc9447eec5c58d9442103d0668ae30a0ffbb25a29e5c1529"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/sabre-external-path-containment.json",
+      "sha256": "sha256:c8344dc737b8311f75eaaf1b277de6574fd4d672b1347af5b975b393a03228dd"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/sabre-lockout-boundary.json",
+      "sha256": "sha256:32a6cf8d76cb06472f61640ad5c2cb31386f143d6ed1724cd2a65329de0d6363"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/sabre-lockout-cutoff.json",
+      "sha256": "sha256:7a50bb03a92b34720e8bfda55c86456c2ddc201b85b2b69c297e318496f5b676"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/sabre-own-equipment-hit-continuity.json",
+      "sha256": "sha256:e0eb8ce134200dfb82cc0784f06290e262bfd96288a6212fb07a48bde6f33d2b"
+    },
+    {
+      "category": "golden-scenario",
+      "path": "apps/scoring/docs/golden-scenarios/sabre-whipover-boundaries-and-recovery.json",
+      "sha256": "sha256:46aee27229ffb976e69b3cb51e5dedd5ad39418e55da35d2f57940782334f65d"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/docs/rules-1-release-review.md",
+      "sha256": "sha256:ea36362a413b35ec321024bd9b96798258169a5a59992d9a4f8ca5be00bb0782"
+    },
+    {
+      "category": "transport-frames",
+      "path": "apps/scoring/fixtures/transport-frame-golden.json",
+      "sha256": "sha256:894cf5fe1a3d4dd34d69a602d95b8482aaf0716ae2b17daf1f854ade3eb27a9c"
+    },
+    {
+      "category": "environment",
+      "path": "apps/scoring/package.json",
+      "sha256": "sha256:2a879e301dc466687166a386ba841832952a9c73ecc964232fbc4c218dddd8b4"
+    },
+    {
+      "category": "golden-corpus",
+      "path": "apps/scoring/scripts/export-golden-vectors.mjs",
+      "sha256": "sha256:3a3ad90ee7cee1ebf70137dc01bbd966301c847db6175b409a83edf094a83d32"
+    },
+    {
+      "category": "golden-corpus",
+      "path": "apps/scoring/scripts/run-scenarios.mjs",
+      "sha256": "sha256:63c8cb50db3d71d4193d121be69c89f7d10181620407d7af86804e5d657097ff"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/bout-state.test.ts",
+      "sha256": "sha256:56f1a52f97a83721381bf21dd31648024b6cf39c24413917cb0843f2b518660c"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/bout-state.ts",
+      "sha256": "sha256:b95701affb58d35fd36e07525d2db3b4dd9bb1416124ac8d8cd15f8d6010d948"
+    },
+    {
+      "category": "decision-schema",
+      "path": "apps/scoring/src/decision-record.test.ts",
+      "sha256": "sha256:01db8a0fb249ead10791e74ea7ecd9ad5aae148d5c80c81db7ac4c9c49f2db0e"
+    },
+    {
+      "category": "decision-schema",
+      "path": "apps/scoring/src/decision-record.ts",
+      "sha256": "sha256:78654764396b0e6e4eb87227f3e433f21f90d22721f4c5a24b31f0ecb1f846df"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/epee.test.ts",
+      "sha256": "sha256:32778e202477deacf62318fb06bf0c0c5dd8d2a04a286afa14acc897e7da9108"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/epee.ts",
+      "sha256": "sha256:d5d55ad915598858ae92dd8a205f410f64a53ba1c1a11730beeacb058f65b65e"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/foil.test.ts",
+      "sha256": "sha256:4459f63c11c0cfe838e7ae6449fea919ee8b436ffffe1acf8da69eab9028eb36"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/foil.ts",
+      "sha256": "sha256:fe233ff0d3c3f5bab15b059fc4746dbac5d9c82f8cd0c095922320da2bfbf8b9"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/sabre.test.ts",
+      "sha256": "sha256:291bb4be8fa3f748f195cfa03e0a9ac004c212f14169e060e3e0c4360b6e7170"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/sabre.ts",
+      "sha256": "sha256:1b6a95363849f21a3701fbfc033a7df849b7656ba06fa38aed34fa23f90ce089"
+    },
+    {
+      "category": "display-projection",
+      "path": "apps/scoring/src/scenario-display-projection.test.ts",
+      "sha256": "sha256:972fbc6144e41b95b2b022055397c32280c149fab5084e2360b7a51c2a29612b"
+    },
+    {
+      "category": "display-projection",
+      "path": "apps/scoring/src/scenario-display-projection.ts",
+      "sha256": "sha256:7fbe34449ad1b5ccca38577dea608d5becd5bf295304242772409d8d34fbc4f5"
+    },
+    {
+      "category": "golden-corpus",
+      "path": "apps/scoring/src/scenario-runner.test.ts",
+      "sha256": "sha256:1a482c438dee53afa788a5f106faaff87f6d10579bb8ee306175c3e5d065a7f1"
+    },
+    {
+      "category": "golden-corpus",
+      "path": "apps/scoring/src/scenario-runner.ts",
+      "sha256": "sha256:502180b829cb66b196638e733f8fccd9c24c23820a2d498b46571fbb3cd1327b"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/scoring-property-harness.test.ts",
+      "sha256": "sha256:7c829ea73b95d9d45370a29ec9230bc41fcdc4ac33eb4e5d63efb157f91c4372"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/scoring-property-harness.ts",
+      "sha256": "sha256:fc9d935049bfb82319a1cef758002ea6435f59780974f94ed4e95beee63dd2db"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/timing-boundary.test.ts",
+      "sha256": "sha256:e3cbe6f3fc1bd5d5382c259fdf1fdd2e9b9c0171d879426dbb9a50f979181cb8"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/timing-boundary.ts",
+      "sha256": "sha256:91a4e664c41af1401ddd20b15dabba6dc2b833f344c241d37210a9f62af94128"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/timing-table.test.ts",
+      "sha256": "sha256:0afcf1b0c3ef5aed6597fe39a20aaa6925c2613e35c5766bdc19f026f485f56c"
+    },
+    {
+      "category": "rules-1",
+      "path": "apps/scoring/src/timing-table.ts",
+      "sha256": "sha256:61f6ab3a074c0cf81a50e0d1ceef227bc93bf532161258249db4e378244f83d8"
+    },
+    {
+      "category": "transport-frames",
+      "path": "apps/scoring/src/transport-frame.test.ts",
+      "sha256": "sha256:8cd89a1518bb10f2a2c4305dbc95c1a0537fc3c45fd21cdb603fef4871d3f05b"
+    },
+    {
+      "category": "transport-frames",
+      "path": "apps/scoring/src/transport-frame.ts",
+      "sha256": "sha256:35c66dae268b7883ac6a284ed1005f470e64928b7acc11c1f36a8a97a634dd08"
+    },
+    {
+      "category": "environment",
+      "path": "apps/scoring/tsconfig.build.json",
+      "sha256": "sha256:c3dd12faa768ee597dcc775b86897324cb87d3d59f636163e4b9f8d92aa07600"
+    },
+    {
+      "category": "environment",
+      "path": "apps/scoring/tsconfig.json",
+      "sha256": "sha256:36604112fc711f18dcedb67d020380306f4d34d3134e686151958729b46db55b"
+    },
+    {
+      "category": "environment",
+      "path": "apps/scoring/vitest.config.ts",
+      "sha256": "sha256:79c023ad2c14bc4d1f1e4746316d8ce25e6295752bd61dc6c62a9219db278723"
+    },
+    {
+      "category": "environment",
+      "path": "package.json",
+      "sha256": "sha256:b793b0eb5ba3514ac0859b0fd384f3b09da84c0d94c23d917ef8182b03215d1b"
+    },
+    {
+      "category": "environment",
+      "path": "packages/typescript-config/base.json",
+      "sha256": "sha256:c8db54ca0e4ab8f1171b75e56b1b10960dacc7067078ca022104ca3525269d5d"
+    },
+    {
+      "category": "environment",
+      "path": "packages/typescript-config/package.json",
+      "sha256": "sha256:98d826e563b783d455ba9088ce6950e9f14a746c3c015f515305998a83c384ef"
+    },
+    {
+      "category": "environment",
+      "path": "pnpm-lock.yaml",
+      "sha256": "sha256:4cf3e261f64b4988906c54ce3736d922c9837c752803598fdf73362fb699bc65"
+    },
+    {
+      "category": "environment",
+      "path": "pnpm-workspace.yaml",
+      "sha256": "sha256:6c955229406118202bc2b109e44f882f10910eabd452d7fbf0c66c3332d3df6e"
+    },
+    {
+      "category": "environment",
+      "path": "turbo.json",
+      "sha256": "sha256:3ba7731518efcc3ba3e03aced5cf8aec0697bb1d3b148b7cba6665c14c5851c9"
+    }
+  ],
+  "commands": [
+    "node apps/scoring/scripts/behavior-oracle.mjs --check",
+    "pnpm --filter scoring test -- src/epee.test.ts src/foil.test.ts src/sabre.test.ts src/bout-state.test.ts src/timing-table.test.ts src/timing-boundary.test.ts src/scoring-property-harness.test.ts",
+    "pnpm --filter scoring test -- src/decision-record.test.ts src/transport-frame.test.ts src/scenario-display-projection.test.ts",
+    "pnpm --filter scoring run:scenarios -- docs/golden-scenario-manifest.json",
+    "pnpm --filter scoring check:golden-vectors"
+  ],
+  "format": "scoring-behavior-oracle",
+  "hashPolicy": "sha256 over UTF-8 text after CRLF-to-LF normalization",
+  "oracleRevision": "rules-1",
+  "schemaVersion": 1,
+  "digest": "sha256:b1ff641b598d92d3a8386db6f1d77a6bbdf8c39fd44865f71d77d31f4e51494e"
+}

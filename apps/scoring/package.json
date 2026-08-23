@@ -50,6 +50,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "check:behavior-oracle": "node scripts/behavior-oracle.mjs --check",
     "check:format": "oxfmt --check",
     "check:golden-vectors": "pnpm build && node scripts/export-golden-vectors.mjs --check",
     "check:stm32-golden-fixture": "node firmware/stm32/tools/generate-golden-fixture.mjs --check",
@@ -64,7 +65,7 @@
     "test:coverage": "vitest run --coverage",
     "test:stm32-host": "node firmware/stm32/tools/test-host.mjs",
     "test:watch": "vitest",
-    "verify": "run-s check:format check:lint check:types check:unused check:golden-vectors test:coverage test:stm32-host"
+    "verify": "run-s check:format check:lint check:types check:unused check:behavior-oracle check:golden-vectors test:coverage test:stm32-host"
   },
   "devDependencies": {
     "@repo/oxlint-config": "workspace:*",

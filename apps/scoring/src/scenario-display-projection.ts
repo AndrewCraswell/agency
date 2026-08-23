@@ -1,0 +1,264 @@
+export type DisplayWeapon = "epee" | "foil" | "sabre"
+export type DisplaySide = "left" | "right"
+export type DisplayLamp = "diagnostic" | "off" | "off-target" | "valid-hit"
+export type DisplayEventKind = "expected" | "input" | "output" | "rejection" | "uncertainty"
+
+export type ScenarioDisplayLine = {
+  readonly line: string
+  readonly state: string
+}
+
+export type ScenarioDisplayDecision = {
+  readonly decisionAtUs: number
+  readonly disposition: string
+  readonly side?: DisplaySide
+  readonly signal?: {
+    readonly audible?: string
+    readonly latched?: boolean
+    readonly visual?: string
+  }
+}
+
+type ExpectedDecision = ScenarioDisplayDecision & { readonly id: string }
+
+type ExpectedNonEvent = {
+  readonly assertion: string
+  readonly assertionReasonCode: string
+  readonly id: string
+  readonly window: { readonly throughUs: number }
+}
+
+type DisplayUncertainty = {
+  readonly atUs: number
+  readonly id?: string
+}
+
+export type ScenarioDisplayCase = {
+  readonly expected: {
+    readonly decisions: readonly ExpectedDecision[]
+    readonly error?: { readonly atInputId?: string; readonly code?: string } | null
+    readonly nonEvents: readonly ExpectedNonEvent[]
+    readonly status?: string
+    readonly uncertainty: readonly DisplayUncertainty[]
+  }
+  readonly result: {
+    readonly actualStatus?: string
+    readonly decisions: readonly unknown[]
+    readonly error?: { readonly atInputId?: string; readonly code?: string } | null
+    readonly uncertainty: readonly DisplayUncertainty[]
+  }
+  readonly scenario: {
+    readonly inputs: readonly {
+      readonly atUs: number
+      readonly id: string
+      readonly lines: readonly ScenarioDisplayLine[]
+    }[]
+    readonly weapon: DisplayWeapon
+  }
+}
+
+export type ScenarioDisplayEvent = {
+  readonly atUs: number
+  readonly id: string
+  readonly kind: DisplayEventKind
+  readonly label: string
+  readonly lines?: readonly ScenarioDisplayLine[]
+  readonly value?: unknown
+}
+
+export type ScenarioDisplayProjection = {
+  readonly accessibleLabel: string
+  readonly audibleRequested: boolean
+  readonly bladeContact: boolean
+  readonly cursorAtUs: number
+  readonly event: ScenarioDisplayEvent | null
+  readonly eventCount: number
+  readonly eventNumber: number
+  readonly leftContact: boolean
+  readonly leftFault: boolean
+  readonly leftLamp: DisplayLamp
+  readonly rightContact: boolean
+  readonly rightFault: boolean
+  readonly rightLamp: DisplayLamp
+  readonly weapon: DisplayWeapon
+}
+
+const EVENT_ORDER: Readonly<Record<DisplayEventKind, number>> = {
+  input: 0,
+  expected: 1,
+  output: 2,
+  uncertainty: 3,
+  rejection: 4
+}
+
+function isActualAccepted(testCase: ScenarioDisplayCase): boolean {
+  return testCase.result.actualStatus === "accepted"
+}
+
+export function createScenarioDisplayTimeline(testCase: ScenarioDisplayCase): readonly ScenarioDisplayEvent[] {
+  const events: { event: ScenarioDisplayEvent; ordinal: number }[] = []
+  const append = (event: ScenarioDisplayEvent) => events.push({ event, ordinal: events.length })
+
+  for (const [inputIndex, input] of testCase.scenario.inputs.entries())
+    append({
+      atUs: input.atUs,
+      id: input.id,
+      kind: "input",
+      label: `Declared input ${inputIndex + 1}: ${input.id}`,
+      lines: input.lines
+    })
+
+  if (!isActualAccepted(testCase)) {
+    const error = testCase.result.error
+    const rejectedInput = testCase.scenario.inputs.find((input) => input.id === error?.atInputId)
+    append({
+      atUs: rejectedInput?.atUs ?? 0,
+      id: `rejection-${error?.atInputId ?? "scenario"}`,
+      kind: "rejection",
+      label: `Host-scorer unavailable: ${error?.code ?? "actual status is not accepted"}`,
+      value: error
+    })
+  } else {
+    for (const decision of testCase.expected.decisions)
+      append({
+        atUs: decision.decisionAtUs,
+        id: decision.id,
+        kind: "expected",
+        label: decision.disposition,
+        value: decision
+      })
+
+    for (const nonEvent of testCase.expected.nonEvents)
+      append({
+        atUs: nonEvent.window.throughUs,
+        id: nonEvent.id,
+        kind: "expected",
+        label: `${nonEvent.assertion} (${nonEvent.assertionReasonCode})`,
+        value: nonEvent
+      })
+
+    for (const uncertainty of testCase.expected.uncertainty)
+      append({
+        atUs: uncertainty.atUs,
+        id: `expected-${uncertainty.id ?? uncertainty.atUs}`,
+        kind: "expected",
+        label: "uncertainty",
+        value: uncertainty
+      })
+
+    for (const [decisionIndex, decision] of testCase.result.decisions.entries()) {
+      if (!isScenarioDisplayDecision(decision)) continue
+      append({
+        atUs: decision.decisionAtUs,
+        id: `actual-${decision.side ?? "none"}-${decision.decisionAtUs}-${decisionIndex}`,
+        kind: "output",
+        label: decision.disposition,
+        value: decision
+      })
+    }
+
+    for (const uncertainty of testCase.result.uncertainty)
+      append({
+        atUs: uncertainty.atUs,
+        id: `uncertainty-${uncertainty.id ?? uncertainty.atUs}`,
+        kind: "uncertainty",
+        label: "Host-scorer reported uncertainty",
+        value: uncertainty
+      })
+  }
+
+  return events
+    .toSorted(
+      (left, right) =>
+        left.event.atUs - right.event.atUs ||
+        EVENT_ORDER[left.event.kind] - EVENT_ORDER[right.event.kind] ||
+        left.ordinal - right.ordinal
+    )
+    .map(({ event }) => event)
+}
+
+function lineLeaf(line: ScenarioDisplayLine): string {
+  return line.line.slice(line.line.lastIndexOf(".") + 1)
+}
+
+function isContactLine(line: ScenarioDisplayLine, side: DisplaySide): boolean {
+  return (
+    line.line.startsWith(`${side}.`) &&
+    ["blade", "target", "tip-loop", "weapon-circuit"].includes(lineLeaf(line)) &&
+    line.state === "closed"
+  )
+}
+
+function isBladeContactLine(line: ScenarioDisplayLine): boolean {
+  return ["blade", "parry"].includes(lineLeaf(line)) && line.state === "closed"
+}
+
+function isFaultLine(line: ScenarioDisplayLine, side: DisplaySide): boolean {
+  return (
+    line.line.startsWith(`${side}.`) && ["disconnected", "grounded", "indeterminate", "shorted"].includes(line.state)
+  )
+}
+
+function lampForDecision(decision: ScenarioDisplayDecision | undefined): DisplayLamp {
+  const visual = decision?.signal?.visual
+  return visual === "diagnostic" || visual === "off-target" || visual === "valid-hit" ? visual : "off"
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null
+}
+
+function isScenarioDisplayDecision(value: unknown): value is ScenarioDisplayDecision {
+  if (!isRecord(value)) return false
+  if (typeof value.decisionAtUs !== "number" || typeof value.disposition !== "string") return false
+  if (value.side !== undefined && value.side !== "left" && value.side !== "right") return false
+  return value.signal === undefined || isRecord(value.signal)
+}
+
+function latestDecision(
+  events: readonly ScenarioDisplayEvent[],
+  side: DisplaySide
+): ScenarioDisplayDecision | undefined {
+  const event = events.findLast(
+    (candidate) =>
+      candidate.kind === "output" && isScenarioDisplayDecision(candidate.value) && candidate.value.side === side
+  )
+  return isScenarioDisplayDecision(event?.value) ? event.value : undefined
+}
+
+function buildAccessibleLabel(projection: Omit<ScenarioDisplayProjection, "accessibleLabel">): string {
+  const buzzer = projection.audibleRequested ? "buzzer requested" : "buzzer idle"
+  return `${projection.weapon}; left ${projection.leftLamp}; right ${projection.rightLamp}; ${buzzer}; event ${projection.eventNumber}/${projection.eventCount}; cursor ${projection.cursorAtUs} us`
+}
+
+export function projectScenarioDisplay(
+  testCase: ScenarioDisplayCase,
+  requestedEventIndex: number
+): ScenarioDisplayProjection {
+  const timeline = createScenarioDisplayTimeline(testCase)
+  const normalizedEventIndex = Number.isSafeInteger(requestedEventIndex) ? requestedEventIndex : -1
+  const eventIndex = Math.max(-1, Math.min(normalizedEventIndex, timeline.length - 1))
+  const playedEvents = timeline.slice(0, eventIndex + 1)
+  const latestInput = playedEvents.findLast((event) => event.kind === "input")
+  const lines = latestInput?.lines ?? []
+  const actualDecisions = playedEvents.filter((event) => event.kind === "output")
+  const projection = {
+    audibleRequested: actualDecisions.some(
+      (event) => isScenarioDisplayDecision(event.value) && event.value.signal?.audible === "requested"
+    ),
+    bladeContact: lines.some(isBladeContactLine),
+    cursorAtUs: timeline[eventIndex]?.atUs ?? 0,
+    event: timeline[eventIndex] ?? null,
+    eventCount: timeline.length,
+    eventNumber: eventIndex + 1,
+    leftContact: lines.some((line) => isContactLine(line, "left")),
+    leftFault: lines.some((line) => isFaultLine(line, "left")),
+    leftLamp: lampForDecision(latestDecision(actualDecisions, "left")),
+    rightContact: lines.some((line) => isContactLine(line, "right")),
+    rightFault: lines.some((line) => isFaultLine(line, "right")),
+    rightLamp: lampForDecision(latestDecision(actualDecisions, "right")),
+    weapon: testCase.scenario.weapon
+  }
+
+  return { ...projection, accessibleLabel: buildAccessibleLabel(projection) }
+}
