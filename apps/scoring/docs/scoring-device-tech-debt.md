@@ -156,3 +156,79 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## Explicit YAGNI exclusions
 
 The audit does not recommend a cross-weapon scorer framework, a monorepo-wide validation package, a generalized tscircuit component library, or a new transport abstraction layered over the existing binary codec. The current weapon-specific semantics, security-boundary validators, and board-specific evidence should remain local until a demonstrated third use or a protocol-compatibility requirement justifies further extraction.
+
+## Firmware audit additions
+
+This append-only review covers the stable first-party C sources below
+`apps/scoring/firmware`. The LLVM gate passed on 2026-08-24 for every source
+(100 percent line, function, and branch coverage for the STM32 scoring core;
+at least 80 percent for every other included source). Coverage is evidence for
+the current behavior, not a reason to add speculative abstractions. These four
+items are `ready`; no additional intake-only firmware item met the evidence
+threshold. FW-001 is intentionally narrower than SD-005: it concerns duplicate
+validation inside the STM32 codec, not the cross-target transport source of
+truth.
+
+## FW-001: share STM32 one-shot and streaming frame validation
+
+- Priority: `P1`
+- State: `ready`
+- Affected files: [`apps/scoring/firmware/stm32/core/stm32_transport.c`](../firmware/stm32/core/stm32_transport.c) (lines 163-215 and 227-314), [`apps/scoring/firmware/stm32/include/stm32_transport.h`](../firmware/stm32/include/stm32_transport.h) (lines 101-119), and [`apps/scoring/firmware/stm32/tests/test_stm32_transport.c`](../firmware/stm32/tests/test_stm32_transport.c) (lines 138-213 and 272-337).
+- Description and evidence: `scoring_stm32_transport_decode` validates the fixed header, message direction, payload bound, exact frame length, and CRC before projecting a frame (lines 174-215). `scoring_stm32_transport_receive` repeats header validation, payload-length validation, expected-frame-length arithmetic, and excess-byte rejection while buffering, then calls `decode` and applies sequence checks (lines 262-313). The fragmented and complete-frame tests exercise both paths, but the validation rules remain manually maintained twice.
+- Impact: a future header, length, or CRC-policy change can update the direct decoder and leave the streaming path with different acceptance or error behavior. The current coverage gate proves both implementations, but it does not prove that their duplicated checks remain equivalent.
+- Bounded remediation: add private helpers for fixed-header validation and declared-frame-length calculation, and make the streaming path call the same complete-frame validation once its bounded buffer reaches the declared length. Keep accumulation, sequence ordering, and failure-state transitions in `receive`; do not introduce a new cross-target transport abstraction.
+- Dependencies: the frozen M2-05 transport contract, checked transport golden frames, and the existing STM32 host-test build.
+- Non-goals: do not change wire bytes, result codes, buffering limits, sequence policy, DMA/HAL integration, or the cross-target source-of-truth decision in SD-005.
+- Acceptance checks:
+  - Existing STM32 transport tests and `node firmware/tools/check-coverage.mjs` pass.
+  - Direct and fragmented delivery return equivalent results for valid frames, truncation, excess bytes, bad magic/version/type/direction/flags, payload bounds, and CRC corruption.
+  - One private implementation owns fixed-header, declared-length, and CRC validation; `receive` retains only buffering and stream-sequence behavior.
+  - `node firmware/stm32/tools/generate-transport-fixture.mjs --check` remains clean.
+
+## FW-002: consolidate ESP32 journal mutation preconditions
+
+- Priority: `P1`
+- State: `ready`
+- Affected files: [`apps/scoring/firmware/esp32/src/scoring_esp32_journal.c`](../firmware/esp32/src/scoring_esp32_journal.c) (lines 211-297 and 299-371), [`apps/scoring/firmware/esp32/include/scoring_esp32_journal.h`](../firmware/esp32/include/scoring_esp32_journal.h) (lines 94-113), and [`apps/scoring/firmware/esp32/tests/scoring_esp32_receiver_host_test.c`](../firmware/esp32/tests/scoring_esp32_receiver_host_test.c) (lines 167-390 and 474-586).
+- Description and evidence: `scoring_esp32_journal_append` and `scoring_esp32_journal_advance_cursor` each check that the journal is open, storage is present, recovery is not corrupt, the active slot is valid, and the sequence boundary is acceptable before calling the shared `commit_checkpoint` (append at lines 306-335; cursor advance at lines 350-363). Their operation-specific checks are validly different, but the common durable-state preflight and post-commit state contract are spread across the two public mutations and the shared commit helper.
+- Impact: a change to corruption handling, full-journal backpressure, or sequence exhaustion can update one mutation path and not the other. The receiver uses both paths for authoritative records and ignored frames, so drift can make replay and cursor recovery depend on the message type.
+- Bounded remediation: extract one private journal-mutation preflight for open/storage/recovery/current-slot checks and keep payload-size, duplicate-payload, and cursor-order rules in their respective callers. Retain `commit_checkpoint` as the sole slot-copy, integrity, commit-marker, and in-memory-state transition; do not change the two-slot format.
+- Dependencies: the M3-09 journal slot contract, power-loss boundary tests, and receiver exactly-once semantics.
+- Non-goals: do not add a storage backend, alter slot generations or integrity bytes, deserialize records, merge the journal with transport framing, or change ignored-frame behavior.
+- Acceptance checks:
+  - ESP32 journal and receiver host tests plus `node firmware/tools/check-coverage.mjs` pass.
+  - Corrupt active-slot, full-capacity, power-loss at each boundary, duplicate, out-of-order, and `UINT32_MAX` sequence cases retain their current result codes for both append and cursor advance.
+  - The shared preflight and the single commit transition are each covered; operation-specific duplicate-payload and cursor-order checks remain separate and explicit.
+  - Receiver reboot/reopen tests prove that accepted decision records and ignored frames restore the same next expected sequence.
+
+## FW-003: remove positional coupling from product-release authorization
+
+- Priority: `P1`
+- State: `ready`
+- Affected files: [`apps/scoring/firmware/product-update/src/scoring_product_release.c`](../firmware/product-update/src/scoring_product_release.c) (lines 178-288 and 327-380), [`apps/scoring/firmware/product-update/include/scoring_product_release.h`](../firmware/product-update/include/scoring_product_release.h) (lines 11 and 66-79), and [`apps/scoring/firmware/product-update/tests/scoring_product_release_host_test.c`](../firmware/product-update/tests/scoring_product_release_host_test.c) (lines 191-198 and 400-424).
+- Description and evidence: manifest decoding requires artifact tag 8 to occur twice and then requires `decoded.artifacts[0]` to be ESP32 and `[1]` to be STM32 (lines 183-185 and 280-285). Authorization repeats that positional assumption by pairing those slots with `environment->esp32` and `environment->stm32`, while callers must supply `observed[0]` and `observed[1]` in the same order (lines 365-379 and header lines 75-79). The current tests construct the same positional tuple in `matching_observed`.
+- Impact: the signed manifest is safe only because its order is enforced in a separate check. A schema or processor-order edit can leave artifact, installed-target, security-floor, and observed-digest comparisons paired by index rather than by processor, producing a hard-to-review release authorization drift or an unnecessary rejection.
+- Bounded remediation: keep the fixed two-processor contract, but select artifacts and observed values by the explicit `scoring_release_processor_t` identity in private helpers before calling `authorize_artifact`. Retain duplicate/missing-processor rejection and the current canonical wire order; do not build a general processor registry.
+- Dependencies: the product-release manifest contract, processor IDs, signature verification boundary, and existing canonical release fixtures.
+- Non-goals: do not add a manifest revision, alter signature bytes or verification order, support a third processor, or change security-floor and downgrade policy.
+- Acceptance checks:
+  - Product-release host tests and `node firmware/tools/check-coverage.mjs` pass.
+  - Tests prove that each processor is compared with its matching board, target, security floor, staging capacity, observed length, and digest even when test inputs are assembled in a different caller order.
+  - A manifest with reversed artifact order still receives the existing `SCORING_RELEASE_NON_CANONICAL` result, while the private authorization mapping no longer depends on array position.
+  - Signature-before-compatibility ordering and all existing reason codes remain unchanged.
+
+## FW-004: separate ESP32 receiver orchestration from frame and journal state transitions
+
+- Priority: `P2`
+- State: `ready`
+- Affected files: [`apps/scoring/firmware/esp32/src/scoring_esp32_receiver.c`](../firmware/esp32/src/scoring_esp32_receiver.c) (lines 173-262), [`apps/scoring/firmware/esp32/include/scoring_esp32_receiver.h`](../firmware/esp32/include/scoring_esp32_receiver.h) (lines 15-22 and 50-64), and [`apps/scoring/firmware/esp32/tests/scoring_esp32_receiver_host_test.c`](../firmware/esp32/tests/scoring_esp32_receiver_host_test.c) (lines 167-390 and 587-650).
+- Description and evidence: `scoring_esp32_receiver_receive` performs application readiness checks, link I/O, frame-length checks, M2-05 decoding, expected-sequence enforcement, ignored-message classification, journal cursor or record mutation, cursor restoration, degraded-link updates, and receipt projection in one branch-heavy public function. `ignore_receipt` and `reject_receipt` cover only two projections; accepted and duplicate paths still mutate receipt fields and restore cursor inline. The coverage gate passes this routine at 86.78 percent lines and 80.91 percent branches, but the covered branches still combine transport, persistence, and API state transitions.
+- Impact: a new transport result or journal outcome requires edits across several coupled branches, increasing the chance that `link_degraded`, the next expected sequence, and the receipt outcome diverge. Reviewers cannot isolate frame classification from durable mutation without running the complete receiver path.
+- Bounded remediation: keep `scoring_esp32_receiver_receive` as the public coordinator, but move frame acquisition and decoding, sequence classification, and the journal commit/receipt projection into small private helpers with explicit internal results. Preserve the existing borrowed-payload lifetime and keep all service ownership in the receiver.
+- Dependencies: M2-05 frame semantics, M3-08 service normalization, M3-09 journal/replay behavior, and the existing receiver fixtures.
+- Non-goals: do not add an asynchronous task model, service registry, message bus, scoring authority, or new public receiver API.
+- Acceptance checks:
+  - ESP32 receiver host tests and `node firmware/tools/check-coverage.mjs` pass.
+  - Accepted, ignored, duplicate, out-of-order, malformed, unavailable, journal-full, journal-corrupt, and sequence-exhausted cases preserve their current result, receipt, degraded-link, and cursor behavior.
+  - Private frame classification can be tested without journal mutation, and private journal projection can be tested without reimplementing frame decoding.
+  - The public receive function coordinates the helpers rather than directly containing both frame-parser details and journal state-transition logic.
