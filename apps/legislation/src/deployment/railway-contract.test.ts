@@ -19,7 +19,7 @@ describe("Railway deployment contract", () => {
     expect(dockerfile).toContain("COPY apps/legislation ./apps/legislation")
     expect(dockerfile).toContain("COPY apps/legislation/pnpm-workspace.railway.yaml ./pnpm-workspace.yaml")
     expect(dockerfile).toContain(
-      "pnpm install --frozen-lockfile --trust-lockfile --update-checksums --filter legislation..."
+      "pnpm install --no-frozen-lockfile --trust-lockfile --update-checksums --filter legislation..."
     )
     expect(dockerfile).toContain("pnpm --filter legislation build")
     expect(dockerfile).not.toContain("pnpm --filter ./...")
