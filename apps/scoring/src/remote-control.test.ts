@@ -5,6 +5,7 @@ import {
   REMOTE_COMMAND_REJECTION_REASONS,
   REMOTE_CONTROL_SCHEMA_VERSION,
   parseBoutStateEvent,
+  parseBoutWorkflowSnapshot,
   parseRemoteCommand,
   type BoutWorkflowSnapshot,
   type RemoteCommand,
@@ -376,5 +377,32 @@ describe("RC-02 bout state event schema", () => {
           stm32RecordId: null
         })
       ).toMatchObject({ rejectionReason })
+  })
+})
+
+describe("RC-02 complete clock snapshot schema", () => {
+  it("preserves a short configured bout duration while a one-minute break is active", () => {
+    const activeBreak = {
+      ...snapshot,
+      clock: {
+        configuredDurationCentiseconds: 3_000,
+        mode: "break",
+        remainingDurationCentiseconds: 6_000,
+        status: "running"
+      }
+    } as const
+    expect(parseBoutWorkflowSnapshot(activeBreak)).toEqual(activeBreak)
+    expect(() =>
+      parseBoutWorkflowSnapshot({
+        ...activeBreak,
+        clock: { ...activeBreak.clock, mode: "overtime" }
+      })
+    ).toThrow(TypeError)
+    expect(() =>
+      parseBoutWorkflowSnapshot({
+        ...activeBreak,
+        clock: { ...activeBreak.clock, remainingDurationCentiseconds: 6_001 }
+      })
+    ).toThrow(TypeError)
   })
 })

@@ -50,6 +50,7 @@ export const REMOTE_COMMAND_REJECTION_REASONS = [
   "incomplete-snapshot",
   "incompatible-snapshot-revision",
   "entry-timeout",
+  "event-capacity-exhausted",
   "owner-unavailable",
   "stm32-rejection"
 ] as const
@@ -121,6 +122,7 @@ export type BoutWorkflowSnapshot = Readonly<{
   boutId: string
   boutRevision: number
   clock: Readonly<{
+    /** Configured bout-clock duration; a temporary break does not replace it. */
     configuredDurationCentiseconds: number
     mode: "bout" | "break" | "overtime"
     remainingDurationCentiseconds: number
@@ -387,8 +389,10 @@ export function isBoutWorkflowSnapshot(value: unknown): value is BoutWorkflowSna
     keys(value.clock, ["configuredDurationCentiseconds", "mode", "remainingDurationCentiseconds", "status"]) &&
     integer(value.clock.configuredDurationCentiseconds) &&
     integer(value.clock.remainingDurationCentiseconds) &&
-    value.clock.remainingDurationCentiseconds <= value.clock.configuredDurationCentiseconds &&
     oneOf(value.clock.mode, ["bout", "break", "overtime"]) &&
+    (value.clock.mode === "break"
+      ? value.clock.remainingDurationCentiseconds <= 6_000
+      : value.clock.remainingDurationCentiseconds <= value.clock.configuredDurationCentiseconds) &&
     oneOf(value.clock.status, ["running", "stopped"]) &&
     record(value.competition) &&
     keys(value.competition, ["kind", "value"]) &&

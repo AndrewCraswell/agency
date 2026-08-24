@@ -45,6 +45,7 @@ export type PendingNewBout = Readonly<{
 }>
 
 export type BoutWorkflowReducerState = Readonly<{
+  completedCommandIds: readonly string[]
   completedEvents: readonly BoutStateEvent[]
   pendingNewBout: PendingNewBout | null
   snapshot: BoutWorkflowSnapshot
@@ -77,6 +78,13 @@ export type BoutWorkflowReduction = Readonly<{
   state: BoutWorkflowReducerState
 }>
 
+/**
+ * The event replay cache is intentionally shorter than the command-ID ledger.
+ * The reducer never evicts command IDs. Once full, it stays unavailable for
+ * new commands until the owning service performs an explicit audited lifecycle
+ * reset; retransmissions of retained IDs still resolve as duplicates.
+ */
+export const BOUT_WORKFLOW_COMMAND_ID_CAPACITY = 4_096
 const MAX_RETAINED_EVENTS = 256
 const IDENTIFIER_MAX = 96
 
@@ -138,9 +146,11 @@ function freeze<T>(value: T): T {
 function freezeState(
   snapshot: BoutWorkflowSnapshot,
   pendingNewBout: PendingNewBout | null,
-  completedEvents: readonly BoutStateEvent[]
+  completedEvents: readonly BoutStateEvent[],
+  completedCommandIds: readonly string[]
 ): BoutWorkflowReducerState {
   return freeze({
+    completedCommandIds: [...completedCommandIds],
     completedEvents: completedEvents.map((event) => freeze(structuredClone(event))),
     pendingNewBout: pendingNewBout === null ? null : freeze(structuredClone(pendingNewBout)),
     snapshot: freeze(copySnapshot(snapshot))
@@ -150,7 +160,7 @@ function freezeState(
 function eventFor(
   command: RemoteCommand,
   snapshot: BoutWorkflowSnapshot,
-  cause: Extract<BoutStateEvent["cause"], "bout.reset.result" | "bout.snapshot.load">,
+  cause: Exclude<BoutStateEvent["cause"], "command.rejected">,
   stm32RecordId: string | null
 ): BoutStateEvent {
   return freeze({
@@ -186,7 +196,22 @@ function rejection(
 
 function remember(state: BoutWorkflowReducerState, event: BoutStateEvent): BoutWorkflowReducerState {
   const completed = [...state.completedEvents, event]
-  return freezeState(state.snapshot, state.pendingNewBout, completed.slice(-MAX_RETAINED_EVENTS))
+  return freezeState(state.snapshot, state.pendingNewBout, completed.slice(-MAX_RETAINED_EVENTS), [
+    ...state.completedCommandIds,
+    event.sourceCommand.commandId
+  ])
+}
+
+function complete(
+  state: BoutWorkflowReducerState,
+  snapshot: BoutWorkflowSnapshot,
+  pendingNewBout: PendingNewBout | null,
+  event: BoutStateEvent
+): BoutWorkflowReducerState {
+  return freezeState(snapshot, pendingNewBout, [...state.completedEvents, event].slice(-MAX_RETAINED_EVENTS), [
+    ...state.completedCommandIds,
+    event.sourceCommand.commandId
+  ])
 }
 
 function acceptedSnapshot(
@@ -202,6 +227,46 @@ function acceptedSnapshot(
     sourceCommandIdentity: sourceFor(command),
     stm32RecordId
   })
+}
+
+function apply(
+  state: BoutWorkflowReducerState,
+  command: RemoteCommand,
+  cause: Exclude<BoutStateEvent["cause"], "command.rejected">,
+  next: BoutWorkflowSnapshot
+): BoutWorkflowReduction {
+  if (state.snapshot.eventRevision === Number.MAX_SAFE_INTEGER) return reject(state, command, "out-of-bounds")
+  const snapshot = acceptedSnapshot(next, command, state.snapshot.eventRevision + 1, null)
+  const event = eventFor(command, snapshot, cause, null)
+  return {
+    event,
+    outcome: "applied",
+    reason: null,
+    state: complete(state, snapshot, null, event)
+  }
+}
+
+function isBoutClock(snapshot: BoutWorkflowSnapshot): boolean {
+  return snapshot.clock.mode === "bout"
+}
+
+function adjustedClockDuration(snapshot: BoutWorkflowSnapshot): number {
+  return snapshot.clock.remainingDurationCentiseconds < 1_000 ? 1 : 100
+}
+
+function scoreCommand(command: RemoteCommand): Readonly<{ direction: -1 | 1; side: "left" | "right" }> | null {
+  switch (command.command) {
+    case "score.increment.left":
+      return { direction: 1, side: "left" }
+    case "score.increment.right":
+      return { direction: 1, side: "right" }
+    case "score.decrement.left":
+      return { direction: -1, side: "left" }
+    case "score.decrement.right":
+      return { direction: -1, side: "right" }
+    default:
+      return null
+  }
 }
 
 function reject(
@@ -383,13 +448,13 @@ export function createFreshBoutWorkflowSnapshot(input: FreshBoutWorkflowInput): 
 
 /** Creates a reducer state only from a full, strictly parseable snapshot. */
 export function createBoutWorkflowReducerState(snapshot: unknown): BoutWorkflowReducerState {
-  return freezeState(parseBoutWorkflowSnapshot(snapshot), null, [])
+  return freezeState(parseBoutWorkflowSnapshot(snapshot), null, [], [])
 }
 
 /**
  * Reduces one already authenticated command or one STM32 new-bout response.
- * Unsupported commands intentionally receive a rejection event until their
- * dedicated RC-06+ behaviour is implemented.
+ * Commands outside the implemented RC-05/RC-06 slices intentionally receive
+ * a rejection event until their dedicated workflow slice is implemented.
  */
 export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: BoutWorkflowAction): BoutWorkflowReduction {
   const safeCommandAction = parseCommandAction(action, state.snapshot)
@@ -404,14 +469,24 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
     }
   }
 
-  const duplicate =
-    safeAction.type === "command"
-      ? state.completedEvents.find((event) => event.sourceCommand.commandId === safeAction.command.commandId)
-      : undefined
-  if (duplicate !== undefined) return { event: duplicate, outcome: "duplicate", reason: null, state }
+  if (safeAction.type === "command" && state.completedCommandIds.includes(safeAction.command.commandId)) {
+    const duplicate = state.completedEvents.find(
+      (event) => event.sourceCommand.commandId === safeAction.command.commandId
+    )
+    return { event: duplicate ?? null, outcome: "duplicate", reason: null, state }
+  }
 
   if (safeAction.type === "command" && state.pendingNewBout?.command.commandId === safeAction.command.commandId) {
     return { event: null, outcome: "pending", reason: null, state }
+  }
+
+  if (
+    safeAction.type === "command" &&
+    state.completedCommandIds.length >=
+      (state.pendingNewBout === null ? BOUT_WORKFLOW_COMMAND_ID_CAPACITY : BOUT_WORKFLOW_COMMAND_ID_CAPACITY - 1)
+  ) {
+    const event = rejection(safeAction.command, "event-capacity-exhausted", state.snapshot.eventRevision)
+    return { event, outcome: "rejected", reason: "event-capacity-exhausted", state }
   }
 
   if (safeAction.type === "stm32-bout-reset-result") {
@@ -421,7 +496,7 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
     }
     if (safeAction.result === "rejected") {
       const event = rejection(pending.command, "stm32-rejection", state.snapshot.eventRevision)
-      const next = freezeState(state.snapshot, null, [...state.completedEvents, event].slice(-MAX_RETAINED_EVENTS))
+      const next = complete(state, state.snapshot, null, event)
       return { event, outcome: "rejected", reason: "stm32-rejection", state: next }
     }
     if (
@@ -429,12 +504,12 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
       state.snapshot.boutRevision === Number.MAX_SAFE_INTEGER
     ) {
       const event = rejection(pending.command, "stm32-rejection", state.snapshot.eventRevision)
-      const next = freezeState(state.snapshot, null, [...state.completedEvents, event].slice(-MAX_RETAINED_EVENTS))
+      const next = complete(state, state.snapshot, null, event)
       return { event, outcome: "rejected", reason: "stm32-rejection", state: next }
     }
     const snapshot = freshFromPending(pending, state.snapshot, safeAction.stm32RecordId)
     const event = eventFor(pending.command, snapshot, "bout.reset.result", safeAction.stm32RecordId)
-    const next = freezeState(snapshot, null, [...state.completedEvents, event].slice(-MAX_RETAINED_EVENTS))
+    const next = complete(state, snapshot, null, event)
     return { event, outcome: "applied", reason: null, state: next }
   }
 
@@ -460,7 +535,7 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
     if (loaded.sourceCommandDisposition !== "accepted") return reject(state, command, "incomplete-snapshot")
     const snapshot = acceptedSnapshot(loaded, command, loaded.eventRevision, loaded.stm32RecordId)
     const event = eventFor(command, snapshot, "bout.snapshot.load", loaded.stm32RecordId)
-    const next = freezeState(snapshot, null, [...state.completedEvents, event].slice(-MAX_RETAINED_EVENTS))
+    const next = complete(state, snapshot, null, event)
     return { event, outcome: "applied", reason: null, state: next }
   }
 
@@ -476,8 +551,114 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
       event: null,
       outcome: "pending",
       reason: null,
-      state: freezeState(state.snapshot, pending, state.completedEvents)
+      state: freezeState(state.snapshot, pending, state.completedEvents, state.completedCommandIds)
     }
+  }
+
+  const score = scoreCommand(command)
+  if (score !== null) {
+    if (state.snapshot.clock.mode === "break") return reject(state, command, "invalid-mode")
+    const side = state.snapshot.sides[score.side]
+    if (score.direction < 0 && side.score === 0) return reject(state, command, "out-of-bounds")
+    if (score.direction > 0 && side.score === Number.MAX_SAFE_INTEGER) return reject(state, command, "out-of-bounds")
+    return apply(state, command, score.direction > 0 ? "score.increment" : "score.decrement", {
+      ...copySnapshot(state.snapshot),
+      lastScoredSide: score.direction > 0 ? score.side : state.snapshot.lastScoredSide,
+      sides: {
+        ...structuredClone(state.snapshot.sides),
+        [score.side]: { ...structuredClone(side), score: side.score + score.direction }
+      }
+    })
+  }
+
+  if (command.command === "clock.toggle") {
+    const status = state.snapshot.clock.status === "running" ? "stopped" : "running"
+    if (status === "running" && state.snapshot.clock.remainingDurationCentiseconds === 0)
+      return reject(state, command, "out-of-bounds")
+    return apply(state, command, status === "running" ? "clock.start" : "clock.stop", {
+      ...copySnapshot(state.snapshot),
+      clock: { ...structuredClone(state.snapshot.clock), status },
+      passivity:
+        state.snapshot.clock.mode === "bout" && state.snapshot.passivity !== null
+          ? { ...structuredClone(state.snapshot.passivity), status }
+          : state.snapshot.passivity === null
+            ? null
+            : structuredClone(state.snapshot.passivity)
+    })
+  }
+
+  if (command.command === "clock.adjust.positive" || command.command === "clock.adjust.negative") {
+    if (state.snapshot.clock.status === "running") return reject(state, command, "clock-running")
+    if (!isBoutClock(state.snapshot)) return reject(state, command, "invalid-mode")
+    const amount = adjustedClockDuration(state.snapshot)
+    const remaining =
+      command.command === "clock.adjust.positive"
+        ? state.snapshot.clock.remainingDurationCentiseconds + amount
+        : state.snapshot.clock.remainingDurationCentiseconds - amount
+    if (remaining < 0 || remaining > state.snapshot.clock.configuredDurationCentiseconds)
+      return reject(state, command, "out-of-bounds")
+    return apply(state, command, "clock.adjust", {
+      ...copySnapshot(state.snapshot),
+      clock: { ...structuredClone(state.snapshot.clock), remainingDurationCentiseconds: remaining }
+    })
+  }
+
+  if (command.command === "clock.loadConfigured") {
+    if (state.snapshot.clock.status === "running") return reject(state, command, "clock-running")
+    if (state.snapshot.clock.configuredDurationCentiseconds === 0) return reject(state, command, "invalid-mode")
+    return apply(state, command, "clock.set", {
+      ...copySnapshot(state.snapshot),
+      clock: {
+        ...structuredClone(state.snapshot.clock),
+        mode: "bout",
+        remainingDurationCentiseconds: state.snapshot.clock.configuredDurationCentiseconds,
+        status: "stopped"
+      }
+    })
+  }
+
+  if (command.command === "clock.loadOneMinute") {
+    if (state.snapshot.clock.status === "running") return reject(state, command, "clock-running")
+    return apply(state, command, "clock.set", {
+      ...copySnapshot(state.snapshot),
+      clock: {
+        ...structuredClone(state.snapshot.clock),
+        mode: "bout",
+        remainingDurationCentiseconds: 6_000,
+        configuredDurationCentiseconds: 6_000,
+        status: "stopped"
+      }
+    })
+  }
+
+  if (command.command === "clock.configure") {
+    if (state.snapshot.clock.status === "running") return reject(state, command, "clock-running")
+    const duration = (command.payload.minutes * 60 + command.payload.seconds) * 100
+    if (duration === 0) return reject(state, command, "out-of-bounds")
+    return apply(state, command, "clock.set", {
+      ...copySnapshot(state.snapshot),
+      clock: {
+        ...structuredClone(state.snapshot.clock),
+        configuredDurationCentiseconds: duration,
+        mode: "bout",
+        remainingDurationCentiseconds: duration,
+        status: "stopped"
+      }
+    })
+  }
+
+  if (command.command === "break.start.oneMinute") {
+    if (state.snapshot.clock.status === "running") return reject(state, command, "clock-running")
+    if (!isBoutClock(state.snapshot)) return reject(state, command, "invalid-mode")
+    return apply(state, command, "break.start", {
+      ...copySnapshot(state.snapshot),
+      clock: {
+        configuredDurationCentiseconds: state.snapshot.clock.configuredDurationCentiseconds,
+        mode: "break",
+        remainingDurationCentiseconds: 6_000,
+        status: "running"
+      }
+    })
   }
 
   return reject(state, command, "unsupported-command")
