@@ -20,10 +20,27 @@ replace physical continuity, component behaviour, or generated-artwork checks.
 ## Footprint review queue
 
 The executable artifact has one exact-MPN review record for each 45-reference
-coupon BOM entry. An implementation reconciliation binds each reference, MPN,
-package, and manufacturer-primary URL to the schematic BOM. A separate field
-names `root-final-reviewer` for every drawing review. It is deliberately
-`pending`; implementation work cannot approve its own footprints.
+coupon BOM entry, across 26 distinct MPNs. An implementation reconciliation
+binds each reference, MPN, package, and manufacturer-primary URL to the
+schematic BOM. The source is bound to the exact MPN record, so shared package
+families do not borrow another MPN's drawing review. A separate field names
+`root-final-reviewer` for every drawing review. It is deliberately `pending`;
+implementation work cannot approve its own footprints.
+
+The only manufacturer drawing source currently recorded is Molex
+`SD-43650-001`, revision D8, for the `43650-0300` Micro-Fit 3.0 fixture
+header. The existing source record identifies its three 1.02-mm-plus-or-minus-
+0.05-mm component-side layout holes on 3.00-mm pitch, circuit-one datum,
+1.57-mm recommended board thickness, and 10.16-mm maximum board-edge
+placement. It is series-drawing evidence only: it does not release a finished
+hole, copper, mask, paste, courtyard, or orientation decision.
+
+For every other exact MPN, the manufacturer-primary technical URL is recorded
+as discovery evidence but the exact drawing bytes and revision remain
+unacquired. No manufacturer CAD artifact has been acquired or marked available,
+and the existing circuit source supplies a schematic reference only, not
+generated footprint artwork or an overlay. These are intentional, precise
+blockers rather than assumed package geometry.
 
 For every reference, the root review must acquire and hash the exact
 manufacturer package drawing and CAD object, or record the manufacturer-source

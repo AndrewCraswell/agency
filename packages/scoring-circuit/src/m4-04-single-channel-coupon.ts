@@ -173,12 +173,66 @@ const ercNets = [
   }
 ] as const
 
+type CouponBomPart = (typeof oneChannelAnalogExperimentBom)[number]
+
+function drawingEvidenceFor(part: CouponBomPart) {
+  if (part.mpn === "43650-0300") {
+    return {
+      acquisition: "source-recorded" as const,
+      drawingUrl:
+        "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/436/43650/436500400_sd.pdf",
+      drawingIdentifier: "SD-43650-001, revision D8",
+      scope:
+        "Manufacturer 43650-series right-angle Micro-Fit drawing. Root review must still confirm its 0300 circuit count and orientation before accepting a footprint.",
+      geometry:
+        "Three 1.02 mm plus or minus 0.05 mm component-side layout holes on a 3.00 mm pitch, 1.57 mm recommended board thickness, circuit-one marking, and 10.16 mm maximum board-edge placement.",
+      sha256: null
+    }
+  }
+  return {
+    acquisition: "not-acquired" as const,
+    drawingUrl: null,
+    drawingIdentifier: null,
+    scope:
+      "No exact drawing bytes or revision have been acquired for this MPN; the manufacturer-primary technical link is discovery evidence only.",
+    geometry: null,
+    sha256: null
+  }
+}
+
+function footprintEvidenceFor(part: CouponBomPart) {
+  return {
+    exactMpn: part.mpn,
+    manufacturerPrimaryDocument: {
+      url: part.primaryEvidenceUrl,
+      scope:
+        "Bound only to this exact MPN record. A shared package family must receive its own record and cannot inherit this review.",
+      status: "identified-not-hash-acquired" as const
+    },
+    manufacturerDrawing: drawingEvidenceFor(part),
+    manufacturerCad: {
+      availability: "not-verified" as const,
+      sourceUrl: null,
+      artifactPath: null,
+      sha256: null,
+      status: "not-acquired" as const
+    },
+    reviewArtwork: {
+      sourceFile: "src/one-channel-analog-experiment.circuit.tsx",
+      status: "schematic-reference-only" as const,
+      artifactPath: null,
+      sha256: null,
+      overlayStatus: "not-generated" as const
+    }
+  }
+}
+
 const footprintReviews = oneChannelAnalogExperimentBom.map((part) => ({
   reference: part.reference,
   manufacturer: part.manufacturer,
   exactMpn: part.mpn,
   package: part.package,
-  manufacturerPrimaryUrl: part.primaryEvidenceUrl,
+  evidence: footprintEvidenceFor(part),
   implementationEvidence: {
     reviewerId: "m4-04-implementation-agent",
     status: "bom-and-schematic-identity-reconciled" as const,
@@ -246,6 +300,15 @@ export function validateM404SingleChannelCoupon(value: unknown): true {
   }
   const coupon = M404_SINGLE_CHANNEL_COUPON
   const referenceSet = new Set(coupon.footprints.map((footprint) => footprint.reference))
+  const mpnSourceRecords = new Map<string, string>()
+  for (const footprint of coupon.footprints) {
+    const existingSourceUrl = mpnSourceRecords.get(footprint.exactMpn)
+    if (existingSourceUrl === undefined) {
+      mpnSourceRecords.set(footprint.exactMpn, footprint.evidence.manufacturerPrimaryDocument.url)
+    } else if (existingSourceUrl !== footprint.evidence.manufacturerPrimaryDocument.url) {
+      throw new RangeError("M4-04 exact MPN source records must not drift between repeated references")
+    }
+  }
   if (
     coupon.workUnit !== "M4-04" ||
     coupon.erc.status !== "pass" ||
@@ -257,7 +320,20 @@ export function validateM404SingleChannelCoupon(value: unknown): true {
       (footprint) =>
         footprint.exactMpn.trim() === "" ||
         footprint.package.trim() === "" ||
-        !footprint.manufacturerPrimaryUrl.startsWith("https://") ||
+        footprint.evidence.exactMpn !== footprint.exactMpn ||
+        !footprint.evidence.manufacturerPrimaryDocument.url.startsWith("https://") ||
+        footprint.evidence.manufacturerPrimaryDocument.status !== "identified-not-hash-acquired" ||
+        (footprint.exactMpn === "43650-0300"
+          ? footprint.evidence.manufacturerDrawing.acquisition !== "source-recorded" ||
+            footprint.evidence.manufacturerDrawing.drawingIdentifier !== "SD-43650-001, revision D8" ||
+            footprint.evidence.manufacturerDrawing.geometry === null
+          : footprint.evidence.manufacturerDrawing.acquisition !== "not-acquired" ||
+            footprint.evidence.manufacturerDrawing.drawingUrl !== null ||
+            footprint.evidence.manufacturerDrawing.geometry !== null) ||
+        footprint.evidence.manufacturerCad.status !== "not-acquired" ||
+        footprint.evidence.manufacturerCad.availability !== "not-verified" ||
+        footprint.evidence.reviewArtwork.status !== "schematic-reference-only" ||
+        footprint.evidence.reviewArtwork.overlayStatus !== "not-generated" ||
         footprint.implementationEvidence.status !== "bom-and-schematic-identity-reconciled" ||
         footprint.independentDrawingReview.reviewerId !== "root-final-reviewer" ||
         footprint.independentDrawingReview.status !== "pending" ||

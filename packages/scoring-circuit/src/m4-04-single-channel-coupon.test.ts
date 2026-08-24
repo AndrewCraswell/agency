@@ -13,6 +13,24 @@ describe("M4-04 single-channel sensing coupon", () => {
       oneChannelAnalogExperimentBom.map((part) => part.reference)
     )
     expect(M404_SINGLE_CHANNEL_COUPON.footprints).toHaveLength(45)
+    expect(new Set(M404_SINGLE_CHANNEL_COUPON.footprints.map((footprint) => footprint.exactMpn)).size).toBe(26)
+  })
+
+  it("records source evidence per exact MPN without inventing CAD or artwork", () => {
+    for (const footprint of M404_SINGLE_CHANNEL_COUPON.footprints) {
+      expect(footprint.evidence.exactMpn).toBe(footprint.exactMpn)
+      expect(footprint.evidence.manufacturerPrimaryDocument.url).toMatch(/^https:\/\//u)
+      expect(footprint.evidence.manufacturerCad).toMatchObject({ availability: "not-verified", status: "not-acquired" })
+      expect(footprint.evidence.reviewArtwork).toMatchObject({
+        overlayStatus: "not-generated",
+        status: "schematic-reference-only"
+      })
+    }
+    expect(
+      M404_SINGLE_CHANNEL_COUPON.footprints.find((footprint) => footprint.exactMpn === "43650-0300")?.evidence
+    ).toMatchObject({
+      manufacturerDrawing: { acquisition: "source-recorded", drawingIdentifier: "SD-43650-001, revision D8" }
+    })
   })
 
   it("requires a separate root reviewer and refuses to convert implementation reconciliation into footprint approval", () => {
@@ -33,6 +51,11 @@ describe("M4-04 single-channel sensing coupon", () => {
     [
       "forged footprint approval",
       (copy: typeof M404_SINGLE_CHANNEL_COUPON) => Reflect.set(copy.footprints[0], "footprintRelease", "released")
+    ],
+    [
+      "cross-MPN source reuse",
+      (copy: typeof M404_SINGLE_CHANNEL_COUPON) =>
+        Reflect.set(copy.footprints[0].evidence, "exactMpn", copy.footprints[1]?.exactMpn)
     ],
     [
       "self approved drawing",
