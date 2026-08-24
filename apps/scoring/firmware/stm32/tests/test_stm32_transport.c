@@ -164,6 +164,153 @@ static void test_fragmented_request_is_delivered_once(void) {
   CHECK(frame.payload_length == 0U);
 }
 
+static void assert_direct_and_receive_result(
+  scoring_stm32_transport_receiver_t receiver,
+  const uint8_t *bytes,
+  size_t byte_count,
+  uint32_t expected_sequence,
+  scoring_stm32_transport_result_t expected_result
+) {
+  scoring_stm32_transport_frame_t decoded;
+  scoring_stm32_transport_frame_t received;
+  scoring_stm32_transport_t transport;
+  scoring_stm32_transport_result_t decoded_result;
+  scoring_stm32_transport_result_t received_result;
+
+  decoded_result = scoring_stm32_transport_decode(receiver, bytes, byte_count, &decoded);
+  scoring_stm32_transport_init(&transport, receiver, expected_sequence, 0U);
+  received_result = scoring_stm32_transport_receive(&transport, bytes, byte_count, &received);
+  CHECK(decoded_result == expected_result);
+  CHECK(received_result == expected_result);
+
+  if (expected_result == SCORING_STM32_TRANSPORT_OK) {
+    CHECK(received.message_type == decoded.message_type);
+    CHECK(received.sequence == decoded.sequence);
+    CHECK(received.payload_length == decoded.payload_length);
+    CHECK(memcmp(received.payload, decoded.payload, decoded.payload_length) == 0);
+  }
+}
+
+static void test_direct_and_streaming_validation_are_equivalent(void) {
+  const scoring_stm32_transport_golden_fixture_t *fixture = &SCORING_STM32_TRANSPORT_GOLDEN_FIXTURES[1];
+  uint8_t altered[SCORING_STM32_TRANSPORT_MAX_FRAME_BYTES + 1U];
+  scoring_stm32_transport_frame_t frame;
+  scoring_stm32_transport_t transport;
+  size_t index;
+
+  for (index = 0U; index < SCORING_STM32_TRANSPORT_GOLDEN_FIXTURE_COUNT; index += 1U) {
+    const scoring_stm32_transport_golden_fixture_t *valid_fixture =
+      &SCORING_STM32_TRANSPORT_GOLDEN_FIXTURES[index];
+
+    assert_direct_and_receive_result(
+      valid_fixture->receiver,
+      valid_fixture->frame,
+      valid_fixture->frame_length,
+      valid_fixture->sequence,
+      SCORING_STM32_TRANSPORT_OK
+    );
+  }
+
+  (void)memcpy(altered, fixture->frame, fixture->frame_length);
+  altered[fixture->frame_length] = 0xA5U;
+  assert_direct_and_receive_result(
+    fixture->receiver,
+    altered,
+    fixture->frame_length + 1U,
+    fixture->sequence,
+    SCORING_STM32_TRANSPORT_LENGTH
+  );
+
+  (void)memcpy(altered, fixture->frame, fixture->frame_length);
+  altered[0] = 0U;
+  assert_direct_and_receive_result(
+    fixture->receiver,
+    altered,
+    fixture->frame_length,
+    fixture->sequence,
+    SCORING_STM32_TRANSPORT_MAGIC
+  );
+
+  (void)memcpy(altered, fixture->frame, fixture->frame_length);
+  altered[2] = 2U;
+  assert_direct_and_receive_result(
+    fixture->receiver,
+    altered,
+    fixture->frame_length,
+    fixture->sequence,
+    SCORING_STM32_TRANSPORT_VERSION
+  );
+
+  (void)memcpy(altered, fixture->frame, fixture->frame_length);
+  altered[3] = 0xFFU;
+  assert_direct_and_receive_result(
+    fixture->receiver,
+    altered,
+    fixture->frame_length,
+    fixture->sequence,
+    SCORING_STM32_TRANSPORT_MESSAGE_TYPE
+  );
+  assert_direct_and_receive_result(
+    SCORING_STM32_TRANSPORT_RECEIVER_ESP32,
+    fixture->frame,
+    fixture->frame_length,
+    fixture->sequence,
+    SCORING_STM32_TRANSPORT_DIRECTION
+  );
+
+  (void)memcpy(altered, fixture->frame, fixture->frame_length);
+  altered[5] = 1U;
+  assert_direct_and_receive_result(
+    fixture->receiver,
+    altered,
+    fixture->frame_length,
+    fixture->sequence,
+    SCORING_STM32_TRANSPORT_FLAGS
+  );
+
+  (void)memcpy(altered, fixture->frame, fixture->frame_length);
+  altered[10] = 0U;
+  altered[11] = 0U;
+  altered[12] = 0x10U;
+  altered[13] = 1U;
+  assert_direct_and_receive_result(
+    fixture->receiver,
+    altered,
+    fixture->frame_length,
+    fixture->sequence,
+    SCORING_STM32_TRANSPORT_PAYLOAD_LENGTH
+  );
+
+  (void)memcpy(altered, fixture->frame, fixture->frame_length);
+  altered[fixture->frame_length - 1U] ^= 1U;
+  assert_direct_and_receive_result(
+    fixture->receiver,
+    altered,
+    fixture->frame_length,
+    fixture->sequence,
+    SCORING_STM32_TRANSPORT_CRC
+  );
+
+  CHECK(
+    scoring_stm32_transport_decode(
+      fixture->receiver,
+      fixture->frame,
+      fixture->frame_length - 1U,
+      &frame
+    ) == SCORING_STM32_TRANSPORT_LENGTH
+  );
+  scoring_stm32_transport_init(&transport, fixture->receiver, fixture->sequence, 0U);
+  CHECK(
+    scoring_stm32_transport_receive(
+      &transport,
+      fixture->frame,
+      fixture->frame_length - 1U,
+      &frame
+    ) == SCORING_STM32_TRANSPORT_NEED_MORE
+  );
+  CHECK(transport.receive_failed == false);
+}
+
 static void test_invalid_frame_conditions_fail_closed(void) {
   const scoring_stm32_transport_golden_fixture_t *fixture = &SCORING_STM32_TRANSPORT_GOLDEN_FIXTURES[1];
   uint8_t altered[SCORING_STM32_TRANSPORT_MAX_FRAME_BYTES];
@@ -692,6 +839,7 @@ int main(void) {
   test_transport_argument_guards_and_decode_bounds();
   test_generated_golden_frames_match_c_codec();
   test_fragmented_request_is_delivered_once();
+  test_direct_and_streaming_validation_are_equivalent();
   test_invalid_frame_conditions_fail_closed();
   test_payload_and_receive_bounds_are_exact();
   test_receive_fail_closed_paths();

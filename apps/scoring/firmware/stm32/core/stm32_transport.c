@@ -104,6 +104,75 @@ static scoring_stm32_transport_result_t validate_fixed_header(
   return SCORING_STM32_TRANSPORT_OK;
 }
 
+static scoring_stm32_transport_result_t validate_header_and_declared_length(
+  scoring_stm32_transport_receiver_t receiver,
+  const uint8_t *bytes,
+  size_t *out_frame_bytes
+) {
+  scoring_stm32_transport_result_t result;
+  uint32_t payload_length;
+
+  result = validate_fixed_header(receiver, bytes);
+  if (result != SCORING_STM32_TRANSPORT_OK) {
+    return result;
+  }
+
+  payload_length = read_u32_be(&bytes[SCORING_STM32_TRANSPORT_PAYLOAD_LENGTH_OFFSET]);
+  if (payload_length > SCORING_STM32_TRANSPORT_MAX_PAYLOAD_BYTES) {
+    return SCORING_STM32_TRANSPORT_PAYLOAD_LENGTH;
+  }
+
+  *out_frame_bytes = SCORING_STM32_TRANSPORT_HEADER_BYTES +
+    (size_t)payload_length + SCORING_STM32_TRANSPORT_CRC_BYTES;
+  return SCORING_STM32_TRANSPORT_OK;
+}
+
+static scoring_stm32_transport_result_t validate_complete_frame(
+  scoring_stm32_transport_receiver_t receiver,
+  const uint8_t *bytes,
+  size_t byte_count,
+  scoring_stm32_transport_frame_t *out_frame
+) {
+  scoring_stm32_transport_result_t result;
+  size_t expected_frame_bytes;
+  size_t payload_length;
+  uint32_t expected_crc;
+
+  if (
+    byte_count < SCORING_STM32_TRANSPORT_HEADER_BYTES ||
+    byte_count > SCORING_STM32_TRANSPORT_MAX_FRAME_BYTES
+  ) {
+    return SCORING_STM32_TRANSPORT_LENGTH;
+  }
+
+  result = validate_header_and_declared_length(receiver, bytes, &expected_frame_bytes);
+  if (result != SCORING_STM32_TRANSPORT_OK) {
+    return result;
+  }
+
+  if (byte_count != expected_frame_bytes) {
+    return SCORING_STM32_TRANSPORT_LENGTH;
+  }
+
+  expected_crc = read_u32_be(&bytes[expected_frame_bytes - SCORING_STM32_TRANSPORT_CRC_BYTES]);
+  if (
+    scoring_stm32_transport_crc32c(
+      bytes,
+      expected_frame_bytes - SCORING_STM32_TRANSPORT_CRC_BYTES
+    ) != expected_crc
+  ) {
+    return SCORING_STM32_TRANSPORT_CRC;
+  }
+
+  payload_length = expected_frame_bytes - SCORING_STM32_TRANSPORT_HEADER_BYTES -
+    SCORING_STM32_TRANSPORT_CRC_BYTES;
+  out_frame->message_type = (scoring_stm32_transport_message_type_t)bytes[3];
+  out_frame->payload = &bytes[SCORING_STM32_TRANSPORT_HEADER_BYTES];
+  out_frame->payload_length = payload_length;
+  out_frame->sequence = read_u32_be(&bytes[SCORING_STM32_TRANSPORT_SEQUENCE_OFFSET]);
+  return SCORING_STM32_TRANSPORT_OK;
+}
+
 uint32_t scoring_stm32_transport_crc32c(const uint8_t *bytes, size_t byte_count) {
   uint32_t crc = UINT32_MAX;
   size_t index;
@@ -166,53 +235,12 @@ scoring_stm32_transport_result_t scoring_stm32_transport_decode(
   size_t byte_count,
   scoring_stm32_transport_frame_t *out_frame
 ) {
-  uint32_t payload_length;
-  size_t payload_end;
-  uint32_t expected_crc;
-  scoring_stm32_transport_message_type_t message_type;
-
   clear_frame(out_frame);
   if (!is_valid_receiver(receiver) || bytes == NULL || out_frame == NULL) {
     return SCORING_STM32_TRANSPORT_INVALID_ARGUMENT;
   }
 
-  if (byte_count < SCORING_STM32_TRANSPORT_HEADER_BYTES) {
-    return SCORING_STM32_TRANSPORT_LENGTH;
-  }
-
-  if (byte_count > SCORING_STM32_TRANSPORT_MAX_FRAME_BYTES) {
-    return SCORING_STM32_TRANSPORT_LENGTH;
-  }
-
-  {
-    scoring_stm32_transport_result_t header_result = validate_fixed_header(receiver, bytes);
-    if (header_result != SCORING_STM32_TRANSPORT_OK) {
-      return header_result;
-    }
-  }
-
-  message_type = (scoring_stm32_transport_message_type_t)bytes[3];
-
-  payload_length = read_u32_be(&bytes[SCORING_STM32_TRANSPORT_PAYLOAD_LENGTH_OFFSET]);
-  if (payload_length > SCORING_STM32_TRANSPORT_MAX_PAYLOAD_BYTES) {
-    return SCORING_STM32_TRANSPORT_PAYLOAD_LENGTH;
-  }
-
-  payload_end = SCORING_STM32_TRANSPORT_HEADER_BYTES + (size_t)payload_length;
-  if (byte_count != payload_end + SCORING_STM32_TRANSPORT_CRC_BYTES) {
-    return SCORING_STM32_TRANSPORT_LENGTH;
-  }
-
-  expected_crc = read_u32_be(&bytes[payload_end]);
-  if (scoring_stm32_transport_crc32c(bytes, payload_end) != expected_crc) {
-    return SCORING_STM32_TRANSPORT_CRC;
-  }
-
-  out_frame->message_type = message_type;
-  out_frame->payload = &bytes[SCORING_STM32_TRANSPORT_HEADER_BYTES];
-  out_frame->payload_length = (size_t)payload_length;
-  out_frame->sequence = read_u32_be(&bytes[SCORING_STM32_TRANSPORT_SEQUENCE_OFFSET]);
-  return SCORING_STM32_TRANSPORT_OK;
+  return validate_complete_frame(receiver, bytes, byte_count, out_frame);
 }
 
 static scoring_stm32_transport_result_t fail_receive(
@@ -231,7 +259,6 @@ scoring_stm32_transport_result_t scoring_stm32_transport_receive(
   scoring_stm32_transport_frame_t *out_frame
 ) {
   scoring_stm32_transport_result_t result;
-  uint32_t declared_payload_length;
 
   clear_frame(out_frame);
   if (transport == NULL || out_frame == NULL || (bytes == NULL && byte_count != 0U)) {
@@ -263,20 +290,15 @@ scoring_stm32_transport_result_t scoring_stm32_transport_receive(
     return SCORING_STM32_TRANSPORT_NEED_MORE;
   }
 
-  result = validate_fixed_header(transport->receiver, transport->receive_buffer);
+  result = validate_header_and_declared_length(
+    transport->receiver,
+    transport->receive_buffer,
+    &transport->expected_frame_bytes
+  );
   if (result != SCORING_STM32_TRANSPORT_OK) {
     return fail_receive(transport, result);
   }
 
-  declared_payload_length = read_u32_be(
-    &transport->receive_buffer[SCORING_STM32_TRANSPORT_PAYLOAD_LENGTH_OFFSET]
-  );
-  if (declared_payload_length > SCORING_STM32_TRANSPORT_MAX_PAYLOAD_BYTES) {
-    return fail_receive(transport, SCORING_STM32_TRANSPORT_PAYLOAD_LENGTH);
-  }
-
-  transport->expected_frame_bytes = SCORING_STM32_TRANSPORT_HEADER_BYTES +
-    (size_t)declared_payload_length + SCORING_STM32_TRANSPORT_CRC_BYTES;
   if (transport->received_byte_count < transport->expected_frame_bytes) {
     return SCORING_STM32_TRANSPORT_NEED_MORE;
   }
@@ -285,7 +307,7 @@ scoring_stm32_transport_result_t scoring_stm32_transport_receive(
     return fail_receive(transport, SCORING_STM32_TRANSPORT_LENGTH);
   }
 
-  result = scoring_stm32_transport_decode(
+  result = validate_complete_frame(
     transport->receiver,
     transport->receive_buffer,
     transport->received_byte_count,

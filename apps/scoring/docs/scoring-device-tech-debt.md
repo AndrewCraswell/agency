@@ -172,7 +172,7 @@ truth.
 ## FW-001: share STM32 one-shot and streaming frame validation
 
 - Priority: `P1`
-- State: `ready`
+- State: `done`
 - Affected files: [`apps/scoring/firmware/stm32/core/stm32_transport.c`](../firmware/stm32/core/stm32_transport.c) (lines 163-215 and 227-314), [`apps/scoring/firmware/stm32/include/stm32_transport.h`](../firmware/stm32/include/stm32_transport.h) (lines 101-119), and [`apps/scoring/firmware/stm32/tests/test_stm32_transport.c`](../firmware/stm32/tests/test_stm32_transport.c) (lines 138-213 and 272-337).
 - Description and evidence: `scoring_stm32_transport_decode` validates the fixed header, message direction, payload bound, exact frame length, and CRC before projecting a frame (lines 174-215). `scoring_stm32_transport_receive` repeats header validation, payload-length validation, expected-frame-length arithmetic, and excess-byte rejection while buffering, then calls `decode` and applies sequence checks (lines 262-313). The fragmented and complete-frame tests exercise both paths, but the validation rules remain manually maintained twice.
 - Impact: a future header, length, or CRC-policy change can update the direct decoder and leave the streaming path with different acceptance or error behavior. The current coverage gate proves both implementations, but it does not prove that their duplicated checks remain equivalent.
