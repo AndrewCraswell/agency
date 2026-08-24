@@ -1,7 +1,8 @@
 # Legislative records and document endpoints
 
-All operations use the [shared envelopes, pagination, errors, and named schemas](schemas.md). Each heading's operation
-ID is its lower-camel-case label in parentheses. A `GET` request has no
+All operations use the [shared envelopes, pagination, errors, and named schemas](schemas.md). A lower-camel-case label
+in parentheses names the corresponding application-service operation. The generated OpenAPI operation ID follows the
+[deterministic rule](README.md#operation-ids-and-generated-specifications). A `GET` request has no
 request body. Unless an operation says otherwise, successful retrieval returns `200`; conditional retrieval may return
 `304`; documented domain failures use the shared error body.
 
