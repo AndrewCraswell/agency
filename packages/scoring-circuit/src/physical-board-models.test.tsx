@@ -50,6 +50,28 @@ function traceNames(json: CircuitJson): string[] {
   )
 }
 
+function weaponComponentContract(json: CircuitJson, reference: string) {
+  const source = json.find((element) => element.type === "source_component" && element.name === reference)
+  if (source?.type !== "source_component") throw new Error(`missing ${reference}`)
+  return {
+    manufacturerPartNumber: source.manufacturer_part_number,
+    ports: json
+      .flatMap((element) =>
+        element.type === "source_port" && element.source_component_id === source.source_component_id
+          ? element.port_hints
+          : []
+      )
+      .sort()
+  }
+}
+
+function normalizedWeaponTraces(json: CircuitJson, side: "L" | "R") {
+  return traceNames(json)
+    .filter((trace) => trace.includes(`U_ESD_${side}`) || trace.includes(`U_FRONTEND_${side}`))
+    .map((trace) => (trace.includes(" to U_ESD_") ? trace.replace(/^[^ ]+ to /, "J_WEAPON.SIGNAL to ") : trace))
+    .sort()
+}
+
 function expectNoRenderErrors(json: CircuitJson): void {
   expect(json.filter((element) => element.type.endsWith("_error"))).toEqual([])
 }
@@ -120,6 +142,25 @@ describe("separate physical-board planning models", () => {
     expectNoRenderErrors(scoringPcb)
     expectNoRenderErrors(applicationPcb)
     expectNoRenderErrors(communicationsPcb)
+  })
+
+  it("shares the complete weapon ESD/front-end topology while keeping connector labels board-specific", () => {
+    for (const side of ["L", "R"] as const) {
+      expect(weaponComponentContract(logicalSource, `U_ESD_${side}`)).toEqual(
+        weaponComponentContract(scoringSource, `U_ESD_${side}`)
+      )
+      expect(weaponComponentContract(logicalSource, `U_FRONTEND_${side}`)).toEqual(
+        weaponComponentContract(scoringSource, `U_FRONTEND_${side}`)
+      )
+      expect(normalizedWeaponTraces(logicalSource, side)).toEqual(normalizedWeaponTraces(scoringSource, side))
+    }
+
+    expect(weaponComponentContract(logicalSource, "J_L").ports).toEqual(expect.arrayContaining(["A", "B", "C"]))
+    expect(weaponComponentContract(scoringSource, "J_WEAPON_HARNESS_L").ports).toEqual(
+      expect.arrayContaining(["WEAPON_A", "WEAPON_B", "WEAPON_C"])
+    )
+    expect(traceNames(logicalSource)).toContain("J_L.A to U_ESD_L.CH_A")
+    expect(traceNames(scoringSource)).toContain("J_WEAPON_HARNESS_L.WEAPON_A to U_ESD_L.CH_A")
   })
 
   it("uses an identical complete isolation-boundary pin contract on both boards", () => {
