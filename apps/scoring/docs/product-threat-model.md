@@ -3,6 +3,11 @@
 **Contract:** M0-11
 **Status:** baseline product security and trust-boundary contract for review
 
+The executable companion [`../src/product-threat-model.ts`](../src/product-threat-model.ts) freezes the current
+M0-11 boundaries and rejects authority, update, debug, parser, recovery, power-input, and evidence-release drift.
+Its host tests are contract evidence only. They do not claim a target secure boot, cryptographic verifier, schematic,
+provisioning fixture, production debug lock, or independent security review.
+
 This contract covers the scoring apparatus, its two processor domains, isolated link, service interfaces, manufacturing
 flow, firmware delivery, and event records. It is read with the [device delivery plan](device-delivery-plan.md),
 [processor fault-containment contract](processor-fault-containment-contract.md), [transport-frame
@@ -68,9 +73,10 @@ defeats the physical boundary. Application isolation cannot contain those cases;
 ### Firmware update and rollback
 
 For each processor, an update must bind product, processor, board/module revision, image role, protocol/schema/config
-compatibility, image digest, and release revision. The receiving authority must verify an approved release signature or
-equivalent authenticated authorization before activation. Download location, filename, transport CRC, or digest alone is
-not authorization. The receiver records image identity, digest, update cause, and new boot identity.
+compatibility, image digest, and release revision. The receiving authority must verify an approved target-bound digital
+signature before activation. The signature algorithm, format, and key hierarchy remain open design gates. Download
+location, filename, transport CRC, or digest alone is not authorization. The receiver records image identity, digest,
+update cause, and new boot identity.
 
 ESP32 application updates may use the application update path after its gates pass. ESP32 may transport STM32 material but
 cannot install, select, roll back, or activate scoring firmware unilaterally. STM32 activation requires a signed,
