@@ -471,6 +471,172 @@ static bool test_newest_corrupt_falls_back_and_all_corrupt_fails(void) {
   return true;
 }
 
+static bool test_journal_public_argument_boundaries(void) {
+  static const uint8_t payload[] = {0xA1U};
+  static const uint8_t other_payload[] = {0xA2U};
+  uint8_t replay[SCORING_ESP32_MAX_TRANSPORT_PAYLOAD_BYTES] = {0};
+  scoring_esp32_journal_storage_t storage;
+  scoring_esp32_journal_t journal = {0};
+  scoring_esp32_journal_t unopened = {0};
+  size_t replay_length = 0U;
+  uint32_t replay_sequence = 0U;
+
+  scoring_esp32_journal_storage_init(NULL);
+  scoring_esp32_journal_arm_power_loss(NULL, SCORING_ESP32_JOURNAL_COMMIT_MARKER);
+  CHECK(scoring_esp32_journal_corrupt_committed(NULL, 0U) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  scoring_esp32_journal_storage_init(&storage);
+  CHECK(scoring_esp32_journal_corrupt_committed(&storage, 0U) == SCORING_ESP32_RESULT_JOURNAL_CORRUPT);
+  CHECK(scoring_esp32_journal_open(NULL, &storage, 1U) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_open(&journal, NULL, 1U) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_open(&journal, &storage, 0U) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_open(&journal, &storage, SCORING_ESP32_JOURNAL_MAX_ENTRIES + 1U) ==
+        SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_open(&journal, &storage, 4U) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_journal_recovery(&journal) == SCORING_ESP32_JOURNAL_RECOVERY_EMPTY);
+  CHECK(scoring_esp32_journal_recovery(NULL) == SCORING_ESP32_JOURNAL_RECOVERY_CORRUPT);
+  CHECK(scoring_esp32_journal_count(NULL) == 0U);
+  CHECK(scoring_esp32_journal_reopen(&unopened) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_append(NULL, 1U, (scoring_esp32_bytes_t){0}) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_append(&journal, 1U, (scoring_esp32_bytes_t){.data = NULL, .length = 1U}) ==
+        SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_append(
+          &journal,
+          1U,
+          (scoring_esp32_bytes_t){.data = payload, .length = SCORING_ESP32_MAX_TRANSPORT_PAYLOAD_BYTES + 1U}
+        ) == SCORING_ESP32_RESULT_BUFFER_TOO_SMALL);
+  CHECK(scoring_esp32_journal_append(&journal, 1U, (scoring_esp32_bytes_t){.data = NULL, .length = 0U}) ==
+        SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_journal_replay(NULL, 0U, (scoring_esp32_mutable_bytes_t){0}, &replay_length, &replay_sequence) ==
+        SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_replay(&journal, 0U, (scoring_esp32_mutable_bytes_t){0}, NULL, &replay_sequence) ==
+        SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_replay(&journal, 0U, (scoring_esp32_mutable_bytes_t){0}, &replay_length, NULL) ==
+        SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_replay(
+          &journal,
+          0U,
+          (scoring_esp32_mutable_bytes_t){.data = NULL, .capacity = 1U},
+          &replay_length,
+          &replay_sequence
+        ) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_replay(
+          &journal,
+          99U,
+          (scoring_esp32_mutable_bytes_t){.data = replay, .capacity = sizeof(replay)},
+          &replay_length,
+          &replay_sequence
+        ) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_replay(
+          &journal,
+          0U,
+          (scoring_esp32_mutable_bytes_t){.data = NULL, .capacity = 0U},
+          &replay_length,
+          &replay_sequence
+        ) == SCORING_ESP32_RESULT_OK);
+  CHECK(replay_length == 0U && replay_sequence == 1U);
+  CHECK(scoring_esp32_journal_append(&journal, 2U, (scoring_esp32_bytes_t){.data = payload, .length = sizeof(payload)}) ==
+        SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_journal_replay(
+          &journal,
+          1U,
+          (scoring_esp32_mutable_bytes_t){.data = NULL, .capacity = 0U},
+          &replay_length,
+          &replay_sequence
+        ) == SCORING_ESP32_RESULT_BUFFER_TOO_SMALL);
+  CHECK(scoring_esp32_journal_replay(
+          &journal,
+          1U,
+          (scoring_esp32_mutable_bytes_t){.data = replay, .capacity = sizeof(replay)},
+          &replay_length,
+          &replay_sequence
+        ) == SCORING_ESP32_RESULT_OK);
+  CHECK(replay_length == sizeof(payload) && replay_sequence == 2U && replay[0] == payload[0]);
+  CHECK(scoring_esp32_journal_append(&journal, 2U, (scoring_esp32_bytes_t){.data = payload, .length = sizeof(payload)}) ==
+        SCORING_ESP32_RESULT_DUPLICATE);
+  CHECK(scoring_esp32_journal_append(
+          &journal,
+          2U,
+          (scoring_esp32_bytes_t){.data = other_payload, .length = sizeof(other_payload)}
+        ) ==
+        SCORING_ESP32_RESULT_CONFLICT);
+  {
+    const scoring_esp32_result_t out_of_order = scoring_esp32_journal_append(
+          &journal,
+          0U,
+          (scoring_esp32_bytes_t){.data = other_payload, .length = sizeof(other_payload)}
+        );
+    CHECK(out_of_order == SCORING_ESP32_RESULT_OUT_OF_ORDER);
+  }
+  CHECK(scoring_esp32_journal_advance_cursor(NULL, 3U) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_advance_cursor(&journal, 2U) == SCORING_ESP32_RESULT_DUPLICATE);
+  CHECK(scoring_esp32_journal_advance_cursor(&journal, 1U) == SCORING_ESP32_RESULT_OUT_OF_ORDER);
+  CHECK(scoring_esp32_journal_advance_cursor(&journal, 3U) == SCORING_ESP32_RESULT_OK);
+  {
+    scoring_esp32_journal_storage_t zero_storage;
+    scoring_esp32_journal_t zero_journal;
+    scoring_esp32_journal_storage_init(&zero_storage);
+    CHECK(scoring_esp32_journal_open(&zero_journal, &zero_storage, 1U) == SCORING_ESP32_RESULT_OK);
+    CHECK(scoring_esp32_journal_append(&zero_journal, 1U, (scoring_esp32_bytes_t){.data = NULL, .length = 0U}) ==
+          SCORING_ESP32_RESULT_OK);
+    CHECK(scoring_esp32_journal_corrupt_committed(&zero_storage, 1U) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+    CHECK(scoring_esp32_journal_corrupt_committed(&zero_storage, 0U) == SCORING_ESP32_RESULT_OK);
+  }
+  return true;
+}
+
+static bool test_receiver_public_argument_and_link_boundaries(void) {
+  static const uint8_t status_payload[] = {0x70U};
+  uint8_t status_frame[SCORING_ESP32_MAX_TRANSPORT_FRAME_BYTES] = {0};
+  const size_t status_length = make_frame(
+    status_frame,
+    SCORING_ESP32_TRANSPORT_STATUS,
+    status_payload,
+    sizeof(status_payload),
+    1U
+  );
+  fake_link_t link = {.frame = status_frame, .frame_length = status_length, .result = SCORING_ESP32_RESULT_FRAME_INVALID};
+  reset_observer_t observer = {0};
+  scoring_esp32_services_t services;
+  scoring_esp32_receiver_t receiver = {0};
+  scoring_esp32_receiver_receipt_t receipt = {0};
+  scoring_esp32_identifier_t identifier = {0};
+  uint32_t expected_sequence = 0U;
+
+  CHECK(scoring_esp32_receiver_init(NULL, NULL, &test_storage, 1U) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_receiver_init(&receiver, NULL, NULL, 1U) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_receiver_reset(NULL) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_receiver_receive(NULL, &receipt) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_receiver_receive(&receiver, NULL) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_UNAVAILABLE);
+  CHECK(receipt.outcome == SCORING_ESP32_RECEIVER_IGNORED);
+  CHECK(scoring_esp32_receiver_is_link_degraded(NULL) == false);
+  CHECK(scoring_esp32_receiver_has_expected_sequence(NULL, &expected_sequence) == false);
+  CHECK(scoring_esp32_receiver_has_expected_sequence(&receiver, NULL) == false);
+  CHECK(scoring_esp32_receiver_read_application_boot_id(NULL, &identifier) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_receiver_read_application_boot_id(&receiver, NULL) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_receiver_read_application_boot_id(&receiver, &identifier) == SCORING_ESP32_RESULT_UNAVAILABLE);
+  CHECK(identifier.length == 0U);
+  CHECK(scoring_esp32_receiver_journal(NULL) == NULL);
+
+  set_boot_id(&observer, "boundary-boot");
+  services = services_for(&link, &observer);
+  scoring_esp32_journal_storage_init(&test_storage);
+  CHECK(status_length != 0U);
+  CHECK(scoring_esp32_receiver_init(&receiver, &services, &test_storage, 2U) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_FRAME_INVALID);
+  CHECK(receipt.outcome == SCORING_ESP32_RECEIVER_REJECTED);
+  CHECK(receipt.result == SCORING_ESP32_RESULT_FRAME_INVALID);
+  CHECK(scoring_esp32_receiver_is_link_degraded(&receiver));
+
+  link.result = SCORING_ESP32_RESULT_OK;
+  scoring_esp32_journal_arm_power_loss(&test_storage, SCORING_ESP32_JOURNAL_PREPARED_HEADER);
+  CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_POWER_LOSS);
+  CHECK(receipt.outcome == SCORING_ESP32_RECEIVER_REJECTED);
+  CHECK(receipt.has_sequence);
+  CHECK(receipt.sequence == 1U);
+  return true;
+}
+
 int main(void) {
   if (!test_host_storage_size_is_measured_bound() ||
       !test_accept_duplicate_corruption_reorder_and_replay() ||
@@ -480,7 +646,9 @@ int main(void) {
       !test_reset_restores_ignored_cursor() ||
       !test_max_sequence_exhaustion_restores() ||
       !test_boot_identity_is_required_changed_and_exposed() ||
-      !test_newest_corrupt_falls_back_and_all_corrupt_fails()) {
+      !test_newest_corrupt_falls_back_and_all_corrupt_fails() ||
+      !test_journal_public_argument_boundaries() ||
+      !test_receiver_public_argument_and_link_boundaries()) {
     return 1;
   }
   return 0;

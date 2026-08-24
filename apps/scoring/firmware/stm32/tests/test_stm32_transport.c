@@ -47,6 +47,54 @@ static void test_crc32c_check_value(void) {
   CHECK(scoring_stm32_transport_crc32c(CHECK_BYTES, sizeof(CHECK_BYTES) - 1U) == UINT32_C(0xE3069283));
 }
 
+static void test_transport_argument_guards_and_decode_bounds(void) {
+  const scoring_stm32_transport_golden_fixture_t *fixture = &SCORING_STM32_TRANSPORT_GOLDEN_FIXTURES[1];
+  scoring_stm32_transport_frame_t frame;
+  uint8_t oversized[SCORING_STM32_TRANSPORT_MAX_FRAME_BYTES + 1U];
+
+  CHECK(scoring_stm32_transport_crc32c(NULL, 0U) == 0U);
+  CHECK(scoring_stm32_transport_crc32c(NULL, 1U) == 0U);
+  scoring_stm32_transport_init(NULL, fixture->receiver, 0U, 0U);
+  scoring_stm32_transport_recover(NULL, 0U, 0U);
+  CHECK(
+    scoring_stm32_transport_decode(
+      (scoring_stm32_transport_receiver_t)99U,
+      fixture->frame,
+      fixture->frame_length,
+      &frame
+    ) == SCORING_STM32_TRANSPORT_INVALID_ARGUMENT
+  );
+  CHECK(
+    scoring_stm32_transport_decode(
+      fixture->receiver,
+      NULL,
+      fixture->frame_length,
+      &frame
+    ) == SCORING_STM32_TRANSPORT_INVALID_ARGUMENT
+  );
+  CHECK(
+    scoring_stm32_transport_decode(
+      fixture->receiver,
+      fixture->frame,
+      fixture->frame_length,
+      NULL
+    ) == SCORING_STM32_TRANSPORT_INVALID_ARGUMENT
+  );
+  CHECK(
+    scoring_stm32_transport_decode(fixture->receiver, fixture->frame, 0U, &frame) ==
+    SCORING_STM32_TRANSPORT_LENGTH
+  );
+  (void)memcpy(oversized, fixture->frame, fixture->frame_length);
+  CHECK(
+    scoring_stm32_transport_decode(
+      fixture->receiver,
+      oversized,
+      sizeof(oversized),
+      &frame
+    ) == SCORING_STM32_TRANSPORT_LENGTH
+  );
+}
+
 static void test_generated_golden_frames_match_c_codec(void) {
   size_t index;
 
@@ -221,6 +269,73 @@ static void test_payload_and_receive_bounds_are_exact(void) {
   CHECK(scoring_stm32_transport_receive(&receiver, maximum_fragment, 0U, &frame) == SCORING_STM32_TRANSPORT_FAILED);
 }
 
+static void test_receive_fail_closed_paths(void) {
+  const scoring_stm32_transport_golden_fixture_t *fixture = &SCORING_STM32_TRANSPORT_GOLDEN_FIXTURES[1];
+  scoring_stm32_transport_t transport;
+  scoring_stm32_transport_frame_t frame;
+  uint8_t altered[SCORING_STM32_TRANSPORT_MAX_FRAME_BYTES];
+  uint8_t oversized_payload_header[SCORING_STM32_TRANSPORT_HEADER_BYTES] = {
+    0x53U, 0x43U, 0x01U, (uint8_t)SCORING_STM32_TRANSPORT_REQUEST,
+    0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+    0x00U, 0x00U, 0x10U, 0x01U
+  };
+
+  scoring_stm32_transport_init(&transport, fixture->receiver, 0U, 0U);
+  CHECK(
+    scoring_stm32_transport_receive(&transport, NULL, 0U, &frame) ==
+    SCORING_STM32_TRANSPORT_NEED_MORE
+  );
+
+  scoring_stm32_transport_init(&transport, (scoring_stm32_transport_receiver_t)99U, 0U, 0U);
+  CHECK(
+    scoring_stm32_transport_receive(&transport, fixture->frame, fixture->frame_length, &frame) ==
+    SCORING_STM32_TRANSPORT_INVALID_ARGUMENT
+  );
+  scoring_stm32_transport_init(&transport, fixture->receiver, 0U, 0U);
+  transport.receive_sequence_initialized = false;
+  CHECK(
+    scoring_stm32_transport_receive(&transport, fixture->frame, fixture->frame_length, &frame) ==
+    SCORING_STM32_TRANSPORT_INVALID_ARGUMENT
+  );
+
+  scoring_stm32_transport_init(&transport, fixture->receiver, 0U, 0U);
+  transport.receive_exhausted = true;
+  CHECK(
+    scoring_stm32_transport_receive(&transport, fixture->frame, fixture->frame_length, &frame) ==
+    SCORING_STM32_TRANSPORT_SEQUENCE_EXHAUSTED
+  );
+  scoring_stm32_transport_init(&transport, fixture->receiver, 0U, 0U);
+  transport.receive_failed = true;
+  CHECK(
+    scoring_stm32_transport_receive(&transport, fixture->frame, fixture->frame_length, &frame) ==
+    SCORING_STM32_TRANSPORT_FAILED
+  );
+
+  scoring_stm32_transport_init(&transport, fixture->receiver, 0U, 0U);
+  CHECK(
+    scoring_stm32_transport_receive(
+      &transport,
+      oversized_payload_header,
+      sizeof(oversized_payload_header),
+      &frame
+    ) == SCORING_STM32_TRANSPORT_PAYLOAD_LENGTH
+  );
+
+  scoring_stm32_transport_init(&transport, fixture->receiver, 0U, 0U);
+  (void)memcpy(altered, fixture->frame, fixture->frame_length);
+  altered[fixture->frame_length - 1U] ^= 1U;
+  CHECK(
+    scoring_stm32_transport_receive(&transport, altered, fixture->frame_length, &frame) ==
+    SCORING_STM32_TRANSPORT_CRC
+  );
+
+  scoring_stm32_transport_init(&transport, fixture->receiver, 0U, 0U);
+  CHECK(
+    scoring_stm32_transport_receive(&transport, fixture->frame, fixture->frame_length + 1U, &frame) ==
+    SCORING_STM32_TRANSPORT_LENGTH
+  );
+}
+
 static void test_duplicate_and_reorder_block_receipt_until_recovery(void) {
   const scoring_stm32_transport_golden_fixture_t *fixture = &SCORING_STM32_TRANSPORT_GOLDEN_FIXTURES[1];
   scoring_stm32_transport_t receiver;
@@ -374,6 +489,127 @@ static void test_transport_state_boundaries_are_fail_closed(void) {
   );
 }
 
+static void test_transmit_argument_and_commit_guards(void) {
+  scoring_stm32_transport_t transport;
+  const uint8_t *bytes = NULL;
+  size_t byte_count = 0U;
+  uint8_t payload = 0x42U;
+  static uint8_t oversized_payload[SCORING_STM32_TRANSPORT_MAX_PAYLOAD_BYTES + 1U];
+
+  scoring_stm32_transport_init(&transport, SCORING_STM32_TRANSPORT_RECEIVER_STM32, 0U, 0U);
+  CHECK(
+    scoring_stm32_transport_prepare_transmit(
+      NULL,
+      SCORING_STM32_TRANSPORT_STATUS,
+      NULL,
+      0U,
+      &bytes,
+      &byte_count
+    ) == SCORING_STM32_TRANSPORT_INVALID_ARGUMENT
+  );
+  CHECK(
+    scoring_stm32_transport_prepare_transmit(
+      &transport,
+      SCORING_STM32_TRANSPORT_STATUS,
+      NULL,
+      0U,
+      NULL,
+      &byte_count
+    ) == SCORING_STM32_TRANSPORT_INVALID_ARGUMENT
+  );
+  CHECK(
+    scoring_stm32_transport_prepare_transmit(
+      &transport,
+      SCORING_STM32_TRANSPORT_STATUS,
+      NULL,
+      0U,
+      &bytes,
+      NULL
+    ) == SCORING_STM32_TRANSPORT_INVALID_ARGUMENT
+  );
+  transport.receiver = (scoring_stm32_transport_receiver_t)99U;
+  CHECK(
+    scoring_stm32_transport_prepare_transmit(
+      &transport,
+      SCORING_STM32_TRANSPORT_STATUS,
+      NULL,
+      0U,
+      &bytes,
+      &byte_count
+    ) == SCORING_STM32_TRANSPORT_INVALID_ARGUMENT
+  );
+  scoring_stm32_transport_init(&transport, SCORING_STM32_TRANSPORT_RECEIVER_STM32, 0U, 0U);
+  CHECK(
+    scoring_stm32_transport_prepare_transmit(
+      &transport,
+      (scoring_stm32_transport_message_type_t)99U,
+      NULL,
+      0U,
+      &bytes,
+      &byte_count
+    ) == SCORING_STM32_TRANSPORT_INVALID_ARGUMENT
+  );
+  CHECK(
+    scoring_stm32_transport_prepare_transmit(
+      &transport,
+      SCORING_STM32_TRANSPORT_STATUS,
+      NULL,
+      1U,
+      &bytes,
+      &byte_count
+    ) == SCORING_STM32_TRANSPORT_INVALID_ARGUMENT
+  );
+  CHECK(
+    scoring_stm32_transport_prepare_transmit(
+      &transport,
+      SCORING_STM32_TRANSPORT_STATUS,
+      oversized_payload,
+      sizeof(oversized_payload),
+      &bytes,
+      &byte_count
+    ) == SCORING_STM32_TRANSPORT_PAYLOAD_LENGTH
+  );
+  CHECK(
+    scoring_stm32_transport_prepare_transmit(
+      &transport,
+      SCORING_STM32_TRANSPORT_REQUEST,
+      NULL,
+      0U,
+      &bytes,
+      &byte_count
+    ) == SCORING_STM32_TRANSPORT_DIRECTION
+  );
+
+  scoring_stm32_transport_init(&transport, SCORING_STM32_TRANSPORT_RECEIVER_STM32, 0U, 0U);
+  CHECK(
+    scoring_stm32_transport_prepare_transmit(
+      &transport,
+      SCORING_STM32_TRANSPORT_STATUS,
+      &payload,
+      sizeof(payload),
+      &bytes,
+      &byte_count
+    ) == SCORING_STM32_TRANSPORT_OK
+  );
+  CHECK(byte_count == SCORING_STM32_TRANSPORT_HEADER_BYTES + 1U + SCORING_STM32_TRANSPORT_CRC_BYTES);
+  scoring_stm32_transport_commit_transmit(&transport);
+  CHECK(transport.next_transmit_sequence == 1U);
+  CHECK(transport.transmit_byte_count == 0U);
+
+  scoring_stm32_transport_commit_transmit(NULL);
+  transport.transmit_blocked = true;
+  scoring_stm32_transport_commit_transmit(&transport);
+  transport.transmit_blocked = false;
+  transport.transmit_exhausted = true;
+  scoring_stm32_transport_commit_transmit(&transport);
+  transport.transmit_exhausted = false;
+  CHECK(transport.transmit_byte_count == 0U);
+  scoring_stm32_transport_fail_backpressure(NULL);
+  scoring_stm32_transport_fail_backpressure(&transport);
+  CHECK(transport.transmit_blocked);
+  CHECK(transport.transmit_byte_count == 0U);
+}
+
 static void test_backpressure_blocks_repeat_transmission(void) {
   fake_transport_state_t state = { .publish_status = SCORING_STATUS_BACKPRESSURE };
   scoring_stm32_hardware_t hardware = { .transport = { .context = &state, .publish = fake_publish } };
@@ -453,12 +689,15 @@ static void test_default_host_cannot_publish_a_decision_and_preserves_adapter_fa
 
 int main(void) {
   test_crc32c_check_value();
+  test_transport_argument_guards_and_decode_bounds();
   test_generated_golden_frames_match_c_codec();
   test_fragmented_request_is_delivered_once();
   test_invalid_frame_conditions_fail_closed();
   test_payload_and_receive_bounds_are_exact();
+  test_receive_fail_closed_paths();
   test_duplicate_and_reorder_block_receipt_until_recovery();
   test_transport_state_boundaries_are_fail_closed();
+  test_transmit_argument_and_commit_guards();
   test_backpressure_blocks_repeat_transmission();
   test_default_host_cannot_publish_a_decision_and_preserves_adapter_failure();
   return EXIT_SUCCESS;

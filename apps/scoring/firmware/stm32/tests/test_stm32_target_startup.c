@@ -165,11 +165,64 @@ static void test_missing_target_callback_never_starts(void) {
   CHECK(state.step_count == 0U);
 }
 
+static void test_target_argument_guards_and_reset_failure(void) {
+  fake_platform_state_t state = { .failing_step = (fake_step_t)99 };
+  scoring_stm32_target_platform_t platform = make_platform(&state);
+  scoring_stm32_target_t target;
+
+  CHECK(scoring_stm32_target_init(NULL, &platform) == SCORING_STATUS_INVALID_ARGUMENT);
+  CHECK(scoring_stm32_target_init(&target, NULL) == SCORING_STATUS_INVALID_ARGUMENT);
+  CHECK(scoring_stm32_target_start(NULL) == SCORING_STATUS_INVALID_ARGUMENT);
+  CHECK(scoring_stm32_target_reset(NULL) == SCORING_STATUS_INVALID_ARGUMENT);
+  target.platform = NULL;
+  CHECK(scoring_stm32_target_start(&target) == SCORING_STATUS_INVALID_ARGUMENT);
+  CHECK(scoring_stm32_target_reset(&target) == SCORING_STATUS_INVALID_ARGUMENT);
+
+  state.failing_step = FAKE_STEP_SAFE_OUTPUTS;
+  CHECK(scoring_stm32_target_init(&target, &platform) == SCORING_STATUS_OK);
+  CHECK(scoring_stm32_target_reset(&target) == SCORING_STATUS_HARDWARE_FAULT);
+  check_unavailable_safe(&target);
+  CHECK(state.step_count == 1U);
+}
+
+static void test_each_target_callback_is_required(void) {
+  fake_platform_state_t state = { .failing_step = (fake_step_t)99 };
+  scoring_stm32_target_platform_t platform;
+  scoring_stm32_target_t target;
+
+  platform = make_platform(&state);
+  platform.assert_safe_outputs = NULL;
+  CHECK(scoring_stm32_target_init(&target, &platform) == SCORING_STATUS_INVALID_ARGUMENT);
+  platform = make_platform(&state);
+  platform.configure_mpu = NULL;
+  CHECK(scoring_stm32_target_init(&target, &platform) == SCORING_STATUS_INVALID_ARGUMENT);
+  platform = make_platform(&state);
+  platform.configure_clocks = NULL;
+  CHECK(scoring_stm32_target_init(&target, &platform) == SCORING_STATUS_INVALID_ARGUMENT);
+  platform = make_platform(&state);
+  platform.validate_supervisor = NULL;
+  CHECK(scoring_stm32_target_init(&target, &platform) == SCORING_STATUS_INVALID_ARGUMENT);
+  platform = make_platform(&state);
+  platform.validate_integrity = NULL;
+  CHECK(scoring_stm32_target_init(&target, &platform) == SCORING_STATUS_INVALID_ARGUMENT);
+  platform = make_platform(&state);
+  platform.validate_acquisition_safety = NULL;
+  CHECK(scoring_stm32_target_init(&target, &platform) == SCORING_STATUS_INVALID_ARGUMENT);
+  platform = make_platform(&state);
+  platform.verify_safe_outputs = NULL;
+  CHECK(scoring_stm32_target_init(&target, &platform) == SCORING_STATUS_INVALID_ARGUMENT);
+  platform = make_platform(&state);
+  platform.arm_watchdog = NULL;
+  CHECK(scoring_stm32_target_init(&target, &platform) == SCORING_STATUS_INVALID_ARGUMENT);
+}
+
 int main(void) {
   test_manifest_is_bounded_to_the_candidate_device();
   test_reset_defaults_are_unavailable_and_safe();
   test_startup_runs_recovery_gates_before_watchdog();
   test_each_gate_failure_fails_closed_before_watchdog();
   test_missing_target_callback_never_starts();
+  test_target_argument_guards_and_reset_failure();
+  test_each_target_callback_is_required();
   return EXIT_SUCCESS;
 }

@@ -11,6 +11,15 @@ enable_testing()
 set(SCORING_FIRMWARE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 
 option(SCORING_BUILD_STM32G474RE_TARGET "Build the pinned STM32G474RE target safety adapter" OFF)
+option(SCORING_ENABLE_LLVM_COVERAGE "Enable LLVM source-based coverage for native host tests" OFF)
+
+if(SCORING_ENABLE_LLVM_COVERAGE)
+  if(MSVC)
+    message(FATAL_ERROR "SCORING_ENABLE_LLVM_COVERAGE requires a Clang-compatible compiler")
+  endif()
+  add_compile_options(-fprofile-instr-generate -fcoverage-mapping -O0)
+  add_link_options(-fprofile-instr-generate -fcoverage-mapping)
+endif()
 
 add_library(scoring_stm32_host STATIC
   core/stm32_scoring_core.c
@@ -46,6 +55,11 @@ add_executable(scoring_stm32_target_startup_tests
   tests/test_stm32_target_startup.c
 )
 
+add_executable(scoring_stm32g474_target_adapter_tests
+  tests/test_stm32g474_target_adapter.c
+  target/stm32g474_target_adapter.c
+)
+
 target_include_directories(scoring_stm32_host_tests PRIVATE
   "${SCORING_FIRMWARE_ROOT}/include"
   "${SCORING_FIRMWARE_ROOT}/generated"
@@ -65,10 +79,17 @@ target_include_directories(scoring_stm32_target_startup_tests PRIVATE
   "${SCORING_FIRMWARE_ROOT}/include"
 )
 
+target_include_directories(scoring_stm32g474_target_adapter_tests PRIVATE
+  "${SCORING_FIRMWARE_ROOT}/include"
+  "${SCORING_FIRMWARE_ROOT}/target"
+  "${SCORING_FIRMWARE_ROOT}/tests"
+)
+
 target_link_libraries(scoring_stm32_host_tests PRIVATE scoring_stm32_host)
 target_link_libraries(scoring_stm32_transport_tests PRIVATE scoring_stm32_host)
 target_link_libraries(scoring_stm32_core_tests PRIVATE scoring_stm32_host)
 target_link_libraries(scoring_stm32_target_startup_tests PRIVATE scoring_stm32_host)
+target_link_libraries(scoring_stm32g474_target_adapter_tests PRIVATE scoring_stm32_host)
 
 if(MSVC)
   target_compile_options(scoring_stm32_host_tests PRIVATE /W4 /WX)
@@ -94,10 +115,17 @@ else()
   target_compile_options(scoring_stm32_target_startup_tests PRIVATE -Wall -Wextra -Werror -Wpedantic)
 endif()
 
+if(MSVC)
+  target_compile_options(scoring_stm32g474_target_adapter_tests PRIVATE /W4 /WX)
+else()
+  target_compile_options(scoring_stm32g474_target_adapter_tests PRIVATE -Wall -Wextra -Werror -Wpedantic)
+endif()
+
 add_test(NAME scoring_stm32_host_tests COMMAND scoring_stm32_host_tests)
 add_test(NAME scoring_stm32_transport_tests COMMAND scoring_stm32_transport_tests)
 add_test(NAME scoring_stm32_core_tests COMMAND scoring_stm32_core_tests)
 add_test(NAME scoring_stm32_target_startup_tests COMMAND scoring_stm32_target_startup_tests)
+add_test(NAME scoring_stm32g474_target_adapter_tests COMMAND scoring_stm32g474_target_adapter_tests)
 add_test(
   NAME scoring_stm32_golden_fixture_is_current
   COMMAND node "${SCORING_FIRMWARE_ROOT}/tools/generate-golden-fixture.mjs" --check

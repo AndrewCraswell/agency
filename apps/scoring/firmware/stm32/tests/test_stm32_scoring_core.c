@@ -141,9 +141,346 @@ static void test_overflow_is_atomic(void) {
   CHECK(memcmp(&state, &before_overflow, sizeof(state)) == 0);
 }
 
+static void test_simultaneous_hits_are_sorted(void) {
+  scoring_core_state_t state;
+  scoring_core_sample_t sample = { 0 };
+
+  /* The right candidate starts first, so the sort branch must swap the two hits. */
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_EPEE) == SCORING_CORE_OK);
+  sample.right.epee_closed = 1U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 1U;
+  sample.left.epee_closed = 1U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 2001U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  CHECK(state.hit_count == 2U);
+  CHECK(state.hits[0].side == SCORING_CORE_SIDE_RIGHT);
+  CHECK(state.hits[1].side == SCORING_CORE_SIDE_LEFT);
+
+  /* Equal starts exercise the equal-time side ordering branch. */
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_EPEE) == SCORING_CORE_OK);
+  sample = (scoring_core_sample_t) { .left = { .epee_closed = 1U }, .right = { .epee_closed = 1U } };
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 2000U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  CHECK(state.hit_count == 2U);
+  CHECK(state.hits[0].side == SCORING_CORE_SIDE_LEFT);
+  CHECK(state.hits[1].side == SCORING_CORE_SIDE_RIGHT);
+
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_EPEE) == SCORING_CORE_OK);
+  sample = (scoring_core_sample_t) { .left = { .epee_closed = 1U } };
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 1U;
+  sample.right.epee_closed = 1U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 2001U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  CHECK(state.hit_count == 2U);
+  CHECK(state.hits[0].side == SCORING_CORE_SIDE_LEFT);
+  CHECK(state.hits[1].side == SCORING_CORE_SIDE_RIGHT);
+
+  /* The same ordering contract applies to foil and sabre. */
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_FOIL) == SCORING_CORE_OK);
+  sample = (scoring_core_sample_t) { .right = { .foil_open = 1U } };
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 1U;
+  sample.left.foil_open = 1U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 13001U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  CHECK(state.hit_count == 2U);
+  CHECK(state.hits[0].side == SCORING_CORE_SIDE_RIGHT);
+  CHECK(state.hits[1].side == SCORING_CORE_SIDE_LEFT);
+
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_SABRE) == SCORING_CORE_OK);
+  sample = (scoring_core_sample_t) {
+    .at_us = 0U,
+    .left = { .target_kind = 1U },
+    .right = { .blade_present = 1U }
+  };
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 1U;
+  sample.left = (scoring_core_contact_t) { .blade_present = 1U };
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 101U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  CHECK(state.hit_count == 2U);
+  CHECK(state.hits[0].side == SCORING_CORE_SIDE_RIGHT);
+  CHECK(state.hits[1].side == SCORING_CORE_SIDE_LEFT);
+
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_FOIL) == SCORING_CORE_OK);
+  sample = (scoring_core_sample_t) { .left = { .foil_open = 1U } };
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 1U;
+  sample.right.foil_open = 1U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 13001U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  CHECK(state.hit_count == 2U);
+  CHECK(state.hits[0].side == SCORING_CORE_SIDE_LEFT);
+  CHECK(state.hits[1].side == SCORING_CORE_SIDE_RIGHT);
+
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_SABRE) == SCORING_CORE_OK);
+  sample = (scoring_core_sample_t) { .left = { .blade_present = 1U } };
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 1U;
+  sample.left.blade_present = 0U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 2U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+}
+
+static void test_epee_window_and_append_overflow(void) {
+  scoring_core_state_t state;
+  scoring_core_state_t before_overflow;
+  scoring_core_sample_t sample = { 0 };
+
+  /* A pending candidate may have started before the first accepted hit. */
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_EPEE) == SCORING_CORE_OK);
+  state.has_first_hit = true;
+  state.first_hit_signalled_at_us = 1000U;
+  state.sides[SCORING_CORE_SIDE_LEFT].candidate_active = true;
+  state.sides[SCORING_CORE_SIDE_LEFT].candidate_since_us = 0U;
+  sample.at_us = 2000U;
+  sample.left.epee_closed = 1U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  CHECK(state.hit_count == 1U);
+  CHECK(state.hits[0].started_at_us == 0U);
+
+  /* A hit that starts outside the double-hit window is deliberately discarded. */
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_EPEE) == SCORING_CORE_OK);
+  sample = (scoring_core_sample_t) { .left = { .epee_closed = 1U } };
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 2000U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 47000U;
+  sample.left.epee_closed = 0U;
+  sample.right.epee_closed = 1U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 49000U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  CHECK(state.hit_count == 1U);
+  CHECK(state.locked);
+
+  state.locked = false;
+  state.sides[SCORING_CORE_SIDE_RIGHT].candidate_active = true;
+  state.sides[SCORING_CORE_SIDE_RIGHT].candidate_since_us = 46000U;
+  sample.at_us = 50000U;
+  sample.left.epee_closed = 0U;
+  sample.right.epee_closed = 1U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  CHECK(state.hit_count == 1U);
+  CHECK(state.locked);
+
+  /* The first pending side makes the second pending test short-circuit. */
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_EPEE) == SCORING_CORE_OK);
+  state.has_first_hit = true;
+  state.first_hit_signalled_at_us = 1U;
+  state.sides[SCORING_CORE_SIDE_LEFT].candidate_active = true;
+  state.sides[SCORING_CORE_SIDE_LEFT].candidate_since_us = 0U;
+  sample = (scoring_core_sample_t) { .at_us = 0U, .left = { .epee_closed = 1U } };
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  CHECK(!state.locked);
+
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_EPEE) == SCORING_CORE_OK);
+  state.hit_count = SCORING_CORE_MAX_HITS;
+  state.sides[SCORING_CORE_SIDE_LEFT].candidate_active = true;
+  sample.at_us = 2000U;
+  sample.left.epee_closed = 1U;
+  before_overflow = state;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OVERFLOW);
+  CHECK(memcmp(&state, &before_overflow, sizeof(state)) == 0);
+
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_EPEE) == SCORING_CORE_OK);
+  state.hit_count = SCORING_CORE_MAX_HITS;
+  state.has_first_hit = true;
+  state.first_hit_signalled_at_us = 0U;
+  state.sides[SCORING_CORE_SIDE_LEFT].candidate_active = true;
+  sample.at_us = 2000U;
+  sample.left.epee_closed = 1U;
+  before_overflow = state;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OVERFLOW);
+  CHECK(memcmp(&state, &before_overflow, sizeof(state)) == 0);
+}
+
+static void test_latched_lock_and_append_overflow(void) {
+  scoring_core_state_t state;
+  scoring_core_state_t before_overflow;
+  scoring_core_sample_t sample = { 0 };
+
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_FOIL) == SCORING_CORE_OK);
+  state.locked = true;
+  state.sides[SCORING_CORE_SIDE_LEFT].candidate_active = true;
+  sample.left.foil_open = 1U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  CHECK(state.locked);
+  CHECK(!state.sides[SCORING_CORE_SIDE_LEFT].candidate_active);
+
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_FOIL) == SCORING_CORE_OK);
+  state.has_first_hit = true;
+  state.lockout_ends_at_us = 100U;
+  state.sides[SCORING_CORE_SIDE_LEFT].candidate_active = true;
+  sample.at_us = 100U;
+  sample.left.foil_open = 1U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  CHECK(state.locked);
+  CHECK(!state.sides[SCORING_CORE_SIDE_LEFT].candidate_active);
+
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_FOIL) == SCORING_CORE_OK);
+  state.hit_count = SCORING_CORE_MAX_HITS;
+  state.sides[SCORING_CORE_SIDE_LEFT].candidate_active = true;
+  state.sides[SCORING_CORE_SIDE_LEFT].candidate_classification = SCORING_CORE_CLASSIFICATION_ON_TARGET;
+  sample = (scoring_core_sample_t) { .at_us = 13000U, .left = { .foil_open = 1U } };
+  before_overflow = state;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OVERFLOW);
+  CHECK(memcmp(&state, &before_overflow, sizeof(state)) == 0);
+}
+
+static void test_foil_off_target_and_reclassification(void) {
+  scoring_core_state_t state;
+  scoring_core_sample_t sample = { 0 };
+  scoring_core_decision_record_t record;
+  char digest[] = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+  scoring_core_record_context_t context = {
+    .record_id = "record",
+    .capture_id = "capture",
+    .capture_digest = digest,
+    .firmware_digest = digest,
+    .scoring_boot_id = "boot",
+    .first_sequence = 1U,
+    .last_sequence = 1U,
+    .capture_from_us = 0U,
+    .capture_through_us = 1U,
+    .sample_count = 1U
+  };
+
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_FOIL) == SCORING_CORE_OK);
+  sample.left.foil_open = 1U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 1U;
+  sample.left.target_kind = 1U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 13001U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_OK);
+  CHECK(state.hit_count == 1U);
+  CHECK(state.hits[0].classification == SCORING_CORE_CLASSIFICATION_OFF_TARGET);
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_OK);
+  CHECK(record.disposition == SCORING_CORE_RECORD_OFF_TARGET);
+  CHECK(record.visual == SCORING_CORE_VISUAL_OFF_TARGET);
+}
+
+static void make_valid_record_state(scoring_core_state_t *state) {
+  scoring_core_sample_t sample = { .left = { .epee_closed = 1U } };
+  CHECK(scoring_core_init(state, SCORING_CORE_WEAPON_EPEE) == SCORING_CORE_OK);
+  CHECK(scoring_core_advance(state, &sample) == SCORING_CORE_OK);
+  sample.at_us = 2000U;
+  CHECK(scoring_core_advance(state, &sample) == SCORING_CORE_OK);
+}
+
+static void test_record_validation_branches(void) {
+  scoring_core_state_t state;
+  scoring_core_decision_record_t record;
+  char capture_digest[] = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  char firmware_digest[] = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
+  char invalid_slash[] = "sha256:/000000000000000000000000000000000000000000000000000000000000000";
+  char invalid_g[] = "sha256:g000000000000000000000000000000000000000000000000000000000000000";
+  char too_long[] = "sha256:00000000000000000000000000000000000000000000000000000000000000000";
+  scoring_core_record_context_t context = {
+    .record_id = "record",
+    .capture_id = "capture",
+    .capture_digest = capture_digest,
+    .firmware_digest = firmware_digest,
+    .scoring_boot_id = "boot",
+    .first_sequence = 1U,
+    .last_sequence = 1U,
+    .capture_from_us = 0U,
+    .capture_through_us = 1U,
+    .sample_count = 1U
+  };
+
+  make_valid_record_state(&state);
+  CHECK(scoring_core_make_record(&state, 0U, NULL, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  CHECK(scoring_core_make_record(&state, 0U, &context, NULL) == SCORING_CORE_INVALID_ARGUMENT);
+
+  CHECK(scoring_core_make_record(&state, 1U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.record_id = NULL;
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.record_id = "";
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.record_id = "record";
+  context.capture_id = NULL;
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.capture_id = "";
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.capture_id = "capture";
+
+  context.capture_digest = NULL;
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.capture_digest = "bad";
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.capture_digest = invalid_slash;
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.capture_digest = invalid_g;
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.capture_digest = too_long;
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.capture_digest = capture_digest;
+
+  context.firmware_digest = NULL;
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.firmware_digest = firmware_digest;
+  context.scoring_boot_id = NULL;
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.scoring_boot_id = "";
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.scoring_boot_id = "boot";
+  context.sample_count = 0U;
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.sample_count = 1U;
+  context.first_sequence = 2U;
+  context.last_sequence = 1U;
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  context.first_sequence = 1U;
+  context.capture_from_us = 2U;
+  context.capture_through_us = 1U;
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+}
+
+static void test_advance_argument_branches(void) {
+  scoring_core_state_t state;
+  scoring_core_sample_t sample = { 0 };
+
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_EPEE) == SCORING_CORE_OK);
+  state.weapon = (scoring_core_weapon_t)99;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_INVALID_ARGUMENT);
+
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_EPEE) == SCORING_CORE_OK);
+  sample.left.epee_closed = 2U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_INVALID_ARGUMENT);
+  sample.left = (scoring_core_contact_t) { 0 };
+  sample.left.foil_open = 2U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_INVALID_ARGUMENT);
+  sample.left.foil_open = 0U;
+  sample.left.blade_present = 2U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_INVALID_ARGUMENT);
+  sample.left.blade_present = 0U;
+  sample.left.control_break = 2U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_INVALID_ARGUMENT);
+  sample.left.control_break = 0U;
+  sample.right.epee_closed = 2U;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_INVALID_ARGUMENT);
+}
+
 int main(void) {
   test_complete_golden_corpus();
   test_fail_closed_api();
   test_overflow_is_atomic();
+  test_simultaneous_hits_are_sorted();
+  test_epee_window_and_append_overflow();
+  test_latched_lock_and_append_overflow();
+  test_foil_off_target_and_reclassification();
+  test_record_validation_branches();
+  test_advance_argument_branches();
   return EXIT_SUCCESS;
 }

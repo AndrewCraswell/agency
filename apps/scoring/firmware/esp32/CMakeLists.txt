@@ -1,6 +1,7 @@
 # M3-08 ESP32 service boundary. This file is both an ESP-IDF component and a
 # standalone native C17 host-test project; source files intentionally include
 # no ESP-IDF headers.
+option(SCORING_ENABLE_LLVM_COVERAGE "Enable LLVM source-based coverage for native host tests" OFF)
 if(ESP_PLATFORM)
   idf_component_register(
     SRCS
@@ -17,6 +18,14 @@ else()
   set(CMAKE_C_STANDARD 17)
   set(CMAKE_C_STANDARD_REQUIRED ON)
   set(CMAKE_C_EXTENSIONS OFF)
+
+  if(SCORING_ENABLE_LLVM_COVERAGE)
+    if(MSVC)
+      message(FATAL_ERROR "SCORING_ENABLE_LLVM_COVERAGE requires a Clang-compatible compiler")
+    endif()
+    add_compile_options(-fprofile-instr-generate -fcoverage-mapping -O0)
+    add_link_options(-fprofile-instr-generate -fcoverage-mapping)
+  endif()
 
   add_library(
     scoring_esp32_services

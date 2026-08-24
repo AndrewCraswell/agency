@@ -243,9 +243,169 @@ static bool test_missing_adapters_are_safe_and_unavailable(void) {
   return true;
 }
 
+static scoring_esp32_result_t callback_read_monotonic(void *context, uint64_t *out_us) {
+  (void)context;
+  if (out_us == NULL) {
+    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
+  }
+  *out_us = UINT64_C(123456);
+  return SCORING_ESP32_RESULT_OK;
+}
+
+static scoring_esp32_result_t callback_read_time(
+  void *context,
+  scoring_esp32_time_metadata_t *out_metadata
+) {
+  (void)context;
+  if (out_metadata == NULL) {
+    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
+  }
+  *out_metadata = (scoring_esp32_time_metadata_t){
+    .is_available = true,
+    .wall_clock_at_us = INT64_C(987654),
+    .uncertainty_us = 7U,
+    .source = SCORING_ESP32_WALL_CLOCK_RTC
+  };
+  return SCORING_ESP32_RESULT_OK;
+}
+
+static scoring_esp32_result_t callback_read_identifier(
+  void *context,
+  scoring_esp32_identifier_t *out_identifier
+) {
+  (void)context;
+  if (out_identifier == NULL) {
+    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
+  }
+  *out_identifier = (scoring_esp32_identifier_t){.bytes = "adapter-id", .length = 10U};
+  return SCORING_ESP32_RESULT_OK;
+}
+
+static scoring_esp32_result_t callback_read_invalid_identifier(
+  void *context,
+  scoring_esp32_identifier_t *out_identifier
+) {
+  (void)context;
+  if (out_identifier == NULL) {
+    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
+  }
+  *out_identifier = (scoring_esp32_identifier_t){.bytes = {'x', 'x'}, .length = 1U};
+  return SCORING_ESP32_RESULT_OK;
+}
+
+static scoring_esp32_result_t callback_bytes(void *context, scoring_esp32_bytes_t bytes) {
+  (void)context;
+  (void)bytes;
+  return SCORING_ESP32_RESULT_OK;
+}
+
+static scoring_esp32_result_t callback_no_arguments(void *context) {
+  (void)context;
+  return SCORING_ESP32_RESULT_OK;
+}
+
+static scoring_esp32_result_t callback_reset(void *context, scoring_esp32_reset_reason_t reason) {
+  (void)context;
+  (void)reason;
+  return SCORING_ESP32_RESULT_OK;
+}
+
+static scoring_esp32_result_t callback_read_frame(
+  void *context,
+  scoring_esp32_mutable_bytes_t destination,
+  size_t *out_frame_length
+) {
+  (void)context;
+  (void)destination;
+  if (out_frame_length == NULL) {
+    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
+  }
+  *out_frame_length = 0U;
+  return SCORING_ESP32_RESULT_UNAVAILABLE;
+}
+
+static bool test_service_callbacks_and_argument_boundaries(void) {
+  static const uint8_t payload[] = {0xA5U};
+  uint8_t encoded[SCORING_ESP32_TRANSPORT_HEADER_BYTES + sizeof(payload) + SCORING_ESP32_TRANSPORT_CRC_BYTES] = {0};
+  scoring_esp32_m2_05_frame_t frame;
+  scoring_esp32_services_t services = {
+    .audio = {.play_notification = callback_bytes},
+    .clock = {.read_monotonic_us = callback_read_monotonic, .read_time_metadata = callback_read_time},
+    .display = {.present_status = callback_bytes},
+    .identity = {.read_boot_id = callback_read_identifier, .read_device_id = callback_read_identifier},
+    .network = {.publish_status = callback_bytes},
+    .reset = {.request_reset = callback_reset},
+    .scoring_link = {.read_frame = callback_read_frame},
+    .signed_update = {.stage_signed_update = callback_bytes, .activate_staged_update = callback_no_arguments},
+    .storage = {.append_authoritative_record = fake_append_record},
+    .watchdog = {.feed = callback_no_arguments}
+  };
+  fake_storage_t storage = {.result = SCORING_ESP32_RESULT_OK};
+  scoring_esp32_app_t app;
+  scoring_esp32_identifier_t identifier = {0};
+  scoring_esp32_time_metadata_t metadata = {0};
+  scoring_esp32_authoritative_record_t record = {0};
+  uint64_t monotonic_us = 0U;
+
+  services.storage.context = &storage;
+  CHECK(scoring_esp32_app_init(NULL, &services) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_app_init(&app, &services) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_calculate_crc32c((scoring_esp32_bytes_t){.data = NULL, .length = 1U}) == 0U);
+  CHECK(scoring_esp32_calculate_crc32c((scoring_esp32_bytes_t){.data = NULL, .length = 0U}) == 0U);
+  CHECK(scoring_esp32_decode_m2_05_frame((scoring_esp32_bytes_t){.data = encoded, .length = sizeof(encoded)}, NULL) ==
+        SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_decode_m2_05_frame((scoring_esp32_bytes_t){.data = NULL, .length = 1U}, &frame) ==
+        SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_receive_authoritative_record(NULL, &record) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_receive_authoritative_record(&app, NULL) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_read_monotonic_us(NULL, &monotonic_us) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_read_monotonic_us(&app, NULL) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_read_time_metadata(NULL, &metadata) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_read_time_metadata(&app, NULL) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_read_boot_id(NULL, &identifier) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_read_boot_id(&app, NULL) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_read_device_id(NULL, &identifier) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_read_device_id(&app, NULL) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_publish_status(NULL, (scoring_esp32_bytes_t){0}) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_present_status(NULL, (scoring_esp32_bytes_t){0}) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_play_notification(NULL, (scoring_esp32_bytes_t){0}) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_stage_signed_update(NULL, (scoring_esp32_bytes_t){0}) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_activate_staged_update(NULL) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_feed_watchdog(NULL) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_request_reset(NULL, SCORING_ESP32_RESET_OPERATOR) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+
+  CHECK(scoring_esp32_read_monotonic_us(&app, &monotonic_us) == SCORING_ESP32_RESULT_OK);
+  CHECK(monotonic_us == UINT64_C(123456));
+  CHECK(scoring_esp32_read_time_metadata(&app, &metadata) == SCORING_ESP32_RESULT_OK);
+  CHECK(metadata.is_available && metadata.wall_clock_at_us == INT64_C(987654));
+  CHECK(scoring_esp32_read_boot_id(&app, &identifier) == SCORING_ESP32_RESULT_OK);
+  CHECK(strcmp(identifier.bytes, "adapter-id") == 0);
+  CHECK(scoring_esp32_read_device_id(&app, &identifier) == SCORING_ESP32_RESULT_OK);
+  CHECK(strcmp(identifier.bytes, "adapter-id") == 0);
+  CHECK(scoring_esp32_publish_status(&app, (scoring_esp32_bytes_t){.data = payload, .length = sizeof(payload)}) ==
+        SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_present_status(&app, (scoring_esp32_bytes_t){.data = payload, .length = sizeof(payload)}) ==
+        SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_play_notification(&app, (scoring_esp32_bytes_t){.data = payload, .length = sizeof(payload)}) ==
+        SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_stage_signed_update(&app, (scoring_esp32_bytes_t){.data = payload, .length = sizeof(payload)}) ==
+        SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_activate_staged_update(&app) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_feed_watchdog(&app) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_request_reset(&app, SCORING_ESP32_RESET_UPDATE) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_receive_authoritative_record(&app, &record) == SCORING_ESP32_RESULT_UNAVAILABLE);
+
+  services.identity.read_boot_id = callback_read_invalid_identifier;
+  CHECK(scoring_esp32_app_init(&app, &services) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_read_boot_id(&app, &identifier) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(identifier.length == 0U && identifier.bytes[0] == '\0');
+  return true;
+}
+
 int main(void) {
   if (!test_valid_m2_05_frame_reaches_storage_as_opaque_authority() || !test_rejected_frames_never_reach_storage() ||
-      !test_storage_failure_does_not_return_a_record() || !test_missing_adapters_are_safe_and_unavailable()) {
+      !test_storage_failure_does_not_return_a_record() || !test_missing_adapters_are_safe_and_unavailable() ||
+      !test_service_callbacks_and_argument_boundaries()) {
     return 1;
   }
   return 0;

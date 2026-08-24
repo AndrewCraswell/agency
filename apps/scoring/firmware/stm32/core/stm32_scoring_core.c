@@ -56,8 +56,8 @@ static scoring_core_hit_t make_hit(
 }
 
 static bool hit_precedes(const scoring_core_hit_t *left, const scoring_core_hit_t *right) {
-  return left->started_at_us < right->started_at_us ||
-    (left->started_at_us == right->started_at_us && left->side < right->side);
+  /* Candidate collection is left-side first, so equal timestamps are already in canonical side order. */
+  return left->started_at_us <= right->started_at_us;
 }
 
 static bool starts_inside_window(uint64_t started_at_us, uint64_t first_at_us, uint64_t window_us) {

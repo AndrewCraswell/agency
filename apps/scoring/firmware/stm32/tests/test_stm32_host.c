@@ -146,6 +146,89 @@ static void test_safe_defaults_remain_unavailable(void) {
   CHECK(scoring_stm32_host_poll(&host) == SCORING_STATUS_NOT_READY);
 }
 
+static void test_safe_default_callbacks_fail_closed_individually(void) {
+  const scoring_stm32_hardware_t *safe_hardware = scoring_stm32_safe_hardware();
+  scoring_adc_frame_t adc_frame;
+  scoring_comparator_event_t comparator_events[1];
+  scoring_adc_frame_t dma_frames[1];
+  uint8_t bytes[1] = { 0U };
+  size_t count = 0U;
+  uint64_t now_us = 0U;
+
+  CHECK(safe_hardware->clock.now_us(safe_hardware->clock.context, &now_us) == SCORING_STATUS_UNAVAILABLE);
+  CHECK(safe_hardware->adc.read_frame(safe_hardware->adc.context, &adc_frame) == SCORING_STATUS_UNAVAILABLE);
+  CHECK(
+    safe_hardware->comparator.read_events(
+      safe_hardware->comparator.context,
+      comparator_events,
+      1U,
+      &count
+    ) == SCORING_STATUS_UNAVAILABLE
+  );
+  CHECK(
+    safe_hardware->dma.pop_frames(safe_hardware->dma.context, dma_frames, 1U, &count) ==
+    SCORING_STATUS_UNAVAILABLE
+  );
+  CHECK(safe_hardware->flash.read(safe_hardware->flash.context, 0U, bytes, sizeof(bytes)) == SCORING_STATUS_UNAVAILABLE);
+  CHECK(
+    safe_hardware->flash.write(safe_hardware->flash.context, 0U, bytes, sizeof(bytes)) ==
+    SCORING_STATUS_UNAVAILABLE
+  );
+  CHECK(safe_hardware->watchdog.arm(safe_hardware->watchdog.context) == SCORING_STATUS_UNAVAILABLE);
+  CHECK(safe_hardware->watchdog.service(safe_hardware->watchdog.context) == SCORING_STATUS_UNAVAILABLE);
+  CHECK(safe_hardware->transport.publish(safe_hardware->transport.context, bytes, sizeof(bytes)) == SCORING_STATUS_UNAVAILABLE);
+}
+
+static void test_host_and_hardware_argument_guards(void) {
+  fake_hardware_state_t state = { .now_us = 1234U };
+  scoring_stm32_hardware_t hardware = make_fake_hardware(&state);
+  scoring_stm32_host_t host;
+  scoring_stm32_transport_frame_t frame;
+
+  CHECK(scoring_stm32_validate_hardware(NULL) == SCORING_STATUS_INVALID_ARGUMENT);
+  CHECK(scoring_stm32_host_init(NULL, &hardware) == SCORING_STATUS_INVALID_ARGUMENT);
+  CHECK(scoring_stm32_host_init(&host, NULL) == SCORING_STATUS_INVALID_ARGUMENT);
+  CHECK(scoring_stm32_host_start(NULL) == SCORING_STATUS_INVALID_ARGUMENT);
+  CHECK(scoring_stm32_host_poll(NULL) == SCORING_STATUS_INVALID_ARGUMENT);
+  CHECK(
+    scoring_stm32_host_publish_transport_frame(
+      NULL,
+      SCORING_STM32_TRANSPORT_STATUS,
+      NULL,
+      0U
+    ) == SCORING_STATUS_INVALID_ARGUMENT
+  );
+  CHECK(scoring_stm32_host_receive_transport_fragment(NULL, NULL, 0U, &frame) == SCORING_STM32_TRANSPORT_INVALID_ARGUMENT);
+  scoring_stm32_host_recover_transport(NULL, 0U, 0U);
+
+  hardware.clock.now_us = NULL;
+  CHECK(scoring_stm32_validate_hardware(&hardware) == SCORING_STATUS_INVALID_ARGUMENT);
+  hardware = make_fake_hardware(&state);
+  hardware.adc.read_frame = NULL;
+  CHECK(scoring_stm32_validate_hardware(&hardware) == SCORING_STATUS_INVALID_ARGUMENT);
+  hardware = make_fake_hardware(&state);
+  hardware.comparator.read_events = NULL;
+  CHECK(scoring_stm32_validate_hardware(&hardware) == SCORING_STATUS_INVALID_ARGUMENT);
+  hardware = make_fake_hardware(&state);
+  hardware.dma.pop_frames = NULL;
+  CHECK(scoring_stm32_validate_hardware(&hardware) == SCORING_STATUS_INVALID_ARGUMENT);
+  hardware = make_fake_hardware(&state);
+  hardware.flash.read = NULL;
+  CHECK(scoring_stm32_validate_hardware(&hardware) == SCORING_STATUS_INVALID_ARGUMENT);
+  hardware = make_fake_hardware(&state);
+  hardware.flash.write = NULL;
+  CHECK(scoring_stm32_validate_hardware(&hardware) == SCORING_STATUS_INVALID_ARGUMENT);
+  hardware = make_fake_hardware(&state);
+  hardware.watchdog.arm = NULL;
+  CHECK(scoring_stm32_validate_hardware(&hardware) == SCORING_STATUS_INVALID_ARGUMENT);
+  hardware = make_fake_hardware(&state);
+  hardware.watchdog.service = NULL;
+  CHECK(scoring_stm32_validate_hardware(&hardware) == SCORING_STATUS_INVALID_ARGUMENT);
+  hardware = make_fake_hardware(&state);
+  hardware.transport.publish = NULL;
+  CHECK(scoring_stm32_validate_hardware(&hardware) == SCORING_STATUS_INVALID_ARGUMENT);
+}
+
 static void test_missing_callback_fails_before_start(void) {
   fake_hardware_state_t state = { .now_us = 1234U };
   scoring_stm32_hardware_t hardware = make_fake_hardware(&state);
@@ -230,6 +313,70 @@ static void test_bounded_dma_and_comparator_fail_closed(void) {
   CHECK(host.state == SCORING_STM32_STATE_UNAVAILABLE);
 }
 
+static void test_successful_poll_and_decision_publish(void) {
+  fake_hardware_state_t state = {
+    .now_us = 987654U,
+    .dma_frame_count = SCORING_STM32_MAX_DMA_FRAMES_PER_POLL,
+    .comparator_event_count = SCORING_STM32_MAX_COMPARATOR_EVENTS_PER_POLL
+  };
+  scoring_stm32_hardware_t hardware;
+  scoring_stm32_host_t host;
+  const uint8_t payload[] = { 0xA5U, 0x5AU };
+
+  start_ready_host(&host, &hardware, &state);
+  CHECK(host.started_at_us == state.now_us);
+  CHECK(scoring_stm32_host_poll(&host) == SCORING_STATUS_OK);
+  CHECK(host.state == SCORING_STM32_STATE_READY);
+  CHECK(state.watchdog_service_count == 1U);
+  CHECK(
+    scoring_stm32_host_publish_transport_frame(
+      &host,
+      SCORING_STM32_TRANSPORT_DECISION_RECORD,
+      payload,
+      sizeof(payload)
+    ) == SCORING_STATUS_OK
+  );
+}
+
+static void test_host_transport_and_receive_guards(void) {
+  fake_hardware_state_t state = { .now_us = 1234U };
+  scoring_stm32_hardware_t hardware;
+  scoring_stm32_host_t host;
+  scoring_stm32_transport_frame_t frame;
+  uint8_t invalid_header[SCORING_STM32_TRANSPORT_HEADER_BYTES] = { 0U };
+
+  start_ready_host(&host, &hardware, &state);
+  CHECK(
+    scoring_stm32_host_publish_transport_frame(
+      &host,
+      (scoring_stm32_transport_message_type_t)0U,
+      NULL,
+      0U
+    ) == SCORING_STATUS_INTEGRITY_FAILURE
+  );
+  CHECK(
+    scoring_stm32_host_publish_transport_frame(
+      &host,
+      SCORING_STM32_TRANSPORT_STATUS,
+      NULL,
+      1U
+    ) == SCORING_STATUS_INTEGRITY_FAILURE
+  );
+  CHECK(
+    scoring_stm32_host_receive_transport_fragment(&host, NULL, 0U, &frame) ==
+    SCORING_STM32_TRANSPORT_NEED_MORE
+  );
+  CHECK(
+    scoring_stm32_host_receive_transport_fragment(
+      &host,
+      invalid_header,
+      sizeof(invalid_header),
+      &frame
+    ) ==
+    SCORING_STM32_TRANSPORT_MAGIC
+  );
+}
+
 static void test_checked_golden_fixture_translation(void) {
   size_t index;
   size_t total_diagnostics = 0U;
@@ -255,10 +402,14 @@ static void test_checked_golden_fixture_translation(void) {
 
 int main(void) {
   test_safe_defaults_remain_unavailable();
+  test_safe_default_callbacks_fail_closed_individually();
+  test_host_and_hardware_argument_guards();
   test_missing_callback_fails_before_start();
   test_clock_and_watchdog_start_failures_remain_unavailable();
   test_acquisition_and_watchdog_poll_failures_remain_unavailable();
   test_bounded_dma_and_comparator_fail_closed();
+  test_successful_poll_and_decision_publish();
+  test_host_transport_and_receive_guards();
   test_checked_golden_fixture_translation();
   return EXIT_SUCCESS;
 }
