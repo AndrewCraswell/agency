@@ -2,7 +2,12 @@ import { createServer } from "node:http"
 import { afterEach, describe, expect, it } from "vitest"
 import { runWithRequestContext } from "../auth/request-context.js"
 import { createSubscriptionApiHandler } from "./subscription-routes.js"
-import { createWebhookSecretProtector, SubscriptionService, type SubscriptionRepository } from "./subscriptions.js"
+import {
+  createWebhookSecretProtector,
+  SubscriptionService,
+  type SubscriptionRepository,
+  type WebhookRepository
+} from "./subscriptions.js"
 
 const servers = new Set<ReturnType<typeof createServer>>()
 
@@ -13,7 +18,7 @@ afterEach(async () => {
   servers.clear()
 })
 
-function unavailableRepository(): SubscriptionRepository {
+function unavailableRepository(): SubscriptionRepository & WebhookRepository {
   const unavailable = async () => {
     throw new Error("Repository must not be reached by validation tests")
   }

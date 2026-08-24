@@ -188,25 +188,39 @@ export class SubscriptionApiError extends Error {
 }
 
 export type SubscriptionRepository = Readonly<{
-  activateWebhook(input: Readonly<{ id: string; revision: string; when: Date }>): Promise<Webhook>
-  cancelSubscription(input: Readonly<{ id: string; revision: string; when: Date }>): Promise<Subscription>
-  cancelWebhook(input: Readonly<{ id: string; revision: string; when: Date }>): Promise<Webhook>
+  cancelSubscription(
+    input: Readonly<{ id: string; owner: SubscriptionOwner; revision: string; when: Date }>
+  ): Promise<Subscription | undefined>
   createSubscription(input: Readonly<{ fingerprint: string; subscription: Subscription }>): Promise<Subscription>
-  createWebhook(
-    input: Readonly<{ keyId: string; secretCiphertext: EncryptedWebhookSecret; webhook: Webhook }>
-  ): Promise<Webhook>
   findExactSubscription(owner: SubscriptionOwner, fingerprint: string): Promise<Subscription | undefined>
-  getSubscription(id: string): Promise<Subscription | undefined>
-  getWebhook(id: string): Promise<Webhook | undefined>
+  getSubscription(input: Readonly<{ id: string; owner: SubscriptionOwner }>): Promise<Subscription | undefined>
   listDeliveries(
-    input: Readonly<{ cursor?: string; limit: number; subscriptionId: string }>
+    input: Readonly<{ cursor?: string; limit: number; owner: SubscriptionOwner; subscriptionId: string }>
   ): Promise<RepositoryPage<Delivery>>
   listSubscriptionEvents(
-    input: Readonly<{ cursor?: string; limit: number; subscriptionId: string }>
+    input: Readonly<{ cursor?: string; limit: number; owner: SubscriptionOwner; subscriptionId: string }>
   ): Promise<RepositoryPage<SubscriptionEvent>>
   listSubscriptions(
     input: Readonly<{ cursor?: string; limit: number; owner: SubscriptionOwner }>
   ): Promise<RepositoryPage<Subscription>>
+  updateSubscription(
+    input: Readonly<{
+      id: string
+      owner: SubscriptionOwner
+      patch: UpdateSubscriptionInput
+      revision: string
+      when: Date
+    }>
+  ): Promise<Subscription | undefined>
+}>
+
+export type WebhookRepository = Readonly<{
+  activateWebhook(input: Readonly<{ id: string; revision: string; when: Date }>): Promise<Webhook>
+  cancelWebhook(input: Readonly<{ id: string; revision: string; when: Date }>): Promise<Webhook>
+  createWebhook(
+    input: Readonly<{ keyId: string; secretCiphertext: EncryptedWebhookSecret; webhook: Webhook }>
+  ): Promise<Webhook>
+  getWebhook(id: string): Promise<Webhook | undefined>
   listWebhooks(
     input: Readonly<{ cursor?: string; limit: number; owner: SubscriptionOwner }>
   ): Promise<RepositoryPage<Webhook>>
@@ -220,9 +234,6 @@ export type SubscriptionRepository = Readonly<{
       when: Date
     }>
   ): Promise<Webhook>
-  updateSubscription(
-    input: Readonly<{ id: string; patch: UpdateSubscriptionInput; revision: string; when: Date }>
-  ): Promise<Subscription>
   updateWebhook(
     input: Readonly<{ id: string; patch: UpdateWebhookInput; revision: string; when: Date }>
   ): Promise<Webhook>
@@ -233,6 +244,22 @@ export type RepositoryPage<T> = Readonly<{
   nextCursor?: string
   truncated: boolean
 }>
+
+type SubscriptionAndOptionalWebhookRepository = SubscriptionRepository & Partial<WebhookRepository>
+
+function hasWebhookRepository(
+  repository: SubscriptionAndOptionalWebhookRepository
+): repository is SubscriptionRepository & WebhookRepository {
+  return (
+    typeof repository.activateWebhook === "function" &&
+    typeof repository.cancelWebhook === "function" &&
+    typeof repository.createWebhook === "function" &&
+    typeof repository.getWebhook === "function" &&
+    typeof repository.listWebhooks === "function" &&
+    typeof repository.rotateWebhookSecret === "function" &&
+    typeof repository.updateWebhook === "function"
+  )
+}
 
 function ownerFor(identity: RequestIdentity): SubscriptionOwner {
   return { organizationId: identity.organizationId ?? null, userId: identity.userId }
@@ -378,17 +405,30 @@ export class SubscriptionService {
   private readonly now: () => Date
   private readonly repository: SubscriptionRepository
   private readonly secretProtector: WebhookSecretProtector
+  private readonly webhookRepository: WebhookRepository | undefined
 
   constructor(
-    repository: SubscriptionRepository,
+    repository: SubscriptionAndOptionalWebhookRepository,
     secretProtector: WebhookSecretProtector,
     now: () => Date = () => new Date(),
-    identifiers: () => string = () => randomUUID()
+    identifiers: () => string = () => randomUUID(),
+    webhookRepository?: WebhookRepository
   ) {
     this.repository = repository
     this.secretProtector = secretProtector
     this.now = now
     this.identifiers = identifiers
+    this.webhookRepository = webhookRepository ?? (hasWebhookRepository(repository) ? repository : undefined)
+  }
+
+  private requireWebhookRepository(): WebhookRepository {
+    if (this.webhookRepository === undefined) {
+      throw new SubscriptionApiError(
+        "unprocessable",
+        "Webhook persistence is unavailable until its durable security adapters are configured."
+      )
+    }
+    return this.webhookRepository
   }
 
   async createSubscription(identity: RequestIdentity, input: CreateSubscriptionInput): Promise<Subscription> {
@@ -398,7 +438,7 @@ export class SubscriptionService {
       if (preference.channel !== "webhook" || !preference.isEnabled) {
         continue
       }
-      const webhook = await this.repository.getWebhook(preference.destinationId)
+      const webhook = await this.requireWebhookRepository().getWebhook(preference.destinationId)
       if (webhook === undefined || !canAccess(identity, webhook.owner) || webhook.status !== "active") {
         throw new SubscriptionApiError(
           "unprocessable",
@@ -433,7 +473,7 @@ export class SubscriptionService {
   }
 
   async getSubscription(identity: RequestIdentity, id: string): Promise<Subscription> {
-    const subscription = await this.repository.getSubscription(id)
+    const subscription = await this.repository.getSubscription({ id, owner: ownerFor(identity) })
     if (subscription === undefined || !canAccess(identity, subscription.owner)) {
       throw new SubscriptionApiError("not_found", "Subscription was not found.")
     }
@@ -472,7 +512,7 @@ export class SubscriptionService {
       if (preference.channel !== "webhook" || !preference.isEnabled) {
         continue
       }
-      const webhook = await this.repository.getWebhook(preference.destinationId)
+      const webhook = await this.requireWebhookRepository().getWebhook(preference.destinationId)
       if (webhook === undefined || !canAccess(identity, webhook.owner) || webhook.status !== "active") {
         throw new SubscriptionApiError(
           "unprocessable",
@@ -480,13 +520,32 @@ export class SubscriptionService {
         )
       }
     }
-    return await this.repository.updateSubscription({ id, patch, revision, when: this.now() })
+    const updated = await this.repository.updateSubscription({
+      id,
+      owner: ownerFor(identity),
+      patch,
+      revision,
+      when: this.now()
+    })
+    if (updated === undefined) {
+      throw new SubscriptionApiError("precondition_failed", "The subscription changed before it could be updated.")
+    }
+    return updated
   }
 
   async cancelSubscription(identity: RequestIdentity, id: string, revision: string): Promise<Subscription> {
     const subscription = await this.getSubscription(identity, id)
     requireRevision(subscription.revision, revision)
-    return await this.repository.cancelSubscription({ id, revision, when: this.now() })
+    const cancelled = await this.repository.cancelSubscription({
+      id,
+      owner: ownerFor(identity),
+      revision,
+      when: this.now()
+    })
+    if (cancelled === undefined) {
+      throw new SubscriptionApiError("precondition_failed", "The subscription changed before it could be cancelled.")
+    }
+    return cancelled
   }
 
   async listSubscriptionEvents(
@@ -495,7 +554,7 @@ export class SubscriptionService {
     input: Readonly<{ cursor?: string; limit: number }>
   ): Promise<RepositoryPage<SubscriptionEvent>> {
     await this.getSubscription(identity, id)
-    return await this.repository.listSubscriptionEvents({ ...input, subscriptionId: id })
+    return await this.repository.listSubscriptionEvents({ ...input, owner: ownerFor(identity), subscriptionId: id })
   }
 
   async listDeliveries(
@@ -504,11 +563,11 @@ export class SubscriptionService {
     input: Readonly<{ cursor?: string; limit: number }>
   ): Promise<RepositoryPage<Delivery>> {
     await this.getSubscription(identity, id)
-    return await this.repository.listDeliveries({ ...input, subscriptionId: id })
+    return await this.repository.listDeliveries({ ...input, owner: ownerFor(identity), subscriptionId: id })
   }
 
   async getWebhook(identity: RequestIdentity, id: string): Promise<Webhook> {
-    const webhook = await this.repository.getWebhook(id)
+    const webhook = await this.requireWebhookRepository().getWebhook(id)
     if (webhook === undefined || !canAccess(identity, webhook.owner)) {
       throw new SubscriptionApiError("not_found", "Webhook was not found.")
     }
@@ -519,7 +578,7 @@ export class SubscriptionService {
     identity: RequestIdentity,
     input: Readonly<{ cursor?: string; limit: number }>
   ): Promise<RepositoryPage<Webhook>> {
-    return await this.repository.listWebhooks({ ...input, owner: ownerFor(identity) })
+    return await this.requireWebhookRepository().listWebhooks({ ...input, owner: ownerFor(identity) })
   }
 
   async createWebhook(identity: RequestIdentity, input: CreateWebhookInput): Promise<WebhookWithSecret> {
@@ -545,7 +604,7 @@ export class SubscriptionService {
       updatedAt: now,
       url: input.url
     }
-    const created = await this.repository.createWebhook({ keyId, secretCiphertext, webhook })
+    const created = await this.requireWebhookRepository().createWebhook({ keyId, secretCiphertext, webhook })
     return { keyId, secret, webhook: created }
   }
 
@@ -564,13 +623,13 @@ export class SubscriptionService {
     if (patch.url !== undefined) {
       validateWebhookInput({ eventTypes: webhook.eventTypes, name: webhook.name, url: patch.url })
     }
-    return await this.repository.updateWebhook({ id, patch, revision, when: this.now() })
+    return await this.requireWebhookRepository().updateWebhook({ id, patch, revision, when: this.now() })
   }
 
   async cancelWebhook(identity: RequestIdentity, id: string, revision: string): Promise<Webhook> {
     const webhook = await this.getWebhook(identity, id)
     requireRevision(webhook.revision, revision)
-    return await this.repository.cancelWebhook({ id, revision, when: this.now() })
+    return await this.requireWebhookRepository().cancelWebhook({ id, revision, when: this.now() })
   }
 
   async rotateWebhookSecret(
@@ -591,7 +650,7 @@ export class SubscriptionService {
     const secret = randomBytes(32).toString("base64url")
     const secretCiphertext = await this.secretProtector.protect(secret)
     const keyId = `webhook-key:${this.identifiers()}`
-    const rotated = await this.repository.rotateWebhookSecret({
+    const rotated = await this.requireWebhookRepository().rotateWebhookSecret({
       id,
       keyId,
       overlapEndsAt: overlapSeconds === 0 ? null : new Date(now.getTime() + overlapSeconds * 1000),
@@ -608,7 +667,7 @@ export class SubscriptionService {
     if (webhook.status === "cancelled") {
       throw new SubscriptionApiError("conflict", "Cancelled webhooks cannot be verified.")
     }
-    return await this.repository.activateWebhook({ id, revision, when: this.now() })
+    return await this.requireWebhookRepository().activateWebhook({ id, revision, when: this.now() })
   }
 }
 

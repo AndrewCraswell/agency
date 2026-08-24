@@ -6,10 +6,11 @@ import {
   SubscriptionService,
   type Subscription,
   type SubscriptionRepository,
-  type Webhook
+  type Webhook,
+  type WebhookRepository
 } from "./subscriptions.js"
 
-function repository(): SubscriptionRepository {
+function repository(): SubscriptionRepository & WebhookRepository {
   const subscriptions = new Map<string, Subscription>()
   const webhooks = new Map<string, Webhook>()
   const noEvents = async () => ({ items: [], truncated: false }) as const
@@ -62,7 +63,7 @@ function repository(): SubscriptionRepository {
           fingerprint.length === 64 &&
           subscription.target.type === "record"
       ),
-    getSubscription: async (id) => subscriptions.get(id),
+    getSubscription: async ({ id }) => subscriptions.get(id),
     getWebhook: async (id) => webhooks.get(id),
     listDeliveries: noEvents,
     listSubscriptionEvents: noEvents,
