@@ -1,5 +1,4 @@
 import { createElement } from "react"
-import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
 import AnalogCouponCircuit from "./analog-coupon.circuit.js"
 import {
@@ -11,17 +10,10 @@ import {
   validateCouponRun,
   type AnalogCouponPoint
 } from "./analog-coupon.js"
+import { renderTestCircuit } from "./test-helper.js"
 
 function renderCouponCircuit() {
-  const circuit = new Circuit()
-  circuit.pcbDisabled = true
-  circuit.pcbRoutingDisabled = true
-  circuit.schematicDisabled = true
-  circuit.setPlatform({ partsEngineDisabled: true })
-  circuit.add(createElement(AnalogCouponCircuit))
-  circuit.render()
-
-  return circuit.getCircuitJson()
+  return renderTestCircuit(createElement(AnalogCouponCircuit), { pcbEnabled: false })
 }
 
 const completePoint: AnalogCouponPoint = {

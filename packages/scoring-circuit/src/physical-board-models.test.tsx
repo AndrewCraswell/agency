@@ -1,4 +1,3 @@
-import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
 import { applicationDisplayHub75SupportParts } from "./application-display-carrier-support.js"
 import ApplicationDisplayCarrierCircuit, { hub75Signals } from "./application-display-carrier.circuit.js"
@@ -14,18 +13,12 @@ import {
   validatePhysicalBoardContract
 } from "./physical-board-contract.js"
 import ScoringIoBoardCircuit from "./scoring-io-board.circuit.js"
+import { renderTestCircuit } from "./test-helper.js"
 
-type CircuitJson = ReturnType<InstanceType<typeof Circuit>["getCircuitJson"]>
+type CircuitJson = ReturnType<typeof renderTestCircuit>
 
 function render(element: React.ReactElement, pcbEnabled: boolean): CircuitJson {
-  const circuit = new Circuit()
-  circuit.pcbDisabled = !pcbEnabled
-  circuit.pcbRoutingDisabled = true
-  circuit.schematicDisabled = true
-  circuit.setPlatform({ partsEngineDisabled: true })
-  circuit.add(element)
-  circuit.render()
-  return circuit.getCircuitJson()
+  return renderTestCircuit(element, { pcbEnabled })
 }
 
 const scoringSource = render(<ScoringIoBoardCircuit />, false)

@@ -34,7 +34,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 14 | SD-008 | P2 | intake-blocked-on-active-units | Strict immutable-data helpers are copied across app and circuit contracts |
 | 15 | SC-004 | P2 | ready | Generated board reports are nondeterministic and embed a localhost simulator URL |
 | 16 | FW-005 | P2 | done | Root-approved shared native CMake policy now enforces C17, conversion warnings, and Clang coverage consistently while retaining STM32 target-specific flags |
-| 17 | SC-005 | P3 | ready | Circuit test setup is repeated across eight files |
+| 17 | SC-005 | P3 | done | Root-approved test-only renderer helper centralizes the shared tscircuit setup across eight suites while preserving each suite's PCB mode and component-specific assertions |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -207,7 +207,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SC-005: centralize repeated tscircuit test setup
 
 - Priority: `P3`
-- State: `ready`
+- State: `done`
 - Affected files: the repeated `new Circuit()` setup in analog-coupon, communications-module, index, manufacturer-footprint-adapter, part-readiness, and physical-board-model tests.
 - Description: fourteen setup blocks repeat materially identical circuit construction and option wiring across eight test files.
 - Impact: rendering-option changes require repeated edits and can leave suites using subtly different setup.

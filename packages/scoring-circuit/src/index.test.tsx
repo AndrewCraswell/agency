@@ -1,35 +1,20 @@
-import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
 import { componentDecisions, componentEvidenceAsOf, forbiddenLifecycleStates } from "./component-decisions.js"
 import ScoringCircuit from "./index.circuit.js"
+import { renderTestCircuit } from "./test-helper.js"
 
-let architectureJson: ReturnType<InstanceType<typeof Circuit>["getCircuitJson"]> | undefined
-let pcbPlacementJson: ReturnType<InstanceType<typeof Circuit>["getCircuitJson"]> | undefined
+let architectureJson: ReturnType<typeof renderTestCircuit> | undefined
+let pcbPlacementJson: ReturnType<typeof renderTestCircuit> | undefined
 
 function renderArchitecture() {
   if (architectureJson !== undefined) return architectureJson
-  const circuit = new Circuit()
-  circuit.pcbDisabled = true
-  circuit.pcbRoutingDisabled = true
-  circuit.schematicDisabled = true
-  circuit.setPlatform({ partsEngineDisabled: true })
-  circuit.add(<ScoringCircuit />)
-  circuit.render()
-
-  architectureJson = circuit.getCircuitJson()
+  architectureJson = renderTestCircuit(<ScoringCircuit />, { pcbEnabled: false })
   return architectureJson
 }
 
 function renderPcbPlacements() {
   if (pcbPlacementJson !== undefined) return pcbPlacementJson
-  const circuit = new Circuit()
-  circuit.pcbRoutingDisabled = true
-  circuit.schematicDisabled = true
-  circuit.setPlatform({ partsEngineDisabled: true })
-  circuit.add(<ScoringCircuit />)
-  circuit.render()
-
-  pcbPlacementJson = circuit.getCircuitJson()
+  pcbPlacementJson = renderTestCircuit(<ScoringCircuit />)
   return pcbPlacementJson
 }
 
@@ -88,8 +73,8 @@ describe("production scoring architecture", () => {
     expect(serialized).not.toContain("J_STM32")
     expect(serialized).not.toContain("J_ESP32")
     expect(traceNames.some((name) => name.includes("U_STM32") && name.includes("U_ESP32"))).toBe(false)
-    expect(traceNames).toContain("J_PISTE.PISTE to U_ESD_L.SPARE")
-    expect(traceNames).toContain("U_ESD_L.SPARE to U_PISTE_FRONTEND.RAW_PISTE")
+    expect(traceNames).toContain("J_PISTE.PISTE to U_PISTE_FRONTEND.RAW_PISTE")
+    expect(traceNames).toContain("U_PISTE_FRONTEND.SENSE_PISTE to U_STM32.PISTE")
     expect(traceNames).not.toContain("J_PISTE.PISTE to U_STM32.PISTE")
     expect(traceNames).toContain("J_USB2_CARRIER.SHIELD to net.CHASSIS")
     expect(traceNames.some((name) => name.includes("CHASSIS") && name.includes("net.GND"))).toBe(false)

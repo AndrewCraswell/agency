@@ -1,4 +1,3 @@
-import { Circuit } from "tscircuit"
 import { beforeAll, describe, expect, it } from "vitest"
 import CommunicationsModuleCircuit from "./communications-module.circuit.js"
 import ScoringCircuit from "./index.circuit.js"
@@ -10,44 +9,27 @@ import {
   type CriticalPartReadiness
 } from "./part-readiness.js"
 import ScoringIoBoardCircuit from "./scoring-io-board.circuit.js"
+import { renderTestCircuit } from "./test-helper.js"
 
-let architectureJson: ReturnType<InstanceType<typeof Circuit>["getCircuitJson"]> | undefined
-let communicationsModuleJson: ReturnType<InstanceType<typeof Circuit>["getCircuitJson"]> | undefined
-let scoringIoBoardJson: ReturnType<InstanceType<typeof Circuit>["getCircuitJson"]> | undefined
+let architectureJson: ReturnType<typeof renderTestCircuit> | undefined
+let communicationsModuleJson: ReturnType<typeof renderTestCircuit> | undefined
+let scoringIoBoardJson: ReturnType<typeof renderTestCircuit> | undefined
 
 function renderArchitecture() {
   if (architectureJson !== undefined) return architectureJson
-  const circuit = new Circuit()
-  circuit.pcbRoutingDisabled = true
-  circuit.schematicDisabled = true
-  circuit.setPlatform({ partsEngineDisabled: true })
-  circuit.add(<ScoringCircuit />)
-  circuit.render()
-  architectureJson = circuit.getCircuitJson()
+  architectureJson = renderTestCircuit(<ScoringCircuit />)
   return architectureJson
 }
 
 function renderCommunicationsModule() {
   if (communicationsModuleJson !== undefined) return communicationsModuleJson
-  const circuit = new Circuit()
-  circuit.pcbRoutingDisabled = true
-  circuit.schematicDisabled = true
-  circuit.setPlatform({ partsEngineDisabled: true })
-  circuit.add(<CommunicationsModuleCircuit />)
-  circuit.render()
-  communicationsModuleJson = circuit.getCircuitJson()
+  communicationsModuleJson = renderTestCircuit(<CommunicationsModuleCircuit />)
   return communicationsModuleJson
 }
 
 function renderScoringIoBoard() {
   if (scoringIoBoardJson !== undefined) return scoringIoBoardJson
-  const circuit = new Circuit()
-  circuit.pcbRoutingDisabled = true
-  circuit.schematicDisabled = true
-  circuit.setPlatform({ partsEngineDisabled: true })
-  circuit.add(<ScoringIoBoardCircuit />)
-  circuit.render()
-  scoringIoBoardJson = circuit.getCircuitJson()
+  scoringIoBoardJson = renderTestCircuit(<ScoringIoBoardCircuit />)
   return scoringIoBoardJson
 }
 

@@ -1,4 +1,3 @@
-import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
 import CommunicationsModuleCircuit, {
   communicationsModuleBoardContract,
@@ -8,15 +7,10 @@ import { componentDecisions } from "./component-decisions.js"
 import { ethernetCrystalQualification, ethernetSupportNetwork } from "./ethernet-support-network.js"
 import ScoringCircuit from "./index.circuit.js"
 import { criticalPartReadiness } from "./part-readiness.js"
+import { renderTestCircuit } from "./test-helper.js"
 
 function render(circuitElement: React.ReactElement) {
-  const circuit = new Circuit()
-  circuit.pcbRoutingDisabled = true
-  circuit.schematicDisabled = true
-  circuit.setPlatform({ partsEngineDisabled: true })
-  circuit.add(circuitElement)
-  circuit.render()
-  return circuit.getCircuitJson()
+  return renderTestCircuit(circuitElement)
 }
 
 function renderModule() {

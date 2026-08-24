@@ -1,5 +1,4 @@
 import { createElement } from "react"
-import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
 import OneChannelAnalogExperimentCircuit from "./one-channel-analog-experiment.circuit.js"
 import {
@@ -16,16 +15,10 @@ import {
   type OneChannelExperimentRecord
 } from "./one-channel-analog-experiment.js"
 import { oneChannelAnalogExperimentBom } from "./one-channel-analog-readiness.js"
+import { renderTestCircuit } from "./test-helper.js"
 
 function renderCircuit() {
-  const circuit = new Circuit()
-  circuit.pcbDisabled = true
-  circuit.pcbRoutingDisabled = true
-  circuit.schematicDisabled = true
-  circuit.setPlatform({ partsEngineDisabled: true })
-  circuit.add(createElement(OneChannelAnalogExperimentCircuit))
-  circuit.render()
-  return circuit.getCircuitJson()
+  return renderTestCircuit(createElement(OneChannelAnalogExperimentCircuit), { pcbEnabled: false })
 }
 
 type CircuitElement = ReturnType<typeof renderCircuit>[number]

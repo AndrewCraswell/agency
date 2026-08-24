@@ -1,4 +1,3 @@
-import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
 import CommunicationsModuleCircuit from "./communications-module.circuit.js"
 import { ethernetSupportNetwork } from "./ethernet-support-network.js"
@@ -6,15 +5,10 @@ import { fabricationFootprintGates } from "./fabrication-footprint-gates.js"
 import ScoringCircuit from "./index.circuit.js"
 import { criticalPartReadiness } from "./part-readiness.js"
 import ScoringIoBoardCircuit from "./scoring-io-board.circuit.js"
+import { renderTestCircuit } from "./test-helper.js"
 
 function renderPcbPlacements(circuitElement: React.ReactElement) {
-  const circuit = new Circuit()
-  circuit.pcbRoutingDisabled = true
-  circuit.schematicDisabled = true
-  circuit.setPlatform({ partsEngineDisabled: true })
-  circuit.add(circuitElement)
-  circuit.render()
-  return circuit.getCircuitJson()
+  return renderTestCircuit(circuitElement)
 }
 
 const communicationsReferences = new Set([

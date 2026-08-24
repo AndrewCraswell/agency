@@ -1,27 +1,15 @@
-import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
 import CommunicationsModuleCircuit from "./communications-module.circuit.js"
 import ScoringCircuit from "./index.circuit.js"
 import { manufacturerFootprintEligibility, manufacturerFootprintProps } from "./manufacturer-footprint-adapter.js"
+import { renderTestCircuit } from "./test-helper.js"
 
 function renderPcbPlacements() {
-  const circuit = new Circuit()
-  circuit.pcbRoutingDisabled = true
-  circuit.schematicDisabled = true
-  circuit.setPlatform({ partsEngineDisabled: true })
-  circuit.add(<ScoringCircuit />)
-  circuit.render()
-  return circuit.getCircuitJson()
+  return renderTestCircuit(<ScoringCircuit />)
 }
 
 function renderCommunicationsPcbPlacements() {
-  const circuit = new Circuit()
-  circuit.pcbRoutingDisabled = true
-  circuit.schematicDisabled = true
-  circuit.setPlatform({ partsEngineDisabled: true })
-  circuit.add(<CommunicationsModuleCircuit />)
-  circuit.render()
-  return circuit.getCircuitJson()
+  return renderTestCircuit(<CommunicationsModuleCircuit />)
 }
 
 function pcbArtifactsFor(circuitJson: ReturnType<typeof renderPcbPlacements>, name: string) {
