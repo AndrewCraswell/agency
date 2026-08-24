@@ -97,6 +97,12 @@ memberships use the existing relationship endpoint and `membershipsPageInfo` cur
 Person bill, amendment, vote, and membership collections default respectively to latest-observed descending,
 submitted-date descending, held-date descending, and membership start-date descending.
 
+### `GET /api/people/{personId}/terms/{termId}`
+
+Returns `ResourceResponse<LegislativeTerm>`. The term must belong to the path person; otherwise the response is
+`404 not_found`. This is the unique canonical retrieval URL emitted in `LegislativeTerm.canonicalUrl`. No body or query
+parameters are accepted.
+
 ## Organizations
 
 ### `GET /api/organizations`
@@ -123,6 +129,12 @@ Source coverage may not provide every relationship; empty results include a cove
 Organization children are complete with an ingestion maximum of 250. Membership continuation uses the existing
 `/members` endpoint. Organization members default role then person name ascending; bills default latest-action
 descending; calendars default name ascending; meeting collections default `sort=starts-asc`.
+
+### `GET /api/organizations/{organizationId}/memberships/{membershipId}`
+
+Returns `ResourceResponse<Membership>`. The membership must belong to the path organization; otherwise the response is
+`404 not_found`. This is the unique canonical retrieval URL emitted in `Membership.canonicalUrl`. No body or query
+parameters are accepted.
 
 ## Meetings
 
@@ -157,6 +169,20 @@ Meeting organizations are complete with an ingestion maximum of 50; the other em
 cursors through the four relationship endpoints above.
 Agenda, document, outcome, and participant collections default respectively to ordinal ascending, classification then
 title ascending, source sequence ascending, and participant name ascending.
+
+### Singular meeting child retrieval
+
+The following routes return `ResourceResponse<T>` for one canonical meeting child. In every case the child must belong
+to the path meeting; otherwise the response is `404 not_found`. No body or query parameters are accepted.
+
+| Method and path | Response |
+| --- | --- |
+| `GET /api/meetings/{meetingId}/agenda/{agendaItemId}` | `AgendaItem` |
+| `GET /api/meetings/{meetingId}/documents/{eventDocumentId}` | `EventDocument` |
+| `GET /api/meetings/{meetingId}/outcomes/{outcomeId}` | `MeetingOutcome` |
+| `GET /api/meetings/{meetingId}/participants/{participantId}` | `MeetingParticipant` |
+
+Each route is the unique retrieval URL emitted in the corresponding record's `canonicalUrl`.
 
 ## Calendars
 

@@ -217,6 +217,12 @@ Returns ordered, unranked `Page<DocumentSection>`. Query parameters are `cursor`
 `pageTo`. This endpoint reads a known document; it does not perform lexical or semantic ranking. Use
 `POST /api/search/passages` to search within one or more documents.
 
+### `GET /api/documents/{documentId}/sections/{sectionId}`
+
+Returns `ResourceResponse<DocumentSection>` for the named section. The section must belong to the path document;
+otherwise the response is `404 not_found`. This is the unique canonical retrieval URL emitted in
+`DocumentSection.canonicalUrl`. No body or query parameters are accepted.
+
 ### `GET /api/supporting-materials`
 
 Query parameters are `cursor`, `limit`, `jurisdictionId`, `billId`, `amendmentId`, `meetingId`, `organizationId`,
@@ -232,6 +238,12 @@ not one unbounded text field.
 
 Returns ordered `Page<SupportingMaterialSection>`. Query parameters are `cursor`, `limit`, `heading`, `pageFrom`, and
 `pageTo`.
+
+### `GET /api/supporting-materials/{materialId}/sections/{sectionId}`
+
+Returns `ResourceResponse<SupportingMaterialSection>` for the named section. The section must belong to the path
+material; otherwise the response is `404 not_found`. This is the unique canonical retrieval URL emitted in
+`SupportingMaterialSection.canonicalUrl`. No body or query parameters are accepted.
 
 ## Change feed
 

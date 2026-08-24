@@ -87,9 +87,11 @@ ordering rule, and exception.
 | GET    | `/api/votes/{voteId}/positions`                          | Authenticated | `Page<VotePosition>`            |
 | GET    | `/api/documents/{documentId}`                            | Authenticated | `DocumentDetail`                |
 | GET    | `/api/documents/{documentId}/sections`                   | Authenticated | `Page<DocumentSection>`         |
+| GET    | `/api/documents/{documentId}/sections/{sectionId}`       | Authenticated | `DocumentSection`               |
 | GET    | `/api/supporting-materials`                              | Authenticated | `Page<SupportingMaterialSummary>` |
 | GET    | `/api/supporting-materials/{materialId}`                 | Authenticated | `SupportingMaterialDetail`      |
 | GET    | `/api/supporting-materials/{materialId}/sections`        | Authenticated | `Page<SupportingMaterialSection>` |
+| GET    | `/api/supporting-materials/{materialId}/sections/{sectionId}` | Authenticated | `SupportingMaterialSection` |
 | GET    | `/api/changes`                                           | Authenticated | `Page<ChangeEvent>`             |
 | POST   | `/api/resources/batch`                                  | Authenticated | `BatchResponse<CanonicalResource>` |
 
@@ -103,18 +105,24 @@ ordering rule, and exception.
 | GET    | `/api/people/{personId}/amendments`               | Authenticated | `Page<AmendmentSummary>`    |
 | GET    | `/api/people/{personId}/votes`                    | Authenticated | `Page<VotePositionActivity>` |
 | GET    | `/api/people/{personId}/memberships`              | Authenticated | `Page<Membership>`          |
+| GET    | `/api/people/{personId}/terms/{termId}`           | Authenticated | `LegislativeTerm`           |
 | GET    | `/api/organizations`                              | Authenticated | `Page<OrganizationSummary>` |
 | GET    | `/api/organizations/{organizationId}`             | Authenticated | `OrganizationDetail`        |
 | GET    | `/api/organizations/{organizationId}/members`     | Authenticated | `Page<Membership>`          |
+| GET    | `/api/organizations/{organizationId}/memberships/{membershipId}` | Authenticated | `Membership` |
 | GET    | `/api/organizations/{organizationId}/meetings`    | Authenticated | `Page<MeetingSummary>`      |
 | GET    | `/api/organizations/{organizationId}/bills`       | Authenticated | `Page<BillSummary>`         |
 | GET    | `/api/organizations/{organizationId}/calendars`   | Authenticated | `Page<CalendarSummary>`     |
 | GET    | `/api/meetings`                                   | Authenticated | `Page<MeetingSummary>`      |
 | GET    | `/api/meetings/{meetingId}`                       | Authenticated | `MeetingDetail`             |
 | GET    | `/api/meetings/{meetingId}/agenda`                | Authenticated | `Page<AgendaItem>`          |
+| GET    | `/api/meetings/{meetingId}/agenda/{agendaItemId}` | Authenticated | `AgendaItem`                |
 | GET    | `/api/meetings/{meetingId}/documents`             | Authenticated | `Page<EventDocument>`       |
+| GET    | `/api/meetings/{meetingId}/documents/{eventDocumentId}` | Authenticated | `EventDocument`       |
 | GET    | `/api/meetings/{meetingId}/outcomes`              | Authenticated | `Page<MeetingOutcome>`      |
+| GET    | `/api/meetings/{meetingId}/outcomes/{outcomeId}`  | Authenticated | `MeetingOutcome`            |
 | GET    | `/api/meetings/{meetingId}/participants`          | Authenticated | `Page<MeetingParticipant>`  |
+| GET    | `/api/meetings/{meetingId}/participants/{participantId}` | Authenticated | `MeetingParticipant` |
 | GET    | `/api/calendars`                                  | Authenticated | `Page<CalendarSummary>`     |
 | GET    | `/api/calendars/{calendarId}`                     | Authenticated | `CalendarDetail`            |
 | GET    | `/api/calendars/{calendarId}/meetings`            | Authenticated | `Page<MeetingSummary>`      |

@@ -13,8 +13,8 @@ An endpoint is not **Done** merely because a route handler exists. Each phase is
 the verification listed below. The endpoint contract remains the source of truth for request and response bodies.
 The execution gate is the [local smoke and MCP parity checklist](http-api-local-smoke-and-parity.md). This ledger was
 last reconciled with the reviewed implementation on 2026-08-24; no endpoint has yet supplied the smoke, parity, and
-reviewed-commit evidence required for **Done**. Current totals are 36 **In progress**, 39 **Blocked**, 4 **Ready**, and
-0 **Done** across 79 endpoints.
+reviewed-commit evidence required for **Done**. Current totals are 38 **In progress**, 45 **Blocked**, 4 **Ready**, and
+0 **Done** across 87 endpoints.
 
 ## Delivery phases
 
@@ -83,9 +83,11 @@ intentionally uncomposed and **Blocked**.
 | GET | `/api/votes/{voteId}/positions` | Blocked | Dedicated paginated position query is missing. |
 | GET | `/api/documents/{documentId}` | In progress | Reviewed handler exists; hosted/source URLs, extraction state, exact projection, live parity, and commit remain. |
 | GET | `/api/documents/{documentId}/sections` | In progress | Reviewed handler/page foundation exists; OCR/extraction metadata, exact projection, live parity, and commit remain. |
+| GET | `/api/documents/{documentId}/sections/{sectionId}` | In progress | Canonical projector and contract exist; singular repository query, handler tests, live smoke/parity, and commit remain. |
 | GET | `/api/supporting-materials` | In progress | Reviewed handler exists; exact collection projection, complete filters, live parity, and commit remain. |
 | GET | `/api/supporting-materials/{materialId}` | In progress | Reviewed handler exists; exact canonical/provenance projection, live parity, and commit remain. |
 | GET | `/api/supporting-materials/{materialId}/sections` | Blocked | Supporting-material section query is missing. |
+| GET | `/api/supporting-materials/{materialId}/sections/{sectionId}` | In progress | Canonical projector and contract exist; singular repository query, handler tests, live smoke/parity, and commit remain. |
 | GET | `/api/changes` | In progress | Reviewed handler exists; complete filters, exact projection, live parity, and commit remain. |
 | POST | `/api/resources/batch` | Blocked | Cross-resource dispatcher and canonical union projection are missing. |
 
@@ -99,18 +101,24 @@ intentionally uncomposed and **Blocked**.
 | GET | `/api/people/{personId}/amendments` | Blocked | Person-amendment relationship query is missing. |
 | GET | `/api/people/{personId}/votes` | Blocked | Person vote-position activity query is missing. |
 | GET | `/api/people/{personId}/memberships` | Blocked | Historical membership query is missing. |
+| GET | `/api/people/{personId}/terms/{termId}` | Blocked | Canonical projector exists; direct person-scoped term lookup and handler are missing. |
 | GET | `/api/organizations` | In progress | Reviewed handler exists; exact `OrganizationSummary` projection/filter smoke, live parity, and commit remain. |
 | GET | `/api/organizations/{organizationId}` | In progress | Reviewed handler exists; exact canonical detail/child metadata, live parity, and commit remain. |
 | GET | `/api/organizations/{organizationId}/members` | Blocked | Historical organization membership query is missing. |
+| GET | `/api/organizations/{organizationId}/memberships/{membershipId}` | Blocked | Canonical projector exists; direct organization-scoped membership lookup and handler are missing. |
 | GET | `/api/organizations/{organizationId}/meetings` | Ready | Reuse event search with organization scope. |
 | GET | `/api/organizations/{organizationId}/bills` | Blocked | Organization-bill relationship query is missing. |
 | GET | `/api/organizations/{organizationId}/calendars` | Blocked | Durable calendar resources are not modeled. |
 | GET | `/api/meetings` | In progress | Reviewed handler exists; exact `MeetingSummary` projection/filter smoke, live parity, and commit remain. |
 | GET | `/api/meetings/{meetingId}` | In progress | Reviewed handler exists; exact canonical detail/child metadata, live parity, and commit remain. |
 | GET | `/api/meetings/{meetingId}/agenda` | Blocked | Agenda-item query/projection is missing. |
+| GET | `/api/meetings/{meetingId}/agenda/{agendaItemId}` | Blocked | Canonical projector exists; direct meeting-scoped agenda-item lookup and handler are missing. |
 | GET | `/api/meetings/{meetingId}/documents` | Blocked | Event-document relationship query is missing. |
+| GET | `/api/meetings/{meetingId}/documents/{eventDocumentId}` | Blocked | Canonical projector exists; direct meeting-scoped event-document lookup and handler are missing. |
 | GET | `/api/meetings/{meetingId}/outcomes` | Blocked | Meeting outcome query is missing. |
+| GET | `/api/meetings/{meetingId}/outcomes/{outcomeId}` | Blocked | Canonical projector exists; direct meeting-scoped outcome lookup and handler are missing. |
 | GET | `/api/meetings/{meetingId}/participants` | Blocked | Meeting participant query is missing. |
+| GET | `/api/meetings/{meetingId}/participants/{participantId}` | Blocked | Canonical projector exists; direct meeting-scoped participant lookup and handler are missing. |
 | GET | `/api/calendars` | Blocked | Durable calendar resources are not modeled. |
 | GET | `/api/calendars/{calendarId}` | Blocked | Durable calendar resources are not modeled. |
 | GET | `/api/calendars/{calendarId}/meetings` | Blocked | Durable calendar resources are not modeled. |
