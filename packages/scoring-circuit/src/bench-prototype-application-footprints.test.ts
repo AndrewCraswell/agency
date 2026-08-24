@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   benchPrototypeApplicationFootprints,
@@ -18,6 +20,37 @@ describe("BP-033 application footprint closure ledger", () => {
         (record) => record.packageStatus === "upstream-package-not-specified"
       )
     ).toBe(true)
+  })
+
+  it("hash-binds every retained primary source without granting review credit", () => {
+    const retainedRecords = benchPrototypeApplicationFootprints.records.filter(
+      (record) => record.manufacturerDrawing.state === "acquired"
+    )
+    const packageRoot = new URL("../", import.meta.url)
+    expect(retainedRecords.map((record) => record.reference).sort()).toEqual([
+      "D_SOURCE_SELECTOR",
+      "D_VBUS_TVS",
+      "L_APP_REGULATOR",
+      "U_DISPLAY_LIMITER",
+      "U_USB_CC_SBU_PROTECT",
+      "U_USB_DATA_PROTECT",
+      "U_USB_PD",
+      "U_VBUS_EFUSE"
+    ])
+    expect(new Set(retainedRecords.map((record) => record.reference)).size).toBe(retainedRecords.length)
+    for (const record of retainedRecords) {
+      if (record.manufacturerDrawing.sha256 === null || record.manufacturerDrawing.url === null)
+        throw new Error(`${record.reference} retained source is incomplete`)
+      if (record.manufacturerDrawing.artifactPath === null)
+        throw new Error(`${record.reference} retained source path is missing`)
+      const bytes = readFileSync(new URL(record.manufacturerDrawing.artifactPath, packageRoot))
+      expect(bytes.subarray(0, 4).toString("ascii")).toBe("%PDF")
+      expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(record.manufacturerDrawing.sha256)
+      expect(record.sourceUrl).toBe(record.manufacturerDrawing.url)
+      expect(record.packageStatus).toBe("exact-package-identified")
+    }
+    expect(benchPrototypeApplicationFootprints.authority.manufacturerDrawingsReviewed).toBe(false)
+    expect(benchPrototypeApplicationFootprints.authority.fabricationAuthorized).toBe(false)
   })
 
   it("keeps audio and every other omitted peripheral out of the board", () => {

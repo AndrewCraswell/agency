@@ -93,11 +93,19 @@ function sameDataGraph(actual: unknown, expected: unknown, seen = new WeakMap<ob
 }
 
 const noEvidence = () => ({
-  manufacturerDrawing: { state: "not-acquired", url: null, revision: null, sha256: null },
+  manufacturerDrawing: { state: "not-acquired", artifactPath: null, url: null, revision: null, sha256: null },
   manufacturerCad: { state: "not-acquired", url: null, revision: null, sha256: null },
   artwork: { state: "not-generated", artifactPath: null, generator: null, sha256: null },
   orientation: { state: "unreviewed", assemblyRotationDeg: null, datum: null, notes: null }
 })
+
+type SourceEvidence = {
+  readonly state: "not-acquired" | "acquired"
+  readonly artifactPath: string | null
+  readonly url: string | null
+  readonly revision: string | null
+  readonly sha256: string | null
+}
 
 type Seed = {
   readonly reference: string
@@ -107,6 +115,87 @@ type Seed = {
   readonly package: string | null
   readonly sourceContract: string
   readonly sourceUrl: string | null
+  readonly manufacturerDrawing?: SourceEvidence
+}
+
+const retainedPrimarySourceBatch = [
+  {
+    reference: "U_USB_PD",
+    mpn: "TPS25730ADREFR",
+    package: "WQFN (REF), 38-pin",
+    path: "docs/evidence/bp-033/ti-tps25730a-datasheet.pdf",
+    url: "https://www.ti.com/lit/ds/symlink/tps25730a.pdf",
+    sha256: "B7D9836E4C82D28BF400FC1747586F24C26DAF94A629AAB4EE57C49072371D28"
+  },
+  {
+    reference: "U_USB_CC_SBU_PROTECT",
+    mpn: "TPD4S201TRGRRQ1",
+    package: "VQFN (RGR), 20-pin",
+    path: "docs/evidence/bp-033/ti-tpd4s201-q1-datasheet.pdf",
+    url: "https://www.ti.com/lit/ds/symlink/tpd4s201-q1.pdf",
+    sha256: "E5A00ECD4BBAD07C21A92754DA2050950B91EBA32A960381FD5C1DE921B758D5"
+  },
+  {
+    reference: "U_USB_DATA_PROTECT",
+    mpn: "TPD2EUSB30DRTR",
+    package: "SOT-9X3 (DRT), 3-pin",
+    path: "docs/evidence/bp-033/ti-tpd2eusb30a-datasheet.pdf",
+    url: "https://www.ti.com/lit/ds/symlink/tpd2eusb30a.pdf",
+    sha256: "A2C0DD845043A5BBFE610F673879C29E38649544385DEA51DBE0A4C49DF39136"
+  },
+  {
+    reference: "D_VBUS_TVS",
+    mpn: "TVS2200DRVR",
+    package: "WSON (DRV), 6-pin",
+    path: "docs/evidence/bp-033/ti-tvs2200-datasheet.pdf",
+    url: "https://www.ti.com/lit/ds/symlink/tvs2200.pdf",
+    sha256: "E79BF6F7D5B69FB71EC3DCE566B4B4D63C27BCCAD8561195E5F2F7122B44C801"
+  },
+  {
+    reference: "D_SOURCE_SELECTOR",
+    mpn: "B340A-13-F",
+    package: "SMA (DO-214AC)",
+    path: "docs/evidence/bp-033/diodes-b340a-datasheet.pdf",
+    url: "https://www.diodes.com/datasheet/download/B340A.pdf",
+    sha256: "453CBD34D996482ABD07AC694C4E2D812D26B1D679D05EE325ACC5C3EEB79917"
+  },
+  {
+    reference: "U_VBUS_EFUSE",
+    mpn: "TPS259474ARPWR",
+    package: "VQFN-HR (RPW), 10-pin",
+    path: "docs/evidence/bp-033/ti-tps25947-datasheet.pdf",
+    url: "https://www.ti.com/lit/ds/symlink/tps25947.pdf",
+    sha256: "051ECDDFE545B8B9F4F992148D24F385F75B1116FD36BEC358F85008A7D919EC"
+  },
+  {
+    reference: "U_DISPLAY_LIMITER",
+    mpn: "TPS259474ARPWR",
+    package: "VQFN-HR (RPW), 10-pin",
+    path: "docs/evidence/bp-033/ti-tps25947-datasheet.pdf",
+    url: "https://www.ti.com/lit/ds/symlink/tps25947.pdf",
+    sha256: "051ECDDFE545B8B9F4F992148D24F385F75B1116FD36BEC358F85008A7D919EC"
+  },
+  {
+    reference: "L_APP_REGULATOR",
+    mpn: "XGL4030-222MEC",
+    package: "XGL4030, 4 mm x 4 mm x 3 mm molded power inductor",
+    path: "docs/evidence/bp-033/coilcraft-xgl4030-datasheet.pdf",
+    url: "https://www.coilcraft.com/getmedia/032d9c73-4222-482f-b6bc-7808590e27c9/xgl4030.pdf",
+    sha256: "34BB1C739914FC2114653D5B3D5893E90501129D5C2AF8A152E546B8068B72E5"
+  }
+] as const
+
+function retainedSourceFor(reference: string): SourceEvidence | undefined {
+  const source = retainedPrimarySourceBatch.find((candidate) => candidate.reference === reference)
+  return source === undefined
+    ? undefined
+    : {
+        state: "acquired",
+        artifactPath: source.path,
+        url: source.url,
+        revision: `Primary source retained at ${source.path}`,
+        sha256: source.sha256
+      }
 }
 
 function selected(seed: Seed) {
@@ -114,7 +203,10 @@ function selected(seed: Seed) {
     ...seed,
     packageStatus: seed.package === null ? "upstream-package-not-specified" : "exact-package-identified",
     population: "DNP-unresolved",
-    ...noEvidence()
+    manufacturerDrawing: seed.manufacturerDrawing ?? noEvidence().manufacturerDrawing,
+    manufacturerCad: noEvidence().manufacturerCad,
+    artwork: noEvidence().artwork,
+    orientation: noEvidence().orientation
   } as const
 }
 
@@ -146,13 +238,13 @@ function selectionBlocked(reference: string, role: string, upstreamDisposition: 
 
 const powerSeeds = [
   ["J_USB_C", "Amphenol ICC", "10177070-00011LF", null, "USB-C receptacle"],
-  ["U_USB_PD", "Texas Instruments", "TPS25730ADREFR", null, "USB-C PD sink controller"],
-  ["U_USB_CC_SBU_PROTECT", "Texas Instruments", "TPD4S201TRGRRQ1", null, "CC/SBU protector"],
-  ["U_USB_DATA_PROTECT", "Texas Instruments", "TPD2EUSB30DRTR", null, "USB data protector"],
-  ["D_VBUS_TVS", "Texas Instruments", "TVS2200DRVR", null, "VBUS TVS"],
-  ["D_SOURCE_SELECTOR", "Diodes Incorporated", "B340A-13-F", null, "source-selector surge diode"],
-  ["U_VBUS_EFUSE", "Texas Instruments", "TPS259474ARPWR", null, "VBUS eFuse"],
-  ["U_DISPLAY_LIMITER", "Texas Instruments", "TPS259474ARPWR", null, "display branch limiter"],
+  ["U_USB_PD", "Texas Instruments", "TPS25730ADREFR", "WQFN (REF), 38-pin", "USB-C PD sink controller"],
+  ["U_USB_CC_SBU_PROTECT", "Texas Instruments", "TPD4S201TRGRRQ1", "VQFN (RGR), 20-pin", "CC/SBU protector"],
+  ["U_USB_DATA_PROTECT", "Texas Instruments", "TPD2EUSB30DRTR", "SOT-9X3 (DRT), 3-pin", "USB data protector"],
+  ["D_VBUS_TVS", "Texas Instruments", "TVS2200DRVR", "WSON (DRV), 6-pin", "VBUS TVS"],
+  ["D_SOURCE_SELECTOR", "Diodes Incorporated", "B340A-13-F", "SMA (DO-214AC)", "source-selector surge diode"],
+  ["U_VBUS_EFUSE", "Texas Instruments", "TPS259474ARPWR", "VQFN-HR (RPW), 10-pin", "VBUS eFuse"],
+  ["U_DISPLAY_LIMITER", "Texas Instruments", "TPS259474ARPWR", "VQFN-HR (RPW), 10-pin", "display branch limiter"],
   ["S_SOURCE_SELECTOR", "C&K", "7101SYZQE", null, "de-energized source selector"],
   ["F_APPLICATION", "Littelfuse", "0451002.MRL", null, "application branch fuse"],
   ["F_DISPLAY", "Littelfuse", "045106.3MRL", null, "display branch fuse"],
@@ -175,7 +267,13 @@ const powerSeeds = [
 
 const applicationSeeds = [
   ["U_APP_REGULATOR", "Texas Instruments", "LMR43620MSC3RPERQ1", "VQFN-HR RPE, 2 mm x 2 mm", "application regulator"],
-  ["L_APP_REGULATOR", "Coilcraft", "XGL4030-222MEC", null, "application regulator inductor"],
+  [
+    "L_APP_REGULATOR",
+    "Coilcraft",
+    "XGL4030-222MEC",
+    "XGL4030, 4 mm x 4 mm x 3 mm molded power inductor",
+    "application regulator inductor"
+  ],
   ["C_APP_REG_IN", "TDK", "C2012X7R1E475K125AB", "0805", "application regulator input capacitor"],
   ["C_APP_REG_IN_HF", "KEMET", "C0603C104K3RACTU", "0603", "application regulator bypass"],
   ["C_APP_REG_BOOT", "KEMET", "C0603C104K3RACTU", "0603", "application regulator bootstrap capacitor"],
@@ -362,7 +460,8 @@ const records = [
       mpn,
       package: packageName,
       sourceContract: "BP-050",
-      sourceUrl: null,
+      sourceUrl: retainedSourceFor(reference)?.url ?? null,
+      manufacturerDrawing: retainedSourceFor(reference),
       role
     } as Seed & { readonly role: string })
   ),
@@ -374,7 +473,8 @@ const records = [
       mpn,
       package: packageName,
       sourceContract: "BP-142",
-      sourceUrl: null,
+      sourceUrl: retainedSourceFor(reference)?.url ?? null,
+      manufacturerDrawing: retainedSourceFor(reference),
       role
     } as Seed & { readonly role: string })
   ),
@@ -468,6 +568,8 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
   const contract = benchPrototypeApplicationFootprints
   const currentBp140References = currentBp140ReferenceSet()
   const reconciledBp140References = contract.bp140ReferenceReconciliation.map((record) => record.reference)
+  const retainedSourceReferences = contract.records.filter((record) => record.manufacturerDrawing.state === "acquired")
+  const retainedSourceReferenceIds = retainedSourceReferences.map((record) => record.reference)
   if (
     contract.workUnit !== "BP-033" ||
     contract.releaseState !== "deny" ||
@@ -486,11 +588,28 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
     ) ||
     contract.records.some(
       (record) =>
-        record.manufacturerDrawing.state !== "not-acquired" ||
+        (record.manufacturerDrawing.state !== "not-acquired" &&
+          !retainedPrimarySourceBatch.some((source) => source.reference === record.reference)) ||
         record.manufacturerCad.state !== "not-acquired" ||
         record.artwork.state !== "not-generated" ||
         record.orientation.state !== "unreviewed"
     ) ||
+    new Set(retainedPrimarySourceBatch.map((source) => source.reference)).size !== retainedPrimarySourceBatch.length ||
+    retainedSourceReferences.length !== retainedPrimarySourceBatch.length ||
+    new Set(retainedSourceReferenceIds).size !== retainedSourceReferenceIds.length ||
+    retainedPrimarySourceBatch.some((source) => {
+      const record = retainedSourceReferences.find((candidate) => candidate.reference === source.reference)
+      return (
+        record === undefined ||
+        record.mpn !== source.mpn ||
+        record.package !== source.package ||
+        record.sourceUrl !== source.url ||
+        record.manufacturerDrawing.artifactPath !== source.path ||
+        record.manufacturerDrawing.url !== source.url ||
+        record.manufacturerDrawing.sha256 !== source.sha256 ||
+        record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
+      )
+    }) ||
     !contract.records.some((record) => record.packageStatus === "upstream-package-not-specified") ||
     currentBp140References.length !== reconciledBp140References.length ||
     currentBp140References.some((reference, index) => reference !== reconciledBp140References[index]) ||

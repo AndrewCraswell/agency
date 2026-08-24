@@ -11,6 +11,20 @@ the exact manufacturer drawing and CAD are archived, the project artwork is
 generated and hashed, and a second reviewer checks orientation and mating
 constraints.
 
+## Source mapping scope
+
+The BP-033 ledger retains a bounded batch of exact manufacturer PDFs for the
+BP-050 USB-C power/protection path, the display eFuse, and the BP-142
+application inductor. Each record binds the exact MPN and package to a
+repository-relative source path, manufacturer URL, and SHA-256. The test reads
+and hashes every retained file. This is source acquisition only: it does not
+alter any CAD, artwork, orientation, schematic, layout, or fabrication `DENY`
+state.
+
+References without retained source bytes have no source URL in this ledger.
+They must not receive a guessed family or distributor link merely to make the
+ledger appear complete.
+
 Some BP-050 selections do not yet state an exact package in their upstream
 contract. They are recorded as `upstream-package-not-specified`, not guessed.
 Those references block schematic and layout release until the manufacturer
