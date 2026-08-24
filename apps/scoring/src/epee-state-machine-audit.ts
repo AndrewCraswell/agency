@@ -42,23 +42,23 @@ function deepFreeze<const Value>(value: Value): Value {
 
 export const M101_EPEE_SOURCE_CONTRACTS = deepFreeze([
   {
-    commit: "9f4c20e7e0ce91e3ea2c3469b91adc57975971d8",
-    sha256: "d5d55ad915598858ae92dd8a205f410f64a53ba1c1a11730beeacb058f65b65e",
+    commit: "3609d483e290d8ab8de6967c9b3d5c9fe2ec3ad9",
+    sha256: "428d020fd742bbed2de06b2dbef9722e807959bd9ef4c7e786c1593cb9269677",
     sourcePath: "apps/scoring/src/epee.ts"
   },
   {
-    commit: "9f4c20e7e0ce91e3ea2c3469b91adc57975971d8",
-    sha256: "1130506e7b7d5a242653f4201db85664e242a0ef4ab6fed88f7b36b5bf167541",
+    commit: "3609d483e290d8ab8de6967c9b3d5c9fe2ec3ad9",
+    sha256: "c347542b3875c704340b174a2475dc1203e0b72c8c2cea650cc09b64c1a10584",
     sourcePath: "apps/scoring/src/epee-resistance.ts"
   },
   {
-    commit: "9f4c20e7e0ce91e3ea2c3469b91adc57975971d8",
+    commit: "3609d483e290d8ab8de6967c9b3d5c9fe2ec3ad9",
     sha256: "32778e202477deacf62318fb06bf0c0c5dd8d2a04a286afa14acc897e7da9108",
     sourcePath: "apps/scoring/src/epee.test.ts"
   },
   {
-    commit: "9f4c20e7e0ce91e3ea2c3469b91adc57975971d8",
-    sha256: "9e14734196a74a754d51afb8325dcf029d4d67c10990e5b70fbe8dd5c11e69dd",
+    commit: "3609d483e290d8ab8de6967c9b3d5c9fe2ec3ad9",
+    sha256: "23022234a4ac44ef4f758f797d5abae77c8e2b4577e9805d8c82f1b2f0eedc70",
     sourcePath: "apps/scoring/src/epee-resistance.test.ts"
   }
 ] as const satisfies readonly M101SourceContract[])
