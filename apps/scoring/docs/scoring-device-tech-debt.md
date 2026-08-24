@@ -42,6 +42,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 22 | SC-007 | P2 | blocked | PCB identity serializers differ; implementation waits for active board-artifact work |
 | 23 | SC-008 | P3 | done | Root-approved private finite-positive assertion now serves the three electrical-budget modules with unchanged errors |
 | 24 | SC-006 | P2 | done | Root-approved strict evidence-time parser now serves connector, fixture, footprint, and IR evidence validators |
+| 25 | SC-009 | P2 | ready | Four analog-evidence flows still bypass the canonical UTC parser, risking inconsistent chronology and calibration acceptance |
 | 25 | SD-016 | P1 | ready | Encrypted-IR ingress throttling stores milliseconds instead of canonical integer microseconds |
 | 26 | SD-017 | P2 | ready | Encrypted-IR wire sizes and byte offsets are manually repeated |
 
@@ -453,3 +454,15 @@ truth.
   - Layout invariants prove the 70-byte header and 150-byte maximum.
   - Round-trip, fixed-vector, malformed-length, and mutated-AAD tests pass.
   - No unexplained raw wire offsets remain in serializer or parser code.
+## SC-009: apply canonical UTC validation to analog evidence
+
+- Priority: `P2`
+- State: `ready`
+- Latest state: The gap is bounded to four analog evidence modules; implementation may begin after reconciling the shared SC-006 helper in the dirty worktree.
+- Affected files: `packages/scoring-circuit/src/analog-coupon.ts`, `one-channel-analog-experiment.ts`, `one-channel-analog-readiness.ts`, and `bench-prototype-analog-test-matrix.ts`, plus focused tests.
+- Description and evidence: these flows use `z.string().datetime()` and raw `Date.parse` even though `bench-prototype-evidence-time.ts` already defines the fail-closed canonical UTC boundary. Offsets and noncanonical-but-parseable values can therefore be accepted differently across otherwise equivalent evidence.
+- Impact: inconsistent timestamp rules can change run ordering, pulse dwell, calibration validity, permit sequencing, and capture chronology.
+- Bounded remediation: reuse `parseCanonicalUtcTimestamp` in the four owning schemas/validators, cache parsed dates locally for comparisons, and retain all existing domain outputs.
+- Acceptance: canonical `.000Z` records retain current results; offsets, impossible dates, noncanonical precision, and invalid ordering/dwell/calibration/permit boundaries reject; no raw `Date.parse` remains in the four modules; focused analog and BP-106 tests pass.
+- Non-goals: no date library, timezone conversion, protocol timestamp change, evidence schema version, or unrelated validator refactor.
+
