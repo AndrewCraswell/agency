@@ -56,7 +56,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 37 | FW-007 | P2 | done | Root-approved private byte-string validation now serves manifest and environment boundaries with unchanged error categories |
 | 38 | FW-008 | P1 | done | Root-approved shared journal preflight prevents replay from indexing an invalid active slot |
 | 39 | SD-022 | P1 | done | Root-approved canonical provenance parsing now serves decision records and event-capture construction |
-| 40 | SD-023 | P2 | in-progress | Virtual front-end phase IDs and runtime profiles have two manually maintained registries |
+| 40 | SD-023 | P2 | done | Root-approved canonical phase registry now derives public IDs, guard, and lookup without duplicate literals |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -615,7 +615,8 @@ truth.
 ## SD-023: derive virtual front-end phase IDs from the profile registry
 
 - Priority: `P2`
-- State: `in-progress`
+- State: `done`
+- Latest state: Root review approved one canonical phase-profile registry with a frozen derived public ID list and guarded lookup. Exact ten-ID order, uniqueness, and profile coverage pass 15 focused tests; lint and format checks pass.
 - Affected files: `apps/scoring/src/virtual-front-end.ts` and its focused tests.
 - Description: the ten public phase IDs are listed once for the exported type and guard and again inside the runtime profile registry used by acquisition lookup.
 - Impact: a phase can be accepted by one registry but missing from the other, turning a configuration drift into a runtime lookup failure.

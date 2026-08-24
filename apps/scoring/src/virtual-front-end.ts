@@ -24,36 +24,23 @@ export const VIRTUAL_FRONT_END_CONDUCTOR_IDS = [
   "piste"
 ] as const
 
-export const VIRTUAL_FRONT_END_PHASE_IDS = [
-  "foil-circuit-integrity",
-  "foil-target-context",
-  "foil-insulation-diagnostic",
-  "epee-tip-loop",
-  "epee-ground-reference",
-  "epee-line-integrity",
-  "sabre-target-contact",
-  "sabre-own-equipment",
-  "sabre-blade-contact",
-  "sabre-bc-control"
-] as const
-
 export type VirtualFrontEndConductorId = (typeof VIRTUAL_FRONT_END_CONDUCTOR_IDS)[number]
-
-export type VirtualFrontEndPhaseId = (typeof VIRTUAL_FRONT_END_PHASE_IDS)[number]
 
 /** The weapon is derived from the phase ID.  Frames never carry both fields. */
 export type VirtualFrontEndWeapon = "epee" | "foil" | "sabre"
 
 export type VirtualFrontEndCycleStage = "fault" | "observe" | "release" | "safe-inactive" | "select-source" | "settle"
 
+export type VirtualFrontEndPerspective = "acting-side" | "affected-side"
+
 type VirtualFrontEndEndpointTemplate = readonly [
   "own.A" | "own.B" | "own.C",
   "opposing.A" | "opposing.B" | "opposing.C" | "piste" | "own.A" | "own.B" | "own.C"
 ]
 
-export type VirtualFrontEndPhaseProfile = Readonly<{
+type VirtualFrontEndPhaseRegistryEntry = Readonly<{
   allowedEndpointTemplates: readonly VirtualFrontEndEndpointTemplate[]
-  id: VirtualFrontEndPhaseId
+  id: string
   perspective: VirtualFrontEndPerspective
   requiredRelationCount: number
   sourceConductor: "A" | "B"
@@ -61,10 +48,10 @@ export type VirtualFrontEndPhaseProfile = Readonly<{
 }>
 
 /**
- * Machine-readable M0-03 relation contract. These are logical endpoint
- * relations, not a connector assignment or an analogue circuit claim.
+ * The one M0-03 phase-profile registry. These are logical endpoint relations,
+ * not a connector assignment or an analogue circuit claim.
  */
-export const VIRTUAL_FRONT_END_PHASE_PROFILES: readonly VirtualFrontEndPhaseProfile[] = [
+const VIRTUAL_FRONT_END_PHASE_PROFILE_REGISTRY = [
   {
     allowedEndpointTemplates: [["own.A", "own.B"]],
     id: "foil-circuit-integrity",
@@ -152,7 +139,42 @@ export const VIRTUAL_FRONT_END_PHASE_PROFILES: readonly VirtualFrontEndPhaseProf
     sourceConductor: "B",
     weapon: "sabre"
   }
-] as const
+] as const satisfies readonly VirtualFrontEndPhaseRegistryEntry[]
+
+export type VirtualFrontEndPhaseId = (typeof VIRTUAL_FRONT_END_PHASE_PROFILE_REGISTRY)[number]["id"]
+
+/** The ordered public IDs are frozen and derived from the canonical phase-profile registry. */
+export const VIRTUAL_FRONT_END_PHASE_IDS: readonly VirtualFrontEndPhaseId[] = Object.freeze(
+  VIRTUAL_FRONT_END_PHASE_PROFILE_REGISTRY.map(({ id }) => id)
+)
+
+export type VirtualFrontEndPhaseProfile = Readonly<{
+  allowedEndpointTemplates: readonly VirtualFrontEndEndpointTemplate[]
+  id: VirtualFrontEndPhaseId
+  perspective: VirtualFrontEndPerspective
+  requiredRelationCount: number
+  sourceConductor: "A" | "B"
+  weapon: VirtualFrontEndWeapon
+}>
+
+/** The ordered public profiles are the canonical registry, not a copied table. */
+export const VIRTUAL_FRONT_END_PHASE_PROFILES: readonly VirtualFrontEndPhaseProfile[] =
+  VIRTUAL_FRONT_END_PHASE_PROFILE_REGISTRY
+
+function createPhaseProfileLookup(
+  profiles: readonly VirtualFrontEndPhaseProfile[]
+): ReadonlyMap<string, VirtualFrontEndPhaseProfile> {
+  const lookup = new Map<string, VirtualFrontEndPhaseProfile>()
+  for (const profile of profiles) {
+    if (lookup.has(profile.id)) {
+      throw new Error("Virtual front-end phase-profile registry must not contain duplicate phase IDs")
+    }
+    lookup.set(profile.id, profile)
+  }
+  return lookup
+}
+
+const VIRTUAL_FRONT_END_PHASE_PROFILE_LOOKUP = createPhaseProfileLookup(VIRTUAL_FRONT_END_PHASE_PROFILES)
 
 /** BP-103 net labels are physical aliases only; they are never logical IDs. */
 export const VIRTUAL_FRONT_END_BP103_PHYSICAL_ALIASES = Object.freeze({
@@ -166,8 +188,6 @@ export const VIRTUAL_FRONT_END_BP103_PHYSICAL_ALIASES = Object.freeze({
 } as const)
 
 export type VirtualFrontEndSide = "left" | "right"
-
-export type VirtualFrontEndPerspective = "acting-side" | "affected-side"
 
 export type VirtualFrontEndAvailability = "available" | "indeterminate" | "unavailable"
 
@@ -316,7 +336,7 @@ export type VirtualFrontEndCycleState = Readonly<{
 }>
 
 function profileFor(phaseId: VirtualFrontEndPhaseId): VirtualFrontEndPhaseProfile {
-  const profile = VIRTUAL_FRONT_END_PHASE_PROFILES.find((candidate) => candidate.id === phaseId)
+  const profile = VIRTUAL_FRONT_END_PHASE_PROFILE_LOOKUP.get(phaseId)
   if (profile === undefined) {
     throw new RangeError("Virtual front-end phases must use a declared M0-03 phase ID")
   }
@@ -415,7 +435,7 @@ function isConductorId(value: unknown): value is VirtualFrontEndConductorId {
 }
 
 function isPhaseId(value: unknown): value is VirtualFrontEndPhaseId {
-  return typeof value === "string" && VIRTUAL_FRONT_END_PHASE_IDS.some((phaseId) => phaseId === value)
+  return typeof value === "string" && VIRTUAL_FRONT_END_PHASE_PROFILE_LOOKUP.has(value)
 }
 
 function isRelationState(value: unknown): value is VirtualFrontEndRelationState {
