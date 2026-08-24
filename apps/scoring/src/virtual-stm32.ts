@@ -1,7 +1,11 @@
 import { loadTimingTable, type TimingTable, type TimingTableRevision } from "./timing-table.js"
 import type { VirtualClock } from "./virtual-clock.js"
 import { createVirtualClock } from "./virtual-clock.js"
-import { validateVirtualFrontEndSnapshot, type VirtualFrontEndSnapshot } from "./virtual-front-end.js"
+import {
+  validateVirtualFrontEndSnapshot,
+  VIRTUAL_FRONT_END_PHASE_PROFILES,
+  type VirtualFrontEndSnapshot
+} from "./virtual-front-end.js"
 
 /** The three approved weapon identities at the STM32 scoring boundary. */
 export type VirtualStm32Weapon = "epee" | "foil" | "sabre"
@@ -43,7 +47,7 @@ export type VirtualStm32AuthoritativeOutcome<Outcome> = Readonly<{
 export type VirtualStm32SnapshotReceipt<Outcome> = Readonly<{
   atUs: number
   outcome: VirtualStm32AuthoritativeOutcome<Outcome> | null
-  status: "ignored-untrusted" | "scored"
+  status: "ignored-unselected-profile" | "ignored-untrusted" | "scored"
 }>
 
 export type VirtualStm32Options<State, Outcome> = Readonly<{
@@ -141,6 +145,18 @@ function assertCanonicalSnapshot(value: unknown): asserts value is VirtualFrontE
   }
 
   validateVirtualFrontEndSnapshot(value)
+}
+
+/**
+ * The M2-02 acquisition registry, rather than an application-provided rule,
+ * binds every canonical phase to its reviewed weapon profile.
+ */
+function weaponForReviewedPhase(snapshot: VirtualFrontEndSnapshot): VirtualStm32Weapon {
+  const profile = VIRTUAL_FRONT_END_PHASE_PROFILES.find((candidate) => candidate.id === snapshot.phase.id)
+  if (profile === undefined) {
+    throw new RangeError("Virtual STM32 snapshots must use a reviewed acquisition phase")
+  }
+  return profile.weapon
 }
 
 function assertSynchronousResult(value: unknown, description: string): void {
@@ -341,6 +357,14 @@ export function createVirtualStm32<State, Outcome>(
     clock.scheduleAt(snapshot.atUs, (atUs) => {
       isScoring = true
       try {
+        if (weaponForReviewedPhase(snapshot) !== options.weapon) {
+          receipt = Object.freeze({ atUs, outcome: null, status: "ignored-unselected-profile" as const })
+          lastReceipt = receipt
+          lastSnapshotAtUs = atUs
+          processedSnapshotCount += 1
+          return
+        }
+
         if (snapshot.trust !== "available") {
           receipt = Object.freeze({ atUs, outcome: null, status: "ignored-untrusted" as const })
           lastReceipt = receipt

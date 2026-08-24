@@ -29,9 +29,11 @@ clock to the same instant. Snapshot timestamps must be monotonic and cannot prec
 host timer, asynchronous scorer, or asynchronous observer is accepted.
 
 Only a snapshot accepted by M2-02's `validateVirtualFrontEndSnapshot` is accepted. This verifies nested phase,
-relation, provenance, resistance, fault, contradiction, trust, and transition evidence. An `indeterminate` or
-`unavailable` snapshot is consumed as `ignored-untrusted`, without invoking the scorer or emitting an outcome. This
-fails closed until M2-04 adds explicit capture records for such evidence.
+relation, provenance, resistance, fault, contradiction, trust, and transition evidence. The shell resolves that phase
+through M2-02's reviewed phase registry; a canonical snapshot for a different weapon is consumed as
+`ignored-unselected-profile`, without invoking the scorer or emitting an outcome. An `indeterminate` or `unavailable`
+snapshot for the selected profile is consumed as `ignored-untrusted`, also without invoking the scorer or emitting an
+outcome. This fails closed until M2-04 adds explicit capture records for such evidence.
 
 The shell accepts at most 100,000 snapshots by default, configurable from 1 through 1,000,000. It stores no outcome
 history and therefore does not become a substitute for M2-04 event capture or M2-08 persistence. Reentrant submission
@@ -51,7 +53,7 @@ factory must also complete synchronously.
 
 ## Acceptance
 
-`src/virtual-stm32.test.ts` proves timing/weapon selection, virtual-clock ordering, deterministic replay, nested
-front-end forgery rejection, trusted-input scoring, fail-closed untrusted input, bounds, invalid configuration,
-deeply immutable outcomes, observer-failure finality, and that outcomes can originate only from the weapon-scorer
-return path.
+`src/virtual-stm32.test.ts` proves timing/weapon selection, reviewed M2-02 weapon-profile selection, virtual-clock
+ordering, deterministic replay, nested front-end forgery rejection, trusted-input scoring, fail-closed untrusted or
+wrong-profile input, bounds, invalid configuration, deeply immutable outcomes, observer-failure finality, and that
+outcomes can originate only from the weapon-scorer return path.

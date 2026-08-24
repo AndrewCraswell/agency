@@ -18,24 +18,31 @@ type TestOutcome = Readonly<{ qualifiedAtUs: number }>
 
 function snapshot(
   atUs: number,
-  trust: "available" | "indeterminate" | "unavailable" = "available"
+  trust: "available" | "indeterminate" | "unavailable" = "available",
+  weapon: "epee" | "foil" | "sabre" = "foil"
 ): VirtualFrontEndSnapshot {
+  const phaseByWeapon = {
+    epee: { id: "epee-tip-loop", perspective: "affected-side" },
+    foil: { id: "foil-circuit-integrity", perspective: "acting-side" },
+    sabre: { id: "sabre-target-contact", perspective: "acting-side" }
+  } as const
+  const phase = phaseByWeapon[weapon]
   const state = advanceVirtualFrontEnd(createVirtualFrontEndState(), {
     atUs,
     phase:
       trust === "available"
         ? {
             excitation: { owner: "left.A", state: "active" },
-            id: "epee-tip-loop",
-            perspective: "affected-side",
+            id: phase.id,
+            perspective: phase.perspective,
             safeInactive: false,
             side: "left",
             status: "available"
           }
         : {
             excitation: { owner: null, state: "inactive" },
-            id: "epee-tip-loop",
-            perspective: "affected-side",
+            id: phase.id,
+            perspective: phase.perspective,
             safeInactive: true,
             side: "left",
             status: trust
@@ -140,7 +147,10 @@ describe("virtual STM32", () => {
         timingTableRevision: "timing-1",
         weapon: "sabre"
       })
-      const receipts = [shell.ingestSnapshot(snapshot(3, "indeterminate")), shell.ingestSnapshot(snapshot(4))]
+      const receipts = [
+        shell.ingestSnapshot(snapshot(3, "indeterminate", "sabre")),
+        shell.ingestSnapshot(snapshot(4, "available", "sabre"))
+      ]
       return { invokedAtUs, receipts }
     }
 
@@ -164,6 +174,30 @@ describe("virtual STM32", () => {
       ]
     })
     expect(JSON.stringify(first)).toBe(JSON.stringify(second))
+  })
+
+  it("fails closed when a canonical acquisition snapshot belongs to a different reviewed weapon profile", () => {
+    const invokedAtUs: number[] = []
+    const shell = createVirtualStm32({
+      scorer: {
+        advance: (state, input) => {
+          invokedAtUs.push(input.atUs)
+          return { outcome: { qualifiedAtUs: input.atUs }, state }
+        },
+        createState: (): TestState => ({ acceptedAtUs: [] }),
+        weapon: "foil"
+      },
+      timingTableRevision: "timing-1",
+      weapon: "foil"
+    })
+
+    const mismatched = shell.ingestSnapshot(snapshot(5, "available", "epee"))
+    const selected = shell.ingestSnapshot(snapshot(6, "available", "foil"))
+
+    expect(mismatched).toEqual({ atUs: 5, outcome: null, status: "ignored-unselected-profile" })
+    expect(selected.outcome?.outcome).toEqual({ qualifiedAtUs: 6 })
+    expect(invokedAtUs).toEqual([6])
+    expect(shell.processedSnapshotCount).toBe(2)
   })
 
   it("fails closed for invalid selection, application-shaped input, unsafe times, and invalid scorer behavior", () => {
