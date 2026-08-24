@@ -25,7 +25,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 5 | SD-004 | P2 | ready | Scenario execution, scorer dispatch, and report comparison are coupled in one branch-heavy module |
 | 6 | SC-001 | P2 | done | Root-approved shared weapon-input topology is renderer-verified across logical and physical circuit models; board-specific connector labels remain distinct |
 | 7 | SC-002 | P2 | done | Production harness selection now owns the MPN and pin data consumed by board integration and readiness checks |
-| 8 | SC-003 | P3 | in-progress | Scoring, service-support, and isolation sections are extracted with regression coverage; application/display remains |
+| 8 | SC-003 | P3 | done | Scoring, service-support, isolation, and application/display sections are extracted with exact-order regression coverage |
 | 9 | SD-006 | P1 | blocked | ESP32 services and receiver disagree on identifier validity; intake waits for FW-004 |
 | 10 | SD-009 | P1 | done | Root-approved remote gesture timing now uses bounded integer microseconds throughout with preserved gesture behavior and overflow-safe deadlines |
 | 11 | SD-010 | P2 | done | Root-approved replay now delegates authoritative record validation and immutable cloning solely to `parseDecisionRecord` while retaining replay-only annotation checks |
@@ -163,8 +163,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SC-003: decompose the retained logical board composition
 
 - Priority: `P3`
-- State: `in-progress`
-- Latest state: Three behavior-preserving seams now isolate scoring, service-support, and the two-chip isolation boundary with exact component, 21-trace, net, and board-envelope regression coverage. Application/display composition remains before SC-003 can close.
+- State: `done`
+- Latest state: Four behavior-preserving seams isolate scoring, service-support, the two-chip isolation boundary, and the application/display path. Exact component, trace, net, coordinate, order, and board-envelope regression coverage passes without adding a public export or generic circuit DSL.
 - Affected files: [`packages/scoring-circuit/src/index.circuit.tsx`](../../../packages/scoring-circuit/src/index.circuit.tsx) (1,163 lines), [`packages/scoring-circuit/src/scoring-io-board.circuit.tsx`](../../../packages/scoring-circuit/src/scoring-io-board.circuit.tsx), [`packages/scoring-circuit/src/application-display-carrier.circuit.tsx`](../../../packages/scoring-circuit/src/application-display-carrier.circuit.tsx), and [`packages/scoring-circuit/src/index.test.tsx`](../../../packages/scoring-circuit/src/index.test.tsx).
 - Description and evidence: `index.circuit.tsx` is a single literal board composition containing weapon inputs, piste protection, STM32 scoring, isolated power, isolation, ESP32, Ethernet, display, audio, service, and mounting geometry. Its own comment says it is a logical end-to-end model rather than one PCB, while separate scoring-I/O and application/display models are the physical planning surfaces.
 - Impact: a reviewer changing one domain must navigate a 1,100-line component and can accidentally alter another domain's names, nets, or geometry. The file's mixed ownership also makes it harder to compare retained architecture evidence with the active prototype models.

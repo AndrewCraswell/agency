@@ -496,6 +496,67 @@ describe("production scoring architecture", () => {
     )
   })
 
+  it("keeps the extracted display path ordered from ESP32 through the panel", () => {
+    const circuitJson = renderArchitecture()
+    const sourceNames = sourceComponentNames(circuitJson)
+    const traceNames = circuitJson.flatMap((element) =>
+      element.type === "source_trace" && "display_name" in element && typeof element.display_name === "string"
+        ? [element.display_name]
+        : []
+    )
+
+    const displayComponentStart = sourceNames.indexOf("U_DISPLAY_BUFFER_A")
+    expect(sourceNames.slice(displayComponentStart, displayComponentStart + 17)).toEqual([
+      "U_DISPLAY_BUFFER_A",
+      "U_DISPLAY_BUFFER_B",
+      "R_HUB75_R1_PD",
+      "R_HUB75_G1_PD",
+      "R_HUB75_B1_PD",
+      "R_HUB75_R2_PD",
+      "R_HUB75_G2_PD",
+      "R_HUB75_B2_PD",
+      "R_HUB75_A_PD",
+      "R_HUB75_B_PD",
+      "R_HUB75_C_PD",
+      "R_HUB75_D_PD",
+      "R_HUB75_CLK_PD",
+      "R_HUB75_LAT_PD",
+      "R_HUB75_OE_PULLUP",
+      "R_HUB75_PANEL_OE_PULLUP",
+      "J_HUB75"
+    ])
+
+    const displayTraceStart = traceNames.indexOf("U_ESP32.HUB75_R1 to U_DISPLAY_BUFFER_A.R1_IN")
+    const displayChannels = ["R1", "G1", "B1", "R2", "G2", "B2", "A", "B"]
+    const expectedDisplayTraces = [
+      ...displayChannels.map((channel) => `U_ESP32.HUB75_${channel} to U_DISPLAY_BUFFER_A.${channel}_IN`),
+      ...["C", "D", "CLK", "LAT", "OE"].map(
+        (channel) =>
+          `U_ESP32.HUB75_${channel === "OE" ? "OE_N" : channel} to U_DISPLAY_BUFFER_B.${channel === "OE" ? "OE_N" : channel}_IN`
+      ),
+      ...displayChannels.map((channel) => `U_DISPLAY_BUFFER_A.${channel}_OUT to J_HUB75.${channel}`),
+      ...["C", "D", "CLK", "LAT", "OE"].map(
+        (channel) => `U_DISPLAY_BUFFER_B.${channel === "OE" ? "OE_N" : channel}_OUT to J_HUB75.${channel}`
+      ),
+      ...displayChannels.map((channel) => `U_DISPLAY_BUFFER_A.${channel}_IN to R_HUB75_${channel}_PD.pin1`),
+      ...["C", "D", "CLK", "LAT"].map((channel) => `U_DISPLAY_BUFFER_B.${channel}_IN to R_HUB75_${channel}_PD.pin1`),
+      ...["R1", "G1", "B1", "R2", "G2", "B2", "A", "B", "C", "D", "CLK", "LAT"].map(
+        (channel) => `R_HUB75_${channel}_PD.pin2 to net.GND`
+      ),
+      "U_DISPLAY_BUFFER_B.OE_N_IN to R_HUB75_OE_PULLUP.pin1",
+      "R_HUB75_OE_PULLUP.pin2 to net.V3_3",
+      "U_DISPLAY_BUFFER_B.OE_N_OUT to R_HUB75_PANEL_OE_PULLUP.pin1",
+      "R_HUB75_PANEL_OE_PULLUP.pin2 to net.V5",
+      "U_DISPLAY_BUFFER_A.DIR_TO_PANEL to net.V5",
+      "U_DISPLAY_BUFFER_B.DIR_TO_PANEL to net.V5"
+    ]
+
+    expect(expectedDisplayTraces).toHaveLength(56)
+    expect(traceNames.slice(displayTraceStart, displayTraceStart + expectedDisplayTraces.length)).toEqual(
+      expectedDisplayTraces
+    )
+  })
+
   it("models the selected application 3.3 V regulator and its safe support network", () => {
     const circuitJson = renderArchitecture()
     const sourceComponents = circuitJson.filter((element) => element.type === "source_component")
