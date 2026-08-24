@@ -14,5 +14,7 @@
 **/.git
 **/.turbo
 **/coverage
+!apps/legislation/src/coverage/
+!apps/legislation/src/coverage/**
 **/dist
 **/node_modules

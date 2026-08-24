@@ -61,6 +61,7 @@ describe("Railway deployment contract", () => {
     expect(dockerIgnore).toContain("**/.env")
     expect(dockerIgnore).toContain("**/node_modules")
     expect(dockerIgnore).toContain("!packages/**")
+    expect(dockerIgnore).toContain("!apps/legislation/src/coverage/**")
     expect(readFileSync(`${repositoryRoot}pnpm-workspace.yaml`, "utf8")).toContain('"apps/*"')
     expect(applicationFile("README.md")).toContain("Config File Path to `/apps/legislation/railway.json`")
     expect(applicationFile("docs/development.md")).toContain(
