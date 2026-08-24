@@ -186,11 +186,15 @@ export const stm32PinAllocation = deepFreeze({
   },
   plannedSevenChannelReplication: {
     owner: "BP-103",
-    state: "blocked",
-    unallocatedNets: ["SAR1_DOUT through SAR7_DOUT", "SAR1_CONVST through SAR7_CONVST"],
-    reason:
-      "BP-100 approved one ADS8881 channel only. Seven dedicated DOUT/CONVST paths, a daisy-chain framing and throughput proof, or another reviewed serialization architecture has not been selected.",
-    releaseEffect: "No seven-channel schematic, CubeMX configuration, or scoring-ready claim is authorized."
+    state: "architecture-selected-integration-denied",
+    architecture: "seven ADS8881 devices in daisy-chain mode without busy indicator",
+    sharedConvst: { pad: "PA4", pin: 18, peripheral: "TIM3_CH2" },
+    sharedSclk: { pad: "PA5", pin: 19, peripheral: "SPI1_SCK" },
+    serialData: { pad: "PA6", pin: 20, peripheral: "SPI1_MISO", source: "U_SAR_7.DOUT" },
+    chainRule: "U_SAR_1.DIN is grounded; each DOUT feeds the next DIN; host receives U_SAR_7 through U_SAR_1",
+    targetSclkHz: 20_000_000,
+    releaseEffect:
+      "BP-103 selects the pin-feasible architecture, but schematic integration, timing, crosstalk, power, firmware, and scoring authority remain denied."
   },
   mcuAnalogAndTiming: {
     internalAdc: "not the primary BP-100 acquisition path; PA0, PA1, PA2, PA3, and PA7 stay unconnected and reserved",
@@ -273,10 +277,12 @@ export function validateStm32PinAllocation(value: unknown): true {
     throw new RangeError("BP-120 must tie VBAT to SCORING_3V3 when no backup supply is allocated")
   }
   if (
-    stm32PinAllocation.plannedSevenChannelReplication.state !== "blocked" ||
+    stm32PinAllocation.plannedSevenChannelReplication.state !== "architecture-selected-integration-denied" ||
+    stm32PinAllocation.plannedSevenChannelReplication.targetSclkHz !== 20_000_000 ||
+    stm32PinAllocation.plannedSevenChannelReplication.serialData.source !== "U_SAR_7.DOUT" ||
     stm32PinAllocation.authority.releaseState !== "deny"
   ) {
-    throw new RangeError("BP-120 must fail closed until BP-103 resolves the seven-channel SAR interface")
+    throw new RangeError("BP-120 must retain the exact BP-103 daisy-chain allocation without granting release")
   }
   return true
 }

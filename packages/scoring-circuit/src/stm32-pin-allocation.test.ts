@@ -105,15 +105,16 @@ describe("BP-120 STM32G474RET3TR allocation", () => {
     ])
   })
 
-  it("does not invent seven dedicated SAR paths", () => {
+  it("binds BP-103 to one shared-strobe ADS8881 daisy chain without granting release", () => {
     expect(stm32PinAllocation.plannedSevenChannelReplication).toMatchObject({
       owner: "BP-103",
-      state: "blocked"
+      state: "architecture-selected-integration-denied",
+      targetSclkHz: 20_000_000,
+      sharedConvst: { pad: "PA4", pin: 18, peripheral: "TIM3_CH2" },
+      sharedSclk: { pad: "PA5", pin: 19, peripheral: "SPI1_SCK" },
+      serialData: { pad: "PA6", pin: 20, peripheral: "SPI1_MISO", source: "U_SAR_7.DOUT" }
     })
-    expect(stm32PinAllocation.plannedSevenChannelReplication.unallocatedNets).toEqual([
-      "SAR1_DOUT through SAR7_DOUT",
-      "SAR1_CONVST through SAR7_CONVST"
-    ])
+    expect(stm32PinAllocation.plannedSevenChannelReplication.chainRule).toContain("each DOUT feeds the next DIN")
     expect(stm32PinAllocation.authority.releaseState).toBe("deny")
   })
 

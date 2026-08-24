@@ -7,10 +7,10 @@ This is the executable, fail-closed BP-120 allocation for the exact
 not a schematic release, CubeMX result, board approval, or fabrication
 authorization.
 
-It follows the committed BP-100 decision: one protected analog channel ends
-at one `ADS8881IDGS`. BP-103 owns seven-channel replication. Therefore this
-document deliberately allocates the one-converter interface and does **not**
-invent seven `DOUT` or `CONVST` nets.
+It follows the committed BP-100 one-cell decision and BP-103 seven-channel
+replication. Seven `ADS8881IDGS` devices share one `CONVST` and one `SCLK` and
+use the converter's documented daisy-chain mode; BP-103 does not invent seven
+dedicated `DOUT` or `CONVST` GPIO allocations.
 
 The STM32 remains the sole scoring authority. The ESP32 can receive bounded,
 CRC-checked records and health information across isolation, but cannot
@@ -64,23 +64,17 @@ and no `COMP1` through `COMP7` positive or negative input is connected to a
 BP-100 conductor. HRTIM1 can be evaluated as an internal scheduler/timebase,
 but no HRTIM-to-pad or comparator capture claim is closed by this allocation.
 
-## BP-103 seven-channel blocker
+## BP-103 seven-channel serialization
 
-The approved topology has only `SAR0_DOUT` and `SAR0_CONVST`. No pads are
-assigned to `SAR1_DOUT` through `SAR7_DOUT` or `SAR1_CONVST` through
-`SAR7_CONVST`.
+BP-103 selects the ADS8881 daisy chain without a busy indicator. `PA4/TIM3_CH2`
+drives all seven `CONVST` inputs, `PA5/SPI1_SCK` drives every clock input, and
+ADC 7 `DOUT` reaches `PA6/SPI1_MISO`. ADC 1 `DIN` is grounded and each preceding
+`DOUT` feeds the next `DIN`, so the host receives ADC 7 through ADC 1. The
+selected arithmetic screen uses a 20-MHz SCLK.
 
-BP-103 must select and prove one of these before a seven-channel schematic can
-exist:
-
-- Dedicated conversion strobes and data inputs, with exact pins, timer/DMA
-  feasibility, simultaneous-conversion power, and crosstalk evidence.
-- A daisy-chain or other serial architecture, including a frame-boundary and
-  worst-case bit-rate proof against the ADS8881 timing limits.
-- A different reviewed converter/serialization architecture.
-
-Until then, the release state is `deny`. The executable test rejects an
-allocation that claims complete seven-channel dedicated paths.
+Selection does not authorize integration or scoring. Exact schematic review,
+126-bit framing, timing margin, crosstalk, power/reference disturbance, parser,
+and bench evidence remain open, and the release state remains `deny`.
 
 ## Isolated scoring-to-application link
 
