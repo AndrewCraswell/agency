@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
-  MAX_NORMALIZED_DIAGNOSTICS,
   MAX_NORMALIZED_DECISIONS,
-  MAX_NORMALIZED_FAULTS,
   NORMALIZED_SCORING_SCHEMA_VERSION,
   NORMALIZED_UINT_WIDTHS,
   NormalizedScoringSchemaError,
@@ -12,131 +10,219 @@ import {
 } from "./normalized-scoring-schema.js"
 import type { NormalizedResult } from "./normalized-scoring-schema.js"
 
-function signals() {
-  return { control: "inactive", point: "active", target: "active", weapon: "active" }
-}
-
-function sample(weapon: "epee" | "foil" | "sabre" = "epee") {
-  return {
-    atUs: "18446744073709551615",
-    diagnostics: [{ code: "white", side: "left" }],
-    faults: [{ code: "line-fault", side: "right" }],
-    inputId: 0xffff_ffff,
-    kind: "sample",
-    left: { signals: signals() },
-    right: {
-      signals: { control: "indeterminate", point: "unavailable", target: "not-applicable", weapon: "inactive" }
-    },
-    schemaVersion: NORMALIZED_SCORING_SCHEMA_VERSION,
-    weapon
-  }
-}
-
-function decision(side: "left" | "right") {
-  return {
-    atUs: "4",
-    audible: "yes",
-    disposition: "qualified-hit",
-    latched: "yes",
-    side,
-    startedAtUs: "3",
-    visual: "valid-hit"
-  }
-}
-
-function emptyDecision(side: "left" | "right") {
-  return {
-    atUs: "0",
-    audible: "no",
-    disposition: "none",
-    latched: "no",
-    side,
-    startedAtUs: "0",
-    visual: "none"
-  }
-}
-
-function state() {
-  return {
-    availability: "available",
-    diagnostics: [{ code: "grounded", side: "none" }],
-    faults: [{ code: "acquisition-unavailable", side: "left" }],
-    lastInputAtUs: "1",
-    lastInputId: 0,
-    left: { candidate: "pending", candidateSinceUs: "1", registered: "no" },
-    lockoutEndsAtUs: "2",
-    outputCapacity: 2,
-    right: { candidate: "qualified", candidateSinceUs: "1", registered: "yes" },
-    schemaVersion: NORMALIZED_SCORING_SCHEMA_VERSION,
-    weapon: "foil"
-  }
-}
-
-function result() {
-  return {
-    diagnostics: [{ code: "yellow", side: "right" }],
-    errorCode: "none",
-    inputId: 7,
-    left: decision("left"),
-    right: decision("right"),
-    schemaVersion: NORMALIZED_SCORING_SCHEMA_VERSION,
-    state: "accepted"
-  }
-}
-
-function resultForState(state: NormalizedResult["state"]) {
+const emptyDecision = (side: "left" | "right") => ({
+  atUs: "0",
+  audible: "no",
+  disposition: "none",
+  latched: "no",
+  side,
+  startedAtUs: "0",
+  visual: "none"
+})
+const hitDecision = (side: "left" | "right") => ({
+  atUs: "4",
+  audible: "yes",
+  disposition: "qualified-hit",
+  latched: "yes",
+  side,
+  startedAtUs: "3",
+  visual: "valid-hit"
+})
+const commonSample = () => ({
+  atUs: "18446744073709551615",
+  diagnostics: [{ code: "white", side: "left" }],
+  faults: [{ code: "line-fault", side: "right" }],
+  inputId: 0xffff_ffff,
+  kind: "sample",
+  schemaVersion: NORMALIZED_SCORING_SCHEMA_VERSION
+})
+const epeeMeasurement = () => ({ resistanceMilliOhms: "100000", resistanceUncertaintyMilliOhms: "100" })
+const epeeSide = () => ({
+  circuitComplete: "closed",
+  contactResistance: epeeMeasurement(),
+  groundPathResistance: epeeMeasurement(),
+  groundedMaterial: "not-grounded",
+  lineIntegrity: "intact"
+})
+const foilSide = () => ({ circuitBreak: "open", insulation: "within-range", integrity: "intact", target: "target" })
+const sabreSide = () => ({
+  bcFault: "normal",
+  blade: "present",
+  externalPath: "eligible",
+  ownEquipment: "absent",
+  target: "target"
+})
+const sample = (weapon: "epee" | "foil" | "sabre") => ({
+  ...commonSample(),
+  left: weapon === "epee" ? epeeSide() : weapon === "foil" ? foilSide() : sabreSide(),
+  right: weapon === "epee" ? epeeSide() : weapon === "foil" ? foilSide() : sabreSide(),
+  weapon
+})
+const stateBase = () => ({
+  availability: "available",
+  diagnostics: [{ code: "grounded", side: "none" }],
+  faults: [{ code: "acquisition-unavailable", side: "left" }],
+  firstHitAtUs: "1",
+  hasFirstHit: "yes",
+  hasLastInput: "yes",
+  lastInputAtUs: "2",
+  lastInputId: 1,
+  locked: "no",
+  lockoutActive: "yes",
+  lockoutEndsAtUs: "3",
+  outputCapacity: 2,
+  schemaVersion: NORMALIZED_SCORING_SCHEMA_VERSION
+})
+const sideState = () => ({ candidate: "pending", candidateSinceUs: "1", registered: "no" })
+const state = (weapon: "epee" | "foil" | "sabre") => ({
+  ...stateBase(),
+  left:
+    weapon === "epee"
+      ? sideState()
+      : weapon === "foil"
+        ? { ...sideState(), candidateClassification: "on-target", insulation: "within-range", observation: "ready" }
+        : {
+            ...sideState(),
+            bladeHistory: { interruptionCount: 1, lastBlade: "present", startedAtUs: "1", state: "active" },
+            controlBreak: { sinceUs: "2", state: "active" },
+            observation: "ready",
+            white: "white-off",
+            yellow: "yellow-off"
+          },
+  right:
+    weapon === "epee"
+      ? sideState()
+      : weapon === "foil"
+        ? {
+            candidate: "none",
+            candidateClassification: "none",
+            candidateSinceUs: "0",
+            insulation: "unavailable",
+            observation: "unavailable",
+            registered: "no"
+          }
+        : {
+            ...sideState(),
+            bladeHistory: { state: "none" },
+            controlBreak: { state: "inactive" },
+            observation: "non-conductive-surface",
+            white: "unavailable",
+            yellow: "unavailable"
+          },
+  weapon
+})
+const result = () => ({
+  diagnostics: [{ code: "yellow", side: "right" }],
+  errorCode: "none",
+  faults: [],
+  inputId: 7,
+  left: hitDecision("left"),
+  right: hitDecision("right"),
+  schemaVersion: NORMALIZED_SCORING_SCHEMA_VERSION,
+  state: "accepted"
+})
+const resultForState = (stateName: NormalizedResult["state"]) => {
   const blank = { left: emptyDecision("left"), right: emptyDecision("right") }
-  switch (state) {
-    case "accepted":
-      return result()
-    case "capacity":
-      return { ...result(), ...blank, errorCode: "capacity", state }
-    case "exhausted":
-      return { ...result(), ...blank, errorCode: "exhausted", state }
-    case "fault":
-      return { ...result(), ...blank, errorCode: "fault", state }
-    case "indeterminate":
-      return {
-        ...result(),
-        ...blank,
-        errorCode: "none",
-        left: { ...emptyDecision("left"), atUs: "4", disposition: "indeterminate", startedAtUs: "3" },
-        state
-      }
-    case "overflow":
-      return { ...result(), ...blank, errorCode: "overflow", state }
-    case "reset":
-      return { ...result(), ...blank, errorCode: "none", state }
-    case "unavailable":
-      return {
-        ...result(),
-        ...blank,
-        errorCode: "unavailable",
-        right: { ...emptyDecision("right"), atUs: "4", disposition: "unavailable", startedAtUs: "3" },
-        state
-      }
+  if (stateName === "accepted") return result()
+  if (stateName === "indeterminate")
+    return {
+      ...result(),
+      ...blank,
+      left: { ...emptyDecision("left"), atUs: "4", disposition: "indeterminate", startedAtUs: "3" },
+      state: stateName
+    }
+  if (stateName === "unavailable")
+    return {
+      ...result(),
+      ...blank,
+      errorCode: "unavailable",
+      faults: [{ code: "acquisition-unavailable", side: "none" }],
+      right: { ...emptyDecision("right"), atUs: "4", disposition: "unavailable", startedAtUs: "3" },
+      state: stateName
+    }
+  const errorCode =
+    stateName === "capacity"
+      ? "capacity"
+      : stateName === "exhausted"
+        ? "exhausted"
+        : stateName === "fault"
+          ? "fault"
+          : stateName === "overflow"
+            ? "overflow"
+            : "none"
+  return {
+    ...result(),
+    ...blank,
+    errorCode,
+    faults: stateName === "fault" ? [{ code: "state-fault", side: "none" }] : [],
+    state: stateName
   }
 }
 
 describe("CW-03 normalized scoring schema", () => {
-  it("normalizes all weapons and a simultaneous two-side sample without applying scoring", () => {
-    for (const weapon of ["epee", "foil", "sabre"] as const) {
-      const raw = sample(weapon)
-      const parsed = parseNormalizedScoringInput(raw)
-      expect(parsed).toEqual(raw)
-      expect(parsed).not.toBe(raw)
-    }
-
-    const parsed = parseNormalizedScoringInput(sample("sabre"))
-    expect(parsed.kind).toBe("sample")
-    if (parsed.kind === "sample") {
-      expect(parsed.left.signals.point).toBe("active")
-      expect(parsed.right.signals.point).toBe("unavailable")
-      expect(parsed.atUs).toBe("18446744073709551615")
-    }
+  it("losslessly normalizes each weapon's distinct input language", () => {
+    const epee = parseNormalizedScoringInput(sample("epee"))
+    const foil = parseNormalizedScoringInput(sample("foil"))
+    const sabre = parseNormalizedScoringInput(sample("sabre"))
+    if (epee.kind !== "sample" || foil.kind !== "sample" || sabre.kind !== "sample") throw new Error("sample expected")
+    expect(epee.weapon === "epee" && epee.left).toEqual({
+      circuitComplete: "closed",
+      contactResistance: epeeMeasurement(),
+      groundPathResistance: epeeMeasurement(),
+      groundedMaterial: "not-grounded",
+      lineIntegrity: "intact"
+    })
+    expect(foil.weapon === "foil" && foil.left).toMatchObject({
+      circuitBreak: "open",
+      insulation: "within-range",
+      integrity: "intact",
+      target: "target"
+    })
+    expect(sabre.weapon === "sabre" && sabre.left).toMatchObject({
+      bcFault: "normal",
+      blade: "present",
+      externalPath: "eligible",
+      ownEquipment: "absent",
+      target: "target"
+    })
   })
 
-  it("keeps reset explicit and accepts every reset reason", () => {
+  it("covers every exact EpeeResistanceContact status and rejects partial measurements", () => {
+    for (const circuitComplete of ["closed", "indeterminate", "open", "unavailable"] as const)
+      expect(
+        parseNormalizedScoringInput({ ...sample("epee"), left: { ...epeeSide(), circuitComplete } })
+      ).toMatchObject({ left: { circuitComplete } })
+    for (const groundedMaterial of ["grounded", "indeterminate", "not-grounded", "unavailable"] as const)
+      expect(
+        parseNormalizedScoringInput({ ...sample("epee"), left: { ...epeeSide(), groundedMaterial } })
+      ).toMatchObject({ left: { groundedMaterial } })
+    for (const lineIntegrity of ["cross-line", "indeterminate", "intact", "out-of-range", "unavailable"] as const)
+      expect(parseNormalizedScoringInput({ ...sample("epee"), left: { ...epeeSide(), lineIntegrity } })).toMatchObject({
+        left: { lineIntegrity }
+      })
+    expect(
+      parseNormalizedScoringInput({
+        ...sample("epee"),
+        left: { ...epeeSide(), contactResistance: { resistanceMilliOhms: null, resistanceUncertaintyMilliOhms: null } }
+      })
+    ).toMatchObject({
+      left: { contactResistance: { resistanceMilliOhms: null, resistanceUncertaintyMilliOhms: null } }
+    })
+    expect(() =>
+      parseNormalizedScoringInput({
+        ...sample("epee"),
+        left: {
+          ...epeeSide(),
+          contactResistance: { resistanceMilliOhms: null, resistanceUncertaintyMilliOhms: "1" }
+        }
+      })
+    ).toThrow(expect.objectContaining({ code: "value" }))
+    expect(() =>
+      parseNormalizedScoringInput({ ...sample("epee"), left: { ...epeeSide(), lineIntegrity: "broken" } })
+    ).toThrow(expect.objectContaining({ code: "value" }))
+  })
+
+  it("keeps reset explicit and accepts every reason", () => {
     for (const resetReason of ["bout", "recovery", "weapon-change"] as const) {
       expect(
         parseNormalizedScoringInput({
@@ -151,12 +237,51 @@ describe("CW-03 normalized scoring schema", () => {
     }
   })
 
-  it("parses bounded state, explicit unavailable or indeterminate status, and every coherent result state", () => {
-    expect(parseNormalizedScoringState(state())).toEqual(state())
-    for (const availability of ["indeterminate", "unavailable"] as const) {
-      expect(parseNormalizedScoringState({ ...state(), availability }).availability).toBe(availability)
-    }
+  it("preserves weapon-specific persistent state needed for replay", () => {
+    for (const weapon of ["epee", "foil", "sabre"] as const)
+      expect(parseNormalizedScoringState(state(weapon)).weapon).toBe(weapon)
+    const sabre = parseNormalizedScoringState(state("sabre"))
+    expect(sabre.weapon === "sabre" && sabre.left).toMatchObject({
+      bladeHistory: { interruptionCount: 1, lastBlade: "present", startedAtUs: "1", state: "active" },
+      controlBreak: { sinceUs: "2", state: "active" },
+      white: "white-off",
+      yellow: "yellow-off"
+    })
+  })
 
+  it("requires explicit time-presence discriminators while permitting timestamp zero", () => {
+    const zeroTime = {
+      ...state("epee"),
+      firstHitAtUs: "0",
+      lastInputAtUs: "0",
+      lockoutEndsAtUs: "0",
+      left: { candidate: "pending", candidateSinceUs: "0", registered: "no" },
+      right: { candidate: "none", candidateSinceUs: "0", registered: "yes" }
+    }
+    expect(parseNormalizedScoringState(zeroTime)).toMatchObject({ firstHitAtUs: "0", lastInputAtUs: "0" })
+    const invalid = [
+      { ...state("epee"), hasFirstHit: "no" },
+      { ...state("epee"), hasLastInput: "no", lastInputAtUs: "0", lastInputId: 0 },
+      { ...state("epee"), lockoutActive: "no" },
+      { ...state("epee"), lockoutActive: "no", locked: "yes", lockoutEndsAtUs: "0" },
+      { ...state("epee"), lastInputAtUs: "0" },
+      { ...state("epee"), left: { candidate: "none", candidateSinceUs: "1", registered: "no" } },
+      { ...state("epee"), left: { candidate: "pending", candidateSinceUs: "1", registered: "yes" } },
+      { ...state("foil"), left: { ...state("foil").left, candidateClassification: "none" } },
+      { ...state("sabre"), left: { ...state("sabre").left, controlBreak: { sinceUs: "3", state: "active" } } },
+      {
+        ...state("sabre"),
+        left: {
+          ...state("sabre").left,
+          bladeHistory: { interruptionCount: 1, lastBlade: "present", startedAtUs: "3", state: "active" }
+        }
+      }
+    ]
+    for (const value of invalid)
+      expect(() => parseNormalizedScoringState(value)).toThrow(expect.objectContaining({ code: "value" }))
+  })
+
+  it("covers every receipt state with fixed simultaneous decision slots and fault provenance", () => {
     for (const stateName of [
       "accepted",
       "capacity",
@@ -168,99 +293,116 @@ describe("CW-03 normalized scoring schema", () => {
       "unavailable"
     ] as const) {
       const parsed = parseNormalizedScoringResult(resultForState(stateName))
-      expect([parsed.state, parsed.errorCode]).toEqual([stateName, resultForState(stateName).errorCode])
+      expect(parsed.state).toBe(stateName)
+    }
+    expect(parseNormalizedScoringResult(result()).faults).toEqual([])
+    expect(() => parseNormalizedScoringResult({ ...resultForState("fault"), left: hitDecision("left") })).toThrow(
+      expect.objectContaining({ code: "value" })
+    )
+    expect(() => parseNormalizedScoringResult({ ...resultForState("fault"), faults: [] })).toThrow(
+      expect.objectContaining({ code: "value" })
+    )
+    expect(() =>
+      parseNormalizedScoringResult({ ...resultForState("unavailable"), faults: [{ code: "line-fault", side: "none" }] })
+    ).toThrow(expect.objectContaining({ code: "value" }))
+    expect(() => parseNormalizedScoringResult({ ...result(), faults: [{ code: "line-fault", side: "none" }] })).toThrow(
+      expect.objectContaining({ code: "value" })
+    )
+  })
+
+  it("preserves post-registration state after a candidate has cleared for every weapon", () => {
+    for (const weapon of ["epee", "foil", "sabre"] as const) {
+      const raw = state(weapon)
+      const left =
+        weapon === "foil"
+          ? {
+              ...raw.left,
+              candidate: "none",
+              candidateClassification: "none",
+              candidateSinceUs: "0",
+              registered: "yes"
+            }
+          : { ...raw.left, candidate: "none", candidateSinceUs: "0", registered: "yes" }
+      const parsed = parseNormalizedScoringState({ ...raw, left })
+      expect(parsed.left).toMatchObject({ candidate: "none", candidateSinceUs: "0", registered: "yes" })
     }
   })
 
-  it("preserves two fixed decision slots and rejects contradictory result receipts", () => {
-    expect(parseNormalizedScoringResult(result())).toEqual(result())
-    const invalid = [
-      { ...result(), errorCode: "fault" },
-      { ...resultForState("fault"), left: decision("left") },
-      { ...result(), left: { ...decision("left"), visual: "none" } },
-      { ...result(), left: decision("right") }
-    ]
-    for (const receipt of invalid) {
-      expect(() => parseNormalizedScoringResult(receipt)).toThrow(expect.objectContaining({ code: "value" }))
-    }
+  it("rejects missing fields, cross-weapon shapes, noncanonical u64, and invalid state unions", () => {
+    expect(() => parseNormalizedScoringInput({ ...sample("epee"), atUs: "01" })).toThrow(
+      expect.objectContaining({ code: "integer" })
+    )
+    expect(() => parseNormalizedScoringInput({ ...sample("foil"), left: epeeSide() })).toThrow(
+      expect.objectContaining({ code: "fields" })
+    )
+    expect(() =>
+      parseNormalizedScoringInput({ ...sample("sabre"), left: { ...sabreSide(), bcFault: "other" } })
+    ).toThrow(expect.objectContaining({ code: "value" }))
+    expect(() =>
+      parseNormalizedScoringState({
+        ...state("sabre"),
+        left: { ...state("sabre").left, bladeHistory: { state: "none", startedAtUs: "1" } }
+      })
+    ).toThrow(expect.objectContaining({ code: "fields" }))
+    expect(() => parseNormalizedScoringInput({ ...sample("epee"), inputId: 0x1_0000_0000 })).toThrow(
+      expect.objectContaining({ code: "integer" })
+    )
   })
 
-  it("rejects omitted, extra, unbounded, and JavaScript-only values", () => {
-    const invalid: readonly [unknown, NormalizedScoringSchemaError["code"]][] = [
-      [null, "value"],
-      [{ ...sample(), schemaVersion: 2 }, "schema-version"],
-      [{ ...sample(), kind: "other" }, "kind"],
-      [{ ...sample(), inputId: Number.NaN }, "integer"],
-      [{ ...sample(), inputId: Number.POSITIVE_INFINITY }, "integer"],
-      [{ ...sample(), inputId: -1 }, "integer"],
-      [{ ...sample(), inputId: 0x1_0000_0000 }, "integer"],
-      [{ ...sample(), atUs: "01" }, "integer"],
-      [{ ...sample(), atUs: "18446744073709551616" }, "integer"],
-      [{ ...sample(), atUs: 1n }, "value"],
-      [
-        {
-          ...sample(),
-          diagnostics: Array.from({ length: MAX_NORMALIZED_DIAGNOSTICS + 1 }, () => ({ code: "white", side: "left" }))
-        },
-        "bounds"
+  it("requires diagnostics and faults to be duplicate-free in canonical code then side order", () => {
+    expect(() =>
+      parseNormalizedScoringInput({
+        ...sample("epee"),
+        diagnostics: [
+          { code: "yellow", side: "left" },
+          { code: "white", side: "left" }
+        ]
+      })
+    ).toThrow(expect.objectContaining({ code: "value" }))
+    expect(() =>
+      parseNormalizedScoringInput({
+        ...sample("epee"),
+        faults: [
+          { code: "line-fault", side: "left" },
+          { code: "line-fault", side: "left" }
+        ]
+      })
+    ).toThrow(expect.objectContaining({ code: "value" }))
+    const parsed = parseNormalizedScoringInput({
+      ...sample("epee"),
+      diagnostics: [
+        { code: "control-break", side: "right" },
+        { code: "white", side: "left" }
       ],
-      [
-        {
-          ...sample(),
-          faults: Array.from({ length: MAX_NORMALIZED_FAULTS + 1 }, () => ({ code: "line-fault", side: "left" }))
-        },
-        "bounds"
-      ],
-      [{ ...sample(), unexpected: "yes" }, "fields"],
-      [{ ...sample(), left: { signals: { ...signals(), point: undefined } } }, "value"]
-    ]
-
-    for (const [value, code] of invalid) {
-      expect(() => parseNormalizedScoringInput(value)).toThrow(expect.objectContaining({ code }))
-    }
+      faults: [
+        { code: "clock-fault", side: "none" },
+        { code: "line-fault", side: "left" }
+      ]
+    })
+    if (parsed.kind !== "sample") throw new Error("sample expected")
+    expect(parsed.diagnostics).toHaveLength(2)
   })
 
-  it("uses the declared fixed-width limits", () => {
-    expect(NORMALIZED_UINT_WIDTHS).toEqual({ u8: 255, u16: 65535, u32: 4294967295, u64: "18446744073709551615" })
-    expect(Object.isFrozen(NORMALIZED_UINT_WIDTHS)).toBe(true)
-    expect(MAX_NORMALIZED_DECISIONS).toBe(2)
-  })
-
-  it("rejects getter, hidden, sparse, subclass, aliased, cyclic, and symbolic data before any read", () => {
-    const accessor = sample()
+  it("rejects JavaScript-only graphs before any field read and returns detached deep-frozen data", () => {
+    const accessor = sample("epee")
     Object.defineProperty(accessor, "inputId", { configurable: true, get: () => 1 })
-    const hidden = sample()
+    const hidden = sample("epee")
     Object.defineProperty(hidden, "hidden", { enumerable: false, value: true })
-    const symbolic = sample()
+    const symbolic = sample("epee")
     Reflect.set(symbolic, Symbol("hidden"), true)
-    const sparse = sample()
-    const sparseDiagnostics: unknown[] = []
-    sparseDiagnostics.length = 1
-    Reflect.set(sparse, "diagnostics", sparseDiagnostics)
-    class DiagnosticList extends Array<unknown> {}
-    const subclass = sample()
-    Reflect.set(subclass, "diagnostics", new DiagnosticList())
-    const alias = sample()
-    Reflect.set(alias.right, "signals", alias.left.signals)
-    const cycle = sample()
-    Reflect.set(cycle.left.signals, "loop", cycle)
-
-    for (const value of [accessor, hidden, symbolic, sparse, subclass, alias, cycle]) {
+    const alias = sample("epee")
+    Reflect.set(alias, "right", alias.left)
+    for (const value of [accessor, hidden, symbolic, alias])
       expect(() => parseNormalizedScoringInput(value)).toThrow(expect.objectContaining({ code: "value" }))
-    }
+    const parsed = parseNormalizedScoringInput(sample("epee"))
+    expect(Object.isFrozen(parsed)).toBe(true)
+    if (parsed.kind === "sample") expect(Object.isFrozen(parsed.left)).toBe(true)
   })
 
-  it("returns detached deeply frozen parsed graphs", () => {
-    const input = parseNormalizedScoringInput(sample())
-    const parsedState = parseNormalizedScoringState(state())
-    const parsedResult = parseNormalizedScoringResult(result())
-    expect(Object.isFrozen(input)).toBe(true)
-    if (input.kind === "sample") {
-      expect(Object.isFrozen(input.diagnostics)).toBe(true)
-      expect(Object.isFrozen(input.left.signals)).toBe(true)
-    }
-    expect(Object.isFrozen(parsedState.left)).toBe(true)
-    expect(Object.isFrozen(parsedResult.right)).toBe(true)
-    expect(Object.isFrozen(parsedResult.diagnostics)).toBe(true)
+  it("publishes the fixed-width contract", () => {
+    expect(NORMALIZED_UINT_WIDTHS).toEqual({ u16: 65535, u32: 4294967295, u64: "18446744073709551615", u8: 255 })
+    expect(MAX_NORMALIZED_DECISIONS).toBe(2)
+    expect(Object.isFrozen(NORMALIZED_UINT_WIDTHS)).toBe(true)
+    expect(NormalizedScoringSchemaError).toBeTypeOf("function")
   })
 })

@@ -1,108 +1,89 @@
 # Normalized scoring schema
 
 **Task:** CW-03
-**Status:** root-reviewed normative logical schema; CW-03 closure awaits CW-02
+**Status:** pending root review; closure still waits for CW-02.
 
-This document freezes the language-neutral logical contract between normalized
-acquisition, the future C17 scoring core, and its result consumer. It is not a
-wire format, C struct definition, or WebAssembly ABI. CW-04 owns byte order,
-field encoding, buffer layout, negotiation, and opaque state handles.
+[`normalized-scoring-schema.ts`](../src/normalized-scoring-schema.ts) freezes
+the language-neutral logical contract between normalized acquisition, the future
+C17 core, and result consumers. It is not a wire format, C struct, or
+WebAssembly ABI. CW-04 owns byte order, field encoding, capacities, and opaque
+state handles.
 
-The executable boundary is
-[`../src/normalized-scoring-schema.ts`](../src/normalized-scoring-schema.ts).
-It accepts only exact, bounded records and rejects omitted, unknown, nonfinite,
-and out-of-range values. It is a validator only: it neither qualifies a hit nor
-converts a fault, unavailable input, or indeterminate input into a score.
+## Boundary rules
 
-## Scalar rules
+Every value is a complete, exact, plain data tree. The validator rejects
+getters, setters, class instances, array subclasses, sparse arrays, symbols,
+hidden properties, aliases, cycles, omitted fields, and unknown fields before
+reading a semantic field. It reconstructs and deeply freezes every accepted
+value, so no caller object reference crosses the boundary.
 
-| Logical scalar | Range and canonical representation |
-| --- | --- |
-| `u8` | Integer from 0 through 255 |
-| `u16` | Integer from 0 through 65,535 |
-| `u32` | Integer from 0 through 4,294,967,295 |
-| `u64` | Canonical base-10 text from `0` through `18446744073709551615`; no sign, decimal point, exponent, whitespace, or leading zero |
-| enumeration | One listed value only |
-| repeated field | Ordered list with an explicit maximum |
+`u8`, `u16`, and `u32` are safe JavaScript integers within their fixed-width
+ranges. A `u64` is canonical base-10 text from `0` through
+`18446744073709551615`; signs, leading zeroes, decimal points, exponents, and
+JavaScript numbers are rejected. This prevents loss of a C `uint64_t` through
+the JSON-facing adapter.
 
-`u64` is text at this logical JSON-facing boundary so an implementation cannot
-silently lose a C `uint64_t` timestamp through a JavaScript number. A native
-implementation stores it as an unsigned fixed-width 64-bit integer. Boolean,
-`undefined`, `NaN`, infinity, arbitrary property bags, implicit defaults, and
-language-specific object identity are not schema values.
+Diagnostics and faults are independently bounded to eight entries. Each list
+is a strictly increasing, duplicate-free sequence ordered by `code`, then
+`side` (`left`, `none`, or `right` in lexical order). The ordered list is part
+of the logical input, so CW-04 can preserve it as deterministic bytes without
+inventing a sort order. The lists carry concrete condition provenance; they are
+not unstructured annotations.
 
-Before reading a field, the executable validator walks the entire supplied
-graph. A record must have exactly `Object.prototype`; a repeated field must
-have exactly `Array.prototype` and every index from zero through length minus
-one. Every supplied property must be an enumerable own data property. Getters,
-setters, class instances, array subclasses, sparse arrays, hidden keys, symbols,
-aliases, and cycles are rejected. Parsed values are reconstructed, deeply
-frozen, and never retain caller-owned references.
+## Lossless per-weapon inputs
 
-## Normalized input
+Every sample has one simultaneous left side and right side at one `u64` time,
+a `u32` input ID, diagnostics, and faults. It is discriminated by weapon:
 
-Every input has schema version `1`, a `u32 inputId`, `u64 atUs`, and one weapon:
-`epee`, `foil`, or `sabre`. A `sample` contains exactly one left and one right
-side at the same timestamp. Each side has all four signal statuses: `point`,
-`target`, `weapon`, and `control`; every status is exactly `active`, `inactive`,
-`indeterminate`, `unavailable`, or `not-applicable`.
+- Épée mirrors `EpeeResistanceContact` without collapsing its subject-specific
+  acquisition: `circuitComplete`, `contactResistance`, `groundPathResistance`,
+  `groundedMaterial`, and `lineIntegrity`. Each resistance measurement has its
+  exact resistance and uncertainty fields; both are canonical `u64` text or
+  both are `null` when unavailable at acquisition.
+- Foil has circuit-break, target, integrity, and insulation states. It
+  distinguishes grounded target context, lame versus weapon faults, and all
+  indeterminate/unavailable values.
+- Sabre has target, external-path eligibility, own-equipment, blade, and B/C
+  fault states. `control-break` and `abnormal-change` are distinct values.
 
-This shared timestamp and fixed left/right fields preserve simultaneous events
-without a source-side ordering rule. A scoring implementation may apply the
-weapon profile to the two side records, but no input adapter may choose a winner
-by arrival order.
+This logical form carries all current Rules-1 inputs without asking a C core to
+infer a weapon meaning from a generic signal name. A reset remains a distinct
+input with one explicit reason: `bout`, `recovery`, or `weapon-change`.
 
-Each sample also carries at most eight diagnostics and eight faults. Diagnostics
-are `control-break`, `external-path`, `grounded`, `input-indeterminate`,
-`insulation`, `reset-required`, `white`, or `yellow`. Faults are
-`acquisition-unavailable`, `capacity-exhausted`, `clock-fault`,
-`configuration-fault`, `line-fault`, `state-fault`, or `timestamp-overflow`.
-Both identify `left`, `right`, or `none` explicitly.
+## Persistent state and receipts
 
-A reset is a distinct input variant with exactly one reason: `bout`, `recovery`,
-or `weapon-change`. It is never an absent sample, inferred reset, or a
-zero-filled sample.
+All weapon states carry availability, first-hit and lockout information,
+candidate/registration state, last input identity, bounded capacity, faults,
+and diagnostics. Explicit `hasFirstHit`, `hasLastInput`, and `lockoutActive`
+discriminators distinguish an absent time from a valid timestamp of zero.
+Absent first-hit, candidate, inactive history, and inactive lockout forms use
+their specified zero sentinel; present times are ordered against the last input
+time. A side candidate is only `none` or `pending`: a pending candidate is
+unregistered and carries its bounded start time. After a hit is registered the
+candidate returns to `none` with a zero candidate time while `registered` stays
+`yes`; `none` also represents an unregistered idle side. Foil additionally
+carries its pending candidate classification, which is `none` exactly when the
+candidate is `none`, plus insulation and observation state.
+Sabre additionally carries blade-mediated history (start, last blade contact,
+and bounded interruption count), control-break timing, observation state, and
+white/yellow diagnostic values. This is sufficient to resume deterministic
+replay rather than reconstructing hidden weapon lifecycle state.
 
-## State and result
+Results use fixed left and right decision slots to preserve simultaneous hits.
+They distinguish accepted, reset, indeterminate, unavailable, fault, overflow,
+capacity, and exhaustion states with an exact matching error code. Results also
+retain the bounded, canonical diagnostic and fault lists, so a consumer can
+observe fault provenance without interpreting a generic `fault` result as a
+no-hit. The parser validates visual, audible, latch, side, and timestamp
+coherence for each decision. `fault` receipts require nonempty fault provenance;
+`unavailable` receipts require `acquisition-unavailable` provenance. Accepted,
+reset, capacity, exhausted, and overflow receipts cannot carry contradictory
+faults.
 
-State is fully explicit and bounded: availability is `available`,
-`indeterminate`, or `unavailable`; each side has candidate state `none`,
-`pending`, or `qualified`; registration is `no` or `yes`; output capacity is a
-`u8`; and the state retains no unbounded history. It also carries the latest
-input identity and timestamp, lockout endpoint, weapon, diagnostics, and faults.
+## Deliberate boundary
 
-Every result is a receipt for one `inputId`. It has an explicit transition
-state and one exact matching error code:
-
-| Result state | Required error code | Allowed decisions |
-| --- | --- | --- |
-| `accepted` | `none` | `none`, `qualified-hit`, `off-target` |
-| `reset` | `none` | `none` |
-| `indeterminate` | `none` | `none`, `indeterminate` |
-| `unavailable` | `unavailable` | `none`, `unavailable` |
-| `fault` | `fault` | `none` |
-| `overflow` | `overflow` | `none` |
-| `capacity` | `capacity` | `none` |
-| `exhausted` | `exhausted` | `none` |
-
-`capacity` means the declared result/output capacity could not contain a
-transaction. `exhausted` means the bounded scoring state or a declared resource
-was exhausted. Both fail atomically and are distinct from timestamp `overflow`.
-Its fixed left and right decision slots
-allow zero, one, or two decisions without a variable-sized output. Each slot
-uses a disposition of `none`, `qualified-hit`, `off-target`, `indeterminate`,
-or `unavailable`, plus explicit start and decision timestamps, visual, audible,
-and latch fields. `qualified-hit` is always valid-hit visual, audible, and
-latched. `off-target` is always off-target visual, silent, and latched.
-`none`, `indeterminate`, and `unavailable` are always silent, unlatched, and
-have no visual indication; `none` uses zero for both timestamps. Thus output
-exhaustion and capacity failure are observable and cannot masquerade as a
-no-hit result.
-
-## Deliberate boundaries
-
-This artifact does not select timings, define weapon qualification, encode
-bytes, expose a C ABI, allocate memory, or implement a C core. It has no
-dependency on the M0-05 decision-record implementation, which is currently a
-dirty worktree surface. CW-04 may map these fixed logical fields to canonical
-bytes only after this contract receives normative rule review.
+This artifact does not choose timings, qualify hits, encode bytes, allocate
+memory, expose C layout, or implement the scoring core. CW-04 must convert
+these exact logical fields into a versioned byte ABI with explicit endianness
+and capacity behavior. CW-05 then generates the rule and timing profile; CW-06
+implements the weapon semantics in C17.
