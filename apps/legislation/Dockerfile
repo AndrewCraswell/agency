@@ -23,11 +23,13 @@ COPY apps/legislation ./apps/legislation
 # extensions cannot make this filtered, frozen install unreproducible.
 COPY apps/legislation/pnpm-workspace.railway.yaml ./pnpm-workspace.yaml
 
-# The reviewed workspace lockfile contains private dependencies for unrelated
-# applications and is missing two public transitive snapshots in TanStack
-# Start's graph. Trust the committed resolutions, repair only broken lockfile
-# entries inside the reduced workspace, and retain downloaded artifact checks.
-RUN pnpm install --fix-lockfile --trust-lockfile --filter legislation...
+# The reviewed, frozen workspace lockfile contains private dependencies for
+# unrelated applications. Railway cannot query those private registries during
+# pnpm's whole-lockfile supply-chain verification, even though this filtered
+# install never consumes those packages. Trust only this committed lockfile so
+# pnpm installs the legislation dependency closure without weakening package
+# integrity checks for downloaded artifacts.
+RUN pnpm install --frozen-lockfile --trust-lockfile --filter legislation...
 RUN pnpm --filter legislation build
 RUN pnpm --filter legislation deploy --prod --legacy --force /opt/legislation
 
