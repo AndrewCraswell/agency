@@ -40,7 +40,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 20 | SD-014 | P1 | ready | Scenario input bytes can be hashed and executed from separate reads |
 | 21 | SD-015 | P2 | done | Root-approved journal now reuses the canonical parser's isolated deeply frozen records without a second traversal |
 | 22 | SC-007 | P2 | blocked | PCB identity serializers differ; implementation waits for active board-artifact work |
-| 23 | SC-008 | P3 | intake | Three electrical-budget modules repeat the same finite-positive guard |
+| 23 | SC-008 | P3 | done | Root-approved private finite-positive assertion now serves the three electrical-budget modules with unchanged errors |
 | 24 | SC-006 | P2 | done | Root-approved strict evidence-time parser now serves connector, fixture, footprint, and IR evidence validators |
 
 ## SD-001: consolidate epee contact and lockout mechanics
@@ -406,11 +406,11 @@ truth.
 ## SC-008: share finite-positive electrical guards
 
 - Priority: `P3`
-- State: `intake`
-- Evidence: `application-rail.ts`, `power-budget.ts`, and `v5-power-stage.ts` repeat the same finite-positive check and error shape.
+- State: `done`
+- Delivered: one private `power-validation.ts` assertion now serves `application-rail.ts`, `power-budget.ts`, and `v5-power-stage.ts` with unchanged finite-positive behavior and public error text.
 - Impact: small validation and wording drift risk.
 - Bounded remediation: share one private assertion only across these exact modules.
-- Acceptance: focused tests preserve all public errors and bounds.
+- Verification: 19 focused tests, circuit-package TypeScript, focused oxlint, and focused oxfmt passed.
 - Dependencies: none.
 - Non-goals: no general validation framework or domain-validator merger.
 

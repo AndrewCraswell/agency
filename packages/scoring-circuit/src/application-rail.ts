@@ -7,6 +7,8 @@
  * blocked-vent measurements remain required.
  */
 
+import { assertFinitePositive } from "./power-validation.js"
+
 export type ApplicationRailInputs = {
   ambientMaxC: number
   continuousLoadW: number
@@ -128,10 +130,6 @@ export type ApplicationRailResult = {
   supervisorDelayNominalMs: number
   supervisorDelayRequirementMs: number
   supervisorPinMinimumV: number
-}
-
-function assertFinitePositive(name: string, value: number): void {
-  if (!Number.isFinite(value) || value <= 0) throw new RangeError(`${name} must be finite and greater than zero`)
 }
 
 function assertFiniteNonNegative(name: string, value: number): void {
