@@ -14,7 +14,7 @@
       "const": "scoring-golden-corpus"
     },
     "schemaVersion": {
-      "const": "1.0.0"
+      "const": "1.1.0"
     },
     "corpusId": {
       "const": "scoring-golden-corpus"
@@ -42,7 +42,7 @@
     "scenarioEntry": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["scenarioId", "path", "weapon", "status", "sourceIds"],
+      "required": ["scenarioId", "path", "weapon", "status", "sourceIds", "contentDigest"],
       "properties": {
         "scenarioId": {
           "type": "string",
@@ -60,12 +60,26 @@
         },
         "sourceIds": {
           "type": "array",
+          "uniqueItems": true,
           "items": {
             "type": "string",
             "pattern": "^[A-Z0-9]+(?:[-_.][A-Z0-9]+)*$"
           }
+        },
+        "contentDigest": {
+          "anyOf": [
+            { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+            { "type": "null" }
+          ]
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "active" } } },
+          "then": { "properties": { "contentDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" } } },
+          "else": { "properties": { "contentDigest": { "type": "null" } } }
+        }
+      ]
     },
     "coverageEntry": {
       "type": "object",
@@ -85,6 +99,7 @@
         },
         "scenarioIds": {
           "type": "array",
+          "uniqueItems": true,
           "items": {
             "type": "string",
             "pattern": "^[a-z0-9]+(?:[._-][a-z0-9]+)*$"

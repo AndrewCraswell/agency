@@ -8,6 +8,7 @@
  * stored decision records.
  */
 
+import { createHash } from "node:crypto"
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs"
 import { basename, dirname, extname, relative, resolve, sep } from "node:path"
 import { fileURLToPath } from "node:url"
@@ -116,6 +117,15 @@ type ScenarioDiagnostic = JsonObject & SabreScenarioDiagnosticEvidence & { id: s
 type ActualDecision = {
   decisionAtUs: number
   disposition: "qualified-hit" | "off-target"
+type ManifestScenario = JsonObject & {
+  contentDigest: string | null
+  path: string
+  scenarioId: string
+  sourceIds: string[]
+  status: "active" | "planned"
+  weapon: Weapon
+}
+
   weapon: Weapon
   side: Side
   hitStartedAtUs?: number
@@ -266,6 +276,14 @@ function validateScenarioDocument(value: unknown): Scenario {
     const inputIds = new Set(scenario.inputs.map(({ id }) => id))
     if (
       new Set(ids).size !== ids.length ||
+  const inputIds = scenario.inputs.map(({ id }) => id)
+  const lineNames = new Set(scenario.lineModel.names)
+  const sourceIds = sources.map((source) => (source as JsonObject).id)
+  if (new Set(sourceIds).size !== sourceIds.length || new Set(inputIds).size !== inputIds.length) fail("scenario.ids")
+  for (const input of scenario.inputs) {
+    const lines = input.lines.map(({ line }) => line)
+    if (new Set(lines).size !== lines.length || lines.some((line) => !lineNames.has(line))) fail("scenario.lines")
+  }
       diagnostics.some(
         (diagnostic) =>
           diagnostic.sourceInputIds.length > MAX_DIAGNOSTIC_SOURCE_INPUT_IDS ||
@@ -308,6 +326,23 @@ function validateManifestDocument(value: unknown): JsonObject {
 }
 function parseJsonFile(filePath: string, kind: "scenario" | "manifest"): JsonObject {
   if (!existsSync(filePath)) throw new RunnerInputError("path-not-found", filePath)
+  const expectedIds = [
+    ...scenario.expect.decisions.map(({ id }) => id),
+    ...scenario.expect.nonEvents.map(({ id }) => id),
+    ...scenario.expect.uncertainty.map(({ id }) => id),
+    ...(classifications?.map(({ id }) => id) ?? []),
+    ...(diagnostics?.map(({ id }) => id) ?? [])
+  ]
+  if (new Set(expectedIds).size !== expectedIds.length) fail("scenario.expect.ids")
+  const declaredInputIds = new Set(inputIds)
+  if (
+    scenario.expect.decisions.some(
+      (decision) =>
+        new Set(decision.sourceInputIds).size !== decision.sourceInputIds.length ||
+        decision.sourceInputIds.some((sourceInputId) => !declaredInputIds.has(sourceInputId))
+    )
+  )
+    fail("scenario.expect.decisions")
   if (statSync(filePath).size > MAX_INPUT_FILE_BYTES) throw new RunnerInputError("input-too-large", filePath)
   let parsed: unknown
   try {
@@ -782,7 +817,7 @@ function runScenarioFile(filePath: string): ScenarioRunResult {
 }
 
 function manifestScenarioPaths(manifest: JsonObject, manifestPath: string): string[] {
-  const scenarioEntries = manifest.scenarios as JsonObject[]
+  const scenarioEntries = manifest.scenarios as ManifestScenario[]
   const ids = scenarioEntries.map((entry) => entry.scenarioId as string)
   if (ids.some((id, index) => ids.indexOf(id) !== index)) throw new RunnerInputError("manifest-duplicate", manifestPath)
   if (ids.some((id, index) => id !== [...ids].sort()[index])) throw new RunnerInputError("manifest-order", manifestPath)
@@ -791,13 +826,13 @@ function manifestScenarioPaths(manifest: JsonObject, manifestPath: string): stri
   const paths: string[] = []
   const listedPaths = new Set<string>()
   for (const entry of scenarioEntries) {
-    const scenarioPath = resolve(manifestDirectory, entry.path as string)
+    const scenarioPath = resolve(manifestDirectory, entry.path)
     if (listedPaths.has(scenarioPath)) throw new RunnerInputError("manifest-duplicate", manifestPath)
     listedPaths.add(scenarioPath)
     if (entry.status !== "active") continue
     const scenario = parseJsonFile(scenarioPath, "scenario") as Scenario
     const scenarioSourceIds = (scenario.sources as unknown[]).map((source) => (source as JsonObject).id).sort()
-    const manifestSourceIds = (entry.sourceIds as unknown[]).slice().sort()
+    const manifestSourceIds = entry.sourceIds.slice().sort()
     if (
       !sameJson(scenarioSourceIds, manifestSourceIds) ||
       scenario.scenarioId !== entry.scenarioId ||
@@ -873,3 +908,14 @@ export function runScenario(inputPath: string): ScenarioRun {
 export function serializeScenarioRunReport(report: ScenarioRunReport): string {
   return `${JSON.stringify(report, null, 2)}\n`
 }
+  const coverage = manifest.coverage as JsonObject[]
+  const traceabilityIds = coverage.map((entry) => entry.traceabilityId as string)
+  if (new Set(traceabilityIds).size !== traceabilityIds.length)
+    throw new RunnerInputError("manifest-duplicate", manifestPath)
+  for (const entry of coverage) {
+    for (const scenarioId of entry.scenarioIds as string[]) {
+      if (!ids.includes(scenarioId)) throw new RunnerInputError("manifest-path", manifestPath)
+    }
+  }
+    const digest = `sha256:${createHash("sha256").update(readFileSync(scenarioPath)).digest("hex")}`
+    if (entry.contentDigest !== digest) throw new RunnerInputError("manifest-path", manifestPath)

@@ -8,7 +8,8 @@ The active epee, foil, and sabre examples are in [`golden-scenarios`](golden-sce
 
 ## Version and determinism
 
-- `format` is `scoring-golden-scenario` and `schemaVersion` is exactly `1.0.0`.
+- `format` is `scoring-golden-scenario`. Scenario documents retain their declared schema version; the corpus manifest is
+  `1.1.0` and binds every active file to a lowercase `sha256:` digest of its exact UTF-8 bytes.
 - A `scenarioId` is stable and identifies the vector. It is not generated from wall-clock time.
 - `ruleRevision` identifies the selected rule table. FIE citations identify authority; implementation and prior-art
   citations do not override the FIE matrix.
@@ -17,13 +18,18 @@ The active epee, foil, and sabre examples are in [`golden-scenarios`](golden-sce
 - All scenario and replay times are integer microseconds. Fields ending in `AtUs`, `atUs`, `fromUs`, or `throughUs`
   are never milliseconds. Resistance fields are non-negative integer milli-ohms.
 
-The manifest is ordered lexicographically by `scenarioId`. A runner must fail on duplicate scenario IDs, duplicate
-input IDs, duplicate line names in one frame, an input line not in `lineModel.names`, or an active path missing from the
-manifest. The JSON Schema deliberately does not try to express cross-record rules such as monotonicity.
+The manifest is ordered lexicographically by `scenarioId`. A runner must fail on missing, extra, duplicate, unknown,
+or stale mappings, including a digest that no longer matches its file. Active entries have a digest; planned entries
+have a null digest and no executable file requirement. A runner also rejects duplicate scenario, source, input, line,
+and expected-result IDs, unknown coverage scenario IDs, and lines that do not exactly equal `lineModel.names`.
+The JSON Schema deliberately does not try to express cross-record rules such as monotonicity.
 
 ## Inputs
 
-Each input is a complete `snapshot` of the scenario's declared logical lines. A line has an explicit electrical
+Each `snapshot` input contains only explicit line readings. Successive snapshots express line transitions, so a
+focused evidence vector can name the changed observation without fabricating an electrical reading for unrelated
+lines. The shape is strict plain JSON with no unknown fields, duplicate line names, or undeclared line names; no scorer
+code or generated expectation is permitted in a scenario. A line has an explicit electrical
 `state` and an explicit integer `resistanceMilliOhms` and `resistanceUncertaintyMilliOhms`; `null` means that
 resistance was not measured, not zero. The two resistance fields are both null or both non-negative integers.
 `indeterminate` is an electrical result, not a missing field. `atUncertaintyUs` records timing uncertainty, with zero
@@ -52,6 +58,10 @@ lockout; it is not a second scoring implementation.
 `expect.status: rejected` is for malformed or semantically invalid replay vectors. It requires a stable error code.
 For example, `epee.non-monotonic-time.json` preserves the current test's backward timestamp input and expects
 `non-monotonic-time`. A runner must not silently sort those inputs.
+
+Expectations are authored data, not scorer output. A runner may compare a scorer's actual records to `expect`, but it
+must never rewrite, fill, or regenerate expectation arrays from that scorer. Every emitted event cites known input IDs;
+non-events and boundary uncertainty remain explicit assertions so a passing run cannot hide an omitted outcome.
 
 ## Replay hooks
 

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
@@ -41,6 +42,12 @@ function temporaryDirectory(): string {
 
 function writeJson(path: string, value: unknown): void {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, "utf8")
+}
+
+function contentDigest(value: unknown): string {
+  return `sha256:${createHash("sha256")
+    .update(`${JSON.stringify(value, null, 2)}\n`)
+    .digest("hex")}`
 }
 
 function reportBytes(report: ScenarioRunReport): string {
@@ -422,7 +429,7 @@ describe("golden scenario runner", () => {
 
   it.each([
     ["signal", { visual: "none", audible: "requested", latched: true }],
-    ["sourceInputIds", ["wrong-input"]]
+    ["sourceInputIds", ["left-short-start"]]
   ])("fails when declared %s evidence differs", (field, value) => {
     const directory = temporaryDirectory()
     const path = join(directory, `wrong-${field}.json`)
@@ -671,7 +678,7 @@ describe("golden scenario runner", () => {
     writeJson(manifestPath, {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       format: "scoring-golden-corpus",
-      schemaVersion: "1.0.0",
+      schemaVersion: "1.1.0",
       corpusId: "scoring-golden-corpus",
       scenarioSchema: "golden-scenario.schema.json",
       ordering: "scenarioId-ascending",
@@ -735,7 +742,7 @@ describe("golden scenario runner", () => {
     writeJson(escaping, {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       format: "scoring-golden-corpus",
-      schemaVersion: "1.0.0",
+      schemaVersion: "1.1.0",
       corpusId: "scoring-golden-corpus",
       scenarioSchema: "golden-scenario.schema.json",
       ordering: "scenarioId-ascending",
@@ -745,7 +752,8 @@ describe("golden scenario runner", () => {
           path: "golden-scenarios/../outside.json",
           weapon: "epee",
           status: "active",
-          sourceIds: []
+          sourceIds: [],
+          contentDigest: contentDigest(scenario)
         }
       ],
       coverage: []
@@ -762,7 +770,7 @@ describe("golden scenario runner", () => {
     const base = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       format: "scoring-golden-corpus",
-      schemaVersion: "1.0.0",
+      schemaVersion: "1.1.0",
       corpusId: "scoring-golden-corpus",
       scenarioSchema: "golden-scenario.schema.json",
       ordering: "scenarioId-ascending",
@@ -776,7 +784,8 @@ describe("golden scenario runner", () => {
           path: "golden-scenarios/planned.json",
           weapon: "epee",
           status: "planned",
-          sourceIds: []
+          sourceIds: [],
+          contentDigest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
         }
       ]
     })
@@ -792,7 +801,8 @@ describe("golden scenario runner", () => {
           path: "golden-scenarios/contact.json",
           weapon: "foil",
           status: "active",
-          sourceIds: []
+          sourceIds: [],
+          contentDigest: null
         }
       ]
     })
@@ -924,7 +934,7 @@ describe("golden scenario runner", () => {
     const base = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       format: "scoring-golden-corpus",
-      schemaVersion: "1.0.0",
+      schemaVersion: "1.1.0",
       corpusId: "scoring-golden-corpus",
       scenarioSchema: "golden-scenario.schema.json",
       ordering: "scenarioId-ascending",
@@ -937,7 +947,8 @@ describe("golden scenario runner", () => {
         path: `golden-scenarios/s-${i}.json`,
         weapon: "epee",
         status: "planned",
-        sourceIds: []
+        sourceIds: [],
+        contentDigest: null
       }))
     if (kind === "coverage")
       base.coverage = Array.from({ length: limit + 1 }, (_, i) => ({
@@ -995,7 +1006,7 @@ describe("golden scenario runner", () => {
     writeJson(duplicatePath, { ...fixture, inputs: [inputs[0], { ...inputs[1], id: inputs[0].id }] })
     expect(runScenario(duplicatePath)).toMatchObject({
       exitCode: 2,
-      report: { error: { code: "manifest-duplicate" } }
+      report: { error: { code: "invalid-schema" } }
     })
 
     const timestampPath = join(directory, "timestamp.json")
@@ -1289,7 +1300,7 @@ describe("golden scenario runner", () => {
     writeJson(manifestPath, {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       format: "scoring-golden-corpus",
-      schemaVersion: "1.0.0",
+      schemaVersion: "1.1.0",
       corpusId: "scoring-golden-corpus",
       scenarioSchema: "golden-scenario.schema.json",
       ordering: "scenarioId-ascending",
@@ -1299,14 +1310,16 @@ describe("golden scenario runner", () => {
           path: "golden-scenarios/epee-contact-boundaries.json",
           weapon: "epee",
           status: "active",
-          sourceIds: firstSourceIds
+          sourceIds: firstSourceIds,
+          contentDigest: contentDigest(first)
         },
         {
           scenarioId: "epee.grounded-rejection",
           path: "golden-scenarios/epee-grounded-rejection.json",
           weapon: "epee",
           status: "active",
-          sourceIds: secondSourceIds
+          sourceIds: secondSourceIds,
+          contentDigest: contentDigest(second)
         }
       ],
       coverage: []
@@ -1328,7 +1341,7 @@ describe("golden scenario runner", () => {
     const base = {
       $schema: "https://json-schema.org/draft/2020-12/schema",
       format: "scoring-golden-corpus",
-      schemaVersion: "1.0.0",
+      schemaVersion: "1.1.0",
       corpusId: "scoring-golden-corpus",
       scenarioSchema: "golden-scenario.schema.json",
       ordering: "scenarioId-ascending",
@@ -1340,7 +1353,8 @@ describe("golden scenario runner", () => {
       path,
       weapon: "epee",
       status: "planned",
-      sourceIds: []
+      sourceIds: [],
+      contentDigest: null
     })
     const cases = [
       [
@@ -1377,7 +1391,13 @@ describe("golden scenario runner", () => {
     const missingScenario = join(directory, "missing-scenario.json")
     writeJson(missingScenario, {
       ...base,
-      scenarios: [{ ...planned("missing", "golden-scenarios/missing.json"), status: "active" }]
+      scenarios: [
+        {
+          ...planned("missing", "golden-scenarios/missing.json"),
+          status: "active",
+          contentDigest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ]
     })
     expect(runScenario(missingScenario)).toMatchObject({
       exitCode: 2,
@@ -1414,6 +1434,100 @@ describe("golden scenario runner", () => {
       "epee.grounded-rejection",
       "epee.non-monotonic-time",
       "epee.resistance-uncertainty-near-lockout",
+  it("fails closed for missing, extra, duplicate, unknown, stale, and digest-corrupt corpus mappings", () => {
+    const directory = temporaryDirectory()
+    const goldenDirectory = join(directory, "golden-scenarios")
+    mkdirSync(goldenDirectory)
+    const scenario = readFixture("epee-contact-boundaries.json")
+    const scenarioPath = join(goldenDirectory, "contact.json")
+    writeJson(scenarioPath, scenario)
+    const base = {
+      $schema: "https://json-schema.org/draft/2020-12/schema",
+      format: "scoring-golden-corpus",
+      schemaVersion: "1.1.0",
+      corpusId: "scoring-golden-corpus",
+      scenarioSchema: "golden-scenario.schema.json",
+      ordering: "scenarioId-ascending",
+      coverage: []
+    }
+    const entry = (overrides: Record<string, unknown> = {}) => ({
+      scenarioId: scenario.scenarioId,
+      path: "golden-scenarios/contact.json",
+      weapon: scenario.weapon,
+      status: "active",
+      sourceIds: (scenario.sources as Record<string, unknown>[]).map(({ id }) => id),
+      contentDigest: contentDigest(scenario),
+      ...overrides
+    })
+    const writeManifest = (name: string, value: Record<string, unknown>) => {
+      const path = join(directory, `${name}.json`)
+      writeJson(path, value)
+      return runScenario(path)
+    }
+
+    expect(
+      writeManifest("missing", { ...base, scenarios: [{ ...entry(), path: "golden-scenarios/missing.json" }] })
+    ).toMatchObject({ exitCode: 2, report: { error: { code: "path-not-found" } } })
+    expect(writeManifest("extra", { ...base, scenarios: [] })).toMatchObject({
+      exitCode: 2,
+      report: { error: { code: "manifest-path" } }
+    })
+    expect(
+      writeManifest("duplicate", { ...base, scenarios: [entry({ sourceIds: ["EPEE-03", "EPEE-03"] })] })
+    ).toMatchObject({
+      exitCode: 2,
+      report: { error: { code: "invalid-schema" } }
+    })
+    expect(
+      writeManifest("unknown", {
+        ...base,
+        scenarios: [entry()],
+        coverage: [{ traceabilityId: "UNKNOWN", status: "planned", scenarioIds: ["not-in-corpus"] }]
+      })
+    ).toMatchObject({ exitCode: 2, report: { error: { code: "manifest-path" } } })
+    expect(writeManifest("stale", { ...base, scenarios: [entry({ weapon: "foil" })] })).toMatchObject({
+      exitCode: 2,
+      report: { error: { code: "manifest-path" } }
+    })
+    expect(
+      writeManifest("digest", {
+        ...base,
+        scenarios: [entry({ contentDigest: "sha256:0000000000000000000000000000000000000000000000000000000000000000" })]
+      })
+    ).toMatchObject({ exitCode: 2, report: { error: { code: "manifest-path" } } })
+  })
+
+  it("rejects duplicated or unknown expectation identities", () => {
+    const directory = temporaryDirectory()
+    const fixture = readFixture("epee-contact-boundaries.json")
+    const expectation = fixture.expect as Record<string, unknown>
+    const decision = (expectation.decisions as Record<string, unknown>[])[0]
+    const cases = [
+      {
+        name: "duplicate-expectation",
+        scenario: {
+          ...fixture,
+          expect: {
+            ...expectation,
+            nonEvents: [{ ...(expectation.nonEvents as Record<string, unknown>[])[0], id: decision.id }]
+          }
+        }
+      },
+      {
+        name: "unknown-source",
+        scenario: {
+          ...fixture,
+          expect: { ...expectation, decisions: [{ ...decision, sourceInputIds: ["not-an-input"] }] }
+        }
+      }
+    ]
+    for (const { name, scenario } of cases) {
+      const path = join(directory, `${name}.json`)
+      writeJson(path, scenario)
+      expect(runScenario(path)).toMatchObject({ exitCode: 2, report: { error: { code: "invalid-schema" } } })
+    }
+  })
+
       "foil.break-boundaries",
       "foil.grounded-contact",
       "foil.host-logical-contexts",
