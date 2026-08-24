@@ -12,8 +12,8 @@
 - Actions have stable upstream order plus zero or more normalized classifications: `introduction`, `referral`,
   `committee`, `amendment`, `reading-1`, `reading-2`, `reading-3`, `passage`, `failure`, `executive-signature`,
   `executive-veto`, and `other`.
-- Vote options normalize to `yes`, `no`, `absent`, `abstain`, `not-voting`, or `other` while preserving raw values in
-  diagnostics.
+- Vote options normalize to `yes`, `no`, `absent`, `abstain`, `not-voting`, `present`, `proxy`, `paired`, or `other`
+  while preserving raw values in diagnostics.
 - Documents are `version`, `amendment`, `fiscal-note`, `analysis`, or `supplemental`. A logical version may retain
   multiple official format records.
 - Relations are `companion`, `replacement`, `replaced-by`, `prior-session`, `related`, or `other`.

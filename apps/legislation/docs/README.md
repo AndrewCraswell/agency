@@ -15,6 +15,8 @@
 - [Identity, entity, and representative roadmap](identity-and-representative-roadmap.md)
 - [Change events](change-events.md)
 - [MCP tool contracts](tool-contracts.md)
+- [HTTP API contract](http-api-contract/README.md)
+- [HTTP API implementation backlog and endpoint states](http-api-implementation-backlog.md)
 - [Architecture decisions](architecture-decisions.md)
 - [Trigger.dev synchronization orchestration design](trigger-orchestration-design.md)
 - [LegiScan data catalog](legiscan/README.md)

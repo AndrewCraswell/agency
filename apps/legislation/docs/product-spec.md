@@ -35,15 +35,28 @@ default. The complete data, extraction, privacy, API, and rollout tasks live in 
 The product is ready when the package verification suite passes, the [data synchronization catalog](data-sync-catalog.md)
 accurately describes deployed capabilities, and required external services have been validated in the target environment.
 
+## Adopted application and API program
+
+The next approved product layer is a first-party web application and documented HTTP API over the canonical legislation
+data. It includes retrieval and search for bills, amendments, votes and voter identities, documents and OCR sections,
+supporting materials, people, organizations, commissions, meetings, and calendars; source-grounded research answers and
+document diffs; representative lookup for the web application; and subscriptions with in-app, email, or webhook
+delivery. The [HTTP API contract](http-api-contract/README.md) is the design boundary. It is not evidence that these
+routes are implemented.
+
+The MCP and HTTP API will share one application-service layer. Source-grounded answers are allowed only when every
+nontrivial claim cites retrieved canonical evidence; free-form uncited summaries remain excluded.
+
 ## Explicit exclusions
 
 - State real-time ingestion remains deferred until historical state coverage is reliable and a freshness requirement is
   approved.
 - Committee media, recordings, transcripts, Mux, and Deepgram remain deferred until a research scenario requires media
   evidence.
-- AI-generated summaries remain deferred until retrieval quality and evaluation baselines are stable.
-- Portfolios, watch lists, alerts, notifications, a web application, billing, and Novu remain deferred until the remote
-  research interface demonstrates repeat use.
+- Uncited AI summaries and autonomous policy conclusions remain deferred. The approved research-answer contract is
+  source-grounded and separately evaluated.
+- Billing, paid plans, collaborative portfolios, and Novu remain deferred. The approved application program includes a
+  web interface and narrowly scoped subscriptions, notifications, and webhooks implemented against the HTTP contract.
 - Temporal, LangChain, LangGraph, Redis, OpenSearch, dedicated vector stores, and graph databases remain deferred until
   measured PostgreSQL or orchestration limits justify additional operational systems.
 
