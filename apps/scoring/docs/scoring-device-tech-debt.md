@@ -566,6 +566,18 @@ truth.
 - Acceptance: rendered values derive from the support record and all W5500 traces and references remain identical.
 - Non-goals: no generic unit parser, pin-map abstraction, or fabrication approval.
 
+## SC-013: share the display-panel readiness guard
+
+- Priority: `P2`
+- State: `done`
+- Latest state: Root review approved one bounded readiness guard shared by display evaluation and selected-panel power budgeting. The production diff is smaller, malformed and non-finite nested inputs fail consistently, and 25 focused tests plus package types, lint, and format checks pass.
+- Affected files: `packages/scoring-circuit/src/display-panel-readiness.ts`, `selected-panel-power-budget.ts`, and focused tests.
+- Description: selected-panel power budgeting duplicated the display readiness shape and semantic checks already owned by the display-panel boundary.
+- Impact: a panel field change could be accepted by display evaluation but rejected or interpreted differently by power budgeting.
+- Bounded remediation: keep one exported assertion in the readiness owner and call it from both consumers without introducing reconstruction, cloning, or a generic validation framework.
+- Acceptance: missing, malformed, non-finite, and invalid nested values reject identically at both boundaries; valid panel and power results remain unchanged.
+- Non-goals: no schema library, generic parser, public data-shape change, or display/power redesign.
+
 ## FW-006: make the ESP32 receiver the sole authoritative-record ingress
 
 - Priority: `P1`
