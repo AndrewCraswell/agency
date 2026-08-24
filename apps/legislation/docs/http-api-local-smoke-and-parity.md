@@ -24,6 +24,24 @@ do not match the contract.
 - Pin the expected embedding and reranking routes from the contract. If model credentials are intentionally absent,
   semantic and hybrid checks are blocked rather than silently treated as lexical checks.
 
+The reviewed local harness is `pnpm --filter legislation smoke:api`. Without
+`LEGISLATION_SMOKE_BASE_URL`, it starts the same composed `src/cli/main.ts serve` process used by the application on
+`127.0.0.1:3199`, waits for `/health` and `/ready`, and shuts it down after the run. Set
+`LEGISLATION_SMOKE_BASE_URL` to exercise an already-running local or remote instance instead. The harness always
+prints a JSON report with individual `passed`, `skipped`, `blocked`, and `failed` checks; a missing fixture is skipped,
+an unavailable route or dependency is blocked, and no blocked check is treated as success. A blocked report exits with
+code 2; a failed report exits with code 1.
+
+Detail fixtures are supplied by name only through `LEGISLATION_SMOKE_JURISDICTION_ID`,
+`LEGISLATION_SMOKE_SESSION_ID`, `LEGISLATION_SMOKE_BILL_ID`, `LEGISLATION_SMOKE_AMENDMENT_ID`,
+`LEGISLATION_SMOKE_VOTE_ID`, `LEGISLATION_SMOKE_DOCUMENT_ID`, `LEGISLATION_SMOKE_DOCUMENT_ID_B`,
+`LEGISLATION_SMOKE_MATERIAL_ID`, `LEGISLATION_SMOKE_MEETING_ID`, `LEGISLATION_SMOKE_PERSON_ID`, and
+`LEGISLATION_SMOKE_ORGANIZATION_ID`. The list and search routes always run; detail, relationship, and diff routes run
+only when their required IDs are supplied. For `AUTH_MODE=workos` (or explicit `LEGISLATION_SMOKE_REQUIRE_AUTH=true`),
+`LEGISLATION_SMOKE_TOKEN` is required. It is sent only as an in-memory bearer header and is never included in the
+report or diagnostics. The harness separately asserts unauthenticated `401` rejection, response envelopes, matching
+`x-correlation-id` values, unknown-route handling, and unsupported-method handling.
+
 ## Shared protocol smoke
 
 Complete these assertions once per composed server build and repeat mutation assertions for every mutable product.
@@ -55,11 +73,13 @@ Complete these assertions once per composed server build and repeat mutation ass
       union with canonical source references.
 - [ ] Retrieve related bills in explicit and semantic modes; verify a `Page<RelatedBillHit>`, relationship evidence,
       model metadata when used, and stable score/order behavior.
-- [ ] Retrieve bill sections, a document, and document sections; verify OCR/extraction fields, offsets, ordinals, hosted
-      and official URLs, provenance, and cursor continuation.
+- [ ] Retrieve bill sections, a document, its section collection, and one section by canonical URL; verify
+      OCR/extraction fields, offsets, ordinals, hosted and official URLs, provenance, parent mismatch `404`, and cursor
+      continuation.
 - [ ] Browse and retrieve structured and document-backed amendments; verify their canonical discriminator and bill link.
 - [ ] Browse and retrieve votes; verify result/count vocabulary and named position identity mapping.
-- [ ] Browse and retrieve supporting materials and change events; verify canonical parent links and provenance.
+- [ ] Browse and retrieve supporting materials, retrieve one supporting-material section by canonical URL, and browse
+      change events; verify canonical parent links, parent mismatch `404`, and provenance.
 - [ ] Confirm every contract route still marked **Blocked** returns `404`, not a placeholder or empty success.
 
 ## Civic graph and meeting product

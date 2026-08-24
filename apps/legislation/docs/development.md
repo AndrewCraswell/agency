@@ -64,12 +64,34 @@ unexplained one-off files:
 | Script group | Purpose | Retention rule |
 | --- | --- | --- |
 | `smoke-local.mjs` | Start the real local service and verify health and readiness. | Permanent release check. |
-| `smoke-deployment.mjs` | Verify a deployed MCP endpoint, representative bill and document calls, and protocol behavior. | Permanent post-deployment check. |
+| `smoke-deployment.mjs` | Verify deployed health, readiness, one bearer-authenticated API collection, the MCP tool set, representative bill and document calls, and protocol behavior. | Permanent post-deployment check; requires `LEGISLATION_SMOKE_TOKEN` and never logs it. |
 | `smoke-dependencies.mjs` | Verify production PostgreSQL, pgvector, managed identity, and Blob read/write behavior. | Permanent infrastructure check; packaged with the build intentionally. |
 | `build-embedding-*`, `run-embedding-*`, `evaluate-embedding-canary.ts`, `rerank-embedding-bakeoff.ts` | Rebuild frozen evaluation inputs, seed a bounded treatment, compare retrieval, and reproduce model or reranker decisions. | Keep as regression tooling; remove superseded generated outputs instead. |
 | `run-trigger-backfill.ts` | Plan or explicitly launch a resumable historical rebuild. | Permanent disaster-recovery and future-rebuild entry point. |
 | `reconcile-trigger-schedules.ts` | Diff or explicitly reconcile managed Trigger schedules. | Permanent schedule-control entry point. |
-| `copy-migrations.mjs`, `prepare-container-context.mjs`, `infra-what-if.mjs` | Build packaging, container context, and infrastructure preview. | Permanent build and deployment tooling. |
+| `copy-migrations.mjs`, `infra-what-if.mjs` | Package migration files with compiled output and preview infrastructure changes. | Permanent build and deployment tooling. |
+
+## Container and Railway build
+
+The API image uses the repository root as its Docker context so pnpm can resolve the root lockfile, catalog, and shared
+TypeScript package. The multi-stage Dockerfile installs the legislation workspace dependency closure, builds only the
+legislation service, and copies a production-only `pnpm deploy` output into the non-root runtime image.
+
+From the repository root:
+
+```text
+docker build -f apps/legislation/Dockerfile -t legislation:local .
+```
+
+Railway config-as-code lives at `apps/legislation/railway.json`. For `legislation-api`, keep the service root at the
+repository root and explicitly set Config File Path to `/apps/legislation/railway.json`; nested config is not discovered
+automatically. Before release, verify the effective service uses the Dockerfile builder,
+`apps/legislation/Dockerfile`, and `/ready` health check. Railway injects `PORT`; the service uses it and binds to
+`0.0.0.0`. The image command is only `node dist/cli/main.js serve`. Apply migrations as a separate, explicit release
+operation with `pnpm --filter legislation db:migrate`; neither the image build nor startup runs migrations.
+
+After Railway allocates the public service domain, set `LEGISLATION_PUBLIC_API_BASE_URL` to that exact `https` URL.
+This required production variable is the trusted base for canonical API URLs; it must not be derived from request headers.
 
 There is no standalone historical OCR sweep script or task. Native document
 and material ingestion own OCR handoff, and a later unowned OCR accumulation

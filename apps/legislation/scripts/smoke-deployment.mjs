@@ -8,6 +8,9 @@ const token = process.env.LEGISLATION_SMOKE_TOKEN
 const billId = process.env.LEGISLATION_SMOKE_BILL_ID
 const firstDocumentId = process.env.LEGISLATION_SMOKE_DOCUMENT_ID_A
 const secondDocumentId = process.env.LEGISLATION_SMOKE_DOCUMENT_ID_B
+if (token === undefined) {
+  throw new Error("LEGISLATION_SMOKE_TOKEN is required")
+}
 if (billId === undefined || firstDocumentId === undefined || secondDocumentId === undefined) {
   throw new Error("LEGISLATION_SMOKE_BILL_ID and both LEGISLATION_SMOKE_DOCUMENT_ID values are required")
 }
@@ -17,9 +20,46 @@ const ready = await fetch(new URL("/ready", root))
 if (!health.ok || !ready.ok) {
   throw new Error(`Health smoke failed: health=${health.status}, ready=${ready.status}`)
 }
+const api = await fetch(new URL("/api/jurisdictions?limit=1", root), {
+  headers: { authorization: `Bearer ${token}` }
+})
+if (!api.ok) {
+  throw new Error(`Authenticated API smoke failed with status ${api.status}`)
+}
+const apiBody = await api.json()
+if (!Array.isArray(apiBody?.data)) {
+  throw new Error("Authenticated API smoke returned an invalid page envelope")
+}
+const apiCorrelationId = api.headers.get("x-correlation-id")
+if (
+  apiCorrelationId === null ||
+  apiBody.meta?.correlationId !== apiCorrelationId ||
+  apiBody.meta?.limit !== 1 ||
+  typeof apiBody.meta?.truncated !== "boolean" ||
+  typeof apiBody.links?.self !== "string" ||
+  !(apiBody.links?.next === null || typeof apiBody.links?.next === "string")
+) {
+  throw new Error("Authenticated API smoke returned invalid page metadata")
+}
+const apiItem = apiBody.data[0]
+if (apiItem !== undefined) {
+  const canonicalUrl = typeof apiItem.canonicalUrl === "string" ? URL.parse(apiItem.canonicalUrl) : null
+  if (
+    typeof apiItem.id !== "string" ||
+    apiItem.id.length === 0 ||
+    canonicalUrl === null ||
+    !["http:", "https:"].includes(canonicalUrl.protocol) ||
+    !Array.isArray(apiItem.sources) ||
+    apiItem.sources.length === 0 ||
+    typeof apiItem.updatedAt !== "string" ||
+    Number.isNaN(Date.parse(apiItem.updatedAt))
+  ) {
+    throw new Error("Authenticated API smoke returned a non-canonical item")
+  }
+}
 
 const transport = new StreamableHTTPClientTransport(new URL("/mcp", root), {
-  authProvider: token === undefined ? undefined : { token: async () => token }
+  authProvider: { token: async () => token }
 })
 const client = new Client(
   { name: "legislation-deployment-smoke", version: "1.0.0" },
@@ -141,7 +181,7 @@ try {
     }
   }
   process.stdout.write(
-    `${JSON.stringify({ health: health.status, ready: ready.status, toolCalls, tools: names.length })}\n`
+    `${JSON.stringify({ api: api.status, health: health.status, ready: ready.status, toolCalls, tools: names.length })}\n`
   )
 } finally {
   await transport.close()

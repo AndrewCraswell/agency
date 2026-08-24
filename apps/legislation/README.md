@@ -20,13 +20,16 @@ Start with the [documentation index](docs/README.md).
 
 ## Container image
 
-Prepare a self-contained production context before building locally or in a remote registry. This keeps unrelated
-monorepo packages and private registries out of the legislation build.
+Build from the repository root so pnpm can resolve the root lockfile, catalog, and shared workspace configuration. The
+multi-stage image compiles only `legislation`, prunes the runtime to production dependencies, and runs as a non-root
+user.
 
 ```powershell
-pnpm container:prepare
-docker build -f ../../.container/legislation/Dockerfile -t legislation:local ../../.container/legislation
+docker build -f apps/legislation/Dockerfile -t legislation:local .
 ```
 
-`pnpm docker:build` runs both commands. The generated repository-level `.container/legislation` directory is ignored by
-Git and excludes `.env`.
+From `apps/legislation`, `pnpm docker:build` runs the same root-context build. For the `legislation-api` Railway service,
+keep the repository root visible and explicitly set Config File Path to `/apps/legislation/railway.json`; Railway does
+not auto-discover this nested file. The service reads Railway's `PORT`, binds to `0.0.0.0`, and starts only the
+HTTP/API/MCP server. Database migrations remain an explicit release operation through
+`pnpm --filter legislation db:migrate`; container startup never applies them.

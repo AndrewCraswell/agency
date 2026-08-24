@@ -1,15 +1,43 @@
-FROM node:24.13.1-bookworm-slim AS runtime
+# syntax=docker/dockerfile:1.7
+
+ARG NODE_VERSION=24.13.1
+
+FROM node:${NODE_VERSION}-bookworm-slim AS build
+
+ENV PNPM_HOME=/pnpm
+ENV PATH=${PNPM_HOME}:${PATH}
+ENV npm_config_registry=https://registry.npmjs.org/
+
+RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
+
+WORKDIR /workspace
+
+# Railway must keep the repository root as the Docker build context. The
+# legislation build extends workspace TypeScript configuration and relies on
+# the root lockfile/catalog even though only this application is compiled.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages ./packages
+COPY apps/legislation ./apps/legislation
+
+RUN pnpm install --frozen-lockfile --filter legislation...
+RUN pnpm --filter legislation build
+RUN pnpm --filter legislation deploy --prod --legacy --force /opt/legislation
+
+FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 
 ENV NODE_ENV=production
+ENV LEGISLATION_HOST=0.0.0.0
+
 WORKDIR /app
 
 RUN groupadd --system --gid 10001 legislation \
   && useradd --system --uid 10001 --gid legislation legislation
 
-# Build from the self-contained context produced by `pnpm container:prepare`.
-# It contains compiled output and production dependencies only.
-COPY --chown=legislation:legislation . ./
+COPY --from=build --chown=legislation:legislation /opt/legislation/ ./
 
 USER 10001
 EXPOSE 3100
+
+# Migrations are an explicit release operation and are intentionally absent
+# from the API container startup path.
 CMD ["node", "dist/cli/main.js", "serve"]
