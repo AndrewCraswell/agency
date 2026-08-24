@@ -7,6 +7,7 @@
  */
 
 import { parseDecisionRecord, type DecisionRecord } from "./decision-record.js"
+import { strictDataObject, strictExactDataObject } from "./strict-data-object.js"
 
 export const DEFAULT_APPLICATION_TIME_MAX_ANCHORS = 16
 export const DEFAULT_APPLICATION_TIME_MAX_ENTRIES = 32
@@ -127,26 +128,15 @@ function assertPublicDataObject(
   allowedKeys: readonly string[],
   requiredKeys: readonly string[]
 ): asserts value is Record<string, unknown> {
-  if (
-    typeof value !== "object" ||
-    value === null ||
-    Array.isArray(value) ||
-    Object.getPrototypeOf(value) !== Object.prototype
-  ) {
-    throw new TypeError(`${description} must be a plain object`)
-  }
-  const keys = Reflect.ownKeys(value)
+  const object = strictDataObject(value, description, `${description} contains an unknown property`)
+  const keys = Reflect.ownKeys(object)
   for (const key of keys) {
     if (typeof key !== "string" || !allowedKeys.includes(key)) {
       throw new TypeError(`${description} contains an unknown property`)
     }
-    const descriptor = Object.getOwnPropertyDescriptor(value, key)
-    if (descriptor === undefined || !descriptor.enumerable || !("value" in descriptor)) {
-      throw new TypeError(`${description} properties must be enumerable data values`)
-    }
   }
   for (const key of requiredKeys) {
-    if (!Object.hasOwn(value, key)) {
+    if (!Object.hasOwn(object, key)) {
       throw new TypeError(`${description} requires ${key}`)
     }
   }
@@ -168,6 +158,181 @@ function assertAnchor(value: unknown): asserts value is WallClockAnchor {
   }
   assertSafeInteger(anchor.wallClockAtUs, "Wall-clock anchor timestamp")
   assertNonnegativeSafeInteger(anchor.uncertaintyUs, "Wall-clock anchor uncertainty")
+}
+
+function parseWallClockMetadata(value: unknown): WallClockMetadata {
+  const wallClock = strictDataObject(value, "Application wall-clock metadata")
+  if (wallClock.status === "bounded") {
+    const bounded = strictExactDataObject(
+      value,
+      [
+        "anchorId",
+        "correctionFromPreviousUs",
+        "estimatedAtUs",
+        "lowerBoundUs",
+        "source",
+        "status",
+        "uncertaintyUs",
+        "upperBoundUs"
+      ],
+      "Application bounded wall-clock metadata"
+    )
+    assertIdentifier(bounded.anchorId, "Application wall-clock anchor ID")
+    if (bounded.correctionFromPreviousUs !== null) {
+      assertSafeInteger(bounded.correctionFromPreviousUs, "Application wall-clock correction")
+    }
+    assertSafeInteger(bounded.estimatedAtUs, "Application wall-clock estimate")
+    assertSafeInteger(bounded.lowerBoundUs, "Application wall-clock lower bound")
+    assertSafeInteger(bounded.upperBoundUs, "Application wall-clock upper bound")
+    assertNonnegativeSafeInteger(bounded.uncertaintyUs, "Application wall-clock uncertainty")
+    if (bounded.source !== "network-time" && bounded.source !== "rtc") {
+      throw new TypeError("Application wall-clock source is unknown")
+    }
+    if (
+      bounded.lowerBoundUs > bounded.upperBoundUs ||
+      bounded.estimatedAtUs < bounded.lowerBoundUs ||
+      bounded.estimatedAtUs > bounded.upperBoundUs
+    ) {
+      throw new RangeError("Application wall-clock bounds must contain the estimate")
+    }
+    const expectedLowerBoundUs = checkedSubtract(
+      bounded.estimatedAtUs,
+      bounded.uncertaintyUs,
+      "Application wall-clock lower bound arithmetic"
+    )
+    const expectedUpperBoundUs = checkedAdd(
+      bounded.estimatedAtUs,
+      bounded.uncertaintyUs,
+      "Application wall-clock upper bound arithmetic"
+    )
+    if (bounded.lowerBoundUs !== expectedLowerBoundUs || bounded.upperBoundUs !== expectedUpperBoundUs) {
+      throw new RangeError("Application wall-clock bounds must equal estimate plus or minus uncertainty")
+    }
+    return freezeWallClock({
+      anchorId: bounded.anchorId,
+      correctionFromPreviousUs: bounded.correctionFromPreviousUs,
+      estimatedAtUs: bounded.estimatedAtUs,
+      lowerBoundUs: bounded.lowerBoundUs,
+      source: bounded.source,
+      status: "bounded",
+      uncertaintyUs: bounded.uncertaintyUs,
+      upperBoundUs: bounded.upperBoundUs
+    })
+  }
+
+  if (wallClock.status !== "unavailable") {
+    throw new TypeError("Application wall-clock status is unknown")
+  }
+  const unavailable = strictExactDataObject(value, ["reason", "status"], "Application unavailable wall-clock metadata")
+  if (
+    unavailable.reason !== "anchor-after-decision" &&
+    unavailable.reason !== "offline" &&
+    unavailable.reason !== "stale-anchor"
+  ) {
+    throw new TypeError("Application wall-clock reason is unknown")
+  }
+  return freezeWallClock({ reason: unavailable.reason, status: "unavailable" })
+}
+
+/**
+ * Parses application-owned metadata against the authoritative record it
+ * annotates. The returned value is a new deeply frozen projection, so replay
+ * and other consumers cannot retain mutable or accessor-backed input objects.
+ */
+export function parseApplicationTimeMetadata(
+  value: unknown,
+  associatedRecord: DecisionRecord
+): ApplicationTimelineEntry {
+  const record = parseDecisionRecord(associatedRecord)
+  const application = strictExactDataObject(
+    value,
+    ["applicationBootId", "applicationSequence", "decisionRecordId", "monotonic", "ordering", "wallClock"],
+    "Application time metadata"
+  )
+  assertIdentifier(application.applicationBootId, "Application boot ID")
+  assertNonnegativeSafeInteger(application.applicationSequence, "Application sequence")
+  assertIdentifier(application.decisionRecordId, "Application decision record ID")
+  if (application.decisionRecordId !== record.recordId) {
+    throw new RangeError("Application metadata must identify the rendered record")
+  }
+
+  const monotonic = strictExactDataObject(
+    application.monotonic,
+    ["decisionAtUs", "scoringBootId"],
+    "Application monotonic metadata"
+  )
+  assertNonnegativeSafeInteger(monotonic.decisionAtUs, "Application monotonic decision timestamp")
+  assertIdentifier(monotonic.scoringBootId, "Application monotonic scoring boot ID")
+  if (
+    monotonic.decisionAtUs !== record.decisionAtUs ||
+    monotonic.scoringBootId !== record.provenance.firmware.scoringBootId
+  ) {
+    throw new RangeError("Application metadata must preserve STM32 time and boot identity")
+  }
+
+  const ordering = strictExactDataObject(
+    application.ordering,
+    [
+      "previousApplicationRecordId",
+      "previousScoringBootRecordId",
+      "relationToPreviousApplicationRecord",
+      "relationWithinScoringBoot"
+    ],
+    "Application ordering metadata"
+  )
+  let previousApplicationRecordId: string | null
+  let previousScoringBootRecordId: string | null
+  const previousApplicationRecordIdValue = ordering.previousApplicationRecordId
+  const previousScoringBootRecordIdValue = ordering.previousScoringBootRecordId
+  if (previousApplicationRecordIdValue === null) {
+    previousApplicationRecordId = null
+  } else {
+    assertIdentifier(previousApplicationRecordIdValue, "Application previous application record ID")
+    previousApplicationRecordId = previousApplicationRecordIdValue
+  }
+  if (previousScoringBootRecordIdValue === null) {
+    previousScoringBootRecordId = null
+  } else {
+    assertIdentifier(previousScoringBootRecordIdValue, "Application previous scoring-boot record ID")
+    previousScoringBootRecordId = previousScoringBootRecordIdValue
+  }
+  if (
+    ordering.relationToPreviousApplicationRecord !== "first" &&
+    ordering.relationToPreviousApplicationRecord !== "indeterminate-across-scoring-boots" &&
+    ordering.relationToPreviousApplicationRecord !== "ordered"
+  ) {
+    throw new TypeError("Application ordering relation is unknown")
+  }
+  if ((ordering.relationToPreviousApplicationRecord === "first") !== (previousApplicationRecordId === null)) {
+    throw new RangeError("Application first relation must match its previous record ID")
+  }
+  if (
+    ordering.relationWithinScoringBoot !== "first" &&
+    ordering.relationWithinScoringBoot !== "ordered" &&
+    ordering.relationWithinScoringBoot !== "same-authority-instant"
+  ) {
+    throw new TypeError("Application within-boot ordering relation is unknown")
+  }
+  if ((ordering.relationWithinScoringBoot === "first") !== (previousScoringBootRecordId === null)) {
+    throw new RangeError("Application within-boot first relation must match its previous record ID")
+  }
+
+  return freeze({
+    applicationBootId: application.applicationBootId,
+    applicationSequence: application.applicationSequence,
+    decisionRecordId: application.decisionRecordId,
+    monotonic: freeze({
+      decisionAtUs: monotonic.decisionAtUs,
+      scoringBootId: monotonic.scoringBootId
+    }),
+    ordering: freeze({
+      previousApplicationRecordId,
+      previousScoringBootRecordId,
+      relationToPreviousApplicationRecord: ordering.relationToPreviousApplicationRecord,
+      relationWithinScoringBoot: ordering.relationWithinScoringBoot
+    }),
+    wallClock: parseWallClockMetadata(application.wallClock)
+  })
 }
 
 function freeze<T>(value: T): T {

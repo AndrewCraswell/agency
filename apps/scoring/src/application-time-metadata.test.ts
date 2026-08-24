@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest"
 import {
   MAX_APPLICATION_TIME_ANCHORS,
   MAX_APPLICATION_TIME_ENTRIES,
-  createApplicationTimeMetadata
+  createApplicationTimeMetadata,
+  parseApplicationTimeMetadata
 } from "./application-time-metadata.js"
 import { DECISION_RECORD_SCHEMA_VERSION, type DecisionRecord } from "./decision-record.js"
 import { createEventJournal, createVirtualEventJournalStorage } from "./event-journal.js"
@@ -525,5 +526,50 @@ describe("application time metadata", () => {
         captureWindow: { firstSequence: 1, fromUs: 100, lastSequence: 1, throughUs: 100 }
       })
     ).toThrow("ambiguous")
+  })
+
+  it("strictly parses an annotation against its authoritative record", () => {
+    const authoritative = record("record-1", 100)
+    const produced = model().observe(authoritative)
+    const parsed = parseApplicationTimeMetadata(structuredClone(produced), authoritative)
+
+    expect(parsed).toEqual(produced)
+    expect(parsed).not.toBe(produced)
+    expect(Object.isFrozen(parsed)).toBe(true)
+    expect(Object.isFrozen(parsed.monotonic)).toBe(true)
+    expect(Object.isFrozen(parsed.ordering)).toBe(true)
+    expect(Object.isFrozen(parsed.wallClock)).toBe(true)
+
+    const anchored = model()
+    anchored.synchronize({
+      anchorId: "rtc-a",
+      sampledAtUs: 0,
+      scoringBootId: "stm32-boot-a",
+      source: "rtc",
+      uncertaintyUs: 1,
+      wallClockAtUs: 1_000
+    })
+    const bounded = anchored.observe(authoritative)
+    expect(parseApplicationTimeMetadata(structuredClone(bounded), authoritative)).toEqual(bounded)
+
+    const accessorInput = structuredClone(produced)
+    Object.defineProperty(accessorInput, "applicationSequence", {
+      enumerable: true,
+      get: () => produced.applicationSequence
+    })
+    expect(() => parseApplicationTimeMetadata(accessorInput, authoritative)).toThrow("data values")
+
+    expect(() =>
+      parseApplicationTimeMetadata({ ...produced, decisionRecordId: "other-record" }, authoritative)
+    ).toThrow("identify the rendered record")
+    expect(() =>
+      parseApplicationTimeMetadata(
+        {
+          ...produced,
+          monotonic: { ...produced.monotonic, scoringBootId: "other-boot" }
+        },
+        authoritative
+      )
+    ).toThrow("preserve STM32 time and boot identity")
   })
 })

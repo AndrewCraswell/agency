@@ -29,7 +29,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 9 | SD-006 | P1 | blocked | ESP32 services and receiver disagree on identifier validity; intake waits for FW-004 |
 | 10 | SD-009 | P1 | ready | Remote gesture timing still uses milliseconds instead of canonical microseconds |
 | 11 | SD-010 | P2 | done | Root-approved replay now delegates authoritative record validation and immutable cloning solely to `parseDecisionRecord` while retaining replay-only annotation checks |
-| 12 | SD-011 | P2 | ready | Replay duplicates application-time annotation validation |
+| 12 | SD-011 | P2 | done | Root-approved producer parser now owns strict application-time validation and replay consumes its deeply frozen projection |
 | 13 | SD-007 | P2 | ready | Scenario display and fixture schemas duplicate vocabulary predicates |
 | 14 | SD-008 | P2 | intake-blocked-on-active-units | Strict immutable-data helpers are copied across app and circuit contracts |
 | 15 | SC-004 | P2 | ready | Generated board reports are nondeterministic and embed a localhost simulator URL |
@@ -238,7 +238,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SD-011: centralize application-time annotation parsing
 
 - Priority: `P2`
-- State: `ready`
+- State: `done`
+- Latest state: Delivered and root-approved: `parseApplicationTimeMetadata` owns exact-key, timestamp, ordering, wall-clock, and decision-record correlation checks; replay delegates to it and retains no duplicate annotation validator or clone.
 - Affected files: `apps/scoring/src/application-time-metadata.ts`, `replay-renderer.ts`, and focused tests.
 - Description: replay repeats wall-clock bounds, monotonic identity, ordering, and record-correlation rules already owned by the application-time producer.
 - Impact: producer and replay acceptance can drift, undermining deterministic offline ordering and uncertainty display.
