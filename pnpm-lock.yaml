@@ -8010,6 +8010,16 @@ packages:
     resolution: {integrity: sha1-g/ryWGnj33J8yFUWHbXahbDlssA=}
     engines: {node: ^12.22.0 || ^14.16.0 || ^16.0.0 || >=17.0.0}
 
+  h3@2.0.1-rc.20:
+    resolution: {integrity: sha1-UQUNswr7C25pcY2IzMwjZm++gDk=}
+    engines: {node: '>=20.11.1'}
+    hasBin: true
+    peerDependencies:
+      crossws: ^0.4.1
+    peerDependenciesMeta:
+      crossws:
+        optional: true
+
   happy-dom@20.11.1:
     resolution: {integrity: sha1-EbTrv8hZX06jbFYhe0/6/MOtl1M=}
     engines: {node: '>=20.0.0'}
@@ -9838,6 +9848,9 @@ packages:
 
   rope-sequence@1.3.4:
     resolution: {integrity: sha1-34VxGq7NMvHnVvduQ6QVFxI11CU=}
+
+  rou3@0.8.1:
+    resolution: {integrity: sha1-0YydrkK92c1P/6d7xnMdXP6SEpo=}
 
   router@2.2.0:
     resolution: {integrity: sha1-AZvmILcRyHZBFnzHm5kJDwCxRu8=}
@@ -18854,6 +18867,11 @@ snapshots:
 
   graphql@16.14.2: {}
 
+  h3@2.0.1-rc.20:
+    dependencies:
+      rou3: 0.8.1
+      srvx: 0.11.22
+
   happy-dom@20.11.1:
     dependencies:
       '@types/node': 24.13.2
@@ -20738,6 +20756,8 @@ snapshots:
 
   rope-sequence@1.3.4: {}
 
+  rou3@0.8.1: {}
+
   router@2.2.0(supports-color@10.2.2):
     dependencies:
       debug: 4.4.3(supports-color@10.2.2)
@@ -22403,3 +22423,4 @@ snapshots:
     dependencies:
       '@oozcitak/infra': 2.0.2
       '@oozcitak/util': 10.0.0
+
