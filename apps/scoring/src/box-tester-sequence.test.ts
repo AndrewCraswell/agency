@@ -136,7 +136,7 @@ describe("BT-04 box tester sequence compiler", () => {
         expect: { status: "accepted" | "rejected" }
       }
       if (scenario.expect.status === "accepted") expect(compileBoxTesterSequence(scenario).stimulus).not.toHaveLength(0)
-      else expect(() => compileBoxTesterSequence(scenario)).toThrow("rejected scenarios")
+      else expect(() => compileBoxTesterSequence(scenario)).toThrow(RangeError)
     }
   })
 })
