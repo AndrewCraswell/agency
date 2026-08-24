@@ -30,7 +30,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 10 | SD-009 | P1 | done | Root-approved remote gesture timing now uses bounded integer microseconds throughout with preserved gesture behavior and overflow-safe deadlines |
 | 11 | SD-010 | P2 | done | Root-approved replay now delegates authoritative record validation and immutable cloning solely to `parseDecisionRecord` while retaining replay-only annotation checks |
 | 12 | SD-011 | P2 | done | Root-approved producer parser now owns strict application-time validation and replay consumes its deeply frozen projection |
-| 13 | SD-007 | P2 | ready | Scenario display and fixture schemas duplicate vocabulary predicates |
+| 13 | SD-007 | P2 | done | Root-approved private display-schema predicates now serve both projection and fixture validation |
 | 14 | SD-008 | P2 | intake-blocked-on-active-units | Strict immutable-data helpers are copied across app and circuit contracts |
 | 15 | SC-004 | P2 | done | Root-approved board artifacts use content-addressed readiness identities and a validated configurable simulator origin instead of wall-clock or embedded localhost data |
 | 16 | FW-005 | P2 | done | Root-approved shared native CMake policy now enforces C17, conversion warnings, and Clang coverage consistently while retaining STM32 target-specific flags |
@@ -179,7 +179,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SD-007: share scenario-display schema predicates
 
 - Priority: `P2`
-- State: `ready`
+- State: `done`
 - Affected files: `src/scenario-display-projection.ts`, `src/scenario-display-fixtures.ts`, and their focused tests.
 - Description: decision, signal, diagnostic, timestamp, and vocabulary predicates are independently reimplemented; the two record guards already disagree about arrays.
 - Impact: fixture parsing and display projection can accept different shapes after a vocabulary or boundary change.
