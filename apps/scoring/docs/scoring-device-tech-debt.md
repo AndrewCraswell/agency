@@ -52,6 +52,9 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 33 | SC-010 | P2 | intake | Communications circuit selected MPNs can drift from canonical component decisions and USB-PD records |
 | 34 | SC-011 | P3 | done | Root-approved BOM validation now relies on canonical rows as its sole exact-selection registry |
 | 35 | SC-012 | P2 | intake | W5500 support values are canonical upstream but duplicated as circuit literals |
+| 36 | FW-006 | P1 | ready | A legacy ESP32 authoritative-record helper can bypass the canonical receiver journal and sequence boundary |
+| 37 | FW-007 | P2 | in-progress | Product-release manifest and environment inputs duplicate one byte-string validation policy |
+| 38 | FW-008 | P1 | in-progress | ESP32 journal replay indexes the active slot without the mutation path's exact slot-bound preflight |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -556,3 +559,36 @@ truth.
 - Bounded remediation: expose a small typed circuit-value projection and consume it for the supported capacitors and resistors, retaining explicit zero-ohm normalization.
 - Acceptance: rendered values derive from the support record and all W5500 traces and references remain identical.
 - Non-goals: no generic unit parser, pin-map abstraction, or fabrication approval.
+
+## FW-006: make the ESP32 receiver the sole authoritative-record ingress
+
+- Priority: `P1`
+- State: `ready`
+- Affected files: `apps/scoring/firmware/esp32/src/scoring_esp32_services.c`, its public header, receiver code, and focused native tests.
+- Description: `scoring_esp32_receive_authoritative_record` forwards an accepted decision payload directly to storage, while the canonical receiver path owns durable journal persistence, cursor restoration, duplicate and reorder rejection, reset, and replay.
+- Impact: a production caller can select a second ingress boundary that bypasses exactly-once and recovery guarantees.
+- Bounded remediation: make `scoring_esp32_receiver_receive` the sole production ingress and remove or explicitly quarantine the legacy helper as scaffold/test-only.
+- Acceptance: no production path can select the bypass; focused tests retain payload forwarding and cover journal, duplicate, reorder, reset, and replay behavior.
+- Non-goals: no transport, journal, or payload-format redesign.
+
+## FW-007: share product-release byte-string validation
+
+- Priority: `P2`
+- State: `in-progress`
+- Affected file: `apps/scoring/firmware/product-update/src/scoring_product_release.c` and focused native tests.
+- Description: manifest decoding and stored/environment argument validation repeat the same bounded byte grammar with separate loops and limits.
+- Impact: accepted identifier bytes or boundary lengths can drift between manifest and authorization inputs, creating inconsistent release decisions.
+- Bounded remediation: extract one private byte-and-length validator with caller-supplied maximums while preserving caller-owned error categories.
+- Acceptance: manifest and environment boundary/invalid-byte tests agree; `INVALID_FIELD` versus `INVALID_ARGUMENT`, wire bytes, and public APIs remain unchanged.
+- Non-goals: no grammar, schema, wire, or public-API redesign.
+
+## FW-008: share bounded ESP32 journal state preflight with replay
+
+- Priority: `P1`
+- State: `in-progress`
+- Affected file: `apps/scoring/firmware/esp32/src/scoring_esp32_journal.c` and focused native tests.
+- Description: mutation validates the journal's active slot before indexing storage, while replay performs a separate validation path and then indexes the active slot without the same exact bound check.
+- Impact: corrupt or externally damaged journal state can turn a recoverable `JOURNAL_CORRUPT` condition into an out-of-range storage access.
+- Bounded remediation: extract one const-safe journal-state preflight used by mutation and replay before any active-slot indexing.
+- Acceptance: invalid active-slot, corrupt-slot, unopened, and recovery-corrupt cases return bounded errors without an out-of-range access; valid replay bytes and sequence remain unchanged.
+- Non-goals: no slot layout, persistence, payload, or recovery-policy redesign.
