@@ -496,6 +496,7 @@ static bool test_journal_public_argument_boundaries(void) {
   CHECK(scoring_esp32_journal_recovery(NULL) == SCORING_ESP32_JOURNAL_RECOVERY_CORRUPT);
   CHECK(scoring_esp32_journal_count(NULL) == 0U);
   CHECK(scoring_esp32_journal_reopen(&unopened) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  CHECK(scoring_esp32_journal_advance_cursor(&unopened, 1U) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
   CHECK(scoring_esp32_journal_append(NULL, 1U, (scoring_esp32_bytes_t){0}) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
   CHECK(scoring_esp32_journal_append(&journal, 1U, (scoring_esp32_bytes_t){.data = NULL, .length = 1U}) ==
         SCORING_ESP32_RESULT_INVALID_ARGUMENT);
@@ -571,6 +572,36 @@ static bool test_journal_public_argument_boundaries(void) {
   CHECK(scoring_esp32_journal_advance_cursor(&journal, 2U) == SCORING_ESP32_RESULT_DUPLICATE);
   CHECK(scoring_esp32_journal_advance_cursor(&journal, 1U) == SCORING_ESP32_RESULT_OUT_OF_ORDER);
   CHECK(scoring_esp32_journal_advance_cursor(&journal, 3U) == SCORING_ESP32_RESULT_OK);
+  {
+    scoring_esp32_journal_t invalid_active_slot = journal;
+    invalid_active_slot.active_slot = SCORING_ESP32_JOURNAL_SLOT_COUNT;
+    CHECK(scoring_esp32_journal_append(
+            &invalid_active_slot,
+            4U,
+            (scoring_esp32_bytes_t){.data = other_payload, .length = sizeof(other_payload)}
+          ) ==
+          SCORING_ESP32_RESULT_JOURNAL_CORRUPT);
+    CHECK(scoring_esp32_journal_advance_cursor(&invalid_active_slot, 4U) == SCORING_ESP32_RESULT_JOURNAL_CORRUPT);
+  }
+  {
+    scoring_esp32_journal_t corrupt_recovery = journal;
+    corrupt_recovery.recovery = SCORING_ESP32_JOURNAL_RECOVERY_CORRUPT;
+    CHECK(scoring_esp32_journal_append(
+            &corrupt_recovery,
+            4U,
+            (scoring_esp32_bytes_t){.data = other_payload, .length = sizeof(other_payload)}
+          ) ==
+          SCORING_ESP32_RESULT_JOURNAL_CORRUPT);
+    CHECK(scoring_esp32_journal_advance_cursor(&corrupt_recovery, 4U) == SCORING_ESP32_RESULT_JOURNAL_CORRUPT);
+  }
+  CHECK(scoring_esp32_journal_corrupt_committed(&storage, 0U) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_journal_append(
+          &journal,
+          4U,
+          (scoring_esp32_bytes_t){.data = other_payload, .length = sizeof(other_payload)}
+        ) ==
+        SCORING_ESP32_RESULT_JOURNAL_CORRUPT);
+  CHECK(scoring_esp32_journal_advance_cursor(&journal, 4U) == SCORING_ESP32_RESULT_JOURNAL_CORRUPT);
   {
     scoring_esp32_journal_storage_t zero_storage;
     scoring_esp32_journal_t zero_journal;

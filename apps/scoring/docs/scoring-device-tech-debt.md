@@ -188,7 +188,7 @@ truth.
 ## FW-002: consolidate ESP32 journal mutation preconditions
 
 - Priority: `P1`
-- State: `ready`
+- State: `done`
 - Affected files: [`apps/scoring/firmware/esp32/src/scoring_esp32_journal.c`](../firmware/esp32/src/scoring_esp32_journal.c) (lines 211-297 and 299-371), [`apps/scoring/firmware/esp32/include/scoring_esp32_journal.h`](../firmware/esp32/include/scoring_esp32_journal.h) (lines 94-113), and [`apps/scoring/firmware/esp32/tests/scoring_esp32_receiver_host_test.c`](../firmware/esp32/tests/scoring_esp32_receiver_host_test.c) (lines 167-390 and 474-586).
 - Description and evidence: `scoring_esp32_journal_append` and `scoring_esp32_journal_advance_cursor` each check that the journal is open, storage is present, recovery is not corrupt, the active slot is valid, and the sequence boundary is acceptable before calling the shared `commit_checkpoint` (append at lines 306-335; cursor advance at lines 350-363). Their operation-specific checks are validly different, but the common durable-state preflight and post-commit state contract are spread across the two public mutations and the shared commit helper.
 - Impact: a change to corruption handling, full-journal backpressure, or sequence exhaustion can update one mutation path and not the other. The receiver uses both paths for authoritative records and ignored frames, so drift can make replay and cursor recovery depend on the message type.

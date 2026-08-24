@@ -166,6 +166,31 @@ static scoring_esp32_result_t select_committed_slot(
   return SCORING_ESP32_RESULT_OK;
 }
 
+static scoring_esp32_result_t journal_mutation_preflight(
+  const scoring_esp32_journal_t *journal,
+  const scoring_esp32_journal_slot_t **out_current
+) {
+  const scoring_esp32_journal_slot_t *current;
+  if (journal == NULL || !journal->is_open || journal->storage == NULL) {
+    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
+  }
+  if (journal->recovery == SCORING_ESP32_JOURNAL_RECOVERY_CORRUPT) {
+    return SCORING_ESP32_RESULT_JOURNAL_CORRUPT;
+  }
+  if (journal->active_slot >= SCORING_ESP32_JOURNAL_SLOT_COUNT) {
+    return SCORING_ESP32_RESULT_JOURNAL_CORRUPT;
+  }
+  current = &journal->storage->slots[journal->active_slot];
+  if ((journal->record_count != 0U || journal->cursor_valid) &&
+      !slot_is_valid(current, journal->max_records)) {
+    return SCORING_ESP32_RESULT_JOURNAL_CORRUPT;
+  }
+  if (out_current != NULL) {
+    *out_current = current;
+  }
+  return SCORING_ESP32_RESULT_OK;
+}
+
 scoring_esp32_result_t scoring_esp32_journal_open(
   scoring_esp32_journal_t *journal,
   scoring_esp32_journal_storage_t *storage,
@@ -223,25 +248,8 @@ static scoring_esp32_result_t commit_checkpoint(
   uint32_t index;
   uint32_t next_generation;
   scoring_esp32_result_t result;
-  if (journal == NULL || !journal->is_open || journal->storage == NULL ||
-      (bytes.data == NULL && bytes.length != 0U)) {
-    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
-  }
-  if (journal->recovery == SCORING_ESP32_JOURNAL_RECOVERY_CORRUPT) {
-    return SCORING_ESP32_RESULT_JOURNAL_CORRUPT;
-  }
-  if (append_record && bytes.length > SCORING_ESP32_MAX_TRANSPORT_PAYLOAD_BYTES) {
-    return SCORING_ESP32_RESULT_BUFFER_TOO_SMALL;
-  }
-  if (!append_record && bytes.length != 0U) {
-    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
-  }
   storage = journal->storage;
   current = &storage->slots[journal->active_slot];
-  if ((journal->record_count != 0U || journal->cursor_valid) &&
-      !slot_is_valid(current, journal->max_records)) {
-    return SCORING_ESP32_RESULT_JOURNAL_CORRUPT;
-  }
   if (journal->record_count + (append_record ? 1U : 0U) > journal->max_records) {
     return SCORING_ESP32_RESULT_BACKPRESSURE;
   }
@@ -250,7 +258,6 @@ static scoring_esp32_result_t commit_checkpoint(
   }
   next_slot = (uint8_t)(journal->active_slot == 0U ? 1U : 0U);
   next = &storage->slots[next_slot];
-  current = &storage->slots[journal->active_slot];
   (void)memset(next, 0, sizeof(*next));
   next_generation = journal->generation + 1U;
   next->magic = JOURNAL_MAGIC;
@@ -302,21 +309,17 @@ scoring_esp32_result_t scoring_esp32_journal_append(
   scoring_esp32_bytes_t bytes
 ) {
   const scoring_esp32_journal_slot_t *current;
+  scoring_esp32_result_t result;
   uint32_t index;
-  if (journal == NULL || !journal->is_open || journal->storage == NULL ||
-      (bytes.data == NULL && bytes.length != 0U)) {
+  if (bytes.data == NULL && bytes.length != 0U) {
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }
-  if (journal->recovery == SCORING_ESP32_JOURNAL_RECOVERY_CORRUPT) {
-    return SCORING_ESP32_RESULT_JOURNAL_CORRUPT;
+  result = journal_mutation_preflight(journal, &current);
+  if (result != SCORING_ESP32_RESULT_OK) {
+    return result;
   }
   if (bytes.length > SCORING_ESP32_MAX_TRANSPORT_PAYLOAD_BYTES) {
     return SCORING_ESP32_RESULT_BUFFER_TOO_SMALL;
-  }
-  current = &journal->storage->slots[journal->active_slot];
-  if ((journal->record_count != 0U || journal->cursor_valid) &&
-      !slot_is_valid(current, journal->max_records)) {
-    return SCORING_ESP32_RESULT_JOURNAL_CORRUPT;
   }
   for (index = 0U; index < journal->record_count; ++index) {
     const scoring_esp32_journal_record_t *record = &current->records[index];
@@ -347,11 +350,9 @@ scoring_esp32_result_t scoring_esp32_journal_advance_cursor(
   scoring_esp32_journal_t *journal,
   uint32_t transport_sequence
 ) {
-  if (journal == NULL || !journal->is_open || journal->storage == NULL) {
-    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
-  }
-  if (journal->recovery == SCORING_ESP32_JOURNAL_RECOVERY_CORRUPT) {
-    return SCORING_ESP32_RESULT_JOURNAL_CORRUPT;
+  const scoring_esp32_result_t preflight = journal_mutation_preflight(journal, NULL);
+  if (preflight != SCORING_ESP32_RESULT_OK) {
+    return preflight;
   }
   if (journal->cursor_valid) {
     if (transport_sequence == journal->cursor) {
