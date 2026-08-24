@@ -103,7 +103,7 @@ evidence without inventing missing behavior.
 
 | ID | Status | Deliverable | Depends on | Acceptance |
 | --- | --- | --- | --- | --- |
-| M0-01 | review | FIE traceability matrix for foil, epee, sabre, lamps, buzzer, lockout, faults, and power | None | Every normative behavior cites article/page in the local FIE PDF; Favero differences are labeled prior art, not authority |
+| M0-01 | done | FIE traceability matrix for foil, epee, sabre, lamps, buzzer, lockout, faults, and power | None | Every normative behavior cites article/page in the local FIE PDF; Favero differences are labeled prior art, not authority |
 | M0-02 | backlog | Glossary and units contract for line names, sides, timestamps, resistance, and timing boundaries | M0-01 | No overloaded names; all internal time uses integer microseconds; all electrical units are explicit |
 | M0-03 | backlog | Seven-conductor logical signal contract, weapon excitation phases, and safe inactive state | M0-01, M0-02 | Reviewed by software and electrical owners; every illegal or indeterminate state has a diagnostic outcome |
 | M0-04 | backlog | STM32/ESP32 responsibility and fault-containment contract | M0-02 | Scoring authority, reset ownership, watchdog behavior, degraded modes, and forbidden ESP32 decisions are explicit |

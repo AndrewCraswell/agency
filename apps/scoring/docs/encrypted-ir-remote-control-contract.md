@@ -283,7 +283,7 @@ and unrestricted service authorization remain separated from ordinary assembly a
 
 | ID | Status | Work unit | Depends on | Acceptance |
 | --- | --- | --- | --- | --- |
-| `RC-01` | review | Approve match-clock, bout-state, scoring-rearm, and controller-authority ADR. | M0-04, M0-05, M0-10 | Every command and applied event has one owner; countdown and scoring time remain separate; handheld/app/tournament write authority and rearm/reset boundaries are unambiguous. |
+| `RC-01` | done | Approve match-clock, bout-state, scoring-rearm, and controller-authority ADR. | M0-04, M0-05, M0-10 | Every command and applied event has one owner; countdown and scoring time remain separate; handheld/app/tournament write authority and rearm/reset boundaries are unambiguous. |
 | `RC-02` | review | Freeze remote-command, complete bout snapshot, controller-authority, and applied-event schemas. | `RC-01` | Versioned schemas and golden fixtures cover every command key in the button lookup, new bout, snapshot load, empty/invalid-state rejection, and authority transfer. |
 | `RC-03` | in-progress | Select encrypted IR protocol, pairing, anti-replay, counter persistence, and key custody. | `RC-01` | Independent security review approves the suite, threat response, provisioning boundary, rotation/revocation, reset recovery, and no-fallback rules. |
 | `RC-04` | blocked | Select handheld electronics, button matrix, optical path, power system, and apparatus receiver architecture. | `RC-03`, BP-126 | Approved labels and ergonomics, exact parts/interfaces, at least 20 m frontal range target, 300-hour battery target, latency target, reset/fault behavior, and test access are ready for schematic and industrial design. |
