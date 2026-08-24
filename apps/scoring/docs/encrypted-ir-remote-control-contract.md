@@ -77,9 +77,10 @@ SEMI interpretation. If it does not, an encrypted radio remote remains an additi
 - Remote failure, IR jamming, ESP32 reset, or application unavailability cannot fabricate a touch, clear a primary
   indication, reset the STM32 automatically, or prevent an otherwise healthy STM32 from scoring.
 
-The match-clock and full bout-state ownership ADR remains a prerequisite for implementation. It must decide how an
-accepted referee command, STM32 scoring record, countdown-clock transition, primary output, and replay event are
-correlated without treating the STM32 scoring timestamp as a countdown clock.
+The match-clock and full bout-state ownership decision is recorded in the
+[remote-control authority ADR](remote-control-authority-adr.md). It defines how an accepted referee command, STM32
+scoring record, countdown-clock transition, primary output, and replay event are correlated without treating the STM32
+scoring timestamp as a countdown clock.
 
 ## Required operator actions
 

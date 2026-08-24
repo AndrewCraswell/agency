@@ -17,7 +17,8 @@ The pre-prototype encrypted infrared referee remote, Favero-compatible operator 
 pairing/provisioning security properties, board gates, and manufacturer software package are defined in
 [encrypted-ir-remote-control-contract.md](encrypted-ir-remote-control-contract.md). The face-position, gesture,
 command-key, guard, and feedback lookup is in
-[remote-control-button-reference.md](remote-control-button-reference.md).
+[remote-control-button-reference.md](remote-control-button-reference.md). The countdown, STM32 scoring, rearm/reset,
+and controller-transfer boundary is in [the RC-01 authority ADR](remote-control-authority-adr.md).
 
 The reproducible `rules-1` baseline, its pinned executable inputs and toolchain,
 and its review-sensitive digest workflow are defined in
