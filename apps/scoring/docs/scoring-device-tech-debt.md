@@ -42,6 +42,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 22 | SC-007 | P2 | blocked | PCB identity serializers differ; implementation waits for active board-artifact work |
 | 23 | SC-008 | P3 | done | Root-approved private finite-positive assertion now serves the three electrical-budget modules with unchanged errors |
 | 24 | SC-006 | P2 | done | Root-approved strict evidence-time parser now serves connector, fixture, footprint, and IR evidence validators |
+| 25 | SD-016 | P1 | ready | Encrypted-IR ingress throttling stores milliseconds instead of canonical integer microseconds |
+| 26 | SD-017 | P2 | ready | Encrypted-IR wire sizes and byte offsets are manually repeated |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -422,3 +424,31 @@ truth.
 - Impact: equivalent evidence timestamps previously had different acceptance rules and malformed IR review timestamps could pass.
 - Non-goals: no date library, analog schema rewrite, or authority escalation.
 - Verification: 53 focused tests, circuit-package TypeScript, focused oxlint, and focused oxfmt passed.
+
+## SD-016: use canonical microseconds for encrypted-IR ingress throttling
+
+- Priority: `P1`
+- State: `ready`
+- Affected files: `apps/scoring/src/encrypted-ir-security.ts` and its focused tests.
+- Description: the throttle state and API use `windowStartedAtMilliseconds` and `observedAtMilliseconds` with a `1_000` window even though the product time contract requires bounded integer microseconds.
+- Impact: a receiver or virtual-clock adapter can introduce a 1,000-times conversion error at the rate-limit boundary.
+- Bounded remediation: rename the throttle state/API to `...AtUs`, use a `1_000_000` microsecond window, and apply the shared safe-microsecond guard while preserving the current rate and queue limits.
+- Non-goals: do not change cryptography, authentication, rate limits, queue capacity, or remote-button gesture semantics.
+- Acceptance checks:
+  - Exact one-second boundary and clock-regression tests pass.
+  - Negative, fractional, non-finite, and unsafe timestamps reject fail closed.
+  - No millisecond-named field remains in the IR ingress throttle.
+
+## SD-017: derive encrypted-IR wire offsets and sizes from one layout
+
+- Priority: `P2`
+- State: `ready`
+- Affected files: `apps/scoring/src/encrypted-ir-security.ts` and its focused tests.
+- Description: the 70-byte header, 150-byte maximum frame, named layout, and raw offsets such as 40, 44, 52, 68, and 69 are maintained separately.
+- Impact: a field change can leave serialization, parsing, AAD construction, and length validation inconsistent.
+- Bounded remediation: derive private named offsets and total sizes from one ordered layout descriptor while retaining the exact RC-03 bytes and public parser API.
+- Non-goals: do not build a generic codec framework, revise the RC-03 wire format, or implement cryptography.
+- Acceptance checks:
+  - Layout invariants prove the 70-byte header and 150-byte maximum.
+  - Round-trip, fixed-vector, malformed-length, and mutated-AAD tests pass.
+  - No unexplained raw wire offsets remain in serializer or parser code.
