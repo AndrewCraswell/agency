@@ -104,6 +104,18 @@ describe("bench prototype BOM baseline", () => {
     })
   })
 
+  it("records the NXE1 manufacturer package positions without releasing a project footprint", () => {
+    const row = benchPrototypeBom.rows.find((candidate) => candidate.reference === "U_ISO_POWER")
+
+    expect(row).toMatchObject({
+      mpn: "NXE1S0505MC",
+      package:
+        "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect"
+    })
+    expect(benchPrototypeBom.releaseState).toBe("deny")
+    expect(benchPrototypeBom.fabricationRelease).toBe(false)
+  })
+
   it("keeps unresolved analog, connector, and USB power scope explicit", () => {
     expect(benchPrototypeBom.rows.find((row) => row.reference === "U_ANALOG_CELL_1")?.disposition).toBe("TBD")
     expect(benchPrototypeBom.rows.find((row) => row.reference === "J_WEAPON_HARNESS")?.disposition).toBe("TBD")

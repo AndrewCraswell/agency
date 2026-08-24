@@ -53,7 +53,7 @@ guarded experiment a device-range screen for plus/minus 24 V while preserving
 
 | Ref. | Exact part/value | Role |
 | --- | --- | --- |
-| `U_ISO` | `NXE1S0505MC` | 1 W isolated 5 V source for the coupon analog island |
+| `U_ISO` | `NXE1S0505MC` | 1 W isolated 5 V source for the coupon analog island; surface-mount 14-position package with five solder lands at positions 1, 3, 7, 8, 14, four functional connections, and position 14 NA/no-connect |
 | `U_NEGATIVE_RAIL` | `TPS60400DBVR` | Isolated 5 V to -5 V charge pump |
 | `U_3V3` | `TPS7A2033PDBVR` | 3.3 V converter digital and analog supply |
 | `U_REF` | `REF5025AQDRQ1` | Shared 2.5 V excitation and SAR reference |
@@ -205,7 +205,7 @@ authority even after a measurement record passes schema validation.
   switch leakage, resistance, and charge-injection behavior under test.
 - [TPS6040x data sheet, revision C](https://www.ti.com/lit/ds/symlink/tps60400.pdf):
   DBV package pin assignments in Table 6-1 on page 3.
-- [Murata NXE1 series data sheet](https://www.murata.com/en-us/products/productdata/8807031865374/kdc-nxe1.pdf): `NXE1S0505MC` 5 V, 200 mA, 1 W isolated output.
+- [Murata NXE1 series data sheet](https://www.murata.com/en-us/products/productdata/8807031865374/kdc-nxe1.pdf): `NXE1S0505MC` 5 V, 200 mA, 1 W isolated output; its KDC_NXE1.A01 package drawing maps five solder lands at positions 1, 3, 7, 8, and 14, four functional connections, and position 14 NA/no-connect, with the recommended 5-pad footprint retained as source guidance only.
 - [Panasonic `ERA3AEB2491V` product page](https://industrial.panasonic.com/ww/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V): 2.49 kohm, 0.1%,
   25 ppm/C exact source resistor.
 

@@ -194,6 +194,16 @@ describe("one-channel analog experiment readiness", () => {
     expect(oneChannelAnalogExperimentReadiness.poweredTestingAuthorized).toBe(false)
   })
 
+  it("records the NXE1 source package positions without opening the footprint gate", () => {
+    expect(oneChannelAnalogExperimentBom.find((part) => part.reference === "U_ISO")).toMatchObject({
+      mpn: "NXE1S0505MC",
+      package:
+        "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect"
+    })
+    expect(oneChannelAnalogExperimentReadiness.fabrication.footprintState).toBe("all-unreleased-dnp")
+    expect(oneChannelAnalogExperimentReadiness.authorization).toBe(false)
+  })
+
   it("selects shrouded, polarized, locking, mutually incompatible fixture families with the correct orientation", () => {
     const safety = oneChannelAnalogExperimentReadiness.connectorSafety
 

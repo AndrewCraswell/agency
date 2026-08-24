@@ -54,7 +54,7 @@ describe("M4-04 single-channel sensing coupon", () => {
     })
   })
 
-  it("binds a ten-MPN first-party drawing batch without granting footprint authority", () => {
+  it("binds an eleven-MPN first-party drawing batch without granting footprint authority", () => {
     const acquired = M404_SINGLE_CHANNEL_COUPON.footprints
       .filter((footprint) => footprint.evidence.manufacturerDrawing.acquisition === "exact-drawing-hash-bound")
       .filter(
@@ -69,6 +69,12 @@ describe("M4-04 single-channel sensing coupon", () => {
       }))
 
     expect(acquired).toEqual([
+      {
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/murata-nxe1s0505mc-datasheet.pdf",
+        exactMpn: "NXE1S0505MC",
+        sha256: "53A6DCE053DA52AF149055634FC380E5B9AD1473D575D0B59F0EFF6123913D40",
+        sourceUrl: "https://www.murata.com/en-us/products/productdata/8807031865374/kdc-nxe1.pdf"
+      },
       {
         artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-tps60400-dbvr-datasheet.pdf",
         exactMpn: "TPS60400DBVR",
@@ -140,6 +146,30 @@ describe("M4-04 single-channel sensing coupon", () => {
       fabricationAuthorized: false,
       releaseState: "deny"
     })
+  })
+
+  it("binds the Murata NXE1 isolated-converter source without releasing its footprint", () => {
+    const converter = M404_SINGLE_CHANNEL_COUPON.footprints.find((footprint) => footprint.exactMpn === "NXE1S0505MC")
+    expect(converter?.package).toBe(
+      "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect"
+    )
+    expect(converter?.evidence.manufacturerPrimaryDocument).toMatchObject({
+      status: "hash-bound",
+      url: "https://www.murata.com/en-us/products/productdata/8807031865374/kdc-nxe1.pdf"
+    })
+    expect(converter?.evidence.manufacturerDrawing).toMatchObject({
+      acquisition: "exact-drawing-hash-bound",
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/murata-nxe1s0505mc-datasheet.pdf",
+      drawingIdentifier: "Murata Power Solutions KDC_NXE1.A01, NXE1 SMD package mechanical drawing",
+      drawingUrl: "https://www.murata.com/en-us/products/productdata/8807031865374/kdc-nxe1.pdf",
+      geometry: null,
+      sha256: "53A6DCE053DA52AF149055634FC380E5B9AD1473D575D0B59F0EFF6123913D40"
+    })
+    expect(converter?.evidence.manufacturerDrawing.scope).toContain("five solder lands at positions 1, 3, 7, 8, and 14")
+    expect(converter?.evidence.manufacturerDrawing.scope).toContain("four functional connections")
+    expect(converter?.evidence.manufacturerDrawing.scope).toContain("14=NA (not available for electrical connection)")
+    expect(converter?.evidence.manufacturerDrawing.scope).toContain("recommended 5-pad footprint")
+    expect(converter?.footprintRelease).toBe("deny")
   })
 
   it("retains a Vishay D/CRCW family drawing as series evidence, not exact-MPN evidence", () => {

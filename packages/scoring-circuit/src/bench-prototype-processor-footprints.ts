@@ -93,9 +93,11 @@ function packageFor(mpn: string): string {
     BSS138AKA: "SOT-23",
     C0603C104K3RACTU: "0603",
     C1608X5R1A105K080AC: "0603",
+    GCM188R71H104KA57D: "0603 (1608M)",
     ISO7721FDR: "SOIC-8",
     ISO7762FDWR: "SOIC-16 wide",
-    NXE1S0505MC: "SMD 7-pin",
+    NXE1S0505MC:
+      "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect",
     "RC0603FR-07100KL": "0603",
     "RC0603FR-0710KL": "0603",
     SN74LVC2G07DCKR: "SC70-6",
@@ -295,7 +297,8 @@ const definition = {
       reference: "U_ISO_POWER",
       boardReference: "U_ISOLATED_POWER",
       mpn: "NXE1S0505MC",
-      package: "SMD 7-pin",
+      package:
+        "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect",
       population: "selected-awaiting-footprint-evidence",
       source: "BP-122 isolated-power channel",
       evidence: evidence("NXE1S0505MC")

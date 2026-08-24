@@ -181,6 +181,9 @@ describe("one-channel protected analog experiment", () => {
     )
     expect(new Set(names)).toEqual(new Set(oneChannelAnalogExperimentBom.map((part) => part.reference)))
     expect(serialized).toContain("NXE1S0505MC")
+    expect(serialized).toContain('"name":"NC","pin_number":14')
+    expect(serialized).toContain('"name":"SYSTEM_5V","pin_number":3')
+    expect(serialized).toContain('"name":"S5V_ISO","pin_number":8')
     expect(serialized).toContain("ADA4177-1ARZ")
     expect(oneChannelAnalogExperiment.acquisition.bufferManufacturerEvidence).toEqual({
       dataSheetRevision: "Rev. E",

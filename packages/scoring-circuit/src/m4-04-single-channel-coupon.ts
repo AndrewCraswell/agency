@@ -296,6 +296,17 @@ const acquiredDrawingEvidenceByMpn: Readonly<Record<string, AcquiredDrawing>> = 
     scope:
       "Murata GRM21 reference sheet. The first page names the exact GRM21BR71A106KE51 orderable, 0805 case, X7R dielectric, and 10 uF/10 V rating; the retained manufacturer source provides the GRM21 2.0 x 1.25 mm component dimensions and reflow land-dimension guidance. No project land pattern or geometry is inferred from this source.",
     sha256: "E8432C7ACFA982B24EB06DD145682F78051DC4649ABBEB35BBCA8646B1408E4F"
+  },
+  NXE1S0505MC: {
+    acquisition: "exact-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/murata-nxe1s0505mc-datasheet.pdf",
+    drawingIdentifier: "Murata Power Solutions KDC_NXE1.A01, NXE1 SMD package mechanical drawing",
+    drawingUrl: "https://www.murata.com/en-us/products/productdata/8807031865374/kdc-nxe1.pdf",
+    geometry: null,
+    byteMarkers: ["NXE1S0505MC", "KDC_NXE1.A01", "Mechanical Dimensions", "7.62", "12.70"],
+    scope:
+      "Murata Power Solutions NXE1 series datasheet. The exact NXE1S0505MC orderable, 5 V to 5 V 1 W converter, manufacturer mechanical dimensions, and recommended footprint details are retained in the KDC_NXE1.A01 source. The surface-mount package uses 14 positions with five solder lands at positions 1, 3, 7, 8, and 14, four functional connections; the pin map is 1=-Vin, 3=+Vin, 7=-Vout, 8=+Vout, and 14=NA (not available for electrical connection). Murata's recommended 5-pad footprint remains source guidance only. No project land pattern, CAD, artwork, or fabrication geometry is inferred from the manufacturer drawing.",
+    sha256: "53A6DCE053DA52AF149055634FC380E5B9AD1473D575D0B59F0EFF6123913D40"
   }
 }
 

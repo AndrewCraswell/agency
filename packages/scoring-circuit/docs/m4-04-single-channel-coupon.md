@@ -36,7 +36,7 @@ families do not borrow another MPN's drawing review. A separate field names
 implementation work cannot approve its own footprints.
 
 On 2026-08-24, a small first-party source batch was acquired and SHA-256 bound
-for ten exact component MPNs, plus a Vishay D/CRCW e3 family drawing covering
+for eleven exact component MPNs, plus a Vishay D/CRCW e3 family drawing covering
 four selected resistor MPNs as series evidence. Each Texas Instruments
 datasheet names the exact orderable MPN and package and contains the
 corresponding manufacturer mechanical package drawing. The YAGEO/KEMET product
@@ -58,6 +58,7 @@ mask, paste, courtyard, or orientation decision.
 | `T521B106M025ATE100` | [KEMET product spec](https://search.kemet.com/download/specsheet/T521B106M025ATE100), `1411/3528` manufacturer dimensions | `packages/scoring-circuit/docs/evidence/m4-04/kemet-t521b106m025ate100-datasheet.pdf` | `8DBB07C110359B8BC1BE5AE0044E08B8BADCC88A60F4DA36404BB27803F85EBD` |
 | `C0603C104K3RACTU` | [YAGEO/KEMET product spec](https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en), `0603/1608` manufacturer dimensions | `packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c104k3ractu-datasheet.pdf` | `F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064` |
 | `GRM21BR71A106KE51L` | [Murata GRM21 reference sheet](https://search.murata.co.jp/Ceramy/image/img/A01X/G101/ENG/GRM21BR71A106KE51-01.pdf), `GRM21` manufacturer dimensions | `packages/scoring-circuit/docs/evidence/m4-04/murata-grm21br71a106ke51l-datasheet.pdf` | `E8432C7ACFA982B24EB06DD145682F78051DC4649ABBEB35BBCA8646B1408E4F` |
+| `NXE1S0505MC` | [Murata NXE1 series datasheet](https://www.murata.com/en-us/products/productdata/8807031865374/kdc-nxe1.pdf), `KDC_NXE1.A01`, manufacturer mechanical dimensions and recommended footprint details | `packages/scoring-circuit/docs/evidence/m4-04/murata-nxe1s0505mc-datasheet.pdf` | `53A6DCE053DA52AF149055634FC380E5B9AD1473D575D0B59F0EFF6123913D40` |
 | `CRCW060322R0FKEAHP`, `CRCW120656K0FKEAHP`, `CRCW0603100KFKEAHP`, `CRCW060320R0FKEAHP` | [Vishay D/CRCW e3 series datasheet](https://www.vishay.com/docs/20035/dcrcwe3.pdf), revision `14-Apr-2026`, document `20035`, `D11/CRCW0603e3` and `D25/CRCW1206e3` series drawings; exact-MPN identity not named | `packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf` | `1F5E20329C74727DA629B92E2BFBDBDB3FA3BE57229E3208E24058173F9CECF3` (series evidence only) |
 | `RCWE0603R220FKEA` | [Vishay Dale RCWE datasheet](https://www.vishay.com/docs/20019/rcwe.pdf), revision `24-Oct-2023`, document `20019`, `RCWE0603` series drawing; exact-MPN identity not named | `packages/scoring-circuit/docs/evidence/m4-04/vishay-rcwe-precision-resistor-datasheet.pdf` | `5977F6B0414A669571207B18831446698C7C64F15B672F893BDDA1E428D4D374` (series evidence only) |
 
@@ -102,6 +103,22 @@ manufacturer reference sheet supplies GRM21 component dimensions and reflow
 land-dimension guidance. It does not create a project footprint or independent
 approval.
 
+The Murata Power Solutions `NXE1S0505MC` isolated converter now has a
+SHA-256-bound `KDC_NXE1.A01` source record at
+`packages/scoring-circuit/docs/evidence/m4-04/murata-nxe1s0505mc-datasheet.pdf`:
+[Murata NXE1 series datasheet](https://www.murata.com/en-us/products/productdata/8807031865374/kdc-nxe1.pdf),
+`53A6DCE053DA52AF149055634FC380E5B9AD1473D575D0B59F0EFF6123913D40`. The
+retained document names the exact `NXE1S0505MC` orderable, 5 V input and output,
+1 W rating, surface-mount 14-position package, five solder lands at positions
+1, 3, 7, 8, and 14 with four functional connections, the pin map (1 = -Vin,
+3 = +Vin, 7 = -Vout, 8 = +Vout, and 14 = NA), package dimensions, and
+recommended 5-pad footprint details. The asset is a byte-preserved copy of the Murata-issued
+`KDC_NXE1.A01` document retrieved through a distributor mirror while the
+Murata-hosted URL was returning a maintenance response; the Murata URL remains
+the canonical manufacturer source. This record supplies source evidence only:
+it does not release a project land pattern, CAD, artwork, orientation, or
+fabrication authority.
+
 The Molex `SD-43650-001`, revision D8, lead for the `43650-0300` Micro-Fit
 3.0 fixture header remains identified but not hash-acquired. Its source record
 identifies three 1.02-mm-plus-or-minus-0.05-mm component-side layout holes on
@@ -112,7 +129,7 @@ For the remaining exact MPNs, the manufacturer-primary technical URL is
 recorded as discovery evidence but the exact drawing bytes and revision remain
 unacquired. A series-hash-bound source is not counted as exact-MPN evidence.
 No manufacturer CAD artifact has been acquired or marked available, including
-for the ten exact and two series-hash-bound source artifacts. The existing
+for the eleven exact and two series-hash-bound source artifacts. The existing
 circuit source supplies a schematic reference only, not generated footprint
 artwork or an overlay. The executable tests hash-verify every retained PDF from
 the repository root and inspect decompressed PDF content for the exact

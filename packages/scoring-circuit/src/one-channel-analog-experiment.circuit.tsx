@@ -63,8 +63,14 @@ export default function OneChannelAnalogExperimentCircuit() {
       <chip
         name="U_ISO"
         manufacturerPartNumber="NXE1S0505MC"
-        footprint="sip7"
-        pinLabels={{ pin1: "SYSTEM_5V", pin2: "SYSTEM_GND", pin6: "S5V_ISO", pin7: "SGND" }}
+        footprint={[]}
+        pinLabels={{
+          pin1: "SYSTEM_GND",
+          pin3: "SYSTEM_5V",
+          pin7: "SGND",
+          pin8: "S5V_ISO",
+          pin14: "NC"
+        }}
         pcbX={-16}
         pcbY={0}
       />

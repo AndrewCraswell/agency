@@ -15,7 +15,12 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
         expect.objectContaining({ reference: "U_APP", mpn: "ESP32-S3-WROOM-1U-N16R2" }),
         expect.objectContaining({ reference: "U_ISO_MAIN", mpn: "ISO7762FDWR" }),
         expect.objectContaining({ reference: "U_ISO_AUX", mpn: "ISO7721FDR" }),
-        expect.objectContaining({ reference: "U_ISO_POWER", mpn: "NXE1S0505MC" }),
+        expect.objectContaining({
+          reference: "U_ISO_POWER",
+          mpn: "NXE1S0505MC",
+          package:
+            "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect"
+        }),
         expect.objectContaining({ reference: "U_STM_SUPERVISOR", mpn: "TPS389033DSER" }),
         expect.objectContaining({ reference: "U_ESP_WATCHDOG", mpn: "TPS3431SDRBR" }),
         expect.objectContaining({ reference: "U_APP_RESET_FANOUT", mpn: "SN74LVC2G07DCKR" }),
@@ -47,9 +52,18 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
       benchPrototypeProcessorFootprints.processorSupportReferences.filter(
         (entry) => entry.reconciliation === "DNP-until-exact-selection"
       )
-    ).toHaveLength(12)
+    ).toHaveLength(8)
     expect(benchPrototypeProcessorFootprints.processorSupportReferences).toEqual(
       expect.arrayContaining([
+        ...["C_STM_VDD16", "C_STM_VDD32", "C_STM_VDD48", "C_STM_VDD64"].map((reference) =>
+          expect.objectContaining({
+            reference,
+            mpn: "GCM188R71H104KA57D",
+            selectedMpn: "GCM188R71H104KA57D",
+            package: "0603 (1608M)",
+            reconciliation: "selected-by-BP-125"
+          })
+        ),
         expect.objectContaining({
           reference: "R_STM_BOOT0",
           mpn: "RC0603FR-0710KL",

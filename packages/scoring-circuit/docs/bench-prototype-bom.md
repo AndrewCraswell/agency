@@ -22,7 +22,7 @@ validated on the bench:
 | Application and network MCU | `U_APP` | `ESP32-S3-WROOM-1U-N16R2` |
 | Main processor isolation | `U_ISO_MAIN` | `ISO7762FDWR` |
 | Auxiliary processor isolation | `U_ISO_AUX` | `ISO7721FDR` |
-| Isolated scoring power | `U_ISO_POWER` | `NXE1S0505MC` |
+| Isolated scoring power | `U_ISO_POWER` | `NXE1S0505MC`, surface-mount 14-position package with 5 solder lands at positions 1, 3, 7, 8, 14; four functional connections and position 14 NA/no-connect |
 | Scoring reference | `U_REF` | `REF5025AQDRQ1` |
 | Ethernet controller | `U_W5500` | `W5500`, LQFP-48, 7 mm by 7 mm body, 0.5 mm pitch |
 | Integrated-magnetics Ethernet jack | `J_ETH` | `7499011121A` |
@@ -49,6 +49,15 @@ The `U_W5500` package identity is also checked against the existing WIZnet
 manufacturer footprint evidence. It is the 48-pin LQFP package, not a QFN
 package. Its manufacturer CAD still requires independent import, overlay, and
 lot/package-revision review before footprint closure.
+
+The Murata `NXE1S0505MC` package identity is a surface-mount 14-position
+geometry with five solder lands at positions 1, 3, 7, 8, and 14. Four are
+functional connections. The manufacturer pin map is 1 = -Vin, 3 = +Vin, 7 =
+-Vout, 8 = +Vout, and 14 = NA (not available for electrical connection).
+Murata's recommended 5-pad
+footprint is source guidance only; it is not project CAD, generated artwork,
+or footprint approval. BP-032 remains DENY until its independent drawing, CAD,
+artwork, and orientation gates close.
 
 Adafruit product `2277`, the 64-by-32 1/16-scan HUB75 panel, is recorded as a
 selected external item. It is not assigned a PCB reference because it remains

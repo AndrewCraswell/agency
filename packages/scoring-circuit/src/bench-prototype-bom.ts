@@ -51,7 +51,8 @@ const packageByMpn = {
   "ESP32-S3-WROOM-1U-N16R2": "ESP32-S3-WROOM-1U module, 18mm x 25.5mm",
   ISO7762FDWR: "SOIC-16, 10.3mm body",
   ISO7721FDR: "SOIC-8, 5.0mm body",
-  NXE1S0505MC: "SMD isolated DC-DC converter, 7-pin case",
+  NXE1S0505MC:
+    "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect",
   REF5025AQDRQ1: "VSON-8, 3mm x 3mm",
   W5500: "LQFP-48, 7mm x 7mm body, 0.5mm pitch",
   "7499011121A": "Shielded through-hole RJ45 with integrated magnetics and LEDs",

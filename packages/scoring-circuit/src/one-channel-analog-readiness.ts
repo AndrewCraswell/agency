@@ -55,7 +55,7 @@ const physicalPartSeeds = [
     "U_ISO",
     "Murata Power Solutions",
     "NXE1S0505MC",
-    "SIP-7",
+    "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect",
     "1 W isolated 5 V to 5 V converter",
     "https://www.murata.com/en-us/products/productdata/8807031865374/kdc-nxe1.pdf"
   ],

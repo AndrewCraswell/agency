@@ -12,6 +12,14 @@ copper/mask/paste/courtyard artwork, and assembly orientation are all explicitly
 unacquired or unreviewed. No pad, solder-mask, paste, courtyard, antenna, or
 assembly geometry is invented.
 
+For `NXE1S0505MC`, the source-backed package identity is a surface-mount
+14-position geometry with five solder lands at positions 1, 3, 7, 8, and 14;
+four are functional connections. Murata maps those lands as 1 = -Vin, 3 =
++Vin, 7 = -Vout, 8 = +Vout, and 14 = NA (not available for electrical
+connection). The manufacturer's
+recommended 5-pad footprint remains source guidance only; BP-032 has no
+project footprint, CAD, generated artwork, or orientation approval for it.
+
 The STM32 HSE and LSE entries are DNP, with no MPN, oscillator, crystal, load,
 or bias network. The ESP32 oscillator remains module-integrated. The ledger
 extracts all 16 references in BP-125's processor-support contract. It reconciles
