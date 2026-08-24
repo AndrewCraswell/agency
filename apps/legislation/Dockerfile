@@ -23,15 +23,12 @@ COPY apps/legislation ./apps/legislation
 # extensions cannot make this filtered, frozen install unreproducible.
 COPY apps/legislation/pnpm-workspace.railway.yaml ./pnpm-workspace.yaml
 
-# The reviewed, frozen workspace lockfile contains private dependencies for
-# unrelated applications. Railway cannot query those private registries during
-# pnpm's whole-lockfile supply-chain verification, even though this filtered
-# install never consumes those packages. Trust only this committed lockfile so
-# pnpm installs the legislation dependency closure without weakening package
-# integrity checks for downloaded artifacts.
-RUN pnpm install --frozen-lockfile --trust-lockfile --filter legislation...
+# The reviewed, frozen lockfile was produced through a registry proxy. Keep its
+# exact versions while refreshing proxy-specific tarball checksums against the
+# public registry. The isolated workspace installs only legislation's closure.
+RUN pnpm install --frozen-lockfile --trust-lockfile --update-checksums --filter legislation...
 RUN pnpm --filter legislation build
-RUN pnpm --filter legislation deploy --prod --legacy --force /opt/legislation
+RUN pnpm --filter legislation deploy --prod --force /opt/legislation
 
 FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 
