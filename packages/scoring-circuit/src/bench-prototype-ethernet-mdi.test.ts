@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { describe, expect, it } from "vitest"
 import {
   benchPrototypeEthernetMdi,
@@ -5,6 +6,9 @@ import {
   validateBenchPrototypeEthernetMdi
 } from "./bench-prototype-ethernet-mdi.js"
 import { communicationsFootprintEvidence } from "./communications-footprint-evidence.js"
+import { componentDecisions } from "./component-decisions.js"
+
+const canonicalMdiJsonSha256 = "9fc37fea6e0b7bec19ca1982b9bdbffdf5354fa8a9a000d4f321887693c7fe7d"
 
 describe("BP-141 W5500 to MagJack MDI contract", () => {
   it("maps every W5500 PHY polarity to the selected MagJack without a harness", () => {
@@ -112,5 +116,28 @@ describe("BP-141 W5500 to MagJack MDI contract", () => {
       Reflect.set(source!, "manufacturer", originalManufacturer)
     }
     expect(validateBenchPrototypeEthernetMdi(benchPrototypeEthernetMdi)).toBe(true)
+
+    const controller = componentDecisions.find((decision) => decision.mpn === "W5500")
+    expect(controller).toBeDefined()
+    const originalControllerManufacturer = controller!.manufacturer
+    try {
+      Reflect.set(controller!, "manufacturer", "FORGED")
+      expect(() => validateBenchPrototypeEthernetMdi(benchPrototypeEthernetMdi)).toThrow(RangeError)
+    } finally {
+      Reflect.set(controller!, "manufacturer", originalControllerManufacturer)
+    }
+    expect(validateBenchPrototypeEthernetMdi(benchPrototypeEthernetMdi)).toBe(true)
+  })
+
+  it("preserves the canonical serialized output while deriving endpoint identities", () => {
+    const serialized = JSON.stringify(benchPrototypeEthernetMdi)
+
+    expect(createHash("sha256").update(serialized).digest("hex")).toBe(canonicalMdiJsonSha256)
+    expect(JSON.stringify(benchPrototypeEthernetMdi.controller)).toBe(
+      '{"reference":"U_W5500","manufacturer":"WIZnet","mpn":"W5500"}'
+    )
+    expect(JSON.stringify(benchPrototypeEthernetMdi.magJack)).toBe(
+      '{"reference":"J_ETH","manufacturer":"Würth Elektronik","mpn":"7499011121A"}'
+    )
   })
 })
