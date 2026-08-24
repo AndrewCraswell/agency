@@ -7,6 +7,7 @@ FROM node:${NODE_VERSION}-bookworm-slim AS build
 ENV PNPM_HOME=/pnpm
 ENV PATH=${PNPM_HOME}:${PATH}
 ENV npm_config_registry=https://registry.npmjs.org/
+ENV CI=true
 
 RUN corepack enable && corepack prepare pnpm@11.9.0 --activate
 

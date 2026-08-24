@@ -14,6 +14,7 @@ describe("Railway deployment contract", () => {
     const runtime = dockerfile.slice(dockerfile.indexOf(" AS runtime"))
 
     expect(dockerfile).toContain("FROM node:${NODE_VERSION}-bookworm-slim AS build")
+    expect(dockerfile).toContain("ENV CI=true")
     expect(dockerfile).toContain("COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./")
     expect(dockerfile).toContain("COPY packages ./packages")
     expect(dockerfile).toContain("COPY apps/legislation ./apps/legislation")
