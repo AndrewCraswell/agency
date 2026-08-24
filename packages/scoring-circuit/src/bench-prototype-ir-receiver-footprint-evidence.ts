@@ -92,7 +92,15 @@ const definition = {
       reviewedPages: "2, 7",
       sha256: "5F81C36AA02E9901E51C749D03AEE75A23A29B8195B30BF1CBA95F536C865074",
       retainedArtifactPath: "docs/evidence/bp-146/vishay-82491-tsop382-tsop384-datasheet.pdf",
-      byteMarkers: ["TSOP384", "Pinning", "6.550-5263.01-4"],
+      byteMarkers: [
+        "TSOP384",
+        "Pinning",
+        "6.550-5263.01-4",
+        "Carrier frequency",
+        "38 kHz",
+        "Supply voltage",
+        "Supply current"
+      ],
       retrievedAtUtc: "2026-08-24T08:17:00.000Z",
       reviewerId: "implementation-agent",
       reviewedAtUtc: "2026-08-24T08:17:00.000Z",
@@ -162,6 +170,28 @@ const definition = {
     orientationDatum:
       "Use the Vishay package drawing front view with the optical window facing the intended IR source; pin numbers and lead pitch are source-controlled.",
     opticalAxis: "Normal to the front optical window; do not infer a PCB rotation from the electrical pin order alone."
+  },
+  publishedElectricalOpticalCharacteristics: {
+    sourceId: "vishay-82491-tsop38438-datasheet",
+    sourcePages: "2-3",
+    carrierFrequencyKHz: 38,
+    agcVariant: "AGC4",
+    supplyVoltageV: { minimum: 2, maximum: 5.5 },
+    supplyCurrentAtVs3V3mA: {
+      minimum: 0.25,
+      typical: 0.35,
+      maximum: 0.45,
+      testCondition: "Ev = 0, VS = 3.3 V"
+    },
+    transmissionDistanceTest: {
+      nominalDistanceM: 30,
+      testCondition: "Ev = 0, TSAL6200 IR diode, IF = 50 mA, test signal see Fig. 1"
+    },
+    halfTransmissionAngleDegrees: 45,
+    outputDelaySpecification: "7/f0 < td < 13/f0",
+    outputDelayTestCondition: "f0 = carrier frequency, test signal see Fig. 1",
+    qualificationState:
+      "datasheet-characteristics-only; bench range, angle, latency, flood, reset, and power-off evidence required"
   },
   throughHoleGeometry: {
     sourceId: "vishay-82491-tsop38438-datasheet",
@@ -268,6 +298,29 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
     ) {
       throw new RangeError("BP-146 source evidence requires a primary URL, digest, and reviewer")
     }
+  }
+  const characteristics = evidence.publishedElectricalOpticalCharacteristics
+  if (
+    characteristics.sourceId !== "vishay-82491-tsop38438-datasheet" ||
+    characteristics.sourcePages !== "2-3" ||
+    characteristics.carrierFrequencyKHz !== 38 ||
+    characteristics.agcVariant !== "AGC4" ||
+    characteristics.supplyVoltageV.minimum !== 2 ||
+    characteristics.supplyVoltageV.maximum !== 5.5 ||
+    characteristics.supplyCurrentAtVs3V3mA.minimum !== 0.25 ||
+    characteristics.supplyCurrentAtVs3V3mA.typical !== 0.35 ||
+    characteristics.supplyCurrentAtVs3V3mA.maximum !== 0.45 ||
+    characteristics.supplyCurrentAtVs3V3mA.testCondition !== "Ev = 0, VS = 3.3 V" ||
+    characteristics.transmissionDistanceTest.nominalDistanceM !== 30 ||
+    characteristics.transmissionDistanceTest.testCondition !==
+      "Ev = 0, TSAL6200 IR diode, IF = 50 mA, test signal see Fig. 1" ||
+    characteristics.halfTransmissionAngleDegrees !== 45 ||
+    characteristics.outputDelaySpecification !== "7/f0 < td < 13/f0" ||
+    characteristics.outputDelayTestCondition !== "f0 = carrier frequency, test signal see Fig. 1" ||
+    characteristics.qualificationState !==
+      "datasheet-characteristics-only; bench range, angle, latency, flood, reset, and power-off evidence required"
+  ) {
+    throw new RangeError("BP-146 published electrical and optical characteristics drifted")
   }
   if (parseCanonicalUtcTimestamp(evidence.manufacturerCad.reviewedAtUtc) === null) {
     throw new RangeError("BP-146 manufacturer CAD evidence requires a canonical UTC review timestamp")

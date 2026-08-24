@@ -112,12 +112,25 @@ lens-to-panel distance.
 The Vishay values are typical design references, not prototype acceptance
 claims:
 
+- the reviewed electrical table identifies TSOP38438 as the 38 kHz AGC4
+  option and gives 2.0 to 5.5 V supply and 0.25/0.35/0.45 mA
+  minimum/typical/maximum supply current at `Ev = 0`, `VS = 3.3 V`;
 - 2.0 to 5.5 V supply, nominal 3.3 V;
 - nominal 30 m transmission test distance with Vishay's laboratory TSAL6200
   test source, which does not establish handheld range;
 - ±45° half-transmission directivity;
 - 184 to 342 us output delay for the 38 kHz qualifying burst;
 - active-low output with 100 mV maximum low under the cited test condition.
+
+The supply, carrier, and laboratory-distance facts above are now bound to the
+retained datasheet in the executable
+`publishedElectricalOpticalCharacteristics` record. Its source pages are 2–3,
+and its qualification state remains datasheet-only. The delay rule is retained
+as Vishay's direct specification, `7/f0 < td < 13/f0`; the integer microsecond
+values shown here are a readable 38 kHz test-window summary, not a replacement
+for the source condition. None of these manufacturer values closes the
+prototype's handheld range, optical coupon, flood, reset, power-off, or PCB
+land-pattern gates.
 
 The bench must pass all of these bounded gates before fabrication can be
 considered:
