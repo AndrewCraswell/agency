@@ -32,7 +32,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 12 | SD-011 | P2 | done | Root-approved producer parser now owns strict application-time validation and replay consumes its deeply frozen projection |
 | 13 | SD-007 | P2 | ready | Scenario display and fixture schemas duplicate vocabulary predicates |
 | 14 | SD-008 | P2 | intake-blocked-on-active-units | Strict immutable-data helpers are copied across app and circuit contracts |
-| 15 | SC-004 | P2 | ready | Generated board reports are nondeterministic and embed a localhost simulator URL |
+| 15 | SC-004 | P2 | done | Root-approved board artifacts use content-addressed readiness identities and a validated configurable simulator origin instead of wall-clock or embedded localhost data |
 | 16 | FW-005 | P2 | done | Root-approved shared native CMake policy now enforces C17, conversion warnings, and Clang coverage consistently while retaining STM32 target-specific flags |
 | 17 | SC-005 | P3 | done | Root-approved test-only renderer helper centralizes the shared tscircuit setup across eight suites while preserving each suite's PCB mode and component-specific assertions |
 
@@ -197,7 +197,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SC-004: make generated board artifacts deterministic and portable
 
 - Priority: `P2`
-- State: `ready`
+- State: `done`
+- Latest state: Delivered and root-approved: readiness JSON and page bytes are deterministic and content-addressed, simulator origins fail closed, the real board artifact builds, and browser acceptance follows the configured link to the live simulator without console errors.
 - Affected file: `packages/scoring-circuit/src/build.ts`.
 - Description: the readiness report embeds the current wall-clock timestamp and the board page hardcodes a workstation-only `127.0.0.1:4178` simulator URL.
 - Impact: identical board builds have different hashes, and non-local artifacts contain an environment-specific link.

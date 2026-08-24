@@ -9,6 +9,7 @@ import { convertCircuitJsonToPcbSvg, convertCircuitJsonToSchematicSvg } from "ci
 import { build as bundle } from "esbuild"
 import { createElement } from "react"
 import { Circuit } from "tscircuit"
+import { createReadinessReport, resolveSimulatorPresentationUrl } from "./board-artifact.js"
 import { componentDecisions } from "./component-decisions.js"
 import ScoringCircuit from "./index.circuit.js"
 import {
@@ -18,6 +19,8 @@ import {
 } from "./part-readiness.js"
 
 type PlatformPartsEngine = NonNullable<Parameters<InstanceType<typeof Circuit>["setPlatform"]>[0]["partsEngine"]>
+
+const simulatorPresentationUrl = resolveSimulatorPresentationUrl(process.env)
 
 const partsEngine = {
   fetchPartCircuitJson: async (parameters) => {
@@ -116,36 +119,39 @@ const bomCsv = [
       .join(",")
   )
 ].join("\n")
-const readiness = {
-  canonicalBenchPrototype: false,
-  fabricationReady: false,
-  generatedAt: new Date().toISOString(),
-  modelAuthority: "retained-multi-assembly-evidence",
-  modelPurpose:
-    "Retained multi-assembly architecture, constrained placement, connector topology, and isolation review; not the canonical one-board bench prototype",
-  retainedArchitectureRouting: {
-    connectionCount,
-    routeCount,
-    unresolvedConnectionCount
-  },
-  partsResolution: {
-    engine: "JLC parts engine with EasyEDA footprint and CAD import",
-    criticalParts: partReadinessSummary,
-    externallySourcedCadModelCount,
-    renderedCadComponentCount,
-    resolvedSupplierPartCount,
-    status:
-      "Rendered supplier geometry is a candidate aid only; manufacturer evidence and production approval are tracked separately"
-  },
-  openGates: [
-    "Complete and characterize the three-weapon analog front end",
-    "Select every connector, protection device, passive, magnetics part, and power inductor",
-    "Complete the exact bench-prototype pin maps and decoupling networks",
-    "Run schematic ERC and independent mixed-signal review",
-    "Select the prototype four- or six-layer stack-up, route the board, and pass PCB DRC",
-    "Complete the BP-300 through BP-403 schematic, layout, output, and independent prototype-order reviews"
-  ]
-} as const
+const readiness = createReadinessReport({
+  circuitJson,
+  criticalPartReadiness,
+  readiness: {
+    canonicalBenchPrototype: false,
+    fabricationReady: false,
+    modelAuthority: "retained-multi-assembly-evidence",
+    modelPurpose:
+      "Retained multi-assembly architecture, constrained placement, connector topology, and isolation review; not the canonical one-board bench prototype",
+    retainedArchitectureRouting: {
+      connectionCount,
+      routeCount,
+      unresolvedConnectionCount
+    },
+    partsResolution: {
+      engine: "JLC parts engine with EasyEDA footprint and CAD import",
+      criticalParts: partReadinessSummary,
+      externallySourcedCadModelCount,
+      renderedCadComponentCount,
+      resolvedSupplierPartCount,
+      status:
+        "Rendered supplier geometry is a candidate aid only; manufacturer evidence and production approval are tracked separately"
+    },
+    openGates: [
+      "Complete and characterize the three-weapon analog front end",
+      "Select every connector, protection device, passive, magnetics part, and power inductor",
+      "Complete the exact bench-prototype pin maps and decoupling networks",
+      "Run schematic ERC and independent mixed-signal review",
+      "Select the prototype four- or six-layer stack-up, route the board, and pass PCB DRC",
+      "Complete the BP-300 through BP-403 schematic, layout, output, and independent prototype-order reviews"
+    ]
+  } as const
+})
 const previewHtml = `<!doctype html>
 <html lang="en">
 <head>
@@ -216,7 +222,7 @@ const previewHtml = `<!doctype html>
     <li><strong>${partReadinessSummary.manufacturerVerifiedCad}</strong> manufacturer-verified critical CAD models</li>
     <li><strong>${partReadinessSummary.productionApproved}</strong> fabrication-approved critical parts</li>
   </ul>
-  <p class="resources"><a href="../docs/bench-prototype-plan.md">Bench prototype plan</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="critical-part-readiness.json">Critical-part evidence</a><a href="bom.csv">Component decisions</a><a href="http://127.0.0.1:4178/">Bout test simulator</a></p>
+  <p class="resources"><a href="../docs/bench-prototype-plan.md">Bench prototype plan</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="critical-part-readiness.json">Critical-part evidence</a><a href="bom.csv">Component decisions</a><a href="${simulatorPresentationUrl}">Bout test simulator</a></p>
   <div class="tabs" role="tablist" aria-label="Circuit views">
     <button id="tab-pcb" role="tab" aria-selected="true" aria-controls="view-pcb" tabindex="0">PCB</button>
     <button id="tab-schematic" role="tab" aria-selected="false" aria-controls="view-schematic" tabindex="-1">Schematic</button>
