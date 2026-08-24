@@ -178,12 +178,12 @@ type CouponBomPart = (typeof oneChannelAnalogExperimentBom)[number]
 function drawingEvidenceFor(part: CouponBomPart) {
   if (part.mpn === "43650-0300") {
     return {
-      acquisition: "source-recorded" as const,
+      acquisition: "series-drawing-identified-not-hash-acquired" as const,
       drawingUrl:
         "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/436/43650/436500400_sd.pdf",
       drawingIdentifier: "SD-43650-001, revision D8",
       scope:
-        "Manufacturer 43650-series right-angle Micro-Fit drawing. Root review must still confirm its 0300 circuit count and orientation before accepting a footprint.",
+        "Manufacturer 43650-series right-angle Micro-Fit drawing lead only. The exact drawing bytes have not been acquired or hashed; root review must still confirm its 0300 circuit count and orientation before accepting a footprint.",
       geometry:
         "Three 1.02 mm plus or minus 0.05 mm component-side layout holes on a 3.00 mm pitch, 1.57 mm recommended board thickness, circuit-one marking, and 10.16 mm maximum board-edge placement.",
       sha256: null
@@ -324,7 +324,7 @@ export function validateM404SingleChannelCoupon(value: unknown): true {
         !footprint.evidence.manufacturerPrimaryDocument.url.startsWith("https://") ||
         footprint.evidence.manufacturerPrimaryDocument.status !== "identified-not-hash-acquired" ||
         (footprint.exactMpn === "43650-0300"
-          ? footprint.evidence.manufacturerDrawing.acquisition !== "source-recorded" ||
+          ? footprint.evidence.manufacturerDrawing.acquisition !== "series-drawing-identified-not-hash-acquired" ||
             footprint.evidence.manufacturerDrawing.drawingIdentifier !== "SD-43650-001, revision D8" ||
             footprint.evidence.manufacturerDrawing.geometry === null
           : footprint.evidence.manufacturerDrawing.acquisition !== "not-acquired" ||

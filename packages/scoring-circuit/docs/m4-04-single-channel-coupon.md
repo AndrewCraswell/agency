@@ -27,9 +27,10 @@ families do not borrow another MPN's drawing review. A separate field names
 `root-final-reviewer` for every drawing review. It is deliberately `pending`;
 implementation work cannot approve its own footprints.
 
-The only manufacturer drawing source currently recorded is Molex
+The only manufacturer drawing lead currently identified is Molex
 `SD-43650-001`, revision D8, for the `43650-0300` Micro-Fit 3.0 fixture
-header. The existing source record identifies its three 1.02-mm-plus-or-minus-
+header. The exact drawing bytes have not been acquired or hashed. The source
+record identifies its three 1.02-mm-plus-or-minus-
 0.05-mm component-side layout holes on 3.00-mm pitch, circuit-one datum,
 1.57-mm recommended board thickness, and 10.16-mm maximum board-edge
 placement. It is series-drawing evidence only: it does not release a finished

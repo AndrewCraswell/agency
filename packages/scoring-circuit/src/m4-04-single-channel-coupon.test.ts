@@ -29,7 +29,11 @@ describe("M4-04 single-channel sensing coupon", () => {
     expect(
       M404_SINGLE_CHANNEL_COUPON.footprints.find((footprint) => footprint.exactMpn === "43650-0300")?.evidence
     ).toMatchObject({
-      manufacturerDrawing: { acquisition: "source-recorded", drawingIdentifier: "SD-43650-001, revision D8" }
+      manufacturerDrawing: {
+        acquisition: "series-drawing-identified-not-hash-acquired",
+        drawingIdentifier: "SD-43650-001, revision D8",
+        sha256: null
+      }
     })
   })
 
@@ -61,6 +65,15 @@ describe("M4-04 single-channel sensing coupon", () => {
       "self approved drawing",
       (copy: typeof M404_SINGLE_CHANNEL_COUPON) =>
         Reflect.set(copy.footprints[0].independentDrawingReview, "reviewerId", "m4-04-implementation-agent")
+    ],
+    [
+      "unacquired series drawing represented as acquired",
+      (copy: typeof M404_SINGLE_CHANNEL_COUPON) =>
+        Reflect.set(
+          copy.footprints.find((footprint) => footprint.exactMpn === "43650-0300")?.evidence.manufacturerDrawing ?? {},
+          "acquisition",
+          "source-recorded"
+        )
     ],
     [
       "fabrication authority",
