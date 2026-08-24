@@ -215,7 +215,7 @@ frozen enough to complete the EVT schematic and layout.
 | M4-10 | blocked | Exact red/blue Stäubli selections now bind the 2022 item sheet, 2024 item sheet, and 2026 catalogue: the newer sources agree at 30.7 mm, but overall length remains null until Stäubli confirms the controlling revision or samples are measured. Plug-fit, retention, cycle, resistance, salt, enclosure, and footprint evidence remain open. | Exact reel-socket selection and physical plug-fit study | None | Color suffixes, retention, contact resistance, sweat/salt exposure plan, harness termination, and cycle target are recorded |
 | M4-11 | blocked | Root review corrected the retained Würth RJ45 STEP checksum and current Molex 43030-0007 drawing revision to N10. A committed handoff records exact Molex identities, URLs, observed markers, failed byte acquisition, and the manufacturer-query/sample-measurement next step. Molex/Amphenol CAD, geometry, enclosure, strain-relief, and release evidence remain DENY. | Communications and power connector CAD/footprint verification | None | RJ45, USB-C, locking power, shield tabs, fasteners, service access, and strain relief match manufacturer drawings |
 | M4-12 | blocked | Root-approved fail-closed constraint/evidence register now covers every enclosure acceptance area and remains permanently non-fabrication. Closure is still blocked on M4-10/M4-11 released geometry, sample fit, exact connector and board overlays, antenna/IR/display/speaker selections, thermal evidence, and cable-specific bend radii. | Enclosure architecture, board outlines, keepouts, and thermal assumptions | M4-10, M4-11 | VESA mounting, antenna clearance, encrypted IR optical window/field of view, airflow, display, speaker, connector modules, harness bend radii, and service sequence fit |
-| M4-13 | backlog | Next after M0-03, M0-10, M4-10 through M4-12: Harness pinout, keying, bonding, and current-rating release. | Harness pinout, keying, bonding, and current-rating release | M0-03, M0-10, M4-10 through M4-12 | No reversible connector can apply destructive power or swap left/right scoring lines; chassis/ESD paths are explicit |
+| M4-13 | blocked | Root-approved fail-closed harness reconciliation now derives the selected connector/cable identities, proposes the A/B/C and piste mapping, and records keying, bonding, current, and USB-C PD boundaries. Release remains blocked on M4-10/M4-11/M4-12 physical fit, CAD, enclosure, current/thermal, and independent review evidence. | Harness pinout, keying, bonding, and current-rating release | M0-03, M0-10, M4-10 through M4-12 | No reversible connector can apply destructive power or swap left/right scoring lines; chassis/ESD paths are explicit |
 | M4-14 | backlog | Next after M4-08 through M4-13: Critical-parts readiness manifest update. | Critical-parts readiness manifest update | M4-08 through M4-13 | Selected parts, verified footprints, manufacturer CAD, mechanical review, and blockers are accurately machine-checked |
 
 ## M5: EVT fabrication release
@@ -358,7 +358,6 @@ A milestone closes only when:
 4. documents and machine-readable manifests agree with the implementation;
 5. an independent reviewer has resolved every release-blocking comment; and
 6. remaining risks, assumptions, and deferred work are named in the next milestone entry criteria.
-
 
 
 
