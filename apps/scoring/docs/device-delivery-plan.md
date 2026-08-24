@@ -116,7 +116,7 @@ evidence without inventing missing behavior.
 | M0-09 | blocked | Blocked: Candidate N16R2 map and tests exist; schematic/RF/antenna, boot electrical, and physical interface reviews remain before closure. | Candidate ESP32 GPIO and peripheral allocation | M0-04, M0-06 | Strapping, boot, USB, Ethernet SPI, display, audio, I2C, debug, and antenna constraints are reviewed |
 | M0-10 | done | Delivered: Root-approved immutable power/reset lifecycle covers cold boot, brownout, independent and watchdog reset, update activation/rollback, whole-power loss, persistence, one-way reset authority, safe-inactive behavior, and USB-C PD as the normal input. | Power-state and reset-state contract | M0-04 | Cold boot, brownout, independent reset, watchdog reset, update, and power-loss persistence behavior are defined |
 | M0-11 | done | Delivered and root-approved: the immutable threat model freezes STM32 scoring authority, target-bound signed activation and rollback, identity/key custody, production debug policy, hostile network/frame/IR boundaries, fail-closed recovery, and USB-C PD normal power while retaining downstream security evidence gates. | Product threat model and firmware trust boundaries | M0-04, M0-06, M0-10 | Covers signed updates, rollback, device identity, debug access, network isolation, malformed frames, and recovery |
-| M0-12 | backlog | Next after M0-01 through M0-11: Requirements-to-evidence ledger. | Requirements-to-evidence ledger | M0-01 through M0-11 | Every product requirement names its planned unit, simulation, bench, EVT, DVT, compliance, or production evidence |
+| M0-12 | blocked | Delivered and root-reviewed: immutable 19-family ledger binds every requirement ID and requirement-text projection from the FIE matrix and four canonical backlogs to explicit unit, simulator, native-C, WebAssembly, HIL, and physical evidence owners; completion waits for blocked prerequisites M0-08 and M0-09. | Requirements-to-evidence ledger | M0-01 through M0-11 | Every product requirement names its planned unit, simulation, bench, EVT, DVT, compliance, or production evidence |
 
 ## M1: Executable three-weapon scoring specification
 
@@ -358,3 +358,4 @@ A milestone closes only when:
 4. documents and machine-readable manifests agree with the implementation;
 5. an independent reviewer has resolved every release-blocking comment; and
 6. remaining risks, assumptions, and deferred work are named in the next milestone entry criteria.
+
