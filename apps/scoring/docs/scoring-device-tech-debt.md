@@ -36,6 +36,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 16 | FW-005 | P2 | done | Root-approved shared native CMake policy now enforces C17, conversion warnings, and Clang coverage consistently while retaining STM32 target-specific flags |
 | 17 | SC-005 | P3 | done | Root-approved test-only renderer helper centralizes the shared tscircuit setup across eight suites while preserving each suite's PCB mode and component-specific assertions |
 | 18 | SD-012 | P2 | done | Root-approved canonical integer-microsecond guard now enforces identical timestamp validity across all four TypeScript scorers |
+| 19 | SD-013 | P2 | done | Root-approved app-internal CRC-32C primitive removes divergent TypeScript implementations while preserving the transport export |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -353,3 +354,13 @@ truth.
 - Impact: duplicated timestamp predicates could drift at the exact integer and safe-range boundary used by native/WASM parity.
 - Non-goals: no scoring timing values, qualification behavior, or public scorer API changed.
 - Verification: 194 focused scorer tests, application TypeScript, focused oxlint, and focused oxfmt passed.
+
+## SD-013: share the TypeScript CRC-32C primitive
+
+- Priority: `P2`
+- State: `done`
+- Affected files: `crc32c.ts`, `transport-frame.ts`, and `event-journal.ts` plus focused tests.
+- Delivered: one app-internal reflected Castagnoli implementation now serves the transport envelope and UTF-8 canonical journal integrity path. The transport module retains its public export.
+- Impact: two independent polynomial loops could drift in initialization, final XOR, or byte encoding.
+- Non-goals: this does not replace the cross-language transport convergence work in SD-005 and does not treat CRC as authentication.
+- Verification: 21 focused tests, application TypeScript, focused oxlint, and focused oxfmt passed.
