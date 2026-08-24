@@ -267,21 +267,114 @@ function validateFullUniquePins(pins: readonly HarnessPin[], expectedCount: numb
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.getPrototypeOf(value) === Object.prototype
+  )
 }
 
-function isExactValue(actual: unknown, expected: unknown): boolean {
-  if (Object.is(actual, expected)) return true
-  if (Array.isArray(actual) && Array.isArray(expected)) {
-    return actual.length === expected.length && actual.every((value, index) => isExactValue(value, expected[index]))
+function isDataProperty(
+  descriptor: PropertyDescriptor | undefined,
+  enumerable: boolean
+): descriptor is PropertyDescriptor & { value: unknown } {
+  return descriptor !== undefined && "value" in descriptor && descriptor.enumerable === enumerable
+}
+
+function isCanonicalArrayIndex(key: PropertyKey, length: number): key is string {
+  return typeof key === "string" && /^(0|[1-9]\d*)$/u.test(key) && Number(key) < length
+}
+
+function isExactValue(
+  actual: unknown,
+  expected: unknown,
+  seenActual = new WeakSet<object>(),
+  seenExpected = new WeakSet<object>()
+): boolean {
+  if (actual === null || expected === null || typeof actual !== "object" || typeof expected !== "object") {
+    return Object.is(actual, expected)
   }
-  if (!(isPlainRecord(actual) && isPlainRecord(expected))) return false
-  const actualKeys = Object.keys(actual).sort()
-  const expectedKeys = Object.keys(expected).sort()
-  return (
-    actualKeys.length === expectedKeys.length &&
-    actualKeys.every((key, index) => key === expectedKeys[index] && isExactValue(actual[key], expected[key]))
-  )
+  if (seenActual.has(actual) || seenExpected.has(expected)) return false
+  seenActual.add(actual)
+  seenExpected.add(expected)
+
+  if (Array.isArray(expected)) {
+    if (!Array.isArray(actual)) return false
+    if (Object.getPrototypeOf(actual) !== Array.prototype || Object.getPrototypeOf(expected) !== Array.prototype) {
+      return false
+    }
+
+    const actualLength = Object.getOwnPropertyDescriptor(actual, "length")
+    const expectedLength = Object.getOwnPropertyDescriptor(expected, "length")
+    if (
+      !isDataProperty(actualLength, false) ||
+      !isDataProperty(expectedLength, false) ||
+      actualLength.value !== expectedLength.value ||
+      actualLength.writable !== expectedLength.writable ||
+      actualLength.configurable !== expectedLength.configurable
+    ) {
+      return false
+    }
+
+    const length = expectedLength.value
+    if (typeof length !== "number" || !Number.isSafeInteger(length) || length < 0) return false
+    const actualKeys = Reflect.ownKeys(actual)
+    const expectedKeys = Reflect.ownKeys(expected)
+    if (
+      actualKeys.length !== expectedKeys.length ||
+      actualKeys.some((key) => typeof key === "symbol") ||
+      expectedKeys.some((key) => typeof key === "symbol") ||
+      actualKeys.some((key) => key !== "length" && !isCanonicalArrayIndex(key, length)) ||
+      expectedKeys.some((key) => key !== "length" && !isCanonicalArrayIndex(key, length))
+    ) {
+      return false
+    }
+
+    for (let index = 0; index < length; index += 1) {
+      const key = String(index)
+      if (!actualKeys.includes(key) || !expectedKeys.includes(key)) return false
+      const actualDescriptor = Object.getOwnPropertyDescriptor(actual, key)
+      const expectedDescriptor = Object.getOwnPropertyDescriptor(expected, key)
+      if (
+        !isDataProperty(actualDescriptor, true) ||
+        !isDataProperty(expectedDescriptor, true) ||
+        actualDescriptor.writable !== expectedDescriptor.writable ||
+        actualDescriptor.configurable !== expectedDescriptor.configurable ||
+        !isExactValue(actualDescriptor.value, expectedDescriptor.value, seenActual, seenExpected)
+      ) {
+        return false
+      }
+    }
+    return true
+  }
+
+  if (!isPlainRecord(actual) || !isPlainRecord(expected)) return false
+  const actualKeys = Reflect.ownKeys(actual)
+  const expectedKeys = Reflect.ownKeys(expected)
+  if (
+    actualKeys.length !== expectedKeys.length ||
+    actualKeys.some((key) => typeof key === "symbol") ||
+    expectedKeys.some((key) => typeof key === "symbol") ||
+    actualKeys.some((key) => !expectedKeys.includes(key))
+  ) {
+    return false
+  }
+  for (const key of expectedKeys) {
+    if (typeof key !== "string") return false
+    const actualDescriptor = Object.getOwnPropertyDescriptor(actual, key)
+    const expectedDescriptor = Object.getOwnPropertyDescriptor(expected, key)
+    if (
+      !isDataProperty(actualDescriptor, true) ||
+      !isDataProperty(expectedDescriptor, true) ||
+      actualDescriptor.writable !== expectedDescriptor.writable ||
+      actualDescriptor.configurable !== expectedDescriptor.configurable ||
+      !isExactValue(actualDescriptor.value, expectedDescriptor.value, seenActual, seenExpected)
+    ) {
+      return false
+    }
+  }
+  return true
 }
 
 export function validateInterboardContract(input: unknown): void {

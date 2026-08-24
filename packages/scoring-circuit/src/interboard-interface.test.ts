@@ -178,4 +178,74 @@ describe("inter-board interface contract", () => {
     ]
     for (const forged of forgedCases) expect(() => validateInterboardContract(forged)).toThrow(RangeError)
   })
+
+  it("rejects non-data graphs without evaluating untrusted accessors", () => {
+    let accessorRead = false
+    const accessor = structuredClone(interboardContract)
+    Object.defineProperty(accessor, "connectors", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        accessorRead = true
+        throw new Error("untrusted accessor executed")
+      }
+    })
+    expect(() => validateInterboardContract(accessor)).toThrow(RangeError)
+    expect(accessorRead).toBe(false)
+
+    const hidden = structuredClone(interboardContract)
+    Object.defineProperty(hidden, "forged", { configurable: true, enumerable: false, value: true })
+    expect(() => validateInterboardContract(hidden)).toThrow(RangeError)
+
+    const symbolic = structuredClone(interboardContract)
+    Object.defineProperty(symbolic, Symbol("forged"), { enumerable: true, value: true })
+    expect(() => validateInterboardContract(symbolic)).toThrow(RangeError)
+
+    const sparse = structuredClone(interboardContract)
+    expect(Reflect.deleteProperty(sparse.connectors, "1")).toBe(true)
+    expect(() => validateInterboardContract(sparse)).toThrow(RangeError)
+
+    const arrayExtra = structuredClone(interboardContract)
+    Object.defineProperty(arrayExtra.connectors, "forged", { enumerable: false, value: true })
+    expect(() => validateInterboardContract(arrayExtra)).toThrow(RangeError)
+
+    const arraySubclass = structuredClone(interboardContract)
+    class ConnectorArray extends Array {}
+    Object.setPrototypeOf(arraySubclass.connectors, ConnectorArray.prototype)
+    expect(() => validateInterboardContract(arraySubclass)).toThrow(RangeError)
+
+    const nonPlain = structuredClone(interboardContract)
+    Object.setPrototypeOf(nonPlain.architecture, { forged: true })
+    expect(() => validateInterboardContract(nonPlain)).toThrow(RangeError)
+
+    const arrayAccessor = structuredClone(interboardContract)
+    Object.defineProperty(arrayAccessor.connectors, "0", {
+      configurable: true,
+      enumerable: true,
+      get() {
+        accessorRead = true
+        throw new Error("untrusted array accessor executed")
+      }
+    })
+    expect(() => validateInterboardContract(arrayAccessor)).toThrow(RangeError)
+    expect(accessorRead).toBe(false)
+
+    const aliased = structuredClone(interboardContract)
+    Object.defineProperty(aliased.connectors, "1", {
+      configurable: true,
+      enumerable: true,
+      value: aliased.connectors[0],
+      writable: true
+    })
+    expect(() => validateInterboardContract(aliased)).toThrow(RangeError)
+
+    const cyclic = structuredClone(interboardContract)
+    Object.defineProperty(cyclic, "architecture", {
+      configurable: true,
+      enumerable: true,
+      value: cyclic,
+      writable: true
+    })
+    expect(() => validateInterboardContract(cyclic)).toThrow(RangeError)
+  })
 })
