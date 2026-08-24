@@ -2,7 +2,12 @@ import { drizzle } from "drizzle-orm/node-postgres"
 import pg from "pg"
 import { afterAll, describe, expect, it } from "vitest"
 import * as schema from "../db/schema/schema.js"
-import { buildBillBrowseQuery, documentBackedAmendmentId, projectDocumentBackedAmendment } from "./query-service.js"
+import {
+  billSearchExecution,
+  buildBillBrowseQuery,
+  documentBackedAmendmentId,
+  projectDocumentBackedAmendment
+} from "./query-service.js"
 
 const pool = new pg.Pool({ connectionString: "postgresql://query-service-test.invalid/legislation" })
 const database = drizzle(pool, { schema })
@@ -60,6 +65,29 @@ describe("bill browse query", () => {
     expect(generated.sql).toMatch(
       /order by coalesce\("latest_action_at", "browse_bill"\."source_updated_at", "browse_bill"\."updated_at"\) desc, "browse_bill"\."id" asc/
     )
+  })
+})
+
+describe("bill search execution metadata", () => {
+  it("does not claim a reranker when semantic search has no candidates", () => {
+    expect(billSearchExecution("voyageai/voyage-4", "cohere/rerank-v3.5", 0)).toEqual({
+      isReranked: false,
+      models: [{ model: "voyageai/voyage-4", purpose: "embedding" }]
+    })
+  })
+
+  it("does not claim a reranker when hybrid search has no fused candidates", () => {
+    expect(billSearchExecution("voyageai/voyage-4", "cohere/rerank-v3.5", 0).models).toHaveLength(1)
+  })
+
+  it("reports only the embedding and reranker that were used", () => {
+    expect(billSearchExecution("voyageai/voyage-4", "cohere/rerank-v3.5", 1)).toEqual({
+      isReranked: true,
+      models: [
+        { model: "voyageai/voyage-4", purpose: "embedding" },
+        { model: "cohere/rerank-v3.5", purpose: "reranking" }
+      ]
+    })
   })
 })
 

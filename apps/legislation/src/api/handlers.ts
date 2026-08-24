@@ -13,6 +13,6 @@ export function createLegislationApiHandler(
 ): HttpApiHandler {
   return createCompositeHttpApiHandler([
     createCoreReadApiHandler(queryService, options),
-    createCivicSearchApiHandler(queryService)
+    createCivicSearchApiHandler(queryService, options)
   ])
 }

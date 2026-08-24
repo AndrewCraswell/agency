@@ -3,10 +3,13 @@ import { z } from "zod"
 import { LegislationError } from "../legislation/errors.js"
 import type {
   AmendmentSearchInput,
+  SupportingMaterialSearchHitResult,
   SupportingMaterialSearchInput,
   VersionComparisonInput
 } from "../legislation/query-service.js"
 import type { PassageSearchInput, SearchInput } from "../search/search.js"
+import { projectSupportingMaterialSearchHits } from "./canonical-material-search.js"
+import { CanonicalProjectionError } from "./canonical-projection.js"
 import { apiSearchPage, readJsonBody, requestUrl, sendApiError, sendApiJson, type HttpApiHandler } from "./http.js"
 
 type QueryPage<T> = Readonly<{
@@ -24,6 +27,7 @@ export type CivicSearchApi = Readonly<{
     input: PassageSearchInput & { mode?: "hybrid" | "lexical" | "semantic" }
   ) => Promise<QueryPage<unknown>>
   searchBills: (input: SearchInput & { mode?: "hybrid" | "lexical" | "semantic" }) => Promise<QueryPage<unknown>>
+  searchSupportingMaterialHits: (input: SupportingMaterialSearchInput) => Promise<SupportingMaterialSearchHitResult>
   searchSupportingMaterials: (input: SupportingMaterialSearchInput) => Promise<QueryPage<unknown>>
 }>
 
@@ -91,16 +95,6 @@ const materialSearchRequestSchema = searchRequestSchema
   })
   .strict()
 
-function optionalSingle(values: readonly string[] | undefined, name: string): string | undefined {
-  if (values === undefined) {
-    return undefined
-  }
-  if (values.length !== 1) {
-    throw new LegislationError("invalid_request", `${name} currently accepts exactly one value`)
-  }
-  return values[0]
-}
-
 function rejectUnsupportedFilter(value: unknown, name: string): void {
   if (value !== undefined) {
     throw new LegislationError("invalid_request", `${name} is not implemented by the current query service`)
@@ -114,6 +108,30 @@ function validateDateOrder(from: string | undefined, to: string | undefined, nam
   if (from !== undefined && to !== undefined && Date.parse(from) > Date.parse(to)) {
     throw new LegislationError("invalid_request", `${names[0]} must not be after ${names[1]}`)
   }
+}
+
+function materialUpdatedRange(
+  from: string | undefined,
+  to: string | undefined
+): {
+  updatedFrom: Date | undefined
+  updatedTo: Date | undefined
+  updatedToExclusive: Date | undefined
+} {
+  if (from === undefined && to === undefined) {
+    return { updatedFrom: undefined, updatedTo: undefined, updatedToExclusive: undefined }
+  }
+  const dateOnly = (from ?? to ?? "").length === 10
+  const updatedFrom = from === undefined ? undefined : new Date(dateOnly ? `${from}T00:00:00.000Z` : from)
+  if (to === undefined) {
+    return { updatedFrom, updatedTo: undefined, updatedToExclusive: undefined }
+  }
+  if (!dateOnly) {
+    return { updatedFrom, updatedTo: new Date(to), updatedToExclusive: undefined }
+  }
+  const exclusive = new Date(`${to}T00:00:00.000Z`)
+  exclusive.setUTCDate(exclusive.getUTCDate() + 1)
+  return { updatedFrom, updatedTo: undefined, updatedToExclusive: exclusive }
 }
 
 function validateSearchModeLimit(mode: "hybrid" | "lexical" | "semantic", limit: number | undefined): number {
@@ -162,7 +180,10 @@ function searchInput(
   }
 }
 
-export function createCivicSearchApiHandler(service: CivicSearchApi): HttpApiHandler {
+export function createCivicSearchApiHandler(
+  service: CivicSearchApi,
+  options: Readonly<{ apiBaseUrl: string }>
+): HttpApiHandler {
   return async (request, response) => {
     const url = requestUrl(request)
     try {
@@ -181,25 +202,37 @@ export function createCivicSearchApiHandler(service: CivicSearchApi): HttpApiHan
         const limit = validateSearchModeLimit(mode, body.limit)
         validateDateOrder(body.from ?? undefined, body.to ?? undefined, ["from", "to"])
         validateDateOrder(body.documentFrom, body.documentTo, ["documentFrom", "documentTo"])
-        rejectUnsupportedFilter(body.explain === true ? true : undefined, "explain")
-        rejectUnsupportedFilter(body.from ?? undefined, "from")
-        rejectUnsupportedFilter(body.to ?? undefined, "to")
-        rejectUnsupportedFilter(body.sessionIds, "sessionIds")
-        rejectUnsupportedFilter(body.organizationIds, "organizationIds")
-        rejectUnsupportedFilter(body.documentFrom, "documentFrom")
-        rejectUnsupportedFilter(body.documentTo, "documentTo")
+        const updatedRange = materialUpdatedRange(body.from ?? undefined, body.to ?? undefined)
         const input: SupportingMaterialSearchInput = {
-          amendmentId: optionalSingle(body.amendmentIds, "amendmentIds"),
-          billId: optionalSingle(body.billIds, "billIds"),
-          classification: optionalSingle(body.classifications, "classifications"),
+          amendmentIds: body.amendmentIds,
+          billIds: body.billIds,
+          classifications: body.classifications,
           cursor: body.cursor ?? undefined,
-          eventId: optionalSingle(body.meetingIds, "meetingIds"),
-          jurisdictionId: optionalSingle(body.jurisdictionIds, "jurisdictionIds"),
+          documentFrom: body.documentFrom,
+          documentTo: body.documentTo,
+          eventIds: body.meetingIds,
+          jurisdictionIds: body.jurisdictionIds,
           limit,
           mode,
-          query: body.query
+          organizationIds: body.organizationIds,
+          query: body.query,
+          sessionIds: body.sessionIds,
+          ...updatedRange
         }
-        sendApiJson(response, 200, searchPage(request, await service.searchSupportingMaterials(input), limit, mode))
+        const result = await service.searchSupportingMaterialHits(input)
+        sendApiJson(
+          response,
+          200,
+          searchPage(
+            request,
+            {
+              ...result,
+              items: projectSupportingMaterialSearchHits(result.items, mode, options.apiBaseUrl, body.explain === true)
+            },
+            limit,
+            mode
+          )
+        )
         return true
       }
 
@@ -212,6 +245,8 @@ export function createCivicSearchApiHandler(service: CivicSearchApi): HttpApiHan
             response,
             new LegislationError("invalid_request", error.issues[0]?.message ?? "Invalid request")
           )
+        } else if (error instanceof CanonicalProjectionError) {
+          sendApiError(request, response, new LegislationError("unprocessable", error.message))
         } else {
           sendApiError(request, response, error)
         }

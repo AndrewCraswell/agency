@@ -48,10 +48,11 @@ import {
 } from "../db/schema/schema.js"
 import { embeddingQueryRouteFor, embeddingRouteFor, type EmbeddingSearchTool } from "../models/embedding-routing.js"
 import type { RetrievalModelClient } from "../models/openrouter-retrieval.js"
-import type { PassageSearchInput, SearchInput } from "../search/search.js"
+import type { BillSearchCandidate, BillSearchResultPage, PassageSearchInput, SearchInput } from "../search/search.js"
 import {
   lexicalBillSearch,
   lexicalPassageSearch,
+  paginateCappedSearchRows,
   paginateSearchRows,
   reciprocalRankFusionWithScores,
   semanticBillSearch,
@@ -247,24 +248,38 @@ function amendmentSortKey(amendment: {
 
 export interface SupportingMaterialSearchInput {
   amendmentId?: string
+  amendmentIds?: readonly string[]
   billId?: string
+  billIds?: readonly string[]
   classification?: string
+  classifications?: readonly string[]
   cursor?: string
   documentFrom?: string
   documentTo?: string
   eventId?: string
+  eventIds?: readonly string[]
   jurisdictionId?: string
+  jurisdictionIds?: readonly string[]
   limit?: number
   mode?: "hybrid" | "lexical" | "semantic"
   organizationId?: string
+  organizationIds?: readonly string[]
   processingStatus?: "failed" | "pending" | "processed" | "processing" | "unsupported"
   query?: string
+  sessionIds?: readonly string[]
   sort?: "document-desc" | "title-asc" | "updated-desc"
+  updatedFrom?: Date
+  updatedTo?: Date
+  updatedToExclusive?: Date
 }
 
 const { text: _supportingMaterialText, ...supportingMaterialSummaryColumns } = getTableColumns(supportingMaterials)
 type SupportingMaterialSummary = Omit<typeof supportingMaterials.$inferSelect, "text">
-type SupportingMaterialRanked = SupportingMaterialSummary & { distance?: number; score?: number }
+type SupportingMaterialRanked = SupportingMaterialSummary & {
+  distance?: number
+  score?: number
+  semanticSectionId?: string
+}
 
 export type SupportingMaterialRead = SupportingMaterialRanked & {
   amendmentIds: string[]
@@ -276,8 +291,74 @@ export type SupportingMaterialRead = SupportingMaterialRanked & {
 interface SupportingMaterialSearchResult {
   items: SupportingMaterialRead[]
   nextCursor?: string
+  search?: Readonly<{
+    isReranked: false
+    models: readonly Readonly<{ model: string; purpose: "embedding" }>[]
+  }>
   truncated: boolean
   warnings: string[]
+}
+
+export type SupportingMaterialSearchHitRead = SupportingMaterialRead & {
+  lexicalScore: number | null
+  matchedFields: readonly ("sectionText" | "semantic" | "title")[]
+  rerankScore: null
+  score: number
+  section: typeof supportingMaterialSections.$inferSelect
+  semanticScore: number | null
+  snippet: string | null
+}
+
+export interface SupportingMaterialSearchHitResult {
+  items: SupportingMaterialSearchHitRead[]
+  nextCursor?: string
+  search: Readonly<{
+    isReranked: false
+    models: readonly Readonly<{ model: string; purpose: "embedding" }>[]
+  }>
+  truncated: boolean
+  warnings: string[]
+}
+
+function supportingMaterialFilterValues(
+  values: readonly string[] | undefined,
+  value: string | undefined
+): readonly string[] | undefined {
+  if (values !== undefined) {
+    return values
+  }
+  return value === undefined ? undefined : [value]
+}
+
+function supportingMaterialFilter(
+  values: readonly string[] | undefined,
+  value: string | undefined,
+  single: (item: string) => SQL,
+  multiple: (items: readonly string[]) => SQL
+): SQL | undefined {
+  if (values !== undefined) {
+    return multiple(values)
+  }
+  if (value !== undefined) {
+    return single(value)
+  }
+  return undefined
+}
+
+function supportingMaterialSearchScore(
+  mode: "hybrid" | "lexical" | "semantic",
+  lexicalScore: number | null,
+  semanticScore: number | null,
+  hybridScore: number | undefined
+): number | null | undefined {
+  switch (mode) {
+    case "lexical":
+      return lexicalScore
+    case "semantic":
+      return semanticScore
+    case "hybrid":
+      return hybridScore
+  }
 }
 
 function supportingMaterialOrder(sort: SupportingMaterialSearchInput["sort"]): SQL[] {
@@ -406,18 +487,21 @@ export interface SupportingMaterialSectionLookup {
   sectionId: string
 }
 
-interface FusedBillResult {
-  id: string
-  identifier: string
-  introducedAt: null | string
-  jurisdictionId: string
-  score: number
-  sessionId: string
-  snippet?: string
-  sourceUrl: string
-  status: null | string
-  summary: null | string
-  title: string
+type FusedBillResult = BillSearchCandidate
+
+export function billSearchExecution(embeddingModel: string, rerankModel: string, rerankedCandidateCount: number) {
+  if (!Number.isSafeInteger(rerankedCandidateCount) || rerankedCandidateCount < 0) {
+    throw new Error("Reranked candidate count must be a nonnegative safe integer")
+  }
+  return rerankedCandidateCount === 0
+    ? { isReranked: false, models: [{ model: embeddingModel, purpose: "embedding" as const }] }
+    : {
+        isReranked: true,
+        models: [
+          { model: embeddingModel, purpose: "embedding" as const },
+          { model: rerankModel, purpose: "reranking" as const }
+        ]
+      }
 }
 
 function comparisonClassification(before: string | undefined, after: string | undefined) {
@@ -1205,24 +1289,36 @@ export class LegislationQueryService {
 
   async searchSupportingMaterials(input: SupportingMaterialSearchInput): Promise<SupportingMaterialSearchResult> {
     const mode = input.mode ?? "lexical"
+    if (input.query !== undefined && mode === "lexical") {
+      return await this.#searchLexicalSupportingMaterials(input)
+    }
     if (input.query !== undefined && mode !== "lexical") {
       const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
       const offset = decodeOffset(input.cursor)
       const candidateLimit = embeddingQueryRouteFor("search_supporting_materials").candidateLimit
-      const embedding = await this.#embedQuery("search_supporting_materials", input.query)
+      const queryEmbedding = await this.#embedQueryWithModel("search_supporting_materials", input.query)
       const semanticRows = await semanticSupportingMaterialSearch(this.#database, {
-        amendmentId: input.amendmentId,
-        billId: input.billId,
-        classification: input.classification,
-        embedding,
-        eventId: input.eventId,
-        jurisdictionId: input.jurisdictionId,
-        limit: candidateLimit
+        amendmentIds: supportingMaterialFilterValues(input.amendmentIds, input.amendmentId),
+        billIds: supportingMaterialFilterValues(input.billIds, input.billId),
+        classifications: supportingMaterialFilterValues(input.classifications, input.classification),
+        documentFrom: input.documentFrom,
+        documentTo: input.documentTo,
+        embedding: queryEmbedding.embedding,
+        eventIds: supportingMaterialFilterValues(input.eventIds, input.eventId),
+        jurisdictionIds: supportingMaterialFilterValues(input.jurisdictionIds, input.jurisdictionId),
+        limit: candidateLimit,
+        organizationIds: supportingMaterialFilterValues(input.organizationIds, input.organizationId),
+        processingStatus: input.processingStatus,
+        sessionIds: input.sessionIds,
+        updatedFrom: input.updatedFrom,
+        updatedTo: input.updatedTo,
+        updatedToExclusive: input.updatedToExclusive
       })
       const semantic: SupportingMaterialRanked[] = [
         ...new Map(
           semanticRows.map(
-            ({ distance, material }) => [material.id, { ...material, distance, id: material.id }] as const
+            ({ distance, material, sectionId }) =>
+              [material.id, { ...material, distance, id: material.id, semanticSectionId: sectionId }] as const
           )
         ).values()
       ]
@@ -1249,9 +1345,29 @@ export class LegislationQueryService {
               semantic,
               candidateLimit
             )
-      const page = paginateSearchRows(ranked, limit, offset, ranked.length === candidateLimit)
+      const semanticById = new Map(semantic.map((item) => [item.id, item]))
+      const page = paginateCappedSearchRows(
+        ranked.map((item) => {
+          const semanticItem = semanticById.get(item.id)
+          return semanticItem === undefined
+            ? item
+            : {
+                ...item,
+                distance: semanticItem.distance,
+                semanticSectionId: semanticItem.semanticSectionId
+              }
+        }),
+        limit,
+        offset,
+        ranked.length === candidateLimit
+      )
       const items = await this.#withSupportingMaterialLinkIds(page.items)
-      return { ...page, items, warnings: coverageWarnings(items.length, "supporting materials") }
+      return {
+        ...page,
+        items,
+        search: { isReranked: false, models: [{ model: queryEmbedding.model, purpose: "embedding" as const }] },
+        warnings: coverageWarnings(items.length, "supporting materials")
+      }
     }
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeOffset(input.cursor)
@@ -1261,14 +1377,42 @@ export class LegislationQueryService {
       .leftJoin(supportingMaterialLinks, eq(supportingMaterialLinks.materialId, supportingMaterials.id))
       .where(
         and(
-          input.jurisdictionId === undefined ? undefined : eq(supportingMaterials.jurisdictionId, input.jurisdictionId),
-          input.classification === undefined ? undefined : eq(supportingMaterials.classification, input.classification),
-          input.billId === undefined ? undefined : eq(supportingMaterialLinks.billId, input.billId),
-          input.amendmentId === undefined ? undefined : eq(supportingMaterialLinks.amendmentId, input.amendmentId),
-          input.eventId === undefined ? undefined : eq(supportingMaterialLinks.eventId, input.eventId),
-          input.organizationId === undefined
-            ? undefined
-            : eq(supportingMaterialLinks.organizationId, input.organizationId),
+          supportingMaterialFilter(
+            input.jurisdictionIds,
+            input.jurisdictionId,
+            (value) => eq(supportingMaterials.jurisdictionId, value),
+            (values) => inArray(supportingMaterials.jurisdictionId, values)
+          ),
+          supportingMaterialFilter(
+            input.classifications,
+            input.classification,
+            (value) => eq(supportingMaterials.classification, value),
+            (values) => inArray(supportingMaterials.classification, values)
+          ),
+          supportingMaterialFilter(
+            input.billIds,
+            input.billId,
+            (value) => eq(supportingMaterialLinks.billId, value),
+            (values) => inArray(supportingMaterialLinks.billId, values)
+          ),
+          supportingMaterialFilter(
+            input.amendmentIds,
+            input.amendmentId,
+            (value) => eq(supportingMaterialLinks.amendmentId, value),
+            (values) => inArray(supportingMaterialLinks.amendmentId, values)
+          ),
+          supportingMaterialFilter(
+            input.eventIds,
+            input.eventId,
+            (value) => eq(supportingMaterialLinks.eventId, value),
+            (values) => inArray(supportingMaterialLinks.eventId, values)
+          ),
+          supportingMaterialFilter(
+            input.organizationIds,
+            input.organizationId,
+            (value) => eq(supportingMaterialLinks.organizationId, value),
+            (values) => inArray(supportingMaterialLinks.organizationId, values)
+          ),
           input.documentFrom === undefined ? undefined : gte(supportingMaterials.documentDate, input.documentFrom),
           input.documentTo === undefined ? undefined : lte(supportingMaterials.documentDate, input.documentTo),
           input.processingStatus === undefined
@@ -1276,7 +1420,7 @@ export class LegislationQueryService {
             : eq(supportingMaterials.processingStatus, input.processingStatus),
           input.query === undefined
             ? undefined
-            : sql`(${supportingMaterials.title} ilike ${`%${input.query}%`} or exists (
+            : sql`(to_tsvector('english', ${supportingMaterials.title}) @@ websearch_to_tsquery('english', ${input.query}) or exists (
                 select 1 from ${supportingMaterialSections}
                 where ${supportingMaterialSections.materialId} = ${supportingMaterials.id}
                   and ${supportingMaterialSections.searchVector} @@ websearch_to_tsquery('english', ${input.query})
@@ -1294,6 +1438,236 @@ export class LegislationQueryService {
       truncated,
       warnings: coverageWarnings(items.length, "supporting materials")
     }
+  }
+
+  async #searchLexicalSupportingMaterials(
+    input: SupportingMaterialSearchInput
+  ): Promise<SupportingMaterialSearchResult> {
+    const query = input.query
+    if (query === undefined) {
+      throw new LegislationError("invalid_request", "Supporting material lexical search requires query")
+    }
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const searchQuery = sql`websearch_to_tsquery('english', ${query})`
+    const titleRank = sql<number>`ts_rank_cd(to_tsvector('english', ${supportingMaterials.title}), ${searchQuery})`
+    const sectionRank = sql<number>`coalesce(max(ts_rank_cd(${supportingMaterialSections.searchVector}, ${searchQuery})), 0)`
+    const score = sql<number>`greatest(${titleRank}, ${sectionRank})`
+    const rows = await this.#database
+      .select({ lexicalScore: score, material: supportingMaterialSummaryColumns })
+      .from(supportingMaterials)
+      .leftJoin(supportingMaterialSections, eq(supportingMaterialSections.materialId, supportingMaterials.id))
+      .leftJoin(supportingMaterialLinks, eq(supportingMaterialLinks.materialId, supportingMaterials.id))
+      .leftJoin(bills, eq(bills.id, supportingMaterialLinks.billId))
+      .where(
+        and(
+          supportingMaterialFilter(
+            input.jurisdictionIds,
+            input.jurisdictionId,
+            (value) => eq(supportingMaterials.jurisdictionId, value),
+            (values) => inArray(supportingMaterials.jurisdictionId, values)
+          ),
+          supportingMaterialFilter(
+            input.classifications,
+            input.classification,
+            (value) => eq(supportingMaterials.classification, value),
+            (values) => inArray(supportingMaterials.classification, values)
+          ),
+          supportingMaterialFilter(
+            input.billIds,
+            input.billId,
+            (value) => eq(supportingMaterialLinks.billId, value),
+            (values) => inArray(supportingMaterialLinks.billId, values)
+          ),
+          supportingMaterialFilter(
+            input.amendmentIds,
+            input.amendmentId,
+            (value) => eq(supportingMaterialLinks.amendmentId, value),
+            (values) => inArray(supportingMaterialLinks.amendmentId, values)
+          ),
+          supportingMaterialFilter(
+            input.eventIds,
+            input.eventId,
+            (value) => eq(supportingMaterialLinks.eventId, value),
+            (values) => inArray(supportingMaterialLinks.eventId, values)
+          ),
+          supportingMaterialFilter(
+            input.organizationIds,
+            input.organizationId,
+            (value) => eq(supportingMaterialLinks.organizationId, value),
+            (values) => inArray(supportingMaterialLinks.organizationId, values)
+          ),
+          input.sessionIds === undefined ? undefined : inArray(bills.sessionId, input.sessionIds),
+          input.documentFrom === undefined ? undefined : gte(supportingMaterials.documentDate, input.documentFrom),
+          input.documentTo === undefined ? undefined : lte(supportingMaterials.documentDate, input.documentTo),
+          input.updatedFrom === undefined ? undefined : gte(supportingMaterials.updatedAt, input.updatedFrom),
+          input.updatedTo === undefined ? undefined : lte(supportingMaterials.updatedAt, input.updatedTo),
+          input.updatedToExclusive === undefined
+            ? undefined
+            : sql`${supportingMaterials.updatedAt} < ${input.updatedToExclusive}`,
+          input.processingStatus === undefined
+            ? undefined
+            : eq(supportingMaterials.processingStatus, input.processingStatus),
+          sql`(to_tsvector('english', ${supportingMaterials.title}) @@ ${searchQuery} or ${supportingMaterialSections.searchVector} @@ ${searchQuery})`
+        )
+      )
+      .groupBy(supportingMaterials.id)
+      .orderBy(desc(score), asc(supportingMaterials.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    const items = await this.#withSupportingMaterialLinkIds(
+      rows.slice(0, limit).map(({ lexicalScore, material }) => ({ ...material, score: lexicalScore, id: material.id }))
+    )
+    return {
+      items,
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated,
+      warnings: coverageWarnings(items.length, "supporting materials")
+    }
+  }
+
+  /**
+   * The public search endpoint needs more than collection rows: each result
+   * must identify the persisted section that supports the match and preserve
+   * the ranking values actually returned by PostgreSQL/vector search. The MCP
+   * collection method above remains summary-oriented.
+   */
+  async searchSupportingMaterialHits(input: SupportingMaterialSearchInput): Promise<SupportingMaterialSearchHitResult> {
+    if (input.query === undefined) {
+      throw new LegislationError("invalid_request", "Supporting material search requires query")
+    }
+    const mode = input.mode ?? "lexical"
+    const page = await this.searchSupportingMaterials(input)
+    const items = await Promise.all(
+      page.items.map(async (material) => await this.#supportingMaterialSearchHit(material, input.query!, mode))
+    )
+    return {
+      ...page,
+      items,
+      search: page.search ?? { isReranked: false, models: [] }
+    }
+  }
+
+  async #supportingMaterialSearchHit(
+    material: SupportingMaterialRead,
+    query: string,
+    mode: "hybrid" | "lexical" | "semantic"
+  ): Promise<SupportingMaterialSearchHitRead> {
+    const semanticScore = material.distance === undefined ? null : 1 - material.distance
+    if ((mode === "semantic" || mode === "hybrid") && semanticScore !== null && !Number.isFinite(semanticScore)) {
+      throw new LegislationError("unprocessable", "Supporting material semantic score is not finite")
+    }
+    if (mode === "semantic" && semanticScore === null) {
+      throw new LegislationError("unprocessable", "Supporting material semantic search did not preserve a vector score")
+    }
+
+    const lexical =
+      mode === "semantic"
+        ? { matchedFields: [] as const, score: null, sectionId: undefined, snippet: null }
+        : await this.#materialLexicalMatch(material.id, query)
+    const section = await this.#supportingMaterialSearchSection(
+      material.id,
+      mode === "lexical" ? lexical.sectionId : (material.semanticSectionId ?? lexical.sectionId)
+    )
+    const matchedFields = [
+      ...new Set([...lexical.matchedFields, ...(semanticScore === null ? [] : (["semantic"] as const))])
+    ]
+    if (matchedFields.length === 0) {
+      throw new LegislationError("unprocessable", "Supporting material search did not preserve a match explanation")
+    }
+    const score = supportingMaterialSearchScore(mode, lexical.score, semanticScore, material.score)
+    if (score === null || score === undefined || !Number.isFinite(score)) {
+      throw new LegislationError("unprocessable", "Supporting material search did not preserve a ranking score")
+    }
+    return {
+      ...material,
+      lexicalScore: lexical.score,
+      matchedFields,
+      rerankScore: null,
+      score,
+      section,
+      semanticScore,
+      snippet: section.id === lexical.sectionId ? lexical.snippet : null
+    }
+  }
+
+  async #materialLexicalMatch(
+    materialId: string,
+    query: string
+  ): Promise<{
+    matchedFields: readonly ("sectionText" | "title")[]
+    score: number | null
+    sectionId: string | undefined
+    snippet: string | null
+  }> {
+    const searchQuery = sql`websearch_to_tsquery('english', ${query})`
+    const [title, section] = await Promise.all([
+      this.#database
+        .select({
+          score: sql<number>`ts_rank_cd(to_tsvector('english', ${supportingMaterials.title}), ${searchQuery})`
+        })
+        .from(supportingMaterials)
+        .where(
+          and(
+            eq(supportingMaterials.id, materialId),
+            sql`to_tsvector('english', ${supportingMaterials.title}) @@ ${searchQuery}`
+          )
+        )
+        .limit(1),
+      this.#database
+        .select({
+          score: sql<number>`ts_rank_cd(${supportingMaterialSections.searchVector}, ${searchQuery})`,
+          sectionId: supportingMaterialSections.id,
+          snippet: sql<string>`ts_headline('english', ${supportingMaterialSections.text}, ${searchQuery}, 'MaxFragments=2, MaxWords=35, MinWords=10')`
+        })
+        .from(supportingMaterialSections)
+        .where(
+          and(
+            eq(supportingMaterialSections.materialId, materialId),
+            sql`${supportingMaterialSections.searchVector} @@ ${searchQuery}`
+          )
+        )
+        .orderBy(
+          desc(sql`ts_rank_cd(${supportingMaterialSections.searchVector}, ${searchQuery})`),
+          asc(supportingMaterialSections.id)
+        )
+        .limit(1)
+    ])
+    const titleScore = title[0]?.score
+    const sectionScore = section[0]?.score
+    const score = Math.max(titleScore ?? Number.NEGATIVE_INFINITY, sectionScore ?? Number.NEGATIVE_INFINITY)
+    if (!Number.isFinite(score)) {
+      return { matchedFields: [], score: null, sectionId: undefined, snippet: null }
+    }
+    return {
+      matchedFields: [
+        ...(titleScore === undefined ? [] : (["title"] as const)),
+        ...(sectionScore === undefined ? [] : (["sectionText"] as const))
+      ],
+      score,
+      sectionId: section[0]?.sectionId,
+      snippet: section[0]?.snippet ?? null
+    }
+  }
+
+  async #supportingMaterialSearchSection(materialId: string, preferredSectionId: string | undefined) {
+    const sections = await this.#database
+      .select()
+      .from(supportingMaterialSections)
+      .where(
+        and(
+          eq(supportingMaterialSections.materialId, materialId),
+          preferredSectionId === undefined ? undefined : eq(supportingMaterialSections.id, preferredSectionId)
+        )
+      )
+      .orderBy(asc(supportingMaterialSections.ordinal), asc(supportingMaterialSections.id))
+      .limit(1)
+    const section = sections[0]
+    if (section === undefined) {
+      throw new LegislationError("unprocessable", "Supporting material search result has no persisted matching section")
+    }
+    return section
   }
 
   async getSupportingMaterial(lookup: EntityLookup) {
@@ -1407,19 +1781,23 @@ export class LegislationQueryService {
     return rows[0]
   }
 
-  async searchBills(input: SearchInput & { mode?: "hybrid" | "lexical" | "semantic" }) {
+  async searchBills(input: SearchInput & { mode?: "hybrid" | "lexical" | "semantic" }): Promise<BillSearchResultPage> {
     const mode = input.mode ?? "hybrid"
     if (mode === "lexical") {
-      return lexicalBillSearch(this.#database, input)
+      return { ...(await lexicalBillSearch(this.#database, input)), search: { isReranked: false, models: [] } }
     }
-    const embedding = await this.#embedQuery("search_bills", input.query)
+    const queryEmbedding = await this.#embedQueryWithModel("search_bills", input.query)
     const { limit, offset } = validateSearchInput(input)
     const candidateLimit = embeddingQueryRouteFor("search_bills").candidateLimit
+    const rerankModel = embeddingQueryRouteFor("search_bills").rerank?.model
+    if (rerankModel === undefined) {
+      throw new LegislationError("dependency_unavailable", "Bill search reranking is not configured")
+    }
     if (mode === "semantic") {
       const semantic = await semanticBillSearch(this.#database, {
         ...input,
         cursor: undefined,
-        embedding,
+        embedding: queryEmbedding.embedding,
         limit: candidateLimit
       })
       const reranked = await this.#rerank(
@@ -1429,18 +1807,42 @@ export class LegislationQueryService {
         (item) => item.id,
         (item) => [item.title, item.summary].filter((value): value is string => value !== null).join("\n")
       )
-      return paginateSearchRows(reranked, limit, offset, semantic.truncated)
+      return {
+        ...paginateCappedSearchRows(
+          reranked.map((item) => ({ ...item, score: item.rerankScore })),
+          limit,
+          offset,
+          semantic.truncated
+        ),
+        search: billSearchExecution(queryEmbedding.model, rerankModel, semantic.items.length)
+      }
     }
     const [lexical, semantic] = await Promise.all([
       lexicalBillSearch(this.#database, { ...input, cursor: undefined, limit: candidateLimit }),
-      semanticBillSearch(this.#database, { ...input, cursor: undefined, embedding, limit: candidateLimit })
+      semanticBillSearch(this.#database, {
+        ...input,
+        cursor: undefined,
+        embedding: queryEmbedding.embedding,
+        limit: candidateLimit
+      })
     ])
-    const lexicalItems: FusedBillResult[] = lexical.items.map((item) => ({ ...item, score: item.rank }))
-    const semanticItems: FusedBillResult[] = semantic.items.map((item) => ({
-      ...item,
-      score: 1 - item.distance
-    }))
-    const candidates = reciprocalRankFusionWithScores(lexicalItems, semanticItems, candidateLimit)
+    const lexicalItems: FusedBillResult[] = lexical.items
+    const semanticItems: FusedBillResult[] = semantic.items
+    const lexicalById = new Map(lexicalItems.map((item) => [item.id, item]))
+    const semanticById = new Map(semanticItems.map((item) => [item.id, item]))
+    const candidates = reciprocalRankFusionWithScores(lexicalItems, semanticItems, candidateLimit).map((candidate) => {
+      const lexicalCandidate = lexicalById.get(candidate.id)
+      const semanticCandidate = semanticById.get(candidate.id)
+      return {
+        ...candidate,
+        lexicalScore: lexicalCandidate?.lexicalScore ?? null,
+        matchedFields: [
+          ...new Set([...(lexicalCandidate?.matchedFields ?? []), ...(semanticCandidate?.matchedFields ?? [])])
+        ],
+        semanticScore: semanticCandidate?.semanticScore ?? null,
+        snippet: lexicalCandidate?.snippet ?? semanticCandidate?.snippet ?? null
+      }
+    })
     const reranked = await this.#rerank(
       "search_bills",
       input.query,
@@ -1448,7 +1850,15 @@ export class LegislationQueryService {
       (item) => item.id,
       (item) => [item.title, item.summary].filter((value): value is string => value !== null).join("\n")
     )
-    return paginateSearchRows(reranked, limit, offset, lexical.truncated || semantic.truncated)
+    return {
+      ...paginateCappedSearchRows(
+        reranked.map((item) => ({ ...item, score: item.rerankScore })),
+        limit,
+        offset,
+        lexical.truncated || semantic.truncated
+      ),
+      search: billSearchExecution(queryEmbedding.model, rerankModel, candidates.length)
+    }
   }
 
   async getBill(lookup: BillLookup) {
@@ -1770,18 +2180,27 @@ export class LegislationQueryService {
     })
     const seen = new Set([input.id, ...explicit.map((item) => item.bill.id)])
     const semanticItems = semantic.items
-      .filter((bill) => !seen.has(bill.id))
+      .filter(
+        (bill): bill is typeof bill & { semanticScore: number } => !seen.has(bill.id) && bill.semanticScore !== null
+      )
       .slice(0, limit - explicit.length)
       .map((bill) => ({
         bill,
         classification: "semantic",
         method: "semantic" as const,
-        similarity: 1 - bill.distance
+        similarity: bill.semanticScore
       }))
     return { items: [...explicit, ...semanticItems], truncated: relations.length > limit || semantic.truncated }
   }
 
   async #embedQuery(tool: EmbeddingSearchTool, query: string): Promise<number[]> {
+    return (await this.#embedQueryWithModel(tool, query)).embedding
+  }
+
+  async #embedQueryWithModel(
+    tool: EmbeddingSearchTool,
+    query: string
+  ): Promise<{ embedding: number[]; model: string }> {
     if (this.#retrievalClient === undefined) {
       throw new LegislationError("dependency_unavailable", "Semantic search is not configured")
     }
@@ -1791,7 +2210,7 @@ export class LegislationQueryService {
     if (embedding === undefined) {
       throw new LegislationError("dependency_unavailable", "Embedding provider returned no query vector")
     }
-    return embedding
+    return { embedding, model: response.model }
   }
 
   async #rerank<Item>(

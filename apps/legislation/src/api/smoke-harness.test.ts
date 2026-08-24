@@ -551,11 +551,17 @@ describe("local API smoke harness", () => {
         truncated: false,
         warnings: []
       }),
+      searchSupportingMaterialHits: async () => ({
+        items: [],
+        search: { isReranked: false, models: [] },
+        truncated: false,
+        warnings: []
+      }),
       searchVotes: async () => page()
     }
     const apiHandler = createCompositeHttpApiHandler([
       createCoreReadApiHandler(service),
-      createCivicSearchApiHandler(service)
+      createCivicSearchApiHandler(service, { apiBaseUrl: "https://api.example.test" })
     ])
     const server = createLegislationServer({
       apiHandler,

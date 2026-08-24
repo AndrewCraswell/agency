@@ -22,13 +22,19 @@ function createService(overrides: Partial<CivicSearchApi> = {}): CivicSearchApi 
     searchAmendments: async () => ({ items: [], truncated: false }),
     searchBillText: async () => ({ items: [], truncated: false }),
     searchBills: async () => ({ items: [], truncated: false }),
+    searchSupportingMaterialHits: async () => ({
+      items: [],
+      search: { isReranked: false, models: [] },
+      truncated: false,
+      warnings: []
+    }),
     searchSupportingMaterials: async () => ({ items: [], truncated: false }),
     ...overrides
   }
 }
 
 async function startApi(service: CivicSearchApi): Promise<string> {
-  const handler = createCivicSearchApiHandler(service)
+  const handler = createCivicSearchApiHandler(service, { apiBaseUrl: "https://api.example.test" })
   const server = createServer(async (request, response) => {
     if (!(await handler(request, response))) {
       response.writeHead(404)
@@ -42,6 +48,60 @@ async function startApi(service: CivicSearchApi): Promise<string> {
     throw new Error("Expected a TCP server address")
   }
   return `http://127.0.0.1:${address.port}`
+}
+
+function materialSearchCandidate() {
+  return {
+    amendmentIds: ["amendment:fixture"],
+    billIds: ["bill:fixture"],
+    blobPath: null,
+    classification: "committee-report",
+    contentHash: null,
+    contentType: "application/pdf",
+    createdAt: new Date("2026-08-24T00:00:00.000Z"),
+    documentDate: "2026-08-20",
+    id: "material:fixture",
+    jurisdictionId: "jurisdiction:fixture",
+    lastAttemptAt: null,
+    lexicalScore: 0.8,
+    matchedFields: ["sectionText", "title"] as const,
+    meetingIds: ["meeting:fixture"],
+    nextAttemptAt: null,
+    organizationIds: ["organization:fixture"],
+    processingStatus: "processed",
+    processingAttempts: 0,
+    processingError: null,
+    processingErrorCategory: null,
+    rerankScore: null,
+    score: 0.8,
+    section: {
+      contentHash: "a".repeat(64),
+      createdAt: new Date("2026-08-24T00:00:00.000Z"),
+      embeddedAt: null,
+      embedding: null,
+      embeddingInputHash: null,
+      embeddingModel: null,
+      heading: "Summary",
+      id: "material:fixture:section:0",
+      materialId: "material:fixture",
+      ordinal: 0,
+      searchVector: null,
+      sectionIdentifier: null,
+      sourceEndOffset: 32,
+      sourceStartOffset: 0,
+      text: "A bounded matching material section.",
+      updatedAt: new Date("2026-08-24T00:00:00.000Z")
+    },
+    semanticScore: null,
+    snippet: "A bounded <b>matching</b> material section.",
+    sourceUpdatedAt: null,
+    sourceId: "fixture-material",
+    sourceUrl: "https://source.example.test/material",
+    text: null,
+    title: "Matching committee report",
+    updatedAt: new Date("2026-08-24T01:00:00.000Z"),
+    upstreamIds: { fixture: "material" }
+  }
 }
 
 describe("civic and search HTTP API handler", () => {
@@ -102,7 +162,7 @@ describe("civic and search HTTP API handler", () => {
 
     const lexical = await fetch(`${baseUrl}/api/search/bills`, {
       body: JSON.stringify({ query: "housing" }),
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", host: "hostile.example.test" },
       method: "POST"
     })
     const semantic = await fetch(`${baseUrl}/api/search/bills`, {
@@ -211,6 +271,121 @@ describe("civic and search HTTP API handler", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { message: "documentFrom must not be after documentTo" }
     })
+  })
+
+  it("returns canonical material search hits and forwards every supported material filter", async () => {
+    let received: unknown
+    const baseUrl = await startApi(
+      createService({
+        searchSupportingMaterialHits: async (input) => {
+          received = input
+          return {
+            items: [materialSearchCandidate()],
+            search: { isReranked: false, models: [] },
+            truncated: false,
+            warnings: []
+          }
+        }
+      })
+    )
+    const response = await fetch(`${baseUrl}/api/search/supporting-materials`, {
+      body: JSON.stringify({
+        amendmentIds: ["amendment:fixture"],
+        billIds: ["bill:fixture"],
+        classifications: ["committee-report"],
+        documentFrom: "2026-08-01",
+        documentTo: "2026-08-20",
+        explain: true,
+        from: "2026-08-01T00:00:00.000Z",
+        jurisdictionIds: ["jurisdiction:fixture"],
+        meetingIds: ["meeting:fixture"],
+        organizationIds: ["organization:fixture"],
+        query: "matching",
+        sessionIds: ["session:fixture"],
+        to: "2026-08-20T00:00:00.000Z"
+      }),
+      headers: { "content-type": "application/json", host: "hostile.example.test" },
+      method: "POST"
+    })
+
+    expect(response.status).toBe(200)
+    expect(received).toMatchObject({
+      amendmentIds: ["amendment:fixture"],
+      billIds: ["bill:fixture"],
+      classifications: ["committee-report"],
+      documentFrom: "2026-08-01",
+      documentTo: "2026-08-20",
+      eventIds: ["meeting:fixture"],
+      jurisdictionIds: ["jurisdiction:fixture"],
+      organizationIds: ["organization:fixture"],
+      sessionIds: ["session:fixture"],
+      updatedFrom: expect.any(Date),
+      updatedTo: expect.any(Date)
+    })
+    await expect(response.json()).resolves.toMatchObject({
+      data: [
+        {
+          match: {
+            explanation: "lexical search matched sectionText, title; response score 0.8.",
+            lexicalScore: 0.8,
+            mode: "lexical",
+            rerankScore: null
+          },
+          record: {
+            material: {
+              canonicalUrl: "https://api.example.test/api/supporting-materials/material%3Afixture",
+              id: "material:fixture",
+              type: "supporting-material"
+            },
+            relatedRecordIds: ["amendment:fixture", "bill:fixture", "meeting:fixture", "organization:fixture"],
+            section: { id: "material:fixture:section:0", materialId: "material:fixture" }
+          },
+          recordType: "supporting-material"
+        }
+      ],
+      meta: { isReranked: false, mode: "lexical", models: [] }
+    })
+  })
+
+  it("keeps explanations null unless requested", async () => {
+    const baseUrl = await startApi(
+      createService({
+        searchSupportingMaterialHits: async () => ({
+          items: [materialSearchCandidate()],
+          search: { isReranked: false, models: [] },
+          truncated: false,
+          warnings: []
+        })
+      })
+    )
+    const response = await fetch(`${baseUrl}/api/search/supporting-materials`, {
+      body: JSON.stringify({ query: "matching" }),
+      headers: { "content-type": "application/json" },
+      method: "POST"
+    })
+    await expect(response.json()).resolves.toMatchObject({ data: [{ match: { explanation: null } }] })
+  })
+
+  it("fails closed for incomplete canonical candidates", async () => {
+    const baseUrl = await startApi(
+      createService({
+        searchSupportingMaterialHits: async () => ({
+          items: [
+            { ...materialSearchCandidate(), section: { ...materialSearchCandidate().section, materialId: "wrong" } }
+          ],
+          search: { isReranked: false, models: [] },
+          truncated: false,
+          warnings: []
+        })
+      })
+    )
+    const incomplete = await fetch(`${baseUrl}/api/search/supporting-materials`, {
+      body: JSON.stringify({ query: "matching" }),
+      headers: { "content-type": "application/json" },
+      method: "POST"
+    })
+    expect(incomplete.status).toBe(422)
+    await expect(incomplete.json()).resolves.toMatchObject({ error: { category: "unprocessable" } })
   })
 
   it("leaves organization meeting routes unregistered until exact canonical projection facts exist", async () => {

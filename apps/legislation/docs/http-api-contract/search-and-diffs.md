@@ -93,6 +93,9 @@ versionCodes?: string[]; headings?: string[]; pageFrom?: integer; pageTo?: integ
 Body is `BaseSearchRequest & { billIds?: string[]; amendmentIds?: string[]; meetingIds?: string[];
 organizationIds?: string[]; classifications?: string[]; documentFrom?: date; documentTo?: date }`. Response is
 `200 SearchPage<MaterialSearchHit>`. Search hits contain one bounded section, never the complete material text.
+For supporting materials, BaseSearch `from` and `to` filter the canonical material `updatedAt` interval inclusively;
+date-only upper bounds include the complete UTC date. `documentFrom` and `documentTo` continue to filter the publisher
+document date. `sessionIds` filters through the material's linked bills without duplicating a material hit.
 
 ## `POST /api/search/all` (`searchAll`)
 

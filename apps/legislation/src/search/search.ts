@@ -1,9 +1,10 @@
-import { and, arrayOverlaps, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm"
+import { and, arrayOverlaps, asc, desc, eq, gte, inArray, isNotNull, lte, or, sql } from "drizzle-orm"
 import { getTableColumns, type SQL } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
 import {
   amendmentEmbeddings,
   amendments,
+  billActions,
   billDocuments,
   billEmbeddings,
   billSponsors,
@@ -44,6 +45,59 @@ export interface SearchPage<T> {
   nextCursor?: string
   truncated: boolean
 }
+
+export interface SearchModelUsage {
+  model: string
+  purpose: "embedding" | "reranking"
+}
+
+export interface BillSearchResultPage extends SearchPage<BillSearchCandidate> {
+  search: {
+    isReranked: boolean
+    models: SearchModelUsage[]
+  }
+}
+
+/**
+ * The persisted facts needed to turn a search candidate into the public
+ * canonical bill summary. Search never infers a source, status, or action
+ * timestamp that is absent from the database.
+ */
+export interface BillSearchCandidate {
+  classification: string[]
+  createdAt: Date
+  distance?: number
+  id: string
+  identifier: string
+  introducedAt: string | null
+  jurisdictionId: string
+  latestActionAt: Date | null
+  lexicalScore: number | null
+  matchedFields: BillSearchMatchedField[]
+  rerankScore: number | null
+  rank?: number
+  score: number
+  semanticScore: number | null
+  sessionId: string
+  snippet: string | null
+  sourceUpdatedAt: Date | null
+  sourceUrl: string
+  status: string | null
+  subjects: string[]
+  summary: string | null
+  title: string
+  updatedAt: Date
+  upstreamIds: Record<string, string>
+}
+
+export type BillSearchMatchedField =
+  | "abstract"
+  | "identifier"
+  | "semantic"
+  | "sponsorNames"
+  | "subjects"
+  | "title"
+  | "versionText"
 
 export function validateSearchInput(input: SearchInput): { limit: number; offset: number; query: string } {
   const query = input.query.trim()
@@ -108,30 +162,181 @@ export function paginateSearchRows<T>(rows: T[], limit: number, offset: number, 
   }
 }
 
-export async function lexicalBillSearch(database: LegislationDatabase, input: SearchInput) {
+/**
+ * A model/provider candidate window may be incomplete, but its cursor must
+ * never advance beyond items that were actually retrieved. `truncated`
+ * retains the coverage signal while `nextCursor` only exists for a real next
+ * item in the bounded window.
+ */
+export function paginateCappedSearchRows<T>(rows: T[], limit: number, offset: number, capped = false): SearchPage<T> {
+  const available = rows.slice(offset)
+  const hasNextInWindow = available.length > limit
+  return {
+    items: available.slice(0, limit),
+    nextCursor: hasNextInWindow ? encodeSearchCursor(offset + limit) : undefined,
+    truncated: hasNextInWindow || capped
+  }
+}
+
+/**
+ * Database search queries apply their cursor offset in SQL. The returned
+ * window must therefore use that offset only to advance the opaque cursor,
+ * never to slice the window a second time.
+ */
+export function paginateSearchDatabaseRows<T>(rows: T[], limit: number, offset: number): SearchPage<T> {
+  const truncated = rows.length > limit
+  return {
+    items: rows.slice(0, limit),
+    nextCursor: truncated ? encodeSearchCursor(offset + limit) : undefined,
+    truncated
+  }
+}
+
+export async function lexicalBillSearch(
+  database: LegislationDatabase,
+  input: SearchInput
+): Promise<SearchPage<BillSearchCandidate>> {
   const { limit, offset, query } = validateSearchInput(input)
+  const rows = await buildLexicalBillSearchQuery(database, input, query, limit, offset)
+  return paginateSearchDatabaseRows(
+    rows.map((row) => ({
+      ...row.bill,
+      latestActionAt: row.latestActionAt,
+      lexicalScore: row.rank,
+      matchedFields: billSearchMatchedFields(row),
+      rerankScore: null,
+      rank: row.rank,
+      score: row.rank,
+      semanticScore: null,
+      snippet:
+        row.billTextMatches || row.identifierMatches
+          ? (row.billSnippet ?? null)
+          : (row.sponsorSnippet ?? row.versionSnippet)
+    })),
+    limit,
+    offset
+  )
+}
+
+export function buildLexicalBillSearchQuery(
+  database: LegislationDatabase,
+  input: SearchInput,
+  query: string,
+  limit: number,
+  offset: number
+) {
   const searchQuery = sql`websearch_to_tsquery('english', ${query})`
-  const rank = sql<number>`ts_rank_cd(${bills.searchVector}, ${searchQuery})`
-  const rows = await database
+  const identifierMatches = sql<boolean>`to_tsvector('english', ${bills.identifier}) @@ ${searchQuery}`
+  const titleMatches = sql<boolean>`to_tsvector('english', ${bills.title}) @@ ${searchQuery}`
+  const abstractMatches = sql<boolean>`to_tsvector('english', coalesce(${bills.summary}, '')) @@ ${searchQuery}`
+  const subjectMatches = sql<boolean>`to_tsvector('english', array_to_string(${bills.subjects}, ' ')) @@ ${searchQuery}`
+  const sponsorSearchVector = sql`to_tsvector('english', ${billSponsors.name})`
+  const sponsorMatches = database
     .select({
-      id: bills.id,
-      identifier: bills.identifier,
-      introducedAt: bills.introducedAt,
-      jurisdictionId: bills.jurisdictionId,
+      rank: sql<number | null>`max(ts_rank_cd(${sponsorSearchVector}, ${searchQuery}))`.as("rank"),
+      snippet: sql<
+        string | null
+      >`min(ts_headline('english', ${billSponsors.name}, ${searchQuery}, 'MaxFragments=1, MaxWords=20, MinWords=5'))`.as(
+        "snippet"
+      )
+    })
+    .from(billSponsors)
+    .where(and(eq(billSponsors.billId, bills.id), sql`${sponsorSearchVector} @@ ${searchQuery}`))
+    .as("bill_sponsor_matches")
+  const versionMatches = database
+    .select({
+      rank: sql<number | null>`max(ts_rank_cd(${documentSections.searchVector}, ${searchQuery}))`.as("rank"),
+      snippet: sql<
+        string | null
+      >`min(ts_headline('english', ${documentSections.text}, ${searchQuery}, 'MaxFragments=2, MaxWords=35, MinWords=10'))`.as(
+        "snippet"
+      )
+    })
+    .from(documentSections)
+    .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
+    .where(
+      and(
+        eq(billDocuments.billId, bills.id),
+        eq(billDocuments.classification, "version"),
+        eq(billDocuments.processingStatus, "processed"),
+        sql`${documentSections.searchVector} @@ ${searchQuery}`
+      )
+    )
+    .as("bill_version_matches")
+  const latestActions = database
+    .select({
+      latestActionAt: sql<Date | null>`max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))`.as(
+        "latest_action_at"
+      )
+    })
+    .from(billActions)
+    .where(eq(billActions.billId, bills.id))
+    .as("bill_search_latest_actions")
+  const rank = sql<number>`
+    ts_rank_cd(${bills.searchVector}, ${searchQuery})
+    + case when ${identifierMatches} then 1 else 0 end
+    + coalesce(${sponsorMatches.rank}, 0)
+    + coalesce(${versionMatches.rank}, 0)
+  `
+  return database
+    .select({
+      abstractMatches,
+      bill: bills,
+      billSnippet: sql<string | null>`ts_headline(
+        'english',
+        concat_ws(' ', ${bills.identifier}, ${bills.title}, ${bills.summary}, array_to_string(${bills.subjects}, ' ')),
+        ${searchQuery},
+        'MaxFragments=2, MaxWords=35, MinWords=10'
+      )`,
+      billTextMatches: sql<boolean>`${bills.searchVector} @@ ${searchQuery}`,
+      identifierMatches,
+      latestActionAt: latestActions.latestActionAt,
       rank,
-      sessionId: bills.sessionId,
-      snippet: sql<string>`ts_headline('english', coalesce(${bills.summary}, ${bills.title}), ${searchQuery}, 'MaxFragments=2, MaxWords=35, MinWords=10')`,
-      sourceUrl: bills.sourceUrl,
-      status: bills.status,
-      summary: bills.summary,
-      title: bills.title
+      sponsorRank: sponsorMatches.rank,
+      sponsorSnippet: sponsorMatches.snippet,
+      subjectMatches,
+      titleMatches,
+      versionRank: versionMatches.rank,
+      versionSnippet: versionMatches.snippet
     })
     .from(bills)
-    .where(and(sql`${bills.searchVector} @@ ${searchQuery}`, ...billFilters(input)))
+    .leftJoinLateral(sponsorMatches, sql`true`)
+    .leftJoinLateral(versionMatches, sql`true`)
+    .leftJoinLateral(latestActions, sql`true`)
+    .where(
+      and(
+        or(
+          sql`${bills.searchVector} @@ ${searchQuery}`,
+          identifierMatches,
+          isNotNull(sponsorMatches.rank),
+          isNotNull(versionMatches.rank)
+        ),
+        ...billFilters(input)
+      )
+    )
     .orderBy(desc(rank), asc(bills.id))
     .limit(limit + 1)
     .offset(offset)
-  return paginateSearchRows(rows, limit, 0)
+}
+
+function billSearchMatchedFields(value: {
+  abstractMatches: boolean
+  billSnippet: string | null
+  billTextMatches: boolean
+  identifierMatches: boolean
+  sponsorRank: number | null
+  subjectMatches: boolean
+  titleMatches: boolean
+  versionRank: number | null
+}): BillSearchMatchedField[] {
+  return [
+    ...(value.identifierMatches ? (["identifier"] as const) : []),
+    ...(value.titleMatches ? (["title"] as const) : []),
+    ...(value.abstractMatches ? (["abstract"] as const) : []),
+    ...(value.subjectMatches ? (["subjects"] as const) : []),
+    ...(value.sponsorRank === null ? [] : (["sponsorNames"] as const)),
+    ...(value.versionRank === null ? [] : (["versionText"] as const))
+  ]
 }
 
 export interface PassageSearchInput extends SearchInput {
@@ -182,7 +387,7 @@ function embeddingLiteral(embedding: number[], dimensions: number): SQL {
 export async function semanticBillSearch(
   database: LegislationDatabase,
   input: Omit<SearchInput, "query"> & { embedding: number[] }
-) {
+): Promise<SearchPage<BillSearchCandidate>> {
   const route = embeddingRouteFor("bill")
   const limit = input.limit ?? DEFAULT_LIMIT
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAXIMUM_LIMIT) {
@@ -190,21 +395,24 @@ export async function semanticBillSearch(
   }
   const offset = decodeSearchCursor(input.cursor)
   const distance = sql<number>`${billEmbeddings.embedding} <=> ${embeddingLiteral(input.embedding, route.dimensions)}`
+  const latestActions = database
+    .select({
+      latestActionAt: sql<Date | null>`max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))`.as(
+        "latest_action_at"
+      )
+    })
+    .from(billActions)
+    .where(eq(billActions.billId, bills.id))
+    .as("bill_semantic_latest_actions")
   const rows = await database
     .select({
+      bill: bills,
       distance,
-      id: bills.id,
-      identifier: bills.identifier,
-      introducedAt: bills.introducedAt,
-      jurisdictionId: bills.jurisdictionId,
-      sessionId: bills.sessionId,
-      sourceUrl: bills.sourceUrl,
-      status: bills.status,
-      summary: bills.summary,
-      title: bills.title
+      latestActionAt: latestActions.latestActionAt
     })
     .from(bills)
     .innerJoin(billEmbeddings, eq(billEmbeddings.billId, bills.id))
+    .leftJoinLateral(latestActions, sql`true`)
     .where(
       and(
         eq(billEmbeddings.model, route.model),
@@ -215,7 +423,21 @@ export async function semanticBillSearch(
     .orderBy(asc(distance), asc(bills.id))
     .limit(limit + 1)
     .offset(offset)
-  return paginateSearchRows(rows, limit, 0)
+  return paginateSearchDatabaseRows(
+    rows.map((row) => ({
+      ...row.bill,
+      latestActionAt: row.latestActionAt,
+      lexicalScore: null,
+      matchedFields: ["semantic"],
+      rerankScore: null,
+      distance: row.distance,
+      score: 1 - row.distance,
+      semanticScore: 1 - row.distance,
+      snippet: `${row.bill.identifier} ${row.bill.title}${row.bill.summary === null ? "" : ` ${row.bill.summary}`}`
+    })),
+    limit,
+    offset
+  )
 }
 
 export async function semanticPassageSearch(
@@ -324,13 +546,21 @@ export async function semanticDocumentAmendmentSearch(
 export async function semanticSupportingMaterialSearch(
   database: LegislationDatabase,
   input: Readonly<{
-    amendmentId?: string
-    billId?: string
-    classification?: string
+    amendmentIds?: readonly string[]
+    billIds?: readonly string[]
+    classifications?: readonly string[]
+    documentFrom?: string
+    documentTo?: string
     embedding: number[]
-    eventId?: string
-    jurisdictionId?: string
+    eventIds?: readonly string[]
+    jurisdictionIds?: readonly string[]
     limit?: number
+    organizationIds?: readonly string[]
+    processingStatus?: "failed" | "pending" | "processed" | "processing" | "unsupported"
+    sessionIds?: readonly string[]
+    updatedFrom?: Date
+    updatedTo?: Date
+    updatedToExclusive?: Date
   }>
 ) {
   const route = embeddingRouteFor("supporting-material-section")
@@ -345,15 +575,34 @@ export async function semanticSupportingMaterialSearch(
     )
     .innerJoin(supportingMaterials, eq(supportingMaterialSections.materialId, supportingMaterials.id))
     .leftJoin(supportingMaterialLinks, eq(supportingMaterialLinks.materialId, supportingMaterials.id))
+    .leftJoin(bills, eq(bills.id, supportingMaterialLinks.billId))
     .where(
       and(
         eq(supportingMaterialSectionEmbeddings.model, route.model),
         eq(supportingMaterialSectionEmbeddings.inputContract, route.embeddingInputContract),
-        input.jurisdictionId === undefined ? undefined : eq(supportingMaterials.jurisdictionId, input.jurisdictionId),
-        input.classification === undefined ? undefined : eq(supportingMaterials.classification, input.classification),
-        input.billId === undefined ? undefined : eq(supportingMaterialLinks.billId, input.billId),
-        input.amendmentId === undefined ? undefined : eq(supportingMaterialLinks.amendmentId, input.amendmentId),
-        input.eventId === undefined ? undefined : eq(supportingMaterialLinks.eventId, input.eventId)
+        input.jurisdictionIds === undefined
+          ? undefined
+          : inArray(supportingMaterials.jurisdictionId, input.jurisdictionIds),
+        input.classifications === undefined
+          ? undefined
+          : inArray(supportingMaterials.classification, input.classifications),
+        input.billIds === undefined ? undefined : inArray(supportingMaterialLinks.billId, input.billIds),
+        input.amendmentIds === undefined ? undefined : inArray(supportingMaterialLinks.amendmentId, input.amendmentIds),
+        input.eventIds === undefined ? undefined : inArray(supportingMaterialLinks.eventId, input.eventIds),
+        input.organizationIds === undefined
+          ? undefined
+          : inArray(supportingMaterialLinks.organizationId, input.organizationIds),
+        input.documentFrom === undefined ? undefined : gte(supportingMaterials.documentDate, input.documentFrom),
+        input.documentTo === undefined ? undefined : lte(supportingMaterials.documentDate, input.documentTo),
+        input.processingStatus === undefined
+          ? undefined
+          : eq(supportingMaterials.processingStatus, input.processingStatus),
+        input.sessionIds === undefined ? undefined : inArray(bills.sessionId, input.sessionIds),
+        input.updatedFrom === undefined ? undefined : gte(supportingMaterials.updatedAt, input.updatedFrom),
+        input.updatedTo === undefined ? undefined : lte(supportingMaterials.updatedAt, input.updatedTo),
+        input.updatedToExclusive === undefined
+          ? undefined
+          : sql`${supportingMaterials.updatedAt} < ${input.updatedToExclusive}`
       )
     )
     .orderBy(asc(distance), asc(supportingMaterialSections.id))
