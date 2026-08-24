@@ -686,3 +686,27 @@ truth.
 - Bounded remediation: extract a small compiled client with testable state and rendering seams, then add behavior-level DOM/browser coverage.
 - Acceptance: HTML becomes a thin bootstrap shell; loading, selection, run-all/run-single, playback, rejection, API failure, and no-console-error startup are covered; server and oracle checks remain green.
 - Non-goals: no UI redesign, scoring-rule change, display-contract change, or duplication of SD-018 live-build coherence work.
+
+## SC-015: harden interboard exact-data validation
+
+- Priority: `P2`
+- State: `done`
+- Latest state: Root review approved a bounded local comparator that rejects accessors without invoking them, symbols, hidden or extra properties, sparse or subclassed arrays, non-plain objects, aliases, cycles, and descriptor drift. Nine focused tests plus package types, lint, and format checks pass. Delivered in `b6b54f4`.
+- Affected files: `packages/scoring-circuit/src/interboard-interface.ts` and its focused tests.
+- Description: the interboard contract comparator previously walked enumerable string keys and could accept or execute non-canonical object graphs.
+- Impact: a forged contract could pass exact validation, and cyclic input could fail through uncontrolled recursion rather than a bounded rejection.
+- Bounded remediation: require a plain, dense, exact data graph and compare own data descriptors without reading accessors.
+- Acceptance: canonical fixtures remain accepted; accessor, symbol, hidden-key, sparse-array, subclass, prototype, alias, cycle, and descriptor mutations fail closed.
+- Non-goals: no generic repository validator, contract schema, connector selection, or release-authority change.
+
+## SC-016: make mechanical evidence parsing data-only
+
+- Priority: `P2`
+- State: `done`
+- Latest state: Root review approved a cast-free exact evidence reader using a typed key guard and own enumerable data descriptors. Ten focused tests plus package types, lint, and format checks pass. Delivered in `18d5f1f`.
+- Affected files: `packages/scoring-circuit/src/mechanical-envelope.ts` and its focused tests.
+- Description: mechanical evidence parsing previously cast unknown input to a record, ignored symbols and hidden properties, permitted non-plain objects, and read values dynamically.
+- Impact: evidence completeness could be asserted through a non-canonical or executable object rather than an immutable plain-data boundary.
+- Bounded remediation: validate the exact reviewed gate set on a plain object and read each boolean through its own enumerable data descriptor.
+- Acceptance: existing complete and incomplete results remain unchanged; class instances, null-prototype objects, getters, symbols, hidden properties, aliases, missing keys, and non-booleans reject.
+- Non-goals: no evidence-field, mechanical-envelope, fabrication-authority, or generic schema redesign.
