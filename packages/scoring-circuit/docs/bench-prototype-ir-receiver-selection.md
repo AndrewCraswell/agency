@@ -86,6 +86,13 @@ guessed footprint or a claimed CAD digest.
 | Vishay document 82756, Minicast window size, p. 1 | Rev. 1.0, 2016-08-18 | `C8A78F338915815E93C5AB4CC98ABF588504CC8B2E4CD3288794660810985BC1` | `implementation-agent` | Window formula and light-guide guidance reviewed; no fixed PCB keepout published |
 | Vishay document 80068, IR receiver assembly instructions, pp. 1 and 2 | Rev. 1.8, 2026-05-20 | `8DEE97CE1235CB20794A6CB15BD7364277EAAF6FAE908B32F67E8362962FD1A6` | `implementation-agent` | Leaded through-hole assembly constraints reviewed |
 
+The exact source bytes are retained in the repository under
+[`docs/evidence/bp-146`](evidence/bp-146). The footprint-evidence regression
+test resolves those paths from `import.meta.url`, recomputes every SHA-256
+digest, and checks stable source markers from the raw and inflated PDF streams.
+This makes the source review reproducible without treating the retained PDFs
+as a released CAD or land-pattern artifact.
+
 The source review is fail-closed: `manufacturerPackageDrawingReviewed`,
 `pinOrientationReviewed`, `throughHoleGeometryReviewed`, and
 `opticalKeepoutReviewed` are true, while `manufacturerCadReviewed`,

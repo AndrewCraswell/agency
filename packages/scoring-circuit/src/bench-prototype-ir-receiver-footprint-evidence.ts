@@ -91,6 +91,8 @@ const definition = {
       publishedAt: "2025-05-27",
       reviewedPages: "2, 7",
       sha256: "5F81C36AA02E9901E51C749D03AEE75A23A29B8195B30BF1CBA95F536C865074",
+      retainedArtifactPath: "docs/evidence/bp-146/vishay-82491-tsop382-tsop384-datasheet.pdf",
+      byteMarkers: ["TSOP384", "Pinning", "6.550-5263.01-4"],
       retrievedAtUtc: "2026-08-24T08:17:00.000Z",
       reviewerId: "implementation-agent",
       reviewedAtUtc: "2026-08-24T08:17:00.000Z",
@@ -106,6 +108,8 @@ const definition = {
       publishedAt: "2016-08-18",
       reviewedPages: "1",
       sha256: "C8A78F338915815E93C5AB4CC98ABF588504CC8B2E4CD3288794660810985BC1",
+      retainedArtifactPath: "docs/evidence/bp-146/vishay-82756-minicast-window-size.pdf",
+      byteMarkers: ["Minicast Package", "4 mm"],
       retrievedAtUtc: "2026-08-24T08:17:00.000Z",
       reviewerId: "implementation-agent",
       reviewedAtUtc: "2026-08-24T08:17:00.000Z",
@@ -121,6 +125,8 @@ const definition = {
       publishedAt: "2026-05-20",
       reviewedPages: "1, 2",
       sha256: "8DEE97CE1235CB20794A6CB15BD7364277EAAF6FAE908B32F67E8362962FD1A6",
+      retainedArtifactPath: "docs/evidence/bp-146/vishay-80068-ir-receiver-assembly.pdf",
+      byteMarkers: ["80068", "Assembly Instructions"],
       retrievedAtUtc: "2026-08-24T08:17:00.000Z",
       reviewerId: "implementation-agent",
       reviewedAtUtc: "2026-08-24T08:17:00.000Z",
@@ -251,6 +257,9 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
       source.authority !== "manufacturer-primary" ||
       !source.url.startsWith("https://") ||
       !/^[0-9A-F]{64}$/u.test(source.sha256) ||
+      !source.retainedArtifactPath.startsWith("docs/evidence/bp-146/") ||
+      source.retainedArtifactPath.includes("..") ||
+      source.byteMarkers.some((marker) => marker.trim() === "") ||
       parseRealUtcDate(source.publishedAt) === null ||
       parseCanonicalUtcTimestamp(source.retrievedAtUtc) === null ||
       source.reviewerId.trim() === "" ||
