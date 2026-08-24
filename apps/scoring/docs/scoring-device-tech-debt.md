@@ -46,7 +46,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 27 | SD-016 | P1 | done | Root-approved ingress throttle now uses canonical integer microseconds with an exact one-second boundary |
 | 28 | SD-017 | P2 | done | Root-approved ordered layout now derives every wire offset, the 70-byte header, and 150-byte maximum without changing RC-03 bytes |
 | 29 | SD-018 | P2 | in-progress | Live simulator rebuild can leave startup-cached HTML pointing at deleted hashed assets |
-| 30 | SD-019 | P1 | intake | Remote identity length and character policies disagree across command, authority, and fixture boundaries |
+| 30 | SD-019 | P1 | done | Root-approved remote command, authority, snapshot, and fixture boundaries share one bounded identifier policy |
 | 31 | SD-020 | P2 | intake | Remote schema parsers return caller-owned mutable objects despite readonly result types |
 | 32 | SD-021 | P2 | done | Root-approved private metadata projection now serves secure-envelope and replay-candidate validation with unchanged wire and error behavior |
 | 33 | SC-010 | P2 | intake | Communications circuit selected MPNs can drift from canonical component decisions and USB-PD records |
@@ -495,8 +495,9 @@ truth.
 ## SD-019: unify remote identifier policy
 
 - Priority: `P1`
-- State: `intake`
-- Affected files: `apps/scoring/src/remote-control.ts`, `remote-control-authority.ts`, and `remote-control-golden-fixtures.test.ts`.
+- State: `done`
+- Latest state: Root review approved one app-internal ASCII `[A-Za-z0-9][A-Za-z0-9._:-]*` policy bounded to 1-64 characters for command, apparatus, remote, controller, persisted source, authority request, and fixture identities. Non-remote bout/event identifiers remain unchanged. Focused command and authority verification passes 19 tests with boundary and invalid-character coverage.
+- Affected files: `apps/scoring/src/remote-identifier.ts`, `remote-control.ts`, `remote-control-authority.ts`, and their focused tests.
 - Description: command parsing accepts trimmed identifiers up to 96 characters without a grammar, authority parsing accepts an ASCII grammar up to 128 characters, and the immutable fixture contract uses 64 characters.
 - Impact: the same controller, apparatus, or command identity can pass one boundary and fail another, with different resource limits and canonical expectations.
 - Bounded remediation: choose one documented policy and centralize a private validator across command, snapshot, authority, and fixture boundaries.
