@@ -58,6 +58,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 39 | SD-022 | P1 | done | Root-approved canonical provenance parsing now serves decision records and event-capture construction |
 | 40 | SD-023 | P2 | done | Root-approved canonical phase registry now derives public IDs, guard, and lookup without duplicate literals |
 | 41 | SC-017 | P2 | done | Root-approved BP-141 identity projections now derive the W5500 and MagJack from their canonical upstream owners |
+| 42 | FW-009 | P1 | in-progress | Public scoring-record projection can index beyond a malformed caller-provided hit array |
+| 43 | FW-010 | P1 | in-progress | Out-of-range transport message enums can wrap into valid one-byte wire message types |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -723,3 +725,27 @@ truth.
 - Bounded remediation: create a small private BP-141 identity projection sourced from `benchPrototypeEthernet` and `communicationsFootprintEvidence`, then use it to construct the MDI definition and provenance.
 - Acceptance: no duplicate W5500 or MagJack manufacturer/MPN literals remain in BP-141 production code; upstream identity mutation fails through the existing provenance boundary; generated MDI JSON, pair mappings, source list, and release gates remain byte-equivalent; focused BP-140/BP-141 tests, package types, lint, and format pass.
 - Non-goals: do not change `U_W5500` or `J_ETH` references, reset or interrupt selection, MDI electrical topology, release-deny state, or create a generic parts-catalog/serialization abstraction.
+
+## FW-009: validate public scoring state before record projection
+
+- Priority: `P1`
+- State: `in-progress`
+- Latest state: A bounded implementation unit is adding a pre-index hit-count guard and an output-nonmutation regression; root review and verification remain pending.
+- Affected files: `apps/scoring/firmware/stm32/core/stm32_scoring_core.c` and `apps/scoring/firmware/stm32/tests/test_stm32_scoring_core.c`.
+- Description: `scoring_core_make_record` checks the requested hit index against caller-provided `hit_count`, but does not first prove that `hit_count` fits the public two-element `hits` array.
+- Impact: malformed public state can cause a deterministic out-of-bounds read and project invalid bytes into a decision record.
+- Bounded remediation: reject `hit_count > SCORING_CORE_MAX_HITS` before any `hits[]` access and leave the output record untouched on rejection.
+- Acceptance: focused native tests cover an oversized hit count with an otherwise in-range index, prove output nonmutation, and preserve 100% line/function/branch coverage for the scoring core.
+- Non-goals: no public API, scoring behavior, record layout, hit-capacity, or generic state-validation redesign.
+
+## FW-010: validate transport message enums before narrowing
+
+- Priority: `P1`
+- State: `in-progress`
+- Latest state: A bounded implementation unit is moving message-type validation ahead of the one-byte cast and adding wrapping-value regressions; root review and verification remain pending.
+- Affected files: `apps/scoring/firmware/stm32/core/stm32_transport.c` and `apps/scoring/firmware/stm32/tests/test_stm32_transport.c`.
+- Description: `scoring_stm32_transport_prepare_transmit` narrows the public enum to `uint8_t` before checking whether it is a known message type, so values such as `257` can wrap to a valid wire code.
+- Impact: malformed caller input can bypass the fail-closed boundary and emit a valid-looking but unintended protocol frame.
+- Bounded remediation: validate the enum in its native width before narrowing, with explicit wrapping and negative invalid-value tests.
+- Acceptance: invalid wide and negative enum values reject without mutating output, existing wire bytes remain unchanged, and the STM32 transport coverage gate remains at or above 80% for line/function/branch metrics.
+- Non-goals: no wire constant, message-direction, framing, payload, or protocol-version change.
