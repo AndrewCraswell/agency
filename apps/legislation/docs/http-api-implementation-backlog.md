@@ -13,8 +13,8 @@ An endpoint is not **Done** merely because a route handler exists. Each phase is
 the verification listed below. The endpoint contract remains the source of truth for request and response bodies.
 The execution gate is the [local smoke and MCP parity checklist](http-api-local-smoke-and-parity.md). This ledger was
 last reconciled with the reviewed implementation and authenticated scoped-bills smoke on 2026-08-24. Two scoped bill
-collections have the smoke and reviewed-commit evidence required for **Done**. Current totals are 38 **In progress**,
-47 **Blocked**, 0 **Ready**, and 2 **Done** across 87 endpoints.
+collections have the smoke and reviewed-commit evidence required for **Done**. Current totals are 7 **In progress**,
+78 **Blocked**, 0 **Ready**, and 2 **Done** across 87 endpoints.
 
 ## Delivery phases
 
@@ -24,7 +24,7 @@ collections have the smoke and reviewed-commit evidence required for **Done**. C
 | API-01 | Shared HTTP foundation | In progress | Root review accepted the routing/envelope/error foundation and focused protocol tests. Conditional caching, composed authenticated local smoke, repository-wide verification, and the reviewed commit remain. |
 | API-02 | Canonical legislative reads | In progress | Root review accepted the current core-read handler foundation and focused tests. Complete canonical contract projections, missing filters/relationships, source links, authenticated database smoke, parity evidence, and the reviewed commit. |
 | API-03 | Civic graph, meetings, search, and diffs | In progress | Root review accepted the current civic/search handler foundation and focused validation. Complete canonical projections, missing filters/relationships, truthful model metadata, database-backed smoke/parity evidence, and the reviewed commit. |
-| API-04 | Subscriptions and webhooks | Blocked | Root review accepted the uncomposed schema, service, route, SSRF, and encrypted-secret foundations. A durable `SubscriptionRepository`, KMS-backed `WebhookSecretProtector`, encrypted 24-hour idempotency executor, event matcher/materializer, pinned outbound verification/delivery executors, retry/dead-letter worker, and composition/authorization adapter are still missing. |
+| API-04 | Subscriptions and webhooks | Blocked | Root review accepted the uncomposed schema, service, route, SSRF, and encrypted-secret foundations. The subscription PostgreSQL repository now provides scope-aware CRUD/list/event/delivery persistence, revision-guarded transactions, transactional event/audit writes, and an encrypted 24-hour idempotency boundary. Route composition, documented event/delivery filters, event matcher/materializer, delivery attempt workers, KMS-backed `WebhookSecretProtector`, pinned outbound verification/delivery executors, retry/dead-letter worker, and the authorization adapter remain missing. |
 | API-05 | Local smoke and parity | In progress | The scoped-bills composed-server profile has passed locally. Execute the remaining authenticated fixture, canonical projection, pagination, negative-path, model-routing, and MCP-parity checks per product; do not promote an endpoint on handler-unit evidence alone. |
 | API-06 | Railway API release | Done | `legislation-api` is deployed at the recorded Railway release. `WORKOS_API_AUDIENCE` isolates the API token audience from the MCP resource audience. Health, readiness, unauthenticated API/MCP challenges, and the authenticated scoped-bills remote smoke passed; the rollback target is documented. |
 | API-07 | MCP HTTP migration | In progress | The rollback-safe HTTP and hybrid query adapters are committed, but production remains explicitly `in-process`; the hybrid HTTP-method allowlist is empty. Complete the full parity suite, enable one bounded canary method only after its remote parity passes, and cut over only after the broader gate passes. |
@@ -52,65 +52,65 @@ intentionally uncomposed and **Blocked**.
 
 | Method | Path | State | Current gate |
 | --- | --- | --- | --- |
-| GET | `/api/jurisdictions` | In progress | Reviewed handler and page tests exist; exact `Jurisdiction` projection, live database smoke, parity, and commit remain. |
-| GET | `/api/jurisdictions/{jurisdictionId}` | In progress | Reviewed handler exists; exact canonical/provenance projection, live smoke, parity, and commit remain. |
-| GET | `/api/jurisdictions/{jurisdictionId}/sessions` | In progress | Reviewed handler exists; exact `Session` projection/filter smoke, parity, and commit remain. |
+| GET | `/api/jurisdictions` | Blocked | The additive canonical-foundation schema, guarded importer, checkpoint, and fail-closed audit exist. No authoritative source snapshot has supplied complete jurisdiction active/provenance facts, so the route remains intentionally unregistered. |
+| GET | `/api/jurisdictions/{jurisdictionId}` | Blocked | The additive canonical-foundation schema, guarded importer, checkpoint, and fail-closed audit exist. No authoritative source snapshot has supplied complete jurisdiction active/provenance facts, so the route remains intentionally unregistered. |
+| GET | `/api/jurisdictions/{jurisdictionId}/sessions` | Blocked | The additive canonical-foundation schema, guarded importer, checkpoint, and fail-closed audit exist. No authoritative source snapshot has supplied session classification/provenance facts, so the route remains intentionally unregistered. |
 | GET | `/api/jurisdictions/{jurisdictionId}/bills` | Done | Exact canonical projection and scoped filters passed the authenticated remote `scoped-bills` profile for `jurisdiction:ak`; `introduced-desc` avoids the separately tracked default latest-action performance work. |
 | GET | `/api/jurisdictions/{jurisdictionId}/organizations` | Blocked | Jurisdiction-scoped organization query is missing. |
 | GET | `/api/jurisdictions/{jurisdictionId}/commissions` | Blocked | Classification-scoped organization query is missing. |
 | GET | `/api/jurisdictions/{jurisdictionId}/committees` | Blocked | Classification-scoped organization query is missing. |
 | GET | `/api/jurisdictions/{jurisdictionId}/meetings` | Blocked | `legislative_events` lacks a session relationship and authoritative local date, canonical organization relation, and typed location/virtual-access fields required for `MeetingSummary`; route is intentionally unregistered. |
-| GET | `/api/sessions/{sessionId}` | In progress | Reviewed handler exists; exact canonical/provenance projection, live smoke, parity, and commit remain. |
+| GET | `/api/sessions/{sessionId}` | Blocked | The additive canonical-foundation schema, guarded importer, checkpoint, and fail-closed audit exist. No authoritative source snapshot has supplied session classification/provenance facts, so the route remains intentionally unregistered. |
 | GET | `/api/sessions/{sessionId}/bills` | Done | Exact canonical projection and scoped filters passed the authenticated remote `scoped-bills` profile for `session:ak:30`; `introduced-desc` avoids the separately tracked default latest-action performance work. |
 | GET | `/api/sessions/{sessionId}/meetings` | Blocked | An authoritative event-session relation is missing; inferring through `event_bills` omits session meetings without linked bills. |
 | GET | `/api/bills` | In progress | Reviewed handler exists; remaining filters, canonical projection, stable-order database smoke, parity, and commit remain. |
-| POST | `/api/bills/batch` | In progress | Reviewed item-isolation and limit tests exist; exact `BillDetail` projection, live smoke/parity, and commit remain. |
-| POST | `/api/bills/amendments/batch` | In progress | Reviewed bounds/error foundation exists; exact per-bill envelope, live smoke/parity, and commit remain. |
-| GET | `/api/bills/{billId}` | In progress | Reviewed handler exists; exact `BillDetail` canonical/provenance projection, live smoke/parity, and commit remain. |
-| GET | `/api/bills/{billId}/timeline` | In progress | Reviewed page-envelope test exists; documented discriminated timeline projection, live parity, and commit remain. |
-| GET | `/api/bills/{billId}/related` | In progress | Reviewed handler exists; `Page<RelatedBillHit>` projection, semantic metadata, live parity, and commit remain. |
-| GET | `/api/bills/{billId}/sections` | In progress | Reviewed page-envelope test exists; exact section/document/bill projection, live parity, and commit remain. |
-| GET | `/api/bills/{billId}/amendments` | In progress | Reviewed handler exists; complete filters, canonical summary projection, live parity, and commit remain. |
-| GET | `/api/bills/{billId}/votes` | In progress | Reviewed page-envelope test exists; exact roll-call/position projection, live parity, and commit remain. |
+| POST | `/api/bills/batch` | Blocked | Route is intentionally unregistered: the query service has no independent child cursors or complete canonical child records. Strict `BillDetail` projector coverage exists; unblock with persisted child-page/provenance facts, then add batch item-isolation smoke and live parity. |
+| POST | `/api/bills/amendments/batch` | Blocked | Route is intentionally unregistered: structured and document-backed amendments do not have an authoritative non-null bill and title policy, and the query lacks the complete contract filters. Persist and backfill that policy, then add independent per-bill canonical pages and cursors with item-isolated errors, plus database smoke and parity. |
+| GET | `/api/bills/{billId}` | Blocked | Route is intentionally unregistered: the query service does not retain the complete canonical child/provenance shape or independent child cursors. Strict `BillDetail` projector coverage exists; unblock with the data-layer projection, then add envelope smoke and live parity. |
+| GET | `/api/bills/{billId}/timeline` | Blocked | Route is intentionally unregistered: historical action/vote rows do not satisfy the strict discriminated canonical timeline union or requested filtering. Strict ISO date/RFC 3339 timeline projector coverage exists; unblock with data-layer construction/filtering and live parity. |
+| GET | `/api/bills/{billId}/related` | Blocked | Route is intentionally unregistered: related-bill rows lack immutable relation provenance, direction, and constrained classification. Persist those facts, then add scoped semantic availability as a typed 503 and stable keyset paging for exact canonical hits before registering it. |
+| GET | `/api/bills/{billId}/sections` | Blocked | Route is intentionally unregistered: bill text traversal has no persisted/backfilled page mapping or all-processed-version keyset traversal, and cannot preserve repeated document/version filters across pages. Add those durable mappings and traversal semantics before registering it. |
+| GET | `/api/bills/{billId}/amendments` | Blocked | Route is intentionally unregistered: structured and document-backed amendments do not have an authoritative non-null bill and title policy, and the query lacks the complete contract filters. Persist and backfill that policy, then add the strict canonical summary projection and stable paging before registering it. |
+| GET | `/api/bills/{billId}/votes` | Blocked | Route is intentionally unregistered: votes lack the required publisher-local date, normalized result and nine-bucket counts, complete canonical provenance, publisher position sequence, and contract filters. Persist and backfill those facts, add a complete `VoteDetail` page query, then prove live parity. |
 | GET | `/api/bills/{billId}/documents` | Blocked | Dedicated bill-document collection query is missing. |
-| GET | `/api/bills/{billId}/changes` | In progress | Reviewed scoped handler/tests exist; exact canonical projection, live database smoke, MCP parity, and commit remain. |
-| GET | `/api/amendments` | In progress | Reviewed handler exists; full filters, exact canonical projection, live parity, and commit remain. |
-| POST | `/api/amendments/batch` | In progress | Reviewed item-isolation foundation exists; exact detail projection, live parity, and commit remain. |
-| GET | `/api/amendments/{amendmentId}` | In progress | Reviewed handler exists; exact canonical/provenance projection, live parity, and commit remain. |
-| GET | `/api/votes` | In progress | Reviewed handler exists; ordering, complete filters, exact projection, live parity, and commit remain. |
-| POST | `/api/votes/batch` | In progress | Reviewed item-isolation test exists; exact detail projection, live parity, and commit remain. |
-| GET | `/api/votes/{voteId}` | In progress | Reviewed handler exists; exact roll-call/position projection, live parity, and commit remain. |
-| GET | `/api/votes/{voteId}/positions` | Blocked | Dedicated paginated position query is missing. |
-| GET | `/api/documents/{documentId}` | In progress | Reviewed handler exists; hosted/source URLs, extraction state, exact projection, live parity, and commit remain. |
-| GET | `/api/documents/{documentId}/sections` | In progress | Reviewed handler/page foundation exists; OCR/extraction metadata, exact projection, live parity, and commit remain. |
+| GET | `/api/bills/{billId}/changes` | Blocked | Route is intentionally unregistered: change events lack an immutable observation-time source snapshot. Joining the affected record live would rewrite historical values. Persist the canonical affected-record snapshot, typed change payload, provenance, and keyset order, then prove database/MCP parity before registering it. |
+| GET | `/api/amendments` | Blocked | Route is intentionally unregistered: the current mixed structured/document query returns persistence rows rather than `AmendmentSummary`; it lacks the contract filters and ordering, and nullable structured `billId` cannot satisfy the required canonical field. |
+| POST | `/api/amendments/batch` | Blocked | Route is intentionally unregistered: the raw item path cannot produce `AmendmentDetail` without fabricating detail relationships or returning a mixed noncanonical batch. |
+| GET | `/api/amendments/{amendmentId}` | Blocked | Route is intentionally unregistered: structured records lack a canonical document relation and document-backed records lack persisted OCR status needed for `DocumentSummary`; action dates/source URLs are nullable, so a complete canonical detail cannot be guaranteed. |
+| GET | `/api/votes` | Blocked | Route is intentionally unregistered: the query exposes raw votes without the required publisher-local date, normalized result, all nine count buckets, canonical provenance, jurisdiction binding, complete filters, or contract order. Persist/backfill the facts and add the canonical summary query before registering it. |
+| POST | `/api/votes/batch` | Blocked | Route is intentionally unregistered: raw vote and position rows cannot produce an exact `VoteDetail`; required vote provenance/date/count/result facts and canonical people are incomplete. Add a strict detail query and item-isolation/live parity coverage after the data repair. |
+| GET | `/api/votes/{voteId}` | Blocked | Route is intentionally unregistered: raw vote and position rows cannot produce an exact `VoteDetail`; required vote provenance/date/count/result facts and canonical people are incomplete. Add a strict detail query and live parity coverage after the data repair. |
+| GET | `/api/votes/{voteId}/positions` | Blocked | Dedicated paginated position query is missing; rows also lack the publisher sequence required for contract ordering and linked people can lack canonical provenance. |
+| GET | `/api/documents/{documentId}` | Blocked | Route is intentionally unregistered: document records lack durable OCR status and a routable artifact URL contract for hosted or source content. Persist and backfill those facts with canonical bill/version ownership, then add exact detail smoke and parity. |
+| GET | `/api/documents/{documentId}/sections` | Blocked | Route is intentionally unregistered: section rows have no persisted page mapping and the query lacks heading/page filters and stable order. Persist and backfill page mapping, then add the bounded canonical section page and live parity before registering it. |
 | GET | `/api/documents/{documentId}/sections/{sectionId}` | In progress | Canonical projector and contract exist; singular repository query, handler tests, live smoke/parity, and commit remain. |
-| GET | `/api/supporting-materials` | In progress | Reviewed handler exists; exact collection projection, complete filters, live parity, and commit remain. |
-| GET | `/api/supporting-materials/{materialId}` | In progress | Reviewed handler exists; exact canonical/provenance projection, live parity, and commit remain. |
+| GET | `/api/supporting-materials` | In progress | Canonical collection projection, bounded filters/sorts, and focused query/handler coverage exist; authenticated Railway smoke, live MCP parity, and commit remain. |
+| GET | `/api/supporting-materials/{materialId}` | In progress | Canonical detail/provenance projection and aggregate-count coverage exist; authenticated Railway smoke, live MCP parity, and commit remain. |
 | GET | `/api/supporting-materials/{materialId}/sections` | Blocked | Supporting-material section query is missing. |
 | GET | `/api/supporting-materials/{materialId}/sections/{sectionId}` | In progress | Canonical projector and contract exist; singular repository query, handler tests, live smoke/parity, and commit remain. |
-| GET | `/api/changes` | In progress | Reviewed handler exists; complete filters, exact projection, live parity, and commit remain. |
+| GET | `/api/changes` | Blocked | Route is intentionally unregistered: change events lack an immutable observation-time source snapshot. Joining the affected record live would rewrite historical values. Persist the canonical affected-record snapshot, typed change payload, provenance, documented filters, and keyset order, then prove database/MCP parity before registering it. |
 | POST | `/api/resources/batch` | Blocked | Cross-resource dispatcher and canonical union projection are missing. |
 
 ### Civic graph and events
 
 | Method | Path | State | Current gate |
 | --- | --- | --- | --- |
-| GET | `/api/people` | In progress | Reviewed handler/filter tests exist; exact `PersonSummary` projection, live database parity, and commit remain. |
-| GET | `/api/people/{personId}` | In progress | Reviewed handler exists; exact canonical detail/child metadata, live parity, and commit remain. |
+| GET | `/api/people` | Blocked | Route is intentionally unregistered: `people.source_url` and `is_active` are nullable, while canonical provenance and `isActive` are required; the query also lacks `party`/`sort` filters and stored aliases. Backfill provenance/activity and add the canonical query before registering it. |
+| GET | `/api/people/{personId}` | Blocked | Route is intentionally unregistered: no persisted aliases, image, public email, official URL, external identifiers, canonical person-jurisdiction set, or required term office title; membership role/provenance is incomplete. Add authoritative profile and relationship facts before registering it. |
 | GET | `/api/people/{personId}/bills` | Blocked | Role-aware sponsorship/action query is missing. |
 | GET | `/api/people/{personId}/amendments` | Blocked | Person-amendment relationship query is missing. |
 | GET | `/api/people/{personId}/votes` | Blocked | Person vote-position activity query is missing. |
 | GET | `/api/people/{personId}/memberships` | Blocked | Historical membership query is missing. |
 | GET | `/api/people/{personId}/terms/{termId}` | Blocked | Canonical projector exists; direct person-scoped term lookup and handler are missing. |
-| GET | `/api/organizations` | In progress | Reviewed handler exists; exact `OrganizationSummary` projection/filter smoke, live parity, and commit remain. |
-| GET | `/api/organizations/{organizationId}` | In progress | Reviewed handler exists; exact canonical detail/child metadata, live parity, and commit remain. |
+| GET | `/api/organizations` | Blocked | Route is intentionally unregistered: `source_url` and `is_active` are nullable, chamber values are unconstrained, and the query lacks `chamber`/`sort` filters. Backfill canonical provenance/activity and add constrained projection/filtering before registering it. |
+| GET | `/api/organizations/{organizationId}` | Blocked | Route is intentionally unregistered: no persisted description, website, public contact, or terms of reference; children are unbounded and memberships lack canonical embedded-record provenance. Add profile facts and bounded canonical child queries before registering it. |
 | GET | `/api/organizations/{organizationId}/members` | Blocked | Historical organization membership query is missing. |
 | GET | `/api/organizations/{organizationId}/memberships/{membershipId}` | Blocked | Canonical projector exists; direct organization-scoped membership lookup and handler are missing. |
 | GET | `/api/organizations/{organizationId}/meetings` | Blocked | `legislative_events` lacks a session relationship and authoritative local date, canonical organization relation, and typed location/virtual-access fields required for `MeetingSummary`; route is intentionally unregistered. |
 | GET | `/api/organizations/{organizationId}/bills` | Blocked | Organization-bill relationship query is missing. |
 | GET | `/api/organizations/{organizationId}/calendars` | Blocked | Durable calendar resources are not modeled. |
-| GET | `/api/meetings` | In progress | Reviewed handler exists; exact `MeetingSummary` projection/filter smoke, live parity, and commit remain. |
-| GET | `/api/meetings/{meetingId}` | In progress | Reviewed handler exists; exact canonical detail/child metadata, live parity, and commit remain. |
+| GET | `/api/meetings` | Blocked | Route is intentionally unregistered: `source_url` is nullable; location and virtual access are untyped JSON; no authoritative local date, session, or calendar relation exists; and the query lacks calendar, bill, classification, status, remote, and sort filters. Persist typed canonical facts before registering it. |
+| GET | `/api/meetings/{meetingId}` | Blocked | Route is intentionally unregistered: child collections are raw/unbounded; agenda rows lack title/status/amendment/material relations, event documents lack canonical links/classification, and outcome links lack description/classification/agenda relations. Add complete bounded child projections before registering it. |
 | GET | `/api/meetings/{meetingId}/agenda` | Blocked | Agenda-item query/projection is missing. |
 | GET | `/api/meetings/{meetingId}/agenda/{agendaItemId}` | Blocked | Canonical projector exists; direct meeting-scoped agenda-item lookup and handler are missing. |
 | GET | `/api/meetings/{meetingId}/documents` | Blocked | Event-document relationship query is missing. |
@@ -128,25 +128,25 @@ intentionally uncomposed and **Blocked**.
 
 | Method | Path | State | Current gate |
 | --- | --- | --- | --- |
-| POST | `/api/search/bills` | In progress | Reviewed validation/mode tests exist; actual model/rerank metadata, complete filters, canonical hits, live ranking parity, and commit remain. |
-| POST | `/api/search/amendments` | In progress | Reviewed validation exists; complete filters, actual model metadata, canonical hits, live ranking parity, and commit remain. |
-| POST | `/api/search/passages` | In progress | Reviewed bounds/duplicate validation exists; section-document-bill projection, full filters, model metadata, live parity, and commit remain. |
-| POST | `/api/search/supporting-materials` | In progress | Reviewed date/filter validation exists; canonical material mapping, model metadata, live parity, and commit remain. |
+| POST | `/api/search/bills` | In progress | Canonical bill hits, actual model/rerank metadata, every documented filter including BaseSearch `from`/`to` inclusive `BillSummary.updatedAt` bounds (a date-only upper bound includes that full UTC day), capped cursors, and focused handler/query/projection tests exist. Remaining gates: database-backed ranking/filter integration, authenticated Railway smoke, MCP parity, review, and commit. |
+| POST | `/api/search/amendments` | Blocked | Intentionally unregistered: `AmendmentSummary.billId` is required while structured amendment rows permit a null bill relationship. Define and backfill an authoritative relationship policy, then add independently retrieved structured and document records, complete filters, canonical hits, and actual model metadata. |
+| POST | `/api/search/passages` | Blocked | Intentionally unregistered: `DocumentSummary` requires durable OCR status, but `bill_documents` only persists processing status. Persist and backfill OCR state, then add canonical section-document-bill projection, highlight ranges, complete filters, and actual model metadata. |
+| POST | `/api/search/supporting-materials` | In progress | Canonical bounded-section hits, lexical/semantic/hybrid score and model metadata, all documented material/link/session/date filters, and hostile-Host-safe canonical URLs are implemented and focused-tested. Remaining gates: database-backed ranking/filter integration, authenticated Railway smoke, MCP parity, review, and commit. |
 | POST | `/api/search/all` | Blocked | Cross-product fusion and stable pagination policy are missing. |
-| POST | `/api/document-diffs` | In progress | Reviewed request-mapping test exists; exact counts/operations/provenance projection, pair validation, live smoke, and commit remain. |
+| POST | `/api/document-diffs` | Blocked | Intentionally unregistered: document canonical projection lacks durable OCR state, and the comparison service only returns section before/after text. Add OCR state plus an exact bounded diff engine with ownership and processing conflict semantics, granularity, operations and offsets, counts, cursors, hunk sources, and canonical document summaries. |
 | POST | `/api/research/answers` | Blocked | Approved generation provider, citation verifier, and budget controls are missing. |
 
 ### Subscriptions and webhooks
 
 | Method | Path | State | Current gate |
 | --- | --- | --- | --- |
-| GET | `/api/subscriptions` | Blocked | Reviewed uncomposed route/service foundation exists; bounded durable repository queries and composition/authorization adapter are missing. |
-| POST | `/api/subscriptions` | Blocked | Durable repository, encrypted 24-hour idempotency executor, matcher/materializer, and delivery executors are missing. |
-| GET | `/api/subscriptions/{subscriptionId}` | Blocked | Reviewed scope checks exist; durable repository and composition/authorization adapter are missing. |
-| PATCH | `/api/subscriptions/{subscriptionId}` | Blocked | Reviewed revision/validation foundation exists; durable revision transaction and encrypted replay executor are missing. |
-| DELETE | `/api/subscriptions/{subscriptionId}` | Blocked | Durable cancellation transaction, exact replay, audit/event persistence, and delivery shutdown are missing. |
-| GET | `/api/subscriptions/{subscriptionId}/events` | Blocked | Bounded repository contract exists; event matcher/materializer and durable event queries are missing. |
-| GET | `/api/subscriptions/{subscriptionId}/deliveries` | Blocked | Bounded repository contract exists; durable attempt repository and delivery workers are missing. |
+| GET | `/api/subscriptions` | Blocked | Reviewed uncomposed route/service foundation exists; the durable scope-aware repository and keyset list query now exist, but route composition/authorization and the documented filters remain. |
+| POST | `/api/subscriptions` | Blocked | Durable scope-aware repository, transactional event/audit writer, and encrypted 24-hour idempotency boundary now exist; matcher/materializer, delivery executors, and route composition/authorization remain. |
+| GET | `/api/subscriptions/{subscriptionId}` | Blocked | Reviewed scope checks and durable scope-aware lookup now exist; route composition/authorization adapter remains. |
+| PATCH | `/api/subscriptions/{subscriptionId}` | Blocked | Reviewed revision/validation foundation, durable scope/revision transaction, and encrypted replay boundary now exist; route composition/authorization adapter remains. |
+| DELETE | `/api/subscriptions/{subscriptionId}` | Blocked | Durable scope/revision cancellation, transactional event/audit writer, and encrypted replay boundary now exist; delivery shutdown and route composition/authorization remain. |
+| GET | `/api/subscriptions/{subscriptionId}/events` | Blocked | Durable scope-aware keyset event query now exists; documented filters, event matcher/materializer, and route composition/authorization remain. |
+| GET | `/api/subscriptions/{subscriptionId}/deliveries` | Blocked | Durable scope-aware keyset delivery query now exists; documented filters, attempt workers, and route composition/authorization remain. |
 | GET | `/api/webhooks` | Blocked | Reviewed uncomposed route/service foundation exists; durable repository and composition/authorization adapter are missing. |
 | POST | `/api/webhooks` | Blocked | Nominal encrypted-secret boundary exists; KMS protector, durable repository, encrypted replay, and verification executor are missing. |
 | GET | `/api/webhooks/{webhookId}` | Blocked | Reviewed scope checks exist; durable repository and composition adapter are missing. |
@@ -167,5 +167,5 @@ The MCP remains on its current application service until all of these are true:
 - the remote canary shows acceptable latency and no authorization or provider regression.
 
 The current release evidence and remaining MCP-cutover gate are recorded in
-[the Railway API release record](http-api-railway-release.md). The endpoint matrix is 38 **In progress**, 47
+[the Railway API release record](http-api-railway-release.md). The endpoint matrix is 7 **In progress**, 78
 **Blocked**, and 2 **Done** routes; the two scoped bill collections are the only completed endpoint rows.
