@@ -18,6 +18,12 @@ function renderPcbPlacements() {
   return pcbPlacementJson
 }
 
+function sourceComponentNames(circuitJson: ReturnType<typeof renderTestCircuit>): string[] {
+  return circuitJson.flatMap((element) =>
+    element.type === "source_component" && typeof element.name === "string" ? [element.name] : []
+  )
+}
+
 describe("production scoring architecture", () => {
   it("contains the independent scoring and application domains", () => {
     const circuitJson = renderArchitecture()
@@ -57,6 +63,66 @@ describe("production scoring architecture", () => {
         "U_APP_REGULATOR"
       ])
     )
+  })
+
+  it("keeps the extracted scoring-domain composition and logical board envelope stable", () => {
+    const circuitJson = renderArchitecture()
+    const scoringDomainReferences = [
+      "J_L",
+      "J_R",
+      "U_ESD_L",
+      "U_ESD_R",
+      "U_FRONTEND_L",
+      "U_FRONTEND_R",
+      "J_PISTE",
+      "U_PISTE_FRONTEND",
+      "U_STM32",
+      "U_VREF",
+      "U_STM_WATCHDOG",
+      "U_STM_SUPERVISOR",
+      "R_STM_WD_CWD",
+      "C_STM_WD_BYPASS",
+      "C_STM_SUPERVISOR_CT",
+      "C_STM_SUPERVISOR_BYPASS",
+      "U_ISOLATED_POWER",
+      "U_SCORING_LDO",
+      "U_LINE_SOURCE_A",
+      "U_LINE_SOURCE_B",
+      "U_LINE_SINK_A",
+      "U_LINE_SINK_B"
+    ]
+    const traceNames = circuitJson.flatMap((element) =>
+      element.type === "source_trace" && "display_name" in element && typeof element.display_name === "string"
+        ? [element.display_name]
+        : []
+    )
+
+    expect(
+      sourceComponentNames(circuitJson)
+        .filter((name) => scoringDomainReferences.includes(name))
+        .sort()
+    ).toEqual(scoringDomainReferences.sort())
+    expect(traceNames).toEqual(
+      expect.arrayContaining([
+        "U_FRONTEND_L.SENSE_A to U_STM32.LEFT_A",
+        "U_FRONTEND_L.SENSE_B to U_STM32.LEFT_B",
+        "U_FRONTEND_L.SENSE_C to U_STM32.LEFT_C",
+        "U_FRONTEND_R.SENSE_A to U_STM32.RIGHT_A",
+        "U_FRONTEND_R.SENSE_B to U_STM32.RIGHT_B",
+        "U_FRONTEND_R.SENSE_C to U_STM32.RIGHT_C",
+        "U_VREF.VOUT to U_STM32.VREF",
+        "U_STM32.WD_KICK to U_STM_WATCHDOG.WDI",
+        "U_STM_WATCHDOG.RESET to U_STM32.NRST",
+        "U_STM_SUPERVISOR.RESET to U_STM32.NRST",
+        "U_ISOLATED_POWER.S5 to U_SCORING_LDO.S5",
+        "U_SCORING_LDO.S3_3 to net.S3_3"
+      ])
+    )
+    expect(renderPcbPlacements().find((element) => element.type === "pcb_board")).toMatchObject({
+      width: 160,
+      height: 100,
+      num_layers: 4
+    })
   })
 
   it("uses separate scoring and application ground nets", () => {
@@ -360,6 +426,37 @@ describe("production scoring architecture", () => {
     expect(audio?.mpn).toBe("TAS2505TRGERQ1")
     expect(sourceComponents).toHaveLength(1)
     expect(sourceComponents[0]).toMatchObject({ manufacturer_part_number: "TAS2505TRGERQ1" })
+  })
+
+  it("keeps the extracted service-support components and buses intact", () => {
+    const circuitJson = renderArchitecture()
+    const sourceNames = sourceComponentNames(circuitJson)
+    const traceNames = circuitJson.flatMap((element) =>
+      element.type === "source_trace" && "display_name" in element && typeof element.display_name === "string"
+        ? [element.display_name]
+        : []
+    )
+
+    const serviceComponentStart = sourceNames.indexOf("U_FIELD_SERIAL")
+    expect(sourceNames.slice(serviceComponentStart, serviceComponentStart + 5)).toEqual([
+      "U_FIELD_SERIAL",
+      "J_FIELD_SERIAL",
+      "U_FRAM",
+      "U_RTC",
+      "U_SECURE_ELEMENT"
+    ])
+    expect(traceNames).toEqual(
+      expect.arrayContaining([
+        "U_ESP32.I2C_SDA to U_RTC.SDA",
+        "U_ESP32.I2C_SCL to U_RTC.SCL",
+        "U_ESP32.I2C_SDA to U_SECURE_ELEMENT.SDA",
+        "U_ESP32.I2C_SCL to U_SECURE_ELEMENT.SCL",
+        "U_ESP32.APP_SPI_SCK to U_FRAM.SCK",
+        "U_ESP32.APP_SPI_MOSI to U_FRAM.MOSI",
+        "U_ESP32.APP_SPI_MISO to U_FRAM.MISO",
+        "U_ESP32.FRAM_CS to U_FRAM.CS"
+      ])
+    )
   })
 
   it("models the selected application 3.3 V regulator and its safe support network", () => {
