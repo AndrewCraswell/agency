@@ -650,3 +650,39 @@ truth.
 - Bounded remediation: make one phase-profile registry canonical and derive the ordered public ID tuple, type, guard, and lookup from it while preserving exact public order and profiles.
 - Acceptance: one literal ID source remains; uniqueness and exact profile coverage are tested; all existing phase, weapon, endpoint, and cycle behavior is unchanged.
 - Non-goals: no vocabulary, endpoint-template, physical-alias, scoring-authority, or generic schema redesign.
+
+## SD-024: share resistance interval validation
+
+- Priority: `P1`
+- State: `done`
+- Latest state: Root review approved one bounded resistance-range helper for epée, foil, and sabre. The helper now rejects partial measurements, invalid integers, and unsafe upper-bound sums consistently; 137 focused tests plus app types, lint, and format checks pass. Delivered in `53b4e03`.
+- Affected files: `apps/scoring/src/resistance-range.ts`, `epee-resistance.ts`, `foil-insulation.ts`, `sabre.ts`, and focused tests.
+- Description: the three weapon modules independently validated paired resistance and uncertainty values and constructed conservative ranges.
+- Impact: epée could emit an unsafe-integer upper bound that foil and sabre rejected, and future range-policy changes required three synchronized implementations.
+- Bounded remediation: use one app-local range validator and constructor while retaining weapon-specific errors, classifications, and thresholds.
+- Acceptance: overflow, partial-null, valid, and boundary vectors agree across all three modules; one implementation owns paired-value and safe-range rules.
+- Non-goals: no scorer merge, threshold change, public wire change, or generic validation framework.
+
+## SD-025: centralize event-capture decision-record construction
+
+- Priority: `P2`
+- State: `done`
+- Latest state: Root review approved one private DecisionRecord parser-input constructor shared by validation and final capture. Canonical key order, record IDs, timestamps, capture windows, and serialized output remain unchanged; 7 focused tests plus app types, lint, and format checks pass. Delivered in `7c01e73`.
+- Affected files: `apps/scoring/src/event-capture.ts` and its focused tests.
+- Description: authoritative-decision validation and final record creation independently assembled nearly identical parser inputs.
+- Impact: a DecisionRecord schema change could update one construction path but leave the other stale.
+- Bounded remediation: route both call sites through one private constructor while retaining capture-specific validation ownership.
+- Acceptance: one canonical construction path remains and existing validation timing, IDs, windows, and outputs are byte-equivalent.
+- Non-goals: no schema revision, record-ID change, generic record builder, or altered validation ownership.
+
+## SD-026: extract the observatory browser client from inline HTML
+
+- Priority: `P2`
+- State: `ready`
+- Latest state: Read-only audit found the committed observatory client embedded as a roughly 1,165-line inline module with little behavior-level browser coverage. The simulator migration must be reconciled before implementation to avoid overlapping its uncommitted replacement UI.
+- Affected files: `apps/scoring/observatory/index.html`, a future app-local client module, and observatory browser/integration tests.
+- Description: one inline module combines state management, rendering, canvas drawing, playback timers, selection, API calls, and error handling.
+- Impact: selection, run controls, playback, rejected/skipped rendering, accessibility state, and startup failures can regress while string-level integration assertions still pass.
+- Bounded remediation: extract a small compiled client with testable state and rendering seams, then add behavior-level DOM/browser coverage.
+- Acceptance: HTML becomes a thin bootstrap shell; loading, selection, run-all/run-single, playback, rejection, API failure, and no-console-error startup are covered; server and oracle checks remain green.
+- Non-goals: no UI redesign, scoring-rule change, display-contract change, or duplication of SD-018 live-build coherence work.
