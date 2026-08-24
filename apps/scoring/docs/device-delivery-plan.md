@@ -203,7 +203,7 @@ frozen enough to complete the EVT schematic and layout.
 
 | ID | Status | Latest state | Deliverable | Depends on | Acceptance |
 | --- | --- | --- | --- | --- | --- |
-| M4-01 | backlog | Next after M0-01, M0-03: Analog simulation audit against all rule boundaries. | Analog simulation audit against all rule boundaries | M0-01, M0-03 | Model cases cover 0-500 ohm paths, declared capacitance range, tolerances, temperature, and pulse widths |
+| M4-01 | done | Delivered and root-approved: 786 immutable model-screen cases cover normal, guarded, unpowered, tolerance, temperature, pulse-width, and reference boundaries with committed-source digests and explicit no-credit physical follow-ups. | Analog simulation audit against all rule boundaries | M0-01, M0-03 | Model cases cover 0-500 ohm paths, declared capacitance range, tolerances, temperature, and pulse widths |
 | M4-02 | backlog | Next after M4-01: Final candidate clamp diode and rail-protection network. | Final candidate clamp diode and rail-protection network | M4-01 | Leakage, charge injection, capacitance, surge path, and MCU injected-current limits are calculated with vendor models |
 | M4-03 | backlog | Next after M4-01, M4-02: Source/sink switch, resistor, reference, and ADC error budget. | Source/sink switch, resistor, reference, and ADC error budget | M4-01, M4-02 | Worst-case threshold error meets the fixture target with explicit calibration assumptions |
 | M4-04 | backlog | Next after M4-02, M4-03: Single-channel sensing coupon schematic and verified footprints. | Single-channel sensing coupon schematic and verified footprints | M4-02, M4-03 | ERC passes; footprints are checked against manufacturer drawings by a second reviewer |
