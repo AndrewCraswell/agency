@@ -24,7 +24,9 @@ describe("Railway deployment contract", () => {
     )
     expect(dockerfile).toContain("pnpm --filter legislation build")
     expect(dockerfile).not.toContain("pnpm --filter ./...")
-    expect(dockerfile).toContain("pnpm --filter legislation deploy --prod --legacy --force /opt/legislation")
+    expect(dockerfile).toContain(
+      "pnpm --filter legislation deploy --prod --legacy --force --ignore-scripts /opt/legislation"
+    )
     expect(runtime).toContain("COPY --from=build")
     expect(runtime).toContain("ENV LEGISLATION_HOST=0.0.0.0")
     expect(runtime).toContain("USER 10001")

@@ -29,7 +29,7 @@ COPY apps/legislation/pnpm-workspace.railway.yaml ./pnpm-workspace.yaml
 # public registry. The isolated workspace installs only legislation's closure.
 RUN pnpm install --no-frozen-lockfile --trust-lockfile --update-checksums --ignore-scripts --filter legislation...
 RUN pnpm --filter legislation build
-RUN pnpm --filter legislation deploy --prod --legacy --force /opt/legislation
+RUN pnpm --filter legislation deploy --prod --legacy --force --ignore-scripts /opt/legislation
 
 FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 
