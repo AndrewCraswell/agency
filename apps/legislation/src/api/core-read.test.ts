@@ -337,6 +337,83 @@ describe("core read API handler", () => {
     })
   })
 
+  it("forwards both parent IDs to the singular repository reads and uses resource envelopes", async () => {
+    const calls: {
+      document?: Readonly<{ documentId: string; sectionId: string }>
+      material?: Readonly<{ materialId: string; sectionId: string }>
+    } = {}
+    const base = service()
+    const baseDocumentSection = base.getDocumentSection
+    const baseSupportingMaterialSection = base.getSupportingMaterialSection
+    if (baseDocumentSection === undefined || baseSupportingMaterialSection === undefined) {
+      throw new Error("Section fixtures must include both singular repository reads")
+    }
+    const baseUrl = await startServer({
+      ...base,
+      getDocumentSection: async (input) => {
+        calls.document = input
+        return await baseDocumentSection(input)
+      },
+      getSupportingMaterialSection: async (input) => {
+        calls.material = input
+        return await baseSupportingMaterialSection(input)
+      }
+    })
+    const documentPath = "/api/documents/document%3A1%2Ftext/sections/document-section%3A1%2Fpart"
+    const materialPath = "/api/supporting-materials/material%3A1%2Freport/sections/material-section%3A1%2Fpart"
+    const [document, material] = await Promise.all([
+      fetch(`${baseUrl}${documentPath}`),
+      fetch(`${baseUrl}${materialPath}`)
+    ])
+
+    expect(document.status).toBe(200)
+    expect(material.status).toBe(200)
+    expect(calls).toEqual({
+      document: { documentId: "document:1/text", sectionId: "document-section:1/part" },
+      material: { materialId: "material:1/report", sectionId: "material-section:1/part" }
+    })
+    await expect(document.json()).resolves.toMatchObject({
+      data: {
+        canonicalUrl: "http://127.0.0.1:3100/api/documents/document%3A1%2Ftext/sections/document-section%3A1%2Fpart",
+        documentId: "document:1/text",
+        type: "document-section"
+      },
+      links: { self: documentPath },
+      meta: { warnings: [] }
+    })
+    await expect(material.json()).resolves.toMatchObject({
+      data: {
+        canonicalUrl:
+          "http://127.0.0.1:3100/api/supporting-materials/material%3A1%2Freport/sections/material-section%3A1%2Fpart",
+        materialId: "material:1/report",
+        type: "supporting-material-section"
+      },
+      links: { self: materialPath },
+      meta: { warnings: [] }
+    })
+  })
+
+  it("fails closed for malformed supporting-material section provenance", async () => {
+    const baseUrl = await startServer({
+      ...service(),
+      getSupportingMaterialSection: async ({ materialId, sectionId }) => ({
+        material: {
+          createdAt: new Date("2026-08-20T15:00:00Z"),
+          id: materialId,
+          sourceUrl: "not a URL",
+          updatedAt: new Date("2026-08-20T15:00:00Z")
+        },
+        section: { contentHash: "b".repeat(64), heading: null, id: sectionId, ordinal: 0, text: "Text" }
+      })
+    })
+
+    const response = await fetch(`${baseUrl}/api/supporting-materials/material%3A1/sections/section%3A1`)
+    expect(response.status).toBe(422)
+    await expect(response.json()).resolves.toMatchObject({
+      error: { category: "unprocessable", retryable: false }
+    })
+  })
+
   it("projects supporting-material collections with strict contract filters and ordering", async () => {
     let received: Parameters<CoreReadQueryApi["searchSupportingMaterials"]>[0] | undefined
     const baseUrl = await startServer({

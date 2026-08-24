@@ -3,7 +3,9 @@ import { CanonicalProjectionError } from "./canonical-projection.js"
 import {
   projectBillDetailRead,
   projectBillTimelineRead,
+  projectDocumentSectionRead,
   projectSupportingMaterialDetailRead,
+  projectSupportingMaterialSectionRead,
   projectSupportingMaterialSummaryRead
 } from "./canonical-read.js"
 
@@ -319,5 +321,98 @@ describe("canonical supporting-material reads", () => {
     expect(() => projectSupportingMaterialSummaryRead(invalid, "https://api.example.test")).toThrow(
       CanonicalProjectionError
     )
+  })
+})
+
+describe("canonical section reads", () => {
+  it("projects parent-scoped document and supporting-material sections", () => {
+    const documentSection = projectDocumentSectionRead(
+      {
+        document: {
+          billId: "bill:us:119:hr:1",
+          createdAt: "2026-08-20T15:00:00.000Z",
+          id: "document:us:119:hr:1:text",
+          sourceUrl: "https://publisher.example/documents/hr-1.txt",
+          updatedAt: "2026-08-20T15:00:00.000Z"
+        },
+        section: {
+          contentHash: "a".repeat(64),
+          heading: "Section 1",
+          id: "document-section:1",
+          ordinal: 0,
+          sourceEndOffset: 12,
+          sourceStartOffset: 0,
+          text: "Section text"
+        }
+      },
+      "https://api.example.test"
+    )
+    const supportingMaterialSection = projectSupportingMaterialSectionRead(
+      {
+        material: {
+          createdAt: "2026-08-20T15:00:00.000Z",
+          id: "material:us:119:report:1",
+          sourceUrl: "https://publisher.example/materials/report-1.txt",
+          updatedAt: "2026-08-20T15:00:00.000Z"
+        },
+        section: {
+          contentHash: "b".repeat(64),
+          heading: null,
+          id: "material-section:1",
+          ordinal: 0,
+          text: "Report text"
+        }
+      },
+      "https://api.example.test"
+    )
+
+    expect(documentSection).toMatchObject({
+      billId: "bill:us:119:hr:1",
+      canonicalUrl:
+        "https://api.example.test/api/documents/document%3Aus%3A119%3Ahr%3A1%3Atext/sections/document-section%3A1",
+      documentId: "document:us:119:hr:1:text",
+      endOffset: 12,
+      pageEnd: null,
+      pageStart: null,
+      startOffset: 0,
+      type: "document-section"
+    })
+    expect(supportingMaterialSection).toMatchObject({
+      canonicalUrl:
+        "https://api.example.test/api/supporting-materials/material%3Aus%3A119%3Areport%3A1/sections/material-section%3A1",
+      materialId: "material:us:119:report:1",
+      pageEnd: null,
+      pageStart: null,
+      type: "supporting-material-section"
+    })
+    expect(documentSection.sources).toEqual([
+      expect.objectContaining({ isOfficial: false, provider: "publisher.example" })
+    ])
+    expect(supportingMaterialSection.sources).toEqual([
+      expect.objectContaining({ isOfficial: false, provider: "publisher.example" })
+    ])
+  })
+
+  it("rejects malformed section source provenance before projection", () => {
+    expect(() =>
+      projectSupportingMaterialSectionRead(
+        {
+          material: {
+            createdAt: "2026-08-20T15:00:00.000Z",
+            id: "material:1",
+            sourceUrl: "not a URL",
+            updatedAt: "2026-08-20T15:00:00.000Z"
+          },
+          section: {
+            contentHash: "a".repeat(64),
+            heading: null,
+            id: "section:1",
+            ordinal: 0,
+            text: "Text"
+          }
+        },
+        "https://api.example.test"
+      )
+    ).toThrow(CanonicalProjectionError)
   })
 })

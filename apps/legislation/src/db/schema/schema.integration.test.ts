@@ -197,6 +197,15 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       sourceStartOffset: 0,
       text: "Section 1. This act concerns legislative data."
     })
+    const queryService = new LegislationQueryService(database)
+    const documentSectionId = `${documentId}:section:1`
+    await expect(queryService.getDocumentSection({ documentId, sectionId: documentSectionId })).resolves.toMatchObject({
+      document: { billId, id: documentId },
+      section: { documentId, id: documentSectionId }
+    })
+    await expect(
+      queryService.getDocumentSection({ documentId: relatedBillId, sectionId: documentSectionId })
+    ).rejects.toMatchObject({ category: "not_found" })
     await database.insert(schema.billRelations).values({
       billId,
       classification: "companion",
@@ -1426,6 +1435,17 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       truncated: false
     })
     expect(detailResult.material).not.toHaveProperty("text")
+    const section = detailResult.sections[0]
+    if (section === undefined) {
+      throw new Error("Supporting-material processing should persist a section")
+    }
+    await expect(service.getSupportingMaterialSection({ materialId, sectionId: section.id })).resolves.toMatchObject({
+      material: { id: materialId },
+      section: { id: section.id, materialId }
+    })
+    await expect(
+      service.getSupportingMaterialSection({ materialId: `${materialId}:other`, sectionId: section.id })
+    ).rejects.toMatchObject({ category: "not_found" })
 
     const retrievalService = new LegislationQueryService(database, retrievalClient)
     const semanticSearch = await retrievalService.searchSupportingMaterials({
