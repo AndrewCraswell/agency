@@ -177,7 +177,7 @@ const definition = {
   },
   signalPath: {
     sourceModule: "ESP32-S3-WROOM-1U-N16R2",
-    levelTranslators: ["U_HUB75_BUF_A", "U_HUB75_BUF_B"],
+    levelTranslators: ["U_DISPLAY_BUFFER_A", "U_DISPLAY_BUFFER_B"],
     destinationConnector: "J_HUB75",
     destinationPanel: "DISPLAY_PANEL_2277_HUB75_INPUT",
     map: signalMap

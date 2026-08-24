@@ -1,3 +1,4 @@
+import { applicationDisplayHub75SupportPart } from "./application-display-carrier-support.js"
 import { manufacturerFootprintProps } from "./manufacturer-footprint-adapter.js"
 import { isolatedInterboardPinLabels, physicalBoardContract } from "./physical-board-contract.js"
 
@@ -348,8 +349,8 @@ export default function ApplicationDisplayCarrierCircuit() {
 
       <chip
         name="U_DISPLAY_BUFFER_A"
-        manufacturerPartNumber="SN74AHCT245PWR"
-        footprint="tssop20"
+        manufacturerPartNumber={applicationDisplayHub75SupportPart("U_DISPLAY_BUFFER_A").mpn}
+        footprint={applicationDisplayHub75SupportPart("U_DISPLAY_BUFFER_A").footprint}
         pinLabels={{
           pin1: "DIR_TO_PANEL",
           pin2: "R1_IN",
@@ -375,8 +376,8 @@ export default function ApplicationDisplayCarrierCircuit() {
       />
       <chip
         name="U_DISPLAY_BUFFER_B"
-        manufacturerPartNumber="SN74AHCT245PWR"
-        footprint="tssop20"
+        manufacturerPartNumber={applicationDisplayHub75SupportPart("U_DISPLAY_BUFFER_B").mpn}
+        footprint={applicationDisplayHub75SupportPart("U_DISPLAY_BUFFER_B").footprint}
         pinLabels={{
           pin1: "DIR_TO_PANEL",
           pin2: "C_IN",
@@ -384,7 +385,13 @@ export default function ApplicationDisplayCarrierCircuit() {
           pin4: "CLK_IN",
           pin5: "LAT_IN",
           pin6: "OE_N_IN",
+          pin7: "UNUSED_A6_PD",
+          pin8: "UNUSED_A7_PD",
+          pin9: "UNUSED_A8_PD",
           pin10: "GND",
+          pin11: "UNUSED_B8_NC",
+          pin12: "UNUSED_B7_NC",
+          pin13: "UNUSED_B6_NC",
           pin14: "OE_N_OUT",
           pin15: "LAT_OUT",
           pin16: "CLK_OUT",
@@ -397,43 +404,88 @@ export default function ApplicationDisplayCarrierCircuit() {
       {hub75Signals.map(([espSignal]) => (
         <resistor
           key={espSignal}
-          name={`R_${espSignal}_${espSignal === "HUB75_OE_N" ? "PU" : "PD"}`}
+          name={espSignal === "HUB75_OE_N" ? "R_HUB75_OE_PULLUP" : `R_${espSignal}_PD`}
+          manufacturerPartNumber={
+            applicationDisplayHub75SupportPart(espSignal === "HUB75_OE_N" ? "R_HUB75_OE_PULLUP" : `R_${espSignal}_PD`)
+              .mpn
+          }
           resistance="10k"
           tolerance="1%"
-          footprint="0603"
+          footprint={
+            applicationDisplayHub75SupportPart(espSignal === "HUB75_OE_N" ? "R_HUB75_OE_PULLUP" : `R_${espSignal}_PD`)
+              .footprint
+          }
         />
       ))}
-      <resistor name="R_HUB75_PANEL_OE_PULLUP" resistance="10k" tolerance="1%" footprint="0603" />
+      {(["A6", "A7", "A8"] as const).map((input) => (
+        <resistor
+          key={input}
+          name={`R_HUB75_UNUSED_B_${input}_PD`}
+          manufacturerPartNumber={applicationDisplayHub75SupportPart(`R_HUB75_UNUSED_B_${input}_PD`).mpn}
+          resistance="10k"
+          tolerance="1%"
+          footprint={applicationDisplayHub75SupportPart(`R_HUB75_UNUSED_B_${input}_PD`).footprint}
+        />
+      ))}
+      <resistor
+        name="R_HUB75_PANEL_OE_PULLUP"
+        manufacturerPartNumber={applicationDisplayHub75SupportPart("R_HUB75_PANEL_OE_PULLUP").mpn}
+        resistance="10k"
+        tolerance="1%"
+        footprint={applicationDisplayHub75SupportPart("R_HUB75_PANEL_OE_PULLUP").footprint}
+      />
+      <capacitor
+        name="C_HUB75_BUF_A_BYPASS"
+        manufacturerPartNumber={applicationDisplayHub75SupportPart("C_HUB75_BUF_A_BYPASS").mpn}
+        capacitance="100nF"
+        footprint={applicationDisplayHub75SupportPart("C_HUB75_BUF_A_BYPASS").footprint}
+      />
+      <capacitor
+        name="C_HUB75_BUF_B_BYPASS"
+        manufacturerPartNumber={applicationDisplayHub75SupportPart("C_HUB75_BUF_B_BYPASS").mpn}
+        capacitance="100nF"
+        footprint={applicationDisplayHub75SupportPart("C_HUB75_BUF_B_BYPASS").footprint}
+      />
       {(["A", "B"] as const).flatMap((bank) => [
         <chip
           key={`${bank}-enable`}
           name={`Q_DISPLAY_BUFFER_${bank}_ENABLE`}
-          manufacturerPartNumber="BSS138AKA"
-          footprint="sot23"
+          manufacturerPartNumber={applicationDisplayHub75SupportPart(`Q_DISPLAY_BUFFER_${bank}_ENABLE`).mpn}
+          footprint={applicationDisplayHub75SupportPart(`Q_DISPLAY_BUFFER_${bank}_ENABLE`).footprint}
           pinLabels={{ pin1: "G", pin2: "S", pin3: "D" }}
         />,
         <resistor
           key={`${bank}-pullup`}
           name={`R_BUFFER_${bank}_ENABLE_PULLUP`}
+          manufacturerPartNumber={applicationDisplayHub75SupportPart(`R_BUFFER_${bank}_ENABLE_PULLUP`).mpn}
           resistance="10k"
           tolerance="1%"
-          footprint="0603"
+          footprint={applicationDisplayHub75SupportPart(`R_BUFFER_${bank}_ENABLE_PULLUP`).footprint}
         />,
         <resistor
           key={`${bank}-gate`}
           name={`R_BUFFER_${bank}_GATE`}
+          manufacturerPartNumber={applicationDisplayHub75SupportPart(`R_BUFFER_${bank}_GATE`).mpn}
           resistance="10k"
           tolerance="1%"
-          footprint="0603"
+          footprint={applicationDisplayHub75SupportPart(`R_BUFFER_${bank}_GATE`).footprint}
         />,
         <resistor
           key={`${bank}-pd`}
           name={`R_BUFFER_${bank}_GATE_PD`}
+          manufacturerPartNumber={applicationDisplayHub75SupportPart(`R_BUFFER_${bank}_GATE_PD`).mpn}
           resistance="100k"
           tolerance="1%"
-          footprint="0603"
+          footprint={applicationDisplayHub75SupportPart(`R_BUFFER_${bank}_GATE_PD`).footprint}
         />
       ])}
+      <pinheader name="J_DISPLAY_DISCONNECT" pinCount={2} pinLabels={["V5_SOURCE", "V5_DISPLAY_LIMITED"]} />
+      <pinheader
+        name="J_LINK_DISPLAY"
+        manufacturerPartNumber="39-28-1023"
+        pinCount={2}
+        pinLabels={["V5_DISPLAY_LIMITED_IN", "V5_DISPLAY_LIMITED_OUT"]}
+      />
       <pinheader
         name="J_HUB75"
         pinCount={16}
@@ -442,9 +494,10 @@ export default function ApplicationDisplayCarrierCircuit() {
       />
 
       <trace from="J_ISO_SCORING_BOUNDARY.V5_PRIMARY" to="net.V5" />
-      <trace from="J_ISO_SCORING_BOUNDARY.APP_GND_PRIMARY" to="net.GND" />
+      <trace from="J_ISO_SCORING_BOUNDARY.APP_GND_PRIMARY" to="net.APP_GND" />
       <trace from="J_ISO_SCORING_BOUNDARY.V3_3_APP" to="net.V3_3" />
-      <trace from="J_ISO_SCORING_BOUNDARY.APP_GND_LOGIC" to="net.GND" />
+      <trace from="J_ISO_SCORING_BOUNDARY.APP_GND_LOGIC" to="net.APP_GND" />
+      <trace from="net.APP_GND" to="net.GND" />
       <trace from="J_ISO_SCORING_BOUNDARY.SCORE_SCK" to="U_ESP32.SCORE_SCK" />
       <trace from="J_ISO_SCORING_BOUNDARY.SCORE_MOSI" to="U_ESP32.SCORE_MOSI" />
       <trace from="J_ISO_SCORING_BOUNDARY.SCORE_MISO" to="U_ESP32.SCORE_MISO" />
@@ -541,24 +594,37 @@ export default function ApplicationDisplayCarrierCircuit() {
         <trace
           key={`${espSignal}-bias-input`}
           from={`${buffer}.${input}`}
-          to={`R_${espSignal}_${espSignal === "HUB75_OE_N" ? "PU" : "PD"}.pin1`}
+          to={espSignal === "HUB75_OE_N" ? "R_HUB75_OE_PULLUP.pin1" : `R_${espSignal}_PD.pin1`}
         />,
         <trace
           key={`${espSignal}-bias-return`}
-          from={`R_${espSignal}_${espSignal === "HUB75_OE_N" ? "PU" : "PD"}.pin2`}
-          to={espSignal === "HUB75_OE_N" ? "net.V3_3" : "net.GND"}
+          from={espSignal === "HUB75_OE_N" ? "R_HUB75_OE_PULLUP.pin2" : `R_${espSignal}_PD.pin2`}
+          to={espSignal === "HUB75_OE_N" ? "net.V3_3" : "net.APP_GND"}
         />
       ])}
-      <trace from="U_DISPLAY_BUFFER_A.DIR_TO_PANEL" to="net.V5" />
-      <trace from="U_DISPLAY_BUFFER_B.DIR_TO_PANEL" to="net.V5" />
-      <trace from="U_DISPLAY_BUFFER_A.V5" to="net.V5" />
-      <trace from="U_DISPLAY_BUFFER_B.V5" to="net.V5" />
-      <trace from="U_DISPLAY_BUFFER_A.GND" to="net.GND" />
-      <trace from="U_DISPLAY_BUFFER_B.GND" to="net.GND" />
+      <trace from="net.V5" to="J_DISPLAY_DISCONNECT.V5_SOURCE" />
+      <trace from="J_DISPLAY_DISCONNECT.V5_DISPLAY_LIMITED" to="J_LINK_DISPLAY.V5_DISPLAY_LIMITED_IN" />
+      <trace from="J_LINK_DISPLAY.V5_DISPLAY_LIMITED_OUT" to="net.V5_DISPLAY_LIMITED" />
+      <trace from="U_DISPLAY_BUFFER_A.DIR_TO_PANEL" to="net.V5_DISPLAY_LIMITED" />
+      <trace from="U_DISPLAY_BUFFER_B.DIR_TO_PANEL" to="net.V5_DISPLAY_LIMITED" />
+      <trace from="U_DISPLAY_BUFFER_A.V5" to="net.V5_DISPLAY_LIMITED" />
+      <trace from="U_DISPLAY_BUFFER_B.V5" to="net.V5_DISPLAY_LIMITED" />
+      <trace from="U_DISPLAY_BUFFER_A.GND" to="net.APP_GND" />
+      <trace from="U_DISPLAY_BUFFER_B.GND" to="net.APP_GND" />
+      <trace from="U_DISPLAY_BUFFER_A.V5" to="C_HUB75_BUF_A_BYPASS.pin1" />
+      <trace from="C_HUB75_BUF_A_BYPASS.pin2" to="net.APP_GND" />
+      <trace from="U_DISPLAY_BUFFER_B.V5" to="C_HUB75_BUF_B_BYPASS.pin1" />
+      <trace from="C_HUB75_BUF_B_BYPASS.pin2" to="net.APP_GND" />
       <trace from="U_DISPLAY_BUFFER_B.OE_N_OUT" to="R_HUB75_PANEL_OE_PULLUP.pin1" />
-      <trace from="R_HUB75_PANEL_OE_PULLUP.pin2" to="net.V5" />
+      <trace from="R_HUB75_PANEL_OE_PULLUP.pin2" to="net.V5_DISPLAY_LIMITED" />
+      {(["A6", "A7", "A8"] as const).map((input) => (
+        <trace key={input} from={`U_DISPLAY_BUFFER_B.UNUSED_${input}_PD`} to={`R_HUB75_UNUSED_B_${input}_PD.pin1`} />
+      ))}
+      {(["A6", "A7", "A8"] as const).map((input) => (
+        <trace key={`${input}-gnd`} from={`R_HUB75_UNUSED_B_${input}_PD.pin2`} to="net.APP_GND" />
+      ))}
       {(["GND1", "GND2", "GND3"] as const).map((pin) => (
-        <trace key={pin} from={`J_HUB75.${pin}`} to="net.GND" />
+        <trace key={pin} from={`J_HUB75.${pin}`} to="net.APP_GND" />
       ))}
       {(["A", "B"] as const).flatMap((bank) => [
         <trace
@@ -566,13 +632,13 @@ export default function ApplicationDisplayCarrierCircuit() {
           from={`U_DISPLAY_BUFFER_${bank}.BUFFER_ENABLE_N`}
           to={`R_BUFFER_${bank}_ENABLE_PULLUP.pin1`}
         />,
-        <trace key={`${bank}-up`} from={`R_BUFFER_${bank}_ENABLE_PULLUP.pin2`} to="net.V5" />,
+        <trace key={`${bank}-up`} from={`R_BUFFER_${bank}_ENABLE_PULLUP.pin2`} to="net.V5_DISPLAY_LIMITED" />,
         <trace
           key={`${bank}-drain`}
           from={`Q_DISPLAY_BUFFER_${bank}_ENABLE.D`}
           to={`U_DISPLAY_BUFFER_${bank}.BUFFER_ENABLE_N`}
         />,
-        <trace key={`${bank}-source`} from={`Q_DISPLAY_BUFFER_${bank}_ENABLE.S`} to="net.GND" />,
+        <trace key={`${bank}-source`} from={`Q_DISPLAY_BUFFER_${bank}_ENABLE.S`} to="net.APP_GND" />,
         <trace key={`${bank}-reset`} from="U_ESP32.EN_RESET" to={`R_BUFFER_${bank}_GATE.pin1`} />,
         <trace key={`${bank}-gate`} from={`R_BUFFER_${bank}_GATE.pin2`} to={`Q_DISPLAY_BUFFER_${bank}_ENABLE.G`} />,
         <trace
@@ -580,7 +646,7 @@ export default function ApplicationDisplayCarrierCircuit() {
           from={`Q_DISPLAY_BUFFER_${bank}_ENABLE.G`}
           to={`R_BUFFER_${bank}_GATE_PD.pin1`}
         />,
-        <trace key={`${bank}-gate-gnd`} from={`R_BUFFER_${bank}_GATE_PD.pin2`} to="net.GND" />
+        <trace key={`${bank}-gate-gnd`} from={`R_BUFFER_${bank}_GATE_PD.pin2`} to="net.APP_GND" />
       ])}
 
       <trace from="U_ESP32.WD_KICK" to="U_ESP_WATCHDOG.WDI" />

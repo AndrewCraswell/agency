@@ -1,5 +1,6 @@
 import { Circuit } from "tscircuit"
 import { describe, expect, it } from "vitest"
+import { applicationDisplayHub75SupportParts } from "./application-display-carrier-support.js"
 import ApplicationDisplayCarrierCircuit, { hub75Signals } from "./application-display-carrier.circuit.js"
 import CommunicationsModuleCircuit from "./communications-module.circuit.js"
 import LogicalArchitectureCircuit from "./index.circuit.js"
@@ -164,6 +165,8 @@ describe("separate physical-board planning models", () => {
     expect(traceNames(applicationSource)).toEqual(
       expect.arrayContaining([
         "J_ISO_SCORING_BOUNDARY.V5_PRIMARY to net.V5",
+        "J_ISO_SCORING_BOUNDARY.APP_GND_PRIMARY to net.APP_GND",
+        "J_ISO_SCORING_BOUNDARY.APP_GND_LOGIC to net.APP_GND",
         "J_ISO_SCORING_BOUNDARY.V3_3_APP to net.V3_3",
         "J_ISO_SCORING_BOUNDARY.ESP_RESET_ASSERT to R_STM_RESET_GATE.pin1",
         "Q_ESP_RESET_STM.D to U_ESP32.EN_RESET",
@@ -254,16 +257,73 @@ describe("separate physical-board planning models", () => {
     }
     expect(traces).toEqual(
       expect.arrayContaining([
-        "U_DISPLAY_BUFFER_A.DIR_TO_PANEL to net.V5",
-        "U_DISPLAY_BUFFER_B.DIR_TO_PANEL to net.V5",
+        "J_DISPLAY_DISCONNECT.V5_SOURCE to net.V5",
+        "J_DISPLAY_DISCONNECT.V5_DISPLAY_LIMITED to J_LINK_DISPLAY.V5_DISPLAY_LIMITED_IN",
+        "J_LINK_DISPLAY.V5_DISPLAY_LIMITED_OUT to net.V5_DISPLAY_LIMITED",
+        "U_DISPLAY_BUFFER_A.DIR_TO_PANEL to net.V5_DISPLAY_LIMITED",
+        "U_DISPLAY_BUFFER_B.DIR_TO_PANEL to net.V5_DISPLAY_LIMITED",
+        "U_DISPLAY_BUFFER_A.V5 to net.V5_DISPLAY_LIMITED",
+        "U_DISPLAY_BUFFER_B.V5 to net.V5_DISPLAY_LIMITED",
+        "U_DISPLAY_BUFFER_A.GND to net.APP_GND",
+        "U_DISPLAY_BUFFER_B.GND to net.APP_GND",
         "U_DISPLAY_BUFFER_B.OE_N_OUT to R_HUB75_PANEL_OE_PULLUP.pin1",
+        "U_DISPLAY_BUFFER_A.V5 to C_HUB75_BUF_A_BYPASS.pin1",
+        "C_HUB75_BUF_A_BYPASS.pin2 to net.APP_GND",
+        "U_DISPLAY_BUFFER_B.V5 to C_HUB75_BUF_B_BYPASS.pin1",
+        "C_HUB75_BUF_B_BYPASS.pin2 to net.APP_GND",
+        "U_DISPLAY_BUFFER_B.UNUSED_A6_PD to R_HUB75_UNUSED_B_A6_PD.pin1",
+        "R_HUB75_UNUSED_B_A6_PD.pin2 to net.APP_GND",
+        "U_DISPLAY_BUFFER_B.UNUSED_A7_PD to R_HUB75_UNUSED_B_A7_PD.pin1",
+        "R_HUB75_UNUSED_B_A7_PD.pin2 to net.APP_GND",
+        "U_DISPLAY_BUFFER_B.UNUSED_A8_PD to R_HUB75_UNUSED_B_A8_PD.pin1",
+        "R_HUB75_UNUSED_B_A8_PD.pin2 to net.APP_GND",
         "Q_DISPLAY_BUFFER_A_ENABLE.D to U_DISPLAY_BUFFER_A.BUFFER_ENABLE_N",
         "U_ESP32.EN_RESET to R_BUFFER_A_GATE.pin1",
-        "J_HUB75.GND1 to net.GND",
-        "J_HUB75.GND2 to net.GND",
-        "J_HUB75.GND3 to net.GND"
+        "J_HUB75.GND1 to net.APP_GND",
+        "J_HUB75.GND2 to net.APP_GND",
+        "J_HUB75.GND3 to net.APP_GND"
       ])
     )
+    const bufferB = applicationSource.find(
+      (element) => element.type === "source_component" && element.name === "U_DISPLAY_BUFFER_B"
+    )
+    const bufferBId = bufferB?.type === "source_component" ? bufferB.source_component_id : undefined
+    const bufferBPorts = applicationSource.flatMap((element) =>
+      element.type === "source_port" && element.source_component_id === bufferBId ? element.port_hints : []
+    )
+    expect(bufferBPorts).toEqual(
+      expect.arrayContaining([
+        "UNUSED_A6_PD",
+        "UNUSED_A7_PD",
+        "UNUSED_A8_PD",
+        "UNUSED_B6_NC",
+        "UNUSED_B7_NC",
+        "UNUSED_B8_NC"
+      ])
+    )
+    expect(traces.some((trace) => trace.includes("UNUSED_B") && trace.includes("_NC"))).toBe(false)
+    expect(traces.some((trace) => trace.startsWith("U_DISPLAY_BUFFER") && trace.endsWith(" to net.V5"))).toBe(false)
+    expect(traces.some((trace) => trace.includes("HUB75") && trace.endsWith(" to net.GND"))).toBe(false)
+  })
+
+  it("extracts exactly one live carrier declaration for each BP-144 support component", () => {
+    expect(applicationDisplayHub75SupportParts).toHaveLength(29)
+    expect(new Set(applicationDisplayHub75SupportParts.map((part) => part.reference)).size).toBe(29)
+    for (const part of applicationDisplayHub75SupportParts) {
+      const sources = applicationSource.filter(
+        (element) => element.type === "source_component" && element.name === part.reference
+      )
+      expect(sources).toHaveLength(1)
+      const [source] = sources
+      expect(source).toMatchObject({ manufacturer_part_number: part.mpn })
+      expect(part).toMatchObject({
+        package: expect.any(String),
+        manufacturer: expect.any(String),
+        source: expect.any(String),
+        sourceUrl: expect.stringMatching(/^https:\/\//),
+        value: expect.any(String)
+      })
+    }
   })
 
   it("keeps physical ownership exact and disjoint from the communications module", () => {
