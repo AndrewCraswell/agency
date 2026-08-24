@@ -20,14 +20,34 @@ connection). The manufacturer's
 recommended 5-pad footprint remains source guidance only; BP-032 has no
 project footprint, CAD, generated artwork, or orientation approval for it.
 
+Every populated processor, isolator, reset/watchdog part, and selected
+processor-support part carries a manufacturer-primary identity and URL in the
+executable ledger. A URL-only mapping is explicitly source-unverified; it does
+not close manufacturer-source evidence. The bounded retained-byte batch is
+only `TPS3431SDRBR` and `TPS389033DSER`: their exact Texas Instruments primary
+PDFs are retained at `docs/evidence/bp-032/ti-tps3431.pdf` and
+`docs/evidence/bp-032/ti-tps3890.pdf`, with request identities,
+MPN/package/path/source URL, and SHA-256 digests frozen in the ledger. Tests
+enumerate that folder and read and hash every retained asset; omission, an
+extra asset, duplicate request identity, package/path mismatch, or digest
+drift fails. `GCM188R71H104KA57D` maps to its Murata primary URL but remains
+source-unverified in BP-032 because its retained bytes are owned by BP-125 and
+are not duplicated here. All other URL-only rows are likewise source-unverified
+until their own manufacturer bytes are retained.
+
+Retaining the two TI source files does not release geometry: drawing/CAD
+archive, generated artwork, and orientation review remain DENY.
+
 The STM32 HSE and LSE entries are DNP, with no MPN, oscillator, crystal, load,
 or bias network. The ESP32 oscillator remains module-integrated. The ledger
-extracts all 16 references in BP-125's processor-support contract. It reconciles
+extracts all 16 references in BP-125's processor-support contract: six exact
+BP-125 selections, two BP-123 reconciliations, and eight DNP-until-exact-selection
+rows. It reconciles
 `C_ESP_EN_DELAY` to BP-123's exact selection. The `R_STM_BOOT0` and
 `R_ESP_BOOT_PULLUP` rows consume BP-125's exact Yageo `RC0603FR-0710KL` source
 record, while `R_ESP_EN_PULLUP` retains its exact BP-123 selection and now has
 the same BP-125 source evidence. All three remain geometry-unclaimed; the
-other 12 references whose MPN remains intentionally TBD stay DNP until an
+other 8 references whose MPN remains intentionally TBD stay DNP until an
 exact selection is reviewed. The retained source digest is
 `EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497` for
 `docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf`. An added, removed,

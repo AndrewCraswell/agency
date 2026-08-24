@@ -101,16 +101,127 @@ function packageFor(mpn: string): string {
     "RC0603FR-07100KL": "0603",
     "RC0603FR-0710KL": "0603",
     SN74LVC2G07DCKR: "SC70-6",
-    TPS3431SDRBR: "VSON-8",
-    TPS389033DSER: "WSON-6"
+    TPS3431SDRBR: "VSON-8 (DRB), 3 mm × 3 mm",
+    TPS389033DSER: "WSON-6 (DSE), 1.5 mm × 1.5 mm"
   }
   const value = packages[mpn]
   if (value === undefined) throw new RangeError(`BP-032 has no reviewed package identity for ${mpn}`)
   return value
 }
 
+/**
+ * A product URL identifies the selected orderable but does not close source
+ * evidence. Only the bounded retained-byte records below are verified.
+ */
+const manufacturerPrimarySourceByMpn = {
+  BSS138AKA: { manufacturer: "Nexperia", url: "https://www.nexperia.com/product/BSS138AKA" },
+  C0603C104K3RACTU: {
+    manufacturer: "KEMET (Yageo Group)",
+    url: "https://search.kemet.com/component-documentation/download/specsheet/C0603C104K3RACTU"
+  },
+  C1608X5R1A105K080AC: {
+    manufacturer: "TDK",
+    url: "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/0000?part_no=C1608X5R1A105K080AC"
+  },
+  "ESP32-S3-WROOM-1U-N16R2": {
+    manufacturer: "Espressif",
+    url: "https://www.espressif.com/en/products/modules/esp32-s3/esp32-s3-wroom-1"
+  },
+  GCM188R71H104KA57D: {
+    manufacturer: "Murata",
+    url: "https://www.murata.com/en-us/products/productdetail?partno=GCM188R71H104KA57D"
+  },
+  ISO7721FDR: { manufacturer: "Texas Instruments", url: "https://www.ti.com/product/ISO7721" },
+  ISO7762FDWR: { manufacturer: "Texas Instruments", url: "https://www.ti.com/product/ISO7762" },
+  NXE1S0505MC: {
+    manufacturer: "Murata",
+    url: "https://www.murata.com/en-us/products/productdata/8807031865374/kdc-nxe1.pdf"
+  },
+  "RC0603FR-07100KL": {
+    manufacturer: "Yageo",
+    url: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL"
+  },
+  "RC0603FR-0710KL": {
+    manufacturer: "Yageo",
+    url: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
+  },
+  SN74LVC2G07DCKR: { manufacturer: "Texas Instruments", url: "https://www.ti.com/product/SN74LVC2G07" },
+  STM32G474RET3TR: {
+    manufacturer: "STMicroelectronics",
+    url: "https://www.st.com/en/microcontrollers-microprocessors/stm32g474re.html"
+  },
+  TPS3431SDRBR: { manufacturer: "Texas Instruments", url: "https://www.ti.com/product/TPS3431" },
+  TPS389033DSER: { manufacturer: "Texas Instruments", url: "https://www.ti.com/product/TPS3890" }
+} as const
+
+const retainedManufacturerPrimarySources = deepFreeze([
+  {
+    requestIdentity: "BP032-TI-TPS3431SDRBR-20260824",
+    mpn: "TPS3431SDRBR",
+    package: "VSON-8 (DRB), 3 mm × 3 mm",
+    artifactPath: "docs/evidence/bp-032/ti-tps3431.pdf",
+    sourceUrl: "https://www.ti.com/lit/ds/symlink/tps3431.pdf",
+    sha256: "99BF5DBFFFE06E8F85D9A86CFB777A0151E85B4A103033BC025F4897A0BDC6F3"
+  },
+  {
+    requestIdentity: "BP032-TI-TPS389033DSER-20260824",
+    mpn: "TPS389033DSER",
+    package: "WSON-6 (DSE), 1.5 mm × 1.5 mm",
+    artifactPath: "docs/evidence/bp-032/ti-tps3890.pdf",
+    sourceUrl: "https://www.ti.com/lit/ds/symlink/tps3890.pdf",
+    sha256: "EE79599730E7606BA9718D9820B411020E3DCD9FF7D44572F8EE63FEAD15B9D0"
+  }
+] as const)
+
+export const benchPrototypeProcessorFootprintsRetainedManufacturerSources = retainedManufacturerPrimarySources
+
+export function validateBenchPrototypeProcessorFootprintsRetainedManufacturerSources(value: unknown): true {
+  if (!sameDataGraph(value, retainedManufacturerPrimarySources))
+    throw new RangeError(
+      "BP-032 retained manufacturer-source evidence must exactly match the canonical request records"
+    )
+  const sources = retainedManufacturerPrimarySources
+  if (
+    sources.length !== 2 ||
+    new Set(sources.map((source) => source.mpn)).size !== sources.length ||
+    new Set(sources.map((source) => source.requestIdentity)).size !== sources.length ||
+    new Set(sources.map((source) => source.artifactPath)).size !== sources.length ||
+    sources.some(
+      (source) =>
+        source.package !== packageFor(source.mpn) ||
+        !source.sourceUrl.startsWith("https://www.ti.com/") ||
+        !/^docs\/evidence\/bp-032\/[^/]+\.pdf$/u.test(source.artifactPath) ||
+        !/^[0-9A-F]{64}$/u.test(source.sha256)
+    )
+  )
+    throw new RangeError("BP-032 retained manufacturer-source evidence has identity, package, path, or hash drift")
+  return true
+}
+
+function hasManufacturerPrimarySource(mpn: string): mpn is keyof typeof manufacturerPrimarySourceByMpn {
+  return Object.hasOwn(manufacturerPrimarySourceByMpn, mpn)
+}
+
+function retainedManufacturerPrimarySourceFor(mpn: string) {
+  const matches = retainedManufacturerPrimarySources.filter((source) => source.mpn === mpn)
+  if (matches.length > 1) throw new RangeError(`BP-032 has duplicate retained manufacturer sources for ${mpn}`)
+  return matches[0]
+}
+
 const evidence = (mpn: string | null) => ({
   priorGateReferences: mpn === null ? [] : [...(findFootprintReleaseEvidence(mpn)?.gateReferences ?? [])],
+  manufacturerPrimarySource:
+    mpn === null || !hasManufacturerPrimarySource(mpn) ? null : structuredClone(manufacturerPrimarySourceByMpn[mpn]),
+  manufacturerPrimarySourceMapping:
+    mpn === null
+      ? "not-applicable"
+      : retainedManufacturerPrimarySourceFor(mpn) !== undefined
+        ? "verified-by-retained-manufacturer-primary-bytes"
+        : hasManufacturerPrimarySource(mpn)
+          ? "source-unverified-primary-url-only"
+          : "missing",
+  retainedManufacturerPrimarySource:
+    mpn === null ? null : structuredClone(retainedManufacturerPrimarySourceFor(mpn) ?? null),
   manufacturerDrawing: "required-not-acquired",
   manufacturerCad: "required-not-acquired",
   copper: "not-claimed",
@@ -433,6 +544,7 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   validateBenchPrototypeResetWatchdog(benchPrototypeResetWatchdog)
   validateBenchPrototypeServiceHeaders(benchPrototypeServiceHeaders)
   validateBenchPrototypeProcessorSupport(benchPrototypeProcessorSupport)
+  validateBenchPrototypeProcessorFootprintsRetainedManufacturerSources(retainedManufacturerPrimarySources)
   if (!sameDataGraph(value, benchPrototypeProcessorFootprints))
     throw new RangeError("BP-032 ledger must exactly match the reviewed canonical decision")
   validateBenchPrototypeProcessorFootprintsUpstreamProvenance(currentUpstreamSnapshot())
@@ -456,7 +568,9 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
       (entry) =>
         entry.mpn === null ||
         entry.population !== "selected-awaiting-footprint-evidence" ||
-        entry.evidence.copper !== "not-claimed"
+        entry.evidence.copper !== "not-claimed" ||
+        entry.evidence.manufacturerPrimarySourceMapping === "missing" ||
+        entry.evidence.manufacturerPrimarySource === null
     ) ||
     ledger.debugReferences.some((entry) => entry.population !== "DNP-until-footprint-and-mating-evidence") ||
     ledger.clockReferences[0].population !== "DNP" ||
@@ -465,7 +579,12 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
     ledger.processorSupportReferences.length !== processorSupportSnapshot.length ||
     unresolvedProcessorSupport.some((entry) => entry.selectedMpn !== null || entry.mpn !== "TBD") ||
     bp125SelectedSupport.some(
-      (entry) => entry.mpn === "TBD" || entry.selectedMpn !== entry.mpn || entry.package === null
+      (entry) =>
+        entry.mpn === "TBD" ||
+        entry.selectedMpn !== entry.mpn ||
+        entry.package === null ||
+        entry.evidence.manufacturerPrimarySourceMapping === "missing" ||
+        entry.evidence.manufacturerPrimarySource === null
     ) ||
     ledger.processorSupportReferences
       .filter((entry) => entry.reconciliation === "selected-by-BP-123")

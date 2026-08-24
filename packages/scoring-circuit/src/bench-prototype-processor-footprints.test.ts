@@ -1,8 +1,12 @@
+import { createHash } from "node:crypto"
+import { readdirSync, readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   benchPrototypeProcessorFootprints,
   benchPrototypeProcessorFootprintsUpstreamProvenance,
+  benchPrototypeProcessorFootprintsRetainedManufacturerSources,
   validateBenchPrototypeProcessorFootprints,
+  validateBenchPrototypeProcessorFootprintsRetainedManufacturerSources,
   validateBenchPrototypeProcessorFootprintsUpstreamProvenance
 } from "./bench-prototype-processor-footprints.js"
 
@@ -27,6 +31,17 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
         expect.objectContaining({ reference: "Q_ESP_DEBUG_RESET", mpn: "BSS138AKA" })
       ])
     )
+    for (const record of benchPrototypeProcessorFootprints.populatedReferences) {
+      expect(record.evidence).toMatchObject({
+        manufacturerPrimarySourceMapping: expect.stringMatching(
+          /^(?:source-unverified-primary-url-only|verified-by-retained-manufacturer-primary-bytes)$/u
+        ),
+        manufacturerPrimarySource: expect.objectContaining({
+          manufacturer: expect.any(String),
+          url: expect.stringMatching(/^https:\/\//u)
+        })
+      })
+    }
     expect(benchPrototypeProcessorFootprints.clockReferences).toEqual([
       expect.objectContaining({ reference: "X_STM_HSE", population: "DNP", mpn: null }),
       expect.objectContaining({ reference: "X_STM_LSE", population: "DNP", mpn: null }),
@@ -99,6 +114,29 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
         })
       ])
     )
+    expect(
+      benchPrototypeProcessorFootprints.processorSupportReferences.filter((entry) => entry.mpn === "GCM188R71H104KA57D")
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          evidence: expect.objectContaining({
+            manufacturerPrimarySourceMapping: "source-unverified-primary-url-only",
+            manufacturerPrimarySource: expect.objectContaining({ manufacturer: "Murata" }),
+            retainedManufacturerPrimarySource: null
+          })
+        })
+      ])
+    )
+    expect(
+      benchPrototypeProcessorFootprints.processorSupportReferences.filter(
+        (entry) => entry.reconciliation === "selected-by-BP-125"
+      )
+    ).toHaveLength(6)
+    expect(
+      benchPrototypeProcessorFootprints.processorSupportReferences.filter(
+        (entry) => entry.reconciliation === "selected-by-BP-123"
+      )
+    ).toHaveLength(2)
     for (const record of [
       ...benchPrototypeProcessorFootprints.populatedReferences,
       ...benchPrototypeProcessorFootprints.debugReferences
@@ -112,6 +150,30 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
         courtyard: "not-claimed",
         artwork: "not-generated",
         orientation: "unreviewed"
+      })
+    }
+  })
+
+  it("retains and hashes only the bounded TI reset-source batch", () => {
+    const sources = benchPrototypeProcessorFootprintsRetainedManufacturerSources
+    expect(sources).toHaveLength(2)
+    expect(sources.map((source) => source.mpn)).toEqual(["TPS3431SDRBR", "TPS389033DSER"])
+    expect(readdirSync(new URL("../docs/evidence/bp-032/", import.meta.url)).sort()).toEqual(
+      sources.map((source) => source.artifactPath.split("/").at(-1)).sort()
+    )
+    for (const source of sources) {
+      const bytes = readFileSync(new URL(`../${source.artifactPath}`, import.meta.url))
+      expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(source.sha256)
+      expect(source.sourceUrl).toMatch(/^https:\/\/www\.ti\.com\//u)
+      const row = benchPrototypeProcessorFootprints.populatedReferences.find(
+        (candidate) => candidate.mpn === source.mpn
+      )
+      expect(row).toMatchObject({
+        package: source.package,
+        evidence: {
+          manufacturerPrimarySourceMapping: "verified-by-retained-manufacturer-primary-bytes",
+          retainedManufacturerPrimarySource: source
+        }
       })
     }
   })
@@ -147,6 +209,20 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
       const candidate = structuredClone(benchPrototypeProcessorFootprintsUpstreamProvenance)
       mutate(candidate)
       expect(() => validateBenchPrototypeProcessorFootprintsUpstreamProvenance(candidate)).toThrow(RangeError)
+    }
+  })
+
+  it("rejects retained-source omission, extra records, duplicate identities, and hash drift", () => {
+    for (const mutate of [
+      (candidate: any) => candidate.pop(),
+      (candidate: any) => candidate.push(structuredClone(candidate[0])),
+      (candidate: any) => (candidate[1].requestIdentity = candidate[0].requestIdentity),
+      (candidate: any) => (candidate[0].mpn = "TPS389033DSER"),
+      (candidate: any) => (candidate[0].sha256 = "0".repeat(64))
+    ]) {
+      const candidate = structuredClone(benchPrototypeProcessorFootprintsRetainedManufacturerSources)
+      mutate(candidate)
+      expect(() => validateBenchPrototypeProcessorFootprintsRetainedManufacturerSources(candidate)).toThrow(RangeError)
     }
   })
 })
