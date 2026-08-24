@@ -76,6 +76,20 @@ function command(commandName: RemoteCommand["command"], commandId: string, paylo
   })
 }
 
+function commandFrom(
+  commandName: RemoteCommand["command"],
+  commandId: string,
+  commandAuthority: ControllerAuthority,
+  payload: object = {}
+): RemoteCommand {
+  const current = command(commandName, commandId, payload)
+  return parseRemoteCommand({
+    ...current,
+    authority: commandAuthority,
+    remoteId: commandAuthority.kind === "paired-handheld" ? "paired-remote-01" : null
+  })
+}
+
 function callReduce(stateValue: BoutWorkflowReducerState, action: unknown): BoutWorkflowReduction {
   return Reflect.apply(reduceBoutWorkflow, undefined, [stateValue, action])
 }
@@ -1038,6 +1052,227 @@ describe("RC-05 bout workflow reducer", () => {
         }
       }
     })
+  })
+
+  it("undoes the latest reversible workflow transition with a compensating event and retains its original event", () => {
+    const initial = state()
+    const increment = reduceBoutWorkflow(initial, {
+      command: command("score.increment.left", "undo-score-increment"),
+      nextBout: null,
+      type: "command"
+    })
+    const penalty = reduceBoutWorkflow(increment.state, {
+      command: command("penalty.award.left", "undo-yellow-card"),
+      nextBout: null,
+      type: "command"
+    })
+    const undone = reduceBoutWorkflow(penalty.state, {
+      command: command("workflow.undo", "undo-yellow-card-command"),
+      nextBout: null,
+      type: "command"
+    })
+
+    expect(undone).toMatchObject({
+      event: {
+        cause: "workflow.undo",
+        eventId: "undo-yellow-card-command",
+        eventRevision: 3,
+        stm32RecordId: null
+      },
+      outcome: "applied",
+      state: {
+        reversibleSnapshots: [initial.snapshot],
+        snapshot: { authority, eventRevision: 3, sides: { left: { score: 1, yellowCard: false } } }
+      }
+    })
+    expect(undone.state.completedEvents.map((event) => event.eventId)).toEqual([
+      "undo-score-increment",
+      "undo-yellow-card",
+      "undo-yellow-card-command"
+    ])
+    expect(undone.state.completedEvents[1]?.resultingBoutState?.sides.left.yellowCard).toBe(true)
+
+    const secondUndo = reduceBoutWorkflow(undone.state, {
+      command: command("workflow.undo", "undo-score-increment-command"),
+      nextBout: null,
+      type: "command"
+    })
+    expect(secondUndo).toMatchObject({
+      event: { cause: "workflow.undo", eventRevision: 4 },
+      outcome: "applied",
+      state: { reversibleSnapshots: [], snapshot: { eventRevision: 4, sides: { left: { score: 0 } } } }
+    })
+
+    const emptyUndo = reduceBoutWorkflow(secondUndo.state, {
+      command: command("workflow.undo", "undo-empty"),
+      nextBout: null,
+      type: "command"
+    })
+    expect(emptyUndo).toMatchObject({ event: { rejectionReason: "invalid-mode" }, outcome: "rejected" })
+    expect(emptyUndo.state.snapshot).toEqual(secondUndo.state.snapshot)
+  })
+
+  it("does not make STM32 results reversible or retain pre-result undo history", () => {
+    const initial = state()
+    const scored = reduceBoutWorkflow(initial, {
+      command: command("score.increment.left", "before-non-reversible-rearm"),
+      nextBout: null,
+      type: "command"
+    })
+    const rearm = reduceBoutWorkflow(scored.state, {
+      command: command("scoring.rearm", "non-reversible-rearm"),
+      nextBout: null,
+      type: "command"
+    })
+    const accepted = reduceBoutWorkflow(rearm.state, {
+      authority: "stm32-scoring",
+      operation: "scoring-rearm",
+      requestId: "non-reversible-rearm",
+      result: "accepted",
+      stm32RecordId: "stm32-rearm-01",
+      type: "stm32-workflow-result"
+    })
+    const undo = reduceBoutWorkflow(accepted.state, {
+      command: command("workflow.undo", "undo-stm32-result"),
+      nextBout: null,
+      type: "command"
+    })
+    expect(accepted.state.reversibleSnapshots).toEqual([])
+    expect(undo).toMatchObject({ event: { rejectionReason: "invalid-mode" }, outcome: "rejected" })
+    expect(undo.state.snapshot).toEqual(accepted.state.snapshot)
+  })
+
+  it("clears reversible history after an authoritative snapshot load or accepted new bout", () => {
+    const initial = state()
+    const scored = reduceBoutWorkflow(initial, {
+      command: command("score.increment.left", "new-bout-clears-undo"),
+      nextBout: null,
+      type: "command"
+    })
+    const requested = reduceBoutWorkflow(scored.state, {
+      command: command("bout.new", "new-bout-clears-history"),
+      nextBout: {
+        boutId: "bout-02",
+        clockDurationCentiseconds: 12_000,
+        initialCompetition: { kind: "period", value: 1 },
+        timingConfigurationRevision: "timing-02",
+        weapon: "epee"
+      },
+      type: "command"
+    })
+    const fresh = reduceBoutWorkflow(requested.state, {
+      authority: "stm32-scoring",
+      requestId: "new-bout-clears-history",
+      result: "accepted",
+      stm32RecordId: "stm32-new-bout-02",
+      type: "stm32-bout-reset-result"
+    })
+    expect(fresh).toMatchObject({ outcome: "applied", state: { reversibleSnapshots: [] } })
+
+    const loaded = createFreshBoutWorkflowSnapshot({
+      apparatusId: "apparatus-01",
+      authority,
+      boutId: "bout-01",
+      clockDurationCentiseconds: 18_000,
+      eventRevision: 2,
+      initialCompetition: { kind: "match", value: 1 },
+      sourceCommandIdentity: {
+        apparatusId: "apparatus-01",
+        commandId: "loaded-snapshot-source",
+        controllerId: "console-supervisor",
+        counter: 1,
+        remoteId: null
+      },
+      timingConfigurationRevision: "timing-01",
+      weapon: "foil"
+    })
+    const snapshotLoad = reduceBoutWorkflow(scored.state, {
+      command: command("bout.snapshot.load", "snapshot-clears-history", { snapshot: loaded }),
+      nextBout: null,
+      type: "command"
+    })
+    expect(snapshotLoad).toMatchObject({ outcome: "applied", state: { reversibleSnapshots: [] } })
+  })
+
+  it("arbitrates one active writer across local, tournament, and handheld controllers", () => {
+    const tournament: ControllerAuthority = {
+      authorityRevision: 99,
+      controllerId: "tournament-supervisor",
+      kind: "tournament-controller",
+      permission: "supervisor"
+    }
+    const handheld: ControllerAuthority = {
+      authorityRevision: 0,
+      controllerId: "paired-referee",
+      kind: "paired-handheld",
+      permission: "referee"
+    }
+    const initial = state()
+    const toTournament = reduceBoutWorkflow(initial, {
+      command: command("controller.authority.transfer", "transfer-to-tournament", { nextAuthority: tournament }),
+      nextBout: null,
+      type: "command"
+    })
+    const activeTournament = { ...tournament, authorityRevision: 5 } as const satisfies ControllerAuthority
+    expect(toTournament).toMatchObject({
+      event: { cause: "controller.authority.transfer", eventRevision: 1 },
+      outcome: "applied",
+      state: { reversibleSnapshots: [], snapshot: { authority: activeTournament } }
+    })
+
+    const displacedApplication = reduceBoutWorkflow(toTournament.state, {
+      command: command("score.increment.left", "displaced-application-score"),
+      nextBout: null,
+      type: "command"
+    })
+    expect(displacedApplication).toMatchObject({ event: { rejectionReason: "wrong-controller-authority" } })
+
+    const toHandheld = reduceBoutWorkflow(toTournament.state, {
+      command: commandFrom("controller.authority.transfer", "transfer-to-handheld", activeTournament, {
+        nextAuthority: handheld
+      }),
+      nextBout: null,
+      type: "command"
+    })
+    const activeHandheld = { ...handheld, authorityRevision: 6 } as const satisfies ControllerAuthority
+    expect(toHandheld).toMatchObject({
+      outcome: "applied",
+      state: { reversibleSnapshots: [], snapshot: { authority: activeHandheld } }
+    })
+
+    const displacedTournament = reduceBoutWorkflow(toHandheld.state, {
+      command: commandFrom("score.increment.left", "displaced-tournament-score", activeTournament),
+      nextBout: null,
+      type: "command"
+    })
+    const handheldWrite = reduceBoutWorkflow(toHandheld.state, {
+      command: commandFrom("score.increment.left", "handheld-score", activeHandheld),
+      nextBout: null,
+      type: "command"
+    })
+    expect(displacedTournament).toMatchObject({ event: { rejectionReason: "wrong-controller-authority" } })
+    expect(handheldWrite).toMatchObject({ outcome: "applied", state: { snapshot: { sides: { left: { score: 1 } } } } })
+
+    const sameTarget = reduceBoutWorkflow(state(), {
+      command: command("controller.authority.transfer", "transfer-to-self", {
+        nextAuthority: { ...authority, authorityRevision: 5 }
+      }),
+      nextBout: null,
+      type: "command"
+    })
+    expect(sameTarget).toMatchObject({ event: { rejectionReason: "invalid-mode" }, outcome: "rejected" })
+
+    const pending = reduceBoutWorkflow(state(), {
+      command: command("scoring.rearm", "transfer-blocked-by-pending"),
+      nextBout: null,
+      type: "command"
+    })
+    const blockedTransfer = reduceBoutWorkflow(pending.state, {
+      command: command("controller.authority.transfer", "transfer-while-pending", { nextAuthority: tournament }),
+      nextBout: null,
+      type: "command"
+    })
+    expect(blockedTransfer).toMatchObject({ event: { rejectionReason: "invalid-mode" }, outcome: "rejected" })
   })
 
   it("retains command identities beyond the event cache and fails closed at the explicit ledger capacity", () => {

@@ -1,6 +1,6 @@
 import type { Weapon } from "./bout-state.js"
 /**
- * RC-05 authoritative reducer for the application-owned bout workflow.
+ * RC-05 through RC-10 authoritative reducer for the application-owned bout workflow.
  *
  * This module deliberately does not create or mutate STM32 DecisionRecords.
  * New-bout completion is represented as a pending request until a separately
@@ -73,6 +73,7 @@ export type BoutWorkflowReducerState = Readonly<{
   completedEvents: readonly BoutStateEvent[]
   pendingNewBout: PendingNewBout | null
   pendingStm32WorkflowAction: PendingStm32WorkflowAction | null
+  reversibleSnapshots: readonly BoutWorkflowSnapshot[]
   snapshot: BoutWorkflowSnapshot
 }>
 
@@ -133,6 +134,7 @@ export type BoutWorkflowReduction = Readonly<{
  */
 export const BOUT_WORKFLOW_COMMAND_ID_CAPACITY = 4_096
 const MAX_RETAINED_EVENTS = 256
+const MAX_RETAINED_REVERSIBLE_SNAPSHOTS = 256
 const IDENTIFIER_MAX = 96
 
 function isIdentifier(value: unknown): value is string {
@@ -170,6 +172,10 @@ function sameAuthority(left: ControllerAuthority, right: ControllerAuthority): b
   )
 }
 
+function sameController(left: ControllerAuthority, right: ControllerAuthority): boolean {
+  return left.controllerId === right.controllerId && left.kind === right.kind && left.permission === right.permission
+}
+
 function sourceFor(command: RemoteCommand): SourceCommandIdentity {
   return {
     apparatusId: command.apparatusId,
@@ -195,7 +201,8 @@ function freezeState(
   pendingNewBout: PendingNewBout | null,
   pendingStm32WorkflowAction: PendingStm32WorkflowAction | null,
   completedEvents: readonly BoutStateEvent[],
-  completedCommandIds: readonly string[]
+  completedCommandIds: readonly string[],
+  reversibleSnapshots: readonly BoutWorkflowSnapshot[]
 ): BoutWorkflowReducerState {
   return freeze({
     completedCommandIds: [...completedCommandIds],
@@ -203,6 +210,7 @@ function freezeState(
     pendingNewBout: pendingNewBout === null ? null : freeze(structuredClone(pendingNewBout)),
     pendingStm32WorkflowAction:
       pendingStm32WorkflowAction === null ? null : freeze(structuredClone(pendingStm32WorkflowAction)),
+    reversibleSnapshots: reversibleSnapshots.map((snapshot) => freeze(copySnapshot(snapshot))),
     snapshot: freeze(copySnapshot(snapshot))
   })
 }
@@ -251,19 +259,25 @@ function remember(state: BoutWorkflowReducerState, event: BoutStateEvent): BoutW
     state.pendingNewBout,
     state.pendingStm32WorkflowAction,
     completed.slice(-MAX_RETAINED_EVENTS),
-    [...state.completedCommandIds, event.sourceCommand.commandId]
+    [...state.completedCommandIds, event.sourceCommand.commandId],
+    state.reversibleSnapshots
   )
 }
 
 function complete(
   state: BoutWorkflowReducerState,
   snapshot: BoutWorkflowSnapshot,
-  event: BoutStateEvent
+  event: BoutStateEvent,
+  reversibleSnapshots = state.reversibleSnapshots
 ): BoutWorkflowReducerState {
-  return freezeState(snapshot, null, null, [...state.completedEvents, event].slice(-MAX_RETAINED_EVENTS), [
-    ...state.completedCommandIds,
-    event.sourceCommand.commandId
-  ])
+  return freezeState(
+    snapshot,
+    null,
+    null,
+    [...state.completedEvents, event].slice(-MAX_RETAINED_EVENTS),
+    [...state.completedCommandIds, event.sourceCommand.commandId],
+    reversibleSnapshots
+  )
 }
 
 function acceptedSnapshot(
@@ -285,7 +299,8 @@ function apply(
   state: BoutWorkflowReducerState,
   command: RemoteCommand,
   cause: Exclude<BoutStateEvent["cause"], "command.rejected">,
-  next: BoutWorkflowSnapshot
+  next: BoutWorkflowSnapshot,
+  recordsReversibleSnapshot = true
 ): BoutWorkflowReduction {
   if (state.snapshot.eventRevision === Number.MAX_SAFE_INTEGER) return reject(state, command, "out-of-bounds")
   const snapshot = acceptedSnapshot(next, command, state.snapshot.eventRevision + 1, null)
@@ -294,7 +309,35 @@ function apply(
     event,
     outcome: "applied",
     reason: null,
-    state: complete(state, snapshot, event)
+    state: complete(
+      state,
+      snapshot,
+      event,
+      recordsReversibleSnapshot
+        ? [...state.reversibleSnapshots, state.snapshot].slice(-MAX_RETAINED_REVERSIBLE_SNAPSHOTS)
+        : state.reversibleSnapshots
+    )
+  }
+}
+
+function compensate(
+  state: BoutWorkflowReducerState,
+  command: RemoteCommand,
+  prior: BoutWorkflowSnapshot
+): BoutWorkflowReduction {
+  if (state.snapshot.eventRevision === Number.MAX_SAFE_INTEGER) return reject(state, command, "out-of-bounds")
+  const snapshot = acceptedSnapshot(
+    compensatedSnapshot(state.snapshot, prior),
+    command,
+    state.snapshot.eventRevision + 1,
+    null
+  )
+  const event = eventFor(command, snapshot, "workflow.undo", null)
+  return {
+    event,
+    outcome: "applied",
+    reason: null,
+    state: complete(state, snapshot, event, state.reversibleSnapshots.slice(0, -1))
   }
 }
 
@@ -509,6 +552,22 @@ function safeIdle(snapshot: BoutWorkflowSnapshot): boolean {
   )
 }
 
+/**
+ * Restores only application-owned workflow fields. Provenance, current writer,
+ * revisions, and any STM32 correlation remain owned by the compensating event.
+ */
+function compensatedSnapshot(current: BoutWorkflowSnapshot, prior: BoutWorkflowSnapshot): BoutWorkflowSnapshot {
+  return {
+    ...copySnapshot(prior),
+    apparatusId: current.apparatusId,
+    authority: structuredClone(current.authority),
+    boutId: current.boutId,
+    boutRevision: current.boutRevision,
+    eventRevision: current.eventRevision,
+    stm32RecordId: null
+  }
+}
+
 function requestStm32WorkflowAction(
   state: BoutWorkflowReducerState,
   command: RemoteCommand,
@@ -527,7 +586,14 @@ function requestStm32WorkflowAction(
     event: null,
     outcome: "pending",
     reason: null,
-    state: freezeState(state.snapshot, null, pending, state.completedEvents, state.completedCommandIds)
+    state: freezeState(
+      state.snapshot,
+      null,
+      pending,
+      state.completedEvents,
+      state.completedCommandIds,
+      state.reversibleSnapshots
+    )
   }
 }
 
@@ -637,12 +703,12 @@ export function createBoutWorkflowReducerState(snapshot: unknown): BoutWorkflowR
     throw new TypeError("Bout snapshot competition is outside the frozen competition-format registry")
   if (parsed.priorityEntropyReceipt !== null)
     throw new TypeError("Live priority entropy requires the unavailable trusted issuer")
-  return freezeState(parsed, null, null, [], [])
+  return freezeState(parsed, null, null, [], [], [])
 }
 
 /**
  * Reduces one already authenticated command or one STM32 new-bout response.
- * Commands outside the implemented RC-05/RC-06 slices intentionally receive
+ * Commands outside the implemented RC-05 through RC-10 slices intentionally receive
  * a rejection event until their dedicated workflow slice is implemented.
  */
 export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: BoutWorkflowAction): BoutWorkflowReduction {
@@ -708,7 +774,7 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
     }
     const snapshot = freshFromPending(pending, state.snapshot, safeAction.stm32RecordId)
     const event = eventFor(pending.command, snapshot, "bout.reset.result", safeAction.stm32RecordId)
-    const next = complete(state, snapshot, event)
+    const next = complete(state, snapshot, event, [])
     return { event, outcome: "applied", reason: null, state: next }
   }
 
@@ -742,7 +808,10 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
           : "device.sleep.result"
     const snapshot = acceptedSnapshot(next, pending.command, state.snapshot.eventRevision + 1, safeAction.stm32RecordId)
     const event = eventFor(pending.command, snapshot, cause, safeAction.stm32RecordId)
-    return { event, outcome: "applied", reason: null, state: complete(state, snapshot, event) }
+    // An accepted STM32 result is an irreversible authority boundary. Retaining
+    // application snapshots from before it would let a later undo restore an
+    // obsolete auto-rearm or weapon selection.
+    return { event, outcome: "applied", reason: null, state: complete(state, snapshot, event, []) }
   }
 
   const { command } = safeAction
@@ -788,8 +857,34 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
     if (loaded.sourceCommandDisposition !== "accepted") return reject(state, command, "incomplete-snapshot")
     const snapshot = acceptedSnapshot(loaded, command, loaded.eventRevision, loaded.stm32RecordId)
     const event = eventFor(command, snapshot, "bout.snapshot.load", loaded.stm32RecordId)
-    const next = complete(state, snapshot, event)
+    const next = complete(state, snapshot, event, [])
     return { event, outcome: "applied", reason: null, state: next }
+  }
+
+  if (command.command === "controller.authority.transfer") {
+    const target = command.payload.nextAuthority
+    if (sameController(target, state.snapshot.authority)) return reject(state, command, "invalid-mode")
+    if (state.snapshot.authority.authorityRevision === Number.MAX_SAFE_INTEGER)
+      return reject(state, command, "out-of-bounds")
+    return apply(
+      state,
+      command,
+      "controller.authority.transfer",
+      {
+        ...copySnapshot(state.snapshot),
+        authority: {
+          ...structuredClone(target),
+          authorityRevision: state.snapshot.authority.authorityRevision + 1
+        }
+      },
+      false
+    )
+  }
+
+  if (command.command === "workflow.undo") {
+    const prior = state.reversibleSnapshots.at(-1)
+    if (prior === undefined) return reject(state, command, "invalid-mode")
+    return compensate(state, command, prior)
   }
 
   if (command.command === "bout.new") {
@@ -804,7 +899,14 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
       event: null,
       outcome: "pending",
       reason: null,
-      state: freezeState(state.snapshot, pending, null, state.completedEvents, state.completedCommandIds)
+      state: freezeState(
+        state.snapshot,
+        pending,
+        null,
+        state.completedEvents,
+        state.completedCommandIds,
+        state.reversibleSnapshots
+      )
     }
   }
 

@@ -172,6 +172,24 @@ Destructive configuration, weapon, new-bout, snapshot-load, clock-reset, and sco
 the bout clock is running. Authentication success never overrides state-machine guards. Undo creates a new applied
 event restoring a prior reversible snapshot; it never deletes or rewrites history and cannot undo an STM32 decision.
 
+### RC-10 compensating undo and writer arbitration
+
+The reducer retains a bounded stack of pre-transition snapshots only for accepted application-owned referee workflow
+actions. `workflow.undo` consumes the latest snapshot and appends its own `workflow.undo` applied event. The original
+event remains in the ordered event record. The compensating snapshot restores workflow fields, while the current
+`boutId`, bout revision, active controller, authority revision, command provenance, event revision, and STM32
+correlation remain owned by the current event. STM32 request results, authority transfer, snapshot load, and new-bout
+completion never enter that reversible stack; an accepted STM32 result, snapshot load, and accepted new bout clear it.
+With no reversible action, undo is rejected without changing the authoritative bout snapshot.
+
+`controller.authority.transfer` is an accepted application event only after the current active controller has passed
+normal command authentication and exact authority matching. The command must be from a local-application or
+tournament-controller supervisor, as fixed by the canonical command schema, and its target must be a distinct known
+controller identity. The reducer derives the next authority revision from the active snapshot and does not trust the
+revision supplied in the target payload. A transfer never enters undo history. After it applies, every handheld,
+application, or tournament command must name that exact target identity and derived revision; all other contenders are
+rejected without mutation. Pending STM32 work blocks transfer under the normal pending-workflow guard.
+
 ## Encrypted IR protocol requirements
 
 The security design must select a reviewed authenticated-encryption construction and implementation before schematic
@@ -294,7 +312,7 @@ and unrestricted service authorization remain separated from ordinary assembly a
 | `RC-07` | blocked | Root-approved partial direct yellow/red card scoring and card-reset work is retained. Full closure is blocked by a named approved P-card rules table; unsupported P-card actions fail closed, and compensating undo remains owned downstream by RC-10. | Implement penalty-card and P-card award semantics. | `RC-05`, approved rules revision | Tests prove yellow/red counts, atomic opponent scoring for red, rules-valid P-card progression, no cycle-to-none behavior, Reset Cards separation, and immutable card-event provenance compatible with RC-10 undo. |
 | `RC-08` | blocked | Committed root-approved partial: a hash-bound competition-format registry, strict snapshot bounds, format transitions, and medical-clock isolation fail closed; 59 focused tests plus types, lint, and format pass. Overtime remains unavailable until a trusted entropy issuer, supervisor-override provenance, and the applicable approved rules revision are integrated. | Implement overtime, unbiased priority, medical intervention, and competition-format transitions. | `RC-05`, approved rules revision | Seeded priority tests, priority removal, five-minute preset/configuration review, break/medical/overtime clock isolation, and typed match-versus-period bounds pass. |
 | `RC-09` | done | Delivered and root-approved: strict STM32-correlated manual and automatic rearm, weapon requests, and safe-idle sleep fail closed on malformed, rejected, or mismatched responses; stopped-bout side swap is atomic; existing New Bout correlation still changes `boutId`; RC-08 entropy behavior is unchanged. The reducer and remote suites pass 38 tests with app TypeScript, lint, format, and whitespace checks clean. | Implement manual/automatic rearm, weapon request, side swap, Reset All/New Bout, and safe-idle sleep. | `RC-01`, `RC-05`, M1-06 | STM32 request/accept/reject correlation passes; side swap is atomic; new bout changes `boutId`; sleep and destructive actions fail closed while unsafe. |
-| `RC-10` | backlog | Next after `RC-02`, `RC-05` through `RC-09`: Implement compensating-event undo and controller-authority arbitration. | Implement compensating-event undo and controller-authority arbitration. | `RC-02`, `RC-05` through `RC-09` | Undo scope is explicit and immutable decisions remain unchanged; handheld/app/tournament contention and transfer tests admit exactly one writer. |
+| `RC-10` | blocked | Root-approved implementation now provides bounded compensating undo and exact writer arbitration: original events remain immutable, STM32 and snapshot/new-bout boundaries clear undo history, authority revisions are derived, and displaced writers fail closed. The focused suites pass 52 tests with app types, lint, and format clean. Final closure waits for blocked dependencies `RC-07` and `RC-08`, followed by undo coverage for their completed penalty and overtime transitions. | Implement compensating-event undo and controller-authority arbitration. | `RC-02`, `RC-05` through `RC-09` | Undo scope is explicit and immutable decisions remain unchanged; handheld/app/tournament contention and transfer tests admit exactly one writer. |
 | `RC-11` | backlog | Next after `RC-02`, `RC-06` through `RC-10`: Implement the simulator remote surface and command-level conformance suite. | Implement the simulator remote surface and command-level conformance suite. | `RC-02`, `RC-06` through `RC-10` | Every lookup row is executable by direct, modified, held, or double input; button-state fixtures prove no phantom standalone `OPT`, repeats, or empty initial displays. |
 | `RC-12` | backlog | Next after `RC-02`, `RC-05`, `RC-10`: Implement authenticated application/tournament new-bout, snapshot-load, and controller-transfer APIs. | Implement authenticated application/tournament new-bout, snapshot-load, and controller-transfer APIs. | `RC-02`, `RC-05`, `RC-10` | API contract, authorization, idempotency, full-state validation, running-clock policy, recovery, and loaded-running/stopped snapshot tests pass. |
 | `RC-13` | ready | Dependencies RC-02, RC-03, and RC-05 are done; ready to implement and fuzz the apparatus IR receive, decrypt, authenticate, anti-replay, deduplicate, and dispatch service. | Implement and fuzz the apparatus IR receive, decrypt, authenticate, anti-replay, deduplicate, and dispatch service. | `RC-02`, `RC-03`, `RC-05` | Golden frames, malformed inputs, wrong identity/key/version, stale/reordered counters, flood bounds, reset persistence, and dispatch identity tests pass. |
