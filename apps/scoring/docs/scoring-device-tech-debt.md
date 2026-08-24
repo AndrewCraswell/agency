@@ -21,7 +21,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 1 | SD-001 | P1 | done | One private epee lifecycle kernel now owns contact qualification, hit ordering, and lockout mechanics |
 | 2 | SD-002 | P1 | ready | Prototype `device.ts` is still an exported parallel emulator/protocol path |
 | 3 | SD-005 | P1 | ready | STM32, ESP32, and TypeScript transport codecs do not share one executable source of truth |
-| 4 | SD-003 | P2 | ready | Virtual STM32 and ESP32 duplicate canonical-data cloning and boundary checks |
+| 4 | SD-003 | P2 | done | Virtual STM32 and ESP32 now share one bounded canonical-data clone traversal with boundary-specific limits |
 | 5 | SD-004 | P2 | ready | Scenario execution, scorer dispatch, and report comparison are coupled in one branch-heavy module |
 | 6 | SC-001 | P2 | done | Root-approved shared weapon-input topology is renderer-verified across logical and physical circuit models; board-specific connector labels remain distinct |
 | 7 | SC-002 | P2 | done | Production harness selection now owns the MPN and pin data consumed by board integration and readiness checks |
@@ -87,9 +87,9 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SD-003: share bounded canonical-data cloning primitives
 
 - Priority: `P2`
-- State: `ready`
+- State: `done`
 - Affected files: [`apps/scoring/src/virtual-esp32.ts`](../src/virtual-esp32.ts) (lines 61-159 and 278-376) and [`apps/scoring/src/virtual-stm32.ts`](../src/virtual-stm32.ts) (lines 74-169 and 171-270).
-- Description and evidence: both virtual processor boundaries define local `isRecord`, non-negative integer, synchronous-result, exact-key, cycle, depth, entry, string, array-descriptor, plain-object, accessor, and deep-clone logic. Their limits differ intentionally (ESP32 accepts a larger record; STM32 accepts a smaller outcome), but the traversal and descriptor rules are materially the same.
+- Delivered: one private cloneCanonicalData traversal now enforces plain-data descriptors, bounded depth/entries/strings, cycle and non-finite rejection, and deep freezing for both virtual processors. Each boundary retains its schema validation, limits, and historical error category. Root review passed 18 focused tests, app type-check, lint, and format checks.
 - Impact: security-relevant handling of getters, symbols, sparse arrays, cycles, prototypes, non-finite values, and freezing can drift between processor boundaries. Fixes must be applied and tested twice, while similar code makes it difficult to see which differences are intentional limits and which are accidental.
 - Bounded remediation: extract a private `cloneCanonicalData` utility with explicit per-call limits and an error label. Reuse only the traversal and descriptor mechanics; keep each module's schema-specific exact-key checks, error codes, and limits at its own boundary. The same small module can hold the common `isRecord`, safe-integer, and thenable checks if that reduces repetition.
 - Dependencies: the existing virtual boundary contracts and tests.
@@ -342,5 +342,6 @@ truth.
   - All three native host projects and the STM32 target configure and build.
   - A configure-time assertion proves every first-party native target receives the baseline warning policy.
   - `node apps/scoring/firmware/tools/check-coverage.mjs` still passes the 100-percent core and 80-percent other-source gates.
+
 
 

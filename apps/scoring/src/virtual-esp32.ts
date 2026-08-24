@@ -8,6 +8,7 @@
  * decision.
  */
 
+import { cloneCanonicalData } from "./canonical-data-clone.js"
 import { parseDecisionRecord, type DecisionRecord } from "./decision-record.js"
 import { TransportFrameError, decodeTransportFrame, type TransportFrameErrorCode } from "./transport-frame.js"
 import { resolveVirtualProcessorLinkDelivery, type VirtualLinkAttempt } from "./virtual-processor-link.js"
@@ -294,105 +295,16 @@ function assertExactDecisionRecordShape(value: unknown): void {
   assertExactOutcomeShape(value.outcome)
 }
 
-type CloneContext = {
-  entries: number
-  seen: WeakSet<object>
-}
-
-function cloneRecordValue(value: unknown, context: CloneContext, depth: number): unknown {
-  /* v8 ignore start -- assertExactDecisionRecordShape has already rejected these defensive invalid-data branches. */
-  if (value === null || typeof value === "boolean") {
-    return value
-  }
-
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) {
-      throw new TypeError("Authoritative decision records cannot contain non-finite numbers")
-    }
-    return value
-  }
-
-  if (typeof value === "string") {
-    if (value.length > MAX_RECORD_CLONE_STRING_LENGTH) {
-      throw new RangeError(
-        `Authoritative decision record strings cannot exceed ${MAX_RECORD_CLONE_STRING_LENGTH} characters`
-      )
-    }
-    return value
-  }
-
-  if (typeof value !== "object" || value === null) {
-    throw new TypeError("Authoritative decision records must contain only plain data")
-  }
-
-  if (depth === MAX_RECORD_CLONE_DEPTH || context.seen.has(value)) {
-    throw new RangeError("Authoritative decision records exceed the supported depth or contain a cycle")
-  }
-
-  context.seen.add(value)
-  try {
-    if (Array.isArray(value)) {
-      if (value.length > MAX_RECORD_CLONE_ENTRIES - context.entries) {
-        throw new RangeError(`Authoritative decision records cannot exceed ${MAX_RECORD_CLONE_ENTRIES} values`)
-      }
-
-      const keys = Reflect.ownKeys(value)
-      if (keys.length !== value.length + 1 || !keys.includes("length")) {
-        throw new TypeError("Authoritative decision record arrays must use canonical data indices only")
-      }
-
-      const cloned: unknown[] = []
-      for (let index = 0; index < value.length; index += 1) {
-        const descriptor = Object.getOwnPropertyDescriptor(value, String(index))
-        if (descriptor === undefined || !("value" in descriptor) || !descriptor.enumerable) {
-          throw new TypeError("Authoritative decision record arrays must use canonical data indices only")
-        }
-        context.entries += 1
-        cloned.push(cloneRecordValue(descriptor.value, context, depth + 1))
-      }
-      return Object.freeze(cloned)
-    }
-
-    if (Object.getPrototypeOf(value) !== Object.prototype) {
-      throw new TypeError("Authoritative decision records must contain only plain objects and arrays")
-    }
-
-    const keys = Reflect.ownKeys(value)
-    if (
-      keys.length > MAX_RECORD_CLONE_ENTRIES - context.entries ||
-      keys.some((key) => typeof key !== "string" || key.length === 0 || key.length > MAX_RECORD_CLONE_STRING_LENGTH)
-    ) {
-      throw new RangeError(`Authoritative decision records cannot exceed ${MAX_RECORD_CLONE_ENTRIES} values`)
-    }
-
-    context.entries += keys.length
-    const cloned: Record<string, unknown> = {}
-    for (const key of keys) {
-      if (typeof key !== "string") {
-        throw new TypeError("Authoritative decision records must use string keys")
-      }
-
-      const descriptor = Object.getOwnPropertyDescriptor(value, key)
-      if (descriptor === undefined || !("value" in descriptor)) {
-        throw new TypeError("Authoritative decision records cannot contain accessors")
-      }
-      Object.defineProperty(cloned, key, {
-        configurable: true,
-        enumerable: descriptor.enumerable,
-        value: cloneRecordValue(descriptor.value, context, depth + 1),
-        writable: true
-      })
-    }
-
-    return Object.freeze(cloned)
-  } finally {
-    context.seen.delete(value)
-  }
-  /* v8 ignore stop */
-}
-
 function cloneDecisionRecord(value: unknown): DecisionRecord {
-  return parseDecisionRecord(cloneRecordValue(value, { entries: 1, seen: new WeakSet() }, 0))
+  return parseDecisionRecord(
+    cloneCanonicalData(value, {
+      errorLabel: "Authoritative decision record",
+      maxDepth: MAX_RECORD_CLONE_DEPTH,
+      maxEntries: MAX_RECORD_CLONE_ENTRIES,
+      maxStringLength: MAX_RECORD_CLONE_STRING_LENGTH,
+      symbolKeyError: "range"
+    })
+  )
 }
 
 function assertDeliveredStm32Attempt(value: unknown): asserts value is VirtualLinkAttempt {
