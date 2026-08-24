@@ -17,6 +17,7 @@ describe("Railway deployment contract", () => {
     expect(dockerfile).toContain("COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./")
     expect(dockerfile).toContain("COPY packages ./packages")
     expect(dockerfile).toContain("COPY apps/legislation ./apps/legislation")
+    expect(dockerfile).toContain("COPY apps/legislation/pnpm-workspace.railway.yaml ./pnpm-workspace.yaml")
     expect(dockerfile).toContain("pnpm install --frozen-lockfile --trust-lockfile --filter legislation...")
     expect(dockerfile).toContain("pnpm --filter legislation build")
     expect(dockerfile).not.toContain("pnpm --filter ./...")
@@ -25,6 +26,13 @@ describe("Railway deployment contract", () => {
     expect(runtime).toContain("ENV LEGISLATION_HOST=0.0.0.0")
     expect(runtime).toContain("USER 10001")
     expect(runtime).toContain('CMD ["node", "dist/cli/main.js", "serve"]')
+
+    const railwayWorkspace = applicationFile("pnpm-workspace.railway.yaml")
+    expect(railwayWorkspace).toContain('  - "apps/legislation"')
+    expect(railwayWorkspace).toContain('  - "packages/oxlint-config"')
+    expect(railwayWorkspace).toContain('  - "packages/typescript-config"')
+    expect(railwayWorkspace).not.toContain('"apps/*"')
+    expect(railwayWorkspace).not.toContain("packageExtensions")
     expect(runtime).not.toMatch(/db:migrate|migrateDatabase/)
   })
 

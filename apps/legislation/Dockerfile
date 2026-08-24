@@ -18,6 +18,10 @@ WORKDIR /workspace
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages ./packages
 COPY apps/legislation ./apps/legislation
+# The application image has no dependency on the monorepo's other products.
+# Use an app-local workspace view so unrelated private packages and package
+# extensions cannot make this filtered, frozen install unreproducible.
+COPY apps/legislation/pnpm-workspace.railway.yaml ./pnpm-workspace.yaml
 
 # The reviewed, frozen workspace lockfile contains private dependencies for
 # unrelated applications. Railway cannot query those private registries during

@@ -1,0 +1,26 @@
+packages:
+  - "apps/legislation"
+  - "packages/oxlint-config"
+  - "packages/typescript-config"
+
+# Keep the install model and locked versions identical to the repository while
+# excluding unrelated application-only package extensions and workspace roots.
+nodeLinker: hoisted
+catalog:
+  "@types/node": 24.13.2
+  typescript: 7.0.1-rc
+overrides:
+  react: 19.2.7
+  react-dom: 19.2.7
+allowBuilds:
+  esbuild: true
+  lefthook: true
+  msw: true
+  "@parcel/watcher": true
+  "@prisma/client": true
+  "@prisma/engines": true
+  protobufjs: true
+  prisma: true
+  unrs-resolver: true
+  sharp: true
+  "@depot/cli": true
