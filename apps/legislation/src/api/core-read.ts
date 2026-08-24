@@ -424,7 +424,16 @@ function routeMatch(method: string | undefined, pathname: string): CoreRoute | u
   if (pathname === "/api/supporting-materials") {
     return { name: "listSupportingMaterials" }
   }
-  const segments = pathname.split("/").filter(Boolean).map(decodeURIComponent)
+  const segments = pathname
+    .split("/")
+    .filter(Boolean)
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment)
+      } catch {
+        throw new LegislationError("invalid_request", "Path contains invalid percent encoding")
+      }
+    })
   if (segments[0] !== "api") {
     return undefined
   }
@@ -441,7 +450,11 @@ function routeMatch(method: string | undefined, pathname: string): CoreRoute | u
   }
   if (segments[1] === "documents" && typeof segments[2] === "string") {
     return segments[3] === "sections" && segments.length === 5 && typeof segments[4] === "string"
-      ? { documentId: segments[2], name: "getDocumentSection", sectionId: segments[4] }
+      ? {
+          documentId: canonicalPathId(segments[2], "documentId"),
+          name: "getDocumentSection",
+          sectionId: canonicalPathId(segments[4], "sectionId")
+        }
       : undefined
   }
   if (segments[1] === "supporting-materials" && typeof segments[2] === "string") {
@@ -449,10 +462,21 @@ function routeMatch(method: string | undefined, pathname: string): CoreRoute | u
       return { materialId: segments[2], name: "getSupportingMaterial" }
     }
     return segments[3] === "sections" && segments.length === 5 && typeof segments[4] === "string"
-      ? { materialId: segments[2], name: "getSupportingMaterialSection", sectionId: segments[4] }
+      ? {
+          materialId: canonicalPathId(segments[2], "materialId"),
+          name: "getSupportingMaterialSection",
+          sectionId: canonicalPathId(segments[4], "sectionId")
+        }
       : undefined
   }
   return undefined
+}
+
+function canonicalPathId(value: string, name: string): string {
+  if (value.length < 1 || value.length > 256) {
+    throw new LegislationError("invalid_request", `${name} must be between 1 and 256 characters`)
+  }
+  return value
 }
 
 function allowedQueryParameters(name: CoreRoute["name"]): readonly string[] {

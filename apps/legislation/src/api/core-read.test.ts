@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
+import { LegislationError } from "../legislation/errors.js"
 import { close, createLegislationServer } from "../mcp/server.js"
 import { createLogger } from "../observability/logger.js"
 import { createCoreReadApiHandler, type CoreReadQueryApi } from "./core-read.js"
@@ -90,6 +91,8 @@ function service(): CoreReadQueryApi {
         heading: null,
         id: sectionId,
         ordinal: 0,
+        pageEnd: 2,
+        pageStart: 1,
         sourceEndOffset: 10,
         sourceStartOffset: 0,
         text: "Text"
@@ -362,8 +365,8 @@ describe("core read API handler", () => {
     const documentPath = "/api/documents/document%3A1%2Ftext/sections/document-section%3A1%2Fpart"
     const materialPath = "/api/supporting-materials/material%3A1%2Freport/sections/material-section%3A1%2Fpart"
     const [document, material] = await Promise.all([
-      fetch(`${baseUrl}${documentPath}`),
-      fetch(`${baseUrl}${materialPath}`)
+      fetch(`${baseUrl}${documentPath}`, { headers: { "x-correlation-id": "document-section-read" } }),
+      fetch(`${baseUrl}${materialPath}`, { headers: { "x-correlation-id": "material-section-read" } })
     ])
 
     expect(document.status).toBe(200)
@@ -376,10 +379,12 @@ describe("core read API handler", () => {
       data: {
         canonicalUrl: "http://127.0.0.1:3100/api/documents/document%3A1%2Ftext/sections/document-section%3A1%2Fpart",
         documentId: "document:1/text",
+        pageEnd: 2,
+        pageStart: 1,
         type: "document-section"
       },
       links: { self: documentPath },
-      meta: { warnings: [] }
+      meta: { correlationId: "document-section-read", warnings: [] }
     })
     await expect(material.json()).resolves.toMatchObject({
       data: {
@@ -389,7 +394,7 @@ describe("core read API handler", () => {
         type: "supporting-material-section"
       },
       links: { self: materialPath },
-      meta: { warnings: [] }
+      meta: { correlationId: "material-section-read", warnings: [] }
     })
   })
 
@@ -411,6 +416,53 @@ describe("core read API handler", () => {
     expect(response.status).toBe(422)
     await expect(response.json()).resolves.toMatchObject({
       error: { category: "unprocessable", retryable: false }
+    })
+  })
+
+  it("returns parent-scoped absence and invalid path IDs as correlated contract errors", async () => {
+    let sectionReads = 0
+    const baseUrl = await startServer({
+      ...service(),
+      getDocumentSection: async () => {
+        sectionReads += 1
+        throw new LegislationError("not_found", "Document section was not found")
+      },
+      getSupportingMaterialSection: async () => {
+        sectionReads += 1
+        throw new LegislationError("not_found", "Supporting material section was not found")
+      }
+    })
+    const tooLongId = "x".repeat(257)
+    const [missingDocument, missingMaterial, malformedDocument, tooLongMaterial] = await Promise.all([
+      fetch(`${baseUrl}/api/documents/document%3A1/sections/section%3Aabsent`, {
+        headers: { "x-correlation-id": "document-absence" }
+      }),
+      fetch(`${baseUrl}/api/supporting-materials/material%3A1/sections/section%3Aabsent`, {
+        headers: { "x-correlation-id": "material-absence" }
+      }),
+      fetch(`${baseUrl}/api/documents/%ZZ/sections/section%3A1`, {
+        headers: { "x-correlation-id": "invalid-document-id" }
+      }),
+      fetch(`${baseUrl}/api/supporting-materials/${tooLongId}/sections/section%3A1`, {
+        headers: { "x-correlation-id": "invalid-material-id" }
+      })
+    ])
+
+    expect([missingDocument.status, missingMaterial.status, malformedDocument.status, tooLongMaterial.status]).toEqual([
+      404, 404, 400, 400
+    ])
+    expect(sectionReads).toBe(2)
+    await expect(missingDocument.json()).resolves.toMatchObject({
+      error: { category: "not_found", correlationId: "document-absence", retryable: false }
+    })
+    await expect(missingMaterial.json()).resolves.toMatchObject({
+      error: { category: "not_found", correlationId: "material-absence", retryable: false }
+    })
+    await expect(malformedDocument.json()).resolves.toMatchObject({
+      error: { category: "invalid_request", correlationId: "invalid-document-id", retryable: false }
+    })
+    await expect(tooLongMaterial.json()).resolves.toMatchObject({
+      error: { category: "invalid_request", correlationId: "invalid-material-id", retryable: false }
     })
   })
 

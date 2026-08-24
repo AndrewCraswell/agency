@@ -340,6 +340,8 @@ describe("canonical section reads", () => {
           heading: "Section 1",
           id: "document-section:1",
           ordinal: 0,
+          pageEnd: 3,
+          pageStart: 2,
           sourceEndOffset: 12,
           sourceStartOffset: 0,
           text: "Section text"
@@ -372,8 +374,8 @@ describe("canonical section reads", () => {
         "https://api.example.test/api/documents/document%3Aus%3A119%3Ahr%3A1%3Atext/sections/document-section%3A1",
       documentId: "document:us:119:hr:1:text",
       endOffset: 12,
-      pageEnd: null,
-      pageStart: null,
+      pageEnd: 3,
+      pageStart: 2,
       startOffset: 0,
       type: "document-section"
     })

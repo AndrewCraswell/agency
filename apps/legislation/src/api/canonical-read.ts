@@ -42,6 +42,8 @@ export interface DocumentSectionRecord {
   heading: string | null
   id: string
   ordinal: number
+  pageEnd?: number | null
+  pageStart?: number | null
   sourceEndOffset: number
   sourceStartOffset: number
   text: string
@@ -144,8 +146,8 @@ export function projectDocumentSectionRead(value: Readonly<DocumentSectionRead>,
       billId: value.document.billId,
       documentId: requiredString(value.document, "id", "document ID"),
       endOffset: value.section.sourceEndOffset,
-      pageEnd: null,
-      pageStart: null,
+      pageEnd: value.section.pageEnd ?? null,
+      pageStart: value.section.pageStart ?? null,
       sourceUrl: value.document.sourceUrl,
       startOffset: value.section.sourceStartOffset
     },
