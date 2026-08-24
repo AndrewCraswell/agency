@@ -46,6 +46,12 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 27 | SD-016 | P1 | done | Root-approved ingress throttle now uses canonical integer microseconds with an exact one-second boundary |
 | 28 | SD-017 | P2 | done | Root-approved ordered layout now derives every wire offset, the 70-byte header, and 150-byte maximum without changing RC-03 bytes |
 | 29 | SD-018 | P2 | in-progress | Live simulator rebuild can leave startup-cached HTML pointing at deleted hashed assets |
+| 30 | SD-019 | P1 | intake | Remote identity length and character policies disagree across command, authority, and fixture boundaries |
+| 31 | SD-020 | P2 | intake | Remote schema parsers return caller-owned mutable objects despite readonly result types |
+| 32 | SD-021 | P2 | in-progress | Secure-envelope and replay-candidate metadata validation is duplicated in one security module |
+| 33 | SC-010 | P2 | intake | Communications circuit selected MPNs can drift from canonical component decisions and USB-PD records |
+| 34 | SC-011 | P3 | intake | BOM validation repeats the same 21-reference exact-selection registry already present in canonical rows |
+| 35 | SC-012 | P2 | intake | W5500 support values are canonical upstream but duplicated as circuit literals |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -481,3 +487,70 @@ truth.
 - Acceptance: existing server/API coverage passes; a live-server rebuild test proves the newly served index and referenced JavaScript resolve together; missing/corrupt index or asset fails explicitly.
 - Non-goals: no HMR, production hosting redesign, oracle/lock changes, or scoring-authority changes.
 
+
+
+## SD-019: unify remote identifier policy
+
+- Priority: `P1`
+- State: `intake`
+- Affected files: `apps/scoring/src/remote-control.ts`, `remote-control-authority.ts`, and `remote-control-golden-fixtures.test.ts`.
+- Description: command parsing accepts trimmed identifiers up to 96 characters without a grammar, authority parsing accepts an ASCII grammar up to 128 characters, and the immutable fixture contract uses 64 characters.
+- Impact: the same controller, apparatus, or command identity can pass one boundary and fail another, with different resource limits and canonical expectations.
+- Bounded remediation: choose one documented policy and centralize a private validator across command, snapshot, authority, and fixture boundaries.
+- Acceptance: lower, upper, over-bound, empty, whitespace, and invalid-character cases agree across every parser and fixture.
+- Non-goals: no wire-format, reducer, gesture, or generic validation-framework change.
+
+## SD-020: detach and freeze remote parser results
+
+- Priority: `P2`
+- State: `intake`
+- Affected files: `apps/scoring/src/remote-control.ts` and its focused schema tests.
+- Description: `parseRemoteCommand`, `parseBoutWorkflowSnapshot`, and `parseBoutStateEvent` validate and return the original object; TypeScript readonly types do not prevent runtime mutation or nested aliasing.
+- Impact: downstream validity can change after parsing when a caller mutates the source object.
+- Bounded remediation: return detached deeply frozen canonical projections, then remove redundant downstream cloning only where proven safe.
+- Acceptance: source and nested mutations cannot affect parsed values; all existing schema and reducer tests remain equivalent.
+- Non-goals: no field changes, generic schema library, reducer, or gesture work.
+
+## SD-021: deduplicate encrypted-IR metadata validation
+
+- Priority: `P2`
+- State: `in-progress`
+- Affected files: `apps/scoring/src/encrypted-ir-security.ts` and its focused tests.
+- Description: secure-envelope and replay-candidate parsers independently validate the same apparatus identity, command ID, counter, epoch, protocol, version, remote identity, and suite fields.
+- Impact: a future protocol or identity change can update one security boundary while leaving the other inconsistent.
+- Bounded remediation: use one private common-metadata projection while retaining envelope-only ciphertext/tag/press checks and candidate-specific exact-key checks.
+- Acceptance: shared-field mutation tests prove identical accept/reject behavior while preserving public APIs, error categories, wire bytes, and crypto DENY posture.
+- Non-goals: no cryptography, wire-format, public API, or generic validation abstraction.
+
+## SC-010: bind communications circuit MPNs to canonical selections
+
+- Priority: `P2`
+- State: `intake`
+- Affected files: `packages/scoring-circuit/src/communications-module.circuit.tsx`, `component-decisions.ts`, `usb-pd-footprints.ts`, and focused renderer tests.
+- Description: the circuit hard-codes selected MPNs that already exist in canonical component-decision and USB-PD records, while the BOM already derives from those upstream sources.
+- Impact: a reviewed part change can update the BOM while leaving the rendered communications circuit on the old identity.
+- Bounded remediation: add a narrow private selected-MPN lookup used only by circuit manufacturer identity and footprint-prop calls.
+- Acceptance: all overlapping circuit identities match canonical records with unchanged names, pins, traces, geometry, and release denial.
+- Non-goals: no parts-catalog merger, footprint release, or pin-map redesign.
+
+## SC-011: remove the redundant BOM exact-selection registry
+
+- Priority: `P3`
+- State: `intake`
+- Affected file: `packages/scoring-circuit/src/bench-prototype-bom.ts` and its focused tests.
+- Description: 21 reference/MPN pairs are repeated in a second registry even though validation already compares every row against the canonical BOM.
+- Impact: each exact-selection change requires synchronized edits without adding independent protection.
+- Bounded remediation: remove the duplicate map and loop while retaining canonical-row comparison and focused drift mutations.
+- Acceptance: malformed and MPN-drifted rows still reject; canonical selected BOM data is unchanged.
+- Non-goals: no selection or provenance redesign.
+
+## SC-012: derive W5500 circuit values from the support record
+
+- Priority: `P2`
+- State: `intake`
+- Affected files: `packages/scoring-circuit/src/ethernet-support-network.ts`, `communications-module.circuit.tsx`, and focused renderer tests.
+- Description: the circuit derives support MPNs from the canonical W5500 network but repeats their electrical values as literals.
+- Impact: a reviewed support-value change can leave the rendered circuit electrically stale while its MPN remains synchronized.
+- Bounded remediation: expose a small typed circuit-value projection and consume it for the supported capacitors and resistors, retaining explicit zero-ohm normalization.
+- Acceptance: rendered values derive from the support record and all W5500 traces and references remain identical.
+- Non-goals: no generic unit parser, pin-map abstraction, or fabrication approval.
