@@ -152,7 +152,7 @@ accepted or rejected electrical event from its immutable record.
 | M2-06 | done | Delivered and root-approved: the deterministic virtual link covers delay, loss, duplication, reordering, corruption, disconnect/reconnect, cancellation, bounded backpressure, defensive snapshots, and caller-mutation isolation at 100% focused coverage. | Fault-injectable virtual processor link | M2-05 | Supports delay, loss, duplication, reordering, corruption, disconnect, and bounded backpressure |
 | M2-07 | backlog | Next after M0-04, M2-06: Virtual ESP32 receiver and authority guard. | Virtual ESP32 receiver and authority guard | M0-04, M2-06 | Accepts valid records exactly once and cannot create, alter, or reclassify a scoring decision |
 | M2-08 | done | Delivered and root-approved: strict immutable journal options and storage handoff, bounded atomic checkpoint generations, CRC/digest recovery, idempotency/conflict handling, and adversarial power-loss tests guarantee recovery to the old or new complete state. | Event journal and power-fail transaction model | M0-05, M0-10, M2-07 | Power loss at every write boundary yields either the old or new valid state, never a partial record |
-| M2-09 | blocked | Root review found the application boot identity, bounded RTC/network annotations, ordering, resynchronization, and journal-recovery integration implemented and focused-tested; completion waits for declared dependency M2-08 to close. | Application boot ID, RTC uncertainty, and network-time metadata | M0-05, M2-08 | Offline and resynchronized timelines remain ordered and explicitly uncertain where required |
+| M2-09 | done | Delivered and root-approved: bounded application boot identity, RTC uncertainty/drift, forward and backward network-time anchors, explicit offline/stale/indeterminate ordering, deterministic M2-08 journal recovery annotation, and replay preservation remain outside STM32 scoring authority. | Application boot ID, RTC uncertainty, and network-time metadata | M0-05, M2-08 | Offline and resynchronized timelines remain ordered and explicitly uncertain where required |
 | M2-10 | backlog | Next after M0-10, M2-06 through M2-09: Processor reset, watchdog, brownout, and recovery scenarios. | Processor reset, watchdog, brownout, and recovery scenarios | M0-10, M2-06 through M2-09 | Independent resets never change STM32 scoring authority; recovery produces explicit diagnostics |
 | M2-11 | backlog | Next after M2-04, M2-09: Replay renderer data contract. | Replay renderer data contract | M2-04, M2-09 | A stored record renders without rerunning or re-deciding the scoring algorithm |
 | M2-12 | backlog | Next after M0-07, M2-10: Scenario-runner CLI and machine-readable report. | Scenario-runner CLI and machine-readable report | M0-07, M2-10 | Runs one file or a corpus, returns nonzero on mismatch, and emits stable JSON evidence |
@@ -358,6 +358,7 @@ A milestone closes only when:
 4. documents and machine-readable manifests agree with the implementation;
 5. an independent reviewer has resolved every release-blocking comment; and
 6. remaining risks, assumptions, and deferred work are named in the next milestone entry criteria.
+
 
 
 
