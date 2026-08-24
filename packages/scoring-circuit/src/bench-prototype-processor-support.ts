@@ -3,8 +3,8 @@
  *
  * This document captures only requirements justified by the frozen pin maps
  * and the processor/module primary-source checklists. It deliberately leaves
- * land patterns, capacitor MPNs, oscillator selection, and layout release
- * denied until BP-032/BP-300 supply their independent evidence.
+ * land patterns, the remaining capacitor MPNs, oscillator selection, and
+ * layout release denied until BP-032/BP-300 supply their independent evidence.
  */
 
 import {
@@ -132,6 +132,58 @@ const processorSupportDefinition = {
     ]
   },
   supportSelectionEvidence: {
+    stm32DigitalBypass: {
+      references: ["C_STM_VDD16", "C_STM_VDD32", "C_STM_VDD48", "C_STM_VDD64"],
+      mpn: "GCM188R71H104KA57D",
+      manufacturer: "Murata",
+      sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GCM188R71H104KA57D",
+      sourceDocument: "Murata GCM188R71H104KA57D manufacturer reference sheet",
+      generatedOn: "2026-08-24",
+      value: "100 nF",
+      tolerance: "±10%",
+      dielectric: "X7R",
+      voltageRating: "50 VDC",
+      package: "0603 (1608M)",
+      temperatureScope: "-55 to 125 C",
+      archivePath: "docs/evidence/bp-125/murata-gcm188r71h104ka57-01a.pdf",
+      archiveSha256: "5A29828795FE4B9B8282C7C7FC77E7859FD5E25A64E208257ED25BE08EF2402A",
+      requestContextPath: "docs/evidence/bp-125/murata-gcm188r71h104ka57d-dcbias-request.txt",
+      requestContextSha256: "B46660B122DCEF2DF94D30DCD2C4C1E4602D36350006B14E94B4F97F31004D58",
+      characteristicRecords: [
+        {
+          temperature: "-40 C",
+          requestIdentity:
+            "GET https://ds.murata.com/simserve/characteristics?callback=nothing&ReqType=Characteristics&CallBack=&WorkInfo=bp125; ReqChara partnumber=GCM188R71H104KA57D, chara_type=c_dcbias_capacitance, temperature=-40, ac_vrms=1",
+          path: "docs/evidence/bp-125/murata-gcm188r71h104ka57d-dcbias-tcneg40.json",
+          sha256: "81EE2E884FB23E3590B73BB43784A697E4FF7620E77C4F2C1DB44ACB543B54E0"
+        },
+        {
+          temperature: "25 C",
+          requestIdentity:
+            "GET https://ds.murata.com/simserve/characteristics?callback=nothing&ReqType=Characteristics&CallBack=&WorkInfo=bp125; ReqChara partnumber=GCM188R71H104KA57D, chara_type=c_dcbias_capacitance, temperature=25, ac_vrms=1",
+          path: "docs/evidence/bp-125/murata-gcm188r71h104ka57d-dcbias-tc25.json",
+          sha256: "D4B4A03EEDA87CFD812511927DAE323120A2B5F2DFFF1828F8B9DEF090829B7A"
+        },
+        {
+          temperature: "85 C",
+          requestIdentity:
+            "GET https://ds.murata.com/simserve/characteristics?callback=nothing&ReqType=Characteristics&CallBack=&WorkInfo=bp125; ReqChara partnumber=GCM188R71H104KA57D, chara_type=c_dcbias_capacitance, temperature=85, ac_vrms=1",
+          path: "docs/evidence/bp-125/murata-gcm188r71h104ka57d-dcbias-tc85.json",
+          sha256: "0E624A2E28283EB1DABCA2E25B4C7B30F50243348D6E6D47A385AC3E43E51101"
+        },
+        {
+          temperature: "125 C",
+          requestIdentity:
+            "GET https://ds.murata.com/simserve/characteristics?callback=nothing&ReqType=Characteristics&CallBack=&WorkInfo=bp125; ReqChara partnumber=GCM188R71H104KA57D, chara_type=c_dcbias_capacitance, temperature=125, ac_vrms=1",
+          path: "docs/evidence/bp-125/murata-gcm188r71h104ka57d-dcbias-tc125.json",
+          sha256: "F7A096FD71D88535F4AD23B10BCD456498C8468C43E203AEDA0547D3AD0101FD"
+        }
+      ],
+      temperatureLimit:
+        "-55 to 125 C source operating range; typical characteristic only, no lot or assembled-board guarantee",
+      dcBiasClaim:
+        "No numeric DC-bias claim is made by this contract; retained raw responses are evidence for later review only."
+    },
     stm32Boot0Pulldown: {
       reference: "R_STM_BOOT0",
       mpn: "RC0603FR-0710KL",
@@ -206,7 +258,7 @@ const processorSupportDefinition = {
   },
   bypassAndBulk: {
     stm32Digital: {
-      capacitorMpn: "TBD",
+      capacitorMpn: "GCM188R71H104KA57D",
       population: "required",
       value: "100 nF X7R",
       references: ["C_STM_VDD16", "C_STM_VDD32", "C_STM_VDD48", "C_STM_VDD64"],
@@ -379,6 +431,61 @@ export function validateBenchPrototypeProcessorSupport(value: unknown): true {
     contract.bypassAndBulk.stm32Analog.vref.values[0] !== "100 nF X7R" ||
     contract.bypassAndBulk.stm32Analog.vref.values[1] !== "1 uF X7R" ||
     contract.bypassAndBulk.esp32.values[1] !== "22 uF minimum ceramic" ||
+    contract.bypassAndBulk.stm32Digital.capacitorMpn !== "GCM188R71H104KA57D" ||
+    !sameDataGraph(contract.supportSelectionEvidence.stm32DigitalBypass.references, [
+      "C_STM_VDD16",
+      "C_STM_VDD32",
+      "C_STM_VDD48",
+      "C_STM_VDD64"
+    ]) ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.mpn !== "GCM188R71H104KA57D" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.manufacturer !== "Murata" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.sourceUrl !==
+      "https://www.murata.com/en-us/products/productdetail?partno=GCM188R71H104KA57D" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.sourceDocument !==
+      "Murata GCM188R71H104KA57D manufacturer reference sheet" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.generatedOn !== "2026-08-24" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.value !== "100 nF" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.tolerance !== "±10%" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.dielectric !== "X7R" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.voltageRating !== "50 VDC" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.package !== "0603 (1608M)" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.temperatureScope !== "-55 to 125 C" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.archivePath !==
+      "docs/evidence/bp-125/murata-gcm188r71h104ka57-01a.pdf" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.archiveSha256 !==
+      "5A29828795FE4B9B8282C7C7FC77E7859FD5E25A64E208257ED25BE08EF2402A" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.requestContextPath !==
+      "docs/evidence/bp-125/murata-gcm188r71h104ka57d-dcbias-request.txt" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.requestContextSha256 !==
+      "B46660B122DCEF2DF94D30DCD2C4C1E4602D36350006B14E94B4F97F31004D58" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.characteristicRecords.length !== 4 ||
+    !sameDataGraph(
+      contract.supportSelectionEvidence.stm32DigitalBypass.characteristicRecords.map((record) => record.temperature),
+      ["-40 C", "25 C", "85 C", "125 C"]
+    ) ||
+    !sameDataGraph(
+      contract.supportSelectionEvidence.stm32DigitalBypass.characteristicRecords.map((record) => record.path),
+      [
+        "docs/evidence/bp-125/murata-gcm188r71h104ka57d-dcbias-tcneg40.json",
+        "docs/evidence/bp-125/murata-gcm188r71h104ka57d-dcbias-tc25.json",
+        "docs/evidence/bp-125/murata-gcm188r71h104ka57d-dcbias-tc85.json",
+        "docs/evidence/bp-125/murata-gcm188r71h104ka57d-dcbias-tc125.json"
+      ]
+    ) ||
+    !sameDataGraph(
+      contract.supportSelectionEvidence.stm32DigitalBypass.characteristicRecords.map((record) => record.sha256),
+      [
+        "81EE2E884FB23E3590B73BB43784A697E4FF7620E77C4F2C1DB44ACB543B54E0",
+        "D4B4A03EEDA87CFD812511927DAE323120A2B5F2DFFF1828F8B9DEF090829B7A",
+        "0E624A2E28283EB1DABCA2E25B4C7B30F50243348D6E6D47A385AC3E43E51101",
+        "F7A096FD71D88535F4AD23B10BCD456498C8468C43E203AEDA0547D3AD0101FD"
+      ]
+    ) ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.temperatureLimit !==
+      "-55 to 125 C source operating range; typical characteristic only, no lot or assembled-board guarantee" ||
+    contract.supportSelectionEvidence.stm32DigitalBypass.dcBiasClaim !==
+      "No numeric DC-bias claim is made by this contract; retained raw responses are evidence for later review only." ||
     contract.bootAndReset.stm32.boot0.mpn !== "RC0603FR-0710KL" ||
     contract.supportSelectionEvidence.stm32Boot0Pulldown.reference !== "R_STM_BOOT0" ||
     contract.supportSelectionEvidence.stm32Boot0Pulldown.mpn !== "RC0603FR-0710KL" ||

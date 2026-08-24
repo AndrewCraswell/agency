@@ -26,6 +26,21 @@ to VSSA, VREF+ with 100 nF plus 1 uF to VSSA, and a 100 nF VBAT bypass. VBAT tie
 committed no-backup `SCORING_3V3_NO_BACKUP_TIE`. VREF+ remains the committed
 2.5 V reference and must never be replaced by the 3.3 V rail.
 
+The four STM32 digital bypass references (`C_STM_VDD16`, `C_STM_VDD32`,
+`C_STM_VDD48`, and `C_STM_VDD64`) have the exact Murata
+`GCM188R71H104KA57D` selection. The retained manufacturer reference sheet is
+[`docs/evidence/bp-125/murata-gcm188r71h104ka57-01a.pdf`](evidence/bp-125/murata-gcm188r71h104ka57-01a.pdf),
+SHA-256
+`5A29828795FE4B9B8282C7C7FC77E7859FD5E25A64E208257ED25BE08EF2402A`.
+It identifies 100 nF X7R, 50 V, 0603 (1608M), and a -55 to 125 C operating
+range. Murata characteristic responses for -40, 25, 85, and 125 C are retained
+as raw JSON with the retained request-context file (SHA-256
+`B46660B122DCEF2DF94D30DCD2C4C1E4602D36350006B14E94B4F97F31004D58`) and
+an ordered temperature/path/SHA-256 record in the executable contract. This
+unit makes no numeric DC-bias claim; those responses remain typical
+characterization evidence only and do not establish lot, assembled-board,
+placement, impedance, or derated-capacitance release.
+
 The ESP32 module receives 100 nF X7R plus 22 uF-minimum ceramic directly from
 pad 2 to its ground pads and exposed pad. Exact capacitor MPNs and footprints
 are intentionally `TBD`; their voltage rating, DC-bias derating, impedance,
