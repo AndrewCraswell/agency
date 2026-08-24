@@ -107,12 +107,17 @@ guessed footprint or a claimed CAD digest.
 
 The executable record now contains a deterministic project-footprint review
 input for the exact `TSOP38438`, without treating it as manufacturer CAD. The
-project input uses 1.00 mm finished drill, 2.00 mm pad, 0.50 mm annular ring,
-2.10 mm mask opening, zero paste opening for the through-hole part, and a
-0.55 mm courtyard clearance. Pin 1 is at `(0, 0)` mm, the other leads are at
-2.54 mm pitch, and the lens datum is at `(2.5, 0)` mm with zero-degree
-project rotation and a 0.1-degree review tolerance. These are project review
-inputs, not Vishay dimensions or fabrication approval.
+project input uses 1.10 mm finished drill with ±0.05 mm drill tolerance, 2.20
+mm pad, 0.55 mm annular ring, 2.30 mm mask opening with 0.05 mm expansion,
+zero paste opening for the through-hole part, and a 0.55 mm courtyard
+clearance. The retained Vishay lead envelope is 0.7 mm maximum width by 0.5
+mm maximum thickness, or 0.8602 mm maximum diagonal, at 2.54 mm nominal
+pitch; the drawing rule is `not indicated tolerances ±0.2 mm`. The minimum
+finished drill is therefore 1.05 mm and leaves 0.1898 mm worst-case
+diametral clearance over that diagonal, above the 0.15 mm hand-assembly rule.
+The 2.30 mm mask opening leaves a 0.24 mm mask web at 2.54 mm pitch. These are
+project review inputs, not Vishay land-pattern dimensions or fabrication
+approval.
 
 The project datum is exact: pin 1 and the lead row are at `y=0`, the package
 body extends toward positive `y`, the lens center is `(2.5, 0)` mm, and the

@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="14mm" height="12mm" viewBox="-4 -3 14 12">
-  <metadata>BP-146 TSOP38438 project footprint overlay; scale 1:1; blue outline is a deterministic projection of retained manufacturer drawing dimensions, not manufacturer CAD; pin 1 and lead row are at (0,0), lens face at y=0, body extends positive y; generator deterministic-svg-overlay-generator 1.0.0; review pending; fabrication denied.</metadata>
+  <metadata>BP-146 TSOP38438 project footprint overlay; scale 1:1; blue outline is a deterministic projection of retained manufacturer drawing dimensions, not manufacturer CAD; pin 1 and lead row are at (0,0), lens face at y=0, body extends positive y; project drill 1.10 mm, copper pad 2.20 mm, mask opening 2.30 mm, 0.24 mm mask web at 2.54 mm pitch; generator deterministic-svg-overlay-generator 1.0.0; review pending; fabrication denied.</metadata>
   <g id="package-drawing" fill="none" stroke="#1d4ed8" stroke-width="0.05">
     <rect x="0" y="0" width="5" height="6.95" />
     <line x1="0" y1="0" x2="5" y2="0" />
     <circle cx="2.5" cy="0" r="0.3" />
   </g>
   <g id="project-footprint" fill="none" stroke="#b91c1c" stroke-width="0.05">
-    <circle cx="0" cy="0" r="1" />
-    <circle cx="2.54" cy="0" r="1" />
-    <circle cx="5.08" cy="0" r="1" />
-    <circle cx="0" cy="0" r="0.5" stroke-dasharray="0.1 0.1" />
-    <circle cx="2.54" cy="0" r="0.5" stroke-dasharray="0.1 0.1" />
-    <circle cx="5.08" cy="0" r="0.5" stroke-dasharray="0.1 0.1" />
+    <circle cx="0" cy="0" r="1.1" />
+    <circle cx="2.54" cy="0" r="1.1" />
+    <circle cx="5.08" cy="0" r="1.1" />
+    <circle cx="0" cy="0" r="1.15" stroke-dasharray="0.1 0.1" />
+    <circle cx="2.54" cy="0" r="1.15" stroke-dasharray="0.1 0.1" />
+    <circle cx="5.08" cy="0" r="1.15" stroke-dasharray="0.1 0.1" />
     <rect x="-0.55" y="-0.55" width="6.18" height="8.05" stroke-dasharray="0.15 0.1" />
     <text x="-3.5" y="-1.5" fill="#111827" stroke="none" font-size="0.35">BODY +Y; BLUE PROJECTION; NOT CAD</text>
   </g>

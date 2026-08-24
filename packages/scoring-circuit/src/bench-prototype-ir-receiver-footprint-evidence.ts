@@ -227,6 +227,8 @@ const definition = {
     leadPitchNominalMm: 2.54,
     leadWidthMaximumMm: 0.7,
     leadThicknessMaximumMm: 0.5,
+    leadDiagonalMaximumMm: 0.8602,
+    sourceToleranceRule: "not indicated tolerances ±0.2 mm",
     drillDiameterMm: null,
     padDiameterMm: null,
     state: "source-reviewed-partial",
@@ -313,14 +315,22 @@ const definition = {
     boardCoordinateDatum:
       "project-origin-at-pin-1-x0-y0; lead-row-and-lens-face-at-y0; body-extends-positive-y; optical-axis-negative-y",
     finishedGeometry: {
-      drillDiameterMm: 1,
-      padDiameterMm: 2,
-      annularRingMm: 0.5,
-      solderMaskOpeningDiameterMm: 2.1,
+      drillDiameterMm: 1.1,
+      padDiameterMm: 2.2,
+      annularRingMm: 0.55,
+      solderMaskOpeningDiameterMm: 2.3,
       solderMaskExpansionMm: 0.05,
       courtyardClearanceMm: 0.55,
       pasteOpeningDiameterMm: 0,
-      geometryAuthority: "project-review-input-not-manufacturer-specification"
+      geometryAuthority: "project-review-input-not-manufacturer-specification",
+      minimumFinishedDrillDiameterMm: 1.05,
+      maximumLeadDiagonalMm: 0.8602,
+      minimumDiametralClearanceMm: 0.15,
+      worstCaseDiametralClearanceMm: 0.1898,
+      clearanceRule: "minimum finished drill minus maximum lead diagonal must be at least 0.15 mm",
+      clearancePasses: true,
+      maskWebAtPitchMm: 0.24,
+      maskWebRule: "2.54 mm nominal pitch minus 2.30 mm mask opening must be at least 0.20 mm"
     },
     pinOne: {
       sourceDatum: "Vishay package drawing pin 1 OUT lead at the lens-face front view",
@@ -350,7 +360,7 @@ const definition = {
       artifactPath: "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg",
       generator: "deterministic-svg-overlay-generator",
       generatorVersion: "1.0.0",
-      sha256: "44A4D62B5EFF0F48A222AEAEF0DB93D00ACC38C51A4754C9606BB8C129917426",
+      sha256: "5F9662C67CA5144D5ABA88E917EC025DF45E2481A16A10896E6B38728160774A",
       authority: "deny"
     },
     oneToOneOverlayArtifacts: [
@@ -361,7 +371,7 @@ const definition = {
         artifactPath: "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg",
         generator: "deterministic-svg-overlay-generator",
         generatorVersion: "1.0.0",
-        sha256: "44A4D62B5EFF0F48A222AEAEF0DB93D00ACC38C51A4754C9606BB8C129917426",
+        sha256: "5F9662C67CA5144D5ABA88E917EC025DF45E2481A16A10896E6B38728160774A",
         reviewedBy: null,
         reviewStatus: "pending"
       },
@@ -372,13 +382,13 @@ const definition = {
         artifactPath: "docs/evidence/bp-146/tsop38438-project-assembly-overlay.svg",
         generator: "deterministic-svg-overlay-generator",
         generatorVersion: "1.0.0",
-        sha256: "8EF751EFE0B9160AB5C1EF21159448D75F56A1E7B59C1AA57035E234A1F41830",
+        sha256: "8B54B54ED85F33B67D77AAF3350EE326A549AAB0643BEAE78CCEC95650093A87",
         reviewedBy: null,
         reviewStatus: "pending"
       }
     ],
     toleranceReview: {
-      packageLeadPitchToleranceMm: 0.05,
+      packageLeadPitchToleranceMm: 0.2,
       drillToleranceMm: 0.05,
       padToleranceMm: 0.05,
       boardRotationToleranceDegrees: 0.1,
@@ -589,6 +599,15 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
   ) {
     throw new RangeError("BP-146 series/application guidance drifted")
   }
+  if (
+    evidence.throughHoleGeometry.leadPitchNominalMm !== 2.54 ||
+    evidence.throughHoleGeometry.leadWidthMaximumMm !== 0.7 ||
+    evidence.throughHoleGeometry.leadThicknessMaximumMm !== 0.5 ||
+    evidence.throughHoleGeometry.leadDiagonalMaximumMm !== 0.8602 ||
+    evidence.throughHoleGeometry.sourceToleranceRule !== "not indicated tolerances ±0.2 mm"
+  ) {
+    throw new RangeError("BP-146 Vishay lead envelope and tolerance rule drifted")
+  }
   const assembly = evidence.assemblyGuidance
   if (
     assembly.sourceId !== "vishay-80068-ir-receiver-assembly" ||
@@ -618,14 +637,24 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
     candidate.state !== "project-footprint-generated-pending-review" ||
     candidate.exactPart !== "TSOP38438" ||
     candidate.sourceBasis.length !== 3 ||
-    candidate.finishedGeometry.drillDiameterMm !== 1 ||
-    candidate.finishedGeometry.padDiameterMm !== 2 ||
-    candidate.finishedGeometry.annularRingMm !== 0.5 ||
-    candidate.finishedGeometry.solderMaskOpeningDiameterMm !== 2.1 ||
+    candidate.finishedGeometry.drillDiameterMm !== 1.1 ||
+    candidate.finishedGeometry.padDiameterMm !== 2.2 ||
+    candidate.finishedGeometry.annularRingMm !== 0.55 ||
+    candidate.finishedGeometry.solderMaskOpeningDiameterMm !== 2.3 ||
     candidate.finishedGeometry.solderMaskExpansionMm !== 0.05 ||
     candidate.finishedGeometry.courtyardClearanceMm !== 0.55 ||
     candidate.finishedGeometry.pasteOpeningDiameterMm !== 0 ||
     candidate.finishedGeometry.geometryAuthority !== "project-review-input-not-manufacturer-specification" ||
+    candidate.finishedGeometry.minimumFinishedDrillDiameterMm !== 1.05 ||
+    candidate.finishedGeometry.maximumLeadDiagonalMm !== 0.8602 ||
+    candidate.finishedGeometry.minimumDiametralClearanceMm !== 0.15 ||
+    candidate.finishedGeometry.worstCaseDiametralClearanceMm !== 0.1898 ||
+    candidate.finishedGeometry.clearanceRule !==
+      "minimum finished drill minus maximum lead diagonal must be at least 0.15 mm" ||
+    candidate.finishedGeometry.clearancePasses !== true ||
+    candidate.finishedGeometry.maskWebAtPitchMm !== 0.24 ||
+    candidate.finishedGeometry.maskWebRule !==
+      "2.54 mm nominal pitch minus 2.30 mm mask opening must be at least 0.20 mm" ||
     candidate.pinOne.boardPinOneOrientation !==
       "pin-1-at-x0-y0; lead-row-and-lens-face-at-y0; body-extends-positive-y" ||
     candidate.pinOne.boardRotationDegrees !== 0 ||
@@ -648,7 +677,7 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
     candidate.generatedArtwork.artifactPath !== "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg" ||
     candidate.generatedArtwork.generator !== "deterministic-svg-overlay-generator" ||
     candidate.generatedArtwork.generatorVersion !== "1.0.0" ||
-    candidate.generatedArtwork.sha256 !== "44A4D62B5EFF0F48A222AEAEF0DB93D00ACC38C51A4754C9606BB8C129917426" ||
+    candidate.generatedArtwork.sha256 !== "5F9662C67CA5144D5ABA88E917EC025DF45E2481A16A10896E6B38728160774A" ||
     candidate.generatedArtwork.authority !== "deny" ||
     candidate.oneToOneOverlayArtifacts.length !== 2 ||
     candidate.oneToOneOverlayArtifacts.some(
@@ -663,12 +692,12 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
         artifact.generatorVersion !== "1.0.0" ||
         artifact.sha256 !==
           (artifact.kind === "package-drawing-vs-project-footprint"
-            ? "44A4D62B5EFF0F48A222AEAEF0DB93D00ACC38C51A4754C9606BB8C129917426"
-            : "8EF751EFE0B9160AB5C1EF21159448D75F56A1E7B59C1AA57035E234A1F41830") ||
+            ? "5F9662C67CA5144D5ABA88E917EC025DF45E2481A16A10896E6B38728160774A"
+            : "8B54B54ED85F33B67D77AAF3350EE326A549AAB0643BEAE78CCEC95650093A87") ||
         artifact.reviewedBy !== null ||
         artifact.reviewStatus !== "pending"
     ) ||
-    candidate.toleranceReview.packageLeadPitchToleranceMm !== 0.05 ||
+    candidate.toleranceReview.packageLeadPitchToleranceMm !== 0.2 ||
     candidate.toleranceReview.drillToleranceMm !== 0.05 ||
     candidate.toleranceReview.padToleranceMm !== 0.05 ||
     candidate.toleranceReview.boardRotationToleranceDegrees !== 0.1 ||

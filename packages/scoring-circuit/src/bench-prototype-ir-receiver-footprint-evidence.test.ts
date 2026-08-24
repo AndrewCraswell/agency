@@ -64,6 +64,13 @@ describe("BP-146 IR receiver footprint source evidence", () => {
       envelopeMm: { width: 5, height: 6.95, depth: 4.8 },
       drawingNumber: "6.550-5263.01-4"
     })
+    expect(benchPrototypeIrReceiverFootprintEvidence.throughHoleGeometry).toMatchObject({
+      leadPitchNominalMm: 2.54,
+      leadWidthMaximumMm: 0.7,
+      leadThicknessMaximumMm: 0.5,
+      leadDiagonalMaximumMm: 0.8602,
+      sourceToleranceRule: "not indicated tolerances ±0.2 mm"
+    })
     expect(benchPrototypeIrReceiverFootprintEvidence.pinOrientation).toMatchObject({
       pinning: [
         { pin: 1, name: "OUT" },
@@ -137,14 +144,22 @@ describe("BP-146 IR receiver footprint source evidence", () => {
       state: "project-footprint-generated-pending-review",
       exactPart: "TSOP38438",
       finishedGeometry: {
-        drillDiameterMm: 1,
-        padDiameterMm: 2,
-        annularRingMm: 0.5,
-        solderMaskOpeningDiameterMm: 2.1,
+        drillDiameterMm: 1.1,
+        padDiameterMm: 2.2,
+        annularRingMm: 0.55,
+        solderMaskOpeningDiameterMm: 2.3,
         solderMaskExpansionMm: 0.05,
         courtyardClearanceMm: 0.55,
         pasteOpeningDiameterMm: 0,
-        geometryAuthority: "project-review-input-not-manufacturer-specification"
+        geometryAuthority: "project-review-input-not-manufacturer-specification",
+        minimumFinishedDrillDiameterMm: 1.05,
+        maximumLeadDiagonalMm: 0.8602,
+        minimumDiametralClearanceMm: 0.15,
+        worstCaseDiametralClearanceMm: 0.1898,
+        clearanceRule: "minimum finished drill minus maximum lead diagonal must be at least 0.15 mm",
+        clearancePasses: true,
+        maskWebAtPitchMm: 0.24,
+        maskWebRule: "2.54 mm nominal pitch minus 2.30 mm mask opening must be at least 0.20 mm"
       },
       pinOne: {
         boardPinOneOrientation: "pin-1-at-x0-y0; lead-row-and-lens-face-at-y0; body-extends-positive-y",
@@ -165,9 +180,12 @@ describe("BP-146 IR receiver footprint source evidence", () => {
         state: "generated-project-review-only",
         generator: "deterministic-svg-overlay-generator",
         generatorVersion: "1.0.0",
-        sha256: "44A4D62B5EFF0F48A222AEAEF0DB93D00ACC38C51A4754C9606BB8C129917426"
+        sha256: "5F9662C67CA5144D5ABA88E917EC025DF45E2481A16A10896E6B38728160774A"
       },
-      toleranceReview: { status: "project-review-inputs-pending-independent-CAD-review" },
+      toleranceReview: {
+        packageLeadPitchToleranceMm: 0.2,
+        status: "project-review-inputs-pending-independent-CAD-review"
+      },
       accepted: false,
       fabricationAuthority: "deny"
     })
@@ -179,7 +197,7 @@ describe("BP-146 IR receiver footprint source evidence", () => {
         artifactPath: "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg",
         generator: "deterministic-svg-overlay-generator",
         generatorVersion: "1.0.0",
-        sha256: "44A4D62B5EFF0F48A222AEAEF0DB93D00ACC38C51A4754C9606BB8C129917426",
+        sha256: "5F9662C67CA5144D5ABA88E917EC025DF45E2481A16A10896E6B38728160774A",
         reviewedBy: null,
         reviewStatus: "pending"
       },
@@ -190,7 +208,7 @@ describe("BP-146 IR receiver footprint source evidence", () => {
         artifactPath: "docs/evidence/bp-146/tsop38438-project-assembly-overlay.svg",
         generator: "deterministic-svg-overlay-generator",
         generatorVersion: "1.0.0",
-        sha256: "8EF751EFE0B9160AB5C1EF21159448D75F56A1E7B59C1AA57035E234A1F41830",
+        sha256: "8B54B54ED85F33B67D77AAF3350EE326A549AAB0643BEAE78CCEC95650093A87",
         reviewedBy: null,
         reviewStatus: "pending"
       }
