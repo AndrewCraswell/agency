@@ -1,4 +1,5 @@
 import { benchPrototypeBom } from "./bench-prototype-bom.js"
+import { parseCanonicalUtcTimestamp } from "./bench-prototype-evidence-time.js"
 import { findFootprintReleaseEvidence } from "./footprint-release-evidence.js"
 
 export type FootprintSourceEvidence = {
@@ -300,11 +301,7 @@ function validateRecord(value: unknown, index: number, seen: WeakSet<object>): v
 
   const reviewer = optionalString(record.reviewer, `${path}.reviewer`)
   const reviewedAt = optionalString(record.reviewedAt, `${path}.reviewedAt`)
-  if (
-    reviewedAt !== null &&
-    (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(reviewedAt) ||
-      new Date(reviewedAt).toISOString() !== reviewedAt)
-  ) {
+  if (reviewedAt !== null && parseCanonicalUtcTimestamp(reviewedAt) === null) {
     throw new RangeError(`${path}.reviewedAt must be a canonical UTC timestamp`)
   }
   const findings = parseStringArray(record.findings, `${path}.findings`, seen)

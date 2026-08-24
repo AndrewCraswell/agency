@@ -4,6 +4,7 @@
  * samples, physical mates, photographs, or measured continuity.
  */
 
+import { parseCanonicalUtcTimestamp, parseRealUtcDate } from "./bench-prototype-evidence-time.js"
 import type { BenchPrototypeContinuityEvidence } from "./bench-prototype-fixture-harness.js"
 import {
   benchPrototypeContinuityThresholds,
@@ -361,18 +362,6 @@ function finiteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value)
 }
 
-function parseUtc(value: unknown): Date | null {
-  if (typeof value !== "string") return null
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) || date.toISOString() !== value ? null : date
-}
-
-function parseDate(value: unknown): Date | null {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) return null
-  const date = new Date(`${value}T00:00:00.000Z`)
-  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : date
-}
-
 function inspectDataGraph(value: unknown, path: string, seen: WeakSet<object>, reasons: string[]): void {
   if (value === null || typeof value !== "object") return
   if (seen.has(value)) {
@@ -581,7 +570,7 @@ export function evaluateBenchPrototypeConnectorPreorderEvidence(
   const artifacts = new Map<string, ArtifactUse>()
   if (value.artifactKind !== "bench-prototype-connector-preorder-evidence") reasons.push("artifact kind is invalid")
   if (value.status !== "measured") reasons.push("status must be measured")
-  const recordedAt = parseUtc(value.recordedAtUtc)
+  const recordedAt = parseCanonicalUtcTimestamp(value.recordedAtUtc)
   if (!nonEmptyString(value.evidenceId) || !nonEmptyString(value.operator) || recordedAt === null) {
     reasons.push("evidenceId, operator, and a canonical UTC timestamp are required")
   }
@@ -722,7 +711,7 @@ export function evaluateBenchPrototypeConnectorPreorderEvidence(
         ])
       )
         return false
-      const due = parseDate(row.equipment.calibrationDueDate)
+      const due = parseRealUtcDate(row.equipment.calibrationDueDate)
       const equipmentIdentity =
         typeof row.equipment.manufacturer === "string" &&
         typeof row.equipment.model === "string" &&

@@ -41,6 +41,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 21 | SD-015 | P2 | ready | Event journal redundantly reclones already validated immutable decision records |
 | 22 | SC-007 | P2 | blocked | PCB identity serializers differ; implementation waits for active board-artifact work |
 | 23 | SC-008 | P3 | intake | Three electrical-budget modules repeat the same finite-positive guard |
+| 24 | SC-006 | P2 | done | Root-approved strict evidence-time parser now serves connector, fixture, footprint, and IR evidence validators |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -412,3 +413,12 @@ truth.
 - Acceptance: focused tests preserve all public errors and bounds.
 - Dependencies: none.
 - Non-goals: no general validation framework or domain-validator merger.
+
+## SC-006: unify PCB evidence time validation
+
+- Priority: `P2`
+- State: `done`
+- Delivered: one private scoring-circuit helper enforces canonical millisecond UTC timestamps and real ISO dates across connector preorder, fixture continuity, footprint review, and IR footprint evidence. Existing calibration due-date ordering remains UTC-based.
+- Impact: equivalent evidence timestamps previously had different acceptance rules and malformed IR review timestamps could pass.
+- Non-goals: no date library, analog schema rewrite, or authority escalation.
+- Verification: 53 focused tests, circuit-package TypeScript, focused oxlint, and focused oxfmt passed.

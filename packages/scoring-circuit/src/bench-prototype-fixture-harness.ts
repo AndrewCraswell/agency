@@ -6,6 +6,7 @@
  */
 
 import { benchPrototypeContract, validateBenchPrototypeContract } from "./bench-prototype-contract.js"
+import { parseCanonicalUtcTimestamp, parseRealUtcDate } from "./bench-prototype-evidence-time.js"
 import {
   benchPrototypeSevenChannelAnalog,
   validateBenchPrototypeSevenChannelAnalog
@@ -309,26 +310,10 @@ function nonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.length > 0
 }
 
-function parseStrictUtcDate(value: unknown): Date | null {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) return null
-  const date = new Date(`${value}T00:00:00.000Z`)
-  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : date
-}
-
-function parseStrictUtcTimestamp(value: unknown): Date | null {
-  if (typeof value !== "string") return null
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{3}))?Z$/u.exec(value)
-  if (match === null) return null
-  const milliseconds = match[7] ?? "000"
-  const canonical = `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}.${milliseconds}Z`
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) || date.toISOString() !== canonical ? null : date
-}
-
 export function evaluateBenchPrototypeContinuityEvidence(value: unknown): BenchPrototypeContinuityEvaluation {
   const reasons: string[] = []
   if (!isPlainRecord(value)) return { accepted: false, reasons: ["evidence must be a plain data record"] }
-  const recordedAt = parseStrictUtcTimestamp(value.recordedAtUtc)
+  const recordedAt = parseCanonicalUtcTimestamp(value.recordedAtUtc)
   if (value.artifactKind !== "bench-prototype-fixture-continuity-evidence") reasons.push("artifact kind is invalid")
   if (!nonEmptyString(value.evidenceId)) reasons.push("evidenceId is required")
   if (value.status !== "measured") reasons.push("status must be measured")
@@ -350,7 +335,7 @@ export function evaluateBenchPrototypeContinuityEvidence(value: unknown): BenchP
     ) {
       reasons.push("equipment manufacturer, model, and serial number are required")
     }
-    calibrationDueDate = parseStrictUtcDate(equipment.calibrationDueDate)
+    calibrationDueDate = parseRealUtcDate(equipment.calibrationDueDate)
     if (!nonEmptyString(equipment.calibrationCertificate) || calibrationDueDate === null) {
       reasons.push("equipment calibration certificate and real ISO due date are required")
     }

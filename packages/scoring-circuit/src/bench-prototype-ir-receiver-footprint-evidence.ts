@@ -8,6 +8,8 @@
  * cannot acquire fabrication credit by implication.
  */
 
+import { parseCanonicalUtcTimestamp, parseRealUtcDate } from "./bench-prototype-evidence-time.js"
+
 type DataRecord = Record<PropertyKey, unknown>
 
 function isPlainRecord(value: unknown): value is DataRecord {
@@ -89,9 +91,9 @@ const definition = {
       publishedAt: "2025-05-27",
       reviewedPages: "2, 7",
       sha256: "5F81C36AA02E9901E51C749D03AEE75A23A29B8195B30BF1CBA95F536C865074",
-      retrievedAtUtc: "2026-08-24T08:17:00Z",
+      retrievedAtUtc: "2026-08-24T08:17:00.000Z",
       reviewerId: "implementation-agent",
-      reviewedAtUtc: "2026-08-24T08:17:00Z",
+      reviewedAtUtc: "2026-08-24T08:17:00.000Z",
       reviewStatus: "reviewed",
       reviewScope: "TSOP38438 identity, pin order, package drawing, orientation, and lead geometry"
     },
@@ -104,9 +106,9 @@ const definition = {
       publishedAt: "2016-08-18",
       reviewedPages: "1",
       sha256: "C8A78F338915815E93C5AB4CC98ABF588504CC8B2E4CD3288794660810985BC1",
-      retrievedAtUtc: "2026-08-24T08:17:00Z",
+      retrievedAtUtc: "2026-08-24T08:17:00.000Z",
       reviewerId: "implementation-agent",
-      reviewedAtUtc: "2026-08-24T08:17:00Z",
+      reviewedAtUtc: "2026-08-24T08:17:00.000Z",
       reviewStatus: "reviewed",
       reviewScope: "Minicast front-panel window sizing formula and light-guide recommendation"
     },
@@ -119,9 +121,9 @@ const definition = {
       publishedAt: "2026-05-20",
       reviewedPages: "1, 2",
       sha256: "8DEE97CE1235CB20794A6CB15BD7364277EAAF6FAE908B32F67E8362962FD1A6",
-      retrievedAtUtc: "2026-08-24T08:17:00Z",
+      retrievedAtUtc: "2026-08-24T08:17:00.000Z",
       reviewerId: "implementation-agent",
-      reviewedAtUtc: "2026-08-24T08:17:00Z",
+      reviewedAtUtc: "2026-08-24T08:17:00.000Z",
       reviewStatus: "reviewed",
       reviewScope: "leaded through-hole assembly and lead-bend constraints"
     }
@@ -209,7 +211,7 @@ const definition = {
     artifactId: null,
     sha256: null,
     reviewerId: "implementation-agent",
-    reviewedAtUtc: "2026-08-24T08:17:00Z",
+    reviewedAtUtc: "2026-08-24T08:17:00.000Z",
     reviewStatus: "reviewed-not-acquired",
     limitation:
       "The Vishay product page links ECAD downloads to Ultra Librarian, a third-party service. No first-party CAD artifact was acquired or treated as released geometry."
@@ -228,7 +230,7 @@ const definition = {
   },
   review: {
     reviewerId: "implementation-agent",
-    reviewedAtUtc: "2026-08-24T08:17:00Z",
+    reviewedAtUtc: "2026-08-24T08:17:00.000Z",
     reviewStatus: "source-review-only",
     independentApproval: false
   }
@@ -249,13 +251,20 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
       source.authority !== "manufacturer-primary" ||
       !source.url.startsWith("https://") ||
       !/^[0-9A-F]{64}$/u.test(source.sha256) ||
-      source.retrievedAtUtc.trim() === "" ||
+      parseRealUtcDate(source.publishedAt) === null ||
+      parseCanonicalUtcTimestamp(source.retrievedAtUtc) === null ||
       source.reviewerId.trim() === "" ||
-      source.reviewedAtUtc.trim() === "" ||
+      parseCanonicalUtcTimestamp(source.reviewedAtUtc) === null ||
       source.reviewStatus !== "reviewed"
     ) {
       throw new RangeError("BP-146 source evidence requires a primary URL, digest, and reviewer")
     }
+  }
+  if (parseCanonicalUtcTimestamp(evidence.manufacturerCad.reviewedAtUtc) === null) {
+    throw new RangeError("BP-146 manufacturer CAD evidence requires a canonical UTC review timestamp")
+  }
+  if (parseCanonicalUtcTimestamp(evidence.review.reviewedAtUtc) === null) {
+    throw new RangeError("BP-146 review evidence requires a canonical UTC review timestamp")
   }
   if (
     evidence.receiverMpn !== "TSOP38438" ||
