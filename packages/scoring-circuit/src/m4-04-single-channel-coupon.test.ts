@@ -40,7 +40,7 @@ describe("M4-04 single-channel sensing coupon", () => {
     })
   })
 
-  it("binds a nine-MPN first-party drawing batch without granting footprint authority", () => {
+  it("binds a ten-MPN first-party drawing batch without granting footprint authority", () => {
     const acquired = M404_SINGLE_CHANNEL_COUPON.footprints
       .filter((footprint) => footprint.evidence.manufacturerDrawing.acquisition === "exact-drawing-hash-bound")
       .filter(
@@ -108,6 +108,12 @@ describe("M4-04 single-channel sensing coupon", () => {
         exactMpn: "C0603C104K3RACTU",
         sha256: "F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064",
         sourceUrl: "https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en"
+      },
+      {
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/murata-grm21br71a106ke51l-datasheet.pdf",
+        exactMpn: "GRM21BR71A106KE51L",
+        sha256: "E8432C7ACFA982B24EB06DD145682F78051DC4649ABBEB35BBCA8646B1408E4F",
+        sourceUrl: "https://search.murata.co.jp/Ceramy/image/img/A01X/G101/ENG/GRM21BR71A106KE51-01.pdf"
       }
     ])
     expect(

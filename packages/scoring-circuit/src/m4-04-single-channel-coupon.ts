@@ -285,6 +285,17 @@ const acquiredDrawingEvidenceByMpn: Readonly<Record<string, AcquiredDrawing>> = 
     scope:
       "KEMET product specsheet. The exact T521B106M025ATE100 MPN and 1411/3528 B-case package are named in the retained manufacturer source. No project land pattern or geometry is inferred from this source.",
     sha256: "8DBB07C110359B8BC1BE5AE0044E08B8BADCC88A60F4DA36404BB27803F85EBD"
+  },
+  GRM21BR71A106KE51L: {
+    acquisition: "exact-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/murata-grm21br71a106ke51l-datasheet.pdf",
+    drawingIdentifier: "Murata GRM21, GRM21BR71A106KE51 reference sheet, manufacturer dimensions",
+    drawingUrl: "https://search.murata.co.jp/Ceramy/image/img/A01X/G101/ENG/GRM21BR71A106KE51-01.pdf",
+    geometry: null,
+    byteMarkers: ["GRM", "X7R", "E51", "1.25"],
+    scope:
+      "Murata GRM21 reference sheet. The first page names the exact GRM21BR71A106KE51 orderable, 0805 case, X7R dielectric, and 10 uF/10 V rating; the retained manufacturer source provides the GRM21 2.0 x 1.25 mm component dimensions and reflow land-dimension guidance. No project land pattern or geometry is inferred from this source.",
+    sha256: "E8432C7ACFA982B24EB06DD145682F78051DC4649ABBEB35BBCA8646B1408E4F"
   }
 }
 
