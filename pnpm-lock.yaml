@@ -26,6 +26,9 @@ importers:
       '@turbo/gen':
         specifier: ^2.10.0
         version: 2.10.7(@types/node@24.13.2)
+      '@vitest/expect':
+        specifier: 4.1.10
+        version: 4.1.10
       beachball:
         specifier: ^2.65.5
         version: 2.65.5(typescript@7.0.1-rc)
