@@ -1,0 +1,15 @@
+{
+  "formats": {
+    "match": {
+      "maximum": 3,
+      "minimum": 1
+    },
+    "period": {
+      "maximum": 3,
+      "minimum": 1
+    }
+  },
+  "ownerId": "scoring-product-rules",
+  "registryId": "prototype-bout-format-registry",
+  "registryRevision": "2026-08-23.1"
+}

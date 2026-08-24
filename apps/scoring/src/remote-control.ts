@@ -116,6 +116,18 @@ export type TimedWorkflowState = Readonly<{
   remainingDurationCentiseconds: number
   status: "running" | "stopped"
 }>
+export type PriorityEntropyReceiptCorrelation = Readonly<{
+  bit: 0 | 1
+  ownerId: string
+  ownerRevision: string
+  sampleId: string
+}>
+export type CompetitionFormatAuthority = Readonly<{
+  ownerId: string
+  registryDigest: string
+  registryId: string
+  registryRevision: string
+}>
 export type BoutWorkflowSnapshot = Readonly<{
   apparatusId: string
   authority: ControllerAuthority
@@ -130,11 +142,13 @@ export type BoutWorkflowSnapshot = Readonly<{
     status: "running" | "stopped"
   }>
   competition: Readonly<{ kind: "match" | "period"; value: number }>
+  competitionFormatAuthority: CompetitionFormatAuthority
   eventRevision: number
   lastScoredSide: "left" | "right" | null
   medical: TimedWorkflowState | null
   passivity: TimedWorkflowState | null
   priority: "left" | "right" | null
+  priorityEntropyReceipt: PriorityEntropyReceiptCorrelation | null
   sides: Readonly<{
     left: Readonly<{ pCard: "none" | "yellow" | "red"; redCardCount: number; score: number; yellowCard: boolean }>
     right: Readonly<{ pCard: "none" | "yellow" | "red"; redCardCount: number; score: number; yellowCard: boolean }>
@@ -339,6 +353,26 @@ function timed(value: unknown): value is TimedWorkflowState {
     oneOf(value.status, ["running", "stopped"])
   )
 }
+function priorityEntropyReceipt(value: unknown): value is PriorityEntropyReceiptCorrelation {
+  return (
+    record(value) &&
+    keys(value, ["bit", "ownerId", "ownerRevision", "sampleId"]) &&
+    (value.bit === 0 || value.bit === 1) &&
+    id(value.ownerId) &&
+    id(value.ownerRevision) &&
+    id(value.sampleId)
+  )
+}
+function competitionFormatAuthority(value: unknown): value is CompetitionFormatAuthority {
+  return (
+    record(value) &&
+    keys(value, ["ownerId", "registryDigest", "registryId", "registryRevision"]) &&
+    id(value.ownerId) &&
+    id(value.registryDigest) &&
+    id(value.registryId) &&
+    id(value.registryRevision)
+  )
+}
 function side(value: unknown): boolean {
   return (
     record(value) &&
@@ -361,11 +395,13 @@ export function isBoutWorkflowSnapshot(value: unknown): value is BoutWorkflowSna
       "boutRevision",
       "clock",
       "competition",
+      "competitionFormatAuthority",
       "eventRevision",
       "lastScoredSide",
       "medical",
       "passivity",
       "priority",
+      "priorityEntropyReceipt",
       "sides",
       "sourceCommandDisposition",
       "sourceCommandIdentity",
@@ -394,7 +430,7 @@ export function isBoutWorkflowSnapshot(value: unknown): value is BoutWorkflowSna
     integer(value.clock.configuredDurationCentiseconds) &&
     integer(value.clock.remainingDurationCentiseconds) &&
     oneOf(value.clock.mode, ["bout", "break", "overtime"]) &&
-    (value.clock.mode === "break"
+    (value.clock.mode === "break" || value.clock.mode === "overtime"
       ? value.clock.remainingDurationCentiseconds <= 6_000
       : value.clock.remainingDurationCentiseconds <= value.clock.configuredDurationCentiseconds) &&
     oneOf(value.clock.status, ["running", "stopped"]) &&
@@ -402,14 +438,36 @@ export function isBoutWorkflowSnapshot(value: unknown): value is BoutWorkflowSna
     keys(value.competition, ["kind", "value"]) &&
     oneOf(value.competition.kind, ["match", "period"]) &&
     integer(value.competition.value) &&
+    competitionFormatAuthority(value.competitionFormatAuthority) &&
     (value.lastScoredSide === null || oneOf(value.lastScoredSide, ["left", "right"])) &&
     (value.priority === null || oneOf(value.priority, ["left", "right"])) &&
+    (value.priorityEntropyReceipt === null || priorityEntropyReceipt(value.priorityEntropyReceipt)) &&
     (value.medical === null || timed(value.medical)) &&
     (value.passivity === null || timed(value.passivity)) &&
     record(value.sides) &&
     keys(value.sides, ["left", "right"]) &&
     side(value.sides.left) &&
-    side(value.sides.right)
+    side(value.sides.right) &&
+    (value.priority === null || value.clock.mode === "overtime") &&
+    (value.priorityEntropyReceipt === null ||
+      value.priority === (value.priorityEntropyReceipt.bit === 0 ? "left" : "right")) &&
+    (value.clock.mode !== "overtime" ||
+      (value.clock.status === "running" &&
+        value.clock.remainingDurationCentiseconds > 0 &&
+        value.priority !== null &&
+        value.priorityEntropyReceipt !== null)) &&
+    !(
+      value.medical !== null &&
+      value.medical.status === "running" &&
+      (value.clock.mode !== "bout" ||
+        value.clock.status !== "stopped" ||
+        (value.passivity !== null && value.passivity.status === "running"))
+    ) &&
+    !(
+      value.passivity !== null &&
+      value.passivity.status === "running" &&
+      (value.clock.mode !== "bout" || value.clock.status !== "running")
+    )
   )
 }
 function permitted(command: RemoteCommandKey, controller: ControllerAuthority): boolean {

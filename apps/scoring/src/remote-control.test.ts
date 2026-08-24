@@ -51,11 +51,18 @@ const snapshot = {
     status: "stopped"
   },
   competition: { kind: "period", value: 1 },
+  competitionFormatAuthority: {
+    ownerId: "scoring-product-rules",
+    registryDigest: "sha256:8ccfc9c878c8758bde503fec7bba2f81308da66528b3b7b6ab1e4b8046770d98",
+    registryId: "prototype-bout-format-registry",
+    registryRevision: "2026-08-23.1"
+  },
   eventRevision: 8,
   lastScoredSide: null,
   medical: null,
   passivity: null,
   priority: null,
+  priorityEntropyReceipt: null,
   sides: {
     left: { pCard: "none", redCardCount: 0, score: 1, yellowCard: false },
     right: { pCard: "none", redCardCount: 0, score: 0, yellowCard: false }
@@ -524,6 +531,40 @@ describe("RC-02 complete clock snapshot schema", () => {
         ...activeBreak,
         clock: { ...activeBreak.clock, remainingDurationCentiseconds: 6_001 }
       })
+    ).toThrow(TypeError)
+  })
+
+  it("requires frozen format provenance and coherent priority entropy", () => {
+    const activeOvertime = {
+      ...snapshot,
+      clock: { ...snapshot.clock, mode: "overtime", remainingDurationCentiseconds: 6_000, status: "running" },
+      priority: "left",
+      priorityEntropyReceipt: {
+        bit: 0,
+        ownerId: "priority-entropy-owner",
+        ownerRevision: "priority-entropy-1",
+        sampleId: "priority-sample-01"
+      }
+    } as const
+    const { competitionFormatAuthority: _missingFormatAuthority, ...missingFormatAuthority } = snapshot
+
+    expect(parseBoutWorkflowSnapshot(activeOvertime)).toEqual(activeOvertime)
+    expect(() => parseBoutWorkflowSnapshot(missingFormatAuthority)).toThrow(TypeError)
+    expect(() =>
+      parseBoutWorkflowSnapshot({
+        ...snapshot,
+        competitionFormatAuthority: { ...snapshot.competitionFormatAuthority, unexpected: true }
+      })
+    ).toThrow(TypeError)
+    expect(() => parseBoutWorkflowSnapshot({ ...snapshot, priority: "left" })).toThrow(TypeError)
+    expect(() =>
+      parseBoutWorkflowSnapshot({
+        ...activeOvertime,
+        priorityEntropyReceipt: { ...activeOvertime.priorityEntropyReceipt, bit: 1 }
+      })
+    ).toThrow(TypeError)
+    expect(() =>
+      parseBoutWorkflowSnapshot({ ...activeOvertime, clock: { ...activeOvertime.clock, status: "stopped" } })
     ).toThrow(TypeError)
   })
 })

@@ -1,6 +1,9 @@
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   BOUT_WORKFLOW_COMMAND_ID_CAPACITY,
+  COMPETITION_FORMAT_REGISTRY,
   createBoutWorkflowReducerState,
   createFreshBoutWorkflowSnapshot,
   parseStm32BoutResetResult,
@@ -38,16 +41,25 @@ function state(): BoutWorkflowReducerState {
   )
 }
 
+function entropyReceipt(bit: 0 | 1, sampleId: string) {
+  return { bit, ownerId: "priority-entropy-owner", ownerRevision: "priority-entropy-1", sampleId }
+}
+
 function command(commandName: RemoteCommand["command"], commandId: string, payload: object = {}): RemoteCommand {
   const pressKind =
     commandName === "bout.new" ||
     commandName === "clock.configure" ||
+    commandName === "medical.start" ||
+    commandName === "format.advance" ||
+    commandName === "format.retreat" ||
     commandName === "passivityPenalty.award.left" ||
     commandName === "passivityPenalty.award.right"
       ? "modified"
       : commandName === "clock.loadOneMinute"
         ? "double"
-        : "direct"
+        : commandName === "overtime.toggle"
+          ? "held"
+          : "direct"
   return parseRemoteCommand({
     apparatusId: "apparatus-01",
     authority,
@@ -66,6 +78,20 @@ function callReduce(stateValue: BoutWorkflowReducerState, action: unknown): Bout
 }
 
 describe("RC-05 bout workflow reducer", () => {
+  it("binds the frozen competition authority to the canonical registry artifact bytes", () => {
+    const artifact = readFileSync(new URL("../docs/competition-format-rules-registry.json", import.meta.url), "utf8")
+    const parsed = JSON.parse(artifact) as unknown
+    expect(createHash("sha256").update(artifact, "utf8").digest("hex")).toBe(
+      COMPETITION_FORMAT_REGISTRY.authority.registryDigest.slice("sha256:".length)
+    )
+    expect(parsed).toEqual({
+      formats: COMPETITION_FORMAT_REGISTRY.bounds,
+      ownerId: COMPETITION_FORMAT_REGISTRY.authority.ownerId,
+      registryId: COMPETITION_FORMAT_REGISTRY.authority.registryId,
+      registryRevision: COMPETITION_FORMAT_REGISTRY.authority.registryRevision
+    })
+  })
+
   it("creates a complete fresh, stopped bout without implicit timer or score values", () => {
     const snapshot = state().snapshot
     expect(snapshot).toMatchObject({
@@ -73,8 +99,10 @@ describe("RC-05 bout workflow reducer", () => {
       boutId: "bout-01",
       boutRevision: 0,
       clock: { configuredDurationCentiseconds: 18_000, remainingDurationCentiseconds: 18_000, status: "stopped" },
+      competitionFormatAuthority: COMPETITION_FORMAT_REGISTRY.authority,
       eventRevision: 0,
       priority: null,
+      priorityEntropyReceipt: null,
       sides: {
         left: { pCard: "none", redCardCount: 0, score: 0, yellowCard: false },
         right: { pCard: "none", redCardCount: 0, score: 0, yellowCard: false }
@@ -120,7 +148,9 @@ describe("RC-05 bout workflow reducer", () => {
           boutId: "bout-02",
           boutRevision: 1,
           clock: { configuredDurationCentiseconds: 12_000, remainingDurationCentiseconds: 12_000, status: "stopped" },
+          competitionFormatAuthority: COMPETITION_FORMAT_REGISTRY.authority,
           eventRevision: 1,
+          priorityEntropyReceipt: null,
           weapon: "epee"
         }
       }
@@ -184,6 +214,83 @@ describe("RC-05 bout workflow reducer", () => {
       }
     })
     expect(isBoutStateEvent(applied.event)).toBe(true)
+  })
+
+  it("fails closed for snapshots without the frozen registry or a live entropy capability", () => {
+    const current = state()
+    const loaded = createFreshBoutWorkflowSnapshot({
+      apparatusId: "apparatus-01",
+      authority,
+      boutId: "snapshot-provenance",
+      boutRevision: 2,
+      clockDurationCentiseconds: 18_000,
+      eventRevision: 8,
+      initialCompetition: { kind: "period", value: 2 },
+      sourceCommandIdentity: {
+        apparatusId: "apparatus-01",
+        commandId: "saved-provenance",
+        controllerId: "console-supervisor",
+        counter: 6,
+        remoteId: null
+      },
+      timingConfigurationRevision: "timing-saved",
+      weapon: "sabre"
+    })
+    const attempt = (commandId: string, snapshot: object) =>
+      reduceBoutWorkflow(current, {
+        command: command("bout.snapshot.load", commandId, { snapshot }),
+        nextBout: null,
+        type: "command"
+      })
+
+    expect(
+      attempt("load-unknown-registry", {
+        ...loaded,
+        competitionFormatAuthority: { ...loaded.competitionFormatAuthority, registryRevision: "unreviewed" }
+      })
+    ).toMatchObject({ event: { rejectionReason: "owner-unavailable" }, outcome: "rejected" })
+    expect(
+      attempt("load-out-of-bounds-format", { ...loaded, competition: { kind: "period", value: 4 } })
+    ).toMatchObject({
+      event: { rejectionReason: "out-of-bounds" },
+      outcome: "rejected"
+    })
+    expect(
+      attempt("load-live-entropy", {
+        ...loaded,
+        clock: { ...loaded.clock, mode: "overtime", remainingDurationCentiseconds: 6_000, status: "running" },
+        priority: "left",
+        priorityEntropyReceipt: entropyReceipt(0, "externally-supplied-priority")
+      })
+    ).toMatchObject({ event: { rejectionReason: "owner-unavailable" }, outcome: "rejected" })
+  })
+
+  it("rejects every public overtime-start request and denies caller-constructed live priority state", () => {
+    const initial = state()
+    const archivalOvertime = {
+      ...initial.snapshot,
+      clock: { ...initial.snapshot.clock, mode: "overtime", remainingDurationCentiseconds: 6_000, status: "running" },
+      priority: "left",
+      priorityEntropyReceipt: entropyReceipt(0, "loaded-priority")
+    }
+    expect(() => createBoutWorkflowReducerState(archivalOvertime)).toThrow(
+      "Live priority entropy requires the unavailable trusted issuer"
+    )
+    expect(
+      callReduce(initial, {
+        command: command("overtime.toggle", "overtime-untrusted"),
+        nextBout: null,
+        priorityEntropyReceipt: entropyReceipt(0, "forged-priority"),
+        type: "command"
+      })
+    ).toMatchObject({ outcome: "ignored", reason: "malformed-action" })
+    expect(
+      reduceBoutWorkflow(initial, {
+        command: command("overtime.toggle", "overtime-missing"),
+        nextBout: null,
+        type: "command"
+      })
+    ).toMatchObject({ event: { rejectionReason: "owner-unavailable" }, outcome: "rejected" })
   })
 
   it("does not load an older authority revision or revive different ownership at the current revision", () => {
@@ -352,17 +459,6 @@ describe("RC-05 bout workflow reducer", () => {
     expect(atFloor).toMatchObject({ event: { rejectionReason: "out-of-bounds" }, outcome: "rejected" })
     expect(atFloor.state.snapshot).toEqual(decremented.state.snapshot)
 
-    const overtime = createBoutWorkflowReducerState({
-      ...initial.snapshot,
-      clock: { ...initial.snapshot.clock, mode: "overtime" }
-    })
-    expect(
-      reduceBoutWorkflow(overtime, {
-        command: command("score.increment.right", "overtime-score"),
-        nextBout: null,
-        type: "command"
-      })
-    ).toMatchObject({ outcome: "applied", state: { snapshot: { sides: { right: { score: 1 } } } } })
     const breakState = createBoutWorkflowReducerState({
       ...initial.snapshot,
       clock: { ...initial.snapshot.clock, mode: "break", remainingDurationCentiseconds: 6_000 }
@@ -612,7 +708,7 @@ describe("RC-05 bout workflow reducer", () => {
     expect(reduceBoutWorkflow(running, action)).toMatchObject({ event: { rejectionReason: "clock-running" } })
     const otherMode = createBoutWorkflowReducerState({
       ...initial.snapshot,
-      clock: { ...initial.snapshot.clock, mode: "overtime" }
+      medical: { configuredDurationCentiseconds: 30_000, remainingDurationCentiseconds: 30_000, status: "running" }
     })
     expect(reduceBoutWorkflow(otherMode, action)).toMatchObject({ event: { rejectionReason: "invalid-mode" } })
   })
@@ -737,8 +833,6 @@ describe("RC-05 bout workflow reducer", () => {
     const current = state().snapshot
     const initial = createBoutWorkflowReducerState({
       ...current,
-      clock: { ...current.clock, status: "running" },
-      priority: "left",
       sides: {
         left: { pCard: "red", redCardCount: 2, score: 7, yellowCard: true },
         right: { pCard: "yellow", redCardCount: 1, score: 9, yellowCard: true }
@@ -756,7 +850,7 @@ describe("RC-05 bout workflow reducer", () => {
         snapshot: {
           boutId: "bout-01",
           clock: initial.snapshot.clock,
-          priority: "left",
+          priority: null,
           sides: {
             left: { pCard: "none", redCardCount: 0, score: 7, yellowCard: false },
             right: { pCard: "none", redCardCount: 0, score: 9, yellowCard: false }

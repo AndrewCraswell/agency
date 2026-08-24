@@ -11,6 +11,7 @@ import {
   parseBoutWorkflowSnapshot,
   type BoutStateEvent,
   type BoutWorkflowSnapshot,
+  type CompetitionFormatAuthority,
   type ControllerAuthority,
   type RemoteCommand,
   type RemoteCommandRejectionReason,
@@ -44,6 +45,20 @@ export type PendingNewBout = Readonly<{
   nextBout: NewBoutConfiguration
 }>
 
+/** SHA-256 of docs/competition-format-rules-registry.json, including its trailing LF. */
+export const COMPETITION_FORMAT_REGISTRY = Object.freeze({
+  authority: Object.freeze({
+    ownerId: "scoring-product-rules",
+    registryDigest: "sha256:8ccfc9c878c8758bde503fec7bba2f81308da66528b3b7b6ab1e4b8046770d98",
+    registryId: "prototype-bout-format-registry",
+    registryRevision: "2026-08-23.1"
+  }),
+  bounds: Object.freeze({
+    match: Object.freeze({ maximum: 3, minimum: 1 }),
+    period: Object.freeze({ maximum: 3, minimum: 1 })
+  })
+})
+
 export type BoutWorkflowReducerState = Readonly<{
   completedCommandIds: readonly string[]
   completedEvents: readonly BoutStateEvent[]
@@ -51,9 +66,13 @@ export type BoutWorkflowReducerState = Readonly<{
   snapshot: BoutWorkflowSnapshot
 }>
 
-export type BoutWorkflowAction =
-  | Readonly<{ command: RemoteCommand; nextBout: NewBoutConfiguration | null; type: "command" }>
-  | Stm32BoutResetResult
+export type BoutWorkflowCommandAction = Readonly<{
+  command: RemoteCommand
+  nextBout: NewBoutConfiguration | null
+  type: "command"
+}>
+
+export type BoutWorkflowAction = BoutWorkflowCommandAction | Stm32BoutResetResult
 
 export type Stm32BoutResetResult =
   | Readonly<{
@@ -295,6 +314,35 @@ function reject(
   return { event, outcome: "rejected", reason, state: remember(state, event) }
 }
 
+function isKnownFormatAuthority(value: unknown): value is CompetitionFormatAuthority {
+  const known = COMPETITION_FORMAT_REGISTRY.authority
+  return (
+    isStrictPlainRecord(value) &&
+    hasExactlyKeys(value, ["ownerId", "registryDigest", "registryId", "registryRevision"]) &&
+    value.ownerId === known.ownerId &&
+    value.registryDigest === known.registryDigest &&
+    value.registryId === known.registryId &&
+    value.registryRevision === known.registryRevision
+  )
+}
+
+function isKnownCompetition(value: unknown): value is Readonly<{ kind: "match" | "period"; value: number }> {
+  if (
+    !isStrictPlainRecord(value) ||
+    !hasExactlyKeys(value, ["kind", "value"]) ||
+    (value.kind !== "match" && value.kind !== "period") ||
+    !isPositiveInteger(value.value)
+  ) {
+    return false
+  }
+  const bounds = COMPETITION_FORMAT_REGISTRY.bounds[value.kind]
+  return value.value >= bounds.minimum && value.value <= bounds.maximum
+}
+
+function knownFormatAuthority(): CompetitionFormatAuthority {
+  return structuredClone(COMPETITION_FORMAT_REGISTRY.authority)
+}
+
 function isNewBoutConfiguration(value: unknown, current: BoutWorkflowSnapshot): value is NewBoutConfiguration {
   return (
     isStrictPlainRecord(value) &&
@@ -310,10 +358,7 @@ function isNewBoutConfiguration(value: unknown, current: BoutWorkflowSnapshot): 
     isPositiveInteger(value.clockDurationCentiseconds) &&
     isIdentifier(value.timingConfigurationRevision) &&
     (value.weapon === "epee" || value.weapon === "foil" || value.weapon === "sabre") &&
-    isStrictPlainRecord(value.initialCompetition) &&
-    hasExactlyKeys(value.initialCompetition, ["kind", "value"]) &&
-    (value.initialCompetition.kind === "match" || value.initialCompetition.kind === "period") &&
-    isPositiveInteger(value.initialCompetition.value)
+    isKnownCompetition(value.initialCompetition)
   )
 }
 
@@ -353,19 +398,16 @@ export function parseStm32BoutResetResult(value: unknown): Stm32BoutResetResult 
   }
 }
 
-function parseCommandAction(
-  value: unknown,
-  current: BoutWorkflowSnapshot
-): Extract<BoutWorkflowAction, Readonly<{ type: "command" }>> | null {
+function parseCommandAction(value: unknown, current: BoutWorkflowSnapshot): BoutWorkflowCommandAction | null {
   if (
     !isStrictPlainRecord(value) ||
-    !hasExactlyKeys(value, ["command", "nextBout", "type"]) ||
     value.type !== "command" ||
     !isRemoteCommand(value.command) ||
     (value.nextBout !== null && !isNewBoutConfiguration(value.nextBout, current))
   ) {
     return null
   }
+  if (!hasExactlyKeys(value, ["command", "nextBout", "type"])) return null
   return { command: value.command, nextBout: value.nextBout, type: "command" }
 }
 
@@ -389,11 +431,13 @@ function freshFromPending(
         status: "stopped"
       },
       competition: structuredClone(next.initialCompetition),
+      competitionFormatAuthority: knownFormatAuthority(),
       eventRevision: current.eventRevision + 1,
       lastScoredSide: null,
       medical: null,
       passivity: null,
       priority: null,
+      priorityEntropyReceipt: null,
       sides: {
         left: { pCard: "none", redCardCount: 0, score: 0, yellowCard: false },
         right: { pCard: "none", redCardCount: 0, score: 0, yellowCard: false }
@@ -426,8 +470,7 @@ export function createFreshBoutWorkflowSnapshot(input: FreshBoutWorkflowInput): 
     !isNonnegativeInteger(input.sourceCommandIdentity.counter) ||
     (input.sourceCommandIdentity.remoteId !== null && !isIdentifier(input.sourceCommandIdentity.remoteId)) ||
     (input.weapon !== "epee" && input.weapon !== "foil" && input.weapon !== "sabre") ||
-    (input.initialCompetition.kind !== "match" && input.initialCompetition.kind !== "period") ||
-    !isPositiveInteger(input.initialCompetition.value)
+    !isKnownCompetition(input.initialCompetition)
   ) {
     throw new TypeError("Fresh bout workflow input is incomplete or invalid")
   }
@@ -445,11 +488,13 @@ export function createFreshBoutWorkflowSnapshot(input: FreshBoutWorkflowInput): 
       status: "stopped"
     },
     competition: structuredClone(input.initialCompetition),
+    competitionFormatAuthority: knownFormatAuthority(),
     eventRevision: input.eventRevision ?? 0,
     lastScoredSide: null,
     medical: null,
     passivity: null,
     priority: null,
+    priorityEntropyReceipt: null,
     sides: {
       left: { pCard: "none", redCardCount: 0, score: 0, yellowCard: false },
       right: { pCard: "none", redCardCount: 0, score: 0, yellowCard: false }
@@ -465,7 +510,14 @@ export function createFreshBoutWorkflowSnapshot(input: FreshBoutWorkflowInput): 
 
 /** Creates a reducer state only from a full, strictly parseable snapshot. */
 export function createBoutWorkflowReducerState(snapshot: unknown): BoutWorkflowReducerState {
-  return freezeState(parseBoutWorkflowSnapshot(snapshot), null, [], [])
+  const parsed = parseBoutWorkflowSnapshot(snapshot)
+  if (!isKnownFormatAuthority(parsed.competitionFormatAuthority))
+    throw new TypeError("Bout snapshot does not reference the frozen competition-format registry")
+  if (!isKnownCompetition(parsed.competition))
+    throw new TypeError("Bout snapshot competition is outside the frozen competition-format registry")
+  if (parsed.priorityEntropyReceipt !== null)
+    throw new TypeError("Live priority entropy requires the unavailable trusted issuer")
+  return freezeState(parsed, null, [], [])
 }
 
 /**
@@ -536,9 +588,29 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
     return reject(state, command, "wrong-controller-authority")
   if (state.pendingNewBout !== null) return reject(state, command, "invalid-mode")
 
+  if (
+    state.snapshot.medical?.status === "running" &&
+    (command.command === "clock.toggle" ||
+      command.command === "clock.adjust.positive" ||
+      command.command === "clock.adjust.negative" ||
+      command.command === "clock.loadConfigured" ||
+      command.command === "clock.loadOneMinute" ||
+      command.command === "clock.configure" ||
+      command.command === "break.start.oneMinute" ||
+      command.command === "overtime.toggle")
+  ) {
+    return reject(state, command, "invalid-mode")
+  }
+
+  if (state.snapshot.clock.mode === "overtime" && command.command === "clock.toggle")
+    return reject(state, command, "invalid-mode")
+
   if (command.command === "bout.snapshot.load") {
     if (state.snapshot.clock.status === "running") return reject(state, command, "clock-running")
     const loaded = parseBoutWorkflowSnapshot(command.payload.snapshot)
+    if (!isKnownFormatAuthority(loaded.competitionFormatAuthority)) return reject(state, command, "owner-unavailable")
+    if (!isKnownCompetition(loaded.competition)) return reject(state, command, "out-of-bounds")
+    if (loaded.priorityEntropyReceipt !== null) return reject(state, command, "owner-unavailable")
     if (
       loaded.apparatusId !== state.snapshot.apparatusId ||
       loaded.eventRevision <= state.snapshot.eventRevision ||
@@ -664,9 +736,47 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
     })
   }
 
-  if (command.command === "break.start.oneMinute") {
+  if (command.command === "overtime.toggle") {
+    if (!isBoutClock(state.snapshot) || state.snapshot.medical !== null) return reject(state, command, "invalid-mode")
     if (state.snapshot.clock.status === "running") return reject(state, command, "clock-running")
+    return reject(state, command, "owner-unavailable")
+  }
+
+  if (command.command === "medical.start") {
+    if (!isBoutClock(state.snapshot) || state.snapshot.medical !== null) return reject(state, command, "invalid-mode")
+    if (state.snapshot.clock.status === "running") return reject(state, command, "clock-running")
+    return apply(state, command, "medical.start", {
+      ...copySnapshot(state.snapshot),
+      medical: { configuredDurationCentiseconds: 30_000, remainingDurationCentiseconds: 30_000, status: "running" }
+    })
+  }
+
+  if (command.command === "priority.assign.supervisor") return reject(state, command, "owner-unavailable")
+
+  if (command.command === "format.advance" || command.command === "format.retreat") {
+    if (!isKnownFormatAuthority(state.snapshot.competitionFormatAuthority))
+      return reject(state, command, "owner-unavailable")
+    if (!isBoutClock(state.snapshot) || state.snapshot.medical !== null) return reject(state, command, "invalid-mode")
+    if (state.snapshot.clock.status === "running") return reject(state, command, "clock-running")
+    const format = COMPETITION_FORMAT_REGISTRY.bounds[state.snapshot.competition.kind]
+    const current = state.snapshot.competition.value
+    if (current < format.minimum || current > format.maximum) return reject(state, command, "out-of-bounds")
+    if (command.command === "format.advance" && current === format.maximum)
+      return reject(state, command, "out-of-bounds")
+    if (command.command === "format.retreat" && current === format.minimum)
+      return reject(state, command, "out-of-bounds")
+    return apply(state, command, "format.change", {
+      ...copySnapshot(state.snapshot),
+      competition: {
+        ...structuredClone(state.snapshot.competition),
+        value: current + (command.command === "format.advance" ? 1 : -1)
+      }
+    })
+  }
+
+  if (command.command === "break.start.oneMinute") {
     if (!isBoutClock(state.snapshot)) return reject(state, command, "invalid-mode")
+    if (state.snapshot.clock.status === "running") return reject(state, command, "clock-running")
     return apply(state, command, "break.start", {
       ...copySnapshot(state.snapshot),
       clock: {
