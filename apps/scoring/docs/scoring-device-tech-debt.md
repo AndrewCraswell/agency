@@ -27,7 +27,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 7 | SC-002 | P2 | ready | Harness MPN and pin data have multiple manually maintained sources |
 | 8 | SC-003 | P3 | intake | The retained logical board model is a 1,100-line mixed-domain composition |
 | 9 | SD-006 | P1 | blocked | ESP32 services and receiver disagree on identifier validity; intake waits for FW-004 |
-| 10 | SD-009 | P1 | ready | Remote gesture timing still uses milliseconds instead of canonical microseconds |
+| 10 | SD-009 | P1 | done | Root-approved remote gesture timing now uses bounded integer microseconds throughout with preserved gesture behavior and overflow-safe deadlines |
 | 11 | SD-010 | P2 | done | Root-approved replay now delegates authoritative record validation and immutable cloning solely to `parseDecisionRecord` while retaining replay-only annotation checks |
 | 12 | SD-011 | P2 | done | Root-approved producer parser now owns strict application-time validation and replay consumes its deeply frozen projection |
 | 13 | SD-007 | P2 | ready | Scenario display and fixture schemas duplicate vocabulary predicates |
@@ -218,7 +218,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SD-009: migrate remote gesture timing to canonical microseconds
 
 - Priority: `P1`
-- State: `ready`
+- State: `done`
+- Latest state: Delivered and root-approved: signals, reducer state, defaults, double-click, hold, and entry-expiry timing use canonical integer microseconds; unsafe values and overflowed expiries reject fail closed while all focused gesture tests pass.
 - Affected files: `apps/scoring/src/remote-button-gestures.ts` and its focused tests.
 - Description: the reducer exposes `atMs`, `lastAtMs`, and millisecond timeout/window fields while the canonical device clock uses safe-integer microseconds.
 - Impact: adapters can introduce a 1,000-times conversion error or lose sub-millisecond ordering when remote input joins virtual, C17, or hardware timelines.
