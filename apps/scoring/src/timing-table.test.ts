@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
-import { loadTimingTable, validateTimingTable } from "./timing-table.js"
+import {
+  FIE_TIMING_BANDS,
+  getFieTimingBandEndpointUs,
+  loadTimingTable,
+  resolveTimingTable,
+  validateTimingTable
+} from "./timing-table.js"
 
 function timingTableCandidate() {
   return {
@@ -59,17 +65,93 @@ describe("versioned immutable timing-table loader", () => {
     const sabreTooShort = timingTableCandidate()
     sabreTooShort.sabre.minimumContactUs = 99
     expect(() => validateTimingTable(sabreTooShort)).toThrow(
-      new RangeError("Timing table sabre.minimumContactUs must be at least 100 microseconds")
+      new RangeError("Timing table sabre.minimumContactUs must be within 100..unbounded microseconds")
+    )
+
+    const sabreRecoveryTooEarly = timingTableCandidate()
+    sabreRecoveryTooEarly.sabre.bladeRecoveryUs = 9_999
+    expect(() => validateTimingTable(sabreRecoveryTooEarly)).toThrow(
+      new RangeError("Timing table sabre.bladeRecoveryUs must be within 10000..20000 microseconds")
     )
   })
 
-  it("rejects unreviewed changes even when they fall inside an FIE tolerance", () => {
+  it("rejects unreviewed changes even when they fall inside an FIE tolerance or uncertain endpoint", () => {
     const alternateSelection = timingTableCandidate()
     alternateSelection.epee.doubleHitWindowUs = 40_000
 
     expect(() => validateTimingTable(alternateSelection)).toThrow(
       new RangeError("Timing table epee.doubleHitWindowUs must equal the approved timing-1 value 45000")
     )
+
+    const uncertainEndpoint = timingTableCandidate()
+    uncertainEndpoint.sabre.bladeRegistrationLatestUs = 4_000
+
+    expect(() => validateTimingTable(uncertainEndpoint)).toThrow(
+      new RangeError("Timing table sabre.bladeRegistrationLatestUs must equal the approved timing-1 value 5000")
+    )
+  })
+
+  it("publishes immutable FIE bands with endpoint uncertainty beside the exact product table", () => {
+    expect(FIE_TIMING_BANDS).toEqual({
+      epee: {
+        contactMinimumUs: {
+          earliestUs: 2_000,
+          endpointUncertainty: "fie-tolerance-requires-product-selection",
+          latestUs: 10_000
+        },
+        doubleHitWindowUs: {
+          earliestUs: 40_000,
+          endpointUncertainty: "fie-tolerance-requires-product-selection",
+          latestUs: 50_000
+        }
+      },
+      foil: {
+        contactBreakMinimumUs: {
+          earliestUs: 13_000,
+          endpointUncertainty: "fie-tolerance-requires-product-selection",
+          latestUs: 15_000
+        },
+        lockoutUs: {
+          earliestUs: 275_000,
+          endpointUncertainty: "fie-tolerance-requires-product-selection",
+          latestUs: 325_000
+        }
+      },
+      sabre: {
+        bladeRecoveryUs: {
+          earliestUs: 10_000,
+          endpointUncertainty: "fie-tolerance-requires-product-selection",
+          latestUs: 20_000
+        },
+        bladeRegistrationLatestUs: {
+          earliestUs: 0,
+          endpointUncertainty: "published-endpoint-needs-product-policy",
+          latestUs: 5_000
+        },
+        controlBreakUs: {
+          earliestUs: 1_000,
+          endpointUncertainty: "fie-tolerance-requires-product-selection",
+          latestUs: 5_000
+        },
+        lockoutUs: {
+          earliestUs: 160_000,
+          endpointUncertainty: "fie-tolerance-requires-product-selection",
+          latestUs: 180_000
+        },
+        minimumContactUs: {
+          earliestUs: 100,
+          endpointUncertainty: "published-endpoint-needs-product-policy",
+          latestUs: null
+        },
+        sensitivityTestPointUs: {
+          earliestUs: 1_000,
+          endpointUncertainty: "exact-published-endpoint",
+          latestUs: 1_000
+        }
+      }
+    })
+    expect(Object.isFrozen(FIE_TIMING_BANDS)).toBe(true)
+    expect(Object.isFrozen(FIE_TIMING_BANDS.sabre.bladeRecoveryUs)).toBe(true)
   })
 
   it("returns a deeply immutable table that cannot be changed by a consumer", () => {
@@ -83,6 +165,20 @@ describe("versioned immutable timing-table loader", () => {
       ;(table.epee as { contactMinimumUs: number }).contactMinimumUs = 9_999
     }).toThrow(TypeError)
     expect(loadTimingTable("timing-1").epee.contactMinimumUs).toBe(2_000)
+  })
+
+  it("canonicalizes an explicit validated table before a scorer can use it", () => {
+    const copiedTable = timingTableCandidate()
+
+    validateTimingTable(copiedTable)
+
+    expect(resolveTimingTable(copiedTable)).toBe(loadTimingTable("timing-1"))
+  })
+
+  it("rejects a request for an unbounded FIE endpoint", () => {
+    expect(() => getFieTimingBandEndpointUs(FIE_TIMING_BANDS.sabre.minimumContactUs, "latest")).toThrow(
+      new RangeError("Requested FIE timing endpoint is unbounded")
+    )
   })
 
   it("rejects missing and unrecognized table fields", () => {

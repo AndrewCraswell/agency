@@ -131,7 +131,7 @@ implementation has no dependency on an MCU SDK or wall-clock time.
 | M1-04 | done | Delivered and root-approved: independently authored, FIE-PDF-digest-bound vectors cover both sides at 449/450/475/476 ohms plus bounded uncertainty and unavailable evidence, while keeping yellow diagnostics separate from 200-ohm scoring eligibility and preserving the C17/no-TypeScript-fallback boundary. | Foil insulation-warning and 450/475 ohm decision contract | M1-03 | Boundary vectors distinguish scoring behavior from diagnostic indication |
 | M1-05 | done | Delivered and root-approved: sabre scorer and source-bound scenarios cover both sides, 99/100/1,000 us held and released target pulses, fail-closed uncertain releases, control break, yellow/white diagnostics, whipover/external-path containment, deterministic simultaneous capture, and lockout; the 28-scenario corpus remains green. | Sabre contact and control-break state machine | M0-01, M0-03, M0-07 | Tests cover 0.1 ms minimum, 1 ms capture, 3 ms control break, whipover-related sequences, and lockout |
 | M1-06 | backlog | Next after M1-02, M1-03, M1-05: Weapon-neutral bout reset and state-transition API. | Weapon-neutral bout reset and state-transition API | M1-02, M1-03, M1-05 | Reset cannot leak hits, pending contacts, or lockout state across bouts or weapon changes |
-| M1-07 | backlog | Next after M1-02, M1-03, M1-05: Versioned immutable timing-table loader. | Versioned immutable timing-table loader | M1-02, M1-03, M1-05 | Unknown revisions fail closed; values outside approved bounds are rejected |
+| M1-07 | done | Delivered and root-approved: `timing-1` is a deeply immutable canonical table with machine-readable FIE bands and endpoint uncertainty; epee, foil, sabre, and boundary generation derive from it, while unknown revisions, altered selections, out-of-band values, and mutable clones fail closed. | Versioned immutable timing-table loader | M1-02, M1-03, M1-05 | Unknown revisions fail closed; values outside approved bounds are rejected |
 | M1-08 | backlog | Next after M1-02 through M1-07: Generated boundary-vector suite. | Generated boundary-vector suite | M1-02 through M1-07 | Every timing boundary runs below, at, and above the limit for both sides with deterministic ordering |
 | M1-09 | backlog | Next after M1-06, M1-08: Property tests for monotonic time, symmetry, determinism, and no-hit safety. | Property tests for monotonic time, symmetry, determinism, and no-hit safety | M1-06, M1-08 | Seeded runs reproduce exactly; left/right mirroring produces mirrored decisions |
 | M1-10 | backlog | Next after M0-07: Reference-machine comparison capture format. | Reference-machine comparison capture format | M0-07 | Favero or other machine observations can be stored with provenance without becoming normative rules |
@@ -358,6 +358,7 @@ A milestone closes only when:
 4. documents and machine-readable manifests agree with the implementation;
 5. an independent reviewer has resolved every release-blocking comment; and
 6. remaining risks, assumptions, and deferred work are named in the next milestone entry criteria.
+
 
 
 

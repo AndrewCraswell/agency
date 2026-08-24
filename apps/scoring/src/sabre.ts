@@ -1,4 +1,10 @@
-import { loadTimingTable, resolveTimingTable, type TimingTable } from "./timing-table.js"
+import {
+  FIE_TIMING_BANDS,
+  getFieTimingBandEndpointUs,
+  loadTimingTable,
+  resolveTimingTable,
+  type TimingTable
+} from "./timing-table.js"
 
 export type SabreSide = "left" | "right"
 
@@ -111,8 +117,8 @@ export const SABRE_RULES = {
   /** SABRE-06's stated maximum number of blade-contact interruptions. */
   maximumBladeContactInterruptions: DEFAULT_TIMING_TABLE.sabre.maximumBladeContactInterruptions,
   /** FIE SABRE-05 tolerance references, not active product endpoints. */
-  eventWindowEarliestUs: 160_000,
-  eventWindowLatestUs: 180_000,
+  eventWindowEarliestUs: getFieTimingBandEndpointUs(FIE_TIMING_BANDS.sabre.lockoutUs, "earliest"),
+  eventWindowLatestUs: getFieTimingBandEndpointUs(FIE_TIMING_BANDS.sabre.lockoutUs, "latest"),
   /** Selected endpoint inside FIE SABRE-05's 170 ms +/- 10 ms band. */
   provisionalLockoutUs: DEFAULT_TIMING_TABLE.sabre.lockoutUs
 } as const

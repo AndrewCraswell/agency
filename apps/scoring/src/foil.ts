@@ -1,4 +1,10 @@
-import { loadTimingTable, resolveTimingTable, type TimingTable } from "./timing-table.js"
+import {
+  FIE_TIMING_BANDS,
+  getFieTimingBandEndpointUs,
+  loadTimingTable,
+  resolveTimingTable,
+  type TimingTable
+} from "./timing-table.js"
 
 export type FoilSide = "left" | "right"
 
@@ -75,8 +81,8 @@ export const FOIL_RULES = {
   /** Conservative product floor at the start of FIE FOIL-02's guaranteed registration band. */
   minimumBreakUs: DEFAULT_TIMING_TABLE.foil.contactBreakMinimumUs,
   /** FIE FOIL-05 tolerance band, retained as references rather than active endpoints. */
-  eventWindowEarliestUs: 275_000,
-  eventWindowLatestUs: 325_000,
+  eventWindowEarliestUs: getFieTimingBandEndpointUs(FIE_TIMING_BANDS.foil.lockoutUs, "earliest"),
+  eventWindowLatestUs: getFieTimingBandEndpointUs(FIE_TIMING_BANDS.foil.lockoutUs, "latest"),
   /** Selected endpoint inside FIE's 300 ms +/- 25 ms tolerance. */
   provisionalLockoutUs: DEFAULT_TIMING_TABLE.foil.lockoutUs
 } as const

@@ -1,4 +1,11 @@
-import { loadTimingTable, validateTimingTable, type TimingTable, type TimingTableRevision } from "./timing-table.js"
+import {
+  FIE_TIMING_BANDS,
+  getFieTimingBandEndpointUs,
+  loadTimingTable,
+  validateTimingTable,
+  type TimingTable,
+  type TimingTableRevision
+} from "./timing-table.js"
 
 export type TimingBoundaryWeapon = "epee" | "foil" | "sabre"
 export type TimingBoundarySide = "left" | "right"
@@ -47,7 +54,12 @@ const BOUNDARIES: readonly BoundaryDefinition[] = [
   {
     boundary: "contact-minimum",
     kind: "runtime",
-    references: [{ boundary: "contact-minimum-envelope-latest", valueUs: () => 10_000 }],
+    references: [
+      {
+        boundary: "contact-minimum-envelope-latest",
+        valueUs: () => getFieTimingBandEndpointUs(FIE_TIMING_BANDS.epee.contactMinimumUs, "latest")
+      }
+    ],
     valueUs: (table) => table.epee.contactMinimumUs,
     weapon: "epee"
   },
@@ -55,8 +67,14 @@ const BOUNDARIES: readonly BoundaryDefinition[] = [
     boundary: "double-hit-window",
     kind: "runtime",
     references: [
-      { boundary: "double-hit-window-envelope-earliest", valueUs: () => 40_000 },
-      { boundary: "double-hit-window-envelope-latest", valueUs: () => 50_000 }
+      {
+        boundary: "double-hit-window-envelope-earliest",
+        valueUs: () => getFieTimingBandEndpointUs(FIE_TIMING_BANDS.epee.doubleHitWindowUs, "earliest")
+      },
+      {
+        boundary: "double-hit-window-envelope-latest",
+        valueUs: () => getFieTimingBandEndpointUs(FIE_TIMING_BANDS.epee.doubleHitWindowUs, "latest")
+      }
     ],
     valueUs: (table) => table.epee.doubleHitWindowUs,
     weapon: "epee"
@@ -64,7 +82,12 @@ const BOUNDARIES: readonly BoundaryDefinition[] = [
   {
     boundary: "contact-break-minimum",
     kind: "runtime",
-    references: [{ boundary: "contact-break-minimum-envelope-latest", valueUs: () => 15_000 }],
+    references: [
+      {
+        boundary: "contact-break-minimum-envelope-latest",
+        valueUs: () => getFieTimingBandEndpointUs(FIE_TIMING_BANDS.foil.contactBreakMinimumUs, "latest")
+      }
+    ],
     valueUs: (table) => table.foil.contactBreakMinimumUs,
     weapon: "foil"
   },
@@ -72,8 +95,14 @@ const BOUNDARIES: readonly BoundaryDefinition[] = [
     boundary: "lockout",
     kind: "runtime",
     references: [
-      { boundary: "lockout-envelope-earliest", valueUs: () => 275_000 },
-      { boundary: "lockout-envelope-latest", valueUs: () => 325_000 }
+      {
+        boundary: "lockout-envelope-earliest",
+        valueUs: () => getFieTimingBandEndpointUs(FIE_TIMING_BANDS.foil.lockoutUs, "earliest")
+      },
+      {
+        boundary: "lockout-envelope-latest",
+        valueUs: () => getFieTimingBandEndpointUs(FIE_TIMING_BANDS.foil.lockoutUs, "latest")
+      }
     ],
     valueUs: (table) => table.foil.lockoutUs,
     weapon: "foil"
@@ -100,8 +129,14 @@ const BOUNDARIES: readonly BoundaryDefinition[] = [
     boundary: "control-break",
     kind: "runtime",
     references: [
-      { boundary: "control-break-envelope-earliest", valueUs: () => 1_000 },
-      { boundary: "control-break-envelope-latest", valueUs: () => 5_000 }
+      {
+        boundary: "control-break-envelope-earliest",
+        valueUs: () => getFieTimingBandEndpointUs(FIE_TIMING_BANDS.sabre.controlBreakUs, "earliest")
+      },
+      {
+        boundary: "control-break-envelope-latest",
+        valueUs: () => getFieTimingBandEndpointUs(FIE_TIMING_BANDS.sabre.controlBreakUs, "latest")
+      }
     ],
     valueUs: (table) => table.sabre.controlBreakUs,
     weapon: "sabre"
@@ -110,8 +145,14 @@ const BOUNDARIES: readonly BoundaryDefinition[] = [
     boundary: "lockout",
     kind: "runtime",
     references: [
-      { boundary: "lockout-envelope-earliest", valueUs: () => 160_000 },
-      { boundary: "lockout-envelope-latest", valueUs: () => 180_000 }
+      {
+        boundary: "lockout-envelope-earliest",
+        valueUs: () => getFieTimingBandEndpointUs(FIE_TIMING_BANDS.sabre.lockoutUs, "earliest")
+      },
+      {
+        boundary: "lockout-envelope-latest",
+        valueUs: () => getFieTimingBandEndpointUs(FIE_TIMING_BANDS.sabre.lockoutUs, "latest")
+      }
     ],
     valueUs: (table) => table.sabre.lockoutUs,
     weapon: "sabre"

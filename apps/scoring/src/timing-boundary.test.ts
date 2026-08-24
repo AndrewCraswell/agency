@@ -15,7 +15,7 @@ import {
   type TimingBoundarySide,
   type TimingBoundaryVector
 } from "./timing-boundary.js"
-import { loadTimingTable, type TimingTable } from "./timing-table.js"
+import { FIE_TIMING_BANDS, loadTimingTable, type TimingTable } from "./timing-table.js"
 
 const table = loadTimingTable("timing-1")
 const vectors = generateTimingBoundaryVectors(table)
@@ -299,6 +299,22 @@ describe("generated timing boundary vectors", () => {
     })
     expect(vectors.at(-1)?.id).toBe("sabre.sensitivity-test-point.right.above")
     expect(vectors.map(({ id }) => id)).toEqual(generateTimingBoundaryVectors(table).map(({ id }) => id))
+  })
+
+  it("derives tolerance references from the canonical FIE bands", () => {
+    const referenceValue = (id: string) => vectors.find((vector) => vector.id === id)?.boundaryUs
+
+    expect(referenceValue("epee.contact-minimum-envelope-latest.left.at")).toBe(
+      FIE_TIMING_BANDS.epee.contactMinimumUs.latestUs
+    )
+    expect(referenceValue("epee.double-hit-window-envelope-earliest.left.at")).toBe(
+      FIE_TIMING_BANDS.epee.doubleHitWindowUs.earliestUs
+    )
+    expect(referenceValue("foil.lockout-envelope-latest.right.at")).toBe(FIE_TIMING_BANDS.foil.lockoutUs.latestUs)
+    expect(referenceValue("sabre.control-break-envelope-earliest.right.at")).toBe(
+      FIE_TIMING_BANDS.sabre.controlBreakUs.earliestUs
+    )
+    expect(referenceValue("sabre.lockout-envelope-latest.left.at")).toBe(FIE_TIMING_BANDS.sabre.lockoutUs.latestUs)
   })
 
   it.each(runtimeVectors)("executes $id against the loaded table", (vector) => {
