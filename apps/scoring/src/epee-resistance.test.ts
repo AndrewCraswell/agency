@@ -156,15 +156,20 @@ describe("epée resistance scoring", () => {
     expect(state.hits.map(({ startedAtUs }) => startedAtUs)).toEqual([0, 1])
   })
 
-  it.each(["left", "right"] as const)(
-    "retains an exceptional opposing contact that starts at the current provisional lockout boundary when %s hits first",
-    (firstSide) => {
+  it.each([
+    ["left", NORMAL_10_OHM, EXCEPTIONAL_100_OHM],
+    ["right", NORMAL_10_OHM, EXCEPTIONAL_100_OHM],
+    ["left", EXCEPTIONAL_100_OHM, NORMAL_10_OHM],
+    ["right", EXCEPTIONAL_100_OHM, NORMAL_10_OHM]
+  ] as const)(
+    "retains the opposing trusted contact at the provisional lockout boundary when %s starts first",
+    (firstSide, firstResistance, opposingResistance) => {
       const opposingSide = oppositeSide(firstSide)
       const state = replay([
-        atSide(firstSide, 0, closed(NORMAL_10_OHM)),
-        atSide(firstSide, 2_000, closed(NORMAL_10_OHM)),
-        atSide(opposingSide, EPEE_RULES.lockoutTimeUs, closed(EXCEPTIONAL_100_OHM)),
-        atSide(opposingSide, EPEE_RULES.lockoutTimeUs + EPEE_RULES.contactTimeUs, closed(EXCEPTIONAL_100_OHM))
+        atSide(firstSide, 0, closed(firstResistance)),
+        atSide(firstSide, 2_000, closed(firstResistance)),
+        atSide(opposingSide, EPEE_RULES.lockoutTimeUs, closed(opposingResistance)),
+        atSide(opposingSide, EPEE_RULES.lockoutTimeUs + EPEE_RULES.contactTimeUs, closed(opposingResistance))
       ])
 
       expect(state.hits.map(({ side }) => side)).toEqual([firstSide, opposingSide])
@@ -204,6 +209,24 @@ describe("epée resistance scoring", () => {
       subject: "line-integrity"
     })
   })
+
+  it.each([
+    ["left", unavailable(), "unavailable", "line-integrity"],
+    ["right", unavailable(), "unavailable", "line-integrity"],
+    ["left", { ...closed(NORMAL_10_OHM), circuitComplete: "indeterminate" }, "uncertainty", "tip-loop"],
+    ["right", { ...closed(NORMAL_10_OHM), circuitComplete: "indeterminate" }, "uncertainty", "tip-loop"],
+    ["left", closed(UNCERTAIN_NORMAL_10_OHM), "uncertainty", "contact-resistance"],
+    ["right", closed(UNCERTAIN_NORMAL_10_OHM), "uncertainty", "contact-resistance"]
+  ] as const)(
+    "keeps %s-side unavailable, indeterminate, and interval evidence out of hit qualification",
+    (side, contact, disposition, subject) => {
+      const state = replay([atSide(side, 0, contact)])
+      const decision = state.decisions[0]
+
+      expect(state.hits).toEqual([])
+      expect(decision).toMatchObject({ atUs: 0, disposition, side, subject })
+    }
+  )
 
   it.each([
     ["cross-line", { ...closed(NORMAL_10_OHM), lineIntegrity: "cross-line" }, "line-fault", "line-integrity"],

@@ -1533,7 +1533,7 @@ describe("golden scenario runner", () => {
     const secondRun = runScenario(manifestPath)
 
     expect(firstRun.exitCode).toBe(0)
-    expect(firstRun.report.summary).toEqual({ failed: 0, passed: 28, scenarioCount: 28 })
+    expect(firstRun.report.summary).toEqual({ failed: 0, passed: 29, scenarioCount: 29 })
     expect(firstRun.report.scenarios.every((scenario) => scenario.status === "passed")).toBe(true)
     expect(firstRun.report.scenarios.map((scenario) => scenario.scenarioId)).toEqual([
       "epee.audio-visual-correlation",
@@ -1543,6 +1543,7 @@ describe("golden scenario runner", () => {
       "epee.grounded-material-100-ohm",
       "epee.grounded-rejection",
       "epee.non-monotonic-time",
+      "epee.resistance-near-lockout-both-sides",
       "epee.resistance-uncertainty-near-lockout",
       "foil.break-boundaries",
       "foil.grounded-contact",

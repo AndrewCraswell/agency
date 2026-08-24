@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "format": "scoring-golden-scenario",
+  "schemaVersion": "1.0.0",
+  "scenarioId": "epee.resistance-near-lockout-both-sides",
+  "title": "Epee retains an opposing exceptional contact at the provisional lockout boundary",
+  "weapon": "epee",
+  "ruleRevision": "fie-2026-epee",
+  "sources": [
+    { "authority": "fie", "id": "EPEE-02", "document": "fie-material-rules-2026-08-en.pdf", "page": 80, "locator": "Annex B, B(b)" },
+    { "authority": "fie", "id": "EPEE-03", "document": "fie-material-rules-2026-08-en.pdf", "page": 80, "locator": "Annex B, B(c)" },
+    { "authority": "implementation", "id": "EPEE-TEST-RESISTANCE", "document": "src/epee-resistance.test.ts", "page": null, "locator": "both-side provisional lockout resistance cases" }
+  ],
+  "lineModel": {
+    "revision": "epee-logical-resistance-lines-1",
+    "names": ["left.tip-loop", "left.ground-reference", "right.tip-loop", "right.ground-reference"]
+  },
+  "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
+  "replay": {
+    "clock": "virtual",
+    "timeUnit": "us",
+    "initialState": "fresh-bout",
+    "hooks": { "firmwareIdentity": "golden-scenario-runner", "firmwareDigest": null, "scoringBootId": "golden-epee-resistance-near-lockout", "transportSequenceStart": 0, "captureId": null }
+  },
+  "inputs": [
+    {
+      "id": "left-normal-start",
+      "atUs": 0,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.tip-loop", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "left.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.tip-loop", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "left-normal-qualified",
+      "atUs": 2000,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.tip-loop", "state": "closed", "resistanceMilliOhms": 10000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "left.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.tip-loop", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "right-exceptional-start",
+      "atUs": 45000,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.tip-loop", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "left.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.tip-loop", "state": "closed", "resistanceMilliOhms": 100000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    },
+    {
+      "id": "right-exceptional-qualified",
+      "atUs": 47000,
+      "atUncertaintyUs": 0,
+      "mode": "snapshot",
+      "lines": [
+        { "line": "left.tip-loop", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "left.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+        { "line": "right.tip-loop", "state": "closed", "resistanceMilliOhms": 100000, "resistanceUncertaintyMilliOhms": 0 },
+        { "line": "right.ground-reference", "state": "open", "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null }
+      ]
+    }
+  ],
+  "expect": {
+    "status": "accepted",
+    "decisions": [
+      { "id": "left-normal-hit", "decisionAtUs": 2000, "disposition": "qualified-hit", "side": "left", "weapon": "epee", "hitStartedAtUs": 0, "qualifiedAtUs": 2000, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["left-normal-start", "left-normal-qualified"] },
+      { "id": "right-exceptional-hit", "decisionAtUs": 47000, "disposition": "qualified-hit", "side": "right", "weapon": "epee", "hitStartedAtUs": 45000, "qualifiedAtUs": 47000, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["right-exceptional-start", "right-exceptional-qualified"] }
+    ],
+    "nonEvents": [],
+    "uncertainty": [],
+    "finalState": { "hitCount": 2, "isLocked": true }
+  }
+}
