@@ -65,6 +65,43 @@ describe("production scoring architecture", () => {
     )
   })
 
+  it("keeps the isolated processor boundary ordered and electrically identified", () => {
+    const circuitJson = renderArchitecture()
+    const sourceNames = sourceComponentNames(circuitJson)
+    const traceNames = circuitJson.flatMap((element) =>
+      element.type === "source_trace" && "display_name" in element && typeof element.display_name === "string"
+        ? [element.display_name]
+        : []
+    )
+    const isolationComponentStart = sourceNames.indexOf("U_ISO_MAIN")
+    const isolationTraceStart = traceNames.indexOf("U_STM32.SPI_SCK to U_ISO_MAIN.S_SCK")
+
+    expect(sourceNames.slice(isolationComponentStart, isolationComponentStart + 2)).toEqual(["U_ISO_MAIN", "U_ISO_AUX"])
+    expect(traceNames.slice(isolationTraceStart, isolationTraceStart + 21)).toEqual([
+      "U_STM32.SPI_SCK to U_ISO_MAIN.S_SCK",
+      "U_STM32.SPI_MOSI to U_ISO_MAIN.S_MOSI",
+      "U_STM32.SPI_CS to U_ISO_MAIN.S_CS",
+      "U_STM32.SPI_MISO to U_ISO_MAIN.S_MISO",
+      "U_STM32.ESP_RESET to R_STM_RESET_ISO_SERIES.pin1",
+      "R_STM_RESET_ISO_SERIES.pin2 to U_ISO_MAIN.S_ESP_RESET_ASSERT",
+      "U_ISO_MAIN.S_ESP_RESET_ASSERT to R_STM_RESET_ISO_PD.pin1",
+      "R_STM_RESET_ISO_PD.pin2 to net.SGND",
+      "U_STM32.HEARTBEAT to U_ISO_AUX.S_HEARTBEAT",
+      "U_ISO_MAIN.A_SCK to U_ESP32.SCORE_SCK",
+      "U_ISO_MAIN.A_MOSI to U_ESP32.SCORE_MOSI",
+      "U_ISO_MAIN.A_CS to U_ESP32.SCORE_CS",
+      "U_ISO_MAIN.A_MISO to U_ESP32.SCORE_MISO",
+      "U_ISO_MAIN.A_ESP_RESET_ASSERT to TP_ESP_RESET_REQUEST.RESET_REQUEST",
+      "U_ISO_MAIN.A_ESP_RESET_ASSERT to R_STM_RESET_GATE.pin1",
+      "R_STM_RESET_GATE.pin2 to Q_ESP_RESET_STM.G",
+      "Q_ESP_RESET_STM.G to R_STM_RESET_GATE_PD.pin1",
+      "R_STM_RESET_GATE_PD.pin2 to net.GND",
+      "U_ISO_AUX.A_HEARTBEAT to U_ESP32.STM_HEARTBEAT",
+      "U_ESP32.ESP_HEARTBEAT to U_ISO_MAIN.A_ESP_HEARTBEAT",
+      "U_ISO_MAIN.S_ESP_HEARTBEAT to U_STM32.ESP_HEARTBEAT"
+    ])
+  })
+
   it("keeps the extracted scoring-domain composition and logical board envelope stable", () => {
     const circuitJson = renderArchitecture()
     const scoringDomainReferences = [
