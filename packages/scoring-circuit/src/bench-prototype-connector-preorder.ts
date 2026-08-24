@@ -4,13 +4,24 @@
  * samples, physical mates, photographs, or measured continuity.
  */
 
+import { benchPrototypeEthernetMdi, validateBenchPrototypeEthernetMdi } from "./bench-prototype-ethernet-mdi.js"
 import { parseCanonicalUtcTimestamp, parseRealUtcDate } from "./bench-prototype-evidence-time.js"
-import type { BenchPrototypeContinuityEvidence } from "./bench-prototype-fixture-harness.js"
 import {
+  benchPrototypeFixtureHarness,
   benchPrototypeContinuityThresholds,
-  evaluateBenchPrototypeContinuityEvidence
+  evaluateBenchPrototypeContinuityEvidence,
+  validateBenchPrototypeFixtureHarness,
+  type BenchPrototypeContinuityEvidence
 } from "./bench-prototype-fixture-harness.js"
-import { defaultBenchPrototypePowerInputs } from "./bench-prototype-power.js"
+import {
+  benchPrototypeHub75Connector,
+  validateBenchPrototypeHub75Connector
+} from "./bench-prototype-hub75-connector.js"
+import { calculateBenchPrototypePowerContract, defaultBenchPrototypePowerInputs } from "./bench-prototype-power.js"
+import {
+  benchPrototypeServiceHeaders,
+  validateBenchPrototypeServiceHeaders
+} from "./bench-prototype-service-headers.js"
 
 type DataRecord = Record<PropertyKey, unknown>
 
@@ -40,6 +51,33 @@ const measurement = (id: string, from: string, to: string) => ({ id, from, to })
 const numberedMeasurements = (ids: readonly (number | string)[], from: string, to: string) =>
   ids.map((id) => measurement(`pin-${id}`, `${from}.pin-${id}`, `${to}.pin-${id}`))
 
+const sourceAsset = (sourceUrl: string, assetPath: string, sha256: string) => ({ sourceUrl, assetPath, sha256 })
+
+type BenchPrototypeConnectorSampleId =
+  | "usb-c-input"
+  | "lab-injection"
+  | "measurement-link"
+  | "weapon-fixture"
+  | "weapon-test-plug"
+  | "stm32-service"
+  | "esp32-service"
+  | "ethernet-magjack"
+  | "hub75-signal"
+  | "hub75-panel-power"
+
+type ConnectorSampleSelection =
+  | { readonly selectionState: "exact"; readonly selectionBlocker: null }
+  | { readonly selectionState: "blocked"; readonly selectionBlocker: string }
+
+type RequiredConnectorSample = ConnectorSampleSelection & {
+  readonly id: BenchPrototypeConnectorSampleId
+  readonly interfaceReferences: readonly string[]
+  readonly requiredComponents: readonly ReturnType<typeof component>[]
+  readonly continuityMeasurements: readonly ReturnType<typeof measurement>[]
+  readonly sourceEvidence?: ReturnType<typeof sourceAsset>
+  readonly selectionBasis?: Readonly<Record<string, string | number>>
+}
+
 const measurementLinkContracts = [
   defaultBenchPrototypePowerInputs.measurementLinks.input,
   defaultBenchPrototypePowerInputs.measurementLinks.display,
@@ -47,14 +85,30 @@ const measurementLinkContracts = [
   defaultBenchPrototypePowerInputs.measurementLinks.isolatedScoring
 ] as const
 
-const requiredSamples = [
+const requiredSamples: readonly RequiredConnectorSample[] = [
   {
     id: "usb-c-input",
     interfaceReferences: ["J_USB_C"],
-    requiredComponents: [component("Amphenol Communications Solutions", "10177070-00011LF", 1)],
-    selectionState: "blocked-no-exact-source-cable",
-    selectionBlocker:
-      "Select an exact source-backed USB-C cable MPN rated for the 20 V / 3 A contract before sample acceptance.",
+    requiredComponents: [
+      component("Amphenol Communications Solutions", "10177070-00011LF", 1),
+      component("StarTech.com", "USB2CC1M", 1)
+    ],
+    selectionState: "exact",
+    selectionBlocker: null,
+    sourceEvidence: sourceAsset(
+      "https://media.startech.com/cms/pdfs/usb2cc1m_datasheet.pdf",
+      "docs/evidence/bp-034/startech-usb2cc1m-datasheet.pdf",
+      "AE5241D2A65A5B64F737D4205FD428B0432567EA98FA1482520AB0D9F345FAE7"
+    ),
+    selectionBasis: {
+      cableEnds: "USB-C male to USB-C male",
+      nominalLengthM: 1,
+      maximumPowerW: 60,
+      maximumVoltageV: 20,
+      maximumCurrentA: 3,
+      sourceScope:
+        "The manufacturer datasheet names USB2CC1M, USB-C-to-USB-C ends, 60 W (3 A) PD, and USB-IF certification."
+    },
     continuityMeasurements: [
       "A1",
       "A4",
@@ -166,9 +220,24 @@ const requiredSamples = [
   {
     id: "ethernet-magjack",
     interfaceReferences: ["J_ETH"],
-    requiredComponents: [component("Würth Elektronik", "7499011121A", 1)],
-    selectionState: "blocked-no-exact-test-plug",
-    selectionBlocker: "Select and source an exact 8P8C test-plug or patch-cable MPN before sample acceptance.",
+    requiredComponents: [
+      component("Würth Elektronik", "7499011121A", 1),
+      component("Eaton, Tripp Lite series", "N201-003-BL", 1)
+    ],
+    selectionState: "exact",
+    selectionBlocker: null,
+    sourceEvidence: sourceAsset(
+      "https://assets.tripplite.com/product-pdfs/en/n201003bl.pdf",
+      "docs/evidence/bp-034/eaton-tripp-lite-n201-003-bl-datasheet.pdf",
+      "BB81E709DFD1E57546379D2962431CD1D1C2445E038E81B053521B6231A14C12"
+    ),
+    selectionBasis: {
+      cableEnds: "RJ45 male to RJ45 male (8P8C patch cable)",
+      nominalLengthM: 0.91,
+      cableCategory: "Cat6",
+      sourceScope:
+        "The manufacturer datasheet names N201-003-BL and states RJ45 male connectors at both ends with integral strain relief."
+    },
     continuityMeasurements: [
       ...numberedMeasurements(
         Array.from({ length: 12 }, (_, index) => index + 1),
@@ -236,7 +305,7 @@ const requiredSamples = [
 ] as const
 
 const sampleIds = requiredSamples.map((sample) => sample.id)
-export type BenchPrototypeConnectorSampleId = (typeof requiredSamples)[number]["id"]
+export type { BenchPrototypeConnectorSampleId }
 
 export const benchPrototypeConnectorContinuityThresholds = deepFreeze({
   maximumContactPathResistanceOhms: 2,
@@ -259,10 +328,537 @@ export const benchPrototypeConnectorPreorder = deepFreeze({
   },
   openGates: [
     "No physical sample, mate, immutable artifact, retention observation, strain observation, or continuity record is claimed.",
-    "USB-C and Ethernet cable/test-plug selection remain blocked until exact source-backed MPNs replace generic descriptions.",
+    "The USB-C and Ethernet cable selections are source-backed only; receipt, fit, continuity, retention, strain, SI/EMC, CAD/artwork, and release evidence remain open.",
     "Passing BP-034 does not clear the electrical, isolation, recovery, inrush, thermal, or fabrication gates held upstream."
   ]
 })
+
+type ConnectorUpstreamProvenance = {
+  readonly bp050: unknown
+  readonly bp104: unknown
+  readonly bp124: unknown
+  readonly bp141: unknown
+  readonly bp143: unknown
+}
+
+const upstreamProvenanceDefinition = {
+  bp050: {
+    workUnit: "BP-050",
+    displayDisconnectReference: "J_DISPLAY_DISCONNECT",
+    normalInput: {
+      receptacleMpn: "10177070-00011LF",
+      contractVoltageV: 20,
+      contractCurrentA: 3,
+      requestedMinimumVoltageV: 20,
+      requestedMaximumVoltageV: 20,
+      sinkOnly: true
+    },
+    labInjection: {
+      connectorMpn: "43045-0400",
+      matingHousingMpn: "43025-0400",
+      terminalMpn: "43030-0007",
+      pin1Net: "LAB_20V",
+      pin2Net: "LAB_20V",
+      pin3Net: "LAB_RETURN",
+      pin4Net: "LAB_RETURN"
+    },
+    measurementLinks: [
+      {
+        label: "J_LINK_INPUT",
+        boardHeaderMpn: "39-28-1023",
+        matingHousingMpn: "39-01-2020",
+        terminalMpn: "39-00-0039",
+        pin1Net: "V20_TO_V5_BUCK",
+        pin2Net: "V20_BUCK_INPUT",
+        contactProjectScreenA: 6
+      },
+      {
+        label: "J_LINK_DISPLAY",
+        boardHeaderMpn: "39-28-1023",
+        matingHousingMpn: "39-01-2020",
+        terminalMpn: "39-00-0039",
+        pin1Net: "V5_DISPLAY_LIMITED",
+        pin2Net: "V5_DISPLAY_LOAD",
+        contactProjectScreenA: 6
+      },
+      {
+        label: "J_LINK_APPLICATION",
+        boardHeaderMpn: "39-28-1023",
+        matingHousingMpn: "39-01-2020",
+        terminalMpn: "39-00-0039",
+        pin1Net: "V5",
+        pin2Net: "V5_APPLICATION",
+        contactProjectScreenA: 6
+      },
+      {
+        label: "J_LINK_SCORING",
+        boardHeaderMpn: "39-28-1023",
+        matingHousingMpn: "39-01-2020",
+        terminalMpn: "39-00-0039",
+        pin1Net: "V5",
+        pin2Net: "V5_SCORING_ISOLATOR_INPUT",
+        contactProjectScreenA: 6
+      }
+    ],
+    authority: {
+      displayConnectedPermit: "deny-until-inrush-measured",
+      physicalPresenceVerified: false,
+      releaseState: "deny"
+    }
+  },
+  bp104: {
+    artifactKind: "bench-prototype-fixture-harness-contract",
+    workUnit: "BP-104",
+    targetAssembly: "one-board bench prototype",
+    prototypeOnly: true,
+    schematicInputOnly: true,
+    fabricationDisposition: "DENY",
+    releaseState: "deny",
+    connector: {
+      boardReference: "J_WEAPON_FIXTURE",
+      header: {
+        manufacturer: "Molex",
+        mpn: "43045-1200",
+        positions: 12,
+        rows: 2,
+        pitchMm: 3
+      },
+      mate: {
+        manufacturer: "Molex",
+        mpn: "43025-1200",
+        positions: 12,
+        rows: 2,
+        pitchMm: 3,
+        terminalMpn: "43030-0007"
+      },
+      testPlug: {
+        manufacturer: "Molex",
+        mpn: "44242-0005",
+        materialNumber: "442420005",
+        positions: 12,
+        rows: 2,
+        pitchMm: 3
+      },
+      conductorOrder: [
+        "LEFT_WEAPON_A",
+        "LEFT_WEAPON_B",
+        "LEFT_WEAPON_C",
+        "RIGHT_WEAPON_A",
+        "RIGHT_WEAPON_B",
+        "RIGHT_WEAPON_C",
+        "PISTE"
+      ],
+      continuityAcceptance: {
+        status: "unresolved",
+        testPlugMpn: "44242-0005",
+        maxEndToEndResistanceOhms: 2,
+        minimumIsolationResistanceOhms: 10_000_000,
+        isolationTestVoltageV: 5,
+        maximumLeadCompensationOhms: 0.2
+      },
+      physicalEvidenceAcceptanceStatus: "unresolved",
+      authority: {
+        exactSelectionFrozen: true,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      }
+    }
+  },
+  bp124: {
+    artifactKind: "bench-prototype-service-header-contract",
+    workUnit: "BP-124",
+    targetAssembly: "one-board bench prototype",
+    prototypeOnly: true,
+    schematicInputOnly: true,
+    fabricationDisposition: "DENY",
+    releaseState: "deny",
+    stm32: {
+      reference: "J_STM_SWD",
+      bomReference: "J_STM32_SWD",
+      headerMpn: "FTSH-105-01-L-DV-007-K",
+      matingCableMpn: "FFSD-05-D-06.00-01-N",
+      omittedPins: [7],
+      pinout: [
+        { pin: 1, net: "SCORING_3V3_SENSE" },
+        { pin: 2, net: "SWDIO" },
+        { pin: 3, net: "SCORING_SGND" },
+        { pin: 4, net: "SWCLK" },
+        { pin: 5, net: "SCORING_SGND" },
+        { pin: 6, net: "NC_SWD_SWO_RESERVED" },
+        { pin: 8, net: "NC_SWD_RESERVED" },
+        { pin: 9, net: "SCORING_SGND" },
+        { pin: 10, net: "SCORING_NRST_N" }
+      ]
+    },
+    esp32: {
+      reference: "J_ESP_SERVICE",
+      bomReference: "J_ESP32_SERVICE",
+      headerMpn: "TSW-106-07-G-S",
+      matingSocketMpn: "SSW-106-01-G-S",
+      pinout: [
+        { pin: 1, net: "APP_GND" },
+        { pin: 2, net: "APP_3V3_SENSE" },
+        { pin: 3, net: "UART0_TX" },
+        { pin: 4, net: "UART0_RX" },
+        { pin: 5, net: "BOOT_N" },
+        { pin: 6, net: "MANUAL_RESET_ASSERT" }
+      ]
+    }
+  },
+  bp141: {
+    artifactKind: "bench-prototype-w5500-mdi-contract",
+    targetAssembly: "one-board bench prototype",
+    prototypeOnly: true,
+    integrationRelease: false,
+    fabricationRelease: false,
+    layoutRelease: false,
+    benchValidationRelease: false,
+    releaseState: "deny",
+    controller: { reference: "U_W5500", manufacturer: "WIZnet", mpn: "W5500" },
+    magJack: { reference: "J_ETH", manufacturer: "Würth Elektronik", mpn: "7499011121A" },
+    mdiPairs: [
+      { controllerEndpoint: "U_W5500.TXP", controllerPad: 2, jackEndpoint: "J_ETH.TD+", jackPin: 1, net: "ETH_TX_P" },
+      { controllerEndpoint: "U_W5500.TXN", controllerPad: 1, jackEndpoint: "J_ETH.TD-", jackPin: 3, net: "ETH_TX_N" },
+      { controllerEndpoint: "U_W5500.RXP", controllerPad: 6, jackEndpoint: "J_ETH.RD+", jackPin: 4, net: "ETH_RX_P" },
+      { controllerEndpoint: "U_W5500.RXN", controllerPad: 5, jackEndpoint: "J_ETH.RD-", jackPin: 6, net: "ETH_RX_N" }
+    ],
+    shieldAndEsdReturn: {
+      chassisNet: "CHASSIS_ETHERNET",
+      endpoints: ["J_ETH.8", "J_ETH.S1", "J_ETH.S2"]
+    },
+    noMdiHarnessCrossing: false
+  },
+  bp143: {
+    artifactKind: "bench-prototype-hub75-connector-contract",
+    task: "BP-143",
+    targetAssembly: "one-board bench prototype",
+    prototypeOnly: true,
+    schematicInputOnly: true,
+    layoutRelease: false,
+    fabricationRelease: false,
+    fabricationDisposition: "DENY",
+    releaseState: "deny",
+    boardConnector: {
+      reference: "J_HUB75",
+      manufacturer: "Samtec",
+      mpn: "TST-108-04-G-D-RA",
+      positions: 16,
+      rows: 2,
+      pitchMm: 2.54
+    },
+    signalCable: {
+      manufacturer: "Adafruit Industries",
+      productId: "4170",
+      quantity: 1,
+      conductorCount: 16,
+      panelConnection: "panel HUB75 INPUT only; panel OUTPUT remains unconnected"
+    },
+    powerCable: {
+      manufacturer: "Adafruit Industries",
+      productId: "4767",
+      quantity: 1,
+      panelSideHousingMpn: "SMR-04V-N",
+      panelSideContactMpn: "SYM-001T-P0.6",
+      cableSideHousingMpn: "SMP-04V-NC",
+      cableSideContactMpn: "SHF-001T-0.8BS",
+      contactCurrentRatingA: 3,
+      parallelPowerContactsPerConnector: 2,
+      minimumConnectedPowerBranches: 2
+    },
+    panel: {
+      manufacturer: "Adafruit Industries",
+      productId: "2277",
+      inputHeader: "one keyed 16-position IDC connector",
+      separatePowerRequired: true
+    },
+    powerPath: {
+      supplyNet: "V5_DISPLAY_LIMITED",
+      returnNet: "APP_GND",
+      displayDisconnectReference: "J_DISPLAY_DISCONNECT",
+      measurementLinkReference: "J_LINK_DISPLAY"
+    },
+    authority: {
+      exactSelectionFrozen: true,
+      schematicIntegrationApproved: false,
+      footprintApproved: false,
+      layoutApproved: false,
+      purchasedPanelVerified: false,
+      continuityVerified: false,
+      currentRatingVerified: false,
+      fabricationAuthorized: false,
+      releaseState: "deny"
+    }
+  }
+} as const
+
+export const benchPrototypeConnectorUpstreamProvenance = deepFreeze(upstreamProvenanceDefinition)
+
+function sameDataGraph(actual: unknown, expected: unknown, seen = new WeakMap<object, object>()): boolean {
+  if (Object.is(actual, expected)) return true
+  if (actual === null || expected === null || typeof actual !== "object" || typeof expected !== "object") return false
+  if (seen.has(actual)) return seen.get(actual) === expected
+  seen.set(actual, expected)
+  const expectedArray = Array.isArray(expected)
+  if (Array.isArray(actual) !== expectedArray) return false
+  if (expectedArray) {
+    if (!Array.isArray(actual) || !Array.isArray(expected) || Object.getPrototypeOf(actual) !== Array.prototype) {
+      return false
+    }
+    const expectedKeys = Array.from({ length: expected.length }, (_, index) => String(index)).concat("length")
+    const actualKeys = Reflect.ownKeys(actual)
+    if (actual.length !== expected.length || actualKeys.length !== expectedKeys.length) return false
+    if (actualKeys.some((key, index) => key !== expectedKeys[index])) return false
+    return expected.every((entry, index) => {
+      const descriptor = Object.getOwnPropertyDescriptor(actual, String(index))
+      return (
+        descriptor !== undefined &&
+        "value" in descriptor &&
+        descriptor.enumerable &&
+        sameDataGraph(descriptor.value, entry, seen)
+      )
+    })
+  }
+  if (Object.getPrototypeOf(actual) !== Object.prototype || Object.getPrototypeOf(expected) !== Object.prototype) {
+    return false
+  }
+  const expectedKeys = Reflect.ownKeys(expected)
+  const actualKeys = Reflect.ownKeys(actual)
+  if (actualKeys.length !== expectedKeys.length || actualKeys.some((key, index) => key !== expectedKeys[index]))
+    return false
+  return expectedKeys.every((key) => {
+    const actualDescriptor = Object.getOwnPropertyDescriptor(actual, key)
+    const expectedDescriptor = Object.getOwnPropertyDescriptor(expected, key)
+    return (
+      actualDescriptor !== undefined &&
+      expectedDescriptor !== undefined &&
+      "value" in actualDescriptor &&
+      "value" in expectedDescriptor &&
+      actualDescriptor.enumerable === expectedDescriptor.enumerable &&
+      sameDataGraph(actualDescriptor.value, expectedDescriptor.value, seen)
+    )
+  })
+}
+
+function measurementLinkProvenance(
+  link: (typeof defaultBenchPrototypePowerInputs.measurementLinks)[keyof typeof defaultBenchPrototypePowerInputs.measurementLinks]
+) {
+  return {
+    label: link.label,
+    boardHeaderMpn: link.boardHeaderMpn,
+    matingHousingMpn: link.matingHousingMpn,
+    terminalMpn: link.terminalMpn,
+    pin1Net: link.pin1Net,
+    pin2Net: link.pin2Net,
+    contactProjectScreenA: link.contactProjectScreenA
+  }
+}
+
+function currentUpstreamProvenance(): ConnectorUpstreamProvenance {
+  const powerResult = calculateBenchPrototypePowerContract(defaultBenchPrototypePowerInputs)
+  const fixture = benchPrototypeFixtureHarness.connector
+  const service = benchPrototypeServiceHeaders
+  const mdi = benchPrototypeEthernetMdi
+  const hub75 = benchPrototypeHub75Connector
+  return {
+    bp050: {
+      workUnit: "BP-050",
+      displayDisconnectReference: defaultBenchPrototypePowerInputs.displayDisconnectReference,
+      normalInput: {
+        receptacleMpn: defaultBenchPrototypePowerInputs.normalInput.parts.receptacleMpn,
+        contractVoltageV: defaultBenchPrototypePowerInputs.normalInput.contractVoltageV,
+        contractCurrentA: defaultBenchPrototypePowerInputs.normalInput.contractCurrentA,
+        requestedMinimumVoltageV: defaultBenchPrototypePowerInputs.normalInput.requestedMinimumVoltageV,
+        requestedMaximumVoltageV: defaultBenchPrototypePowerInputs.normalInput.requestedMaximumVoltageV,
+        sinkOnly: defaultBenchPrototypePowerInputs.normalInput.sinkOnly
+      },
+      labInjection: {
+        connectorMpn: defaultBenchPrototypePowerInputs.labInjection.connectorMpn,
+        matingHousingMpn: defaultBenchPrototypePowerInputs.labInjection.matingHousingMpn,
+        terminalMpn: defaultBenchPrototypePowerInputs.labInjection.terminalMpn,
+        pin1Net: defaultBenchPrototypePowerInputs.labInjection.pin1Net,
+        pin2Net: defaultBenchPrototypePowerInputs.labInjection.pin2Net,
+        pin3Net: defaultBenchPrototypePowerInputs.labInjection.pin3Net,
+        pin4Net: defaultBenchPrototypePowerInputs.labInjection.pin4Net
+      },
+      measurementLinks: [
+        measurementLinkProvenance(defaultBenchPrototypePowerInputs.measurementLinks.input),
+        measurementLinkProvenance(defaultBenchPrototypePowerInputs.measurementLinks.display),
+        measurementLinkProvenance(defaultBenchPrototypePowerInputs.measurementLinks.application),
+        measurementLinkProvenance(defaultBenchPrototypePowerInputs.measurementLinks.isolatedScoring)
+      ],
+      authority: {
+        displayConnectedPermit: powerResult.displayConnectedPermit,
+        physicalPresenceVerified: powerResult.physicalPresenceVerified,
+        releaseState: powerResult.releaseState
+      }
+    },
+    bp104: {
+      artifactKind: benchPrototypeFixtureHarness.artifactKind,
+      workUnit: benchPrototypeFixtureHarness.workUnit,
+      targetAssembly: benchPrototypeFixtureHarness.targetAssembly,
+      prototypeOnly: benchPrototypeFixtureHarness.prototypeOnly,
+      schematicInputOnly: benchPrototypeFixtureHarness.schematicInputOnly,
+      fabricationDisposition: benchPrototypeFixtureHarness.fabricationDisposition,
+      releaseState: benchPrototypeFixtureHarness.releaseState,
+      connector: {
+        boardReference: fixture.boardReference,
+        header: {
+          manufacturer: fixture.header.manufacturer,
+          mpn: fixture.header.mpn,
+          positions: fixture.header.positions,
+          rows: fixture.header.rows,
+          pitchMm: fixture.header.pitchMm
+        },
+        mate: {
+          manufacturer: fixture.mate.manufacturer,
+          mpn: fixture.mate.mpn,
+          positions: fixture.mate.positions,
+          rows: fixture.mate.rows,
+          pitchMm: fixture.mate.pitchMm,
+          terminalMpn: fixture.mate.terminalMpn
+        },
+        testPlug: {
+          manufacturer: fixture.testPlug.manufacturer,
+          mpn: fixture.testPlug.mpn,
+          materialNumber: fixture.testPlug.materialNumber,
+          positions: fixture.testPlug.positions,
+          rows: fixture.testPlug.rows,
+          pitchMm: fixture.testPlug.pitchMm
+        },
+        conductorOrder: [...fixture.conductorOrder],
+        continuityAcceptance: {
+          status: fixture.continuityAcceptance.status,
+          testPlugMpn: fixture.continuityAcceptance.testPlugMpn,
+          maxEndToEndResistanceOhms: fixture.continuityAcceptance.thresholds.maxEndToEndResistanceOhms,
+          minimumIsolationResistanceOhms: fixture.continuityAcceptance.thresholds.minimumIsolationResistanceOhms,
+          isolationTestVoltageV: fixture.continuityAcceptance.thresholds.isolationTestVoltageV,
+          maximumLeadCompensationOhms: fixture.continuityAcceptance.thresholds.maximumLeadCompensationOhms
+        },
+        physicalEvidenceAcceptanceStatus: fixture.physicalEvidenceAcceptance.status,
+        authority: {
+          exactSelectionFrozen: benchPrototypeFixtureHarness.authority.exactSelectionFrozen,
+          fabricationAuthorized: benchPrototypeFixtureHarness.authority.fabricationAuthorized,
+          releaseState: benchPrototypeFixtureHarness.authority.releaseState
+        }
+      }
+    },
+    bp124: {
+      artifactKind: service.artifactKind,
+      workUnit: service.workUnit,
+      targetAssembly: service.targetAssembly,
+      prototypeOnly: service.prototypeOnly,
+      schematicInputOnly: service.schematicInputOnly,
+      fabricationDisposition: service.fabricationDisposition,
+      releaseState: service.releaseState,
+      stm32: {
+        reference: service.stm32.reference,
+        bomReference: service.stm32.bomReference,
+        headerMpn: service.stm32.header.mpn,
+        matingCableMpn: service.stm32.matingCable.mpn,
+        omittedPins: [...service.stm32.omittedPins],
+        pinout: service.stm32.pinout.map((pin) => ({ pin: pin.pin, net: pin.net }))
+      },
+      esp32: {
+        reference: service.esp32.reference,
+        bomReference: service.esp32.bomReference,
+        headerMpn: service.esp32.header.mpn,
+        matingSocketMpn: service.esp32.header.matingSocket.mpn,
+        pinout: service.esp32.pinout.map((pin) => ({ pin: pin.pin, net: pin.net }))
+      }
+    },
+    bp141: {
+      artifactKind: mdi.artifactKind,
+      targetAssembly: mdi.targetAssembly,
+      prototypeOnly: mdi.prototypeOnly,
+      integrationRelease: mdi.integrationRelease,
+      fabricationRelease: mdi.fabricationRelease,
+      layoutRelease: mdi.layoutRelease,
+      benchValidationRelease: mdi.benchValidationRelease,
+      releaseState: mdi.releaseState,
+      controller: { ...mdi.controller },
+      magJack: { ...mdi.magJack },
+      mdiPairs: mdi.mdiPairs.map((pair) => ({
+        controllerEndpoint: pair.controllerEndpoint,
+        controllerPad: pair.controllerPad,
+        jackEndpoint: pair.jackEndpoint,
+        jackPin: pair.jackPin,
+        net: pair.net
+      })),
+      shieldAndEsdReturn: {
+        chassisNet: mdi.shieldAndEsdReturn.chassisNet,
+        endpoints: [...mdi.shieldAndEsdReturn.endpoints]
+      },
+      noMdiHarnessCrossing: mdi.noMdiHarnessCrossing.externalMdiHarness
+    },
+    bp143: {
+      artifactKind: hub75.artifactKind,
+      task: hub75.task,
+      targetAssembly: hub75.targetAssembly,
+      prototypeOnly: hub75.prototypeOnly,
+      schematicInputOnly: hub75.schematicInputOnly,
+      layoutRelease: hub75.layoutRelease,
+      fabricationRelease: hub75.fabricationRelease,
+      fabricationDisposition: hub75.fabricationDisposition,
+      releaseState: hub75.releaseState,
+      boardConnector: {
+        reference: hub75.boardConnector.reference,
+        manufacturer: hub75.boardConnector.manufacturer,
+        mpn: hub75.boardConnector.mpn,
+        positions: hub75.boardConnector.positions,
+        rows: hub75.boardConnector.rows,
+        pitchMm: hub75.boardConnector.pitchMm
+      },
+      signalCable: {
+        manufacturer: hub75.signalCable.manufacturer,
+        productId: hub75.signalCable.productId,
+        quantity: hub75.signalCable.quantity,
+        conductorCount: hub75.signalCable.conductorCount,
+        panelConnection: hub75.signalCable.panelConnection
+      },
+      powerCable: {
+        manufacturer: hub75.powerCable.manufacturer,
+        productId: hub75.powerCable.productId,
+        quantity: hub75.powerCable.quantity,
+        panelSideHousingMpn: hub75.powerCable.panelSideHousingMpn,
+        panelSideContactMpn: hub75.powerCable.panelSideContactMpn,
+        cableSideHousingMpn: hub75.powerCable.cableSideHousingMpn,
+        cableSideContactMpn: hub75.powerCable.cableSideContactMpn,
+        contactCurrentRatingA: hub75.powerCable.contactCurrentRatingA,
+        parallelPowerContactsPerConnector: hub75.powerCable.parallelPowerContactsPerConnector,
+        minimumConnectedPowerBranches: hub75.powerCable.minimumConnectedPowerBranches
+      },
+      panel: {
+        manufacturer: hub75.panel.manufacturer,
+        productId: hub75.panel.productId,
+        inputHeader: hub75.panel.inputHeader,
+        separatePowerRequired: hub75.panel.separatePowerRequired
+      },
+      powerPath: {
+        supplyNet: hub75.powerPath.supplyNet,
+        returnNet: hub75.powerPath.returnNet,
+        displayDisconnectReference: hub75.powerPath.displayDisconnectReference,
+        measurementLinkReference: hub75.powerPath.measurementLinkReference
+      },
+      authority: { ...hub75.authority }
+    }
+  }
+}
+
+export function validateBenchPrototypeConnectorUpstreamProvenance(value: unknown): true {
+  if (!sameDataGraph(value, benchPrototypeConnectorUpstreamProvenance)) {
+    throw new RangeError("BP-034 upstream interface provenance drifted from BP-050, BP-104, BP-124, BP-141, or BP-143")
+  }
+  return true
+}
+
+function assertUpstreamProvenance(): void {
+  calculateBenchPrototypePowerContract(defaultBenchPrototypePowerInputs)
+  validateBenchPrototypeFixtureHarness(benchPrototypeFixtureHarness)
+  validateBenchPrototypeServiceHeaders(benchPrototypeServiceHeaders)
+  validateBenchPrototypeEthernetMdi(benchPrototypeEthernetMdi)
+  validateBenchPrototypeHub75Connector(benchPrototypeHub75Connector)
+  validateBenchPrototypeConnectorUpstreamProvenance(currentUpstreamProvenance())
+}
 
 export type ImmutableEvidenceArtifact = { readonly artifactId: string; readonly sha256: string }
 
@@ -547,6 +1143,7 @@ const negativeIds = ["open", "polarity", "reversal", "swap"] as const
 export function evaluateBenchPrototypeConnectorPreorderEvidence(
   value: unknown
 ): BenchPrototypeConnectorPreorderEvaluation {
+  assertUpstreamProvenance()
   const reasons: string[] = []
   inspectDataGraph(value, "evidence", new WeakSet<object>(), reasons)
   if (reasons.length > 0) return { accepted: false, reasons }
@@ -796,13 +1393,33 @@ export function evaluateBenchPrototypeConnectorPreorderEvidence(
 }
 
 export function validateBenchPrototypeConnectorPreorder(value: unknown): true {
+  assertUpstreamProvenance()
   if (value !== benchPrototypeConnectorPreorder) {
     throw new RangeError("BP-034 connector preorder contract must use its reviewed canonical object")
   }
+  const usbCable = benchPrototypeConnectorPreorder.samples[0].requiredComponents[1]
+  const ethernetCable = benchPrototypeConnectorPreorder.samples[7].requiredComponents[1]
+  const usbSource = benchPrototypeConnectorPreorder.samples[0].sourceEvidence
+  const ethernetSource = benchPrototypeConnectorPreorder.samples[7].sourceEvidence
   if (
     benchPrototypeConnectorPreorder.fabricationDisposition !== "DENY" ||
     benchPrototypeConnectorPreorder.releaseState !== "deny" ||
     benchPrototypeConnectorPreorder.samples.length !== 10 ||
+    benchPrototypeConnectorPreorder.samples.some((sample) => sample.selectionState !== "exact") ||
+    usbCable.manufacturer !== "StarTech.com" ||
+    usbCable.mpn !== "USB2CC1M" ||
+    usbSource?.sourceUrl !== "https://media.startech.com/cms/pdfs/usb2cc1m_datasheet.pdf" ||
+    usbSource?.assetPath !== "docs/evidence/bp-034/startech-usb2cc1m-datasheet.pdf" ||
+    usbSource?.sha256 !== "AE5241D2A65A5B64F737D4205FD428B0432567EA98FA1482520AB0D9F345FAE7" ||
+    benchPrototypeConnectorPreorder.samples[0].selectionBasis?.["maximumVoltageV"] !== 20 ||
+    benchPrototypeConnectorPreorder.samples[0].selectionBasis?.["maximumCurrentA"] !== 3 ||
+    ethernetCable.manufacturer !== "Eaton, Tripp Lite series" ||
+    ethernetCable.mpn !== "N201-003-BL" ||
+    ethernetSource?.sourceUrl !== "https://assets.tripplite.com/product-pdfs/en/n201003bl.pdf" ||
+    ethernetSource?.assetPath !== "docs/evidence/bp-034/eaton-tripp-lite-n201-003-bl-datasheet.pdf" ||
+    ethernetSource?.sha256 !== "BB81E709DFD1E57546379D2962431CD1D1C2445E038E81B053521B6231A14C12" ||
+    benchPrototypeConnectorPreorder.samples[7].selectionBasis?.["cableEnds"] !==
+      "RJ45 male to RJ45 male (8P8C patch cable)" ||
     benchPrototypeConnectorPreorder.samples[1].interfaceReferences[0] !== "J_LAB_INJECTION" ||
     !benchPrototypeConnectorPreorder.samples[6].interfaceReferences.includes("J_ESP_SERVICE") ||
     !benchPrototypeConnectorPreorder.samples[9].requiredComponents.some((entry) => entry.mpn === "SYM-001T-P0.6") ||
