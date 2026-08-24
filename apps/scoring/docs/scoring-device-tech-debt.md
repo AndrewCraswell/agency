@@ -57,6 +57,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 38 | FW-008 | P1 | done | Root-approved shared journal preflight prevents replay from indexing an invalid active slot |
 | 39 | SD-022 | P1 | done | Root-approved canonical provenance parsing now serves decision records and event-capture construction |
 | 40 | SD-023 | P2 | done | Root-approved canonical phase registry now derives public IDs, guard, and lookup without duplicate literals |
+| 41 | SC-017 | P2 | intake | BP-140 and BP-141 duplicate the Ethernet controller and MagJack identities |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -710,3 +711,15 @@ truth.
 - Bounded remediation: validate the exact reviewed gate set on a plain object and read each boolean through its own enumerable data descriptor.
 - Acceptance: existing complete and incomplete results remain unchanged; class instances, null-prototype objects, getters, symbols, hidden properties, aliases, missing keys, and non-booleans reject.
 - Non-goals: no evidence-field, mechanical-envelope, fabrication-authority, or generic schema redesign.
+
+## SC-017: unify BP-140 and BP-141 Ethernet endpoint identity
+
+- Priority: `P2`
+- State: `intake`
+- Latest state: A read-only audit found that BP-141 manually repeats the W5500 and MagJack manufacturer/MPN identities already owned by the BP-140 Ethernet contract and communications footprint evidence. The bounded implementation is ready for root intake; no production files have been changed.
+- Affected files: `packages/scoring-circuit/src/bench-prototype-ethernet-mdi.ts`, its focused test, and the existing canonical identity sources in `bench-prototype-ethernet.ts` and the communications footprint evidence.
+- Description: BP-141 hard-codes the W5500 and MagJack identities in both its provenance snapshot and exported MDI definition even though it separately validates those values against upstream canonical sources.
+- Impact: a reviewed part-identity change can leave BP-141 stale, forcing maintainers to synchronize multiple representations and making drift visible only after validation fails.
+- Bounded remediation: create a small private BP-141 identity projection sourced from `benchPrototypeEthernet` and `communicationsFootprintEvidence`, then use it to construct the MDI definition and provenance.
+- Acceptance: no duplicate W5500 or MagJack manufacturer/MPN literals remain in BP-141 production code; upstream identity mutation fails through the existing provenance boundary; generated MDI JSON, pair mappings, source list, and release gates remain byte-equivalent; focused BP-140/BP-141 tests, package types, lint, and format pass.
+- Non-goals: do not change `U_W5500` or `J_ETH` references, reset or interrupt selection, MDI electrical topology, release-deny state, or create a generic parts-catalog/serialization abstraction.
