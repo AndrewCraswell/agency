@@ -104,3 +104,23 @@ panel's fit against the 40.60 W post-shunt ceiling.
 - [Waveshare RGB-Matrix-P4-64x32 alternate candidate](https://www.waveshare.com/product/modules/rgb-matrix-p4-64x32.htm) (not selected: its published HUB75 definition includes an `E` address line and requires a separate pinout review)
 - [Carrier safe blanking and panel-level verification gates](reset-and-display-safing.md)
 - [USB-C power budget and display allocation](usb-c-power-budget.md)
+
+## Hash-bound source record
+
+The exact Adafruit product page for `2277`, and the selected Adafruit signal
+and power cable pages (`4170` and `4767`), were acquired on 2026-08-24 and
+retained with SHA-256 digests in
+[`evidence/bp-143`](evidence/bp-143). The same evidence set contains the
+manufacturer Samtec TST product/print sources and JST SM series specification
+for the exact BP-143 header and power-mate identities. The complete URL and
+digest table is maintained in
+[the BP-143 connector record](bench-prototype-hub75-connector.md#acquired-source-snapshots)
+and is executable in
+[`src/display-panel-readiness.ts`](../src/display-panel-readiness.ts).
+
+These are manufacturer/vendor source bytes only. They do not claim that a
+panel, cable, connector, or mating assembly has been purchased, received,
+measured, fitted, or tested. The panel's current, cable drop, connector
+temperature, continuity, physical fit, CAD, fabrication, and all release
+decisions remain downstream gates. `productionApproved` stays `false` and the
+USB-C PD and display power **DENY** gates are unchanged.
