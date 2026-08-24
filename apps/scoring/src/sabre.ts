@@ -284,6 +284,15 @@ type ContactAdvance = {
   hit: SabreHit | null
 }
 
+/**
+ * A non-conductive observation is a known end of a previously trusted target
+ * interval. It may therefore qualify that interval at its exact end. Unknown
+ * or unavailable inputs remain fail-closed and never capture a candidate.
+ */
+function isKnownTargetRelease(observationStatus: SabreObservationStatus): boolean {
+  return observationStatus === "non-conductive-surface"
+}
+
 function collectDiagnosticDecisions(
   side: SabreSide,
   state: SabreSideState,
@@ -369,7 +378,24 @@ function advanceContact(
     yellowDiagnostic
   }
 
-  if (state.isRegistered || hitRegistrationBlocked || observationStatus !== "ready") {
+  if (state.isRegistered || hitRegistrationBlocked) {
+    return { contact: { ...nextState, candidateSinceUs: null }, diagnostics, hit: null }
+  }
+
+  const releasedCandidateSinceUs = state.candidateSinceUs
+  if (
+    releasedCandidateSinceUs !== null &&
+    isKnownTargetRelease(observationStatus) &&
+    atUs - releasedCandidateSinceUs >= minimumContactUs
+  ) {
+    return {
+      contact: { ...nextState, candidateSinceUs: null, isRegistered: true },
+      diagnostics,
+      hit: { qualifiedAtUs: atUs, side, startedAtUs: releasedCandidateSinceUs }
+    }
+  }
+
+  if (observationStatus !== "ready") {
     return { contact: { ...nextState, candidateSinceUs: null }, diagnostics, hit: null }
   }
 

@@ -3,13 +3,13 @@
   "format": "scoring-golden-scenario",
   "schemaVersion": "1.0.0",
   "scenarioId": "sabre.contact-floor-boundaries",
-  "title": "Sabre target contact does not register at 99 microseconds and registers at exactly 100 microseconds",
+  "title": "Sabre target pulses do not register at 99 microseconds and register at exactly 100 microseconds",
   "weapon": "sabre",
   "ruleRevision": "fie-2026-sabre",
   "sources": [
     { "authority": "fie", "id": "SABRE-01", "document": "fie-material-rules-2026-08-en.pdf", "page": 81, "locator": "Annex B, C(a).1-C(a).4" },
     { "authority": "fie", "id": "SABRE-03", "document": "fie-material-rules-2026-08-en.pdf", "page": 81, "locator": "Annex B, C(a).7 and C(b).1-C(b).2" },
-    { "authority": "implementation", "id": "SABRE-TEST-CONTACT-FLOOR", "document": "src/sabre.test.ts", "page": null, "locator": "qualifies a target contact only at the 100 microsecond floor" }
+    { "authority": "implementation", "id": "SABRE-TEST-CONTACT-FLOOR", "document": "src/sabre.test.ts", "page": null, "locator": "captures a released target pulse only when its known duration reaches 100 microseconds" }
   ],
   "lineModel": { "revision": "sabre-logical-lines-1", "names": ["left.target", "right.target"] },
   "determinism": { "seed": 0, "inputOrder": "listed", "resultOrder": "decision-atUs-then-id" },
@@ -27,12 +27,14 @@
   ],
   "expect": {
     "status": "accepted",
-    "decisions": [{ "id": "right-floor-hit", "decisionAtUs": 100, "disposition": "qualified-hit", "weapon": "sabre", "side": "right", "hitStartedAtUs": 0, "qualifiedAtUs": 100, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["both-start", "left-break-right-at-floor"] }],
+    "decisions": [
+      { "id": "left-released-floor-hit", "decisionAtUs": 100, "disposition": "qualified-hit", "weapon": "sabre", "side": "left", "hitStartedAtUs": 0, "qualifiedAtUs": 100, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["both-start", "left-break-right-at-floor"] },
+      { "id": "right-floor-hit", "decisionAtUs": 100, "disposition": "qualified-hit", "weapon": "sabre", "side": "right", "hitStartedAtUs": 0, "qualifiedAtUs": 100, "signal": { "visual": "valid-hit", "audible": "requested", "latched": true }, "sourceInputIds": ["both-start", "left-break-right-at-floor"] }
+    ],
     "nonEvents": [
-      { "id": "below-floor-no-hit", "window": { "fromUs": 0, "throughUs": 99 }, "assertion": "no-decision", "side": "both", "assertionReasonCode": "contact-shorter-than-minimum" },
-      { "id": "left-non-conductive-no-hit", "window": { "fromUs": 100, "throughUs": 100 }, "assertion": "no-decision", "side": "left", "assertionReasonCode": "non-target-surface" }
+      { "id": "below-floor-no-hit", "window": { "fromUs": 0, "throughUs": 99 }, "assertion": "no-decision", "side": "both", "assertionReasonCode": "contact-shorter-than-minimum" }
     ],
     "uncertainty": [],
-    "finalState": { "hitCount": 1, "isLocked": false }
+    "finalState": { "hitCount": 2, "isLocked": false }
   }
 }

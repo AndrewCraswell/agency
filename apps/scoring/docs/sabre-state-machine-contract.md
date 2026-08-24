@@ -67,10 +67,14 @@ correctly. Those remain M0-03, M4, and M6 evidence.
 ## Contact qualification and blade-mediated whipover history
 
 A target candidate starts at the first trusted `target` and `eligible`
-observation. It qualifies at the first such observation at least `100 us`
-later. Equality is included: 99 us is rejected, 100 us
-qualifies, and 101 us qualifies. This explicit product endpoint ensures the
-apparatus never signals below the SABRE-03 floor.
+observation. It qualifies at the first subsequent trusted target observation
+at least `100 us` later, or at a subsequent known
+`nonConductiveSurface` observation that ends the trusted target interval.
+Equality is included: a 99-us released pulse is rejected, while 100-us and
+101-us pulses qualify. An indeterminate or unavailable ending projection never
+captures a candidate. This explicit product endpoint ensures the apparatus
+never signals below the SABRE-03 floor while retaining the required 0.1-ms
+pulse capture behaviour.
 
 The FIE `0.1-1 ms` sensitivity wording provides a 1,000-us test point but does
 not safely establish a host-only candidate expiry. The scorer therefore checks

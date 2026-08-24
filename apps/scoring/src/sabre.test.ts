@@ -112,6 +112,34 @@ describe("sabre scoring state machine", () => {
     }
   )
 
+  it.each([
+    ["left", 99, false],
+    ["left", 100, true],
+    ["left", 1_000, true],
+    ["right", 99, false],
+    ["right", 100, true],
+    ["right", 1_000, true]
+  ] as const)(
+    "captures a released %s target pulse only when its known duration reaches %i microseconds: %s",
+    (side, durationUs, qualifies) => {
+      const state = replay([forSide(side, READY, 0), forSide(side, NON_CONDUCTIVE, durationUs)])
+
+      expect(state.hits).toEqual(qualifies ? [{ qualifiedAtUs: durationUs, side, startedAtUs: 0 }] : [])
+      expect(state[side].observationStatus).toBe("non-conductive-surface")
+    }
+  )
+
+  it.each(["indeterminate", "unavailable"] as const)(
+    "does not capture a candidate when its ending target projection is %s",
+    (targetContact) => {
+      const terminalContact: SabreContact = { ...READY, targetContact }
+      const state = replay([forSide("left", READY, 0), forSide("left", terminalContact, 1_000)])
+
+      expect(state.hits).toEqual([])
+      expect(state.left.observationStatus).toBe(targetContact)
+    }
+  )
+
   it.each(["left", "right"] as const)("rejects a %s non-conductive surface", (side) => {
     const state = replay([forSide(side, NON_CONDUCTIVE, 0), forSide(side, NON_CONDUCTIVE, 1_000)])
 

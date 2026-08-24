@@ -129,7 +129,7 @@ implementation has no dependency on an MCU SDK or wall-clock time.
 | M1-02 | backlog | Next after M1-01, M0-03: Epee exceptional-resistance and grounded-material logical cases. | Epee exceptional-resistance and grounded-material logical cases | M1-01, M0-03 | Golden scenarios cover valid, invalid, simultaneous, and near-lockout contacts on both sides |
 | M1-03 | done | Delivered and root-approved: source-bound foil scorer and contract cover both sides at 12,999/13,000/14,000/15,000 us, target and non-target classification, grounded and equipment-fault containment, indeterminate/unavailable inputs, deterministic ordering, same-side inhibition, and provisional first-signalled-hit lockout. | Foil contact-break and on/off-target state machine | M0-01, M0-03, M0-07 | Tests cover 13/14/15 ms boundaries, target grounding, lame/weapon faults, and lockout |
 | M1-04 | backlog | Next after M1-03: Foil insulation-warning and 450/475 ohm decision contract. | Foil insulation-warning and 450/475 ohm decision contract | M1-03 | Boundary vectors distinguish scoring behavior from diagnostic indication |
-| M1-05 | backlog | Next after M0-01, M0-03, M0-07: Sabre contact and control-break state machine. | Sabre contact and control-break state machine | M0-01, M0-03, M0-07 | Tests cover 0.1 ms minimum, 1 ms capture, 3 ms control break, whipover-related sequences, and lockout |
+| M1-05 | done | Delivered and root-approved: sabre scorer and source-bound scenarios cover both sides, 99/100/1,000 us held and released target pulses, fail-closed uncertain releases, control break, yellow/white diagnostics, whipover/external-path containment, deterministic simultaneous capture, and lockout; the 28-scenario corpus remains green. | Sabre contact and control-break state machine | M0-01, M0-03, M0-07 | Tests cover 0.1 ms minimum, 1 ms capture, 3 ms control break, whipover-related sequences, and lockout |
 | M1-06 | backlog | Next after M1-02, M1-03, M1-05: Weapon-neutral bout reset and state-transition API. | Weapon-neutral bout reset and state-transition API | M1-02, M1-03, M1-05 | Reset cannot leak hits, pending contacts, or lockout state across bouts or weapon changes |
 | M1-07 | backlog | Next after M1-02, M1-03, M1-05: Versioned immutable timing-table loader. | Versioned immutable timing-table loader | M1-02, M1-03, M1-05 | Unknown revisions fail closed; values outside approved bounds are rejected |
 | M1-08 | backlog | Next after M1-02 through M1-07: Generated boundary-vector suite. | Generated boundary-vector suite | M1-02 through M1-07 | Every timing boundary runs below, at, and above the limit for both sides with deterministic ordering |
@@ -358,6 +358,7 @@ A milestone closes only when:
 4. documents and machine-readable manifests agree with the implementation;
 5. an independent reviewer has resolved every release-blocking comment; and
 6. remaining risks, assumptions, and deferred work are named in the next milestone entry criteria.
+
 
 
 
