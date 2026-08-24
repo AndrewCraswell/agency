@@ -95,7 +95,29 @@ const definition = {
       selectionBasis:
         "The exact manufacturer family is an insulated rigid 4 mm panel socket with a published mounting drawing. The parts satisfy the nominal FIE female-contact diameter and make the requested red and blue apparatus-port identification orderable.",
       releaseLimitation:
-        "This is a component selection only. It is not a plug-fit, retention, environment, apparatus-approval, or production-release claim. The release remains deny until the physical gates pass."
+        "This is a component selection only. It is not a plug-fit, retention, environment, apparatus-approval, or production-release claim. The release remains deny until the physical gates pass.",
+      primaryEvidence: [
+        {
+          artifactPath: "docs/evidence/m4-10/staubli-23-3070-en.pdf",
+          capturedOn: "2026-08-24",
+          kind: "manufacturer-item-data-sheet",
+          relevantPages: [1],
+          sha256: "DB2C84AC0D3FFBB1F29FEE2CE8BE375E8E176F3183BA8B1540379D51176DA80F",
+          sourceUrl: "https://www.staubli.com/content/dam/ecs/technical-documentation/datasheets/TM/23.3070_en.pdf",
+          supports:
+            "SLB4-F/A item family 23.3070-*, insulated rigid 4 mm panel socket, Ni/CuZn contact, supplied M12 nut and washer, and 4.8 mm by 0.8 mm flat tab."
+        },
+        {
+          artifactPath: "docs/evidence/m4-10/staubli-tm-main-11014124-en.pdf",
+          capturedOn: "2026-08-24",
+          kind: "manufacturer-main-catalogue",
+          relevantPages: [6, 82],
+          sha256: "3B3E7F6CDC234365D8C413F467EFF08B3D09C176956EC15772DC0DBCCB20CDED",
+          sourceUrl: "https://www.staubli.com/content/dam/ecs/catalogs-brochures/TM/TM-Main-11014124-en.pdf",
+          supports:
+            "23.3070-* SLB4-F/A panel-mount socket, its 4 mm spring-loaded-plug interface, standard suffixes 22 red and 23 blue, and manufacturer mechanical drawing."
+        }
+      ]
     },
     candidates: [
       {
@@ -181,16 +203,23 @@ const definition = {
     selectedSocketMechanicalFacts: {
       plugSystemDiameterMm: 4,
       panelCutoutDiameterMm: 12.2,
-      overallLengthMm: 30.5,
+      overallLengthMm: null,
+      overallLengthDrawingConflictMm: {
+        manufacturerDataSheet: 30.5,
+        manufacturerMainCatalogue: 30.7,
+        resolution:
+          "unresolved; do not release an enclosure or panel clearance envelope until Stäubli supplies a controlling current drawing or a received sample is measured"
+      },
       frontFlangeDiameterMm: 14.5,
       terminal: "4.8 mm by 0.8 mm flat connecting tab, bend once to 90 degrees maximum",
       contactMaterial: "CuZn",
       contactPlating: "Ni",
       mounting: "M12 by 0.75 threaded panel mount with supplied nut and washer",
-      drawingState: "manufacturer drawing is published in the Stäubli main catalogue and item data sheet"
+      drawingState:
+        "manufacturer drawings are acquired, but they disagree on overall length; the individual-hole drawing is usable only after the controlling revision is resolved"
     },
     drawingContract:
-      "The panel drawing must preserve the three stated contact centres. It must cite the Stäubli drawing for each individual mounting hole and show socket-body, terminal, harness, enclosure, and adjacent-port clearance. Do not infer production tolerances beyond the manufacturer drawing.",
+      "The panel drawing must preserve the three stated contact centres. It must cite the Stäubli drawing for each individual mounting hole and show socket-body, terminal, harness, enclosure, and adjacent-port clearance. The acquired drawings disagree on overall length (30.5 mm versus 30.7 mm), so no clearance envelope or production tolerance is released until the controlling revision is resolved.",
     pinMapState:
       "No logical A/B/C or piste assignment is released here. M0-03 and M4-13 own the released pin map, keying, bonding, harness and CAD release record."
   },
@@ -304,6 +333,7 @@ const definition = {
   ],
   explicitUnknowns: [
     "Stäubli 23.3070-22 and 23.3070-23 are exact orderable component selections with a published drawing, but neither manufacturer nor FIE evidence proves fit with Favero or Allstar fencing plugs.",
+    "The acquired Stäubli item data sheet depicts a 30.5 mm overall length, while its main catalogue depicts 30.7 mm. This drawing conflict blocks panel-clearance and footprint release until Stäubli confirms the controlling revision or a received sample is measured.",
     "The Stäubli socket accepts spring-loaded 4 mm plugs with a rigid insulating sleeve. The Favero 910 plug's spring construction, sleeve clearance, insertion depth, and mating force are not published in the evidence used here.",
     "Favero 900-09 is identified as a three-socket connector on a reel case, not as a central-apparatus standalone part; it is comparison evidence only, not the selected central-apparatus component.",
     "Allstar lists an Allstar spool 3 pin socket, but the current listing does not publish an exact MPN, dimensions, panel cutout, terminal style, or drawing.",
@@ -331,7 +361,7 @@ const definition = {
       title: "Stäubli Test accessories main catalogue",
       url: "https://www.staubli.com/content/dam/ecs/catalogs-brochures/TM/TM-Main-11014124-en.pdf",
       supports:
-        "SLB4-F/A mechanical drawing, 12.2 mm panel cutout, 14.5 mm front flange, 30.5 mm length, 4.8 mm by 0.8 mm terminal, and available standard colors"
+        "SLB4-F/A mechanical drawing, 12.2 mm panel cutout, 14.5 mm front flange, 30.7 mm depicted length, 4.8 mm by 0.8 mm terminal, and available standard colors; it conflicts with the 30.5 mm item-data-sheet drawing"
     },
     {
       title: "Current distributor confirmation for Stäubli red variant",

@@ -27,9 +27,22 @@ The panel drawing must use these coordinates in millimetres, with the centre con
 | centre | 0 | 0 |
 | outer-far-20 mm | 20 | 0 |
 
-For each Stäubli socket, the manufacturer documentation provides a 4 mm plug system, 12.2 mm panel cutout, 14.5 mm front flange, 30.5 mm overall length, M12 x 0.75 threaded panel mount, supplied nut and washer, and a 4.8 mm by 0.8 mm flat connecting tab. The drawing owner must preserve the FIE contact centres, then apply the manufacturer's individual-hole drawing and document terminal, harness, enclosure, and adjacent-port clearance. No project tolerance is inferred beyond the manufacturer drawing.
+For each Stäubli socket, the manufacturer documentation provides a 4 mm plug system, 12.2 mm panel cutout, 14.5 mm front flange, M12 x 0.75 threaded panel mount, supplied nut and washer, and a 4.8 mm by 0.8 mm flat connecting tab. The item data sheet depicts a 30.5 mm overall length, but the manufacturer main catalogue depicts 30.7 mm. That conflict is an explicit blocker: no enclosure clearance envelope, footprint, or production tolerance may use either value until Stäubli identifies the controlling drawing revision or a received sample is measured. The drawing owner must preserve the FIE contact centres, then apply the resolved individual-hole drawing and document terminal, harness, enclosure, and adjacent-port clearance.
 
 The selected socket's published contact material is CuZn with nickel surface treatment. Its published electrical ratings are 24 A and 1000 V CAT III. Those ratings are not a fencing durability, corrosion, plug-fit, or FIE-homologation claim.
+
+## Acquired primary-source record
+
+The two manufacturer PDFs below are vendored as an immutable engineering record. Their SHA-256 values are verified by the M4-10 unit test. They establish the selected part-family identity and mechanical interface only; neither document proves that a fencing plug fits or that the part is qualified for a central-apparatus panel.
+
+| Snapshot | SHA-256 | Relevant pages | What it establishes |
+| --- | --- | --- | --- |
+| [Stäubli SLB4-F/A data sheet](evidence/m4-10/staubli-23-3070-en.pdf) | `DB2C84AC0D3FFBB1F29FEE2CE8BE375E8E176F3183BA8B1540379D51176DA80F` | 1 | `23.3070-*` family, rigid 4 mm panel socket, contact material, supplied hardware, and terminal |
+| [Stäubli Test accessories main catalogue](evidence/m4-10/staubli-tm-main-11014124-en.pdf) | `3B3E7F6CDC234365D8C413F467EFF08B3D09C176956EC15772DC0DBCCB20CDED` | 6, 82 | Color-code mapping `22` red and `23` blue, `23.3070-*` SLB4-F/A panel socket, and its 4 mm mating-interface statement |
+
+Captured from the manufacturer URLs on 2026-08-24. Stäubli reserves the right to change these documents, so any later part substitution must reacquire and re-review primary evidence rather than inherit this record.
+
+The snapshots also disclose a material discrepancy: the item data sheet shows a 30.5 mm overall length while catalogue page 82 shows 30.7 mm. M4-10 deliberately records this as unresolved rather than choosing a value. It is not an error band or a permissible tolerance.
 
 ## What physical evidence still blocks release
 

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import { reelSocketSelection, validateReelSocketSelection } from "./reel-socket-selection.js"
 
@@ -62,7 +64,11 @@ describe("M4-10 reel-socket selection", () => {
       selectedSocketMechanicalFacts: {
         plugSystemDiameterMm: 4,
         panelCutoutDiameterMm: 12.2,
-        overallLengthMm: 30.5,
+        overallLengthMm: null,
+        overallLengthDrawingConflictMm: {
+          manufacturerDataSheet: 30.5,
+          manufacturerMainCatalogue: 30.7
+        },
         frontFlangeDiameterMm: 14.5
       }
     })
@@ -78,6 +84,9 @@ describe("M4-10 reel-socket selection", () => {
       terminalStyle: "4.8 mm by 0.8 mm flat connecting tab"
     })
     expect(reelSocketSelection.candidateSocketFacts.manufacturerPublished.retentionForceN).toBeNull()
+    expect(
+      reelSocketSelection.centralApparatusPort.selectedSocketMechanicalFacts.overallLengthDrawingConflictMm.resolution
+    ).toContain("unresolved")
     expect(reelSocketSelection.candidateSocketFacts.engineeringTargets).toMatchObject({
       initialPerContactResistanceMaximumMilliOhm: 50,
       postQualificationPerContactResistanceMaximumMilliOhm: 100,
@@ -86,6 +95,26 @@ describe("M4-10 reel-socket selection", () => {
     })
     expect(reelSocketSelection.sweatSaltExposurePlan.status).toBe("planned, not executed")
     expect(reelSocketSelection.physicalEvidenceGates.length).toBeGreaterThanOrEqual(6)
+  })
+
+  it("binds the selected component to acquired primary manufacturer evidence without treating it as plug-fit evidence", () => {
+    const selected = reelSocketSelection.decision.selectedCandidate
+    if (selected === null) throw new Error("M4-10 selected component is missing")
+
+    expect(selected.primaryEvidence).toHaveLength(2)
+    expect(selected.primaryEvidence.map((source) => source.kind)).toEqual([
+      "manufacturer-item-data-sheet",
+      "manufacturer-main-catalogue"
+    ])
+    expect(selected.primaryEvidence[0]!.relevantPages).toEqual([1])
+    expect(selected.primaryEvidence[1]!.relevantPages).toEqual([6, 82])
+    for (const source of selected.primaryEvidence) {
+      const bytes = readFileSync(new URL(`../${source.artifactPath}`, import.meta.url))
+      expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(source.sha256)
+      expect(source.sourceUrl).toMatch(/^https:\/\/www\.staubli\.com\//u)
+    }
+    expect(selected.releaseLimitation).toContain("not a plug-fit")
+    expect(reelSocketSelection.matingPlugStudy.fitEvidenceState).toBe("none collected; no release or purchase")
   })
 
   it("validates only the exact frozen data graph", () => {
