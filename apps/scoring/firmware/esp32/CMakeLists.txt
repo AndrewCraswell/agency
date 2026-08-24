@@ -38,6 +38,7 @@ else()
 
   add_executable(scoring_esp32_services_host_test tests/scoring_esp32_services_host_test.c)
   target_link_libraries(scoring_esp32_services_host_test PRIVATE scoring_esp32_services)
+  target_include_directories(scoring_esp32_services_host_test PRIVATE generated)
 
   add_executable(scoring_esp32_load_isolation_host_test tests/scoring_esp32_load_isolation_host_test.c)
   target_link_libraries(scoring_esp32_load_isolation_host_test PRIVATE scoring_esp32_services)

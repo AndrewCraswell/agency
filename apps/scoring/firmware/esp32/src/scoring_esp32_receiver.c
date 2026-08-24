@@ -175,7 +175,7 @@ scoring_esp32_result_t scoring_esp32_receiver_receive(
   scoring_esp32_receiver_receipt_t *out_receipt
 ) {
   scoring_esp32_result_t result;
-  scoring_esp32_m2_05_frame_t frame;
+  scoring_esp32_transport_frame_t frame;
   size_t frame_length = 0U;
   if (receiver == NULL || out_receipt == NULL) {
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
@@ -207,7 +207,8 @@ scoring_esp32_result_t scoring_esp32_receiver_receive(
   if (frame_length > sizeof(receiver->ingress.scoring_link_buffer)) {
     return reject_receipt(receiver, out_receipt, SCORING_ESP32_RESULT_BUFFER_TOO_SMALL, 0U, false, true);
   }
-  result = scoring_esp32_decode_m2_05_frame(
+  result = scoring_esp32_decode_transport_frame(
+    SCORING_ESP32_TRANSPORT_RECEIVER_ESP32,
     (scoring_esp32_bytes_t){.data = receiver->ingress.scoring_link_buffer, .length = frame_length},
     &frame
   );

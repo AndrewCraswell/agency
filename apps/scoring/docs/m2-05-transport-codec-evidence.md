@@ -35,7 +35,7 @@ Focused scoring verification:
 
 ```text
 pnpm --filter scoring test -- transport-frame.test.ts
-7 tests passed
+8 tests passed
 ```
 
 The repository-wide `pnpm verify` remains the milestone-level check and may include unrelated work from other active

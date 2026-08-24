@@ -1,4 +1,5 @@
 #include "scoring_esp32_services.h"
+#include "esp32_transport_golden_frames.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -101,7 +102,7 @@ static bool received_record_is_empty(const scoring_esp32_authoritative_record_t 
   return record->bytes.data == NULL && record->bytes.length == 0U && record->transport_sequence == 0U;
 }
 
-static bool test_valid_m2_05_frame_reaches_storage_as_opaque_authority(void) {
+static bool test_valid_transport_frame_reaches_storage_as_opaque_authority(void) {
   static const uint8_t payload[] = {0xA1U, 0x01U, 0xDEU, 0xADU, 0xBEU, 0xEFU};
   uint8_t frame[SCORING_ESP32_MAX_TRANSPORT_FRAME_BYTES] = {0};
   const size_t frame_length = make_frame(
@@ -128,6 +129,95 @@ static bool test_valid_m2_05_frame_reaches_storage_as_opaque_authority(void) {
   CHECK(storage.sequence == 41U);
   CHECK(storage.record_length == sizeof(payload));
   CHECK(memcmp(storage.record, payload, sizeof(payload)) == 0);
+  return true;
+}
+
+static bool test_generated_golden_frames_match_esp32_codec(void) {
+  static uint8_t maximum_payload[SCORING_ESP32_MAX_TRANSPORT_PAYLOAD_BYTES] = {0};
+  uint8_t maximum_frame[SCORING_ESP32_MAX_TRANSPORT_FRAME_BYTES] = {0};
+  uint8_t corrupted[SCORING_ESP32_MAX_TRANSPORT_FRAME_BYTES] = {0};
+  size_t index;
+  scoring_esp32_transport_frame_t decoded;
+
+  CHECK(SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURE_COUNT == 4U);
+  for (index = 0U; index < SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURE_COUNT; index += 1U) {
+    const scoring_esp32_transport_golden_fixture_t *fixture = &SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURES[index];
+    CHECK(scoring_esp32_decode_transport_frame(
+            fixture->receiver,
+            (scoring_esp32_bytes_t){.data = fixture->frame, .length = fixture->frame_length},
+            &decoded
+          ) == SCORING_ESP32_RESULT_OK);
+    CHECK(decoded.message_type == fixture->message_type);
+    CHECK(decoded.sequence == fixture->sequence);
+    CHECK(decoded.payload.length == fixture->payload_length);
+    CHECK(memcmp(decoded.payload.data, fixture->payload, decoded.payload.length) == 0);
+  }
+
+  (void)memcpy(corrupted, SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURES[0].frame,
+    SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURES[0].frame_length);
+  corrupted[SCORING_ESP32_TRANSPORT_HEADER_BYTES] ^= 1U;
+  CHECK(scoring_esp32_decode_transport_frame(
+          SCORING_ESP32_TRANSPORT_RECEIVER_ESP32,
+          (scoring_esp32_bytes_t){
+            .data = corrupted,
+            .length = SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURES[0].frame_length
+          },
+          &decoded
+        ) == SCORING_ESP32_RESULT_FRAME_INTEGRITY_FAILURE);
+  CHECK(scoring_esp32_decode_transport_frame(
+          SCORING_ESP32_TRANSPORT_RECEIVER_ESP32,
+          (scoring_esp32_bytes_t){
+            .data = SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURES[0].frame,
+            .length = SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURES[0].frame_length - 1U
+          },
+          &decoded
+        ) == SCORING_ESP32_RESULT_FRAME_TRUNCATED);
+  CHECK(scoring_esp32_decode_transport_frame(
+          SCORING_ESP32_TRANSPORT_RECEIVER_STM32,
+          (scoring_esp32_bytes_t){
+            .data = SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURES[0].frame,
+            .length = SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURES[0].frame_length
+          },
+          &decoded
+        ) == SCORING_ESP32_RESULT_FRAME_INVALID);
+  (void)memcpy(corrupted, SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURES[0].frame,
+    SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURES[0].frame_length);
+  corrupted[2] = 2U;
+  CHECK(scoring_esp32_decode_transport_frame(
+          SCORING_ESP32_TRANSPORT_RECEIVER_ESP32,
+          (scoring_esp32_bytes_t){
+            .data = corrupted,
+            .length = SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURES[0].frame_length
+          },
+          &decoded
+        ) == SCORING_ESP32_RESULT_FRAME_INVALID);
+  corrupted[2] = 1U;
+  corrupted[3] = 0xFFU;
+  CHECK(scoring_esp32_decode_transport_frame(
+          SCORING_ESP32_TRANSPORT_RECEIVER_ESP32,
+          (scoring_esp32_bytes_t){
+            .data = corrupted,
+            .length = SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURES[0].frame_length
+          },
+          &decoded
+        ) == SCORING_ESP32_RESULT_FRAME_INVALID);
+
+  maximum_payload[0] = 0x00U;
+  maximum_payload[SCORING_ESP32_MAX_TRANSPORT_PAYLOAD_BYTES - 1U] = 0xFFU;
+  CHECK(make_frame(
+          maximum_frame,
+          SCORING_ESP32_TRANSPORT_DECISION_RECORD,
+          0U,
+          maximum_payload,
+          sizeof(maximum_payload),
+          1U
+        ) == SCORING_ESP32_MAX_TRANSPORT_FRAME_BYTES);
+  CHECK(scoring_esp32_decode_transport_frame(
+          SCORING_ESP32_TRANSPORT_RECEIVER_ESP32,
+          (scoring_esp32_bytes_t){.data = maximum_frame, .length = sizeof(maximum_frame)},
+          &decoded
+        ) == SCORING_ESP32_RESULT_OK);
+  CHECK(decoded.payload.length == sizeof(maximum_payload));
   return true;
 }
 
@@ -327,7 +417,7 @@ static scoring_esp32_result_t callback_read_frame(
 static bool test_service_callbacks_and_argument_boundaries(void) {
   static const uint8_t payload[] = {0xA5U};
   uint8_t encoded[SCORING_ESP32_TRANSPORT_HEADER_BYTES + sizeof(payload) + SCORING_ESP32_TRANSPORT_CRC_BYTES] = {0};
-  scoring_esp32_m2_05_frame_t frame;
+  scoring_esp32_transport_frame_t frame;
   scoring_esp32_services_t services = {
     .audio = {.play_notification = callback_bytes},
     .clock = {.read_monotonic_us = callback_read_monotonic, .read_time_metadata = callback_read_time},
@@ -352,9 +442,17 @@ static bool test_service_callbacks_and_argument_boundaries(void) {
   CHECK(scoring_esp32_app_init(&app, &services) == SCORING_ESP32_RESULT_OK);
   CHECK(scoring_esp32_calculate_crc32c((scoring_esp32_bytes_t){.data = NULL, .length = 1U}) == 0U);
   CHECK(scoring_esp32_calculate_crc32c((scoring_esp32_bytes_t){.data = NULL, .length = 0U}) == 0U);
-  CHECK(scoring_esp32_decode_m2_05_frame((scoring_esp32_bytes_t){.data = encoded, .length = sizeof(encoded)}, NULL) ==
+  CHECK(scoring_esp32_decode_transport_frame(
+          SCORING_ESP32_TRANSPORT_RECEIVER_ESP32,
+          (scoring_esp32_bytes_t){.data = encoded, .length = sizeof(encoded)},
+          NULL
+        ) ==
         SCORING_ESP32_RESULT_INVALID_ARGUMENT);
-  CHECK(scoring_esp32_decode_m2_05_frame((scoring_esp32_bytes_t){.data = NULL, .length = 1U}, &frame) ==
+  CHECK(scoring_esp32_decode_transport_frame(
+          SCORING_ESP32_TRANSPORT_RECEIVER_ESP32,
+          (scoring_esp32_bytes_t){.data = NULL, .length = 1U},
+          &frame
+        ) ==
         SCORING_ESP32_RESULT_INVALID_ARGUMENT);
   CHECK(scoring_esp32_receive_authoritative_record(NULL, &record) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
   CHECK(scoring_esp32_receive_authoritative_record(&app, NULL) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
@@ -403,7 +501,8 @@ static bool test_service_callbacks_and_argument_boundaries(void) {
 }
 
 int main(void) {
-  if (!test_valid_m2_05_frame_reaches_storage_as_opaque_authority() || !test_rejected_frames_never_reach_storage() ||
+  if (!test_valid_transport_frame_reaches_storage_as_opaque_authority() ||
+      !test_generated_golden_frames_match_esp32_codec() || !test_rejected_frames_never_reach_storage() ||
       !test_storage_failure_does_not_return_a_record() || !test_missing_adapters_are_safe_and_unavailable() ||
       !test_service_callbacks_and_argument_boundaries()) {
     return 1;

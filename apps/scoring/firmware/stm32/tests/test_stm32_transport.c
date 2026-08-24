@@ -98,7 +98,7 @@ static void test_transport_argument_guards_and_decode_bounds(void) {
 static void test_generated_golden_frames_match_c_codec(void) {
   size_t index;
 
-  CHECK(SCORING_STM32_TRANSPORT_GOLDEN_FIXTURE_COUNT == 3U);
+  CHECK(SCORING_STM32_TRANSPORT_GOLDEN_FIXTURE_COUNT == 4U);
   for (index = 0U; index < SCORING_STM32_TRANSPORT_GOLDEN_FIXTURE_COUNT; index += 1U) {
     const scoring_stm32_transport_golden_fixture_t *fixture = &SCORING_STM32_TRANSPORT_GOLDEN_FIXTURES[index];
     scoring_stm32_transport_t transport;

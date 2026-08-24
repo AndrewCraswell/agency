@@ -5,21 +5,32 @@
       "receiver": "esp32",
       "messageType": "decision-record",
       "payloadHex": "007f80ff",
-      "sequence": 16909060
+      "sequence": 16909060,
+      "encodedHex": "5343010100000102030400000004007f80ff01de6abe"
     },
     {
       "name": "request-empty",
       "receiver": "stm32",
       "messageType": "request",
       "payloadHex": "",
-      "sequence": 0
+      "sequence": 0,
+      "encodedHex": "5343010300000000000000000000452025ea"
     },
     {
       "name": "status-max-sequence",
       "receiver": "esp32",
       "messageType": "status",
       "payloadHex": "a5",
-      "sequence": 4294967295
+      "sequence": 4294967295,
+      "encodedHex": "534301020000ffffffff00000001a52b9989f7"
+    },
+    {
+      "name": "response-boundary-sequence",
+      "receiver": "esp32",
+      "messageType": "response",
+      "payloadHex": "52",
+      "sequence": 7,
+      "encodedHex": "534301040000000000070000000152694a1138"
     }
   ]
 }

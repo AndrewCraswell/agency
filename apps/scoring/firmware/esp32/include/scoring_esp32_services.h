@@ -81,12 +81,17 @@ typedef enum scoring_esp32_transport_message_type {
   SCORING_ESP32_TRANSPORT_RESPONSE = 4
 } scoring_esp32_transport_message_type_t;
 
-typedef struct scoring_esp32_m2_05_frame {
+typedef enum scoring_esp32_transport_receiver {
+  SCORING_ESP32_TRANSPORT_RECEIVER_STM32 = 0,
+  SCORING_ESP32_TRANSPORT_RECEIVER_ESP32
+} scoring_esp32_transport_receiver_t;
+
+typedef struct scoring_esp32_transport_frame {
   uint16_t flags;
   scoring_esp32_transport_message_type_t message_type;
   scoring_esp32_bytes_t payload;
   uint32_t sequence;
-} scoring_esp32_m2_05_frame_t;
+} scoring_esp32_transport_frame_t;
 
 typedef struct scoring_esp32_storage_service {
   void *context;
@@ -175,17 +180,18 @@ typedef struct scoring_esp32_app {
   uint8_t scoring_link_buffer[SCORING_ESP32_MAX_TRANSPORT_FRAME_BYTES];
 } scoring_esp32_app_t;
 
-/* M2-05 validation only: the payload remains a borrowed opaque byte view. */
+/* M0-06 validation only: the payload remains a borrowed opaque byte view. */
 uint32_t scoring_esp32_calculate_crc32c(scoring_esp32_bytes_t bytes);
-scoring_esp32_result_t scoring_esp32_decode_m2_05_frame(
+scoring_esp32_result_t scoring_esp32_decode_transport_frame(
+  scoring_esp32_transport_receiver_t receiver,
   scoring_esp32_bytes_t encoded,
-  scoring_esp32_m2_05_frame_t *out_frame
+  scoring_esp32_transport_frame_t *out_frame
 );
 
 /* Missing adapters are normalized to deterministic unavailable services. */
 scoring_esp32_result_t scoring_esp32_app_init(scoring_esp32_app_t *app, const scoring_esp32_services_t *services);
 
-/* Accepts only a valid M2-05 decision-record frame and forwards opaque bytes to storage. */
+/* Accepts only a valid M0-06 decision-record frame and forwards opaque bytes to storage. */
 scoring_esp32_result_t scoring_esp32_receive_authoritative_record(
   scoring_esp32_app_t *app,
   scoring_esp32_authoritative_record_t *out_record

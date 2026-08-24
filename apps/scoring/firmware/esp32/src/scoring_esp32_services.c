@@ -3,9 +3,9 @@
 #include <string.h>
 
 enum {
-  M2_05_MAGIC_FIRST = 0x53,
-  M2_05_MAGIC_SECOND = 0x43,
-  M2_05_VERSION = 1
+  TRANSPORT_MAGIC_FIRST = 0x53,
+  TRANSPORT_MAGIC_SECOND = 0x43,
+  TRANSPORT_VERSION = 1
 };
 
 static uint16_t read_u16_be(const uint8_t *bytes) {
@@ -19,6 +19,21 @@ static uint32_t read_u32_be(const uint8_t *bytes) {
 
 static bool is_known_message_type(uint8_t value) {
   return value >= SCORING_ESP32_TRANSPORT_DECISION_RECORD && value <= SCORING_ESP32_TRANSPORT_RESPONSE;
+}
+
+static bool is_valid_receiver(scoring_esp32_transport_receiver_t receiver) {
+  return receiver == SCORING_ESP32_TRANSPORT_RECEIVER_STM32 || receiver == SCORING_ESP32_TRANSPORT_RECEIVER_ESP32;
+}
+
+static bool is_allowed_for_receiver(
+  scoring_esp32_transport_receiver_t receiver,
+  scoring_esp32_transport_message_type_t message_type
+) {
+  if (receiver == SCORING_ESP32_TRANSPORT_RECEIVER_STM32) {
+    return message_type == SCORING_ESP32_TRANSPORT_REQUEST;
+  }
+  return message_type == SCORING_ESP32_TRANSPORT_DECISION_RECORD || message_type == SCORING_ESP32_TRANSPORT_STATUS ||
+         message_type == SCORING_ESP32_TRANSPORT_RESPONSE;
 }
 
 static bool is_valid_identifier(const scoring_esp32_identifier_t *identifier) {
@@ -159,9 +174,10 @@ uint32_t scoring_esp32_calculate_crc32c(scoring_esp32_bytes_t bytes) {
   return crc ^ UINT32_MAX;
 }
 
-scoring_esp32_result_t scoring_esp32_decode_m2_05_frame(
+scoring_esp32_result_t scoring_esp32_decode_transport_frame(
+  scoring_esp32_transport_receiver_t receiver,
   scoring_esp32_bytes_t encoded,
-  scoring_esp32_m2_05_frame_t *out_frame
+  scoring_esp32_transport_frame_t *out_frame
 ) {
   const uint8_t *bytes;
   uint32_t payload_length;
@@ -170,10 +186,10 @@ scoring_esp32_result_t scoring_esp32_decode_m2_05_frame(
   uint32_t encoded_crc;
   uint32_t calculated_crc;
 
-  if (out_frame == NULL || (encoded.data == NULL && encoded.length != 0U)) {
+  if (!is_valid_receiver(receiver) || out_frame == NULL || (encoded.data == NULL && encoded.length != 0U)) {
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }
-  *out_frame = (scoring_esp32_m2_05_frame_t){0};
+  *out_frame = (scoring_esp32_transport_frame_t){0};
   if (encoded.length < SCORING_ESP32_TRANSPORT_HEADER_BYTES) {
     return SCORING_ESP32_RESULT_FRAME_TRUNCATED;
   }
@@ -182,10 +198,13 @@ scoring_esp32_result_t scoring_esp32_decode_m2_05_frame(
   }
 
   bytes = encoded.data;
-  if (bytes[0] != M2_05_MAGIC_FIRST || bytes[1] != M2_05_MAGIC_SECOND || bytes[2] != M2_05_VERSION) {
+  if (bytes[0] != TRANSPORT_MAGIC_FIRST || bytes[1] != TRANSPORT_MAGIC_SECOND || bytes[2] != TRANSPORT_VERSION) {
     return SCORING_ESP32_RESULT_FRAME_INVALID;
   }
   if (!is_known_message_type(bytes[3])) {
+    return SCORING_ESP32_RESULT_FRAME_INVALID;
+  }
+  if (!is_allowed_for_receiver(receiver, (scoring_esp32_transport_message_type_t)bytes[3])) {
     return SCORING_ESP32_RESULT_FRAME_INVALID;
   }
 
@@ -212,7 +231,7 @@ scoring_esp32_result_t scoring_esp32_decode_m2_05_frame(
   out_frame->payload = (scoring_esp32_bytes_t){.data = &bytes[SCORING_ESP32_TRANSPORT_HEADER_BYTES], .length = payload_length};
   out_frame->sequence = read_u32_be(&bytes[6]);
   if (out_frame->flags != 0U) {
-    *out_frame = (scoring_esp32_m2_05_frame_t){0};
+    *out_frame = (scoring_esp32_transport_frame_t){0};
     return SCORING_ESP32_RESULT_FRAME_INVALID;
   }
   return SCORING_ESP32_RESULT_OK;
@@ -233,7 +252,7 @@ scoring_esp32_result_t scoring_esp32_receive_authoritative_record(
 ) {
   scoring_esp32_result_t result;
   size_t frame_length = 0U;
-  scoring_esp32_m2_05_frame_t frame;
+  scoring_esp32_transport_frame_t frame;
   scoring_esp32_authoritative_record_t record;
   if (app == NULL || out_record == NULL) {
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
@@ -250,7 +269,8 @@ scoring_esp32_result_t scoring_esp32_receive_authoritative_record(
   if (frame_length > sizeof(app->scoring_link_buffer)) {
     return SCORING_ESP32_RESULT_BUFFER_TOO_SMALL;
   }
-  result = scoring_esp32_decode_m2_05_frame(
+  result = scoring_esp32_decode_transport_frame(
+    SCORING_ESP32_TRANSPORT_RECEIVER_ESP32,
     (scoring_esp32_bytes_t){.data = app->scoring_link_buffer, .length = frame_length},
     &frame
   );

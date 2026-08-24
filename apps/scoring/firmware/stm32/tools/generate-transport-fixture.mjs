@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 const fixtureUrl = new URL("../../../fixtures/transport-frame-golden.json", import.meta.url)
 const codecUrl = new URL("../../../dist/transport-frame.js", import.meta.url)
 const outputUrl = new URL("../generated/stm32_transport_golden_frames.h", import.meta.url)
+const esp32OutputUrl = new URL("../../esp32/generated/esp32_transport_golden_frames.h", import.meta.url)
 const mode = process.argv[2] ?? "write"
 
 if (mode !== "write" && mode !== "--check") {
@@ -22,6 +23,12 @@ function bytes(values) {
 function cString(value) {
   assert(typeof value === "string" && /^[a-z0-9-]+$/.test(value), "Fixture name must be lowercase ASCII")
   return JSON.stringify(value)
+}
+
+function hexBytes(value) {
+  assert(typeof value === "string" && /^[0-9a-f]*$/i.test(value), "Encoded frame must be hex")
+  assert(value.length % 2 === 0, "Encoded frame hex must contain complete bytes")
+  return new Uint8Array(Buffer.from(value, "hex"))
 }
 
 function receiverValue(receiver) {
@@ -57,8 +64,10 @@ const fixtureNames = new Set()
 const rows = artifact.fixtures.map((fixture, index) => {
   assert(fixture && typeof fixture === "object" && !Array.isArray(fixture), "Fixture must be an object")
   assert(
-    Object.keys(fixture).length === 5 &&
-      ["name", "receiver", "messageType", "payloadHex", "sequence"].every((field) => Object.hasOwn(fixture, field)),
+    Object.keys(fixture).length === 6 &&
+      ["name", "receiver", "messageType", "payloadHex", "sequence", "encodedHex"].every((field) =>
+        Object.hasOwn(fixture, field)
+      ),
     "Fixture has unknown or missing fields"
   )
   cString(fixture.name)
@@ -77,6 +86,8 @@ const rows = artifact.fixtures.map((fixture, index) => {
     payload,
     sequence: fixture.sequence
   })
+  const encodedFrame = hexBytes(fixture.encodedHex)
+  assert(Buffer.compare(frame, encodedFrame) === 0, "Immutable encoded frame does not match the TypeScript codec")
   const symbol = `SCORING_STM32_TRANSPORT_GOLDEN_${index}`
 
   const payloadDeclaration =
@@ -85,7 +96,7 @@ const rows = artifact.fixtures.map((fixture, index) => {
       : `static const uint8_t ${symbol}_PAYLOAD[] = { ${bytes(payload)} };`
 
   return {
-    frame,
+    frame: encodedFrame,
     payload,
     rendered:
       `${payloadDeclaration}\n` +
@@ -124,11 +135,46 @@ ${fixtures}
 #endif
 `
 
+const esp32Output = `/* Generated from fixtures/transport-frame-golden.json through dist/transport-frame.js. Do not edit. */
+#ifndef ESP32_TRANSPORT_GOLDEN_FRAMES_H
+#define ESP32_TRANSPORT_GOLDEN_FRAMES_H
+
+#include "scoring_esp32_services.h"
+
+typedef struct scoring_esp32_transport_golden_fixture {
+  const char *name;
+  scoring_esp32_transport_receiver_t receiver;
+  scoring_esp32_transport_message_type_t message_type;
+  uint32_t sequence;
+  const uint8_t *payload;
+  size_t payload_length;
+  const uint8_t *frame;
+  size_t frame_length;
+} scoring_esp32_transport_golden_fixture_t;
+
+${arrays.replaceAll("SCORING_STM32_TRANSPORT_GOLDEN_", "SCORING_ESP32_TRANSPORT_GOLDEN_")}
+
+#define SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURE_COUNT ${rows.length}U
+static const scoring_esp32_transport_golden_fixture_t SCORING_ESP32_TRANSPORT_GOLDEN_FIXTURES[] = {
+${fixtures
+  .replaceAll("SCORING_STM32_TRANSPORT_GOLDEN_", "SCORING_ESP32_TRANSPORT_GOLDEN_")
+  .replaceAll("SCORING_STM32_TRANSPORT_RECEIVER_", "SCORING_ESP32_TRANSPORT_RECEIVER_")
+  .replaceAll("SCORING_STM32_TRANSPORT_", "SCORING_ESP32_TRANSPORT_")}
+};
+
+#endif
+`
+
 if (mode === "--check") {
   if (readFileSync(outputUrl, "utf8") !== output) {
     throw new Error("Stale STM32 transport golden fixture translation")
   }
+  if (readFileSync(esp32OutputUrl, "utf8") !== esp32Output) {
+    throw new Error("Stale ESP32 transport golden fixture translation")
+  }
 } else {
   mkdirSync(new URL("../generated/", import.meta.url), { recursive: true })
+  mkdirSync(new URL("../../esp32/generated/", import.meta.url), { recursive: true })
   writeFileSync(outputUrl, output, "utf8")
+  writeFileSync(esp32OutputUrl, esp32Output, "utf8")
 }

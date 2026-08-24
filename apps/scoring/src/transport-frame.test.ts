@@ -38,6 +38,16 @@ const GOLDEN_FRAMES = [
       sequence: 0xffff_ffff
     },
     receiver: "esp32" as const
+  },
+  {
+    encodedHex: "534301040000000000070000000152694a1138",
+    frame: {
+      flags: 0,
+      messageType: "response" as const,
+      payloadHex: "52",
+      sequence: 7
+    },
+    receiver: "esp32" as const
   }
 ] as const
 
@@ -147,6 +157,25 @@ describe("M0-06 transport frame", () => {
 
     expect(() => decodeTransportFrame("esp32", request)).toThrow(expect.objectContaining({ code: "direction" }))
     expect(() => decodeTransportFrame("stm32", decision)).toThrow(expect.objectContaining({ code: "direction" }))
+  })
+
+  it("leaves duplicate and reorder policy to the stateful firmware receivers", () => {
+    const first = encodeTransportFrame({
+      flags: 0,
+      messageType: "decision-record",
+      payload: new Uint8Array([1]),
+      sequence: 10
+    })
+    const second = encodeTransportFrame({
+      flags: 0,
+      messageType: "decision-record",
+      payload: new Uint8Array([2]),
+      sequence: 11
+    })
+
+    expect(decodeTransportFrame("esp32", first).sequence).toBe(10)
+    expect(decodeTransportFrame("esp32", first).sequence).toBe(10)
+    expect(decodeTransportFrame("esp32", second).sequence).toBe(11)
   })
 
   it("bounds encoder inputs before allocating a frame", () => {
