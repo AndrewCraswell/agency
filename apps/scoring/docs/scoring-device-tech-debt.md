@@ -204,7 +204,8 @@ truth.
 ## FW-003: remove positional coupling from product-release authorization
 
 - Priority: `P1`
-- State: `ready`
+- State: `done`
+- Latest state: Delivered and root-approved: private authorization helpers resolve manifest artifacts, installed processor state, security floors, and observed artifacts by `scoring_release_processor_t`; reversed caller observation order passes, reversed manifest order remains non-canonical, and the full native coverage gate passes.
 - Affected files: [`apps/scoring/firmware/product-update/src/scoring_product_release.c`](../firmware/product-update/src/scoring_product_release.c) (lines 178-288 and 327-380), [`apps/scoring/firmware/product-update/include/scoring_product_release.h`](../firmware/product-update/include/scoring_product_release.h) (lines 11 and 66-79), and [`apps/scoring/firmware/product-update/tests/scoring_product_release_host_test.c`](../firmware/product-update/tests/scoring_product_release_host_test.c) (lines 191-198 and 400-424).
 - Description and evidence: manifest decoding requires artifact tag 8 to occur twice and then requires `decoded.artifacts[0]` to be ESP32 and `[1]` to be STM32 (lines 183-185 and 280-285). Authorization repeats that positional assumption by pairing those slots with `environment->esp32` and `environment->stm32`, while callers must supply `observed[0]` and `observed[1]` in the same order (lines 365-379 and header lines 75-79). The current tests construct the same positional tuple in `matching_observed`.
 - Impact: the signed manifest is safe only because its order is enforced in a separate check. A schema or processor-order edit can leave artifact, installed-target, security-floor, and observed-digest comparisons paired by index rather than by processor, producing a hard-to-review release authorization drift or an unnecessary rejection.

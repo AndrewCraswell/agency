@@ -324,6 +324,44 @@ static bool valid_environment_argument(const scoring_release_environment_t *envi
          environment->stm32.staging_capacity != 0U;
 }
 
+static const scoring_release_artifact_t *artifact_for_processor(
+  const scoring_product_release_manifest_t *manifest,
+  scoring_release_processor_t processor
+) {
+  size_t index;
+  for (index = 0U; index < SCORING_RELEASE_ARTIFACT_COUNT; index += 1U)
+    if (manifest->artifacts[index].processor == processor) return &manifest->artifacts[index];
+  return NULL;
+}
+
+static const scoring_release_observed_artifact_t *observed_for_processor(
+  const scoring_release_observed_artifact_t observed[SCORING_RELEASE_ARTIFACT_COUNT],
+  scoring_release_processor_t processor
+) {
+  size_t index;
+  for (index = 0U; index < SCORING_RELEASE_ARTIFACT_COUNT; index += 1U)
+    if (observed[index].processor == processor) return &observed[index];
+  return NULL;
+}
+
+static const scoring_release_installed_processor_t *installed_for_processor(
+  const scoring_release_environment_t *environment,
+  scoring_release_processor_t processor
+) {
+  if (processor == SCORING_RELEASE_PROCESSOR_ESP32) return &environment->esp32;
+  if (processor == SCORING_RELEASE_PROCESSOR_STM32) return &environment->stm32;
+  return NULL;
+}
+
+static uint32_t security_floor_for_processor(
+  const scoring_product_release_manifest_t *manifest,
+  scoring_release_processor_t processor
+) {
+  if (processor == SCORING_RELEASE_PROCESSOR_ESP32) return manifest->esp32_security_floor;
+  if (processor == SCORING_RELEASE_PROCESSOR_STM32) return manifest->stm32_security_floor;
+  return 0U;
+}
+
 static scoring_release_reason_t authorize_artifact(
   const scoring_product_release_manifest_t *manifest,
   const scoring_release_artifact_t *artifact,
@@ -355,28 +393,34 @@ static scoring_release_reason_t authorize_manifest(
   const scoring_release_environment_t *environment,
   const scoring_release_observed_artifact_t observed[SCORING_RELEASE_ARTIFACT_COUNT]
 ) {
+  static const scoring_release_processor_t processors[SCORING_RELEASE_ARTIFACT_COUNT] = {
+    SCORING_RELEASE_PROCESSOR_ESP32,
+    SCORING_RELEASE_PROCESSOR_STM32
+  };
   scoring_release_reason_t reason;
+  size_t index;
   if (!valid_environment_argument(environment)) return SCORING_RELEASE_INVALID_ARGUMENT;
   if (!same_string(&manifest->product_id, &environment->product_id)) return SCORING_RELEASE_PRODUCT_MISMATCH;
   if (!same_string(&manifest->protocol_revision, &environment->protocol_revision))
     return SCORING_RELEASE_PROTOCOL_MISMATCH;
   if (!same_string(&manifest->schema_revision, &environment->schema_revision)) return SCORING_RELEASE_SCHEMA_MISMATCH;
   if (!same_string(&manifest->config_revision, &environment->config_revision)) return SCORING_RELEASE_CONFIG_MISMATCH;
-  reason = authorize_artifact(
-    manifest,
-    &manifest->artifacts[0],
-    &environment->esp32,
-    &observed[0],
-    manifest->esp32_security_floor
-  );
-  if (reason != SCORING_RELEASE_OK) return reason;
-  return authorize_artifact(
-    manifest,
-    &manifest->artifacts[1],
-    &environment->stm32,
-    &observed[1],
-    manifest->stm32_security_floor
-  );
+  for (index = 0U; index < SCORING_RELEASE_ARTIFACT_COUNT; index += 1U) {
+    const scoring_release_processor_t processor = processors[index];
+    const scoring_release_artifact_t *artifact = artifact_for_processor(manifest, processor);
+    const scoring_release_installed_processor_t *installed = installed_for_processor(environment, processor);
+    const scoring_release_observed_artifact_t *observed_artifact = observed_for_processor(observed, processor);
+    if (artifact == NULL || installed == NULL || observed_artifact == NULL) return SCORING_RELEASE_TARGET_MISMATCH;
+    reason = authorize_artifact(
+      manifest,
+      artifact,
+      installed,
+      observed_artifact,
+      security_floor_for_processor(manifest, processor)
+    );
+    if (reason != SCORING_RELEASE_OK) return reason;
+  }
+  return SCORING_RELEASE_OK;
 }
 
 scoring_release_reason_t scoring_product_release_verify_and_authorize(

@@ -23,6 +23,7 @@ typedef struct manifest_offsets {
   size_t esp32_floor_value;
   size_t esp32_security_version_value;
   size_t product_tag;
+  size_t first_artifact_processor;
   size_t second_artifact_processor;
   size_t signature_length;
 } manifest_offsets_t;
@@ -141,6 +142,7 @@ static test_buffer_t canonical_manifest(bool with_signature, manifest_offsets_t 
   append_u32_tlv(&manifest, 7U, 10U);
   append_u8(&manifest, 8U);
   append_u16(&manifest, esp.length);
+  offsets->first_artifact_processor = manifest.length + esp_processor_offset;
   offsets->esp32_security_version_value = manifest.length + esp_security_version_offset;
   append_bytes(&manifest, esp.bytes, esp.length);
   append_u8(&manifest, 8U);
@@ -313,6 +315,10 @@ static bool test_structural_rejections(void) {
   encoded.bytes[offsets.second_artifact_processor + 1U] = 1U;
   CHECK(verify_release(&encoded, &verifier, &environment, observed) == SCORING_RELEASE_DUPLICATE_FIELD);
   encoded = canonical_manifest(true, &offsets);
+  encoded.bytes[offsets.first_artifact_processor] = 2U;
+  encoded.bytes[offsets.second_artifact_processor] = 1U;
+  CHECK(verify_release(&encoded, &verifier, &environment, observed) == SCORING_RELEASE_NON_CANONICAL);
+  encoded = canonical_manifest(true, &offsets);
   encoded.bytes[offsets.signature_length] = 0U;
   encoded.bytes[offsets.signature_length + 1U] = 65U;
   CHECK(verify_release(&encoded, &verifier, &environment, observed) == SCORING_RELEASE_TRUNCATED);
@@ -424,6 +430,40 @@ static bool test_artifact_and_security_rejections(void) {
   return true;
 }
 
+static bool test_observed_artifact_order_is_identity_based(void) {
+  manifest_offsets_t offsets;
+  test_buffer_t encoded = canonical_manifest(true, &offsets);
+  scoring_release_environment_t environment = compatible_environment();
+  scoring_release_observed_artifact_t observed[SCORING_RELEASE_ARTIFACT_COUNT];
+  scoring_release_observed_artifact_t reversed[SCORING_RELEASE_ARTIFACT_COUNT];
+  verifier_observer_t verifier = {SCORING_RELEASE_SIGNATURE_VALID, 0U, 0U, NULL};
+  matching_observed(observed);
+  reversed[0] = observed[1];
+  reversed[1] = observed[0];
+  CHECK(verify_release(&encoded, &verifier, &environment, reversed) == SCORING_RELEASE_OK);
+
+  environment = compatible_environment();
+  environment.esp32.board_id = release_string("other-board");
+  CHECK(verify_release(&encoded, &verifier, &environment, reversed) == SCORING_RELEASE_BOARD_MISMATCH);
+  environment = compatible_environment();
+  environment.stm32.target_id = release_string("other-target");
+  CHECK(verify_release(&encoded, &verifier, &environment, reversed) == SCORING_RELEASE_TARGET_MISMATCH);
+  environment = compatible_environment();
+  environment.esp32.security_floor = 8U;
+  CHECK(verify_release(&encoded, &verifier, &environment, reversed) == SCORING_RELEASE_SECURITY_FLOOR);
+  environment = compatible_environment();
+  environment.stm32.staging_capacity = 2047U;
+  CHECK(verify_release(&encoded, &verifier, &environment, reversed) == SCORING_RELEASE_CAPACITY_EXCEEDED);
+  environment = compatible_environment();
+  reversed[0].artifact_length += 1U;
+  CHECK(verify_release(&encoded, &verifier, &environment, reversed) == SCORING_RELEASE_LENGTH_MISMATCH);
+  reversed[0].artifact_length = 2048U;
+  reversed[0].digest[0] ^= 1U;
+  environment = compatible_environment();
+  CHECK(verify_release(&encoded, &verifier, &environment, reversed) == SCORING_RELEASE_DIGEST_MISMATCH);
+  return true;
+}
+
 static bool test_authorization_argument_bounds(void) {
   manifest_offsets_t offsets;
   test_buffer_t encoded = canonical_manifest(true, &offsets);
@@ -519,6 +559,7 @@ int main(void) {
     {"malformed identifier bound", test_malformed_identifier_bound},
     {"identity and revision mismatches", test_identity_and_revision_mismatches},
     {"artifact and security rejections", test_artifact_and_security_rejections},
+    {"observed artifact order is identity based", test_observed_artifact_order_is_identity_based},
     {"authorization argument bounds", test_authorization_argument_bounds},
     {"seeded parser fuzz", test_seeded_parser_fuzz_is_deterministic},
     {"stable reason codes", test_reason_codes_are_stable}
