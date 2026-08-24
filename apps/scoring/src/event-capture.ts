@@ -8,6 +8,8 @@
 
 import {
   DECISION_RECORD_SCHEMA_VERSION,
+  parseRecordProvenance,
+  RecordProvenanceValidationError,
   parseDecisionRecord,
   type DecisionRecord,
   type DecisionRecordOutcome,
@@ -91,12 +93,6 @@ function assertBoundedIdentifier(value: unknown, description: string): asserts v
   }
 }
 
-function assertSha256Digest(value: unknown, description: string): asserts value is string {
-  if (typeof value !== "string" || !/^sha256:[0-9a-f]{64}$/u.test(value)) {
-    throw new TypeError(`${description} must be a sha256 digest with 64 lowercase hexadecimal characters`)
-  }
-}
-
 function assertPositiveSafeInteger(value: unknown, description: string, maximum: number): asserts value is number {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1 || value > maximum) {
     throw new RangeError(`${description} must be a safe integer from 1 through ${maximum}`)
@@ -155,31 +151,59 @@ function cloneOutcome(
   return deepFreeze(structuredClone(value) as VirtualStm32AuthoritativeOutcome<CapturableDecisionOutcome>)
 }
 
-function assertProvenance(value: unknown): asserts value is RecordProvenance {
-  if (!isRecord(value) || !isRecord(value.firmware)) {
-    throw new TypeError("Event capture provenance must be an M0-05 provenance object")
+function assertProvenance(value: unknown): RecordProvenance {
+  let provenance: RecordProvenance
+  try {
+    provenance = parseRecordProvenance(value)
+  } catch (error) {
+    if (!(error instanceof RecordProvenanceValidationError)) {
+      throw new TypeError("Event capture provenance must be an M0-05 provenance object")
+    }
+    switch (error.issue) {
+      case "shape":
+        throw new TypeError("Event capture provenance must be an M0-05 provenance object")
+      case "firmware-build-digest":
+        throw new TypeError(
+          "Event capture firmware build digests must be a sha256 digest with 64 lowercase hexadecimal characters"
+        )
+      case "calibration-profile-revision":
+        throw new RangeError(
+          `Event capture calibration revisions must be a non-empty string no longer than ${MAX_EVENT_CAPTURE_IDENTIFIER_LENGTH} characters`
+        )
+      case "firmware-identity":
+        throw new RangeError(
+          `Event capture firmware identities must be a non-empty STM32 identifier no longer than ${MAX_EVENT_CAPTURE_IDENTIFIER_LENGTH} characters`
+        )
+      case "scoring-boot-id":
+        throw new RangeError(
+          `Event capture scoring boot IDs must be a non-empty string no longer than ${MAX_EVENT_CAPTURE_IDENTIFIER_LENGTH} characters`
+        )
+      case "hardware-revision":
+        throw new RangeError(
+          `Event capture hardware revisions must be a non-empty string no longer than ${MAX_EVENT_CAPTURE_IDENTIFIER_LENGTH} characters`
+        )
+      case "line-contract-revision":
+        throw new RangeError(
+          `Event capture line-contract revisions must be a non-empty string no longer than ${MAX_EVENT_CAPTURE_IDENTIFIER_LENGTH} characters`
+        )
+      case "rule-set-revision":
+        throw new RangeError(
+          `Event capture rule-set revisions must be a non-empty string no longer than ${MAX_EVENT_CAPTURE_IDENTIFIER_LENGTH} characters`
+        )
+      case "timing-table-revision":
+        throw new RangeError(
+          `Event capture timing-table revisions must be a non-empty string no longer than ${MAX_EVENT_CAPTURE_IDENTIFIER_LENGTH} characters`
+        )
+    }
   }
-  assertExactKeys(
-    value,
-    [
-      "calibrationProfileRevision",
-      "firmware",
-      "hardwareRevision",
-      "lineContractRevision",
-      "ruleSetRevision",
-      "timingTableRevision"
-    ],
-    "Event capture provenance"
-  )
-  assertExactKeys(value.firmware, ["buildDigest", "identity", "scoringBootId"], "Event capture firmware provenance")
-  assertSha256Digest(value.firmware.buildDigest, "Event capture firmware build digests")
-  assertBoundedIdentifier(value.calibrationProfileRevision, "Event capture calibration revisions")
-  assertBoundedIdentifier(value.firmware.identity, "Event capture firmware identities")
-  assertBoundedIdentifier(value.firmware.scoringBootId, "Event capture scoring boot IDs")
-  assertBoundedIdentifier(value.hardwareRevision, "Event capture hardware revisions")
-  assertBoundedIdentifier(value.lineContractRevision, "Event capture line-contract revisions")
-  assertBoundedIdentifier(value.ruleSetRevision, "Event capture rule-set revisions")
-  assertBoundedIdentifier(value.timingTableRevision, "Event capture timing-table revisions")
+  assertBoundedIdentifier(provenance.calibrationProfileRevision, "Event capture calibration revisions")
+  assertBoundedIdentifier(provenance.firmware.identity, "Event capture firmware identities")
+  assertBoundedIdentifier(provenance.firmware.scoringBootId, "Event capture scoring boot IDs")
+  assertBoundedIdentifier(provenance.hardwareRevision, "Event capture hardware revisions")
+  assertBoundedIdentifier(provenance.lineContractRevision, "Event capture line-contract revisions")
+  assertBoundedIdentifier(provenance.ruleSetRevision, "Event capture rule-set revisions")
+  assertBoundedIdentifier(provenance.timingTableRevision, "Event capture timing-table revisions")
+  return provenance
 }
 
 function decisionAtUs(outcome: CapturableDecisionOutcome): number {
@@ -268,7 +292,7 @@ export function createEventCapture(options: EventCaptureOptions): EventCapture {
     ["maxPending", "maxRecords", "postSampleCount", "preSampleCount", "provenance", "recordIdPrefix"],
     "Event capture options"
   )
-  assertProvenance(options.provenance)
+  const provenance = assertProvenance(options.provenance)
   assertBoundedIdentifier(options.recordIdPrefix, "Event capture record ID prefixes")
 
   const preSampleCount = options.preSampleCount ?? DEFAULT_EVENT_CAPTURE_PRE_SAMPLES
@@ -280,7 +304,6 @@ export function createEventCapture(options: EventCaptureOptions): EventCapture {
   assertPositiveSafeInteger(maxPending, "Event capture pending limits", MAX_EVENT_CAPTURE_PENDING)
   assertPositiveSafeInteger(maxRecords, "Event capture record limits", MAX_EVENT_CAPTURE_RECORDS)
 
-  const provenance = deepFreeze(structuredClone(options.provenance))
   const history: EventCaptureSample[] = []
   const pending: PendingCapture[] = []
   const completed: CapturedDecisionRecord[] = []

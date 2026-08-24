@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest"
 import {
   DECISION_RECORD_SCHEMA_VERSION,
+  isRecordProvenance,
   parseDecisionRecord,
+  parseRecordProvenance,
+  RecordProvenanceValidationError,
   type DecisionRecord,
   type DecisionRecordOutcome
 } from "./decision-record.js"
@@ -154,6 +157,56 @@ const outcomes: readonly DecisionRecordOutcome[] = [
 ]
 
 describe("decision record schema", () => {
+  it("provides one strict bounded provenance parser for every consumer", () => {
+    expect(isRecordProvenance(provenance)).toBe(true)
+    const parsed = parseRecordProvenance(provenance)
+    expect(parsed).toEqual(provenance)
+    expect(Object.isFrozen(parsed)).toBe(true)
+    expect(Object.isFrozen(parsed.firmware)).toBe(true)
+
+    const invalidCases: readonly [unknown, string][] = [
+      [null, "shape"],
+      [[], "shape"],
+      [new Map(), "shape"],
+      [Object.create(null), "shape"],
+      [{ ...provenance, calibrationProfileRevision: "bad revision" }, "calibration-profile-revision"],
+      [{ ...provenance, calibrationProfileRevision: "r".repeat(129) }, "calibration-profile-revision"],
+      [
+        { ...provenance, firmware: { ...provenance.firmware, buildDigest: `sha256:${"A1".repeat(32)}` } },
+        "firmware-build-digest"
+      ],
+      [{ ...provenance, firmware: { ...provenance.firmware, identity: "esp32-scoring" } }, "firmware-identity"]
+    ]
+    for (const [invalid, issue] of invalidCases) {
+      expect(isRecordProvenance(invalid)).toBe(false)
+      expect(() => parseRecordProvenance(invalid)).toThrow(RecordProvenanceValidationError)
+      try {
+        parseRecordProvenance(invalid)
+      } catch (error) {
+        expect(error).toBeInstanceOf(RecordProvenanceValidationError)
+        expect((error as RecordProvenanceValidationError).issue).toBe(issue)
+      }
+    }
+
+    let getterRead = false
+    const accessor = structuredClone(provenance)
+    Object.defineProperty(accessor.firmware, "identity", {
+      enumerable: true,
+      get: () => {
+        getterRead = true
+        return "stm32-scoring"
+      }
+    })
+    expect(isRecordProvenance(accessor)).toBe(false)
+    expect(getterRead).toBe(false)
+
+    const symbolKey = { ...provenance, [Symbol("forged")]: true }
+    expect(isRecordProvenance(symbolKey)).toBe(false)
+    const cycle = structuredClone(provenance)
+    Reflect.set(cycle, "firmware", cycle)
+    expect(isRecordProvenance(cycle)).toBe(false)
+  })
+
   it("round-trips every M0-05 record class without scoring again", () => {
     for (const outcome of outcomes) {
       const original = record(outcome)

@@ -245,6 +245,24 @@ describe("authoritative event capture", () => {
         "Event capture firmware build digests must be a sha256 digest with 64 lowercase hexadecimal characters"
       )
     )
+    expect(() =>
+      createEventCapture({
+        provenance: { ...provenance, firmware: { ...provenance.firmware, identity: "esp32-scoring" } },
+        recordIdPrefix: "x"
+      })
+    ).toThrow(
+      new RangeError(
+        "Event capture firmware identities must be a non-empty STM32 identifier no longer than 120 characters"
+      )
+    )
+    expect(() =>
+      createEventCapture({
+        provenance: { ...provenance, calibrationProfileRevision: "r".repeat(129) },
+        recordIdPrefix: "x"
+      })
+    ).toThrow(
+      new RangeError("Event capture calibration revisions must be a non-empty string no longer than 120 characters")
+    )
     expect(() => createEventCapture({ provenance, recordIdPrefix: "x".repeat(121) })).toThrow(
       new RangeError("Event capture record ID prefixes must be a non-empty string no longer than 120 characters")
     )

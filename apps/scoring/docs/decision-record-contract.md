@@ -1,7 +1,9 @@
 # Decision record contract
 
-This is the M0-05 canonical logical schema for an immutable scoring decision record. The parser in `src/decision-record.ts`
-and the virtual STM32/ESP32 processor path consume this schema directly; there is no parallel prototype record shape.
+This is the M0-05 canonical logical schema for an immutable scoring decision record. The parsers in
+`src/decision-record.ts`, including the shared `parseRecordProvenance` guard, and the virtual STM32/ESP32 processor
+path consume this schema directly; there is no parallel prototype record shape. M2-04 event capture uses the same
+provenance guard before constructing a record.
 M2 owns the separately reviewed capture migration. This contract does not silently define M0-06 framing or M2 persistence.
 
 The record is sufficient to replay the decision and its initial indication without running the scoring algorithm again.

@@ -55,7 +55,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 36 | FW-006 | P1 | ready | A legacy ESP32 authoritative-record helper can bypass the canonical receiver journal and sequence boundary |
 | 37 | FW-007 | P2 | done | Root-approved private byte-string validation now serves manifest and environment boundaries with unchanged error categories |
 | 38 | FW-008 | P1 | done | Root-approved shared journal preflight prevents replay from indexing an invalid active slot |
-| 39 | SD-022 | P1 | in-progress | Event capture and decision records duplicate provenance validation with different acceptance rules |
+| 39 | SD-022 | P1 | done | Root-approved canonical provenance parsing now serves decision records and event-capture construction |
 | 40 | SD-023 | P2 | in-progress | Virtual front-end phase IDs and runtime profiles have two manually maintained registries |
 
 ## SD-001: consolidate epee contact and lockout mechanics
@@ -603,7 +603,8 @@ truth.
 ## SD-022: share canonical decision provenance validation
 
 - Priority: `P1`
-- State: `in-progress`
+- State: `done`
+- Latest state: Root review approved one strict plain-data provenance parser for decision records and event capture. Invalid provenance now fails at capture construction while capture-specific messages and the 120-character bound remain; 10 focused tests plus lint and format checks pass.
 - Affected files: `apps/scoring/src/decision-record.ts`, `apps/scoring/src/event-capture.ts`, and their focused tests.
 - Description: event-capture construction and decision-record parsing validate the same provenance and firmware identities with different shape, grammar, and length rules. Event capture can therefore accept provenance that only fails after an outcome is captured.
 - Impact: invalid authority metadata survives longer than intended, error behavior differs by entry point, and future trust-boundary changes require synchronized edits.
