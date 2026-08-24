@@ -59,6 +59,13 @@ describe("M4-11 communications and power connector CAD verification", () => {
         expect.objectContaining({ revision: expect.stringContaining("43030-0007"), state: "checked-no-local-copy" })
       ])
     )
+    expect(lockingPower.primarySources).toEqual(
+      expect.arrayContaining([expect.objectContaining({ revision: expect.stringContaining("revision N10") })])
+    )
+    const handoff = sourceText("../docs/evidence/m4-11/molex-download-handoff.md")
+    expect(handoff).toContain("43030-0007")
+    expect(handoff).toContain("current revision `N10`")
+    expect(handoff).toContain("No checksum is claimed")
     expect(usbC.evidence.landPattern).toBe("unknown")
     expect(lockingPower.evidence.landPattern).toBe("unverified")
   })

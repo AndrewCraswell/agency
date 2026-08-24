@@ -150,7 +150,7 @@ const definition = {
           checkedOn: "2026-08-24",
           kind: "step-model",
           revision: "rev1",
-          sha256: "44143609DA5D63A01551C85B343134BA5F027136C04CEBEFEA9ABA05AE6AFCD1",
+          sha256: "A4968DA8AC85C413990CD4F1F20600BFDB07F30005A4503DA7484651E38C386C",
           state: "acquired",
           url: "https://www.we-online.com/components/products/download/7499011121A%20%28rev1%29.stp"
         }
@@ -246,7 +246,7 @@ const definition = {
           artifactPath: null,
           checkedOn: "2026-08-24",
           kind: "sales-drawing",
-          revision: "SD-43030-XXXX revision N9, exact 43030-0007 row checked",
+          revision: "SD-43030-XXXX revision N10, exact 43030-0007 row checked",
           sha256: null,
           state: "checked-no-local-copy",
           url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43030/430300003_sd.pdf"
