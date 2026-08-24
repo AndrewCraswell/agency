@@ -4,6 +4,7 @@ import {
   physicalBoardContract,
   scoringHarnessBoardIntegration
 } from "./physical-board-contract.js"
+import { WeaponInputTraces, weaponInputTopology } from "./weapon-input-topology.js"
 
 function selectedHarness(reference: (typeof scoringHarnessBoardIntegration)[number]["boardReference"]) {
   const harness = scoringHarnessBoardIntegration.find((candidate) => candidate.boardReference === reference)
@@ -13,6 +14,15 @@ function selectedHarness(reference: (typeof scoringHarnessBoardIntegration)[numb
 
 function WeaponInput({ side, x }: { readonly side: "L" | "R"; readonly x: number }) {
   const harness = selectedHarness(`J_WEAPON_HARNESS_${side}`)
+  if (!("pin3" in harness.pinLabels)) throw new RangeError(`Weapon harness is missing pin 3: ${harness.boardReference}`)
+  const topology = weaponInputTopology({
+    connectorReference: harness.boardReference,
+    connectorEndpointLabels: {
+      a: harness.pinLabels.pin1,
+      b: harness.pinLabels.pin2,
+      c: harness.pinLabels.pin3
+    }
+  })
   return (
     <group name={`G_SCORING_WEAPON_${side}`} pcbX={x} pcbY={25}>
       <chip
@@ -23,37 +33,20 @@ function WeaponInput({ side, x }: { readonly side: "L" | "R"; readonly x: number
         pinLabels={harness.pinLabels}
       />
       <chip
-        name={`U_ESD_${side}`}
-        manufacturerPartNumber="TPD4E05U06DQAR"
+        name={topology.esd.name}
+        manufacturerPartNumber={topology.esd.manufacturerPartNumber}
         {...manufacturerFootprintProps("TPD4E05U06DQAR")}
         footprint={[]}
-        pinLabels={{ pin1: "CH_A", pin2: "CH_B", pin3: "CH_C", pin4: "SPARE", pin5: "ESD_RETURN" }}
+        pinLabels={topology.esd.pinLabels}
       />
       <chip
-        name={`U_FRONTEND_${side}`}
-        manufacturerPartNumber="ANALOG-FRONT-END-TBD"
+        name={topology.frontend.name}
+        manufacturerPartNumber={topology.frontend.manufacturerPartNumber}
         doNotPlace
         footprint={[]}
-        pinLabels={{
-          pin1: "RAW_A",
-          pin2: "RAW_B",
-          pin3: "RAW_C",
-          pin4: "SGND",
-          pin5: "S3_3",
-          pin6: "SENSE_A",
-          pin7: "SENSE_B",
-          pin8: "SENSE_C"
-        }}
+        pinLabels={topology.frontend.pinLabels}
       />
-      <trace from={`J_WEAPON_HARNESS_${side}.WEAPON_A`} to={`U_ESD_${side}.CH_A`} />
-      <trace from={`J_WEAPON_HARNESS_${side}.WEAPON_B`} to={`U_ESD_${side}.CH_B`} />
-      <trace from={`J_WEAPON_HARNESS_${side}.WEAPON_C`} to={`U_ESD_${side}.CH_C`} />
-      <trace from={`U_ESD_${side}.CH_A`} to={`U_FRONTEND_${side}.RAW_A`} />
-      <trace from={`U_ESD_${side}.CH_B`} to={`U_FRONTEND_${side}.RAW_B`} />
-      <trace from={`U_ESD_${side}.CH_C`} to={`U_FRONTEND_${side}.RAW_C`} />
-      <trace from={`U_ESD_${side}.ESD_RETURN`} to="net.ESD_RETURN" />
-      <trace from={`U_FRONTEND_${side}.SGND`} to="net.SGND" />
-      <trace from={`U_FRONTEND_${side}.S3_3`} to="net.S3_3" />
+      <WeaponInputTraces topology={topology} />
     </group>
   )
 }

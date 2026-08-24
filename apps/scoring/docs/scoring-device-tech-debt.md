@@ -23,7 +23,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 3 | SD-005 | P1 | ready | STM32, ESP32, and TypeScript transport codecs do not share one executable source of truth |
 | 4 | SD-003 | P2 | ready | Virtual STM32 and ESP32 duplicate canonical-data cloning and boundary checks |
 | 5 | SD-004 | P2 | ready | Scenario execution, scorer dispatch, and report comparison are coupled in one branch-heavy module |
-| 6 | SC-001 | P2 | ready | Logical and physical circuit models duplicate the weapon-input subcircuit |
+| 6 | SC-001 | P2 | done | Root-approved shared weapon-input topology is renderer-verified across logical and physical circuit models; board-specific connector labels remain distinct |
 | 7 | SC-002 | P2 | ready | Harness MPN and pin data have multiple manually maintained sources |
 | 8 | SC-003 | P3 | intake | The retained logical board model is a 1,100-line mixed-domain composition |
 
@@ -110,7 +110,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SC-001: deduplicate the weapon-input subcircuit while preserving board-specific connectors
 
 - Priority: `P2`
-- State: `ready`
+- State: `done`
+- Latest state: Root review confirmed one shared weapon-input-topology contract drives both models, removes the invented TBD front-end footprint and obsolete piste-through-left-ESD route, preserves connector-specific labels, and passes 17 focused helper and generated-Circuit-JSON tests after the runtime schema fix.
 - Affected files: [`packages/scoring-circuit/src/index.circuit.tsx`](../../../packages/scoring-circuit/src/index.circuit.tsx) (lines 3-53) and [`packages/scoring-circuit/src/scoring-io-board.circuit.tsx`](../../../packages/scoring-circuit/src/scoring-io-board.circuit.tsx) (lines 14-59), plus their tests.
 - Description and evidence: both `WeaponInput` functions declare `U_ESD_L/R`, the placeholder analog front end, the A/B/C signal traces, ESD return, signal ground, and 3.3 V. The logical model uses `J_L/J_R` with A/B/C labels; the physical scoring-I/O model uses the selected harness references and physical footprint metadata. The internal protection/front-end topology is nevertheless manually duplicated.
 - Impact: a pin-label, ESD return, front-end pin, or shared trace change can update one model and leave the other inconsistent. Since the logical model is retained as architecture evidence and the physical model feeds prototype planning, drift is especially hard to spot from a single board preview.

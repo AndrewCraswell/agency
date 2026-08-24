@@ -81,6 +81,18 @@ export const MAX_VIRTUAL_LINK_QUEUE_CAPACITY = 1_024
 export const MAX_VIRTUAL_LINK_DUPLICATE_COPIES = 8
 export const MAX_VIRTUAL_LINK_FAULT_SCRIPT_ENTRIES = 4_096
 
+/**
+ * A host-only capability registry for deliveries emitted through `onDelivery`.
+ *
+ * `VirtualLinkAttempt` is intentionally inspectable data, so its TypeScript
+ * shape alone cannot establish that a caller actually received it from the
+ * virtual link. The receiver resolves the original callback object through
+ * this registry and receives a new defensive snapshot. This keeps the
+ * simulator's ESP32 authority boundary from accepting application-forged
+ * objects while leaving transport attempts observable for diagnostics.
+ */
+const authenticatedDeliveries = new WeakMap<object, VirtualLinkAttempt>()
+
 type MutableAttempt = {
   attemptId: number
   completedAtUs: number | null
@@ -195,6 +207,27 @@ function cloneAttempt(attempt: MutableAttempt): VirtualLinkAttempt {
   }
 }
 
+/**
+ * Returns a defensive snapshot only for a delivery issued to an `onDelivery`
+ * callback. Plain objects, cloned attempts, and attempts merely observed in
+ * diagnostics have no delivery capability.
+ */
+export function resolveVirtualProcessorLinkDelivery(value: unknown): VirtualLinkAttempt | null {
+  if (typeof value !== "object" || value === null) {
+    return null
+  }
+
+  const authenticated = authenticatedDeliveries.get(value)
+  return authenticated === undefined
+    ? null
+    : {
+        ...authenticated,
+        fault: cloneFault(authenticated.fault),
+        frameBytes: authenticated.frameBytes.slice(),
+        wireBytes: authenticated.wireBytes.slice()
+      }
+}
+
 function assertFrameBytes(frameBytes: unknown): asserts frameBytes is Uint8Array {
   if (!(frameBytes instanceof Uint8Array)) {
     throw new TypeError("Virtual processor link frames must be Uint8Array values")
@@ -276,7 +309,9 @@ export function createVirtualProcessorLink(options: VirtualProcessorLinkOptions 
     const snapshot = cloneAttempt(attempt)
     options.onAttempt?.(snapshot)
     if (attempt.outcome === "delivered") {
-      options.onDelivery?.(cloneAttempt(attempt))
+      const delivery = cloneAttempt(attempt)
+      authenticatedDeliveries.set(delivery, cloneAttempt(attempt))
+      options.onDelivery?.(delivery)
     }
   }
 
