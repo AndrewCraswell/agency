@@ -1195,3 +1195,177 @@ export const syncCheckpoints = legislationSchema.table(
     check("sync_checkpoints_stream_check", sql`length(${table.stream}) > 0`)
   ]
 )
+
+/**
+ * User-owned notification rules are deliberately isolated from ingested civic
+ * records. Their opaque owner fields map to the authenticated WorkOS subject
+ * and optional organization rather than to a legislative person.
+ */
+export const subscriptions = legislationSchema.table(
+  "subscriptions",
+  {
+    id: text("id").primaryKey(),
+    ownerUserId: text("owner_user_id").notNull(),
+    ownerOrganizationId: text("owner_organization_id"),
+    name: text("name").notNull(),
+    target: jsonb("target").$type<Record<string, unknown>>().notNull(),
+    targetFingerprint: char("target_fingerprint", { length: 64 }).notNull(),
+    eventTypes: text("event_types").array().notNull(),
+    delivery: jsonb("delivery").$type<readonly Record<string, unknown>[]>().notNull(),
+    frequency: text("frequency").notNull(),
+    timezone: text("timezone").notNull(),
+    status: text("status").notNull().default("active"),
+    revision: uuid("revision").notNull().defaultRandom(),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("subscriptions_name_check", sql`length(${table.name}) between 1 and 120`),
+    check("subscriptions_owner_user_check", sql`length(${table.ownerUserId}) > 0`),
+    check(
+      "subscriptions_owner_organization_check",
+      sql`${table.ownerOrganizationId} is null or length(${table.ownerOrganizationId}) > 0`
+    ),
+    check("subscriptions_frequency_check", sql`${table.frequency} in ('immediate', 'hourly', 'daily')`),
+    check("subscriptions_status_check", sql`${table.status} in ('active', 'paused', 'cancelled')`),
+    check(
+      "subscriptions_cancelled_at_check",
+      sql`(${table.status} = 'cancelled' and ${table.cancelledAt} is not null) or (${table.status} <> 'cancelled' and ${table.cancelledAt} is null)`
+    ),
+    index("subscriptions_owner_updated_idx").on(table.ownerOrganizationId, table.ownerUserId, table.updatedAt),
+    uniqueIndex("subscriptions_exact_active_uidx")
+      .on(sql`coalesce(${table.ownerOrganizationId}, '')`, table.ownerUserId, table.targetFingerprint)
+      .where(sql`${table.status} <> 'cancelled'`)
+  ]
+)
+
+export const subscriptionEvents = legislationSchema.table(
+  "subscription_events",
+  {
+    id: text("id").primaryKey(),
+    subscriptionId: text("subscription_id")
+      .notNull()
+      .references(() => subscriptions.id, { onDelete: "cascade" }),
+    eventType: text("event_type").notNull(),
+    changeEventId: text("change_event_id").references(() => changeEvents.id, { onDelete: "set null" }),
+    recordType: text("record_type").notNull(),
+    recordId: text("record_id").notNull(),
+    title: text("title").notNull(),
+    summary: text("summary").notNull(),
+    sourceUrls: text("source_urls").array().notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
+    matchedAt: timestamp("matched_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("subscription_events_event_type_check", sql`length(${table.eventType}) > 0`),
+    check("subscription_events_record_check", sql`length(${table.recordType}) > 0 and length(${table.recordId}) > 0`),
+    index("subscription_events_subscription_matched_idx").on(table.subscriptionId, table.matchedAt, table.id)
+  ]
+)
+
+export const webhooks = legislationSchema.table(
+  "webhooks",
+  {
+    id: text("id").primaryKey(),
+    ownerUserId: text("owner_user_id").notNull(),
+    ownerOrganizationId: text("owner_organization_id"),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    eventTypes: text("event_types").array().notNull(),
+    status: text("status").notNull().default("pending-verification"),
+    revision: uuid("revision").notNull().defaultRandom(),
+    secretLastFour: char("secret_last_four", { length: 4 }).notNull(),
+    overlapEndsAt: timestamp("overlap_ends_at", { withTimezone: true }),
+    lastSucceededAt: timestamp("last_succeeded_at", { withTimezone: true }),
+    lastFailedAt: timestamp("last_failed_at", { withTimezone: true }),
+    cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("webhooks_name_check", sql`length(${table.name}) between 1 and 120`),
+    check("webhooks_url_check", sql`${table.url} ~ '^https://'`),
+    check("webhooks_status_check", sql`${table.status} in ('pending-verification', 'active', 'paused', 'cancelled')`),
+    check(
+      "webhooks_cancelled_at_check",
+      sql`(${table.status} = 'cancelled' and ${table.cancelledAt} is not null) or (${table.status} <> 'cancelled' and ${table.cancelledAt} is null)`
+    ),
+    index("webhooks_owner_updated_idx").on(table.ownerOrganizationId, table.ownerUserId, table.updatedAt)
+  ]
+)
+
+/** Keys use application/KMS encryption. Never persist raw signing secrets. */
+export const webhookSigningKeys = legislationSchema.table(
+  "webhook_signing_keys",
+  {
+    id: text("id").primaryKey(),
+    webhookId: text("webhook_id")
+      .notNull()
+      .references(() => webhooks.id, { onDelete: "cascade" }),
+    secretCiphertext: text("secret_ciphertext").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("webhook_signing_keys_ciphertext_check", sql`length(${table.secretCiphertext}) > 0`),
+    index("webhook_signing_keys_active_idx").on(table.webhookId, table.isActive, table.expiresAt)
+  ]
+)
+
+export const subscriptionDeliveries = legislationSchema.table(
+  "subscription_deliveries",
+  {
+    id: text("id").primaryKey(),
+    subscriptionId: text("subscription_id")
+      .notNull()
+      .references(() => subscriptions.id, { onDelete: "cascade" }),
+    subscriptionEventIds: text("subscription_event_ids").array().notNull(),
+    channel: text("channel").notNull(),
+    destinationId: text("destination_id"),
+    status: text("status").notNull().default("pending"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    failureCategory: text("failure_category"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("subscription_deliveries_channel_check", sql`${table.channel} in ('email', 'webhook', 'in-app')`),
+    check(
+      "subscription_deliveries_status_check",
+      sql`${table.status} in ('pending', 'processing', 'delivered', 'failed', 'suppressed')`
+    ),
+    check("subscription_deliveries_attempts_check", sql`${table.attemptCount} >= 0 and ${table.attemptCount} <= 5`),
+    index("subscription_deliveries_subscription_created_idx").on(table.subscriptionId, table.createdAt, table.id)
+  ]
+)
+
+/**
+ * Durable mutation replay records. `responseCiphertext` protects create and
+ * rotate responses that may contain a one-time webhook signing secret.
+ */
+export const apiIdempotencyRecords = legislationSchema.table(
+  "api_idempotency_records",
+  {
+    principalScope: char("principal_scope", { length: 64 }).notNull(),
+    method: text("method").notNull(),
+    canonicalPath: text("canonical_path").notNull(),
+    key: text("key").notNull(),
+    requestHash: char("request_hash", { length: 64 }).notNull(),
+    statusCode: integer("status_code").notNull(),
+    responseHeaders: jsonb("response_headers").$type<Record<string, string>>().notNull().default({}),
+    responseCiphertext: text("response_ciphertext").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.principalScope, table.method, table.canonicalPath, table.key] }),
+    check("api_idempotency_records_scope_check", sql`${table.principalScope} ~ '^[0-9a-f]{64}$'`),
+    check("api_idempotency_records_key_check", sql`length(${table.key}) between 8 and 128`),
+    check("api_idempotency_records_hash_check", sql`${table.requestHash} ~ '^[0-9a-f]{64}$'`),
+    check("api_idempotency_records_status_check", sql`${table.statusCode} between 200 and 599`),
+    index("api_idempotency_records_expiry_idx").on(table.expiresAt)
+  ]
+)
