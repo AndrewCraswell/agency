@@ -43,8 +43,9 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 23 | SC-008 | P3 | done | Root-approved private finite-positive assertion now serves the three electrical-budget modules with unchanged errors |
 | 24 | SC-006 | P2 | done | Root-approved strict evidence-time parser now serves connector, fixture, footprint, and IR evidence validators |
 | 25 | SC-009 | P2 | done | Root-approved canonical UTC parser now governs all four analog-evidence flows and their temporal comparisons |
-| 25 | SD-016 | P1 | ready | Encrypted-IR ingress throttling stores milliseconds instead of canonical integer microseconds |
-| 26 | SD-017 | P2 | done | Root-approved ordered layout now derives every wire offset, the 70-byte header, and 150-byte maximum without changing RC-03 bytes |
+| 27 | SD-016 | P1 | ready | Encrypted-IR ingress throttling stores milliseconds instead of canonical integer microseconds |
+| 28 | SD-017 | P2 | done | Root-approved ordered layout now derives every wire offset, the 70-byte header, and 150-byte maximum without changing RC-03 bytes |
+| 29 | SD-018 | P2 | in-progress | Live simulator rebuild can leave startup-cached HTML pointing at deleted hashed assets |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -467,4 +468,15 @@ truth.
 - Bounded remediation: reuse `parseCanonicalUtcTimestamp` in the four owning schemas/validators, cache parsed dates locally for comparisons, and retain all existing domain outputs.
 - Acceptance: canonical `.000Z` records retain current results; offsets, impossible dates, noncanonical precision, and invalid ordering/dwell/calibration/permit boundaries reject; no raw `Date.parse` remains in the four modules; focused analog and BP-106 tests pass.
 - Non-goals: no date library, timezone conversion, protocol timestamp change, evidence schema version, or unrelated validator refactor.
+## SD-018: keep live simulator HTML and hashed assets coherent
+
+- Priority: `P2`
+- State: `in-progress`
+- Latest state: The live-rebuild coherence gap is bounded and assigned inside the blocked simulator source unit; closure waits for a regression proving each newly served index references a 200 asset.
+- Affected files: `apps/scoring/scripts/serve-scenario-observatory.mjs` and `apps/scoring/src/observatory-integration.test.ts`.
+- Description and evidence: the server snapshots `dist/simulator/index.html` at module initialization but reads hashed assets on every request. A Vite rebuild may therefore delete the old hash while the running server still serves HTML that references it.
+- Impact: iterative simulator work can produce a blank or stale page until a manual restart and can be misdiagnosed as an application failure.
+- Bounded remediation: read the current index atomically per root request, or retain one revisioned static snapshot with its exact asset set; keep no-store and nosniff behavior.
+- Acceptance: existing server/API coverage passes; a live-server rebuild test proves the newly served index and referenced JavaScript resolve together; missing/corrupt index or asset fails explicitly.
+- Non-goals: no HMR, production hosting redesign, oracle/lock changes, or scoring-authority changes.
 
