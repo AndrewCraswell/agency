@@ -179,6 +179,34 @@ describe("M4-04 single-channel sensing coupon", () => {
     expect(connector?.footprintRelease).toBe("deny")
   })
 
+  it("records the JST PHR-2 mate separately at family scope without creating footprint authority", () => {
+    expect(M404_SINGLE_CHANNEL_COUPON.connectorMates).toEqual([
+      {
+        connectorReference: "J_GUARDED_FORCE",
+        boardMpn: "B2B-PH-K-S(LF)(SN)",
+        mateMpn: "PHR-2",
+        manufacturer: "JST",
+        role: "mate-only",
+        manufacturerDrawing: {
+          acquisition: "series-drawing-hash-bound",
+          artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/jst-ph-series-datasheet.pdf",
+          drawingIdentifier: "JST ePH, page 3 exact PHR-2 housing table, manufacturer dimensions",
+          drawingUrl: "https://www.jst-mfg.com/product/pdf/eng/ePH.pdf",
+          geometry: null,
+          byteMarkers: ["PH", "B2B"],
+          sha256: "447624F4F2F7D37C58C1EAA7EE314AD757FE7AFF48F6186491EF6F69FBC00B96",
+          scope: expect.stringContaining("explicitly lists PHR-2")
+        }
+      }
+    ])
+    expect(M404_SINGLE_CHANNEL_COUPON.connectorMates[0]?.manufacturerDrawing.geometry).toBeNull()
+    expect(M404_SINGLE_CHANNEL_COUPON.authority).toMatchObject({
+      footprintsIndependentlyReviewed: false,
+      fabricationAuthorized: false,
+      releaseState: "deny"
+    })
+  })
+
   it("keeps the RCWE0603 resistor source hash-bound at family scope", () => {
     const resistor = M404_SINGLE_CHANNEL_COUPON.footprints.find(
       (footprint) => footprint.exactMpn === "RCWE0603R220FKEA"
@@ -220,8 +248,10 @@ describe("M4-04 single-channel sensing coupon", () => {
       return decoded
     }
 
-    for (const footprint of M404_SINGLE_CHANNEL_COUPON.footprints) {
-      const drawing = footprint.evidence.manufacturerDrawing
+    for (const drawing of [
+      ...M404_SINGLE_CHANNEL_COUPON.footprints.map((footprint) => footprint.evidence.manufacturerDrawing),
+      ...M404_SINGLE_CHANNEL_COUPON.connectorMates.map((mate) => mate.manufacturerDrawing)
+    ]) {
       if (drawing.acquisition !== "exact-drawing-hash-bound" && drawing.acquisition !== "series-drawing-hash-bound") {
         continue
       }

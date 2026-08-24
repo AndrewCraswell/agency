@@ -325,6 +325,17 @@ const acquiredSeriesDrawingEvidenceByMpn: Readonly<
       "JST PH-series manufacturer source. The retained source covers the B2B-PH-K-S(LF)(SN) two-circuit header family and its 2.00 mm pitch and board-layout guidance, but it does not prove the exact suffix or grant a project land pattern. No project geometry or footprint authority is inferred.",
     sha256: "447624F4F2F7D37C58C1EAA7EE314AD757FE7AFF48F6186491EF6F69FBC00B96"
   },
+  "PHR-2": {
+    acquisition: "series-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/jst-ph-series-datasheet.pdf",
+    drawingIdentifier: "JST ePH, page 3 exact PHR-2 housing table, manufacturer dimensions",
+    drawingUrl: "https://www.jst-mfg.com/product/pdf/eng/ePH.pdf",
+    geometry: null,
+    byteMarkers: ["PH", "B2B"],
+    scope:
+      "JST PH-series manufacturer source retained for the PHR-2 mate-only BOM record. Page 3 explicitly lists PHR-2 as the two-circuit housing with A = 2.0 mm and B = 5.8 mm. This does not supply project CAD, a board land pattern, an artwork overlay, or footprint authority.",
+    sha256: "447624F4F2F7D37C58C1EAA7EE314AD757FE7AFF48F6186491EF6F69FBC00B96"
+  },
   CRCW0603100KFKEAHP: {
     acquisition: "series-drawing-hash-bound",
     artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf",
@@ -381,6 +392,20 @@ const acquiredSeriesDrawingEvidenceByMpn: Readonly<
     sha256: "5977F6B0414A669571207B18831446698C7C64F15B672F893BDDA1E428D4D374"
   }
 }
+
+const connectorMateEvidence = [
+  {
+    connectorReference: "J_GUARDED_FORCE",
+    boardMpn: "B2B-PH-K-S(LF)(SN)",
+    mateMpn: "PHR-2",
+    manufacturer: "JST",
+    role: "mate-only",
+    manufacturerDrawing: {
+      ...acquiredSeriesDrawingEvidenceByMpn["PHR-2"],
+      byteMarkers: [...acquiredSeriesDrawingEvidenceByMpn["PHR-2"].byteMarkers]
+    }
+  }
+] as const
 
 function drawingEvidenceFor(part: CouponBomPart) {
   const acquiredDrawing = acquiredDrawingEvidenceByMpn[part.mpn]
@@ -491,6 +516,7 @@ const definition = {
     excluded:
       "No electrical-rule check substitutes for a tscircuit renderer result, a physical short/open inspection, or an energized test."
   },
+  connectorMates: connectorMateEvidence,
   footprints: footprintReviews,
   authority: {
     schematicIntegrationAuthorized: false,

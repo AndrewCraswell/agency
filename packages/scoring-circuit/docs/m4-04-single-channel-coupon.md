@@ -75,6 +75,14 @@ header layout and 2.00 mm pitch guidance, but does not prove the exact
 CAD or absence record, artwork comparison, and independent root approval remain
 pending.
 
+The JST `PHR-2` guarded-force mate is also recorded as a separate **mate-only,
+series-drawing-hash-bound** source record in the coupon artifact. Page 3 of the
+retained PH-series PDF explicitly lists `PHR-2` as the two-circuit housing with
+`A = 2.0 mm` and `B = 5.8 mm`. That exact housing identity does not supply
+project CAD, a board land pattern, an artwork overlay, or footprint authority.
+The mate record remains informational and does not add a second footprint
+review row.
+
 The Murata `GRM21BR71A106KE51L` reference capacitor now has a SHA-256-bound
 manufacturer source record at
 `packages/scoring-circuit/docs/evidence/m4-04/murata-grm21br71a106ke51l-datasheet.pdf`:
