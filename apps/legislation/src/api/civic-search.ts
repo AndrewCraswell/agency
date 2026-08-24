@@ -7,9 +7,10 @@ import type {
   SupportingMaterialSearchInput,
   VersionComparisonInput
 } from "../legislation/query-service.js"
-import type { PassageSearchInput, SearchInput } from "../search/search.js"
+import { decodeSearchCursor, type PassageSearchInput, type SearchInput } from "../search/search.js"
 import { projectSupportingMaterialSearchHits } from "./canonical-material-search.js"
 import { CanonicalProjectionError } from "./canonical-projection.js"
+import { projectBillSearchHits, type BillSearchCandidateRead } from "./canonical-search.js"
 import { apiSearchPage, readJsonBody, requestUrl, sendApiError, sendApiJson, type HttpApiHandler } from "./http.js"
 
 type QueryPage<T> = Readonly<{
@@ -26,7 +27,9 @@ export type CivicSearchApi = Readonly<{
   searchBillText: (
     input: PassageSearchInput & { mode?: "hybrid" | "lexical" | "semantic" }
   ) => Promise<QueryPage<unknown>>
-  searchBills: (input: SearchInput & { mode?: "hybrid" | "lexical" | "semantic" }) => Promise<QueryPage<unknown>>
+  searchBills: (
+    input: SearchInput & { mode?: "hybrid" | "lexical" | "semantic" }
+  ) => Promise<QueryPage<BillSearchCandidateRead>>
   searchSupportingMaterialHits: (input: SupportingMaterialSearchInput) => Promise<SupportingMaterialSearchHitResult>
   searchSupportingMaterials: (input: SupportingMaterialSearchInput) => Promise<QueryPage<unknown>>
 }>
@@ -95,12 +98,6 @@ const materialSearchRequestSchema = searchRequestSchema
   })
   .strict()
 
-function rejectUnsupportedFilter(value: unknown, name: string): void {
-  if (value !== undefined) {
-    throw new LegislationError("invalid_request", `${name} is not implemented by the current query service`)
-  }
-}
-
 function validateDateOrder(from: string | undefined, to: string | undefined, names: readonly [string, string]): void {
   if (from !== undefined && to !== undefined && from.includes("T") !== to.includes("T")) {
     throw new LegislationError("invalid_request", `${names[0]} and ${names[1]} must use the same temporal format`)
@@ -158,25 +155,36 @@ function searchPage<T>(
 function searchInput(
   value: z.infer<typeof billSearchRequestSchema>,
   mode: "hybrid" | "lexical" | "semantic"
-): SearchInput & { mode: "hybrid" | "lexical" | "semantic" } {
+): Readonly<{ input: SearchInput & { mode: "hybrid" | "lexical" | "semantic" }; offset: number }> {
   validateDateOrder(value.introducedFrom, value.introducedTo, ["introducedFrom", "introducedTo"])
   validateDateOrder(value.from ?? undefined, value.to ?? undefined, ["from", "to"])
-  rejectUnsupportedFilter(value.explain === true ? true : undefined, "explain")
-  rejectUnsupportedFilter(value.from ?? undefined, "from")
-  rejectUnsupportedFilter(value.to ?? undefined, "to")
+  const offset = searchCursorOffset(value.cursor)
+  const updatedRange = materialUpdatedRange(value.from ?? undefined, value.to ?? undefined)
   return {
-    classifications: value.classifications,
-    cursor: value.cursor ?? undefined,
-    introducedFrom: value.introducedFrom,
-    introducedTo: value.introducedTo,
-    jurisdictionIds: value.jurisdictionIds,
-    limit: value.limit,
-    mode,
-    query: value.query,
-    sessionIds: value.sessionIds,
-    sponsorIds: value.sponsorIds,
-    statuses: value.statuses,
-    subjects: value.subjects
+    input: {
+      classifications: value.classifications,
+      cursor: value.cursor ?? undefined,
+      introducedFrom: value.introducedFrom,
+      introducedTo: value.introducedTo,
+      jurisdictionIds: value.jurisdictionIds,
+      limit: value.limit,
+      mode,
+      query: value.query,
+      sessionIds: value.sessionIds,
+      sponsorIds: value.sponsorIds,
+      statuses: value.statuses,
+      subjects: value.subjects,
+      ...updatedRange
+    },
+    offset
+  }
+}
+
+function searchCursorOffset(cursor: string | null | undefined): number {
+  try {
+    return decodeSearchCursor(cursor ?? undefined)
+  } catch {
+    throw new LegislationError("invalid_request", "cursor must be a valid search cursor")
   }
 }
 
@@ -191,8 +199,21 @@ export function createCivicSearchApiHandler(
         const body = billSearchRequestSchema.parse(await readJsonBody(request))
         const mode = body.mode ?? "lexical"
         const limit = validateSearchModeLimit(mode, body.limit)
-        const result = await service.searchBills(searchInput(body, mode))
-        sendApiJson(response, 200, searchPage(request, result, limit, mode))
+        const { input, offset } = searchInput(body, mode)
+        const result = await service.searchBills(input)
+        sendApiJson(
+          response,
+          200,
+          searchPage(
+            request,
+            {
+              ...result,
+              items: projectBillSearchHits(result.items, mode, options.apiBaseUrl, body.explain === true, offset)
+            },
+            limit,
+            mode
+          )
+        )
         return true
       }
 
@@ -202,6 +223,7 @@ export function createCivicSearchApiHandler(
         const limit = validateSearchModeLimit(mode, body.limit)
         validateDateOrder(body.from ?? undefined, body.to ?? undefined, ["from", "to"])
         validateDateOrder(body.documentFrom, body.documentTo, ["documentFrom", "documentTo"])
+        const offset = searchCursorOffset(body.cursor)
         const updatedRange = materialUpdatedRange(body.from ?? undefined, body.to ?? undefined)
         const input: SupportingMaterialSearchInput = {
           amendmentIds: body.amendmentIds,
@@ -227,7 +249,13 @@ export function createCivicSearchApiHandler(
             request,
             {
               ...result,
-              items: projectSupportingMaterialSearchHits(result.items, mode, options.apiBaseUrl, body.explain === true)
+              items: projectSupportingMaterialSearchHits(
+                result.items,
+                mode,
+                options.apiBaseUrl,
+                body.explain === true,
+                offset
+              )
             },
             limit,
             mode

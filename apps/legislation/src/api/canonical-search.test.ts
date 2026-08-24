@@ -50,6 +50,13 @@ describe("canonical bill search projection", () => {
     })
   })
 
+  it("only includes a deterministic score explanation when requested", () => {
+    expect(projectBillSearchHit(candidate, "lexical", 1, "https://api.example.test").match.explanation).toBeNull()
+    expect(projectBillSearchHit(candidate, "lexical", 1, "https://api.example.test", true).match.explanation).toBe(
+      "lexical search matched identifier, title; lexical score 0.8, semantic score null, rerank score null; response score 0.8."
+    )
+  })
+
   it("rejects invented ranking metadata", () => {
     expect(() =>
       projectBillSearchHit({ ...candidate, semanticScore: 0.7 }, "lexical", 1, "https://api.example.test")

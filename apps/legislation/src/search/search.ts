@@ -32,6 +32,12 @@ export interface SearchFilters {
   sponsorIds?: string[]
   statuses?: string[]
   subjects?: string[]
+  /** Inclusive canonical BillSummary.updatedAt lower bound. */
+  updatedFrom?: Date
+  /** Inclusive canonical BillSummary.updatedAt timestamp upper bound. */
+  updatedTo?: Date
+  /** Exclusive upper bound used when a date-only updatedTo includes a full UTC day. */
+  updatedToExclusive?: Date
 }
 
 export interface SearchInput extends SearchFilters {
@@ -146,6 +152,9 @@ function billFilters(filters: SearchFilters): SQL[] {
     filters.classifications === undefined ? undefined : arrayOverlaps(bills.classification, filters.classifications),
     filters.introducedFrom === undefined ? undefined : gte(bills.introducedAt, filters.introducedFrom),
     filters.introducedTo === undefined ? undefined : lte(bills.introducedAt, filters.introducedTo),
+    filters.updatedFrom === undefined ? undefined : gte(bills.updatedAt, filters.updatedFrom),
+    filters.updatedTo === undefined ? undefined : lte(bills.updatedAt, filters.updatedTo),
+    filters.updatedToExclusive === undefined ? undefined : sql`${bills.updatedAt} < ${filters.updatedToExclusive}`,
     filters.sponsorIds === undefined
       ? undefined
       : sql`exists (select 1 from ${billSponsors} where ${billSponsors.billId} = ${bills.id} and ${inArray(billSponsors.personId, filters.sponsorIds)})`

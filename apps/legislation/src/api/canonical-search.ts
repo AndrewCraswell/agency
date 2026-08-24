@@ -33,7 +33,7 @@ export interface BillSearchExecution {
 
 export interface BillSearchHit {
   match: {
-    explanation: null
+    explanation: string | null
     lexicalScore: number | null
     matchedFields: readonly BillSearchMatchedField[]
     mode: BillSearchMode
@@ -57,22 +57,27 @@ export interface BillSearchHit {
 export function projectBillSearchHits(
   candidates: readonly BillSearchCandidateRead[],
   mode: BillSearchMode,
-  apiBaseUrl: string
+  apiBaseUrl: string,
+  explain = false,
+  rankOffset = 0
 ): BillSearchHit[] {
-  return candidates.map((candidate, index) => projectBillSearchHit(candidate, mode, index + 1, apiBaseUrl))
+  return candidates.map((candidate, index) =>
+    projectBillSearchHit(candidate, mode, rankOffset + index + 1, apiBaseUrl, explain)
+  )
 }
 
 export function projectBillSearchHit(
   candidate: Readonly<BillSearchCandidateRead>,
   mode: BillSearchMode,
   rank: number,
-  apiBaseUrl: string
+  apiBaseUrl: string,
+  explain = false
 ): BillSearchHit {
   validateSearchCandidate(candidate, mode, rank)
   const record = projectBillSummaryRead(candidate, apiBaseUrl)
   return {
     match: {
-      explanation: null,
+      explanation: explain ? deterministicExplanation(candidate, mode) : null,
       lexicalScore: candidate.lexicalScore,
       matchedFields: [...candidate.matchedFields],
       mode,
@@ -87,6 +92,16 @@ export function projectBillSearchHit(
     score: candidate.score,
     sources: record.sources
   }
+}
+
+function deterministicExplanation(candidate: Readonly<BillSearchCandidateRead>, mode: BillSearchMode): string {
+  return `${mode} search matched ${candidate.matchedFields.join(", ")}; lexical score ${scoreText(
+    candidate.lexicalScore
+  )}, semantic score ${scoreText(candidate.semanticScore)}, rerank score ${scoreText(candidate.rerankScore)}; response score ${candidate.score.toString()}.`
+}
+
+function scoreText(score: number | null): string {
+  return score === null ? "null" : score.toString()
 }
 
 function validateSearchCandidate(

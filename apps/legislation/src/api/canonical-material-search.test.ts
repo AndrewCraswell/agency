@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { projectSupportingMaterialSearchHit } from "./canonical-material-search.js"
+import { projectSupportingMaterialSearchHit, projectSupportingMaterialSearchHits } from "./canonical-material-search.js"
 import { CanonicalProjectionError } from "./canonical-projection.js"
 
 const candidate = {
@@ -92,6 +92,12 @@ describe("canonical supporting material search projection", () => {
     )
     const hybrid = { ...semantic, lexicalScore: 0.3, matchedFields: ["sectionText", "semantic"] as const, score: 0.04 }
     expect(projectSupportingMaterialSearchHit(hybrid, "hybrid", 1, "https://api.example.test").score).toBe(0.04)
+  })
+
+  it("preserves absolute rank after an opaque cursor offset", () => {
+    expect(
+      projectSupportingMaterialSearchHits([candidate], "lexical", "https://api.example.test", false, 20)[0]?.rank
+    ).toBe(21)
   })
 
   it("fails closed when the candidate lacks a bounded related section or truthful score", () => {

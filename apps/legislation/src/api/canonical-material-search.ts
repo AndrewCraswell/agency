@@ -57,10 +57,11 @@ export function projectSupportingMaterialSearchHits(
   candidates: readonly SupportingMaterialSearchCandidateRead[],
   mode: SupportingMaterialSearchMode,
   apiBaseUrl: string,
-  explain = false
+  explain = false,
+  rankOffset = 0
 ): SupportingMaterialSearchHit[] {
   return candidates.map((candidate, index) =>
-    projectSupportingMaterialSearchHit(candidate, mode, index + 1, apiBaseUrl, explain)
+    projectSupportingMaterialSearchHit(candidate, mode, rankOffset + index + 1, apiBaseUrl, explain)
   )
 }
 

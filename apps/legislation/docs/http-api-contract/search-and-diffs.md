@@ -73,6 +73,8 @@ Body is `BaseSearchRequest & { classifications?: string[]; statuses?: string[]; 
 sponsorIds?: string[]; introducedFrom?: date; introducedTo?: date }`. Response is
 `200 SearchPage<BillSearchHit>`. Searchable fields are identifier, title, abstract, subjects, sponsor names, and processed
 version text. Standard errors are `400`, `401`, `403`, `413`, `422`, `429`, `500`, and `503`.
+BaseSearch `from` and `to` filter the canonical bill `updatedAt` interval inclusively; a date-only upper bound includes
+the complete UTC date. `introducedFrom` and `introducedTo` continue to filter the publisher's introduction date.
 
 ## `POST /api/search/amendments` (`searchAmendments`)
 

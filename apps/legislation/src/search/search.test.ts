@@ -91,4 +91,21 @@ describe("lexical bill candidate query", () => {
     expect(generated).toContain('"legislation"."bill_documents"."processing_status" =')
     expect(generated).toContain("left join lateral")
   })
+
+  it("applies inclusive updatedAt timestamp bounds and a date-only exclusive upper bound", () => {
+    const generated = buildLexicalBillSearchQuery(
+      database,
+      {
+        query: "appropriations act",
+        updatedFrom: new Date("2026-08-01T00:00:00.000Z"),
+        updatedToExclusive: new Date("2026-08-25T00:00:00.000Z")
+      },
+      "appropriations act",
+      25,
+      0
+    ).toSQL().sql
+
+    expect(generated).toContain('"legislation"."bills"."updated_at" >=')
+    expect(generated).toContain('"legislation"."bills"."updated_at" <')
+  })
 })
