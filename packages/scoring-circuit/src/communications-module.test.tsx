@@ -4,7 +4,11 @@ import CommunicationsModuleCircuit, {
   communicationsResetBiasContract
 } from "./communications-module.circuit.js"
 import { componentDecisions } from "./component-decisions.js"
-import { ethernetCrystalQualification, ethernetSupportNetwork } from "./ethernet-support-network.js"
+import {
+  ethernetCrystalQualification,
+  ethernetSupportCircuitReferences,
+  ethernetSupportNetwork
+} from "./ethernet-support-network.js"
 import ScoringCircuit from "./index.circuit.js"
 import { criticalPartReadiness } from "./part-readiness.js"
 import { renderTestCircuit } from "./test-helper.js"
@@ -181,6 +185,14 @@ describe("communications-module circuit", () => {
     expect([...ethernetSupportNetwork.references].sort()).toEqual(
       ethernetSupportNetwork.supportNetworkComponents.map((component) => component.reference).sort()
     )
+    const circuitReferences = new Set<string>(ethernetSupportCircuitReferences)
+    expect(
+      json
+        .filter((element) => element.type === "source_component")
+        .flatMap((element) =>
+          typeof element.name === "string" && circuitReferences.has(element.name) ? [element.name] : []
+        )
+    ).toEqual([...ethernetSupportCircuitReferences])
 
     const expectedElectricalValues = new Map<string, { readonly capacitance?: number; readonly resistance?: number }>([
       ["C_ETH_AVDD_FERRITE_INPUT", { capacitance: 1e-7 }],

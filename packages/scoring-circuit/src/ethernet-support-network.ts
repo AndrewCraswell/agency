@@ -355,6 +355,40 @@ export const ethernetSupportNetwork = {
   }
 } as const
 
+/**
+ * The subset of the selected support network that is rendered as passive
+ * circuit values. Keep this order aligned with the W5500 support declarations
+ * in the communications-module circuit so a review can compare both records
+ * without reconstructing the selection.
+ */
+export const ethernetSupportCircuitReferences = [
+  "R_W5500_EXRES",
+  "C_W5500_TOCAP",
+  "C_W5500_1V2O",
+  "C_W5500_VDD",
+  "C_W5500_AVDD_1",
+  "C_W5500_AVDD_2",
+  "C_W5500_AVDD_3",
+  "C_W5500_AVDD_4",
+  "C_W5500_AVDD_5",
+  "C_W5500_AVDD_6",
+  "C_ETH_AVDD_FERRITE_INPUT",
+  "R_W5500_XTAL",
+  "R_W5500_XO",
+  "C_W5500_XI",
+  "C_W5500_XO"
+] as const
+
+export type EthernetSupportCircuitReference = (typeof ethernetSupportCircuitReferences)[number]
+
+export type EthernetSupportCircuitValue =
+  | { readonly component: "capacitor"; readonly capacitance: string }
+  | { readonly component: "resistor"; readonly resistance: string }
+
+export type EthernetSupportCircuitValues = Readonly<{
+  readonly [reference in EthernetSupportCircuitReference]: EthernetSupportCircuitValue
+}>
+
 function assertFinitePositive(name: string, value: unknown): asserts value is number {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     throw new RangeError(`${name} must be a finite positive number`)
@@ -569,7 +603,7 @@ function assertCanonicalValue(value: unknown, expected: unknown, path: string, s
   }
 }
 
-export function validateEthernetSupportNetwork(value: unknown): true {
+export function validateEthernetSupportNetwork(value: unknown): value is typeof ethernetSupportNetwork {
   try {
     assertCanonicalValue(value, ethernetSupportNetwork, "ethernetSupportNetwork", new WeakSet<object>())
     return true
@@ -580,6 +614,43 @@ export function validateEthernetSupportNetwork(value: unknown): true {
     throw new RangeError("ethernetSupportNetwork could not be validated safely")
   }
 }
+
+function toEthernetSupportCircuitValue(part: EthernetSupportComponent): EthernetSupportCircuitValue {
+  if (part.component === "capacitor") {
+    return Object.freeze({ component: "capacitor", capacitance: part.value })
+  }
+  if (part.component === "resistor") {
+    if (part.value === "0Ohm jumper") {
+      return Object.freeze({ component: "resistor", resistance: "0" })
+    }
+    if (!part.value.endsWith("Ohm")) {
+      throw new RangeError(`${part.reference} must use an Ohm value for circuit rendering`)
+    }
+    return Object.freeze({ component: "resistor", resistance: part.value.slice(0, -3) })
+  }
+  throw new RangeError(`${part.reference} is not a renderable passive support component`)
+}
+
+export function deriveEthernetSupportCircuitValues(
+  value: unknown = ethernetSupportNetwork
+): EthernetSupportCircuitValues {
+  if (!validateEthernetSupportNetwork(value)) {
+    throw new RangeError("ethernetSupportNetwork could not be validated safely")
+  }
+  const circuitValues = {} as {
+    -readonly [reference in EthernetSupportCircuitReference]: EthernetSupportCircuitValue
+  }
+  for (const reference of ethernetSupportCircuitReferences) {
+    const part = value.supportNetworkComponents.find((candidate) => candidate.reference === reference)
+    if (part === undefined) {
+      throw new RangeError(`Missing selected W5500 support part for ${reference}`)
+    }
+    circuitValues[reference] = toEthernetSupportCircuitValue(part)
+  }
+  return Object.freeze(circuitValues)
+}
+
+export const ethernetSupportCircuitValues = deriveEthernetSupportCircuitValues()
 
 export const ethernetCrystalQualification = qualifyW5500Crystal({
   agingMaximumPpmPerYear: 2,

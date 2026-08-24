@@ -1,4 +1,8 @@
-import { ethernetSupportNetwork } from "./ethernet-support-network.js"
+import {
+  ethernetSupportCircuitValues,
+  ethernetSupportNetwork,
+  type EthernetSupportCircuitReference
+} from "./ethernet-support-network.js"
 import { manufacturerFootprintProps } from "./manufacturer-footprint-adapter.js"
 import { physicalBoardContract } from "./physical-board-contract.js"
 
@@ -22,6 +26,20 @@ function ethernetSupportPart(reference: string) {
   const part = ethernetSupportNetwork.supportNetworkComponents.find((candidate) => candidate.reference === reference)
   if (part === undefined) throw new Error(`Missing selected W5500 support part for ${reference}`)
   return part
+}
+
+function ethernetSupportCircuitValue(reference: EthernetSupportCircuitReference, component: "capacitor" | "resistor") {
+  const value = ethernetSupportCircuitValues[reference]
+  if (component === "capacitor") {
+    if (value.component !== "capacitor") {
+      throw new Error(`Selected W5500 support part ${reference} is not a capacitor`)
+    }
+    return value.capacitance
+  }
+  if (value.component !== "resistor") {
+    throw new Error(`Selected W5500 support part ${reference} is not a resistor`)
+  }
+  return value.resistance
 }
 
 export const communicationsResetBiasContract = {
@@ -470,26 +488,26 @@ export default function CommunicationsModuleCircuit() {
       <resistor
         name="R_W5500_EXRES"
         manufacturerPartNumber={ethernetSupportPart("R_W5500_EXRES").mpn}
-        resistance="12.4k"
+        resistance={ethernetSupportCircuitValue("R_W5500_EXRES", "resistor")}
         tolerance="1%"
         {...unreleasedFootprintProps(ethernetSupportPart("R_W5500_EXRES").mpn)}
       />
       <capacitor
         name="C_W5500_TOCAP"
         manufacturerPartNumber={ethernetSupportPart("C_W5500_TOCAP").mpn}
-        capacitance="4.7uF"
+        capacitance={ethernetSupportCircuitValue("C_W5500_TOCAP", "capacitor")}
         {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_TOCAP").mpn)}
       />
       <capacitor
         name="C_W5500_1V2O"
         manufacturerPartNumber={ethernetSupportPart("C_W5500_1V2O").mpn}
-        capacitance="10nF"
+        capacitance={ethernetSupportCircuitValue("C_W5500_1V2O", "capacitor")}
         {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_1V2O").mpn)}
       />
       <capacitor
         name="C_W5500_VDD"
         manufacturerPartNumber={ethernetSupportPart("C_W5500_VDD").mpn}
-        capacitance="100nF"
+        capacitance={ethernetSupportCircuitValue("C_W5500_VDD", "capacitor")}
         {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_VDD").mpn)}
       />
       {(["1", "2", "3", "4", "5", "6"] as const).map((suffix) => (
@@ -497,14 +515,14 @@ export default function CommunicationsModuleCircuit() {
           key={suffix}
           name={`C_W5500_AVDD_${suffix}`}
           manufacturerPartNumber={ethernetSupportPart(`C_W5500_AVDD_${suffix}`).mpn}
-          capacitance="100nF"
+          capacitance={ethernetSupportCircuitValue(`C_W5500_AVDD_${suffix}`, "capacitor")}
           {...unreleasedFootprintProps(ethernetSupportPart(`C_W5500_AVDD_${suffix}`).mpn)}
         />
       ))}
       <capacitor
         name="C_ETH_AVDD_FERRITE_INPUT"
         manufacturerPartNumber={ethernetSupportPart("C_ETH_AVDD_FERRITE_INPUT").mpn}
-        capacitance="100nF"
+        capacitance={ethernetSupportCircuitValue("C_ETH_AVDD_FERRITE_INPUT", "capacitor")}
         {...unreleasedFootprintProps(ethernetSupportPart("C_ETH_AVDD_FERRITE_INPUT").mpn)}
       />
       <chip
@@ -516,25 +534,25 @@ export default function CommunicationsModuleCircuit() {
       <resistor
         name="R_W5500_XTAL"
         manufacturerPartNumber={ethernetSupportPart("R_W5500_XTAL").mpn}
-        resistance="1M"
+        resistance={ethernetSupportCircuitValue("R_W5500_XTAL", "resistor")}
         {...unreleasedFootprintProps(ethernetSupportPart("R_W5500_XTAL").mpn)}
       />
       <resistor
         name="R_W5500_XO"
         manufacturerPartNumber={ethernetSupportPart("R_W5500_XO").mpn}
-        resistance="0"
+        resistance={ethernetSupportCircuitValue("R_W5500_XO", "resistor")}
         {...unreleasedFootprintProps(ethernetSupportPart("R_W5500_XO").mpn)}
       />
       <capacitor
         name="C_W5500_XI"
         manufacturerPartNumber={ethernetSupportPart("C_W5500_XI").mpn}
-        capacitance="18pF"
+        capacitance={ethernetSupportCircuitValue("C_W5500_XI", "capacitor")}
         {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_XI").mpn)}
       />
       <capacitor
         name="C_W5500_XO"
         manufacturerPartNumber={ethernetSupportPart("C_W5500_XO").mpn}
-        capacitance="18pF"
+        capacitance={ethernetSupportCircuitValue("C_W5500_XO", "capacitor")}
         {...unreleasedFootprintProps(ethernetSupportPart("C_W5500_XO").mpn)}
       />
       <chip

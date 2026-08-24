@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest"
 import {
   calculateCrystalLoadEnvelope,
+  deriveEthernetSupportCircuitValues,
   ethernetCrystalLoadEnvelope,
   ethernetCrystalQualification,
+  ethernetSupportCircuitReferences,
+  ethernetSupportCircuitValues,
   ethernetSupportNetwork,
   ethernetSupportSources,
   qualifyW5500Crystal,
@@ -112,6 +115,53 @@ describe("W5500 support-network selection", () => {
     expect(supplyCaps.filter((part) => part.reference.startsWith("C_W5500_AVDD_")).length).toBe(6)
     expect(supplyCaps.some((part) => part.reference === "C_W5500_VDD")).toBe(true)
     expect(supplyCaps.some((part) => part.reference === "C_ETH_AVDD_FERRITE_INPUT")).toBe(true)
+  })
+
+  it("derives the renderer values in exact order and keeps the zero-ohm normalization narrow", () => {
+    expect([...ethernetSupportCircuitReferences]).toEqual([
+      "R_W5500_EXRES",
+      "C_W5500_TOCAP",
+      "C_W5500_1V2O",
+      "C_W5500_VDD",
+      "C_W5500_AVDD_1",
+      "C_W5500_AVDD_2",
+      "C_W5500_AVDD_3",
+      "C_W5500_AVDD_4",
+      "C_W5500_AVDD_5",
+      "C_W5500_AVDD_6",
+      "C_ETH_AVDD_FERRITE_INPUT",
+      "R_W5500_XTAL",
+      "R_W5500_XO",
+      "C_W5500_XI",
+      "C_W5500_XO"
+    ])
+    expect(
+      ethernetSupportCircuitReferences.map((reference) => [reference, ethernetSupportCircuitValues[reference]])
+    ).toEqual([
+      ["R_W5500_EXRES", { component: "resistor", resistance: "12.4k" }],
+      ["C_W5500_TOCAP", { component: "capacitor", capacitance: "4.7uF" }],
+      ["C_W5500_1V2O", { component: "capacitor", capacitance: "10nF" }],
+      ["C_W5500_VDD", { component: "capacitor", capacitance: "100nF" }],
+      ["C_W5500_AVDD_1", { component: "capacitor", capacitance: "100nF" }],
+      ["C_W5500_AVDD_2", { component: "capacitor", capacitance: "100nF" }],
+      ["C_W5500_AVDD_3", { component: "capacitor", capacitance: "100nF" }],
+      ["C_W5500_AVDD_4", { component: "capacitor", capacitance: "100nF" }],
+      ["C_W5500_AVDD_5", { component: "capacitor", capacitance: "100nF" }],
+      ["C_W5500_AVDD_6", { component: "capacitor", capacitance: "100nF" }],
+      ["C_ETH_AVDD_FERRITE_INPUT", { component: "capacitor", capacitance: "100nF" }],
+      ["R_W5500_XTAL", { component: "resistor", resistance: "1M" }],
+      ["R_W5500_XO", { component: "resistor", resistance: "0" }],
+      ["C_W5500_XI", { component: "capacitor", capacitance: "18pF" }],
+      ["C_W5500_XO", { component: "capacitor", capacitance: "18pF" }]
+    ])
+    expect(Object.isFrozen(ethernetSupportCircuitValues)).toBe(true)
+    expect(Object.isFrozen(ethernetSupportCircuitValues.R_W5500_XO)).toBe(true)
+
+    const forged = structuredClone(ethernetSupportNetwork)
+    const exres = forged.supportNetworkComponents.find((part) => part.reference === "R_W5500_EXRES")
+    expect(exres).toBeDefined()
+    if (exres !== undefined) Reflect.set(exres, "value", "12.5kOhm")
+    expect(() => deriveEthernetSupportCircuitValues(forged)).toThrow(RangeError)
   })
 
   it("calculates the assumed 18pF crystal load window and drive margin", () => {

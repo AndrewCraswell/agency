@@ -51,7 +51,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 32 | SD-021 | P2 | done | Root-approved private metadata projection now serves secure-envelope and replay-candidate validation with unchanged wire and error behavior |
 | 33 | SC-010 | P2 | intake | Communications circuit selected MPNs can drift from canonical component decisions and USB-PD records |
 | 34 | SC-011 | P3 | done | Root-approved BOM validation now relies on canonical rows as its sole exact-selection registry |
-| 35 | SC-012 | P2 | intake | W5500 support values are canonical upstream but duplicated as circuit literals |
+| 35 | SC-012 | P2 | done | Root-approved typed projection now derives rendered W5500 passive values from the canonical support record |
 | 36 | FW-006 | P1 | ready | A legacy ESP32 authoritative-record helper can bypass the canonical receiver journal and sequence boundary |
 | 37 | FW-007 | P2 | done | Root-approved private byte-string validation now serves manifest and environment boundaries with unchanged error categories |
 | 38 | FW-008 | P1 | done | Root-approved shared journal preflight prevents replay from indexing an invalid active slot |
@@ -554,7 +554,8 @@ truth.
 ## SC-012: derive W5500 circuit values from the support record
 
 - Priority: `P2`
-- State: `intake`
+- State: `done`
+- Latest state: Root review approved an exact ordered passive-value projection derived from the canonical W5500 support network. Communications rendering retains its references, MPNs, nets, geometry, release denial, and narrow zero-ohm normalization; 33 focused tests plus package types and lint pass.
 - Affected files: `packages/scoring-circuit/src/ethernet-support-network.ts`, `communications-module.circuit.tsx`, and focused renderer tests.
 - Description: the circuit derives support MPNs from the canonical W5500 network but repeats their electrical values as literals.
 - Impact: a reviewed support-value change can leave the rendered circuit electrically stale while its MPN remains synchronized.
