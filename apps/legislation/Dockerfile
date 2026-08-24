@@ -24,10 +24,10 @@ COPY apps/legislation ./apps/legislation
 # extensions cannot make this filtered, frozen install unreproducible.
 COPY apps/legislation/pnpm-workspace.railway.yaml ./pnpm-workspace.yaml
 
-# The reviewed lockfile was produced through a registry proxy. Keep its
-# exact versions while refreshing proxy-specific tarball checksums against the
-# public registry. The isolated workspace installs only legislation's closure.
-RUN pnpm install --no-frozen-lockfile --trust-lockfile --update-checksums --ignore-scripts --filter legislation...
+# The public registry keeps this source build independent from the private
+# workstation feed. The isolated workspace installs only legislation's closure
+# from the committed lockfile.
+RUN pnpm install --frozen-lockfile --ignore-scripts --filter legislation...
 RUN pnpm --filter legislation build
 RUN pnpm --filter legislation deploy --prod --legacy --force --ignore-scripts /opt/legislation
 
