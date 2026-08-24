@@ -1,14 +1,17 @@
 import { randomUUID } from "node:crypto"
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http"
+import { sendApiError, type HttpApiHandler } from "../api/http.js"
 import { runWithRequestContext, type RequestIdentity } from "../auth/request-context.js"
 import { AuthenticationError } from "../auth/workos.js"
 import type { LegislationConfig } from "../config/config.js"
 import { isApprovedDocumentRelayUrl } from "../ingestion/documents/trusted-document-transport.js"
+import { LegislationError } from "../legislation/errors.js"
 import { errorContext, type Logger } from "../observability/logger.js"
 
 type RelayedDocument = Readonly<{ bytes: Uint8Array; contentType: string; sourceUrl: string }>
 
 type ServerDependencies = Readonly<{
+  apiHandler?: HttpApiHandler
   authenticate?: (authorizationHeader: string | string[] | undefined) => Promise<RequestIdentity>
   documentFetchRelay?: Readonly<{
     fetch: (sourceUrl: string) => Promise<RelayedDocument>
@@ -105,26 +108,33 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
         return
       }
 
-      if (requestUrl.pathname === "/mcp" && dependencies.mcpHandler !== undefined) {
-        let identity: RequestIdentity | undefined
-        if (dependencies.authenticate !== undefined) {
-          try {
-            identity = await dependencies.authenticate(request.headers.authorization)
-          } catch (error) {
-            if (error instanceof AuthenticationError) {
-              const resourceMetadata =
-                dependencies.protectedResourceMetadata === undefined
-                  ? ""
-                  : `, resource_metadata="${protectedResourceMetadataUrl(dependencies.protectedResourceMetadata.resource)}"`
-              response.setHeader(
-                "www-authenticate",
-                `Bearer realm="legislation", error="invalid_token"${resourceMetadata}`
-              )
-              sendJson(response, 401, { error: "unauthorized" })
-              return
-            }
-            throw error
+      if (requestUrl.pathname.startsWith("/api/")) {
+        if (dependencies.apiHandler === undefined) {
+          runWithRequestContext({ correlationId: String(correlationId) }, () =>
+            sendApiError(request, response, new LegislationError("not_found", "API route was not found"))
+          )
+          return
+        }
+        const identity = await runWithRequestContext(
+          { correlationId: String(correlationId) },
+          async () => await authenticateRequest(request, response, dependencies, true)
+        )
+        if (identity === undefined && dependencies.authenticate !== undefined) {
+          return
+        }
+        await runWithRequestContext({ correlationId: String(correlationId), identity }, async () => {
+          const handled = await dependencies.apiHandler?.(request, response)
+          if (handled !== true) {
+            sendApiError(request, response, new LegislationError("not_found", "API route was not found"))
           }
+        })
+        return
+      }
+
+      if (requestUrl.pathname === "/mcp" && dependencies.mcpHandler !== undefined) {
+        const identity = await authenticateRequest(request, response, dependencies)
+        if (identity === undefined && dependencies.authenticate !== undefined) {
+          return
         }
         const contentLength = Number(request.headers["content-length"])
         if (Number.isFinite(contentLength) && contentLength > requestBodyBytes) {
@@ -140,13 +150,46 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
       sendJson(response, 404, { error: "not_found" })
     } catch (error) {
       dependencies.logger.error("request failed", errorContext(error))
-      sendJson(response, 500, { error: "internal_error" })
+      if (requestUrl.pathname.startsWith("/api/")) {
+        runWithRequestContext({ correlationId: String(correlationId) }, () => sendApiError(request, response, error))
+      } else {
+        sendJson(response, 500, { error: "internal_error" })
+      }
     }
   })
   server.headersTimeout = 15_000
   server.keepAliveTimeout = 5000
   server.requestTimeout = 60_000
   return server
+}
+
+async function authenticateRequest(
+  request: IncomingMessage,
+  response: ServerResponse,
+  dependencies: ServerDependencies,
+  apiRequest = false
+): Promise<RequestIdentity | undefined> {
+  if (dependencies.authenticate === undefined) {
+    return undefined
+  }
+  try {
+    return await dependencies.authenticate(request.headers.authorization)
+  } catch (error) {
+    if (!(error instanceof AuthenticationError)) {
+      throw error
+    }
+    const resourceMetadata =
+      dependencies.protectedResourceMetadata === undefined
+        ? ""
+        : `, resource_metadata="${protectedResourceMetadataUrl(dependencies.protectedResourceMetadata.resource)}"`
+    response.setHeader("www-authenticate", `Bearer realm="legislation", error="invalid_token"${resourceMetadata}`)
+    if (apiRequest) {
+      sendApiError(request, response, new LegislationError("unauthorized", "Bearer token is absent or invalid"))
+    } else {
+      sendJson(response, 401, { error: "unauthorized" })
+    }
+    return undefined
+  }
 }
 
 async function readJsonBody(request: IncomingMessage, maximumBytes: number): Promise<Record<string, unknown>> {

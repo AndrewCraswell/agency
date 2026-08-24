@@ -16,6 +16,7 @@ afterEach(async () => {
 async function startServer(
   isReady = true,
   options: Readonly<{
+    apiHandler?: NonNullable<Parameters<typeof createLegislationServer>[0]["apiHandler"]>
     authenticate?: () => Promise<{ userId: string }>
     documentFetchRelay?: NonNullable<Parameters<typeof createLegislationServer>[0]["documentFetchRelay"]>
     logger?: Logger
@@ -144,6 +145,65 @@ describe("createLegislationServer", () => {
 
     expect(response.status).toBe(404)
     await expect(response.json()).resolves.toEqual({ error: "not_found" })
+  })
+
+  it("returns the API error envelope for an unclaimed API route", async () => {
+    const baseUrl = await startServer(true, { apiHandler: async () => false })
+    const response = await fetch(`${baseUrl}/api/not-implemented`, {
+      headers: { "x-correlation-id": "api-not-found" }
+    })
+
+    expect(response.status).toBe(404)
+    expect(response.headers.get("x-correlation-id")).toBe("api-not-found")
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        category: "not_found",
+        correlationId: "api-not-found",
+        message: "API route was not found",
+        retryable: false
+      }
+    })
+  })
+
+  it("returns API authentication failures in the API error envelope", async () => {
+    const resource = "https://legislation.example/mcp"
+    const baseUrl = await startServer(true, {
+      apiHandler: async () => true,
+      authenticate: async () => {
+        const { AuthenticationError } = await import("../auth/workos.js")
+        throw new AuthenticationError("invalid")
+      },
+      protectedResourceMetadata: {
+        authorizationServer: "https://api.workos.com",
+        resource
+      }
+    })
+    const [absent, invalid] = await Promise.all([
+      fetch(`${baseUrl}/api/bills`, { headers: { "x-correlation-id": "api-auth-absent" } }),
+      fetch(`${baseUrl}/api/bills`, {
+        headers: { authorization: "Bearer invalid", "x-correlation-id": "api-auth-invalid" }
+      })
+    ])
+
+    for (const [response, correlationId] of [
+      [absent, "api-auth-absent"],
+      [invalid, "api-auth-invalid"]
+    ] as const) {
+      expect(response.status).toBe(401)
+      expect(response.headers.get("x-correlation-id")).toBe(correlationId)
+      expect(response.headers.get("www-authenticate")).toContain("invalid_token")
+      expect(response.headers.get("www-authenticate")).toContain(
+        `resource_metadata="https://legislation.example/.well-known/oauth-protected-resource/mcp"`
+      )
+      await expect(response.json()).resolves.toEqual({
+        error: {
+          category: "unauthorized",
+          correlationId,
+          message: "Bearer token is absent or invalid",
+          retryable: false
+        }
+      })
+    }
   })
 
   it("accepts and returns a caller correlation identifier", async () => {

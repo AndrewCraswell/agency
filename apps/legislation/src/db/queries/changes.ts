@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { and, desc, eq, lt, or } from "drizzle-orm"
+import { and, desc, eq, gte, lte, lt, or } from "drizzle-orm"
 import { currentIngestionRunId } from "../../ingestion/run-context.js"
 import type { LegislationDatabase } from "../database.js"
 import { canonicalRecordFingerprints, changeEvents } from "../schema/schema.js"
@@ -164,12 +164,15 @@ export async function observeCanonicalRecord(
 export interface ChangeQuery {
   before?: Date
   beforeId?: string
+  changeType?: CanonicalChangeType
   jurisdictionId?: string
   limit?: number
   organizationId?: string
   personId?: string
   recordId?: string
   recordType?: string
+  observedFrom?: Date
+  observedTo?: Date
 }
 
 export async function findChangeEvents(database: LegislationDatabase, query: ChangeQuery) {
@@ -187,11 +190,14 @@ export async function findChangeEvents(database: LegislationDatabase, query: Cha
   })()
   const conditions = [
     beforeCondition,
+    query.changeType === undefined ? undefined : eq(changeEvents.changeType, query.changeType),
     query.jurisdictionId === undefined ? undefined : eq(changeEvents.jurisdictionId, query.jurisdictionId),
     query.organizationId === undefined ? undefined : eq(changeEvents.organizationId, query.organizationId),
     query.personId === undefined ? undefined : eq(changeEvents.personId, query.personId),
     query.recordId === undefined ? undefined : eq(changeEvents.recordId, query.recordId),
-    query.recordType === undefined ? undefined : eq(changeEvents.recordType, query.recordType)
+    query.recordType === undefined ? undefined : eq(changeEvents.recordType, query.recordType),
+    query.observedFrom === undefined ? undefined : gte(changeEvents.observedAt, query.observedFrom),
+    query.observedTo === undefined ? undefined : lte(changeEvents.observedAt, query.observedTo)
   ].filter((condition) => condition !== undefined)
   return database
     .select()

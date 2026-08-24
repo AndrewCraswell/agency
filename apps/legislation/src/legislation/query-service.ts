@@ -1,6 +1,19 @@
-import { and, asc, eq, getTableColumns, gte, inArray, lte, sql } from "drizzle-orm"
+import {
+  and,
+  arrayContains,
+  arrayOverlaps,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  gte,
+  inArray,
+  lte,
+  sql,
+  type SQL
+} from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
-import { findChangeEvents } from "../db/queries/changes.js"
+import { findChangeEvents, type CanonicalChangeType } from "../db/queries/changes.js"
 import {
   amendmentActions,
   amendments,
@@ -19,10 +32,12 @@ import {
   eventOutcomeLinks,
   eventParticipants,
   legislativeEvents,
+  legislativeSessions,
   legislativeTerms,
   organizationMemberships,
   organizations,
   people,
+  jurisdictions,
   supportingMaterialLinks,
   supportingMaterialSections,
   supportingMaterials,
@@ -101,12 +116,44 @@ export interface OrganizationSearchInput {
 }
 
 export interface EventSearchInput {
+  classification?: string[]
   cursor?: string
   from?: Date
   jurisdictionId?: string
   limit?: number
   organizationId?: string
+  sort?: "starts-asc" | "starts-desc" | "updated-desc"
+  status?: string[]
   to?: Date
+}
+
+function billBrowseOrder(sort: BillBrowseInput["sort"]): SQL[] {
+  switch (sort) {
+    case "identifier-asc":
+      return [asc(bills.identifier), asc(bills.id)]
+    case "introduced-desc":
+      return [desc(bills.introducedAt), asc(bills.id)]
+    case "updated-desc":
+      return [desc(bills.updatedAt), asc(bills.id)]
+    default:
+      return [
+        desc(
+          sql`coalesce((select max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp)) from ${billActions} where ${billActions.billId} = ${bills.id}), ${bills.sourceUpdatedAt}, ${bills.updatedAt})`
+        ),
+        asc(bills.id)
+      ]
+  }
+}
+
+function eventSearchOrder(sort: EventSearchInput["sort"]): SQL[] {
+  switch (sort) {
+    case "starts-desc":
+      return [desc(legislativeEvents.startAt), asc(legislativeEvents.id)]
+    case "updated-desc":
+      return [desc(legislativeEvents.updatedAt), asc(legislativeEvents.id)]
+    default:
+      return [asc(legislativeEvents.startAt), asc(legislativeEvents.id)]
+  }
 }
 
 export interface VoteSearchInput {
@@ -210,6 +257,8 @@ interface SupportingMaterialSearchResult {
 }
 
 export interface ChangeSearchInput {
+  billId?: string
+  changeType?: CanonicalChangeType
   cursor?: string
   jurisdictionId?: string
   limit?: number
@@ -217,6 +266,45 @@ export interface ChangeSearchInput {
   personId?: string
   recordId?: string
   recordType?: string
+  observedFrom?: Date
+  observedTo?: Date
+}
+
+export interface JurisdictionSearchInput {
+  classification?: string
+  cursor?: string
+  isActive?: boolean
+  limit?: number
+  query?: string
+}
+
+export interface SessionSearchInput {
+  cursor?: string
+  from?: string
+  isActive?: boolean
+  jurisdictionId?: string
+  limit?: number
+  to?: string
+}
+
+export interface BillBrowseInput {
+  classification?: string[]
+  cursor?: string
+  identifier?: string
+  introducedFrom?: string
+  introducedTo?: string
+  jurisdictionId?: string
+  limit?: number
+  sessionId?: string
+  sort?: "identifier-asc" | "introduced-desc" | "latest-action-desc" | "updated-desc"
+  status?: string[]
+  subject?: string[]
+}
+
+export interface DocumentSectionLookup {
+  cursor?: string
+  documentId: string
+  limit?: number
 }
 
 interface FusedBillResult {
@@ -314,12 +402,15 @@ export class LegislationQueryService {
     const rows = await findChangeEvents(this.#database, {
       before: cursor.observedAt,
       beforeId: cursor.id,
+      changeType: input.changeType,
       jurisdictionId: input.jurisdictionId,
       limit: limit + 1,
       organizationId: input.organizationId,
       personId: input.personId,
-      recordId: input.recordId,
-      recordType: input.recordType
+      recordId: input.billId ?? input.recordId,
+      recordType: input.billId === undefined ? input.recordType : "bill",
+      observedFrom: input.observedFrom,
+      observedTo: input.observedTo
     })
     const truncated = rows.length > limit
     const items = rows.slice(0, limit)
@@ -328,6 +419,134 @@ export class LegislationQueryService {
       items,
       nextCursor: truncated && last !== undefined ? encodeChangeCursor(last) : undefined,
       truncated
+    }
+  }
+
+  async listJurisdictions(input: JurisdictionSearchInput) {
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const rows = await this.#database
+      .select()
+      .from(jurisdictions)
+      .where(
+        and(
+          input.classification === undefined ? undefined : eq(jurisdictions.classification, input.classification),
+          input.query === undefined ? undefined : sql`${jurisdictions.name} ilike ${`${input.query}%`}`
+        )
+      )
+      .orderBy(asc(jurisdictions.name), asc(jurisdictions.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated,
+      warnings: coverageWarnings(rows.length, "jurisdictions")
+    }
+  }
+
+  async getJurisdiction(id: string) {
+    const rows = await this.#database.select().from(jurisdictions).where(eq(jurisdictions.id, id)).limit(1)
+    if (rows[0] === undefined) {
+      throw new LegislationError("not_found", `Jurisdiction ${id} was not found`)
+    }
+    return rows[0]
+  }
+
+  async listSessions(input: SessionSearchInput) {
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const rows = await this.#database
+      .select()
+      .from(legislativeSessions)
+      .where(
+        and(
+          input.jurisdictionId === undefined ? undefined : eq(legislativeSessions.jurisdictionId, input.jurisdictionId),
+          input.isActive === undefined ? undefined : eq(legislativeSessions.isActive, input.isActive),
+          input.from === undefined ? undefined : gte(legislativeSessions.endDate, input.from),
+          input.to === undefined ? undefined : lte(legislativeSessions.startDate, input.to)
+        )
+      )
+      .orderBy(asc(legislativeSessions.startDate), asc(legislativeSessions.name), asc(legislativeSessions.id))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated,
+      warnings: coverageWarnings(rows.length, "sessions")
+    }
+  }
+
+  async getSession(id: string) {
+    const rows = await this.#database.select().from(legislativeSessions).where(eq(legislativeSessions.id, id)).limit(1)
+    if (rows[0] === undefined) {
+      throw new LegislationError("not_found", `Session ${id} was not found`)
+    }
+    return rows[0]
+  }
+
+  async browseBills(input: BillBrowseInput) {
+    const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const rows = await this.#database
+      .select()
+      .from(bills)
+      .where(
+        and(
+          input.jurisdictionId === undefined ? undefined : eq(bills.jurisdictionId, input.jurisdictionId),
+          input.sessionId === undefined ? undefined : eq(bills.sessionId, input.sessionId),
+          input.identifier === undefined ? undefined : sql`${bills.identifier} ilike ${`${input.identifier}%`}`,
+          input.classification === undefined ? undefined : arrayOverlaps(bills.classification, input.classification),
+          input.status === undefined ? undefined : inArray(bills.status, input.status),
+          input.subject === undefined ? undefined : arrayContains(bills.subjects, input.subject),
+          input.introducedFrom === undefined ? undefined : gte(bills.introducedAt, input.introducedFrom),
+          input.introducedTo === undefined ? undefined : lte(bills.introducedAt, input.introducedTo)
+        )
+      )
+      .orderBy(...billBrowseOrder(input.sort))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated,
+      warnings: coverageWarnings(rows.length, "bills")
+    }
+  }
+
+  async getDocument(lookup: EntityLookup) {
+    const document = await this.#database.select().from(billDocuments).where(eq(billDocuments.id, lookup.id)).limit(1)
+    if (document[0] === undefined) {
+      throw new LegislationError("not_found", `Document ${lookup.id} was not found`)
+    }
+    const sections = await this.getDocumentSections({
+      cursor: lookup.cursor,
+      documentId: lookup.id,
+      limit: lookup.limit
+    })
+    return { document: document[0], sections }
+  }
+
+  async getDocumentSections(input: DocumentSectionLookup) {
+    const limit = Math.min(Math.max(input.limit ?? SECTION_LIMIT, 1), SECTION_LIMIT)
+    const offset = decodeOffset(input.cursor)
+    const rows = await this.#database
+      .select()
+      .from(documentSections)
+      .where(eq(documentSections.documentId, input.documentId))
+      .orderBy(asc(documentSections.ordinal))
+      .limit(limit + 1)
+      .offset(offset)
+    const truncated = rows.length > limit
+    return {
+      items: rows.slice(0, limit),
+      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      truncated,
+      warnings: coverageWarnings(rows.length, "document sections")
     }
   }
 
@@ -523,18 +742,24 @@ export class LegislationQueryService {
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeOffset(input.cursor)
     const rows = await this.#database
-      .selectDistinct({ event: legislativeEvents })
+      .select({ event: legislativeEvents })
       .from(legislativeEvents)
-      .leftJoin(eventParticipants, eq(eventParticipants.eventId, legislativeEvents.id))
       .where(
         and(
           input.jurisdictionId === undefined ? undefined : eq(legislativeEvents.jurisdictionId, input.jurisdictionId),
-          input.organizationId === undefined ? undefined : eq(eventParticipants.organizationId, input.organizationId),
+          input.organizationId === undefined
+            ? undefined
+            : sql`exists (select 1 from ${eventParticipants} where ${eventParticipants.eventId} = ${legislativeEvents.id} and ${eventParticipants.organizationId} = ${input.organizationId})`,
+          input.classification === undefined
+            ? undefined
+            : inArray(legislativeEvents.classification, input.classification),
+          input.status === undefined ? undefined : inArray(legislativeEvents.status, input.status),
           input.from === undefined ? undefined : gte(legislativeEvents.startAt, input.from),
-          input.to === undefined ? undefined : lte(legislativeEvents.startAt, input.to)
+          input.to === undefined ? undefined : lte(legislativeEvents.startAt, input.to),
+          eq(legislativeEvents.isDeleted, false)
         )
       )
-      .orderBy(asc(legislativeEvents.startAt), asc(legislativeEvents.id))
+      .orderBy(...eventSearchOrder(input.sort))
       .limit(limit + 1)
       .offset(offset)
     const truncated = rows.length > limit

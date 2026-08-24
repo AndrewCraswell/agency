@@ -5,7 +5,9 @@ export type LegislationErrorCategory =
   | "internal"
   | "invalid_request"
   | "not_found"
+  | "precondition_failed"
   | "rate_limited"
+  | "unprocessable"
   | "unauthorized"
 
 export class LegislationError extends Error {

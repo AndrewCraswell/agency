@@ -3,6 +3,7 @@ import { createReadStream } from "node:fs"
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import { Command } from "commander"
+import { createLegislationApiHandler } from "../api/handlers.js"
 import { createWorkosAuthenticator } from "../auth/workos.js"
 import { loadConfig, type LegislationConfig } from "../config/config.js"
 import { compareCoverageReports, generateCoverageReport, isCoverageReport } from "../coverage/report.js"
@@ -331,9 +332,11 @@ async function serve() {
     config.model.apiKey === undefined
       ? undefined
       : new OpenRouterRetrievalClient({ apiKey: config.model.apiKey, baseUrl: new URL(config.model.baseUrl) })
-  const mcp = createLegislationMcpHandler(new LegislationQueryService(database, retrievalClient), logger, telemetry)
+  const queryService = new LegislationQueryService(database, retrievalClient)
+  const mcp = createLegislationMcpHandler(queryService, logger, telemetry)
   const authenticate = config.auth.mode === "workos" ? createWorkosAuthenticator(config.auth) : undefined
   const server = createLegislationServer({
+    apiHandler: createLegislationApiHandler(queryService),
     authenticate,
     documentFetchRelay:
       process.env.DOCUMENT_FETCH_RELAY_TOKEN === undefined

@@ -1,0 +1,330 @@
+import { randomUUID } from "node:crypto"
+import type { IncomingMessage, ServerResponse } from "node:http"
+import { getRequestContext } from "../auth/request-context.js"
+import { LegislationError } from "../legislation/errors.js"
+
+export type HttpApiHandler = (request: IncomingMessage, response: ServerResponse) => Promise<boolean>
+
+export type JsonRecord = Readonly<Record<string, unknown>>
+
+export function createCompositeHttpApiHandler(handlers: readonly HttpApiHandler[]): HttpApiHandler {
+  return async (request, response) => {
+    for (const handler of handlers) {
+      if (await handler(request, response)) {
+        return true
+      }
+    }
+    return false
+  }
+}
+
+export function sendApiJson(response: ServerResponse, statusCode: number, body: unknown): void {
+  response.writeHead(statusCode, { "content-type": "application/json; charset=utf-8" })
+  response.end(JSON.stringify(body))
+}
+
+export function requestUrl(request: IncomingMessage): URL {
+  return new URL(request.url ?? "/", "http://localhost")
+}
+
+export function correlationId(request: IncomingMessage): string {
+  const context = getRequestContext()
+  if (context !== undefined) {
+    return context.correlationId
+  }
+  const value = request.headers["x-correlation-id"]
+  const callerValue = Array.isArray(value) ? value[0] : value
+  return callerValue?.trim() || randomUUID()
+}
+
+export function apiResource<T>(request: IncomingMessage, data: T): JsonRecord {
+  return {
+    data,
+    links: { self: requestUrl(request).pathname },
+    meta: { correlationId: correlationId(request), warnings: [] }
+  }
+}
+
+export function apiPage<T>(
+  request: IncomingMessage,
+  page: Readonly<{ items: readonly T[]; nextCursor?: string; truncated: boolean; warnings?: readonly string[] }>,
+  limit: number
+): JsonRecord {
+  const url = requestUrl(request)
+  const nextCursor = page.nextCursor ?? null
+  const next =
+    nextCursor === null
+      ? null
+      : (() => {
+          const nextUrl = new URL(url)
+          nextUrl.searchParams.set("cursor", nextCursor)
+          return `${nextUrl.pathname}${nextUrl.search}`
+        })()
+  return {
+    data: page.items,
+    links: { next, self: `${url.pathname}${url.search}` },
+    meta: {
+      correlationId: correlationId(request),
+      limit,
+      nextCursor,
+      truncated: page.truncated,
+      warnings: page.warnings ?? []
+    }
+  }
+}
+
+export function apiSearchPage<T>(
+  request: IncomingMessage,
+  page: Readonly<{ items: readonly T[]; nextCursor?: string; truncated: boolean; warnings?: readonly string[] }>,
+  limit: number,
+  search: Readonly<{ isReranked: boolean; mode: "hybrid" | "lexical" | "semantic"; models: readonly unknown[] }>
+): JsonRecord {
+  const response = apiPage(request, page, limit)
+  const meta = response.meta
+  if (typeof meta !== "object" || meta === null) {
+    throw new Error("Page metadata is missing")
+  }
+  return { ...response, meta: { ...meta, ...search } }
+}
+
+export function apiError(request: IncomingMessage, error: unknown): JsonRecord {
+  const category = error instanceof LegislationError ? error.category : "internal"
+  const status = statusForError(category)
+  const message = error instanceof LegislationError ? error.message : "The request could not be completed"
+  return {
+    error: {
+      category,
+      correlationId: correlationId(request),
+      message,
+      retryable: category === "dependency_unavailable" || category === "rate_limited"
+    },
+    status
+  }
+}
+
+export function sendApiError(request: IncomingMessage, response: ServerResponse, error: unknown): void {
+  const body = apiError(request, error)
+  const status = body.status
+  const { status: _status, ...errorBody } = body
+  sendApiJson(response, typeof status === "number" ? status : 500, errorBody)
+}
+
+export function queryInteger(url: URL, name: string, defaultValue: number, maximum = 100): number {
+  const value = url.searchParams.get(name)
+  if (value === null) {
+    return defaultValue
+  }
+  if (!/^\d+$/.test(value)) {
+    throw new LegislationError("invalid_request", `${name} must be a positive integer`)
+  }
+  const result = Number(value)
+  if (!Number.isSafeInteger(result) || result < 1 || result > maximum) {
+    throw new LegislationError("invalid_request", `${name} must be between 1 and ${maximum}`)
+  }
+  return result
+}
+
+export function queryOptionalString(url: URL, name: string): string | undefined {
+  const value = url.searchParams.get(name)?.trim()
+  if (value === undefined || value.length === 0) {
+    return undefined
+  }
+  return value
+}
+
+export function queryOptionalBoolean(url: URL, name: string): boolean | undefined {
+  const value = url.searchParams.get(name)
+  if (value === null) {
+    return undefined
+  }
+  if (value === "true") {
+    return true
+  }
+  if (value === "false") {
+    return false
+  }
+  throw new LegislationError("invalid_request", `${name} must be true or false`)
+}
+
+export function queryOptionalDate(url: URL, name: string): Date | undefined {
+  const value = querySingleValue(url, name)
+  if (value === undefined) {
+    return undefined
+  }
+  return parseRfc3339Timestamp(value, name)
+}
+
+export function queryOptionalDateOrTimestamp(url: URL, name: string): Date | undefined {
+  const value = querySingleValue(url, name)
+  if (value === undefined) {
+    return undefined
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const date = parseIsoDate(value, name)
+    return new Date(`${date}T00:00:00.000Z`)
+  }
+  return parseRfc3339Timestamp(value, name, "an ISO date or RFC 3339 timestamp")
+}
+
+export function queryOptionalIsoDate(url: URL, name: string): string | undefined {
+  const value = querySingleValue(url, name)
+  return value === undefined ? undefined : parseIsoDate(value, name)
+}
+
+function parseIsoDate(value: string, name: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  if (match === null) {
+    throw new LegislationError("invalid_request", `${name} must be an ISO date`)
+  }
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const parsed = new Date(Date.UTC(year, month - 1, day))
+  if (
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day ||
+    parsed.toISOString().slice(0, 10) !== value
+  ) {
+    throw new LegislationError("invalid_request", `${name} must be an ISO date`)
+  }
+  return value
+}
+
+function parseRfc3339Timestamp(value: string, name: string, expected = "an RFC 3339 timestamp"): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|[+-]\d{2}:\d{2})$/.exec(value)
+  if (match === null) {
+    throw new LegislationError("invalid_request", `${name} must be ${expected}`)
+  }
+  const year = Number(match[1])
+  const month = Number(match[2])
+  const day = Number(match[3])
+  const hour = Number(match[4])
+  const minute = Number(match[5])
+  const second = Number(match[6])
+  const offset = match[7]
+  const offsetHours = offset === "Z" ? 0 : Number(offset.slice(1, 3))
+  const offsetMinutes = offset === "Z" ? 0 : Number(offset.slice(4, 6))
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate()
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > daysInMonth ||
+    hour > 23 ||
+    minute > 59 ||
+    second > 59 ||
+    offsetHours > 23 ||
+    offsetMinutes > 59
+  ) {
+    throw new LegislationError("invalid_request", `${name} must be ${expected}`)
+  }
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    throw new LegislationError("invalid_request", `${name} must be ${expected}`)
+  }
+  const offsetSign = offset === "Z" || offset.startsWith("+") ? 1 : -1
+  const local = new Date(date.getTime() + offsetSign * (offsetHours * 60 + offsetMinutes) * 60_000)
+  if (
+    local.getUTCFullYear() !== year ||
+    local.getUTCMonth() !== month - 1 ||
+    local.getUTCDate() !== day ||
+    local.getUTCHours() !== hour ||
+    local.getUTCMinutes() !== minute ||
+    local.getUTCSeconds() !== second
+  ) {
+    throw new LegislationError("invalid_request", `${name} must be ${expected}`)
+  }
+  return date
+}
+
+function querySingleValue(url: URL, name: string): string | undefined {
+  const values = url.searchParams.getAll(name)
+  if (values.length === 0) {
+    return undefined
+  }
+  if (values.length !== 1) {
+    throw new LegislationError("invalid_request", `${name} must appear once`)
+  }
+  return values[0]?.trim() ?? ""
+}
+
+export function queryRepeatedStrings(url: URL, name: string): string[] | undefined {
+  const values = url.searchParams
+    .getAll(name)
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0)
+  return values.length === 0 ? undefined : [...new Set(values)]
+}
+
+export function assertAllowedQueryParameters(url: URL, allowed: readonly string[]): void {
+  const allowedParameters = new Set(allowed)
+  for (const name of url.searchParams.keys()) {
+    if (!allowedParameters.has(name)) {
+      throw new LegislationError("invalid_request", `Unsupported query parameter: ${name}`)
+    }
+  }
+}
+
+export async function readJsonBody(request: IncomingMessage, maximumBytes = 1_048_576): Promise<JsonRecord> {
+  const chunks: Buffer[] = []
+  let bytes = 0
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+    bytes += buffer.byteLength
+    if (bytes > maximumBytes) {
+      throw new LegislationError("invalid_request", "Request body exceeds the allowed size")
+    }
+    chunks.push(buffer)
+  }
+  try {
+    const value: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"))
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      throw new LegislationError("invalid_request", "Request body must be a JSON object")
+    }
+    return value as JsonRecord
+  } catch (error) {
+    if (error instanceof LegislationError) {
+      throw error
+    }
+    throw new LegislationError("invalid_request", "Request body must be valid JSON")
+  }
+}
+
+export function stringArrayBody(body: JsonRecord, name: string, maximum = 25): string[] {
+  const value = body[name]
+  if (
+    !Array.isArray(value) ||
+    value.length < 1 ||
+    value.length > maximum ||
+    value.some((item) => typeof item !== "string" || item.trim().length === 0)
+  ) {
+    throw new LegislationError("invalid_request", `${name} must contain between 1 and ${maximum} non-empty IDs`)
+  }
+  return [...new Set(value.map((item) => item.trim()))]
+}
+
+function statusForError(category: LegislationError["category"] | "internal"): number {
+  switch (category) {
+    case "invalid_request":
+      return 400
+    case "unauthorized":
+      return 401
+    case "forbidden":
+      return 403
+    case "not_found":
+      return 404
+    case "conflict":
+      return 409
+    case "precondition_failed":
+      return 412
+    case "unprocessable":
+      return 422
+    case "rate_limited":
+      return 429
+    case "dependency_unavailable":
+      return 503
+    case "internal":
+      return 500
+  }
+}
