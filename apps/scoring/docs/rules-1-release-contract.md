@@ -19,10 +19,16 @@ homologation. Favero material remains reference evidence only.
 
 ## Review handoff
 
-The checked-in record is `approved-root` with `root-independent-reviewer` after
-the root agent independently reviewed the pinned artifact diff and ran the
-recorded checks. Any source change requires a new pending release review before
-the release can be approved again.
+The checked-in record is `approved-root` with reviewer
+`root-independent-reviewer`. The root reviewer independently reviewed the new
+pinned artifact diff and the recorded checks. Any later source change requires
+the record to return to `pending-root-final-review` with no reviewer before it
+can be approved again.
+
+The approved record remains immutable at its recorded `sourceRevision` in Git
+history. If any bound artifact changes, reopen M1-11 and update this same
+canonical record to a pending review at the new coherent source revision; do not
+add a parallel renewal record or silently refresh a digest.
 
 The validator rejects missing, duplicate, extra, and out-of-order required
 traceability or verification identities. It also rejects duplicate artifact

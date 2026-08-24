@@ -135,7 +135,7 @@ implementation has no dependency on an MCU SDK or wall-clock time.
 | M1-08 | done | Root-reviewed independent expectations cover all 54 runtime vectors and 26 FIE/reference vectors below, at, and above every boundary for both sides; 86 focused tests pass. | Generated boundary-vector suite | M1-02 through M1-07 | Every timing boundary runs below, at, and above the limit for both sides with deterministic ordering |
 | M1-09 | done | Root-reviewed bounded property evidence reproduces seeded corpora byte-for-byte, mirrors both sides and decisions, rejects backdated time, and proves unsafe projections cannot score; 8 focused tests pass. | Property tests for monotonic time, symmetry, determinism, and no-hit safety | M1-06, M1-08 | Seeded runs reproduce exactly; left/right mirroring produces mirrored decisions |
 | M1-10 | done | Delivered and root-approved: strict bounded immutable capture records machine, instrument, calibration, uncertainty, raw-artifact, session, observation, and comparison provenance; every relationship is descriptive evidence only and prior-art observations cannot become normative rules, thresholds, pass/fail gates, or scorer-generated expectations. | Reference-machine comparison capture format | M0-07 | Favero or other machine observations can be stored with provenance without becoming normative rules |
-| M1-11 | in-progress | Historical rules-1 approval remains immutable at source revision 8e4681d (211c291). Commit 606ce67 changed the bound FIE traceability artifact without changing scorer behavior; renew the canonical release record at a coherent current revision, reconcile R-02, rerun declared verification, and obtain root review. | Scoring specification release `rules-1` | M1-01 through M1-10 | Focused verification and independent rule review pass; traceability ledger is complete |
+| M1-11 | done | Delivered and root-approved: the canonical `rules-1` record is renewed at source revision `afc7e6d` after all 39 bound Git blobs matched, the 14-file suite passed 353 tests, the release suite passed 3 tests, and TypeScript, lint, format, and whitespace checks passed. Historical approval at `8e4681d` remains immutable; analog, target, HIL, production, fabrication, and FIE approval gates remain open. | Scoring specification release `rules-1` | M1-01 through M1-10 | Focused verification and independent rule review pass; traceability ledger is complete |
 
 ## M2: Deterministic virtual apparatus and replay
 
@@ -358,7 +358,6 @@ A milestone closes only when:
 4. documents and machine-readable manifests agree with the implementation;
 5. an independent reviewer has resolved every release-blocking comment; and
 6. remaining risks, assumptions, and deferred work are named in the next milestone entry criteria.
-
 
 
 
