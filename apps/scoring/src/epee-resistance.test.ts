@@ -6,7 +6,14 @@ import {
   type EpeeResistanceSample,
   type ResistanceMeasurement
 } from "./epee-resistance.js"
-import { EPEE_RULES, type Side } from "./epee.js"
+import {
+  EPEE_RULES,
+  advanceEpeeScoring,
+  createEpeeScoringState,
+  type EpeeContact,
+  type EpeeSample,
+  type Side
+} from "./epee.js"
 
 const NO_MEASUREMENT: ResistanceMeasurement = {
   resistanceMilliOhms: null,
@@ -32,6 +39,9 @@ const OPEN: EpeeResistanceContact = {
   groundedMaterial: "not-grounded",
   lineIntegrity: "intact"
 }
+const SIMPLE_OPEN: EpeeContact = { isGrounded: false, isTipClosed: false }
+const SIMPLE_HIT: EpeeContact = { isGrounded: false, isTipClosed: true }
+const SIMPLE_GROUNDED: EpeeContact = { isGrounded: true, isTipClosed: true }
 
 function closed(contactResistance: ResistanceMeasurement): EpeeResistanceContact {
   return {
@@ -67,6 +77,10 @@ function sample(atUs: number, left = OPEN, right = OPEN): EpeeResistanceSample {
   return { atUs, left, right }
 }
 
+function simpleSample(atUs: number, left = SIMPLE_OPEN, right = SIMPLE_OPEN): EpeeSample {
+  return { atUs, left, right }
+}
+
 function replay(samples: readonly EpeeResistanceSample[]) {
   return samples.reduce(
     (state, sample) => advanceEpeeResistanceScoring(state, sample),
@@ -82,7 +96,71 @@ function atSide(side: Side, atUs: number, contact: EpeeResistanceContact): EpeeR
   return side === "left" ? sample(atUs, contact) : sample(atUs, OPEN, contact)
 }
 
+function toResistanceContact(contact: EpeeContact, resistance: ResistanceMeasurement): EpeeResistanceContact {
+  if (!contact.isTipClosed) {
+    return OPEN
+  }
+
+  return contact.isGrounded ? grounded(EXCEPTIONAL_100_OHM) : closed(resistance)
+}
+
+function toResistanceSample(sample: EpeeSample, resistance: ResistanceMeasurement): EpeeResistanceSample {
+  return {
+    atUs: sample.atUs,
+    left: toResistanceContact(sample.left, resistance),
+    right: toResistanceContact(sample.right, resistance)
+  }
+}
+
 describe("epée resistance scoring", () => {
+  it.each([NORMAL_10_OHM, EXCEPTIONAL_100_OHM] as const)(
+    "matches simple-contact hits and lock state for exact %d milli-ohm observations",
+    (resistance) => {
+      const simpleCases = [
+        [
+          simpleSample(0, SIMPLE_HIT),
+          simpleSample(1, SIMPLE_HIT, SIMPLE_HIT),
+          simpleSample(2_001, SIMPLE_HIT, SIMPLE_HIT),
+          simpleSample(EPEE_RULES.lockoutTimeUs + 1, SIMPLE_HIT, SIMPLE_HIT)
+        ],
+        [
+          simpleSample(0, SIMPLE_HIT),
+          simpleSample(2_000, SIMPLE_HIT),
+          simpleSample(EPEE_RULES.lockoutTimeUs - 1, SIMPLE_HIT, SIMPLE_HIT),
+          simpleSample(EPEE_RULES.lockoutTimeUs + 1, SIMPLE_HIT, SIMPLE_HIT),
+          simpleSample(EPEE_RULES.lockoutTimeUs - 1 + EPEE_RULES.contactTimeUs, SIMPLE_HIT, SIMPLE_HIT)
+        ],
+        [
+          simpleSample(0, SIMPLE_HIT),
+          simpleSample(1_000, SIMPLE_GROUNDED),
+          simpleSample(2_000, SIMPLE_HIT),
+          simpleSample(4_000, SIMPLE_HIT)
+        ]
+      ]
+      for (const simpleSamples of simpleCases) {
+        const simpleState = simpleSamples.reduce(
+          (state, nextSample) => advanceEpeeScoring(state, nextSample),
+          createEpeeScoringState()
+        )
+        const resistanceState = simpleSamples
+          .map((nextSample) => toResistanceSample(nextSample, resistance))
+          .reduce(
+            (state, nextSample) => advanceEpeeResistanceScoring(state, nextSample),
+            createEpeeResistanceScoringState()
+          )
+
+        expect({
+          firstHitAtUs: resistanceState.firstHitAtUs,
+          hits: resistanceState.hits,
+          isLocked: resistanceState.isLocked,
+          lastSampleAtUs: resistanceState.lastSampleAtUs,
+          left: resistanceState.left,
+          right: resistanceState.right
+        }).toEqual(simpleState)
+      }
+    }
+  )
+
   it("registers a normal 10 ohm contact observed for ten milliseconds", () => {
     const state = replay([sample(0, closed(NORMAL_10_OHM)), sample(10_000, closed(NORMAL_10_OHM))])
 

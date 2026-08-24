@@ -18,7 +18,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 
 | Rank | ID | Priority | State | Finding |
 | --- | --- | --- | --- | --- |
-| 1 | SD-001 | P1 | ready | Epee contact and lockout mechanics are implemented twice |
+| 1 | SD-001 | P1 | done | One private epee lifecycle kernel now owns contact qualification, hit ordering, and lockout mechanics |
 | 2 | SD-002 | P1 | ready | Prototype `device.ts` is still an exported parallel emulator/protocol path |
 | 3 | SD-005 | P1 | ready | STM32, ESP32, and TypeScript transport codecs do not share one executable source of truth |
 | 4 | SD-003 | P2 | ready | Virtual STM32 and ESP32 duplicate canonical-data cloning and boundary checks |
@@ -39,9 +39,9 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SD-001: consolidate epee contact and lockout mechanics
 
 - Priority: `P1`
-- State: `ready`
+- State: `done`
 - Affected files: [`apps/scoring/src/epee.ts`](../src/epee.ts) (lines 65-182), [`apps/scoring/src/epee-resistance.ts`](../src/epee-resistance.ts) (lines 240-381), and their two test files.
-- Description and evidence: `epee.ts` advances a side through valid-contact, candidate, registered, hit, and lockout states in `advanceContact`, `compareHits`, `isPendingInsideLockout`, and `advanceEpeeScoring`. `epee-resistance.ts` repeats the same lifecycle in its own `advanceContact`, `compareHits`, `isPendingInsideLockout`, and `advanceEpeeResistanceScoring`; the resistance version only adds classification and diagnostic decisions. The two modules therefore repeat the side advances, first-hit selection, ordering, and provisional cutoff arithmetic instead of sharing a small timing kernel.
+- Delivered: one private pee-contact-kernel now owns side lifecycle, first-hit ordering, pending-candidate cutoff, lockout, and monotonic-time handling. Simple and resistance scorers retain their public types and supply only their classification/diagnostic policy. Root review passed 65 focused tests, app type-check, lint, and format checks.
 - Impact: a change to contact duration, start-time ordering, or the retained lockout boundary can be fixed in one scorer and missed in the other. The duplicated tests prove each implementation locally, but do not prove that the common normal-contact behavior stays equivalent.
 - Bounded remediation: extract one private app-local helper for the side lifecycle and hit ordering. Let each scorer supply a small classification result (`candidate`, `open`, or `decision`) and retain the resistance scorer's decision list outside the helper. Keep the existing public state and scorer functions.
 - Dependencies: the selected `TimingTable` contract and existing epee/resistance golden scenarios.
@@ -342,4 +342,5 @@ truth.
   - All three native host projects and the STM32 target configure and build.
   - A configure-time assertion proves every first-party native target receives the baseline warning policy.
   - `node apps/scoring/firmware/tools/check-coverage.mjs` still passes the 100-percent core and 80-percent other-source gates.
+
 
