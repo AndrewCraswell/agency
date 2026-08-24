@@ -7,6 +7,8 @@
  * raw relation evidence needed by later projection and capture work.
  */
 
+import { assertIntegerMicroseconds } from "./scoring-glossary-and-units.js"
+
 const DEFAULT_HISTORY_LIMIT = 64
 const DEFAULT_MAX_RELATIONS_PER_SNAPSHOT = 32
 const MAX_IDENTIFIER_LENGTH = 120
@@ -38,6 +40,130 @@ export const VIRTUAL_FRONT_END_PHASE_IDS = [
 export type VirtualFrontEndConductorId = (typeof VIRTUAL_FRONT_END_CONDUCTOR_IDS)[number]
 
 export type VirtualFrontEndPhaseId = (typeof VIRTUAL_FRONT_END_PHASE_IDS)[number]
+
+/** The weapon is derived from the phase ID.  Frames never carry both fields. */
+export type VirtualFrontEndWeapon = "epee" | "foil" | "sabre"
+
+export type VirtualFrontEndCycleStage = "fault" | "observe" | "release" | "safe-inactive" | "select-source" | "settle"
+
+type VirtualFrontEndEndpointTemplate = readonly [
+  "own.A" | "own.B" | "own.C",
+  "opposing.A" | "opposing.B" | "opposing.C" | "piste" | "own.A" | "own.B" | "own.C"
+]
+
+export type VirtualFrontEndPhaseProfile = Readonly<{
+  allowedEndpointTemplates: readonly VirtualFrontEndEndpointTemplate[]
+  id: VirtualFrontEndPhaseId
+  perspective: VirtualFrontEndPerspective
+  requiredRelationCount: number
+  sourceConductor: "A" | "B"
+  weapon: VirtualFrontEndWeapon
+}>
+
+/**
+ * Machine-readable M0-03 relation contract. These are logical endpoint
+ * relations, not a connector assignment or an analogue circuit claim.
+ */
+export const VIRTUAL_FRONT_END_PHASE_PROFILES: readonly VirtualFrontEndPhaseProfile[] = [
+  {
+    allowedEndpointTemplates: [["own.A", "own.B"]],
+    id: "foil-circuit-integrity",
+    perspective: "acting-side",
+    requiredRelationCount: 1,
+    sourceConductor: "A",
+    weapon: "foil"
+  },
+  {
+    allowedEndpointTemplates: [
+      ["own.A", "opposing.C"],
+      ["own.A", "piste"]
+    ],
+    id: "foil-target-context",
+    perspective: "acting-side",
+    requiredRelationCount: 2,
+    sourceConductor: "A",
+    weapon: "foil"
+  },
+  {
+    allowedEndpointTemplates: [["own.A", "own.C"]],
+    id: "foil-insulation-diagnostic",
+    perspective: "affected-side",
+    requiredRelationCount: 1,
+    sourceConductor: "A",
+    weapon: "foil"
+  },
+  {
+    allowedEndpointTemplates: [["own.A", "own.B"]],
+    id: "epee-tip-loop",
+    perspective: "affected-side",
+    requiredRelationCount: 1,
+    sourceConductor: "A",
+    weapon: "epee"
+  },
+  {
+    allowedEndpointTemplates: [["own.A", "piste"]],
+    id: "epee-ground-reference",
+    perspective: "affected-side",
+    requiredRelationCount: 1,
+    sourceConductor: "A",
+    weapon: "epee"
+  },
+  {
+    allowedEndpointTemplates: [
+      ["own.A", "own.B"],
+      ["own.A", "own.C"],
+      ["own.B", "own.C"]
+    ],
+    id: "epee-line-integrity",
+    perspective: "affected-side",
+    requiredRelationCount: 3,
+    sourceConductor: "A",
+    weapon: "epee"
+  },
+  {
+    allowedEndpointTemplates: [["own.A", "opposing.C"]],
+    id: "sabre-target-contact",
+    perspective: "acting-side",
+    requiredRelationCount: 1,
+    sourceConductor: "A",
+    weapon: "sabre"
+  },
+  {
+    allowedEndpointTemplates: [["own.A", "own.C"]],
+    id: "sabre-own-equipment",
+    perspective: "affected-side",
+    requiredRelationCount: 1,
+    sourceConductor: "A",
+    weapon: "sabre"
+  },
+  {
+    allowedEndpointTemplates: [["own.B", "opposing.B"]],
+    id: "sabre-blade-contact",
+    perspective: "acting-side",
+    requiredRelationCount: 1,
+    sourceConductor: "B",
+    weapon: "sabre"
+  },
+  {
+    allowedEndpointTemplates: [["own.B", "own.C"]],
+    id: "sabre-bc-control",
+    perspective: "affected-side",
+    requiredRelationCount: 1,
+    sourceConductor: "B",
+    weapon: "sabre"
+  }
+] as const
+
+/** BP-103 net labels are physical aliases only; they are never logical IDs. */
+export const VIRTUAL_FRONT_END_BP103_PHYSICAL_ALIASES = Object.freeze({
+  "left.A": "LEFT_WEAPON_A",
+  "left.B": "LEFT_WEAPON_B",
+  "left.C": "LEFT_WEAPON_C",
+  piste: "PISTE",
+  "right.A": "RIGHT_WEAPON_A",
+  "right.B": "RIGHT_WEAPON_B",
+  "right.C": "RIGHT_WEAPON_C"
+} as const)
 
 export type VirtualFrontEndSide = "left" | "right"
 
@@ -149,17 +275,110 @@ export type VirtualFrontEndState = {
   snapshots: readonly VirtualFrontEndSnapshot[]
 }
 
-const PHASE_PERSPECTIVES: Readonly<Record<VirtualFrontEndPhaseId, VirtualFrontEndPerspective>> = {
-  "epee-ground-reference": "affected-side",
-  "epee-line-integrity": "affected-side",
-  "epee-tip-loop": "affected-side",
-  "foil-circuit-integrity": "acting-side",
-  "foil-insulation-diagnostic": "affected-side",
-  "foil-target-context": "acting-side",
-  "sabre-bc-control": "affected-side",
-  "sabre-blade-contact": "acting-side",
-  "sabre-own-equipment": "affected-side",
-  "sabre-target-contact": "acting-side"
+/** A strict, phase-sequenced M0-03 command. `weapon` is deliberately absent. */
+export type VirtualFrontEndCycleCommand = Readonly<{
+  atUs: number
+  cycleId: string
+  phaseId: VirtualFrontEndPhaseId
+  relations: readonly VirtualFrontEndRelationInput[] | null
+  side: VirtualFrontEndSide
+  source: VirtualFrontEndConductorId | null
+  stage: VirtualFrontEndCycleStage
+}>
+
+export type VirtualFrontEndCycleDiagnostic =
+  | "cross-line"
+  | "cycle-incomplete"
+  | "out-of-range-resistance"
+  | "safe-state"
+  | "sample-overrun"
+  | "stale-sample"
+  | "uncertain-evidence"
+  | "unauthorized-excitation"
+
+export type VirtualFrontEndCycleReceipt = Readonly<{
+  diagnostic: VirtualFrontEndCycleDiagnostic | null
+  phaseId: VirtualFrontEndPhaseId
+  safeInactive: boolean
+  snapshot: VirtualFrontEndSnapshot | null
+  stage: VirtualFrontEndCycleStage
+  status: "fault" | "observed" | "released" | "safe-inactive" | "selected" | "settled"
+  weapon: VirtualFrontEndWeapon
+}>
+
+export type VirtualFrontEndCycleState = Readonly<{
+  frontEnd: VirtualFrontEndState
+  lastAtUs: number | null
+  nextStage: "safe-inactive" | "select-source" | "settle" | "observe" | "release"
+  openCycleId: string | null
+  phaseId: VirtualFrontEndPhaseId | null
+  side: VirtualFrontEndSide | null
+}>
+
+function profileFor(phaseId: VirtualFrontEndPhaseId): VirtualFrontEndPhaseProfile {
+  const profile = VIRTUAL_FRONT_END_PHASE_PROFILES.find((candidate) => candidate.id === phaseId)
+  if (profile === undefined) {
+    throw new RangeError("Virtual front-end phases must use a declared M0-03 phase ID")
+  }
+  return profile
+}
+
+function conductorFor(side: VirtualFrontEndSide, label: "A" | "B" | "C"): VirtualFrontEndConductorId {
+  return `${side}.${label}` as VirtualFrontEndConductorId
+}
+
+function otherSide(side: VirtualFrontEndSide): VirtualFrontEndSide {
+  return side === "left" ? "right" : "left"
+}
+
+function resolveEndpointTemplate(
+  template: VirtualFrontEndEndpointTemplate,
+  side: VirtualFrontEndSide
+): readonly [VirtualFrontEndConductorId, VirtualFrontEndConductorId] {
+  const resolve = (endpoint: VirtualFrontEndEndpointTemplate[number]): VirtualFrontEndConductorId => {
+    if (endpoint === "piste") {
+      return "piste"
+    }
+    const [owner, conductor] = endpoint.split(".") as ["own" | "opposing", "A" | "B" | "C"]
+    return conductorFor(owner === "own" ? side : otherSide(side), conductor)
+  }
+  const first = resolve(template[0])
+  const second = resolve(template[1])
+  return first < second ? [first, second] : [second, first]
+}
+
+function endpointKey(endpoints: readonly [VirtualFrontEndConductorId, VirtualFrontEndConductorId]): string {
+  return `${endpoints[0]}\u0000${endpoints[1]}`
+}
+
+function phaseAllowsEndpoints(
+  profile: VirtualFrontEndPhaseProfile,
+  side: VirtualFrontEndSide,
+  endpoints: readonly [VirtualFrontEndConductorId, VirtualFrontEndConductorId]
+): boolean {
+  const key = endpointKey(endpoints)
+  return profile.allowedEndpointTemplates.some(
+    (template) => endpointKey(resolveEndpointTemplate(template, side)) === key
+  )
+}
+
+function hasCompleteProfileRelationSet(
+  profile: VirtualFrontEndPhaseProfile,
+  side: VirtualFrontEndSide,
+  relations: readonly VirtualFrontEndRelationReading[]
+): boolean {
+  if (relations.length !== profile.requiredRelationCount) {
+    return false
+  }
+  const expected = new Set(
+    profile.allowedEndpointTemplates.map((template) => endpointKey(resolveEndpointTemplate(template, side)))
+  )
+  const actual = new Set(relations.map((relation) => endpointKey(relation.endpoints)))
+  return (
+    expected.size === profile.requiredRelationCount &&
+    actual.size === expected.size &&
+    [...actual].every((key) => expected.has(key))
+  )
 }
 
 function assertNonNegativeSafeInteger(value: number, description: string): void {
@@ -233,7 +452,8 @@ function assertPhase(phase: VirtualFrontEndPhase): void {
     throw new RangeError("Virtual front-end phases must identify the left or right side")
   }
 
-  if (phase.perspective !== PHASE_PERSPECTIVES[phase.id]) {
+  const profile = profileFor(phase.id)
+  if (phase.perspective !== profile.perspective) {
     throw new RangeError("Virtual front-end phases must use their declared M0-03 perspective")
   }
 
@@ -248,6 +468,9 @@ function assertPhase(phase: VirtualFrontEndPhase): void {
   if (phase.excitation.state === "active") {
     if (!isConductorId(phase.excitation.owner)) {
       throw new RangeError("Active virtual front-end excitation requires one declared conductor owner")
+    }
+    if (phase.excitation.owner !== conductorFor(phase.side, profile.sourceConductor)) {
+      throw new RangeError("Virtual front-end excitation owner is not authorized for its M0-03 phase")
     }
   } else if (phase.excitation.state === "inactive") {
     if (phase.excitation.owner !== null) {
@@ -337,7 +560,11 @@ function assertFaultState(state: VirtualFrontEndRelationState, faultCode: Virtua
   }
 }
 
-function normalizeRelation(input: VirtualFrontEndRelationInput): VirtualFrontEndRelationReading {
+function normalizeRelation(
+  input: VirtualFrontEndRelationInput,
+  profile?: VirtualFrontEndPhaseProfile,
+  side?: VirtualFrontEndSide
+): VirtualFrontEndRelationReading {
   assertIdentifier(input.id, "Virtual front-end relation IDs")
 
   const [first, second] = input.endpoints
@@ -349,17 +576,21 @@ function normalizeRelation(input: VirtualFrontEndRelationInput): VirtualFrontEnd
     throw new RangeError("Virtual front-end readings must use a declared relation state")
   }
 
-  assertFaultState(input.state, input.faultCode)
+  const endpointIsLegal =
+    profile === undefined || side === undefined || phaseAllowsEndpoints(profile, side, [first, second])
+  const state = endpointIsLegal ? input.state : "crossLine"
+  const faultCode = endpointIsLegal ? input.faultCode : "cross-line"
+  assertFaultState(state, faultCode)
   assertIdentifier(input.provenance.sourceId, "Virtual front-end provenance source IDs")
   assertNonNegativeSafeInteger(input.provenance.observedAtUs, "Virtual front-end provenance timestamps")
 
   return {
     endpoints: [first, second],
-    faultCode: input.faultCode,
+    faultCode,
     id: input.id,
     provenance: { ...input.provenance },
     resistance: toResistance(input.resistanceMilliOhms, input.resistanceUncertaintyMilliOhms),
-    state: input.state
+    state
   }
 }
 
@@ -425,7 +656,16 @@ function calculateTrust(
   relations: readonly VirtualFrontEndRelationReading[],
   contradictoryRelationIds: readonly string[]
 ): VirtualFrontEndAvailability {
-  if (phase.status === "unavailable" || relations.some((relation) => relation.state === "unavailable")) {
+  if (
+    phase.status === "unavailable" ||
+    relations.some(
+      (relation) =>
+        relation.state === "crossLine" ||
+        relation.state === "outOfRange" ||
+        relation.state === "unavailable" ||
+        relation.faultCode === "sample-overrun"
+    )
+  ) {
     return "unavailable"
   }
 
@@ -440,14 +680,17 @@ function calculateTrust(
   return "available"
 }
 
-function validateDeclaredAvailability(
-  phase: VirtualFrontEndPhase,
-  relations: readonly VirtualFrontEndRelationReading[],
-  contradictoryRelationIds: readonly string[]
-): void {
-  const derivedTrust = calculateTrust(phase, relations, contradictoryRelationIds)
-  if (derivedTrust !== phase.status) {
-    throw new RangeError("Virtual front-end phase status must preserve unavailable or indeterminate relation evidence")
+function failClosedPhase(phase: VirtualFrontEndPhase, trust: VirtualFrontEndAvailability): VirtualFrontEndPhase {
+  if (trust === "available") {
+    return clonePhase(phase)
+  }
+  return {
+    excitation: { owner: null, state: "inactive" },
+    id: phase.id,
+    perspective: phase.perspective,
+    safeInactive: true,
+    side: phase.side,
+    status: trust
   }
 }
 
@@ -631,15 +874,15 @@ function normalizeFrame(
 
   relations.sort(compareRelations)
   const contradictoryRelationIds = collectContradictions(relations)
-  validateDeclaredAvailability(frame.phase, relations, contradictoryRelationIds)
+  const trust = calculateTrust(frame.phase, relations, contradictoryRelationIds)
 
   return {
     atUs: frame.atUs,
     contradictoryRelationIds,
-    phase: clonePhase(frame.phase),
+    phase: failClosedPhase(frame.phase, trust),
     relations,
     transitions: collectTransitions(previous, relations, frame.atUs),
-    trust: calculateTrust(frame.phase, relations, contradictoryRelationIds)
+    trust
   }
 }
 
@@ -745,4 +988,293 @@ export function advanceVirtualFrontEnd(
   const snapshots = [...state.snapshots, current].slice(-historyLimit)
 
   return { current, lastAtUs: frame.atUs, snapshots }
+}
+
+export function createVirtualFrontEndCycleState(): VirtualFrontEndCycleState {
+  return deepFreezeCycleValue({
+    frontEnd: createVirtualFrontEndState(),
+    lastAtUs: null,
+    nextStage: "safe-inactive",
+    openCycleId: null,
+    phaseId: null,
+    side: null
+  })
+}
+
+function plainDataRecord(value: unknown, expected: readonly string[], description: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Object.getPrototypeOf(value) !== Object.prototype) {
+    throw new TypeError(`${description} must be a plain object`)
+  }
+  const keys = Reflect.ownKeys(value)
+  if (keys.length !== expected.length || keys.some((key) => typeof key !== "string" || !expected.includes(key))) {
+    throw new TypeError(`${description} has missing or unrecognized fields`)
+  }
+  const result: Record<string, unknown> = {}
+  for (const key of expected) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (descriptor === undefined || !("value" in descriptor) || !descriptor.enumerable) {
+      throw new TypeError(`${description} must use own enumerable data properties`)
+    }
+    result[key] = descriptor.value
+  }
+  return result
+}
+
+function plainDataArray(value: unknown, description: string, seen: WeakSet<object>): readonly unknown[] {
+  if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype || seen.has(value)) {
+    throw new TypeError(`${description} must be an unaliased plain array`)
+  }
+  seen.add(value)
+  const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length")
+  if (lengthDescriptor === undefined || !("value" in lengthDescriptor) || typeof lengthDescriptor.value !== "number") {
+    throw new TypeError(`${description} must have a data length`)
+  }
+  const length = lengthDescriptor.value
+  const keys = Reflect.ownKeys(value)
+  const expected = [...Array.from({ length }, (_, index) => String(index)), "length"]
+  if (keys.length !== expected.length || expected.some((key) => !keys.includes(key))) {
+    throw new TypeError(`${description} must be dense and have no extra properties`)
+  }
+  const copied: unknown[] = []
+  for (let index = 0; index < length; index += 1) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, String(index))
+    if (descriptor === undefined || !("value" in descriptor) || !descriptor.enumerable) {
+      throw new TypeError(`${description} must contain enumerable data elements`)
+    }
+    copied.push(descriptor.value)
+  }
+  return copied
+}
+
+function cloneCycleRelation(value: unknown, seen: WeakSet<object>): VirtualFrontEndRelationInput {
+  if (typeof value === "object" && value !== null && seen.has(value)) {
+    throw new TypeError("Virtual front-end cycle relations cannot alias another command value")
+  }
+  if (typeof value === "object" && value !== null) seen.add(value)
+  const relation = plainDataRecord(
+    value,
+    ["endpoints", "faultCode", "id", "provenance", "resistanceMilliOhms", "resistanceUncertaintyMilliOhms", "state"],
+    "Virtual front-end cycle relations"
+  )
+  const endpoints = plainDataArray(relation.endpoints, "Virtual front-end cycle relation endpoints", seen)
+  if (endpoints.length !== 2) {
+    throw new TypeError("Virtual front-end cycle relation endpoints must contain exactly two values")
+  }
+  if (typeof relation.provenance === "object" && relation.provenance !== null && seen.has(relation.provenance)) {
+    throw new TypeError("Virtual front-end cycle relation provenance cannot alias another command value")
+  }
+  if (typeof relation.provenance === "object" && relation.provenance !== null) seen.add(relation.provenance)
+  const provenance = plainDataRecord(
+    relation.provenance,
+    ["observedAtUs", "sourceId"],
+    "Virtual front-end cycle relation provenance"
+  )
+  return {
+    endpoints: [endpoints[0] as VirtualFrontEndConductorId, endpoints[1] as VirtualFrontEndConductorId],
+    faultCode: relation.faultCode as VirtualFrontEndFaultCode | null,
+    id: relation.id as string,
+    provenance: { observedAtUs: provenance.observedAtUs as number, sourceId: provenance.sourceId as string },
+    resistanceMilliOhms: relation.resistanceMilliOhms as number | null,
+    resistanceUncertaintyMilliOhms: relation.resistanceUncertaintyMilliOhms as number | null,
+    state: relation.state as VirtualFrontEndRelationState
+  }
+}
+
+function validateCycleCommand(command: unknown): VirtualFrontEndCycleCommand {
+  const values = plainDataRecord(
+    command,
+    ["atUs", "cycleId", "phaseId", "relations", "side", "source", "stage"],
+    "Virtual front-end cycle commands"
+  )
+  assertIntegerMicroseconds(values.atUs, "Virtual front-end cycle timestamps")
+  if (typeof values.cycleId !== "string") {
+    throw new TypeError("Virtual front-end cycle IDs must be strings")
+  }
+  assertIdentifier(values.cycleId, "Virtual front-end cycle IDs")
+  if (!isPhaseId(values.phaseId) || (values.side !== "left" && values.side !== "right")) {
+    throw new RangeError("Virtual front-end cycle commands must identify a declared phase and side")
+  }
+  if (
+    values.stage !== "safe-inactive" &&
+    values.stage !== "select-source" &&
+    values.stage !== "settle" &&
+    values.stage !== "observe" &&
+    values.stage !== "release" &&
+    values.stage !== "fault"
+  ) {
+    throw new RangeError("Virtual front-end cycle commands must use a declared acquisition stage")
+  }
+  const activeStage = values.stage === "select-source" || values.stage === "settle" || values.stage === "observe"
+  if (activeStage ? !isConductorId(values.source) : values.source !== null) {
+    throw new TypeError("Virtual front-end cycle source witnesses must match their acquisition stage")
+  }
+  if (values.stage === "observe") {
+    if (!Array.isArray(values.relations)) {
+      throw new TypeError("Observe cycle commands require a complete relation collection")
+    }
+  } else if (values.relations !== null) {
+    throw new TypeError("Only observe cycle commands may carry relations")
+  }
+  const seen = new WeakSet<object>()
+  if (typeof command === "object" && command !== null) seen.add(command)
+  const observedRelations = values.relations
+  const relations =
+    values.stage === "observe"
+      ? plainDataArray(observedRelations, "Virtual front-end cycle relations", seen).map((relation) =>
+          cloneCycleRelation(relation, seen)
+        )
+      : null
+  return {
+    atUs: values.atUs,
+    cycleId: values.cycleId,
+    phaseId: values.phaseId,
+    relations,
+    side: values.side,
+    source: values.source as VirtualFrontEndConductorId | null,
+    stage: values.stage
+  }
+}
+
+function cycleReceipt(
+  profile: VirtualFrontEndPhaseProfile,
+  stage: VirtualFrontEndCycleStage,
+  status: VirtualFrontEndCycleReceipt["status"],
+  safeInactive: boolean,
+  diagnostic: VirtualFrontEndCycleDiagnostic | null,
+  snapshot: VirtualFrontEndSnapshot | null
+): VirtualFrontEndCycleReceipt {
+  return deepFreezeCycleValue({
+    diagnostic,
+    phaseId: profile.id,
+    safeInactive,
+    snapshot,
+    stage,
+    status,
+    weapon: profile.weapon
+  })
+}
+
+function deepFreezeCycleValue<Value>(value: Value): Value {
+  if (typeof value !== "object" || value === null || Object.isFrozen(value)) return value
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (descriptor !== undefined && "value" in descriptor) deepFreezeCycleValue(descriptor.value)
+  }
+  return Object.freeze(value)
+}
+
+function cycleResult(
+  receipt: VirtualFrontEndCycleReceipt,
+  state: VirtualFrontEndCycleState
+): Readonly<{ receipt: VirtualFrontEndCycleReceipt; state: VirtualFrontEndCycleState }> {
+  return deepFreezeCycleValue({ receipt, state })
+}
+
+function faultDiagnostic(snapshot: VirtualFrontEndSnapshot): VirtualFrontEndCycleDiagnostic {
+  if (snapshot.relations.some((relation) => relation.faultCode === "cross-line")) return "cross-line"
+  if (snapshot.relations.some((relation) => relation.faultCode === "out-of-range-resistance")) {
+    return "out-of-range-resistance"
+  }
+  if (snapshot.relations.some((relation) => relation.faultCode === "sample-overrun")) return "sample-overrun"
+  return "uncertain-evidence"
+}
+
+/**
+ * Applies the M0-03 acquisition ordering. A sequence failure returns a safe
+ * inactive fault receipt; malformed commands still throw rather than being
+ * reinterpreted as an electrical observation.
+ */
+export function advanceVirtualFrontEndCycle(
+  state: VirtualFrontEndCycleState,
+  input: unknown
+): Readonly<{ receipt: VirtualFrontEndCycleReceipt; state: VirtualFrontEndCycleState }> {
+  const command = validateCycleCommand(input)
+  const profile = profileFor(command.phaseId)
+  const fault = (diagnostic: VirtualFrontEndCycleDiagnostic) =>
+    cycleResult(cycleReceipt(profile, "fault", "fault", true, diagnostic, null), {
+      ...state,
+      lastAtUs: command.atUs,
+      nextStage: "safe-inactive" as const,
+      openCycleId: null,
+      phaseId: null,
+      side: null
+    })
+
+  if (state.lastAtUs !== null && command.atUs <= state.lastAtUs) return fault("stale-sample")
+  if (command.source !== null && command.source !== conductorFor(command.side, profile.sourceConductor))
+    return fault("unauthorized-excitation")
+  if (command.stage === "fault") return fault("safe-state")
+  if (command.stage !== state.nextStage) return fault("cycle-incomplete")
+  if (
+    state.openCycleId !== null &&
+    (command.cycleId !== state.openCycleId || command.phaseId !== state.phaseId || command.side !== state.side)
+  ) {
+    return fault("cycle-incomplete")
+  }
+
+  if (command.stage === "safe-inactive") {
+    return cycleResult(cycleReceipt(profile, command.stage, "safe-inactive", true, null, null), {
+      ...state,
+      lastAtUs: command.atUs,
+      nextStage: "select-source" as const,
+      openCycleId: command.cycleId,
+      phaseId: command.phaseId,
+      side: command.side
+    })
+  }
+  if (command.stage === "select-source" || command.stage === "settle") {
+    return cycleResult(
+      cycleReceipt(
+        profile,
+        command.stage,
+        command.stage === "select-source" ? "selected" : "settled",
+        false,
+        null,
+        null
+      ),
+      { ...state, lastAtUs: command.atUs, nextStage: command.stage === "select-source" ? "settle" : "observe" }
+    )
+  }
+  if (command.stage === "release") {
+    return cycleResult(cycleReceipt(profile, command.stage, "released", true, null, null), {
+      ...state,
+      lastAtUs: command.atUs,
+      nextStage: "safe-inactive" as const,
+      openCycleId: null,
+      phaseId: null,
+      side: null
+    })
+  }
+
+  const relations = command.relations
+  if (relations === null) {
+    throw new Error("Observe cycle commands require relations after validation")
+  }
+  const snapshotState = advanceVirtualFrontEnd(state.frontEnd, {
+    atUs: command.atUs,
+    phase: {
+      excitation: { owner: conductorFor(command.side, profile.sourceConductor), state: "active" },
+      id: command.phaseId,
+      perspective: profile.perspective,
+      safeInactive: false,
+      side: command.side,
+      status: "available"
+    },
+    relations: relations.map((relation) =>
+      phaseAllowsEndpoints(profile, command.side, relation.endpoints)
+        ? relation
+        : { ...relation, faultCode: "cross-line" as const, state: "crossLine" as const }
+    )
+  })
+  const snapshot = snapshotState.current!
+  if (!hasCompleteProfileRelationSet(profile, command.side, snapshot.relations) || snapshot.trust !== "available") {
+    const failed = fault(snapshot.trust === "available" ? "cycle-incomplete" : faultDiagnostic(snapshot))
+    return cycleResult(failed.receipt, { ...failed.state, frontEnd: snapshotState })
+  }
+  return cycleResult(cycleReceipt(profile, command.stage, "observed", false, null, snapshot), {
+    ...state,
+    frontEnd: snapshotState,
+    lastAtUs: command.atUs,
+    nextStage: "release"
+  })
 }

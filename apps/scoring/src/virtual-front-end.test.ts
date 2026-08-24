@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest"
 import {
   advanceVirtualFrontEnd,
+  advanceVirtualFrontEndCycle,
+  createVirtualFrontEndCycleState,
   createVirtualFrontEndState,
   validateVirtualFrontEndSnapshot,
   VIRTUAL_FRONT_END_CONDUCTOR_IDS,
+  VIRTUAL_FRONT_END_PHASE_PROFILES,
   type VirtualFrontEndFrame,
   type VirtualFrontEndPhase,
   type VirtualFrontEndRelationInput
@@ -158,6 +161,7 @@ describe("virtual front-end", () => {
     const grounded = advanceVirtualFrontEnd(
       createVirtualFrontEndState(),
       frame({
+        phase: { ...activeEpeePhase, id: "epee-ground-reference" },
         relations: [
           relation({
             endpoints: ["left.A", "piste"],
@@ -473,14 +477,12 @@ describe("virtual front-end", () => {
     expect(() =>
       advanceVirtualFrontEnd(createVirtualFrontEndState(), frame({ relations: [relation({ id: "a".repeat(121) })] }))
     ).toThrow(new RangeError("Virtual front-end relation IDs must be a non-empty string no longer than 120 characters"))
-    expect(() =>
+    expect(
       advanceVirtualFrontEnd(
         createVirtualFrontEndState(),
         frame({ relations: [relation({ id: "untrusted", state: "indeterminate" })] })
-      )
-    ).toThrow(
-      new RangeError("Virtual front-end phase status must preserve unavailable or indeterminate relation evidence")
-    )
+      ).current
+    ).toMatchObject({ phase: { safeInactive: true, status: "indeterminate" }, trust: "indeterminate" })
     expect(() => advanceVirtualFrontEnd(createVirtualFrontEndState(), frame(), { historyLimit: 0 })).toThrow(
       new RangeError("Virtual front-end collection limits must be greater than zero")
     )
@@ -549,5 +551,245 @@ describe("virtual front-end", () => {
       phase: { id: "epee-tip-loop", perspective: "affected-side", side: "right" },
       relations: [{ endpoints: ["right.A", "right.B"], state: "closed" }]
     })
+  })
+
+  it("derives a weapon from each phase profile and keeps BP-103 labels out of logical relations", () => {
+    expect(VIRTUAL_FRONT_END_PHASE_PROFILES.map((profile) => [profile.id, profile.weapon])).toEqual([
+      ["foil-circuit-integrity", "foil"],
+      ["foil-target-context", "foil"],
+      ["foil-insulation-diagnostic", "foil"],
+      ["epee-tip-loop", "epee"],
+      ["epee-ground-reference", "epee"],
+      ["epee-line-integrity", "epee"],
+      ["sabre-target-contact", "sabre"],
+      ["sabre-own-equipment", "sabre"],
+      ["sabre-blade-contact", "sabre"],
+      ["sabre-bc-control", "sabre"]
+    ])
+    expect(() =>
+      advanceVirtualFrontEnd(
+        createVirtualFrontEndState(),
+        frame({ relations: [relation({ endpoints: ["LEFT_WEAPON_A" as never, "LEFT_WEAPON_B" as never], id: "net" })] })
+      )
+    ).toThrow(RangeError)
+  })
+
+  it("requires the M0-03 safe, select, settle, observe, release cycle", () => {
+    const command = (stage: "safe-inactive" | "select-source" | "settle" | "observe" | "release", atUs: number) => ({
+      atUs,
+      cycleId: "cycle-1",
+      phaseId: "epee-tip-loop" as const,
+      relations:
+        stage === "observe" ? [relation({ provenance: { observedAtUs: atUs, sourceId: "fixture" }, id: "tip" })] : null,
+      side: "left" as const,
+      source: stage === "safe-inactive" || stage === "release" ? null : ("left.A" as const),
+      stage
+    })
+    let state = createVirtualFrontEndCycleState()
+    for (const [stage, atUs, status] of [
+      ["safe-inactive", 1, "safe-inactive"],
+      ["select-source", 2, "selected"],
+      ["settle", 3, "settled"],
+      ["observe", 4, "observed"],
+      ["release", 5, "released"]
+    ] as const) {
+      const advanced = advanceVirtualFrontEndCycle(state, command(stage, atUs))
+      expect(advanced.receipt).toMatchObject({
+        safeInactive: stage === "safe-inactive" || stage === "release",
+        status,
+        weapon: "epee"
+      })
+      state = advanced.state
+    }
+  })
+
+  it("fails closed for incomplete, stale, unsafe, cross-line, overrun, contradictory, and malformed cycle evidence", () => {
+    const cycle = (
+      stage: "safe-inactive" | "select-source" | "settle" | "observe",
+      atUs: number,
+      relations: readonly VirtualFrontEndRelationInput[] | null = null
+    ) => ({
+      atUs,
+      cycleId: "adversarial",
+      phaseId: "epee-tip-loop" as const,
+      relations,
+      side: "left" as const,
+      source: stage === "safe-inactive" ? null : ("left.A" as const),
+      stage
+    })
+    expect(
+      advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), cycle("observe", 1, [])).receipt
+    ).toMatchObject({ diagnostic: "cycle-incomplete", safeInactive: true, status: "fault" })
+    let state = createVirtualFrontEndCycleState()
+    for (const [stage, atUs] of [
+      ["safe-inactive", 1],
+      ["select-source", 2],
+      ["settle", 3]
+    ] as const) {
+      state = advanceVirtualFrontEndCycle(state, cycle(stage, atUs)).state
+    }
+    const beforeObserve = () => {
+      let prepared = createVirtualFrontEndCycleState()
+      for (const [stage, atUs] of [
+        ["safe-inactive", 10],
+        ["select-source", 11],
+        ["settle", 12]
+      ] as const) {
+        prepared = advanceVirtualFrontEndCycle(prepared, cycle(stage, atUs)).state
+      }
+      return prepared
+    }
+    const crossLine = advanceVirtualFrontEndCycle(
+      state,
+      cycle("observe", 4, [
+        relation({
+          endpoints: ["left.A", "right.A"],
+          id: "cross",
+          provenance: { observedAtUs: 4, sourceId: "fixture" }
+        })
+      ])
+    )
+    expect(crossLine.receipt).toMatchObject({ diagnostic: "cross-line", safeInactive: true, status: "fault" })
+    expect(advanceVirtualFrontEndCycle(crossLine.state, cycle("safe-inactive", 4)).receipt).toMatchObject({
+      diagnostic: "stale-sample",
+      safeInactive: true,
+      status: "fault"
+    })
+    expect(
+      advanceVirtualFrontEndCycle(
+        beforeObserve(),
+        cycle("observe", 13, [
+          relation({
+            faultCode: "out-of-range-resistance",
+            id: "range",
+            provenance: { observedAtUs: 13, sourceId: "fixture" },
+            state: "outOfRange"
+          })
+        ])
+      ).receipt
+    ).toMatchObject({ diagnostic: "out-of-range-resistance", safeInactive: true, status: "fault" })
+    expect(
+      advanceVirtualFrontEndCycle(
+        beforeObserve(),
+        cycle("observe", 13, [
+          relation({
+            faultCode: "sample-overrun",
+            id: "overrun",
+            provenance: { observedAtUs: 13, sourceId: "fixture" },
+            resistanceMilliOhms: null,
+            resistanceUncertaintyMilliOhms: null,
+            state: "unavailable"
+          })
+        ])
+      ).receipt
+    ).toMatchObject({ diagnostic: "sample-overrun", safeInactive: true, status: "fault" })
+    expect(
+      advanceVirtualFrontEndCycle(
+        beforeObserve(),
+        cycle("observe", 13, [
+          relation({ id: "closed", provenance: { observedAtUs: 13, sourceId: "fixture-a" } }),
+          relation({ id: "open", provenance: { observedAtUs: 13, sourceId: "fixture-b" }, state: "open" })
+        ])
+      ).receipt
+    ).toMatchObject({ diagnostic: "uncertain-evidence", safeInactive: true, status: "fault" })
+    expect(() =>
+      advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), { ...cycle("safe-inactive", 1), extra: true })
+    ).toThrow(TypeError)
+    expect(() => advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), cycle("observe", 1, null))).toThrow(
+      TypeError
+    )
+  })
+  it("preflights own data and rejects getters, sparse arrays, subclasses, and aliases", () => {
+    const base = {
+      atUs: 1,
+      cycleId: "preflight",
+      phaseId: "epee-tip-loop" as const,
+      relations: null,
+      side: "left" as const,
+      source: null,
+      stage: "safe-inactive" as const
+    }
+    let getterRead = false
+    const getterCommand = { ...base }
+    Object.defineProperty(getterCommand, "atUs", {
+      enumerable: true,
+      get: () => {
+        getterRead = true
+        return 1
+      }
+    })
+    expect(() => advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), getterCommand)).toThrow(TypeError)
+    expect(getterRead).toBe(false)
+    expect(() => advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), Object.create(base))).toThrow(TypeError)
+
+    const active = advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), base).state
+    const selected = advanceVirtualFrontEndCycle(active, {
+      ...base,
+      atUs: 2,
+      source: "left.A",
+      stage: "select-source"
+    }).state
+    const settled = advanceVirtualFrontEndCycle(selected, { ...base, atUs: 3, source: "left.A", stage: "settle" }).state
+    const reading = relation({ id: "tip", provenance: { observedAtUs: 4, sourceId: "fixture" } })
+    const sparse = [] as VirtualFrontEndRelationInput[]
+    sparse.length = 1
+    expect(() =>
+      advanceVirtualFrontEndCycle(settled, { ...base, atUs: 4, relations: sparse, source: "left.A", stage: "observe" })
+    ).toThrow(TypeError)
+    class RelationArray extends Array<VirtualFrontEndRelationInput> {}
+    expect(() =>
+      advanceVirtualFrontEndCycle(settled, {
+        ...base,
+        atUs: 4,
+        relations: new RelationArray(reading),
+        source: "left.A",
+        stage: "observe"
+      })
+    ).toThrow(TypeError)
+    expect(() =>
+      advanceVirtualFrontEndCycle(settled, {
+        ...base,
+        atUs: 4,
+        relations: [reading, reading],
+        source: "left.A",
+        stage: "observe"
+      })
+    ).toThrow(TypeError)
+  })
+
+  it("reports unauthorized excitation and deeply freezes returned cycle values", () => {
+    const command = (
+      atUs: number,
+      stage: "safe-inactive" | "select-source" | "settle" | "observe",
+      source: "left.A" | "right.A" | null
+    ) => ({
+      atUs,
+      cycleId: "immutable",
+      phaseId: "epee-tip-loop" as const,
+      relations:
+        stage === "observe" ? [relation({ id: "tip", provenance: { observedAtUs: atUs, sourceId: "fixture" } })] : null,
+      side: "left" as const,
+      source,
+      stage
+    })
+    const safe = advanceVirtualFrontEndCycle(createVirtualFrontEndCycleState(), command(1, "safe-inactive", null))
+    expect(advanceVirtualFrontEndCycle(safe.state, command(2, "select-source", "right.A")).receipt).toMatchObject({
+      diagnostic: "unauthorized-excitation",
+      safeInactive: true,
+      status: "fault"
+    })
+    let state = safe.state
+    for (const [atUs, stage, source] of [
+      [2, "select-source", "left.A"],
+      [3, "settle", "left.A"],
+      [4, "observe", "left.A"]
+    ] as const)
+      state = advanceVirtualFrontEndCycle(state, command(atUs, stage, source)).state
+    expect(Object.isFrozen(state)).toBe(true)
+    expect(Object.isFrozen(state.frontEnd)).toBe(true)
+    expect(Object.isFrozen(state.frontEnd.snapshots)).toBe(true)
+    expect(Object.isFrozen(state.frontEnd.current)).toBe(true)
+    expect(Object.isFrozen(state.frontEnd.current?.relations)).toBe(true)
+    expect(Object.isFrozen(state.frontEnd.current?.relations[0]?.provenance)).toBe(true)
   })
 })
