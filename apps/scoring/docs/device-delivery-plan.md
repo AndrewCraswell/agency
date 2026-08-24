@@ -314,7 +314,7 @@ track, not another scoring-box feature and not an automatic FIE approval claim. 
 | ID | Status | Latest state | Deliverable | Depends on | Acceptance |
 | --- | --- | --- | --- | --- | --- |
 | BT-01 | done | Delivered and root-approved: all 19 canonical requirement families map exactly once to tester stimulus, independent observation, uncertainty, and evidence ownership; fail-closed evaluation distinguishes virtual, DUT, physical-observer, and infrastructure outcomes without claiming physical qualification. Seven focused tests, TypeScript, lint, and format checks pass. | Tester requirements, independence, and coverage contract | M0-01 through M0-07 | Every normative and product behavior maps to stimulus, independent observation, uncertainty, and evidence; unsupported behavior is explicit |
-| BT-02 | backlog | Next after M0-03, M0-10, BT-01: Reel, piste, output-sensor, and safety interface contract. | Reel, piste, output-sensor, and safety interface contract | M0-03, M0-10, BT-01 | Two three-contact reel cables, piste/ground, voltage/current range, floating boundaries, misuse, and no-back-power behavior are reviewed |
+| BT-02 | done | Delivered and root-approved: exact abstract left/right A-B-C and piste-P mappings, bounded normal and guarded source envelopes, floating/no-back-power policy, independent physical-output observation, misuse handling, source provenance, and USB-C PD separation are frozen and fail closed. Physical connector MPNs, DUT limits, calibration, and tester hardware remain explicitly deferred to BT-03 and BT-06 through BT-09. Five focused tests, app TypeScript, lint, and format checks pass. | Reel, piste, output-sensor, and safety interface contract | M0-03, M0-10, BT-01 | Two three-contact reel cables, piste/ground, voltage/current range, floating boundaries, misuse, and no-back-power behavior are reviewed |
 | BT-03 | backlog | Next after M4-01, M4-05, BT-02: Switch-matrix and programmable-impedance architecture. | Switch-matrix and programmable-impedance architecture | M4-01, M4-05, BT-02 | Coverage proof chooses the minimum justified topology; resistance, leakage, capacitance, switching time, skew, and fault energy fit allocated limits |
 | BT-04 | backlog | Next after M0-07, M2-12, BT-01: Tester sequence language and canonical-scenario compiler. | Tester sequence language and canonical-scenario compiler | M0-07, M2-12, BT-01 | Scenarios compile deterministically without copied timing constants; invalid, unsupported, or unsafe steps fail closed |
 | BT-05 | backlog | Next after M2-12, BT-04: Virtual tester and bout-observatory integration. | Virtual tester and bout-observatory integration | M2-12, BT-04 | Commands, measured transitions, expected/actual outputs, evaluations, and pass/fail/skipped/indeterminate/infrastructure-error states replay on one timeline |
@@ -358,8 +358,6 @@ A milestone closes only when:
 4. documents and machine-readable manifests agree with the implementation;
 5. an independent reviewer has resolved every release-blocking comment; and
 6. remaining risks, assumptions, and deferred work are named in the next milestone entry criteria.
-
-
 
 
 
