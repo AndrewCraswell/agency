@@ -44,7 +44,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 24 | SC-006 | P2 | done | Root-approved strict evidence-time parser now serves connector, fixture, footprint, and IR evidence validators |
 | 25 | SC-009 | P2 | ready | Four analog-evidence flows still bypass the canonical UTC parser, risking inconsistent chronology and calibration acceptance |
 | 25 | SD-016 | P1 | ready | Encrypted-IR ingress throttling stores milliseconds instead of canonical integer microseconds |
-| 26 | SD-017 | P2 | ready | Encrypted-IR wire sizes and byte offsets are manually repeated |
+| 26 | SD-017 | P2 | done | Root-approved ordered layout now derives every wire offset, the 70-byte header, and 150-byte maximum without changing RC-03 bytes |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -65,7 +65,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SD-002: retire or explicitly quarantine the prototype device path
 
 - Priority: `P1`
-- State: `ready`
+- State: `done`
+- Latest state: Root-approved implementation derives named offsets and sizes from one private ordered descriptor; fixed vectors, maximum-frame round-trip, malformed-length, type, lint, and format checks pass.
 - Affected files: [`apps/scoring/src/device.ts`](../src/device.ts) (lines 102-311), [`apps/scoring/src/virtual-stm32.ts`](../src/virtual-stm32.ts) (lines 278-380), [`apps/scoring/src/virtual-esp32.ts`](../src/virtual-esp32.ts) (lines 416-490), [`apps/scoring/src/transport-frame.ts`](../src/transport-frame.ts) (lines 1-7 and 145-210), [`apps/scoring/package.json`](../package.json) (lines 9-17), [`apps/scoring/README.md`](../README.md) (lines 9-23), and [`apps/scoring/docs/decision-record-contract.md`](decision-record-contract.md) (lines 3-14).
 - Description and evidence: `device.ts` exports its own epee-only STM32/ESP32 state, `ScoringDecisionRecord`, CRC over JSON, newline-delimited JSON encoding, and exactly-once receiver. The package still exports it as `scoring/device`. The newer virtual shell and receiver model the processor authority and binary transport separately, while the decision-record contract explicitly says it replaces the prototype `ScoringDecisionRecord` shape when M2 implements capture. The README still labels `device.ts` as the production boundary and describes its JSON event encoding.
 - Impact: callers can select two emulator APIs with different record shapes, timing defaults, framing, and validation. A protocol or record fix can land in the canonical virtual path while the exported prototype continues to look production-ready and silently exercises different semantics.
@@ -454,6 +455,7 @@ truth.
   - Layout invariants prove the 70-byte header and 150-byte maximum.
   - Round-trip, fixed-vector, malformed-length, and mutated-AAD tests pass.
   - No unexplained raw wire offsets remain in serializer or parser code.
+
 ## SC-009: apply canonical UTC validation to analog evidence
 
 - Priority: `P2`

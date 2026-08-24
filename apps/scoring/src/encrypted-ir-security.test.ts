@@ -76,6 +76,37 @@ describe("RC-03 encrypted IR security contract", () => {
   it("freezes one reviewed candidate and exact 150-byte wire accounting pending security review", () => {
     expect(IR_AEAD_SUITE).toBe("AES-256-GCM-96N-128T")
     expect(IR_SECURITY_REVIEW_STATUS).toBe("DENY-independent-security-review")
+    expect(IR_WIRE_LAYOUT_BYTES).toEqual({
+      apparatusIdentity: 16,
+      ciphertext: 64,
+      ciphertextLength: 1,
+      commandId: 16,
+      counter: 8,
+      keyEpoch: 4,
+      magic: 2,
+      productProtocol: 4,
+      protocolVersion: 1,
+      remoteIdentity: 16,
+      suite: 1,
+      tag: 16,
+      pressKind: 1
+    })
+    expect(IR_WIRE_HEADER_BYTES).toBe(
+      IR_WIRE_LAYOUT_BYTES.magic +
+        IR_WIRE_LAYOUT_BYTES.productProtocol +
+        IR_WIRE_LAYOUT_BYTES.protocolVersion +
+        IR_WIRE_LAYOUT_BYTES.suite +
+        IR_WIRE_LAYOUT_BYTES.apparatusIdentity +
+        IR_WIRE_LAYOUT_BYTES.remoteIdentity +
+        IR_WIRE_LAYOUT_BYTES.keyEpoch +
+        IR_WIRE_LAYOUT_BYTES.counter +
+        IR_WIRE_LAYOUT_BYTES.commandId +
+        IR_WIRE_LAYOUT_BYTES.pressKind +
+        IR_WIRE_LAYOUT_BYTES.ciphertextLength
+    )
+    expect(IR_MAX_WIRE_FRAME_BYTES).toBe(
+      IR_WIRE_HEADER_BYTES + IR_WIRE_LAYOUT_BYTES.ciphertext + IR_WIRE_LAYOUT_BYTES.tag
+    )
     expect(Object.values(IR_WIRE_LAYOUT_BYTES).reduce((sum, bytes) => sum + bytes, 0)).toBe(IR_MAX_WIRE_FRAME_BYTES)
     expect(IR_MAX_WIRE_FRAME_BYTES).toBe(150)
     expect(IR_INGRESS_QUEUE_CAPACITY).toBe(4)
@@ -105,15 +136,22 @@ describe("RC-03 encrypted IR security contract", () => {
     expect(Buffer.from(wire).toString("hex")).toBe(`${expectedAad}a1${"22".repeat(16)}`)
     expect(parseIrSecureFrame(wire)).toEqual(frame())
 
+    const maximumFrame = serializeIrSecureFrame(frame({ ciphertext: "aa".repeat(IR_WIRE_LAYOUT_BYTES.ciphertext) }))
+    expect(maximumFrame).toHaveLength(IR_MAX_WIRE_FRAME_BYTES)
+    expect(parseIrSecureFrame(maximumFrame)).toEqual(
+      frame({ ciphertext: "aa".repeat(IR_WIRE_LAYOUT_BYTES.ciphertext) })
+    )
+
     const wrongMagic = wire.slice()
     wrongMagic[0] ^= 1
     expect(() => parseIrSecureFrame(wrongMagic)).toThrow(TypeError)
     const wrongLength = wire.slice()
-    wrongLength[69] = 2
+    wrongLength[IR_WIRE_HEADER_BYTES - 1] = 2
     expect(() => parseIrSecureFrame(wrongLength)).toThrow(TypeError)
     const wrongPressKind = wire.slice()
-    wrongPressKind[68] = 255
+    wrongPressKind[IR_WIRE_HEADER_BYTES - 2] = 255
     expect(() => parseIrSecureFrame(wrongPressKind)).toThrow(TypeError)
+    expect(() => parseIrSecureFrame(new Uint8Array(IR_MAX_WIRE_FRAME_BYTES + 1))).toThrow(TypeError)
   })
 
   it("keeps raw frames outside the non-authoritative replay calculation", () => {

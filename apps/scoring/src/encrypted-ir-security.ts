@@ -26,25 +26,92 @@ export const IR_REPLAY_AUTHENTICATION_STATUS = "not-proved-by-this-contract" as 
 export const IR_WIRE_MAGIC_HEX = "4952" as const
 export const IR_WIRE_PRODUCT_PROTOCOL_HEX = "46534952" as const
 export const IR_WIRE_SUITE_CODE = 1 as const
-export const IR_WIRE_HEADER_BYTES = 70
 
-/** Exact v1 wire maximum: 2+4+1+1+16+16+4+8+16+1+1+64+16 = 150 bytes. */
-export const IR_WIRE_LAYOUT_BYTES = Object.freeze({
-  apparatusIdentity: 16,
-  ciphertext: IR_COMMAND_CIPHERTEXT_MAX_BYTES,
-  ciphertextLength: 1,
-  commandId: 16,
-  counter: 8,
-  keyEpoch: 4,
-  magic: 2,
-  productProtocol: 4,
-  protocolVersion: 1,
-  remoteIdentity: 16,
-  suite: 1,
-  tag: IR_AEAD_TAG_BYTES,
-  pressKind: 1
+/**
+ * The ordered v1 wire layout is the only source for field widths and offsets.
+ * Header fields precede the variable-length ciphertext; the tag follows the
+ * maximum ciphertext slot on the fixed upper-bound layout.
+ */
+const IR_WIRE_LAYOUT = [
+  { bytes: 2, header: true, name: "magic" },
+  { bytes: 4, header: true, name: "productProtocol" },
+  { bytes: 1, header: true, name: "protocolVersion" },
+  { bytes: 1, header: true, name: "suite" },
+  { bytes: 16, header: true, name: "apparatusIdentity" },
+  { bytes: 16, header: true, name: "remoteIdentity" },
+  { bytes: 4, header: true, name: "keyEpoch" },
+  { bytes: 8, header: true, name: "counter" },
+  { bytes: 16, header: true, name: "commandId" },
+  { bytes: 1, header: true, name: "pressKind" },
+  { bytes: 1, header: true, name: "ciphertextLength" },
+  { bytes: IR_COMMAND_CIPHERTEXT_MAX_BYTES, header: false, name: "ciphertext" },
+  { bytes: IR_AEAD_TAG_BYTES, header: false, name: "tag" }
+] as const
+
+type IrWireFieldName = (typeof IR_WIRE_LAYOUT)[number]["name"]
+
+function wireField(name: IrWireFieldName): (typeof IR_WIRE_LAYOUT)[number] {
+  const field = IR_WIRE_LAYOUT.find((candidate) => candidate.name === name)
+  if (field === undefined) throw new Error(`Unknown IR wire field: ${name}`)
+  return field
+}
+
+function wireOffset(name: IrWireFieldName): number {
+  let offset = 0
+  for (const field of IR_WIRE_LAYOUT) {
+    if (field.name === name) return offset
+    offset += field.bytes
+  }
+  throw new Error(`Unknown IR wire field: ${name}`)
+}
+
+function wireHeaderBytes(): number {
+  let bytes = 0
+  for (const field of IR_WIRE_LAYOUT) {
+    if (!field.header) break
+    bytes += field.bytes
+  }
+  return bytes
+}
+
+function wireFrameBytes(): number {
+  return IR_WIRE_LAYOUT.reduce((total, field) => total + field.bytes, 0)
+}
+
+const IR_WIRE_OFFSETS = Object.freeze({
+  apparatusIdentity: wireOffset("apparatusIdentity"),
+  ciphertext: wireOffset("ciphertext"),
+  ciphertextLength: wireOffset("ciphertextLength"),
+  commandId: wireOffset("commandId"),
+  counter: wireOffset("counter"),
+  keyEpoch: wireOffset("keyEpoch"),
+  magic: wireOffset("magic"),
+  productProtocol: wireOffset("productProtocol"),
+  protocolVersion: wireOffset("protocolVersion"),
+  remoteIdentity: wireOffset("remoteIdentity"),
+  suite: wireOffset("suite"),
+  tag: wireOffset("tag"),
+  pressKind: wireOffset("pressKind")
 })
-export const IR_MAX_WIRE_FRAME_BYTES = 150
+
+/** Exact v1 wire widths and derived 70-byte header/150-byte maximum. */
+export const IR_WIRE_LAYOUT_BYTES = Object.freeze({
+  apparatusIdentity: wireField("apparatusIdentity").bytes,
+  ciphertext: wireField("ciphertext").bytes,
+  ciphertextLength: wireField("ciphertextLength").bytes,
+  commandId: wireField("commandId").bytes,
+  counter: wireField("counter").bytes,
+  keyEpoch: wireField("keyEpoch").bytes,
+  magic: wireField("magic").bytes,
+  productProtocol: wireField("productProtocol").bytes,
+  protocolVersion: wireField("protocolVersion").bytes,
+  remoteIdentity: wireField("remoteIdentity").bytes,
+  suite: wireField("suite").bytes,
+  tag: wireField("tag").bytes,
+  pressKind: wireField("pressKind").bytes
+})
+export const IR_WIRE_HEADER_BYTES = wireHeaderBytes()
+export const IR_MAX_WIRE_FRAME_BYTES = wireFrameBytes()
 
 /** Public NIST SP 800-38D AES-256-GCM test inputs; never product credentials. */
 export const IR_AES_256_GCM_NIST_KAT = Object.freeze({
@@ -314,18 +381,18 @@ function pressKindFromCode(code: number): RemotePressKind {
 export function serializeIrCanonicalAad(value: unknown): Uint8Array {
   const envelope = parseIrSecureEnvelope(value)
   const header = new Uint8Array(IR_WIRE_HEADER_BYTES)
-  header.set(hexToBytes(IR_WIRE_MAGIC_HEX), 0)
-  header.set(hexToBytes(IR_WIRE_PRODUCT_PROTOCOL_HEX), 2)
-  header[6] = IR_PROTOCOL_VERSION
-  header[7] = IR_WIRE_SUITE_CODE
-  header.set(hexToBytes(envelope.apparatusIdentity), 8)
-  header.set(hexToBytes(envelope.remoteIdentity), 24)
+  header.set(hexToBytes(IR_WIRE_MAGIC_HEX), IR_WIRE_OFFSETS.magic)
+  header.set(hexToBytes(IR_WIRE_PRODUCT_PROTOCOL_HEX), IR_WIRE_OFFSETS.productProtocol)
+  header[IR_WIRE_OFFSETS.protocolVersion] = IR_PROTOCOL_VERSION
+  header[IR_WIRE_OFFSETS.suite] = IR_WIRE_SUITE_CODE
+  header.set(hexToBytes(envelope.apparatusIdentity), IR_WIRE_OFFSETS.apparatusIdentity)
+  header.set(hexToBytes(envelope.remoteIdentity), IR_WIRE_OFFSETS.remoteIdentity)
   const view = new DataView(header.buffer, header.byteOffset, header.byteLength)
-  view.setUint32(40, envelope.keyEpoch, false)
-  view.setBigUint64(44, BigInt(`0x${envelope.counter}`), false)
-  header.set(hexToBytes(envelope.commandId), 52)
-  header[68] = pressKindCode(envelope.pressKind)
-  header[69] = envelope.ciphertext.length / 2
+  view.setUint32(IR_WIRE_OFFSETS.keyEpoch, envelope.keyEpoch, false)
+  view.setBigUint64(IR_WIRE_OFFSETS.counter, BigInt(`0x${envelope.counter}`), false)
+  header.set(hexToBytes(envelope.commandId), IR_WIRE_OFFSETS.commandId)
+  header[IR_WIRE_OFFSETS.pressKind] = pressKindCode(envelope.pressKind)
+  header[IR_WIRE_OFFSETS.ciphertextLength] = envelope.ciphertext.length / 2
   return header
 }
 
@@ -336,9 +403,9 @@ export function serializeIrSecureFrame(value: unknown): Uint8Array {
   const ciphertext = hexToBytes(envelope.ciphertext)
   const tag = hexToBytes(envelope.tag)
   const frame = new Uint8Array(header.length + ciphertext.length + tag.length)
-  frame.set(header, 0)
-  frame.set(ciphertext, header.length)
-  frame.set(tag, header.length + ciphertext.length)
+  frame.set(header, IR_WIRE_OFFSETS.magic)
+  frame.set(ciphertext, IR_WIRE_OFFSETS.ciphertext)
+  frame.set(tag, IR_WIRE_HEADER_BYTES + ciphertext.length)
   return frame
 }
 
@@ -347,37 +414,38 @@ export function parseIrSecureFrame(value: unknown): IrSecureEnvelope {
   if (!(value instanceof Uint8Array) || Object.getPrototypeOf(value) !== Uint8Array.prototype) {
     throw new TypeError("IR wire frame must be a plain Uint8Array")
   }
-  if (value.length < IR_WIRE_HEADER_BYTES + 1 + IR_AEAD_TAG_BYTES || value.length > IR_MAX_WIRE_FRAME_BYTES) {
+  if (value.length < IR_WIRE_HEADER_BYTES + 1 + IR_WIRE_LAYOUT_BYTES.tag || value.length > IR_MAX_WIRE_FRAME_BYTES) {
     throw new TypeError("IR wire frame has an invalid length")
   }
   if (
-    bytesToHex(value.subarray(0, 2)) !== IR_WIRE_MAGIC_HEX ||
-    bytesToHex(value.subarray(2, 6)) !== IR_WIRE_PRODUCT_PROTOCOL_HEX ||
-    value[6] !== IR_PROTOCOL_VERSION ||
-    value[7] !== IR_WIRE_SUITE_CODE
+    bytesToHex(value.subarray(IR_WIRE_OFFSETS.magic, IR_WIRE_OFFSETS.productProtocol)) !== IR_WIRE_MAGIC_HEX ||
+    bytesToHex(value.subarray(IR_WIRE_OFFSETS.productProtocol, IR_WIRE_OFFSETS.protocolVersion)) !==
+      IR_WIRE_PRODUCT_PROTOCOL_HEX ||
+    value[IR_WIRE_OFFSETS.protocolVersion] !== IR_PROTOCOL_VERSION ||
+    value[IR_WIRE_OFFSETS.suite] !== IR_WIRE_SUITE_CODE
   ) {
     throw new TypeError("IR wire frame has an unsupported marker, protocol, or suite")
   }
-  const ciphertextLength = value[69]
+  const ciphertextLength = value[IR_WIRE_OFFSETS.ciphertextLength]
   if (
     ciphertextLength === undefined ||
     ciphertextLength < 1 ||
-    ciphertextLength > IR_COMMAND_CIPHERTEXT_MAX_BYTES ||
-    value.length !== IR_WIRE_HEADER_BYTES + ciphertextLength + IR_AEAD_TAG_BYTES
+    ciphertextLength > IR_WIRE_LAYOUT_BYTES.ciphertext ||
+    value.length !== IR_WIRE_HEADER_BYTES + ciphertextLength + IR_WIRE_LAYOUT_BYTES.tag
   ) {
     throw new TypeError("IR wire frame has an inconsistent ciphertext length")
   }
   const view = new DataView(value.buffer, value.byteOffset, value.byteLength)
   return parseIrSecureEnvelope({
-    apparatusIdentity: bytesToHex(value.subarray(8, 24)),
-    ciphertext: bytesToHex(value.subarray(IR_WIRE_HEADER_BYTES, IR_WIRE_HEADER_BYTES + ciphertextLength)),
-    commandId: bytesToHex(value.subarray(52, 68)),
-    counter: view.getBigUint64(44, false).toString(16).padStart(16, "0"),
-    keyEpoch: view.getUint32(40, false),
-    pressKind: pressKindFromCode(value[68] ?? 0),
+    apparatusIdentity: bytesToHex(value.subarray(IR_WIRE_OFFSETS.apparatusIdentity, IR_WIRE_OFFSETS.remoteIdentity)),
+    ciphertext: bytesToHex(value.subarray(IR_WIRE_OFFSETS.ciphertext, IR_WIRE_OFFSETS.ciphertext + ciphertextLength)),
+    commandId: bytesToHex(value.subarray(IR_WIRE_OFFSETS.commandId, IR_WIRE_OFFSETS.pressKind)),
+    counter: view.getBigUint64(IR_WIRE_OFFSETS.counter, false).toString(16).padStart(16, "0"),
+    keyEpoch: view.getUint32(IR_WIRE_OFFSETS.keyEpoch, false),
+    pressKind: pressKindFromCode(value[IR_WIRE_OFFSETS.pressKind] ?? 0),
     protocolId: IR_PROTOCOL_ID,
     protocolVersion: IR_PROTOCOL_VERSION,
-    remoteIdentity: bytesToHex(value.subarray(24, 40)),
+    remoteIdentity: bytesToHex(value.subarray(IR_WIRE_OFFSETS.remoteIdentity, IR_WIRE_OFFSETS.keyEpoch)),
     suite: IR_AEAD_SUITE,
     tag: bytesToHex(value.subarray(IR_WIRE_HEADER_BYTES + ciphertextLength))
   })
