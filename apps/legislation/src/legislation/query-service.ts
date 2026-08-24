@@ -68,6 +68,8 @@ const CHILD_LIMIT = 100
 const SECTION_LIMIT = 50
 const DETAIL_RESPONSE_TARGET_BYTES = 750_000
 const DOCUMENT_AMENDMENT_ID_PREFIX = "amendment:document:"
+const LEXICAL_SUPPORTING_MATERIAL_CANDIDATE_LIMIT = 250
+const LEXICAL_SUPPORTING_MATERIAL_SEARCH_TIMEOUT_MS = 5_000
 
 function coverageWarnings(itemCount: number, domain: string): string[] {
   return itemCount === 0
@@ -275,8 +277,16 @@ export interface SupportingMaterialSearchInput {
 
 const { text: _supportingMaterialText, ...supportingMaterialSummaryColumns } = getTableColumns(supportingMaterials)
 type SupportingMaterialSummary = Omit<typeof supportingMaterials.$inferSelect, "text">
+type SupportingMaterialLexicalEvidence = {
+  lexicalScore: number
+  matchedFields: readonly ("sectionText" | "title")[]
+  section: typeof supportingMaterialSections.$inferSelect
+  snippet: string | null
+}
+
 type SupportingMaterialRanked = SupportingMaterialSummary & {
   distance?: number
+  lexicalEvidence?: SupportingMaterialLexicalEvidence
   score?: number
   semanticSectionId?: string
 }
@@ -372,11 +382,274 @@ function supportingMaterialOrder(sort: SupportingMaterialSearchInput["sort"]): S
   }
 }
 
+/**
+ * Lexical material search deliberately has a bounded retrieval window. It
+ * preserves title and section-text matches, but runs both candidate sources
+ * under a short transaction-local deadline. The title source lacks a GIN
+ * index, and a deadline is preferable to silently returning partial results
+ * while index maintenance is in progress.
+ */
+export function lexicalSupportingMaterialCandidateLimit(limit: number, offset: number): number {
+  return Math.min(
+    Math.max(limit + offset + 1, embeddingQueryRouteFor("search_supporting_materials").candidateLimit),
+    LEXICAL_SUPPORTING_MATERIAL_CANDIDATE_LIMIT
+  )
+}
+
+export function lexicalSupportingMaterialCandidateWindowCapped(
+  candidateLimit: number,
+  titleCandidateCount: number,
+  sectionCandidateCount: number
+): boolean {
+  return titleCandidateCount > candidateLimit || sectionCandidateCount > candidateLimit
+}
+
+export function lexicalSupportingMaterialPageState(
+  offset: number,
+  limit: number,
+  rowCount: number,
+  candidateWindowCapped: boolean
+): { nextCursor: string | undefined; truncated: boolean } {
+  const pageLength = Math.min(rowCount, limit)
+  const truncated = rowCount > limit || candidateWindowCapped
+  return {
+    nextCursor: truncated && pageLength > 0 ? encodeOffset(offset + pageLength) : undefined,
+    truncated
+  }
+}
+
+function supportingMaterialLexicalLinkFilter(input: SupportingMaterialSearchInput): SQL | undefined {
+  const billIds = supportingMaterialFilterValues(input.billIds, input.billId)
+  const amendmentIds = supportingMaterialFilterValues(input.amendmentIds, input.amendmentId)
+  const eventIds = supportingMaterialFilterValues(input.eventIds, input.eventId)
+  const organizationIds = supportingMaterialFilterValues(input.organizationIds, input.organizationId)
+  if (
+    billIds === undefined &&
+    amendmentIds === undefined &&
+    eventIds === undefined &&
+    organizationIds === undefined &&
+    input.sessionIds === undefined
+  ) {
+    return undefined
+  }
+  const linkPredicates =
+    and(
+      billIds === undefined ? undefined : inArray(supportingMaterialLinks.billId, billIds),
+      amendmentIds === undefined ? undefined : inArray(supportingMaterialLinks.amendmentId, amendmentIds),
+      eventIds === undefined ? undefined : inArray(supportingMaterialLinks.eventId, eventIds),
+      organizationIds === undefined ? undefined : inArray(supportingMaterialLinks.organizationId, organizationIds)
+    ) ?? sql`true`
+  if (input.sessionIds === undefined) {
+    return sql`exists (
+      select 1
+      from ${supportingMaterialLinks}
+      where ${supportingMaterialLinks.materialId} = ${supportingMaterials.id}
+        and ${linkPredicates}
+    )`
+  }
+  return sql`exists (
+    select 1
+    from ${supportingMaterialLinks}
+    inner join ${bills} on ${bills.id} = ${supportingMaterialLinks.billId}
+    where ${supportingMaterialLinks.materialId} = ${supportingMaterials.id}
+      and ${linkPredicates}
+      and ${inArray(bills.sessionId, input.sessionIds)}
+  )`
+}
+
+function supportingMaterialLexicalScope(input: SupportingMaterialSearchInput): SQL | undefined {
+  return and(
+    supportingMaterialFilter(
+      input.jurisdictionIds,
+      input.jurisdictionId,
+      (value) => eq(supportingMaterials.jurisdictionId, value),
+      (values) => inArray(supportingMaterials.jurisdictionId, values)
+    ),
+    supportingMaterialFilter(
+      input.classifications,
+      input.classification,
+      (value) => eq(supportingMaterials.classification, value),
+      (values) => inArray(supportingMaterials.classification, values)
+    ),
+    supportingMaterialLexicalLinkFilter(input),
+    input.documentFrom === undefined ? undefined : gte(supportingMaterials.documentDate, input.documentFrom),
+    input.documentTo === undefined ? undefined : lte(supportingMaterials.documentDate, input.documentTo),
+    input.updatedFrom === undefined ? undefined : gte(supportingMaterials.updatedAt, input.updatedFrom),
+    input.updatedTo === undefined ? undefined : lte(supportingMaterials.updatedAt, input.updatedTo),
+    input.updatedToExclusive === undefined
+      ? undefined
+      : sql`${supportingMaterials.updatedAt} < ${input.updatedToExclusive}`,
+    input.processingStatus === undefined ? undefined : eq(supportingMaterials.processingStatus, input.processingStatus)
+  )
+}
+
+interface LexicalSupportingMaterialCandidate {
+  [key: string]: unknown
+  candidateWindowCapped: boolean
+  id: string
+  lexicalScore: number
+  matchedSectionId: null | string
+  sectionId: string
+  sectionScore: null | number
+  snippet: null | string
+  titleScore: null | number
+}
+
+/**
+ * Retrieve bounded title and section candidate windows before material-level
+ * ranking. Section headlines are calculated only after their rank window is
+ * selected, because headline generation scans text and is too expensive for
+ * common-term matches. Both candidate sources must complete: a timeout is
+ * surfaced as dependency_unavailable instead of returning title or section
+ * matches selectively.
+ */
+export function buildLexicalSupportingMaterialCandidateQuery(
+  input: SupportingMaterialSearchInput,
+  query: string,
+  limit: number,
+  offset: number
+): SQL {
+  const searchQuery = sql`websearch_to_tsquery('english', ${query})`
+  const titleRank = sql<number>`ts_rank_cd(to_tsvector('english', ${supportingMaterials.title}), ${searchQuery})`
+  const titleMatches = sql`to_tsvector('english', ${supportingMaterials.title}) @@ ${searchQuery}`
+  const sectionRank = sql<number>`ts_rank_cd(${supportingMaterialSections.searchVector}, ${searchQuery})`
+  const sectionMatches = sql`${supportingMaterialSections.searchVector} @@ ${searchQuery}`
+  const scope = supportingMaterialLexicalScope(input)
+  const titleScope = scope ?? sql`true`
+  const sectionMaterialJoin =
+    scope === undefined
+      ? sql``
+      : sql`inner join ${supportingMaterials} on ${supportingMaterials.id} = ${supportingMaterialSections.materialId}`
+  const sectionScope = scope ?? sql`true`
+  const candidateLimit = lexicalSupportingMaterialCandidateLimit(limit, offset)
+  const candidateProbeLimit = candidateLimit + 1
+  return sql`
+    with title_candidate_probe as (
+      select
+        ${supportingMaterials.id} as material_id,
+        ${titleRank} as title_score
+      from ${supportingMaterials}
+      where ${titleMatches} and ${titleScope}
+      order by ${titleRank} desc, ${supportingMaterials.id} asc
+      limit ${candidateProbeLimit}
+    ),
+    title_candidates as (
+      select material_id, title_score
+      from title_candidate_probe
+      order by title_score desc, material_id asc
+      limit ${candidateLimit}
+    ),
+    section_candidate_probe as (
+      select
+        ${supportingMaterialSections.materialId} as material_id,
+        ${supportingMaterialSections.id} as section_id
+      from ${supportingMaterialSections}
+      ${sectionMaterialJoin}
+      where ${sectionMatches} and ${sectionScope}
+      limit ${candidateProbeLimit}
+    ),
+    candidate_materials as (
+      select material_id from title_candidates
+      union
+      select material_id from section_candidate_probe
+    ),
+    section_ranked_candidates as (
+      select
+        ${supportingMaterialSections.materialId} as material_id,
+        ${supportingMaterialSections.id} as section_id,
+        ${sectionRank} as section_score,
+        row_number() over (
+          partition by ${supportingMaterialSections.materialId}
+          order by ${sectionRank} desc, ${supportingMaterialSections.id} asc
+        ) as section_rank
+      from ${supportingMaterialSections}
+      inner join candidate_materials on candidate_materials.material_id = ${supportingMaterialSections.materialId}
+      where ${sectionMatches}
+    ),
+    section_candidates as (
+      select
+        section_ranked_candidates.material_id,
+        section_ranked_candidates.section_id,
+        section_ranked_candidates.section_score,
+        ts_headline(
+          'english',
+          ${supportingMaterialSections.text},
+          ${searchQuery},
+          'MaxFragments=2, MaxWords=35, MinWords=10'
+        ) as section_snippet
+      from section_ranked_candidates
+      inner join ${supportingMaterialSections}
+        on ${supportingMaterialSections.id} = section_ranked_candidates.section_id
+      where section_ranked_candidates.section_rank = 1
+    ),
+    candidate_scores as (
+      select
+        material_id,
+        title_score,
+        null::text as section_id,
+        null::real as section_score,
+        null::text as section_snippet
+      from title_candidates
+      union all
+      select
+        material_id,
+        null::real as title_score,
+        section_id,
+        section_score,
+        section_snippet
+      from section_candidates
+    ),
+    ranked_candidates as (
+      select
+        material_id,
+        max(title_score) as title_score,
+        max(section_score) as section_score,
+        greatest(coalesce(max(title_score), 0), coalesce(max(section_score), 0)) as lexical_score,
+        (array_agg(section_id order by section_score desc nulls last, section_id asc) filter (where section_id is not null))[1] as matched_section_id,
+        (array_agg(section_snippet order by section_score desc nulls last, section_id asc) filter (where section_id is not null))[1] as section_snippet
+      from candidate_scores
+      group by material_id
+    ),
+    candidate_window as (
+      select
+        (
+          exists (select 1 from title_candidate_probe offset ${candidateLimit})
+          or exists (select 1 from section_candidate_probe offset ${candidateLimit})
+        ) as capped
+    )
+    select
+      ranked_candidates.material_id as id,
+      ranked_candidates.lexical_score as lexical_score,
+      ranked_candidates.title_score as title_score,
+      ranked_candidates.section_score as section_score,
+      ranked_candidates.matched_section_id as matched_section_id,
+      coalesce(ranked_candidates.matched_section_id, fallback_section.id) as section_id,
+      ranked_candidates.section_snippet as snippet,
+      candidate_window.capped as candidate_window_capped
+    from ranked_candidates
+    inner join lateral (
+      select ${supportingMaterialSections.id}
+      from ${supportingMaterialSections}
+      where ${supportingMaterialSections.materialId} = ranked_candidates.material_id
+      order by ${supportingMaterialSections.ordinal} asc, ${supportingMaterialSections.id} asc
+      limit 1
+    ) as fallback_section on true
+    cross join candidate_window
+    order by ranked_candidates.lexical_score desc, ranked_candidates.material_id asc
+    limit ${limit + 1}
+    offset ${offset}
+  `
+}
+
 function materialLinkIds(
   links: readonly (typeof supportingMaterialLinks.$inferSelect)[],
   key: "amendmentId" | "billId" | "eventId" | "organizationId"
 ): string[] {
   return [...new Set(links.flatMap((link) => (link[key] === null ? [] : [link[key]])))].sort()
+}
+
+function isPostgresStatementTimeout(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "57014"
 }
 
 export interface ChangeSearchInput {
@@ -1449,80 +1722,79 @@ export class LegislationQueryService {
     }
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeOffset(input.cursor)
-    const searchQuery = sql`websearch_to_tsquery('english', ${query})`
-    const titleRank = sql<number>`ts_rank_cd(to_tsvector('english', ${supportingMaterials.title}), ${searchQuery})`
-    const sectionRank = sql<number>`coalesce(max(ts_rank_cd(${supportingMaterialSections.searchVector}, ${searchQuery})), 0)`
-    const score = sql<number>`greatest(${titleRank}, ${sectionRank})`
-    const rows = await this.#database
-      .select({ lexicalScore: score, material: supportingMaterialSummaryColumns })
-      .from(supportingMaterials)
-      .leftJoin(supportingMaterialSections, eq(supportingMaterialSections.materialId, supportingMaterials.id))
-      .leftJoin(supportingMaterialLinks, eq(supportingMaterialLinks.materialId, supportingMaterials.id))
-      .leftJoin(bills, eq(bills.id, supportingMaterialLinks.billId))
-      .where(
-        and(
-          supportingMaterialFilter(
-            input.jurisdictionIds,
-            input.jurisdictionId,
-            (value) => eq(supportingMaterials.jurisdictionId, value),
-            (values) => inArray(supportingMaterials.jurisdictionId, values)
-          ),
-          supportingMaterialFilter(
-            input.classifications,
-            input.classification,
-            (value) => eq(supportingMaterials.classification, value),
-            (values) => inArray(supportingMaterials.classification, values)
-          ),
-          supportingMaterialFilter(
-            input.billIds,
-            input.billId,
-            (value) => eq(supportingMaterialLinks.billId, value),
-            (values) => inArray(supportingMaterialLinks.billId, values)
-          ),
-          supportingMaterialFilter(
-            input.amendmentIds,
-            input.amendmentId,
-            (value) => eq(supportingMaterialLinks.amendmentId, value),
-            (values) => inArray(supportingMaterialLinks.amendmentId, values)
-          ),
-          supportingMaterialFilter(
-            input.eventIds,
-            input.eventId,
-            (value) => eq(supportingMaterialLinks.eventId, value),
-            (values) => inArray(supportingMaterialLinks.eventId, values)
-          ),
-          supportingMaterialFilter(
-            input.organizationIds,
-            input.organizationId,
-            (value) => eq(supportingMaterialLinks.organizationId, value),
-            (values) => inArray(supportingMaterialLinks.organizationId, values)
-          ),
-          input.sessionIds === undefined ? undefined : inArray(bills.sessionId, input.sessionIds),
-          input.documentFrom === undefined ? undefined : gte(supportingMaterials.documentDate, input.documentFrom),
-          input.documentTo === undefined ? undefined : lte(supportingMaterials.documentDate, input.documentTo),
-          input.updatedFrom === undefined ? undefined : gte(supportingMaterials.updatedAt, input.updatedFrom),
-          input.updatedTo === undefined ? undefined : lte(supportingMaterials.updatedAt, input.updatedTo),
-          input.updatedToExclusive === undefined
-            ? undefined
-            : sql`${supportingMaterials.updatedAt} < ${input.updatedToExclusive}`,
-          input.processingStatus === undefined
-            ? undefined
-            : eq(supportingMaterials.processingStatus, input.processingStatus),
-          sql`(to_tsvector('english', ${supportingMaterials.title}) @@ ${searchQuery} or ${supportingMaterialSections.searchVector} @@ ${searchQuery})`
+    let rows: LexicalSupportingMaterialCandidate[]
+    try {
+      rows = await this.#database.transaction(async (transaction) => {
+        await transaction.execute(
+          sql`select set_config('statement_timeout', ${String(LEXICAL_SUPPORTING_MATERIAL_SEARCH_TIMEOUT_MS)}, true)`
         )
-      )
-      .groupBy(supportingMaterials.id)
-      .orderBy(desc(score), asc(supportingMaterials.id))
-      .limit(limit + 1)
-      .offset(offset)
-    const truncated = rows.length > limit
-    const items = await this.#withSupportingMaterialLinkIds(
-      rows.slice(0, limit).map(({ lexicalScore, material }) => ({ ...material, score: lexicalScore, id: material.id }))
+        const candidateRows = await transaction.execute<LexicalSupportingMaterialCandidate>(
+          buildLexicalSupportingMaterialCandidateQuery(input, query, limit, offset)
+        )
+        return candidateRows.rows
+      })
+    } catch (error) {
+      if (isPostgresStatementTimeout(error)) {
+        throw new LegislationError(
+          "dependency_unavailable",
+          "Supporting material lexical search is temporarily unavailable"
+        )
+      }
+      throw error
+    }
+    const pageCandidates = rows.slice(0, limit)
+    const candidateIds = pageCandidates.map((row) => row.id)
+    const candidateSectionIds = pageCandidates.map((row) => row.sectionId)
+    const summariesAndSections =
+      candidateIds.length === 0
+        ? []
+        : await this.#database
+            .select({ material: supportingMaterialSummaryColumns, section: supportingMaterialSections })
+            .from(supportingMaterials)
+            .innerJoin(supportingMaterialSections, eq(supportingMaterialSections.materialId, supportingMaterials.id))
+            .where(
+              and(
+                inArray(supportingMaterials.id, candidateIds),
+                inArray(supportingMaterialSections.id, candidateSectionIds)
+              )
+            )
+    const summariesAndSectionsByMaterialId = new Map(
+      summariesAndSections.map(({ material, section }) => [material.id, { material, section }])
     )
+    const rankedMaterials = pageCandidates.flatMap((row) => {
+      const value = summariesAndSectionsByMaterialId.get(row.id)
+      if (value === undefined) {
+        return []
+      }
+      const matchedFields = [
+        ...(row.titleScore === null ? [] : (["title"] as const)),
+        ...(row.sectionScore === null ? [] : (["sectionText"] as const))
+      ]
+      return [
+        {
+          ...value.material,
+          id: value.material.id,
+          lexicalEvidence: {
+            lexicalScore: row.lexicalScore,
+            matchedFields,
+            section: value.section,
+            snippet: row.matchedSectionId === value.section.id ? row.snippet : null
+          },
+          score: row.lexicalScore
+        }
+      ]
+    })
+    const pageState = lexicalSupportingMaterialPageState(
+      offset,
+      limit,
+      rows.length,
+      rows[0]?.candidateWindowCapped === true
+    )
+    const items = await this.#withSupportingMaterialLinkIds(rankedMaterials)
     return {
       items,
-      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
-      truncated,
+      nextCursor: pageState.nextCursor,
+      truncated: pageState.truncated,
       warnings: coverageWarnings(items.length, "supporting materials")
     }
   }
@@ -1539,9 +1811,20 @@ export class LegislationQueryService {
     }
     const mode = input.mode ?? "lexical"
     const page = await this.searchSupportingMaterials(input)
-    const items = await Promise.all(
-      page.items.map(async (material) => await this.#supportingMaterialSearchHit(material, input.query!, mode))
-    )
+    const semanticSectionIds = [
+      ...new Set(
+        page.items.flatMap((material) => (material.semanticSectionId === undefined ? [] : [material.semanticSectionId]))
+      )
+    ]
+    const semanticSections =
+      semanticSectionIds.length === 0
+        ? []
+        : await this.#database
+            .select()
+            .from(supportingMaterialSections)
+            .where(inArray(supportingMaterialSections.id, semanticSectionIds))
+    const semanticSectionsById = new Map(semanticSections.map((section) => [section.id, section]))
+    const items = page.items.map((material) => this.#supportingMaterialSearchHit(material, mode, semanticSectionsById))
     return {
       ...page,
       items,
@@ -1549,11 +1832,30 @@ export class LegislationQueryService {
     }
   }
 
-  async #supportingMaterialSearchHit(
+  #supportingMaterialSearchHit(
     material: SupportingMaterialRead,
-    query: string,
-    mode: "hybrid" | "lexical" | "semantic"
-  ): Promise<SupportingMaterialSearchHitRead> {
+    mode: "hybrid" | "lexical" | "semantic",
+    semanticSectionsById: ReadonlyMap<string, typeof supportingMaterialSections.$inferSelect>
+  ): SupportingMaterialSearchHitRead {
+    if (mode === "lexical") {
+      const lexical = material.lexicalEvidence
+      if (lexical === undefined) {
+        throw new LegislationError(
+          "unprocessable",
+          "Supporting material lexical search did not preserve match evidence"
+        )
+      }
+      return {
+        ...material,
+        lexicalScore: lexical.lexicalScore,
+        matchedFields: lexical.matchedFields,
+        rerankScore: null,
+        score: lexical.lexicalScore,
+        section: lexical.section,
+        semanticScore: null,
+        snippet: lexical.snippet
+      }
+    }
     const semanticScore = material.distance === undefined ? null : 1 - material.distance
     if ((mode === "semantic" || mode === "hybrid") && semanticScore !== null && !Number.isFinite(semanticScore)) {
       throw new LegislationError("unprocessable", "Supporting material semantic score is not finite")
@@ -1562,14 +1864,26 @@ export class LegislationQueryService {
       throw new LegislationError("unprocessable", "Supporting material semantic search did not preserve a vector score")
     }
 
+    const lexicalEvidence = material.lexicalEvidence
     const lexical =
-      mode === "semantic"
-        ? { matchedFields: [] as const, score: null, sectionId: undefined, snippet: null }
-        : await this.#materialLexicalMatch(material.id, query)
-    const section = await this.#supportingMaterialSearchSection(
-      material.id,
-      mode === "lexical" ? lexical.sectionId : (material.semanticSectionId ?? lexical.sectionId)
-    )
+      lexicalEvidence === undefined
+        ? { matchedFields: [] as const, score: null, section: undefined, sectionId: undefined, snippet: null }
+        : {
+            matchedFields: lexicalEvidence.matchedFields,
+            score: lexicalEvidence.lexicalScore,
+            section: lexicalEvidence.section,
+            sectionId: lexicalEvidence.section.id,
+            snippet: lexicalEvidence.snippet
+          }
+    const preferredSectionId = material.semanticSectionId ?? lexical.sectionId
+    let section =
+      lexical.section !== undefined && preferredSectionId === lexical.section.id ? lexical.section : undefined
+    if (section === undefined && preferredSectionId !== undefined) {
+      section = semanticSectionsById.get(preferredSectionId)
+    }
+    if (section === undefined || section.materialId !== material.id) {
+      throw new LegislationError("unprocessable", "Supporting material search result has no persisted matching section")
+    }
     const matchedFields = [
       ...new Set([...lexical.matchedFields, ...(semanticScore === null ? [] : (["semantic"] as const))])
     ]
@@ -1590,84 +1904,6 @@ export class LegislationQueryService {
       semanticScore,
       snippet: section.id === lexical.sectionId ? lexical.snippet : null
     }
-  }
-
-  async #materialLexicalMatch(
-    materialId: string,
-    query: string
-  ): Promise<{
-    matchedFields: readonly ("sectionText" | "title")[]
-    score: number | null
-    sectionId: string | undefined
-    snippet: string | null
-  }> {
-    const searchQuery = sql`websearch_to_tsquery('english', ${query})`
-    const [title, section] = await Promise.all([
-      this.#database
-        .select({
-          score: sql<number>`ts_rank_cd(to_tsvector('english', ${supportingMaterials.title}), ${searchQuery})`
-        })
-        .from(supportingMaterials)
-        .where(
-          and(
-            eq(supportingMaterials.id, materialId),
-            sql`to_tsvector('english', ${supportingMaterials.title}) @@ ${searchQuery}`
-          )
-        )
-        .limit(1),
-      this.#database
-        .select({
-          score: sql<number>`ts_rank_cd(${supportingMaterialSections.searchVector}, ${searchQuery})`,
-          sectionId: supportingMaterialSections.id,
-          snippet: sql<string>`ts_headline('english', ${supportingMaterialSections.text}, ${searchQuery}, 'MaxFragments=2, MaxWords=35, MinWords=10')`
-        })
-        .from(supportingMaterialSections)
-        .where(
-          and(
-            eq(supportingMaterialSections.materialId, materialId),
-            sql`${supportingMaterialSections.searchVector} @@ ${searchQuery}`
-          )
-        )
-        .orderBy(
-          desc(sql`ts_rank_cd(${supportingMaterialSections.searchVector}, ${searchQuery})`),
-          asc(supportingMaterialSections.id)
-        )
-        .limit(1)
-    ])
-    const titleScore = title[0]?.score
-    const sectionScore = section[0]?.score
-    const score = Math.max(titleScore ?? Number.NEGATIVE_INFINITY, sectionScore ?? Number.NEGATIVE_INFINITY)
-    if (!Number.isFinite(score)) {
-      return { matchedFields: [], score: null, sectionId: undefined, snippet: null }
-    }
-    return {
-      matchedFields: [
-        ...(titleScore === undefined ? [] : (["title"] as const)),
-        ...(sectionScore === undefined ? [] : (["sectionText"] as const))
-      ],
-      score,
-      sectionId: section[0]?.sectionId,
-      snippet: section[0]?.snippet ?? null
-    }
-  }
-
-  async #supportingMaterialSearchSection(materialId: string, preferredSectionId: string | undefined) {
-    const sections = await this.#database
-      .select()
-      .from(supportingMaterialSections)
-      .where(
-        and(
-          eq(supportingMaterialSections.materialId, materialId),
-          preferredSectionId === undefined ? undefined : eq(supportingMaterialSections.id, preferredSectionId)
-        )
-      )
-      .orderBy(asc(supportingMaterialSections.ordinal), asc(supportingMaterialSections.id))
-      .limit(1)
-    const section = sections[0]
-    if (section === undefined) {
-      throw new LegislationError("unprocessable", "Supporting material search result has no persisted matching section")
-    }
-    return section
   }
 
   async getSupportingMaterial(lookup: EntityLookup) {
