@@ -18,6 +18,8 @@
 - [HTTP API contract](http-api-contract/README.md)
 - [HTTP API implementation backlog and endpoint states](http-api-implementation-backlog.md)
 - [HTTP API local smoke and MCP parity checklist](http-api-local-smoke-and-parity.md)
+- [HTTP API Railway release record](http-api-railway-release.md)
+- [WorkOS MCP-resource OAuth canary](workos-mcp-resource-oauth-canary.md)
 - [Architecture decisions](architecture-decisions.md)
 - [Trigger.dev synchronization orchestration design](trigger-orchestration-design.md)
 - [LegiScan data catalog](legiscan/README.md)

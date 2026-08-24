@@ -12,9 +12,9 @@ This is the delivery ledger for the HTTP API, Railway release, and MCP cutover. 
 An endpoint is not **Done** merely because a route handler exists. Each phase is committed only after root review and
 the verification listed below. The endpoint contract remains the source of truth for request and response bodies.
 The execution gate is the [local smoke and MCP parity checklist](http-api-local-smoke-and-parity.md). This ledger was
-last reconciled with the reviewed implementation on 2026-08-24; no endpoint has yet supplied the smoke, parity, and
-reviewed-commit evidence required for **Done**. Current totals are 40 **In progress**, 47 **Blocked**, 0 **Ready**, and
-0 **Done** across 87 endpoints.
+last reconciled with the reviewed implementation and authenticated scoped-bills smoke on 2026-08-24. Two scoped bill
+collections have the smoke and reviewed-commit evidence required for **Done**. Current totals are 38 **In progress**,
+47 **Blocked**, 0 **Ready**, and 2 **Done** across 87 endpoints.
 
 ## Delivery phases
 
@@ -25,9 +25,9 @@ reviewed-commit evidence required for **Done**. Current totals are 40 **In progr
 | API-02 | Canonical legislative reads | In progress | Root review accepted the current core-read handler foundation and focused tests. Complete canonical contract projections, missing filters/relationships, source links, authenticated database smoke, parity evidence, and the reviewed commit. |
 | API-03 | Civic graph, meetings, search, and diffs | In progress | Root review accepted the current civic/search handler foundation and focused validation. Complete canonical projections, missing filters/relationships, truthful model metadata, database-backed smoke/parity evidence, and the reviewed commit. |
 | API-04 | Subscriptions and webhooks | Blocked | Root review accepted the uncomposed schema, service, route, SSRF, and encrypted-secret foundations. A durable `SubscriptionRepository`, KMS-backed `WebhookSecretProtector`, encrypted 24-hour idempotency executor, event matcher/materializer, pinned outbound verification/delivery executors, retry/dead-letter worker, and composition/authorization adapter are still missing. |
-| API-05 | Local smoke and parity | Ready | Execute the linked checklist against the composed authenticated server and disposable fixture database. Record canonical projection, pagination, negative-path, model-routing, and MCP parity evidence per product; do not promote an endpoint on handler-unit evidence alone. |
-| API-06 | Railway API release | Ready | Resolve the linked Railway project/service; configure the monorepo root/start command and non-secret variables; deploy the reviewed build; wait for terminal `SUCCESS`; verify health plus authenticated remote API smoke; document the release and rollback target. |
-| API-07 | MCP HTTP migration | Blocked | After API-06, add an HTTP-backed application-service adapter with service authentication, timeouts, retries only for safe operations, tracing, and an in-process rollback switch; run the full parity suite; deploy MCP; canary and then cut over only after parity passes. |
+| API-05 | Local smoke and parity | In progress | The scoped-bills composed-server profile has passed locally. Execute the remaining authenticated fixture, canonical projection, pagination, negative-path, model-routing, and MCP-parity checks per product; do not promote an endpoint on handler-unit evidence alone. |
+| API-06 | Railway API release | Done | `legislation-api` is deployed at the recorded Railway release. `WORKOS_API_AUDIENCE` isolates the API token audience from the MCP resource audience. Health, readiness, unauthenticated API/MCP challenges, and the authenticated scoped-bills remote smoke passed; the rollback target is documented. |
+| API-07 | MCP HTTP migration | In progress | The rollback-safe HTTP and hybrid query adapters are committed, but production remains explicitly `in-process`; the hybrid HTTP-method allowlist is empty. Complete the full parity suite, enable one bounded canary method only after its remote parity passes, and cut over only after the broader gate passes. |
 | API-08 | Hardening and completion | Blocked | Generate and validate OpenAPI, add rate limits and observability, validate daily incremental behavior, finish blocked data/provider work, update every endpoint state, run scoped and repository verification, and commit final documentation. |
 
 ## Review and commit protocol
@@ -55,13 +55,13 @@ intentionally uncomposed and **Blocked**.
 | GET | `/api/jurisdictions` | In progress | Reviewed handler and page tests exist; exact `Jurisdiction` projection, live database smoke, parity, and commit remain. |
 | GET | `/api/jurisdictions/{jurisdictionId}` | In progress | Reviewed handler exists; exact canonical/provenance projection, live smoke, parity, and commit remain. |
 | GET | `/api/jurisdictions/{jurisdictionId}/sessions` | In progress | Reviewed handler exists; exact `Session` projection/filter smoke, parity, and commit remain. |
-| GET | `/api/jurisdictions/{jurisdictionId}/bills` | In progress | Exact canonical projection and scoped filters are implemented; default `latest-action-desc` performance remains a tracked blocker, while scoped smoke uses `introduced-desc`; live database smoke, MCP parity, and reviewed commit remain. |
+| GET | `/api/jurisdictions/{jurisdictionId}/bills` | Done | Exact canonical projection and scoped filters passed the authenticated remote `scoped-bills` profile for `jurisdiction:ak`; `introduced-desc` avoids the separately tracked default latest-action performance work. |
 | GET | `/api/jurisdictions/{jurisdictionId}/organizations` | Blocked | Jurisdiction-scoped organization query is missing. |
 | GET | `/api/jurisdictions/{jurisdictionId}/commissions` | Blocked | Classification-scoped organization query is missing. |
 | GET | `/api/jurisdictions/{jurisdictionId}/committees` | Blocked | Classification-scoped organization query is missing. |
 | GET | `/api/jurisdictions/{jurisdictionId}/meetings` | Blocked | `legislative_events` lacks a session relationship and authoritative local date, canonical organization relation, and typed location/virtual-access fields required for `MeetingSummary`; route is intentionally unregistered. |
 | GET | `/api/sessions/{sessionId}` | In progress | Reviewed handler exists; exact canonical/provenance projection, live smoke, parity, and commit remain. |
-| GET | `/api/sessions/{sessionId}/bills` | In progress | Exact canonical projection and scoped filters are implemented; default `latest-action-desc` performance remains a tracked blocker, while scoped smoke uses `introduced-desc`; live database smoke, MCP parity, and reviewed commit remain. |
+| GET | `/api/sessions/{sessionId}/bills` | Done | Exact canonical projection and scoped filters passed the authenticated remote `scoped-bills` profile for `session:ak:30`; `introduced-desc` avoids the separately tracked default latest-action performance work. |
 | GET | `/api/sessions/{sessionId}/meetings` | Blocked | An authoritative event-session relation is missing; inferring through `event_bills` omits session meetings without linked bills. |
 | GET | `/api/bills` | In progress | Reviewed handler exists; remaining filters, canonical projection, stable-order database smoke, parity, and commit remain. |
 | POST | `/api/bills/batch` | In progress | Reviewed item-isolation and limit tests exist; exact `BillDetail` projection, live smoke/parity, and commit remain. |
@@ -165,3 +165,7 @@ The MCP remains on its current application service until all of these are true:
 - MCP-vs-HTTP fixtures show no material result loss for bills, amendments, votes, documents, meetings, and search;
 - a configuration switch can immediately restore the in-process adapter without a redeploy;
 - the remote canary shows acceptable latency and no authorization or provider regression.
+
+The current release evidence and remaining MCP-cutover gate are recorded in
+[the Railway API release record](http-api-railway-release.md). The endpoint matrix is 38 **In progress**, 47
+**Blocked**, and 2 **Done** routes; the two scoped bill collections are the only completed endpoint rows.
