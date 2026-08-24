@@ -5,6 +5,11 @@
 **Status:** baseline contract for review
 **Scope:** power, reset, safe-state, recovery, persistence, and evidence semantics for the scoring apparatus. This is not a schematic, rail budget, reset-circuit design, firmware implementation, or storage transaction format.
 
+The executable companion [`../src/power-reset-state.ts`](../src/power-reset-state.ts) freezes this contract as
+immutable fail-closed data. Its validator rejects a relaxed lifecycle, reset direction, safe-output state, persistence
+boundary, boot identity, input-source selection, or hardware-evidence claim. Passing that validator is
+software-contract evidence only.
+
 This contract applies the terms in [the scoring glossary](scoring-glossary.md), the STM32/ESP32 authority boundary in
 [the processor fault-containment contract](processor-fault-containment-contract.md), and the intended isolated
 processor domains in [the bench prototype plan](../../../packages/scoring-circuit/docs/bench-prototype-plan.md).
