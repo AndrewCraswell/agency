@@ -37,6 +37,10 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 17 | SC-005 | P3 | done | Root-approved test-only renderer helper centralizes the shared tscircuit setup across eight suites while preserving each suite's PCB mode and component-specific assertions |
 | 18 | SD-012 | P2 | done | Root-approved canonical integer-microsecond guard now enforces identical timestamp validity across all four TypeScript scorers |
 | 19 | SD-013 | P2 | done | Root-approved app-internal CRC-32C primitive removes divergent TypeScript implementations while preserving the transport export |
+| 20 | SD-014 | P1 | ready | Scenario input bytes can be hashed and executed from separate reads |
+| 21 | SD-015 | P2 | ready | Event journal redundantly reclones already validated immutable decision records |
+| 22 | SC-007 | P2 | blocked | PCB identity serializers differ; implementation waits for active board-artifact work |
+| 23 | SC-008 | P3 | intake | Three electrical-budget modules repeat the same finite-positive guard |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -364,3 +368,47 @@ truth.
 - Impact: two independent polynomial loops could drift in initialization, final XOR, or byte encoding.
 - Non-goals: this does not replace the cross-language transport convergence work in SD-005 and does not treat CRC as authentication.
 - Verification: 21 focused tests, application TypeScript, focused oxlint, and focused oxfmt passed.
+
+## SD-014: eliminate scenario digest and execution TOCTOU
+
+- Priority: `P1`
+- State: `ready`
+- Evidence: `scenario-runner-cli.ts` hashes one file read and then invokes a runner that rereads the path; manifest validation and execution can also observe different bytes.
+- Impact: a report digest can identify different bytes from those actually executed.
+- Bounded remediation: make one bounded immutable input snapshot own bytes, digest, parsed value, and validated path for both direct and CLI execution.
+- Acceptance: race/mutation coverage proves digest and executed bytes cannot diverge; existing missing, oversized, invalid-JSON, and digest-failure outcomes remain fail closed.
+- Dependencies: M0-07 scenario manifest integrity.
+- Non-goals: no general filesystem abstraction, cache, or live watcher.
+
+## SD-015: remove redundant event-journal record cloning
+
+- Priority: `P2`
+- State: `ready`
+- Evidence: `event-journal.ts` performs `structuredClone(parseDecisionRecord(value))`, while `parseDecisionRecord` already reconstructs and deeply freezes an isolated record.
+- Impact: every journal boundary performs a second traversal and maintains a second immutability path.
+- Bounded remediation: delegate record cloning directly to `parseDecisionRecord`; retain transaction and container freezing.
+- Acceptance: journal tests prove returned records remain isolated and frozen and canonical recovery bytes are unchanged.
+- Dependencies: M0-05 and M2-08.
+- Non-goals: no persistence or record-schema change.
+
+## SC-007: unify PCB canonical JSON identities
+
+- Priority: `P2`
+- State: `blocked`
+- Evidence: the analog test matrix and board-artifact paths implement different canonical JSON policies.
+- Impact: equivalent evidence identities can drift in key ordering and invalid-value handling.
+- Bounded remediation: after board-artifact work settles, share one private package serializer/digest helper while preserving arrays and digest prefixes.
+- Acceptance: reordered keys, arrays, numeric-like and Unicode keys, undefined, non-finite numbers, accessors, and non-plain objects have explicit common outcomes.
+- Dependencies: SC-004 board-artifact work and BP-106.
+- Non-goals: no cross-package framework or silent migration of recorded digests.
+
+## SC-008: share finite-positive electrical guards
+
+- Priority: `P3`
+- State: `intake`
+- Evidence: `application-rail.ts`, `power-budget.ts`, and `v5-power-stage.ts` repeat the same finite-positive check and error shape.
+- Impact: small validation and wording drift risk.
+- Bounded remediation: share one private assertion only across these exact modules.
+- Acceptance: focused tests preserve all public errors and bounds.
+- Dependencies: none.
+- Non-goals: no general validation framework or domain-validator merger.
