@@ -238,13 +238,39 @@ function fakeFetch() {
       url.pathname === "/api/meetings" ||
       url.pathname === "/api/amendments" ||
       url.pathname === "/api/votes" ||
-      url.pathname === "/api/supporting-materials" ||
       url.pathname === "/api/changes" ||
       url.pathname === "/api/jurisdictions"
     ) {
       return jsonResponse(
         {
           data: [],
+          links: { next: null, self: url.pathname },
+          meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
+        },
+        200,
+        correlationId
+      )
+    }
+    if (url.pathname === "/api/supporting-materials") {
+      return jsonResponse(
+        {
+          data: [
+            {
+              ...canonical("material:fixture"),
+              amendmentIds: [],
+              billIds: ["bill:fixture"],
+              classification: "supporting-document",
+              documentDate: "2026-01-01",
+              jurisdictionId: "jurisdiction:fixture",
+              meetingIds: [],
+              mimeType: "text/html",
+              organizationIds: [],
+              processingStatus: "processed",
+              sourceUrl: "https://source.example.test/material",
+              title: "Fixture material",
+              type: "supporting-material"
+            }
+          ],
           links: { next: null, self: url.pathname },
           meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
         },

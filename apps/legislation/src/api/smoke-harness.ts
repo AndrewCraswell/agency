@@ -6,12 +6,14 @@ export type SmokeProfile = "full" | "scoped-bills"
 export type SmokeFixture = Readonly<{
   amendmentId?: string
   billId?: string
+  billSearchQuery?: string
   documentId?: string
   documentIdB?: string
   documentSectionId?: string
   jurisdictionId?: string
   materialId?: string
   materialSectionId?: string
+  materialSearchQuery?: string
   meetingId?: string
   organizationId?: string
   personId?: string
@@ -46,12 +48,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 type CheckDefinition = Readonly<{
   body?: unknown
   errorCategory?: string
-  expected: "batch" | "bill-page" | "calculation" | "error" | "health" | "page" | "resource" | "search"
+  expected:
+    | "batch"
+    | "bill-page"
+    | "calculation"
+    | "error"
+    | "health"
+    | "material-page"
+    | "page"
+    | "resource"
+    | "search"
   healthStatus?: "ok" | "ready"
   id: string
   method?: "GET" | "POST"
   path: string
   protected?: boolean
+  requireNonEmptySearch?: boolean
   requiresAuthHeader?: boolean
   statusCode?: number
 }>
@@ -78,7 +90,7 @@ const ALWAYS_CHECKS: readonly CheckDefinition[] = [
 
 const REGISTERED_EXACT_CHECKS: readonly CheckDefinition[] = [
   { expected: "bill-page", id: "list-bills", path: "/api/bills?sort=introduced-desc&limit=1" },
-  { expected: "page", id: "list-supporting-materials", path: "/api/supporting-materials?limit=1" }
+  { expected: "material-page", id: "list-supporting-materials", path: "/api/supporting-materials?limit=1" }
 ]
 
 const BLOCKED_ABSENCE_CHECKS: readonly CheckDefinition[] = [
@@ -184,6 +196,26 @@ function fixtureChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
       path: `/api/supporting-materials/${encoded(fixture.materialId)}/sections/${encoded(fixture.materialSectionId)}`
     })
   }
+  if (fixture.billSearchQuery !== undefined) {
+    checks.push({
+      body: { limit: 1, mode: "lexical", query: fixture.billSearchQuery },
+      expected: "search",
+      id: "search-bills",
+      method: "POST",
+      path: "/api/search/bills",
+      requireNonEmptySearch: true
+    })
+  }
+  if (fixture.materialSearchQuery !== undefined) {
+    checks.push({
+      body: { limit: 1, mode: "lexical", query: fixture.materialSearchQuery },
+      expected: "search",
+      id: "search-supporting-materials",
+      method: "POST",
+      path: "/api/search/supporting-materials",
+      requireNonEmptySearch: true
+    })
+  }
   return checks
 }
 
@@ -246,6 +278,27 @@ function missingFixtureChecks(fixture: SmokeFixture, present: ReadonlySet<string
       )
     )
   }
+  if (fixture.billSearchQuery === undefined) {
+    skipped.push(
+      skippedCheck(
+        { expected: "search", id: "search-bills", method: "POST", path: "/api/search/bills" },
+        "skipped: provide LEGISLATION_SMOKE_BILL_SEARCH_QUERY to exercise this route with a nonempty canonical result"
+      )
+    )
+  }
+  if (fixture.materialSearchQuery === undefined) {
+    skipped.push(
+      skippedCheck(
+        {
+          expected: "search",
+          id: "search-supporting-materials",
+          method: "POST",
+          path: "/api/search/supporting-materials"
+        },
+        "skipped: provide LEGISLATION_SMOKE_MATERIAL_SEARCH_QUERY to exercise this route with a nonempty canonical result"
+      )
+    )
+  }
   return skipped
 }
 
@@ -296,6 +349,20 @@ function isStringArray(value: unknown): value is readonly string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string")
 }
 
+function hasSourceReference(value: unknown): boolean {
+  if (
+    !isRecord(value) ||
+    typeof value.provider !== "string" ||
+    value.provider.trim() === "" ||
+    !isAbsoluteHttpUrl(value.sourceUrl) ||
+    !isRfc3339(value.retrievedAt) ||
+    typeof value.isOfficial !== "boolean"
+  ) {
+    return false
+  }
+  return value.sourceUpdatedAt === null || isRfc3339(value.sourceUpdatedAt)
+}
+
 function hasCanonicalRecord(value: unknown): boolean {
   if (!isRecord(value)) {
     return false
@@ -310,19 +377,7 @@ function hasCanonicalRecord(value: unknown): boolean {
   ) {
     return false
   }
-  return value.sources.every((source) => {
-    if (
-      !isRecord(source) ||
-      typeof source.provider !== "string" ||
-      source.provider.trim() === "" ||
-      !isAbsoluteHttpUrl(source.sourceUrl) ||
-      !isRfc3339(source.retrievedAt) ||
-      typeof source.isOfficial !== "boolean"
-    ) {
-      return false
-    }
-    return source.sourceUpdatedAt === null || isRfc3339(source.sourceUpdatedAt)
-  })
+  return value.sources.every(hasSourceReference)
 }
 
 function hasPageEnvelope(body: Record<string, unknown>, itemsMustBeCanonical: boolean): boolean {
@@ -398,8 +453,194 @@ export function canonicalSmokeApiBaseUrl(value: string | URL): URL {
   return url
 }
 
-function hasSearchEnvelope(body: Record<string, unknown>): boolean {
-  if (!hasPageEnvelope(body, true)) {
+function hasSearchMatch(
+  value: unknown,
+  recordType: "bill" | "supporting-material"
+): value is Record<string, unknown> & { mode: "hybrid" | "lexical" | "semantic" } {
+  if (
+    !isRecord(value) ||
+    (value.mode !== "hybrid" && value.mode !== "lexical" && value.mode !== "semantic") ||
+    !Array.isArray(value.matchedFields) ||
+    value.matchedFields.length === 0 ||
+    !value.matchedFields.every((field) => typeof field === "string" && field.trim() !== "") ||
+    new Set(value.matchedFields).size !== value.matchedFields.length ||
+    !(value.snippet === null || typeof value.snippet === "string") ||
+    value.explanation !== null
+  ) {
+    return false
+  }
+  const allowedFields =
+    recordType === "bill"
+      ? new Set(["abstract", "identifier", "semantic", "sponsorNames", "subjects", "title", "versionText"])
+      : new Set(["sectionText", "semantic", "title"])
+  if (value.matchedFields.some((field) => !allowedFields.has(field))) {
+    return false
+  }
+  const lexical = value.lexicalScore
+  const semantic = value.semanticScore
+  const rerank = value.rerankScore
+  const finite = (score: unknown): score is number => typeof score === "number" && Number.isFinite(score)
+  if (recordType === "bill") {
+    if (value.mode === "lexical") {
+      return finite(lexical) && semantic === null && rerank === null
+    }
+    if (value.mode === "semantic") {
+      return lexical === null && finite(semantic) && finite(rerank)
+    }
+    return (finite(lexical) || finite(semantic)) && finite(rerank)
+  }
+  if (rerank !== null) {
+    return false
+  }
+  if (value.mode === "lexical") {
+    return finite(lexical) && semantic === null
+  }
+  if (value.mode === "semantic") {
+    return lexical === null && finite(semantic)
+  }
+  return finite(lexical) || finite(semantic)
+}
+
+function hasSupportingMaterialSummary(value: unknown, canonicalApiBaseUrl: URL | undefined): boolean {
+  if (
+    !isRecord(value) ||
+    !hasCanonicalRecord(value) ||
+    value.type !== "supporting-material" ||
+    typeof value.jurisdictionId !== "string" ||
+    value.jurisdictionId.trim() === "" ||
+    typeof value.classification !== "string" ||
+    value.classification.trim() === "" ||
+    typeof value.title !== "string" ||
+    value.title.trim() === "" ||
+    !isStringArray(value.billIds) ||
+    !isStringArray(value.amendmentIds) ||
+    !isStringArray(value.meetingIds) ||
+    !isStringArray(value.organizationIds) ||
+    !(value.documentDate === null || isIsoDate(value.documentDate)) ||
+    !isAbsoluteHttpUrl(value.sourceUrl) ||
+    !(value.mimeType === null || typeof value.mimeType === "string") ||
+    (value.processingStatus !== "pending" &&
+      value.processingStatus !== "processing" &&
+      value.processingStatus !== "processed" &&
+      value.processingStatus !== "failed" &&
+      value.processingStatus !== "unsupported")
+  ) {
+    return false
+  }
+  return (
+    canonicalApiBaseUrl === undefined ||
+    value.canonicalUrl ===
+      new URL(`/api/supporting-materials/${encoded(value.id as string)}`, canonicalApiBaseUrl).toString()
+  )
+}
+
+function hasSupportingMaterialPageEnvelope(
+  body: Record<string, unknown>,
+  canonicalApiBaseUrl: URL | undefined
+): boolean {
+  return (
+    hasPageEnvelope(body, true) &&
+    Array.isArray(body.data) &&
+    body.data.length > 0 &&
+    body.data.every((item) => hasSupportingMaterialSummary(item, canonicalApiBaseUrl))
+  )
+}
+
+function hasSupportingMaterialSection(
+  value: unknown,
+  materialId: string,
+  canonicalApiBaseUrl: URL | undefined
+): boolean {
+  if (
+    !isRecord(value) ||
+    !hasCanonicalRecord(value) ||
+    value.type !== "supporting-material-section" ||
+    value.materialId !== materialId ||
+    !isNonnegativeInteger(value.ordinal) ||
+    !(value.heading === null || typeof value.heading === "string") ||
+    typeof value.text !== "string" ||
+    !(value.pageStart === null || isNonnegativeInteger(value.pageStart)) ||
+    !(value.pageEnd === null || isNonnegativeInteger(value.pageEnd)) ||
+    (typeof value.pageStart === "number" && typeof value.pageEnd === "number" && value.pageEnd < value.pageStart) ||
+    typeof value.contentHash !== "string" ||
+    !isAbsoluteHttpUrl(value.sourceUrl)
+  ) {
+    return false
+  }
+  return (
+    canonicalApiBaseUrl === undefined ||
+    value.canonicalUrl ===
+      new URL(
+        `/api/supporting-materials/${encoded(materialId)}/sections/${encoded(value.id as string)}`,
+        canonicalApiBaseUrl
+      ).toString()
+  )
+}
+
+function hasCanonicalSearchHit(value: unknown, canonicalApiBaseUrl: URL | undefined): boolean {
+  if (!isRecord(value) || typeof value.recordId !== "string" || value.recordId.trim() === "") {
+    return false
+  }
+  if (
+    !isNonnegativeInteger(value.rank) ||
+    value.rank < 1 ||
+    typeof value.score !== "number" ||
+    !Number.isFinite(value.score)
+  ) {
+    return false
+  }
+  if (!Array.isArray(value.sources) || value.sources.length === 0 || !value.sources.every(hasSourceReference)) {
+    return false
+  }
+  if (value.recordType === "bill") {
+    const record = value.record
+    if (!hasSearchMatch(value.match, "bill")) {
+      return false
+    }
+    return (
+      isRecord(record) &&
+      hasBillSummary(record, canonicalApiBaseUrl) &&
+      record.id === value.recordId &&
+      JSON.stringify(value.sources) === JSON.stringify(record.sources) &&
+      value.score === (value.match.mode === "lexical" ? value.match.lexicalScore : value.match.rerankScore)
+    )
+  }
+  if (value.recordType !== "supporting-material" || !isRecord(value.record)) {
+    return false
+  }
+  const material = value.record.material
+  if (!hasSearchMatch(value.match, "supporting-material")) {
+    return false
+  }
+  const scoreMatchesMode =
+    value.match.mode === "hybrid" ||
+    (value.match.mode === "lexical" && value.score === value.match.lexicalScore) ||
+    (value.match.mode === "semantic" && value.score === value.match.semanticScore)
+  return (
+    isRecord(material) &&
+    hasSupportingMaterialSummary(material, canonicalApiBaseUrl) &&
+    material.id === value.recordId &&
+    hasSupportingMaterialSection(value.record.section, value.recordId, canonicalApiBaseUrl) &&
+    isStringArray(value.record.relatedRecordIds) &&
+    JSON.stringify(value.sources) === JSON.stringify(material.sources) &&
+    scoreMatchesMode
+  )
+}
+
+function hasSearchEnvelope(
+  body: Record<string, unknown>,
+  requireNonEmptySearch: boolean,
+  canonicalApiBaseUrl: URL | undefined
+): boolean {
+  if (!hasPageEnvelope(body, false)) {
+    return false
+  }
+  if (
+    requireNonEmptySearch &&
+    (!Array.isArray(body.data) ||
+      body.data.length === 0 ||
+      !body.data.every((item) => hasCanonicalSearchHit(item, canonicalApiBaseUrl)))
+  ) {
     return false
   }
   const meta = body.meta
@@ -492,7 +733,8 @@ function hasExpectedEnvelope(
   body: unknown,
   expected: CheckDefinition["expected"],
   healthStatus: CheckDefinition["healthStatus"],
-  canonicalApiBaseUrl: URL | undefined
+  canonicalApiBaseUrl: URL | undefined,
+  requireNonEmptySearch: boolean
 ): boolean {
   if (expected === "health") {
     return isRecord(body) && body.status === healthStatus
@@ -510,7 +752,10 @@ function hasExpectedEnvelope(
     return isRecord(body.data)
   }
   if (expected === "search") {
-    return hasSearchEnvelope(body)
+    return hasSearchEnvelope(body, requireNonEmptySearch, canonicalApiBaseUrl)
+  }
+  if (expected === "material-page") {
+    return hasSupportingMaterialPageEnvelope(body, canonicalApiBaseUrl)
   }
   if (expected === "batch") {
     return hasBatchEnvelope(body)
@@ -617,7 +862,13 @@ async function execute(
       statusCode: response.status
     }
   } else if (
-    !hasExpectedEnvelope(body, definition.expected, definition.healthStatus, canonicalApiBaseUrl) ||
+    !hasExpectedEnvelope(
+      body,
+      definition.expected,
+      definition.healthStatus,
+      canonicalApiBaseUrl,
+      definition.requireNonEmptySearch ?? false
+    ) ||
     (definition.expected === "health"
       ? response.headers.get("x-correlation-id") !== `smoke-${definition.id}`
       : !hasApiCorrelation(body, response.headers.get("x-correlation-id")))

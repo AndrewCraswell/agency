@@ -1,24 +1,12 @@
 import { spawn, type ChildProcess } from "node:child_process"
-import { fileURLToPath } from "node:url"
-import {
-  canonicalSmokeApiBaseUrl,
-  runApiSmoke,
-  type SmokeFixture,
-  type SmokeProfile
-} from "../src/api/smoke-harness.js"
+import { fileURLToPath, pathToFileURL } from "node:url"
+import { canonicalSmokeApiBaseUrl, runApiSmoke, type SmokeProfile } from "../src/api/smoke-harness.js"
 import { formatSmokeProcessOutput } from "../src/api/smoke-process-diagnostics.js"
+import { fetchWithTimeout } from "../src/api/smoke-readiness.js"
+import { parseSmokeFixtures, parseSmokeToken } from "../src/api/smoke-runner-config.js"
 
 const appRoot = fileURLToPath(new URL("..", import.meta.url))
-const port = Number(process.env.LEGISLATION_SMOKE_PORT ?? "3199")
-const configuredBaseUrl = process.env.LEGISLATION_SMOKE_BASE_URL?.trim()
-const token = process.env.LEGISLATION_SMOKE_TOKEN?.trim() || undefined
-const requestTimeoutMs = Number(process.env.LEGISLATION_SMOKE_REQUEST_TIMEOUT_MS ?? "30000")
-const profile = smokeProfile(process.env.LEGISLATION_SMOKE_PROFILE)
-const canonicalApiBaseUrl = smokeCanonicalApiBaseUrl(profile)
 const MAX_CAPTURED_OUTPUT = 8_000
-const requireAuth =
-  process.env.LEGISLATION_SMOKE_REQUIRE_AUTH === "true" ||
-  (process.env.LEGISLATION_SMOKE_REQUIRE_AUTH === undefined && process.env.AUTH_MODE === "workos")
 
 function smokeProfile(value: string | undefined): SmokeProfile {
   if (value === undefined || value.trim() === "" || value === "full") {
@@ -42,27 +30,6 @@ function smokeCanonicalApiBaseUrl(profile: SmokeProfile): URL | undefined {
     return undefined
   }
   return canonicalSmokeApiBaseUrl(value)
-}
-
-function fixture(name: keyof SmokeFixture): string | undefined {
-  const envName = `LEGISLATION_SMOKE_${name.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase()}`
-  return process.env[envName]?.trim() || undefined
-}
-
-function smokeFixtures(): SmokeFixture {
-  return {
-    amendmentId: fixture("amendmentId"),
-    billId: fixture("billId"),
-    documentId: fixture("documentId"),
-    documentIdB: fixture("documentIdB"),
-    jurisdictionId: fixture("jurisdictionId"),
-    materialId: fixture("materialId"),
-    meetingId: fixture("meetingId"),
-    organizationId: fixture("organizationId"),
-    personId: fixture("personId"),
-    sessionId: fixture("sessionId"),
-    voteId: fixture("voteId")
-  }
 }
 
 type LocalServerProcess = Readonly<{
@@ -92,7 +59,11 @@ async function waitForReady(baseUrl: URL, local: LocalServerProcess): Promise<vo
       throw startupFailure(local)
     }
     try {
-      const [health, ready] = await Promise.all([fetch(new URL("/health", baseUrl)), fetch(new URL("/ready", baseUrl))])
+      const remainingMs = Math.max(1, deadline - Date.now())
+      const [health, ready] = await Promise.all([
+        fetchWithTimeout(fetch, new URL("/health", baseUrl), remainingMs),
+        fetchWithTimeout(fetch, new URL("/ready", baseUrl), remainingMs)
+      ])
       if (health.ok && ready.ok) {
         return
       }
@@ -106,7 +77,7 @@ async function waitForReady(baseUrl: URL, local: LocalServerProcess): Promise<vo
   throw new Error(`Local legislation server did not become ready: ${lastError}${output === "" ? "" : `; ${output}`}`)
 }
 
-function startLocalServer(secrets: readonly string[]): LocalServerProcess {
+function startLocalServer(secrets: readonly string[], port: number): LocalServerProcess {
   const environment = { ...process.env }
   delete environment.LEGISLATION_SMOKE_TOKEN
   Object.assign(environment, {
@@ -165,32 +136,47 @@ function stopLocalServer(local: LocalServerProcess): Promise<void> {
   })
 }
 
-const local = configuredBaseUrl === undefined ? startLocalServer(token === undefined ? [] : [token]) : undefined
-let baseUrl: URL
-try {
-  baseUrl = new URL(configuredBaseUrl ?? `http://127.0.0.1:${port}`)
-  if (local !== undefined) {
-    await waitForReady(baseUrl, local)
+async function main(): Promise<void> {
+  const port = Number(process.env.LEGISLATION_SMOKE_PORT ?? "3199")
+  const configuredBaseUrl = process.env.LEGISLATION_SMOKE_BASE_URL?.trim()
+  const token = parseSmokeToken(process.env)
+  const requestTimeoutMs = Number(process.env.LEGISLATION_SMOKE_REQUEST_TIMEOUT_MS ?? "30000")
+  const profile = smokeProfile(process.env.LEGISLATION_SMOKE_PROFILE)
+  const canonicalApiBaseUrl = smokeCanonicalApiBaseUrl(profile)
+  const requireAuth =
+    process.env.LEGISLATION_SMOKE_REQUIRE_AUTH === "true" ||
+    (process.env.LEGISLATION_SMOKE_REQUIRE_AUTH === undefined && process.env.AUTH_MODE === "workos")
+  const local = configuredBaseUrl === undefined ? startLocalServer(token === undefined ? [] : [token], port) : undefined
+  let baseUrl: URL
+  try {
+    baseUrl = new URL(configuredBaseUrl ?? `http://127.0.0.1:${port}`)
+    if (local !== undefined) {
+      await waitForReady(baseUrl, local)
+    }
+    const report = await runApiSmoke({
+      baseUrl,
+      canonicalApiBaseUrl,
+      fixtures: parseSmokeFixtures(process.env),
+      profile,
+      requireAuth,
+      requestTimeoutMs,
+      token
+    })
+    process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
+    if (report.status === "failed") {
+      process.exitCode = 1
+    } else if (report.status === "blocked") {
+      process.exitCode = 2
+    } else {
+      process.exitCode = 0
+    }
+  } finally {
+    if (local !== undefined) {
+      await stopLocalServer(local)
+    }
   }
-  const report = await runApiSmoke({
-    baseUrl,
-    canonicalApiBaseUrl,
-    fixtures: smokeFixtures(),
-    profile,
-    requireAuth,
-    requestTimeoutMs,
-    token
-  })
-  process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
-  if (report.status === "failed") {
-    process.exitCode = 1
-  } else if (report.status === "blocked") {
-    process.exitCode = 2
-  } else {
-    process.exitCode = 0
-  }
-} finally {
-  if (local !== undefined) {
-    await stopLocalServer(local)
-  }
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+  await main()
 }

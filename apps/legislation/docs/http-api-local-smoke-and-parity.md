@@ -34,15 +34,25 @@ code 2; a failed report exits with code 1.
 
 Detail fixtures are supplied by name only through `LEGISLATION_SMOKE_JURISDICTION_ID`,
 `LEGISLATION_SMOKE_SESSION_ID`, `LEGISLATION_SMOKE_BILL_ID`, `LEGISLATION_SMOKE_AMENDMENT_ID`,
-`LEGISLATION_SMOKE_VOTE_ID`, `LEGISLATION_SMOKE_DOCUMENT_ID`, `LEGISLATION_SMOKE_DOCUMENT_ID_B`,
-`LEGISLATION_SMOKE_MATERIAL_ID`, `LEGISLATION_SMOKE_MEETING_ID`, `LEGISLATION_SMOKE_PERSON_ID`, and
-`LEGISLATION_SMOKE_ORGANIZATION_ID`. The list and search routes always run; detail, relationship, and diff routes run
-only when their required IDs are supplied. For `AUTH_MODE=workos` (or explicit `LEGISLATION_SMOKE_REQUIRE_AUTH=true`),
+`LEGISLATION_SMOKE_VOTE_ID`, `LEGISLATION_SMOKE_DOCUMENT_ID`, `LEGISLATION_SMOKE_DOCUMENT_SECTION_ID`,
+`LEGISLATION_SMOKE_DOCUMENT_ID_B`, `LEGISLATION_SMOKE_MATERIAL_ID`,
+`LEGISLATION_SMOKE_MATERIAL_SECTION_ID`, `LEGISLATION_SMOKE_MEETING_ID`, `LEGISLATION_SMOKE_PERSON_ID`, and
+`LEGISLATION_SMOKE_ORGANIZATION_ID`. The document and supporting-material section checks require both the parent
+ID and its corresponding section ID. The list routes always run; detail, relationship, and diff routes run only when
+their required IDs are supplied. Positive bill and supporting-material search checks are fixture-backed and run only
+when `LEGISLATION_SMOKE_BILL_SEARCH_QUERY` and `LEGISLATION_SMOKE_MATERIAL_SEARCH_QUERY` are supplied respectively;
+each query must return a nonempty canonical hit page. For `AUTH_MODE=workos` (or explicit
+`LEGISLATION_SMOKE_REQUIRE_AUTH=true`),
 `LEGISLATION_SMOKE_TOKEN` is required. It is sent only as an in-memory bearer header and is never included in the
 report or diagnostics. Each route has a 30-second request deadline by default; set
 `LEGISLATION_SMOKE_REQUEST_TIMEOUT_MS` to an integer from 1 through 60,000 milliseconds when a different bounded
 deadline is needed. The harness separately asserts unauthenticated `401` rejection, response envelopes, matching
 `x-correlation-id` values, unknown-route handling, and unsupported-method handling.
+
+The release gate has no skipped checks: the reviewed full-profile report must have `status: "passed"`, with empty
+`blocked`, `failed`, and `skipped` arrays. To produce that report, provide jurisdiction and session IDs, material ID,
+document ID plus document section ID, material section ID, both search-query variables, and authenticated mode with an
+explicit smoke token. A report with any skipped check is evidence of an incomplete fixture configuration, not a pass.
 
 For the implemented scoped bill pages, set `LEGISLATION_SMOKE_PROFILE=scoped-bills` with both
 `LEGISLATION_SMOKE_JURISDICTION_ID` and `LEGISLATION_SMOKE_SESSION_ID`. This profile runs health, readiness,
