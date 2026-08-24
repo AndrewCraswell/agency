@@ -66,6 +66,8 @@ export type MeasurementLinkDeclaration = {
   label: string
   loopbackRequired: boolean
   matingHousingMpn: string
+  pin1Net: string
+  pin2Net: string
   required: boolean
   terminalMpn: string
 }
@@ -162,7 +164,7 @@ const fuseSemantics = {
   required: true
 } as const
 
-function measurementLink(label: string): MeasurementLinkDeclaration {
+function measurementLink(label: string, pin1Net: string, pin2Net: string): MeasurementLinkDeclaration {
   return {
     boardHeaderMpn: "39-28-1023",
     contactProjectScreenA: 6,
@@ -170,6 +172,8 @@ function measurementLink(label: string): MeasurementLinkDeclaration {
     label,
     loopbackRequired: true,
     matingHousingMpn: "39-01-2020",
+    pin1Net,
+    pin2Net,
     required: true,
     terminalMpn: "39-00-0039"
   }
@@ -249,10 +253,10 @@ export const defaultBenchPrototypePowerInputs = {
     wireGaugeAwg: 20
   },
   measurementLinks: {
-    application: measurementLink("J_LINK_APPLICATION"),
-    display: measurementLink("J_LINK_DISPLAY"),
-    input: measurementLink("J_LINK_INPUT"),
-    isolatedScoring: measurementLink("J_LINK_SCORING")
+    application: measurementLink("J_LINK_APPLICATION", "V5", "V5_APPLICATION"),
+    display: measurementLink("J_LINK_DISPLAY", "V5_DISPLAY_LIMITED", "V5_DISPLAY_LOAD"),
+    input: measurementLink("J_LINK_INPUT", "V20_TO_V5_BUCK", "V20_BUCK_INPUT"),
+    isolatedScoring: measurementLink("J_LINK_SCORING", "V5", "V5_SCORING_ISOLATOR_INPUT")
   },
   normalInput: {
     ccAndSbuProtectionTopology: "series-cc1-cc2-sbu1-sbu2",
@@ -362,6 +366,8 @@ function isLink(value: unknown): value is MeasurementLinkDeclaration {
     typeof value.label === "string" &&
     typeof value.loopbackRequired === "boolean" &&
     typeof value.matingHousingMpn === "string" &&
+    typeof value.pin1Net === "string" &&
+    typeof value.pin2Net === "string" &&
     typeof value.required === "boolean" &&
     typeof value.terminalMpn === "string"
   )
@@ -453,13 +459,21 @@ function validateFuse(name: string, branch: PowerBranchDeclaration, mpn: string,
   if (branch.expectedPeakA > ratingA) throw new RangeError(`${name} peak load exceeds the fuse rating`)
 }
 
-function validateLink(name: string, link: MeasurementLinkDeclaration, label: string): void {
+function validateLink(
+  name: string,
+  link: MeasurementLinkDeclaration,
+  label: string,
+  pin1Net: string,
+  pin2Net: string
+): void {
   if (!link.required || !link.loopbackRequired || !link.deenergizedRemovalOnly) {
     throw new RangeError(`${name} must require a de-energized removable loopback`)
   }
   exact(`${name}.label`, link.label, label)
   exact(`${name}.boardHeaderMpn`, link.boardHeaderMpn, "39-28-1023")
   exact(`${name}.matingHousingMpn`, link.matingHousingMpn, "39-01-2020")
+  exact(`${name}.pin1Net`, link.pin1Net, pin1Net)
+  exact(`${name}.pin2Net`, link.pin2Net, pin2Net)
   exact(`${name}.terminalMpn`, link.terminalMpn, "39-00-0039")
   exact(`${name}.contactProjectScreenA`, link.contactProjectScreenA, 6)
 }
@@ -552,10 +566,34 @@ function validateInputs(inputs: unknown): asserts inputs is BenchPrototypePowerI
     "V5_DISPLAY_LIMITED_TO_APP_GND"
   )
 
-  validateLink("measurementLinks.input", inputs.measurementLinks.input, "J_LINK_INPUT")
-  validateLink("measurementLinks.display", inputs.measurementLinks.display, "J_LINK_DISPLAY")
-  validateLink("measurementLinks.application", inputs.measurementLinks.application, "J_LINK_APPLICATION")
-  validateLink("measurementLinks.isolatedScoring", inputs.measurementLinks.isolatedScoring, "J_LINK_SCORING")
+  validateLink(
+    "measurementLinks.input",
+    inputs.measurementLinks.input,
+    "J_LINK_INPUT",
+    "V20_TO_V5_BUCK",
+    "V20_BUCK_INPUT"
+  )
+  validateLink(
+    "measurementLinks.display",
+    inputs.measurementLinks.display,
+    "J_LINK_DISPLAY",
+    "V5_DISPLAY_LIMITED",
+    "V5_DISPLAY_LOAD"
+  )
+  validateLink(
+    "measurementLinks.application",
+    inputs.measurementLinks.application,
+    "J_LINK_APPLICATION",
+    "V5",
+    "V5_APPLICATION"
+  )
+  validateLink(
+    "measurementLinks.isolatedScoring",
+    inputs.measurementLinks.isolatedScoring,
+    "J_LINK_SCORING",
+    "V5",
+    "V5_SCORING_ISOLATOR_INPUT"
+  )
 
   const parts = inputs.normalInput.parts
   exact("normalInput.parts.receptacleMpn", parts.receptacleMpn, "10177070-00011LF")

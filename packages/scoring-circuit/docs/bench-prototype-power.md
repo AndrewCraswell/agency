@@ -85,6 +85,16 @@ the source selector, `J_LINK_DISPLAY` after display protection,
 link has an exact **6 A project screen**; the validator rejects both lower and
 higher declarations. Remove links only with both possible sources off.
 
+The two sides are distinct schematic nets so an installed loopback is the only
+normal current path:
+
+| Link | Pin 1 source-side net | Pin 2 load-side net |
+| --- | --- | --- |
+| `J_LINK_INPUT` | `V20_TO_V5_BUCK` | `V20_BUCK_INPUT` |
+| `J_LINK_DISPLAY` | `V5_DISPLAY_LIMITED` | `V5_DISPLAY_LOAD` |
+| `J_LINK_APPLICATION` | `V5` | `V5_APPLICATION` |
+| `J_LINK_SCORING` | `V5` | `V5_SCORING_ISOLATOR_INPUT` |
+
 ## Evidence and stop conditions
 
 The executable declaration validator is

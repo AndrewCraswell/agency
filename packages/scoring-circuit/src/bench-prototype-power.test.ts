@@ -119,6 +119,20 @@ describe("prototype USB-C PD power contract", () => {
         terminalMpn: "39-00-0039"
       })
     }
+    expect(defaultBenchPrototypePowerInputs.measurementLinks).toMatchObject({
+      application: { label: "J_LINK_APPLICATION", pin1Net: "V5", pin2Net: "V5_APPLICATION" },
+      display: {
+        label: "J_LINK_DISPLAY",
+        pin1Net: "V5_DISPLAY_LIMITED",
+        pin2Net: "V5_DISPLAY_LOAD"
+      },
+      input: { label: "J_LINK_INPUT", pin1Net: "V20_TO_V5_BUCK", pin2Net: "V20_BUCK_INPUT" },
+      isolatedScoring: {
+        label: "J_LINK_SCORING",
+        pin1Net: "V5",
+        pin2Net: "V5_SCORING_ISOLATOR_INPUT"
+      }
+    })
     expect(() =>
       calculateBenchPrototypePowerContract({
         ...defaultBenchPrototypePowerInputs,
@@ -128,6 +142,15 @@ describe("prototype USB-C PD power contract", () => {
         }
       })
     ).toThrow("measurementLinks.input.contactProjectScreenA must be 6")
+    expect(() =>
+      calculateBenchPrototypePowerContract({
+        ...defaultBenchPrototypePowerInputs,
+        measurementLinks: {
+          ...defaultBenchPrototypePowerInputs.measurementLinks,
+          display: { ...defaultBenchPrototypePowerInputs.measurementLinks.display, pin2Net: "V5" }
+        }
+      })
+    ).toThrow("measurementLinks.display.pin2Net must be V5_DISPLAY_LOAD")
   })
 
   it("rejects PD-part substitution or weakened eFuse limits", () => {
