@@ -20,7 +20,8 @@ export const Route = createRootRoute({
       },
       { title: "Legislative Intelligence" }
     ]
-  })
+  }),
+  notFoundComponent: NotFoundPage
 })
 
 function RootComponent() {
@@ -39,6 +40,18 @@ function RouteError() {
       <p className="eyebrow">Request interrupted</p>
       <h1>This page could not be displayed.</h1>
       <p>Refresh the page to try again. If the problem continues, keep the request ID shown by the API.</p>
+    </main>
+  )
+}
+
+function NotFoundPage() {
+  return (
+    <main className="error-page">
+      <p className="eyebrow">Page not found</p>
+      <h1>This page is not part of the public record.</h1>
+      <p>
+        Check the address or return to the <a href="/">Legislative Intelligence home page</a>.
+      </p>
     </main>
   )
 }
