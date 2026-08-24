@@ -23,7 +23,9 @@ export function parseSmokeFixtures(environment: SmokeRunnerEnvironment): SmokeFi
     organizationId: fixture(environment, "organizationId"),
     personId: fixture(environment, "personId"),
     sessionId: fixture(environment, "sessionId"),
-    voteId: fixture(environment, "voteId")
+    subscriptionId: fixture(environment, "subscriptionId"),
+    voteId: fixture(environment, "voteId"),
+    webhookId: fixture(environment, "webhookId")
   }
 }
 

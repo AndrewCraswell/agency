@@ -64,7 +64,7 @@ unexplained one-off files:
 | Script group | Purpose | Retention rule |
 | --- | --- | --- |
 | `smoke-local.mjs` | Start the real local service and verify health and readiness. | Permanent release check. |
-| `smoke-deployment.mjs` | Verify deployed health, readiness, one bearer-authenticated API collection, the MCP tool set, representative bill and document calls, and protocol behavior. | Permanent post-deployment check; requires `LEGISLATION_SMOKE_TOKEN` and never logs it. |
+| `smoke-deployment.mjs` | Verify deployed health, readiness, one bearer-authenticated API collection, the MCP tool set, representative bill and document calls, and protocol behavior. | Permanent post-deployment check; requires separate `LEGISLATION_SMOKE_TOKEN` (API) and `LEGISLATION_MCP_SMOKE_TOKEN` (MCP) credentials, a root HTTP(S) base URL, and never logs either token. |
 | `smoke-dependencies.mjs` | Verify production PostgreSQL, pgvector, managed identity, and Blob read/write behavior. | Permanent infrastructure check; packaged with the build intentionally. |
 | `build-embedding-*`, `run-embedding-*`, `evaluate-embedding-canary.ts`, `rerank-embedding-bakeoff.ts` | Rebuild frozen evaluation inputs, seed a bounded treatment, compare retrieval, and reproduce model or reranker decisions. | Keep as regression tooling; remove superseded generated outputs instead. |
 | `run-trigger-backfill.ts` | Plan or explicitly launch a resumable historical rebuild. | Permanent disaster-recovery and future-rebuild entry point. |

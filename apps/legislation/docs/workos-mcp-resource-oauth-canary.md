@@ -3,8 +3,8 @@
 ## Purpose
 
 This procedure proves that WorkOS can issue an MCP-resource access token and that the deployed legislation service
-accepts it without weakening audience isolation. It is deliberately separate from the M2M API smoke: a manually
-created M2M application receives the environment API audience, not the MCP resource audience.
+accepts it without weakening audience isolation. It is deliberately separate from the generic API smoke and uses an
+independent MCP credential flow.
 
 No step copies an access token into the repository, Railway variables, a shell history entry, or an agent transcript.
 The user completes consent in their own browser. The operator retains only sanitized smoke output and correlation IDs.
@@ -43,25 +43,17 @@ Success proves the MCP route accepts only a valid token whose audience is the MC
 environment-client-ID token instead means the Resource Indicator or its `resource` parameter is misconfigured; do not
 relax the MCP verifier to accept that token.
 
-## Authenticated API smoke with an MCP-resource token
+## Authenticated API smoke with the provisioned API session
 
-The API intentionally also accepts the MCP-resource audience so a same-origin MCP-to-HTTP adapter can forward the
-already verified caller token. Standard MCP clients do not normally expose their access token, and this procedure must
-not attempt to extract it from their credential store.
+The retained remote smoke credential is an externally provisioned, API-scoped AuthKit session. The generic API smoke
+command sends it only to `/api` and never opens `/mcp`; keep the MCP browser-consent canary independent.
 
-If an explicit API proof with an MCP-resource token is required, the minimal user-owned action is to use an existing
-OAuth Connect client with Authorization Code plus PKCE. Its authorization request must include the exact
-`resource=https://legislation-api-production-7096.up.railway.app/mcp` parameter. The user finishes login and consent
-in the browser, exchanges the returned code locally, and supplies the resulting short-lived token only to the current
-PowerShell process. Do not create an M2M application for this purpose. Do not add a redirect URI, OAuth application,
-or token handling code solely for a one-time canary without an explicit product decision.
-
-Run the smoke in the same terminal after the token is acquired. `Read-Host -MaskInput` keeps the token out of command
-history and the harness redacts it from diagnostics. Replace the two canonical fixture IDs with values approved for the
-remote smoke.
+Run the smoke in the same terminal after the approved 30-day session is provisioned. `Read-Host -MaskInput` keeps the
+token out of command history and the harness redacts it from diagnostics. Replace the two canonical fixture IDs with
+values approved for the remote smoke.
 
 ```powershell
-$token = Read-Host 'Paste the short-lived MCP-resource access token' -MaskInput
+$token = Read-Host 'Paste the provisioned 30-day API AuthKit session' -MaskInput
 $env:LEGISLATION_SMOKE_BASE_URL = 'https://legislation-api-production-7096.up.railway.app'
 $env:LEGISLATION_SMOKE_CANONICAL_API_BASE_URL = $env:LEGISLATION_SMOKE_BASE_URL
 $env:LEGISLATION_SMOKE_PROFILE = 'scoped-bills'
@@ -75,9 +67,8 @@ Remove-Variable token
 ```
 
 Expected evidence is a passing scoped-bills report with no token in the report or diagnostics, plus the independent
-MCP browser-consent canary. A `401` from `/api` after the route-aware deployment means the OAuth request did not obtain
-the configured MCP-resource audience or the deployment configuration is wrong. A `401` from `/mcp` for an M2M token is
-expected and confirms audience separation.
+MCP browser-consent canary. A `401` from `/api` means the provisioned API session or deployment configuration is wrong.
+Do not substitute an M2M token for the smoke credential, even though M2M remains supported by runtime auth.
 
 ## Stop conditions
 

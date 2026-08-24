@@ -27,7 +27,8 @@ do not match the contract.
 The reviewed local harness is `pnpm --filter legislation smoke:api`. Without
 `LEGISLATION_SMOKE_BASE_URL`, it starts the same composed `src/cli/main.ts serve` process used by the application on
 `127.0.0.1:3199`, waits for `/health` and `/ready`, and shuts it down after the run. Set
-`LEGISLATION_SMOKE_BASE_URL` to exercise an already-running local or remote instance instead. The harness always
+`LEGISLATION_SMOKE_BASE_URL` to exercise an already-running local or remote instance instead. The value must be a
+credential-free HTTP(S) origin at its root, without a query or fragment; a blank value uses the local mode. The harness always
 prints a JSON report with individual `passed`, `skipped`, `blocked`, and `failed` checks; a missing fixture is skipped,
 an unavailable route or dependency is blocked, and no blocked check is treated as success. A blocked report exits with
 code 2; a failed report exits with code 1.
@@ -36,23 +37,29 @@ Detail fixtures are supplied by name only through `LEGISLATION_SMOKE_JURISDICTIO
 `LEGISLATION_SMOKE_SESSION_ID`, `LEGISLATION_SMOKE_BILL_ID`, `LEGISLATION_SMOKE_AMENDMENT_ID`,
 `LEGISLATION_SMOKE_VOTE_ID`, `LEGISLATION_SMOKE_DOCUMENT_ID`, `LEGISLATION_SMOKE_DOCUMENT_SECTION_ID`,
 `LEGISLATION_SMOKE_DOCUMENT_ID_B`, `LEGISLATION_SMOKE_MATERIAL_ID`,
-`LEGISLATION_SMOKE_MATERIAL_SECTION_ID`, `LEGISLATION_SMOKE_MEETING_ID`, `LEGISLATION_SMOKE_PERSON_ID`, and
-`LEGISLATION_SMOKE_ORGANIZATION_ID`. The document and supporting-material section checks require both the parent
-ID and its corresponding section ID. The list routes always run; detail, relationship, and diff routes run only when
+`LEGISLATION_SMOKE_MATERIAL_SECTION_ID`, `LEGISLATION_SMOKE_MEETING_ID`, `LEGISLATION_SMOKE_PERSON_ID`,
+`LEGISLATION_SMOKE_ORGANIZATION_ID`, `LEGISLATION_SMOKE_SUBSCRIPTION_ID`, and `LEGISLATION_SMOKE_WEBHOOK_ID`.
+The document and supporting-material section checks require both the parent ID and its corresponding section ID. The
+full-profile manifest covers 18 implemented or In-progress operations: core bill and material reads, document reads,
+bill and supporting-material search, and subscription and webhook reads. The list routes always run; detail,
+relationship, and diff routes run only when
 their required IDs are supplied. Positive bill and supporting-material search checks are fixture-backed and run only
 when `LEGISLATION_SMOKE_BILL_SEARCH_QUERY` and `LEGISLATION_SMOKE_MATERIAL_SEARCH_QUERY` are supplied respectively;
 each query must return a nonempty canonical hit page. For `AUTH_MODE=workos` (or explicit
 `LEGISLATION_SMOKE_REQUIRE_AUTH=true`),
 `LEGISLATION_SMOKE_TOKEN` is required. It is sent only as an in-memory bearer header and is never included in the
-report or diagnostics. Each route has a 30-second request deadline by default; set
+report or diagnostics. The API smoke command never opens `/mcp` and never reads the MCP-only
+`LEGISLATION_MCP_SMOKE_TOKEN`; use the separate deployment smoke command when an MCP credential is intentionally
+available. Each manifest request has a 30-second request deadline by default; set
 `LEGISLATION_SMOKE_REQUEST_TIMEOUT_MS` to an integer from 1 through 60,000 milliseconds when a different bounded
 deadline is needed. The harness separately asserts unauthenticated `401` rejection, response envelopes, matching
 `x-correlation-id` values, unknown-route handling, and unsupported-method handling.
 
 The release gate has no skipped checks: the reviewed full-profile report must have `status: "passed"`, with empty
-`blocked`, `failed`, and `skipped` arrays. To produce that report, provide jurisdiction and session IDs, material ID,
-document ID plus document section ID, material section ID, both search-query variables, and authenticated mode with an
-explicit smoke token. A report with any skipped check is evidence of an incomplete fixture configuration, not a pass.
+`blocked`, `failed`, and `skipped` arrays. To produce that report, provide jurisdiction and session IDs, bill ID,
+material ID, document ID plus document section ID, material section ID, subscription ID, webhook ID, both search-query
+variables, and authenticated mode with an explicit smoke token. A report with any skipped check is evidence of an
+incomplete fixture configuration, not a pass.
 
 For the implemented scoped bill pages, set `LEGISLATION_SMOKE_PROFILE=scoped-bills` with both
 `LEGISLATION_SMOKE_JURISDICTION_ID` and `LEGISLATION_SMOKE_SESSION_ID`. This profile runs health, readiness,
@@ -83,6 +90,10 @@ Complete these assertions once per composed server build and repeat mutation ass
 - [ ] Batch reads reject more than 25 unique IDs, preserve request order, isolate item errors, and do not fail a valid
       outer request because one item is missing.
 - [ ] Cacheable reads return the documented validators; `If-None-Match` returns an empty `304` only when unchanged.
+- [ ] API requests return `RateLimit-Limit`, `RateLimit-Remaining`, and `RateLimit-Reset`; exhausted quotas return the
+      normal safe `429 rate_limited` envelope with `Retry-After`. Confirm `LEGISLATION_TRUSTED_PROXY_HOPS=1` only when
+      deployed behind Railway's public proxy, verify its documented `X-Real-IP` client-address header, and retain a
+      shared edge limiter before adding replicas.
 - [ ] Logs and errors contain no SQL, stack, raw provider payload, token, address, or cross-tenant identifier.
 
 ## Canonical legislative-read product
@@ -215,12 +226,12 @@ Record one row per execution:
 | Date and reviewer | 2026-08-24, authenticated remote evidence supplied for root review |
 | Commit/deployment | Commit `2846332`; Railway `legislation-api` deployment `f7c855ed-9b81-482b-9def-d3b3d8b90255` |
 | Database fixture/snapshot | Local scoped bill fixture; remote production records `jurisdiction:ak` and `session:ak:30` |
-| Auth principal scopes | Local scoped profile and remote no-token API/MCP challenge checks passed. An ephemeral M2M token for `WORKOS_API_AUDIENCE` passed the API profile and was correctly rejected by `/mcp`; its WorkOS application was deleted and verified absent. |
+| Auth principal scopes | Local scoped profile and remote no-token API/MCP challenge checks passed. The authenticated API profile uses the externally provisioned API AuthKit session; the generic API smoke does not exercise `/mcp`. |
 | Embedding and reranking routes | Not exercised |
 | Products and routes exercised | Local scoped bill routes; remote `/health`, `/ready`, unknown route, unsupported method, unauthenticated rejection, and authenticated scoped `GET /api/jurisdictions/{jurisdictionId}/bills` plus `GET /api/sessions/{sessionId}/bills` |
 | Smoke result and evidence path | Remote `scoped-bills` profile passed 7/7 with 0 blocked and 0 failed against the recorded deployment. See [Railway API release record](http-api-railway-release.md). |
 | MCP parity result and evidence path | Historical/stale deployed `getBill` HTTP-parity canary passed for `bill:ak:30:hb:1`: exact recursive direct QueryService versus deployed HTTP-adapter equality, correlation ID `bd7dda5d-104b-47d8-8ffa-2251e2abbcda`. Current HEAD intentionally unregisters `GET /api/bills/{id}`, so this cannot authorize allowlisting. Production MCP remains in-process and the hybrid allowlist remains empty. |
-| Known deviations and owning backlog item | Only the two scoped bill collection routes are Done. Remaining MCP methods, an MCP-resource authenticated canary, and any HTTP/hybrid enablement remain pending (API-07). Next candidates are canonical `searchBills` and query-present `searchSupportingMaterials`, subject to shared direct-MCP/HTTP output parity and remote same-snapshot and MCP-resource-auth gates. |
+| Known deviations and owning backlog item | Only the two scoped bill collection routes are Done. Remaining MCP methods, a separate MCP-resource authenticated canary, and any HTTP/hybrid enablement remain pending (API-07). Next candidates are canonical `searchBills` and query-present `searchSupportingMaterials`, subject to shared direct-MCP/HTTP output parity and remote same-snapshot and MCP-resource-auth gates. |
 
 Only after the run is reviewed, linked from the backlog, and the route is included in a reviewed commit may its state
 move to **Done**.

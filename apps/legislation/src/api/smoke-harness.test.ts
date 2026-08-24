@@ -2,10 +2,13 @@ import { afterEach, describe, expect, it } from "vitest"
 import { AuthenticationError } from "../auth/workos.js"
 import { close, createLegislationServer } from "../mcp/server.js"
 import type { BillSummaryRead, SupportingMaterialDetailRead } from "./canonical-read.js"
-import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
-import { createCoreReadApiHandler, type CoreReadQueryApi } from "./core-read.js"
-import { createCompositeHttpApiHandler } from "./http.js"
-import { runApiSmoke } from "./smoke-harness.js"
+import type { CivicSearchApi } from "./civic-search.js"
+import type { CoreReadQueryApi } from "./core-read.js"
+import type { DocumentReadApi } from "./document-read-routes.js"
+import { createLegislationApiHandler } from "./handlers.js"
+import { runApiSmoke, SMOKE_MANIFEST } from "./smoke-harness.js"
+import type { Delivery, Subscription, SubscriptionEvent, SubscriptionRepository, Webhook } from "./subscriptions.js"
+import type { WebhookReadRepository } from "./webhook-read-repository.js"
 
 const servers = new Set<ReturnType<typeof createLegislationServer>>()
 
@@ -13,7 +16,6 @@ afterEach(async () => {
   await Promise.all([...servers].map(async (server) => close(server)))
   servers.clear()
 })
-
 function jsonResponse(body: unknown, status: number, correlationId?: string): Response {
   const headers = new Headers({ "content-type": "application/json" })
   if (correlationId !== undefined) {
@@ -108,6 +110,130 @@ function supportingMaterialRead(id: string): SupportingMaterialDetailRead {
   }
 }
 
+function documentRead(id = "document:fixture") {
+  return {
+    billId: "bill:fixture",
+    byteSize: null,
+    classification: "version" as const,
+    contentHash: "a".repeat(64),
+    createdAt: new Date("2026-08-24T00:00:00Z"),
+    documentDate: "2026-01-01",
+    failureCategory: null,
+    id,
+    mimeType: "application/pdf",
+    ocrCompletedAt: new Date("2026-08-24T00:00:00Z"),
+    ocrProvider: "fixture-ocr",
+    ocrStatus: "processed" as const,
+    pageCount: 2,
+    processingStatus: "processed" as const,
+    sourceUrl: `https://source.example.test/${encodeURIComponent(id)}`,
+    storedUrl: null,
+    title: "Fixture document",
+    updatedAt: new Date("2026-08-24T00:00:00Z"),
+    versionCode: "fixture"
+  }
+}
+
+function documentSectionRead(documentId = "document:fixture") {
+  return {
+    document: {
+      billId: "bill:fixture",
+      createdAt: new Date("2026-08-24T00:00:00Z"),
+      id: documentId,
+      sourceUrl: `https://source.example.test/${encodeURIComponent(documentId)}`,
+      updatedAt: new Date("2026-08-24T00:00:00Z")
+    },
+    section: {
+      contentHash: "b".repeat(64),
+      heading: "Fixture section",
+      id: "document-section:fixture",
+      ordinal: 0,
+      pageEnd: 1,
+      pageStart: 1,
+      sourceEndOffset: 12,
+      sourceStartOffset: 0,
+      text: "Fixture text"
+    }
+  }
+}
+
+function subscriptionRead(): Subscription {
+  return {
+    cancelledAt: null,
+    createdAt: new Date("2026-08-24T00:00:00Z"),
+    delivery: [{ channel: "in-app", destinationId: null, isEnabled: true }],
+    eventTypes: ["record-updated"],
+    frequency: "daily",
+    id: "subscription:fixture",
+    name: "Fixture subscription",
+    owner: { organizationId: "organization:smoke", userId: "smoke-user" },
+    revision: "subscription-revision",
+    status: "active",
+    target: { recordId: "bill:fixture", recordType: "bill", type: "record" },
+    timezone: "America/Los_Angeles",
+    updatedAt: new Date("2026-08-24T00:00:00Z")
+  }
+}
+
+function subscriptionEventRead(): SubscriptionEvent {
+  return {
+    changeEventId: null,
+    eventType: "record-updated",
+    id: "subscription-event:fixture",
+    matchedAt: new Date("2026-08-24T00:00:00Z"),
+    occurredAt: new Date("2026-08-24T00:00:00Z"),
+    recordId: "bill:fixture",
+    recordType: "bill",
+    sourceUrls: ["https://source.example.test/bill-fixture"],
+    subscriptionId: "subscription:fixture",
+    summary: "Fixture subscription event",
+    title: "Fixture bill updated"
+  }
+}
+
+function deliveryRead(): Delivery {
+  return {
+    attemptCount: 0,
+    channel: "in-app",
+    createdAt: new Date("2026-08-24T00:00:00Z"),
+    deliveredAt: null,
+    destinationId: null,
+    failureCategory: null,
+    id: "delivery:fixture",
+    nextAttemptAt: null,
+    status: "pending",
+    subscriptionEventIds: ["subscription-event:fixture"],
+    subscriptionId: "subscription:fixture"
+  }
+}
+
+function webhookRead(): Webhook {
+  return {
+    activeKeyIds: ["webhook-key:fixture"],
+    cancelledAt: null,
+    createdAt: new Date("2026-08-24T00:00:00Z"),
+    eventTypes: ["record-updated"],
+    id: "webhook:fixture",
+    lastFailedAt: null,
+    lastSucceededAt: null,
+    name: "Fixture webhook",
+    overlapEndsAt: null,
+    owner: { organizationId: "organization:smoke", userId: "smoke-user" },
+    revision: "00000000-0000-0000-0000-000000000001",
+    secretLastFour: "1234",
+    status: "active",
+    updatedAt: new Date("2026-08-24T00:00:00Z"),
+    url: "https://hooks.example.test/legislation"
+  }
+}
+
+function ownsFixture(
+  owner: Readonly<{ organizationId: string | null; userId: string }>,
+  resourceOwner: Readonly<{ organizationId: string | null; userId: string }>
+): boolean {
+  return owner.organizationId === resourceOwner.organizationId && owner.userId === resourceOwner.userId
+}
+
 function fakeFetch() {
   const calls: Array<{ authorization: string | null; method: string; path: string; search: string }> = []
   const fetchImpl = async (input: string | URL, init?: RequestInit): Promise<Response> => {
@@ -155,7 +281,7 @@ function fakeFetch() {
       return jsonResponse(
         {
           data: [billSummary("bill:fixture")],
-          links: { next: null, self: url.pathname },
+          links: { next: null, self: `${url.pathname}${url.search}` },
           meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
         },
         200,
@@ -180,11 +306,41 @@ function fakeFetch() {
         correlationId
       )
     }
+    if (url.pathname === "/api/subscriptions" || url.pathname === "/api/webhooks") {
+      return jsonResponse(
+        {
+          data: [],
+          links: { next: null, self: `${url.pathname}${url.search}` },
+          meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
+        },
+        200,
+        correlationId
+      )
+    }
+    if (
+      init?.method === "POST" &&
+      url.pathname === "/api/search/bills" &&
+      typeof init.body === "string" &&
+      init.body.length > 1_048_576
+    ) {
+      return jsonResponse(
+        {
+          error: {
+            category: "payload_too_large",
+            correlationId,
+            message: "Request body exceeds the allowed size",
+            retryable: false
+          }
+        },
+        413,
+        correlationId
+      )
+    }
     if (init?.method === "POST" && url.pathname.startsWith("/api/search/")) {
       return jsonResponse(
         {
           data: [],
-          links: { next: null, self: url.pathname },
+          links: { next: null, self: `${url.pathname}${url.search}` },
           meta: {
             correlationId,
             limit: 1,
@@ -200,9 +356,24 @@ function fakeFetch() {
         correlationId
       )
     }
+    if (url.pathname.endsWith("/documents")) {
+      return jsonResponse(
+        {
+          data: [],
+          links: { next: null, self: `${url.pathname}${url.search}` },
+          meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
+        },
+        200,
+        correlationId
+      )
+    }
     if (url.pathname.includes("/sections/")) {
       return jsonResponse(
-        { data: canonical("section:fixture"), links: { self: url.pathname }, meta: { correlationId, warnings: [] } },
+        {
+          data: canonical("section:fixture"),
+          links: { self: `${url.pathname}${url.search}` },
+          meta: { correlationId, warnings: [] }
+        },
         200,
         correlationId
       )
@@ -211,7 +382,7 @@ function fakeFetch() {
       return jsonResponse(
         {
           data: [],
-          links: { next: null, self: url.pathname },
+          links: { next: null, self: `${url.pathname}${url.search}` },
           meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
         },
         200,
@@ -220,14 +391,22 @@ function fakeFetch() {
     }
     if (init?.method === "POST" && url.pathname.endsWith("/batch")) {
       return jsonResponse(
-        { data: [], links: { self: url.pathname }, meta: { correlationId, requested: 0, returned: 0, warnings: [] } },
+        {
+          data: [],
+          links: { self: `${url.pathname}${url.search}` },
+          meta: { correlationId, requested: 0, returned: 0, warnings: [] }
+        },
         200,
         correlationId
       )
     }
     if (init?.method === "POST" && url.pathname === "/api/document-diffs") {
       return jsonResponse(
-        { data: canonical("diff:fixture"), links: { self: url.pathname }, meta: { correlationId, warnings: [] } },
+        {
+          data: canonical("diff:fixture"),
+          links: { self: `${url.pathname}${url.search}` },
+          meta: { correlationId, warnings: [] }
+        },
         200,
         correlationId
       )
@@ -244,7 +423,7 @@ function fakeFetch() {
       return jsonResponse(
         {
           data: [],
-          links: { next: null, self: url.pathname },
+          links: { next: null, self: `${url.pathname}${url.search}` },
           meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
         },
         200,
@@ -271,7 +450,7 @@ function fakeFetch() {
               type: "supporting-material"
             }
           ],
-          links: { next: null, self: url.pathname },
+          links: { next: null, self: `${url.pathname}${url.search}` },
           meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
         },
         200,
@@ -290,7 +469,7 @@ function fakeFetch() {
       return jsonResponse(
         {
           data: [],
-          links: { next: null, self: url.pathname },
+          links: { next: null, self: `${url.pathname}${url.search}` },
           meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
         },
         200,
@@ -298,7 +477,11 @@ function fakeFetch() {
       )
     }
     return jsonResponse(
-      { data: canonical("resource:fixture"), links: { self: url.pathname }, meta: { correlationId, warnings: [] } },
+      {
+        data: canonical("resource:fixture"),
+        links: { self: `${url.pathname}${url.search}` },
+        meta: { correlationId, warnings: [] }
+      },
       200,
       correlationId
     )
@@ -326,6 +509,12 @@ function mutateJson(
 }
 
 describe("local API smoke harness", () => {
+  it("keeps one manifest entry for every implemented or in-progress full-profile operation", () => {
+    expect(SMOKE_MANIFEST).toHaveLength(18)
+    expect(new Set(SMOKE_MANIFEST.map((entry) => entry.id)).size).toBe(SMOKE_MANIFEST.length)
+    expect(SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "done")).toHaveLength(2)
+  })
+
   it("runs only universal checks and exact canonical scoped bill pages in the scoped-bills profile", async () => {
     const { calls, fetchImpl } = fakeFetch()
     const report = await runApiSmoke({
@@ -440,6 +629,23 @@ describe("local API smoke harness", () => {
     ).rejects.toThrow(/canonicalApiBaseUrl/)
   })
 
+  it.each([
+    "ftp://legislation.example.test/",
+    "https://user:pass@legislation.example.test/",
+    "https://legislation.example.test/api",
+    "https://legislation.example.test/?source=smoke",
+    "https://legislation.example.test/#smoke"
+  ])("rejects an unsafe smoke target base URL: %s", async (baseUrl) => {
+    await expect(
+      runApiSmoke({
+        baseUrl,
+        fetchImpl: async () => {
+          throw new Error("fetch must not run for an unsafe base URL")
+        }
+      })
+    ).rejects.toThrow(/canonicalApiBaseUrl/)
+  })
+
   it("blocks protected checks when authenticated mode has no explicit token", async () => {
     const { calls, fetchImpl } = fakeFetch()
     const report = await runApiSmoke({
@@ -523,6 +729,50 @@ describe("local API smoke harness", () => {
 
   it("runs against the composed Node server with canonical fixture records", async () => {
     const page = () => ({ items: [canonical("fixture:item")], truncated: false, warnings: [] })
+    const subscription = subscriptionRead()
+    const event = subscriptionEventRead()
+    const delivery = deliveryRead()
+    const webhook = webhookRead()
+    const documentReadApi: DocumentReadApi = {
+      assertBillExists: async () => undefined,
+      getDocumentDetail: async (id) => ({ ...documentRead(id), sectionCount: 1, textCharacterCount: 12 }),
+      listBillDocuments: async () => ({ items: [documentRead()], truncated: false }),
+      listDocumentSections: async (input) => ({ items: [documentSectionRead(input.documentId)], truncated: false })
+    }
+    const subscriptionRepository: SubscriptionRepository = {
+      cancelSubscription: async () => {
+        throw new Error("Subscription mutations are not composed by this smoke fixture")
+      },
+      createSubscription: async () => {
+        throw new Error("Subscription mutations are not composed by this smoke fixture")
+      },
+      findExactSubscription: async () => undefined,
+      getSubscription: async ({ id, owner }) =>
+        id === subscription.id && ownsFixture(owner, subscription.owner) ? subscription : undefined,
+      listDeliveries: async ({ owner, subscriptionId }) => ({
+        items: ownsFixture(owner, subscription.owner) && subscriptionId === subscription.id ? [delivery] : [],
+        truncated: false
+      }),
+      listSubscriptionEvents: async ({ owner, subscriptionId }) => ({
+        items: ownsFixture(owner, subscription.owner) && subscriptionId === subscription.id ? [event] : [],
+        truncated: false
+      }),
+      listSubscriptions: async ({ owner }) => ({
+        items: ownsFixture(owner, subscription.owner) ? [subscription] : [],
+        truncated: false
+      }),
+      updateSubscription: async () => {
+        throw new Error("Subscription mutations are not composed by this smoke fixture")
+      }
+    }
+    const webhookReadRepository: WebhookReadRepository = {
+      getWebhook: async ({ id, owner }) =>
+        id === webhook.id && ownsFixture(owner, webhook.owner) ? webhook : undefined,
+      listWebhooks: async ({ owner }) => ({
+        items: ownsFixture(owner, webhook.owner) ? [webhook] : [],
+        truncated: false
+      })
+    }
     const service: CoreReadQueryApi & CivicSearchApi = {
       browseBills: async () => ({ items: [billSummaryRead("bill:fixture")], truncated: false, warnings: [] }),
       compareBillVersions: async () => ({ changes: [] }),
@@ -585,10 +835,12 @@ describe("local API smoke harness", () => {
       }),
       searchVotes: async () => page()
     }
-    const apiHandler = createCompositeHttpApiHandler([
-      createCoreReadApiHandler(service),
-      createCivicSearchApiHandler(service, { apiBaseUrl: "https://api.example.test" })
-    ])
+    const apiHandler = createLegislationApiHandler(service, {
+      apiBaseUrl: "https://api.example.test",
+      documentReadApi,
+      subscriptionRepository,
+      webhookReadRepository
+    })
     const server = createLegislationServer({
       apiHandler,
       apiAuthenticate: async (authorizationHeader) => {
@@ -596,7 +848,7 @@ describe("local API smoke harness", () => {
         if (value !== "Bearer smoke-token") {
           throw new AuthenticationError("invalid")
         }
-        return { userId: "smoke-user" }
+        return { organizationId: "organization:smoke", userId: "smoke-user" }
       },
       isReady: () => true,
       logger: {
@@ -612,28 +864,84 @@ describe("local API smoke harness", () => {
     if (address === null || typeof address === "string") {
       throw new Error("Expected a TCP server address")
     }
+    const unauthorized = await Promise.all([
+      fetch(`http://127.0.0.1:${address.port}/api/subscriptions`),
+      fetch(`http://127.0.0.1:${address.port}/api/webhooks`)
+    ])
+    expect(unauthorized.map((response) => response.status)).toEqual([401, 401])
 
     const report = await runApiSmoke({
       baseUrl: `http://127.0.0.1:${address.port}`,
       fixtures: {
+        billId: "bill:fixture",
         documentId: "document:fixture",
         documentSectionId: "document-section:fixture",
         materialId: "material:fixture",
-        materialSectionId: "supporting-material-section:fixture"
+        materialSectionId: "supporting-material-section:fixture",
+        subscriptionId: "subscription:fixture",
+        webhookId: "webhook:fixture"
       },
       requireAuth: true,
       token: "smoke-token"
     })
     expect(JSON.stringify(report.failed)).toBe("[]")
-    expect(report.blocked).toHaveLength(0)
-    expect(report.skipped.some((check) => check.id === "scoped-bill-pages")).toBe(true)
+    expect(report.blocked).toEqual([])
+    expect(report.skipped.map((check) => check.id)).toEqual(
+      expect.arrayContaining(["list-jurisdiction-bills", "list-session-bills"])
+    )
     expect(report.passed.map((check) => check.id)).toContain("list-bills")
     expect(report.passed.map((check) => check.id)).toContain("list-supporting-materials")
+    expect(report.passed.map((check) => check.id)).toContain("payload-too-large")
+    expect(report.passed.map((check) => check.id)).toEqual(
+      expect.arrayContaining(["list-bill-documents", "get-document", "list-document-sections"])
+    )
     expect(report.passed.map((check) => check.id)).toContain("get-supporting-material")
     expect(report.passed.map((check) => check.id)).toContain("get-document-section")
     expect(report.passed.map((check) => check.id)).toContain("get-supporting-material-section")
+    expect(report.passed.map((check) => check.id)).toEqual(
+      expect.arrayContaining([
+        "list-subscriptions",
+        "get-subscription",
+        "list-subscription-events",
+        "list-subscription-deliveries",
+        "list-webhooks",
+        "get-webhook"
+      ])
+    )
     expect(report.passed.map((check) => check.id)).toContain("absent-list-votes")
     expect(report.passed.map((check) => check.id)).toContain("auth-rejection")
+
+    const revisionEtagMismatch = async (input: string | URL, init?: RequestInit): Promise<Response> => {
+      const response = await fetch(input, init)
+      const pathname = new URL(input).pathname
+      if (pathname !== "/api/subscriptions/subscription%3Afixture" && pathname !== "/api/webhooks/webhook%3Afixture") {
+        return response
+      }
+      const headers = new Headers(response.headers)
+      if (pathname.startsWith("/api/subscriptions/")) {
+        headers.set("etag", "wrong-revision")
+      } else {
+        headers.delete("etag")
+      }
+      return new Response(await response.arrayBuffer(), {
+        headers,
+        status: response.status,
+        statusText: response.statusText
+      })
+    }
+    const etagReport = await runApiSmoke({
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      fetchImpl: revisionEtagMismatch,
+      fixtures: {
+        subscriptionId: "subscription:fixture",
+        webhookId: "webhook:fixture"
+      },
+      requireAuth: true,
+      token: "smoke-token"
+    })
+    expect(etagReport.failed.map((check) => check.id)).toEqual(
+      expect.arrayContaining(["get-subscription", "get-webhook"])
+    )
   })
 
   it("rejects malformed error correlation and category responses", async () => {
@@ -655,6 +963,47 @@ describe("local API smoke harness", () => {
     })
 
     expect(report.failed.map((check) => check.id)).toContain("unknown-route")
+  })
+
+  it("rejects a 413 response that does not use the canonical payload-too-large category", async () => {
+    const { fetchImpl } = fakeFetch()
+    const malformed = mutateJson(fetchImpl, "/api/search/bills", (body) => {
+      if (!isRecord(body) || !isRecord(body.error)) {
+        return body
+      }
+      return { ...body, error: { ...body.error, category: "internal" } }
+    })
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      fetchImpl: malformed,
+      requireAuth: true,
+      token: "smoke-token"
+    })
+
+    expect(report.failed.map((check) => check.id)).toContain("payload-too-large")
+  })
+
+  it("redacts bearer tokens echoed by a failing endpoint", async () => {
+    const secret = "smoke-secret-must-not-appear"
+    const leakingFetch = async (input: string | URL, init?: RequestInit): Promise<Response> => {
+      const url = new URL(input)
+      if (url.pathname !== "/api/__smoke_unknown__") {
+        return await fakeFetch().fetchImpl(input, init)
+      }
+      const correlationId = new Headers(init?.headers).get("x-correlation-id") ?? "missing-correlation"
+      return jsonResponse(
+        { error: { category: "internal", correlationId, message: `echoed ${secret}`, retryable: false } },
+        500,
+        correlationId
+      )
+    }
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      fetchImpl: leakingFetch,
+      token: secret
+    })
+
+    expect(report.failed.find((check) => check.id === "unknown-route")?.detail).not.toContain(secret)
   })
 
   it("rejects an invalid health status", async () => {
@@ -698,7 +1047,7 @@ describe("local API smoke harness", () => {
       }
       const correlationId = new Headers(init?.headers).get("x-correlation-id") ?? "missing-correlation"
       return jsonResponse(
-        { data: [], links: { next: null, self: url.pathname }, meta: { correlationId } },
+        { data: [], links: { next: null, self: `${url.pathname}${url.search}` }, meta: { correlationId } },
         200,
         correlationId
       )
