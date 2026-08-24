@@ -40,9 +40,13 @@ describe("M4-04 single-channel sensing coupon", () => {
     })
   })
 
-  it("binds a six-MPN first-party drawing batch without granting footprint authority", () => {
+  it("binds an eight-MPN first-party drawing batch without granting footprint authority", () => {
     const acquired = M404_SINGLE_CHANNEL_COUPON.footprints
       .filter((footprint) => footprint.evidence.manufacturerDrawing.acquisition === "exact-drawing-hash-bound")
+      .filter(
+        (footprint, index, footprints) =>
+          footprints.findIndex((candidate) => candidate.exactMpn === footprint.exactMpn) === index
+      )
       .map((footprint) => ({
         artifactPath: footprint.evidence.manufacturerDrawing.artifactPath,
         exactMpn: footprint.exactMpn,
@@ -82,10 +86,22 @@ describe("M4-04 single-channel sensing coupon", () => {
         sourceUrl: "https://www.ti.com/lit/ds/symlink/tmux1112.pdf"
       },
       {
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c102j5gactu-datasheet.pdf",
+        exactMpn: "C0603C102J5GACTU",
+        sha256: "B62452DE5A68C2E26AE145A4F4F4DF1D989AA5482AF4746C93A86155D5910221",
+        sourceUrl: "https://yageogroup.com/component-documentation/download/specsheet/C0603C102J5GACTU?lang=en"
+      },
+      {
         artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-ads8881-dgs-datasheet.pdf",
         exactMpn: "ADS8881IDGS",
         sha256: "EA5896CA4C8053A1AE183BE8354DD551A5D947CE670AC1F1170C59176148F1A8",
         sourceUrl: "https://www.ti.com/lit/ds/symlink/ads8881.pdf"
+      },
+      {
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c104k3ractu-datasheet.pdf",
+        exactMpn: "C0603C104K3RACTU",
+        sha256: "F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064",
+        sourceUrl: "https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en"
       }
     ])
     expect(
@@ -131,7 +147,7 @@ describe("M4-04 single-channel sensing coupon", () => {
       expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(drawing.sha256)
       const pdfContent = `${bytes.toString("latin1")}\n${inflatePdfStreams(bytes)}`
       for (const marker of drawing.byteMarkers) expect(pdfContent).toContain(marker)
-      expect(drawing.drawingIdentifier).toMatch(/mechanical drawing$/u)
+      expect(drawing.drawingIdentifier).toMatch(/(?:mechanical drawing|manufacturer dimensions)$/u)
       expect(drawing.geometry).toBeNull()
     }
   })

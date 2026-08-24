@@ -255,12 +255,36 @@ const acquiredDrawingEvidenceByMpn: Readonly<
     scope:
       "Texas Instruments TPD4E05U06 datasheet. The orderable table names the exact TPD4E05U06DQAR MPN and DQA USON-10 package; the mechanical section contains the manufacturer DQA0010A package drawing. No project land pattern or geometry is inferred from this source.",
     sha256: "C167CF1E72A5473A4D2C59B6A3C0251498701DA05B7785919B9CEAAE3B3E02C6"
+  },
+  C0603C102J5GACTU: {
+    acquisition: "exact-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c102j5gactu-datasheet.pdf",
+    drawingIdentifier: "YAGEO SMD Comm C0G, 0603/1608 manufacturer dimensions",
+    drawingUrl: "https://yageogroup.com/component-documentation/download/specsheet/C0603C102J5GACTU?lang=en",
+    geometry: null,
+    byteMarkers: ["C0603C102J5GACTU", "0603", "1.6"],
+    scope:
+      "YAGEO/KEMET product specsheet. The exact C0603C102J5GACTU MPN, 0603/1608 case, and manufacturer dimensions are present in the retained source. No project land pattern or geometry is inferred from this source.",
+    sha256: "B62452DE5A68C2E26AE145A4F4F4DF1D989AA5482AF4746C93A86155D5910221"
+  },
+  C0603C104K3RACTU: {
+    acquisition: "exact-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c104k3ractu-datasheet.pdf",
+    drawingIdentifier: "YAGEO SMD Comm X7R, 0603/1608 manufacturer dimensions",
+    drawingUrl: "https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en",
+    geometry: null,
+    byteMarkers: ["C0603C104K3RACTU", "0603", "1.6"],
+    scope:
+      "YAGEO/KEMET product specsheet. The exact C0603C104K3RACTU MPN, 0603/1608 case, and manufacturer dimensions are present in the retained source. No project land pattern or geometry is inferred from this source.",
+    sha256: "F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064"
   }
 }
 
 function drawingEvidenceFor(part: CouponBomPart) {
   const acquiredDrawing = acquiredDrawingEvidenceByMpn[part.mpn]
-  if (acquiredDrawing !== undefined) return acquiredDrawing
+  if (acquiredDrawing !== undefined) {
+    return { ...acquiredDrawing, byteMarkers: [...acquiredDrawing.byteMarkers] }
+  }
   if (part.mpn === "43650-0300") {
     return {
       acquisition: "series-drawing-identified-not-hash-acquired" as const,
