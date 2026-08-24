@@ -31,20 +31,15 @@ import {
   assertAllowedQueryParameters,
   apiPage,
   apiResource,
-  correlationId,
   queryInteger,
   queryOptionalDate,
   queryOptionalIsoDate,
   queryOptionalString,
-  readJsonBody,
   requestUrl,
   sendApiError,
   sendApiJson,
-  stringArrayBody,
   type HttpApiHandler
 } from "./http.js"
-
-type ChangeType = ChangeSearchInput["changeType"]
 
 export interface CoreReadQueryApi {
   findRelatedBills: (input: BillLookup & { includeSemantic?: boolean; limit?: number }) => Promise<CorePage>
@@ -159,56 +154,6 @@ async function handleCoreRequest(
       sendApiJson(response, 200, apiPage(request, projectBillPage(page, apiBaseUrl), limit))
       return true
     }
-    case "getRelatedBills": {
-      const limit = queryInteger(url, "limit", 20)
-      const page = await service.findRelatedBills({
-        id: route.billId,
-        includeSemantic: queryOptionalString(url, "mode") !== "explicit",
-        limit
-      })
-      sendApiJson(response, 200, apiPage(request, page, limit))
-      return true
-    }
-    case "getBillText": {
-      const limit = queryInteger(url, "limit", 50, 50)
-      const page = await service.getBillText({
-        cursor: queryOptionalString(url, "cursor"),
-        documentId: queryOptionalString(url, "documentId"),
-        id: route.billId,
-        versionCode: queryOptionalString(url, "versionCode")
-      })
-      sendApiJson(response, 200, apiPage(request, { items: page.sections, ...page }, limit))
-      return true
-    }
-    case "listBillAmendments": {
-      const limit = queryInteger(url, "limit", 20)
-      const page = await service.searchAmendments({
-        billId: route.billId,
-        cursor: queryOptionalString(url, "cursor"),
-        limit,
-        query: queryOptionalString(url, "q"),
-        sponsorPersonId: queryOptionalString(url, "sponsorPersonId")
-      })
-      sendApiJson(response, 200, apiPage(request, page, limit))
-      return true
-    }
-    case "batchBillAmendments": {
-      const body = await readJsonBody(request)
-      const billIds = stringArrayBody(body, "billIds")
-      const limit = body.limitPerBill === undefined ? 25 : bodyInteger(body.limitPerBill, "limitPerBill", 1, 100)
-      const data = await Promise.all(
-        billIds.map(async (billId) => {
-          try {
-            const page = await service.searchAmendments({ billId, limit })
-            return { billId, page: apiPage(request, page, limit), status: "ok" as const }
-          } catch (error) {
-            return { billId, error: itemError(error), status: "error" as const }
-          }
-        })
-      )
-      sendApiJson(response, 200, { data, links: { self: url.pathname }, meta: batchMeta(request, billIds, data) })
-      return true
-    }
     case "listSupportingMaterials": {
       const limit = queryInteger(url, "limit", 20)
       const { documentFrom, documentTo } = querySupportingMaterialDateRange(url)
@@ -242,25 +187,6 @@ async function handleCoreRequest(
       )
       return true
     }
-    case "getDocument": {
-      const data = await service.getDocument({
-        cursor: queryOptionalString(url, "cursor"),
-        id: route.documentId,
-        limit: queryInteger(url, "limit", 20, 50)
-      })
-      sendApiJson(response, 200, apiResource(request, data))
-      return true
-    }
-    case "getDocumentSections": {
-      const limit = queryInteger(url, "limit", 20, 50)
-      const page = await service.getDocumentSections({
-        cursor: queryOptionalString(url, "cursor"),
-        documentId: route.documentId,
-        limit
-      })
-      sendApiJson(response, 200, apiPage(request, page, limit))
-      return true
-    }
     case "getDocumentSection": {
       if (service.getDocumentSection === undefined) {
         return false
@@ -278,38 +204,6 @@ async function handleCoreRequest(
         sectionId: route.sectionId
       })
       sendApiJson(response, 200, apiResource(request, projectSupportingMaterialSectionRead(data, apiBaseUrl)))
-      return true
-    }
-    case "listChanges": {
-      const limit = queryInteger(url, "limit", 20)
-      const { observedFrom, observedTo } = queryChangeDateRange(url)
-      const page = await service.searchChanges({
-        cursor: queryOptionalString(url, "cursor"),
-        changeType: queryOptionalChangeType(url),
-        jurisdictionId: queryOptionalString(url, "jurisdictionId"),
-        limit,
-        organizationId: queryOptionalString(url, "organizationId"),
-        personId: queryOptionalString(url, "personId"),
-        recordId: queryOptionalString(url, "recordId"),
-        recordType: queryOptionalString(url, "recordType"),
-        observedFrom,
-        observedTo
-      })
-      sendApiJson(response, 200, apiPage(request, page, limit))
-      return true
-    }
-    case "getBillChanges": {
-      const limit = queryInteger(url, "limit", 20)
-      const { observedFrom, observedTo } = queryChangeDateRange(url)
-      const page = await service.searchChanges({
-        billId: route.billId,
-        changeType: queryOptionalChangeType(url),
-        cursor: queryOptionalString(url, "cursor"),
-        limit,
-        observedFrom,
-        observedTo
-      })
-      sendApiJson(response, 200, apiPage(request, page, limit))
       return true
     }
   }
@@ -513,12 +407,7 @@ function billSort(value: string): BillBrowseInput["sort"] {
 }
 
 type CoreRoute =
-  | { name: "batchBillAmendments" | "listBills" | "listChanges" | "listSupportingMaterials" }
-  | {
-      billId: string
-      name: "getBillText" | "getRelatedBills" | "getBillChanges" | "listBillAmendments"
-    }
-  | { documentId: string; name: "getDocument" | "getDocumentSections" }
+  | { name: "listBills" | "listSupportingMaterials" }
   | { documentId: string; name: "getDocumentSection"; sectionId: string }
   | { jurisdictionId: string; name: "listJurisdictionBills" }
   | { materialId: string; name: "getSupportingMaterial" }
@@ -526,20 +415,11 @@ type CoreRoute =
   | { name: "listSessionBills"; sessionId: string }
 
 function routeMatch(method: string | undefined, pathname: string): CoreRoute | undefined {
-  if (method === "POST") {
-    if (pathname === "/api/bills/amendments/batch") {
-      return { name: "batchBillAmendments" }
-    }
-    return undefined
-  }
   if (method !== "GET") {
     return undefined
   }
   if (pathname === "/api/bills") {
     return { name: "listBills" }
-  }
-  if (pathname === "/api/changes") {
-    return { name: "listChanges" }
   }
   if (pathname === "/api/supporting-materials") {
     return { name: "listSupportingMaterials" }
@@ -547,27 +427,6 @@ function routeMatch(method: string | undefined, pathname: string): CoreRoute | u
   const segments = pathname.split("/").filter(Boolean).map(decodeURIComponent)
   if (segments[0] !== "api") {
     return undefined
-  }
-  if (segments[1] === "bills" && typeof segments[2] === "string") {
-    const billId = segments[2]
-    if (segments.length === 3) {
-      return undefined
-    }
-    if (segments.length !== 4) {
-      return undefined
-    }
-    switch (segments[3]) {
-      case "related":
-        return { billId, name: "getRelatedBills" }
-      case "sections":
-        return { billId, name: "getBillText" }
-      case "amendments":
-        return { billId, name: "listBillAmendments" }
-      case "changes":
-        return { billId, name: "getBillChanges" }
-      default:
-        return undefined
-    }
   }
   if (segments[1] === "jurisdictions" && typeof segments[2] === "string") {
     if (segments.length === 4 && segments[3] === "bills") {
@@ -581,16 +440,7 @@ function routeMatch(method: string | undefined, pathname: string): CoreRoute | u
       : undefined
   }
   if (segments[1] === "documents" && typeof segments[2] === "string") {
-    if (segments.length === 3) {
-      return { documentId: segments[2], name: "getDocument" }
-    }
-    if (segments[3] !== "sections") {
-      return undefined
-    }
-    if (segments.length === 4) {
-      return { documentId: segments[2], name: "getDocumentSections" }
-    }
-    return segments.length === 5 && typeof segments[4] === "string"
+    return segments[3] === "sections" && segments.length === 5 && typeof segments[4] === "string"
       ? { documentId: segments[2], name: "getDocumentSection", sectionId: segments[4] }
       : undefined
   }
@@ -603,30 +453,6 @@ function routeMatch(method: string | undefined, pathname: string): CoreRoute | u
       : undefined
   }
   return undefined
-}
-
-function batchMeta(request: IncomingMessage, ids: readonly string[], data: readonly unknown[]) {
-  return {
-    correlationId: correlationId(request),
-    requested: ids.length,
-    returned: data.length,
-    warnings: []
-  }
-}
-
-function itemError(error: unknown) {
-  return {
-    category: error instanceof Error && "category" in error ? error.category : "internal",
-    message: error instanceof Error ? error.message : "The request could not be completed",
-    retryable: false
-  }
-}
-
-function bodyInteger(value: unknown, name: string, minimum: number, maximum: number): number {
-  if (typeof value !== "number" || !Number.isInteger(value) || value < minimum || value > maximum) {
-    throw new LegislationError("invalid_request", `${name} must be an integer between ${minimum} and ${maximum}`)
-  }
-  return value
 }
 
 function allowedQueryParameters(name: CoreRoute["name"]): readonly string[] {
@@ -648,8 +474,6 @@ function allowedQueryParameters(name: CoreRoute["name"]): readonly string[] {
         "subject",
         "updatedFrom"
       ]
-    case "batchBillAmendments":
-      return []
     case "listJurisdictionBills":
       return [
         "classification",
@@ -664,12 +488,6 @@ function allowedQueryParameters(name: CoreRoute["name"]): readonly string[] {
       ]
     case "listSessionBills":
       return ["classification", "cursor", "introducedFrom", "introducedTo", "limit", "sort", "status", "subject"]
-    case "getRelatedBills":
-      return ["limit", "mode"]
-    case "getBillText":
-      return ["cursor", "documentId", "limit", "versionCode"]
-    case "listBillAmendments":
-      return ["cursor", "limit", "q", "sponsorPersonId"]
     case "listSupportingMaterials":
       return [
         "amendmentId",
@@ -687,56 +505,10 @@ function allowedQueryParameters(name: CoreRoute["name"]): readonly string[] {
       ]
     case "getSupportingMaterial":
       return []
-    case "getDocument":
-      return ["cursor", "limit"]
     case "getDocumentSection":
     case "getSupportingMaterialSection":
       return []
-    case "getDocumentSections":
-      return ["cursor", "limit"]
-    case "listChanges":
-      return [
-        "classification",
-        "cursor",
-        "jurisdictionId",
-        "limit",
-        "observedFrom",
-        "observedTo",
-        "organizationId",
-        "personId",
-        "recordId",
-        "recordType"
-      ]
-    case "getBillChanges":
-      return ["classification", "cursor", "limit", "observedFrom", "observedTo"]
   }
-}
-
-function queryOptionalChangeType(url: URL): ChangeType {
-  const value = queryOptionalString(url, "classification")
-  if (value === undefined) {
-    return undefined
-  }
-  switch (value) {
-    case "cancel":
-    case "create":
-    case "delete":
-    case "relationship-change":
-    case "reschedule":
-    case "update":
-      return value
-    default:
-      throw new LegislationError("invalid_request", "classification must be a supported change type")
-  }
-}
-
-function queryChangeDateRange(url: URL): { observedFrom: Date | undefined; observedTo: Date | undefined } {
-  const observedFrom = queryOptionalDate(url, "observedFrom")
-  const observedTo = queryOptionalDate(url, "observedTo")
-  if (observedFrom !== undefined && observedTo !== undefined && observedFrom > observedTo) {
-    throw new LegislationError("invalid_request", "observedFrom must not be after observedTo")
-  }
-  return { observedFrom, observedTo }
 }
 
 function querySupportingMaterialDateRange(url: URL): {

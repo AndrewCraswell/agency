@@ -497,80 +497,72 @@ describe("core read API handler", () => {
     await expect(response.json()).resolves.toMatchObject({ error: { category: "unprocessable", retryable: false } })
   })
 
-  it("uses page envelopes for registered related-bill and bill-section routes", async () => {
-    const baseUrl = await startServer(service())
-    const billId = "bill%3Aus%3A119%3Ahr%3A1"
-    const [timeline, related, sections, votes] = await Promise.all([
-      fetch(`${baseUrl}/api/bills/${billId}/timeline`),
-      fetch(`${baseUrl}/api/bills/${billId}/related?mode=explicit`),
-      fetch(`${baseUrl}/api/bills/${billId}/sections`),
-      fetch(`${baseUrl}/api/bills/${billId}/votes`)
-    ])
-
-    expect(timeline.status).toBe(404)
-    for (const response of [related, sections]) {
-      expect(response.status).toBe(200)
-      await expect(response.json()).resolves.toMatchObject({
-        data: expect.any(Array),
-        links: { next: null },
-        meta: { limit: expect.any(Number), truncated: false }
-      })
-    }
-    expect(votes.status).toBe(404)
-  })
-
-  it("scopes bill changes and validates the contract filters", async () => {
-    let received: Parameters<CoreReadQueryApi["searchChanges"]>[0] | undefined
+  it("leaves incomplete relationship, document, and change routes unregistered without querying the service", async () => {
+    let amendmentSearches = 0
+    let billTextReads = 0
+    let changeSearches = 0
+    let documentReads = 0
+    let documentSectionPages = 0
+    let relatedBillSearches = 0
     const baseUrl = await startServer({
       ...service(),
-      searchChanges: async (input) => {
-        received = input
-        return { items: [{ id: "change:1" }], truncated: false }
+      findRelatedBills: async () => {
+        relatedBillSearches += 1
+        return { items: [], truncated: false }
+      },
+      getBillText: async () => {
+        billTextReads += 1
+        return { sections: [], truncated: false }
+      },
+      getDocument: async () => {
+        documentReads += 1
+        return { document: {} }
+      },
+      getDocumentSections: async () => {
+        documentSectionPages += 1
+        return { items: [], truncated: false }
+      },
+      searchAmendments: async () => {
+        amendmentSearches += 1
+        return { items: [], truncated: false }
+      },
+      searchChanges: async () => {
+        changeSearches += 1
+        return { items: [], truncated: false }
       }
     })
-    const response = await fetch(
-      `${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/changes?classification=update&limit=2&observedFrom=2026-01-01T00%3A00%3A00Z&observedTo=2026-01-31T23%3A59%3A59Z`
-    )
-
-    expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toMatchObject({
-      data: [{ id: "change:1" }],
-      links: { next: null },
-      meta: { limit: 2, truncated: false }
-    })
-    expect(received).toMatchObject({
-      billId: "bill:us:119:hr:1",
-      changeType: "update",
-      limit: 2,
-      observedFrom: new Date("2026-01-01T00:00:00.000Z"),
-      observedTo: new Date("2026-01-31T23:59:59.000Z")
-    })
-  })
-
-  it("rejects invalid bill-change filters and route suffixes", async () => {
-    const baseUrl = await startServer(service())
-    const [classification, range, ambiguousDate, duplicateDate, suffix, typo] = await Promise.all([
-      fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/changes?classification=not-a-change`),
-      fetch(
-        `${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/changes?observedFrom=2026-02-01T00%3A00%3A00Z&observedTo=2026-01-01T00%3A00%3A00Z`
-      ),
-      fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/changes?observedFrom=01%2F02%2F2026`),
-      fetch(
-        `${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/changes?observedFrom=2026-01-01T00%3A00%3A00Z&observedFrom=2026-01-02T00%3A00%3A00Z`
-      ),
-      fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/changes/extra`),
-      fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/changes?limti=20`)
+    const billId = "bill%3Aus%3A119%3Ahr%3A1"
+    const responses = await Promise.all([
+      fetch(`${baseUrl}/api/bills/amendments/batch`, {
+        body: JSON.stringify({ billIds: ["bill:us:119:hr:1"], limitPerBill: 1 }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      }),
+      fetch(`${baseUrl}/api/bills/${billId}/related?mode=explicit`),
+      fetch(`${baseUrl}/api/bills/${billId}/sections`),
+      fetch(`${baseUrl}/api/bills/${billId}/amendments?limit=1`),
+      fetch(`${baseUrl}/api/changes?limit=1`),
+      fetch(`${baseUrl}/api/bills/${billId}/changes?limit=1`),
+      fetch(`${baseUrl}/api/documents/document%3A1`),
+      fetch(`${baseUrl}/api/documents/document%3A1/sections?limit=1`)
     ])
 
-    expect(classification.status).toBe(400)
-    expect(range.status).toBe(400)
-    expect(ambiguousDate.status).toBe(400)
-    expect(duplicateDate.status).toBe(400)
-    expect(suffix.status).toBe(404)
-    expect(typo.status).toBe(400)
-    await expect(classification.json()).resolves.toMatchObject({ error: { category: "invalid_request" } })
-    await expect(range.json()).resolves.toMatchObject({ error: { category: "invalid_request" } })
-    await expect(typo.json()).resolves.toMatchObject({ error: { category: "invalid_request" } })
+    expect(responses.map((response) => response.status)).toEqual([404, 404, 404, 404, 404, 404, 404, 404])
+    expect({
+      amendmentSearches,
+      billTextReads,
+      changeSearches,
+      documentReads,
+      documentSectionPages,
+      relatedBillSearches
+    }).toEqual({
+      amendmentSearches: 0,
+      billTextReads: 0,
+      changeSearches: 0,
+      documentReads: 0,
+      documentSectionPages: 0,
+      relatedBillSearches: 0
+    })
   })
 
   it("rejects route suffixes and unsupported query parameters", async () => {
@@ -656,17 +648,5 @@ describe("core read API handler", () => {
     for (const response of responses.slice(0, 3)) {
       await expect(response.json()).resolves.toMatchObject({ error: { category: "invalid_request" } })
     }
-  })
-
-  it("reports invalid batch limits as a client error", async () => {
-    const baseUrl = await startServer(service())
-    const response = await fetch(`${baseUrl}/api/bills/amendments/batch`, {
-      body: JSON.stringify({ billIds: ["bill:us:119:hr:1"], limitPerBill: 0 }),
-      headers: { "content-type": "application/json" },
-      method: "POST"
-    })
-
-    expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toMatchObject({ error: { category: "invalid_request" } })
   })
 })
