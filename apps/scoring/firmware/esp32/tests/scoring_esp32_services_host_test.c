@@ -215,6 +215,18 @@ static scoring_esp32_result_t callback_read_invalid_identifier(
   return SCORING_ESP32_RESULT_OK;
 }
 
+static scoring_esp32_result_t callback_read_identifier_fixture(
+  void *context,
+  scoring_esp32_identifier_t *out_identifier
+) {
+  const scoring_esp32_identifier_t *identifier = context;
+  if (identifier == NULL || out_identifier == NULL) {
+    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
+  }
+  *out_identifier = *identifier;
+  return SCORING_ESP32_RESULT_OK;
+}
+
 static scoring_esp32_result_t callback_bytes(void *context, scoring_esp32_bytes_t bytes) {
   (void)context;
   (void)bytes;
@@ -324,9 +336,52 @@ static bool test_service_callbacks_and_argument_boundaries(void) {
   return true;
 }
 
+static bool test_identifier_validation_boundaries(void) {
+  static const scoring_esp32_identifier_t invalid_identifiers[] = {
+    {.bytes = {0}, .length = 0U},
+    {.bytes = {'a', '\0', 'b'}, .length = 3U},
+    {.bytes = {'a', '\0'}, .length = 2U},
+    {.bytes = {'a', 'b'}, .length = 1U},
+    {.bytes = {0}, .length = SCORING_ESP32_MAX_IDENTIFIER_BYTES + 1U}
+  };
+  scoring_esp32_services_t services = {
+    .identity = {
+      .read_boot_id = callback_read_identifier_fixture,
+      .read_device_id = callback_read_identifier_fixture
+    }
+  };
+  scoring_esp32_app_t app;
+  scoring_esp32_identifier_t identifier;
+  size_t index;
+  scoring_esp32_identifier_t maximum_identifier = {.length = SCORING_ESP32_MAX_IDENTIFIER_BYTES};
+
+  for (index = 0U; index < maximum_identifier.length; ++index) {
+    maximum_identifier.bytes[index] = 'a';
+  }
+  maximum_identifier.bytes[maximum_identifier.length] = '\0';
+  services.identity.context = &maximum_identifier;
+  CHECK(scoring_esp32_app_init(&app, &services) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_read_boot_id(&app, &identifier) == SCORING_ESP32_RESULT_OK);
+  CHECK(identifier.length == SCORING_ESP32_MAX_IDENTIFIER_BYTES);
+  CHECK(scoring_esp32_read_device_id(&app, &identifier) == SCORING_ESP32_RESULT_OK);
+  CHECK(identifier.length == SCORING_ESP32_MAX_IDENTIFIER_BYTES);
+
+  for (index = 0U; index < sizeof(invalid_identifiers) / sizeof(invalid_identifiers[0]); ++index) {
+    services.identity.context = (void *)&invalid_identifiers[index];
+    CHECK(scoring_esp32_app_init(&app, &services) == SCORING_ESP32_RESULT_OK);
+    identifier = (scoring_esp32_identifier_t){.bytes = {'x'}, .length = 1U};
+    CHECK(scoring_esp32_read_boot_id(&app, &identifier) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+    CHECK(identifier.length == 0U && identifier.bytes[0] == '\0');
+    identifier = (scoring_esp32_identifier_t){.bytes = {'x'}, .length = 1U};
+    CHECK(scoring_esp32_read_device_id(&app, &identifier) == SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+    CHECK(identifier.length == 0U && identifier.bytes[0] == '\0');
+  }
+  return true;
+}
+
 int main(void) {
   if (!test_generated_golden_frames_match_esp32_codec() || !test_missing_adapters_are_safe_and_unavailable() ||
-      !test_service_callbacks_and_argument_boundaries()) {
+      !test_service_callbacks_and_argument_boundaries() || !test_identifier_validation_boundaries()) {
     return 1;
   }
   return 0;

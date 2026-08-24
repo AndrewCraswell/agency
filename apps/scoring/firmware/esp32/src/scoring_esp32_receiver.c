@@ -1,4 +1,5 @@
 #include "scoring_esp32_receiver.h"
+#include "scoring_esp32_identifier.h"
 
 #include <string.h>
 
@@ -14,21 +15,6 @@ static void clear_receipt(scoring_esp32_receiver_receipt_t *receipt) {
 
 static void mark_degraded(scoring_esp32_receiver_t *receiver) {
   receiver->link_degraded = true;
-}
-
-static bool is_valid_boot_id(const scoring_esp32_identifier_t *identifier) {
-  size_t index;
-  if (identifier == NULL || identifier->length == 0U ||
-      identifier->length > SCORING_ESP32_MAX_IDENTIFIER_BYTES ||
-      identifier->bytes[identifier->length] != '\0') {
-    return false;
-  }
-  for (index = 0U; index < identifier->length; ++index) {
-    if (identifier->bytes[index] == '\0') {
-      return false;
-    }
-  }
-  return true;
 }
 
 static bool boot_ids_equal(
@@ -52,7 +38,7 @@ static scoring_esp32_result_t read_boot_id(
   if (result != SCORING_ESP32_RESULT_OK) {
     return result;
   }
-  if (!is_valid_boot_id(out_id)) {
+  if (!scoring_esp32_identifier_is_valid(out_id)) {
     *out_id = (scoring_esp32_identifier_t){0};
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }

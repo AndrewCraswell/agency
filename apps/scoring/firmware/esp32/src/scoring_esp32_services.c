@@ -1,4 +1,5 @@
 #include "scoring_esp32_services.h"
+#include "scoring_esp32_identifier.h"
 
 #include <string.h>
 
@@ -34,11 +35,6 @@ static bool is_allowed_for_receiver(
   }
   return message_type == SCORING_ESP32_TRANSPORT_DECISION_RECORD || message_type == SCORING_ESP32_TRANSPORT_STATUS ||
          message_type == SCORING_ESP32_TRANSPORT_RESPONSE;
-}
-
-static bool is_valid_identifier(const scoring_esp32_identifier_t *identifier) {
-  return identifier != NULL && identifier->length <= SCORING_ESP32_MAX_IDENTIFIER_BYTES &&
-         identifier->bytes[identifier->length] == '\0';
 }
 
 static scoring_esp32_result_t unavailable_storage(
@@ -269,7 +265,7 @@ scoring_esp32_result_t scoring_esp32_read_boot_id(const scoring_esp32_app_t *app
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }
   result = app->services.identity.read_boot_id(app->services.identity.context, out_id);
-  if (result == SCORING_ESP32_RESULT_OK && !is_valid_identifier(out_id)) {
+  if (result == SCORING_ESP32_RESULT_OK && !scoring_esp32_identifier_is_valid(out_id)) {
     *out_id = (scoring_esp32_identifier_t){.bytes = {0}, .length = 0U};
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }
@@ -282,7 +278,7 @@ scoring_esp32_result_t scoring_esp32_read_device_id(const scoring_esp32_app_t *a
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }
   result = app->services.identity.read_device_id(app->services.identity.context, out_id);
-  if (result == SCORING_ESP32_RESULT_OK && !is_valid_identifier(out_id)) {
+  if (result == SCORING_ESP32_RESULT_OK && !scoring_esp32_identifier_is_valid(out_id)) {
     *out_id = (scoring_esp32_identifier_t){.bytes = {0}, .length = 0U};
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }

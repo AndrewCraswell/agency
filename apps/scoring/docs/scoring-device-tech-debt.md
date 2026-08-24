@@ -26,7 +26,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 6 | SC-001 | P2 | done | Root-approved shared weapon-input topology is renderer-verified across logical and physical circuit models; board-specific connector labels remain distinct |
 | 7 | SC-002 | P2 | done | Production harness selection now owns the MPN and pin data consumed by board integration and readiness checks |
 | 8 | SC-003 | P3 | done | Scoring, service-support, isolation, and application/display sections are extracted with exact-order regression coverage |
-| 9 | SD-006 | P1 | blocked | ESP32 services and receiver disagree on identifier validity; intake waits for FW-004 |
+| 9 | SD-006 | P1 | done | Root-approved private identifier validation now applies one nonempty, bounded, NUL-safe policy to ESP32 services and receiver ingress |
 | 10 | SD-009 | P1 | done | Root-approved remote gesture timing now uses bounded integer microseconds throughout with preserved gesture behavior and overflow-safe deadlines |
 | 11 | SD-010 | P2 | done | Root-approved replay now delegates authoritative record validation and immutable cloning solely to `parseDecisionRecord` while retaining replay-only annotation checks |
 | 12 | SD-011 | P2 | done | Root-approved producer parser now owns strict application-time validation and replay consumes its deeply frozen projection |
@@ -190,8 +190,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SD-006: unify ESP32 identifier validation
 
 - Priority: `P1`
-- State: `blocked`
-- Latest state: The mismatch is evidenced and bounded; implementation waits for FW-004 so receiver validation is not edited concurrently.
+- State: `done`
+- Latest state: Root-approved after FW-004: one private validator now rejects empty, embedded-NUL, terminal-NUL-in-length, missing-terminator, and overlength identifiers consistently across services and receiver initialization while preserving public APIs and result mappings. Debug and Release ESP32 CTest pass 3/3, and the native coverage gate remains green.
 - Affected files: `firmware/esp32/src/scoring_esp32_services.c`, `firmware/esp32/src/scoring_esp32_receiver.c`, and their host tests.
 - Description: services currently accept empty or embedded-NUL identifiers that the receiver rejects for the same public identifier type.
 - Impact: boot and device identity validity depends on which ESP32 API receives the value.

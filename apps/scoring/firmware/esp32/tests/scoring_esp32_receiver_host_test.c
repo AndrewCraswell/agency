@@ -57,6 +57,20 @@ static void set_boot_id(reset_observer_t *observer, const char *value) {
   observer->boot_result = SCORING_ESP32_RESULT_OK;
 }
 
+static void set_raw_boot_id(
+  reset_observer_t *observer,
+  const char *bytes,
+  size_t length,
+  size_t storage_length
+) {
+  (void)memset(&observer->boot_id, 0, sizeof(observer->boot_id));
+  if (bytes != NULL && storage_length != 0U) {
+    (void)memcpy(observer->boot_id.bytes, bytes, storage_length);
+  }
+  observer->boot_id.length = length;
+  observer->boot_result = SCORING_ESP32_RESULT_OK;
+}
+
 static size_t make_frame(
   uint8_t *destination,
   scoring_esp32_transport_message_type_t message_type,
@@ -659,6 +673,50 @@ static bool test_boot_identity_is_required_changed_and_exposed(void) {
   return true;
 }
 
+static bool test_receiver_identifier_validation_boundaries(void) {
+  static const char embedded_nul[] = {'a', '\0', 'b'};
+  static const char terminal_nul_in_length[] = {'a', '\0'};
+  static const char missing_terminal_nul[] = {'a', 'b'};
+  static const struct {
+    const char *bytes;
+    size_t length;
+  } invalid_identifiers[] = {
+    {.bytes = NULL, .length = 0U},
+    {.bytes = embedded_nul, .length = sizeof(embedded_nul)},
+    {.bytes = terminal_nul_in_length, .length = sizeof(terminal_nul_in_length)},
+    {.bytes = missing_terminal_nul, .length = 1U},
+    {.bytes = NULL, .length = SCORING_ESP32_MAX_IDENTIFIER_BYTES + 1U}
+  };
+  fake_link_t link = {0};
+  reset_observer_t observer = {0};
+  scoring_esp32_services_t services;
+  scoring_esp32_receiver_t receiver;
+  scoring_esp32_identifier_t maximum_identifier = {.length = SCORING_ESP32_MAX_IDENTIFIER_BYTES};
+  size_t index;
+
+  services = services_for(&link, &observer);
+  for (index = 0U; index < maximum_identifier.length; ++index) {
+    maximum_identifier.bytes[index] = 'a';
+  }
+  maximum_identifier.bytes[maximum_identifier.length] = '\0';
+  set_raw_boot_id(&observer, maximum_identifier.bytes, maximum_identifier.length, sizeof(maximum_identifier.bytes));
+  scoring_esp32_journal_storage_init(&test_storage);
+  CHECK(scoring_esp32_receiver_init(&receiver, &services, &test_storage, 4U) == SCORING_ESP32_RESULT_OK);
+
+  for (index = 0U; index < sizeof(invalid_identifiers) / sizeof(invalid_identifiers[0]); ++index) {
+    set_raw_boot_id(
+      &observer,
+      invalid_identifiers[index].bytes,
+      invalid_identifiers[index].length,
+      index == 3U ? sizeof(missing_terminal_nul) : invalid_identifiers[index].length
+    );
+    scoring_esp32_journal_storage_init(&test_storage);
+    CHECK(scoring_esp32_receiver_init(&receiver, &services, &test_storage, 4U) ==
+          SCORING_ESP32_RESULT_INVALID_ARGUMENT);
+  }
+  return true;
+}
+
 static bool test_newest_corrupt_falls_back_and_all_corrupt_fails(void) {
   static const uint8_t first_payload[] = {0x10U};
   static const uint8_t second_payload[] = {0x11U};
@@ -937,6 +995,7 @@ int main(void) {
       !test_reset_restores_ignored_cursor() ||
       !test_max_sequence_exhaustion_restores() ||
       !test_boot_identity_is_required_changed_and_exposed() ||
+      !test_receiver_identifier_validation_boundaries() ||
       !test_newest_corrupt_falls_back_and_all_corrupt_fails() ||
       !test_journal_public_argument_boundaries() ||
       !test_receiver_public_argument_and_link_boundaries()) {
