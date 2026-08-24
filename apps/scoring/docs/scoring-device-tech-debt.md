@@ -48,7 +48,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 29 | SD-018 | P2 | in-progress | Live simulator rebuild can leave startup-cached HTML pointing at deleted hashed assets |
 | 30 | SD-019 | P1 | intake | Remote identity length and character policies disagree across command, authority, and fixture boundaries |
 | 31 | SD-020 | P2 | intake | Remote schema parsers return caller-owned mutable objects despite readonly result types |
-| 32 | SD-021 | P2 | in-progress | Secure-envelope and replay-candidate metadata validation is duplicated in one security module |
+| 32 | SD-021 | P2 | done | Root-approved private metadata projection now serves secure-envelope and replay-candidate validation with unchanged wire and error behavior |
 | 33 | SC-010 | P2 | intake | Communications circuit selected MPNs can drift from canonical component decisions and USB-PD records |
 | 34 | SC-011 | P3 | intake | BOM validation repeats the same 21-reference exact-selection registry already present in canonical rows |
 | 35 | SC-012 | P2 | intake | W5500 support values are canonical upstream but duplicated as circuit literals |
@@ -514,9 +514,10 @@ truth.
 ## SD-021: deduplicate encrypted-IR metadata validation
 
 - Priority: `P2`
-- State: `in-progress`
+- State: `done`
+- Latest state: Root-approved private common-metadata parsing preserves exact envelope projection order, wire bytes, public APIs, malformed-frame behavior, and crypto DENY posture; 13 focused tests plus lint and format checks pass. App typecheck remains blocked only by the pre-existing remote fixture/schema mismatch outside this unit.
 - Affected files: `apps/scoring/src/encrypted-ir-security.ts` and its focused tests.
-- Description: secure-envelope and replay-candidate parsers independently validate the same apparatus identity, command ID, counter, epoch, protocol, version, remote identity, and suite fields.
+- Description: secure-envelope and replay-candidate parsers independently validated the same apparatus identity, command ID, counter, epoch, protocol, version, remote identity, and suite fields.
 - Impact: a future protocol or identity change can update one security boundary while leaving the other inconsistent.
 - Bounded remediation: use one private common-metadata projection while retaining envelope-only ciphertext/tag/press checks and candidate-specific exact-key checks.
 - Acceptance: shared-field mutation tests prove identical accept/reject behavior while preserving public APIs, error categories, wire bytes, and crypto DENY posture.

@@ -451,65 +451,36 @@ export function parseIrSecureFrame(value: unknown): IrSecureEnvelope {
   })
 }
 
-/** Strictly parses a fixed-suite envelope before the selected AES-GCM adapter receives it. */
-export function parseIrSecureEnvelope(value: unknown): IrSecureEnvelope {
-  if (
-    !isStrictPlainRecord(value) ||
-    !hasExactlyKeys(value, [
-      "apparatusIdentity",
-      "ciphertext",
-      "commandId",
-      "counter",
-      "keyEpoch",
-      "pressKind",
-      "protocolId",
-      "protocolVersion",
-      "remoteIdentity",
-      "suite",
-      "tag"
-    ]) ||
-    !isIdentity(value.apparatusIdentity) ||
-    !isBoundedCiphertext(value.ciphertext) ||
-    !isHex(value.commandId, COMMAND_ID_HEX_LENGTH) ||
-    !isCounter(value.counter, false) ||
-    !isEpoch(value.keyEpoch) ||
-    !isPressKind(value.pressKind) ||
-    value.protocolId !== IR_PROTOCOL_ID ||
-    value.protocolVersion !== IR_PROTOCOL_VERSION ||
-    !isIdentity(value.remoteIdentity) ||
-    value.suite !== IR_AEAD_SUITE ||
-    !isHex(value.tag, IR_AEAD_TAG_BYTES * 2)
-  ) {
-    throw new TypeError("IR secure envelope has an invalid or unsupported shape")
-  }
-  return Object.freeze({
-    apparatusIdentity: value.apparatusIdentity,
-    ciphertext: value.ciphertext,
-    commandId: value.commandId,
-    counter: value.counter,
-    keyEpoch: value.keyEpoch,
-    pressKind: value.pressKind,
-    protocolId: value.protocolId,
-    protocolVersion: value.protocolVersion,
-    remoteIdentity: value.remoteIdentity,
-    suite: value.suite,
-    tag: value.tag
-  })
-}
+const IR_REPLAY_CANDIDATE_KEYS = [
+  "apparatusIdentity",
+  "commandId",
+  "counter",
+  "keyEpoch",
+  "protocolId",
+  "protocolVersion",
+  "remoteIdentity",
+  "suite"
+]
 
-function parseIrReplayCandidate(value: unknown): IrReplayCandidate {
+const IR_SECURE_ENVELOPE_KEYS = [
+  "apparatusIdentity",
+  "ciphertext",
+  "commandId",
+  "counter",
+  "keyEpoch",
+  "pressKind",
+  "protocolId",
+  "protocolVersion",
+  "remoteIdentity",
+  "suite",
+  "tag"
+]
+
+/** Parses and freezes the protocol metadata common to envelopes and replay candidates. */
+function parseIrMetadata(value: unknown, expectedKeys: readonly string[], errorMessage: string): IrReplayCandidate {
   if (
     !isStrictPlainRecord(value) ||
-    !hasExactlyKeys(value, [
-      "apparatusIdentity",
-      "commandId",
-      "counter",
-      "keyEpoch",
-      "protocolId",
-      "protocolVersion",
-      "remoteIdentity",
-      "suite"
-    ]) ||
+    !hasExactlyKeys(value, expectedKeys) ||
     !isIdentity(value.apparatusIdentity) ||
     !isHex(value.commandId, COMMAND_ID_HEX_LENGTH) ||
     !isCounter(value.counter, false) ||
@@ -519,7 +490,7 @@ function parseIrReplayCandidate(value: unknown): IrReplayCandidate {
     !isIdentity(value.remoteIdentity) ||
     value.suite !== IR_AEAD_SUITE
   ) {
-    throw new TypeError("IR replay candidate has an invalid or unsupported shape")
+    throw new TypeError(errorMessage)
   }
   return Object.freeze({
     apparatusIdentity: value.apparatusIdentity,
@@ -531,6 +502,40 @@ function parseIrReplayCandidate(value: unknown): IrReplayCandidate {
     remoteIdentity: value.remoteIdentity,
     suite: value.suite
   })
+}
+
+/** Strictly parses a fixed-suite envelope before the selected AES-GCM adapter receives it. */
+export function parseIrSecureEnvelope(value: unknown): IrSecureEnvelope {
+  const metadata = parseIrMetadata(
+    value,
+    IR_SECURE_ENVELOPE_KEYS,
+    "IR secure envelope has an invalid or unsupported shape"
+  )
+  if (
+    !isStrictPlainRecord(value) ||
+    !isBoundedCiphertext(value.ciphertext) ||
+    !isPressKind(value.pressKind) ||
+    !isHex(value.tag, IR_AEAD_TAG_BYTES * 2)
+  ) {
+    throw new TypeError("IR secure envelope has an invalid or unsupported shape")
+  }
+  return Object.freeze({
+    apparatusIdentity: metadata.apparatusIdentity,
+    ciphertext: value.ciphertext,
+    commandId: metadata.commandId,
+    counter: metadata.counter,
+    keyEpoch: metadata.keyEpoch,
+    pressKind: value.pressKind,
+    protocolId: metadata.protocolId,
+    protocolVersion: metadata.protocolVersion,
+    remoteIdentity: metadata.remoteIdentity,
+    suite: metadata.suite,
+    tag: value.tag
+  })
+}
+
+function parseIrReplayCandidate(value: unknown): IrReplayCandidate {
+  return parseIrMetadata(value, IR_REPLAY_CANDIDATE_KEYS, "IR replay candidate has an invalid or unsupported shape")
 }
 
 function isIrPairingRecord(value: unknown): value is IrPairingRecord {

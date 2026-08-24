@@ -124,6 +124,34 @@ describe("RC-03 encrypted IR security contract", () => {
     expect(() => deriveIrAeadNonce(7, "0000000000000000")).toThrow(TypeError)
   })
 
+  it("keeps secure-envelope and replay-candidate metadata validation in parity", () => {
+    const invalidMetadata = [
+      { apparatusIdentity: "00" },
+      { commandId: "11" },
+      { counter: "0000000000000000" },
+      { keyEpoch: 0 },
+      { protocolId: "other-ir" },
+      { protocolVersion: 2 },
+      { remoteIdentity: "ff" },
+      { suite: "AES-128-GCM" }
+    ]
+    const initial = createIrReplayState(pairing)
+
+    for (const overrides of invalidMetadata) {
+      expect(() => parseIrSecureEnvelope(frame(overrides))).toThrow(TypeError)
+      expect(calculateIrReplayTransition(pairing, initial, candidate(overrides))).toMatchObject({
+        disposition: "rejected",
+        reason: "malformed-frame"
+      })
+    }
+
+    expect(() => parseIrSecureEnvelope({ ...frame(), unexpected: true })).toThrow(TypeError)
+    expect(calculateIrReplayTransition(pairing, initial, { ...candidate(), unexpected: true })).toMatchObject({
+      disposition: "rejected",
+      reason: "malformed-frame"
+    })
+  })
+
   it("serializes and parses the exact canonical v1 header, AAD, and full-frame vector", () => {
     const aad = serializeIrCanonicalAad(frame())
     const expectedAad =
