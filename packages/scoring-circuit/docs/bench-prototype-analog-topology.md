@@ -43,9 +43,11 @@ The core remains `NXE1S0505MC`, `TPS60400DBVR`, `TPS7A2033PDBVR`,
 `REF5025AQDRQ1`, `TPD4E05U06DQAR`, `CRCW060322R0FKEAHP`,
 `TMUX1112PWR`, `ERA3AEB2491V`, `ADA4177-1BRZ`,
 `ADS8881IDGS`, `CRCW060320R0FKEAHP`, `C0603C102J5GACTU`, and the separate
-`CRCW120656K0FKEAHP` guarded-force resistor. The corrected reference output
-capacitor is KEMET `T521B106M025ATE100`, 10 uF, 25 V, 100 milliohm maximum
-ESR at 25 C and 100 kHz, not the older `T491A106K010AT` candidate.
+`CRCW120656K0FKEAHP` guarded-force resistor. BP-101 separates the reference
+loops: KEMET `T521B106M025ATE100` stabilizes the REF5025 output locally, while
+Vishay `RCWE0603R220FKEA` feeds an ADS8881-local Murata
+`GRM21BR71A106KE51L` 10-uF X7R 0805 reservoir. No smaller parallel capacitor
+is permitted at the ADC REF pins.
 
 The complete per-reference support BOM remains in
 [`one-channel-analog-readiness.ts`](../src/one-channel-analog-readiness.ts).

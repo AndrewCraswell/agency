@@ -156,7 +156,10 @@ describe("one-channel protected analog experiment", () => {
         "R_SAR",
         "C_SAR",
         "C_REF_IN",
-        "C_REF_OUT_HF",
+        "C_REF_REG",
+        "C_REF_REG_HF",
+        "R_REF_SAR",
+        "C_REF",
         "C_BUFFER_POS",
         "C_BUFFER_NEG",
         "C_NEG_IN",
@@ -169,6 +172,8 @@ describe("one-channel protected analog experiment", () => {
     expect(serialized).toContain("ADA4177-1BRZ")
     expect(serialized).toContain("ADS8881IDGS")
     expect(serialized).toContain("T521B106M025ATE100")
+    expect(serialized).toContain("GRM21BR71A106KE51L")
+    expect(serialized).toContain("RCWE0603R220FKEA")
     expect(serialized).toContain("TP_AINN")
     expect(serialized).toContain("MUTEX_OBS")
     expect(serialized).toContain("BUFFER_INVERTING")
@@ -230,7 +235,11 @@ describe("one-channel protected analog experiment", () => {
         "U_OVP_BUFFER.S5V_ISO to C_BUFFER_POS.pin1",
         "U_OVP_BUFFER.S5V_NEG to C_BUFFER_NEG.pin1",
         "U_REF.S5V_ISO to C_REF_IN.pin1",
-        "U_REF.REF_2V5 to C_REF_OUT_HF.pin1",
+        "U_REF.REF_2V5 to C_REF_REG.pin1",
+        "U_REF.REF_2V5 to C_REF_REG_HF.pin1",
+        "U_REF.REF_2V5 to R_REF_SAR.pin1",
+        "R_REF_SAR.pin2 to U_SAR.REF_2V5",
+        "R_REF_SAR.pin2 to C_REF.pin1",
         "U_ISO.SYSTEM_5V to C_ISO_IN.pin1",
         "U_ISO.S5V_ISO to C_ISO_OUT.pin1",
         "U_SOURCE_SWITCH.UNUSED_SEL2 to net.SGND"

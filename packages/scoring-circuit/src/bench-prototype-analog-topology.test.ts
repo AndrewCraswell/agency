@@ -40,7 +40,9 @@ describe("BP-100 bench prototype analog topology", () => {
   })
 
   it("pins the corrected reference capacitor and exact acquisition parts", () => {
-    expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["C_REF", "T521B106M025ATE100"])
+    expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["C_REF_REG", "T521B106M025ATE100"])
+    expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["R_REF_SAR", "RCWE0603R220FKEA"])
+    expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["C_REF", "GRM21BR71A106KE51L"])
     expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["U_ESD", "TPD4E05U06DQAR"])
     expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["R_ESD", "CRCW060322R0FKEAHP"])
     expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["U_OVP_BUFFER", "ADA4177-1BRZ"])

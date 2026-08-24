@@ -16,16 +16,36 @@ const kemetOneHundredNfEvidence =
   "https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en"
 const keystoneTestPointEvidence = "https://www.keyelco.com/product.cfm/product_id/13550"
 
-/** REF5025A-Q1 output-capacitor limits and the selected exact candidate. */
+/** REF5025A-Q1 local output-capacitor limits and selected stabilization part. */
 export const ref5025OutputCapacitorRequirement = {
   manufacturerEsrTestCondition: "25 C, 100 kHz",
-  reference: "C_REF",
+  reference: "C_REF_REG",
   requiredMaximumCapacitanceUf: 50,
   requiredMaximumEsrOhms: 1.5,
   requiredMinimumCapacitanceUf: 1,
   selectedCapacitanceUf: 10,
   selectedManufacturerMaximumEsrOhms: 0.1,
   selectedMpn: "T521B106M025ATE100"
+} as const
+
+/** ADS8881-local reference reservoir and the exact feed-isolation resistor. */
+export const ads8881ReferenceNetworkRequirement = {
+  capacitor: {
+    reference: "C_REF",
+    dielectric: "X7R",
+    nominalCapacitanceUf: 10,
+    package: "0805",
+    tolerancePercent: 10,
+    selectedMpn: "GRM21BR71A106KE51L"
+  },
+  feedResistor: {
+    allowedMaximumOhms: 0.47,
+    allowedMinimumOhms: 0.1,
+    reference: "R_REF_SAR",
+    selectedOhms: 0.22,
+    selectedMpn: "RCWE0603R220FKEA"
+  },
+  lowerValueParallelCapacitorPermittedAtAdcRef: false
 } as const
 
 /** Exactly one row for each physical reference in the committed experiment circuit. */
@@ -108,7 +128,7 @@ const physicalPartSeeds = [
     "https://www.ti.com/lit/ds/symlink/ads8881.pdf"
   ],
   [
-    "C_REF",
+    "C_REF_REG",
     "KEMET",
     "T521B106M025ATE100",
     "1411 / 3528 B case",
@@ -117,12 +137,28 @@ const physicalPartSeeds = [
   ],
   ["C_REF_IN", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V REF5025A-Q1 input bypass", murataOneUfEvidence],
   [
-    "C_REF_OUT_HF",
+    "C_REF_REG_HF",
     "KEMET",
     "C0603C104K3RACTU",
     "0603",
-    "100 nF X7R, 25 V REF5025A-Q1 high-frequency output bypass in parallel with C_REF",
+    "100 nF X7R, 25 V REF5025A-Q1 local high-frequency output bypass in parallel with C_REF_REG",
     kemetOneHundredNfEvidence
+  ],
+  [
+    "R_REF_SAR",
+    "Vishay Dale",
+    "RCWE0603R220FKEA",
+    "0603",
+    "0.22 ohm, 1 percent ADS8881 reference-feed isolation resistor",
+    "https://www.vishay.com/docs/20019/rcwe.pdf"
+  ],
+  [
+    "C_REF",
+    "Murata",
+    "GRM21BR71A106KE51L",
+    "0805",
+    "10 uF X7R, 10 V, 10 percent ADS8881-local reference reservoir",
+    "https://search.murata.co.jp/Ceramy/image/img/A01X/G101/ENG/GRM21BR71A106KE51-01.pdf"
   ],
   [
     "C_BUFFER_POS",
@@ -273,7 +309,8 @@ export const oneChannelAnalogExperimentBom = physicalPartSeeds.map(
 
 const mandatorySupportReferences = [
   "C_REF_IN",
-  "C_REF_OUT_HF",
+  "C_REF_REG_HF",
+  "R_REF_SAR",
   "C_BUFFER_POS",
   "C_BUFFER_NEG",
   "C_NEG_IN",
@@ -281,7 +318,7 @@ const mandatorySupportReferences = [
   "C_ISO_OUT"
 ] as const
 
-/** The seven support references are present only in the standalone source circuit. */
+/** Mandatory support references are present only in the standalone source circuit. */
 export const mandatoryExperimentSupportParts = oneChannelAnalogExperimentBom.filter((part) =>
   (mandatorySupportReferences as readonly string[]).includes(part.reference)
 )

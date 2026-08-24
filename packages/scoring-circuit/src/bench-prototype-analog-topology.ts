@@ -5,7 +5,11 @@ import {
   oneChannelSabreTimingScreen,
   oneChannelStaticScreen
 } from "./one-channel-analog-experiment.js"
-import { oneChannelAnalogExperimentBom, ref5025OutputCapacitorRequirement } from "./one-channel-analog-readiness.js"
+import {
+  ads8881ReferenceNetworkRequirement,
+  oneChannelAnalogExperimentBom,
+  ref5025OutputCapacitorRequirement
+} from "./one-channel-analog-readiness.js"
 
 type PlainRecord = Record<PropertyKey, unknown>
 
@@ -71,7 +75,9 @@ const selectedReferences = [
   ["U_SAR", "ADS8881IDGS"],
   ["R_SAR", "CRCW060320R0FKEAHP"],
   ["C_SAR", "C0603C102J5GACTU"],
-  ["C_REF", "T521B106M025ATE100"],
+  ["C_REF_REG", "T521B106M025ATE100"],
+  ["R_REF_SAR", "RCWE0603R220FKEA"],
+  ["C_REF", "GRM21BR71A106KE51L"],
   ["R_FAULT_GUARD", "CRCW120656K0FKEAHP"]
 ] as const
 
@@ -171,13 +177,31 @@ const expectedUpstream = deepFreeze({
   },
   cRef: {
     manufacturerEsrTestCondition: "25 C, 100 kHz",
-    reference: "C_REF",
+    reference: "C_REF_REG",
     requiredMaximumCapacitanceUf: 50,
     requiredMaximumEsrOhms: 1.5,
     requiredMinimumCapacitanceUf: 1,
     selectedCapacitanceUf: 10,
     selectedManufacturerMaximumEsrOhms: 0.1,
     selectedMpn: "T521B106M025ATE100"
+  },
+  adcReferenceNetwork: {
+    capacitor: {
+      reference: "C_REF",
+      dielectric: "X7R",
+      nominalCapacitanceUf: 10,
+      package: "0805",
+      tolerancePercent: 10,
+      selectedMpn: "GRM21BR71A106KE51L"
+    },
+    feedResistor: {
+      allowedMaximumOhms: 0.47,
+      allowedMinimumOhms: 0.1,
+      reference: "R_REF_SAR",
+      selectedOhms: 0.22,
+      selectedMpn: "RCWE0603R220FKEA"
+    },
+    lowerValueParallelCapacitorPermittedAtAdcRef: false
   },
   bomReferences: selectedReferences.map(([reference, mpn]) => ({ reference, mpn }))
 } as const)
@@ -217,6 +241,7 @@ function currentUpstreamSnapshot() {
       switch: oneChannelAnalogExperiment.source.switch
     },
     cRef: ref5025OutputCapacitorRequirement,
+    adcReferenceNetwork: ads8881ReferenceNetworkRequirement,
     bomReferences: selectedReferences.map(([reference]) => {
       const matches = oneChannelAnalogExperimentBom.filter((row) => row.reference === reference)
       return { reference, mpn: matches.length === 1 ? matches[0]!.mpn : "__MISSING_OR_DUPLICATE__" }

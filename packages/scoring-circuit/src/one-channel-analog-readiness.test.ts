@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  ads8881ReferenceNetworkRequirement,
   assessOneChannelExperimentPhysicalEvidence,
   mandatoryExperimentSupportParts,
   oneChannelAnalogExperimentBom,
@@ -182,9 +183,9 @@ const physicalEvidence = {
 }
 
 describe("one-channel analog experiment readiness", () => {
-  it("tracks all 43 physical references individually and keeps every release state false", () => {
-    expect(oneChannelAnalogExperimentBom).toHaveLength(43)
-    expect(new Set(oneChannelAnalogExperimentBom.map((part) => part.reference)).size).toBe(43)
+  it("tracks all 45 physical references individually and keeps every release state false", () => {
+    expect(oneChannelAnalogExperimentBom).toHaveLength(45)
+    expect(new Set(oneChannelAnalogExperimentBom.map((part) => part.reference)).size).toBe(45)
     expect(oneChannelAnalogExperimentBom.every((part) => part.dnp)).toBe(true)
     expect(oneChannelAnalogExperimentReadiness.authorization).toBe(false)
     expect(oneChannelAnalogExperimentReadiness.fabrication.couponBomReleased).toBe(false)
@@ -211,7 +212,8 @@ describe("one-channel analog experiment readiness", () => {
   it("reconciles exact source-circuit support networks without opening any release gate", () => {
     expect(mandatoryExperimentSupportParts.map((part) => part.reference)).toEqual([
       "C_REF_IN",
-      "C_REF_OUT_HF",
+      "C_REF_REG_HF",
+      "R_REF_SAR",
       "C_BUFFER_POS",
       "C_BUFFER_NEG",
       "C_NEG_IN",
@@ -230,14 +232,15 @@ describe("one-channel analog experiment readiness", () => {
       C_ISO_OUT: "GRM188R71A225KE15D",
       C_NEG_IN: "GRM188R71A105KA12D",
       C_REF_IN: "GRM188R71A105KA12D",
-      C_REF_OUT_HF: "C0603C104K3RACTU"
+      C_REF_REG_HF: "C0603C104K3RACTU",
+      R_REF_SAR: "RCWE0603R220FKEA"
     })
     expect(oneChannelAnalogExperimentReadiness.supportReconciliation.nxeOptionalEmiFilter.population).toBe(
       "dnp-not-selected"
     )
   })
 
-  it("selects the exact REF5025A-Q1 output capacitor within the manufacturer ESR limit", () => {
+  it("selects separate REF5025 stabilization and ADS8881-local reference parts", () => {
     const selectedPart = oneChannelAnalogExperimentBom.find(
       (part) => part.reference === ref5025OutputCapacitorRequirement.reference
     )
@@ -263,6 +266,24 @@ describe("one-channel analog experiment readiness", () => {
     expect(ref5025OutputCapacitorRequirement.selectedManufacturerMaximumEsrOhms).toBeLessThanOrEqual(
       ref5025OutputCapacitorRequirement.requiredMaximumEsrOhms
     )
+    expect(ads8881ReferenceNetworkRequirement).toEqual({
+      capacitor: {
+        dielectric: "X7R",
+        nominalCapacitanceUf: 10,
+        package: "0805",
+        reference: "C_REF",
+        selectedMpn: "GRM21BR71A106KE51L",
+        tolerancePercent: 10
+      },
+      feedResistor: {
+        allowedMaximumOhms: 0.47,
+        allowedMinimumOhms: 0.1,
+        reference: "R_REF_SAR",
+        selectedMpn: "RCWE0603R220FKEA",
+        selectedOhms: 0.22
+      },
+      lowerValueParallelCapacitorPermittedAtAdcRef: false
+    })
   })
 
   it("accepts only unpowered evidence as incomplete while physical release evidence is absent", () => {

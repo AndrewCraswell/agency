@@ -117,12 +117,20 @@ export default function OneChannelAnalogExperimentCircuit() {
         pcbY={16}
       />
       <capacitor
-        name="C_REF_OUT_HF"
+        name="C_REF_REG_HF"
         manufacturerPartNumber="C0603C104K3RACTU"
         capacitance="100nF"
         footprint="0603"
         pcbX={12}
         pcbY={16}
+      />
+      <capacitor
+        name="C_REF_REG"
+        manufacturerPartNumber="T521B106M025ATE100"
+        capacitance="10uF"
+        footprint="1411"
+        pcbX={13}
+        pcbY={19}
       />
 
       <chip
@@ -255,10 +263,18 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_REF"
-        manufacturerPartNumber="T521B106M025ATE100"
+        manufacturerPartNumber="GRM21BR71A106KE51L"
         capacitance="10uF"
-        footprint="1411"
+        footprint="0805"
         pcbX={18}
+        pcbY={-17}
+      />
+      <resistor
+        name="R_REF_SAR"
+        manufacturerPartNumber="RCWE0603R220FKEA"
+        resistance="0.22ohm"
+        footprint="0603"
+        pcbX={24}
         pcbY={-17}
       />
       <capacitor
@@ -394,12 +410,15 @@ export default function OneChannelAnalogExperimentCircuit() {
       <trace from="U_REF.S5V_ISO" to="C_REF_IN.pin1" />
       <trace from="C_REF_IN.pin2" to="net.SGND" />
       <trace from="U_REF.REF_2V5" to="R_SOURCE.pin1" />
-      <trace from="U_REF.REF_2V5" to="U_SAR.REF_2V5" />
-      <trace from="U_REF.REF_2V5" to="C_REF.pin1" />
-      <trace from="U_REF.REF_2V5" to="C_REF_OUT_HF.pin1" />
+      <trace from="U_REF.REF_2V5" to="C_REF_REG.pin1" />
+      <trace from="U_REF.REF_2V5" to="C_REF_REG_HF.pin1" />
+      <trace from="U_REF.REF_2V5" to="R_REF_SAR.pin1" />
+      <trace from="R_REF_SAR.pin2" to="U_SAR.REF_2V5" />
+      <trace from="R_REF_SAR.pin2" to="C_REF.pin1" />
+      <trace from="C_REF_REG.pin2" to="net.SGND" />
       <trace from="C_REF.pin2" to="net.SGND" />
-      <trace from="C_REF_OUT_HF.pin2" to="net.SGND" />
-      <trace from="U_REF.REF_2V5" to="TP_REF.REF_2V5" />
+      <trace from="C_REF_REG_HF.pin2" to="net.SGND" />
+      <trace from="R_REF_SAR.pin2" to="TP_REF.REF_2V5" />
       <trace from="R_SOURCE.pin2" to="U_SOURCE_SWITCH.SOURCE_PATH" />
       <trace from="J_CONTROL.SOURCE_EN" to="U_SOURCE_SWITCH.SOURCE_EN" />
       <trace from="J_CONTROL.SGND" to="net.SGND" />

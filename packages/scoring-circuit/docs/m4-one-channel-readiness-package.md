@@ -9,7 +9,7 @@ replication, or a scoring/FIE claim.
 
 The executable contract is
 [`src/one-channel-analog-readiness.ts`](../src/one-channel-analog-readiness.ts).
-It contains exactly one row for each of the 43 physical references in the
+It contains exactly one row for each of the 45 physical references in the
 committed experiment circuit. Every row is DNP and every release flag remains
 false. The source circuit is electrically reconciled, but only the two
 unpowered steps can be archived while footprint and fixture evidence remain
@@ -37,14 +37,15 @@ source switch, buffer, SAR, passives, six headers, and eight individual test
 points. Part-specific manufacturer evidence replaces generic capacitor-family
 pages for the KEMET MPNs.
 
-The seven previously missing support references are now in the standalone
+The eight required support references are now in the standalone
 source circuit and in its same-reference BOM. All are DNP, tied to the listed
 device pins and isolated-domain return, and remain unreleased:
 
 | Reference | Exact candidate | Pin/net connection and required role |
 | --- | --- | --- |
 | `C_REF_IN` | Murata `GRM188R71A105KA12D`, 1 uF X7R, 10 V, 0603 | `U_REF` input pin 2 (`S5V_ISO`) to `SGND` |
-| `C_REF_OUT_HF` | KEMET `C0603C104K3RACTU`, 100 nF X7R, 25 V, 0603 | `U_REF` output pin 6 (`REF_2V5`) to `SGND`, in parallel with 10-uF `C_REF` |
+| `C_REF_REG_HF` | KEMET `C0603C104K3RACTU`, 100 nF X7R, 25 V, 0603 | `U_REF` output pin 6 (`REF_2V5`) to `SGND`, in parallel with 10-uF `C_REF_REG` |
+| `R_REF_SAR` | Vishay Dale `RCWE0603R220FKEA`, 0.22 ohm, 1%, 0603 | Series feed from the REF5025-local node to the ADS8881-local reference node |
 | `C_BUFFER_POS` | KEMET `C0603C104K3RACTU`, 100 nF X7R, 25 V, 0603 | ADA4177-1 pin 7 (`S5V_ISO`) to `SGND` |
 | `C_BUFFER_NEG` | KEMET `C0603C104K3RACTU`, 100 nF X7R, 25 V, 0603 | ADA4177-1 pin 4 (`S5V_NEG`) to `SGND` |
 | `C_NEG_IN` | Murata `GRM188R71A105KA12D`, 1 uF X7R, 10 V, 0603 | TPS60400 input pin 2 (`S5V_ISO`) to pin 4 (`SGND`) |
@@ -52,18 +53,21 @@ device pins and isolated-domain return, and remain unreleased:
 | `C_ISO_OUT` | Murata `GRM188R71A225KE15D`, 2.2 uF X7R, 10 V, 0603 | NXE1 output pin 6 (`S5V_ISO`) to pin 7 (`SGND`) |
 
 TI requires a 1-uF to 10-uF input bypass for `REF5025A-Q1` and a 1-uF to
-50-uF low-ESR output capacitor with ESR no greater than 1.5 ohm. `C_REF` is
+50-uF low-ESR output capacitor with ESR no greater than 1.5 ohm. `C_REF_REG` is
 KEMET `T521B106M025ATE100`: 10 uF, 25 V polymer tantalum in a 1411 / 3528 B
 case. Its [manufacturer datasheet](https://search.kemet.com/download/specsheet/T521B106M025ATE100)
 specifies 100 milliohms maximum ESR at 25 C and 100 kHz, which is below the
-1.5-ohm requirement. `C_REF_OUT_HF` is only the local high-frequency parallel
-bypass. TI specifies three 1-uF ceramic capacitors for `TPS60400`: flying,
+1.5-ohm requirement. `C_REF_REG_HF` is only the REF5025-local high-frequency parallel
+bypass. The separate ADS8881-local `C_REF` is Murata
+`GRM21BR71A106KE51L`, 10 uF X7R, 10 V, 10%, 0805, fed through
+`RCWE0603R220FKEA` 0.22 ohm. No smaller capacitor is placed in parallel at
+the ADC REF pins. TI specifies three 1-uF ceramic capacitors for `TPS60400`: flying,
 input, and output. The MLCC manufacturers publish impedance/ESR curves rather
 than a single DC ESR maximum, so their impedance and dc-bias behavior are
 unresolved physical characterization gates, not a claim that an unmeasured ESR
 value is acceptable.
 
-`supportCircuitReconciled` is structurally true only because all seven exact
+`supportCircuitReconciled` is structurally true only because all eight exact
 references are populated in the standalone source circuit and match the
 one-to-one BOM. It does not authorize assembly, an energized test, copper,
 Gerbers, or fabrication. `poweredTestingAuthorized` remains false until each
@@ -75,7 +79,7 @@ isolation boundary.
 
 ## Per-part physical evidence
 
-Each of the 43 physical references requires its own record. The schema rejects
+Each of the 45 physical references requires its own record. The schema rejects
 missing, extra, duplicate, substituted, or package-mismatched rows. Each row
 binds:
 
