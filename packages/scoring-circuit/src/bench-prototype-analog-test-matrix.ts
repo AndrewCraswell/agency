@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto"
 import { z } from "zod"
+import { parseCanonicalUtcTimestamp } from "./bench-prototype-evidence-time.js"
 import {
   benchPrototypeFaultProtection,
   validateBenchPrototypeFaultProtection
@@ -16,6 +17,16 @@ import {
 } from "./one-channel-analog-experiment.js"
 
 const sha256Schema = z.string().regex(/^[0-9a-f]{64}$/u)
+const canonicalUtcTimestampSchema = z
+  .string()
+  .refine((value) => parseCanonicalUtcTimestamp(value) !== null, "timestamps must use canonical UTC milliseconds")
+
+function canonicalUtcMilliseconds(value: string): number {
+  const timestamp = parseCanonicalUtcTimestamp(value)
+  if (timestamp === null) throw new RangeError("timestamps must use canonical UTC milliseconds")
+  return timestamp.getTime()
+}
+
 const resistanceOhms = [
   0, 10, 95, 100, 105, 195, 200, 205, 245, 250, 255, 445, 450, 455, 470, 475, 480, 495, 500, 505
 ] as const
@@ -114,8 +125,8 @@ const calibrationSchema = z
     calibrationCertificateDigest: sha256Schema,
     calibrationCertificateId: z.string().min(1),
     calibrationCertificateImmutableUri: z.string().url(),
-    calibrationDateUtc: z.string().datetime(),
-    calibrationDueUtc: z.string().datetime(),
+    calibrationDateUtc: canonicalUtcTimestampSchema,
+    calibrationDueUtc: canonicalUtcTimestampSchema,
     category: z.enum(instrumentCategories),
     instrumentId: z.string().min(1),
     manufacturer: z.string().min(1),
@@ -134,7 +145,7 @@ const calibrationSchema = z
   })
   .strict()
   .superRefine((item, context) => {
-    if (Date.parse(item.calibrationDueUtc) <= Date.parse(item.calibrationDateUtc)) {
+    if (canonicalUtcMilliseconds(item.calibrationDueUtc) <= canonicalUtcMilliseconds(item.calibrationDateUtc)) {
       context.addIssue({ code: z.ZodIssueCode.custom, message: "calibration due date must follow calibration date" })
     }
     if (item.applicableRange.maximum <= item.applicableRange.minimum) {
@@ -330,10 +341,10 @@ export function evaluateBenchPrototypeAnalogTestRun(input: unknown): BenchProtot
     const used = record.instrumentIds.map((id) => {
       const instrument = instrumentById.get(id)
       if (!instrument) throw new RangeError(`unknown instrumentId ${id}`)
-      const measuredAt = Date.parse(evidence.timestampUtc)
+      const measuredAt = canonicalUtcMilliseconds(evidence.timestampUtc)
       if (
-        measuredAt < Date.parse(instrument.calibrationDateUtc) ||
-        measuredAt > Date.parse(instrument.calibrationDueUtc)
+        measuredAt < canonicalUtcMilliseconds(instrument.calibrationDateUtc) ||
+        measuredAt > canonicalUtcMilliseconds(instrument.calibrationDueUtc)
       ) {
         throw new RangeError(`instrument ${id} calibration is not valid at measurement time`)
       }

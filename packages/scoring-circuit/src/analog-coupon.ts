@@ -1,5 +1,6 @@
 import { z } from "zod"
 import { analogBudget, m403ScreenedStaticErrorOhms } from "./analog-model.js"
+import { parseCanonicalUtcTimestamp } from "./bench-prototype-evidence-time.js"
 
 /**
  * Bounded single-channel M4 characterization coupon. This is intentionally
@@ -171,12 +172,22 @@ const couponIncidentControlSchema = z
   })
   .strict()
 
+const canonicalUtcTimestampSchema = z
+  .string()
+  .refine((value) => parseCanonicalUtcTimestamp(value) !== null, "timestamps must use canonical UTC milliseconds")
+
+function canonicalUtcMilliseconds(value: string): number {
+  const timestamp = parseCanonicalUtcTimestamp(value)
+  if (timestamp === null) throw new RangeError("timestamps must use canonical UTC milliseconds")
+  return timestamp.getTime()
+}
+
 const couponSequenceSchema = z
   .object({
     dwellTimerWitnessId: z.string().min(1),
     eventIndex: z.number().int().positive(),
     observedInterPulseIntervalMs: z.number().finite().min(0).nullable(),
-    previousForcePulseEndedUtc: z.string().datetime().nullable(),
+    previousForcePulseEndedUtc: canonicalUtcTimestampSchema.nullable(),
     runId: z.string().min(1)
   })
   .strict()
@@ -263,7 +274,7 @@ const couponCommonSchema = z.object({
   sequence: couponSequenceSchema,
   stress: couponStressSchema,
   testPoints: couponTestPointSchema,
-  timestampUtc: z.string().datetime(),
+  timestampUtc: canonicalUtcTimestampSchema,
   traces: z.array(couponTraceSchema).min(1)
 })
 
@@ -458,7 +469,7 @@ export function validateCouponRun(records: readonly unknown[]): readonly AnalogC
     const forceRelayClosed = record.control.forceRelayObservedClosed
     if (!forceRelayClosed) continue
 
-    const startMs = Date.parse(record.timestampUtc)
+    const startMs = canonicalUtcMilliseconds(record.timestampUtc)
     if (priorForceEndMs === undefined) {
       if (
         record.sequence.previousForcePulseEndedUtc !== null ||
@@ -473,7 +484,7 @@ export function validateCouponRun(records: readonly unknown[]): readonly AnalogC
         record.sequence.observedInterPulseIntervalMs === null ||
         actualIntervalMs < analogCouponDesign.faultGuard.minimumPulseIntervalMs ||
         record.sequence.observedInterPulseIntervalMs < analogCouponDesign.faultGuard.minimumPulseIntervalMs ||
-        Date.parse(record.sequence.previousForcePulseEndedUtc) !== priorForceEndMs
+        canonicalUtcMilliseconds(record.sequence.previousForcePulseEndedUtc) !== priorForceEndMs
       ) {
         throw new RangeError("guarded force pulses must retain a verified interval of at least 10 seconds")
       }

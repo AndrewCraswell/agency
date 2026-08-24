@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { parseCanonicalUtcTimestamp } from "./bench-prototype-evidence-time.js"
 
 type PartSeed = readonly [
   reference: string,
@@ -419,7 +420,15 @@ export const oneChannelAnalogExperimentReadiness = {
 } as const
 
 const digestSchema = z.string().regex(/^[0-9a-f]{64}$/u)
-const timestampSchema = z.string().datetime()
+const timestampSchema = z
+  .string()
+  .refine((value) => parseCanonicalUtcTimestamp(value) !== null, "timestamps must use canonical UTC milliseconds")
+
+function canonicalUtcMilliseconds(value: string): number {
+  const timestamp = parseCanonicalUtcTimestamp(value)
+  if (timestamp === null) throw new RangeError("timestamps must use canonical UTC milliseconds")
+  return timestamp.getTime()
+}
 const partIdentitySchema = z
   .object({ mpn: z.string().min(1), package: z.string().min(1), reference: z.string().min(1) })
   .strict()
@@ -602,8 +611,8 @@ const physicalEvidenceSchema = z
         path: ["equipment"]
       })
     }
-    const capturedAtMs = Date.parse(evidence.capturedAtUtc)
-    if (Date.parse(evidence.fixtureInterlock.approvedAtUtc) > capturedAtMs) {
+    const capturedAtMs = canonicalUtcMilliseconds(evidence.capturedAtUtc)
+    if (canonicalUtcMilliseconds(evidence.fixtureInterlock.approvedAtUtc) > capturedAtMs) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         message: "fixture approval must not occur after evidence capture",
@@ -611,7 +620,7 @@ const physicalEvidenceSchema = z
       })
     }
     evidence.partEvidence.forEach((item, index) => {
-      if (Date.parse(item.reviewedAtUtc) > capturedAtMs) {
+      if (canonicalUtcMilliseconds(item.reviewedAtUtc) > capturedAtMs) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
           message: "part review must not occur after evidence capture",
@@ -636,7 +645,7 @@ const physicalEvidenceSchema = z
           path: ["bringUpResults", index]
         })
       }
-      const completedAtMs = Date.parse(result.completedAtUtc)
+      const completedAtMs = canonicalUtcMilliseconds(result.completedAtUtc)
       if (completedAtMs > capturedAtMs) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
@@ -644,7 +653,7 @@ const physicalEvidenceSchema = z
           path: ["bringUpResults", index]
         })
       }
-      if (index > 0 && completedAtMs <= Date.parse(evidence.bringUpResults[index - 1].completedAtUtc)) {
+      if (index > 0 && completedAtMs <= canonicalUtcMilliseconds(evidence.bringUpResults[index - 1].completedAtUtc)) {
         context.addIssue({
           code: z.ZodIssueCode.custom,
           message: "bring-up timestamps must be strictly ordered",
@@ -696,8 +705,8 @@ const physicalEvidenceSchema = z
       })
       evidence.equipment.forEach((item, equipmentIndex) => {
         if (
-          Date.parse(item.calibrationValidFromUtc) > completedAtMs ||
-          Date.parse(item.calibrationDueUtc) <= completedAtMs
+          canonicalUtcMilliseconds(item.calibrationValidFromUtc) > completedAtMs ||
+          canonicalUtcMilliseconds(item.calibrationDueUtc) <= completedAtMs
         ) {
           context.addIssue({
             code: z.ZodIssueCode.custom,
@@ -714,14 +723,19 @@ const physicalEvidenceSchema = z
             path: ["bringUpResults", index]
           })
         }
-        if (Date.parse(evidence.fixtureInterlock.approvedAtUtc) >= Date.parse(result.externalPermit.issuedAtUtc)) {
+        if (
+          canonicalUtcMilliseconds(evidence.fixtureInterlock.approvedAtUtc) >=
+          canonicalUtcMilliseconds(result.externalPermit.issuedAtUtc)
+        ) {
           context.addIssue({
             code: z.ZodIssueCode.custom,
             message: "fixture approval must precede the external permit",
             path: ["bringUpResults", index]
           })
         }
-        if (Date.parse(result.externalPermit.issuedAtUtc) >= Date.parse(result.completedAtUtc)) {
+        if (
+          canonicalUtcMilliseconds(result.externalPermit.issuedAtUtc) >= canonicalUtcMilliseconds(result.completedAtUtc)
+        ) {
           context.addIssue({
             code: z.ZodIssueCode.custom,
             message: "external permit must precede powered evidence",

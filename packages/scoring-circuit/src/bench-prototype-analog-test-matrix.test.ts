@@ -327,4 +327,19 @@ describe("BP-106 analog test matrix", () => {
     refreshArtifactDigest(BP104Drift)
     expect(() => evaluateBenchPrototypeAnalogTestRun(BP104Drift)).toThrow("upstream snapshot drifted")
   })
+
+  it("requires canonical UTC milliseconds and retains calibration validity boundaries", () => {
+    for (const timestampUtc of ["2025-01-01T00:00:00.000-07:00", "2025-02-30T00:00:00.000Z", "2025-01-01T00:00:00Z"]) {
+      const artifact = run()
+      artifact.calibrationManifest.instruments[0]!.calibrationDateUtc = timestampUtc
+      expect(() => evaluateBenchPrototypeAnalogTestRun(artifact)).toThrow(
+        "timestamps must use canonical UTC milliseconds"
+      )
+    }
+
+    const boundary = run()
+    boundary.calibrationManifest.instruments[0]!.calibrationDueUtc = boundary.records[0]!.evidence.timestampUtc
+    sealDigests(boundary)
+    expect(() => evaluateBenchPrototypeAnalogTestRun(boundary)).toThrow("calibration is not valid")
+  })
 })

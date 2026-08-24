@@ -464,6 +464,14 @@ describe("one-channel protected analog experiment", () => {
     ).toThrow("experiment timestamps must be strictly increasing")
   })
 
+  it("requires canonical UTC milliseconds before ordering or dwell evaluation", () => {
+    for (const timestampUtc of ["2026-08-23T08:00:00.000-07:00", "2026-02-30T15:00:00.000Z", "2026-08-23T15:00:00Z"]) {
+      expect(() => oneChannelExperimentRecordSchema.parse({ ...measuredRecord, timestampUtc })).toThrow(
+        "timestamps must use canonical UTC milliseconds"
+      )
+    }
+  })
+
   it("stays structurally denied even though arithmetic screens are useful", () => {
     const assessment = assessOneChannelAnalogExperiment()
     expect(oneChannelAnalogExperiment.authorization).toBe(false)

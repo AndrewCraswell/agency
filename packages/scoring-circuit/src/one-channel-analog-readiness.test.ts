@@ -423,6 +423,26 @@ describe("one-channel analog experiment readiness", () => {
     ).toThrow("external permit must precede")
   })
 
+  it("requires canonical UTC milliseconds before capture, calibration, or permit ordering", () => {
+    for (const timestampUtc of ["2026-08-23T06:00:00.000-07:00", "2026-02-30T13:00:00.000Z", "2026-08-23T13:00:00Z"]) {
+      expect(() =>
+        assessOneChannelExperimentPhysicalEvidence({ ...physicalEvidence, capturedAtUtc: timestampUtc })
+      ).toThrow("timestamps must use canonical UTC milliseconds")
+      expect(() =>
+        assessOneChannelExperimentPhysicalEvidence({
+          ...physicalEvidence,
+          bringUpResults: bringUpResults
+            .slice(0, 3)
+            .map((result, index) =>
+              index === 2
+                ? { ...result, externalPermit: { ...result.externalPermit!, issuedAtUtc: timestampUtc } }
+                : result
+            )
+        })
+      ).toThrow("timestamps must use canonical UTC milliseconds")
+    }
+  })
+
   it("mechanically rejects pass observations outside fixed bounds or boolean requirements", () => {
     expect(() =>
       assessOneChannelExperimentPhysicalEvidence({

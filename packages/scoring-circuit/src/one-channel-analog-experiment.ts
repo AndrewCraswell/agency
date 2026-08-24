@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { parseCanonicalUtcTimestamp } from "./bench-prototype-evidence-time.js"
 
 /**
  * One-channel, non-production experiment after the PGA855/LTC2373 rejection.
@@ -417,7 +418,9 @@ const oneChannelRecordBaseSchema = z
       .strict(),
     temperatureC: z.union([z.literal(-40), z.literal(25), z.literal(85), z.literal(125)]),
     testPoints: testPointSchema,
-    timestampUtc: z.string().datetime(),
+    timestampUtc: z
+      .string()
+      .refine((value) => parseCanonicalUtcTimestamp(value) !== null, "timestamps must use canonical UTC milliseconds"),
     traces: z.array(traceSchema).min(1)
   })
   .strict()
@@ -504,6 +507,12 @@ export const oneChannelExperimentArchiveSchema = z.union([
 export type OneChannelExperimentRecord = z.infer<typeof oneChannelExperimentRecordSchema>
 export type OneChannelExperimentArchiveRecord = z.infer<typeof oneChannelExperimentArchiveSchema>
 
+function canonicalUtcMilliseconds(value: string): number {
+  const timestamp = parseCanonicalUtcTimestamp(value)
+  if (timestamp === null) throw new RangeError("timestamps must use canonical UTC milliseconds")
+  return timestamp.getTime()
+}
+
 export function validateOneChannelExperimentRun(
   records: readonly unknown[]
 ): readonly OneChannelExperimentArchiveRecord[] {
@@ -515,8 +524,8 @@ export function validateOneChannelExperimentRun(
     if (index > 0 && record.sequence.runId !== parsed[0].sequence.runId) {
       throw new RangeError("all experiment records must share one runId")
     }
-    const startMs = Date.parse(record.timestampUtc)
-    if (index > 0 && startMs <= Date.parse(parsed[index - 1].timestampUtc)) {
+    const startMs = canonicalUtcMilliseconds(record.timestampUtc)
+    if (index > 0 && startMs <= canonicalUtcMilliseconds(parsed[index - 1].timestampUtc)) {
       throw new RangeError("experiment timestamps must be strictly increasing")
     }
     const containsGuardedPulse =

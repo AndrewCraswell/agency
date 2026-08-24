@@ -368,4 +368,18 @@ describe("bounded analog coupon", () => {
       validateCouponRun([first, { ...second, sequence: { ...second.sequence, observedInterPulseIntervalMs: 9_999 } }])
     ).toThrow("guarded force pulses must retain a verified interval of at least 10 seconds")
   })
+
+  it("requires canonical UTC milliseconds for coupon and guarded-pulse evidence", () => {
+    for (const timestampUtc of ["2026-08-23T05:00:00.000-07:00", "2026-02-30T12:00:00.000Z", "2026-08-23T12:00:00Z"]) {
+      expect(() => analogCouponPointSchema.parse({ ...completePoint, timestampUtc })).toThrow(
+        "timestamps must use canonical UTC milliseconds"
+      )
+      expect(() =>
+        analogCouponPointSchema.parse({
+          ...completePoint,
+          sequence: { ...completePoint.sequence, previousForcePulseEndedUtc: timestampUtc }
+        })
+      ).toThrow("timestamps must use canonical UTC milliseconds")
+    }
+  })
 })
