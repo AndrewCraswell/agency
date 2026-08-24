@@ -277,6 +277,17 @@ const acquiredDrawingEvidenceByMpn: Readonly<
     scope:
       "YAGEO/KEMET product specsheet. The exact C0603C104K3RACTU MPN, 0603/1608 case, and manufacturer dimensions are present in the retained source. No project land pattern or geometry is inferred from this source.",
     sha256: "F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064"
+  },
+  T521B106M025ATE100: {
+    acquisition: "exact-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/kemet-t521b106m025ate100-datasheet.pdf",
+    drawingIdentifier: "KEMET T521, 1411/3528 manufacturer dimensions",
+    drawingUrl: "https://search.kemet.com/download/specsheet/T521B106M025ATE100",
+    geometry: null,
+    byteMarkers: ["T521B106M025ATE100"],
+    scope:
+      "KEMET product specsheet. The exact T521B106M025ATE100 MPN and 1411/3528 B-case package are named in the retained manufacturer source. No project land pattern or geometry is inferred from this source.",
+    sha256: "8DBB07C110359B8BC1BE5AE0044E08B8BADCC88A60F4DA36404BB27803F85EBD"
   }
 }
 

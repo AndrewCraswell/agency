@@ -40,7 +40,7 @@ describe("M4-04 single-channel sensing coupon", () => {
     })
   })
 
-  it("binds an eight-MPN first-party drawing batch without granting footprint authority", () => {
+  it("binds a nine-MPN first-party drawing batch without granting footprint authority", () => {
     const acquired = M404_SINGLE_CHANNEL_COUPON.footprints
       .filter((footprint) => footprint.evidence.manufacturerDrawing.acquisition === "exact-drawing-hash-bound")
       .filter(
@@ -96,6 +96,12 @@ describe("M4-04 single-channel sensing coupon", () => {
         exactMpn: "ADS8881IDGS",
         sha256: "EA5896CA4C8053A1AE183BE8354DD551A5D947CE670AC1F1170C59176148F1A8",
         sourceUrl: "https://www.ti.com/lit/ds/symlink/ads8881.pdf"
+      },
+      {
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/kemet-t521b106m025ate100-datasheet.pdf",
+        exactMpn: "T521B106M025ATE100",
+        sha256: "8DBB07C110359B8BC1BE5AE0044E08B8BADCC88A60F4DA36404BB27803F85EBD",
+        sourceUrl: "https://search.kemet.com/download/specsheet/T521B106M025ATE100"
       },
       {
         artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c104k3ractu-datasheet.pdf",

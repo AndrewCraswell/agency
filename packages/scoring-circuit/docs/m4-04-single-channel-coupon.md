@@ -28,11 +28,12 @@ families do not borrow another MPN's drawing review. A separate field names
 implementation work cannot approve its own footprints.
 
 On 2026-08-24, a small first-party source batch was acquired and SHA-256 bound
-for eight exact component MPNs. Each Texas Instruments datasheet names the exact
+for nine exact component MPNs. Each Texas Instruments datasheet names the exact
 orderable MPN and package and contains the corresponding manufacturer
 mechanical package drawing. The YAGEO/KEMET product specs name the exact MPN and
-retain the manufacturer 0603/1608 dimensions. These are source records only; they do not release
-a finished hole, copper, mask, paste, courtyard, or orientation decision.
+retain the manufacturer 0603/1608 dimensions. These are source records only;
+they do not release a finished hole, copper, mask, paste, courtyard, or
+orientation decision.
 
 | Exact MPN | Manufacturer source and drawing | Retained artifact | SHA-256 |
 | --- | --- | --- | --- |
@@ -43,6 +44,7 @@ a finished hole, copper, mask, paste, courtyard, or orientation decision.
 | `TMUX1112PWR` | [TMUX1112 datasheet](https://www.ti.com/lit/ds/symlink/tmux1112.pdf), revision C, `PW0016A` | `packages/scoring-circuit/docs/evidence/m4-04/ti-tmux1112-pwr-datasheet.pdf` | `EB7CCF89EC59635B34043D364DB6B1E21B457A0BA7363737408CEBCA30CD6C4D` |
 | `TPD4E05U06DQAR` | [TPD4E05U06 datasheet](https://www.ti.com/lit/ds/symlink/tpd4e05u06.pdf), revision O, `DQA0010A` | `packages/scoring-circuit/docs/evidence/m4-04/ti-tpd4e05u06-dqar-datasheet.pdf` | `C167CF1E72A5473A4D2C59B6A3C0251498701DA05B7785919B9CEAAE3B3E02C6` |
 | `C0603C102J5GACTU` | [YAGEO/KEMET product spec](https://yageogroup.com/component-documentation/download/specsheet/C0603C102J5GACTU?lang=en), `0603/1608` manufacturer dimensions | `packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c102j5gactu-datasheet.pdf` | `B62452DE5A68C2E26AE145A4F4F4DF1D989AA5482AF4746C93A86155D5910221` |
+| `T521B106M025ATE100` | [KEMET product spec](https://search.kemet.com/download/specsheet/T521B106M025ATE100), `1411/3528` manufacturer dimensions | `packages/scoring-circuit/docs/evidence/m4-04/kemet-t521b106m025ate100-datasheet.pdf` | `8DBB07C110359B8BC1BE5AE0044E08B8BADCC88A60F4DA36404BB27803F85EBD` |
 | `C0603C104K3RACTU` | [YAGEO/KEMET product spec](https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en), `0603/1608` manufacturer dimensions | `packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c104k3ractu-datasheet.pdf` | `F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064` |
 
 The Molex `SD-43650-001`, revision D8, lead for the `43650-0300` Micro-Fit
@@ -54,7 +56,7 @@ identifies three 1.02-mm-plus-or-minus-0.05-mm component-side layout holes on
 For the remaining exact MPNs, the manufacturer-primary technical URL is
 recorded as discovery evidence but the exact drawing bytes and revision remain
 unacquired. No manufacturer CAD artifact has been acquired or marked available,
-including for the eight hash-bound source records. The existing circuit source
+including for the nine hash-bound source records. The existing circuit source
 supplies a schematic reference only, not generated footprint artwork or an
 overlay. The executable tests hash-verify every retained PDF from the repository
 root and inspect decompressed PDF content for the exact orderable and package-
