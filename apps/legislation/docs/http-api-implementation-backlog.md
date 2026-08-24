@@ -24,7 +24,7 @@ collections have the smoke and reviewed-commit evidence required for **Done**. C
 | API-01 | Shared HTTP foundation | In progress | Root review accepted the routing/envelope/error foundation and focused protocol tests. Conditional caching, composed authenticated local smoke, repository-wide verification, and the reviewed commit remain. |
 | API-02 | Canonical legislative reads | In progress | Root review accepted the current core-read handler foundation and focused tests. Complete canonical contract projections, missing filters/relationships, source links, authenticated database smoke, parity evidence, and the reviewed commit. |
 | API-03 | Civic graph, meetings, search, and diffs | In progress | Root review accepted the current civic/search handler foundation and focused validation. Complete canonical projections, missing filters/relationships, truthful model metadata, database-backed smoke/parity evidence, and the reviewed commit. |
-| API-04 | Subscriptions and webhooks | In progress | The authenticated subscription read routes are composed with scope-aware persistence, documented filters, keyset pagination, and focused tests. They await remote authenticated smoke and MCP parity. Subscription mutations and all webhook routes remain blocked on the matcher/materializer, delivery workers, KMS-backed `WebhookSecretProtector`, pinned outbound verification/delivery executors, retry/dead-letter worker, and remaining authorization composition. |
+| API-04 | Subscriptions and webhooks | In progress | The authenticated subscription and webhook read routes are composed with scope-aware persistence, documented filters, keyset pagination, and focused tests. They await remote authenticated smoke and MCP parity. Subscription mutations and webhook mutation routes remain blocked on the matcher/materializer, delivery workers, KMS-backed `WebhookSecretProtector`, pinned outbound verification/delivery executors, retry/dead-letter worker, and remaining authorization composition. |
 | API-05 | Local smoke and parity | In progress | The scoped-bills composed-server profile has passed locally. Execute the remaining authenticated fixture, canonical projection, pagination, negative-path, model-routing, and MCP-parity checks per product; do not promote an endpoint on handler-unit evidence alone. |
 | API-06 | Railway API release | Done | `legislation-api` is deployed at the recorded Railway release. `WORKOS_API_AUDIENCE` isolates the API token audience from the MCP resource audience. Health, readiness, unauthenticated API/MCP challenges, and the authenticated scoped-bills remote smoke passed; the rollback target is documented. |
 | API-07 | MCP HTTP migration | Blocked | Production remains explicitly `in-process`. Per product decision, do not enable a production HTTP canary or cut over any MCP method until every one of the 87 API endpoints is **Done** and the full parity suite passes. |
@@ -46,8 +46,8 @@ For each deliverable:
 Root review has accepted the current shared, core-read, civic/search, and subscription-security foundations. **In
 progress** below therefore means the route has reviewed implementation and focused tests but still lacks one or more of
 the exact contract projection, live database smoke, MCP parity, or reviewed-commit gates. The four subscription read
-handlers are composed and await remote authenticated smoke and MCP parity. Subscription mutations and webhook handlers
-remain intentionally uncomposed and **Blocked**.
+handlers and two webhook read handlers are composed and await remote authenticated smoke and MCP parity. Subscription
+mutations and webhook mutation handlers remain intentionally uncomposed and **Blocked**.
 
 ### Legislative records and documents
 
@@ -84,11 +84,11 @@ remain intentionally uncomposed and **Blocked**.
 | GET | `/api/votes/{voteId}/positions` | Blocked | Dedicated paginated position query is missing; rows also lack the publisher sequence required for contract ordering and linked people can lack canonical provenance. |
 | GET | `/api/documents/{documentId}` | In progress | Strict canonical detail query and resource projection exist. It exposes `storedUrl: null` until a routable artifact URL is persisted and rejects incomplete OCR/provenance records. Remaining gates: authenticated Railway smoke and live MCP parity. |
 | GET | `/api/documents/{documentId}/sections` | In progress | Bounded heading/page keyset query and canonical Page projection exist. Historical incomplete page/OCR facts fail closed rather than being inferred. Remaining gates: authenticated Railway smoke and live MCP parity. |
-| GET | `/api/documents/{documentId}/sections/{sectionId}` | In progress | Canonical projector and contract exist; singular repository query, handler tests, live smoke/parity, and commit remain. |
+| GET | `/api/documents/{documentId}/sections/{sectionId}` | In progress | Canonical projector, singular query-service read, and parent-scoped handler tests exist; the dedicated canonical repository slice, authenticated smoke, live MCP parity, and reviewed commit remain. |
 | GET | `/api/supporting-materials` | In progress | Canonical collection projection, bounded filters/sorts, and focused query/handler coverage exist; authenticated Railway smoke, live MCP parity, and commit remain. |
 | GET | `/api/supporting-materials/{materialId}` | In progress | Canonical detail/provenance projection and aggregate-count coverage exist; authenticated Railway smoke, live MCP parity, and commit remain. |
 | GET | `/api/supporting-materials/{materialId}/sections` | Blocked | The ordinal/heading query exists, but the contract also requires `pageFrom` and `pageTo`; supporting-material source page mappings are not persisted. The route remains intentionally unregistered until those mappings and page-overlap filtering are available. |
-| GET | `/api/supporting-materials/{materialId}/sections/{sectionId}` | In progress | Canonical projector and contract exist; singular repository query, handler tests, live smoke/parity, and commit remain. |
+| GET | `/api/supporting-materials/{materialId}/sections/{sectionId}` | In progress | Canonical projector, singular query-service read, and parent-scoped handler tests exist; the dedicated canonical repository slice, authenticated smoke, live MCP parity, and reviewed commit remain. |
 | GET | `/api/changes` | Blocked | Route is intentionally unregistered: change events lack an immutable observation-time source snapshot. Joining the affected record live would rewrite historical values. Persist the canonical affected-record snapshot, typed change payload, provenance, documented filters, and keyset order, then prove database/MCP parity before registering it. |
 | POST | `/api/resources/batch` | Blocked | Cross-resource dispatcher and canonical union projection are missing. |
 
@@ -168,5 +168,5 @@ The MCP remains on its current application service until all of these are true:
 - the remote canary shows acceptable latency and no authorization or provider regression.
 
 The current release evidence and remaining MCP-cutover gate are recorded in
-[the Railway API release record](http-api-railway-release.md). The endpoint matrix is 11 **In progress**, 74
+[the Railway API release record](http-api-railway-release.md). The endpoint matrix is 16 **In progress**, 69
 **Blocked**, and 2 **Done** routes; the two scoped bill collections are the only completed endpoint rows.

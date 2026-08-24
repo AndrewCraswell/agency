@@ -64,8 +64,13 @@ No semantic request silently falls back to lexical. Missing model dependencies r
 | supporting materials | section text and metadata | `voyageai/voyage-4` | 1,024 | weighted RRF | none |
 
 The response `meta.models` records only models actually used. Lexical mode has an empty model list and never reports
-reranking. RRF uses `1 / (60 + rank)`; default lexical and semantic weights are both 1.0. Each product retrieves and,
-where applicable, reranks at most 25 candidates, matching the approved rollout contract.
+reranking. RRF uses `1 / (60 + rank)`; default lexical and semantic weights are both 1.0. Semantic and hybrid products
+retrieve and, where applicable, rerank at most 25 candidates, matching the approved rollout contract.
+
+For lexical bill search, each lexical match source considers at most 1,000 candidates. This is a bounded result window:
+when that bound prevents a continuation, the response sets `meta.truncated` to `true` and returns no continuation
+(`meta.nextCursor` and `links.next` are `null`). Clients must refine the query or filters before continuing. A lexical
+bill cursor binds the normalized query and filters; changing either returns `400 invalid_request`.
 
 ## `POST /api/search/bills` (`searchBills`)
 
