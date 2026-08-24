@@ -76,6 +76,20 @@ function annotation(): ApplicationTimelineEntry {
   return time.observe(record)
 }
 
+function reverseDataKeys(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(reverseDataKeys)
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(
+      Object.entries(value)
+        .toReversed()
+        .map(([key, entry]) => [key, reverseDataKeys(entry)])
+    )
+  }
+  return value
+}
+
 describe("stored-record replay renderer", () => {
   it("renders an authoritative record without changing STM32 fields", () => {
     const original = structuredClone(record)
@@ -194,24 +208,12 @@ describe("stored-record replay renderer", () => {
     }
   })
 
-  it("renders equivalent input objects with different source key order", () => {
+  it("serializes equivalent records identically despite adversarial nested input key order", () => {
     const first = renderReplayRecord({ record, applicationTime: annotation() })
-    const reordered = JSON.parse(
-      JSON.stringify({
-        record: {
-          schemaVersion: record.schemaVersion,
-          recordId: record.recordId,
-          rawCaptureRefs: record.rawCaptureRefs,
-          provenance: record.provenance,
-          outcome: record.outcome,
-          decisionAtUs: record.decisionAtUs,
-          captureWindow: record.captureWindow
-        },
-        applicationTime: annotation()
-      })
-    ) as ReplayRenderInput
+    const reordered = reverseDataKeys({ record, applicationTime: annotation() }) as ReplayRenderInput
     const second = renderReplayRecord(reordered)
 
+    expect(JSON.stringify(first)).toBe(JSON.stringify(second))
     expect(first).toEqual(second)
     expect(first).not.toBe(second)
     expect(first.record).not.toBe(record)
