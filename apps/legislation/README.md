@@ -28,8 +28,8 @@ user.
 docker build -f apps/legislation/Dockerfile -t legislation:local .
 ```
 
-From `apps/legislation`, `pnpm docker:build` runs the same root-context build. For the `legislation-api` Railway service,
-keep the repository root visible and explicitly set Config File Path to `/apps/legislation/railway.json`; Railway does
-not auto-discover this nested file. The service reads Railway's `PORT`, binds to `0.0.0.0`, and starts only the
-HTTP/API/MCP server. Database migrations remain an explicit release operation through
+From `apps/legislation`, `pnpm docker:build` runs the same root-context build. For the `legislation-api` Railway
+service, keep the repository root visible and explicitly set Config File Path to `/apps/legislation/railway.json`;
+Railway does not auto-discover this nested file. The service reads Railway's `PORT`, binds to `0.0.0.0`, and starts only
+the HTTP/API/MCP server. Database migrations remain an explicit release operation through
 `pnpm --filter legislation db:migrate`; container startup never applies them.
