@@ -1,3 +1,4 @@
+import { isIntegerMicroseconds } from "./scoring-glossary-and-units.js"
 import {
   FIE_TIMING_BANDS,
   getFieTimingBandEndpointUs,
@@ -188,10 +189,6 @@ function compareHits(left: FoilHit, right: FoilHit) {
   return left.side.localeCompare(right.side)
 }
 
-function isValidAtUs(atUs: number) {
-  return Number.isSafeInteger(atUs) && atUs >= 0
-}
-
 export function advanceFoilScoring(
   state: FoilScoringState,
   sample: FoilSample,
@@ -199,7 +196,7 @@ export function advanceFoilScoring(
 ): FoilScoringState {
   const resolvedTimingTable = resolveTimingTable(timingTable)
 
-  if (!isValidAtUs(sample.atUs)) {
+  if (!isIntegerMicroseconds(sample.atUs)) {
     throw new RangeError("Foil samples must use non-negative safe integer timestamps")
   }
 

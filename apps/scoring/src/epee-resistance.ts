@@ -5,6 +5,7 @@ import {
   type EpeeContactLifecycleState
 } from "./epee-contact-kernel.js"
 import { type EpeeHit, type Side } from "./epee.js"
+import { isIntegerMicroseconds } from "./scoring-glossary-and-units.js"
 import { resolveTimingTable, type TimingTable } from "./timing-table.js"
 
 export type EpeeCircuitComplete = "closed" | "indeterminate" | "open" | "unavailable"
@@ -222,7 +223,7 @@ function classifyContact(side: Side, contact: EpeeResistanceContact, atUs: numbe
 }
 
 function validateSample(sample: EpeeResistanceSample) {
-  if (!Number.isSafeInteger(sample.atUs) || sample.atUs < 0) {
+  if (!isIntegerMicroseconds(sample.atUs)) {
     throw new RangeError("Epee resistance samples must use non-negative safe integer timestamps")
   }
 

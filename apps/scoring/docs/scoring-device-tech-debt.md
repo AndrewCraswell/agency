@@ -35,6 +35,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 15 | SC-004 | P2 | done | Root-approved board artifacts use content-addressed readiness identities and a validated configurable simulator origin instead of wall-clock or embedded localhost data |
 | 16 | FW-005 | P2 | done | Root-approved shared native CMake policy now enforces C17, conversion warnings, and Clang coverage consistently while retaining STM32 target-specific flags |
 | 17 | SC-005 | P3 | done | Root-approved test-only renderer helper centralizes the shared tscircuit setup across eight suites while preserving each suite's PCB mode and component-specific assertions |
+| 18 | SD-012 | P2 | done | Root-approved canonical integer-microsecond guard now enforces identical timestamp validity across all four TypeScript scorers |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -343,5 +344,12 @@ truth.
   - A configure-time assertion proves every first-party native target receives the baseline warning policy.
   - `node apps/scoring/firmware/tools/check-coverage.mjs` still passes the 100-percent core and 80-percent other-source gates.
 
+## SD-012: share the canonical scoring timestamp guard
 
-
+- Priority: `P2`
+- State: `done`
+- Affected files: `epee.ts`, `epee-resistance.ts`, `foil.ts`, and `sabre.ts` plus the focused timestamp regression suite.
+- Delivered: all four TypeScript scorers delegate timestamp validity to the M0-02 `isIntegerMicroseconds` contract while preserving their existing public error messages. Root review covers negative, fractional, non-finite, unsafe, zero, and maximum-safe timestamps for every scorer.
+- Impact: duplicated timestamp predicates could drift at the exact integer and safe-range boundary used by native/WASM parity.
+- Non-goals: no scoring timing values, qualification behavior, or public scorer API changed.
+- Verification: 194 focused scorer tests, application TypeScript, focused oxlint, and focused oxfmt passed.

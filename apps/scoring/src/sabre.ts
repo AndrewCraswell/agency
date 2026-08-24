@@ -1,3 +1,4 @@
+import { isIntegerMicroseconds } from "./scoring-glossary-and-units.js"
 import {
   FIE_TIMING_BANDS,
   getFieTimingBandEndpointUs,
@@ -441,10 +442,6 @@ function appendDiagnostics(
   return [...existing, ...additions].sort(compareDiagnostics)
 }
 
-function isValidAtUs(atUs: number) {
-  return Number.isSafeInteger(atUs) && atUs >= 0
-}
-
 export function advanceSabreScoring(
   state: SabreScoringState,
   sample: SabreSample,
@@ -452,7 +449,7 @@ export function advanceSabreScoring(
 ): SabreScoringState {
   const resolvedTimingTable = resolveTimingTable(timingTable)
 
-  if (!isValidAtUs(sample.atUs)) {
+  if (!isIntegerMicroseconds(sample.atUs)) {
     throw new RangeError("Sabre samples must use non-negative safe integer timestamps")
   }
 

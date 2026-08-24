@@ -4,6 +4,7 @@ import {
   type EpeeContactClassification,
   type EpeeContactLifecycleState
 } from "./epee-contact-kernel.js"
+import { isIntegerMicroseconds } from "./scoring-glossary-and-units.js"
 import { loadTimingTable, resolveTimingTable, type TimingTable } from "./timing-table.js"
 
 export type EpeeContact = {
@@ -59,7 +60,7 @@ export function advanceEpeeScoring(
 ): EpeeScoringState {
   const resolvedTimingTable = resolveTimingTable(timingTable)
 
-  if (!Number.isSafeInteger(sample.atUs) || sample.atUs < 0) {
+  if (!isIntegerMicroseconds(sample.atUs)) {
     throw new RangeError("Epee samples must use non-negative safe integer timestamps")
   }
 
