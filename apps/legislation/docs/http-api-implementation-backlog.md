@@ -13,7 +13,7 @@ An endpoint is not **Done** merely because a route handler exists. Each phase is
 the verification listed below. The endpoint contract remains the source of truth for request and response bodies.
 The execution gate is the [local smoke and MCP parity checklist](http-api-local-smoke-and-parity.md). This ledger was
 last reconciled with the reviewed implementation on 2026-08-24; no endpoint has yet supplied the smoke, parity, and
-reviewed-commit evidence required for **Done**. Current totals are 38 **In progress**, 45 **Blocked**, 4 **Ready**, and
+reviewed-commit evidence required for **Done**. Current totals are 40 **In progress**, 47 **Blocked**, 0 **Ready**, and
 0 **Done** across 87 endpoints.
 
 ## Delivery phases
@@ -55,13 +55,13 @@ intentionally uncomposed and **Blocked**.
 | GET | `/api/jurisdictions` | In progress | Reviewed handler and page tests exist; exact `Jurisdiction` projection, live database smoke, parity, and commit remain. |
 | GET | `/api/jurisdictions/{jurisdictionId}` | In progress | Reviewed handler exists; exact canonical/provenance projection, live smoke, parity, and commit remain. |
 | GET | `/api/jurisdictions/{jurisdictionId}/sessions` | In progress | Reviewed handler exists; exact `Session` projection/filter smoke, parity, and commit remain. |
-| GET | `/api/jurisdictions/{jurisdictionId}/bills` | Ready | Reuse bill browse with scoped canonical response. |
+| GET | `/api/jurisdictions/{jurisdictionId}/bills` | In progress | Exact canonical projection and scoped filters are implemented; live database smoke, MCP parity, and reviewed commit remain. |
 | GET | `/api/jurisdictions/{jurisdictionId}/organizations` | Blocked | Jurisdiction-scoped organization query is missing. |
 | GET | `/api/jurisdictions/{jurisdictionId}/commissions` | Blocked | Classification-scoped organization query is missing. |
 | GET | `/api/jurisdictions/{jurisdictionId}/committees` | Blocked | Classification-scoped organization query is missing. |
-| GET | `/api/jurisdictions/{jurisdictionId}/meetings` | Ready | Reuse event search with jurisdiction scope and canonical projection. |
+| GET | `/api/jurisdictions/{jurisdictionId}/meetings` | Blocked | `legislative_events` lacks a session relationship and authoritative local date, canonical organization relation, and typed location/virtual-access fields required for `MeetingSummary`; route is intentionally unregistered. |
 | GET | `/api/sessions/{sessionId}` | In progress | Reviewed handler exists; exact canonical/provenance projection, live smoke, parity, and commit remain. |
-| GET | `/api/sessions/{sessionId}/bills` | Ready | Reuse bill browse with session scope. |
+| GET | `/api/sessions/{sessionId}/bills` | In progress | Exact canonical projection and scoped filters are implemented; live database smoke, MCP parity, and reviewed commit remain. |
 | GET | `/api/sessions/{sessionId}/meetings` | Blocked | An authoritative event-session relation is missing; inferring through `event_bills` omits session meetings without linked bills. |
 | GET | `/api/bills` | In progress | Reviewed handler exists; remaining filters, canonical projection, stable-order database smoke, parity, and commit remain. |
 | POST | `/api/bills/batch` | In progress | Reviewed item-isolation and limit tests exist; exact `BillDetail` projection, live smoke/parity, and commit remain. |
@@ -106,7 +106,7 @@ intentionally uncomposed and **Blocked**.
 | GET | `/api/organizations/{organizationId}` | In progress | Reviewed handler exists; exact canonical detail/child metadata, live parity, and commit remain. |
 | GET | `/api/organizations/{organizationId}/members` | Blocked | Historical organization membership query is missing. |
 | GET | `/api/organizations/{organizationId}/memberships/{membershipId}` | Blocked | Canonical projector exists; direct organization-scoped membership lookup and handler are missing. |
-| GET | `/api/organizations/{organizationId}/meetings` | Ready | Reuse event search with organization scope. |
+| GET | `/api/organizations/{organizationId}/meetings` | Blocked | `legislative_events` lacks a session relationship and authoritative local date, canonical organization relation, and typed location/virtual-access fields required for `MeetingSummary`; route is intentionally unregistered. |
 | GET | `/api/organizations/{organizationId}/bills` | Blocked | Organization-bill relationship query is missing. |
 | GET | `/api/organizations/{organizationId}/calendars` | Blocked | Durable calendar resources are not modeled. |
 | GET | `/api/meetings` | In progress | Reviewed handler exists; exact `MeetingSummary` projection/filter smoke, live parity, and commit remain. |

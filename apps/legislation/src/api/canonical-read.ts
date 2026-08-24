@@ -1,6 +1,7 @@
 import { LegislationError } from "../legislation/errors.js"
 import {
   CanonicalProjectionError,
+  projectBillSummary,
   projectDocumentSection,
   projectSupportingMaterialSection,
   type ProjectionContext,
@@ -49,6 +50,18 @@ export interface SupportingMaterialSectionRead {
   section: SupportingMaterialSectionRecord
 }
 
+export interface BillSummaryRead extends SourceDocument {
+  classification: readonly string[]
+  identifier: string
+  introducedAt: Date | string | null
+  jurisdictionId: string
+  latestActionAt: Date | string | null
+  sessionId: string
+  status: string | null
+  subjects: readonly string[]
+  title: string
+}
+
 export function projectDocumentSectionRead(value: Readonly<DocumentSectionRead>, apiBaseUrl: string) {
   return projectDocumentSection(
     {
@@ -78,6 +91,18 @@ export function projectSupportingMaterialSectionRead(
       sourceUrl: value.material.sourceUrl
     },
     projectionContext(value.material, apiBaseUrl)
+  )
+}
+
+export function projectBillSummaryRead(value: Readonly<BillSummaryRead>, apiBaseUrl: string) {
+  return projectBillSummary(
+    {
+      ...value,
+      introducedDate: value.introducedAt,
+      latestActionAt: value.latestActionAt,
+      status: requiredString(value, "status", "bill status")
+    },
+    projectionContext(value, apiBaseUrl)
   )
 }
 

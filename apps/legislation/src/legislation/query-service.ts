@@ -497,7 +497,14 @@ export class LegislationQueryService {
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeOffset(input.cursor)
     const rows = await this.#database
-      .select()
+      .select({
+        bill: bills,
+        latestActionAt: sql<Date | null>`(
+          select max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))
+          from ${billActions}
+          where ${billActions.billId} = ${bills.id}
+        )`
+      })
       .from(bills)
       .where(
         and(
@@ -516,7 +523,7 @@ export class LegislationQueryService {
       .offset(offset)
     const truncated = rows.length > limit
     return {
-      items: rows.slice(0, limit),
+      items: rows.slice(0, limit).map(({ bill, latestActionAt }) => ({ ...bill, latestActionAt })),
       nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
       truncated,
       warnings: coverageWarnings(rows.length, "bills")

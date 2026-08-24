@@ -212,20 +212,6 @@ function optionalQueryBoolean(url: URL, name: string): boolean | undefined {
   throw new LegislationError("invalid_request", `${name} must be true or false`)
 }
 
-function repeatedQueryValues(url: URL, name: string): string[] | undefined {
-  const values = url.searchParams.getAll(name).map((value) => value.trim())
-  if (values.length === 0) {
-    return undefined
-  }
-  if (values.length > 25 || values.some((value) => value.length === 0)) {
-    throw new LegislationError("invalid_request", `${name} must contain between 1 and 25 non-empty values`)
-  }
-  if (new Set(values).size !== values.length) {
-    throw new LegislationError("invalid_request", `${name} values must be unique`)
-  }
-  return values
-}
-
 function queryLimit(url: URL): number | undefined {
   const value = url.searchParams.get("limit")
   if (value === null) {
@@ -263,30 +249,6 @@ function routeIdentifier(pathname: string, resource: "meetings" | "organizations
     return decodeURIComponent(suffix)
   } catch {
     throw new LegislationError("invalid_request", `Invalid ${resource} ID encoding`)
-  }
-}
-
-function organizationMeetingIdentifier(pathname: string): string | undefined {
-  const segments = pathname.split("/").filter(Boolean)
-  if (segments.length !== 4 || segments[0] !== "api" || segments[1] !== "organizations" || segments[3] !== "meetings") {
-    return undefined
-  }
-  try {
-    return decodeURIComponent(segments[2] ?? "") || undefined
-  } catch {
-    throw new LegislationError("invalid_request", "Invalid organizations ID encoding")
-  }
-}
-
-function meetingSort(url: URL): "starts-asc" | "starts-desc" | "updated-desc" {
-  const value = optionalQueryString(url, "sort") ?? "starts-asc"
-  switch (value) {
-    case "starts-asc":
-    case "starts-desc":
-    case "updated-desc":
-      return value
-    default:
-      throw new LegislationError("invalid_request", "sort is not supported for meeting collections")
   }
 }
 
@@ -384,30 +346,6 @@ export function createCivicSearchApiHandler(service: CivicSearchApi): HttpApiHan
           query: optionalQueryString(url, "q")
         }
         sendApiJson(response, 200, apiPage(request, await service.searchOrganizations(input), input.limit ?? 20))
-        return true
-      }
-
-      const organizationMeetingId = organizationMeetingIdentifier(url.pathname)
-      if (request.method === "GET" && organizationMeetingId !== undefined) {
-        assertKnownQuery(url, ["classification", "cursor", "from", "limit", "sort", "status", "to"])
-        await service.getOrganization({ id: organizationMeetingId })
-        const from = queryOptionalDateOrTimestamp(url, "from")
-        const to = queryOptionalDateOrTimestamp(url, "to")
-        if (from !== undefined && to !== undefined && from > to) {
-          throw new LegislationError("invalid_request", "from must not be after to")
-        }
-        const limit = queryLimit(url) ?? 20
-        const page = await service.searchEvents({
-          classification: repeatedQueryValues(url, "classification"),
-          cursor: optionalQueryString(url, "cursor"),
-          from,
-          limit,
-          organizationId: organizationMeetingId,
-          sort: meetingSort(url),
-          status: repeatedQueryValues(url, "status"),
-          to
-        })
-        sendApiJson(response, 200, apiPage(request, page, limit))
         return true
       }
 

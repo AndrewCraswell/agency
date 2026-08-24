@@ -22,9 +22,28 @@ async function startServer(service: CoreReadQueryApi) {
   return `http://127.0.0.1:${address.port}`
 }
 
+function bill(id = "bill:us:119:hr:1") {
+  return {
+    classification: ["bill"],
+    createdAt: new Date("2026-08-20T15:00:00Z"),
+    id,
+    identifier: "HR 1",
+    introducedAt: new Date("2026-01-01T00:00:00Z"),
+    jurisdictionId: "jurisdiction:us",
+    latestActionAt: new Date("2026-02-01T00:00:00Z"),
+    sessionId: "session:us:119",
+    sourceUrl: "https://api.congress.gov/v3/bill/119/hr/1",
+    status: "introduced",
+    subjects: ["Government"],
+    title: "Test bill",
+    updatedAt: new Date("2026-08-20T15:00:00Z"),
+    upstreamIds: { congress: "119-hr-1" }
+  }
+}
+
 function service(): CoreReadQueryApi {
   return {
-    browseBills: async () => ({ items: [{ id: "bill:us:119:hr:1" }], truncated: false }),
+    browseBills: async () => ({ items: [bill()], truncated: false }),
     findRelatedBills: async () => ({ items: [], truncated: false }),
     getAmendment: async ({ id }) => ({ amendment: { id } }),
     getBill: async ({ id }) => ({ bill: { id } }),
@@ -70,7 +89,6 @@ function service(): CoreReadQueryApi {
     listSessions: async () => ({ items: [{ id: "session:us:119" }], truncated: false }),
     searchAmendments: async () => ({ items: [], truncated: false, warnings: [] }),
     searchChanges: async () => ({ items: [], truncated: false }),
-    searchEvents: async () => ({ items: [{ id: "event:1" }], truncated: false }),
     searchSupportingMaterials: async () => ({ items: [], truncated: false }),
     searchVotes: async () => ({ items: [], truncated: false })
   }
@@ -136,6 +154,39 @@ describe("core read API handler", () => {
     const response = await fetch(`${baseUrl}/api/subscriptions`)
 
     expect(response.status).toBe(404)
+  })
+
+  it("projects jurisdiction and session bill pages with trusted canonical URLs and source provenance", async () => {
+    const baseUrl = await startServer(service())
+    const [jurisdiction, session] = await Promise.all([
+      fetch(`${baseUrl}/api/jurisdictions/jurisdiction%3Aus/bills`, { headers: { host: "untrusted.example" } }),
+      fetch(`${baseUrl}/api/sessions/session%3Aus%3A119/bills`, { headers: { host: "untrusted.example" } })
+    ])
+
+    for (const response of [jurisdiction, session]) {
+      expect(response.status).toBe(200)
+      await expect(response.json()).resolves.toMatchObject({
+        data: [
+          {
+            canonicalUrl: "http://127.0.0.1:3100/api/bills/bill%3Aus%3A119%3Ahr%3A1",
+            latestActionAt: "2026-02-01T00:00:00.000Z",
+            sources: [{ isOfficial: true, provider: "congress" }],
+            type: "bill"
+          }
+        ]
+      })
+    }
+  })
+
+  it("returns 422 instead of an incomplete bill projection when persisted provenance is malformed", async () => {
+    const baseUrl = await startServer({
+      ...service(),
+      browseBills: async () => ({ items: [{ ...bill(), sourceUrl: "not a URL" }], truncated: false })
+    })
+
+    const response = await fetch(`${baseUrl}/api/jurisdictions/jurisdiction%3Aus/bills`)
+    expect(response.status).toBe(422)
+    await expect(response.json()).resolves.toMatchObject({ error: { category: "unprocessable", retryable: false } })
   })
 
   it("returns canonical parent-scoped section resources without trusting the Host header", async () => {
@@ -303,18 +354,13 @@ describe("core read API handler", () => {
     await expect(typo.json()).resolves.toMatchObject({ error: { category: "invalid_request" } })
   })
 
-  it("maps jurisdiction and session collection filters into scoped service calls", async () => {
+  it("maps jurisdiction and session bill collection filters into scoped service calls", async () => {
     const billInputs: Parameters<CoreReadQueryApi["browseBills"]>[0][] = []
-    const meetingInputs: Parameters<CoreReadQueryApi["searchEvents"]>[0][] = []
     const baseUrl = await startServer({
       ...service(),
       browseBills: async (input) => {
         billInputs.push(input)
-        return { items: [{ id: "bill:1" }], truncated: false }
-      },
-      searchEvents: async (input) => {
-        meetingInputs.push(input)
-        return { items: [{ id: "meeting:1" }], truncated: false }
+        return { items: [bill("bill:1")], truncated: false }
       }
     })
 
@@ -324,13 +370,10 @@ describe("core read API handler", () => {
       ),
       fetch(
         `${baseUrl}/api/sessions/session%3Aus%3A119/bills?classification=resolution&status=passed&subject=education&sort=identifier-asc&limit=8`
-      ),
-      fetch(
-        `${baseUrl}/api/jurisdictions/jurisdiction%3Aus/meetings?organizationId=organization%3Aus%3Ahouse&classification=hearing&status=scheduled&from=2026-02-01T00%3A00%3A00Z&to=2026-02-28T23%3A59%3A59Z&limit=9`
       )
     ])
 
-    expect(responses.map((response) => response.status)).toEqual([200, 200, 200])
+    expect(responses.map((response) => response.status)).toEqual([200, 200])
     for (const response of responses) {
       await expect(response.json()).resolves.toMatchObject({
         data: expect.any(Array),
@@ -364,19 +407,6 @@ describe("core read API handler", () => {
         subject: ["education"]
       }
     ])
-    expect(meetingInputs).toEqual([
-      {
-        classification: ["hearing"],
-        cursor: undefined,
-        from: new Date("2026-02-01T00:00:00.000Z"),
-        jurisdictionId: "jurisdiction:us",
-        limit: 9,
-        organizationId: "organization:us:house",
-        sort: "starts-asc",
-        status: ["scheduled"],
-        to: new Date("2026-02-28T23:59:59.000Z")
-      }
-    ])
   })
 
   it("rejects invalid scoped collection filters and non-exact routes", async () => {
@@ -385,14 +415,14 @@ describe("core read API handler", () => {
       fetch(`${baseUrl}/api/jurisdictions/jurisdiction%3Aus/bills?status=introduced&status=introduced`),
       fetch(`${baseUrl}/api/sessions/session%3Aus%3A119/bills?introducedFrom=2026-02-01&introducedTo=2026-01-01`),
       fetch(`${baseUrl}/api/jurisdictions/jurisdiction%3Aus/bills?sort=unknown`),
-      fetch(`${baseUrl}/api/jurisdictions/jurisdiction%3Aus/meetings?from=2026-02-30`),
+      fetch(`${baseUrl}/api/jurisdictions/jurisdiction%3Aus/meetings`),
       fetch(`${baseUrl}/api/jurisdictions/jurisdiction%3Aus/meetings?from=2026-02-01&from=2026-02-02`),
       fetch(`${baseUrl}/api/sessions/session%3Aus%3A119/meetings`),
       fetch(`${baseUrl}/api/sessions/session%3Aus%3A119/meetings/extra`)
     ])
 
-    expect(responses.map((response) => response.status)).toEqual([400, 400, 400, 400, 400, 404, 404])
-    for (const response of responses.slice(0, 5)) {
+    expect(responses.map((response) => response.status)).toEqual([400, 400, 400, 404, 404, 404, 404])
+    for (const response of responses.slice(0, 3)) {
       await expect(response.json()).resolves.toMatchObject({ error: { category: "invalid_request" } })
     }
   })

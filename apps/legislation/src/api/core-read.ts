@@ -7,18 +7,18 @@ import type {
   ChangeSearchInput,
   DocumentSectionLookup,
   EntityLookup,
-  EventSearchInput,
   JurisdictionSearchInput,
   SessionSearchInput,
   SupportingMaterialSearchInput,
   VoteSearchInput
 } from "../legislation/query-service.js"
 import {
+  projectBillSummaryRead,
   projectDocumentSectionRead,
   projectSupportingMaterialSectionRead,
   toProjectionLegislationError
 } from "./canonical-read.js"
-import type { DocumentSectionRead, SupportingMaterialSectionRead } from "./canonical-read.js"
+import type { BillSummaryRead, DocumentSectionRead, SupportingMaterialSectionRead } from "./canonical-read.js"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -27,7 +27,6 @@ import {
   queryInteger,
   queryOptionalBoolean,
   queryOptionalDate,
-  queryOptionalDateOrTimestamp,
   queryOptionalIsoDate,
   queryOptionalString,
   readJsonBody,
@@ -64,13 +63,12 @@ export interface CoreReadQueryApi {
   listSessions: (input: SessionSearchInput) => Promise<CorePage>
   searchAmendments: (input: AmendmentSearchInput) => Promise<CorePage>
   searchChanges: (input: ChangeSearchInput) => Promise<CorePage>
-  searchEvents: (input: EventSearchInput) => Promise<CorePage>
   searchSupportingMaterials: (input: SupportingMaterialSearchInput) => Promise<CorePage>
   searchVotes: (input: VoteSearchInput) => Promise<CorePage>
 }
 
-interface CorePage {
-  items: readonly unknown[]
+interface CorePage<T = unknown> {
+  items: readonly T[]
   nextCursor?: string
   truncated: boolean
   warnings?: readonly string[]
@@ -178,14 +176,7 @@ async function handleCoreRequest(
       await service.getJurisdiction(route.jurisdictionId)
       const limit = queryInteger(url, "limit", 20)
       const page = await service.browseBills(billBrowseInput(url, limit, { jurisdictionId: route.jurisdictionId }))
-      sendApiJson(response, 200, apiPage(request, page, limit))
-      return true
-    }
-    case "listJurisdictionMeetings": {
-      await service.getJurisdiction(route.jurisdictionId)
-      const limit = queryInteger(url, "limit", 20)
-      const page = await service.searchEvents(meetingBrowseInput(url, limit, { jurisdictionId: route.jurisdictionId }))
-      sendApiJson(response, 200, apiPage(request, page, limit))
+      sendApiJson(response, 200, apiPage(request, projectBillPage(page, apiBaseUrl), limit))
       return true
     }
     case "getSession": {
@@ -197,7 +188,7 @@ async function handleCoreRequest(
       await service.getSession(route.sessionId)
       const limit = queryInteger(url, "limit", 20)
       const page = await service.browseBills(billBrowseInput(url, limit, { sessionId: route.sessionId }))
-      sendApiJson(response, 200, apiPage(request, page, limit))
+      sendApiJson(response, 200, apiPage(request, projectBillPage(page, apiBaseUrl), limit))
       return true
     }
     case "getBillTimeline": {
@@ -430,6 +421,59 @@ async function handleCoreRequest(
   }
 }
 
+function projectBillPage(page: CorePage, apiBaseUrl: string): CorePage {
+  return { ...page, items: page.items.map((item) => projectBillSummaryRead(billSummaryRead(item), apiBaseUrl)) }
+}
+
+function billSummaryRead(value: unknown): BillSummaryRead {
+  if (!isBillSummaryRead(value)) {
+    throw new LegislationError(
+      "unprocessable",
+      "The record cannot be returned because its canonical provenance is incomplete"
+    )
+  }
+  return value
+}
+
+function isBillSummaryRead(value: unknown): value is BillSummaryRead {
+  if (typeof value !== "object" || value === null) {
+    return false
+  }
+  const read = (name: string) => Reflect.get(value, name)
+  return (
+    isStringArray(read("classification")) &&
+    isDateValue(read("createdAt")) &&
+    typeof read("id") === "string" &&
+    typeof read("identifier") === "string" &&
+    isNullableDateValue(read("introducedAt")) &&
+    typeof read("jurisdictionId") === "string" &&
+    isNullableDateValue(read("latestActionAt")) &&
+    typeof read("sessionId") === "string" &&
+    (typeof read("status") === "string" || read("status") === null) &&
+    typeof read("sourceUrl") === "string" &&
+    isStringArray(read("subjects")) &&
+    typeof read("title") === "string" &&
+    isDateValue(read("updatedAt")) &&
+    (read("upstreamIds") === undefined || isStringRecord(read("upstreamIds")))
+  )
+}
+
+function isDateValue(value: unknown): value is Date | string {
+  return value instanceof Date || typeof value === "string"
+}
+
+function isNullableDateValue(value: unknown): value is Date | string | null {
+  return value === null || isDateValue(value)
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return typeof value === "object" && value !== null && Object.values(value).every((item) => typeof item === "string")
+}
+
 function repeatedQueryValues(url: URL, name: string): string[] | undefined {
   const values = url.searchParams.getAll(name).map((value) => value.trim())
   if (values.length === 0) {
@@ -473,54 +517,11 @@ function billBrowseInput(
   }
 }
 
-function meetingBrowseInput(
-  url: URL,
-  limit: number,
-  scope: Readonly<{ jurisdictionId?: string; organizationId?: string }>,
-  allowSort = false
-): EventSearchInput {
-  const from = queryOptionalDateOrTimestamp(url, "from")
-  const to = queryOptionalDateOrTimestamp(url, "to")
-  if (from !== undefined && to !== undefined && from > to) {
-    throw new LegislationError("invalid_request", "from must not be after to")
-  }
-  const sortValue = queryOptionalString(url, "sort") ?? "starts-asc"
-  if (!allowSort && url.searchParams.has("sort")) {
-    throw new LegislationError("invalid_request", "sort is not supported by this meeting collection")
-  }
-  const sort = meetingSort(sortValue)
-  if (sort === undefined) {
-    throw new LegislationError("invalid_request", "sort is not supported for meeting collections")
-  }
-  return {
-    classification: repeatedQueryValues(url, "classification"),
-    cursor: queryOptionalString(url, "cursor"),
-    from,
-    jurisdictionId: scope.jurisdictionId,
-    limit,
-    organizationId: scope.organizationId ?? queryOptionalString(url, "organizationId"),
-    sort,
-    status: repeatedQueryValues(url, "status"),
-    to
-  }
-}
-
 function billSort(value: string): BillBrowseInput["sort"] {
   switch (value) {
     case "identifier-asc":
     case "introduced-desc":
     case "latest-action-desc":
-    case "updated-desc":
-      return value
-    default:
-      return undefined
-  }
-}
-
-function meetingSort(value: string): EventSearchInput["sort"] {
-  switch (value) {
-    case "starts-asc":
-    case "starts-desc":
     case "updated-desc":
       return value
     default:
@@ -558,7 +559,7 @@ type CoreRoute =
   | { documentId: string; name: "getDocumentSection"; sectionId: string }
   | {
       jurisdictionId: string
-      name: "getJurisdiction" | "listJurisdictionBills" | "listJurisdictionMeetings" | "listJurisdictionSessions"
+      name: "getJurisdiction" | "listJurisdictionBills" | "listJurisdictionSessions"
     }
   | { materialId: string; name: "getSupportingMaterial" }
   | { materialId: string; name: "getSupportingMaterialSection"; sectionId: string }
@@ -643,8 +644,6 @@ function routeMatch(method: string | undefined, pathname: string): CoreRoute | u
         return { jurisdictionId: segments[2], name: "listJurisdictionSessions" }
       case "bills":
         return { jurisdictionId: segments[2], name: "listJurisdictionBills" }
-      case "meetings":
-        return { jurisdictionId: segments[2], name: "listJurisdictionMeetings" }
       default:
         return undefined
     }
@@ -760,8 +759,6 @@ function allowedQueryParameters(name: CoreRoute["name"]): readonly string[] {
       ]
     case "listSessionBills":
       return ["classification", "cursor", "introducedFrom", "introducedTo", "limit", "sort", "status", "subject"]
-    case "listJurisdictionMeetings":
-      return ["classification", "cursor", "from", "limit", "organizationId", "status", "to"]
     case "getBillTimeline":
       return ["cursor", "limit"]
     case "getRelatedBills":

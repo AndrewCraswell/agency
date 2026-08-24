@@ -242,56 +242,14 @@ describe("civic and search HTTP API handler", () => {
     await expect(response.json()).resolves.toMatchObject({ data: { changes: [{ classification: "changed" }] } })
   })
 
-  it("returns an organization meeting page with documented filters and ordering", async () => {
-    let observed: unknown
-    const baseUrl = await startApi(
-      createService({
-        searchEvents: async (input) => {
-          observed = input
-          return { items: [{ id: "meeting:ca:budget" }], truncated: false }
-        }
-      })
-    )
-
-    const response = await fetch(
-      `${baseUrl}/api/organizations/organization%3Aca%3Abudget/meetings?classification=hearing&status=scheduled&from=2026-08-01&to=2026-08-31T23%3A59%3A59Z&sort=starts-desc&limit=12`,
-      { headers: { "x-correlation-id": "organization-meetings" } }
-    )
-
-    expect(response.status).toBe(200)
-    expect(observed).toEqual({
-      classification: ["hearing"],
-      cursor: undefined,
-      from: new Date("2026-08-01T00:00:00.000Z"),
-      limit: 12,
-      organizationId: "organization:ca:budget",
-      sort: "starts-desc",
-      status: ["scheduled"],
-      to: new Date("2026-08-31T23:59:59.000Z")
-    })
-    await expect(response.json()).resolves.toMatchObject({
-      data: [{ id: "meeting:ca:budget" }],
-      links: { next: null },
-      meta: { correlationId: "organization-meetings", limit: 12, truncated: false }
-    })
-  })
-
-  it("rejects invalid organization meeting filters and non-exact routes", async () => {
+  it("leaves organization meeting routes unregistered until exact canonical projection facts exist", async () => {
     const baseUrl = await startApi(createService())
     const responses = await Promise.all([
-      fetch(
-        `${baseUrl}/api/organizations/organization%3Aca%3Abudget/meetings?classification=hearing&classification=hearing`
-      ),
-      fetch(`${baseUrl}/api/organizations/organization%3Aca%3Abudget/meetings?from=2026-09-02&to=2026-09-01`),
-      fetch(`${baseUrl}/api/organizations/organization%3Aca%3Abudget/meetings?sort=identifier-asc`),
-      fetch(`${baseUrl}/api/organizations/organization%3Aca%3Abudget/meetings?from=2026-02-30T00%3A00%3A00Z`),
-      fetch(`${baseUrl}/api/organizations/organization%3Aca%3Abudget/meetings?to=2026-09-01&to=2026-09-02`),
+      fetch(`${baseUrl}/api/organizations/organization%3Aca%3Abudget/meetings`),
+      fetch(`${baseUrl}/api/organizations/organization%3Aca%3Abudget/meetings?sort=starts-desc`),
       fetch(`${baseUrl}/api/organizations/organization%3Aca%3Abudget/meetings/extra`)
     ])
 
-    expect(responses.map((response) => response.status)).toEqual([400, 400, 400, 400, 400, 404])
-    for (const response of responses.slice(0, 5)) {
-      await expect(response.json()).resolves.toMatchObject({ error: { category: "invalid_request" } })
-    }
+    expect(responses.map((response) => response.status)).toEqual([404, 404, 404])
   })
 })
