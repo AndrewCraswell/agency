@@ -25,7 +25,6 @@ import {
   apiResource,
   correlationId,
   queryInteger,
-  queryOptionalBoolean,
   queryOptionalDate,
   queryOptionalIsoDate,
   queryOptionalString,
@@ -122,15 +121,6 @@ async function handleCoreRequest(
   assertAllowedQueryParameters(url, allowedQueryParameters(route.name))
 
   switch (route.name) {
-    case "getBill": {
-      const data = await service.getBill({
-        childCursor: queryOptionalString(url, "childCursor"),
-        childLimit: queryInteger(url, "childLimit", 25, 25),
-        id: route.billId
-      })
-      sendApiJson(response, 200, apiResource(request, data))
-      return true
-    }
     case "listBills": {
       const limit = queryInteger(url, "limit", 20)
       const page = await service.browseBills({
@@ -143,35 +133,6 @@ async function handleCoreRequest(
       sendApiJson(response, 200, apiPage(request, page, limit))
       return true
     }
-    case "listJurisdictions": {
-      const limit = queryInteger(url, "limit", 20)
-      const page = await service.listJurisdictions({
-        classification: queryOptionalString(url, "classification"),
-        cursor: queryOptionalString(url, "cursor"),
-        limit,
-        query: queryOptionalString(url, "q")
-      })
-      sendApiJson(response, 200, apiPage(request, page, limit))
-      return true
-    }
-    case "getJurisdiction": {
-      const data = await service.getJurisdiction(route.jurisdictionId)
-      sendApiJson(response, 200, apiResource(request, data))
-      return true
-    }
-    case "listJurisdictionSessions": {
-      const limit = queryInteger(url, "limit", 20)
-      const page = await service.listSessions({
-        cursor: queryOptionalString(url, "cursor"),
-        from: queryOptionalString(url, "from"),
-        isActive: queryOptionalBoolean(url, "isActive"),
-        jurisdictionId: route.jurisdictionId,
-        limit,
-        to: queryOptionalString(url, "to")
-      })
-      sendApiJson(response, 200, apiPage(request, page, limit))
-      return true
-    }
     case "listJurisdictionBills": {
       await service.getJurisdiction(route.jurisdictionId)
       const limit = queryInteger(url, "limit", 20)
@@ -179,34 +140,11 @@ async function handleCoreRequest(
       sendApiJson(response, 200, apiPage(request, projectBillPage(page, apiBaseUrl), limit))
       return true
     }
-    case "getSession": {
-      const data = await service.getSession(route.sessionId)
-      sendApiJson(response, 200, apiResource(request, data))
-      return true
-    }
     case "listSessionBills": {
       await service.getSession(route.sessionId)
       const limit = queryInteger(url, "limit", 20)
       const page = await service.browseBills(billBrowseInput(url, limit, { sessionId: route.sessionId }))
       sendApiJson(response, 200, apiPage(request, projectBillPage(page, apiBaseUrl), limit))
-      return true
-    }
-    case "getBillTimeline": {
-      const limit = queryInteger(url, "limit", 20)
-      const page = await service.getBillTimeline({
-        childCursor: queryOptionalString(url, "cursor"),
-        childLimit: limit,
-        id: route.billId
-      })
-      sendApiJson(
-        response,
-        200,
-        apiPage(
-          request,
-          { items: page.events, nextCursor: page.nextChildCursor, truncated: page.truncated, warnings: page.warnings },
-          limit
-        )
-      )
       return true
     }
     case "getRelatedBills": {
@@ -230,16 +168,6 @@ async function handleCoreRequest(
       sendApiJson(response, 200, apiPage(request, { items: page.sections, ...page }, limit))
       return true
     }
-    case "getBillVotes": {
-      const limit = queryInteger(url, "limit", 20, 25)
-      const page = await service.getBillVotes({
-        billId: route.billId,
-        cursor: queryOptionalString(url, "cursor"),
-        limit
-      })
-      sendApiJson(response, 200, apiPage(request, page, limit))
-      return true
-    }
     case "listBillAmendments": {
       const limit = queryInteger(url, "limit", 20)
       const page = await service.searchAmendments({
@@ -250,12 +178,6 @@ async function handleCoreRequest(
         sponsorPersonId: queryOptionalString(url, "sponsorPersonId")
       })
       sendApiJson(response, 200, apiPage(request, page, limit))
-      return true
-    }
-    case "batchBills": {
-      const ids = stringArrayBody(await readJsonBody(request), "ids")
-      const data = await batch(ids, async (id) => await service.getBill({ childLimit: 25, id }))
-      sendApiJson(response, 200, { data, links: { self: url.pathname }, meta: batchMeta(request, ids, data) })
       return true
     }
     case "batchBillAmendments": {
@@ -273,54 +195,6 @@ async function handleCoreRequest(
         })
       )
       sendApiJson(response, 200, { data, links: { self: url.pathname }, meta: batchMeta(request, billIds, data) })
-      return true
-    }
-    case "listAmendments": {
-      const limit = queryInteger(url, "limit", 20)
-      const page = await service.searchAmendments({
-        billId: queryOptionalString(url, "billId"),
-        cursor: queryOptionalString(url, "cursor"),
-        jurisdictionId: queryOptionalString(url, "jurisdictionId"),
-        limit,
-        mode: "lexical",
-        query: queryOptionalString(url, "q"),
-        sponsorPersonId: queryOptionalString(url, "sponsorPersonId")
-      })
-      sendApiJson(response, 200, apiPage(request, page, limit))
-      return true
-    }
-    case "getAmendment": {
-      const data = await service.getAmendment({ id: route.amendmentId })
-      sendApiJson(response, 200, apiResource(request, data))
-      return true
-    }
-    case "batchAmendments": {
-      const ids = stringArrayBody(await readJsonBody(request), "ids")
-      const data = await batch(ids, async (id) => await service.getAmendment({ id }))
-      sendApiJson(response, 200, { data, links: { self: url.pathname }, meta: batchMeta(request, ids, data) })
-      return true
-    }
-    case "listVotes": {
-      const limit = queryInteger(url, "limit", 20)
-      const page = await service.searchVotes({
-        billId: queryOptionalString(url, "billId"),
-        cursor: queryOptionalString(url, "cursor"),
-        organizationId: queryOptionalString(url, "organizationId"),
-        personId: queryOptionalString(url, "personId"),
-        limit
-      })
-      sendApiJson(response, 200, apiPage(request, page, limit))
-      return true
-    }
-    case "getVote": {
-      const data = await service.getVote({ id: route.voteId })
-      sendApiJson(response, 200, apiResource(request, data))
-      return true
-    }
-    case "batchVotes": {
-      const ids = stringArrayBody(await readJsonBody(request), "ids")
-      const data = await batch(ids, async (id) => await service.getVote({ id }))
-      sendApiJson(response, 200, { data, links: { self: url.pathname }, meta: batchMeta(request, ids, data) })
       return true
     }
     case "listSupportingMaterials": {
@@ -530,60 +404,27 @@ function billSort(value: string): BillBrowseInput["sort"] {
 }
 
 type CoreRoute =
-  | {
-      name:
-        | "batchAmendments"
-        | "batchBillAmendments"
-        | "batchBills"
-        | "batchVotes"
-        | "listAmendments"
-        | "listBills"
-        | "listChanges"
-        | "listJurisdictions"
-        | "listSupportingMaterials"
-        | "listVotes"
-    }
+  | { name: "batchBillAmendments" | "listBills" | "listChanges" | "listSupportingMaterials" }
   | {
       billId: string
-      name:
-        | "getBill"
-        | "getBillText"
-        | "getBillTimeline"
-        | "getBillVotes"
-        | "getRelatedBills"
-        | "getBillChanges"
-        | "listBillAmendments"
+      name: "getBillText" | "getRelatedBills" | "getBillChanges" | "listBillAmendments"
     }
-  | { amendmentId: string; name: "getAmendment" }
   | { documentId: string; name: "getDocument" | "getDocumentSections" }
   | { documentId: string; name: "getDocumentSection"; sectionId: string }
-  | {
-      jurisdictionId: string
-      name: "getJurisdiction" | "listJurisdictionBills" | "listJurisdictionSessions"
-    }
+  | { jurisdictionId: string; name: "listJurisdictionBills" }
   | { materialId: string; name: "getSupportingMaterial" }
   | { materialId: string; name: "getSupportingMaterialSection"; sectionId: string }
-  | { name: "getSession" | "listSessionBills"; sessionId: string }
-  | { name: "getVote"; voteId: string }
+  | { name: "listSessionBills"; sessionId: string }
 
 function routeMatch(method: string | undefined, pathname: string): CoreRoute | undefined {
   if (method === "POST") {
-    if (pathname === "/api/amendments/batch") {
-      return { name: "batchAmendments" }
-    }
     if (pathname === "/api/bills/amendments/batch") {
       return { name: "batchBillAmendments" }
     }
-    if (pathname === "/api/bills/batch") {
-      return { name: "batchBills" }
-    }
-    return pathname === "/api/votes/batch" ? { name: "batchVotes" } : undefined
+    return undefined
   }
   if (method !== "GET") {
     return undefined
-  }
-  if (pathname === "/api/amendments") {
-    return { name: "listAmendments" }
   }
   if (pathname === "/api/bills") {
     return { name: "listBills" }
@@ -594,12 +435,6 @@ function routeMatch(method: string | undefined, pathname: string): CoreRoute | u
   if (pathname === "/api/supporting-materials") {
     return { name: "listSupportingMaterials" }
   }
-  if (pathname === "/api/votes") {
-    return { name: "listVotes" }
-  }
-  if (pathname === "/api/jurisdictions") {
-    return { name: "listJurisdictions" }
-  }
   const segments = pathname.split("/").filter(Boolean).map(decodeURIComponent)
   if (segments[0] !== "api") {
     return undefined
@@ -607,20 +442,16 @@ function routeMatch(method: string | undefined, pathname: string): CoreRoute | u
   if (segments[1] === "bills" && typeof segments[2] === "string") {
     const billId = segments[2]
     if (segments.length === 3) {
-      return { billId, name: "getBill" }
+      return undefined
     }
     if (segments.length !== 4) {
       return undefined
     }
     switch (segments[3]) {
-      case "timeline":
-        return { billId, name: "getBillTimeline" }
       case "related":
         return { billId, name: "getRelatedBills" }
       case "sections":
         return { billId, name: "getBillText" }
-      case "votes":
-        return { billId, name: "getBillVotes" }
       case "amendments":
         return { billId, name: "listBillAmendments" }
       case "changes":
@@ -629,38 +460,16 @@ function routeMatch(method: string | undefined, pathname: string): CoreRoute | u
         return undefined
     }
   }
-  if (segments[1] === "amendments" && typeof segments[2] === "string" && segments.length === 3) {
-    return { amendmentId: segments[2], name: "getAmendment" }
-  }
   if (segments[1] === "jurisdictions" && typeof segments[2] === "string") {
-    if (segments.length === 3) {
-      return { jurisdictionId: segments[2], name: "getJurisdiction" }
+    if (segments.length === 4 && segments[3] === "bills") {
+      return { jurisdictionId: segments[2], name: "listJurisdictionBills" }
     }
-    if (segments.length !== 4) {
-      return undefined
-    }
-    switch (segments[3]) {
-      case "sessions":
-        return { jurisdictionId: segments[2], name: "listJurisdictionSessions" }
-      case "bills":
-        return { jurisdictionId: segments[2], name: "listJurisdictionBills" }
-      default:
-        return undefined
-    }
+    return undefined
   }
   if (segments[1] === "sessions" && typeof segments[2] === "string") {
-    if (segments.length === 3) {
-      return { name: "getSession", sessionId: segments[2] }
-    }
-    if (segments.length !== 4) {
-      return undefined
-    }
-    switch (segments[3]) {
-      case "bills":
-        return { name: "listSessionBills", sessionId: segments[2] }
-      default:
-        return undefined
-    }
+    return segments.length === 4 && segments[3] === "bills"
+      ? { name: "listSessionBills", sessionId: segments[2] }
+      : undefined
   }
   if (segments[1] === "documents" && typeof segments[2] === "string") {
     if (segments.length === 3) {
@@ -676,9 +485,6 @@ function routeMatch(method: string | undefined, pathname: string): CoreRoute | u
       ? { documentId: segments[2], name: "getDocumentSection", sectionId: segments[4] }
       : undefined
   }
-  if (segments[1] === "votes" && typeof segments[2] === "string" && segments.length === 3) {
-    return { name: "getVote", voteId: segments[2] }
-  }
   if (segments[1] === "supporting-materials" && typeof segments[2] === "string") {
     if (segments.length === 3) {
       return { materialId: segments[2], name: "getSupportingMaterial" }
@@ -688,18 +494,6 @@ function routeMatch(method: string | undefined, pathname: string): CoreRoute | u
       : undefined
   }
   return undefined
-}
-
-async function batch<T>(ids: readonly string[], operation: (id: string) => Promise<T>) {
-  return await Promise.all(
-    ids.map(async (id) => {
-      try {
-        return { data: await operation(id), id, status: "ok" as const }
-      } catch (error) {
-        return { error: itemError(error), id, status: "error" as const }
-      }
-    })
-  )
 }
 
 function batchMeta(request: IncomingMessage, ids: readonly string[], data: readonly unknown[]) {
@@ -728,23 +522,10 @@ function bodyInteger(value: unknown, name: string, minimum: number, maximum: num
 
 function allowedQueryParameters(name: CoreRoute["name"]): readonly string[] {
   switch (name) {
-    case "getBill":
-      return ["childCursor", "childLimit"]
     case "listBills":
       return ["cursor", "identifier", "jurisdictionId", "limit", "sessionId"]
-    case "listJurisdictions":
-      return ["classification", "cursor", "limit", "q"]
-    case "getJurisdiction":
-    case "getSession":
-    case "getAmendment":
-    case "getVote":
-    case "batchBills":
     case "batchBillAmendments":
-    case "batchAmendments":
-    case "batchVotes":
       return []
-    case "listJurisdictionSessions":
-      return ["cursor", "from", "isActive", "limit", "to"]
     case "listJurisdictionBills":
       return [
         "classification",
@@ -759,20 +540,12 @@ function allowedQueryParameters(name: CoreRoute["name"]): readonly string[] {
       ]
     case "listSessionBills":
       return ["classification", "cursor", "introducedFrom", "introducedTo", "limit", "sort", "status", "subject"]
-    case "getBillTimeline":
-      return ["cursor", "limit"]
     case "getRelatedBills":
       return ["limit", "mode"]
     case "getBillText":
       return ["cursor", "documentId", "limit", "versionCode"]
-    case "getBillVotes":
-      return ["cursor", "limit"]
     case "listBillAmendments":
       return ["cursor", "limit", "q", "sponsorPersonId"]
-    case "listAmendments":
-      return ["billId", "cursor", "jurisdictionId", "limit", "q", "sponsorPersonId"]
-    case "listVotes":
-      return ["billId", "cursor", "limit", "organizationId", "personId"]
     case "listSupportingMaterials":
       return ["amendmentId", "billId", "classification", "cursor", "jurisdictionId", "limit", "meetingId", "q"]
     case "getSupportingMaterial":

@@ -95,58 +95,61 @@ function service(): CoreReadQueryApi {
 }
 
 describe("core read API handler", () => {
-  it("wraps canonical reads in the public resource envelope", async () => {
+  it("leaves BillDetail, batch, and timeline routes unregistered until the query service preserves their contract facts", async () => {
     const baseUrl = await startServer(service())
-    const response = await fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1`, {
-      headers: { "x-correlation-id": "core-read-test" }
-    })
+    const responses = await Promise.all([
+      fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1`),
+      fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/timeline`),
+      fetch(`${baseUrl}/api/bills/batch`, { body: JSON.stringify({ ids: ["bill:us:119:hr:1"] }), method: "POST" })
+    ])
 
-    expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toEqual({
-      data: { bill: { id: "bill:us:119:hr:1" } },
-      links: { self: "/api/bills/bill%3Aus%3A119%3Ahr%3A1" },
-      meta: { correlationId: "core-read-test", warnings: [] }
-    })
+    expect(responses.map((response) => response.status)).toEqual([404, 404, 404])
   })
 
-  it("returns pages with cursor metadata and a stable next link", async () => {
+  it("leaves jurisdiction and session canonical routes unregistered until persisted contract provenance exists", async () => {
     const baseUrl = await startServer(service())
-    const response = await fetch(`${baseUrl}/api/jurisdictions?limit=10`)
+    const responses = await Promise.all([
+      fetch(`${baseUrl}/api/jurisdictions?limit=10`),
+      fetch(`${baseUrl}/api/jurisdictions/jurisdiction%3Aus`),
+      fetch(`${baseUrl}/api/jurisdictions/jurisdiction%3Aus/sessions`),
+      fetch(`${baseUrl}/api/sessions/session%3Aus%3A119`)
+    ])
 
-    expect(response.status).toBe(200)
-    const body = await response.json()
-    expect(body).toEqual({
-      data: [{ id: "jurisdiction:us" }],
-      links: { next: null, self: "/api/jurisdictions?limit=10" },
-      meta: { correlationId: expect.any(String), limit: 10, nextCursor: null, truncated: false, warnings: [] }
-    })
-    expect(body).toMatchObject({ meta: { correlationId: response.headers.get("x-correlation-id") } })
+    expect(responses.map((response) => response.status)).toEqual([404, 404, 404, 404])
   })
 
-  it("returns item-level errors for an otherwise valid batch", async () => {
-    const baseUrl = await startServer({
-      ...service(),
-      getVote: async ({ id }) => {
-        if (id === "vote:missing") {
-          const { LegislationError } = await import("../legislation/errors.js")
-          throw new LegislationError("not_found", "Vote vote:missing was not found")
-        }
-        return { vote: { id } }
+  it("leaves vote routes unregistered until persisted canonical vote facts exist", async () => {
+    let billVoteReads = 0
+    let voteReads = 0
+    let voteSearches = 0
+    const voteService = Object.assign(service(), {
+      getBillVotes: async () => {
+        billVoteReads += 1
+        return { items: [], truncated: false }
+      },
+      getVote: async () => {
+        voteReads += 1
+        return {}
+      },
+      searchVotes: async () => {
+        voteSearches += 1
+        return { items: [], truncated: false }
       }
     })
-    const response = await fetch(`${baseUrl}/api/votes/batch`, {
-      body: JSON.stringify({ ids: ["vote:ok", "vote:missing"] }),
-      headers: { "content-type": "application/json" },
-      method: "POST"
-    })
+    const baseUrl = await startServer(voteService)
+    const responses = await Promise.all([
+      fetch(`${baseUrl}/api/votes`),
+      fetch(`${baseUrl}/api/votes/vote%3Aus%3A119%3Ahouse%3A1`),
+      fetch(`${baseUrl}/api/votes/batch`, {
+        body: JSON.stringify({ ids: ["vote:us:119:house:1"] }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      }),
+      fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/votes`)
+    ])
 
-    expect(response.status).toBe(200)
-    await expect(response.json()).resolves.toMatchObject({
-      data: [
-        { data: { vote: { id: "vote:ok" } }, id: "vote:ok", status: "ok" },
-        { error: { category: "not_found" }, id: "vote:missing", status: "error" }
-      ]
-    })
+    expect(responses.map((response) => response.status)).toEqual([404, 404, 404, 404])
+    expect({ billVoteReads, voteReads, voteSearches }).toEqual({ billVoteReads: 0, voteReads: 0, voteSearches: 0 })
   })
 
   it("keeps absent route slices absent instead of manufacturing a placeholder response", async () => {
@@ -154,6 +157,36 @@ describe("core read API handler", () => {
     const response = await fetch(`${baseUrl}/api/subscriptions`)
 
     expect(response.status).toBe(404)
+  })
+
+  it("keeps incomplete canonical amendment routes unregistered", async () => {
+    let amendmentReads = 0
+    let amendmentSearches = 0
+    const baseUrl = await startServer({
+      ...service(),
+      getAmendment: async ({ id }) => {
+        amendmentReads += 1
+        return { amendment: { id } }
+      },
+      searchAmendments: async () => {
+        amendmentSearches += 1
+        return { items: [], truncated: false }
+      }
+    })
+
+    const responses = await Promise.all([
+      fetch(`${baseUrl}/api/amendments`),
+      fetch(`${baseUrl}/api/amendments/amendment%3Aus%3A119%3Ahr%3A1`),
+      fetch(`${baseUrl}/api/amendments/batch`, {
+        body: JSON.stringify({ ids: ["amendment:us:119:hr:1"] }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+    ])
+
+    expect(responses.map((response) => response.status)).toEqual([404, 404, 404])
+    expect(amendmentReads).toBe(0)
+    expect(amendmentSearches).toBe(0)
   })
 
   it("projects jurisdiction and session bill pages with trusted canonical URLs and source provenance", async () => {
@@ -279,7 +312,7 @@ describe("core read API handler", () => {
     await expect(response.json()).resolves.toMatchObject({ error: { category: "unprocessable", retryable: false } })
   })
 
-  it("uses page envelopes for timelines, related bills, bill sections, and bill votes", async () => {
+  it("uses page envelopes for registered related-bill and bill-section routes", async () => {
     const baseUrl = await startServer(service())
     const billId = "bill%3Aus%3A119%3Ahr%3A1"
     const [timeline, related, sections, votes] = await Promise.all([
@@ -289,7 +322,8 @@ describe("core read API handler", () => {
       fetch(`${baseUrl}/api/bills/${billId}/votes`)
     ])
 
-    for (const response of [timeline, related, sections, votes]) {
+    expect(timeline.status).toBe(404)
+    for (const response of [related, sections]) {
       expect(response.status).toBe(200)
       await expect(response.json()).resolves.toMatchObject({
         data: expect.any(Array),
@@ -297,6 +331,7 @@ describe("core read API handler", () => {
         meta: { limit: expect.any(Number), truncated: false }
       })
     }
+    expect(votes.status).toBe(404)
   })
 
   it("scopes bill changes and validates the contract filters", async () => {
