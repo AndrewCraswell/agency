@@ -1,8 +1,8 @@
 # ADR: firmware language and portability
 
-- **Status:** accepted for the current firmware baseline; Rust migration deferred until code-complete equivalence evidence
+- **Status:** accepted; one C17 scoring core targets native host, STM32, and WebAssembly
 - **Decision date:** 2026-08-22
-- **Applies to:** M3-03 through M3-15
+- **Applies to:** M3-03 through M3-18 and `CW-00` through `CW-20`
 - **Revisit when:** a named safety, certification, customer, or hiring requirement materially changes this trade-off
 
 ## Context
@@ -18,8 +18,11 @@ decision does not select a safety standard or claim certification.
 
 ## Decision
 
-Use a freestanding, portable **strict C17 subset** for the STM32 scoring core and SDK-free protocol-domain libraries
-in the first firmware release. Compile those libraries for native host tests and, where relevant, their owning target.
+Use a freestanding, portable **strict C17 subset** for the scoring core and SDK-free protocol-domain libraries.
+Compile the exact scoring-core source for native host tests, the STM32 target, and WebAssembly. After the `CW-16`
+cutover, the browser uses the WebAssembly build through a fail-closed adapter and never contains or falls back to a
+TypeScript scoring implementation.
+Compile protocol-domain libraries for native tests and, where relevant, their owning target.
 Use the pinned vendor C dialect and required assembly at startup and adapter boundaries; isolate and audit every vendor
 extension there rather than claim that generated headers or startup code are strict C17.
 
@@ -34,12 +37,14 @@ extension there rather than claim that generated headers or startup code are str
   scoring qualification algorithm. Use ESP-IDF for the target framework. C++ is not banned from a later, isolated
   non-scoring ESP component, but it is not part of the M3 foundations or shared interface. Any such addition needs its
   own ADR, a pinned language standard, and a target-size and failure-path measurement.
-- **STM32 scoring core:** create it only in M3-03 after M3-02 exports the scoring golden vectors. It will be a pure C
+- **Shared scoring core:** M3-03 establishes the host scaffold and hardware interface after M3-02 exports the scoring
+  golden vectors; M3-04 implements the pure C
   library with a C header, fixed-width integer types, explicit input/output lengths, caller-owned bounded state, and
   no SDK headers, heap allocation, files, threads, interrupts, wall clock, floating point, or target compiler
   extensions. It receives normalized acquisition observations plus an explicit microsecond timestamp and returns a
-  bounded decision or no decision. It is compiled only for native host tests and STM32 firmware. STM32 adapters own
-  peripheral access and convert core results to the M0-05/M2-05 contracts.
+  bounded decision or no decision. A versioned byte ABI isolates WebAssembly and fixture consumers from raw C struct
+  layout, pointers, padding, and ownership. STM32 adapters own peripheral access and convert core results to the
+  M0-05/M2-05 contracts; the browser adapter only marshals validated bytes.
 - **Protocol-domain libraries:** a C transport/schema library may be compiled on both targets only when it operates on
   already-authoritative records or bytes. It must not contain weapon tables, acquisition observations, qualification
   state, or an API that can produce a scoring decision.
@@ -88,9 +93,9 @@ rather than rely on current defaults.
 | --- | --- | --- |
 | Strict C17 STM32 scoring core, C protocol-domain libraries, and pinned vendor C adapters | Direct fit for ST-generated C and ESP-IDF C APIs; one scoring authority; straightforward native host tests; widest embedded hiring and support pool | **Selected** |
 | C++ STM32 scoring core or C++ on both processors | Better encapsulation tools and supported by both vendor environments | Rejected for foundations. It adds language-linkage and language-version policy without reducing the C peripheral boundary. ESP-IDF's documented exception, RTTI, designated-initializer, and IRAM constraints create avoidable qualification-path rules. It also cannot justify an ESP scoring implementation. |
-| Rust `no_std` STM32 scoring core with native and WebAssembly targets | Stronger memory-safety defaults and a potential shared core for browser simulation | Deferred until the C17/ESP-IDF release is validated. The staged proof in [the software product evolution roadmap](software-product-evolution-roadmap.md) must first show oracle equivalence on native, WebAssembly, and STM32 targets, with measured timing, memory, toolchain, debugging, and supply-chain evidence. It does not authorize scoring logic on the ESP32. |
+| A scoring-core rewrite in another language | Could add different language-level safety guarantees | Rejected for this product generation. The existing C17 core can target native, STM32, and WebAssembly, so a rewrite adds another implementation and migration campaign without solving the portability requirement. |
 | A production scoring implementation on ESP32 | Could appear to simplify local rendering | Prohibited by M0-04. It would violate the authority boundary regardless of language and make replay a second decision path. |
-| Keep TypeScript in the firmware path | Reuses the current implementation text | Rejected. It would complicate deterministic bounded-memory target behavior and displace the vendor-supported firmware toolchains. The TypeScript rules remain the oracle and fixture producer. |
+| Keep TypeScript in the firmware path | Reuses the current implementation text | Rejected. It would complicate deterministic bounded-memory target behavior and displace the vendor-supported firmware toolchains. TypeScript remains the temporary simulator and comparison implementation only through the migration; independently reviewed fixtures replace implementation-generated expectations before deletion. |
 
 ## Reliability and maintenance rules
 
@@ -112,17 +117,19 @@ rather than rely on current defaults.
    exception, callback with captured state, or STL type crosses that boundary, and no ESP C++ code gains a path to
    scoring qualification logic.
 
-## Exit gates for M3-03 and M3-08, before their dependents
+## Final cross-plan acceptance gates
 
-M3-03 and M3-08 establish these gates. Their dependent implementation tasks may begin only after the applicable gates
-are demonstrated:
+M3-03 and M3-08 establish the host scaffolds and interfaces. The firmware tasks
+may proceed under the M3 dependency graph; the later WebAssembly and
+cross-target requirements close through `CW-00` through `CW-20`. The combined
+architecture is accepted only when these final gates are demonstrated:
 
 1. **Fixture parity:** M3-02 generates immutable `rules-1` scoring vectors; M2-05 remains the owner of canonical
    transport golden frames. A native C host test consumes the scoring vectors without copied timing constants and
    matches expected decision records field-for-field. ESP receiver tests consume only M2-05 frames and already-made
    decision records.
-2. **Portable build:** the STM32 scoring core builds under pinned native Linux CI compilers and the STM32 target
-   toolchain with the same public header, warning policy, and no target SDK include in core sources. The ESP-IDF
+2. **Portable build:** the scoring core builds under pinned native CI compilers, the STM32 target toolchain, and the
+   pinned WebAssembly toolchain from the same source revision, with no target SDK include in core sources. The ESP-IDF
    receiver/journal component builds with the pinned ESP toolchain and has no scoring-core dependency.
 3. **Bounded resources:** the interfaces state maximum sample, event, transport, and state sizes; the STM32 build
    publishes map and stack-budget artifacts. Overflow is an explicit diagnostic/safe outcome, never silent allocation
@@ -132,9 +139,9 @@ are demonstrated:
    weapon table, normalized acquisition input, or scoring-core link dependency.
 5. **Debug and recovery:** each target can produce a build identity, reset reason, and controlled watchdog test
    artifact. Debug access and production locking remain governed by M0-11 and M3-10, not by this ADR.
-6. **Toolchain provenance:** CI fails if the pinned firmware SDK/compiler/container identities are absent from the
-   artifact metadata. Version upgrades require the M3-02 scoring corpus, M2-05 frame corpus, and a recorded size,
-   warning, and timing-delta review.
+6. **Toolchain provenance:** CI fails if pinned native, STM32, WebAssembly, firmware SDK, compiler, and container
+   identities are absent from artifact metadata. Version upgrades require the complete scoring corpus, M2-05 frame
+   corpus, and a recorded size, warning, timing, and cross-target parity review.
 
 ## Consequences and open risks
 
@@ -143,9 +150,9 @@ disciplined review and dynamic testing. The ESP32 remains a record consumer, not
 STM32 interrupt latency, ADC/comparator timing, DMA behavior, ESP32 load isolation, ESD resilience, or FIE
 acceptance; those remain M3 target, M4, and EVT/DVT evidence items.
 
-The only planned language boundary in the current baseline is TypeScript fixture generation to versioned data files. It
-is intentionally a test-artifact boundary, not an in-product FFI boundary. Rust migration is explicitly deferred
-until the current C17/ESP-IDF baseline is complete (`EVO-17`) and the `EVO-18` through `EVO-23` gates in the
-[software product evolution roadmap](software-product-evolution-roadmap.md) are met. The proof may run before
-commercial hardware launch; no production cutover follows without its own approved release plan. C++ remains an option
-for later isolated, non-authoritative components. Neither may authorize an ESP32 scoring implementation.
+The browser language boundary is a versioned byte ABI between TypeScript orchestration and the C17 WebAssembly module.
+TypeScript may author schema-valid scenario inputs, but it may not generate the independent expected scoring results
+used to approve its own deletion. The granular
+completion, parity, simulator-cutover, and TypeScript-deletion gates are defined in the
+[C17 WebAssembly migration plan](c17-wasm-simulator-migration.md). C++ remains an option for later isolated,
+non-authoritative components. No language choice may authorize an ESP32 scoring implementation.

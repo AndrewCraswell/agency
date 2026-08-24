@@ -42,8 +42,10 @@ an implementation assumption in design.
    timestamps. Keep the visual playback cursor nondecreasing and explain any difference.
 4. **Color is reinforced by position, shape, icon, and text.** The interface and 64 × 32 preview must remain legible
    for common color-vision deficiencies.
-5. **Planned requirements are not tests.** Separate executable scenarios from planned coverage. Never include planned
-   requirements in pass-rate totals or expose a Run action for them.
+5. **Planned requirements are not disabled tests.** Separate executable scenarios from incomplete requirement evidence.
+   A planned requirement may link to active partial scenarios; retain and expose those mappings while explaining the
+   remaining rules, analog, output, audio, timing, or hardware evidence gate. Never include planned requirements in
+   pass-rate totals or expose a Run action for the requirement row itself.
 6. **Dense information, calm hierarchy.** Prefer aligned grids, restrained borders, muted metadata, and generous
    whitespace over decorative cards or dashboard clutter.
 
@@ -56,7 +58,8 @@ Use one continuous workspace. Do not make the primary workflow depend on page-le
 - Product name: **Scoring simulator**
 - Environment badge when relevant: Local, CI artifact, or Recorded session
 - Corpus and rule revision
-- Corpus summary: executable count, passed, failed, and planned requirements
+- Corpus summary: executable count, passed, failed, and planned requirements as separate quantities; never label a
+  planned requirement as a skipped or disabled test
 - Primary actions:
   - **Run all executable tests**, an atomic request with Running, Complete, and Error states
   - **Play all reports**, available after reports have loaded
@@ -124,6 +127,7 @@ Each planned row contains:
 - Weapon or All weapons badge
 - Requirement ID, clearly labeled as a requirement rather than a scenario
 - A short **Why not executable** explanation
+- Links to every active partial scenario declared by the requirement, labeled **Partial executable evidence**
 
 Selecting a row changes the detail workspace but does not automatically run it. Preserve the selected item when filters
 change if it remains visible.
@@ -143,7 +147,8 @@ Above the display, show:
 - **Run scenario** action only for a valid executable scenario identity and rule revision
 
 Use `Badge`, `Button`, `Tooltip`, and semantic `dl`, `dt`, and `dd` elements. Missing or malformed executable identity
-must show **Unavailable** and suppress Run. A planned requirement shows **Rule revision: Not declared**.
+must show **Unavailable** and suppress Run. A planned requirement shows its evidence status and mapped active scenario
+revisions; it shows **Rule revision: Not declared** only when no mapped scenario supplies one.
 
 ## 64 × 32 scoring display preview
 
@@ -299,7 +304,8 @@ Additional corpus control:
 - During Play all, show playback progress and the current scenario.
 - During Play all, pause on a failed evaluation by default and focus the first mismatch.
 - During Play all, offer **Continue playback** and **Stop playback**.
-- Planned requirements are skipped and excluded from the executed denominator.
+- Planned requirement-evidence rows are reported separately and excluded from
+  the executable denominator; they are not skipped or disabled tests.
 
 Keyboard contract:
 
@@ -375,12 +381,16 @@ Final colors require contrast and color-vision testing. Initial intent:
 Use components from the current [shadcn/ui component catalog](https://ui.shadcn.com/docs/components). Do not introduce a
 second design system inside the page.
 
-### Frontend architecture prerequisite
+### Frontend and scoring architecture
 
-The current scoring observatory is static HTML and TypeScript. It does not yet contain a React, Tailwind CSS, or
-`components.json` shadcn application boundary. Before implementation, approve whether this simulator becomes a new
-React page/app or replaces the observatory shell, then install and pin the selected shadcn foundation. Do not mix
-partially generated shadcn components into the current static page without that architecture decision.
+The simulator now has a React, Tailwind CSS, and shadcn-compatible application boundary under `apps/scoring/simulator`.
+Its browser UI fetches reports from the scenario service and imports the shared display projection. The current service
+still executes the TypeScript scoring engines.
+
+`CW-00` through `CW-20` in the [C17 WebAssembly migration plan](c17-wasm-simulator-migration.md) replace that backend
+with the same C17 core linked into STM32 firmware. During shadow comparison, TypeScript and WebAssembly results remain
+separate and any mismatch fails visibly. After cutover, every Run action uses WebAssembly; a missing, incompatible, or
+trapped module shows **Authoritative result unavailable** and never invokes a TypeScript scoring fallback.
 
 ## Required states
 

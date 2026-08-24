@@ -157,12 +157,14 @@ accepted or rejected electrical event from its immutable record.
 
 ## M3: Firmware foundations
 
-**Exit criterion:** host-tested STM32 and ESP32 firmware implement the frozen contracts. Emulator and firmware consume
-the same vectors even if they do not share a programming language implementation.
+**Exit criterion:** M3-15 releases host-tested STM32 and ESP32 firmware foundations that implement the frozen
+contracts. M3-16 through M3-18 are explicitly tracked aliases into the separate C17 WebAssembly migration DAG and do
+not retroactively expand the M3-15 firmware release. The ESP32 remains a record consumer and does not link the scoring
+core.
 
 | ID | Deliverable | Depends on | Acceptance |
 | --- | --- | --- | --- |
-| M3-01 | Firmware-language and portability decision record | M1-11, M2-05 | Compares C, C++, and Rust against STM32 tooling, ESP-IDF integration, qualification, debugging, and team support |
+| M3-01 | Firmware-language and portability decision record | M1-11, M2-05 | Records the selected strict C17 core, vendor C adapters, native/STM32/WebAssembly target model, qualification, debugging, and team-support rationale |
 | M3-02 | Golden-vector exporter usable by host firmware tests | M0-07, M1-11 | Firmware tests consume generated fixtures without manually copying timing constants |
 | M3-03 | STM32 host-build scaffold with hardware interfaces | M3-01, M3-02 | Builds without STM32 hardware and substitutes clock, ADC, comparator, DMA, flash, watchdog, and transport interfaces |
 | M3-04 | STM32 scoring core implementation | M3-03 | Passes the complete three-weapon golden corpus and matches decision records field-for-field |
@@ -177,6 +179,9 @@ the same vectors even if they do not share a programming language implementation
 | M3-13 | ESP32 QEMU feasibility spike | M3-08 through M3-10 | A bounded report identifies supported ESP-IDF behavior and value beyond host tests |
 | M3-14 | Dual-virtual-firmware integration runner | M3-05, M3-09, accepted M3-12/M3-13 results | Runs the highest-value supported firmware paths together; unsupported peripherals remain host fakes, not hidden omissions |
 | M3-15 | Firmware-foundation release | M3-01 through M3-14 | Host verification passes; target builds are reproducible; remaining board-only tests are listed explicitly |
+| M3-16 | Versioned portable scoring ABI (tracking alias) | `CW-02` through `CW-04` | `CW-04` closes fixed-width canonical byte inputs, outputs, state, errors, versioning, capacities, and digests without exposing C struct layout |
+| M3-17 | C17 WebAssembly build and browser adapter (tracking alias) | `CW-11` through `CW-13` | `CW-12` and `CW-13` close a pinned reproducible module and fail-closed adapter with no scorer callback, target I/O, or TypeScript fallback |
+| M3-18 | Simulator WebAssembly cutover and atomic TypeScript scorer deletion (tracking alias) | `CW-14` through `CW-19B` | Browser, native, and STM32 parity plus observation and independent review pass; simulator uses WebAssembly only; duplicate TypeScript scorers and the final oracle are changed atomically |
 
 M3-10 is part of the ESP32 half of the launch update requirement. The independently verified STM32 image, dual-bank
 rollback, product compatibility manifest, ESP32 candidate health/rollback, interrupted-update matrix, and

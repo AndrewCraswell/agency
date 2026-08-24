@@ -4,7 +4,7 @@
 
 ## Decisions this roadmap makes
 
-1. Finish and validate the current TypeScript specification, C17 STM32 scoring implementation, and ESP-IDF ESP32 implementation before migrating the scoring core to Rust.
+1. Complete one C17 scoring core and compile the same source for native tests, STM32, and WebAssembly before removing the TypeScript scoring replication.
 2. Treat the approved golden vectors, unit tests, integration tests, scenario corpus, and hardware-correlation evidence as the behavioral oracle. A new implementation must match that oracle; it does not replace it by asserting equivalent intent.
 3. Improve the web player now. It is a deterministic presentation and replay client, not a second scoring authority. Its RGB LED array must present the same event and latch semantics as the apparatus display contract.
 4. Make reliable, signed, rollback-capable OTA for both processors a launch requirement. The STM32 remains the only scoring authority throughout download, validation, activation, rollback, and an ESP32 failure.
@@ -18,13 +18,13 @@ This page sequences the decisions above. The [device delivery plan](device-deliv
 
 ## Guardrails
 
-- Do not begin a Rust production migration while the current C17/ESP-IDF release is incomplete or lacks its required evidence. A small toolchain investigation may be planned, but it must not fork the launch implementation.
-- Keep scoring qualification, timestamps, weapon tables, and primary output decisions on the STM32. The ESP32 and browser may consume immutable records and render projections only.
+- Do not delete the TypeScript scoring oracle until the C17 native, STM32, and WebAssembly builds pass the complete independent corpus, target evidence, simulator cutover, and observation gates.
+- Keep physical-apparatus scoring qualification, timestamps, weapon tables, and primary output decisions on the STM32. The ESP32 may consume immutable records only. The simulator may execute the same C17 core as WebAssembly for pre-hardware testing, but the browser is never a physical product authority.
 - Do not couple a web-player visual change to a new scoring rule. Render stored or already-qualified events; add rule behavior only through the existing rules, vector, and evidence process.
 - Do not OTA-update bootloaders or the ESP32 partition table in the initial product release. Do not make an irreversible anti-rollback change without an explicit security review.
 - Do not publish secrets, production signing keys, device credentials, unrestricted factory tools, or a claim that software publication makes hardware certified. Keep the license undecided until its review gate.
 - Keep IR commands, accepted bout-workflow events, and STM32 decision records as separate artifacts. Authentication never grants scoring authority or bypasses current-state guards.
-- Avoid speculative abstraction. A shared Rust crate exists only after equivalence evidence shows it reduces lifecycle risk. No Rust HAL, ESP Rust port, cloud fleet service, or alternate simulator is in scope merely to demonstrate portability.
+- Avoid speculative abstraction. The shared unit is the existing C17 scoring core behind a versioned byte ABI. No alternate scoring implementation, ESP scoring port, cloud fleet service, or fallback simulator is in scope merely to demonstrate portability.
 
 ## Phase A: Protect the current oracle and improve the player now
 
@@ -41,7 +41,8 @@ This page sequences the decisions above. The [device delivery plan](device-deliv
 | EVO-05 | Add player controls for scenario selection, deterministic play, pause, step, reset, and an explicit unavailable diagnostic. | EVO-04 | Keyboard-accessible controls replay a named scenario and identify the source scenario and rule revision. | Keep controls local to playback; do not add remote scoring, configuration, or firmware-control paths. |
 | EVO-06 | Add visual regression fixtures for each panel state and a browser acceptance checklist comparing the player’s event/latch behavior with the apparatus display contract. | EVO-03, EVO-05 | CI and integrated-browser review pass for desktop and mobile layouts, keyboard names, and all display states. | Stop release of a player change when a fixture or accessibility check disagrees with the contract. |
 
-`EVO-02` through `EVO-06` are the immediate implementation queue. They may proceed without waiting for hardware, Rust, or an open-source license decision.
+`EVO-02` through `EVO-06` are the immediate implementation queue. They may proceed without waiting for hardware,
+the C17 WebAssembly cutover, or an open-source license decision.
 
 ## Phase B: Finish and validate the current C17 and ESP-IDF path
 
@@ -62,7 +63,7 @@ host/target evidence, and a complete oracle baseline. This is a code-completion 
 | EVO-14 | Implement product-update orchestration: compatibility evaluation, idle-only candidate requests, independent ESP32 and STM32 activation, and an explicit partial-update state. | EVO-09, EVO-11 through EVO-13, M0-04 | ESP-first, STM32-first failure, and rollback combinations remain serviceable; no active bout is updated. | Abort activation on an active bout, incompatible pair, missing prior-valid image, or unmet health gate. |
 | EVO-15 | Run target and board power-cut, reset, watchdog, bad-image, compatibility, and recovery trials at every update state transition. | EVO-11, EVO-12, EVO-14, M6-03, M6-06, M6-07 | Evidence shows both processors return to a valid version or an explicit serviceable recovery state, with identities and diagnostics retained. | Any brick, unintended scoring availability, or silent cross-processor reset blocks DVT and launch. |
 | EVO-16 | Establish the signed release-build, key-custody, staged cohort rollout, publication-pause, audit, and emergency-rollback procedure for DVT and production validation. | EVO-09, EVO-12, EVO-15 | A pre-production dry run demonstrates reproducible artifacts, separated approvals, canary containment, and recorded recovery without requiring a fleet service. | Do not publish a release that cannot be paused or whose keys, audit trail, or compatibility record are incomplete. |
-| EVO-17 | Approve the code-complete current-language baseline and retained behavioral oracle. | EVO-07, EVO-08, EVO-15, EVO-16 | Firmware, security, quality, and service owners accept the C17/ESP-IDF evidence and the bounded Rust-proof scope. | This approval does not authorize hardware launch or a Rust production cutover; unresolved defects remain on the current path. |
+| EVO-17 | Approve the code-complete current-language baseline and retained behavioral oracle. | EVO-07, EVO-08, EVO-15, EVO-16 | Firmware, security, quality, and service owners accept the C17/ESP-IDF evidence and the bounded C17 WebAssembly migration scope. | This approval does not authorize hardware launch or TypeScript scorer deletion; unresolved defects remain on the current path. |
 
 The first hardware product release must satisfy `EVO-09` through `EVO-16` together with the applicable M7 and M8
 evidence. M3-10 alone closes only part of the ESP32 update requirement; it does not close the STM32 path.
@@ -74,23 +75,23 @@ closes paired-system bench acceptance, and `RC-17` through `RC-18` close the pro
 software-package gates. The handheld firmware, apparatus decoder, protocol schemas, tests, signed artifacts, and
 least-privilege provisioning tools are all part of the delivered software baseline.
 
-## Phase C: Rust shared-core proof after current-code completion
+## Phase C: one C17 core for STM32, native tests, and WebAssembly
 
-**Entry:** `EVO-17` is complete. The C17 baseline and its oracle remain the reference implementation until a separate
-migration decision is accepted. Commercial hardware shipment is not a prerequisite for this proof.
+**Entry:** the current C17 core and TypeScript oracle are available. This phase may begin before `EVO-17`, but
+TypeScript scoring deletion remains blocked until the full target and observation gates pass.
 
-**Exit:** a small `no_std` Rust scoring core has proven byte-for-byte and decision-for-decision equivalence on native, WebAssembly, and STM32 targets, or the migration is stopped with the C17 baseline retained.
+**Exit:** the same C17 scoring source is linked into STM32 firmware and compiled for native and WebAssembly targets;
+the simulator executes WebAssembly without a TypeScript scoring fallback; the complete independent corpus passes on
+all targets; and the duplicated TypeScript scoring engines are removed under independent review.
 
-| ID | Task | Depends on | Acceptance | Stop or rollback gate |
-| --- | --- | --- | --- | --- |
-| EVO-18 | Write the Rust proof scope: one bounded scoring slice, target toolchains, ownership boundaries, size/timing budgets, supply-chain policy, and comparison report format. | EVO-17 | The scope excludes ESP32 scoring, firmware-wide rewrite, and production cutover. | Stop before coding if the proof cannot reuse the oracle or has no measurable lifecycle hypothesis. |
-| EVO-19 | Implement the isolated `no_std` Rust core and native test harness for the scoped scoring slice. | EVO-18 | It consumes the existing immutable vectors and matches C17 decisions and record fields exactly. | Any behavioral delta is a defect or an approved rules change in the oracle, never a migration exception. |
-| EVO-20 | Compile the same core and a Rust display-projection module to WebAssembly; provide a browser adapter that uses the player display projection contract. | EVO-19, EVO-04 | Native and WASM runs produce identical ordered decisions and panel projections for the frozen corpus. | Stop if the browser adapter adds scoring behavior outside the core or diverges from replay semantics. |
-| EVO-21 | Compile the same core for STM32 and attach only the minimal acquisition/output adapters needed for target timing, memory, watchdog, and fault tests. | EVO-19 | Target build, map/stack, cycle/timing, and fault tests meet the agreed budgets and oracle parity. | Stop if an adapter needs heap allocation, non-deterministic timing, an unreviewed unsafe boundary, or misses the current C17 budget. |
-| EVO-22 | Run a three-target equivalence gate across native, WASM, STM32 host/target, and the retained C17 reference. | EVO-20, EVO-21 | All targets match the oracle and one another for rules, faults, reset/unavailable behavior, and declared display projection. | Preserve C17 in production and close the experiment if any unexplained mismatch or maintenance cost outweighs the stated benefit. |
-| EVO-23 | Make a separate migration decision from measured evidence: retain C17, migrate the core incrementally, or reject Rust for this product generation. | EVO-22 | The decision records toolchain provenance, security review, debugging workflow, build reproducibility, size, timing, staffing, and rollback plan. | No production cutover occurs without an explicit approved decision and a normal product release plan with a validated fallback. |
+The authoritative granular task DAG is `CW-00` through `CW-20` in the
+[C17 WebAssembly simulator migration plan](c17-wasm-simulator-migration.md). It covers semantic inventory, portable
+ABI, timing-profile generation, complete three-weapon C behavior, independent corpus expansion, sanitizer and fuzz
+gates, STM32 linking and measurement, pinned WebAssembly builds, browser integration, shadow comparison, simulator
+cutover, observation, deletion, and oracle rebuilding.
 
-Rust portability applies to the scoring core and web simulation only. The ESP32 may remain ESP-IDF C because it is not a scoring target; a Rust ESP32 port requires a separate non-authoritative service decision and does not block this phase.
+The ESP32 remains ESP-IDF C and never links or invokes the scoring core. WebAssembly is a simulator target, not a
+second physical scoring authority.
 
 ## Phase D: Open-source preparation with commercial hardware
 
@@ -113,8 +114,8 @@ product-security gates. It may precede hardware launch.
 | --- | --- | --- |
 | Player checkpoint after EVO-06 | Deterministic, accessible RGB array projection of authoritative records | Keep the previous player and correct the projection contract. |
 | OTA checkpoint after EVO-16 | Independent signed update and rollback for both processors under interruption | Do not launch OTA or ship a network-update promise. |
-| Current-code checkpoint after EVO-17 | C17/ESP-IDF implementation is fully validated against the oracle | Finish defects on the current path; do not start a Rust rewrite. |
-| Rust checkpoint after EVO-22 | Native, WASM, STM32, and C17 outputs are equivalent within declared resource budgets | Retain C17 and document the rejected or deferred migration. |
+| Current-code checkpoint after EVO-17 | C17/ESP-IDF implementation is fully validated against the oracle | Finish defects on the current path; do not delete the comparison oracle. |
+| C17 WebAssembly checkpoint after CW-18 | Native, WebAssembly, and STM32 outputs are equivalent within declared resource budgets and the observation period has no unresolved divergence | Keep the TypeScript shadow comparison, block CW-19A/CW-19B deletion and factory evidence, resolve the mismatch or changed input, and restart CW-18. If the WebAssembly cutover itself is defective, roll the simulator back to its last verified artifact without treating TypeScript as an automatic scoring fallback. |
 | Open-source checkpoint after EVO-28 | License and publication scope are reviewed and reproducible | Keep the project private until the specific blocker is resolved. |
 
 ## Non-goals

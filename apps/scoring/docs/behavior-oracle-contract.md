@@ -1,8 +1,11 @@
 # Behavior oracle contract
 
-The `rules-1` behavior oracle makes later native, WebAssembly, and target
-implementations compare against an explicit and reproducible host baseline. It
-does not grant hardware, timing, fabrication, or FIE approval.
+The current `rules-1` behavior oracle pins the TypeScript implementation and
+its existing corpus. The target state makes native C, WebAssembly, and STM32
+builds compare against explicit, independently reviewed expected artifacts. It
+does not grant hardware, timing, fabrication, or FIE approval. TypeScript is
+the active simulator backend until `CW-16`, then comparison-only until the
+atomic `CW-19B` deletion; it may not generate the independent final corpus.
 
 ## Pinned inputs
 
@@ -59,8 +62,15 @@ a primary lamp or request the buzzer. Expected decisions remain markers, input
 snapshots provide contact and fault context, unknown visuals fail closed, and a
 rejected report cannot synthesize an output.
 
-The observatory still contains its original inline projection. Integrating the
-module requires serving its compiled browser form and deleting the duplicate
-inline projection in one reviewed change. Until that wiring is complete, the
-new module is an executable contract and parity target, not a claim that the
-current HTML imports it.
+The React simulator imports the shared display-projection module. The display
+continues to project already-authoritative results and does not score. The
+scoring backend remains the TypeScript scenario runner until `CW-16` switches
+it to the reviewed C17 WebAssembly adapter; a module failure must render
+unavailable rather than selecting a TypeScript fallback.
+
+The oracle manifest must eventually bind the C core, ABI, generated timing profile,
+native/STM32/WebAssembly toolchains and tests, browser adapter, complete corpus,
+and simulator behavior. The currently stale manifest is repaired as an
+immediate baseline-maintenance task before migration evidence is credited;
+`CW-19A` prepares and reviews the final replacement, and `CW-19B` activates it
+atomically with TypeScript scorer deletion.

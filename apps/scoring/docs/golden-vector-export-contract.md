@@ -95,5 +95,20 @@ firmware sources. The scoring package's `verify` script runs this check.
 
 This contract does not define a target-language parser, MCU transport frame, or
 target timing claim. M3-03 and later firmware tasks may translate this artifact
-into C, C++, or Rust fixtures while retaining its units, order, rule-set/timing
-identities, and digest.
+into C fixtures while retaining its units, order, rule-set/timing identities,
+and digest.
+
+## Replacement gate for the shared C17 core
+
+The 54-vector artifact remains valid bounded regression evidence, but it is not
+sufficient to remove the TypeScript scoring engines. `CW-08` replaces it as the
+deletion-grade oracle with independent expected artifacts covering every active
+scenario, complete normalized inputs, uncertainty, unavailable and fault states,
+yellow and white diagnostics, reset and lifecycle behavior, decision records,
+malformed ABI inputs, long sequences, simultaneous events, and overflow.
+
+The replacement fixture compiler may read reviewed scenario inputs and expected
+results, but it must not execute either the TypeScript or C scorer to manufacture
+expectations. Native C, STM32, and WebAssembly consume the same immutable bytes.
+The current exporter and generated C header are removed or narrowed only after
+the atomic `CW-19B` deletion-and-oracle gate closes.

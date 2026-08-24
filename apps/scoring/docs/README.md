@@ -4,11 +4,12 @@ The cross-software-and-hardware execution plan is in [device-delivery-plan.md](d
 milestones, dependencies, granular agent-sized tasks, acceptance evidence, and the boundary between emulation,
 fabrication readiness, EVT, DVT, and production validation.
 
-The approved sequencing for the immediate RGB LED web player, two-chip OTA launch gate, Rust proof after the current
-code-complete baseline, and open-source preparation is in
-[software-product-evolution-roadmap.md](software-product-evolution-roadmap.md). It keeps the current
-TypeScript/C17/ESP-IDF implementation and its test corpus as the oracle until equivalence evidence supports a separate
-migration decision; neither that proof nor public source publication requires commercial hardware launch first.
+The approved sequencing for the immediate RGB LED web player, two-chip OTA launch gate, shared C17 WebAssembly core,
+and open-source preparation is in [software-product-evolution-roadmap.md](software-product-evolution-roadmap.md).
+The granular native/STM32/WebAssembly parity, simulator cutover, and TypeScript scorer deletion gates are in
+[c17-wasm-simulator-migration.md](c17-wasm-simulator-migration.md). The TypeScript scorer remains the live simulator
+backend until cutover, then comparison-only until atomic deletion; neither the migration nor public source publication
+requires commercial hardware launch first.
 
 The production UX brief for the Shadcn-based test selector, 64 × 32 scoring display, bout state, and synchronized event
 timeline is in [simulator-product-design-spec.md](simulator-product-design-spec.md).
