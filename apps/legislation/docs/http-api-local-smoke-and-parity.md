@@ -1,0 +1,153 @@
+# HTTP API local smoke and MCP parity checklist
+
+## Purpose and evidence rule
+
+Use this checklist after an API product has passed code review and before any endpoint moves from **In progress** to
+**Done**. It is an execution plan, not evidence that a smoke or parity run has occurred. Record the date, commit,
+database snapshot, model routing configuration, commands, sanitized results, and reviewer in the run record.
+
+An endpoint passes only when the live handler projects the documented contract. A `200` response from an existing
+application-service method is insufficient when canonical fields, provenance, filters, pagination, or search metadata
+do not match the contract.
+
+## Test fixture and prerequisites
+
+- Use a disposable local PostgreSQL database migrated from an empty schema with the current migration set.
+- Seed canonical fixtures covering at least two jurisdictions, two sessions, related bills, a structured amendment, a
+  document-backed amendment, a recorded vote with named positions, a processed document with multiple sections, a
+  supporting material, two people, two organizations, and a meeting with related records.
+- Include one missing ID, one inaccessible tenant-owned ID, one image-only document completed through OCR, and enough
+  records to produce a second page.
+- Start the same composed handler used by the service. Do not mount a slice-only test server for acceptance evidence.
+- Run authenticated requests with a valid user token and, separately, an organization token. Retain correlation IDs but
+  redact tokens, addresses, webhook secrets, and provider credentials.
+- Pin the expected embedding and reranking routes from the contract. If model credentials are intentionally absent,
+  semantic and hybrid checks are blocked rather than silently treated as lexical checks.
+
+## Shared protocol smoke
+
+Complete these assertions once per composed server build and repeat mutation assertions for every mutable product.
+
+- [ ] `GET /health` returns `200`; `GET /ready` returns `200` only when PostgreSQL is ready.
+- [ ] An API request without a required bearer token returns `401` with `WWW-Authenticate` and the protected-resource
+      metadata link; an invalid token does not reach a handler.
+- [ ] A valid request echoes or generates one correlation ID in both the header and response envelope.
+- [ ] Unknown paths and lookalike prefixes return `404`; unsupported methods do not get claimed by another slice.
+- [ ] Unknown query and body fields return `400 invalid_request` instead of being ignored.
+- [ ] A body over the configured ceiling returns `413 payload_too_large` without invoking the service.
+- [ ] Every page honors `limit`, binds its cursor to filters and ordering, emits a stable `next` link, and returns no
+      duplicate or missing records across two consecutive pages.
+- [ ] A malformed, expired, filter-mismatched, or cross-principal cursor returns `400` without leaking cursor contents.
+- [ ] Canonical reads include `id`, `canonicalUrl`, non-empty `sources`, `updatedAt`, stable ordering, and the documented
+      `ResourceResponse` or `Page` envelope.
+- [ ] Missing and invisible resources both return the same safe `404 not_found` shape.
+- [ ] Batch reads reject more than 25 unique IDs, preserve request order, isolate item errors, and do not fail a valid
+      outer request because one item is missing.
+- [ ] Cacheable reads return the documented validators; `If-None-Match` returns an empty `304` only when unchanged.
+- [ ] Logs and errors contain no SQL, stack, raw provider payload, token, address, or cross-tenant identifier.
+
+## Canonical legislative-read product
+
+- [ ] Browse and retrieve jurisdictions and sessions; verify jurisdiction/session links and active/date filters.
+- [ ] Browse bills, retrieve a bill, and compare the response field-for-field with `BillSummary` and `BillDetail`.
+- [ ] Exercise bill, amendment, and vote batches at 1, 25, duplicate, missing, and 26-ID boundaries.
+- [ ] Traverse a bill timeline and verify each item is the documented discriminated action, vote, or meeting-outcome
+      union with canonical source references.
+- [ ] Retrieve related bills in explicit and semantic modes; verify a `Page<RelatedBillHit>`, relationship evidence,
+      model metadata when used, and stable score/order behavior.
+- [ ] Retrieve bill sections, a document, and document sections; verify OCR/extraction fields, offsets, ordinals, hosted
+      and official URLs, provenance, and cursor continuation.
+- [ ] Browse and retrieve structured and document-backed amendments; verify their canonical discriminator and bill link.
+- [ ] Browse and retrieve votes; verify result/count vocabulary and named position identity mapping.
+- [ ] Browse and retrieve supporting materials and change events; verify canonical parent links and provenance.
+- [ ] Confirm every contract route still marked **Blocked** returns `404`, not a placeholder or empty success.
+
+## Civic graph and meeting product
+
+- [ ] Browse and retrieve people with jurisdiction, organization, active-status, query, and cursor filters.
+- [ ] Browse and retrieve organizations with classification, parent, jurisdiction, active-status, query, and cursor
+      filters; confirm committee and commission classifications remain canonical organizations.
+- [ ] Browse and retrieve meetings with jurisdiction, organization, date-window, and cursor filters; verify timezone,
+      status, organization, session, and provenance projection.
+- [ ] Verify person, organization, and meeting detail child collections expose truthful truncation/cursor metadata.
+- [ ] Confirm relationship, calendar, agenda, participant, outcome, document, and representative-lookup routes remain
+      absent until their named queries/providers exist.
+
+## Search and document-diff product
+
+- [ ] Run the same representative query through lexical, semantic, and hybrid bill search; verify the requested mode,
+      actual embedding/reranking models, rerank flag, canonical bill hits, sources, scores, and cursor behavior.
+- [ ] Repeat mode and metadata checks for amendment, passage, and supporting-material search using fixtures that exercise
+      each product-specific embedding route.
+- [ ] Exercise every documented filter. A filter not supported by the application service must return a precise `400`;
+      it must never be silently discarded.
+- [ ] Verify passage hits map section to document and bill, supporting-material hits map to their canonical material,
+      and amendment hits preserve structured/document-backed identity.
+- [ ] Request a document diff for two versions of one bill; verify bounds, counts, ordered operations, canonical source
+      mapping, and rejection of cross-bill or nonexistent document pairs.
+- [ ] Confirm universal search and research answers remain absent while their fusion, generation, citation, and budget
+      controls are blocked.
+
+## Subscription and webhook product gate
+
+Do not execute this section or compose the handler until the backlog's repository, encryption, idempotency, matching,
+and delivery adapters are implemented and reviewed.
+
+- [ ] Prove organization and personal ownership isolation for list, read, patch, cancel, events, and deliveries.
+- [ ] Prove exact normalized subscription duplicates conflict for both null-organization and organization owners while
+      distinct event/delivery/frequency/timezone combinations remain valid.
+- [ ] Replay every mutation with the same idempotency key and body; verify identical status, headers, and encrypted
+      secret response for 24 hours. Reuse the key with another body and verify `409`.
+- [ ] Verify current and stale `If-Match` behavior, exact DELETE replay, cancellation audit retention, and disabled linked
+      delivery preferences.
+- [ ] Attempt webhook creation and verification with loopback, private, link-local, mixed public/private DNS,
+      credential-bearing, redirecting, and DNS-rebinding destinations. No request may connect unless it pins a currently
+      revalidated approved public address while preserving the hostname for TLS and Host.
+- [ ] Verify challenge body/signature/timeout behavior, signature constant-time validation, five-minute receiver window,
+      one-time secret disclosure, dual-key overlap, zero-overlap rotation, and old-key expiry.
+- [ ] Exercise webhook retry categories, bounded jitter/backoff, five-attempt terminal behavior, dead-letter/audit state,
+      and delivery-ID deduplication. Email and in-application delivery require their own reviewed executors.
+
+## MCP-to-HTTP parity
+
+For each row marked migrated in the MCP parity map, call the MCP tool and its HTTP operation against the same database
+snapshot and normalized input.
+
+| Product | MCP operations | HTTP assertions |
+| --- | --- | --- |
+| Bills | search, get one/many, timeline, text, related, version comparison | Same canonical bill/document IDs, child completeness, ordering, warnings, and diff operations. |
+| Amendments | search, get one/many, search for bills | Same structured/document-backed identities, bill links, item errors, pagination, and ranking. |
+| Votes | search, get bill votes, get one/many | Same vote IDs, result/count vocabulary, named positions, ordering, and pagination. |
+| People and organizations | search and get | Same canonical IDs, memberships exposed by the approved detail contract, filters, and warnings. |
+| Meetings and calendars | search/get event and calendar | Same canonical meeting IDs, time/status fields, child records, and explicit absence where calendar resources are blocked. |
+| Supporting materials | search and get | Same material/section IDs, parent mapping, provenance, ranking, and pagination. |
+| Changes | search changes | Same event IDs, filters, observed ordering, before/after policy, and cursors. |
+
+Apply these parity rules:
+
+- [ ] Compare canonical records after removing transport-only envelope fields; do not compare raw provider objects.
+- [ ] Require exact ID, discriminator, date/time, relationship, source URL, warning, and pagination equality.
+- [ ] For deterministic lexical retrieval, require identical ordered IDs through the compared depth.
+- [ ] For semantic or hybrid retrieval, pin models and index snapshot, then require identical ordered IDs and scores within
+      the documented numeric tolerance. A top-k overlap metric alone does not excuse transport divergence.
+- [ ] Compare error category, retryability, item isolation, and absent-versus-empty behavior for invalid and missing input.
+- [ ] Record latency separately; parity passes on behavior and quality, while latency is an independent release gate.
+
+## Run record
+
+Record one row per execution:
+
+| Field | Value |
+| --- | --- |
+| Date and reviewer | |
+| Commit/deployment | |
+| Database fixture/snapshot | |
+| Auth principal scopes | |
+| Embedding and reranking routes | |
+| Products and routes exercised | |
+| Smoke result and evidence path | |
+| MCP parity result and evidence path | |
+| Known deviations and owning backlog item | |
+
+Only after the run is reviewed, linked from the backlog, and the route is included in a reviewed commit may its state
+move to **Done**.
