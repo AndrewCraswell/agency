@@ -6,7 +6,6 @@ packages:
 # Keep the install model and locked versions identical to the repository while
 # excluding unrelated application-only package extensions and workspace roots.
 nodeLinker: isolated
-injectWorkspacePackages: true
 catalog:
   "@types/node": 24.13.2
   typescript: 7.0.1-rc
