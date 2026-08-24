@@ -89,9 +89,26 @@ const bufferOffsetMaximumUv = 120
 const bufferInputBiasMaximumNa = 1
 const fixtureTargetHalfWidthOhms = 5
 const calibrationTemperatureC = 25
+const minimumModeledResistanceOhms = 0
+const maximumModeledResistanceOhms = 500
+const minimumModeledTemperatureC = -40
+const maximumModeledTemperatureC = 125
 
 function finiteNonNegative(value: number, label: string): void {
   if (!Number.isFinite(value) || value < 0) throw new RangeError(`${label} must be finite and non-negative`)
+}
+
+function modeledCornerInput(input: { readonly resistanceOhms: number; readonly temperatureC: number }): void {
+  finiteNonNegative(input.resistanceOhms, "resistanceOhms")
+  if (input.resistanceOhms > maximumModeledResistanceOhms) {
+    throw new RangeError(`resistanceOhms must be at most ${maximumModeledResistanceOhms}`)
+  }
+  if (!Number.isFinite(input.temperatureC)) throw new RangeError("temperatureC must be finite")
+  if (input.temperatureC < minimumModeledTemperatureC || input.temperatureC > maximumModeledTemperatureC) {
+    throw new RangeError(
+      `temperatureC must be between ${minimumModeledTemperatureC} and ${maximumModeledTemperatureC} degrees C`
+    )
+  }
 }
 
 function sensitivityVoltsPerOhm(resistanceOhms: number): number {
@@ -116,8 +133,7 @@ export function calculateM403ThresholdError(input: {
   readonly sensitivityVoltsPerOhm: number
   readonly totalSourceBoundOhms: number
 } {
-  finiteNonNegative(input.resistanceOhms, "resistanceOhms")
-  if (!Number.isFinite(input.temperatureC)) throw new RangeError("temperatureC must be finite")
+  modeledCornerInput(input)
   const temperatureDeltaC = Math.abs(input.temperatureC - calibrationTemperatureC)
   const sourceTheveninOhms =
     (sourceResistanceOhms * input.resistanceOhms) / (sourceResistanceOhms + input.resistanceOhms)
@@ -430,6 +446,15 @@ const definition = {
     switch: "TMUX1112PWR maximum on resistance is 9.8 ohm in the committed bounded screen"
   },
   calibration: {
+    invalidationTriggers: [
+      "source or sink control, path, or channel assignment change",
+      "reference or ADC conversion timing change",
+      "power, rail, or supply-selection change",
+      "temperature boundary or declared humidity range change",
+      "wiring, probe, fixture, or channel replication provenance change",
+      "calibration algorithm, standard, firmware, or fit-limit change",
+      "integrity/configuration identity mismatch, failed drift/reference self-test, or explicit recalibration"
+    ],
     requiredProcedure: [
       "At each channel, source-selected and sink-selected direction, and -40, 25, 85, and 125 C corner, acquire traceable 0 and 500 ohm standards with the same conversion timing used for the threshold measurement.",
       "Fit one gain and one intercept from the two standards; invalidate calibration after source/sink control, reference, ADC timing, power, temperature, or wiring provenance changes.",
@@ -463,18 +488,43 @@ export function validateM403SensingErrorBudget(value: unknown): true {
     budget.thresholdScreens.some((screen) => !screen.withinFixtureTarget) ||
     budget.thresholdScreens.some(
       (screen) =>
+        !Number.isFinite(screen.totalWorstCaseOhms) ||
+        screen.totalWorstCaseOhms < minimumModeledResistanceOhms ||
         screen.terms.length !== M403_REQUIRED_TERM_IDS.length ||
         screen.terms.some(
           (term) =>
             !Number.isFinite(term.allocationOhms) ||
             term.allocationOhms < 0 ||
+            !term.source.trim() ||
             !term.evidenceRequired.length ||
-            !term.invalidatedBy.length
+            term.evidenceRequired.some((evidence) => !evidence.trim()) ||
+            !term.invalidatedBy.length ||
+            term.invalidatedBy.some((invalidation) => !invalidation.trim())
         ) ||
         screen.terms.map((term) => term.id).join("|") !== M403_REQUIRED_TERM_IDS.join("|") ||
-        Math.abs(screen.terms.reduce((total, term) => total + term.allocationOhms, 0) - screen.totalWorstCaseOhms) >
-          Number.EPSILON
+        !Object.is(
+          screen.terms.reduce((total, term) => total + term.allocationOhms, 0),
+          screen.totalWorstCaseOhms
+        )
     ) ||
+    budget.thresholdScreens.some(
+      (screen) =>
+        screen.resistanceOhms < minimumModeledResistanceOhms ||
+        screen.resistanceOhms > maximumModeledResistanceOhms ||
+        screen.temperatureC < minimumModeledTemperatureC ||
+        screen.temperatureC > maximumModeledTemperatureC
+    ) ||
+    budget.sourceContracts.length !== 4 ||
+    new Set(budget.sourceContracts.map((contract) => contract.id)).size !== budget.sourceContracts.length ||
+    budget.sourceContracts.some(
+      (contract) =>
+        !/^[0-9a-f]{40}$/u.test(contract.commit) ||
+        !/^[0-9a-f]{64}$/u.test(contract.sha256) ||
+        (!contract.sourcePath.startsWith("apps/scoring/src/") &&
+          !contract.sourcePath.startsWith("packages/scoring-circuit/src/"))
+    ) ||
+    budget.calibration.invalidationTriggers.length < 5 ||
+    budget.calibration.invalidationTriggers.some((trigger) => !trigger.trim()) ||
     !budget.calibration.residualsAreUnmeasuredAcceptanceGates ||
     budget.authority.energizedTestAuthorization ||
     budget.authority.fabricationAuthorized ||
