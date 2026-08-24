@@ -22,6 +22,9 @@ COPY apps/legislation ./apps/legislation
 # Use an app-local workspace view so unrelated private packages and package
 # extensions cannot make this filtered, frozen install unreproducible.
 COPY apps/legislation/pnpm-workspace.railway.yaml ./pnpm-workspace.yaml
+# Modern `pnpm deploy` requires injected workspace packages. Keep that setting
+# local to this image instead of changing install semantics for the monorepo.
+RUN node -e "const fs=require('node:fs');const p='pnpm-lock.yaml';const s=fs.readFileSync(p,'utf8');const a='settings:\\n';if(!s.startsWith('lockfileVersion:')||!s.includes(a)||s.includes('injectWorkspacePackages:'))throw new Error('unexpected lockfile settings');fs.writeFileSync(p,s.replace(a,a+'  injectWorkspacePackages: true\\n'))"
 
 # The reviewed, frozen lockfile was produced through a registry proxy. Keep its
 # exact versions while refreshing proxy-specific tarball checksums against the
