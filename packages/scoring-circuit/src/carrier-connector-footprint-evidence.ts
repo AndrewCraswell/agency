@@ -21,8 +21,16 @@ export type CarrierEvidenceStatus =
   | "not-imported"
   | "not-independently-tested"
 
+export type CarrierAcquiredSourceArtifact = {
+  readonly acquiredDate: "2026-08-24"
+  readonly evidenceFile: `apps/scoring/docs/evidence/m4-11/${string}`
+  readonly sha256: string
+}
+
 export type CarrierPrimarySource = {
-  readonly access: "manufacturer-listed" | "manufacturer-acquired-temporary"
+  readonly access: "manufacturer-acquired-hash-bound" | "manufacturer-listed"
+  /** Present only when the manufacturer download is vendored and SHA-256 bound. */
+  readonly acquiredArtifact?: CarrierAcquiredSourceArtifact
   readonly kind:
     | "product-page"
     | "product-drawing"
@@ -119,7 +127,7 @@ const molexHeaderHoles: readonly CarrierHole[] = [
 
 const molexDrawingSources: readonly CarrierPrimarySource[] = [
   {
-    access: "manufacturer-acquired-temporary",
+    access: "manufacturer-listed",
     kind: "product-drawing",
     revision: "Molex SD-43045-001 H1, released 2024-09-27",
     url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43045/430451400_sd.pdf"
@@ -153,13 +161,23 @@ const samtecHsec8Sources: readonly CarrierPrimarySource[] = [
     url: "https://www.samtec.com/products/hsec8-113-01-l-dv-a-l2"
   },
   {
-    access: "manufacturer-acquired-temporary",
+    access: "manufacturer-acquired-hash-bound",
+    acquiredArtifact: {
+      acquiredDate: "2026-08-24",
+      evidenceFile: "apps/scoring/docs/evidence/m4-11/samtec-hsec8-mkt-rev-bz.pdf",
+      sha256: "7C94D52B1F5F1687411125862913A902620A3FF5D12B0992F1C657C664E08896"
+    },
     kind: "mechanical-series-print",
     revision: "HSEC8-1XXX-XX-XX-DV-X-XX-X-XX MKT revision BZ",
     url: "https://suddendocs.samtec.com/prints/hsec8-1xxx-xx-xx-dv-x-xx-x-xx-mkt.pdf"
   },
   {
-    access: "manufacturer-acquired-temporary",
+    access: "manufacturer-acquired-hash-bound",
+    acquiredArtifact: {
+      acquiredDate: "2026-08-24",
+      evidenceFile: "apps/scoring/docs/evidence/m4-11/samtec-hsec8-footprint-rev-ah.pdf",
+      sha256: "444530543B34CF92F87AE037FB52C55F0583EB257ACB0BC0B7558853190DB383"
+    },
     kind: "footprint-series-print",
     revision: "HSEC8-1XXX-XX-XX-DV-X-XX-FOOTPRINT revision AH",
     url: "https://suddendocs.samtec.com/prints/hsec8-1xxx-xx-xx-dv-x-xx-footprint.pdf"
@@ -180,7 +198,12 @@ const ecdpSources: readonly CarrierPrimarySource[] = [
     url: "https://www.samtec.com/products/ecdp"
   },
   {
-    access: "manufacturer-acquired-temporary",
+    access: "manufacturer-acquired-hash-bound",
+    acquiredArtifact: {
+      acquiredDate: "2026-08-24",
+      evidenceFile: "apps/scoring/docs/evidence/m4-11/samtec-ecdp-mkt-rev-x.pdf",
+      sha256: "7808FF959CF6C2AE84B252620FE8D1B69808FE8766A232B4AFA78EE7B361B1C4"
+    },
     kind: "mechanical-series-print",
     revision: "ECDP-XX-XX.XX-XX-XX-X-X MKT revision X",
     url: "https://suddendocs.samtec.com/prints/ecdp-xx-xx.xx-xx-xx-x-x-mkt.pdf"
@@ -260,7 +283,7 @@ export const carrierConnectorFootprintEvidence: readonly CarrierConnectorEvidenc
     package: "Micro-Fit 3.0 dual-row, four-circuit receptacle housing for 43030 female terminals",
     primarySources: [
       {
-        access: "manufacturer-acquired-temporary",
+        access: "manufacturer-listed",
         kind: "product-drawing",
         revision: "Molex 430250000-SD, revision D, released 2018-06-01; 43025-0400 table row",
         url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43025/430250400_sd.pdf"
@@ -282,7 +305,7 @@ export const carrierConnectorFootprintEvidence: readonly CarrierConnectorEvidenc
     package: "Micro-Fit 3.0 female crimp terminal, loose form A, 20-24 AWG",
     primarySources: [
       {
-        access: "manufacturer-acquired-temporary",
+        access: "manufacturer-listed",
         kind: "product-drawing",
         revision: "Molex SD-43030-XXXX, revision N10, released 2026-04-24; 43030-0007 table row",
         url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43030/430300003_sd.pdf"
@@ -386,6 +409,19 @@ function sourceErrors(record: CarrierConnectorEvidence): string[] {
     sourceKinds.add(source.kind)
     if (!source.url.startsWith("https://")) errors.push(`${record.mpn}: source URL must use HTTPS`)
     if (source.revision.trim().length === 0) errors.push(`${record.mpn}: source revision is required`)
+    if (source.access === "manufacturer-acquired-hash-bound") {
+      const artifact = source.acquiredArtifact
+      if (
+        artifact === undefined ||
+        artifact.acquiredDate !== "2026-08-24" ||
+        !artifact.evidenceFile.startsWith("apps/scoring/docs/evidence/m4-11/") ||
+        !/^[0-9A-F]{64}$/u.test(artifact.sha256)
+      ) {
+        errors.push(`${record.mpn}: hash-bound manufacturer source requires the M4-11 artifact path and SHA-256`)
+      }
+    } else if (source.acquiredArtifact !== undefined) {
+      errors.push(`${record.mpn}: manufacturer-listed source must not claim an acquired artifact`)
+    }
   }
   return errors
 }

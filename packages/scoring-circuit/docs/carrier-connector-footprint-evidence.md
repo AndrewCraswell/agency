@@ -81,6 +81,31 @@ mask/courtyard and stackup, tested the cable’s physical retention, or verified
 the configured contact map in a production-representative USB channel. Those
 are release gates, not assumptions.
 
+## Hash-bound acquired artifacts
+
+On 2026-08-24, the three public Samtec Series Prints below were downloaded
+from the manufacturer URLs above and their PDF title blocks and configuration
+fields were reviewed. Their exact bytes are retained under the M4-11 evidence
+directory and the immutable source references in
+`src/carrier-connector-footprint-evidence.ts` bind each file path to its
+SHA-256. A checksum demonstrates that a later review uses these same source
+bytes. It does not count as importing CAD, approving a footprint, or proving
+an enclosure or strain-relief design.
+
+| Manufacturer document | Bound artifact | SHA-256 |
+| --- | --- | --- |
+| HSEC8 mechanical Series Print, revision BZ | `apps/scoring/docs/evidence/m4-11/samtec-hsec8-mkt-rev-bz.pdf` | `7C94D52B1F5F1687411125862913A902620A3FF5D12B0992F1C657C664E08896` |
+| HSEC8 recommended PCB layout, revision AH | `apps/scoring/docs/evidence/m4-11/samtec-hsec8-footprint-rev-ah.pdf` | `444530543B34CF92F87AE037FB52C55F0583EB257ACB0BC0B7558853190DB383` |
+| ECDP cable assembly Series Print, revision X | `apps/scoring/docs/evidence/m4-11/samtec-ecdp-mkt-rev-x.pdf` | `7808FF959CF6C2AE84B252620FE8D1B69808FE8766A232B4AFA78EE7B361B1C4` |
+
+The acquisition environment could not retrieve the three cited Molex drawing
+URLs within its connection timeout, so those remain manufacturer-listed only.
+Their previously transcribed facts are retained as `DENY` evidence, not as
+hash-bound drawings. The Amphenol USB-C drawing and 3D ZIP still return HTTP
+403 from the manufacturer CDN. USB-C PD remains the normal input, but its
+exact receptacle drawing, STP, shell stakes, panel support, and cable strain
+relief remain open release gates.
+
 ## Release gates and handoff
 
 Do not replace the DNP models or emit fabrication artwork until the following

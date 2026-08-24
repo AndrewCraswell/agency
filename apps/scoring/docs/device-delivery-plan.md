@@ -213,7 +213,7 @@ frozen enough to complete the EVT schematic and layout.
 | M4-08 | backlog | Next after M4-07: Analog threshold, timing, and calibration report. | Analog threshold, timing, and calibration report | M4-07 | Required resistance and pulse boundaries pass across input tolerance and planned temperature range |
 | M4-09 | backlog | Next after M4-07, M4-08: Sacrificial ESD/EFT/surge and cable-fault report. | Sacrificial ESD/EFT/surge and cable-fault report | M4-07, M4-08 | Failures are contained; protection changes are fed back into the model and retested |
 | M4-10 | blocked | Exact red `23.3070-22` and blue `23.3070-23` Stäubli SLB4-F/A component selections, manufacturer geometry, color identities, and current orderability are root-reviewed; release remains blocked on received samples, Favero/Allstar plug compatibility, panel-stack fit, contact resistance, 30 N pull, 5,000 cycles, and salt-screen evidence. | Exact reel-socket selection and physical plug-fit study | None | Color suffixes, retention, contact resistance, sweat/salt exposure plan, harness termination, and cycle target are recorded |
-| M4-11 | blocked | Würth `7499011121A` drawing and STEP evidence are acquired and hash-bound; exact Amphenol/Molex files, released land-pattern and enclosure overlays, chassis fasteners, service access, and strain-relief evidence remain open. | Communications and power connector CAD/footprint verification | None | RJ45, USB-C, locking power, shield tabs, fasteners, service access, and strain relief match manufacturer drawings |
+| M4-11 | blocked | Würth drawing/STEP plus three Samtec HSEC8/ECDP manufacturer PDFs are byte-retained and SHA-256 bound with executable hash checks; exact Amphenol/Molex files, released land-pattern/enclosure overlays, fasteners, service access, and strain relief remain open. | Communications and power connector CAD/footprint verification | None | RJ45, USB-C, locking power, shield tabs, fasteners, service access, and strain relief match manufacturer drawings |
 | M4-12 | backlog | Next after M4-10, M4-11: Enclosure architecture, board outlines, keepouts, and thermal assumptions. | Enclosure architecture, board outlines, keepouts, and thermal assumptions | M4-10, M4-11 | VESA mounting, antenna clearance, encrypted IR optical window/field of view, airflow, display, speaker, connector modules, harness bend radii, and service sequence fit |
 | M4-13 | backlog | Next after M0-03, M0-10, M4-10 through M4-12: Harness pinout, keying, bonding, and current-rating release. | Harness pinout, keying, bonding, and current-rating release | M0-03, M0-10, M4-10 through M4-12 | No reversible connector can apply destructive power or swap left/right scoring lines; chassis/ESD paths are explicit |
 | M4-14 | backlog | Next after M4-08 through M4-13: Critical-parts readiness manifest update. | Critical-parts readiness manifest update | M4-08 through M4-13 | Selected parts, verified footprints, manufacturer CAD, mechanical review, and blockers are accurately machine-checked |
@@ -358,6 +358,7 @@ A milestone closes only when:
 4. documents and machine-readable manifests agree with the implementation;
 5. an independent reviewer has resolved every release-blocking comment; and
 6. remaining risks, assumptions, and deferred work are named in the next milestone entry criteria.
+
 
 
 
