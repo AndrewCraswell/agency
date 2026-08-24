@@ -148,37 +148,34 @@ monitor and buck-boost controller have unconnected `SDA`/`SCL` pins, so this
 table adds them as intended bus members but does not claim that their voltage,
 address, pull-up, or wake behavior has been approved.
 
-No raw expansion GPIO remains after the present display, audio, Ethernet,
-storage, and service requirements. Any additional buttons, LEDs, panel
+No raw expansion GPIO remains after the present display, Ethernet, storage,
+service, and IR receiver requirements. Any additional buttons, LEDs, panel
 controls, low-rate sensors, or identification lines must use a reset-safe I2C
-expander on the existing bus, or a reviewed change to the display/audio
+expander on the existing bus, or a reviewed change to the display/application
 architecture. A future expander must default its external loads inactive and
 must not be allowed to pull a strapping pin.
 
-The encrypted IR referee remote is now an in-scope pre-prototype requirement, not an optional low-rate control. IR pulse
-capture, authenticated-frame intake, and fault behavior must be reconciled under `BP-126` before fabrication. This
-allocation does not assume that a generic I2C GPIO expander preserves the selected carrier/pulse timing. The reviewed
-design must either free a suitable reset-safe ESP32 peripheral input or select a bounded receiver/decoder peripheral and
-update this complete pad/interface allocation, its tests, the schematic, and the board-support configuration together.
+The encrypted IR referee remote is now an in-scope pre-prototype requirement, not an optional low-rate control. BP-126
+now selects GPIO35 (module pad 28) as the application-only `IR_RX` input using the ESP32-S3 `RMT_RX` peripheral. The
+receiver hardware itself remains unselected and denied to BP-146. GPIO36 and GPIO37 (module pads 29 and 30) are
+reserved `NC_AUDIO_DNP` pads because the optional TAS2505TRGERQ1 audio path is DNP; they are not host-routed audio
+signals. GPIO3 remains electrically quiet at reset. USB, Ethernet, F-RAM, HUB75, UART recovery, watchdog, heartbeat,
+and isolation signals may not be borrowed. A generic I2C GPIO expander receives no timing credit.
 
-### Audio I2S
-
-`TAS2505TRGERQ1` requires a digital audio stream. The existing one-net `AUDIO`
-mapping is insufficient because the amplifier model also exposes `DIN` and
-`SCLK`, and I2S additionally requires a word-select signal.
+### IR receiver and deferred audio
 
 | Module pad | GPIO | Function | Direction | Reset-safe requirement |
 | --- | ---: | --- | --- | --- |
-| 28 | 35 | `I2S_BCLK` to TAS2505-Q1 `BCLK` | output | Hold low until audio is configured; series footprint near source. |
-| 29 | 36 | `I2S_WS` to TAS2505-Q1 `WCLK` | output | Hold low until audio is configured; series footprint near source. |
-| 30 | 37 | `I2S_DOUT` to TAS2505-Q1 `DIN` | output | Hold low until audio is configured; amplifier must remain held reset while clocks are absent. |
+| 28 | 35 | `IR_RX` to the BP-146 receiver interface | input | Route to one ESP32-S3 `RMT_RX` channel. The receiver front end must be electrically inactive through reset and boot; hardware selection and pulse/fault evidence remain BP-146 gates. |
+| 29 | 36 | `NC_AUDIO_DNP_WS` | reserved NC | No host routing, footprint, or pull that can affect boot. Reserved for the DNP audio option only. |
+| 30 | 37 | `NC_AUDIO_DNP_DOUT` | reserved NC | No host routing, footprint, or pull that can affect boot. Reserved for the DNP audio option only. |
 
-The same I2C bus configures the amplifier through its `SCL/SSZ` and `SDA/MOSI`
-pins with `SPI_SEL` strapped for I2C. The application supervisor holds the
-amplifier reset pin low during brownout/reset. These pads are permitted on the
-N16R2 module. They would not be available on an R8 or R16 variant that uses
-Octal PSRAM. The selected module part number must therefore remain locked to
-an R2 configuration unless this allocation is reworked.
+`TAS2505TRGERQ1` remains a retained BP-145 candidate but is not host-routed in
+this prototype. Re-enabling audio requires a new BP-121 allocation review and
+must not borrow `IR_RX` or any protected bus. GPIO35 through GPIO37 are
+available on N16R2 but unavailable on Octal-PSRAM R8/R16 modules; GPIO35 is
+`IR_RX` and GPIO36/GPIO37 are reserved NC. The exact N16R2 module identity
+remains locked.
 
 ### HUB75 display
 
@@ -228,7 +225,9 @@ change the now-complete GPIO allocation.
 | GPIO46 | Default weak pull-down participates in boot mode and ROM-message controls. | Drives HUB75 `CLK` only after reset. The pull-down and a high-impedance AHCT input preserve the required strap. |
 | GPIO19/GPIO20 | Dedicated to USB D-/D+ and USB Serial/JTAG. | The bench board routes these pads to the required USB-C power/service receptacle and uses separate GPIOs for Ethernet. |
 | GPIO26 to GPIO32 | Not exposed and occupied by flash/PSRAM. | Never allocate. |
-| GPIO35 to GPIO37 | Available on N16R2 but unavailable on Octal-PSRAM R8/R16 modules. | BP-121 uses them for audio; module substitutions require a pin-map review. |
+| GPIO35 | Available on N16R2 but unavailable on Octal-PSRAM R8/R16 modules. | BP-121 uses it for `IR_RX`/`RMT_RX`; module substitutions require a pin-map review. |
+| GPIO36/GPIO37 | Available on N16R2 but unavailable on Octal-PSRAM R8/R16 modules. | Reserved `NC_AUDIO_DNP` pads; no host routing is permitted. |
+| GPIO33/GPIO34 | Not exposed by the N16R2 module. | Never allocate. |
 | `EN` | Hardware reset only, held high only after 3.3 V is stable. | `EN_RESET` is pulled up with 10 kOhm and delayed with 1 uF; TPS389033 (3.170 V falling / 3.189 V rising, 100 nF CT about 107 ms) and TPS3431 open-drain outputs, a BSS138 service sink, and the isolated active-high STM32 request sink it independently. No GPIO16 reset request exists. |
 
 The external watchdog and supervisor both assert the same active-low
@@ -277,12 +276,12 @@ with these constraints.
 | ESP-02 | W5500 `INTn` is locally pulled inactive and polled; GPIO3 is reserved for its strap. | Verify W5500 polling latency/load and `INTn` bias against the selected W5500 revision. |
 | ESP-03 | The complete 13-signal HUB75 bus is routed through two AHCT245 buffers with 10 kOhm input pulldowns, a 10 kOhm `OE_N_IN` pull-up to `V3_3`, reset-gated buffer enables, and a 10 kOhm panel `OE_N_OUT` pull-up to `V5`. | Verify the exact panel power return, scan/DMA choice, current, buffer drive, ghosting, cable behavior, and SI on EVT. |
 | ESP-04 | GPIO45 is `D` and GPIO46 is `CLK`; both have 10 kOhm pulldowns and high-impedance AHCT loading at reset. | Verify resistor leakage, flash-voltage/eFuse policy, strap levels, and boot measurements on the exact N16R2 module. |
-| ESP-05 | GPIO35/GPIO36/GPIO37 provide BCLK/WCLK/DIN; the audio codec control bus and reset are now named. | Verify audio clock plan, reset/mute, power rails, speaker load, and fault reporting. |
+| ESP-05 | GPIO35 is `IR_RX`/`RMT_RX`; GPIO36/GPIO37 are reserved `NC_AUDIO_DNP` pads while `TAS2505TRGERQ1` remains DNP. | BP-146 must verify receiver reset/idle behavior, pulse timing, queue bounds, noise/flood handling, and fault isolation before hardware selection; any future audio population requires a new BP-121 allocation. |
 | ESP-06 | The STM32 reset assertion exits isolation at active-high `RESET_REQUEST`, not GPIO16 or `EN`, and drives a BSS138 low-side sink into `EN_RESET`. | Prove ISO output-side rise, injected current, reset release, and no unpowered-domain back-powering in the power-off test before schematic acceptance. |
 | ESP-07 | Both heartbeat directions are allocated. STM32-to-ESP32 reset is one-way; no ESP32 automatic `NRST` path exists. | Freeze failure polarity, timeout, bias, and isolator power-loss behavior in the reset schematic and bench plan. |
-| ESP-08 | Shared SPI now reaches F-RAM and W5500; I2C reaches RTC, secure element, monitor, converter, and audio codec; W5500 reset follows the application supervisor. | Check bus voltage, addresses, capacitance, pull-ups, W5500 reset timing, and application brownout ordering. |
+| ESP-08 | Shared SPI reaches F-RAM and W5500; I2C reaches RTC, secure element, monitor, and converter; audio remains DNP with no I2C stub; W5500 reset follows the application supervisor. | Check bus voltage, addresses, capacitance, pull-ups, W5500 reset timing, and application brownout ordering. |
 | ESP-09 | USB Serial/JTAG and UART0/`EN`/`BOOT_N` are independent bench recovery paths; GPIO39-GPIO42 stay assigned to HUB75. | Complete both service-path reviews and do not burn JTAG-selection eFuses. |
-| ESP-10 | Audio allocation locks the ESP32-S3-WROOM-1U-N16R2 module configuration. | Any module substitution requires pin, temperature, and RF review. |
+| ESP-10 | The `IR_RX`/`RMT_RX` and reserved-NC allocation locks the ESP32-S3-WROOM-1U-N16R2 module configuration. | Any module substitution requires pin, temperature, and RF review. |
 | ESP-11 | None. | The module, W5500, connectors, land patterns, RF route, Ethernet physical layer, and mechanical interfaces still need their M4/M5 evidence. |
 
 ## Required verification before detailed schematic capture
@@ -297,7 +296,7 @@ with these constraints.
    watchdog reset, supervisor brownout, STM32-requested reset, USB insertion,
    USB service use, UART service-header use,
    and application firmware absence. Check that every output is inactive,
-   especially W5500 CS/reset, F-RAM CS, display enables, I2S, and the isolated
+   especially W5500 CS/reset, F-RAM CS, display enables, IR_RX, reserved NC pads, and the isolated
    link MISO output.
 4. Verify the selected display architecture against the fixed allocation. A
    16-pin HUB75 connector uses all 13 timing/data signals listed above; any
@@ -306,23 +305,24 @@ with these constraints.
    RTC backup domain, secure-element provisioning, and whether rail telemetry
    must remain reachable during watchdog handling.
 6. Verify ESP-IDF peripheral routing and simultaneous DMA load for the two SPI
-   buses, USB Serial/JTAG, UART recovery, I2C, I2S, radio, W5500 traffic, display refresh,
+   buses, USB Serial/JTAG, UART recovery, I2C, RMT_RX/IR_RX, radio, W5500 traffic, display refresh,
    and PSRAM. Software scheduling must not be used as evidence of scoring
    timing because scoring remains isolated on the STM32.
-7. Execute RF, USB, Ethernet, display-emissions, audio, thermal, ESD/EFT,
+7. Execute RF, USB, Ethernet, display-emissions, IR/RMT timing, thermal, ESD/EFT,
    brownout, and recovery measurements on EVT hardware. These are later
    evidence gates, not assumptions discharged by this document.
 
 ## BP-121 acceptance record
 
 BP-121 fixes a unique physical pad for the isolated link, W5500 and journal
-SPI, USB service, I2C, watchdog, UART recovery, I2S, and every HUB75 signal.
+SPI, USB service, I2C, watchdog, UART recovery, RMT_RX/IR_RX, reserved NC
+pads, and every HUB75 signal.
 It also fixes GPIO3 as `NC_STRAP_QUIET`, records GPIO26 through GPIO32 as
 internal flash/PSRAM resources that are not module allocations, and leaves no
 raw expansion GPIO. Strapping, flash/PSRAM, `EN`, and RF constraints retain
 their required verification actions.
 
-The allocation resolves USB, Ethernet, straps, HUB75, audio, reset, and
+The allocation resolves USB, Ethernet, straps, HUB75, IR receiver input, reset, and
 heartbeat collisions at the architectural-net level. It remains a
 schematic-capture input until the listed electrical, firmware-routing, RF,
 mechanical, and bench gates pass. Nothing in this document establishes layout

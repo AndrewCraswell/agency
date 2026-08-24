@@ -21,7 +21,9 @@ ESP32 pin. Its footprint, support-part identities, bus behavior, reset default,
 and recovery-with-device-absent behavior remain evidence gates.
 
 `RV-3028-C7` and `TAS2505TRGERQ1` remain retained, source-backed candidates but
-are DNP. `STSAFE-A110` is only a family-level DNP candidate; its exact
+are DNP. The audio host routing is not populated: GPIO35 is allocated to
+BP-126 `IR_RX`/`RMT_RX`, while GPIO36 and GPIO37 are reserved `NC_AUDIO_DNP`.
+Re-enabling audio requires a new BP-121 allocation review. `STSAFE-A110` is only a family-level DNP candidate; its exact
 orderable personalization and package variant remains TBD. Network/test-host time is sufficient for
 the first test; secure-element personalization belongs to a controlled factory
 flow; and audio cannot close without a speaker, load, thermal, SPL, and factory

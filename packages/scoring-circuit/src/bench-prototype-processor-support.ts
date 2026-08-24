@@ -93,7 +93,8 @@ const upstreamProvenance = deepFreeze({
     pads: structuredClone(benchPrototypeEsp32Allocation.pads),
     recovery: structuredClone(benchPrototypeEsp32Allocation.recovery),
     resetSafety: structuredClone(benchPrototypeEsp32Allocation.resetSafety),
-    unavailableResources: structuredClone(benchPrototypeEsp32Allocation.unavailableResources)
+    unavailableResources: structuredClone(benchPrototypeEsp32Allocation.unavailableResources),
+    irReceiver: structuredClone(benchPrototypeEsp32Allocation.irReceiver)
   }
 })
 
@@ -112,7 +113,8 @@ function currentUpstreamProvenance() {
       pads: structuredClone(benchPrototypeEsp32Allocation.pads),
       recovery: structuredClone(benchPrototypeEsp32Allocation.recovery),
       resetSafety: structuredClone(benchPrototypeEsp32Allocation.resetSafety),
-      unavailableResources: structuredClone(benchPrototypeEsp32Allocation.unavailableResources)
+      unavailableResources: structuredClone(benchPrototypeEsp32Allocation.unavailableResources),
+      irReceiver: structuredClone(benchPrototypeEsp32Allocation.irReceiver)
     }
   }
 }
@@ -272,9 +274,24 @@ const processorSupportDefinition = {
         { gpio: 45, disposition: "weak external pulldown and high-impedance AHCT input during reset" },
         { gpio: 46, disposition: "weak external pulldown and high-impedance AHCT input during reset" }
       ],
-      unusedPads: ["GPIO3", "GPIO26 through GPIO32 internal flash/PSRAM and not exposed"],
+      unusedPads: [
+        "GPIO3",
+        "GPIO26 through GPIO32 internal flash/PSRAM and not exposed",
+        "GPIO33 and GPIO34 not exposed by N16R2",
+        "GPIO36 and GPIO37 reserved NC for DNP audio"
+      ],
+      irReceiver: {
+        modulePad: 28,
+        gpio: 35,
+        signal: "IR_RX",
+        peripheral: "RMT_RX",
+        direction: "input",
+        receiverHardware: "BP-146 not selected",
+        resetRule:
+          "Receiver front end must be electrically inactive through ESP32 reset and boot; GPIO35 remains an input until the application enables RMT_RX."
+      },
       firmwareRule:
-        "Do not reconfigure USB GPIO19/GPIO20, boot straps, or flash/PSRAM resources as generic GPIO. GPIO3 remains unconnected; any future unused exposed GPIO must default high impedance or analog with no external functional load."
+        "Do not reconfigure USB GPIO19/GPIO20, boot straps, IR_RX GPIO35, reserved NC GPIO36/GPIO37, or flash/PSRAM resources as generic GPIO. GPIO3 remains unconnected; GPIO33/GPIO34 are not exposed."
     }
   },
   layoutAndSequencing: {
@@ -327,6 +344,13 @@ export function validateBenchPrototypeProcessorSupport(value: unknown): true {
     contract.bypassAndBulk.stm32Analog.vref.values[0] !== "100 nF X7R" ||
     contract.bypassAndBulk.stm32Analog.vref.values[1] !== "1 uF X7R" ||
     contract.bypassAndBulk.esp32.values[1] !== "22 uF minimum ceramic" ||
+    contract.bootAndReset.esp32.irReceiver.modulePad !== 28 ||
+    contract.bootAndReset.esp32.irReceiver.gpio !== 35 ||
+    contract.bootAndReset.esp32.irReceiver.signal !== "IR_RX" ||
+    contract.bootAndReset.esp32.irReceiver.peripheral !== "RMT_RX" ||
+    contract.bootAndReset.esp32.irReceiver.receiverHardware !== "BP-146 not selected" ||
+    !contract.bootAndReset.esp32.unusedPads.includes("GPIO33 and GPIO34 not exposed by N16R2") ||
+    !contract.bootAndReset.esp32.unusedPads.includes("GPIO36 and GPIO37 reserved NC for DNP audio") ||
     contract.authority.schematicSignoff !== "deny" ||
     contract.layoutAndSequencing.evidence.fabricationAuthorized
   ) {

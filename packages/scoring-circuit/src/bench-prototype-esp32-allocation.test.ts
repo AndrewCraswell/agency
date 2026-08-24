@@ -62,15 +62,15 @@ describe("BP-121 ESP32-S3 module-pad allocation", () => {
     expect(benchPrototypeEsp32Allocation.resetSafety.inactivePullUpSignals).toContain("HUB75_OE_N")
   })
 
-  it("retains I2C, I2S, watchdog, heartbeat, NC, and unavailable-pad dispositions", () => {
+  it("retains I2C, IR RMT input, watchdog, heartbeat, NC, and unavailable-pad dispositions", () => {
     expect(benchPrototypeEsp32Allocation.pads).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ gpio: 10, signal: "I2C_SDA" }),
         expect.objectContaining({ gpio: 11, signal: "I2C_SCL" }),
         expect.objectContaining({ gpio: 12, signal: "APP_WD_KICK" }),
-        expect.objectContaining({ gpio: 35, signal: "I2S_BCLK" }),
-        expect.objectContaining({ gpio: 36, signal: "I2S_WS" }),
-        expect.objectContaining({ gpio: 37, signal: "I2S_DOUT" }),
+        expect.objectContaining({ gpio: 35, signal: "IR_RX", group: "ir-receiver" }),
+        expect.objectContaining({ gpio: 36, disposition: "reserved-nc", signal: "NC_AUDIO_DNP_WS" }),
+        expect.objectContaining({ gpio: 37, disposition: "reserved-nc", signal: "NC_AUDIO_DNP_DOUT" }),
         expect.objectContaining({ gpio: 3, disposition: "reserved-nc", signal: "NC_STRAP_QUIET" })
       ])
     )
@@ -78,6 +78,13 @@ describe("BP-121 ESP32-S3 module-pad allocation", () => {
       26, 27, 28, 29, 30, 31, 32
     ])
     expect(benchPrototypeEsp32Allocation.unavailableResources.rawExpansionGpios).toEqual([])
+    expect(benchPrototypeEsp32Allocation.unavailableResources.moduleUnexposedGpios).toEqual([33, 34])
+    expect(benchPrototypeEsp32Allocation.irReceiver).toMatchObject({
+      modulePad: 28,
+      gpio: 35,
+      peripheral: "RMT_RX",
+      receiverHardware: "BP-146 not selected"
+    })
   })
 
   it("fails closed on substitutions, omissions, extras, aliases, accessors, and reused GPIOs", () => {

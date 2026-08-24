@@ -37,9 +37,14 @@ STM32 BOOT0 has a required 10 kOhm pulldown. ESP32 EN has a 10 kOhm pullup and
 1 uF delay capacitor; GPIO0/`BOOT_N` has a 10 kOhm pullup. BP-123 remains the
 only owner of supervisor/watchdog reset sources, which must be open-drain.
 GPIO3 stays electrically quiet; GPIO45/GPIO46 retain weak pulldowns and have
-only high-impedance AHCT loads during reset. STM32 unused pads have no external
-functional net and firmware puts them into the low-leakage state without
-defeating hardware safety pulls.
+only high-impedance AHCT loads during reset. BP-121 assigns GPIO35/module pad
+28 to application-only `IR_RX` on ESP32-S3 `RMT_RX`; the BP-146 receiver
+front-end hardware remains unselected and must be electrically inactive through
+reset and boot. GPIO36/GPIO37 are reserved `NC_AUDIO_DNP` pads with no host
+routing, and GPIO33/GPIO34 are not exposed by N16R2. The BP-145
+`TAS2505TRGERQ1` audio row is DNP and has no host or I2C stub. STM32 unused pads
+have no external functional net and firmware puts them into the low-leakage
+state without defeating hardware safety pulls.
 
 Place each bypass at its named supply pin with its direct local return. Keep
 the STM32 analog/reference loops local to the analog domain. Follow Espressif's

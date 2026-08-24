@@ -44,6 +44,16 @@ describe("BP-125 processor support", () => {
         { gpio: 45, disposition: "weak external pulldown and high-impedance AHCT input during reset" }
       ])
     )
+    expect(benchPrototypeProcessorSupport.bootAndReset.esp32.irReceiver).toMatchObject({
+      modulePad: 28,
+      gpio: 35,
+      signal: "IR_RX",
+      peripheral: "RMT_RX",
+      receiverHardware: "BP-146 not selected"
+    })
+    expect(benchPrototypeProcessorSupport.bootAndReset.esp32.unusedPads).toEqual(
+      expect.arrayContaining(["GPIO33 and GPIO34 not exposed by N16R2", "GPIO36 and GPIO37 reserved NC for DNP audio"])
+    )
   })
 
   it("fails closed for substitutions, omissions, and release escalation", () => {

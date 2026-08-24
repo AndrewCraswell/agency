@@ -68,9 +68,23 @@ const allocationDefinition = {
     { pad: 25, gpio: 48, pin: "GPIO48", signal: "HUB75_LAT", group: "hub75", disposition: "assigned" },
     { pad: 26, gpio: 45, pin: "GPIO45", signal: "HUB75_D", group: "hub75", disposition: "assigned" },
     { pad: 27, gpio: 0, pin: "GPIO0", signal: "BOOT_N", group: "recovery", disposition: "assigned" },
-    { pad: 28, gpio: 35, pin: "GPIO35", signal: "I2S_BCLK", group: "i2s", disposition: "assigned" },
-    { pad: 29, gpio: 36, pin: "GPIO36", signal: "I2S_WS", group: "i2s", disposition: "assigned" },
-    { pad: 30, gpio: 37, pin: "GPIO37", signal: "I2S_DOUT", group: "i2s", disposition: "assigned" },
+    {
+      pad: 28,
+      gpio: 35,
+      pin: "GPIO35",
+      signal: "IR_RX",
+      group: "ir-receiver",
+      disposition: "assigned"
+    },
+    { pad: 29, gpio: 36, pin: "GPIO36", signal: "NC_AUDIO_DNP_WS", group: "reserved", disposition: "reserved-nc" },
+    {
+      pad: 30,
+      gpio: 37,
+      pin: "GPIO37",
+      signal: "NC_AUDIO_DNP_DOUT",
+      group: "reserved",
+      disposition: "reserved-nc"
+    },
     { pad: 31, gpio: 38, pin: "GPIO38", signal: "HUB75_G2", group: "hub75", disposition: "assigned" },
     { pad: 32, gpio: 39, pin: "GPIO39", signal: "HUB75_B2", group: "hub75", disposition: "assigned" },
     { pad: 33, gpio: 40, pin: "GPIO40", signal: "HUB75_A", group: "hub75", disposition: "assigned" },
@@ -129,7 +143,20 @@ const allocationDefinition = {
     rawExpansionGpios: [],
     w5500Interrupt: "not connected; pulled inactive locally, exposed at a test point, and polled",
     isolatedResetRequest: "not a GPIO; RESET_REQUEST crosses ISO7762FDWR and drives a BSS138 sink on EN_RESET",
-    iso7721ReverseChannel: "service-only NC; never connected to STM32 NRST"
+    iso7721ReverseChannel: "service-only NC; never connected to STM32 NRST",
+    moduleUnexposedGpios: [33, 34]
+  },
+  irReceiver: {
+    signal: "IR_RX",
+    modulePad: 28,
+    gpio: 35,
+    peripheral: "RMT_RX",
+    direction: "input",
+    receiverHardware: "BP-146 not selected",
+    resetRule:
+      "The BP-146 receiver front end must be electrically inactive through ESP32 reset and boot; GPIO35 remains an input until the application enables RMT_RX.",
+    authorityRule:
+      "IR_RX is application-domain input only; authenticated application dispatch never directly reaches STM32 scoring, qualification, lamps, buzzer, or reset."
   }
 } as const
 
@@ -207,7 +234,7 @@ export function validateBenchPrototypeEsp32Allocation(input: unknown): true {
     "app-spi": ["APP_SPI_SCK", "APP_SPI_MOSI", "APP_SPI_MISO", "ETH_CS_N", "FRAM_CS_N"],
     "usb-service": ["USB_DN", "USB_DP"],
     i2c: ["I2C_SDA", "I2C_SCL"],
-    i2s: ["I2S_BCLK", "I2S_WS", "I2S_DOUT"],
+    "ir-receiver": ["IR_RX"],
     recovery: ["BOOT_N", "UART0_RX", "UART0_TX"],
     "watchdog-heartbeat": ["ESP32_HEARTBEAT", "STM32_HEARTBEAT", "APP_WD_KICK"],
     hub75: [
@@ -272,10 +299,25 @@ export function validateBenchPrototypeEsp32Allocation(input: unknown): true {
     gpioPads.find((pad) => pad.gpio === 3)?.disposition !== "reserved-nc" ||
     gpioPads.some((pad) => internalFlashPsramGpios.includes(pad.gpio)) ||
     contract.unavailableResources.rawExpansionGpios.length !== 0 ||
+    contract.unavailableResources.moduleUnexposedGpios.join(",") !== "33,34" ||
     !contract.recovery.externalJtag.includes("not allocated") ||
     !contract.unavailableResources.isolatedResetRequest.includes("not a GPIO")
   ) {
     throw new RangeError("Reserved, internal, reset-request, and unallocated resources changed")
+  }
+
+  if (
+    contract.irReceiver.signal !== "IR_RX" ||
+    contract.irReceiver.modulePad !== 28 ||
+    contract.irReceiver.gpio !== 35 ||
+    contract.irReceiver.peripheral !== "RMT_RX" ||
+    contract.irReceiver.direction !== "input" ||
+    contract.irReceiver.receiverHardware !== "BP-146 not selected" ||
+    gpioPads.find((pad) => pad.gpio === 35)?.signal !== "IR_RX" ||
+    gpioPads.find((pad) => pad.gpio === 36)?.disposition !== "reserved-nc" ||
+    gpioPads.find((pad) => pad.gpio === 37)?.disposition !== "reserved-nc"
+  ) {
+    throw new RangeError("BP-121 must reserve GPIO35 for the selected IR RMT_RX interface and keep GPIO36/GPIO37 NC")
   }
 
   return true

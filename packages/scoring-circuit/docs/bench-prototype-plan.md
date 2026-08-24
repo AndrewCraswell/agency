@@ -89,7 +89,7 @@ Organize the board from left to right:
 3. STM32, scoring watchdog/supervisor, SWD, and primary lamp/buzzer outputs;
 4. a clearly marked isolation corridor containing only the exact isolators and
    isolated-power crossing;
-5. ESP32, application watchdog/supervisor, service header, storage, and audio;
+5. ESP32, application watchdog/supervisor, service header, storage, and controls;
 6. USB-C receptacle, PD sink/protection/eFuse, W5500, crystal/support network,
    and the board-edge MagJack;
 7. HUB75 logic buffers, display signal header, and separately protected display
@@ -204,7 +204,7 @@ their paper designs and test assets. No lane may waive another lane's evidence.
 | `BP-030` | Freeze the footprint-evidence method and review template. | `BP-020` | Per-reference template binds exact MPN/package, manufacturer drawing/CAD, artwork digest, orientation, reviewer, and disposition. It does not claim closure before selections exist. |
 | `BP-031` | Close analog, protection, reference, and weapon-fixture footprints. | `BP-030`, `BP-103`, `BP-104` | Independent evidence record for every populated lane-B reference; unresolved options remain explicit DNP. |
 | `BP-032` | Close processor, isolation, reset, clock, and debug footprints. | `BP-030`, `BP-122`, `BP-123`, `BP-124`, `BP-125` | Independent evidence record for every populated lane-C reference. |
-| `BP-033` | Close power, Ethernet, application, HUB75, and display footprints. | `BP-030`, `BP-050`, `BP-141`, `BP-142`, `BP-143`, `BP-144`, `BP-145` | Independent evidence record for every populated lane-D reference. |
+| `BP-033` | Close power, Ethernet, application, HUB75, display, and encrypted-IR receiver footprints. | `BP-030`, `BP-050`, `BP-141`, `BP-142`, `BP-143`, `BP-144`, `BP-145`, `BP-146` | Independent evidence record for every populated lane-D reference, including the BP-146 receiver path; audio remains explicit DNP with no host or I2C stub. |
 | `BP-034` | Complete pre-order connector sample, mate, fit, pinout, and continuity review. | `BP-050`, `BP-104`, `BP-124`, `BP-141`, `BP-143` | Received sample identities, mating-part checks, orientation/photos, mechanical fit, harness pinout, strain relief, and continuity archive. No automated scoring fixture is required yet. |
 | `BP-035` | Converge the lane BOMs into an order-candidate BOM. | `BP-031`, `BP-032`, `BP-033`, `BP-034` | Every proposed populated row is exact and footprint-approved; no proposed populated `TBD` remains; every omitted option is explicit DNP; lane netlists and reference sets are ready for schematic integration. |
 | `BP-040` | Freeze net classes and ground/shield names. | `BP-010` | Reviewed `APP_GND`, `SCORING_SGND`, ESD-return, chassis, analog, high-current, and differential-pair rules. |
@@ -227,12 +227,12 @@ their paper designs and test assets. No lane may waive another lane's evidence.
 | ID | Work unit | Dependencies | Acceptance evidence |
 | --- | --- | --- | --- |
 | `BP-120` | Reconcile the STM32 pin allocation with the selected seven-channel topology. | `BP-100` | Exact LQFP64 pad/net table with ADC, comparator, timer, SPI, lamp, buzzer, SWD, and strap checks. |
-| `BP-121` | Reconcile the ESP32 N16R2 allocation. | `BP-000` | Exact module-pad table covering isolated SPI, Ethernet SPI, HUB75, native USB2 service, UART recovery, I2C, I2S, watchdog, straps, and NC pads. |
+| `BP-121` | Reconcile the ESP32 N16R2 allocation. | `BP-000` | Exact module-pad table covering isolated SPI, Ethernet SPI, HUB75, native USB2 service, UART recovery, I2C, application-only `IR_RX`/`RMT_RX`, watchdog, straps, reserved NC pads, and module-unexposed GPIO33/GPIO34. |
 | `BP-122` | Freeze isolation channel directions and default levels. | `BP-120`, `BP-121` | Pin-level ISO7762/ISO7721 map and powered/unpowered truth table. |
 | `BP-123` | Close both supervisor/watchdog/reset networks. | `BP-120`, `BP-121` | Exact MPN/value schematic and cold-start, brownout, watchdog, manual-reset, cross-domain, and power-off tests. |
 | `BP-124` | Freeze STM32 SWD and ESP32 UART/boot service headers. | `BP-120`, `BP-121` | Header pinouts, mating cable IDs, voltage constraints, reset procedure, and recovery demonstration plan. |
-| `BP-125` | Define oscillator, decoupling, boot straps, and unused-pin policy. | `BP-120`, `BP-121` | Data-sheet checklist and schematic sign-off for both processors. |
-| `BP-126` | Reconcile the encrypted IR receiver/decoder interface with the ESP32 allocation and authority boundary. | `BP-121` | Reviewed choice between reset-safe pin reallocation and a bounded decoder peripheral; pulse timing, reset behavior, queue bounds, fault isolation, and no direct STM32 scoring path are explicit. A generic GPIO expander receives no timing credit without measurement. |
+| `BP-125` | Define oscillator, decoupling, boot straps, and unused-pin policy. | `BP-120`, `BP-121` | Data-sheet checklist and schematic sign-off for both processors, including GPIO35 `IR_RX`/`RMT_RX`, GPIO36/37 reserved NC, GPIO33/34 module-unexposed, and BP-121 `irReceiver` provenance. |
+| `BP-126` | Reconcile the encrypted IR receiver/decoder interface with the ESP32 allocation and authority boundary. | `BP-121`, `BP-145` | `GPIO35`/module pad 28 is selected as application-only `IR_RX` on ESP32-S3 `RMT_RX`; receiver hardware remains **DENY** pending BP-146 cumulative exact-MPN, reset, timing, queue, fault, and power-off evidence. GPIO36/37 are reserved NC for DNP audio, GPIO33/34 are unexposed, and protected USB/Ethernet/F-RAM/HUB75/UART/watchdog/isolation signals remain unchanged. A generic GPIO expander receives no timing credit. |
 
 ### Ethernet, display, and application lane
 
@@ -287,7 +287,7 @@ BP-000 -> BP-020 -> BP-030
 analog:     BP-100 -> BP-101/BP-102 -> BP-103 -> BP-104/BP-106 -> BP-031
 processors: BP-120/BP-121 -> BP-122/BP-123/BP-124/BP-125       -> BP-032
 peripheral: BP-050 + BP-140 -> BP-141/BP-142/BP-143
-                                      -> BP-144/BP-145          -> BP-033
+                                      -> BP-144/BP-145 -> BP-126 -> BP-146 -> BP-033
 connectors: BP-050/BP-104/BP-124/BP-141/BP-143                 -> BP-034
 
 BP-031/BP-032/BP-033/BP-034 -> BP-035 lane-BOM convergence
@@ -318,7 +318,7 @@ true:
 
 1. Planning and electrical tasks `BP-000` through `BP-106` are accepted except
    post-order fixture-build task `BP-105`; processor tasks `BP-120` through
-   `BP-125`, peripheral tasks `BP-140` through `BP-145`, and implementation
+   `BP-126`, peripheral tasks `BP-140` through `BP-146`, and implementation
    tasks `BP-300` through `BP-403` are accepted with no open
    fabrication-critical finding.
 2. `BP-303` proves every populated reference has an exact orderable MPN, approved footprint,
@@ -332,9 +332,10 @@ true:
    DRC/unrouted errors, and stack-up, impedance, isolation, return paths,
    high-current copper, thermals, and probe access are reviewed.
 5. Exact fixture, USB-C power/service, diagnostic-injection, SWD, ESP32 UART,
-   Ethernet, HUB75, and panel
-   harness drawings are frozen, and normal versus guarded/fault connections are
-   physically incompatible where required.
+   Ethernet, HUB75, panel, and BP-146 encrypted-IR receiver drawings are
+   frozen, and normal versus guarded/fault connections are physically
+   incompatible where required. Audio remains explicit DNP with no host or I2C
+   stub.
 6. The test matrix, fixture behavior, evidence schemas, current-limit procedure,
    and stop conditions are frozen. Automated fixture construction and executable
    bring-up firmware may continue after order release.

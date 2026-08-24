@@ -147,9 +147,7 @@ const relevantSignals = [
   "FRAM_CS_N",
   "I2C_SDA",
   "I2C_SCL",
-  "I2S_BCLK",
-  "I2S_WS",
-  "I2S_DOUT"
+  "IR_RX"
 ] as const
 const relevantSignalSet = new Set<string>(relevantSignals)
 
@@ -249,7 +247,7 @@ const definition = {
       reference: "U_AUDIO",
       disposition: "DNP",
       retainedCandidateMpn: "TAS2505TRGERQ1",
-      interface: "I2S_BCLK/I2S_WS/I2S_DOUT plus shared control bus",
+      interface: "DNP; no audio host routing; GPIO35 is reserved for BP-126 IR_RX/RMT_RX",
       reason:
         "Weapon sensing, Ethernet, and display validation do not require audio; speaker load and thermal evidence are absent."
     },
@@ -274,7 +272,7 @@ const definition = {
     "U_FRAM is the only populated BP-145 APP SPI peripheral; W5500 retains ETH_CS_N and U_FRAM retains FRAM_CS_N.",
     "FRAM_CS_N has its BP-121 inactive pull-up and must remain high through reset, bootloader entry, and ESP32 absence.",
     "RTC and secure-element pads create no I2C stubs or pull-ups while DNP; BP-300 must not infer populated bus capacitance.",
-    "Audio DNP leaves I2S pins allocated but unloaded; they may not be repurposed without revising BP-121."
+    "Audio DNP leaves GPIO36/GPIO37 reserved NC and GPIO35 allocated to BP-126 IR_RX/RMT_RX; audio may not be repopulated without revising BP-121."
   ],
   antennaPolicy: {
     module: "ESP32-S3-WROOM-1U-N16R2",

@@ -117,7 +117,17 @@ or approved-level external adapter; 5 V TTL is prohibited.
 
 The encrypted IR referee remote is not deferred. Its receiver/decoder path, ESP32 interface, optical test access, and
 numeric range/angle/light/latency requirements must converge through `BP-126` and `BP-146` before the canonical bench
-schematic or PCB can be released.
+schematic or PCB can be released. BP-126 selects GPIO35/module pad 28 as the
+application-only `IR_RX` input using ESP32-S3 `RMT_RX`; the receiver hardware
+itself remains denied pending BP-146's exact-MPN and electrical/timing evidence.
+GPIO3 is reset/strap-quiet, GPIO36 and GPIO37 are reserved NC for DNP audio,
+GPIO33/GPIO34 are not exposed, and all other candidates are consumed by USB,
+Ethernet, F-RAM, HUB75, UART recovery, watchdog/heartbeat, isolation, or other
+frozen interfaces. See
+[the executable BP-126 interface decision](../src/bench-prototype-ir-receiver-interface.ts)
+and [its decision record](bench-prototype-ir-receiver-interface.md). No raw
+receiver, generic I2C expander, or direct STM32 path may be added as a
+workaround.
 
 This board does not decide enclosure mechanics, miniaturization, final
 three-board production partitioning, a production battery/UPS or charging

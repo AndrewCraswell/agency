@@ -64,6 +64,10 @@ describe("BP-145 optional application peripherals", () => {
       retainedCandidateMpn: "STSAFE-A110",
       candidateLevel: "family-level only; exact orderable personalization and package variant TBD"
     })
+    expect(benchPrototypeOptionalPeripherals.population.find((item) => item.reference === "U_AUDIO")).toMatchObject({
+      disposition: "DNP",
+      interface: "DNP; no audio host routing; GPIO35 is reserved for BP-126 IR_RX/RMT_RX"
+    })
   })
 
   it("uses the WROOM-1U connector policy and disables radio without an antenna", () => {
