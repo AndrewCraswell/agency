@@ -44,6 +44,15 @@ report or diagnostics. Each route has a 30-second request deadline by default; s
 deadline is needed. The harness separately asserts unauthenticated `401` rejection, response envelopes, matching
 `x-correlation-id` values, unknown-route handling, and unsupported-method handling.
 
+For the implemented scoped bill pages, set `LEGISLATION_SMOKE_PROFILE=scoped-bills` with both
+`LEGISLATION_SMOKE_JURISDICTION_ID` and `LEGISLATION_SMOKE_SESSION_ID`. This profile runs health, readiness,
+unknown-route, unsupported-method, and enabled-auth rejection checks, then requires nonempty exact canonical
+`Page<BillSummary>` responses from both scoped bill routes. It intentionally skips the full profile's known
+In-progress and Blocked endpoint set. It also requires `LEGISLATION_SMOKE_CANONICAL_API_BASE_URL` or
+`LEGISLATION_PUBLIC_API_BASE_URL`: the value must be a credential-free HTTP(S) origin at its root, without a query or
+fragment. Set the smoke-specific value when the expected configured public base URL differs from
+`LEGISLATION_SMOKE_BASE_URL`; the profile verifies every bill canonical URL against it.
+
 ## Shared protocol smoke
 
 Complete these assertions once per composed server build and repeat mutation assertions for every mutable product.

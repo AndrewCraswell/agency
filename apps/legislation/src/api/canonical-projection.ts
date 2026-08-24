@@ -1456,9 +1456,19 @@ function requiredIsoDate(value: DateValue, label: string): string {
     assertValidDate(value, label)
     return value.toISOString().slice(0, 10)
   }
+  if (!isIsoDate(value)) {
+    throw new CanonicalProjectionError(`${label} must be an ISO date`)
+  }
+  return value
+}
+
+export function isIsoDate(value: unknown): value is string {
+  if (typeof value !== "string") {
+    return false
+  }
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
   if (match === null) {
-    throw new CanonicalProjectionError(`${label} must be an ISO date`)
+    return false
   }
   const year = Number(match[1])
   const month = Number(match[2])
@@ -1470,9 +1480,9 @@ function requiredIsoDate(value: DateValue, label: string): string {
     date.getUTCDate() !== day ||
     date.toISOString().slice(0, 10) !== value
   ) {
-    throw new CanonicalProjectionError(`${label} must be an ISO date`)
+    return false
   }
-  return value
+  return true
 }
 
 function isoTimestamp(value: DateValue | null, label: string): string | null {

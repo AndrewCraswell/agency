@@ -1,6 +1,7 @@
-import { isRfc3339Timestamp } from "./canonical-projection.js"
+import { isIsoDate, isRfc3339Timestamp } from "./canonical-projection.js"
 
 export type SmokeCheckStatus = "blocked" | "failed" | "passed" | "skipped"
+export type SmokeProfile = "full" | "scoped-bills"
 
 export type SmokeFixture = Readonly<{
   amendmentId?: string
@@ -43,7 +44,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 type CheckDefinition = Readonly<{
   body?: unknown
   errorCategory?: string
-  expected: "batch" | "calculation" | "error" | "health" | "page" | "resource" | "search"
+  expected: "batch" | "bill-page" | "calculation" | "error" | "health" | "page" | "resource" | "search"
   healthStatus?: "ok" | "ready"
   id: string
   method?: "GET" | "POST"
@@ -357,6 +358,24 @@ function fixtureChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
   return checks
 }
 
+function scopedBillChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
+  if (fixture.jurisdictionId === undefined || fixture.sessionId === undefined) {
+    return []
+  }
+  return [
+    {
+      expected: "bill-page",
+      id: "list-jurisdiction-bills",
+      path: `/api/jurisdictions/${encoded(fixture.jurisdictionId)}/bills?limit=1`
+    },
+    {
+      expected: "bill-page",
+      id: "list-session-bills",
+      path: `/api/sessions/${encoded(fixture.sessionId)}/bills?limit=1`
+    }
+  ]
+}
+
 function missingFixtureChecks(fixture: SmokeFixture, present: ReadonlySet<string>): readonly SmokeCheck[] {
   return OPTIONAL_CHECKS.flatMap(({ definition, fixtures }) => {
     if (present.has(definition.id) || fixtures.every((name) => fixture[name] !== undefined)) {
@@ -465,6 +484,59 @@ function hasPageEnvelope(body: Record<string, unknown>, itemsMustBeCanonical: bo
   return !itemsMustBeCanonical || body.data.every((item) => hasCanonicalRecord(item))
 }
 
+function hasBillSummary(value: unknown, canonicalApiBaseUrl: URL | undefined): boolean {
+  if (!hasCanonicalRecord(value) || !isRecord(value)) {
+    return false
+  }
+  if (
+    value.type !== "bill" ||
+    typeof value.jurisdictionId !== "string" ||
+    typeof value.sessionId !== "string" ||
+    typeof value.identifier !== "string" ||
+    typeof value.title !== "string" ||
+    !isStringArray(value.classification) ||
+    typeof value.status !== "string" ||
+    !isStringArray(value.subjects) ||
+    !(value.introducedDate === null || isIsoDate(value.introducedDate)) ||
+    !(value.latestActionAt === null || isRfc3339(value.latestActionAt))
+  ) {
+    return false
+  }
+  if (canonicalApiBaseUrl === undefined) {
+    return true
+  }
+  return (
+    typeof value.id === "string" &&
+    value.canonicalUrl === new URL(`/api/bills/${encoded(value.id)}`, canonicalApiBaseUrl).toString()
+  )
+}
+
+function hasBillPageEnvelope(body: Record<string, unknown>, canonicalApiBaseUrl: URL | undefined): boolean {
+  return (
+    hasPageEnvelope(body, true) &&
+    Array.isArray(body.data) &&
+    body.data.length > 0 &&
+    body.data.every((item) => hasBillSummary(item, canonicalApiBaseUrl))
+  )
+}
+
+export function canonicalSmokeApiBaseUrl(value: string | URL): URL {
+  const url = new URL(value)
+  if (
+    (url.protocol !== "http:" && url.protocol !== "https:") ||
+    url.username !== "" ||
+    url.password !== "" ||
+    url.pathname !== "/" ||
+    url.search !== "" ||
+    url.hash !== ""
+  ) {
+    throw new TypeError(
+      "canonicalApiBaseUrl must be a credential-free http or https origin with a root path and no query or hash"
+    )
+  }
+  return url
+}
+
 function hasSearchEnvelope(body: Record<string, unknown>): boolean {
   if (!hasPageEnvelope(body, true)) {
     return false
@@ -558,7 +630,8 @@ function hasErrorEnvelope(body: unknown, header: string | null, category: string
 function hasExpectedEnvelope(
   body: unknown,
   expected: CheckDefinition["expected"],
-  healthStatus: CheckDefinition["healthStatus"]
+  healthStatus: CheckDefinition["healthStatus"],
+  canonicalApiBaseUrl: URL | undefined
 ): boolean {
   if (expected === "health") {
     return isRecord(body) && body.status === healthStatus
@@ -568,6 +641,9 @@ function hasExpectedEnvelope(
   }
   if (expected === "resource") {
     return hasCanonicalRecord(body.data)
+  }
+  if (expected === "bill-page") {
+    return hasBillPageEnvelope(body, canonicalApiBaseUrl)
   }
   if (expected === "calculation") {
     return isRecord(body.data)
@@ -595,7 +671,8 @@ async function execute(
   definition: CheckDefinition,
   token: string | undefined,
   requestTimeoutMs: number,
-  callerSignal: AbortSignal | undefined
+  callerSignal: AbortSignal | undefined,
+  canonicalApiBaseUrl: URL | undefined
 ): Promise<SmokeCheck> {
   const headers: Record<string, string> = { accept: "application/json", "x-correlation-id": `smoke-${definition.id}` }
   if (definition.body !== undefined) {
@@ -679,7 +756,7 @@ async function execute(
       statusCode: response.status
     }
   } else if (
-    !hasExpectedEnvelope(body, definition.expected, definition.healthStatus) ||
+    !hasExpectedEnvelope(body, definition.expected, definition.healthStatus, canonicalApiBaseUrl) ||
     (definition.expected === "health"
       ? response.headers.get("x-correlation-id") !== `smoke-${definition.id}`
       : !hasApiCorrelation(body, response.headers.get("x-correlation-id")))
@@ -706,14 +783,22 @@ async function execute(
 
 export async function runApiSmoke(options: {
   baseUrl: string | URL
+  canonicalApiBaseUrl?: string | URL
   fetchImpl?: FetchLike
   fixtures?: SmokeFixture
+  profile?: SmokeProfile
   requireAuth?: boolean
   requestTimeoutMs?: number
   signal?: AbortSignal
   token?: string
 }): Promise<SmokeReport> {
   const baseUrl = new URL(options.baseUrl)
+  const profile = options.profile ?? "full"
+  if (profile === "scoped-bills" && options.canonicalApiBaseUrl === undefined) {
+    throw new TypeError("canonicalApiBaseUrl is required for the scoped-bills smoke profile")
+  }
+  const canonicalApiBaseUrl =
+    options.canonicalApiBaseUrl === undefined ? undefined : canonicalSmokeApiBaseUrl(options.canonicalApiBaseUrl)
   const fetchImpl = options.fetchImpl ?? fetch
   const requireAuth = options.requireAuth ?? false
   const requestTimeoutMs = options.requestTimeoutMs ?? 30_000
@@ -721,10 +806,21 @@ export async function runApiSmoke(options: {
     throw new RangeError("requestTimeoutMs must be an integer between 1 and 60000")
   }
   const fixtures = options.fixtures ?? {}
-  const fixtureDefinitions = fixtureChecks(fixtures)
-  const definitions = [...ALWAYS_CHECKS, ...LIST_CHECKS, ...fixtureDefinitions]
+  const fixtureDefinitions = profile === "full" ? fixtureChecks(fixtures) : scopedBillChecks(fixtures)
+  const definitions =
+    profile === "full"
+      ? [...ALWAYS_CHECKS, ...LIST_CHECKS, ...fixtureDefinitions]
+      : [...ALWAYS_CHECKS, ...fixtureDefinitions]
   const checks: SmokeCheck[] = []
-  checks.push(...missingFixtureChecks(fixtures, new Set(fixtureDefinitions.map((definition) => definition.id))))
+  if (profile === "full") {
+    checks.push(...missingFixtureChecks(fixtures, new Set(fixtureDefinitions.map((definition) => definition.id))))
+  } else if (fixtures.jurisdictionId === undefined || fixtures.sessionId === undefined) {
+    checks.push({
+      detail: "blocked: scoped-bills requires LEGISLATION_SMOKE_JURISDICTION_ID and LEGISLATION_SMOKE_SESSION_ID",
+      id: "scoped-bills-fixtures",
+      status: "blocked"
+    })
+  }
   for (const definition of definitions) {
     if (definition.protected !== false && requireAuth && options.token === undefined) {
       checks.push(
@@ -743,7 +839,8 @@ export async function runApiSmoke(options: {
         definition,
         definition.protected === false ? undefined : options.token,
         requestTimeoutMs,
-        options.signal
+        options.signal,
+        canonicalApiBaseUrl
       )
     )
   }
@@ -757,7 +854,17 @@ export async function runApiSmoke(options: {
     statusCode: 401
   }
   if (requireAuth) {
-    checks.push(await execute(baseUrl, fetchImpl, authDefinition, undefined, requestTimeoutMs, options.signal))
+    checks.push(
+      await execute(
+        baseUrl,
+        fetchImpl,
+        authDefinition,
+        undefined,
+        requestTimeoutMs,
+        options.signal,
+        canonicalApiBaseUrl
+      )
+    )
   } else {
     checks.push(skippedCheck(authDefinition, "skipped: authenticated mode is not enabled"))
   }

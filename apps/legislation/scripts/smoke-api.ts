@@ -1,6 +1,11 @@
 import { spawn, type ChildProcess } from "node:child_process"
 import { fileURLToPath } from "node:url"
-import { runApiSmoke, type SmokeFixture } from "../src/api/smoke-harness.js"
+import {
+  canonicalSmokeApiBaseUrl,
+  runApiSmoke,
+  type SmokeFixture,
+  type SmokeProfile
+} from "../src/api/smoke-harness.js"
 import { formatSmokeProcessOutput } from "../src/api/smoke-process-diagnostics.js"
 
 const appRoot = fileURLToPath(new URL("..", import.meta.url))
@@ -8,10 +13,36 @@ const port = Number(process.env.LEGISLATION_SMOKE_PORT ?? "3199")
 const configuredBaseUrl = process.env.LEGISLATION_SMOKE_BASE_URL?.trim()
 const token = process.env.LEGISLATION_SMOKE_TOKEN?.trim() || undefined
 const requestTimeoutMs = Number(process.env.LEGISLATION_SMOKE_REQUEST_TIMEOUT_MS ?? "30000")
+const profile = smokeProfile(process.env.LEGISLATION_SMOKE_PROFILE)
+const canonicalApiBaseUrl = smokeCanonicalApiBaseUrl(profile)
 const MAX_CAPTURED_OUTPUT = 8_000
 const requireAuth =
   process.env.LEGISLATION_SMOKE_REQUIRE_AUTH === "true" ||
   (process.env.LEGISLATION_SMOKE_REQUIRE_AUTH === undefined && process.env.AUTH_MODE === "workos")
+
+function smokeProfile(value: string | undefined): SmokeProfile {
+  if (value === undefined || value.trim() === "" || value === "full") {
+    return "full"
+  }
+  if (value === "scoped-bills") {
+    return value
+  }
+  throw new Error("LEGISLATION_SMOKE_PROFILE must be full or scoped-bills")
+}
+
+function smokeCanonicalApiBaseUrl(profile: SmokeProfile): URL | undefined {
+  const value =
+    process.env.LEGISLATION_SMOKE_CANONICAL_API_BASE_URL?.trim() || process.env.LEGISLATION_PUBLIC_API_BASE_URL?.trim()
+  if (value === undefined || value === "") {
+    if (profile === "scoped-bills") {
+      throw new Error(
+        "LEGISLATION_SMOKE_CANONICAL_API_BASE_URL or LEGISLATION_PUBLIC_API_BASE_URL is required for scoped-bills"
+      )
+    }
+    return undefined
+  }
+  return canonicalSmokeApiBaseUrl(value)
+}
 
 function fixture(name: keyof SmokeFixture): string | undefined {
   const envName = `LEGISLATION_SMOKE_${name.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase()}`
@@ -143,7 +174,9 @@ try {
   }
   const report = await runApiSmoke({
     baseUrl,
+    canonicalApiBaseUrl,
     fixtures: smokeFixtures(),
+    profile,
     requireAuth,
     requestTimeoutMs,
     token

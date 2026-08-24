@@ -41,6 +41,27 @@ function canonical(id: string): Record<string, unknown> {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function billSummary(id: string): Record<string, unknown> {
+  return {
+    ...canonical(id),
+    canonicalUrl: `https://legislation.example.test/api/bills/${encodeURIComponent(id)}`,
+    classification: ["bill"],
+    identifier: "HB 1",
+    introducedDate: "2026-01-01",
+    jurisdictionId: "jurisdiction:fixture",
+    latestActionAt: "2026-02-01T00:00:00.000Z",
+    sessionId: "session:fixture",
+    status: "introduced",
+    subjects: ["Government"],
+    title: "Fixture bill",
+    type: "bill"
+  }
+}
+
 function fakeFetch() {
   const calls: Array<{ authorization: string | null; method: string; path: string }> = []
   const fetchImpl = async (input: string | URL, init?: RequestInit): Promise<Response> => {
@@ -72,6 +93,20 @@ function fakeFetch() {
       return jsonResponse(
         { error: { category: "unauthorized", correlationId, message: "Unauthorized", retryable: false } },
         401,
+        correlationId
+      )
+    }
+    if (
+      url.pathname === "/api/jurisdictions/jurisdiction%3Afixture/bills" ||
+      url.pathname === "/api/sessions/session%3Afixture/bills"
+    ) {
+      return jsonResponse(
+        {
+          data: [billSummary("bill:fixture")],
+          links: { next: null, self: url.pathname },
+          meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
+        },
+        200,
         correlationId
       )
     }
@@ -188,6 +223,109 @@ function mutateJson(
 }
 
 describe("local API smoke harness", () => {
+  it("runs only universal checks and exact canonical scoped bill pages in the scoped-bills profile", async () => {
+    const { fetchImpl } = fakeFetch()
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl,
+      fixtures: { jurisdictionId: "jurisdiction:fixture", sessionId: "session:fixture" },
+      profile: "scoped-bills",
+      requireAuth: true,
+      token: "do-not-log-this-token"
+    })
+
+    expect(report.status).toBe("passed")
+    expect(report.passed.map((check) => check.id)).toEqual([
+      "health",
+      "ready",
+      "unknown-route",
+      "unsupported-method",
+      "list-jurisdiction-bills",
+      "list-session-bills",
+      "auth-rejection"
+    ])
+    expect(report.checks.some((check) => check.id === "list-jurisdictions")).toBe(false)
+  })
+
+  it("blocks the scoped-bills profile without both required fixture IDs while retaining universal checks", async () => {
+    const { fetchImpl } = fakeFetch()
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl,
+      fixtures: { jurisdictionId: "jurisdiction:fixture" },
+      profile: "scoped-bills"
+    })
+
+    expect(report.status).toBe("blocked")
+    expect(report.blocked).toContainEqual(expect.objectContaining({ id: "scoped-bills-fixtures" }))
+    expect(report.passed.map((check) => check.id)).toContain("health")
+    expect(report.passed.map((check) => check.id)).toContain("unknown-route")
+  })
+
+  it("rejects a scoped bill page whose canonical URL does not match the configured public base URL", async () => {
+    const { fetchImpl } = fakeFetch()
+    const malformed = mutateJson(fetchImpl, "/api/sessions/session%3Afixture/bills", (body) => {
+      if (!isRecord(body) || !Array.isArray(body.data) || !isRecord(body.data[0])) {
+        return body
+      }
+      return {
+        ...body,
+        data: [{ ...body.data[0], canonicalUrl: "https://untrusted.example/api/bills/bill%3Afixture" }]
+      }
+    })
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl: malformed,
+      fixtures: { jurisdictionId: "jurisdiction:fixture", sessionId: "session:fixture" },
+      profile: "scoped-bills"
+    })
+
+    expect(report.status).toBe("failed")
+    expect(report.failed).toContainEqual(expect.objectContaining({ id: "list-session-bills" }))
+  })
+
+  it("rejects rollover dates in scoped bill pages", async () => {
+    const { fetchImpl } = fakeFetch()
+    const malformed = mutateJson(fetchImpl, "/api/jurisdictions/jurisdiction%3Afixture/bills", (body) => {
+      if (!isRecord(body) || !Array.isArray(body.data) || !isRecord(body.data[0])) {
+        return body
+      }
+      return { ...body, data: [{ ...body.data[0], introducedDate: "2026-02-30" }] }
+    })
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      canonicalApiBaseUrl: "https://legislation.example.test",
+      fetchImpl: malformed,
+      fixtures: { jurisdictionId: "jurisdiction:fixture", sessionId: "session:fixture" },
+      profile: "scoped-bills"
+    })
+
+    expect(report.status).toBe("failed")
+    expect(report.failed).toContainEqual(expect.objectContaining({ id: "list-jurisdiction-bills" }))
+  })
+
+  it.each([
+    undefined,
+    "ftp://legislation.example.test/",
+    "https://user:pass@legislation.example.test/",
+    "https://legislation.example.test/api",
+    "https://legislation.example.test/?source=smoke",
+    "https://legislation.example.test/#smoke"
+  ])("rejects missing or unsafe canonical API base URLs for scoped bills: %s", async (canonicalApiBaseUrl) => {
+    await expect(
+      runApiSmoke({
+        baseUrl: "http://localhost:3199",
+        canonicalApiBaseUrl,
+        fetchImpl: fakeFetch().fetchImpl,
+        fixtures: { jurisdictionId: "jurisdiction:fixture", sessionId: "session:fixture" },
+        profile: "scoped-bills"
+      })
+    ).rejects.toThrow(/canonicalApiBaseUrl/)
+  })
+
   it("blocks protected checks when authenticated mode has no explicit token", async () => {
     const { calls, fetchImpl } = fakeFetch()
     const report = await runApiSmoke({
