@@ -66,6 +66,42 @@ describe("virtual scoring clock", () => {
     expect(order).toEqual(["outer:10", "nested:10", "later"])
   })
 
+  it("rejects recursive drain operations while allowing callback scheduling", () => {
+    const clock = createVirtualClock()
+    const order: string[] = []
+
+    clock.scheduleAt(10, () => {
+      order.push("outer")
+      expect(() => clock.advanceTo(11)).toThrow(
+        new TypeError("Virtual clock drain operations cannot be called from a callback")
+      )
+      expect(() => clock.advanceTo(0)).toThrow(
+        new TypeError("Virtual clock drain operations cannot be called from a callback")
+      )
+      expect(() => clock.runUntilIdle()).toThrow(
+        new TypeError("Virtual clock drain operations cannot be called from a callback")
+      )
+      clock.scheduleAfter(0, () => order.push("nested"))
+    })
+    clock.scheduleAt(11, () => order.push("later"))
+
+    expect(clock.advanceTo(11)).toBe(3)
+    expect(order).toEqual(["outer", "nested", "later"])
+  })
+
+  it("releases the drain guard when a callback aborts an operation", () => {
+    const clock = createVirtualClock()
+
+    clock.scheduleAt(10, () => clock.advanceTo(11))
+    expect(() => clock.advanceTo(10)).toThrow(
+      new TypeError("Virtual clock drain operations cannot be called from a callback")
+    )
+
+    clock.scheduleAt(11, () => undefined)
+    expect(clock.advanceTo(11)).toBe(1)
+    expect(clock.currentAtUs).toBe(11)
+  })
+
   it("runs all future work without moving when already idle", () => {
     const clock = createVirtualClock({ startAtUs: 7 })
 
@@ -124,6 +160,24 @@ describe("virtual scoring clock", () => {
       new RangeError("Virtual clock delay exceeds the safe timestamp range")
     )
     expect(boundary.scheduleAfter(1, () => undefined)).toBe(0)
+  })
+
+  it("runs the maximum safe microsecond deadline and accepts a maximum safe callback budget", () => {
+    const maxUs = Number.MAX_SAFE_INTEGER
+    const clock = createVirtualClock({ startAtUs: maxUs - 2, maxSteps: maxUs })
+    const observed: number[] = []
+
+    expect(clock.scheduleAfter(2, (atUs) => observed.push(atUs))).toBe(0)
+    expect(clock.advanceTo(maxUs)).toBe(1)
+    expect(observed).toEqual([maxUs])
+    expect(clock.currentAtUs).toBe(maxUs)
+
+    expect(clock.scheduleAfter(0, (atUs) => observed.push(atUs))).toBe(1)
+    expect(clock.runUntilIdle()).toBe(1)
+    expect(observed).toEqual([maxUs, maxUs])
+    expect(() => clock.scheduleAfter(1, () => undefined)).toThrow(
+      new RangeError("Virtual clock delay exceeds the safe timestamp range")
+    )
   })
 
   it("stops a same-time rescheduling loop at the explicit step budget", () => {

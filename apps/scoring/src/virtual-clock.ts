@@ -3,9 +3,15 @@
  *
  * The clock's time is an integer number of microseconds from the current
  * scoring boot. It never reads the host clock or schedules host work.
+ *
+ * M0-02 defines `atUs` as integer microseconds. This JavaScript host adapter
+ * deliberately accepts only values representable as safe integers. It is not
+ * a claim that JavaScript `number` can carry every future 64-bit ABI value;
+ * an adapter for such an ABI must make an explicit checked `bigint` boundary.
  */
 
 const DEFAULT_MAX_STEPS = 100_000
+const MAX_SAFE_MICROSECONDS = Number.MAX_SAFE_INTEGER
 
 export type VirtualClockCallback = (atUs: number) => unknown
 
@@ -94,6 +100,8 @@ export function createVirtualClock(options: VirtualClockOptions = {}): VirtualCl
 
   let currentAtUs = startAtUs
   let nextHandle = 0
+  let scheduleSequenceExhausted = false
+  let drainDepth = 0
   const queue: ScheduledCallback[] = []
 
   function scheduleAt(atUs: number, callback: VirtualClockCallback): VirtualTimerHandle {
@@ -105,12 +113,16 @@ export function createVirtualClock(options: VirtualClockOptions = {}): VirtualCl
     }
 
     /* v8 ignore next -- reaching this after nearly nine quadrillion schedules is not executable in a bounded test */
-    if (nextHandle === Number.MAX_SAFE_INTEGER) {
+    if (scheduleSequenceExhausted) {
       throw new RangeError("Virtual clock schedule sequence exhausted")
     }
 
     const handle = nextHandle
-    nextHandle += 1
+    if (handle === MAX_SAFE_MICROSECONDS) {
+      scheduleSequenceExhausted = true
+    } else {
+      nextHandle += 1
+    }
     queue.push({ atUs, callback, handle, order: handle })
     return handle
   }
@@ -118,7 +130,7 @@ export function createVirtualClock(options: VirtualClockOptions = {}): VirtualCl
   function scheduleAfter(delayUs: number, callback: VirtualClockCallback): VirtualTimerHandle {
     assertNonNegativeSafeInteger(delayUs, "Virtual clock delays")
 
-    if (delayUs > Number.MAX_SAFE_INTEGER - currentAtUs) {
+    if (delayUs > MAX_SAFE_MICROSECONDS - currentAtUs) {
       throw new RangeError("Virtual clock delay exceeds the safe timestamp range")
     }
 
@@ -147,37 +159,59 @@ export function createVirtualClock(options: VirtualClockOptions = {}): VirtualCl
     assertSynchronousResult(next.event.callback(currentAtUs))
   }
 
+  function assertNotDraining(): void {
+    if (drainDepth > 0) {
+      throw new TypeError("Virtual clock drain operations cannot be called from a callback")
+    }
+  }
+
+  function drain(operation: () => number): number {
+    drainDepth += 1
+    try {
+      return operation()
+    } finally {
+      drainDepth -= 1
+    }
+  }
+
   function advanceTo(atUs: number): number {
+    assertNotDraining()
     assertNonNegativeSafeInteger(atUs, "Virtual clock timestamps")
 
     if (atUs < currentAtUs) {
       throw new RangeError("Virtual clock cannot move backward")
     }
 
-    let steps = 0
-    while (true) {
-      const next = findNextDueCallback(queue, atUs)
-      if (next === null) {
-        currentAtUs = atUs
-        return steps
-      }
+    return drain(() => {
+      let steps = 0
+      while (true) {
+        const next = findNextDueCallback(queue, atUs)
+        if (next === null) {
+          currentAtUs = atUs
+          return steps
+        }
 
-      runOne(next, steps)
-      steps += 1
-    }
+        runOne(next, steps)
+        steps += 1
+      }
+    })
   }
 
   function runUntilIdle(): number {
-    let steps = 0
-    while (true) {
-      const next = findNextDueCallback(queue)
-      if (next === null) {
-        return steps
-      }
+    assertNotDraining()
 
-      runOne(next, steps)
-      steps += 1
-    }
+    return drain(() => {
+      let steps = 0
+      while (true) {
+        const next = findNextDueCallback(queue)
+        if (next === null) {
+          return steps
+        }
+
+        runOne(next, steps)
+        steps += 1
+      }
+    })
   }
 
   return {

@@ -24,13 +24,19 @@ import { classifyFoilScenarioInputs, type FoilScenarioClassification } from "./f
 import { advanceFoilScoring, createFoilScoringState, type FoilContact, type FoilSample } from "./foil.js"
 import {
   projectSabreScenarioInput,
-  runSabreScenarioEvidence,
   SabreScenarioEvidenceError,
   type SabreScenarioDiagnosticEvidence
 } from "./sabre-scenario-evidence.js"
-import { createSabreScoringState } from "./sabre.js"
+import {
+  advanceSabreScoring,
+  createSabreScoringState,
+  type SabreDiagnosticDecision,
+  type SabreScoringState,
+  type SabreSide
+} from "./sabre.js"
 import { loadTimingTableForRuleRevision } from "./timing-boundary.js"
 import type { TimingTable } from "./timing-table.js"
+import { createVirtualClock } from "./virtual-clock.js"
 
 export { projectSabreScenarioInput }
 
@@ -111,12 +117,6 @@ type ScenarioUncertainty = JsonObject & {
   rangeMilliOhms?: { min: number; max: number }
 }
 
-type ScenarioClassification = JsonObject & FoilScenarioClassification & { id: string }
-type ScenarioDiagnostic = JsonObject & SabreScenarioDiagnosticEvidence & { id: string }
-
-type ActualDecision = {
-  decisionAtUs: number
-  disposition: "qualified-hit" | "off-target"
 type ManifestScenario = JsonObject & {
   contentDigest: string | null
   path: string
@@ -126,6 +126,12 @@ type ManifestScenario = JsonObject & {
   weapon: Weapon
 }
 
+type ScenarioClassification = JsonObject & FoilScenarioClassification & { id: string }
+type ScenarioDiagnostic = JsonObject & SabreScenarioDiagnosticEvidence & { id: string }
+
+type ActualDecision = {
+  decisionAtUs: number
+  disposition: "qualified-hit" | "off-target"
   weapon: Weapon
   side: Side
   hitStartedAtUs?: number
@@ -214,6 +220,7 @@ class RunnerInputError extends Error {
     | "manifest-order"
     | "manifest-duplicate"
     | "input-too-large"
+    | "timestamp-out-of-range"
     | "execution-error"
   readonly filePath: string
 
@@ -224,8 +231,33 @@ class RunnerInputError extends Error {
   }
 }
 
+class ScenarioTimestampError extends Error {
+  readonly fieldPath: string
+
+  constructor(fieldPath: string) {
+    super(`${fieldPath} must be a non-negative safe integer in microseconds`)
+    this.fieldPath = fieldPath
+  }
+}
+
 function fail(path: string): never {
   throw new TypeError(`${path} is invalid`)
+}
+
+function assertSafeTimestampFields(value: unknown, fieldPath: string): void {
+  if (Array.isArray(value)) {
+    value.forEach((child, index) => assertSafeTimestampFields(child, `${fieldPath}[${index}]`))
+    return
+  }
+  if (!isObject(value)) return
+
+  for (const [key, child] of Object.entries(value)) {
+    const childPath = `${fieldPath}.${key}`
+    if (key.endsWith("Us") && (!Number.isSafeInteger(child) || (child as number) < 0)) {
+      throw new ScenarioTimestampError(childPath)
+    }
+    assertSafeTimestampFields(child, childPath)
+  }
 }
 
 const schemaDirectory = resolve(dirname(fileURLToPath(import.meta.url)), "../docs")
@@ -239,10 +271,19 @@ const manifestValidator = new Ajv2020({ allErrors: true, strict: false }).compil
 function validateScenarioDocument(value: unknown): Scenario {
   if (!scenarioValidator(value)) fail("scenario")
   const scenario = value as Scenario
+  assertSafeTimestampFields(scenario, "scenario")
   const sources = scenario.sources as unknown[]
   if (sources.length > MAX_SOURCE_RECORDS || scenario.lineModel.names.length > MAX_LINE_NAMES) fail("scenario.bounds")
   if (scenario.inputs.length > MAX_SCENARIO_INPUTS) fail("scenario.inputs")
   for (const input of scenario.inputs) if (input.lines.length > MAX_LINES_PER_INPUT) fail("scenario.lines")
+  const inputIds = scenario.inputs.map(({ id }) => id)
+  const lineNames = new Set(scenario.lineModel.names)
+  const sourceIds = sources.map((source) => (source as JsonObject).id)
+  if (new Set(sourceIds).size !== sourceIds.length || new Set(inputIds).size !== inputIds.length) fail("scenario.ids")
+  for (const input of scenario.inputs) {
+    const lines = input.lines.map(({ line }) => line)
+    if (new Set(lines).size !== lines.length || lines.some((line) => !lineNames.has(line))) fail("scenario.lines")
+  }
   if (
     scenario.expect.decisions.length > MAX_EXPECTED_DECISIONS ||
     scenario.expect.nonEvents.length > MAX_EXPECTED_NON_EVENTS ||
@@ -276,14 +317,6 @@ function validateScenarioDocument(value: unknown): Scenario {
     const inputIds = new Set(scenario.inputs.map(({ id }) => id))
     if (
       new Set(ids).size !== ids.length ||
-  const inputIds = scenario.inputs.map(({ id }) => id)
-  const lineNames = new Set(scenario.lineModel.names)
-  const sourceIds = sources.map((source) => (source as JsonObject).id)
-  if (new Set(sourceIds).size !== sourceIds.length || new Set(inputIds).size !== inputIds.length) fail("scenario.ids")
-  for (const input of scenario.inputs) {
-    const lines = input.lines.map(({ line }) => line)
-    if (new Set(lines).size !== lines.length || lines.some((line) => !lineNames.has(line))) fail("scenario.lines")
-  }
       diagnostics.some(
         (diagnostic) =>
           diagnostic.sourceInputIds.length > MAX_DIAGNOSTIC_SOURCE_INPUT_IDS ||
@@ -293,6 +326,23 @@ function validateScenarioDocument(value: unknown): Scenario {
     )
       fail("scenario.expect.diagnostics")
   }
+  const expectedIds = [
+    ...scenario.expect.decisions.map(({ id }) => id),
+    ...scenario.expect.nonEvents.map(({ id }) => id),
+    ...scenario.expect.uncertainty.map(({ id }) => id),
+    ...(classifications?.map(({ id }) => id) ?? []),
+    ...(diagnostics?.map(({ id }) => id) ?? [])
+  ]
+  if (new Set(expectedIds).size !== expectedIds.length) fail("scenario.expect.ids")
+  const declaredInputIds = new Set(inputIds)
+  if (
+    scenario.expect.decisions.some(
+      (decision) =>
+        new Set(decision.sourceInputIds).size !== decision.sourceInputIds.length ||
+        decision.sourceInputIds.some((sourceInputId) => !declaredInputIds.has(sourceInputId))
+    )
+  )
+    fail("scenario.expect.decisions")
   for (const nonEvent of scenario.expect.nonEvents)
     if (nonEvent.window.fromUs > nonEvent.window.throughUs) fail("scenario.expect.nonEvents")
   for (const decision of scenario.expect.decisions) {
@@ -326,23 +376,6 @@ function validateManifestDocument(value: unknown): JsonObject {
 }
 function parseJsonFile(filePath: string, kind: "scenario" | "manifest"): JsonObject {
   if (!existsSync(filePath)) throw new RunnerInputError("path-not-found", filePath)
-  const expectedIds = [
-    ...scenario.expect.decisions.map(({ id }) => id),
-    ...scenario.expect.nonEvents.map(({ id }) => id),
-    ...scenario.expect.uncertainty.map(({ id }) => id),
-    ...(classifications?.map(({ id }) => id) ?? []),
-    ...(diagnostics?.map(({ id }) => id) ?? [])
-  ]
-  if (new Set(expectedIds).size !== expectedIds.length) fail("scenario.expect.ids")
-  const declaredInputIds = new Set(inputIds)
-  if (
-    scenario.expect.decisions.some(
-      (decision) =>
-        new Set(decision.sourceInputIds).size !== decision.sourceInputIds.length ||
-        decision.sourceInputIds.some((sourceInputId) => !declaredInputIds.has(sourceInputId))
-    )
-  )
-    fail("scenario.expect.decisions")
   if (statSync(filePath).size > MAX_INPUT_FILE_BYTES) throw new RunnerInputError("input-too-large", filePath)
   let parsed: unknown
   try {
@@ -354,7 +387,8 @@ function parseJsonFile(filePath: string, kind: "scenario" | "manifest"): JsonObj
   try {
     if (kind === "scenario") validateScenarioDocument(parsed)
     else validateManifestDocument(parsed)
-  } catch {
+  } catch (error) {
+    if (error instanceof ScenarioTimestampError) throw new RunnerInputError("timestamp-out-of-range", filePath)
     throw new RunnerInputError("invalid-schema", filePath)
   }
 
@@ -378,7 +412,7 @@ function firstLine(input: ScenarioInput, side: Side, preferred: readonly string[
   return lineForSide(input, side, preferred)[0]
 }
 
-function mapSimpleEpee(input: ScenarioInput): EpeeSample {
+function mapSimpleEpee(input: ScenarioInput, atUs = input.atUs): EpeeSample {
   const contact = (side: Side) => {
     const weapon = firstLine(input, side, ["weapon-circuit", "tip-loop"])
     const ground = firstLine(input, side, ["guard-or-piste", "ground-reference"])
@@ -387,10 +421,10 @@ function mapSimpleEpee(input: ScenarioInput): EpeeSample {
       isTipClosed: weapon?.state === "closed"
     }
   }
-  return { atUs: input.atUs, left: contact("left"), right: contact("right") }
+  return { atUs, left: contact("left"), right: contact("right") }
 }
 
-function mapEpeeResistance(input: ScenarioInput): EpeeResistanceSample {
+function mapEpeeResistance(input: ScenarioInput, atUs = input.atUs): EpeeResistanceSample {
   const contact = (side: Side) => {
     const tip = firstLine(input, side, ["tip-loop"])
     const ground = firstLine(input, side, ["ground-reference"])
@@ -430,10 +464,10 @@ function mapEpeeResistance(input: ScenarioInput): EpeeResistanceSample {
       lineIntegrity: lineIntegrity(tip)
     }
   }
-  return { atUs: input.atUs, left: contact("left"), right: contact("right") }
+  return { atUs, left: contact("left"), right: contact("right") }
 }
 
-export function projectFoilScenarioInput(input: ScenarioInput): FoilSample {
+export function projectFoilScenarioInput(input: ScenarioInput, atUs = input.atUs): FoilSample {
   const contact = (side: Side): FoilContact => {
     const circuit = firstLine(input, side, ["weapon-circuit", "circuit", "tip-loop"])
     const target = firstLine(input, side, ["target", "lame"])
@@ -476,7 +510,7 @@ export function projectFoilScenarioInput(input: ScenarioInput): FoilSample {
             : "outsideRange"
     return { circuitBreak, insulationDiagnostic, integrity, targetContext }
   }
-  return { atUs: input.atUs, left: contact("left"), right: contact("right") }
+  return { atUs, left: contact("left"), right: contact("right") }
 }
 
 function isResistanceScenario(scenario: Scenario): boolean {
@@ -522,6 +556,64 @@ function diagnosticShape(diagnostic: SabreScenarioDiagnosticEvidence): Record<st
 
 function compareDiagnosticShape(left: Record<string, unknown>, right: Record<string, unknown>): number {
   return (left.atUs as number) - (right.atUs as number) || compareText(left.side as string, right.side as string)
+}
+
+function requiredSabreSourceInputId(value: string | null): string {
+  /* v8 ignore next -- scorer diagnostics establish this invariant before the adapter records evidence */
+  if (value === null) throw new Error("Sabre diagnostic onset input is missing")
+  return value
+}
+
+function uniqueInputIds(ids: readonly string[]): string[] {
+  return [...new Set(ids)]
+}
+
+function sabreDiagnosticSources(
+  diagnostic: SabreDiagnosticDecision,
+  input: ScenarioInput,
+  yellowOnInputIds: Readonly<Record<SabreSide, string | null>>,
+  controlBreakInputIds: Readonly<Record<SabreSide, string | null>>
+): string[] {
+  if (diagnostic.reason === "own-equipment-clear")
+    return uniqueInputIds([requiredSabreSourceInputId(yellowOnInputIds[diagnostic.side]), input.id])
+  if (diagnostic.reason === "control-break-qualified")
+    return uniqueInputIds([requiredSabreSourceInputId(controlBreakInputIds[diagnostic.side]), input.id])
+  return [input.id]
+}
+
+/** Advances the Sabre adapter one input at a time under the virtual clock. */
+function advanceSabreScenarioInput(
+  state: SabreScoringState,
+  input: ScenarioInput,
+  atUs: number,
+  timingTable: TimingTable,
+  yellowOnInputIds: Record<SabreSide, string | null>,
+  controlBreakInputIds: Record<SabreSide, string | null>
+): { diagnostics: SabreScenarioDiagnosticEvidence[]; state: SabreScoringState } {
+  try {
+    const sample = { ...projectSabreScenarioInput(input), atUs }
+    for (const side of ["left", "right"] as const) {
+      if (sample[side].ownEquipmentFault === "present" && state[side].yellowDiagnostic !== "yellow-on")
+        yellowOnInputIds[side] = input.id
+      if (sample[side].circuitBCFault === "controlBreak") controlBreakInputIds[side] ??= input.id
+      else controlBreakInputIds[side] = null
+    }
+
+    const priorDiagnostics = state.diagnostics
+    const nextState = advanceSabreScoring(state, sample, timingTable)
+    const emitted = nextState.diagnostics.filter((diagnostic) => !priorDiagnostics.includes(diagnostic))
+    const diagnostics = emitted.map((diagnostic) => ({
+      ...diagnostic,
+      sourceInputIds: sabreDiagnosticSources(diagnostic, input, yellowOnInputIds, controlBreakInputIds)
+    }))
+
+    for (const side of ["left", "right"] as const) {
+      if (sample[side].ownEquipmentFault !== "present") yellowOnInputIds[side] = null
+    }
+    return { diagnostics, state: nextState }
+  } catch (error) {
+    throw new SabreScenarioEvidenceError(input.id, error)
+  }
 }
 
 function compareScenario(
@@ -699,20 +791,31 @@ function executeScenario(scenario: Scenario, path: string): ScenarioRunResult {
   const uncertainties: ActualUncertainty[] = []
   let error: { code: string; atInputId?: string } | null = null
   let lastInput: ScenarioInput | undefined
+  const clock = createVirtualClock()
+  const yellowOnInputIds: Record<SabreSide, string | null> = { left: null, right: null }
+  const controlBreakInputIds: Record<SabreSide, string | null> = { left: null, right: null }
   try {
-    if (scenario.weapon === "sabre") {
-      const evidence = runSabreScenarioEvidence(scenario.inputs, timingTable)
-      scorer = evidence.state
-      diagnostics.push(...evidence.diagnostics)
-      hits.push(...evidence.state.hits.map((hit) => ({ ...hit })))
-    } else {
-      for (const input of scenario.inputs) {
-        lastInput = input
-        if (scenario.weapon === "epee" && useResistance) {
+    for (const input of scenario.inputs) {
+      lastInput = input
+      if (input.atUs < clock.nowUs()) throw new RangeError("Scenario input timestamps must be monotonic")
+      clock.scheduleAt(input.atUs, (atUs) => {
+        if (scenario.weapon === "sabre") {
+          const evidence = advanceSabreScenarioInput(
+            scorer as ReturnType<typeof createSabreScoringState>,
+            input,
+            atUs,
+            timingTable,
+            yellowOnInputIds,
+            controlBreakInputIds
+          )
+          scorer = evidence.state
+          diagnostics.push(...evidence.diagnostics)
+          hits.push(...evidence.state.hits.slice(hits.length).map((hit) => ({ ...hit })))
+        } else if (scenario.weapon === "epee" && useResistance) {
           const previousDecisionCount = (scorer as ReturnType<typeof createEpeeResistanceScoringState>).decisions.length
           scorer = advanceEpeeResistanceScoring(
             scorer as ReturnType<typeof createEpeeResistanceScoringState>,
-            mapEpeeResistance(input),
+            mapEpeeResistance(input, atUs),
             timingTable
           )
           const resistanceState = scorer as ReturnType<typeof createEpeeResistanceScoringState>
@@ -729,7 +832,7 @@ function executeScenario(scenario: Scenario, path: string): ScenarioRunResult {
         } else if (scenario.weapon === "epee") {
           scorer = advanceEpeeScoring(
             scorer as ReturnType<typeof createEpeeScoringState>,
-            mapSimpleEpee(input),
+            mapSimpleEpee(input, atUs),
             timingTable
           )
           const nextHits = (scorer as ReturnType<typeof createEpeeScoringState>).hits
@@ -737,19 +840,25 @@ function executeScenario(scenario: Scenario, path: string): ScenarioRunResult {
         } else {
           scorer = advanceFoilScoring(
             scorer as ReturnType<typeof createFoilScoringState>,
-            projectFoilScenarioInput(input),
+            projectFoilScenarioInput(input, atUs),
             timingTable
           )
           const nextHits = (scorer as ReturnType<typeof createFoilScoringState>).hits
           hits.push(...nextHits.slice(hits.length).map((hit) => ({ ...hit })))
         }
-      }
+      })
+      clock.advanceTo(input.atUs)
     }
   } catch (caught) {
     // The owned scorer implementations throw Error instances; retain a stable
     // fallback for defensive callers without fabricating a test-only throw.
     /* v8 ignore next */
     const message = caught instanceof Error ? caught.message : "scorer rejected input"
+    if (scenario.weapon === "sabre" && message.includes("monotonic")) {
+      scorer = createSabreScoringState()
+      diagnostics.length = 0
+      hits.length = 0
+    }
     error = {
       code: message.includes("monotonic") ? "non-monotonic-time" : "invalid-line-state",
       atInputId: caught instanceof SabreScenarioEvidenceError ? caught.inputId : lastInput?.id
@@ -839,7 +948,20 @@ function manifestScenarioPaths(manifest: JsonObject, manifestPath: string): stri
       scenario.weapon !== entry.weapon
     )
       throw new RunnerInputError("manifest-path", manifestPath)
+    const digest = `sha256:${createHash("sha256").update(readFileSync(scenarioPath)).digest("hex")}`
+    if (entry.contentDigest !== digest) throw new RunnerInputError("manifest-path", manifestPath)
     paths.push(scenarioPath)
+  }
+
+  const coverage = manifest.coverage as JsonObject[]
+  const traceabilityIds = coverage.map((entry) => entry.traceabilityId as string)
+  if (new Set(traceabilityIds).size !== traceabilityIds.length)
+    throw new RunnerInputError("manifest-duplicate", manifestPath)
+  const scenarioIds = new Set(ids)
+  for (const entry of coverage) {
+    for (const scenarioId of entry.scenarioIds as string[]) {
+      if (!scenarioIds.has(scenarioId)) throw new RunnerInputError("manifest-path", manifestPath)
+    }
   }
 
   const goldenDirectory = resolve(manifestDirectory, "golden-scenarios")
@@ -908,14 +1030,3 @@ export function runScenario(inputPath: string): ScenarioRun {
 export function serializeScenarioRunReport(report: ScenarioRunReport): string {
   return `${JSON.stringify(report, null, 2)}\n`
 }
-  const coverage = manifest.coverage as JsonObject[]
-  const traceabilityIds = coverage.map((entry) => entry.traceabilityId as string)
-  if (new Set(traceabilityIds).size !== traceabilityIds.length)
-    throw new RunnerInputError("manifest-duplicate", manifestPath)
-  for (const entry of coverage) {
-    for (const scenarioId of entry.scenarioIds as string[]) {
-      if (!ids.includes(scenarioId)) throw new RunnerInputError("manifest-path", manifestPath)
-    }
-  }
-    const digest = `sha256:${createHash("sha256").update(readFileSync(scenarioPath)).digest("hex")}`
-    if (entry.contentDigest !== digest) throw new RunnerInputError("manifest-path", manifestPath)

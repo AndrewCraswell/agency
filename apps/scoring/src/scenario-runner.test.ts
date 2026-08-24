@@ -573,6 +573,22 @@ describe("golden scenario runner", () => {
     expect(missing.report).toMatchObject({ status: "invalid-input", error: { code: "path-not-found" } })
   })
 
+  it("rejects an unsafe microsecond timestamp with a stable input error", () => {
+    const directory = temporaryDirectory()
+    const path = join(directory, "unsafe-timestamp.json")
+    const fixture = readFixture("epee-contact-boundaries.json")
+    const inputs = fixture.inputs as Record<string, unknown>[]
+    writeJson(path, {
+      ...fixture,
+      inputs: [{ ...inputs[0], atUs: Number.MAX_SAFE_INTEGER + 1 }, ...inputs.slice(1)]
+    })
+
+    expect(runScenario(path)).toMatchObject({
+      exitCode: 2,
+      report: { error: { code: "timestamp-out-of-range" }, status: "invalid-input" }
+    })
+  })
+
   it.each([
     ["top-level array", () => []],
     ["bad scenario id", (x: Record<string, unknown>) => ({ ...x, scenarioId: "" })],
@@ -753,7 +769,7 @@ describe("golden scenario runner", () => {
           weapon: "epee",
           status: "active",
           sourceIds: [],
-          contentDigest: contentDigest(scenario)
+          contentDigest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
         }
       ],
       coverage: []
@@ -785,7 +801,7 @@ describe("golden scenario runner", () => {
           weapon: "epee",
           status: "planned",
           sourceIds: [],
-          contentDigest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+          contentDigest: null
         }
       ]
     })
@@ -802,7 +818,7 @@ describe("golden scenario runner", () => {
           weapon: "foil",
           status: "active",
           sourceIds: [],
-          contentDigest: null
+          contentDigest: contentDigest(scenario)
         }
       ]
     })
@@ -971,7 +987,8 @@ describe("golden scenario runner", () => {
           path: "golden-scenarios/s.json",
           weapon: "epee",
           status: "planned",
-          sourceIds: Array.from({ length: limit + 1 }, (_, i) => `SRC-${i}`)
+          sourceIds: Array.from({ length: limit + 1 }, (_, i) => `SRC-${i}`),
+          contentDigest: null
         }
       ]
     writeJson(path, base)
@@ -1286,12 +1303,14 @@ describe("golden scenario runner", () => {
     expect(runScenario(unknownSource)).toMatchObject({ exitCode: 2, report: { status: "invalid-input" } })
   })
 
-  it("runs active manifest entries in scenario-id order and serializes deterministically", () => {
+  it("runs active manifest entries in scenario-id order and serializes deterministically for the same seed", () => {
     const directory = temporaryDirectory()
     const goldenDirectory = join(directory, "golden-scenarios")
     mkdirSync(goldenDirectory)
     const first = readFixture("epee-contact-boundaries.json")
     const second = readFixture("epee-grounded-rejection.json")
+    first.determinism = { ...(first.determinism as Record<string, unknown>), seed: 20_260_824 }
+    second.determinism = { ...(second.determinism as Record<string, unknown>), seed: 20_260_824 }
     writeJson(join(goldenDirectory, "epee-contact-boundaries.json"), first)
     writeJson(join(goldenDirectory, "epee-grounded-rejection.json"), second)
     const manifestPath = join(directory, "corpus.json")
@@ -1416,24 +1435,6 @@ describe("golden scenario runner", () => {
     })
   })
 
-  it("passes the committed canonical corpus in stable order", () => {
-    const manifestPath = resolve(fixtureDirectory, "../golden-scenario-manifest.json")
-
-    const firstRun = runScenario(manifestPath)
-    const secondRun = runScenario(manifestPath)
-
-    expect(firstRun.exitCode).toBe(0)
-    expect(firstRun.report.summary).toEqual({ failed: 0, passed: 28, scenarioCount: 28 })
-    expect(firstRun.report.scenarios.every((scenario) => scenario.status === "passed")).toBe(true)
-    expect(firstRun.report.scenarios.map((scenario) => scenario.scenarioId)).toEqual([
-      "epee.audio-visual-correlation",
-      "epee.contact-boundaries",
-      "epee.double-lockout-boundary",
-      "epee.exceptional-resistance-duration",
-      "epee.grounded-material-100-ohm",
-      "epee.grounded-rejection",
-      "epee.non-monotonic-time",
-      "epee.resistance-uncertainty-near-lockout",
   it("fails closed for missing, extra, duplicate, unknown, stale, and digest-corrupt corpus mappings", () => {
     const directory = temporaryDirectory()
     const goldenDirectory = join(directory, "golden-scenarios")
@@ -1474,10 +1475,7 @@ describe("golden scenario runner", () => {
     })
     expect(
       writeManifest("duplicate", { ...base, scenarios: [entry({ sourceIds: ["EPEE-03", "EPEE-03"] })] })
-    ).toMatchObject({
-      exitCode: 2,
-      report: { error: { code: "invalid-schema" } }
-    })
+    ).toMatchObject({ exitCode: 2, report: { error: { code: "invalid-schema" } } })
     expect(
       writeManifest("unknown", {
         ...base,
@@ -1528,6 +1526,24 @@ describe("golden scenario runner", () => {
     }
   })
 
+  it("passes the committed canonical corpus in stable order", () => {
+    const manifestPath = resolve(fixtureDirectory, "../golden-scenario-manifest.json")
+
+    const firstRun = runScenario(manifestPath)
+    const secondRun = runScenario(manifestPath)
+
+    expect(firstRun.exitCode).toBe(0)
+    expect(firstRun.report.summary).toEqual({ failed: 0, passed: 28, scenarioCount: 28 })
+    expect(firstRun.report.scenarios.every((scenario) => scenario.status === "passed")).toBe(true)
+    expect(firstRun.report.scenarios.map((scenario) => scenario.scenarioId)).toEqual([
+      "epee.audio-visual-correlation",
+      "epee.contact-boundaries",
+      "epee.double-lockout-boundary",
+      "epee.exceptional-resistance-duration",
+      "epee.grounded-material-100-ohm",
+      "epee.grounded-rejection",
+      "epee.non-monotonic-time",
+      "epee.resistance-uncertainty-near-lockout",
       "foil.break-boundaries",
       "foil.grounded-contact",
       "foil.host-logical-contexts",
