@@ -18,6 +18,7 @@ typedef struct test_buffer {
 } test_buffer_t;
 
 typedef struct manifest_offsets {
+  size_t release_value;
   size_t algorithm_value;
   size_t domain_value;
   size_t esp32_floor_value;
@@ -131,6 +132,7 @@ static test_buffer_t canonical_manifest(bool with_signature, manifest_offsets_t 
   append_bytes(&manifest, (const uint8_t *)"SPRM", 4U);
   append_u8(&manifest, 1U);
   append_u8(&manifest, 13U);
+  offsets->release_value = manifest.length + 3U;
   append_text_tlv(&manifest, 1U, "release-2026-08");
   offsets->product_tag = manifest.length;
   append_text_tlv(&manifest, 2U, "scoring-box");
@@ -165,6 +167,13 @@ static scoring_release_string_t release_string(const char *value) {
   scoring_release_string_t result = {{0}, 0U};
   result.length = strlen(value);
   (void)memcpy(result.bytes, value, result.length);
+  return result;
+}
+
+static scoring_release_string_t repeated_release_string(uint8_t byte, size_t length) {
+  scoring_release_string_t result = {{0}, 0U};
+  (void)memset(result.bytes, byte, sizeof(result.bytes));
+  result.length = length;
   return result;
 }
 
@@ -375,6 +384,30 @@ static bool test_malformed_identifier_bound(void) {
   return true;
 }
 
+static bool test_identifier_bytes_and_environment_bounds(void) {
+  manifest_offsets_t offsets;
+  test_buffer_t encoded = canonical_manifest(true, &offsets);
+  scoring_release_environment_t environment = compatible_environment();
+  scoring_release_observed_artifact_t observed[SCORING_RELEASE_ARTIFACT_COUNT];
+  verifier_observer_t verifier = {SCORING_RELEASE_SIGNATURE_VALID, 0U, 0U, NULL};
+
+  matching_observed(observed);
+  encoded.bytes[offsets.release_value] = (uint8_t)'/';
+  CHECK(verify_release(&encoded, &verifier, &environment, observed) == SCORING_RELEASE_INVALID_FIELD);
+  CHECK(verifier.calls == 0U);
+
+  encoded = canonical_manifest(true, &offsets);
+  environment.product_id = repeated_release_string((uint8_t)'a', SCORING_RELEASE_MAX_ID_BYTES);
+  CHECK(verify_release(&encoded, &verifier, &environment, observed) == SCORING_RELEASE_PRODUCT_MISMATCH);
+
+  environment.product_id.bytes[SCORING_RELEASE_MAX_ID_BYTES - 1U] = (uint8_t)'/';
+  CHECK(verify_release(&encoded, &verifier, &environment, observed) == SCORING_RELEASE_INVALID_ARGUMENT);
+
+  environment.product_id = repeated_release_string((uint8_t)'a', SCORING_RELEASE_MAX_ID_BYTES + 1U);
+  CHECK(verify_release(&encoded, &verifier, &environment, observed) == SCORING_RELEASE_INVALID_ARGUMENT);
+  return true;
+}
+
 static bool test_identity_and_revision_mismatches(void) {
   manifest_offsets_t offsets;
   test_buffer_t encoded = canonical_manifest(true, &offsets);
@@ -557,6 +590,7 @@ int main(void) {
     {"structural rejections", test_structural_rejections},
     {"every truncation fails closed", test_every_truncation_fails_closed},
     {"malformed identifier bound", test_malformed_identifier_bound},
+    {"identifier bytes and environment bounds", test_identifier_bytes_and_environment_bounds},
     {"identity and revision mismatches", test_identity_and_revision_mismatches},
     {"artifact and security rejections", test_artifact_and_security_rejections},
     {"observed artifact order is identity based", test_observed_artifact_order_is_identity_based},

@@ -74,16 +74,27 @@ static bool valid_identifier_byte(uint8_t value) {
          value == (uint8_t)'.';
 }
 
+static bool valid_identifier_bytes(
+  const uint8_t *value,
+  size_t length,
+  size_t maximum,
+  size_t storage_capacity
+) {
+  size_t index;
+
+  if (value == NULL || length == 0U || length > maximum || length > storage_capacity) return false;
+  for (index = 0U; index < length; index += 1U)
+    if (!valid_identifier_byte(value[index])) return false;
+  return true;
+}
+
 static scoring_release_reason_t decode_string(
   const uint8_t *value,
   size_t length,
   size_t maximum,
   scoring_release_string_t *out
 ) {
-  size_t index;
-  if (length == 0U || length > maximum || length > sizeof(out->bytes)) return SCORING_RELEASE_INVALID_FIELD;
-  for (index = 0U; index < length; index += 1U)
-    if (!valid_identifier_byte(value[index])) return SCORING_RELEASE_INVALID_FIELD;
+  if (!valid_identifier_bytes(value, length, maximum, sizeof(out->bytes))) return SCORING_RELEASE_INVALID_FIELD;
   (void)memset(out, 0, sizeof(*out));
   (void)memcpy(out->bytes, value, length);
   out->length = length;
@@ -298,11 +309,8 @@ static bool stored_equals_text(const scoring_release_string_t *value, const char
 }
 
 static bool valid_stored_string(const scoring_release_string_t *value, size_t maximum) {
-  size_t index;
-  if (value->length == 0U || value->length > maximum || value->length > sizeof(value->bytes)) return false;
-  for (index = 0U; index < value->length; index += 1U)
-    if (!valid_identifier_byte(value->bytes[index])) return false;
-  return true;
+  return value != NULL &&
+    valid_identifier_bytes(value->bytes, value->length, maximum, sizeof(value->bytes));
 }
 
 static bool valid_environment_argument(const scoring_release_environment_t *environment) {

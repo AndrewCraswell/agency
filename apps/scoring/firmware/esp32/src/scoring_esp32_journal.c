@@ -166,7 +166,7 @@ static scoring_esp32_result_t select_committed_slot(
   return SCORING_ESP32_RESULT_OK;
 }
 
-static scoring_esp32_result_t journal_mutation_preflight(
+static scoring_esp32_result_t journal_state_preflight(
   const scoring_esp32_journal_t *journal,
   const scoring_esp32_journal_slot_t **out_current
 ) {
@@ -314,7 +314,7 @@ scoring_esp32_result_t scoring_esp32_journal_append(
   if (bytes.data == NULL && bytes.length != 0U) {
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }
-  result = journal_mutation_preflight(journal, &current);
+  result = journal_state_preflight(journal, &current);
   if (result != SCORING_ESP32_RESULT_OK) {
     return result;
   }
@@ -350,7 +350,7 @@ scoring_esp32_result_t scoring_esp32_journal_advance_cursor(
   scoring_esp32_journal_t *journal,
   uint32_t transport_sequence
 ) {
-  const scoring_esp32_result_t preflight = journal_mutation_preflight(journal, NULL);
+  const scoring_esp32_result_t preflight = journal_state_preflight(journal, NULL);
   if (preflight != SCORING_ESP32_RESULT_OK) {
     return preflight;
   }
@@ -395,22 +395,19 @@ scoring_esp32_result_t scoring_esp32_journal_replay(
 ) {
   const scoring_esp32_journal_record_t *record;
   const scoring_esp32_journal_slot_t *slot;
+  scoring_esp32_result_t preflight;
   if (journal == NULL || !journal->is_open || out_length == NULL || out_transport_sequence == NULL ||
       (destination.data == NULL && destination.capacity != 0U)) {
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
   }
   *out_length = 0U;
   *out_transport_sequence = 0U;
-  if (journal->recovery == SCORING_ESP32_JOURNAL_RECOVERY_CORRUPT) {
-    return SCORING_ESP32_RESULT_JOURNAL_CORRUPT;
+  preflight = journal_state_preflight(journal, &slot);
+  if (preflight != SCORING_ESP32_RESULT_OK) {
+    return preflight;
   }
   if (record_index >= (size_t)journal->record_count) {
     return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
-  }
-  slot = &journal->storage->slots[journal->active_slot];
-  if ((journal->record_count != 0U || journal->cursor_valid) &&
-      !slot_is_valid(slot, journal->max_records)) {
-    return SCORING_ESP32_RESULT_JOURNAL_CORRUPT;
   }
   record = &slot->records[record_index];
   if (record->length > destination.capacity) {

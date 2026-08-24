@@ -53,8 +53,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 34 | SC-011 | P3 | done | Root-approved BOM validation now relies on canonical rows as its sole exact-selection registry |
 | 35 | SC-012 | P2 | intake | W5500 support values are canonical upstream but duplicated as circuit literals |
 | 36 | FW-006 | P1 | ready | A legacy ESP32 authoritative-record helper can bypass the canonical receiver journal and sequence boundary |
-| 37 | FW-007 | P2 | in-progress | Product-release manifest and environment inputs duplicate one byte-string validation policy |
-| 38 | FW-008 | P1 | in-progress | ESP32 journal replay indexes the active slot without the mutation path's exact slot-bound preflight |
+| 37 | FW-007 | P2 | done | Root-approved private byte-string validation now serves manifest and environment boundaries with unchanged error categories |
+| 38 | FW-008 | P1 | done | Root-approved shared journal preflight prevents replay from indexing an invalid active slot |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -575,7 +575,8 @@ truth.
 ## FW-007: share product-release byte-string validation
 
 - Priority: `P2`
-- State: `in-progress`
+- State: `done`
+- Latest state: Root review approved one private byte-and-length validator for wire manifest and caller-owned environment inputs. Release CTest passed in Release mode; the native coverage gate remains green, and `INVALID_FIELD` versus `INVALID_ARGUMENT` behavior is preserved.
 - Affected file: `apps/scoring/firmware/product-update/src/scoring_product_release.c` and focused native tests.
 - Description: manifest decoding and stored/environment argument validation repeat the same bounded byte grammar with separate loops and limits.
 - Impact: accepted identifier bytes or boundary lengths can drift between manifest and authorization inputs, creating inconsistent release decisions.
@@ -586,7 +587,8 @@ truth.
 ## FW-008: share bounded ESP32 journal state preflight with replay
 
 - Priority: `P1`
-- State: `in-progress`
+- State: `done`
+- Latest state: Root review approved one const-safe lifecycle, recovery, active-slot, storage, and slot-integrity preflight shared by mutation and replay. The three-test ESP32 Release CTest suite and native coverage gate pass; corrupt and unopened states fail before slot indexing.
 - Affected file: `apps/scoring/firmware/esp32/src/scoring_esp32_journal.c` and focused native tests.
 - Description: mutation validates the journal's active slot before indexing storage, while replay performs a separate validation path and then indexes the active slot without the same exact bound check.
 - Impact: corrupt or externally damaged journal state can turn a recoverable `JOURNAL_CORRUPT` condition into an out-of-range storage access.
