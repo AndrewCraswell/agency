@@ -19,14 +19,21 @@ pnpm run:scenarios -- docs/golden-scenarios/epee-contact-boundaries.json
 pnpm run:scenarios -- docs/golden-scenario-manifest.json
 ```
 
-The command emits exactly one pretty-printed JSON report on standard output.
-The report has format `scoring-golden-run-report`, schema version `1.1.0`, a
-stable lexicographic scenario order, deterministic actual results, mismatch
-details, and a summary. Qualified-hit and off-target comparisons include the
-canonical signal snapshot and exact listed `sourceInputIds`; descriptive
-decision `id` values are not runtime identities. Planned manifest entries are not executed; active
-entries must resolve to files and agree with their manifest IDs, weapons, and
-source IDs.
+The command accepts exactly one `.json` pathname and no flags or option aliases.
+It emits exactly one pretty-printed JSON report on standard output. The outer
+report has format `scoring-golden-scenario-cli-report`, schema version `1.0.0`,
+and the SHA-256 digest of the exact input bytes. Its `runnerReport` is the
+authoritative runner report, with format `scoring-golden-run-report` and schema
+version `1.1.0`. This keeps the command boundary from becoming a second scoring
+implementation. The output is limited to 4 MiB; a larger serialized result is
+replaced by the deterministic `output-too-large` report.
+
+The embedded runner report has a stable lexicographic scenario order,
+deterministic actual results, mismatch details, and a summary. Qualified-hit
+and off-target comparisons include the canonical signal snapshot and exact
+listed `sourceInputIds`; descriptive decision `id` values are not runtime
+identities. Planned manifest entries are not executed; active entries must
+resolve to files and agree with their manifest IDs, weapons, and source IDs.
 
 Report `1.1.0` emits Sabre host `diagnostics` for canonical scenario version
 `1.1.0` and Foil host `classifications` for canonical scenario version `1.2.0`.
@@ -39,7 +46,8 @@ Exit status is part of the interface:
 
 - `0`: every selected scenario matched its declared accepted or rejected result;
 - `1`: a scenario executed but its result differed from its expectation;
-- `2`: the input path, JSON, schema fields, or manifest contract was invalid.
+- `2`: the command invocation or input path was invalid, the runner rejected
+  JSON/schema/manifest input, or a report exceeded the output bound.
 
 The runner invokes the selected host weapon scorer and preserves listed input
 order. It does not sort invalid timestamps, replay stored decision records, or
