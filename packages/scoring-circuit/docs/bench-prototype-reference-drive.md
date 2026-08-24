@@ -71,6 +71,53 @@ model, bandwidth, grounding method, calibration, time base, sample rate,
 trigger, board ID, firmware digest, SHA-256, ripple, conversion-correlated
 step, recovery time, ringing, and ADC-code statistics.
 
+## Bounded simulation and evidence contract
+
+[`spice/reference-drive.cir`](../spice/reference-drive.cir) and
+[`scripts/run-reference-drive-sim.mjs`](../scripts/run-reference-drive-sim.mjs)
+provide a reproducible ngspice 47 behavioral screen. Run it from the repository
+root with:
+
+```text
+node packages/scoring-circuit/scripts/run-reference-drive-sim.mjs
+```
+
+The 12-case run covers one conversion, sustained bursts, startup, and a
+controlled power-off/recovery transition at declared -40 C, 25 C, and 125 C
+behavioral corners. All cases passed the model-only limits. Across the run, the
+largest ADC-reference droop was 13.69 mV, the largest between-pulse residual was
+2.11 mV, the longest 99% startup was 94.71 us, power-off collapse was no
+longer than 7.848 us, and recovery after power restoration was no longer than
+16.21 us. The runner also normalizes and binds 126,279 raw input, regulator
+output, and ADC-reference waveform points. These are simulator outputs, not
+device limits.
+
+The runner fails unless the ngspice identity and the following artifacts
+reproduce exactly:
+
+| Artifact | SHA-256 |
+| --- | --- |
+| Netlist template | `87be1beb2285c6adc1ab4b620f7139445cf06b451f57264a94508658f66894c2` |
+| Parameter manifest | `5ca2d17e0664ace5c44ff4ed96113b1280b389591a2c1c03ba4ab17adce34f46` |
+| Normalized results | `f3a2997911b1b700babc4822093731aa54c3286de8e941748f8e9a5764b5d975` |
+| Raw-waveform manifest | `1c708bcb507b3cbed63ddd416524c478dafef2409949362dba9f528a4e98f62f` |
+| Bound evidence identity | `79d700c8eddaf11a4a47ea1cd6e38ef29d8407effb30a1cef5cf6b2089b5599c` |
+
+No official REF5025A-Q1 transient macromodel or ADS8881 conversion-phase
+reference-load model is claimed. The run uses an explicit 2.5-V behavioral
+target, declared output resistance, selected passives, and the illustrative
+100-mA, 1-us load pulse. The temperature labels select declared screening
+values; they are not vendor temperature bounds. Capacitor DC-bias, ESR/ESL,
+vendor silicon dynamics, and post-layout parasitics remain unproved.
+
+Before any dynamic-load or performance credit, measured REF5025A-Q1 OUT and
+ADS_REF2V5 traces must be archived with the same case identifiers and bound
+inputs. Every measurement record must identify the board and populated-part
+manifest, firmware digest, instrument calibration, probe setup, raw-waveform
+metadata, and concurrent ADC-code statistics. Missing, substituted, or
+non-reproducible measurement artifacts keep measurement, correlation, layout,
+footprint, performance, and fabrication authority denied.
+
 Until those traces are measured and reviewed, dynamic load, reference quietness,
 layout, footprint, and fabrication all remain **DENY**.
 

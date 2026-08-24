@@ -67,6 +67,22 @@ power/energy; and post-pulse leakage, continuity, startup, reference, ADC, and
 buffer-recovery records. Powered and unpowered cold, ambient, and hot runs are
 required, with the normal source disabled during every guarded pulse.
 
+The executable capture witness accepts only the exact fixture permit, current
+trip, watchdog, normal-source-off, sink-off, mutual-exclusion, dwell, and
+inter-pulse observations. It also requires explicit healthy-reference, both
+healthy-rail, overload-clear, expected-ADC-code, and all ten trace-node
+observations. A missing witness, a stop condition, or an unpowered run returns
+`unavailable`; a complete powered plus- or minus-24-V capture is only
+`capture-eligible-no-approval`. Neither result approves a component, the
+schematic, fabrication, sustained faults, unpowered faults, or recovery.
+
+The recovery capture plan is fixed: record before, during, and after every
+guarded pulse at `LINE`, post-TPD, buffer input/output, `ADS8881 AINP`, both
+isolated rails, `REF5025A-Q1` output, and guarded-force voltage/current. Follow
+each pulse with continuity, leakage, rail-startup, reference, ADC-code,
+buffer-overload, and normal-resistance records. These are required physical
+gates; no current record exists in this repository.
+
 The executable, fail-closed decision is
 [`bench-prototype-fault-protection.ts`](../src/bench-prototype-fault-protection.ts).
 It rejects altered canonical data and mutable upstream connector/fault evidence.

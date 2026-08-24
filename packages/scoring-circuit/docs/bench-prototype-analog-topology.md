@@ -13,29 +13,48 @@ ADS8881 AINN -> SCORING_SGND
 REF5025A-Q1 -> 2.49 kohm -> TMUX1112 source path -> source node
 ```
 
-This is a topology selection, not accuracy, timing, fault, footprint,
-schematic, or fabrication approval. BP-101 must close the reference network,
-BP-102 must close connector protection and fault recovery, and BP-103 must
-select and prove the seven-channel conversion architecture.
+This accepts the reviewed topology selection only. It is not a performance,
+physical-measurement, fault, footprint, schematic, or fabrication approval.
+BP-101 must close the reference network, BP-102 must close connector protection
+and fault recovery, and BP-103 must select and prove the seven-channel
+conversion architecture.
 
 ## Why this path is selected
 
 - The normative 0-ohm state and the 450/475/500-ohm region are within the
   published normal input ranges of the isolated `ADA4177-1BRZ` buffer and
   `ADS8881IDGS` converter.
-- The inspectable 450-ohm, 125 C arithmetic is below the 4.5-ohm development
-  allocation, but remains unvalidated and requires per-corner two-point
-  calibration.
+- The 450-ohm, 125 C review inventory has an explicit 4.5-ohm arithmetic
+  screen. Its credited values are fixture allocation, source-resistor
+  temperature after corner calibration, buffer bias and offset, ADC INL and
+  offset drift, and ADC quantization. It remains unvalidated and requires
+  per-corner two-point calibration.
 - The inspectable 100-ohm, 10-nF arithmetic is below 10 microseconds, but uses
   typical buffer bandwidth and is not a guaranteed settling result.
 - The separately guarded 56-kohm lane keeps a 24 V, 100 ms experiment within
   the buffer's published OVP range. It is not sustained-fault, surge, ESD,
   EFT, brownout, or unpowered approval.
 
-No omitted term receives credit. The executable contract lists the omitted
-switch, clamp, ADC, reference, tolerance, parasitic, firmware, and recovery
-terms with `credited: false` and keeps both accuracy and timing `validated:
-false`.
+## Reviewed budget inventory
+
+The executable contract is the complete review record. Every term is named;
+an unbounded term uses `credit: "none"`, and a numerical screen that cannot
+prove end-to-end performance uses `credit: "screen-only"`. A guarded-source
+value uses `credit: "source-envelope-only"`: it does not provide a component
+survival or recovery allowance.
+
+| Budget | Included or screened terms | Explicit zero-credit terms | Physical state |
+| --- | --- | --- | --- |
+| Error at 450 ohm and 125 C | Fixture allocation, source-resistor temperature, buffer bias and offset, ADC INL, ADC offset drift, and quantization | Reference accuracy and dynamics; source calibration residual; switch resistance, leakage, charge, and memory; clamp behavior; remaining buffer and ADC errors; SAR and reference loop components; board and fixture effects; calibration transfer | `DENY` |
+| Settling at 100 ohm and 10 nF | Source five-time-constant, typical buffer-bandwidth, SAR RC, and ADC-cycle arithmetic | Switch behavior; guaranteed buffer settling; SAR kickback and reference recovery; all extracted parasitics; firmware and qualification timing; overload recovery | `DENY` |
+| Leakage | Buffer bias bound and a screen-only ADC leakage conversion | Switch, clamp, reference, PCB, connector, cable, fixture, contamination, humidity, and probe leakage | `DENY` |
+| Overload and fault | 24 V, 100 ms, 10 s, minimum guard resistance, source current, power, and energy envelope | Normal-port and surge conditions; clamp, buffer, ADC, rail, return, and supply behavior | `DENY` |
+| Fault recovery | No physical result is credited | Powered and unpowered polarity and temperature matrix, required traces, post-pulse health, and fixture-control evidence | `DENY` |
+
+Therefore `topologySelectionAccepted` and `reviewedBudgetComplete` are true,
+while `performanceClaimAccepted` and `physicalMeasurementsAccepted` are false.
+The acceptance is truthful because it accepts the selection review, not an
+unmeasured product characteristic.
 
 ## Exact selected core
 
@@ -53,6 +72,14 @@ The complete per-reference support BOM remains in
 [`one-channel-analog-readiness.ts`](../src/one-channel-analog-readiness.ts).
 The executable BP-100 decision is
 [`bench-prototype-analog-topology.ts`](../src/bench-prototype-analog-topology.ts).
+
+The normal protection path is bound by exact reference, MPN, package, and
+manufacturer evidence link: `U_ESD` `TPD4E05U06DQAR`, `R_ESD`
+`CRCW060322R0FKEAHP`, `U_SOURCE_SWITCH` `TMUX1112PWR`, `U_OVP_BUFFER`
+`ADA4177-1BRZ`, `R_SAR` `CRCW060320R0FKEAHP`, and `U_SAR` `ADS8881IDGS`.
+The same contract independently freezes every upstream numerical input used by
+the screens. A missing, duplicate, or altered BOM row, or an altered numerical
+input, fails validation rather than becoming a new BP-100 baseline.
 
 ## Open gates
 

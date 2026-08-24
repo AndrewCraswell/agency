@@ -4,13 +4,14 @@ import {
   validateBenchPrototypeAnalogTopology
 } from "./bench-prototype-analog-topology.js"
 import { oneChannelAnalogExperiment } from "./one-channel-analog-experiment.js"
+import { oneChannelAnalogExperimentBom } from "./one-channel-analog-readiness.js"
 
 function clone<T>(value: T): T {
   return structuredClone(value)
 }
 
 describe("BP-100 bench prototype analog topology", () => {
-  it("selects the one-channel protected buffer and SAR chain without granting release", () => {
+  it("accepts the reviewed topology-selection budget without granting performance, physical, or release authority", () => {
     expect(validateBenchPrototypeAnalogTopology(benchPrototypeAnalogTopology)).toBe(true)
     expect(benchPrototypeAnalogTopology.normalRange).toMatchObject({
       allInsidePublishedBufferAndAdcRanges: true,
@@ -20,23 +21,60 @@ describe("BP-100 bench prototype analog topology", () => {
     expect(benchPrototypeAnalogTopology.accuracyBudget.validated).toBe(false)
     expect(benchPrototypeAnalogTopology.sabreTimingBudget.arithmeticInsideAllocation).toBe(true)
     expect(benchPrototypeAnalogTopology.sabreTimingBudget.validated).toBe(false)
+    expect(benchPrototypeAnalogTopology.authority).toMatchObject({
+      performanceClaimAccepted: false,
+      physicalMeasurementsAccepted: false,
+      reviewedBudgetComplete: true,
+      topologySelectionAccepted: true
+    })
     expect(benchPrototypeAnalogTopology.authority).toEqual({
       fabricationAuthorized: false,
       footprintClosureAuthorized: false,
+      performanceClaimAccepted: false,
+      physicalMeasurementsAccepted: false,
       releaseState: "deny",
-      schematicIntegrationAuthorized: false
+      reviewedBudgetComplete: true,
+      schematicIntegrationAuthorized: false,
+      topologySelectionAccepted: true
     })
   })
 
-  it("gives no credit to any omitted accuracy or timing term", () => {
-    expect(benchPrototypeAnalogTopology.accuracyBudget.omittedTerms.length).toBeGreaterThan(0)
-    expect(benchPrototypeAnalogTopology.sabreTimingBudget.omittedTerms.length).toBeGreaterThan(0)
+  it("makes every error, settling, leakage, overload, and recovery term explicit and grants no unbounded term credit", () => {
+    const { accuracyBudget, faultRecoveryBudget, leakageBudget, overloadAndFault, sabreTimingBudget } =
+      benchPrototypeAnalogTopology
+    expect(accuracyBudget.completeTermInventory.length).toBeGreaterThan(10)
+    expect(sabreTimingBudget.completeTermInventory.length).toBeGreaterThan(5)
+    expect(leakageBudget.completeTermInventory.length).toBeGreaterThan(5)
+    expect(overloadAndFault.completeTermInventory.length).toBeGreaterThan(10)
+    expect(faultRecoveryBudget.completeTermInventory.length).toBeGreaterThan(3)
     expect(
-      [
-        ...benchPrototypeAnalogTopology.accuracyBudget.omittedTerms,
-        ...benchPrototypeAnalogTopology.sabreTimingBudget.omittedTerms
-      ].every((entry) => entry.credited === false)
+      accuracyBudget.completeTermInventory
+        .filter((entry) => entry.credit === "none")
+        .every((entry) => entry.errorOhms === null)
     ).toBe(true)
+    expect(
+      sabreTimingBudget.completeTermInventory
+        .filter((entry) => entry.credit === "none")
+        .every((entry) => entry.timeUs === null)
+    ).toBe(true)
+    expect(
+      leakageBudget.completeTermInventory
+        .filter((entry) => entry.credit === "none")
+        .every((entry) => entry.errorOhms === null && entry.maximumNa === null)
+    ).toBe(true)
+    expect(
+      overloadAndFault.completeTermInventory
+        .filter((entry) => entry.credit === "none")
+        .every((entry) => entry.value === null)
+    ).toBe(true)
+    expect(
+      faultRecoveryBudget.completeTermInventory.every((entry) => entry.credit === "none" && entry.measured === false)
+    ).toBe(true)
+    expect(accuracyBudget.physicalMeasurementStatus).toBe("DENY")
+    expect(sabreTimingBudget.physicalMeasurementStatus).toBe("DENY")
+    expect(leakageBudget.physicalMeasurementStatus).toBe("DENY")
+    expect(overloadAndFault.physicalMeasurementStatus).toBe("DENY")
+    expect(faultRecoveryBudget.physicalMeasurementStatus).toBe("DENY")
   })
 
   it("pins the corrected reference capacitor and exact acquisition parts", () => {
@@ -47,6 +85,14 @@ describe("BP-100 bench prototype analog topology", () => {
     expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["R_ESD", "CRCW060322R0FKEAHP"])
     expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["U_OVP_BUFFER", "ADA4177-1BRZ"])
     expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["U_SAR", "ADS8881IDGS"])
+    expect(benchPrototypeAnalogTopology.normalProtectionParts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ mpn: "TPD4E05U06DQAR", reference: "U_ESD" }),
+        expect.objectContaining({ mpn: "CRCW060322R0FKEAHP", reference: "R_ESD" }),
+        expect.objectContaining({ mpn: "TMUX1112PWR", reference: "U_SOURCE_SWITCH" }),
+        expect.objectContaining({ mpn: "ADA4177-1BRZ", reference: "U_OVP_BUFFER" })
+      ])
+    )
   })
 
   it("rejects substitutions, extras, sparse arrays, accessors, aliases, and array subclasses", () => {
@@ -96,6 +142,29 @@ describe("BP-100 bench prototype analog topology", () => {
     expect(validateBenchPrototypeAnalogTopology(benchPrototypeAnalogTopology)).toBe(true)
   })
 
+  it("rejects normal-protection BOM and numerical-provenance drift", () => {
+    const esd = oneChannelAnalogExperimentBom.find((part) => part.reference === "U_ESD") as unknown as { mpn: string }
+    const acquisition = oneChannelAnalogExperiment.acquisition as unknown as { adcInputLeakageMaximumNa: number }
+    const esdOriginal = esd.mpn
+    const leakageOriginal = acquisition.adcInputLeakageMaximumNa
+    try {
+      Reflect.set(esd, "mpn", "FAKE")
+      expect(() => validateBenchPrototypeAnalogTopology(benchPrototypeAnalogTopology)).toThrow(
+        "upstream analog evidence drifted"
+      )
+      Reflect.set(esd, "mpn", esdOriginal)
+
+      Reflect.set(acquisition, "adcInputLeakageMaximumNa", 6)
+      expect(() => validateBenchPrototypeAnalogTopology(benchPrototypeAnalogTopology)).toThrow(
+        "upstream analog evidence drifted"
+      )
+    } finally {
+      Reflect.set(esd, "mpn", esdOriginal)
+      Reflect.set(acquisition, "adcInputLeakageMaximumNa", leakageOriginal)
+    }
+    expect(validateBenchPrototypeAnalogTopology(benchPrototypeAnalogTopology)).toBe(true)
+  })
+
   it("rejects numerical drift behind static, range, timing, and fault screens", () => {
     const source = oneChannelAnalogExperiment.source as unknown as {
       excitationVolts: number
@@ -112,19 +181,19 @@ describe("BP-100 bench prototype analog topology", () => {
     try {
       Reflect.set(source, "excitationVolts", 2.4)
       expect(() => validateBenchPrototypeAnalogTopology(benchPrototypeAnalogTopology)).toThrow(
-        "numerical experiment evidence drifted"
+        "upstream analog evidence drifted"
       )
       Reflect.set(source, "excitationVolts", sourceOriginal)
 
       Reflect.set(acquisition, "bufferGainBandwidthTypicalMhz", 4)
       expect(() => validateBenchPrototypeAnalogTopology(benchPrototypeAnalogTopology)).toThrow(
-        "numerical experiment evidence drifted"
+        "upstream analog evidence drifted"
       )
       Reflect.set(acquisition, "bufferGainBandwidthTypicalMhz", bandwidthOriginal)
 
       Reflect.set(faultGuard, "maximumPulseDurationMs", 101)
       expect(() => validateBenchPrototypeAnalogTopology(benchPrototypeAnalogTopology)).toThrow(
-        "numerical experiment evidence drifted"
+        "upstream analog evidence drifted"
       )
     } finally {
       Reflect.set(source, "excitationVolts", sourceOriginal)

@@ -3,6 +3,7 @@ import { benchPrototypeAnalogTopology } from "./bench-prototype-analog-topology.
 import {
   benchPrototypeFaultProtection,
   calculateGuardedFaultEnvelope,
+  evaluateGuardedFaultCaptureWitness,
   validateBenchPrototypeFaultProtection
 } from "./bench-prototype-fault-protection.js"
 import { oneChannelAnalogExperiment } from "./one-channel-analog-experiment.js"
@@ -77,6 +78,92 @@ describe("BP-102 bench prototype fault protection", () => {
     expect(() => calculateGuardedFaultEnvelope({ appliedVolts: 24.01, pulseDurationMs: 100 })).toThrow(RangeError)
     expect(() => calculateGuardedFaultEnvelope({ appliedVolts: 24, pulseDurationMs: 100.01 })).toThrow(RangeError)
     expect(() => calculateGuardedFaultEnvelope({ appliedVolts: Number.NaN, pulseDurationMs: 1 })).toThrow(RangeError)
+  })
+
+  it("fails closed unless every powered capture witness, trace, and stop gate is observed", () => {
+    const witness = {
+      appliedVolts: 24,
+      beforePulse: {
+        currentTripArmed: true,
+        dwellTimerArmed: true,
+        fixturePermitObserved: true,
+        interPulseTimerSatisfied: true,
+        normalSourceDisabled: true,
+        sinkDisabled: true,
+        sourceSinkForceMutualExclusionObserved: true,
+        watchdogHealthy: true
+      },
+      health: {
+        adcCodeExpected: true,
+        negativeAnalogRailHealthy: true,
+        overloadClear: true,
+        positiveAnalogRailHealthy: true,
+        referenceHealthy: true
+      },
+      powered: true,
+      pulseDurationMs: 100,
+      stopConditionObserved: false,
+      traceObserved: {
+        ads8881Ainp: true,
+        bufferInput: true,
+        bufferOutput: true,
+        guardedForceCurrent: true,
+        guardedForceVoltage: true,
+        line: true,
+        postTpd: true,
+        ref5025Output: true,
+        s5vIsolated: true,
+        s5vNeg: true
+      }
+    }
+
+    expect(evaluateGuardedFaultCaptureWitness(witness)).toMatchObject({
+      approval: false,
+      evidenceState: "capture-eligible-no-approval",
+      polarity: "plus",
+      reasons: []
+    })
+    expect(evaluateGuardedFaultCaptureWitness({ ...witness, appliedVolts: -24 })).toMatchObject({
+      approval: false,
+      evidenceState: "capture-eligible-no-approval",
+      polarity: "minus",
+      reasons: []
+    })
+    expect(
+      evaluateGuardedFaultCaptureWitness({
+        ...witness,
+        powered: false,
+        stopConditionObserved: true
+      })
+    ).toMatchObject({
+      approval: false,
+      evidenceState: "unavailable",
+      reasons: ["fixture stop condition observed", "unpowered behavior remains unvalidated and denied"]
+    })
+
+    expect(
+      evaluateGuardedFaultCaptureWitness({
+        ...witness,
+        health: { ...witness.health, referenceHealthy: false }
+      })
+    ).toMatchObject({
+      evidenceState: "unavailable",
+      reasons: ["health witness absent: referenceHealthy"]
+    })
+    expect(
+      evaluateGuardedFaultCaptureWitness({
+        ...witness,
+        traceObserved: { ...witness.traceObserved, bufferOutput: false }
+      })
+    ).toMatchObject({
+      evidenceState: "unavailable",
+      reasons: ["required trace absent: bufferOutput"]
+    })
+    expect(() => evaluateGuardedFaultCaptureWitness({ ...witness, ignored: true })).toThrow(RangeError)
+    expect(() => evaluateGuardedFaultCaptureWitness({ ...witness, appliedVolts: 0 })).toThrow(RangeError)
+    const accessor = { ...witness }
+    Object.defineProperty(accessor, "powered", { get: () => true })
+    expect(() => evaluateGuardedFaultCaptureWitness(accessor)).toThrow(RangeError)
   })
 
   it("rejects substitutions, extras, sparse arrays, accessors, aliases, and array subclasses", () => {

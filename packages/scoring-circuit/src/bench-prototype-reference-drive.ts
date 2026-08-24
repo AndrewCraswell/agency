@@ -227,6 +227,105 @@ export const benchPrototypeReferenceDrive = deepFreeze({
     ],
     measurementRequired: true
   },
+  simulationAndEvidence: {
+    artifactKind: "bench-prototype-reference-transient-evidence",
+    simulation: {
+      model: "bounded-behavioral-REF5025-to-ADS8881-reference-network-screen",
+      status: "passed-bounded-behavioral-screen",
+      modelAuthority:
+        "No official REF5025A-Q1 macromodel or ADS8881 conversion-phase REF-load model is claimed. Declared behavioral parameters exercise the selected passive network only.",
+      declaredModelInputs: [
+        "2.5 V behavioral regulator target with 1 V declared input headroom",
+        "1 uF C_REF_IN behind a declared 0.05 ohm source resistance",
+        "100 mA, 1 us behavioral ADC reference-load pulse representing the illustrative 100 nC stimulus",
+        "8 uF to 10 uF ADS8881-local effective capacitance with 0.05 ohm to 0.1 ohm declared ESR",
+        "8 uF to 10 uF REF5025-local effective capacitance with 0.05 ohm to 0.1 ohm declared ESR",
+        "0.22 ohm R_REF_SAR and 0.05 ohm to 0.1 ohm declared regulator output resistance",
+        "cold, ambient, and hot labels that select declared behavioral values rather than vendor temperature bounds"
+      ],
+      requiredCases: [
+        "single conversion at the selected one-channel acquisition rate",
+        "sustained conversion burst at the selected one-channel acquisition rate",
+        "source off and largest normal source-on signal",
+        "cold, ambient, and hot component conditions",
+        "isolated-converter startup and controlled power transitions"
+      ],
+      requiredArtifacts: [
+        "versioned simulator and model identifiers",
+        "machine-readable netlist and parameter manifest",
+        "raw node waveforms for ADS_REF2V5 and REF5025A-Q1 OUT",
+        "peak-to-peak ripple, conversion-correlated step, settling time, and ringing summary",
+        "artifact digest bound to the exact selected-part and layout-parasitic inputs"
+      ],
+      execution: {
+        command: "node packages/scoring-circuit/scripts/run-reference-drive-sim.mjs",
+        engineIdentity: "ngspice-47 : Circuit level simulation program",
+        caseCount: 12,
+        rawWaveformPointCount: 126279,
+        caseFamilies: ["single-conversion", "sustained-burst", "startup", "power-transition"],
+        cornersC: [-40, 25, 125],
+        boundedAcceptance: {
+          dynamicMaximumDroopMv: 30,
+          dynamicMaximumFinalErrorMv: 3,
+          powerOffMaximumResidualMv: 1,
+          powerTransitionMaximumCollapseUs: 50,
+          powerTransitionMaximumRecoveryUs: 50,
+          startupMaximumTimeTo99PercentUs: 150
+        },
+        observedEnvelope: {
+          maximumDynamicDroopMv: 13.69,
+          maximumDynamicFinalErrorMv: 2.11,
+          maximumPowerOffResidualMv: 0.000000961191,
+          maximumPowerTransitionCollapseUs: 7.848,
+          maximumPowerTransitionRecoveryUs: 16.21,
+          maximumStartupTimeTo99PercentUs: 94.71
+        },
+        artifactDigests: {
+          netlistTemplateSha256: "87be1beb2285c6adc1ab4b620f7139445cf06b451f57264a94508658f66894c2",
+          parameterManifestSha256: "5ca2d17e0664ace5c44ff4ed96113b1280b389591a2c1c03ba4ab17adce34f46",
+          normalizedResultsSha256: "f3a2997911b1b700babc4822093731aa54c3286de8e941748f8e9a5764b5d975",
+          waveformManifestSha256: "1c708bcb507b3cbed63ddd416524c478dafef2409949362dba9f528a4e98f62f",
+          evidenceDigest: "79d700c8eddaf11a4a47ea1cd6e38ef29d8407effb30a1cef5cf6b2089b5599c"
+        },
+        reproduced: true,
+        boundedSimulationPassed: true
+      },
+      unavailableSiliconEvidence: [
+        "REF5025A-Q1 official transient macromodel or exact selected-condition output-impedance model",
+        "ADS8881 conversion-phase REF current waveform or official REF-load macromodel",
+        "temperature-qualified selected-capacitor DC-bias, ESR, and ESL bounds",
+        "post-layout loop parasitics"
+      ],
+      performanceCredit: false
+    },
+    measurement: {
+      status: "not-acquired",
+      requiredArchiveFields: [
+        "board identifier and exact populated-part manifest",
+        "firmware digest and acquisition-rate configuration",
+        "instrument model, serial, calibration certificate, and due date",
+        "probe model, bandwidth limit, grounding method, and exact probe points",
+        "raw waveform artifact with sample rate, time base, trigger position, and SHA-256",
+        "concurrent ADC-code statistics and environmental condition"
+      ],
+      requiredComparison:
+        "Compare measured REF5025A-Q1 OUT and ADS_REF2V5 traces with the simulation cases before any dynamic-load credit.",
+      physicalEvidenceAccepted: false
+    },
+    correlation: {
+      status: "not-assessed",
+      required: true,
+      acceptance:
+        "Simulation and measurement must use identical case identifiers and bound inputs; any missing, substituted, or non-reproducible artifact keeps BP-101 denied."
+    },
+    authority: {
+      boundedSimulationPassed: true,
+      performanceClaimAccepted: false,
+      measurementAccepted: false,
+      correlationAccepted: false,
+      releaseState: "deny"
+    }
+  },
   authority: {
     measuredTransientApproved: false,
     layoutApproved: false,

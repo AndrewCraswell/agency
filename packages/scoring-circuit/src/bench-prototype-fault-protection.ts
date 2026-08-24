@@ -18,6 +18,42 @@ function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
   return Object.freeze(value)
 }
 
+function readExactDataRecord(value: unknown, requiredKeys: readonly string[], label: string): Record<string, unknown> {
+  if (!isPlainRecord(value)) throw new RangeError(`${label} must be a plain data record`)
+  const actualKeys = Reflect.ownKeys(value)
+  if (
+    actualKeys.length !== requiredKeys.length ||
+    actualKeys.some((key) => typeof key !== "string" || !requiredKeys.includes(key))
+  ) {
+    throw new RangeError(`${label} must contain exactly the reviewed keys`)
+  }
+
+  const record: Record<string, unknown> = {}
+  for (const key of requiredKeys) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (descriptor === undefined || !("value" in descriptor)) {
+      throw new RangeError(`${label}.${key} must be an own data property`)
+    }
+    record[key] = descriptor.value
+  }
+  return record
+}
+
+function readExactBooleanRecord(
+  value: unknown,
+  requiredKeys: readonly string[],
+  label: string
+): Record<string, boolean> {
+  const record = readExactDataRecord(value, requiredKeys, label)
+  const witness: Record<string, boolean> = {}
+  for (const key of requiredKeys) {
+    const booleanValue = record[key]
+    if (typeof booleanValue !== "boolean") throw new RangeError(`${label}.${key} must be a Boolean data property`)
+    witness[key] = booleanValue
+  }
+  return witness
+}
+
 /** Rejects getters, prototypes, holes, symbols, unexpected keys, and aliases. */
 function hasExactDataGraph(actual: unknown, expected: unknown, seen = new WeakMap<object, object>()): boolean {
   if (Object.is(actual, expected)) return true
@@ -86,6 +122,103 @@ export function calculateGuardedFaultEnvelope(input: { appliedVolts: number; pul
 }
 
 const maximumGuardedEnvelope = calculateGuardedFaultEnvelope({ appliedVolts: 24, pulseDurationMs: 100 })
+
+const guardedFaultWitnessRequirements = deepFreeze({
+  beforePulse: [
+    "fixturePermitObserved",
+    "currentTripArmed",
+    "watchdogHealthy",
+    "normalSourceDisabled",
+    "sinkDisabled",
+    "sourceSinkForceMutualExclusionObserved",
+    "dwellTimerArmed",
+    "interPulseTimerSatisfied"
+  ],
+  health: [
+    "referenceHealthy",
+    "positiveAnalogRailHealthy",
+    "negativeAnalogRailHealthy",
+    "overloadClear",
+    "adcCodeExpected"
+  ],
+  traceObserved: [
+    "line",
+    "postTpd",
+    "bufferInput",
+    "bufferOutput",
+    "ads8881Ainp",
+    "s5vIsolated",
+    "s5vNeg",
+    "ref5025Output",
+    "guardedForceVoltage",
+    "guardedForceCurrent"
+  ]
+} as const)
+
+const guardedFaultWitnessTopLevelKeys = [
+  "appliedVolts",
+  "beforePulse",
+  "health",
+  "powered",
+  "pulseDurationMs",
+  "stopConditionObserved",
+  "traceObserved"
+] as const
+
+export function evaluateGuardedFaultCaptureWitness(input: unknown): {
+  approval: false
+  evidenceState: "capture-eligible-no-approval" | "unavailable"
+  polarity: "minus" | "plus"
+  reasons: readonly string[]
+  sourceEnvelope: ReturnType<typeof calculateGuardedFaultEnvelope>
+} {
+  const witness = readExactDataRecord(input, guardedFaultWitnessTopLevelKeys, "guarded-fault witness")
+  const { appliedVolts, powered, pulseDurationMs, stopConditionObserved } = witness
+  if (
+    typeof appliedVolts !== "number" ||
+    !Number.isFinite(appliedVolts) ||
+    appliedVolts === 0 ||
+    typeof pulseDurationMs !== "number" ||
+    typeof powered !== "boolean" ||
+    typeof stopConditionObserved !== "boolean"
+  ) {
+    throw new RangeError("guarded-fault witness must use finite nonzero volts and Boolean powered and stop fields")
+  }
+
+  const beforePulse = readExactBooleanRecord(
+    witness.beforePulse,
+    guardedFaultWitnessRequirements.beforePulse,
+    "beforePulse"
+  )
+  const health = readExactBooleanRecord(witness.health, guardedFaultWitnessRequirements.health, "health")
+  const traceObserved = readExactBooleanRecord(
+    witness.traceObserved,
+    guardedFaultWitnessRequirements.traceObserved,
+    "traceObserved"
+  )
+  const sourceEnvelope = calculateGuardedFaultEnvelope({ appliedVolts, pulseDurationMs })
+  const reasons = [
+    ...Object.entries(beforePulse)
+      .filter(([, observed]) => !observed)
+      .map(([key]) => `before-pulse witness absent: ${key}`),
+    ...Object.entries(health)
+      .filter(([, observed]) => !observed)
+      .map(([key]) => `health witness absent: ${key}`),
+    ...Object.entries(traceObserved)
+      .filter(([, observed]) => !observed)
+      .map(([key]) => `required trace absent: ${key}`),
+    ...(stopConditionObserved ? ["fixture stop condition observed"] : []),
+    ...(!powered ? ["unpowered behavior remains unvalidated and denied"] : [])
+  ]
+
+  return deepFreeze({
+    approval: false,
+    evidenceState: reasons.length === 0 ? "capture-eligible-no-approval" : "unavailable",
+    polarity: appliedVolts < 0 ? "minus" : "plus",
+    reasons,
+    sourceEnvelope
+  })
+}
 
 const selectedParts = deepFreeze([
   {

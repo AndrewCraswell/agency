@@ -29,6 +29,13 @@ describe("BP-101 bench prototype reference drive", () => {
         ["U_SAR", "ADS8881IDGS"]
       ])
     )
+    expect(benchPrototypeReferenceDrive.topology).toEqual({
+      input:
+        "S5V_ISOLATED -> C_REF_IN 1 uF X7R directly to SCORING_SGND at REF5025A-Q1 IN/GND; no shared return through ADS8881 or digital decoupling",
+      regulatorOutput:
+        "REF5025A-Q1 OUT -> C_REF_REG 10 uF polymer tantalum in parallel with C_REF_REG_HF 100 nF X7R -> SCORING_SGND, entirely inside the regulator-local loop",
+      adc: "REF5025A-Q1 OUT -> R_REF_SAR 0.22 ohm -> ADS_REF2V5; C_REF 10 uF X7R 0805 is the only capacitor directly across ADS8881 REF/GND; AINN remains SCORING_SGND"
+    })
     expect(benchPrototypeReferenceDrive.ref5025LocalStabilization).toMatchObject({
       outputMaximumCapacitanceUf: 50,
       outputMaximumEsrOhms: 1.5,
@@ -89,6 +96,60 @@ describe("BP-101 bench prototype reference drive", () => {
     ).toThrow(RangeError)
   })
 
+  it("defines reproducible simulation and measurement evidence without granting performance credit", () => {
+    expect(benchPrototypeReferenceDrive.simulationAndEvidence).toMatchObject({
+      artifactKind: "bench-prototype-reference-transient-evidence",
+      simulation: {
+        model: "bounded-behavioral-REF5025-to-ADS8881-reference-network-screen",
+        performanceCredit: false,
+        status: "passed-bounded-behavioral-screen",
+        execution: {
+          boundedSimulationPassed: true,
+          caseCount: 12,
+          rawWaveformPointCount: 126279,
+          reproduced: true
+        }
+      },
+      measurement: {
+        physicalEvidenceAccepted: false,
+        status: "not-acquired"
+      },
+      correlation: { required: true, status: "not-assessed" },
+      authority: {
+        boundedSimulationPassed: true,
+        correlationAccepted: false,
+        measurementAccepted: false,
+        performanceClaimAccepted: false,
+        releaseState: "deny"
+      }
+    })
+    expect(benchPrototypeReferenceDrive.simulationAndEvidence.simulation.declaredModelInputs).toEqual(
+      expect.arrayContaining([
+        "2.5 V behavioral regulator target with 1 V declared input headroom",
+        "100 mA, 1 us behavioral ADC reference-load pulse representing the illustrative 100 nC stimulus",
+        "0.22 ohm R_REF_SAR and 0.05 ohm to 0.1 ohm declared regulator output resistance"
+      ])
+    )
+    expect(benchPrototypeReferenceDrive.simulationAndEvidence.simulation.execution).toMatchObject({
+      observedEnvelope: {
+        maximumDynamicDroopMv: 13.69,
+        maximumDynamicFinalErrorMv: 2.11,
+        maximumPowerTransitionRecoveryUs: 16.21,
+        maximumStartupTimeTo99PercentUs: 94.71
+      },
+      artifactDigests: {
+        netlistTemplateSha256: "87be1beb2285c6adc1ab4b620f7139445cf06b451f57264a94508658f66894c2",
+        normalizedResultsSha256: "f3a2997911b1b700babc4822093731aa54c3286de8e941748f8e9a5764b5d975",
+        parameterManifestSha256: "5ca2d17e0664ace5c44ff4ed96113b1280b389591a2c1c03ba4ab17adce34f46",
+        waveformManifestSha256: "1c708bcb507b3cbed63ddd416524c478dafef2409949362dba9f528a4e98f62f",
+        evidenceDigest: "79d700c8eddaf11a4a47ea1cd6e38ef29d8407effb30a1cef5cf6b2089b5599c"
+      }
+    })
+    expect(benchPrototypeReferenceDrive.simulationAndEvidence.measurement.requiredArchiveFields).toEqual(
+      expect.arrayContaining(["raw waveform artifact with sample rate, time base, trigger position, and SHA-256"])
+    )
+  })
+
   it("keeps the regulator and ADC loops separate and validates canonical net names", () => {
     expect(benchPrototypeReferenceDrive.ads8881LocalReservoir).toMatchObject({
       capacitorMpn: "GRM21BR71A106KE51L",
@@ -141,6 +202,12 @@ describe("BP-101 bench prototype reference drive", () => {
     const subclass = clone(benchPrototypeReferenceDrive) as unknown as { selectedParts: Array<[string, string]> }
     subclass.selectedParts = new ForgedArray(...subclass.selectedParts)
     expect(() => validateBenchPrototypeReferenceDrive(subclass)).toThrow(RangeError)
+
+    const simulationStatus = clone(benchPrototypeReferenceDrive) as unknown as {
+      simulationAndEvidence: { simulation: { status: string } }
+    }
+    simulationStatus.simulationAndEvidence.simulation.status = "accepted"
+    expect(() => validateBenchPrototypeReferenceDrive(simulationStatus)).toThrow(RangeError)
   })
 
   it("rejects mutable source provenance drift and restores it", () => {
