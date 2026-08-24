@@ -22,6 +22,7 @@ import {
   validateBenchPrototypeSevenChannelAnalog
 } from "./bench-prototype-seven-channel-analog.js"
 import { findFootprintReleaseEvidence } from "./footprint-release-evidence.js"
+import { M404_SINGLE_CHANNEL_COUPON, validateM404SingleChannelCoupon } from "./m4-04-single-channel-coupon.js"
 import { manufacturerFootprintEligibility } from "./manufacturer-footprint-adapter.js"
 import { oneChannelAnalogExperimentBom } from "./one-channel-analog-readiness.js"
 
@@ -160,6 +161,10 @@ const expectedCellReferenceCount = 16
 const expectedReplicatedCellRecordCount = expectedReplicatedCellCount * expectedCellReferenceCount
 const expectedConnectorRecordCount = 1
 const expectedTotalRecordCount = expectedReplicatedCellRecordCount + expectedConnectorRecordCount
+const expectedSharedManufacturerSourceCount = 13
+const expectedSharedSourceLinkedRecordCount = expectedReplicatedCellCount * expectedSharedManufacturerSourceCount
+const expectedSharedSourceUnresolvedRecordCount =
+  expectedReplicatedCellRecordCount - expectedSharedSourceLinkedRecordCount
 
 function findUniqueSourcePart(reference: string): SourcePart {
   const matches = oneChannelAnalogExperimentBom.filter((part) => part.reference === reference)
@@ -194,6 +199,55 @@ function existingFootprintEvidence(mpn: string) {
   }
 }
 
+function sharedManufacturerSourcesFor(parts: readonly SourcePart[]) {
+  return parts.flatMap((part) => {
+    const m404Footprint = M404_SINGLE_CHANNEL_COUPON.footprints.find((footprint) => footprint.exactMpn === part.mpn)
+    if (
+      m404Footprint === undefined ||
+      m404Footprint.manufacturer !== part.manufacturer ||
+      m404Footprint.package !== part.package ||
+      m404Footprint.evidence.exactMpn !== part.mpn ||
+      m404Footprint.evidence.manufacturerPrimaryDocument.url !== part.primaryEvidenceUrl ||
+      (m404Footprint.evidence.manufacturerPrimaryDocument.status !== "hash-bound" &&
+        m404Footprint.evidence.manufacturerPrimaryDocument.status !== "series-hash-bound") ||
+      (m404Footprint.evidence.manufacturerDrawing.acquisition !== "exact-drawing-hash-bound" &&
+        m404Footprint.evidence.manufacturerDrawing.acquisition !== "series-drawing-hash-bound") ||
+      m404Footprint.evidence.manufacturerDrawing.artifactPath === null ||
+      m404Footprint.evidence.manufacturerDrawing.drawingUrl === null ||
+      m404Footprint.evidence.manufacturerDrawing.sha256 === null
+    ) {
+      return []
+    }
+
+    return [
+      {
+        sourceId: `M4-04:${part.mpn}`,
+        sourceWorkUnit: "M4-04" as const,
+        exactMpn: part.mpn,
+        manufacturer: part.manufacturer,
+        package: part.package,
+        primaryEvidenceUrl: part.primaryEvidenceUrl,
+        sourceStatus: m404Footprint.evidence.manufacturerPrimaryDocument.status,
+        acquisition: m404Footprint.evidence.manufacturerDrawing.acquisition,
+        artifactPath: m404Footprint.evidence.manufacturerDrawing.artifactPath,
+        drawingIdentifier: m404Footprint.evidence.manufacturerDrawing.drawingIdentifier,
+        drawingUrl: m404Footprint.evidence.manufacturerDrawing.drawingUrl,
+        sha256: m404Footprint.evidence.manufacturerDrawing.sha256,
+        geometry: null,
+        reviewStatus: "not-reviewed-for-bp-031" as const,
+        scope:
+          "Imported source identity only. BP-031 has not reviewed the source against project artwork, CAD, orientation, assembly, schematic integration, or fabrication acceptance."
+      }
+    ]
+  })
+}
+
+const sourceParts = cellReferenceBindings.map((binding) => findUniqueSourcePart(binding.baseReference))
+const sharedManufacturerSources = sharedManufacturerSourcesFor(sourceParts)
+const sharedManufacturerSourceByMpn = new Map(
+  sharedManufacturerSources.map((source) => [source.exactMpn, source] as const)
+)
+
 function sourceContractFor(reference: string): "BP-101" | "BP-102" {
   if (["U_REF", "C_REF_IN", "C_REF_REG", "C_REF_REG_HF", "R_REF_SAR", "C_REF", "U_SAR"].includes(reference)) {
     return "BP-101"
@@ -222,6 +276,7 @@ function createCellRecord(
     exactMpn: sourcePart.mpn,
     exactPackage: sourcePart.package,
     primaryEvidenceUrl: sourcePart.primaryEvidenceUrl,
+    sharedManufacturerSourceId: sharedManufacturerSourceByMpn.get(sourcePart.mpn)?.sourceId ?? null,
     manufacturerDrawing: emptySourceEvidence(),
     manufacturerCad: emptySourceEvidence(),
     artwork: emptyArtworkEvidence(),
@@ -339,7 +394,8 @@ const upstreamSnapshot = deepFreeze({
       reference: binding.baseReference,
       part: findUniqueSourcePart(binding.baseReference)
     }))
-  )
+  ),
+  m404SharedManufacturerSources: structuredClone(sharedManufacturerSources)
 })
 
 function liveUpstreamSnapshot() {
@@ -371,7 +427,10 @@ function liveUpstreamSnapshot() {
     sourceParts: cellReferenceBindings.map((binding) => ({
       reference: binding.baseReference,
       part: findUniqueSourcePart(binding.baseReference)
-    }))
+    })),
+    m404SharedManufacturerSources: sharedManufacturerSourcesFor(
+      cellReferenceBindings.map((binding) => findUniqueSourcePart(binding.baseReference))
+    )
   }
 }
 
@@ -383,7 +442,8 @@ const definition = {
   upstream: {
     baselineFootprintReview: "BP-030",
     sevenChannelAnalog: "BP-103",
-    weaponFixtureHarness: "BP-104"
+    weaponFixtureHarness: "BP-104",
+    sharedManufacturerSources: "M4-04"
   },
   scope: {
     replicatedCellCount: expectedReplicatedCellCount,
@@ -391,11 +451,15 @@ const definition = {
     replicatedCellRecordCount: expectedReplicatedCellRecordCount,
     connectorRecordCount: expectedConnectorRecordCount,
     totalRecordCount: expectedTotalRecordCount,
+    sharedManufacturerSourceCount: expectedSharedManufacturerSourceCount,
+    sharedSourceLinkedRecordCount: expectedSharedSourceLinkedRecordCount,
+    sharedSourceUnresolvedRecordCount: expectedSharedSourceUnresolvedRecordCount,
     closedFootprintCount: 0,
     deniedUnresolvedFootprintCount: expectedTotalRecordCount,
     rule: "Exact identity may be carried forward; no geometry or placement permission is carried forward without independent evidence."
   },
   records: [...records, connectorRecord],
+  sharedManufacturerSources,
   connectorClosure,
   authority: {
     identityReconciled: true,
@@ -409,7 +473,8 @@ const definition = {
     releaseState: "deny" as const
   },
   openGates: [
-    "For every record, acquire the exact manufacturer package drawing and record its revision and SHA-256 without substituting a family or generic footprint.",
+    "For every record without a shared source record, acquire the exact manufacturer package drawing and record its revision and SHA-256 without substituting a family or generic footprint.",
+    "For every M4-04 source record, review its exact or explicitly series-only scope against the seven-channel reference before treating it as BP-031 manufacturer-drawing evidence.",
     "For every record, acquire the exact manufacturer CAD object or explicitly document that no CAD is published; do not infer pads, courtyard, paste, or mask geometry from package prose.",
     "Generate and hash one project artwork object per exact reference only after the drawing/CAD comparison; independently overlay pad mapping, pin one or polarity, orientation, edge clearance, courtyard, and assembly constraints.",
     "Reconcile all seven channel copies, every C0603C102J5GACTU SAR capacitor, the reference loops, and the 43045-1200 connector against one schematic revision before BP-035.",
@@ -421,6 +486,7 @@ const definition = {
     { title: "BP-104 weapon fixture harness", url: "src/bench-prototype-fixture-harness.ts" },
     { title: "BP-101 reference drive", url: "src/bench-prototype-reference-drive.ts" },
     { title: "BP-102 fault protection", url: "src/bench-prototype-fault-protection.ts" },
+    { title: "M4-04 single-channel source registry", url: "src/m4-04-single-channel-coupon.ts" },
     { title: "Molex 43045-1200", url: "https://www.molex.com/en-us/products/part-detail/43045-1200" },
     { title: "Molex 43025-1200", url: "https://www.molex.com/en-us/products/part-detail/0430251200" },
     { title: "Molex 43030-0007", url: "https://www.molex.com/en-us/products/part-detail/430300007" }
@@ -434,8 +500,9 @@ function assertUpstreamContracts(): void {
   validateBenchPrototypeFootprintReview(benchPrototypeFootprintReviewTemplate)
   validateBenchPrototypeSevenChannelAnalog(benchPrototypeSevenChannelAnalog)
   validateBenchPrototypeFixtureHarness(benchPrototypeFixtureHarness)
+  validateM404SingleChannelCoupon(M404_SINGLE_CHANNEL_COUPON)
   if (!sameDataGraph(liveUpstreamSnapshot(), upstreamSnapshot)) {
-    throw new RangeError("BP-030, BP-103, BP-104, or analog source-part evidence drifted")
+    throw new RangeError("BP-030, BP-103, BP-104, M4-04, or analog source-part evidence drifted")
   }
 }
 
@@ -458,6 +525,9 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     contract.scope.connectorRecordCount !== expectedConnectorRecordCount ||
     contract.scope.totalRecordCount !== expectedTotalRecordCount ||
     contract.scope.totalRecordCount !== contract.records.length ||
+    contract.scope.sharedManufacturerSourceCount !== expectedSharedManufacturerSourceCount ||
+    contract.scope.sharedSourceLinkedRecordCount !== expectedSharedSourceLinkedRecordCount ||
+    contract.scope.sharedSourceUnresolvedRecordCount !== expectedSharedSourceUnresolvedRecordCount ||
     contract.scope.closedFootprintCount !== 0 ||
     contract.scope.deniedUnresolvedFootprintCount !== contract.records.length ||
     contract.authority.footprintClosureAuthorized ||
@@ -476,6 +546,33 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     )
   ) {
     throw new RangeError("BP-031 must retain complete per-reference evidence denial")
+  }
+
+  const sharedSourcesByMpn = new Map(contract.sharedManufacturerSources.map((source) => [source.exactMpn, source]))
+  const sharedSourceIds = new Set(contract.sharedManufacturerSources.map((source) => source.sourceId))
+  const sourceLinkedRecords = cellRecords.filter((record) => record.sharedManufacturerSourceId !== null)
+  if (
+    sharedSourcesByMpn.size !== expectedSharedManufacturerSourceCount ||
+    sharedSourceIds.size !== expectedSharedManufacturerSourceCount ||
+    sourceLinkedRecords.length !== expectedSharedSourceLinkedRecordCount ||
+    cellRecords.length - sourceLinkedRecords.length !== expectedSharedSourceUnresolvedRecordCount ||
+    contract.sharedManufacturerSources.some(
+      (source) =>
+        source.sourceId !== `M4-04:${source.exactMpn}` ||
+        source.sourceWorkUnit !== "M4-04" ||
+        (source.sourceStatus !== "hash-bound" && source.sourceStatus !== "series-hash-bound") ||
+        (source.acquisition !== "exact-drawing-hash-bound" && source.acquisition !== "series-drawing-hash-bound") ||
+        source.artifactPath === null ||
+        source.drawingUrl === null ||
+        source.sha256 === null ||
+        source.geometry !== null ||
+        source.reviewStatus !== "not-reviewed-for-bp-031"
+    ) ||
+    cellRecords.some(
+      (record) => record.sharedManufacturerSourceId !== (sharedSourcesByMpn.get(record.exactMpn)?.sourceId ?? null)
+    )
+  ) {
+    throw new RangeError("BP-031 shared M4-04 source provenance must remain exact, centralized, and unreviewed")
   }
 
   const channelCounts = new Map<number, number>()

@@ -14,6 +14,9 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       replicatedCellRecordCount: 112,
       connectorRecordCount: 1,
       totalRecordCount: 113,
+      sharedManufacturerSourceCount: 13,
+      sharedSourceLinkedRecordCount: 91,
+      sharedSourceUnresolvedRecordCount: 21,
       closedFootprintCount: 0,
       deniedUnresolvedFootprintCount: 113
     })
@@ -30,6 +33,59 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       fabricationAuthorized: false,
       releaseState: "deny"
     })
+  })
+
+  it("centralizes only matching M4-04 manufacturer sources without promoting a footprint gate", () => {
+    expect(benchPrototypeAnalogFootprintClosure.sharedManufacturerSources).toHaveLength(13)
+    expect(
+      benchPrototypeAnalogFootprintClosure.sharedManufacturerSources.find(
+        (source) => source.sourceId === "M4-04:TPD4E05U06DQAR"
+      )
+    ).toMatchObject({
+      sourceStatus: "hash-bound",
+      acquisition: "exact-drawing-hash-bound",
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-tpd4e05u06-dqar-datasheet.pdf"
+    })
+    expect(
+      benchPrototypeAnalogFootprintClosure.sharedManufacturerSources.find(
+        (source) => source.sourceId === "M4-04:CRCW060322R0FKEAHP"
+      )
+    ).toMatchObject({
+      sourceStatus: "series-hash-bound",
+      acquisition: "series-drawing-hash-bound",
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf"
+    })
+    expect(
+      benchPrototypeAnalogFootprintClosure.sharedManufacturerSources.find(
+        (source) => source.sourceId === "M4-04:GRM21BR71A106KE51L"
+      )
+    ).toMatchObject({
+      sourceStatus: "hash-bound",
+      acquisition: "exact-drawing-hash-bound",
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/murata-grm21br71a106ke51l-datasheet.pdf"
+    })
+    for (const record of benchPrototypeAnalogFootprintClosure.records.filter(
+      (candidate) => candidate.sourceContract === "BP-103"
+    )) {
+      if (
+        record.exactMpn === "ERA3AEB2491V" ||
+        record.exactMpn === "ADA4177-1BRZ" ||
+        record.exactMpn === "GRM188R71A105KA12D"
+      ) {
+        expect(record.sharedManufacturerSourceId).toBeNull()
+      } else {
+        expect(record.sharedManufacturerSourceId).toBe(`M4-04:${record.exactMpn}`)
+      }
+    }
+    for (const record of benchPrototypeAnalogFootprintClosure.records) {
+      expect(record.manufacturerDrawing).toMatchObject({
+        state: "not-acquired",
+        url: null,
+        revision: null,
+        sha256: null
+      })
+      expect(record.disposition).toBe("DNP-unresolved")
+    }
   })
 
   it("reconciles all seven BP-103 cells to the exact identity set", () => {
@@ -152,6 +208,16 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       "forged geometry evidence",
       (copy: typeof benchPrototypeAnalogFootprintClosure) =>
         Reflect.set(copy.records[0]?.manufacturerDrawing, "state", "acquired")
+    ],
+    [
+      "forged shared source link",
+      (copy: typeof benchPrototypeAnalogFootprintClosure) =>
+        Reflect.set(copy.records[0], "sharedManufacturerSourceId", "M4-04:FORGED")
+    ],
+    [
+      "promoted shared source review",
+      (copy: typeof benchPrototypeAnalogFootprintClosure) =>
+        Reflect.set(copy.sharedManufacturerSources[0], "reviewStatus", "reviewed")
     ],
     [
       "wrong replicated capacitor",

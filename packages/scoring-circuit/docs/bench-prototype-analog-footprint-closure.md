@@ -1,5 +1,21 @@
 # BP-031 analog and weapon-fixture footprint closure
 
+## Shared manufacturer-source projection
+
+BP-031 imports the already reviewed M4-04 source identities once, rather than
+copying source hashes into each of the seven repeated cells. Thirteen exact
+lane-B MPNs have a shared source ID: eight are exact-MPN hash-bound records and
+five are explicitly series-only Vishay resistor records. The 91 matching cell
+rows reference those IDs. The remaining 21 rows (`ERA3AEB2491V`, `ADA4177-1BRZ`,
+and `GRM188R71A105KA12D` across seven cells) retain no archived M4-04 drawing
+source.
+
+This is source provenance only. A shared source ID does not change a row's
+`manufacturerDrawing` state, DNP disposition, or release authority. Every
+manufacturer CAD record, generated artwork, orientation review, schematic
+integration, independent review, footprint closure, and fabrication gate
+remains unresolved and denied.
+
 BP-031 is the lane-B footprint evidence ledger for the one-board bench
 prototype. It reconciles BP-103's seven repeated acquisition cells and BP-104's
 12-position weapon-fixture header to the BP-030 evidence method. It freezes
