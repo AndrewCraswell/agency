@@ -157,41 +157,42 @@ describe("event journal", () => {
     expect(journal.append(record("record-overflow", 100)).outcome).toBe("backpressure")
   })
 
-  it("preserves a null-valued opaque field in the integrity projection", () => {
+  it("preserves valid null-valued schema fields in the integrity projection", () => {
     const storage = createVirtualEventJournalStorage()
     const journal = createEventJournal({ storage })
     const base = record("record-false", 99)
     const falseLatched = { ...base, outcome: { ...base.outcome, signal: { ...base.outcome.signal, latched: false } } }
-    const nullValue = { ...record("record-null", 100), ignoredValue: null }
+    const nullSide = {
+      ...record("record-null", 100),
+      outcome: {
+        detectedAtUs: 100,
+        diagnostic: "open-circuit" as const,
+        disposition: "line-fault" as const,
+        lineId: "left-A",
+        persistence: "transient" as const,
+        side: null,
+        signal: { audible: "none" as const, latched: false, visual: "diagnostic" as const }
+      }
+    }
 
-    expect(journal.append(nullValue).outcome).toBe("accepted")
+    expect(journal.append(nullSide).outcome).toBe("accepted")
     expect(journal.append(falseLatched).outcome).toBe("accepted")
   })
 
-  it("bounds canonical integrity input before any durable write", () => {
+  it("rejects noncanonical records before any durable write", () => {
     const storage = createVirtualEventJournalStorage()
     const journal = createEventJournal({ storage })
     const longIdentifier = "r".repeat(4_097)
     const longKey = "k".repeat(4_097)
-    const tooManyValues = { ...record("record-many", 100), ignoredValues: Array.from({ length: 8_193 }, () => 0) }
-    const tooManyBytes = {
-      ...record("record-bytes", 100),
-      ignoredValues: Array.from({ length: 600 }, () => "x".repeat(200))
-    }
-    const tooManyFields = Object.fromEntries(Array.from({ length: 8_193 }, (_, index) => [`ignored-${index}`, index]))
-    const nonPlainValue = { ...record("record-map", 100), ignoredValue: new Map() }
-    const unsafeNumber = { ...record("record-nan", 100), ignoredValue: Number.NaN }
+    const unexpectedField = { ...record("record-extra", 100), unexpectedField: null }
+    const nonPlainValue = { ...record("record-map", 100), outcome: new Map() }
+    const unsafeNumber = { ...record("record-nan", 100), decisionAtUs: Number.NaN }
     const longIdentifierRecord = { ...record(longIdentifier, 100) }
     const longKeyRecord = { ...record("record-key", 100), [longKey]: 1 }
-    const tooManyFieldRecord = { ...record("record-fields", 100), ...tooManyFields }
 
-    expect(journal.append(longIdentifierRecord).outcome).toBe("backpressure")
-    expect(journal.append(longKeyRecord).outcome).toBe("backpressure")
-    expect(journal.append(tooManyValues).outcome).toBe("backpressure")
-    expect(journal.append(tooManyBytes).outcome).toBe("backpressure")
-    expect(journal.append(tooManyFieldRecord).outcome).toBe("backpressure")
-    expect(() => journal.append(nonPlainValue)).toThrow("plain data")
-    expect(() => journal.append(unsafeNumber)).toThrow("safe integer")
+    for (const invalidRecord of [longIdentifierRecord, longKeyRecord, unexpectedField, nonPlainValue, unsafeNumber]) {
+      expect(() => journal.append(invalidRecord as DecisionRecord)).toThrow("Unsupported or invalid decision record")
+    }
     expect(storage.writes).toEqual([])
     expect(createEventJournal({ storage }).records).toEqual([])
   })

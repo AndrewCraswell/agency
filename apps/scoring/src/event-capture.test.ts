@@ -175,7 +175,7 @@ describe("authoritative event capture", () => {
       observedAtUs: 1,
       signal: { audible: "none", latched: false, visual: "diagnostic" },
       subject: "capture-completeness",
-      unit: "none",
+      unit: null,
       upperBound: 0
     }
     const capture = createEventCapture({

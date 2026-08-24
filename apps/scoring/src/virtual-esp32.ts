@@ -220,11 +220,30 @@ function assertExactOutcomeShape(value: unknown): void {
       )
       break
     case "uncertainty":
-      assertExactDataObject(
-        value,
-        ["disposition", "effect", "lowerBound", "observedAtUs", "signal", "subject", "unit", "upperBound"],
-        "Uncertainty decision record outcome"
-      )
+      if (value.subject === "identity") {
+        assertExactDataObject(
+          value,
+          [
+            "disposition",
+            "effect",
+            "identity",
+            "lowerBound",
+            "observedAtUs",
+            "signal",
+            "subject",
+            "unit",
+            "upperBound"
+          ],
+          "Identity uncertainty decision record outcome"
+        )
+        assertExactDataObject(value.identity, ["field", "observed", "status"], "Decision record identity uncertainty")
+      } else {
+        assertExactDataObject(
+          value,
+          ["disposition", "effect", "lowerBound", "observedAtUs", "signal", "subject", "unit", "upperBound"],
+          "Uncertainty decision record outcome"
+        )
+      }
       break
     case "calibration":
       assertExactDataObject(

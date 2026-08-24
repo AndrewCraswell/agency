@@ -8,6 +8,7 @@
 
 export const DECISION_RECORD_SCHEMA_VERSION = 1
 export const MAX_RAW_CAPTURE_REFERENCES = 8
+export const MAX_DECISION_RECORD_ID_LENGTH = 128
 
 export type DecisionSide = "left" | "right"
 export type Weapon = "epee" | "foil" | "sabre"
@@ -31,14 +32,29 @@ const UNCERTAINTY_SUBJECTS = [
 ] as const satisfies readonly UncertaintySubject[]
 
 const UNCERTAINTY_UNIT_BY_SUBJECT = {
-  calibration: "none",
-  "capture-completeness": "none",
+  calibration: null,
+  "capture-completeness": null,
   clock: "us",
-  identity: "none",
-  "line-state": "none",
+  identity: null,
+  "line-state": null,
   resistance: "milliOhm",
   timing: "us"
-} as const satisfies Record<UncertaintySubject, "milliOhm" | "none" | "us">
+} as const satisfies Record<UncertaintySubject, "milliOhm" | "us" | null>
+
+/**
+ * M0-03 cycle-receipt diagnostics that map to a recordable line fault. A null
+ * mapping deliberately remains an uncertainty record instead of a guessed fault.
+ */
+export const M003_DIAGNOSTIC_TO_LINE_FAULT = Object.freeze({
+  "cross-line": "cross-line",
+  "cycle-incomplete": "acquisition-gap",
+  "out-of-range-resistance": "out-of-range-resistance",
+  "safe-state": "safe-state",
+  "sample-overrun": "sample-overrun",
+  "stale-sample": "acquisition-gap",
+  "uncertain-evidence": null,
+  "unauthorized-excitation": "excitation-invalid"
+} as const)
 
 export type RawCaptureReference = Readonly<{
   captureId: string
@@ -82,6 +98,56 @@ export type RejectionReason =
   | "reset-in-progress"
   | "same-side-inhibit"
   | "whipover-while-blade-contact"
+
+type UncertaintyEffect = "decision-with-caveat" | "diagnostic-only" | "not-qualified" | "unavailable"
+type IdentityUncertaintyField =
+  | "calibration-profile-revision"
+  | "firmware-build-digest"
+  | "firmware-identity"
+  | "hardware-revision"
+  | "line-contract-revision"
+  | "rule-set-revision"
+  | "scoring-boot-id"
+  | "timing-table-revision"
+
+type UncertaintyOutcomeBase = Readonly<{
+  disposition: "uncertainty"
+  effect: UncertaintyEffect
+  lowerBound: number
+  observedAtUs: number
+  signal: SignalSnapshot
+  upperBound: number
+}>
+
+type NonIdentityUncertaintyOutcome =
+  | (UncertaintyOutcomeBase &
+      Readonly<{
+        subject: "calibration" | "capture-completeness" | "line-state"
+        unit: null
+      }>)
+  | (UncertaintyOutcomeBase &
+      Readonly<{
+        subject: "clock" | "timing"
+        unit: "us"
+      }>)
+  | (UncertaintyOutcomeBase &
+      Readonly<{
+        subject: "resistance"
+        unit: "milliOhm"
+      }>)
+
+type IdentityUncertaintyOutcome = UncertaintyOutcomeBase &
+  Readonly<{
+    identity: Readonly<{
+      field: IdentityUncertaintyField
+      observed: string | null
+      status: "mismatch" | "missing" | "untrusted"
+    }>
+    lowerBound: 0
+    subject: "identity"
+    unit: null
+    upperBound: 0
+  }>
 
 export type DecisionRecordOutcome =
   | Readonly<{
@@ -131,16 +197,8 @@ export type DecisionRecordOutcome =
       scope: "esp32" | "scoring-apparatus" | "stm32"
       signal: SignalSnapshot
     }>
-  | Readonly<{
-      disposition: "uncertainty"
-      effect: "decision-with-caveat" | "diagnostic-only" | "not-qualified" | "unavailable"
-      lowerBound: number
-      observedAtUs: number
-      signal: SignalSnapshot
-      subject: UncertaintySubject
-      unit: "milliOhm" | "none" | "us"
-      upperBound: number
-    }>
+  | NonIdentityUncertaintyOutcome
+  | IdentityUncertaintyOutcome
   | Readonly<{
       calibrationId: string
       disposition: "calibration"
@@ -165,15 +223,29 @@ export type DecisionRecord = Readonly<{
 }>
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.getPrototypeOf(value) === Object.prototype
+  )
 }
 
 function isNonnegativeSafeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
 }
 
-function isNonemptyString(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0
+function isIdentifier(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= MAX_DECISION_RECORD_ID_LENGTH &&
+    /^[A-Za-z0-9][A-Za-z0-9._:-]*$/u.test(value)
+  )
+}
+
+function isStm32FirmwareIdentity(value: unknown): value is string {
+  return isIdentifier(value) && /^stm32(?:-|$)/u.test(value)
 }
 
 function isDigest(value: unknown): value is string {
@@ -184,9 +256,15 @@ function isOneOf<T extends string>(value: unknown, choices: readonly T[]): value
   return typeof value === "string" && choices.some((choice) => choice === value)
 }
 
+function hasExactKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  const actual = Object.keys(value)
+  return actual.length === keys.length && actual.every((key) => keys.includes(key))
+}
+
 function isSignalSnapshot(value: unknown): value is SignalSnapshot {
   return (
     isRecord(value) &&
+    hasExactKeys(value, ["audible", "latched", "visual"]) &&
     isOneOf(value.audible, ["none", "requested"]) &&
     typeof value.latched === "boolean" &&
     isOneOf(value.visual, ["diagnostic", "none", "off-target", "valid-hit"])
@@ -196,9 +274,20 @@ function isSignalSnapshot(value: unknown): value is SignalSnapshot {
 function isRawCaptureReference(value: unknown): value is RawCaptureReference {
   return (
     isRecord(value) &&
-    isNonemptyString(value.captureId) &&
+    hasExactKeys(value, [
+      "captureId",
+      "contentDigest",
+      "contentFormatRevision",
+      "firstSequence",
+      "fromUs",
+      "kind",
+      "lastSequence",
+      "sampleCount",
+      "throughUs"
+    ]) &&
+    isIdentifier(value.captureId) &&
     isDigest(value.contentDigest) &&
-    isNonemptyString(value.contentFormatRevision) &&
+    isIdentifier(value.contentFormatRevision) &&
     isNonnegativeSafeInteger(value.firstSequence) &&
     isNonnegativeSafeInteger(value.lastSequence) &&
     value.lastSequence >= value.firstSequence &&
@@ -216,39 +305,53 @@ function isProvenance(value: unknown): value is RecordProvenance {
   }
 
   return (
-    isNonemptyString(value.calibrationProfileRevision) &&
+    hasExactKeys(value, [
+      "calibrationProfileRevision",
+      "firmware",
+      "hardwareRevision",
+      "lineContractRevision",
+      "ruleSetRevision",
+      "timingTableRevision"
+    ]) &&
+    hasExactKeys(value.firmware, ["buildDigest", "identity", "scoringBootId"]) &&
+    isIdentifier(value.calibrationProfileRevision) &&
     isDigest(value.firmware.buildDigest) &&
-    isNonemptyString(value.firmware.identity) &&
-    isNonemptyString(value.firmware.scoringBootId) &&
-    isNonemptyString(value.hardwareRevision) &&
-    isNonemptyString(value.lineContractRevision) &&
-    isNonemptyString(value.ruleSetRevision) &&
-    isNonemptyString(value.timingTableRevision)
+    isStm32FirmwareIdentity(value.firmware.identity) &&
+    isIdentifier(value.firmware.scoringBootId) &&
+    isIdentifier(value.hardwareRevision) &&
+    isIdentifier(value.lineContractRevision) &&
+    isIdentifier(value.ruleSetRevision) &&
+    isIdentifier(value.timingTableRevision)
   )
 }
 
 function isDecisionRecordOutcome(value: unknown): value is DecisionRecordOutcome {
-  if (!isRecord(value) || !isNonemptyString(value.disposition) || !isSignalSnapshot(value.signal)) {
+  if (!isRecord(value) || typeof value.disposition !== "string") {
     return false
   }
 
   switch (value.disposition) {
     case "qualified-hit":
       return (
+        hasExactKeys(value, ["disposition", "hitStartedAtUs", "qualifiedAtUs", "side", "signal", "weapon"]) &&
         isNonnegativeSafeInteger(value.hitStartedAtUs) &&
         isNonnegativeSafeInteger(value.qualifiedAtUs) &&
         value.qualifiedAtUs >= value.hitStartedAtUs &&
         isOneOf(value.side, ["left", "right"]) &&
+        isSignalSnapshot(value.signal) &&
         isOneOf(value.weapon, ["epee", "foil", "sabre"])
       )
     case "off-target":
       return (
+        hasExactKeys(value, ["disposition", "qualifiedAtUs", "side", "signal", "weapon"]) &&
         isNonnegativeSafeInteger(value.qualifiedAtUs) &&
         isOneOf(value.side, ["left", "right"]) &&
+        isSignalSnapshot(value.signal) &&
         value.weapon === "foil"
       )
     case "rejected-contact":
       return (
+        hasExactKeys(value, ["attemptedAtUs", "attemptedSide", "disposition", "reason", "signal", "weapon"]) &&
         isNonnegativeSafeInteger(value.attemptedAtUs) &&
         isOneOf(value.attemptedSide, ["left", "right"]) &&
         isOneOf(value.reason, [
@@ -263,10 +366,12 @@ function isDecisionRecordOutcome(value: unknown): value is DecisionRecordOutcome
           "same-side-inhibit",
           "whipover-while-blade-contact"
         ]) &&
+        isSignalSnapshot(value.signal) &&
         isOneOf(value.weapon, ["epee", "foil", "sabre"])
       )
     case "line-fault":
       return (
+        hasExactKeys(value, ["detectedAtUs", "diagnostic", "disposition", "lineId", "persistence", "side", "signal"]) &&
         isNonnegativeSafeInteger(value.detectedAtUs) &&
         isOneOf(value.diagnostic, [
           "acquisition-gap",
@@ -278,30 +383,84 @@ function isDecisionRecordOutcome(value: unknown): value is DecisionRecordOutcome
           "sample-overrun",
           "short-to-ground"
         ]) &&
-        isNonemptyString(value.lineId) &&
+        isIdentifier(value.lineId) &&
         isOneOf(value.persistence, ["transient", "latched-until-reset"]) &&
+        isSignalSnapshot(value.signal) &&
         (value.side === null || isOneOf(value.side, ["left", "right"]))
       )
     case "reset":
       return (
+        hasExactKeys(value, ["cause", "disposition", "resetAtUs", "scope", "signal"]) &&
         isOneOf(value.cause, ["brownout", "firmware-update", "operator", "power-on", "watchdog"]) &&
         isNonnegativeSafeInteger(value.resetAtUs) &&
+        isSignalSnapshot(value.signal) &&
         isOneOf(value.scope, ["esp32", "scoring-apparatus", "stm32"])
       )
     case "uncertainty":
+      if (
+        !isOneOf(value.effect, ["decision-with-caveat", "diagnostic-only", "not-qualified", "unavailable"]) ||
+        !isNonnegativeSafeInteger(value.observedAtUs)
+      )
+        return false
+      if (value.subject === "identity") {
+        return (
+          hasExactKeys(value, [
+            "disposition",
+            "effect",
+            "identity",
+            "lowerBound",
+            "observedAtUs",
+            "signal",
+            "subject",
+            "unit",
+            "upperBound"
+          ]) &&
+          isSignalSnapshot(value.signal) &&
+          isRecord(value.identity) &&
+          hasExactKeys(value.identity, ["field", "observed", "status"]) &&
+          isOneOf(value.identity.field, [
+            "calibration-profile-revision",
+            "firmware-build-digest",
+            "firmware-identity",
+            "hardware-revision",
+            "line-contract-revision",
+            "rule-set-revision",
+            "scoring-boot-id",
+            "timing-table-revision"
+          ]) &&
+          (value.identity.observed === null ||
+            isIdentifier(value.identity.observed) ||
+            isDigest(value.identity.observed)) &&
+          isOneOf(value.identity.status, ["mismatch", "missing", "untrusted"]) &&
+          value.lowerBound === 0 &&
+          value.unit === null &&
+          value.upperBound === 0
+        )
+      }
       return (
-        isOneOf(value.effect, ["decision-with-caveat", "diagnostic-only", "not-qualified", "unavailable"]) &&
+        hasExactKeys(value, [
+          "disposition",
+          "effect",
+          "lowerBound",
+          "observedAtUs",
+          "signal",
+          "subject",
+          "unit",
+          "upperBound"
+        ]) &&
         isNonnegativeSafeInteger(value.lowerBound) &&
-        isNonnegativeSafeInteger(value.observedAtUs) &&
         isOneOf(value.subject, UNCERTAINTY_SUBJECTS) &&
+        isSignalSnapshot(value.signal) &&
         value.unit === UNCERTAINTY_UNIT_BY_SUBJECT[value.subject] &&
         isNonnegativeSafeInteger(value.upperBound) &&
         value.upperBound >= value.lowerBound
       )
     case "calibration":
       return (
-        isNonemptyString(value.calibrationId) &&
+        hasExactKeys(value, ["calibrationId", "disposition", "performedAtUs", "signal", "status"]) &&
+        isIdentifier(value.calibrationId) &&
         isNonnegativeSafeInteger(value.performedAtUs) &&
+        isSignalSnapshot(value.signal) &&
         isOneOf(value.status, ["expired", "failed", "passed", "unavailable"])
       )
     default:
@@ -327,14 +486,72 @@ function outcomeDecisionAtUs(outcome: DecisionRecordOutcome): number {
   }
 }
 
+function isStrictPlainData(value: unknown, seen = new WeakSet<object>()): boolean {
+  if (value === null || typeof value === "string" || typeof value === "boolean") return true
+  if (typeof value === "number") return Number.isFinite(value)
+  if (typeof value !== "object" || seen.has(value)) return false
+  seen.add(value)
+
+  if (Array.isArray(value)) {
+    const keys = Reflect.ownKeys(value)
+    if (
+      Object.getPrototypeOf(value) !== Array.prototype ||
+      keys.length !== value.length + 1 ||
+      keys.at(-1) !== "length" ||
+      Object.keys(value).length !== value.length
+    ) {
+      return false
+    }
+    return value.every((entry, index) => {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index))
+      return (
+        descriptor !== undefined && descriptor.enumerable && "value" in descriptor && isStrictPlainData(entry, seen)
+      )
+    })
+  }
+  const keys = Reflect.ownKeys(value)
+  if (Object.getPrototypeOf(value) !== Object.prototype || keys.some((key) => typeof key !== "string")) {
+    return false
+  }
+  return keys.every((key) => {
+    if (typeof key !== "string") return false
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    return (
+      descriptor !== undefined &&
+      descriptor.enumerable &&
+      "value" in descriptor &&
+      isStrictPlainData(descriptor.value, seen)
+    )
+  })
+}
+
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const nestedValue of Object.values(value)) deepFreeze(nestedValue)
+    Object.freeze(value)
+  }
+  return value
+}
+
 export function isDecisionRecord(value: unknown): value is DecisionRecord {
   if (
     !(
+      isStrictPlainData(value) &&
       isRecord(value) &&
+      hasExactKeys(value, [
+        "captureWindow",
+        "decisionAtUs",
+        "outcome",
+        "provenance",
+        "rawCaptureRefs",
+        "recordId",
+        "schemaVersion"
+      ]) &&
       value.schemaVersion === DECISION_RECORD_SCHEMA_VERSION &&
-      isNonemptyString(value.recordId) &&
+      isIdentifier(value.recordId) &&
       isNonnegativeSafeInteger(value.decisionAtUs) &&
       isRecord(value.captureWindow) &&
+      hasExactKeys(value.captureWindow, ["firstSequence", "fromUs", "lastSequence", "throughUs"]) &&
       isNonnegativeSafeInteger(value.captureWindow.firstSequence) &&
       isNonnegativeSafeInteger(value.captureWindow.lastSequence) &&
       value.captureWindow.lastSequence >= value.captureWindow.firstSequence &&
@@ -353,7 +570,11 @@ export function isDecisionRecord(value: unknown): value is DecisionRecord {
     return false
   }
 
-  return outcomeDecisionAtUs(value.outcome) === value.decisionAtUs
+  return (
+    outcomeDecisionAtUs(value.outcome) === value.decisionAtUs &&
+    (value.outcome.disposition !== "calibration" ||
+      value.rawCaptureRefs.some((reference) => reference.kind === "calibration-measurements"))
+  )
 }
 
 /** Rejects an incompatible schema revision or an incomplete decision payload. */
@@ -362,5 +583,5 @@ export function parseDecisionRecord(value: unknown): DecisionRecord {
     throw new TypeError("Unsupported or invalid decision record")
   }
 
-  return value
+  return deepFreeze(structuredClone(value))
 }

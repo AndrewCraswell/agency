@@ -1,8 +1,9 @@
 # Decision record contract
 
-This is the M0-05 canonical logical schema for an immutable scoring decision record. It replaces the prototype
-on-target-only `ScoringDecisionRecord` shape in `src/device.ts` when M2 implements event capture. The prototype stays
-unchanged in M0-05 so this contract does not silently define M0-06 framing or M2 persistence.
+This is the M0-05 canonical logical schema for an immutable scoring decision record. It reconciles the existing
+prototype on-target-only `ScoringDecisionRecord` shape in `src/device.ts` without converting it, adding a second scorer,
+or adding a TypeScript-only fallback. M2 owns that separately reviewed capture migration. This contract does not silently
+define M0-06 framing or M2 persistence.
 
 The record is sufficient to replay the decision and its initial indication without running the scoring algorithm again.
 Raw observations remain evidence, not input to a replay-time re-decision.
@@ -13,9 +14,10 @@ This contract defines the payload only. It does not define a binary frame, JSON 
 signature, clock synchronization protocol, seven-line electrical topology, or a timing-table value. Those belong to
 M0-06, M0-03, M0-10, M1-07, and M2 respectively.
 
-All `*Us` fields are non-negative integer microseconds on the STM32 monotonic scoring clock. UTC and network-time
-metadata are deliberately absent until M2-09. A record carries the result selected by the scoring authority; an ESP32
-can display, store, or replay it but cannot create or reclassify it.
+All `*Us` fields are non-negative safe integer microseconds on the STM32 monotonic scoring clock. UTC and network-time
+metadata are deliberately absent until M2-09. Required `provenance.firmware.identity` identifies the STM32 source
+authority that created the record. An ESP32 can display, store, or replay an accepted copy but cannot create or
+reclassify it.
 
 ## Version and immutability policy
 
@@ -27,6 +29,9 @@ can display, store, or replay it but cannot create or reclassify it.
   specified here. Later work may choose storage and encoding without changing the decision meaning.
 - The stable vocabularies below have no `other` or free-text fallback. A new semantic value requires a reviewed schema
   revision; older consumers fail closed instead of turning it into a hit or ignoring it.
+- Input is strict plain data: own enumerable data properties on ordinary objects and dense ordinary arrays only. The
+  parser rejects inherited properties, accessors, hidden keys, symbols, class instances, aliases, cycles, and non-finite
+  numbers, then returns a fresh deeply frozen copy.
 
 ## Required envelope
 
@@ -46,11 +51,16 @@ not display copy.
 `provenance.firmware` contains `identity`, `buildDigest` (a `sha256:` prefix followed by 64 lowercase hexadecimal
 digits), and `scoringBootId`. The remaining required
 provenance fields are `hardwareRevision`, `ruleSetRevision`, `timingTableRevision`, `lineContractRevision`, and
-`calibrationProfileRevision`. A missing or unknown identity is an uncertainty or reset record, not a fabricated value.
+`calibrationProfileRevision`. Every identifier/revision is ASCII `[A-Za-z0-9][A-Za-z0-9._:-]*` and at most 128
+characters. This required STM32 provenance is never omitted. Identity uncertainty compares an expected provenance
+identity with an observed identity or its absence; it is not permission to omit STM32 provenance or to create an
+application-originated record.
 
 Each raw capture reference contains `captureId`, `kind`, `contentDigest`, `contentFormatRevision`, `fromUs`, `throughUs`,
 `firstSequence`, `lastSequence`, and `sampleCount`. Its interval and sequence range must be ordered and bounded. Valid
-`kind` values are `acquisition-samples`, `calibration-measurements`, `fault-context`, and `reset-context`.
+`kind` values are `acquisition-samples`, `calibration-measurements`, `fault-context`, and `reset-context`. A
+`calibration` outcome requires at least one `calibration-measurements` reference; calibration cannot be asserted without
+its raw measurement evidence.
 
 ## Outcome vocabulary
 
@@ -91,12 +101,23 @@ Valid `weapon` values are `epee`, `foil`, and `sabre`; valid sides are `left` an
 `out-of-range-resistance`, `safe-state`, `sample-overrun`, or `short-to-ground`. Its `persistence` is either
 `transient` or `latched-until-reset`.
 
-`uncertainty.subject` is one of `calibration`, `capture-completeness`, `clock`, `identity`, `line-state`, `resistance`,
-or `timing`; `effect` is `decision-with-caveat`, `diagnostic-only`, `not-qualified`, or `unavailable`; `unit` is
-`milliOhm`, `none`, or `us`. Bounds are non-negative safe integers and ordered. The subject determines the required
-unit: `resistance` uses `milliOhm`; `timing` and `clock` use `us`; `calibration`, `capture-completeness`, `identity`,
-and `line-state` use `none`. The foil 450-475 ohm band is therefore `450_000` through `475_000 milliOhm`. This
-preserves that unresolved band without treating an ambiguous state as a hit.
+Numeric `uncertainty.subject` is one of `calibration`, `capture-completeness`, `clock`, `line-state`, `resistance`, or
+`timing`; `effect` is `decision-with-caveat`, `diagnostic-only`, `not-qualified`, or `unavailable`. Bounds are
+non-negative safe integers and ordered. The subject determines the required unit: `resistance` uses `milliOhm`;
+`timing` and `clock` use `us`; `calibration`, `capture-completeness`, and `line-state` use JSON `null` because they have
+no M0-02 machine unit. `none` is not a unit code and is rejected. The foil 450-475 ohm band is therefore `450_000`
+through `475_000 milliOhm`.
+
+Identity uncertainty is a separate exact form, with `subject: "identity"` and an `identity` object containing the
+affected provenance field, `observed` identifier/digest or `null`, and `status` of `missing`, `mismatch`, or
+`untrusted`. Its ordered bounds are integer zero and its unit is JSON `null`; this preserves the common uncertainty
+envelope without inventing a machine unit or a measurable identity quantity.
+
+M0-03 receipt diagnostics map deterministically where their meanings align: `cycle-incomplete` and `stale-sample` map
+to `acquisition-gap`; `cross-line`, `out-of-range-resistance`, `safe-state`, and `sample-overrun` retain their tokens;
+and `unauthorized-excitation` maps to `excitation-invalid`. `uncertain-evidence` maps to no line fault and must be an
+uncertainty record. `open-circuit` and `short-to-ground` remain direct M0-03 fault-code diagnostics. This mapping
+records acquisition evidence only and does not decide a weapon rule.
 
 `reset.scope` is `stm32`, `esp32`, or `scoring-apparatus`; `cause` is `brownout`, `firmware-update`, `operator`,
 `power-on`, or `watchdog`. `calibration.status` is `passed`, `failed`, `expired`, or `unavailable`.
@@ -104,8 +125,9 @@ preserves that unresolved band without treating an ambiguous state as a hit.
 ## Examples and executable acceptance
 
 `src/decision-record.test.ts` round-trips one representative payload for every disposition, including qualified hit,
-foil off-target, rejected grounded contact, line fault, reset, uncertainty, and calibration. It also rejects
-`schemaVersion: 2` and an unknown rejection reason. The test uses a generic object serialization only to prove the
+foil off-target, rejected grounded contact, line fault, reset, numeric uncertainty, identity uncertainty, and
+calibration. It also rejects incompatible versions, unknown rejection reasons, ESP32 authority, non-integer time,
+missing calibration evidence, and non-plain input. The test uses a generic object serialization only to prove the
 logical payload round-trip; it does not establish a device transport format.
 
 ```json

@@ -189,10 +189,11 @@ function makeRecord(recordId: string, atUs: number, variant: number): DecisionRe
   if (recordId.length > MAX_RECORD_ID_LENGTH) {
     throw new RangeError("M2-13 record IDs exceed the test bound")
   }
+  const outcome = recordOutcome(variant, atUs)
   return {
     captureWindow: { firstSequence: atUs, fromUs: atUs, lastSequence: atUs, throughUs: atUs },
     decisionAtUs: atUs,
-    outcome: recordOutcome(variant, atUs),
+    outcome,
     provenance: {
       calibrationProfileRevision: "calibration-1",
       firmware: {
@@ -205,7 +206,22 @@ function makeRecord(recordId: string, atUs: number, variant: number): DecisionRe
       ruleSetRevision: "rules-1",
       timingTableRevision: "timing-1"
     },
-    rawCaptureRefs: [],
+    rawCaptureRefs:
+      outcome.disposition === "calibration"
+        ? [
+            {
+              captureId: `calibration-capture-${recordId}`,
+              contentDigest: `sha256:${"cd".repeat(32)}`,
+              contentFormatRevision: "capture-1",
+              firstSequence: atUs,
+              fromUs: atUs,
+              kind: "calibration-measurements",
+              lastSequence: atUs,
+              sampleCount: 1,
+              throughUs: atUs
+            }
+          ]
+        : [],
     recordId,
     schemaVersion: 1
   }

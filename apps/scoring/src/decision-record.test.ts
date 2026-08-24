@@ -33,13 +33,26 @@ const rawCaptureRefs = [
   }
 ]
 
+const calibrationCaptureReference = {
+  captureId: "calibration-capture-001",
+  contentDigest: `sha256:${"92".repeat(32)}`,
+  contentFormatRevision: "capture-1",
+  firstSequence: 45,
+  fromUs: 10_500,
+  kind: "calibration-measurements" as const,
+  lastSequence: 45,
+  sampleCount: 1,
+  throughUs: 10_500
+}
+
 function record(outcome: DecisionRecordOutcome): DecisionRecord {
   return {
     captureWindow: { firstSequence: 40, fromUs: 10_000, lastSequence: 44, throughUs: 11_000 },
     decisionAtUs: 10_500,
     outcome,
     provenance,
-    rawCaptureRefs,
+    rawCaptureRefs:
+      outcome.disposition === "calibration" ? [...rawCaptureRefs, calibrationCaptureReference] : rawCaptureRefs,
     recordId: "record-001",
     schemaVersion: DECISION_RECORD_SCHEMA_VERSION
   }
@@ -55,6 +68,39 @@ const uncertaintyOutcome = {
   unit: "milliOhm",
   upperBound: 475_000
 } satisfies DecisionRecordOutcome
+
+const identityUncertaintyOutcome = {
+  disposition: "uncertainty",
+  effect: "unavailable",
+  identity: { field: "firmware-identity", observed: null, status: "missing" },
+  lowerBound: 0,
+  observedAtUs: 10_500,
+  signal: { audible: "none", latched: false, visual: "diagnostic" },
+  subject: "identity",
+  unit: null,
+  upperBound: 0
+} satisfies DecisionRecordOutcome
+
+// @ts-expect-error Identity uncertainty requires an exact identity comparison.
+const identityUncertaintyWithoutComparison: DecisionRecordOutcome = {
+  disposition: "uncertainty",
+  effect: "unavailable",
+  lowerBound: 0,
+  observedAtUs: 10_500,
+  signal: { audible: "none", latched: false, visual: "diagnostic" },
+  subject: "identity",
+  unit: null,
+  upperBound: 0
+}
+
+const resistanceUncertaintyWithIdentity: DecisionRecordOutcome = {
+  ...uncertaintyOutcome,
+  // @ts-expect-error Non-identity uncertainty cannot carry an identity comparison.
+  identity: { field: "firmware-identity", observed: null, status: "missing" }
+}
+
+void identityUncertaintyWithoutComparison
+void resistanceUncertaintyWithIdentity
 
 const outcomes: readonly DecisionRecordOutcome[] = [
   {
@@ -97,6 +143,7 @@ const outcomes: readonly DecisionRecordOutcome[] = [
     signal: { audible: "none", latched: false, visual: "none" }
   },
   uncertaintyOutcome,
+  identityUncertaintyOutcome,
   {
     calibrationId: "fixture-run-026",
     disposition: "calibration",
@@ -113,6 +160,11 @@ describe("decision record schema", () => {
       const restored = parseDecisionRecord(JSON.parse(JSON.stringify(original)))
 
       expect(restored).toEqual(original)
+      expect(restored).not.toBe(original)
+      expect(Object.isFrozen(restored)).toBe(true)
+      expect(Object.isFrozen(restored.outcome)).toBe(true)
+      expect(Object.isFrozen(restored.provenance)).toBe(true)
+      expect(Object.isFrozen(restored.rawCaptureRefs)).toBe(true)
     }
   })
 
@@ -168,5 +220,68 @@ describe("decision record schema", () => {
         outcome: { ...uncertaintyOutcome, unit: "us" }
       })
     ).toThrow(new TypeError("Unsupported or invalid decision record"))
+    expect(() =>
+      parseDecisionRecord({
+        ...record(identityUncertaintyOutcome),
+        outcome: { ...identityUncertaintyOutcome, unit: "none" }
+      })
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
+    expect(() =>
+      parseDecisionRecord({
+        ...record(identityUncertaintyOutcome),
+        outcome: { ...identityUncertaintyOutcome, upperBound: 1 }
+      })
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
+    expect(() =>
+      parseDecisionRecord({
+        ...record(uncertaintyOutcome),
+        outcome: {
+          ...uncertaintyOutcome,
+          identity: { field: "firmware-identity", observed: null, status: "missing" }
+        }
+      })
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
+    expect(() =>
+      parseDecisionRecord({
+        ...record(identityUncertaintyOutcome),
+        outcome: {
+          disposition: "uncertainty",
+          effect: "unavailable",
+          lowerBound: 0,
+          observedAtUs: 10_500,
+          signal: { audible: "none", latched: false, visual: "diagnostic" },
+          subject: "identity",
+          unit: null,
+          upperBound: 0
+        }
+      })
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
+    expect(() =>
+      parseDecisionRecord({
+        ...record(outcomes[0]!),
+        provenance: { ...provenance, firmware: { ...provenance.firmware, identity: "esp32-scoring" } }
+      })
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
+    expect(() => parseDecisionRecord(record(outcomes.at(-1)!))).not.toThrow()
+  })
+
+  it("requires calibration evidence and rejects non-plain, aliased, accessor, and hidden input data", () => {
+    const calibration = record(outcomes.at(-1)!)
+    expect(() => parseDecisionRecord({ ...calibration, rawCaptureRefs })).toThrow(
+      new TypeError("Unsupported or invalid decision record")
+    )
+
+    const shared = { ...rawCaptureRefs[0]! }
+    const duplicate = { ...record(outcomes[0]!), rawCaptureRefs: [shared, shared] }
+    expect(() => parseDecisionRecord(duplicate)).toThrow(new TypeError("Unsupported or invalid decision record"))
+
+    const accessor = structuredClone(record(outcomes[0]!))
+    Object.defineProperty(accessor, "recordId", { enumerable: true, get: () => "record-001" })
+    expect(() => parseDecisionRecord(accessor)).toThrow(new TypeError("Unsupported or invalid decision record"))
+
+    const hidden = structuredClone(record(outcomes[0]!))
+    Object.defineProperty(hidden, "hidden", { enumerable: false, value: true })
+    expect(() => parseDecisionRecord(hidden)).toThrow(new TypeError("Unsupported or invalid decision record"))
+    expect(() => parseDecisionRecord(new Map())).toThrow(new TypeError("Unsupported or invalid decision record"))
   })
 })

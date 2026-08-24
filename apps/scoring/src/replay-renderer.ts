@@ -252,11 +252,17 @@ function validateOutcome(value: unknown): void {
     reset: ["cause", "disposition", "resetAtUs", "scope", "signal"],
     uncertainty: ["disposition", "effect", "lowerBound", "observedAtUs", "signal", "subject", "unit", "upperBound"]
   }
-  const fields = fieldsByDisposition[outcome.disposition as DecisionRecordOutcome["disposition"]]
+  const fields =
+    outcome.disposition === "uncertainty" && outcome.subject === "identity"
+      ? ["disposition", "effect", "identity", "lowerBound", "observedAtUs", "signal", "subject", "unit", "upperBound"]
+      : fieldsByDisposition[outcome.disposition as DecisionRecordOutcome["disposition"]]
   if (fields === undefined) {
     throw new TypeError("Replay outcome disposition is unknown")
   }
   exactObject(value, fields, "Replay outcome")
+  if (outcome.disposition === "uncertainty" && outcome.subject === "identity") {
+    exactObject(outcome.identity, ["field", "observed", "status"], "Replay identity uncertainty")
+  }
   for (const field of fields) {
     if (field.endsWith("AtUs") || field === "lowerBound" || field === "upperBound") {
       assertNonnegativeSafeInteger(outcome[field], `Replay outcome ${field}`)
@@ -501,6 +507,47 @@ function cloneOutcome(value: DecisionRecordOutcome): DecisionRecordOutcome {
         signal: cloneSignal(value.signal)
       }
     case "uncertainty":
+      if (value.subject === "identity") {
+        return {
+          disposition: value.disposition,
+          effect: value.effect,
+          identity: {
+            field: value.identity.field,
+            observed: value.identity.observed,
+            status: value.identity.status
+          },
+          lowerBound: value.lowerBound,
+          observedAtUs: value.observedAtUs,
+          signal: cloneSignal(value.signal),
+          subject: value.subject,
+          unit: value.unit,
+          upperBound: value.upperBound
+        }
+      }
+      if (value.subject === "resistance") {
+        return {
+          disposition: value.disposition,
+          effect: value.effect,
+          lowerBound: value.lowerBound,
+          observedAtUs: value.observedAtUs,
+          signal: cloneSignal(value.signal),
+          subject: value.subject,
+          unit: value.unit,
+          upperBound: value.upperBound
+        }
+      }
+      if (value.subject === "clock" || value.subject === "timing") {
+        return {
+          disposition: value.disposition,
+          effect: value.effect,
+          lowerBound: value.lowerBound,
+          observedAtUs: value.observedAtUs,
+          signal: cloneSignal(value.signal),
+          subject: value.subject,
+          unit: value.unit,
+          upperBound: value.upperBound
+        }
+      }
       return {
         disposition: value.disposition,
         effect: value.effect,
@@ -508,7 +555,7 @@ function cloneOutcome(value: DecisionRecordOutcome): DecisionRecordOutcome {
         observedAtUs: value.observedAtUs,
         signal: cloneSignal(value.signal),
         subject: value.subject,
-        unit: value.unit,
+        unit: null,
         upperBound: value.upperBound
       }
   }

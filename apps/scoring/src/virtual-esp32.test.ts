@@ -54,7 +54,26 @@ function recordForOutcome(recordId: string, outcome: DecisionRecordOutcome): Dec
             : outcome.disposition === "uncertainty"
               ? outcome.observedAtUs
               : outcome.performedAtUs
-  return { ...decisionRecord(recordId, decisionAtUs), outcome }
+  return {
+    ...decisionRecord(recordId, decisionAtUs),
+    outcome,
+    rawCaptureRefs:
+      outcome.disposition === "calibration"
+        ? [
+            {
+              captureId: `calibration-capture-${recordId}`,
+              contentDigest: `sha256:${"cd".repeat(32)}`,
+              contentFormatRevision: "capture-1",
+              firstSequence: decisionAtUs,
+              fromUs: decisionAtUs,
+              kind: "calibration-measurements",
+              lastSequence: decisionAtUs,
+              sampleCount: 1,
+              throughUs: decisionAtUs
+            }
+          ]
+        : []
+  }
 }
 
 function decisionFrame(sequence: number, payloadId: number): Uint8Array {
@@ -278,9 +297,20 @@ describe("virtual ESP32 authority guard", () => {
         upperBound: 2
       },
       {
+        disposition: "uncertainty",
+        effect: "unavailable",
+        identity: { field: "firmware-identity", observed: null, status: "missing" },
+        lowerBound: 0,
+        observedAtUs: 16,
+        signal: { audible: "none", latched: false, visual: "diagnostic" },
+        subject: "identity",
+        unit: null,
+        upperBound: 0
+      },
+      {
         calibrationId: "cal-1",
         disposition: "calibration",
-        performedAtUs: 16,
+        performedAtUs: 17,
         signal: { audible: "none", latched: false, visual: "diagnostic" },
         status: "passed"
       }

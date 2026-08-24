@@ -51,6 +51,18 @@ const record: DecisionRecord = {
   schemaVersion: DECISION_RECORD_SCHEMA_VERSION
 }
 
+const calibrationCaptureReference = {
+  captureId: "calibration-capture-001",
+  contentDigest: `sha256:${"92".repeat(32)}`,
+  contentFormatRevision: "capture-1",
+  firstSequence: 44,
+  fromUs: 10_500,
+  kind: "calibration-measurements" as const,
+  lastSequence: 44,
+  sampleCount: 1,
+  throughUs: 10_500
+}
+
 function annotation(): ApplicationTimelineEntry {
   const time = createApplicationTimeMetadata({ applicationBootId: "esp32-boot-a", maximumDriftPpm: 20 })
   time.synchronize({
@@ -141,11 +153,30 @@ describe("stored-record replay renderer", () => {
         subject: "resistance",
         unit: "milliOhm",
         upperBound: 475_000
+      },
+      {
+        disposition: "uncertainty",
+        effect: "unavailable",
+        identity: { field: "firmware-identity", observed: null, status: "missing" },
+        lowerBound: 0,
+        observedAtUs: 10_500,
+        signal: { audible: "none", latched: false, visual: "diagnostic" },
+        subject: "identity",
+        unit: null,
+        upperBound: 0
       }
     ]
 
     for (const [index, outcome] of outcomes.entries()) {
-      const source = { ...record, outcome, recordId: `record-disposition-${index}` }
+      const source = {
+        ...record,
+        outcome,
+        rawCaptureRefs:
+          outcome.disposition === "calibration"
+            ? [...record.rawCaptureRefs, calibrationCaptureReference]
+            : record.rawCaptureRefs,
+        recordId: `record-disposition-${index}`
+      }
       const original = structuredClone(source)
       const rendered = renderReplayRecord({ record: source })
       expect(rendered.record).toEqual(source)
