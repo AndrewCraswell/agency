@@ -68,6 +68,11 @@ type PendingCapture = Readonly<{
   triggerSequence: number
 }>
 
+type DecisionRecordParserInput = Omit<DecisionRecord, "outcome"> &
+  Readonly<{
+    outcome: CapturableDecisionOutcome
+  }>
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
 }
@@ -220,6 +225,29 @@ function decisionAtUs(outcome: CapturableDecisionOutcome): number {
   }
 }
 
+function createDecisionRecordParserInput(
+  outcome: VirtualStm32AuthoritativeOutcome<CapturableDecisionOutcome>,
+  first: EventCaptureSample,
+  last: EventCaptureSample,
+  provenance: RecordProvenance,
+  recordId: string
+): DecisionRecordParserInput {
+  return {
+    captureWindow: {
+      firstSequence: first.sequence,
+      fromUs: first.snapshot.atUs,
+      lastSequence: last.sequence,
+      throughUs: last.snapshot.atUs
+    },
+    decisionAtUs: outcome.atUs,
+    outcome: outcome.outcome,
+    provenance,
+    rawCaptureRefs: [],
+    recordId,
+    schemaVersion: DECISION_RECORD_SCHEMA_VERSION
+  }
+}
+
 function assertAuthoritativeDecision(
   outcome: VirtualStm32AuthoritativeOutcome<CapturableDecisionOutcome>,
   provenance: RecordProvenance,
@@ -235,20 +263,7 @@ function assertAuthoritativeDecision(
     throw new RangeError("Event capture outcomes must preserve the STM32-selected weapon")
   }
 
-  parseDecisionRecord({
-    captureWindow: {
-      firstSequence: sample.sequence,
-      fromUs: sample.snapshot.atUs,
-      lastSequence: sample.sequence,
-      throughUs: sample.snapshot.atUs
-    },
-    decisionAtUs: outcome.atUs,
-    outcome: outcome.outcome,
-    provenance,
-    rawCaptureRefs: [],
-    recordId: "capture-validation",
-    schemaVersion: DECISION_RECORD_SCHEMA_VERSION
-  })
+  parseDecisionRecord(createDecisionRecordParserInput(outcome, sample, sample, provenance, "capture-validation"))
 }
 
 function createRecord(
@@ -261,20 +276,7 @@ function createRecord(
   const samples = [...preSamples, ...postSamples]
   const first = samples[0]!
   const last = samples.at(-1)!
-  const decision = parseDecisionRecord({
-    captureWindow: {
-      firstSequence: first.sequence,
-      fromUs: first.snapshot.atUs,
-      lastSequence: last.sequence,
-      throughUs: last.snapshot.atUs
-    },
-    decisionAtUs: outcome.atUs,
-    outcome: outcome.outcome,
-    provenance,
-    rawCaptureRefs: [],
-    recordId,
-    schemaVersion: DECISION_RECORD_SCHEMA_VERSION
-  })
+  const decision = parseDecisionRecord(createDecisionRecordParserInput(outcome, first, last, provenance, recordId))
   return deepFreeze({ decision, postSamples: [...postSamples], preSamples: [...preSamples] })
 }
 
