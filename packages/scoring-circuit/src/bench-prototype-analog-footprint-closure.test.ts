@@ -10,17 +10,17 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     expect(validateBenchPrototypeAnalogFootprintClosure(benchPrototypeAnalogFootprintClosure)).toBe(true)
     expect(benchPrototypeAnalogFootprintClosure.scope).toMatchObject({
       replicatedCellCount: 7,
-      referencesPerReplicatedCell: 14,
-      replicatedCellRecordCount: 98,
+      referencesPerReplicatedCell: 16,
+      replicatedCellRecordCount: 112,
       connectorRecordCount: 1,
-      totalRecordCount: 99,
+      totalRecordCount: 113,
       closedFootprintCount: 0,
-      deniedUnresolvedFootprintCount: 99
+      deniedUnresolvedFootprintCount: 113
     })
-    expect(benchPrototypeAnalogFootprintClosure.records).toHaveLength(99)
+    expect(benchPrototypeAnalogFootprintClosure.records).toHaveLength(113)
     expect(
       benchPrototypeAnalogFootprintClosure.records.filter((record) => record.sourceContract === "BP-103")
-    ).toHaveLength(98)
+    ).toHaveLength(112)
     expect(
       benchPrototypeAnalogFootprintClosure.records.filter((record) => record.sourceContract === "BP-104")
     ).toHaveLength(1)
@@ -39,11 +39,13 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     expect(new Set(cellRecords.map((record) => record.channelIndex))).toEqual(new Set([1, 2, 3, 4, 5, 6, 7]))
     for (const channelIndex of [1, 2, 3, 4, 5, 6, 7]) {
       const channelRecords = cellRecords.filter((record) => record.channelIndex === channelIndex)
-      expect(channelRecords).toHaveLength(14)
+      expect(channelRecords).toHaveLength(16)
       expect(channelRecords.map((record) => record.reference)).toEqual([
         `U_ESD_${channelIndex}`,
         `R_ESD_${channelIndex}`,
         `U_SOURCE_SWITCH_${channelIndex}`,
+        `R_SOURCE_${channelIndex}`,
+        `R_SOURCE_PD_${channelIndex}`,
         `U_OVP_BUFFER_${channelIndex}`,
         `R_SAR_${channelIndex}`,
         `C_SAR_${channelIndex}`,
@@ -63,6 +65,25 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       expect(channelRecords.find((record) => record.reference === `U_SAR_${channelIndex}`)).toMatchObject({
         exactMpn: "ADS8881IDGS",
         exactPackage: "DGS VSSOP-10"
+      })
+      expect(channelRecords.find((record) => record.reference === `R_SOURCE_${channelIndex}`)).toMatchObject({
+        sourceContract: "BP-103",
+        sourceBaseReference: "R_SOURCE",
+        sourceSubcontract: "BP-102",
+        manufacturer: "Panasonic",
+        exactMpn: "ERA3AEB2491V",
+        exactPackage: "0603",
+        primaryEvidenceUrl:
+          "https://industrial.panasonic.com/ww/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V"
+      })
+      expect(channelRecords.find((record) => record.reference === `R_SOURCE_PD_${channelIndex}`)).toMatchObject({
+        sourceContract: "BP-103",
+        sourceBaseReference: "R_SOURCE_PD",
+        sourceSubcontract: "BP-102",
+        manufacturer: "Vishay",
+        exactMpn: "CRCW0603100KFKEAHP",
+        exactPackage: "0603",
+        primaryEvidenceUrl: "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
       })
     }
   })
@@ -106,6 +127,22 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     expect(Object.isFrozen(benchPrototypeAnalogFootprintClosureUpstreamSnapshot)).toBe(true)
   })
 
+  it("rejects the stale 14-reference, 98-cell-record ledger", () => {
+    const stale = structuredClone(benchPrototypeAnalogFootprintClosure)
+    Reflect.set(
+      stale,
+      "records",
+      stale.records.filter(
+        (record) => record.sourceBaseReference !== "R_SOURCE" && record.sourceBaseReference !== "R_SOURCE_PD"
+      )
+    )
+    Reflect.set(stale.scope, "referencesPerReplicatedCell", 14)
+    Reflect.set(stale.scope, "replicatedCellRecordCount", 98)
+    Reflect.set(stale.scope, "totalRecordCount", 99)
+    Reflect.set(stale.scope, "deniedUnresolvedFootprintCount", 99)
+    expect(() => validateBenchPrototypeAnalogFootprintClosure(stale)).toThrow(RangeError)
+  })
+
   it.each([
     [
       "forged exact MPN",
@@ -123,7 +160,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     ],
     [
       "wrong connector",
-      (copy: typeof benchPrototypeAnalogFootprintClosure) => Reflect.set(copy.records[98], "exactMpn", "43045-0400")
+      (copy: typeof benchPrototypeAnalogFootprintClosure) => Reflect.set(copy.records[112], "exactMpn", "43045-0400")
     ],
     [
       "fabrication release",

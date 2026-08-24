@@ -138,6 +138,8 @@ const cellReferenceBindings = [
   { key: "esd", baseReference: "U_ESD", role: "connector-side ESD shunt" },
   { key: "series", baseReference: "R_ESD", role: "normal-path protection series resistor" },
   { key: "switch", baseReference: "U_SOURCE_SWITCH", role: "source and sink analog switch" },
+  { key: "source", baseReference: "R_SOURCE", role: "reference excitation series resistor" },
+  { key: "sourcePullDown", baseReference: "R_SOURCE_PD", role: "source-enable safe-state pull-down" },
   { key: "buffer", baseReference: "U_OVP_BUFFER", role: "over-voltage-tolerant unity buffer" },
   { key: "sarSeries", baseReference: "R_SAR", role: "SAR input isolation resistor" },
   { key: "sarCap", baseReference: "C_SAR", role: "SAR input charge-bucket capacitor" },
@@ -152,6 +154,12 @@ const cellReferenceBindings = [
 ] as const
 
 type CellReferenceKey = (typeof cellReferenceBindings)[number]["key"]
+
+const expectedReplicatedCellCount = 7
+const expectedCellReferenceCount = 16
+const expectedReplicatedCellRecordCount = expectedReplicatedCellCount * expectedCellReferenceCount
+const expectedConnectorRecordCount = 1
+const expectedTotalRecordCount = expectedReplicatedCellRecordCount + expectedConnectorRecordCount
 
 function findUniqueSourcePart(reference: string): SourcePart {
   const matches = oneChannelAnalogExperimentBom.filter((part) => part.reference === reference)
@@ -378,13 +386,13 @@ const definition = {
     weaponFixtureHarness: "BP-104"
   },
   scope: {
-    replicatedCellCount: 7,
-    referencesPerReplicatedCell: cellReferenceBindings.length,
-    replicatedCellRecordCount: records.length,
-    connectorRecordCount: 1,
-    totalRecordCount: records.length + 1,
+    replicatedCellCount: expectedReplicatedCellCount,
+    referencesPerReplicatedCell: expectedCellReferenceCount,
+    replicatedCellRecordCount: expectedReplicatedCellRecordCount,
+    connectorRecordCount: expectedConnectorRecordCount,
+    totalRecordCount: expectedTotalRecordCount,
     closedFootprintCount: 0,
-    deniedUnresolvedFootprintCount: records.length + 1,
+    deniedUnresolvedFootprintCount: expectedTotalRecordCount,
     rule: "Exact identity may be carried forward; no geometry or placement permission is carried forward without independent evidence."
   },
   records: [...records, connectorRecord],
@@ -441,8 +449,14 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
   const cellRecords = contract.records.filter((record) => record.sourceContract === "BP-103")
   const connectorRecords = contract.records.filter((record) => record.sourceContract === "BP-104")
   if (
-    cellRecords.length !== 7 * cellReferenceBindings.length ||
-    connectorRecords.length !== 1 ||
+    cellReferenceBindings.length !== expectedCellReferenceCount ||
+    cellRecords.length !== expectedReplicatedCellRecordCount ||
+    connectorRecords.length !== expectedConnectorRecordCount ||
+    contract.scope.replicatedCellCount !== expectedReplicatedCellCount ||
+    contract.scope.referencesPerReplicatedCell !== expectedCellReferenceCount ||
+    contract.scope.replicatedCellRecordCount !== expectedReplicatedCellRecordCount ||
+    contract.scope.connectorRecordCount !== expectedConnectorRecordCount ||
+    contract.scope.totalRecordCount !== expectedTotalRecordCount ||
     contract.scope.totalRecordCount !== contract.records.length ||
     contract.scope.closedFootprintCount !== 0 ||
     contract.scope.deniedUnresolvedFootprintCount !== contract.records.length ||
@@ -469,7 +483,7 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     channelCounts.set(record.channelIndex, (channelCounts.get(record.channelIndex) ?? 0) + 1)
   if (
     channelCounts.size !== 7 ||
-    [...channelCounts.values()].some((count) => count !== cellReferenceBindings.length) ||
+    [...channelCounts.values()].some((count) => count !== expectedCellReferenceCount) ||
     !sameDataGraph(
       cellRecords.map((record) => record.conductor).filter((value, index, values) => values.indexOf(value) === index),
       benchPrototypeSevenChannelAnalog.channelOrder
