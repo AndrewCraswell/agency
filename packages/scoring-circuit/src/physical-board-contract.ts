@@ -1,4 +1,4 @@
-import { productionHarnessSelection } from "./production-harness-selection.js"
+import { harnessBoardPinLabel, productionHarnessSelection } from "./production-harness-selection.js"
 
 /**
  * Physical-board ownership is deliberately separate from the logical
@@ -56,56 +56,39 @@ export const isolatedInterboardPinLabels = {
  * body-cord sockets J_L and J_R stay on their separately serviceable chassis
  * modules; they are intentionally not PCB references or PCB load paths.
  */
-export const scoringHarnessBoardIntegration = [
-  {
-    boardReference: "J_WEAPON_HARNESS_L",
-    cableMpn: "45003",
-    headerMpn: "43650-0300",
-    mateHousingMpn: "43645-0300",
-    mateTerminalMpn: "43030-0007",
-    pinLabels: { pin1: "WEAPON_A", pin2: "WEAPON_B", pin3: "WEAPON_C" },
-    chassisSocketReferences: ["J_L"]
-  },
-  {
-    boardReference: "J_WEAPON_HARNESS_R",
-    cableMpn: "45004",
-    headerMpn: "43650-0400",
-    mateHousingMpn: "43645-0400",
-    mateTerminalMpn: "43030-0007",
-    pinLabels: {
-      pin1: "WEAPON_A",
-      pin2: "WEAPON_B",
-      pin3: "WEAPON_C",
-      pin4: "EMPTY_CAVITY_NO_TERMINAL"
-    },
-    chassisSocketReferences: ["J_R"]
-  },
-  {
-    boardReference: "J_PISTE_HARNESS",
-    cableMpn: "45002",
-    headerMpn: "43650-0200",
-    mateHousingMpn: "43645-0200",
-    mateTerminalMpn: "43030-0007",
-    pinLabels: { pin1: "PISTE", pin2: "PISTE_RETURN" },
-    chassisSocketReferences: []
-  },
-  {
-    boardReference: "J_PRIMARY_OUTPUTS_HARNESS",
-    cableMpn: "45066",
-    headerMpn: "39-29-1067",
-    mateHousingMpn: "39-01-2060",
-    mateTerminalMpn: "39-00-0039",
-    pinLabels: {
-      pin1: "LAMP_RED",
-      pin2: "LAMP_GREEN",
-      pin3: "LAMP_WHITE_L",
-      pin4: "LAMP_WHITE_R",
-      pin5: "BUZZER",
-      pin6: "PRIMARY_RETURN"
-    },
-    chassisSocketReferences: []
-  }
+const scoringHarnessBoardOwnership = [
+  { boardReference: "J_WEAPON_HARNESS_L", chassisSocketReferences: ["J_L"] },
+  { boardReference: "J_WEAPON_HARNESS_R", chassisSocketReferences: ["J_R"] },
+  { boardReference: "J_PISTE_HARNESS", chassisSocketReferences: [] },
+  { boardReference: "J_PRIMARY_OUTPUTS_HARNESS", chassisSocketReferences: [] }
 ] as const
+
+type ProductionHarnessSelection = (typeof productionHarnessSelection)[number]
+
+function deriveHarnessBoardIntegration(
+  ownership: (typeof scoringHarnessBoardOwnership)[number],
+  selection: ProductionHarnessSelection
+) {
+  return {
+    boardReference: ownership.boardReference,
+    cableMpn: selection.cable.mpn,
+    headerMpn: selection.connector.headerMpn,
+    mateHousingMpn: selection.connector.mateHousingMpn,
+    mateTerminalMpn: selection.connector.mateTerminalMpn,
+    pinLabels: Object.fromEntries(selection.pins.map((pin) => [`pin${pin.pin}`, harnessBoardPinLabel(pin)])),
+    chassisSocketReferences: ownership.chassisSocketReferences
+  } as const
+}
+
+export const scoringHarnessBoardIntegration = scoringHarnessBoardOwnership.map((ownership) => {
+  const selection = productionHarnessSelection.find(
+    (candidate) => candidate.boardReference === ownership.boardReference
+  )
+  if (selection === undefined) {
+    throw new RangeError(`Missing production harness selection for ${ownership.boardReference}`)
+  }
+  return deriveHarnessBoardIntegration(ownership, selection)
+})
 
 export const scoringIoOwnedReferences = [
   "J_WEAPON_HARNESS_L",
@@ -258,12 +241,13 @@ export function validatePhysicalBoardContract(): void {
   if (boundaryPins.length !== 11 || new Set(boundaryPins).size !== boundaryPins.length) {
     throw new RangeError("The isolation boundary must contain eleven unique reviewed conductors")
   }
-  const expectedHeaders = ["43650-0300", "43650-0400", "43650-0200", "39-29-1067"]
   if (
-    scoringHarnessBoardIntegration.length !== expectedHeaders.length ||
-    scoringHarnessBoardIntegration.some((harness, index) => harness.headerMpn !== expectedHeaders[index])
+    scoringHarnessBoardIntegration.length !== productionHarnessSelection.length ||
+    scoringHarnessBoardIntegration.some(
+      (harness, index) => harness.boardReference !== productionHarnessSelection[index]?.boardReference
+    )
   ) {
-    throw new RangeError("The scoring I/O harness boundary must retain the reviewed exact header selection")
+    throw new RangeError("The scoring I/O harness boundary must retain the reviewed production selection order")
   }
   const boardReferences = scoringHarnessBoardIntegration.map((harness) => harness.boardReference)
   if (
@@ -277,20 +261,6 @@ export function validatePhysicalBoardContract(): void {
       "Chassis socket clusters must remain off-board and harness references must remain scoring-owned"
     )
   }
-  const selectedPinLabels = {
-    "intentional empty cavity": "EMPTY_CAVITY_NO_TERMINAL",
-    "piste return to connector-side ESD return": "PISTE_RETURN",
-    "piste signal": "PISTE",
-    "primary output return": "PRIMARY_RETURN",
-    "red lamp output": "LAMP_RED",
-    "green lamp output": "LAMP_GREEN",
-    "left white lamp output": "LAMP_WHITE_L",
-    "right white lamp output": "LAMP_WHITE_R",
-    "buzzer output": "BUZZER",
-    "weapon A": "WEAPON_A",
-    "weapon B": "WEAPON_B",
-    "weapon C": "WEAPON_C"
-  } as const
   for (const harness of scoringHarnessBoardIntegration) {
     const selection = productionHarnessSelection.find(
       (candidate) => candidate.boardReference === harness.boardReference
@@ -303,10 +273,7 @@ export function validatePhysicalBoardContract(): void {
       selection.connector.mateHousingMpn !== harness.mateHousingMpn ||
       selection.connector.mateTerminalMpn !== harness.mateTerminalMpn ||
       selection.pins.length !== Object.keys(harness.pinLabels).length ||
-      selection.pins.some(
-        (pin) =>
-          harness.pinLabels[`pin${pin.pin}` as keyof typeof harness.pinLabels] !== selectedPinLabels[pin.function]
-      )
+      selection.pins.some((pin) => harness.pinLabels[`pin${pin.pin}`] !== harnessBoardPinLabel(pin))
     ) {
       throw new RangeError(
         "The scoring I/O board harness data must exactly integrate the reviewed production selection"

@@ -5,6 +5,7 @@ import { interboardArchitectureVerdict } from "./interboard-interface.js"
 import {
   criticalPartReadiness,
   summarizeCriticalPartReadiness,
+  validateSelectedHarnessReadiness,
   validateCriticalPartReadiness,
   type CriticalPartReadiness
 } from "./part-readiness.js"
@@ -182,6 +183,14 @@ describe("critical-part readiness", () => {
     )
     expect(validateCriticalPartReadiness([{ ...scoringHarnesses[0], assembly: "application-carrier" }])).toContain(
       "43650-0300: weapon-harness physical evidence belongs to the scoring-io-board assembly"
+    )
+
+    const mismatchedSelectedMpn = { ...scoringHarnesses[0], mpn: "43650-0400" }
+    expect(validateSelectedHarnessReadiness([mismatchedSelectedMpn])).toEqual([
+      "J_WEAPON_HARNESS_L: readiness MPN 43650-0400 must match selected header MPN 43650-0300"
+    ])
+    expect(validateCriticalPartReadiness([mismatchedSelectedMpn])).toContain(
+      "J_WEAPON_HARNESS_L: readiness MPN 43650-0400 must match selected header MPN 43650-0300"
     )
   })
 

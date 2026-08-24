@@ -24,7 +24,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 4 | SD-003 | P2 | ready | Virtual STM32 and ESP32 duplicate canonical-data cloning and boundary checks |
 | 5 | SD-004 | P2 | ready | Scenario execution, scorer dispatch, and report comparison are coupled in one branch-heavy module |
 | 6 | SC-001 | P2 | done | Root-approved shared weapon-input topology is renderer-verified across logical and physical circuit models; board-specific connector labels remain distinct |
-| 7 | SC-002 | P2 | ready | Harness MPN and pin data have multiple manually maintained sources |
+| 7 | SC-002 | P2 | done | Production harness selection now owns the MPN and pin data consumed by board integration and readiness checks |
 | 8 | SC-003 | P3 | intake | The retained logical board model is a 1,100-line mixed-domain composition |
 | 9 | SD-006 | P1 | blocked | ESP32 services and receiver disagree on identifier validity; intake waits for FW-004 |
 | 10 | SD-009 | P1 | done | Root-approved remote gesture timing now uses bounded integer microseconds throughout with preserved gesture behavior and overflow-safe deadlines |
@@ -135,7 +135,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SC-002: make production harness selection the single MPN/pin source
 
 - Priority: `P2`
-- State: `ready`
+- State: `done`
 - Affected files: [`packages/scoring-circuit/src/physical-board-contract.ts`](../../../packages/scoring-circuit/src/physical-board-contract.ts) (lines 59-108 and 261-314), [`packages/scoring-circuit/src/production-harness-selection.ts`](../../../packages/scoring-circuit/src/production-harness-selection.ts) (lines 84-144 and 145-210), and [`packages/scoring-circuit/src/part-readiness.ts`](../../../packages/scoring-circuit/src/part-readiness.ts) (lines 76-246).
 - Description and evidence: `physical-board-contract.ts` manually repeats cable, header, housing, terminal MPNs and board pin labels for all four harnesses. It later compares those literals to `productionHarnessSelection`, proving that the same facts have two sources. `part-readiness.ts` also carries the selected connector MPN records and physical evidence. The current validator catches some drift at runtime, but the duplication remains in every edit and review.
 - Impact: a connector revision can require synchronized edits in multiple data tables. A missed edit blocks the build only if the changed value is covered by the validator; fields outside that comparison can diverge while still producing a plausible board model.
@@ -342,3 +342,4 @@ truth.
   - All three native host projects and the STM32 target configure and build.
   - A configure-time assertion proves every first-party native target receives the baseline warning policy.
   - `node apps/scoring/firmware/tools/check-coverage.mjs` still passes the 100-percent core and 80-percent other-source gates.
+

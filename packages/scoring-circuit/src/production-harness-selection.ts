@@ -4,11 +4,46 @@
  * model without turning any connector into a fabrication artifact.
  */
 
+export type HarnessPinFunction =
+  | "buzzer output"
+  | "green lamp output"
+  | "intentional empty cavity"
+  | "left white lamp output"
+  | "piste return to connector-side ESD return"
+  | "piste signal"
+  | "primary output return"
+  | "red lamp output"
+  | "right white lamp output"
+  | "weapon A"
+  | "weapon B"
+  | "weapon C"
+
 export type HarnessPin = {
-  readonly function: string
+  readonly function: HarnessPinFunction
   readonly pin: number
   readonly terminalInstalled: boolean
   readonly wire: string
+}
+
+const boardPinLabelsByFunction: Record<HarnessPinFunction, string> = {
+  "intentional empty cavity": "EMPTY_CAVITY_NO_TERMINAL",
+  "piste return to connector-side ESD return": "PISTE_RETURN",
+  "piste signal": "PISTE",
+  "primary output return": "PRIMARY_RETURN",
+  "red lamp output": "LAMP_RED",
+  "green lamp output": "LAMP_GREEN",
+  "left white lamp output": "LAMP_WHITE_L",
+  "right white lamp output": "LAMP_WHITE_R",
+  "buzzer output": "BUZZER",
+  "weapon A": "WEAPON_A",
+  "weapon B": "WEAPON_B",
+  "weapon C": "WEAPON_C"
+}
+
+export function harnessBoardPinLabel(pin: HarnessPin): string {
+  const label = boardPinLabelsByFunction[pin.function]
+  if (label === undefined) throw new RangeError(`Unsupported production harness pin function: ${pin.function}`)
+  return label
 }
 
 export type ProductionHarness = {
