@@ -1483,9 +1483,7 @@ export function isRfc3339Timestamp(value: unknown): value is string {
   if (typeof value !== "string") {
     return false
   }
-  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(Z|[+-](\d{2}):(\d{2}))$/.exec(
-    value
-  )
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?(Z|[+-](\d{2}):(\d{2}))$/.exec(value)
   if (match === null) {
     return false
   }
@@ -1493,11 +1491,7 @@ export function isRfc3339Timestamp(value: unknown): value is string {
   const month = Number(match[2])
   const day = Number(match[3])
   const calendar = new Date(Date.UTC(year, month - 1, day))
-  if (
-    calendar.getUTCFullYear() !== year ||
-    calendar.getUTCMonth() !== month - 1 ||
-    calendar.getUTCDate() !== day
-  ) {
+  if (calendar.getUTCFullYear() !== year || calendar.getUTCMonth() !== month - 1 || calendar.getUTCDate() !== day) {
     return false
   }
   const hour = Number(match[4])

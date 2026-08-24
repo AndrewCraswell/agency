@@ -307,6 +307,11 @@ export interface DocumentSectionLookup {
   limit?: number
 }
 
+export interface SupportingMaterialSectionLookup {
+  materialId: string
+  sectionId: string
+}
+
 interface FusedBillResult {
   id: string
   identifier: string
@@ -548,6 +553,19 @@ export class LegislationQueryService {
       truncated,
       warnings: coverageWarnings(rows.length, "document sections")
     }
+  }
+
+  async getDocumentSection(input: Readonly<{ documentId: string; sectionId: string }>) {
+    const rows = await this.#database
+      .select({ document: billDocuments, section: documentSections })
+      .from(documentSections)
+      .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
+      .where(and(eq(documentSections.documentId, input.documentId), eq(documentSections.id, input.sectionId)))
+      .limit(1)
+    if (rows[0] === undefined) {
+      throw new LegislationError("not_found", `Document section ${input.sectionId} was not found`)
+    }
+    return rows[0]
   }
 
   async getPerson(lookup: EntityLookup) {
@@ -1213,6 +1231,24 @@ export class LegislationQueryService {
       sections: sections.slice(0, limit),
       truncated
     }
+  }
+
+  async getSupportingMaterialSection(input: SupportingMaterialSectionLookup) {
+    const rows = await this.#database
+      .select({ material: supportingMaterials, section: supportingMaterialSections })
+      .from(supportingMaterialSections)
+      .innerJoin(supportingMaterials, eq(supportingMaterialSections.materialId, supportingMaterials.id))
+      .where(
+        and(
+          eq(supportingMaterialSections.materialId, input.materialId),
+          eq(supportingMaterialSections.id, input.sectionId)
+        )
+      )
+      .limit(1)
+    if (rows[0] === undefined) {
+      throw new LegislationError("not_found", `Supporting material section ${input.sectionId} was not found`)
+    }
+    return rows[0]
   }
 
   async searchBills(input: SearchInput & { mode?: "hybrid" | "lexical" | "semantic" }) {

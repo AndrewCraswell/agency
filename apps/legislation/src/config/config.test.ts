@@ -29,7 +29,12 @@ describe("loadConfig", () => {
       logging: { level: "info" },
       model: { baseUrl: "https://openrouter.ai/api/v1" },
       ocr: { maximumAttempts: 5 },
-      server: { host: "127.0.0.1", port: 3100, requestBodyBytes: 1_048_576 }
+      server: {
+        host: "127.0.0.1",
+        port: 3100,
+        publicApiBaseUrl: "http://127.0.0.1:3100",
+        requestBodyBytes: 1_048_576
+      }
     })
   })
 
@@ -44,8 +49,10 @@ describe("loadConfig", () => {
       GOVINFO_API_URL: "https://govinfo.example/api/",
       LEGISLATION_HOST: "0.0.0.0",
       LEGISLATION_PORT: "8080",
+      LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
       LOG_LEVEL: "debug",
       NODE_ENV: "production",
+      OPENSTATES_API_KEY: "openstates-key",
       WORKOS_AUDIENCE: "https://legislation.example/mcp",
       WORKOS_ISSUER: "https://api.workos.com/user_management/client_test",
       WORKOS_JWKS_URL: "https://api.workos.com/sso/jwks/client_test"
@@ -66,9 +73,30 @@ describe("loadConfig", () => {
     expect(config.environment).toBe("production")
     expect(config.ingestion).toMatchObject({
       govInfoApiKey: "govinfo-key",
-      govInfoApiUrl: "https://govinfo.example/api/"
+      govInfoApiUrl: "https://govinfo.example/api/",
+      openStatesApiKey: "openstates-key"
     })
-    expect(config.server).toMatchObject({ host: "0.0.0.0", port: 8080 })
+    expect(config.server).toMatchObject({
+      host: "0.0.0.0",
+      port: 8080,
+      publicApiBaseUrl: "https://legislation.example"
+    })
+  })
+
+  it("uses Railway's injected port and public container bind address", () => {
+    const config = loadConfig({ LEGISLATION_PORT: "3100", PORT: "4567" })
+
+    expect(config.server).toMatchObject({ host: "0.0.0.0", port: 4567 })
+  })
+
+  it("requires an http or https public API URL in production", () => {
+    expect(() => loadConfig({ NODE_ENV: "production" })).toThrow(ConfigurationError)
+    expect(() => loadConfig({ LEGISLATION_PUBLIC_API_BASE_URL: "ftp://legislation.example" })).toThrow(
+      ConfigurationError
+    )
+    expect(loadConfig({ LEGISLATION_PUBLIC_API_BASE_URL: "http://legislation.example" }).server.publicApiBaseUrl).toBe(
+      "http://legislation.example"
+    )
   })
 
   it.each(["0", "65536", "not-a-port"])('rejects invalid port "%s" without including secrets', (port) => {

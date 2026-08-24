@@ -72,6 +72,7 @@ const configSchema = z
     server: z.object({
       host: z.string().trim().min(1),
       port: z.coerce.number().int().min(1).max(65_535),
+      publicApiBaseUrl: z.url({ protocol: /^https?$/ }),
       requestBodyBytes: z.coerce.number().int().min(1024).max(10_485_760),
       shutdownTimeoutMs: z.coerce.number().int().min(1000).max(120_000)
     })
@@ -149,7 +150,7 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       govInfoApiKey: environment.GOVINFO_API_KEY,
       govInfoApiUrl: environment.GOVINFO_API_URL ?? "https://api.govinfo.gov",
       maxAttempts: environment.INGESTION_MAX_ATTEMPTS ?? "4",
-      openStatesApiKey: environment.OPENSTATE_API_KEY,
+      openStatesApiKey: environment.OPENSTATES_API_KEY,
       openStatesApiUrl: environment.OPENSTATES_API_URL ?? "https://v3.openstates.org",
       requestTimeoutMs: environment.INGESTION_REQUEST_TIMEOUT_MS ?? "30000",
       sourceDirectory: environment.LEGISLATION_SOURCE_DIRECTORY ?? ".data/sources"
@@ -169,8 +170,11 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       maximumAttempts: environment.OCR_MAXIMUM_ATTEMPTS ?? "5"
     },
     server: {
-      host: environment.LEGISLATION_HOST ?? "127.0.0.1",
-      port: environment.LEGISLATION_PORT ?? "3100",
+      host: environment.LEGISLATION_HOST ?? (environment.PORT === undefined ? "127.0.0.1" : "0.0.0.0"),
+      port: environment.PORT ?? environment.LEGISLATION_PORT ?? "3100",
+      publicApiBaseUrl:
+        environment.LEGISLATION_PUBLIC_API_BASE_URL ??
+        (environment.NODE_ENV === "production" ? undefined : "http://127.0.0.1:3100"),
       requestBodyBytes: environment.LEGISLATION_REQUEST_BODY_BYTES ?? "1048576",
       shutdownTimeoutMs: environment.LEGISLATION_SHUTDOWN_TIMEOUT_MS ?? "30000"
     }

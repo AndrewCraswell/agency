@@ -14,6 +14,12 @@ import type {
   VoteSearchInput
 } from "../legislation/query-service.js"
 import {
+  projectDocumentSectionRead,
+  projectSupportingMaterialSectionRead,
+  toProjectionLegislationError
+} from "./canonical-read.js"
+import type { DocumentSectionRead, SupportingMaterialSectionRead } from "./canonical-read.js"
+import {
   assertAllowedQueryParameters,
   apiPage,
   apiResource,
@@ -35,7 +41,7 @@ import {
 type ChangeType = ChangeSearchInput["changeType"]
 
 export interface CoreReadQueryApi {
-  findRelatedBills: (input: BillLookup & { includeSemantic?: boolean; limit?: number }) => Promise<unknown>
+  findRelatedBills: (input: BillLookup & { includeSemantic?: boolean; limit?: number }) => Promise<CorePage>
   getAmendment: (input: EntityLookup) => Promise<unknown>
   getBill: (input: BillLookup) => Promise<unknown>
   getBillText: (
@@ -44,7 +50,11 @@ export interface CoreReadQueryApi {
   getBillTimeline: (input: BillLookup) => Promise<TimelinePage>
   getBillVotes: (input: Readonly<{ billId: string; cursor?: string; limit?: number }>) => Promise<CorePage>
   getSupportingMaterial: (input: EntityLookup) => Promise<unknown>
+  getSupportingMaterialSection?: (
+    input: Readonly<{ materialId: string; sectionId: string }>
+  ) => Promise<SupportingMaterialSectionRead>
   getDocument: (input: EntityLookup) => Promise<unknown>
+  getDocumentSection?: (input: Readonly<{ documentId: string; sectionId: string }>) => Promise<DocumentSectionRead>
   getDocumentSections: (input: DocumentSectionLookup) => Promise<CorePage>
   getJurisdiction: (id: string) => Promise<unknown>
   getSession: (id: string) => Promise<unknown>
@@ -80,7 +90,10 @@ interface TimelinePage {
   warnings?: readonly string[]
 }
 
-export function createCoreReadApiHandler(service: CoreReadQueryApi): HttpApiHandler {
+export function createCoreReadApiHandler(
+  service: CoreReadQueryApi,
+  options: Readonly<{ apiBaseUrl: string }> = { apiBaseUrl: "http://127.0.0.1:3100" }
+): HttpApiHandler {
   return async (request, response) => {
     const url = requestUrl(request)
     if (!url.pathname.startsWith("/api/")) {
@@ -88,10 +101,10 @@ export function createCoreReadApiHandler(service: CoreReadQueryApi): HttpApiHand
     }
 
     try {
-      const handled = await handleCoreRequest(service, request, response, url)
+      const handled = await handleCoreRequest(service, request, response, url, options.apiBaseUrl)
       return handled
     } catch (error) {
-      sendApiError(request, response, error)
+      sendApiError(request, response, toProjectionLegislationError(error))
       return true
     }
   }
@@ -101,7 +114,8 @@ async function handleCoreRequest(
   service: CoreReadQueryApi,
   request: IncomingMessage,
   response: ServerResponse,
-  url: URL
+  url: URL,
+  apiBaseUrl: string
 ): Promise<boolean> {
   const route = routeMatch(request.method, url.pathname)
   if (route === undefined) {
@@ -206,12 +220,12 @@ async function handleCoreRequest(
     }
     case "getRelatedBills": {
       const limit = queryInteger(url, "limit", 20)
-      const data = await service.findRelatedBills({
+      const page = await service.findRelatedBills({
         id: route.billId,
         includeSemantic: queryOptionalString(url, "mode") !== "explicit",
         limit
       })
-      sendApiJson(response, 200, apiResource(request, data))
+      sendApiJson(response, 200, apiPage(request, page, limit))
       return true
     }
     case "getBillText": {
@@ -360,6 +374,25 @@ async function handleCoreRequest(
         limit
       })
       sendApiJson(response, 200, apiPage(request, page, limit))
+      return true
+    }
+    case "getDocumentSection": {
+      if (service.getDocumentSection === undefined) {
+        return false
+      }
+      const data = await service.getDocumentSection({ documentId: route.documentId, sectionId: route.sectionId })
+      sendApiJson(response, 200, apiResource(request, projectDocumentSectionRead(data, apiBaseUrl)))
+      return true
+    }
+    case "getSupportingMaterialSection": {
+      if (service.getSupportingMaterialSection === undefined) {
+        return false
+      }
+      const data = await service.getSupportingMaterialSection({
+        materialId: route.materialId,
+        sectionId: route.sectionId
+      })
+      sendApiJson(response, 200, apiResource(request, projectSupportingMaterialSectionRead(data, apiBaseUrl)))
       return true
     }
     case "listChanges": {
@@ -522,11 +555,13 @@ type CoreRoute =
     }
   | { amendmentId: string; name: "getAmendment" }
   | { documentId: string; name: "getDocument" | "getDocumentSections" }
+  | { documentId: string; name: "getDocumentSection"; sectionId: string }
   | {
       jurisdictionId: string
       name: "getJurisdiction" | "listJurisdictionBills" | "listJurisdictionMeetings" | "listJurisdictionSessions"
     }
   | { materialId: string; name: "getSupportingMaterial" }
+  | { materialId: string; name: "getSupportingMaterialSection"; sectionId: string }
   | { name: "getSession" | "listSessionBills"; sessionId: string }
   | { name: "getVote"; voteId: string }
 
@@ -632,15 +667,26 @@ function routeMatch(method: string | undefined, pathname: string): CoreRoute | u
     if (segments.length === 3) {
       return { documentId: segments[2], name: "getDocument" }
     }
-    return segments[3] === "sections" && segments.length === 4
-      ? { documentId: segments[2], name: "getDocumentSections" }
+    if (segments[3] !== "sections") {
+      return undefined
+    }
+    if (segments.length === 4) {
+      return { documentId: segments[2], name: "getDocumentSections" }
+    }
+    return segments.length === 5 && typeof segments[4] === "string"
+      ? { documentId: segments[2], name: "getDocumentSection", sectionId: segments[4] }
       : undefined
   }
   if (segments[1] === "votes" && typeof segments[2] === "string" && segments.length === 3) {
     return { name: "getVote", voteId: segments[2] }
   }
-  if (segments[1] === "supporting-materials" && typeof segments[2] === "string" && segments.length === 3) {
-    return { materialId: segments[2], name: "getSupportingMaterial" }
+  if (segments[1] === "supporting-materials" && typeof segments[2] === "string") {
+    if (segments.length === 3) {
+      return { materialId: segments[2], name: "getSupportingMaterial" }
+    }
+    return segments[3] === "sections" && segments.length === 5 && typeof segments[4] === "string"
+      ? { materialId: segments[2], name: "getSupportingMaterialSection", sectionId: segments[4] }
+      : undefined
   }
   return undefined
 }
@@ -735,6 +781,9 @@ function allowedQueryParameters(name: CoreRoute["name"]): readonly string[] {
     case "getSupportingMaterial":
     case "getDocument":
       return ["cursor", "limit"]
+    case "getDocumentSection":
+    case "getSupportingMaterialSection":
+      return []
     case "getDocumentSections":
       return ["cursor", "limit"]
     case "listChanges":

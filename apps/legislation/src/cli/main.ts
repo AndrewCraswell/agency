@@ -336,7 +336,7 @@ async function serve() {
   const mcp = createLegislationMcpHandler(queryService, logger, telemetry)
   const authenticate = config.auth.mode === "workos" ? createWorkosAuthenticator(config.auth) : undefined
   const server = createLegislationServer({
-    apiHandler: createLegislationApiHandler(queryService),
+    apiHandler: createLegislationApiHandler(queryService, { apiBaseUrl: config.server.publicApiBaseUrl }),
     authenticate,
     documentFetchRelay:
       process.env.DOCUMENT_FETCH_RELAY_TOKEN === undefined

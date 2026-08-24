@@ -32,10 +32,39 @@ function service(): CoreReadQueryApi {
     getBillTimeline: async () => ({ events: [{ id: "action:1" }], truncated: false }),
     getBillVotes: async ({ billId }) => ({ items: [], billId, truncated: false }),
     getDocument: async ({ id }) => ({ document: { id } }),
+    getDocumentSection: async ({ documentId, sectionId }) => ({
+      document: {
+        billId: "bill:us:119:hr:1",
+        createdAt: new Date("2026-08-20T15:00:00Z"),
+        id: documentId,
+        sourceUrl: "https://api.congress.gov/v3/bill/119/hr/1/text",
+        updatedAt: new Date("2026-08-20T15:00:00Z"),
+        upstreamIds: { congress: "119-hr-1" }
+      },
+      section: {
+        contentHash: "a".repeat(64),
+        heading: null,
+        id: sectionId,
+        ordinal: 0,
+        sourceEndOffset: 10,
+        sourceStartOffset: 0,
+        text: "Text"
+      }
+    }),
     getDocumentSections: async () => ({ items: [], truncated: false }),
     getJurisdiction: async (id) => ({ id }),
     getSession: async (id) => ({ id }),
     getSupportingMaterial: async ({ id }) => ({ material: { id } }),
+    getSupportingMaterialSection: async ({ materialId, sectionId }) => ({
+      material: {
+        createdAt: new Date("2026-08-20T15:00:00Z"),
+        id: materialId,
+        sourceUrl: "https://api.congress.gov/v3/bill/119/hr/1/text",
+        updatedAt: new Date("2026-08-20T15:00:00Z"),
+        upstreamIds: { congress: "119-hr-1" }
+      },
+      section: { contentHash: "b".repeat(64), heading: null, id: sectionId, ordinal: 0, text: "Text" }
+    }),
     getVote: async ({ id }) => ({ vote: { id } }),
     listJurisdictions: async () => ({ items: [{ id: "jurisdiction:us" }], truncated: false }),
     listSessions: async () => ({ items: [{ id: "session:us:119" }], truncated: false }),
@@ -109,16 +138,96 @@ describe("core read API handler", () => {
     expect(response.status).toBe(404)
   })
 
-  it("uses page envelopes for timelines, bill sections, and bill votes", async () => {
+  it("returns canonical parent-scoped section resources without trusting the Host header", async () => {
+    const baseUrl = await startServer(service())
+    const [document, material] = await Promise.all([
+      fetch(`${baseUrl}/api/documents/document%3A1/sections/section%3A1`, { headers: { host: "untrusted.example" } }),
+      fetch(`${baseUrl}/api/supporting-materials/material%3A1/sections/section%3A1`, {
+        headers: { host: "untrusted.example" }
+      })
+    ])
+
+    expect(document.status).toBe(200)
+    expect(material.status).toBe(200)
+    await expect(document.json()).resolves.toMatchObject({
+      data: { canonicalUrl: "http://127.0.0.1:3100/api/documents/document%3A1/sections/section%3A1" }
+    })
+    await expect(material.json()).resolves.toMatchObject({
+      data: {
+        canonicalUrl: "http://127.0.0.1:3100/api/supporting-materials/material%3A1/sections/section%3A1"
+      }
+    })
+  })
+
+  it("uses an observed unknown hostname as a conservative non-official provider", async () => {
+    const baseUrl = await startServer({
+      ...service(),
+      getDocumentSection: async ({ documentId, sectionId }) => ({
+        document: {
+          billId: "bill:1",
+          createdAt: new Date("2026-08-20T15:00:00Z"),
+          id: documentId,
+          sourceUrl: "https://publisher.example/document",
+          updatedAt: new Date("2026-08-20T15:00:00Z")
+        },
+        section: {
+          contentHash: "a".repeat(64),
+          heading: null,
+          id: sectionId,
+          ordinal: 0,
+          sourceEndOffset: 1,
+          sourceStartOffset: 0,
+          text: "Text"
+        }
+      })
+    })
+
+    const response = await fetch(`${baseUrl}/api/documents/document%3A1/sections/section%3A1`)
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      data: { sources: [{ isOfficial: false, provider: "publisher.example" }] }
+    })
+  })
+
+  it("fails closed with 422 when persisted section provenance has a malformed source URL", async () => {
+    const baseUrl = await startServer({
+      ...service(),
+      getDocumentSection: async ({ documentId, sectionId }) => ({
+        document: {
+          billId: "bill:1",
+          createdAt: new Date("2026-08-20T15:00:00Z"),
+          id: documentId,
+          sourceUrl: "not a URL",
+          updatedAt: new Date("2026-08-20T15:00:00Z")
+        },
+        section: {
+          contentHash: "a".repeat(64),
+          heading: null,
+          id: sectionId,
+          ordinal: 0,
+          sourceEndOffset: 1,
+          sourceStartOffset: 0,
+          text: "Text"
+        }
+      })
+    })
+
+    const response = await fetch(`${baseUrl}/api/documents/document%3A1/sections/section%3A1`)
+    expect(response.status).toBe(422)
+    await expect(response.json()).resolves.toMatchObject({ error: { category: "unprocessable", retryable: false } })
+  })
+
+  it("uses page envelopes for timelines, related bills, bill sections, and bill votes", async () => {
     const baseUrl = await startServer(service())
     const billId = "bill%3Aus%3A119%3Ahr%3A1"
-    const [timeline, sections, votes] = await Promise.all([
+    const [timeline, related, sections, votes] = await Promise.all([
       fetch(`${baseUrl}/api/bills/${billId}/timeline`),
+      fetch(`${baseUrl}/api/bills/${billId}/related?mode=explicit`),
       fetch(`${baseUrl}/api/bills/${billId}/sections`),
       fetch(`${baseUrl}/api/bills/${billId}/votes`)
     ])
 
-    for (const response of [timeline, sections, votes]) {
+    for (const response of [timeline, related, sections, votes]) {
       expect(response.status).toBe(200)
       await expect(response.json()).resolves.toMatchObject({
         data: expect.any(Array),

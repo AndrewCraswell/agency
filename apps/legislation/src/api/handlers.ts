@@ -7,9 +7,12 @@ import { createCompositeHttpApiHandler, type HttpApiHandler } from "./http.js"
  * The sole composition point for public HTTP route slices. Domain slices add a
  * handler here; the HTTP server and CLI remain unaware of individual routes.
  */
-export function createLegislationApiHandler(queryService: LegislationQueryService): HttpApiHandler {
+export function createLegislationApiHandler(
+  queryService: LegislationQueryService,
+  options: Readonly<{ apiBaseUrl: string }>
+): HttpApiHandler {
   return createCompositeHttpApiHandler([
-    createCoreReadApiHandler(queryService),
+    createCoreReadApiHandler(queryService, options),
     createCivicSearchApiHandler(queryService)
   ])
 }
