@@ -81,6 +81,9 @@ describe("HTTP API documentation contract", () => {
     expect(operations.filter(({ response }) => response.startsWith("Page<"))).toHaveLength(45)
     expect(operations.filter(({ response }) => response.startsWith("SearchPage<"))).toHaveLength(4)
     expect(operations.filter(({ response }) => response.startsWith("BatchResponse<"))).toHaveLength(4)
+    expect(readme).toContain("The HTTP API accepts configured WorkOS M2M bearer tokens")
+    expect(readme).toContain("AuthKit sessions are API-only")
+    expect(readme).toContain("The MCP resource accepts only M2M tokens for its configured resource audience.")
     expect(readme).toContain(
       "Every authenticated operation declares `401`, `403`, `429`, and `500` with `ErrorResponse`."
     )

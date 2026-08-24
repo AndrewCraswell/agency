@@ -33,8 +33,11 @@ The contract is split into focused pages:
 
 ## Authentication and access classes
 
-Bearer tokens use the same WorkOS issuer, audience, signature, expiry, subject, user, and optional organization checks as
-the MCP resource. Every operation declares one of these access classes:
+The HTTP API accepts configured WorkOS M2M bearer tokens and, for first-party browser clients, configured AuthKit
+user-session bearer tokens. M2M tokens are verified for issuer, signature, expiry, subject, optional organization, and
+either the API or MCP audience. AuthKit sessions are API-only and require the configured client ID, a nonempty session
+ID, and a maximum 30-day lifetime. The MCP resource accepts only M2M tokens for its configured resource audience. Every
+operation declares one of these access classes:
 
 | Access class  | Meaning                                                                                         |
 | ------------- | ----------------------------------------------------------------------------------------------- |
