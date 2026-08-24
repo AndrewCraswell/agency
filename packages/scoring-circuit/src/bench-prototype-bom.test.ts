@@ -32,8 +32,8 @@ describe("bench prototype BOM baseline", () => {
       U_EFUSE: "TPS259474ARPWR",
       C_USB_PD_PPHV: "T523H107M035APE070",
       C_USB_PD_LDO: "T55A106M010C0200",
-      U_HUB75_BUF_A: "SN74AHCT245PWR",
-      U_HUB75_BUF_B: "SN74AHCT245PWR"
+      U_DISPLAY_BUFFER_A: "SN74AHCT245PWR",
+      U_DISPLAY_BUFFER_B: "SN74AHCT245PWR"
     })
   })
 
@@ -211,8 +211,8 @@ describe("bench prototype BOM baseline", () => {
   it("binds selected metadata to its exact provenance", () => {
     for (const [reference, change] of [
       ["U_REF", { package: "wrong-package" }],
-      ["U_HUB75_BUF_A", { manufacturer: "Not TI" }],
-      ["U_HUB75_BUF_B", { lifecycle: "active-preferred" }],
+      ["U_DISPLAY_BUFFER_A", { manufacturer: "Not TI" }],
+      ["U_DISPLAY_BUFFER_B", { lifecycle: "active-preferred" }],
       ["Y_W5500", { mpn: "wrong-crystal" }],
       ["D_USB_PD_VBUS_DISCONNECT", { package: "wrong-SMA" }]
     ] as const) {

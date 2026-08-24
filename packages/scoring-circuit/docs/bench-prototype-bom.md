@@ -37,7 +37,7 @@ validated on the bench:
 | PD 3.3 V LDO capacitor | `C_USB_PD_LDO` | `T55A106M010C0200` |
 | Test-only injection connector | `J_LAB_INJECTION` | `43045-0400` |
 | Hard source selector | `S_POWER_SOURCE_SELECTOR` | `7101SYZQE` |
-| HUB75 buffer A/B | `U_HUB75_BUF_A`, `U_HUB75_BUF_B` | `SN74AHCT245PWR` |
+| HUB75 buffer A/B | `U_DISPLAY_BUFFER_A`, `U_DISPLAY_BUFFER_B` | `SN74AHCT245PWR` |
 
 The W5500 crystal, passives, ferrite, and supply capacitors are also included
 as selected rows. Their source and package data are reused from the committed
