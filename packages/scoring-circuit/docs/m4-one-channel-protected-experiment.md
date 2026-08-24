@@ -63,7 +63,7 @@ guarded experiment a device-range screen for plus/minus 24 V while preserving
 | `U_SAR` | `ADS8881IDGS` | 18-bit, 1 MSPS, 10-pin VSSOP grounded-input differential SAR |
 | `R_SAR` | `CRCW060320R0FKEAHP`, 20 ohm, 1% | SAR isolation resistor |
 | `C_SAR` | `C0603C102J5GACTU`, 1 nF C0G | ADC charge bucket/filter |
-| `C_REF` | `T491A106K010AT`, 10 uF, 10 V | ADS8881 reference decoupling candidate |
+| `C_REF` | `T521B106M025ATE100`, 10 uF, 25 V, 100 mOhm maximum ESR | ADS8881 and REF5025A-Q1 reference decoupling candidate |
 | `R_FAULT_GUARD` | `CRCW120656K0FKEAHP`, 56 kohm, 1% | Separate guarded low-energy force lane |
 
 The support values are specified for this coupon only. They still require
