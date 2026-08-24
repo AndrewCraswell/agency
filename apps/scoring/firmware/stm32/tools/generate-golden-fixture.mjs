@@ -93,12 +93,12 @@ function renderRecordContext(vector, index, digest) {
   return `{ ${cString(identity.recordId)}, ${cString(identity.captureId)}, ${cString(digest)}, ${cString(HOST_FIRMWARE_DIGEST)}, "golden-boot-1", 0U, ${vector.stimulus.samples.length - 1}U, ${asUs(first.atUs, "capture start")}U, ${asUs(last.atUs, "capture end")}U, ${vector.stimulus.samples.length}U }`
 }
 
-function renderRecord(vector, hit, index, digest) {
+function renderRecord(vector, hit, index, digest, ruleSetRevision, timingTableRevision) {
   const identity = recordIdentity(vector, index)
   const first = vector.stimulus.samples[0]
   const last = vector.stimulus.samples.at(-1)
   const disposition = hit.classification === "off-target" ? 1 : 0
-  return `{ 1U, ${cString(identity.recordId)}, ${asUs(hit.qualifiedAtUs, "record decision")}U, ${asUs(first.atUs, "record capture start")}U, ${asUs(last.atUs, "record capture end")}U, 0U, ${vector.stimulus.samples.length - 1}U, "stm32-scoring-core", ${cString(HOST_FIRMWARE_DIGEST)}, "golden-boot-1", "host-golden", "rules-1", "timing-1", "lines-1", "calibration-1", ${cString(identity.captureId)}, ${cString(digest)}, "golden-vector-1", ${vector.stimulus.samples.length}U, 1U, 0U, ${asUs(first.atUs, "raw capture start")}U, ${asUs(last.atUs, "raw capture end")}U, 0U, ${vector.stimulus.samples.length - 1}U, ${asEnum(vector.weapon, ["epee", "foil", "sabre"], "record weapon")}U, ${asEnum(hit.side, ["left", "right"], "record side")}U, ${disposition}U, ${disposition}U, 1U, 1U, ${asUs(hit.startedAtUs, "record hit start")}U, ${asUs(hit.qualifiedAtUs, "record qualification")}U }`
+  return `{ 1U, ${cString(identity.recordId)}, ${asUs(hit.qualifiedAtUs, "record decision")}U, ${asUs(first.atUs, "record capture start")}U, ${asUs(last.atUs, "record capture end")}U, 0U, ${vector.stimulus.samples.length - 1}U, "stm32-scoring-core", ${cString(HOST_FIRMWARE_DIGEST)}, "golden-boot-1", "host-golden", ${cString(ruleSetRevision)}, ${cString(timingTableRevision)}, "lines-1", "calibration-1", ${cString(identity.captureId)}, ${cString(digest)}, "golden-vector-1", ${vector.stimulus.samples.length}U, 1U, 0U, ${asUs(first.atUs, "raw capture start")}U, ${asUs(last.atUs, "raw capture end")}U, 0U, ${vector.stimulus.samples.length - 1}U, ${asEnum(vector.weapon, ["epee", "foil", "sabre"], "record weapon")}U, ${asEnum(hit.side, ["left", "right"], "record side")}U, ${disposition}U, ${disposition}U, 1U, 1U, ${asUs(hit.startedAtUs, "record hit start")}U, ${asUs(hit.qualifiedAtUs, "record qualification")}U }`
 }
 
 function paddedRows(values, limit, renderValue, emptyValue) {
@@ -106,7 +106,7 @@ function paddedRows(values, limit, renderValue, emptyValue) {
   return [...values.map(renderValue), ...Array.from({ length: limit - values.length }, () => emptyValue)].join(", ")
 }
 
-function renderVector(vector, digest) {
+function renderVector(vector, digest, ruleSetRevision, timingTableRevision) {
   assert(vector && typeof vector === "object", "Vector must be an object")
   assert(vector.expected && typeof vector.expected === "object", "Vector expected result must be an object")
   assert(vector.stimulus && typeof vector.stimulus === "object", "Vector stimulus must be an object")
@@ -129,7 +129,12 @@ function renderVector(vector, digest) {
     (_hit, index) => renderRecordContext(vector, index, digest),
     "{ NULL, NULL, NULL, NULL, NULL, 0U, 0U, 0U, 0U, 0U }"
   )
-  const records = paddedRows(vector.expected.hits, 2, (hit, index) => renderRecord(vector, hit, index, digest), "{ 0 }")
+  const records = paddedRows(
+    vector.expected.hits,
+    2,
+    (hit, index) => renderRecord(vector, hit, index, digest, ruleSetRevision, timingTableRevision),
+    "{ 0 }"
+  )
 
   return [
     "  {",
@@ -155,13 +160,19 @@ function renderVector(vector, digest) {
 function render(checkedArtifact) {
   assert(checkedArtifact.format === "scoring-firmware-golden-vectors", "Unexpected fixture format")
   assert(checkedArtifact.schemaVersion === "1.0.0", "Unexpected fixture schema version")
+  assert(checkedArtifact.source === "m1-08-runtime-boundary-vectors", "Unexpected fixture source")
+  assert(checkedArtifact.ordering === "m1-08-generation-order", "Unexpected fixture ordering")
   assert(checkedArtifact.ruleSetRevision === "rules-1", "Unexpected fixture rule revision")
   assert(checkedArtifact.timingTableRevision === "timing-1", "Unexpected fixture timing revision")
   assert(checkedArtifact.timeUnit === "us", "Unexpected fixture time unit")
   assert(checkedArtifact.resistanceUnit === "milliOhm", "Unexpected fixture resistance unit")
   assert(Array.isArray(checkedArtifact.vectors) && checkedArtifact.vectors.length > 0, "Fixture has no vectors")
 
-  const vectorRows = checkedArtifact.vectors.map((vector) => renderVector(vector, checkedArtifact.digest)).join(",\n")
+  const vectorRows = checkedArtifact.vectors
+    .map((vector) =>
+      renderVector(vector, checkedArtifact.digest, checkedArtifact.ruleSetRevision, checkedArtifact.timingTableRevision)
+    )
+    .join(",\n")
 
   return `/* Generated from fixtures/golden-vector-export.json. Do not edit. */
 #ifndef STM32_GOLDEN_VECTORS_H
@@ -191,8 +202,12 @@ typedef struct scoring_golden_vector_fixture {
 
 #define SCORING_GOLDEN_VECTOR_FORMAT ${cString(checkedArtifact.format)}
 #define SCORING_GOLDEN_VECTOR_SCHEMA_VERSION ${cString(checkedArtifact.schemaVersion)}
+#define SCORING_GOLDEN_VECTOR_SOURCE ${cString(checkedArtifact.source)}
+#define SCORING_GOLDEN_VECTOR_ORDERING ${cString(checkedArtifact.ordering)}
 #define SCORING_GOLDEN_VECTOR_RULE_SET_REVISION ${cString(checkedArtifact.ruleSetRevision)}
 #define SCORING_GOLDEN_VECTOR_TIMING_TABLE_REVISION ${cString(checkedArtifact.timingTableRevision)}
+#define SCORING_GOLDEN_VECTOR_TIME_UNIT ${cString(checkedArtifact.timeUnit)}
+#define SCORING_GOLDEN_VECTOR_RESISTANCE_UNIT ${cString(checkedArtifact.resistanceUnit)}
 #define SCORING_GOLDEN_VECTOR_DIGEST ${cString(checkedArtifact.digest)}
 #define SCORING_GOLDEN_VECTOR_COUNT ${checkedArtifact.vectors.length}U
 

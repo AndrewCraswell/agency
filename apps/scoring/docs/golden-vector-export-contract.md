@@ -91,7 +91,10 @@ The command builds the exporter, then runs the small Node CLI under
 `apps/scoring/scripts`. `--check` parses the checked JSON and compares its
 canonical bytes, raw UTF-8 bytes, and digest with a fresh export. Native host
 tests can consume the checked JSON without copying timing constants into
-firmware sources. The scoring package's `verify` script runs this check.
+firmware sources. The STM32 translation also carries and asserts the exact
+source, ordering, rule-set, timing-table, time-unit, resistance-unit, and
+digest metadata from this artifact. The scoring package's `verify` script runs
+this check.
 
 This contract does not define a target-language parser, MCU transport frame, or
 target timing claim. M3-03 and later firmware tasks may translate this artifact

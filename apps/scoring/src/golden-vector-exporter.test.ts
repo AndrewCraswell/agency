@@ -32,6 +32,8 @@ describe("golden-vector exporter", () => {
 
     expect(exported.format).toBe(GOLDEN_VECTOR_EXPORT_FORMAT)
     expect(exported.schemaVersion).toBe(GOLDEN_VECTOR_EXPORT_SCHEMA_VERSION)
+    expect(exported.source).toBe("m1-08-runtime-boundary-vectors")
+    expect(exported.ordering).toBe("m1-08-generation-order")
     expect(exported.ruleSetRevision).toBe("rules-1")
     expect(exported.timingTableRevision).toBe("timing-1")
     expect(exported.timeUnit).toBe("us")
