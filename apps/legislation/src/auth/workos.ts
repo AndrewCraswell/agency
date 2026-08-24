@@ -29,7 +29,11 @@ export function extractBearerToken(authorizationHeader: string | string[] | unde
 }
 
 export function createWorkosAuthenticator(
-  config: Extract<LegislationConfig["auth"], { mode: "workos" }>,
+  config: Readonly<{
+    audience: string | string[]
+    issuer: Extract<LegislationConfig["auth"], { mode: "workos" }>["issuer"]
+    jwksUrl: Extract<LegislationConfig["auth"], { mode: "workos" }>["jwksUrl"]
+  }>,
   getKey: JWTVerifyGetKey = createRemoteJWKSet(new URL(config.jwksUrl), {
     cooldownDuration: 30_000,
     timeoutDuration: 5000

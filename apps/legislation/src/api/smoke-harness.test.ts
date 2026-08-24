@@ -461,7 +461,7 @@ describe("local API smoke harness", () => {
     ])
     const server = createLegislationServer({
       apiHandler,
-      authenticate: async (authorizationHeader) => {
+      apiAuthenticate: async (authorizationHeader) => {
         const value = Array.isArray(authorizationHeader) ? authorizationHeader[0] : authorizationHeader
         if (value !== "Bearer smoke-token") {
           throw new AuthenticationError("invalid")

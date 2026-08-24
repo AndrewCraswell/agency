@@ -1,6 +1,7 @@
 import { LegislationApiClient, type FetchLike } from "../api-client/client.js"
 import type { LegislationConfig } from "../config/config.js"
 import { HttpLegislationQueryAdapter } from "./http-query-adapter.js"
+import { HybridLegislationQueryAdapter } from "./hybrid-query-adapter.js"
 import type { LegislationQueryApi } from "./tools.js"
 
 export function createMcpQueryApi(
@@ -11,7 +12,7 @@ export function createMcpQueryApi(
   if (config.transport === "in-process") {
     return inProcess
   }
-  return new HttpLegislationQueryAdapter(
+  const http = new HttpLegislationQueryAdapter(
     new LegislationApiClient({
       baseUrl: config.apiBaseUrl,
       bearerToken: config.bearerToken,
@@ -19,4 +20,5 @@ export function createMcpQueryApi(
       timeoutMs: config.timeoutMs
     })
   )
+  return config.transport === "hybrid" ? new HybridLegislationQueryAdapter(http, inProcess, config.httpMethods) : http
 }

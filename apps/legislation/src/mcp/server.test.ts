@@ -17,9 +17,10 @@ async function startServer(
   isReady = true,
   options: Readonly<{
     apiHandler?: NonNullable<Parameters<typeof createLegislationServer>[0]["apiHandler"]>
-    authenticate?: () => Promise<{ userId: string }>
+    apiAuthenticate?: () => Promise<{ userId: string }>
     documentFetchRelay?: NonNullable<Parameters<typeof createLegislationServer>[0]["documentFetchRelay"]>
     logger?: Logger
+    mcpAuthenticate?: () => Promise<{ userId: string }>
     mcpHandler?: NonNullable<Parameters<typeof createLegislationServer>[0]["mcpHandler"]>
     protectedResourceMetadata?: NonNullable<Parameters<typeof createLegislationServer>[0]["protectedResourceMetadata"]>
     readinessDetails?: () => Readonly<Record<string, unknown>>
@@ -169,7 +170,7 @@ describe("createLegislationServer", () => {
     const resource = "https://legislation.example/mcp"
     const baseUrl = await startServer(true, {
       apiHandler: async () => true,
-      authenticate: async () => {
+      apiAuthenticate: async () => {
         const { AuthenticationError } = await import("../auth/workos.js")
         throw new AuthenticationError("invalid")
       },
@@ -192,9 +193,7 @@ describe("createLegislationServer", () => {
       expect(response.status).toBe(401)
       expect(response.headers.get("x-correlation-id")).toBe(correlationId)
       expect(response.headers.get("www-authenticate")).toContain("invalid_token")
-      expect(response.headers.get("www-authenticate")).toContain(
-        `resource_metadata="https://legislation.example/.well-known/oauth-protected-resource/mcp"`
-      )
+      expect(response.headers.get("www-authenticate")).not.toContain("resource_metadata=")
       await expect(response.json()).resolves.toEqual({
         error: {
           category: "unauthorized",
@@ -232,7 +231,7 @@ describe("createLegislationServer", () => {
   it("rejects anonymous MCP requests while leaving health public", async () => {
     const resource = "https://legislation.example/mcp"
     const baseUrl = await startServer(true, {
-      authenticate: async () => {
+      mcpAuthenticate: async () => {
         const { AuthenticationError } = await import("../auth/workos.js")
         throw new AuthenticationError("missing")
       },
@@ -266,7 +265,7 @@ describe("createLegislationServer", () => {
   it("carries authenticated user and organization identity into MCP handling", async () => {
     let capturedContext: ReturnType<typeof getRequestContext>
     const baseUrl = await startServer(true, {
-      authenticate: async () => ({ organizationId: "org_test", userId: "user_test" }),
+      mcpAuthenticate: async () => ({ organizationId: "org_test", userId: "user_test" }),
       mcpHandler: async (_request, response) => {
         capturedContext = getRequestContext()
         response.writeHead(204)
@@ -337,7 +336,7 @@ describe("createLegislationServer", () => {
     const mcp = createLegislationMcpHandler(service, logger)
     let authenticationCalls = 0
     const baseUrl = await startServer(true, {
-      authenticate: async () => {
+      mcpAuthenticate: async () => {
         authenticationCalls += 1
         return { userId: "user_test" }
       },

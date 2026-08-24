@@ -74,6 +74,33 @@ describe("loadConfig", () => {
         LEGISLATION_MCP_TRANSPORT: "http"
       }).mcp
     ).toMatchObject({ apiBaseUrl: "http://127.0.0.1:3100", transport: "http" })
+    expect(
+      loadConfig({
+        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
+        LEGISLATION_MCP_TRANSPORT: "hybrid"
+      }).mcp
+    ).toMatchObject({ apiBaseUrl: "http://127.0.0.1:3100", httpMethods: [], transport: "hybrid" })
+    expect(
+      loadConfig({
+        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
+        LEGISLATION_MCP_HTTP_METHODS: "  ,  ",
+        LEGISLATION_MCP_TRANSPORT: "hybrid"
+      }).mcp
+    ).toMatchObject({ httpMethods: [], transport: "hybrid" })
+    expect(() =>
+      loadConfig({
+        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
+        LEGISLATION_MCP_HTTP_METHODS: "getBill,notAQueryMethod",
+        LEGISLATION_MCP_TRANSPORT: "hybrid"
+      })
+    ).toThrow(ConfigurationError)
+    expect(() =>
+      loadConfig({
+        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
+        LEGISLATION_MCP_HTTP_METHODS: "getBill,getBill",
+        LEGISLATION_MCP_TRANSPORT: "hybrid"
+      })
+    ).toThrow(ConfigurationError)
   })
 
   it("does not expose an HTTP transport bearer token in configuration errors", () => {
@@ -106,15 +133,17 @@ describe("loadConfig", () => {
       LOG_LEVEL: "debug",
       NODE_ENV: "production",
       OPENSTATES_API_KEY: "openstates-key",
-      WORKOS_AUDIENCE: "https://legislation.example/mcp",
+      WORKOS_API_AUDIENCE: "client_environment",
       WORKOS_ISSUER: "https://api.workos.com/user_management/client_test",
-      WORKOS_JWKS_URL: "https://api.workos.com/sso/jwks/client_test"
+      WORKOS_JWKS_URL: "https://api.workos.com/sso/jwks/client_test",
+      WORKOS_MCP_AUDIENCE: "https://legislation.example/mcp"
     })
 
     expect(config.auth).toEqual({
-      audience: "https://legislation.example/mcp",
+      apiAudience: "client_environment",
       issuer: "https://api.workos.com/user_management/client_test",
       jwksUrl: "https://api.workos.com/sso/jwks/client_test",
+      mcpAudience: "https://legislation.example/mcp",
       mode: "workos"
     })
     expect(config.database).toEqual({
@@ -169,6 +198,43 @@ describe("loadConfig", () => {
     expect(() => loadConfig({ AUTH_MODE: "workos", WORKOS_ISSUER: "https://issuer.example" })).toThrow(
       ConfigurationError
     )
+  })
+
+  it("requires separate API and MCP audiences in WorkOS mode", () => {
+    expect(() =>
+      loadConfig({
+        AUTH_MODE: "workos",
+        WORKOS_API_AUDIENCE: "client_environment",
+        WORKOS_ISSUER: "https://issuer.example",
+        WORKOS_JWKS_URL: "https://issuer.example/jwks"
+      })
+    ).toThrow(ConfigurationError)
+    expect(() =>
+      loadConfig({
+        AUTH_MODE: "workos",
+        WORKOS_ISSUER: "https://issuer.example",
+        WORKOS_JWKS_URL: "https://issuer.example/jwks",
+        WORKOS_MCP_AUDIENCE: "https://legislation.example/mcp"
+      })
+    ).toThrow(ConfigurationError)
+  })
+
+  it("uses the existing MCP audience variable during the Railway configuration rollout", () => {
+    expect(
+      loadConfig({
+        AUTH_MODE: "workos",
+        WORKOS_API_AUDIENCE: "client_environment",
+        WORKOS_AUDIENCE: "https://legislation.example/mcp",
+        WORKOS_ISSUER: "https://issuer.example",
+        WORKOS_JWKS_URL: "https://issuer.example/jwks"
+      }).auth
+    ).toEqual({
+      apiAudience: "client_environment",
+      issuer: "https://issuer.example",
+      jwksUrl: "https://issuer.example/jwks",
+      mcpAudience: "https://legislation.example/mcp",
+      mode: "workos"
+    })
   })
 
   it("rejects an inverted federal range", () => {

@@ -4,6 +4,7 @@ import { runWithRequestContext } from "../auth/request-context.js"
 import { LegislationError } from "../legislation/errors.js"
 import { HttpLegislationQueryAdapter } from "./http-query-adapter.js"
 import { createMcpQueryApi } from "./query-transport.js"
+import type { LegislationQueryApi } from "./tools.js"
 
 function jsonResponse(payload: unknown, correlationId: string, status = 200): Response {
   return new Response(JSON.stringify(payload), {
@@ -25,6 +26,35 @@ function page(data: unknown[], correlationId: string) {
     data,
     links: { next: null, self: "https://api.example.test/api/people" },
     meta: { correlationId, limit: 20, nextCursor: null, truncated: false, warnings: ["coverage"] }
+  }
+}
+
+function inProcessApi(overrides: Partial<LegislationQueryApi> = {}): LegislationQueryApi {
+  const fallback = async () => ({ source: "in-process" })
+  return {
+    compareBillVersions: fallback,
+    findRelatedBills: fallback,
+    getAmendment: fallback,
+    getBill: fallback,
+    getBillText: fallback,
+    getBillTimeline: fallback,
+    getBillVotes: fallback,
+    getCalendar: fallback,
+    getEvent: fallback,
+    getOrganization: fallback,
+    getPerson: fallback,
+    getSupportingMaterial: fallback,
+    getVote: fallback,
+    searchAmendments: fallback,
+    searchBills: fallback,
+    searchBillText: fallback,
+    searchChanges: fallback,
+    searchEvents: fallback,
+    searchOrganizations: fallback,
+    searchPeople: fallback,
+    searchSupportingMaterials: fallback,
+    searchVotes: fallback,
+    ...overrides
   }
 }
 
@@ -56,6 +86,88 @@ describe("HttpLegislationQueryAdapter", () => {
     expect(fetch).toHaveBeenCalledOnce()
     expect(String(fetch.mock.calls[0]?.[0])).toBe("http://127.0.0.1:3100/api/bills/bill%3Aus%3A119%3Ahr%3A1")
     expect(String(fetch.mock.calls[0]?.[0])).not.toContain("/mcp")
+  })
+
+  it("keeps hybrid behavior-identical to the in-process transport until a method is enabled", async () => {
+    const getBill = vi.fn<() => Promise<unknown>>(async () => ({ source: "in-process" }))
+    const fetch = vi.fn<FetchLike>()
+    const adapter = createMcpQueryApi(
+      { apiBaseUrl: "https://api.example.test", httpMethods: [], timeoutMs: 30_000, transport: "hybrid" },
+      inProcessApi({ getBill }),
+      fetch
+    )
+
+    await expect(adapter.getBill({ id: "bill:us:119:hr:1" })).resolves.toEqual({ source: "in-process" })
+
+    expect(getBill).toHaveBeenCalledOnce()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it("uses an explicitly enabled HTTP route once without calling MCP and retains caller context", async () => {
+    let authorization: string | null = null
+    let correlationId: string | null = null
+    const fetch: FetchLike = async (input, init) => {
+      const headers = new Headers(init?.headers)
+      authorization = headers.get("authorization")
+      correlationId = headers.get("x-correlation-id")
+      expect(String(input)).toBe("https://api.example.test/api/bills/bill%3Aus%3A119%3Ahr%3A1")
+      return jsonResponse(resource({ id: "bill:us:119:hr:1" }, correlationId ?? "missing"), correlationId ?? "missing")
+    }
+    const adapter = createMcpQueryApi(
+      { apiBaseUrl: "https://api.example.test", httpMethods: ["getBill"], timeoutMs: 30_000, transport: "hybrid" },
+      inProcessApi(),
+      fetch
+    )
+
+    await runWithRequestContext(
+      { bearerToken: "caller-token", correlationId: "hybrid-correlation", identity: { userId: "user-1" } },
+      async () => await adapter.getBill({ id: "bill:us:119:hr:1" })
+    )
+
+    expect(authorization).toBe("Bearer caller-token")
+    expect(correlationId).toBe("hybrid-correlation")
+  })
+
+  it("uses the in-process service for unsupported methods and HTTP-incompatible filter combinations", async () => {
+    const searchVotes = vi.fn<() => Promise<unknown>>(async () => ({ source: "votes" }))
+    const fetch = vi.fn<FetchLike>()
+    const adapter = createMcpQueryApi(
+      { apiBaseUrl: "https://api.example.test", httpMethods: ["searchVotes"], timeoutMs: 30_000, transport: "hybrid" },
+      inProcessApi({ searchVotes }),
+      fetch
+    )
+
+    await expect(adapter.searchVotes({ from: new Date("2026-08-24T00:00:00.000Z") })).resolves.toEqual({
+      source: "votes"
+    })
+
+    expect(searchVotes).toHaveBeenCalledOnce()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
+  it("does not conceal a remote parity-route failure with an in-process retry", async () => {
+    const getBill = vi.fn<() => Promise<unknown>>(async () => ({ source: "in-process" }))
+    const fetch: FetchLike = async (_input, init) => {
+      const correlationId = new Headers(init?.headers).get("x-correlation-id") ?? "missing"
+      return jsonResponse(
+        {
+          error: { category: "dependency_unavailable", correlationId, message: "Remote unavailable", retryable: true }
+        },
+        correlationId,
+        503
+      )
+    }
+    const adapter = createMcpQueryApi(
+      { apiBaseUrl: "https://api.example.test", httpMethods: ["getBill"], timeoutMs: 30_000, transport: "hybrid" },
+      inProcessApi({ getBill }),
+      fetch
+    )
+
+    await expect(adapter.getBill({ id: "bill:us:119:hr:1" })).rejects.toMatchObject({
+      category: "dependency_unavailable",
+      message: "Remote unavailable"
+    })
+    expect(getBill).not.toHaveBeenCalled()
   })
 
   it("preserves legacy resource/page results and propagates request-scoped auth and correlation", async () => {

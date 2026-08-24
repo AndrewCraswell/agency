@@ -335,10 +335,25 @@ async function serve() {
       : new OpenRouterRetrievalClient({ apiKey: config.model.apiKey, baseUrl: new URL(config.model.baseUrl) })
   const queryService = new LegislationQueryService(database, retrievalClient)
   const mcp = createLegislationMcpHandler(createMcpQueryApi(config.mcp, queryService), logger, telemetry)
-  const authenticate = config.auth.mode === "workos" ? createWorkosAuthenticator(config.auth) : undefined
+  const apiAuthenticate =
+    config.auth.mode === "workos"
+      ? createWorkosAuthenticator({
+          audience: [config.auth.apiAudience, config.auth.mcpAudience],
+          issuer: config.auth.issuer,
+          jwksUrl: config.auth.jwksUrl
+        })
+      : undefined
+  const mcpAuthenticate =
+    config.auth.mode === "workos"
+      ? createWorkosAuthenticator({
+          audience: config.auth.mcpAudience,
+          issuer: config.auth.issuer,
+          jwksUrl: config.auth.jwksUrl
+        })
+      : undefined
   const server = createLegislationServer({
     apiHandler: createLegislationApiHandler(queryService, { apiBaseUrl: config.server.publicApiBaseUrl }),
-    authenticate,
+    apiAuthenticate,
     documentFetchRelay:
       process.env.DOCUMENT_FETCH_RELAY_TOKEN === undefined
         ? undefined
@@ -353,12 +368,13 @@ async function serve() {
           },
     isReady: () => isDatabaseReady(pool),
     logger,
+    mcpAuthenticate,
     mcpHandler: mcp.nodeHandler,
     protectedResourceMetadata:
       config.auth.mode === "workos"
         ? {
             authorizationServer: config.auth.issuer,
-            resource: config.auth.audience
+            resource: config.auth.mcpAudience
           }
         : undefined,
     readinessDetails: () => ({ databasePool: databasePoolSnapshot(pool) }),

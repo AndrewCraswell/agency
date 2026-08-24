@@ -12,13 +12,14 @@ type RelayedDocument = Readonly<{ bytes: Uint8Array; contentType: string; source
 
 type ServerDependencies = Readonly<{
   apiHandler?: HttpApiHandler
-  authenticate?: (authorizationHeader: string | string[] | undefined) => Promise<RequestIdentity>
+  apiAuthenticate?: (authorizationHeader: string | string[] | undefined) => Promise<RequestIdentity>
   documentFetchRelay?: Readonly<{
     fetch: (sourceUrl: string) => Promise<RelayedDocument>
     token: string
   }>
   isReady?: () => boolean | Promise<boolean>
   logger: Logger
+  mcpAuthenticate?: (authorizationHeader: string | string[] | undefined) => Promise<RequestIdentity>
   mcpHandler?: (request: IncomingMessage, response: ServerResponse) => Promise<void>
   protectedResourceMetadata?: Readonly<{ authorizationServer: string; resource: string }>
   readinessDetails?: () => Readonly<Record<string, unknown>>
@@ -117,9 +118,9 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
         }
         const identity = await runWithRequestContext(
           { correlationId: String(correlationId) },
-          async () => await authenticateRequest(request, response, dependencies, true)
+          async () => await authenticateRequest(request, response, dependencies.apiAuthenticate, true)
         )
-        if (identity === undefined && dependencies.authenticate !== undefined) {
+        if (identity === undefined && dependencies.apiAuthenticate !== undefined) {
           return
         }
         await runWithRequestContext({ correlationId: String(correlationId), identity }, async () => {
@@ -132,8 +133,14 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
       }
 
       if (requestUrl.pathname === "/mcp" && dependencies.mcpHandler !== undefined) {
-        const identity = await authenticateRequest(request, response, dependencies)
-        if (identity === undefined && dependencies.authenticate !== undefined) {
+        const identity = await authenticateRequest(
+          request,
+          response,
+          dependencies.mcpAuthenticate,
+          false,
+          dependencies.protectedResourceMetadata
+        )
+        if (identity === undefined && dependencies.mcpAuthenticate !== undefined) {
           return
         }
         const contentLength = Number(request.headers["content-length"])
@@ -142,7 +149,7 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
           return
         }
         const bearerToken =
-          dependencies.authenticate === undefined ? undefined : bearerTokenFrom(request.headers.authorization)
+          dependencies.mcpAuthenticate === undefined ? undefined : bearerTokenFrom(request.headers.authorization)
         await runWithRequestContext({ bearerToken, correlationId: String(correlationId), identity }, () =>
           dependencies.mcpHandler?.(request, response)
         )
@@ -176,22 +183,23 @@ function bearerTokenFrom(header: string | string[] | undefined): string | undefi
 async function authenticateRequest(
   request: IncomingMessage,
   response: ServerResponse,
-  dependencies: ServerDependencies,
-  apiRequest = false
+  authenticate: ServerDependencies["apiAuthenticate"],
+  apiRequest: boolean,
+  protectedResourceMetadata?: ServerDependencies["protectedResourceMetadata"]
 ): Promise<RequestIdentity | undefined> {
-  if (dependencies.authenticate === undefined) {
+  if (authenticate === undefined) {
     return undefined
   }
   try {
-    return await dependencies.authenticate(request.headers.authorization)
+    return await authenticate(request.headers.authorization)
   } catch (error) {
     if (!(error instanceof AuthenticationError)) {
       throw error
     }
     const resourceMetadata =
-      dependencies.protectedResourceMetadata === undefined
+      protectedResourceMetadata === undefined
         ? ""
-        : `, resource_metadata="${protectedResourceMetadataUrl(dependencies.protectedResourceMetadata.resource)}"`
+        : `, resource_metadata="${protectedResourceMetadataUrl(protectedResourceMetadata.resource)}"`
     response.setHeader("www-authenticate", `Bearer realm="legislation", error="invalid_token"${resourceMetadata}`)
     if (apiRequest) {
       sendApiError(request, response, new LegislationError("unauthorized", "Bearer token is absent or invalid"))
