@@ -5,6 +5,7 @@ import {
   createApplicationTimeMetadata
 } from "./application-time-metadata.js"
 import { DECISION_RECORD_SCHEMA_VERSION, type DecisionRecord } from "./decision-record.js"
+import { createEventJournal, createVirtualEventJournalStorage } from "./event-journal.js"
 
 function record(recordId: string, decisionAtUs: number, scoringBootId = "stm32-boot-a"): DecisionRecord {
   return {
@@ -77,6 +78,42 @@ describe("application time metadata", () => {
     expect(Object.isFrozen(first)).toBe(true)
     expect(Object.isFrozen(first.monotonic)).toBe(true)
     expect(Object.isFrozen(time.timeline)).toBe(true)
+  })
+
+  it("annotates records recovered from the event journal under a new application boot", () => {
+    const storage = createVirtualEventJournalStorage()
+    const source = createEventJournal({ storage })
+    source.append(record("record-1", 100))
+    source.append(record("record-2", 200))
+
+    const recovered = createEventJournal({ storage })
+    const time = createApplicationTimeMetadata({
+      applicationBootId: "esp32-boot-recovered",
+      maximumDriftPpm: 0
+    })
+    const entries = recovered.records.map((entry) => time.observe(entry))
+
+    expect(entries).toMatchObject([
+      {
+        applicationBootId: "esp32-boot-recovered",
+        applicationSequence: 0,
+        decisionRecordId: "record-1",
+        wallClock: { reason: "offline", status: "unavailable" }
+      },
+      {
+        applicationBootId: "esp32-boot-recovered",
+        applicationSequence: 1,
+        decisionRecordId: "record-2",
+        ordering: {
+          previousApplicationRecordId: "record-1",
+          relationToPreviousApplicationRecord: "ordered",
+          relationWithinScoringBoot: "ordered"
+        },
+        wallClock: { reason: "offline", status: "unavailable" }
+      }
+    ])
+    expect(recovered.records).toEqual([record("record-1", 100), record("record-2", 200)])
+    expect(entries.map((entry) => entry.monotonic.decisionAtUs)).toEqual([100, 200])
   })
 
   it("uses a declared RTC uncertainty and drift bound rather than assuming clock accuracy", () => {
