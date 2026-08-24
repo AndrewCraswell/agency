@@ -236,6 +236,64 @@ describe("core read API handler", () => {
     }
   })
 
+  it("maps every documented global bill filter and returns canonical bill summaries", async () => {
+    let received: Parameters<CoreReadQueryApi["browseBills"]>[0] | undefined
+    const baseUrl = await startServer({
+      ...service(),
+      browseBills: async (input) => {
+        received = input
+        return { items: [bill()], truncated: false }
+      }
+    })
+    const response = await fetch(
+      `${baseUrl}/api/bills?classification=bill&classification=resolution&cursor=eyJvZmZzZXQiOjB9&identifier=HR&introducedFrom=2026-01-01&introducedTo=2026-01-31&jurisdictionId=jurisdiction%3Aus&limit=7&organizationId=organization%3Aus%3Ahouse%3Arules&sessionId=session%3Aus%3A119&sort=updated-desc&sponsorPersonId=person%3Aus%3A1&status=introduced&status=referred&subject=budget&subject=taxes&updatedFrom=2026-08-20T12%3A00%3A00Z`
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      data: [
+        {
+          canonicalUrl: "http://127.0.0.1:3100/api/bills/bill%3Aus%3A119%3Ahr%3A1",
+          sources: [{ isOfficial: true, provider: "congress" }],
+          type: "bill"
+        }
+      ],
+      meta: { limit: 7 }
+    })
+    expect(received).toEqual({
+      classification: ["bill", "resolution"],
+      cursor: "eyJvZmZzZXQiOjB9",
+      identifier: "HR",
+      introducedFrom: "2026-01-01",
+      introducedTo: "2026-01-31",
+      jurisdictionId: "jurisdiction:us",
+      limit: 7,
+      organizationId: "organization:us:house:rules",
+      sessionId: "session:us:119",
+      sort: "updated-desc",
+      sponsorPersonId: "person:us:1",
+      status: ["introduced", "referred"],
+      subject: ["budget", "taxes"],
+      updatedFrom: new Date("2026-08-20T12:00:00.000Z")
+    })
+  })
+
+  it("rejects malformed global bill filters and undocumented query controls", async () => {
+    const baseUrl = await startServer(service())
+    const responses = await Promise.all([
+      fetch(`${baseUrl}/api/bills?updatedFrom=2026-08-20`),
+      fetch(`${baseUrl}/api/bills?updatedFrom=2026-08-20T12%3A00%3A00Z&updatedFrom=2026-08-21T12%3A00%3A00Z`),
+      fetch(`${baseUrl}/api/bills?introducedFrom=2026-02-01&introducedTo=2026-01-01`),
+      fetch(`${baseUrl}/api/bills?sort=unrecognized`),
+      fetch(`${baseUrl}/api/bills?q=budget`)
+    ])
+
+    expect(responses.map((response) => response.status)).toEqual([400, 400, 400, 400, 400])
+    for (const response of responses) {
+      await expect(response.json()).resolves.toMatchObject({ error: { category: "invalid_request" } })
+    }
+  })
+
   it("preserves a persisted null bill status without manufacturing one", async () => {
     const baseUrl = await startServer({
       ...service(),

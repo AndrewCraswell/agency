@@ -337,10 +337,13 @@ export interface BillBrowseInput {
   introducedTo?: string
   jurisdictionId?: string
   limit?: number
+  organizationId?: string
   sessionId?: string
   sort?: "identifier-asc" | "introduced-desc" | "latest-action-desc" | "updated-desc"
   status?: string[]
   subject?: string[]
+  sponsorPersonId?: string
+  updatedFrom?: Date
 }
 
 export function buildBillBrowseQuery(
@@ -376,8 +379,15 @@ export function buildBillBrowseQuery(
         input.classification === undefined ? undefined : arrayOverlaps(browseBill.classification, input.classification),
         input.status === undefined ? undefined : inArray(browseBill.status, input.status),
         input.subject === undefined ? undefined : arrayContains(browseBill.subjects, input.subject),
+        input.sponsorPersonId === undefined
+          ? undefined
+          : sql`exists (select 1 from ${billSponsors} where ${billSponsors.billId} = ${browseBill.id} and ${billSponsors.personId} = ${input.sponsorPersonId})`,
+        input.organizationId === undefined
+          ? undefined
+          : sql`exists (select 1 from ${billOrganizations} where ${billOrganizations.billId} = ${browseBill.id} and ${billOrganizations.organizationId} = ${input.organizationId})`,
         input.introducedFrom === undefined ? undefined : gte(browseBill.introducedAt, input.introducedFrom),
-        input.introducedTo === undefined ? undefined : lte(browseBill.introducedAt, input.introducedTo)
+        input.introducedTo === undefined ? undefined : lte(browseBill.introducedAt, input.introducedTo),
+        input.updatedFrom === undefined ? undefined : gte(browseBill.updatedAt, input.updatedFrom)
       )
     )
     .orderBy(...billBrowseOrder(input.sort, latestActions.latestActionAt, browseBill))

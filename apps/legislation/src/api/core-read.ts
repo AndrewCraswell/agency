@@ -131,14 +131,18 @@ async function handleCoreRequest(
   switch (route.name) {
     case "listBills": {
       const limit = queryInteger(url, "limit", 20)
-      const page = await service.browseBills({
-        cursor: queryOptionalString(url, "cursor"),
-        identifier: queryOptionalString(url, "identifier"),
-        jurisdictionId: queryOptionalString(url, "jurisdictionId"),
-        limit,
-        sessionId: queryOptionalString(url, "sessionId")
-      })
-      sendApiJson(response, 200, apiPage(request, page, limit))
+      const page = await service.browseBills(
+        billBrowseInput(
+          url,
+          limit,
+          {
+            jurisdictionId: queryOptionalString(url, "jurisdictionId"),
+            sessionId: queryOptionalString(url, "sessionId")
+          },
+          { includeGlobalFilters: true }
+        )
+      )
+      sendApiJson(response, 200, apiPage(request, projectBillPage(page, apiBaseUrl), limit))
       return true
     }
     case "listJurisdictionBills": {
@@ -459,7 +463,8 @@ function repeatedQueryValues(url: URL, name: string): string[] | undefined {
 function billBrowseInput(
   url: URL,
   limit: number,
-  scope: Readonly<{ jurisdictionId?: string; sessionId?: string }>
+  scope: Readonly<{ jurisdictionId?: string; sessionId?: string }>,
+  options: Readonly<{ includeGlobalFilters?: boolean }> = {}
 ): BillBrowseInput {
   const introducedFrom = queryOptionalIsoDate(url, "introducedFrom")
   const introducedTo = queryOptionalIsoDate(url, "introducedTo")
@@ -471,7 +476,7 @@ function billBrowseInput(
   if (sort === undefined) {
     throw new LegislationError("invalid_request", "sort is not supported for bill collections")
   }
-  return {
+  const input: BillBrowseInput = {
     classification: repeatedQueryValues(url, "classification"),
     cursor: queryOptionalString(url, "cursor"),
     introducedFrom,
@@ -482,6 +487,16 @@ function billBrowseInput(
     sort,
     status: repeatedQueryValues(url, "status"),
     subject: repeatedQueryValues(url, "subject")
+  }
+  if (!options.includeGlobalFilters) {
+    return input
+  }
+  return {
+    ...input,
+    identifier: queryOptionalString(url, "identifier"),
+    organizationId: queryOptionalString(url, "organizationId"),
+    sponsorPersonId: queryOptionalString(url, "sponsorPersonId"),
+    updatedFrom: queryOptionalDate(url, "updatedFrom")
   }
 }
 
@@ -617,7 +632,22 @@ function bodyInteger(value: unknown, name: string, minimum: number, maximum: num
 function allowedQueryParameters(name: CoreRoute["name"]): readonly string[] {
   switch (name) {
     case "listBills":
-      return ["cursor", "identifier", "jurisdictionId", "limit", "sessionId"]
+      return [
+        "classification",
+        "cursor",
+        "identifier",
+        "introducedFrom",
+        "introducedTo",
+        "jurisdictionId",
+        "limit",
+        "organizationId",
+        "sessionId",
+        "sort",
+        "sponsorPersonId",
+        "status",
+        "subject",
+        "updatedFrom"
+      ]
     case "batchBillAmendments":
       return []
     case "listJurisdictionBills":

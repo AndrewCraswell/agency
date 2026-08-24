@@ -29,6 +29,38 @@ describe("bill browse query", () => {
       /order by coalesce\("latest_action_at", "browse_bill"\."source_updated_at", "browse_bill"\."updated_at"\) desc, "browse_bill"\."id" asc/
     )
   })
+
+  it("applies the global collection's sponsor, organization, and update filters without changing its stable sort", () => {
+    const updatedFrom = new Date("2026-08-20T12:00:00.000Z")
+    const query = buildBillBrowseQuery(
+      database,
+      {
+        classification: ["bill", "resolution"],
+        identifier: "HR",
+        introducedFrom: "2026-01-01",
+        introducedTo: "2026-01-31",
+        organizationId: "organization:us:house:rules",
+        sponsorPersonId: "person:us:1",
+        status: ["introduced", "referred"],
+        subject: ["budget", "taxes"],
+        updatedFrom
+      },
+      25,
+      0
+    )
+    const generated = query.toSQL()
+
+    expect(generated.sql).toContain('"browse_bill"."identifier" ilike')
+    expect(generated.sql).toContain('"browse_bill"."classification" &&')
+    expect(generated.sql).toContain('"browse_bill"."subjects" @>')
+    expect(generated.sql).toContain('exists (select 1 from "legislation"."bill_sponsors"')
+    expect(generated.sql).toContain('exists (select 1 from "legislation"."bill_organizations"')
+    expect(generated.sql).toContain('"browse_bill"."updated_at" >=')
+    expect(generated.params).toContain(updatedFrom.toISOString())
+    expect(generated.sql).toMatch(
+      /order by coalesce\("latest_action_at", "browse_bill"\."source_updated_at", "browse_bill"\."updated_at"\) desc, "browse_bill"\."id" asc/
+    )
+  })
 })
 
 describe("document-backed amendments", () => {
