@@ -71,6 +71,29 @@ Minicast window note defines the front-panel window as
 `a = 4 mm + 2d tan(Phi / 2)`, with a 4 mm minimum at zero lens-to-panel
 distance, and recommends a 4 mm light guide with at least 12 mm length.
 
+The exact-part record is kept separate from the datasheet's series and
+application guidance. The latter identifies the `TSOP382.., TSOP384..` series
+as leaded and for remote-control use, and lists `TSOP38438` in the 38 kHz AGC4
+column recommended for long-burst codes. These statements are selection
+context, not a board land pattern, an optical keepout, or prototype acceptance
+evidence.
+
+The retained Vishay assembly instructions add generic leaded-receiver handling
+constraints: a bend must start at least 1.5 mm from the package bottom and
+must not transmit force from the leads into the package. For through-hole
+assembly without a holder, the table gives iron soldering at no more than
+350 °C, at least 2 mm from the lower case edge, for no more than 3 seconds per
+pin; wave soldering is 260 °C, at least 1 mm from the lower case edge, for no
+more than 10 seconds. These are assembly-process limits, not finished drill or
+pad dimensions.
+
+The exact manufacturer land-pattern finding is negative. The retained
+package drawing gives the package views, pin order, lead pitch, lead width,
+and lead thickness, but no board-coordinate rotation or exact PCB pin-one
+orientation. No retained Vishay byte defines a finished drill, annular ring,
+pad, mask, paste, courtyard, or PCB land pattern. The executable record keeps
+those values null and the board-orientation match false.
+
 The manufacturer does not specify a finished PCB drill diameter, annular ring,
 pad diameter, mask, paste, courtyard, or fixed radial copper/component
 keepout in those primary documents. Vishay's product page sends ECAD downloads
@@ -80,11 +103,55 @@ record. The record separately marks the board-CAD land-pattern and optical
 coupon reviews as not submitted and not run. They are not substituted with a
 guessed footprint or a claimed CAD digest.
 
+### Candidate footprint review procedure
+
+The executable record now defines the fields needed to review a project-owned
+prototype footprint without treating a package drawing as released CAD. The
+candidate remains `not-submitted` and denied. A future submission must record,
+for the exact `TSOP38438`, the finished through-hole drill, pad diameter,
+annular ring, solder-mask opening and expansion, paste opening if used, and
+courtyard clearance. It must also identify the pin-one datum, lens datum,
+board rotation and rotation tolerance, and the board-coordinate match.
+
+The submission must retain the generator and version and SHA-256 for the
+generated project artwork. It must retain two 1:1 overlay artifacts: the
+package drawing against the project footprint and the package drawing against
+the project assembly placement. Each overlay requires its path, generator,
+version, digest, reviewer, and review state. No field is populated by this
+source-only record; manufacturer-CAD authority, artwork authority, and
+fabrication authority remain `deny`.
+
+### Optical coupon review procedure
+
+Before accepting the board opening, record the panel material and thickness,
+the measured lens-to-panel distance, required total viewing angle, aperture
+width and height, and light-guide dimensions. Calculate the aperture with
+`a = 4 mm + 2d tan(Phi / 2)` and retain the calculation inputs and result.
+The executable procedure leaves these inputs and result empty until the panel
+is dimensioned. It retains Vishay's 4 mm zero-distance minimum and 4 mm
+light-guide, at least 12 mm length, guidance without representing them as a
+PCB footprint.
+
+Use a conservative project rule of 3 mm radial copper and component keepout
+around the lens. This is explicitly a project rule, not a Vishay value. The
+coupon record must then contain measured panel and aperture dimensions,
+viewing-angle results, calibration-record identities and SHA-256 digests,
+raw-measurement and report artifact hashes, and photos with immutable paths
+and digests. The canonical record has no photos, calibration records, or
+measurement/report hashes and remains `not-run`.
+
+The coupon cannot close independently of the existing physical gates. Record
+separate evidence for 20 m range, angle, receiver timing and authenticated
+command latency, flood and ambient-light behavior, and reset/power-off and
+backfeed behavior. Every gate remains pending and false until its bounded
+evidence is reviewed. The executable aperture calculation is a planning
+helper only; it does not authorize board layout or fabrication.
+
 | Evidence identity | Source revision | SHA-256 | Reviewer | Review result |
 | --- | --- | --- | --- | --- |
 | Vishay document 82491, TSOP382/TSOP384 datasheet, pp. 2 and 7 | Rev. 2.1, 2025-05-27 | `5F81C36AA02E9901E51C749D03AEE75A23A29B8195B30BF1CBA95F536C865074` | `implementation-agent` | Package, pin, orientation, and lead geometry reviewed |
 | Vishay document 82756, Minicast window size, p. 1 | Rev. 1.0, 2016-08-18 | `C8A78F338915815E93C5AB4CC98ABF588504CC8B2E4CD3288794660810985BC1` | `implementation-agent` | Window formula and light-guide guidance reviewed; no fixed PCB keepout published |
-| Vishay document 80068, IR receiver assembly instructions, pp. 1 and 2 | Rev. 1.8, 2026-05-20 | `8DEE97CE1235CB20794A6CB15BD7364277EAAF6FAE908B32F67E8362962FD1A6` | `implementation-agent` | Leaded through-hole assembly constraints reviewed |
+| Vishay document 80068, IR receiver assembly instructions, pp. 1 and 2 | Rev. 1.8, 2026-05-20 | `8DEE97CE1235CB20794A6CB15BD7364277EAAF6FAE908B32F67E8362962FD1A6` | `implementation-agent` | Lead bend and through-hole solder limits reviewed; no PCB land pattern |
 
 The exact source bytes are retained in the repository under
 [`docs/evidence/bp-146`](evidence/bp-146). The footprint-evidence regression

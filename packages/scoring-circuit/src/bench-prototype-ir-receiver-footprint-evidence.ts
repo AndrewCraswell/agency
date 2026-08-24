@@ -76,6 +76,27 @@ function sameDataGraph(
   })
 }
 
+/**
+ * Calculate the minimum front-panel aperture from the retained Vishay window
+ * guidance. This is a planning calculation only: the canonical procedure
+ * deliberately has no measured panel inputs or accepted result.
+ */
+export function calculateBenchPrototypeIrReceiverApertureMm(
+  lensToPanelDistanceMm: number,
+  requiredTotalViewingAngleDegrees: number
+): number {
+  if (
+    !Number.isFinite(lensToPanelDistanceMm) ||
+    lensToPanelDistanceMm < 0 ||
+    !Number.isFinite(requiredTotalViewingAngleDegrees) ||
+    requiredTotalViewingAngleDegrees < 0 ||
+    requiredTotalViewingAngleDegrees >= 180
+  ) {
+    throw new RangeError("BP-146 optical aperture inputs must be finite and within the physical formula domain")
+  }
+  return 4 + 2 * lensToPanelDistanceMm * Math.tan((requiredTotalViewingAngleDegrees * Math.PI) / 360)
+}
+
 const definition = {
   artifactKind: "bp146-tsop38438-footprint-optical-source-evidence",
   workUnit: "BP-146",
@@ -99,7 +120,10 @@ const definition = {
         "Carrier frequency",
         "38 kHz",
         "Supply voltage",
-        "Supply current"
+        "Supply current",
+        "2.54 nom.",
+        "0.7 max.",
+        "0.5 max."
       ],
       retrievedAtUtc: "2026-08-24T08:17:00.000Z",
       reviewerId: "implementation-agent",
@@ -117,7 +141,7 @@ const definition = {
       reviewedPages: "1",
       sha256: "C8A78F338915815E93C5AB4CC98ABF588504CC8B2E4CD3288794660810985BC1",
       retainedArtifactPath: "docs/evidence/bp-146/vishay-82756-minicast-window-size.pdf",
-      byteMarkers: ["Minicast Package", "4 mm"],
+      byteMarkers: ["Minicast Package", "Window Size", "4 mm", "4 mm +"],
       retrievedAtUtc: "2026-08-24T08:17:00.000Z",
       reviewerId: "implementation-agent",
       reviewedAtUtc: "2026-08-24T08:17:00.000Z",
@@ -134,7 +158,7 @@ const definition = {
       reviewedPages: "1, 2",
       sha256: "8DEE97CE1235CB20794A6CB15BD7364277EAAF6FAE908B32F67E8362962FD1A6",
       retainedArtifactPath: "docs/evidence/bp-146/vishay-80068-ir-receiver-assembly.pdf",
-      byteMarkers: ["80068", "Assembly Instructions"],
+      byteMarkers: ["80068", "Assembly Instructions", "1.5", "350", "260", "10 s"],
       retrievedAtUtc: "2026-08-24T08:17:00.000Z",
       reviewerId: "implementation-agent",
       reviewedAtUtc: "2026-08-24T08:17:00.000Z",
@@ -167,6 +191,10 @@ const definition = {
       { pin: 2, name: "GND" },
       { pin: 3, name: "VS" }
     ],
+    packageDrawingDatum:
+      "The Vishay package drawing shows the Minicast lens face as the front optical datum and the three leads in pin order 1, 2, 3.",
+    boardCoordinateRotationDegrees: null,
+    boardPinOneOrientation: "not-published",
     orientationDatum:
       "Use the Vishay package drawing front view with the optical window facing the intended IR source; pin numbers and lead pitch are source-controlled.",
     opticalAxis: "Normal to the front optical window; do not infer a PCB rotation from the electrical pin order alone."
@@ -205,8 +233,38 @@ const definition = {
     limitation:
       "Vishay specifies lead geometry and pitch but does not specify a finished PCB drill, annular ring, pad diameter, mask, paste, courtyard, or released footprint in the reviewed primary documents."
   },
+  seriesApplicationGuidance: {
+    sourceId: "vishay-82491-tsop38438-datasheet",
+    sourcePages: "2, 6",
+    series: "TSOP382.., TSOP384..",
+    application: "Remote control",
+    mounting: "Leaded",
+    agc4Selection: "The parts table lists TSOP38438 in the 38 kHz AGC4 column recommended for long burst codes.",
+    qualificationState: "series-and-application-guidance-only; not exact board geometry or prototype acceptance"
+  },
+  assemblyGuidance: {
+    sourceId: "vishay-80068-ir-receiver-assembly",
+    sourcePages: "1-2",
+    scope: "Vishay leaded IR receiver assembly instructions; not a TSOP38438 PCB land pattern",
+    leadBendMinimumFromPackageBottomMm: 1.5,
+    leadBendForceRule: "During bending, force must not be transmitted from the leads to the package.",
+    throughHoleWithoutHolder: {
+      ironSoldering: {
+        maximumTemperatureC: 350,
+        minimumSolderPositionDistanceFromLowerCaseEdgeMm: 2,
+        maximumTimePerPinS: 3
+      },
+      waveSoldering: {
+        temperatureC: 260,
+        minimumSolderPositionDistanceFromLowerCaseEdgeMm: 1,
+        maximumTimeS: 10
+      }
+    }
+  },
   landPatternReview: {
     manufacturerSourceStatus: "not-published-in-reviewed-primary-documents",
+    manufacturerStatement:
+      "The retained Vishay sources provide package and lead geometry, not an exact PCB land pattern, finished drill, pad, mask, paste, or courtyard.",
     boardCadStatus: "not-submitted-for-review",
     exactFootprintReference: null,
     finishedDrillDiameterMm: null,
@@ -219,6 +277,8 @@ const definition = {
   },
   opticalWindow: {
     sourceId: "vishay-82756-minicast-window-size",
+    manufacturerStatement:
+      "Vishay sizes the front-panel window for the required total viewing angle and the distance between the lens and panel.",
     windowFormula: "a = 4 mm + 2d tan(Phi / 2)",
     minimumWindowSizeAtZeroDistanceMm: 4,
     distanceBetweenLensAndPanelSymbol: "d",
@@ -240,6 +300,185 @@ const definition = {
     accepted: false,
     releaseBlocker:
       "Review the board optical aperture and a physical front-panel coupon against the required viewing angle and lens-to-panel distance before release."
+  },
+  candidateFootprintReview: {
+    state: "not-submitted",
+    sourceBasis: [
+      "vishay-82491-tsop38438-datasheet",
+      "vishay-82756-minicast-window-size",
+      "vishay-80068-ir-receiver-assembly"
+    ],
+    exactPart: "TSOP38438",
+    packageDrawingDatum: "front optical window and pin 1 lead order from Vishay drawing 6.550-5263.01-4",
+    boardCoordinateDatum: "not-defined-until-project-board-CAD-is-submitted",
+    finishedGeometry: {
+      drillDiameterMm: null,
+      padDiameterMm: null,
+      annularRingMm: null,
+      solderMaskOpeningDiameterMm: null,
+      solderMaskExpansionMm: null,
+      courtyardClearanceMm: null,
+      pasteOpeningDiameterMm: null
+    },
+    pinOne: {
+      sourceDatum: "Vishay package drawing pin 1 OUT lead at the lens-face front view",
+      boardPinOneOrientation: null,
+      boardRotationDegrees: null,
+      boardRotationToleranceDegrees: null,
+      overlayMatch: false
+    },
+    lens: {
+      sourceDatum: "front optical window normal to the intended front-panel axis",
+      boardLensDatum: null,
+      boardRotationDegrees: null,
+      boardRotationToleranceDegrees: null,
+      overlayMatch: false
+    },
+    manufacturerCad: {
+      state: "not-acquired",
+      sourceUrl: null,
+      revision: null,
+      sha256: null,
+      authority: "deny"
+    },
+    generatedArtwork: {
+      state: "not-generated",
+      artifactPath: null,
+      generator: null,
+      generatorVersion: null,
+      sha256: null,
+      authority: "deny"
+    },
+    oneToOneOverlayArtifacts: [
+      {
+        kind: "package-drawing-vs-project-footprint",
+        scale: "1:1",
+        state: "not-generated",
+        artifactPath: null,
+        generator: null,
+        generatorVersion: null,
+        sha256: null,
+        reviewedBy: null,
+        reviewStatus: "pending"
+      },
+      {
+        kind: "package-drawing-vs-project-assembly-overlay",
+        scale: "1:1",
+        state: "not-generated",
+        artifactPath: null,
+        generator: null,
+        generatorVersion: null,
+        sha256: null,
+        reviewedBy: null,
+        reviewStatus: "pending"
+      }
+    ],
+    toleranceReview: {
+      packageLeadPitchToleranceMm: null,
+      drillToleranceMm: null,
+      padToleranceMm: null,
+      boardRotationToleranceDegrees: null,
+      courtyardToleranceMm: null,
+      status: "pending-project-CAD-and-fabrication-inputs"
+    },
+    accepted: false,
+    fabricationAuthority: "deny",
+    releaseBlocker:
+      "Submit exact project footprint and board coordinates, populate finished geometry and tolerances, generate hashed 1:1 overlays, and independently review pin one, lens datum, rotation, and clearances."
+  },
+  opticalCouponReviewProcedure: {
+    state: "not-run",
+    sourceBasis: "vishay-82756-minicast-window-size",
+    formula: "a = 4 mm + 2d tan(Phi / 2)",
+    panelInputs: {
+      panelMaterial: null,
+      panelThicknessMm: null,
+      lensToPanelDistanceMm: null,
+      requiredTotalViewingAngleDegrees: null,
+      apertureWidthMm: null,
+      apertureHeightMm: null,
+      lightGuideDiameterMm: 4,
+      lightGuideLengthMm: null
+    },
+    apertureCalculation: {
+      minimumAtZeroDistanceMm: 4,
+      calculatedApertureMm: null,
+      status: "pending-dimensioned-panel-inputs"
+    },
+    projectKeepout: {
+      copperRadiusMm: 3,
+      componentRadiusMm: 3,
+      authority: "project-rule-not-manufacturer-specification",
+      accepted: false
+    },
+    couponEvidence: {
+      state: "not-run",
+      measuredPanelThicknessMm: null,
+      measuredLensToPanelDistanceMm: null,
+      measuredApertureWidthMm: null,
+      measuredApertureHeightMm: null,
+      measuredViewingAngleDegrees: null,
+      measurementMethod: null,
+      photos: [],
+      photoRecordRequirements: ["artifactPath", "sha256", "captureAtUtc", "view", "scaleReference"],
+      calibrationRecords: [],
+      calibrationRecordRequirements: [
+        "instrumentId",
+        "calibrationCertificateId",
+        "calibrationCertificateSha256",
+        "calibrationDueUtc"
+      ],
+      rawMeasurementArtifactPath: null,
+      rawMeasurementArtifactSha256: null,
+      reportArtifactPath: null,
+      reportArtifactSha256: null,
+      reviewerId: null,
+      reviewedAtUtc: null
+    },
+    physicalGates: {
+      range20m: {
+        passCriteria: "1000/1000 valid authenticated frames at 20 m and 0 degrees; 100/100 at 20 m and +/-15 degrees",
+        failCriteria: "any false accepted command, reset, watchdog fault, or unbounded capture",
+        passed: false,
+        evidenceStatus: "pending"
+      },
+      angle: {
+        passCriteria: "100/100 valid frames at 5 m at 0, +/-30, and +/-45 degrees; record the first failing angle",
+        failCriteria: "any angle causes a reset, direct scoring effect, or accepted malformed frame",
+        passed: false,
+        evidenceStatus: "pending"
+      },
+      latency: {
+        componentCriteria:
+          "scope emitter trigger and TP_IR_RX; first output edge must be 184-342 us after a qualifying burst edge",
+        systemCriteria:
+          "timestamped IR edge to authenticated command event must be <= 50 ms for every valid test frame",
+        failCriteria:
+          "out-of-range receiver delay, queue starvation, or a command emitted from an unauthenticated frame",
+        passed: false,
+        evidenceStatus: "pending"
+      },
+      flood: {
+        setup: "30 minutes of 38 kHz carrier/burst noise at the maximum safe optical level plus 40 klx ambient light",
+        passCriteria:
+          "zero accepted commands, zero reset/watchdog faults, bounded queue occupancy, and automatic recovery within 1 s",
+        failCriteria: "any command, queue growth without bound, or receiver path affecting scoring",
+        passed: false,
+        evidenceStatus: "pending"
+      },
+      resetPowerOff: {
+        passCriteria:
+          "100 power cycles and 100 reset cycles; TP_IR_RX is inactive-high or high-impedance within 10 ms of rail validity and no reset is caused by IR",
+        failCriteria: "backfeed above APP_3V3 + 0.3 V, strap disturbance, or a reset/watchdog fault",
+        passed: false,
+        evidenceStatus: "pending"
+      }
+    },
+    physicalAuthority: "deny",
+    accepted: false,
+    fabricationAuthority: "deny",
+    releaseBlocker:
+      "Record dimensioned panel inputs, calculated aperture, 1:1 coupon measurements, calibrated instruments, photos, immutable hashes, and all range, angle, timing, flood, and reset/power-off results before acceptance."
   },
   manufacturerCad: {
     sourcePageUrl: "https://www.vishay.com/en/product/82491/",
@@ -321,6 +560,139 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
       "datasheet-characteristics-only; bench range, angle, latency, flood, reset, and power-off evidence required"
   ) {
     throw new RangeError("BP-146 published electrical and optical characteristics drifted")
+  }
+  const orientation = evidence.pinOrientation
+  if (
+    orientation.sourceId !== "vishay-82491-tsop38438-datasheet" ||
+    orientation.packageDrawingDatum !==
+      "The Vishay package drawing shows the Minicast lens face as the front optical datum and the three leads in pin order 1, 2, 3." ||
+    orientation.boardCoordinateRotationDegrees !== null ||
+    orientation.boardPinOneOrientation !== "not-published"
+  ) {
+    throw new RangeError("BP-146 package orientation evidence drifted")
+  }
+  const seriesGuidance = evidence.seriesApplicationGuidance
+  if (
+    seriesGuidance.sourceId !== "vishay-82491-tsop38438-datasheet" ||
+    seriesGuidance.sourcePages !== "2, 6" ||
+    seriesGuidance.series !== "TSOP382.., TSOP384.." ||
+    seriesGuidance.application !== "Remote control" ||
+    seriesGuidance.mounting !== "Leaded" ||
+    seriesGuidance.agc4Selection !==
+      "The parts table lists TSOP38438 in the 38 kHz AGC4 column recommended for long burst codes." ||
+    seriesGuidance.qualificationState !==
+      "series-and-application-guidance-only; not exact board geometry or prototype acceptance"
+  ) {
+    throw new RangeError("BP-146 series/application guidance drifted")
+  }
+  const assembly = evidence.assemblyGuidance
+  if (
+    assembly.sourceId !== "vishay-80068-ir-receiver-assembly" ||
+    assembly.sourcePages !== "1-2" ||
+    assembly.scope !== "Vishay leaded IR receiver assembly instructions; not a TSOP38438 PCB land pattern" ||
+    assembly.leadBendMinimumFromPackageBottomMm !== 1.5 ||
+    assembly.leadBendForceRule !== "During bending, force must not be transmitted from the leads to the package." ||
+    assembly.throughHoleWithoutHolder.ironSoldering.maximumTemperatureC !== 350 ||
+    assembly.throughHoleWithoutHolder.ironSoldering.minimumSolderPositionDistanceFromLowerCaseEdgeMm !== 2 ||
+    assembly.throughHoleWithoutHolder.ironSoldering.maximumTimePerPinS !== 3 ||
+    assembly.throughHoleWithoutHolder.waveSoldering.temperatureC !== 260 ||
+    assembly.throughHoleWithoutHolder.waveSoldering.minimumSolderPositionDistanceFromLowerCaseEdgeMm !== 1 ||
+    assembly.throughHoleWithoutHolder.waveSoldering.maximumTimeS !== 10
+  ) {
+    throw new RangeError("BP-146 assembly guidance drifted")
+  }
+  if (
+    evidence.landPatternReview.manufacturerStatement !==
+      "The retained Vishay sources provide package and lead geometry, not an exact PCB land pattern, finished drill, pad, mask, paste, or courtyard." ||
+    evidence.opticalWindow.manufacturerStatement !==
+      "Vishay sizes the front-panel window for the required total viewing angle and the distance between the lens and panel."
+  ) {
+    throw new RangeError("BP-146 manufacturer land-pattern and window statements drifted")
+  }
+  const candidate = evidence.candidateFootprintReview
+  if (
+    candidate.state !== "not-submitted" ||
+    candidate.exactPart !== "TSOP38438" ||
+    candidate.sourceBasis.length !== 3 ||
+    candidate.finishedGeometry.drillDiameterMm !== null ||
+    candidate.finishedGeometry.padDiameterMm !== null ||
+    candidate.finishedGeometry.annularRingMm !== null ||
+    candidate.finishedGeometry.solderMaskOpeningDiameterMm !== null ||
+    candidate.finishedGeometry.solderMaskExpansionMm !== null ||
+    candidate.finishedGeometry.courtyardClearanceMm !== null ||
+    candidate.finishedGeometry.pasteOpeningDiameterMm !== null ||
+    candidate.pinOne.boardPinOneOrientation !== null ||
+    candidate.pinOne.boardRotationDegrees !== null ||
+    candidate.pinOne.boardRotationToleranceDegrees !== null ||
+    candidate.pinOne.overlayMatch ||
+    candidate.lens.boardLensDatum !== null ||
+    candidate.lens.boardRotationDegrees !== null ||
+    candidate.lens.boardRotationToleranceDegrees !== null ||
+    candidate.lens.overlayMatch ||
+    candidate.manufacturerCad.state !== "not-acquired" ||
+    candidate.manufacturerCad.sourceUrl !== null ||
+    candidate.manufacturerCad.revision !== null ||
+    candidate.manufacturerCad.sha256 !== null ||
+    candidate.manufacturerCad.authority !== "deny" ||
+    candidate.generatedArtwork.state !== "not-generated" ||
+    candidate.generatedArtwork.artifactPath !== null ||
+    candidate.generatedArtwork.generator !== null ||
+    candidate.generatedArtwork.generatorVersion !== null ||
+    candidate.generatedArtwork.sha256 !== null ||
+    candidate.generatedArtwork.authority !== "deny" ||
+    candidate.oneToOneOverlayArtifacts.length !== 2 ||
+    candidate.oneToOneOverlayArtifacts.some(
+      (artifact) =>
+        artifact.scale !== "1:1" ||
+        artifact.state !== "not-generated" ||
+        artifact.artifactPath !== null ||
+        artifact.generator !== null ||
+        artifact.generatorVersion !== null ||
+        artifact.sha256 !== null ||
+        artifact.reviewedBy !== null ||
+        artifact.reviewStatus !== "pending"
+    ) ||
+    candidate.toleranceReview.packageLeadPitchToleranceMm !== null ||
+    candidate.toleranceReview.drillToleranceMm !== null ||
+    candidate.toleranceReview.padToleranceMm !== null ||
+    candidate.toleranceReview.boardRotationToleranceDegrees !== null ||
+    candidate.toleranceReview.courtyardToleranceMm !== null ||
+    candidate.toleranceReview.status !== "pending-project-CAD-and-fabrication-inputs" ||
+    candidate.accepted ||
+    candidate.fabricationAuthority !== "deny" ||
+    evidence.opticalCouponReviewProcedure.state !== "not-run" ||
+    evidence.opticalCouponReviewProcedure.panelInputs.panelMaterial !== null ||
+    evidence.opticalCouponReviewProcedure.panelInputs.panelThicknessMm !== null ||
+    evidence.opticalCouponReviewProcedure.panelInputs.lensToPanelDistanceMm !== null ||
+    evidence.opticalCouponReviewProcedure.panelInputs.requiredTotalViewingAngleDegrees !== null ||
+    evidence.opticalCouponReviewProcedure.panelInputs.apertureWidthMm !== null ||
+    evidence.opticalCouponReviewProcedure.panelInputs.apertureHeightMm !== null ||
+    evidence.opticalCouponReviewProcedure.panelInputs.lightGuideDiameterMm !== 4 ||
+    evidence.opticalCouponReviewProcedure.panelInputs.lightGuideLengthMm !== null ||
+    evidence.opticalCouponReviewProcedure.apertureCalculation.minimumAtZeroDistanceMm !== 4 ||
+    evidence.opticalCouponReviewProcedure.apertureCalculation.calculatedApertureMm !== null ||
+    evidence.opticalCouponReviewProcedure.apertureCalculation.status !== "pending-dimensioned-panel-inputs" ||
+    evidence.opticalCouponReviewProcedure.projectKeepout.copperRadiusMm !== 3 ||
+    evidence.opticalCouponReviewProcedure.projectKeepout.componentRadiusMm !== 3 ||
+    evidence.opticalCouponReviewProcedure.projectKeepout.authority !== "project-rule-not-manufacturer-specification" ||
+    evidence.opticalCouponReviewProcedure.projectKeepout.accepted ||
+    evidence.opticalCouponReviewProcedure.couponEvidence.state !== "not-run" ||
+    evidence.opticalCouponReviewProcedure.couponEvidence.photos.length !== 0 ||
+    evidence.opticalCouponReviewProcedure.couponEvidence.calibrationRecords.length !== 0 ||
+    evidence.opticalCouponReviewProcedure.couponEvidence.rawMeasurementArtifactPath !== null ||
+    evidence.opticalCouponReviewProcedure.couponEvidence.rawMeasurementArtifactSha256 !== null ||
+    evidence.opticalCouponReviewProcedure.couponEvidence.reportArtifactPath !== null ||
+    evidence.opticalCouponReviewProcedure.couponEvidence.reportArtifactSha256 !== null ||
+    evidence.opticalCouponReviewProcedure.couponEvidence.reviewerId !== null ||
+    evidence.opticalCouponReviewProcedure.couponEvidence.reviewedAtUtc !== null ||
+    Object.values(evidence.opticalCouponReviewProcedure.physicalGates).some(
+      (gate) => gate.passed || gate.evidenceStatus !== "pending"
+    ) ||
+    evidence.opticalCouponReviewProcedure.accepted ||
+    evidence.opticalCouponReviewProcedure.physicalAuthority !== "deny" ||
+    evidence.opticalCouponReviewProcedure.fabricationAuthority !== "deny"
+  ) {
+    throw new RangeError("BP-146 candidate footprint and optical coupon reviews must remain pending and denied")
   }
   if (parseCanonicalUtcTimestamp(evidence.manufacturerCad.reviewedAtUtc) === null) {
     throw new RangeError("BP-146 manufacturer CAD evidence requires a canonical UTC review timestamp")
