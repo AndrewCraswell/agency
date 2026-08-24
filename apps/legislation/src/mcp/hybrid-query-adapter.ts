@@ -120,7 +120,7 @@ export class HybridLegislationQueryAdapter implements LegislationQueryApi {
   }
 
   searchSupportingMaterials(input: Input<"searchSupportingMaterials">) {
-    return this.#useHttp("searchSupportingMaterials")
+    return this.#useHttp("searchSupportingMaterials") && hasQuery(input)
       ? this.#http.searchSupportingMaterials(input)
       : this.#inProcess.searchSupportingMaterials(input)
   }
@@ -138,4 +138,9 @@ export class HybridLegislationQueryAdapter implements LegislationQueryApi {
 
 function hasAnyValue(input: object, names: readonly string[]): boolean {
   return names.some((name) => Reflect.get(input, name) !== undefined)
+}
+
+function hasQuery(input: object): boolean {
+  const query = Reflect.get(input, "query")
+  return typeof query === "string" && query.trim().length > 0
 }

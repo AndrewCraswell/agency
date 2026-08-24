@@ -170,6 +170,28 @@ describe("HttpLegislationQueryAdapter", () => {
     expect(getBill).not.toHaveBeenCalled()
   })
 
+  it("keeps supporting-material traversal in process unless a search query is present", async () => {
+    const searchSupportingMaterials = vi.fn<() => Promise<unknown>>(async () => ({ source: "in-process" }))
+    const fetch = vi.fn<FetchLike>()
+    const adapter = createMcpQueryApi(
+      {
+        apiBaseUrl: "https://api.example.test",
+        httpMethods: ["searchSupportingMaterials"],
+        timeoutMs: 30_000,
+        transport: "hybrid"
+      },
+      inProcessApi({ searchSupportingMaterials }),
+      fetch
+    )
+
+    await expect(adapter.searchSupportingMaterials({ billId: "bill:us:119:hr:1" })).resolves.toEqual({
+      source: "in-process"
+    })
+
+    expect(searchSupportingMaterials).toHaveBeenCalledOnce()
+    expect(fetch).not.toHaveBeenCalled()
+  })
+
   it("preserves legacy resource/page results and propagates request-scoped auth and correlation", async () => {
     const requests: Array<{ authorization: string | null; body?: unknown; correlationId: string | null; url: string }> =
       []

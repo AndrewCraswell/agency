@@ -1,11 +1,19 @@
 import { randomUUID } from "node:crypto"
 import { LegislationApiClient, type FetchLike } from "../api-client/client.js"
 import { runWithRequestContext } from "../auth/request-context.js"
+import { decodeSearchCursor } from "../search/search.js"
+import {
+  normalizeDirectBillSearchPage,
+  normalizeHttpBillSearchPage,
+  type DirectBillSearchPage
+} from "./canonical-search-output.js"
 import { HttpLegislationQueryAdapter } from "./http-query-adapter.js"
 import type { LegislationQueryApi } from "./tools.js"
 
 type GetBillInput = Parameters<LegislationQueryApi["getBill"]>[0]
 type GetBillQueryApi = Pick<LegislationQueryApi, "getBill">
+type SearchBillsInput = Parameters<LegislationQueryApi["searchBills"]>[0]
+type SearchBillsQueryApi = Readonly<{ searchBills: (input: SearchBillsInput) => Promise<DirectBillSearchPage> }>
 
 export type GetBillHttpParityReport = Readonly<{
   billId: string
@@ -14,13 +22,21 @@ export type GetBillHttpParityReport = Readonly<{
   status: "passed"
 }>
 
+export type SearchBillsHttpParityReport = Readonly<{
+  correlationId: string
+  method: "searchBills"
+  query: string
+  status: "passed"
+}>
+
 export class McpHttpParityMismatchError extends Error {
-  readonly method = "getBill"
+  readonly method: "getBill" | "searchBills"
   readonly mismatchPath: string
 
-  constructor(mismatchPath: string) {
-    super(`MCP HTTP parity failed for getBill at ${mismatchPath}`)
+  constructor(mismatchPath: string, method: "getBill" | "searchBills" = "getBill") {
+    super(`MCP HTTP parity failed for ${method} at ${mismatchPath}`)
     this.name = "McpHttpParityMismatchError"
+    this.method = method
     this.mismatchPath = mismatchPath
   }
 }
@@ -57,6 +73,50 @@ export async function assertGetBillHttpParity(
     throw new McpHttpParityMismatchError(mismatchPath)
   }
   return { billId, correlationId, method: "getBill", status: "passed" }
+}
+
+/**
+ * An explicit canary for the next search cutover. The live MCP search result
+ * remains untouched until this canonical comparison is accepted by operators.
+ */
+export async function assertSearchBillsHttpParity(
+  options: Readonly<{
+    apiBaseUrl: string
+    correlationId?: string
+    fetch?: FetchLike
+    inProcess: SearchBillsQueryApi
+    input: SearchBillsInput
+    token: string
+  }>
+): Promise<SearchBillsHttpParityReport> {
+  const token = nonEmpty(options.token, "token")
+  const query = nonEmpty(options.input.query, "input.query")
+  const correlationId = options.correlationId?.trim() || randomUUID()
+  const mode = options.input.mode ?? "lexical"
+  const input = { ...options.input, mode, query }
+  const rankOffset = decodeSearchCursor(input.cursor)
+  const client = new LegislationApiClient({ baseUrl: options.apiBaseUrl, fetch: options.fetch })
+  const [directResult, httpResult] = await runWithRequestContext(
+    { bearerToken: token, correlationId },
+    async () =>
+      await Promise.all([
+        options.inProcess.searchBills(input),
+        client.searchBills(input, { bearerToken: token, correlationId })
+      ])
+  )
+  const direct = normalizeDirectBillSearchPage(directResult, {
+    apiBaseUrl: options.apiBaseUrl,
+    correlationId,
+    limit: input.limit ?? 20,
+    mode,
+    rankOffset
+  })
+  const remote = normalizeHttpBillSearchPage(httpResult)
+  const mismatchPath = firstMismatchPath(normalizeJson(direct), normalizeJson(remote))
+  if (mismatchPath !== undefined) {
+    throw new McpHttpParityMismatchError(mismatchPath, "searchBills")
+  }
+  return { correlationId, method: "searchBills", query, status: "passed" }
 }
 
 function nonEmpty(value: string, name: string): string {
