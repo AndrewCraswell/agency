@@ -84,11 +84,14 @@ TypeScript scoring deletion remains blocked until the full target and observatio
 the simulator executes WebAssembly without a TypeScript scoring fallback; the complete independent corpus passes on
 all targets; and the duplicated TypeScript scoring engines are removed under independent review.
 
-The authoritative granular task DAG is `CW-00` through `CW-20` in the
+The authoritative granular task DAG is `CW-00` through `CW-22` in the
 [C17 WebAssembly simulator migration plan](c17-wasm-simulator-migration.md). It covers semantic inventory, portable
 ABI, timing-profile generation, complete three-weapon C behavior, independent corpus expansion, sanitizer and fuzz
 gates, STM32 linking and measurement, pinned WebAssembly builds, browser integration, shadow comparison, simulator
-cutover, observation, deletion, and oracle rebuilding.
+cutover, exact closure of the 13 known planned requirement-evidence rows, independent coverage-gap analysis,
+observation, deletion, and oracle rebuilding. `CW-21` must close the exact known ledger before `CW-22` independently
+searches for missing scenarios; every discovered gap becomes a separately owned task and remains a deletion blocker
+until closed.
 
 The ESP32 remains ESP-IDF C and never links or invokes the scoring core. WebAssembly is a simulator target, not a
 second physical scoring authority.

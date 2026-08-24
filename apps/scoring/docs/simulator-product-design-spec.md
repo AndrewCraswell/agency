@@ -387,7 +387,7 @@ The simulator now has a React, Tailwind CSS, and shadcn-compatible application b
 Its browser UI fetches reports from the scenario service and imports the shared display projection. The current service
 still executes the TypeScript scoring engines.
 
-`CW-00` through `CW-20` in the [C17 WebAssembly migration plan](c17-wasm-simulator-migration.md) replace that backend
+`CW-00` through `CW-22` in the [C17 WebAssembly migration plan](c17-wasm-simulator-migration.md) replace that backend
 with the same C17 core linked into STM32 firmware. During shadow comparison, TypeScript and WebAssembly results remain
 separate and any mismatch fails visibly. After cutover, every Run action uses WebAssembly; a missing, incompatible, or
 trapped module shows **Authoritative result unavailable** and never invokes a TypeScript scoring fallback.

@@ -181,7 +181,10 @@ core.
 | M3-15 | Firmware-foundation release | M3-01 through M3-14 | Host verification passes; target builds are reproducible; remaining board-only tests are listed explicitly |
 | M3-16 | Versioned portable scoring ABI (tracking alias) | `CW-02` through `CW-04` | `CW-04` closes fixed-width canonical byte inputs, outputs, state, errors, versioning, capacities, and digests without exposing C struct layout |
 | M3-17 | C17 WebAssembly build and browser adapter (tracking alias) | `CW-11` through `CW-13` | `CW-12` and `CW-13` close a pinned reproducible module and fail-closed adapter with no scorer callback, target I/O, or TypeScript fallback |
-| M3-18 | Simulator WebAssembly cutover and atomic TypeScript scorer deletion (tracking alias) | `CW-14` through `CW-19B` | Browser, native, and STM32 parity plus observation and independent review pass; simulator uses WebAssembly only; duplicate TypeScript scorers and the final oracle are changed atomically |
+| M3-18 | Simulator WebAssembly cutover and atomic TypeScript scorer deletion (tracking alias) | `CW-14` through `CW-19B`, plus `CW-21` and `CW-22` | Browser, native, and STM32 parity, exact planned-evidence closure, independent gap analysis, observation, and independent review pass; simulator uses WebAssembly only; duplicate TypeScript scorers and the final oracle are changed atomically |
+
+M3-18 intentionally excludes `CW-20`: factory-facing evidence packaging is a subsequent deliverable after atomic
+TypeScript-scorer deletion and does not participate in the simulator cutover/deletion tracking alias.
 
 M3-10 is part of the ESP32 half of the launch update requirement. The independently verified STM32 image, dual-bank
 rollback, product compatibility manifest, ESP32 candidate health/rollback, interrupted-update matrix, and

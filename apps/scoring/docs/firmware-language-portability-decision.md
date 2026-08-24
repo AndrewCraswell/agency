@@ -2,7 +2,7 @@
 
 - **Status:** accepted; one C17 scoring core targets native host, STM32, and WebAssembly
 - **Decision date:** 2026-08-22
-- **Applies to:** M3-03 through M3-18 and `CW-00` through `CW-20`
+- **Applies to:** M3-03 through M3-18 and `CW-00` through `CW-22`
 - **Revisit when:** a named safety, certification, customer, or hiring requirement materially changes this trade-off
 
 ## Context
@@ -121,7 +121,7 @@ rather than rely on current defaults.
 
 M3-03 and M3-08 establish the host scaffolds and interfaces. The firmware tasks
 may proceed under the M3 dependency graph; the later WebAssembly and
-cross-target requirements close through `CW-00` through `CW-20`. The combined
+cross-target requirements close through `CW-00` through `CW-22`. The combined
 architecture is accepted only when these final gates are demonstrated:
 
 1. **Fixture parity:** M3-02 generates immutable `rules-1` scoring vectors; M2-05 remains the owner of canonical
