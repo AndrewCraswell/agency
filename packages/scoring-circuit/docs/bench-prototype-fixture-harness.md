@@ -101,12 +101,18 @@ drawing import, and fabrication remain open gates. The executable contract is
 
 ## Drawing evidence state
 
-Molex identifies `43045-1200` in the material-number table of series drawing
-`SD-43045-001` and identifies `43025-1200` in the material-number table of
-series drawing `430250000-SD`. These are primary manufacturer sources, but
-they are series drawings, not exact-MPN drawings or CAD-review artifacts. No
-source bytes, retained asset, or SHA-256 is recorded for either source yet, so
-both remain `identified-not-hash-acquired`. This is not footprint approval.
+The detailed retrieval record is [BP-104 Molex drawing discovery](evidence/bp-104/molex-drawing-discovery.md).
+
+Molex's official drawing endpoints were checked and the material-number tables
+identify the selected parts within their series scope: `43045-1200` is the
+12-circuit, finish-A row of `SD-43045-001`; `43025-1200` is the 12-position row
+of `430250000-SD`; `43030-0007` is the 20-24 AWG, form-A loose-terminal row of
+`SD-43030-XXXX`; and `44242-0005` is the 12-circuit row of `SD-44242-001`.
+These are series drawings, not exact-MPN drawings or CAD-review artifacts.
+The remote web sources were readable for table verification, but the current
+execution environment could not retain their PDF bytes, so no local asset or
+SHA-256 is recorded. All four therefore remain
+`identified-not-hash-acquired`. This is not footprint approval.
 
 Sources:
 
@@ -117,4 +123,7 @@ Sources:
 - [Molex 43030-0007](https://www.molex.com/en-us/products/part-detail/430300007)
 - [Molex 44242 series chart, including 12-circuit 44242-0005](https://www.molex.com/en-us/products/series-chart/44242)
 - [Molex SD-44242-001 test-plug drawing](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/442/44242/442420001_sd.pdf)
+- [Molex SD-43045-001 series drawing](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43045/430450600_sd.pdf)
+- [Molex SD-430250000 series drawing](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43025/430250400_sd.pdf)
+- [Molex SD-43030-XXXX terminal series drawing](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43030/430300003_sd.pdf)
 - [Molex Micro-Fit product specification](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/productspecificationpdf/203/203951/2039510000-PS-000.pdf)

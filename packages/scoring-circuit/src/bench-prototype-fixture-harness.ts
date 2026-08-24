@@ -1136,20 +1136,48 @@ const definition = {
           sourceKind: "series-drawing",
           drawingNumber: "SD-43045-001",
           includesExactMpnInMaterialTable: true,
+          materialTableScope: "12-circuit row, finish A, material number 43045-1200",
           sourceUrl:
-            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43045/430450201_sd.pdf",
+            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43045/430450600_sd.pdf",
           retainedAsset: null,
-          contentSha256: null
+          contentSha256: null,
+          retrievalState: "official-url-verified-but-local-bytes-unavailable"
         },
         {
           mpn: "43025-1200",
           sourceKind: "series-drawing",
           drawingNumber: "430250000-SD",
           includesExactMpnInMaterialTable: true,
+          materialTableScope: "12-position row, material number 43025-1200",
           sourceUrl:
-            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43025/430250600_sd.pdf",
+            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43025/430250400_sd.pdf",
           retainedAsset: null,
-          contentSha256: null
+          contentSha256: null,
+          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+        },
+        {
+          mpn: "43030-0007",
+          sourceKind: "series-drawing",
+          drawingNumber: "SD-43030-XXXX",
+          includesExactMpnInMaterialTable: true,
+          materialTableScope: "20-24 AWG, form A, loose terminal row, material number 43030-0007",
+          sourceUrl:
+            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43030/430300003_sd.pdf",
+          retainedAsset: null,
+          contentSha256: null,
+          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+        },
+        {
+          mpn: "44242-0005",
+          sourceKind: "series-drawing",
+          drawingNumber: "SD-44242-001",
+          includesExactMpnInMaterialTable: true,
+          materialTableScope: "12-circuit test-plug row, material number 44242-0005",
+          sourceUrl:
+            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/442/44242/442420001_sd.pdf",
+          retainedAsset: null,
+          contentSha256: null,
+          retrievalState: "official-url-verified-but-local-bytes-unavailable"
         }
       ]
     },

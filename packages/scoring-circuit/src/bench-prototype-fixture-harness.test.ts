@@ -552,10 +552,52 @@ describe("BP-104 seven-channel fixture harness", () => {
     expect(benchPrototypeFixtureHarness.evidence.manufacturerDrawingDiscovery).toMatchObject({
       status: "identified-not-hash-acquired",
       candidates: [
-        { mpn: "43045-1200", sourceKind: "series-drawing", retainedAsset: null, contentSha256: null },
-        { mpn: "43025-1200", sourceKind: "series-drawing", retainedAsset: null, contentSha256: null }
+        {
+          mpn: "43045-1200",
+          drawingNumber: "SD-43045-001",
+          includesExactMpnInMaterialTable: true,
+          materialTableScope: "12-circuit row, finish A, material number 43045-1200",
+          sourceUrl: expect.stringContaining("430450600_sd.pdf"),
+          retainedAsset: null,
+          contentSha256: null,
+          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+        },
+        {
+          mpn: "43025-1200",
+          drawingNumber: "430250000-SD",
+          includesExactMpnInMaterialTable: true,
+          materialTableScope: "12-position row, material number 43025-1200",
+          sourceUrl: expect.stringContaining("430250400_sd.pdf"),
+          retainedAsset: null,
+          contentSha256: null,
+          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+        },
+        {
+          mpn: "43030-0007",
+          drawingNumber: "SD-43030-XXXX",
+          includesExactMpnInMaterialTable: true,
+          materialTableScope: "20-24 AWG, form A, loose terminal row, material number 43030-0007",
+          sourceUrl: expect.stringContaining("430300003_sd.pdf"),
+          retainedAsset: null,
+          contentSha256: null,
+          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+        },
+        {
+          mpn: "44242-0005",
+          drawingNumber: "SD-44242-001",
+          includesExactMpnInMaterialTable: true,
+          materialTableScope: "12-circuit test-plug row, material number 44242-0005",
+          sourceUrl: expect.stringContaining("442420001_sd.pdf"),
+          retainedAsset: null,
+          contentSha256: null,
+          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+        }
       ]
     })
+    expect(benchPrototypeFixtureHarness.evidence.manufacturerDrawingDiscovery.candidates).toHaveLength(4)
+    expect(benchPrototypeFixtureHarness.evidence.manufacturerDrawingDiscovery.candidates.map(({ mpn }) => mpn)).toEqual(
+      ["43045-1200", "43025-1200", "43030-0007", "44242-0005"]
+    )
     expect(benchPrototypeFixtureHarness.authority).toMatchObject({
       exactSelectionFrozen: true,
       footprintEvidenceApproved: false,
