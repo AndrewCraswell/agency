@@ -17,6 +17,14 @@ typedef struct fake_link {
   scoring_esp32_result_t result;
 } fake_link_t;
 
+typedef struct fake_storage {
+  uint8_t record[SCORING_ESP32_MAX_TRANSPORT_PAYLOAD_BYTES];
+  size_t record_length;
+  uint32_t transport_sequence;
+  unsigned int calls;
+  scoring_esp32_result_t result;
+} fake_storage_t;
+
 typedef struct reset_observer {
   unsigned int reset_calls;
   unsigned int identity_calls;
@@ -108,6 +116,24 @@ static scoring_esp32_result_t fake_read_frame(
   return SCORING_ESP32_RESULT_OK;
 }
 
+static scoring_esp32_result_t fake_append_record(
+  void *context,
+  const scoring_esp32_authoritative_record_t *record
+) {
+  fake_storage_t *storage = context;
+  if (storage == NULL || record == NULL || record->bytes.length > sizeof(storage->record) ||
+      (record->bytes.data == NULL && record->bytes.length != 0U)) {
+    return SCORING_ESP32_RESULT_INVALID_ARGUMENT;
+  }
+  if (record->bytes.length != 0U) {
+    (void)memcpy(storage->record, record->bytes.data, record->bytes.length);
+  }
+  storage->record_length = record->bytes.length;
+  storage->transport_sequence = record->transport_sequence;
+  storage->calls += 1U;
+  return storage->result;
+}
+
 static scoring_esp32_result_t fake_request_reset(void *context, scoring_esp32_reset_reason_t reason) {
   reset_observer_t *observer = context;
   (void)reason;
@@ -174,6 +200,7 @@ static bool test_accept_duplicate_corruption_reorder_and_replay(void) {
   const size_t second_length = make_decision_frame(second_frame, second_payload, sizeof(second_payload), 11U);
   fake_link_t link = {.frame = first_frame, .frame_length = first_length};
   reset_observer_t observer = {0};
+  fake_storage_t storage = {0};
   scoring_esp32_services_t services;
   scoring_esp32_receiver_t receiver;
   scoring_esp32_receiver_receipt_t receipt;
@@ -181,6 +208,10 @@ static bool test_accept_duplicate_corruption_reorder_and_replay(void) {
 
   set_boot_id(&observer, "boot-1");
   services = services_for(&link, &observer);
+  services.storage = (scoring_esp32_storage_service_t){
+    .context = &storage,
+    .append_authoritative_record = fake_append_record
+  };
   CHECK(first_length != 0U);
   CHECK(second_length != 0U);
   scoring_esp32_journal_storage_init(&test_storage);
@@ -189,11 +220,16 @@ static bool test_accept_duplicate_corruption_reorder_and_replay(void) {
   CHECK(receipt.outcome == SCORING_ESP32_RECEIVER_ACCEPTED);
   CHECK(receipt.record.length == sizeof(first_payload));
   CHECK(memcmp(receipt.record.data, first_payload, sizeof(first_payload)) == 0);
+  CHECK(storage.calls == 1U);
+  CHECK(storage.transport_sequence == 10U);
+  CHECK(storage.record_length == sizeof(first_payload));
+  CHECK(memcmp(storage.record, first_payload, sizeof(first_payload)) == 0);
   CHECK(scoring_esp32_journal_count(scoring_esp32_receiver_journal(&receiver)) == 1U);
   CHECK(scoring_esp32_receiver_has_expected_sequence(&receiver, &expected_sequence));
   CHECK(expected_sequence == 11U);
 
   CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_DUPLICATE);
+  CHECK(storage.calls == 1U);
   CHECK(scoring_esp32_journal_count(scoring_esp32_receiver_journal(&receiver)) == 1U);
   CHECK(!scoring_esp32_receiver_is_link_degraded(&receiver));
 
@@ -201,6 +237,7 @@ static bool test_accept_duplicate_corruption_reorder_and_replay(void) {
   corrupted_frame[SCORING_ESP32_TRANSPORT_HEADER_BYTES] ^= 1U;
   link = (fake_link_t){.frame = corrupted_frame, .frame_length = second_length};
   CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_FRAME_INTEGRITY_FAILURE);
+  CHECK(storage.calls == 1U);
   CHECK(scoring_esp32_journal_count(scoring_esp32_receiver_journal(&receiver)) == 1U);
   CHECK(scoring_esp32_receiver_is_link_degraded(&receiver));
 
@@ -209,12 +246,99 @@ static bool test_accept_duplicate_corruption_reorder_and_replay(void) {
   write_u32_be(&second_frame[SCORING_ESP32_TRANSPORT_HEADER_BYTES + sizeof(second_payload)],
     scoring_esp32_calculate_crc32c((scoring_esp32_bytes_t){.data = second_frame, .length = second_length - 4U}));
   CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_OUT_OF_ORDER);
+  CHECK(storage.calls == 1U);
   second_frame[9] = 11U;
   write_u32_be(&second_frame[SCORING_ESP32_TRANSPORT_HEADER_BYTES + sizeof(second_payload)],
     scoring_esp32_calculate_crc32c((scoring_esp32_bytes_t){.data = second_frame, .length = second_length - 4U}));
   CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_OK);
+  CHECK(storage.calls == 2U);
+  CHECK(storage.transport_sequence == 11U);
+  CHECK(storage.record_length == sizeof(second_payload));
+  CHECK(memcmp(storage.record, second_payload, sizeof(second_payload)) == 0);
   CHECK(replay_matches(scoring_esp32_receiver_journal(&receiver), 1U, second_payload, sizeof(second_payload), 11U));
   CHECK(observer.reset_calls == 0U);
+  return true;
+}
+
+static bool test_forwarding_failure_does_not_rollback_journal(void) {
+  static const uint8_t payload[] = {0xC1U, 0x00U, 0xFEU, 0x7FU};
+  uint8_t frame_bytes[SCORING_ESP32_MAX_TRANSPORT_FRAME_BYTES] = {0};
+  const size_t frame_length = make_decision_frame(frame_bytes, payload, sizeof(payload), 21U);
+  fake_link_t link = {.frame = frame_bytes, .frame_length = frame_length};
+  reset_observer_t observer = {0};
+  fake_storage_t storage = {.result = SCORING_ESP32_RESULT_UNAVAILABLE};
+  scoring_esp32_services_t services;
+  scoring_esp32_receiver_t receiver;
+  scoring_esp32_receiver_receipt_t receipt;
+  uint32_t expected_sequence = 0U;
+
+  set_boot_id(&observer, "boot-forward-failure");
+  services = services_for(&link, &observer);
+  services.storage = (scoring_esp32_storage_service_t){
+    .context = &storage,
+    .append_authoritative_record = fake_append_record
+  };
+  scoring_esp32_journal_storage_init(&test_storage);
+  CHECK(frame_length != 0U);
+  CHECK(scoring_esp32_receiver_init(&receiver, &services, &test_storage, 4U) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_UNAVAILABLE);
+  CHECK(receipt.outcome == SCORING_ESP32_RECEIVER_REJECTED);
+  CHECK(receipt.result == SCORING_ESP32_RESULT_UNAVAILABLE);
+  CHECK(receipt.has_sequence);
+  CHECK(receipt.sequence == 21U);
+  CHECK(receipt.record.data == NULL);
+  CHECK(receipt.record.length == 0U);
+  CHECK(scoring_esp32_receiver_is_link_degraded(&receiver));
+  CHECK(storage.calls == 1U);
+  CHECK(storage.transport_sequence == 21U);
+  CHECK(storage.record_length == sizeof(payload));
+  CHECK(memcmp(storage.record, payload, sizeof(payload)) == 0);
+  CHECK(scoring_esp32_journal_count(scoring_esp32_receiver_journal(&receiver)) == 1U);
+  CHECK(scoring_esp32_receiver_has_expected_sequence(&receiver, &expected_sequence));
+  CHECK(expected_sequence == 22U);
+  CHECK(replay_matches(scoring_esp32_receiver_journal(&receiver), 0U, payload, sizeof(payload), 21U));
+
+  CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_DUPLICATE);
+  CHECK(receipt.outcome == SCORING_ESP32_RECEIVER_REJECTED);
+  CHECK(receipt.result == SCORING_ESP32_RESULT_DUPLICATE);
+  CHECK(receipt.has_sequence);
+  CHECK(receipt.sequence == 21U);
+  CHECK(storage.calls == 1U);
+  CHECK(scoring_esp32_journal_count(scoring_esp32_receiver_journal(&receiver)) == 1U);
+  CHECK(scoring_esp32_receiver_has_expected_sequence(&receiver, &expected_sequence));
+  CHECK(expected_sequence == 22U);
+  CHECK(scoring_esp32_receiver_is_link_degraded(&receiver));
+  return true;
+}
+
+static bool test_missing_forwarding_callback_uses_journal(void) {
+  static const uint8_t payload[] = {0xD1U, 0x02U, 0xFDU};
+  uint8_t frame_bytes[SCORING_ESP32_MAX_TRANSPORT_FRAME_BYTES] = {0};
+  const size_t frame_length = make_decision_frame(frame_bytes, payload, sizeof(payload), 31U);
+  fake_link_t link = {.frame = frame_bytes, .frame_length = frame_length};
+  reset_observer_t observer = {0};
+  scoring_esp32_services_t services;
+  scoring_esp32_receiver_t receiver;
+  scoring_esp32_receiver_receipt_t receipt;
+  uint32_t expected_sequence = 0U;
+
+  set_boot_id(&observer, "boot-forward-missing");
+  services = services_for(&link, &observer);
+  scoring_esp32_journal_storage_init(&test_storage);
+  CHECK(frame_length != 0U);
+  CHECK(scoring_esp32_receiver_init(&receiver, &services, &test_storage, 4U) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_OK);
+  CHECK(receipt.outcome == SCORING_ESP32_RECEIVER_ACCEPTED);
+  CHECK(receipt.result == SCORING_ESP32_RESULT_OK);
+  CHECK(receipt.has_sequence);
+  CHECK(receipt.sequence == 31U);
+  CHECK(receipt.record.length == sizeof(payload));
+  CHECK(memcmp(receipt.record.data, payload, sizeof(payload)) == 0);
+  CHECK(!scoring_esp32_receiver_is_link_degraded(&receiver));
+  CHECK(scoring_esp32_journal_count(scoring_esp32_receiver_journal(&receiver)) == 1U);
+  CHECK(scoring_esp32_receiver_has_expected_sequence(&receiver, &expected_sequence));
+  CHECK(expected_sequence == 32U);
+  CHECK(replay_matches(scoring_esp32_receiver_journal(&receiver), 0U, payload, sizeof(payload), 31U));
   return true;
 }
 
@@ -699,6 +823,8 @@ static bool test_receiver_public_argument_and_link_boundaries(void) {
 int main(void) {
   if (!test_host_storage_size_is_measured_bound() ||
       !test_accept_duplicate_corruption_reorder_and_replay() ||
+      !test_forwarding_failure_does_not_rollback_journal() ||
+      !test_missing_forwarding_callback_uses_journal() ||
       !test_backpressure_retains_expected_sequence() ||
       !test_power_loss_recovers_multiple_record_checkpoint() ||
       !test_reset_restores_decision_cursor_and_next_frame() ||

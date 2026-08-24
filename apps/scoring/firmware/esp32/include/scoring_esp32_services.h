@@ -191,12 +191,6 @@ scoring_esp32_result_t scoring_esp32_decode_transport_frame(
 /* Missing adapters are normalized to deterministic unavailable services. */
 scoring_esp32_result_t scoring_esp32_app_init(scoring_esp32_app_t *app, const scoring_esp32_services_t *services);
 
-/* Accepts only a valid M0-06 decision-record frame and forwards opaque bytes to storage. */
-scoring_esp32_result_t scoring_esp32_receive_authoritative_record(
-  scoring_esp32_app_t *app,
-  scoring_esp32_authoritative_record_t *out_record
-);
-
 scoring_esp32_result_t scoring_esp32_read_monotonic_us(const scoring_esp32_app_t *app, uint64_t *out_us);
 scoring_esp32_result_t scoring_esp32_read_time_metadata(
   const scoring_esp32_app_t *app,

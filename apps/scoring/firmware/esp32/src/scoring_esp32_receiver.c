@@ -104,6 +104,21 @@ static scoring_esp32_result_t reject_receipt(
   return result;
 }
 
+static scoring_esp32_result_t forward_authoritative_record(
+  const scoring_esp32_receiver_t *receiver,
+  const scoring_esp32_transport_frame_t *frame
+) {
+  scoring_esp32_authoritative_record_t record;
+  if (receiver->services.storage.append_authoritative_record == NULL) {
+    return SCORING_ESP32_RESULT_OK;
+  }
+  record = (scoring_esp32_authoritative_record_t){
+    .transport_sequence = frame->sequence,
+    .bytes = frame->payload
+  };
+  return receiver->services.storage.append_authoritative_record(receiver->services.storage.context, &record);
+}
+
 scoring_esp32_result_t scoring_esp32_receiver_init(
   scoring_esp32_receiver_t *receiver,
   const scoring_esp32_services_t *services,
@@ -256,6 +271,10 @@ scoring_esp32_result_t scoring_esp32_receiver_receive(
     return reject_receipt(receiver, out_receipt, result, frame.sequence, true, true);
   }
   restore_cursor(receiver);
+  result = forward_authoritative_record(receiver, &frame);
+  if (result != SCORING_ESP32_RESULT_OK) {
+    return reject_receipt(receiver, out_receipt, result, frame.sequence, true, true);
+  }
   out_receipt->outcome = SCORING_ESP32_RECEIVER_ACCEPTED;
   out_receipt->result = SCORING_ESP32_RESULT_OK;
   out_receipt->record = frame.payload;

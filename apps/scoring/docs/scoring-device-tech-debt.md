@@ -52,7 +52,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 33 | SC-010 | P2 | intake | Communications circuit selected MPNs can drift from canonical component decisions and USB-PD records |
 | 34 | SC-011 | P3 | done | Root-approved BOM validation now relies on canonical rows as its sole exact-selection registry |
 | 35 | SC-012 | P2 | done | Root-approved typed projection now derives rendered W5500 passive values from the canonical support record |
-| 36 | FW-006 | P1 | ready | A legacy ESP32 authoritative-record helper can bypass the canonical receiver journal and sequence boundary |
+| 36 | FW-006 | P1 | done | Root-approved receiver is now the sole authoritative ingress; journal commit and sequence advance precede optional forwarding |
 | 37 | FW-007 | P2 | done | Root-approved private byte-string validation now serves manifest and environment boundaries with unchanged error categories |
 | 38 | FW-008 | P1 | done | Root-approved shared journal preflight prevents replay from indexing an invalid active slot |
 | 39 | SD-022 | P1 | done | Root-approved canonical provenance parsing now serves decision records and event-capture construction |
@@ -94,7 +94,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SD-005: establish one transport codec source of truth across targets
 
 - Priority: `P1`
-- State: `ready`
+- State: `done`
+- Latest state: Root review removed the legacy direct-storage ingress. The canonical receiver now commits and advances exactly once before optional application forwarding; callback failure degrades without rollback or duplicate forwarding, missing callbacks retain journal acceptance, and Release CTest passes 3/3 with the FW-008 replay-preflight cases preserved.
 - Affected files: [`apps/scoring/src/transport-frame.ts`](../src/transport-frame.ts) (lines 9-15 and 131-210), [`apps/scoring/firmware/stm32/core/stm32_transport.c`](../firmware/stm32/core/stm32_transport.c) (lines 6-123 and 163-215), [`apps/scoring/firmware/esp32/src/scoring_esp32_services.c`](../firmware/esp32/src/scoring_esp32_services.c) (lines 5-22 and 145-218), [`apps/scoring/firmware/stm32/tools/generate-transport-fixture.mjs`](../firmware/stm32/tools/generate-transport-fixture.mjs), and the ESP32 host transport tests.
 - Description and evidence: TypeScript defines the M2-05 magic, version, message mapping, direction policy, lengths, and CRC. The STM32 C parser repeats those rules and receives generated golden frames from the TypeScript build. The ESP32 C parser independently repeats the magic/version/message range, header offsets, flags, length, and CRC, but its host tests construct frames locally rather than consuming the generated TypeScript fixture. The C implementations also use range checks for message types where TypeScript uses an explicit mapping.
 - Impact: a message-code, direction, length, or CRC change can pass one target's tests and fail at the other target. The current STM32 fixture generation gives cross-language evidence for STM32 only; the ESP32 boundary has no equivalent byte-for-byte compatibility gate.
