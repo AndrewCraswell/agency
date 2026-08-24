@@ -61,12 +61,22 @@ describe("carrier connector footprint evidence", () => {
     expect(header.footprint?.holes).toHaveLength(4)
     expect(housing.primarySources).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ kind: "product-drawing", url: expect.stringContaining("430250400") })
+        expect.objectContaining({ kind: "product-drawing", url: expect.stringContaining("430252400") })
+      ])
+    )
+    expect(header.primarySources).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "product-drawing", url: expect.stringContaining("430450201") })
       ])
     )
     expect(terminal.package).toContain("20-24 AWG")
     expect(terminal.primarySources).toEqual(
-      expect.arrayContaining([expect.objectContaining({ revision: expect.stringContaining("revision N10") })])
+      expect.arrayContaining([
+        expect.objectContaining({
+          revision: expect.stringContaining("revision N10"),
+          url: expect.stringContaining("430300007")
+        })
+      ])
     )
     expect(header.missingReleaseEvidence.join(" ")).toContain("annular ring")
   })

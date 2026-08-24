@@ -130,7 +130,7 @@ const molexDrawingSources: readonly CarrierPrimarySource[] = [
     access: "manufacturer-listed",
     kind: "product-drawing",
     revision: "Molex SD-43045-001 H1, released 2024-09-27",
-    url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43045/430451400_sd.pdf"
+    url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43045/430450201_sd.pdf"
   },
   {
     access: "manufacturer-listed",
@@ -286,7 +286,7 @@ export const carrierConnectorFootprintEvidence: readonly CarrierConnectorEvidenc
         access: "manufacturer-listed",
         kind: "product-drawing",
         revision: "Molex 430250000-SD, revision D, released 2018-06-01; 43025-0400 table row",
-        url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43025/430250400_sd.pdf"
+        url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43025/430252400_sd.pdf"
       },
       ...molexDrawingSources.slice(1)
     ],
@@ -308,7 +308,7 @@ export const carrierConnectorFootprintEvidence: readonly CarrierConnectorEvidenc
         access: "manufacturer-listed",
         kind: "product-drawing",
         revision: "Molex SD-43030-XXXX, revision N10, released 2026-04-24; 43030-0007 table row",
-        url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43030/430300003_sd.pdf"
+        url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43030/430300007_sd.pdf?inline="
       },
       {
         access: "manufacturer-listed",
