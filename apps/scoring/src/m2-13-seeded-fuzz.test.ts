@@ -563,28 +563,119 @@ describe("M2-13 bounded seeded protocol and record fuzz", () => {
     expect(() => decodeTransportFrame("esp32", new Uint8Array(MAX_TRANSPORT_FRAME_BYTES + 1))).toThrow(
       expect.objectContaining({ code: "frame-length" })
     )
+
+    const oversizedDecodedRecord = {
+      ...makeRecord("bounded-clone", 1, 0),
+      recordId: "r".repeat(4_097)
+    }
+    const receiver = createVirtualEsp32({
+      decodeDecisionRecordPayload: () => oversizedDecodedRecord,
+      maxRecords: 1
+    })
+    const oversizedReceipt = deliver(receiver, "stm32", makeFrame("decision-record", 0, new Uint8Array([0])))[0]
+
+    expect(oversizedReceipt).toMatchObject({ outcome: "rejected", reason: "payload", sequence: 0 })
+    expect(receiver.records).toEqual([])
   })
 
-  it("rejects strict record-shape mutations without durable writes", () => {
+  it("rejects malformed protocol inputs at the receiver boundary without crashes or state mutation", () => {
+    for (const seedText of SEED_FIXTURE.seeds) {
+      const seed = parseSeed(seedText)
+      const random = createSeededRandom(seed)
+
+      for (let iteration = 0; iteration < SEED_FIXTURE.iterationsPerSeed; iteration += 1) {
+        const action = iteration % ACTION_COUNT
+        const fuzzPayload = random.bytes(random.nextInt(MAX_TRANSPORT_PAYLOAD_BYTES))
+        const frame = makeFrame("decision-record", 0, fuzzPayload)
+        const malformedFrame =
+          action === INVALID_PAYLOAD_ACTION
+            ? makeFrame("decision-record", 0, new Uint8Array([0xff]))
+            : action === DIRECTION_ACTION
+              ? makeFrame("request", 0, fuzzPayload)
+              : mutateFrame(frame, action)
+        const receiver = createVirtualEsp32({ decodeDecisionRecordPayload: jsonDecoder, maxRecords: 1 })
+
+        if (malformedFrame.length < TRANSPORT_FRAME_HEADER_BYTES + 4) {
+          expect(() => deliver(receiver, "stm32", malformedFrame)).toThrowError(RangeError)
+          expect(receiver.records).toEqual([])
+          continue
+        }
+
+        const receipt = deliver(receiver, "stm32", malformedFrame)[0]
+        expect(receipt).toMatchObject({ outcome: "rejected", sequence: 0 })
+        expect(receiver.records).toEqual([])
+        expect(receiver.isLinkDegraded).toBe(true)
+      }
+    }
+  })
+
+  it("rejects strict record-shape mutations without durable writes or silent corruption", () => {
+    for (const seedText of SEED_FIXTURE.seeds) {
+      const seed = parseSeed(seedText)
+      for (let iteration = 0; iteration < SEED_FIXTURE.iterationsPerSeed; iteration += 1) {
+        const record = makeRecord(`shape-${seed.toString(16)}-${iteration}`, seed + iteration, iteration)
+        const receiver = createVirtualEsp32({ decodeDecisionRecordPayload: jsonDecoder })
+        const malformedPayload = payloadFor(invalidRecord(record, iteration))
+        const receipt = deliver(receiver, "stm32", makeFrame("decision-record", 0, malformedPayload))[0]
+
+        expect(receipt).toMatchObject({ outcome: "rejected", reason: "payload" })
+        expect(receiver.records).toEqual([])
+
+        const extraFieldReceiver = createVirtualEsp32({ decodeDecisionRecordPayload: jsonDecoder })
+        const extraFieldPayload = payloadFor({ ...record, unexpectedField: true })
+        const extraFieldReceipt = deliver(
+          extraFieldReceiver,
+          "stm32",
+          makeFrame("decision-record", 0, extraFieldPayload)
+        )[0]
+        expect(extraFieldReceipt).toMatchObject({ outcome: "rejected", reason: "payload" })
+        expect(extraFieldReceiver.records).toEqual([])
+      }
+    }
+  })
+
+  it("accepts one valid record and rejects both transport and record duplicates", () => {
+    const record = makeRecord("duplicate-boundary", 42, 0)
+    const frame = makeFrame("decision-record", 0, payloadFor(record))
+    const receiver = createVirtualEsp32({ decodeDecisionRecordPayload: jsonDecoder, maxRecords: 2 })
+
+    const first = deliver(receiver, "stm32", frame)[0]
+    const duplicateFrame = deliver(receiver, "stm32", frame)[0]
+    const duplicateRecord = deliver(receiver, "stm32", makeFrame("decision-record", 1, payloadFor(record)))[0]
+
+    expect(first).toMatchObject({ outcome: "accepted", record, sequence: 0 })
+    expect(duplicateFrame).toMatchObject({ outcome: "rejected", reason: "out-of-order", sequence: 0 })
+    expect(duplicateRecord).toMatchObject({ outcome: "rejected", reason: "record-duplicate", sequence: 1 })
+    expect(receiver.records).toEqual([record])
+    expect(receiver.isLinkDegraded).toBe(true)
+  })
+
+  it("isolates accepted records from decoder-owned mutation", () => {
+    const record = makeRecord("decoder-isolation", 84, 6)
+    const decoderOwnedRecord = structuredClone(record)
+    const receiver = createVirtualEsp32({
+      decodeDecisionRecordPayload: () => decoderOwnedRecord,
+      maxRecords: 1
+    })
+
+    const receipt = deliver(receiver, "stm32", makeFrame("decision-record", 0, new Uint8Array([0])))[0]
+    Reflect.set(decoderOwnedRecord, "outcome", { ...decoderOwnedRecord.outcome, disposition: "off-target" })
+
+    expect(receipt).toMatchObject({ outcome: "accepted", record })
+    expect(receiver.records).toEqual([record])
+    expect(JSON.stringify(receiver.records[0])).toBe(JSON.stringify(record))
+  })
+
+  it("keeps malformed journal records outside the durable write path", () => {
     for (const [index, seedText] of SEED_FIXTURE.seeds.entries()) {
       const seed = parseSeed(seedText)
-      const record = makeRecord(`shape-${seed.toString(16)}`, seed, index)
-      const receiver = createVirtualEsp32({ decodeDecisionRecordPayload: jsonDecoder })
-      const malformedPayload = payloadFor(invalidRecord(record, index))
-      const receipt = deliver(receiver, "stm32", makeFrame("decision-record", 0, malformedPayload))[0]
+      const record = makeRecord(`journal-shape-${seed.toString(16)}`, seed, index)
+      const storage = createVirtualEventJournalStorage()
+      const journal = createEventJournal({ maxRecords: SEED_FIXTURE.maxJournalRecords, storage })
 
-      expect(receipt).toMatchObject({ outcome: "rejected", reason: "payload" })
-      expect(receiver.records).toEqual([])
-
-      const extraFieldReceiver = createVirtualEsp32({ decodeDecisionRecordPayload: jsonDecoder })
-      const extraFieldPayload = payloadFor({ ...record, unexpectedField: true })
-      const extraFieldReceipt = deliver(
-        extraFieldReceiver,
-        "stm32",
-        makeFrame("decision-record", 0, extraFieldPayload)
-      )[0]
-      expect(extraFieldReceipt).toMatchObject({ outcome: "rejected", reason: "payload" })
-      expect(extraFieldReceiver.records).toEqual([])
+      expect(() => journal.append(invalidRecord(record, index) as DecisionRecord)).toThrowError()
+      expect(storage.writes).toEqual([])
+      expect(journal.records).toEqual([])
     }
   })
 })

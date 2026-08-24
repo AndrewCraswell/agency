@@ -156,7 +156,7 @@ accepted or rejected electrical event from its immutable record.
 | M2-10 | done | Delivered and root-approved: deterministic reset/recovery scenarios cover independent processor reset, watchdog, brownout, link loss, whole-power recovery, corrupt or interrupted journal recovery, new application-boot metadata, immutable diagnostics, and preserved STM32 boot identity, output state, and scoring authority. | Processor reset, watchdog, brownout, and recovery scenarios | M0-10, M2-06 through M2-09 | Independent resets never change STM32 scoring authority; recovery produces explicit diagnostics |
 | M2-11 | backlog | Next after M2-04, M2-09: Replay renderer data contract. | Replay renderer data contract | M2-04, M2-09 | A stored record renders without rerunning or re-deciding the scoring algorithm |
 | M2-12 | done | Delivered and root-approved: strict one-path CLI runs a scenario or corpus through the canonical runner, binds exact input bytes by SHA-256, emits bounded byte-stable JSON, preserves runner mismatch status, and rejects invalid invocations, paths, oversized inputs, and oversized reports with deterministic nonzero exits. | Scenario-runner CLI and machine-readable report | M0-07, M2-10 | Runs one file or a corpus, returns nonzero on mismatch, and emits stable JSON evidence |
-| M2-13 | backlog | Next after M2-05, M2-07, M2-08: Seeded protocol and record fuzz suite. | Seeded protocol and record fuzz suite | M2-05, M2-07, M2-08 | Crashes, unbounded allocations, duplicate acceptance, and silent corruption are absent across the fixed corpus |
+| M2-13 | done | Root-reviewed fixed seeded fuzz evidence exercises all 256 receiver cases, strict record mutations, allocation bounds, frame/record duplicates, journal write exclusion, and decoder mutation isolation; 7 focused tests pass. | Seeded protocol and record fuzz suite | M2-05, M2-07, M2-08 | Crashes, unbounded allocations, duplicate acceptance, and silent corruption are absent across the fixed corpus |
 | M2-14 | backlog | Next after M2-01 through M2-13, M1-11: Full virtual-apparatus release. | Full virtual-apparatus release | M2-01 through M2-13, M1-11 | All golden vectors and fault scenarios pass with required coverage and reproducible evidence |
 
 ## M3: Firmware foundations
@@ -358,6 +358,7 @@ A milestone closes only when:
 4. documents and machine-readable manifests agree with the implementation;
 5. an independent reviewer has resolved every release-blocking comment; and
 6. remaining risks, assumptions, and deferred work are named in the next milestone entry criteria.
+
 
 
 
