@@ -343,7 +343,8 @@ function side(value: unknown): boolean {
     typeof value.yellowCard === "boolean"
   )
 }
-function snapshot(value: unknown): value is BoutWorkflowSnapshot {
+/** Strictly validates a complete persisted bout-workflow snapshot. */
+export function isBoutWorkflowSnapshot(value: unknown): value is BoutWorkflowSnapshot {
   if (
     !record(value) ||
     !keys(value, [
@@ -425,7 +426,7 @@ function payload(command: RemoteCommandKey, value: unknown): boolean {
       integer(value.seconds) &&
       value.seconds <= 59
     )
-  if (command === "bout.snapshot.load") return keys(value, ["snapshot"]) && snapshot(value.snapshot)
+  if (command === "bout.snapshot.load") return keys(value, ["snapshot"]) && isBoutWorkflowSnapshot(value.snapshot)
   if (command === "controller.authority.transfer")
     return keys(value, ["nextAuthority"]) && authority(value.nextAuthority)
   if (command === "priority.assign.supervisor") return keys(value, ["side"]) && oneOf(value.side, ["left", "right"])
@@ -517,7 +518,7 @@ export function isBoutStateEvent(value: unknown): value is BoutStateEvent {
       value.cause !== "command.rejected" &&
       CAUSES[value.sourceCommand.command].some((cause) => cause === value.cause) &&
       value.rejectionReason === null &&
-      snapshot(value.resultingBoutState) &&
+      isBoutWorkflowSnapshot(value.resultingBoutState) &&
       value.resultingBoutState.apparatusId === value.sourceCommand.apparatusId &&
       value.resultingBoutState.eventRevision === value.eventRevision &&
       value.resultingBoutState.sourceCommandDisposition === "accepted" &&
@@ -533,6 +534,11 @@ export function isBoutStateEvent(value: unknown): value is BoutStateEvent {
     value.resultingBoutState === null &&
     value.stm32RecordId === null
   )
+}
+/** Rejects incomplete or incompatible persisted snapshot shapes before a load can begin. */
+export function parseBoutWorkflowSnapshot(value: unknown): BoutWorkflowSnapshot {
+  if (!isBoutWorkflowSnapshot(value)) throw new TypeError("Unsupported or invalid bout workflow snapshot")
+  return value
 }
 export function parseBoutStateEvent(value: unknown): BoutStateEvent {
   if (!isBoutStateEvent(value)) throw new TypeError("Unsupported or invalid bout state event")
