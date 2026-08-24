@@ -107,6 +107,34 @@ Manual ESP32 reset uses the same sink pattern: active-high
 | Application off, scoring on | Unaffected | Cannot release | No app-rail back-power is permitted |
 | Scoring off, application on | Unpowered | Unaffected | False request must remain impossible |
 
+## Physical-capture intake remains empty
+
+The executable `physicalEvidenceIntake` is an intake schema, not evidence.
+It contains no capture, prototype identity, instrument identity, calibration
+artifact, procedure, input profile, artifact ID, or digest. Its state is
+`absent` and every authority flag remains `DENY` until a real assembled
+prototype is measured.
+
+A submitted record must contain exactly one measured capture in this
+canonical order: `BP123-COLD-START`, `BP123-BROWNOUT`, `BP123-WATCHDOG`,
+`BP123-MANUAL-RESET`, `BP123-CROSS-DOMAIN`, and `BP123-POWER-OFF`. Each record
+must identify the same assembly, board revision, and serial number. It must
+identify its instrument by manufacturer, model, and serial number, bind its
+calibration certificate as an artifact ID and lowercase SHA-256 digest, and
+place the measurement date inside that calibration period. A capture also
+binds distinct trace, setup, exact procedure-revision, and injected-input
+profile artifacts and hashes.
+
+The evaluator computes acceptance from finite, frozen, typed limits instead of
+a submitter-supplied result. It requires reset assertion and release timing at
+cold start and manual reset; falling and rising thresholds plus hysteresis in
+both domains for brownout; both watchdog timeout and reset-pulse durations; cross-domain
+request and reset propagation; and both power-off backfeed currents plus reset
+release voltage. Each capture must provide exactly its required metrics with
+the expected unit and no duplicate or extra measurement. Named signals remain
+mandatory. Repeated trace/setup/input artifact IDs or digests, omitted fields,
+aliases, accessors, malformed timestamps, or out-of-limit values fail closed.
+
 ## Gates still denied
 
 Bench captures must cover cold start, brownout, normal falling-edge watchdog

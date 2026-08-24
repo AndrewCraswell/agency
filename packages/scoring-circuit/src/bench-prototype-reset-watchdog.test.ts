@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 import { defaultApplicationRailInputs } from "./application-rail.js"
-import { benchPrototypeResetWatchdog, validateBenchPrototypeResetWatchdog } from "./bench-prototype-reset-watchdog.js"
+import {
+  benchPrototypeResetWatchdog,
+  evaluateBenchPrototypeResetWatchdogPhysicalEvidence,
+  validateBenchPrototypeResetWatchdog
+} from "./bench-prototype-reset-watchdog.js"
 
 describe("BP-123 reset, supervisor, and watchdog contract", () => {
   it("uses exact local reset parts and the committed processor allocations", () => {
@@ -121,6 +125,102 @@ describe("BP-123 reset, supervisor, and watchdog contract", () => {
       benchTruthTableVerified: false,
       fabricationApproved: false
     })
+  })
+
+  it("keeps physical evidence absent while freezing a calibrated, hash-bound capture intake", () => {
+    const intake = benchPrototypeResetWatchdog.physicalEvidenceIntake
+    expect(intake.state).toBe("absent")
+    expect(intake.captures).toEqual([])
+    expect(intake.requiredCaptures.map((capture) => capture.captureId)).toEqual([
+      "BP123-COLD-START",
+      "BP123-BROWNOUT",
+      "BP123-WATCHDOG",
+      "BP123-MANUAL-RESET",
+      "BP123-CROSS-DOMAIN",
+      "BP123-POWER-OFF"
+    ])
+    expect(
+      intake.requiredCaptures.find((capture) => capture.captureId === "BP123-POWER-OFF")?.requiredObservedSignals
+    ).toEqual(expect.arrayContaining(["INJECTED_CURRENT", "EN_RESET", "RESET_REQUEST"]))
+    expect(intake.authority).toEqual({
+      physicalEvidenceAccepted: false,
+      benchTruthTableVerified: false,
+      schematicIntegrationAuthorized: false,
+      fabricationAuthorized: false,
+      releaseState: "deny"
+    })
+    expect(evaluateBenchPrototypeResetWatchdogPhysicalEvidence({}).accepted).toBe(false)
+    expect(
+      evaluateBenchPrototypeResetWatchdogPhysicalEvidence({
+        artifactKind: "bench-prototype-reset-watchdog-physical-evidence",
+        evidenceId: "not-a-capture",
+        captures: []
+      }).reasons
+    ).toContain("all six required BP-123 capture classes are required")
+  })
+
+  it("calculates physical-capture acceptance from immutable provenance and frozen measurements", () => {
+    const intake = benchPrototypeResetWatchdog.physicalEvidenceIntake
+    const sha256 = (index: number) => index.toString(16).padStart(64, "0")
+    // Synthetic evaluator input only. It is not stored in the canonical intake and is not physical evidence.
+    const makeSubmission = () => ({
+      artifactKind: "bench-prototype-reset-watchdog-physical-evidence" as const,
+      evidenceId: "evaluator-fixture",
+      captures: intake.requiredCaptures.map((requirement, index) => ({
+        captureId: requirement.captureId,
+        status: "measured" as const,
+        recordedAtUtc: "2026-08-24T12:00:00.000Z",
+        operator: "test operator",
+        prototype: { assemblyId: "test-assembly", boardRevision: "test-revision", serialNumber: "test-serial" },
+        instrument: {
+          manufacturer: "test instrument maker",
+          model: "test scope",
+          serialNumber: `test-scope-${index}`,
+          calibrationArtifact: { artifactId: `calibration-${index}`, contentSha256: sha256(100 + index) },
+          calibrationDueDate: "2026-12-31"
+        },
+        captureArtifact: { artifactId: `capture-${index}`, contentSha256: sha256(200 + index) },
+        setupArtifact: { artifactId: `setup-${index}`, contentSha256: sha256(300 + index) },
+        procedure: {
+          revision: "test-procedure-r1",
+          artifactId: `procedure-${index}`,
+          contentSha256: sha256(400 + index)
+        },
+        injectedInputProfile: { artifactId: `input-${index}`, contentSha256: sha256(500 + index) },
+        observedSignals: [...requirement.requiredObservedSignals],
+        measurements: requirement.requiredMetrics.map((metric) => ({
+          id: metric.id,
+          unit: metric.unit,
+          value: (metric.minimum + metric.maximum) / 2
+        }))
+      }))
+    })
+
+    expect(evaluateBenchPrototypeResetWatchdogPhysicalEvidence(makeSubmission())).toMatchObject({ accepted: true })
+
+    const missingCalibrationHash = makeSubmission()
+    missingCalibrationHash.captures[0]!.instrument.calibrationArtifact.contentSha256 = "not-a-digest"
+    expect(evaluateBenchPrototypeResetWatchdogPhysicalEvidence(missingCalibrationHash).accepted).toBe(false)
+
+    const missingProcedure = makeSubmission()
+    Reflect.deleteProperty(missingProcedure.captures[0]!, "procedure")
+    expect(evaluateBenchPrototypeResetWatchdogPhysicalEvidence(missingProcedure).accepted).toBe(false)
+
+    const outOfLimit = makeSubmission()
+    outOfLimit.captures[2]!.measurements[0]!.value = Number.POSITIVE_INFINITY
+    expect(evaluateBenchPrototypeResetWatchdogPhysicalEvidence(outOfLimit).accepted).toBe(false)
+
+    const duplicateMetric = makeSubmission()
+    duplicateMetric.captures[5]!.measurements[1]!.id = duplicateMetric.captures[5]!.measurements[0]!.id
+    expect(evaluateBenchPrototypeResetWatchdogPhysicalEvidence(duplicateMetric).accepted).toBe(false)
+
+    const extraMetric = makeSubmission()
+    extraMetric.captures[4]!.measurements.push({ ...extraMetric.captures[4]!.measurements[0]! })
+    expect(evaluateBenchPrototypeResetWatchdogPhysicalEvidence(extraMetric).accepted).toBe(false)
+
+    const mismatchedPrototype = makeSubmission()
+    mismatchedPrototype.captures[3]!.prototype.serialNumber = "other-prototype"
+    expect(evaluateBenchPrototypeResetWatchdogPhysicalEvidence(mismatchedPrototype).accepted).toBe(false)
   })
 
   it("fails closed for forged graphs and a broken application 3V3 prerequisite", () => {

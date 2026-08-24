@@ -15,6 +15,7 @@ import {
   benchPrototypeEsp32Allocation,
   validateBenchPrototypeEsp32Allocation
 } from "./bench-prototype-esp32-allocation.js"
+import { parseCanonicalUtcTimestamp, parseRealUtcDate } from "./bench-prototype-evidence-time.js"
 import { stm32PinAllocation, validateStm32PinAllocation } from "./stm32-pin-allocation.js"
 
 type PlainRecord = Record<PropertyKey, unknown>
@@ -85,6 +86,384 @@ function sameDataGraph(
     )
   })
 }
+
+function hasExactKeys(value: unknown, expected: readonly string[]): value is PlainRecord {
+  if (!isPlainRecord(value)) return false
+  const actual = Object.keys(value)
+  return actual.length === expected.length && expected.every((key) => actual.includes(key))
+}
+
+function inspectPlainDataGraph(value: unknown, path: string, seen: WeakSet<object>, reasons: string[]): void {
+  if (value === null || typeof value !== "object") return
+  if (seen.has(value)) {
+    reasons.push(`${path} contains a cycle or object alias`)
+    return
+  }
+  seen.add(value)
+  const keys = Reflect.ownKeys(value)
+  if (Array.isArray(value)) {
+    const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length")
+    if (
+      Object.getPrototypeOf(value) !== Array.prototype ||
+      lengthDescriptor === undefined ||
+      !("value" in lengthDescriptor) ||
+      !Number.isSafeInteger(lengthDescriptor.value) ||
+      lengthDescriptor.value < 0
+    ) {
+      reasons.push(`${path} must be a plain array with a valid length`)
+      return
+    }
+    const expectedKeys: PropertyKey[] = Array.from({ length: lengthDescriptor.value }, (_, index) => String(index))
+    expectedKeys.push("length")
+    if (keys.length !== expectedKeys.length || keys.some((key, index) => key !== expectedKeys[index])) {
+      reasons.push(`${path} must be dense and contain no extra or symbol keys`)
+      return
+    }
+    for (let index = 0; index < lengthDescriptor.value; index += 1) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index))
+      if (descriptor === undefined || !("value" in descriptor) || !descriptor.enumerable) {
+        reasons.push(`${path}[${index}] must be an enumerable data property`)
+        return
+      }
+      inspectPlainDataGraph(descriptor.value, `${path}[${index}]`, seen, reasons)
+    }
+    return
+  }
+  if (!isPlainRecord(value)) {
+    reasons.push(`${path} must be a plain data record`)
+    return
+  }
+  for (const key of keys) {
+    if (typeof key === "symbol") {
+      reasons.push(`${path} must not contain symbol keys`)
+      return
+    }
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (descriptor === undefined || !("value" in descriptor) || !descriptor.enumerable) {
+      reasons.push(`${path}.${key} must be an enumerable data property`)
+      return
+    }
+    inspectPlainDataGraph(descriptor.value, `${path}.${key}`, seen, reasons)
+  }
+}
+
+function nonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0
+}
+
+function isSha256(value: unknown): value is string {
+  return typeof value === "string" && /^[a-f0-9]{64}$/u.test(value)
+}
+
+const resetWatchdogPhysicalCaptureRequirements = [
+  {
+    captureId: "BP123-COLD-START",
+    requiredObservedSignals: ["SCORING_3V3", "V3_3", "SCORING_NRST_N", "EN_RESET", "APP_W5500_RESET_N"],
+    requiredMetrics: [
+      { id: "SCORING_RESET_RELEASE_DELAY_MS", unit: "ms", minimum: 53.04, maximum: 500 },
+      { id: "APPLICATION_RESET_RELEASE_DELAY_MS", unit: "ms", minimum: 53.04, maximum: 500 }
+    ]
+  },
+  {
+    captureId: "BP123-BROWNOUT",
+    requiredObservedSignals: [
+      "SCORING_3V3",
+      "V3_3",
+      "SCORING_NRST_N",
+      "EN_RESET",
+      "APP_SUPERVISOR_RESET_N",
+      "APP_W5500_RESET_N"
+    ],
+    requiredMetrics: [
+      { id: "SCORING_FALLING_THRESHOLD_V", unit: "V", minimum: 3.1383, maximum: 3.2017 },
+      { id: "SCORING_RISING_THRESHOLD_V", unit: "V", minimum: 3.15711, maximum: 3.22089 },
+      { id: "SCORING_HYSTERESIS_V", unit: "V", minimum: 0.001, maximum: 0.1 },
+      { id: "APPLICATION_FALLING_THRESHOLD_V", unit: "V", minimum: 3.1383, maximum: 3.2017 },
+      { id: "APPLICATION_RISING_THRESHOLD_V", unit: "V", minimum: 3.15711, maximum: 3.22089 },
+      { id: "APPLICATION_HYSTERESIS_V", unit: "V", minimum: 0.001, maximum: 0.1 }
+    ]
+  },
+  {
+    captureId: "BP123-WATCHDOG",
+    requiredObservedSignals: [
+      "SCORING_WATCHDOG_WDI",
+      "APP_WD_KICK",
+      "SCORING_NRST_N",
+      "EN_RESET",
+      "U_STM_WATCHDOG.WDO+ENOUT",
+      "U_ESP_WATCHDOG.WDO+ENOUT"
+    ],
+    requiredMetrics: [
+      { id: "SCORING_WATCHDOG_TIMEOUT_MS", unit: "ms", minimum: 170, maximum: 230 },
+      { id: "SCORING_WATCHDOG_RESET_PULSE_MS", unit: "ms", minimum: 170, maximum: 230 },
+      { id: "APPLICATION_WATCHDOG_TIMEOUT_MS", unit: "ms", minimum: 170, maximum: 230 },
+      { id: "APPLICATION_WATCHDOG_RESET_PULSE_MS", unit: "ms", minimum: 170, maximum: 230 }
+    ]
+  },
+  {
+    captureId: "BP123-MANUAL-RESET",
+    requiredObservedSignals: ["MANUAL_RESET_ASSERT", "EN_RESET", "SCORING_NRST_N", "APP_W5500_RESET_N"],
+    requiredMetrics: [
+      { id: "MANUAL_RESET_ASSERTION_DELAY_MS", unit: "ms", minimum: 0, maximum: 10 },
+      { id: "MANUAL_RESET_RELEASE_DELAY_MS", unit: "ms", minimum: 53.04, maximum: 500 }
+    ]
+  },
+  {
+    captureId: "BP123-CROSS-DOMAIN",
+    requiredObservedSignals: ["ESP32_RESET_ASSERT", "RESET_REQUEST", "EN_RESET", "SCORING_NRST_N"],
+    requiredMetrics: [
+      { id: "RESET_REQUEST_PROPAGATION_MS", unit: "ms", minimum: 0, maximum: 10 },
+      { id: "EN_RESET_ASSERTION_DELAY_MS", unit: "ms", minimum: 0, maximum: 10 }
+    ]
+  },
+  {
+    captureId: "BP123-POWER-OFF",
+    requiredObservedSignals: [
+      "SCORING_3V3",
+      "V3_3",
+      "ESP32_RESET_ASSERT",
+      "RESET_REQUEST",
+      "EN_RESET",
+      "INJECTED_CURRENT"
+    ],
+    requiredMetrics: [
+      { id: "V3_3_BACKFEED_CURRENT_MA", unit: "mA", minimum: 0, maximum: 0.1 },
+      { id: "SCORING_3V3_BACKFEED_CURRENT_MA", unit: "mA", minimum: 0, maximum: 0.1 },
+      { id: "EN_RESET_RELEASE_V", unit: "V", minimum: 0, maximum: 0.3 }
+    ]
+  }
+] as const
+
+type ResetWatchdogPhysicalCaptureId = (typeof resetWatchdogPhysicalCaptureRequirements)[number]["captureId"]
+
+/**
+ * Submission schema only. The canonical BP-123 contract intentionally retains
+ * no physical capture, instrument identity, or content digest until a real
+ * prototype run can supply them.
+ */
+export type BenchPrototypeResetWatchdogPhysicalCapture = {
+  readonly captureId: ResetWatchdogPhysicalCaptureId
+  readonly status: "measured"
+  readonly recordedAtUtc: string
+  readonly operator: string
+  readonly prototype: {
+    readonly assemblyId: string
+    readonly boardRevision: string
+    readonly serialNumber: string
+  }
+  readonly instrument: {
+    readonly manufacturer: string
+    readonly model: string
+    readonly serialNumber: string
+    readonly calibrationArtifact: { readonly artifactId: string; readonly contentSha256: string }
+    readonly calibrationDueDate: string
+  }
+  readonly captureArtifact: {
+    readonly artifactId: string
+    readonly contentSha256: string
+  }
+  readonly setupArtifact: {
+    readonly artifactId: string
+    readonly contentSha256: string
+  }
+  readonly procedure: { readonly revision: string; readonly artifactId: string; readonly contentSha256: string }
+  readonly injectedInputProfile: { readonly artifactId: string; readonly contentSha256: string }
+  readonly observedSignals: readonly string[]
+  readonly measurements: readonly { readonly id: string; readonly unit: "ms" | "V" | "mA"; readonly value: number }[]
+}
+
+export type BenchPrototypeResetWatchdogPhysicalEvidence = {
+  readonly artifactKind: "bench-prototype-reset-watchdog-physical-evidence"
+  readonly evidenceId: string
+  readonly captures: readonly BenchPrototypeResetWatchdogPhysicalCapture[]
+}
+
+export type BenchPrototypeResetWatchdogPhysicalEvidenceEvaluation = {
+  readonly accepted: boolean
+  readonly reasons: readonly string[]
+}
+
+type RawPhysicalArtifact = { readonly artifactId: unknown; readonly contentSha256: unknown }
+type RawPhysicalPrototype = {
+  readonly assemblyId: unknown
+  readonly boardRevision: unknown
+  readonly serialNumber: unknown
+}
+type RawPhysicalInstrument = {
+  readonly manufacturer: unknown
+  readonly model: unknown
+  readonly serialNumber: unknown
+  readonly calibrationArtifact: RawPhysicalArtifact
+  readonly calibrationDueDate: unknown
+}
+type RawPhysicalCapture = {
+  readonly captureId: unknown
+  readonly status: unknown
+  readonly recordedAtUtc: unknown
+  readonly operator: unknown
+  readonly prototype: RawPhysicalPrototype
+  readonly instrument: RawPhysicalInstrument
+  readonly captureArtifact: RawPhysicalArtifact
+  readonly setupArtifact: RawPhysicalArtifact
+  readonly procedure: { readonly revision: unknown; readonly artifactId: unknown; readonly contentSha256: unknown }
+  readonly injectedInputProfile: RawPhysicalArtifact
+  readonly observedSignals: unknown[]
+  readonly measurements: { readonly id: unknown; readonly unit: unknown; readonly value: unknown }[]
+}
+
+function hasPhysicalCaptureShape(value: unknown): value is RawPhysicalCapture {
+  return (
+    hasExactKeys(value, [
+      "captureId",
+      "status",
+      "recordedAtUtc",
+      "operator",
+      "prototype",
+      "instrument",
+      "captureArtifact",
+      "setupArtifact",
+      "procedure",
+      "injectedInputProfile",
+      "observedSignals",
+      "measurements"
+    ]) &&
+    hasExactKeys(value.prototype, ["assemblyId", "boardRevision", "serialNumber"]) &&
+    hasExactKeys(value.instrument, [
+      "manufacturer",
+      "model",
+      "serialNumber",
+      "calibrationArtifact",
+      "calibrationDueDate"
+    ]) &&
+    hasExactKeys(value.captureArtifact, ["artifactId", "contentSha256"]) &&
+    hasExactKeys(value.setupArtifact, ["artifactId", "contentSha256"]) &&
+    hasExactKeys(value.instrument.calibrationArtifact, ["artifactId", "contentSha256"]) &&
+    hasExactKeys(value.procedure, ["revision", "artifactId", "contentSha256"]) &&
+    hasExactKeys(value.injectedInputProfile, ["artifactId", "contentSha256"]) &&
+    Array.isArray(value.observedSignals) &&
+    Array.isArray(value.measurements) &&
+    value.measurements.every((measurement) => hasExactKeys(measurement, ["id", "unit", "value"]))
+  )
+}
+
+/** Rejects incomplete, uncalibrated, unhashed, duplicate, or under-scoped physical-capture submissions. */
+export function evaluateBenchPrototypeResetWatchdogPhysicalEvidence(
+  value: unknown
+): BenchPrototypeResetWatchdogPhysicalEvidenceEvaluation {
+  const reasons: string[] = []
+  inspectPlainDataGraph(value, "physicalEvidence", new WeakSet<object>(), reasons)
+  if (reasons.length > 0) return deepFreeze({ accepted: false, reasons })
+  if (!hasExactKeys(value, ["artifactKind", "evidenceId", "captures"]) || !Array.isArray(value.captures)) {
+    return deepFreeze({ accepted: false, reasons: ["physical evidence must contain only the exact BP-123 data keys"] })
+  }
+  if (value.artifactKind !== "bench-prototype-reset-watchdog-physical-evidence")
+    reasons.push("artifact kind is invalid")
+  if (!nonEmptyString(value.evidenceId)) reasons.push("evidenceId is required")
+  if (value.captures.length !== resetWatchdogPhysicalCaptureRequirements.length) {
+    reasons.push("all six required BP-123 capture classes are required")
+  }
+
+  const artifactIds = new Set<string>()
+  const digests = new Set<string>()
+  let prototypeIdentity: string | null = null
+  for (const [index, requirement] of resetWatchdogPhysicalCaptureRequirements.entries()) {
+    const capture = value.captures[index]
+    if (!hasPhysicalCaptureShape(capture)) {
+      reasons.push(`${requirement.captureId} must contain the exact capture schema`)
+      continue
+    }
+    if (capture.captureId !== requirement.captureId || capture.status !== "measured") {
+      reasons.push(`${requirement.captureId} must be measured in canonical order`)
+    }
+    const recordedAt = parseCanonicalUtcTimestamp(capture.recordedAtUtc)
+    const calibrationDueDate = parseRealUtcDate(capture.instrument.calibrationDueDate)
+    if (recordedAt === null || !nonEmptyString(capture.operator)) {
+      reasons.push(`${requirement.captureId} requires a real UTC timestamp and operator`)
+    }
+    if (
+      !nonEmptyString(capture.prototype.assemblyId) ||
+      !nonEmptyString(capture.prototype.boardRevision) ||
+      !nonEmptyString(capture.prototype.serialNumber)
+    ) {
+      reasons.push(`${requirement.captureId} requires prototype assembly, revision, and serial identity`)
+    } else {
+      const identity = `${capture.prototype.assemblyId}\u0000${capture.prototype.boardRevision}\u0000${capture.prototype.serialNumber}`
+      if (prototypeIdentity === null) prototypeIdentity = identity
+      else if (prototypeIdentity !== identity) reasons.push("all six BP-123 captures must identify the same prototype")
+    }
+    if (
+      !nonEmptyString(capture.instrument.manufacturer) ||
+      !nonEmptyString(capture.instrument.model) ||
+      !nonEmptyString(capture.instrument.serialNumber) ||
+      calibrationDueDate === null
+    ) {
+      reasons.push(`${requirement.captureId} requires calibrated instrument provenance`)
+    } else if (recordedAt !== null && recordedAt.getTime() > calibrationDueDate.getTime() + 86_399_999) {
+      reasons.push(`${requirement.captureId} instrument calibration must remain valid on the capture date`)
+    }
+    for (const [kind, artifact] of [
+      ["capture", capture.captureArtifact],
+      ["setup", capture.setupArtifact],
+      ["calibration", capture.instrument.calibrationArtifact],
+      ["procedure", capture.procedure],
+      ["injected input profile", capture.injectedInputProfile]
+    ] as const) {
+      if (!nonEmptyString(artifact.artifactId) || !isSha256(artifact.contentSha256)) {
+        reasons.push(`${requirement.captureId} ${kind} artifact requires an ID and lowercase SHA-256`)
+      } else if (
+        (kind === "capture" || kind === "setup" || kind === "injected input profile") &&
+        (artifactIds.has(artifact.artifactId) || digests.has(artifact.contentSha256))
+      ) {
+        reasons.push(`${requirement.captureId} ${kind} artifact ID and SHA-256 must be immutable and unique`)
+      } else if (kind === "capture" || kind === "setup" || kind === "injected input profile") {
+        artifactIds.add(artifact.artifactId)
+        digests.add(artifact.contentSha256)
+      }
+    }
+    if (!nonEmptyString(capture.procedure.revision)) {
+      reasons.push(`${requirement.captureId} requires an exact procedure revision`)
+    }
+    if (
+      capture.observedSignals.length !== new Set(capture.observedSignals).size ||
+      requirement.requiredObservedSignals.some((signal) => !capture.observedSignals.includes(signal))
+    ) {
+      reasons.push(`${requirement.captureId} omits a required observed signal or repeats one`)
+    }
+    if (capture.measurements.length !== requirement.requiredMetrics.length) {
+      reasons.push(`${requirement.captureId} requires exactly its frozen metrics`)
+    } else {
+      requirement.requiredMetrics.forEach((limit, metricIndex) => {
+        const measurement = capture.measurements[metricIndex]
+        if (
+          measurement === undefined ||
+          measurement.id !== limit.id ||
+          measurement.unit !== limit.unit ||
+          typeof measurement.value !== "number" ||
+          !Number.isFinite(measurement.value) ||
+          measurement.value < limit.minimum ||
+          measurement.value > limit.maximum
+        ) {
+          reasons.push(`${requirement.captureId} metric ${limit.id} is missing, duplicated, extra, or out of limit`)
+        }
+      })
+    }
+  }
+  return deepFreeze({ accepted: reasons.length === 0, reasons })
+}
+
+const resetWatchdogPhysicalEvidenceIntake = {
+  artifactKind: "bench-prototype-reset-watchdog-physical-evidence-intake",
+  state: "absent",
+  requiredCaptures: resetWatchdogPhysicalCaptureRequirements,
+  captures: [],
+  authority: {
+    physicalEvidenceAccepted: false,
+    benchTruthTableVerified: false,
+    schematicIntegrationAuthorized: false,
+    fabricationAuthorized: false,
+    releaseState: "deny"
+  }
+} as const
 
 const resistor10k = "RC0603FR-0710KL"
 const resistor100k = "RC0603FR-07100KL"
@@ -447,6 +826,7 @@ const resetWatchdogDefinition = {
     "For each WDI, inject normal falling-edge kicks and high-Z, stuck-high, and stuck-low faults; prove normal service at 100 ms or faster and deterministic timeout for every static fault.",
     "BP-144 must scope its buffer-enable and panel-OE defaults against EN_RESET before HUB75 enable is permitted."
   ],
+  physicalEvidenceIntake: resetWatchdogPhysicalEvidenceIntake,
   deniedEvidence: {
     exactFootprintsApproved: false,
     scoringRailImplementationApproved: false,
@@ -508,6 +888,15 @@ export function validateBenchPrototypeResetWatchdog(value: unknown): true {
       (rule) => !rule.includes("No ESP32") && !rule.includes("do not automatically")
     ) ||
     contract.truthTable.length !== 8 ||
+    contract.physicalEvidenceIntake.state !== "absent" ||
+    contract.physicalEvidenceIntake.captures.length !== 0 ||
+    contract.physicalEvidenceIntake.requiredCaptures.map((capture) => capture.captureId).join(",") !==
+      "BP123-COLD-START,BP123-BROWNOUT,BP123-WATCHDOG,BP123-MANUAL-RESET,BP123-CROSS-DOMAIN,BP123-POWER-OFF" ||
+    contract.physicalEvidenceIntake.authority.physicalEvidenceAccepted ||
+    contract.physicalEvidenceIntake.authority.benchTruthTableVerified ||
+    contract.physicalEvidenceIntake.authority.schematicIntegrationAuthorized ||
+    contract.physicalEvidenceIntake.authority.fabricationAuthorized ||
+    contract.physicalEvidenceIntake.authority.releaseState !== "deny" ||
     contract.deniedEvidence.fabricationApproved ||
     contract.releaseState !== "deny"
   ) {
