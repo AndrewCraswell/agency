@@ -19,6 +19,10 @@
       "types": "./dist/bout-state.d.ts",
       "default": "./dist/bout-state.js"
     },
+    "./remote-control": {
+      "types": "./dist/remote-control.d.ts",
+      "default": "./dist/remote-control.js"
+    },
     "./epee-resistance": {
       "types": "./dist/epee-resistance.d.ts",
       "default": "./dist/epee-resistance.js"
