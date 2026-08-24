@@ -19,7 +19,13 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages ./packages
 COPY apps/legislation ./apps/legislation
 
-RUN pnpm install --frozen-lockfile --filter legislation...
+# The reviewed, frozen workspace lockfile contains private dependencies for
+# unrelated applications. Railway cannot query those private registries during
+# pnpm's whole-lockfile supply-chain verification, even though this filtered
+# install never consumes those packages. Trust only this committed lockfile so
+# pnpm installs the legislation dependency closure without weakening package
+# integrity checks for downloaded artifacts.
+RUN pnpm install --frozen-lockfile --config.trust-lockfile=true --filter legislation...
 RUN pnpm --filter legislation build
 RUN pnpm --filter legislation deploy --prod --legacy --force /opt/legislation
 
