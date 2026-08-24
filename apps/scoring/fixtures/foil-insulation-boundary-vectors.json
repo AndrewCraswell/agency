@@ -1,0 +1,55 @@
+{
+  "format": "foil-insulation-boundary-vectors",
+  "schemaVersion": "1.0.0",
+  "source": {
+    "authority": "fie",
+    "document": "fie-material-rules-2026-08-en.pdf",
+    "sha256": "1489D28ED6F3C91E27ECDF75BB29B4ED65C688A012F544D37D946A9DA81AFC26",
+    "page": 79,
+    "locator": "Annex B, A.2, FOIL-04"
+  },
+  "vectors": [
+    {
+      "id": "yellow-at-449-ohms",
+      "returnResistance": { "resistanceMilliOhms": 200000, "resistanceUncertaintyMilliOhms": 0 },
+      "insulationResistance": { "resistanceMilliOhms": 449000, "resistanceUncertaintyMilliOhms": 0 },
+      "expected": { "scoring": "valid-hit-eligible", "diagnostic": "yellow-on" }
+    },
+    {
+      "id": "yellow-at-450-ohms",
+      "returnResistance": { "resistanceMilliOhms": 200001, "resistanceUncertaintyMilliOhms": 0 },
+      "insulationResistance": { "resistanceMilliOhms": 450000, "resistanceUncertaintyMilliOhms": 0 },
+      "expected": { "scoring": "non-valid-hit-eligible", "diagnostic": "indeterminate" }
+    },
+    {
+      "id": "yellow-at-475-ohms",
+      "returnResistance": { "resistanceMilliOhms": 200001, "resistanceUncertaintyMilliOhms": 0 },
+      "insulationResistance": { "resistanceMilliOhms": 475000, "resistanceUncertaintyMilliOhms": 0 },
+      "expected": { "scoring": "non-valid-hit-eligible", "diagnostic": "indeterminate" }
+    },
+    {
+      "id": "yellow-at-476-ohms",
+      "returnResistance": { "resistanceMilliOhms": 500000, "resistanceUncertaintyMilliOhms": 0 },
+      "insulationResistance": { "resistanceMilliOhms": 476000, "resistanceUncertaintyMilliOhms": 0 },
+      "expected": { "scoring": "non-valid-hit-eligible", "diagnostic": "yellow-off" }
+    },
+    {
+      "id": "uncertainty-touches-450-ohms",
+      "returnResistance": { "resistanceMilliOhms": 200001, "resistanceUncertaintyMilliOhms": 0 },
+      "insulationResistance": { "resistanceMilliOhms": 450000, "resistanceUncertaintyMilliOhms": 1000 },
+      "expected": { "scoring": "non-valid-hit-eligible", "diagnostic": "indeterminate" }
+    },
+    {
+      "id": "uncertainty-touches-475-ohms",
+      "returnResistance": { "resistanceMilliOhms": 500000, "resistanceUncertaintyMilliOhms": 0 },
+      "insulationResistance": { "resistanceMilliOhms": 475000, "resistanceUncertaintyMilliOhms": 1000 },
+      "expected": { "scoring": "non-valid-hit-eligible", "diagnostic": "indeterminate" }
+    },
+    {
+      "id": "both-measurements-unavailable",
+      "returnResistance": { "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+      "insulationResistance": { "resistanceMilliOhms": null, "resistanceUncertaintyMilliOhms": null },
+      "expected": { "scoring": "unavailable", "diagnostic": "unavailable" }
+    }
+  ]
+}
