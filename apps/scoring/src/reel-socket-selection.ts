@@ -73,8 +73,30 @@ const definition = {
   releaseState: "deny",
   procurementAuthorized: false,
   decision: {
-    status: "unresolved",
-    selectedCandidate: null,
+    status: "component-selected-validation-unresolved",
+    selectedCandidate: {
+      manufacturer: "Stäubli Electrical Connectors",
+      family: "SLB4-F/A",
+      role: "central-apparatus female socket; install three discrete sockets as one FIE port",
+      selectedParts: [
+        {
+          apparatusPosition: "left",
+          color: "Red",
+          mpn: "23.3070-22",
+          quantityPerFiePort: 3
+        },
+        {
+          apparatusPosition: "right",
+          color: "Blue",
+          mpn: "23.3070-23",
+          quantityPerFiePort: 3
+        }
+      ],
+      selectionBasis:
+        "The exact manufacturer family is an insulated rigid 4 mm panel socket with a published mounting drawing. The parts satisfy the nominal FIE female-contact diameter and make the requested red and blue apparatus-port identification orderable.",
+      releaseLimitation:
+        "This is a component selection only. It is not a plug-fit, retention, environment, apparatus-approval, or production-release claim. The release remains deny until the physical gates pass."
+    },
     candidates: [
       {
         manufacturer: "Favero",
@@ -109,18 +131,24 @@ const definition = {
       {
         apparatusPosition: "left",
         requestedColor: "Red",
-        colorSuffix: null,
-        suffixState: "not published for the unresolved candidates; supplier confirmation is required before any order"
+        colorSuffix: "-22",
+        mpn: "23.3070-22",
+        quantityPerFiePort: 3,
+        suffixState:
+          "manufacturer family color code and current distributor listing verified; sample lot and actual color remain receiving checks"
       },
       {
         apparatusPosition: "right",
         requestedColor: "Blue",
-        colorSuffix: null,
-        suffixState: "not published for the unresolved candidates; supplier confirmation is required before any order"
+        colorSuffix: "-23",
+        mpn: "23.3070-23",
+        quantityPerFiePort: 3,
+        suffixState:
+          "manufacturer family color code and current distributor listing verified; sample lot and actual color remain receiving checks"
       }
     ],
     colorPolicy:
-      "Color is an inspection and service identification only. It does not encode left/right A/B/C, a scoring output, polarity, protective earth, chassis, or processor ground. Green is not selected because the current manufacturer evidence does not establish a required green variant.",
+      "Install three sockets of one color as one apparatus port: red for left and blue for right. Color is an inspection and service identifier only. It does not encode A/B/C, a scoring output, polarity, protective earth, chassis, or processor ground.",
     rejectedBaseline: {
       family: "generic 3-pole XLR",
       reason:
@@ -128,18 +156,43 @@ const definition = {
     }
   },
   normativeInterface: {
-    source: "FIE Material Rules, m.55.4 and m.55.5, December 2025 English edition",
+    source: "FIE Material Rules, August 2026 English edition, m.55.4 through m.55.6",
     plugPins: 3,
     pinDiameterMm: 4,
     arrangement: "straight line",
     outerPinOffsetFromCentreMm: [15, 20],
     fencerEndSocketRequirement:
       "A safety device must prevent use unless the plug is correctly inserted and prevent separation during a bout; the device must be visually verifiable.",
+    centralApparatusRole:
+      "m.55.6 assigns sockets to the spool wires and central electrical apparatus. The m.55.4 retention-device requirement applies to the fencer-end spool socket, not by its text to the central-apparatus socket.",
     connectingCable: "3-core rubber-covered cable for humidity and blows",
     maximumSpoolWireResistanceSocketToSocketOhm: 3,
     maximumConnectingCableWireResistanceOhm: 2.5,
     pinOrderPolicy:
       "The outer-near-15 mm, centre, and outer-far-20 mm physical positions are not assigned to logical A/B/C in M4-10. M0-03 and M4-13 own the released pin map and keying record."
+  },
+  centralApparatusPort: {
+    assembly: "Three Stäubli SLB4-F/A sockets installed on one insulating central-apparatus panel",
+    contactCoordinatesMm: [
+      { position: "outer-near-15 mm", xFromCentre: -15, yFromCentre: 0 },
+      { position: "centre", xFromCentre: 0, yFromCentre: 0 },
+      { position: "outer-far-20 mm", xFromCentre: 20, yFromCentre: 0 }
+    ],
+    selectedSocketMechanicalFacts: {
+      plugSystemDiameterMm: 4,
+      panelCutoutDiameterMm: 12.2,
+      overallLengthMm: 30.5,
+      frontFlangeDiameterMm: 14.5,
+      terminal: "4.8 mm by 0.8 mm flat connecting tab, bend once to 90 degrees maximum",
+      contactMaterial: "CuZn",
+      contactPlating: "Ni",
+      mounting: "M12 by 0.75 threaded panel mount with supplied nut and washer",
+      drawingState: "manufacturer drawing is published in the Stäubli main catalogue and item data sheet"
+    },
+    drawingContract:
+      "The panel drawing must preserve the three stated contact centres. It must cite the Stäubli drawing for each individual mounting hole and show socket-body, terminal, harness, enclosure, and adjacent-port clearance. Do not infer production tolerances beyond the manufacturer drawing.",
+    pinMapState:
+      "No logical A/B/C or piste assignment is released here. M0-03 and M4-13 own the released pin map, keying, bonding, harness and CAD release record."
   },
   matingPlugStudy: {
     samplesToObtain: [
@@ -179,11 +232,11 @@ const definition = {
       contactResistanceMilliOhm: null,
       retentionForceN: null,
       matingCycles: null,
-      contactMaterialOrPlating: null,
-      panelCutoutMm: null,
-      terminalStyle: null,
+      contactMaterialOrPlating: "CuZn contact with Ni surface treatment",
+      panelCutoutMm: 12.2,
+      terminalStyle: "4.8 mm by 0.8 mm flat connecting tab",
       ingressOrSaltRating: null,
-      cadOrMechanicalDrawing: null
+      cadOrMechanicalDrawing: "published manufacturer catalogue drawing and item data sheet"
     },
     engineeringTargets: {
       initialPerContactResistanceMaximumMilliOhm: 50,
@@ -237,11 +290,12 @@ const definition = {
       "Each contact remains at or below the post-qualification resistance maximum",
       "The exposed assembly still meets the full-insertion and service-identification checks"
     ],
-    evidenceState: "not run; candidate material, plating, and environmental rating are unknown"
+    evidenceState:
+      "not run; manufacturer material and plating are published, while salt-screen performance and environmental rating remain unknown"
   },
   physicalEvidenceGates: [
-    "Identify an exact, current, orderable female socket intended for the reel or central apparatus. A bodywire or fencer-end socket such as OK Fencing 17-2017-03 is not acceptable evidence for this role.",
-    "Obtain one lot-controlled sample of each surviving candidate and obtain its exact color suffix or variant code where color is offered. No PO is authorized while the role, identity, or suffix is unresolved.",
+    "Receive and identify one lot-controlled sample each of selected Stäubli 23.3070-22 red and 23.3070-23 blue, three sockets per FIE port. A bodywire or fencer-end socket such as OK Fencing 17-2017-03 is not acceptable for this role.",
+    "Compare the received part, color, terminal, supplied mounting hardware and manufacturer drawing to the exact MPN before building a fixture. Procurement authorization remains false; this is a sample request and acceptance gate, not a production buy release.",
     "Obtain the Favero 910 and 903 mating samples, plus the Allstar comparison cable, and retain photographs and lot or article identifiers.",
     "Measure and record the FIE 4 mm, straight-line, 15 mm and 20 mm geometry on the actual plug and socket, including tolerance and orientation.",
     "Complete panel-stack-up fit, insertion, visual full-insertion, and axial-retention testing with the actual harness termination.",
@@ -249,8 +303,9 @@ const definition = {
     "Freeze the CAD footprint, panel cutout, terminal process, physical pin map, keying, and bonding in the M4-13 release record after this evidence passes."
   ],
   explicitUnknowns: [
-    "No current manufacturer evidence in this study identifies an exact central-apparatus female socket that is both orderable and mechanically documented.",
-    "Favero 900-09 is identified as a three-socket connector on a reel case, not as a central-apparatus standalone part; its current orderability, terminal style, panel cutout, dimensions, and drawing remain unverified.",
+    "Stäubli 23.3070-22 and 23.3070-23 are exact orderable component selections with a published drawing, but neither manufacturer nor FIE evidence proves fit with Favero or Allstar fencing plugs.",
+    "The Stäubli socket accepts spring-loaded 4 mm plugs with a rigid insulating sleeve. The Favero 910 plug's spring construction, sleeve clearance, insertion depth, and mating force are not published in the evidence used here.",
+    "Favero 900-09 is identified as a three-socket connector on a reel case, not as a central-apparatus standalone part; it is comparison evidence only, not the selected central-apparatus component.",
     "Allstar lists an Allstar spool 3 pin socket, but the current listing does not publish an exact MPN, dimensions, panel cutout, terminal style, or drawing.",
     "OK Fencing 17-2017-03 is described by its manufacturer as an epee/bodywire socket and is rejected for the central-apparatus role; its color names do not establish orderable color variants.",
     "Compatibility between any surviving candidate and Favero or Allstar plugs is not established by catalog descriptions; only the physical sample gate can establish it.",
@@ -261,10 +316,32 @@ const definition = {
   ],
   sources: [
     {
-      title: "FIE Material Rules, December 2025 English edition",
-      url: "https://static.fie.org/uploads/38/190667-book%20m%20ang.pdf",
+      title: "FIE Material Rules, August 2026 English edition",
+      url: "apps/scoring/docs/fie-material-rules-2026-08-en.pdf",
       supports:
-        "m.55 three-pin 4 mm straight-line geometry, 15 mm and 20 mm offsets, fencer-end safety device, and wire-resistance limits; m.56 rubber-covered three-core cable"
+        "m.55 three-pin 4 mm straight-line geometry, 15 mm and 20 mm offsets, socket roles, fencer-end safety device, and wire-resistance limits; m.56 rubber-covered three-core cable"
+    },
+    {
+      title: "Stäubli SLB4-F/A manufacturer item data sheet",
+      url: "https://www.staubli.com/content/dam/ecs/technical-documentation/datasheets/TM/23.3070_en.pdf",
+      supports:
+        "manufacturer family 23.3070-*, 4 mm insulated rigid panel socket, CuZn with Ni contact surface, 24 A rating, mounting hardware and flat-tab terminal"
+    },
+    {
+      title: "Stäubli Test accessories main catalogue",
+      url: "https://www.staubli.com/content/dam/ecs/catalogs-brochures/TM/TM-Main-11014124-en.pdf",
+      supports:
+        "SLB4-F/A mechanical drawing, 12.2 mm panel cutout, 14.5 mm front flange, 30.5 mm length, 4.8 mm by 0.8 mm terminal, and available standard colors"
+    },
+    {
+      title: "Current distributor confirmation for Stäubli red variant",
+      url: "https://www.buerklin.com/en/p/staeubli-electrical-connectors/laboratory-connectors/23-3070-22/22F272/",
+      supports: "current exact red MPN 23.3070-22 identity, dimensions and orderability"
+    },
+    {
+      title: "Current distributor confirmation for Stäubli blue variant",
+      url: "https://www.buerklin.com/en/p/staeubli-electrical-connectors/laboratory-connectors/23-3070-23/22F275/",
+      supports: "current exact blue MPN 23.3070-23 identity, dimensions and orderability"
     },
     {
       title: "Favero Millennium Reel technical information and spare-parts manual",

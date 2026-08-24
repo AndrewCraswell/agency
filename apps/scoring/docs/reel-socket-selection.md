@@ -1,117 +1,71 @@
 # M4-10 reel-socket selection and physical plug-fit study
 
-Status: `DENY` for procurement and release. The central-apparatus female socket selection is unresolved. This artifact records candidates and evidence gates for a physical study. It does not approve a part, buy a part, or release a footprint.
+Status: `DENY` for production procurement and release. M4-10 selects the exact **central-apparatus component**, but physical compatibility and the production panel remain unqualified.
 
-## Decision
+## Selected central-apparatus port
 
-No socket is selected. The previous proposal of OK Fencing `17-2017-03` was incorrect for this role: its manufacturer describes it as an **Epee Socket** used with body wires. It remains a rejected bodywire/fencer-end candidate, not evidence of a central-apparatus female socket.
+Use three insulated, discrete Stäubli Electrical Connectors `SLB4-F/A` female 4 mm panel sockets to make each one FIE central-apparatus port. The selected exact parts are:
 
-The current research candidates are Favero `900-09`, identified in the manufacturer's Millennium Reel manual as the **Three sockets connector on reel-case**, and the current Allstar/Uhlmann listing **Allstar spool 3 pin socket**, which has no exact MPN in the listing. Both are reel/spool candidates, not selected central-apparatus parts. Neither has a verified orderable identity, mechanical drawing, or physical fit record for this design.
+| Apparatus position | Part per contact | Quantity per FIE port | Color | Current evidence |
+| --- | --- | ---: | --- | --- |
+| left | Stäubli `23.3070-22`, SLB4-F/A | 3 | Red | Exact MPN, manufacturer data sheet and a current distributor listing |
+| right | Stäubli `23.3070-23`, SLB4-F/A | 3 | Blue | Exact MPN, manufacturer data sheet and current distributor listings |
 
-The study requests `Red` for the apparatus left position and `Blue` for the apparatus right position, but no candidate has a verified manufacturer color suffix or variant code. Supplier confirmation is required before any purchase order is possible.
+This is not an approval to build, purchase production quantity, or release a footprint. It resolves the previously missing exact component, color code, and individual-socket drawing. It does not prove that a Favero or Allstar fencing plug mates safely with this socket. `procurementAuthorized` remains false in the machine-readable artifact.
 
-Color is a service and inspection marker only. It is not a logical signal name and does not encode left/right A/B/C, a scoring output, polarity, protective earth, chassis, or processor ground. Green is intentionally not selected because the current cited manufacturer page does not list it.
+All three sockets in a port use that port's color. Red and blue identify the apparatus position for service and inspection only. They do not identify any logical net, polarity, protective earth, chassis, or processor ground. The released physical pin map remains owned by M0-03 and M4-13.
 
-Generic triangular 3-pole XLRs are rejected as a substitution. Their familiar microphone geometry is not the FIE reel interface.
+## FIE geometry and drawing contract
 
-## Normative interface to measure
+The local August 2026 FIE Material Rules, m.55.6, require the central electrical apparatus to have sockets for the three-pin connecting-cable plugs. The pins are 4 mm diameter in a straight line, with outer contacts 15 mm and 20 mm from the center. m.55.4's visually verifiable retention device applies to the fencer-end socket, not by its text to the central-apparatus socket. m.55.5 limits each connecting-cable wire to 2.5 ohms; m.56.3 calls for a three-core rubber-covered cable. USB-C PD is outside this connector selection and remains unchanged.
 
-The FIE Material Rules, m.55, specify three 4 mm plug pins arranged in a straight line. The two outer pin offsets from the centre are 15 mm and 20 mm. The fencer-end socket must have a visually verifiable safety device that prevents use unless the plug is correctly inserted and prevents separation during a bout. FIE also limits each spool wire socket-to-socket to 3 ohms and each connecting-cable wire to 2.5 ohms. m.56 calls for a three-core rubber-covered connecting cable for humidity and blows.
+The panel drawing must use these coordinates in millimetres, with the centre contact at `(0, 0)`:
 
-M4-10 records the physical positions as `outer-near-15 mm`, `centre`, and `outer-far-20 mm`. It deliberately does not assign those positions to logical A/B/C or `piste`. M0-03 and M4-13 own the released pin map, keying, bonding, and harness record.
+| Physical contact | X | Y |
+| --- | ---: | ---: |
+| outer-near-15 mm | -15 | 0 |
+| centre | 0 | 0 |
+| outer-far-20 mm | 20 | 0 |
 
-## Candidate identities and mating samples
+For each Stäubli socket, the manufacturer documentation provides a 4 mm plug system, 12.2 mm panel cutout, 14.5 mm front flange, 30.5 mm overall length, M12 x 0.75 threaded panel mount, supplied nut and washer, and a 4.8 mm by 0.8 mm flat connecting tab. The drawing owner must preserve the FIE contact centres, then apply the manufacturer's individual-hole drawing and document terminal, harness, enclosure, and adjacent-port clearance. No project tolerance is inferred beyond the manufacturer drawing.
 
-| Role | Candidate catalogue identity | What is frozen | What remains unproven |
-| --- | --- | --- | --- |
-| Reel-case candidate | Favero, `900-09`, Three sockets connector on reel-case | Official manufacturer item identity in the Millennium Reel manual | Standalone current orderability, central-apparatus role, dimensions, panel cutout, terminal style, plating, retention, contact resistance, mating life, and environmental rating |
-| Spool/reel candidate | Allstar/Uhlmann, Allstar spool 3 pin socket | Current catalogue listing and general spool/reel context | Exact MPN, central-apparatus role, dimensions, panel cutout, terminal style, plating, retention, contact resistance, mating life, and environmental rating |
-| Rejected bodywire candidate | OK Fencing, `17-2017-03`, Epee Socket Transparent | Manufacturer, MPN, and published color names | It is not evidence for a central-apparatus socket; its dimensions, panel cutout, terminal style, plating, retention, contact resistance, mating life, and environmental rating are also unverified |
-| Mating sample | Favero art. `910`, 3-PIN PLUG for floor and body cord | Obtain one lot-identified sample | Fit, insertion depth, retention, and electrical contact with the surviving socket candidate |
-| Mating sample | Favero art. `903`, 14 m cable from piste to signalling apparatus with 3-pin plugs | Obtain one lot-identified sample | Fit, insertion depth, retention, and electrical contact with the surviving socket candidate |
-| Comparison sample | Allstar/Uhlmann, Allstar spare spool cable (20M) | Obtain one current catalogue sample if available | Fit and interchangeability; no exact MPN or connector drawing is published in the cited listing |
+The selected socket's published contact material is CuZn with nickel surface treatment. Its published electrical ratings are 24 A and 1000 V CAT III. Those ratings are not a fencing durability, corrosion, plug-fit, or FIE-homologation claim.
 
-The requested color entries are not selections:
+## What physical evidence still blocks release
 
-| Apparatus position | Requested manufacturer color | MPN color suffix | Release state |
-| --- | --- | --- | --- |
-| left | Red | Not published | No candidate selected; supplier confirmation and physical sample required |
-| right | Blue | Not published | No candidate selected; supplier confirmation and physical sample required |
+The Stäubli documentation describes mating with spring-loaded 4 mm plugs with a rigid insulating sleeve. The Favero `910` plug documentation identifies an orderable 3-pin fencing plug, but does not establish that construction, sleeve clearance, insertion depth, or force. FIE nominal geometry is necessary, but does not prove interchangeability.
 
-Do not convert these colors to `left.A`, `left.B`, `left.C`, `right.A`, `right.B`, `right.C`, or `piste`. Those are the logical nets in the seven-conductor contract.
+Before a production decision, the lab must receive and record lot IDs and photographs for one sample of each selected color and these mating samples:
 
-## Physical plug-fit study
-
-Obtain one lot-controlled sample of each surviving candidate and the Favero 910 and 903 plugs. Keep photographs, lot or article identifiers, and the measured setup with the study record.
-
-For every socket and plug pair:
-
-1. Measure contact diameter, straight-line arrangement, and both outer offsets against the FIE values. Record actual tolerances, not only a pass/fail statement.
-2. Mate without force, rocking, or partial insertion. Record insertion depth, full-insertion indication, orientation, and any safety or retention feature.
-3. Repeat with the proposed panel stack-up, gasket, strain relief, and terminated harness. Bare-bench fit is insufficient.
-4. Apply the axial retention test below and record force, direction, dwell, and failure mode.
-5. Monitor continuity while flexing the terminated harness and while applying and removing the retention load.
-
-The current candidate sources do not publish enough mechanical evidence to prove a central-apparatus socket. In particular, the OK Fencing page describes a bodywire socket and cannot be treated as proof of the required role or plug fit.
-
-## Contact, retention, and cycle targets
-
-FIE publishes the whole-wire resistance limits, not a contact-resistance limit for this socket. The following are engineering targets for the physical gate, not FIE requirements or OK Fencing claims:
-
-| Measurement | Target |
+| Sample | Purpose |
 | --- | --- |
-| Initial resistance per mated contact | No more than 50 milliohms |
-| Post-qualification resistance per mated contact | No more than 100 milliohms |
-| Axial retention | No uncommanded separation under a 30 N axial pull held for 10 seconds |
-| Mating life | 5,000 complete insertion and withdrawal cycles |
+| Favero `910`, 3-pin plug | Direct plug fit and contact test |
+| Favero `903`, 14 m reel-apparatus cable | Cable-end plug fit test |
+| Allstar/Uhlmann spare spool cable, if available | Cross-brand comparison only |
 
-The cycle test passes only if there is no latch or retention failure, intermittent open, short, cracked housing, loosened terminal, unacceptable wear, loss of full-insertion indication, or contact resistance above the post-qualification limit. The test fixture must measure the socket, plug, panel, and harness as an assembly.
+For each selected-socket and plug pair, record all of the following:
 
-## Harness termination and electrical boundary
+1. Actual contact diameter, straight-line geometry, both offsets, and orientation.
+2. Insertion without force, rocking, or partial engagement; depth and full-insertion visibility.
+3. Panel-stack-up fit with the actual nut, washer, insulation, harness terminal, strain relief, enclosure, and intended adjacent-port clearance.
+4. Axial pull of 30 N for 10 seconds, direction, movement, and failure mode. This is an engineering target, not an FIE or Stäubli requirement.
+5. Continuity during cable flex and pull, separately measuring mated-contact resistance from wire resistance.
 
-Each socket is a three-conductor branch. The terminal method is not frozen until the selected part's terminal style is confirmed; use the vendor-approved solder or crimp process and a local strain relief so insertion force is not carried by the terminals. M4-13 owns the released three-core rubber-covered cable, gauge/current calculation, physical pin map, keying, and bonding.
+The qualification gate also retains the existing 5,000 mating-cycle and controlled 0.9% sodium-chloride wet/dry screen. Both need the actual full assembly. The 50 milliohm initial limit, 100 milliohm post-qualification limit, 30 N pull, and 5,000-cycle count are project engineering targets, not claims by FIE, Favero, Allstar, or Stäubli.
 
-Before release, the harness study must show:
+## Rejected or comparison evidence
 
-- 100% continuity from every socket contact to its harness endpoint.
-- 100% open/short checks between the three contacts and adjacent sockets.
-- Mated-interface contact resistance measured separately from wire resistance.
-- No bond to protective earth, chassis, or processor ground unless a later approved EMC record requires it.
+Favero `900-09` is a documented reel-case three-socket connector, not a selected or documented central-apparatus part. Allstar/Uhlmann lists an orderable spool 3-pin socket without an exact MPN or drawing. These remain useful comparison samples, not substitutes for the selected Stäubli components.
 
-The `piste` conductor is the conductive piste reference. It is not protective earth, chassis, or processor ground.
-
-## Sweat and salt exposure plan
-
-This screen has not been run. It covers the socket, mating plug, terminal area, panel interface, and harness strain relief, not the powered electronics assembly.
-
-Use a bounded aqueous 0.9% sodium-chloride screening solution. This is an engineering screen, not a claim of compliance with a named corrosion standard. Before execution, the reliability owner must freeze solution pH, wetting volume, fixture, and laboratory record.
-
-1. Record baseline appearance, full insertion, retention, continuity, and per-contact resistance.
-2. Apply the controlled solution to mated and unmated contact areas without immersing the electronics assembly.
-3. Run 10 documented wet/dry cycles, then allow 24 hours of dry recovery.
-4. Repeat insertion, retention, continuity, and contact-resistance measurements.
-5. Inspect contacts, terminals, plating, latch, seal, panel interface, and strain relief for corrosion, residue, swelling, cracks, or looseness.
-
-Pass requires no visible corrosion product or insertion-blocking residue, no intermittent continuity or short under flex and retention checks, each contact at or below 100 milliohms, and retained full-insertion and service-identification behavior.
-
-## Evidence gates and explicit unknowns
-
-The selection remains `DENY` and unresolved until all of these are complete:
-
-- An exact, current, orderable female socket intended for the reel or central apparatus is identified. A bodywire or fencer-end socket such as OK Fencing `17-2017-03` is not acceptable evidence for this role.
-- The supplier confirms the exact MPN, role, color suffix or variant code where applicable, and supplies lot-controlled samples.
-- The Favero 910 and 903 mating samples, and the Allstar comparison cable if available, are physically retained and identified.
-- Actual 4 mm, straight-line, 15 mm, and 20 mm geometry is measured on the proposed mate, with tolerance and orientation recorded.
-- Panel-stack-up fit, full insertion, visual indication, and axial retention are tested with the actual harness termination.
-- The 5,000-cycle test and the sweat/salt screen are completed with contact resistance measured before and after.
-- CAD footprint, panel cutout, terminal process, physical pin map, keying, and bonding are frozen in the M4-13 release record.
-
-Known unknowns are the candidate role and orderability, exact MPN where absent, color suffixes, socket dimensions, CAD, panel cutout, terminal style, contact material or plating, ingress or salt rating, retention force, contact resistance, mating life, and compatibility with Favero or Allstar plugs. The FIE rules do not supply the missing socket-specific limits. The 5,000-cycle, 50 milliohm, 100 milliohm, and 30 N values are engineering targets only.
+OK Fencing `17-2017-03` is an epee/bodywire socket and is rejected for this central-apparatus role. Generic triangular three-pole XLR is rejected because it does not have the FIE straight-line three-contact geometry.
 
 ## Sources
 
-- [FIE Material Rules, December 2025 English edition](https://static.fie.org/uploads/38/190667-book%20m%20ang.pdf), m.55 and m.56.
-- [Favero Millennium Reel technical information and spare-parts manual](https://www.favero.com/get_file.php?id=51&lang=_en), official item identity Art. 900-09, three sockets connector on reel-case, plus Art. 910 and Art. 903.
-- [Favero current fencing reel, cables, connectors and accessories catalogue](https://favero.com/en1_fencing_winding_cables_reel_spools_accessories_and_equipment-18.html), articles 903, 906, and 910.
-- [OK Fencing product 17-2017-03](https://www.okfencing.com/product-220.html), current product identity and published color options; its description identifies an epee/bodywire socket, so it is rejected for the central-apparatus role.
-- [Allstar/Uhlmann scoring equipment catalogue](https://allstaruhlmann.com/product-category/scoring-equipment/), current 3-pin socket, retaining clip, and 20 m spare spool cable listings.
+- Local authoritative evidence: [FIE Material Rules, August 2026 English edition](fie-material-rules-2026-08-en.pdf), m.55 and m.56.
+- [Stäubli SLB4-F/A manufacturer data sheet](https://www.staubli.com/content/dam/ecs/technical-documentation/datasheets/TM/23.3070_en.pdf): family `23.3070-*`, 4 mm socket, contact material and terminal.
+- [Stäubli Test accessories main catalogue](https://www.staubli.com/content/dam/ecs/catalogs-brochures/TM/TM-Main-11014124-en.pdf): individual-socket mechanical drawing and colour family.
+- [Stäubli `23.3070-22` red distributor listing](https://www.buerklin.com/en/p/staeubli-electrical-connectors/laboratory-connectors/23-3070-22/22F272/): exact red MPN, dimensions, and current orderability.
+- [Stäubli `23.3070-23` blue distributor listing](https://www.buerklin.com/en/p/staeubli-electrical-connectors/laboratory-connectors/23-3070-23/22F275/): exact blue MPN, dimensions, and current orderability.
+- [Favero current reels, cables and connectors catalogue](https://www.favero.com/en1_fencing_winding_cables_reel_spools_accessories_and_equipment-18.html): `910` plug and `903` reel-apparatus cable identities.
+- [Favero Millennium Reel technical manual](https://www.favero.com/get_file.php?id=51&lang=_en): `900-09` reel-case comparison part.
+- [Allstar/Uhlmann scoring equipment catalogue](https://allstaruhlmann.com/product-category/scoring-equipment/): spool socket and comparison cable listing.
