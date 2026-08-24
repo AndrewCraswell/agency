@@ -129,8 +129,8 @@ const benchPrototypeContractDefinition = {
       rule: "returns require schematic review; NC positions remain unpopulated; this is not a production body-cord connector"
     },
     stm32Debug: {
-      candidateMpn: "Samtec FTSH-105-01-L-DV-K",
-      signals: ["SWDIO", "SWCLK", "NRST", "SCORING_3V3_SENSE", "SCORING_SGND", "KEYED_ORIENTATION"],
+      candidateMpn: "Samtec FTSH-105-01-L-DV-007-K",
+      signals: ["SWDIO", "SWCLK", "NRST", "SCORING_3V3_SENSE", "SCORING_SGND", "PIN7_OMITTED_KEY"],
       voltageConstraint: "SCORING_3V3_SENSE is sense-only; the adapter must reference SCORING_SGND"
     },
     esp32Service: {
@@ -548,7 +548,8 @@ export function validateBenchPrototypeContract(input: unknown): true {
     interfaces.weaponFixture.scoredConductors.length !== 7 ||
     interfaces.weaponFixture.pins.length !== 12 ||
     interfaces.weaponFixture.pins.filter((pin) => pin === "NC").length !== 2 ||
-    interfaces.stm32Debug.candidateMpn !== "Samtec FTSH-105-01-L-DV-K" ||
+    interfaces.stm32Debug.candidateMpn !== "Samtec FTSH-105-01-L-DV-007-K" ||
+    interfaces.stm32Debug.signals.join(",") !== "SWDIO,SWCLK,NRST,SCORING_3V3_SENSE,SCORING_SGND,PIN7_OMITTED_KEY" ||
     !interfaces.stm32Debug.voltageConstraint.includes("sense-only") ||
     interfaces.esp32Service.candidateMpn !== "Samtec TSW-106-07-G-S" ||
     interfaces.esp32Service.signals.length !== 6 ||

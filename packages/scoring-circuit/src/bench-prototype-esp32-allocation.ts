@@ -96,7 +96,8 @@ const allocationDefinition = {
   recovery: {
     header: "TSW-106-07-G-S",
     signals: ["UART0_RX", "UART0_TX", "BOOT_N", "MANUAL_RESET_ASSERT", "APP_3V3_SENSE", "APP_GND"],
-    bootRule: "BOOT_N may be pulled low only while EN_RESET is asserted",
+    bootRule:
+      "BOOT_N must be driven low before and throughout EN_RESET assertion, held low through the 10 ms post-release sample interval after EN_RESET is released, then released",
     resetRule: "MANUAL_RESET_ASSERT drives a BSS138 open-drain sink; the header must not directly drive EN_RESET",
     externalJtag: "not allocated; GPIO39 through GPIO42 remain HUB75 signals; do not burn JTAG-selection eFuses"
   },
@@ -235,6 +236,13 @@ export function validateBenchPrototypeEsp32Allocation(input: unknown): true {
     new Set(assignedSignals).size !== assignedSignals.length
   ) {
     throw new RangeError("BP-121 must retain the exact N16R2 41-pad allocation without GPIO or signal reuse")
+  }
+
+  if (
+    contract.recovery.bootRule !==
+    "BOOT_N must be driven low before and throughout EN_RESET assertion, held low through the 10 ms post-release sample interval after EN_RESET is released, then released"
+  ) {
+    throw new RangeError("BP-121 BOOT_N must remain low through the explicit post-reset sample interval")
   }
 
   for (const [group, signals] of Object.entries(expectedGroups)) {

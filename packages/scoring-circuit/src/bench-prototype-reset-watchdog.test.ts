@@ -16,6 +16,21 @@ describe("BP-123 reset, supervisor, and watchdog contract", () => {
         expect.objectContaining({ reference: "R_ESP_WD_CWD", mpn: "RC0603FR-0710KL" }),
         expect.objectContaining({ reference: "R_ESP_WDI_PULLUP", mpn: "RC0603FR-07100KL" }),
         expect.objectContaining({ reference: "Q_ESP_RESET_STM", mpn: "BSS138AKA" }),
+        expect.objectContaining({
+          reference: "Q_ESP_DEBUG_RESET",
+          mpn: "BSS138AKA",
+          connections: "source to APP_GND; drain to EN_RESET; gate from MANUAL_RESET_ASSERT through R_DEBUG_RESET_GATE"
+        }),
+        expect.objectContaining({
+          reference: "R_DEBUG_RESET_GATE",
+          mpn: "RC0603FR-0710KL",
+          connections: "MANUAL_RESET_ASSERT to Q_ESP_DEBUG_RESET gate"
+        }),
+        expect.objectContaining({
+          reference: "R_DEBUG_RESET_GATE_PD",
+          mpn: "RC0603FR-07100KL",
+          connections: "Q_ESP_DEBUG_RESET gate to APP_GND"
+        }),
         expect.objectContaining({ reference: "U_APP_RESET_FANOUT", mpn: "SN74LVC2G07DCKR" }),
         expect.objectContaining({ reference: "R_APP_SUPERVISOR_RESET_PULLUP", mpn: "RC0603FR-0710KL" })
       ])
@@ -112,6 +127,30 @@ describe("BP-123 reset, supervisor, and watchdog contract", () => {
     const changedMpn = structuredClone(benchPrototypeResetWatchdog)
     Reflect.set(changedMpn.parts[0]!, "mpn", "FORGED")
     expect(() => validateBenchPrototypeResetWatchdog(changedMpn)).toThrow(RangeError)
+
+    for (const mutate of [
+      (candidate: typeof benchPrototypeResetWatchdog) => {
+        Reflect.set(
+          candidate.parts.find((part) => part.reference === "Q_ESP_DEBUG_RESET")!,
+          "connections",
+          "source to EN_RESET"
+        )
+      },
+      (candidate: typeof benchPrototypeResetWatchdog) => {
+        Reflect.set(candidate.parts.find((part) => part.reference === "R_DEBUG_RESET_GATE")!, "mpn", "FORGED")
+      },
+      (candidate: typeof benchPrototypeResetWatchdog) => {
+        Reflect.set(
+          candidate.parts.find((part) => part.reference === "R_DEBUG_RESET_GATE_PD")!,
+          "connections",
+          "gate to V3_3"
+        )
+      }
+    ]) {
+      const candidate = structuredClone(benchPrototypeResetWatchdog)
+      mutate(candidate)
+      expect(() => validateBenchPrototypeResetWatchdog(candidate)).toThrow(RangeError)
+    }
 
     expect(() => validateBenchPrototypeResetWatchdog({ ...benchPrototypeResetWatchdog, extra: true })).toThrow(
       RangeError

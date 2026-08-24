@@ -64,6 +64,10 @@ The baseline keeps work visible without pretending it is closed:
   until the one-channel experiment and measurements close.
 - Weapon fixture, HUB75, SWD, service, and speaker connectors remain `TBD`
   until sample fit, pinout, mating, and harness evidence closes.
+- BP-124 freezes the SWD candidate as Samtec `FTSH-105-01-L-DV-007-K` with
+  pin 7 omitted and the ESP32 service candidate as Samtec `TSW-106-07-G-S`.
+  Their BOM rows remain `TBD` and DNP until the exact footprint, mating,
+  continuity, orientation, voltage, and recovery evidence is archived.
 - The primary lamp and buzzer output connector is represented by
   `J_PRIMARY_OUTPUTS` and remains `TBD` until its connector, mate, pinout, load
   ratings, and harness are selected.

@@ -108,7 +108,8 @@ describe("BP-010 one-board bench prototype contract", () => {
     expect(benchPrototypeContract.fixedInterfaces.weaponFixture.scoredConductors).toHaveLength(7)
     expect(benchPrototypeContract.fixedInterfaces.weaponFixture.pins).toHaveLength(12)
     expect(benchPrototypeContract.fixedInterfaces.weaponFixture.pins.slice(-2)).toEqual(["NC", "NC"])
-    expect(benchPrototypeContract.fixedInterfaces.stm32Debug.candidateMpn).toBe("Samtec FTSH-105-01-L-DV-K")
+    expect(benchPrototypeContract.fixedInterfaces.stm32Debug.candidateMpn).toBe("Samtec FTSH-105-01-L-DV-007-K")
+    expect(benchPrototypeContract.fixedInterfaces.stm32Debug.signals).toContain("PIN7_OMITTED_KEY")
     expect(benchPrototypeContract.fixedInterfaces.esp32Service.candidateMpn).toBe("Samtec TSW-106-07-G-S")
   })
 

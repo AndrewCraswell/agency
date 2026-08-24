@@ -107,7 +107,7 @@ frees GPIO1 for display output and removes the former GPIO3 strap conflict.
 | 36 | 44 | UART0 RX, service-header receive | input | Keep the existing six-pin service-header function. Use a high-impedance header/bridge so it cannot disturb boot. |
 | 37 | 43 | UART0 TX, service-header transmit | output | Fit the Espressif-recommended TX series resistor and keep the trace short. |
 | 3 | `EN` | hardware reset input | input | `R_ESP_EN_PULLUP` 10 kOhm to `V3_3`, `C_ESP_EN_DELAY` 1 uF to GND, supervisor and watchdog open-drain pulls, reset-combiner sink, and physical service reset access. Never leave floating. |
-| 27 | 0 | `BOOT_N`, service-header only | input at reset | Pull up. Physical service control may pull low only while `EN` is held low to enter download mode. Do not attach a functional load. |
+| 27 | 0 | `BOOT_N`, service-header only | input at reset | Pull up. Drive low before and throughout `EN_RESET` assertion, hold low through the 10 ms post-release sample interval after `EN_RESET` is released, then release. Do not attach a functional load. |
 
 USB Serial/JTAG is an implemented fixed-function bench service path, not a
 general application USB device. USB-OTG and USB Serial/JTAG share the internal
@@ -122,6 +122,13 @@ protection path. USB D-/D+ do not pass through it: they use exact
 `TPD2EUSB30DRTR`, then one matched 22 Ohm resistor per line before GPIO19 and
 GPIO20. There is no second series resistor or alternate data-protection path
 on either line.
+
+The UART0 recovery sequence is deliberately explicit: power off and discharge
+the board before mating the service harness, reapply normal USB-C power only,
+verify `APP_3V3_SENSE` and zero adapter back-power, drive `BOOT_N` low before
+and during reset, retain it for the 10 ms post-release sample interval, then
+release it for ROM download. Power off and discharge again before unmating;
+powered mating, powered unmating, and external adapter power are prohibited.
 
 External JTAG on GPIO39 to GPIO42 is not allocated. Those four pads are needed
 for HUB75 output. Do not burn JTAG-selection eFuses merely to recover this
@@ -209,7 +216,7 @@ change the now-complete GPIO allocation.
 
 | Resource | Required disposition | Current-map effect |
 | --- | --- | --- |
-| GPIO0 | Keep pulled high. Expose only as physical `BOOT_N` with controlled reset sequencing. | BP-121 connects it to the debug header's `BOOT` pin, not a product function. |
+| GPIO0 | Keep pulled high. Expose only as physical `BOOT_N` with controlled reset sequencing. | BP-121 connects it to the service header's `BOOT_N` pin, not a product function. |
 | GPIO3 | Keep electrically quiet at reset because it selects the JTAG source when the relevant eFuse is used. | Reserved and unconnected. External JTAG and its selection eFuse are not part of this product allocation. |
 | GPIO45 | Default weak pull-down selects 3.3 V VDD_SPI when eFuse forcing is not used. | Drives HUB75 `D` only after reset. The pull-down and a high-impedance AHCT input preserve the required strap. |
 | GPIO46 | Default weak pull-down participates in boot mode and ROM-message controls. | Drives HUB75 `CLK` only after reset. The pull-down and a high-impedance AHCT input preserve the required strap. |

@@ -105,8 +105,9 @@ fixture return requiring review, and an ESD return requiring review. Pins 11
 and 12 are NC and remain unpopulated. The fixture connector is not a
 production body-cord connector.
 
-The STM32 debug candidate is Samtec `FTSH-105-01-L-DV-K`, exposing SWDIO,
-SWCLK, NRST, scoring 3.3 V sense, scoring ground, and keyed orientation. The
+The STM32 debug candidate is Samtec `FTSH-105-01-L-DV-007-K` with Cortex pin 7
+omitted, exposing SWDIO,
+SWCLK, NRST, scoring 3.3 V sense, scoring ground, and the pin-7-omitted key. The
 sense line never powers the board. The ESP32 service candidate is Samtec
 `TSW-106-07-G-S`, exposing 3.3 V-compatible UART RX/TX, `BOOT_N`, active-high
 manual reset request, application 3.3 V sense, and `APP_GND`. Use an isolated

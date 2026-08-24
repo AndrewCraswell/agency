@@ -306,7 +306,8 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     function: "STM32 Cortex-style SWD debug header",
     disposition: "TBD",
     quantity: 1,
-    notes: "Samtec FTSH-105-01-L-DV-K is a candidate; exact pinout, keying, and mating cable remain open."
+    notes:
+      "Samtec FTSH-105-01-L-DV-007-K is a candidate with pin 7 omitted; exact footprint, pinout, keying, and mating cable remain open."
   },
   {
     reference: "J_ESP32_SERVICE",
@@ -502,13 +503,13 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "Required exact 10 uF, 10 V tantalum-polymer selection; layout and assembly remain gates."
     ),
     selectedDecisionRow(
-      "U_HUB75_BUF_A",
+      "U_DISPLAY_BUFFER_A",
       "SN74AHCT245PWR",
       "HUB75 signal buffer A",
       "Exact buffer identity is retained for safe blanking; panel header and current remain prototype gates."
     ),
     selectedDecisionRow(
-      "U_HUB75_BUF_B",
+      "U_DISPLAY_BUFFER_B",
       "SN74AHCT245PWR",
       "HUB75 signal buffer B",
       "Exact buffer identity is retained for safe blanking; panel header and current remain prototype gates."
@@ -555,8 +556,8 @@ const requiredExactSelections = new Map([
   ["U_EFUSE", "TPS259474ARPWR"],
   ["C_USB_PD_PPHV", "T523H107M035APE070"],
   ["C_USB_PD_LDO", "T55A106M010C0200"],
-  ["U_HUB75_BUF_A", "SN74AHCT245PWR"],
-  ["U_HUB75_BUF_B", "SN74AHCT245PWR"]
+  ["U_DISPLAY_BUFFER_A", "SN74AHCT245PWR"],
+  ["U_DISPLAY_BUFFER_B", "SN74AHCT245PWR"]
 ])
 
 type ParsedBomRow = {

@@ -41,6 +41,9 @@ describe("BP-121 ESP32-S3 module-pad allocation", () => {
       matchedPairRequired: true
     })
     expect(benchPrototypeEsp32Allocation.recovery.resetRule).toContain("must not directly drive EN_RESET")
+    expect(benchPrototypeEsp32Allocation.recovery.bootRule).toBe(
+      "BOOT_N must be driven low before and throughout EN_RESET assertion, held low through the 10 ms post-release sample interval after EN_RESET is released, then released"
+    )
   })
 
   it("allocates all 13 HUB75 signals while preserving strap and reset-safe defaults", () => {
@@ -83,6 +86,7 @@ describe("BP-121 ESP32-S3 module-pad allocation", () => {
       (candidate: any) => candidate.pads.splice(12, 1),
       (candidate: any) => (candidate.pads[13].gpio = 19),
       (candidate: any) => (candidate.usbService.seriesResistorCount = 4),
+      (candidate: any) => (candidate.recovery.bootRule = "BOOT_N may be pulled low only while EN_RESET is asserted"),
       (candidate: any) => (candidate.unavailableResources.rawExpansionGpios = [3])
     ]) {
       const candidate = structuredClone(benchPrototypeEsp32Allocation)
