@@ -15,10 +15,14 @@ assembly geometry is invented.
 The STM32 HSE and LSE entries are DNP, with no MPN, oscillator, crystal, load,
 or bias network. The ESP32 oscillator remains module-integrated. The ledger
 extracts all 16 references in BP-125's processor-support contract. It reconciles
-`R_ESP_EN_PULLUP` and `C_ESP_EN_DELAY` to BP-123's exact selections; the other
-14 references whose MPN remains intentionally TBD stay DNP until an exact
-selection is reviewed. An added, removed, reordered, or changed BP-125 support
-reference fails provenance validation.
+`R_ESP_EN_PULLUP` and `C_ESP_EN_DELAY` to BP-123's exact selections. The
+`R_STM_BOOT0` and `R_ESP_BOOT_PULLUP` rows now consume BP-125's exact Yageo
+`RC0603FR-0710KL` source record and remain geometry-unclaimed; the other 12
+references whose MPN remains intentionally TBD stay DNP until an exact
+selection is reviewed. The retained source digest is
+`EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497` for
+`docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf`. An added, removed,
+reordered, or changed BP-125 support reference fails provenance validation.
 
 BP-032 also snapshots BP-030's artifact, method, BOM-kind, footprint-closure,
 fabrication-release, and release-state fields. Any change to those method or

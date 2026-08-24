@@ -31,6 +31,24 @@ pad 2 to its ground pads and exposed pad. Exact capacitor MPNs and footprints
 are intentionally `TBD`; their voltage rating, DC-bias derating, impedance,
 placement, and independent footprint evidence remain release gates.
 
+The STM32 BOOT0 pulldown is now selected as Yageo `RC0603FR-0710KL`, a 10 kOhm,
+1%, 0603 / 1608 thick-film resistor. The manufacturer product specification is
+retained at
+[`docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf`](evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf)
+and is bound to SHA-256
+`EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497`. The
+source identifies 0.1 W operation at 70 C, a 75 V maximum continuous voltage,
+and the 0603 / 1608 case. This closes only the exact MPN identity for
+`R_STM_BOOT0`; it does not claim a land pattern, artwork, schematic sign-off,
+or fabrication authority.
+
+The ESP32 `BOOT_N` GPIO0 pullup is also selected as the same Yageo
+`RC0603FR-0710KL` 10 kOhm, 1%, 0603 / 1608 resistor. It is bound to the same
+archived manufacturer source and digest above. This closes only the exact MPN
+identity for `R_ESP_BOOT_PULLUP`; its strap behavior, land pattern, artwork,
+schematic sign-off, and fabrication authority remain subject to their existing
+gates.
+
 ## Boot, reset, unused pins, layout, and release
 
 STM32 BOOT0 has a required 10 kOhm pulldown. ESP32 EN has a 10 kOhm pullup and

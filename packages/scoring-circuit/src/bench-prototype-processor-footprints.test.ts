@@ -47,9 +47,23 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
       benchPrototypeProcessorFootprints.processorSupportReferences.filter(
         (entry) => entry.reconciliation === "DNP-until-exact-selection"
       )
-    ).toHaveLength(14)
+    ).toHaveLength(12)
     expect(benchPrototypeProcessorFootprints.processorSupportReferences).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({
+          reference: "R_STM_BOOT0",
+          mpn: "RC0603FR-0710KL",
+          selectedMpn: "RC0603FR-0710KL",
+          package: "0603",
+          reconciliation: "selected-by-BP-125"
+        }),
+        expect.objectContaining({
+          reference: "R_ESP_BOOT_PULLUP",
+          mpn: "RC0603FR-0710KL",
+          selectedMpn: "RC0603FR-0710KL",
+          package: "0603",
+          reconciliation: "selected-by-BP-125"
+        }),
         expect.objectContaining({
           reference: "R_ESP_EN_PULLUP",
           mpn: "TBD",

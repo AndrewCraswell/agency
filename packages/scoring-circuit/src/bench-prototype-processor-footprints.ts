@@ -213,6 +213,16 @@ const processorSupportLedger = processorSupportSnapshot.map((support) => {
   const selections = resetLedger.filter((part) => part.reference === support.reference)
   if (selections.length > 1) throw new RangeError(`BP-032 has duplicate BP-123 selections for ${support.reference}`)
   const selected = selections[0]
+  if (selected === undefined && support.mpn !== "TBD") {
+    return {
+      ...structuredClone(support),
+      reconciliation: "selected-by-BP-125",
+      selectedMpn: support.mpn,
+      package: packageFor(support.mpn),
+      source: "BP-125 exact manufacturer-source selection",
+      evidence: evidence(support.mpn)
+    }
+  }
   return selected === undefined
     ? {
         ...structuredClone(support),
@@ -427,11 +437,15 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   const unresolvedProcessorSupport = ledger.processorSupportReferences.filter(
     (entry) => entry.reconciliation === "DNP-until-exact-selection"
   )
+  const bp125SelectedSupport = ledger.processorSupportReferences.filter(
+    (entry) => entry.reconciliation === "selected-by-BP-125"
+  )
   const references = [
     ...ledger.populatedReferences,
     ...ledger.debugReferences,
     ...ledger.clockReferences,
-    ...unresolvedProcessorSupport
+    ...unresolvedProcessorSupport,
+    ...bp125SelectedSupport
   ]
   if (
     new Set(references.map((entry) => entry.reference)).size !== references.length ||
@@ -447,6 +461,9 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
     ledger.clockReferences[2].population !== "module-integrated" ||
     ledger.processorSupportReferences.length !== processorSupportSnapshot.length ||
     unresolvedProcessorSupport.some((entry) => entry.selectedMpn !== null || entry.mpn !== "TBD") ||
+    bp125SelectedSupport.some(
+      (entry) => entry.mpn === "TBD" || entry.selectedMpn !== entry.mpn || entry.package === null
+    ) ||
     ledger.processorSupportReferences
       .filter((entry) => entry.reconciliation === "selected-by-BP-123")
       .some(

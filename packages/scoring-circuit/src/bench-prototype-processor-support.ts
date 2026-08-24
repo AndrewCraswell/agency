@@ -131,6 +131,30 @@ const processorSupportDefinition = {
       "Espressif ESP32-S3 Hardware Design Guidelines: schematic checklist and PCB layout"
     ]
   },
+  supportSelectionEvidence: {
+    stm32Boot0Pulldown: {
+      reference: "R_STM_BOOT0",
+      mpn: "RC0603FR-0710KL",
+      manufacturer: "Yageo",
+      sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL",
+      sourceDocument: "Yageo RC0603FR-0710KL manufacturer product specification",
+      generatedOn: "2026-08-24",
+      archivePath: "docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf",
+      archiveSha256: "EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497",
+      observedSpecification: "10 kOhm, 1%, 0.1 W at 70 C, 0603 / 1608, 75 V maximum continuous voltage"
+    },
+    esp32BootPullup: {
+      reference: "R_ESP_BOOT_PULLUP",
+      mpn: "RC0603FR-0710KL",
+      manufacturer: "Yageo",
+      sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL",
+      sourceDocument: "Yageo RC0603FR-0710KL manufacturer product specification",
+      generatedOn: "2026-08-24",
+      archivePath: "docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf",
+      archiveSha256: "EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497",
+      observedSpecification: "10 kOhm, 1%, 0.1 W at 70 C, 0603 / 1608, 75 V maximum continuous voltage"
+    }
+  },
   processors: {
     stm32: {
       part: "STM32G474RET3TR",
@@ -222,7 +246,7 @@ const processorSupportDefinition = {
       boot0: {
         pad: "PB8-BOOT0",
         reference: "R_STM_BOOT0",
-        mpn: "TBD",
+        mpn: "RC0603FR-0710KL",
         value: "10 kOhm pulldown",
         disposition: "required"
       },
@@ -265,7 +289,7 @@ const processorSupportDefinition = {
       gpio0: {
         net: "BOOT_N",
         reference: "R_ESP_BOOT_PULLUP",
-        mpn: "TBD",
+        mpn: "RC0603FR-0710KL",
         value: "10 kOhm pullup",
         rule: "Service fixture may pull low only while EN_RESET is asserted; it may not carry a product function."
       },
@@ -344,6 +368,20 @@ export function validateBenchPrototypeProcessorSupport(value: unknown): true {
     contract.bypassAndBulk.stm32Analog.vref.values[0] !== "100 nF X7R" ||
     contract.bypassAndBulk.stm32Analog.vref.values[1] !== "1 uF X7R" ||
     contract.bypassAndBulk.esp32.values[1] !== "22 uF minimum ceramic" ||
+    contract.bootAndReset.stm32.boot0.mpn !== "RC0603FR-0710KL" ||
+    contract.supportSelectionEvidence.stm32Boot0Pulldown.reference !== "R_STM_BOOT0" ||
+    contract.supportSelectionEvidence.stm32Boot0Pulldown.mpn !== "RC0603FR-0710KL" ||
+    contract.supportSelectionEvidence.stm32Boot0Pulldown.manufacturer !== "Yageo" ||
+    !contract.supportSelectionEvidence.stm32Boot0Pulldown.sourceUrl.startsWith("https://www.yageogroup.com/") ||
+    !/^docs\/evidence\/bp-125\/[^/]+\.pdf$/u.test(contract.supportSelectionEvidence.stm32Boot0Pulldown.archivePath) ||
+    !/^[0-9A-F]{64}$/u.test(contract.supportSelectionEvidence.stm32Boot0Pulldown.archiveSha256) ||
+    contract.bootAndReset.esp32.gpio0.mpn !== "RC0603FR-0710KL" ||
+    contract.supportSelectionEvidence.esp32BootPullup.reference !== "R_ESP_BOOT_PULLUP" ||
+    contract.supportSelectionEvidence.esp32BootPullup.mpn !== "RC0603FR-0710KL" ||
+    contract.supportSelectionEvidence.esp32BootPullup.manufacturer !== "Yageo" ||
+    !contract.supportSelectionEvidence.esp32BootPullup.sourceUrl.startsWith("https://www.yageogroup.com/") ||
+    !/^docs\/evidence\/bp-125\/[^/]+\.pdf$/u.test(contract.supportSelectionEvidence.esp32BootPullup.archivePath) ||
+    !/^[0-9A-F]{64}$/u.test(contract.supportSelectionEvidence.esp32BootPullup.archiveSha256) ||
     contract.bootAndReset.esp32.irReceiver.modulePad !== 28 ||
     contract.bootAndReset.esp32.irReceiver.gpio !== 35 ||
     contract.bootAndReset.esp32.irReceiver.signal !== "IR_RX" ||
