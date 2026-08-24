@@ -125,7 +125,7 @@ implementation has no dependency on an MCU SDK or wall-clock time.
 
 | ID | Status | Latest state | Deliverable | Depends on | Acceptance |
 | --- | --- | --- | --- | --- | --- |
-| M1-01 | backlog | Next after M0-01, M0-07: Audit current epee state machine against the traceability matrix. | Audit current epee state machine against the traceability matrix | M0-01, M0-07 | Existing behavior is either cited and retained or corrected with boundary tests |
+| M1-01 | done | Delivered and root-approved: executable source-fingerprinted audit maps every current epee boolean and resistance branch to EPEE/GEN requirements, verifies both declared commit blobs and current sources, retains exact timing/ground/ordering boundaries, and explicitly defers lamps/audio and C17 migration without granting TypeScript authority. | Audit current epee state machine against the traceability matrix | M0-01, M0-07 | Existing behavior is either cited and retained or corrected with boundary tests |
 | M1-02 | backlog | Next after M1-01, M0-03: Epee exceptional-resistance and grounded-material logical cases. | Epee exceptional-resistance and grounded-material logical cases | M1-01, M0-03 | Golden scenarios cover valid, invalid, simultaneous, and near-lockout contacts on both sides |
 | M1-03 | done | Delivered and root-approved: source-bound foil scorer and contract cover both sides at 12,999/13,000/14,000/15,000 us, target and non-target classification, grounded and equipment-fault containment, indeterminate/unavailable inputs, deterministic ordering, same-side inhibition, and provisional first-signalled-hit lockout. | Foil contact-break and on/off-target state machine | M0-01, M0-03, M0-07 | Tests cover 13/14/15 ms boundaries, target grounding, lame/weapon faults, and lockout |
 | M1-04 | backlog | Next after M1-03: Foil insulation-warning and 450/475 ohm decision contract. | Foil insulation-warning and 450/475 ohm decision contract | M1-03 | Boundary vectors distinguish scoring behavior from diagnostic indication |
@@ -358,6 +358,7 @@ A milestone closes only when:
 4. documents and machine-readable manifests agree with the implementation;
 5. an independent reviewer has resolved every release-blocking comment; and
 6. remaining risks, assumptions, and deferred work are named in the next milestone entry criteria.
+
 
 
 

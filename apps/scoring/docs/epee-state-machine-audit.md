@@ -2,7 +2,8 @@
 
 **Task:** M1-01
 
-**Status:** audited baseline; no released endpoint policy
+**Status:** executable audited baseline; `timing-1` carries the released
+product selection, not an FIE endpoint rule
 
 **Scope:** [`epee.ts`](../src/epee.ts) and its direct unit tests. This is not an
 analogue qualification, a seven-conductor implementation, or M1-02
@@ -17,7 +18,16 @@ EPEE-05. The matrix is authoritative for this audit. Its `45_000 us` value is
 explicitly a product implementation choice inside the FIE 40-50 ms tolerance;
 it is not an FIE constant.
 
-The existing public input is intentionally only a boolean adapter:
+The existing public input is intentionally only a boolean adapter. The
+executable inventory in
+[`epee-state-machine-audit.ts`](../src/epee-state-machine-audit.ts) pins the
+two scorers and their direct boundary suites to their current content. Its
+[`test`](../src/epee-state-machine-audit.test.ts) fails closed if a cited branch
+or source fingerprint drifts, and verifies each declared commit against its
+exact Git blob as well as the current source. It grants no scoring authority
+and requires the C17 migration without a TypeScript scoring fallback.
+
+The boolean adapter is deliberately narrow:
 
 - `isTipClosed: true` represents a confirmed closed `epee-tip-loop`.
 - `isGrounded: true` represents confirmed `epeeGroundedMaterial: grounded`.
@@ -73,20 +83,24 @@ microseconds. The same behavior is now unit-tested at 39,999, 40,000, 45,000,
 | `50_000 us` | No endpoint outcome is stated. | Second side is rejected because it is beyond the selected 45 ms cutoff. | Provisional product behavior, not an FIE endpoint rule. |
 | `> 50_000 us` | Only one lamp must signal. | Second side is rejected. | FIE-required region, subject to the boolean adapter's trusted input. |
 
-The 45 ms behavior is retained only to preserve the existing deterministic
-baseline and golden scenario. It is not a release of INT-02. M1-07 must place a
-reviewed anchor, equality, timing-uncertainty, and rule-revision policy in the
-versioned timing table before firmware or hardware relies on it.
+The 45 ms behavior is the released `timing-1` product selection, supplied to
+the scorer through the validated versioned table. It preserves the existing
+deterministic baseline and golden scenario, but it is not a release of an FIE
+endpoint rule: the authoritative text still leaves the 40 ms and 50 ms
+endpoints and the measurement anchor unresolved. M1-01 records the current
+observed-candidate-start and inclusive-equality policy for C17 parity; it does
+not turn that policy into an FIE constant.
 
 ## Deferred work and review gates
 
-- **M1-02:** model normal 10-ohm and exceptional 100-ohm paths, bounded
-  exceptional-resistance duration behavior, ground-path measurements, and the
-  associated line-fault or uncertainty outcomes. This audit does not treat a
-  missing resistance measurement as a no-hit.
-- **M1-07:** replace the bare `EPEE_RULES` constants with a versioned approved
-  timing table. The existing `timingRevision` in the device emulator is not
-  evidence that the provisional endpoint policy is FIE-approved.
+- **M1-02:** current `epee-resistance.ts` is an explicit fail-closed logical
+  model for exact 10-ohm and 100-ohm measurements, grounded material, and
+  unavailable or uncertain inputs. It is cited by the executable inventory but
+  remains a separate acceptance and fixture task; no finite test duration is
+  inferred from the phrase "without any specific duration".
+- **M1-07:** `timing-1` now replaces bare runtime constants and rejects an
+  unreviewed in-envelope substitute. Its 45 ms value is still a product
+  selection rather than a claim that FIE specifies an exact endpoint.
 - **M1-08 and M1-09:** generate all boundary vectors and add broader symmetry,
   determinism, and property coverage after the rule table is frozen.
 - **M0-03 blockers and M4 work:** the committed logical contract leaves
@@ -101,7 +115,7 @@ versioned timing table before firmware or hardware relies on it.
 ## M1-01 acceptance
 
 The existing behavior is now explicitly traced as retained or corrected. The
-corrected timestamp boundary and retained contact, ground, lockout, and
-ordering boundaries have direct unit evidence. No exceptional-resistance logic,
-front-end redesign, output implementation, or endpoint-policy claim is made by
-this task.
+timestamp, contact, ground, lockout, ordering, resistance, and fail-closed
+diagnostic boundaries have direct unit and executable source-bound evidence.
+No front-end redesign, output implementation, physical-timing claim, or FIE
+endpoint-policy claim is made by this task.
