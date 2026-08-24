@@ -10,8 +10,10 @@ import {
   inArray,
   lte,
   sql,
-  type SQL
+  type SQL,
+  type SQLWrapper
 } from "drizzle-orm"
+import { alias } from "drizzle-orm/pg-core"
 import type { LegislationDatabase } from "../db/database.js"
 import { findChangeEvents, type CanonicalChangeType } from "../db/queries/changes.js"
 import {
@@ -127,20 +129,30 @@ export interface EventSearchInput {
   to?: Date
 }
 
-function billBrowseOrder(sort: BillBrowseInput["sort"]): SQL[] {
+type BillBrowseOrderColumns = {
+  id: SQLWrapper
+  identifier: SQLWrapper
+  introducedAt: SQLWrapper
+  sourceUpdatedAt: SQLWrapper
+  updatedAt: SQLWrapper
+}
+
+function billBrowseOrder(
+  sort: BillBrowseInput["sort"],
+  latestActionAt: SQLWrapper,
+  billTable: BillBrowseOrderColumns
+): SQL[] {
   switch (sort) {
     case "identifier-asc":
-      return [asc(bills.identifier), asc(bills.id)]
+      return [asc(billTable.identifier), asc(billTable.id)]
     case "introduced-desc":
-      return [desc(bills.introducedAt), asc(bills.id)]
+      return [desc(billTable.introducedAt), asc(billTable.id)]
     case "updated-desc":
-      return [desc(bills.updatedAt), asc(bills.id)]
+      return [desc(billTable.updatedAt), asc(billTable.id)]
     default:
       return [
-        desc(
-          sql`coalesce((select max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp)) from ${billActions} where ${billActions.billId} = ${bills.id}), ${bills.sourceUpdatedAt}, ${bills.updatedAt})`
-        ),
-        asc(bills.id)
+        desc(sql`coalesce(${latestActionAt}, ${billTable.sourceUpdatedAt}, ${billTable.updatedAt})`),
+        asc(billTable.id)
       ]
   }
 }
@@ -299,6 +311,48 @@ export interface BillBrowseInput {
   sort?: "identifier-asc" | "introduced-desc" | "latest-action-desc" | "updated-desc"
   status?: string[]
   subject?: string[]
+}
+
+export function buildBillBrowseQuery(
+  database: LegislationDatabase,
+  input: BillBrowseInput,
+  limit: number,
+  offset: number
+) {
+  const browseBill = alias(bills, "browse_bill")
+  const billActionPredicate = eq(billActions.billId, browseBill.id)
+  const latestActions = database
+    .select({
+      latestActionAt: sql<Date | null>`max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))`
+        .mapWith(billActions.actionAt)
+        .as("latest_action_at")
+    })
+    .from(billActions)
+    .where(billActionPredicate)
+    .as("latest_actions")
+
+  return database
+    .select({
+      bill: browseBill,
+      latestActionAt: latestActions.latestActionAt
+    })
+    .from(browseBill)
+    .leftJoinLateral(latestActions, sql`true`)
+    .where(
+      and(
+        input.jurisdictionId === undefined ? undefined : eq(browseBill.jurisdictionId, input.jurisdictionId),
+        input.sessionId === undefined ? undefined : eq(browseBill.sessionId, input.sessionId),
+        input.identifier === undefined ? undefined : sql`${browseBill.identifier} ilike ${`${input.identifier}%`}`,
+        input.classification === undefined ? undefined : arrayOverlaps(browseBill.classification, input.classification),
+        input.status === undefined ? undefined : inArray(browseBill.status, input.status),
+        input.subject === undefined ? undefined : arrayContains(browseBill.subjects, input.subject),
+        input.introducedFrom === undefined ? undefined : gte(browseBill.introducedAt, input.introducedFrom),
+        input.introducedTo === undefined ? undefined : lte(browseBill.introducedAt, input.introducedTo)
+      )
+    )
+    .orderBy(...billBrowseOrder(input.sort, latestActions.latestActionAt, browseBill))
+    .limit(limit + 1)
+    .offset(offset)
 }
 
 export interface DocumentSectionLookup {
@@ -496,31 +550,7 @@ export class LegislationQueryService {
   async browseBills(input: BillBrowseInput) {
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeOffset(input.cursor)
-    const rows = await this.#database
-      .select({
-        bill: bills,
-        latestActionAt: sql<Date | null>`(
-          select max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))
-          from ${billActions}
-          where ${billActions.billId} = ${bills.id}
-        )`
-      })
-      .from(bills)
-      .where(
-        and(
-          input.jurisdictionId === undefined ? undefined : eq(bills.jurisdictionId, input.jurisdictionId),
-          input.sessionId === undefined ? undefined : eq(bills.sessionId, input.sessionId),
-          input.identifier === undefined ? undefined : sql`${bills.identifier} ilike ${`${input.identifier}%`}`,
-          input.classification === undefined ? undefined : arrayOverlaps(bills.classification, input.classification),
-          input.status === undefined ? undefined : inArray(bills.status, input.status),
-          input.subject === undefined ? undefined : arrayContains(bills.subjects, input.subject),
-          input.introducedFrom === undefined ? undefined : gte(bills.introducedAt, input.introducedFrom),
-          input.introducedTo === undefined ? undefined : lte(bills.introducedAt, input.introducedTo)
-        )
-      )
-      .orderBy(...billBrowseOrder(input.sort))
-      .limit(limit + 1)
-      .offset(offset)
+    const rows = await buildBillBrowseQuery(this.#database, input, limit, offset)
     const truncated = rows.length > limit
     return {
       items: rows.slice(0, limit).map(({ bill, latestActionAt }) => ({ ...bill, latestActionAt })),

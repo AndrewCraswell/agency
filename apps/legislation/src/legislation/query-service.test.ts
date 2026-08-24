@@ -1,5 +1,35 @@
-import { describe, expect, it } from "vitest"
-import { documentBackedAmendmentId, projectDocumentBackedAmendment } from "./query-service.js"
+import { drizzle } from "drizzle-orm/node-postgres"
+import pg from "pg"
+import { afterAll, describe, expect, it } from "vitest"
+import * as schema from "../db/schema/schema.js"
+import { buildBillBrowseQuery, documentBackedAmendmentId, projectDocumentBackedAmendment } from "./query-service.js"
+
+const pool = new pg.Pool({ connectionString: "postgresql://query-service-test.invalid/legislation" })
+const database = drizzle(pool, { schema })
+
+afterAll(async () => {
+  await pool.end()
+})
+
+describe("bill browse query", () => {
+  it("computes latest action once and reuses it for latest-action-desc ordering", () => {
+    const query = buildBillBrowseQuery(
+      database,
+      { jurisdictionId: "jurisdiction:ak", sort: "latest-action-desc" },
+      100,
+      0
+    )
+    const generated = query.toSQL().sql
+
+    expect(generated.match(/max\(coalesce/g)).toHaveLength(1)
+    expect(generated).toContain("left join lateral")
+    expect(generated).toContain('"latest_action_at"')
+    expect(generated).toContain('"legislation"."bill_actions"."bill_id" = "browse_bill"."id"')
+    expect(generated).toMatch(
+      /order by coalesce\("latest_action_at", "browse_bill"\."source_updated_at", "browse_bill"\."updated_at"\) desc, "browse_bill"\."id" asc/
+    )
+  })
+})
 
 describe("document-backed amendments", () => {
   it("uses a stable amendment ID and preserves published metadata", () => {
