@@ -26,6 +26,15 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 6 | SC-001 | P2 | done | Root-approved shared weapon-input topology is renderer-verified across logical and physical circuit models; board-specific connector labels remain distinct |
 | 7 | SC-002 | P2 | ready | Harness MPN and pin data have multiple manually maintained sources |
 | 8 | SC-003 | P3 | intake | The retained logical board model is a 1,100-line mixed-domain composition |
+| 9 | SD-006 | P1 | blocked | ESP32 services and receiver disagree on identifier validity; intake waits for FW-004 |
+| 10 | SD-009 | P1 | ready | Remote gesture timing still uses milliseconds instead of canonical microseconds |
+| 11 | SD-010 | P2 | ready | Replay duplicates the canonical decision-record validator and clone |
+| 12 | SD-011 | P2 | ready | Replay duplicates application-time annotation validation |
+| 13 | SD-007 | P2 | ready | Scenario display and fixture schemas duplicate vocabulary predicates |
+| 14 | SD-008 | P2 | intake-blocked-on-active-units | Strict immutable-data helpers are copied across app and circuit contracts |
+| 15 | SC-004 | P2 | ready | Generated board reports are nondeterministic and embed a localhost simulator URL |
+| 16 | FW-005 | P2 | ready | Native CMake warning and coverage policies are duplicated and have drifted |
+| 17 | SC-005 | P3 | ready | Circuit test setup is repeated across eight files |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -111,8 +120,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 
 - Priority: `P2`
 - State: `done`
-- Latest state: Root review confirmed one shared weapon-input-topology contract drives both models, removes the invented TBD front-end footprint and obsolete piste-through-left-ESD route, preserves connector-specific labels, and passes 17 focused helper and generated-Circuit-JSON tests after the runtime schema fix.
-- Affected files: [`packages/scoring-circuit/src/index.circuit.tsx`](../../../packages/scoring-circuit/src/index.circuit.tsx) (lines 3-53) and [`packages/scoring-circuit/src/scoring-io-board.circuit.tsx`](../../../packages/scoring-circuit/src/scoring-io-board.circuit.tsx) (lines 14-59), plus their tests.
+- Latest state: Root review confirmed one shared `weapon-input-topology.tsx` contract drives both models, removes the invented TBD front-end footprint and the obsolete piste-through-left-ESD route, preserves connector-specific labels, and passes 17 focused helper and generated-Circuit-JSON tests after the runtime schema fix.
+- Affected files: [`packages/scoring-circuit/src/index.circuit.tsx`](../../../packages/scoring-circuit/src/index.circuit.tsx), [`packages/scoring-circuit/src/scoring-io-board.circuit.tsx`](../../../packages/scoring-circuit/src/scoring-io-board.circuit.tsx), [`packages/scoring-circuit/src/weapon-input-topology.tsx`](../../../packages/scoring-circuit/src/weapon-input-topology.tsx), and their tests.
 - Description and evidence: both `WeaponInput` functions declare `U_ESD_L/R`, the placeholder analog front end, the A/B/C signal traces, ESD return, signal ground, and 3.3 V. The logical model uses `J_L/J_R` with A/B/C labels; the physical scoring-I/O model uses the selected harness references and physical footprint metadata. The internal protection/front-end topology is nevertheless manually duplicated.
 - Impact: a pin-label, ESD return, front-end pin, or shared trace change can update one model and leave the other inconsistent. Since the logical model is retained as architecture evidence and the physical model feeds prototype planning, drift is especially hard to spot from a single board preview.
 - Bounded remediation: extract one private helper for the shared ESD/front-end group and its six signal/power traces. Pass only the connector reference and its A/B/C endpoint labels; keep the logical connector, harness component, footprint decisions, coordinates, and board-specific traces in each caller.
@@ -153,6 +162,87 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
   - `@repo/scoring-circuit` build output has identical component/trace names, counts, and board envelope before and after the split.
   - `index.test.tsx` and the generated preview checks pass.
   - Each private section has one clear domain responsibility and no new public export.
+
+## SD-006: unify ESP32 identifier validation
+
+- Priority: `P1`
+- State: `blocked`
+- Latest state: The mismatch is evidenced and bounded; implementation waits for FW-004 so receiver validation is not edited concurrently.
+- Affected files: `firmware/esp32/src/scoring_esp32_services.c`, `firmware/esp32/src/scoring_esp32_receiver.c`, and their host tests.
+- Description: services currently accept empty or embedded-NUL identifiers that the receiver rejects for the same public identifier type.
+- Impact: boot and device identity validity depends on which ESP32 API receives the value.
+- Bounded remediation: introduce one private validator with an explicit nonempty policy and cover empty, embedded-NUL, terminal-NUL, and maximum-length inputs through both APIs.
+- Non-goals: do not change public wire formats, identity ownership, or add a general validation framework.
+
+## SD-007: share scenario-display schema predicates
+
+- Priority: `P2`
+- State: `ready`
+- Affected files: `src/scenario-display-projection.ts`, `src/scenario-display-fixtures.ts`, and their focused tests.
+- Description: decision, signal, diagnostic, timestamp, and vocabulary predicates are independently reimplemented; the two record guards already disagree about arrays.
+- Impact: fixture parsing and display projection can accept different shapes after a vocabulary or boundary change.
+- Bounded remediation: share only the common display signal, decision, and diagnostic predicates while retaining fixture-specific document bounds and expected-ID checks locally.
+- Non-goals: do not create a generic schema library or merge scenario execution with display projection.
+
+## SD-008: consolidate strict immutable-data helpers
+
+- Priority: `P2`
+- State: `intake-blocked-on-active-units`
+- Affected files: the strict copies in `apps/scoring/src`, plus behaviorally identical copies across `packages/scoring-circuit/src` such as `bench-prototype-analog-footprint-closure.ts`, `bench-prototype-application-footprints.ts`, `bench-prototype-fixture-harness.ts`, and `bench-prototype-reset-watchdog.ts` after active M4, remote-control, and PCB units settle.
+- Description: security-sensitive `deepFreeze`, plain-record, and exact-data-graph implementations are copied across engineering contracts.
+- Impact: alias, accessor, prototype, and symbol rejection semantics can drift and fixes must be repeated.
+- Bounded remediation: after overlapping work closes, extract one private helper with caller-supplied error labels and migrate only behaviorally identical strict copies.
+- Non-goals: do not migrate simpler trusted-object freezing or publish a monorepo-wide abstraction.
+
+## SC-004: make generated board artifacts deterministic and portable
+
+- Priority: `P2`
+- State: `ready`
+- Affected file: `packages/scoring-circuit/src/build.ts`.
+- Description: the readiness report embeds the current wall-clock timestamp and the board page hardcodes a workstation-only `127.0.0.1:4178` simulator URL.
+- Impact: identical board builds have different hashes, and non-local artifacts contain an environment-specific link.
+- Bounded remediation: derive a stable report identity from canonical circuit/readiness inputs, omit runtime timestamps, and make the simulator link an explicit build setting or relative deployment link.
+- Acceptance: two identical builds produce identical report/page hashes, while non-local builds contain no unintended localhost URL.
+
+## SC-005: centralize repeated tscircuit test setup
+
+- Priority: `P3`
+- State: `ready`
+- Affected files: the repeated `new Circuit()` setup in analog-coupon, communications-module, index, manufacturer-footprint-adapter, part-readiness, and physical-board-model tests.
+- Description: fourteen setup blocks repeat materially identical circuit construction and option wiring across eight test files.
+- Impact: rendering-option changes require repeated edits and can leave suites using subtly different setup.
+- Bounded remediation: with the tscircuit runtime repaired, add one test-only helper with explicit PCB/schematic options while preserving each suite's current rendering mode.
+- Non-goals: do not introduce a production circuit abstraction or hide component-specific assertions.
+
+## SD-009: migrate remote gesture timing to canonical microseconds
+
+- Priority: `P1`
+- State: `ready`
+- Affected files: `apps/scoring/src/remote-button-gestures.ts` and its focused tests.
+- Description: the reducer exposes `atMs`, `lastAtMs`, and millisecond timeout/window fields while the canonical device clock uses safe-integer microseconds.
+- Impact: adapters can introduce a 1,000-times conversion error or lose sub-millisecond ordering when remote input joins virtual, C17, or hardware timelines.
+- Bounded remediation: rename the fields and constants to `Us`, apply the shared integer-microsecond guard, and migrate focused fixtures without changing gesture semantics.
+- Non-goals: do not move remote gestures into the scoring core or create a new clock abstraction.
+
+## SD-010: use the decision-record parser as replay's sole record validator
+
+- Priority: `P2`
+- State: `ready`
+- Affected files: `apps/scoring/src/replay-renderer.ts`, `decision-record.ts`, and focused tests.
+- Description: replay independently validates the complete decision-record shape, then calls `parseDecisionRecord` and manually clones the same record again.
+- Impact: every record-contract change requires synchronized validation edits and can make replay reject or reinterpret an otherwise canonical record.
+- Bounded remediation: rely on `parseDecisionRecord` and its immutable result; retain only replay-specific annotation validation and model assembly.
+- Non-goals: do not merge replay rendering with the record schema or add a generic validation framework.
+
+## SD-011: centralize application-time annotation parsing
+
+- Priority: `P2`
+- State: `ready`
+- Affected files: `apps/scoring/src/application-time-metadata.ts`, `replay-renderer.ts`, and focused tests.
+- Description: replay repeats wall-clock bounds, monotonic identity, ordering, and record-correlation rules already owned by the application-time producer.
+- Impact: producer and replay acceptance can drift, undermining deterministic offline ordering and uncertainty display.
+- Bounded remediation: export one strict parser that accepts the associated decision record and make replay consume it.
+- Non-goals: do not add wall-clock authority to the scoring record or scoring core.
 
 ## Explicit YAGNI exclusions
 
@@ -234,3 +324,17 @@ truth.
   - Accepted, ignored, duplicate, out-of-order, malformed, unavailable, journal-full, journal-corrupt, and sequence-exhausted cases preserve their current result, receipt, degraded-link, and cursor behavior.
   - Private frame classification can be tested without journal mutation, and private journal projection can be tested without reimplementing frame decoding.
   - The public receive function coordinates the helpers rather than directly containing both frame-parser details and journal state-transition logic.
+
+## FW-005: consolidate native CMake safety policy
+
+- Priority: `P2`
+- State: `ready`
+- Affected files: the STM32, ESP32, and product-update `CMakeLists.txt` files plus a private `apps/scoring/firmware/cmake` policy module.
+- Description: C17, LLVM coverage, and compiler-warning setup is repeated across native targets; ESP32 and product-update enable `-Wconversion` and `-Wsign-conversion`, while STM32 host/target code does not.
+- Impact: first-party C is compiled under unequal implicit-conversion safety and every toolchain-policy change requires synchronized edits across three projects and multiple test targets.
+- Bounded remediation: provide private CMake functions for baseline C17, warning, and Clang coverage policy while leaving STM32 freestanding, CPU, linker, and target-specific flags local.
+- Non-goals: do not introduce a shared HAL, C++ layer, generic firmware framework, or weaken target-specific warnings.
+- Acceptance checks:
+  - All three native host projects and the STM32 target configure and build.
+  - A configure-time assertion proves every first-party native target receives the baseline warning policy.
+  - `node apps/scoring/firmware/tools/check-coverage.mjs` still passes the 100-percent core and 80-percent other-source gates.
