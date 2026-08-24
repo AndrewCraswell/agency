@@ -13,8 +13,8 @@ An endpoint is not **Done** merely because a route handler exists. Each phase is
 the verification listed below. The endpoint contract remains the source of truth for request and response bodies.
 The execution gate is the [local smoke and MCP parity checklist](http-api-local-smoke-and-parity.md). This ledger was
 last reconciled with the reviewed implementation and authenticated scoped-bills smoke on 2026-08-24. Two scoped bill
-collections have the smoke and reviewed-commit evidence required for **Done**. Current totals are 7 **In progress**,
-78 **Blocked**, 0 **Ready**, and 2 **Done** across 87 endpoints.
+collections have the smoke and reviewed-commit evidence required for **Done**. Current totals are 11 **In progress**,
+74 **Blocked**, 0 **Ready**, and 2 **Done** across 87 endpoints.
 
 ## Delivery phases
 
@@ -24,10 +24,10 @@ collections have the smoke and reviewed-commit evidence required for **Done**. C
 | API-01 | Shared HTTP foundation | In progress | Root review accepted the routing/envelope/error foundation and focused protocol tests. Conditional caching, composed authenticated local smoke, repository-wide verification, and the reviewed commit remain. |
 | API-02 | Canonical legislative reads | In progress | Root review accepted the current core-read handler foundation and focused tests. Complete canonical contract projections, missing filters/relationships, source links, authenticated database smoke, parity evidence, and the reviewed commit. |
 | API-03 | Civic graph, meetings, search, and diffs | In progress | Root review accepted the current civic/search handler foundation and focused validation. Complete canonical projections, missing filters/relationships, truthful model metadata, database-backed smoke/parity evidence, and the reviewed commit. |
-| API-04 | Subscriptions and webhooks | Blocked | Root review accepted the uncomposed schema, service, route, SSRF, and encrypted-secret foundations. The subscription PostgreSQL repository now provides scope-aware CRUD/list/event/delivery persistence, revision-guarded transactions, transactional event/audit writes, and an encrypted 24-hour idempotency boundary. Route composition, documented event/delivery filters, event matcher/materializer, delivery attempt workers, KMS-backed `WebhookSecretProtector`, pinned outbound verification/delivery executors, retry/dead-letter worker, and the authorization adapter remain missing. |
+| API-04 | Subscriptions and webhooks | In progress | The authenticated subscription read routes are composed with scope-aware persistence, documented filters, keyset pagination, and focused tests. They await remote authenticated smoke and MCP parity. Subscription mutations and all webhook routes remain blocked on the matcher/materializer, delivery workers, KMS-backed `WebhookSecretProtector`, pinned outbound verification/delivery executors, retry/dead-letter worker, and remaining authorization composition. |
 | API-05 | Local smoke and parity | In progress | The scoped-bills composed-server profile has passed locally. Execute the remaining authenticated fixture, canonical projection, pagination, negative-path, model-routing, and MCP-parity checks per product; do not promote an endpoint on handler-unit evidence alone. |
 | API-06 | Railway API release | Done | `legislation-api` is deployed at the recorded Railway release. `WORKOS_API_AUDIENCE` isolates the API token audience from the MCP resource audience. Health, readiness, unauthenticated API/MCP challenges, and the authenticated scoped-bills remote smoke passed; the rollback target is documented. |
-| API-07 | MCP HTTP migration | In progress | The rollback-safe HTTP and hybrid query adapters are committed, but production remains explicitly `in-process`; the hybrid HTTP-method allowlist is empty. Complete the full parity suite, enable one bounded canary method only after its remote parity passes, and cut over only after the broader gate passes. |
+| API-07 | MCP HTTP migration | Blocked | Production remains explicitly `in-process`. Per product decision, do not enable a production HTTP canary or cut over any MCP method until every one of the 87 API endpoints is **Done** and the full parity suite passes. |
 | API-08 | Hardening and completion | Blocked | Generate and validate OpenAPI, add rate limits and observability, validate daily incremental behavior, finish blocked data/provider work, update every endpoint state, run scoped and repository verification, and commit final documentation. |
 
 ## Review and commit protocol
@@ -45,8 +45,9 @@ For each deliverable:
 
 Root review has accepted the current shared, core-read, civic/search, and subscription-security foundations. **In
 progress** below therefore means the route has reviewed implementation and focused tests but still lacks one or more of
-the exact contract projection, live database smoke, MCP parity, or reviewed-commit gates. Subscription handlers remain
-intentionally uncomposed and **Blocked**.
+the exact contract projection, live database smoke, MCP parity, or reviewed-commit gates. The four subscription read
+handlers are composed and await remote authenticated smoke and MCP parity. Subscription mutations and webhook handlers
+remain intentionally uncomposed and **Blocked**.
 
 ### Legislative records and documents
 
@@ -140,13 +141,13 @@ intentionally uncomposed and **Blocked**.
 
 | Method | Path | State | Current gate |
 | --- | --- | --- | --- |
-| GET | `/api/subscriptions` | Blocked | Reviewed uncomposed route/service foundation exists; the durable scope-aware repository and keyset list query now exist, but route composition/authorization and the documented filters remain. |
+| GET | `/api/subscriptions` | In progress | Authenticated route composition, scope-aware persistence, documented filters, and keyset pagination are implemented and focused-tested. Remaining gate: remote authenticated smoke and MCP parity. |
 | POST | `/api/subscriptions` | Blocked | Durable scope-aware repository, transactional event/audit writer, and encrypted 24-hour idempotency boundary now exist; matcher/materializer, delivery executors, and route composition/authorization remain. |
-| GET | `/api/subscriptions/{subscriptionId}` | Blocked | Reviewed scope checks and durable scope-aware lookup now exist; route composition/authorization adapter remains. |
+| GET | `/api/subscriptions/{subscriptionId}` | In progress | Authenticated scope-aware lookup and ETag route composition are implemented and focused-tested. Remaining gate: remote authenticated smoke and MCP parity. |
 | PATCH | `/api/subscriptions/{subscriptionId}` | Blocked | Reviewed revision/validation foundation, durable scope/revision transaction, and encrypted replay boundary now exist; route composition/authorization adapter remains. |
 | DELETE | `/api/subscriptions/{subscriptionId}` | Blocked | Durable scope/revision cancellation, transactional event/audit writer, and encrypted replay boundary now exist; delivery shutdown and route composition/authorization remain. |
-| GET | `/api/subscriptions/{subscriptionId}/events` | Blocked | Durable scope-aware keyset event query now exists; documented filters, event matcher/materializer, and route composition/authorization remain. |
-| GET | `/api/subscriptions/{subscriptionId}/deliveries` | Blocked | Durable scope-aware keyset delivery query now exists; documented filters, attempt workers, and route composition/authorization remain. |
+| GET | `/api/subscriptions/{subscriptionId}/events` | In progress | Authenticated scope-aware event listing, documented filters, and keyset pagination are implemented and focused-tested. Remaining gate: remote authenticated smoke and MCP parity. Event matching/materialization remains a mutation-delivery prerequisite, not a read-route prerequisite. |
+| GET | `/api/subscriptions/{subscriptionId}/deliveries` | In progress | Authenticated scope-aware delivery listing, documented filters, and keyset pagination are implemented and focused-tested. Remaining gate: remote authenticated smoke and MCP parity. Attempt workers remain a mutation-delivery prerequisite, not a read-route prerequisite. |
 | GET | `/api/webhooks` | Blocked | Reviewed uncomposed route/service foundation exists; durable repository and composition/authorization adapter are missing. |
 | POST | `/api/webhooks` | Blocked | Nominal encrypted-secret boundary exists; KMS protector, durable repository, encrypted replay, and verification executor are missing. |
 | GET | `/api/webhooks/{webhookId}` | Blocked | Reviewed scope checks exist; durable repository and composition adapter are missing. |
@@ -160,12 +161,12 @@ intentionally uncomposed and **Blocked**.
 The MCP remains on its current application service until all of these are true:
 
 - the Railway API deployment is terminal `SUCCESS` and authenticated smoke tests pass;
-- every MCP-mapped endpoint used in the canary is **Done**;
+- every one of the 87 API endpoints is **Done** before any production MCP HTTP canary or cutover;
 - an HTTP client preserves canonical IDs, pagination, error semantics, timeouts, and trace context;
 - MCP-vs-HTTP fixtures show no material result loss for bills, amendments, votes, documents, meetings, and search;
 - a configuration switch can immediately restore the in-process adapter without a redeploy;
 - the remote canary shows acceptable latency and no authorization or provider regression.
 
 The current release evidence and remaining MCP-cutover gate are recorded in
-[the Railway API release record](http-api-railway-release.md). The endpoint matrix is 7 **In progress**, 78
+[the Railway API release record](http-api-railway-release.md). The endpoint matrix is 11 **In progress**, 74
 **Blocked**, and 2 **Done** routes; the two scoped bill collections are the only completed endpoint rows.
