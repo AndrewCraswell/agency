@@ -1,6 +1,7 @@
 import {
   analogBudget,
   resistanceErrorForVoltageErrorOhms,
+  sourceTheveninResistanceOhms,
   sourceResistorTemperatureErrorOhms,
   switchChargeErrorOhms
 } from "./analog-model.js"
@@ -75,13 +76,6 @@ export const ovpBufferCandidate = {
 
 function requireFiniteNonNegative(name: string, value: number): void {
   if (!Number.isFinite(value) || value < 0) throw new RangeError(`${name} must be finite and non-negative`)
-}
-
-function sourceTheveninResistanceOhms(externalResistanceOhms: number): number {
-  return (
-    (analogBudget.sourceResistanceMaximumOhms * externalResistanceOhms) /
-    (analogBudget.sourceResistanceMaximumOhms + externalResistanceOhms)
-  )
 }
 
 function sourceSenseVoltage(externalResistanceOhms: number): number {

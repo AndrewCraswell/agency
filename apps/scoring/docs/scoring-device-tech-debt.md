@@ -578,6 +578,18 @@ truth.
 - Acceptance: missing, malformed, non-finite, and invalid nested values reject identically at both boundaries; valid panel and power results remain unchanged.
 - Non-goals: no schema library, generic parser, public data-shape change, or display/power redesign.
 
+## SC-014: reuse the canonical analog Thevenin calculation
+
+- Priority: `P2`
+- State: `done`
+- Latest state: Root review removed the duplicate formula and routed the OVP buffer through the canonical analog-model helper. The focused analog suites pass 17 tests; direct TypeScript, lint, and format checks pass with no public result change.
+- Affected file: `packages/scoring-circuit/src/analog-ovp-buffer.ts` and existing focused analog tests.
+- Description: the OVP buffer repeated the source-resistance parallel-combination formula already owned by `analog-model.ts`.
+- Impact: a reviewed model change could update one calculation while leaving the protection analysis numerically stale.
+- Bounded remediation: import and reuse `sourceTheveninResistanceOhms` and remove only the local duplicate.
+- Acceptance: focused model and OVP-buffer results remain unchanged and only one production formula remains.
+- Non-goals: no generic math abstraction, analog API change, model redesign, or new physical claim.
+
 ## FW-006: make the ESP32 receiver the sole authoritative-record ingress
 
 - Priority: `P1`
