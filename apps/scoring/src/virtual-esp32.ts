@@ -10,7 +10,7 @@
 
 import { parseDecisionRecord, type DecisionRecord } from "./decision-record.js"
 import { TransportFrameError, decodeTransportFrame, type TransportFrameErrorCode } from "./transport-frame.js"
-import { resolveVirtualProcessorLinkDelivery, type VirtualLinkAttempt } from "./virtual-processor-link.js"
+import type { VirtualLinkAttempt } from "./virtual-processor-link.js"
 
 export const DEFAULT_VIRTUAL_ESP32_MAX_RECORDS = 256
 export const MAX_VIRTUAL_ESP32_MAX_RECORDS = 1_024
@@ -473,11 +473,6 @@ export function createVirtualEsp32(options: VirtualEsp32Options): VirtualEsp32 {
     isReceiving = true
     try {
       try {
-        const authenticatedDelivery = resolveVirtualProcessorLinkDelivery(delivery)
-        if (authenticatedDelivery === null) {
-          throw new TypeError("Virtual ESP32 delivery was not issued by the virtual processor link")
-        }
-        delivery = authenticatedDelivery
         assertDeliveredStm32Attempt(delivery)
       } catch {
         return reject("delivery", null)

@@ -1,14 +1,8 @@
 import { manufacturerFootprintProps } from "./manufacturer-footprint-adapter.js"
-import { weaponInputTopology, WeaponInputTraces } from "./weapon-input-topology.js"
 
 const weaponConnectorPins = { pin1: "A", pin2: "B", pin3: "C" } as const
-const weaponConnectorEndpointLabels = { a: "A", b: "B", c: "C" } as const
 
 function WeaponInput({ side, x }: { side: "L" | "R"; x: number }) {
-  const topology = weaponInputTopology({
-    connectorReference: `J_${side}`,
-    connectorEndpointLabels: weaponConnectorEndpointLabels
-  })
   return (
     <group name={`G_WEAPON_${side}`} pcbX={x} pcbY={35}>
       <pinheader
@@ -22,23 +16,40 @@ function WeaponInput({ side, x }: { side: "L" | "R"; x: number }) {
         showSilkscreenPinLabels
       />
       <chip
-        name={topology.esd.name}
-        manufacturerPartNumber={topology.esd.manufacturerPartNumber}
+        name={`U_ESD_${side}`}
+        manufacturerPartNumber="TPD4E05U06DQAR"
         doNotPlace
-        pinLabels={topology.esd.pinLabels}
+        pinLabels={{ pin1: "CH_A", pin2: "CH_B", pin3: "CH_C", pin4: "SPARE", pin5: "ESD_RETURN" }}
         pcbX={0}
         pcbY={-6}
       />
       <chip
-        name={topology.frontend.name}
-        manufacturerPartNumber={topology.frontend.manufacturerPartNumber}
+        name={`U_FRONTEND_${side}`}
+        manufacturerPartNumber="ANALOG-FRONT-END-TBD"
         doNotPlace
-        footprint={[]}
-        pinLabels={topology.frontend.pinLabels}
+        footprint="soic16"
+        pinLabels={{
+          pin1: "RAW_A",
+          pin2: "RAW_B",
+          pin3: "RAW_C",
+          pin4: "SGND",
+          pin5: "S3_3",
+          pin6: "SENSE_A",
+          pin7: "SENSE_B",
+          pin8: "SENSE_C"
+        }}
         pcbX={0}
         pcbY={-13}
       />
-      <WeaponInputTraces topology={topology} />
+      <trace from={`J_${side}.A`} to={`U_ESD_${side}.CH_A`} />
+      <trace from={`J_${side}.B`} to={`U_ESD_${side}.CH_B`} />
+      <trace from={`J_${side}.C`} to={`U_ESD_${side}.CH_C`} />
+      <trace from={`U_ESD_${side}.CH_A`} to={`U_FRONTEND_${side}.RAW_A`} />
+      <trace from={`U_ESD_${side}.CH_B`} to={`U_FRONTEND_${side}.RAW_B`} />
+      <trace from={`U_ESD_${side}.CH_C`} to={`U_FRONTEND_${side}.RAW_C`} />
+      <trace from={`U_ESD_${side}.ESD_RETURN`} to="net.ESD_RETURN" />
+      <trace from={`U_FRONTEND_${side}.SGND`} to="net.SGND" />
+      <trace from={`U_FRONTEND_${side}.S3_3`} to="net.S3_3" />
     </group>
   )
 }
@@ -867,7 +878,8 @@ function ScoringCircuit() {
       <trace from="U_FRONTEND_R.SENSE_A" to="U_STM32.RIGHT_A" />
       <trace from="U_FRONTEND_R.SENSE_B" to="U_STM32.RIGHT_B" />
       <trace from="U_FRONTEND_R.SENSE_C" to="U_STM32.RIGHT_C" />
-      <trace from="J_PISTE.PISTE" to="U_PISTE_FRONTEND.RAW_PISTE" />
+      <trace from="J_PISTE.PISTE" to="U_ESD_L.SPARE" />
+      <trace from="U_ESD_L.SPARE" to="U_PISTE_FRONTEND.RAW_PISTE" />
       <trace from="U_PISTE_FRONTEND.SENSE_PISTE" to="U_STM32.PISTE" />
       <trace from="U_VREF.VOUT" to="U_STM32.VREF" />
       <trace from="U_STM32.WD_KICK" to="U_STM_WATCHDOG.WDI" />

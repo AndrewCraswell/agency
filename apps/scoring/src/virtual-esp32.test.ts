@@ -129,17 +129,6 @@ describe("virtual ESP32 authority guard", () => {
     expect(Reflect.set(receiver.records[0]!.outcome, "side", "right")).toBe(false)
     expect(receiver.records[0]?.outcome).toMatchObject({ side: "left", weapon: "epee" })
 
-    // The application can only mutate its own snapshots. It cannot clear,
-    // reorder, or change the STM32 decision retained by the receiver.
-    const applicationSnapshot = receiver.records.slice()
-    applicationSnapshot.reverse()
-    applicationSnapshot.length = 0
-    expect(receiver.records).toEqual([source])
-    expect(Object.isFrozen(accepted)).toBe(true)
-    expect(Reflect.set(accepted, "record", null)).toBe(false)
-    expect(Reflect.set(source.outcome, "side", "right")).toBe(true)
-    expect(receiver.records[0]?.outcome).toMatchObject({ side: "left", weapon: "epee" })
-
     const duplicate = receiver.receive(delivered(decisionFrame(0, 1)))
     expect(duplicate).toMatchObject({ outcome: "rejected", reason: "out-of-order", record: null, sequence: 0 })
     expect(receiver.records).toHaveLength(1)
@@ -449,58 +438,30 @@ describe("virtual ESP32 authority guard", () => {
       expectedSequence: 0
     })
     const genuine = delivered(decisionFrame(0, 1))
-    const applicationForged: VirtualLinkAttempt = {
-      ...genuine,
-      frameBytes: genuine.frameBytes.slice(),
-      wireBytes: genuine.wireBytes.slice()
-    }
-    expect(receiver.receive(applicationForged)).toMatchObject({
+    const mismatchedMetadata: VirtualLinkAttempt = { ...genuine, wireSequence: 1 }
+    expect(receiver.receive(mismatchedMetadata)).toMatchObject({
       outcome: "rejected",
-      reason: "delivery",
-      sequence: null
+      reason: "frame-metadata",
+      sequence: 0
     })
 
-    // The callback object's public bytes are diagnostic snapshots. Mutating
-    // them cannot substitute a new scoring frame for the link-issued one.
-    genuine.wireBytes[0] ^= 0xff
-    expect(receiver.receive(genuine)).toMatchObject({ outcome: "accepted", sequence: 0 })
-
-    const secondReceiver = createVirtualEsp32({
-      decodeDecisionRecordPayload: () => decisionRecord("record-unused", 1),
-      expectedSequence: 0
-    })
-    const secondGenuine = delivered(decisionFrame(0, 1))
-    const mismatchedMetadata: VirtualLinkAttempt = { ...secondGenuine, wireSequence: 1 }
-    expect(secondReceiver.receive(mismatchedMetadata)).toMatchObject({
+    const undelivered: VirtualLinkAttempt = { ...genuine, outcome: "queued" }
+    expect(receiver.receive(undelivered)).toMatchObject({ outcome: "rejected", reason: "delivery", sequence: null })
+    const missingWireBytes: VirtualLinkAttempt = { ...genuine, wireBytes: null as never }
+    expect(receiver.receive(missingWireBytes)).toMatchObject({
       outcome: "rejected",
       reason: "delivery",
       sequence: null
     })
-
-    const undelivered: VirtualLinkAttempt = { ...secondGenuine, outcome: "queued" }
-    expect(secondReceiver.receive(undelivered)).toMatchObject({
+    const proxyWireBytes = new Proxy(genuine.wireBytes, {})
+    const unexpectedDecoderFailure: VirtualLinkAttempt = { ...genuine, wireBytes: proxyWireBytes as Uint8Array }
+    expect(receiver.receive(unexpectedDecoderFailure)).toMatchObject({
       outcome: "rejected",
-      reason: "delivery",
-      sequence: null
+      reason: "frame",
+      frameError: null,
+      sequence: 0
     })
-    const missingWireBytes: VirtualLinkAttempt = { ...secondGenuine, wireBytes: null as never }
-    expect(secondReceiver.receive(missingWireBytes)).toMatchObject({
-      outcome: "rejected",
-      reason: "delivery",
-      sequence: null
-    })
-    const proxyWireBytes = new Proxy(secondGenuine.wireBytes, {})
-    const unexpectedDecoderFailure: VirtualLinkAttempt = { ...secondGenuine, wireBytes: proxyWireBytes as Uint8Array }
-    expect(secondReceiver.receive(unexpectedDecoderFailure)).toMatchObject({
-      outcome: "rejected",
-      reason: "delivery",
-      sequence: null
-    })
-    expect(secondReceiver.receive(null as never)).toMatchObject({
-      outcome: "rejected",
-      reason: "delivery",
-      sequence: null
-    })
+    expect(receiver.receive(null as never)).toMatchObject({ outcome: "rejected", reason: "delivery", sequence: null })
   })
 
   it("rejects reentrant application decoder calls without accepting a decision", () => {

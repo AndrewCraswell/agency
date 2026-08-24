@@ -168,7 +168,7 @@ core.
 
 | ID | Status | Latest state | Deliverable | Depends on | Acceptance |
 | --- | --- | --- | --- | --- | --- |
-| M3-01 | backlog | Next after M1-11, M2-05: Firmware-language and portability decision record. | Firmware-language and portability decision record | M1-11, M2-05 | Records the selected strict C17 core, vendor C adapters, native/STM32/WebAssembly target model, qualification, debugging, and team-support rationale |
+| M3-01 | blocked | Root-reviewed portability ADR is delivered: strict C17 remains the sole native/STM32/WebAssembly core, vendor C adapters are retained, Rust/C++ rewrites and TypeScript scoring fallback are rejected; completion waits for dependency M1-11. | Firmware-language and portability decision record | M1-11, M2-05 | Records the selected strict C17 core, vendor C adapters, native/STM32/WebAssembly target model, qualification, debugging, and team-support rationale |
 | M3-02 | backlog | Next after M0-07, M1-11: Golden-vector exporter usable by host firmware tests. | Golden-vector exporter usable by host firmware tests | M0-07, M1-11 | Firmware tests consume generated fixtures without manually copying timing constants |
 | M3-03 | backlog | Next after M3-01, M3-02: STM32 host-build scaffold with hardware interfaces. | STM32 host-build scaffold with hardware interfaces | M3-01, M3-02 | Builds without STM32 hardware and substitutes clock, ADC, comparator, DMA, flash, watchdog, and transport interfaces |
 | M3-04 | backlog | Next after M3-03: STM32 scoring core implementation. | STM32 scoring core implementation | M3-03 | Passes the complete three-weapon golden corpus and matches decision records field-for-field |

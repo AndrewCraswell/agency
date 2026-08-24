@@ -46,9 +46,7 @@ const resolvedSupplierPartCount = circuitJson.filter(
   (element) =>
     element.type === "source_component" &&
     "supplier_part_numbers" in element &&
-    Object.values(element.supplier_part_numbers ?? {}).some(
-      (partNumbers) => Array.isArray(partNumbers) && partNumbers.length > 0
-    )
+    Object.values(element.supplier_part_numbers ?? {}).some((partNumbers) => partNumbers.length > 0)
 ).length
 const renderedCadComponentCount = circuitJson.filter((element) => element.type === "cad_component").length
 const externallySourcedCadModelCount = circuitJson.filter(

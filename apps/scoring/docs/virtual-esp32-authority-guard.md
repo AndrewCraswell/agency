@@ -5,7 +5,7 @@
 
 ## Boundary
 
-The virtual ESP32 receiver accepts only a completed `stm32-to-esp32` delivery issued to a virtual processor-link `onDelivery` callback. The link retains an internal byte snapshot for that callback object, so a plain object, a cloned attempt, or a mutation of the callback's diagnostic bytes cannot impersonate a delivered scoring frame. It decodes its M2-05 envelope for the ESP32 role and accepts only the `decision-record` type as a scoring record. An ESP32-to-STM32 attempt, an undelivered link attempt, a corrupt frame, an invalid frame direction, or an inconsistent link/frame sequence produces no scoring record.
+The virtual ESP32 receiver accepts only a completed `stm32-to-esp32` delivery produced by the virtual processor link. It decodes its M2-05 envelope for the ESP32 role and accepts only the `decision-record` type as a scoring record. An ESP32-to-STM32 attempt, an undelivered link attempt, a corrupt frame, an invalid frame direction, or an inconsistent link/frame sequence produces no scoring record.
 
 M2-05 intentionally defines payload bytes as opaque. Consequently this receiver takes a synchronous injected `decodeDecisionRecordPayload` boundary owned by the M0-05 decision-record codec. The guard does not introduce JSON, CBOR, protobuf, or another payload encoding. It validates and privately deep-freezes the returned M0-05 record before exposing it.
 
@@ -35,4 +35,4 @@ The virtual link delivery is the authority boundary in this host model. Producti
 
 ## Evidence
 
-`src/virtual-esp32.test.ts` exercises valid delivery, duplicate and reordering rejection, corrupt and wrong-direction frames, forged or mutated delivery attempts, opaque-payload decoding, bounded backpressure, immutable output, caller attempts to clear or reorder returned snapshots, non-decision ordering, sequence exhaustion, and deterministic replay.
+`src/virtual-esp32.test.ts` exercises valid delivery, duplicate and reordering rejection, corrupt and wrong-direction frames, app-forged delivery metadata, opaque-payload decoding, bounded backpressure, immutable output, non-decision ordering, sequence exhaustion, and deterministic replay.

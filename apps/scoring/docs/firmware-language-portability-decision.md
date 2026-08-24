@@ -93,7 +93,7 @@ rather than rely on current defaults.
 | --- | --- | --- |
 | Strict C17 STM32 scoring core, C protocol-domain libraries, and pinned vendor C adapters | Direct fit for ST-generated C and ESP-IDF C APIs; one scoring authority; straightforward native host tests; widest embedded hiring and support pool | **Selected** |
 | C++ STM32 scoring core or C++ on both processors | Better encapsulation tools and supported by both vendor environments | Rejected for foundations. It adds language-linkage and language-version policy without reducing the C peripheral boundary. ESP-IDF's documented exception, RTTI, designated-initializer, and IRAM constraints create avoidable qualification-path rules. It also cannot justify an ESP scoring implementation. |
-| A scoring-core rewrite in another language | Could add different language-level safety guarantees | Rejected for this product generation. The existing C17 core can target native, STM32, and WebAssembly, so a rewrite adds another implementation and migration campaign without solving the portability requirement. |
+| A scoring-core rewrite in another language, including Rust | Could add different language-level safety guarantees | Rejected for this product generation. The existing C17 core can target native, STM32, and WebAssembly, so a Rust or other-language rewrite adds another implementation and migration campaign without solving the portability requirement. |
 | A production scoring implementation on ESP32 | Could appear to simplify local rendering | Prohibited by M0-04. It would violate the authority boundary regardless of language and make replay a second decision path. |
 | Keep TypeScript in the firmware path | Reuses the current implementation text | Rejected. It would complicate deterministic bounded-memory target behavior and displace the vendor-supported firmware toolchains. TypeScript remains the temporary simulator and comparison implementation only through the migration; independently reviewed fixtures replace implementation-generated expectations before deletion. |
 
@@ -156,3 +156,7 @@ used to approve its own deletion. The granular
 completion, parity, simulator-cutover, and TypeScript-deletion gates are defined in the
 [C17 WebAssembly migration plan](c17-wasm-simulator-migration.md). C++ remains an option for later isolated,
 non-authoritative components. No language choice may authorize an ESP32 scoring implementation.
+
+There is no Rust rewrite in this product generation: the strict C17 scoring core remains the single implementation
+across native host tests, STM32, and WebAssembly. This preserves one qualification surface and keeps debugging,
+toolchain support, and embedded-team ownership aligned across those targets.
