@@ -406,8 +406,7 @@ function footprintEvidenceFor(part: CouponBomPart) {
       scope:
         "Bound only to this exact MPN record. A shared package family must receive its own record and cannot inherit this review.",
       status:
-        manufacturerDrawing.acquisition === "exact-drawing-hash-bound" ||
-        manufacturerDrawing.acquisition === "series-drawing-hash-bound"
+        manufacturerDrawing.acquisition === "exact-drawing-hash-bound"
           ? ("hash-bound" as const)
           : manufacturerDrawing.acquisition === "series-drawing-hash-bound"
             ? ("series-hash-bound" as const)
