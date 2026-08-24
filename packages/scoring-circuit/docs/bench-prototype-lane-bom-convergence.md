@@ -6,12 +6,12 @@ The evaluator requires BP-010, BP-031, BP-032, BP-033, and BP-034 as explicit in
 
 BP-034 rows are classified before reconciliation. Board-populated connector references reconcile against BP-010. External mates, cables, samples, and test tooling retain their order and sample-evidence blockers without being misrepresented as PCB references.
 
-The current result is `DENY` for a prototype order candidate. In particular:
+The current result is `DENY` for a prototype order candidate. BP-034 now has exact source-backed selections for the USB-C cable (`USB2CC1M`) and Ethernet patch cable (`N201-003-BL`), so those selections do not contribute `selection-blocked` blockers. In particular:
 
-- BP-034 still lacks exact source-backed USB-C cable and Ethernet test-plug or patch-cable MPNs.
+- The exact BP-034 cable selections remain pre-order identities only; they do not claim purchase, receipt, mating, fit, retention, strain, continuity, SI/EMC, CAD/artwork, or release evidence.
 - No BP-034 received-sample, mate, retention, strain, or continuity evidence has been accepted.
 - BP-031, BP-032, and BP-033 retain unreviewed manufacturer drawing, CAD, generated artwork, and independent orientation gates.
-- Baseline and downstream reference, selection, package, and population differences remain enumerated blockers until they are corrected in their owning contracts.
+- Baseline and downstream reference, package, and population differences remain enumerated blockers until they are corrected in their owning contracts.
 
 An eventual `READY` result means only that an exact one-board prototype order candidate has converged. `fabricationDisposition` remains `DENY`, and production release remains false; schematic, layout, electrical validation, and fabrication authorization are separate gates.
 

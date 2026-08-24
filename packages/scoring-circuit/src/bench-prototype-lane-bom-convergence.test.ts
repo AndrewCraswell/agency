@@ -36,7 +36,7 @@ const allSourcesFor = (...provided: LaneBomRow["source"][]) => [
 ]
 
 describe("BP-035 lane BOM convergence", () => {
-  it("keeps the current prototype order candidate and fabrication release denied", () => {
+  it("keeps the current prototype order candidate and fabrication release denied after exact BP-034 selections", () => {
     expect(benchPrototypeLaneBomConvergence).toMatchObject({
       workUnit: "BP-035",
       orderCandidateReady: false,
@@ -44,12 +44,12 @@ describe("BP-035 lane BOM convergence", () => {
       fabricationDisposition: "DENY",
       productionRelease: false
     })
+    expect(benchPrototypeLaneBomConvergence.blockers.filter(({ code }) => code === "selection-blocked")).toEqual([])
     expect(benchPrototypeLaneBomConvergence.blockers).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ code: "selection-blocked", reference: "J_USB_C" }),
-        expect.objectContaining({ code: "selection-blocked", reference: "J_ETH" }),
         expect.objectContaining({ code: "footprint-evidence-open", reference: "U_SCORING" }),
-        expect.objectContaining({ code: "sample-evidence-open", reference: "J_USB_C" })
+        expect.objectContaining({ code: "sample-evidence-open", reference: "J_USB_C" }),
+        expect.objectContaining({ code: "sample-evidence-open", reference: "J_ETH" })
       ])
     )
   })
