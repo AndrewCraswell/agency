@@ -55,6 +55,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 36 | FW-006 | P1 | ready | A legacy ESP32 authoritative-record helper can bypass the canonical receiver journal and sequence boundary |
 | 37 | FW-007 | P2 | done | Root-approved private byte-string validation now serves manifest and environment boundaries with unchanged error categories |
 | 38 | FW-008 | P1 | done | Root-approved shared journal preflight prevents replay from indexing an invalid active slot |
+| 39 | SD-022 | P1 | in-progress | Event capture and decision records duplicate provenance validation with different acceptance rules |
+| 40 | SD-023 | P2 | in-progress | Virtual front-end phase IDs and runtime profiles have two manually maintained registries |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -597,3 +599,25 @@ truth.
 - Bounded remediation: extract one const-safe journal-state preflight used by mutation and replay before any active-slot indexing.
 - Acceptance: invalid active-slot, corrupt-slot, unopened, and recovery-corrupt cases return bounded errors without an out-of-range access; valid replay bytes and sequence remain unchanged.
 - Non-goals: no slot layout, persistence, payload, or recovery-policy redesign.
+
+## SD-022: share canonical decision provenance validation
+
+- Priority: `P1`
+- State: `in-progress`
+- Affected files: `apps/scoring/src/decision-record.ts`, `apps/scoring/src/event-capture.ts`, and their focused tests.
+- Description: event-capture construction and decision-record parsing validate the same provenance and firmware identities with different shape, grammar, and length rules. Event capture can therefore accept provenance that only fails after an outcome is captured.
+- Impact: invalid authority metadata survives longer than intended, error behavior differs by entry point, and future trust-boundary changes require synchronized edits.
+- Bounded remediation: expose one canonical decision-provenance parser or guard and consume its result during event-capture construction while retaining capture-specific error wording and record-ID-prefix checks.
+- Acceptance: both boundaries agree on plain-object shape, identifier grammar and length, digest, and STM32 identity; invalid provenance fails during capture construction; emitted records remain byte-equivalent.
+- Non-goals: no record schema, capture-window, outcome, or generic validation-framework redesign.
+
+## SD-023: derive virtual front-end phase IDs from the profile registry
+
+- Priority: `P2`
+- State: `in-progress`
+- Affected files: `apps/scoring/src/virtual-front-end.ts` and its focused tests.
+- Description: the ten public phase IDs are listed once for the exported type and guard and again inside the runtime profile registry used by acquisition lookup.
+- Impact: a phase can be accepted by one registry but missing from the other, turning a configuration drift into a runtime lookup failure.
+- Bounded remediation: make one phase-profile registry canonical and derive the ordered public ID tuple, type, guard, and lookup from it while preserving exact public order and profiles.
+- Acceptance: one literal ID source remains; uniqueness and exact profile coverage are tested; all existing phase, weapon, endpoint, and cycle behavior is unchanged.
+- Non-goals: no vocabulary, endpoint-template, physical-alias, scoring-authority, or generic schema redesign.
