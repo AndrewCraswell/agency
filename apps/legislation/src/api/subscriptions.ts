@@ -194,15 +194,9 @@ export type SubscriptionRepository = Readonly<{
   createSubscription(input: Readonly<{ fingerprint: string; subscription: Subscription }>): Promise<Subscription>
   findExactSubscription(owner: SubscriptionOwner, fingerprint: string): Promise<Subscription | undefined>
   getSubscription(input: Readonly<{ id: string; owner: SubscriptionOwner }>): Promise<Subscription | undefined>
-  listDeliveries(
-    input: Readonly<{ cursor?: string; limit: number; owner: SubscriptionOwner; subscriptionId: string }>
-  ): Promise<RepositoryPage<Delivery>>
-  listSubscriptionEvents(
-    input: Readonly<{ cursor?: string; limit: number; owner: SubscriptionOwner; subscriptionId: string }>
-  ): Promise<RepositoryPage<SubscriptionEvent>>
-  listSubscriptions(
-    input: Readonly<{ cursor?: string; limit: number; owner: SubscriptionOwner }>
-  ): Promise<RepositoryPage<Subscription>>
+  listDeliveries(input: SubscriptionDeliveryListInput): Promise<RepositoryPage<Delivery>>
+  listSubscriptionEvents(input: SubscriptionEventListInput): Promise<RepositoryPage<SubscriptionEvent>>
+  listSubscriptions(input: SubscriptionListInput): Promise<RepositoryPage<Subscription>>
   updateSubscription(
     input: Readonly<{
       id: string
@@ -243,6 +237,41 @@ export type RepositoryPage<T> = Readonly<{
   items: readonly T[]
   nextCursor?: string
   truncated: boolean
+}>
+
+export type SubscriptionListInput = Readonly<{
+  channel?: SubscriptionDeliveryPreference["channel"]
+  cursor?: string
+  eventType?: SubscriptionEventType
+  limit: number
+  owner: SubscriptionOwner
+  recordType?: Extract<SubscriptionTarget, { type: "record" }>["recordType"]
+  status?: SubscriptionStatus
+  targetType?: SubscriptionTarget["type"]
+  updatedFrom?: Date
+}>
+
+export type SubscriptionEventListInput = Readonly<{
+  cursor?: string
+  eventType?: SubscriptionEventType
+  from?: Date
+  limit: number
+  owner: SubscriptionOwner
+  recordId?: string
+  recordType?: Extract<SubscriptionTarget, { type: "record" }>["recordType"]
+  subscriptionId: string
+  to?: Date
+}>
+
+export type SubscriptionDeliveryListInput = Readonly<{
+  channel?: Delivery["channel"]
+  cursor?: string
+  from?: Date
+  limit: number
+  owner: SubscriptionOwner
+  status?: Delivery["status"]
+  subscriptionId: string
+  to?: Date
 }>
 
 type SubscriptionAndOptionalWebhookRepository = SubscriptionRepository & Partial<WebhookRepository>
@@ -482,7 +511,7 @@ export class SubscriptionService {
 
   async listSubscriptions(
     identity: RequestIdentity,
-    input: Readonly<{ cursor?: string; limit: number }>
+    input: Omit<SubscriptionListInput, "owner">
   ): Promise<RepositoryPage<Subscription>> {
     return await this.repository.listSubscriptions({ ...input, owner: ownerFor(identity) })
   }
@@ -551,7 +580,7 @@ export class SubscriptionService {
   async listSubscriptionEvents(
     identity: RequestIdentity,
     id: string,
-    input: Readonly<{ cursor?: string; limit: number }>
+    input: Omit<SubscriptionEventListInput, "owner" | "subscriptionId">
   ): Promise<RepositoryPage<SubscriptionEvent>> {
     await this.getSubscription(identity, id)
     return await this.repository.listSubscriptionEvents({ ...input, owner: ownerFor(identity), subscriptionId: id })
@@ -560,7 +589,7 @@ export class SubscriptionService {
   async listDeliveries(
     identity: RequestIdentity,
     id: string,
-    input: Readonly<{ cursor?: string; limit: number }>
+    input: Omit<SubscriptionDeliveryListInput, "owner" | "subscriptionId">
   ): Promise<RepositoryPage<Delivery>> {
     await this.getSubscription(identity, id)
     return await this.repository.listDeliveries({ ...input, owner: ownerFor(identity), subscriptionId: id })

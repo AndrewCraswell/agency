@@ -117,6 +117,17 @@ describePostgres.sequential("PostgreSQL subscription repository", () => {
     await expect(
       repository.listSubscriptions({ cursor: firstPage.nextCursor, owner: owner("user:two", "org:one"), limit: 1 })
     ).resolves.toMatchObject({ items: [{ id: "subscription:shared-two" }], truncated: false })
+    await expect(
+      repository.listSubscriptions({
+        cursor: firstPage.nextCursor,
+        owner: owner("user:two", "org:one"),
+        limit: 1,
+        status: "paused"
+      })
+    ).rejects.toMatchObject({ category: "invalid_cursor" })
+    await expect(
+      repository.listSubscriptions({ cursor: firstPage.nextCursor, owner: owner("user:two", "org:two"), limit: 1 })
+    ).rejects.toMatchObject({ category: "invalid_cursor" })
 
     const updated = await repository.updateSubscription({
       id: shared.id,
@@ -148,6 +159,18 @@ describePostgres.sequential("PostgreSQL subscription repository", () => {
       summary: "A bill changed",
       title: "Bill updated"
     })
+    await repository.appendSubscriptionEvent({
+      changeEventId: null,
+      eventType: "status-changed",
+      id: "subscription-event:shared:2",
+      occurredAt: new Date(fixedNow.getTime() + 1000),
+      recordId: "bill:us:119:hr:1",
+      recordType: "bill",
+      sourceUrls: ["https://example.test/bill"],
+      subscriptionId: shared.id,
+      summary: "A bill status changed",
+      title: "Bill status changed"
+    })
     await repository.appendDelivery({
       attemptCount: 0,
       channel: "in-app",
@@ -161,12 +184,63 @@ describePostgres.sequential("PostgreSQL subscription repository", () => {
       subscriptionEventIds: ["subscription-event:shared:1"],
       subscriptionId: shared.id
     })
+    await repository.appendDelivery({
+      attemptCount: 1,
+      channel: "in-app",
+      createdAt: new Date(fixedNow.getTime() + 1000),
+      deliveredAt: new Date(fixedNow.getTime() + 1000),
+      destinationId: null,
+      failureCategory: null,
+      id: "delivery:shared:2",
+      nextAttemptAt: null,
+      status: "delivered",
+      subscriptionEventIds: ["subscription-event:shared:2"],
+      subscriptionId: shared.id
+    })
+    const allEvents = await repository.listSubscriptionEvents({
+      owner: owner("user:two", "org:one"),
+      subscriptionId: shared.id,
+      limit: 20
+    })
+    expect(allEvents).toMatchObject({ truncated: false })
+    expect(allEvents.items).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: "subscription-event:shared:1" })])
+    )
+    const allDeliveries = await repository.listDeliveries({
+      owner: owner("user:two", "org:one"),
+      subscriptionId: shared.id,
+      limit: 20
+    })
+    expect(allDeliveries).toMatchObject({ truncated: false })
+    expect(allDeliveries.items).toEqual(expect.arrayContaining([expect.objectContaining({ id: "delivery:shared:1" })]))
+    const eventPage = await repository.listSubscriptionEvents({
+      owner: owner("user:two", "org:one"),
+      subscriptionId: shared.id,
+      limit: 1
+    })
     await expect(
-      repository.listSubscriptionEvents({ owner: owner("user:two", "org:one"), subscriptionId: shared.id, limit: 20 })
-    ).resolves.toMatchObject({ items: [{ id: "subscription-event:shared:1" }], truncated: false })
+      repository.listSubscriptionEvents({
+        cursor: eventPage.nextCursor,
+        eventType: "record-updated",
+        owner: owner("user:two", "org:one"),
+        subscriptionId: shared.id,
+        limit: 1
+      })
+    ).rejects.toMatchObject({ category: "invalid_cursor" })
+    const deliveryPage = await repository.listDeliveries({
+      owner: owner("user:two", "org:one"),
+      subscriptionId: shared.id,
+      limit: 1
+    })
     await expect(
-      repository.listDeliveries({ owner: owner("user:two", "org:one"), subscriptionId: shared.id, limit: 20 })
-    ).resolves.toMatchObject({ items: [{ id: "delivery:shared:1" }], truncated: false })
+      repository.listDeliveries({
+        cursor: deliveryPage.nextCursor,
+        owner: owner("user:two", "org:one"),
+        status: "pending",
+        subscriptionId: shared.id,
+        limit: 1
+      })
+    ).rejects.toMatchObject({ category: "invalid_cursor" })
   })
 
   it("replays an encrypted idempotent response and rolls back mutation work on failure", async () => {

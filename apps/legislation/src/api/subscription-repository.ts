@@ -9,9 +9,12 @@ import {
   type Delivery,
   type RepositoryPage,
   type Subscription,
+  type SubscriptionDeliveryListInput,
   type SubscriptionDeliveryPreference,
   type SubscriptionEvent,
+  type SubscriptionEventListInput,
   type SubscriptionEventType,
+  type SubscriptionListInput,
   type SubscriptionOwner,
   type SubscriptionRepository,
   type SubscriptionTarget,
@@ -126,6 +129,7 @@ type IdempotencyRow = typeof schema.apiIdempotencyRecords.$inferSelect
 
 type CursorKind = "deliveries" | "events" | "subscriptions"
 type Cursor = Readonly<{
+  filterFingerprint: string
   id: string
   kind: CursorKind
   owner: SubscriptionOwner
@@ -224,17 +228,34 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository, S
     return rows[0] === undefined ? undefined : toSubscription(rows[0])
   }
 
-  async listSubscriptions(
-    input: Readonly<{ cursor?: string; limit: number; owner: SubscriptionOwner }>
-  ): Promise<RepositoryPage<Subscription>> {
+  async listSubscriptions(input: SubscriptionListInput): Promise<RepositoryPage<Subscription>> {
     const limit = pageLimit(input.limit)
-    const cursor = decodeCursor(input.cursor, "subscriptions", input.owner)
+    const filterFingerprint = subscriptionFilterFingerprint(input)
+    const cursor = decodeCursor(input.cursor, "subscriptions", input.owner, filterFingerprint)
     const rows = await this.#database
       .select()
       .from(schema.subscriptions)
       .where(
         and(
           ownerScope(schema.subscriptions, input.owner),
+          input.status === undefined ? undefined : eq(schema.subscriptions.status, input.status),
+          input.targetType === undefined
+            ? undefined
+            : sql<boolean>`${schema.subscriptions.target}->>'type' = ${input.targetType}`,
+          input.recordType === undefined
+            ? undefined
+            : sql<boolean>`${schema.subscriptions.target}->>'recordType' = ${input.recordType}`,
+          input.eventType === undefined
+            ? undefined
+            : sql<boolean>`${schema.subscriptions.eventTypes} @> ARRAY[${input.eventType}]::text[]`,
+          input.channel === undefined
+            ? undefined
+            : sql<boolean>`exists (
+                select 1
+                from jsonb_array_elements(${schema.subscriptions.delivery}) as delivery_preference
+                where delivery_preference->>'channel' = ${input.channel}
+              )`,
+          input.updatedFrom === undefined ? undefined : sql`${schema.subscriptions.updatedAt} >= ${input.updatedFrom}`,
           cursor === undefined
             ? undefined
             : or(
@@ -255,6 +276,7 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository, S
       ...(hasMore && page.at(-1) !== undefined
         ? {
             nextCursor: encodeCursor({
+              filterFingerprint,
               id: page.at(-1)!.id,
               kind: "subscriptions",
               owner: input.owner,
@@ -332,11 +354,10 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository, S
     return rows[0] === undefined ? undefined : toSubscription(rows[0])
   }
 
-  async listSubscriptionEvents(
-    input: Readonly<{ cursor?: string; limit: number; owner: SubscriptionOwner; subscriptionId: string }>
-  ): Promise<RepositoryPage<SubscriptionEvent>> {
+  async listSubscriptionEvents(input: SubscriptionEventListInput): Promise<RepositoryPage<SubscriptionEvent>> {
     const limit = pageLimit(input.limit)
-    const cursor = decodeCursor(input.cursor, "events", input.owner)
+    const filterFingerprint = subscriptionEventFilterFingerprint(input)
+    const cursor = decodeCursor(input.cursor, "events", input.owner, filterFingerprint)
     const rows = await this.#database
       .select({ event: schema.subscriptionEvents })
       .from(schema.subscriptionEvents)
@@ -345,6 +366,11 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository, S
         and(
           eq(schema.subscriptionEvents.subscriptionId, input.subscriptionId),
           ownerScope(schema.subscriptions, input.owner),
+          input.eventType === undefined ? undefined : eq(schema.subscriptionEvents.eventType, input.eventType),
+          input.recordType === undefined ? undefined : eq(schema.subscriptionEvents.recordType, input.recordType),
+          input.recordId === undefined ? undefined : eq(schema.subscriptionEvents.recordId, input.recordId),
+          input.from === undefined ? undefined : sql`${schema.subscriptionEvents.occurredAt} >= ${input.from}`,
+          input.to === undefined ? undefined : sql`${schema.subscriptionEvents.occurredAt} <= ${input.to}`,
           cursor === undefined
             ? undefined
             : or(
@@ -365,6 +391,7 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository, S
       ...(hasMore && page.at(-1) !== undefined
         ? {
             nextCursor: encodeCursor({
+              filterFingerprint,
               id: page.at(-1)!.id,
               kind: "events",
               owner: input.owner,
@@ -377,11 +404,10 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository, S
     }
   }
 
-  async listDeliveries(
-    input: Readonly<{ cursor?: string; limit: number; owner: SubscriptionOwner; subscriptionId: string }>
-  ): Promise<RepositoryPage<Delivery>> {
+  async listDeliveries(input: SubscriptionDeliveryListInput): Promise<RepositoryPage<Delivery>> {
     const limit = pageLimit(input.limit)
-    const cursor = decodeCursor(input.cursor, "deliveries", input.owner)
+    const filterFingerprint = subscriptionDeliveryFilterFingerprint(input)
+    const cursor = decodeCursor(input.cursor, "deliveries", input.owner, filterFingerprint)
     const rows = await this.#database
       .select({ delivery: schema.subscriptionDeliveries })
       .from(schema.subscriptionDeliveries)
@@ -390,6 +416,10 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository, S
         and(
           eq(schema.subscriptionDeliveries.subscriptionId, input.subscriptionId),
           ownerScope(schema.subscriptions, input.owner),
+          input.channel === undefined ? undefined : eq(schema.subscriptionDeliveries.channel, input.channel),
+          input.status === undefined ? undefined : eq(schema.subscriptionDeliveries.status, input.status),
+          input.from === undefined ? undefined : sql`${schema.subscriptionDeliveries.createdAt} >= ${input.from}`,
+          input.to === undefined ? undefined : sql`${schema.subscriptionDeliveries.createdAt} <= ${input.to}`,
           cursor === undefined
             ? undefined
             : or(
@@ -410,6 +440,7 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository, S
       ...(hasMore && page.at(-1) !== undefined
         ? {
             nextCursor: encodeCursor({
+              filterFingerprint,
               id: page.at(-1)!.id,
               kind: "deliveries",
               owner: input.owner,
@@ -592,7 +623,12 @@ function encodeCursor(cursor: Cursor): string {
   return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url")
 }
 
-function decodeCursor(value: string | undefined, kind: CursorKind, owner: SubscriptionOwner): Cursor | undefined {
+function decodeCursor(
+  value: string | undefined,
+  kind: CursorKind,
+  owner: SubscriptionOwner,
+  filterFingerprint: string
+): Cursor | undefined {
   if (value === undefined) {
     return undefined
   }
@@ -606,6 +642,7 @@ function decodeCursor(value: string | undefined, kind: CursorKind, owner: Subscr
     !isRecord(parsed) ||
     parsed.version !== 1 ||
     parsed.kind !== kind ||
+    parsed.filterFingerprint !== filterFingerprint ||
     typeof parsed.id !== "string" ||
     typeof parsed.timestamp !== "string" ||
     !isRecord(parsed.owner) ||
@@ -616,12 +653,53 @@ function decodeCursor(value: string | undefined, kind: CursorKind, owner: Subscr
     throw new SubscriptionRepositoryError("invalid_cursor", "Cursor does not match this request scope.")
   }
   return {
+    filterFingerprint,
     id: parsed.id,
     kind,
     owner,
     timestamp: parsed.timestamp,
     version: 1
   }
+}
+
+function subscriptionFilterFingerprint(input: SubscriptionListInput): string {
+  return filterFingerprint({
+    channel: input.channel ?? null,
+    eventType: input.eventType ?? null,
+    recordType: input.recordType ?? null,
+    status: input.status ?? null,
+    targetType: input.targetType ?? null,
+    updatedFrom: timestampValue(input.updatedFrom)
+  })
+}
+
+function subscriptionEventFilterFingerprint(input: SubscriptionEventListInput): string {
+  return filterFingerprint({
+    eventType: input.eventType ?? null,
+    from: timestampValue(input.from),
+    recordId: input.recordId ?? null,
+    recordType: input.recordType ?? null,
+    subscriptionId: input.subscriptionId,
+    to: timestampValue(input.to)
+  })
+}
+
+function subscriptionDeliveryFilterFingerprint(input: SubscriptionDeliveryListInput): string {
+  return filterFingerprint({
+    channel: input.channel ?? null,
+    from: timestampValue(input.from),
+    status: input.status ?? null,
+    subscriptionId: input.subscriptionId,
+    to: timestampValue(input.to)
+  })
+}
+
+function filterFingerprint(filters: Readonly<Record<string, string | null>>): string {
+  return createHash("sha256").update(JSON.stringify(filters)).digest("hex")
+}
+
+function timestampValue(value: Date | undefined): string | null {
+  return value === undefined ? null : value.toISOString()
 }
 
 function validateIdempotencyRequest(request: IdempotencyRequest): void {

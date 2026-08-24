@@ -1,22 +1,33 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { getRequestContext } from "../auth/request-context.js"
+import { LegislationError } from "../legislation/errors.js"
 import {
+  assertAllowedQueryParameters,
   apiPage,
   apiResource,
   queryInteger,
+  queryOptionalDate,
   queryOptionalString,
   readJsonBody,
   requestUrl,
+  sendApiError,
   sendApiJson,
   type HttpApiHandler
 } from "./http.js"
+import { SubscriptionRepositoryError } from "./subscription-repository.js"
 import {
   type CreateSubscriptionInput,
   type CreateWebhookInput,
+  type Delivery,
   type SubscriptionDeliveryPreference,
   SubscriptionApiError,
+  type SubscriptionDeliveryListInput,
+  type SubscriptionEvent,
+  type SubscriptionEventListInput,
   type SubscriptionEventType,
+  type SubscriptionListInput,
   SubscriptionService,
+  type Subscription,
   type SubscriptionTarget,
   type UpdateSubscriptionInput,
   type UpdateWebhookInput
@@ -48,6 +59,191 @@ const subscriptionEvents = new Set<SubscriptionEventType>([
   "vote-added"
 ])
 
+type SubscriptionRecordType = Extract<SubscriptionTarget, { type: "record" }>["recordType"]
+
+const subscriptionRecordTypes = new Set<SubscriptionRecordType>([
+  "amendment",
+  "bill",
+  "calendar",
+  "meeting",
+  "organization",
+  "person",
+  "supporting-material"
+])
+
+type SubscriptionReadApi = Pick<
+  SubscriptionService,
+  "getSubscription" | "listDeliveries" | "listSubscriptionEvents" | "listSubscriptions"
+>
+
+type SubscriptionReadRouteOptions = Readonly<{ apiBaseUrl: string }>
+
+/**
+ * Read-only subscription composition. Subscription mutations are deliberately
+ * absent until a production encryption adapter can protect idempotent replay.
+ */
+export function createSubscriptionReadApiHandler(
+  service: SubscriptionReadApi,
+  options: SubscriptionReadRouteOptions
+): HttpApiHandler {
+  return async (request, response) => {
+    const url = requestUrl(request)
+    const match = /^\/api\/subscriptions\/([^/]+)(?:\/(events|deliveries))?$/.exec(url.pathname)
+    const isCollection = url.pathname === "/api/subscriptions"
+    if (request.method !== "GET" || (!isCollection && match === null)) {
+      return false
+    }
+    const identity = getRequestContext()?.identity
+    if (identity === undefined) {
+      sendError(request, response, new SubscriptionApiError("forbidden", "An authenticated identity is required."))
+      return true
+    }
+    try {
+      if (isCollection) {
+        const input = subscriptionListInput(url)
+        const page = await service.listSubscriptions(identity, input)
+        sendApiJson(response, 200, apiPage(request, projectPage(page, options, projectSubscription), input.limit))
+        return true
+      }
+      const id = decodeURIComponent(match![1]!)
+      const child = match![2]
+      if (child === "events") {
+        const input = subscriptionEventListInput(url)
+        const page = await service.listSubscriptionEvents(identity, id, input)
+        sendApiJson(response, 200, apiPage(request, projectPage(page, options, projectSubscriptionEvent), input.limit))
+        return true
+      }
+      if (child === "deliveries") {
+        const input = subscriptionDeliveryListInput(url)
+        const page = await service.listDeliveries(identity, id, input)
+        sendApiJson(response, 200, apiPage(request, projectPage(page, options, projectDelivery), input.limit))
+        return true
+      }
+      const subscription = await service.getSubscription(identity, id)
+      response.setHeader("etag", subscription.revision)
+      sendApiJson(response, 200, apiResource(request, projectSubscription(subscription, options)))
+      return true
+    } catch (error) {
+      sendError(request, response, error)
+      return true
+    }
+  }
+}
+
+function subscriptionListInput(url: URL): Omit<SubscriptionListInput, "owner"> {
+  assertAllowedQueryParameters(url, [
+    "channel",
+    "cursor",
+    "eventType",
+    "limit",
+    "recordType",
+    "status",
+    "targetType",
+    "updatedFrom"
+  ])
+  return {
+    channel: queryEnum(url, "channel", new Set(["email", "in-app", "webhook"])),
+    cursor: queryOptionalString(url, "cursor"),
+    eventType: queryEnum(url, "eventType", subscriptionEvents),
+    limit: queryInteger(url, "limit", 20),
+    recordType: queryEnum(url, "recordType", subscriptionRecordTypes),
+    status: queryEnum(url, "status", new Set(["active", "cancelled", "paused"])),
+    targetType: queryEnum(url, "targetType", new Set(["query", "record"])),
+    updatedFrom: queryOptionalDate(url, "updatedFrom")
+  }
+}
+
+function subscriptionEventListInput(url: URL): Omit<SubscriptionEventListInput, "owner" | "subscriptionId"> {
+  assertAllowedQueryParameters(url, ["cursor", "eventType", "from", "limit", "recordId", "recordType", "to"])
+  const from = queryOptionalDate(url, "from")
+  const to = queryOptionalDate(url, "to")
+  assertTimeRange(from, to)
+  return {
+    cursor: queryOptionalString(url, "cursor"),
+    eventType: queryEnum(url, "eventType", subscriptionEvents),
+    from,
+    limit: queryInteger(url, "limit", 20),
+    recordId: queryOptionalString(url, "recordId"),
+    recordType: queryEnum(url, "recordType", subscriptionRecordTypes),
+    to
+  }
+}
+
+function subscriptionDeliveryListInput(url: URL): Omit<SubscriptionDeliveryListInput, "owner" | "subscriptionId"> {
+  assertAllowedQueryParameters(url, ["channel", "cursor", "from", "limit", "status", "to"])
+  const from = queryOptionalDate(url, "from")
+  const to = queryOptionalDate(url, "to")
+  assertTimeRange(from, to)
+  return {
+    channel: queryEnum(url, "channel", new Set(["email", "in-app", "webhook"])),
+    cursor: queryOptionalString(url, "cursor"),
+    from,
+    limit: queryInteger(url, "limit", 20),
+    status: queryEnum(url, "status", new Set(["delivered", "failed", "pending", "processing", "suppressed"])),
+    to
+  }
+}
+
+function queryEnum<Value extends string>(url: URL, name: string, values: ReadonlySet<Value>): Value | undefined {
+  const value = queryOptionalString(url, name)
+  if (value === undefined) {
+    return undefined
+  }
+  if (!values.has(value as Value)) {
+    throw new SubscriptionApiError("invalid_request", `${name} is invalid.`)
+  }
+  return value as Value
+}
+
+function assertTimeRange(from: Date | undefined, to: Date | undefined): void {
+  if (from !== undefined && to !== undefined && from > to) {
+    throw new SubscriptionApiError("invalid_request", "from must not be after to.")
+  }
+}
+
+function projectPage<Input, Output>(
+  page: Readonly<{ items: readonly Input[]; nextCursor?: string; truncated: boolean }>,
+  options: SubscriptionReadRouteOptions,
+  project: (input: Input, options: SubscriptionReadRouteOptions) => Output
+): Readonly<{ items: readonly Output[]; nextCursor?: string; truncated: boolean }> {
+  return { ...page, items: page.items.map((item) => project(item, options)) }
+}
+
+function projectSubscription(subscription: Subscription, options: SubscriptionReadRouteOptions) {
+  return {
+    ...subscription,
+    canonicalUrl: canonicalUrl(options, `/api/subscriptions/${encodeURIComponent(subscription.id)}`),
+    cancelledAt: isoTimestamp(subscription.cancelledAt),
+    createdAt: isoTimestamp(subscription.createdAt),
+    updatedAt: isoTimestamp(subscription.updatedAt)
+  }
+}
+
+function projectSubscriptionEvent(event: SubscriptionEvent) {
+  return {
+    ...event,
+    matchedAt: isoTimestamp(event.matchedAt),
+    occurredAt: isoTimestamp(event.occurredAt)
+  }
+}
+
+function projectDelivery(delivery: Delivery) {
+  return {
+    ...delivery,
+    createdAt: isoTimestamp(delivery.createdAt),
+    deliveredAt: isoTimestamp(delivery.deliveredAt),
+    nextAttemptAt: isoTimestamp(delivery.nextAttemptAt)
+  }
+}
+
+function canonicalUrl(options: SubscriptionReadRouteOptions, path: string): string {
+  return new URL(path, options.apiBaseUrl).toString()
+}
+
+function isoTimestamp(value: Date | null): string | null {
+  return value === null ? null : value.toISOString()
+}
+
 export function createSubscriptionApiHandler(
   service: SubscriptionService,
   options: Readonly<{ verifyWebhook?: WebhookVerificationExecutor }> = {}
@@ -59,13 +255,13 @@ export function createSubscriptionApiHandler(
     }
     const identity = getRequestContext()?.identity
     if (identity === undefined) {
-      sendError(response, new SubscriptionApiError("forbidden", "An authenticated identity is required."))
+      sendError(request, response, new SubscriptionApiError("forbidden", "An authenticated identity is required."))
       return true
     }
     try {
       return await handleRequest(service, identity, request, response, url, options)
     } catch (error) {
-      sendError(response, error)
+      sendError(request, response, error)
       return true
     }
   }
@@ -83,12 +279,9 @@ async function handleRequest(
   const webhookMatch = /^\/api\/webhooks\/([^/]+)(?:\/(rotate-secret|verify))?$/.exec(url.pathname)
 
   if (url.pathname === "/api/subscriptions" && request.method === "GET") {
-    const limit = queryInteger(url, "limit", 20)
-    const page = await service.listSubscriptions(identity, {
-      cursor: queryOptionalString(url, "cursor"),
-      limit
-    })
-    sendApiJson(response, 200, apiPage(request, page, limit))
+    const input = subscriptionListInput(url)
+    const page = await service.listSubscriptions(identity, input)
+    sendApiJson(response, 200, apiPage(request, page, input.limit))
     return true
   }
   if (url.pathname === "/api/subscriptions" && request.method === "POST") {
@@ -103,21 +296,15 @@ async function handleRequest(
     const id = decodeURIComponent(subscriptionMatch[1]!)
     const child = subscriptionMatch[2]
     if (child === "events" && request.method === "GET") {
-      const limit = queryInteger(url, "limit", 20)
-      const page = await service.listSubscriptionEvents(identity, id, {
-        cursor: queryOptionalString(url, "cursor"),
-        limit
-      })
-      sendApiJson(response, 200, apiPage(request, page, limit))
+      const input = subscriptionEventListInput(url)
+      const page = await service.listSubscriptionEvents(identity, id, input)
+      sendApiJson(response, 200, apiPage(request, page, input.limit))
       return true
     }
     if (child === "deliveries" && request.method === "GET") {
-      const limit = queryInteger(url, "limit", 20)
-      const page = await service.listDeliveries(identity, id, {
-        cursor: queryOptionalString(url, "cursor"),
-        limit
-      })
-      sendApiJson(response, 200, apiPage(request, page, limit))
+      const input = subscriptionDeliveryListInput(url)
+      const page = await service.listDeliveries(identity, id, input)
+      sendApiJson(response, 200, apiPage(request, page, input.limit))
       return true
     }
     if (child === undefined && request.method === "GET") {
@@ -417,42 +604,32 @@ function numberValue(value: unknown, field: string): number {
   return value
 }
 
-function sendError(response: ServerResponse, error: unknown): void {
-  let apiError: SubscriptionApiError
-  if (error instanceof SubscriptionApiError) {
+function sendError(request: IncomingMessage, response: ServerResponse, error: unknown): void {
+  let apiError: LegislationError
+  if (error instanceof LegislationError) {
     apiError = error
+  } else if (error instanceof SubscriptionApiError) {
+    apiError = new LegislationError(error.category, error.message)
+  } else if (error instanceof SubscriptionRepositoryError) {
+    apiError = repositoryError(error)
   } else if (error instanceof UnsafeWebhookUrlError) {
-    apiError = new SubscriptionApiError(
-      "unprocessable",
-      "Webhook URL does not resolve to a public delivery destination."
-    )
+    apiError = new LegislationError("unprocessable", "Webhook URL does not resolve to a public delivery destination.")
   } else {
-    apiError = new SubscriptionApiError("invalid_request", "The request could not be completed.")
+    apiError = new LegislationError("internal", "The request could not be completed")
   }
-  sendApiJson(response, statusForSubscriptionError(apiError.category), {
-    error: {
-      category: apiError.category,
-      correlationId: getRequestContext()?.correlationId ?? "",
-      details: apiError.details,
-      message: apiError.message,
-      retryable: false
-    }
-  })
+  sendApiError(request, response, apiError)
 }
 
-function statusForSubscriptionError(category: SubscriptionApiError["category"]): number {
-  switch (category) {
-    case "invalid_request":
-      return 400
-    case "forbidden":
-      return 403
-    case "not_found":
-      return 404
+function repositoryError(error: SubscriptionRepositoryError): LegislationError {
+  switch (error.category) {
+    case "invalid_cursor":
+      return new LegislationError("invalid_request", "Cursor is invalid for this request")
     case "conflict":
-      return 409
-    case "precondition_failed":
-      return 412
-    case "unprocessable":
-      return 422
+    case "idempotency_conflict":
+      return new LegislationError("conflict", "The request conflicts with existing state")
+    case "invalid_persistence":
+      return new LegislationError("internal", "The request could not be completed")
+    default:
+      return new LegislationError("internal", "The request could not be completed")
   }
 }
