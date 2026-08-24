@@ -117,6 +117,14 @@ describe("event journal", () => {
 
   it("rejects invalid construction and cannot corrupt an empty checkpoint", () => {
     expect(() => createEventJournal(null as never)).toThrow("options")
+    expect(() => createEventJournal(Object.create(null) as never)).toThrow("plain object")
+    expect(() => createEventJournal({ extra: true, storage: createVirtualEventJournalStorage() } as never)).toThrow(
+      "unrecognized"
+    )
+    expect(() => createEventJournal({ maxRecords: 1 } as never)).toThrow("missing")
+    expect(() =>
+      createEventJournal({ storage: createVirtualEventJournalStorage(), [Symbol("extra")]: true } as never)
+    ).toThrow("unrecognized")
     expect(() => createEventJournal({ storage: null as never })).toThrow("storage")
     expect(() => createEventJournal({ storage: {} as never })).toThrow("readCommitted")
     expect(() => createEventJournal({ maxRecords: 0, storage: createVirtualEventJournalStorage() })).toThrow("capacity")
@@ -200,5 +208,27 @@ describe("event journal", () => {
   it("rejects an incomplete direct commit marker from the virtual medium", () => {
     const storage = createVirtualEventJournalStorage()
     expect(() => storage.writeCommitMarker()).toThrow("incomplete")
+  })
+
+  it("gives a storage adapter an immutable checkpoint input", () => {
+    const medium = createVirtualEventJournalStorage()
+    let suppliedRecords: readonly DecisionRecord[] | null = null
+    const storage = {
+      readCommitted: medium.readCommitted,
+      writeCommitMarker: medium.writeCommitMarker,
+      writePreparedHeader: medium.writePreparedHeader,
+      writePreparedIntegrity: medium.writePreparedIntegrity,
+      writePreparedRecords(records: readonly DecisionRecord[]) {
+        suppliedRecords = records
+        medium.writePreparedRecords(records)
+      }
+    }
+    const journal = createEventJournal({ storage })
+
+    expect(journal.append(record("record-1", 100)).outcome).toBe("accepted")
+    expect(suppliedRecords).not.toBeNull()
+    expect(Object.isFrozen(suppliedRecords)).toBe(true)
+    expect(() => (suppliedRecords as DecisionRecord[]).push(record("record-2", 200))).toThrow()
+    expect(createEventJournal({ storage }).records.map((entry) => entry.recordId)).toEqual(["record-1"])
   })
 })

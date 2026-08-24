@@ -104,6 +104,28 @@ function assertBoundedRecordCount(value: unknown, description: string): asserts 
   }
 }
 
+function assertOptions(value: unknown): asserts value is EventJournalOptions {
+  if (typeof value !== "object" || value === null || Object.getPrototypeOf(value) !== Object.prototype) {
+    throw new TypeError("Event journal options must be a plain object")
+  }
+
+  const allowedKeys = ["maxRecords", "storage"]
+  const actualKeys = Reflect.ownKeys(value)
+  if (
+    actualKeys.length === 0 ||
+    actualKeys.some((key) => {
+      if (typeof key !== "string" || !allowedKeys.includes(key)) {
+        return true
+      }
+      const descriptor = Object.getOwnPropertyDescriptor(value, key)
+      return descriptor === undefined || !("value" in descriptor) || !descriptor.enumerable
+    }) ||
+    !actualKeys.includes("storage")
+  ) {
+    throw new TypeError("Event journal options have missing or unrecognized fields")
+  }
+}
+
 function assertStorage(value: unknown): asserts value is EventJournalStorage {
   if (typeof value !== "object" || value === null) {
     throw new TypeError("Event journal storage must be an object")
@@ -415,16 +437,14 @@ function recover(
  * unavailable to callers; it is never treated as replay evidence.
  */
 export function createEventJournal(options: EventJournalOptions): EventJournal {
-  if (typeof options !== "object" || options === null) {
-    throw new TypeError("Event journal options must be an object")
-  }
+  assertOptions(options)
   assertStorage(options.storage)
   const maxRecords = options.maxRecords ?? DEFAULT_EVENT_JOURNAL_MAX_RECORDS
   assertBoundedRecordCount(maxRecords, "Event journal record capacity")
 
   const restored = recover(options.storage, maxRecords)
   let generation = restored.generation
-  let records = restored.records.slice()
+  let records: readonly DecisionRecord[] = restored.records.slice()
   const recovery = restored.recovery
 
   function append(value: DecisionRecord): EventJournalAppendReceipt {
@@ -443,7 +463,7 @@ export function createEventJournal(options: EventJournalOptions): EventJournal {
       throw new RangeError("Event journal generation is exhausted")
     }
 
-    const nextRecords = [...records, record]
+    const nextRecords = Object.freeze([...records, record])
     const header = Object.freeze({ generation: generation + 1, recordCount: nextRecords.length })
     let integrity: EventJournalIntegrity
     try {

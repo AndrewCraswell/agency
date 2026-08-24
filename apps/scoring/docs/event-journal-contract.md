@@ -30,7 +30,8 @@ recovery.
 
 ## Record and capacity rules
 
-- Every stored entry is revalidated as an M0-05 `DecisionRecord`, cloned, and deeply frozen.
+- The journal accepts only a strict plain options object and every stored entry is revalidated as an M0-05
+  `DecisionRecord`, cloned, and deeply frozen. The checkpoint array given to a storage adapter is frozen too.
 - Existing matching `recordId` plus identical content is idempotent and returns `duplicate`; the same ID with differing
   content returns `conflict`.
 - Capacity is configured at construction, from one through 32. A full journal, or a record set beyond the host
