@@ -49,7 +49,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 30 | SD-019 | P1 | done | Root-approved remote command, authority, snapshot, and fixture boundaries share one bounded identifier policy |
 | 31 | SD-020 | P2 | done | Root-approved parser projections are detached and recursively frozen without changing accepted schemas or byte order |
 | 32 | SD-021 | P2 | done | Root-approved private metadata projection now serves secure-envelope and replay-candidate validation with unchanged wire and error behavior |
-| 33 | SC-010 | P2 | intake | Communications circuit selected MPNs can drift from canonical component decisions and USB-PD records |
+| 33 | SC-010 | P2 | done | Root-approved communications rendering now derives overlapping MPNs from canonical component and USB-PD records |
 | 34 | SC-011 | P3 | done | Root-approved BOM validation now relies on canonical rows as its sole exact-selection registry |
 | 35 | SC-012 | P2 | done | Root-approved typed projection now derives rendered W5500 passive values from the canonical support record |
 | 36 | FW-006 | P1 | done | Root-approved receiver is now the sole authoritative ingress; journal commit and sequence advance precede optional forwarding |
@@ -533,7 +533,8 @@ truth.
 ## SC-010: bind communications circuit MPNs to canonical selections
 
 - Priority: `P2`
-- State: `intake`
+- State: `done`
+- Latest state: Root review approved narrow canonical lookups for every overlapping communications MPN while preserving the SC-012 W5500 value projection. Names, pins, traces, geometry, USB-C PD policy, and release denial remain unchanged; 72 focused tests plus TypeScript, lint, and format checks pass.
 - Affected files: `packages/scoring-circuit/src/communications-module.circuit.tsx`, `component-decisions.ts`, `usb-pd-footprints.ts`, and focused renderer tests.
 - Description: the circuit hard-codes selected MPNs that already exist in canonical component-decision and USB-PD records, while the BOM already derives from those upstream sources.
 - Impact: a reviewed part change can update the BOM while leaving the rendered communications circuit on the old identity.

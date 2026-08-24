@@ -1,3 +1,4 @@
+import { componentDecisions } from "./component-decisions.js"
 import {
   ethernetSupportCircuitValues,
   ethernetSupportNetwork,
@@ -5,8 +6,45 @@ import {
 } from "./ethernet-support-network.js"
 import { manufacturerFootprintProps } from "./manufacturer-footprint-adapter.js"
 import { physicalBoardContract } from "./physical-board-contract.js"
+import { usbPdFootprints } from "./usb-pd-footprints.js"
 
 const communicationsPhysicalBoard = physicalBoardContract.communicationsModule
+
+function componentDecisionMpn(category: string): string {
+  const decision = componentDecisions.find((candidate) => candidate.category === category)
+  if (decision === undefined) throw new Error(`Missing canonical component decision for ${category}`)
+  return decision.mpn
+}
+
+function usbPdFootprintMpn(mpn: string): string {
+  const footprint = usbPdFootprints.find((candidate) => candidate.mpn === mpn)
+  if (footprint === undefined) throw new Error(`Missing canonical USB-PD footprint for ${mpn}`)
+  return footprint.mpn
+}
+
+function usbPdComponentMpn(category: string): string {
+  return usbPdFootprintMpn(componentDecisionMpn(category))
+}
+
+const selectedMpn = {
+  usbConnector: usbPdComponentMpn("usb-c-power-and-service-connector"),
+  ccAndSbuProtection: usbPdComponentMpn("usb-c-cc-sbu-protection"),
+  usb2Protection: componentDecisionMpn("usb2-esd-protection"),
+  pdController: usbPdComponentMpn("usb-pd-controller"),
+  vbusTvs: usbPdComponentMpn("usb-pd-vbus-transient-protection"),
+  disconnectSurgeDiode: usbPdFootprintMpn("B340A-13-F"),
+  pdLdoCapacitor: usbPdFootprintMpn("T55A106M010C0200"),
+  pdPphvCapacitor: usbPdFootprintMpn("T523H107M035APE070"),
+  efuse: usbPdComponentMpn("power-protection"),
+  communicationsRegulator: componentDecisionMpn("application-rail-regulator"),
+  communicationsSupervisor: componentDecisionMpn("power-supervisor"),
+  communicationsOeEnableBuffer: componentDecisionMpn("communications-oe-enable-buffer"),
+  resetSink: componentDecisionMpn("reset-combiner"),
+  communicationsInputGate: componentDecisionMpn("communications-io-dual-power-off-isolation"),
+  communicationsOutputGate: componentDecisionMpn("communications-io-single-power-off-isolation"),
+  ethernet: componentDecisionMpn("ethernet"),
+  ethernetConnector: componentDecisionMpn("ethernet-connector")
+} as const
 
 function unreleasedFootprintProps(mpn: string) {
   return { ...manufacturerFootprintProps(mpn), footprint: [] as [] }
@@ -77,8 +115,8 @@ export default function CommunicationsModuleCircuit() {
     >
       <chip
         name="J_USB_C"
-        manufacturerPartNumber="10177070-00011LF"
-        {...unreleasedFootprintProps("10177070-00011LF")}
+        manufacturerPartNumber={selectedMpn.usbConnector}
+        {...unreleasedFootprintProps(selectedMpn.usbConnector)}
         pinLabels={{
           pin1: "USB_DN_PORT",
           pin2: "USB_DP_PORT",
@@ -95,8 +133,8 @@ export default function CommunicationsModuleCircuit() {
       />
       <chip
         name="U_USB_PORT_PROTECT"
-        manufacturerPartNumber="TPD4S201TRGRRQ1"
-        {...unreleasedFootprintProps("TPD4S201TRGRRQ1")}
+        manufacturerPartNumber={selectedMpn.ccAndSbuProtection}
+        {...unreleasedFootprintProps(selectedMpn.ccAndSbuProtection)}
         pinLabels={{
           pin1: "C_SBU1",
           pin2: "C_SBU2",
@@ -125,15 +163,15 @@ export default function CommunicationsModuleCircuit() {
       />
       <chip
         name="U_USB2_ESD"
-        manufacturerPartNumber="TPD2EUSB30DRTR"
+        manufacturerPartNumber={selectedMpn.usb2Protection}
         doNotPlace
         footprint={[]}
         pinLabels={{ pin1: "IO1_USB_DN", pin2: "GND", pin3: "IO2_USB_DP" }}
       />
       <chip
         name="U_USB_PD"
-        manufacturerPartNumber="TPS25730ADREFR"
-        {...unreleasedFootprintProps("TPS25730ADREFR")}
+        manufacturerPartNumber={selectedMpn.pdController}
+        {...unreleasedFootprintProps(selectedMpn.pdController)}
         pinLabels={{
           pin1: "LDO_3V3",
           pin2: "ADCIN1",
@@ -181,16 +219,16 @@ export default function CommunicationsModuleCircuit() {
       />
       <chip
         name="D_USB_PD_VBUS_TVS"
-        manufacturerPartNumber="TVS2200DRVR"
-        {...unreleasedFootprintProps("TVS2200DRVR")}
+        manufacturerPartNumber={selectedMpn.vbusTvs}
+        {...unreleasedFootprintProps(selectedMpn.vbusTvs)}
         pinLabels={{ pin1: "VBUS_PORT", pin2: "CHASSIS" }}
         pcbX={-36}
         pcbY={-10}
       />
       <chip
         name="D_USB_PD_VBUS_DISCONNECT"
-        manufacturerPartNumber="B340A-13-F"
-        {...unreleasedFootprintProps("B340A-13-F")}
+        manufacturerPartNumber={selectedMpn.disconnectSurgeDiode}
+        {...unreleasedFootprintProps(selectedMpn.disconnectSurgeDiode)}
         pinLabels={{ pin1: "ANODE_GND", pin2: "CATHODE_VBUS" }}
         pcbX={-28}
         pcbY={-10}
@@ -209,8 +247,8 @@ export default function CommunicationsModuleCircuit() {
       />
       <chip
         name="C_USB_PD_LDO"
-        manufacturerPartNumber="T55A106M010C0200"
-        {...unreleasedFootprintProps("T55A106M010C0200")}
+        manufacturerPartNumber={selectedMpn.pdLdoCapacitor}
+        {...unreleasedFootprintProps(selectedMpn.pdLdoCapacitor)}
         pinLabels={{ pin1: "LDO_3V3", pin2: "GND" }}
         pcbX={-14}
         pcbY={-10}
@@ -235,8 +273,8 @@ export default function CommunicationsModuleCircuit() {
       />
       <chip
         name="C_USB_PD_PPHV"
-        manufacturerPartNumber="T523H107M035APE070"
-        {...unreleasedFootprintProps("T523H107M035APE070")}
+        manufacturerPartNumber={selectedMpn.pdPphvCapacitor}
+        {...unreleasedFootprintProps(selectedMpn.pdPphvCapacitor)}
         pinLabels={{ pin1: "PD_PPHV_20V", pin2: "GND" }}
         pcbX={-6}
         pcbY={-10}
@@ -267,8 +305,8 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_USB_PORT_PROTECT_FLT_PULLUP" resistance={10000} footprint="0402" />
       <chip
         name="U_EFUSE"
-        manufacturerPartNumber="TPS259474ARPWR"
-        {...unreleasedFootprintProps("TPS259474ARPWR")}
+        manufacturerPartNumber={selectedMpn.efuse}
+        {...unreleasedFootprintProps(selectedMpn.efuse)}
         pinLabels={{
           pin1: "EN_UVLO",
           pin2: "OVLO",
@@ -296,16 +334,16 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_EFUSE_PG_PULLUP" resistance={10000} footprint="0402" />
       <chip
         name="C_EFUSE_OUT"
-        manufacturerPartNumber="T523H107M035APE070"
-        {...unreleasedFootprintProps("T523H107M035APE070")}
+        manufacturerPartNumber={selectedMpn.pdPphvCapacitor}
+        {...unreleasedFootprintProps(selectedMpn.pdPphvCapacitor)}
         pinLabels={{ pin1: "VOUT", pin2: "GND" }}
         pcbX={8}
         pcbY={-10}
       />
       <chip
         name="U_COMM_3V3"
-        manufacturerPartNumber="LMR43620MSC3RPERQ1"
-        {...unreleasedFootprintProps("LMR43620MSC3RPERQ1")}
+        manufacturerPartNumber={selectedMpn.communicationsRegulator}
+        {...unreleasedFootprintProps(selectedMpn.communicationsRegulator)}
         pinLabels={{
           pin1: "MODE_SYNC",
           pin2: "PGOOD",
@@ -361,7 +399,7 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_COMM_REG_PGOOD" resistance="10k" tolerance="1%" footprint="0603" />
       <chip
         name="U_COMM_SUPERVISOR"
-        manufacturerPartNumber="TPS389033DSER"
+        manufacturerPartNumber={selectedMpn.communicationsSupervisor}
         doNotPlace
         footprint={[]}
         pinLabels={{ pin1: "SENSE", pin2: "GND", pin3: "MR", pin4: "VDD", pin5: "CT", pin6: "RESET_N" }}
@@ -371,7 +409,7 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_COMM_RESET_PULLUP" resistance="10k" tolerance="1%" footprint="0603" />
       <chip
         name="U_COMM_OE_ENABLE_BUFFER"
-        manufacturerPartNumber="SN74LVC1G34DCKR"
+        manufacturerPartNumber={selectedMpn.communicationsOeEnableBuffer}
         doNotPlace
         footprint={[]}
         pinLabels={{ pin1: "NC", pin2: "A", pin3: "GND", pin4: "Y", pin5: "VCC" }}
@@ -379,7 +417,7 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_COMM_OE_INPUT_PD" resistance="1M" tolerance="1%" footprint="0603" />
       <chip
         name="Q_COMM_RESET_SINK"
-        manufacturerPartNumber="BSS138AKA"
+        manufacturerPartNumber={selectedMpn.resetSink}
         doNotPlace
         footprint={[]}
         pinLabels={{ pin1: "G", pin2: "S", pin3: "D" }}
@@ -387,7 +425,7 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_COMM_RESET_GATE_PD" resistance="100k" tolerance="1%" footprint="0603" />
       <chip
         name="U_COMM_INPUT_GATE_A"
-        manufacturerPartNumber="SN74LVC2G126DCUR"
+        manufacturerPartNumber={selectedMpn.communicationsInputGate}
         doNotPlace
         footprint={[]}
         pinLabels={{
@@ -403,14 +441,14 @@ export default function CommunicationsModuleCircuit() {
       />
       <chip
         name="U_COMM_INPUT_GATE_B"
-        manufacturerPartNumber="SN74LVC1G126DCKR"
+        manufacturerPartNumber={selectedMpn.communicationsOutputGate}
         doNotPlace
         footprint={[]}
         pinLabels={{ pin1: "OE", pin2: "A_CS_N", pin3: "GND", pin4: "Y_CS_N", pin5: "VCC" }}
       />
       <chip
         name="U_COMM_OUTPUT_GATE"
-        manufacturerPartNumber="SN74LVC2G126DCUR"
+        manufacturerPartNumber={selectedMpn.communicationsInputGate}
         doNotPlace
         footprint={[]}
         pinLabels={{
@@ -431,7 +469,7 @@ export default function CommunicationsModuleCircuit() {
       <resistor name="R_COMM_PRESENT_TIE" resistance="1k" tolerance="1%" footprint="0603" />
       <chip
         name="U_ETHERNET"
-        manufacturerPartNumber="W5500"
+        manufacturerPartNumber={selectedMpn.ethernet}
         doNotPlace
         footprint={[]}
         pinLabels={{
@@ -563,7 +601,7 @@ export default function CommunicationsModuleCircuit() {
       />
       <chip
         name="J_ETHERNET_MAGJACK"
-        manufacturerPartNumber="7499011121A"
+        manufacturerPartNumber={selectedMpn.ethernetConnector}
         doNotPlace
         footprint={[]}
         pinLabels={{

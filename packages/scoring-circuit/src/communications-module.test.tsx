@@ -12,6 +12,7 @@ import {
 import ScoringCircuit from "./index.circuit.js"
 import { criticalPartReadiness } from "./part-readiness.js"
 import { renderTestCircuit } from "./test-helper.js"
+import { usbPdFootprints } from "./usb-pd-footprints.js"
 
 function render(circuitElement: React.ReactElement) {
   return renderTestCircuit(circuitElement)
@@ -39,6 +40,52 @@ describe("communications-module circuit", () => {
   it("keeps component-decision categories and selected MPNs unique", () => {
     expect(new Set(componentDecisions.map(({ category }) => category)).size).toBe(componentDecisions.length)
     expect(new Set(componentDecisions.map(({ mpn }) => mpn)).size).toBe(componentDecisions.length)
+  })
+
+  it("binds overlapping rendered identities to canonical component and USB-PD selections", () => {
+    const sources = new Map(
+      renderModule()
+        .filter((element) => element.type === "source_component")
+        .map((element) => [element.name, element])
+    )
+    const componentBindings = [
+      ["J_USB_C", "usb-c-power-and-service-connector"],
+      ["U_USB_PORT_PROTECT", "usb-c-cc-sbu-protection"],
+      ["U_USB2_ESD", "usb2-esd-protection"],
+      ["U_USB_PD", "usb-pd-controller"],
+      ["D_USB_PD_VBUS_TVS", "usb-pd-vbus-transient-protection"],
+      ["U_EFUSE", "power-protection"],
+      ["U_COMM_3V3", "application-rail-regulator"],
+      ["U_COMM_SUPERVISOR", "power-supervisor"],
+      ["U_COMM_OE_ENABLE_BUFFER", "communications-oe-enable-buffer"],
+      ["Q_COMM_RESET_SINK", "reset-combiner"],
+      ["U_COMM_INPUT_GATE_A", "communications-io-dual-power-off-isolation"],
+      ["U_COMM_OUTPUT_GATE", "communications-io-dual-power-off-isolation"],
+      ["U_COMM_INPUT_GATE_B", "communications-io-single-power-off-isolation"],
+      ["U_ETHERNET", "ethernet"],
+      ["J_ETHERNET_MAGJACK", "ethernet-connector"]
+    ] as const
+    for (const [reference, category] of componentBindings) {
+      const decision = componentDecisions.find((candidate) => candidate.category === category)
+      const source = sources.get(reference)
+      expect(decision, `${reference} canonical component decision`).toBeDefined()
+      expect(source, `${reference} rendered source`).toBeDefined()
+      expect(source).toMatchObject({ manufacturer_part_number: decision?.mpn })
+    }
+
+    const usbPdBindings = [
+      ["D_USB_PD_VBUS_DISCONNECT", "B340A-13-F"],
+      ["C_USB_PD_LDO", "T55A106M010C0200"],
+      ["C_USB_PD_PPHV", "T523H107M035APE070"],
+      ["C_EFUSE_OUT", "T523H107M035APE070"]
+    ] as const
+    for (const [reference, mpn] of usbPdBindings) {
+      const footprint = usbPdFootprints.find((candidate) => candidate.mpn === mpn)
+      const source = sources.get(reference)
+      expect(footprint, `${reference} canonical USB-PD footprint`).toBeDefined()
+      expect(source, `${reference} rendered source`).toBeDefined()
+      expect(source).toMatchObject({ manufacturer_part_number: footprint?.mpn })
+    }
   })
 
   it("owns the external input, local rail, Ethernet, and carrier boundaries", () => {
