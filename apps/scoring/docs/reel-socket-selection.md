@@ -27,22 +27,35 @@ The panel drawing must use these coordinates in millimetres, with the centre con
 | centre | 0 | 0 |
 | outer-far-20 mm | 20 | 0 |
 
-For each Stäubli socket, the manufacturer documentation provides a 4 mm plug system, 12.2 mm panel cutout, 14.5 mm front flange, M12 x 0.75 threaded panel mount, supplied nut and washer, and a 4.8 mm by 0.8 mm flat connecting tab. The item data sheet depicts a 30.5 mm overall length, but the manufacturer main catalogue depicts 30.7 mm. That conflict is an explicit blocker: no enclosure clearance envelope, footprint, or production tolerance may use either value until Stäubli identifies the controlling drawing revision or a received sample is measured. The drawing owner must preserve the FIE contact centres, then apply the resolved individual-hole drawing and document terminal, harness, enclosure, and adjacent-port clearance.
+For each Stäubli socket, the manufacturer documentation provides a 4 mm plug system, 12.2 mm panel cutout, 14.5 mm front flange, M12 x 0.75 threaded panel mount, supplied nut and washer, and a 4.8 mm by 0.8 mm flat connecting tab. The 02.2022 item data sheet depicts a 30.5 mm overall length, while the 02.2024 item data sheet and Index O; 01.2026 main catalogue depict 30.7 mm. The newer documents agree, but Stäubli has not provided a controlling revision statement that explicitly supersedes the older drawing. Overall length therefore remains unresolved: no enclosure clearance envelope, footprint, or production tolerance may use either value until the controlling revision is confirmed or a received sample is measured. The drawing owner must preserve the FIE contact centres, then apply the resolved individual-hole drawing and document terminal, harness, enclosure, and adjacent-port clearance.
 
 The selected socket's published contact material is CuZn with nickel surface treatment. Its published electrical ratings are 24 A and 1000 V CAT III. Those ratings are not a fencing durability, corrosion, plug-fit, or FIE-homologation claim.
 
 ## Acquired primary-source record
 
-The two manufacturer PDFs below are vendored as an immutable engineering record. Their SHA-256 values are verified by the M4-10 unit test. They establish the selected part-family identity and mechanical interface only; neither document proves that a fencing plug fits or that the part is qualified for a central-apparatus panel.
+The three manufacturer PDFs below are vendored as an immutable engineering record. Their SHA-256 values, byte lengths, document markers, and recorded dimensions are verified by the M4-10 unit test. They establish the selected part-family identity and mechanical interface only; none proves that a fencing plug fits or that the part is qualified for a central-apparatus panel.
 
 | Snapshot | SHA-256 | Relevant pages | What it establishes |
 | --- | --- | --- | --- |
+| [Stäubli SLB4-F/A data sheet, 02.2024](evidence/m4-10/staubli-23-3070-en-2024.pdf) | `9FA76A963469918DFEEDBF6C01B794F1BFA5EBD2DAD66AFAE7CAD7AC410C8D60` | 1 | `23.3070-*` family and 30.7 mm drawing; newer agreeing record |
 | [Stäubli SLB4-F/A data sheet](evidence/m4-10/staubli-23-3070-en.pdf) | `DB2C84AC0D3FFBB1F29FEE2CE8BE375E8E176F3183BA8B1540379D51176DA80F` | 1 | `23.3070-*` family, rigid 4 mm panel socket, contact material, supplied hardware, and terminal |
 | [Stäubli Test accessories main catalogue](evidence/m4-10/staubli-tm-main-11014124-en.pdf) | `3B3E7F6CDC234365D8C413F467EFF08B3D09C176956EC15772DC0DBCCB20CDED` | 6, 82 | Color-code mapping `22` red and `23` blue, `23.3070-*` SLB4-F/A panel socket, and its 4 mm mating-interface statement |
 
-Captured from the manufacturer URLs on 2026-08-24. Stäubli reserves the right to change these documents, so any later part substitution must reacquire and re-review primary evidence rather than inherit this record.
+The 02.2022 item-sheet row is the original manufacturer item-sheet snapshot; the 02.2024 item-sheet row is the newer official snapshot, and the catalogue row is Index O; 01.2026. Stäubli reserves the right to change these documents, so any later part substitution must reacquire and re-review primary evidence rather than inherit this record.
 
-The snapshots also disclose a material discrepancy: the item data sheet shows a 30.5 mm overall length while catalogue page 82 shows 30.7 mm. M4-10 deliberately records this as unresolved rather than choosing a value. It is not an error band or a permissible tolerance.
+The snapshots disclose a revision-era discrepancy rather than a tolerance: the 2022 item data sheet shows 30.5 mm, while the 2024 item data sheet and 2026 catalogue show 30.7 mm. M4-10 records all three values and retains `overallLengthMm: null`; it does not infer that the newer documents supersede the older one. This remains a controlling-document query and sample-measurement gate, not an error band or a permissible tolerance.
+
+### Exact manufacturer query and sample-measurement handoff
+
+Before releasing an enclosure, panel clearance, footprint, or production tolerance, send Stäubli Electrical Connectors this exact query:
+
+1. Confirm the controlled drawing or document ID, revision, and effective date for SLB4-F/A item family `23.3070-*`.
+2. Confirm whether 30.7 mm is the current overall-length dimension for exact order numbers `23.3070-22` (red) and `23.3070-23` (blue).
+3. Explain whether the 30.5 mm dimension in the 02.2022 item sheet was superseded or uses a different datum or measurement definition.
+4. Provide the applicable datums and tolerances for overall length, panel bore, front flange, M12 x 0.75 thread, and flat terminal.
+5. Confirm that the red and blue variants have identical mechanical geometry and mounting hardware.
+
+In parallel, retain lot-controlled samples of both exact MPNs with order confirmation, lot/date code, packaging, markings, and photographs. Measure the manufacturer-confirmed overall-length datum and panel-stack-up clearance on at least one sample of each color. Record the instrument, calibration, datum fixture, operator, ambient conditions, and measurement uncertainty. A sample measurement does not replace the controlling drawing response, and neither source nor measurement establishes plug fit without the physical mating study below.
 
 ## What physical evidence still blocks release
 

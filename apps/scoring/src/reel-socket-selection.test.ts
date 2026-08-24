@@ -101,18 +101,42 @@ describe("M4-10 reel-socket selection", () => {
     const selected = reelSocketSelection.decision.selectedCandidate
     if (selected === null) throw new Error("M4-10 selected component is missing")
 
-    expect(selected.primaryEvidence).toHaveLength(2)
+    expect(selected.primaryEvidence).toHaveLength(3)
     expect(selected.primaryEvidence.map((source) => source.kind)).toEqual([
+      "manufacturer-item-data-sheet",
       "manufacturer-item-data-sheet",
       "manufacturer-main-catalogue"
     ])
     expect(selected.primaryEvidence[0]!.relevantPages).toEqual([1])
-    expect(selected.primaryEvidence[1]!.relevantPages).toEqual([6, 82])
+    expect(selected.primaryEvidence[1]!.relevantPages).toEqual([1])
+    expect(selected.primaryEvidence[2]!.relevantPages).toEqual([6, 82])
+    expect(selected.primaryEvidence.map((source) => [source.documentRevision, source.depictedOverallLengthMm])).toEqual(
+      [
+        ["02.2022", 30.5],
+        ["02.2024", 30.7],
+        ["Index O; 01.2026", 30.7]
+      ]
+    )
+    expect(selected.primaryEvidence.map((source) => source.markers)).toEqual([
+      ["02.2022", "30.5"],
+      ["02.2024", "30.7"],
+      ["01.2026", "23.3070-*", "22", "23", "30.7"]
+    ])
     for (const source of selected.primaryEvidence) {
       const bytes = readFileSync(new URL(`../${source.artifactPath}`, import.meta.url))
       expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(source.sha256)
-      expect(source.sourceUrl).toMatch(/^https:\/\/www\.staubli\.com\//u)
+      expect(bytes.byteLength).toBe(source.contentLengthBytes)
+      expect(source.sourceUrl).toMatch(/^https:\/\/(?:www\.staubli\.com|media\.ec\.staubli\.com)\//u)
     }
+    expect(reelSocketSelection.centralApparatusPort.selectedSocketMechanicalFacts.overallLengthMm).toBeNull()
+    expect(reelSocketSelection.centralApparatusPort.selectedSocketMechanicalFacts.overallLengthEvidence).toEqual([
+      expect.objectContaining({ documentRevision: "02.2022", depictedOverallLengthMm: 30.5 }),
+      expect.objectContaining({ documentRevision: "02.2024", depictedOverallLengthMm: 30.7 }),
+      expect.objectContaining({ documentRevision: "Index O; 01.2026", depictedOverallLengthMm: 30.7 })
+    ])
+    expect(reelSocketSelection.manufacturerQueryHandoff.status).toBe("required-before-enclosure-or-footprint-release")
+    expect(reelSocketSelection.manufacturerQueryHandoff.request).toHaveLength(5)
+    expect(reelSocketSelection.manufacturerQueryHandoff.sampleMeasurement).toHaveLength(3)
     expect(selected.releaseLimitation).toContain("not a plug-fit")
     expect(reelSocketSelection.matingPlugStudy.fitEvidenceState).toBe("none collected; no release or purchase")
   })
