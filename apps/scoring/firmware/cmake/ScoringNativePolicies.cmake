@@ -1,0 +1,56 @@
+include_guard(GLOBAL)
+
+function(scoring_native_initialize)
+  set(CMAKE_C_STANDARD 17 PARENT_SCOPE)
+  set(CMAKE_C_STANDARD_REQUIRED ON PARENT_SCOPE)
+  set(CMAKE_C_EXTENSIONS OFF PARENT_SCOPE)
+endfunction()
+
+function(scoring_native_enable_llvm_coverage)
+  if(MSVC OR NOT CMAKE_C_COMPILER_ID MATCHES "Clang")
+    message(FATAL_ERROR "SCORING_ENABLE_LLVM_COVERAGE requires a Clang-compatible compiler")
+  endif()
+
+  add_compile_options(-fprofile-instr-generate -fcoverage-mapping -O0)
+  add_link_options(-fprofile-instr-generate -fcoverage-mapping)
+endfunction()
+
+function(scoring_native_apply_baseline_warnings target)
+  if(NOT TARGET "${target}")
+    message(FATAL_ERROR "Cannot apply native warning policy to unknown target: ${target}")
+  endif()
+
+  if(MSVC)
+    target_compile_options("${target}" PRIVATE /W4 /WX /permissive-)
+  else()
+    target_compile_options("${target}" PRIVATE -Wall -Wextra -Werror -Wpedantic -Wconversion -Wsign-conversion)
+  endif()
+
+  set_property(TARGET "${target}" PROPERTY SCORING_NATIVE_BASELINE_WARNINGS_APPLIED TRUE)
+endfunction()
+
+function(scoring_native_assert_baseline_warnings)
+  foreach(target IN LISTS ARGN)
+    if(NOT TARGET "${target}")
+      message(FATAL_ERROR "Native warning policy assertion received unknown target: ${target}")
+    endif()
+
+    get_property(policy_applied TARGET "${target}" PROPERTY SCORING_NATIVE_BASELINE_WARNINGS_APPLIED)
+    if(NOT policy_applied)
+      message(FATAL_ERROR "Native target ${target} is missing the baseline warning policy")
+    endif()
+
+    get_property(compile_options TARGET "${target}" PROPERTY COMPILE_OPTIONS)
+    if(MSVC)
+      set(required_options /W4 /WX /permissive-)
+    else()
+      set(required_options -Wall -Wextra -Werror -Wpedantic -Wconversion -Wsign-conversion)
+    endif()
+
+    foreach(required_option IN LISTS required_options)
+      if(NOT required_option IN_LIST compile_options)
+        message(FATAL_ERROR "Native target ${target} is missing baseline warning ${required_option}")
+      endif()
+    endforeach()
+  endforeach()
+endfunction()

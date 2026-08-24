@@ -33,7 +33,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 13 | SD-007 | P2 | ready | Scenario display and fixture schemas duplicate vocabulary predicates |
 | 14 | SD-008 | P2 | intake-blocked-on-active-units | Strict immutable-data helpers are copied across app and circuit contracts |
 | 15 | SC-004 | P2 | ready | Generated board reports are nondeterministic and embed a localhost simulator URL |
-| 16 | FW-005 | P2 | ready | Native CMake warning and coverage policies are duplicated and have drifted |
+| 16 | FW-005 | P2 | done | Root-approved shared native CMake policy now enforces C17, conversion warnings, and Clang coverage consistently while retaining STM32 target-specific flags |
 | 17 | SC-005 | P3 | ready | Circuit test setup is repeated across eight files |
 
 ## SD-001: consolidate epee contact and lockout mechanics
@@ -328,7 +328,7 @@ truth.
 ## FW-005: consolidate native CMake safety policy
 
 - Priority: `P2`
-- State: `ready`
+- State: `done`
 - Affected files: the STM32, ESP32, and product-update `CMakeLists.txt` files plus a private `apps/scoring/firmware/cmake` policy module.
 - Description: C17, LLVM coverage, and compiler-warning setup is repeated across native targets; ESP32 and product-update enable `-Wconversion` and `-Wsign-conversion`, while STM32 host/target code does not.
 - Impact: first-party C is compiled under unequal implicit-conversion safety and every toolchain-policy change requires synchronized edits across three projects and multiple test targets.

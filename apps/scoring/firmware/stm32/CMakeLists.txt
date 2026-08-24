@@ -2,11 +2,9 @@ cmake_minimum_required(VERSION 3.25)
 
 project(scoring_stm32_host LANGUAGES C ASM)
 
-set(CMAKE_C_STANDARD 17)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
-
 enable_testing()
+include("${CMAKE_CURRENT_LIST_DIR}/../cmake/ScoringNativePolicies.cmake")
+scoring_native_initialize()
 
 set(SCORING_FIRMWARE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}")
 
@@ -14,11 +12,7 @@ option(SCORING_BUILD_STM32G474RE_TARGET "Build the pinned STM32G474RE target saf
 option(SCORING_ENABLE_LLVM_COVERAGE "Enable LLVM source-based coverage for native host tests" OFF)
 
 if(SCORING_ENABLE_LLVM_COVERAGE)
-  if(MSVC)
-    message(FATAL_ERROR "SCORING_ENABLE_LLVM_COVERAGE requires a Clang-compatible compiler")
-  endif()
-  add_compile_options(-fprofile-instr-generate -fcoverage-mapping -O0)
-  add_link_options(-fprofile-instr-generate -fcoverage-mapping)
+  scoring_native_enable_llvm_coverage()
 endif()
 
 add_library(scoring_stm32_host STATIC
@@ -33,11 +27,7 @@ target_include_directories(scoring_stm32_host
     "${SCORING_FIRMWARE_ROOT}/include"
 )
 
-if(MSVC)
-  target_compile_options(scoring_stm32_host PRIVATE /W4 /WX)
-else()
-  target_compile_options(scoring_stm32_host PRIVATE -Wall -Wextra -Werror -Wpedantic)
-endif()
+scoring_native_apply_baseline_warnings(scoring_stm32_host)
 
 add_executable(scoring_stm32_host_tests
   tests/test_stm32_host.c
@@ -91,35 +81,23 @@ target_link_libraries(scoring_stm32_core_tests PRIVATE scoring_stm32_host)
 target_link_libraries(scoring_stm32_target_startup_tests PRIVATE scoring_stm32_host)
 target_link_libraries(scoring_stm32g474_target_adapter_tests PRIVATE scoring_stm32_host)
 
-if(MSVC)
-  target_compile_options(scoring_stm32_host_tests PRIVATE /W4 /WX)
-else()
-  target_compile_options(scoring_stm32_host_tests PRIVATE -Wall -Wextra -Werror -Wpedantic)
-endif()
-
-if(MSVC)
-  target_compile_options(scoring_stm32_transport_tests PRIVATE /W4 /WX)
-else()
-  target_compile_options(scoring_stm32_transport_tests PRIVATE -Wall -Wextra -Werror -Wpedantic)
-endif()
-
-if(MSVC)
-  target_compile_options(scoring_stm32_core_tests PRIVATE /W4 /WX)
-else()
-  target_compile_options(scoring_stm32_core_tests PRIVATE -Wall -Wextra -Werror -Wpedantic)
-endif()
-
-if(MSVC)
-  target_compile_options(scoring_stm32_target_startup_tests PRIVATE /W4 /WX)
-else()
-  target_compile_options(scoring_stm32_target_startup_tests PRIVATE -Wall -Wextra -Werror -Wpedantic)
-endif()
-
-if(MSVC)
-  target_compile_options(scoring_stm32g474_target_adapter_tests PRIVATE /W4 /WX)
-else()
-  target_compile_options(scoring_stm32g474_target_adapter_tests PRIVATE -Wall -Wextra -Werror -Wpedantic)
-endif()
+foreach(target
+  scoring_stm32_host_tests
+  scoring_stm32_transport_tests
+  scoring_stm32_core_tests
+  scoring_stm32_target_startup_tests
+  scoring_stm32g474_target_adapter_tests
+)
+  scoring_native_apply_baseline_warnings(${target})
+endforeach()
+scoring_native_assert_baseline_warnings(
+  scoring_stm32_host
+  scoring_stm32_host_tests
+  scoring_stm32_transport_tests
+  scoring_stm32_core_tests
+  scoring_stm32_target_startup_tests
+  scoring_stm32g474_target_adapter_tests
+)
 
 add_test(NAME scoring_stm32_host_tests COMMAND scoring_stm32_host_tests)
 add_test(NAME scoring_stm32_transport_tests COMMAND scoring_stm32_transport_tests)

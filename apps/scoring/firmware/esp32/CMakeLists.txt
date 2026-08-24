@@ -15,16 +15,11 @@ else()
   project(scoring_esp32_services LANGUAGES C)
 
   enable_testing()
-  set(CMAKE_C_STANDARD 17)
-  set(CMAKE_C_STANDARD_REQUIRED ON)
-  set(CMAKE_C_EXTENSIONS OFF)
+  include("${CMAKE_CURRENT_LIST_DIR}/../cmake/ScoringNativePolicies.cmake")
+  scoring_native_initialize()
 
   if(SCORING_ENABLE_LLVM_COVERAGE)
-    if(MSVC)
-      message(FATAL_ERROR "SCORING_ENABLE_LLVM_COVERAGE requires a Clang-compatible compiler")
-    endif()
-    add_compile_options(-fprofile-instr-generate -fcoverage-mapping -O0)
-    add_link_options(-fprofile-instr-generate -fcoverage-mapping)
+    scoring_native_enable_llvm_coverage()
   endif()
 
   add_library(
@@ -47,12 +42,14 @@ else()
   target_link_libraries(scoring_esp32_receiver_host_test PRIVATE scoring_esp32_services)
 
   foreach(target scoring_esp32_services scoring_esp32_services_host_test scoring_esp32_load_isolation_host_test scoring_esp32_receiver_host_test)
-    if(MSVC)
-      target_compile_options(${target} PRIVATE /W4 /WX /permissive-)
-    else()
-      target_compile_options(${target} PRIVATE -Wall -Wextra -Werror -Wpedantic -Wconversion -Wsign-conversion)
-    endif()
+    scoring_native_apply_baseline_warnings(${target})
   endforeach()
+  scoring_native_assert_baseline_warnings(
+    scoring_esp32_services
+    scoring_esp32_services_host_test
+    scoring_esp32_load_isolation_host_test
+    scoring_esp32_receiver_host_test
+  )
 
   add_test(NAME scoring_esp32_services_host_test COMMAND scoring_esp32_services_host_test)
   add_test(NAME scoring_esp32_load_isolation_host_test COMMAND scoring_esp32_load_isolation_host_test)
