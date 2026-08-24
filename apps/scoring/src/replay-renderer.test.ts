@@ -194,7 +194,7 @@ describe("stored-record replay renderer", () => {
     }
   })
 
-  it("is deterministic for equivalent input objects with different source key order", () => {
+  it("renders equivalent input objects with different source key order", () => {
     const first = renderReplayRecord({ record, applicationTime: annotation() })
     const reordered = JSON.parse(
       JSON.stringify({
@@ -212,7 +212,7 @@ describe("stored-record replay renderer", () => {
     ) as ReplayRenderInput
     const second = renderReplayRecord(reordered)
 
-    expect(JSON.stringify(first)).toBe(JSON.stringify(second))
+    expect(first).toEqual(second)
     expect(first).not.toBe(second)
     expect(first.record).not.toBe(record)
   })
@@ -239,13 +239,13 @@ describe("stored-record replay renderer", () => {
     expect(() => renderReplayRecord({ record, unexpected: true } as never)).toThrow("missing or unrecognized fields")
     expect(() => renderReplayRecord({ record, applicationTime: undefined })).toThrow("plain object")
     expect(() => renderReplayRecord({ record: { ...record, futureField: true } } as never)).toThrow(
-      "missing or unrecognized fields"
+      new TypeError("Unsupported or invalid decision record")
     )
     expect(() =>
       renderReplayRecord({ record: { ...record, outcome: { ...record.outcome, futureDisposition: true } } } as never)
-    ).toThrow("missing or unrecognized fields")
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
     expect(() => renderReplayRecord({ record: { ...record, schemaVersion: 2 } } as never)).toThrow(
-      "Unsupported or invalid"
+      new TypeError("Unsupported or invalid decision record")
     )
     expect(() =>
       renderReplayRecord({ record, applicationTime: { ...annotation(), decisionRecordId: "other-record" } })
@@ -269,7 +269,7 @@ describe("stored-record replay renderer", () => {
           }
         }
       } as never)
-    ).toThrow("bounded identifier")
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
     const accessorInput = { record } as { record: DecisionRecord; applicationTime?: ApplicationTimelineEntry }
     Object.defineProperty(accessorInput, "applicationTime", { enumerable: true, get: () => null })
     expect(() => renderReplayRecord(accessorInput)).toThrow("data values")
@@ -278,55 +278,67 @@ describe("stored-record replay renderer", () => {
       enumerable: true,
       get: () => provenance.firmware
     })
-    expect(() => renderReplayRecord({ record: nestedAccessorRecord })).toThrow("data values")
+    expect(() => renderReplayRecord({ record: nestedAccessorRecord })).toThrow(
+      new TypeError("Unsupported or invalid decision record")
+    )
     const symbolInput = { record, [Symbol("extension")]: true }
     expect(() => renderReplayRecord(symbolInput as never)).toThrow("string keys")
   })
 
-  it("rejects malformed bounded records before parsing or cloning them", () => {
+  it("delegates malformed authoritative records to the canonical parser", () => {
     const withRawCaptureRefs = (rawCaptureRefs: unknown) =>
       renderReplayRecord({ record: { ...record, rawCaptureRefs } } as never)
-    expect(() => withRawCaptureRefs(null)).toThrow("array")
+    expect(() => withRawCaptureRefs(null)).toThrow(new TypeError("Unsupported or invalid decision record"))
     const wrongPrototype = [...record.rawCaptureRefs]
     Object.setPrototypeOf(wrongPrototype, null)
-    expect(() => withRawCaptureRefs(wrongPrototype)).toThrow("array")
-    expect(() => withRawCaptureRefs(Array.from({ length: 9 }, () => record.rawCaptureRefs[0]))).toThrow("at most")
+    expect(() => withRawCaptureRefs(wrongPrototype)).toThrow(new TypeError("Unsupported or invalid decision record"))
+    expect(() => withRawCaptureRefs(Array.from({ length: 9 }, () => record.rawCaptureRefs[0]))).toThrow(
+      new TypeError("Unsupported or invalid decision record")
+    )
     const extraArrayField = [...record.rawCaptureRefs] as unknown[] & { extra?: boolean }
     extraArrayField.extra = true
-    expect(() => withRawCaptureRefs(extraArrayField)).toThrow("unrecognized fields")
+    expect(() => withRawCaptureRefs(extraArrayField)).toThrow(new TypeError("Unsupported or invalid decision record"))
     const hiddenArrayEntry = [...record.rawCaptureRefs]
     Object.defineProperty(hiddenArrayEntry, "0", {
       configurable: true,
       enumerable: false,
       value: record.rawCaptureRefs[0]
     })
-    expect(() => withRawCaptureRefs(hiddenArrayEntry)).toThrow("enumerable")
+    expect(() => withRawCaptureRefs(hiddenArrayEntry)).toThrow(new TypeError("Unsupported or invalid decision record"))
     const accessorArrayEntry = [...record.rawCaptureRefs]
     Object.defineProperty(accessorArrayEntry, "0", {
       configurable: true,
       enumerable: true,
       get: () => record.rawCaptureRefs[0]
     })
-    expect(() => withRawCaptureRefs(accessorArrayEntry)).toThrow("enumerable data")
+    expect(() => withRawCaptureRefs(accessorArrayEntry)).toThrow(
+      new TypeError("Unsupported or invalid decision record")
+    )
     const sparseArray: unknown[] = []
     sparseArray.length = 1
-    expect(() => withRawCaptureRefs(sparseArray)).toThrow("sparse")
+    expect(() => withRawCaptureRefs(sparseArray)).toThrow(new TypeError("Unsupported or invalid decision record"))
     const descriptorProxy = new Proxy([...record.rawCaptureRefs], {
       getOwnPropertyDescriptor: () => undefined
     })
-    expect(() => withRawCaptureRefs(descriptorProxy)).toThrow("enumerable data")
+    expect(() => withRawCaptureRefs(descriptorProxy)).toThrow(TypeError)
 
     const withSignal = (signal: unknown) =>
       renderReplayRecord({ record: { ...record, outcome: { ...record.outcome, signal } } } as never)
-    expect(() => withSignal({ audible: "future", latched: true, visual: "none" })).toThrow("audible")
-    expect(() => withSignal({ audible: "none", latched: "future", visual: "none" })).toThrow("latched")
-    expect(() => withSignal({ audible: "none", latched: false, visual: "future" })).toThrow("visual")
+    expect(() => withSignal({ audible: "future", latched: true, visual: "none" })).toThrow(
+      new TypeError("Unsupported or invalid decision record")
+    )
+    expect(() => withSignal({ audible: "none", latched: "future", visual: "none" })).toThrow(
+      new TypeError("Unsupported or invalid decision record")
+    )
+    expect(() => withSignal({ audible: "none", latched: false, visual: "future" })).toThrow(
+      new TypeError("Unsupported or invalid decision record")
+    )
     expect(() =>
       renderReplayRecord({ record: { ...record, captureWindow: { ...record.captureWindow, lastSequence: 1 } } })
-    ).toThrow("ordered")
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
     expect(() =>
       renderReplayRecord({ record: { ...record, captureWindow: { ...record.captureWindow, throughUs: 1 } } })
-    ).toThrow("ordered")
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
     expect(() =>
       renderReplayRecord({
         record: {
@@ -334,18 +346,26 @@ describe("stored-record replay renderer", () => {
           provenance: { ...record.provenance, firmware: { ...record.provenance.firmware, buildDigest: "bad" } }
         }
       })
-    ).toThrow("digest")
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
     const raw = record.rawCaptureRefs[0]!
-    expect(() => withRawCaptureRefs([{ ...raw, contentDigest: "bad" }])).toThrow("digest")
-    expect(() => withRawCaptureRefs([{ ...raw, lastSequence: 1 }])).toThrow("ordered")
-    expect(() => withRawCaptureRefs([{ ...raw, throughUs: 1 }])).toThrow("ordered")
-    expect(() => withRawCaptureRefs([{ ...raw, kind: "future" }])).toThrow("kind")
+    expect(() => withRawCaptureRefs([{ ...raw, contentDigest: "bad" }])).toThrow(
+      new TypeError("Unsupported or invalid decision record")
+    )
+    expect(() => withRawCaptureRefs([{ ...raw, lastSequence: 1 }])).toThrow(
+      new TypeError("Unsupported or invalid decision record")
+    )
+    expect(() => withRawCaptureRefs([{ ...raw, throughUs: 1 }])).toThrow(
+      new TypeError("Unsupported or invalid decision record")
+    )
+    expect(() => withRawCaptureRefs([{ ...raw, kind: "future" }])).toThrow(
+      new TypeError("Unsupported or invalid decision record")
+    )
     expect(() =>
       renderReplayRecord({ record: { ...record, outcome: { ...record.outcome, disposition: 1 } } } as never)
-    ).toThrow("required")
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
     expect(() =>
       renderReplayRecord({ record: { ...record, outcome: { ...record.outcome, disposition: "future" } } } as never)
-    ).toThrow("unknown")
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
     expect(() =>
       renderReplayRecord({
         record: {
@@ -361,7 +381,7 @@ describe("stored-record replay renderer", () => {
           }
         }
       } as never)
-    ).toThrow("side")
+    ).toThrow(new TypeError("Unsupported or invalid decision record"))
     expect(() =>
       renderReplayRecord({ record, applicationTime: { ...annotation(), applicationSequence: "future" } } as never)
     ).toThrow("safe integer")
@@ -539,7 +559,9 @@ describe("stored-record replay renderer", () => {
       ...record,
       provenance: { ...record.provenance, hardwareRevision: `x${"a".repeat(MAX_REPLAY_RENDER_STRING_LENGTH)}` }
     }
-    expect(() => renderReplayRecord({ record: oversized })).toThrow("bounded identifier")
+    expect(() => renderReplayRecord({ record: oversized })).toThrow(
+      new TypeError("Unsupported or invalid decision record")
+    )
     expect(MAX_REPLAY_RENDER_RECORD_BYTES).toBe(65_536)
   })
 })

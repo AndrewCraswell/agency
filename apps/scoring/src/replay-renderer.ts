@@ -8,20 +8,11 @@
  */
 
 import type { ApplicationTimelineEntry, WallClockMetadata } from "./application-time-metadata.js"
-import {
-  MAX_RAW_CAPTURE_REFERENCES,
-  parseDecisionRecord,
-  type DecisionRecord,
-  type DecisionRecordOutcome,
-  type RecordProvenance,
-  type RawCaptureReference
-} from "./decision-record.js"
+import { parseDecisionRecord, type DecisionRecord } from "./decision-record.js"
 
 export const REPLAY_RENDER_SCHEMA_VERSION = 1
 export const MAX_REPLAY_RENDER_STRING_LENGTH = 256
 export const MAX_REPLAY_RENDER_RECORD_BYTES = 65_536
-
-type SignalSnapshot = DecisionRecordOutcome["signal"]
 
 /** The only input accepted by the renderer. The annotation is application-owned metadata. */
 export type ReplayRenderInput = Readonly<{
@@ -93,29 +84,6 @@ function objectWithOptionalFields(
   return object
 }
 
-function exactArray(value: unknown, description: string, maximumLength: number): readonly unknown[] {
-  if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype || value.length > maximumLength) {
-    throw new RangeError(`${description} must be an array of at most ${maximumLength} entries`)
-  }
-
-  const expectedKeys = new Set<string>(["length", ...value.map((_, index) => `${index}`)])
-  for (const key of Reflect.ownKeys(value)) {
-    if (typeof key !== "string" || !expectedKeys.has(key)) {
-      throw new TypeError(`${description} has unrecognized fields`)
-    }
-    const descriptor = Object.getOwnPropertyDescriptor(value, key)
-    if (descriptor === undefined || (key !== "length" && !descriptor.enumerable) || !("value" in descriptor)) {
-      throw new TypeError(`${description} entries must be enumerable data values`)
-    }
-  }
-  for (let index = 0; index < value.length; index += 1) {
-    if (!Object.hasOwn(value, index)) {
-      throw new TypeError(`${description} cannot contain sparse entries`)
-    }
-  }
-  return value
-}
-
 function assertIdentifier(value: unknown, description: string): asserts value is string {
   if (typeof value !== "string" || value.length === 0 || value.length > MAX_REPLAY_RENDER_STRING_LENGTH) {
     throw new RangeError(`${description} must be a bounded identifier`)
@@ -133,169 +101,6 @@ function assertNonnegativeSafeInteger(value: unknown, description: string): asse
   if (value < 0) {
     throw new RangeError(`${description} must be non-negative`)
   }
-}
-
-function validateSignal(value: unknown): void {
-  const signal = exactObject(value, ["audible", "latched", "visual"], "Replay signal")
-  if (signal.audible !== "none" && signal.audible !== "requested") {
-    throw new TypeError("Replay signal audible value is unknown")
-  }
-  if (typeof signal.latched !== "boolean") {
-    throw new TypeError("Replay signal latched value must be boolean")
-  }
-  if (
-    signal.visual !== "diagnostic" &&
-    signal.visual !== "none" &&
-    signal.visual !== "off-target" &&
-    signal.visual !== "valid-hit"
-  ) {
-    throw new TypeError("Replay signal visual value is unknown")
-  }
-}
-
-function validateCaptureWindow(value: unknown): void {
-  const window = exactObject(value, ["firstSequence", "fromUs", "lastSequence", "throughUs"], "Replay capture window")
-  assertNonnegativeSafeInteger(window.firstSequence, "Replay capture first sequence")
-  assertNonnegativeSafeInteger(window.lastSequence, "Replay capture last sequence")
-  assertNonnegativeSafeInteger(window.fromUs, "Replay capture start timestamp")
-  assertNonnegativeSafeInteger(window.throughUs, "Replay capture end timestamp")
-  if (window.lastSequence < window.firstSequence || window.throughUs < window.fromUs) {
-    throw new RangeError("Replay capture window bounds must be ordered")
-  }
-}
-
-function validateProvenance(value: unknown): void {
-  const provenance = exactObject(
-    value,
-    [
-      "calibrationProfileRevision",
-      "firmware",
-      "hardwareRevision",
-      "lineContractRevision",
-      "ruleSetRevision",
-      "timingTableRevision"
-    ],
-    "Replay provenance"
-  )
-  const firmware = exactObject(
-    provenance.firmware,
-    ["buildDigest", "identity", "scoringBootId"],
-    "Replay firmware provenance"
-  )
-  assertIdentifier(provenance.calibrationProfileRevision, "Replay calibration profile revision")
-  assertIdentifier(provenance.hardwareRevision, "Replay hardware revision")
-  assertIdentifier(provenance.lineContractRevision, "Replay line-contract revision")
-  assertIdentifier(provenance.ruleSetRevision, "Replay rule-set revision")
-  assertIdentifier(provenance.timingTableRevision, "Replay timing-table revision")
-  assertIdentifier(firmware.identity, "Replay firmware identity")
-  assertIdentifier(firmware.scoringBootId, "Replay scoring boot ID")
-  if (typeof firmware.buildDigest !== "string" || !/^sha256:[0-9a-f]{64}$/u.test(firmware.buildDigest)) {
-    throw new TypeError("Replay firmware build digest must be a lowercase SHA-256 digest")
-  }
-}
-
-function validateRawCaptureReferences(value: unknown): void {
-  const references = exactArray(value, "Replay raw capture references", MAX_RAW_CAPTURE_REFERENCES)
-  for (const reference of references) {
-    const raw = exactObject(
-      reference,
-      [
-        "captureId",
-        "contentDigest",
-        "contentFormatRevision",
-        "firstSequence",
-        "fromUs",
-        "kind",
-        "lastSequence",
-        "sampleCount",
-        "throughUs"
-      ],
-      "Replay raw capture reference"
-    )
-    assertIdentifier(raw.captureId, "Replay capture ID")
-    assertIdentifier(raw.contentFormatRevision, "Replay capture format revision")
-    if (typeof raw.contentDigest !== "string" || !/^sha256:[0-9a-f]{64}$/u.test(raw.contentDigest)) {
-      throw new TypeError("Replay capture content digest must be a lowercase SHA-256 digest")
-    }
-    assertNonnegativeSafeInteger(raw.firstSequence, "Replay capture reference first sequence")
-    assertNonnegativeSafeInteger(raw.lastSequence, "Replay capture reference last sequence")
-    assertNonnegativeSafeInteger(raw.fromUs, "Replay capture reference start timestamp")
-    assertNonnegativeSafeInteger(raw.throughUs, "Replay capture reference end timestamp")
-    assertNonnegativeSafeInteger(raw.sampleCount, "Replay capture reference sample count")
-    if (raw.lastSequence < raw.firstSequence || raw.throughUs < raw.fromUs) {
-      throw new RangeError("Replay raw capture reference bounds must be ordered")
-    }
-    if (
-      raw.kind !== "acquisition-samples" &&
-      raw.kind !== "calibration-measurements" &&
-      raw.kind !== "fault-context" &&
-      raw.kind !== "reset-context"
-    ) {
-      throw new TypeError("Replay raw capture reference kind is unknown")
-    }
-  }
-}
-
-function validateOutcome(value: unknown): void {
-  const outcome = isPlainDataObject(value, "Replay outcome")
-  validateSignal(outcome.signal)
-  if (typeof outcome.disposition !== "string") {
-    throw new TypeError("Replay outcome disposition is required")
-  }
-
-  const fieldsByDisposition: Readonly<Record<DecisionRecordOutcome["disposition"], readonly string[]>> = {
-    calibration: ["calibrationId", "disposition", "performedAtUs", "signal", "status"],
-    "line-fault": ["detectedAtUs", "diagnostic", "disposition", "lineId", "persistence", "side", "signal"],
-    "off-target": ["disposition", "qualifiedAtUs", "side", "signal", "weapon"],
-    "qualified-hit": ["disposition", "hitStartedAtUs", "qualifiedAtUs", "side", "signal", "weapon"],
-    "rejected-contact": ["attemptedAtUs", "attemptedSide", "disposition", "reason", "signal", "weapon"],
-    reset: ["cause", "disposition", "resetAtUs", "scope", "signal"],
-    uncertainty: ["disposition", "effect", "lowerBound", "observedAtUs", "signal", "subject", "unit", "upperBound"]
-  }
-  const fields =
-    outcome.disposition === "uncertainty" && outcome.subject === "identity"
-      ? ["disposition", "effect", "identity", "lowerBound", "observedAtUs", "signal", "subject", "unit", "upperBound"]
-      : fieldsByDisposition[outcome.disposition as DecisionRecordOutcome["disposition"]]
-  if (fields === undefined) {
-    throw new TypeError("Replay outcome disposition is unknown")
-  }
-  exactObject(value, fields, "Replay outcome")
-  if (outcome.disposition === "uncertainty" && outcome.subject === "identity") {
-    exactObject(outcome.identity, ["field", "observed", "status"], "Replay identity uncertainty")
-  }
-  for (const field of fields) {
-    if (field.endsWith("AtUs") || field === "lowerBound" || field === "upperBound") {
-      assertNonnegativeSafeInteger(outcome[field], `Replay outcome ${field}`)
-    }
-  }
-  for (const field of ["calibrationId", "lineId"] as const) {
-    if (Object.hasOwn(outcome, field)) {
-      assertIdentifier(outcome[field], `Replay outcome ${field}`)
-    }
-  }
-  if (
-    outcome.disposition === "line-fault" &&
-    outcome.side !== null &&
-    outcome.side !== "left" &&
-    outcome.side !== "right"
-  ) {
-    throw new TypeError("Replay line-fault side is unknown")
-  }
-}
-
-function validateRecord(value: unknown): DecisionRecord {
-  const record = exactObject(
-    value,
-    ["captureWindow", "decisionAtUs", "outcome", "provenance", "rawCaptureRefs", "recordId", "schemaVersion"],
-    "Replay decision record"
-  )
-  assertIdentifier(record.recordId, "Replay record ID")
-  assertNonnegativeSafeInteger(record.decisionAtUs, "Replay decision timestamp")
-  validateCaptureWindow(record.captureWindow)
-  validateProvenance(record.provenance)
-  validateRawCaptureReferences(record.rawCaptureRefs)
-  validateOutcome(record.outcome)
-  return parseDecisionRecord(record)
 }
 
 function validateWallClock(value: unknown): void {
@@ -419,165 +224,6 @@ function validateApplicationTime(value: unknown, record: DecisionRecord): Applic
   return application as unknown as ApplicationTimelineEntry
 }
 
-function cloneSignal(value: SignalSnapshot): SignalSnapshot {
-  return { audible: value.audible, latched: value.latched, visual: value.visual }
-}
-
-function cloneProvenance(value: RecordProvenance): RecordProvenance {
-  return {
-    calibrationProfileRevision: value.calibrationProfileRevision,
-    firmware: {
-      buildDigest: value.firmware.buildDigest,
-      identity: value.firmware.identity,
-      scoringBootId: value.firmware.scoringBootId
-    },
-    hardwareRevision: value.hardwareRevision,
-    lineContractRevision: value.lineContractRevision,
-    ruleSetRevision: value.ruleSetRevision,
-    timingTableRevision: value.timingTableRevision
-  }
-}
-
-function cloneRawCaptureReference(value: RawCaptureReference): RawCaptureReference {
-  return {
-    captureId: value.captureId,
-    contentDigest: value.contentDigest,
-    contentFormatRevision: value.contentFormatRevision,
-    firstSequence: value.firstSequence,
-    fromUs: value.fromUs,
-    kind: value.kind,
-    lastSequence: value.lastSequence,
-    sampleCount: value.sampleCount,
-    throughUs: value.throughUs
-  }
-}
-
-function cloneOutcome(value: DecisionRecordOutcome): DecisionRecordOutcome {
-  switch (value.disposition) {
-    case "calibration":
-      return {
-        calibrationId: value.calibrationId,
-        disposition: value.disposition,
-        performedAtUs: value.performedAtUs,
-        signal: cloneSignal(value.signal),
-        status: value.status
-      }
-    case "line-fault":
-      return {
-        detectedAtUs: value.detectedAtUs,
-        diagnostic: value.diagnostic,
-        disposition: value.disposition,
-        lineId: value.lineId,
-        persistence: value.persistence,
-        side: value.side,
-        signal: cloneSignal(value.signal)
-      }
-    case "off-target":
-      return {
-        disposition: value.disposition,
-        qualifiedAtUs: value.qualifiedAtUs,
-        side: value.side,
-        signal: cloneSignal(value.signal),
-        weapon: value.weapon
-      }
-    case "qualified-hit":
-      return {
-        disposition: value.disposition,
-        hitStartedAtUs: value.hitStartedAtUs,
-        qualifiedAtUs: value.qualifiedAtUs,
-        side: value.side,
-        signal: cloneSignal(value.signal),
-        weapon: value.weapon
-      }
-    case "rejected-contact":
-      return {
-        attemptedAtUs: value.attemptedAtUs,
-        attemptedSide: value.attemptedSide,
-        disposition: value.disposition,
-        reason: value.reason,
-        signal: cloneSignal(value.signal),
-        weapon: value.weapon
-      }
-    case "reset":
-      return {
-        cause: value.cause,
-        disposition: value.disposition,
-        resetAtUs: value.resetAtUs,
-        scope: value.scope,
-        signal: cloneSignal(value.signal)
-      }
-    case "uncertainty":
-      if (value.subject === "identity") {
-        return {
-          disposition: value.disposition,
-          effect: value.effect,
-          identity: {
-            field: value.identity.field,
-            observed: value.identity.observed,
-            status: value.identity.status
-          },
-          lowerBound: value.lowerBound,
-          observedAtUs: value.observedAtUs,
-          signal: cloneSignal(value.signal),
-          subject: value.subject,
-          unit: value.unit,
-          upperBound: value.upperBound
-        }
-      }
-      if (value.subject === "resistance") {
-        return {
-          disposition: value.disposition,
-          effect: value.effect,
-          lowerBound: value.lowerBound,
-          observedAtUs: value.observedAtUs,
-          signal: cloneSignal(value.signal),
-          subject: value.subject,
-          unit: value.unit,
-          upperBound: value.upperBound
-        }
-      }
-      if (value.subject === "clock" || value.subject === "timing") {
-        return {
-          disposition: value.disposition,
-          effect: value.effect,
-          lowerBound: value.lowerBound,
-          observedAtUs: value.observedAtUs,
-          signal: cloneSignal(value.signal),
-          subject: value.subject,
-          unit: value.unit,
-          upperBound: value.upperBound
-        }
-      }
-      return {
-        disposition: value.disposition,
-        effect: value.effect,
-        lowerBound: value.lowerBound,
-        observedAtUs: value.observedAtUs,
-        signal: cloneSignal(value.signal),
-        subject: value.subject,
-        unit: null,
-        upperBound: value.upperBound
-      }
-  }
-}
-
-function cloneRecord(value: DecisionRecord): DecisionRecord {
-  return {
-    captureWindow: {
-      firstSequence: value.captureWindow.firstSequence,
-      fromUs: value.captureWindow.fromUs,
-      lastSequence: value.captureWindow.lastSequence,
-      throughUs: value.captureWindow.throughUs
-    },
-    decisionAtUs: value.decisionAtUs,
-    outcome: cloneOutcome(value.outcome),
-    provenance: cloneProvenance(value.provenance),
-    rawCaptureRefs: value.rawCaptureRefs.map(cloneRawCaptureReference),
-    recordId: value.recordId,
-    schemaVersion: value.schemaVersion
-  }
-}
-
 function cloneWallClock(value: WallClockMetadata): WallClockMetadata {
   return value.status === "bounded"
     ? {
@@ -638,14 +284,14 @@ function serializedByteLength(value: ReplayRenderModel): number {
  */
 export function renderReplayRecord(value: ReplayRenderInput): ReplayRenderModel {
   const input = objectWithOptionalFields(value, ["applicationTime", "record"], ["record"], "Replay renderer input")
-  const record = validateRecord(input.record)
+  const record = parseDecisionRecord(input.record)
   const applicationTime =
     !Object.hasOwn(input, "applicationTime") || input.applicationTime === null
       ? null
       : validateApplicationTime(input.applicationTime, record)
   const model = deepFreeze({
     applicationTime: applicationTime === null ? null : cloneApplicationTime(applicationTime),
-    record: cloneRecord(record),
+    record,
     schemaVersion: REPLAY_RENDER_SCHEMA_VERSION as typeof REPLAY_RENDER_SCHEMA_VERSION
   })
   serializedByteLength(model)

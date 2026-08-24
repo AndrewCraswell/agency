@@ -28,7 +28,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 8 | SC-003 | P3 | intake | The retained logical board model is a 1,100-line mixed-domain composition |
 | 9 | SD-006 | P1 | blocked | ESP32 services and receiver disagree on identifier validity; intake waits for FW-004 |
 | 10 | SD-009 | P1 | ready | Remote gesture timing still uses milliseconds instead of canonical microseconds |
-| 11 | SD-010 | P2 | ready | Replay duplicates the canonical decision-record validator and clone |
+| 11 | SD-010 | P2 | done | Root-approved replay now delegates authoritative record validation and immutable cloning solely to `parseDecisionRecord` while retaining replay-only annotation checks |
 | 12 | SD-011 | P2 | ready | Replay duplicates application-time annotation validation |
 | 13 | SD-007 | P2 | ready | Scenario display and fixture schemas duplicate vocabulary predicates |
 | 14 | SD-008 | P2 | intake-blocked-on-active-units | Strict immutable-data helpers are copied across app and circuit contracts |
@@ -227,7 +227,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SD-010: use the decision-record parser as replay's sole record validator
 
 - Priority: `P2`
-- State: `ready`
+- State: `done`
+- Latest state: Delivered and root-approved: replay removes its duplicate record validator and manual clone, consumes the canonical parser's deeply frozen result, preserves replay-only annotation validation, and passes the replay and journal regression suites.
 - Affected files: `apps/scoring/src/replay-renderer.ts`, `decision-record.ts`, and focused tests.
 - Description: replay independently validates the complete decision-record shape, then calls `parseDecisionRecord` and manually clones the same record again.
 - Impact: every record-contract change requires synchronized validation edits and can make replay reject or reinterpret an otherwise canonical record.
