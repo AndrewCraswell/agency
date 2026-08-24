@@ -38,6 +38,20 @@ describe("M4-04 single-channel sensing coupon", () => {
         sha256: null
       }
     })
+    expect(
+      M404_SINGLE_CHANNEL_COUPON.footprints.find((footprint) => footprint.exactMpn === "ADA4177-1ARZ")?.evidence
+    ).toMatchObject({
+      manufacturerDrawing: {
+        acquisition: "not-acquired",
+        artifactPath: null,
+        drawingUrl: null,
+        sha256: null
+      },
+      manufacturerPrimaryDocument: {
+        status: "identified-not-hash-acquired",
+        url: "https://www.analog.com/media/en/technical-documentation/data-sheets/ADA4177-1_4177-2_4177-4.pdf"
+      }
+    })
   })
 
   it("binds a ten-MPN first-party drawing batch without granting footprint authority", () => {

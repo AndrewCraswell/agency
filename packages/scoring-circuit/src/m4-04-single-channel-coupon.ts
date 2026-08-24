@@ -505,7 +505,7 @@ const definition = {
     sourceModel: "src/one-channel-analog-experiment.ts",
     title: "One-channel protected analog experiment",
     sourcePath: "REF5025AQDRQ1 -> ERA3AEB2491V -> TMUX1112PWR -> LINE",
-    acquisitionPath: "LINE -> TPD4E05U06DQAR / 22 ohm -> ADA4177-1BRZ -> 20 ohm / 1 nF -> ADS8881IDGS",
+    acquisitionPath: "LINE -> TPD4E05U06DQAR / 22 ohm -> ADA4177-1ARZ -> 20 ohm / 1 nF -> ADS8881IDGS",
     normalPower:
       "USB-C PD remains the apparatus normal input; this isolated coupon accepts no USB-C, VBUS, CC, or PD controller connection."
   },

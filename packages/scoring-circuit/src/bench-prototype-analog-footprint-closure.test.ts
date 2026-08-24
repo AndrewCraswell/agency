@@ -69,7 +69,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     )) {
       if (
         record.exactMpn === "ERA3AEB2491V" ||
-        record.exactMpn === "ADA4177-1BRZ" ||
+        record.exactMpn === "ADA4177-1ARZ" ||
         record.exactMpn === "GRM188R71A105KA12D"
       ) {
         expect(record.sharedManufacturerSourceId).toBeNull()
@@ -131,6 +131,13 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
         exactPackage: "0603",
         primaryEvidenceUrl:
           "https://industrial.panasonic.com/ww/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V"
+      })
+      expect(channelRecords.find((record) => record.reference === `U_OVP_BUFFER_${channelIndex}`)).toMatchObject({
+        exactMpn: "ADA4177-1ARZ",
+        exactPackage: "R SOIC-8",
+        primaryEvidenceUrl:
+          "https://www.analog.com/media/en/technical-documentation/data-sheets/ADA4177-1_4177-2_4177-4.pdf",
+        sharedManufacturerSourceId: null
       })
       expect(channelRecords.find((record) => record.reference === `R_SOURCE_PD_${channelIndex}`)).toMatchObject({
         sourceContract: "BP-103",

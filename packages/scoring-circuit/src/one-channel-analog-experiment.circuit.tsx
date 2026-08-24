@@ -197,7 +197,7 @@ export default function OneChannelAnalogExperimentCircuit() {
 
       <chip
         name="U_OVP_BUFFER"
-        manufacturerPartNumber="ADA4177-1BRZ"
+        manufacturerPartNumber="ADA4177-1ARZ"
         footprint="soic8"
         pinLabels={{
           pin2: "BUFFER_INVERTING",

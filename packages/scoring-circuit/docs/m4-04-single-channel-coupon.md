@@ -8,8 +8,16 @@ The schematic is the existing
 It is a one-channel learning article, not a seven-channel scoring-board
 implementation. Its source path is `REF5025AQDRQ1 -> ERA3AEB2491V ->
 TMUX1112PWR -> LINE`; its acquisition path uses the connector-side
-TPD4E05U06DQAR shunt, 22-ohm series resistor, ADA4177-1BRZ buffer, and
+TPD4E05U06DQAR shunt, 22-ohm series resistor, ADA4177-1ARZ buffer, and
 ADS8881IDGS converter.
+
+The protected buffer orderable is `ADA4177-1ARZ`; the former `BRZ` suffix was
+not a manufacturer-listed ADA4177-1 orderable. Analog
+Devices' [ADA4177-1 product page](https://www.analog.com/en/products/ADA4177-1.html)
+and [Rev. E data sheet](https://www.analog.com/media/en/technical-documentation/data-sheets/ADA4177-1_4177-2_4177-4.pdf)
+identify `ADA4177-1ARZ` as the 8-lead R SOIC variant. This is primary-source
+identity evidence only: no source bytes, package-drawing hash, CAD object,
+project artwork, orientation review, or fabrication authority has been added.
 
 `m4-04-single-channel-coupon.ts` performs a source-bound static ERC over the
 named functional nets. It confirms the defined line, quiet, source, guarded

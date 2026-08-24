@@ -6,7 +6,7 @@ BP-031 imports the already reviewed M4-04 source identities once, rather than
 copying source hashes into each of the seven repeated cells. Thirteen exact
 lane-B MPNs have a shared source ID: eight are exact-MPN hash-bound records and
 five are explicitly series-only Vishay resistor records. The 91 matching cell
-rows reference those IDs. The remaining 21 rows (`ERA3AEB2491V`, `ADA4177-1BRZ`,
+rows reference those IDs. The remaining 21 rows (`ERA3AEB2491V`, `ADA4177-1ARZ`,
 and `GRM188R71A105KA12D` across seven cells) retain no archived M4-04 drawing
 source.
 
@@ -45,7 +45,7 @@ channel number, conductor, connector net, and role. The repeated set is:
 | `U_SOURCE_SWITCH_n` | `TMUX1112PWR` | PW TSSOP-16 | BP-102 |
 | `R_SOURCE_n` | `ERA3AEB2491V` | 0603 | BP-102 |
 | `R_SOURCE_PD_n` | `CRCW0603100KFKEAHP` | 0603 | BP-102 |
-| `U_OVP_BUFFER_n` | `ADA4177-1BRZ` | R SOIC-8 | BP-102 |
+| `U_OVP_BUFFER_n` | `ADA4177-1ARZ` | R SOIC-8 | BP-102 |
 | `R_SAR_n` | `CRCW060320R0FKEAHP` | 0603 | BP-102 |
 | `C_SAR_n` | `C0603C102J5GACTU` | 0603 | BP-102 |
 | `U_SAR_n` | `ADS8881IDGS` | DGS VSSOP-10 | BP-101 |

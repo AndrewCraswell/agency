@@ -42,7 +42,7 @@ full-temperature input range ends at plus/minus 1.5 V. This is fundamentally
 different from trying to force a PGA output at 2.5 V into the LTC2373's narrow
 common-mode window.
 
-`ADA4177-1BRZ` is intentionally operated from isolated plus/minus 5 V, not as
+`ADA4177-1ARZ` is intentionally operated from isolated plus/minus 5 V, not as
 an undocumented single-supply buffer. Its pin 3 non-inverting input receives
 the source node, pin 6 output closes unity feedback to pin 2 inverting input,
 and its normal 0 V to 0.42 V input is inside
@@ -59,7 +59,14 @@ guarded experiment a device-range screen for plus/minus 24 V while preserving
 | `U_REF` | `REF5025AQDRQ1` | Shared 2.5 V excitation and SAR reference |
 | `U_SOURCE_SWITCH` | `TMUX1112PWR` | Existing source-path behavior under test; source-only during capture |
 | `R_SOURCE` | `ERA3AEB2491V`, 2.49 kohm, 0.1%, 25 ppm/C | Exact excitation resistor |
-| `U_OVP_BUFFER` | `ADA4177-1BRZ` | Unity-gain protected buffer, plus/minus 5 V |
+| `U_OVP_BUFFER` | `ADA4177-1ARZ` | Unity-gain protected buffer, plus/minus 5 V |
+
+`U_OVP_BUFFER` is the manufacturer-listed `ADA4177-1ARZ` R SOIC-8 orderable.
+The Analog Devices [product page](https://www.analog.com/en/products/ADA4177-1.html)
+and [Rev. E data sheet](https://www.analog.com/media/en/technical-documentation/data-sheets/ADA4177-1_4177-2_4177-4.pdf)
+are recorded as exact-orderable identity evidence. They have not been retained
+or hash-bound here and do not release any footprint, CAD, artwork, orientation,
+or fabrication gate.
 | `U_SAR` | `ADS8881IDGS` | 18-bit, 1 MSPS, 10-pin VSSOP grounded-input differential SAR |
 | `R_SAR` | `CRCW060320R0FKEAHP`, 20 ohm, 1% | SAR isolation resistor |
 | `C_SAR` | `C0603C102J5GACTU`, 1 nF C0G | ADC charge bucket/filter |

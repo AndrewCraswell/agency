@@ -199,7 +199,7 @@ describe("BP-103 seven-channel analog replication", () => {
       ["U_SOURCE_SWITCH", "TMUX1112PWR"],
       ["R_SOURCE", "ERA3AEB2491V"],
       ["R_SOURCE_PD", "CRCW0603100KFKEAHP"],
-      ["U_OVP_BUFFER", "ADA4177-1BRZ"],
+      ["U_OVP_BUFFER", "ADA4177-1ARZ"],
       ["R_SAR", "CRCW060320R0FKEAHP"],
       ["C_SAR", "C0603C102J5GACTU"],
       ["U_SAR", "ADS8881IDGS"],

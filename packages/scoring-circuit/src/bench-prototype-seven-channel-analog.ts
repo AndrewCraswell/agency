@@ -202,7 +202,7 @@ const enablePadMap = [
  */
 const cellIdentity = {
   adc: "ADS8881IDGS",
-  buffer: "ADA4177-1BRZ",
+  buffer: "ADA4177-1ARZ",
   esd: "TPD4E05U06DQAR",
   normalSeries: "CRCW060322R0FKEAHP",
   sarSeries: "CRCW060320R0FKEAHP",

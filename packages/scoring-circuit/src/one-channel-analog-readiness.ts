@@ -113,10 +113,10 @@ const physicalPartSeeds = [
   [
     "U_OVP_BUFFER",
     "Analog Devices",
-    "ADA4177-1BRZ",
+    "ADA4177-1ARZ",
     "R SOIC-8",
     "protected precision buffer",
-    "https://www.analog.com/media/en/technical-documentation/data-sheets/ada4177-1_4177-2_4177-4.pdf"
+    "https://www.analog.com/media/en/technical-documentation/data-sheets/ADA4177-1_4177-2_4177-4.pdf"
   ],
   ["R_SAR", "Vishay", "CRCW060320R0FKEAHP", "0603", "20 ohm, 1 percent", vishayCrcwEvidence],
   ["C_SAR", "KEMET", "C0603C102J5GACTU", "0603", "1 nF C0G, 5 percent", kemetOneNfEvidence],
