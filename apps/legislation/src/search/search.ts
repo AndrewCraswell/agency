@@ -1,4 +1,5 @@
-import { and, arrayOverlaps, asc, desc, eq, gte, inArray, isNotNull, lte, or, sql } from "drizzle-orm"
+import { createHash } from "node:crypto"
+import { and, arrayOverlaps, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm"
 import { getTableColumns, type SQL } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
 import {
@@ -19,8 +20,17 @@ import {
 import { embeddingRouteFor } from "../models/embedding-routing.js"
 
 const DEFAULT_LIMIT = 20
+const LEXICAL_BILL_CANDIDATE_LIMIT = 1_000
 const MAXIMUM_LIMIT = 100
 const MAXIMUM_QUERY_LENGTH = 500
+const {
+  embedding: _billEmbedding,
+  embeddingInputHash: _billEmbeddingInputHash,
+  embeddingModel: _billEmbeddingModel,
+  embeddedAt: _billEmbeddedAt,
+  searchVector: _billSearchVector,
+  ...billSearchSummaryColumns
+} = getTableColumns(bills)
 const { text: _supportingMaterialText, ...supportingMaterialSummaryColumns } = getTableColumns(supportingMaterials)
 
 export interface SearchFilters {
@@ -105,7 +115,10 @@ export type BillSearchMatchedField =
   | "title"
   | "versionText"
 
-export function validateSearchInput(input: SearchInput): { limit: number; offset: number; query: string } {
+export function validateSearchInput(
+  input: SearchInput,
+  bindCursor = false
+): { limit: number; offset: number; query: string } {
   const query = input.query.trim()
   if (query.length === 0 || query.length > MAXIMUM_QUERY_LENGTH) {
     throw new Error(`Search query must contain between 1 and ${MAXIMUM_QUERY_LENGTH} characters`)
@@ -114,10 +127,10 @@ export function validateSearchInput(input: SearchInput): { limit: number; offset
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAXIMUM_LIMIT) {
     throw new Error(`Search limit must be between 1 and ${MAXIMUM_LIMIT}`)
   }
-  return { limit, offset: decodeSearchCursor(input.cursor), query }
+  return { limit, offset: decodeSearchCursor(input.cursor, bindCursor ? input : undefined), query }
 }
 
-export function decodeSearchCursor(cursor: string | undefined): number {
+export function decodeSearchCursor(cursor: string | undefined, input?: SearchInput): number {
   if (cursor === undefined) {
     return 0
   }
@@ -133,14 +146,51 @@ export function decodeSearchCursor(cursor: string | undefined): number {
     ) {
       throw new Error("invalid shape")
     }
+    if (input === undefined && "version" in value) {
+      throw new Error("bound cursor used outside lexical bill search")
+    }
+    if (
+      input !== undefined &&
+      (!("binding" in value) ||
+        value.binding !== searchCursorBinding(input) ||
+        !("version" in value) ||
+        value.version !== 1 ||
+        value.offset >= LEXICAL_BILL_CANDIDATE_LIMIT)
+    ) {
+      throw new Error("search request does not match cursor")
+    }
     return value.offset
   } catch {
     throw new Error("Invalid search cursor")
   }
 }
 
-export function encodeSearchCursor(offset: number): string {
-  return Buffer.from(JSON.stringify({ offset })).toString("base64url")
+export function encodeSearchCursor(offset: number, input?: SearchInput): string {
+  return Buffer.from(
+    JSON.stringify(input === undefined ? { offset } : { binding: searchCursorBinding(input), offset, version: 1 })
+  ).toString("base64url")
+}
+
+function searchCursorBinding(input: SearchInput): string {
+  const value = {
+    classifications: sortedValues(input.classifications),
+    introducedFrom: input.introducedFrom,
+    introducedTo: input.introducedTo,
+    jurisdictionIds: sortedValues(input.jurisdictionIds),
+    query: input.query.trim(),
+    sessionIds: sortedValues(input.sessionIds),
+    sponsorIds: sortedValues(input.sponsorIds),
+    statuses: sortedValues(input.statuses),
+    subjects: sortedValues(input.subjects),
+    updatedFrom: input.updatedFrom?.toISOString(),
+    updatedTo: input.updatedTo?.toISOString(),
+    updatedToExclusive: input.updatedToExclusive?.toISOString()
+  }
+  return createHash("sha256").update(JSON.stringify(value)).digest("base64url")
+}
+
+function sortedValues(values: readonly string[] | undefined): readonly string[] | undefined {
+  return values === undefined ? undefined : [...new Set(values)].sort()
 }
 
 function billFilters(filters: SearchFilters): SQL[] {
@@ -192,11 +242,17 @@ export function paginateCappedSearchRows<T>(rows: T[], limit: number, offset: nu
  * window must therefore use that offset only to advance the opaque cursor,
  * never to slice the window a second time.
  */
-export function paginateSearchDatabaseRows<T>(rows: T[], limit: number, offset: number): SearchPage<T> {
-  const truncated = rows.length > limit
+export function paginateSearchDatabaseRows<T>(
+  rows: T[],
+  limit: number,
+  offset: number,
+  input?: SearchInput,
+  capped = false
+): SearchPage<T> {
+  const truncated = rows.length > limit || capped
   return {
     items: rows.slice(0, limit),
-    nextCursor: truncated ? encodeSearchCursor(offset + limit) : undefined,
+    nextCursor: rows.length > limit && !capped ? encodeSearchCursor(offset + limit, input) : undefined,
     truncated
   }
 }
@@ -205,133 +261,120 @@ export async function lexicalBillSearch(
   database: LegislationDatabase,
   input: SearchInput
 ): Promise<SearchPage<BillSearchCandidate>> {
-  const { limit, offset, query } = validateSearchInput(input)
-  const rows = await buildLexicalBillSearchQuery(database, input, query, limit, offset)
-  return paginateSearchDatabaseRows(
-    rows.map((row) => ({
-      ...row.bill,
-      latestActionAt: row.latestActionAt,
-      lexicalScore: row.rank,
-      matchedFields: billSearchMatchedFields(row),
-      rerankScore: null,
-      rank: row.rank,
-      score: row.rank,
-      semanticScore: null,
-      snippet:
-        row.billTextMatches || row.identifierMatches
-          ? (row.billSnippet ?? null)
-          : (row.sponsorSnippet ?? row.versionSnippet)
-    })),
+  const { limit, offset, query } = validateSearchInput(input, true)
+  const result = await database.execute<LexicalBillSearchRow>(buildLexicalBillSearchQuery(input, query, limit, offset))
+  const page = paginateSearchDatabaseRows(
+    result.rows,
     limit,
-    offset
+    offset,
+    input,
+    offset + limit + 1 > LEXICAL_BILL_CANDIDATE_LIMIT
   )
+  if (page.items.length === 0) {
+    return { ...page, items: [] }
+  }
+
+  const candidates = await hydrateLexicalBillCandidates(database, page.items, query)
+  return { ...page, items: candidates }
 }
 
-export function buildLexicalBillSearchQuery(
-  database: LegislationDatabase,
-  input: SearchInput,
-  query: string,
-  limit: number,
-  offset: number
-) {
+export function buildLexicalBillSearchQuery(input: SearchInput, query: string, limit: number, offset: number): SQL {
   const searchQuery = sql`websearch_to_tsquery('english', ${query})`
+  const candidateLimit = Math.min(Math.max(limit + offset + 1, 25), LEXICAL_BILL_CANDIDATE_LIMIT)
+  const billTextMatches = sql<boolean>`${bills.searchVector} @@ ${searchQuery}`
   const identifierMatches = sql<boolean>`to_tsvector('english', ${bills.identifier}) @@ ${searchQuery}`
   const titleMatches = sql<boolean>`to_tsvector('english', ${bills.title}) @@ ${searchQuery}`
   const abstractMatches = sql<boolean>`to_tsvector('english', coalesce(${bills.summary}, '')) @@ ${searchQuery}`
   const subjectMatches = sql<boolean>`to_tsvector('english', array_to_string(${bills.subjects}, ' ')) @@ ${searchQuery}`
   const sponsorSearchVector = sql`to_tsvector('english', ${billSponsors.name})`
-  const sponsorMatches = database
-    .select({
-      rank: sql<number | null>`max(ts_rank_cd(${sponsorSearchVector}, ${searchQuery}))`.as("rank"),
-      snippet: sql<
-        string | null
-      >`min(ts_headline('english', ${billSponsors.name}, ${searchQuery}, 'MaxFragments=1, MaxWords=20, MinWords=5'))`.as(
-        "snippet"
-      )
-    })
-    .from(billSponsors)
-    .where(and(eq(billSponsors.billId, bills.id), sql`${sponsorSearchVector} @@ ${searchQuery}`))
-    .as("bill_sponsor_matches")
-  const versionMatches = database
-    .select({
-      rank: sql<number | null>`max(ts_rank_cd(${documentSections.searchVector}, ${searchQuery}))`.as("rank"),
-      snippet: sql<
-        string | null
-      >`min(ts_headline('english', ${documentSections.text}, ${searchQuery}, 'MaxFragments=2, MaxWords=35, MinWords=10'))`.as(
-        "snippet"
-      )
-    })
-    .from(documentSections)
-    .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
-    .where(
-      and(
-        eq(billDocuments.billId, bills.id),
-        eq(billDocuments.classification, "version"),
-        eq(billDocuments.processingStatus, "processed"),
-        sql`${documentSections.searchVector} @@ ${searchQuery}`
-      )
-    )
-    .as("bill_version_matches")
-  const latestActions = database
-    .select({
-      latestActionAt: sql<Date | null>`max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))`.as(
-        "latest_action_at"
-      )
-    })
-    .from(billActions)
-    .where(eq(billActions.billId, bills.id))
-    .as("bill_search_latest_actions")
+  const versionRank = sql<number>`max(ts_rank_cd(${documentSections.searchVector}, ${searchQuery}))`
+  const sponsorRank = sql<number>`max(ts_rank_cd(${sponsorSearchVector}, ${searchQuery}))`
   const rank = sql<number>`
     ts_rank_cd(${bills.searchVector}, ${searchQuery})
     + case when ${identifierMatches} then 1 else 0 end
-    + coalesce(${sponsorMatches.rank}, 0)
-    + coalesce(${versionMatches.rank}, 0)
+    + coalesce(sponsor_matches.sponsor_rank, 0)
+    + coalesce(version_matches.version_rank, 0)
   `
-  return database
-    .select({
-      abstractMatches,
-      bill: bills,
-      billSnippet: sql<string | null>`ts_headline(
-        'english',
-        concat_ws(' ', ${bills.identifier}, ${bills.title}, ${bills.summary}, array_to_string(${bills.subjects}, ' ')),
-        ${searchQuery},
-        'MaxFragments=2, MaxWords=35, MinWords=10'
-      )`,
-      billTextMatches: sql<boolean>`${bills.searchVector} @@ ${searchQuery}`,
-      identifierMatches,
-      latestActionAt: latestActions.latestActionAt,
-      rank,
-      sponsorRank: sponsorMatches.rank,
-      sponsorSnippet: sponsorMatches.snippet,
-      subjectMatches,
-      titleMatches,
-      versionRank: versionMatches.rank,
-      versionSnippet: versionMatches.snippet
-    })
-    .from(bills)
-    .leftJoinLateral(sponsorMatches, sql`true`)
-    .leftJoinLateral(versionMatches, sql`true`)
-    .leftJoinLateral(latestActions, sql`true`)
-    .where(
-      and(
-        or(
-          sql`${bills.searchVector} @@ ${searchQuery}`,
-          identifierMatches,
-          isNotNull(sponsorMatches.rank),
-          isNotNull(versionMatches.rank)
-        ),
-        ...billFilters(input)
-      )
+  return sql`
+    with bill_text_matches as materialized (
+      select ${bills.id} as id
+      from ${bills}
+      where ${billTextMatches} and ${and(...billFilters(input)) ?? sql`true`}
+      order by ts_rank_cd(${bills.searchVector}, ${searchQuery}) desc, ${bills.id} asc
+      limit ${candidateLimit}
+    ),
+    identifier_matches as materialized (
+      select ${bills.id} as id
+      from ${bills}
+      where ${identifierMatches} and ${and(...billFilters(input)) ?? sql`true`}
+      order by ${bills.id} asc
+      limit ${candidateLimit}
+    ),
+    sponsor_matches as materialized (
+      select ${billSponsors.billId} as bill_id, ${sponsorRank} as sponsor_rank
+      from ${billSponsors}
+      inner join ${bills} on ${bills.id} = ${billSponsors.billId}
+      where
+        ${sponsorSearchVector} @@ ${searchQuery}
+        and ${and(...billFilters(input)) ?? sql`true`}
+      group by ${billSponsors.billId}
+      order by ${sponsorRank} desc, ${billSponsors.billId} asc
+      limit ${candidateLimit}
+    ),
+    version_matches as materialized (
+      select ${billDocuments.billId} as bill_id, ${versionRank} as version_rank
+      from ${documentSections}
+      inner join ${billDocuments} on ${documentSections.documentId} = ${billDocuments.id}
+      inner join ${bills} on ${bills.id} = ${billDocuments.billId}
+      where
+        ${billDocuments.classification} = 'version'
+        and ${billDocuments.processingStatus} = 'processed'
+        and ${documentSections.searchVector} @@ ${searchQuery}
+        and ${and(...billFilters(input)) ?? sql`true`}
+      group by ${billDocuments.billId}
+      order by ${versionRank} desc, ${billDocuments.billId} asc
+      limit ${candidateLimit}
+    ),
+    candidate_sources as (
+      select id from bill_text_matches
+      union all
+      select id from identifier_matches
+      union all
+      select bill_id as id from sponsor_matches
+      union all
+      select bill_id as id from version_matches
+    ),
+    candidate_ids as (
+      select id
+      from candidate_sources
+      group by id
+    ),
+    ranked_candidates as (
+      select
+        ${bills.id} as "id",
+        ${abstractMatches} as "abstractMatches",
+        ${billTextMatches} as "billTextMatches",
+        ${identifierMatches} as "identifierMatches",
+        ${rank} as "rank",
+        sponsor_matches.sponsor_rank as "sponsorRank",
+        ${subjectMatches} as "subjectMatches",
+        ${titleMatches} as "titleMatches",
+        version_matches.version_rank as "versionRank"
+      from candidate_ids
+      inner join ${bills} on ${bills.id} = candidate_ids.id
+      left join sponsor_matches on sponsor_matches.bill_id = ${bills.id}
+      left join version_matches on version_matches.bill_id = ${bills.id}
     )
-    .orderBy(desc(rank), asc(bills.id))
-    .limit(limit + 1)
-    .offset(offset)
+    select *
+    from ranked_candidates
+    order by "rank" desc, "id" asc
+    limit ${limit + 1}
+    offset ${offset}
+  `
 }
 
 function billSearchMatchedFields(value: {
   abstractMatches: boolean
-  billSnippet: string | null
-  billTextMatches: boolean
   identifierMatches: boolean
   sponsorRank: number | null
   subjectMatches: boolean
@@ -346,6 +389,111 @@ function billSearchMatchedFields(value: {
     ...(value.sponsorRank === null ? [] : (["sponsorNames"] as const)),
     ...(value.versionRank === null ? [] : (["versionText"] as const))
   ]
+}
+
+interface LexicalBillSearchRow {
+  [key: string]: unknown
+  abstractMatches: boolean
+  billTextMatches: boolean
+  id: string
+  identifierMatches: boolean
+  rank: number
+  sponsorRank: number | null
+  subjectMatches: boolean
+  titleMatches: boolean
+  versionRank: number | null
+}
+
+async function hydrateLexicalBillCandidates(
+  database: LegislationDatabase,
+  rows: readonly LexicalBillSearchRow[],
+  query: string
+): Promise<BillSearchCandidate[]> {
+  const billIds = rows.map((row) => row.id)
+  const searchQuery = sql`websearch_to_tsquery('english', ${query})`
+  const sponsorSearchVector = sql`to_tsvector('english', ${billSponsors.name})`
+  // Keep each request to one active database operation at a time. The ranking
+  // window is already small, while concurrent hydration queries would add four
+  // simultaneous PgBouncer clients for a single API request.
+  const billRows = await database
+    .select({
+      bill: billSearchSummaryColumns,
+      billSnippet: sql<string | null>`ts_headline(
+        'english',
+        concat_ws(' ', ${bills.identifier}, ${bills.title}, ${bills.summary}, array_to_string(${bills.subjects}, ' ')),
+        ${searchQuery},
+        'MaxFragments=2, MaxWords=35, MinWords=10'
+      )`
+    })
+    .from(bills)
+    .where(inArray(bills.id, billIds))
+  const latestActionRows = await database
+    .select({
+      billId: billActions.billId,
+      latestActionAt: sql<Date | null>`max(coalesce(${billActions.actionAt}, ${billActions.actionDate}::timestamp))`
+    })
+    .from(billActions)
+    .where(inArray(billActions.billId, billIds))
+    .groupBy(billActions.billId)
+  const sponsorSnippetRows = await database
+    .select({
+      billId: billSponsors.billId,
+      snippet: sql<string | null>`min(ts_headline(
+        'english',
+        ${billSponsors.name},
+        ${searchQuery},
+        'MaxFragments=1, MaxWords=20, MinWords=5'
+      ))`
+    })
+    .from(billSponsors)
+    .where(and(inArray(billSponsors.billId, billIds), sql`${sponsorSearchVector} @@ ${searchQuery}`))
+    .groupBy(billSponsors.billId)
+  const versionSnippetRows = await database
+    .select({
+      billId: billDocuments.billId,
+      snippet: sql<string | null>`min(ts_headline(
+        'english',
+        ${documentSections.text},
+        ${searchQuery},
+        'MaxFragments=2, MaxWords=35, MinWords=10'
+      ))`
+    })
+    .from(documentSections)
+    .innerJoin(billDocuments, eq(documentSections.documentId, billDocuments.id))
+    .where(
+      and(
+        inArray(billDocuments.billId, billIds),
+        eq(billDocuments.classification, "version"),
+        eq(billDocuments.processingStatus, "processed"),
+        sql`${documentSections.searchVector} @@ ${searchQuery}`
+      )
+    )
+    .groupBy(billDocuments.billId)
+  const billsById = new Map(billRows.map((row) => [row.bill.id, row]))
+  const latestActionsByBillId = new Map(latestActionRows.map((row) => [row.billId, row.latestActionAt]))
+  const sponsorSnippetsByBillId = new Map(sponsorSnippetRows.map((row) => [row.billId, row.snippet]))
+  const versionSnippetsByBillId = new Map(versionSnippetRows.map((row) => [row.billId, row.snippet]))
+
+  return rows.map((row) => {
+    const bill = billsById.get(row.id)
+    if (bill === undefined) {
+      throw new Error(`Lexical bill candidate ${row.id} disappeared during hydration`)
+    }
+    return {
+      ...bill.bill,
+      latestActionAt: latestActionsByBillId.get(row.id) ?? null,
+      lexicalScore: row.rank,
+      matchedFields: billSearchMatchedFields(row),
+      rerankScore: null,
+      rank: row.rank,
+      score: row.rank,
+      semanticScore: null,
+      snippet:
+        row.billTextMatches || row.identifierMatches
+          ? (bill.billSnippet ?? null)
+          : (sponsorSnippetsByBillId.get(row.id) ?? versionSnippetsByBillId.get(row.id) ?? null)
+    }
+  })
 }
 
 export interface PassageSearchInput extends SearchInput {
