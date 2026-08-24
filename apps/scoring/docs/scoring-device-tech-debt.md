@@ -38,7 +38,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 18 | SD-012 | P2 | done | Root-approved canonical integer-microsecond guard now enforces identical timestamp validity across all four TypeScript scorers |
 | 19 | SD-013 | P2 | done | Root-approved app-internal CRC-32C primitive removes divergent TypeScript implementations while preserving the transport export |
 | 20 | SD-014 | P1 | ready | Scenario input bytes can be hashed and executed from separate reads |
-| 21 | SD-015 | P2 | ready | Event journal redundantly reclones already validated immutable decision records |
+| 21 | SD-015 | P2 | done | Root-approved journal now reuses the canonical parser's isolated deeply frozen records without a second traversal |
 | 22 | SC-007 | P2 | blocked | PCB identity serializers differ; implementation waits for active board-artifact work |
 | 23 | SC-008 | P3 | intake | Three electrical-budget modules repeat the same finite-positive guard |
 | 24 | SC-006 | P2 | done | Root-approved strict evidence-time parser now serves connector, fixture, footprint, and IR evidence validators |
@@ -384,11 +384,11 @@ truth.
 ## SD-015: remove redundant event-journal record cloning
 
 - Priority: `P2`
-- State: `ready`
-- Evidence: `event-journal.ts` performs `structuredClone(parseDecisionRecord(value))`, while `parseDecisionRecord` already reconstructs and deeply freezes an isolated record.
+- State: `done`
+- Delivered: `cloneRecord` now delegates directly to `parseDecisionRecord`; transaction and container freezing remain unchanged. Root review proves caller isolation, stable parsed-record identity, nested deep freezing, mutation rejection, and recovery isolation.
 - Impact: every journal boundary performs a second traversal and maintains a second immutability path.
 - Bounded remediation: delegate record cloning directly to `parseDecisionRecord`; retain transaction and container freezing.
-- Acceptance: journal tests prove returned records remain isolated and frozen and canonical recovery bytes are unchanged.
+- Verification: 12 focused journal tests, application TypeScript, focused oxlint, and focused oxfmt passed.
 - Dependencies: M0-05 and M2-08.
 - Non-goals: no persistence or record-schema change.
 

@@ -156,7 +156,7 @@ function deepFreeze<T>(value: T): T {
 }
 
 function cloneRecord(value: unknown): DecisionRecord {
-  return deepFreeze(structuredClone(parseDecisionRecord(value)))
+  return parseDecisionRecord(value)
 }
 
 /**

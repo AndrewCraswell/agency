@@ -68,6 +68,48 @@ describe("event journal", () => {
     expect(createEventJournal({ storage }).records.map((entry) => entry.recordId)).toEqual(["record-1"])
   })
 
+  it("isolates caller records and retains the parser's deep-frozen record identity", () => {
+    const storage = createVirtualEventJournalStorage()
+    const sourceRecord = record("record-1", 100)
+    const source = {
+      ...sourceRecord,
+      provenance: {
+        ...sourceRecord.provenance,
+        firmware: { ...sourceRecord.provenance.firmware }
+      }
+    }
+    const journal = createEventJournal({ storage })
+
+    const receipt = journal.append(source)
+    expect(receipt.outcome).toBe("accepted")
+    if (receipt.outcome !== "accepted") return
+
+    expect(receipt.record).not.toBe(source)
+    expect(journal.records).not.toBe(journal.records)
+    expect(journal.records[0]).toBe(receipt.record)
+
+    ;(source.outcome.signal as { latched: boolean }).latched = false
+    ;(source.provenance.firmware as { identity: string }).identity = "caller-mutated"
+    expect(receipt.record.outcome.signal.latched).toBe(true)
+    expect(receipt.record.provenance.firmware.identity).toBe("stm32-scoring")
+
+    expect(Object.isFrozen(receipt.record)).toBe(true)
+    expect(Object.isFrozen(receipt.record.captureWindow)).toBe(true)
+    expect(Object.isFrozen(receipt.record.outcome)).toBe(true)
+    expect(Object.isFrozen(receipt.record.outcome.signal)).toBe(true)
+    expect(Object.isFrozen(receipt.record.provenance)).toBe(true)
+    expect(Object.isFrozen(receipt.record.provenance.firmware)).toBe(true)
+    expect(Object.isFrozen(receipt.record.rawCaptureRefs)).toBe(true)
+    expect(Object.isFrozen(receipt.record.rawCaptureRefs[0])).toBe(true)
+    expect(() => {
+      ;(receipt.record.outcome.signal as { latched: boolean }).latched = false
+    }).toThrow(TypeError)
+
+    const recovered = createEventJournal({ storage })
+    expect(recovered.records[0]).not.toBe(receipt.record)
+    expect(recovered.records).toEqual(journal.records)
+  })
+
   it("recovers either the old or new complete checkpoint after every write boundary", () => {
     for (const boundary of EVENT_JOURNAL_WRITE_BOUNDARIES) {
       const storage = createVirtualEventJournalStorage()
