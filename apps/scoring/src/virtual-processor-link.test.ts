@@ -154,6 +154,37 @@ describe("virtual processor link", () => {
     expect(link.attempts[0]?.frameBytes).toEqual(original)
   })
 
+  it("isolates the fault script and callback snapshots from caller mutation", () => {
+    const clock = createVirtualClock()
+    const faultScript: VirtualLinkFault[] = [{ kind: "delay", delayUs: 10 }]
+    const callbacks: VirtualLinkAttempt[] = []
+    const link = createVirtualProcessorLink({
+      clock,
+      faultScript,
+      onAttempt: (attempt) => {
+        callbacks.push(attempt)
+        attempt.frameBytes.fill(0)
+        attempt.wireBytes.fill(0)
+      },
+      onDelivery: (attempt) => {
+        attempt.frameBytes.fill(0)
+        attempt.wireBytes.fill(0)
+      }
+    })
+    faultScript[0] = { kind: "loss" }
+
+    const original = frame("stm32", 23)
+    link.send("stm32", original)
+    original.fill(0)
+    clock.runUntilIdle()
+
+    expect(callbacks).toHaveLength(1)
+    expect(callbacks[0]?.outcome).toBe("delivered")
+    expect(link.attempts[0]).toMatchObject({ outcome: "delivered", scheduledAtUs: 10 })
+    expect(link.attempts[0]?.frameBytes).toEqual(frame("stm32", 23))
+    expect(link.attempts[0]?.wireBytes).toEqual(frame("stm32", 23))
+  })
+
   it("disconnects by dropping queued work, and reconnect starts an empty epoch", () => {
     const clock = createVirtualClock()
     const link = createVirtualProcessorLink({ clock, faultScript: [{ kind: "delay", delayUs: 100 }] })
