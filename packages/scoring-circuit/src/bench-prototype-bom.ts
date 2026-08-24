@@ -536,30 +536,6 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
 
 export const benchPrototypeBom = deepFreeze(benchPrototypeBomDefinition)
 
-const requiredExactSelections = new Map([
-  ["U_SCORING", "STM32G474RET3TR"],
-  ["U_APP", "ESP32-S3-WROOM-1U-N16R2"],
-  ["U_ISO_MAIN", "ISO7762FDWR"],
-  ["U_ISO_AUX", "ISO7721FDR"],
-  ["U_ISO_POWER", "NXE1S0505MC"],
-  ["U_REF", "REF5025AQDRQ1"],
-  ["U_W5500", "W5500"],
-  ["J_ETH", "7499011121A"],
-  ["J_USB_C", "10177070-00011LF"],
-  ["U_USB_PD", "TPS25730ADREFR"],
-  ["U_USB_PORT_PROTECT", "TPD4S201TRGRRQ1"],
-  ["U_USB2_ESD", "TPD2EUSB30DRTR"],
-  ["J_LAB_INJECTION", "43045-0400"],
-  ["S_POWER_SOURCE_SELECTOR", "7101SYZQE"],
-  ["D_USB_PD_VBUS_TVS", "TVS2200DRVR"],
-  ["D_USB_PD_VBUS_DISCONNECT", "B340A-13-F"],
-  ["U_EFUSE", "TPS259474ARPWR"],
-  ["C_USB_PD_PPHV", "T523H107M035APE070"],
-  ["C_USB_PD_LDO", "T55A106M010C0200"],
-  ["U_DISPLAY_BUFFER_A", "SN74AHCT245PWR"],
-  ["U_DISPLAY_BUFFER_B", "SN74AHCT245PWR"]
-])
-
 type ParsedBomRow = {
   reference: string
   function: string
@@ -820,12 +796,6 @@ export function validateBenchPrototypeBom(value: unknown): true {
         parsed.mpn !== expected.mpn
       ) {
         throw new RangeError(`${expected.reference} does not match the canonical baseline row`)
-      }
-    }
-    for (const [reference, mpn] of requiredExactSelections) {
-      const row = parsedRows.find((candidate) => candidate.reference === reference)
-      if (row === undefined || row.disposition !== "selected" || row.mpn !== mpn) {
-        throw new RangeError(`${reference} must select exact MPN ${mpn}`)
       }
     }
     validateExternalItems(bom.externalItems, seen)

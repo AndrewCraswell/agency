@@ -50,7 +50,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 31 | SD-020 | P2 | intake | Remote schema parsers return caller-owned mutable objects despite readonly result types |
 | 32 | SD-021 | P2 | done | Root-approved private metadata projection now serves secure-envelope and replay-candidate validation with unchanged wire and error behavior |
 | 33 | SC-010 | P2 | intake | Communications circuit selected MPNs can drift from canonical component decisions and USB-PD records |
-| 34 | SC-011 | P3 | intake | BOM validation repeats the same 21-reference exact-selection registry already present in canonical rows |
+| 34 | SC-011 | P3 | done | Root-approved BOM validation now relies on canonical rows as its sole exact-selection registry |
 | 35 | SC-012 | P2 | intake | W5500 support values are canonical upstream but duplicated as circuit literals |
 
 ## SD-001: consolidate epee contact and lockout mechanics
@@ -537,9 +537,10 @@ truth.
 ## SC-011: remove the redundant BOM exact-selection registry
 
 - Priority: `P3`
-- State: `intake`
+- State: `done`
+- Latest state: Root review approved removal of the redundant 21-entry reference/MPN registry and its validation loop. Canonical selected BOM data is unchanged; canonical-row comparison remains authoritative, and the focused suite passes 15 tests including an explicit forged-MPN rejection.
 - Affected file: `packages/scoring-circuit/src/bench-prototype-bom.ts` and its focused tests.
-- Description: 21 reference/MPN pairs are repeated in a second registry even though validation already compares every row against the canonical BOM.
+- Description: validation now derives exact reference/MPN expectations solely from the immutable canonical BOM rows.
 - Impact: each exact-selection change requires synchronized edits without adding independent protection.
 - Bounded remediation: remove the duplicate map and loop while retaining canonical-row comparison and focused drift mutations.
 - Acceptance: malformed and MPN-drifted rows still reject; canonical selected BOM data is unchanged.

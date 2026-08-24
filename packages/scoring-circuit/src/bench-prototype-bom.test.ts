@@ -210,6 +210,7 @@ describe("bench prototype BOM baseline", () => {
 
   it("binds selected metadata to its exact provenance", () => {
     for (const [reference, change] of [
+      ["U_REF", { mpn: "forged-mpn" }],
       ["U_REF", { package: "wrong-package" }],
       ["U_DISPLAY_BUFFER_A", { manufacturer: "Not TI" }],
       ["U_DISPLAY_BUFFER_B", { lifecycle: "active-preferred" }],
