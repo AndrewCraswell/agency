@@ -179,6 +179,23 @@ describe("M4-04 single-channel sensing coupon", () => {
     expect(connector?.footprintRelease).toBe("deny")
   })
 
+  it("keeps the RCWE0603 resistor source hash-bound at family scope", () => {
+    const resistor = M404_SINGLE_CHANNEL_COUPON.footprints.find(
+      (footprint) => footprint.exactMpn === "RCWE0603R220FKEA"
+    )
+    expect(resistor?.evidence.manufacturerDrawing).toMatchObject({
+      acquisition: "series-drawing-hash-bound",
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/vishay-rcwe-precision-resistor-datasheet.pdf",
+      drawingIdentifier: "Vishay RCWE, revision 24-Oct-2023, document 20019, RCWE0603 series drawing",
+      drawingUrl: "https://www.vishay.com/docs/20019/rcwe.pdf",
+      geometry: null,
+      sha256: "5977F6B0414A669571207B18831446698C7C64F15B672F893BDDA1E428D4D374"
+    })
+    expect(resistor?.evidence.manufacturerDrawing.scope).toContain("does not name the exact RCWE0603R220FKEA orderable")
+    expect(resistor?.evidence.manufacturerPrimaryDocument.status).toBe("series-hash-bound")
+    expect(resistor?.footprintRelease).toBe("deny")
+  })
+
   it("hash-verifies every retained drawing and checks its source markers from PDF bytes", () => {
     const repoRoot = new URL("../../../", import.meta.url)
     const inflatePdfStreams = (bytes: Buffer) => {

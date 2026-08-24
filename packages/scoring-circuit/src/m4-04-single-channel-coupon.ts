@@ -368,6 +368,17 @@ const acquiredSeriesDrawingEvidenceByMpn: Readonly<
     scope:
       "Vishay D/CRCW e3 series datasheet. The retained source verifies the 0603 and 1206 package families and manufacturer dimensions, but it does not name this exact CRCW orderable MPN; no exact-MPN drawing identity or project geometry is inferred.",
     sha256: "1F5E20329C74727DA629B92E2BFBDBDB3FA3BE57229E3208E24058173F9CECF3"
+  },
+  RCWE0603R220FKEA: {
+    acquisition: "series-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/vishay-rcwe-precision-resistor-datasheet.pdf",
+    drawingIdentifier: "Vishay RCWE, revision 24-Oct-2023, document 20019, RCWE0603 series drawing",
+    drawingUrl: "https://www.vishay.com/docs/20019/rcwe.pdf",
+    geometry: null,
+    byteMarkers: ["RCWE", "Vishay", "20019"],
+    scope:
+      "Vishay Dale RCWE datasheet. The retained source verifies the RCWE0603 family, its 0603 dimensions, and the global part-number fields needed to distinguish the selected 0.22-ohm, 1-percent row; it does not name the exact RCWE0603R220FKEA orderable, so this remains series evidence only and no project geometry is inferred.",
+    sha256: "5977F6B0414A669571207B18831446698C7C64F15B672F893BDDA1E428D4D374"
   }
 }
 

@@ -51,6 +51,18 @@ mask, paste, courtyard, or orientation decision.
 | `C0603C104K3RACTU` | [YAGEO/KEMET product spec](https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en), `0603/1608` manufacturer dimensions | `packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c104k3ractu-datasheet.pdf` | `F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064` |
 | `GRM21BR71A106KE51L` | [Murata GRM21 reference sheet](https://search.murata.co.jp/Ceramy/image/img/A01X/G101/ENG/GRM21BR71A106KE51-01.pdf), `GRM21` manufacturer dimensions | `packages/scoring-circuit/docs/evidence/m4-04/murata-grm21br71a106ke51l-datasheet.pdf` | `E8432C7ACFA982B24EB06DD145682F78051DC4649ABBEB35BBCA8646B1408E4F` |
 | `CRCW060322R0FKEAHP`, `CRCW120656K0FKEAHP`, `CRCW0603100KFKEAHP`, `CRCW060320R0FKEAHP` | [Vishay D/CRCW e3 series datasheet](https://www.vishay.com/docs/20035/dcrcwe3.pdf), revision `14-Apr-2026`, document `20035`, `D11/CRCW0603e3` and `D25/CRCW1206e3` series drawings; exact-MPN identity not named | `packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf` | `1F5E20329C74727DA629B92E2BFBDBDB3FA3BE57229E3208E24058173F9CECF3` (series evidence only) |
+| `RCWE0603R220FKEA` | [Vishay Dale RCWE datasheet](https://www.vishay.com/docs/20019/rcwe.pdf), revision `24-Oct-2023`, document `20019`, `RCWE0603` series drawing; exact-MPN identity not named | `packages/scoring-circuit/docs/evidence/m4-04/vishay-rcwe-precision-resistor-datasheet.pdf` | `5977F6B0414A669571207B18831446698C7C64F15B672F893BDDA1E428D4D374` (series evidence only) |
+
+The `RCWE0603R220FKEA` `R_REF_SAR` resistor now has a SHA-256-bound Vishay
+Dale RCWE series source record at
+`packages/scoring-circuit/docs/evidence/m4-04/vishay-rcwe-precision-resistor-datasheet.pdf`:
+[Vishay RCWE source](https://www.vishay.com/docs/20019/rcwe.pdf), revision
+`24-Oct-2023`, document `20019`,
+`5977F6B0414A669571207B18831446698C7C64F15B672F893BDDA1E428D4D374`. The
+source names the RCWE0603 family, 0603 dimensions, and the global part-number
+fields, but does not name the exact `RCWE0603R220FKEA` orderable. It therefore
+remains **series-drawing-hash-bound** evidence only; no exact-MPN drawing,
+project geometry, CAD, artwork, or footprint authority is inferred.
 
 The JST `B2B-PH-K-S(LF)(SN)` guarded-force header now has a SHA-256-bound
 manufacturer source record at
