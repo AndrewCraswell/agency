@@ -232,6 +232,15 @@ function clientIp(request: IncomingMessage, trustedProxyHops: number): string {
   // A nonzero trustedProxyHops value is an explicit deployment assertion that
   // the direct socket peer is an operator-controlled proxy. Without an IP
   // allowlist, this process cannot independently verify that assertion.
+  // Railway's public edge publishes the client address in X-Real-IP. Prefer
+  // that single-hop header for the documented Railway topology, then retain
+  // X-Forwarded-For as the explicit multi-proxy fallback.
+  if (trustedProxyHops === 1) {
+    const realIp = parseSingleIp(request.headers["x-real-ip"])
+    if (realIp !== undefined) {
+      return realIp
+    }
+  }
   const forwardedFor = request.headers["x-forwarded-for"]
   const values = parseForwardedFor(forwardedFor)
   if (values === undefined || values.length < trustedProxyHops) {
@@ -242,6 +251,14 @@ function clientIp(request: IncomingMessage, trustedProxyHops: number): string {
     return candidate
   }
   return socketAddress
+}
+
+function parseSingleIp(header: string | string[] | undefined): string | undefined {
+  if (typeof header !== "string") {
+    return undefined
+  }
+  const value = header.trim()
+  return isIP(value) === 0 ? undefined : value
 }
 
 function parseForwardedFor(header: string | string[] | undefined): readonly string[] | undefined {

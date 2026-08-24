@@ -349,6 +349,46 @@ describe("createLegislationServer", () => {
     await second.text()
   })
 
+  it("uses Railway's real client address after an explicit single-proxy opt-in", async () => {
+    const baseUrl = await startServer(true, {
+      apiHandler: async (_request, response) => {
+        sendApiJson(response, 200, { data: {} })
+        return true
+      },
+      rateLimit: { enabled: true, limit: 1, maximumKeys: 10, trustedProxyHops: 1, windowMs: 60_000 }
+    })
+
+    const first = await fetch(`${baseUrl}/api/bills`, {
+      headers: { "x-forwarded-for": "192.0.2.1", "x-real-ip": "198.51.100.10" }
+    })
+    const second = await fetch(`${baseUrl}/api/bills`, {
+      headers: { "x-forwarded-for": "192.0.2.1", "x-real-ip": "203.0.113.10" }
+    })
+
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(200)
+    await first.text()
+    await second.text()
+  })
+
+  it("rejects malformed real-client headers and safely falls back to the direct socket", async () => {
+    const baseUrl = await startServer(true, {
+      apiHandler: async (_request, response) => {
+        sendApiJson(response, 200, { data: {} })
+        return true
+      },
+      rateLimit: { enabled: true, limit: 1, maximumKeys: 10, trustedProxyHops: 1, windowMs: 60_000 }
+    })
+
+    const first = await fetch(`${baseUrl}/api/bills`, { headers: { "x-real-ip": "not-an-ip" } })
+    const second = await fetch(`${baseUrl}/api/bills`, { headers: { "x-real-ip": "also-not-an-ip" } })
+
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(429)
+    await first.text()
+    await second.text()
+  })
+
   it("falls back to the direct socket when any forwarded hop is malformed", async () => {
     const baseUrl = await startServer(true, {
       apiHandler: async (_request, response) => {
