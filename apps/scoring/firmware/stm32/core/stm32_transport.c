@@ -28,9 +28,9 @@ static void write_u32_be(uint8_t *bytes, uint32_t value) {
   bytes[3] = (uint8_t)value;
 }
 
-static bool is_known_message_type(uint8_t value) {
-  return value >= (uint8_t)SCORING_STM32_TRANSPORT_DECISION_RECORD &&
-    value <= (uint8_t)SCORING_STM32_TRANSPORT_RESPONSE;
+static bool is_known_message_type(scoring_stm32_transport_message_type_t value) {
+  return value >= SCORING_STM32_TRANSPORT_DECISION_RECORD &&
+    value <= SCORING_STM32_TRANSPORT_RESPONSE;
 }
 
 static bool is_allowed_for_receiver(
@@ -88,11 +88,11 @@ static scoring_stm32_transport_result_t validate_fixed_header(
     return SCORING_STM32_TRANSPORT_VERSION;
   }
 
-  if (!is_known_message_type(bytes[3])) {
+  message_type = (scoring_stm32_transport_message_type_t)bytes[3];
+  if (!is_known_message_type(message_type)) {
     return SCORING_STM32_TRANSPORT_MESSAGE_TYPE;
   }
 
-  message_type = (scoring_stm32_transport_message_type_t)bytes[3];
   if (!is_allowed_for_receiver(receiver, message_type)) {
     return SCORING_STM32_TRANSPORT_DIRECTION;
   }
@@ -356,7 +356,7 @@ scoring_stm32_transport_result_t scoring_stm32_transport_prepare_transmit(
     return SCORING_STM32_TRANSPORT_INVALID_ARGUMENT;
   }
 
-  if (!is_valid_receiver(transport->receiver) || !is_known_message_type((uint8_t)message_type)) {
+  if (!is_valid_receiver(transport->receiver) || !is_known_message_type(message_type)) {
     return SCORING_STM32_TRANSPORT_INVALID_ARGUMENT;
   }
 

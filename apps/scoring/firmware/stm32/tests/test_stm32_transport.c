@@ -757,6 +757,41 @@ static void test_transmit_argument_and_commit_guards(void) {
   CHECK(transport.transmit_byte_count == 0U);
 }
 
+static void test_invalid_message_types_reject_without_mutating_transmit_state(void) {
+  static const scoring_stm32_transport_message_type_t INVALID_MESSAGE_TYPES[] = {
+    (scoring_stm32_transport_message_type_t)257,
+    (scoring_stm32_transport_message_type_t)-1,
+    (scoring_stm32_transport_message_type_t)-255
+  };
+  scoring_stm32_transport_t transport;
+  scoring_stm32_transport_t before;
+  const uint8_t *bytes;
+  size_t byte_count;
+  size_t index;
+
+  for (index = 0U; index < sizeof(INVALID_MESSAGE_TYPES) / sizeof(INVALID_MESSAGE_TYPES[0]); index += 1U) {
+    scoring_stm32_transport_init(&transport, SCORING_STM32_TRANSPORT_RECEIVER_STM32, 0U, 37U);
+    (void)memset(transport.transmit_buffer, 0xA5, sizeof(transport.transmit_buffer));
+    before = transport;
+    bytes = transport.transmit_buffer;
+    byte_count = 17U;
+
+    CHECK(
+      scoring_stm32_transport_prepare_transmit(
+        &transport,
+        INVALID_MESSAGE_TYPES[index],
+        NULL,
+        0U,
+        &bytes,
+        &byte_count
+      ) == SCORING_STM32_TRANSPORT_INVALID_ARGUMENT
+    );
+    CHECK(memcmp(&transport, &before, sizeof(transport)) == 0);
+    CHECK(bytes == NULL);
+    CHECK(byte_count == 0U);
+  }
+}
+
 static void test_backpressure_blocks_repeat_transmission(void) {
   fake_transport_state_t state = { .publish_status = SCORING_STATUS_BACKPRESSURE };
   scoring_stm32_hardware_t hardware = { .transport = { .context = &state, .publish = fake_publish } };
@@ -846,6 +881,7 @@ int main(void) {
   test_duplicate_and_reorder_block_receipt_until_recovery();
   test_transport_state_boundaries_are_fail_closed();
   test_transmit_argument_and_commit_guards();
+  test_invalid_message_types_reject_without_mutating_transmit_state();
   test_backpressure_blocks_repeat_transmission();
   test_default_host_cannot_publish_a_decision_and_preserves_adapter_failure();
   return EXIT_SUCCESS;
