@@ -6,6 +6,12 @@ import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { generateCoverageReport } from "../../coverage/report.js"
+import {
+  applyCanonicalFoundationRecord,
+  auditCanonicalFoundation,
+  canonicalFoundationCheckpointSource,
+  importCanonicalFoundationRecords
+} from "../../ingestion/canonical-foundation.js"
 import { CongressRequestBudgetExhaustedError } from "../../ingestion/congress/request-budget.js"
 import { synchronizeCongress } from "../../ingestion/congress/sync.js"
 import type { ArtifactStore } from "../../ingestion/documents/artifact-store.js"
@@ -78,6 +84,147 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       { column_type: "vector(1536)", table_name: "document_section_embeddings" },
       { column_type: "vector(1024)", table_name: "supporting_material_section_embeddings" }
     ])
+  })
+
+  it("enforces and checkpoints the fail-closed jurisdiction and session foundation", async () => {
+    const jurisdictionId = "jurisdiction:foundation"
+    const incompleteSessionId = "session:foundation:2026"
+    const lateSessionId = "session:foundation:late"
+    const source = {
+      isOfficial: true,
+      provider: "official-legislature",
+      retrievedAt: "2026-08-24T12:00:00.000Z",
+      sourceUpdatedAt: null,
+      url: "https://legislature.example.test/foundation"
+    }
+    await database.insert(schema.jurisdictions).values({
+      classification: "state",
+      countryCode: "US",
+      id: jurisdictionId,
+      name: "Foundation",
+      subdivisionCode: "FD"
+    })
+    await database.insert(schema.legislativeSessions).values({
+      id: incompleteSessionId,
+      identifier: "2026",
+      jurisdictionId,
+      name: "Foundation 2026"
+    })
+
+    await expect(
+      database.insert(schema.jurisdictions).values({
+        classification: "state",
+        countryCode: "US",
+        id: "jurisdiction:invalid-provenance",
+        isActive: true,
+        name: "Invalid provenance",
+        provenanceComplete: true,
+        sourceIsOfficial: true,
+        sourceProvider: " ",
+        sourceRetrievedAt: new Date("2026-08-24T12:00:00.000Z"),
+        sourceUrl: "https://legislature.example.test/invalid"
+      })
+    ).rejects.toThrow("jurisdictions_provenance_complete_check")
+    await expect(
+      database.insert(schema.legislativeSessions).values({
+        classification: "regular",
+        id: "session:foundation:invalid-provenance",
+        identifier: "invalid",
+        isActive: true,
+        jurisdictionId,
+        name: "Invalid provenance",
+        provenanceComplete: true,
+        sourceIsOfficial: true,
+        sourceProvider: "official-legislature",
+        sourceRetrievedAt: new Date("2026-08-24T12:00:00.000Z"),
+        sourceUrl: "http://legislature.example.test/invalid"
+      })
+    ).rejects.toThrow("legislative_sessions_provenance_complete_check")
+
+    await expect(
+      applyCanonicalFoundationRecord(database, {
+        id: "jurisdiction:missing",
+        isActive: true,
+        kind: "jurisdiction",
+        source,
+        timezone: "America/Los_Angeles"
+      })
+    ).rejects.toThrow("unknown jurisdiction")
+    await expect(importCanonicalFoundationRecords(database, [], { contentHash: "not-a-hash" })).rejects.toThrow(
+      "contentHash"
+    )
+
+    const resumableRecords = [
+      {
+        id: jurisdictionId,
+        isActive: true,
+        kind: "jurisdiction" as const,
+        source,
+        timezone: "America/Los_Angeles"
+      },
+      {
+        classification: "regular",
+        id: lateSessionId,
+        isActive: true,
+        kind: "session" as const,
+        source
+      }
+    ]
+    const first = await importCanonicalFoundationRecords(database, resumableRecords, { contentHash: "a".repeat(64) })
+    expect(first).toMatchObject({
+      audit: { complete: false, incompleteSessionIds: [incompleteSessionId] },
+      checkpoint: { complete: false, index: 1 },
+      counts: { failed: 1, updated: 1 },
+      failures: [{ identifier: `session:${lateSessionId}` }]
+    })
+    await expect(
+      database.query.syncCheckpoints.findFirst({
+        where: (table, operators) =>
+          operators.and(
+            operators.eq(table.source, canonicalFoundationCheckpointSource),
+            operators.eq(table.stream, "jurisdictions-sessions")
+          )
+      })
+    ).resolves.toMatchObject({ cursor: { complete: false, index: 1 } })
+
+    await database.insert(schema.legislativeSessions).values({
+      id: lateSessionId,
+      identifier: "late",
+      jurisdictionId,
+      name: "Foundation late session"
+    })
+    const resumed = await importCanonicalFoundationRecords(database, resumableRecords, { contentHash: "a".repeat(64) })
+    expect(resumed).toMatchObject({
+      audit: { complete: false, incompleteSessionIds: [incompleteSessionId] },
+      checkpoint: { complete: false, index: 2 },
+      counts: { failed: 0, skipped: 1, updated: 1 }
+    })
+
+    const completed = await importCanonicalFoundationRecords(
+      database,
+      [
+        resumableRecords[0],
+        {
+          classification: "regular",
+          id: incompleteSessionId,
+          isActive: false,
+          kind: "session" as const,
+          source
+        },
+        resumableRecords[1]
+      ],
+      { contentHash: "b".repeat(64) }
+    )
+    expect(completed).toMatchObject({
+      audit: { complete: true, incompleteJurisdictionIds: [], incompleteSessionIds: [] },
+      checkpoint: { complete: true, index: 3 },
+      counts: { failed: 0, updated: 3 }
+    })
+    await expect(auditCanonicalFoundation(database)).resolves.toMatchObject({
+      complete: true,
+      incompleteJurisdictionIds: [],
+      incompleteSessionIds: []
+    })
   })
 
   it("records a budget handoff as deferred without advancing a generic checkpoint or retaining the lease", async () => {

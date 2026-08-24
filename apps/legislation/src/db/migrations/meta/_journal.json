@@ -176,6 +176,13 @@
       "when": 1787566084215,
       "tag": "0024_subscriptions-webhooks-and-idempotency",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1787593501353,
+      "tag": "0025_steep_alice",
+      "breakpoints": true
     }
   ]
 }

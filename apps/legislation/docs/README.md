@@ -4,6 +4,7 @@
 
 - [Local development](development.md)
 - [Canonical data model](data-model.md)
+- [Canonical jurisdiction and session foundation](canonical-foundation.md)
 - [Canonical vocabulary](canonical-vocabulary.md)
 - [Product specification](product-spec.md)
 - [Coverage policy](coverage-policy.md)

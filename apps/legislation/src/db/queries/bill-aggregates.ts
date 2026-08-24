@@ -347,7 +347,8 @@ export async function upsertBillAggregates(
           classification: sql`excluded.classification`,
           countryCode: sql`excluded.country_code`,
           name: sql`excluded.name`,
-          sourceUrl: sql`excluded.source_url`,
+          // Bill feeds cannot replace jurisdiction-level provenance.
+          sourceUrl: sql`coalesce(excluded.source_url, ${jurisdictions.sourceUrl})`,
           subdivisionCode: sql`excluded.subdivision_code`,
           updatedAt: new Date()
         },
@@ -363,10 +364,14 @@ export async function upsertBillAggregates(
         set: {
           endDate: sql`excluded.end_date`,
           identifier: sql`excluded.identifier`,
-          isActive: sql`excluded.is_active`,
+          // Bill feeds do not state the session active flag. Preserve a value
+          // written by the canonical-foundation source rather than converting
+          // an omitted source fact to false or null.
+          isActive: sql`coalesce(excluded.is_active, ${legislativeSessions.isActive})`,
           jurisdictionId: sql`excluded.jurisdiction_id`,
           name: sql`excluded.name`,
-          sourceUrl: sql`excluded.source_url`,
+          // Bill feeds cannot replace session-level provenance.
+          sourceUrl: sql`coalesce(excluded.source_url, ${legislativeSessions.sourceUrl})`,
           startDate: sql`excluded.start_date`,
           updatedAt: new Date()
         },

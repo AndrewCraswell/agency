@@ -16,6 +16,14 @@ payloads are normalized into this model rather than creating provider-specific b
 Bill-owned child records cascade when their bill is deleted. Shared people and related bills are restricted from
 accidental deletion. Composite constraints prevent a bill from referencing a session in another jurisdiction.
 
+## Jurisdiction and session foundation
+
+Jurisdiction `timezone` and `is_active`, plus session `classification` and `is_active`, are nullable until an
+authoritative record states them. `provenance_complete` may be true only with a nonblank provider, HTTPS source URL,
+retrieval time, and official-source flag. The canonical foundation importer updates existing canonical records only and records
+its cursor in `sync_checkpoints`; its audit is fail-closed, so a partial source snapshot cannot enable a jurisdiction
+or session route. See [canonical jurisdiction and session foundation](canonical-foundation.md).
+
 ## Search storage
 
 Bill and document-section records retain PostgreSQL `tsvector` columns for lexical search. Semantic search reads four

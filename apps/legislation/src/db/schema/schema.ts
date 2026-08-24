@@ -33,7 +33,16 @@ export const jurisdictions = legislationSchema.table(
     classification: text("classification").notNull(),
     countryCode: char("country_code", { length: 2 }).notNull(),
     subdivisionCode: text("subdivision_code"),
+    /** Source-declared IANA zone. Null remains an explicit unknown, never a geographic guess. */
+    timezone: text("timezone"),
+    /** Null means no authoritative source has stated the jurisdiction's active state. */
+    isActive: boolean("is_active"),
     sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
@@ -45,9 +54,17 @@ export const jurisdictions = legislationSchema.table(
       sql`${table.classification} in ('country', 'state', 'district', 'territory')`
     ),
     check("jurisdictions_country_code_check", sql`${table.countryCode} ~ '^[A-Z]{2}$'`),
+    check("jurisdictions_timezone_check", sql`${table.timezone} is null or length(${table.timezone}) > 0`),
+    check(
+      "jurisdictions_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} ~ '^https://' and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
     uniqueIndex("jurisdictions_subdivision_uidx")
       .on(table.countryCode, table.subdivisionCode)
-      .where(sql`${table.subdivisionCode} is not null`)
+      .where(sql`${table.subdivisionCode} is not null`),
+    index("jurisdictions_foundation_incomplete_idx")
+      .on(table.id)
+      .where(sql`not ${table.provenanceComplete}`)
   ]
 )
 
@@ -60,10 +77,18 @@ export const legislativeSessions = legislationSchema.table(
       .references(() => jurisdictions.id, { onDelete: "restrict" }),
     identifier: text("identifier").notNull(),
     name: text("name").notNull(),
+    /** Publisher session classification. Null means the source has not supplied one. */
+    classification: text("classification"),
     startDate: date("start_date"),
     endDate: date("end_date"),
-    isActive: boolean("is_active").notNull().default(false),
+    /** Null means the source has not supplied a session active state. */
+    isActive: boolean("is_active"),
     sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
@@ -71,11 +96,22 @@ export const legislativeSessions = legislationSchema.table(
     check("legislative_sessions_id_check", sql`length(${table.id}) > 0`),
     check("legislative_sessions_identifier_check", sql`length(${table.identifier}) > 0`),
     check(
+      "legislative_sessions_classification_check",
+      sql`${table.classification} is null or length(${table.classification}) > 0`
+    ),
+    check(
       "legislative_sessions_dates_check",
       sql`${table.startDate} is null or ${table.endDate} is null or ${table.startDate} <= ${table.endDate}`
     ),
+    check(
+      "legislative_sessions_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} ~ '^https://' and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
     uniqueIndex("legislative_sessions_identifier_uidx").on(table.jurisdictionId, table.identifier),
-    uniqueIndex("legislative_sessions_jurisdiction_id_uidx").on(table.jurisdictionId, table.id)
+    uniqueIndex("legislative_sessions_jurisdiction_id_uidx").on(table.jurisdictionId, table.id),
+    index("legislative_sessions_foundation_incomplete_idx")
+      .on(table.id)
+      .where(sql`not ${table.provenanceComplete}`)
   ]
 )
 
