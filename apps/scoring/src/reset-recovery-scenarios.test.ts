@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
+import { createApplicationTimeMetadata } from "./application-time-metadata.js"
 import { DECISION_RECORD_SCHEMA_VERSION, type DecisionRecord } from "./decision-record.js"
 import { VirtualJournalPowerLoss, createVirtualEventJournalStorage } from "./event-journal.js"
 import { createResetRecoveryScenario } from "./reset-recovery-scenarios.js"
+import { createVirtualClock } from "./virtual-clock.js"
 import { createVirtualProcessorLink } from "./virtual-processor-link.js"
 
 function record(recordId: string, decisionAtUs: number): DecisionRecord {
@@ -110,6 +112,58 @@ describe("reset recovery scenarios", () => {
     expect(model.applicationAvailability).toBe("awaiting-record-reception")
     model.confirmApplicationRecordReception()
     expect(model.applicationAvailability).toBe("available")
+  })
+
+  it("reopens the complete journal checkpoint after an ESP32 reset without rewriting STM32 authority", () => {
+    const { model } = scenario()
+    model.appendDurableRecord(record("accepted-before-reset", 100))
+    model.observeStm32PrimaryOutput("latched")
+    const scoringBootId = model.scoringBootId
+
+    model.resetApplication("brownout")
+    model.completeApplicationRecovery()
+    model.confirmApplicationRecordReception()
+    const recoveredApplicationTime = createApplicationTimeMetadata({
+      applicationBootId: model.applicationBootId,
+      maximumDriftPpm: 0
+    })
+    const timeline = model.journal.records.map((entry) => recoveredApplicationTime.observe(entry))
+
+    expect(model.journal.records.map((entry) => entry.recordId)).toEqual(["accepted-before-reset"])
+    expect(model.journal.recovery).toEqual({ reason: null, status: "recovered" })
+    expect(timeline).toMatchObject([
+      {
+        applicationBootId: "esp32-boot-a-recovery-1",
+        monotonic: { decisionAtUs: 100, scoringBootId },
+        wallClock: { reason: "offline", status: "unavailable" }
+      }
+    ])
+    expect(model.scoringAvailability).toBe("available")
+    expect(model.scoringBootId).toBe(scoringBootId)
+    expect(model.primaryOutput).toBe("latched")
+  })
+
+  it("records lifecycle diagnostics on the supplied deterministic virtual clock", () => {
+    const clock = createVirtualClock({ startAtUs: 40 })
+    const model = createResetRecoveryScenario({
+      applicationBootId: "esp32-boot-a",
+      journalStorage: createVirtualEventJournalStorage(),
+      processorLink: createVirtualProcessorLink({ clock }),
+      scoringBootId: "stm32-boot-a"
+    })
+
+    clock.advanceTo(125)
+    model.disconnectLink()
+    clock.advanceTo(250)
+    model.resetApplication("watchdog")
+    clock.advanceTo(500)
+    model.resetStm32("brownout")
+
+    expect(model.diagnostics.map((diagnostic) => [diagnostic.atUs, diagnostic.cause])).toEqual([
+      [125, "link-loss"],
+      [250, "watchdog"],
+      [500, "brownout"]
+    ])
   })
 
   it("refuses automatic ESP32-to-STM32 reset without changing scoring authority", () => {
@@ -308,6 +362,35 @@ describe("reset recovery scenarios", () => {
     expect(model.diagnostics).toHaveLength(powerLossDiagnosticCount)
     expect(() => model.completeStm32TechnicalRecovery(passingGates)).toThrow("power is absent")
     expect(() => model.resetStm32("watchdog")).toThrow("power is absent")
+  })
+
+  it("starts unavailable when the initial journal checkpoint is corrupt", () => {
+    const storage = createVirtualEventJournalStorage()
+    const source = createResetRecoveryScenario({
+      applicationBootId: "esp32-boot-a",
+      journalStorage: storage,
+      scoringBootId: "stm32-boot-a"
+    })
+    source.appendDurableRecord(record("accepted", 100))
+    storage.corruptCommitted("digest")
+
+    const recovered = createResetRecoveryScenario({
+      applicationBootId: "esp32-boot-b",
+      journalStorage: storage,
+      scoringBootId: "stm32-boot-a"
+    })
+
+    expect(recovered.applicationAvailability).toBe("unavailable")
+    expect(recovered.journal.recovery).toEqual({ reason: "digest", status: "corrupt" })
+    expect(recovered.diagnostics).toEqual([
+      expect.objectContaining({
+        cause: "power-on",
+        detail: "journal-recovery",
+        journalRecovery: { reason: "digest", status: "corrupt" },
+        subject: "journal"
+      })
+    ])
+    expect(() => recovered.appendDurableRecord(record("must-not-append", 200))).toThrow("available powered")
   })
 
   it("rejects malformed options and impossible recovery transitions", () => {

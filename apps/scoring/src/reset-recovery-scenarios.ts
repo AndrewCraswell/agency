@@ -232,7 +232,8 @@ export function createResetRecoveryScenario(options: ResetRecoveryScenarioOption
   const applicationBootIdBase = options.applicationBootId
   const scoringBootIdBase = options.scoringBootId
   let applicationBootId = options.applicationBootId
-  let applicationAvailability: ApplicationAvailability = "available"
+  let applicationAvailability: ApplicationAvailability =
+    journal.recovery.status === "corrupt" ? "unavailable" : "available"
   let scoringBootId = options.scoringBootId
   let scoringAvailability: ScoringAvailability = "available"
   let primaryOutput: PrimaryOutputState = "safe-inactive"
@@ -270,6 +271,10 @@ export function createResetRecoveryScenario(options: ResetRecoveryScenarioOption
     if (count > maxDiagnostics - diagnostics.length) {
       throw new RangeError("Reset recovery diagnostic capacity is exhausted")
     }
+  }
+
+  if (journal.recovery.status === "corrupt") {
+    appendDiagnostic("journal", "power-on", "journal-recovery")
   }
 
   function resetStm32(cause: ResetRecoveryCause): void {
