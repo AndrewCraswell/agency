@@ -5,7 +5,7 @@ import { mapConcurrent } from "../job.js"
 import { ArtifactNotFoundError, type ArtifactStore } from "./artifact-store.js"
 import { detectDocumentContentType } from "./download.js"
 import type { OcrClient } from "./ocr-client.js"
-import { classifyOcrFailure, OCR_MAXIMUM_ATTEMPTS } from "./ocr-retry.js"
+import { classifyOcrFailure, OCR_MAXIMUM_ATTEMPTS, type OcrFailureClassification } from "./ocr-retry.js"
 import { markDocumentProcessingFailure, persistOcrDocument } from "./process.js"
 
 interface OcrCandidate {
@@ -30,6 +30,21 @@ export interface OcrDocumentRetryState {
   nextAttemptAt?: Date
 }
 
+const permanentUnsupportedOcrFailureCategories = new Set([
+  "download-permanent",
+  "malformed-document",
+  "not-found",
+  "oversized",
+  "source-inaccessible",
+  "unsafe-url",
+  "unsupported-format"
+])
+
+/** A completed OCR attempt is failed unless its source or content is terminally unsupported. */
+export function ocrStatusForFailure(failure: OcrFailureClassification): "failed" | "unsupported" {
+  return !failure.retryable && permanentUnsupportedOcrFailureCategories.has(failure.category) ? "unsupported" : "failed"
+}
+
 function ocrProcessingOwner(ownerId: string): string {
   return `ocr-owner:${ownerId}`
 }
@@ -41,6 +56,10 @@ export async function recoverOwnedOcrDocuments(database: LegislationDatabase, ow
       nextAttemptAt: null,
       processingAttempts: sql`greatest(${billDocuments.processingAttempts} - 1, 0)`,
       processingError: null,
+      ocrCompletedAt: null,
+      ocrPageCount: null,
+      ocrProvider: null,
+      ocrStatus: "pending",
       processingStatus: "unsupported",
       updatedAt: new Date()
     })
@@ -147,6 +166,10 @@ export async function processOcrRequiredDocuments(
           nextAttemptAt: null,
           processingAttempts: sql`${billDocuments.processingAttempts} + 1`,
           ...(input.ownerId === undefined ? {} : { processingError: ocrProcessingOwner(input.ownerId) }),
+          ocrCompletedAt: null,
+          ocrPageCount: null,
+          ocrProvider: null,
+          ocrStatus: "processing",
           processingStatus: "processing",
           updatedAt: now
         })
@@ -177,6 +200,9 @@ export async function processOcrRequiredDocuments(
         blobPath: record.blobPath,
         contentType,
         documentId: record.id,
+        pageCount: result.pageCount,
+        pages: result.pages,
+        provider: result.provider,
         sourceBytes,
         text: result.text
       })
@@ -193,6 +219,7 @@ export async function processOcrRequiredDocuments(
       await markDocumentProcessingFailure(database, record.id, {
         category: failure.category,
         ...(failure.nextAttemptAt === undefined ? {} : { nextAttemptAt: failure.nextAttemptAt }),
+        ocrStatus: ocrStatusForFailure(failure),
         processingError: failure.message,
         status: "unsupported"
       })
@@ -222,6 +249,10 @@ async function requeueDocumentWithMissingOcrArtifact(database: LegislationDataba
       processingErrorCategory: null,
       processingStatus: "pending",
       text: null,
+      ocrCompletedAt: null,
+      ocrPageCount: null,
+      ocrProvider: null,
+      ocrStatus: "pending",
       updatedAt: new Date()
     })
     .where(eq(billDocuments.id, documentId))

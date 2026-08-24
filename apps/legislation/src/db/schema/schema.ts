@@ -900,6 +900,10 @@ export const billDocuments = legislationSchema.table(
     blobPath: text("blob_path"),
     text: text("text"),
     contentHash: char("content_hash", { length: 64 }),
+    ocrStatus: text("ocr_status"),
+    ocrProvider: text("ocr_provider"),
+    ocrCompletedAt: timestamp("ocr_completed_at", { withTimezone: true }),
+    ocrPageCount: integer("ocr_page_count"),
     lastAttemptAt: timestamp("last_attempt_at", { withTimezone: true }),
     nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
     processingAttempts: integer("processing_attempts").notNull().default(0),
@@ -912,6 +916,23 @@ export const billDocuments = legislationSchema.table(
   (table) => [
     check("bill_documents_title_check", sql`length(${table.title}) > 0`),
     check("bill_documents_hash_check", sql`${table.contentHash} is null or ${table.contentHash} ~ '^[0-9a-f]{64}$'`),
+    check(
+      "bill_documents_ocr_status_check",
+      sql`${table.ocrStatus} is null or ${table.ocrStatus} in ('not-required', 'pending', 'processing', 'processed', 'failed', 'unsupported')`
+    ),
+    check(
+      "bill_documents_ocr_provider_check",
+      sql`${table.ocrProvider} is null or length(btrim(${table.ocrProvider})) > 0`
+    ),
+    check("bill_documents_ocr_page_count_check", sql`${table.ocrPageCount} is null or ${table.ocrPageCount} > 0`),
+    check(
+      "bill_documents_ocr_success_check",
+      sql`${table.ocrStatus} <> 'processed' or (${table.ocrProvider} is not null and length(btrim(${table.ocrProvider})) > 0 and ${table.ocrCompletedAt} is not null)`
+    ),
+    check(
+      "bill_documents_ocr_metadata_status_check",
+      sql`(${table.ocrProvider} is null and ${table.ocrCompletedAt} is null and ${table.ocrPageCount} is null) or ${table.ocrStatus} is not distinct from 'processed'`
+    ),
     check("bill_documents_attempts_check", sql`${table.processingAttempts} >= 0`),
     check(
       "bill_documents_error_category_check",
@@ -968,6 +989,8 @@ export const documentSections = legislationSchema.table(
     heading: text("heading"),
     sourceStartOffset: integer("source_start_offset").notNull(),
     sourceEndOffset: integer("source_end_offset").notNull(),
+    pageStart: integer("page_start"),
+    pageEnd: integer("page_end"),
     text: text("text").notNull(),
     contentHash: char("content_hash", { length: 64 }).notNull(),
     searchVector: tsvector("search_vector"),
@@ -987,6 +1010,10 @@ export const documentSections = legislationSchema.table(
     check(
       "document_sections_offsets_check",
       sql`${table.sourceStartOffset} >= 0 and ${table.sourceEndOffset} >= ${table.sourceStartOffset}`
+    ),
+    check(
+      "document_sections_page_range_check",
+      sql`(${table.pageStart} is null and ${table.pageEnd} is null) or (${table.pageStart} > 0 and ${table.pageEnd} >= ${table.pageStart})`
     ),
     check("document_sections_text_check", sql`length(${table.text}) > 0`),
     check("document_sections_hash_check", sql`${table.contentHash} ~ '^[0-9a-f]{64}$'`),

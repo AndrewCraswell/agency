@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm"
 import type { LegislationDatabase } from "../../db/database.js"
 import { billDocuments, documentSections } from "../../db/schema/schema.js"
 import { extractDocument, sanitizeDatabaseText } from "./extract.js"
+import { mapOcrPagesToDocumentSections, type OcrPageSpan } from "./ocr-page-mapping.js"
 
 export const DOCUMENT_FAILURE_CATEGORIES = [
   "download-permanent",
@@ -158,12 +159,19 @@ export async function persistOcrDocument(
     blobPath: string
     contentType: string
     documentId: string
+    pageCount?: number
+    pages?: readonly OcrPageSpan[]
+    provider: string
     sourceBytes: Uint8Array
     text: string
   }
 ): Promise<void> {
   const textBytes = new TextEncoder().encode(input.text)
   const extractedText = await extractDocument(input.documentId, textBytes, "text/plain")
+  const pageRanges =
+    input.pages === undefined
+      ? new Map()
+      : mapOcrPagesToDocumentSections(input.text, extractedText.text, extractedText.sections, input.pages)
   await persistDocumentExtraction(
     database,
     {
@@ -175,6 +183,12 @@ export async function persistOcrDocument(
     {
       ...extractedText,
       contentHash: createHash("sha256").update(input.sourceBytes).digest("hex")
+    },
+    {
+      completedAt: new Date(),
+      pageCount: input.pageCount,
+      pageRanges,
+      provider: input.provider
     }
   )
 }
@@ -182,7 +196,13 @@ export async function persistOcrDocument(
 async function persistDocumentExtraction(
   database: LegislationDatabase,
   input: { blobPath?: string; bytes: Uint8Array; contentType: string; documentId: string },
-  extraction: Awaited<ReturnType<typeof extractDocument>>
+  extraction: Awaited<ReturnType<typeof extractDocument>>,
+  ocr?: Readonly<{
+    completedAt: Date
+    pageCount?: number
+    pageRanges: ReadonlyMap<string, Readonly<{ pageEnd: number; pageStart: number }>>
+    provider: string
+  }>
 ): Promise<void> {
   await database.transaction(async (transaction) => {
     await transaction
@@ -191,6 +211,19 @@ async function persistDocumentExtraction(
         ...(input.blobPath === undefined ? {} : { blobPath: input.blobPath }),
         contentHash: extraction.contentHash,
         contentType: input.contentType,
+        ...(ocr === undefined
+          ? {
+              ocrCompletedAt: null,
+              ocrPageCount: null,
+              ocrProvider: null,
+              ocrStatus: "not-required"
+            }
+          : {
+              ocrCompletedAt: ocr.completedAt,
+              ocrPageCount: ocr.pageCount ?? null,
+              ocrProvider: ocr.provider,
+              ocrStatus: "processed"
+            }),
         nextAttemptAt: null,
         processingError: null,
         processingErrorCategory: null,
@@ -208,6 +241,7 @@ async function persistDocumentExtraction(
           heading: section.heading,
           id: section.id,
           ordinal: section.ordinal,
+          ...(ocr === undefined ? undefined : ocr.pageRanges.get(section.id)),
           sectionIdentifier: section.identifier,
           sourceEndOffset: section.endOffset,
           sourceStartOffset: section.startOffset,
@@ -226,15 +260,21 @@ export async function markDocumentProcessingFailure(
     blobPath?: string
     contentType?: string
     nextAttemptAt?: Date
+    ocrStatus?: "failed" | "pending" | "unsupported"
     processingError: string
     status: "failed" | "unsupported"
   }>
 ): Promise<void> {
+  const ocrStatus = ocrStatusForDocumentFailure(input)
   await database
     .update(billDocuments)
     .set({
       ...(input.blobPath === undefined ? {} : { blobPath: input.blobPath }),
       ...(input.contentType === undefined ? {} : { contentType: input.contentType }),
+      ...(ocrStatus === undefined ? undefined : { ocrStatus }),
+      ocrCompletedAt: null,
+      ocrPageCount: null,
+      ocrProvider: null,
       nextAttemptAt: input.nextAttemptAt ?? null,
       processingError: boundedProcessingError(input.processingError),
       processingErrorCategory: input.category,
@@ -242,6 +282,27 @@ export async function markDocumentProcessingFailure(
       updatedAt: new Date()
     })
     .where(eq(billDocuments.id, documentId))
+}
+
+/**
+ * The generic ingestion worker must not turn download/extraction failures into
+ * OCR failures. OCR lifecycle states become known only when extraction detects
+ * image-only content, or when the dedicated OCR worker reports its own result.
+ */
+export function ocrStatusForDocumentFailure(
+  input: Readonly<{
+    category: DocumentFailureCategory
+    ocrStatus?: "failed" | "pending" | "unsupported"
+    status: "failed" | "unsupported"
+  }>
+): "failed" | "pending" | "unsupported" | undefined {
+  if (input.ocrStatus !== undefined) {
+    return input.ocrStatus
+  }
+  if (input.category === "ocr-required") {
+    return "pending"
+  }
+  return input.status === "unsupported" ? "unsupported" : undefined
 }
 
 /**
@@ -262,6 +323,10 @@ export async function deferDocumentProcessing(
       processingAttempts: sql`greatest(${billDocuments.processingAttempts} - 1, 0)`,
       processingError: null,
       processingErrorCategory: null,
+      ocrCompletedAt: null,
+      ocrPageCount: null,
+      ocrProvider: null,
+      ocrStatus: null,
       processingStatus: "pending",
       updatedAt: new Date()
     })

@@ -183,6 +183,13 @@
       "when": 1787593501353,
       "tag": "0025_steep_alice",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1787595720169,
+      "tag": "0026_lean_corsair",
+      "breakpoints": true
     }
   ]
 }

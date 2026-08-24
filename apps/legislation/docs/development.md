@@ -97,6 +97,16 @@ There is no standalone historical OCR sweep script or task. Native document
 and material ingestion own OCR handoff, and a later unowned OCR accumulation
 is treated as a defect rather than hidden by polling.
 
+Document OCR metadata is deliberately forward-only. `bill_documents.ocr_status`
+uses the HTTP contract lifecycle (`not-required`, `pending`, `processing`,
+`processed`, `failed`, or `unsupported`); provider, completion time, and page
+count remain `NULL` for historical rows unless a recorded ingestion attempt
+establishes them. `document_sections`
+receives a one-based inclusive page range only when the provider's complete,
+contiguous UTF-16 source spans are identical to the canonical normalized text;
+any normalization or layout ambiguity leaves both page fields `NULL`. Do not infer
+page values from section order, PDF page count, or prior document versions.
+
 Stop the container while retaining data with `pnpm --filter legislation db:down`. To delete only the disposable
 legislation database volume and recreate it from zero, run:
 

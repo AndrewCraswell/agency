@@ -1,7 +1,16 @@
 import { describe, expect, it } from "vitest"
-import { classifyDocumentFailure } from "./process.js"
+import { classifyDocumentFailure, ocrStatusForDocumentFailure } from "./process.js"
 
 describe("document failure classification", () => {
+  it("does not fabricate an OCR failure for a generic retryable extraction failure", () => {
+    expect(ocrStatusForDocumentFailure({ category: "download-transient", status: "failed" })).toBeUndefined()
+    expect(ocrStatusForDocumentFailure({ category: "ocr-required", status: "unsupported" })).toBe("pending")
+    expect(ocrStatusForDocumentFailure({ category: "unsupported-format", status: "unsupported" })).toBe("unsupported")
+    expect(
+      ocrStatusForDocumentFailure({ category: "processing-transient", ocrStatus: "failed", status: "unsupported" })
+    ).toBe("failed")
+  })
+
   it("classifies a successfully fetched legacy Word response as terminal without persistence", () => {
     expect(classifyDocumentFailure(new Error("Unsupported document content type: application/msword"))).toEqual({
       category: "unsupported-format",

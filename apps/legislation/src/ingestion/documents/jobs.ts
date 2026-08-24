@@ -203,6 +203,10 @@ export async function prepareDocumentRemediation(
               processing_attempts = 0,
               processing_error = null,
               processing_error_category = null,
+              ocr_provider = null,
+              ocr_completed_at = null,
+              ocr_page_count = null,
+              ocr_status = null,
               processing_status = 'pending',
               text = null,
               updated_at = now()
@@ -1182,6 +1186,10 @@ export async function requeueInterruptedDocuments(
         processing_attempts = greatest(processing_attempts - 1, 0),
         processing_error = null,
         processing_error_category = null,
+        ocr_provider = null,
+        ocr_completed_at = null,
+        ocr_page_count = null,
+        ocr_status = null,
         processing_status = 'pending',
         updated_at = now()
       from candidates
@@ -1352,6 +1360,13 @@ export async function processPendingDocuments(
         .set({
           lastAttemptAt: claimStartedAt,
           nextAttemptAt: null,
+          ocrCompletedAt: null,
+          ocrPageCount: null,
+          ocrProvider: null,
+          // This worker is downloading and extracting source content, not
+          // performing OCR. Keep OCR unknown until extraction identifies an
+          // image-only document and transfers it to the OCR queue.
+          ocrStatus: null,
           processingAttempts: sql`${billDocuments.processingAttempts} + 1`,
           processingError: null,
           processingErrorCategory: null,

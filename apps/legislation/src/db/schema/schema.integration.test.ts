@@ -14,14 +14,19 @@ import {
 } from "../../ingestion/canonical-foundation.js"
 import { CongressRequestBudgetExhaustedError } from "../../ingestion/congress/request-budget.js"
 import { synchronizeCongress } from "../../ingestion/congress/sync.js"
-import type { ArtifactStore } from "../../ingestion/documents/artifact-store.js"
+import { ArtifactNotFoundError, type ArtifactStore } from "../../ingestion/documents/artifact-store.js"
 import {
   nextDocumentBackfillAttempt,
   prepareDocumentRemediation,
   processPendingDocuments,
   requeueInterruptedDocuments
 } from "../../ingestion/documents/jobs.js"
-import { persistProcessedDocument } from "../../ingestion/documents/process.js"
+import { processOcrRequiredDocuments, recoverOwnedOcrDocuments } from "../../ingestion/documents/ocr-jobs.js"
+import {
+  markDocumentProcessingFailure,
+  persistOcrDocument,
+  persistProcessedDocument
+} from "../../ingestion/documents/process.js"
 import { processPendingSupportingMaterials } from "../../ingestion/documents/supporting-material-jobs.js"
 import { embedBills, embedDocumentSections, embedSupportingMaterialSections } from "../../ingestion/embeddings/jobs.js"
 import { GovInfoClient } from "../../ingestion/govinfo/client.js"
@@ -792,6 +797,199 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     })
   })
 
+  it("persists only source-backed OCR status and page ranges", async () => {
+    const documentId = "bill:us:119:hr:1234:document:ocr-page-mapping"
+    const sourceText = "SECTION 1. TITLE.\nFirst page text.\nSECTION 2. DATA.\nSecond page text."
+    const secondPageStart = sourceText.indexOf("SECTION 2")
+    await database.insert(schema.billDocuments).values({
+      billId: "bill:us:119:hr:1234",
+      classification: "version",
+      id: documentId,
+      sourceUrl: "https://example.test/ocr-page-mapping.pdf",
+      title: "OCR page mapping"
+    })
+
+    await persistOcrDocument(database, {
+      blobPath: "documents/ocr-page-mapping.pdf",
+      contentType: "application/pdf",
+      documentId,
+      pageCount: 2,
+      pages: [
+        { endOffset: secondPageStart, pageNumber: 1, startOffset: 0 },
+        { endOffset: sourceText.length, pageNumber: 2, startOffset: secondPageStart }
+      ],
+      provider: "azure-document-intelligence",
+      sourceBytes: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+      text: sourceText
+    })
+
+    await expect(
+      database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, documentId) })
+    ).resolves.toMatchObject({
+      ocrPageCount: 2,
+      ocrProvider: "azure-document-intelligence",
+      ocrStatus: "processed",
+      processingStatus: "processed"
+    })
+    await expect(
+      database
+        .select({ pageEnd: schema.documentSections.pageEnd, pageStart: schema.documentSections.pageStart })
+        .from(schema.documentSections)
+        .where(eq(schema.documentSections.documentId, documentId))
+        .orderBy(schema.documentSections.ordinal)
+    ).resolves.toEqual([
+      { pageEnd: 1, pageStart: 1 },
+      { pageEnd: 2, pageStart: 2 }
+    ])
+    await expect(
+      database.insert(schema.documentSections).values({
+        contentHash,
+        documentId,
+        id: `${documentId}:invalid-page-range`,
+        ordinal: 9,
+        pageStart: 1,
+        sourceEndOffset: 1,
+        sourceStartOffset: 0,
+        text: "x"
+      })
+    ).rejects.toThrow(/document_sections_page_range_check/)
+  })
+
+  it("clears successful OCR metadata across every non-processed lifecycle state", async () => {
+    const documentId = "bill:us:119:hr:1234:document:ocr-lifecycle"
+    await database.insert(schema.billDocuments).values({
+      billId: "bill:us:119:hr:1234",
+      classification: "version",
+      id: documentId,
+      sourceUrl: "https://example.test/ocr-lifecycle.pdf",
+      title: "OCR lifecycle"
+    })
+    await expect(
+      database
+        .update(schema.billDocuments)
+        .set({ ocrProvider: "azure-document-intelligence" })
+        .where(eq(schema.billDocuments.id, documentId))
+    ).rejects.toThrow(/bill_documents_ocr_metadata_status_check/)
+    await persistOcrDocument(database, {
+      blobPath: "documents/ocr-lifecycle.pdf",
+      contentType: "application/pdf",
+      documentId,
+      pageCount: 1,
+      pages: [{ endOffset: 34, pageNumber: 1, startOffset: 0 }],
+      provider: "azure-document-intelligence",
+      sourceBytes: new Uint8Array([0x25, 0x50, 0x44, 0x46]),
+      text: "SECTION 1. TITLE.\nRecognized text."
+    })
+
+    const expectCleared = async (ocrStatus: string | null) => {
+      await expect(
+        database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, documentId) })
+      ).resolves.toMatchObject({
+        ocrCompletedAt: null,
+        ocrPageCount: null,
+        ocrProvider: null,
+        ocrStatus
+      })
+    }
+
+    await markDocumentProcessingFailure(database, documentId, {
+      category: "download-transient",
+      processingError: "publisher unavailable",
+      status: "failed"
+    })
+    // A generic publisher/download failure is not an OCR failure.
+    await expectCleared(null)
+
+    await markDocumentProcessingFailure(database, documentId, {
+      category: "ocr-required",
+      processingError: "requires OCR",
+      status: "unsupported"
+    })
+    await expectCleared("pending")
+
+    await markDocumentProcessingFailure(database, documentId, {
+      category: "unsupported-format",
+      processingError: "format cannot be read",
+      status: "unsupported"
+    })
+    await expectCleared("unsupported")
+
+    await database
+      .update(schema.billDocuments)
+      .set({
+        ocrStatus: "processing",
+        processingError: "ocr-owner:interrupted-worker",
+        processingErrorCategory: "ocr-required",
+        processingStatus: "processing"
+      })
+      .where(eq(schema.billDocuments.id, documentId))
+    await expect(recoverOwnedOcrDocuments(database, "interrupted-worker")).resolves.toBe(1)
+    await expectCleared("pending")
+
+    await database
+      .update(schema.billDocuments)
+      .set({
+        blobPath: "documents/missing-ocr-artifact.pdf",
+        ocrCompletedAt: new Date(),
+        ocrPageCount: 1,
+        ocrProvider: "azure-document-intelligence",
+        ocrStatus: "processed",
+        processingErrorCategory: "ocr-required",
+        processingStatus: "unsupported"
+      })
+      .where(eq(schema.billDocuments.id, documentId))
+    await expect(
+      processOcrRequiredDocuments(database, {
+        artifactStore: {
+          exists: async () => true,
+          put: async () => true,
+          read: async (path) => {
+            throw new ArtifactNotFoundError(path)
+          }
+        },
+        documentId,
+        maximumAttempts: 5,
+        ocr: { recognize: async () => ({ provider: "azure-document-intelligence", text: "unreachable" }) }
+      })
+    ).resolves.toMatchObject({ rerouted: 1 })
+    await expectCleared("pending")
+
+    await database
+      .update(schema.billDocuments)
+      .set({
+        blobPath: "documents/ocr-execution-failure.pdf",
+        processingAttempts: 0,
+        processingErrorCategory: "ocr-required",
+        processingStatus: "unsupported"
+      })
+      .where(eq(schema.billDocuments.id, documentId))
+    const ocrClaimed = Promise.withResolvers<void>()
+    const allowOcrFailure = Promise.withResolvers<void>()
+    const ocrProcessing = processOcrRequiredDocuments(database, {
+      artifactStore: {
+        exists: async () => true,
+        put: async () => true,
+        read: async () => new Uint8Array([0x25, 0x50, 0x44, 0x46])
+      },
+      documentId,
+      maximumAttempts: 5,
+      ocr: {
+        recognize: async () => {
+          ocrClaimed.resolve()
+          await allowOcrFailure.promise
+          throw new Error("OCR service unavailable")
+        }
+      }
+    })
+    await ocrClaimed.promise
+    await expect(
+      database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, documentId) })
+    ).resolves.toMatchObject({ ocrStatus: "processing", processingStatus: "processing" })
+    allowOcrFailure.resolve()
+    await expect(ocrProcessing).resolves.toMatchObject({ claimed: 1, failed: 1 })
+    await expectCleared("failed")
+  })
+
   it("downloads, stores, and processes a pending document through the worker", async () => {
     const documentId = "bill:us:119:hr:1234:document:worker-test"
     await database.insert(schema.billDocuments).values({
@@ -875,6 +1073,52 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
         .from(schema.documentSections)
         .where(eq(schema.documentSections.documentId, documentId))
     ).resolves.toEqual([expect.objectContaining({ text: expect.stringContaining("targeted retry") })])
+  })
+
+  it("keeps OCR unknown while a generic source extraction claim is running", async () => {
+    const documentId = "bill:us:119:hr:1234:document:generic-claim-ocr-unknown"
+    await database.insert(schema.billDocuments).values({
+      billId: "bill:us:119:hr:1234",
+      classification: "analysis",
+      id: documentId,
+      sourceUrl: "https://example.test/generic-claim-ocr-unknown.txt",
+      title: "Generic claim OCR unknown"
+    })
+    const artifacts = new Map<string, Uint8Array>()
+    const extractionClaimed = Promise.withResolvers<void>()
+    const allowExtraction = Promise.withResolvers<void>()
+    const processing = processPendingDocuments(database, {
+      artifactStore: {
+        exists: async (path) => artifacts.has(path),
+        put: async (path, bytes) => {
+          const created = !artifacts.has(path)
+          artifacts.set(path, bytes)
+          return created
+        },
+        read: async (path) => artifacts.get(path) ?? new Uint8Array()
+      },
+      concurrency: 1,
+      documentId,
+      fetch: async () => {
+        extractionClaimed.resolve()
+        await allowExtraction.promise
+        return new Response("SECTION 1. GENERIC CLAIM.", { headers: { "content-type": "text/plain" } })
+      },
+      maximumAttempts: 2
+    })
+
+    await extractionClaimed.promise
+    await expect(
+      database.query.billDocuments.findFirst({ where: eq(schema.billDocuments.id, documentId) })
+    ).resolves.toMatchObject({
+      ocrCompletedAt: null,
+      ocrPageCount: null,
+      ocrProvider: null,
+      ocrStatus: null,
+      processingStatus: "processing"
+    })
+    allowExtraction.resolve()
+    await expect(processing).resolves.toMatchObject({ counts: { processed: 1 } })
   })
 
   it("claims pending documents once and enforces the configured attempt ceiling", async () => {

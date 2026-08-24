@@ -1,11 +1,13 @@
 import { setTimeout as delay } from "node:timers/promises"
 import { DefaultAzureCredential } from "@azure/identity"
+import type { OcrPageSpan } from "./ocr-page-mapping.js"
 
 const cognitiveServicesScope = "https://cognitiveservices.azure.com/.default"
 const documentIntelligenceApiVersion = "2024-11-30"
 
 export interface OcrResult {
   pageCount?: number
+  pages?: readonly OcrPageSpan[]
   provider: "azure-document-intelligence"
   text: string
 }
@@ -64,7 +66,7 @@ export class AzureDocumentIntelligenceClient implements OcrClient {
     }
 
     const analyzeUrl = new URL(
-      `documentintelligence/documentModels/prebuilt-read:analyze?_overload=analyzeDocument&api-version=${documentIntelligenceApiVersion}`,
+      `documentintelligence/documentModels/prebuilt-read:analyze?_overload=analyzeDocument&api-version=${documentIntelligenceApiVersion}&stringIndexType=utf16CodeUnit`,
       this.#endpoint
     )
     const response = await this.#fetch(analyzeUrl, {
@@ -122,8 +124,10 @@ export class AzureDocumentIntelligenceClient implements OcrClient {
         })
       }
       const pages = body.analyzeResult.pages
+      const pageSpans = parsePageSpans(pages, content.length)
       return {
-        pageCount: Array.isArray(pages) ? pages.length : undefined,
+        ...(Array.isArray(pages) && pages.length > 0 ? { pageCount: pages.length } : {}),
+        ...(pageSpans === undefined ? {} : { pages: pageSpans }),
         provider: "azure-document-intelligence",
         text: content
       }
@@ -177,4 +181,37 @@ function providerFailureMessage(value: Record<string, unknown>): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
+}
+
+function parsePageSpans(value: unknown, contentLength: number): readonly OcrPageSpan[] | undefined {
+  if (!Array.isArray(value) || value.length === 0) {
+    return undefined
+  }
+  const spans: OcrPageSpan[] = []
+  for (const [index, page] of value.entries()) {
+    if (!isRecord(page) || !Number.isSafeInteger(page.pageNumber) || page.pageNumber !== index + 1) {
+      return undefined
+    }
+    const pageSpans = page.spans
+    if (!Array.isArray(pageSpans) || pageSpans.length !== 1 || !isRecord(pageSpans[0])) {
+      return undefined
+    }
+    const span = pageSpans[0]
+    const offset = span.offset
+    const length = span.length
+    if (
+      typeof offset !== "number" ||
+      typeof length !== "number" ||
+      !Number.isSafeInteger(offset) ||
+      !Number.isSafeInteger(length) ||
+      offset < 0 ||
+      length < 1 ||
+      offset > Number.MAX_SAFE_INTEGER - length ||
+      offset + length > contentLength
+    ) {
+      return undefined
+    }
+    spans.push({ endOffset: offset + length, pageNumber: page.pageNumber, startOffset: offset })
+  }
+  return spans
 }

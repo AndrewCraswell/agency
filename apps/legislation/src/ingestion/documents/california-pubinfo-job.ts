@@ -97,6 +97,12 @@ export async function processCaliforniaPubinfoArchive(
         .set({
           lastAttemptAt: now,
           nextAttemptAt: null,
+          ocrCompletedAt: null,
+          ocrPageCount: null,
+          ocrProvider: null,
+          // PUBINFO archival ingestion is source extraction, not OCR. An OCR
+          // worker alone may claim the OCR processing lifecycle state.
+          ocrStatus: null,
           processingAttempts: sql`${billDocuments.processingAttempts} + 1`,
           processingError: null,
           processingErrorCategory: null,
@@ -168,6 +174,10 @@ export async function processCaliforniaPubinfoArchive(
       .set({
         lastAttemptAt: null,
         nextAttemptAt: null,
+        ocrCompletedAt: null,
+        ocrPageCount: null,
+        ocrProvider: null,
+        ocrStatus: null,
         processingAttempts: sql`greatest(${billDocuments.processingAttempts} - 1, 0)`,
         processingStatus: "pending",
         updatedAt: new Date()
