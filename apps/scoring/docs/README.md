@@ -19,6 +19,8 @@ pairing/provisioning security properties, board gates, and manufacturer software
 command-key, guard, and feedback lookup is in
 [remote-control-button-reference.md](remote-control-button-reference.md). The countdown, STM32 scoring, rearm/reset,
 and controller-transfer boundary is in [the RC-01 authority ADR](remote-control-authority-adr.md).
+The partial RC-07 delivery and its P-card rules gate are in
+[p-card-rules-gate.md](p-card-rules-gate.md).
 
 The reproducible `rules-1` baseline, its pinned executable inputs and toolchain,
 and its review-sensitive digest workflow are defined in

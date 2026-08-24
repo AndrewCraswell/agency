@@ -269,6 +269,23 @@ function scoreCommand(command: RemoteCommand): Readonly<{ direction: -1 | 1; sid
   }
 }
 
+function awardedSide(command: RemoteCommand): "left" | "right" | null {
+  switch (command.command) {
+    case "penalty.award.left":
+    case "passivityPenalty.award.left":
+      return "left"
+    case "penalty.award.right":
+    case "passivityPenalty.award.right":
+      return "right"
+    default:
+      return null
+  }
+}
+
+function opposingSide(side: "left" | "right"): "left" | "right" {
+  return side === "left" ? "right" : "left"
+}
+
 function reject(
   state: BoutWorkflowReducerState,
   command: RemoteCommand,
@@ -657,6 +674,53 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
         mode: "break",
         remainingDurationCentiseconds: 6_000,
         status: "running"
+      }
+    })
+  }
+
+  const awarded = awardedSide(command)
+  if (awarded !== null) {
+    if (command.command.startsWith("passivityPenalty.award.")) {
+      // RC-07 cannot select an outcome until its rules owner approves a source-backed P-card table.
+      return reject(state, command, "owner-unavailable")
+    }
+    if (state.snapshot.clock.mode === "break") return reject(state, command, "invalid-mode")
+
+    const awardedState = state.snapshot.sides[awarded]
+    if (command.command.startsWith("penalty.award.")) {
+      if (!awardedState.yellowCard) {
+        return apply(state, command, "penalty.award", {
+          ...copySnapshot(state.snapshot),
+          sides: {
+            ...structuredClone(state.snapshot.sides),
+            [awarded]: { ...structuredClone(awardedState), yellowCard: true }
+          }
+        })
+      }
+
+      const opponent = opposingSide(awarded)
+      const opponentState = state.snapshot.sides[opponent]
+      if (awardedState.redCardCount === Number.MAX_SAFE_INTEGER || opponentState.score === Number.MAX_SAFE_INTEGER) {
+        return reject(state, command, "out-of-bounds")
+      }
+      return apply(state, command, "penalty.award", {
+        ...copySnapshot(state.snapshot),
+        lastScoredSide: opponent,
+        sides: {
+          ...structuredClone(state.snapshot.sides),
+          [awarded]: { ...structuredClone(awardedState), redCardCount: awardedState.redCardCount + 1 },
+          [opponent]: { ...structuredClone(opponentState), score: opponentState.score + 1 }
+        }
+      })
+    }
+  }
+
+  if (command.command === "cards.reset") {
+    return apply(state, command, "cards.reset", {
+      ...copySnapshot(state.snapshot),
+      sides: {
+        left: { ...structuredClone(state.snapshot.sides.left), pCard: "none", redCardCount: 0, yellowCard: false },
+        right: { ...structuredClone(state.snapshot.sides.right), pCard: "none", redCardCount: 0, yellowCard: false }
       }
     })
   }

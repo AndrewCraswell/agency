@@ -40,7 +40,10 @@ function state(): BoutWorkflowReducerState {
 
 function command(commandName: RemoteCommand["command"], commandId: string, payload: object = {}): RemoteCommand {
   const pressKind =
-    commandName === "bout.new" || commandName === "clock.configure"
+    commandName === "bout.new" ||
+    commandName === "clock.configure" ||
+    commandName === "passivityPenalty.award.left" ||
+    commandName === "passivityPenalty.award.right"
       ? "modified"
       : commandName === "clock.loadOneMinute"
         ? "double"
@@ -612,6 +615,155 @@ describe("RC-05 bout workflow reducer", () => {
       clock: { ...initial.snapshot.clock, mode: "overtime" }
     })
     expect(reduceBoutWorkflow(otherMode, action)).toMatchObject({ event: { rejectionReason: "invalid-mode" } })
+  })
+
+  it("awards yellow then cumulative red cards and atomically scores the opponent", () => {
+    for (const [awarded, opponent] of [
+      ["left", "right"],
+      ["right", "left"]
+    ] as const) {
+      const initial = state()
+      const yellow = reduceBoutWorkflow(initial, {
+        command: command(`penalty.award.${awarded}`, `yellow-${awarded}`),
+        nextBout: null,
+        type: "command"
+      })
+      expect(yellow).toMatchObject({
+        event: { cause: "penalty.award", eventRevision: 1 },
+        outcome: "applied",
+        state: { snapshot: { sides: { [awarded]: { redCardCount: 0, yellowCard: true } } } }
+      })
+
+      const red = reduceBoutWorkflow(yellow.state, {
+        command: command(`penalty.award.${awarded}`, `red-${awarded}`),
+        nextBout: null,
+        type: "command"
+      })
+      expect(red).toMatchObject({
+        event: { cause: "penalty.award", eventRevision: 2 },
+        outcome: "applied",
+        state: {
+          snapshot: {
+            lastScoredSide: opponent,
+            sides: { [awarded]: { redCardCount: 1, yellowCard: true }, [opponent]: { score: 1 } }
+          }
+        }
+      })
+      expect(isBoutStateEvent(red.event)).toBe(true)
+
+      const anotherRed = reduceBoutWorkflow(red.state, {
+        command: command(`penalty.award.${awarded}`, `red-again-${awarded}`),
+        nextBout: null,
+        type: "command"
+      })
+      expect(anotherRed).toMatchObject({
+        outcome: "applied",
+        state: { snapshot: { sides: { [awarded]: { redCardCount: 2 }, [opponent]: { score: 2 } } } }
+      })
+    }
+  })
+
+  it("rejects an overflowing red award without partially changing either side", () => {
+    const initial = state()
+    const blocked = createBoutWorkflowReducerState({
+      ...initial.snapshot,
+      sides: {
+        ...initial.snapshot.sides,
+        left: { ...initial.snapshot.sides.left, redCardCount: Number.MAX_SAFE_INTEGER, yellowCard: true },
+        right: { ...initial.snapshot.sides.right, score: Number.MAX_SAFE_INTEGER }
+      }
+    })
+    const rejected = reduceBoutWorkflow(blocked, {
+      command: command("penalty.award.left", "red-overflow"),
+      nextBout: null,
+      type: "command"
+    })
+    expect(rejected).toMatchObject({ event: { cause: "command.rejected", rejectionReason: "out-of-bounds" } })
+    expect(rejected.state.snapshot).toEqual(blocked.snapshot)
+  })
+
+  it("fails closed on every P-card command until a source-backed rule table has an available owner", () => {
+    for (const side of ["left", "right"] as const) {
+      const initial = state()
+      const rejected = reduceBoutWorkflow(initial, {
+        command: command(`passivityPenalty.award.${side}`, `p-gated-${side}`),
+        nextBout: null,
+        type: "command"
+      })
+      expect(rejected).toMatchObject({ event: { cause: "command.rejected", rejectionReason: "owner-unavailable" } })
+      expect(rejected.state.snapshot).toEqual(initial.snapshot)
+    }
+  })
+
+  it("allows card awards while the active clock is running, rejects them during a break, and deduplicates them", () => {
+    const initial = state()
+    const running = createBoutWorkflowReducerState({
+      ...initial.snapshot,
+      clock: { ...initial.snapshot.clock, status: "running" }
+    })
+    const action = {
+      command: command("penalty.award.left", "running-yellow"),
+      nextBout: null,
+      type: "command"
+    } as const
+    const applied = reduceBoutWorkflow(running, action)
+    expect(applied).toMatchObject({
+      outcome: "applied",
+      state: { snapshot: { sides: { left: { yellowCard: true } } } }
+    })
+    expect(reduceBoutWorkflow(applied.state, action)).toMatchObject({ event: applied.event, outcome: "duplicate" })
+
+    const breakState = createBoutWorkflowReducerState({
+      ...initial.snapshot,
+      clock: { ...initial.snapshot.clock, mode: "break", remainingDurationCentiseconds: 6_000, status: "running" }
+    })
+    expect(
+      reduceBoutWorkflow(breakState, {
+        command: command("penalty.award.left", "break-penalty.award.left"),
+        nextBout: null,
+        type: "command"
+      })
+    ).toMatchObject({ event: { cause: "command.rejected", rejectionReason: "invalid-mode" } })
+    expect(
+      reduceBoutWorkflow(breakState, {
+        command: command("passivityPenalty.award.left", "break-passivityPenalty.award.left"),
+        nextBout: null,
+        type: "command"
+      })
+    ).toMatchObject({ event: { cause: "command.rejected", rejectionReason: "owner-unavailable" } })
+  })
+
+  it("resets only penalty and P-card presentation, leaving every bout value and card-caused score intact", () => {
+    const current = state().snapshot
+    const initial = createBoutWorkflowReducerState({
+      ...current,
+      clock: { ...current.clock, status: "running" },
+      priority: "left",
+      sides: {
+        left: { pCard: "red", redCardCount: 2, score: 7, yellowCard: true },
+        right: { pCard: "yellow", redCardCount: 1, score: 9, yellowCard: true }
+      }
+    })
+    const reset = reduceBoutWorkflow(initial, {
+      command: command("cards.reset", "cards-reset"),
+      nextBout: null,
+      type: "command"
+    })
+    expect(reset).toMatchObject({
+      event: { cause: "cards.reset", eventRevision: 1 },
+      outcome: "applied",
+      state: {
+        snapshot: {
+          boutId: "bout-01",
+          clock: initial.snapshot.clock,
+          priority: "left",
+          sides: {
+            left: { pCard: "none", redCardCount: 0, score: 7, yellowCard: false },
+            right: { pCard: "none", redCardCount: 0, score: 9, yellowCard: false }
+          }
+        }
+      }
+    })
   })
 
   it("retains command identities beyond the event cache and fails closed at the explicit ledger capacity", () => {
