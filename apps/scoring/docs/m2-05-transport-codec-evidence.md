@@ -14,7 +14,7 @@ contract, as required by M0-05 and M0-06.
 
 | M2-05 acceptance | Evidence | Result |
 | --- | --- | --- |
-| Golden frames match byte for byte | Three deterministic fixtures cover a `decision-record` frame with opaque test payload bytes, an empty request, and a maximum-sequence status frame. The first fixture does not define or validate decision-record payload serialization. | Pass |
+| Golden frames match byte for byte | The checked-in `transport-frame-golden.json` source covers all four permitted message types: `decision-record`, `status`, `request`, and `response`. The payload remains opaque; this task does not define or validate decision-record payload serialization. | Pass |
 | Malformed length rejected | Decoder rejects truncated input, declared lengths above 4,096 bytes, declared lengths that do not match the complete input, trailing bytes, and input above the 4,114-byte frame bound. | Pass |
 | CRC corruption rejected | CRC-32C check-value test plus a corrupted payload byte case. | Pass |
 | Unknown message type rejected | Unknown type is rejected before payload delivery. | Pass |

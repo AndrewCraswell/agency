@@ -72,9 +72,10 @@ These vectors are hexadecimal complete frames, including CRC-32C.
 | `decision-record` frame with opaque test payload `00 7F 80 FF`, sequence `0x01020304` | `5343010100000102030400000004007F80FF01DE6ABE` |
 | empty `request`, sequence `0` | `5343010300000000000000000000452025EA` |
 | `status`, sequence `0xFFFFFFFF`, payload `A5` | `534301020000FFFFFFFF00000001A52B9989F7` |
+| `response`, payload `52`, sequence `7` | `534301040000000000070000000152694A1138` |
 
-The executable vectors and malformed-frame cases are in `src/transport-frame.test.ts`. The decoder also rejects any
-input larger than the 4,114-byte complete-frame bound before reading payload bytes; M2-05 acceptance evidence is in
+The executable vectors are sourced from `fixtures/transport-frame-golden.json`, and malformed-frame cases are in
+`src/transport-frame.test.ts`. The decoder also rejects any input larger than the 4,114-byte complete-frame bound before reading payload bytes; M2-05 acceptance evidence is in
 [`m2-05-transport-codec-evidence.md`](m2-05-transport-codec-evidence.md).
 
 At the public decoder boundary, any value that is not a `Uint8Array` is rejected with the stable `frame-input` error

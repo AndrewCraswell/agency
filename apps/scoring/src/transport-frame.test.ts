@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   calculateCrc32c,
@@ -8,69 +9,48 @@ import {
   TRANSPORT_FRAME_HEADER_BYTES
 } from "./transport-frame.js"
 
-const GOLDEN_FRAMES = [
-  {
-    encodedHex: "5343010100000102030400000004007f80ff01de6abe",
-    frame: {
-      flags: 0,
-      messageType: "decision-record" as const,
-      payloadHex: "007f80ff",
-      sequence: 0x0102_0304
-    },
-    receiver: "esp32" as const
-  },
-  {
-    encodedHex: "5343010300000000000000000000452025ea",
-    frame: {
-      flags: 0,
-      messageType: "request" as const,
-      payloadHex: "",
-      sequence: 0
-    },
-    receiver: "stm32" as const
-  },
-  {
-    encodedHex: "534301020000ffffffff00000001a52b9989f7",
-    frame: {
-      flags: 0,
-      messageType: "status" as const,
-      payloadHex: "a5",
-      sequence: 0xffff_ffff
-    },
-    receiver: "esp32" as const
-  },
-  {
-    encodedHex: "534301040000000000070000000152694a1138",
-    frame: {
-      flags: 0,
-      messageType: "response" as const,
-      payloadHex: "52",
-      sequence: 7
-    },
-    receiver: "esp32" as const
+type GoldenFixture = Readonly<{
+  encodedHex: string
+  messageType: "decision-record" | "request" | "response" | "status"
+  name: string
+  payloadHex: string
+  receiver: "esp32" | "stm32"
+  sequence: number
+}>
+
+const GOLDEN_FIXTURES = (
+  JSON.parse(readFileSync(new URL("../fixtures/transport-frame-golden.json", import.meta.url), "utf8")) as {
+    readonly fixtures: readonly GoldenFixture[]
   }
-] as const
+).fixtures
 
 function hex(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("hex")
 }
 
-describe("M0-06 transport frame", () => {
-  it("matches every documented golden frame byte for byte", () => {
-    for (const { encodedHex, frame, receiver } of GOLDEN_FRAMES) {
+describe("M0-06/M2-05 canonical transport frame", () => {
+  it("matches every checked-in golden frame byte for byte", () => {
+    expect(GOLDEN_FIXTURES.map(({ messageType }) => messageType)).toEqual([
+      "decision-record",
+      "request",
+      "status",
+      "response"
+    ])
+
+    for (const { encodedHex, messageType, payloadHex, receiver, sequence } of GOLDEN_FIXTURES) {
       const encoded = encodeTransportFrame({
-        flags: frame.flags,
-        messageType: frame.messageType,
-        payload: new Uint8Array(Buffer.from(frame.payloadHex, "hex")),
-        sequence: frame.sequence
+        flags: 0,
+        messageType,
+        payload: new Uint8Array(Buffer.from(payloadHex, "hex")),
+        sequence
       })
 
       expect(hex(encoded)).toBe(encodedHex)
       expect(decodeTransportFrame(receiver, encoded)).toEqual({
-        flags: frame.flags,
-        messageType: frame.messageType,
-        payload: new Uint8Array(Buffer.from(frame.payloadHex, "hex")),
-        sequence: frame.sequence
+        flags: 0,
+        messageType,
+        payload: new Uint8Array(Buffer.from(payloadHex, "hex")),
+        sequence
       })
     }
 
