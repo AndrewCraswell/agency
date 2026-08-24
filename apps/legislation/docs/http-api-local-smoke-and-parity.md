@@ -141,8 +141,12 @@ and delivery adapters are implemented and reviewed.
 
 ## MCP-to-HTTP parity
 
-For each row marked migrated in the MCP parity map, call the MCP tool and its HTTP operation against the same database
-snapshot and normalized input.
+This table is a parity-coverage map, not route-registration or allowlist authorization. Current HEAD intentionally
+leaves `GET /api/bills/{billId}` unregistered. Production MCP remains in-process and the hybrid allowlist remains empty;
+do not use a `getBill` result to authorize HTTP or hybrid routing.
+
+For each approved candidate whose HTTP operation is registered, call the MCP tool and its HTTP operation against the
+same database snapshot and normalized input.
 
 | Product | MCP operations | HTTP assertions |
 | --- | --- | --- |
@@ -164,15 +168,19 @@ Apply these parity rules:
 - [ ] Compare error category, retryability, item isolation, and absent-versus-empty behavior for invalid and missing input.
 - [ ] Record latency separately; parity passes on behavior and quality, while latency is an independent release gate.
 
-### Focused `getBill` canary
+### Historical deployed `getBill` canary (stale, non-authorizing)
 
-`pnpm --filter legislation canary:mcp-http-parity` is the first fail-closed parity canary. It compares the direct
-`LegislationQueryService.getBill` result with the deployed HTTP-backed MCP adapter for one explicit fixture. Set
-`LEGISLATION_PARITY_API_BASE_URL`, `LEGISLATION_PARITY_BILL_ID`, and `LEGISLATION_PARITY_TOKEN`; the configured
-`DATABASE_URL` must point to the same snapshot as the deployment. The token remains in memory and is never printed.
-The canary normalizes JSON date serialization, then requires exact recursive equality, including child ordering,
-warnings, truncation, and absent-versus-present fields. It exits nonzero on any request error or mismatch and does not
-change Railway configuration or `LEGISLATION_MCP_HTTP_METHODS`.
+The completed `pnpm --filter legislation canary:mcp-http-parity` run below targeted a prior deployed source commit,
+not current HEAD. It compared the direct `LegislationQueryService.getBill` result with the then-deployed HTTP-backed
+MCP adapter for one explicit fixture. The token remained in memory and was never printed. The canary normalized JSON
+date serialization and required exact recursive equality, including child ordering, warnings, truncation, and
+absent-versus-present fields. It exited nonzero on any request error or mismatch and did not change Railway
+configuration or `LEGISLATION_MCP_HTTP_METHODS`.
+
+Current HEAD intentionally leaves `GET /api/bills/{billId}` unregistered. This historical parity result is stale for
+current HEAD and cannot authorize `getBill` in the HTTP or hybrid allowlist. The next candidates are canonical
+`searchBills` and query-present `searchSupportingMaterials`, each only after shared direct-MCP/HTTP output parity, a
+remote same-snapshot canary, and MCP-resource authentication.
 
 ## Run record
 
@@ -201,8 +209,8 @@ Record one row per execution:
 | Embedding and reranking routes | Not exercised |
 | Products and routes exercised | Local scoped bill routes; remote `/health`, `/ready`, unknown route, unsupported method, unauthenticated rejection, and authenticated scoped `GET /api/jurisdictions/{jurisdictionId}/bills` plus `GET /api/sessions/{sessionId}/bills` |
 | Smoke result and evidence path | Remote `scoped-bills` profile passed 7/7 with 0 blocked and 0 failed against the recorded deployment. See [Railway API release record](http-api-railway-release.md). |
-| MCP parity result and evidence path | Focused strict `getBill` HTTP-parity canary passed for `bill:ak:30:hb:1` against the same production snapshot: exact recursive direct QueryService versus deployed HTTP-adapter equality, correlation ID `bd7dda5d-104b-47d8-8ffa-2251e2abbcda`. Production MCP remains in-process. |
-| Known deviations and owning backlog item | Only the two scoped bill collection routes are Done. Remaining MCP methods, an MCP-resource authenticated canary, and any HTTP/hybrid enablement remain pending (API-07). |
+| MCP parity result and evidence path | Historical/stale deployed `getBill` HTTP-parity canary passed for `bill:ak:30:hb:1`: exact recursive direct QueryService versus deployed HTTP-adapter equality, correlation ID `bd7dda5d-104b-47d8-8ffa-2251e2abbcda`. Current HEAD intentionally unregisters `GET /api/bills/{id}`, so this cannot authorize allowlisting. Production MCP remains in-process and the hybrid allowlist remains empty. |
+| Known deviations and owning backlog item | Only the two scoped bill collection routes are Done. Remaining MCP methods, an MCP-resource authenticated canary, and any HTTP/hybrid enablement remain pending (API-07). Next candidates are canonical `searchBills` and query-present `searchSupportingMaterials`, subject to shared direct-MCP/HTTP output parity and remote same-snapshot and MCP-resource-auth gates. |
 
 Only after the run is reviewed, linked from the backlog, and the route is included in a reviewed commit may its state
 move to **Done**.
