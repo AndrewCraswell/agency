@@ -31,6 +31,7 @@ import {
   type BoutWorkflowSnapshot,
   type RemotePressKind
 } from "./remote-control.js"
+import { isRemoteIdentifier } from "./remote-identifier.js"
 
 type ExpectedPayloadKind = "empty" | "configure" | "snapshot" | "transfer" | "priority"
 
@@ -441,13 +442,21 @@ describe("RC-02 immutable remote-control golden fixtures", () => {
 
     for (const key of GOLDEN_REMOTE_COMMAND_KEYS) {
       const command = GOLDEN_REMOTE_COMMANDS[key]
-      expect(command.apparatusId).toMatch(/^[a-z0-9-]{1,64}$/u)
-      expect(command.commandId).toMatch(/^[a-z0-9-]{1,64}$/u)
-      expect(command.authority.controllerId).toMatch(/^[a-z0-9-]{1,64}$/u)
+      expect(isRemoteIdentifier(command.apparatusId)).toBe(true)
+      expect(isRemoteIdentifier(command.commandId)).toBe(true)
+      expect(isRemoteIdentifier(command.authority.controllerId)).toBe(true)
       expect(Number.isSafeInteger(command.counter)).toBe(true)
       expect(command.counter).toBeGreaterThanOrEqual(0)
-      if (command.remoteId !== null) expect(command.remoteId).toMatch(/^[a-z0-9-]{1,64}$/u)
+      if (command.remoteId !== null) expect(isRemoteIdentifier(command.remoteId)).toBe(true)
     }
+  })
+
+  it("uses the same identifier bounds as the remote parser boundaries", () => {
+    expect(isRemoteIdentifier("a")).toBe(true)
+    expect(isRemoteIdentifier("a".repeat(64))).toBe(true)
+    expect(isRemoteIdentifier("Remote_Command.1:pair")).toBe(true)
+    for (const identifier of ["", "a".repeat(65), "remote id", " remote-1", "remote/1", "épee-1"])
+      expect(isRemoteIdentifier(identifier)).toBe(false)
   })
 
   it("round-trips complete fresh, loaded, overtime, new-bout, and transfer snapshots", () => {

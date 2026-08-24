@@ -1,5 +1,6 @@
 /** RC-02 logical remote-command and bout-event contracts; not a crypto or reducer implementation. */
 import type { Weapon } from "./bout-state.js"
+import { isRemoteIdentifier } from "./remote-identifier.js"
 
 export const REMOTE_CONTROL_SCHEMA_VERSION = 1
 export const REMOTE_COMMAND_KEYS = [
@@ -304,12 +305,15 @@ function integer(value: unknown): value is number {
 function id(value: unknown): value is string {
   return typeof value === "string" && value.length > 0 && value.length <= ID_MAX && value === value.trim()
 }
+function remoteIdentifier(value: unknown): value is string {
+  return isRemoteIdentifier(value)
+}
 function authority(value: unknown): value is ControllerAuthority {
   return (
     record(value) &&
     keys(value, ["authorityRevision", "controllerId", "kind", "permission"]) &&
     integer(value.authorityRevision) &&
-    id(value.controllerId) &&
+    remoteIdentifier(value.controllerId) &&
     oneOf(value.kind, ["local-application", "paired-handheld", "tournament-controller"]) &&
     oneOf(value.permission, ["referee", "supervisor"])
   )
@@ -318,11 +322,11 @@ function sourceIdentity(value: unknown): value is SourceCommandIdentity {
   return (
     record(value) &&
     keys(value, ["apparatusId", "commandId", "controllerId", "counter", "remoteId"]) &&
-    id(value.apparatusId) &&
-    id(value.commandId) &&
-    id(value.controllerId) &&
+    remoteIdentifier(value.apparatusId) &&
+    remoteIdentifier(value.commandId) &&
+    remoteIdentifier(value.controllerId) &&
     integer(value.counter) &&
-    (value.remoteId === null || id(value.remoteId))
+    (value.remoteId === null || remoteIdentifier(value.remoteId))
   )
 }
 function timed(value: unknown): value is TimedWorkflowState {
@@ -369,7 +373,7 @@ export function isBoutWorkflowSnapshot(value: unknown): value is BoutWorkflowSna
       "timingConfigurationRevision",
       "weapon"
     ]) ||
-    !id(value.apparatusId) ||
+    !remoteIdentifier(value.apparatusId) ||
     !authority(value.authority) ||
     !oneOf(value.autoRearm, ["manual", "one-second", "three-seconds", "five-seconds"]) ||
     !id(value.boutId) ||
@@ -470,12 +474,12 @@ export function isRemoteCommand(value: unknown): value is RemoteCommand {
       "schemaVersion"
     ]) &&
     value.schemaVersion === REMOTE_CONTROL_SCHEMA_VERSION &&
-    id(value.apparatusId) &&
+    remoteIdentifier(value.apparatusId) &&
     authority(value.authority) &&
     oneOf(value.command, REMOTE_COMMAND_KEYS) &&
-    id(value.commandId) &&
+    remoteIdentifier(value.commandId) &&
     integer(value.counter) &&
-    (value.remoteId === null || id(value.remoteId)) &&
+    (value.remoteId === null || remoteIdentifier(value.remoteId)) &&
     (value.authority.kind === "paired-handheld" ? value.remoteId !== null : value.remoteId === null) &&
     permitted(value.command, value.authority) &&
     press(value.command, value.pressKind) &&

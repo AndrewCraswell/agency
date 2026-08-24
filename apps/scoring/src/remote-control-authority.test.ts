@@ -66,6 +66,22 @@ describe("RC-01 remote-control authority contract", () => {
     })
   })
 
+  it("uses the remote command identity policy for controller and request identifiers", () => {
+    const validIdentifiers = ["a", "a".repeat(64), "Remote_Command.1:pair"]
+    const invalidIdentifiers = ["", "a".repeat(65), "remote id", " remote-1", "remote/1", "épee-1"]
+
+    for (const identifier of validIdentifiers) {
+      const controller = { ...handheldReferee, controllerId: identifier }
+      expect(gate(controller).state.activeController).toEqual(controller)
+      expect(() => parseAuthorityRequest(workflowRequest(identifier, controller))).not.toThrow()
+    }
+    for (const identifier of invalidIdentifiers) {
+      const controller = { ...handheldReferee, controllerId: identifier }
+      expect(() => gate(controller)).toThrow(TypeError)
+      expect(() => parseAuthorityRequest(workflowRequest(identifier, controller))).toThrow(TypeError)
+    }
+  })
+
   it("allows exactly one current controller and transfers ownership atomically", () => {
     expect(
       gate(handheldSupervisor).receive({

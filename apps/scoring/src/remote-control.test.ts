@@ -4,6 +4,8 @@ import {
   REMOTE_COMMAND_KEYS,
   REMOTE_COMMAND_REJECTION_REASONS,
   REMOTE_CONTROL_SCHEMA_VERSION,
+  isBoutWorkflowSnapshot,
+  isRemoteCommand,
   parseBoutStateEvent,
   parseBoutWorkflowSnapshot,
   parseRemoteCommand,
@@ -165,6 +167,47 @@ describe("RC-02 remote command schema", () => {
     expect(_handheldScoreClearIsNotRemoteCommand).toBe(true)
     for (const command of REMOTE_COMMAND_KEYS)
       expect(parseRemoteCommand(JSON.parse(JSON.stringify(commandFor(command))))).toEqual(commandFor(command))
+  })
+  it("uses one bounded ASCII identity policy for command and snapshot fields", () => {
+    const validIdentifiers = ["a", "a".repeat(64), "Remote_Command.1:pair"]
+    const invalidIdentifiers = ["", "a".repeat(65), "remote id", " remote-1", "remote/1", "épee-1"]
+    const commandWithIdentifier = (identifier: string) => [
+      { ...score, apparatusId: identifier },
+      { ...score, commandId: identifier },
+      { ...score, authority: { ...score.authority, controllerId: identifier } },
+      { ...score, remoteId: identifier }
+    ]
+    const snapshotWithIdentifier = (identifier: string) => ({
+      ...snapshot,
+      apparatusId: identifier,
+      authority: { ...snapshot.authority, controllerId: identifier },
+      sourceCommandIdentity: {
+        ...snapshot.sourceCommandIdentity,
+        apparatusId: identifier,
+        commandId: identifier,
+        controllerId: identifier,
+        remoteId: identifier
+      }
+    })
+
+    for (const identifier of validIdentifiers) {
+      for (const command of commandWithIdentifier(identifier)) {
+        expect(isRemoteCommand(command)).toBe(true)
+        expect(parseRemoteCommand(command)).toEqual(command)
+      }
+      const snapshotValue = snapshotWithIdentifier(identifier)
+      expect(isBoutWorkflowSnapshot(snapshotValue)).toBe(true)
+      expect(parseBoutWorkflowSnapshot(snapshotValue)).toEqual(snapshotValue)
+    }
+    for (const identifier of invalidIdentifiers) {
+      for (const command of commandWithIdentifier(identifier)) {
+        expect(isRemoteCommand(command)).toBe(false)
+        expect(() => parseRemoteCommand(command)).toThrow(TypeError)
+      }
+      const snapshotValue = snapshotWithIdentifier(identifier)
+      expect(isBoutWorkflowSnapshot(snapshotValue)).toBe(false)
+      expect(() => parseBoutWorkflowSnapshot(snapshotValue)).toThrow(TypeError)
+    }
   })
   it("fails closed for mismatched discriminants and exact keys", () => {
     let getterReads = 0
