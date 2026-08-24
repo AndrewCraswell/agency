@@ -381,6 +381,7 @@ static void make_valid_record_state(scoring_core_state_t *state) {
 static void test_record_validation_branches(void) {
   scoring_core_state_t state;
   scoring_core_decision_record_t record;
+  unsigned char record_before[sizeof(record)];
   char capture_digest[] = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   char firmware_digest[] = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
   char invalid_slash[] = "sha256:/000000000000000000000000000000000000000000000000000000000000000";
@@ -402,6 +403,13 @@ static void test_record_validation_branches(void) {
   make_valid_record_state(&state);
   CHECK(scoring_core_make_record(&state, 0U, NULL, &record) == SCORING_CORE_INVALID_ARGUMENT);
   CHECK(scoring_core_make_record(&state, 0U, &context, NULL) == SCORING_CORE_INVALID_ARGUMENT);
+
+  state.hit_count = SCORING_CORE_MAX_HITS + 1U;
+  (void)memset(&record, 0xA5, sizeof(record));
+  (void)memcpy(record_before, &record, sizeof(record));
+  CHECK(scoring_core_make_record(&state, 0U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
+  CHECK(memcmp(record_before, &record, sizeof(record)) == 0);
+  state.hit_count = 1U;
 
   CHECK(scoring_core_make_record(&state, 1U, &context, &record) == SCORING_CORE_INVALID_ARGUMENT);
   context.record_id = NULL;

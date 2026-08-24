@@ -349,7 +349,8 @@ scoring_core_status_t scoring_core_make_record(
 ) {
   const scoring_core_hit_t *hit;
   if (
-    state == NULL || context == NULL || out_record == NULL || hit_index >= state->hit_count ||
+    state == NULL || context == NULL || out_record == NULL || state->hit_count > SCORING_CORE_MAX_HITS ||
+    hit_index >= state->hit_count ||
     context->record_id == NULL || context->record_id[0] == '\0' || context->capture_id == NULL ||
     context->capture_id[0] == '\0' || !is_sha256_digest(context->capture_digest) ||
     !is_sha256_digest(context->firmware_digest) ||
