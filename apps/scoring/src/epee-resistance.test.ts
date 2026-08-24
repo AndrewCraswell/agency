@@ -348,22 +348,48 @@ describe("epée resistance scoring", () => {
   })
 
   it("rejects incomplete, invalid, and non-monotonic input without treating it as a contact", () => {
-    const incompleteMeasurement = closed({ resistanceMilliOhms: 10_000, resistanceUncertaintyMilliOhms: null })
+    const incompleteMeasurements = [
+      closed({ resistanceMilliOhms: 10_000, resistanceUncertaintyMilliOhms: null }),
+      closed({ resistanceMilliOhms: null, resistanceUncertaintyMilliOhms: 0 })
+    ]
     const invalidMeasurement = closed({ resistanceMilliOhms: -1, resistanceUncertaintyMilliOhms: 0 })
+    const overflowingMeasurement = closed({
+      resistanceMilliOhms: Number.MAX_SAFE_INTEGER,
+      resistanceUncertaintyMilliOhms: 1
+    })
     const state = advanceEpeeResistanceScoring(createEpeeResistanceScoringState(), sample(1, closed(NORMAL_10_OHM)))
 
     expect(() => advanceEpeeResistanceScoring(createEpeeResistanceScoringState(), sample(-1))).toThrow(
       new RangeError("Epee resistance samples must use non-negative safe integer timestamps")
     )
-    expect(() =>
-      advanceEpeeResistanceScoring(createEpeeResistanceScoringState(), sample(0, incompleteMeasurement))
-    ).toThrow(new RangeError("Epee resistance measurements must provide a value and uncertainty together"))
+    for (const incompleteMeasurement of incompleteMeasurements) {
+      expect(() =>
+        advanceEpeeResistanceScoring(createEpeeResistanceScoringState(), sample(0, incompleteMeasurement))
+      ).toThrow(new RangeError("Epee resistance measurements must provide a value and uncertainty together"))
+    }
     expect(() =>
       advanceEpeeResistanceScoring(createEpeeResistanceScoringState(), sample(0, invalidMeasurement))
     ).toThrow(new RangeError("Epee resistance measurements must use non-negative safe integer milli-ohms"))
+    expect(() =>
+      advanceEpeeResistanceScoring(createEpeeResistanceScoringState(), sample(0, overflowingMeasurement))
+    ).toThrow(new RangeError("Epee resistance measurement ranges must remain safe integers"))
     expect(() => advanceEpeeResistanceScoring(state, sample(0))).toThrow(
       new RangeError("Epee resistance samples must use monotonic timestamps")
     )
+  })
+
+  it("accepts the maximum safe resistance at the zero-uncertainty boundary", () => {
+    const state = replay([
+      sample(0, closed({ resistanceMilliOhms: Number.MAX_SAFE_INTEGER, resistanceUncertaintyMilliOhms: 0 }))
+    ])
+
+    expect(state.decisions).toContainEqual({
+      atUs: 0,
+      disposition: "uncertainty",
+      rangeMilliOhms: { max: Number.MAX_SAFE_INTEGER, min: Number.MAX_SAFE_INTEGER },
+      side: "left",
+      subject: "contact-resistance"
+    })
   })
 
   it("does not add decisions after the retained lockout state", () => {

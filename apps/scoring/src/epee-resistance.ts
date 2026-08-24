@@ -5,6 +5,7 @@ import {
   type EpeeContactLifecycleState
 } from "./epee-contact-kernel.js"
 import { type EpeeHit, type Side } from "./epee.js"
+import { getResistanceRange, type ResistanceMeasurement } from "./resistance-range.js"
 import { isIntegerMicroseconds } from "./scoring-glossary-and-units.js"
 import { resolveTimingTable, type TimingTable } from "./timing-table.js"
 
@@ -14,10 +15,7 @@ export type EpeeGroundedMaterial = "grounded" | "indeterminate" | "not-grounded"
 
 export type EpeeLineIntegrity = "cross-line" | "indeterminate" | "intact" | "out-of-range" | "unavailable"
 
-export type ResistanceMeasurement = {
-  resistanceMilliOhms: number | null
-  resistanceUncertaintyMilliOhms: number | null
-}
+export type { ResistanceMeasurement } from "./resistance-range.js"
 
 export type EpeeResistanceContact = {
   circuitComplete: EpeeCircuitComplete
@@ -95,31 +93,11 @@ export function createEpeeResistanceScoringState(): EpeeResistanceScoringState {
 }
 
 function getMeasurementRange(measurement: ResistanceMeasurement) {
-  const resistanceMilliOhms = measurement.resistanceMilliOhms
-  const resistanceUncertaintyMilliOhms = measurement.resistanceUncertaintyMilliOhms
-
-  if (resistanceMilliOhms === null || resistanceUncertaintyMilliOhms === null) {
-    return null
-  }
-
-  return {
-    max: resistanceMilliOhms + resistanceUncertaintyMilliOhms,
-    min: Math.max(0, resistanceMilliOhms - resistanceUncertaintyMilliOhms)
-  }
-}
-
-function validateMeasurement(measurement: ResistanceMeasurement) {
-  const values = [measurement.resistanceMilliOhms, measurement.resistanceUncertaintyMilliOhms]
-  const hasKnownMeasurement = values.every((value) => value !== null)
-  const hasNoMeasurement = values.every((value) => value === null)
-
-  if (!hasKnownMeasurement && !hasNoMeasurement) {
-    throw new RangeError("Epee resistance measurements must provide a value and uncertainty together")
-  }
-
-  if (hasKnownMeasurement && values.some((value) => !Number.isSafeInteger(value) || value < 0 || value === null)) {
-    throw new RangeError("Epee resistance measurements must use non-negative safe integer milli-ohms")
-  }
+  return getResistanceRange(measurement, {
+    incomplete: () => new RangeError("Epee resistance measurements must provide a value and uncertainty together"),
+    invalid: () => new RangeError("Epee resistance measurements must use non-negative safe integer milli-ohms"),
+    overflow: () => new RangeError("Epee resistance measurement ranges must remain safe integers")
+  })
 }
 
 function classifyContactResistance(
@@ -228,8 +206,8 @@ function validateSample(sample: EpeeResistanceSample) {
   }
 
   for (const contact of [sample.left, sample.right]) {
-    validateMeasurement(contact.contactResistance)
-    validateMeasurement(contact.groundPathResistance)
+    getMeasurementRange(contact.contactResistance)
+    getMeasurementRange(contact.groundPathResistance)
   }
 }
 

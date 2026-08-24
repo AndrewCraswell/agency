@@ -1,3 +1,4 @@
+import { getResistanceRange, type ResistanceMeasurement } from "./resistance-range.js"
 import { isIntegerMicroseconds } from "./scoring-glossary-and-units.js"
 import {
   FIE_TIMING_BANDS,
@@ -18,10 +19,7 @@ export type SabreTargetContact = "target" | "nonConductiveSurface" | "indetermin
  */
 export type SabreExternalPathEligibility = "eligible" | "ineligible" | "indeterminate" | "unavailable"
 
-export type SabreExternalPathMeasurement = {
-  resistanceMilliOhms: number | null
-  resistanceUncertaintyMilliOhms: number | null
-}
+export type SabreExternalPathMeasurement = ResistanceMeasurement
 
 export type SabreOwnEquipmentFault = "present" | "absent" | "indeterminate" | "unavailable"
 
@@ -155,28 +153,18 @@ export function createSabreScoringState(): SabreScoringState {
  * acquisition path.
  */
 export function classifySabreExternalPath(measurement: SabreExternalPathMeasurement): SabreExternalPathEligibility {
-  const { resistanceMilliOhms, resistanceUncertaintyMilliOhms } = measurement
+  const range = getResistanceRange(measurement, {
+    incomplete: () =>
+      new TypeError("Sabre external-path resistance and uncertainty must both be present or both be null"),
+    invalid: () => new RangeError("Sabre external-path resistance values must be non-negative safe integers"),
+    overflow: () => new RangeError("Sabre external-path resistance values must be non-negative safe integers")
+  })
 
-  if (resistanceMilliOhms === null && resistanceUncertaintyMilliOhms === null) {
+  if (range === null) {
     return "unavailable"
   }
 
-  if (resistanceMilliOhms === null || resistanceUncertaintyMilliOhms === null) {
-    throw new TypeError("Sabre external-path resistance and uncertainty must both be present or both be null")
-  }
-
-  if (
-    !Number.isSafeInteger(resistanceMilliOhms) ||
-    resistanceMilliOhms < 0 ||
-    !Number.isSafeInteger(resistanceUncertaintyMilliOhms) ||
-    resistanceUncertaintyMilliOhms < 0 ||
-    resistanceMilliOhms + resistanceUncertaintyMilliOhms > Number.MAX_SAFE_INTEGER
-  ) {
-    throw new RangeError("Sabre external-path resistance values must be non-negative safe integers")
-  }
-
-  const lowerBound = Math.max(0, resistanceMilliOhms - resistanceUncertaintyMilliOhms)
-  const upperBound = resistanceMilliOhms + resistanceUncertaintyMilliOhms
+  const { min: lowerBound, max: upperBound } = range
 
   if (upperBound <= SABRE_EXTERNAL_PATH_MAXIMUM_MILLI_OHMS) {
     return "eligible"
