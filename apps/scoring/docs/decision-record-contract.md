@@ -1,9 +1,8 @@
 # Decision record contract
 
-This is the M0-05 canonical logical schema for an immutable scoring decision record. It reconciles the existing
-prototype on-target-only `ScoringDecisionRecord` shape in `src/device.ts` without converting it, adding a second scorer,
-or adding a TypeScript-only fallback. M2 owns that separately reviewed capture migration. This contract does not silently
-define M0-06 framing or M2 persistence.
+This is the M0-05 canonical logical schema for an immutable scoring decision record. The parser in `src/decision-record.ts`
+and the virtual STM32/ESP32 processor path consume this schema directly; there is no parallel prototype record shape.
+M2 owns the separately reviewed capture migration. This contract does not silently define M0-06 framing or M2 persistence.
 
 The record is sufficient to replay the decision and its initial indication without running the scoring algorithm again.
 Raw observations remain evidence, not input to a replay-time re-decision.

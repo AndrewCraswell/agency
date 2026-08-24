@@ -11,10 +11,6 @@
       "types": "./dist/epee.d.ts",
       "default": "./dist/epee.js"
     },
-    "./device": {
-      "types": "./dist/device.d.ts",
-      "default": "./dist/device.js"
-    },
     "./bout-state": {
       "types": "./dist/bout-state.d.ts",
       "default": "./dist/bout-state.js"

@@ -6,21 +6,26 @@ vendor SDKs so its timing rules can be replayed deterministically on a developer
 See `docs/device-delivery-plan.md` for the coordinated implementation plan from executable rules and emulation through
 fabrication readiness, EVT, DVT, FIE evidence, and production validation.
 
-`src/device.ts` models the production boundary:
+The canonical virtual processor path is split across the scoring authority, binary processor link, and application
+receiver:
 
-- A virtual STM32G474 consumes protected electrical readings, owns the scoring state, and emits versioned, sequenced hit
-  events.
-- A virtual ESP32-S3 accepts those events for display, storage, identity, and cloud work. It never re-decides a touch.
+- [`src/virtual-stm32.ts`](src/virtual-stm32.ts) consumes trusted front-end snapshots, owns the selected weapon scorer,
+  and emits immutable authoritative outcomes.
+- [`src/virtual-processor-link.ts`](src/virtual-processor-link.ts) carries bounded binary transport frames with
+  deterministic delay, loss, duplication, reordering, corruption, and connection faults.
+- [`src/virtual-esp32.ts`](src/virtual-esp32.ts) accepts validated [`DecisionRecord`](src/decision-record.ts) payloads
+  from STM32, preserves them for display and storage, and never re-decides a touch.
 
-The emulator delays a decision record for a bounded post-touch capture window. Each immutable record includes packed
-input samples, the qualified hit, capture bounds, timing-table revision, firmware digest, scoring boot ID, sequence
-range, and CRC-32C. The ESP32 rejects corrupt, duplicated, unordered, or structurally invalid records; it does not
-reconstruct or re-decide the touch. The current event encoding is newline-delimited JSON because it is easy to inspect
-and fuzz. Production firmware will use a fixed binary frame while preserving the versioned decision-record semantics.
+The virtual STM32 delays an authoritative outcome only according to the selected scorer and virtual clock. The canonical
+decision-record schema carries the qualified, rejected, diagnostic, calibration, reset, or uncertainty outcome together
+with capture bounds and firmware, rule, timing, line, and calibration provenance. The receiver rejects corrupt,
+duplicated, unordered, wrong-direction, forged, or structurally invalid records; it does not reconstruct or re-decide
+the touch. The transport uses the fixed binary frame defined in [`transport-frame.ts`](src/transport-frame.ts), while
+the decision-record payload remains independently validated by `decision-record.ts`.
 
-This increment records qualified epee touches. Rejected-touch and line-fault records, application-controller boot IDs,
-and RTC uncertainty belong to the next transport/persistence increment; they are target-model fields, not claims about
-the current emulator.
+The virtual path is a deterministic host model and does not claim physical front-end, processor-peripheral, or
+hardware-in-the-loop evidence. Native C17 and WebAssembly implementations must preserve the same authority and record
+boundaries before hardware release.
 
 ## Golden scenario runner
 

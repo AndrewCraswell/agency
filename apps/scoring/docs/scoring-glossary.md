@@ -214,7 +214,9 @@ prohibited in a rule field or protocol message unless the type supplies the weap
 
 ### Decision record vocabulary
 
-The current source provides a useful epee baseline in [`epee.ts`](../src/epee.ts) and [`device.ts`](../src/device.ts):
+The current source provides the epee scoring baseline in [`epee.ts`](../src/epee.ts) and the canonical immutable-record
+boundary in [`decision-record.ts`](../src/decision-record.ts), with authority and receiver behavior covered by
+[`virtual-stm32.ts`](../src/virtual-stm32.ts) and [`virtual-esp32.ts`](../src/virtual-esp32.ts):
 
 | Current source term | Contract meaning | Boundary |
 | --- | --- | --- |
@@ -224,9 +226,9 @@ The current source provides a useful epee baseline in [`epee.ts`](../src/epee.ts
 | `EpeeScoringState.candidateSinceUs` | Start instant of a currently continuous candidate | Clearing it means the candidate was broken or rejected; it does not create a rejection record by itself. |
 | `EpeeHit.startedAtUs` | Candidate start instant | It is not necessarily the lamp or protocol emission instant. |
 | `EpeeHit.qualifiedAtUs` | Instant at which the candidate met the current epee rule table | It is not a wall-clock timestamp. |
-| `ScoringDecisionRecord.samples` | Immutable retained replay samples used to support a decision | Samples are evidence and must not be rewritten when rendered by the ESP32. |
-| `ScoringDecisionRecord.capturedFromUs` and `capturedThroughUs` | Inclusive bounds of retained replay evidence | The bounds use the monotonic scoring clock. |
-| `ScoringDecisionRecord.rejectionReason` | Current baseline is `null` for an on-target epee record | M0-05 must expand this to explicit rejection, fault, and uncertainty records without overloading `null`. |
+| `DecisionRecord.rawCaptureRefs` | Immutable content-addressed references to retained replay, calibration, fault, or reset evidence | References are evidence and must not be rewritten when rendered by the ESP32. |
+| `DecisionRecord.captureWindow.fromUs` and `throughUs` | Inclusive bounds of the evidence considered by the authority | The bounds use the monotonic scoring clock. |
+| `DecisionRecord.outcome` | The authority's already-decided qualified, rejected, diagnostic, calibration, reset, or uncertainty result | The ESP32 preserves the outcome and never re-runs a weapon scorer. |
 
 The current source's `classification: "on-target"` is a product implementation term. It is not the literal FIE phrase
 `valid hit`; the record must retain enough electrical evidence to support the mapping. A future off-target record uses
