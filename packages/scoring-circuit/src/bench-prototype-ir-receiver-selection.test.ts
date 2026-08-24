@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
 import {
+  benchPrototypeIrReceiverFootprintEvidence,
+  validateBenchPrototypeIrReceiverFootprintEvidence
+} from "./bench-prototype-ir-receiver-footprint-evidence.js"
+import {
   benchPrototypeIrReceiverSelection,
   validateBenchPrototypeIrReceiverSelection
 } from "./bench-prototype-ir-receiver-selection.js"
@@ -20,6 +24,59 @@ describe("BP-146 encrypted-IR receiver selection", () => {
       { pin: 3, name: "VS", net: "IR_3V3_FILTERED" }
     ])
     expect(benchPrototypeIrReceiverSelection.releaseState).toBe("deny")
+  })
+
+  it("binds reviewed Vishay geometry without treating it as released PCB CAD", () => {
+    expect(validateBenchPrototypeIrReceiverFootprintEvidence(benchPrototypeIrReceiverFootprintEvidence)).toBe(true)
+    expect(benchPrototypeIrReceiverSelection.footprintEvidence).toBe(benchPrototypeIrReceiverFootprintEvidence)
+    expect(benchPrototypeIrReceiverSelection.footprintEvidence.packageGeometry).toMatchObject({
+      drawingNumber: "6.550-5263.01-4",
+      drawingIssue: "12; 16.04.10"
+    })
+    expect(benchPrototypeIrReceiverSelection.footprintEvidence.pinOrientation.pinning).toEqual([
+      { pin: 1, name: "OUT" },
+      { pin: 2, name: "GND" },
+      { pin: 3, name: "VS" }
+    ])
+    expect(benchPrototypeIrReceiverSelection.footprintEvidence.throughHoleGeometry).toMatchObject({
+      leadPitchNominalMm: 2.54,
+      leadWidthMaximumMm: 0.7,
+      leadThicknessMaximumMm: 0.5,
+      drillDiameterMm: null,
+      padDiameterMm: null
+    })
+    expect(benchPrototypeIrReceiverSelection.footprintEvidence.landPatternReview).toMatchObject({
+      manufacturerSourceStatus: "not-published-in-reviewed-primary-documents",
+      boardCadStatus: "not-submitted-for-review",
+      exactFootprintReference: null,
+      finishedDrillDiameterMm: null,
+      padDiameterMm: null,
+      pinOneOrientationMatchedToBoardCad: false,
+      accepted: false
+    })
+    expect(benchPrototypeIrReceiverSelection.footprintEvidence.opticalWindow).toMatchObject({
+      windowFormula: "a = 4 mm + 2d tan(Phi / 2)",
+      minimumWindowSizeAtZeroDistanceMm: 4,
+      fixedCopperKeepoutRadiusMm: null,
+      fixedComponentKeepoutRadiusMm: null
+    })
+    expect(benchPrototypeIrReceiverSelection.footprintEvidence.opticalKeepoutReview).toMatchObject({
+      manufacturerSourceStatus: "window-guidance-only-no-fixed-pcb-keepout",
+      projectBoardRuleAuthority: "project-rule-not-manufacturer-specification",
+      boardCadStatus: "not-submitted-for-review",
+      frontPanelCouponStatus: "not-run",
+      accepted: false
+    })
+    expect(benchPrototypeIrReceiverSelection.evidence.opticalKeepoutReviewed).toBe(true)
+    expect(benchPrototypeIrReceiverSelection.evidence.opticalKeepoutAccepted).toBe(false)
+    expect(benchPrototypeIrReceiverSelection.evidence.manufacturerCadReviewed).toBe(false)
+    expect(benchPrototypeIrReceiverSelection.evidence.footprintReleased).toBe(false)
+  })
+
+  it("rejects a standalone evidence record with a relaxed source identity", () => {
+    const candidate: any = structuredClone(benchPrototypeIrReceiverFootprintEvidence)
+    candidate.sources[0].reviewStatus = "reviewed-without-digest"
+    expect(() => validateBenchPrototypeIrReceiverFootprintEvidence(candidate)).toThrow(RangeError)
   })
 
   it("freezes the exact support network, output protection, and probe point", () => {
@@ -74,7 +131,16 @@ describe("BP-146 encrypted-IR receiver selection", () => {
       (candidate: any) => (candidate.receiver.pinout[0].electrical = "active-high"),
       (candidate: any) => (candidate.evidence.range20mEvidence = true),
       (candidate: any) => (candidate.evidence.fabricationAuthorized = true),
-      (candidate: any) => (candidate.benchGates.flood.pass = "accept all frames")
+      (candidate: any) => (candidate.benchGates.flood.pass = "accept all frames"),
+      (candidate: any) => (candidate.footprintEvidence.sources[0].sha256 = "0".repeat(64)),
+      (candidate: any) => (candidate.footprintEvidence.sources[1].reviewerId = ""),
+      (candidate: any) => (candidate.footprintEvidence.throughHoleGeometry.drillDiameterMm = 1.2),
+      (candidate: any) => (candidate.footprintEvidence.landPatternReview.accepted = true),
+      (candidate: any) => (candidate.footprintEvidence.landPatternReview.exactFootprintReference = "U_IR_RX"),
+      (candidate: any) => (candidate.footprintEvidence.opticalWindow.fixedCopperKeepoutRadiusMm = 3),
+      (candidate: any) => (candidate.footprintEvidence.opticalKeepoutReview.accepted = true),
+      (candidate: any) => (candidate.footprintEvidence.manufacturerCad.state = "reviewed"),
+      (candidate: any) => (candidate.evidence.opticalKeepoutAccepted = true)
     ]) {
       const candidate = structuredClone(benchPrototypeIrReceiverSelection)
       mutate(candidate)
@@ -83,5 +149,6 @@ describe("BP-146 encrypted-IR receiver selection", () => {
     expect(Object.isFrozen(benchPrototypeIrReceiverSelection)).toBe(true)
     expect(Object.isFrozen(benchPrototypeIrReceiverSelection.receiver)).toBe(true)
     expect(Object.isFrozen(benchPrototypeIrReceiverSelection.supportNetwork)).toBe(true)
+    expect(Object.isFrozen(benchPrototypeIrReceiverFootprintEvidence)).toBe(true)
   })
 })

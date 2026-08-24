@@ -56,10 +56,51 @@ new optical and footprint review.
 
 Place the lens normal to the intended front-panel axis. Keep the optical
 aperture free of copper, vias, LEDs, light pipes, and switching-node copper,
-with at least a 3 mm radial copper/component keepout until the released Vishay
-drawing is checked. Keep the receiver and `TP_IR_RX` in `APP_GND` on the
-application side of the scoring isolation boundary and do not place the lens
-behind the HUB75 panel or tinted material.
+with at least a 3 mm radial copper/component keepout as a conservative board
+rule. Keep the receiver and `TP_IR_RX` in `APP_GND` on the application side of
+the scoring isolation boundary and do not place the lens behind the HUB75
+panel or tinted material.
+
+## Manufacturer footprint and optical-window evidence
+
+The reviewed Vishay sources close the source-identity review without closing
+the board-release gate. The TSOP382/TSOP384 datasheet identifies the exact
+TSOP38438 Minicast package, pinning, optical-window side, 2.54 mm nominal lead
+pitch, 0.7 mm maximum lead width, and 0.5 mm maximum lead thickness. Vishay's
+Minicast window note defines the front-panel window as
+`a = 4 mm + 2d tan(Phi / 2)`, with a 4 mm minimum at zero lens-to-panel
+distance, and recommends a 4 mm light guide with at least 12 mm length.
+
+The manufacturer does not specify a finished PCB drill diameter, annular ring,
+pad diameter, mask, paste, courtyard, or fixed radial copper/component
+keepout in those primary documents. Vishay's product page sends ECAD downloads
+to Ultra Librarian; no first-party CAD artifact was acquired for this review.
+Those omissions are recorded as explicit nulls in the executable evidence
+record. The record separately marks the board-CAD land-pattern and optical
+coupon reviews as not submitted and not run. They are not substituted with a
+guessed footprint or a claimed CAD digest.
+
+| Evidence identity | Source revision | SHA-256 | Reviewer | Review result |
+| --- | --- | --- | --- | --- |
+| Vishay document 82491, TSOP382/TSOP384 datasheet, pp. 2 and 7 | Rev. 2.1, 2025-05-27 | `5F81C36AA02E9901E51C749D03AEE75A23A29B8195B30BF1CBA95F536C865074` | `implementation-agent` | Package, pin, orientation, and lead geometry reviewed |
+| Vishay document 82756, Minicast window size, p. 1 | Rev. 1.0, 2016-08-18 | `C8A78F338915815E93C5AB4CC98ABF588504CC8B2E4CD3288794660810985BC1` | `implementation-agent` | Window formula and light-guide guidance reviewed; no fixed PCB keepout published |
+| Vishay document 80068, IR receiver assembly instructions, pp. 1 and 2 | Rev. 1.8, 2026-05-20 | `8DEE97CE1235CB20794A6CB15BD7364277EAAF6FAE908B32F67E8362962FD1A6` | `implementation-agent` | Leaded through-hole assembly constraints reviewed |
+
+The source review is fail-closed: `manufacturerPackageDrawingReviewed`,
+`pinOrientationReviewed`, `throughHoleGeometryReviewed`, and
+`opticalKeepoutReviewed` are true, while `manufacturerCadReviewed`,
+`opticalKeepoutAccepted`, and `footprintReleased` remain false. The 3 mm
+radial rule is a conservative BP-146 board constraint, not a Vishay-published
+keepout value. Board CAD/artwork, the finished drill and land choice, and a
+physical front-panel coupon remain required before PCB release.
+
+The executable evidence intentionally makes both reviews fail closed. The land
+pattern has no finished drill, pad, courtyard, or board-CAD pin-1 confirmation;
+the optical review has no submitted board layout or front-panel coupon. Neither
+record can become accepted by changing the project 3 mm rule. The actual board
+review must confirm the package drawing's optical-window-facing orientation and
+the final panel window calculated from the required viewing angle and measured
+lens-to-panel distance.
 
 The Vishay values are typical design references, not prototype acceptance
 claims:
@@ -97,13 +138,17 @@ The executable contract and regression tests are
 [`bench-prototype-ir-receiver-selection.ts`](../src/bench-prototype-ir-receiver-selection.ts)
 and
 [`bench-prototype-ir-receiver-selection.test.ts`](../src/bench-prototype-ir-receiver-selection.test.ts).
-The exact receiver, support MPN records, footprint/CAD, optical keepout, and
-all bench evidence remain open gates; this BP-146 unit does not authorize
-schematic integration or fabrication.
+The exact receiver, support MPN records, and manufacturer source review are
+closed for this selection. Board CAD/artwork, the finished land/drill choice,
+optical layout/coupon, and all bench evidence remain open gates; this BP-146
+unit does not authorize schematic integration or fabrication.
 
 ## Primary manufacturer sources
 
 - [Vishay TSOP382/TSOP384 datasheet, Rev. 2.1, 27 May 2025](https://www.vishay.com/docs/82491/tsop382.pdf)
+- [Vishay Minicast window-size guidance, Rev. 1.0, 18 August 2016](https://www.vishay.com/docs/82756/windowsizeminicast.pdf)
+- [Vishay IR receiver assembly instructions, Rev. 1.8, 20 May 2026](https://www.vishay.com/docs/80068/assembly.pdf)
+- [Vishay TSOP382/TSOP384 product page and ECAD link](https://www.vishay.com/en/product/82491/)
 - [Vishay IR receiver product records](https://www.vishay.com/en/ir-receiver-modules/mitsubishi/)
 - [YAGEO RC0603FR-07100RL product record](https://yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100RL)
 - [YAGEO RC0603FR-0710KL product record](https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL)

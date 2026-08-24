@@ -3,9 +3,14 @@
  *
  * This is a hardware/interface contract only. Authentication, anti-replay,
  * pairing, and command authority remain application firmware responsibilities.
- * The selection deliberately stays fabrication-denied until the footprint,
- * optical, timing, and fault tests below have evidence.
+ * The selection deliberately stays fabrication-denied until board CAD,
+ * optical layout, timing, and fault tests below have evidence.
  */
+
+import {
+  benchPrototypeIrReceiverFootprintEvidence,
+  validateBenchPrototypeIrReceiverFootprintEvidence
+} from "./bench-prototype-ir-receiver-footprint-evidence.js"
 
 type DataRecord = Record<PropertyKey, unknown>
 
@@ -195,12 +200,14 @@ const definition = {
     orientation: "receiver optical axis normal to the intended front panel",
     keepout: [
       "no copper, traces, vias, LEDs, display light pipes, or switching-node copper in the front optical aperture",
-      "keep 3 mm radial copper and component keepout around the lens; confirm against the released Vishay drawing",
+      "keep 3 mm radial copper and component keepout around the lens as a conservative board rule; Vishay publishes window sizing but no fixed radial PCB keepout",
       "place receiver and TP on the application side of the scoring isolation boundary",
       "do not place the receiver behind tinted material or the HUB75 panel"
     ],
-    prototypeMechanicalGate: "use the released TSOP38438 drawing and a physical front-panel coupon before PCB release"
+    prototypeMechanicalGate:
+      "use the reviewed TSOP38438 drawing, accepted board CAD, and a physical front-panel coupon before PCB release"
   },
+  footprintEvidence: benchPrototypeIrReceiverFootprintEvidence,
   benchGates: {
     range: {
       setup:
@@ -231,9 +238,14 @@ const definition = {
   evidence: {
     exactMpnAndDatasheetReviewed: true,
     supportMpnRecordsReviewed: true,
+    manufacturerPackageDrawingReviewed: true,
+    pinOrientationReviewed: true,
+    throughHoleGeometryReviewed: true,
+    manufacturerCadReviewed: false,
     range20mEvidence: false,
     footprintReleased: false,
-    opticalKeepoutReviewed: false,
+    opticalKeepoutReviewed: true,
+    opticalKeepoutAccepted: false,
     rangeEvidence: false,
     angleEvidence: false,
     latencyEvidence: false,
@@ -243,6 +255,9 @@ const definition = {
   },
   sources: [
     "https://www.vishay.com/docs/82491/tsop382.pdf",
+    "https://www.vishay.com/docs/82756/windowsizeminicast.pdf",
+    "https://www.vishay.com/docs/80068/assembly.pdf",
+    "https://www.vishay.com/en/product/82491/",
     "https://www.vishay.com/en/ir-receiver-modules/mitsubishi/",
     "https://yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100RL",
     "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL",
@@ -260,6 +275,7 @@ export function validateBenchPrototypeIrReceiverSelection(value: unknown): true 
     throw new RangeError("BP-146 must exactly match the reviewed TSOP38438 selection contract")
   }
   const contract = benchPrototypeIrReceiverSelection
+  validateBenchPrototypeIrReceiverFootprintEvidence(contract.footprintEvidence)
   if (
     contract.workUnit !== "BP-146" ||
     contract.releaseState !== "deny" ||
@@ -272,11 +288,17 @@ export function validateBenchPrototypeIrReceiverSelection(value: unknown): true 
     contract.supportNetwork.length !== 4 ||
     contract.supportNetworkBasis.designChoice.includes("bench-prototype engineering choices") === false ||
     contract.observation.testPoint.mpn !== "5001" ||
+    !contract.evidence.manufacturerPackageDrawingReviewed ||
+    !contract.evidence.pinOrientationReviewed ||
+    !contract.evidence.throughHoleGeometryReviewed ||
+    contract.evidence.manufacturerCadReviewed ||
     contract.benchGates.range.pass.includes("20 m and 0 degrees") === false ||
     contract.benchGates.flood.pass.includes("zero accepted commands") === false ||
     contract.evidence.fabricationAuthorized ||
     contract.evidence.range20mEvidence ||
     contract.evidence.footprintReleased ||
+    !contract.evidence.opticalKeepoutReviewed ||
+    contract.evidence.opticalKeepoutAccepted ||
     contract.evidence.rangeEvidence ||
     contract.evidence.angleEvidence ||
     contract.evidence.latencyEvidence ||
