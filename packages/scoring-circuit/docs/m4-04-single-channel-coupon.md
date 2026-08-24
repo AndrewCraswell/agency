@@ -28,14 +28,17 @@ families do not borrow another MPN's drawing review. A separate field names
 implementation work cannot approve its own footprints.
 
 On 2026-08-24, a small first-party source batch was acquired and SHA-256 bound
-for nine exact component MPNs. Each Texas Instruments datasheet names the exact
-orderable MPN and package and contains the corresponding manufacturer
-mechanical package drawing. The YAGEO/KEMET product specs name the exact MPN and
-retain the manufacturer 0603/1608 dimensions. These are source records only;
-they do not release a finished hole, copper, mask, paste, courtyard, or
-orientation decision.
+for nine exact component MPNs, plus a Vishay D/CRCW e3 family drawing covering
+four selected resistor MPNs as series evidence. Each Texas Instruments
+datasheet names the exact orderable MPN and package and contains the
+corresponding manufacturer mechanical package drawing. The YAGEO/KEMET product
+specs name the exact MPN and retain the manufacturer 0603/1608 dimensions.
+The Vishay source names the D/CRCW e3 0603 and 1206 families but does not name
+the four exact CRCW orderables; it must not be treated as exact-MPN evidence.
+These are source records only; they do not release a finished hole, copper,
+mask, paste, courtyard, or orientation decision.
 
-| Exact MPN | Manufacturer source and drawing | Retained artifact | SHA-256 |
+| Exact MPN or family scope | Manufacturer source and drawing | Retained artifact | SHA-256 |
 | --- | --- | --- | --- |
 | `TPS60400DBVR` | [TPS60400 datasheet](https://www.ti.com/lit/ds/symlink/tps60400.pdf), revision C, `DBV0005A` | `packages/scoring-circuit/docs/evidence/m4-04/ti-tps60400-dbvr-datasheet.pdf` | `B3B26A8519549BC369E8A91F11133F1D5CBE37C31EBBDF13C4D4C980EF7B8347` |
 | `TPS7A2033PDBVR` | [TPS7A20 datasheet](https://www.ti.com/lit/ds/symlink/tps7a20.pdf), revision H, `DBV0005A` | `packages/scoring-circuit/docs/evidence/m4-04/ti-tps7a20-dbvr-datasheet.pdf` | `6EBFF717770572C7E301A5C16345F50A558EF379A727984ED0F3A6B1DCD400D1` |
@@ -46,6 +49,7 @@ orientation decision.
 | `C0603C102J5GACTU` | [YAGEO/KEMET product spec](https://yageogroup.com/component-documentation/download/specsheet/C0603C102J5GACTU?lang=en), `0603/1608` manufacturer dimensions | `packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c102j5gactu-datasheet.pdf` | `B62452DE5A68C2E26AE145A4F4F4DF1D989AA5482AF4746C93A86155D5910221` |
 | `T521B106M025ATE100` | [KEMET product spec](https://search.kemet.com/download/specsheet/T521B106M025ATE100), `1411/3528` manufacturer dimensions | `packages/scoring-circuit/docs/evidence/m4-04/kemet-t521b106m025ate100-datasheet.pdf` | `8DBB07C110359B8BC1BE5AE0044E08B8BADCC88A60F4DA36404BB27803F85EBD` |
 | `C0603C104K3RACTU` | [YAGEO/KEMET product spec](https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en), `0603/1608` manufacturer dimensions | `packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c104k3ractu-datasheet.pdf` | `F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064` |
+| `CRCW060322R0FKEAHP`, `CRCW120656K0FKEAHP`, `CRCW0603100KFKEAHP`, `CRCW060320R0FKEAHP` | [Vishay D/CRCW e3 series datasheet](https://www.vishay.com/docs/20035/dcrcwe3.pdf), revision `14-Apr-2026`, document `20035`, `D11/CRCW0603e3` and `D25/CRCW1206e3` series drawings; exact-MPN identity not named | `packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf` | `1F5E20329C74727DA629B92E2BFBDBDB3FA3BE57229E3208E24058173F9CECF3` (series evidence only) |
 
 The Molex `SD-43650-001`, revision D8, lead for the `43650-0300` Micro-Fit
 3.0 fixture header remains identified but not hash-acquired. Its source record
@@ -55,13 +59,14 @@ identifies three 1.02-mm-plus-or-minus-0.05-mm component-side layout holes on
 
 For the remaining exact MPNs, the manufacturer-primary technical URL is
 recorded as discovery evidence but the exact drawing bytes and revision remain
-unacquired. No manufacturer CAD artifact has been acquired or marked available,
-including for the nine hash-bound source records. The existing circuit source
-supplies a schematic reference only, not generated footprint artwork or an
-overlay. The executable tests hash-verify every retained PDF from the repository
-root and inspect decompressed PDF content for the exact orderable and package-
-drawing markers. These are intentional, precise blockers rather than assumed
-package geometry.
+unacquired. A series-hash-bound source is not counted as exact-MPN evidence.
+No manufacturer CAD artifact has been acquired or marked available, including
+for the nine exact and one series hash-bound source records. The existing
+circuit source supplies a schematic reference only, not generated footprint
+artwork or an overlay. The executable tests hash-verify every retained PDF from
+the repository root and inspect decompressed PDF content for the exact
+orderable, series, and package-drawing markers. These are intentional, precise
+blockers rather than assumed package geometry.
 
 For every reference, the root review must acquire and hash the exact
 manufacturer package drawing and CAD object, or record the manufacturer-source

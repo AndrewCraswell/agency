@@ -291,10 +291,75 @@ const acquiredDrawingEvidenceByMpn: Readonly<
   }
 }
 
+const acquiredSeriesDrawingEvidenceByMpn: Readonly<
+  Record<
+    string,
+    {
+      acquisition: "series-drawing-hash-bound"
+      artifactPath: `packages/scoring-circuit/docs/evidence/m4-04/${string}`
+      drawingIdentifier: string
+      drawingUrl: string
+      geometry: null
+      byteMarkers: readonly string[]
+      scope: string
+      sha256: string
+    }
+  >
+> = {
+  CRCW0603100KFKEAHP: {
+    acquisition: "series-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf",
+    drawingIdentifier: "Vishay D/CRCW e3, revision 14-Apr-2026, document 20035, D11/CRCW0603e3 series drawing",
+    drawingUrl: "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    geometry: null,
+    byteMarkers: ["D/CRCW e3", "D11/CRCW0603", "D25/CRCW1206", "0603", "1206", "20035"],
+    scope:
+      "Vishay D/CRCW e3 series datasheet. The retained source verifies the 0603 and 1206 package families and manufacturer dimensions, but it does not name this exact CRCW orderable MPN; no exact-MPN drawing identity or project geometry is inferred.",
+    sha256: "1F5E20329C74727DA629B92E2BFBDBDB3FA3BE57229E3208E24058173F9CECF3"
+  },
+  CRCW060320R0FKEAHP: {
+    acquisition: "series-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf",
+    drawingIdentifier: "Vishay D/CRCW e3, revision 14-Apr-2026, document 20035, D11/CRCW0603e3 series drawing",
+    drawingUrl: "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    geometry: null,
+    byteMarkers: ["D/CRCW e3", "D11/CRCW0603", "D25/CRCW1206", "0603", "1206", "20035"],
+    scope:
+      "Vishay D/CRCW e3 series datasheet. The retained source verifies the 0603 and 1206 package families and manufacturer dimensions, but it does not name this exact CRCW orderable MPN; no exact-MPN drawing identity or project geometry is inferred.",
+    sha256: "1F5E20329C74727DA629B92E2BFBDBDB3FA3BE57229E3208E24058173F9CECF3"
+  },
+  CRCW060322R0FKEAHP: {
+    acquisition: "series-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf",
+    drawingIdentifier: "Vishay D/CRCW e3, revision 14-Apr-2026, document 20035, D11/CRCW0603e3 series drawing",
+    drawingUrl: "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    geometry: null,
+    byteMarkers: ["D/CRCW e3", "D11/CRCW0603", "D25/CRCW1206", "0603", "1206", "20035"],
+    scope:
+      "Vishay D/CRCW e3 series datasheet. The retained source verifies the 0603 and 1206 package families and manufacturer dimensions, but it does not name this exact CRCW orderable MPN; no exact-MPN drawing identity or project geometry is inferred.",
+    sha256: "1F5E20329C74727DA629B92E2BFBDBDB3FA3BE57229E3208E24058173F9CECF3"
+  },
+  CRCW120656K0FKEAHP: {
+    acquisition: "series-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf",
+    drawingIdentifier: "Vishay D/CRCW e3, revision 14-Apr-2026, document 20035, D25/CRCW1206e3 series drawing",
+    drawingUrl: "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+    geometry: null,
+    byteMarkers: ["D/CRCW e3", "D11/CRCW0603", "D25/CRCW1206", "0603", "1206", "20035"],
+    scope:
+      "Vishay D/CRCW e3 series datasheet. The retained source verifies the 0603 and 1206 package families and manufacturer dimensions, but it does not name this exact CRCW orderable MPN; no exact-MPN drawing identity or project geometry is inferred.",
+    sha256: "1F5E20329C74727DA629B92E2BFBDBDB3FA3BE57229E3208E24058173F9CECF3"
+  }
+}
+
 function drawingEvidenceFor(part: CouponBomPart) {
   const acquiredDrawing = acquiredDrawingEvidenceByMpn[part.mpn]
   if (acquiredDrawing !== undefined) {
     return { ...acquiredDrawing, byteMarkers: [...acquiredDrawing.byteMarkers] }
+  }
+  const acquiredSeriesDrawing = acquiredSeriesDrawingEvidenceByMpn[part.mpn]
+  if (acquiredSeriesDrawing !== undefined) {
+    return { ...acquiredSeriesDrawing, byteMarkers: [...acquiredSeriesDrawing.byteMarkers] }
   }
   if (part.mpn === "43650-0300") {
     return {
@@ -335,7 +400,9 @@ function footprintEvidenceFor(part: CouponBomPart) {
       status:
         manufacturerDrawing.acquisition === "exact-drawing-hash-bound"
           ? ("hash-bound" as const)
-          : ("identified-not-hash-acquired" as const)
+          : manufacturerDrawing.acquisition === "series-drawing-hash-bound"
+            ? ("series-hash-bound" as const)
+            : ("identified-not-hash-acquired" as const)
     },
     manufacturerDrawing,
     manufacturerCad: {
@@ -453,8 +520,11 @@ export function validateM404SingleChannelCoupon(value: unknown): true {
         footprint.evidence.manufacturerPrimaryDocument.status !==
           (footprint.evidence.manufacturerDrawing.acquisition === "exact-drawing-hash-bound"
             ? "hash-bound"
-            : "identified-not-hash-acquired") ||
-        (footprint.evidence.manufacturerDrawing.acquisition === "exact-drawing-hash-bound" &&
+            : footprint.evidence.manufacturerDrawing.acquisition === "series-drawing-hash-bound"
+              ? "series-hash-bound"
+              : "identified-not-hash-acquired") ||
+        ((footprint.evidence.manufacturerDrawing.acquisition === "exact-drawing-hash-bound" ||
+          footprint.evidence.manufacturerDrawing.acquisition === "series-drawing-hash-bound") &&
           (!footprint.evidence.manufacturerDrawing.drawingUrl.startsWith("https://") ||
             footprint.evidence.manufacturerDrawing.drawingIdentifier.trim() === "" ||
             footprint.evidence.manufacturerDrawing.artifactPath === null ||
@@ -465,6 +535,7 @@ export function validateM404SingleChannelCoupon(value: unknown): true {
             footprint.evidence.manufacturerDrawing.geometry !== null ||
             footprint.evidence.manufacturerDrawing.byteMarkers.length === 0)) ||
         (footprint.evidence.manufacturerDrawing.acquisition !== "exact-drawing-hash-bound" &&
+          footprint.evidence.manufacturerDrawing.acquisition !== "series-drawing-hash-bound" &&
           (footprint.exactMpn === "43650-0300"
             ? footprint.evidence.manufacturerDrawing.acquisition !== "series-drawing-identified-not-hash-acquired" ||
               footprint.evidence.manufacturerDrawing.drawingIdentifier !== "SD-43650-001, revision D8" ||

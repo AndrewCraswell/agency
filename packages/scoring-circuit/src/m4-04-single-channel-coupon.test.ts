@@ -122,6 +122,40 @@ describe("M4-04 single-channel sensing coupon", () => {
     })
   })
 
+  it("retains a Vishay D/CRCW family drawing as series evidence, not exact-MPN evidence", () => {
+    const expectedMpn = [
+      "CRCW060322R0FKEAHP",
+      "CRCW120656K0FKEAHP",
+      "CRCW0603100KFKEAHP",
+      "CRCW060320R0FKEAHP"
+    ] as const
+    const records = M404_SINGLE_CHANNEL_COUPON.footprints.filter((footprint) =>
+      expectedMpn.includes(footprint.exactMpn as (typeof expectedMpn)[number])
+    )
+    expect(records.map((record) => record.exactMpn)).toEqual(expectedMpn)
+    expect(new Set(records.map((record) => record.evidence.manufacturerDrawing.artifactPath)).size).toBe(1)
+    for (const record of records) {
+      expect(record.evidence.manufacturerPrimaryDocument).toMatchObject({
+        status: "series-hash-bound",
+        url: "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
+      })
+      expect(record.evidence.manufacturerDrawing).toMatchObject({
+        acquisition: "series-drawing-hash-bound",
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf",
+        drawingUrl: "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
+        geometry: null,
+        sha256: "1F5E20329C74727DA629B92E2BFBDBDB3FA3BE57229E3208E24058173F9CECF3"
+      })
+      expect(record.evidence.manufacturerDrawing.scope).toContain("does not name this exact CRCW orderable MPN")
+      expect(record.footprintRelease).toBe("deny")
+    }
+    expect(M404_SINGLE_CHANNEL_COUPON.authority).toMatchObject({
+      footprintsIndependentlyReviewed: false,
+      fabricationAuthorized: false,
+      releaseState: "deny"
+    })
+  })
+
   it("hash-verifies every retained drawing and checks exact orderable and package markers from PDF bytes", () => {
     const repoRoot = new URL("../../../", import.meta.url)
     const inflatePdfStreams = (bytes: Buffer) => {
@@ -148,12 +182,14 @@ describe("M4-04 single-channel sensing coupon", () => {
 
     for (const footprint of M404_SINGLE_CHANNEL_COUPON.footprints) {
       const drawing = footprint.evidence.manufacturerDrawing
-      if (drawing.acquisition !== "exact-drawing-hash-bound") continue
+      if (drawing.acquisition !== "exact-drawing-hash-bound" && drawing.acquisition !== "series-drawing-hash-bound") {
+        continue
+      }
       const bytes = readFileSync(new URL(drawing.artifactPath, repoRoot))
       expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(drawing.sha256)
       const pdfContent = `${bytes.toString("latin1")}\n${inflatePdfStreams(bytes)}`
       for (const marker of drawing.byteMarkers) expect(pdfContent).toContain(marker)
-      expect(drawing.drawingIdentifier).toMatch(/(?:mechanical drawing|manufacturer dimensions)$/u)
+      expect(drawing.drawingIdentifier).toMatch(/(?:mechanical drawing|manufacturer dimensions|series drawing)$/u)
       expect(drawing.geometry).toBeNull()
     }
   })
@@ -194,6 +230,16 @@ describe("M4-04 single-channel sensing coupon", () => {
           copy.footprints.find((footprint) => footprint.exactMpn === "43650-0300")?.evidence.manufacturerDrawing ?? {},
           "acquisition",
           "source-recorded"
+        )
+    ],
+    [
+      "series evidence promoted to exact-MPN evidence",
+      (copy: typeof M404_SINGLE_CHANNEL_COUPON) =>
+        Reflect.set(
+          copy.footprints.find((footprint) => footprint.exactMpn === "CRCW060322R0FKEAHP")?.evidence
+            .manufacturerDrawing ?? {},
+          "acquisition",
+          "exact-drawing-hash-bound"
         )
     ],
     [
