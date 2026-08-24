@@ -48,9 +48,6 @@ function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
 
 const component = (manufacturer: string, mpn: string, quantity: number) => ({ manufacturer, mpn, quantity })
 const measurement = (id: string, from: string, to: string) => ({ id, from, to })
-const numberedMeasurements = (ids: readonly (number | string)[], from: string, to: string) =>
-  ids.map((id) => measurement(`pin-${id}`, `${from}.pin-${id}`, `${to}.pin-${id}`))
-
 const sourceAsset = (sourceUrl: string, assetPath: string, sha256: string) => ({ sourceUrl, assetPath, sha256 })
 
 type BenchPrototypeConnectorSampleId =
@@ -239,13 +236,10 @@ const requiredSamples: readonly RequiredConnectorSample[] = [
         "The manufacturer datasheet names N201-003-BL and states RJ45 male connectors at both ends with integral strain relief."
     },
     continuityMeasurements: [
-      ...numberedMeasurements(
-        Array.from({ length: 12 }, (_, index) => index + 1),
-        "J_ETH",
-        "SELECTED_8P8C_TEST_MATE"
+      ...Array.from({ length: 8 }, (_, index) =>
+        measurement(`8p8c-contact-${index + 1}`, `J_ETH.8P8C-${index + 1}`, `SELECTED_8P8C_TEST_MATE.8P8C-${index + 1}`)
       ),
-      measurement("shield-S1", "J_ETH.S1[CHASSIS_ETHERNET]", "7499011121A.S1[CHASSIS_ETHERNET]"),
-      measurement("shield-S2", "J_ETH.S2[CHASSIS_ETHERNET]", "7499011121A.S2[CHASSIS_ETHERNET]")
+      measurement("shield-shell", "J_ETH.SHIELD_SHELL[CHASSIS_ETHERNET]", "CHASSIS_ETHERNET")
     ]
   },
   {
@@ -324,7 +318,12 @@ export const benchPrototypeConnectorPreorder = deepFreeze({
   weaponFixtureContinuityAuthority: {
     contract: "BP-104",
     requiredReadings: "7 end-to-end, 66 isolation, and 5 intentional-open",
-    thresholds: benchPrototypeContinuityThresholds
+    thresholds: benchPrototypeContinuityThresholds,
+    delegatedArtifacts: {
+      procedure: "benchPrototypeFixtureHarness.connector.sampleFitProcedure",
+      continuityAndCalibration: "evaluateBenchPrototypeContinuityEvidence",
+      physicalFitAndNegativeTests: "evaluateBenchPrototypeFixturePhysicalEvidence"
+    }
   },
   openGates: [
     "No physical sample, mate, immutable artifact, retention observation, strain observation, or continuity record is claimed.",
@@ -901,14 +900,23 @@ export type BenchPrototypeConnectorPreorderEvidence = {
       readonly fullySeatedPhoto: ImmutableEvidenceArtifact
     }[]
     readonly insertionDirection: string
+    readonly powerState: "off-and-discharged"
+    readonly forcedMateObserved: false
+    readonly noForceMateAndUnmateResult: "accepted"
     readonly retentionObserved: true
-    readonly wrongMateOrReversalRejected: true
+    readonly rejectedMateOrReversalArtifact: ImmutableEvidenceArtifact
   }[]
   readonly retentionAndStrain: readonly {
     readonly id: BenchPrototypeConnectorSampleId
     readonly loadPath: string
     readonly cableExitDirection: string
+    readonly retentionMethod: string
+    readonly retentionLoadN: number
+    readonly retentionResult: "accepted"
     readonly retentionArtifact: ImmutableEvidenceArtifact
+    readonly strainMethod: string
+    readonly strainLoadN: number
+    readonly strainResult: "accepted"
     readonly strainArtifact: ImmutableEvidenceArtifact
     readonly solderJointsAreNotSoleRetention: true
   }[]
@@ -956,6 +964,12 @@ function nonEmptyString(value: unknown): value is string {
 
 function finiteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value)
+}
+
+function hasExactStringArray(value: unknown, expected: readonly string[]): boolean {
+  return (
+    Array.isArray(value) && value.length === expected.length && expected.every((entry, index) => value[index] === entry)
+  )
 }
 
 function inspectDataGraph(value: unknown, path: string, seen: WeakSet<object>, reasons: string[]): void {
@@ -1235,7 +1249,16 @@ export function evaluateBenchPrototypeConnectorPreorderEvidence(
       const sample = requiredSamples.find((candidate) => candidate.id === id)!
       const expectedMates = sample.requiredComponents.slice(1)
       if (
-        !hasExactKeys(row, ["id", "mates", "insertionDirection", "retentionObserved", "wrongMateOrReversalRejected"]) ||
+        !hasExactKeys(row, [
+          "id",
+          "mates",
+          "insertionDirection",
+          "powerState",
+          "forcedMateObserved",
+          "noForceMateAndUnmateResult",
+          "retentionObserved",
+          "rejectedMateOrReversalArtifact"
+        ]) ||
         !exactComponents(row.mates, expectedMates) ||
         !Array.isArray(row.mates)
       )
@@ -1249,8 +1272,11 @@ export function evaluateBenchPrototypeConnectorPreorderEvidence(
       return (
         artifactLinksValid &&
         nonEmptyString(row.insertionDirection) &&
+        row.powerState === "off-and-discharged" &&
+        row.forcedMateObserved === false &&
+        row.noForceMateAndUnmateResult === "accepted" &&
         row.retentionObserved === true &&
-        row.wrongMateOrReversalRejected === true
+        validateArtifact(row.rejectedMateOrReversalArtifact, artifacts, reasons, `${id}.rejectedMateOrReversalArtifact`)
       )
     },
     reasons
@@ -1265,13 +1291,27 @@ export function evaluateBenchPrototypeConnectorPreorderEvidence(
         "id",
         "loadPath",
         "cableExitDirection",
+        "retentionMethod",
+        "retentionLoadN",
+        "retentionResult",
         "retentionArtifact",
+        "strainMethod",
+        "strainLoadN",
+        "strainResult",
         "strainArtifact",
         "solderJointsAreNotSoleRetention"
       ]) &&
       nonEmptyString(row.loadPath) &&
       nonEmptyString(row.cableExitDirection) &&
+      nonEmptyString(row.retentionMethod) &&
+      finiteNumber(row.retentionLoadN) &&
+      row.retentionLoadN > 0 &&
+      row.retentionResult === "accepted" &&
       validateArtifact(row.retentionArtifact, artifacts, reasons, `${id}.retentionArtifact`) &&
+      nonEmptyString(row.strainMethod) &&
+      finiteNumber(row.strainLoadN) &&
+      row.strainLoadN > 0 &&
+      row.strainResult === "accepted" &&
       validateArtifact(row.strainArtifact, artifacts, reasons, `${id}.strainArtifact`) &&
       row.solderJointsAreNotSoleRetention === true,
     reasons
@@ -1392,6 +1432,465 @@ export function evaluateBenchPrototypeConnectorPreorderEvidence(
   return { accepted: reasons.length === 0, reasons }
 }
 
+const panelCircuitOrder = ["A", "B", "C"] as const
+const panelNegativeTestIds = ["open", "swap", "reversal"] as const
+
+/**
+ * This is deliberately a separate scope from BP-104.  BP-104 owns the
+ * seven-channel fixture harness; this contract owns a single custom, three
+ * socket weapon panel and its short board harness.  The owner has confirmed
+ * the existing OK Fencing weapon cable is compatible with market scoring
+ * boxes.  That fact authorizes no part selection, fabrication, or release.
+ */
+export const benchPrototypeWeaponPanelHarness = deepFreeze({
+  artifactKind: "bench-prototype-custom-weapon-panel-harness-contract",
+  workUnit: "BP-034",
+  targetAssembly: "per-side custom three-socket prototype weapon interface",
+  prototypeOnly: true,
+  cableCompatibility: {
+    supplier: "OK Fencing",
+    status: "owner-validated-not-a-blocker",
+    scope:
+      "Existing three-pin weapon cable compatibility only; no socket, panel, harness, or board-end identity is implied."
+  },
+  ownerReferencePhotos: [
+    {
+      assetPath: "docs/evidence/bp-034/owner-weapon-socket-reference-1.jpg",
+      sha256: "F82EC60AA16BE02BC93D00F31A610E3859ECAA158D63E2CED121A0A05CEBE41B",
+      boundedObservation:
+        "Owner-supplied reference image shows three separate metal sockets retained in a transparent insulating carrier with threaded bodies."
+    },
+    {
+      assetPath: "docs/evidence/bp-034/owner-weapon-socket-reference-2.jpg",
+      sha256: "100831D56FD5F3F1759B83CC5A5568AD3236F1D3065BE699093CA0472774617E",
+      boundedObservation:
+        "Owner-supplied reference image shows the same three-socket assembly and a separately fastened metal bracket or tang."
+    }
+  ],
+  photoNonClaims: [
+    "The photos are non-dimensional reference evidence only.",
+    "They do not identify a socket SKU, spacing, material, rating, final panel geometry, or board-side connector."
+  ],
+  perPanelCircuitOrder: panelCircuitOrder,
+  prototypeImplementationAlternatives: [
+    {
+      id: "direct-carrier-pcb-mount",
+      scope: "Prototype only",
+      requiredEvidence:
+        "Mounting holes, hardware, an insertion-load path, and proof that electrical solder joints are not the sole mechanical retention."
+    },
+    {
+      id: "separate-sockets-to-board-landing-pads",
+      scope: "Prototype only",
+      requiredEvidence:
+        "Labeled plated through-hole and test landing pads, conductor gauge and insulation, strain-relief anchor, clearance, A/B/C map, and no exposed shorts."
+    }
+  ],
+  productionHarness: {
+    status: "later-gate",
+    requirement: "Production uses a replaceable insulated socket module and keyed short connectorized harness.",
+    selectionState: "unselected"
+  },
+  requiredEvidence: [
+    "Exact socket manufacturer and MPN, one panel side, and three individual socket identities in A/B/C order.",
+    "Either direct carrier PCB mount with independent insertion-load retention, or separate sockets wired to labeled board landing pads.",
+    "De-energized continuity, isolation, open, swap, and reversal captures.",
+    "A received sample and non-forced mate/unmate evidence before any prototype wiring decision."
+  ],
+  fabricationDisposition: "DENY",
+  releaseState: "deny"
+})
+
+export type BenchPrototypeWeaponPanelHarnessEvidence = {
+  readonly artifactKind: "bench-prototype-custom-weapon-panel-harness-evidence"
+  readonly status: "measured"
+  readonly evidenceId: string
+  readonly recordedAtUtc: string
+  readonly operator: string
+  readonly ownerCableCompatibility: "accepted-not-blocker"
+  readonly panel: {
+    readonly side: "left" | "right"
+    readonly socketManufacturer: string
+    readonly socketMpn: string
+    readonly socketQuantity: 3
+    readonly socketIdentityArtifact: ImmutableEvidenceArtifact
+    readonly circuitOrder: readonly ["A", "B", "C"]
+    readonly panelMountMethod: string
+    readonly insulationMethod: string
+    readonly mountAndInsulationArtifact: ImmutableEvidenceArtifact
+  }
+  readonly rearTerminations: readonly {
+    readonly circuit: "A" | "B" | "C"
+    readonly socketRearTermination: string
+    readonly boardEndContact: string
+    readonly artifact: ImmutableEvidenceArtifact
+  }[]
+  readonly prototypeImplementation:
+    | {
+        readonly approach: "direct-carrier-pcb-mount"
+        readonly mountingHoleReferences: readonly string[]
+        readonly mountingHardware: string
+        readonly insertionLoadPath: string
+        readonly solderJointsAreNotSoleMechanicalRetention: true
+        readonly artifact: ImmutableEvidenceArtifact
+      }
+    | {
+        readonly approach: "separate-sockets-to-board-landing-pads"
+        readonly landingPads: readonly {
+          readonly circuit: "A" | "B" | "C"
+          readonly reference: string
+          readonly labeled: true
+          readonly platedThroughHole: true
+          readonly testLandingPad: true
+        }[]
+        readonly conductorMaterial: string
+        readonly conductorGaugeAwg: number
+        readonly insulation: string
+        readonly lengthMm: number
+        readonly strainReliefAnchor: string
+        readonly clearanceMethod: string
+        readonly noExposedShorts: true
+        readonly artifact: ImmutableEvidenceArtifact
+      }
+  readonly mate: {
+    readonly powerState: "off-and-discharged"
+    readonly forcedMateObserved: false
+    readonly noForceMateAndUnmateResult: "accepted"
+    readonly artifact: ImmutableEvidenceArtifact
+  }
+  readonly continuity: readonly {
+    readonly circuit: "A" | "B" | "C"
+    readonly from: string
+    readonly to: string
+    readonly resistanceOhms: number
+    readonly artifact: ImmutableEvidenceArtifact
+  }[]
+  readonly isolation: {
+    readonly testVoltageV: number
+    readonly minimumResistanceOhms: number
+    readonly artifact: ImmutableEvidenceArtifact
+  }
+  readonly negativeTests: readonly {
+    readonly id: "open" | "swap" | "reversal"
+    readonly result: "rejected"
+    readonly artifact: ImmutableEvidenceArtifact
+  }[]
+}
+
+export function evaluateBenchPrototypeWeaponPanelHarnessEvidence(
+  value: unknown
+): BenchPrototypeConnectorPreorderEvaluation {
+  const reasons: string[] = []
+  inspectDataGraph(value, "weaponPanelHarnessEvidence", new WeakSet<object>(), reasons)
+  if (reasons.length > 0) return { accepted: false, reasons }
+  if (
+    !hasExactKeys(value, [
+      "artifactKind",
+      "status",
+      "evidenceId",
+      "recordedAtUtc",
+      "operator",
+      "ownerCableCompatibility",
+      "panel",
+      "rearTerminations",
+      "prototypeImplementation",
+      "mate",
+      "continuity",
+      "isolation",
+      "negativeTests"
+    ])
+  ) {
+    return {
+      accepted: false,
+      reasons: ["weapon panel harness evidence must contain only the exact declared data keys"]
+    }
+  }
+  const artifacts = new Map<string, ArtifactUse>()
+  if (value.artifactKind !== "bench-prototype-custom-weapon-panel-harness-evidence")
+    reasons.push("artifact kind is invalid")
+  if (value.status !== "measured") reasons.push("status must be measured")
+  if (
+    !nonEmptyString(value.evidenceId) ||
+    !nonEmptyString(value.operator) ||
+    parseCanonicalUtcTimestamp(value.recordedAtUtc) === null ||
+    value.ownerCableCompatibility !== "accepted-not-blocker"
+  ) {
+    reasons.push("identity, canonical timestamp, and owner cable compatibility acceptance are required")
+  }
+  const panel = value.panel
+  const panelValid =
+    hasExactKeys(panel, [
+      "side",
+      "socketManufacturer",
+      "socketMpn",
+      "socketQuantity",
+      "socketIdentityArtifact",
+      "circuitOrder",
+      "panelMountMethod",
+      "insulationMethod",
+      "mountAndInsulationArtifact"
+    ]) &&
+    (panel.side === "left" || panel.side === "right") &&
+    nonEmptyString(panel.socketManufacturer) &&
+    nonEmptyString(panel.socketMpn) &&
+    panel.socketQuantity === 3 &&
+    hasExactStringArray(panel.circuitOrder, panelCircuitOrder) &&
+    nonEmptyString(panel.panelMountMethod) &&
+    nonEmptyString(panel.insulationMethod) &&
+    validateArtifact(panel.socketIdentityArtifact, artifacts, reasons, "panel.socketIdentityArtifact") &&
+    validateArtifact(panel.mountAndInsulationArtifact, artifacts, reasons, "panel.mountAndInsulationArtifact")
+  if (!panelValid) reasons.push("panel must define one insulated A/B/C three-socket panel with immutable evidence")
+  const rearTerminations = value.rearTerminations
+  if (
+    !Array.isArray(rearTerminations) ||
+    rearTerminations.length !== panelCircuitOrder.length ||
+    !panelCircuitOrder.every((circuit, index) => {
+      const row = rearTerminations[index]
+      return (
+        hasExactKeys(row, ["circuit", "socketRearTermination", "boardEndContact", "artifact"]) &&
+        row.circuit === circuit &&
+        nonEmptyString(row.socketRearTermination) &&
+        nonEmptyString(row.boardEndContact) &&
+        validateArtifact(row.artifact, artifacts, reasons, `rearTerminations[${index}].artifact`)
+      )
+    })
+  ) {
+    reasons.push("rear terminations must define exactly A, B, and C socket-to-board contacts")
+  }
+  const prototypeImplementation = value.prototypeImplementation
+  let prototypeImplementationValid = false
+  if (isPlainRecord(prototypeImplementation) && prototypeImplementation.approach === "direct-carrier-pcb-mount") {
+    prototypeImplementationValid =
+      hasExactKeys(prototypeImplementation, [
+        "approach",
+        "mountingHoleReferences",
+        "mountingHardware",
+        "insertionLoadPath",
+        "solderJointsAreNotSoleMechanicalRetention",
+        "artifact"
+      ]) &&
+      Array.isArray(prototypeImplementation.mountingHoleReferences) &&
+      prototypeImplementation.mountingHoleReferences.length > 0 &&
+      prototypeImplementation.mountingHoleReferences.every(nonEmptyString) &&
+      nonEmptyString(prototypeImplementation.mountingHardware) &&
+      nonEmptyString(prototypeImplementation.insertionLoadPath) &&
+      prototypeImplementation.solderJointsAreNotSoleMechanicalRetention === true &&
+      validateArtifact(prototypeImplementation.artifact, artifacts, reasons, "prototypeImplementation.artifact")
+  } else if (
+    isPlainRecord(prototypeImplementation) &&
+    prototypeImplementation.approach === "separate-sockets-to-board-landing-pads"
+  ) {
+    const landingPads = prototypeImplementation.landingPads
+    prototypeImplementationValid =
+      hasExactKeys(prototypeImplementation, [
+        "approach",
+        "landingPads",
+        "conductorMaterial",
+        "conductorGaugeAwg",
+        "insulation",
+        "lengthMm",
+        "strainReliefAnchor",
+        "clearanceMethod",
+        "noExposedShorts",
+        "artifact"
+      ]) &&
+      Array.isArray(landingPads) &&
+      landingPads.length === panelCircuitOrder.length &&
+      panelCircuitOrder.every((circuit, index) => {
+        const row = landingPads[index]
+        return (
+          hasExactKeys(row, ["circuit", "reference", "labeled", "platedThroughHole", "testLandingPad"]) &&
+          row.circuit === circuit &&
+          nonEmptyString(row.reference) &&
+          row.labeled === true &&
+          row.platedThroughHole === true &&
+          row.testLandingPad === true
+        )
+      }) &&
+      nonEmptyString(prototypeImplementation.conductorMaterial) &&
+      finiteNumber(prototypeImplementation.conductorGaugeAwg) &&
+      prototypeImplementation.conductorGaugeAwg > 0 &&
+      nonEmptyString(prototypeImplementation.insulation) &&
+      finiteNumber(prototypeImplementation.lengthMm) &&
+      prototypeImplementation.lengthMm > 0 &&
+      nonEmptyString(prototypeImplementation.strainReliefAnchor) &&
+      nonEmptyString(prototypeImplementation.clearanceMethod) &&
+      prototypeImplementation.noExposedShorts === true &&
+      validateArtifact(prototypeImplementation.artifact, artifacts, reasons, "prototypeImplementation.artifact")
+  }
+  if (!prototypeImplementationValid) {
+    reasons.push("prototype implementation must be one complete reviewed direct mount or landing-pad alternative")
+  }
+  const mate = value.mate
+  if (
+    !hasExactKeys(mate, ["powerState", "forcedMateObserved", "noForceMateAndUnmateResult", "artifact"]) ||
+    mate.powerState !== "off-and-discharged" ||
+    mate.forcedMateObserved !== false ||
+    mate.noForceMateAndUnmateResult !== "accepted" ||
+    !validateArtifact(mate.artifact, artifacts, reasons, "mate.artifact")
+  ) {
+    reasons.push("mate must be de-energized, non-forced, accepted for mate/unmate, and immutable")
+  }
+  const continuity = value.continuity
+  if (
+    !Array.isArray(continuity) ||
+    continuity.length !== panelCircuitOrder.length ||
+    !panelCircuitOrder.every((circuit, index) => {
+      const row = continuity[index]
+      return (
+        hasExactKeys(row, ["circuit", "from", "to", "resistanceOhms", "artifact"]) &&
+        row.circuit === circuit &&
+        nonEmptyString(row.from) &&
+        nonEmptyString(row.to) &&
+        finiteNumber(row.resistanceOhms) &&
+        row.resistanceOhms >= 0 &&
+        row.resistanceOhms <= benchPrototypeConnectorContinuityThresholds.maximumContactPathResistanceOhms &&
+        validateArtifact(row.artifact, artifacts, reasons, `continuity[${index}].artifact`)
+      )
+    })
+  ) {
+    reasons.push("continuity must capture exactly the A, B, and C paths at no more than 2 ohms")
+  }
+  const isolation = value.isolation
+  if (
+    !hasExactKeys(isolation, ["testVoltageV", "minimumResistanceOhms", "artifact"]) ||
+    !finiteNumber(isolation.testVoltageV) ||
+    isolation.testVoltageV <= 0 ||
+    isolation.testVoltageV > benchPrototypeConnectorContinuityThresholds.maximumTestVoltageV ||
+    !finiteNumber(isolation.minimumResistanceOhms) ||
+    isolation.minimumResistanceOhms < 10_000_000 ||
+    !validateArtifact(isolation.artifact, artifacts, reasons, "isolation.artifact")
+  ) {
+    reasons.push("isolation must record at least 10 Mohm at an allowed positive test voltage")
+  }
+  const negativeTests = value.negativeTests
+  if (
+    !Array.isArray(negativeTests) ||
+    negativeTests.length !== panelNegativeTestIds.length ||
+    !panelNegativeTestIds.every((id, index) => {
+      const row = negativeTests[index]
+      return (
+        hasExactKeys(row, ["id", "result", "artifact"]) &&
+        row.id === id &&
+        row.result === "rejected" &&
+        validateArtifact(row.artifact, artifacts, reasons, `negativeTests[${index}].artifact`)
+      )
+    })
+  ) {
+    reasons.push("open, swap, and reversal negative captures are required and must be rejected")
+  }
+  return { accepted: reasons.length === 0, reasons }
+}
+
+export type BenchPrototypeWeaponPanelPairEvidence = {
+  readonly artifactKind: "bench-prototype-custom-weapon-panel-pair-evidence"
+  readonly status: "measured"
+  readonly evidenceId: string
+  readonly recordedAtUtc: string
+  readonly operator: string
+  readonly pairArtifact: ImmutableEvidenceArtifact
+  readonly sides: readonly [BenchPrototypeWeaponPanelHarnessEvidence, BenchPrototypeWeaponPanelHarnessEvidence]
+}
+
+function collectImmutableArtifactIds(value: unknown, results: Set<string>): void {
+  if (value === null || typeof value !== "object") return
+  if (hasExactKeys(value, ["artifactId", "sha256"])) {
+    results.add(String(value.artifactId))
+    return
+  }
+  if (Array.isArray(value)) {
+    for (const entry of value) collectImmutableArtifactIds(entry, results)
+    return
+  }
+  if (isPlainRecord(value)) {
+    for (const key of Object.keys(value)) collectImmutableArtifactIds(value[key], results)
+  }
+}
+
+export function evaluateBenchPrototypeWeaponPanelPairEvidence(
+  value: unknown
+): BenchPrototypeConnectorPreorderEvaluation {
+  const reasons: string[] = []
+  inspectDataGraph(value, "weaponPanelPairEvidence", new WeakSet<object>(), reasons)
+  if (reasons.length > 0) return { accepted: false, reasons }
+  if (
+    !hasExactKeys(value, ["artifactKind", "status", "evidenceId", "recordedAtUtc", "operator", "pairArtifact", "sides"])
+  ) {
+    return { accepted: false, reasons: ["weapon panel pair evidence must contain only the exact declared data keys"] }
+  }
+  const artifacts = new Map<string, ArtifactUse>()
+  if (value.artifactKind !== "bench-prototype-custom-weapon-panel-pair-evidence")
+    reasons.push("artifact kind is invalid")
+  if (value.status !== "measured") reasons.push("status must be measured")
+  if (
+    !nonEmptyString(value.evidenceId) ||
+    !nonEmptyString(value.operator) ||
+    parseCanonicalUtcTimestamp(value.recordedAtUtc) === null ||
+    !validateArtifact(value.pairArtifact, artifacts, reasons, "pairArtifact")
+  ) {
+    reasons.push("pair identity, canonical timestamp, operator, and immutable pair artifact are required")
+  }
+  const sides = value.sides
+  if (!Array.isArray(sides) || sides.length !== 2) {
+    reasons.push("pair evidence must contain exactly one left and one right interface")
+  } else {
+    const expectedSides = ["left", "right"] as const
+    const sideEvidenceIds = new Set<string>()
+    const sideArtifactIds = new Set<string>()
+    expectedSides.forEach((expectedSide, index) => {
+      const side = sides[index]
+      const panel = isPlainRecord(side) ? side.panel : null
+      if (!isPlainRecord(side) || !isPlainRecord(panel) || panel.side !== expectedSide) {
+        reasons.push(`pair side ${index + 1} must be the ${expectedSide} interface`)
+        return
+      }
+      const evaluation = evaluateBenchPrototypeWeaponPanelHarnessEvidence(side)
+      reasons.push(...evaluation.reasons.map((reason) => `${expectedSide}: ${reason}`))
+      const sideEvidenceId = nonEmptyString(side.evidenceId) ? side.evidenceId : null
+      if (sideEvidenceId === null || sideEvidenceIds.has(sideEvidenceId)) {
+        reasons.push(`${expectedSide} evidence ID must be unique across the left and right interfaces`)
+      }
+      if (sideEvidenceId !== null) sideEvidenceIds.add(sideEvidenceId)
+      const artifactsForSide = new Set<string>()
+      collectImmutableArtifactIds(side, artifactsForSide)
+      for (const artifactId of artifactsForSide) {
+        if (sideArtifactIds.has(artifactId)) {
+          reasons.push(`${expectedSide} reuses immutable artifact ID ${artifactId} across interfaces`)
+        }
+        sideArtifactIds.add(artifactId)
+      }
+    })
+  }
+  return { accepted: reasons.length === 0, reasons }
+}
+
+export function validateBenchPrototypeWeaponPanelHarness(value: unknown): true {
+  if (value !== benchPrototypeWeaponPanelHarness) {
+    throw new RangeError("custom weapon-panel harness contract must use its reviewed canonical object")
+  }
+  if (
+    benchPrototypeWeaponPanelHarness.cableCompatibility.status !== "owner-validated-not-a-blocker" ||
+    benchPrototypeWeaponPanelHarness.targetAssembly !== "per-side custom three-socket prototype weapon interface" ||
+    benchPrototypeWeaponPanelHarness.perPanelCircuitOrder.join(",") !== "A,B,C" ||
+    benchPrototypeWeaponPanelHarness.ownerReferencePhotos[0]?.sha256 !==
+      "F82EC60AA16BE02BC93D00F31A610E3859ECAA158D63E2CED121A0A05CEBE41B" ||
+    benchPrototypeWeaponPanelHarness.ownerReferencePhotos[1]?.sha256 !==
+      "100831D56FD5F3F1759B83CC5A5568AD3236F1D3065BE699093CA0472774617E" ||
+    benchPrototypeWeaponPanelHarness.photoNonClaims.length !== 2 ||
+    benchPrototypeWeaponPanelHarness.prototypeImplementationAlternatives.length !== 2 ||
+    benchPrototypeWeaponPanelHarness.prototypeImplementationAlternatives[0]?.id !== "direct-carrier-pcb-mount" ||
+    benchPrototypeWeaponPanelHarness.prototypeImplementationAlternatives[1]?.id !==
+      "separate-sockets-to-board-landing-pads" ||
+    benchPrototypeWeaponPanelHarness.productionHarness.status !== "later-gate" ||
+    benchPrototypeWeaponPanelHarness.productionHarness.selectionState !== "unselected" ||
+    benchPrototypeWeaponPanelHarness.fabricationDisposition !== "DENY" ||
+    benchPrototypeWeaponPanelHarness.releaseState !== "deny"
+  ) {
+    throw new RangeError("custom weapon-panel harness must retain owner cable scope and deny release")
+  }
+  return true
+}
+
 export function validateBenchPrototypeConnectorPreorder(value: unknown): true {
   assertUpstreamProvenance()
   if (value !== benchPrototypeConnectorPreorder) {
@@ -1401,6 +1900,7 @@ export function validateBenchPrototypeConnectorPreorder(value: unknown): true {
   const ethernetCable = benchPrototypeConnectorPreorder.samples[7].requiredComponents[1]
   const usbSource = benchPrototypeConnectorPreorder.samples[0].sourceEvidence
   const ethernetSource = benchPrototypeConnectorPreorder.samples[7].sourceEvidence
+  const ethernetContinuity = benchPrototypeConnectorPreorder.samples[7].continuityMeasurements
   if (
     benchPrototypeConnectorPreorder.fabricationDisposition !== "DENY" ||
     benchPrototypeConnectorPreorder.releaseState !== "deny" ||
@@ -1420,6 +1920,15 @@ export function validateBenchPrototypeConnectorPreorder(value: unknown): true {
     ethernetSource?.sha256 !== "BB81E709DFD1E57546379D2962431CD1D1C2445E038E81B053521B6231A14C12" ||
     benchPrototypeConnectorPreorder.samples[7].selectionBasis?.["cableEnds"] !==
       "RJ45 male to RJ45 male (8P8C patch cable)" ||
+    ethernetContinuity.length !== 9 ||
+    !ethernetContinuity.slice(0, 8).every((entry, index) => entry.id === `8p8c-contact-${index + 1}`) ||
+    ethernetContinuity[8]?.id !== "shield-shell" ||
+    benchPrototypeConnectorPreorder.weaponFixtureContinuityAuthority.delegatedArtifacts.procedure !==
+      "benchPrototypeFixtureHarness.connector.sampleFitProcedure" ||
+    benchPrototypeConnectorPreorder.weaponFixtureContinuityAuthority.delegatedArtifacts.continuityAndCalibration !==
+      "evaluateBenchPrototypeContinuityEvidence" ||
+    benchPrototypeConnectorPreorder.weaponFixtureContinuityAuthority.delegatedArtifacts.physicalFitAndNegativeTests !==
+      "evaluateBenchPrototypeFixturePhysicalEvidence" ||
     benchPrototypeConnectorPreorder.samples[1].interfaceReferences[0] !== "J_LAB_INJECTION" ||
     !benchPrototypeConnectorPreorder.samples[6].interfaceReferences.includes("J_ESP_SERVICE") ||
     !benchPrototypeConnectorPreorder.samples[9].requiredComponents.some((entry) => entry.mpn === "SYM-001T-P0.6") ||

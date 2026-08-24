@@ -4,9 +4,13 @@ import { describe, expect, it } from "vitest"
 import {
   benchPrototypeConnectorUpstreamProvenance,
   benchPrototypeConnectorPreorder,
+  benchPrototypeWeaponPanelHarness,
   evaluateBenchPrototypeConnectorPreorderEvidence,
+  evaluateBenchPrototypeWeaponPanelHarnessEvidence,
+  evaluateBenchPrototypeWeaponPanelPairEvidence,
   validateBenchPrototypeConnectorPreorder,
-  validateBenchPrototypeConnectorUpstreamProvenance
+  validateBenchPrototypeConnectorUpstreamProvenance,
+  validateBenchPrototypeWeaponPanelHarness
 } from "./bench-prototype-connector-preorder.js"
 
 const artifact = (id: string, hash = "A".repeat(64)) => ({ artifactId: id, sha256: hash })
@@ -112,14 +116,23 @@ function completeEvidence() {
         fullySeatedPhoto: nextArtifact(`seated-${sample.id}-${entry.mpn}`)
       })),
       insertionDirection: "recorded",
+      powerState: "off-and-discharged" as const,
+      forcedMateObserved: false as const,
+      noForceMateAndUnmateResult: "accepted" as const,
       retentionObserved: true as const,
-      wrongMateOrReversalRejected: true as const
+      rejectedMateOrReversalArtifact: nextArtifact(`rejected-mate-${sample.id}`)
     })),
     retentionAndStrain: benchPrototypeConnectorPreorder.samples.map((sample) => ({
       id: sample.id,
       loadPath: "independent support",
       cableExitDirection: "recorded",
+      retentionMethod: "documented pull fixture",
+      retentionLoadN: 20,
+      retentionResult: "accepted" as const,
       retentionArtifact: nextArtifact(`retention-${sample.id}`),
+      strainMethod: "documented cable-exit pull fixture",
+      strainLoadN: 20,
+      strainResult: "accepted" as const,
       strainArtifact: nextArtifact(`strain-${sample.id}`),
       solderJointsAreNotSoleRetention: true as const
     })),
@@ -152,6 +165,89 @@ function completeEvidence() {
       }))
     })),
     weaponFixtureContinuity: weaponEvidence()
+  }
+}
+
+function completeWeaponPanelHarnessEvidence(side: "left" | "right" = "left") {
+  let sequence = 0
+  const nextArtifact = (label: string) => artifact(`${side}-${label}-${++sequence}`, "B".repeat(64))
+  return {
+    artifactKind: "bench-prototype-custom-weapon-panel-harness-evidence" as const,
+    status: "measured" as const,
+    evidenceId: `BP034-WEAPON-PANEL-${side.toUpperCase()}-001`,
+    recordedAtUtc: "2026-08-24T00:00:00.000Z",
+    operator: "operator",
+    ownerCableCompatibility: "accepted-not-blocker" as const,
+    panel: {
+      side,
+      socketManufacturer: "OK Fencing",
+      socketMpn: "supplier-confirmed-socket",
+      socketQuantity: 3 as const,
+      socketIdentityArtifact: nextArtifact("socket-identity"),
+      circuitOrder: ["A", "B", "C"] as const,
+      panelMountMethod: "insulated panel mount",
+      insulationMethod: "individual insulating bushes",
+      mountAndInsulationArtifact: nextArtifact("mount-insulation")
+    },
+    rearTerminations: ["A", "B", "C"].map((circuit) => ({
+      circuit: circuit as "A" | "B" | "C",
+      socketRearTermination: "crimped insulated terminal",
+      boardEndContact: "crimped board-harness contact",
+      artifact: nextArtifact(`rear-${circuit}`)
+    })),
+    prototypeImplementation: {
+      approach: "separate-sockets-to-board-landing-pads" as const,
+      landingPads: ["A", "B", "C"].map((circuit) => ({
+        circuit: circuit as "A" | "B" | "C",
+        reference: `TP_WEAPON_${side.toUpperCase()}_${circuit}`,
+        labeled: true as const,
+        platedThroughHole: true as const,
+        testLandingPad: true as const
+      })),
+      conductorMaterial: "stranded copper",
+      conductorGaugeAwg: 22,
+      insulation: "individual insulated conductors",
+      lengthMm: 150,
+      strainReliefAnchor: "panel clamp",
+      clearanceMethod: "insulated conductors separated from metal bracket",
+      noExposedShorts: true as const,
+      artifact: nextArtifact("prototype-landing-pads")
+    },
+    mate: {
+      powerState: "off-and-discharged" as const,
+      forcedMateObserved: false as const,
+      noForceMateAndUnmateResult: "accepted" as const,
+      artifact: nextArtifact("mate")
+    },
+    continuity: ["A", "B", "C"].map((circuit) => ({
+      circuit: circuit as "A" | "B" | "C",
+      from: `PANEL_${side.toUpperCase()}.${circuit}`,
+      to: `J_WEAPON_PANEL_${side.toUpperCase()}.${circuit}`,
+      resistanceOhms: 2,
+      artifact: nextArtifact(`continuity-${circuit}`)
+    })),
+    isolation: {
+      testVoltageV: 5,
+      minimumResistanceOhms: 10_000_000,
+      artifact: nextArtifact("isolation")
+    },
+    negativeTests: ["open", "swap", "reversal"].map((id) => ({
+      id: id as "open" | "swap" | "reversal",
+      result: "rejected" as const,
+      artifact: nextArtifact(`negative-${id}`)
+    }))
+  }
+}
+
+function completeWeaponPanelPairEvidence() {
+  return {
+    artifactKind: "bench-prototype-custom-weapon-panel-pair-evidence" as const,
+    status: "measured" as const,
+    evidenceId: "BP034-WEAPON-PANEL-PAIR-001",
+    recordedAtUtc: "2026-08-24T00:00:00.000Z",
+    operator: "operator",
+    pairArtifact: artifact("weapon-panel-pair", "C".repeat(64)),
+    sides: [completeWeaponPanelHarnessEvidence("left"), completeWeaponPanelHarnessEvidence("right")] as const
   }
 }
 
@@ -202,6 +298,26 @@ describe("BP-034 connector pre-order evidence", () => {
     })
   })
 
+  it("defines the separate owner-validated OK Fencing cable scope without granting release", () => {
+    expect(validateBenchPrototypeWeaponPanelHarness(benchPrototypeWeaponPanelHarness)).toBe(true)
+    expect(benchPrototypeWeaponPanelHarness).toMatchObject({
+      workUnit: "BP-034",
+      targetAssembly: "per-side custom three-socket prototype weapon interface",
+      cableCompatibility: { supplier: "OK Fencing", status: "owner-validated-not-a-blocker" },
+      perPanelCircuitOrder: ["A", "B", "C"],
+      productionHarness: { status: "later-gate", selectionState: "unselected" },
+      fabricationDisposition: "DENY",
+      releaseState: "deny"
+    })
+    for (const photo of benchPrototypeWeaponPanelHarness.ownerReferencePhotos) {
+      const bytes = readFileSync(new URL(`../${photo.assetPath}`, import.meta.url))
+      expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(photo.sha256)
+    }
+    expect(benchPrototypeWeaponPanelHarness.photoNonClaims).toContain(
+      "They do not identify a socket SKU, spacing, material, rating, final panel geometry, or board-side connector."
+    )
+  })
+
   it("fails closed when any upstream identity or release gate drifts", () => {
     const mutations: readonly ((candidate: typeof benchPrototypeConnectorUpstreamProvenance) => void)[] = [
       (candidate) => void Reflect.set(candidate.bp050.normalInput, "receptacleMpn", "FORGED"),
@@ -239,6 +355,21 @@ describe("BP-034 connector pre-order evidence", () => {
       assetPath: "docs/evidence/bp-034/startech-usb2cc1m-datasheet.pdf",
       sha256: "AE5241D2A65A5B64F737D4205FD428B0432567EA98FA1482520AB0D9F345FAE7"
     })
+    const ethernetPaths = benchPrototypeConnectorPreorder.samples.find(
+      (sample) => sample.id === "ethernet-magjack"
+    )!.continuityMeasurements
+    expect(ethernetPaths).toHaveLength(9)
+    expect(ethernetPaths.map((row) => row.id)).toEqual([
+      "8p8c-contact-1",
+      "8p8c-contact-2",
+      "8p8c-contact-3",
+      "8p8c-contact-4",
+      "8p8c-contact-5",
+      "8p8c-contact-6",
+      "8p8c-contact-7",
+      "8p8c-contact-8",
+      "shield-shell"
+    ])
     expect(benchPrototypeConnectorPreorder.samples[0].selectionBasis).toMatchObject({
       cableEnds: "USB-C male to USB-C male",
       maximumVoltageV: 20,
@@ -280,6 +411,111 @@ describe("BP-034 connector pre-order evidence", () => {
   it("allows a complete physical-evidence fixture after cable selection", () => {
     const result = evaluateBenchPrototypeConnectorPreorderEvidence(completeEvidence())
     expect(result).toEqual({ accepted: true, reasons: [] })
+  })
+
+  it("requires a complete custom A/B/C panel harness evidence scope without changing BP-104", () => {
+    expect(evaluateBenchPrototypeWeaponPanelHarnessEvidence(completeWeaponPanelHarnessEvidence())).toEqual({
+      accepted: true,
+      reasons: []
+    })
+    const candidate = completeWeaponPanelHarnessEvidence()
+    expect(
+      evaluateBenchPrototypeWeaponPanelHarnessEvidence({
+        ...candidate,
+        panel: { ...candidate.panel, circuitOrder: ["B", "A", "C"] }
+      }).reasons
+    ).toContain("panel must define one insulated A/B/C three-socket panel with immutable evidence")
+    expect(
+      evaluateBenchPrototypeWeaponPanelHarnessEvidence({
+        ...candidate,
+        mate: { ...candidate.mate, forcedMateObserved: true }
+      }).reasons
+    ).toContain("mate must be de-energized, non-forced, accepted for mate/unmate, and immutable")
+    expect(
+      evaluateBenchPrototypeWeaponPanelHarnessEvidence({
+        ...candidate,
+        negativeTests: candidate.negativeTests.slice(1)
+      }).reasons
+    ).toContain("open, swap, and reversal negative captures are required and must be rejected")
+    expect(
+      evaluateBenchPrototypeWeaponPanelHarnessEvidence({
+        ...candidate,
+        prototypeImplementation: {
+          approach: "direct-carrier-pcb-mount" as const,
+          mountingHoleReferences: ["MH_WEAPON_LEFT_1", "MH_WEAPON_LEFT_2"],
+          mountingHardware: "documented screws and insulating hardware",
+          insertionLoadPath: "carrier hardware into PCB mounting holes",
+          solderJointsAreNotSoleMechanicalRetention: true as const,
+          artifact: artifact("direct-carrier-mount", "C".repeat(64))
+        }
+      })
+    ).toEqual({ accepted: true, reasons: [] })
+    expect(
+      evaluateBenchPrototypeWeaponPanelHarnessEvidence({
+        ...candidate,
+        prototypeImplementation: {
+          ...candidate.prototypeImplementation,
+          landingPads: candidate.prototypeImplementation.landingPads.map((row, index) =>
+            index === 0 ? { ...row, platedThroughHole: false } : row
+          )
+        }
+      }).reasons
+    ).toContain("prototype implementation must be one complete reviewed direct mount or landing-pad alternative")
+  })
+
+  it("requires independent accepted left and right prototype interfaces", () => {
+    const pair = completeWeaponPanelPairEvidence()
+    expect(evaluateBenchPrototypeWeaponPanelPairEvidence(pair)).toEqual({ accepted: true, reasons: [] })
+    expect(evaluateBenchPrototypeWeaponPanelPairEvidence({ ...pair, sides: [pair.sides[0]] }).reasons).toContain(
+      "pair evidence must contain exactly one left and one right interface"
+    )
+    expect(
+      evaluateBenchPrototypeWeaponPanelPairEvidence({
+        ...pair,
+        sides: [pair.sides[0], { ...pair.sides[1], panel: { ...pair.sides[1].panel, side: "left" } }]
+      }).reasons
+    ).toContain("pair side 2 must be the right interface")
+    const duplicatedArtifactId = pair.sides[0].panel.socketIdentityArtifact.artifactId
+    expect(
+      evaluateBenchPrototypeWeaponPanelPairEvidence({
+        ...pair,
+        sides: [
+          pair.sides[0],
+          {
+            ...pair.sides[1],
+            panel: {
+              ...pair.sides[1].panel,
+              socketIdentityArtifact: {
+                ...pair.sides[1].panel.socketIdentityArtifact,
+                artifactId: duplicatedArtifactId
+              }
+            }
+          }
+        ]
+      }).reasons
+    ).toContain(`right reuses immutable artifact ID ${duplicatedArtifactId} across interfaces`)
+    expect(
+      evaluateBenchPrototypeWeaponPanelPairEvidence({
+        ...pair,
+        sides: [pair.sides[0], { ...pair.sides[1], evidenceId: pair.sides[0].evidenceId }]
+      }).reasons
+    ).toContain("right evidence ID must be unique across the left and right interfaces")
+  })
+
+  it("requires explicit non-forced mating and retention or strain methods, loads, and results", () => {
+    const candidate = completeEvidence()
+    const matingAndOrientation = candidate.matingAndOrientation.map((row, index) =>
+      index === 0 ? { ...row, forcedMateObserved: true } : row
+    )
+    expect(evaluateBenchPrototypeConnectorPreorderEvidence({ ...candidate, matingAndOrientation }).reasons).toContain(
+      "matingAndOrientation record 1 must be a complete usb-c-input record"
+    )
+    const retentionAndStrain = candidate.retentionAndStrain.map((row, index) =>
+      index === 0 ? { ...row, strainLoadN: 0 } : row
+    )
+    expect(evaluateBenchPrototypeConnectorPreorderEvidence({ ...candidate, retentionAndStrain }).reasons).toContain(
+      "retentionAndStrain record 1 must be a complete usb-c-input record"
+    )
   })
 
   it("rejects missing, extra, reordered, and duplicate mate components", () => {
