@@ -25,7 +25,7 @@ COPY apps/legislation ./apps/legislation
 # install never consumes those packages. Trust only this committed lockfile so
 # pnpm installs the legislation dependency closure without weakening package
 # integrity checks for downloaded artifacts.
-RUN pnpm install --frozen-lockfile --config.trust-lockfile=true --filter legislation...
+RUN pnpm install --frozen-lockfile --trust-lockfile --filter legislation...
 RUN pnpm --filter legislation build
 RUN pnpm --filter legislation deploy --prod --legacy --force /opt/legislation
 
