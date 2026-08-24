@@ -30,6 +30,13 @@ normal and guarded harnesses are physically incompatible. The cable drawings,
 pin-one orientation, drill pattern, strain relief, and assembled keying test
 remain mandatory evidence before a fixture may be attached.
 
+The normal header pin map is pin 1 `LINE`, pin 2 `SGND`, and pin 3
+`ESD_RETURN_RESERVED_NC`. Pin 3 is electrically unconnected: the current
+coupon connects both `TPD4E05U06DQAR` ground pins 3 and 8 directly to `SGND`,
+and no separate `ESD_RETURN` net is released. The guarded header is pin 1
+`FORCE` and pin 2 `SGND`. A later split-return proposal requires a controlled
+tie-point design and a new review before reserved pin 3 may be used.
+
 ## Circuit reconciliation gate
 
 The circuit's 43 rows include the converter, regulator, reference, protection,

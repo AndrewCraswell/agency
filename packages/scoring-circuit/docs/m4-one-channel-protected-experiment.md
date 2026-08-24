@@ -130,6 +130,14 @@ E_MAX,100ms = 1.039 mJ
 The fixture must enforce a 100 ms maximum pulse, ten-second minimum interval,
 force-relay normally-open state, source-off state, source/sink mutual exclusion,
 current trip, watchdog, and observed permit before the coupon is connected.
+Measured records require commanded and observed force-relay, source, and sink
+states to agree; an armed current trip, satisfied dwell-timer witness, healthy
+fixture power, healthy watchdog, and observed permit are mandatory. Guarded
+records require both source and sink commanded and observed off.
+Every favorable measured record also requires an explicitly healthy reference,
+healthy positive and negative analog rails, clear overload observation, and an
+expected ADC-code observation. A false or missing value is valid only in an
+`unavailable` incident record and can never carry a resistance measurement.
 Each record requires independent line, buffer-input, buffer-output, force
 voltage, and force-current traces. A source envelope is not a component-rating,
 heat, clamp, surge, EFT, ESD, unpowered, brownout, or apparatus-fault proof.

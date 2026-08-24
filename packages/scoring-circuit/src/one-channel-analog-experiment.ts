@@ -364,9 +364,22 @@ const traceSchema = z
 
 const incidentControlSchema = z
   .object({
+    adcCodeObservedExpected: z.boolean(),
+    currentTripObservedArmed: z.boolean(),
+    dwellTimerObservedSatisfied: z.boolean(),
+    dwellTimerWitnessId: z.string().min(1),
     fixtureInterlockCertificateId: z.string().min(1),
     fixturePermitObserved: z.boolean(),
+    fixturePowerObservedGood: z.boolean(),
+    forceRelayCommandedClosed: z.boolean(),
     forceRelayObservedClosed: z.boolean(),
+    negativeRailObservedHealthy: z.boolean(),
+    overloadObservedClear: z.boolean(),
+    positiveRailObservedHealthy: z.boolean(),
+    referenceObservedHealthy: z.boolean(),
+    sinkCommandedEnabled: z.boolean(),
+    sinkObservedEnabled: z.boolean(),
+    sourceCommandedEnabled: z.boolean(),
     sourceObservedEnabled: z.boolean(),
     sourceSinkMutualExclusionObserved: z.boolean(),
     watchdogObservedHealthy: z.boolean()
@@ -374,7 +387,15 @@ const incidentControlSchema = z
   .strict()
 
 const measurementControlSchema = incidentControlSchema.extend({
+  adcCodeObservedExpected: z.literal(true),
+  currentTripObservedArmed: z.literal(true),
+  dwellTimerObservedSatisfied: z.literal(true),
   fixturePermitObserved: z.literal(true),
+  fixturePowerObservedGood: z.literal(true),
+  negativeRailObservedHealthy: z.literal(true),
+  overloadObservedClear: z.literal(true),
+  positiveRailObservedHealthy: z.literal(true),
+  referenceObservedHealthy: z.literal(true),
   sourceSinkMutualExclusionObserved: z.literal(true),
   watchdogObservedHealthy: z.literal(true)
 })
@@ -406,16 +427,28 @@ export const oneChannelExperimentRecordSchema = oneChannelRecordBaseSchema
   .strict()
   .superRefine((record, context) => {
     const isGuarded = record.mode === "guarded-force"
+    const observedMatchesCommands =
+      record.control.forceRelayCommandedClosed === record.control.forceRelayObservedClosed &&
+      record.control.sourceCommandedEnabled === record.control.sourceObservedEnabled &&
+      record.control.sinkCommandedEnabled === record.control.sinkObservedEnabled
     const stateMatchesMode = isGuarded
-      ? record.control.forceRelayObservedClosed &&
+      ? record.control.forceRelayCommandedClosed &&
+        record.control.forceRelayObservedClosed &&
+        !record.control.sourceCommandedEnabled &&
         !record.control.sourceObservedEnabled &&
+        !record.control.sinkCommandedEnabled &&
+        !record.control.sinkObservedEnabled &&
         record.forceAppliedVolts !== 0 &&
         record.forcePulseDurationMs > 0
-      : !record.control.forceRelayObservedClosed &&
+      : !record.control.forceRelayCommandedClosed &&
+        !record.control.forceRelayObservedClosed &&
+        record.control.sourceCommandedEnabled &&
         record.control.sourceObservedEnabled &&
+        !record.control.sinkCommandedEnabled &&
+        !record.control.sinkObservedEnabled &&
         record.forceAppliedVolts === 0 &&
         record.forcePulseDurationMs === 0
-    if (!stateMatchesMode) {
+    if (!stateMatchesMode || !observedMatchesCommands) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
         message: "control state does not match the declared experiment mode"

@@ -380,16 +380,25 @@ export const oneChannelAnalogExperimentReadiness = {
   circuitPhysicalReferenceCount: 43,
   connectorSafety: {
     circuitGender: "male" as const,
-    guarded: { boardMpn: "B2B-PH-K-S(LF)(SN)", mateMpn: "PHR-2", pitchMm: 2, positions: 2 },
+    guarded: {
+      boardMpn: "B2B-PH-K-S(LF)(SN)",
+      mateMpn: "PHR-2",
+      pinMap: { 1: "FORCE", 2: "SGND" },
+      pitchMm: 2,
+      positions: 2
+    },
     normal: {
       boardDrawingUrl: "https://www.molex.com/en-us/products/part-detail/436500300",
       boardMpn: "43650-0300",
       mateDrawingUrl: "https://www.molex.com/en-us/products/part-detail/436450300",
       mateMpn: "43645-0300",
       orientation: "right-angle" as const,
+      pinMap: { 1: "LINE", 2: "SGND", 3: "ESD_RETURN_RESERVED_NC" },
       pitchMm: 3,
       positions: 3
     },
+    normalPin3Disposition:
+      "J_FIXTURE pin 3 is reserved and electrically unconnected; no ESD_RETURN net or separate return path is released. U_ESD ground pins 3 and 8 connect to SGND.",
     physicallyMutuallyIncompatible: true
   },
   supportReconciliation: {

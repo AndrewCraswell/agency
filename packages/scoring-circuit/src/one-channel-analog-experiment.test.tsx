@@ -54,9 +54,22 @@ const measuredRecord: OneChannelExperimentRecord = {
   boardId: "M4-ONE-CHANNEL-001",
   capacitancePf: 10_000,
   control: {
+    adcCodeObservedExpected: true,
+    currentTripObservedArmed: true,
+    dwellTimerObservedSatisfied: true,
+    dwellTimerWitnessId: "DWELL-001",
     fixtureInterlockCertificateId: "INTERLOCK-001",
     fixturePermitObserved: true,
+    fixturePowerObservedGood: true,
+    forceRelayCommandedClosed: false,
     forceRelayObservedClosed: false,
+    negativeRailObservedHealthy: true,
+    overloadObservedClear: true,
+    positiveRailObservedHealthy: true,
+    referenceObservedHealthy: true,
+    sinkCommandedEnabled: false,
+    sinkObservedEnabled: false,
+    sourceCommandedEnabled: true,
     sourceObservedEnabled: true,
     sourceSinkMutualExclusionObserved: true,
     watchdogObservedHealthy: true
@@ -108,7 +121,13 @@ const measuredRecord: OneChannelExperimentRecord = {
 
 const guardedRecord: OneChannelExperimentRecord = {
   ...measuredRecord,
-  control: { ...measuredRecord.control, forceRelayObservedClosed: true, sourceObservedEnabled: false },
+  control: {
+    ...measuredRecord.control,
+    forceRelayCommandedClosed: true,
+    forceRelayObservedClosed: true,
+    sourceCommandedEnabled: false,
+    sourceObservedEnabled: false
+  },
   forceAppliedVolts: -24,
   forcePulseDurationMs: 100,
   mode: "guarded-force",
@@ -207,6 +226,13 @@ describe("one-channel protected analog experiment", () => {
       4: "SGND",
       5: "CFLY_POS"
     })
+    expect(physicalPortMap(circuitJson, "J_FIXTURE")).toEqual({
+      1: "LINE",
+      2: "SGND",
+      3: "ESD_RETURN_RESERVED_NC"
+    })
+    expect(physicalPortMap(circuitJson, "J_GUARDED_FORCE")).toEqual({ 1: "FORCE", 2: "SGND" })
+    expect(physicalPortMap(circuitJson, "U_ESD")).toEqual({ 1: "LINE_SHUNT", 3: "SGND_3", 8: "SGND_8" })
     expect(physicalPortMap(circuitJson, "U_SAR")).toEqual({
       1: "REF_2V5",
       2: "AVDD_3V3",
@@ -307,13 +333,58 @@ describe("one-channel protected analog experiment", () => {
     ).toThrow("control state does not match the declared experiment mode")
   })
 
+  it("rejects unsafe commanded, observed, trip, dwell, permit, and fixture-power measurement states", () => {
+    const unsafeControls = [
+      { sourceCommandedEnabled: false },
+      { sinkCommandedEnabled: true, sinkObservedEnabled: true },
+      { forceRelayObservedClosed: true },
+      { currentTripObservedArmed: false },
+      { dwellTimerObservedSatisfied: false },
+      { dwellTimerWitnessId: "" },
+      { fixturePermitObserved: false },
+      { fixturePowerObservedGood: false },
+      { referenceObservedHealthy: false },
+      { positiveRailObservedHealthy: false },
+      { negativeRailObservedHealthy: false },
+      { overloadObservedClear: false },
+      { adcCodeObservedExpected: false },
+      { sourceSinkMutualExclusionObserved: false },
+      { watchdogObservedHealthy: false }
+    ] as const
+
+    for (const unsafe of unsafeControls) {
+      expect(() =>
+        oneChannelExperimentRecordSchema.parse({
+          ...measuredRecord,
+          control: { ...measuredRecord.control, ...unsafe }
+        })
+      ).toThrow()
+    }
+
+    expect(() =>
+      oneChannelExperimentRecordSchema.parse({
+        ...guardedRecord,
+        control: { ...guardedRecord.control, sourceObservedEnabled: true }
+      })
+    ).toThrow("control state does not match the declared experiment mode")
+  })
+
   it("archives unavailable conditions without inventing a resistance measurement", () => {
     const { measurement: _measurement, ...common } = measuredRecord
     const unavailable = {
       ...common,
       control: {
         ...common.control,
+        currentTripObservedArmed: false,
+        dwellTimerObservedSatisfied: false,
         fixturePermitObserved: false,
+        fixturePowerObservedGood: false,
+        negativeRailObservedHealthy: false,
+        overloadObservedClear: false,
+        positiveRailObservedHealthy: false,
+        referenceObservedHealthy: false,
+        adcCodeObservedExpected: false,
+        sourceCommandedEnabled: false,
         sourceObservedEnabled: false,
         sourceSinkMutualExclusionObserved: false,
         watchdogObservedHealthy: false

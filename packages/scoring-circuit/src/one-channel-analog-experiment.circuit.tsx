@@ -8,7 +8,7 @@ export default function OneChannelAnalogExperimentCircuit() {
       <pinheader
         name="J_FIXTURE"
         pinCount={3}
-        pinLabels={{ pin1: "LINE", pin2: "SGND", pin3: "ESD_RETURN" }}
+        pinLabels={{ pin1: "LINE", pin2: "SGND", pin3: "ESD_RETURN_RESERVED_NC" }}
         gender="male"
         pcbX={-32}
         pcbY={23}
