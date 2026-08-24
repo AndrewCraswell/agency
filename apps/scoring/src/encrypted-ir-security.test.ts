@@ -293,6 +293,39 @@ describe("RC-03 encrypted IR security contract", () => {
     ).toMatchObject({ disposition: "rejected", reason: "command-id-capacity-exhausted", replayState: capacityState })
   })
 
+  it("uses canonical microseconds with an exact one-second window boundary", () => {
+    const windowStartUs = 2_000_000
+    const initial = createIrIngressThrottleState(windowStartUs)
+    expect(initial).toMatchObject({ windowStartedAtUs: windowStartUs })
+    expect(Object.keys(initial)).not.toContain("windowStartedAtMilliseconds")
+    const beforeBoundary = admitIrIngress(initial, pairing.remoteIdentity, windowStartUs + 999_999)
+    expect(beforeBoundary.disposition).toBe("admitted")
+    if (beforeBoundary.disposition !== "admitted") throw new Error("expected pre-boundary admission")
+    const atBoundary = admitIrIngress(
+      beforeBoundary.state,
+      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      windowStartUs + 1_000_000
+    )
+    expect(atBoundary).toMatchObject({ disposition: "admitted" })
+    if (atBoundary.disposition !== "admitted") throw new Error("expected boundary admission")
+    expect(atBoundary.state.windowStartedAtUs).toBe(windowStartUs + 1_000_000)
+    expect(atBoundary.state.globalWindowCount).toBe(1)
+  })
+
+  it("rejects unsafe timestamps and legacy millisecond state fields", () => {
+    const initial = createIrIngressThrottleState(0)
+    const unsafeTimestamp = Number.MAX_SAFE_INTEGER + 1
+    expect(() => createIrIngressThrottleState(unsafeTimestamp)).toThrow(TypeError)
+    expect(admitIrIngress(initial, pairing.remoteIdentity, unsafeTimestamp)).toMatchObject({
+      disposition: "rejected",
+      reason: "invalid-ingress"
+    })
+    expect(admitIrIngress({ ...initial, windowStartedAtMilliseconds: 0 }, pairing.remoteIdentity, 0)).toMatchObject({
+      disposition: "rejected",
+      reason: "invalid-ingress"
+    })
+  })
+
   it("enforces bounded queue, pair rate, global rate, release, and monotonic ingress time", () => {
     let queueState = createIrIngressThrottleState(100)
     for (let index = 0; index < IR_INGRESS_QUEUE_CAPACITY; index += 1) {

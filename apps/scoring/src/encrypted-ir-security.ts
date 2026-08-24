@@ -212,7 +212,7 @@ export type IrIngressThrottleState = Readonly<{
   globalWindowCount: number
   queuedFrameCount: number
   remoteWindowCounts: readonly Readonly<{ count: number; remoteIdentity: string }>[]
-  windowStartedAtMilliseconds: number
+  windowStartedAtUs: number
 }>
 
 export type IrIngressAdmission =
@@ -228,7 +228,7 @@ const COMMAND_ID_HEX_LENGTH = 32
 const COUNTER_HEX_LENGTH = 16
 const ZERO_COUNTER = "0000000000000000"
 const MAX_COUNTER = "00000000ffffffff"
-const RATE_WINDOW_MILLISECONDS = 1_000
+const RATE_WINDOW_US = 1_000_000
 
 function isStrictPlainRecord(value: unknown): value is Record<string, unknown> {
   if (typeof value !== "object" || value === null || Object.getPrototypeOf(value) !== Object.prototype) return false
@@ -319,13 +319,13 @@ function freezeThrottleState(
   globalWindowCount: number,
   queuedFrameCount: number,
   remoteWindowCounts: readonly Readonly<{ count: number; remoteIdentity: string }>[],
-  windowStartedAtMilliseconds: number
+  windowStartedAtUs: number
 ): IrIngressThrottleState {
   return Object.freeze({
     globalWindowCount,
     queuedFrameCount,
     remoteWindowCounts: Object.freeze(remoteWindowCounts.map((entry) => Object.freeze({ ...entry }))),
-    windowStartedAtMilliseconds
+    windowStartedAtUs
   })
 }
 
@@ -706,18 +706,13 @@ function isRemoteWindowCount(value: unknown): value is Readonly<{ count: number;
 function isIrIngressThrottleState(value: unknown): value is IrIngressThrottleState {
   if (
     !isStrictPlainRecord(value) ||
-    !hasExactlyKeys(value, [
-      "globalWindowCount",
-      "queuedFrameCount",
-      "remoteWindowCounts",
-      "windowStartedAtMilliseconds"
-    ]) ||
+    !hasExactlyKeys(value, ["globalWindowCount", "queuedFrameCount", "remoteWindowCounts", "windowStartedAtUs"]) ||
     !isNonnegativeSafeInteger(value.globalWindowCount) ||
     value.globalWindowCount > IR_GLOBAL_RATE_LIMIT_PER_SECOND ||
     !isNonnegativeSafeInteger(value.queuedFrameCount) ||
     value.queuedFrameCount > IR_INGRESS_QUEUE_CAPACITY ||
     !isStrictDenseArray(value.remoteWindowCounts) ||
-    !isNonnegativeSafeInteger(value.windowStartedAtMilliseconds)
+    !isNonnegativeSafeInteger(value.windowStartedAtUs)
   ) {
     return false
   }
@@ -731,12 +726,12 @@ function isIrIngressThrottleState(value: unknown): value is IrIngressThrottleSta
   return counted === value.globalWindowCount
 }
 
-/** Creates an empty in-memory ingress queue/rate state for a monotonic millisecond clock. */
-export function createIrIngressThrottleState(windowStartedAtMilliseconds: unknown): IrIngressThrottleState {
-  if (!isNonnegativeSafeInteger(windowStartedAtMilliseconds)) {
-    throw new TypeError("IR ingress state requires a nonnegative monotonic millisecond clock")
+/** Creates an empty in-memory ingress queue/rate state for a monotonic microsecond clock. */
+export function createIrIngressThrottleState(windowStartedAtUs: unknown): IrIngressThrottleState {
+  if (!isNonnegativeSafeInteger(windowStartedAtUs)) {
+    throw new TypeError("IR ingress state requires a nonnegative monotonic microsecond clock")
   }
-  return freezeThrottleState(0, 0, [], windowStartedAtMilliseconds)
+  return freezeThrottleState(0, 0, [], windowStartedAtUs)
 }
 
 function rejectIngress(
@@ -750,26 +745,25 @@ function rejectIngress(
 export function admitIrIngress(
   throttleState: unknown,
   remoteIdentity: unknown,
-  observedAtMilliseconds: unknown
+  observedAtUs: unknown
 ): IrIngressAdmission {
   if (!isIrIngressThrottleState(throttleState)) return rejectIngress("invalid-ingress", null)
   const currentThrottleState = freezeThrottleState(
     throttleState.globalWindowCount,
     throttleState.queuedFrameCount,
     throttleState.remoteWindowCounts,
-    throttleState.windowStartedAtMilliseconds
+    throttleState.windowStartedAtUs
   )
-  if (!isIdentity(remoteIdentity) || !isNonnegativeSafeInteger(observedAtMilliseconds)) {
+  if (!isIdentity(remoteIdentity) || !isNonnegativeSafeInteger(observedAtUs)) {
     return rejectIngress("invalid-ingress", currentThrottleState)
   }
-  if (observedAtMilliseconds < currentThrottleState.windowStartedAtMilliseconds) {
+  if (observedAtUs < currentThrottleState.windowStartedAtUs) {
     return rejectIngress("clock-regression", currentThrottleState)
   }
-  const withinWindow =
-    observedAtMilliseconds - currentThrottleState.windowStartedAtMilliseconds < RATE_WINDOW_MILLISECONDS
+  const withinWindow = observedAtUs - currentThrottleState.windowStartedAtUs < RATE_WINDOW_US
   const base = withinWindow
     ? currentThrottleState
-    : freezeThrottleState(0, currentThrottleState.queuedFrameCount, [], observedAtMilliseconds)
+    : freezeThrottleState(0, currentThrottleState.queuedFrameCount, [], observedAtUs)
   if (base.queuedFrameCount === IR_INGRESS_QUEUE_CAPACITY) return rejectIngress("queue-capacity-exhausted", base)
   if (base.globalWindowCount === IR_GLOBAL_RATE_LIMIT_PER_SECOND) return rejectIngress("rate-limited", base)
 
@@ -788,7 +782,7 @@ export function admitIrIngress(
       base.globalWindowCount + 1,
       base.queuedFrameCount + 1,
       remoteWindowCounts,
-      base.windowStartedAtMilliseconds
+      base.windowStartedAtUs
     )
   }
 }
@@ -802,7 +796,7 @@ export function releaseIrIngressSlot(throttleState: unknown): IrIngressAdmission
     throttleState.globalWindowCount,
     throttleState.queuedFrameCount,
     throttleState.remoteWindowCounts,
-    throttleState.windowStartedAtMilliseconds
+    throttleState.windowStartedAtUs
   )
   return {
     disposition: "released",
@@ -811,7 +805,7 @@ export function releaseIrIngressSlot(throttleState: unknown): IrIngressAdmission
       currentThrottleState.globalWindowCount,
       currentThrottleState.queuedFrameCount - 1,
       currentThrottleState.remoteWindowCounts,
-      currentThrottleState.windowStartedAtMilliseconds
+      currentThrottleState.windowStartedAtUs
     )
   }
 }

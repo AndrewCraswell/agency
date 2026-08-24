@@ -43,7 +43,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 23 | SC-008 | P3 | done | Root-approved private finite-positive assertion now serves the three electrical-budget modules with unchanged errors |
 | 24 | SC-006 | P2 | done | Root-approved strict evidence-time parser now serves connector, fixture, footprint, and IR evidence validators |
 | 25 | SC-009 | P2 | done | Root-approved canonical UTC parser now governs all four analog-evidence flows and their temporal comparisons |
-| 27 | SD-016 | P1 | ready | Encrypted-IR ingress throttling stores milliseconds instead of canonical integer microseconds |
+| 27 | SD-016 | P1 | done | Root-approved ingress throttle now uses canonical integer microseconds with an exact one-second boundary |
 | 28 | SD-017 | P2 | done | Root-approved ordered layout now derives every wire offset, the 70-byte header, and 150-byte maximum without changing RC-03 bytes |
 | 29 | SD-018 | P2 | in-progress | Live simulator rebuild can leave startup-cached HTML pointing at deleted hashed assets |
 
@@ -432,7 +432,8 @@ truth.
 ## SD-016: use canonical microseconds for encrypted-IR ingress throttling
 
 - Priority: `P1`
-- State: `ready`
+- State: `done`
+- Latest state: Root-approved ingress state/API use windowStartedAtUs/observedAtUs and a 1,000,000-microsecond window; exact-boundary, unsafe-integer, legacy-field, type, lint, and format checks pass.
 - Affected files: `apps/scoring/src/encrypted-ir-security.ts` and its focused tests.
 - Description: the throttle state and API use `windowStartedAtMilliseconds` and `observedAtMilliseconds` with a `1_000` window even though the product time contract requires bounded integer microseconds.
 - Impact: a receiver or virtual-clock adapter can introduce a 1,000-times conversion error at the rate-limit boundary.
