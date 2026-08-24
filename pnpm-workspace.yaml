@@ -4,6 +4,14 @@ packages:
 # Flat node_modules so depending on @repo/storybook-config transitively provides
 # the whole Storybook stack (addons resolve from the app dir).
 nodeLinker: hoisted
+# circuit-json imports its Zod schemas at runtime but declares Zod only as a
+# development dependency. Keep that runtime dependency on the Zod 3 API used
+# by the tscircuit props/core packages instead of resolving the workspace's
+# unrelated Zod 4 installation.
+packageExtensions:
+  "circuit-json@0.0.465":
+    dependencies:
+      zod: 3.25.76
 # Versions locked once for the whole monorepo. Reference them with "catalog:".
 catalog:
   "@types/node": 24.13.2
