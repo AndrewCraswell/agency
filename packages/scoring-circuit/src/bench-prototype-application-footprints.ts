@@ -1,0 +1,518 @@
+/**
+ * BP-033: fail-closed footprint-closure ledger for the application carrier.
+ *
+ * This ledger is a reconciliation aid, not a PCB library.  In particular, a
+ * package name is not copper geometry: every populated reference remains
+ * DNP-unresolved until its exact manufacturer drawing, CAD, generated
+ * artwork, and independently reviewed orientation are archived.
+ */
+
+import {
+  benchPrototypeApplicationRail,
+  validateBenchPrototypeApplicationRail
+} from "./bench-prototype-application-rail.js"
+import { benchPrototypeEthernetMdi, validateBenchPrototypeEthernetMdi } from "./bench-prototype-ethernet-mdi.js"
+import { benchPrototypeEthernet, validateBenchPrototypeEthernet } from "./bench-prototype-ethernet.js"
+import {
+  benchPrototypeFootprintReviewTemplate,
+  validateBenchPrototypeFootprintReview
+} from "./bench-prototype-footprint-review.js"
+import {
+  benchPrototypeHub75Connector,
+  validateBenchPrototypeHub75Connector
+} from "./bench-prototype-hub75-connector.js"
+import { benchPrototypeHub75Safing, validateBenchPrototypeHub75Safing } from "./bench-prototype-hub75-safing.js"
+import {
+  benchPrototypeIrReceiverSelection,
+  validateBenchPrototypeIrReceiverSelection
+} from "./bench-prototype-ir-receiver-selection.js"
+import {
+  benchPrototypeOptionalPeripherals,
+  validateBenchPrototypeOptionalPeripherals
+} from "./bench-prototype-optional-peripherals.js"
+import { calculateBenchPrototypePowerContract, defaultBenchPrototypePowerInputs } from "./bench-prototype-power.js"
+import { ethernetSupportNetwork } from "./ethernet-support-network.js"
+
+type PlainRecord = Record<PropertyKey, unknown>
+
+function isPlainRecord(value: unknown): value is PlainRecord {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.getPrototypeOf(value) === Object.prototype
+  )
+}
+
+function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || typeof value !== "object") return value
+  if (seen.has(value)) throw new RangeError("BP-033 ledger cannot contain aliases or cycles")
+  seen.add(value)
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (descriptor === undefined || !("value" in descriptor)) throw new RangeError("BP-033 accepts data only")
+    deepFreeze(descriptor.value, seen)
+  }
+  return Object.freeze(value)
+}
+
+function sameDataGraph(actual: unknown, expected: unknown, seen = new WeakMap<object, object>()): boolean {
+  if (Object.is(actual, expected)) return true
+  if (actual === null || expected === null || typeof actual !== "object" || typeof expected !== "object") return false
+  if (seen.has(actual)) return seen.get(actual) === expected
+  seen.set(actual, expected)
+  if (Array.isArray(actual) !== Array.isArray(expected)) return false
+  if (Array.isArray(actual)) {
+    if (
+      !Array.isArray(expected) ||
+      Object.getPrototypeOf(actual) !== Array.prototype ||
+      Object.getPrototypeOf(expected) !== Array.prototype ||
+      actual.length !== expected.length
+    )
+      return false
+  } else if (!(isPlainRecord(actual) && isPlainRecord(expected))) return false
+  const actualKeys = Reflect.ownKeys(actual)
+  const expectedKeys = Reflect.ownKeys(expected)
+  if (
+    actualKeys.length !== expectedKeys.length ||
+    actualKeys.some((key) => typeof key === "symbol" || !expectedKeys.includes(key))
+  )
+    return false
+  return expectedKeys.every((key) => {
+    const left = Object.getOwnPropertyDescriptor(actual, key)
+    const right = Object.getOwnPropertyDescriptor(expected, key)
+    return (
+      left !== undefined &&
+      right !== undefined &&
+      "value" in left &&
+      "value" in right &&
+      left.enumerable === right.enumerable &&
+      sameDataGraph(left.value, right.value, seen)
+    )
+  })
+}
+
+const noEvidence = () => ({
+  manufacturerDrawing: { state: "not-acquired", url: null, revision: null, sha256: null },
+  manufacturerCad: { state: "not-acquired", url: null, revision: null, sha256: null },
+  artwork: { state: "not-generated", artifactPath: null, generator: null, sha256: null },
+  orientation: { state: "unreviewed", assemblyRotationDeg: null, datum: null, notes: null }
+})
+
+type Seed = {
+  readonly reference: string
+  readonly section: string
+  readonly manufacturer: string
+  readonly mpn: string
+  readonly package: string | null
+  readonly sourceContract: string
+  readonly sourceUrl: string | null
+}
+
+function selected(seed: Seed) {
+  return {
+    ...seed,
+    packageStatus: seed.package === null ? "upstream-package-not-specified" : "exact-package-identified",
+    population: "DNP-unresolved",
+    ...noEvidence()
+  } as const
+}
+
+function dnp(reference: string, retainedCandidateMpn: string | null, reason: string) {
+  return {
+    reference,
+    retainedCandidateMpn,
+    population: "DNP",
+    reason,
+    footprintLandPattern: "prohibited-until-a-scoped-selection-contract"
+  } as const
+}
+
+function selectionBlocked(reference: string, role: string, upstreamDisposition: string) {
+  return {
+    reference,
+    section: "ethernet",
+    manufacturer: null,
+    mpn: null,
+    package: null,
+    packageStatus: "upstream-package-not-specified",
+    population: "DNP-or-selection-blocked",
+    sourceContract: "BP-140",
+    role,
+    upstreamDisposition,
+    ...noEvidence()
+  } as const
+}
+
+const powerSeeds = [
+  ["J_USB_C", "Amphenol ICC", "10177070-00011LF", null, "USB-C receptacle"],
+  ["U_USB_PD", "Texas Instruments", "TPS25730ADREFR", null, "USB-C PD sink controller"],
+  ["U_USB_CC_SBU_PROTECT", "Texas Instruments", "TPD4S201TRGRRQ1", null, "CC/SBU protector"],
+  ["U_USB_DATA_PROTECT", "Texas Instruments", "TPD2EUSB30DRTR", null, "USB data protector"],
+  ["D_VBUS_TVS", "Texas Instruments", "TVS2200DRVR", null, "VBUS TVS"],
+  ["D_SOURCE_SELECTOR", "Diodes Incorporated", "B340A-13-F", null, "source-selector surge diode"],
+  ["U_VBUS_EFUSE", "Texas Instruments", "TPS259474ARPWR", null, "VBUS eFuse"],
+  ["U_DISPLAY_LIMITER", "Texas Instruments", "TPS259474ARPWR", null, "display branch limiter"],
+  ["S_SOURCE_SELECTOR", "C&K", "7101SYZQE", null, "de-energized source selector"],
+  ["F_APPLICATION", "Littelfuse", "0451002.MRL", null, "application branch fuse"],
+  ["F_DISPLAY", "Littelfuse", "045106.3MRL", null, "display branch fuse"],
+  ["F_SCORING", "Littelfuse", "0451.500MRL", null, "isolated scoring branch fuse"],
+  ["J_LAB_INJECTION", "Molex", "43045-0400", null, "laboratory injection header"],
+  ["J_LINK_INPUT", "Molex", "39-28-1023", null, "input removable measurement link"],
+  ["J_LINK_APPLICATION", "Molex", "39-28-1023", null, "application removable measurement link"],
+  ["J_LINK_DISPLAY", "Molex", "39-28-1023", null, "display removable measurement link"],
+  ["J_LINK_SCORING", "Molex", "39-28-1023", null, "scoring removable measurement link"],
+  ["R_DISPLAY_ILM", "Yageo", "RC0402FR-07698RL", "0402", "display limiter ILM resistor"],
+  ["C_DISPLAY_BYPASS", "KEMET", "C0402C104K3RACTU", "0402", "display limiter local bypass"],
+  ["C_DISPLAY_DVDT", "KEMET", "C0402C222K3RACTU", "0402", "display limiter dV/dt capacitor"],
+  ["C_DISPLAY_ITIMER", "KEMET", "C0402C222K3RACTU", "0402", "display limiter retry capacitor"],
+  ["C_DISPLAY_IN", "TDK", "C2012X7S1A226M125AC", "0805", "display limiter input capacitor"],
+  ["C_DISPLAY_OUT", "TDK", "C2012X7S1A226M125AC", "0805", "display limiter output capacitor"],
+  ["R_DISPLAY_PG_PULLUP", "Yageo", "RC0402FR-0710KL", "0402", "display limiter PG pull-up"],
+  ["R_DISPLAY_PG_LOWER", "Yageo", "RC0402FR-0749K9L", "0402", "display limiter threshold lower resistor"],
+  ["R_DISPLAY_PG_UPPER", "Yageo", "RC0402FR-07137KL", "0402", "display limiter threshold upper resistor"]
+] as const
+
+const applicationSeeds = [
+  ["U_APP_REGULATOR", "Texas Instruments", "LMR43620MSC3RPERQ1", "VQFN-HR RPE, 2 mm x 2 mm", "application regulator"],
+  ["L_APP_REGULATOR", "Coilcraft", "XGL4030-222MEC", null, "application regulator inductor"],
+  ["C_APP_REG_IN", "TDK", "C2012X7R1E475K125AB", "0805", "application regulator input capacitor"],
+  ["C_APP_REG_IN_HF", "KEMET", "C0603C104K3RACTU", "0603", "application regulator bypass"],
+  ["C_APP_REG_BOOT", "KEMET", "C0603C104K3RACTU", "0603", "application regulator bootstrap capacitor"],
+  ["C_APP_REG_VCC", "Wurth Elektronik", "885012206052", "0603", "application regulator VCC bypass"],
+  ["C_APP_REG_OUT_A", "TDK", "C2012X7S1A226M125AC", "0805", "application rail output capacitor"],
+  ["C_APP_REG_OUT_B", "TDK", "C2012X7S1A226M125AC", "0805", "application rail output capacitor"],
+  ["C_APP_REG_OUT_C", "TDK", "C2012X7S1A226M125AC", "0805", "application rail output capacitor"],
+  ["R_APP_REG_DISCHARGE", "Yageo", "RC0603FR-071KL", "0603", "application rail discharge resistor"],
+  ["R_APP_REG_PGOOD", "Yageo", "RC0603FR-0710KL", "0603", "application regulator PGOOD pull-up"]
+] as const
+
+const ethernetSeeds = [
+  {
+    reference: "U_W5500",
+    section: "ethernet",
+    manufacturer: "WIZnet",
+    mpn: "W5500",
+    package: "LQFP-48, 7 mm x 7 mm, 0.5 mm pitch",
+    sourceContract: "BP-140/BP-141",
+    sourceUrl: "https://docs.wiznet.io/img/products/w5500/W5500_ds_v110e.pdf"
+  },
+  {
+    reference: "J_ETH",
+    section: "ethernet",
+    manufacturer: "Würth Elektronik",
+    mpn: "7499011121A",
+    package: null,
+    sourceContract: "BP-141",
+    sourceUrl: "https://www.we-online.com/components/products/datasheet/7499011121A.pdf"
+  },
+  ...ethernetSupportNetwork.supportNetworkComponents.map((part) => ({
+    reference: part.reference,
+    section: "ethernet",
+    manufacturer: part.manufacturer,
+    mpn: part.mpn,
+    package: part.package,
+    sourceContract: "BP-140",
+    sourceUrl: part.sourceUrls[0] ?? null
+  })),
+  {
+    reference: "R_W5500_RESET_PULLUP",
+    section: "ethernet",
+    manufacturer: "Yageo",
+    mpn: "RC0603FR-0710KL",
+    package: "0603",
+    sourceContract: "BP-123/BP-140",
+    sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
+  },
+  {
+    reference: "U_APP_RESET_FANOUT",
+    section: "ethernet",
+    manufacturer: "Texas Instruments",
+    mpn: "SN74LVC2G07DCKR",
+    package: "SC70-6",
+    sourceContract: "BP-123/BP-140",
+    sourceUrl: "https://www.ti.com/lit/ds/symlink/sn74lvc2g07.pdf"
+  }
+] as const
+
+const bp140SelectionBlockedReferences = [
+  selectionBlocked(
+    "TP_W5500_RESET_N",
+    "W5500 reset observation point",
+    "BP-140 requires an observation endpoint but selects no exact test-point manufacturer, MPN, or package."
+  ),
+  selectionBlocked(
+    "TP_W5500_INT_N",
+    "W5500 interrupt observation point",
+    "BP-140 requires an observation endpoint but selects no exact test-point manufacturer, MPN, or package."
+  ),
+  selectionBlocked(
+    "R_W5500_INT_BIAS",
+    "optional W5500 interrupt local bias",
+    "BP-140 leaves the value TBD and requires BP-123 to select an exact bias part or explicitly DNP it after power-sequence review."
+  )
+] as const
+
+function currentBp140ReferenceSet(): string[] {
+  return [
+    benchPrototypeEthernet.controller.reference,
+    ...benchPrototypeEthernet.supportParts.map((part) => part.reference),
+    benchPrototypeEthernet.nets.reset.pullup.reference,
+    benchPrototypeEthernet.nets.reset.driver.reference,
+    benchPrototypeEthernet.nets.reset.observationEndpoint,
+    benchPrototypeEthernet.nets.interrupt.bias.reference,
+    benchPrototypeEthernet.nets.interrupt.observationEndpoint
+  ].sort()
+}
+
+const hub75Seeds = [
+  {
+    reference: "J_HUB75",
+    section: "HUB75",
+    manufacturer: "Samtec",
+    mpn: "TST-108-04-G-D-RA",
+    package: "2 x 8 right-angle through-hole header",
+    sourceContract: "BP-143",
+    sourceUrl: "https://www.samtec.com/products/tst-108-04-g-d-ra"
+  },
+  ...benchPrototypeHub75Safing.partIdentityEvidence.map((part) => ({
+    reference: part.reference,
+    section: "HUB75",
+    manufacturer: part.manufacturer,
+    mpn: part.mpn,
+    package: part.package,
+    sourceContract: "BP-144",
+    sourceUrl: part.sourceUrl
+  }))
+] as const
+
+const irSeeds = [
+  {
+    reference: "U_IR",
+    section: "encrypted-IR",
+    manufacturer: benchPrototypeIrReceiverSelection.receiver.manufacturer,
+    mpn: benchPrototypeIrReceiverSelection.receiver.mpn,
+    package: benchPrototypeIrReceiverSelection.receiver.package,
+    sourceContract: "BP-146",
+    sourceUrl: "https://www.vishay.com/docs/82491/tsop382.pdf"
+  },
+  ...benchPrototypeIrReceiverSelection.supportNetwork.map((part) => ({
+    reference: part.reference,
+    section: "encrypted-IR",
+    manufacturer: part.manufacturer,
+    mpn: part.mpn,
+    package: part.package,
+    sourceContract: "BP-146",
+    sourceUrl: null
+  })),
+  {
+    reference: "TP_IR_RX",
+    section: "encrypted-IR",
+    manufacturer: "Keystone Electronics",
+    mpn: "5001",
+    package: "miniature through-hole test point, 1.02 mm hole",
+    sourceContract: "BP-146",
+    sourceUrl: "https://www.keystone-europe.com/wp-content/uploads/2025/08/terminal-test-points.pdf"
+  },
+  {
+    reference: "U_FRAM",
+    section: "application peripheral",
+    manufacturer: "Infineon",
+    mpn: "CY15B104Q-LHXIT",
+    package: "8-pin TDFN/DFN, 5 mm x 6 mm x 0.75 mm, PG-USON-8, drawing 001-85579",
+    sourceContract: "BP-145",
+    sourceUrl:
+      "https://www.infineon.com/dgdl/Infineon-CY15B104Q-4-Mbit_(512_K_x_8)_Serial_(SPI)_F-RAM-DataSheet-v15_00-EN.pdf"
+  },
+  {
+    reference: "R_FRAM_WP_PULLUP",
+    section: "application peripheral",
+    manufacturer: "Yageo",
+    mpn: "RC0603FR-0710KL",
+    package: "0603",
+    sourceContract: "BP-145",
+    sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
+  },
+  {
+    reference: "R_FRAM_HOLD_PULLUP",
+    section: "application peripheral",
+    manufacturer: "Yageo",
+    mpn: "RC0603FR-0710KL",
+    package: "0603",
+    sourceContract: "BP-145",
+    sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL"
+  },
+  {
+    reference: "C_FRAM_BYPASS",
+    section: "application peripheral",
+    manufacturer: "KEMET",
+    mpn: "C0603C104K3RACTU",
+    package: "0603",
+    sourceContract: "BP-145",
+    sourceUrl: "https://search.kemet.com/component-documentation/download/specsheet/C0603C104K3RACTU"
+  }
+] as const
+
+const records = [
+  ...powerSeeds.map(([reference, manufacturer, mpn, packageName, role]) =>
+    selected({
+      reference,
+      section: "power",
+      manufacturer,
+      mpn,
+      package: packageName,
+      sourceContract: "BP-050",
+      sourceUrl: null,
+      role
+    } as Seed & { readonly role: string })
+  ),
+  ...applicationSeeds.map(([reference, manufacturer, mpn, packageName, role]) =>
+    selected({
+      reference,
+      section: "application-3v3",
+      manufacturer,
+      mpn,
+      package: packageName,
+      sourceContract: "BP-142",
+      sourceUrl: null,
+      role
+    } as Seed & { readonly role: string })
+  ),
+  ...ethernetSeeds.map(selected),
+  ...hub75Seeds.map(selected),
+  ...irSeeds.map(selected)
+]
+
+const bp140ReferenceReconciliation = [
+  ...records
+    .filter((record) => record.sourceContract.includes("BP-140"))
+    .map((record) => ({
+      reference: record.reference,
+      reconciliation: "selected-awaiting-footprint-evidence" as const
+    })),
+  ...bp140SelectionBlockedReferences.map((record) => ({
+    reference: record.reference,
+    reconciliation: record.population
+  }))
+].sort((left, right) => left.reference.localeCompare(right.reference))
+
+const definition = {
+  artifactKind: "bench-prototype-application-footprint-closure-ledger",
+  workUnit: "BP-033",
+  targetAssembly: "one-board bench prototype",
+  releaseState: "deny",
+  fabricationAuthorized: false,
+  upstream: {
+    method: "BP-030",
+    power: "BP-050",
+    ethernet: ["BP-140", "BP-141"],
+    applicationRail: "BP-142",
+    hub75: ["BP-143", "BP-144"],
+    optionalPeripherals: "BP-145",
+    encryptedIrReceiver: "BP-146"
+  },
+  records,
+  bp140ReferenceReconciliation,
+  bp140SelectionBlockedReferences,
+  omittedPeripherals: [
+    dnp("U_RTC", "RV-3028-C7", "Not required for first physical validation."),
+    dnp("U_SECURE_ELEMENT", "STSAFE-A110", "Exact provisioned orderable and package variant are not selected."),
+    dnp("U_AUDIO", "TAS2505TRGERQ1", "Audio is not required; GPIO35 is dedicated to IR_RX."),
+    dnp("J_SPEAKER", null, "No speaker, connector, or load evidence exists."),
+    dnp("ANT_EXTERNAL", null, "No exact antenna/cable assembly is selected; Ethernet is the bench network path.")
+  ],
+  closureRules: [
+    "A package identity never grants pad, drill, copper, mask, paste, courtyard, or assembly geometry.",
+    "Each DNP-unresolved record requires an exact manufacturer drawing revision and SHA-256, exact CAD or an explicit no-CAD record, generated artwork hash, and independent orientation review.",
+    "BP-300 may not instantiate a record whose packageStatus is upstream-package-not-specified; obtain the exact package from the manufacturer before assigning geometry.",
+    "TP_W5500_RESET_N and TP_W5500_INT_N require exact test-point selections, packages, drawings, CAD, artwork, and probe-clearance review before population.",
+    "R_W5500_INT_BIAS remains DNP-or-selection-blocked until BP-123 either selects its exact value, manufacturer, MPN, and package or explicitly records DNP after power-sequence review.",
+    "Keep U_AUDIO and every omitted peripheral DNP. Do not create a land pattern, route, or bodge connection for an omitted peripheral.",
+    "The TSOP38438 optical aperture, front-panel coupon, receiver timing/range/flood tests, and GPIO35 isolation remain BP-146 gates; they are not closed by this ledger."
+  ],
+  authority: {
+    exactMpnAndManufacturerReconciled: true,
+    fullBp140ReferenceSetReconciled: true,
+    bp140BlockedReferenceIdentitiesReconciled: false,
+    everyPackageIdentityReconciled: false,
+    manufacturerDrawingsReviewed: false,
+    manufacturerCadReviewed: false,
+    artworkReviewed: false,
+    orientationsReviewed: false,
+    schematicIntegrationAuthorized: false,
+    layoutAuthorized: false,
+    fabricationAuthorized: false,
+    releaseState: "deny"
+  }
+} as const
+
+export const benchPrototypeApplicationFootprints = deepFreeze(definition)
+
+function assertUpstream(): void {
+  validateBenchPrototypeFootprintReview(benchPrototypeFootprintReviewTemplate)
+  calculateBenchPrototypePowerContract(defaultBenchPrototypePowerInputs)
+  validateBenchPrototypeEthernet(benchPrototypeEthernet)
+  validateBenchPrototypeEthernetMdi(benchPrototypeEthernetMdi)
+  validateBenchPrototypeApplicationRail(benchPrototypeApplicationRail)
+  validateBenchPrototypeHub75Connector(benchPrototypeHub75Connector)
+  validateBenchPrototypeHub75Safing(benchPrototypeHub75Safing)
+  validateBenchPrototypeOptionalPeripherals(benchPrototypeOptionalPeripherals)
+  validateBenchPrototypeIrReceiverSelection(benchPrototypeIrReceiverSelection)
+}
+
+/** Rejects package inference, geometry credit, populated omitted peripherals, and release relaxation. */
+export function validateBenchPrototypeApplicationFootprints(value: unknown): true {
+  assertUpstream()
+  if (!sameDataGraph(value, benchPrototypeApplicationFootprints))
+    throw new RangeError("BP-033 must exactly match the reviewed fail-closed ledger")
+  const contract = benchPrototypeApplicationFootprints
+  const currentBp140References = currentBp140ReferenceSet()
+  const reconciledBp140References = contract.bp140ReferenceReconciliation.map((record) => record.reference)
+  if (
+    contract.workUnit !== "BP-033" ||
+    contract.releaseState !== "deny" ||
+    contract.fabricationAuthorized ||
+    contract.authority.exactMpnAndManufacturerReconciled !== true ||
+    contract.authority.fullBp140ReferenceSetReconciled !== true ||
+    contract.authority.bp140BlockedReferenceIdentitiesReconciled ||
+    contract.authority.everyPackageIdentityReconciled ||
+    contract.authority.manufacturerDrawingsReviewed ||
+    contract.authority.manufacturerCadReviewed ||
+    contract.authority.artworkReviewed ||
+    contract.authority.orientationsReviewed ||
+    contract.records.length === 0 ||
+    contract.records.some(
+      (record) => !record.reference || !record.manufacturer || !record.mpn || record.population !== "DNP-unresolved"
+    ) ||
+    contract.records.some(
+      (record) =>
+        record.manufacturerDrawing.state !== "not-acquired" ||
+        record.manufacturerCad.state !== "not-acquired" ||
+        record.artwork.state !== "not-generated" ||
+        record.orientation.state !== "unreviewed"
+    ) ||
+    !contract.records.some((record) => record.packageStatus === "upstream-package-not-specified") ||
+    currentBp140References.length !== reconciledBp140References.length ||
+    currentBp140References.some((reference, index) => reference !== reconciledBp140References[index]) ||
+    contract.bp140SelectionBlockedReferences.length !== 3 ||
+    contract.bp140SelectionBlockedReferences.some(
+      (record) =>
+        record.population !== "DNP-or-selection-blocked" ||
+        record.manufacturer !== null ||
+        record.mpn !== null ||
+        record.package !== null ||
+        record.packageStatus !== "upstream-package-not-specified" ||
+        record.manufacturerDrawing.state !== "not-acquired" ||
+        record.manufacturerCad.state !== "not-acquired" ||
+        record.artwork.state !== "not-generated" ||
+        record.orientation.state !== "unreviewed"
+    ) ||
+    contract.omittedPeripherals.length !== 5 ||
+    contract.omittedPeripherals.some((record) => record.population !== "DNP") ||
+    !contract.omittedPeripherals.some((record) => record.reference === "U_AUDIO")
+  )
+    throw new RangeError("BP-033 must remain complete, fail-closed, and fabrication denied")
+  return true
+}
+
+validateBenchPrototypeApplicationFootprints(benchPrototypeApplicationFootprints)
