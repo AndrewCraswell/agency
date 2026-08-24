@@ -52,7 +52,7 @@ describe("BP-140 W5500 support-network import", () => {
     expect(new Set(bypasses.map((part) => part.mpn))).toEqual(new Set(["GRM188R71C104KA01D"]))
   })
 
-  it("uses one-board rails while leaving BP-123 reset and interrupt ownership honestly open", () => {
+  it("uses one-board rails and the independent BP-123 supervisor fanout", () => {
     expect(benchPrototypeEthernet.nets.digitalSupply.name).toBe("V3_3")
     expect(benchPrototypeEthernet.nets.analogSupply.endpoints).toHaveLength(7)
     expect(benchPrototypeEthernet.nets.ground.name).toBe("APP_GND")
@@ -60,20 +60,22 @@ describe("BP-140 W5500 support-network import", () => {
       name: "APP_W5500_RESET_N",
       polarity: "active-low",
       inputType: "W5500 active-low reset input",
-      endpoints: expect.arrayContaining(["R_W5500_RESET_PULLUP.2", "U_W5500.RST_N", "TP_W5500_RESET_N"]),
+      endpoints: ["U_APP_RESET_FANOUT.Y2", "R_W5500_RESET_PULLUP.2", "U_W5500.RST_N", "TP_W5500_RESET_N"],
       firmwareControl: "none",
       observationEndpoint: "TP_W5500_RESET_N",
       pullup: {
         reference: "R_W5500_RESET_PULLUP",
-        value: "TBD",
+        value: "10 kOhm, 1%",
+        mpn: "RC0603FR-0710KL",
         rail: "V3_3",
-        ownershipStatus: expect.stringContaining("BP-123")
+        ownershipStatus: expect.stringContaining("selected by BP-123")
       },
       driver: {
-        reference: "U_APP_SUPERVISOR",
-        mpn: "TBD",
-        outputRequirement: "open-drain reset output",
-        ownershipStatus: expect.stringContaining("BP-123")
+        reference: "U_APP_RESET_FANOUT",
+        endpoint: "Y2",
+        mpn: "SN74LVC2G07DCKR",
+        outputRequirement: expect.stringContaining("APP_SUPERVISOR_RESET_N"),
+        ownershipStatus: expect.stringContaining("selected by BP-123")
       }
     })
     expect(benchPrototypeEthernet.nets.interrupt).toMatchObject({

@@ -146,22 +146,24 @@ const definition = {
       name: "APP_W5500_RESET_N",
       polarity: "active-low",
       inputType: "W5500 active-low reset input",
-      endpoints: ["U_APP_SUPERVISOR.RESET_N", "R_W5500_RESET_PULLUP.2", "U_W5500.RST_N", "TP_W5500_RESET_N"],
+      endpoints: ["U_APP_RESET_FANOUT.Y2", "R_W5500_RESET_PULLUP.2", "U_W5500.RST_N", "TP_W5500_RESET_N"],
       firmwareControl: "none",
       observationEndpoint: "TP_W5500_RESET_N",
       pullup: {
         reference: "R_W5500_RESET_PULLUP",
-        value: "TBD",
+        value: "10 kOhm, 1%",
+        mpn: "RC0603FR-0710KL",
         rail: "V3_3",
-        ownershipStatus: "open; BP-123 must select the exact value and prove supervisor sink and timing margins"
+        ownershipStatus: "selected by BP-123; footprint, placement, and measured sink/timing margins remain open"
       },
       driver: {
-        reference: "U_APP_SUPERVISOR",
-        mpn: "TBD",
-        outputRequirement: "open-drain reset output",
-        ownershipStatus: "open; BP-123 owns exact supervisor and reset timing closure"
+        reference: "U_APP_RESET_FANOUT",
+        endpoint: "Y2",
+        mpn: "SN74LVC2G07DCKR",
+        outputRequirement: "non-inverting open-drain fanout output driven only by APP_SUPERVISOR_RESET_N",
+        ownershipStatus: "selected by BP-123; footprint and measured reset timing remain open"
       },
-      rule: "BP-123 must make the application supervisor hold W5500 reset through brownout and release delay; ESP32 GPIO cannot override it"
+      rule: "BP-123 fanout Y2 must hold W5500 reset through supervisor brownout and release delay; EN_RESET sinks and ESP32 GPIO cannot override it"
     },
     interrupt: {
       name: "APP_W5500_INT_N",

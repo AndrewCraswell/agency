@@ -8,7 +8,7 @@ not a released schematic, PCB, panel harness, EMC result, or fabrication
 approval. Physical land-pattern review, signal-integrity work, exact-panel
 power sequencing, and EVT measurements remain open gates.
 
-The primary references are the [ESP32-S3-WROOM-1/WROOM-1U datasheet](https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf), the [TI ISO776x datasheet](https://www.ti.com/lit/gpn/iso7762), the [TI TPS3890 datasheet](https://www.ti.com/lit/gpn/tps3890), the [TI TPS3431 datasheet](https://www.ti.com/lit/ds/symlink/tps3431.pdf), the [TI SN74AHCT245 datasheet](https://www.ti.com/lit/ds/symlink/sn74ahct245.pdf), and the [Nexperia BSS138AKA datasheet](https://assets.nexperia.com/documents/data-sheet/BSS138AKA.pdf).
+The primary references are the [ESP32-S3-WROOM-1/WROOM-1U datasheet](https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf), the [TI ISO776x datasheet](https://www.ti.com/lit/gpn/iso7762), the [TI TPS3890 datasheet](https://www.ti.com/lit/gpn/tps3890), the [TI TPS3431 datasheet](https://www.ti.com/lit/ds/symlink/tps3431.pdf), the [TI SN74LVC2G07 datasheet](https://www.ti.com/lit/ds/symlink/sn74lvc2g07.pdf), the [TI SN74AHCT245 datasheet](https://www.ti.com/lit/ds/symlink/sn74ahct245.pdf), and the [Nexperia BSS138AKA datasheet](https://assets.nexperia.com/documents/data-sheet/BSS138AKA.pdf).
 
 ## Reset topology
 
@@ -20,11 +20,13 @@ unpowered.
 
 | Function | Part or value | Connection and purpose |
 | --- | --- | --- |
-| ESP32 rail supervisor | `TPS389033DSER` | `SENSE` and `VDD` to `V3_3`; `MR` to `V3_3`; open-drain `RESET` to `EN_RESET`; 3.170 V falling and 3.189 V rising nominal thresholds, with +/-1% threshold accuracy |
+| ESP32 rail supervisor | `TPS389033DSER` | `SENSE` and `VDD` to `V3_3`; `MR` to `V3_3`; open-drain `RESET` only to `APP_SUPERVISOR_RESET_N`; 3.170 V falling and 3.189 V rising nominal thresholds, with +/-1% threshold accuracy |
 | Supervisor release delay | `C_ESP_SUPERVISOR_CT`, 100 nF ceramic | `CT` to GND; TI's selected value is approximately 107 ms nominal release delay, subject to tolerance and measurement |
 | Supervisor bypass | `C_ESP_SUPERVISOR_BYPASS`, 100 nF ceramic | `V3_3` to GND at the supervisor |
-| ESP32 watchdog | `TPS3431SDRBR` | Real pin map is modeled; `WDO` pin 7 is active-low open drain to `EN_RESET`, `EN` and `SET1` are high |
+| Supervisor reset fanout | `SN74LVC2G07DCKR`; `R_APP_SUPERVISOR_RESET_PULLUP`, 10 kOhm; 100 nF bypass | Both inputs observe `APP_SUPERVISOR_RESET_N`; open-drain Y1 drives `EN_RESET`; open-drain Y2 independently drives `APP_W5500_RESET_N` |
+| ESP32 watchdog | `TPS3431SDRBR` | `WDO` and `ENOUT` are tied open-drain at `EN_RESET`; `EN` and `SET1` are high |
 | Watchdog timeout | `R_ESP_WD_CWD`, 10 kOhm, 1% | `CWD` to `V3_3`; TI's 10 kOhm selection is the 200 ms timeout option |
+| Watchdog input default | `R_ESP_WDI_PULLUP`, `RC0603FR-07100KL`, 100 kOhm, 1% | `V3_3` to `APP_WD_KICK`; GPIO12 is open-drain and kicks only with a falling edge |
 | Watchdog bypass | `C_ESP_WD_BYPASS`, 100 nF ceramic | `V3_3` to GND at the watchdog |
 | ESP32 EN pull-up | `R_ESP_EN_PULLUP`, 10 kOhm, 1% | `V3_3` to `EN_RESET`; no pull-up comes from the STM32 domain |
 | EN timing | `C_ESP_EN_DELAY`, 1 uF ceramic | `EN_RESET` to GND; approximately 10 ms with the 10 kOhm pull-up, subject to rail and leakage measurement |
@@ -46,6 +48,19 @@ The actual `GND`, `CWD`, `EN`, `SET1`, `WDI`, `WDO`, and `ENOUT` pins are now
 represented, rather than treating pin 4 as a reset output. The `ENOUT` and
 `WDO` open-drain outputs are tied as permitted by TI when the watchdog is
 enabled.
+
+The STM32 watchdog uses the same falling-edge policy. Exact
+`R_STM_WDI_PULLUP` `RC0603FR-07100KL` pulls `SCORING_WATCHDOG_WDI` to
+`SCORING_3V3`; PC9 is open-drain, briefly sinks for a kick, then releases.
+Both processors target at most 100 ms between falling edges against the 170
+ms minimum timeout. High-Z, stuck-high, and stuck-low firmware produce no
+repeated falling edges and must time out. Bench fault injection must prove
+all three static faults.
+
+`APP_SUPERVISOR_RESET_N` is an input to the two fanout channels, not the
+processor reset node. Consequently an `EN_RESET` assertion by the ESP32
+watchdog, manual sink, or STM32 `RESET_REQUEST` cannot propagate to the fanout
+input or its Ethernet Y2 output. W5500 reset remains supervisor-only.
 
 The application `V3_3` rail is now represented by the selected
 `LMR43620MSC3RPERQ1` fixed 3.3 V buck. Its guaranteed 3.27 V to 3.33 V
@@ -109,9 +124,12 @@ return remain validation inputs.
 
 ## Verification gates that remain open
 
-1. Scope cold boot, watchdog timeout, supervisor brownout, STM32-requested
-   reset, active-high manual reset command, and `V3_3` removal. Record `EN_RESET`, both buffer
-   enable pins, `OE_N_IN`, `OE_N_OUT`, and all three rails.
+1. Scope cold boot, normal falling-edge watchdog kicks, high-Z/stuck-high/stuck-low
+   WDI faults, watchdog timeout, supervisor brownout, STM32-requested reset,
+   active-high manual reset command, and `V3_3` removal. Record
+   `APP_SUPERVISOR_RESET_N`, both `SN74LVC2G07` outputs, `EN_RESET`,
+   `APP_W5500_RESET_N`, both display-buffer enable pins, `OE_N_IN`,
+   `OE_N_OUT`, and all three rails.
 2. With the ESP32 rail unpowered, drive the isolated STM32 request through its
    full allowed range and measure ISO output-side rise, `V3_3` rise, reset
    current, and MOSFET gate current. Reject the topology if any rail exceeds

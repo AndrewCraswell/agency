@@ -33,13 +33,14 @@ bypass. All W5500 analog, digital, crystal-shield, and support returns use
 
 ## Reset and interrupt
 
-`APP_W5500_RESET_N` must join the application supervisor's open-drain reset
-output, `R_W5500_RESET_PULLUP`, W5500 `RST_N`, and the required
-`TP_W5500_RESET_N` observation point. The pull-up reference and `V3_3` rail are
-reserved, but its exact value and the supervisor MPN remain `TBD` under
-BP-123. The supervisor must hold the controller reset through brownout and its
-release delay. No ESP32 GPIO is connected to this reset net, so firmware cannot
-override a power-integrity reset.
+`APP_W5500_RESET_N` joins `U_APP_RESET_FANOUT.Y2`, exact Yageo
+`RC0603FR-0710KL` 10 kOhm pull-up `R_W5500_RESET_PULLUP`, W5500 `RST_N`, and
+the required `TP_W5500_RESET_N` observation point. BP-123 selects exact TI
+`SN74LVC2G07DCKR` as the dual non-inverting open-drain fanout from
+`APP_SUPERVISOR_RESET_N`. Y2 is the Ethernet-only output; Y1 separately drives
+`EN_RESET`. Therefore watchdog, manual, or STM32-request sinks on `EN_RESET`
+cannot reset W5500. No ESP32 GPIO is connected to the Ethernet reset net, so
+firmware cannot override a supervisor brownout or release delay.
 
 W5500 `INT_N` is an active-low push-pull output. The unconsumed output reaches
 `TP_W5500_INT_N` and the reserved `R_W5500_INT_BIAS` position, but no ESP32
@@ -47,11 +48,10 @@ GPIO. The bias value remains `TBD` on `V3_3`; BP-123 must select it or record an
 explicit DNP after power-sequence review. Firmware polls the controller over
 SPI regardless.
 
-The exact application regulator, supervisor, timing capacitor, reset pull-up,
-interrupt bias-or-DNP decision, and reset timing are intentionally not invented
-here. BP-123 owns the supervisor/reset network and BP-142 owns the application
-rail. Until those tasks converge, this document defines net ownership,
-observation points, and required behavior only.
+BP-123 owns the exact supervisor, timing capacitor, fanout, reset pull-up, and
+reset timing; BP-142 owns the application rail. Their schematic inputs have
+converged, while footprints, placement, and measured sink/timing behavior
+remain open. The interrupt bias-or-DNP decision also remains open.
 
 ## Still open
 
@@ -63,9 +63,9 @@ observation points, and required behavior only.
   behavior.
 - Complete BP-141 for W5500 MDI pin mapping, the Würth `7499011121A`,
   termination, shield/ESD return, surge behavior, and 100 Ohm routing.
-- Close the application 3.3 V regulator under BP-142 and the exact supervisor,
-  reset pull-up, timing, and interrupt bias-or-DNP decision under BP-123 before
-  schematic integration.
+- Integrate the BP-142 application rail and BP-123 supervisor, fanout, exact
+  reset pull-up, and timing network; close the interrupt bias-or-DNP decision
+  before schematic integration.
 
 The source evidence remains
 [`w5500-support-network-selection.md`](./w5500-support-network-selection.md),
