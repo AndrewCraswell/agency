@@ -57,7 +57,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 38 | FW-008 | P1 | done | Root-approved shared journal preflight prevents replay from indexing an invalid active slot |
 | 39 | SD-022 | P1 | done | Root-approved canonical provenance parsing now serves decision records and event-capture construction |
 | 40 | SD-023 | P2 | done | Root-approved canonical phase registry now derives public IDs, guard, and lookup without duplicate literals |
-| 41 | SC-017 | P2 | intake | BP-140 and BP-141 duplicate the Ethernet controller and MagJack identities |
+| 41 | SC-017 | P2 | done | Root-approved BP-141 identity projections now derive the W5500 and MagJack from their canonical upstream owners |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -715,8 +715,8 @@ truth.
 ## SC-017: unify BP-140 and BP-141 Ethernet endpoint identity
 
 - Priority: `P2`
-- State: `intake`
-- Latest state: A read-only audit found that BP-141 manually repeats the W5500 and MagJack manufacturer/MPN identities already owned by the BP-140 Ethernet contract and communications footprint evidence. The bounded implementation is ready for root intake; no production files have been changed.
+- State: `done`
+- Latest state: Root review approved private BP-141 identity projections sourced from the BP-140 Ethernet contract and communications footprint evidence. The exact 4,430-byte serialized contract and SHA-256 remain unchanged; upstream controller/MagJack drift rejects, and 18 focused tests plus package types, lint, and format pass. Delivered in `41192f2`.
 - Affected files: `packages/scoring-circuit/src/bench-prototype-ethernet-mdi.ts`, its focused test, and the existing canonical identity sources in `bench-prototype-ethernet.ts` and the communications footprint evidence.
 - Description: BP-141 hard-codes the W5500 and MagJack identities in both its provenance snapshot and exported MDI definition even though it separately validates those values against upstream canonical sources.
 - Impact: a reviewed part-identity change can leave BP-141 stale, forcing maintainers to synchronize multiple representations and making drift visible only after validation fails.
