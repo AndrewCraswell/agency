@@ -41,6 +41,31 @@ function bill(id = "bill:us:119:hr:1") {
   }
 }
 
+function supportingMaterial(id = "material:us:119:committee-report:1") {
+  return {
+    amendmentIds: ["amendment:us:119:hamdt:1"],
+    billIds: ["bill:us:119:hr:1"],
+    byteSize: null,
+    classification: "committee-report",
+    contentType: "application/pdf",
+    createdAt: new Date("2026-08-20T15:00:00Z"),
+    documentDate: "2026-02-01",
+    id,
+    jurisdictionId: "jurisdiction:us",
+    meetingIds: ["event:us:119:committee:1"],
+    organizationIds: ["organization:us:house:committee"],
+    pageCount: null,
+    processingStatus: "processed",
+    sectionCount: 3,
+    sourceUrl: "https://api.congress.gov/v3/committee-report/1",
+    storedUrl: null,
+    textCharacterCount: 1234,
+    title: "Committee report",
+    updatedAt: new Date("2026-08-20T15:00:00Z"),
+    upstreamIds: { congress: "committee-report-1" }
+  }
+}
+
 function service(): CoreReadQueryApi {
   return {
     browseBills: async () => ({ items: [bill()], truncated: false }),
@@ -73,7 +98,7 @@ function service(): CoreReadQueryApi {
     getDocumentSections: async () => ({ items: [], truncated: false }),
     getJurisdiction: async (id) => ({ id }),
     getSession: async (id) => ({ id }),
-    getSupportingMaterial: async ({ id }) => ({ material: { id } }),
+    getSupportingMaterial: async ({ id }) => ({ material: supportingMaterial(id) }),
     getSupportingMaterialSection: async ({ materialId, sectionId }) => ({
       material: {
         createdAt: new Date("2026-08-20T15:00:00Z"),
@@ -252,6 +277,108 @@ describe("core read API handler", () => {
         canonicalUrl: "http://127.0.0.1:3100/api/supporting-materials/material%3A1/sections/section%3A1"
       }
     })
+  })
+
+  it("projects supporting-material collections with strict contract filters and ordering", async () => {
+    let received: Parameters<CoreReadQueryApi["searchSupportingMaterials"]>[0] | undefined
+    const baseUrl = await startServer({
+      ...service(),
+      searchSupportingMaterials: async (input) => {
+        received = input
+        return { items: [supportingMaterial()], truncated: false }
+      }
+    })
+    const response = await fetch(
+      `${baseUrl}/api/supporting-materials?amendmentId=amendment%3Aus%3A119%3Ahamdt%3A1&billId=bill%3Aus%3A119%3Ahr%3A1&classification=committee-report&documentFrom=2026-02-01&documentTo=2026-02-28&jurisdictionId=jurisdiction%3Aus&meetingId=event%3Aus%3A119%3Acommittee%3A1&organizationId=organization%3Aus%3Ahouse%3Acommittee&processingStatus=processed&sort=title-asc&limit=7`
+    )
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      data: [
+        {
+          canonicalUrl: "http://127.0.0.1:3100/api/supporting-materials/material%3Aus%3A119%3Acommittee-report%3A1",
+          processingStatus: "processed",
+          sources: [{ isOfficial: true, provider: "congress" }],
+          type: "supporting-material"
+        }
+      ],
+      links: { next: null },
+      meta: { limit: 7, truncated: false }
+    })
+    expect(received).toEqual({
+      amendmentId: "amendment:us:119:hamdt:1",
+      billId: "bill:us:119:hr:1",
+      classification: "committee-report",
+      cursor: undefined,
+      documentFrom: "2026-02-01",
+      documentTo: "2026-02-28",
+      eventId: "event:us:119:committee:1",
+      jurisdictionId: "jurisdiction:us",
+      limit: 7,
+      mode: "lexical",
+      organizationId: "organization:us:house:committee",
+      processingStatus: "processed",
+      sort: "title-asc"
+    })
+  })
+
+  it("returns only the canonical supporting-material detail and rejects incomplete facts", async () => {
+    const baseUrl = await startServer(service())
+    const response = await fetch(`${baseUrl}/api/supporting-materials/material%3Aus%3A119%3Acommittee-report%3A1`)
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      data: {
+        byteSize: null,
+        canonicalUrl: "http://127.0.0.1:3100/api/supporting-materials/material%3Aus%3A119%3Acommittee-report%3A1",
+        pageCount: null,
+        sectionCount: 3,
+        storedUrl: null,
+        textCharacterCount: 1234,
+        type: "supporting-material"
+      },
+      links: { self: "/api/supporting-materials/material%3Aus%3A119%3Acommittee-report%3A1" }
+    })
+
+    const incompleteBaseUrl = await startServer({
+      ...service(),
+      getSupportingMaterial: async ({ id }) => ({ material: { ...supportingMaterial(id), sectionCount: -1 } })
+    })
+    const incomplete = await fetch(
+      `${incompleteBaseUrl}/api/supporting-materials/material%3Aus%3A119%3Acommittee-report%3A1`
+    )
+    expect(incomplete.status).toBe(422)
+    await expect(incomplete.json()).resolves.toMatchObject({ error: { category: "unprocessable", retryable: false } })
+
+    const duplicateLinkBaseUrl = await startServer({
+      ...service(),
+      searchSupportingMaterials: async () => ({
+        items: [{ ...supportingMaterial(), billIds: ["bill:us:119:hr:1", "bill:us:119:hr:1"] }],
+        truncated: false
+      })
+    })
+    const duplicateLinks = await fetch(`${duplicateLinkBaseUrl}/api/supporting-materials`)
+    expect(duplicateLinks.status).toBe(422)
+    await expect(duplicateLinks.json()).resolves.toMatchObject({
+      error: { category: "unprocessable", retryable: false }
+    })
+  })
+
+  it("rejects malformed, out-of-range, and undocumented supporting-material query controls", async () => {
+    const baseUrl = await startServer(service())
+    const responses = await Promise.all([
+      fetch(`${baseUrl}/api/supporting-materials?documentFrom=2026-02-02&documentTo=2026-02-01`),
+      fetch(`${baseUrl}/api/supporting-materials?documentFrom=2026-02-30`),
+      fetch(`${baseUrl}/api/supporting-materials?processingStatus=unknown`),
+      fetch(`${baseUrl}/api/supporting-materials?sort=unknown`),
+      fetch(`${baseUrl}/api/supporting-materials?q=committee`),
+      fetch(`${baseUrl}/api/supporting-materials/material%3Aus%3A119%3Acommittee-report%3A1?limit=1`)
+    ])
+
+    expect(responses.map((response) => response.status)).toEqual([400, 400, 400, 400, 400, 400])
+    for (const response of responses) {
+      await expect(response.json()).resolves.toMatchObject({ error: { category: "invalid_request" } })
+    }
   })
 
   it("uses an observed unknown hostname as a conservative non-official provider", async () => {

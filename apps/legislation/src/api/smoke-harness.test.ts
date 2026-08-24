@@ -62,6 +62,32 @@ function billSummary(id: string): Record<string, unknown> {
   }
 }
 
+function supportingMaterialRead(id: string): Record<string, unknown> {
+  return {
+    ...canonical(id),
+    amendmentIds: ["amendment:fixture"],
+    billIds: ["bill:fixture"],
+    byteSize: null,
+    classification: "committee-report",
+    contentType: "application/pdf",
+    createdAt: new Date("2026-08-24T00:00:00Z"),
+    documentDate: "2026-01-01",
+    id,
+    jurisdictionId: "jurisdiction:fixture",
+    meetingIds: ["event:fixture"],
+    organizationIds: ["organization:fixture"],
+    pageCount: null,
+    processingStatus: "processed",
+    sectionCount: 1,
+    sourceUrl: `https://source.example.test/${encodeURIComponent(id)}`,
+    storedUrl: null,
+    textCharacterCount: 12,
+    title: "Fixture supporting material",
+    updatedAt: new Date("2026-08-24T00:00:00Z"),
+    upstreamIds: { fixture: id }
+  }
+}
+
 function fakeFetch() {
   const calls: Array<{ authorization: string | null; method: string; path: string; search: string }> = []
   const fetchImpl = async (input: string | URL, init?: RequestInit): Promise<Response> => {
@@ -436,12 +462,9 @@ describe("local API smoke harness", () => {
       getBillVotes: async () => page(),
       getDocument: async () => canonical("document:fixture"),
       getDocumentSections: async () => page(),
-      getEvent: async () => canonical("event:fixture"),
       getJurisdiction: async () => canonical("jurisdiction:fixture"),
-      getOrganization: async () => canonical("organization:fixture"),
-      getPerson: async () => canonical("person:fixture"),
       getSession: async () => canonical("session:fixture"),
-      getSupportingMaterial: async () => canonical("material:fixture"),
+      getSupportingMaterial: async () => ({ material: supportingMaterialRead("material:fixture") }),
       getVote: async () => canonical("vote:fixture"),
       listJurisdictions: async () => page(),
       listSessions: async () => page(),
@@ -449,10 +472,11 @@ describe("local API smoke harness", () => {
       searchBills: async () => page(),
       searchBillText: async () => page(),
       searchChanges: async () => page(),
-      searchEvents: async () => page(),
-      searchOrganizations: async () => page(),
-      searchPeople: async () => page(),
-      searchSupportingMaterials: async () => page(),
+      searchSupportingMaterials: async () => ({
+        items: [supportingMaterialRead("material:fixture")],
+        truncated: false,
+        warnings: []
+      }),
       searchVotes: async () => page()
     }
     const apiHandler = createCompositeHttpApiHandler([

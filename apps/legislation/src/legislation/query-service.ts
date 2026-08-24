@@ -250,22 +250,52 @@ export interface SupportingMaterialSearchInput {
   billId?: string
   classification?: string
   cursor?: string
+  documentFrom?: string
+  documentTo?: string
   eventId?: string
   jurisdictionId?: string
   limit?: number
   mode?: "hybrid" | "lexical" | "semantic"
+  organizationId?: string
+  processingStatus?: "failed" | "pending" | "processed" | "processing" | "unsupported"
   query?: string
+  sort?: "document-desc" | "title-asc" | "updated-desc"
 }
 
 const { text: _supportingMaterialText, ...supportingMaterialSummaryColumns } = getTableColumns(supportingMaterials)
 type SupportingMaterialSummary = Omit<typeof supportingMaterials.$inferSelect, "text">
-type SupportingMaterialSearchItem = SupportingMaterialSummary & { distance?: number; score?: number }
+type SupportingMaterialRanked = SupportingMaterialSummary & { distance?: number; score?: number }
+
+export type SupportingMaterialRead = SupportingMaterialRanked & {
+  amendmentIds: string[]
+  billIds: string[]
+  meetingIds: string[]
+  organizationIds: string[]
+}
 
 interface SupportingMaterialSearchResult {
-  items: SupportingMaterialSearchItem[]
+  items: SupportingMaterialRead[]
   nextCursor?: string
   truncated: boolean
   warnings: string[]
+}
+
+function supportingMaterialOrder(sort: SupportingMaterialSearchInput["sort"]): SQL[] {
+  switch (sort) {
+    case "title-asc":
+      return [asc(supportingMaterials.title), asc(supportingMaterials.id)]
+    case "updated-desc":
+      return [desc(supportingMaterials.updatedAt), asc(supportingMaterials.id)]
+    default:
+      return [desc(supportingMaterials.documentDate), asc(supportingMaterials.id)]
+  }
+}
+
+function materialLinkIds(
+  links: readonly (typeof supportingMaterialLinks.$inferSelect)[],
+  key: "amendmentId" | "billId" | "eventId" | "organizationId"
+): string[] {
+  return [...new Set(links.flatMap((link) => (link[key] === null ? [] : [link[key]])))].sort()
 }
 
 export interface ChangeSearchInput {
@@ -1179,14 +1209,14 @@ export class LegislationQueryService {
         jurisdictionId: input.jurisdictionId,
         limit: candidateLimit
       })
-      const semantic: SupportingMaterialSearchItem[] = [
+      const semantic: SupportingMaterialRanked[] = [
         ...new Map(
           semanticRows.map(
             ({ distance, material }) => [material.id, { ...material, distance, id: material.id }] as const
           )
         ).values()
       ]
-      const ranked: SupportingMaterialSearchItem[] =
+      const ranked: SupportingMaterialRanked[] =
         mode === "semantic"
           ? semantic
           : reciprocalRankFusionWithScores(
@@ -1197,12 +1227,21 @@ export class LegislationQueryService {
                   limit: candidateLimit,
                   mode: "lexical"
                 })
-              ).items.map((item) => ({ ...item, id: item.id })),
+              ).items.map(
+                ({
+                  amendmentIds: _amendmentIds,
+                  billIds: _billIds,
+                  meetingIds: _meetingIds,
+                  organizationIds: _organizationIds,
+                  ...item
+                }) => ({ ...item, id: item.id })
+              ),
               semantic,
               candidateLimit
             )
       const page = paginateSearchRows(ranked, limit, offset, ranked.length === candidateLimit)
-      return { ...page, warnings: coverageWarnings(page.items.length, "supporting materials") }
+      const items = await this.#withSupportingMaterialLinkIds(page.items)
+      return { ...page, items, warnings: coverageWarnings(items.length, "supporting materials") }
     }
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
     const offset = decodeOffset(input.cursor)
@@ -1217,6 +1256,14 @@ export class LegislationQueryService {
           input.billId === undefined ? undefined : eq(supportingMaterialLinks.billId, input.billId),
           input.amendmentId === undefined ? undefined : eq(supportingMaterialLinks.amendmentId, input.amendmentId),
           input.eventId === undefined ? undefined : eq(supportingMaterialLinks.eventId, input.eventId),
+          input.organizationId === undefined
+            ? undefined
+            : eq(supportingMaterialLinks.organizationId, input.organizationId),
+          input.documentFrom === undefined ? undefined : gte(supportingMaterials.documentDate, input.documentFrom),
+          input.documentTo === undefined ? undefined : lte(supportingMaterials.documentDate, input.documentTo),
+          input.processingStatus === undefined
+            ? undefined
+            : eq(supportingMaterials.processingStatus, input.processingStatus),
           input.query === undefined
             ? undefined
             : sql`(${supportingMaterials.title} ilike ${`%${input.query}%`} or exists (
@@ -1226,11 +1273,11 @@ export class LegislationQueryService {
               ))`
         )
       )
-      .orderBy(asc(supportingMaterials.documentDate), asc(supportingMaterials.id))
+      .orderBy(...supportingMaterialOrder(input.sort))
       .limit(limit + 1)
       .offset(offset)
     const truncated = rows.length > limit
-    const items = rows.slice(0, limit).map((row) => row.material)
+    const items = await this.#withSupportingMaterialLinkIds(rows.slice(0, limit).map((row) => row.material))
     return {
       items,
       nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
@@ -1250,7 +1297,7 @@ export class LegislationQueryService {
     }
     const limit = Math.min(Math.max(lookup.limit ?? SECTION_LIMIT, 1), SECTION_LIMIT)
     const offset = decodeOffset(lookup.cursor)
-    const [links, sections] = await Promise.all([
+    const [links, sections, aggregate] = await Promise.all([
       this.#database.select().from(supportingMaterialLinks).where(eq(supportingMaterialLinks.materialId, lookup.id)),
       this.#database
         .select()
@@ -1258,15 +1305,77 @@ export class LegislationQueryService {
         .where(eq(supportingMaterialSections.materialId, lookup.id))
         .orderBy(asc(supportingMaterialSections.ordinal))
         .limit(limit + 1)
-        .offset(offset)
+        .offset(offset),
+      this.#database
+        .select({
+          sectionCount: sql<number>`count(*)::integer`,
+          textCharacterCount: sql<number>`coalesce(sum(length(${supportingMaterialSections.text})), 0)::integer`
+        })
+        .from(supportingMaterialSections)
+        .where(eq(supportingMaterialSections.materialId, lookup.id))
     ])
     const truncated = sections.length > limit
+    const materialRead = this.#supportingMaterialRead(material[0], links)
     return {
       links,
-      material: material[0],
+      material: {
+        ...materialRead,
+        byteSize: null,
+        pageCount: null,
+        sectionCount: aggregate[0]?.sectionCount ?? 0,
+        storedUrl: null,
+        textCharacterCount: aggregate[0]?.textCharacterCount ?? 0
+      },
       nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
       sections: sections.slice(0, limit),
       truncated
+    }
+  }
+
+  async #withSupportingMaterialLinkIds(
+    materials: readonly SupportingMaterialRanked[]
+  ): Promise<SupportingMaterialRead[]> {
+    if (materials.length === 0) {
+      return []
+    }
+    const links = await this.#database
+      .select()
+      .from(supportingMaterialLinks)
+      .where(
+        inArray(
+          supportingMaterialLinks.materialId,
+          materials.map((material) => material.id)
+        )
+      )
+      .orderBy(
+        asc(supportingMaterialLinks.materialId),
+        asc(supportingMaterialLinks.billId),
+        asc(supportingMaterialLinks.amendmentId),
+        asc(supportingMaterialLinks.eventId),
+        asc(supportingMaterialLinks.organizationId)
+      )
+    const byMaterial = new Map<string, (typeof links)[number][]>()
+    for (const link of links) {
+      const current = byMaterial.get(link.materialId)
+      if (current === undefined) {
+        byMaterial.set(link.materialId, [link])
+      } else {
+        current.push(link)
+      }
+    }
+    return materials.map((material) => this.#supportingMaterialRead(material, byMaterial.get(material.id) ?? []))
+  }
+
+  #supportingMaterialRead(
+    material: SupportingMaterialRanked,
+    links: readonly (typeof supportingMaterialLinks.$inferSelect)[]
+  ): SupportingMaterialRead {
+    return {
+      ...material,
+      amendmentIds: materialLinkIds(links, "amendmentId"),
+      billIds: materialLinkIds(links, "billId"),
+      meetingIds: materialLinkIds(links, "eventId"),
+      organizationIds: materialLinkIds(links, "organizationId")
     }
   }
 

@@ -15,10 +15,18 @@ import type {
 import {
   projectBillSummaryRead,
   projectDocumentSectionRead,
+  projectSupportingMaterialDetailRead,
   projectSupportingMaterialSectionRead,
+  projectSupportingMaterialSummaryRead,
   toProjectionLegislationError
 } from "./canonical-read.js"
-import type { BillSummaryRead, DocumentSectionRead, SupportingMaterialSectionRead } from "./canonical-read.js"
+import type {
+  BillSummaryRead,
+  DocumentSectionRead,
+  SupportingMaterialDetailRead,
+  SupportingMaterialRead,
+  SupportingMaterialSectionRead
+} from "./canonical-read.js"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -47,7 +55,7 @@ export interface CoreReadQueryApi {
   ) => Promise<SectionPage>
   getBillTimeline: (input: BillLookup) => Promise<TimelinePage>
   getBillVotes: (input: Readonly<{ billId: string; cursor?: string; limit?: number }>) => Promise<CorePage>
-  getSupportingMaterial: (input: EntityLookup) => Promise<unknown>
+  getSupportingMaterial: (input: EntityLookup) => Promise<Readonly<{ material: unknown }>>
   getSupportingMaterialSection?: (
     input: Readonly<{ materialId: string; sectionId: string }>
   ) => Promise<SupportingMaterialSectionRead>
@@ -199,27 +207,35 @@ async function handleCoreRequest(
     }
     case "listSupportingMaterials": {
       const limit = queryInteger(url, "limit", 20)
+      const { documentFrom, documentTo } = querySupportingMaterialDateRange(url)
       const page = await service.searchSupportingMaterials({
         amendmentId: queryOptionalString(url, "amendmentId"),
         billId: queryOptionalString(url, "billId"),
         classification: queryOptionalString(url, "classification"),
         cursor: queryOptionalString(url, "cursor"),
+        documentFrom,
+        documentTo,
         eventId: queryOptionalString(url, "meetingId"),
         jurisdictionId: queryOptionalString(url, "jurisdictionId"),
         limit,
         mode: "lexical",
-        query: queryOptionalString(url, "q")
+        organizationId: queryOptionalString(url, "organizationId"),
+        processingStatus: querySupportingMaterialProcessingStatus(url),
+        sort: supportingMaterialSort(queryOptionalString(url, "sort") ?? "document-desc")
       })
-      sendApiJson(response, 200, apiPage(request, page, limit))
+      sendApiJson(response, 200, apiPage(request, projectSupportingMaterialPage(page, apiBaseUrl), limit))
       return true
     }
     case "getSupportingMaterial": {
-      const data = await service.getSupportingMaterial({
-        cursor: queryOptionalString(url, "cursor"),
-        id: route.materialId,
-        limit: queryInteger(url, "limit", 20, 50)
-      })
-      sendApiJson(response, 200, apiResource(request, data))
+      const result = await service.getSupportingMaterial({ id: route.materialId })
+      sendApiJson(
+        response,
+        200,
+        apiResource(
+          request,
+          projectSupportingMaterialDetailRead(supportingMaterialDetailRead(result.material), apiBaseUrl)
+        )
+      )
       return true
     }
     case "getDocument": {
@@ -299,6 +315,13 @@ function projectBillPage(page: CorePage, apiBaseUrl: string): CorePage {
   return { ...page, items: page.items.map((item) => projectBillSummaryRead(billSummaryRead(item), apiBaseUrl)) }
 }
 
+function projectSupportingMaterialPage(page: CorePage, apiBaseUrl: string): CorePage {
+  return {
+    ...page,
+    items: page.items.map((item) => projectSupportingMaterialSummaryRead(supportingMaterialRead(item), apiBaseUrl))
+  }
+}
+
 function billSummaryRead(value: unknown): BillSummaryRead {
   if (!isBillSummaryRead(value)) {
     throw new LegislationError(
@@ -332,6 +355,65 @@ function isBillSummaryRead(value: unknown): value is BillSummaryRead {
   )
 }
 
+function supportingMaterialRead(value: unknown): SupportingMaterialRead {
+  if (!isSupportingMaterialRead(value)) {
+    throw new LegislationError(
+      "unprocessable",
+      "The supporting material cannot be returned because its canonical facts are incomplete"
+    )
+  }
+  return value
+}
+
+function supportingMaterialDetailRead(value: unknown): SupportingMaterialDetailRead {
+  if (!isSupportingMaterialDetailRead(value)) {
+    throw new LegislationError(
+      "unprocessable",
+      "The supporting material cannot be returned because its canonical detail facts are incomplete"
+    )
+  }
+  return value
+}
+
+function isSupportingMaterialRead(value: unknown): value is SupportingMaterialRead {
+  if (typeof value !== "object" || value === null) {
+    return false
+  }
+  const read = (name: string) => Reflect.get(value, name)
+  return (
+    isNonemptyUniqueStringArray(read("amendmentIds")) &&
+    isNonemptyUniqueStringArray(read("billIds")) &&
+    typeof read("classification") === "string" &&
+    (typeof read("contentType") === "string" || read("contentType") === null) &&
+    isNullableDateValue(read("documentDate")) &&
+    isDateValue(read("createdAt")) &&
+    typeof read("id") === "string" &&
+    typeof read("jurisdictionId") === "string" &&
+    isNonemptyUniqueStringArray(read("meetingIds")) &&
+    isNonemptyUniqueStringArray(read("organizationIds")) &&
+    typeof read("processingStatus") === "string" &&
+    typeof read("sourceUrl") === "string" &&
+    typeof read("title") === "string" &&
+    isDateValue(read("updatedAt")) &&
+    (read("sourceUpdatedAt") === undefined || isNullableDateValue(read("sourceUpdatedAt"))) &&
+    (read("upstreamIds") === undefined || isStringRecord(read("upstreamIds")))
+  )
+}
+
+function isSupportingMaterialDetailRead(value: unknown): value is SupportingMaterialDetailRead {
+  if (!isSupportingMaterialRead(value)) {
+    return false
+  }
+  const read = (name: string) => Reflect.get(value, name)
+  return (
+    read("byteSize") === null &&
+    read("pageCount") === null &&
+    read("storedUrl") === null &&
+    isNonnegativeSafeInteger(read("sectionCount")) &&
+    isNonnegativeSafeInteger(read("textCharacterCount"))
+  )
+}
+
 function isDateValue(value: unknown): value is Date | string {
   return value instanceof Date || typeof value === "string"
 }
@@ -340,8 +422,20 @@ function isNullableDateValue(value: unknown): value is Date | string | null {
   return value === null || isDateValue(value)
 }
 
+function isNonnegativeSafeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+}
+
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === "string")
+}
+
+function isNonemptyUniqueStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) &&
+    value.every((item) => typeof item === "string" && item.trim().length > 0) &&
+    new Set(value).size === value.length
+  )
 }
 
 function isStringRecord(value: unknown): value is Record<string, string> {
@@ -547,8 +641,22 @@ function allowedQueryParameters(name: CoreRoute["name"]): readonly string[] {
     case "listBillAmendments":
       return ["cursor", "limit", "q", "sponsorPersonId"]
     case "listSupportingMaterials":
-      return ["amendmentId", "billId", "classification", "cursor", "jurisdictionId", "limit", "meetingId", "q"]
+      return [
+        "amendmentId",
+        "billId",
+        "classification",
+        "cursor",
+        "documentFrom",
+        "documentTo",
+        "jurisdictionId",
+        "limit",
+        "meetingId",
+        "organizationId",
+        "processingStatus",
+        "sort"
+      ]
     case "getSupportingMaterial":
+      return []
     case "getDocument":
       return ["cursor", "limit"]
     case "getDocumentSection":
@@ -599,4 +707,44 @@ function queryChangeDateRange(url: URL): { observedFrom: Date | undefined; obser
     throw new LegislationError("invalid_request", "observedFrom must not be after observedTo")
   }
   return { observedFrom, observedTo }
+}
+
+function querySupportingMaterialDateRange(url: URL): {
+  documentFrom: string | undefined
+  documentTo: string | undefined
+} {
+  const documentFrom = queryOptionalIsoDate(url, "documentFrom")
+  const documentTo = queryOptionalIsoDate(url, "documentTo")
+  if (documentFrom !== undefined && documentTo !== undefined && documentFrom > documentTo) {
+    throw new LegislationError("invalid_request", "documentFrom must not be after documentTo")
+  }
+  return { documentFrom, documentTo }
+}
+
+function querySupportingMaterialProcessingStatus(url: URL): SupportingMaterialSearchInput["processingStatus"] {
+  const value = queryOptionalString(url, "processingStatus")
+  if (value === undefined) {
+    return undefined
+  }
+  switch (value) {
+    case "failed":
+    case "pending":
+    case "processed":
+    case "processing":
+    case "unsupported":
+      return value
+    default:
+      throw new LegislationError("invalid_request", "processingStatus must be a supported processing status")
+  }
+}
+
+function supportingMaterialSort(value: string): NonNullable<SupportingMaterialSearchInput["sort"]> {
+  switch (value) {
+    case "document-desc":
+    case "title-asc":
+    case "updated-desc":
+      return value
+    default:
+      throw new LegislationError("invalid_request", "sort is not supported for supporting-material collections")
+  }
 }

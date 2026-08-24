@@ -6,7 +6,9 @@ import {
   projectBillDetail,
   projectBillSummary,
   projectDocumentSection,
+  projectSupportingMaterialDetail,
   projectSupportingMaterialSection,
+  projectSupportingMaterialSummary,
   type DateValue,
   type AmendmentSummary,
   type BillAction,
@@ -21,6 +23,8 @@ import {
   type ProjectionSourceInput,
   type SourceReference,
   type Sponsor,
+  type SupportingMaterialDetail,
+  type SupportingMaterialSummary,
   type VoteSummary
 } from "./canonical-projection.js"
 
@@ -64,6 +68,27 @@ export interface DocumentSectionRead {
 export interface SupportingMaterialSectionRead {
   material: SourceDocument
   section: SupportingMaterialSectionRecord
+}
+
+export interface SupportingMaterialRead extends SourceDocument {
+  amendmentIds: readonly string[]
+  billIds: readonly string[]
+  classification: string
+  contentType: string | null
+  documentDate: Date | string | null
+  jurisdictionId: string
+  meetingIds: readonly string[]
+  organizationIds: readonly string[]
+  processingStatus: string
+  title: string
+}
+
+export interface SupportingMaterialDetailRead extends SupportingMaterialRead {
+  byteSize: null
+  pageCount: null
+  sectionCount: number
+  storedUrl: null
+  textCharacterCount: number
 }
 
 export interface BillSummaryRead extends SourceDocument {
@@ -141,6 +166,57 @@ export function projectSupportingMaterialSectionRead(
       sourceUrl: value.material.sourceUrl
     },
     projectionContext(value.material, apiBaseUrl)
+  )
+}
+
+export function projectSupportingMaterialSummaryRead(
+  value: Readonly<SupportingMaterialRead>,
+  apiBaseUrl: string
+): SupportingMaterialSummary {
+  return projectSupportingMaterialSummary(
+    {
+      amendmentIds: value.amendmentIds,
+      billIds: value.billIds,
+      classification: requiredString(value, "classification", "supporting material classification"),
+      documentDate: value.documentDate,
+      id: requiredString(value, "id", "supporting material ID"),
+      jurisdictionId: requiredString(value, "jurisdictionId", "supporting material jurisdiction ID"),
+      meetingIds: value.meetingIds,
+      mimeType: value.contentType,
+      organizationIds: value.organizationIds,
+      processingStatus: supportingMaterialProcessingStatus(value.processingStatus),
+      sourceUrl: requiredString(value, "sourceUrl", "supporting material source URL"),
+      title: requiredString(value, "title", "supporting material title")
+    },
+    projectionContext(value, apiBaseUrl)
+  )
+}
+
+export function projectSupportingMaterialDetailRead(
+  value: Readonly<SupportingMaterialDetailRead>,
+  apiBaseUrl: string
+): SupportingMaterialDetail {
+  return projectSupportingMaterialDetail(
+    {
+      amendmentIds: value.amendmentIds,
+      billIds: value.billIds,
+      byteSize: value.byteSize,
+      classification: requiredString(value, "classification", "supporting material classification"),
+      documentDate: value.documentDate,
+      id: requiredString(value, "id", "supporting material ID"),
+      jurisdictionId: requiredString(value, "jurisdictionId", "supporting material jurisdiction ID"),
+      meetingIds: value.meetingIds,
+      mimeType: value.contentType,
+      organizationIds: value.organizationIds,
+      pageCount: value.pageCount,
+      processingStatus: supportingMaterialProcessingStatus(value.processingStatus),
+      sectionCount: value.sectionCount,
+      sourceUrl: requiredString(value, "sourceUrl", "supporting material source URL"),
+      storedUrl: value.storedUrl,
+      textCharacterCount: value.textCharacterCount,
+      title: requiredString(value, "title", "supporting material title")
+    },
+    projectionContext(value, apiBaseUrl)
   )
 }
 
@@ -226,6 +302,21 @@ function billSummaryProjectionInput(value: BillSummaryRead) {
     status: value.status,
     subjects: value.subjects,
     title: value.title
+  }
+}
+
+function supportingMaterialProcessingStatus(
+  value: string
+): "failed" | "pending" | "processed" | "processing" | "unsupported" {
+  switch (value) {
+    case "failed":
+    case "pending":
+    case "processed":
+    case "processing":
+    case "unsupported":
+      return value
+    default:
+      throw new CanonicalProjectionError("supporting material processing status is invalid")
   }
 }
 

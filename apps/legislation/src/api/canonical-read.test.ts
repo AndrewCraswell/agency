@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest"
 import { CanonicalProjectionError } from "./canonical-projection.js"
-import { projectBillDetailRead, projectBillTimelineRead } from "./canonical-read.js"
+import {
+  projectBillDetailRead,
+  projectBillTimelineRead,
+  projectSupportingMaterialDetailRead,
+  projectSupportingMaterialSummaryRead
+} from "./canonical-read.js"
 
 const sourceUrl = "https://api.congress.gov/v3/bill/119/hr/1"
 
@@ -165,6 +170,30 @@ function vote(id: number) {
   }
 }
 
+function supportingMaterialRead() {
+  return {
+    amendmentIds: ["amendment:us:119:hr:1"],
+    billIds: ["bill:us:119:hr:1"],
+    byteSize: null,
+    classification: "committee-report",
+    contentType: "application/pdf",
+    createdAt: "2026-08-20T15:00:00.000Z",
+    documentDate: "2026-02-01",
+    id: "material:us:119:committee-report:1",
+    jurisdictionId: "jurisdiction:us",
+    meetingIds: ["event:us:119:committee:1"],
+    organizationIds: ["organization:us:house:committee"],
+    pageCount: null,
+    processingStatus: "processed",
+    sectionCount: 3,
+    sourceUrl,
+    storedUrl: null,
+    textCharacterCount: 1234,
+    title: "Committee report",
+    updatedAt: "2026-08-20T15:00:00.000Z"
+  }
+}
+
 function timelineAction() {
   const action = {
     ...canonical("action:us:119:hr:1:1", "/api/bill-actions/action%3Aus%3A119%3Ahr%3A1%3A1"),
@@ -261,5 +290,34 @@ describe("canonical bill detail reads", () => {
     const invalidTimestamp = timelineAction()
     invalidTimestamp.occurredAt = "2026-02-01T09:30:00"
     expect(() => projectBillTimelineRead(invalidTimestamp)).toThrow(CanonicalProjectionError)
+  })
+})
+
+describe("canonical supporting-material reads", () => {
+  it("projects all persisted relationship IDs and leaves unavailable artifact metadata null", () => {
+    const read = supportingMaterialRead()
+    expect(projectSupportingMaterialSummaryRead(read, "https://api.example.test")).toMatchObject({
+      amendmentIds: ["amendment:us:119:hr:1"],
+      billIds: ["bill:us:119:hr:1"],
+      canonicalUrl: "https://api.example.test/api/supporting-materials/material%3Aus%3A119%3Acommittee-report%3A1",
+      meetingIds: ["event:us:119:committee:1"],
+      organizationIds: ["organization:us:house:committee"],
+      processingStatus: "processed",
+      type: "supporting-material"
+    })
+    expect(projectSupportingMaterialDetailRead(read, "https://api.example.test")).toMatchObject({
+      byteSize: null,
+      pageCount: null,
+      sectionCount: 3,
+      storedUrl: null,
+      textCharacterCount: 1234
+    })
+  })
+
+  it("fails closed when the persisted processing status is outside the canonical enum", () => {
+    const invalid = { ...supportingMaterialRead(), processingStatus: "unknown" }
+    expect(() => projectSupportingMaterialSummaryRead(invalid, "https://api.example.test")).toThrow(
+      CanonicalProjectionError
+    )
   })
 })

@@ -1394,6 +1394,14 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     const embeddingClient = {
       embed: async (input: string[]) => ({ embeddings: input.map(() => embedding), model: route.model })
     }
+    const retrievalClient = {
+      embed: async (_product: string, input: string[]) => ({
+        embeddings: input.map(() => embedding),
+        model: route.model
+      }),
+      rerank: async (_tool: string, _query: string, candidates: Array<{ id: string; text: string }>) =>
+        candidates.map((candidate, index) => ({ ...candidate, relevanceScore: 1 - index / 100 }))
+    }
     await expect(
       embedSupportingMaterialSections(database, embeddingClient, { materialId, rolloutId: "test" })
     ).resolves.toEqual({
@@ -1418,6 +1426,200 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       truncated: false
     })
     expect(detailResult.material).not.toHaveProperty("text")
+
+    const retrievalService = new LegislationQueryService(database, retrievalClient)
+    const semanticSearch = await retrievalService.searchSupportingMaterials({
+      mode: "semantic",
+      query: "improved public data access"
+    })
+    expect(semanticSearch.items).toEqual([expect.objectContaining({ distance: expect.any(Number), id: materialId })])
+    const hybridSearch = await retrievalService.searchSupportingMaterials({
+      mode: "hybrid",
+      query: "improved public data access"
+    })
+    expect(hybridSearch.items).toEqual([expect.objectContaining({ id: materialId, score: expect.any(Number) })])
+  })
+
+  it("aggregates canonical supporting-material links and applies bounded collection filters", async () => {
+    const jurisdictionId = "jurisdiction:or"
+    const sessionId = "session:or:2025"
+    const primaryMaterialId = "material:or:2025:committee-report:links"
+    const alphaMaterialId = "material:or:2025:committee-report:alpha"
+    const excludedMaterialId = "material:or:2025:committee-report:excluded"
+    const first = {
+      amendmentId: "amendment:or:2025:hamdt:links-a",
+      billId: "bill:or:2025:hb:9901",
+      eventId: "event:or:2025:committee:links-a",
+      organizationId: "organization:or:committee:links-a"
+    }
+    const second = {
+      amendmentId: "amendment:or:2025:hamdt:links-b",
+      billId: "bill:or:2025:hb:9902",
+      eventId: "event:or:2025:committee:links-b",
+      organizationId: "organization:or:committee:links-b"
+    }
+
+    await database.insert(schema.organizations).values([
+      {
+        classification: "committee",
+        id: first.organizationId,
+        jurisdictionId,
+        name: "Link Committee A",
+        sourceId: "supporting-material-links-a"
+      },
+      {
+        classification: "committee",
+        id: second.organizationId,
+        jurisdictionId,
+        name: "Link Committee B",
+        sourceId: "supporting-material-links-b"
+      }
+    ])
+    await database.insert(schema.bills).values([
+      {
+        id: first.billId,
+        identifier: "HB 9901",
+        jurisdictionId,
+        sessionId,
+        sourceUrl: "https://example.test/or/hb-9901",
+        title: "Supporting material link bill A"
+      },
+      {
+        id: second.billId,
+        identifier: "HB 9902",
+        jurisdictionId,
+        sessionId,
+        sourceUrl: "https://example.test/or/hb-9902",
+        title: "Supporting material link bill B"
+      }
+    ])
+    await database.insert(schema.amendments).values([
+      {
+        amendmentNumber: "A",
+        amendmentType: "committee",
+        billId: first.billId,
+        id: first.amendmentId,
+        jurisdictionId,
+        printedIdentifier: "H.Amdt. Links A",
+        sourceId: "supporting-material-links-a",
+        sourceUrl: "https://example.test/or/amendments/links-a"
+      },
+      {
+        amendmentNumber: "B",
+        amendmentType: "committee",
+        billId: second.billId,
+        id: second.amendmentId,
+        jurisdictionId,
+        printedIdentifier: "H.Amdt. Links B",
+        sourceId: "supporting-material-links-b",
+        sourceUrl: "https://example.test/or/amendments/links-b"
+      }
+    ])
+    await database.insert(schema.legislativeEvents).values([
+      {
+        id: first.eventId,
+        jurisdictionId,
+        name: "Link hearing A",
+        sourceId: "supporting-material-links-a",
+        startAt: new Date("2026-01-15T17:00:00Z"),
+        status: "scheduled"
+      },
+      {
+        id: second.eventId,
+        jurisdictionId,
+        name: "Link hearing B",
+        sourceId: "supporting-material-links-b",
+        startAt: new Date("2026-01-16T17:00:00Z"),
+        status: "scheduled"
+      }
+    ])
+    await database.insert(schema.supportingMaterials).values([
+      {
+        classification: "committee-report",
+        documentDate: "2026-01-16",
+        id: primaryMaterialId,
+        jurisdictionId,
+        processingStatus: "processed",
+        sourceId: "supporting-material-links-primary",
+        sourceUrl: "https://example.test/or/materials/primary",
+        title: "Zulu supporting material"
+      },
+      {
+        classification: "committee-report",
+        documentDate: "2026-01-15",
+        id: alphaMaterialId,
+        jurisdictionId,
+        processingStatus: "processed",
+        sourceId: "supporting-material-links-alpha",
+        sourceUrl: "https://example.test/or/materials/alpha",
+        title: "Alpha supporting material"
+      },
+      {
+        classification: "committee-report",
+        documentDate: "2026-01-17",
+        id: excludedMaterialId,
+        jurisdictionId,
+        processingStatus: "pending",
+        sourceId: "supporting-material-links-excluded",
+        sourceUrl: "https://example.test/or/materials/excluded",
+        title: "Excluded supporting material"
+      }
+    ])
+    await database.insert(schema.supportingMaterialLinks).values([
+      { ...first, classification: "related", materialId: primaryMaterialId },
+      { ...first, classification: "duplicate", materialId: primaryMaterialId },
+      { ...second, classification: "related", materialId: primaryMaterialId },
+      { classification: "related", materialId: alphaMaterialId, organizationId: first.organizationId },
+      { classification: "related", materialId: excludedMaterialId, organizationId: first.organizationId }
+    ])
+    await database.insert(schema.supportingMaterialSections).values([
+      {
+        contentHash: "c".repeat(64),
+        id: `${primaryMaterialId}:section:1`,
+        materialId: primaryMaterialId,
+        ordinal: 0,
+        sourceEndOffset: 3,
+        sourceStartOffset: 0,
+        text: "abc"
+      },
+      {
+        contentHash: "d".repeat(64),
+        id: `${primaryMaterialId}:section:2`,
+        materialId: primaryMaterialId,
+        ordinal: 1,
+        sourceEndOffset: 5,
+        sourceStartOffset: 0,
+        text: "defgh"
+      }
+    ])
+
+    const service = new LegislationQueryService(database)
+    const collection = await service.searchSupportingMaterials({
+      documentFrom: "2026-01-15",
+      documentTo: "2026-01-16",
+      organizationId: first.organizationId,
+      processingStatus: "processed",
+      sort: "title-asc"
+    })
+    expect(collection.items.map((item) => item.id)).toEqual([alphaMaterialId, primaryMaterialId])
+    expect(collection.items[1]).toMatchObject({
+      amendmentIds: [first.amendmentId, second.amendmentId],
+      billIds: [first.billId, second.billId],
+      meetingIds: [first.eventId, second.eventId],
+      organizationIds: [first.organizationId, second.organizationId]
+    })
+
+    const detail = await service.getSupportingMaterial({ id: primaryMaterialId, limit: 1 })
+    expect(detail).toMatchObject({
+      material: {
+        byteSize: null,
+        pageCount: null,
+        sectionCount: 2,
+        storedUrl: null,
+        textCharacterCount: 8
+      },
+      truncated: true
+    })
   })
 
   it("records committed event changes and keeps replays and rollbacks silent", async () => {
