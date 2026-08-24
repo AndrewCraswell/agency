@@ -58,8 +58,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 39 | SD-022 | P1 | done | Root-approved canonical provenance parsing now serves decision records and event-capture construction |
 | 40 | SD-023 | P2 | done | Root-approved canonical phase registry now derives public IDs, guard, and lookup without duplicate literals |
 | 41 | SC-017 | P2 | done | Root-approved BP-141 identity projections now derive the W5500 and MagJack from their canonical upstream owners |
-| 42 | FW-009 | P1 | in-progress | Public scoring-record projection can index beyond a malformed caller-provided hit array |
-| 43 | FW-010 | P1 | in-progress | Out-of-range transport message enums can wrap into valid one-byte wire message types |
+| 42 | FW-009 | P1 | done | Root-approved scoring-record projection rejects malformed public hit counts before indexing |
+| 43 | FW-010 | P1 | done | Root-approved transport validation rejects out-of-range enums before one-byte narrowing |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -729,8 +729,8 @@ truth.
 ## FW-009: validate public scoring state before record projection
 
 - Priority: `P1`
-- State: `in-progress`
-- Latest state: A bounded implementation unit is adding a pre-index hit-count guard and an output-nonmutation regression; root review and verification remain pending.
+- State: `done`
+- Latest state: Root review approved the pre-index hit-count guard and output-nonmutation regression. All seven STM32 host tests pass and the full native coverage gate retains 100% line/function/branch coverage for `stm32_scoring_core.c`. Delivered in `67b8176`.
 - Affected files: `apps/scoring/firmware/stm32/core/stm32_scoring_core.c` and `apps/scoring/firmware/stm32/tests/test_stm32_scoring_core.c`.
 - Description: `scoring_core_make_record` checks the requested hit index against caller-provided `hit_count`, but does not first prove that `hit_count` fits the public two-element `hits` array.
 - Impact: malformed public state can cause a deterministic out-of-bounds read and project invalid bytes into a decision record.
@@ -741,8 +741,8 @@ truth.
 ## FW-010: validate transport message enums before narrowing
 
 - Priority: `P1`
-- State: `in-progress`
-- Latest state: A bounded implementation unit is moving message-type validation ahead of the one-byte cast and adding wrapping-value regressions; root review and verification remain pending.
+- State: `done`
+- Latest state: Root review approved native-width validation before the wire-byte cast, with `257`, `-1`, and `-255` regressions proving fail-closed nonmutation. All seven STM32 host tests pass; `stm32_transport.c` retains 99.33% lines, 100% functions, and 97.22% branches. Delivered in `81564d7`.
 - Affected files: `apps/scoring/firmware/stm32/core/stm32_transport.c` and `apps/scoring/firmware/stm32/tests/test_stm32_transport.c`.
 - Description: `scoring_stm32_transport_prepare_transmit` narrows the public enum to `uint8_t` before checking whether it is a known message type, so values such as `257` can wrap to a valid wire code.
 - Impact: malformed caller input can bypass the fail-closed boundary and emit a valid-looking but unintended protocol frame.
