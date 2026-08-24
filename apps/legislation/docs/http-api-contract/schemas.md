@@ -163,7 +163,7 @@ The notation `A & {...}` includes every required field of `A`; enum values below
 ```ts
 type Jurisdiction = CanonicalFields & { type: "jurisdiction"; name: string; classification: "country" | "state" | "district" | "territory"; timezone: string | null; isActive: boolean }
 type Session = CanonicalFields & { type: "session"; jurisdictionId: string; name: string; classification: string; startDate: string | null; endDate: string | null; isActive: boolean }
-type BillSummary = CanonicalFields & { type: "bill"; jurisdictionId: string; sessionId: string; identifier: string; title: string; classification: string[]; status: string; subjects: string[]; introducedDate: string | null; latestActionAt: string | null }
+type BillSummary = CanonicalFields & { type: "bill"; jurisdictionId: string; sessionId: string; identifier: string; title: string; classification: string[]; status: string | null; subjects: string[]; introducedDate: string | null; latestActionAt: string | null }
 type Sponsor = { person: PersonSummary | null; sourceName: string; classification: "primary" | "cosponsor" | "author" | "other"; isPrimary: boolean; sources: SourceReference[] }
 type BillRelation = { relatedBill: BillSummary; classification: "companion" | "replacement" | "replaced-by" | "prior-session" | "related" | "other"; sources: SourceReference[] }
 type BillAction = CanonicalFields & { type: "bill-action"; billId: string; description: string; date: string; occurredAt: string | null; sequence: number; classifications: string[]; organization: OrganizationSummary | null }

@@ -178,6 +178,17 @@ describe("core read API handler", () => {
     }
   })
 
+  it("preserves a persisted null bill status without manufacturing one", async () => {
+    const baseUrl = await startServer({
+      ...service(),
+      browseBills: async () => ({ items: [{ ...bill(), status: null }], truncated: false })
+    })
+
+    const response = await fetch(`${baseUrl}/api/jurisdictions/jurisdiction%3Aus/bills`)
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({ data: [{ status: null }] })
+  })
+
   it("returns 422 instead of an incomplete bill projection when persisted provenance is malformed", async () => {
     const baseUrl = await startServer({
       ...service(),

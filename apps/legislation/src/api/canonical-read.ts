@@ -100,7 +100,7 @@ export function projectBillSummaryRead(value: Readonly<BillSummaryRead>, apiBase
       ...value,
       introducedDate: value.introducedAt,
       latestActionAt: value.latestActionAt,
-      status: requiredString(value, "status", "bill status")
+      status: value.status
     },
     projectionContext(value, apiBaseUrl)
   )

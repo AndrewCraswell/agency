@@ -55,7 +55,7 @@ function billSummary(id: string): Record<string, unknown> {
     jurisdictionId: "jurisdiction:fixture",
     latestActionAt: "2026-02-01T00:00:00.000Z",
     sessionId: "session:fixture",
-    status: "introduced",
+    status: null,
     subjects: ["Government"],
     title: "Fixture bill",
     type: "bill"
@@ -63,12 +63,17 @@ function billSummary(id: string): Record<string, unknown> {
 }
 
 function fakeFetch() {
-  const calls: Array<{ authorization: string | null; method: string; path: string }> = []
+  const calls: Array<{ authorization: string | null; method: string; path: string; search: string }> = []
   const fetchImpl = async (input: string | URL, init?: RequestInit): Promise<Response> => {
     const url = new URL(input)
     const headers = new Headers(init?.headers)
     const correlationId = headers.get("x-correlation-id") ?? "missing-correlation"
-    calls.push({ authorization: headers.get("authorization"), method: init?.method ?? "GET", path: url.pathname })
+    calls.push({
+      authorization: headers.get("authorization"),
+      method: init?.method ?? "GET",
+      path: url.pathname,
+      search: url.search
+    })
     if (url.pathname === "/health") {
       return jsonResponse({ status: "ok" }, 200, correlationId)
     }
@@ -224,7 +229,7 @@ function mutateJson(
 
 describe("local API smoke harness", () => {
   it("runs only universal checks and exact canonical scoped bill pages in the scoped-bills profile", async () => {
-    const { fetchImpl } = fakeFetch()
+    const { calls, fetchImpl } = fakeFetch()
     const report = await runApiSmoke({
       baseUrl: "http://localhost:3199",
       canonicalApiBaseUrl: "https://legislation.example.test",
@@ -246,6 +251,17 @@ describe("local API smoke harness", () => {
       "auth-rejection"
     ])
     expect(report.checks.some((check) => check.id === "list-jurisdictions")).toBe(false)
+    expect(
+      calls
+        .filter((call) => call.path.startsWith("/api/jurisdictions/") || call.path.startsWith("/api/sessions/"))
+        .map((call) => ({ path: call.path, search: call.search }))
+    ).toEqual([
+      {
+        path: "/api/jurisdictions/jurisdiction%3Afixture/bills",
+        search: "?sort=introduced-desc&limit=1"
+      },
+      { path: "/api/sessions/session%3Afixture/bills", search: "?sort=introduced-desc&limit=1" }
+    ])
   })
 
   it("blocks the scoped-bills profile without both required fixture IDs while retaining universal checks", async () => {

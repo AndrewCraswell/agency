@@ -55,13 +55,13 @@ intentionally uncomposed and **Blocked**.
 | GET | `/api/jurisdictions` | In progress | Reviewed handler and page tests exist; exact `Jurisdiction` projection, live database smoke, parity, and commit remain. |
 | GET | `/api/jurisdictions/{jurisdictionId}` | In progress | Reviewed handler exists; exact canonical/provenance projection, live smoke, parity, and commit remain. |
 | GET | `/api/jurisdictions/{jurisdictionId}/sessions` | In progress | Reviewed handler exists; exact `Session` projection/filter smoke, parity, and commit remain. |
-| GET | `/api/jurisdictions/{jurisdictionId}/bills` | In progress | Exact canonical projection and scoped filters are implemented; live database smoke, MCP parity, and reviewed commit remain. |
+| GET | `/api/jurisdictions/{jurisdictionId}/bills` | In progress | Exact canonical projection and scoped filters are implemented; default `latest-action-desc` performance remains a tracked blocker, while scoped smoke uses `introduced-desc`; live database smoke, MCP parity, and reviewed commit remain. |
 | GET | `/api/jurisdictions/{jurisdictionId}/organizations` | Blocked | Jurisdiction-scoped organization query is missing. |
 | GET | `/api/jurisdictions/{jurisdictionId}/commissions` | Blocked | Classification-scoped organization query is missing. |
 | GET | `/api/jurisdictions/{jurisdictionId}/committees` | Blocked | Classification-scoped organization query is missing. |
 | GET | `/api/jurisdictions/{jurisdictionId}/meetings` | Blocked | `legislative_events` lacks a session relationship and authoritative local date, canonical organization relation, and typed location/virtual-access fields required for `MeetingSummary`; route is intentionally unregistered. |
 | GET | `/api/sessions/{sessionId}` | In progress | Reviewed handler exists; exact canonical/provenance projection, live smoke, parity, and commit remain. |
-| GET | `/api/sessions/{sessionId}/bills` | In progress | Exact canonical projection and scoped filters are implemented; live database smoke, MCP parity, and reviewed commit remain. |
+| GET | `/api/sessions/{sessionId}/bills` | In progress | Exact canonical projection and scoped filters are implemented; default `latest-action-desc` performance remains a tracked blocker, while scoped smoke uses `introduced-desc`; live database smoke, MCP parity, and reviewed commit remain. |
 | GET | `/api/sessions/{sessionId}/meetings` | Blocked | An authoritative event-session relation is missing; inferring through `event_bills` omits session meetings without linked bills. |
 | GET | `/api/bills` | In progress | Reviewed handler exists; remaining filters, canonical projection, stable-order database smoke, parity, and commit remain. |
 | POST | `/api/bills/batch` | In progress | Reviewed item-isolation and limit tests exist; exact `BillDetail` projection, live smoke/parity, and commit remain. |

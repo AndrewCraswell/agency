@@ -169,6 +169,7 @@ describe("canonical legislative projections", () => {
       status: "introduced",
       type: "bill"
     })
+    expect(projectBillSummary({ ...billInput, status: null }, context).status).toBeNull()
     expect(detail).toMatchObject({
       abstract: null,
       documents: [{ mimeType: null, storedUrl: null }],

@@ -69,7 +69,7 @@ export interface BillSummary extends CanonicalFields {
   identifier: string
   title: string
   classification: string[]
-  status: string
+  status: string | null
   subjects: string[]
   introducedDate: string | null
   latestActionAt: string | null
@@ -572,7 +572,7 @@ export type BillSummaryProjectionInput = SourceRecord & {
   identifier: string
   title: string
   classification: readonly string[]
-  status: string
+  status: string | null
   subjects: readonly string[]
   introducedDate: DateValue | null
   latestActionAt: DateValue | null
@@ -966,7 +966,7 @@ export function projectBillSummary(input: BillSummaryProjectionInput, context: P
     identifier: required(input.identifier, "bill identifier"),
     title: required(input.title, "bill title"),
     classification: [...input.classification],
-    status: required(input.status, "bill status"),
+    status: input.status === null ? null : required(input.status, "bill status"),
     subjects: [...input.subjects],
     introducedDate: isoDate(input.introducedDate, "bill introducedDate"),
     latestActionAt: isoTimestamp(input.latestActionAt, "bill latestActionAt")
@@ -1279,7 +1279,9 @@ function validateBillSummary(input: BillSummary): void {
   required(input.sessionId, "bill sessionId")
   required(input.identifier, "bill identifier")
   required(input.title, "bill title")
-  required(input.status, "bill status")
+  if (input.status !== null) {
+    required(input.status, "bill status")
+  }
   isoDate(input.introducedDate, "bill introducedDate")
   isoTimestamp(input.latestActionAt, "bill latestActionAt")
 }

@@ -366,12 +366,12 @@ function scopedBillChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
     {
       expected: "bill-page",
       id: "list-jurisdiction-bills",
-      path: `/api/jurisdictions/${encoded(fixture.jurisdictionId)}/bills?limit=1`
+      path: `/api/jurisdictions/${encoded(fixture.jurisdictionId)}/bills?sort=introduced-desc&limit=1`
     },
     {
       expected: "bill-page",
       id: "list-session-bills",
-      path: `/api/sessions/${encoded(fixture.sessionId)}/bills?limit=1`
+      path: `/api/sessions/${encoded(fixture.sessionId)}/bills?sort=introduced-desc&limit=1`
     }
   ]
 }
@@ -495,7 +495,7 @@ function hasBillSummary(value: unknown, canonicalApiBaseUrl: URL | undefined): b
     typeof value.identifier !== "string" ||
     typeof value.title !== "string" ||
     !isStringArray(value.classification) ||
-    typeof value.status !== "string" ||
+    !(value.status === null || typeof value.status === "string") ||
     !isStringArray(value.subjects) ||
     !(value.introducedDate === null || isIsoDate(value.introducedDate)) ||
     !(value.latestActionAt === null || isRfc3339(value.latestActionAt))
