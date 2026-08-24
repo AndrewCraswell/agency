@@ -16,7 +16,7 @@ order review are still required before any prototype order.
 
 - `STM32G474RET3TR` owns acquisition, touch qualification, timing, primary
   lamps, and buzzer in the `SCORING_SGND` domain.
-- `ESP32-S3-WROOM-1U-N16R2` owns display, Ethernet services, storage, controls,
+- `ESP32-S3-WROOM-1U-N16R2` owns display, Ethernet services, storage, encrypted IR remote reception, controls,
   and non-authoritative replay in the `APP_GND` domain.
 - `ISO7762FDWR`, `ISO7721FDR`, and `NXE1S0505MC` are the only permitted
   crossings of the visibly marked isolation corridor. The two grounds remain
@@ -114,6 +114,10 @@ manual reset request, application 3.3 V sense, and `APP_GND`. Use an isolated
 or approved-level external adapter; 5 V TTL is prohibited.
 
 ## Explicitly deferred
+
+The encrypted IR referee remote is not deferred. Its receiver/decoder path, ESP32 interface, optical test access, and
+numeric range/angle/light/latency requirements must converge through `BP-126` and `BP-146` before the canonical bench
+schematic or PCB can be released.
 
 This board does not decide enclosure mechanics, miniaturization, final
 three-board production partitioning, a production battery/UPS or charging

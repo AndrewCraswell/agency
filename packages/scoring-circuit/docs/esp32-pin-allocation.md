@@ -155,6 +155,12 @@ expander on the existing bus, or a reviewed change to the display/audio
 architecture. A future expander must default its external loads inactive and
 must not be allowed to pull a strapping pin.
 
+The encrypted IR referee remote is now an in-scope pre-prototype requirement, not an optional low-rate control. IR pulse
+capture, authenticated-frame intake, and fault behavior must be reconciled under `BP-126` before fabrication. This
+allocation does not assume that a generic I2C GPIO expander preserves the selected carrier/pulse timing. The reviewed
+design must either free a suitable reset-safe ESP32 peripheral input or select a bounded receiver/decoder peripheral and
+update this complete pad/interface allocation, its tests, the schematic, and the board-support configuration together.
+
 ### Audio I2S
 
 `TAS2505TRGERQ1` requires a digital audio stream. The existing one-net `AUDIO`

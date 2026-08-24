@@ -9,6 +9,10 @@
 3. Improve the web player now. It is a deterministic presentation and replay client, not a second scoring authority. Its RGB LED array must present the same event and latch semantics as the apparatus display contract.
 4. Make reliable, signed, rollback-capable OTA for both processors a launch requirement. The STM32 remains the only scoring authority throughout download, validation, activation, rollback, and an ESP32 failure.
 5. Plan to open-source the software while selling hardware. Select the exact license only after dependency-compatibility, contributor, trademark, safety, security, export, and commercial-hardware review.
+6. Deliver the encrypted IR remote, Favero-compatible bout workflow, controller APIs, and apparatus receiver software as
+   a reproducible, security-reviewed manufacturer package. The `RC-01` through `RC-18` work units in the
+   [encrypted IR remote contract](encrypted-ir-remote-control-contract.md) are product-launch requirements, not
+   optional application polish.
 
 This page sequences the decisions above. The [device delivery plan](device-delivery-plan.md) remains the authority for hardware, EVT, DVT, and production milestones. The [firmware language ADR](firmware-language-portability-decision.md) remains the authority for the current C17 decision.
 
@@ -19,6 +23,7 @@ This page sequences the decisions above. The [device delivery plan](device-deliv
 - Do not couple a web-player visual change to a new scoring rule. Render stored or already-qualified events; add rule behavior only through the existing rules, vector, and evidence process.
 - Do not OTA-update bootloaders or the ESP32 partition table in the initial product release. Do not make an irreversible anti-rollback change without an explicit security review.
 - Do not publish secrets, production signing keys, device credentials, unrestricted factory tools, or a claim that software publication makes hardware certified. Keep the license undecided until its review gate.
+- Keep IR commands, accepted bout-workflow events, and STM32 decision records as separate artifacts. Authentication never grants scoring authority or bypasses current-state guards.
 - Avoid speculative abstraction. A shared Rust crate exists only after equivalence evidence shows it reduces lifecycle risk. No Rust HAL, ESP Rust port, cloud fleet service, or alternate simulator is in scope merely to demonstrate portability.
 
 ## Phase A: Protect the current oracle and improve the player now
@@ -61,6 +66,13 @@ host/target evidence, and a complete oracle baseline. This is a code-completion 
 
 The first hardware product release must satisfy `EVO-09` through `EVO-16` together with the applicable M7 and M8
 evidence. M3-10 alone closes only part of the ESP32 update requirement; it does not close the STM32 path.
+
+The encrypted IR track runs alongside Phase B. `RC-01` through `RC-04` and bench tasks `BP-126`/`BP-146` must close
+before prototype schematic release. `RC-05` through `RC-12` establish the complete software workflow and simulator
+surface. `RC-13` through `RC-15` deliver receiver, handheld, and service firmware before prototype completion. `RC-16`
+closes paired-system bench acceptance, and `RC-17` through `RC-18` close the production fixture and manufacturer
+software-package gates. The handheld firmware, apparatus decoder, protocol schemas, tests, signed artifacts, and
+least-privilege provisioning tools are all part of the delivered software baseline.
 
 ## Phase C: Rust shared-core proof after current-code completion
 

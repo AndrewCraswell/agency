@@ -30,6 +30,8 @@ One board must let the team:
   existing `SN74AHCT245PWR` safe-blanking architecture;
 - program, reset, recover, and observe both processors without removing parts;
 - attach an external body-cord/piste fixture through a selected bench harness;
+- receive, authenticate, and exercise the in-scope encrypted IR referee remote through the selected protected receiver
+  path without giving the ESP32 scoring authority;
 - expose every critical rail, reset, timing, analog, isolation, and interface
   node to labeled probes.
 
@@ -54,6 +56,11 @@ This prototype does not close or require:
 
 Those are production gates. The bench board must preserve the architecture
 needed to test them later without pretending it already satisfies them.
+
+The encrypted IR referee remote is not deferred. Its product behavior, security boundary, bout-event requirements, and
+manufacturer package are defined in
+[`apps/scoring/docs/encrypted-ir-remote-control-contract.md`](../../../apps/scoring/docs/encrypted-ir-remote-control-contract.md).
+The current no-spare-GPIO allocation is a design blocker to resolve, not permission to omit the receiver.
 
 ## Documentation authority
 
@@ -225,6 +232,7 @@ their paper designs and test assets. No lane may waive another lane's evidence.
 | `BP-123` | Close both supervisor/watchdog/reset networks. | `BP-120`, `BP-121` | Exact MPN/value schematic and cold-start, brownout, watchdog, manual-reset, cross-domain, and power-off tests. |
 | `BP-124` | Freeze STM32 SWD and ESP32 UART/boot service headers. | `BP-120`, `BP-121` | Header pinouts, mating cable IDs, voltage constraints, reset procedure, and recovery demonstration plan. |
 | `BP-125` | Define oscillator, decoupling, boot straps, and unused-pin policy. | `BP-120`, `BP-121` | Data-sheet checklist and schematic sign-off for both processors. |
+| `BP-126` | Reconcile the encrypted IR receiver/decoder interface with the ESP32 allocation and authority boundary. | `BP-121` | Reviewed choice between reset-safe pin reallocation and a bounded decoder peripheral; pulse timing, reset behavior, queue bounds, fault isolation, and no direct STM32 scoring path are explicit. A generic GPIO expander receives no timing credit without measurement. |
 
 ### Ethernet, display, and application lane
 
@@ -236,14 +244,15 @@ their paper designs and test assets. No lane may waive another lane's evidence.
 | `BP-143` | Freeze HUB75 connector and panel power mating parts. | `BP-020` | Exact 16-pin signal and power connector MPNs, cable pinout, current rating, and purchased-panel continuity record. |
 | `BP-144` | Implement the two-buffer reset-safe HUB75 path. | `BP-121`, `BP-123`, `BP-143` | Schematic truth table proves black/high-impedance defaults; all 13 signals and pulls are present. |
 | `BP-145` | Define optional application peripherals for population. | `BP-121`, `BP-142` | Explicit populate/DNP table for F-RAM, RTC, secure element, audio amplifier, speaker, and antenna. |
+| `BP-146` | Select and freeze the encrypted IR remote receiver path and optical test interface. | `BP-126`, `BP-142`, `BP-145` | Exact receiver/demodulator or decoder, wavelength/carrier, supply/filter/protection, connector or optical window assumptions, test points, footprint, current budget, numeric range/angle/light/latency targets, and stuck/noise/power-off behavior are reviewed. |
 
 ### Schematic and physical implementation
 
 | ID | Work unit | Dependencies | Acceptance evidence |
 | --- | --- | --- | --- |
-| `BP-300` | Integrate one canonical bench schematic. | `BP-035`, `BP-050`, `BP-103`, `BP-104`, `BP-106`, `BP-122`, `BP-123`, `BP-125`, `BP-141`, `BP-142`, `BP-143`, `BP-144`, `BP-145` | Schematic source, generated PDF, converged candidate BOM, and zero unexplained ERC errors. Every fabrication-critical analog, power, processor, isolation, Ethernet, display, fixture, and debug input has converged. |
+| `BP-300` | Integrate one canonical bench schematic. | `BP-035`, `BP-050`, `BP-103`, `BP-104`, `BP-106`, `BP-122`, `BP-123`, `BP-125`, `BP-141`, `BP-142`, `BP-143`, `BP-144`, `BP-145`, `BP-146` | Schematic source, generated PDF, converged candidate BOM, and zero unexplained ERC errors. Every fabrication-critical analog, power, processor, isolation, Ethernet, display, encrypted IR remote, fixture, and debug input has converged. |
 | `BP-301` | Conduct independent mixed-signal and fault-containment review. | `BP-300` | Findings log closed with reviewer acceptance. |
-| `BP-302` | Freeze test points, removable links, current shunts, and labels. | `BP-300`, `BP-106` | Probe map covers every rail, reset, heartbeat, SPI, analog stage, fixture line, reference, and display-enable state. |
+| `BP-302` | Freeze test points, removable links, current shunts, and labels. | `BP-300`, `BP-106` | Probe map covers every rail, reset, heartbeat, SPI, encrypted IR receiver/decoder interface, analog stage, fixture line, reference, and display-enable state. |
 | `BP-303` | Freeze the final prototype order BOM against the accepted schematic. | `BP-035`, `BP-301`, `BP-302` | BOM and schematic reference sets, quantities, MPNs, packages, population/DNP states, footprint evidence, and approved substitutions match exactly; zero populated TBDs remain. |
 | `BP-400` | Freeze board outline, stack-up, mounting, and placement. | `BP-010`, `BP-301`, `BP-302`, `BP-303` | Dimensioned drawing, fabricator stack-up, placement review, hand/probe clearance, and strain-relief plan. |
 | `BP-401` | Route analog, isolation, clocks, USB-C PD and USB2 service, UART recovery, Ethernet, HUB75, and high-current branches. | `BP-400` | Routed source with reviewed return paths, USB/Ethernet differential constraints, PD/power layout rules, isolation clearance, and no unrouted nets. |
@@ -254,17 +263,17 @@ their paper designs and test assets. No lane may waive another lane's evidence.
 
 | ID | Work unit | Dependencies | Acceptance evidence |
 | --- | --- | --- | --- |
-| `BP-500` | Build STM32 and ESP32 board-support configurations. | `BP-120`, `BP-121`, `BP-300` | Pin ownership tests, build artifacts, firmware digests, and hardware revision binding. |
-| `BP-501` | Implement fixture-safe manufacturing self-test. | `BP-105`, `BP-302`, `BP-500` | Test enumerates rails, reference, resets, isolation, seven lines, lamps, buzzer, Ethernet, and display; failures cannot be reported as passes. |
+| `BP-500` | Build STM32 and ESP32 board-support configurations. | `BP-120`, `BP-121`, `BP-126`, `BP-300` | Pin ownership tests, encrypted IR receiver/decoder support, build artifacts, firmware digests, and hardware revision binding. |
+| `BP-501` | Implement fixture-safe manufacturing self-test. | `BP-105`, `BP-302`, `BP-500` | Test enumerates rails, reference, resets, isolation, seven lines, lamps, buzzer, encrypted IR receiver/decoder, Ethernet, and display; failures cannot be reported as passes. |
 | `BP-502` | Assemble and inspect the first boards. | `BP-403` | Serialized as-built BOM, X-ray where required, AOI/manual inspection, unpowered continuity/isolation, and rework record. |
 | `BP-503` | Conduct the ready-to-apply-power review. | `BP-050`, `BP-105`, `BP-106`, `BP-500`, `BP-501`, `BP-502` | Approved power procedure, current limits, stop conditions, calibrated equipment, fixture-interlock certificate, firmware digests, unpowered inspection, and signed external power permit. |
 | `BP-504` | Bring up power with processors and display disconnected. | `BP-503` | Capture successful 20 V/3 A PD negotiation; prove raw 5 V/non-PD attachment cannot energize the post-contract apparatus rail; verify PD and `LAB_POST_EFUSE_20V` selector throws, de-energized change procedure, and physical source mutual exclusion; execute the current-limited 20 V/2.3 A diagnostic bring-up; archive rail sequence, ripple, temperature, and stop conditions. |
 | `BP-505` | Bring up STM32, reset, SWD, and isolated link. | `BP-504`, `BP-500` | Clock/debug, watchdog, supervisor, heartbeat, malformed-link, and ESP32-absent evidence. |
-| `BP-506` | Bring up ESP32, Ethernet, USB service, and recovery. | `BP-504`, `BP-500`, `BP-141` | Capture USB Serial/JTAG enumeration, console/service traffic, JTAG access, disconnect/reconnect, and recovery; prove independent UART/`BOOT_N` recovery; archive W5500 reset, link, traffic, polling, and fault-injection captures. |
+| `BP-506` | Bring up ESP32, encrypted IR remote, Ethernet, USB service, and recovery. | `BP-504`, `BP-500`, `BP-141`, `BP-146` | Capture USB Serial/JTAG enumeration, console/service traffic, JTAG access, disconnect/reconnect, and recovery; prove independent UART/`BOOT_N` recovery; archive encrypted IR pairing, command/duplicate/replay/wrong-key/noise/fault results plus W5500 reset, link, traffic, polling, and fault-injection captures. |
 | `BP-507` | Bring up HUB75 with the purchased panel. | `BP-504`, `BP-144` | Blank/reset behavior, all signals, refresh, full-white current, inrush, cable drop, ghosting, and connector temperature. |
 | `BP-508` | Execute one-channel analog characterization before seven-channel scoring. | `BP-504`, `BP-106` | Complete calibrated archive; unavailable conditions remain unavailable. |
-| `BP-509` | Execute all-channel rules and interaction corpus. | `BP-505`, `BP-508` | Foil, epee, sabre, simultaneous-event, shorts, grounds, lockout, timing-boundary, replay, and failure-case results. |
-| `BP-510` | Run integrated stress and recovery. | `BP-506`, `BP-507`, `BP-509` | Panel load, Ethernet traffic, radio when equipped, processor resets, brownout, cable faults, and 50 C bench-thermal record. |
+| `BP-509` | Execute all-channel rules and interaction corpus. | `BP-505`, `BP-506`, `BP-508` | Foil, epee, sabre, simultaneous-event, shorts, grounds, lockout, timing-boundary, replay, every encrypted IR short/held command and state guard, loaded/fresh bout state, duplicate/replay rejection, and failure-case results. |
+| `BP-510` | Run integrated stress and recovery. | `BP-506`, `BP-507`, `BP-509` | Panel load, Ethernet traffic, encrypted IR traffic and optical interference, radio when equipped, processor resets, brownout, cable faults, and 50 C bench-thermal record. |
 | `BP-511` | Conduct prototype completion review. | `BP-510` | Accepted evidence index, known-limit register, production-transfer recommendations, and explicit remaining production gates. |
 
 ## Convergence gates and dependency DAG

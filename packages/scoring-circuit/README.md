@@ -16,7 +16,10 @@ one-board bench schematic or PCB described by the active prototype backlog.
 Read `docs/bench-prototype-plan.md` for the active one-board prototype backlog, dependency graph, and physical-test
 acceptance evidence. It keeps the exact STM32, ESP32-S3, isolation, and W5500 Ethernet silicon while deferring the
 enclosure and factory-optimized implementation. The read-only LLM review workflows are documented in `judges/README.md`.
-The bounded three-weapon sensing topology, ngspice model, and socketed fixture plan are documented in
+The encrypted IR referee remote is an in-scope pre-prototype requirement defined by
+`../../apps/scoring/docs/encrypted-ir-remote-control-contract.md`; the active board remains denied until the receiver,
+ESP32 interface, optical acceptance targets, and manufacturer-test boundary converge in the prototype backlog. The
+bounded three-weapon sensing topology, ngspice model, and socketed fixture plan are documented in
 `docs/analog-front-end.md`. The present-rule compatibility strategy and proposed FIE update are in
 `docs/fie-modern-power-proposal.md`.
 

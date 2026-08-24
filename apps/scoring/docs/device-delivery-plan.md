@@ -9,7 +9,8 @@ Deliver a premium three-weapon scoring apparatus in controlled increments:
 3. host-tested STM32 and ESP32 firmware;
 4. an independently reviewed EVT design package that is safe to fabricate;
 5. validated EVT and DVT units; and
-6. a production release supported by manufacturing, compliance, reliability, and FIE evidence.
+6. a production release supported by manufacturing, compliance, reliability, FIE evidence, and a reproducible
+   encrypted referee-remote software package.
 
 Fabrication readiness is the exit criterion for Milestone 5. It is not a claim of product, regulatory, or FIE approval.
 Software emulation can retire rule, protocol, replay, recovery, and application risks before boards arrive, but it cannot
@@ -77,6 +78,21 @@ development, but its handoff must identify any unrelated repository failures rat
 | M6: EVT integration | Boards score correctly and survive defined faults | EVT boards assembled | Application feature development |
 | M7: DVT and approval | Design passes reliability, compliance, venue, and FIE evidence gates | EVT defects closed | Manufacturing fixture development |
 | M8: Production validation | Repeatable, traceable manufacturing release | DVT design frozen | Field-service preparation |
+
+## Encrypted remote cross-milestone track
+
+The canonical operator behavior, button lookup, and `RC-01` through `RC-18` work units live in the
+[encrypted IR remote contract](encrypted-ir-remote-control-contract.md) and
+[button reference](remote-control-button-reference.md). They are not duplicated as M-series tasks because they cross
+product, application, firmware, security, electrical, and manufacturing ownership.
+
+| Gate | Required remote work | Exit evidence |
+| --- | --- | --- |
+| Baseline and schematic release | `RC-01` through `RC-04` | Authority and schema decisions, approved keypad/labels, selected cryptographic and receiver architecture, optical/battery targets, and bench-board interface. |
+| Virtual apparatus and application | `RC-05` through `RC-12` | Complete valid initialization, every bout transition, button conformance, snapshot load, no-empty-state tests, and single-writer controller arbitration. |
+| Target firmware | `RC-13` through `RC-15` | Apparatus decoder, handheld firmware, pairing/provisioning/service recovery, and target security evidence. |
+| Paired prototype acceptance | `RC-16` | Command, fault, range, angle, venue-light, adjacent-piste, latency, battery, reset, replay, and unavailable-owner evidence. |
+| Production release | `RC-17` and `RC-18` | Serialized fixture conformance and least-privilege manufacturer/recovery package dry run. |
 
 ## M0: Baseline contracts
 
@@ -186,7 +202,7 @@ frozen enough to complete the EVT schematic and layout.
 | M4-09 | Sacrificial ESD/EFT/surge and cable-fault report | M4-07, M4-08 | Failures are contained; protection changes are fed back into the model and retested |
 | M4-10 | Exact reel-socket selection and physical plug-fit study | None | Color suffixes, retention, contact resistance, sweat/salt exposure plan, harness termination, and cycle target are recorded |
 | M4-11 | Communications and power connector CAD/footprint verification | None | RJ45, USB-C, locking power, shield tabs, fasteners, service access, and strain relief match manufacturer drawings |
-| M4-12 | Enclosure architecture, board outlines, keepouts, and thermal assumptions | M4-10, M4-11 | VESA mounting, antenna clearance, airflow, display, speaker, connector modules, harness bend radii, and service sequence fit |
+| M4-12 | Enclosure architecture, board outlines, keepouts, and thermal assumptions | M4-10, M4-11 | VESA mounting, antenna clearance, encrypted IR optical window/field of view, airflow, display, speaker, connector modules, harness bend radii, and service sequence fit |
 | M4-13 | Harness pinout, keying, bonding, and current-rating release | M0-03, M0-10, M4-10 through M4-12 | No reversible connector can apply destructive power or swap left/right scoring lines; chassis/ESD paths are explicit |
 | M4-14 | Critical-parts readiness manifest update | M4-08 through M4-13 | Selected parts, verified footprints, manufacturer CAD, mechanical review, and blockers are accurately machine-checked |
 
@@ -202,7 +218,7 @@ the defined electrical/layout rules, and are safe to order as a small EVT build.
 | M5-03 | Complete seven-channel analog front-end schematic | M4-08, M4-09 | Exact values/models, calibration paths, safe defaults, ADC/comparator mapping, and test points match evidence |
 | M5-04 | Complete STM32, reference, debug, watchdog, and primary-output schematic | M0-08, M3-06, M5-03 | Pin map, clocks, decoupling, reset, SWD, lamps, buzzer, and fault defaults are complete |
 | M5-05 | Complete isolation and processor-link schematic | M0-04, M0-06, M3-05 | Directions, defaults, power domains, creepage intent, and reset/heartbeat paths match the contract |
-| M5-06 | Complete ESP32, Ethernet, storage, RTC, identity, display, audio, and debug schematic | M0-09, M3-15, M4-11 | Pin map, strapping, decoupling, clocks, antenna keepout, magnetics, terminations, and service paths are complete |
+| M5-06 | Complete ESP32, encrypted IR receiver, Ethernet, storage, RTC, identity, display, audio, and debug schematic | M0-09, M3-15, M4-11, RC-01 through RC-04 | Pin map, strapping, decoupling, clocks, protected IR receiver/decoder and test path, antenna keepout, magnetics, terminations, and service paths are complete |
 | M5-07 | Complete connector-module and harness schematics | M4-10 through M4-13 | Panel parts are not represented as generic headers; module and harness part numbers are explicit |
 | M5-08 | Production BOM and approved alternatives | M5-02 through M5-07 | Lifecycle, stock risk, temperature grade, tolerance, voltage/current derating, and alternates are reviewed |
 | M5-09 | Independent schematic and ERC review | M5-01 through M5-08 | No unexplained ERC waiver; every review comment is resolved or recorded as an accepted risk |
