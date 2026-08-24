@@ -14,7 +14,7 @@ import {
   type SynchronizationExecutionInput
 } from "./synchronize.js"
 
-const config = loadConfig({ CONGRESS_API_KEY: "congress-key", NODE_ENV: "test", OPENSTATE_API_KEY: "openstates-key" })
+const config = loadConfig({ CONGRESS_API_KEY: "congress-key", NODE_ENV: "test", OPENSTATES_API_KEY: "openstates-key" })
 const { database, pool } = createDatabase(config.database)
 const fixedNow = new Date("2026-08-18T12:00:00.000Z")
 
@@ -140,11 +140,11 @@ describe("executeSynchronization", () => {
         },
         dependencies
       )
-    ).rejects.toThrow("OPENSTATE_API_KEY is required")
+    ).rejects.toThrow("OPENSTATES_API_KEY is required")
   })
 
   it("rejects Congress.gov execution without the provider credential before acquiring a lease", async () => {
-    const missingCongressKey = loadConfig({ NODE_ENV: "test", OPENSTATE_API_KEY: "openstates-key" })
+    const missingCongressKey = loadConfig({ NODE_ENV: "test", OPENSTATES_API_KEY: "openstates-key" })
     const dependencies: SynchronizationExecutionDependencies = {
       runIngestionJob: async () => {
         throw new Error("The job runner must not be called")

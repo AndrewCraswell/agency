@@ -527,7 +527,7 @@ function assertCanonicalIdentity(identity: SynchronizationIdentity): ApiSynchron
 
 function assertProviderCredentials(config: LegislationConfig, identity: SynchronizationIdentity): void {
   if (identity.provider === "openstates" && config.ingestion.openStatesApiKey === undefined) {
-    throw new Error("OPENSTATE_API_KEY is required for OpenStates synchronization")
+    throw new Error("OPENSTATES_API_KEY is required for OpenStates synchronization")
   }
   if (identity.provider === "congress" && config.ingestion.congressApiKey === undefined) {
     throw new Error("CONGRESS_API_KEY is required for Congress.gov synchronization")
@@ -537,7 +537,7 @@ function assertProviderCredentials(config: LegislationConfig, identity: Synchron
 function createOpenStatesClient(config: LegislationConfig): OpenStatesSynchronizationClient {
   const apiKey = config.ingestion.openStatesApiKey
   if (apiKey === undefined) {
-    throw new Error("OPENSTATE_API_KEY is required for OpenStates synchronization")
+    throw new Error("OPENSTATES_API_KEY is required for OpenStates synchronization")
   }
   return new DefaultOpenStatesClient({
     apiKey,

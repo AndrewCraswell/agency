@@ -529,7 +529,7 @@ async function importOpenStates(options: {
 async function syncOpenStates(options: { from?: string; jurisdiction?: string }) {
   const config = loadConfig()
   if (config.ingestion.openStatesApiKey === undefined) {
-    throw new InvalidJobInput("OPENSTATE_API_KEY is required for openstates:sync")
+    throw new InvalidJobInput("OPENSTATES_API_KEY is required for openstates:sync")
   }
   const from = options.from === undefined ? new Date(Date.now() - 7 * 86_400_000) : parseDate(options.from, "from")
   const requestedCode = options.jurisdiction?.trim().toLowerCase()
@@ -594,7 +594,7 @@ async function syncOpenStates(options: { from?: string; jurisdiction?: string })
 async function syncOpenStatesEntities(options: { jurisdiction?: string }) {
   const config = loadConfig()
   if (config.ingestion.openStatesApiKey === undefined) {
-    throw new InvalidJobInput("OPENSTATE_API_KEY is required for openstates:entities")
+    throw new InvalidJobInput("OPENSTATES_API_KEY is required for openstates:entities")
   }
   const requestedCode = options.jurisdiction?.trim().toLowerCase()
   const jurisdictionCodes =
@@ -676,7 +676,7 @@ async function syncOpenStatesEntities(options: { jurisdiction?: string }) {
 async function syncOpenStatesEvents(options: { from?: string; jurisdiction?: string; to?: string }) {
   const config = loadConfig()
   if (config.ingestion.openStatesApiKey === undefined) {
-    throw new InvalidJobInput("OPENSTATE_API_KEY is required for openstates:events")
+    throw new InvalidJobInput("OPENSTATES_API_KEY is required for openstates:events")
   }
   const from = options.from === undefined ? new Date(Date.now() - 30 * 86_400_000) : parseDate(options.from, "from")
   const to = options.to === undefined ? new Date(Date.now() + 90 * 86_400_000) : parseDate(options.to, "to")
