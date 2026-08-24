@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto"
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http"
-import { sendApiError, type HttpApiHandler } from "../api/http.js"
+import { isIP } from "node:net"
+import { prepareApiResponse, sendApiError, type HttpApiHandler } from "../api/http.js"
+import { createFixedWindowRateLimiter, type RateLimiter } from "../api/rate-limit.js"
 import { runWithRequestContext, type RequestIdentity } from "../auth/request-context.js"
 import { AuthenticationError } from "../auth/workos.js"
 import type { LegislationConfig } from "../config/config.js"
@@ -22,6 +24,15 @@ type ServerDependencies = Readonly<{
   mcpAuthenticate?: (authorizationHeader: string | string[] | undefined) => Promise<RequestIdentity>
   mcpHandler?: (request: IncomingMessage, response: ServerResponse) => Promise<void>
   protectedResourceMetadata?: Readonly<{ authorizationServer: string; resource: string }>
+  rateLimit?: Readonly<{
+    enabled: boolean
+    limit: number
+    maximumKeys: number
+    /** Nonzero means the direct socket peer is an operator-trusted proxy chain. */
+    trustedProxyHops: number
+    windowMs: number
+  }>
+  rateLimiter?: RateLimiter
   readinessDetails?: () => Readonly<Record<string, unknown>>
   requestBodyBytes?: number
 }>
@@ -40,6 +51,9 @@ function protectedResourceMetadataUrl(resource: string): string {
 export function createLegislationServer(dependencies: ServerDependencies): Server {
   const isReady = dependencies.isReady ?? (() => true)
   const requestBodyBytes = dependencies.requestBodyBytes ?? 1_048_576
+  const rateLimiter =
+    dependencies.rateLimiter ??
+    (dependencies.rateLimit?.enabled === true ? createFixedWindowRateLimiter(dependencies.rateLimit) : undefined)
 
   const server = createServer(async (request, response) => {
     const requestUrl = new URL(request.url ?? "/", "http://localhost")
@@ -110,6 +124,8 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
       }
 
       if (requestUrl.pathname.startsWith("/api/")) {
+        response.setHeader("cache-control", "private, no-store")
+        prepareApiResponse(response, request)
         if (dependencies.apiHandler === undefined) {
           runWithRequestContext({ correlationId: String(correlationId) }, () =>
             sendApiError(request, response, new LegislationError("not_found", "API route was not found"))
@@ -122,6 +138,30 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
         )
         if (identity === undefined && dependencies.apiAuthenticate !== undefined) {
           return
+        }
+        if (rateLimiter !== undefined) {
+          let decision
+          try {
+            decision = rateLimiter.consume(
+              rateLimitKey(request, identity, dependencies.rateLimit?.trustedProxyHops ?? 0)
+            )
+          } catch (error) {
+            dependencies.logger.error("rate limit check failed", errorContext(error))
+            sendApiError(
+              request,
+              response,
+              new LegislationError("dependency_unavailable", "Request processing is unavailable")
+            )
+            return
+          }
+          response.setHeader("ratelimit-limit", String(decision.limit))
+          response.setHeader("ratelimit-remaining", String(decision.remaining))
+          response.setHeader("ratelimit-reset", String(decision.resetAfterSeconds))
+          if (!decision.allowed) {
+            response.setHeader("retry-after", String(decision.resetAfterSeconds))
+            sendApiError(request, response, new LegislationError("rate_limited", "Request rate limit exceeded"))
+            return
+          }
         }
         await runWithRequestContext({ correlationId: String(correlationId), identity }, async () => {
           const handled = await dependencies.apiHandler?.(request, response)
@@ -170,6 +210,54 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
   server.keepAliveTimeout = 5000
   server.requestTimeout = 60_000
   return server
+}
+
+function rateLimitKey(
+  request: IncomingMessage,
+  identity: RequestIdentity | undefined,
+  trustedProxyHops: number
+): string {
+  if (identity !== undefined) {
+    return `identity:${rateLimitKeyPart(identity.organizationId)}${rateLimitKeyPart(identity.userId)}`
+  }
+  return `ip:${rateLimitKeyPart(clientIp(request, trustedProxyHops))}`
+}
+
+function clientIp(request: IncomingMessage, trustedProxyHops: number): string {
+  const socketAddress = request.socket.remoteAddress ?? "unknown"
+  if (trustedProxyHops <= 0) {
+    return socketAddress
+  }
+
+  // A nonzero trustedProxyHops value is an explicit deployment assertion that
+  // the direct socket peer is an operator-controlled proxy. Without an IP
+  // allowlist, this process cannot independently verify that assertion.
+  const forwardedFor = request.headers["x-forwarded-for"]
+  const values = parseForwardedFor(forwardedFor)
+  if (values === undefined || values.length < trustedProxyHops) {
+    return socketAddress
+  }
+  const candidate = values.at(-trustedProxyHops)
+  if (candidate !== undefined) {
+    return candidate
+  }
+  return socketAddress
+}
+
+function parseForwardedFor(header: string | string[] | undefined): readonly string[] | undefined {
+  const raw = Array.isArray(header) ? header.join(",") : header
+  if (raw === undefined || raw.length === 0) {
+    return undefined
+  }
+  const values = raw.split(",").map((value) => value.trim())
+  return values.every((value) => isIP(value) !== 0) ? values : undefined
+}
+
+function rateLimitKeyPart(value: string | undefined): string {
+  if (value === undefined) {
+    return "u;"
+  }
+  return `s${value.length}:${value};`
 }
 
 function bearerTokenFrom(header: string | string[] | undefined): string | undefined {

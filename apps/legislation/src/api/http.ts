@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { getRequestContext } from "../auth/request-context.js"
 import { LegislationError } from "../legislation/errors.js"
@@ -6,6 +6,8 @@ import { LegislationError } from "../legislation/errors.js"
 export type HttpApiHandler = (request: IncomingMessage, response: ServerResponse) => Promise<boolean>
 
 export type JsonRecord = Readonly<Record<string, unknown>>
+
+const apiResponseRequests = new WeakMap<ServerResponse, IncomingMessage>()
 
 export function createCompositeHttpApiHandler(handlers: readonly HttpApiHandler[]): HttpApiHandler {
   return async (request, response) => {
@@ -18,8 +20,24 @@ export function createCompositeHttpApiHandler(handlers: readonly HttpApiHandler[
   }
 }
 
+export function prepareApiResponse(response: ServerResponse, request: IncomingMessage): void {
+  apiResponseRequests.set(response, request)
+}
+
 export function sendApiJson(response: ServerResponse, statusCode: number, body: unknown): void {
-  response.writeHead(statusCode, { "content-type": "application/json; charset=utf-8" })
+  const request = apiResponseRequests.get(response)
+  const headers: Record<string, string> = { "content-type": "application/json; charset=utf-8" }
+  if (request?.method === "GET" && statusCode === 200) {
+    const configuredEtag = response.getHeader("etag")
+    const etag = typeof configuredEtag === "string" ? configuredEtag : weakEtag(body)
+    headers.etag = etag
+    if (ifNoneMatchMatches(request.headers["if-none-match"], etag)) {
+      response.writeHead(304, { etag })
+      response.end()
+      return
+    }
+  }
+  response.writeHead(statusCode, headers)
   response.end(JSON.stringify(body))
 }
 
@@ -106,6 +124,13 @@ export function sendApiError(request: IncomingMessage, response: ServerResponse,
   const body = apiError(request, error)
   const status = body.status
   const { status: _status, ...errorBody } = body
+  if (
+    error instanceof LegislationError &&
+    (error.category === "dependency_unavailable" || error.category === "rate_limited") &&
+    !response.hasHeader("retry-after")
+  ) {
+    response.setHeader("retry-after", error.category === "dependency_unavailable" ? "30" : "1")
+  }
   sendApiJson(response, typeof status === "number" ? status : 500, errorBody)
 }
 
@@ -273,7 +298,7 @@ export async function readJsonBody(request: IncomingMessage, maximumBytes = 1_04
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
     bytes += buffer.byteLength
     if (bytes > maximumBytes) {
-      throw new LegislationError("invalid_request", "Request body exceeds the allowed size")
+      throw new LegislationError("payload_too_large", "Request body exceeds the allowed size")
     }
     chunks.push(buffer)
   }
@@ -318,6 +343,8 @@ function statusForError(category: LegislationError["category"] | "internal"): nu
       return 409
     case "precondition_failed":
       return 412
+    case "payload_too_large":
+      return 413
     case "unprocessable":
       return 422
     case "rate_limited":
@@ -327,4 +354,27 @@ function statusForError(category: LegislationError["category"] | "internal"): nu
     case "internal":
       return 500
   }
+}
+
+function weakEtag(body: unknown): string {
+  // Correlation IDs identify an individual request and are intentionally not
+  // part of the semantic representation validator.
+  const representation = JSON.stringify(body, (key, value: unknown) => (key === "correlationId" ? undefined : value))
+  const digest = createHash("sha256").update(representation).digest("base64url")
+  return `W/"${digest}"`
+}
+
+function ifNoneMatchMatches(header: string | string[] | undefined, etag: string): boolean {
+  const value = Array.isArray(header) ? header.join(",") : header
+  if (value === undefined) {
+    return false
+  }
+  const normalizedEtag = normalizeEtag(etag)
+  return value
+    .split(",")
+    .some((candidate) => candidate.trim() === "*" || normalizeEtag(candidate.trim()) === normalizedEtag)
+}
+
+function normalizeEtag(value: string): string {
+  return value.startsWith("W/") || value.startsWith("w/") ? value.slice(2) : value
 }

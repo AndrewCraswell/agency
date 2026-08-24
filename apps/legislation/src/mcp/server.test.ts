@@ -1,6 +1,9 @@
 import { Client, StreamableHTTPClientTransport } from "@modelcontextprotocol/client"
 import { afterEach, describe, expect, it } from "vitest"
+import { readJsonBody, sendApiJson } from "../api/http.js"
+import type { RateLimiter } from "../api/rate-limit.js"
 import { getRequestContext } from "../auth/request-context.js"
+import { LegislationError } from "../legislation/errors.js"
 import { createLogger, type Logger } from "../observability/logger.js"
 import { close, createLegislationServer } from "./server.js"
 import { createLegislationMcpHandler, type LegislationQueryApi } from "./tools.js"
@@ -17,12 +20,14 @@ async function startServer(
   isReady = true,
   options: Readonly<{
     apiHandler?: NonNullable<Parameters<typeof createLegislationServer>[0]["apiHandler"]>
-    apiAuthenticate?: () => Promise<{ userId: string }>
+    apiAuthenticate?: () => Promise<{ organizationId?: string; userId: string }>
     documentFetchRelay?: NonNullable<Parameters<typeof createLegislationServer>[0]["documentFetchRelay"]>
     logger?: Logger
     mcpAuthenticate?: () => Promise<{ userId: string }>
     mcpHandler?: NonNullable<Parameters<typeof createLegislationServer>[0]["mcpHandler"]>
     protectedResourceMetadata?: NonNullable<Parameters<typeof createLegislationServer>[0]["protectedResourceMetadata"]>
+    rateLimit?: NonNullable<Parameters<typeof createLegislationServer>[0]["rateLimit"]>
+    rateLimiter?: RateLimiter
     readinessDetails?: () => Readonly<Record<string, unknown>>
     requestBodyBytes?: number
   }> = {}
@@ -164,6 +169,230 @@ describe("createLegislationServer", () => {
         retryable: false
       }
     })
+  })
+
+  it("returns a weak ETag for API retrievals and honors a matching If-None-Match without a body", async () => {
+    const baseUrl = await startServer(true, {
+      apiHandler: async (_request, response) => {
+        sendApiJson(response, 200, { data: { id: "bill:us:119:hr:1" }, meta: { correlationId: "volatile" } })
+        return true
+      }
+    })
+
+    const initial = await fetch(`${baseUrl}/api/bills`)
+    const etag = initial.headers.get("etag")
+    expect(initial.status).toBe(200)
+    expect(etag).toMatch(/^W\/"/)
+    if (etag === null) {
+      throw new Error("Expected API retrieval to include an ETag")
+    }
+    expect(initial.headers.get("cache-control")).toBe("private, no-store")
+    await initial.text()
+
+    const conditional = await fetch(`${baseUrl}/api/bills`, { headers: { "if-none-match": etag } })
+    expect(conditional.status).toBe(304)
+    expect(conditional.headers.get("etag")).toBe(etag)
+    await expect(conditional.text()).resolves.toBe("")
+  })
+
+  it("preserves a resource revision ETag and honors it for conditional retrievals", async () => {
+    const revision = "7ca73ae3-ef1f-47bc-998c-ef30f7c6c6ee"
+    const baseUrl = await startServer(true, {
+      apiHandler: async (_request, response) => {
+        response.setHeader("etag", revision)
+        sendApiJson(response, 200, { data: { id: "subscription:test" } })
+        return true
+      }
+    })
+
+    const initial = await fetch(`${baseUrl}/api/subscriptions/subscription%3Atest`)
+    expect(initial.status).toBe(200)
+    expect(initial.headers.get("etag")).toBe(revision)
+    await initial.text()
+
+    const conditional = await fetch(`${baseUrl}/api/subscriptions/subscription%3Atest`, {
+      headers: { "if-none-match": revision }
+    })
+    expect(conditional.status).toBe(304)
+    expect(conditional.headers.get("etag")).toBe(revision)
+    await expect(conditional.text()).resolves.toBe("")
+  })
+
+  it("returns the canonical 413 envelope when an API request body exceeds one MiB", async () => {
+    const baseUrl = await startServer(true, {
+      apiHandler: async (request, response) => {
+        await readJsonBody(request)
+        sendApiJson(response, 200, { data: {} })
+        return true
+      }
+    })
+    const response = await fetch(`${baseUrl}/api/search/bills`, {
+      body: JSON.stringify({ query: "x".repeat(1_048_576) }),
+      headers: { "content-type": "application/json", "x-correlation-id": "oversized-api-body" },
+      method: "POST"
+    })
+
+    expect(response.status).toBe(413)
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        category: "payload_too_large",
+        correlationId: "oversized-api-body",
+        message: "Request body exceeds the allowed size",
+        retryable: false
+      }
+    })
+  })
+
+  it("adds Retry-After to retryable dependency failures", async () => {
+    const baseUrl = await startServer(true, {
+      apiHandler: async () => {
+        throw new LegislationError("dependency_unavailable", "Search dependency is unavailable")
+      }
+    })
+    const response = await fetch(`${baseUrl}/api/search/bills`)
+
+    expect(response.status).toBe(503)
+    expect(response.headers.get("retry-after")).toBe("30")
+    await expect(response.json()).resolves.toMatchObject({
+      error: { category: "dependency_unavailable", retryable: true }
+    })
+  })
+
+  it("rate limits API requests by authenticated identity with standard headers and a safe envelope", async () => {
+    const secret = "must-not-leak"
+    const baseUrl = await startServer(true, {
+      apiAuthenticate: async () => ({ userId: "user_test" }),
+      apiHandler: async (_request, response) => {
+        sendApiJson(response, 200, { data: { id: "bill:us:119:hr:1" } })
+        return true
+      },
+      rateLimit: { enabled: true, limit: 2, maximumKeys: 10, trustedProxyHops: 0, windowMs: 60_000 }
+    })
+
+    const headers = { authorization: `Bearer ${secret}` }
+    const first = await fetch(`${baseUrl}/api/bills`, { headers })
+    const second = await fetch(`${baseUrl}/api/bills`, { headers })
+    const third = await fetch(`${baseUrl}/api/bills`, { headers })
+
+    expect([first.status, second.status]).toEqual([200, 200])
+    await first.text()
+    await second.text()
+    expect(third.status).toBe(429)
+    expect(third.headers.get("ratelimit-limit")).toBe("2")
+    expect(third.headers.get("ratelimit-remaining")).toBe("0")
+    expect(third.headers.get("ratelimit-reset")).toMatch(/^\d+$/)
+    expect(third.headers.get("retry-after")).toBe(third.headers.get("ratelimit-reset"))
+    expect(third.headers.get("cache-control")).toBe("private, no-store")
+    const body = await third.text()
+    expect(body).not.toContain(secret)
+    expect(JSON.parse(body)).toMatchObject({
+      error: { category: "rate_limited", message: "Request rate limit exceeded", retryable: true }
+    })
+  })
+
+  it("uses a verified identity instead of caller-controlled forwarded addresses", async () => {
+    const baseUrl = await startServer(true, {
+      apiAuthenticate: async () => ({ userId: "user_test" }),
+      apiHandler: async (_request, response) => {
+        sendApiJson(response, 200, { data: {} })
+        return true
+      },
+      rateLimit: { enabled: true, limit: 1, maximumKeys: 10, trustedProxyHops: 1, windowMs: 60_000 }
+    })
+
+    const first = await fetch(`${baseUrl}/api/bills`, {
+      headers: { authorization: "Bearer test", "x-forwarded-for": "198.51.100.10" }
+    })
+    const second = await fetch(`${baseUrl}/api/bills`, {
+      headers: { authorization: "Bearer test", "x-forwarded-for": "203.0.113.10" }
+    })
+
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(429)
+    await first.text()
+    await second.text()
+  })
+
+  it("ignores caller-controlled forwarded addresses when no trusted proxy is configured", async () => {
+    const baseUrl = await startServer(true, {
+      apiHandler: async (_request, response) => {
+        sendApiJson(response, 200, { data: {} })
+        return true
+      },
+      rateLimit: { enabled: true, limit: 1, maximumKeys: 10, trustedProxyHops: 0, windowMs: 60_000 }
+    })
+
+    const first = await fetch(`${baseUrl}/api/bills`, { headers: { "x-forwarded-for": "198.51.100.10" } })
+    const second = await fetch(`${baseUrl}/api/bills`, { headers: { "x-forwarded-for": "203.0.113.10" } })
+
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(429)
+    await first.text()
+    await second.text()
+  })
+
+  it("uses forwarded addresses only after an explicit trusted proxy opt-in", async () => {
+    const baseUrl = await startServer(true, {
+      apiHandler: async (_request, response) => {
+        sendApiJson(response, 200, { data: {} })
+        return true
+      },
+      rateLimit: { enabled: true, limit: 1, maximumKeys: 10, trustedProxyHops: 1, windowMs: 60_000 }
+    })
+
+    const first = await fetch(`${baseUrl}/api/bills`, { headers: { "x-forwarded-for": "198.51.100.10" } })
+    const second = await fetch(`${baseUrl}/api/bills`, { headers: { "x-forwarded-for": "203.0.113.10" } })
+
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(200)
+    await first.text()
+    await second.text()
+  })
+
+  it("falls back to the direct socket when any forwarded hop is malformed", async () => {
+    const baseUrl = await startServer(true, {
+      apiHandler: async (_request, response) => {
+        sendApiJson(response, 200, { data: {} })
+        return true
+      },
+      rateLimit: { enabled: true, limit: 1, maximumKeys: 10, trustedProxyHops: 1, windowMs: 60_000 }
+    })
+
+    const first = await fetch(`${baseUrl}/api/bills`, {
+      headers: { "x-forwarded-for": "198.51.100.10, malformed-hop" }
+    })
+    const second = await fetch(`${baseUrl}/api/bills`, {
+      headers: { "x-forwarded-for": "203.0.113.10, malformed-hop" }
+    })
+
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(429)
+    await first.text()
+    await second.text()
+  })
+
+  it("keeps structured identity components collision-free", async () => {
+    const identities = [
+      { organizationId: "org", userId: "user:part" },
+      { organizationId: "org:user", userId: "part" }
+    ]
+    let identityIndex = 0
+    const baseUrl = await startServer(true, {
+      apiAuthenticate: async () => identities[identityIndex++] ?? identities.at(-1)!,
+      apiHandler: async (_request, response) => {
+        sendApiJson(response, 200, { data: {} })
+        return true
+      },
+      rateLimit: { enabled: true, limit: 1, maximumKeys: 10, trustedProxyHops: 0, windowMs: 60_000 }
+    })
+
+    const first = await fetch(`${baseUrl}/api/bills`, { headers: { authorization: "Bearer first" } })
+    const second = await fetch(`${baseUrl}/api/bills`, { headers: { authorization: "Bearer second" } })
+
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(200)
+    await first.text()
+    await second.text()
   })
 
   it("returns API authentication failures in the API error envelope", async () => {

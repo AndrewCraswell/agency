@@ -5,6 +5,7 @@ export type LegislationErrorCategory =
   | "internal"
   | "invalid_request"
   | "not_found"
+  | "payload_too_large"
   | "precondition_failed"
   | "rate_limited"
   | "unprocessable"

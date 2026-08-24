@@ -2,6 +2,8 @@ import { z } from "zod"
 import { mcpHttpMethods } from "../mcp/http-methods.js"
 
 const optionalSecret = z.string().trim().min(1).optional()
+const workosSessionIssuer = "https://api.workos.com"
+const environmentBoolean = z.preprocess(parseEnvironmentBoolean, z.boolean())
 const mcpApiBaseUrl = z.url({ protocol: /^https?$/ }).refine((value) => {
   const url = new URL(value)
   return (
@@ -24,10 +26,16 @@ const configSchema = z
       z.object({ mode: z.literal("disabled") }),
       z.object({
         apiAudience: z.string().trim().min(1),
+        clientId: z.string().trim().min(1),
         issuer: z.url({ protocol: /^https$/ }),
         jwksUrl: z.url({ protocol: /^https$/ }),
         mcpAudience: z.string().trim().min(1),
-        mode: z.literal("workos")
+        mode: z.literal("workos"),
+        userSession: z.object({
+          clientId: z.string().trim().min(1),
+          issuer: z.literal(workosSessionIssuer),
+          jwksUrl: z.url({ protocol: /^https$/ })
+        })
       })
     ]),
     backfill: z.object({
@@ -106,6 +114,13 @@ const configSchema = z
       host: z.string().trim().min(1),
       port: z.coerce.number().int().min(1).max(65_535),
       publicApiBaseUrl: z.url({ protocol: /^https?$/ }),
+      rateLimit: z.object({
+        enabled: environmentBoolean,
+        limit: z.coerce.number().int().min(1).max(10_000),
+        maximumKeys: z.coerce.number().int().min(1).max(100_000),
+        trustedProxyHops: z.coerce.number().int().min(0).max(4),
+        windowMs: z.coerce.number().int().min(1_000).max(3_600_000)
+      }),
       requestBodyBytes: z.coerce.number().int().min(1024).max(10_485_760),
       shutdownTimeoutMs: z.coerce.number().int().min(1000).max(120_000)
     })
@@ -147,10 +162,19 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
     (environment.AUTH_MODE ?? "disabled") === "workos"
       ? {
           apiAudience: environment.WORKOS_API_AUDIENCE,
+          clientId: environment.WORKOS_CLIENT_ID,
           issuer: environment.WORKOS_ISSUER,
           jwksUrl: environment.WORKOS_JWKS_URL,
           mcpAudience: environment.WORKOS_MCP_AUDIENCE ?? environment.WORKOS_AUDIENCE,
-          mode: "workos" as const
+          mode: "workos" as const,
+          userSession: {
+            clientId: environment.WORKOS_CLIENT_ID,
+            issuer: workosSessionIssuer,
+            jwksUrl: new URL(
+              `/sso/jwks/${encodeURIComponent(environment.WORKOS_CLIENT_ID ?? "")}`,
+              workosSessionIssuer
+            ).toString()
+          }
         }
       : { mode: environment.AUTH_MODE ?? "disabled" }
   const result = configSchema.safeParse({
@@ -220,6 +244,13 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       publicApiBaseUrl:
         environment.LEGISLATION_PUBLIC_API_BASE_URL ??
         (environment.NODE_ENV === "production" ? undefined : "http://127.0.0.1:3100"),
+      rateLimit: {
+        enabled: environment.LEGISLATION_RATE_LIMIT_ENABLED ?? "true",
+        limit: environment.LEGISLATION_RATE_LIMIT_LIMIT ?? "120",
+        maximumKeys: environment.LEGISLATION_RATE_LIMIT_MAXIMUM_KEYS ?? "10000",
+        trustedProxyHops: environment.LEGISLATION_TRUSTED_PROXY_HOPS ?? "0",
+        windowMs: environment.LEGISLATION_RATE_LIMIT_WINDOW_MS ?? "60000"
+      },
       requestBodyBytes: environment.LEGISLATION_REQUEST_BODY_BYTES ?? "1048576",
       shutdownTimeoutMs: environment.LEGISLATION_SHUTDOWN_TIMEOUT_MS ?? "30000"
     }
@@ -242,4 +273,14 @@ function parseMcpHttpMethods(value: string | undefined): string[] {
         .split(",")
         .map((method) => method.trim())
         .filter((method) => method.length > 0)
+}
+
+function parseEnvironmentBoolean(value: unknown): unknown {
+  if (value === "true" || value === true) {
+    return true
+  }
+  if (value === "false" || value === false) {
+    return false
+  }
+  return value
 }

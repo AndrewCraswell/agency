@@ -340,17 +340,22 @@ async function serve() {
   const apiAuthenticate =
     config.auth.mode === "workos"
       ? createWorkosAuthenticator({
-          audience: [config.auth.apiAudience, config.auth.mcpAudience],
-          issuer: config.auth.issuer,
-          jwksUrl: config.auth.jwksUrl
+          m2m: {
+            audience: [config.auth.apiAudience, config.auth.mcpAudience],
+            issuer: config.auth.issuer,
+            jwksUrl: config.auth.jwksUrl
+          },
+          userSession: config.auth.userSession
         })
       : undefined
   const mcpAuthenticate =
     config.auth.mode === "workos"
       ? createWorkosAuthenticator({
-          audience: config.auth.mcpAudience,
-          issuer: config.auth.issuer,
-          jwksUrl: config.auth.jwksUrl
+          m2m: {
+            audience: config.auth.mcpAudience,
+            issuer: config.auth.issuer,
+            jwksUrl: config.auth.jwksUrl
+          }
         })
       : undefined
   const server = createLegislationServer({
@@ -384,6 +389,7 @@ async function serve() {
             resource: config.auth.mcpAudience
           }
         : undefined,
+    rateLimit: config.server.rateLimit,
     readinessDetails: () => ({ databasePool: databasePoolSnapshot(pool) }),
     requestBodyBytes: config.server.requestBodyBytes
   })
