@@ -2,6 +2,13 @@ import { readFile } from "node:fs/promises"
 import { createServer } from "node:http"
 import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import { compileBoxTesterSequence } from "../dist/box-tester-sequence.js"
+import {
+  createIndeterminateVirtualTesterTimeline,
+  createInfrastructureErrorVirtualTesterTimeline,
+  createSkippedVirtualTesterTimeline,
+  createVirtualTesterTimeline
+} from "../dist/box-tester-virtual-timeline.js"
 import { runScenario } from "../dist/scenario-runner.js"
 import { loadTimingTableForRuleRevision } from "../dist/timing-boundary.js"
 
@@ -9,6 +16,7 @@ const applicationDirectory = resolve(dirname(fileURLToPath(import.meta.url)), ".
 const manifestPath = resolve(applicationDirectory, "docs/golden-scenario-manifest.json")
 const observatoryPath = resolve(applicationDirectory, "observatory/index.html")
 const projectionModulePath = resolve(applicationDirectory, "dist/scenario-display-projection.js")
+const schemaModulePath = resolve(applicationDirectory, "dist/scenario-display-schema.js")
 const identityModulePath = resolve(applicationDirectory, "dist/observatory-identity.js")
 const host = "127.0.0.1"
 const portArgument = process.argv.find((argument) => argument.startsWith("--port="))
@@ -23,6 +31,7 @@ const activeById = new Map(activeEntries.map((entry) => [entry.scenarioId, entry
 const plannedCoverage = manifest.coverage.filter((entry) => entry.status === "planned")
 const observatoryHtml = await readFile(observatoryPath, "utf8")
 const projectionModule = await readFile(projectionModulePath, "utf8")
+const schemaModule = await readFile(schemaModulePath, "utf8")
 const identityModule = await readFile(identityModulePath, "utf8")
 
 async function loadScenario(entry) {
@@ -61,11 +70,24 @@ async function executeActiveEntry(entry) {
   const result = run.report.scenarios[0]
   if (run.exitCode === 2 || result === undefined) throw new Error(run.report.error?.code ?? "scenario execution failed")
   const scenario = await loadScenario(entry)
+  let tester
+  try {
+    tester =
+      scenario.expect.status === "accepted"
+        ? createVirtualTesterTimeline(compileBoxTesterSequence(scenario), result)
+        : createIndeterminateVirtualTesterTimeline(scenario.scenarioId, "scenario-not-accepted-for-stimulus")
+  } catch (error) {
+    tester = createInfrastructureErrorVirtualTesterTimeline(
+      scenario.scenarioId,
+      error instanceof Error ? error.message : "virtual-tester-execution-error"
+    )
+  }
   return {
     expected: scenario.expect,
     result,
     scenario,
     status: result.status,
+    tester,
     timing: timingForScenario(scenario)
   }
 }
@@ -92,6 +114,7 @@ async function executeReport(selectedScenarioId) {
                 : "epee"
           },
           status: "skipped",
+          tester: createSkippedVirtualTesterTimeline(entry.traceabilityId, "scenario-not-executable"),
           timing: { reason: "scenario-not-executable", status: "unavailable" }
         }))
       : []
@@ -134,6 +157,15 @@ const server = createServer(async (request, response) => {
         "X-Content-Type-Options": "nosniff"
       })
       response.end(projectionModule)
+      return
+    }
+    if (request.method === "GET" && url.pathname === "/assets/scenario-display-schema.js") {
+      response.writeHead(200, {
+        "Cache-Control": "no-store",
+        "Content-Type": "text/javascript; charset=utf-8",
+        "X-Content-Type-Options": "nosniff"
+      })
+      response.end(schemaModule)
       return
     }
     if (request.method === "GET" && url.pathname === "/assets/observatory-identity.js") {

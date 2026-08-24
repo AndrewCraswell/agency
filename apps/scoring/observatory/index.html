@@ -866,6 +866,49 @@
         return section
       }
 
+      function renderVirtualTesterEvidence(testCase) {
+        const tester = testCase.tester
+        if (!tester) return document.createDocumentFragment()
+        const section = document.createElement("section")
+        const heading = document.createElement("h3")
+        heading.textContent = "Virtual tester evidence"
+        const outcome = document.createElement("p")
+        outcome.id = "virtual-tester-outcome"
+        outcome.setAttribute("role", "status")
+        outcome.textContent = "Virtual tester outcome: " + tester.outcome
+        const table = document.createElement("table")
+        table.className = "evaluations"
+        table.innerHTML = "<thead><tr><th>Time</th><th>Lane</th><th>Evidence</th></tr></thead>"
+        const body = document.createElement("tbody")
+        for (const event of tester.timeline) {
+          const row = document.createElement("tr")
+          row.className = "virtual-tester-row"
+          row.dataset.atUs = String(event.atUs)
+          const time = document.createElement("td")
+          time.textContent = formatTime(event.atUs)
+          const lane = document.createElement("td")
+          lane.textContent = event.lane
+          const evidence = document.createElement("td")
+          evidence.textContent = event.label
+          row.append(time, lane, evidence)
+          body.append(row)
+        }
+        table.append(body)
+        section.append(heading, outcome, table)
+        return section
+      }
+
+      function updateVirtualTesterPlayback(event) {
+        const atUs = event?.playbackAtUs ?? -1
+        document.querySelectorAll(".virtual-tester-row").forEach((row) => {
+          const occurred = Number(row.dataset.atUs) <= atUs
+          row.classList.toggle("is-played", occurred)
+          row.classList.toggle("is-current", occurred && Number(row.dataset.atUs) === atUs)
+          if (occurred) row.setAttribute("aria-current", "true")
+          else row.removeAttribute("aria-current")
+        })
+      }
+
       function stopPlayback() {
         if (state.timer !== null) window.clearInterval(state.timer)
         state.timer = null
@@ -954,6 +997,7 @@
         })
         updatePlaybackControls()
         updateBoxPlayer(event)
+        updateVirtualTesterPlayback(event)
         if (!current) return
         current.replaceChildren()
         if (event === undefined) {
@@ -1737,9 +1781,14 @@
           const message = document.createElement("p")
           message.className = "empty"
           message.textContent = "Scenario not executable yet. This requirement remains in the planned corpus."
-          body.append(message)
+          body.append(message, renderVirtualTesterEvidence(testCase))
         } else {
-          body.append(renderTimeline(testCase), renderEvaluations(testCase), renderEventStream())
+          body.append(
+            renderTimeline(testCase),
+            renderEvaluations(testCase),
+            renderVirtualTesterEvidence(testCase),
+            renderEventStream()
+          )
         }
         detailRoot.append(body)
       }

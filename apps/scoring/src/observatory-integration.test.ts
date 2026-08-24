@@ -51,11 +51,21 @@ describe("scenario observatory module integration", () => {
   })
 
   it("serves the compiled tested projection as the observatory module", async () => {
-    const [pageResponse, moduleResponse, identityResponse, compiledModule, compiledIdentity] = await Promise.all([
+    const [
+      pageResponse,
+      moduleResponse,
+      schemaResponse,
+      identityResponse,
+      compiledModule,
+      compiledSchema,
+      compiledIdentity
+    ] = await Promise.all([
       fetch(origin),
       fetch(`${origin}/assets/scenario-display-projection.js`),
+      fetch(`${origin}/assets/scenario-display-schema.js`),
       fetch(`${origin}/assets/observatory-identity.js`),
       readFile(resolve(applicationDirectory, "dist/scenario-display-projection.js"), "utf8"),
+      readFile(resolve(applicationDirectory, "dist/scenario-display-schema.js"), "utf8"),
       readFile(resolve(applicationDirectory, "dist/observatory-identity.js"), "utf8")
     ])
     const page = await pageResponse.text()
@@ -75,12 +85,18 @@ describe("scenario observatory module integration", () => {
     expect(page).not.toContain("event.atUs / maximumTime")
     expect(page).toContain('identity.setAttribute("aria-label", `Selected ${projectedIdentity.kind}`)')
     expect(page).toContain("projectObservatoryIdentity(testCase)")
+    expect(page).toContain("function renderVirtualTesterEvidence(testCase)")
+    expect(page).toContain("function updateVirtualTesterPlayback(event)")
+    expect(page).toContain("Virtual tester outcome: ")
     expect(page).toContain("if (projectedIdentity.canRun)")
     expect(page).not.toContain("function isRejectedCase")
     expect(page).not.toContain('testCase.expected?.status === "rejected"')
     expect(moduleResponse.headers.get("content-type")).toBe("text/javascript; charset=utf-8")
     expect(moduleResponse.headers.get("x-content-type-options")).toBe("nosniff")
     expect(await moduleResponse.text()).toBe(compiledModule)
+    expect(schemaResponse.headers.get("content-type")).toBe("text/javascript; charset=utf-8")
+    expect(schemaResponse.headers.get("x-content-type-options")).toBe("nosniff")
+    expect(await schemaResponse.text()).toBe(compiledSchema)
     expect(identityResponse.headers.get("content-type")).toBe("text/javascript; charset=utf-8")
     expect(identityResponse.headers.get("x-content-type-options")).toBe("nosniff")
     expect(await identityResponse.text()).toBe(compiledIdentity)
@@ -93,6 +109,7 @@ describe("scenario observatory module integration", () => {
       cases: {
         scenario: { ruleRevision?: unknown; scenarioId?: unknown; traceabilityId?: unknown }
         status: string
+        tester?: { outcome?: unknown; timeline?: unknown }
       }[]
     }
 
@@ -122,5 +139,9 @@ describe("scenario observatory module integration", () => {
           scenario.ruleRevision === undefined
       )
     ).toBe(true)
+    expect(
+      report.cases.every(({ tester }) => typeof tester?.outcome === "string" && Array.isArray(tester.timeline))
+    ).toBe(true)
+    expect(report.cases.some(({ tester }) => tester?.outcome === "skipped")).toBe(true)
   })
 })
