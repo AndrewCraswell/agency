@@ -1,6 +1,16 @@
 import { z } from "zod"
 
 const optionalSecret = z.string().trim().min(1).optional()
+const mcpApiBaseUrl = z.url({ protocol: /^https?$/ }).refine((value) => {
+  const url = new URL(value)
+  return (
+    url.username.length === 0 &&
+    url.password.length === 0 &&
+    url.pathname === "/" &&
+    url.search.length === 0 &&
+    url.hash.length === 0
+  )
+}, "MCP API base URL must be an origin without credentials, a path, query, or hash")
 
 const configSchema = z
   .object({
@@ -53,6 +63,15 @@ const configSchema = z
     logging: z.object({
       level: z.enum(["debug", "info", "warn", "error"])
     }),
+    mcp: z.discriminatedUnion("transport", [
+      z.object({ transport: z.literal("in-process") }),
+      z.object({
+        apiBaseUrl: mcpApiBaseUrl,
+        bearerToken: optionalSecret,
+        timeoutMs: z.coerce.number().int().min(1).max(60_000),
+        transport: z.literal("http")
+      })
+    ]),
     model: z.object({
       apiKey: optionalSecret,
       baseUrl: z.url({ protocol: /^https$/ })
@@ -156,6 +175,15 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       sourceDirectory: environment.LEGISLATION_SOURCE_DIRECTORY ?? ".data/sources"
     },
     logging: { level: environment.LOG_LEVEL ?? "info" },
+    mcp:
+      (environment.LEGISLATION_MCP_TRANSPORT ?? "in-process") === "http"
+        ? {
+            apiBaseUrl: environment.LEGISLATION_MCP_API_BASE_URL,
+            bearerToken: environment.LEGISLATION_MCP_API_BEARER_TOKEN,
+            timeoutMs: environment.LEGISLATION_MCP_API_TIMEOUT_MS ?? "30000",
+            transport: "http"
+          }
+        : { transport: environment.LEGISLATION_MCP_TRANSPORT ?? "in-process" },
     model: {
       apiKey: environment.OPENROUTER_API_KEY,
       baseUrl: environment.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1"

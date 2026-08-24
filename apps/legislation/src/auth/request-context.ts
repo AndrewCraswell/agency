@@ -6,6 +6,7 @@ export type RequestIdentity = Readonly<{
 }>
 
 export type RequestContext = Readonly<{
+  bearerToken?: string
   correlationId: string
   identity?: RequestIdentity
 }>

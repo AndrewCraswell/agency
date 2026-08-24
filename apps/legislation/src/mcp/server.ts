@@ -141,7 +141,9 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
           sendJson(response, 413, { error: "payload_too_large" })
           return
         }
-        await runWithRequestContext({ correlationId: String(correlationId), identity }, () =>
+        const bearerToken =
+          dependencies.authenticate === undefined ? undefined : bearerTokenFrom(request.headers.authorization)
+        await runWithRequestContext({ bearerToken, correlationId: String(correlationId), identity }, () =>
           dependencies.mcpHandler?.(request, response)
         )
         return
@@ -161,6 +163,14 @@ export function createLegislationServer(dependencies: ServerDependencies): Serve
   server.keepAliveTimeout = 5000
   server.requestTimeout = 60_000
   return server
+}
+
+function bearerTokenFrom(header: string | string[] | undefined): string | undefined {
+  if (typeof header !== "string") {
+    return undefined
+  }
+  const match = /^Bearer ([^\s]+)$/i.exec(header)
+  return match?.[1]
 }
 
 async function authenticateRequest(

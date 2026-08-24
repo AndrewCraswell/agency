@@ -282,9 +282,30 @@ describe("createLegislationServer", () => {
 
     expect(response.status).toBe(204)
     expect(capturedContext).toEqual({
+      bearerToken: "test",
       correlationId: "auth-request",
       identity: { organizationId: "org_test", userId: "user_test" }
     })
+  })
+
+  it("does not forward an unverified bearer token when MCP authentication is disabled", async () => {
+    let capturedContext: ReturnType<typeof getRequestContext>
+    const baseUrl = await startServer(true, {
+      mcpHandler: async (_request, response) => {
+        capturedContext = getRequestContext()
+        response.writeHead(204)
+        response.end()
+      }
+    })
+
+    const response = await fetch(`${baseUrl}/mcp`, {
+      body: "{}",
+      headers: { authorization: "Bearer unverified", "x-correlation-id": "anonymous-request" },
+      method: "POST"
+    })
+
+    expect(response.status).toBe(204)
+    expect(capturedContext).toEqual({ correlationId: "anonymous-request" })
   })
 
   it("allows an authenticated MCP client to discover and call every authorized tool", async () => {
