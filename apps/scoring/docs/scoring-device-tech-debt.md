@@ -94,8 +94,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 ## SD-005: establish one transport codec source of truth across targets
 
 - Priority: `P1`
-- State: `done`
-- Latest state: Root review removed the legacy direct-storage ingress. The canonical receiver now commits and advances exactly once before optional application forwarding; callback failure degrades without rollback or duplicate forwarding, missing callbacks retain journal acceptance, and Release CTest passes 3/3 with the FW-008 replay-preflight cases preserved.
+- State: `ready`
 - Affected files: [`apps/scoring/src/transport-frame.ts`](../src/transport-frame.ts) (lines 9-15 and 131-210), [`apps/scoring/firmware/stm32/core/stm32_transport.c`](../firmware/stm32/core/stm32_transport.c) (lines 6-123 and 163-215), [`apps/scoring/firmware/esp32/src/scoring_esp32_services.c`](../firmware/esp32/src/scoring_esp32_services.c) (lines 5-22 and 145-218), [`apps/scoring/firmware/stm32/tools/generate-transport-fixture.mjs`](../firmware/stm32/tools/generate-transport-fixture.mjs), and the ESP32 host transport tests.
 - Description and evidence: TypeScript defines the M2-05 magic, version, message mapping, direction policy, lengths, and CRC. The STM32 C parser repeats those rules and receives generated golden frames from the TypeScript build. The ESP32 C parser independently repeats the magic/version/message range, header offsets, flags, length, and CRC, but its host tests construct frames locally rather than consuming the generated TypeScript fixture. The C implementations also use range checks for message types where TypeScript uses an explicit mapping.
 - Impact: a message-code, direction, length, or CRC change can pass one target's tests and fail at the other target. The current STM32 fixture generation gives cross-language evidence for STM32 only; the ESP32 boundary has no equivalent byte-for-byte compatibility gate.
@@ -569,7 +568,8 @@ truth.
 ## FW-006: make the ESP32 receiver the sole authoritative-record ingress
 
 - Priority: `P1`
-- State: `ready`
+- State: `done`
+- Latest state: Root review removed the legacy direct-storage ingress. The canonical receiver now commits and advances exactly once before optional application forwarding; callback failure degrades without rollback or duplicate forwarding, missing callbacks retain journal acceptance, and Release CTest passes 3/3 with the FW-008 replay-preflight cases preserved.
 - Affected files: `apps/scoring/firmware/esp32/src/scoring_esp32_services.c`, its public header, receiver code, and focused native tests.
 - Description: `scoring_esp32_receive_authoritative_record` forwards an accepted decision payload directly to storage, while the canonical receiver path owns durable journal persistence, cursor restoration, duplicate and reorder rejection, reset, and replay.
 - Impact: a production caller can select a second ingress boundary that bypasses exactly-once and recovery guarantees.
