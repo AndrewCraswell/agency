@@ -28,6 +28,7 @@ describe("BP-125 processor support", () => {
   it("hash-verifies the Yageo primary source for the selected STM32 BOOT0 pulldown", () => {
     const source = benchPrototypeProcessorSupport.supportSelectionEvidence.stm32Boot0Pulldown
     const esp32Source = benchPrototypeProcessorSupport.supportSelectionEvidence.esp32BootPullup
+    const esp32EnSource = benchPrototypeProcessorSupport.supportSelectionEvidence.esp32EnPullup
     const packageRoot = new URL("../", import.meta.url)
     const bytes = readFileSync(new URL(source.archivePath, packageRoot))
 
@@ -49,6 +50,18 @@ describe("BP-125 processor support", () => {
         .digest("hex")
         .toUpperCase()
     ).toBe(esp32Source.archiveSha256)
+    expect(esp32EnSource).toMatchObject({
+      reference: "R_ESP_EN_PULLUP",
+      mpn: "RC0603FR-0710KL",
+      archivePath: source.archivePath,
+      archiveSha256: source.archiveSha256
+    })
+    expect(
+      createHash("sha256")
+        .update(readFileSync(new URL(esp32EnSource.archivePath, packageRoot)))
+        .digest("hex")
+        .toUpperCase()
+    ).toBe(esp32EnSource.archiveSha256)
   })
 
   it("keeps unselected STM32 clocks DNP, module timing internal, and reset/strap loads safe", () => {
@@ -63,6 +76,7 @@ describe("BP-125 processor support", () => {
     expect(benchPrototypeProcessorSupport.oscillators.esp32.population).toBe("module-integrated")
     expect(benchPrototypeProcessorSupport.bootAndReset.stm32.boot0.value).toBe("10 kOhm pulldown")
     expect(benchPrototypeProcessorSupport.bootAndReset.esp32.en).toMatchObject({
+      mpn: "RC0603FR-0710KL",
       value: "10 kOhm pullup",
       capacitorValue: "1 uF"
     })

@@ -153,6 +153,17 @@ const processorSupportDefinition = {
       archivePath: "docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf",
       archiveSha256: "EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497",
       observedSpecification: "10 kOhm, 1%, 0.1 W at 70 C, 0603 / 1608, 75 V maximum continuous voltage"
+    },
+    esp32EnPullup: {
+      reference: "R_ESP_EN_PULLUP",
+      mpn: "RC0603FR-0710KL",
+      manufacturer: "Yageo",
+      sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL",
+      sourceDocument: "Yageo RC0603FR-0710KL manufacturer product specification",
+      generatedOn: "2026-08-24",
+      archivePath: "docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf",
+      archiveSha256: "EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497",
+      observedSpecification: "10 kOhm, 1%, 0.1 W at 70 C, 0603 / 1608, 75 V maximum continuous voltage"
     }
   },
   processors: {
@@ -278,7 +289,7 @@ const processorSupportDefinition = {
     esp32: {
       en: {
         reference: "R_ESP_EN_PULLUP",
-        mpn: "TBD",
+        mpn: "RC0603FR-0710KL",
         value: "10 kOhm pullup",
         capacitorReference: "C_ESP_EN_DELAY",
         capacitorMpn: "TBD",
@@ -382,6 +393,13 @@ export function validateBenchPrototypeProcessorSupport(value: unknown): true {
     !contract.supportSelectionEvidence.esp32BootPullup.sourceUrl.startsWith("https://www.yageogroup.com/") ||
     !/^docs\/evidence\/bp-125\/[^/]+\.pdf$/u.test(contract.supportSelectionEvidence.esp32BootPullup.archivePath) ||
     !/^[0-9A-F]{64}$/u.test(contract.supportSelectionEvidence.esp32BootPullup.archiveSha256) ||
+    contract.bootAndReset.esp32.en.mpn !== "RC0603FR-0710KL" ||
+    contract.supportSelectionEvidence.esp32EnPullup.reference !== "R_ESP_EN_PULLUP" ||
+    contract.supportSelectionEvidence.esp32EnPullup.mpn !== "RC0603FR-0710KL" ||
+    contract.supportSelectionEvidence.esp32EnPullup.manufacturer !== "Yageo" ||
+    !contract.supportSelectionEvidence.esp32EnPullup.sourceUrl.startsWith("https://www.yageogroup.com/") ||
+    !/^docs\/evidence\/bp-125\/[^/]+\.pdf$/u.test(contract.supportSelectionEvidence.esp32EnPullup.archivePath) ||
+    !/^[0-9A-F]{64}$/u.test(contract.supportSelectionEvidence.esp32EnPullup.archiveSha256) ||
     contract.bootAndReset.esp32.irReceiver.modulePad !== 28 ||
     contract.bootAndReset.esp32.irReceiver.gpio !== 35 ||
     contract.bootAndReset.esp32.irReceiver.signal !== "IR_RX" ||

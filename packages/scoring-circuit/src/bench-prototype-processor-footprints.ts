@@ -468,7 +468,7 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
       .filter((entry) => entry.reconciliation === "selected-by-BP-123")
       .some(
         (entry) =>
-          entry.mpn !== "TBD" ||
+          (entry.mpn !== "TBD" && entry.mpn !== entry.selectedMpn) ||
           !ledger.populatedReferences.some(
             (selected) => selected.reference === entry.reference && selected.mpn === entry.selectedMpn
           )

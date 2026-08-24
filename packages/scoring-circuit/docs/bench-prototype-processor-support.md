@@ -49,6 +49,14 @@ identity for `R_ESP_BOOT_PULLUP`; its strap behavior, land pattern, artwork,
 schematic sign-off, and fabrication authority remain subject to their existing
 gates.
 
+The frozen BP-123 `EN_RESET` topology also selects `R_ESP_EN_PULLUP` as the
+same Yageo `RC0603FR-0710KL` part. Its 3.3 V, 10 kOhm, 1% pullup dissipates at
+most 1.089 mW in the asserted-low case, within the source's 0.1 W at 70 C and
+75 V maximum continuous-voltage ratings. This closes only the exact MPN
+identity for `R_ESP_EN_PULLUP`; the separate 1 uF delay capacitor, reset timing
+measurements, land pattern, artwork, schematic sign-off, and fabrication
+authority remain open.
+
 ## Boot, reset, unused pins, layout, and release
 
 STM32 BOOT0 has a required 10 kOhm pulldown. ESP32 EN has a 10 kOhm pullup and

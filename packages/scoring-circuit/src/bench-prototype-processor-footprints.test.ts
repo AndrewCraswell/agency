@@ -66,8 +66,9 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
         }),
         expect.objectContaining({
           reference: "R_ESP_EN_PULLUP",
-          mpn: "TBD",
+          mpn: "RC0603FR-0710KL",
           selectedMpn: "RC0603FR-0710KL",
+          package: "0603",
           reconciliation: "selected-by-BP-123"
         }),
         expect.objectContaining({
