@@ -200,7 +200,7 @@ their paper designs and test assets. No lane may waive another lane's evidence.
 
 | ID | Status | Work unit | Dependencies | Acceptance evidence |
 | --- | --- | --- | --- | --- |
-| `BP-000` | backlog | Freeze this plan and assign owner/reviewer for every lane. | None | Approved plan revision and decision log. |
+| `BP-000` | done | Freeze this plan and assign owner/reviewer for every lane. | None | Approved plan revision and decision log. |
 | `BP-010` | backlog | Freeze the bench-only one-board boundary and provisional zone drawing. | `BP-000` | Dimensioned zoning drawing with domain boundary and connector edges. |
 | `BP-020` | done | Create the baseline prototype BOM separate from the production BOM. | `BP-000` | Every reference is explicitly selected, `TBD`, or DNP; selected rows include MPN, lifecycle, quantity, source, and package. A baseline may contain TBD/DNP slots and is not an order BOM. |
 | `BP-030` | done | Freeze the footprint-evidence method and review template. | `BP-020` | Per-reference template binds exact MPN/package, manufacturer drawing/CAD, artwork digest, orientation, reviewer, and disposition. It does not claim closure before selections exist. |
