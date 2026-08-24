@@ -3,6 +3,7 @@ import pg from "pg"
 import { afterAll, describe, expect, it } from "vitest"
 import * as schema from "../schema/schema.js"
 import {
+  buildBillExistenceQuery,
   buildBillDocumentListQuery,
   buildDocumentDetailQuery,
   buildDocumentSectionListQuery,
@@ -23,6 +24,16 @@ function cursor(value: object): string {
 }
 
 describe("bill document reads", () => {
+  it("checks a bill parent through its ID only before serving a child collection", () => {
+    const generated = buildBillExistenceQuery(database, "bill:us:119:hr:1").toSQL().sql
+
+    expect(generated).toContain('select "id" from "legislation"."bills"')
+    expect(generated).toContain('where "legislation"."bills"."id" =')
+    expect(generated).toContain("limit")
+    expect(generated).not.toContain('"bill_text"')
+    expect(generated).not.toContain('"embedding"')
+  })
+
   it("keeps contract filters in the cursor scope and uses a null-safe keyset", () => {
     const generated = buildBillDocumentListQuery(database, {
       billId: "bill:us:119:hr:1",

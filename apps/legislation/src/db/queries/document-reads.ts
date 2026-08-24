@@ -3,7 +3,13 @@ import type { PgColumn } from "drizzle-orm/pg-core"
 import { isIsoDate } from "../../api/canonical-projection.js"
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
-import { billDocuments, documentSections, supportingMaterials, supportingMaterialSections } from "../schema/schema.js"
+import {
+  bills,
+  billDocuments,
+  documentSections,
+  supportingMaterials,
+  supportingMaterialSections
+} from "../schema/schema.js"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100
@@ -188,6 +194,27 @@ type SectionCursor = {
   ordinal: number
   scope: SectionCursorScope
   version: 1
+}
+
+/**
+ * Parent-scoped document pages must distinguish an absent bill from a bill
+ * which simply has no documents. Select only the stable key for that check;
+ * a detail row may contain large text or embedding columns unrelated to the
+ * collection request.
+ */
+export function buildBillExistenceQuery(database: LegislationDatabase, billId: string) {
+  return database
+    .select({ id: bills.id })
+    .from(bills)
+    .where(eq(bills.id, requiredInputText(billId, "billId")))
+    .limit(1)
+}
+
+export async function assertBillExists(database: LegislationDatabase, billId: string): Promise<void> {
+  const rows = await buildBillExistenceQuery(database, billId)
+  if (rows[0] === undefined) {
+    throw new LegislationError("not_found", `Bill ${billId} was not found`)
+  }
 }
 
 export function buildBillDocumentListQuery(database: LegislationDatabase, input: BillDocumentListInput) {

@@ -277,7 +277,12 @@ export function toProjectionLegislationError(error: unknown): Error {
   return error instanceof Error ? error : new Error("The record cannot be returned")
 }
 
-function projectionContext(source: SourceDocument, apiBaseUrl: string): ProjectionContext {
+/**
+ * Builds canonical provenance only from the persisted source record. Route
+ * slices reuse this rather than deriving a provider, official status, or
+ * retrieval time from a request or storage location.
+ */
+export function sourceProjectionContext(source: SourceDocument, apiBaseUrl: string): ProjectionContext {
   const sourceUrl = requiredString(source, "sourceUrl", "source URL")
   const provenance: ProjectionSourceInput = {
     isOfficial: isOfficialSource(sourceUrl),
@@ -287,6 +292,10 @@ function projectionContext(source: SourceDocument, apiBaseUrl: string): Projecti
     sourceUrl
   }
   return { apiBaseUrl, sources: [provenance], updatedAt: source.updatedAt }
+}
+
+function projectionContext(source: SourceDocument, apiBaseUrl: string): ProjectionContext {
+  return sourceProjectionContext(source, apiBaseUrl)
 }
 
 function billSummaryProjectionInput(value: BillSummaryRead) {

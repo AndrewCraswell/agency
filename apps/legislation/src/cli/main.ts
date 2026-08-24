@@ -5,6 +5,7 @@ import { dirname, resolve } from "node:path"
 import { Command } from "commander"
 import { createLegislationApiHandler } from "../api/handlers.js"
 import { PostgresSubscriptionRepository } from "../api/subscription-repository.js"
+import { PostgresWebhookReadRepository } from "../api/webhook-read-repository.js"
 import { createWorkosAuthenticator } from "../auth/workos.js"
 import { loadConfig, type LegislationConfig } from "../config/config.js"
 import { compareCoverageReports, generateCoverageReport, isCoverageReport } from "../coverage/report.js"
@@ -355,7 +356,9 @@ async function serve() {
   const server = createLegislationServer({
     apiHandler: createLegislationApiHandler(queryService, {
       apiBaseUrl: config.server.publicApiBaseUrl,
-      subscriptionRepository: new PostgresSubscriptionRepository(database)
+      documentDatabase: database,
+      subscriptionRepository: new PostgresSubscriptionRepository(database),
+      webhookReadRepository: new PostgresWebhookReadRepository(database)
     }),
     apiAuthenticate,
     documentFetchRelay:
