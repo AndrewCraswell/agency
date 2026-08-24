@@ -7,6 +7,7 @@ import {
   createBoutWorkflowReducerState,
   createFreshBoutWorkflowSnapshot,
   parseStm32BoutResetResult,
+  parseStm32WorkflowResult,
   reduceBoutWorkflow,
   type BoutWorkflowReduction,
   type BoutWorkflowReducerState
@@ -52,12 +53,14 @@ function command(commandName: RemoteCommand["command"], commandId: string, paylo
     commandName === "medical.start" ||
     commandName === "format.advance" ||
     commandName === "format.retreat" ||
+    commandName === "sides.swap" ||
+    commandName === "scoring.autoRearm.advance" ||
     commandName === "passivityPenalty.award.left" ||
     commandName === "passivityPenalty.award.right"
       ? "modified"
       : commandName === "clock.loadOneMinute"
         ? "double"
-        : commandName === "overtime.toggle"
+        : commandName === "overtime.toggle" || commandName === "device.sleep.request"
           ? "held"
           : "direct"
   return parseRemoteCommand({
@@ -426,6 +429,183 @@ describe("RC-05 bout workflow reducer", () => {
     const duplicate = reduceBoutWorkflow(pending.state, { command: newBout, nextBout: null, type: "command" })
     expect(duplicate).toMatchObject({ event: null, outcome: "pending" })
     expect(duplicate.state).toBe(pending.state)
+  })
+
+  it("correlates manual and automatic rearm requests to STM32 acceptance or rejection", () => {
+    let current = state()
+    const acceptedSettings = ["one-second", "three-seconds", "five-seconds", "manual"] as const
+    for (const [index, expectedAutoRearm] of acceptedSettings.entries()) {
+      const requested = reduceBoutWorkflow(current, {
+        command: command("scoring.autoRearm.advance", `auto-rearm-${index}`),
+        nextBout: null,
+        type: "command"
+      })
+      expect(requested).toMatchObject({
+        event: null,
+        outcome: "pending",
+        state: { pendingStm32WorkflowAction: { operation: "scoring-rearm" } }
+      })
+      const accepted = reduceBoutWorkflow(requested.state, {
+        authority: "stm32-scoring",
+        operation: "scoring-rearm",
+        requestId: `auto-rearm-${index}`,
+        result: "accepted",
+        stm32RecordId: `stm32-auto-rearm-${index}`,
+        type: "stm32-workflow-result"
+      })
+      expect(accepted).toMatchObject({
+        event: { cause: "scoring.rearm.result", stm32RecordId: `stm32-auto-rearm-${index}` },
+        outcome: "applied",
+        state: { pendingStm32WorkflowAction: null, snapshot: { autoRearm: expectedAutoRearm } }
+      })
+      expect(isBoutStateEvent(accepted.event)).toBe(true)
+      current = accepted.state
+    }
+
+    const manual = reduceBoutWorkflow(current, {
+      command: command("scoring.rearm", "manual-rearm"),
+      nextBout: null,
+      type: "command"
+    })
+    const rejected = reduceBoutWorkflow(manual.state, {
+      authority: "stm32-scoring",
+      operation: "scoring-rearm",
+      requestId: "manual-rearm",
+      result: "rejected",
+      stm32RecordId: null,
+      type: "stm32-workflow-result"
+    })
+    expect(rejected).toMatchObject({ event: { rejectionReason: "stm32-rejection" }, outcome: "rejected" })
+    expect(rejected.state.snapshot).toEqual(current.snapshot)
+  })
+
+  it("accepts only strict correlated weapon responses and records the next selected weapon", () => {
+    const requested = reduceBoutWorkflow(state(), {
+      command: command("weapon.showOrAdvance", "weapon-request"),
+      nextBout: null,
+      type: "command"
+    })
+    expect(requested).toMatchObject({
+      outcome: "pending",
+      state: { pendingStm32WorkflowAction: { nextWeapon: "sabre", operation: "weapon-request" } }
+    })
+    const malformed = [
+      {
+        authority: "stm32-scoring",
+        operation: "weapon-request",
+        requestId: "weapon-request",
+        result: "accepted",
+        type: "stm32-workflow-result"
+      },
+      {
+        authority: "stm32-scoring",
+        operation: "unknown",
+        requestId: "weapon-request",
+        result: "accepted",
+        stm32RecordId: "stm32-weapon",
+        type: "stm32-workflow-result"
+      },
+      {
+        authority: "stm32-scoring",
+        operation: "weapon-request",
+        requestId: "weapon-request",
+        result: "rejected",
+        stm32RecordId: "not-null",
+        type: "stm32-workflow-result"
+      }
+    ]
+    for (const response of malformed) {
+      expect(() => parseStm32WorkflowResult(response)).toThrow(TypeError)
+      expect(callReduce(requested.state, response)).toMatchObject({ outcome: "ignored", reason: "malformed-action" })
+    }
+    expect(
+      reduceBoutWorkflow(requested.state, {
+        authority: "stm32-scoring",
+        operation: "scoring-rearm",
+        requestId: "weapon-request",
+        result: "accepted",
+        stm32RecordId: "wrong-operation",
+        type: "stm32-workflow-result"
+      })
+    ).toMatchObject({ outcome: "ignored", reason: "unknown-stm32-request" })
+    const accepted = reduceBoutWorkflow(requested.state, {
+      authority: "stm32-scoring",
+      operation: "weapon-request",
+      requestId: "weapon-request",
+      result: "accepted",
+      stm32RecordId: "stm32-weapon",
+      type: "stm32-workflow-result"
+    })
+    expect(accepted).toMatchObject({
+      event: { cause: "weapon.request.result", stm32RecordId: "stm32-weapon" },
+      outcome: "applied",
+      state: { snapshot: { weapon: "sabre" } }
+    })
+    expect(isBoutStateEvent(accepted.event)).toBe(true)
+  })
+
+  it("swaps all side-owned values atomically and requests sleep only from safe idle", () => {
+    const initial = createBoutWorkflowReducerState({
+      ...state().snapshot,
+      lastScoredSide: "left",
+      sides: {
+        left: { pCard: "red", redCardCount: 2, score: 4, yellowCard: true },
+        right: { pCard: "yellow", redCardCount: 1, score: 7, yellowCard: false }
+      }
+    })
+    const swapped = reduceBoutWorkflow(initial, {
+      command: command("sides.swap", "swap-sides"),
+      nextBout: null,
+      type: "command"
+    })
+    expect(swapped).toMatchObject({
+      event: { cause: "sides.swap" },
+      outcome: "applied",
+      state: {
+        snapshot: {
+          lastScoredSide: "right",
+          sides: {
+            left: { pCard: "yellow", redCardCount: 1, score: 7, yellowCard: false },
+            right: { pCard: "red", redCardCount: 2, score: 4, yellowCard: true }
+          }
+        }
+      }
+    })
+
+    const unsafe = createBoutWorkflowReducerState({
+      ...swapped.state.snapshot,
+      clock: { ...swapped.state.snapshot.clock, status: "running" }
+    })
+    expect(
+      reduceBoutWorkflow(unsafe, {
+        command: command("device.sleep.request", "unsafe-sleep"),
+        nextBout: null,
+        type: "command"
+      })
+    ).toMatchObject({ event: { rejectionReason: "invalid-mode" }, outcome: "rejected" })
+
+    const requested = reduceBoutWorkflow(swapped.state, {
+      command: command("device.sleep.request", "safe-sleep"),
+      nextBout: null,
+      type: "command"
+    })
+    expect(requested).toMatchObject({
+      outcome: "pending",
+      state: { pendingStm32WorkflowAction: { operation: "safe-idle-sleep" } }
+    })
+    const accepted = reduceBoutWorkflow(requested.state, {
+      authority: "stm32-scoring",
+      operation: "safe-idle-sleep",
+      requestId: "safe-sleep",
+      result: "accepted",
+      stm32RecordId: "stm32-safe-sleep",
+      type: "stm32-workflow-result"
+    })
+    expect(accepted).toMatchObject({
+      event: { cause: "device.sleep.result", stm32RecordId: "stm32-safe-sleep" },
+      outcome: "applied",
+      state: { pendingStm32WorkflowAction: null }
+    })
   })
 
   it("applies symmetric score operations in bout and overtime, and rejects zero-floor or break-mode changes", () => {

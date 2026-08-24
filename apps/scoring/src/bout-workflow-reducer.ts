@@ -45,6 +45,15 @@ export type PendingNewBout = Readonly<{
   nextBout: NewBoutConfiguration
 }>
 
+type Stm32WorkflowOperation = "safe-idle-sleep" | "scoring-rearm" | "weapon-request"
+
+export type PendingStm32WorkflowAction = Readonly<{
+  command: RemoteCommand
+  nextAutoRearm: BoutWorkflowSnapshot["autoRearm"]
+  nextWeapon: Weapon
+  operation: Stm32WorkflowOperation
+}>
+
 /** SHA-256 of docs/competition-format-rules-registry.json, including its trailing LF. */
 export const COMPETITION_FORMAT_REGISTRY = Object.freeze({
   authority: Object.freeze({
@@ -63,6 +72,7 @@ export type BoutWorkflowReducerState = Readonly<{
   completedCommandIds: readonly string[]
   completedEvents: readonly BoutStateEvent[]
   pendingNewBout: PendingNewBout | null
+  pendingStm32WorkflowAction: PendingStm32WorkflowAction | null
   snapshot: BoutWorkflowSnapshot
 }>
 
@@ -72,7 +82,7 @@ export type BoutWorkflowCommandAction = Readonly<{
   type: "command"
 }>
 
-export type BoutWorkflowAction = BoutWorkflowCommandAction | Stm32BoutResetResult
+export type BoutWorkflowAction = BoutWorkflowCommandAction | Stm32BoutResetResult | Stm32WorkflowResult
 
 export type Stm32BoutResetResult =
   | Readonly<{
@@ -88,6 +98,24 @@ export type Stm32BoutResetResult =
       result: "rejected"
       stm32RecordId: null
       type: "stm32-bout-reset-result"
+    }>
+
+export type Stm32WorkflowResult =
+  | Readonly<{
+      authority: "stm32-scoring"
+      operation: Stm32WorkflowOperation
+      requestId: string
+      result: "accepted"
+      stm32RecordId: string
+      type: "stm32-workflow-result"
+    }>
+  | Readonly<{
+      authority: "stm32-scoring"
+      operation: Stm32WorkflowOperation
+      requestId: string
+      result: "rejected"
+      stm32RecordId: null
+      type: "stm32-workflow-result"
     }>
 
 export type BoutWorkflowReduction = Readonly<{
@@ -165,6 +193,7 @@ function freeze<T>(value: T): T {
 function freezeState(
   snapshot: BoutWorkflowSnapshot,
   pendingNewBout: PendingNewBout | null,
+  pendingStm32WorkflowAction: PendingStm32WorkflowAction | null,
   completedEvents: readonly BoutStateEvent[],
   completedCommandIds: readonly string[]
 ): BoutWorkflowReducerState {
@@ -172,6 +201,8 @@ function freezeState(
     completedCommandIds: [...completedCommandIds],
     completedEvents: completedEvents.map((event) => freeze(structuredClone(event))),
     pendingNewBout: pendingNewBout === null ? null : freeze(structuredClone(pendingNewBout)),
+    pendingStm32WorkflowAction:
+      pendingStm32WorkflowAction === null ? null : freeze(structuredClone(pendingStm32WorkflowAction)),
     snapshot: freeze(copySnapshot(snapshot))
   })
 }
@@ -215,19 +246,21 @@ function rejection(
 
 function remember(state: BoutWorkflowReducerState, event: BoutStateEvent): BoutWorkflowReducerState {
   const completed = [...state.completedEvents, event]
-  return freezeState(state.snapshot, state.pendingNewBout, completed.slice(-MAX_RETAINED_EVENTS), [
-    ...state.completedCommandIds,
-    event.sourceCommand.commandId
-  ])
+  return freezeState(
+    state.snapshot,
+    state.pendingNewBout,
+    state.pendingStm32WorkflowAction,
+    completed.slice(-MAX_RETAINED_EVENTS),
+    [...state.completedCommandIds, event.sourceCommand.commandId]
+  )
 }
 
 function complete(
   state: BoutWorkflowReducerState,
   snapshot: BoutWorkflowSnapshot,
-  pendingNewBout: PendingNewBout | null,
   event: BoutStateEvent
 ): BoutWorkflowReducerState {
-  return freezeState(snapshot, pendingNewBout, [...state.completedEvents, event].slice(-MAX_RETAINED_EVENTS), [
+  return freezeState(snapshot, null, null, [...state.completedEvents, event].slice(-MAX_RETAINED_EVENTS), [
     ...state.completedCommandIds,
     event.sourceCommand.commandId
   ])
@@ -261,7 +294,7 @@ function apply(
     event,
     outcome: "applied",
     reason: null,
-    state: complete(state, snapshot, null, event)
+    state: complete(state, snapshot, event)
   }
 }
 
@@ -398,6 +431,45 @@ export function parseStm32BoutResetResult(value: unknown): Stm32BoutResetResult 
   }
 }
 
+/** Strictly authenticates a correlated STM32 rearm, weapon, or safe-idle response. */
+export function parseStm32WorkflowResult(value: unknown): Stm32WorkflowResult {
+  if (
+    !isStrictPlainRecord(value) ||
+    !hasExactlyKeys(value, ["authority", "operation", "requestId", "result", "stm32RecordId", "type"]) ||
+    value.authority !== "stm32-scoring" ||
+    value.type !== "stm32-workflow-result" ||
+    (value.operation !== "scoring-rearm" &&
+      value.operation !== "weapon-request" &&
+      value.operation !== "safe-idle-sleep") ||
+    (value.result !== "accepted" && value.result !== "rejected") ||
+    !isIdentifier(value.requestId)
+  ) {
+    throw new TypeError("STM32 workflow results have an invalid shape, authority, or correlation")
+  }
+  if (value.result === "accepted") {
+    if (!isIdentifier(value.stm32RecordId))
+      throw new TypeError("STM32 workflow results have an invalid shape, authority, or correlation")
+    return {
+      authority: "stm32-scoring",
+      operation: value.operation,
+      requestId: value.requestId,
+      result: "accepted",
+      stm32RecordId: value.stm32RecordId,
+      type: "stm32-workflow-result"
+    }
+  }
+  if (value.stm32RecordId !== null)
+    throw new TypeError("STM32 workflow results have an invalid shape, authority, or correlation")
+  return {
+    authority: "stm32-scoring",
+    operation: value.operation,
+    requestId: value.requestId,
+    result: "rejected",
+    stm32RecordId: null,
+    type: "stm32-workflow-result"
+  }
+}
+
 function parseCommandAction(value: unknown, current: BoutWorkflowSnapshot): BoutWorkflowCommandAction | null {
   if (
     !isStrictPlainRecord(value) ||
@@ -409,6 +481,54 @@ function parseCommandAction(value: unknown, current: BoutWorkflowSnapshot): Bout
   }
   if (!hasExactlyKeys(value, ["command", "nextBout", "type"])) return null
   return { command: value.command, nextBout: value.nextBout, type: "command" }
+}
+
+function nextAutoRearm(setting: BoutWorkflowSnapshot["autoRearm"]): BoutWorkflowSnapshot["autoRearm"] {
+  switch (setting) {
+    case "manual":
+      return "one-second"
+    case "one-second":
+      return "three-seconds"
+    case "three-seconds":
+      return "five-seconds"
+    case "five-seconds":
+      return "manual"
+  }
+}
+
+function nextWeapon(weapon: Weapon): Weapon {
+  return weapon === "epee" ? "foil" : weapon === "foil" ? "sabre" : "epee"
+}
+
+function safeIdle(snapshot: BoutWorkflowSnapshot): boolean {
+  return (
+    snapshot.clock.mode === "bout" &&
+    snapshot.clock.status === "stopped" &&
+    (snapshot.medical === null || snapshot.medical.status === "stopped") &&
+    (snapshot.passivity === null || snapshot.passivity.status === "stopped")
+  )
+}
+
+function requestStm32WorkflowAction(
+  state: BoutWorkflowReducerState,
+  command: RemoteCommand,
+  operation: Stm32WorkflowOperation
+): BoutWorkflowReduction {
+  const pending: PendingStm32WorkflowAction = freeze({
+    command: structuredClone(command),
+    nextAutoRearm:
+      command.command === "scoring.autoRearm.advance"
+        ? nextAutoRearm(state.snapshot.autoRearm)
+        : state.snapshot.autoRearm,
+    nextWeapon: command.command === "weapon.showOrAdvance" ? nextWeapon(state.snapshot.weapon) : state.snapshot.weapon,
+    operation
+  })
+  return {
+    event: null,
+    outcome: "pending",
+    reason: null,
+    state: freezeState(state.snapshot, null, pending, state.completedEvents, state.completedCommandIds)
+  }
 }
 
 function freshFromPending(
@@ -517,7 +637,7 @@ export function createBoutWorkflowReducerState(snapshot: unknown): BoutWorkflowR
     throw new TypeError("Bout snapshot competition is outside the frozen competition-format registry")
   if (parsed.priorityEntropyReceipt !== null)
     throw new TypeError("Live priority entropy requires the unavailable trusted issuer")
-  return freezeState(parsed, null, [], [])
+  return freezeState(parsed, null, null, [], [])
 }
 
 /**
@@ -534,7 +654,11 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
     try {
       safeAction = parseStm32BoutResetResult(action)
     } catch {
-      return { event: null, outcome: "ignored", reason: "malformed-action", state }
+      try {
+        safeAction = parseStm32WorkflowResult(action)
+      } catch {
+        return { event: null, outcome: "ignored", reason: "malformed-action", state }
+      }
     }
   }
 
@@ -545,14 +669,20 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
     return { event: duplicate ?? null, outcome: "duplicate", reason: null, state }
   }
 
-  if (safeAction.type === "command" && state.pendingNewBout?.command.commandId === safeAction.command.commandId) {
+  if (
+    safeAction.type === "command" &&
+    (state.pendingNewBout?.command.commandId === safeAction.command.commandId ||
+      state.pendingStm32WorkflowAction?.command.commandId === safeAction.command.commandId)
+  ) {
     return { event: null, outcome: "pending", reason: null, state }
   }
 
   if (
     safeAction.type === "command" &&
     state.completedCommandIds.length >=
-      (state.pendingNewBout === null ? BOUT_WORKFLOW_COMMAND_ID_CAPACITY : BOUT_WORKFLOW_COMMAND_ID_CAPACITY - 1)
+      (state.pendingNewBout === null && state.pendingStm32WorkflowAction === null
+        ? BOUT_WORKFLOW_COMMAND_ID_CAPACITY
+        : BOUT_WORKFLOW_COMMAND_ID_CAPACITY - 1)
   ) {
     const event = rejection(safeAction.command, "event-capacity-exhausted", state.snapshot.eventRevision)
     return { event, outcome: "rejected", reason: "event-capacity-exhausted", state }
@@ -565,7 +695,7 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
     }
     if (safeAction.result === "rejected") {
       const event = rejection(pending.command, "stm32-rejection", state.snapshot.eventRevision)
-      const next = complete(state, state.snapshot, null, event)
+      const next = complete(state, state.snapshot, event)
       return { event, outcome: "rejected", reason: "stm32-rejection", state: next }
     }
     if (
@@ -573,20 +703,54 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
       state.snapshot.boutRevision === Number.MAX_SAFE_INTEGER
     ) {
       const event = rejection(pending.command, "stm32-rejection", state.snapshot.eventRevision)
-      const next = complete(state, state.snapshot, null, event)
+      const next = complete(state, state.snapshot, event)
       return { event, outcome: "rejected", reason: "stm32-rejection", state: next }
     }
     const snapshot = freshFromPending(pending, state.snapshot, safeAction.stm32RecordId)
     const event = eventFor(pending.command, snapshot, "bout.reset.result", safeAction.stm32RecordId)
-    const next = complete(state, snapshot, null, event)
+    const next = complete(state, snapshot, event)
     return { event, outcome: "applied", reason: null, state: next }
+  }
+
+  if (safeAction.type === "stm32-workflow-result") {
+    const pending = state.pendingStm32WorkflowAction
+    if (
+      pending === null ||
+      pending.command.commandId !== safeAction.requestId ||
+      pending.operation !== safeAction.operation
+    ) {
+      return { event: null, outcome: "ignored", reason: "unknown-stm32-request", state }
+    }
+    if (safeAction.result === "rejected") {
+      const event = rejection(pending.command, "stm32-rejection", state.snapshot.eventRevision)
+      return { event, outcome: "rejected", reason: "stm32-rejection", state: complete(state, state.snapshot, event) }
+    }
+    if (state.snapshot.eventRevision === Number.MAX_SAFE_INTEGER) {
+      const event = rejection(pending.command, "stm32-rejection", state.snapshot.eventRevision)
+      return { event, outcome: "rejected", reason: "stm32-rejection", state: complete(state, state.snapshot, event) }
+    }
+    const next: BoutWorkflowSnapshot = {
+      ...copySnapshot(state.snapshot),
+      autoRearm: pending.operation === "scoring-rearm" ? pending.nextAutoRearm : state.snapshot.autoRearm,
+      weapon: pending.operation === "weapon-request" ? pending.nextWeapon : state.snapshot.weapon
+    }
+    const cause =
+      pending.operation === "scoring-rearm"
+        ? "scoring.rearm.result"
+        : pending.operation === "weapon-request"
+          ? "weapon.request.result"
+          : "device.sleep.result"
+    const snapshot = acceptedSnapshot(next, pending.command, state.snapshot.eventRevision + 1, safeAction.stm32RecordId)
+    const event = eventFor(pending.command, snapshot, cause, safeAction.stm32RecordId)
+    return { event, outcome: "applied", reason: null, state: complete(state, snapshot, event) }
   }
 
   const { command } = safeAction
   if (command.apparatusId !== state.snapshot.apparatusId) return reject(state, command, "wrong-apparatus")
   if (!sameAuthority(command.authority, state.snapshot.authority))
     return reject(state, command, "wrong-controller-authority")
-  if (state.pendingNewBout !== null) return reject(state, command, "invalid-mode")
+  if (state.pendingNewBout !== null || state.pendingStm32WorkflowAction !== null)
+    return reject(state, command, "invalid-mode")
 
   if (
     state.snapshot.medical?.status === "running" &&
@@ -624,7 +788,7 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
     if (loaded.sourceCommandDisposition !== "accepted") return reject(state, command, "incomplete-snapshot")
     const snapshot = acceptedSnapshot(loaded, command, loaded.eventRevision, loaded.stm32RecordId)
     const event = eventFor(command, snapshot, "bout.snapshot.load", loaded.stm32RecordId)
-    const next = complete(state, snapshot, null, event)
+    const next = complete(state, snapshot, event)
     return { event, outcome: "applied", reason: null, state: next }
   }
 
@@ -640,8 +804,41 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
       event: null,
       outcome: "pending",
       reason: null,
-      state: freezeState(state.snapshot, pending, state.completedEvents, state.completedCommandIds)
+      state: freezeState(state.snapshot, pending, null, state.completedEvents, state.completedCommandIds)
     }
+  }
+
+  if (command.command === "scoring.rearm" || command.command === "scoring.autoRearm.advance") {
+    if (!isBoutClock(state.snapshot) || state.snapshot.clock.status === "running" || state.snapshot.medical !== null)
+      return reject(state, command, "invalid-mode")
+    return requestStm32WorkflowAction(state, command, "scoring-rearm")
+  }
+
+  if (command.command === "weapon.showOrAdvance") {
+    if (!isBoutClock(state.snapshot) || state.snapshot.clock.status === "running" || state.snapshot.medical !== null)
+      return reject(state, command, "invalid-mode")
+    return requestStm32WorkflowAction(state, command, "weapon-request")
+  }
+
+  if (command.command === "device.sleep.request") {
+    if (!safeIdle(state.snapshot)) return reject(state, command, "invalid-mode")
+    return requestStm32WorkflowAction(state, command, "safe-idle-sleep")
+  }
+
+  if (command.command === "sides.swap") {
+    if (!isBoutClock(state.snapshot) || state.snapshot.clock.status === "running" || state.snapshot.medical !== null)
+      return reject(state, command, "invalid-mode")
+    const opposite = (side: "left" | "right" | null): "left" | "right" | null =>
+      side === null ? null : opposingSide(side)
+    return apply(state, command, "sides.swap", {
+      ...copySnapshot(state.snapshot),
+      lastScoredSide: opposite(state.snapshot.lastScoredSide),
+      priority: opposite(state.snapshot.priority),
+      sides: {
+        left: structuredClone(state.snapshot.sides.right),
+        right: structuredClone(state.snapshot.sides.left)
+      }
+    })
   }
 
   const score = scoreCommand(command)
