@@ -8,8 +8,10 @@ export type SmokeFixture = Readonly<{
   billId?: string
   documentId?: string
   documentIdB?: string
+  documentSectionId?: string
   jurisdictionId?: string
   materialId?: string
+  materialSectionId?: string
   meetingId?: string
   organizationId?: string
   personId?: string
@@ -54,46 +56,6 @@ type CheckDefinition = Readonly<{
   statusCode?: number
 }>
 
-const LIST_CHECKS: readonly CheckDefinition[] = [
-  { expected: "page", id: "list-jurisdictions", path: "/api/jurisdictions?limit=1" },
-  { expected: "page", id: "list-bills", path: "/api/bills?limit=1" },
-  { expected: "page", id: "list-amendments", path: "/api/amendments?limit=1" },
-  { expected: "page", id: "list-votes", path: "/api/votes?limit=1" },
-  { expected: "page", id: "list-people", path: "/api/people?limit=1" },
-  { expected: "page", id: "list-organizations", path: "/api/organizations?limit=1" },
-  { expected: "page", id: "list-meetings", path: "/api/meetings?limit=1" },
-  { expected: "page", id: "list-supporting-materials", path: "/api/supporting-materials?limit=1" },
-  { expected: "page", id: "list-changes", path: "/api/changes?limit=1" },
-  {
-    body: { limit: 1, mode: "lexical", query: "legislation" },
-    expected: "search",
-    id: "search-bills",
-    method: "POST",
-    path: "/api/search/bills"
-  },
-  {
-    body: { limit: 1, mode: "lexical", query: "legislation" },
-    expected: "search",
-    id: "search-amendments",
-    method: "POST",
-    path: "/api/search/amendments"
-  },
-  {
-    body: { limit: 1, mode: "lexical", query: "legislation" },
-    expected: "search",
-    id: "search-passages",
-    method: "POST",
-    path: "/api/search/passages"
-  },
-  {
-    body: { limit: 1, mode: "lexical", query: "legislation" },
-    expected: "search",
-    id: "search-supporting-materials",
-    method: "POST",
-    path: "/api/search/supporting-materials"
-  }
-]
-
 const ALWAYS_CHECKS: readonly CheckDefinition[] = [
   { expected: "health", healthStatus: "ok", id: "health", path: "/health", protected: false },
   { expected: "health", healthStatus: "ready", id: "ready", path: "/ready", protected: false },
@@ -114,245 +76,112 @@ const ALWAYS_CHECKS: readonly CheckDefinition[] = [
   }
 ]
 
-const OPTIONAL_CHECKS: readonly Readonly<{ definition: CheckDefinition; fixtures: readonly (keyof SmokeFixture)[] }>[] =
-  [
-    {
-      definition: { expected: "resource", id: "get-jurisdiction", path: "/api/jurisdictions/{jurisdictionId}" },
-      fixtures: ["jurisdictionId"]
+const REGISTERED_EXACT_CHECKS: readonly CheckDefinition[] = [
+  { expected: "bill-page", id: "list-bills", path: "/api/bills?sort=introduced-desc&limit=1" },
+  { expected: "page", id: "list-supporting-materials", path: "/api/supporting-materials?limit=1" }
+]
+
+const BLOCKED_ABSENCE_CHECKS: readonly CheckDefinition[] = [
+  {
+    errorCategory: "not_found",
+    expected: "error",
+    id: "absent-list-jurisdictions",
+    path: "/api/jurisdictions?limit=1",
+    statusCode: 404
+  },
+  {
+    errorCategory: "not_found",
+    expected: "error",
+    id: "absent-list-amendments",
+    path: "/api/amendments?limit=1",
+    statusCode: 404
+  },
+  {
+    errorCategory: "not_found",
+    expected: "error",
+    id: "absent-list-votes",
+    path: "/api/votes?limit=1",
+    statusCode: 404
+  },
+  {
+    errorCategory: "not_found",
+    expected: "error",
+    id: "absent-list-people",
+    path: "/api/people?limit=1",
+    statusCode: 404
+  },
+  {
+    errorCategory: "not_found",
+    expected: "error",
+    id: "absent-list-organizations",
+    path: "/api/organizations?limit=1",
+    statusCode: 404
+  },
+  {
+    errorCategory: "not_found",
+    expected: "error",
+    id: "absent-list-meetings",
+    path: "/api/meetings?limit=1",
+    statusCode: 404
+  },
+  {
+    body: { limit: 1, mode: "lexical", query: "legislation" },
+    errorCategory: "not_found",
+    expected: "error",
+    id: "absent-search-amendments",
+    method: "POST",
+    path: "/api/search/amendments",
+    statusCode: 404
+  },
+  {
+    body: { limit: 1, mode: "lexical", query: "legislation" },
+    errorCategory: "not_found",
+    expected: "error",
+    id: "absent-search-passages",
+    method: "POST",
+    path: "/api/search/passages",
+    statusCode: 404
+  },
+  {
+    body: {
+      billId: "bill:__smoke_absent__",
+      leftDocumentId: "document:__smoke_absent__:left",
+      rightDocumentId: "document:__smoke_absent__:right"
     },
-    {
-      definition: {
-        expected: "page",
-        id: "list-jurisdiction-sessions",
-        path: "/api/jurisdictions/{jurisdictionId}/sessions"
-      },
-      fixtures: ["jurisdictionId"]
-    },
-    {
-      definition: {
-        expected: "page",
-        id: "list-jurisdiction-bills",
-        path: "/api/jurisdictions/{jurisdictionId}/bills"
-      },
-      fixtures: ["jurisdictionId"]
-    },
-    {
-      definition: {
-        expected: "page",
-        id: "list-jurisdiction-meetings",
-        path: "/api/jurisdictions/{jurisdictionId}/meetings"
-      },
-      fixtures: ["jurisdictionId"]
-    },
-    {
-      definition: { expected: "resource", id: "get-session", path: "/api/sessions/{sessionId}" },
-      fixtures: ["sessionId"]
-    },
-    {
-      definition: { expected: "page", id: "list-session-bills", path: "/api/sessions/{sessionId}/bills" },
-      fixtures: ["sessionId"]
-    },
-    {
-      definition: { expected: "resource", id: "get-bill", path: "/api/bills/{billId}" },
-      fixtures: ["billId"]
-    },
-    {
-      definition: { expected: "page", id: "get-bill-timeline", path: "/api/bills/{billId}/timeline" },
-      fixtures: ["billId"]
-    },
-    {
-      definition: { expected: "page", id: "get-related-bills", path: "/api/bills/{billId}/related" },
-      fixtures: ["billId"]
-    },
-    {
-      definition: { expected: "page", id: "get-bill-sections", path: "/api/bills/{billId}/sections" },
-      fixtures: ["billId"]
-    },
-    {
-      definition: { expected: "page", id: "list-bill-amendments", path: "/api/bills/{billId}/amendments" },
-      fixtures: ["billId"]
-    },
-    {
-      definition: { expected: "page", id: "list-bill-votes", path: "/api/bills/{billId}/votes" },
-      fixtures: ["billId"]
-    },
-    {
-      definition: { expected: "page", id: "list-bill-changes", path: "/api/bills/{billId}/changes" },
-      fixtures: ["billId"]
-    },
-    {
-      definition: { expected: "batch", id: "batch-bills", method: "POST", path: "/api/bills/batch" },
-      fixtures: ["billId"]
-    },
-    {
-      definition: {
-        expected: "batch",
-        id: "batch-bill-amendments",
-        method: "POST",
-        path: "/api/bills/amendments/batch"
-      },
-      fixtures: ["billId"]
-    },
-    {
-      definition: { expected: "resource", id: "get-amendment", path: "/api/amendments/{amendmentId}" },
-      fixtures: ["amendmentId"]
-    },
-    {
-      definition: { expected: "batch", id: "batch-amendments", method: "POST", path: "/api/amendments/batch" },
-      fixtures: ["amendmentId"]
-    },
-    {
-      definition: { expected: "resource", id: "get-vote", path: "/api/votes/{voteId}" },
-      fixtures: ["voteId"]
-    },
-    {
-      definition: { expected: "page", id: "list-vote-positions", path: "/api/votes/{voteId}/positions" },
-      fixtures: ["voteId"]
-    },
-    {
-      definition: { expected: "batch", id: "batch-votes", method: "POST", path: "/api/votes/batch" },
-      fixtures: ["voteId"]
-    },
-    {
-      definition: { expected: "resource", id: "get-document", path: "/api/documents/{documentId}" },
-      fixtures: ["documentId"]
-    },
-    {
-      definition: { expected: "page", id: "get-document-sections", path: "/api/documents/{documentId}/sections" },
-      fixtures: ["documentId"]
-    },
-    {
-      definition: {
-        expected: "resource",
-        id: "get-supporting-material",
-        path: "/api/supporting-materials/{materialId}"
-      },
-      fixtures: ["materialId"]
-    },
-    {
-      definition: { expected: "resource", id: "get-meeting", path: "/api/meetings/{meetingId}" },
-      fixtures: ["meetingId"]
-    },
-    {
-      definition: { expected: "resource", id: "get-person", path: "/api/people/{personId}" },
-      fixtures: ["personId"]
-    },
-    {
-      definition: { expected: "resource", id: "get-organization", path: "/api/organizations/{organizationId}" },
-      fixtures: ["organizationId"]
-    },
-    {
-      definition: {
-        expected: "page",
-        id: "list-organization-meetings",
-        path: "/api/organizations/{organizationId}/meetings"
-      },
-      fixtures: ["organizationId"]
-    },
-    {
-      definition: { expected: "calculation", id: "document-diff", method: "POST", path: "/api/document-diffs" },
-      fixtures: ["billId", "documentId", "documentIdB"]
-    }
-  ]
+    errorCategory: "not_found",
+    expected: "error",
+    id: "absent-document-diff",
+    method: "POST",
+    path: "/api/document-diffs",
+    statusCode: 404
+  }
+]
 
 function encoded(id: string): string {
   return encodeURIComponent(id)
 }
 
 function fixtureChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
-  const checks: CheckDefinition[] = []
-  const add = (id: string, path: string, expected: CheckDefinition["expected"] = "resource", protectedRoute = true) =>
-    checks.push({ expected, id, path, protected: protectedRoute })
-  const addPage = (id: string, path: string) => add(id, path, "page")
-
-  if (fixture.jurisdictionId !== undefined) {
-    const id = encoded(fixture.jurisdictionId)
-    add("get-jurisdiction", `/api/jurisdictions/${id}`)
-    addPage("list-jurisdiction-sessions", `/api/jurisdictions/${id}/sessions?limit=1`)
-    addPage("list-jurisdiction-bills", `/api/jurisdictions/${id}/bills?limit=1`)
-    addPage("list-jurisdiction-meetings", `/api/jurisdictions/${id}/meetings?limit=1`)
-  }
-  if (fixture.sessionId !== undefined) {
-    const id = encoded(fixture.sessionId)
-    add("get-session", `/api/sessions/${id}`)
-    addPage("list-session-bills", `/api/sessions/${id}/bills?limit=1`)
-  }
-  if (fixture.billId !== undefined) {
-    const id = encoded(fixture.billId)
-    add("get-bill", `/api/bills/${id}`)
-    addPage("get-bill-timeline", `/api/bills/${id}/timeline?limit=1`)
-    addPage("get-related-bills", `/api/bills/${id}/related?limit=1&mode=explicit`)
-    addPage("get-bill-sections", `/api/bills/${id}/sections?limit=1`)
-    addPage("list-bill-amendments", `/api/bills/${id}/amendments?limit=1`)
-    addPage("list-bill-votes", `/api/bills/${id}/votes?limit=1`)
-    addPage("list-bill-changes", `/api/bills/${id}/changes?limit=1`)
-    checks.push({
-      body: { ids: [fixture.billId] },
-      expected: "batch",
-      id: "batch-bills",
-      method: "POST",
-      path: "/api/bills/batch"
-    })
-    checks.push({
-      body: { billIds: [fixture.billId], limitPerBill: 1 },
-      expected: "batch",
-      id: "batch-bill-amendments",
-      method: "POST",
-      path: "/api/bills/amendments/batch"
-    })
-  }
-  if (fixture.amendmentId !== undefined) {
-    const id = encoded(fixture.amendmentId)
-    add("get-amendment", `/api/amendments/${id}`)
-    checks.push({
-      body: { ids: [fixture.amendmentId] },
-      expected: "batch",
-      id: "batch-amendments",
-      method: "POST",
-      path: "/api/amendments/batch"
-    })
-  }
-  if (fixture.voteId !== undefined) {
-    const id = encoded(fixture.voteId)
-    add("get-vote", `/api/votes/${id}`)
-    addPage("list-vote-positions", `/api/votes/${id}/positions?limit=1`)
-    checks.push({
-      body: { ids: [fixture.voteId] },
-      expected: "batch",
-      id: "batch-votes",
-      method: "POST",
-      path: "/api/votes/batch"
-    })
-  }
-  if (fixture.documentId !== undefined) {
-    const id = encoded(fixture.documentId)
-    add("get-document", `/api/documents/${id}`)
-    addPage("get-document-sections", `/api/documents/${id}/sections?limit=1`)
-  }
+  const checks = [...scopedBillChecks(fixture)]
   if (fixture.materialId !== undefined) {
-    add("get-supporting-material", `/api/supporting-materials/${encoded(fixture.materialId)}`)
-  }
-  if (fixture.meetingId !== undefined) {
-    add("get-meeting", `/api/meetings/${encoded(fixture.meetingId)}`)
-  }
-  if (fixture.personId !== undefined) {
-    add("get-person", `/api/people/${encoded(fixture.personId)}`)
-  }
-  if (fixture.organizationId !== undefined) {
-    add("get-organization", `/api/organizations/${encoded(fixture.organizationId)}`)
-    addPage("list-organization-meetings", `/api/organizations/${encoded(fixture.organizationId)}/meetings?limit=1`)
-  }
-  if (fixture.billId !== undefined && fixture.documentId !== undefined && fixture.documentIdB !== undefined) {
     checks.push({
-      body: {
-        billId: fixture.billId,
-        leftDocumentId: fixture.documentId,
-        rightDocumentId: fixture.documentIdB
-      },
-      expected: "calculation",
-      id: "document-diff",
-      method: "POST",
-      path: "/api/document-diffs"
+      expected: "resource",
+      id: "get-supporting-material",
+      path: `/api/supporting-materials/${encoded(fixture.materialId)}`
+    })
+  }
+  if (fixture.documentId !== undefined && fixture.documentSectionId !== undefined) {
+    checks.push({
+      expected: "resource",
+      id: "get-document-section",
+      path: `/api/documents/${encoded(fixture.documentId)}/sections/${encoded(fixture.documentSectionId)}`
+    })
+  }
+  if (fixture.materialId !== undefined && fixture.materialSectionId !== undefined) {
+    checks.push({
+      expected: "resource",
+      id: "get-supporting-material-section",
+      path: `/api/supporting-materials/${encoded(fixture.materialId)}/sections/${encoded(fixture.materialSectionId)}`
     })
   }
   return checks
@@ -377,15 +206,47 @@ function scopedBillChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
 }
 
 function missingFixtureChecks(fixture: SmokeFixture, present: ReadonlySet<string>): readonly SmokeCheck[] {
-  return OPTIONAL_CHECKS.flatMap(({ definition, fixtures }) => {
-    if (present.has(definition.id) || fixtures.every((name) => fixture[name] !== undefined)) {
-      return []
-    }
-    const names = fixtures.map(
-      (name) => `LEGISLATION_SMOKE_${name.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase()}`
+  const skipped: SmokeCheck[] = []
+  if (
+    !present.has("list-jurisdiction-bills") &&
+    (fixture.jurisdictionId === undefined || fixture.sessionId === undefined)
+  ) {
+    skipped.push(
+      skippedCheck(
+        { expected: "bill-page", id: "scoped-bill-pages", path: "/api/jurisdictions/{jurisdictionId}/bills" },
+        "skipped: provide LEGISLATION_SMOKE_JURISDICTION_ID and LEGISLATION_SMOKE_SESSION_ID to exercise exact bill pages"
+      )
     )
-    return [skippedCheck(definition, `skipped: provide ${names.join(" and ")} to exercise this route`)]
-  })
+  }
+  if (fixture.materialId === undefined) {
+    skipped.push(
+      skippedCheck(
+        { expected: "resource", id: "get-supporting-material", path: "/api/supporting-materials/{materialId}" },
+        "skipped: provide LEGISLATION_SMOKE_MATERIAL_ID to exercise this exact route"
+      )
+    )
+  }
+  if (fixture.documentId === undefined || fixture.documentSectionId === undefined) {
+    skipped.push(
+      skippedCheck(
+        { expected: "resource", id: "get-document-section", path: "/api/documents/{documentId}/sections/{sectionId}" },
+        "skipped: provide LEGISLATION_SMOKE_DOCUMENT_ID and LEGISLATION_SMOKE_DOCUMENT_SECTION_ID to exercise this exact route"
+      )
+    )
+  }
+  if (fixture.materialId === undefined || fixture.materialSectionId === undefined) {
+    skipped.push(
+      skippedCheck(
+        {
+          expected: "resource",
+          id: "get-supporting-material-section",
+          path: "/api/supporting-materials/{materialId}/sections/{sectionId}"
+        },
+        "skipped: provide LEGISLATION_SMOKE_MATERIAL_ID and LEGISLATION_SMOKE_MATERIAL_SECTION_ID to exercise this exact route"
+      )
+    )
+  }
+  return skipped
 }
 
 function skippedCheck(definition: CheckDefinition, detail: string, status: SmokeCheckStatus = "skipped"): SmokeCheck {
@@ -809,7 +670,7 @@ export async function runApiSmoke(options: {
   const fixtureDefinitions = profile === "full" ? fixtureChecks(fixtures) : scopedBillChecks(fixtures)
   const definitions =
     profile === "full"
-      ? [...ALWAYS_CHECKS, ...LIST_CHECKS, ...fixtureDefinitions]
+      ? [...ALWAYS_CHECKS, ...REGISTERED_EXACT_CHECKS, ...BLOCKED_ABSENCE_CHECKS, ...fixtureDefinitions]
       : [...ALWAYS_CHECKS, ...fixtureDefinitions]
   const checks: SmokeCheck[] = []
   if (profile === "full") {

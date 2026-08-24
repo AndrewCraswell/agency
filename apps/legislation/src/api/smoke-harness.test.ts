@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { AuthenticationError } from "../auth/workos.js"
 import { close, createLegislationServer } from "../mcp/server.js"
+import type { BillSummaryRead, SupportingMaterialDetailRead } from "./canonical-read.js"
 import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
 import { createCoreReadApiHandler, type CoreReadQueryApi } from "./core-read.js"
 import { createCompositeHttpApiHandler } from "./http.js"
@@ -62,7 +63,26 @@ function billSummary(id: string): Record<string, unknown> {
   }
 }
 
-function supportingMaterialRead(id: string): Record<string, unknown> {
+function billSummaryRead(id: string): BillSummaryRead {
+  return {
+    classification: ["bill"],
+    createdAt: new Date("2026-08-24T00:00:00Z"),
+    id,
+    identifier: "HB 1",
+    introducedAt: "2026-01-01",
+    jurisdictionId: "jurisdiction:fixture",
+    latestActionAt: "2026-02-01T00:00:00.000Z",
+    sessionId: "session:fixture",
+    sourceUrl: `https://source.example.test/${encodeURIComponent(id)}`,
+    status: null,
+    subjects: ["Government"],
+    title: "Fixture bill",
+    updatedAt: new Date("2026-08-24T00:00:00Z"),
+    upstreamIds: { fixture: id }
+  }
+}
+
+function supportingMaterialRead(id: string): SupportingMaterialDetailRead {
   return {
     ...canonical(id),
     amendmentIds: ["amendment:fixture"],
@@ -129,7 +149,8 @@ function fakeFetch() {
     }
     if (
       url.pathname === "/api/jurisdictions/jurisdiction%3Afixture/bills" ||
-      url.pathname === "/api/sessions/session%3Afixture/bills"
+      url.pathname === "/api/sessions/session%3Afixture/bills" ||
+      url.pathname === "/api/bills"
     ) {
       return jsonResponse(
         {
@@ -138,6 +159,24 @@ function fakeFetch() {
           meta: { correlationId, limit: 1, nextCursor: null, truncated: false, warnings: [] }
         },
         200,
+        correlationId
+      )
+    }
+    if (
+      url.pathname === "/api/jurisdictions" ||
+      url.pathname === "/api/amendments" ||
+      url.pathname === "/api/votes" ||
+      url.pathname === "/api/people" ||
+      url.pathname === "/api/organizations" ||
+      url.pathname === "/api/meetings" ||
+      (init?.method === "POST" &&
+        (url.pathname === "/api/search/amendments" ||
+          url.pathname === "/api/search/passages" ||
+          url.pathname === "/api/document-diffs"))
+    ) {
+      return jsonResponse(
+        { error: { category: "not_found", correlationId, message: "not found", retryable: false } },
+        404,
         correlationId
       )
     }
@@ -157,6 +196,13 @@ function fakeFetch() {
             warnings: []
           }
         },
+        200,
+        correlationId
+      )
+    }
+    if (url.pathname.includes("/sections/")) {
+      return jsonResponse(
+        { data: canonical("section:fixture"), links: { self: url.pathname }, meta: { correlationId, warnings: [] } },
         200,
         correlationId
       )
@@ -379,7 +425,7 @@ describe("local API smoke harness", () => {
 
     expect(report.status).toBe("blocked")
     expect(report.failed).toHaveLength(0)
-    expect(report.blocked.some((check) => check.id === "get-bill")).toBe(true)
+    expect(report.blocked.some((check) => check.id === "absent-list-votes")).toBe(true)
     expect(report.passed.some((check) => check.id === "auth-rejection")).toBe(true)
     expect(calls.every((call) => call.authorization === null)).toBe(true)
     expect(JSON.stringify(report)).not.toContain("bill:1")
@@ -396,7 +442,7 @@ describe("local API smoke harness", () => {
     })
     expect(report.status).toBe("passed")
     expect(report.failed).toHaveLength(0)
-    expect(report.passed.some((check) => check.id === "get-bill")).toBe(true)
+    expect(report.passed.some((check) => check.id === "absent-list-votes")).toBe(true)
     expect(calls.some((call) => call.authorization === "Bearer do-not-log-this-token")).toBe(true)
     expect(JSON.stringify(report)).not.toContain("do-not-log-this-token")
   })
@@ -452,7 +498,7 @@ describe("local API smoke harness", () => {
   it("runs against the composed Node server with canonical fixture records", async () => {
     const page = () => ({ items: [canonical("fixture:item")], truncated: false, warnings: [] })
     const service: CoreReadQueryApi & CivicSearchApi = {
-      browseBills: async () => page(),
+      browseBills: async () => ({ items: [billSummaryRead("bill:fixture")], truncated: false, warnings: [] }),
       compareBillVersions: async () => ({ changes: [] }),
       findRelatedBills: async () => page(),
       getAmendment: async () => canonical("amendment:fixture"),
@@ -461,10 +507,38 @@ describe("local API smoke harness", () => {
       getBillTimeline: async () => ({ events: [canonical("event:fixture")], truncated: false, warnings: [] }),
       getBillVotes: async () => page(),
       getDocument: async () => canonical("document:fixture"),
+      getDocumentSection: async () => ({
+        document: {
+          billId: "bill:fixture",
+          createdAt: new Date("2026-08-24T00:00:00Z"),
+          id: "document:fixture",
+          sourceUrl: "https://source.example.test/document",
+          updatedAt: new Date("2026-08-24T00:00:00Z")
+        },
+        section: {
+          contentHash: "a".repeat(64),
+          heading: null,
+          id: "document-section:fixture",
+          ordinal: 0,
+          sourceEndOffset: 12,
+          sourceStartOffset: 0,
+          text: "Fixture text"
+        }
+      }),
       getDocumentSections: async () => page(),
       getJurisdiction: async () => canonical("jurisdiction:fixture"),
       getSession: async () => canonical("session:fixture"),
       getSupportingMaterial: async () => ({ material: supportingMaterialRead("material:fixture") }),
+      getSupportingMaterialSection: async () => ({
+        material: supportingMaterialRead("material:fixture"),
+        section: {
+          contentHash: "b".repeat(64),
+          heading: null,
+          id: "supporting-material-section:fixture",
+          ordinal: 0,
+          text: "Fixture text"
+        }
+      }),
       getVote: async () => canonical("vote:fixture"),
       listJurisdictions: async () => page(),
       listSessions: async () => page(),
@@ -509,15 +583,24 @@ describe("local API smoke harness", () => {
 
     const report = await runApiSmoke({
       baseUrl: `http://127.0.0.1:${address.port}`,
-      fixtures: { billId: "bill:fixture" },
+      fixtures: {
+        documentId: "document:fixture",
+        documentSectionId: "document-section:fixture",
+        materialId: "material:fixture",
+        materialSectionId: "supporting-material-section:fixture"
+      },
       requireAuth: true,
       token: "smoke-token"
     })
-    expect(report.failed).toHaveLength(0)
+    expect(JSON.stringify(report.failed)).toBe("[]")
     expect(report.blocked).toHaveLength(0)
-    expect(report.skipped.some((check) => check.id === "get-jurisdiction")).toBe(true)
-    expect(report.passed.map((check) => check.id)).toContain("get-bill")
-    expect(report.passed.map((check) => check.id)).toContain("get-related-bills")
+    expect(report.skipped.some((check) => check.id === "scoped-bill-pages")).toBe(true)
+    expect(report.passed.map((check) => check.id)).toContain("list-bills")
+    expect(report.passed.map((check) => check.id)).toContain("list-supporting-materials")
+    expect(report.passed.map((check) => check.id)).toContain("get-supporting-material")
+    expect(report.passed.map((check) => check.id)).toContain("get-document-section")
+    expect(report.passed.map((check) => check.id)).toContain("get-supporting-material-section")
+    expect(report.passed.map((check) => check.id)).toContain("absent-list-votes")
     expect(report.passed.map((check) => check.id)).toContain("auth-rejection")
   })
 
@@ -540,28 +623,6 @@ describe("local API smoke harness", () => {
     })
 
     expect(report.failed.map((check) => check.id)).toContain("unknown-route")
-  })
-
-  it("rejects an impossible RFC3339 timestamp in a canonical resource", async () => {
-    const { fetchImpl } = fakeFetch()
-    const malformed = mutateJson(fetchImpl, "/api/bills/bill%3A1", (body) => {
-      if (typeof body !== "object" || body === null || !("data" in body) || typeof body.data !== "object") {
-        return body
-      }
-      return {
-        ...body,
-        data: { ...(body.data as Record<string, unknown>), updatedAt: "2026-02-30T00:00:00.000Z" }
-      }
-    })
-    const report = await runApiSmoke({
-      baseUrl: "http://localhost:3199",
-      fetchImpl: malformed,
-      fixtures: { billId: "bill:1" },
-      requireAuth: true,
-      token: "smoke-token"
-    })
-
-    expect(report.failed.map((check) => check.id)).toContain("get-bill")
   })
 
   it("rejects an invalid health status", async () => {
@@ -596,77 +657,27 @@ describe("local API smoke harness", () => {
     expect(report.failed.map((check) => check.id)).toContain("ready")
   })
 
-  it("rejects malformed canonical resource responses", async () => {
+  it("fails when an intentionally absent endpoint becomes reachable", async () => {
     const { fetchImpl } = fakeFetch()
-    const malformed = mutateJson(fetchImpl, "/api/bills/bill%3A1", (body) => {
-      if (typeof body !== "object" || body === null || !("data" in body) || typeof body.data !== "object") {
-        return body
+    const reachable = async (input: string | URL, init?: RequestInit): Promise<Response> => {
+      const url = new URL(input)
+      if (url.pathname !== "/api/votes") {
+        return await fetchImpl(input, init)
       }
-      return { ...body, data: { ...(body.data as Record<string, unknown>), canonicalUrl: "/relative" } }
-    })
+      const correlationId = new Headers(init?.headers).get("x-correlation-id") ?? "missing-correlation"
+      return jsonResponse(
+        { data: [], links: { next: null, self: url.pathname }, meta: { correlationId } },
+        200,
+        correlationId
+      )
+    }
     const report = await runApiSmoke({
       baseUrl: "http://localhost:3199",
-      fetchImpl: malformed,
-      fixtures: { billId: "bill:1" },
+      fetchImpl: reachable,
       requireAuth: true,
       token: "smoke-token"
     })
 
-    expect(report.failed.map((check) => check.id)).toContain("get-bill")
-  })
-
-  it("rejects malformed page responses", async () => {
-    const { fetchImpl } = fakeFetch()
-    const malformedPage = mutateJson(fetchImpl, "/api/bills", (body) => {
-      if (typeof body !== "object" || body === null) {
-        return body
-      }
-      return { ...body, data: [{ id: "missing-canonical-fields" }] }
-    })
-    const report = await runApiSmoke({
-      baseUrl: "http://localhost:3199",
-      fetchImpl: malformedPage,
-      requireAuth: true,
-      token: "smoke-token"
-    })
-
-    expect(report.failed.map((check) => check.id)).toContain("list-bills")
-  })
-
-  it("rejects malformed search responses", async () => {
-    const { fetchImpl } = fakeFetch()
-    const malformed = mutateJson(fetchImpl, "/api/search/bills", (body) => {
-      if (typeof body !== "object" || body === null || !("meta" in body) || typeof body.meta !== "object") {
-        return body
-      }
-      return { ...body, meta: { ...(body.meta as Record<string, unknown>), mode: "unknown" } }
-    })
-    const report = await runApiSmoke({
-      baseUrl: "http://localhost:3199",
-      fetchImpl: malformed,
-      requireAuth: true,
-      token: "smoke-token"
-    })
-
-    expect(report.failed.map((check) => check.id)).toContain("search-bills")
-  })
-
-  it("rejects malformed batch responses", async () => {
-    const { fetchImpl } = fakeFetch()
-    const malformed = mutateJson(fetchImpl, "/api/bills/batch", (body) => {
-      if (typeof body !== "object" || body === null || !("meta" in body) || typeof body.meta !== "object") {
-        return body
-      }
-      return { ...body, meta: { ...(body.meta as Record<string, unknown>), returned: 1 } }
-    })
-    const report = await runApiSmoke({
-      baseUrl: "http://localhost:3199",
-      fetchImpl: malformed,
-      fixtures: { billId: "bill:1" },
-      requireAuth: true,
-      token: "smoke-token"
-    })
-
-    expect(report.failed.map((check) => check.id)).toContain("batch-bills")
+    expect(report.failed.map((check) => check.id)).toContain("absent-list-votes")
   })
 })

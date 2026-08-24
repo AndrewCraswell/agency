@@ -19,15 +19,9 @@ afterEach(async () => {
 function createService(overrides: Partial<CivicSearchApi> = {}): CivicSearchApi {
   return {
     compareBillVersions: async () => ({ changes: [], truncated: false }),
-    getEvent: async ({ id }) => ({ event: { id } }),
-    getOrganization: async ({ id }) => ({ organization: { id } }),
-    getPerson: async ({ id }) => ({ person: { id } }),
     searchAmendments: async () => ({ items: [], truncated: false }),
     searchBillText: async () => ({ items: [], truncated: false }),
     searchBills: async () => ({ items: [], truncated: false }),
-    searchEvents: async () => ({ items: [], truncated: false }),
-    searchOrganizations: async () => ({ items: [], truncated: false }),
-    searchPeople: async () => ({ items: [], truncated: false }),
     searchSupportingMaterials: async () => ({ items: [], truncated: false }),
     ...overrides
   }
@@ -51,36 +45,48 @@ async function startApi(service: CivicSearchApi): Promise<string> {
 }
 
 describe("civic and search HTTP API handler", () => {
-  it("maps people query parameters into the shared query service and returns a page envelope", async () => {
-    let observed: unknown
-    const baseUrl = await startApi(
-      createService({
-        searchPeople: async (input) => {
-          observed = input
-          return { items: [{ id: "person:ca:ada" }], truncated: false, warnings: [] }
-        }
-      })
-    )
+  it("leaves civic list and detail routes unregistered without calling the query service", async () => {
+    const calls: string[] = []
+    const service = {
+      ...createService(),
+      getEvent: async () => {
+        calls.push("getEvent")
+        return { event: { id: "meeting:ca:budget" } }
+      },
+      getOrganization: async () => {
+        calls.push("getOrganization")
+        return { organization: { id: "organization:ca:budget" } }
+      },
+      getPerson: async () => {
+        calls.push("getPerson")
+        return { person: { id: "person:ca:ada" } }
+      },
+      searchEvents: async () => {
+        calls.push("searchEvents")
+        return { items: [], truncated: false }
+      },
+      searchOrganizations: async () => {
+        calls.push("searchOrganizations")
+        return { items: [], truncated: false }
+      },
+      searchPeople: async () => {
+        calls.push("searchPeople")
+        return { items: [], truncated: false }
+      }
+    }
+    const baseUrl = await startApi(service)
 
-    const response = await fetch(
-      `${baseUrl}/api/people?q=Ada&jurisdictionId=jurisdiction%3Aca&isActive=true&limit=10`,
-      { headers: { "x-correlation-id": "people-query" } }
-    )
+    const responses = await Promise.all([
+      fetch(`${baseUrl}/api/people?limit=1`),
+      fetch(`${baseUrl}/api/people/person%3Aca%3Aada`),
+      fetch(`${baseUrl}/api/organizations?limit=1`),
+      fetch(`${baseUrl}/api/organizations/organization%3Aca%3Abudget`),
+      fetch(`${baseUrl}/api/meetings?limit=1`),
+      fetch(`${baseUrl}/api/meetings/meeting%3Aca%3Abudget`)
+    ])
 
-    expect(response.status).toBe(200)
-    expect(observed).toEqual({
-      cursor: undefined,
-      isActive: true,
-      jurisdictionId: "jurisdiction:ca",
-      limit: 10,
-      organizationId: undefined,
-      query: "Ada"
-    })
-    await expect(response.json()).resolves.toMatchObject({
-      data: [{ id: "person:ca:ada" }],
-      links: { next: null, self: "/api/people?q=Ada&jurisdictionId=jurisdiction%3Aca&isActive=true&limit=10" },
-      meta: { correlationId: "people-query", limit: 10, nextCursor: null, truncated: false, warnings: [] }
-    })
+    expect(responses.map((response) => response.status)).toEqual([404, 404, 404, 404, 404, 404])
+    expect(calls).toEqual([])
   })
 
   it("uses the documented lexical default without claiming unreported model execution", async () => {
@@ -148,41 +154,49 @@ describe("civic and search HTTP API handler", () => {
     expect(observedLimits).toEqual([100])
   })
 
-  it("rejects duplicate IDs after input normalization", async () => {
-    const baseUrl = await startApi(createService())
-    const response = await fetch(`${baseUrl}/api/search/passages`, {
-      body: JSON.stringify({ documentIds: ["document:a", " document:a "], query: "budget" }),
-      headers: { "content-type": "application/json" },
-      method: "POST"
-    })
+  it("leaves blocked amendment, passage, and document-diff routes unregistered without calling the query service", async () => {
+    const calls: string[] = []
+    const baseUrl = await startApi(
+      createService({
+        compareBillVersions: async () => {
+          calls.push("compareBillVersions")
+          return { changes: [], truncated: false }
+        },
+        searchAmendments: async () => {
+          calls.push("searchAmendments")
+          return { items: [], truncated: false }
+        },
+        searchBillText: async () => {
+          calls.push("searchBillText")
+          return { items: [], truncated: false }
+        }
+      })
+    )
 
-    expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toMatchObject({
-      error: { category: "invalid_request", message: "ID arrays must contain unique values" }
-    })
-  })
+    const responses = await Promise.all([
+      fetch(`${baseUrl}/api/search/amendments`, {
+        body: JSON.stringify({ query: "budget" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      }),
+      fetch(`${baseUrl}/api/search/passages`, {
+        body: JSON.stringify({ query: "budget" }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      }),
+      fetch(`${baseUrl}/api/document-diffs`, {
+        body: JSON.stringify({
+          billId: "bill:ca:2025:ab:1",
+          leftDocumentId: "document:ca:ab1:introduced",
+          rightDocumentId: "document:ca:ab1:enrolled"
+        }),
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+    ])
 
-  it("validates bounds before rejecting currently unsupported passage filters", async () => {
-    const baseUrl = await startApi(createService())
-    const invalidBounds = await fetch(`${baseUrl}/api/search/passages`, {
-      body: JSON.stringify({ pageFrom: 8, pageTo: 3, query: "budget" }),
-      headers: { "content-type": "application/json" },
-      method: "POST"
-    })
-    const unsupportedFilter = await fetch(`${baseUrl}/api/search/passages`, {
-      body: JSON.stringify({ documentClassifications: ["version"], query: "budget" }),
-      headers: { "content-type": "application/json" },
-      method: "POST"
-    })
-
-    expect(invalidBounds.status).toBe(400)
-    await expect(invalidBounds.json()).resolves.toMatchObject({
-      error: { message: "pageFrom must not be greater than pageTo" }
-    })
-    expect(unsupportedFilter.status).toBe(400)
-    await expect(unsupportedFilter.json()).resolves.toMatchObject({
-      error: { message: "documentClassifications is not implemented by the current query service" }
-    })
+    expect(responses.map((response) => response.status)).toEqual([404, 404, 404])
+    expect(calls).toEqual([])
   })
 
   it("rejects reversed document date bounds", async () => {
@@ -197,49 +211,6 @@ describe("civic and search HTTP API handler", () => {
     await expect(response.json()).resolves.toMatchObject({
       error: { message: "documentFrom must not be after documentTo" }
     })
-  })
-
-  it("rejects filters that the current amendment service cannot fulfill without silently discarding them", async () => {
-    const baseUrl = await startApi(createService())
-    const response = await fetch(`${baseUrl}/api/search/amendments`, {
-      body: JSON.stringify({ billIds: ["bill:a", "bill:b"], query: "budget" }),
-      headers: { "content-type": "application/json" },
-      method: "POST"
-    })
-
-    expect(response.status).toBe(400)
-    await expect(response.json()).resolves.toMatchObject({
-      error: { category: "invalid_request", message: "billIds currently accepts exactly one value" }
-    })
-  })
-
-  it("passes the selected document pair to the existing comparison service", async () => {
-    let observed: unknown
-    const baseUrl = await startApi(
-      createService({
-        compareBillVersions: async (input) => {
-          observed = input
-          return { changes: [{ classification: "changed" }], truncated: false }
-        }
-      })
-    )
-
-    const response = await fetch(`${baseUrl}/api/document-diffs`, {
-      body: JSON.stringify({
-        billId: "bill:ca:2025:ab:1",
-        leftDocumentId: "document:ca:ab1:introduced",
-        rightDocumentId: "document:ca:ab1:enrolled"
-      }),
-      headers: { "content-type": "application/json" },
-      method: "POST"
-    })
-
-    expect(response.status).toBe(200)
-    expect(observed).toEqual({
-      billId: "bill:ca:2025:ab:1",
-      documentIds: ["document:ca:ab1:introduced", "document:ca:ab1:enrolled"]
-    })
-    await expect(response.json()).resolves.toMatchObject({ data: { changes: [{ classification: "changed" }] } })
   })
 
   it("leaves organization meeting routes unregistered until exact canonical projection facts exist", async () => {
