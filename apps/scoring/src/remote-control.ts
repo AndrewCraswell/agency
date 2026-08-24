@@ -486,9 +486,22 @@ export function isRemoteCommand(value: unknown): value is RemoteCommand {
     payload(value.command, value.payload)
   )
 }
+
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === "object" && !Object.isFrozen(value)) {
+    for (const nestedValue of Object.values(value)) deepFreeze(nestedValue)
+    Object.freeze(value)
+  }
+  return value
+}
+
+function cloneParsed<T>(value: T): T {
+  return deepFreeze(structuredClone(value))
+}
+
 export function parseRemoteCommand(value: unknown): RemoteCommand {
   if (!isRemoteCommand(value)) throw new TypeError("Unsupported or invalid remote command")
-  return value
+  return cloneParsed(value)
 }
 function matches(snapshotValue: BoutWorkflowSnapshot, command: RemoteCommand): boolean {
   const source = snapshotValue.sourceCommandIdentity
@@ -546,9 +559,9 @@ export function isBoutStateEvent(value: unknown): value is BoutStateEvent {
 /** Rejects incomplete or incompatible persisted snapshot shapes before a load can begin. */
 export function parseBoutWorkflowSnapshot(value: unknown): BoutWorkflowSnapshot {
   if (!isBoutWorkflowSnapshot(value)) throw new TypeError("Unsupported or invalid bout workflow snapshot")
-  return value
+  return cloneParsed(value)
 }
 export function parseBoutStateEvent(value: unknown): BoutStateEvent {
   if (!isBoutStateEvent(value)) throw new TypeError("Unsupported or invalid bout state event")
-  return value
+  return cloneParsed(value)
 }

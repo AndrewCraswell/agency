@@ -47,7 +47,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 28 | SD-017 | P2 | done | Root-approved ordered layout now derives every wire offset, the 70-byte header, and 150-byte maximum without changing RC-03 bytes |
 | 29 | SD-018 | P2 | in-progress | Live simulator rebuild can leave startup-cached HTML pointing at deleted hashed assets |
 | 30 | SD-019 | P1 | done | Root-approved remote command, authority, snapshot, and fixture boundaries share one bounded identifier policy |
-| 31 | SD-020 | P2 | intake | Remote schema parsers return caller-owned mutable objects despite readonly result types |
+| 31 | SD-020 | P2 | done | Root-approved parser projections are detached and recursively frozen without changing accepted schemas or byte order |
 | 32 | SD-021 | P2 | done | Root-approved private metadata projection now serves secure-envelope and replay-candidate validation with unchanged wire and error behavior |
 | 33 | SC-010 | P2 | intake | Communications circuit selected MPNs can drift from canonical component decisions and USB-PD records |
 | 34 | SC-011 | P3 | done | Root-approved BOM validation now relies on canonical rows as its sole exact-selection registry |
@@ -507,7 +507,8 @@ truth.
 ## SD-020: detach and freeze remote parser results
 
 - Priority: `P2`
-- State: `intake`
+- State: `done`
+- Latest state: Root review approved detached recursively frozen projections for commands, snapshots, and state events. The remote, authority, and reducer suites pass 41 tests; focused lint and format checks pass.
 - Affected files: `apps/scoring/src/remote-control.ts` and its focused schema tests.
 - Description: `parseRemoteCommand`, `parseBoutWorkflowSnapshot`, and `parseBoutStateEvent` validate and return the original object; TypeScript readonly types do not prevent runtime mutation or nested aliasing.
 - Impact: downstream validity can change after parsing when a caller mutates the source object.
