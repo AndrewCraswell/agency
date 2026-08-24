@@ -342,6 +342,110 @@ static bool test_missing_forwarding_callback_uses_journal(void) {
   return true;
 }
 
+static bool test_frame_classification_does_not_mutate_journal(void) {
+  static const uint8_t first_payload[] = {0x91U};
+  static const uint8_t second_payload[] = {0x92U};
+  uint8_t first_frame[SCORING_ESP32_MAX_TRANSPORT_FRAME_BYTES] = {0};
+  uint8_t malformed_frame[SCORING_ESP32_MAX_TRANSPORT_FRAME_BYTES] = {0};
+  uint8_t out_of_order_frame[SCORING_ESP32_MAX_TRANSPORT_FRAME_BYTES] = {0};
+  const size_t first_length = make_decision_frame(first_frame, first_payload, sizeof(first_payload), 100U);
+  const size_t malformed_length = make_decision_frame(malformed_frame, second_payload, sizeof(second_payload), 101U);
+  const size_t out_of_order_length = make_decision_frame(out_of_order_frame, second_payload, sizeof(second_payload), 102U);
+  fake_link_t link = {.frame = first_frame, .frame_length = first_length};
+  reset_observer_t observer = {0};
+  fake_storage_t storage = {0};
+  scoring_esp32_services_t services;
+  scoring_esp32_receiver_t receiver;
+  scoring_esp32_receiver_receipt_t receipt;
+  uint32_t expected_sequence = 0U;
+
+  set_boot_id(&observer, "boot-classification");
+  services = services_for(&link, &observer);
+  services.storage = (scoring_esp32_storage_service_t){
+    .context = &storage,
+    .append_authoritative_record = fake_append_record
+  };
+  scoring_esp32_journal_storage_init(&test_storage);
+  CHECK(first_length != 0U);
+  CHECK(malformed_length != 0U);
+  CHECK(out_of_order_length != 0U);
+  CHECK(scoring_esp32_receiver_init(&receiver, &services, &test_storage, 4U) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_journal_count(scoring_esp32_receiver_journal(&receiver)) == 1U);
+  CHECK(scoring_esp32_receiver_has_expected_sequence(&receiver, &expected_sequence));
+  CHECK(expected_sequence == 101U);
+  CHECK(storage.calls == 1U);
+
+  malformed_frame[SCORING_ESP32_TRANSPORT_HEADER_BYTES] ^= 1U;
+  link = (fake_link_t){.frame = malformed_frame, .frame_length = malformed_length};
+  CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_FRAME_INTEGRITY_FAILURE);
+  CHECK(receipt.outcome == SCORING_ESP32_RECEIVER_REJECTED);
+  CHECK(!receipt.has_sequence);
+  CHECK(scoring_esp32_journal_count(scoring_esp32_receiver_journal(&receiver)) == 1U);
+  CHECK(scoring_esp32_receiver_has_expected_sequence(&receiver, &expected_sequence));
+  CHECK(expected_sequence == 101U);
+  CHECK(storage.calls == 1U);
+
+  link = (fake_link_t){.frame = out_of_order_frame, .frame_length = out_of_order_length};
+  CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_OUT_OF_ORDER);
+  CHECK(receipt.outcome == SCORING_ESP32_RECEIVER_REJECTED);
+  CHECK(receipt.has_sequence);
+  CHECK(receipt.sequence == 102U);
+  CHECK(scoring_esp32_journal_count(scoring_esp32_receiver_journal(&receiver)) == 1U);
+  CHECK(scoring_esp32_receiver_has_expected_sequence(&receiver, &expected_sequence));
+  CHECK(expected_sequence == 101U);
+  CHECK(storage.calls == 1U);
+  return true;
+}
+
+static bool test_journal_projection_preserves_decoded_payload(void) {
+  static const uint8_t payload[] = {0xE1U, 0x00U, 0x7FU, 0xA5U};
+  uint8_t frame[SCORING_ESP32_MAX_TRANSPORT_FRAME_BYTES] = {0};
+  uint8_t duplicate_frame[SCORING_ESP32_MAX_TRANSPORT_FRAME_BYTES] = {0};
+  const size_t frame_length = make_decision_frame(frame, payload, sizeof(payload), 201U);
+  const size_t duplicate_length = make_decision_frame(duplicate_frame, payload, sizeof(payload), 202U);
+  fake_link_t link = {.frame = frame, .frame_length = frame_length};
+  reset_observer_t observer = {0};
+  fake_storage_t storage = {0};
+  scoring_esp32_services_t services;
+  scoring_esp32_receiver_t receiver;
+  scoring_esp32_receiver_receipt_t receipt;
+  uint32_t expected_sequence = 0U;
+
+  set_boot_id(&observer, "boot-projection");
+  services = services_for(&link, &observer);
+  services.storage = (scoring_esp32_storage_service_t){
+    .context = &storage,
+    .append_authoritative_record = fake_append_record
+  };
+  scoring_esp32_journal_storage_init(&test_storage);
+  CHECK(frame_length != 0U);
+  CHECK(scoring_esp32_receiver_init(&receiver, &services, &test_storage, 4U) == SCORING_ESP32_RESULT_OK);
+  CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_OK);
+  CHECK(receipt.outcome == SCORING_ESP32_RECEIVER_ACCEPTED);
+  CHECK(receipt.record.length == sizeof(payload));
+  CHECK(memcmp(receipt.record.data, payload, sizeof(payload)) == 0);
+  CHECK(storage.calls == 1U);
+  CHECK(storage.transport_sequence == 201U);
+  CHECK(storage.record_length == sizeof(payload));
+  CHECK(memcmp(storage.record, payload, sizeof(payload)) == 0);
+  CHECK(scoring_esp32_journal_count(scoring_esp32_receiver_journal(&receiver)) == 1U);
+  CHECK(replay_matches(scoring_esp32_receiver_journal(&receiver), 0U, payload, sizeof(payload), 201U));
+  CHECK(duplicate_length != 0U);
+  link = (fake_link_t){.frame = duplicate_frame, .frame_length = duplicate_length};
+  CHECK(scoring_esp32_receiver_receive(&receiver, &receipt) == SCORING_ESP32_RESULT_DUPLICATE);
+  CHECK(receipt.outcome == SCORING_ESP32_RECEIVER_REJECTED);
+  CHECK(receipt.result == SCORING_ESP32_RESULT_DUPLICATE);
+  CHECK(receipt.has_sequence);
+  CHECK(receipt.sequence == 202U);
+  CHECK(scoring_esp32_journal_count(scoring_esp32_receiver_journal(&receiver)) == 1U);
+  CHECK(scoring_esp32_receiver_has_expected_sequence(&receiver, &expected_sequence));
+  CHECK(expected_sequence == 203U);
+  CHECK(storage.calls == 1U);
+  CHECK(replay_matches(scoring_esp32_receiver_journal(&receiver), 0U, payload, sizeof(payload), 201U));
+  return true;
+}
+
 static bool test_backpressure_retains_expected_sequence(void) {
   static const uint8_t first_payload[] = {0x01U};
   static const uint8_t second_payload[] = {0x02U};
@@ -825,6 +929,8 @@ int main(void) {
       !test_accept_duplicate_corruption_reorder_and_replay() ||
       !test_forwarding_failure_does_not_rollback_journal() ||
       !test_missing_forwarding_callback_uses_journal() ||
+      !test_frame_classification_does_not_mutate_journal() ||
+      !test_journal_projection_preserves_decoded_payload() ||
       !test_backpressure_retains_expected_sequence() ||
       !test_power_loss_recovers_multiple_record_checkpoint() ||
       !test_reset_restores_decision_cursor_and_next_frame() ||

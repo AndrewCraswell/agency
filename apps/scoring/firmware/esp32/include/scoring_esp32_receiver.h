@@ -47,6 +47,7 @@ scoring_esp32_result_t scoring_esp32_receiver_init(
  */
 scoring_esp32_result_t scoring_esp32_receiver_reset(scoring_esp32_receiver_t *receiver);
 
+/* Coordinates transport classification, journal projection, and receipt state. */
 scoring_esp32_result_t scoring_esp32_receiver_receive(
   scoring_esp32_receiver_t *receiver,
   scoring_esp32_receiver_receipt_t *out_receipt
