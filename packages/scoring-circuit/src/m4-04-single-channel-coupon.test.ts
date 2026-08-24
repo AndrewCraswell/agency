@@ -156,7 +156,24 @@ describe("M4-04 single-channel sensing coupon", () => {
     })
   })
 
-  it("hash-verifies every retained drawing and checks exact orderable and package markers from PDF bytes", () => {
+  it("keeps the JST guarded-force connector source hash-bound at family scope", () => {
+    const connector = M404_SINGLE_CHANNEL_COUPON.footprints.find(
+      (footprint) => footprint.exactMpn === "B2B-PH-K-S(LF)(SN)"
+    )
+    expect(connector?.evidence.manufacturerDrawing).toMatchObject({
+      acquisition: "series-drawing-hash-bound",
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/jst-ph-series-datasheet.pdf",
+      drawingIdentifier: "JST ePH, PH series header layout, manufacturer dimensions",
+      drawingUrl: "https://www.jst-mfg.com/product/pdf/eng/ePH.pdf",
+      geometry: null,
+      sha256: "447624F4F2F7D37C58C1EAA7EE314AD757FE7AFF48F6186491EF6F69FBC00B96"
+    })
+    expect(connector?.evidence.manufacturerPrimaryDocument.status).toBe("series-hash-bound")
+    expect(connector?.evidence.manufacturerDrawing.scope).toContain("does not prove the exact suffix")
+    expect(connector?.footprintRelease).toBe("deny")
+  })
+
+  it("hash-verifies every retained drawing and checks its source markers from PDF bytes", () => {
     const repoRoot = new URL("../../../", import.meta.url)
     const inflatePdfStreams = (bytes: Buffer) => {
       let decoded = ""

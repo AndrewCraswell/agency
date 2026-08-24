@@ -175,21 +175,18 @@ const ercNets = [
 
 type CouponBomPart = (typeof oneChannelAnalogExperimentBom)[number]
 
-const acquiredDrawingEvidenceByMpn: Readonly<
-  Record<
-    string,
-    {
-      acquisition: "exact-drawing-hash-bound"
-      artifactPath: `packages/scoring-circuit/docs/evidence/m4-04/${string}`
-      drawingIdentifier: string
-      drawingUrl: string
-      geometry: null
-      byteMarkers: readonly string[]
-      scope: string
-      sha256: string
-    }
-  >
-> = {
+type AcquiredDrawing = {
+  acquisition: "exact-drawing-hash-bound" | "series-drawing-hash-bound"
+  artifactPath: `packages/scoring-circuit/docs/evidence/m4-04/${string}`
+  drawingIdentifier: string
+  drawingUrl: string
+  geometry: null
+  byteMarkers: readonly string[]
+  scope: string
+  sha256: string
+}
+
+const acquiredDrawingEvidenceByMpn: Readonly<Record<string, AcquiredDrawing>> = {
   ADS8881IDGS: {
     acquisition: "exact-drawing-hash-bound",
     artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-ads8881-dgs-datasheet.pdf",
@@ -306,6 +303,17 @@ const acquiredSeriesDrawingEvidenceByMpn: Readonly<
     }
   >
 > = {
+  "B2B-PH-K-S(LF)(SN)": {
+    acquisition: "series-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/jst-ph-series-datasheet.pdf",
+    drawingIdentifier: "JST ePH, PH series header layout, manufacturer dimensions",
+    drawingUrl: "https://www.jst-mfg.com/product/pdf/eng/ePH.pdf",
+    geometry: null,
+    byteMarkers: ["PH", "B2B"],
+    scope:
+      "JST PH-series manufacturer source. The retained source covers the B2B-PH-K-S(LF)(SN) two-circuit header family and its 2.00 mm pitch and board-layout guidance, but it does not prove the exact suffix or grant a project land pattern. No project geometry or footprint authority is inferred.",
+    sha256: "447624F4F2F7D37C58C1EAA7EE314AD757FE7AFF48F6186491EF6F69FBC00B96"
+  },
   CRCW0603100KFKEAHP: {
     acquisition: "series-drawing-hash-bound",
     artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf",
@@ -398,7 +406,8 @@ function footprintEvidenceFor(part: CouponBomPart) {
       scope:
         "Bound only to this exact MPN record. A shared package family must receive its own record and cannot inherit this review.",
       status:
-        manufacturerDrawing.acquisition === "exact-drawing-hash-bound"
+        manufacturerDrawing.acquisition === "exact-drawing-hash-bound" ||
+        manufacturerDrawing.acquisition === "series-drawing-hash-bound"
           ? ("hash-bound" as const)
           : manufacturerDrawing.acquisition === "series-drawing-hash-bound"
             ? ("series-hash-bound" as const)
