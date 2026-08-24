@@ -302,7 +302,7 @@ const definition = {
       "Review the board optical aperture and a physical front-panel coupon against the required viewing angle and lens-to-panel distance before release."
   },
   candidateFootprintReview: {
-    state: "not-submitted",
+    state: "project-footprint-generated-pending-review",
     sourceBasis: [
       "vishay-82491-tsop38438-datasheet",
       "vishay-82756-minicast-window-size",
@@ -310,28 +310,32 @@ const definition = {
     ],
     exactPart: "TSOP38438",
     packageDrawingDatum: "front optical window and pin 1 lead order from Vishay drawing 6.550-5263.01-4",
-    boardCoordinateDatum: "not-defined-until-project-board-CAD-is-submitted",
+    boardCoordinateDatum:
+      "project-origin-at-pin-1-x0-y0; lead-row-and-lens-face-at-y0; body-extends-positive-y; optical-axis-negative-y",
     finishedGeometry: {
-      drillDiameterMm: null,
-      padDiameterMm: null,
-      annularRingMm: null,
-      solderMaskOpeningDiameterMm: null,
-      solderMaskExpansionMm: null,
-      courtyardClearanceMm: null,
-      pasteOpeningDiameterMm: null
+      drillDiameterMm: 1,
+      padDiameterMm: 2,
+      annularRingMm: 0.5,
+      solderMaskOpeningDiameterMm: 2.1,
+      solderMaskExpansionMm: 0.05,
+      courtyardClearanceMm: 0.55,
+      pasteOpeningDiameterMm: 0,
+      geometryAuthority: "project-review-input-not-manufacturer-specification"
     },
     pinOne: {
       sourceDatum: "Vishay package drawing pin 1 OUT lead at the lens-face front view",
-      boardPinOneOrientation: null,
-      boardRotationDegrees: null,
-      boardRotationToleranceDegrees: null,
+      boardPinOneOrientation: "pin-1-at-x0-y0; lead-row-and-lens-face-at-y0; body-extends-positive-y",
+      boardRotationDegrees: 0,
+      boardRotationToleranceDegrees: 0.1,
+      boardCoordinatesMm: { x: 0, y: 0 },
       overlayMatch: false
     },
     lens: {
-      sourceDatum: "front optical window normal to the intended front-panel axis",
-      boardLensDatum: null,
-      boardRotationDegrees: null,
-      boardRotationToleranceDegrees: null,
+      sourceDatum: "front optical window is the y=0 lens face; optical axis points toward negative y",
+      boardLensDatum: "lens-face-center-at-x2.5-y0; optical-axis-negative-y",
+      boardRotationDegrees: 0,
+      boardRotationToleranceDegrees: 0.1,
+      boardCoordinatesMm: { x: 2.5, y: 0 },
       overlayMatch: false
     },
     manufacturerCad: {
@@ -342,44 +346,44 @@ const definition = {
       authority: "deny"
     },
     generatedArtwork: {
-      state: "not-generated",
-      artifactPath: null,
-      generator: null,
-      generatorVersion: null,
-      sha256: null,
+      state: "generated-project-review-only",
+      artifactPath: "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg",
+      generator: "deterministic-svg-overlay-generator",
+      generatorVersion: "1.0.0",
+      sha256: "44A4D62B5EFF0F48A222AEAEF0DB93D00ACC38C51A4754C9606BB8C129917426",
       authority: "deny"
     },
     oneToOneOverlayArtifacts: [
       {
         kind: "package-drawing-vs-project-footprint",
         scale: "1:1",
-        state: "not-generated",
-        artifactPath: null,
-        generator: null,
-        generatorVersion: null,
-        sha256: null,
+        state: "generated-project-review-only",
+        artifactPath: "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg",
+        generator: "deterministic-svg-overlay-generator",
+        generatorVersion: "1.0.0",
+        sha256: "44A4D62B5EFF0F48A222AEAEF0DB93D00ACC38C51A4754C9606BB8C129917426",
         reviewedBy: null,
         reviewStatus: "pending"
       },
       {
         kind: "package-drawing-vs-project-assembly-overlay",
         scale: "1:1",
-        state: "not-generated",
-        artifactPath: null,
-        generator: null,
-        generatorVersion: null,
-        sha256: null,
+        state: "generated-project-review-only",
+        artifactPath: "docs/evidence/bp-146/tsop38438-project-assembly-overlay.svg",
+        generator: "deterministic-svg-overlay-generator",
+        generatorVersion: "1.0.0",
+        sha256: "8EF751EFE0B9160AB5C1EF21159448D75F56A1E7B59C1AA57035E234A1F41830",
         reviewedBy: null,
         reviewStatus: "pending"
       }
     ],
     toleranceReview: {
-      packageLeadPitchToleranceMm: null,
-      drillToleranceMm: null,
-      padToleranceMm: null,
-      boardRotationToleranceDegrees: null,
-      courtyardToleranceMm: null,
-      status: "pending-project-CAD-and-fabrication-inputs"
+      packageLeadPitchToleranceMm: 0.05,
+      drillToleranceMm: 0.05,
+      padToleranceMm: 0.05,
+      boardRotationToleranceDegrees: 0.1,
+      courtyardToleranceMm: 0.1,
+      status: "project-review-inputs-pending-independent-CAD-review"
     },
     accepted: false,
     fabricationAuthority: "deny",
@@ -611,53 +615,65 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
   }
   const candidate = evidence.candidateFootprintReview
   if (
-    candidate.state !== "not-submitted" ||
+    candidate.state !== "project-footprint-generated-pending-review" ||
     candidate.exactPart !== "TSOP38438" ||
     candidate.sourceBasis.length !== 3 ||
-    candidate.finishedGeometry.drillDiameterMm !== null ||
-    candidate.finishedGeometry.padDiameterMm !== null ||
-    candidate.finishedGeometry.annularRingMm !== null ||
-    candidate.finishedGeometry.solderMaskOpeningDiameterMm !== null ||
-    candidate.finishedGeometry.solderMaskExpansionMm !== null ||
-    candidate.finishedGeometry.courtyardClearanceMm !== null ||
-    candidate.finishedGeometry.pasteOpeningDiameterMm !== null ||
-    candidate.pinOne.boardPinOneOrientation !== null ||
-    candidate.pinOne.boardRotationDegrees !== null ||
-    candidate.pinOne.boardRotationToleranceDegrees !== null ||
+    candidate.finishedGeometry.drillDiameterMm !== 1 ||
+    candidate.finishedGeometry.padDiameterMm !== 2 ||
+    candidate.finishedGeometry.annularRingMm !== 0.5 ||
+    candidate.finishedGeometry.solderMaskOpeningDiameterMm !== 2.1 ||
+    candidate.finishedGeometry.solderMaskExpansionMm !== 0.05 ||
+    candidate.finishedGeometry.courtyardClearanceMm !== 0.55 ||
+    candidate.finishedGeometry.pasteOpeningDiameterMm !== 0 ||
+    candidate.finishedGeometry.geometryAuthority !== "project-review-input-not-manufacturer-specification" ||
+    candidate.pinOne.boardPinOneOrientation !==
+      "pin-1-at-x0-y0; lead-row-and-lens-face-at-y0; body-extends-positive-y" ||
+    candidate.pinOne.boardRotationDegrees !== 0 ||
+    candidate.pinOne.boardRotationToleranceDegrees !== 0.1 ||
+    candidate.pinOne.boardCoordinatesMm.x !== 0 ||
+    candidate.pinOne.boardCoordinatesMm.y !== 0 ||
     candidate.pinOne.overlayMatch ||
-    candidate.lens.boardLensDatum !== null ||
-    candidate.lens.boardRotationDegrees !== null ||
-    candidate.lens.boardRotationToleranceDegrees !== null ||
+    candidate.lens.boardLensDatum !== "lens-face-center-at-x2.5-y0; optical-axis-negative-y" ||
+    candidate.lens.boardRotationDegrees !== 0 ||
+    candidate.lens.boardRotationToleranceDegrees !== 0.1 ||
+    candidate.lens.boardCoordinatesMm.x !== 2.5 ||
+    candidate.lens.boardCoordinatesMm.y !== 0 ||
     candidate.lens.overlayMatch ||
     candidate.manufacturerCad.state !== "not-acquired" ||
     candidate.manufacturerCad.sourceUrl !== null ||
     candidate.manufacturerCad.revision !== null ||
     candidate.manufacturerCad.sha256 !== null ||
     candidate.manufacturerCad.authority !== "deny" ||
-    candidate.generatedArtwork.state !== "not-generated" ||
-    candidate.generatedArtwork.artifactPath !== null ||
-    candidate.generatedArtwork.generator !== null ||
-    candidate.generatedArtwork.generatorVersion !== null ||
-    candidate.generatedArtwork.sha256 !== null ||
+    candidate.generatedArtwork.state !== "generated-project-review-only" ||
+    candidate.generatedArtwork.artifactPath !== "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg" ||
+    candidate.generatedArtwork.generator !== "deterministic-svg-overlay-generator" ||
+    candidate.generatedArtwork.generatorVersion !== "1.0.0" ||
+    candidate.generatedArtwork.sha256 !== "44A4D62B5EFF0F48A222AEAEF0DB93D00ACC38C51A4754C9606BB8C129917426" ||
     candidate.generatedArtwork.authority !== "deny" ||
     candidate.oneToOneOverlayArtifacts.length !== 2 ||
     candidate.oneToOneOverlayArtifacts.some(
       (artifact) =>
         artifact.scale !== "1:1" ||
-        artifact.state !== "not-generated" ||
-        artifact.artifactPath !== null ||
-        artifact.generator !== null ||
-        artifact.generatorVersion !== null ||
-        artifact.sha256 !== null ||
+        artifact.state !== "generated-project-review-only" ||
+        artifact.artifactPath !==
+          (artifact.kind === "package-drawing-vs-project-footprint"
+            ? "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg"
+            : "docs/evidence/bp-146/tsop38438-project-assembly-overlay.svg") ||
+        artifact.generator !== "deterministic-svg-overlay-generator" ||
+        artifact.generatorVersion !== "1.0.0" ||
+        artifact.sha256 !==
+          (artifact.kind === "package-drawing-vs-project-footprint"
+            ? "44A4D62B5EFF0F48A222AEAEF0DB93D00ACC38C51A4754C9606BB8C129917426"
+            : "8EF751EFE0B9160AB5C1EF21159448D75F56A1E7B59C1AA57035E234A1F41830") ||
         artifact.reviewedBy !== null ||
         artifact.reviewStatus !== "pending"
     ) ||
-    candidate.toleranceReview.packageLeadPitchToleranceMm !== null ||
-    candidate.toleranceReview.drillToleranceMm !== null ||
-    candidate.toleranceReview.padToleranceMm !== null ||
-    candidate.toleranceReview.boardRotationToleranceDegrees !== null ||
-    candidate.toleranceReview.courtyardToleranceMm !== null ||
-    candidate.toleranceReview.status !== "pending-project-CAD-and-fabrication-inputs" ||
+    candidate.toleranceReview.packageLeadPitchToleranceMm !== 0.05 ||
+    candidate.toleranceReview.drillToleranceMm !== 0.05 ||
+    candidate.toleranceReview.padToleranceMm !== 0.05 ||
+    candidate.toleranceReview.boardRotationToleranceDegrees !== 0.1 ||
+    candidate.toleranceReview.courtyardToleranceMm !== 0.1 ||
+    candidate.toleranceReview.status !== "project-review-inputs-pending-independent-CAD-review" ||
     candidate.accepted ||
     candidate.fabricationAuthority !== "deny" ||
     evidence.opticalCouponReviewProcedure.state !== "not-run" ||

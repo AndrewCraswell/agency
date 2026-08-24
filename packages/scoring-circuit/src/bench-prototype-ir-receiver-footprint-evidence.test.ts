@@ -132,34 +132,42 @@ describe("BP-146 IR receiver footprint source evidence", () => {
     })
   })
 
-  it("defines the candidate footprint fields without fabricating geometry or overlay evidence", () => {
+  it("defines deterministic project footprint inputs without claiming manufacturer CAD or release", () => {
     expect(benchPrototypeIrReceiverFootprintEvidence.candidateFootprintReview).toMatchObject({
-      state: "not-submitted",
+      state: "project-footprint-generated-pending-review",
       exactPart: "TSOP38438",
       finishedGeometry: {
-        drillDiameterMm: null,
-        padDiameterMm: null,
-        annularRingMm: null,
-        solderMaskOpeningDiameterMm: null,
-        solderMaskExpansionMm: null,
-        courtyardClearanceMm: null,
-        pasteOpeningDiameterMm: null
+        drillDiameterMm: 1,
+        padDiameterMm: 2,
+        annularRingMm: 0.5,
+        solderMaskOpeningDiameterMm: 2.1,
+        solderMaskExpansionMm: 0.05,
+        courtyardClearanceMm: 0.55,
+        pasteOpeningDiameterMm: 0,
+        geometryAuthority: "project-review-input-not-manufacturer-specification"
       },
       pinOne: {
-        boardPinOneOrientation: null,
-        boardRotationDegrees: null,
-        boardRotationToleranceDegrees: null,
+        boardPinOneOrientation: "pin-1-at-x0-y0; lead-row-and-lens-face-at-y0; body-extends-positive-y",
+        boardRotationDegrees: 0,
+        boardRotationToleranceDegrees: 0.1,
+        boardCoordinatesMm: { x: 0, y: 0 },
         overlayMatch: false
       },
       lens: {
-        boardLensDatum: null,
-        boardRotationDegrees: null,
-        boardRotationToleranceDegrees: null,
+        boardLensDatum: "lens-face-center-at-x2.5-y0; optical-axis-negative-y",
+        boardRotationDegrees: 0,
+        boardRotationToleranceDegrees: 0.1,
+        boardCoordinatesMm: { x: 2.5, y: 0 },
         overlayMatch: false
       },
       manufacturerCad: { state: "not-acquired", sha256: null, authority: "deny" },
-      generatedArtwork: { state: "not-generated", generator: null, generatorVersion: null, sha256: null },
-      toleranceReview: { status: "pending-project-CAD-and-fabrication-inputs" },
+      generatedArtwork: {
+        state: "generated-project-review-only",
+        generator: "deterministic-svg-overlay-generator",
+        generatorVersion: "1.0.0",
+        sha256: "44A4D62B5EFF0F48A222AEAEF0DB93D00ACC38C51A4754C9606BB8C129917426"
+      },
+      toleranceReview: { status: "project-review-inputs-pending-independent-CAD-review" },
       accepted: false,
       fabricationAuthority: "deny"
     })
@@ -167,22 +175,22 @@ describe("BP-146 IR receiver footprint source evidence", () => {
       {
         kind: "package-drawing-vs-project-footprint",
         scale: "1:1",
-        state: "not-generated",
-        artifactPath: null,
-        generator: null,
-        generatorVersion: null,
-        sha256: null,
+        state: "generated-project-review-only",
+        artifactPath: "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg",
+        generator: "deterministic-svg-overlay-generator",
+        generatorVersion: "1.0.0",
+        sha256: "44A4D62B5EFF0F48A222AEAEF0DB93D00ACC38C51A4754C9606BB8C129917426",
         reviewedBy: null,
         reviewStatus: "pending"
       },
       {
         kind: "package-drawing-vs-project-assembly-overlay",
         scale: "1:1",
-        state: "not-generated",
-        artifactPath: null,
-        generator: null,
-        generatorVersion: null,
-        sha256: null,
+        state: "generated-project-review-only",
+        artifactPath: "docs/evidence/bp-146/tsop38438-project-assembly-overlay.svg",
+        generator: "deterministic-svg-overlay-generator",
+        generatorVersion: "1.0.0",
+        sha256: "8EF751EFE0B9160AB5C1EF21159448D75F56A1E7B59C1AA57035E234A1F41830",
         reviewedBy: null,
         reviewStatus: "pending"
       }
@@ -266,5 +274,37 @@ describe("BP-146 IR receiver footprint source evidence", () => {
       const pdfContent = `${bytes.toString("latin1")}\n${inflatePdfStreams(bytes)}`
       for (const marker of source.byteMarkers) expect(pdfContent).toContain(marker)
     }
+  })
+
+  it("hash-verifies deterministic 1:1 project overlays without granting CAD authority", () => {
+    const packageRoot = new URL("../", import.meta.url)
+    const overlays = benchPrototypeIrReceiverFootprintEvidence.candidateFootprintReview.oneToOneOverlayArtifacts
+    for (const overlay of overlays) {
+      const bytes = readFileSync(new URL(overlay.artifactPath, packageRoot))
+      expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(overlay.sha256)
+      expect(bytes.toString("utf8")).toContain("scale 1:1")
+      expect(bytes.toString("utf8")).toContain("deterministic-svg-overlay-generator 1.0.0")
+      expect(overlay.reviewStatus).toBe("pending")
+    }
+    const footprintSvg = readFileSync(
+      new URL("docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg", packageRoot),
+      "utf8"
+    )
+    const assemblySvg = readFileSync(
+      new URL("docs/evidence/bp-146/tsop38438-project-assembly-overlay.svg", packageRoot),
+      "utf8"
+    )
+    expect(footprintSvg).toContain('<rect x="0" y="0" width="5" height="6.95" />')
+    expect(assemblySvg).toContain('<rect x="0" y="0" width="5" height="6.95" />')
+    expect(assemblySvg).toContain('<line x1="2.5" y1="0" x2="2.5" y2="-3" />')
+    expect(assemblySvg).toContain("lens face at y=0")
+    expect(assemblySvg).toContain("optical axis points negative y")
+    expect(benchPrototypeIrReceiverFootprintEvidence.candidateFootprintReview.manufacturerCad.authority).toBe("deny")
+    expect(benchPrototypeIrReceiverFootprintEvidence.acceptance.footprintReleased).toBe(false)
+    expect(benchPrototypeIrReceiverFootprintEvidence.opticalCouponReviewProcedure.projectKeepout).toMatchObject({
+      copperRadiusMm: 3,
+      componentRadiusMm: 3,
+      accepted: false
+    })
   })
 })
