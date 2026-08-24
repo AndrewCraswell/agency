@@ -27,21 +27,36 @@ families do not borrow another MPN's drawing review. A separate field names
 `root-final-reviewer` for every drawing review. It is deliberately `pending`;
 implementation work cannot approve its own footprints.
 
-The only manufacturer drawing lead currently identified is Molex
-`SD-43650-001`, revision D8, for the `43650-0300` Micro-Fit 3.0 fixture
-header. The exact drawing bytes have not been acquired or hashed. The source
-record identifies its three 1.02-mm-plus-or-minus-
-0.05-mm component-side layout holes on 3.00-mm pitch, circuit-one datum,
-1.57-mm recommended board thickness, and 10.16-mm maximum board-edge
-placement. It is series-drawing evidence only: it does not release a finished
-hole, copper, mask, paste, courtyard, or orientation decision.
+On 2026-08-24, a small first-party source batch was acquired and SHA-256 bound
+for six exact IC MPNs. Each Texas Instruments datasheet names the exact
+orderable MPN and package and contains the corresponding manufacturer
+mechanical package drawing. These are source records only; they do not release
+a finished hole, copper, mask, paste, courtyard, or orientation decision.
 
-For every other exact MPN, the manufacturer-primary technical URL is recorded
-as discovery evidence but the exact drawing bytes and revision remain
+| Exact MPN | Manufacturer source and drawing | Retained artifact | SHA-256 |
+| --- | --- | --- | --- |
+| `TPS60400DBVR` | [TPS60400 datasheet](https://www.ti.com/lit/ds/symlink/tps60400.pdf), revision C, `DBV0005A` | `packages/scoring-circuit/docs/evidence/m4-04/ti-tps60400-dbvr-datasheet.pdf` | `B3B26A8519549BC369E8A91F11133F1D5CBE37C31EBBDF13C4D4C980EF7B8347` |
+| `TPS7A2033PDBVR` | [TPS7A20 datasheet](https://www.ti.com/lit/ds/symlink/tps7a20.pdf), revision H, `DBV0005A` | `packages/scoring-circuit/docs/evidence/m4-04/ti-tps7a20-dbvr-datasheet.pdf` | `6EBFF717770572C7E301A5C16345F50A558EF379A727984ED0F3A6B1DCD400D1` |
+| `REF5025AQDRQ1` | [REF50xxA-Q1 datasheet](https://www.ti.com/lit/gpn/REF5025A-Q1), revision H, `D0008A` | `packages/scoring-circuit/docs/evidence/m4-04/ti-ref5025a-q1-datasheet.pdf` | `908E1BB3275E2398DF8FAD130DAD91D524C6E5C413967F58229348DD2BCED68B` |
+| `ADS8881IDGS` | [ADS8881 datasheet](https://www.ti.com/lit/ds/symlink/ads8881.pdf), revision D, `DGS0010A` | `packages/scoring-circuit/docs/evidence/m4-04/ti-ads8881-dgs-datasheet.pdf` | `EA5896CA4C8053A1AE183BE8354DD551A5D947CE670AC1F1170C59176148F1A8` |
+| `TMUX1112PWR` | [TMUX1112 datasheet](https://www.ti.com/lit/ds/symlink/tmux1112.pdf), revision C, `PW0016A` | `packages/scoring-circuit/docs/evidence/m4-04/ti-tmux1112-pwr-datasheet.pdf` | `EB7CCF89EC59635B34043D364DB6B1E21B457A0BA7363737408CEBCA30CD6C4D` |
+| `TPD4E05U06DQAR` | [TPD4E05U06 datasheet](https://www.ti.com/lit/ds/symlink/tpd4e05u06.pdf), revision O, `DQA0010A` | `packages/scoring-circuit/docs/evidence/m4-04/ti-tpd4e05u06-dqar-datasheet.pdf` | `C167CF1E72A5473A4D2C59B6A3C0251498701DA05B7785919B9CEAAE3B3E02C6` |
+
+The Molex `SD-43650-001`, revision D8, lead for the `43650-0300` Micro-Fit
+3.0 fixture header remains identified but not hash-acquired. Its source record
+identifies three 1.02-mm-plus-or-minus-0.05-mm component-side layout holes on
+3.00-mm pitch, a circuit-one datum, 1.57-mm recommended board thickness, and
+10.16-mm maximum board-edge placement. It is series-drawing evidence only.
+
+For the remaining exact MPNs, the manufacturer-primary technical URL is
+recorded as discovery evidence but the exact drawing bytes and revision remain
 unacquired. No manufacturer CAD artifact has been acquired or marked available,
-and the existing circuit source supplies a schematic reference only, not
-generated footprint artwork or an overlay. These are intentional, precise
-blockers rather than assumed package geometry.
+including for the six hash-bound datasheet records. The existing circuit source
+supplies a schematic reference only, not generated footprint artwork or an
+overlay. The executable tests hash-verify every retained PDF from the repository
+root and inspect decompressed PDF content for the exact orderable and package-
+drawing markers. These are intentional, precise blockers rather than assumed
+package geometry.
 
 For every reference, the root review must acquire and hash the exact
 manufacturer package drawing and CAD object, or record the manufacturer-source

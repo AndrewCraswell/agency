@@ -175,10 +175,96 @@ const ercNets = [
 
 type CouponBomPart = (typeof oneChannelAnalogExperimentBom)[number]
 
+const acquiredDrawingEvidenceByMpn: Readonly<
+  Record<
+    string,
+    {
+      acquisition: "exact-drawing-hash-bound"
+      artifactPath: `packages/scoring-circuit/docs/evidence/m4-04/${string}`
+      drawingIdentifier: string
+      drawingUrl: string
+      geometry: null
+      byteMarkers: readonly string[]
+      scope: string
+      sha256: string
+    }
+  >
+> = {
+  ADS8881IDGS: {
+    acquisition: "exact-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-ads8881-dgs-datasheet.pdf",
+    drawingIdentifier: "TI SBAS547D, revision D, DGS0010A mechanical drawing",
+    drawingUrl: "https://www.ti.com/lit/ds/symlink/ads8881.pdf",
+    geometry: null,
+    byteMarkers: ["ADS8881IDGS", "DGS0010A", "VSSOP"],
+    scope:
+      "Texas Instruments ADS8881 datasheet. The orderable table names the exact ADS8881IDGS MPN and DGS package; the mechanical section contains the manufacturer DGS0010A package drawing. No project land pattern or geometry is inferred from this source.",
+    sha256: "EA5896CA4C8053A1AE183BE8354DD551A5D947CE670AC1F1170C59176148F1A8"
+  },
+  REF5025AQDRQ1: {
+    acquisition: "exact-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-ref5025a-q1-datasheet.pdf",
+    drawingIdentifier: "TI SBOS456H, revision H, D0008A mechanical drawing",
+    drawingUrl: "https://www.ti.com/lit/gpn/REF5025A-Q1",
+    geometry: null,
+    byteMarkers: ["REF5025AQDRQ1", "D0008A", "SOIC"],
+    scope:
+      "Texas Instruments REF50xxA-Q1 datasheet. The orderable table names the exact REF5025AQDRQ1 MPN and D SOIC-8 package; the mechanical section contains the manufacturer D0008A package drawing. No project land pattern or geometry is inferred from this source.",
+    sha256: "908E1BB3275E2398DF8FAD130DAD91D524C6E5C413967F58229348DD2BCED68B"
+  },
+  TPS60400DBVR: {
+    acquisition: "exact-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-tps60400-dbvr-datasheet.pdf",
+    drawingIdentifier: "TI SLVS324C, revision C, DBV0005A mechanical drawing",
+    drawingUrl: "https://www.ti.com/lit/ds/symlink/tps60400.pdf",
+    geometry: null,
+    byteMarkers: ["TPS60400DBVR", "DBV0005A", "SOT-23"],
+    scope:
+      "Texas Instruments TPS60400 datasheet. The orderable table names the exact TPS60400DBVR MPN and DBV SOT-23-5 package; the mechanical section contains the manufacturer DBV0005A package drawing. No project land pattern or geometry is inferred from this source.",
+    sha256: "B3B26A8519549BC369E8A91F11133F1D5CBE37C31EBBDF13C4D4C980EF7B8347"
+  },
+  TPS7A2033PDBVR: {
+    acquisition: "exact-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-tps7a20-dbvr-datasheet.pdf",
+    drawingIdentifier: "TI SBVS338H, revision H, DBV0005A mechanical drawing",
+    drawingUrl: "https://www.ti.com/lit/ds/symlink/tps7a20.pdf",
+    geometry: null,
+    byteMarkers: ["TPS7A2033PDBVR", "DBV0005A", "SOT-23"],
+    scope:
+      "Texas Instruments TPS7A20 datasheet. The orderable table names the exact TPS7A2033PDBVR MPN and DBV SOT-23-5 package; the mechanical section contains the manufacturer DBV0005A package drawing. No project land pattern or geometry is inferred from this source.",
+    sha256: "6EBFF717770572C7E301A5C16345F50A558EF379A727984ED0F3A6B1DCD400D1"
+  },
+  TMUX1112PWR: {
+    acquisition: "exact-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-tmux1112-pwr-datasheet.pdf",
+    drawingIdentifier: "TI SCDS408C, revision C, PW0016A mechanical drawing",
+    drawingUrl: "https://www.ti.com/lit/ds/symlink/tmux1112.pdf",
+    geometry: null,
+    byteMarkers: ["TMUX1112PWR", "PW0016A", "TSSOP"],
+    scope:
+      "Texas Instruments TMUX1112 datasheet. The orderable table names the exact TMUX1112PWR MPN and PW TSSOP-16 package; the mechanical section contains the manufacturer PW0016A package drawing. No project land pattern or geometry is inferred from this source.",
+    sha256: "EB7CCF89EC59635B34043D364DB6B1E21B457A0BA7363737408CEBCA30CD6C4D"
+  },
+  TPD4E05U06DQAR: {
+    acquisition: "exact-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-tpd4e05u06-dqar-datasheet.pdf",
+    drawingIdentifier: "TI SLVSBO7O, revision O, DQA0010A mechanical drawing",
+    drawingUrl: "https://www.ti.com/lit/ds/symlink/tpd4e05u06.pdf",
+    geometry: null,
+    byteMarkers: ["TPD4E05U06DQAR", "DQA", "USON"],
+    scope:
+      "Texas Instruments TPD4E05U06 datasheet. The orderable table names the exact TPD4E05U06DQAR MPN and DQA USON-10 package; the mechanical section contains the manufacturer DQA0010A package drawing. No project land pattern or geometry is inferred from this source.",
+    sha256: "C167CF1E72A5473A4D2C59B6A3C0251498701DA05B7785919B9CEAAE3B3E02C6"
+  }
+}
+
 function drawingEvidenceFor(part: CouponBomPart) {
+  const acquiredDrawing = acquiredDrawingEvidenceByMpn[part.mpn]
+  if (acquiredDrawing !== undefined) return acquiredDrawing
   if (part.mpn === "43650-0300") {
     return {
       acquisition: "series-drawing-identified-not-hash-acquired" as const,
+      artifactPath: null,
       drawingUrl:
         "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/436/43650/436500400_sd.pdf",
       drawingIdentifier: "SD-43650-001, revision D8",
@@ -186,13 +272,16 @@ function drawingEvidenceFor(part: CouponBomPart) {
         "Manufacturer 43650-series right-angle Micro-Fit drawing lead only. The exact drawing bytes have not been acquired or hashed; root review must still confirm its 0300 circuit count and orientation before accepting a footprint.",
       geometry:
         "Three 1.02 mm plus or minus 0.05 mm component-side layout holes on a 3.00 mm pitch, 1.57 mm recommended board thickness, circuit-one marking, and 10.16 mm maximum board-edge placement.",
+      byteMarkers: [],
       sha256: null
     }
   }
   return {
     acquisition: "not-acquired" as const,
+    artifactPath: null,
     drawingUrl: null,
     drawingIdentifier: null,
+    byteMarkers: [],
     scope:
       "No exact drawing bytes or revision have been acquired for this MPN; the manufacturer-primary technical link is discovery evidence only.",
     geometry: null,
@@ -201,15 +290,19 @@ function drawingEvidenceFor(part: CouponBomPart) {
 }
 
 function footprintEvidenceFor(part: CouponBomPart) {
+  const manufacturerDrawing = drawingEvidenceFor(part)
   return {
     exactMpn: part.mpn,
     manufacturerPrimaryDocument: {
       url: part.primaryEvidenceUrl,
       scope:
         "Bound only to this exact MPN record. A shared package family must receive its own record and cannot inherit this review.",
-      status: "identified-not-hash-acquired" as const
+      status:
+        manufacturerDrawing.acquisition === "exact-drawing-hash-bound"
+          ? ("hash-bound" as const)
+          : ("identified-not-hash-acquired" as const)
     },
-    manufacturerDrawing: drawingEvidenceFor(part),
+    manufacturerDrawing,
     manufacturerCad: {
       availability: "not-verified" as const,
       sourceUrl: null,
@@ -322,14 +415,28 @@ export function validateM404SingleChannelCoupon(value: unknown): true {
         footprint.package.trim() === "" ||
         footprint.evidence.exactMpn !== footprint.exactMpn ||
         !footprint.evidence.manufacturerPrimaryDocument.url.startsWith("https://") ||
-        footprint.evidence.manufacturerPrimaryDocument.status !== "identified-not-hash-acquired" ||
-        (footprint.exactMpn === "43650-0300"
-          ? footprint.evidence.manufacturerDrawing.acquisition !== "series-drawing-identified-not-hash-acquired" ||
-            footprint.evidence.manufacturerDrawing.drawingIdentifier !== "SD-43650-001, revision D8" ||
-            footprint.evidence.manufacturerDrawing.geometry === null
-          : footprint.evidence.manufacturerDrawing.acquisition !== "not-acquired" ||
-            footprint.evidence.manufacturerDrawing.drawingUrl !== null ||
-            footprint.evidence.manufacturerDrawing.geometry !== null) ||
+        footprint.evidence.manufacturerPrimaryDocument.status !==
+          (footprint.evidence.manufacturerDrawing.acquisition === "exact-drawing-hash-bound"
+            ? "hash-bound"
+            : "identified-not-hash-acquired") ||
+        (footprint.evidence.manufacturerDrawing.acquisition === "exact-drawing-hash-bound" &&
+          (!footprint.evidence.manufacturerDrawing.drawingUrl.startsWith("https://") ||
+            footprint.evidence.manufacturerDrawing.drawingIdentifier.trim() === "" ||
+            footprint.evidence.manufacturerDrawing.artifactPath === null ||
+            !footprint.evidence.manufacturerDrawing.artifactPath.startsWith(
+              "packages/scoring-circuit/docs/evidence/m4-04/"
+            ) ||
+            !/^[0-9A-F]{64}$/u.test(footprint.evidence.manufacturerDrawing.sha256 ?? "") ||
+            footprint.evidence.manufacturerDrawing.geometry !== null ||
+            footprint.evidence.manufacturerDrawing.byteMarkers.length === 0)) ||
+        (footprint.evidence.manufacturerDrawing.acquisition !== "exact-drawing-hash-bound" &&
+          (footprint.exactMpn === "43650-0300"
+            ? footprint.evidence.manufacturerDrawing.acquisition !== "series-drawing-identified-not-hash-acquired" ||
+              footprint.evidence.manufacturerDrawing.drawingIdentifier !== "SD-43650-001, revision D8" ||
+              footprint.evidence.manufacturerDrawing.geometry === null
+            : footprint.evidence.manufacturerDrawing.acquisition !== "not-acquired" ||
+              footprint.evidence.manufacturerDrawing.drawingUrl !== null ||
+              footprint.evidence.manufacturerDrawing.geometry !== null)) ||
         footprint.evidence.manufacturerCad.status !== "not-acquired" ||
         footprint.evidence.manufacturerCad.availability !== "not-verified" ||
         footprint.evidence.reviewArtwork.status !== "schematic-reference-only" ||
