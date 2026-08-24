@@ -221,6 +221,54 @@ describe("local API smoke harness", () => {
     expect(JSON.stringify(report)).not.toContain("do-not-log-this-token")
   })
 
+  it("fails an abort-aware request at the configured timeout", async () => {
+    const { fetchImpl } = fakeFetch()
+    let observedAbort = false
+    const hangingFetch = async (input: string | URL, init?: RequestInit): Promise<Response> => {
+      if (new URL(input).pathname !== "/health") {
+        return await fetchImpl(input, init)
+      }
+      return await new Promise<Response>((_resolve, reject) => {
+        const signal = init?.signal
+        if (signal === undefined || signal === null) {
+          reject(new Error("Expected a request signal"))
+          return
+        }
+        const onAbort = () => {
+          observedAbort = true
+          reject(signal.reason)
+        }
+        if (signal.aborted) {
+          onAbort()
+        } else {
+          signal.addEventListener("abort", onAbort, { once: true })
+        }
+      })
+    }
+    const report = await runApiSmoke({
+      baseUrl: "http://localhost:3199",
+      fetchImpl: hangingFetch,
+      requestTimeoutMs: 5
+    })
+
+    expect(observedAbort).toBe(true)
+    expect(report.failed).toContainEqual(
+      expect.objectContaining({ detail: "request timed out after 5 ms", id: "health", status: "failed" })
+    )
+  })
+
+  it.each([0, 1.5, 60_001])("rejects the unsafe request timeout %s", async (requestTimeoutMs) => {
+    await expect(
+      runApiSmoke({
+        baseUrl: "http://localhost:3199",
+        fetchImpl: async () => {
+          throw new Error("fetch must not run for an invalid timeout")
+        },
+        requestTimeoutMs
+      })
+    ).rejects.toThrow("requestTimeoutMs must be an integer between 1 and 60000")
+  })
+
   it("runs against the composed Node server with canonical fixture records", async () => {
     const page = () => ({ items: [canonical("fixture:item")], truncated: false, warnings: [] })
     const service: CoreReadQueryApi & CivicSearchApi = {

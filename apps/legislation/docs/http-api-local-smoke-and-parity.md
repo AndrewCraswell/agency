@@ -39,7 +39,9 @@ Detail fixtures are supplied by name only through `LEGISLATION_SMOKE_JURISDICTIO
 `LEGISLATION_SMOKE_ORGANIZATION_ID`. The list and search routes always run; detail, relationship, and diff routes run
 only when their required IDs are supplied. For `AUTH_MODE=workos` (or explicit `LEGISLATION_SMOKE_REQUIRE_AUTH=true`),
 `LEGISLATION_SMOKE_TOKEN` is required. It is sent only as an in-memory bearer header and is never included in the
-report or diagnostics. The harness separately asserts unauthenticated `401` rejection, response envelopes, matching
+report or diagnostics. Each route has a 30-second request deadline by default; set
+`LEGISLATION_SMOKE_REQUEST_TIMEOUT_MS` to an integer from 1 through 60,000 milliseconds when a different bounded
+deadline is needed. The harness separately asserts unauthenticated `401` rejection, response envelopes, matching
 `x-correlation-id` values, unknown-route handling, and unsupported-method handling.
 
 ## Shared protocol smoke

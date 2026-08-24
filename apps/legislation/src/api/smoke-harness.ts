@@ -593,7 +593,9 @@ async function execute(
   baseUrl: URL,
   fetchImpl: FetchLike,
   definition: CheckDefinition,
-  token: string | undefined
+  token: string | undefined,
+  requestTimeoutMs: number,
+  callerSignal: AbortSignal | undefined
 ): Promise<SmokeCheck> {
   const headers: Record<string, string> = { accept: "application/json", "x-correlation-id": `smoke-${definition.id}` }
   if (definition.body !== undefined) {
@@ -602,12 +604,38 @@ async function execute(
   if (token !== undefined) {
     headers.authorization = `Bearer ${token}`
   }
-  const response = await fetchImpl(new URL(definition.path, baseUrl), {
-    body: definition.body === undefined ? undefined : JSON.stringify(definition.body),
-    headers,
-    method: definition.method ?? "GET"
-  })
-  const body = await parseJson(response)
+  const timeoutController = new AbortController()
+  const timeout = setTimeout(() => timeoutController.abort(), requestTimeoutMs)
+  const signal = AbortSignal.any(
+    callerSignal === undefined ? [timeoutController.signal] : [callerSignal, timeoutController.signal]
+  )
+  let response: Response
+  let body: unknown
+  try {
+    response = await fetchImpl(new URL(definition.path, baseUrl), {
+      body: definition.body === undefined ? undefined : JSON.stringify(definition.body),
+      headers,
+      method: definition.method ?? "GET",
+      signal
+    })
+    body = await parseJson(response)
+  } catch {
+    let detail = "request failed before a response was received"
+    if (timeoutController.signal.aborted) {
+      detail = `request timed out after ${requestTimeoutMs} ms`
+    } else if (callerSignal?.aborted === true) {
+      detail = "request was cancelled"
+    }
+    return {
+      detail,
+      id: definition.id,
+      method: definition.method ?? "GET",
+      path: definition.path,
+      status: "failed"
+    }
+  } finally {
+    clearTimeout(timeout)
+  }
   if (definition.expected === "error") {
     if (response.status !== definition.statusCode) {
       return {
@@ -681,11 +709,17 @@ export async function runApiSmoke(options: {
   fetchImpl?: FetchLike
   fixtures?: SmokeFixture
   requireAuth?: boolean
+  requestTimeoutMs?: number
+  signal?: AbortSignal
   token?: string
 }): Promise<SmokeReport> {
   const baseUrl = new URL(options.baseUrl)
   const fetchImpl = options.fetchImpl ?? fetch
   const requireAuth = options.requireAuth ?? false
+  const requestTimeoutMs = options.requestTimeoutMs ?? 30_000
+  if (!Number.isSafeInteger(requestTimeoutMs) || requestTimeoutMs < 1 || requestTimeoutMs > 60_000) {
+    throw new RangeError("requestTimeoutMs must be an integer between 1 and 60000")
+  }
   const fixtures = options.fixtures ?? {}
   const fixtureDefinitions = fixtureChecks(fixtures)
   const definitions = [...ALWAYS_CHECKS, ...LIST_CHECKS, ...fixtureDefinitions]
@@ -703,7 +737,14 @@ export async function runApiSmoke(options: {
       continue
     }
     checks.push(
-      await execute(baseUrl, fetchImpl, definition, definition.protected === false ? undefined : options.token)
+      await execute(
+        baseUrl,
+        fetchImpl,
+        definition,
+        definition.protected === false ? undefined : options.token,
+        requestTimeoutMs,
+        options.signal
+      )
     )
   }
 
@@ -716,7 +757,7 @@ export async function runApiSmoke(options: {
     statusCode: 401
   }
   if (requireAuth) {
-    checks.push(await execute(baseUrl, fetchImpl, authDefinition, undefined))
+    checks.push(await execute(baseUrl, fetchImpl, authDefinition, undefined, requestTimeoutMs, options.signal))
   } else {
     checks.push(skippedCheck(authDefinition, "skipped: authenticated mode is not enabled"))
   }

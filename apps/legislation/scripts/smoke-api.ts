@@ -1,13 +1,14 @@
 import { spawn, type ChildProcess } from "node:child_process"
 import { fileURLToPath } from "node:url"
 import { runApiSmoke, type SmokeFixture } from "../src/api/smoke-harness.js"
+import { formatSmokeProcessOutput } from "../src/api/smoke-process-diagnostics.js"
 
 const appRoot = fileURLToPath(new URL("..", import.meta.url))
 const port = Number(process.env.LEGISLATION_SMOKE_PORT ?? "3199")
 const configuredBaseUrl = process.env.LEGISLATION_SMOKE_BASE_URL?.trim()
 const token = process.env.LEGISLATION_SMOKE_TOKEN?.trim() || undefined
+const requestTimeoutMs = Number(process.env.LEGISLATION_SMOKE_REQUEST_TIMEOUT_MS ?? "30000")
 const MAX_CAPTURED_OUTPUT = 8_000
-const MAX_DIAGNOSTIC_OUTPUT = 2_000
 const requireAuth =
   process.env.LEGISLATION_SMOKE_REQUIRE_AUTH === "true" ||
   (process.env.LEGISLATION_SMOKE_REQUIRE_AUTH === undefined && process.env.AUTH_MODE === "workos")
@@ -46,24 +47,10 @@ function appendTail(current: string, chunk: unknown): string {
   return next.length <= MAX_CAPTURED_OUTPUT ? next : next.slice(-MAX_CAPTURED_OUTPUT)
 }
 
-function safeTail(value: string, secrets: readonly string[]): string {
-  let sanitized = value
-  for (const secret of secrets) {
-    if (secret !== "") {
-      sanitized = sanitized.replaceAll(secret, "[redacted]")
-    }
-  }
-  sanitized = sanitized
-    .replace(/Bearer\s+[^\s"']+/gi, "Bearer [redacted]")
-    .replace(/(?:password|secret|token|api[_-]?key|authorization)([\s:=]+)[^\s,;"']+/gi, "$1[redacted]")
-    .replace(/postgres(?:ql)?:\/\/[^\s"']+/gi, "postgresql://[redacted]")
-  return sanitized.slice(-MAX_DIAGNOSTIC_OUTPUT)
-}
-
 function startupFailure(local: LocalServerProcess): Error {
   const reason = local.spawnError ?? `process exited with code ${local.child.exitCode ?? "unknown"}`
-  const stderr = safeTail(local.stderrTail, local.secrets)
-  return new Error(`Local legislation server failed to start: ${reason}${stderr === "" ? "" : `; stderr: ${stderr}`}`)
+  const output = formatSmokeProcessOutput(local)
+  return new Error(`Local legislation server failed to start: ${reason}${output === "" ? "" : `; ${output}`}`)
 }
 
 async function waitForReady(baseUrl: URL, local: LocalServerProcess): Promise<void> {
@@ -84,10 +71,8 @@ async function waitForReady(baseUrl: URL, local: LocalServerProcess): Promise<vo
     }
     await new Promise((resolve) => setTimeout(resolve, 250))
   }
-  const stderr = safeTail(local.stderrTail, local.secrets)
-  throw new Error(
-    `Local legislation server did not become ready: ${lastError}${stderr === "" ? "" : `; stderr: ${stderr}`}`
-  )
+  const output = formatSmokeProcessOutput(local)
+  throw new Error(`Local legislation server did not become ready: ${lastError}${output === "" ? "" : `; ${output}`}`)
 }
 
 function startLocalServer(secrets: readonly string[]): LocalServerProcess {
@@ -122,7 +107,11 @@ function startLocalServer(secrets: readonly string[]): LocalServerProcess {
     local.stderrTail = appendTail(local.stderrTail, chunk)
   })
   child.on("error", (error) => {
-    local.spawnError = safeTail(error instanceof Error ? error.message : String(error), secrets)
+    local.spawnError = formatSmokeProcessOutput({
+      secrets,
+      stderrTail: error instanceof Error ? error.message : String(error),
+      stdoutTail: ""
+    }).replace(/^stderr: /, "")
   })
   return local
 }
@@ -156,6 +145,7 @@ try {
     baseUrl,
     fixtures: smokeFixtures(),
     requireAuth,
+    requestTimeoutMs,
     token
   })
   process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
