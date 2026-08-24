@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, ilike, lt, lte, or, sql, type SQL } from "drizzle-orm"
+import { and, asc, desc, eq, gt, gte, ilike, isNotNull, lt, lte, or, sql, type SQL } from "drizzle-orm"
 import { isIsoDate, isRfc3339Timestamp } from "../../api/canonical-projection.js"
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
@@ -209,9 +209,11 @@ export function buildOrganizationMembershipListQuery(
     .where(
       and(
         eq(organizationMemberships.organizationId, input.organizationId),
-        input.role === undefined
-          ? undefined
-          : or(eq(organizationMemberships.classification, input.role), eq(organizationMemberships.title, input.role)),
+        eq(organizationMemberships.provenanceComplete, true),
+        eq(organizations.provenanceComplete, true),
+        eq(people.provenanceComplete, true),
+        isNotNull(organizationMemberships.role),
+        input.role === undefined ? undefined : eq(organizationMemberships.role, input.role),
         input.isCurrent === undefined ? undefined : eq(organizationMemberships.isActive, input.isCurrent),
         dateBounds,
         cursorPredicate
@@ -237,7 +239,7 @@ export async function listOrganizationMemberships(
         ? encodeMembershipCursor({
             id: last.membership.id,
             personName: last.person.name,
-            role: last.membership.classification ?? last.membership.title ?? "",
+            role: last.membership.role ?? "",
             scope: membershipCursorScope(input)
           })
         : undefined,
@@ -265,7 +267,14 @@ export function buildOrganizationMembershipLookupQuery(
     .innerJoin(organizations, eq(organizations.id, organizationMemberships.organizationId))
     .innerJoin(people, eq(people.id, organizationMemberships.personId))
     .where(
-      and(eq(organizationMemberships.organizationId, organizationId), eq(organizationMemberships.id, membershipId))
+      and(
+        eq(organizationMemberships.organizationId, organizationId),
+        eq(organizationMemberships.id, membershipId),
+        eq(organizationMemberships.provenanceComplete, true),
+        eq(organizations.provenanceComplete, true),
+        eq(people.provenanceComplete, true),
+        isNotNull(organizationMemberships.role)
+      )
     )
     .limit(1)
 }
@@ -360,7 +369,7 @@ export function encodeBillCursor(cursor: Omit<BillCursor, "version">): string {
 }
 
 function membershipRoleExpression(): SQL<string> {
-  return sql<string>`coalesce(${organizationMemberships.classification}, ${organizationMemberships.title}, '')`
+  return sql<string>`coalesce(${organizationMemberships.role}, '')`
 }
 
 function organizationCursorScope(input: OrganizationListInput): OrganizationCursorScope {

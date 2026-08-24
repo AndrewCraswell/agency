@@ -12,6 +12,12 @@ import {
   canonicalFoundationCheckpointSource,
   importCanonicalFoundationRecords
 } from "../../ingestion/canonical-foundation.js"
+import {
+  applyCanonicalCivicFoundationRecord,
+  auditCanonicalCivicFoundation,
+  canonicalCivicFoundationCheckpointSource,
+  importCanonicalCivicFoundationRecords
+} from "../../ingestion/civic-foundation.js"
 import { CongressRequestBudgetExhaustedError } from "../../ingestion/congress/request-budget.js"
 import { synchronizeCongress } from "../../ingestion/congress/sync.js"
 import { ArtifactNotFoundError, type ArtifactStore } from "../../ingestion/documents/artifact-store.js"
@@ -230,6 +236,216 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       incompleteJurisdictionIds: [],
       incompleteSessionIds: []
     })
+  })
+
+  it("enforces and checkpoints civic provenance without resolving provider parent IDs", async () => {
+    const jurisdictionId = "jurisdiction:civic-foundation"
+    const personId = "person:official:civic-foundation"
+    const parentOrganizationId = "organization:official:civic-parent"
+    const organizationId = "organization:official:civic-child"
+    const termId = `${personId}:term:civic-foundation`
+    const membershipId = `${organizationId}:membership:civic-foundation`
+    const source = {
+      isOfficial: true,
+      provider: "official-legislature",
+      retrievedAt: "2026-08-24T12:00:00.000Z",
+      sourceUpdatedAt: null,
+      url: "https://legislature.example.test/civic-foundation"
+    }
+    await database.insert(schema.jurisdictions).values({
+      classification: "state",
+      countryCode: "US",
+      id: jurisdictionId,
+      name: "Civic foundation",
+      subdivisionCode: "CF"
+    })
+    await database.insert(schema.people).values({ id: personId, jurisdictionId, name: "Civic Person" })
+    await database.insert(schema.organizations).values([
+      {
+        classification: "legislature",
+        id: parentOrganizationId,
+        jurisdictionId,
+        name: "Civic Legislature",
+        sourceId: "legislature"
+      },
+      {
+        classification: "committee",
+        id: organizationId,
+        jurisdictionId,
+        name: "Civic Committee",
+        sourceId: "committee"
+      }
+    ])
+    await database.insert(schema.legislativeTerms).values({
+      chamber: "lower",
+      id: termId,
+      jurisdictionId,
+      personId
+    })
+    await database.insert(schema.organizationMemberships).values({
+      id: membershipId,
+      organizationId,
+      personId
+    })
+
+    await expect(
+      applyCanonicalCivicFoundationRecord(database, {
+        id: personId,
+        isActive: true,
+        jurisdictionId: "jurisdiction:other",
+        kind: "person",
+        name: "Moved Civic Person",
+        source
+      })
+    ).rejects.toThrow("unknown person")
+    await expect(
+      database
+        .select({ jurisdictionId: schema.people.jurisdictionId, name: schema.people.name })
+        .from(schema.people)
+        .where(eq(schema.people.id, personId))
+    ).resolves.toEqual([{ jurisdictionId, name: "Civic Person" }])
+
+    await expect(
+      applyCanonicalCivicFoundationRecord(database, {
+        chamber: "lower",
+        classification: "committee",
+        id: organizationId,
+        isActive: true,
+        jurisdictionId,
+        kind: "organization",
+        name: "Civic Committee",
+        parentOrganizationId: "ocd-organization/not-a-canonical-id",
+        source
+      })
+    ).rejects.toThrow("not authoritative")
+
+    const result = await importCanonicalCivicFoundationRecords(
+      database,
+      [
+        { id: personId, isActive: true, jurisdictionId, kind: "person" as const, name: "Civic Person", source },
+        {
+          chamber: "legislature" as const,
+          classification: "legislature" as const,
+          id: parentOrganizationId,
+          isActive: true,
+          jurisdictionId,
+          kind: "organization" as const,
+          name: "Civic Legislature",
+          parentOrganizationId: null,
+          source
+        },
+        {
+          chamber: "lower" as const,
+          classification: "committee" as const,
+          id: organizationId,
+          isActive: true,
+          jurisdictionId,
+          kind: "organization" as const,
+          name: "Civic Committee",
+          parentOrganizationId,
+          source
+        },
+        {
+          chamber: "lower" as const,
+          id: termId,
+          isActive: true,
+          jurisdictionId,
+          kind: "term" as const,
+          officeTitle: "Representative",
+          organizationId,
+          personId,
+          source
+        },
+        {
+          id: membershipId,
+          isActive: true,
+          kind: "membership" as const,
+          label: "Committee member",
+          organizationId,
+          personId,
+          role: "member",
+          source
+        }
+      ],
+      { contentHash }
+    )
+    expect(result).toMatchObject({
+      audit: {
+        complete: true,
+        incompleteMembershipIds: [],
+        incompleteOrganizationIds: [],
+        incompletePersonIds: [],
+        incompleteTermIds: []
+      },
+      checkpoint: { complete: true, index: 5 },
+      counts: { failed: 0, updated: 5 }
+    })
+    await expect(
+      database.query.syncCheckpoints.findFirst({
+        where: (table, operators) =>
+          operators.and(
+            operators.eq(table.source, canonicalCivicFoundationCheckpointSource),
+            operators.eq(table.stream, "people-organizations-terms-memberships")
+          )
+      })
+    ).resolves.toMatchObject({ cursor: { complete: true, index: 5 } })
+    await expect(auditCanonicalCivicFoundation(database)).resolves.toMatchObject({ complete: true })
+
+    const completeProvenance = {
+      provenanceComplete: true,
+      sourceIsOfficial: true,
+      sourceProvider: "official-legislature",
+      sourceRetrievedAt: new Date("2026-08-24T12:00:00.000Z"),
+      sourceUrl: "https://legislature.example.test/civic-foundation"
+    }
+    await expect(
+      database
+        .update(schema.people)
+        .set({ ...completeProvenance, sourceUrl: null })
+        .where(eq(schema.people.id, personId))
+    ).rejects.toThrow("people_provenance_complete_check")
+    await expect(
+      database
+        .update(schema.people)
+        .set({ ...completeProvenance, sourceProvider: null })
+        .where(eq(schema.people.id, personId))
+    ).rejects.toThrow("people_provenance_complete_check")
+    await expect(
+      database
+        .update(schema.organizations)
+        .set({ ...completeProvenance, sourceUrl: null })
+        .where(eq(schema.organizations.id, organizationId))
+    ).rejects.toThrow("organizations_provenance_complete_check")
+    await expect(
+      database
+        .update(schema.organizations)
+        .set({ ...completeProvenance, sourceProvider: null })
+        .where(eq(schema.organizations.id, organizationId))
+    ).rejects.toThrow("organizations_provenance_complete_check")
+    await expect(
+      database
+        .update(schema.legislativeTerms)
+        .set({ ...completeProvenance, sourceUrl: null })
+        .where(eq(schema.legislativeTerms.id, termId))
+    ).rejects.toThrow("legislative_terms_provenance_complete_check")
+    await expect(
+      database
+        .update(schema.legislativeTerms)
+        .set({ ...completeProvenance, sourceProvider: null })
+        .where(eq(schema.legislativeTerms.id, termId))
+    ).rejects.toThrow("legislative_terms_provenance_complete_check")
+    await expect(
+      database
+        .update(schema.organizationMemberships)
+        .set({ ...completeProvenance, sourceUrl: null })
+        .where(eq(schema.organizationMemberships.id, membershipId))
+    ).rejects.toThrow("organization_memberships_provenance_complete_check")
+    await expect(
+      database
+        .update(schema.organizationMemberships)
+        .set({ ...completeProvenance, sourceProvider: null })
+        .where(eq(schema.organizationMemberships.id, membershipId))
+    ).rejects.toThrow("organization_memberships_provenance_complete_check")
   })
 
   it("records a budget handoff as deferred without advancing a generic checkpoint or retaining the lease", async () => {

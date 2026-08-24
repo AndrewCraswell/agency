@@ -67,4 +67,17 @@ describe("Congress entity normalization", () => {
       ])
     )
   })
+
+  it("does not invent a Senate parent for an unmappable committee chamber", () => {
+    const result = normalizeCongressCommittees([
+      {
+        chamber: "Joint",
+        name: "Joint Example Committee",
+        systemCode: "joint-example"
+      }
+    ])
+    const committee = result.organizations.find((organization) => organization.sourceId === "joint-example")
+
+    expect(committee).toMatchObject({ chamber: null, parentOrganizationId: null })
+  })
 })

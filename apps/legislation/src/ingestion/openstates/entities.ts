@@ -7,6 +7,7 @@ import {
   organizationMembershipId,
   personId
 } from "../../legislation/identifiers.js"
+import { canonicalChamberSchema, canonicalOrganizationClassificationSchema } from "../civic-foundation.js"
 
 const optionalString = z.preprocess(
   (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
@@ -74,6 +75,18 @@ function sourceUrl(sources: Array<{ url: string }>, fallback?: string): string |
   return sources[0]?.url ?? fallback
 }
 
+function canonicalChamber(value: string): z.output<typeof canonicalChamberSchema> | null {
+  const parsed = canonicalChamberSchema.safeParse(value.trim().toLowerCase())
+  return parsed.success ? parsed.data : null
+}
+
+function canonicalOrganizationClassification(
+  value: string
+): z.output<typeof canonicalOrganizationClassificationSchema> | null {
+  const parsed = canonicalOrganizationClassificationSchema.safeParse(value.trim().toLowerCase())
+  return parsed.success ? parsed.data : null
+}
+
 function normalizePerson(
   input: z.infer<typeof embeddedPersonSchema>,
   context: OpenStatesEntityContext,
@@ -103,7 +116,7 @@ function normalizePerson(
       role === undefined
         ? undefined
         : {
-            chamber: role.org_classification,
+            chamber: canonicalChamber(role.org_classification),
             district: role.district,
             id: legislativeTermId(
               canonicalPersonId,
@@ -142,8 +155,11 @@ export function normalizeOpenStatesCommittees(
   const termsById = new Map<string, TermInsert>()
   const memberships: MembershipInsert[] = []
   const canonicalJurisdictionId = jurisdictionId(context.jurisdictionCode)
-  const normalizedOrganizations = inputs.map((input) => {
-    const committee = committeeSchema.parse(input)
+  const committees = inputs.map((input) => committeeSchema.parse(input))
+  const canonicalOrganizationIds = new Map(
+    committees.map((committee) => [committee.id, organizationId("openstates", committee.id)])
+  )
+  const normalizedOrganizations = committees.map((committee) => {
     const canonicalOrganizationId = organizationId("openstates", committee.id)
     for (const membership of committee.memberships) {
       const normalizedPerson = normalizePerson(membership.person, context)
@@ -163,16 +179,20 @@ export function normalizeOpenStatesCommittees(
       })
     }
     return {
-      classification: committee.classification === "subcommittee" ? "subcommittee" : "committee",
+      classification: canonicalOrganizationClassification(committee.classification),
       id: canonicalOrganizationId,
       isActive: true,
       jurisdictionId: canonicalJurisdictionId,
       name: committee.name,
+      parentOrganizationId:
+        committee.parent_id === undefined ? undefined : (canonicalOrganizationIds.get(committee.parent_id) ?? null),
       sourceId: committee.id,
       sourceUrl: sourceUrl(committee.sources),
       upstreamIds: {
         openstates: committee.id,
-        ...(committee.parent_id === undefined ? {} : { openstatesParent: committee.parent_id })
+        ...(committee.parent_id === undefined || canonicalOrganizationIds.has(committee.parent_id)
+          ? {}
+          : { openstatesParent: committee.parent_id })
       }
     } satisfies OrganizationInsert
   })

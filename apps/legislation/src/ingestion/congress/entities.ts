@@ -153,10 +153,15 @@ export function normalizeCongressCommittees(inputs: readonly unknown[]): Pick<Co
       ...committees.flatMap((committee) => {
         const normalizedChamber = chamber(committee.chamber)
         const canonicalCommitteeId = organizationId("congress", committee.systemCode)
-        const parentOrganizationId = normalizedChamber === "lower" ? houseId : senateId
+        let parentOrganizationId: string | null = null
+        if (normalizedChamber === "lower") {
+          parentOrganizationId = houseId
+        } else if (normalizedChamber === "upper") {
+          parentOrganizationId = senateId
+        }
         return [
           {
-            chamber: normalizedChamber,
+            chamber: normalizedChamber ?? null,
             classification: "committee",
             id: canonicalCommitteeId,
             isActive: true,
@@ -169,7 +174,7 @@ export function normalizeCongressCommittees(inputs: readonly unknown[]): Pick<Co
             upstreamIds: { congress: committee.systemCode, typeCode: committee.committeeTypeCode ?? "" }
           } satisfies OrganizationInsert,
           ...committee.subcommittees.map((subcommittee) => ({
-            chamber: normalizedChamber,
+            chamber: normalizedChamber ?? null,
             classification: "subcommittee" as const,
             id: organizationId("congress", subcommittee.systemCode),
             isActive: true,

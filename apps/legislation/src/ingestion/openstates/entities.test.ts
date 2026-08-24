@@ -73,4 +73,53 @@ describe("Open States entity normalization", () => {
     expect(result.terms).toHaveLength(1)
     expect(result.memberships[0]).toMatchObject({ classification: "co-chair", isActive: true })
   })
+
+  it("leaves unmappable organization classifications and chambers unknown", () => {
+    const people = normalizeOpenStatesPeople(
+      [
+        {
+          current_role: { org_classification: "assembly", title: "Delegate" },
+          id: "ocd-person/unknown-chamber",
+          name: "Unknown Chamber"
+        }
+      ],
+      context
+    )
+    const organizations = normalizeOpenStatesCommittees(
+      [
+        {
+          classification: "task-force",
+          id: "ocd-organization/unknown-classification",
+          name: "Unknown classification"
+        }
+      ],
+      context
+    )
+
+    expect(people.terms[0]?.chamber).toBeNull()
+    expect(organizations.organizations[0]?.classification).toBeNull()
+  })
+
+  it("uses an explicit canonical FK only when the Open States parent is in the authoritative snapshot", () => {
+    const result = normalizeOpenStatesCommittees(
+      [
+        {
+          classification: "committee",
+          id: "ocd-organization/parent",
+          name: "Parent committee"
+        },
+        {
+          classification: "subcommittee",
+          id: "ocd-organization/child",
+          name: "Child committee",
+          parent_id: "ocd-organization/parent"
+        }
+      ],
+      context
+    )
+    const child = result.organizations.find((organization) => organization.sourceId === "ocd-organization/child")
+
+    expect(child).toMatchObject({ parentOrganizationId: "organization:openstates:ocd-organization-parent" })
+    expect(child?.upstreamIds).not.toHaveProperty("openstatesParent")
+  })
 })

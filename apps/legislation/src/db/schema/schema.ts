@@ -211,7 +211,11 @@ export const people = legislationSchema.table(
     party: text("party"),
     sourceId: text("source_id"),
     sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
     sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
     isActive: boolean("is_active"),
     upstreamIds: jsonb("upstream_ids").$type<Record<string, string>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -220,6 +224,10 @@ export const people = legislationSchema.table(
   (table) => [
     check("people_name_check", sql`length(${table.name}) > 0`),
     check("people_source_id_check", sql`${table.sourceId} is null or length(${table.sourceId}) > 0`),
+    check(
+      "people_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
     uniqueIndex("people_jurisdiction_source_uidx")
       .on(table.jurisdictionId, table.sourceId)
       .where(sql`${table.jurisdictionId} is not null and ${table.sourceId} is not null`)
@@ -238,11 +246,17 @@ export const organizations = legislationSchema.table(
     }),
     sourceId: text("source_id").notNull(),
     name: text("name").notNull(),
-    classification: text("classification").notNull(),
+    /** Null remains an explicit source classification gap; no local category is invented. */
+    classification: text("classification"),
+    /** Canonical chamber vocabulary. Null means the provider value was not safely mappable. */
     chamber: text("chamber"),
     isActive: boolean("is_active"),
     sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
     sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
     upstreamIds: jsonb("upstream_ids").$type<Record<string, string>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
@@ -253,11 +267,19 @@ export const organizations = legislationSchema.table(
     check("organizations_name_check", sql`length(${table.name}) > 0`),
     check(
       "organizations_classification_check",
-      sql`${table.classification} in ('legislature', 'chamber', 'committee', 'subcommittee')`
+      sql`${table.classification} is null or ${table.classification} in ('legislature', 'chamber', 'committee', 'subcommittee', 'commission', 'agency', 'other')`
+    ),
+    check(
+      "organizations_chamber_check",
+      sql`${table.chamber} is null or ${table.chamber} in ('lower', 'upper', 'unicameral', 'legislature')`
     ),
     check(
       "organizations_parent_check",
       sql`${table.parentOrganizationId} is null or ${table.parentOrganizationId} <> ${table.id}`
+    ),
+    check(
+      "organizations_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
     ),
     uniqueIndex("organizations_jurisdiction_source_uidx").on(table.jurisdictionId, table.sourceId),
     index("organizations_parent_idx").on(table.parentOrganizationId),
@@ -277,14 +299,22 @@ export const legislativeTerms = legislationSchema.table(
       .references(() => jurisdictions.id, { onDelete: "restrict" }),
     organizationId: text("organization_id").references(() => organizations.id, { onDelete: "restrict" }),
     sourceId: text("source_id"),
-    chamber: text("chamber").notNull(),
+    /** Null remains an explicit unknown when a provider chamber cannot be mapped safely. */
+    chamber: text("chamber"),
     district: text("district"),
     party: text("party"),
     role: text("role"),
+    /** Authoritative office title. Legacy role strings are not substituted for this fact. */
+    officeTitle: text("office_title"),
     startDate: date("start_date"),
     endDate: date("end_date"),
     isActive: boolean("is_active"),
     sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
@@ -294,6 +324,14 @@ export const legislativeTerms = legislationSchema.table(
     check(
       "legislative_terms_dates_check",
       sql`${table.startDate} is null or ${table.endDate} is null or ${table.startDate} <= ${table.endDate}`
+    ),
+    check(
+      "legislative_terms_chamber_vocabulary_check",
+      sql`${table.chamber} is null or ${table.chamber} in ('lower', 'upper', 'unicameral', 'legislature')`
+    ),
+    check(
+      "legislative_terms_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
     ),
     uniqueIndex("legislative_terms_person_source_uidx")
       .on(table.personId, table.sourceId)
@@ -314,6 +352,10 @@ export const organizationMemberships = legislationSchema.table(
       .notNull()
       .references(() => people.id, { onDelete: "cascade" }),
     sourceId: text("source_id"),
+    /** Canonical membership role. Null is incomplete, not a fallback to legacy fields. */
+    role: text("role"),
+    /** Source-supplied public label, kept distinct from the canonical role. */
+    label: text("label"),
     title: text("title"),
     rank: text("rank"),
     classification: text("classification"),
@@ -321,6 +363,11 @@ export const organizationMemberships = legislationSchema.table(
     endDate: date("end_date"),
     isActive: boolean("is_active"),
     sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
   },
@@ -329,6 +376,10 @@ export const organizationMemberships = legislationSchema.table(
     check(
       "organization_memberships_dates_check",
       sql`${table.startDate} is null or ${table.endDate} is null or ${table.startDate} <= ${table.endDate}`
+    ),
+    check(
+      "organization_memberships_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
     ),
     uniqueIndex("organization_memberships_source_uidx")
       .on(table.organizationId, table.sourceId)

@@ -33,6 +33,10 @@ describe("organization collection queries", () => {
         classification: "committee",
         chamber: "lower",
         isActive: true,
+        provenanceComplete: false,
+        sourceIsOfficial: null,
+        sourceProvider: null,
+        sourceRetrievedAt: null,
         sourceUrl: null,
         sourceUpdatedAt: null,
         upstreamIds: {},
@@ -99,7 +103,8 @@ describe("organization membership queries", () => {
     }).toSQL().sql
 
     expect(generated).toContain('"organization_memberships"."organization_id" =')
-    expect(generated).toContain('"organization_memberships"."classification" =')
+    expect(generated).toContain('"organization_memberships"."role" =')
+    expect(generated).toContain('"organization_memberships"."provenance_complete" =')
     expect(generated).toContain('"organization_memberships"."is_active" =')
     expect(generated).toContain('coalesce("legislation"."organization_memberships"."end_date"')
     expect(generated).toContain('coalesce("legislation"."organization_memberships"."start_date"')
@@ -157,6 +162,10 @@ describe("organization pagination validation", () => {
         classification: "committee",
         chamber: null,
         isActive: true,
+        provenanceComplete: false,
+        sourceIsOfficial: null,
+        sourceProvider: null,
+        sourceRetrievedAt: null,
         sourceUrl: null,
         sourceUpdatedAt: null,
         upstreamIds: {},
@@ -189,6 +198,10 @@ describe("organization pagination validation", () => {
         classification: "committee",
         chamber: null,
         isActive: true,
+        provenanceComplete: false,
+        sourceIsOfficial: null,
+        sourceProvider: null,
+        sourceRetrievedAt: null,
         sourceUrl: null,
         sourceUpdatedAt: null,
         upstreamIds: {},

@@ -69,7 +69,10 @@ export async function replaceEntitySnapshot(
             sourceUpdatedAt: sql`excluded.source_updated_at`,
             sourceUrl: sql`excluded.source_url`,
             updatedAt: new Date(),
-            upstreamIds: sql`${organizations.upstreamIds} || excluded.upstream_ids`
+            // A full entity snapshot is authoritative for its Open States parent graph.
+            // Replacing this object clears a now-resolved raw parent identity rather
+            // than retaining it beside the canonical FK indefinitely.
+            upstreamIds: sql`excluded.upstream_ids`
           },
           target: organizations.id
         })
