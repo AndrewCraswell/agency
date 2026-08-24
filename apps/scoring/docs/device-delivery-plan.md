@@ -134,7 +134,7 @@ implementation has no dependency on an MCU SDK or wall-clock time.
 | M1-07 | done | Delivered and root-approved: `timing-1` is a deeply immutable canonical table with machine-readable FIE bands and endpoint uncertainty; epee, foil, sabre, and boundary generation derive from it, while unknown revisions, altered selections, out-of-band values, and mutable clones fail closed. | Versioned immutable timing-table loader | M1-02, M1-03, M1-05 | Unknown revisions fail closed; values outside approved bounds are rejected |
 | M1-08 | backlog | Next after M1-02 through M1-07: Generated boundary-vector suite. | Generated boundary-vector suite | M1-02 through M1-07 | Every timing boundary runs below, at, and above the limit for both sides with deterministic ordering |
 | M1-09 | backlog | Next after M1-06, M1-08: Property tests for monotonic time, symmetry, determinism, and no-hit safety. | Property tests for monotonic time, symmetry, determinism, and no-hit safety | M1-06, M1-08 | Seeded runs reproduce exactly; left/right mirroring produces mirrored decisions |
-| M1-10 | backlog | Next after M0-07: Reference-machine comparison capture format. | Reference-machine comparison capture format | M0-07 | Favero or other machine observations can be stored with provenance without becoming normative rules |
+| M1-10 | done | Delivered and root-approved: strict bounded immutable capture records machine, instrument, calibration, uncertainty, raw-artifact, session, observation, and comparison provenance; every relationship is descriptive evidence only and prior-art observations cannot become normative rules, thresholds, pass/fail gates, or scorer-generated expectations. | Reference-machine comparison capture format | M0-07 | Favero or other machine observations can be stored with provenance without becoming normative rules |
 | M1-11 | backlog | Next after M1-01 through M1-10: Scoring specification release `rules-1`. | Scoring specification release `rules-1` | M1-01 through M1-10 | Focused verification and independent rule review pass; traceability ledger is complete |
 
 ## M2: Deterministic virtual apparatus and replay
@@ -358,6 +358,7 @@ A milestone closes only when:
 4. documents and machine-readable manifests agree with the implementation;
 5. an independent reviewer has resolved every release-blocking comment; and
 6. remaining risks, assumptions, and deferred work are named in the next milestone entry criteria.
+
 
 
 
