@@ -16,9 +16,8 @@
     "canary:mcp-http-parity": "tsx scripts/canary-mcp-http-parity.ts",
     "check:format": "oxfmt --check",
     "check:lint": "pnpm lint",
-    "check:types": "run-p check:types:service check:types:web",
+    "check:types": "pnpm check:types:service",
     "check:types:service": "tsc --noEmit",
-    "check:types:web": "tsc -p tsconfig.web.json --noEmit",
     "check:unused": "knip --directory ../.. --workspace apps/legislation",
     "cli": "tsx src/cli/main.ts",
     "db:check": "drizzle-kit check --config=drizzle.config.ts",
@@ -54,10 +53,7 @@
     "trigger:dev": "trigger dev --config trigger.config.ts",
     "trigger:backfill": "tsx scripts/run-trigger-backfill.ts",
     "trigger:schedules": "tsx scripts/reconcile-trigger-schedules.ts",
-    "verify": "run-s check:format check:lint check:types check:unused test:coverage",
-    "web:build": "vite build --config vite.web.config.ts",
-    "web:dev": "vite dev --config vite.web.config.ts",
-    "web:preview": "vite preview --config vite.web.config.ts"
+    "verify": "run-s check:format check:lint check:types check:unused test:coverage"
   },
   "dependencies": {
     "@azure/identity": "^4.13.1",
@@ -66,8 +62,6 @@
     "@langfuse/tracing": "^5.10.0",
     "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
-    "@tanstack/react-router": "^1.170.23",
-    "@tanstack/react-start": "^1.168.40",
     "@napi-rs/canvas": "1.0.3",
     "@opentelemetry/sdk-node": "^0.221.0",
     "@trigger.dev/sdk": "4.5.10",
@@ -82,8 +76,6 @@
     "pg": "^8.22.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-error-boundary": "^6.1.2",
-    "the-new-css-reset": "^1.11.3",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -94,7 +86,6 @@
     "@types/pg": "^8.20.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@vitejs/plugin-react": "^6.0.3",
     "@vitest/coverage-v8": "^4.1.9",
     "drizzle-kit": "^0.31.10",
     "oxlint": "^1.72.0",
