@@ -74,6 +74,21 @@ are rejected. Until
 `evaluateBenchPrototypeContinuityEvidence` accepts that record, continuity
 acceptance remains unresolved.
 
+`evaluateBenchPrototypeFixturePhysicalEvidence` is a separate, fail-closed
+evidence intake. It accepts only a complete immutable record containing exact
+drawing and CAD review artifacts for `43045-1200`, `43025-1200`, `43030-0007`,
+and `44242-0005`; receipt evidence for those same parts; a de-energized
+sample-fit/orientation/label result; rejected swap, open, return-bond, and
+reversed-mate results; all seven crimp/retention records; strain-relief
+evidence; and an accepted continuity record. Artifact digests and identifiers
+are mandatory. Drawing, CAD, and review artifacts each require their own ID
+and SHA-256; every conductor likewise requires separate crimp and retention
+IDs and SHA-256 values. Before reading any field, the evaluator rejects
+accessors, symbols, hidden properties, non-plain records, sparse or subclassed
+arrays, aliases, cycles, and unknown or missing keys. The evaluator does not
+create physical evidence, authorize fabrication, or change any canonical
+BP-104 gate. Synthetic records in unit tests verify the schema only.
+
 Separately perform one non-forced `43025-1200` to `43045-1200` sample-fit check:
 align circuit 1, verify latch/lock seating and the independent fixture stop,
 then remove it while de-energized. Do not use this sample-fit mate for the
@@ -83,6 +98,15 @@ No powered mating or unmating is permitted. Sample fit, terminal retention,
 crimp process, continuity, miswire rejection, strain relief, manufacturer
 drawing import, and fabrication remain open gates. The executable contract is
 `src/bench-prototype-fixture-harness.ts` and its focused tests.
+
+## Drawing evidence state
+
+Molex identifies `43045-1200` in the material-number table of series drawing
+`SD-43045-001` and identifies `43025-1200` in the material-number table of
+series drawing `430250000-SD`. These are primary manufacturer sources, but
+they are series drawings, not exact-MPN drawings or CAD-review artifacts. No
+source bytes, retained asset, or SHA-256 is recorded for either source yet, so
+both remain `identified-not-hash-acquired`. This is not footprint approval.
 
 Sources:
 

@@ -3,6 +3,7 @@ import {
   benchPrototypeFixtureHarness,
   benchPrototypeContinuityThresholds,
   evaluateBenchPrototypeContinuityEvidence,
+  evaluateBenchPrototypeFixturePhysicalEvidence,
   validateBenchPrototypeFixtureHarness
 } from "./bench-prototype-fixture-harness.js"
 
@@ -135,7 +136,7 @@ describe("BP-104 seven-channel fixture harness", () => {
       artifactKind: "bench-prototype-fixture-continuity-evidence",
       evidenceId: "BP104-EVIDENCE-002",
       status: "measured",
-      recordedAtUtc: "2026-08-23T19:45:00Z",
+      recordedAtUtc: "2026-08-23T19:45:00.000Z",
       operator: "bench-operator",
       boardId: "board-001",
       harnessId: "harness-001",
@@ -199,7 +200,7 @@ describe("BP-104 seven-channel fixture harness", () => {
     expect(evaluateBenchPrototypeContinuityEvidence(malformedTimestamp)).toMatchObject({ accepted: false })
 
     const impossibleTimestamp = structuredClone(validEvidence)
-    impossibleTimestamp.recordedAtUtc = "2026-02-30T19:45:00Z"
+    impossibleTimestamp.recordedAtUtc = "2026-02-30T19:45:00.000Z"
     expect(evaluateBenchPrototypeContinuityEvidence(impossibleTimestamp)).toMatchObject({ accepted: false })
 
     const impossibleCalibrationDate = structuredClone(validEvidence)
@@ -209,6 +210,263 @@ describe("BP-104 seven-channel fixture harness", () => {
     const expiredCalibration = structuredClone(validEvidence)
     expiredCalibration.equipment.calibrationDueDate = "2026-08-22"
     expect(evaluateBenchPrototypeContinuityEvidence(expiredCalibration)).toMatchObject({ accepted: false })
+  })
+
+  it("fails closed on incomplete physical evidence without claiming a physical result", () => {
+    const continuityEvidence = {
+      artifactKind: "bench-prototype-fixture-continuity-evidence",
+      evidenceId: "BP104-CONTINUITY-SYNTHETIC",
+      status: "measured",
+      recordedAtUtc: "2026-08-24T01:02:03.000Z",
+      operator: "synthetic-test-operator",
+      boardId: "synthetic-board",
+      harnessId: "synthetic-harness",
+      testPlugMpn: "44242-0005",
+      equipment: {
+        manufacturer: "Synthetic Instruments",
+        model: "Synthetic Model",
+        serialNumber: "SYN-001",
+        calibrationCertificate: "SYN-CAL-001",
+        calibrationDueDate: "2027-08-24"
+      },
+      method: {
+        powerState: "off-and-discharged",
+        continuityTestVoltageV: 1,
+        isolationTestVoltageV: 5,
+        leadCompensationMethod: "zeroed-with-same-leads-at-fixture",
+        compensatedLeadResidualOhms: 0.05
+      },
+      endToEnd: [
+        "LEFT_WEAPON_A",
+        "LEFT_WEAPON_B",
+        "LEFT_WEAPON_C",
+        "RIGHT_WEAPON_A",
+        "RIGHT_WEAPON_B",
+        "RIGHT_WEAPON_C",
+        "PISTE"
+      ].map((signal, index) => ({
+        boardPin: index + 1,
+        harnessCircuit: index + 1,
+        signal,
+        resistanceOhms: 0.4
+      })),
+      isolation: Array.from({ length: 12 }, (_, index) => index + 1).flatMap((boardPinA) =>
+        Array.from({ length: 12 - boardPinA }, (_, offset) => ({
+          boardPinA,
+          boardPinB: boardPinA + offset + 1,
+          resistanceOhms: benchPrototypeContinuityThresholds.minimumIsolationResistanceOhms,
+          testVoltageV: 5
+        }))
+      ),
+      openCircuitChecks: Array.from({ length: 5 }, (_, index) => ({
+        boardPin: index + 8,
+        harnessCircuit: index + 8,
+        resistanceOhms: benchPrototypeContinuityThresholds.minimumIsolationResistanceOhms
+      })),
+      negativeTests: [
+        { id: "BP104-NEG-SWAP", result: "rejected", observation: "synthetic adjacent swap rejection" },
+        { id: "BP104-NEG-OPEN", result: "rejected", observation: "synthetic open rejection" },
+        { id: "BP104-NEG-RETURN-BOND", result: "rejected", observation: "synthetic return rejection" },
+        { id: "BP104-NEG-REVERSED-MATE", result: "rejected", observation: "synthetic mate rejection" }
+      ]
+    }
+    let digestCounter = 0
+    const nextSha256 = () => {
+      digestCounter += 1
+      return digestCounter.toString(16).padStart(64, "0")
+    }
+    const physicalEvidence = {
+      artifactKind: "bench-prototype-fixture-physical-evidence",
+      evidenceId: "BP104-PHYSICAL-SYNTHETIC",
+      status: "measured",
+      recordedAtUtc: "2026-08-24T01:02:03.000Z",
+      operator: "synthetic-test-operator",
+      drawingCadReviews: ["43045-1200", "43025-1200", "43030-0007", "44242-0005"].map((mpn) => ({
+        mpn,
+        drawingArtifactId: `${mpn}-drawing`,
+        cadArtifactId: `${mpn}-cad`,
+        reviewArtifactId: `${mpn}-review`,
+        drawingSha256: nextSha256(),
+        cadSha256: nextSha256(),
+        reviewSha256: nextSha256(),
+        reviewedAtUtc: "2026-08-24T01:02:03.000Z",
+        result: "accepted"
+      })),
+      receivedParts: [
+        { mpn: "43045-1200", receivedQuantity: 1 },
+        { mpn: "43025-1200", receivedQuantity: 1 },
+        { mpn: "43030-0007", receivedQuantity: 7 },
+        { mpn: "44242-0005", receivedQuantity: 1 }
+      ].map((part) => ({
+        ...part,
+        receiptArtifactId: `${part.mpn}-receipt`,
+        receiptSha256: nextSha256()
+      })),
+      fitOrientationAndLabels: {
+        powerState: "off-and-discharged",
+        sampleFitArtifactId: "synthetic-fit",
+        sampleFitSha256: nextSha256(),
+        circuitOneAligned: true,
+        latchLockSeated: true,
+        independentFixtureStopVerified: true,
+        namedSignalLabelsLegible: true,
+        pinOneMarkerLegible: true,
+        forcedMateObserved: false,
+        result: "accepted"
+      },
+      negativeMiswireResults: [
+        "BP104-NEG-SWAP",
+        "BP104-NEG-OPEN",
+        "BP104-NEG-RETURN-BOND",
+        "BP104-NEG-REVERSED-MATE"
+      ].map((id) => ({
+        id,
+        artifactId: `${id}-synthetic`,
+        contentSha256: nextSha256(),
+        result: "rejected",
+        observation: "synthetic rejected fault"
+      })),
+      crimpAndRetention: [
+        "LEFT_WEAPON_A",
+        "LEFT_WEAPON_B",
+        "LEFT_WEAPON_C",
+        "RIGHT_WEAPON_A",
+        "RIGHT_WEAPON_B",
+        "RIGHT_WEAPON_C",
+        "PISTE"
+      ].map((signal, index) => ({
+        signal,
+        cavity: index + 1,
+        terminalMpn: "43030-0007",
+        crimpArtifactId: `${signal}-crimp`,
+        crimpSha256: nextSha256(),
+        retentionArtifactId: `${signal}-retention`,
+        retentionSha256: nextSha256(),
+        result: "accepted"
+      })),
+      strainRelief: {
+        artifactId: "synthetic-strain-relief",
+        contentSha256: nextSha256(),
+        pullLoadPathBypassesCrimpAndPcb: true,
+        bendPathVerified: true,
+        result: "accepted"
+      },
+      continuityEvidence
+    }
+
+    const accepted = evaluateBenchPrototypeFixturePhysicalEvidence(physicalEvidence)
+    expect(accepted).toEqual({ accepted: true, reasons: [] })
+    expect(Object.isFrozen(accepted)).toBe(true)
+    expect(Object.isFrozen(accepted.reasons)).toBe(true)
+
+    const missingDrawingReview = structuredClone(physicalEvidence)
+    missingDrawingReview.drawingCadReviews[0]!.cadArtifactId = ""
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(missingDrawingReview)).toMatchObject({ accepted: false })
+
+    const insufficientTerminals = structuredClone(physicalEvidence)
+    insufficientTerminals.receivedParts[2]!.receivedQuantity = 6
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(insufficientTerminals)).toMatchObject({ accepted: false })
+
+    const forcedMate = structuredClone(physicalEvidence)
+    forcedMate.fitOrientationAndLabels.forcedMateObserved = true
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(forcedMate)).toMatchObject({ accepted: false })
+
+    const acceptedNegativeFault = structuredClone(physicalEvidence)
+    acceptedNegativeFault.negativeMiswireResults[0]!.result = "accepted"
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(acceptedNegativeFault)).toMatchObject({ accepted: false })
+
+    const failedContinuity = structuredClone(physicalEvidence)
+    failedContinuity.continuityEvidence.endToEnd[0]!.resistanceOhms = 3
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(failedContinuity)).toMatchObject({ accepted: false })
+
+    let accessorInvoked = false
+    const withAccessor = structuredClone(physicalEvidence)
+    Object.defineProperty(withAccessor, "drawingCadReviews", {
+      enumerable: true,
+      get() {
+        accessorInvoked = true
+        return []
+      }
+    })
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withAccessor).accepted).toBe(false)
+    expect(accessorInvoked).toBe(false)
+
+    const withSymbol = structuredClone(physicalEvidence)
+    Object.defineProperty(withSymbol.fitOrientationAndLabels, Symbol("unexpected"), {
+      enumerable: true,
+      value: true
+    })
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withSymbol).accepted).toBe(false)
+
+    const withHidden = structuredClone(physicalEvidence)
+    Object.defineProperty(withHidden.strainRelief, "hidden", { enumerable: false, value: true })
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withHidden).accepted).toBe(false)
+
+    const withNonPlainPrototype = structuredClone(physicalEvidence)
+    Object.setPrototypeOf(withNonPlainPrototype.receivedParts[0]!, {})
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withNonPlainPrototype).accepted).toBe(false)
+
+    const withSparseArray = structuredClone(physicalEvidence)
+    delete withSparseArray.drawingCadReviews[1]
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withSparseArray).accepted).toBe(false)
+
+    class EvidenceArray<T> extends Array<T> {}
+    const withArraySubclass = structuredClone(physicalEvidence)
+    withArraySubclass.negativeMiswireResults = EvidenceArray.from(withArraySubclass.negativeMiswireResults)
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withArraySubclass).accepted).toBe(false)
+
+    const withAlias = structuredClone(physicalEvidence)
+    withAlias.receivedParts[1] = withAlias.receivedParts[0]!
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withAlias).accepted).toBe(false)
+
+    const withCycle = structuredClone(physicalEvidence)
+    Object.defineProperty(withCycle.fitOrientationAndLabels, "cycle", {
+      enumerable: true,
+      value: withCycle.fitOrientationAndLabels
+    })
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withCycle).accepted).toBe(false)
+
+    const withUnknownKey = structuredClone(physicalEvidence)
+    Object.defineProperty(withUnknownKey.receivedParts[0]!, "unexpected", { enumerable: true, value: true })
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withUnknownKey).reasons).toContain(
+      "evidence must contain only the exact BP-104 enumerable data keys"
+    )
+
+    const withMissingKey = structuredClone(physicalEvidence)
+    Reflect.deleteProperty(withMissingKey.fitOrientationAndLabels, "pinOneMarkerLegible")
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withMissingKey).reasons).toContain(
+      "evidence must contain only the exact BP-104 enumerable data keys"
+    )
+
+    const withoutReviewDigest = structuredClone(physicalEvidence)
+    Reflect.deleteProperty(withoutReviewDigest.drawingCadReviews[0]!, "reviewSha256")
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withoutReviewDigest).accepted).toBe(false)
+
+    const withReviewDigestSubstitution = structuredClone(physicalEvidence)
+    withReviewDigestSubstitution.drawingCadReviews[0]!.reviewSha256 =
+      withReviewDigestSubstitution.drawingCadReviews[0]!.drawingSha256
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withReviewDigestSubstitution).accepted).toBe(false)
+
+    const withoutCrimpDigest = structuredClone(physicalEvidence)
+    Reflect.deleteProperty(withoutCrimpDigest.crimpAndRetention[0]!, "crimpSha256")
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withoutCrimpDigest).accepted).toBe(false)
+
+    const withRetentionDigestSubstitution = structuredClone(physicalEvidence)
+    withRetentionDigestSubstitution.crimpAndRetention[0]!.retentionSha256 =
+      withRetentionDigestSubstitution.crimpAndRetention[0]!.crimpSha256
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(withRetentionDigestSubstitution).accepted).toBe(false)
+
+    const continuityAccessor = structuredClone(continuityEvidence)
+    let continuityAccessorInvoked = false
+    Object.defineProperty(continuityAccessor.equipment, "model", {
+      enumerable: true,
+      get() {
+        continuityAccessorInvoked = true
+        return "forged"
+      }
+    })
+    expect(evaluateBenchPrototypeContinuityEvidence(continuityAccessor).accepted).toBe(false)
+    expect(continuityAccessorInvoked).toBe(false)
   })
 
   it.each([
@@ -290,6 +548,13 @@ describe("BP-104 seven-channel fixture harness", () => {
       harnessContinuity: "open",
       miswireRejection: "open",
       strainRelief: "open"
+    })
+    expect(benchPrototypeFixtureHarness.evidence.manufacturerDrawingDiscovery).toMatchObject({
+      status: "identified-not-hash-acquired",
+      candidates: [
+        { mpn: "43045-1200", sourceKind: "series-drawing", retainedAsset: null, contentSha256: null },
+        { mpn: "43025-1200", sourceKind: "series-drawing", retainedAsset: null, contentSha256: null }
+      ]
     })
     expect(benchPrototypeFixtureHarness.authority).toMatchObject({
       exactSelectionFrozen: true,
