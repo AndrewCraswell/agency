@@ -907,6 +907,84 @@ describe("RC-05 bout workflow reducer", () => {
     expect(reduceBoutWorkflow(otherMode, action)).toMatchObject({ event: { rejectionReason: "invalid-mode" } })
   })
 
+  it("starts, stops, and resumes the isolated five-minute medical clock without changing the bout clock", () => {
+    const initial = state()
+    const start = reduceBoutWorkflow(initial, {
+      command: command("medical.start", "medical-start"),
+      nextBout: null,
+      type: "command"
+    })
+    expect(start).toMatchObject({
+      event: { cause: "medical.start", eventRevision: 1 },
+      outcome: "applied",
+      state: {
+        snapshot: {
+          clock: {
+            configuredDurationCentiseconds: 18_000,
+            mode: "bout",
+            remainingDurationCentiseconds: 18_000,
+            status: "stopped"
+          },
+          medical: { configuredDurationCentiseconds: 30_000, remainingDurationCentiseconds: 30_000, status: "running" }
+        }
+      }
+    })
+
+    const stopped = reduceBoutWorkflow(start.state, {
+      command: command("medical.start", "medical-stop"),
+      nextBout: null,
+      type: "command"
+    })
+    expect(stopped).toMatchObject({
+      event: { cause: "medical.stop", eventRevision: 2 },
+      outcome: "applied",
+      state: {
+        snapshot: {
+          clock: { mode: "bout", remainingDurationCentiseconds: 18_000, status: "stopped" },
+          medical: { configuredDurationCentiseconds: 30_000, remainingDurationCentiseconds: 30_000, status: "stopped" }
+        }
+      }
+    })
+
+    const stoppedMedical = stopped.state.snapshot.medical
+    expect(stoppedMedical).not.toBeNull()
+    if (stoppedMedical === null) throw new Error("Expected the medical clock to be retained while stopped")
+    const partiallyElapsed = createBoutWorkflowReducerState({
+      ...stopped.state.snapshot,
+      medical: { ...stoppedMedical, remainingDurationCentiseconds: 12_345 }
+    })
+    const resumed = reduceBoutWorkflow(partiallyElapsed, {
+      command: command("medical.start", "medical-resume"),
+      nextBout: null,
+      type: "command"
+    })
+    expect(resumed).toMatchObject({
+      event: { cause: "medical.start", eventRevision: 3 },
+      outcome: "applied",
+      state: { snapshot: { medical: { remainingDurationCentiseconds: 12_345, status: "running" } } }
+    })
+
+    const duplicate = reduceBoutWorkflow(resumed.state, {
+      command: command("medical.start", "medical-resume"),
+      nextBout: null,
+      type: "command"
+    })
+    expect(duplicate).toMatchObject({ event: resumed.event, outcome: "duplicate" })
+    expect(duplicate.state).toBe(resumed.state)
+
+    const runningBout = createBoutWorkflowReducerState({
+      ...initial.snapshot,
+      clock: { ...initial.snapshot.clock, status: "running" }
+    })
+    expect(
+      reduceBoutWorkflow(runningBout, {
+        command: command("medical.start", "medical-while-running"),
+        nextBout: null,
+        type: "command"
+      })
+    ).toMatchObject({ event: { rejectionReason: "clock-running" }, state: { snapshot: runningBout.snapshot } })
+  })
+
   it("awards yellow then cumulative red cards and atomically scores the opponent", () => {
     for (const [awarded, opponent] of [
       ["left", "right"],

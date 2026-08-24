@@ -1042,8 +1042,15 @@ export function reduceBoutWorkflow(state: BoutWorkflowReducerState, action: Bout
   }
 
   if (command.command === "medical.start") {
-    if (!isBoutClock(state.snapshot) || state.snapshot.medical !== null) return reject(state, command, "invalid-mode")
+    if (!isBoutClock(state.snapshot)) return reject(state, command, "invalid-mode")
     if (state.snapshot.clock.status === "running") return reject(state, command, "clock-running")
+    if (state.snapshot.medical !== null) {
+      const status = state.snapshot.medical.status === "running" ? "stopped" : "running"
+      return apply(state, command, status === "running" ? "medical.start" : "medical.stop", {
+        ...copySnapshot(state.snapshot),
+        medical: { ...structuredClone(state.snapshot.medical), status }
+      })
+    }
     return apply(state, command, "medical.start", {
       ...copySnapshot(state.snapshot),
       medical: { configuredDurationCentiseconds: 30_000, remainingDurationCentiseconds: 30_000, status: "running" }
