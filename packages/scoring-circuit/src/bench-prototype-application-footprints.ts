@@ -843,6 +843,30 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer",
     reviewedAt: "2026-08-25",
     fabricationRelease: "deny"
+  },
+  {
+    reference: "U_VBUS_EFUSE",
+    artifactKind: "bp033-tps25947-project-footprint",
+    artworkModule: "src/bp033-tps25947-project-footprint.tsx",
+    reviewDocument: "docs/bp-033-tps25947-project-footprint.md",
+    sourceArtifactPath: "docs/evidence/bp-033/ti-tps25947-datasheet.pdf",
+    sourceSha256: "051ECDDFE545B8B9F4F992148D24F385F75B1116FD36BEC358F85008A7D919EC",
+    reviewState: "root-reviewed-review-input",
+    reviewer: "root-final-reviewer",
+    reviewedAt: "2026-08-25",
+    fabricationRelease: "deny"
+  },
+  {
+    reference: "U_DISPLAY_LIMITER",
+    artifactKind: "bp033-tps25947-project-footprint",
+    artworkModule: "src/bp033-tps25947-project-footprint.tsx",
+    reviewDocument: "docs/bp-033-tps25947-project-footprint.md",
+    sourceArtifactPath: "docs/evidence/bp-033/ti-tps25947-datasheet.pdf",
+    sourceSha256: "051ECDDFE545B8B9F4F992148D24F385F75B1116FD36BEC358F85008A7D919EC",
+    reviewState: "root-reviewed-review-input",
+    reviewer: "root-final-reviewer",
+    reviewedAt: "2026-08-25",
+    fabricationRelease: "deny"
   }
 ] as const
 
@@ -982,7 +1006,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 7 ||
+    contract.projectFootprintMappings.length !== 9 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1036,6 +1060,21 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         mapping.sourceSha256 === "399D3CC9DA991AA3192638F807FB568F137407D10A4B0D35D106A82B5C2BACE2" &&
         mapping.reviewState === "root-reviewed-review-input" &&
         mapping.reviewer === "root-final-reviewer" &&
+        mapping.fabricationRelease === "deny"
+      )
+    }) ||
+    !(["U_VBUS_EFUSE", "U_DISPLAY_LIMITER"] as const).every((reference, offset) => {
+      const mapping = contract.projectFootprintMappings[7 + offset]
+      return (
+        mapping?.reference === reference &&
+        mapping.artifactKind === "bp033-tps25947-project-footprint" &&
+        mapping.artworkModule === "src/bp033-tps25947-project-footprint.tsx" &&
+        mapping.reviewDocument === "docs/bp-033-tps25947-project-footprint.md" &&
+        mapping.sourceArtifactPath === "docs/evidence/bp-033/ti-tps25947-datasheet.pdf" &&
+        mapping.sourceSha256 === "051ECDDFE545B8B9F4F992148D24F385F75B1116FD36BEC358F85008A7D919EC" &&
+        mapping.reviewState === "root-reviewed-review-input" &&
+        mapping.reviewer === "root-final-reviewer" &&
+        mapping.reviewedAt === "2026-08-25" &&
         mapping.fabricationRelease === "deny"
       )
     }) ||

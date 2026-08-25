@@ -209,7 +209,7 @@ describe("BP-035 lane BOM convergence", () => {
 
     expect(stateCounts("BP-031")).toEqual({ "reviewed-unapproved": 77, "not-started": 36 })
     expect(stateCounts("BP-032")).toEqual({ "not-started": 34, "reviewed-unapproved": 17 })
-    expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 11, "not-started": 90 })
+    expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 13, "not-started": 88 })
     expect(stateFor("BP-031", "U_SAR_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-031", "U_OVP_BUFFER_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-031", "R_ESD_1")).toBe("reviewed-unapproved")
@@ -221,6 +221,8 @@ describe("BP-035 lane BOM convergence", () => {
     expect(stateFor("BP-033", "U_USB_PD")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "U_USB_PORT_PROTECT")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "U_USB_DATA_PROTECT")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-033", "U_VBUS_EFUSE")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-033", "U_DISPLAY_LIMITER")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "J_HUB75")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "D_SOURCE_SELECTOR")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "S_SOURCE_SELECTOR")).toBe("reviewed-unapproved")

@@ -141,6 +141,33 @@ describe("BP-033 application footprint closure ledger", () => {
     expect(benchPrototypeApplicationFootprints.fabricationAuthorized).toBe(false)
   })
 
+  it("maps both TPS25947 logical roles to the reviewed single-instance footprint evidence", () => {
+    const mappings = benchPrototypeApplicationFootprints.projectFootprintMappings.filter(
+      (mapping) => mapping.artifactKind === "bp033-tps25947-project-footprint"
+    )
+    expect(mappings).toEqual(
+      ["U_VBUS_EFUSE", "U_DISPLAY_LIMITER"].map((reference) => ({
+        reference,
+        artifactKind: "bp033-tps25947-project-footprint",
+        artworkModule: "src/bp033-tps25947-project-footprint.tsx",
+        reviewDocument: "docs/bp-033-tps25947-project-footprint.md",
+        sourceArtifactPath: "docs/evidence/bp-033/ti-tps25947-datasheet.pdf",
+        sourceSha256: "051ECDDFE545B8B9F4F992148D24F385F75B1116FD36BEC358F85008A7D919EC",
+        reviewState: "root-reviewed-review-input",
+        reviewer: "root-final-reviewer",
+        reviewedAt: "2026-08-25",
+        fabricationRelease: "deny"
+      }))
+    )
+    expect(benchPrototypeApplicationFootprints.records).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ reference: "U_VBUS_EFUSE", mpn: "TPS259474ARPWR" }),
+        expect.objectContaining({ reference: "U_DISPLAY_LIMITER", mpn: "TPS259474ARPWR" })
+      ])
+    )
+    expect(benchPrototypeApplicationFootprints.releaseState).toBe("deny")
+  })
+
   it("binds only the J_HUB75 pin-map overlay and preserves BP-143 physical gates", () => {
     const record = benchPrototypeApplicationFootprints.records.find((candidate) => candidate.reference === "J_HUB75")
     if (
