@@ -9,10 +9,7 @@ type PlainRecord = Record<PropertyKey, unknown>
 
 const perCellReferences = [
   "U_REF",
-  "U_ESD",
   "R_ESD",
-  "R_FAULT_GUARD",
-  "U_SOURCE_SWITCH",
   "R_SOURCE",
   "R_SOURCE_PD",
   "U_OVP_BUFFER",
@@ -27,8 +24,7 @@ const perCellReferences = [
   "C_BUFFER_POS",
   "C_BUFFER_NEG",
   "C_SAR_AVDD",
-  "C_SAR_DVDD",
-  "C_MUX"
+  "C_SAR_DVDD"
 ] as const
 
 const sharedRailReferences = ["U_NEGATIVE_RAIL", "C_NEG_FLY", "C_NEG_IN", "C_NEG_OUT"] as const
@@ -51,6 +47,7 @@ const paperBounds = {
   ref5025QuiescentCurrentPerReferenceA: 0.0012,
   ref5025OutputCapacityA: 0.01,
   tmux1112SupplyCurrentPerPackageA: 0.000001,
+  sn74hcs595SupplyCurrentA: 0.000002,
   tps60400QuiescentInputCurrentA: 0.00027,
   tps60400OutputCurrentCapacityA: oneChannelAnalogExperiment.analogPower.negativeCurrentMaximumMa / 1_000
 } as const
@@ -152,7 +149,21 @@ function sharedPart(reference: string) {
 }
 
 const perCellParts = perCellReferences.map((reference) => selectedPart(reference))
-const sharedRailParts = sharedRailReferences.map((reference) => sharedPart(reference))
+const sharedRailParts = [
+  ...sharedRailReferences.map((reference) => sharedPart(reference)),
+  { reference: "U_ESD", mpn: "TPD4E05U06DQAR", package: "USON-10", quantity: 2, sourceBomDnp: true },
+  { reference: "U_SOURCE_SWITCH", mpn: "TMUX1112PWR", package: "TSSOP-16", quantity: 2, sourceBomDnp: true },
+  { reference: "C_MUX", mpn: "C0603C104K3RACTU", package: "0603", quantity: 2, sourceBomDnp: true },
+  { reference: "U_SOURCE_CONTROL", mpn: "SN74HCS595PWR", package: "TSSOP-16", quantity: 1, sourceBomDnp: true },
+  { reference: "C_SOURCE_CONTROL", mpn: "C0603C104K3RACTU", package: "0603", quantity: 1, sourceBomDnp: true },
+  {
+    reference: "R_SOURCE_OE_PULLUP",
+    mpn: "CRCW0603100KFKEAHP",
+    package: "0603",
+    quantity: 1,
+    sourceBomDnp: true
+  }
+]
 
 const sourceCurrentTotalA = sourceOnCurrentA * channelCount
 const negativeBufferCurrentTotalA = paperBounds.ada4177SupplyCurrentPerAmplifierA * channelCount
@@ -161,11 +172,16 @@ const ref5025QuiescentCurrentTotalA = paperBounds.ref5025QuiescentCurrentPerRefe
 const positiveBufferCurrentTotalA = negativeBufferCurrentTotalA
 const v5AnalogContinuousCurrentA =
   ref5025QuiescentCurrentTotalA + sourceCurrentTotalA + positiveBufferCurrentTotalA + chargePumpInputCurrentScreenA
-const tmuxSupplyCurrentTotalA = paperBounds.tmux1112SupplyCurrentPerPackageA * channelCount
+const tmuxSupplyCurrentTotalA = paperBounds.tmux1112SupplyCurrentPerPackageA * 2
 const sourceEnablePulldownCurrentTotalA = (supplyVoltage.app3v3V / 100_000) * channelCount
+const sourceOutputEnablePullupCurrentA = supplyVoltage.app3v3V / 100_000
 const ads8881AvddCurrentTotalA = paperBounds.ads8881AvddCurrentPerConverterA * channelCount
 const app3v3BoundedSubtotalCurrentA =
-  tmuxSupplyCurrentTotalA + sourceEnablePulldownCurrentTotalA + ads8881AvddCurrentTotalA
+  tmuxSupplyCurrentTotalA +
+  paperBounds.sn74hcs595SupplyCurrentA +
+  sourceEnablePulldownCurrentTotalA +
+  sourceOutputEnablePullupCurrentA +
+  ads8881AvddCurrentTotalA
 
 function round(value: number): number {
   return Number(value.toFixed(12))
@@ -174,7 +190,7 @@ function round(value: number): number {
 const capacitanceUf = {
   v5Analog: round((1 + 0.1) * channelCount + 1),
   v5Negative: round(0.1 * channelCount + 1),
-  app3v3: round((1 + 1 + 0.1) * channelCount),
+  app3v3: round((1 + 1) * channelCount + 0.1 * 3),
   reference: round((10 + 0.1 + 10) * channelCount)
 } as const
 
@@ -278,9 +294,9 @@ const definition = {
         nominalVoltageV: supplyVoltage.app3v3V,
         returnNet: "SCORING_SGND",
         consumers: [
-          "U_SOURCE_SWITCH_n.VDD for seven TMUX1112PWR packages",
+          "U_SOURCE_SWITCH_1..2 and U_SOURCE_CONTROL on APP_3V3",
           "U_SAR_n.AVDD and DVDD for seven ADS8881IDGS converters",
-          "the fourteen source and sink control boundaries through their MCU-side logic"
+          "seven source-select pulldowns plus the SOURCE_OE_N hardware-disable pull-up"
         ]
       },
       {
@@ -296,8 +312,8 @@ const definition = {
     edges: [
       "V5 -> V5_ANALOG -> U_REF_n.IN and U_OVP_BUFFER_n.V+ for n=1..7",
       "V5_ANALOG -> U_NEGATIVE_RAIL.VIN -> U_NEGATIVE_RAIL.VOUT -> VNEG_ANALOG -> U_OVP_BUFFER_n.V- for n=1..7",
-      "APP_3V3 -> U_SOURCE_SWITCH_n.VDD, U_SAR_n.AVDD, and U_SAR_n.DVDD for n=1..7",
-      "U_REF_n.OUT -> REF_2V5_n -> R_SOURCE_n -> U_SOURCE_SWITCH_n.SOURCE_PATH for n=1..7",
+      "APP_3V3 -> U_SOURCE_SWITCH_1..2, U_SOURCE_CONTROL, U_SAR_n.AVDD, and U_SAR_n.DVDD",
+      "U_REF_n.OUT -> REF_2V5_n -> R_SOURCE_n -> one TMUX1112 channel for n=1..7",
       "U_REF_n.OUT -> R_REF_SAR_n -> C_REF_n -> U_SAR_n.REF for n=1..7",
       "all analog returns, ADC AINN, reference returns, charge-pump ground, and local bypass returns -> SCORING_SGND",
       "SCORING_3V3, STM32 supply, and any isolation-domain rail are not vertices in this clean-sheet graph"
@@ -443,8 +459,8 @@ export function validateBenchPrototypeP0AnalogRailBudget(value: unknown): true {
   }
   if (
     benchPrototypeP0AnalogRailBudget.quantities.channelCount !== 7 ||
-    benchPrototypeP0AnalogRailBudget.quantities.perCellPartCount !== 21 ||
-    benchPrototypeP0AnalogRailBudget.quantities.sharedRailPartCount !== 4 ||
+    benchPrototypeP0AnalogRailBudget.quantities.perCellPartCount !== 17 ||
+    benchPrototypeP0AnalogRailBudget.quantities.sharedRailPartCount !== 10 ||
     benchPrototypeP0AnalogRailBudget.arithmetic.continuous.completeRailTotal ||
     benchPrototypeP0AnalogRailBudget.arithmetic.peak.completeRailTotal ||
     benchPrototypeP0AnalogRailBudget.authority.completeRailBudgetPassed ||

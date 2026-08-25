@@ -31,8 +31,8 @@ describe("BP-120 P0 ESP32-S3-WROOM-1-N16R2 support reconciliation", () => {
       Array.from({ length: 41 }, (_, index) => index + 1)
     )
     expect(p0Esp32Support.unavailableResources).toMatchObject({
-      reservedSparePads: [29, 30, 24],
-      reservedSpareGpios: [36, 37, 47]
+      reservedSparePads: [30],
+      reservedSpareGpios: [37]
     })
   })
 

@@ -6,11 +6,11 @@ describe("BP-050 analog and reference rail budget", () => {
     expect(validateBenchPrototypeP0AnalogRailBudget(benchPrototypeP0AnalogRailBudget)).toBe(true)
     expect(benchPrototypeP0AnalogRailBudget.quantities).toMatchObject({
       channelCount: 7,
-      perCellPartCount: 21,
-      perCellElectricalPartQuantity: 147,
-      sharedRailPartCount: 4,
-      sharedRailElectricalPartQuantity: 4,
-      totalElectricalTopologyQuantity: 151
+      perCellPartCount: 17,
+      perCellElectricalPartQuantity: 119,
+      sharedRailPartCount: 10,
+      sharedRailElectricalPartQuantity: 13,
+      totalElectricalTopologyQuantity: 132
     })
     expect(benchPrototypeP0AnalogRailBudget.quantities.perCellParts).toEqual(
       expect.arrayContaining([
@@ -34,7 +34,7 @@ describe("BP-050 analog and reference rail budget", () => {
     expect(benchPrototypeP0AnalogRailBudget.railGraph.edges).toEqual(
       expect.arrayContaining([
         expect.stringContaining("V5_ANALOG -> U_NEGATIVE_RAIL.VIN"),
-        expect.stringContaining("APP_3V3 -> U_SOURCE_SWITCH_n.VDD"),
+        expect.stringContaining("APP_3V3 -> U_SOURCE_SWITCH_1..2"),
         expect.stringContaining("SCORING_3V3, STM32 supply, and any isolation-domain rail are not vertices")
       ])
     )
@@ -57,7 +57,7 @@ describe("BP-050 analog and reference rail budget", () => {
     const { arithmetic } = benchPrototypeP0AnalogRailBudget
     expect(arithmetic.continuous.v5AnalogCurrentA).toBeCloseTo(0.02409811245, 10)
     expect(arithmetic.continuous.v5NegativeOutputCurrentA).toBeCloseTo(0.0042, 10)
-    expect(arithmetic.continuous.app3v3BoundedSubtotalCurrentA).toBeCloseTo(0.017038, 10)
+    expect(arithmetic.continuous.app3v3BoundedSubtotalCurrentA).toBeCloseTo(0.017068, 10)
     expect(arithmetic.continuous.referenceOutputCurrentA).toBeCloseTo(0.00702811245, 10)
     expect(arithmetic.peak.durationMs).toBe(100)
     expect(arithmetic.peak.completeRailTotal).toBe(false)
@@ -65,7 +65,7 @@ describe("BP-050 analog and reference rail budget", () => {
     expect(arithmetic.startup.capacitanceUf).toEqual({
       v5Analog: 8.7,
       v5Negative: 1.7,
-      app3v3: 14.7,
+      app3v3: 14.3,
       reference: 140.7
     })
     expect(arithmetic.transient.referencePulse).toMatchObject({

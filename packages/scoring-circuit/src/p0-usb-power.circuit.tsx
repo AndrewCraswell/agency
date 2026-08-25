@@ -387,9 +387,9 @@ export function P0UsbPower(): ReactElement {
       <trace from="R_USB_DP_SERIES.pin2" to="J_USB2_SERVICE.USB_DP" />
       <trace from="J_BP033_USB_C.Dn1" to="R_USB_DN_SERIES.pin1" />
       <trace from="R_USB_DN_SERIES.pin2" to="J_USB2_SERVICE.USB_DN" />
-      <trace from="U_BP033_TPD2EUSB30DRTR.GND" to="net.GND" />
-      <trace from="J_USB2_SERVICE.CHASSIS" to="net.CHASSIS" />
-      <trace from="J_BP033_USB_C.GND" to="net.GND" />
+      <trace from="U_BP033_TPD2EUSB30DRTR.GND" to="net.APP_GND" />
+      <trace from="J_USB2_SERVICE.CHASSIS" to="net.CHASSIS_SHIELD" />
+      <trace from="J_BP033_USB_C.GND" to="net.APP_GND" />
       {(["32", "33", "23", "24", "25"] as const).map((pin) => (
         <trace key={pin} from="J_BP033_USB_C.VBUS" to={`U_BP033_USB_PD.${pin}`} />
       ))}
@@ -397,44 +397,44 @@ export function P0UsbPower(): ReactElement {
       <trace from="J_BP033_USB_C.VBUS" to="D_BP033_VBUS_TVS.5" />
       <trace from="J_BP033_USB_C.VBUS" to="D_BP033_VBUS_TVS.6" />
       {(["1", "2", "3", "7"] as const).map((pin) => (
-        <trace key={pin} from={`D_BP033_VBUS_TVS.${pin}`} to="net.GND" />
+        <trace key={pin} from={`D_BP033_VBUS_TVS.${pin}`} to="net.APP_GND" />
       ))}
       <trace from="D_USB_PD_VBUS_DISCONNECT.CATHODE_VBUS" to="J_BP033_USB_C.VBUS" />
-      <trace from="D_USB_PD_VBUS_DISCONNECT.ANODE_GND" to="net.GND" />
+      <trace from="D_USB_PD_VBUS_DISCONNECT.ANODE_GND" to="net.APP_GND" />
       <trace from="J_BP033_USB_C.VBUS" to="TP_USB_VBUS_PORT.VBUS_PORT" />
 
       <trace from="U_BP033_TPD4S201TRGRRQ1.VBIAS" to="C_USB_PORT_PROTECT_BIAS.pin1" />
-      <trace from="C_USB_PORT_PROTECT_BIAS.pin2" to="net.GND" />
+      <trace from="C_USB_PORT_PROTECT_BIAS.pin2" to="net.APP_GND" />
       <trace from="U_BP033_TPD4S201TRGRRQ1.VPWR" to="U_BP033_USB_PD.1" />
       <trace from="U_BP033_TPD4S201TRGRRQ1.VPWR" to="C_USB_PORT_PROTECT_VPWR.pin1" />
-      <trace from="C_USB_PORT_PROTECT_VPWR.pin2" to="net.GND" />
+      <trace from="C_USB_PORT_PROTECT_VPWR.pin2" to="net.APP_GND" />
       {(["GND_8", "GND_13", "GND_18", "THERMAL_GND"] as const).map((pin) => (
-        <trace key={pin} from={`U_BP033_TPD4S201TRGRRQ1.${pin}`} to="net.GND" />
+        <trace key={pin} from={`U_BP033_TPD4S201TRGRRQ1.${pin}`} to="net.APP_GND" />
       ))}
       <trace from="U_BP033_TPD4S201TRGRRQ1.FLT_N" to="U_BP033_USB_PD.18" />
       <trace from="U_BP033_TPD4S201TRGRRQ1.FLT_N" to="R_USB_PORT_PROTECT_FLT_PULLUP.pin1" />
       <trace from="R_USB_PORT_PROTECT_FLT_PULLUP.pin2" to="U_BP033_USB_PD.1" />
       <trace from="U_BP033_USB_PD.1" to="U_BP033_USB_PD.38" />
       <trace from="U_BP033_USB_PD.1" to="C_USB_PD_LDO.LDO_3V3" />
-      <trace from="C_USB_PD_LDO.GND" to="net.GND" />
+      <trace from="C_USB_PD_LDO.GND" to="net.APP_GND" />
       <trace from="U_BP033_USB_PD.38" to="C_USB_PD_VIN_3V3.pin1" />
-      <trace from="C_USB_PD_VIN_3V3.pin2" to="net.GND" />
+      <trace from="C_USB_PD_VIN_3V3.pin2" to="net.APP_GND" />
       <trace from="U_BP033_USB_PD.4" to="C_USB_PD_LDO_1V5.pin1" />
-      <trace from="C_USB_PD_LDO_1V5.pin2" to="net.GND" />
+      <trace from="C_USB_PD_LDO_1V5.pin2" to="net.APP_GND" />
       <trace from="J_BP033_USB_C.VBUS" to="C_USB_PD_VBUS.pin1" />
-      <trace from="C_USB_PD_VBUS.pin2" to="net.GND" />
+      <trace from="C_USB_PD_VBUS.pin2" to="net.APP_GND" />
       <trace from="U_BP033_USB_PD.28" to="C_USB_PD_CC1.pin1" />
       <trace from="U_BP033_USB_PD.29" to="C_USB_PD_CC2.pin1" />
-      <trace from="C_USB_PD_CC1.pin2" to="net.GND" />
-      <trace from="C_USB_PD_CC2.pin2" to="net.GND" />
+      <trace from="C_USB_PD_CC1.pin2" to="net.APP_GND" />
+      <trace from="C_USB_PD_CC2.pin2" to="net.APP_GND" />
       {(["20", "21", "22"] as const).map((pin) => (
         <trace key={pin} from={`U_BP033_USB_PD.${pin}`} to="net.PD_PPHV_20V" />
       ))}
       <trace from="C_USB_PD_PPHV.PD_PPHV_20V" to="net.PD_PPHV_20V" />
-      <trace from="C_USB_PD_PPHV.GND" to="net.GND" />
+      <trace from="C_USB_PD_PPHV.GND" to="net.APP_GND" />
       <trace from="net.PD_PPHV_20V" to="TP_PD_PPHV.PD_PPHV_20V" />
       {(["10", "11", "12", "14", "16", "17", "31", "34", "35", "39"] as const).map((pin) => (
-        <trace key={pin} from={`U_BP033_USB_PD.${pin}`} to="net.GND" />
+        <trace key={pin} from={`U_BP033_USB_PD.${pin}`} to="net.APP_GND" />
       ))}
       {(["15", "30", "40"] as const).map((pin) => (
         <trace key={pin} from={`U_BP033_USB_PD.${pin}`} to="net.PD_DRAIN" />
@@ -444,34 +444,34 @@ export function P0UsbPower(): ReactElement {
           <trace from={`U_BP033_USB_PD.${channel + 1}`} to={`R_USB_PD_ADCIN${channel}_UP.pin2`} />
           <trace from={`U_BP033_USB_PD.${channel + 1}`} to={`R_USB_PD_ADCIN${channel}_DOWN.pin1`} />
           <trace from={`R_USB_PD_ADCIN${channel}_UP.pin1`} to="U_BP033_USB_PD.1" />
-          <trace from={`R_USB_PD_ADCIN${channel}_DOWN.pin2`} to="net.GND" />
+          <trace from={`R_USB_PD_ADCIN${channel}_DOWN.pin2`} to="net.APP_GND" />
         </group>
       ))}
       <trace from="U_BP033_USB_PD.27" to="R_USB_PD_PD5VMAX.pin1" />
-      <trace from="R_USB_PD_PD5VMAX.pin2" to="net.GND" />
+      <trace from="R_USB_PD_PD5VMAX.pin2" to="net.APP_GND" />
       <trace from="U_BP033_USB_PD.26" to="R_USB_PD_RESERVED_26.pin1" />
-      <trace from="R_USB_PD_RESERVED_26.pin2" to="net.GND" />
+      <trace from="R_USB_PD_RESERVED_26.pin2" to="net.APP_GND" />
       <trace from="U_BP033_USB_PD.36" to="R_USB_PD_RESERVED_36.pin1" />
-      <trace from="R_USB_PD_RESERVED_36.pin2" to="net.GND" />
+      <trace from="R_USB_PD_RESERVED_36.pin2" to="net.APP_GND" />
 
       <trace from="net.PD_PPHV_20V" to="BP033_TPS25947_REVIEW_ONLY.IN" />
       <trace from="BP033_TPS25947_REVIEW_ONLY.IN" to="C_EFUSE_IN.pin1" />
-      <trace from="C_EFUSE_IN.pin2" to="net.GND" />
+      <trace from="C_EFUSE_IN.pin2" to="net.APP_GND" />
       <trace from="BP033_TPS25947_REVIEW_ONLY.pin1" to="R_EFUSE_UVLO_UP.pin2" />
       <trace from="R_EFUSE_UVLO_UP.pin1" to="net.PD_PPHV_20V" />
       <trace from="BP033_TPS25947_REVIEW_ONLY.pin1" to="R_EFUSE_UVLO_DOWN.pin1" />
-      <trace from="R_EFUSE_UVLO_DOWN.pin2" to="net.GND" />
+      <trace from="R_EFUSE_UVLO_DOWN.pin2" to="net.APP_GND" />
       <trace from="BP033_TPS25947_REVIEW_ONLY.OVLO" to="R_EFUSE_OVLO_UP.pin2" />
       <trace from="R_EFUSE_OVLO_UP.pin1" to="net.PD_PPHV_20V" />
       <trace from="BP033_TPS25947_REVIEW_ONLY.OVLO" to="R_EFUSE_OVLO_DOWN.pin1" />
-      <trace from="R_EFUSE_OVLO_DOWN.pin2" to="net.GND" />
+      <trace from="R_EFUSE_OVLO_DOWN.pin2" to="net.APP_GND" />
       <trace from="BP033_TPS25947_REVIEW_ONLY.ILM" to="R_EFUSE_ILM.pin1" />
-      <trace from="R_EFUSE_ILM.pin2" to="net.GND" />
+      <trace from="R_EFUSE_ILM.pin2" to="net.APP_GND" />
       <trace from="BP033_TPS25947_REVIEW_ONLY.ITIMER" to="C_EFUSE_ITIMER.pin1" />
-      <trace from="C_EFUSE_ITIMER.pin2" to="net.GND" />
+      <trace from="C_EFUSE_ITIMER.pin2" to="net.APP_GND" />
       <trace from="BP033_TPS25947_REVIEW_ONLY.DVDT" to="C_EFUSE_DVDT.pin1" />
-      <trace from="C_EFUSE_DVDT.pin2" to="net.GND" />
-      <trace from="BP033_TPS25947_REVIEW_ONLY.GND" to="net.GND" />
+      <trace from="C_EFUSE_DVDT.pin2" to="net.APP_GND" />
+      <trace from="BP033_TPS25947_REVIEW_ONLY.GND" to="net.APP_GND" />
       <trace from="BP033_TPS25947_REVIEW_ONLY.OUT" to="C_EFUSE_OUT.V20_TO_V5_BUCK" />
       <trace from="BP033_TPS25947_REVIEW_ONLY.OUT" to="J_LINK_INPUT.V20_TO_V5_BUCK" />
       <trace from="J_LINK_INPUT.V20_TO_V5_BUCK" to="TP_PD_EFUSE_OUT.V20_TO_V5_BUCK" />
@@ -482,27 +482,27 @@ export function P0UsbPower(): ReactElement {
       <trace from="U_V5_BUCK.VIN" to="C_V5_BUCK_IN_B.pin1" />
       <trace from="U_V5_BUCK.VIN" to="C_V5_BUCK_IN_HF.pin1" />
       {(["C_V5_BUCK_IN_A", "C_V5_BUCK_IN_B", "C_V5_BUCK_IN_HF"] as const).map((name) => (
-        <trace key={name} from={`${name}.pin2`} to="net.GND" />
+        <trace key={name} from={`${name}.pin2`} to="net.APP_GND" />
       ))}
       <trace from="U_V5_BUCK.MODE" to="R_V5_BUCK_MODE.pin1" />
-      <trace from="R_V5_BUCK_MODE.pin2" to="net.GND" />
+      <trace from="R_V5_BUCK_MODE.pin2" to="net.APP_GND" />
       <trace from="U_V5_BUCK.BOOT" to="C_V5_BUCK_BOOT.pin1" />
       <trace from="C_V5_BUCK_BOOT.pin2" to="U_V5_BUCK.SW" />
       <trace from="U_V5_BUCK.SW" to="L_V5_BUCK.SW" />
       <trace from="L_V5_BUCK.V5" to="net.V5" />
-      <trace from="U_V5_BUCK.AGND" to="net.GND" />
-      <trace from="U_V5_BUCK.PGND" to="net.GND" />
+      <trace from="U_V5_BUCK.AGND" to="net.APP_GND" />
+      <trace from="U_V5_BUCK.PGND" to="net.APP_GND" />
       <trace from="U_V5_BUCK.FB" to="R_V5_BUCK_FB_TOP.pin2" />
       <trace from="U_V5_BUCK.FB" to="R_V5_BUCK_FB_BOTTOM.pin1" />
       <trace from="R_V5_BUCK_FB_TOP.pin1" to="net.V5" />
-      <trace from="R_V5_BUCK_FB_BOTTOM.pin2" to="net.GND" />
+      <trace from="R_V5_BUCK_FB_BOTTOM.pin2" to="net.APP_GND" />
       <trace from="net.V5" to="R_V5_BUCK_FF.pin1" />
       <trace from="R_V5_BUCK_FF.pin2" to="C_V5_BUCK_FF.pin1" />
       <trace from="C_V5_BUCK_FF.pin2" to="U_V5_BUCK.FB" />
       {(["C_V5_BUCK_OUT_A", "C_V5_BUCK_OUT_B"] as const).map((name) => (
         <group key={name}>
           <trace from={`net.V5`} to={`${name}.pin1`} />
-          <trace from={`${name}.pin2`} to="net.GND" />
+          <trace from={`${name}.pin2`} to="net.APP_GND" />
         </group>
       ))}
       <trace from="net.V5" to="TP_V5.V5" />
@@ -513,25 +513,25 @@ export function P0UsbPower(): ReactElement {
       <trace from="U_APP_REGULATOR.VIN" to="U_APP_REGULATOR.EN_UVLO" />
       <trace from="U_APP_REGULATOR.VIN" to="C_APP_REG_IN.pin1" />
       <trace from="U_APP_REGULATOR.VIN" to="C_APP_REG_IN_HF.pin1" />
-      <trace from="C_APP_REG_IN.pin2" to="net.GND" />
-      <trace from="C_APP_REG_IN_HF.pin2" to="net.GND" />
+      <trace from="C_APP_REG_IN.pin2" to="net.APP_GND" />
+      <trace from="C_APP_REG_IN_HF.pin2" to="net.APP_GND" />
       <trace from="U_APP_REGULATOR.MODE_SYNC" to="U_APP_REGULATOR.VCC" />
       <trace from="U_APP_REGULATOR.VCC" to="C_APP_REG_VCC.pin1" />
-      <trace from="C_APP_REG_VCC.pin2" to="net.GND" />
+      <trace from="C_APP_REG_VCC.pin2" to="net.APP_GND" />
       <trace from="U_APP_REGULATOR.BOOT" to="C_APP_REG_BOOT.pin1" />
       <trace from="C_APP_REG_BOOT.pin2" to="U_APP_REGULATOR.SW" />
       <trace from="U_APP_REGULATOR.SW" to="L_APP_REGULATOR.SW" />
       <trace from="L_APP_REGULATOR.APP_3V3" to="net.APP_3V3" />
       <trace from="U_APP_REGULATOR.VOUT_FB" to="net.APP_3V3" />
-      <trace from="U_APP_REGULATOR.APP_GND" to="net.GND" />
+      <trace from="U_APP_REGULATOR.APP_GND" to="net.APP_GND" />
       {(["A", "B", "C"] as const).map((suffix) => (
         <group key={suffix}>
           <trace from="net.APP_3V3" to={`C_APP_REG_OUT_${suffix}.pin1`} />
-          <trace from={`C_APP_REG_OUT_${suffix}.pin2`} to="net.GND" />
+          <trace from={`C_APP_REG_OUT_${suffix}.pin2`} to="net.APP_GND" />
         </group>
       ))}
       <trace from="net.APP_3V3" to="R_APP_REG_DISCHARGE.pin1" />
-      <trace from="R_APP_REG_DISCHARGE.pin2" to="net.GND" />
+      <trace from="R_APP_REG_DISCHARGE.pin2" to="net.APP_GND" />
       <trace from="net.APP_3V3" to="TP_APP_3V3.APP_3V3" />
       <trace from="J_LINK_SCORING.V5_ANALOG" to="net.V5_ANALOG" />
       <trace from="J_LINK_SCORING.V5_ANALOG" to="TP_SCORING_REFERENCE.V5_ANALOG" />

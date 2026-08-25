@@ -7,6 +7,8 @@ function renderCircuit() {
     <board width="120mm" height="80mm">
       <chip
         name="U_ESP32"
+        doNotPlace
+        footprint={[]}
         pinLabels={{
           pin1: "APP_SPI_SCK",
           pin2: "APP_SPI_MOSI",
@@ -27,10 +29,43 @@ function renderCircuit() {
           pin17: "HUB75_OE_N"
         }}
       />
-      <chip name="U_APP_RESET_FANOUT" pinLabels={{ pin1: "Y2" }} />
+      <chip name="U_APP_RESET_FANOUT" doNotPlace footprint={[]} pinLabels={{ pin1: "Y2" }} />
       <P0DigitalPeripherals pcbX={0} pcbY={0} />
     </board>,
     { pcbEnabled: false }
+  )
+}
+
+function renderPcbCircuit() {
+  return renderTestCircuit(
+    <board width="120mm" height="80mm">
+      <chip
+        name="U_ESP32"
+        doNotPlace
+        footprint={[]}
+        pinLabels={{
+          pin1: "APP_SPI_SCK",
+          pin2: "APP_SPI_MOSI",
+          pin3: "APP_SPI_MISO",
+          pin4: "ETH_CS_N",
+          pin5: "HUB75_R1",
+          pin6: "HUB75_G1",
+          pin7: "HUB75_B1",
+          pin8: "HUB75_R2",
+          pin9: "HUB75_G2",
+          pin10: "HUB75_B2",
+          pin11: "HUB75_A",
+          pin12: "HUB75_B",
+          pin13: "HUB75_C",
+          pin14: "HUB75_D",
+          pin15: "HUB75_CLK",
+          pin16: "HUB75_LAT",
+          pin17: "HUB75_OE_N"
+        }}
+      />
+      <chip name="U_APP_RESET_FANOUT" doNotPlace footprint={[]} pinLabels={{ pin1: "Y2" }} />
+      <P0DigitalPeripherals pcbX={0} pcbY={0} />
+    </board>
   )
 }
 
@@ -38,6 +73,41 @@ function traces(circuitJson: ReturnType<typeof renderCircuit>) {
   return circuitJson.flatMap((element) =>
     element.type === "source_trace" && typeof element.display_name === "string" ? [element.display_name] : []
   )
+}
+
+function pcbArtifacts(circuitJson: ReturnType<typeof renderPcbCircuit>, reference: string) {
+  const source = circuitJson.find((element) => element.type === "source_component" && element.name === reference)
+  if (source?.type !== "source_component") throw new RangeError(`missing ${reference}`)
+  const pcbComponent = circuitJson.find(
+    (element) => element.type === "pcb_component" && element.source_component_id === source.source_component_id
+  )
+  if (pcbComponent?.type !== "pcb_component") throw new RangeError(`missing ${reference} PCB component`)
+  return circuitJson.filter(
+    (element) => "pcb_component_id" in element && element.pcb_component_id === pcbComponent.pcb_component_id
+  )
+}
+
+type CircuitElement = ReturnType<typeof renderPcbCircuit>[number]
+type PortedPlatedHole = Extract<CircuitElement, { readonly type: "pcb_plated_hole" }> & {
+  readonly port_hints: readonly string[]
+}
+
+function isPortedPlatedHole(element: CircuitElement): element is PortedPlatedHole {
+  return element.type === "pcb_plated_hole" && Array.isArray(element.port_hints)
+}
+
+function isRectSmtPad(
+  element: CircuitElement
+): element is Extract<CircuitElement, { readonly shape: "rect"; readonly type: "pcb_smtpad" }> {
+  return element.type === "pcb_smtpad" && element.shape === "rect"
+}
+
+function artifactWithPortHint(artifacts: ReturnType<typeof pcbArtifacts>, hint: string): PortedPlatedHole {
+  const artifact = artifacts.find((element): element is PortedPlatedHole =>
+    isPortedPlatedHole(element) ? element.port_hints.includes(hint) : false
+  )
+  if (artifact === undefined) throw new RangeError(`missing PCB port ${hint}`)
+  return artifact
 }
 
 describe("P0 digital peripherals", () => {
@@ -61,11 +131,11 @@ describe("P0 digital peripherals", () => {
 
     expect(renderedTraces).toEqual(
       expect.arrayContaining([
-        "U_ESP32.APP_SPI_SCK to U_BP033_W5500.33",
-        "U_ESP32.APP_SPI_MOSI to U_BP033_W5500.35",
-        "U_BP033_W5500.34 to U_ESP32.APP_SPI_MISO",
-        "U_ESP32.ETH_CS_N to U_BP033_W5500.32",
-        "U_APP_RESET_FANOUT.Y2 to U_BP033_W5500.37",
+        "U_BP033_W5500.33 to net.APP_SPI_SCK",
+        "U_BP033_W5500.35 to net.APP_SPI_MOSI",
+        "U_BP033_W5500.34 to net.APP_SPI_MISO",
+        "U_BP033_W5500.32 to net.ETH_CS_N",
+        "U_BP033_W5500.37 to net.APP_RESET_N",
         "U_BP033_W5500.36 to TP_W5500_INT_N.APP_W5500_INT_N",
         "U_BP033_W5500.2 to J_ETH.TD_P",
         "U_BP033_W5500.1 to J_ETH.TD_N",
@@ -92,6 +162,40 @@ describe("P0 digital peripherals", () => {
     )
   })
 
+  it("renders the retained MagJack holes and ECS suggested land pattern into PCB artifacts", () => {
+    const circuitJson = renderPcbCircuit()
+    const magJackArtifacts = pcbArtifacts(circuitJson, "J_ETH")
+    const crystalArtifacts = pcbArtifacts(circuitJson, "Y_W5500")
+
+    expect(circuitJson.filter((element) => element.type.includes("error"))).toEqual([])
+    expect(magJackArtifacts.filter((element) => element.type === "pcb_plated_hole")).toHaveLength(14)
+    expect(magJackArtifacts.filter((element) => element.type === "pcb_hole")).toHaveLength(2)
+    const txPositive = artifactWithPortHint(magJackArtifacts, "TD_P")
+    const txCenterTap = artifactWithPortHint(magJackArtifacts, "CTD")
+    const shield = artifactWithPortHint(magJackArtifacts, "SHIELD_A")
+    expect(txPositive).toMatchObject({ hole_diameter: 0.9, rect_pad_width: 1.408, rect_pad_height: 1.408 })
+    expect(shield).toMatchObject({ hole_diameter: 1.6, rect_pad_width: 2.4, rect_pad_height: 2.4 })
+    expect(txCenterTap.x - txPositive.x).toBeCloseTo(1.27)
+    expect(txCenterTap.y - txPositive.y).toBeCloseTo(-2.54)
+    const nonPlatedHole = magJackArtifacts.find((element) => element.type === "pcb_hole")
+    expect(nonPlatedHole).toMatchObject({ hole_diameter: 3.25, hole_shape: "circle" })
+    const crystalPads = crystalArtifacts.filter(isRectSmtPad)
+    expect(crystalPads).toHaveLength(4)
+    expect(crystalPads).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ width: 1.3, height: 1.1 }),
+        expect.objectContaining({ width: 1.3, height: 1.1 })
+      ])
+    )
+    const crystalPinOne = crystalPads.find((element) => element.port_hints?.includes("XI"))
+    const crystalPinThree = crystalPads.find((element) => element.port_hints?.includes("XO"))
+    if (crystalPinOne === undefined || crystalPinThree === undefined) {
+      throw new RangeError("missing ECS crystal pads")
+    }
+    expect(crystalPinThree.x - crystalPinOne.x).toBeCloseTo(2.3)
+    expect(crystalPinThree.y - crystalPinOne.y).toBeCloseTo(-1.9)
+  })
+
   it("blanks the panel through one reset-only enable gate while every other HUB75 input defaults safe", () => {
     const renderedTraces = traces(renderCircuit())
 
@@ -109,7 +213,9 @@ describe("P0 digital peripherals", () => {
       "HUB75_CLK",
       "HUB75_LAT"
     ]) {
-      expect(renderedTraces.some((trace) => trace.startsWith(`U_ESP32.${signal} to U_DISPLAY_BUFFER_`))).toBe(true)
+      expect(
+        renderedTraces.some((trace) => trace.startsWith("U_DISPLAY_BUFFER_") && trace.endsWith(`net.${signal}`))
+      ).toBe(true)
       expect(renderedTraces).toContain(`R_${signal}_PD.pin2 to net.APP_GND`)
     }
     expect(renderedTraces).toEqual(

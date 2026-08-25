@@ -29,13 +29,14 @@ BP-050 V5 from TPS56A37RPAR
                  -> U_OVP_BUFFER_1..7 negative supply
 
 BP-050 APP_3V3 / SCORING_SGND
-  -> U_SOURCE_SWITCH_1..7 TMUX1112PWR VDD
+  -> U_SOURCE_SWITCH_1..2 TMUX1112PWR VDD
+  -> U_SOURCE_CONTROL SN74HCS595PWR
   -> U_SAR_1..7 ADS8881IDGS AVDD and DVDD
 
 U_REF_n OUT
   -> REF_2V5_n
        -> R_SOURCE_n ERA3AEB2491V 2.49 kohm
-            -> U_SOURCE_SWITCH_n source path -> external conductor
+            -> one channel of U_SOURCE_SWITCH_1..2 -> external conductor
        -> R_REF_SAR_n RCWE0603R220FKEA 0.22 ohm
             -> C_REF_n GRM21BR71A106KE51L 10 uF -> U_SAR_n REF
 
@@ -52,15 +53,16 @@ BP-050 slices.
 
 ## Quantities
 
-Each of the seven cells has 21 selected electrical rows:
+Each of the seven cells has 17 selected electrical rows. Shared source-control and protection packages are counted
+once for the board rather than replicated per line:
 
 | Function | MPN | Quantity | Rail or return role |
 | --- | --- | ---: | --- |
 | Reference | `REF5025AQDRQ1` | 7 | `V5_ANALOG` input, `REF_2V5_n` output |
-| ESD shunt | `TPD4E05U06DQAR` | 7 | passive to `SCORING_SGND` |
+| ESD shunt | `TPD4E05U06DQAR` | 2 | seven protected lanes plus one unused lane |
 | Normal series | `CRCW060322R0FKEAHP` | 7 | passive signal path |
-| Guard resistor | `CRCW120656K0FKEAHP` | 7 | guarded, normally open path |
-| Source switch | `TMUX1112PWR` | 7 | `APP_3V3` supply |
+| Source switch | `TMUX1112PWR` | 2 | seven channels used across two quad packages |
+| Source control | `SN74HCS595PWR` | 1 | serial control with reset clear and hardware output disable |
 | Source resistor | `ERA3AEB2491V` | 7 | `REF_2V5_n` source path |
 | Source pull-down | `CRCW0603100KFKEAHP` | 7 | control default to `SCORING_SGND` |
 | OVP buffer | `ADA4177-1ARZ` | 7 | `V5_ANALOG` and `VNEG_ANALOG` supplies |
@@ -70,12 +72,13 @@ Each of the seven cells has 21 selected electrical rows:
 | REF5025 output support | `T521B106M025ATE100`, `C0603C104K3RACTU` | 7 each | `REF_2V5_n` to `SCORING_SGND` |
 | ADC reference feed and reservoir | `RCWE0603R220FKEA`, `GRM21BR71A106KE51L` | 7 each | local `REF_2V5_n` loop |
 | Buffer bypass | `C0603C104K3RACTU` | 14 | positive and negative buffer rails |
-| ADC and switch bypass | `CGA3E3X7R1H105K080AB` x2, `C0603C104K3RACTU` | 21 | `APP_3V3` to `SCORING_SGND` |
+| ADC bypass | `CGA3E3X7R1H105K080AB` x2 | 14 | `APP_3V3` to `SCORING_SGND` |
+| Switch and source-control bypass | `C0603C104K3RACTU` | 3 | `APP_3V3` to ground |
 
 The shared negative rail has one `TPS60400DBVR`, one `C_NEG_FLY`, one
 `C_NEG_IN`, and one `C_NEG_OUT`. The machine-readable contract therefore
-contains 147 per-cell electrical placements plus four shared rail placements,
-151 total topology placements. Connectors and probe points from the
+contains 119 per-cell electrical placements plus 13 shared placements,
+132 total topology placements. Connectors and probe points from the
 standalone experiment are not rail loads.
 
 ## Continuous and 100 ms peak arithmetic
@@ -95,7 +98,7 @@ The following are component-bound screens, not assembled load measurements.
 | --- | --- | ---: | ---: |
 | `V5_ANALOG` input | 7 x 1.2 mA REF5025 quiescent + 7 x 1.004016 mA source output + 7 x 0.6 mA ADA4177 positive supply + (7 x 0.6 mA + 0.27 mA) TPS60400 ideal-current input screen | 24.098112 mA, 120.491 mW | same paper value |
 | `VNEG_ANALOG` output | 7 x 0.6 mA ADA4177 negative supply | 4.200 mA, 21.000 mW delivered | same paper value |
-| `APP_3V3` bounded subtotal | 7 x 2.4 mA ADS8881 AVDD + 7 x 1 uA TMUX supply + 7 x 33 uA source pull-down | 17.038 mA, 56.225 mW | same bounded subtotal |
+| `APP_3V3` bounded subtotal | 7 x 2.4 mA ADS8881 AVDD + 2 x 1 uA TMUX supply + 2 uA register screen + 7 x 33 uA source pull-down + 33 uA output-enable pull-up | 17.068 mA, 56.324 mW | same bounded subtotal |
 | `REF_2V5_n` output | 7 x 1.004016 mA source load | 7.028112 mA, 17.570 mW | same source-on screen |
 
 The `APP_3V3` number is deliberately a subtotal. ADS8881 DVDD, serial-I/O
@@ -119,7 +122,7 @@ nominal rail voltage. It must not be used as a startup-current limit.
 | --- | ---: | ---: |
 | `V5_ANALOG` | 8.7 uF: seven 1 uF REF5025 input capacitors, seven 100 nF buffer-positive capacitors, and 1 uF shared charge-pump input | 43.500 mA |
 | `VNEG_ANALOG` | 1.7 uF: seven 100 nF buffer-negative capacitors and 1 uF shared output capacitor | 8.500 mA |
-| `APP_3V3` | 14.7 uF: seven `(1 uF + 1 uF + 100 nF)` local ADC and switch bypass sets | 48.510 mA |
+| `APP_3V3` | 14.3 uF: fourteen 1-uF ADC bypasses plus three 100-nF switch/control bypasses | 47.190 mA |
 | `REF_2V5` | 140.7 uF: seven `(10 uF + 100 nF + 10 uF)` reference loops | 351.750 mA |
 
 The flying capacitor is a switched charge-pump component, not a direct

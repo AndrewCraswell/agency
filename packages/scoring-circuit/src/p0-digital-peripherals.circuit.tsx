@@ -1,6 +1,7 @@
-import { type ReactElement } from "react"
+import { Fragment, type ReactElement } from "react"
 import { applicationDisplayHub75SupportPart } from "./application-display-carrier-support.js"
 import { Bp033W5500ProjectFootprint } from "./bp033-w5500-project-footprint.js"
+import { findCommunicationsFootprintEvidence } from "./communications-footprint-evidence.js"
 
 const hub75Signals = [
   ["HUB75_R1", "U_DISPLAY_BUFFER_A", "A1", "B1", "R1"],
@@ -20,14 +21,85 @@ const hub75Signals = [
 
 const w5500AvddPins = [4, 8, 11, 15, 17, 21] as const
 const w5500GroundPins = [3, 9, 14, 16, 19, 29, 48] as const
+const ethernetFootprintEvidence = findCommunicationsFootprintEvidence("7499011121A")
+
+if (ethernetFootprintEvidence === undefined || ethernetFootprintEvidence.exactPads.length !== 16) {
+  throw new RangeError("P0 requires the retained 7499011121A exact 16-hole footprint evidence")
+}
+
+const magJackPortHints: Record<string, readonly string[]> = {
+  "1": ["1", "pin1", "TD_P"],
+  "2": ["2", "pin2", "CTD"],
+  "3": ["3", "pin3", "TD_N"],
+  "4": ["4", "pin4", "RD_P"],
+  "5": ["5", "pin5", "CRD"],
+  "6": ["6", "pin6", "RD_N"],
+  "7": ["7"],
+  "8": ["8", "pin8", "CHASSIS_TERMINATION"],
+  "9": ["9", "pin9", "YELLOW_A"],
+  "10": ["10", "pin10", "YELLOW_K"],
+  "11": ["11", "pin11", "GREEN_A"],
+  "12": ["12", "pin12", "GREEN_K"],
+  S1: ["S1", "pin13", "SHIELD_A"],
+  S2: ["S2", "pin14", "SHIELD_B"]
+}
+
+const magJackFootprint = (
+  <footprint name="P0_WE_7499011121A_RETAINED_PROJECT_FOOTPRINT" originalLayer="top">
+    {ethernetFootprintEvidence.exactPads.map((pad) => (
+      <Fragment key={pad.id}>
+        {pad.kind === "plated-hole" ? (
+          <platedhole
+            name={pad.id}
+            shape="circular_hole_with_rect_pad"
+            pcbX={pad.xMm}
+            pcbY={pad.yMm}
+            holeDiameter={`${pad.drillMm}mm`}
+            rectPadWidth={`${pad.widthMm}mm`}
+            rectPadHeight={`${pad.heightMm}mm`}
+            rectBorderRadius={pad.shape === "circle" ? `${pad.widthMm / 2}mm` : "0mm"}
+            portHints={Array.from(magJackPortHints[pad.id] ?? [pad.id])}
+          />
+        ) : (
+          <hole name={pad.id} diameter={`${pad.drillMm}mm`} pcbX={pad.xMm} pcbY={pad.yMm} />
+        )}
+      </Fragment>
+    ))}
+  </footprint>
+)
+
+const crystalPads = [
+  { name: "1", pcbX: -1.15, pcbY: 0.95, portHint: "XI" },
+  { name: "2", pcbX: 1.15, pcbY: 0.95, portHint: "GND_2" },
+  { name: "3", pcbX: 1.15, pcbY: -0.95, portHint: "XO" },
+  { name: "4", pcbX: -1.15, pcbY: -0.95, portHint: "GND_4" }
+] as const
+
+const crystalFootprint = (
+  <footprint name="P0_ECS_33B_SUGGESTED_LAND_PATTERN" originalLayer="top">
+    {crystalPads.map((pad) => (
+      <Fragment key={pad.name}>
+        <smtpad
+          name={pad.name}
+          shape="rect"
+          pcbX={`${pad.pcbX}mm`}
+          pcbY={`${pad.pcbY}mm`}
+          width="1.3mm"
+          height="1.1mm"
+          portHints={[pad.name, `pin${pad.name}`, pad.portHint]}
+        />
+      </Fragment>
+    ))}
+  </footprint>
+)
 
 function hub75Part(reference: string) {
   return applicationDisplayHub75SupportPart(reference)
 }
 
 /**
- * P0's display and Ethernet peripherals. The parent circuit owns U_ESP32 and
- * U_APP_RESET_FANOUT: this block consumes their reviewed signals but creates
+ * P0's display and Ethernet peripherals. The parent circuit owns the ESP32 and
+ * common reset: this block consumes their reviewed nets but creates
  * neither a second controller nor another reset authority.
  */
 export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; readonly pcbY: number }): ReactElement {
@@ -37,8 +109,7 @@ export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; re
       <chip
         name="J_ETH"
         manufacturerPartNumber="7499011121A"
-        doNotPlace
-        footprint={[]}
+        footprint={magJackFootprint}
         pinLabels={{
           pin1: "TD_P",
           pin2: "CTD",
@@ -60,8 +131,7 @@ export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; re
       <chip
         name="Y_W5500"
         manufacturerPartNumber="ECS-250-18-33B-JGN-TR"
-        doNotPlace
-        footprint={[]}
+        footprint={crystalFootprint}
         pinLabels={{ pin1: "XI", pin2: "GND_2", pin3: "XO", pin4: "GND_4" }}
       />
       <chip
@@ -311,11 +381,11 @@ export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; re
         pcbY={pcbY}
       />
 
-      <trace from="U_ESP32.APP_SPI_SCK" to="U_BP033_W5500.33" />
-      <trace from="U_ESP32.APP_SPI_MOSI" to="U_BP033_W5500.35" />
-      <trace from="U_BP033_W5500.34" to="U_ESP32.APP_SPI_MISO" />
-      <trace from="U_ESP32.ETH_CS_N" to="U_BP033_W5500.32" />
-      <trace from="U_APP_RESET_FANOUT.Y2" to="U_BP033_W5500.37" />
+      <trace from="net.APP_SPI_SCK" to="U_BP033_W5500.33" />
+      <trace from="net.APP_SPI_MOSI" to="U_BP033_W5500.35" />
+      <trace from="U_BP033_W5500.34" to="net.APP_SPI_MISO" />
+      <trace from="net.ETH_CS_N" to="U_BP033_W5500.32" />
+      <trace from="net.APP_RESET_N" to="U_BP033_W5500.37" />
       <trace from="U_BP033_W5500.36" to="R_W5500_INT_BIAS.pin1" />
       <trace from="R_W5500_INT_BIAS.pin2" to="net.APP_3V3" />
       <trace from="U_BP033_W5500.36" to="TP_W5500_INT_N.APP_W5500_INT_N" />
@@ -389,7 +459,7 @@ export function P0DigitalPeripherals({ pcbX, pcbY }: { readonly pcbX: number; re
       <trace from="J_ETH.SHIELD_B" to="net.CHASSIS_ETHERNET" />
 
       {hub75Signals.flatMap(([signal, buffer, input, output, panel]) => [
-        <trace key={`${signal}-input`} from={`U_ESP32.${signal}`} to={`${buffer}.${input}`} />,
+        <trace key={`${signal}-input`} from={`net.${signal}`} to={`${buffer}.${input}`} />,
         <trace key={`${signal}-output`} from={`${buffer}.${output}`} to={`J_HUB75.${panel}`} />,
         <trace
           key={`${signal}-default`}

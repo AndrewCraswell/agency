@@ -128,9 +128,9 @@ export function validateP0DisplayPowerCircuitContract(value: unknown = p0Display
  * open in the default safe-off procedure; this block does not authorize
  * assembly, panel connection, layout, or fabrication.
  */
-export function P0DisplayPowerCircuit(): ReactElement {
+export function P0DisplayPower({ pcbX, pcbY }: { readonly pcbX: number; readonly pcbY: number }): ReactElement {
   return (
-    <board title="P0 protected HUB75 display power branch" width="120mm" height="48mm" layers={2}>
+    <group name="P0_DISPLAY_POWER" pcbX={pcbX} pcbY={pcbY}>
       <pinheader
         name="J_DISPLAY_DISCONNECT"
         manufacturerPartNumber="43650-0200"
@@ -308,6 +308,14 @@ export function P0DisplayPowerCircuit(): ReactElement {
       <trace from="J_DISPLAY_POWER_PIGTAIL.APP_GND_BRANCH_1_B" to="net.APP_GND" />
       <trace from="J_DISPLAY_POWER_PIGTAIL.APP_GND_BRANCH_2_A" to="net.APP_GND" />
       <trace from="J_DISPLAY_POWER_PIGTAIL.APP_GND_BRANCH_2_B" to="net.APP_GND" />
+    </group>
+  )
+}
+
+export function P0DisplayPowerCircuit(): ReactElement {
+  return (
+    <board title="P0 protected HUB75 display power branch" width="120mm" height="48mm" layers={2}>
+      <P0DisplayPower pcbX={0} pcbY={0} />
     </board>
   )
 }

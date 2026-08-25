@@ -26,12 +26,12 @@ const pads = [
   { pad: 21, gpio: 13, pin: "GPIO13", signal: "HUB75_R1", group: "hub75", disposition: "assigned" },
   { pad: 22, gpio: 14, pin: "GPIO14", signal: "HUB75_G1", group: "hub75", disposition: "assigned" },
   { pad: 23, gpio: 21, pin: "GPIO21", signal: "HUB75_B1", group: "hub75", disposition: "assigned" },
-  { pad: 24, gpio: 47, pin: "GPIO47", signal: "P0_SPARE_GPIO47", group: "reserved", disposition: "reserved" },
+  { pad: 24, gpio: 47, pin: "GPIO47", signal: "SOURCE_LATCH", group: "source-control", disposition: "assigned" },
   { pad: 25, gpio: 48, pin: "GPIO48", signal: "HUB75_LAT", group: "hub75", disposition: "assigned" },
   { pad: 26, gpio: 45, pin: "GPIO45", signal: "HUB75_D", group: "hub75", disposition: "assigned" },
   { pad: 27, gpio: 0, pin: "GPIO0", signal: "BOOT_N", group: "recovery", disposition: "assigned" },
   { pad: 28, gpio: 35, pin: "GPIO35", signal: "IR_RX", group: "ir-receiver", disposition: "assigned" },
-  { pad: 29, gpio: 36, pin: "GPIO36", signal: "P0_SPARE_GPIO36", group: "reserved", disposition: "reserved" },
+  { pad: 29, gpio: 36, pin: "GPIO36", signal: "SOURCE_OE_N", group: "source-control", disposition: "assigned" },
   { pad: 30, gpio: 37, pin: "GPIO37", signal: "P0_SPARE_GPIO37", group: "reserved", disposition: "reserved" },
   { pad: 31, gpio: 38, pin: "GPIO38", signal: "HUB75_G2", group: "hub75", disposition: "assigned" },
   { pad: 32, gpio: 39, pin: "GPIO39", signal: "HUB75_B2", group: "hub75", disposition: "assigned" },
@@ -55,7 +55,7 @@ const allocationDefinition = {
   peripheralInstances: {
     scoringAdc: "SPI3_HOST plus GDMA",
     scoringConvst: "GPTimer0 hardware schedule; final GPIO event path is a BP-127 bench gate",
-    applicationBus: "SPI2_HOST dedicated to W5500",
+    applicationBus: "SPI2_HOST shared by W5500 and the write-only source-control register",
     ir: "RMT RX on GPIO35",
     usb: "native USB Serial/JTAG on GPIO19/GPIO20",
     watchdog: "GPTimer1 health epoch plus external APP_WD_KICK on GPIO12"
@@ -67,6 +67,22 @@ const allocationDefinition = {
     gpio: [4, 5, 6],
     comparatorInputs: 0,
     feasibilityGate: "BP-127"
+  },
+  sourceControl: {
+    register: "SN74HCS595PWR",
+    signals: ["APP_SPI_SCK", "APP_SPI_MOSI", "SOURCE_LATCH", "SOURCE_OE_N", "APP_RESET_N"],
+    gpio: [18, 8, 47, 36],
+    outputs: [
+      "LEFT_A_SOURCE_EN",
+      "LEFT_B_SOURCE_EN",
+      "LEFT_C_SOURCE_EN",
+      "RIGHT_A_SOURCE_EN",
+      "RIGHT_B_SOURCE_EN",
+      "RIGHT_C_SOURCE_EN",
+      "PISTE_SOURCE_EN"
+    ],
+    safeRule:
+      "APP_RESET_N clears the shift register, SOURCE_OE_N is pulled high to disable every output through reset, and each TMUX1112 select has a pulldown. Firmware latches a complete byte before enabling outputs."
   },
   primaryOutputs: {
     signals: ["LAMP_RED", "LAMP_GREEN", "LAMP_WHITE_LEFT", "LAMP_WHITE_RIGHT", "BUZZER"],
@@ -121,7 +137,7 @@ const allocationDefinition = {
   },
   unavailableResources: {
     internalFlashPsramGpios: [26, 27, 28, 29, 30, 31, 32],
-    rawExpansionGpios: [36, 37, 47],
+    rawExpansionGpios: [37],
     w5500Interrupt: "not connected; pulled inactive locally, exposed at a test point, and polled",
     isolatedResetRequest: "removed from P0",
     iso7721ReverseChannel: "removed from P0",
@@ -218,10 +234,13 @@ export function validateBenchPrototypeEsp32Allocation(input: unknown): true {
     new Set(signals).size !== signals.length ||
     benchPrototypeEsp32Allocation.scoringAdc.gpio.join(",") !== "4,5,6" ||
     benchPrototypeEsp32Allocation.peripheralInstances.scoringAdc !== "SPI3_HOST plus GDMA" ||
-    benchPrototypeEsp32Allocation.peripheralInstances.applicationBus !== "SPI2_HOST dedicated to W5500" ||
+    benchPrototypeEsp32Allocation.peripheralInstances.applicationBus !==
+      "SPI2_HOST shared by W5500 and the write-only source-control register" ||
     benchPrototypeEsp32Allocation.scoringAdc.comparatorInputs !== 0 ||
     benchPrototypeEsp32Allocation.primaryOutputs.gpio.join(",") !== "7,15,17,10,11" ||
-    benchPrototypeEsp32Allocation.unavailableResources.rawExpansionGpios.join(",") !== "36,37,47" ||
+    benchPrototypeEsp32Allocation.sourceControl.gpio.join(",") !== "18,8,47,36" ||
+    benchPrototypeEsp32Allocation.sourceControl.outputs.length !== 7 ||
+    benchPrototypeEsp32Allocation.unavailableResources.rawExpansionGpios.join(",") !== "37" ||
     benchPrototypeEsp32Allocation.irReceiver.gpio !== 35 ||
     benchPrototypeEsp32Allocation.irReceiver.receiverHardware !== "TSOP38438" ||
     benchPrototypeEsp32Allocation.recovery.populatedHeader ||

@@ -99,12 +99,12 @@ pad, or firmware claim in P0. `reserved-nc` is deliberately electrically quiet.
 | 21 | GPIO13 | HUB75_R1 | assigned |
 | 22 | GPIO14 | HUB75_G1 | assigned |
 | 23 | GPIO21 | HUB75_B1 | assigned |
-| 24 | GPIO47 | P0_SPARE_GPIO47 | reserved |
+| 24 | GPIO47 | SOURCE_LATCH | assigned |
 | 25 | GPIO48 | HUB75_LAT | assigned |
 | 26 | GPIO45 | HUB75_D | assigned |
 | 27 | GPIO0 | BOOT_N | assigned |
 | 28 | GPIO35 | IR_RX | assigned |
-| 29 | GPIO36 | P0_SPARE_GPIO36 | reserved |
+| 29 | GPIO36 | SOURCE_OE_N | assigned |
 | 30 | GPIO37 | P0_SPARE_GPIO37 | reserved |
 | 31 | GPIO38 | HUB75_G2 | assigned |
 | 32 | GPIO39 | HUB75_B2 | assigned |
@@ -119,8 +119,9 @@ pad, or firmware claim in P0. `reserved-nc` is deliberately electrically quiet.
 | 41 | GND_EP | APP_GND | ground |
 
 GPIO26 through GPIO32 are consumed by in-package flash and PSRAM. GPIO33 and
-GPIO34 are not module-exposed. The only raw P0 spares are GPIO36, GPIO37, and
-GPIO47 on pads 29, 30, and 24 respectively; they remain reserved.
+GPIO34 are not module-exposed. GPIO37 on pad 30 is the only raw P0 spare.
+GPIO47 latches the seven-channel source-control register and GPIO36 keeps its
+outputs disabled through reset until firmware has latched a complete safe byte.
 
 The executable record and focused verification are
 [`src/p0-esp32-support.ts`](../src/p0-esp32-support.ts) and

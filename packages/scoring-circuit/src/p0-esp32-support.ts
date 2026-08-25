@@ -164,8 +164,8 @@ const supportDefinition = {
   unavailableResources: {
     inPackageFlashPsram: [26, 27, 28, 29, 30, 31, 32],
     moduleUnexposed: [33, 34],
-    reservedSparePads: [29, 30, 24],
-    reservedSpareGpios: [36, 37, 47],
+    reservedSparePads: [30],
+    reservedSpareGpios: [37],
     rule: "Reserved spare pads have no circuit, pull, test pad, or firmware claim in P0. All other module pads have the exact assigned, power, ground, reset, or reserved-nc disposition in modulePadPolicy."
   },
   authority: {
@@ -203,7 +203,7 @@ export function validateP0Esp32Support(value: unknown): true {
     !sameDataGraph(contract.modulePadPolicy, benchPrototypeEsp32Allocation.pads) ||
     pads.length !== 41 ||
     new Set(assignedGpios).size !== assignedGpios.length ||
-    contract.unavailableResources.reservedSpareGpios.join(",") !== "36,37,47" ||
+    contract.unavailableResources.reservedSpareGpios.join(",") !== "37" ||
     contract.authority.schematicIntegrated ||
     contract.authority.supplyAndResetMeasured ||
     contract.authority.usbAndUartRecoveryDemonstrated ||

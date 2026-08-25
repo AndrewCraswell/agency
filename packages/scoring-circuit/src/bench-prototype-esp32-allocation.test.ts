@@ -26,12 +26,12 @@ describe("BP-121 sole-ESP32 P0 allocation", () => {
     })
     expect(benchPrototypeEsp32Allocation.peripheralInstances).toMatchObject({
       scoringAdc: "SPI3_HOST plus GDMA",
-      applicationBus: "SPI2_HOST dedicated to W5500",
+      applicationBus: "SPI2_HOST shared by W5500 and the write-only source-control register",
       ir: "RMT RX on GPIO35"
     })
   })
 
-  it("preserves Ethernet, HUB75, USB, IR, recovery, watchdog, and three spare GPIOs", () => {
+  it("preserves Ethernet, HUB75, USB, IR, recovery, watchdog, and one spare GPIO", () => {
     expect(benchPrototypeEsp32Allocation.pads.filter((pad) => pad.group === "hub75")).toHaveLength(13)
     expect(benchPrototypeEsp32Allocation.pads).toEqual(
       expect.arrayContaining([
@@ -39,10 +39,12 @@ describe("BP-121 sole-ESP32 P0 allocation", () => {
         expect.objectContaining({ gpio: 19, signal: "USB_DN" }),
         expect.objectContaining({ gpio: 20, signal: "USB_DP" }),
         expect.objectContaining({ gpio: 35, signal: "IR_RX" }),
-        expect.objectContaining({ gpio: 12, signal: "APP_WD_KICK" })
+        expect.objectContaining({ gpio: 12, signal: "APP_WD_KICK" }),
+        expect.objectContaining({ gpio: 47, signal: "SOURCE_LATCH" }),
+        expect.objectContaining({ gpio: 36, signal: "SOURCE_OE_N" })
       ])
     )
-    expect(benchPrototypeEsp32Allocation.unavailableResources.rawExpansionGpios).toEqual([36, 37, 47])
+    expect(benchPrototypeEsp32Allocation.unavailableResources.rawExpansionGpios).toEqual([37])
     expect(benchPrototypeEsp32Allocation.recovery.populatedHeader).toBe(false)
   })
 
