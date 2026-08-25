@@ -1,0 +1,78 @@
+# BP-031 and BP-032 C0603C104K3RACTU footprint review
+
+Status: review-only candidate. The exact orderable identity and rendered
+review geometry are recorded, but release, fabrication, CAD, and acceptance
+authority remain denied.
+
+## Exact scope
+
+This bounded slice covers one exact MPN and two explicit reference sets:
+
+| Work unit | References | Role |
+| --- | --- | --- |
+| BP-031 | `C_REF_REG_HF_1` through `C_REF_REG_HF_7` | Seven-channel REF5025A-Q1 local high-frequency output bypass |
+| BP-032 | `C_STM_SUPERVISOR_CT`, `C_STM_SUPERVISOR_BYPASS`, `C_STM_WD_BYPASS`, `C_STM_NRST_FILTER`, `C_ESP_SUPERVISOR_CT`, `C_ESP_SUPERVISOR_BYPASS`, `C_ESP_WD_BYPASS`, `C_APP_RESET_FANOUT_BYPASS` | Reset, supervisor, watchdog, and reset-fanout support bypass capacitors |
+
+Every listed reference is bound to KEMET `C0603C104K3RACTU`, package `0603`.
+The retained source calls the same orderable an SMD Comm X7R ceramic MLCC,
+100 nF, 10%, 25 VDC, X7R, 0603 / 1608. The source also records the alias
+`C0603C104K3RAC7867`.
+
+## Retained primary evidence
+
+The sole retained primary artifact is
+`docs/evidence/m4-04/yageo-c0603c104k3ractu-datasheet.pdf`.
+It is hash-bound as
+`F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064`.
+The PDF has four pages; page 1 is the exact-orderable page used by this
+record. Page 1 establishes:
+
+- L `1.6 +/-0.15 mm`, W `0.8 +/-0.15 mm`, and T `0.8 +/-0.15 mm`;
+- terminal separation S `0.5 mm minimum`;
+- terminal bandwidth B `0.35 +/-0.15 mm`;
+- 100 nF, 10%, 25 VDC, X7R, and the `0603 / 1608` case.
+
+The retained product specification does not publish a land pattern, copper
+land dimensions, solder-mask opening, stencil aperture, courtyard, or exact
+orderable CAD object. Package dimensions are therefore not promoted into
+manufacturer CAD or manufacturer land guidance.
+
+## Project-review geometry
+
+The component renders two rectangular SMT pads, centered on the local X axis:
+
+| Item | Project-review value | Authority |
+| --- | --- | --- |
+| Pad length | `0.90 mm` | Project input |
+| Pad width | `0.90 mm` | Project input |
+| Pad gap | `0.50 mm` | Project input based on the retained terminal-separation minimum |
+| Pad centers | `-0.70 mm`, `+0.70 mm` | Derived project geometry |
+| Solder mask opening | `1.00 mm x 1.00 mm` | Project NSMD input, `0.05 mm` per edge |
+| Paste opening | `0.80 mm x 0.80 mm` | Project reflow input, `0.05 mm` reduction per edge |
+| Courtyard | `2.40 mm x 1.40 mm` | Project review envelope |
+
+These values are deliberately labeled project inputs. They do not claim to
+be Yageo, KEMET, IPC, or exact-orderable manufacturer guidance. The rendered
+component uses pad 1 at negative local X and pad 2 at positive local X only as
+a review datum. The capacitor is non-polar, has no pin-one requirement, and is
+180-degree rotationally equivalent.
+
+The machine-readable record and validator are
+`src/bp031-032-c0603c104k3ractu-footprint-evidence.tsx`; the focused test
+renders the actual tscircuit geometry, checks ports and no render errors, and
+hash-binds the geometry. The validator fails closed on identity, package,
+reference sets, source hash, PDF page binding, geometry, orientation, CAD
+disposition, and release state.
+
+## Authority and open gates
+
+- No official retained CAD object exists in this slice. `manufacturerCad` is
+  `not-acquired` with authority `deny`.
+- The project footprint is review-only; artwork authority, fabrication
+  authority, release state, and `accepted` are all denied or false.
+- No board, schematic, ledger, backlog, manifest, or existing source contract
+  is edited by this slice.
+- Root review must independently compare the final PCB-tool footprint and
+  assembly orientation, decide whether exact manufacturer CAD exists, verify
+  mask, paste, courtyard, and package clearances, and reconcile all listed
+  references before any release decision.
