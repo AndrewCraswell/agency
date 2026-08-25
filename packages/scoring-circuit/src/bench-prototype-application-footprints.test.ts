@@ -281,7 +281,7 @@ describe("BP-033 application footprint closure ledger", () => {
     })
     expect(
       benchPrototypeApplicationFootprints.records.filter((record) => record.projectFootprintCandidate !== undefined)
-    ).toHaveLength(2)
+    ).toHaveLength(3)
     expect(benchPrototypeApplicationFootprints.releaseState).toBe("deny")
     expect(benchPrototypeApplicationFootprints.fabricationAuthorized).toBe(false)
   })
