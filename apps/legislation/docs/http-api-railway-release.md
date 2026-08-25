@@ -18,7 +18,17 @@ Next route state. The approved replacement sequence is the
 [Next.js API migration and staged release plan](nextjs-api-migration-plan.md).
 
 The current public origin remains useful as a rollback target while the Next.js foundation and endpoint blocks are
-released. It must not be described as the final application architecture.
+released. The Next.js route source is the existing `apps/legislation-web/app/api` boundary, and its deployment is a new
+parallel Railway service named `legislation-web`. The `apps/legislation` service remains reusable domain code plus this
+transitional standalone API; neither service should be described as final cutover until the migration gates pass.
+
+## Next.js foundation deployment configuration
+
+The new `legislation-web` service uses the repository root as its build context. Railway does not automatically discover
+nested config files, so set the service Config File Path explicitly to `/apps/legislation-web/railway.json`. Before
+deploying, verify the effective service configuration uses the Dockerfile builder, `apps/legislation-web/Dockerfile`,
+and `/ready` as the health check. A deployment is not a foundation success if Railway used a different builder, Dockerfile,
+or health path.
 
 ## Verified checks
 
@@ -42,18 +52,22 @@ acceptance checklist.
 
 ## Next safe actions
 
-1. Complete the patched Next.js dependency gate and NX-01 foundation work.
-2. Deploy the Next.js foundation without claiming endpoint migration, wait for terminal `SUCCESS`, and verify
-   `/health`, `/ready`, 404, and unsupported-method behavior.
-3. Migrate endpoint blocks in the plan's fixed order. After every block, record the new deployment ID, source commit,
-   cumulative remote-smoke evidence, and the immediately preceding successful deployment as rollback.
+1. Apply the approved Next.js `16.3.1` upgrade to the existing `apps/legislation-web` scaffold and complete NX-01
+   foundation work.
+2. Configure the new service with Config File Path `/apps/legislation-web/railway.json`, verify the effective Dockerfile
+   builder, `apps/legislation-web/Dockerfile`, and `/ready` health check, then deploy the foundation without claiming
+   endpoint migration. Wait for terminal `SUCCESS` and verify `/health`, `/ready`, 404, and unsupported-method behavior.
+3. Migrate endpoint blocks in the plan's fixed order. After every block, redeploy `legislation-web` and record the new
+   deployment ID, source commit, cumulative remote-smoke evidence, and the immediately preceding successful deployment
+   as rollback.
 4. Add authentication only after all 87 routes pass deployed smoke; add distributed rate limiting after auth; migrate
    MCP last.
 
 ## Rollback
 
-Until the first Next.js deployment succeeds, an application regression rolls back to deployment
-`f7c855ed-9b81-482b-9def-d3b3d8b90255` (or, if that deployment itself is under investigation,
+Until the first Next.js deployment succeeds, an application regression rolls back to the standalone `legislation-api`
+deployment `f7c855ed-9b81-482b-9def-d3b3d8b90255` (or, if that deployment itself is under investigation,
 `b00f37c0-50c1-4e95-91e3-1ba3bfa5d1d7`). After each Next.js block, the release record must replace this with the
-immediately preceding known-good deployment. Recheck `/health`, `/ready`, and every cumulative smoke profile after a
-rollback. Database migrations remain separate from process startup.
+immediately preceding known-good `legislation-web` deployment, while retaining the standalone service as a fallback
+until final cutover. Recheck `/health`, `/ready`, and every cumulative smoke profile after a rollback. Database
+migrations remain separate from process startup.

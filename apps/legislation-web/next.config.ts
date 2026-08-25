@@ -2,10 +2,14 @@ import { dirname, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import type { NextConfig } from "next"
 
+const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..")
+
 const nextConfig: NextConfig = {
+  output: "standalone",
+  outputFileTracingRoot: workspaceRoot,
   reactCompiler: true,
   turbopack: {
-    root: resolve(dirname(fileURLToPath(import.meta.url)), "../..")
+    root: workspaceRoot
   }
 }
 

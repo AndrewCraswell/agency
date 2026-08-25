@@ -3,6 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./api/next/http": {
+      "types": "./dist/api/next/http.d.ts",
+      "import": "./dist/api/next/http.js"
+    },
+    "./server/next": {
+      "types": "./dist/server/next/runtime.d.ts",
+      "import": "./dist/server/next/runtime.js"
+    }
+  },
   "files": [
     "dist",
     "scripts/smoke-dependencies.mjs"

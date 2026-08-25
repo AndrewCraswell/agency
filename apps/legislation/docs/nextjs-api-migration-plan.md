@@ -3,8 +3,10 @@
 ## Purpose
 
 This plan replaces the earlier TanStack Start and standalone HTTP-server delivery sequence. The approved application
-runtime is Next.js App Router. The existing 87 endpoint implementations remain useful domain, repository, projection,
-validation, and test code, but they are not counted as migrated until an explicit Next.js Route Handler exists and its
+and API boundary is the existing Next.js App Router application in `apps/legislation-web`. Its scaffold landed in
+commit `03e1c7b` with Next.js `16.2.6`; the user-approved foundation upgrade is Next.js `16.3.1`. The existing 87
+endpoint implementations in `apps/legislation` remain useful domain, repository, projection, validation, and test code,
+but they are not counted as migrated until an explicit Route Handler exists under `apps/legislation-web/app/api` and its
 deployed Railway smoke gate passes.
 
 The required order is:
@@ -23,10 +25,10 @@ placeholder needed to prove the application runtime.
 
 | Concern | Current evidence | Target state |
 | --- | --- | --- |
-| Application runtime | Standalone Node `http` server started by `dist/cli/main.js serve` | Next.js App Router production server |
-| Public endpoint domain code | 87 of 87 implemented and reviewed | Reused behind Next.js Route Handlers |
+| Application and API runtime | Next.js scaffold in `apps/legislation-web` from `03e1c7b` (`next@16.2.6`), with the approved `16.3.1` upgrade in progress; the standalone Node server remains in `apps/legislation` | Next.js App Router production server in `legislation-web` |
+| Public endpoint domain code | 87 of 87 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
 | Next.js Route Handlers | 0 of 87 | 87 of 87 deployed and remotely smoked |
-| Railway runtime | Standalone Node image | Next.js image with `/health`, `/ready`, and `/api/**` |
+| Railway runtime | `legislation-api` standalone service | New parallel `legislation-web` service with the Next.js image; `legislation-api` remains the rollback target during migration |
 | Authentication | WorkOS logic exists in the standalone composition | Added to the Next.js request boundary only after route migration |
 | Rate limiting | No approved distributed Next.js boundary | Added after authentication with a shared Railway-compatible store |
 | MCP transport | In-process access remains | HTTP client cutover only after API, auth, and rate-limit gates pass |
@@ -35,30 +37,33 @@ The previous endpoint ledger's 87 **Done** rows described the reusable standalon
 Next.js routing or a Next.js deployment. This plan uses separate **Domain state** and **Next route state** so that those
 two facts cannot be conflated again.
 
-## Foundation dependency gate
+## Foundation version and dependency decision
 
-Use the latest patched Next.js 16.3.x Active LTS release available on the repository's approved Microsoft package feed.
-Do not install a release that predates a published critical security fix, change the workstation hosts file, or switch
-the repository away from the Microsoft feed to make an install pass.
+The Next.js scaffold already exists in `apps/legislation-web` from commit `03e1c7b` and was initially pinned to
+`next@16.2.6`. The user approved upgrading the foundation to exact `next@16.3.1`, with the matching React dependencies
+already used by the scaffold. The foundation gate is therefore implementation, build, and deployment evidence; it is
+not a missing-Next dependency gate.
 
-At plan creation, the approved feed exposes `next@16.3.1` but not the patched `next@16.3.3`. Phase NX-01 therefore
-remains **Blocked** until either:
-
-- the Microsoft feed mirrors `next@16.3.3` or a later patched 16.3.x release; or
-- the user explicitly approves a narrowly scoped, reproducible dependency-source exception that leaves normal pnpm
-  installs on the Microsoft feed.
+Keep the approved Microsoft feed for workstation installs and preserve the committed frozen lockfile. Do not use a
+floating `latest` tag, change the hosts file, or replace the repository registry configuration to make an install pass.
+The Railway image follows the existing `legislation-api` release pattern: its isolated, frozen workspace closure uses
+`https://registry.npmjs.org/` inside the container build and never copies the workstation `.npmrc` or a feed credential.
 
 The gate is complete only when a clean frozen install, focused type check, production Next.js build, and container build
 all succeed from the committed lockfile.
 
 ## Target architecture
 
-- `apps/legislation/src/app/**` owns the Next.js App Router surface.
+- `apps/legislation-web/app/api/**` owns the explicit Next.js API Route Handlers for the documented `/api/**` operations.
+  The operational `/health` and `/ready` handlers remain at `apps/legislation-web/app/health/route.ts` and
+  `apps/legislation-web/app/ready/route.ts` so their root contract paths stay exact. `app/layout.tsx` and `app/page.tsx`
+  remain the existing non-product application shell.
 - Every documented HTTP operation has an explicit `route.ts`; a catch-all proxy does not count as migration.
 - Route Handlers export only documented methods. Undocumented methods and aliases retain the contract's rejection
   behavior.
 - Database, repositories, query services, canonical projections, request schemas, and response schemas remain
-  framework-independent and are reused.
+  framework-independent in `apps/legislation` and are reused by the Next.js boundary. Its standalone HTTP composition
+  remains the transitional API and rollback target while migration is in progress.
 - A server-only composition module owns process-wide database pools and service singletons. It must be safe under Next.js
   development reloads and Railway production lifecycle behavior.
 - API Route Handlers use the Node.js runtime because PostgreSQL, cryptography, provider clients, and document tooling are
@@ -66,7 +71,11 @@ all succeed from the committed lockfile.
 - The adapter preserves exact status codes, error/resource/page/search/batch envelopes, correlation IDs, ETags,
   conditional requests, request-size bounds, cancellation, and safe error handling.
 - `/health` is liveness and `/ready` is database-backed readiness. Neither runs migrations.
-- Railway continues to build from the repository root and health-check `/ready`.
+- Railway builds the new `legislation-web` service from the repository root. Because the config is nested, set the
+  Railway Config File Path explicitly to `/apps/legislation-web/railway.json`; nested config is not discovered
+  automatically. Before the first deployment and after config changes, verify the effective service uses the Dockerfile
+  builder, `apps/legislation-web/Dockerfile`, and `/ready` health check. The existing `legislation-api` service remains
+  available as the transitional rollback target.
 - The standalone `serve` command remains transitional only while block-by-block parity is being established. It is
   removed from the production path after the last Next route block passes.
 
@@ -88,7 +97,8 @@ State: **In progress**
 - Make this plan canonical and link it from the documentation index, API contract, implementation ledger, architecture
   decisions, and Railway release record.
 - Record 87 domain implementations as reusable input and 0 Next.js Route Handlers as complete.
-- Record the patched-Next/Microsoft-feed dependency gate.
+- Record the existing `legislation-web` scaffold, the approved `16.3.1` upgrade, and the parallel Railway-service
+  boundary.
 - Remove TanStack Start and premature MCP-cutover language from active planning.
 - Commit the documentation correction with normal hooks.
 
@@ -96,11 +106,13 @@ Exit gate: the repository no longer describes the standalone implementation as c
 
 ### NX-01: Next.js foundation and first Railway deployment
 
-State: **Blocked** by the patched-Next/Microsoft-feed gate.
+State: **In progress** from the existing `apps/legislation-web` scaffold.
 
-- Add patched Next.js 16.3.x, React, React DOM, and matching types through the approved pnpm workflow.
-- Add minimal App Router layout and placeholder page without starting product UX.
-- Add `src/app/health/route.ts` and `src/app/ready/route.ts`.
+- Apply the approved `next@16.3.1` upgrade and matching dependency lockfile update through the approved pnpm workflow.
+- Retain the existing minimal App Router layout and placeholder page without starting product UX.
+- Retain the operational health and readiness Route Handlers at `apps/legislation-web/app/health/route.ts` and
+  `apps/legislation-web/app/ready/route.ts`, preserving the contract's public `/health` and `/ready` behavior. All
+  documented `/api/**` operations must use explicit handlers under `apps/legislation-web/app/api/**`.
 - Add server-only configuration and singleton application-service composition.
 - Add the shared Next.js request/response adapter and exact error-envelope fallback.
 - Add correlation-ID, ETag, body-size, abort, unknown-route, and unsupported-method tests.
@@ -108,17 +120,22 @@ State: **Blocked** by the patched-Next/Microsoft-feed gate.
 - Update the Dockerfile for a reproducible Next.js standalone output and non-root runtime.
 - Keep database migrations separate from startup.
 - Build the production container locally.
-- Deploy the foundation to `legislation-api` on Railway.
+- Configure the new parallel `legislation-web` Railway service with repository-root source, Config File Path
+  `/apps/legislation-web/railway.json`, and the committed Dockerfile builder before deploying; keep `legislation-api`
+  unchanged as the rollback target.
+- Verify the effective Railway configuration uses `apps/legislation-web/Dockerfile` and `/ready` as its health check;
+  do not credit a deployment if Railway fell back to a different builder, Dockerfile, or health path.
 - Wait for terminal `SUCCESS`; verify `/health`, `/ready`, placeholder response, 404 behavior, and method rejection.
 - Record deployment ID, source commit, public origin, previous successful deployment, and rollback command.
 
-Exit gate: a patched Next.js App Router foundation is the healthy Railway runtime before any endpoint is credited as
+Exit gate: the approved Next.js App Router foundation is the healthy Railway runtime before any endpoint is credited as
 migrated.
 
 ### NX-02: Legislative endpoint migration
 
-Each sub-block requires explicit `route.ts` files, focused adapter/contract tests, production build, reviewed commit,
-Railway deployment, terminal `SUCCESS`, remote smoke, and rollback evidence.
+Each sub-block requires explicit `route.ts` files under `apps/legislation-web/app/api`, focused adapter/contract tests,
+production build, reviewed commit, deployment of the parallel `legislation-web` Railway service, terminal `SUCCESS`,
+remote smoke, and rollback evidence.
 
 #### NX-02A: Jurisdictions and sessions (11 endpoints)
 
@@ -333,7 +350,8 @@ client boundary with complete release and rollback evidence.
 2. Review every explicit Route Handler and shared adapter change against the contract.
 3. Run focused route tests, composed service tests, type checking, formatting, linting, and a production Next.js build.
 4. Commit the reviewed block with normal hooks.
-5. Deploy that commit to the Railway `legislation-api` production service.
+5. Deploy that commit to the parallel Railway `legislation-web` service. Keep the last successful `legislation-api` or
+   `legislation-web` deployment as the applicable rollback target while cutover is incomplete.
 6. Wait for the deployment to reach terminal `SUCCESS`; a build submission is not success.
 7. Verify `/health` and `/ready` before endpoint smoke.
 8. Run the new block's remote smoke and all earlier cumulative smoke profiles.

@@ -2,16 +2,23 @@
 
 ## Status and boundary
 
-This is the approved public and first-party application contract. The approved runtime is Next.js 16 App Router, with
-one explicit `route.ts` for every documented HTTP operation. Route migration and staged Railway release readiness are
-tracked in the [Next.js API migration plan](../nextjs-api-migration-plan.md) and the
+This is the approved public and first-party application contract. The approved runtime is the existing Next.js 16 App
+Router application in `apps/legislation-web`, with one explicit `route.ts` for every documented HTTP operation under
+`apps/legislation-web/app/api`. Route migration and staged Railway release readiness are tracked in the
+[Next.js API migration plan](../nextjs-api-migration-plan.md) and the
 [HTTP API implementation backlog](../http-api-implementation-backlog.md).
 
 The 87 existing standalone Node handlers are reusable domain implementation, not completed Next.js routes. The
-standalone server is a transitional migration source only. Authentication is added after all 87 Next.js routes pass
-deployed smoke, distributed rate limiting follows authentication, and MCP moves to the HTTP API last. The application,
-public API, and eventual MCP adapter share one application-service boundary so authorization, canonical identity,
-source attribution, and query behavior do not diverge.
+standalone server in `apps/legislation` is the transitional API and rollback target while the new parallel
+`legislation-web` Railway service is released. Authentication is added after all 87 Next.js routes pass deployed smoke,
+distributed rate limiting follows authentication, and MCP moves to the HTTP API last. The application, public API, and
+eventual MCP adapter share one application-service boundary so authorization, canonical identity, source attribution,
+and query behavior do not diverge.
+
+The operational liveness and readiness endpoints remain public `GET /health` and `GET /ready` contract paths. Their
+explicit Next.js handlers live at `apps/legislation-web/app/health/route.ts` and
+`apps/legislation-web/app/ready/route.ts`; documented `/api/**` operations remain under the `app/api` boundary. All
+must preserve the standalone response, status, content type, and correlation-ID behavior.
 
 The contract is split into focused pages:
 

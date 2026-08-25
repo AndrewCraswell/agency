@@ -8,28 +8,30 @@
     "pnpm": ">=11.0.0 <12.0.0"
   },
   "scripts": {
-    "build": "next build && oxfmt next-env.d.ts",
+    "build": "pnpm --filter legislation build && node scripts/next.mjs build && oxfmt next-env.d.ts",
     "check:format": "oxfmt --check",
     "check:lint": "pnpm lint",
     "check:types": "node ../../node_modules/typescript/bin/tsc --project tsconfig.json --noEmit",
     "check:unused": "knip --directory ../.. --workspace apps/legislation-web",
-    "dev": "next dev",
+    "dev": "node scripts/next.mjs dev",
     "lint": "oxlint --max-warnings=0",
-    "start": "next start",
+    "start": "node scripts/next.mjs start",
+    "smoke:foundation": "node scripts/smoke-foundation.mjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "verify": "run-s check:format check:lint check:types check:unused test:coverage"
   },
   "dependencies": {
-    "next": "16.2.6",
+    "legislation": "workspace:*",
+    "next": "16.3.1",
     "react": "19.2.7",
     "react-dom": "19.2.7"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@types/node": "catalog:",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
     "@vitest/coverage-v8": "^4.1.9",
     "oxlint": "^1.72.0",
     "typescript": "5.9.3",

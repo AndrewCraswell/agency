@@ -18,18 +18,20 @@ An endpoint is not Next-route **Done** merely because the standalone Node handle
 the source of truth for request and response bodies. The existing local smoke checklist is reusable test input, but the
 release gate also requires block-by-block deployed Railway smoke.
 
-This ledger was corrected on 2026-08-25 after Git and runtime inspection established that no Next.js dependency,
-`src/app` tree, Route Handler, or Next.js deployment exists on the active branch. All 87 rows have reviewed standalone
-domain/query/projection evidence, so the **Domain state** is 87 **Done**. The **Next route state** is 0 **Done**, 0 **In
-progress**, 0 **Ready**, and 87 **Blocked** on NX-01, the patched Next.js foundation. Authentication, distributed rate
-limiting, and MCP cutover are later global gates and must follow the sequence in the migration plan.
+This ledger was corrected on 2026-08-25 after the runtime boundary was reconciled. The Next.js application scaffold
+already exists in `apps/legislation-web` from commit `03e1c7b`, initially pinned to `16.2.6`; the user-approved upgrade
+target is `16.3.1`. Explicit Route Handlers belong under `apps/legislation-web/app/api`, not under `apps/legislation`.
+All 87 rows have reviewed standalone domain/query/projection evidence, so the **Domain state** is 87 **Done**. The
+**Next route state** is 0 **Done**, 0 **In progress**, 0 **Ready**, and 87 **Blocked** on the in-progress NX-01 foundation.
+The standalone `apps/legislation` server remains the transitional API and rollback target. Authentication, distributed
+rate limiting, and MCP cutover are later global gates and must follow the sequence in the migration plan.
 
 ## Delivery phases
 
 | ID | Phase | State | Granular tasks and exit gate |
 | --- | --- | --- | --- |
 | NX-00 | Correct the delivery record | In progress | Replace the TanStack/standalone completion model with the canonical Next.js plan, separate domain evidence from Next route evidence, and commit the correction. |
-| NX-01 | Next.js foundation and first deployment | Blocked | Install a patched Next.js 16.3.x from the approved Microsoft feed, add App Router health/readiness and server composition, build the production container, deploy, and smoke the foundation. |
+| NX-01 | Next.js foundation and first deployment | In progress | Apply the approved Next.js `16.3.1` upgrade to the existing `apps/legislation-web` scaffold, add App Router health/readiness and server composition under the `app/api` boundary, build the production container, deploy the new parallel `legislation-web` Railway service, and smoke the foundation. |
 | NX-02 | Migrate 38 legislative routes | Blocked | Migrate and release jurisdictions/sessions (11), bills/amendments/votes (18), then documents/materials/resources (9), deploying and remotely smoking each block. |
 | NX-03 | Migrate 28 civic routes | Blocked | Migrate and release people/organizations (14), then meetings/calendars/representative lookup (14), deploying and remotely smoking each block. |
 | NX-04 | Migrate 7 search/diff/research routes | Blocked | Migrate, deploy, and remotely verify lexical, semantic, hybrid, diff, and cited-answer behavior. |
@@ -52,9 +54,10 @@ For each deliverable:
 
 ## Endpoint state matrix
 
-The rows below record reusable standalone domain implementation only. Their **Domain state** does not promote a Next.js
-route. Until NX-01 is complete, every corresponding Next route is **Blocked**. After that, route status is promoted in
-the block ledger in the migration plan only after successful deployed smoke.
+The rows below record reusable domain implementation in `apps/legislation` only. Their **Domain state** does not promote a
+Next.js route. Until NX-01 is complete, every corresponding Next route is **Blocked**. After that, route status is
+promoted in the block ledger in the migration plan only after an explicit handler under
+`apps/legislation-web/app/api` passes successful deployed smoke on the parallel `legislation-web` service.
 
 ### Legislative records and documents
 
@@ -166,4 +169,4 @@ the block ledger in the migration plan only after successful deployed smoke.
 The current standalone release evidence is recorded in the
 [Railway API release record](http-api-railway-release.md). Progress reports must state both totals: reusable domain
 implementation is 87/87 **Done**; Next.js Route Handler migration is 0/87 **Done**, with all 87 currently **Blocked** on
-the patched Next.js foundation.
+the in-progress Next.js foundation.
