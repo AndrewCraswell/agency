@@ -27,9 +27,34 @@ describe("BP-146 TSOP38438 project footprint", () => {
       },
       solderMaskOpeningDiameterMm: 2.3,
       pasteOpeningDiameterMm: 0,
-      pinOne: { pin: 1, name: "OUT", coordinatesMm: { x: 0, y: 0 } },
-      lensDatum: { coordinatesMm: { x: 2.5, y: 0 }, opticalAxis: "negative-y" },
-      bodyDatum: { widthMm: 5, heightMm: 6.95, depthMm: 4.8, frontFaceYMm: 0, extendsPositiveY: true },
+      pinOne: { pin: 1, name: "OUT", coordinatesMm: { x: 0, y: 3.6 } },
+      lensDatum: {
+        coordinatesMm: { x: 2.5, y: 0 },
+        opticalAxis: "negative-y",
+        lensEnvelope: { centerMm: { x: 2.5, y: 2 }, radiusMm: 2, projectionDepthMm: 2 }
+      },
+      bodyDatum: {
+        widthMm: 5,
+        packageHeightMm: 6.95,
+        depthMm: 4.8,
+        frontFaceYMm: 0,
+        bodyBlockDepthMm: 2.8,
+        bodyBlockFrontFaceYMm: 2,
+        bodyBackFaceYMm: 4.8,
+        leadRowYMm: 3.6,
+        leadRowOffsetFromBodyBackEdgeMm: 1.2,
+        extendsPositiveY: true
+      },
+      courtyard: {
+        clearanceMm: 0.55,
+        minimumXMm: -1.65,
+        maximumXMm: 6.73,
+        minimumYMm: -0.55,
+        maximumYMm: 5.35,
+        centerMm: { x: 2.54, y: 2.4 },
+        widthMm: 8.38,
+        heightMm: 5.9
+      },
       manufacturerCad: { state: "not-acquired", authority: "deny" },
       opticalAuthority: "deny",
       physicalAuthority: "deny",
@@ -37,9 +62,9 @@ describe("BP-146 TSOP38438 project footprint", () => {
       accepted: false
     })
     expect(benchPrototypeIrReceiverProjectFootprintGeometry.pins).toEqual([
-      { pin: 1, name: "OUT", xMm: 0, yMm: 0 },
-      { pin: 2, name: "GND", xMm: 2.54, yMm: 0 },
-      { pin: 3, name: "VS", xMm: 5.08, yMm: 0 }
+      { pin: 1, name: "OUT", xMm: 0, yMm: 3.6 },
+      { pin: 2, name: "GND", xMm: 2.54, yMm: 3.6 },
+      { pin: 3, name: "VS", xMm: 5.08, yMm: 3.6 }
     ])
   })
 
@@ -52,7 +77,7 @@ describe("BP-146 TSOP38438 project footprint", () => {
         expect.objectContaining({
           shape: "circular_hole_with_rect_pad",
           x: 0,
-          y: 0,
+          y: 3.6,
           hole_diameter: 1.1,
           rect_pad_width: 2.2,
           rect_pad_height: 2.2,
@@ -62,7 +87,7 @@ describe("BP-146 TSOP38438 project footprint", () => {
         expect.objectContaining({
           shape: "circular_hole_with_rect_pad",
           x: 2.54,
-          y: 0,
+          y: 3.6,
           hole_diameter: 1.1,
           rect_pad_width: 2.2,
           rect_pad_height: 2.2,
@@ -72,7 +97,7 @@ describe("BP-146 TSOP38438 project footprint", () => {
         expect.objectContaining({
           shape: "circular_hole_with_rect_pad",
           x: 5.08,
-          y: 0,
+          y: 3.6,
           hole_diameter: 1.1,
           rect_pad_width: 2.2,
           rect_pad_height: 2.2,
@@ -119,13 +144,25 @@ describe("BP-146 TSOP38438 project footprint", () => {
     )
   })
 
-  it("renders review-only body and lens datum graphics without asserting manufacturer CAD", () => {
+  it("renders real courtyard and body/lens obstruction geometry without asserting manufacturer CAD", () => {
     const json = renderProjectFootprint()
+    expect(json.filter((element) => element.type === "pcb_courtyard_rect")).toEqual(
+      expect.arrayContaining([expect.objectContaining({ center: { x: 2.54, y: 2.4 }, width: 8.38, height: 5.9 })])
+    )
+    expect(json.filter((element) => element.type === "pcb_keepout")).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ shape: "rect", center: { x: 2.5, y: 3.4 }, width: 5, height: 2.8, layers: ["top"] }),
+        expect.objectContaining({ shape: "circle", center: { x: 2.5, y: 2 }, radius: 2, layers: ["top"] })
+      ])
+    )
     expect(json.filter((element) => element.type === "pcb_silkscreen_rect")).toEqual(
-      expect.arrayContaining([expect.objectContaining({ center: { x: 2.5, y: 3.475 }, width: 5, height: 6.95 })])
+      expect.arrayContaining([expect.objectContaining({ center: { x: 2.5, y: 3.4 }, width: 5, height: 2.8 })])
+    )
+    expect(json.filter((element) => element.type === "pcb_silkscreen_circle")).toEqual(
+      expect.arrayContaining([expect.objectContaining({ center: { x: 2.5, y: 2 }, radius: 2 })])
     )
     expect(json.filter((element) => element.type === "pcb_silkscreen_line")).toEqual(
-      expect.arrayContaining([expect.objectContaining({ x1: 0, y1: 0, x2: 5, y2: 0 })])
+      expect.arrayContaining([expect.objectContaining({ x1: 0, y1: 2, x2: 5, y2: 2 })])
     )
     expect(benchPrototypeIrReceiverProjectFootprintGeometry.manufacturerCad.authority).toBe("deny")
     expect(benchPrototypeIrReceiverProjectFootprintGeometry.accepted).toBe(false)

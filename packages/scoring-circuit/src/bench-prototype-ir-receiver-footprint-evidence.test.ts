@@ -8,6 +8,11 @@ import {
   validateBenchPrototypeIrReceiverFootprintEvidence
 } from "./bench-prototype-ir-receiver-footprint-evidence.js"
 import { benchPrototypeIrReceiverProjectFootprintGeometry } from "./bench-prototype-ir-receiver-project-footprint.js"
+import {
+  BP146_OVERLAY_GENERATOR,
+  BP146_OVERLAY_GENERATOR_VERSION,
+  bp146OverlayArtifacts
+} from "./bp146-overlay-generator.js"
 
 function inflatePdfStreams(bytes: Buffer) {
   let decoded = ""
@@ -160,17 +165,28 @@ describe("BP-146 IR receiver footprint source evidence", () => {
         clearanceRule: "minimum finished drill minus maximum lead diagonal must be at least 0.15 mm",
         clearancePasses: true,
         maskWebAtPitchMm: 0.24,
-        maskWebRule: "2.54 mm nominal pitch minus 2.30 mm mask opening must be at least 0.20 mm"
+        maskWebRule: "2.54 mm nominal pitch minus 2.30 mm mask opening must be at least 0.20 mm",
+        courtyardEnvelope: {
+          clearanceMm: 0.55,
+          minimumXMm: -1.65,
+          maximumXMm: 6.73,
+          minimumYMm: -0.55,
+          maximumYMm: 5.35,
+          centerMm: { x: 2.54, y: 2.4 },
+          widthMm: 8.38,
+          heightMm: 5.9
+        }
       },
       pinOne: {
-        boardPinOneOrientation: "pin-1-at-x0-y0; lead-row-and-lens-face-at-y0; body-extends-positive-y",
+        boardPinOneOrientation:
+          "pin-1-at-x0-y3.6; lead-row-y3.6 from 1.2 mm body-back offset; lens-front-y0; body-extends-positive-y",
         boardRotationDegrees: 0,
         boardRotationToleranceDegrees: 0.1,
-        boardCoordinatesMm: { x: 0, y: 0 },
+        boardCoordinatesMm: { x: 0, y: 3.6 },
         overlayMatch: false
       },
       lens: {
-        boardLensDatum: "lens-face-center-at-x2.5-y0; optical-axis-negative-y",
+        boardLensDatum: "lens-front-center-at-x2.5-y0; lens-envelope-center-x2.5-y2-radius2; optical-axis-negative-y",
         boardRotationDegrees: 0,
         boardRotationToleranceDegrees: 0.1,
         boardCoordinatesMm: { x: 2.5, y: 0 },
@@ -180,8 +196,8 @@ describe("BP-146 IR receiver footprint source evidence", () => {
       generatedArtwork: {
         state: "generated-project-review-only",
         generator: "deterministic-svg-overlay-generator",
-        generatorVersion: "1.0.0",
-        sha256: "5F9662C67CA5144D5ABA88E917EC025DF45E2481A16A10896E6B38728160774A"
+        generatorVersion: "2.1.0",
+        sha256: "72B78D44DE5B70E527BD7555B3BAD89BDED4A8A158F1A4F71B10F92405853DB5"
       },
       toleranceReview: {
         packageLeadPitchToleranceMm: 0.2,
@@ -197,8 +213,8 @@ describe("BP-146 IR receiver footprint source evidence", () => {
         state: "generated-project-review-only",
         artifactPath: "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg",
         generator: "deterministic-svg-overlay-generator",
-        generatorVersion: "1.0.0",
-        sha256: "5F9662C67CA5144D5ABA88E917EC025DF45E2481A16A10896E6B38728160774A",
+        generatorVersion: "2.1.0",
+        sha256: "72B78D44DE5B70E527BD7555B3BAD89BDED4A8A158F1A4F71B10F92405853DB5",
         reviewedBy: null,
         reviewStatus: "pending"
       },
@@ -208,8 +224,8 @@ describe("BP-146 IR receiver footprint source evidence", () => {
         state: "generated-project-review-only",
         artifactPath: "docs/evidence/bp-146/tsop38438-project-assembly-overlay.svg",
         generator: "deterministic-svg-overlay-generator",
-        generatorVersion: "1.0.0",
-        sha256: "8B54B54ED85F33B67D77AAF3350EE326A549AAB0643BEAE78CCEC95650093A87",
+        generatorVersion: "2.1.0",
+        sha256: "AD5CB0119E64E688D6597CB13AAD1C41835F01AA1FBA72D9B2698856CD4CDA8A",
         reviewedBy: null,
         reviewStatus: "pending"
       }
@@ -225,17 +241,17 @@ describe("BP-146 IR receiver footprint source evidence", () => {
       geometryExportName: "benchPrototypeIrReceiverProjectFootprintGeometry",
       componentName: "U_BP146_TSOP38438",
       footprintName: "BP146_TSOP38438_PROJECT_FOOTPRINT",
-      gitBlobSha1: "44D776787650030A1622C6356B666F28981673A1",
-      sha256: "F8446CC9258EC3C55CF8378C837F4F7EBD08F42F94439AD0F457354FF7F87DC5",
+      gitBlobSha1: "07273F80E0F622108F272238C6C0A39B54658B98",
+      sha256: "56925A88005421305B161D56537235FC3BE4D8B79EE66767CFFC9803FC75295C",
       authority: "deny",
       manufacturerCad: { state: "not-acquired", authority: "deny" }
     })
     expect(artifact.geometry).toEqual(benchPrototypeIrReceiverProjectFootprintGeometry)
     expect(artifact.geometry.manufacturerPartNumber).toBe("TSOP38438")
     expect(artifact.geometry.pins).toEqual([
-      { pin: 1, name: "OUT", xMm: 0, yMm: 0 },
-      { pin: 2, name: "GND", xMm: 2.54, yMm: 0 },
-      { pin: 3, name: "VS", xMm: 5.08, yMm: 0 }
+      { pin: 1, name: "OUT", xMm: 0, yMm: 3.6 },
+      { pin: 2, name: "GND", xMm: 2.54, yMm: 3.6 },
+      { pin: 3, name: "VS", xMm: 5.08, yMm: 3.6 }
     ])
 
     const packageRoot = new URL("../", import.meta.url)
@@ -331,7 +347,7 @@ describe("BP-146 IR receiver footprint source evidence", () => {
       const bytes = readFileSync(new URL(overlay.artifactPath, packageRoot))
       expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(overlay.sha256)
       expect(bytes.toString("utf8")).toContain("scale 1:1")
-      expect(bytes.toString("utf8")).toContain("deterministic-svg-overlay-generator 1.0.0")
+      expect(bytes.toString("utf8")).toContain(`${BP146_OVERLAY_GENERATOR} ${BP146_OVERLAY_GENERATOR_VERSION}`)
       expect(overlay.reviewStatus).toBe("pending")
     }
     const footprintSvg = readFileSync(
@@ -342,11 +358,14 @@ describe("BP-146 IR receiver footprint source evidence", () => {
       new URL("docs/evidence/bp-146/tsop38438-project-assembly-overlay.svg", packageRoot),
       "utf8"
     )
-    expect(footprintSvg).toContain('<rect x="0" y="0" width="5" height="6.95" />')
-    expect(assemblySvg).toContain('<rect x="0" y="0" width="5" height="6.95" />')
+    expect(footprintSvg).toContain('<rect x="0" y="2" width="5" height="2.8" />')
+    expect(assemblySvg).toContain('<rect x="0" y="2" width="5" height="2.8" />')
     expect(assemblySvg).toContain('<line x1="2.5" y1="0" x2="2.5" y2="-3" />')
-    expect(assemblySvg).toContain("lens face at y=0")
+    expect(assemblySvg).toContain("lens front datum is (2.5,0)")
+    expect(assemblySvg).toContain("lead row are at y=3.6")
     expect(assemblySvg).toContain("optical axis points negative y")
+    expect(footprintSvg).toBe(bp146OverlayArtifacts["docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg"])
+    expect(assemblySvg).toBe(bp146OverlayArtifacts["docs/evidence/bp-146/tsop38438-project-assembly-overlay.svg"])
     expect(benchPrototypeIrReceiverFootprintEvidence.candidateFootprintReview.manufacturerCad.authority).toBe("deny")
     expect(benchPrototypeIrReceiverFootprintEvidence.acceptance.footprintReleased).toBe(false)
     expect(benchPrototypeIrReceiverFootprintEvidence.opticalCouponReviewProcedure.projectKeepout).toMatchObject({

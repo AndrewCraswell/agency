@@ -43,8 +43,8 @@ describe("BP-146 encrypted-IR receiver selection", () => {
     ).toMatchObject({
       artifactPath: "src/bench-prototype-ir-receiver-project-footprint.tsx",
       geometryExportName: "benchPrototypeIrReceiverProjectFootprintGeometry",
-      gitBlobSha1: "44D776787650030A1622C6356B666F28981673A1",
-      sha256: "F8446CC9258EC3C55CF8378C837F4F7EBD08F42F94439AD0F457354FF7F87DC5",
+      gitBlobSha1: "07273F80E0F622108F272238C6C0A39B54658B98",
+      sha256: "56925A88005421305B161D56537235FC3BE4D8B79EE66767CFFC9803FC75295C",
       authority: "deny",
       manufacturerCad: { state: "not-acquired", authority: "deny" }
     })
@@ -52,9 +52,9 @@ describe("BP-146 encrypted-IR receiver selection", () => {
       benchPrototypeIrReceiverSelection.footprintEvidence.candidateFootprintReview.projectFootprintArtifact.geometry
         .pins
     ).toEqual([
-      { pin: 1, name: "OUT", xMm: 0, yMm: 0 },
-      { pin: 2, name: "GND", xMm: 2.54, yMm: 0 },
-      { pin: 3, name: "VS", xMm: 5.08, yMm: 0 }
+      { pin: 1, name: "OUT", xMm: 0, yMm: 3.6 },
+      { pin: 2, name: "GND", xMm: 2.54, yMm: 3.6 },
+      { pin: 3, name: "VS", xMm: 5.08, yMm: 3.6 }
     ])
     expect(benchPrototypeIrReceiverSelection.footprintEvidence.throughHoleGeometry).toMatchObject({
       leadPitchNominalMm: 2.54,

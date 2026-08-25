@@ -319,8 +319,8 @@ const definition = {
       geometryExportName: "benchPrototypeIrReceiverProjectFootprintGeometry",
       componentName: "U_BP146_TSOP38438",
       footprintName: "BP146_TSOP38438_PROJECT_FOOTPRINT",
-      gitBlobSha1: "44D776787650030A1622C6356B666F28981673A1",
-      sha256: "F8446CC9258EC3C55CF8378C837F4F7EBD08F42F94439AD0F457354FF7F87DC5",
+      gitBlobSha1: "07273F80E0F622108F272238C6C0A39B54658B98",
+      sha256: "56925A88005421305B161D56537235FC3BE4D8B79EE66767CFFC9803FC75295C",
       authority: "deny",
       geometry: {
         artifactKind: "bp146-tsop38438-project-footprint",
@@ -335,13 +335,13 @@ const definition = {
         pinOne: {
           pin: 1,
           name: "OUT",
-          coordinatesMm: { x: 0, y: 0 },
+          coordinatesMm: { x: 0, y: 3.6 },
           boardRotationDegrees: 0
         },
         pins: [
-          { pin: 1, name: "OUT", xMm: 0, yMm: 0 },
-          { pin: 2, name: "GND", xMm: 2.54, yMm: 0 },
-          { pin: 3, name: "VS", xMm: 5.08, yMm: 0 }
+          { pin: 1, name: "OUT", xMm: 0, yMm: 3.6 },
+          { pin: 2, name: "GND", xMm: 2.54, yMm: 3.6 },
+          { pin: 3, name: "VS", xMm: 5.08, yMm: 3.6 }
         ],
         pitchMm: 2.54,
         finishedDrillDiameterMm: 1.1,
@@ -360,15 +360,36 @@ const definition = {
         lensDatum: {
           source: "front optical window at the Vishay package drawing front face",
           coordinatesMm: { x: 2.5, y: 0 },
-          opticalAxis: "negative-y"
+          opticalAxis: "negative-y",
+          lensEnvelope: {
+            centerMm: { x: 2.5, y: 2 },
+            radiusMm: 2,
+            projectionDepthMm: 2
+          }
         },
         bodyDatum: {
           source: "Vishay Minicast package drawing 6.550-5263.01-4",
           widthMm: 5,
-          heightMm: 6.95,
+          packageHeightMm: 6.95,
           depthMm: 4.8,
           frontFaceYMm: 0,
+          bodyBlockDepthMm: 2.8,
+          bodyBlockFrontFaceYMm: 2,
+          bodyBackFaceYMm: 4.8,
+          leadRowYMm: 3.6,
+          leadRowOffsetFromBodyBackEdgeMm: 1.2,
           extendsPositiveY: true
+        },
+        courtyard: {
+          source: "project 0.55 mm clearance around the nominal body projection and copper-pad extents",
+          clearanceMm: 0.55,
+          minimumXMm: -1.65,
+          maximumXMm: 6.73,
+          minimumYMm: -0.55,
+          maximumYMm: 5.35,
+          centerMm: { x: 2.54, y: 2.4 },
+          widthMm: 8.38,
+          heightMm: 5.9
         },
         opticalAuthority: "deny",
         physicalAuthority: "deny",
@@ -382,7 +403,7 @@ const definition = {
     },
     packageDrawingDatum: "front optical window and pin 1 lead order from Vishay drawing 6.550-5263.01-4",
     boardCoordinateDatum:
-      "project-origin-at-pin-1-x0-y0; lead-row-and-lens-face-at-y0; body-extends-positive-y; optical-axis-negative-y",
+      "lens-front-datum-at-x2.5-y0; lead-row-at-y3.6 from 1.2 mm body-back offset; body-plane-depth-4.8 (not package-height-6.95); body-extends-positive-y; optical-axis-negative-y",
     finishedGeometry: {
       drillDiameterMm: 1.1,
       padDiameterMm: 2.2,
@@ -399,19 +420,31 @@ const definition = {
       clearanceRule: "minimum finished drill minus maximum lead diagonal must be at least 0.15 mm",
       clearancePasses: true,
       maskWebAtPitchMm: 0.24,
-      maskWebRule: "2.54 mm nominal pitch minus 2.30 mm mask opening must be at least 0.20 mm"
+      maskWebRule: "2.54 mm nominal pitch minus 2.30 mm mask opening must be at least 0.20 mm",
+      courtyardEnvelope: {
+        source: "project 0.55 mm clearance around the nominal body projection and copper-pad extents",
+        clearanceMm: 0.55,
+        minimumXMm: -1.65,
+        maximumXMm: 6.73,
+        minimumYMm: -0.55,
+        maximumYMm: 5.35,
+        centerMm: { x: 2.54, y: 2.4 },
+        widthMm: 8.38,
+        heightMm: 5.9
+      }
     },
     pinOne: {
       sourceDatum: "Vishay package drawing pin 1 OUT lead at the lens-face front view",
-      boardPinOneOrientation: "pin-1-at-x0-y0; lead-row-and-lens-face-at-y0; body-extends-positive-y",
+      boardPinOneOrientation:
+        "pin-1-at-x0-y3.6; lead-row-y3.6 from 1.2 mm body-back offset; lens-front-y0; body-extends-positive-y",
       boardRotationDegrees: 0,
       boardRotationToleranceDegrees: 0.1,
-      boardCoordinatesMm: { x: 0, y: 0 },
+      boardCoordinatesMm: { x: 0, y: 3.6 },
       overlayMatch: false
     },
     lens: {
       sourceDatum: "front optical window is the y=0 lens face; optical axis points toward negative y",
-      boardLensDatum: "lens-face-center-at-x2.5-y0; optical-axis-negative-y",
+      boardLensDatum: "lens-front-center-at-x2.5-y0; lens-envelope-center-x2.5-y2-radius2; optical-axis-negative-y",
       boardRotationDegrees: 0,
       boardRotationToleranceDegrees: 0.1,
       boardCoordinatesMm: { x: 2.5, y: 0 },
@@ -428,8 +461,8 @@ const definition = {
       state: "generated-project-review-only",
       artifactPath: "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg",
       generator: "deterministic-svg-overlay-generator",
-      generatorVersion: "1.0.0",
-      sha256: "5F9662C67CA5144D5ABA88E917EC025DF45E2481A16A10896E6B38728160774A",
+      generatorVersion: "2.1.0",
+      sha256: "72B78D44DE5B70E527BD7555B3BAD89BDED4A8A158F1A4F71B10F92405853DB5",
       authority: "deny"
     },
     oneToOneOverlayArtifacts: [
@@ -439,8 +472,8 @@ const definition = {
         state: "generated-project-review-only",
         artifactPath: "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg",
         generator: "deterministic-svg-overlay-generator",
-        generatorVersion: "1.0.0",
-        sha256: "5F9662C67CA5144D5ABA88E917EC025DF45E2481A16A10896E6B38728160774A",
+        generatorVersion: "2.1.0",
+        sha256: "72B78D44DE5B70E527BD7555B3BAD89BDED4A8A158F1A4F71B10F92405853DB5",
         reviewedBy: null,
         reviewStatus: "pending"
       },
@@ -450,8 +483,8 @@ const definition = {
         state: "generated-project-review-only",
         artifactPath: "docs/evidence/bp-146/tsop38438-project-assembly-overlay.svg",
         generator: "deterministic-svg-overlay-generator",
-        generatorVersion: "1.0.0",
-        sha256: "8B54B54ED85F33B67D77AAF3350EE326A549AAB0643BEAE78CCEC95650093A87",
+        generatorVersion: "2.1.0",
+        sha256: "AD5CB0119E64E688D6597CB13AAD1C41835F01AA1FBA72D9B2698856CD4CDA8A",
         reviewedBy: null,
         reviewStatus: "pending"
       }
@@ -713,8 +746,8 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
     projectFootprintArtifact.geometryExportName !== "benchPrototypeIrReceiverProjectFootprintGeometry" ||
     projectFootprintArtifact.componentName !== "U_BP146_TSOP38438" ||
     projectFootprintArtifact.footprintName !== "BP146_TSOP38438_PROJECT_FOOTPRINT" ||
-    projectFootprintArtifact.gitBlobSha1 !== "44D776787650030A1622C6356B666F28981673A1" ||
-    projectFootprintArtifact.sha256 !== "F8446CC9258EC3C55CF8378C837F4F7EBD08F42F94439AD0F457354FF7F87DC5" ||
+    projectFootprintArtifact.gitBlobSha1 !== "07273F80E0F622108F272238C6C0A39B54658B98" ||
+    projectFootprintArtifact.sha256 !== "56925A88005421305B161D56537235FC3BE4D8B79EE66767CFFC9803FC75295C" ||
     projectFootprintArtifact.authority !== "deny" ||
     projectFootprintArtifact.manufacturerCad.state !== "not-acquired" ||
     projectFootprintArtifact.manufacturerCad.authority !== "deny" ||
@@ -737,14 +770,26 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
     candidate.finishedGeometry.maskWebAtPitchMm !== 0.24 ||
     candidate.finishedGeometry.maskWebRule !==
       "2.54 mm nominal pitch minus 2.30 mm mask opening must be at least 0.20 mm" ||
+    candidate.finishedGeometry.courtyardEnvelope.source !==
+      "project 0.55 mm clearance around the nominal body projection and copper-pad extents" ||
+    candidate.finishedGeometry.courtyardEnvelope.clearanceMm !== 0.55 ||
+    candidate.finishedGeometry.courtyardEnvelope.minimumXMm !== -1.65 ||
+    candidate.finishedGeometry.courtyardEnvelope.maximumXMm !== 6.73 ||
+    candidate.finishedGeometry.courtyardEnvelope.minimumYMm !== -0.55 ||
+    candidate.finishedGeometry.courtyardEnvelope.maximumYMm !== 5.35 ||
+    candidate.finishedGeometry.courtyardEnvelope.centerMm.x !== 2.54 ||
+    candidate.finishedGeometry.courtyardEnvelope.centerMm.y !== 2.4 ||
+    candidate.finishedGeometry.courtyardEnvelope.widthMm !== 8.38 ||
+    candidate.finishedGeometry.courtyardEnvelope.heightMm !== 5.9 ||
     candidate.pinOne.boardPinOneOrientation !==
-      "pin-1-at-x0-y0; lead-row-and-lens-face-at-y0; body-extends-positive-y" ||
+      "pin-1-at-x0-y3.6; lead-row-y3.6 from 1.2 mm body-back offset; lens-front-y0; body-extends-positive-y" ||
     candidate.pinOne.boardRotationDegrees !== 0 ||
     candidate.pinOne.boardRotationToleranceDegrees !== 0.1 ||
     candidate.pinOne.boardCoordinatesMm.x !== 0 ||
-    candidate.pinOne.boardCoordinatesMm.y !== 0 ||
+    candidate.pinOne.boardCoordinatesMm.y !== 3.6 ||
     candidate.pinOne.overlayMatch ||
-    candidate.lens.boardLensDatum !== "lens-face-center-at-x2.5-y0; optical-axis-negative-y" ||
+    candidate.lens.boardLensDatum !==
+      "lens-front-center-at-x2.5-y0; lens-envelope-center-x2.5-y2-radius2; optical-axis-negative-y" ||
     candidate.lens.boardRotationDegrees !== 0 ||
     candidate.lens.boardRotationToleranceDegrees !== 0.1 ||
     candidate.lens.boardCoordinatesMm.x !== 2.5 ||
@@ -758,8 +803,8 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
     candidate.generatedArtwork.state !== "generated-project-review-only" ||
     candidate.generatedArtwork.artifactPath !== "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg" ||
     candidate.generatedArtwork.generator !== "deterministic-svg-overlay-generator" ||
-    candidate.generatedArtwork.generatorVersion !== "1.0.0" ||
-    candidate.generatedArtwork.sha256 !== "5F9662C67CA5144D5ABA88E917EC025DF45E2481A16A10896E6B38728160774A" ||
+    candidate.generatedArtwork.generatorVersion !== "2.1.0" ||
+    candidate.generatedArtwork.sha256 !== "72B78D44DE5B70E527BD7555B3BAD89BDED4A8A158F1A4F71B10F92405853DB5" ||
     candidate.generatedArtwork.authority !== "deny" ||
     candidate.oneToOneOverlayArtifacts.length !== 2 ||
     candidate.oneToOneOverlayArtifacts.some(
@@ -771,11 +816,11 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
             ? "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg"
             : "docs/evidence/bp-146/tsop38438-project-assembly-overlay.svg") ||
         artifact.generator !== "deterministic-svg-overlay-generator" ||
-        artifact.generatorVersion !== "1.0.0" ||
+        artifact.generatorVersion !== "2.1.0" ||
         artifact.sha256 !==
           (artifact.kind === "package-drawing-vs-project-footprint"
-            ? "5F9662C67CA5144D5ABA88E917EC025DF45E2481A16A10896E6B38728160774A"
-            : "8B54B54ED85F33B67D77AAF3350EE326A549AAB0643BEAE78CCEC95650093A87") ||
+            ? "72B78D44DE5B70E527BD7555B3BAD89BDED4A8A158F1A4F71B10F92405853DB5"
+            : "AD5CB0119E64E688D6597CB13AAD1C41835F01AA1FBA72D9B2698856CD4CDA8A") ||
         artifact.reviewedBy !== null ||
         artifact.reviewStatus !== "pending"
     ) ||

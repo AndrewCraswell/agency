@@ -23,13 +23,13 @@ export const benchPrototypeIrReceiverProjectFootprintGeometry = {
   pinOne: {
     pin: 1,
     name: "OUT",
-    coordinatesMm: { x: 0, y: 0 },
+    coordinatesMm: { x: 0, y: 3.6 },
     boardRotationDegrees: 0
   },
   pins: [
-    { pin: 1, name: "OUT", xMm: 0, yMm: 0 },
-    { pin: 2, name: "GND", xMm: 2.54, yMm: 0 },
-    { pin: 3, name: "VS", xMm: 5.08, yMm: 0 }
+    { pin: 1, name: "OUT", xMm: 0, yMm: 3.6 },
+    { pin: 2, name: "GND", xMm: 2.54, yMm: 3.6 },
+    { pin: 3, name: "VS", xMm: 5.08, yMm: 3.6 }
   ],
   pitchMm: 2.54,
   finishedDrillDiameterMm: 1.1,
@@ -48,15 +48,36 @@ export const benchPrototypeIrReceiverProjectFootprintGeometry = {
   lensDatum: {
     source: "front optical window at the Vishay package drawing front face",
     coordinatesMm: { x: 2.5, y: 0 },
-    opticalAxis: "negative-y"
+    opticalAxis: "negative-y",
+    lensEnvelope: {
+      centerMm: { x: 2.5, y: 2 },
+      radiusMm: 2,
+      projectionDepthMm: 2
+    }
   },
   bodyDatum: {
     source: "Vishay Minicast package drawing 6.550-5263.01-4",
     widthMm: 5,
-    heightMm: 6.95,
+    packageHeightMm: 6.95,
     depthMm: 4.8,
     frontFaceYMm: 0,
+    bodyBlockDepthMm: 2.8,
+    bodyBlockFrontFaceYMm: 2,
+    bodyBackFaceYMm: 4.8,
+    leadRowYMm: 3.6,
+    leadRowOffsetFromBodyBackEdgeMm: 1.2,
     extendsPositiveY: true
+  },
+  courtyard: {
+    source: "project 0.55 mm clearance around the nominal body projection and copper-pad extents",
+    clearanceMm: 0.55,
+    minimumXMm: -1.65,
+    maximumXMm: 6.73,
+    minimumYMm: -0.55,
+    maximumYMm: 5.35,
+    centerMm: { x: 2.54, y: 2.4 },
+    widthMm: 8.38,
+    heightMm: 5.9
   },
   opticalAuthority: "deny",
   physicalAuthority: "deny",
@@ -79,7 +100,7 @@ const projectFootprint = (
       name="1"
       shape="circular_hole_with_rect_pad"
       pcbX={0}
-      pcbY={0}
+      pcbY={3.6}
       holeDiameter="1.10mm"
       rectPadWidth="2.20mm"
       rectPadHeight="2.20mm"
@@ -91,7 +112,7 @@ const projectFootprint = (
       name="2"
       shape="circular_hole_with_rect_pad"
       pcbX={2.54}
-      pcbY={0}
+      pcbY={3.6}
       holeDiameter="1.10mm"
       rectPadWidth="2.20mm"
       rectPadHeight="2.20mm"
@@ -103,7 +124,7 @@ const projectFootprint = (
       name="3"
       shape="circular_hole_with_rect_pad"
       pcbX={5.08}
-      pcbY={0}
+      pcbY={3.6}
       holeDiameter="1.10mm"
       rectPadWidth="2.20mm"
       rectPadHeight="2.20mm"
@@ -111,17 +132,21 @@ const projectFootprint = (
       solderMaskMargin="0.05mm"
       portHints={["3", "VS", "pin3"]}
     />
-    {/* Review-only body and lens datums; these are not manufacturer CAD. */}
+    {/* Review-only assembly obstruction and courtyard; neither is manufacturer CAD. */}
+    <keepout shape="rect" pcbX={2.5} pcbY={3.4} width="5mm" height="2.8mm" layers={["top"]} />
+    <keepout shape="circle" pcbX={2.5} pcbY={2} radius="2mm" layers={["top"]} />
+    <courtyardrect pcbX={2.54} pcbY={2.4} width="8.38mm" height="5.9mm" strokeWidth="0.05mm" />
     <silkscreenrect
       pcbX={2.5}
-      pcbY={3.475}
+      pcbY={3.4}
       width="5mm"
-      height="6.95mm"
+      height="2.8mm"
       stroke="dashed"
       strokeWidth="0.1mm"
       filled={false}
     />
-    <silkscreenline x1={0} y1={0} x2={5} y2={0} strokeWidth="0.1mm" />
+    <silkscreencircle pcbX={2.5} pcbY={2} radius="2mm" strokeWidth="0.1mm" />
+    <silkscreenline x1={0} y1={2} x2={5} y2={2} strokeWidth="0.1mm" />
   </footprint>
 )
 
