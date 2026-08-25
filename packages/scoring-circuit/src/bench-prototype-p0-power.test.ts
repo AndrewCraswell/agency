@@ -40,6 +40,35 @@ describe("BP-050 simplified P0 power", () => {
     })
   })
 
+  it("freezes the USB-PD support values and matched native-USB pair", () => {
+    expect(benchPrototypeP0Power.upstreamSupport.pdStraps).toEqual([
+      expect.objectContaining({ reference: "R_USB_PD_ADCIN1_UP", mpn: "RC0402FR-0724K9L", valueOhms: 24_900 }),
+      expect.objectContaining({ reference: "R_USB_PD_ADCIN1_DOWN", mpn: "RC0402FR-0710KL", valueOhms: 10_000 }),
+      expect.objectContaining({ reference: "R_USB_PD_ADCIN2_UP", mpn: "RC0402FR-0710KL", valueOhms: 10_000 }),
+      expect.objectContaining({ reference: "R_USB_PD_ADCIN2_DOWN", mpn: "RC0402FR-0768K1L", valueOhms: 68_100 }),
+      expect.objectContaining({ reference: "R_USB_PD_ADCIN3_UP", mpn: "RC0402FR-07162KL", valueOhms: 162_000 }),
+      expect.objectContaining({ reference: "R_USB_PD_ADCIN3_DOWN", mpn: "RC0402FR-0738K3L", valueOhms: 38_300 }),
+      expect.objectContaining({ reference: "R_USB_PD_ADCIN4_UP", mpn: "RC0402FR-07191KL", valueOhms: 191_000 }),
+      expect.objectContaining({ reference: "R_USB_PD_ADCIN4_DOWN", mpn: "RC0402FR-079K53L", valueOhms: 9_530 }),
+      expect.objectContaining({ reference: "R_USB_PD_PD5VMAX", mpn: "RC0402FR-0710KL", valueOhms: 10_000 }),
+      expect.objectContaining({ reference: "R_USB_PD_RESERVED_26", mpn: "RC0402FR-0710KL", valueOhms: 10_000 }),
+      expect.objectContaining({ reference: "R_USB_PD_RESERVED_36", mpn: "RC0402FR-0710KL", valueOhms: 10_000 })
+    ])
+    expect(benchPrototypeP0Power.upstreamSupport.pdSupportCapacitors).toEqual([
+      expect.objectContaining({ reference: "C_USB_PORT_PROTECT_BIAS", mpn: "GCM188R71H104KA57D", value: "100 nF" }),
+      expect.objectContaining({ reference: "C_USB_PORT_PROTECT_VPWR", mpn: "GCM188R71H105KA64D", value: "1 uF" }),
+      expect.objectContaining({ reference: "C_USB_PD_LDO_1V5", mpn: "GRM21BR71A106KA73K", value: "10 uF" }),
+      expect.objectContaining({ reference: "C_USB_PD_VIN_3V3", mpn: "GRM21BR71A106KA73K", value: "10 uF" }),
+      expect.objectContaining({ reference: "C_USB_PD_VBUS", mpn: "GRM21BR71H475KA73L", value: "4.7 uF" }),
+      expect.objectContaining({ reference: "C_USB_PD_CC1", mpn: "GCM1555C1H331JA16D", value: "330 pF" }),
+      expect.objectContaining({ reference: "C_USB_PD_CC2", mpn: "GCM1555C1H331JA16D", value: "330 pF" })
+    ])
+    expect(benchPrototypeP0Power.upstreamSupport.usbSeriesPair).toEqual([
+      expect.objectContaining({ reference: "R_USB_DN_SERIES", mpn: "RC0402FR-0722RL", valueOhms: 22 }),
+      expect.objectContaining({ reference: "R_USB_DP_SERIES", mpn: "RC0402FR-0722RL", valueOhms: 22 })
+    ])
+  })
+
   it("keeps the AFE load, VBUS clamp, physical power, and FIE gates open", () => {
     expect(benchPrototypeP0Power.currentEvidence).toMatchObject({
       result: "provisional-pass-excluding-afe",

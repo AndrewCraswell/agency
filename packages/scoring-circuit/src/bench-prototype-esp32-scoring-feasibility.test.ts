@@ -8,15 +8,17 @@ describe("BP-127 ESP32 scoring feasibility", () => {
   it("passes the conservative pin and cadence paper screens without claiming bench closure", () => {
     expect(validateBenchPrototypeEsp32ScoringFeasibility(benchPrototypeEsp32ScoringFeasibility)).toBe(true)
     expect(benchPrototypeEsp32ScoringFeasibility.acquisition).toMatchObject({
-      frameBits: 140,
+      frameBits: 126,
       sclkHz: 20_000_000,
-      wireTimeUs: 7,
-      scanPeriodUs: 8,
+      wireTimeUs: 6.3,
+      maximumConversionTimeUs: 0.71,
+      scanPeriodUs: 8.01,
       minimumCompletedScansDuringSabreSignal: 12
     })
     expect(benchPrototypeEsp32ScoringFeasibility.preliminaryPinResult).toMatchObject({
       result: "paper-pin-screen-passes",
-      uncommittedGpios: [10, 11, 15, 17, 36, 37, 47]
+      primaryOutputGpios: [7, 15, 17, 10, 11],
+      uncommittedGpios: [36, 37, 47]
     })
     expect(benchPrototypeEsp32ScoringFeasibility.authority).toMatchObject({
       paperPinScreenPassed: true,

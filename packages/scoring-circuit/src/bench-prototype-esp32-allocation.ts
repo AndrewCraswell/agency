@@ -9,17 +9,10 @@ const pads = [
   { pad: 4, gpio: 4, pin: "GPIO4", signal: "SAR_SCLK", group: "scoring-adc", disposition: "assigned" },
   { pad: 5, gpio: 5, pin: "GPIO5", signal: "SAR_DOUT", group: "scoring-adc", disposition: "assigned" },
   { pad: 6, gpio: 6, pin: "GPIO6", signal: "SAR_CONVST", group: "scoring-adc", disposition: "assigned" },
-  {
-    pad: 7,
-    gpio: 7,
-    pin: "GPIO7",
-    signal: "PRIMARY_OUTPUT_LATCH",
-    group: "primary-output",
-    disposition: "assigned"
-  },
-  { pad: 8, gpio: 15, pin: "GPIO15", signal: "P0_SPARE_GPIO15", group: "reserved", disposition: "reserved" },
+  { pad: 7, gpio: 7, pin: "GPIO7", signal: "LAMP_RED", group: "primary-output", disposition: "assigned" },
+  { pad: 8, gpio: 15, pin: "GPIO15", signal: "LAMP_GREEN", group: "primary-output", disposition: "assigned" },
   { pad: 9, gpio: 16, pin: "GPIO16", signal: "HUB75_R2", group: "hub75", disposition: "assigned" },
-  { pad: 10, gpio: 17, pin: "GPIO17", signal: "P0_SPARE_GPIO17", group: "reserved", disposition: "reserved" },
+  { pad: 10, gpio: 17, pin: "GPIO17", signal: "LAMP_WHITE_LEFT", group: "primary-output", disposition: "assigned" },
   { pad: 11, gpio: 18, pin: "GPIO18", signal: "APP_SPI_SCK", group: "app-spi", disposition: "assigned" },
   { pad: 12, gpio: 8, pin: "GPIO8", signal: "APP_SPI_MOSI", group: "app-spi", disposition: "assigned" },
   { pad: 13, gpio: 19, pin: "GPIO19", signal: "USB_DN", group: "usb-service", disposition: "assigned" },
@@ -27,8 +20,8 @@ const pads = [
   { pad: 15, gpio: 3, pin: "GPIO3", signal: "NC_STRAP_QUIET", group: "reserved", disposition: "reserved-nc" },
   { pad: 16, gpio: 46, pin: "GPIO46", signal: "HUB75_CLK", group: "hub75", disposition: "assigned" },
   { pad: 17, gpio: 9, pin: "GPIO9", signal: "APP_SPI_MISO", group: "app-spi", disposition: "assigned" },
-  { pad: 18, gpio: 10, pin: "GPIO10", signal: "P0_SPARE_GPIO10", group: "reserved", disposition: "reserved" },
-  { pad: 19, gpio: 11, pin: "GPIO11", signal: "P0_SPARE_GPIO11", group: "reserved", disposition: "reserved" },
+  { pad: 18, gpio: 10, pin: "GPIO10", signal: "LAMP_WHITE_RIGHT", group: "primary-output", disposition: "assigned" },
+  { pad: 19, gpio: 11, pin: "GPIO11", signal: "BUZZER", group: "primary-output", disposition: "assigned" },
   { pad: 20, gpio: 12, pin: "GPIO12", signal: "APP_WD_KICK", group: "watchdog", disposition: "assigned" },
   { pad: 21, gpio: 13, pin: "GPIO13", signal: "HUB75_R1", group: "hub75", disposition: "assigned" },
   { pad: 22, gpio: 14, pin: "GPIO14", signal: "HUB75_G1", group: "hub75", disposition: "assigned" },
@@ -62,7 +55,7 @@ const allocationDefinition = {
   peripheralInstances: {
     scoringAdc: "SPI3_HOST plus GDMA",
     scoringConvst: "GPTimer0 hardware schedule; final GPIO event path is a BP-127 bench gate",
-    applicationBus: "SPI2_HOST shared by W5500 and the write-only primary-output shift register",
+    applicationBus: "SPI2_HOST dedicated to W5500",
     ir: "RMT RX on GPIO35",
     usb: "native USB Serial/JTAG on GPIO19/GPIO20",
     watchdog: "GPTimer1 health epoch plus external APP_WD_KICK on GPIO12"
@@ -76,11 +69,10 @@ const allocationDefinition = {
     feasibilityGate: "BP-127"
   },
   primaryOutputs: {
-    busSignals: ["APP_SPI_SCK", "APP_SPI_MOSI"],
-    latchSignal: "PRIMARY_OUTPUT_LATCH",
-    latchGpio: 7,
+    signals: ["LAMP_RED", "LAMP_GREEN", "LAMP_WHITE_LEFT", "LAMP_WHITE_RIGHT", "BUZZER"],
+    gpio: [7, 15, 17, 10, 11],
     hardwareSafeRule:
-      "External reset/output-enable circuitry holds every lamp and buzzer load inactive until a complete safe frame is latched."
+      "The protected output driver has one hardware enable held inactive by reset/watchdog circuitry; each direct GPIO input must also default inactive."
   },
   usbService: {
     receptacle: "10177070-00011LF",
@@ -103,7 +95,11 @@ const allocationDefinition = {
     inactivePullDownSignals: [
       "SAR_SCLK",
       "SAR_CONVST",
-      "PRIMARY_OUTPUT_LATCH",
+      "LAMP_RED",
+      "LAMP_GREEN",
+      "LAMP_WHITE_LEFT",
+      "LAMP_WHITE_RIGHT",
+      "BUZZER",
       "HUB75_R1",
       "HUB75_G1",
       "HUB75_B1",
@@ -125,7 +121,7 @@ const allocationDefinition = {
   },
   unavailableResources: {
     internalFlashPsramGpios: [26, 27, 28, 29, 30, 31, 32],
-    rawExpansionGpios: [10, 11, 15, 17, 36, 37, 47],
+    rawExpansionGpios: [36, 37, 47],
     w5500Interrupt: "not connected; pulled inactive locally, exposed at a test point, and polled",
     isolatedResetRequest: "removed from P0",
     iso7721ReverseChannel: "removed from P0",
@@ -222,11 +218,10 @@ export function validateBenchPrototypeEsp32Allocation(input: unknown): true {
     new Set(signals).size !== signals.length ||
     benchPrototypeEsp32Allocation.scoringAdc.gpio.join(",") !== "4,5,6" ||
     benchPrototypeEsp32Allocation.peripheralInstances.scoringAdc !== "SPI3_HOST plus GDMA" ||
-    benchPrototypeEsp32Allocation.peripheralInstances.applicationBus !==
-      "SPI2_HOST shared by W5500 and the write-only primary-output shift register" ||
+    benchPrototypeEsp32Allocation.peripheralInstances.applicationBus !== "SPI2_HOST dedicated to W5500" ||
     benchPrototypeEsp32Allocation.scoringAdc.comparatorInputs !== 0 ||
-    benchPrototypeEsp32Allocation.primaryOutputs.latchGpio !== 7 ||
-    benchPrototypeEsp32Allocation.unavailableResources.rawExpansionGpios.join(",") !== "10,11,15,17,36,37,47" ||
+    benchPrototypeEsp32Allocation.primaryOutputs.gpio.join(",") !== "7,15,17,10,11" ||
+    benchPrototypeEsp32Allocation.unavailableResources.rawExpansionGpios.join(",") !== "36,37,47" ||
     benchPrototypeEsp32Allocation.irReceiver.gpio !== 35 ||
     benchPrototypeEsp32Allocation.irReceiver.receiverHardware !== "TSOP38438" ||
     benchPrototypeEsp32Allocation.recovery.populatedHeader ||

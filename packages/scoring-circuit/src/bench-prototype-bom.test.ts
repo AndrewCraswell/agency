@@ -207,7 +207,7 @@ describe("bench prototype BOM baseline", () => {
     expect(benchPrototypeBom.fabricationRelease).toBe(false)
   })
 
-  it("keeps unresolved analog, connector, and USB power scope explicit", () => {
+  it("keeps unresolved analog, primary-output, and USB power scope explicit", () => {
     expect(benchPrototypeBom.rows.find((row) => row.reference === "U_ANALOG_CELL_1")?.disposition).toBe("TBD")
     expect(benchPrototypeBom.rows.find((row) => row.reference === "J_WEAPON_HARNESS")).toMatchObject({
       disposition: "DNP",
@@ -216,9 +216,21 @@ describe("bench prototype BOM baseline", () => {
     expect(benchPrototypeBom.rows.find((row) => row.reference === "J_PRIMARY_OUTPUTS")?.disposition).toBe("TBD")
     expect(benchPrototypeBom.rows.find((row) => row.reference === "J_USB_C")?.disposition).toBe("selected")
     expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB_PD")?.disposition).toBe("selected")
-    expect(benchPrototypeBom.rows.find((row) => row.reference === "R_USB_PD_STRAPS")?.disposition).toBe("TBD")
-    expect(benchPrototypeBom.rows.find((row) => row.reference === "R_USB2_SERIES")?.disposition).toBe("TBD")
-    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_PRIMARY_OUTPUT_LATCH")?.disposition).toBe("TBD")
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "R_USB_PD_STRAPS")).toBeUndefined()
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "R_USB2_SERIES")).toBeUndefined()
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "R_USB_PD_ADCIN1_UP")).toMatchObject({
+      disposition: "selected",
+      mpn: "RC0402FR-0724K9L"
+    })
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "C_USB_PD_VBUS")).toMatchObject({
+      disposition: "selected",
+      mpn: "GRM21BR71H475KA73L"
+    })
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "R_USB_DP_SERIES")).toMatchObject({
+      disposition: "selected",
+      mpn: "RC0402FR-0722RL"
+    })
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_PRIMARY_OUTPUT_LATCH")).toBeUndefined()
     expect(benchPrototypeBom.rows.find((row) => row.reference === "U_PRIMARY_OUTPUT_DRIVER")?.disposition).toBe("TBD")
   })
 

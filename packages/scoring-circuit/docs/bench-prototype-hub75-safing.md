@@ -1,61 +1,57 @@
-# BP-144 reset-safe HUB75 path
+# BP-144 simplified reset-safe HUB75 path
 
-`BP-144` is the executable, fail-closed display-output contract. It binds the
-committed BP-121 ESP32 GPIO allocation, BP-123 `EN_RESET` ownership, and BP-143
-HUB75 connector map. It is not a schematic, footprint, layout, bench, or
-fabrication release.
+`BP-144` freezes the smallest P0 display-safing circuit that still guarantees a
+blank, high-impedance display path while the application is in reset. It is an
+executable schematic-input contract, not layout, footprint, bench, or
+fabrication approval.
 
-Two exact `SN74AHCT245PWR` buffers run at `V5_DISPLAY_LIMITED`, with DIR
-hard-wired A-to-B. Buffer A carries R1/G1/B1/R2/G2/B2/A/B; buffer B carries
-C/D/CLK/LAT/OE. Its B outputs connect directly to J_HUB75 pins 1, 2, 3, 5, 6,
-7, 9 through 15. Pins 4, 8, and 16 are `APP_GND` logic reference only.
-The executable map also freezes each actual TSSOP pin pair, such as A1 pin 2
-to B1 pin 18 and A8 pin 9 to B8 pin 11; it does not treat an AHCT bus lane as
-an interchangeable generic block.
+## Populated circuit
 
-Every data/address/clock/latch input receives an exact `RC0603FR-0710KL` 10
-kOhm pull-down. OE has the same exact 10 kOhm pull-up to V3_3, and panel OE
-has an exact 10 kOhm pull-up to `V5_DISPLAY_LIMITED`. Thus reset defaults to
-black data and a panel blank request.
+The path retains two exact `SN74AHCT245PWR` devices at
+`V5_DISPLAY_LIMITED`. Both `DIR` inputs are hard-wired A-to-B. Together they
+carry the 13 HUB75 signals from the sole ESP32-S3 to the panel header:
 
-Each AHCT has its own exact `C0603C104K3RACTU` 100 nF X7R bypass from pin 20
-to `APP_GND`, placed at the buffer. The 5 V logic supply and this bypass remain
-layout and bench evidence gates, not a power-good claim.
+- R1, G1, B1, R2, G2, B2, A, and B use buffer A.
+- C, D, CLK, LAT, and OE use buffer B.
 
-The carrier names the display supply and return explicitly. `net.V5` reaches
-`V5_DISPLAY_LIMITED` only through `J_DISPLAY_DISCONNECT` and `J_LINK_DISPLAY`;
-the latter is the removable measurement link. HUB75 buffers, panel OE pullup,
-and enable pullups use `V5_DISPLAY_LIMITED`. Their bypasses, pulls, FET sources,
-and HUB75 signal grounds use `APP_GND`. The carrier makes the `APP_GND` to
-common-board-ground alias explicit at the isolated boundary, rather than using
-an ambiguous display `V5` or `GND` net name.
+The contract freezes each ESP32 GPIO, AHCT A/B lane, actual TSSOP pin, and
+panel pin. The 12 data/address/clock/latch inputs, the OE input, and the three
+unused buffer-B inputs use the shared exact 10 kOhm `R_HUB75_SIGNAL_DEFAULTS`
+selection (16 physical resistors). The three unused B outputs are NC. Panel OE
+has one exact 10 kOhm `R_HUB75_PANEL_OE_PULLUP` to
+`V5_DISPLAY_LIMITED`. Each AHCT device has one exact 100 nF
+`C_HUB75_BUFFER_BYPASS` local bypass capacitor (two physical capacitors).
 
-The otherwise unused A6, A7, and A8 inputs on buffer B have their own exact
-10 kOhm pulldowns. Their B6, B7, and B8 outputs are intentionally NC: no
-connector, test point, or functional net is permitted. The canonical schematic
-references are `U_DISPLAY_BUFFER_A`, `U_DISPLAY_BUFFER_B`, and
-`R_HUB75_OE_PULLUP`; the older carrier-only names are not valid BP-144 names.
-The physical carrier labels those inputs at TSSOP pins 7, 8, and 9 and their
-unused outputs at pins 13, 12, and 11. It also includes a dedicated 100 nF
-bypass from each buffer pin 20 to `APP_GND`; both the pulldowns and bypasses
-are carrier-owned source components and traces, not documentation-only intent.
+The two AHCT pin-19 `BUFFER_ENABLE_N` inputs are tied together as one
+`DISPLAY_ENABLE_N` net. This net has exactly one low-side `BSS138AKA`
+(`Q_DISPLAY_ENABLE`) sink, one shared 10 kOhm resistor row for the common
+`V5_DISPLAY_LIMITED` pull-up and the `APP_RESET_N`-to-gate series resistor,
+and one exact 100 kOhm gate pulldown. `APP_RESET_N` is the only reset input
+consumed by BP-144.
 
-Each buffer enable is held high by `RC0603FR-0710KL` 10 kOhm to 5 V. Its exact
-`BSS138AKA` low-side sink enables the buffer only when `EN_RESET` is high,
-through a 10 kOhm gate resistor and an exact `RC0603FR-07100KL` 100 kOhm gate
-pull-down. Reset, a missing ESP32, or an unpowered application rail leaves both
-buffers high impedance, without a firmware-controlled enable or reset source.
+There is no firmware-controlled display-enable GPIO, watchdog feedback,
+panel feedback, reset-source authority, or separate per-buffer enable circuit.
+BP-144 does not drive or fan out `APP_RESET_N`, `APP_SUPERVISOR_RESET_N`,
+`SCORING_NRST_N`, or the ESP32 reset/enable state.
 
-Power-off and backfeed behavior has no approval: V3_3-off/V5-on, V5-off/V3_3-on,
-reset/brownout, and panel-disconnected behavior require the listed scope and
-injection measurements. Input threshold, edge quality, panel blanking,
-connector/footprint evidence, schematic integration, and fabrication remain
-**DENY**.
+## Required state behavior
 
-The exported carrier inventory is the one source of live declarations for every
-29 BP-144 support reference. It carries the exact MPN, value, package,
-manufacturer, and primary source URL, and the TSX consumes its MPN and
-footprint on every resistor, capacitor, FET, and buffer. The validator requires
-unique physical ownership, exact complete rows, and the selected BP-020 buffer
-rows. Missing, duplicate, sentinel, or pre-import drift therefore fails closed;
-it does not borrow support identity from BP-123.
+When `APP_RESET_N` is low, absent, or the ESP32 is in reset, the BSS138 sink
+holds `DISPLAY_ENABLE_N` low. Both AHCT outputs are high impedance and panel
+OE is held blank by its V5 pull-up. Data defaults low and OE input defaults
+high. When `APP_RESET_N` is released high with both rails valid, normal ESP32
+HUB75 operation is permitted, but only after the listed bench gates pass.
+
+V3_3-off/V5-on and V5-off/V3_3-on states remain explicitly denied until
+back-power, leakage, input thresholds, and injected-current measurements are
+captured. The same denial applies to reset, brownout, cable insertion or
+removal while de-energized, panel disconnection, display-branch inrush, and
+signal-integrity measurements.
+
+## Evidence boundary
+
+The executable artifact binds the active BP-020 BOM rows, BP-121 ESP32 pad
+allocation, BP-143 HUB75 header map, and the BP-123 `APP_RESET_N` contract.
+BP-032/BP-033 still own exact manufacturer footprint, orientation, and CAD
+evidence. BP-300 still owns schematic/ERC integration. No source or test in
+this contract grants fabrication authority; `releaseState` remains `deny`.

@@ -27,8 +27,212 @@ const definition = {
     efuseCurrentLimitA: { minimum: 2.395, nominal: 2.69, maximum: 2.99 },
     pdPphvCapacitorMpn: "T523H107M035APE070",
     pdLdoCapacitorMpn: "T55A106M010C0200",
-    pdStraps: "exact values remain BP-050 selection work",
-    usbSeriesPair: "two matched 22 ohm resistors; exact MPN remains BP-050 selection work"
+    pdStraps: [
+      {
+        reference: "R_USB_PD_ADCIN1_UP",
+        mpn: "RC0402FR-0724K9L",
+        manufacturer: "Yageo",
+        valueOhms: 24_900,
+        tolerancePct: 1,
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-0724K9L"
+      },
+      {
+        reference: "R_USB_PD_ADCIN1_DOWN",
+        mpn: "RC0402FR-0710KL",
+        manufacturer: "Yageo",
+        valueOhms: 10_000,
+        tolerancePct: 1,
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-0710KL"
+      },
+      {
+        reference: "R_USB_PD_ADCIN2_UP",
+        mpn: "RC0402FR-0710KL",
+        manufacturer: "Yageo",
+        valueOhms: 10_000,
+        tolerancePct: 1,
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-0710KL"
+      },
+      {
+        reference: "R_USB_PD_ADCIN2_DOWN",
+        mpn: "RC0402FR-0768K1L",
+        manufacturer: "Yageo",
+        valueOhms: 68_100,
+        tolerancePct: 1,
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-0768K1L"
+      },
+      {
+        reference: "R_USB_PD_ADCIN3_UP",
+        mpn: "RC0402FR-07162KL",
+        manufacturer: "Yageo",
+        valueOhms: 162_000,
+        tolerancePct: 1,
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-07162KL"
+      },
+      {
+        reference: "R_USB_PD_ADCIN3_DOWN",
+        mpn: "RC0402FR-0738K3L",
+        manufacturer: "Yageo",
+        valueOhms: 38_300,
+        tolerancePct: 1,
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-0738K3L"
+      },
+      {
+        reference: "R_USB_PD_ADCIN4_UP",
+        mpn: "RC0402FR-07191KL",
+        manufacturer: "Yageo",
+        valueOhms: 191_000,
+        tolerancePct: 1,
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-07191KL"
+      },
+      {
+        reference: "R_USB_PD_ADCIN4_DOWN",
+        mpn: "RC0402FR-079K53L",
+        manufacturer: "Yageo",
+        valueOhms: 9_530,
+        tolerancePct: 1,
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-079K53L"
+      },
+      {
+        reference: "R_USB_PD_PD5VMAX",
+        mpn: "RC0402FR-0710KL",
+        manufacturer: "Yageo",
+        valueOhms: 10_000,
+        tolerancePct: 1,
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-0710KL"
+      },
+      {
+        reference: "R_USB_PD_RESERVED_26",
+        mpn: "RC0402FR-0710KL",
+        manufacturer: "Yageo",
+        valueOhms: 10_000,
+        tolerancePct: 1,
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-0710KL"
+      },
+      {
+        reference: "R_USB_PD_RESERVED_36",
+        mpn: "RC0402FR-0710KL",
+        manufacturer: "Yageo",
+        valueOhms: 10_000,
+        tolerancePct: 1,
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-0710KL"
+      }
+    ],
+    pdSupportCapacitors: [
+      {
+        reference: "C_USB_PORT_PROTECT_BIAS",
+        mpn: "GCM188R71H104KA57D",
+        manufacturer: "Murata",
+        value: "100 nF",
+        rating: "50 V, X7R, 10%",
+        package: "0603 (1608 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GCM188R71H104KA57D"
+      },
+      {
+        reference: "C_USB_PORT_PROTECT_VPWR",
+        mpn: "GCM188R71H105KA64D",
+        manufacturer: "Murata",
+        value: "1 uF",
+        rating: "50 V, X7R, 10%",
+        package: "0603 (1608 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GCM188R71H105KA64D"
+      },
+      {
+        reference: "C_USB_PD_LDO_1V5",
+        mpn: "GRM21BR71A106KA73K",
+        manufacturer: "Murata",
+        value: "10 uF",
+        rating: "10 V, X7R, 10%",
+        package: "0805 (2012 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71A106KA73K"
+      },
+      {
+        reference: "C_USB_PD_VIN_3V3",
+        mpn: "GRM21BR71A106KA73K",
+        manufacturer: "Murata",
+        value: "10 uF",
+        rating: "10 V, X7R, 10%",
+        package: "0805 (2012 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71A106KA73K"
+      },
+      {
+        reference: "C_USB_PD_VBUS",
+        mpn: "GRM21BR71H475KA73L",
+        manufacturer: "Murata",
+        value: "4.7 uF",
+        rating: "50 V, X7R, 10%",
+        package: "0805 (2012 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71H475KA73L"
+      },
+      {
+        reference: "C_USB_PD_CC1",
+        mpn: "GCM1555C1H331JA16D",
+        manufacturer: "Murata",
+        value: "330 pF",
+        rating: "50 V, C0G, 5%",
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GCM1555C1H331JA16D"
+      },
+      {
+        reference: "C_USB_PD_CC2",
+        mpn: "GCM1555C1H331JA16D",
+        manufacturer: "Murata",
+        value: "330 pF",
+        rating: "50 V, C0G, 5%",
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GCM1555C1H331JA16D"
+      }
+    ],
+    usbSeriesPair: [
+      {
+        reference: "R_USB_DN_SERIES",
+        mpn: "RC0402FR-0722RL",
+        manufacturer: "Yageo",
+        valueOhms: 22,
+        tolerancePct: 1,
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-0722RL"
+      },
+      {
+        reference: "R_USB_DP_SERIES",
+        mpn: "RC0402FR-0722RL",
+        manufacturer: "Yageo",
+        valueOhms: 22,
+        tolerancePct: 1,
+        package: "0402 (1005 metric)",
+        quantity: 1,
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-0722RL"
+      }
+    ]
   },
   v5Stage: {
     regulatorMpn: "TPS56A37RPAR",

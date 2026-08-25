@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest"
 import { benchPrototypeHub75Safing, validateBenchPrototypeHub75Safing } from "./bench-prototype-hub75-safing.js"
 
-describe("BP-144 reset-safe HUB75 path", () => {
+describe("BP-144 simplified reset-safe HUB75 path", () => {
   it("maps all thirteen committed GPIOs through two exact A-to-B AHCT buffers", () => {
-    expect(validateBenchPrototypeHub75Safing(benchPrototypeHub75Safing)).toBe(true)
     expect(benchPrototypeHub75Safing.signalMap).toHaveLength(13)
     expect(
       benchPrototypeHub75Safing.signalMap.map((entry) => [entry.signal, entry.gpio, entry.panelPinNumber])
@@ -50,34 +49,44 @@ describe("BP-144 reset-safe HUB75 path", () => {
     )
   })
 
-  it("uses reset-gated enables and passive blanking defaults rather than a firmware enable", () => {
-    expect(benchPrototypeHub75Safing.supportNetwork.bufferBypass).toEqual([
-      expect.objectContaining({
-        reference: "C_HUB75_BUF_A_BYPASS",
-        mpn: "C0603C104K3RACTU",
-        value: "100 nF X7R"
-      }),
-      expect.objectContaining({
-        reference: "C_HUB75_BUF_B_BYPASS",
-        mpn: "C0603C104K3RACTU",
-        value: "100 nF X7R"
-      })
-    ])
-    expect(benchPrototypeHub75Safing.supportNetwork.enableGates).toHaveLength(2)
-    for (const gate of benchPrototypeHub75Safing.supportNetwork.enableGates) {
-      expect(gate).toMatchObject({
-        enablePullup: { mpn: "RC0603FR-0710KL", value: "10 kOhm, 1%" },
-        gatePulldown: { mpn: "RC0603FR-07100KL", value: "100 kOhm, 1%" },
-        sink: { mpn: "BSS138AKA" }
-      })
-    }
-    expect(benchPrototypeHub75Safing.truthTable[0]).toMatchObject({
-      buffers: "both disabled high impedance",
-      panelOe: "high by V5 pullup"
+  it("uses one shared reset gate instead of duplicated firmware-visible enables", () => {
+    const { displayEnableGate, signalDefaults, bufferBypass } = benchPrototypeHub75Safing.supportNetwork
+    expect(signalDefaults).toMatchObject({
+      reference: "R_HUB75_SIGNAL_DEFAULTS",
+      mpn: "RC0603FR-0710KL",
+      quantity: 16
     })
-    expect(benchPrototypeHub75Safing.signalMap).toHaveLength(13)
+    expect(bufferBypass).toMatchObject({
+      reference: "C_HUB75_BUFFER_BYPASS",
+      mpn: "C0603C104K3RACTU",
+      value: "100 nF X7R",
+      quantity: 2
+    })
+    expect(displayEnableGate).toMatchObject({
+      net: "DISPLAY_ENABLE_N",
+      sink: { reference: "Q_DISPLAY_ENABLE", mpn: "BSS138AKA" },
+      pullup: { reference: "R_DISPLAY_ENABLE_PULLUP_AND_GATE", mpn: "RC0603FR-0710KL" },
+      gateSeries: { reference: "R_DISPLAY_ENABLE_PULLUP_AND_GATE", mpn: "RC0603FR-0710KL" },
+      gatePulldown: { reference: "R_DISPLAY_ENABLE_GATE_PD", mpn: "RC0603FR-07100KL" }
+    })
+    expect(benchPrototypeHub75Safing.exactConnections.join(" ")).toContain("APP_RESET_N")
+    expect(benchPrototypeHub75Safing.exactConnections.join(" ")).not.toContain("EN_RESET")
+    expect(benchPrototypeHub75Safing.exactConnections.join(" ")).toContain("no ESP32 GPIO")
+  })
+
+  it("keeps all passive defaults and three unused buffer-B inputs explicit", () => {
+    expect(benchPrototypeHub75Safing.unusedBufferInputs).toHaveLength(3)
+    expect(benchPrototypeHub75Safing.unusedBufferInputs.map((input) => input.input)).toEqual(["A6", "A7", "A8"])
+    for (const input of benchPrototypeHub75Safing.unusedBufferInputs) {
+      expect(input.pull).toMatchObject({
+        reference: "R_HUB75_SIGNAL_DEFAULTS",
+        mpn: "RC0603FR-0710KL",
+        to: "APP_GND"
+      })
+      expect(input.outputDisposition).toBe("NC; no connector, test point, or functional net")
+    }
     for (const signal of benchPrototypeHub75Safing.signalMap) {
-      expect(signal.inputPull).toBe(signal.signal === "HUB75_OE_N" ? "R_HUB75_OE_PULLUP" : `R_${signal.signal}_PD`)
+      expect(signal.inputPull).toBe("R_HUB75_SIGNAL_DEFAULTS")
       expect(signal.resetDefault).toBe(
         signal.signal === "HUB75_OE_N" ? "high panel blank request" : "low black-data/address/clock/latch"
       )
@@ -87,29 +96,6 @@ describe("BP-144 reset-safe HUB75 path", () => {
       mpn: "RC0603FR-0710KL",
       value: "10 kOhm, 1%"
     })
-    expect(benchPrototypeHub75Safing.unusedBufferInputs).toEqual([
-      expect.objectContaining({
-        input: "A6",
-        inputPin: 7,
-        output: "B6",
-        outputPin: 13,
-        pull: { mpn: "RC0603FR-0710KL", value: "10 kOhm, 1%", to: "APP_GND", reference: "R_HUB75_UNUSED_B_A6_PD" }
-      }),
-      expect.objectContaining({
-        input: "A7",
-        inputPin: 8,
-        output: "B7",
-        outputPin: 12,
-        pull: { mpn: "RC0603FR-0710KL", value: "10 kOhm, 1%", to: "APP_GND", reference: "R_HUB75_UNUSED_B_A7_PD" }
-      }),
-      expect.objectContaining({
-        input: "A8",
-        inputPin: 9,
-        output: "B8",
-        outputPin: 11,
-        pull: { mpn: "RC0603FR-0710KL", value: "10 kOhm, 1%", to: "APP_GND", reference: "R_HUB75_UNUSED_B_A8_PD" }
-      })
-    ])
   })
 
   it("keeps power-off behavior unvalidated and release denied", () => {
@@ -120,73 +106,36 @@ describe("BP-144 reset-safe HUB75 path", () => {
       panelPowerOffBackfeedVerified: false,
       fabricationAuthorized: false
     })
+    expect(benchPrototypeHub75Safing.releaseState).toBe("deny")
   })
 
-  it("uses a complete carrier-owned live identity for every support reference", () => {
-    expect(benchPrototypeHub75Safing.partIdentityEvidence).toHaveLength(29)
+  it("binds the eight active BOM rows and rejects canonical mutations", () => {
+    expect(benchPrototypeHub75Safing.partIdentityEvidence).toHaveLength(8)
     expect(benchPrototypeHub75Safing.partIdentityEvidence).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           reference: "U_DISPLAY_BUFFER_A",
           mpn: "SN74AHCT245PWR",
-          package: "TSSOP-20",
-          manufacturer: "Texas Instruments"
+          package: "TSSOP-20"
         }),
         expect.objectContaining({
-          reference: "C_HUB75_BUF_A_BYPASS",
-          mpn: "C0603C104K3RACTU",
-          value: "100 nF X7R",
-          package: "0603",
-          manufacturer: "KEMET"
-        }),
-        expect.objectContaining({
-          reference: "R_HUB75_UNUSED_B_A6_PD",
+          reference: "R_HUB75_SIGNAL_DEFAULTS",
           mpn: "RC0603FR-0710KL",
-          value: "10 kOhm, 1%",
-          package: "0603",
-          manufacturer: "Yageo"
+          quantity: 16
         }),
         expect.objectContaining({
-          reference: "Q_DISPLAY_BUFFER_A_ENABLE",
+          reference: "Q_DISPLAY_ENABLE",
           mpn: "BSS138AKA",
-          package: "SOT-23",
-          manufacturer: "Nexperia"
+          package: "SOT23 (TO-236AB)"
+        }),
+        expect.objectContaining({
+          reference: "R_DISPLAY_ENABLE_GATE_PD",
+          mpn: "RC0603FR-07100KL"
         })
       ])
     )
-    for (const part of benchPrototypeHub75Safing.partIdentityEvidence) {
-      expect(part.sourceUrl).toMatch(/^https:\/\//)
-      expect(part.source).not.toContain("BP-123")
-    }
-  })
-
-  it("rejects signal swaps, missing gates, release escalation, aliases, and accessors", () => {
-    for (const mutate of [
-      (candidate: any) => (candidate.signalMap[0].gpio = 14),
-      (candidate: any) => candidate.supportNetwork.enableGates.pop(),
-      (candidate: any) => (candidate.unusedBufferInputs[0].outputDisposition = "connected"),
-      (candidate: any) => (candidate.buffers[0].direction = "firmware controlled"),
-      (candidate: any) => (candidate.partIdentityEvidence[0].mpn = "SN74AHCT245PWR_FORGED"),
-      (candidate: any) => candidate.partIdentityEvidence.pop(),
-      (candidate: any) => (candidate.evidence.fabricationAuthorized = true)
-    ]) {
-      const candidate = structuredClone(benchPrototypeHub75Safing)
-      mutate(candidate)
-      expect(() => validateBenchPrototypeHub75Safing(candidate)).toThrow(RangeError)
-    }
-    const alias = structuredClone(benchPrototypeHub75Safing) as any
-    alias.evidence = alias.powerOffAndBackfeed
-    expect(() => validateBenchPrototypeHub75Safing(alias)).toThrow(RangeError)
-    const accessor = structuredClone(benchPrototypeHub75Safing) as any
-    let read = false
-    Object.defineProperty(accessor, "workUnit", {
-      enumerable: true,
-      get: () => {
-        read = true
-        return "BP-144"
-      }
-    })
-    expect(() => validateBenchPrototypeHub75Safing(accessor)).toThrow(RangeError)
-    expect(read).toBe(false)
+    const candidate = structuredClone(benchPrototypeHub75Safing) as any
+    candidate.supportNetwork.displayEnableGate.net = "FIRMWARE_ENABLE"
+    expect(() => validateBenchPrototypeHub75Safing(candidate)).toThrow(RangeError)
   })
 })

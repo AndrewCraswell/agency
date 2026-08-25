@@ -1,4 +1,5 @@
 import { benchPrototypeIrReceiverSelection } from "./bench-prototype-ir-receiver-selection.js"
+import { benchPrototypeP0Power } from "./bench-prototype-p0-power.js"
 import { findCommunicationsFootprintEvidence } from "./communications-footprint-evidence.js"
 import { componentDecisions } from "./component-decisions.js"
 import { ethernetSupportNetwork } from "./ethernet-support-network.js"
@@ -225,6 +226,48 @@ const selectedEthernetSupportRows: readonly BenchPrototypeBomRow[] =
     notes: "Exact support-network candidate; crystal, analog supply, layout, and Ethernet bench gates remain open."
   }))
 
+const selectedUsbSupportRows: readonly BenchPrototypeBomRow[] = [
+  ...benchPrototypeP0Power.upstreamSupport.pdStraps.map((part) =>
+    selectedSupportRow(
+      part.reference,
+      `USB-PD controller strap, ${part.valueOhms} Ohm ${part.tolerancePct}%`,
+      part.manufacturer,
+      part.mpn,
+      part.package,
+      part.sourceUrl,
+      "Required by the selected TPS25730A 20 V/3 A sink configuration; this is not an optional feature.",
+      part.quantity,
+      "bench-prototype-power"
+    )
+  ),
+  ...benchPrototypeP0Power.upstreamSupport.pdSupportCapacitors.map((part) =>
+    selectedSupportRow(
+      part.reference,
+      `USB-C/PD local support, ${part.value} ${part.rating}`,
+      part.manufacturer,
+      part.mpn,
+      part.package,
+      part.sourceUrl,
+      "Required local bypass or protected-CC support for the selected USB-C/PD chain; placement and effective capacitance remain layout gates.",
+      part.quantity,
+      "bench-prototype-power"
+    )
+  ),
+  ...benchPrototypeP0Power.upstreamSupport.usbSeriesPair.map((part) =>
+    selectedSupportRow(
+      part.reference,
+      `Native ESP32-S3 USB series damping, ${part.valueOhms} Ohm ${part.tolerancePct}%`,
+      part.manufacturer,
+      part.mpn,
+      part.package,
+      part.sourceUrl,
+      "Required matched USB D-minus/D-plus series part; place at the ESP32 and retain controlled-impedance routing.",
+      part.quantity,
+      "bench-prototype-power"
+    )
+  )
+]
+
 const unresolvedRows: readonly BenchPrototypeBomRow[] = [
   {
     reference: "U_ANALOG_CELL_1",
@@ -278,20 +321,12 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
   },
   dnpRow("J_SPEAKER", "External diagnostic speaker connector", "Removed with the P0 audio amplifier."),
   {
-    reference: "U_PRIMARY_OUTPUT_LATCH",
-    function: "Hardware-safe serialized primary lamp and buzzer latch",
-    disposition: "TBD",
-    quantity: 1,
-    notes:
-      "Select an exact shared-SPI latch with reset/enable behavior that holds every primary output inactive before firmware and during faults."
-  },
-  {
     reference: "U_PRIMARY_OUTPUT_DRIVER",
     function: "Primary lamp and buzzer load driver",
     disposition: "TBD",
     quantity: 1,
     notes:
-      "Retain one protected driver stage after the serialized latch; exact voltage, current, connector, and inactive-state limits remain open."
+      "Exact MPN remains TBD until the lamp/buzzer voltage, steady and inrush current, fault, common-return, cable, thermal, and EMC envelope is defined. Hardware permit must default every channel non-energizing; firmware-only safing is prohibited."
   },
   {
     reference: "J_PRIMARY_OUTPUTS",
@@ -299,32 +334,9 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     disposition: "TBD",
     quantity: 1,
     notes:
-      "Exact connector, mate, pinout, load ratings, and harness remain open until the primary-output interface task closes."
+      "Existing Molex 39-29-1067 evidence is a six-position candidate with circuits 1 to 5 for primary outputs and circuit 6 for return. It remains TBD because lamp/buzzer voltage, current, fault, common-return, cable, thermal, and EMC requirements are unbounded."
   },
-  {
-    reference: "R_USB_PD_STRAPS",
-    function: "USB-PD capability, current, UVLO, OVLO, and timing strap network",
-    disposition: "TBD",
-    quantity: 1,
-    notes:
-      "Required support; freeze exact orderable resistor identities and tolerance analysis before the order-candidate BOM."
-  },
-  {
-    reference: "C_USB_PD_SUPPORT",
-    function: "USB-PD VIN, raw-VBUS, CC, VBIAS, timing, and local bypass capacitors",
-    disposition: "TBD",
-    quantity: 1,
-    notes:
-      "Required support; exact remaining capacitance, voltage, dielectric, bias derating, package, and placement must close."
-  },
-  {
-    reference: "R_USB2_SERIES",
-    function: "Native ESP32-S3 USB 2.0 D-minus and D-plus series pair",
-    disposition: "TBD",
-    quantity: 1,
-    notes:
-      "Required service-data support; select the exact matched 22 ohm parts and retain controlled-impedance routing."
-  },
+  ...selectedUsbSupportRows,
   {
     reference: "U_BATTERY",
     function: "Battery or UPS subsystem",

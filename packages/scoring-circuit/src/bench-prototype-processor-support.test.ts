@@ -4,67 +4,51 @@ import {
   validateBenchPrototypeProcessorSupport
 } from "./bench-prototype-processor-support.js"
 
-describe("BP-125 processor support", () => {
-  it("retains the exact processors, their mandatory bypass coverage, and a denied release", () => {
+describe("BP-125 sole-ESP32 processor support", () => {
+  it("binds the exact module and its five selected support rows", () => {
     expect(validateBenchPrototypeProcessorSupport(benchPrototypeProcessorSupport)).toBe(true)
-    expect(benchPrototypeProcessorSupport.bypassAndBulk.stm32Digital.references).toEqual([
-      "C_STM_VDD16",
-      "C_STM_VDD32",
-      "C_STM_VDD48",
-      "C_STM_VDD64"
+    expect(benchPrototypeProcessorSupport.processor).toMatchObject({
+      mpn: "ESP32-S3-WROOM-1U-N16R2",
+      radio: "disabled without a populated, reviewed external antenna"
+    })
+    expect(benchPrototypeProcessorSupport.selectedSupportRows).toEqual([
+      expect.objectContaining({ reference: "R_ESP_BOOT_PULLUP", mpn: "RC0603FR-0710KL" }),
+      expect.objectContaining({ reference: "R_ESP_EN_PULLUP", mpn: "RC0603FR-0710KL" }),
+      expect.objectContaining({ reference: "C_ESP_EN_DELAY", mpn: "C1608X5R1A105K080AC" }),
+      expect.objectContaining({ reference: "C_ESP_3V3_HF", mpn: "GCM188R71H104KA57D" }),
+      expect.objectContaining({ reference: "C_ESP_3V3_BULK", mpn: "GCM32EC71A476KE02L" })
     ])
-    expect(benchPrototypeProcessorSupport.bypassAndBulk.stm32Analog.vref).toMatchObject({
-      values: ["100 nF X7R", "1 uF X7R"]
-    })
-    expect(benchPrototypeProcessorSupport.bypassAndBulk.esp32.values).toEqual(["100 nF X7R", "22 uF minimum ceramic"])
-    expect(benchPrototypeProcessorSupport.authority).toMatchObject({
-      schematicSignoff: "deny",
-      fabricationAuthorized: false
-    })
   })
 
-  it("keeps unselected STM32 clocks DNP, module timing internal, and reset/strap loads safe", () => {
-    expect(benchPrototypeProcessorSupport.oscillators.stm32Hse).toMatchObject({
-      population: "DNP",
-      exactOscillatorMpn: "TBD"
+  it("keeps P0 recovery, acquisition, IR, Ethernet, and HUB75 interfaces explicit", () => {
+    expect(benchPrototypeProcessorSupport.recovery).toEqual({
+      populatedHeader: false,
+      testPads: ["UART0_RX", "UART0_TX", "BOOT_N", "EN_RESET", "APP_3V3", "APP_GND"],
+      rule: expect.stringContaining("native USB")
     })
-    expect(benchPrototypeProcessorSupport.oscillators.stm32Lse).toMatchObject({
-      population: "DNP",
-      exactOscillatorMpn: "TBD"
+    expect(benchPrototypeProcessorSupport.nativeUsb.pins).toEqual(["GPIO19 USB_DN", "GPIO20 USB_DP"])
+    expect(benchPrototypeProcessorSupport.fixedInterfaces).toMatchObject({
+      acquisition: expect.stringContaining("SPI3_HOST plus GDMA"),
+      ir: expect.stringContaining("GPIO35 IR_RX"),
+      ethernet: expect.stringContaining("W5500"),
+      primaryOutputs: expect.stringContaining("GPIO7, GPIO10, GPIO11, GPIO15, and GPIO17"),
+      hub75: expect.stringContaining("blank")
     })
-    expect(benchPrototypeProcessorSupport.oscillators.esp32.population).toBe("module-integrated")
-    expect(benchPrototypeProcessorSupport.bootAndReset.stm32.boot0.value).toBe("10 kOhm pulldown")
-    expect(benchPrototypeProcessorSupport.bootAndReset.esp32.en).toMatchObject({
-      value: "10 kOhm pullup",
-      capacitorValue: "1 uF"
-    })
-    expect(benchPrototypeProcessorSupport.bootAndReset.esp32.straps).toEqual(
-      expect.arrayContaining([
-        { gpio: 3, disposition: "unconnected and quiet" },
-        { gpio: 45, disposition: "weak external pulldown and high-impedance AHCT input during reset" }
-      ])
-    )
-    expect(benchPrototypeProcessorSupport.bootAndReset.esp32.irReceiver).toMatchObject({
-      modulePad: 28,
-      gpio: 35,
-      signal: "IR_RX",
-      peripheral: "RMT_RX",
-      receiverHardware: "BP-146 not selected"
-    })
-    expect(benchPrototypeProcessorSupport.bootAndReset.esp32.unusedPads).toEqual(
-      expect.arrayContaining(["GPIO33 and GPIO34 not exposed by N16R2", "GPIO36 and GPIO37 reserved NC for DNP audio"])
-    )
+    expect(benchPrototypeProcessorSupport.restrictions.flash).toContain("No flash")
+    expect(benchPrototypeProcessorSupport.restrictions.unusedPins).toContain("GPIO36")
   })
 
-  it("fails closed for substitutions, omissions, and release escalation", () => {
-    for (const mutate of [
-      (candidate: any) => (candidate.processors.stm32.part = "STM32G474RBT3TR"),
-      (candidate: any) => candidate.bypassAndBulk.stm32Digital.references.pop(),
-      (candidate: any) => (candidate.bypassAndBulk.stm32Analog.vref.values[0] = "10 nF X7R"),
-      (candidate: any) => (candidate.bypassAndBulk.esp32.values[1] = "10 uF minimum ceramic"),
-      (candidate: any) => (candidate.oscillators.stm32Hse.population = "selected"),
-      (candidate: any) => (candidate.authority.fabricationAuthorized = true)
-    ]) {
+  it("rejects former dual-processor parts, substitutions, omissions, and release escalation", () => {
+    const mutations: Array<(candidate: any) => void> = [
+      (candidate) => (candidate.processor.mpn = "STM32G474RET3TR"),
+      (candidate) => candidate.selectedSupportRows.pop(),
+      (candidate) => (candidate.selectedSupportRows[2].mpn = "TBD"),
+      (candidate) => (candidate.rejectedFromP0[0] = "STM32 permitted"),
+      (candidate) => (candidate.fixedInterfaces.primaryOutputs = "serialized latch permitted"),
+      (candidate) => (candidate.restrictions.flash = "Writes allowed while scoring"),
+      (candidate) => (candidate.authority.fabricationAuthorized = true)
+    ]
+    for (const mutate of mutations) {
       const candidate = structuredClone(benchPrototypeProcessorSupport)
       mutate(candidate)
       expect(() => validateBenchPrototypeProcessorSupport(candidate)).toThrow(RangeError)
@@ -73,9 +57,10 @@ describe("BP-125 processor support", () => {
 
   it("is deeply frozen and rejects aliases and accessors before reading them", () => {
     expect(Object.isFrozen(benchPrototypeProcessorSupport)).toBe(true)
-    expect(Object.isFrozen(benchPrototypeProcessorSupport.bypassAndBulk.stm32Digital.references)).toBe(true)
+    expect(Object.isFrozen(benchPrototypeProcessorSupport.selectedSupportRows)).toBe(true)
+    expect(Object.isFrozen(benchPrototypeProcessorSupport.selectedSupportRows[0])).toBe(true)
     const alias = structuredClone(benchPrototypeProcessorSupport) as any
-    alias.bootAndReset.esp32 = alias.bootAndReset.stm32
+    alias.bootAndReset = alias.restrictions
     expect(() => validateBenchPrototypeProcessorSupport(alias)).toThrow(RangeError)
     const accessor = structuredClone(benchPrototypeProcessorSupport) as any
     let read = false

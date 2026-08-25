@@ -4,11 +4,12 @@ import {
 } from "./bench-prototype-esp32-allocation.js"
 
 const devices = 7
-const bitsPerDevice = 20
+const bitsPerDevice = 18
 const sclkHz = 20_000_000
 const wireTimeUs = (devices * bitsPerDevice * 1_000_000) / sclkHz
+const maximumConversionTimeUs = 0.71
 const guardUs = 1
-const scanPeriodUs = wireTimeUs + guardUs
+const scanPeriodUs = maximumConversionTimeUs + wireTimeUs + guardUs
 
 const definition = {
   artifactKind: "bench-prototype-esp32-scoring-feasibility-contract",
@@ -17,8 +18,8 @@ const definition = {
   preliminaryPinResult: {
     exactAllocation: "BP-121",
     adcGpios: [4, 5, 6],
-    primaryOutputLatchGpio: 7,
-    uncommittedGpios: [10, 11, 15, 17, 36, 37, 47],
+    primaryOutputGpios: [7, 15, 17, 10, 11],
+    uncommittedGpios: [36, 37, 47],
     result: "paper-pin-screen-passes"
   },
   acquisition: {
@@ -30,6 +31,7 @@ const definition = {
     frameBits: devices * bitsPerDevice,
     sclkHz,
     wireTimeUs,
+    maximumConversionTimeUs,
     guardUs,
     scanPeriodUs,
     comparatorGpios: 0,
@@ -56,18 +58,18 @@ const definition = {
   },
   concurrencyPolicy: {
     scoringPriority: "ADC schedule, GDMA completion, canonical frame queue, and C17 evaluation outrank all services",
-    applicationBus: "SPI2_HOST for W5500 and the write-only primary-output shift register",
+    applicationBus: "SPI2_HOST dedicated to W5500",
     ir: "RMT RX cannot enter the normalized electrical-sample interface",
     display: "HUB75 refresh must not share SPI3, its GDMA channel, or the scoring frame queue",
     flash: "erase, write, NVS commit, and OTA are prohibited while scoring is READY or ACTIVE",
     radio: "Wi-Fi/BLE may run only after the loaded timing and analog-noise test passes"
   },
   primaryOutputs: {
-    transport: "APP_SPI_SCK and APP_SPI_MOSI plus GPIO7 PRIMARY_OUTPUT_LATCH",
+    transport: "five direct GPIOs into one protected output driver",
     safeState:
       "External reset/output-enable holds every lamp and buzzer load inactive before boot, during reset, and after any scoring-unavailable fault.",
     feedbackRequired: true,
-    exactLatchAndDriverSelection: "open"
+    exactDriverSelection: "open"
   },
   watchdog: {
     kickSignal: "APP_WD_KICK on GPIO12",
@@ -184,11 +186,12 @@ export function validateBenchPrototypeEsp32ScoringFeasibility(value: unknown): t
     throw new RangeError("BP-127 must exactly match the reviewed fail-closed feasibility contract")
   }
   if (
-    benchPrototypeEsp32ScoringFeasibility.acquisition.frameBits !== 140 ||
-    benchPrototypeEsp32ScoringFeasibility.acquisition.wireTimeUs !== 7 ||
-    benchPrototypeEsp32ScoringFeasibility.acquisition.scanPeriodUs !== 8 ||
+    benchPrototypeEsp32ScoringFeasibility.acquisition.frameBits !== 126 ||
+    benchPrototypeEsp32ScoringFeasibility.acquisition.wireTimeUs !== 6.3 ||
+    benchPrototypeEsp32ScoringFeasibility.acquisition.maximumConversionTimeUs !== 0.71 ||
+    benchPrototypeEsp32ScoringFeasibility.acquisition.scanPeriodUs !== 8.01 ||
     benchPrototypeEsp32ScoringFeasibility.acquisition.minimumCompletedScansDuringSabreSignal !== 12 ||
-    benchPrototypeEsp32ScoringFeasibility.preliminaryPinResult.uncommittedGpios.length !== 7 ||
+    benchPrototypeEsp32ScoringFeasibility.preliminaryPinResult.uncommittedGpios.length !== 3 ||
     benchPrototypeEsp32ScoringFeasibility.queueAndFaultModel.maximumConsumerLagFrames !== 4 ||
     benchPrototypeEsp32ScoringFeasibility.oneCellExperiment.state !== "not-run" ||
     benchPrototypeEsp32ScoringFeasibility.authority.oneCellBenchPassed ||
