@@ -181,7 +181,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
   })
 
   it("maps the seven U_ESD references to the TPD4E05 review inputs without opening release authority", () => {
-    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(10)
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(11)
     expect(
       benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
         (mapping) => mapping.mappingId === "bp031-tpd4e05u06-dqa-project-footprint"
@@ -270,6 +270,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
             record.sourceBaseReference !== "C_REF_IN" &&
             record.sourceBaseReference !== "C_REF_REG_HF" &&
             record.sourceBaseReference !== "J_WEAPON_FIXTURE" &&
+            record.sourceBaseReference !== "R_REF_SAR" &&
             !["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference)
         )
         .every((record) => record.reviewEvidenceMappingId === null)
@@ -746,6 +747,54 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     ])
     expect(
       records.every((record) => record.reviewEvidenceMappingId === "bp031-032-c0603c104k3ractu-footprint-evidence")
+    ).toBe(true)
+    expect(records.every((record) => record.disposition === "DNP-unresolved")).toBe(true)
+  })
+
+  it("maps all seven R_REF_SAR references to root-reviewed RCWE0603 series evidence without overstating exact proof", () => {
+    const mapping = benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+      (candidate) => candidate.mappingId === "bp031-vishay-rcwe0603-r220-footprint-evidence"
+    )
+    expect(mapping).toMatchObject({
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      artifactKind: "bp031-vishay-rcwe0603-r220-footprint-evidence",
+      workUnit: "BP-031",
+      baseReference: "R_REF_SAR",
+      sourceContract: "BP-101",
+      manufacturer: "Vishay Dale",
+      exactMpn: "RCWE0603R220FKEA",
+      exactPackage: "RCWE0603",
+      affectedReferences: [
+        "R_REF_SAR_1",
+        "R_REF_SAR_2",
+        "R_REF_SAR_3",
+        "R_REF_SAR_4",
+        "R_REF_SAR_5",
+        "R_REF_SAR_6",
+        "R_REF_SAR_7"
+      ],
+      exactSelectedPart: { exactMpnNamedInManufacturerSource: false },
+      manufacturerCad: { state: "not-acquired", artifactPath: null, authority: "deny" },
+      projectFootprint: { state: "review-only", accepted: false, fabricationAuthority: "deny" },
+      acceptance: {
+        exactProjectIdentityReviewed: true,
+        exactMpnNamedInManufacturerSource: false,
+        seriesGeometryReviewed: true,
+        projectGeometryAccepted: false,
+        orientationAccepted: false,
+        exactOrderableCadAccepted: false,
+        boardFitAccepted: false,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      }
+    })
+    const records = benchPrototypeAnalogFootprintClosure.records.filter(
+      (record) => record.sourceBaseReference === "R_REF_SAR"
+    )
+    expect(records).toHaveLength(7)
+    expect(
+      records.every((record) => record.reviewEvidenceMappingId === "bp031-vishay-rcwe0603-r220-footprint-evidence")
     ).toBe(true)
     expect(records.every((record) => record.disposition === "DNP-unresolved")).toBe(true)
   })
