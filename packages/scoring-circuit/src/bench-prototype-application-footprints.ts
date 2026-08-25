@@ -60,6 +60,10 @@ import {
   bp033W5500ProjectFootprintGeometry,
   validateBp033W5500ProjectFootprintGeometry
 } from "./bp033-w5500-project-footprint.js"
+import {
+  bp033YageoRc0603fr07100rlIrReviewCandidate,
+  validateBp033YageoRc0603fr07100rlIrReviewCandidate
+} from "./bp033-yageo-rc0603fr-07100rl-ir-review-candidate.js"
 import { ethernetSupportNetwork } from "./ethernet-support-network.js"
 
 type PlainRecord = Record<PropertyKey, unknown>
@@ -1076,6 +1080,18 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer" as const,
     reviewedAt: "2026-08-25" as const,
     fabricationRelease: "deny" as const
+  })),
+  ...bp033YageoRc0603fr07100rlIrReviewCandidate.rootIntegrationHandoff.requiredRows.map(({ reference }) => ({
+    reference,
+    artifactKind: bp033YageoRc0603fr07100rlIrReviewCandidate.artifactKind,
+    artworkModule: "src/bp033-yageo-rc0603fr-07100rl-ir-review-candidate.tsx",
+    reviewDocument: "docs/bp-033-yageo-rc0603fr-07100rl-ir-review-candidate.md",
+    sourceArtifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100rl-datasheet.pdf",
+    sourceSha256: bp033YageoRc0603fr07100rlIrReviewCandidate.source.sha256,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
   }))
 ] as const
 
@@ -1176,6 +1192,9 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
   }
   validateBp033DisplayBufferBss138akaReferenceBinding()
   validateBp033Sn74ahct245pwrTssop20Footprint(bp033Sn74ahct245pwrTssop20Footprint)
+  if (validateBp033YageoRc0603fr07100rlIrReviewCandidate().length !== 0) {
+    throw new RangeError("BP-033 encrypted-IR resistor review candidate drifted")
+  }
   if (!sameDataGraph(value, benchPrototypeApplicationFootprints))
     throw new RangeError("BP-033 must exactly match the reviewed fail-closed ledger")
   const contract = benchPrototypeApplicationFootprints
@@ -1228,7 +1247,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 70 ||
+    contract.projectFootprintMappings.length !== 72 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1455,6 +1474,24 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         mapping.reviewDocument === "docs/bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint-review.md" &&
         mapping.sourceArtifactPath === "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf" &&
         mapping.sourceSha256 === "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054" &&
+        mapping.reviewState === "root-reviewed-review-input" &&
+        mapping.reviewer === "root-final-reviewer" &&
+        mapping.reviewedAt === "2026-08-25" &&
+        mapping.fabricationRelease === "deny"
+      )
+    }) ||
+    !bp033YageoRc0603fr07100rlIrReviewCandidate.rootIntegrationHandoff.requiredRows.every((row, offset) => {
+      const mapping = contract.projectFootprintMappings[70 + offset]
+      return (
+        mapping?.reference === row.reference &&
+        row.manufacturer === "YAGEO" &&
+        row.manufacturerPartNumber === "RC0603FR-07100RL" &&
+        row.package === "0603" &&
+        mapping.artifactKind === bp033YageoRc0603fr07100rlIrReviewCandidate.artifactKind &&
+        mapping.artworkModule === "src/bp033-yageo-rc0603fr-07100rl-ir-review-candidate.tsx" &&
+        mapping.reviewDocument === "docs/bp-033-yageo-rc0603fr-07100rl-ir-review-candidate.md" &&
+        mapping.sourceArtifactPath === "docs/evidence/bp-033/yageo-rc0603fr-07100rl-datasheet.pdf" &&
+        mapping.sourceSha256 === bp033YageoRc0603fr07100rlIrReviewCandidate.source.sha256 &&
         mapping.reviewState === "root-reviewed-review-input" &&
         mapping.reviewer === "root-final-reviewer" &&
         mapping.reviewedAt === "2026-08-25" &&

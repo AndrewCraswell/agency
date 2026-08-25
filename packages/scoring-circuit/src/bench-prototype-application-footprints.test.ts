@@ -797,4 +797,21 @@ describe("BP-033 application footprint closure ledger", () => {
       })
     }
   })
+
+  it("links both BP-033 encrypted-IR resistors to exact Yageo evidence", () => {
+    for (const reference of ["R_IR_VS", "R_IR_OUT"]) {
+      expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toContainEqual({
+        reference,
+        artifactKind: "bp033-yageo-rc0603fr-07100rl-ir-review-candidate",
+        artworkModule: "src/bp033-yageo-rc0603fr-07100rl-ir-review-candidate.tsx",
+        reviewDocument: "docs/bp-033-yageo-rc0603fr-07100rl-ir-review-candidate.md",
+        sourceArtifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100rl-datasheet.pdf",
+        sourceSha256: "FA83985D9865FE54D18F0B3BFF57200829EDD95CB4C2EB4694C45BB92EB18C07",
+        reviewState: "root-reviewed-review-input",
+        reviewer: "root-final-reviewer",
+        reviewedAt: "2026-08-25",
+        fabricationRelease: "deny"
+      })
+    }
+  })
 })
