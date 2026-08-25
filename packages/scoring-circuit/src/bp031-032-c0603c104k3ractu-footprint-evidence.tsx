@@ -51,7 +51,7 @@ const projectCourtyardWidthMm = 1.4
 const sourceArtifactPath = "packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c104k3ractu-datasheet.pdf"
 const sourceSha256 = "F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064"
 const artworkSha256 = "C7F7B09F6AA395F0828ED993D2801D6AEB08D8533C3D8933DD64187423B4B1A8"
-const basisCommit = "a84fb13a95cb1a49c9a3dbe8628249567a9f3e1c"
+const basisCommit = "55fcb34e7af21663ae534dcbf20882553359fa27"
 
 const upstreamSourceHashes = [
   {
@@ -61,7 +61,7 @@ const upstreamSourceHashes = [
   },
   {
     path: "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts",
-    sha256: "ac7a72f68b8d9113b6ad1d161645cc8f8b7062207abf4fe5411042962e22314c",
+    sha256: "4a50698a9344ff2390a12d515f0f964273812a165d3ea3eaf9a5c1e7edc9bf71",
     scope: "BP-031 seven-channel C_REF_REG_HF_1..7 reference expansion"
   },
   {
@@ -81,7 +81,7 @@ const upstreamSourceHashes = [
   },
   {
     path: "packages/scoring-circuit/src/m4-04-single-channel-coupon.ts",
-    sha256: "2cba495fc2746c038fb09a13793b1dbf7f7d0b4d8f55d7f748ad2e0e9e12d0e0",
+    sha256: "298f04737136ba41b9f909ecf838342df5d2da1173778bd42a64ac0048d9e9ce",
     scope: "M4-04 exact C0603C104K3RACTU source registry"
   }
 ] as const
@@ -93,7 +93,20 @@ const upstreamSourceHashes = [
  * not a land-pattern or CAD release. Project copper, mask, paste, courtyard,
  * and orientation are therefore explicit review inputs and remain denied.
  */
-export const bp031032C0603C104K3RactuFootprintEvidence = {
+function deepFreeze<T extends object>(value: T, seen = new WeakSet<object>()): T {
+  if (seen.has(value)) return value
+  seen.add(value)
+  for (const propertyKey of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, propertyKey)
+    if (descriptor && "value" in descriptor && typeof descriptor.value === "object" && descriptor.value !== null) {
+      deepFreeze(descriptor.value, seen)
+    }
+  }
+  Object.freeze(value)
+  return value
+}
+
+const bp031032C0603C104K3RactuFootprintEvidenceBaseline = deepFreeze({
   artifactKind: "bp031-032-c0603c104k3ractu-footprint-evidence",
   workUnits: ["BP-031", "BP-032"],
   sourceContracts: ["BP-101", "BP-123"],
@@ -306,7 +319,65 @@ export const bp031032C0603C104K3RactuFootprintEvidence = {
   releaseState: "deny",
   fabricationAuthority: "deny",
   accepted: false
-} as const
+} as const)
+
+export const bp031032C0603C104K3RactuFootprintEvidence = deepFreeze(
+  structuredClone(bp031032C0603C104K3RactuFootprintEvidenceBaseline)
+)
+
+type ExactGraphState = {
+  readonly actualSeen: Set<object>
+  readonly expectedSeen: Set<object>
+}
+
+function assertExactDataGraph(actual: unknown, expected: unknown, state: ExactGraphState, path: string): void {
+  if (typeof expected !== "object" || expected === null) {
+    if (!Object.is(actual, expected)) throw new RangeError(`C0603C104K3RACTU exact graph drift at ${path}`)
+    return
+  }
+  if (typeof actual !== "object" || actual === null)
+    throw new RangeError(`C0603C104K3RACTU exact graph drift at ${path}`)
+  if (state.actualSeen.has(actual) || state.expectedSeen.has(expected))
+    throw new RangeError(`C0603C104K3RACTU graph cycle or alias at ${path}`)
+  if (Object.getPrototypeOf(actual) !== Object.getPrototypeOf(expected))
+    throw new RangeError(`C0603C104K3RACTU prototype drift at ${path}`)
+
+  const actualKeys = Reflect.ownKeys(actual)
+  const expectedKeys = Reflect.ownKeys(expected)
+  if (
+    actualKeys.length !== expectedKeys.length ||
+    expectedKeys.some((key) => !actualKeys.includes(key)) ||
+    actualKeys.some((key) => !expectedKeys.includes(key))
+  ) {
+    throw new RangeError(`C0603C104K3RACTU hidden or symbol property drift at ${path}`)
+  }
+
+  state.actualSeen.add(actual)
+  state.expectedSeen.add(expected)
+  try {
+    for (const key of expectedKeys) {
+      const actualDescriptor = Object.getOwnPropertyDescriptor(actual, key)
+      const expectedDescriptor = Object.getOwnPropertyDescriptor(expected, key)
+      if (
+        !actualDescriptor ||
+        !expectedDescriptor ||
+        !("value" in actualDescriptor) ||
+        !("value" in expectedDescriptor) ||
+        actualDescriptor.get !== undefined ||
+        actualDescriptor.set !== undefined ||
+        expectedDescriptor.get !== undefined ||
+        expectedDescriptor.set !== undefined ||
+        actualDescriptor.enumerable !== expectedDescriptor.enumerable
+      ) {
+        throw new RangeError(`C0603C104K3RACTU getter or descriptor drift at ${path}.${String(key)}`)
+      }
+      assertExactDataGraph(actualDescriptor.value, expectedDescriptor.value, state, `${path}.${String(key)}`)
+    }
+  } finally {
+    state.actualSeen.delete(actual)
+    state.expectedSeen.delete(expected)
+  }
+}
 
 function isSha256(value: unknown): value is string {
   return typeof value === "string" && /^[0-9a-fA-F]{64}$/u.test(value)
@@ -321,6 +392,19 @@ export function validateBp031032C0603C104K3RactuFootprintEvidence(
   candidate: typeof bp031032C0603C104K3RactuFootprintEvidence = bp031032C0603C104K3RactuFootprintEvidence
 ): readonly string[] {
   const errors: string[] = []
+  try {
+    assertExactDataGraph(
+      candidate,
+      bp031032C0603C104K3RactuFootprintEvidenceBaseline,
+      {
+        actualSeen: new Set(),
+        expectedSeen: new Set()
+      },
+      "root"
+    )
+  } catch {
+    return ["C0603C104K3RACTU exact graph, descriptor, or deny-state drifted"]
+  }
   const exactSource = candidate.sources[0]
   const expectedReferences = [...bp031References, ...bp032References]
 
@@ -515,6 +599,37 @@ export function validateBp031032C0603C104K3RactuFootprintEvidence(
     errors.push("rendered artwork must have a bound SHA-256 while remaining denied")
   }
   return errors
+}
+
+export function bp031032C0603C104K3RactuFootprintEvidenceFor(mpn: string, reference: string) {
+  if (
+    mpn !== manufacturerPartNumber ||
+    !bp031032C0603C104K3RactuFootprintEvidence.referenceSets.bp032.references.some(
+      (candidateReference) => candidateReference === reference
+    )
+  ) {
+    return null
+  }
+  const source = bp031032C0603C104K3RactuFootprintEvidence.sources[0]
+  if (source === undefined) throw new RangeError("C0603C104K3RACTU retained source is missing")
+  return {
+    artifactKind: bp031032C0603C104K3RactuFootprintEvidence.artifactKind,
+    exactMpn: mpn,
+    reference,
+    sourceId: source.id,
+    sourceOwner: "M4-04",
+    upstreamContract: "BP-123",
+    sourceArtifactPath: source.artifactPath,
+    sourceSha256: source.sha256,
+    projectFootprintId: "c0603c104k3ractu-project-review",
+    manufacturerCad: "not-acquired",
+    manufacturerLandPattern: "not-published",
+    artwork: "generated-project-review-only",
+    orientation: "pending-independent-review",
+    releaseState: "deny",
+    fabricationAuthority: "deny",
+    accepted: false
+  } as const
 }
 
 const projectFootprint = (

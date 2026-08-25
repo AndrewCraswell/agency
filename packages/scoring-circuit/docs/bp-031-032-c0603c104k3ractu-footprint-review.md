@@ -62,7 +62,15 @@ The machine-readable record and validator are
 renders the actual tscircuit geometry, checks ports and no render errors, and
 hash-binds the geometry. The validator fails closed on identity, package,
 reference sets, source hash, PDF page binding, geometry, orientation, CAD
-disposition, and release state.
+disposition, and release state. The current source-control snapshot binds
+integration commit `55fcb34e7af21663ae534dcbf20882553359fa27`; its closure
+and M4-04 hashes cover the current source records.
+
+The same review-only evidence is linked to the seven BP-031
+`C_REF_REG_HF_n` records and the eight BP-032 BP-123 reset/watchdog rows.
+Those links establish reviewed-unapproved provenance only. They do not change
+the candidate's CAD, artwork-acceptance, placement, release, or fabrication
+deny states.
 
 ## Authority and open gates
 

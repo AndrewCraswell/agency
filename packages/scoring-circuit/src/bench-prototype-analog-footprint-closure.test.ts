@@ -181,7 +181,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
   })
 
   it("maps the seven U_ESD references to the TPD4E05 review inputs without opening release authority", () => {
-    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(8)
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(9)
     expect(
       benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
         (mapping) => mapping.mappingId === "bp031-tpd4e05u06-dqa-project-footprint"
@@ -268,6 +268,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
             record.sourceBaseReference !== "U_REF" &&
             record.sourceBaseReference !== "C_SAR" &&
             record.sourceBaseReference !== "C_REF_IN" &&
+            record.sourceBaseReference !== "C_REF_REG_HF" &&
             !["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference)
         )
         .every((record) => record.reviewEvidenceMappingId === null)
@@ -673,6 +674,81 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     ).toBe(true)
   })
 
+  it("maps the seven C_REF_REG_HF references to reviewed-unapproved KEMET evidence", () => {
+    const mapping = benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+      (candidate) => candidate.mappingId === "bp031-032-c0603c104k3ractu-footprint-evidence"
+    )
+    expect(mapping).toMatchObject({
+      mappingId: "bp031-032-c0603c104k3ractu-footprint-evidence",
+      reviewState: "reviewed-unapproved",
+      reviewer: null,
+      reviewedAt: null,
+      artifactKind: "bp031-032-c0603c104k3ractu-footprint-evidence",
+      artifactPath: "packages/scoring-circuit/src/bp031-032-c0603c104k3ractu-footprint-evidence.tsx",
+      workUnit: "BP-031",
+      baseReference: "C_REF_REG_HF",
+      sourceContract: "BP-101",
+      manufacturer: "KEMET",
+      exactMpn: "C0603C104K3RACTU",
+      exactPackage: "EIA 0603 / IEC 1608",
+      affectedReferences: [
+        "C_REF_REG_HF_1",
+        "C_REF_REG_HF_2",
+        "C_REF_REG_HF_3",
+        "C_REF_REG_HF_4",
+        "C_REF_REG_HF_5",
+        "C_REF_REG_HF_6",
+        "C_REF_REG_HF_7"
+      ],
+      manufacturerDrawingInput: {
+        state: "source-controlled-pending-review",
+        acquisition: "exact-primary-identity-hash-bound",
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c104k3ractu-datasheet.pdf",
+        reviewedPages: [1],
+        sha256: "F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064",
+        authority: "deny"
+      },
+      manufacturerCad: { state: "not-acquired", artifactPath: null, authority: "deny" },
+      renderedArtwork: {
+        state: "generated-project-review-only",
+        sha256: "C7F7B09F6AA395F0828ED993D2801D6AEB08D8533C3D8933DD64187423B4B1A8",
+        authority: "deny"
+      },
+      orientation: {
+        state: "pending-review",
+        polarity: "non-polar",
+        pinOne: "not-applicable",
+        authority: "deny"
+      },
+      projectGeometry: { state: "review-only", accepted: false, fabricationAuthority: "deny" },
+      acceptance: {
+        exactIdentityHashBound: true,
+        projectGeometryAccepted: false,
+        nonPolarOrientationReviewed: false,
+        cadImportAccepted: false,
+        boardFitAccepted: false,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      }
+    })
+    const records = benchPrototypeAnalogFootprintClosure.records.filter(
+      (record) => record.sourceBaseReference === "C_REF_REG_HF"
+    )
+    expect(records.map((record) => record.reference)).toEqual([
+      "C_REF_REG_HF_1",
+      "C_REF_REG_HF_2",
+      "C_REF_REG_HF_3",
+      "C_REF_REG_HF_4",
+      "C_REF_REG_HF_5",
+      "C_REF_REG_HF_6",
+      "C_REF_REG_HF_7"
+    ])
+    expect(
+      records.every((record) => record.reviewEvidenceMappingId === "bp031-032-c0603c104k3ractu-footprint-evidence")
+    ).toBe(true)
+    expect(records.every((record) => record.disposition === "DNP-unresolved")).toBe(true)
+  })
+
   it("maps all 28 selected Vishay CRCW references to root-reviewed series geometry without opening release authority", () => {
     const mapping = benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
       (candidate) => candidate.mappingId === "bp031-vishay-crcw-selected-resistor-footprint-evidence"
@@ -851,6 +927,11 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       "forged TDK C_REF_IN review mapping",
       (copy: typeof benchPrototypeAnalogFootprintClosure) =>
         Reflect.set(copy.reviewEvidenceMappings[7], "exactMpn", "CGA3E3X7R1H105K080AA")
+    ],
+    [
+      "forged KEMET C_REF_REG_HF review mapping",
+      (copy: typeof benchPrototypeAnalogFootprintClosure) =>
+        Reflect.set(copy.reviewEvidenceMappings[8], "releaseState", "allow")
     ]
   ])("rejects %s", (_name, mutate) => {
     const copy = structuredClone(benchPrototypeAnalogFootprintClosure)

@@ -4,11 +4,13 @@ import { describe, expect, it } from "vitest"
 import {
   Bp031032C0603C104K3RactuFootprintEvidence,
   bp031032C0603C104K3RactuFootprintEvidence,
+  bp031032C0603C104K3RactuFootprintEvidenceFor,
   validateBp031032C0603C104K3RactuFootprintEvidence
 } from "./bp031-032-c0603c104k3ractu-footprint-evidence.js"
 import { renderTestCircuit } from "./test-helper.js"
 
 type CircuitElement = ReturnType<typeof renderTestCircuit>[number]
+const expectedRenderedArtworkSha256 = "C7F7B09F6AA395F0828ED993D2801D6AEB08D8533C3D8933DD64187423B4B1A8"
 
 function renderProjectFootprint() {
   return renderTestCircuit(<Bp031032C0603C104K3RactuFootprintEvidence />)
@@ -198,7 +200,8 @@ describe("BP-031/BP-032 exact C0603C104K3RACTU footprint evidence", () => {
   })
 
   it("binds the rendered geometry hash and explicit non-polar orientation", () => {
-    expect(renderedGeometryHash()).toBe(bp031032C0603C104K3RactuFootprintEvidence.artwork.sha256)
+    expect(renderedGeometryHash()).toBe(expectedRenderedArtworkSha256)
+    expect(bp031032C0603C104K3RactuFootprintEvidence.artwork.sha256).toBe(expectedRenderedArtworkSha256)
     expect(bp031032C0603C104K3RactuFootprintEvidence.orientation).toMatchObject({
       state: "pending-review",
       polarity: "non-polar",
@@ -206,6 +209,92 @@ describe("BP-031/BP-032 exact C0603C104K3RACTU footprint evidence", () => {
       assemblyRotationDeg: null,
       rotationEquivalence: "180-degree rotationally equivalent"
     })
+  })
+
+  it("runtime-freezes the exported evidence and rejects direct provenance or deny-state mutation", () => {
+    const evidence = bp031032C0603C104K3RactuFootprintEvidence
+    const expectDirectMutationDenied = (target: object, key: PropertyKey, value: unknown) => {
+      expect(Reflect.set(target, key, value)).toBe(false)
+      expect(validateBp031032C0603C104K3RactuFootprintEvidence()).toEqual([])
+    }
+
+    expect(Object.isFrozen(evidence)).toBe(true)
+    expect(Object.isFrozen(evidence.sourceControl)).toBe(true)
+    expect(Object.isFrozen(evidence.sourceControl.upstreamSources)).toBe(true)
+    expect(Object.isFrozen(evidence.sources)).toBe(true)
+    expect(Object.isFrozen(evidence.sources[0])).toBe(true)
+    expect(Object.isFrozen(evidence.artwork)).toBe(true)
+    expect(Object.isFrozen(evidence.projectFootprint)).toBe(true)
+
+    expectDirectMutationDenied(evidence, "releaseState", "allow")
+    expectDirectMutationDenied(evidence.projectFootprint, "fabricationAuthority", "allow")
+    expectDirectMutationDenied(evidence.sources[0], "sha256", "0".repeat(64))
+    expectDirectMutationDenied(evidence.artwork, "sha256", "0".repeat(64))
+  })
+
+  it("rejects hidden, symbol, getter, prototype, cycle, and alias graph drift without invoking getters", () => {
+    const expectGraphDrift = (mutate: (copy: Mutable<typeof bp031032C0603C104K3RactuFootprintEvidence>) => void) => {
+      const copy = mutableClone()
+      mutate(copy)
+      expect(
+        validateBp031032C0603C104K3RactuFootprintEvidence(
+          copy as unknown as typeof bp031032C0603C104K3RactuFootprintEvidence
+        )
+      ).not.toEqual([])
+    }
+
+    expectGraphDrift((copy) => {
+      Object.defineProperty(copy.sources[0], "hidden", { configurable: true, enumerable: false, value: "drift" })
+    })
+    expectGraphDrift((copy) => {
+      Object.defineProperty(copy.sources[0], Symbol("drift"), { configurable: true, enumerable: false, value: "drift" })
+    })
+    let getterInvoked = false
+    const getterCopy = mutableClone()
+    Object.defineProperty(getterCopy.sources[0], "sha256", {
+      configurable: true,
+      enumerable: true,
+      get: () => {
+        getterInvoked = true
+        return "F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064"
+      }
+    })
+    expect(
+      validateBp031032C0603C104K3RactuFootprintEvidence(
+        getterCopy as unknown as typeof bp031032C0603C104K3RactuFootprintEvidence
+      )
+    ).not.toEqual([])
+    expect(getterInvoked).toBe(false)
+    expectGraphDrift((copy) => Object.setPrototypeOf(copy.sources[0], null))
+    expectGraphDrift((copy) => {
+      Reflect.set(copy, "sourceBinding", copy)
+    })
+    expectGraphDrift((copy) => {
+      Reflect.set(copy, "projectFootprint", copy.projectSelection)
+    })
+  })
+
+  it("returns review-only BP-123 evidence for exactly the eight BP-032 references", () => {
+    const references = bp031032C0603C104K3RactuFootprintEvidence.referenceSets.bp032.references
+    expect(references).toHaveLength(8)
+    for (const reference of references) {
+      expect(bp031032C0603C104K3RactuFootprintEvidenceFor("C0603C104K3RACTU", reference)).toMatchObject({
+        exactMpn: "C0603C104K3RACTU",
+        reference,
+        sourceId: "yageo-kemet-c0603c104k3ractu-datasheet",
+        sourceOwner: "M4-04",
+        upstreamContract: "BP-123",
+        sourceSha256: "F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064",
+        projectFootprintId: "c0603c104k3ractu-project-review",
+        manufacturerCad: "not-acquired",
+        manufacturerLandPattern: "not-published",
+        releaseState: "deny",
+        fabricationAuthority: "deny",
+        accepted: false
+      })
+    }
+    expect(bp031032C0603C104K3RactuFootprintEvidenceFor("C0603C104K3RACTU", "C_REF_REG_HF_1")).toBe(null)
+    expect(bp031032C0603C104K3RactuFootprintEvidenceFor("OTHER", references[0])).toBe(null)
   })
 
   it.each([

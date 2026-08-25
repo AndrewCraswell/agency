@@ -227,6 +227,43 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
     })
   })
 
+  it("binds the eight BP-123 KEMET 100 nF rows to review-only footprint evidence", () => {
+    const references = [
+      "C_STM_SUPERVISOR_CT",
+      "C_STM_SUPERVISOR_BYPASS",
+      "C_STM_WD_BYPASS",
+      "C_STM_NRST_FILTER",
+      "C_ESP_SUPERVISOR_CT",
+      "C_ESP_SUPERVISOR_BYPASS",
+      "C_ESP_WD_BYPASS",
+      "C_APP_RESET_FANOUT_BYPASS"
+    ]
+    const rows = benchPrototypeProcessorFootprints.populatedReferences.filter((entry) =>
+      references.includes(entry.reference)
+    )
+
+    expect(rows.map((entry) => entry.reference).sort()).toEqual([...references].sort())
+    for (const row of rows) {
+      expect(row).toMatchObject({ mpn: "C0603C104K3RACTU", package: "0603" })
+      expect(row.evidence.footprintEvidence).toMatchObject({
+        artifactKind: "bp031-032-c0603c104k3ractu-footprint-evidence",
+        exactMpn: "C0603C104K3RACTU",
+        reference: row.reference,
+        sourceId: "yageo-kemet-c0603c104k3ractu-datasheet",
+        upstreamContract: "BP-123",
+        sourceArtifactPath: "packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c104k3ractu-datasheet.pdf",
+        projectFootprintId: "c0603c104k3ractu-project-review",
+        manufacturerCad: "not-acquired",
+        manufacturerLandPattern: "not-published",
+        artwork: "generated-project-review-only",
+        orientation: "pending-independent-review",
+        releaseState: "deny",
+        fabricationAuthority: "deny",
+        accepted: false
+      })
+    }
+  })
+
   it("rejects substitutions, premature artwork, clock population, and release escalation", () => {
     for (const mutate of [
       (candidate: any) => (candidate.populatedReferences[0].mpn = "STM32G474RBT3TR"),

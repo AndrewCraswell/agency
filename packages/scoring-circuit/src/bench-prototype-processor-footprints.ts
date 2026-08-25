@@ -23,6 +23,11 @@ import {
   validateBenchPrototypeServiceHeaders
 } from "./bench-prototype-service-headers.js"
 import {
+  bp031032C0603C104K3RactuFootprintEvidence,
+  bp031032C0603C104K3RactuFootprintEvidenceFor,
+  validateBp031032C0603C104K3RactuFootprintEvidence
+} from "./bp031-032-c0603c104k3ractu-footprint-evidence.js"
+import {
   bp032TdkC1608CapacitorFootprintEvidence,
   bp032TdkC1608FootprintEvidenceFor
 } from "./bp032-tdk-c1608-capacitor-footprint-evidence.js"
@@ -292,9 +297,11 @@ const evidence = (mpn: string | null, reference: string | null = null) => ({
   footprintEvidence:
     mpn === null || reference === null
       ? null
-      : mpn === "C1608X5R1A105K080AC"
-        ? bp032TdkC1608FootprintEvidenceFor(mpn, reference)
-        : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
+      : mpn === "C0603C104K3RACTU"
+        ? bp031032C0603C104K3RactuFootprintEvidenceFor(mpn, reference)
+        : mpn === "C1608X5R1A105K080AC"
+          ? bp032TdkC1608FootprintEvidenceFor(mpn, reference)
+          : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
 })
 
 const resetLedger = benchPrototypeResetWatchdog.parts.map((part) => ({
@@ -618,6 +625,9 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   validateBenchPrototypeResetWatchdog(benchPrototypeResetWatchdog)
   validateBenchPrototypeServiceHeaders(benchPrototypeServiceHeaders)
   validateBenchPrototypeProcessorSupport(benchPrototypeProcessorSupport)
+  if (validateBp031032C0603C104K3RactuFootprintEvidence().length !== 0) {
+    throw new RangeError("BP-032 C0603C104K3RACTU project-review candidate drifted")
+  }
   validateBenchPrototypeProcessorFootprintsRetainedManufacturerSources(retainedManufacturerPrimarySources)
   if (!sameDataGraph(value, benchPrototypeProcessorFootprints))
     throw new RangeError("BP-032 ledger must exactly match the reviewed canonical decision")
@@ -643,12 +653,21 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
     sourceId: bp032TdkC1608CapacitorFootprintEvidence.sources[0].id,
     upstreamContract: "BP-123"
   }))
+  const kemetReferenceBindings = bp031032C0603C104K3RactuFootprintEvidence.referenceSets.bp032.references.map(
+    (reference) => ({
+      reference,
+      manufacturerPartNumber: bp031032C0603C104K3RactuFootprintEvidence.manufacturerPartNumber,
+      sourceId: bp031032C0603C104K3RactuFootprintEvidence.sources[0].id,
+      upstreamContract: "BP-123"
+    })
+  )
   const yageoLedgerRows = references.filter(
     (entry) => entry.mpn === "RC0603FR-0710KL" || entry.mpn === "RC0603FR-07100KL"
   )
   const tdkSupportRows = ledger.processorSupportReferences.filter(
     (entry) => entry.reference === "C_ESP_EN_DELAY" && entry.selectedMpn === "C1608X5R1A105K080AC"
   )
+  const kemetResetRows = ledger.populatedReferences.filter((entry) => entry.mpn === "C0603C104K3RACTU")
   if (
     new Set(references.map((entry) => entry.reference)).size !== references.length ||
     ledger.populatedReferences.some(
@@ -706,6 +725,25 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
         row.evidence.footprintEvidence?.sourceId !== expected.sourceId ||
         row.evidence.footprintEvidence?.upstreamContract !== expected.upstreamContract ||
         row.evidence.footprintEvidence?.projectFootprintId !== "tdk-c1608-c1608x5r1a105k080ac-project-review" ||
+        row.evidence.footprintEvidence?.releaseState !== "deny" ||
+        row.evidence.footprintEvidence?.fabricationAuthority !== "deny" ||
+        row.evidence.footprintEvidence?.accepted
+      )
+    }) ||
+    kemetResetRows.length !== kemetReferenceBindings.length ||
+    kemetReferenceBindings.some((expected) => {
+      const row = kemetResetRows.find((candidate) => candidate.reference === expected.reference)
+      return (
+        row === undefined ||
+        row.mpn !== expected.manufacturerPartNumber ||
+        row.evidence.footprintEvidence === null ||
+        row.evidence.footprintEvidence?.exactMpn !== expected.manufacturerPartNumber ||
+        row.evidence.footprintEvidence?.reference !== expected.reference ||
+        row.evidence.footprintEvidence?.sourceId !== expected.sourceId ||
+        row.evidence.footprintEvidence?.upstreamContract !== expected.upstreamContract ||
+        row.evidence.footprintEvidence?.projectFootprintId !== "c0603c104k3ractu-project-review" ||
+        row.evidence.footprintEvidence?.manufacturerCad !== "not-acquired" ||
+        row.evidence.footprintEvidence?.manufacturerLandPattern !== "not-published" ||
         row.evidence.footprintEvidence?.releaseState !== "deny" ||
         row.evidence.footprintEvidence?.fabricationAuthority !== "deny" ||
         row.evidence.footprintEvidence?.accepted
