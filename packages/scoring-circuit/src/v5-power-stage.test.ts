@@ -12,7 +12,7 @@ describe("20 V USB-PD to V5 power stage", () => {
     expect(assessment.peak.outputHeadroomA).toBeCloseTo(0.99, 2)
   })
 
-  it("checks the selected input, on-time, inductor, and sense-resistor limits", () => {
+  it("checks the selected input, on-time, inductor, and input-capacitor limits", () => {
     expect(assessment.limits.inputWithinRecommendedMaximum).toBe(true)
     expect(assessment.limits.inputWithinAbsoluteMaximum).toBe(true)
     expect(assessment.limits.absoluteInputHeadroomV).toBe(10)
@@ -23,7 +23,6 @@ describe("20 V USB-PD to V5 power stage", () => {
     expect(assessment.inductor.peakRmsCurrentA).toBeLessThan(v5PowerStage.inductor.heatingCurrentA)
     expect(assessment.inductor.continuousRmsCurrentA).toBeLessThan(v5PowerStage.inductor.heatingCurrentA)
     expect(assessment.limits.currentLimitPeakHeadroomA).toBeGreaterThan(2)
-    expect(assessment.peak.shuntPowerW).toBeLessThan(v5PowerStage.sense.powerRatingW)
     expect(assessment.inputMlcc.peakBankRmsCurrentA).toBeCloseTo(4.06, 2)
     expect(assessment.inputMlcc.requiredPerCapRmsCurrentA).toBeCloseTo(2.03, 2)
     expect(assessment.inputMlcc.rippleQualificationPass).toBe(false)
@@ -33,12 +32,11 @@ describe("20 V USB-PD to V5 power stage", () => {
     expect(assessment.continuous.eFuseHeadroomA).toBeGreaterThan(0)
     expect(assessment.peak.eFuseHeadroomA).toBeLessThan(0)
     expect(assessment.eFuseBound.minimumCurrentLimitA).toBeCloseTo(2.4, 2)
-    expect(assessment.continuous.preShuntOutputW).toBeCloseTo(40.08, 2)
-    expect(assessment.peak.preShuntOutputW).toBeCloseTo(45.21, 2)
-    expect(assessment.eFuseBound.maximumPreShuntOutputW).toBeCloseTo(40.73, 2)
-    expect(assessment.eFuseBound.maximumPostShuntLoadW).toBeCloseTo(40.6, 2)
-    expect(assessment.eFuseBound.maximumPostShuntOutputCurrentA).toBeCloseTo(8.12, 2)
-    expect(assessment.eFuseBound.maximumPeakDisplayAllocationW).toBeCloseTo(30.34, 2)
+    expect(assessment.continuous.outputLoadW).toBeCloseTo(39.95, 2)
+    expect(assessment.peak.outputLoadW).toBeCloseTo(45.05, 2)
+    expect(assessment.eFuseBound.maximumOutputLoadW).toBeCloseTo(40.73, 2)
+    expect(assessment.eFuseBound.maximumOutputCurrentA).toBeCloseTo(8.15, 2)
+    expect(assessment.eFuseBound.maximumPeakDisplayAllocationW).toBeCloseTo(30.47, 2)
     expect(assessment.releaseState).toBe("deny")
   })
 

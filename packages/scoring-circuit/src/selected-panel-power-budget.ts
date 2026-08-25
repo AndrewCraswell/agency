@@ -13,7 +13,7 @@ import { assessV5PowerStage, v5PowerStage } from "./v5-power-stage.js"
  * This intentionally remains separate from the generic allocation model. The
  * generic model answers how much an unselected display could consume; this
  * model answers whether the currently selected panel's published load fits
- * the USB-PD, eFuse, V5 shunt, V5 buck, and application-rail assumptions.
+ * the USB-PD, eFuse, V5 buck, and application-rail assumptions.
  */
 
 export type SelectedPanelPowerPoint = {
@@ -32,21 +32,19 @@ export type SelectedPanelPowerPoint = {
   eFuseCurrentPass: boolean
   panel: PowerPair & { currentA: number }
   pdAndEfusePathLossW: number
-  postShuntCeilingHeadroomW: number
-  postShuntCeilingW: number
-  postShuntLoadW: number
-  postShuntLoadPass: boolean
-  postShuntOutputCurrentA: number
+  outputCeilingHeadroomW: number
+  outputCeilingW: number
+  outputLoadW: number
+  outputLoadPass: boolean
+  outputCurrentA: number
   sourceDemandA: number
   sourceDemandW: number
   sourceEnvelopeHeadroomW: number
   sourceEnvelopePass: boolean
   sourceEnvelopeW: number
-  shuntPowerW: number
   totalLossW: number
   v5OutputCurrentHeadroomA: number
   v5OutputCurrentPass: boolean
-  v5PreShuntLoadW: number
 }
 
 export type SelectedPanelPowerBudget = {
@@ -144,7 +142,7 @@ function selectedDirectV5Load(mode: "continuous" | "peak"): number {
 function pointFor(
   panel: DisplayPanelReadiness,
   eFuseCurrentLimitA: number,
-  postShuntCeilingW: number,
+  outputCeilingW: number,
   mode: "continuous" | "peak"
 ): SelectedPanelPowerPoint {
   const applicationRail = calculateApplicationRail()
@@ -159,12 +157,10 @@ function pointFor(
   const panelLoad: PowerPair = panel.declaredLoad
   const panelLoadW = panelLoad[`${mode}W`]
   const panelCurrentA = panelLoadW / panel.supplyVoltageV
-  const postShuntLoadW = applicationInputEquivalentW + directV5FixedLoadW + panelLoadW
-  const postShuntOutputCurrentA = postShuntLoadW / v5PowerStage.output.voltageV
-  const shuntPowerW = postShuntOutputCurrentA ** 2 * v5PowerStage.sense.resistanceOhms
-  const v5PreShuntLoadW = postShuntLoadW + shuntPowerW
-  const buckInputPowerW = v5PreShuntLoadW / defaultRailBudgetInputs.buckBoostEfficiency
-  const buckConversionLossW = buckInputPowerW - v5PreShuntLoadW
+  const outputLoadW = applicationInputEquivalentW + directV5FixedLoadW + panelLoadW
+  const outputCurrentA = outputLoadW / v5PowerStage.output.voltageV
+  const buckInputPowerW = outputLoadW / defaultRailBudgetInputs.buckBoostEfficiency
+  const buckConversionLossW = buckInputPowerW - outputLoadW
   const pdAndEfusePathLossW = defaultRailBudgetInputs.pdAndEfusePathLossW
   const sourceDemandW = buckInputPowerW + pdAndEfusePathLossW
   const sourceDemandA = sourceDemandW / defaultRailBudgetInputs.sourceVoltageV
@@ -174,7 +170,7 @@ function pointFor(
     (mode === "continuous"
       ? defaultRailBudgetInputs.continuousSourceUtilization
       : defaultRailBudgetInputs.peakSourceUtilization)
-  const v5OutputCurrentHeadroomA = v5PowerStage.controller.continuousOutputCurrentA - postShuntOutputCurrentA
+  const v5OutputCurrentHeadroomA = v5PowerStage.controller.continuousOutputCurrentA - outputCurrentA
 
   return {
     applicationRail: {
@@ -192,21 +188,19 @@ function pointFor(
     eFuseCurrentPass: sourceDemandA <= eFuseCurrentLimitA,
     panel: { ...panelLoad, currentA: panelCurrentA },
     pdAndEfusePathLossW,
-    postShuntCeilingHeadroomW: postShuntCeilingW - postShuntLoadW,
-    postShuntCeilingW,
-    postShuntLoadW,
-    postShuntLoadPass: postShuntLoadW <= postShuntCeilingW,
-    postShuntOutputCurrentA,
+    outputCeilingHeadroomW: outputCeilingW - outputLoadW,
+    outputCeilingW,
+    outputLoadW,
+    outputLoadPass: outputLoadW <= outputCeilingW,
+    outputCurrentA,
     sourceDemandA,
     sourceDemandW,
     sourceEnvelopeHeadroomW: sourceEnvelopeW - sourceDemandW,
     sourceEnvelopePass: sourceDemandW <= sourceEnvelopeW,
     sourceEnvelopeW,
-    shuntPowerW,
-    totalLossW: sourceDemandW - postShuntLoadW,
+    totalLossW: sourceDemandW - outputLoadW,
     v5OutputCurrentHeadroomA,
-    v5OutputCurrentPass: postShuntOutputCurrentA <= v5PowerStage.controller.continuousOutputCurrentA,
-    v5PreShuntLoadW
+    v5OutputCurrentPass: outputCurrentA <= v5PowerStage.controller.continuousOutputCurrentA
   }
 }
 
@@ -218,18 +212,17 @@ export function calculateSelectedPanelPowerBudget(panel: unknown = displayPanelR
   const continuous = pointFor(
     panel,
     genericV5Assessment.eFuseBound.minimumCurrentLimitA,
-    genericV5Assessment.eFuseBound.maximumPostShuntLoadW,
+    genericV5Assessment.eFuseBound.maximumOutputLoadW,
     "continuous"
   )
   const peak = pointFor(
     panel,
     genericV5Assessment.eFuseBound.minimumCurrentLimitA,
-    genericV5Assessment.eFuseBound.maximumPostShuntLoadW,
+    genericV5Assessment.eFuseBound.maximumOutputLoadW,
     "peak"
   )
   const powerFitPass = [continuous, peak].every(
-    (point) =>
-      point.sourceEnvelopePass && point.eFuseCurrentPass && point.postShuntLoadPass && point.v5OutputCurrentPass
+    (point) => point.sourceEnvelopePass && point.eFuseCurrentPass && point.outputLoadPass && point.v5OutputCurrentPass
   )
 
   return {

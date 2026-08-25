@@ -32,17 +32,15 @@ export const v5PowerStage = {
     mlccMpn: "GRM32ER71E226KE15L",
     mlccRatedCapacitanceF: 22e-6,
     voltageV: 5
-  },
-  sense: { mpn: "CRE2512-FZ-R002E-3", powerRatingW: 3, resistanceOhms: 0.002 }
+  }
 } as const
 
 export type V5PowerStageAssessment = {
   continuous: V5LoadPoint
   eFuseBound: {
     maximumPeakDisplayAllocationW: number
-    maximumPostShuntLoadW: number
-    maximumPostShuntOutputCurrentA: number
-    maximumPreShuntOutputW: number
+    maximumOutputLoadW: number
+    maximumOutputCurrentA: number
     minimumCurrentLimitA: number
   }
   enable: { nominalStartV: number; nominalStopV: number }
@@ -70,9 +68,7 @@ type V5LoadPoint = {
   eFuseHeadroomA: number
   outputCurrentA: number
   outputHeadroomA: number
-  postShuntLoadW: number
-  preShuntOutputW: number
-  shuntPowerW: number
+  outputLoadW: number
 }
 
 const minimumEfuseCurrentLimitA = (3_334 / (1_240 * 1.01)) * 0.9
@@ -94,34 +90,19 @@ function outputCurrentA(outputPowerW: number): number {
   return outputPowerW / v5PowerStage.output.voltageV
 }
 
-function shuntPowerW(currentA: number): number {
-  return currentA ** 2 * v5PowerStage.sense.resistanceOhms
+function converterInputA(outputLoadW: number, buckEfficiency: number, inputVoltageV: number): number {
+  return outputLoadW / buckEfficiency / inputVoltageV
 }
 
-function preShuntOutputW(postShuntLoadW: number): number {
-  return postShuntLoadW + shuntPowerW(outputCurrentA(postShuntLoadW))
-}
-
-function converterInputA(postShuntLoadW: number, buckEfficiency: number, inputVoltageV: number): number {
-  return preShuntOutputW(postShuntLoadW) / buckEfficiency / inputVoltageV
-}
-
-function maximumPostShuntLoadW(maximumPreShuntOutputW: number): number {
-  const shuntCoefficient = v5PowerStage.sense.resistanceOhms / v5PowerStage.output.voltageV ** 2
-  return (-1 + Math.sqrt(1 + 4 * shuntCoefficient * maximumPreShuntOutputW)) / (2 * shuntCoefficient)
-}
-
-function loadPoint(postShuntLoadW: number, buckEfficiency: number): V5LoadPoint {
-  const outputCurrent = outputCurrentA(postShuntLoadW)
-  const converterInput = converterInputA(postShuntLoadW, buckEfficiency, v5PowerStage.input.nominalPdInputV)
+function loadPoint(outputLoadW: number, buckEfficiency: number): V5LoadPoint {
+  const outputCurrent = outputCurrentA(outputLoadW)
+  const converterInput = converterInputA(outputLoadW, buckEfficiency, v5PowerStage.input.nominalPdInputV)
   return {
     converterInputA: converterInput,
     eFuseHeadroomA: minimumEfuseCurrentLimitA - converterInput,
     outputCurrentA: outputCurrent,
     outputHeadroomA: v5PowerStage.controller.continuousOutputCurrentA - outputCurrent,
-    postShuntLoadW,
-    preShuntOutputW: preShuntOutputW(postShuntLoadW),
-    shuntPowerW: shuntPowerW(outputCurrent)
+    outputLoadW
   }
 }
 
@@ -162,8 +143,7 @@ export function assessV5PowerStage(
       v5PowerStage.controller.recommendedMaximumInputV /
       v5PowerStage.controller.switchingFrequencyHz) *
     1e9
-  const eFuseBoundedPreShuntOutputW = minimumEfuseCurrentLimitA * v5PowerStage.input.nominalPdInputV * buckEfficiency
-  const eFuseBoundedPostShuntLoadW = maximumPostShuntLoadW(eFuseBoundedPreShuntOutputW)
+  const eFuseBoundedOutputLoadW = minimumEfuseCurrentLimitA * v5PowerStage.input.nominalPdInputV * buckEfficiency
   const inputCapacitorPeakRmsCurrentA =
     peak.outputCurrentA *
     Math.sqrt(
@@ -174,10 +154,9 @@ export function assessV5PowerStage(
   return {
     continuous,
     eFuseBound: {
-      maximumPeakDisplayAllocationW: eFuseBoundedPostShuntLoadW - railBudget.peak.fixedRailLoadW,
-      maximumPostShuntLoadW: eFuseBoundedPostShuntLoadW,
-      maximumPostShuntOutputCurrentA: outputCurrentA(eFuseBoundedPostShuntLoadW),
-      maximumPreShuntOutputW: eFuseBoundedPreShuntOutputW,
+      maximumPeakDisplayAllocationW: eFuseBoundedOutputLoadW - railBudget.peak.fixedRailLoadW,
+      maximumOutputLoadW: eFuseBoundedOutputLoadW,
+      maximumOutputCurrentA: outputCurrentA(eFuseBoundedOutputLoadW),
       minimumCurrentLimitA: minimumEfuseCurrentLimitA
     },
     enable: { nominalStartV, nominalStopV },

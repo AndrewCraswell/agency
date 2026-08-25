@@ -72,6 +72,8 @@ describe("bench prototype BOM baseline", () => {
       "U_ISO_MAIN",
       "U_ISO_AUX",
       "U_ISO_POWER",
+      "U_POWER_MONITOR",
+      "R_V5_SENSE",
       "U_SCORING_REG",
       "U_SCORING_WDOG",
       "U_SCORING_SUPERVISOR",

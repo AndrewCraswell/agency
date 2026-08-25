@@ -524,6 +524,16 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "Superseded isolated analog-domain converter",
       "Removed because the retained ADA4177 path uses common-ground V5_ANALOG plus a TPS60400 negative rail."
     ),
+    dnpRow(
+      "U_POWER_MONITOR",
+      "On-board V5 current and power monitor",
+      "Removed because the P0 removable current links and external instruments provide bring-up measurements without a permanent telemetry IC."
+    ),
+    dnpRow(
+      "R_V5_SENSE",
+      "Full-rail V5 telemetry shunt",
+      "Removed with the on-board power monitor; P0 does not spend voltage headroom, routing, calibration, or footprint work on permanent rail telemetry."
+    ),
     selectedDecisionRow(
       "U_REF",
       "REF5025AQDRQ1",
