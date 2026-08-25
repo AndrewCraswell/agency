@@ -18,7 +18,7 @@ import {
 } from "./http.js"
 import type { SessionListInput, SessionListPage } from "./session-read-repository.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 const MAX_CURSOR_LENGTH = 4_096
 

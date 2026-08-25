@@ -186,6 +186,35 @@ export function queryOptionalIsoDate(url: URL, name: string): string | undefined
   return value === undefined ? undefined : parseIsoDate(value, name)
 }
 
+export function queryOptionalIsoDateOrRfc3339(url: URL, name: string): string | undefined {
+  const value = querySingleValue(url, name)
+  if (value === undefined) {
+    return undefined
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return parseIsoDate(value, name)
+  }
+  parseRfc3339Timestamp(value, name, "an ISO date or RFC 3339 timestamp")
+  return value
+}
+
+export function assertTemporalRange(
+  from: string | undefined,
+  to: string | undefined,
+  names: Readonly<{ from: string; to: string }> = { from: "from", to: "to" }
+): void {
+  if (from === undefined || to === undefined) {
+    return
+  }
+  const fromIsIsoDate = /^\d{4}-\d{2}-\d{2}$/.test(from)
+  const toIsIsoDate = /^\d{4}-\d{2}-\d{2}$/.test(to)
+  const fromValue = fromIsIsoDate ? Date.parse(`${from}T00:00:00.000Z`) : Date.parse(from)
+  const toValue = toIsIsoDate ? Date.parse(`${to}T00:00:00.000Z`) : Date.parse(to)
+  if (fromValue > toValue) {
+    throw new LegislationError("invalid_request", `${names.from} must not be after ${names.to}`)
+  }
+}
+
 function parseIsoDate(value: string, name: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
   if (match === null) {

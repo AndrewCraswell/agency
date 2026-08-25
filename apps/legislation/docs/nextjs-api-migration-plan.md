@@ -25,10 +25,10 @@ placeholder needed to prove the application runtime.
 
 | Concern | Current evidence | Target state |
 | --- | --- | --- |
-| Application and API runtime | Next.js scaffold in `apps/legislation-web` from `03e1c7b` (`next@16.2.6`), with the approved `16.3.1` upgrade in progress; the standalone Node server remains in `apps/legislation` | Next.js App Router production server in `legislation-web` |
+| Application and API runtime | Next.js `16.3.1` App Router foundation deployed from source commit `d344cc0` | Next.js App Router production server in `legislation-web` with staged endpoint blocks |
 | Public endpoint domain code | 87 of 87 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
-| Next.js Route Handlers | 0 of 87 | 87 of 87 deployed and remotely smoked |
-| Railway runtime | `legislation-api` standalone service (current; teardown pending) | New parallel `legislation-web` service with the Next.js image; delete `legislation-api` after the new service reaches terminal `SUCCESS` and remote `/health` and `/ready` smoke passes, with no old service retained as rollback |
+| Next.js Route Handlers | 0 of 87 Done; 11 Ready; 76 Blocked | 87 of 87 deployed and remotely smoked |
+| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`, deployment `50a71f45-0d55-4ce7-9872-806c21043490` (`SUCCESS`), source `d344cc0`, domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service deleted after the gate | Staged Next.js endpoint releases on `legislation-web`; rollback uses the preceding successful `legislation-web` deployment |
 | Authentication | WorkOS logic exists in the standalone composition | Added to the Next.js request boundary only after route migration |
 | Rate limiting | No approved distributed Next.js boundary | Added after authentication with a shared Railway-compatible store |
 | MCP transport | In-process access remains | HTTP client cutover only after API, auth, and rate-limit gates pass |
@@ -63,8 +63,8 @@ all succeed from the committed lockfile.
   behavior.
 - Database, repositories, query services, canonical projections, request schemas, and response schemas remain
   framework-independent in `apps/legislation` and are reused by the Next.js boundary. The standalone HTTP composition
-  remains transitional source code while migration is in progress; the current `legislation-api` Railway service is
-  retained only until the NX-01 teardown gate, then deleted rather than retained as a rollback service.
+  remains transitional source code while migration is in progress; the old `legislation-api` Railway service was deleted
+  after the NX-01 teardown gate rather than retained as a rollback service.
 - A server-only composition module owns process-wide database pools and service singletons. It must be safe under Next.js
   development reloads and Railway production lifecycle behavior.
 - API Route Handlers use the Node.js runtime because PostgreSQL, cryptography, provider clients, and document tooling are
@@ -75,9 +75,9 @@ all succeed from the committed lockfile.
 - Railway builds the new `legislation-web` service from the repository root. Because the config is nested, set the
   Railway Config File Path explicitly to `/apps/legislation-web/railway.json`; nested config is not discovered
   automatically. Before the first deployment and after config changes, verify the effective service uses the Dockerfile
-  builder, `apps/legislation-web/Dockerfile`, and `/ready` health check. Keep the existing `legislation-api` service live
-  only until the new service reaches terminal `SUCCESS` and remote `/health` and `/ready` smoke passes; then delete it
-  and record the teardown evidence.
+  builder, `apps/legislation-web/Dockerfile`, and `/ready` health check. The old `legislation-api` service was deleted
+  after the new service reached terminal `SUCCESS` and remote `/health` and `/ready` smoke passed; rollback now uses the
+  preceding successful `legislation-web` deployment.
 - The standalone `serve` command remains transitional only while block-by-block parity is being established. It is
   removed from the production path after the last Next route block passes.
 
@@ -108,37 +108,28 @@ Exit gate: the repository no longer describes the standalone implementation as c
 
 ### NX-01: Next.js foundation and first Railway deployment
 
-State: **In progress** from the existing `apps/legislation-web` scaffold.
+State: **Done**.
 
-- Apply the approved `next@16.3.1` upgrade and matching dependency lockfile update through the approved pnpm workflow.
-- Retain the existing minimal App Router layout and placeholder page without starting product UX.
-- Retain the operational health and readiness Route Handlers at `apps/legislation-web/app/health/route.ts` and
-  `apps/legislation-web/app/ready/route.ts`, preserving the contract's public `/health` and `/ready` behavior. All
-  documented `/api/**` operations must use explicit handlers under `apps/legislation-web/app/api/**`.
-- Add server-only configuration and singleton application-service composition.
-- Add the shared Next.js request/response adapter and exact error-envelope fallback.
-- Add correlation-ID, ETag, body-size, abort, unknown-route, and unsupported-method tests.
-- Replace the application build/dev/start scripts with Next.js equivalents while preserving explicit operational CLIs.
-- Update the Dockerfile for a reproducible Next.js standalone output and non-root runtime.
-- Keep database migrations separate from startup.
-- Build the production container locally.
-- Configure the new parallel `legislation-web` Railway service with repository-root source, Config File Path
-  `/apps/legislation-web/railway.json`, and the committed Dockerfile builder before deploying; keep `legislation-api`
-  live until the teardown gate and do not delete it beforehand.
-- Verify the effective Railway configuration uses `apps/legislation-web/Dockerfile` and `/ready` as its health check;
-  do not credit a deployment if Railway fell back to a different builder, Dockerfile, or health path.
-- Wait for terminal `SUCCESS`; verify remote `/health` and `/ready`, placeholder response, 404 behavior, and method
-  rejection. Once terminal `SUCCESS` and remote health/readiness smoke both pass, delete the old Railway
-  `legislation-api` service and record its service ID, deletion timestamp, and deletion result. If either gate fails,
-  leave the old service running and do not delete it.
-- Record the Next deployment ID, source commit, public origin, old-service deletion evidence, and the prior successful
-  `legislation-web` deployment as the rollback target.
+- Deployment evidence: service `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) deployed source commit
+  `d344cc0` as deployment `50a71f45-0d55-4ce7-9872-806c21043490`, reached terminal `SUCCESS`, and serves
+  `https://legislation-web-production-b024.up.railway.app` on target port `8080`.
+- Remote smoke evidence: `GET /health` returned `200` with `{ "status": "ok" }`; `GET /ready` returned `200` with
+  `{ "databasePool": { "active": 0, "idle": 1, "maximum": 8, "saturation": 0, "total": 1, "waiting": 0 }, "status": "ready" }`;
+  `POST /health` returned the documented JSON `404` and preserved the correlation ID.
+- Teardown evidence: old Railway `legislation-api` service `05eb1486-7775-4797-b1c4-1b4a3f31cd26` was deleted on
+  2026-08-25 after the deployment and health/readiness smoke gates passed. The Railway service list now contains only
+  `legislation-web`, `pgbouncer`, and `pgvector`.
+- Known follow-up carried into the active NX-02A gate: a generic unknown Next.js path still returns the framework's HTML
+  `404`. The API catch-all must normalize unknown `/api/**` paths to the standard JSON error envelope before NX-02A's
+  deployed smoke; this is not counted as one of the 87 endpoint routes and does not change the completed health/readiness
+  foundation gate.
 
-Exit gate: the approved Next.js App Router foundation reaches terminal `SUCCESS`, remote `/health` and `/ready` smoke
-passes, and the old `legislation-api` Railway service has been deleted and recorded before any endpoint is credited as
-migrated.
+Exit gate: complete. The approved Next.js App Router foundation reached terminal `SUCCESS`, remote `/health` and `/ready`
+smoke passed, and the old `legislation-api` Railway service was deleted and recorded before endpoint migration.
 
 ### NX-02: Legislative endpoint migration
+
+State: **In progress**.
 
 Each sub-block requires explicit `route.ts` files under `apps/legislation-web/app/api`, focused adapter/contract tests,
 production build, reviewed commit, deployment of the parallel `legislation-web` Railway service, terminal `SUCCESS`,
@@ -146,7 +137,7 @@ remote smoke, and rollback evidence.
 
 #### NX-02A: Jurisdictions and sessions (11 endpoints)
 
-Next route state for every operation in this block: **Blocked** on NX-01.
+Next route state for every operation in this block: **Ready**. NX-01 is complete; implementation may begin.
 
 - `GET /api/jurisdictions`
 - `GET /api/jurisdictions/{jurisdictionId}`
@@ -159,6 +150,10 @@ Next route state for every operation in this block: **Blocked** on NX-01.
 - `GET /api/sessions/{sessionId}`
 - `GET /api/sessions/{sessionId}/bills`
 - `GET /api/sessions/{sessionId}/meetings`
+
+NX-02A active gate: add the API catch-all fallback so unknown `/api/**` paths return the standard JSON error envelope
+instead of Next.js's generic HTML `404`. The catch-all closes the rejection-path gate but does not count as one of the 87
+explicit migrated endpoint handlers.
 
 #### NX-02B: Bills, amendments, and votes (18 endpoints)
 
@@ -372,7 +367,7 @@ client boundary with complete release and rollback evidence.
 Progress reports must always present both numbers:
 
 - **Reusable domain implementation:** 87/87.
-- **Next.js Route Handler migration:** 0/87 at plan creation.
+- **Next.js Route Handler migration:** 0/87 Done; 11 Ready; 76 Blocked.
 
 Foundation, authentication, rate limiting, MCP cutover, and final cleanup are separate phase gates. None may be inferred
 from the endpoint count, and none may be moved earlier than the approved sequence.

@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingRoot: workspaceRoot,
   reactCompiler: true,
+  skipTrailingSlashRedirect: true,
   turbopack: {
     root: workspaceRoot
   }

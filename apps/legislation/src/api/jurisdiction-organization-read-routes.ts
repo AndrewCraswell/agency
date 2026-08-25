@@ -17,7 +17,7 @@ import type {
 } from "./jurisdiction-organization-read-repository.js"
 import { projectOrganizationRow } from "./organization-summary-read-projection.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 const MAX_CURSOR_LENGTH = 4_096
 const MAX_QUERY_LENGTH = 500

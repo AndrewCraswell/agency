@@ -8,8 +8,10 @@ import { toProjectionLegislationError } from "./canonical-read.js"
 import {
   apiPage,
   apiResource,
+  assertTemporalRange,
   assertAllowedQueryParameters,
   queryInteger,
+  queryOptionalIsoDateOrRfc3339,
   requestUrl,
   sendApiError,
   sendApiJson,
@@ -23,7 +25,7 @@ import { projectMeetingRead } from "./meeting-read-projection.js"
 import type { MeetingCollectionInput, MeetingReadRepository } from "./meeting-read-repository.js"
 import { projectOrganizationRow } from "./organization-summary-read-projection.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const DEFAULT_CHILD_LIMIT = 25
 const MAX_CHILD_LIMIT = 25
 
@@ -47,7 +49,6 @@ const JURISDICTION_AND_SESSION_PARAMETERS = [
   "from",
   "limit",
   "organizationId",
-  "sort",
   "status",
   "to"
 ] as const
@@ -165,20 +166,26 @@ function parametersForScope(name: "jurisdiction" | "organization" | "session") {
 }
 
 function inputFromQuery(url: URL, route: MeetingCollectionRoute): MeetingCollectionInput {
+  const from = queryOptionalIsoDateOrRfc3339(url, "from")
+  const to = queryOptionalIsoDateOrRfc3339(url, "to")
+  assertTemporalRange(from, to)
   return {
     billId: route.name === "global" ? boundedQuery(url, "billId", 256) : undefined,
     calendarId: route.name === "global" ? boundedQuery(url, "calendarId", 256) : undefined,
     classification: enumQuery(url, "classification", ["hearing", "meeting", "other", "session"]),
     cursor: boundedQuery(url, "cursor", 4096),
-    from: boundedQuery(url, "from", 64),
+    from,
     isRemote: route.name === "global" ? booleanQuery(url, "isRemote") : undefined,
     jurisdictionId: jurisdictionIdForRoute(url, route),
     limit: queryInteger(url, "limit", DEFAULT_LIMIT, 100),
     organizationId: route.name === "organization" ? route.id : boundedQuery(url, "organizationId", 256),
     sessionId: route.name === "session" ? route.id : undefined,
-    sort: enumQuery(url, "sort", ["starts-asc", "starts-desc", "updated-desc"]),
+    sort:
+      route.name === "jurisdiction" || route.name === "session"
+        ? "starts-asc"
+        : enumQuery(url, "sort", ["starts-asc", "starts-desc", "updated-desc"]),
     status: enumQuery(url, "status", ["cancelled", "completed", "other", "postponed", "scheduled"]),
-    to: boundedQuery(url, "to", 64)
+    to
   }
 }
 

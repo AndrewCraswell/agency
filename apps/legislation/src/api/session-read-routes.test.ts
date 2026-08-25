@@ -90,6 +90,23 @@ describe("session read API handler", () => {
     })
   })
 
+  it("uses the shared default page limit", async () => {
+    let received: { limit?: number } | undefined
+    const baseUrl = await startServer({
+      assertJurisdictionExists: async () => undefined,
+      getSession: async () => session(),
+      listJurisdictionSessions: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const response = await fetch(`${baseUrl}/api/jurisdictions/jurisdiction%3Awa/sessions`)
+
+    expect(response.status).toBe(200)
+    expect(received?.limit).toBe(20)
+  })
+
   it("returns a canonical session resource", async () => {
     const baseUrl = await startServer({
       assertJurisdictionExists: async () => undefined,

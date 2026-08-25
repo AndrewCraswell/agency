@@ -79,7 +79,7 @@ describe("meeting read API handler", () => {
       }
     })
     const path =
-      "/api/jurisdictions/jurisdiction%3Awa/meetings?classification=meeting&from=2026-08-01&limit=1&organizationId=organization%3Aopenstates%3Arules&status=scheduled&to=2026-08-31"
+      "/api/jurisdictions/jurisdiction%3Awa/meetings?classification=meeting&from=2026-08-01T00:00:00Z&limit=1&organizationId=organization%3Aopenstates%3Arules&status=scheduled&to=2026-08-31T23:59:59Z"
     const response = await fetch(`${baseUrl}${path}`, { headers: { "x-correlation-id": "meeting-page" } })
 
     expect(response.status).toBe(200)
@@ -88,15 +88,15 @@ describe("meeting read API handler", () => {
       calendarId: undefined,
       classification: "meeting",
       cursor: undefined,
-      from: "2026-08-01",
+      from: "2026-08-01T00:00:00Z",
       isRemote: undefined,
       jurisdictionId: "jurisdiction:wa",
       limit: 1,
       organizationId: "organization:openstates:rules",
       sessionId: undefined,
-      sort: undefined,
+      sort: "starts-asc",
       status: "scheduled",
-      to: "2026-08-31"
+      to: "2026-08-31T23:59:59Z"
     })
     await expect(response.json()).resolves.toMatchObject({
       data: [
@@ -110,6 +110,49 @@ describe("meeting read API handler", () => {
       ],
       meta: { correlationId: "meeting-page", limit: 1, nextCursor: "next-meeting", truncated: true, warnings: [] }
     })
+  })
+
+  it("uses the shared default page limit and rejects scoped sort overrides", async () => {
+    let received: unknown
+    const baseUrl = await startServer({
+      ...service(),
+      listMeetings: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const response = await fetch(`${baseUrl}/api/jurisdictions/jurisdiction%3Awa/meetings`)
+    const invalidSort = await fetch(`${baseUrl}/api/sessions/session%3Awa%3A2026/meetings?sort=starts-desc`)
+
+    expect(response.status).toBe(200)
+    expect(received).toMatchObject({ limit: 20, sort: "starts-asc" })
+    expect(invalidSort.status).toBe(400)
+  })
+
+  it("accepts valid temporal ranges and rejects invalid temporal bounds", async () => {
+    const baseUrl = await startServer(service())
+    const validMixed = await fetch(
+      `${baseUrl}/api/jurisdictions/jurisdiction%3Awa/meetings?from=2026-08-01&to=2026-08-31T00:00:00Z`
+    )
+    const invertedMixed = await fetch(
+      `${baseUrl}/api/jurisdictions/jurisdiction%3Awa/meetings?from=2026-09-01T00:00:00Z&to=2026-08-31`
+    )
+    const impossibleDate = await fetch(
+      `${baseUrl}/api/jurisdictions/jurisdiction%3Awa/meetings?from=2026-02-30&to=2026-03-01`
+    )
+    const impossibleTimestamp = await fetch(
+      `${baseUrl}/api/jurisdictions/jurisdiction%3Awa/meetings?from=2026-02-28T25:00:00Z&to=2026-03-01T00:00:00Z`
+    )
+    const duplicate = await fetch(
+      `${baseUrl}/api/jurisdictions/jurisdiction%3Awa/meetings?from=2026-08-01&from=2026-08-02&to=2026-08-31`
+    )
+
+    expect(validMixed.status).toBe(200)
+    expect(invertedMixed.status).toBe(400)
+    expect(impossibleDate.status).toBe(400)
+    expect(impossibleTimestamp.status).toBe(400)
+    expect(duplicate.status).toBe(400)
   })
 
   it("binds the session collection to its path and rejects unrelated query scope", async () => {
@@ -129,7 +172,7 @@ describe("meeting read API handler", () => {
     expect(received).toMatchObject({
       organizationId: "organization:openstates:rules",
       sessionId: "session:wa:2026",
-      sort: undefined
+      sort: "starts-asc"
     })
     const invalid = await fetch(`${baseUrl}/api/sessions/session%3Awa%3A2026/meetings?sessionId=session%3Awa%3A2025`)
     expect(invalid.status).toBe(400)
@@ -162,7 +205,8 @@ describe("meeting read API handler", () => {
       billId: "bill:1",
       calendarId: "calendar:1",
       isRemote: false,
-      jurisdictionId: "jurisdiction:wa"
+      jurisdictionId: "jurisdiction:wa",
+      limit: 20
     })
   })
 

@@ -98,6 +98,21 @@ describe("jurisdiction collection API handler", () => {
     })
   })
 
+  it("uses the shared default page limit", async () => {
+    let received: { limit?: number } | undefined
+    const baseUrl = await startServer({
+      listJurisdictions: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const response = await fetch(`${baseUrl}/api/jurisdictions`)
+
+    expect(response.status).toBe(200)
+    expect(received?.limit).toBe(20)
+  })
+
   it("fails closed when a collection row lacks authoritative activity or provenance", async () => {
     const baseUrl = await startServer({
       listJurisdictions: async () => ({ items: [jurisdiction({ isActive: null })], truncated: false })

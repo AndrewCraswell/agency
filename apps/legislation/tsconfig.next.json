@@ -1,5 +1,5 @@
 {
   "extends": "./tsconfig.build.json",
-  "include": ["src/api/next/http.ts", "src/server/next/runtime.ts"],
+  "include": ["src/api/next/http.ts", "src/api/next/node-handler.ts", "src/server/next/nx02.ts"],
   "exclude": ["dist", "node_modules", "src/**/*.test.ts"]
 }

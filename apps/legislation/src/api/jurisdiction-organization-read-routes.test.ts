@@ -156,7 +156,7 @@ describe("jurisdiction organization collection API handler", () => {
         chamber: "lower",
         isActive: false,
         jurisdictionId: "jurisdiction:ca",
-        limit: 25,
+        limit: 20,
         parentOrganizationId: "organization:ca:house",
         query: "rules",
         cursor: undefined

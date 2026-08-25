@@ -27,4 +27,26 @@ transitional API and rollback target until the migration and cutover gates pass.
 endpoint migration, then distributed rate limiting, with MCP moved last; the API base URL remains server-only during the
 transition.
 
+## Deployed smoke profiles
+
+The foundation smoke requires the deployed application origin and checks `/health`, `/ready`, the placeholder page, and
+unsupported-route behavior. It makes no authenticated requests.
+
+```powershell
+$env:LEGISLATION_WEB_SMOKE_BASE_URL = "https://example.up.railway.app"
+pnpm --filter legislation-web smoke:foundation
+```
+
+After the NX-02A jurisdictions and sessions release, set `LEGISLATION_WEB_SMOKE_NX_02A` to `1` to cumulatively check its
+eleven public routes against `jurisdiction:ak` and `session:ak:30`. The profile validates response status, JSON content
+type, correlation propagation, and the documented Page or Resource envelope. A canonical `404 not_found` for one of
+those fixtures is reported as `fixture_missing`; an unstructured or otherwise invalid 404 fails the smoke. It also
+checks that an unknown API path and a trailing-slash API path return canonical `404 not_found` responses without a
+redirect.
+
+```powershell
+$env:LEGISLATION_WEB_SMOKE_NX_02A = "1"
+pnpm --filter legislation-web smoke:foundation
+```
+
 Start with the [frontend architecture and dependency record](docs/architecture.md).

@@ -8,9 +8,17 @@
       "types": "./dist/api/next/http.d.ts",
       "import": "./dist/api/next/http.js"
     },
+    "./api/next/node-handler": {
+      "types": "./dist/api/next/node-handler.d.ts",
+      "import": "./dist/api/next/node-handler.js"
+    },
     "./server/next": {
       "types": "./dist/server/next/runtime.d.ts",
       "import": "./dist/server/next/runtime.js"
+    },
+    "./server/next/nx02": {
+      "types": "./dist/server/next/nx02.d.ts",
+      "import": "./dist/server/next/nx02.js"
     }
   },
   "files": [
