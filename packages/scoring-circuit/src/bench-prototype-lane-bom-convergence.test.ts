@@ -51,6 +51,34 @@ describe("BP-035 lane BOM convergence", () => {
     expect(benchPrototypeLaneBomConvergence.blockers).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "footprint-evidence-open", reference: "U_SCORING" })])
     )
+    expect(benchPrototypeLaneBomConvergence.blockers).toHaveLength(389)
+    expect(benchPrototypeLaneBomConvergence.unresolvedPopulatedReferences).toHaveLength(289)
+    expect(
+      Object.fromEntries(
+        [
+          "footprint-evidence-open",
+          "missing-baseline-reference",
+          "missing-lane-reference",
+          "package-drift",
+          "population-drift",
+          "unresolved-mpn",
+          "unresolved-package",
+          "unresolved-population"
+        ].map((code) => [
+          code,
+          benchPrototypeLaneBomConvergence.blockers.filter((blocker) => blocker.code === code).length
+        ])
+      )
+    ).toEqual({
+      "footprint-evidence-open": 262,
+      "missing-baseline-reference": 8,
+      "missing-lane-reference": 7,
+      "package-drift": 8,
+      "population-drift": 12,
+      "unresolved-mpn": 22,
+      "unresolved-package": 36,
+      "unresolved-population": 34
+    })
   })
 
   it("accepts a fully aligned prototype order row while retaining fabrication denial", () => {

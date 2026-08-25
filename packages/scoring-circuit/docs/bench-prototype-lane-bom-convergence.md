@@ -8,13 +8,13 @@ Exact lane identities that are absent from the historical BP-010 baseline are co
 
 BP-034 rows are classified before reconciliation. Board-populated connector references reconcile against BP-010. External mates, cables, samples, and test tooling remain visible as external rows without being misrepresented as PCB references. Their physical receipt, fit, retention, strain, and continuity evidence belongs to BP-105/BP-502 and does not block BP-035.
 
-Footprint state is per reference: `not-started`, `reviewed-unapproved`, or `approved`. Retained source files alone do not count as reviewed footprint evidence, and root-reviewed candidates remain blocked until their owning lane records explicit approval. The current ledgers contain no `approved` lane footprint row.
+Footprint state is per reference: `not-started`, `reviewed-unapproved`, or `approved`. Retained source files alone do not count as reviewed footprint evidence, and root-reviewed candidates remain blocked until their owning lane records explicit approval. BP-032 `U_ISO_POWER` is the first bounded `approved` lane footprint row; all other reviewed candidates remain unapproved.
 
-The current result is `DENY` with 391 blockers across 292 references: 22 unresolved MPNs, 36 unresolved packages, 34 unresolved populations, 263 open footprint-evidence rows, 9 missing lane references, 8 missing baseline references, 12 population drifts, and 7 package drifts. `selection-blocked` is zero. Current footprint states are:
+The current result is `DENY` with 389 blockers across 289 references: 22 unresolved MPNs, 36 unresolved packages, 34 unresolved populations, 262 open footprint-evidence rows, 7 missing lane references, 8 missing baseline references, 12 population drifts, and 8 package drifts. `selection-blocked` is zero. Current footprint states are:
 
-- BP-031: 28 reviewed-unapproved and 85 not-started.
-- BP-032: 17 reviewed-unapproved and 34 not-started.
-- BP-033: 3 reviewed-unapproved and 98 not-started.
+- BP-031: 113 reviewed-unapproved and zero not-started.
+- BP-032: 1 approved and 50 reviewed-unapproved; 48 populated rows currently contribute open footprint blockers.
+- BP-033: 88 reviewed-unapproved and 13 not-started.
 
 BP-034 has exact source-backed selections for the USB-C cable (`USB2CC1M`) and Ethernet patch cable (`N201-003-BL`), so those selections do not contribute `selection-blocked` blockers. In particular:
 
