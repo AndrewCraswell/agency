@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+import { benchPrototypeAnalogFootprintClosure } from "./bench-prototype-analog-footprint-closure.js"
 import {
   bp031MurataGrm21br71a106ke51l0805CandidateFootprint,
   Bp031MurataGrm21br71a106ke51l0805CandidateFootprint,
@@ -79,15 +80,19 @@ describe("BP-031 Murata GRM21BR71A106KE51L 0805 candidate footprint", () => {
       manufacturerPartNumber: "GRM21BR71A106KE51L",
       sourceContract: "BP-101",
       role: "SAR reference reservoir",
+      primaryProductPageUrl: "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71A106KE51L",
       sourceBinding: {
         canonicalSourceReference: "C_REF",
         replicatedReferencePrefix: "C_REF_",
         manufacturerPartNumber: "GRM21BR71A106KE51L",
         package: "0805 (2012M)",
+        exactOrderableSourceId: "murata-grm21br71a106ke51-reference-sheet",
+        landPatternSourceId: "murata-grm21br71a106ke51-reference-sheet",
+        landPatternApplicability: expect.stringContaining("not exact-orderable CAD"),
         sourceSha256: "AC47072BAD3F60AA4E193192AB01C02507A3F61944F8B45F23B1F2793F207EFB"
       },
       sourceControl: {
-        basisCommit: "a84fb13a95cb1a49c9a3dbe8628249567a9f3e1c",
+        basisCommit: "c6a0723a719551c1632ff2eff5b528409b4cac57",
         upstreamSources: [
           {
             path: "packages/scoring-circuit/src/bench-prototype-seven-channel-analog.ts",
@@ -120,10 +125,33 @@ describe("BP-031 Murata GRM21BR71A106KE51L 0805 candidate footprint", () => {
     expect(bp031MurataGrm21br71a106ke51l0805CandidateFootprint.sources).toEqual([
       expect.objectContaining({
         id: "murata-grm21br71a106ke51-reference-sheet",
+        applicability: "exact-orderable-identity-package-and-electrical",
+        pagePurposes: {
+          exactOrderableIdentityPackageAndElectrical: "1",
+          familyReflowLandGuidance: "25",
+          stressAndPlacementWarnings: "24-25"
+        },
         artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/murata-grm21br71a106ke51l-datasheet.pdf",
         sha256: "E8432C7ACFA982B24EB06DD145682F78051DC4649ABBEB35BBCA8646B1408E4F"
       })
     ])
+    expect(bp031MurataGrm21br71a106ke51l0805CandidateFootprint.placementReview).toMatchObject({
+      state: "pending-independent-review",
+      boardPlacementStatus: "not-reviewed",
+      boardIntegrationAuthority: "deny",
+      boardFitAccepted: false,
+      assemblyClearanceAccepted: false
+    })
+    expect(bp031MurataGrm21br71a106ke51l0805CandidateFootprint.acceptance).toMatchObject({
+      packageIdentityReviewed: true,
+      projectGeometryAccepted: false,
+      pinOneOrientationAccepted: false,
+      placementAccepted: false,
+      cadImportAccepted: false,
+      boardFitAccepted: false,
+      fabricationAuthorized: false,
+      releaseState: "deny"
+    })
     for (const source of bp031MurataGrm21br71a106ke51l0805CandidateFootprint.sources) {
       expect(hashArtifact(source.artifactPath)).toBe(source.sha256)
     }
@@ -148,10 +176,12 @@ describe("BP-031 Murata GRM21BR71A106KE51L 0805 candidate footprint", () => {
       terminalGapMm: { minimum: 0.7 }
     })
     expect(manufacturerLandPattern).toMatchObject({
-      sourceScope: "manufacturer guidance only",
+      sourceScope: expect.stringContaining("GRM21-family"),
+      applicability: expect.stringContaining("GRM21-family"),
       reviewedPage: 25,
       sourceTable: "Table 2 Reflow Soldering Method",
       chipDimensionRow: "2.0 x 1.25 mm (±0.15)",
+      chipDimensionTolerance: "±0.15",
       innerGapMm: { minimum: 1.2, maximum: 1.2 },
       padLengthMm: { minimum: 0.6, maximum: 0.8 },
       padWidthMm: { minimum: 1.2, maximum: 1.4 }
@@ -177,6 +207,27 @@ describe("BP-031 Murata GRM21BR71A106KE51L 0805 candidate footprint", () => {
     expect(projectSelection.copperPad.lengthMm).toBeLessThanOrEqual(manufacturerLandPattern.padLengthMm.maximum)
     expect(projectSelection.copperPad.widthMm).toBeGreaterThanOrEqual(manufacturerLandPattern.padWidthMm.minimum)
     expect(projectSelection.copperPad.widthMm).toBeLessThanOrEqual(manufacturerLandPattern.padWidthMm.maximum)
+  })
+
+  it("matches the existing closure's seven C_REF records without changing closure authority", () => {
+    const expectedReferences = ["C_REF_1", "C_REF_2", "C_REF_3", "C_REF_4", "C_REF_5", "C_REF_6", "C_REF_7"]
+    const records = benchPrototypeAnalogFootprintClosure.records.filter((record) =>
+      expectedReferences.includes(record.reference)
+    )
+    expect(records.map((record) => record.reference)).toEqual(expectedReferences)
+    expect(records).toHaveLength(7)
+    for (const record of records) {
+      expect(record).toMatchObject({
+        sourceContract: "BP-103",
+        sourceBaseReference: "C_REF",
+        exactMpn: "GRM21BR71A106KE51L",
+        exactPackage: "0805",
+        sharedManufacturerSourceId: "M4-04:GRM21BR71A106KE51L",
+        reviewEvidenceMappingId: null,
+        disposition: "DNP-unresolved"
+      })
+    }
+    expect(bp031MurataGrm21br71a106ke51l0805CandidateFootprint.affectedReferences).toEqual(expectedReferences)
   })
 
   it("keeps the capacitor non-polar with no pin-one or assembly rotation claim", () => {
@@ -273,5 +324,39 @@ describe("BP-031 Murata GRM21BR71A106KE51L 0805 candidate footprint", () => {
     expect(validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(artworkDrift)).toContain(
       "Murata CAD uncertainty and fabrication denial must remain fail-closed"
     )
+  })
+
+  it("keeps an independent frozen baseline and rejects descriptor or graph attacks", () => {
+    expect(Object.isFrozen(bp031MurataGrm21br71a106ke51l0805CandidateFootprint)).toBe(true)
+    expect(Object.isFrozen(bp031MurataGrm21br71a106ke51l0805CandidateFootprint.sources)).toBe(true)
+    expect(Reflect.set(bp031MurataGrm21br71a106ke51l0805CandidateFootprint, "accepted", true)).toBe(false)
+    expect(validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint()).toEqual([])
+
+    const hiddenProperty = structuredClone(bp031MurataGrm21br71a106ke51l0805CandidateFootprint)
+    Object.defineProperty(hiddenProperty, "hiddenApproval", { value: true, enumerable: false })
+    expect(validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(hiddenProperty)).toEqual([
+      "Murata GRM21 exact graph, descriptor, or deny-state drifted"
+    ])
+
+    const symbolProperty = structuredClone(bp031MurataGrm21br71a106ke51l0805CandidateFootprint)
+    Reflect.set(symbolProperty, Symbol("approval"), true)
+    expect(validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(symbolProperty)).toEqual([
+      "Murata GRM21 exact graph, descriptor, or deny-state drifted"
+    ])
+
+    const getterProperty = structuredClone(bp031MurataGrm21br71a106ke51l0805CandidateFootprint)
+    Object.defineProperty(getterProperty, "releaseState", { enumerable: true, get: () => "allow" })
+    expect(validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(getterProperty)).toEqual([
+      "Murata GRM21 exact graph, descriptor, or deny-state drifted"
+    ])
+
+    const cyclicCandidate: { self?: unknown } = {}
+    cyclicCandidate.self = cyclicCandidate
+    expect(validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(cyclicCandidate)).toEqual([
+      "Murata GRM21 exact graph, descriptor, or deny-state drifted"
+    ])
+    expect(validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint({})).toEqual([
+      "Murata GRM21 exact graph, descriptor, or deny-state drifted"
+    ])
   })
 })

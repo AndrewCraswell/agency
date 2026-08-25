@@ -1,5 +1,125 @@
 import type { ReactElement } from "react"
 
+type PlainRecord = Record<PropertyKey, unknown>
+
+function isPlainRecord(value: unknown): value is PlainRecord {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.getPrototypeOf(value) === Object.prototype
+  )
+}
+
+function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || typeof value !== "object") return value
+  if (seen.has(value)) throw new RangeError("BP-031 Murata evidence cannot contain cycles or aliases")
+  seen.add(value)
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (descriptor === undefined || !("value" in descriptor)) {
+      throw new RangeError("BP-031 Murata evidence may contain only data properties")
+    }
+    deepFreeze(descriptor.value, seen)
+  }
+  return Object.freeze(value)
+}
+
+function sameDataGraph(actual: unknown, expected: unknown, seen = new WeakMap<object, object>()): boolean {
+  if (Object.is(actual, expected)) return true
+  if (actual === null || expected === null || typeof actual !== "object" || typeof expected !== "object") return false
+  if (seen.has(actual)) return seen.get(actual) === expected
+  seen.set(actual, expected)
+
+  const actualArray = Array.isArray(actual)
+  const expectedArray = Array.isArray(expected)
+  if (actualArray !== expectedArray) return false
+  if (actualArray) {
+    if (
+      !Array.isArray(actual) ||
+      !Array.isArray(expected) ||
+      Object.getPrototypeOf(actual) !== Array.prototype ||
+      Object.getPrototypeOf(expected) !== Array.prototype ||
+      actual.length !== expected.length
+    ) {
+      return false
+    }
+  } else if (!isPlainRecord(actual) || !isPlainRecord(expected)) {
+    return false
+  }
+
+  const actualKeys = Reflect.ownKeys(actual)
+  const expectedKeys = Reflect.ownKeys(expected)
+  if (
+    actualKeys.length !== expectedKeys.length ||
+    actualKeys.some((key) => typeof key === "symbol" || !expectedKeys.includes(key))
+  ) {
+    return false
+  }
+  return expectedKeys.every((key) => {
+    const actualDescriptor = Object.getOwnPropertyDescriptor(actual, key)
+    const expectedDescriptor = Object.getOwnPropertyDescriptor(expected, key)
+    return Boolean(
+      actualDescriptor &&
+      expectedDescriptor &&
+      "value" in actualDescriptor &&
+      "value" in expectedDescriptor &&
+      actualDescriptor.enumerable === expectedDescriptor.enumerable &&
+      sameDataGraph(actualDescriptor.value, expectedDescriptor.value, seen)
+    )
+  })
+}
+
+function assertDataGraphShape(actual: unknown, expected: unknown, seen = new WeakSet<object>()): void {
+  if (typeof expected !== "object" || expected === null) {
+    if (typeof actual !== typeof expected || (expected === null ? actual !== null : actual === null)) {
+      throw new RangeError("Murata candidate primitive shape drift")
+    }
+    return
+  }
+  if (actual === null || typeof actual !== "object") throw new RangeError("Murata candidate object shape drift")
+  if (seen.has(actual) || seen.has(expected)) throw new RangeError("Murata candidate graph cycle or alias")
+  if (Object.getPrototypeOf(actual) !== Object.getPrototypeOf(expected))
+    throw new RangeError("Murata candidate prototype drift")
+
+  const actualArray = Array.isArray(actual)
+  const expectedArray = Array.isArray(expected)
+  if (actualArray !== expectedArray) throw new RangeError("Murata candidate array shape drift")
+
+  const actualKeys = Reflect.ownKeys(actual)
+  const expectedKeys = Reflect.ownKeys(expected)
+  if (
+    !actualArray &&
+    (actualKeys.length !== expectedKeys.length || actualKeys.some((key) => !expectedKeys.includes(key)))
+  ) {
+    throw new RangeError("Murata candidate hidden or symbol property drift")
+  }
+  seen.add(actual)
+  seen.add(expected)
+  try {
+    for (const key of actualKeys) {
+      if (typeof key === "symbol") throw new RangeError("Murata candidate symbol property drift")
+      const actualDescriptor = Object.getOwnPropertyDescriptor(actual, key)
+      const expectedDescriptor = Object.getOwnPropertyDescriptor(expected, key)
+      if (
+        actualDescriptor === undefined ||
+        !("value" in actualDescriptor) ||
+        expectedDescriptor === undefined ||
+        (expectedDescriptor !== undefined &&
+          (!("value" in expectedDescriptor) || actualDescriptor.enumerable !== expectedDescriptor.enumerable))
+      ) {
+        throw new RangeError(`Murata candidate accessor or descriptor drift at ${String(key)}`)
+      }
+      if (expectedDescriptor !== undefined && "value" in expectedDescriptor) {
+        assertDataGraphShape(actualDescriptor.value, expectedDescriptor.value, seen)
+      }
+    }
+  } finally {
+    seen.delete(actual)
+    seen.delete(expected)
+  }
+}
+
 const projectCopperPadLengthMm = 0.7
 const projectCopperPadWidthMm = 1.3
 const projectCopperPadGapMm = 1.2
@@ -15,7 +135,7 @@ const projectCourtyardLengthMm = 3.1
 const projectCourtyardWidthMm = 1.9
 const projectCourtyardClearanceMm = 0.25
 
-const integrationBasisCommit = "a84fb13a95cb1a49c9a3dbe8628249567a9f3e1c"
+const integrationBasisCommit = "c6a0723a719551c1632ff2eff5b528409b4cac57"
 const canonicalSourceSha256 = "AC47072BAD3F60AA4E193192AB01C02507A3F61944F8B45F23B1F2793F207EFB"
 const retainedMurataSourceSha256 = "E8432C7ACFA982B24EB06DD145682F78051DC4649ABBEB35BBCA8646B1408E4F"
 const renderedGeometrySha256 = "0C97468EE0E3B398EAC314577D0C1D10AFBE7AC0A064B4DC1862935190C7C15D"
@@ -30,7 +150,7 @@ const affectedReferences = ["C_REF_1", "C_REF_2", "C_REF_3", "C_REF_4", "C_REF_5
  * finished PCB CAD footprint. Mask, paste, courtyard, and release state are
  * therefore explicit project-review inputs and remain denied.
  */
-export const bp031MurataGrm21br71a106ke51l0805CandidateFootprint = {
+const candidateDefinition = {
   artifactKind: "bp031-murata-grm21br71a106ke51l-0805-candidate-footprint",
   workUnit: "BP-031",
   manufacturer: "Murata",
@@ -45,6 +165,10 @@ export const bp031MurataGrm21br71a106ke51l0805CandidateFootprint = {
     manufacturer: "Murata",
     manufacturerPartNumber: "GRM21BR71A106KE51L",
     package: "0805 (2012M)",
+    exactOrderableSourceId: "murata-grm21br71a106ke51-reference-sheet",
+    landPatternSourceId: "murata-grm21br71a106ke51-reference-sheet",
+    landPatternApplicability:
+      "Applicable GRM21-family reflow land guidance is selected by the exact package row; it is not exact-orderable CAD or a released footprint.",
     sourceSha256: canonicalSourceSha256
   },
   sourceControl: {
@@ -66,9 +190,17 @@ export const bp031MurataGrm21br71a106ke51l0805CandidateFootprint = {
       revision: "X",
       url: "https://search.murata.co.jp/Ceramy/image/img/A01X/G101/ENG/GRM21BR71A106KE51-01.pdf",
       reviewedPages: "1, 24-25",
+      applicability: "exact-orderable-identity-package-and-electrical",
+      pagePurposes: {
+        exactOrderableIdentityPackageAndElectrical: "1",
+        familyReflowLandGuidance: "25",
+        stressAndPlacementWarnings: "24-25"
+      },
       artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/murata-grm21br71a106ke51l-datasheet.pdf",
       sha256: retainedMurataSourceSha256,
-      role: "Exact GRM21BR71A106KE51L identity, GRM21 0805/2012M package dimensions, and Murata reflow land guidance."
+      scope:
+        "Page 1 binds exact GRM21BR71A106KE51L identity, package dimensions, and electrical rating. Page 25 supplies applicable GRM21-family reflow guidance; it is not an exact-orderable CAD object.",
+      role: "Exact GRM21BR71A106KE51L identity and package/electrical data, with separately scoped GRM21-family reflow guidance."
     }
   ],
   manufacturerCad: {
@@ -98,11 +230,14 @@ export const bp031MurataGrm21br71a106ke51l0805CandidateFootprint = {
   },
   manufacturerLandPattern: {
     designation: "Murata GRM21 reflow land guidance",
-    sourceScope: "manufacturer guidance only",
+    sourceScope: "applicable manufacturer GRM21-family reflow guidance only, not exact-orderable CAD",
+    applicability:
+      "Applicable GRM21-family reflow guidance for the 2.0 x 1.25 mm (±0.15) package row; not exact-orderable CAD or a released footprint.",
     sourceId: "murata-grm21br71a106ke51-reference-sheet",
     reviewedPage: 25,
     sourceTable: "Table 2 Reflow Soldering Method",
     chipDimensionRow: "2.0 x 1.25 mm (±0.15)",
+    chipDimensionTolerance: "±0.15",
     innerGapMm: { minimum: 1.2, maximum: 1.2 },
     padLengthMm: { minimum: 0.6, maximum: 0.8 },
     padWidthMm: { minimum: 1.2, maximum: 1.4 },
@@ -110,6 +245,7 @@ export const bp031MurataGrm21br71a106ke51l0805CandidateFootprint = {
   },
   projectSelection: {
     solderingMethod: "reflow",
+    authority: "project-review-input-derived-from-applicable-Murata-family-guidance",
     rationale:
       "Midpoint selection within Murata's exact GRM21 2.0 x 1.25 mm (±0.15) reflow row: a=1.2 mm inner gap, b=0.7 mm pad length, and c=1.3 mm pad width.",
     manufacturerParameterSelectionMm: { aInnerGap: 1.2, bPadLength: 0.7, cPadWidth: 1.3 },
@@ -164,6 +300,54 @@ export const bp031MurataGrm21br71a106ke51l0805CandidateFootprint = {
     dcBiasEvidence: "not-retained",
     note: "The exact Murata reference sheet supplies the electrical rating and package dimensions, but effective capacitance under DC bias, placement stress, assembly clearance, and final orientation remain open."
   },
+  placementReview: {
+    state: "pending-independent-review",
+    boardPlacementStatus: "not-reviewed",
+    boardIntegrationAuthority: "deny",
+    boardFitAccepted: false,
+    edgeClearanceAccepted: false,
+    assemblyClearanceAccepted: false,
+    stressReviewAccepted: false,
+    note: "No board-edge, neighboring-component, keepout, assembly-clearance, board-fit, or board-stress limit is published or accepted by this candidate."
+  },
+  projectFootprint: {
+    state: "review-only",
+    geometryAuthority: "project-review-input-not-manufacturer-cad",
+    padShape: "rectangular-smt",
+    pads: [
+      { pad: "1", terminal: "A", xMm: -projectCopperPadCenterXMm, yMm: 0 },
+      { pad: "2", terminal: "B", xMm: projectCopperPadCenterXMm, yMm: 0 }
+    ],
+    solderMask: {
+      openingLengthMm: projectSolderMaskOpeningLengthMm,
+      openingWidthMm: projectSolderMaskOpeningWidthMm,
+      marginPerEdgeMm: projectSolderMaskMarginMm,
+      status: "project-input-not-manufacturer-specification"
+    },
+    paste: {
+      openingLengthMm: projectPasteOpeningLengthMm,
+      openingWidthMm: projectPasteOpeningWidthMm,
+      reductionPerEdgeMm: projectPasteReductionPerEdgeMm,
+      status: "project-input-not-manufacturer-specification"
+    },
+    courtyard: {
+      centerMm: { x: 0, y: 0 },
+      lengthMm: projectCourtyardLengthMm,
+      widthMm: projectCourtyardWidthMm,
+      status: "project-review-input-not-manufacturer-specification"
+    },
+    orientation: {
+      datum: "pad 1 at negative local X; pad 2 at positive local X",
+      boardRotationDegrees: 0,
+      pinOnePad: null,
+      polarity: "non-polar"
+    },
+    placementStatus: "not-reviewed",
+    boardIntegrationAuthority: "deny",
+    releaseState: "deny",
+    fabricationAuthority: "deny",
+    accepted: false
+  },
   artwork: {
     state: "generated-project-review-only",
     representation: "canonical-rendered-footprint-soup-geometry",
@@ -172,10 +356,36 @@ export const bp031MurataGrm21br71a106ke51l0805CandidateFootprint = {
     sha256: renderedGeometrySha256,
     authority: "deny"
   },
+  acceptance: {
+    packageIdentityReviewed: true,
+    packageDrawingReviewed: true,
+    familyLandGuidanceReviewed: true,
+    projectGeometryAccepted: false,
+    pinOneOrientationAccepted: false,
+    placementAccepted: false,
+    cadImportAccepted: false,
+    boardFitAccepted: false,
+    fabricationAuthorized: false,
+    releaseState: "deny"
+  },
   releaseState: "deny",
   fabricationAuthority: "deny",
   accepted: false
 } as const
+
+const bp031MurataGrm21br71a106ke51l0805CandidateFootprintBaseline = deepFreeze(structuredClone(candidateDefinition))
+export const bp031MurataGrm21br71a106ke51l0805CandidateFootprint = deepFreeze(candidateDefinition)
+
+type Candidate = typeof candidateDefinition
+
+function hasExpectedCandidateShape(value: unknown): value is Candidate {
+  try {
+    assertDataGraphShape(value, bp031MurataGrm21br71a106ke51l0805CandidateFootprintBaseline)
+    return true
+  } catch {
+    return false
+  }
+}
 
 const projectFootprint = (
   <footprint name="BP031_MURATA_GRM21BR71A106KE51L_0805_CANDIDATE" originalLayer="top">
@@ -237,18 +447,15 @@ export function Bp031MurataGrm21br71a106ke51l0805CandidateFootprint({
   )
 }
 
-type Candidate = typeof bp031MurataGrm21br71a106ke51l0805CandidateFootprint
-
-function expectedSource(candidate: Candidate) {
-  return candidate.sources[0]
-}
-
 /** Return exact review failures; an empty result means the denied record is internally consistent. */
 export function validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(
-  candidate: Candidate = bp031MurataGrm21br71a106ke51l0805CandidateFootprint
+  candidate: unknown = bp031MurataGrm21br71a106ke51l0805CandidateFootprint
 ): readonly string[] {
+  if (!hasExpectedCandidateShape(candidate)) {
+    return ["Murata GRM21 exact graph, descriptor, or deny-state drifted"]
+  }
   const errors: string[] = []
-  const source = expectedSource(candidate)
+  const source = candidate.sources[0]
   if (
     candidate.artifactKind !== "bp031-murata-grm21br71a106ke51l-0805-candidate-footprint" ||
     candidate.workUnit !== "BP-031" ||
@@ -256,7 +463,8 @@ export function validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(
     candidate.manufacturerPartNumber !== "GRM21BR71A106KE51L" ||
     candidate.sourceContract !== "BP-101" ||
     candidate.role !== "SAR reference reservoir" ||
-    candidate.geometryAuthority !== "project-review-input-not-manufacturer-cad"
+    candidate.geometryAuthority !== "project-review-input-not-manufacturer-cad" ||
+    candidate.primaryProductPageUrl !== "https://www.murata.com/en-us/products/productdetail?partno=GRM21BR71A106KE51L"
   ) {
     errors.push("exact BP-031 Murata GRM21BR71A106KE51L identity drifted")
   }
@@ -268,6 +476,10 @@ export function validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(
     candidate.sourceBinding.manufacturer !== "Murata" ||
     candidate.sourceBinding.manufacturerPartNumber !== "GRM21BR71A106KE51L" ||
     candidate.sourceBinding.package !== "0805 (2012M)" ||
+    candidate.sourceBinding.exactOrderableSourceId !== "murata-grm21br71a106ke51-reference-sheet" ||
+    candidate.sourceBinding.landPatternSourceId !== "murata-grm21br71a106ke51-reference-sheet" ||
+    candidate.sourceBinding.landPatternApplicability !==
+      "Applicable GRM21-family reflow land guidance is selected by the exact package row; it is not exact-orderable CAD or a released footprint." ||
     candidate.sourceBinding.sourceSha256 !== canonicalSourceSha256 ||
     JSON.stringify(candidate.affectedReferences) !== JSON.stringify(affectedReferences)
   ) {
@@ -289,13 +501,24 @@ export function validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(
     source?.revision !== "X" ||
     source?.url !== "https://search.murata.co.jp/Ceramy/image/img/A01X/G101/ENG/GRM21BR71A106KE51-01.pdf" ||
     source?.reviewedPages !== "1, 24-25" ||
+    source?.applicability !== "exact-orderable-identity-package-and-electrical" ||
+    source?.pagePurposes.exactOrderableIdentityPackageAndElectrical !== "1" ||
+    source?.pagePurposes.familyReflowLandGuidance !== "25" ||
+    source?.pagePurposes.stressAndPlacementWarnings !== "24-25" ||
     source?.artifactPath !== "packages/scoring-circuit/docs/evidence/m4-04/murata-grm21br71a106ke51l-datasheet.pdf" ||
-    source?.sha256 !== retainedMurataSourceSha256
+    source?.sha256 !== retainedMurataSourceSha256 ||
+    source?.scope !==
+      "Page 1 binds exact GRM21BR71A106KE51L identity, package dimensions, and electrical rating. Page 25 supplies applicable GRM21-family reflow guidance; it is not an exact-orderable CAD object."
   ) {
     errors.push("exact retained Murata GRM21 source is required")
   }
   for (const source of candidate.sources) {
-    if (!/^[0-9A-F]{64}$/u.test(source.sha256) || source.artifactPath.length === 0) {
+    if (
+      typeof source.sha256 !== "string" ||
+      !/^[0-9A-F]{64}$/u.test(source.sha256) ||
+      typeof source.artifactPath !== "string" ||
+      source.artifactPath.length === 0
+    ) {
       errors.push(`retained Murata source hash/path is invalid for ${source.id}`)
     }
   }
@@ -327,11 +550,15 @@ export function validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(
   }
   if (
     candidate.manufacturerLandPattern.designation !== "Murata GRM21 reflow land guidance" ||
-    candidate.manufacturerLandPattern.sourceScope !== "manufacturer guidance only" ||
+    candidate.manufacturerLandPattern.sourceScope !==
+      "applicable manufacturer GRM21-family reflow guidance only, not exact-orderable CAD" ||
+    candidate.manufacturerLandPattern.applicability !==
+      "Applicable GRM21-family reflow guidance for the 2.0 x 1.25 mm (±0.15) package row; not exact-orderable CAD or a released footprint." ||
     candidate.manufacturerLandPattern.sourceId !== "murata-grm21br71a106ke51-reference-sheet" ||
     candidate.manufacturerLandPattern.reviewedPage !== 25 ||
     candidate.manufacturerLandPattern.sourceTable !== "Table 2 Reflow Soldering Method" ||
     candidate.manufacturerLandPattern.chipDimensionRow !== "2.0 x 1.25 mm (±0.15)" ||
+    candidate.manufacturerLandPattern.chipDimensionTolerance !== "±0.15" ||
     candidate.manufacturerLandPattern.innerGapMm.minimum !== 1.2 ||
     candidate.manufacturerLandPattern.innerGapMm.maximum !== 1.2 ||
     candidate.manufacturerLandPattern.padLengthMm.minimum !== 0.6 ||
@@ -344,6 +571,7 @@ export function validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(
   const selection = candidate.projectSelection
   if (
     selection.solderingMethod !== "reflow" ||
+    selection.authority !== "project-review-input-derived-from-applicable-Murata-family-guidance" ||
     selection.manufacturerParameterSelectionMm.aInnerGap !== 1.2 ||
     selection.manufacturerParameterSelectionMm.bPadLength !== 0.7 ||
     selection.manufacturerParameterSelectionMm.cPadWidth !== 1.3 ||
@@ -375,6 +603,7 @@ export function validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(
         { pad: "2", terminal: "B", polarity: "non-polar", xMm: projectCopperPadCenterXMm, yMm: 0 }
       ]) ||
     candidate.orientation.state !== "non-polar" ||
+    candidate.orientation.datum !== "local two-terminal axis" ||
     candidate.orientation.pinOne !== "not-applicable" ||
     candidate.orientation.assemblyRotationDeg !== null ||
     candidate.stressOrientationReview.state !== "pending-review" ||
@@ -389,6 +618,51 @@ export function validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(
     errors.push("Murata GRM21 non-polar orientation drifted")
   }
   if (
+    candidate.placementReview.state !== "pending-independent-review" ||
+    candidate.placementReview.boardPlacementStatus !== "not-reviewed" ||
+    candidate.placementReview.boardIntegrationAuthority !== "deny" ||
+    candidate.placementReview.boardFitAccepted ||
+    candidate.placementReview.edgeClearanceAccepted ||
+    candidate.placementReview.assemblyClearanceAccepted ||
+    candidate.placementReview.stressReviewAccepted ||
+    candidate.projectFootprint.state !== "review-only" ||
+    candidate.projectFootprint.geometryAuthority !== "project-review-input-not-manufacturer-cad" ||
+    candidate.projectFootprint.padShape !== "rectangular-smt" ||
+    candidate.projectFootprint.pads.length !== 2 ||
+    candidate.projectFootprint.pads[0]?.pad !== "1" ||
+    candidate.projectFootprint.pads[0]?.terminal !== "A" ||
+    candidate.projectFootprint.pads[0]?.xMm !== -projectCopperPadCenterXMm ||
+    candidate.projectFootprint.pads[0]?.yMm !== 0 ||
+    candidate.projectFootprint.pads[1]?.pad !== "2" ||
+    candidate.projectFootprint.pads[1]?.terminal !== "B" ||
+    candidate.projectFootprint.pads[1]?.xMm !== projectCopperPadCenterXMm ||
+    candidate.projectFootprint.pads[1]?.yMm !== 0 ||
+    candidate.projectFootprint.solderMask.openingLengthMm !== projectSolderMaskOpeningLengthMm ||
+    candidate.projectFootprint.solderMask.openingWidthMm !== projectSolderMaskOpeningWidthMm ||
+    candidate.projectFootprint.solderMask.marginPerEdgeMm !== projectSolderMaskMarginMm ||
+    candidate.projectFootprint.solderMask.status !== "project-input-not-manufacturer-specification" ||
+    candidate.projectFootprint.paste.openingLengthMm !== projectPasteOpeningLengthMm ||
+    candidate.projectFootprint.paste.openingWidthMm !== projectPasteOpeningWidthMm ||
+    candidate.projectFootprint.paste.reductionPerEdgeMm !== projectPasteReductionPerEdgeMm ||
+    candidate.projectFootprint.paste.status !== "project-input-not-manufacturer-specification" ||
+    candidate.projectFootprint.courtyard.centerMm.x !== 0 ||
+    candidate.projectFootprint.courtyard.centerMm.y !== 0 ||
+    candidate.projectFootprint.courtyard.lengthMm !== projectCourtyardLengthMm ||
+    candidate.projectFootprint.courtyard.widthMm !== projectCourtyardWidthMm ||
+    candidate.projectFootprint.courtyard.status !== "project-review-input-not-manufacturer-specification" ||
+    candidate.projectFootprint.orientation.datum !== "pad 1 at negative local X; pad 2 at positive local X" ||
+    candidate.projectFootprint.orientation.boardRotationDegrees !== 0 ||
+    candidate.projectFootprint.orientation.pinOnePad !== null ||
+    candidate.projectFootprint.orientation.polarity !== "non-polar" ||
+    candidate.projectFootprint.placementStatus !== "not-reviewed" ||
+    candidate.projectFootprint.boardIntegrationAuthority !== "deny" ||
+    candidate.projectFootprint.releaseState !== "deny" ||
+    candidate.projectFootprint.fabricationAuthority !== "deny" ||
+    candidate.projectFootprint.accepted
+  ) {
+    errors.push("Murata project footprint or placement gate must remain denied")
+  }
+  if (
     candidate.manufacturerCad.state !== "not-acquired" ||
     candidate.manufacturerCad.authority !== "deny" ||
     candidate.manufacturerCad.availability !== "not-confirmed" ||
@@ -401,11 +675,24 @@ export function validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint(
     candidate.artwork.generatorVersion !== "0.0.2271" ||
     candidate.artwork.sha256 !== renderedGeometrySha256 ||
     candidate.artwork.authority !== "deny" ||
+    candidate.acceptance.packageIdentityReviewed !== true ||
+    candidate.acceptance.packageDrawingReviewed !== true ||
+    candidate.acceptance.familyLandGuidanceReviewed !== true ||
+    candidate.acceptance.projectGeometryAccepted ||
+    candidate.acceptance.pinOneOrientationAccepted ||
+    candidate.acceptance.placementAccepted ||
+    candidate.acceptance.cadImportAccepted ||
+    candidate.acceptance.boardFitAccepted ||
+    candidate.acceptance.fabricationAuthorized ||
+    candidate.acceptance.releaseState !== "deny" ||
     candidate.fabricationAuthority !== "deny" ||
     candidate.releaseState !== "deny" ||
     candidate.accepted !== false
   ) {
     errors.push("Murata CAD uncertainty and fabrication denial must remain fail-closed")
+  }
+  if (errors.length === 0 && !sameDataGraph(candidate, bp031MurataGrm21br71a106ke51l0805CandidateFootprintBaseline)) {
+    errors.push("Murata GRM21 exact graph, descriptor, or deny-state drifted")
   }
   return errors
 }

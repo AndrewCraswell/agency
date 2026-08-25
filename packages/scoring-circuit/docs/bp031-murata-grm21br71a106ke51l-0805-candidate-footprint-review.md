@@ -17,16 +17,16 @@ and its focused contract is
 The source binding is the existing seven-channel analog selection: canonical
 reference `C_REF`, replicated with the `C_REF_` prefix, exact MPN
 `GRM21BR71A106KE51L`, and package `0805 (2012M)`. The candidate is prepared
-against integration commit `a84fb13a95cb1a49c9a3dbe8628249567a9f3e1c`.
+against integration commit `c6a0723a719551c1632ff2eff5b528409b4cac57`.
 
 | Binding | Exact value |
 | --- | --- |
 | Canonical source | `packages/scoring-circuit/src/bench-prototype-seven-channel-analog.ts` |
-| Canonical source SHA-256 at `a84fb13` | `AC47072BAD3F60AA4E193192AB01C02507A3F61944F8B45F23B1F2793F207EFB` |
+| Canonical source SHA-256 at `c6a0723` | `AC47072BAD3F60AA4E193192AB01C02507A3F61944F8B45F23B1F2793F207EFB` |
 | MPN | `GRM21BR71A106KE51L` |
 | Package | `GRM21 (2012M / 0805)` |
 | Canonical reference | `C_REF` |
-| Replicated references | `C_REF_1` through `C_REF_7` |
+| Replicated references | Exactly `C_REF_1` through `C_REF_7` |
 
 No board, ledger, canonical source, plan, or backlog file is changed by this
 candidate.
@@ -35,13 +35,15 @@ candidate.
 
 | Source | Scope used | Retained artifact | SHA-256 |
 | --- | --- | --- | --- |
-| [Murata GRM21BR71A106KE51 reference sheet](https://search.murata.co.jp/Ceramy/image/img/A01X/G101/ENG/GRM21BR71A106KE51-01.pdf) | Exact `GRM21BR71A106KE51L` identity, 0805 / 2012M package dimensions, electrical rating, and GRM21 reflow land guidance | `packages/scoring-circuit/docs/evidence/m4-04/murata-grm21br71a106ke51l-datasheet.pdf` | `E8432C7ACFA982B24EB06DD145682F78051DC4649ABBEB35BBCA8646B1408E4F` |
+| [Murata GRM21BR71A106KE51 reference sheet](https://search.murata.co.jp/Ceramy/image/img/A01X/G101/ENG/GRM21BR71A106KE51-01.pdf) | Page 1: exact `GRM21BR71A106KE51L` identity, 0805 / 2012M package dimensions, and electrical rating. Page 25: applicable GRM21-family reflow land guidance, not exact-orderable CAD. | `packages/scoring-circuit/docs/evidence/m4-04/murata-grm21br71a106ke51l-datasheet.pdf` | `E8432C7ACFA982B24EB06DD145682F78051DC4649ABBEB35BBCA8646B1408E4F` |
 
-The reference sheet identifies `GRM21BR71A106KE51_` as a 10 uF, ±10%, X7R,
-10 V family entry. The final `L` packaging code in the exact MPN binds the
-orderable `GRM21BR71A106KE51L`. Page 1 records -55 to 125 °C operation and
-the 2.00 ±0.15 mm length, 1.25 ±0.15 mm width, 1.25 ±0.15 mm thickness,
-0.20 to 0.70 mm termination dimension, and at least 0.70 mm internal gap.
+The reference sheet identifies `GRM21BR71A106KE51_` on page 1 as a 10 uF,
+±10%, X7R, 10 V entry. The packaging table on that same page binds the final
+`L` packaging code in the exact MPN `GRM21BR71A106KE51L`. Page 1 records
+-55 to 125 °C operation and the 2.00 ±0.15 mm length, 1.25 ±0.15 mm width,
+1.25 ±0.15 mm thickness, 0.20 to 0.70 mm termination dimension, and at least
+0.70 mm internal gap. This page-1 identity/package/electrical evidence is
+tracked separately from the family land guidance below.
 
 The retained artifact is the official Murata primary PDF already present under
 the M4-04 evidence directory. No duplicate evidence file is added for this
@@ -49,7 +51,8 @@ slice.
 
 ## Manufacturer land guidance
 
-Page 25, Table 2, gives the exact GRM21 `2.0 x 1.25 mm (±0.15)` reflow row:
+Page 25, Table 2, gives applicable GRM21-family guidance for the `2.0 x 1.25
+mm (±0.15)` reflow row:
 
 | Murata parameter | Published guidance |
 | --- | --- |
@@ -58,10 +61,14 @@ Page 25, Table 2, gives the exact GRM21 `2.0 x 1.25 mm (±0.15)` reflow row:
 | `c` pad width | 1.2 to 1.4 mm |
 
 Murata says that the suitable land dimension must be confirmed on the actual
-set and PCB. These values are manufacturer guidance only. They are not a
-manufacturer CAD object, a released footprint, or fabrication approval.
+set and PCB. These values are applicable manufacturer family guidance only.
+They are not an exact-orderable CAD object, a released footprint, or
+fabrication approval. The candidate records the source as exact-orderable
+identity/package/electrical evidence on page 1 and as separately scoped
+family land guidance on page 25.
 
-The project review selection takes the midpoint within the published ranges:
+The project review selection takes the midpoint within the applicable
+published family ranges:
 `a=1.2`, `b=0.7`, and `c=1.3` mm. The resulting rectangular copper pads are
 centered at x = -0.95 mm and +0.95 mm, with x-axis pad length 0.70 mm, y-axis
 pad width 1.30 mm, and a 2.60 mm total copper span.
@@ -97,17 +104,26 @@ The ceramic capacitor is non-polar. Both terminals are represented as
 non-polar A and B terminals, with no pin-one, cathode, or anode claim.
 `assemblyRotationDeg` remains null because rotation is electrically
 equivalent; placement axis, board stress, clearance, and effective
-capacitance under DC bias remain independent review items.
+capacitance under DC bias remain independent review items. The project
+footprint records pad coordinates, project mask/paste/courtyard, and local
+orientation for review only.
 
 No Murata CAD artifact is retained. CAD state is `not-acquired`, authority is
 `deny`, retained CAD path and hash are null, and disposition is
-`not-acquired-no-substitute`. The candidate artwork is project review only;
-release state and fabrication authority are both `deny`, and `accepted`
-remains `false`.
+`not-acquired-no-substitute`. Placement is `not-reviewed` with board
+integration and board-fit gates denied. Project geometry, pin-one/orientation,
+placement, CAD import, board fit, fabrication authorization, and release
+acceptance gates remain false or denied. The candidate artwork is project
+review only; release state and fabrication authority are both `deny`, and
+`accepted` remains `false`.
 
-The validator fails closed on exact identity, current integration source
-binding, seven-reference replication, retained source identity and hash,
-package and electrical data, manufacturer land guidance, project geometry,
-rendered geometry digest, non-polar orientation, CAD uncertainty, and release
-state. Root review, board integration, independent placement and process
-review, DC-bias characterization, and fabrication evidence remain open.
+The validator keeps a private independent frozen baseline and uses
+descriptor-safe graph checks before reading candidate data. It fails closed on
+exact identity, current integration source binding, exactly seven-reference
+replication, retained source identity/page/hash, package and electrical data,
+the family-vs-exact land-guidance boundary, project geometry, rendered
+geometry digest, non-polar orientation, placement, CAD uncertainty, all
+acceptance gates, and release state. Adversarial tests cover ordinary drift,
+hidden and symbol properties, accessors, cycles, and malformed candidates.
+Root review, board integration, independent placement and process review,
+DC-bias characterization, and fabrication evidence remain open.
