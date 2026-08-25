@@ -763,4 +763,21 @@ describe("BP-033 application footprint closure ledger", () => {
       })
     }
   })
+
+  it("links both BP-033 display buffers to the exact SN74AHCT245PWR evidence", () => {
+    for (const reference of ["U_DISPLAY_BUFFER_A", "U_DISPLAY_BUFFER_B"]) {
+      expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toContainEqual({
+        reference,
+        artifactKind: "bp033-sn74ahct245pwr-tssop20-review-candidate",
+        artworkModule: "src/bp033-sn74ahct245pwr-tssop20-footprint.tsx",
+        reviewDocument: "docs/bp033-sn74ahct245pwr-tssop20-footprint.md",
+        sourceArtifactPath: "docs/evidence/bp-033/ti-sn74ahct245-datasheet-official.pdf",
+        sourceSha256: "9E7C1B200CDEFD3DC72CD0E8B9019059FED2833B1B15AC80E97E099DFCAC93D7",
+        reviewState: "root-reviewed-review-input",
+        reviewer: "root-final-reviewer",
+        reviewedAt: "2026-08-25",
+        fabricationRelease: "deny"
+      })
+    }
+  })
 })
