@@ -86,10 +86,16 @@ import { createSessionRepository } from "./session-read-repository.js"
 import { createSessionReadApiHandler } from "./session-read-routes.js"
 import type { SubscriptionMutationExecutor } from "./subscription-repository.js"
 import { createSubscriptionMutationApiHandler, createSubscriptionReadApiHandler } from "./subscription-routes.js"
-import { createWebhookSecretProtector, type SubscriptionRepository, SubscriptionService } from "./subscriptions.js"
+import {
+  createWebhookSecretProtector,
+  type SubscriptionRepository,
+  type WebhookSecretProtector,
+  SubscriptionService
+} from "./subscriptions.js"
 import { createSupportingMaterialSectionReadApiHandler } from "./supporting-material-section-read-routes.js"
 import { createVoteReadRepository } from "./vote-read-repository.js"
 import { createVoteReadApiHandler } from "./vote-read-routes.js"
+import { createWebhookMutationApiHandler } from "./webhook-mutation-routes.js"
 import type { WebhookReadRepository } from "./webhook-read-repository.js"
 import { createWebhookReadApiHandler } from "./webhook-read-routes.js"
 
@@ -105,6 +111,8 @@ export function createLegislationApiHandler(
     documentReadApi?: DocumentReadApi
     subscriptionMutationExecutor?: SubscriptionMutationExecutor
     subscriptionRepository?: SubscriptionRepository
+    webhookMutationExecutor?: SubscriptionMutationExecutor
+    webhookSecretProtector?: WebhookSecretProtector
     webhookReadRepository?: WebhookReadRepository
   }>
 ): HttpApiHandler {
@@ -295,9 +303,10 @@ export function createLegislationApiHandler(
       : (() => {
           const subscriptionService = new SubscriptionService(
             options.subscriptionRepository,
-            createWebhookSecretProtector(async () => {
-              throw new Error("Webhook secret protection is not configured for this deployment.")
-            })
+            options.webhookSecretProtector ??
+              createWebhookSecretProtector(async () => {
+                throw new Error("Webhook secret protection is not configured for this deployment.")
+              })
           )
           return [
             createSubscriptionReadApiHandler(subscriptionService, options),
@@ -309,7 +318,10 @@ export function createLegislationApiHandler(
                     options.subscriptionMutationExecutor,
                     options
                   )
-                ])
+                ]),
+            ...(options.webhookMutationExecutor === undefined || options.webhookSecretProtector === undefined
+              ? []
+              : [createWebhookMutationApiHandler(subscriptionService, options.webhookMutationExecutor, options)])
           ]
         })()),
     ...(options.webhookReadRepository === undefined

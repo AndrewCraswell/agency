@@ -202,7 +202,7 @@ export function assertWebhookReadModel(webhook: Webhook): void {
     throw invalidWebhook(webhook.id, "name")
   }
   validateWebhookUrl(webhook)
-  if (webhook.eventTypes.length === 0 || new Set(webhook.eventTypes).size !== webhook.eventTypes.length) {
+  if (new Set(webhook.eventTypes).size !== webhook.eventTypes.length) {
     throw invalidWebhook(webhook.id, "event types")
   }
   for (const eventType of webhook.eventTypes) {

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import { resolve } from "node:path"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from "drizzle-orm/node-postgres/migrator"
@@ -408,5 +409,95 @@ describePostgres.sequential("PostgreSQL subscription repository", () => {
     await expect(
       repository.getSubscription({ id: "subscription:rolled-back", owner: owner("user:one", "org:one") })
     ).resolves.toBeUndefined()
+  })
+
+  it("checks durable idempotency before a verification preflight", async () => {
+    const cipher = createEncryptedIdempotencyCipher(
+      async (plaintext) => Buffer.from(plaintext, "utf8").toString("base64url"),
+      async (ciphertext) => Buffer.from(ciphertext, "base64url").toString("utf8")
+    )
+    const executor = new SubscriptionIdempotencyTransaction(database, cipher, () => fixedNow)
+    const requestForBody = (body: Readonly<Record<string, unknown>>) => ({
+      canonicalPath: "/api/webhooks/webhook%3Atest/verify",
+      key: "webhook-verify-key",
+      method: "POST",
+      principalScope: principalScopeForSubscriptionOwner(owner("user:one", "org:one")),
+      requestHash: createHash("sha256").update(JSON.stringify(body)).digest("hex")
+    })
+    const request = requestForBody({ proof: "first" })
+    let preflightCalls = 0
+    const preflight = async () => {
+      preflightCalls += 1
+      return { challenge: "verified" }
+    }
+    const response = { body: { verified: true }, headers: { etag: "revision" }, statusCode: 200 }
+
+    await expect(executor.executeWithPreflight(request, preflight, async () => response)).resolves.toEqual({
+      replayed: false,
+      response
+    })
+    await expect(
+      executor.executeWithPreflight(
+        request,
+        async () => {
+          throw new Error("a durable replay must not make a network preflight")
+        },
+        async () => {
+          throw new Error("a durable replay must not execute the mutation")
+        }
+      )
+    ).resolves.toEqual({ replayed: true, response })
+    await expect(
+      executor.executeWithPreflight(
+        requestForBody({ proof: "different" }),
+        async () => {
+          throw new Error("a same-key request conflict must not make a network preflight")
+        },
+        async () => {
+          throw new Error("a same-key request conflict must not execute the mutation")
+        }
+      )
+    ).rejects.toMatchObject({ category: "idempotency_conflict" })
+    expect(preflightCalls).toBe(1)
+  })
+
+  it("runs a same-key preflight exactly once for concurrent callers", async () => {
+    const cipher = createEncryptedIdempotencyCipher(
+      async (plaintext) => Buffer.from(plaintext, "utf8").toString("base64url"),
+      async (ciphertext) => Buffer.from(ciphertext, "base64url").toString("utf8")
+    )
+    const executor = new SubscriptionIdempotencyTransaction(database, cipher, () => fixedNow)
+    const request = {
+      canonicalPath: "/api/webhooks/webhook%3Atest/verify",
+      key: "concurrent-webhook-verify-key",
+      method: "POST",
+      principalScope: principalScopeForSubscriptionOwner(owner("user:one", "org:one")),
+      requestHash: "b".repeat(64)
+    }
+    let preflightCalls = 0
+    let releasePreflight: () => void = () => undefined
+    const preflightReleased = new Promise<void>((resolve) => {
+      releasePreflight = resolve
+    })
+    let signalPreflightStarted: () => void = () => undefined
+    const preflightStarted = new Promise<void>((resolve) => {
+      signalPreflightStarted = resolve
+    })
+    const response = { body: { verified: true }, headers: { etag: "revision" }, statusCode: 200 }
+    const preflight = async () => {
+      preflightCalls += 1
+      signalPreflightStarted()
+      await preflightReleased
+    }
+    const first = executor.executeWithPreflight(request, preflight, async () => response)
+    await preflightStarted
+    const second = executor.executeWithPreflight(request, preflight, async () => response)
+    await new Promise<void>((resolve) => setImmediate(resolve))
+    expect(preflightCalls).toBe(1)
+    releasePreflight()
+    const [firstResult, secondResult] = await Promise.all([first, second])
+    expect(firstResult.response).toEqual(response)
+    expect(secondResult.response).toEqual(response)
+    expect(preflightCalls).toBe(1)
   })
 })

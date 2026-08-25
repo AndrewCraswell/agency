@@ -160,7 +160,9 @@ describe("createWebhookReadApiHandler", () => {
   })
 
   it("does not project a repository result that violates the persisted webhook contract", async () => {
-    const baseUrl = await start(repository({ getWebhook: async () => ({ ...webhook, eventTypes: [] }) }))
+    const baseUrl = await start(
+      repository({ getWebhook: async () => ({ ...webhook, eventTypes: ["status-changed", "status-changed"] }) })
+    )
 
     const response = await fetch(`${baseUrl}/api/webhooks/${encodeURIComponent(webhook.id)}`)
 

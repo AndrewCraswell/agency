@@ -79,7 +79,8 @@ const configSchema = z
       }, z.number().int().min(1).max(5))
     }),
     security: z.object({
-      idempotencyEncryptionKey: optionalSecret
+      idempotencyEncryptionKey: optionalSecret,
+      webhookSecretEncryptionKey: optionalSecret
     }),
     server: z.object({
       host: z.string().trim().min(1),
@@ -128,6 +129,16 @@ const configSchema = z
         code: "custom",
         message: "LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY must be a base64 or base64url-encoded 32-byte key",
         path: ["security", "idempotencyEncryptionKey"]
+      })
+    }
+    if (
+      config.security.webhookSecretEncryptionKey !== undefined &&
+      !isAes256Key(config.security.webhookSecretEncryptionKey)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY must be a base64 or base64url-encoded 32-byte key",
+        path: ["security", "webhookSecretEncryptionKey"]
       })
     }
   })
@@ -216,7 +227,8 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       maximumAttempts: environment.OCR_MAXIMUM_ATTEMPTS ?? "5"
     },
     security: {
-      idempotencyEncryptionKey: environment.LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY
+      idempotencyEncryptionKey: environment.LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY,
+      webhookSecretEncryptionKey: environment.LEGISLATION_WEBHOOK_SECRET_ENCRYPTION_KEY
     },
     server: {
       host: environment.LEGISLATION_HOST ?? (environment.PORT === undefined ? "127.0.0.1" : "0.0.0.0"),

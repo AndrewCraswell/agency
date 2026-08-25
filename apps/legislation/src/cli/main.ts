@@ -9,6 +9,7 @@ import {
   PostgresSubscriptionRepository,
   SubscriptionIdempotencyTransaction
 } from "../api/subscription-repository.js"
+import { createAes256GcmWebhookSecretProtector } from "../api/subscriptions.js"
 import { PostgresWebhookReadRepository } from "../api/webhook-read-repository.js"
 import { createWorkosAuthenticator } from "../auth/workos.js"
 import { decodeIdempotencyEncryptionKey, loadConfig, type LegislationConfig } from "../config/config.js"
@@ -371,6 +372,18 @@ async function serve() {
             subscriptionMutationExecutor: new SubscriptionIdempotencyTransaction(
               database,
               createAes256GcmIdempotencyCipher(decodeIdempotencyEncryptionKey(config.security.idempotencyEncryptionKey))
+            )
+          }),
+      ...(config.security.idempotencyEncryptionKey === undefined ||
+      config.security.webhookSecretEncryptionKey === undefined
+        ? {}
+        : {
+            webhookMutationExecutor: new SubscriptionIdempotencyTransaction(
+              database,
+              createAes256GcmIdempotencyCipher(decodeIdempotencyEncryptionKey(config.security.idempotencyEncryptionKey))
+            ),
+            webhookSecretProtector: createAes256GcmWebhookSecretProtector(
+              decodeIdempotencyEncryptionKey(config.security.webhookSecretEncryptionKey)
             )
           }),
       subscriptionRepository: new PostgresSubscriptionRepository(database),

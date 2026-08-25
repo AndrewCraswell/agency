@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import {
+  bigserial,
   boolean,
   type AnyPgColumn,
   char,
@@ -1875,6 +1876,27 @@ export const webhookSigningKeys = legislationSchema.table(
   (table) => [
     check("webhook_signing_keys_ciphertext_check", sql`length(${table.secretCiphertext}) > 0`),
     index("webhook_signing_keys_active_idx").on(table.webhookId, table.isActive, table.expiresAt)
+  ]
+)
+
+/** Immutable, owner-attributed mutation trail. It never contains signing secrets. */
+export const webhookAuditRecords = legislationSchema.table(
+  "webhook_audit_records",
+  {
+    id: bigserial("id", { mode: "number" }).primaryKey(),
+    webhookId: text("webhook_id")
+      .notNull()
+      .references(() => webhooks.id, { onDelete: "cascade" }),
+    action: text("action").notNull(),
+    actorUserId: text("actor_user_id").notNull(),
+    actorOrganizationId: text("actor_organization_id"),
+    details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("webhook_audit_records_action_check", sql`length(${table.action}) > 0`),
+    check("webhook_audit_records_actor_check", sql`length(${table.actorUserId}) > 0`),
+    index("webhook_audit_records_webhook_occurred_idx").on(table.webhookId, table.occurredAt, table.id)
   ]
 )
 

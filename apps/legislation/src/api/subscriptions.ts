@@ -1,4 +1,4 @@
-import { createHash, randomBytes, randomUUID } from "node:crypto"
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto"
 import type { RequestIdentity } from "../auth/request-context.js"
 
 export type SubscriptionEventType =
@@ -139,17 +139,102 @@ export class EncryptedWebhookSecret {
     return new EncryptedWebhookSecret(ciphertext)
   }
 
+  static fromPersistence(ciphertext: string): EncryptedWebhookSecret {
+    if (ciphertext.length === 0 || ciphertext.trim() !== ciphertext) {
+      throw new Error("Webhook secret ciphertext must be a non-empty canonical value.")
+    }
+    return new EncryptedWebhookSecret(ciphertext)
+  }
+
   unwrapForPersistence(): string {
     return this.#ciphertext
   }
 }
 
-export type WebhookSecretProtector = Readonly<{ protect(plaintext: string): Promise<EncryptedWebhookSecret> }>
+/** KMS-compatible envelope-encryption boundary for signing secrets. */
+export type WebhookSecretProtector = Readonly<{
+  protect(plaintext: string): Promise<EncryptedWebhookSecret>
+  unprotect(ciphertext: EncryptedWebhookSecret): Promise<string>
+}>
 
-export function createWebhookSecretProtector(encrypt: (plaintext: string) => Promise<string>): WebhookSecretProtector {
-  return {
-    protect: async (plaintext) => await EncryptedWebhookSecret.protect(plaintext, encrypt)
+export function createWebhookSecretProtector(
+  encrypt: (plaintext: string) => Promise<string>,
+  decrypt: (ciphertext: string) => Promise<string> = async () => {
+    throw new Error("Webhook secret decryption is not configured.")
   }
+): WebhookSecretProtector {
+  return {
+    protect: async (plaintext) => await EncryptedWebhookSecret.protect(plaintext, encrypt),
+    unprotect: async (ciphertext) => {
+      const plaintext = await decrypt(ciphertext.unwrapForPersistence())
+      if (!/^[A-Za-z0-9_-]{43}$/.test(plaintext)) {
+        throw new Error("Webhook secret decryption returned an invalid signing secret.")
+      }
+      return plaintext
+    }
+  }
+}
+
+const webhookSecretCipherVersion = "v1"
+const webhookSecretCipherAad = Buffer.from("legislation:webhook-signing-secret:v1", "utf8")
+
+/**
+ * Local envelope adapter for development and Railway. Its interface is
+ * deliberately compatible with a remote KMS adapter and has no plaintext
+ * persistence fallback.
+ */
+export function createAes256GcmWebhookSecretProtector(key: Uint8Array): WebhookSecretProtector {
+  const encryptionKey = Buffer.from(key)
+  if (encryptionKey.byteLength !== 32) {
+    throw new Error("Webhook secret encryption key must contain exactly 32 bytes.")
+  }
+  return createWebhookSecretProtector(
+    async (plaintext) => {
+      const nonce = randomBytes(12)
+      const cipher = createCipheriv("aes-256-gcm", encryptionKey, nonce)
+      cipher.setAAD(webhookSecretCipherAad)
+      const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()])
+      return [
+        webhookSecretCipherVersion,
+        nonce.toString("base64url"),
+        cipher.getAuthTag().toString("base64url"),
+        ciphertext.toString("base64url")
+      ].join(".")
+    },
+    async (protectedValue) => {
+      const [version, encodedNonce, encodedTag, encodedCiphertext, extra] = protectedValue.split(".")
+      if (
+        version !== webhookSecretCipherVersion ||
+        encodedNonce === undefined ||
+        encodedTag === undefined ||
+        encodedCiphertext === undefined ||
+        extra !== undefined
+      ) {
+        throw new Error("Webhook secret ciphertext has an invalid format.")
+      }
+      const nonce = Buffer.from(encodedNonce, "base64url")
+      const tag = Buffer.from(encodedTag, "base64url")
+      const ciphertext = Buffer.from(encodedCiphertext, "base64url")
+      if (
+        nonce.byteLength !== 12 ||
+        tag.byteLength !== 16 ||
+        ciphertext.byteLength === 0 ||
+        nonce.toString("base64url") !== encodedNonce ||
+        tag.toString("base64url") !== encodedTag ||
+        ciphertext.toString("base64url") !== encodedCiphertext
+      ) {
+        throw new Error("Webhook secret ciphertext is not canonical.")
+      }
+      try {
+        const decipher = createDecipheriv("aes-256-gcm", encryptionKey, nonce)
+        decipher.setAAD(webhookSecretCipherAad)
+        decipher.setAuthTag(tag)
+        return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8")
+      } catch {
+        throw new Error("Webhook secret ciphertext could not be authenticated.")
+      }
+    }
+  )
 }
 
 export type CreateWebhookInput = Readonly<{
@@ -161,7 +246,7 @@ export type CreateWebhookInput = Readonly<{
 export type UpdateWebhookInput = Readonly<{
   eventTypes?: readonly SubscriptionEventType[]
   name?: string
-  status?: "paused"
+  status?: "active" | "paused"
   url?: string
 }>
 
@@ -209,12 +294,16 @@ export type SubscriptionRepository = Readonly<{
 }>
 
 export type WebhookRepository = Readonly<{
-  activateWebhook(input: Readonly<{ id: string; revision: string; when: Date }>): Promise<Webhook>
-  cancelWebhook(input: Readonly<{ id: string; revision: string; when: Date }>): Promise<Webhook>
+  activateWebhook(
+    input: Readonly<{ id: string; owner: SubscriptionOwner; revision: string; when: Date }>
+  ): Promise<Webhook>
+  cancelWebhook(
+    input: Readonly<{ id: string; owner: SubscriptionOwner; revision: string; when: Date }>
+  ): Promise<Webhook>
   createWebhook(
     input: Readonly<{ keyId: string; secretCiphertext: EncryptedWebhookSecret; webhook: Webhook }>
   ): Promise<Webhook>
-  getWebhook(id: string): Promise<Webhook | undefined>
+  getWebhook(input: Readonly<{ id: string; owner: SubscriptionOwner }>): Promise<Webhook | undefined>
   listWebhooks(
     input: Readonly<{ cursor?: string; limit: number; owner: SubscriptionOwner }>
   ): Promise<RepositoryPage<Webhook>>
@@ -223,15 +312,24 @@ export type WebhookRepository = Readonly<{
       id: string
       keyId: string
       overlapEndsAt: Date | null
+      owner: SubscriptionOwner
       revision: string
       secretCiphertext: EncryptedWebhookSecret
+      secretLastFour: string
       when: Date
     }>
   ): Promise<Webhook>
   updateWebhook(
-    input: Readonly<{ id: string; patch: UpdateWebhookInput; revision: string; when: Date }>
+    input: Readonly<{ id: string; owner: SubscriptionOwner; patch: UpdateWebhookInput; revision: string; when: Date }>
   ): Promise<Webhook>
 }>
+
+export type WebhookVerificationRepository = WebhookRepository &
+  Readonly<{
+    activeSigningSecret(
+      input: Readonly<{ id: string; owner: SubscriptionOwner }>
+    ): Promise<EncryptedWebhookSecret | undefined>
+  }>
 
 export type RepositoryPage<T> = Readonly<{
   items: readonly T[]
@@ -454,6 +552,16 @@ export class SubscriptionService {
     return new SubscriptionService(repository, this.secretProtector, this.now, this.identifiers, this.webhookRepository)
   }
 
+  withWebhookRepository(repository: SubscriptionRepository & Partial<WebhookRepository>): SubscriptionService {
+    if (!hasWebhookRepository(repository)) {
+      throw new SubscriptionApiError(
+        "unprocessable",
+        "Webhook mutations require a transaction-scoped webhook repository."
+      )
+    }
+    return new SubscriptionService(repository, this.secretProtector, this.now, this.identifiers, repository)
+  }
+
   private requireWebhookRepository(): WebhookRepository {
     if (this.webhookRepository === undefined) {
       throw new SubscriptionApiError(
@@ -471,7 +579,10 @@ export class SubscriptionService {
       if (preference.channel !== "webhook" || !preference.isEnabled) {
         continue
       }
-      const webhook = await this.requireWebhookRepository().getWebhook(preference.destinationId)
+      const webhook = await this.requireWebhookRepository().getWebhook({
+        id: preference.destinationId,
+        owner
+      })
       if (webhook === undefined || !canAccess(identity, webhook.owner) || webhook.status !== "active") {
         throw new SubscriptionApiError(
           "unprocessable",
@@ -545,7 +656,10 @@ export class SubscriptionService {
       if (preference.channel !== "webhook" || !preference.isEnabled) {
         continue
       }
-      const webhook = await this.requireWebhookRepository().getWebhook(preference.destinationId)
+      const webhook = await this.requireWebhookRepository().getWebhook({
+        id: preference.destinationId,
+        owner: ownerFor(identity)
+      })
       if (webhook === undefined || !canAccess(identity, webhook.owner) || webhook.status !== "active") {
         throw new SubscriptionApiError(
           "unprocessable",
@@ -600,7 +714,7 @@ export class SubscriptionService {
   }
 
   async getWebhook(identity: RequestIdentity, id: string): Promise<Webhook> {
-    const webhook = await this.requireWebhookRepository().getWebhook(id)
+    const webhook = await this.requireWebhookRepository().getWebhook({ id, owner: ownerFor(identity) })
     if (webhook === undefined || !canAccess(identity, webhook.owner)) {
       throw new SubscriptionApiError("not_found", "Webhook was not found.")
     }
@@ -653,16 +767,30 @@ export class SubscriptionService {
     if (webhook.status === "cancelled") {
       throw new SubscriptionApiError("conflict", "Cancelled webhooks cannot be updated.")
     }
+    if (patch.status === "active" && webhook.status === "pending-verification") {
+      throw new SubscriptionApiError("conflict", "Pending webhooks must be verified before activation.")
+    }
     if (patch.url !== undefined) {
       validateWebhookInput({ eventTypes: webhook.eventTypes, name: webhook.name, url: patch.url })
     }
-    return await this.requireWebhookRepository().updateWebhook({ id, patch, revision, when: this.now() })
+    return await this.requireWebhookRepository().updateWebhook({
+      id,
+      owner: ownerFor(identity),
+      patch,
+      revision,
+      when: this.now()
+    })
   }
 
   async cancelWebhook(identity: RequestIdentity, id: string, revision: string): Promise<Webhook> {
     const webhook = await this.getWebhook(identity, id)
     requireRevision(webhook.revision, revision)
-    return await this.requireWebhookRepository().cancelWebhook({ id, revision, when: this.now() })
+    return await this.requireWebhookRepository().cancelWebhook({
+      id,
+      owner: ownerFor(identity),
+      revision,
+      when: this.now()
+    })
   }
 
   async rotateWebhookSecret(
@@ -687,8 +815,10 @@ export class SubscriptionService {
       id,
       keyId,
       overlapEndsAt: overlapSeconds === 0 ? null : new Date(now.getTime() + overlapSeconds * 1000),
+      owner: ownerFor(identity),
       revision,
       secretCiphertext,
+      secretLastFour: secret.slice(-4),
       when: now
     })
     return { keyId, secret, webhook: rotated }
@@ -700,7 +830,34 @@ export class SubscriptionService {
     if (webhook.status === "cancelled") {
       throw new SubscriptionApiError("conflict", "Cancelled webhooks cannot be verified.")
     }
-    return await this.requireWebhookRepository().activateWebhook({ id, revision, when: this.now() })
+    return await this.requireWebhookRepository().activateWebhook({
+      id,
+      owner: ownerFor(identity),
+      revision,
+      when: this.now()
+    })
+  }
+
+  async verificationSecret(
+    identity: RequestIdentity,
+    id: string
+  ): Promise<Readonly<{ secret: string; webhook: Webhook }>> {
+    const webhook = await this.getWebhook(identity, id)
+    const repository = this.requireWebhookRepository()
+    if (typeof (repository as Partial<WebhookVerificationRepository>).activeSigningSecret !== "function") {
+      throw new SubscriptionApiError(
+        "unprocessable",
+        "Webhook verification is unavailable until secret decryption is configured."
+      )
+    }
+    const encrypted = await (repository as WebhookVerificationRepository).activeSigningSecret({
+      id,
+      owner: ownerFor(identity)
+    })
+    if (encrypted === undefined) {
+      throw new SubscriptionApiError("unprocessable", "Webhook verification has no active signing key.")
+    }
+    return { secret: await this.secretProtector.unprotect(encrypted), webhook }
   }
 }
 

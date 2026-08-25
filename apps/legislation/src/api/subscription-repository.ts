@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto"
-import { and, desc, eq, isNull, lt, lte, ne, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gt, isNull, lt, lte, ne, or, sql } from "drizzle-orm"
 import type { ExtractTablesWithRelations } from "drizzle-orm"
 import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres/session"
 import type { PgTransaction } from "drizzle-orm/pg-core"
@@ -18,7 +18,12 @@ import {
   type SubscriptionOwner,
   type SubscriptionRepository,
   type SubscriptionTarget,
-  type UpdateSubscriptionInput
+  type UpdateSubscriptionInput,
+  type UpdateWebhookInput,
+  type Webhook,
+  type WebhookRepository,
+  type WebhookStatus,
+  EncryptedWebhookSecret
 } from "./subscriptions.js"
 
 type LegislationTransaction = PgTransaction<
@@ -31,6 +36,7 @@ type DatabaseHandle = LegislationDatabase | LegislationTransaction
 type SubscriptionRow = typeof schema.subscriptions.$inferSelect
 type SubscriptionEventRow = typeof schema.subscriptionEvents.$inferSelect
 type SubscriptionDeliveryRow = typeof schema.subscriptionDeliveries.$inferSelect
+type WebhookRow = typeof schema.webhooks.$inferSelect
 
 const subscriptionEventTypes = new Set<SubscriptionEventType>([
   "action-added",
@@ -132,6 +138,20 @@ export type SubscriptionMutationExecutor = Readonly<{
     operation: (repository: SubscriptionTransaction) => Promise<IdempotentResponse<T>>
   ): Promise<IdempotencyResult<T>>
 }>
+
+/**
+ * Performs an outbound preflight only after durable replay/conflict lookup.
+ * It keeps the per-key advisory transaction lock through the bounded preflight
+ * and mutation so concurrent callers cannot duplicate that side effect.
+ */
+export type PreflightSubscriptionMutationExecutor = SubscriptionMutationExecutor &
+  Readonly<{
+    executeWithPreflight<T, Preflight>(
+      request: IdempotencyRequest,
+      preflight: () => Promise<Preflight>,
+      operation: (repository: SubscriptionTransaction, preflight: Preflight) => Promise<IdempotentResponse<T>>
+    ): Promise<IdempotencyResult<T>>
+  }>
 
 export type SubscriptionTransaction = SubscriptionRepository & SubscriptionEventWriter
 
@@ -243,7 +263,9 @@ function decodeBase64Url(value: string, name: string): Buffer {
   return decoded
 }
 
-export class PostgresSubscriptionRepository implements SubscriptionRepository, SubscriptionEventWriter {
+export class PostgresSubscriptionRepository
+  implements SubscriptionRepository, SubscriptionEventWriter, WebhookRepository
+{
   readonly #database: DatabaseHandle
   readonly #now: () => Date
 
@@ -577,6 +599,323 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository, S
     return toDelivery(requireRow(rows[0], "The subscription delivery insert did not return a row."))
   }
 
+  async getWebhook(input: Readonly<{ id: string; owner: SubscriptionOwner }>): Promise<Webhook | undefined> {
+    const rows = await this.#database
+      .select()
+      .from(schema.webhooks)
+      .where(and(eq(schema.webhooks.id, input.id), webhookOwnerScope(input.owner)))
+      .limit(1)
+    const row = rows[0]
+    return row === undefined ? undefined : await this.#toWebhook(row)
+  }
+
+  async listWebhooks(
+    input: Readonly<{ cursor?: string; limit: number; owner: SubscriptionOwner }>
+  ): Promise<RepositoryPage<Webhook>> {
+    const limit = pageLimit(input.limit)
+    const rows = await this.#database
+      .select()
+      .from(schema.webhooks)
+      .where(webhookOwnerScope(input.owner))
+      .orderBy(desc(schema.webhooks.updatedAt), desc(schema.webhooks.id))
+      .limit(limit + 1)
+    const visible = rows.slice(0, limit)
+    return {
+      items: await Promise.all(visible.map(async (row) => await this.#toWebhook(row))),
+      truncated: rows.length > limit
+    }
+  }
+
+  async createWebhook(
+    input: Readonly<{ keyId: string; secretCiphertext: EncryptedWebhookSecret; webhook: Webhook }>
+  ): Promise<Webhook> {
+    const rows = await this.#database
+      .insert(schema.webhooks)
+      .values({
+        cancelledAt: input.webhook.cancelledAt,
+        createdAt: input.webhook.createdAt,
+        eventTypes: [...input.webhook.eventTypes],
+        id: input.webhook.id,
+        lastFailedAt: input.webhook.lastFailedAt,
+        lastSucceededAt: input.webhook.lastSucceededAt,
+        name: input.webhook.name,
+        overlapEndsAt: null,
+        ownerOrganizationId: input.webhook.owner.organizationId,
+        ownerUserId: input.webhook.owner.userId,
+        revision: input.webhook.revision,
+        secretLastFour: input.webhook.secretLastFour,
+        status: input.webhook.status,
+        updatedAt: input.webhook.updatedAt,
+        url: input.webhook.url
+      })
+      .returning()
+    const webhook = requireRow(rows[0], "The webhook insert did not return a row.")
+    await this.#database.insert(schema.webhookSigningKeys).values({
+      createdAt: input.webhook.createdAt,
+      id: input.keyId,
+      isActive: true,
+      secretCiphertext: input.secretCiphertext.unwrapForPersistence(),
+      webhookId: webhook.id
+    })
+    await this.#audit(webhook.id, input.webhook.owner, "created", input.webhook.createdAt, { keyId: input.keyId })
+    return await this.#toWebhook(webhook)
+  }
+
+  async updateWebhook(
+    input: Readonly<{ id: string; owner: SubscriptionOwner; patch: UpdateWebhookInput; revision: string; when: Date }>
+  ): Promise<Webhook> {
+    const values: Partial<typeof schema.webhooks.$inferInsert> = {
+      revision: randomUUID(),
+      updatedAt: input.when
+    }
+    if (input.patch.eventTypes !== undefined) {
+      values.eventTypes = [...input.patch.eventTypes]
+    }
+    if (input.patch.name !== undefined) {
+      values.name = input.patch.name.trim()
+    }
+    if (input.patch.status !== undefined) {
+      values.status = input.patch.status
+    }
+    if (input.patch.url !== undefined) {
+      values.status = "pending-verification"
+      values.url = input.patch.url
+    }
+    const rows = await this.#database
+      .update(schema.webhooks)
+      .set(values)
+      .where(
+        and(
+          eq(schema.webhooks.id, input.id),
+          webhookOwnerScope(input.owner),
+          eq(schema.webhooks.revision, input.revision),
+          ne(schema.webhooks.status, "cancelled")
+        )
+      )
+      .returning()
+    const webhook = rows[0]
+    if (webhook === undefined) {
+      throw new SubscriptionRepositoryError("conflict", "Webhook update did not match a current row.")
+    }
+    await this.#audit(webhook.id, input.owner, "updated", input.when, {
+      fields: Object.keys(input.patch).sort(),
+      verificationReset: input.patch.url !== undefined
+    })
+    return await this.#toWebhook(webhook)
+  }
+
+  async cancelWebhook(
+    input: Readonly<{ id: string; owner: SubscriptionOwner; revision: string; when: Date }>
+  ): Promise<Webhook> {
+    const rows = await this.#database
+      .update(schema.webhooks)
+      .set({ cancelledAt: input.when, revision: randomUUID(), status: "cancelled", updatedAt: input.when })
+      .where(
+        and(
+          eq(schema.webhooks.id, input.id),
+          webhookOwnerScope(input.owner),
+          eq(schema.webhooks.revision, input.revision),
+          ne(schema.webhooks.status, "cancelled")
+        )
+      )
+      .returning()
+    const webhook = rows[0]
+    if (webhook === undefined) {
+      throw new SubscriptionRepositoryError("conflict", "Webhook cancellation did not match a current row.")
+    }
+    await this.#database
+      .update(schema.subscriptionDeliveries)
+      .set({ failureCategory: "webhook_cancelled", nextAttemptAt: null, status: "suppressed" })
+      .where(
+        and(
+          eq(schema.subscriptionDeliveries.channel, "webhook"),
+          eq(schema.subscriptionDeliveries.destinationId, input.id),
+          or(
+            eq(schema.subscriptionDeliveries.status, "pending"),
+            eq(schema.subscriptionDeliveries.status, "processing")
+          )
+        )
+      )
+    await this.#database.execute(sql`
+      update ${schema.subscriptions}
+      set delivery = (
+        select jsonb_agg(
+          case
+            when preference->>'channel' = 'webhook' and preference->>'destinationId' = ${input.id}
+            then jsonb_set(preference, '{isEnabled}', 'false'::jsonb)
+            else preference
+          end
+        )
+        from jsonb_array_elements(${schema.subscriptions.delivery}) as preference
+      ), updated_at = ${input.when}, revision = gen_random_uuid()
+      where exists (
+        select 1 from jsonb_array_elements(${schema.subscriptions.delivery}) as preference
+        where preference->>'channel' = 'webhook' and preference->>'destinationId' = ${input.id}
+      )
+    `)
+    await this.#database
+      .update(schema.webhookSigningKeys)
+      .set({ expiresAt: input.when, isActive: false })
+      .where(and(eq(schema.webhookSigningKeys.webhookId, input.id), eq(schema.webhookSigningKeys.isActive, true)))
+    await this.#audit(webhook.id, input.owner, "cancelled", input.when, { linkedDeliveriesSuppressed: true })
+    return await this.#toWebhook(webhook)
+  }
+
+  async rotateWebhookSecret(
+    input: Readonly<{
+      id: string
+      keyId: string
+      overlapEndsAt: Date | null
+      owner: SubscriptionOwner
+      revision: string
+      secretCiphertext: EncryptedWebhookSecret
+      secretLastFour: string
+      when: Date
+    }>
+  ): Promise<Webhook> {
+    const rows = await this.#database
+      .update(schema.webhooks)
+      .set({
+        overlapEndsAt: input.overlapEndsAt,
+        revision: randomUUID(),
+        secretLastFour: input.secretLastFour,
+        updatedAt: input.when
+      })
+      .where(
+        and(
+          eq(schema.webhooks.id, input.id),
+          webhookOwnerScope(input.owner),
+          eq(schema.webhooks.revision, input.revision),
+          ne(schema.webhooks.status, "cancelled")
+        )
+      )
+      .returning()
+    const webhook = rows[0]
+    if (webhook === undefined) {
+      throw new SubscriptionRepositoryError("conflict", "Webhook rotation did not match a current row.")
+    }
+    if (input.overlapEndsAt === null) {
+      await this.#database
+        .update(schema.webhookSigningKeys)
+        .set({ expiresAt: input.when, isActive: false })
+        .where(and(eq(schema.webhookSigningKeys.webhookId, input.id), eq(schema.webhookSigningKeys.isActive, true)))
+    } else {
+      await this.#database.execute(sql`
+        update ${schema.webhookSigningKeys}
+        set expires_at = case
+          when expires_at is null then ${input.overlapEndsAt}
+          when expires_at < ${input.overlapEndsAt} then expires_at
+          else ${input.overlapEndsAt}
+        end
+        where webhook_id = ${input.id} and is_active = true
+      `)
+    }
+    await this.#database.insert(schema.webhookSigningKeys).values({
+      createdAt: input.when,
+      id: input.keyId,
+      isActive: true,
+      secretCiphertext: input.secretCiphertext.unwrapForPersistence(),
+      webhookId: input.id
+    })
+    await this.#audit(webhook.id, input.owner, "secret_rotated", input.when, {
+      keyId: input.keyId,
+      overlapEndsAt: input.overlapEndsAt?.toISOString() ?? null
+    })
+    return await this.#toWebhook(webhook)
+  }
+
+  async activateWebhook(
+    input: Readonly<{ id: string; owner: SubscriptionOwner; revision: string; when: Date }>
+  ): Promise<Webhook> {
+    const rows = await this.#database
+      .update(schema.webhooks)
+      .set({ revision: randomUUID(), status: "active", updatedAt: input.when })
+      .where(
+        and(
+          eq(schema.webhooks.id, input.id),
+          webhookOwnerScope(input.owner),
+          eq(schema.webhooks.revision, input.revision),
+          ne(schema.webhooks.status, "cancelled")
+        )
+      )
+      .returning()
+    const webhook = rows[0]
+    if (webhook === undefined) {
+      throw new SubscriptionRepositoryError("conflict", "Webhook activation did not match a current row.")
+    }
+    await this.#audit(webhook.id, input.owner, "verified", input.when, {})
+    return await this.#toWebhook(webhook)
+  }
+
+  async activeSigningSecret(
+    input: Readonly<{ id: string; owner: SubscriptionOwner }>
+  ): Promise<EncryptedWebhookSecret | undefined> {
+    const rows = await this.#database
+      .select({ ciphertext: schema.webhookSigningKeys.secretCiphertext })
+      .from(schema.webhookSigningKeys)
+      .innerJoin(schema.webhooks, eq(schema.webhookSigningKeys.webhookId, schema.webhooks.id))
+      .where(
+        and(
+          eq(schema.webhooks.id, input.id),
+          webhookOwnerScope(input.owner),
+          eq(schema.webhookSigningKeys.isActive, true),
+          or(isNull(schema.webhookSigningKeys.expiresAt), gt(schema.webhookSigningKeys.expiresAt, this.#now()))
+        )
+      )
+      .orderBy(desc(schema.webhookSigningKeys.createdAt), desc(schema.webhookSigningKeys.id))
+      .limit(1)
+    const row = rows[0]
+    return row === undefined ? undefined : EncryptedWebhookSecret.fromPersistence(row.ciphertext)
+  }
+
+  async #toWebhook(row: WebhookRow): Promise<Webhook> {
+    const keys = await this.#database
+      .select({ id: schema.webhookSigningKeys.id })
+      .from(schema.webhookSigningKeys)
+      .where(
+        and(
+          eq(schema.webhookSigningKeys.webhookId, row.id),
+          eq(schema.webhookSigningKeys.isActive, true),
+          or(isNull(schema.webhookSigningKeys.expiresAt), gt(schema.webhookSigningKeys.expiresAt, this.#now()))
+        )
+      )
+      .orderBy(asc(schema.webhookSigningKeys.createdAt), asc(schema.webhookSigningKeys.id))
+    return {
+      activeKeyIds: keys.map((key) => key.id),
+      cancelledAt: row.cancelledAt,
+      createdAt: row.createdAt,
+      eventTypes: row.eventTypes.map((eventType) => parseEventType(eventType)),
+      id: row.id,
+      lastFailedAt: row.lastFailedAt,
+      lastSucceededAt: row.lastSucceededAt,
+      name: row.name,
+      overlapEndsAt: row.overlapEndsAt,
+      owner: { organizationId: row.ownerOrganizationId, userId: row.ownerUserId },
+      revision: row.revision,
+      secretLastFour: row.secretLastFour,
+      status: row.status as WebhookStatus,
+      updatedAt: row.updatedAt,
+      url: row.url
+    }
+  }
+
+  async #audit(
+    webhookId: string,
+    owner: SubscriptionOwner,
+    action: string,
+    occurredAt: Date,
+    details: Record<string, unknown>
+  ): Promise<void> {
+    await this.#database.insert(schema.webhookAuditRecords).values({
+      action,
+      actorOrganizationId: owner.organizationId,
+      actorUserId: owner.userId,
+      details,
+      occurredAt,
+      webhookId
+    })
+  }
+
   async transaction<T>(operation: (repository: PostgresSubscriptionRepository) => Promise<T>): Promise<T> {
     return await this.#database.transaction(async (transaction) => {
       return await operation(new PostgresSubscriptionRepository(transaction, this.#now))
@@ -584,7 +923,7 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository, S
   }
 }
 
-export class SubscriptionIdempotencyTransaction implements SubscriptionMutationExecutor {
+export class SubscriptionIdempotencyTransaction implements PreflightSubscriptionMutationExecutor {
   readonly #database: LegislationDatabase
   readonly #cipher: EncryptedIdempotencyCipher
   readonly #now: () => Date
@@ -599,28 +938,67 @@ export class SubscriptionIdempotencyTransaction implements SubscriptionMutationE
     request: IdempotencyRequest,
     operation: (repository: SubscriptionTransaction) => Promise<IdempotentResponse<T>>
   ): Promise<IdempotencyResult<T>> {
+    const { expiresAt, now } = this.#validatedTiming(request)
+    return await this.#database.transaction(async (transaction) => {
+      const replay = await this.#replay<T>(transaction, request, now)
+      if (replay !== undefined) {
+        return replay
+      }
+      const repository = new PostgresSubscriptionRepository(transaction, this.#now)
+      const response = await operation(repository)
+      await this.#store(transaction, request, expiresAt, response)
+      return { replayed: false, response }
+    })
+  }
+
+  async executeWithPreflight<T, Preflight>(
+    request: IdempotencyRequest,
+    preflight: () => Promise<Preflight>,
+    operation: (repository: SubscriptionTransaction, preflight: Preflight) => Promise<IdempotentResponse<T>>
+  ): Promise<IdempotencyResult<T>> {
+    const { expiresAt, now } = this.#validatedTiming(request)
+    return await this.#database.transaction(async (transaction) => {
+      const replay = await this.#replay<T>(transaction, request, now)
+      if (replay !== undefined) {
+        return replay
+      }
+      const prepared = await preflight()
+      const response = await operation(new PostgresSubscriptionRepository(transaction, this.#now), prepared)
+      await this.#store(transaction, request, expiresAt, response)
+      return { replayed: false, response }
+    })
+  }
+
+  #validatedTiming(request: IdempotencyRequest): Readonly<{ expiresAt: Date; now: Date }> {
     validateIdempotencyRequest(request)
     const now = this.#now()
     const expiresAt = new Date(now.getTime() + (request.retentionMs ?? 24 * 60 * 60 * 1000))
     if (expiresAt <= now) {
       throw new SubscriptionRepositoryError("invalid_persistence", "Idempotency retention must be positive.")
     }
-    return await this.#database.transaction(async (transaction) => {
-      const repository = new PostgresSubscriptionRepository(transaction, this.#now)
-      const lockKey = `${request.principalScope}:${request.method}:${request.canonicalPath}:${request.key}`
-      await transaction.execute(sql`select pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`)
-      await transaction
-        .delete(schema.apiIdempotencyRecords)
-        .where(
-          and(
-            eq(schema.apiIdempotencyRecords.principalScope, request.principalScope),
-            eq(schema.apiIdempotencyRecords.method, request.method),
-            eq(schema.apiIdempotencyRecords.canonicalPath, request.canonicalPath),
-            eq(schema.apiIdempotencyRecords.key, request.key),
-            lte(schema.apiIdempotencyRecords.expiresAt, now)
-          )
+    return { expiresAt, now }
+  }
+
+  async #replay<T>(
+    transaction: LegislationTransaction,
+    request: IdempotencyRequest,
+    now: Date
+  ): Promise<IdempotencyResult<T> | undefined> {
+    const lockKey = `${request.principalScope}:${request.method}:${request.canonicalPath}:${request.key}`
+    await transaction.execute(sql`select pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`)
+    await transaction
+      .delete(schema.apiIdempotencyRecords)
+      .where(
+        and(
+          eq(schema.apiIdempotencyRecords.principalScope, request.principalScope),
+          eq(schema.apiIdempotencyRecords.method, request.method),
+          eq(schema.apiIdempotencyRecords.canonicalPath, request.canonicalPath),
+          eq(schema.apiIdempotencyRecords.key, request.key),
+          lte(schema.apiIdempotencyRecords.expiresAt, now)
         )
-      const existing = await transaction
+      )
+    const stored = (
+      await transaction
         .select()
         .from(schema.apiIdempotencyRecords)
         .where(
@@ -632,36 +1010,41 @@ export class SubscriptionIdempotencyTransaction implements SubscriptionMutationE
           )
         )
         .limit(1)
-      const stored = existing[0]
-      if (stored !== undefined) {
-        if (stored.requestHash !== request.requestHash) {
-          throw new SubscriptionRepositoryError(
-            "idempotency_conflict",
-            "The idempotency key was already used with a different request.",
-            { reason: "idempotency_key_reused" }
-          )
-        }
-        return { replayed: true, response: await decryptResponse<T>(this.#cipher, stored) }
-      }
+    )[0]
+    if (stored === undefined) {
+      return undefined
+    }
+    if (stored.requestHash !== request.requestHash) {
+      throw new SubscriptionRepositoryError(
+        "idempotency_conflict",
+        "The idempotency key was already used with a different request.",
+        { reason: "idempotency_key_reused" }
+      )
+    }
+    return { replayed: true, response: await decryptResponse<T>(this.#cipher, stored) }
+  }
 
-      const response = await operation(repository)
-      const responsePlaintext = JSON.stringify(response)
-      const responseCiphertext = await this.#cipher.encrypt(responsePlaintext)
-      if (responseCiphertext.length === 0 || responseCiphertext === responsePlaintext) {
-        throw new Error("Idempotency response protection must return non-empty ciphertext distinct from plaintext.")
-      }
-      await transaction.insert(schema.apiIdempotencyRecords).values({
-        canonicalPath: request.canonicalPath,
-        expiresAt,
-        key: request.key,
-        method: request.method,
-        principalScope: request.principalScope,
-        requestHash: request.requestHash,
-        responseCiphertext,
-        responseHeaders: response.headers,
-        statusCode: response.statusCode
-      })
-      return { replayed: false, response }
+  async #store<T>(
+    transaction: LegislationTransaction,
+    request: IdempotencyRequest,
+    expiresAt: Date,
+    response: IdempotentResponse<T>
+  ): Promise<void> {
+    const responsePlaintext = JSON.stringify(response)
+    const responseCiphertext = await this.#cipher.encrypt(responsePlaintext)
+    if (responseCiphertext.length === 0 || responseCiphertext === responsePlaintext) {
+      throw new Error("Idempotency response protection must return non-empty ciphertext distinct from plaintext.")
+    }
+    await transaction.insert(schema.apiIdempotencyRecords).values({
+      canonicalPath: request.canonicalPath,
+      expiresAt,
+      key: request.key,
+      method: request.method,
+      principalScope: request.principalScope,
+      requestHash: request.requestHash,
+      responseCiphertext,
+      responseHeaders: response.headers,
+      statusCode: response.statusCode
     })
   }
 }
@@ -695,6 +1078,15 @@ function ownerScope(table: typeof schema.subscriptions, owner: SubscriptionOwner
     eq(table.ownerOrganizationId, owner.organizationId),
     and(isNull(table.ownerOrganizationId), eq(table.ownerUserId, owner.userId))
   )
+}
+
+function webhookOwnerScope(owner: SubscriptionOwner) {
+  return owner.organizationId === null
+    ? and(isNull(schema.webhooks.ownerOrganizationId), eq(schema.webhooks.ownerUserId, owner.userId))
+    : or(
+        eq(schema.webhooks.ownerOrganizationId, owner.organizationId),
+        and(isNull(schema.webhooks.ownerOrganizationId), eq(schema.webhooks.ownerUserId, owner.userId))
+      )
 }
 
 function pageLimit(limit: number): number {
