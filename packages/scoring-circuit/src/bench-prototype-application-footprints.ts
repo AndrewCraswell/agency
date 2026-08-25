@@ -140,6 +140,35 @@ type Seed = {
       readonly currentVerified: false
     }
   }
+  readonly projectFootprintCandidate?: {
+    readonly state: "source-controlled-review-only"
+    readonly artifactPath: string
+    readonly testArtifactPath: string
+    readonly renderedGeometrySha256: string
+    readonly orderableBinding: {
+      readonly orderableMpn: "TPS25730ADREFR"
+      readonly deviceMpn: "TPS25730AD"
+      readonly packageDrawing: "REF0038A"
+      readonly perimeterPins: 38
+      readonly exposedPads: readonly ["39 GND", "40 DRAIN"]
+    }
+    readonly source: { readonly artifactPath: string; readonly sha256: string; readonly reviewedPages: "1, 4-6, 61-63" }
+    readonly review: {
+      readonly state: "root-reviewed-review-input"
+      readonly reviewer: "root-final-reviewer"
+      readonly reviewedAt: "2026-08-25"
+      readonly scope: string
+    }
+    readonly authority: {
+      readonly manufacturerCadImported: false
+      readonly boardImported: false
+      readonly orientationAccepted: false
+      readonly courtyardAccepted: false
+      readonly drcAccepted: false
+      readonly fabricationAuthorized: false
+      readonly releaseState: "deny"
+    }
+  }
 }
 
 const retainedPrimarySourceBatch = [
@@ -251,6 +280,47 @@ function hasPinMapOrientationOverlay(record: {
 }): record is { readonly pinMapOrientationOverlay: NonNullable<Seed["pinMapOrientationOverlay"]> } {
   return record.pinMapOrientationOverlay !== undefined
 }
+
+function hasProjectFootprintCandidate(record: {
+  readonly projectFootprintCandidate?: Seed["projectFootprintCandidate"]
+}): record is { readonly projectFootprintCandidate: NonNullable<Seed["projectFootprintCandidate"]> } {
+  return record.projectFootprintCandidate !== undefined
+}
+
+const tps25730aRefProjectFootprintCandidate = {
+  state: "source-controlled-review-only",
+  artifactPath: "src/bp033-tps25730a-ref-project-footprint.tsx",
+  testArtifactPath: "src/bp033-tps25730a-ref-project-footprint.test.tsx",
+  renderedGeometrySha256: "b35cde8711ffe20c9c1f38804c2e885bc7caa610db4f9bb5243f760a00e3e7e0",
+  orderableBinding: {
+    orderableMpn: "TPS25730ADREFR",
+    deviceMpn: "TPS25730AD",
+    packageDrawing: "REF0038A",
+    perimeterPins: 38,
+    exposedPads: ["39 GND", "40 DRAIN"]
+  },
+  source: {
+    artifactPath: "docs/evidence/bp-033/ti-tps25730a-datasheet.pdf",
+    sha256: "B7D9836E4C82D28BF400FC1747586F24C26DAF94A629AAB4EE57C49072371D28",
+    reviewedPages: "1, 4-6, 61-63"
+  },
+  review: {
+    state: "root-reviewed-review-input",
+    reviewer: "root-final-reviewer",
+    reviewedAt: "2026-08-25",
+    scope:
+      "Exact orderable/device/package binding, TI top-view pin order, published copper, exposed-pad identities, reference mapping, rendered-review hash, and deny-state integrity; mask, paste segmentation, courtyard, board fit, DRC, and fabrication remain unapproved."
+  },
+  authority: {
+    manufacturerCadImported: false,
+    boardImported: false,
+    orientationAccepted: false,
+    courtyardAccepted: false,
+    drcAccepted: false,
+    fabricationAuthorized: false,
+    releaseState: "deny"
+  }
+} as const
 
 function selected(seed: Seed) {
   return {
@@ -544,6 +614,7 @@ const records = [
       sourceContract: "BP-050",
       sourceUrl: retainedSourceFor(reference)?.url ?? null,
       manufacturerDrawing: retainedSourceFor(reference),
+      projectFootprintCandidate: reference === "U_USB_PD" ? tps25730aRefProjectFootprintCandidate : undefined,
       role
     } as Seed & { readonly role: string })
   ),
@@ -613,6 +684,7 @@ const definition = {
   closureRules: [
     "A package identity never grants pad, drill, copper, mask, paste, courtyard, or assembly geometry.",
     "Each DNP-unresolved record requires an exact manufacturer drawing revision and SHA-256, exact CAD or an explicit no-CAD record, generated artwork hash, and independent orientation review.",
+    "U_USB_PD has one source-controlled TPS25730ADREFR REF0038A artwork candidate with a rendered-geometry hash. It is review-only: no TI native CAD, board import, orientation, courtyard, DRC, release, or fabrication authority is granted.",
     "J_HUB75 has a source-controlled pin-map and orientation overlay bound to the canonical BP-143 Samtec prints. It is not a project footprint, CAD import, board artwork, sample fit, continuity, current, orientation, or fabrication approval.",
     "BP-300 may not instantiate a record whose packageStatus is upstream-package-not-specified; obtain the exact package from the manufacturer before assigning geometry.",
     "TP_W5500_RESET_N and TP_W5500_INT_N select Keystone Electronics 5001 miniature through-hole black test points with a 0.040 inch (catalog 1.0 mm) mounting hole; exact source evidence is retained, while drawings, CAD, artwork, orientation, and probe-clearance review remain open before population.",
@@ -700,6 +772,36 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
+    !contract.records.some(
+      (record) =>
+        record.reference === "U_USB_PD" &&
+        record.mpn === "TPS25730ADREFR" &&
+        hasProjectFootprintCandidate(record) &&
+        record.projectFootprintCandidate.state === "source-controlled-review-only" &&
+        record.projectFootprintCandidate.artifactPath === "src/bp033-tps25730a-ref-project-footprint.tsx" &&
+        record.projectFootprintCandidate.testArtifactPath === "src/bp033-tps25730a-ref-project-footprint.test.tsx" &&
+        record.projectFootprintCandidate.renderedGeometrySha256 ===
+          "b35cde8711ffe20c9c1f38804c2e885bc7caa610db4f9bb5243f760a00e3e7e0" &&
+        record.projectFootprintCandidate.orderableBinding.deviceMpn === "TPS25730AD" &&
+        record.projectFootprintCandidate.orderableBinding.packageDrawing === "REF0038A" &&
+        record.projectFootprintCandidate.orderableBinding.perimeterPins === 38 &&
+        record.projectFootprintCandidate.orderableBinding.exposedPads[0] === "39 GND" &&
+        record.projectFootprintCandidate.orderableBinding.exposedPads[1] === "40 DRAIN" &&
+        record.projectFootprintCandidate.source.artifactPath === "docs/evidence/bp-033/ti-tps25730a-datasheet.pdf" &&
+        record.projectFootprintCandidate.source.sha256 ===
+          "B7D9836E4C82D28BF400FC1747586F24C26DAF94A629AAB4EE57C49072371D28" &&
+        record.projectFootprintCandidate.source.reviewedPages === "1, 4-6, 61-63" &&
+        record.projectFootprintCandidate.review.state === "root-reviewed-review-input" &&
+        record.projectFootprintCandidate.review.reviewer === "root-final-reviewer" &&
+        record.projectFootprintCandidate.authority.manufacturerCadImported === false &&
+        record.projectFootprintCandidate.authority.boardImported === false &&
+        record.projectFootprintCandidate.authority.orientationAccepted === false &&
+        record.projectFootprintCandidate.authority.courtyardAccepted === false &&
+        record.projectFootprintCandidate.authority.drcAccepted === false &&
+        record.projectFootprintCandidate.authority.fabricationAuthorized === false &&
+        record.projectFootprintCandidate.authority.releaseState === "deny"
+    ) ||
+    contract.records.filter(hasProjectFootprintCandidate).length !== 1 ||
     !contract.records.some(
       (record) =>
         record.reference === "J_HUB75" &&

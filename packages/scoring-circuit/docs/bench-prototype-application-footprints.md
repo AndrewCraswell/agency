@@ -25,6 +25,36 @@ References without retained source bytes have no source URL in this ledger.
 They must not receive a guessed family or distributor link merely to make the
 ledger appear complete.
 
+## U_USB_PD REF0038A review-only candidate
+
+`U_USB_PD` binds the exact TI orderable `TPS25730ADREFR` to the
+`TPS25730AD` REF0038A WQFN drawing: 38 perimeter pins, exposed pad 39 (GND),
+and exposed pad 40 (DRAIN). The retained TI datasheet
+`docs/evidence/bp-033/ti-tps25730a-datasheet.pdf` has SHA-256
+`B7D9836E4C82D28BF400FC1747586F24C26DAF94A629AAB4EE57C49072371D28`.
+
+`src/bp033-tps25730a-ref-project-footprint.tsx` renders the source-controlled
+copper into one isolated review candidate. Its normalized rendered copper and
+courtyard geometry is hash-bound as
+`b35cde8711ffe20c9c1f38804c2e885bc7caa610db4f9bb5243f760a00e3e7e0`.
+The top-view datum holds pin 1 at the upper-left of the left edge at zero board
+rotation, with counter-clockwise numbering. The 7.0 mm by 5.0 mm courtyard is
+an explicit project DRC envelope, because TI does not publish a courtyard.
+
+TI's 0.1 mm stencil example records 78% printed area for exposed pad 39 and
+80% for exposed pad 40. The rendered symmetric apertures preserve only those
+total areas; they are not a claim that TI's aperture segmentation, any
+fabricator rule, or an assembly process has been accepted. No native ECAD is
+imported. Board import, independent orientation and courtyard review, DRC,
+release, and fabrication remain denied.
+
+Root reviewer `root-final-reviewer` visually inspected retained TI pages 1,
+4 through 6, and 61 through 63 on 2026-08-25. Root review accepts the exact
+orderable/device/package binding, top-view pin order, published copper,
+exposed-pad identities, `U_USB_PD` mapping, rendered-review hash, and deny-state
+integrity. It does not accept the project mask, symmetric paste approximation,
+courtyard, board fit, DRC, or fabrication release.
+
 ## J_HUB75 Samtec source and candidate disposition
 
 `J_HUB75` is the exact Samtec `TST-108-04-G-D-RA`: a 16-position, double-row,

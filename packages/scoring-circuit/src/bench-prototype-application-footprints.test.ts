@@ -111,6 +111,47 @@ describe("BP-033 application footprint closure ledger", () => {
     expect(benchPrototypeApplicationFootprints.authority.orientationsReviewed).toBe(false)
   })
 
+  it("maps only U_USB_PD to the rendered REF0038A review candidate without board or release credit", () => {
+    const record = benchPrototypeApplicationFootprints.records.find((candidate) => candidate.reference === "U_USB_PD")
+    if (
+      record === undefined ||
+      !("projectFootprintCandidate" in record) ||
+      record.projectFootprintCandidate === undefined
+    )
+      throw new Error("U_USB_PD project footprint candidate is missing")
+    expect(record).toMatchObject({
+      mpn: "TPS25730ADREFR",
+      package: "WQFN (REF), 38-pin",
+      projectFootprintCandidate: {
+        state: "source-controlled-review-only",
+        artifactPath: "src/bp033-tps25730a-ref-project-footprint.tsx",
+        testArtifactPath: "src/bp033-tps25730a-ref-project-footprint.test.tsx",
+        renderedGeometrySha256: "b35cde8711ffe20c9c1f38804c2e885bc7caa610db4f9bb5243f760a00e3e7e0",
+        orderableBinding: {
+          orderableMpn: "TPS25730ADREFR",
+          deviceMpn: "TPS25730AD",
+          packageDrawing: "REF0038A",
+          perimeterPins: 38,
+          exposedPads: ["39 GND", "40 DRAIN"]
+        },
+        review: {
+          state: "root-reviewed-review-input",
+          reviewer: "root-final-reviewer",
+          reviewedAt: "2026-08-25"
+        },
+        authority: {
+          manufacturerCadImported: false,
+          boardImported: false,
+          orientationAccepted: false,
+          courtyardAccepted: false,
+          drcAccepted: false,
+          fabricationAuthorized: false,
+          releaseState: "deny"
+        }
+      }
+    })
+  })
+
   it("rejects a substituted canonical-source path or forged physical evidence", () => {
     const substitutedSource = structuredClone(benchPrototypeApplicationFootprints) as {
       records: Array<Record<string, unknown>>
