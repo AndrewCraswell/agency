@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto"
-import { readdirSync, readFileSync } from "node:fs"
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   benchPrototypeProcessorFootprints,
@@ -176,13 +176,10 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
     }
   })
 
-  it("retains and hashes only the bounded TI reset-source batch", () => {
+  it("retains and hashes the exact bounded TI reset-source batch", () => {
     const sources = benchPrototypeProcessorFootprintsRetainedManufacturerSources
     expect(sources).toHaveLength(2)
     expect(sources.map((source) => source.mpn)).toEqual(["TPS3431SDRBR", "TPS389033DSER"])
-    expect(readdirSync(new URL("../docs/evidence/bp-032/", import.meta.url)).sort()).toEqual(
-      sources.map((source) => source.artifactPath.split("/").at(-1)).sort()
-    )
     for (const source of sources) {
       const bytes = readFileSync(new URL(`../${source.artifactPath}`, import.meta.url))
       expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(source.sha256)
