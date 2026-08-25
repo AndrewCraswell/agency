@@ -578,6 +578,16 @@ export type BillSummaryProjectionInput = SourceRecord & {
   latestActionAt: DateValue | null
 }
 
+export type BillActionProjectionInput = SourceRecord & {
+  billId: string
+  description: string
+  date: DateValue
+  occurredAt: DateValue | null
+  sequence: number
+  classifications: readonly string[]
+  organization: OrganizationSummary | null
+}
+
 export interface BillDetailProjectionInput {
   bill: BillSummaryProjectionInput
   abstract: string | null
@@ -996,6 +1006,23 @@ export function projectBillDetail(input: BillDetailProjectionInput, context: Pro
       amendments: pageInfo(input.childPageInfo.amendments, "bill amendments"),
       votes: pageInfo(input.childPageInfo.votes, "bill votes")
     }
+  }
+}
+
+export function projectBillAction(input: BillActionProjectionInput, context: ProjectionContext): BillAction {
+  if (input.organization !== null) {
+    validateOrganizationSummary(input.organization)
+  }
+  return {
+    ...canonical(input.id, `/api/bills/${segment(input.billId)}/timeline#action-${segment(input.id)}`, context),
+    type: "bill-action",
+    billId: required(input.billId, "bill action billId"),
+    description: required(input.description, "bill action description"),
+    date: requiredIsoDate(input.date, "bill action date"),
+    occurredAt: isoTimestamp(input.occurredAt, "bill action occurredAt"),
+    sequence: nonnegativeInteger(input.sequence, "bill action sequence"),
+    classifications: [...input.classifications],
+    organization: input.organization === null ? null : structuredClone(input.organization)
   }
 }
 

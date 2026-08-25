@@ -43,7 +43,7 @@ const memberVoteSchema = z
   })
   .passthrough()
 const bundleSchema = z.object({
-  members: z.object({ results: z.array(memberVoteSchema).default([]) }).passthrough(),
+  members: z.object({ results: z.array(memberVoteSchema) }).passthrough(),
   reference: referenceSchema,
   vote: voteSchema
 })
@@ -108,8 +108,15 @@ export function normalizeCongressHouseVote(input: unknown): CongressHouseVoteSna
   }))
   const yesCount = positions.filter((position) => position.option === "yes").length
   const noCount = positions.filter((position) => position.option === "no").length
-  const otherCount = positions.length - yesCount - noCount
+  const absentCount = positions.filter((position) => position.option === "absent").length
+  const abstainCount = positions.filter((position) => position.option === "abstain").length
+  const notVotingCount = positions.filter((position) => position.option === "not-voting").length
+  const presentCount = positions.filter((position) => position.option === "present").length
+  const proxyCount = positions.filter((position) => position.option === "proxy").length
+  const pairedCount = positions.filter((position) => position.option === "paired").length
+  const otherCount = positions.filter((position) => position.option === "other").length
   const target = structuredLegislationTarget(reference)
+  const heldAt = sourceDate(source.vote.startDate)
 
   return {
     positions,
@@ -117,20 +124,55 @@ export function normalizeCongressHouseVote(input: unknown): CongressHouseVoteSna
       ...target,
       chamber: "lower",
       classification: "roll-call",
-      heldAt: new Date(source.vote.startDate),
+      heldAt,
       id: canonicalVoteId,
       motion: source.vote.voteQuestion,
       noCount,
+      absentCount,
+      abstainCount,
+      notVotingCount,
       organizationId: organizationId("congress", "house"),
       otherCount,
+      pairedCount,
+      presentCount,
+      proxyCount,
       question: source.vote.voteQuestion,
-      result: source.vote.result,
+      result: canonicalResult(source.vote.result),
       rollCallNumber: String(reference.rollCallNumber),
       sessionId: legislativeSessionId("us", String(reference.congress)),
+      sourceIsOfficial: true,
+      sourceProvider: "congress",
+      sourceRetrievedAt: new Date(),
+      sourceSequence: reference.rollCallNumber,
       sourceId: reference.identifier,
       sourceUrl: reference.url,
+      timelineComplete: true,
       voteType: source.vote.voteType,
       yesCount
     }
   }
+}
+
+function canonicalResult(value: string | undefined): "failed" | "other" | "passed" {
+  const normalized = value?.trim().toLowerCase() ?? ""
+  if (normalized.includes("fail") || normalized.includes("reject") || normalized.includes("not agreed")) {
+    return "failed"
+  }
+  if (
+    normalized.includes("pass") ||
+    normalized.includes("agree") ||
+    normalized.includes("adopt") ||
+    normalized.includes("confirm")
+  ) {
+    return "passed"
+  }
+  return "other"
+}
+
+function sourceDate(value: string): Date {
+  const date = new Date(value)
+  if (Number.isNaN(date.valueOf())) {
+    throw new Error("Congress House vote startDate must be a valid timestamp")
+  }
+  return date
 }

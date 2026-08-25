@@ -1,4 +1,5 @@
 import type { LegislationDatabase } from "../db/database.js"
+import { listBillTimeline } from "../db/queries/bill-timeline-read.js"
 import { getOrganizationMembership, getPersonTerm } from "../db/queries/civic-scoped-reads.js"
 import {
   assertBillExists,
@@ -32,6 +33,7 @@ import { assertPersonExists, listPersonBillActivity } from "../db/queries/person
 import { getSupportingMaterialSectionRead } from "../db/queries/supporting-material-section-read.js"
 import { createBillDetailReadRepository } from "./bill-detail-read-repository.js"
 import { createBillDetailReadApiHandler } from "./bill-detail-read-routes.js"
+import { createBillTimelineReadApiHandler } from "./bill-timeline-read-routes.js"
 import { createCivicScopedReadApiHandler } from "./civic-scoped-read-routes.js"
 import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
 import { createCoreReadApiHandler, type CoreReadQueryApi } from "./core-read.js"
@@ -113,6 +115,13 @@ export function createLegislationApiHandler(
             {
               getOrganizationMembership: async (input) => await getOrganizationMembership(documentDatabase, input),
               getPersonTerm: async (input) => await getPersonTerm(documentDatabase, input)
+            },
+            options
+          ),
+          createBillTimelineReadApiHandler(
+            {
+              assertBillTimelineParentExists: async (billId) => await assertBillExists(documentDatabase, billId),
+              listBillTimeline: async (input) => await listBillTimeline(documentDatabase, input)
             },
             options
           ),

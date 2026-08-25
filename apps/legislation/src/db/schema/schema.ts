@@ -1028,8 +1028,21 @@ export const votes = legislationSchema.table(
     heldAt: timestamp("held_at", { withTimezone: true }),
     yesCount: integer("yes_count"),
     noCount: integer("no_count"),
+    absentCount: integer("absent_count"),
+    abstainCount: integer("abstain_count"),
+    notVotingCount: integer("not_voting_count"),
+    presentCount: integer("present_count"),
+    proxyCount: integer("proxy_count"),
+    pairedCount: integer("paired_count"),
     otherCount: integer("other_count"),
     sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    sourceSequence: integer("source_sequence"),
+    /** False preserves legacy and partial provider rows without inventing timeline facts. */
+    timelineComplete: boolean("timeline_complete").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
@@ -1040,8 +1053,20 @@ export const votes = legislationSchema.table(
     ),
     check("votes_yes_count_check", sql`${table.yesCount} is null or ${table.yesCount} >= 0`),
     check("votes_no_count_check", sql`${table.noCount} is null or ${table.noCount} >= 0`),
+    check("votes_absent_count_check", sql`${table.absentCount} is null or ${table.absentCount} >= 0`),
+    check("votes_abstain_count_check", sql`${table.abstainCount} is null or ${table.abstainCount} >= 0`),
+    check("votes_not_voting_count_check", sql`${table.notVotingCount} is null or ${table.notVotingCount} >= 0`),
+    check("votes_present_count_check", sql`${table.presentCount} is null or ${table.presentCount} >= 0`),
+    check("votes_proxy_count_check", sql`${table.proxyCount} is null or ${table.proxyCount} >= 0`),
+    check("votes_paired_count_check", sql`${table.pairedCount} is null or ${table.pairedCount} >= 0`),
     check("votes_other_count_check", sql`${table.otherCount} is null or ${table.otherCount} >= 0`),
+    check("votes_source_sequence_check", sql`${table.sourceSequence} is null or ${table.sourceSequence} >= 0`),
+    check(
+      "votes_timeline_complete_check",
+      sql`not ${table.timelineComplete} or (${table.heldAt} is not null and ${table.result} in ('passed', 'failed', 'other') and ${table.yesCount} is not null and ${table.noCount} is not null and ${table.absentCount} is not null and ${table.abstainCount} is not null and ${table.notVotingCount} is not null and ${table.presentCount} is not null and ${table.proxyCount} is not null and ${table.pairedCount} is not null and ${table.otherCount} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null and ${table.sourceSequence} is not null)`
+    ),
     index("votes_bill_idx").on(table.billId, table.heldAt),
+    index("votes_bill_timeline_idx").on(table.billId, table.heldAt, table.sourceSequence, table.id),
     index("votes_amendment_idx").on(table.amendmentId, table.heldAt),
     index("votes_event_idx").on(table.eventId, table.heldAt),
     index("votes_organization_idx").on(table.organizationId, table.heldAt),
@@ -1143,6 +1168,10 @@ export const eventOutcomes = legislationSchema.table(
     voteId: text("vote_id").references(() => votes.id, { onDelete: "restrict" }),
     linkMethod: text("link_method").notNull(),
     sourceSequence: integer("source_sequence").notNull(),
+    occurredAt: timestamp("occurred_at", { withTimezone: true }),
+    occurredDate: date("occurred_date"),
+    /** Legacy outcomes remain excluded until their publisher declares an occurrence. */
+    timelineComplete: boolean("timeline_complete").notNull().default(false),
     sourceUrl: text("source_url").notNull(),
     sourceProvider: text("source_provider").notNull(),
     sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
@@ -1169,7 +1198,12 @@ export const eventOutcomes = legislationSchema.table(
     check("event_outcomes_link_method_check", sql`${table.linkMethod} in ('explicit', 'deterministic-id')`),
     check("event_outcomes_source_url_check", sql`${table.sourceUrl} ~ '^https://'`),
     check("event_outcomes_source_provider_check", sql`length(btrim(${table.sourceProvider})) > 0`),
+    check(
+      "event_outcomes_timeline_complete_check",
+      sql`not ${table.timelineComplete} or (${table.occurredAt} is not null and ${table.occurredDate} is not null)`
+    ),
     index("event_outcomes_event_idx").on(table.eventId, table.sourceSequence, table.id),
+    index("event_outcomes_timeline_idx").on(table.occurredAt, table.sourceSequence, table.id),
     index("event_outcomes_agenda_idx").on(table.agendaItemId, table.eventId)
   ]
 )

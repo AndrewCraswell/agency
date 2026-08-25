@@ -8,6 +8,8 @@ function canonicalOutcome() {
     agendaItemId: "agenda:us:119:hearing:1:2",
     classification: "action",
     description: "Committee recommendation adopted",
+    occurredAt: new Date("2026-08-23T15:30:00.000Z"),
+    occurredDate: "2026-08-23",
     eventId: "meeting:us:119:hearing:1",
     id: "outcome:us:119:hearing:1:2",
     linkMethod: "explicit",
@@ -28,6 +30,8 @@ describe("canonical event outcome ingestion", () => {
       agendaItemId: "agenda:us:119:hearing:1:2",
       classification: "action",
       description: "Committee recommendation adopted",
+      occurredAt: new Date("2026-08-23T15:30:00.000Z"),
+      occurredDate: "2026-08-23",
       sourceSequence: 2,
       voteId: null
     })
@@ -57,6 +61,9 @@ describe("canonical event outcome ingestion", () => {
     )
     expect(() => normalizeCanonicalEventOutcome({ ...canonicalOutcome(), sourceSequence: -1 })).toThrow(
       "sourceSequence must be a non-negative integer"
+    )
+    expect(() => normalizeCanonicalEventOutcome({ ...canonicalOutcome(), occurredAt: undefined })).toThrow(
+      "occurredAt must be a valid Date"
     )
   })
 })

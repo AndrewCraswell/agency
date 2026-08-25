@@ -34,7 +34,10 @@ describe("Congress House vote normalization", () => {
       billId: "bill:us:119:hr:3424",
       id: "vote:congress:house-119-1-240",
       noCount: 1,
-      otherCount: 1,
+      notVotingCount: 1,
+      otherCount: 0,
+      result: "passed",
+      timelineComplete: true,
       yesCount: 1
     })
     expect(snapshot.positions.map((position) => position.option)).toEqual(["yes", "no", "not-voting"])

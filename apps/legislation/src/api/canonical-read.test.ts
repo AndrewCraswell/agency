@@ -111,7 +111,7 @@ function relation(id: number) {
 
 function action(id: number) {
   return {
-    ...canonical(`action:${id}`, `/api/bill-actions/action%3A${id}`),
+    ...canonical(`action:${id}`, `/api/bills/bill%3Aus%3A119%3Ahr%3A1/timeline#action-action%3A${id}`),
     billId: "bill:us:119:hr:1",
     classifications: ["introduction"],
     date: "2026-02-01",
@@ -198,7 +198,10 @@ function supportingMaterialRead() {
 
 function timelineAction() {
   const action = {
-    ...canonical("action:us:119:hr:1:1", "/api/bill-actions/action%3Aus%3A119%3Ahr%3A1%3A1"),
+    ...canonical(
+      "action:us:119:hr:1:1",
+      "/api/bills/bill%3Aus%3A119%3Ahr%3A1/timeline#action-action%3Aus%3A119%3Ahr%3A1%3A1"
+    ),
     billId: "bill:us:119:hr:1",
     classifications: ["introduction"],
     date: "2026-02-01",

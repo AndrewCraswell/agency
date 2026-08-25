@@ -27,6 +27,8 @@ type CanonicalOutcomeTarget =
 export type CanonicalEventOutcomeInput = Readonly<
   {
     description: string
+    occurredAt: Date
+    occurredDate: string
     eventId: string
     id: string
     linkMethod: "deterministic-id" | "explicit"
@@ -88,6 +90,9 @@ export async function upsertCanonicalEventOutcomes(
         sourceSequence: sql`excluded.source_sequence`,
         sourceUpdatedAt: sql`excluded.source_updated_at`,
         sourceUrl: sql`excluded.source_url`,
+        occurredAt: sql`excluded.occurred_at`,
+        occurredDate: sql`excluded.occurred_date`,
+        timelineComplete: sql`excluded.timeline_complete`,
         updatedAt: new Date(),
         voteId: sql`excluded.vote_id`
       },
@@ -122,6 +127,8 @@ export function normalizeCanonicalEventOutcome(input: unknown): typeof eventOutc
     agendaItemId: agendaAssociation === "explicit" ? requiredInputText(agendaItemId, "agendaItemId") : null,
     classification,
     description: requiredInputText(input.description, "description"),
+    occurredAt: requiredDate(input.occurredAt, "occurredAt"),
+    occurredDate: requiredIsoDate(input.occurredDate, "occurredDate"),
     eventId: requiredInputText(input.eventId, "eventId"),
     id: requiredInputText(input.id, "id"),
     linkMethod: canonicalLinkMethod(input.linkMethod),
@@ -131,6 +138,7 @@ export function normalizeCanonicalEventOutcome(input: unknown): typeof eventOutc
     sourceSequence: requiredNonnegativeInteger(input.sourceSequence, "sourceSequence"),
     sourceUpdatedAt: optionalDate(input.sourceUpdatedAt, "sourceUpdatedAt"),
     sourceUrl,
+    timelineComplete: true,
     voteId
   }
 }
@@ -224,6 +232,17 @@ function requiredBoolean(value: unknown, name: string): boolean {
 function requiredDate(value: unknown, name: string): Date {
   if (!(value instanceof Date) || Number.isNaN(value.valueOf())) {
     throw new LegislationError("invalid_request", `${name} must be a valid Date`)
+  }
+  return value
+}
+
+function requiredIsoDate(value: unknown, name: string): string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new LegislationError("invalid_request", `${name} must be an ISO date`)
+  }
+  const parsed = new Date(`${value}T00:00:00.000Z`)
+  if (Number.isNaN(parsed.valueOf()) || parsed.toISOString().slice(0, 10) !== value) {
+    throw new LegislationError("invalid_request", `${name} must be an ISO date`)
   }
   return value
 }
