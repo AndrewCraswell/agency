@@ -50,6 +50,10 @@ import {
   validateBenchPrototypeKemetT521bProjectFootprint
 } from "./bp031-kemet-t521b-project-footprint.js"
 import {
+  bp031MurataGrm21br71a106ke51l0805CandidateFootprint,
+  validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint
+} from "./bp031-murata-grm21br71a106ke51l-0805-candidate-footprint.js"
+import {
   bp031Ref5025Aqdrq1DSoic8CandidateFootprint,
   validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint
 } from "./bp031-ref5025aqdrq1-d-soic8-candidate-footprint.js"
@@ -271,6 +275,41 @@ const weaponFixtureReviewEvidenceMappingId = "bp031-weapon-fixture-43045-1200-fo
 const vishayRcweReviewEvidenceMappingId = "bp031-vishay-rcwe0603-r220-footprint-evidence"
 const era3aReviewEvidenceMappingId = "bp031-era3aeb2491v-project-footprint"
 const kemetT521ReviewEvidenceMappingId = "bp031-kemet-t521b106m025ate100-project-footprint"
+const murataCRefReviewEvidenceMappingId = "bp031-murata-grm21br71a106ke51l-0805-candidate-footprint"
+
+function createMurataCRefReviewEvidenceMapping() {
+  const candidate = bp031MurataGrm21br71a106ke51l0805CandidateFootprint
+  return {
+    mappingId: murataCRefReviewEvidenceMappingId,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25T14:51:00.000Z",
+    reviewScope:
+      "Exact GRM21BR71A106KE51L identity, seven-reference binding, retained package/electrical evidence, separately scoped GRM21-family land guidance, project-only geometry, and deny-state integrity. Exact manufacturer CAD, DC-bias performance, stress/placement, board fit, project-artwork acceptance, release, and fabrication remain denied.",
+    artifactKind: candidate.artifactKind,
+    artifactPath: "packages/scoring-circuit/src/bp031-murata-grm21br71a106ke51l-0805-candidate-footprint.tsx",
+    workUnit: candidate.workUnit,
+    baseReference: candidate.sourceBinding.canonicalSourceReference,
+    sourceContract: candidate.sourceContract,
+    manufacturer: candidate.manufacturer,
+    exactMpn: candidate.manufacturerPartNumber,
+    exactPackage: candidate.package.designation,
+    role: candidate.role,
+    affectedReferences: [...candidate.affectedReferences],
+    sources: structuredClone(candidate.sources),
+    manufacturerCad: structuredClone(candidate.manufacturerCad),
+    manufacturerLandPattern: structuredClone(candidate.manufacturerLandPattern),
+    projectSelection: structuredClone(candidate.projectSelection),
+    projectFootprint: structuredClone(candidate.projectFootprint),
+    orientation: structuredClone(candidate.orientation),
+    stressOrientationReview: structuredClone(candidate.stressOrientationReview),
+    placementReview: structuredClone(candidate.placementReview),
+    artwork: structuredClone(candidate.artwork),
+    acceptance: structuredClone(candidate.acceptance)
+  }
+}
+
+const murataCRefReviewEvidenceMapping = deepFreeze(createMurataCRefReviewEvidenceMapping())
 
 function createKemetT521ReviewEvidenceMapping() {
   const candidate = benchPrototypeKemetT521bProjectFootprintGeometry
@@ -1321,9 +1360,11 @@ function createCellRecord(
                           ? era3aReviewEvidenceMappingId
                           : binding.baseReference === "C_REF_REG"
                             ? kemetT521ReviewEvidenceMappingId
-                            : ["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(binding.baseReference)
-                              ? vishayCrcwReviewEvidenceMappingId
-                              : null,
+                            : binding.baseReference === "C_REF"
+                              ? murataCRefReviewEvidenceMappingId
+                              : ["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(binding.baseReference)
+                                ? vishayCrcwReviewEvidenceMappingId
+                                : null,
     manufacturerDrawing: emptySourceEvidence(),
     manufacturerCad: emptySourceEvidence(),
     artwork: emptyArtworkEvidence(),
@@ -1520,6 +1561,7 @@ const definition = {
     vishayRcweReviewEvidenceMapping,
     era3aReviewEvidenceMapping,
     kemetT521ReviewEvidenceMapping,
+    murataCRefReviewEvidenceMapping,
     weaponFixtureReviewEvidenceMapping
   ],
   sharedManufacturerSources,
@@ -1603,6 +1645,9 @@ function assertUpstreamContracts(): void {
   if (validateBenchPrototypeKemetT521bProjectFootprint().length !== 0) {
     throw new RangeError("BP-031 T521B reference-regulator capacitor review candidate drifted")
   }
+  if (validateBp031MurataGrm21br71a106ke51l0805CandidateFootprint().length !== 0) {
+    throw new RangeError("BP-031 Murata reference-reservoir capacitor review candidate drifted")
+  }
   if (!sameDataGraph(liveUpstreamSnapshot(), upstreamSnapshot)) {
     throw new RangeError("BP-030, BP-103, BP-104, M4-04, or analog source-part evidence drifted")
   }
@@ -1656,6 +1701,9 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
   const kemetT521Mapping = contract.reviewEvidenceMappings.find(
     (mapping) => mapping.mappingId === kemetT521ReviewEvidenceMappingId
   )
+  const murataCRefMapping = contract.reviewEvidenceMappings.find(
+    (mapping) => mapping.mappingId === murataCRefReviewEvidenceMappingId
+  )
   const expectedTpd4e05u06Mapping = createTpd4e05u06ReviewEvidenceMapping()
   const expectedTmux1112PwrPwMapping = createTmux1112PwrPwReviewEvidenceMapping()
   const expectedAds8881IdgsDgsMapping = createAds8881IdgsDgsReviewEvidenceMapping()
@@ -1669,6 +1717,7 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
   const expectedVishayRcweMapping = createVishayRcweReviewEvidenceMapping()
   const expectedEra3aMapping = createEra3aReviewEvidenceMapping()
   const expectedKemetT521Mapping = createKemetT521ReviewEvidenceMapping()
+  const expectedMurataCRefMapping = createMurataCRefReviewEvidenceMapping()
   const mappedTpd4e05u06Records = cellRecords.filter(
     (record) => record.reviewEvidenceMappingId === tpd4e05u06ReviewEvidenceMappingId
   )
@@ -1708,6 +1757,9 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
   const mappedKemetT521Records = cellRecords.filter(
     (record) => record.reviewEvidenceMappingId === kemetT521ReviewEvidenceMappingId
   )
+  const mappedMurataCRefRecords = cellRecords.filter(
+    (record) => record.reviewEvidenceMappingId === murataCRefReviewEvidenceMappingId
+  )
   if (
     cellReferenceBindings.length !== expectedCellReferenceCount ||
     cellRecords.length !== expectedReplicatedCellRecordCount ||
@@ -1728,7 +1780,7 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     contract.authority.fabricationAuthorized ||
     contract.authority.releaseState !== "deny" ||
     contract.connectorClosure.releaseState !== "deny" ||
-    contract.reviewEvidenceMappings.length !== 13 ||
+    contract.reviewEvidenceMappings.length !== 14 ||
     tpd4e05u06Mapping === undefined ||
     tmux1112PwrPwMapping === undefined ||
     ads8881IdgsDgsMapping === undefined ||
@@ -1742,6 +1794,7 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     vishayRcweMapping === undefined ||
     era3aMapping === undefined ||
     kemetT521Mapping === undefined ||
+    murataCRefMapping === undefined ||
     !sameDataGraph(tpd4e05u06Mapping, expectedTpd4e05u06Mapping) ||
     !sameDataGraph(tmux1112PwrPwMapping, expectedTmux1112PwrPwMapping) ||
     !sameDataGraph(ads8881IdgsDgsMapping, expectedAds8881IdgsDgsMapping) ||
@@ -1755,6 +1808,7 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     !sameDataGraph(vishayRcweMapping, expectedVishayRcweMapping) ||
     !sameDataGraph(era3aMapping, expectedEra3aMapping) ||
     !sameDataGraph(kemetT521Mapping, expectedKemetT521Mapping) ||
+    !sameDataGraph(murataCRefMapping, expectedMurataCRefMapping) ||
     mappedTpd4e05u06Records.length !== 7 ||
     mappedTmux1112PwrPwRecords.length !== 7 ||
     mappedAds8881IdgsDgsRecords.length !== 7 ||
@@ -1768,6 +1822,7 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     mappedVishayRcweRecords.length !== 7 ||
     mappedEra3aRecords.length !== 7 ||
     mappedKemetT521Records.length !== 7 ||
+    mappedMurataCRefRecords.length !== 7 ||
     !sameDataGraph(
       mappedTpd4e05u06Records.map((record) => record.reference),
       expectedTpd4e05u06Mapping.affectedReferences
@@ -1819,6 +1874,10 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     !sameDataGraph(
       mappedKemetT521Records.map((record) => record.reference),
       expectedKemetT521Mapping.affectedReferences
+    ) ||
+    !sameDataGraph(
+      mappedMurataCRefRecords.map((record) => record.reference),
+      expectedMurataCRefMapping.affectedReferences
     ) ||
     cellRecords.some(
       (record) =>
@@ -1876,6 +1935,11 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     ) ||
     cellRecords.some(
       (record) =>
+        (record.sourceBaseReference === "C_REF") !==
+        (record.reviewEvidenceMappingId === murataCRefReviewEvidenceMappingId)
+    ) ||
+    cellRecords.some(
+      (record) =>
         ["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference) !==
         (record.reviewEvidenceMappingId === vishayCrcwReviewEvidenceMappingId)
     ) ||
@@ -1892,6 +1956,7 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
         record.sourceBaseReference !== "R_REF_SAR" &&
         record.sourceBaseReference !== "R_SOURCE" &&
         record.sourceBaseReference !== "C_REF_REG" &&
+        record.sourceBaseReference !== "C_REF" &&
         record.sourceBaseReference !== "J_WEAPON_FIXTURE" &&
         !["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference) &&
         record.reviewEvidenceMappingId !== null

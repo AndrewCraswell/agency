@@ -181,7 +181,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
   })
 
   it("maps the seven U_ESD references to the TPD4E05 review inputs without opening release authority", () => {
-    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(13)
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(14)
     expect(
       benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
         (mapping) => mapping.mappingId === "bp031-tpd4e05u06-dqa-project-footprint"
@@ -273,6 +273,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
             record.sourceBaseReference !== "R_REF_SAR" &&
             record.sourceBaseReference !== "R_SOURCE" &&
             record.sourceBaseReference !== "C_REF_REG" &&
+            record.sourceBaseReference !== "C_REF" &&
             !["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference)
         )
         .every((record) => record.reviewEvidenceMappingId === null)
@@ -899,6 +900,57 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     expect(records).toHaveLength(7)
     expect(
       records.every((record) => record.reviewEvidenceMappingId === "bp031-kemet-t521b106m025ate100-project-footprint")
+    ).toBe(true)
+    expect(records.every((record) => record.disposition === "DNP-unresolved")).toBe(true)
+  })
+
+  it("maps all seven C_REF references to root-reviewed Murata evidence without treating family guidance as CAD", () => {
+    const mapping = benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+      (candidate) => candidate.mappingId === "bp031-murata-grm21br71a106ke51l-0805-candidate-footprint"
+    )
+    expect(mapping).toMatchObject({
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      artifactKind: "bp031-murata-grm21br71a106ke51l-0805-candidate-footprint",
+      workUnit: "BP-031",
+      baseReference: "C_REF",
+      sourceContract: "BP-101",
+      manufacturer: "Murata",
+      exactMpn: "GRM21BR71A106KE51L",
+      exactPackage: "GRM21 (2012M / 0805)",
+      affectedReferences: ["C_REF_1", "C_REF_2", "C_REF_3", "C_REF_4", "C_REF_5", "C_REF_6", "C_REF_7"],
+      manufacturerCad: {
+        state: "not-acquired",
+        authority: "deny",
+        availability: "not-confirmed",
+        retainedArtifactPath: null,
+        disposition: "not-acquired-no-substitute"
+      },
+      manufacturerLandPattern: {
+        sourceScope: "applicable manufacturer GRM21-family reflow guidance only, not exact-orderable CAD",
+        reviewedPage: 25
+      },
+      projectFootprint: { accepted: false, boardIntegrationAuthority: "deny", fabricationAuthority: "deny" },
+      placementReview: { state: "pending-independent-review", boardFitAccepted: false },
+      acceptance: {
+        packageIdentityReviewed: true,
+        packageDrawingReviewed: true,
+        familyLandGuidanceReviewed: true,
+        projectGeometryAccepted: false,
+        placementAccepted: false,
+        cadImportAccepted: false,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      }
+    })
+    const records = benchPrototypeAnalogFootprintClosure.records.filter(
+      (record) => record.sourceBaseReference === "C_REF"
+    )
+    expect(records).toHaveLength(7)
+    expect(
+      records.every(
+        (record) => record.reviewEvidenceMappingId === "bp031-murata-grm21br71a106ke51l-0805-candidate-footprint"
+      )
     ).toBe(true)
     expect(records.every((record) => record.disposition === "DNP-unresolved")).toBe(true)
   })

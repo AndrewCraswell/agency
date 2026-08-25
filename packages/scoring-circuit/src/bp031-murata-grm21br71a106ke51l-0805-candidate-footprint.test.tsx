@@ -223,7 +223,7 @@ describe("BP-031 Murata GRM21BR71A106KE51L 0805 candidate footprint", () => {
         exactMpn: "GRM21BR71A106KE51L",
         exactPackage: "0805",
         sharedManufacturerSourceId: "M4-04:GRM21BR71A106KE51L",
-        reviewEvidenceMappingId: null,
+        reviewEvidenceMappingId: "bp031-murata-grm21br71a106ke51l-0805-candidate-footprint",
         disposition: "DNP-unresolved"
       })
     }
