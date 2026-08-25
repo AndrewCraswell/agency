@@ -11,6 +11,7 @@ export type PrototypeBomSource = {
     | "bench-prototype-power"
     | "component-decision"
     | "ethernet-support-network"
+    | "hub75-connector"
     | "ir-receiver-selection"
     | "processor-support"
     | "usb-pd-footprint"
@@ -87,7 +88,8 @@ function selectedSupportRow(
   packageName: string,
   sourceUrl: string,
   notes: string,
-  quantity = 1
+  quantity = 1,
+  sourceKind: PrototypeBomSource["kind"] = "processor-support"
 ): BenchPrototypeBomRow {
   return {
     reference,
@@ -98,7 +100,7 @@ function selectedSupportRow(
     mpn,
     lifecycle: "active-preferred",
     package: packageName,
-    source: { kind: "processor-support", url: sourceUrl },
+    source: { kind: sourceKind, url: sourceUrl },
     notes
   }
 }
@@ -268,13 +270,6 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     quantity: 1,
     notes:
       "Molex 43045-1200 remains the interface candidate; connector and fixture evidence is separate from this baseline."
-  },
-  {
-    reference: "J_HUB75",
-    function: "External 13-signal HUB75 panel header",
-    disposition: "TBD",
-    quantity: 1,
-    notes: "The panel product is selected separately; exact mating header, keying, and cable remain open."
   },
   dnpRow("J_STM32_SWD", "Superseded STM32 SWD header", "Removed with the STM32; native USB and ESP32 recovery remain."),
   {
@@ -577,6 +572,17 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       16
     ),
     selectedSupportRow(
+      "J_HUB75",
+      "External 13-signal HUB75 panel header",
+      "Samtec",
+      "TST-108-04-G-D-RA",
+      "2x8, 2.54 mm pitch, right-angle through-hole, four-wall shrouded",
+      "https://www.samtec.com/products/tst-108-04-g-d-ra",
+      "Required keyed 16-position signal header selected by BP-143 for the Adafruit 4170 cable; panel power remains on its separate cable.",
+      1,
+      "hub75-connector"
+    ),
+    selectedSupportRow(
       "R_HUB75_PANEL_OE_PULLUP",
       "HUB75 panel-side blanking default",
       "Yageo",
@@ -851,6 +857,7 @@ function parseRow(value: unknown, index: number, seen: WeakSet<object>): ParsedB
     sourceKind !== "bench-prototype-power" &&
     sourceKind !== "component-decision" &&
     sourceKind !== "ethernet-support-network" &&
+    sourceKind !== "hub75-connector" &&
     sourceKind !== "ir-receiver-selection" &&
     sourceKind !== "processor-support" &&
     sourceKind !== "usb-pd-footprint"

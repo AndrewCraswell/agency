@@ -7,8 +7,8 @@ evidence remain open. Fabrication is **DENY**.
 The executable contract is [`src/bench-prototype-hub75-connector.ts`](../src/bench-prototype-hub75-connector.ts), with focused tests in [`src/bench-prototype-hub75-connector.test.ts`](../src/bench-prototype-hub75-connector.test.ts).
 The contract validates the retained BP-020 baseline, BP-050 display branch,
 and BP-121 ESP32 allocation before accepting its own canonical value. It does
-not change the retained BP-020 `J_HUB75` row, which remains `TBD` until the
-later footprint and schematic integration gate.
+promotes the BP-020 `J_HUB75` row to the exact selected identity. BP-033 still
+owns footprint, orientation, and schematic-integration release.
 
 ## Frozen selections
 

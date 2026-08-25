@@ -231,7 +231,7 @@ const definition = {
     releaseState: "deny"
   },
   openGates: [
-    "Keep BP-020 J_HUB75 as TBD until BP-033 imports this exact selection with manufacturer footprint and orientation evidence.",
+    "Keep BP-020 J_HUB75 selected as the exact TST-108-04-G-D-RA identity while BP-033 retains footprint and orientation release authority.",
     "Acquire the Samtec TST-108-04-G-D-RA sample and verify the Adafruit 4170 socket key, pin-1 stripe, and mating insertion depth.",
     "Purchase an exact Adafruit 2277 sample and record the PCB revision, panel INPUT connector housing, power connector housing, and included cable identities.",
     "Continuity-test every signal pin and all three signal-reference grounds from J_HUB75 to the panel INPUT before energizing.",
@@ -326,11 +326,11 @@ function assertUpstreamProvenance(): void {
   const hub75BomRow = benchPrototypeBom.rows.find((row) => row.reference === "J_HUB75")
   if (
     hub75BomRow === undefined ||
-    hub75BomRow.disposition !== "TBD" ||
+    hub75BomRow.disposition !== "selected" ||
     hub75BomRow.quantity !== 1 ||
-    hub75BomRow.mpn !== undefined
+    hub75BomRow.mpn !== "TST-108-04-G-D-RA"
   ) {
-    throw new RangeError("BP-020 J_HUB75 must remain the reviewed TBD baseline until BP-033 integration")
+    throw new RangeError("BP-020 J_HUB75 must retain the exact BP-143 connector identity")
   }
 
   if (
