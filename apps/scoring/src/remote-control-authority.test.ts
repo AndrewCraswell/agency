@@ -125,6 +125,40 @@ describe("RC-01 remote-control authority contract", () => {
     })
   })
 
+  it("rejects an exact pre-transfer replay as a duplicate without changing authority state", () => {
+    const authority = gate(applicationSupervisor)
+    const acceptedRequest = workflowRequest("pre-transfer-workflow", applicationSupervisor, 7)
+
+    expect(authority.receive(acceptedRequest)).toMatchObject({ disposition: "application-applied" })
+    expect(
+      authority.receive({
+        controller: applicationSupervisor,
+        expectedAuthorityRevision: 7,
+        requestId: "transfer-to-tournament",
+        targetController: tournamentSupervisor,
+        type: "authority-transfer-request"
+      })
+    ).toMatchObject({
+      disposition: "application-applied",
+      state: { activeController: tournamentSupervisor, authorityRevision: 8, pendingStm32RequestIds: [] }
+    })
+
+    const afterTransfer = authority.state
+    expect(authority.receive(acceptedRequest)).toEqual({
+      disposition: "rejected",
+      reason: "duplicate-request",
+      requestId: "pre-transfer-workflow",
+      state: afterTransfer
+    })
+    expect(authority.state).toEqual(afterTransfer)
+    expect(authority.receive(workflowRequest("new-stale-old-controller", applicationSupervisor, 7))).toMatchObject({
+      disposition: "rejected",
+      reason: "authority-revision-mismatch",
+      state: afterTransfer
+    })
+    expect(authority.state).toEqual(afterTransfer)
+  })
+
   it("does not permit transfer while a scoring transition awaits the STM32", () => {
     const authority = gate(applicationSupervisor)
     authority.receive({
