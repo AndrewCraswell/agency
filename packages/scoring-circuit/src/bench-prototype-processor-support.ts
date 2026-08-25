@@ -136,8 +136,11 @@ const processorSupportDefinition = {
       stm32: {
         sourceUrl: "https://www.st.com/resource/en/datasheet/stm32g474re.pdf",
         sourceDocument: "ST DS12288 Rev 6 STM32G474xB/xC/xE datasheet",
-        retainedManufacturerPrimaryBytes: null,
-        primarySourceMapping: "source-unverified-primary-url-only",
+        retainedManufacturerPrimaryBytes: {
+          archivePath: "docs/evidence/bp-125/st-stm32g474re-ds12288-rev6-datasheet.pdf",
+          archiveSha256: "B018E20DBE34B63A43E49365518B186EF0E0E8E899DEEABC1C9F53A3A10C1ADD"
+        },
+        primarySourceMapping: "verified-by-retained-manufacturer-primary-bytes",
         requirement:
           "VDD, VDDA, VREF+, and VBAT remain within the STM32's 1.71 V to 3.6 V supply domain; the existing pin and rail contracts require local VDD, VDDA, VREF+, and no-backup VBAT decoupling."
       },
@@ -607,7 +610,11 @@ export function validateBenchPrototypeProcessorSupport(value: unknown): true {
     contract.bypassAndBulk.stm32Vbat.capacitorMpn !== "GCM188R71H104KA57D" ||
     !sameDataGraph(contract.bypassAndBulk.esp32.capacitorMpns, ["GCM188R71H104KA57D", "GCM32EC71A476KE02L"]) ||
     contract.supportSelectionEvidence.processorRequirements.stm32.primarySourceMapping !==
-      "source-unverified-primary-url-only" ||
+      "verified-by-retained-manufacturer-primary-bytes" ||
+    contract.supportSelectionEvidence.processorRequirements.stm32.retainedManufacturerPrimaryBytes.archivePath !==
+      "docs/evidence/bp-125/st-stm32g474re-ds12288-rev6-datasheet.pdf" ||
+    contract.supportSelectionEvidence.processorRequirements.stm32.retainedManufacturerPrimaryBytes.archiveSha256 !==
+      "B018E20DBE34B63A43E49365518B186EF0E0E8E899DEEABC1C9F53A3A10C1ADD" ||
     contract.supportSelectionEvidence.processorRequirements.esp32.primarySourceMapping !==
       "verified-by-retained-manufacturer-primary-bytes" ||
     contract.supportSelectionEvidence.processorRequirements.esp32.retainedManufacturerPrimaryBytes.archivePath !==

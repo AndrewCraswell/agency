@@ -137,7 +137,13 @@ describe("BP-125 processor support", () => {
         .toUpperCase()
 
     expect(support.supportSelectionEvidence.processorRequirements).toMatchObject({
-      stm32: { primarySourceMapping: "source-unverified-primary-url-only" },
+      stm32: {
+        primarySourceMapping: "verified-by-retained-manufacturer-primary-bytes",
+        retainedManufacturerPrimaryBytes: {
+          archivePath: "docs/evidence/bp-125/st-stm32g474re-ds12288-rev6-datasheet.pdf",
+          archiveSha256: "B018E20DBE34B63A43E49365518B186EF0E0E8E899DEEABC1C9F53A3A10C1ADD"
+        }
+      },
       esp32: {
         primarySourceMapping: "verified-by-retained-manufacturer-primary-bytes",
         retainedManufacturerPrimaryBytes: {
@@ -149,6 +155,9 @@ describe("BP-125 processor support", () => {
     expect(
       hash(support.supportSelectionEvidence.processorRequirements.esp32.retainedManufacturerPrimaryBytes.archivePath)
     ).toBe(support.supportSelectionEvidence.processorRequirements.esp32.retainedManufacturerPrimaryBytes.archiveSha256)
+    expect(
+      hash(support.supportSelectionEvidence.processorRequirements.stm32.retainedManufacturerPrimaryBytes.archivePath)
+    ).toBe(support.supportSelectionEvidence.processorRequirements.stm32.retainedManufacturerPrimaryBytes.archiveSha256)
     expect(support.supportSelectionEvidence.capacitorSelections).toEqual([
       expect.objectContaining({
         references: ["C_STM_3V3_BULK"],

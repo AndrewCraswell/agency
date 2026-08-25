@@ -41,15 +41,23 @@ unit makes no numeric DC-bias claim; those responses remain typical
 characterization evidence only and do not establish lot, assembled-board,
 placement, impedance, or derated-capacitance release.
 
-The STM32 DS12288 supply range is 1.71 V to 3.6 V for VDD and VDDA; its VREF
-buffer supports the committed 2.5 V reference. VBAT is a backup-domain supply,
-but this design explicitly ties it only to `SCORING_3V3_NO_BACKUP_TIE`. The
+The STM32 DS12288 supply range is 1.71 V to 3.6 V for VDD and 1.62 V to 3.6 V
+for VDDA; its VREF buffer supports the committed 2.5 V reference. VBAT is a
+1.55 V to 3.6 V backup-domain supply, but this design explicitly ties it only to `SCORING_3V3_NO_BACKUP_TIE`. The
 ESP32-S3-WROOM-1U datasheet specifies a 3.0 V to 3.6 V 3V3 input. Its primary
 PDF is retained at
 [`docs/evidence/bp-125/espressif-esp32-s3-wroom-1-wroom-1u_datasheet-v1.8.pdf`](evidence/bp-125/espressif-esp32-s3-wroom-1-wroom-1u_datasheet-v1.8.pdf),
 SHA-256 `27D71971DA07C280C6068D08C74720D1A25B8F20CF8494DC1765BDD28D40D435`.
-The official ST URL is recorded in the executable contract but could not be
-retrieved as bytes from this workspace, so it is explicitly URL-only evidence.
+The official ST PDF is retained at
+[`docs/evidence/bp-125/st-stm32g474re-ds12288-rev6-datasheet.pdf`](evidence/bp-125/st-stm32g474re-ds12288-rev6-datasheet.pdf)
+and is hash-bound in the executable contract to SHA-256
+`B018E20DBE34B63A43E49365518B186EF0E0E8E899DEEABC1C9F53A3A10C1ADD`. The
+processor, pinout, rail, clock, boot, reset, and floating-input mappings are
+recorded in the dedicated
+[`stm32g474ret3tr-primary-source.md`](evidence/bp-125/stm32g474ret3tr-primary-source.md)
+source record. This closes only manufacturer-byte retrieval; it does not
+approve the schematic, footprint, layout, clock selection, measurement, or
+fabrication.
 
 The eight remaining support rows now have exact automotive `GCM` selections.
 Murata presents the `GCM` series for automotive powertrain and safety
