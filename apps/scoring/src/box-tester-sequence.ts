@@ -250,10 +250,24 @@ function requireInputIds(value: unknown, knownInputIds: ReadonlySet<string>, pat
   return ids
 }
 
+function assertAtOrAfterSourceInputs(
+  atUs: number,
+  sourceInputIds: readonly string[],
+  inputAtUsById: ReadonlyMap<string, number>,
+  path: string
+): void {
+  for (const sourceInputId of sourceInputIds) {
+    const sourceAtUs = inputAtUsById.get(sourceInputId)
+    if (sourceAtUs === undefined) fail(`${path} references an input without a stimulus timestamp`)
+    if (atUs < sourceAtUs) fail(`${path} precedes source input ${sourceInputId} at ${sourceAtUs}us`)
+  }
+}
+
 function compileExpectation(
   item: unknown,
   kind: BoxTesterExpectationStep["kind"],
   knownInputIds: ReadonlySet<string>,
+  inputAtUsById: ReadonlyMap<string, number>,
   path: string
 ): BoxTesterExpectationStep {
   assertDataRecord(item, path)
@@ -278,10 +292,14 @@ function compileExpectation(
   assertIdentifier(item.id, `${path}.id`)
   const atKey = kind === "expect-decision" ? "decisionAtUs" : "atUs"
   assertSafeNonNegativeInteger(item[atKey], `${path}.${atKey}`)
-  if (kind === "expect-classification") requireInputIds([item.sourceInputId], knownInputIds, `${path}.sourceInputIds`)
-  else if (kind === "expect-diagnostic" || kind === "expect-decision") {
-    requireInputIds(item.sourceInputIds, knownInputIds, `${path}.sourceInputIds`)
-  }
+  const sourceInputIds =
+    kind === "expect-classification"
+      ? requireInputIds([item.sourceInputId], knownInputIds, `${path}.sourceInputIds`)
+      : kind === "expect-diagnostic" || kind === "expect-decision"
+        ? requireInputIds(item.sourceInputIds, knownInputIds, `${path}.sourceInputIds`)
+        : undefined
+  if (sourceInputIds !== undefined)
+    assertAtOrAfterSourceInputs(item[atKey], sourceInputIds, inputAtUsById, `${path}.${atKey}`)
   return {
     atUs: item[atKey] as number,
     expectation: cloneJson(item as JsonValue),
@@ -356,6 +374,7 @@ export function compileBoxTesterSequence(scenario: unknown): BoxTesterSequence {
   }
 
   const inputIds = new Set<string>()
+  const inputAtUsById = new Map<string, number>()
   const stimulus: BoxTesterStimulusStep[] = []
   let previousAtUs = -1
   for (const [inputIndex, input] of scenario.inputs.entries()) {
@@ -370,6 +389,7 @@ export function compileBoxTesterSequence(scenario: unknown): BoxTesterSequence {
     assertSafeNonNegativeInteger(input.atUncertaintyUs, `${path}.atUncertaintyUs`)
     if (input.atUs < previousAtUs) fail(`${path}.atUs is non-monotonic`)
     previousAtUs = input.atUs
+    inputAtUsById.set(input.id, input.atUs)
     if (input.mode !== "snapshot") fail(`${path}.mode is unsupported`)
     assertArray(input.lines, `${path}.lines`)
     if (input.lines.length === 0 || input.lines.length > MAX_BOX_TESTER_SEQUENCE_LINES_PER_INPUT) {
@@ -448,7 +468,7 @@ export function compileBoxTesterSequence(scenario: unknown): BoxTesterSequence {
       if (expectedIds.has(entry.id)) fail(`${path}.id is duplicated`)
       expectedIds.add(entry.id)
       if (kind === "expect-no-decision") expectations.push(compileNoDecisionExpectation(entry, path))
-      else expectations.push(compileExpectation(entry, kind, inputIds, path))
+      else expectations.push(compileExpectation(entry, kind, inputIds, inputAtUsById, path))
     }
   }
   return deepFreeze({

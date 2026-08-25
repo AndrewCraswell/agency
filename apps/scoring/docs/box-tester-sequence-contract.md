@@ -17,6 +17,11 @@ and listed logical line readings. It preserves authored expectation-array order 
 classifications. It never sorts a scenario, fills an expectation, or turns a rule
 result into authored data.
 
+Every source-linked expectation timestamp must be at or after each referenced
+stimulus timestamp; when several inputs are referenced, the latest referenced
+stimulus is the effective lower bound. No-decision windows do not name source
+inputs and retain their independent inclusive range validation.
+
 All numbers accepted by the compiler are non-negative safe integers. Every output is
 a detached, deeply frozen plain-data graph. This lets BT-05 consume one stable plan
 without allowing a caller to mutate the source scenario or the compiled evidence.

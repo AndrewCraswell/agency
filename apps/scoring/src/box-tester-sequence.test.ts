@@ -122,6 +122,16 @@ describe("BT-04 box tester sequence compiler", () => {
     })
   })
 
+  it("rejects an early source-linked decision when a referenced stimulus is shifted later", () => {
+    const source = canonicalScenario() as {
+      expect: { decisions: Array<Record<string, unknown>> }
+      inputs: Array<{ atUs: number; id: string }>
+    }
+    source.inputs.find((input) => input.id === "right-at-two-ms")!.atUs = 2_001
+
+    expect(() => compileBoxTesterSequence(source)).toThrow("precedes source input right-at-two-ms")
+  })
+
   it("does not need the scorer or any copied timing value to compile every active accepted scenario", () => {
     const manifestDirectory = fileURLToPath(new URL("../docs/golden-scenarios/", import.meta.url))
     const manifest = JSON.parse(
