@@ -8,7 +8,7 @@ The executable source is `src/bench-prototype-bom.ts`.
 
 | Function | Required implementation |
 | --- | --- |
-| Sole processor | Exact `ESP32-S3-WROOM-1U-N16R2` running a target adapter and portable C17 core. |
+| Sole processor | Exact `ESP32-S3-WROOM-1-N16R2` with integrated PCB antenna, running a target adapter and portable C17 core. |
 | Analog acquisition | Protected seven-channel AFE, `REF5025AQDRQ1`, and ADS8881 chain. Exact active references remain BP-103/BP-111 work. |
 | Wired network | Exact `W5500`, all required manufacturer support parts, and Würth `7499011121A` MagJack. |
 | Remote | Exact `TSOP38438`, four support passives, and `TP_IR_RX`. |
@@ -29,8 +29,8 @@ an old schematic or lane merge:
 - permanent V5 telemetry, duplicate eFuse-output bulk storage, and unused
   eFuse/V5 power-good indication networks;
 - alternate laboratory power connector and source selector;
-- external F-RAM, RTC, secure element, audio amplifier, speaker connector, and
-  external antenna assembly; and
+- external F-RAM, RTC, secure element, audio amplifier, and speaker connector;
+  and
 - the prototype weapon harness connector, because six direct-wire landing
   holes and a separate strain anchor replace it; and
 - battery/UPS hardware, which remains a production/FIE power decision rather
@@ -39,6 +39,15 @@ an old schematic or lane merge:
 Encrypted-remote identity and replay counters use ESP32 eFuses and encrypted
 NVS. Flash writes are prohibited while scoring acquisition is active until the
 loaded timing tests prove a safe alternative.
+
+## Integrated-antenna placement
+
+The selected WROOM-1 module supplies its own PCB antenna. Place the antenna
+outside the base-board edge with its feed point near that edge when practical.
+Otherwise, preserve at least 15 mm clearance in all directions around the
+antenna area: no copper, routing, or components. Keep metal housing away and
+verify finished-product throughput and communication range. This is a
+placement and RF-validation gate, not a populated antenna BOM row.
 
 ## Open selections
 

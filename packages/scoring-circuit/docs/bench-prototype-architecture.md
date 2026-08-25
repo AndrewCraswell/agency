@@ -6,7 +6,8 @@ The first integrated hardware is one deliberately accessible PCB on standoffs.
 It is a bench instrument for closing electrical, firmware, and rules-behavior
 questions. It is not a production form-factor preview or a fabrication release.
 
-The P0 prototype uses one exact `ESP32-S3-WROOM-1U-N16R2`. The previous
+The P0 prototype uses one exact `ESP32-S3-WROOM-1-N16R2` with its integrated
+PCB antenna. The previous
 STM32-plus-ESP32 architecture, processor-to-processor isolators, isolated link
 power, isolated SPI, and STM32 SWD interface are superseded for this board.
 Their records remain historical evidence only.
@@ -23,7 +24,11 @@ the schematic, PCB, fabrication, and order states remain denied.
 
 ## Required on the one board
 
-- `ESP32-S3-WROOM-1U-N16R2` runs the target adapter and portable C17 core.
+- `ESP32-S3-WROOM-1-N16R2` runs the target adapter and portable C17 core.
+  Its PCB antenna must extend past the base-board edge when practical. If it
+  cannot, keep at least 15 mm clear in all directions around its antenna area:
+  no copper, routing, or components. Keep metal housing away and verify the
+  finished product for throughput and communication range.
 - The seven-conductor external analog front end supplies ordered, timestamped
   ADS8881 samples through a bounded interface. Queue overflow, timestamp loss,
   conversion loss, or frame-order loss must make scoring unavailable rather
@@ -62,7 +67,7 @@ the P0 board. This does not waive isolation that may be required at exposed
 external interfaces or in a future production partition.
 
 The next drawing must place the weapon connection, Ethernet jack, USB-C,
-HUB75, IR optical window, ESP32 antenna connector/keepout, and recovery access
+HUB75, IR optical window, ESP32 integrated-antenna clearance, and recovery access
 on appropriate edges. It must preserve probe access and
 mechanical strain transfer around the direct-wire weapon landing.
 
@@ -70,7 +75,7 @@ mechanical strain transfer around the direct-wire weapon landing.
 
 | Function | Fixed P0 decision |
 | --- | --- |
-| Processor | Exact `ESP32-S3-WROOM-1U-N16R2`; no second MCU on P0. |
+| Processor | Exact `ESP32-S3-WROOM-1-N16R2` with integrated PCB antenna; no second MCU on P0. |
 | Scoring software | One portable C17 core with target-neutral input/output byte contracts; no TypeScript scoring fallback. |
 | Analog acquisition | Existing protected seven-channel AFE and ADS8881 daisy-chain concept; exact ADC-only cadence and timestamp budget to be closed by BP-127 and BP-103. |
 | Ethernet | Exact `W5500` plus committed support network and Würth `7499011121A`. |
@@ -107,7 +112,7 @@ requirements.
 Ethernet and encrypted IR are not deferred. Wi-Fi is not required for
 prototype-ready connectivity and must not receive timing credit until the
 loaded acquisition tests pass. F-RAM, RTC, secure element, audio, speaker,
-external antenna, STM32, processor isolators, isolated-link power, SWD, and
+STM32, processor isolators, isolated-link power, SWD, and
 dual-domain-only support are removed from the populated P0 BOM. One ESP32
 reset/brownout/watchdog path remains because it protects the sole scoring
 authority. Encrypted-remote identity and counters use ESP32 eFuses plus

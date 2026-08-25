@@ -13,7 +13,7 @@ describe("bench prototype BOM baseline", () => {
       benchPrototypeBom.rows.filter((row) => row.disposition === "selected").map((row) => [row.reference, row.mpn])
     )
     expect(Object.fromEntries(selectedByReference)).toMatchObject({
-      U_APP: "ESP32-S3-WROOM-1U-N16R2",
+      U_APP: "ESP32-S3-WROOM-1-N16R2",
       R_ESP_BOOT_PULLUP: "RC0603FR-0710KL",
       R_ESP_EN_PULLUP: "RC0603FR-0710KL",
       C_ESP_EN_DELAY: "C1608X5R1A105K080AC",
@@ -85,14 +85,26 @@ describe("bench prototype BOM baseline", () => {
       "U_RTC",
       "U_SECURE_ELEMENT",
       "U_AUDIO",
-      "J_SPEAKER",
-      "ANT_EXTERNAL"
+      "J_SPEAKER"
     ]) {
       expect(benchPrototypeBom.rows.find((row) => row.reference === reference)).toMatchObject({
         disposition: "DNP",
         quantity: 0
       })
     }
+  })
+
+  it("binds U_APP to the integrated-antenna module with no separate antenna BOM row", () => {
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_APP")).toMatchObject({
+      manufacturer: "Espressif Systems",
+      mpn: "ESP32-S3-WROOM-1-N16R2",
+      package: "ESP32-S3-WROOM-1 module, 18mm x 25.5mm x 3.1mm, 40 perimeter terminals plus EPAD",
+      source: {
+        kind: "processor-support",
+        url: "https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf"
+      }
+    })
+    expect(benchPrototypeBom.rows.every((row) => !row.reference.startsWith("ANT_"))).toBe(true)
   })
 
   it("makes every populated ESP32 support part explicit", () => {

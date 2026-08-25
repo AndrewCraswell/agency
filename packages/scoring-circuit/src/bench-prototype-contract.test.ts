@@ -6,11 +6,12 @@ describe("BP-010 ESP32-only bench prototype contract", () => {
     expect(validateBenchPrototypeContract(benchPrototypeContract)).toBe(true)
     expect(benchPrototypeContract.architecture).toMatchObject({
       boardCount: 1,
-      processor: "ESP32-S3-WROOM-1U-N16R2",
+      processor: "ESP32-S3-WROOM-1-N16R2",
       releaseState: "deny",
       dimensionedDrawingComplete: false
     })
     expect(benchPrototypeContract.requiredHardware).toMatchObject({
+      processor: "ESP32-S3-WROOM-1-N16R2",
       ethernet: "W5500 and Würth 7499011121A",
       ir: "TSOP38438 at 38 kHz on GPIO35 RMT_RX"
     })
@@ -35,10 +36,17 @@ describe("BP-010 ESP32-only bench prototype contract", () => {
         "F-RAM",
         "RTC",
         "secure element",
-        "audio and speaker",
-        "external antenna assembly"
+        "audio and speaker"
       ])
     )
+    expect(benchPrototypeContract.rfPlacement).toEqual({
+      antenna: "ESP32-S3-WROOM-1 integrated PCB antenna",
+      preferredPlacement: "Place the antenna outside the base-board edge with its feed point close to that edge.",
+      fallbackClearanceMm: 15,
+      fallbackClearance: "Keep copper, routing, and components out of the antenna area in all directions.",
+      verification:
+        "Keep metal housing away from the antenna and verify finished-product throughput and communication range."
+    })
     expect(benchPrototypeContract.powerBoundary).toMatchObject({
       populatedInputs: ["USB-C PD"],
       removedInputs: ["J_LAB_INJECTION", "7101SYZQE"]

@@ -4,7 +4,7 @@ const definition = {
   workUnit: "BP-010",
   architecture: {
     boardCount: 1,
-    processor: "ESP32-S3-WROOM-1U-N16R2",
+    processor: "ESP32-S3-WROOM-1-N16R2",
     formFactor: "accessible bench PCB on standoffs",
     layerEnvelope: "four layers preferred; final stack selected during layout review",
     releaseState: "deny",
@@ -19,7 +19,7 @@ const definition = {
     prohibitedCoreDependencies: ["wall clock", "random", "network", "display", "storage", "ESP-IDF"]
   },
   requiredHardware: {
-    processor: "ESP32-S3-WROOM-1U-N16R2",
+    processor: "ESP32-S3-WROOM-1-N16R2",
     analog: "protected seven-channel AFE, REF5025AQDRQ1, and ADS8881 daisy chain",
     ethernet: "W5500 and Würth 7499011121A",
     ir: "TSOP38438 at 38 kHz on GPIO35 RMT_RX",
@@ -40,8 +40,7 @@ const definition = {
     "F-RAM",
     "RTC",
     "secure element",
-    "audio and speaker",
-    "external antenna assembly"
+    "audio and speaker"
   ],
   pinBudget: {
     obsoleteAllocationFreedGpios: [4, 5, 6, 7, 10, 11, 15, 17, 36, 37, 47],
@@ -64,6 +63,14 @@ const definition = {
     ir: "GPIO35 RMT_RX",
     recovery: ["UART0_RX", "UART0_TX", "BOOT_N", "EN_RESET"],
     watchdog: "one external health-gated watchdog/supervisor path"
+  },
+  rfPlacement: {
+    antenna: "ESP32-S3-WROOM-1 integrated PCB antenna",
+    preferredPlacement: "Place the antenna outside the base-board edge with its feed point close to that edge.",
+    fallbackClearanceMm: 15,
+    fallbackClearance: "Keep copper, routing, and components out of the antenna area in all directions.",
+    verification:
+      "Keep metal housing away from the antenna and verify finished-product throughput and communication range."
   },
   powerBoundary: {
     populatedInputs: ["USB-C PD"],
@@ -165,7 +172,8 @@ export function validateBenchPrototypeContract(input: unknown): true {
   const contract = benchPrototypeContract
   if (
     contract.architecture.boardCount !== 1 ||
-    contract.architecture.processor !== "ESP32-S3-WROOM-1U-N16R2" ||
+    contract.architecture.processor !== "ESP32-S3-WROOM-1-N16R2" ||
+    contract.requiredHardware.processor !== "ESP32-S3-WROOM-1-N16R2" ||
     contract.architecture.releaseState !== "deny" ||
     contract.architecture.dimensionedDrawingComplete ||
     contract.softwareBoundary.scoringAuthority !== "portable C17 scoring core" ||
@@ -174,6 +182,9 @@ export function validateBenchPrototypeContract(input: unknown): true {
     contract.pinBudget.remainingCandidateGpios.length !== 7 ||
     contract.preservedInterfaces.hub75 !== 13 ||
     contract.preservedInterfaces.ir !== "GPIO35 RMT_RX" ||
+    contract.rfPlacement.antenna !== "ESP32-S3-WROOM-1 integrated PCB antenna" ||
+    contract.rfPlacement.fallbackClearanceMm !== 15 ||
+    !contract.rfPlacement.fallbackClearance.includes("copper, routing, and components") ||
     contract.powerBoundary.populatedInputs.join(",") !== "USB-C PD" ||
     !contract.removedFromP0.includes("STM32G474RET3TR") ||
     !contract.removedFromP0.includes("F-RAM") ||

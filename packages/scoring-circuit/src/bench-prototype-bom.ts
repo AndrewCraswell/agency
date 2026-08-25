@@ -58,7 +58,6 @@ export type BenchPrototypeBom = {
 
 const packageByMpn = {
   STM32G474RET3TR: "LQFP-64, 10mm x 10mm, 0.5mm pitch",
-  "ESP32-S3-WROOM-1U-N16R2": "ESP32-S3-WROOM-1U module, 18mm x 25.5mm",
   ISO7762FDWR: "SOIC-16, 10.3mm body",
   ISO7721FDR: "SOIC-8, 5.0mm body",
   NXE1S0505MC:
@@ -415,12 +414,7 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     disposition: "DNP",
     quantity: 0,
     notes: "Explicitly deferred from the bench prototype."
-  },
-  dnpRow(
-    "ANT_EXTERNAL",
-    "ESP32 external antenna and coax",
-    "Removed from populated P0; Ethernet is required and radio remains disabled unless a temporary lab antenna is attached."
-  )
+  }
 ]
 
 function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
@@ -445,11 +439,14 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "Superseded STM32 scoring controller",
       "Removed from P0; the portable C17 core runs behind an ESP32 target adapter."
     ),
-    selectedDecisionRow(
+    selectedSupportRow(
       "U_APP",
-      "ESP32-S3-WROOM-1U-N16R2",
       "Sole P0 scoring and application controller",
-      "Runs the target adapter and portable C17 core plus Ethernet, IR, display, USB, persistence, and recovery services."
+      "Espressif Systems",
+      "ESP32-S3-WROOM-1-N16R2",
+      "ESP32-S3-WROOM-1 module, 18mm x 25.5mm x 3.1mm, 40 perimeter terminals plus EPAD",
+      "https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf",
+      "Runs the target adapter and portable C17 core plus Ethernet, IR, display, USB, persistence, and recovery services. The integrated PCB antenna requires the BP-120 placement clearance and final-product RF verification."
     ),
     selectedSupportRow(
       "R_ESP_BOOT_PULLUP",
