@@ -1,3 +1,5 @@
 * text=auto eol=lf
 *.pdf binary
+*.dxf binary
+*.step binary
 packages/scoring-circuit/docs/evidence/**/*.html binary
