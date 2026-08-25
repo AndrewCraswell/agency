@@ -2,6 +2,9 @@ import { createHash, randomUUID } from "node:crypto"
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { getRequestContext } from "../auth/request-context.js"
 import { LegislationError } from "../legislation/errors.js"
+import { createLogger, errorContext } from "../observability/logger.js"
+
+const apiLogger = createLogger({ level: "error", service: "legislation-api" })
 
 export type HttpApiHandler = (request: IncomingMessage, response: ServerResponse) => Promise<boolean>
 
@@ -123,6 +126,14 @@ export function apiError(request: IncomingMessage, error: unknown): JsonRecord {
 }
 
 export function sendApiError(request: IncomingMessage, response: ServerResponse, error: unknown): void {
+  if (!(error instanceof LegislationError)) {
+    apiLogger.error("API request failed", {
+      correlationId: correlationId(request),
+      method: request.method ?? "UNKNOWN",
+      path: (request.url ?? "/").split("?", 1)[0] ?? "/",
+      ...errorContext(error)
+    })
+  }
   const body = apiError(request, error)
   const status = body.status
   const { status: _status, ...errorBody } = body
