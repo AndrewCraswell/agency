@@ -44,8 +44,8 @@ The root agent alone approves, commits, and changes task status.
 | `P0-07` | waiting | Place the complete PCB. | `P0-06` | Place connectors and strain relief first, then power, analog, ESP32/RF, Ethernet, HUB75, IR, outputs, probes, and mounting features with reviewed clearances. |
 | `P0-08` | waiting | Route and review the PCB. | `P0-07` | Route power/thermal paths, analog/reference returns, ADC timing, USB, Ethernet, clocks, RF keepout, and remaining digital signals; finish with zero unexplained DRC or unrouted nets. |
 | `P0-09` | waiting | Generate and approve the manufacturing package, then order boards. | `P0-08` | Review Gerbers and drills, IPC-356, BOM, centroid, assembly drawings, stack-up, board renders, digests, and supplier constraints before root grants prototype-order authority. |
-| `P0-10` | waiting | Implement ESP32 acquisition, scoring-core integration, watchdog, and safe outputs. | `P0-03`, `P0-04` | The portable core and HAL already satisfy their coverage gates. Add ordered ADC scans, explicit microsecond time, bounded queues, fail-unavailable behavior, and reset-safe lamp/buzzer control. |
-| `P0-11` | waiting | Implement Ethernet, HUB75, encrypted IR, USB diagnostics, and recovery adapters. | `P0-04` | Peripheral failures, malformed or flood traffic, display work, recovery, and remote input must never block or alter scoring authority. |
+| `P0-10` | waiting | Implement ESP32 acquisition, scoring-core integration, watchdog, and safe outputs. | `P0-09` | Start only after the PCB package fixes the real hardware boundary. Keep and rename the 100%-covered portable scoring core; retire STM32 target/startup/transport code and build the ESP-IDF acquisition/output adapter against the final schematic. |
+| `P0-11` | waiting | Implement Ethernet, HUB75, encrypted IR, USB diagnostics, and recovery adapters. | `P0-09` | Start only after the PCB package fixes the real peripherals and pins. Replace the dual-MCU receiver/service scaffold with narrow ESP-IDF adapters; peripheral failures, flood traffic, display work, recovery, and remote input must never alter scoring authority. |
 | `P0-12` | waiting | Bring up power, ESP32, recovery, and peripherals on assembled boards. | `P0-09`, `P0-10`, `P0-11` | Record as-built identity, unpowered checks, controlled first power, rails/ripple/temperature, reset/watchdog, USB/UART recovery, Ethernet, HUB75, IR, and output fault behavior. |
 | `P0-13` | waiting | Characterize all seven scoring channels and validate foil, epee, and sabre behavior. | `P0-12` | Measure resistance/capacitance/temperature, settling, leakage, overload recovery, ordering, crosstalk, simultaneous events, opens/shorts, and native/ESP/WASM scoring parity against the corpus. |
 | `P0-14` | waiting | Close prototype findings and issue the production-transfer record. | `P0-13` | Record tested hardware/firmware digests, accepted limitations, fixes for the next revision, and the explicit work needed for production and FIE homologation. |
@@ -55,8 +55,7 @@ The root agent alone approves, commits, and changes task status.
 ```text
 P0-02 + P0-03 + P0-04
           -> P0-05 -> P0-06 -> P0-07 -> P0-08 -> P0-09
-P0-03 + P0-04 -> P0-10/P0-11
-P0-09 + P0-10 + P0-11 -> P0-12 -> P0-13 -> P0-14
+P0-09 -> P0-10/P0-11 -> P0-12 -> P0-13 -> P0-14
 ```
 
 The next concrete milestone is `P0-05`: one complete schematic. Work that does
