@@ -64,5 +64,10 @@ describe("Congress entity range backfill", () => {
     )
     expect(members).toHaveBeenCalledTimes(2)
     expect(replaceEntitySnapshot).toHaveBeenCalledOnce()
+    expect(replaceEntitySnapshot).toHaveBeenCalledWith(
+      expect.anything(),
+      "jurisdiction:us",
+      expect.objectContaining({ personAliasPersonIds: [], personAliases: [] })
+    )
   })
 })

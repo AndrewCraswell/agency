@@ -75,6 +75,8 @@ export async function executeCongressEntityRangeBackfill(
       await replaceSnapshot(input.database, "jurisdiction:us", {
         memberships: [],
         organizations: [...organizationsById.values()],
+        personAliasPersonIds: [],
+        personAliases: [],
         people: [...peopleById.values()],
         terms: [...termsById.values()]
       })

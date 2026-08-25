@@ -1,5 +1,11 @@
 import { z } from "zod"
-import type { legislativeTerms, organizationMemberships, organizations, people } from "../../db/schema/schema.js"
+import type {
+  legislativeTerms,
+  organizationMemberships,
+  organizations,
+  people,
+  personAliases
+} from "../../db/schema/schema.js"
 import {
   jurisdictionId,
   legislativeTermId,
@@ -34,6 +40,7 @@ const personSchema = embeddedPersonSchema.extend({
   family_name: optionalString,
   given_name: optionalString,
   openstates_url: optionalString,
+  other_names: z.array(z.string().trim().min(1)).default([]),
   sources: z.array(sourceSchema).default([]),
   updated_at: optionalString
 })
@@ -56,17 +63,21 @@ const committeeSchema = z
   .passthrough()
 
 type PersonInsert = typeof people.$inferInsert
+type PersonAliasInsert = typeof personAliases.$inferInsert
 type OrganizationInsert = typeof organizations.$inferInsert
 type TermInsert = typeof legislativeTerms.$inferInsert
 type MembershipInsert = typeof organizationMemberships.$inferInsert
 
 export interface OpenStatesEntityContext {
   jurisdictionCode: string
+  retrievedAt: Date
 }
 
 export interface OpenStatesEntitySnapshot {
   memberships: MembershipInsert[]
   organizations: OrganizationInsert[]
+  personAliasPersonIds: string[]
+  personAliases: PersonAliasInsert[]
   people: PersonInsert[]
   terms: TermInsert[]
 }
@@ -92,13 +103,28 @@ function normalizePerson(
   context: OpenStatesEntityContext,
   details?: Pick<
     z.infer<typeof personSchema>,
-    "family_name" | "given_name" | "openstates_url" | "sources" | "updated_at"
+    "family_name" | "given_name" | "openstates_url" | "other_names" | "sources" | "updated_at"
   >
-): { person: PersonInsert; term?: TermInsert } {
+): { aliases: PersonAliasInsert[]; person: PersonInsert; term?: TermInsert } {
   const canonicalPersonId = personId("openstates", input.id)
   const canonicalJurisdictionId = jurisdictionId(context.jurisdictionCode)
   const role = input.current_role
+  const aliasSourceUrl = sourceUrl(details?.sources ?? [], details?.openstates_url)
   return {
+    aliases:
+      details === undefined
+        ? []
+        : [...new Set(details.other_names)].map((name) => ({
+            name,
+            personId: canonicalPersonId,
+            provenanceComplete: aliasSourceUrl !== undefined,
+            sourceIdentity: `openstates:${input.id}:other-name:${name}`,
+            sourceIsOfficial: false,
+            sourceProvider: "openstates",
+            sourceRetrievedAt: context.retrievedAt,
+            sourceUpdatedAt: details.updated_at === undefined ? undefined : new Date(details.updated_at),
+            sourceUrl: aliasSourceUrl
+          })),
     person: {
       familyName: details?.family_name,
       givenName: details?.given_name,
@@ -136,12 +162,14 @@ function normalizePerson(
 export function normalizeOpenStatesPeople(
   inputs: readonly unknown[],
   context: OpenStatesEntityContext
-): Pick<OpenStatesEntitySnapshot, "people" | "terms"> {
+): Pick<OpenStatesEntitySnapshot, "personAliasPersonIds" | "personAliases" | "people" | "terms"> {
   const normalized = inputs.map((input) => {
     const parsed = personSchema.parse(input)
     return normalizePerson(parsed, context, parsed)
   })
   return {
+    personAliasPersonIds: normalized.map((value) => value.person.id),
+    personAliases: normalized.flatMap((value) => value.aliases),
     people: normalized.map((value) => value.person),
     terms: normalized.flatMap((value) => (value.term === undefined ? [] : [value.term]))
   }
@@ -150,7 +178,10 @@ export function normalizeOpenStatesPeople(
 export function normalizeOpenStatesCommittees(
   inputs: readonly unknown[],
   context: OpenStatesEntityContext
-): Pick<OpenStatesEntitySnapshot, "memberships" | "organizations" | "people" | "terms"> {
+): Pick<
+  OpenStatesEntitySnapshot,
+  "memberships" | "organizations" | "personAliasPersonIds" | "personAliases" | "people" | "terms"
+> {
   const peopleById = new Map<string, PersonInsert>()
   const termsById = new Map<string, TermInsert>()
   const memberships: MembershipInsert[] = []
@@ -199,6 +230,8 @@ export function normalizeOpenStatesCommittees(
   return {
     memberships,
     organizations: normalizedOrganizations,
+    personAliasPersonIds: [],
+    personAliases: [],
     people: [...peopleById.values()],
     terms: [...termsById.values()]
   }

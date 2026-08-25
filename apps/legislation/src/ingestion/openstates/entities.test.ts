@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { normalizeOpenStatesCommittees, normalizeOpenStatesPeople } from "./entities.js"
 
-const context = { jurisdictionCode: "ak" }
+const context = { jurisdictionCode: "ak", retrievedAt: new Date("2026-08-24T12:00:00.000Z") }
 
 describe("Open States entity normalization", () => {
   it("normalizes current people and terms without inventing dates", () => {
@@ -35,6 +35,55 @@ describe("Open States entity normalization", () => {
     expect(result.terms[0]).toMatchObject({ chamber: "lower", district: "14", isActive: true })
     expect(result.terms[0]?.startDate).toBeUndefined()
     expect(result.terms[0]?.endDate).toBeUndefined()
+    expect(result.personAliases).toEqual([])
+  })
+
+  it("retains only source-declared aliases with retrieval provenance", () => {
+    const result = normalizeOpenStatesPeople(
+      [
+        {
+          id: "ocd-person/alias-example",
+          name: "Alexandra Example",
+          openstates_url: "https://openstates.org/person/alias-example/",
+          other_names: ["Alex Example", "Alex Example", "A. Example"],
+          updated_at: "2026-08-20T15:00:00Z"
+        },
+        {
+          id: "ocd-person/missing-source",
+          name: "No Source",
+          other_names: ["Unverified Alias"]
+        }
+      ],
+      context
+    )
+
+    expect(result.personAliases).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "Alex Example",
+          personId: "person:openstates:ocd-person-alias-example",
+          provenanceComplete: true,
+          sourceIdentity: "openstates:ocd-person/alias-example:other-name:Alex Example",
+          sourceProvider: "openstates",
+          sourceUrl: "https://openstates.org/person/alias-example/"
+        }),
+        expect.objectContaining({
+          name: "Unverified Alias",
+          personId: "person:openstates:ocd-person-missing-source",
+          provenanceComplete: false,
+          sourceUrl: undefined
+        })
+      ])
+    )
+    expect(result.personAliases.filter((alias) => alias.name === "Alex Example")).toHaveLength(1)
+    expect(result.personAliases.find((alias) => alias.name === "Alex Example")).toHaveProperty(
+      "sourceRetrievedAt",
+      context.retrievedAt
+    )
+    expect(result.personAliasPersonIds).toEqual([
+      "person:openstates:ocd-person-alias-example",
+      "person:openstates:ocd-person-missing-source"
+    ])
   })
 
   it("normalizes committee snapshots and retains unresolved parent identity", () => {

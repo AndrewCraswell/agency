@@ -646,8 +646,12 @@ async function syncOpenStatesEntities(options: { jurisdiction?: string }) {
             for await (const page of client.committees({ jurisdictionId })) {
               rawCommittees.push(...page)
             }
-            const normalizedPeople = normalizeOpenStatesPeople(rawPeople, { jurisdictionCode: code })
-            const normalizedCommittees = normalizeOpenStatesCommittees(rawCommittees, { jurisdictionCode: code })
+            const retrievedAt = new Date()
+            const normalizedPeople = normalizeOpenStatesPeople(rawPeople, { jurisdictionCode: code, retrievedAt })
+            const normalizedCommittees = normalizeOpenStatesCommittees(rawCommittees, {
+              jurisdictionCode: code,
+              retrievedAt
+            })
             const peopleById = new Map(
               [...normalizedPeople.people, ...normalizedCommittees.people].map((person) => [person.id, person])
             )
@@ -657,6 +661,8 @@ async function syncOpenStatesEntities(options: { jurisdiction?: string }) {
             await replaceEntitySnapshot(database, `jurisdiction:${code}`, {
               memberships: normalizedCommittees.memberships,
               organizations: normalizedCommittees.organizations,
+              personAliasPersonIds: normalizedPeople.personAliasPersonIds,
+              personAliases: normalizedPeople.personAliases,
               people: [...peopleById.values()],
               terms: [...termsById.values()]
             })
@@ -1044,6 +1050,8 @@ async function syncCongressEntities(options: { endCongress?: string; startCongre
         await replaceEntitySnapshot(database, "jurisdiction:us", {
           memberships: [],
           organizations: [...organizationsById.values()],
+          personAliasPersonIds: [],
+          personAliases: [],
           people: [...peopleById.values()],
           terms: [...termsById.values()]
         })

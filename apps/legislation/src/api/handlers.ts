@@ -25,6 +25,7 @@ import {
   listMeetingParticipants
 } from "../db/queries/meeting-participant-reads.js"
 import { assertOrganizationExists, listOrganizationBillReads } from "../db/queries/organization-bill-read.js"
+import { listPeople } from "../db/queries/people-read.js"
 import { getSupportingMaterialSectionRead } from "../db/queries/supporting-material-section-read.js"
 import { createCivicScopedReadApiHandler } from "./civic-scoped-read-routes.js"
 import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
@@ -46,6 +47,7 @@ import { createOrganizationMembersRepository } from "./organization-members-read
 import { createOrganizationMembersReadApiHandler } from "./organization-members-read-routes.js"
 import { createOrganizationReadRepository } from "./organization-read-repository.js"
 import { createOrganizationReadApiHandler } from "./organization-read-routes.js"
+import { createPeopleReadApiHandler } from "./people-read-routes.js"
 import { createPersonMembershipsRepository } from "./person-membership-read-repository.js"
 import { createPersonMembershipReadApiHandler } from "./person-membership-read-routes.js"
 import { createResourceBatchReadRepositoryFromCanonicalReads } from "./resource-batch-read-repository.js"
@@ -164,6 +166,10 @@ export function createLegislationApiHandler(
             options
           ),
           createOrganizationReadApiHandler(createOrganizationReadRepository(documentDatabase), options),
+          createPeopleReadApiHandler(
+            { listPeople: async (input) => await listPeople(documentDatabase, input) },
+            options
+          ),
           createOrganizationMembersReadApiHandler(createOrganizationMembersRepository(documentDatabase), options),
           createPersonMembershipReadApiHandler(createPersonMembershipsRepository(documentDatabase), options),
           createSessionReadApiHandler(createSessionRepository(documentDatabase), options),

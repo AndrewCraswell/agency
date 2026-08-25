@@ -234,6 +234,40 @@ export const people = legislationSchema.table(
   ]
 )
 
+/**
+ * Source-declared alternate names. These are distinct from given/family names:
+ * the API searches them only when their source evidence is complete.
+ */
+export const personAliases = legislationSchema.table(
+  "person_aliases",
+  {
+    personId: text("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    sourceIdentity: text("source_identity").notNull(),
+    name: text("name").notNull(),
+    sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.personId, table.sourceIdentity] }),
+    check("person_aliases_name_check", sql`length(btrim(${table.name})) > 0`),
+    check("person_aliases_source_identity_check", sql`length(btrim(${table.sourceIdentity})) > 0`),
+    check(
+      "person_aliases_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
+    index("person_aliases_name_idx").on(table.name),
+    index("person_aliases_person_idx").on(table.personId)
+  ]
+)
+
 export const organizations = legislationSchema.table(
   "organizations",
   {
