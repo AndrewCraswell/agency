@@ -264,6 +264,27 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
     }
   })
 
+  it("binds all 12 BP-125 Murata processor-support rows to review-only footprint evidence", () => {
+    const rows = benchPrototypeProcessorFootprints.processorSupportReferences.filter((entry) =>
+      entry.mpn.startsWith("GCM")
+    )
+    expect(rows).toHaveLength(12)
+    for (const row of rows) {
+      expect(row.evidence.footprintEvidence).toMatchObject({
+        artifactKind: "bp125-murata-mlcc-candidate-footprint",
+        exactMpn: row.mpn,
+        reference: row.reference,
+        upstreamContract: "BP-125",
+        manufacturerCad: "not-acquired",
+        manufacturerLandPattern: "common-gc-family-package-code",
+        orientation: "pending-layout-review",
+        releaseState: "deny",
+        fabricationAuthority: "deny",
+        accepted: false
+      })
+    }
+  })
+
   it("binds the reset-support and keyed SWD rows to review-only evidence", () => {
     for (const reference of ["U_APP_RESET_FANOUT", "Q_ESP_RESET_STM", "Q_ESP_DEBUG_RESET"]) {
       const row = benchPrototypeProcessorFootprints.populatedReferences.find((entry) => entry.reference === reference)

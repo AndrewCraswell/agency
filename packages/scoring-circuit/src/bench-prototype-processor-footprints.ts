@@ -2,6 +2,11 @@
 
 import { benchPrototypeBom, validateBenchPrototypeBom } from "./bench-prototype-bom.js"
 import {
+  benchPrototypeBp125MurataCapacitorFootprintGeometries,
+  benchPrototypeBp125MurataCapacitorReviewBindings,
+  bp125MurataCapacitorFootprintIntegrityErrors
+} from "./bench-prototype-bp125-murata-capacitor-footprints.js"
+import {
   benchPrototypeEsp32Allocation,
   validateBenchPrototypeEsp32Allocation
 } from "./bench-prototype-esp32-allocation.js"
@@ -317,10 +322,46 @@ const evidence = (mpn: string | null, reference: string | null = null) => ({
             ? ftshFootprintEvidenceFor(mpn, reference)
             : mpn === "C1608X5R1A105K080AC"
               ? bp032TdkC1608FootprintEvidenceFor(mpn, reference)
-              : mpn === "TPS389033DSER" || mpn === "TPS3431SDRBR"
-                ? supervisorWatchdogFootprintEvidenceFor(mpn, reference)
-                : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
+              : mpn.startsWith("GCM")
+                ? murataProcessorSupportFootprintEvidenceFor(mpn, reference)
+                : mpn === "TPS389033DSER" || mpn === "TPS3431SDRBR"
+                  ? supervisorWatchdogFootprintEvidenceFor(mpn, reference)
+                  : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
 })
+
+function murataProcessorSupportFootprintEvidenceFor(mpn: string, reference: string) {
+  const binding = benchPrototypeBp125MurataCapacitorReviewBindings.find(
+    (item) => item.manufacturerPartNumber === mpn && item.reference === reference
+  )
+  if (binding === undefined) return null
+  const geometry =
+    benchPrototypeBp125MurataCapacitorFootprintGeometries[
+      binding.candidateKey as keyof typeof benchPrototypeBp125MurataCapacitorFootprintGeometries
+    ]
+  if (geometry === undefined) return null
+  const selection = geometry.appliesTo.find((item) => item.manufacturerPartNumber === mpn)
+  const exactEvidence = geometry.exactMpnEvidence.find((item) => item.manufacturerPartNumber === mpn)
+  if (selection === undefined || exactEvidence === undefined) return null
+  const selectionReferences: readonly string[] = selection.references
+  if (!selectionReferences.includes(reference)) return null
+  return {
+    artifactKind: geometry.artifactKind,
+    exactMpn: mpn,
+    reference,
+    sourceId: `murata-${mpn.toLowerCase()}-retained-evidence`,
+    sourceArtifactPath: exactEvidence.artifactPath,
+    sourceSha256: exactEvidence.sha256,
+    upstreamContract: "BP-125",
+    projectFootprintId: `murata-${binding.candidateKey}-project-review`,
+    manufacturerCad: geometry.manufacturerCad.state,
+    manufacturerLandPattern: binding.landGuidanceScope,
+    artwork: "project-review-only",
+    orientation: geometry.orientation.state,
+    releaseState: "deny",
+    fabricationAuthority: geometry.fabricationAuthority,
+    accepted: geometry.accepted
+  } as const
+}
 
 function supervisorWatchdogFootprintEvidenceFor(mpn: string, reference: string) {
   const candidate = bp032SupervisorWatchdogFootprintEvidence
@@ -734,6 +775,9 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
     throw new RangeError("BP-032 FTSH service-header project-review candidate drifted")
   }
   validateBp032SupervisorWatchdogFootprintEvidence(bp032SupervisorWatchdogFootprintEvidence)
+  if (bp125MurataCapacitorFootprintIntegrityErrors().length !== 0) {
+    throw new RangeError("BP-032 Murata processor-support footprint candidate drifted")
+  }
   validateBenchPrototypeProcessorFootprintsRetainedManufacturerSources(retainedManufacturerPrimarySources)
   if (!sameDataGraph(value, benchPrototypeProcessorFootprints))
     throw new RangeError("BP-032 ledger must exactly match the reviewed canonical decision")
@@ -780,6 +824,7 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   const supervisorWatchdogRows = ledger.populatedReferences.filter((entry) =>
     ["TPS389033DSER", "TPS3431SDRBR"].includes(entry.mpn)
   )
+  const murataProcessorSupportRows = ledger.processorSupportReferences.filter((entry) => entry.mpn.startsWith("GCM"))
   const ftshRows = ledger.debugReferences.filter((entry) => entry.mpn === "FTSH-105-01-L-DV-007-K")
   if (
     new Set(references.map((entry) => entry.reference)).size !== references.length ||
@@ -880,6 +925,17 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
         row.evidence.footprintEvidence.exactMpn !== row.mpn ||
         row.evidence.footprintEvidence.reference !== row.reference ||
         row.evidence.footprintEvidence.upstreamContract !== "BP-123" ||
+        row.evidence.footprintEvidence.releaseState !== "deny" ||
+        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
+        row.evidence.footprintEvidence.accepted
+    ) ||
+    murataProcessorSupportRows.length !== 12 ||
+    murataProcessorSupportRows.some(
+      (row) =>
+        row.evidence.footprintEvidence === null ||
+        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
+        row.evidence.footprintEvidence.reference !== row.reference ||
+        row.evidence.footprintEvidence.upstreamContract !== "BP-125" ||
         row.evidence.footprintEvidence.releaseState !== "deny" ||
         row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
         row.evidence.footprintEvidence.accepted
