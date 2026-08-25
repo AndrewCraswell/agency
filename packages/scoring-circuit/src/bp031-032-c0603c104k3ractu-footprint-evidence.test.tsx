@@ -4,8 +4,10 @@ import { describe, expect, it } from "vitest"
 import {
   Bp031032C0603C104K3RactuFootprintEvidence,
   bp031032C0603C104K3RactuFootprintEvidence,
+  bp031032033C0603C104K3RactuFootprintEvidence,
   bp031032C0603C104K3RactuFootprintEvidenceFor,
-  validateBp031032C0603C104K3RactuFootprintEvidence
+  validateBp031032C0603C104K3RactuFootprintEvidence,
+  validateBp031032033C0603C104K3RactuFootprintEvidence
 } from "./bp031-032-c0603c104k3ractu-footprint-evidence.js"
 import { renderTestCircuit } from "./test-helper.js"
 
@@ -72,6 +74,12 @@ type Mutable<T> = T extends readonly (infer Item)[]
 function mutableClone(): Mutable<typeof bp031032C0603C104K3RactuFootprintEvidence> {
   return structuredClone(bp031032C0603C104K3RactuFootprintEvidence) as unknown as Mutable<
     typeof bp031032C0603C104K3RactuFootprintEvidence
+  >
+}
+
+function mutableExtendedClone(): Mutable<typeof bp031032033C0603C104K3RactuFootprintEvidence> {
+  return structuredClone(bp031032033C0603C104K3RactuFootprintEvidence) as unknown as Mutable<
+    typeof bp031032033C0603C104K3RactuFootprintEvidence
   >
 }
 
@@ -350,5 +358,146 @@ describe("BP-031/BP-032 exact C0603C104K3RACTU footprint evidence", () => {
         copy as unknown as typeof bp031032C0603C104K3RactuFootprintEvidence
       )
     ).not.toEqual([])
+  })
+
+  it("extends the shared candidate to exactly six BP-033 references with source-contract provenance", () => {
+    expect(validateBp031032033C0603C104K3RactuFootprintEvidence()).toEqual([])
+    expect(bp031032C0603C104K3RactuFootprintEvidence).not.toHaveProperty("referenceSets.bp033")
+    expect(bp031032033C0603C104K3RactuFootprintEvidence).toMatchObject({
+      artifactKind: "bp031-032-033-c0603c104k3ractu-footprint-evidence",
+      workUnits: ["BP-031", "BP-032", "BP-033"],
+      sourceContracts: ["BP-101", "BP-123", "BP-142", "BP-144", "BP-145", "BP-146"],
+      referenceSets: {
+        bp033: {
+          workUnit: "BP-033",
+          references: [
+            "C_APP_REG_IN_HF",
+            "C_APP_REG_BOOT",
+            "C_HUB75_BUF_A_BYPASS",
+            "C_HUB75_BUF_B_BYPASS",
+            "C_IR_VS",
+            "C_FRAM_BYPASS"
+          ],
+          sourceContracts: ["BP-142", "BP-144", "BP-145", "BP-146"]
+        }
+      },
+      affectedReferences: [
+        "C_REF_REG_HF_1",
+        "C_REF_REG_HF_2",
+        "C_REF_REG_HF_3",
+        "C_REF_REG_HF_4",
+        "C_REF_REG_HF_5",
+        "C_REF_REG_HF_6",
+        "C_REF_REG_HF_7",
+        "C_STM_SUPERVISOR_CT",
+        "C_STM_SUPERVISOR_BYPASS",
+        "C_STM_WD_BYPASS",
+        "C_STM_NRST_FILTER",
+        "C_ESP_SUPERVISOR_CT",
+        "C_ESP_SUPERVISOR_BYPASS",
+        "C_ESP_WD_BYPASS",
+        "C_APP_RESET_FANOUT_BYPASS",
+        "C_APP_REG_IN_HF",
+        "C_APP_REG_BOOT",
+        "C_HUB75_BUF_A_BYPASS",
+        "C_HUB75_BUF_B_BYPASS",
+        "C_IR_VS",
+        "C_FRAM_BYPASS"
+      ],
+      manufacturerCad: { state: "not-acquired", artifactPath: null, authority: "deny" },
+      releaseState: "deny",
+      fabricationAuthority: "deny",
+      accepted: false
+    })
+
+    expect(bp031032033C0603C104K3RactuFootprintEvidence.sourceBinding.bp033SourceContractBindings).toEqual([
+      {
+        contract: "BP-142",
+        references: ["C_APP_REG_IN_HF", "C_APP_REG_BOOT"],
+        sourcePath: "packages/scoring-circuit/src/bench-prototype-application-rail.ts",
+        sourceSha256: "ED4BFC8B752BE974323BF7ED95B1B5718C1C2F1D903B6444E652245326F35E67",
+        scope: "application regulator high-frequency input and bootstrap capacitor selections"
+      },
+      {
+        contract: "BP-144",
+        references: ["C_HUB75_BUF_A_BYPASS", "C_HUB75_BUF_B_BYPASS"],
+        sourcePath: "packages/scoring-circuit/src/bench-prototype-hub75-safing.ts",
+        sourceSha256: "0DBD6D07A1C10AA93C0DBC92062C271186A0FE5BA6B31B109F771544A4AFAAA2",
+        scope: "two HUB75 buffer local bypass capacitor selections"
+      },
+      {
+        contract: "BP-145",
+        references: ["C_FRAM_BYPASS"],
+        sourcePath: "packages/scoring-circuit/src/bench-prototype-optional-peripherals.ts",
+        sourceSha256: "18B19F1BD020DAF861527D32AE4630464AFD5E00E6167460E2816A38C1296FFA",
+        scope: "F-RAM local bypass capacitor selection"
+      },
+      {
+        contract: "BP-146",
+        references: ["C_IR_VS"],
+        sourcePath: "packages/scoring-circuit/src/bench-prototype-ir-receiver-selection.ts",
+        sourceSha256: "D716C2702606A7EA7A00D72ED0434B56A3BF4F13B6F9638E92221BDF9E68852D",
+        scope: "encrypted-IR receiver filtered-supply bypass capacitor selection"
+      }
+    ])
+
+    for (const binding of bp031032033C0603C104K3RactuFootprintEvidence.sourceBinding.bp033SourceContractBindings) {
+      expect(createHash("sha256").update(retainedBytes(binding.sourcePath)).digest("hex").toUpperCase()).toBe(
+        binding.sourceSha256
+      )
+    }
+    expect(bp031032033C0603C104K3RactuFootprintEvidence.sources[0].sha256).toBe(
+      bp031032C0603C104K3RactuFootprintEvidence.sources[0].sha256
+    )
+    expect(bp031032033C0603C104K3RactuFootprintEvidence.artwork.sha256).toBe(
+      bp031032C0603C104K3RactuFootprintEvidence.artwork.sha256
+    )
+  })
+
+  it("freezes the BP-033 extension and fails closed on reference, source, and deny-gate drift", () => {
+    const evidence = bp031032033C0603C104K3RactuFootprintEvidence
+    expect(Object.isFrozen(evidence)).toBe(true)
+    expect(Object.isFrozen(evidence.referenceSets)).toBe(true)
+    expect(Object.isFrozen(evidence.referenceSets.bp033)).toBe(true)
+    expect(Object.isFrozen(evidence.sourceBinding.bp033SourceContractBindings)).toBe(true)
+
+    for (const mutate of [
+      (copy: Mutable<typeof evidence>) => Reflect.set(copy.referenceSets.bp033, "references", ["C_REF_REG_HF_1"]),
+      (copy: Mutable<typeof evidence>) =>
+        Reflect.set(copy.sourceBinding.bp033SourceContractBindings[0], "contract", "BP-999"),
+      (copy: Mutable<typeof evidence>) => Reflect.set(copy.sources[0], "sha256", "0".repeat(64)),
+      (copy: Mutable<typeof evidence>) => Reflect.set(copy, "releaseState", "allow"),
+      (copy: Mutable<typeof evidence>) => Reflect.set(copy, "accepted", true)
+    ]) {
+      const copy = mutableExtendedClone()
+      mutate(copy)
+      expect(validateBp031032033C0603C104K3RactuFootprintEvidence(copy as unknown as typeof evidence)).not.toEqual([])
+    }
+  })
+
+  it("rejects descriptor and alias drift in the BP-033 extension", () => {
+    const evidence = bp031032033C0603C104K3RactuFootprintEvidence
+    for (const mutate of [
+      (copy: Mutable<typeof evidence>) =>
+        Object.defineProperty(copy.referenceSets.bp033, "workUnit", {
+          value: "BP-033",
+          enumerable: true,
+          configurable: false,
+          writable: true
+        }),
+      (copy: Mutable<typeof evidence>) =>
+        Object.defineProperty(copy.referenceSets.bp033, "workUnit", {
+          value: "BP-033",
+          enumerable: true,
+          configurable: true,
+          writable: false
+        }),
+      (copy: Mutable<typeof evidence>) =>
+        Reflect.set(copy.sourceBinding, "bp033SourceContractBindings", copy.referenceSets.bp033.sourceContractBindings)
+    ]) {
+      const copy = mutableExtendedClone()
+      mutate(copy)
+      expect(validateBp031032033C0603C104K3RactuFootprintEvidence(copy as unknown as typeof evidence)).not.toEqual([])
+    }
   })
 })

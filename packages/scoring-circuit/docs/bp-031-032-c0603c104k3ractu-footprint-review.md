@@ -18,6 +18,40 @@ The retained source calls the same orderable an SMD Comm X7R ceramic MLCC,
 100 nF, 10%, 25 VDC, X7R, 0603 / 1608. The source also records the alias
 `C0603C104K3RAC7867`.
 
+## BP-033 extension scope
+
+The independent BP-031/BP-032 frozen candidate remains unchanged. A separate
+extension record reuses its exact-part, rendered-artwork, and project-review
+geometry evidence for BP-033 only for these six references:
+
+| Reference | BP-033 source contract | Role |
+| --- | --- | --- |
+| `C_APP_REG_IN_HF` | BP-142 | Application regulator high-frequency input bypass |
+| `C_APP_REG_BOOT` | BP-142 | Application regulator bootstrap capacitor |
+| `C_HUB75_BUF_A_BYPASS` | BP-144 | HUB75 buffer A local bypass |
+| `C_HUB75_BUF_B_BYPASS` | BP-144 | HUB75 buffer B local bypass |
+| `C_IR_VS` | BP-146 | Encrypted-IR receiver filtered-supply bypass |
+| `C_FRAM_BYPASS` | BP-145 | F-RAM local bypass |
+
+The extension records source-contract provenance without changing the
+application ledger, convergence records, backlog, board, or application
+footprint mapping. Its four retained source-contract hashes are:
+
+| Contract | Retained source path | SHA-256 |
+| --- | --- | --- |
+| BP-142 | `src/bench-prototype-application-rail.ts` | `ED4BFC8B752BE974323BF7ED95B1B5718C1C2F1D903B6444E652245326F35E67` |
+| BP-144 | `src/bench-prototype-hub75-safing.ts` | `0DBD6D07A1C10AA93C0DBC92062C271186A0FE5BA6B31B109F771544A4AFAAA2` |
+| BP-145 | `src/bench-prototype-optional-peripherals.ts` | `18B19F1BD020DAF861527D32AE4630464AFD5E00E6167460E2816A38C1296FFA` |
+| BP-146 | `src/bench-prototype-ir-receiver-selection.ts` | `D716C2702606A7EA7A00D72ED0434B56A3BF4F13B6F9638E92221BDF9E68852D` |
+
+The machine-readable extension is exported from
+`src/bp031-032-c0603c104k3ractu-footprint-evidence.tsx` as a separate
+BP-031/BP-032/BP-033 candidate. Its validator retains the shared source PDF
+hash, rendered-artwork hash, independent graph checks, and all deny gates.
+The extension's exact-graph validator also enforces property flags and rejects
+sibling aliases for the full traversal. The extension does not authorize mapping, placement, board integration,
+acceptance, release, or fabrication.
+
 ## Retained primary evidence
 
 The sole retained primary artifact is

@@ -24,6 +24,15 @@ const bp032References = [
   "C_APP_RESET_FANOUT_BYPASS"
 ] as const
 
+const bp033References = [
+  "C_APP_REG_IN_HF",
+  "C_APP_REG_BOOT",
+  "C_HUB75_BUF_A_BYPASS",
+  "C_HUB75_BUF_B_BYPASS",
+  "C_IR_VS",
+  "C_FRAM_BYPASS"
+] as const
+
 const affectedReferences = [...bp031References, ...bp032References] as const
 
 const packageLengthMm = { nominal: 1.6, minimum: 1.45, maximum: 1.75 } as const
@@ -325,6 +334,68 @@ export const bp031032C0603C104K3RactuFootprintEvidence = deepFreeze(
   structuredClone(bp031032C0603C104K3RactuFootprintEvidenceBaseline)
 )
 
+const bp033SourceContractBindings = [
+  {
+    contract: "BP-142",
+    references: ["C_APP_REG_IN_HF", "C_APP_REG_BOOT"],
+    sourcePath: "packages/scoring-circuit/src/bench-prototype-application-rail.ts",
+    sourceSha256: "ED4BFC8B752BE974323BF7ED95B1B5718C1C2F1D903B6444E652245326F35E67",
+    scope: "application regulator high-frequency input and bootstrap capacitor selections"
+  },
+  {
+    contract: "BP-144",
+    references: ["C_HUB75_BUF_A_BYPASS", "C_HUB75_BUF_B_BYPASS"],
+    sourcePath: "packages/scoring-circuit/src/bench-prototype-hub75-safing.ts",
+    sourceSha256: "0DBD6D07A1C10AA93C0DBC92062C271186A0FE5BA6B31B109F771544A4AFAAA2",
+    scope: "two HUB75 buffer local bypass capacitor selections"
+  },
+  {
+    contract: "BP-145",
+    references: ["C_FRAM_BYPASS"],
+    sourcePath: "packages/scoring-circuit/src/bench-prototype-optional-peripherals.ts",
+    sourceSha256: "18B19F1BD020DAF861527D32AE4630464AFD5E00E6167460E2816A38C1296FFA",
+    scope: "F-RAM local bypass capacitor selection"
+  },
+  {
+    contract: "BP-146",
+    references: ["C_IR_VS"],
+    sourcePath: "packages/scoring-circuit/src/bench-prototype-ir-receiver-selection.ts",
+    sourceSha256: "D716C2702606A7EA7A00D72ED0434B56A3BF4F13B6F9638E92221BDF9E68852D",
+    scope: "encrypted-IR receiver filtered-supply bypass capacitor selection"
+  }
+] as const
+
+const bp031032033C0603C104K3RactuFootprintEvidenceBaseline = deepFreeze({
+  ...structuredClone(bp031032C0603C104K3RactuFootprintEvidenceBaseline),
+  artifactKind: "bp031-032-033-c0603c104k3ractu-footprint-evidence",
+  workUnits: ["BP-031", "BP-032", "BP-033"],
+  sourceContracts: ["BP-101", "BP-123", "BP-142", "BP-144", "BP-145", "BP-146"],
+  affectedReferences: [...bp031References, ...bp032References, ...bp033References],
+  referenceSets: {
+    ...structuredClone(bp031032C0603C104K3RactuFootprintEvidenceBaseline.referenceSets),
+    bp033: {
+      workUnit: "BP-033",
+      references: [...bp033References],
+      role: "application regulator, HUB75 buffer, encrypted-IR receiver, and F-RAM local bypass capacitors",
+      sourceContracts: ["BP-142", "BP-144", "BP-145", "BP-146"],
+      sourceContractBindings: structuredClone(bp033SourceContractBindings)
+    }
+  },
+  sourceBinding: {
+    ...structuredClone(bp031032C0603C104K3RactuFootprintEvidenceBaseline.sourceBinding),
+    canonicalSourcePaths: [
+      ...structuredClone(bp031032C0603C104K3RactuFootprintEvidenceBaseline.sourceBinding.canonicalSourcePaths),
+      ...bp033SourceContractBindings.map((binding) => binding.sourcePath)
+    ],
+    bp033SourceContractBindings: structuredClone(bp033SourceContractBindings)
+  }
+} as const)
+
+/** BP-033 extension of the shared review-only candidate; the BP-031/BP-032 baseline remains independent. */
+export const bp031032033C0603C104K3RactuFootprintEvidence = deepFreeze(
+  structuredClone(bp031032033C0603C104K3RactuFootprintEvidenceBaseline)
+)
+
 type ExactGraphState = {
   readonly actualSeen: Set<object>
   readonly expectedSeen: Set<object>
@@ -354,28 +425,25 @@ function assertExactDataGraph(actual: unknown, expected: unknown, state: ExactGr
 
   state.actualSeen.add(actual)
   state.expectedSeen.add(expected)
-  try {
-    for (const key of expectedKeys) {
-      const actualDescriptor = Object.getOwnPropertyDescriptor(actual, key)
-      const expectedDescriptor = Object.getOwnPropertyDescriptor(expected, key)
-      if (
-        !actualDescriptor ||
-        !expectedDescriptor ||
-        !("value" in actualDescriptor) ||
-        !("value" in expectedDescriptor) ||
-        actualDescriptor.get !== undefined ||
-        actualDescriptor.set !== undefined ||
-        expectedDescriptor.get !== undefined ||
-        expectedDescriptor.set !== undefined ||
-        actualDescriptor.enumerable !== expectedDescriptor.enumerable
-      ) {
-        throw new RangeError(`C0603C104K3RACTU getter or descriptor drift at ${path}.${String(key)}`)
-      }
-      assertExactDataGraph(actualDescriptor.value, expectedDescriptor.value, state, `${path}.${String(key)}`)
+  for (const key of expectedKeys) {
+    const actualDescriptor = Object.getOwnPropertyDescriptor(actual, key)
+    const expectedDescriptor = Object.getOwnPropertyDescriptor(expected, key)
+    if (
+      !actualDescriptor ||
+      !expectedDescriptor ||
+      !("value" in actualDescriptor) ||
+      !("value" in expectedDescriptor) ||
+      actualDescriptor.get !== undefined ||
+      actualDescriptor.set !== undefined ||
+      expectedDescriptor.get !== undefined ||
+      expectedDescriptor.set !== undefined ||
+      actualDescriptor.enumerable !== expectedDescriptor.enumerable ||
+      actualDescriptor.configurable !== expectedDescriptor.configurable ||
+      actualDescriptor.writable !== expectedDescriptor.writable
+    ) {
+      throw new RangeError(`C0603C104K3RACTU getter or descriptor drift at ${path}.${String(key)}`)
     }
-  } finally {
-    state.actualSeen.delete(actual)
-    state.expectedSeen.delete(expected)
+    assertExactDataGraph(actualDescriptor.value, expectedDescriptor.value, state, `${path}.${String(key)}`)
   }
 }
 
@@ -598,6 +666,74 @@ export function validateBp031032C0603C104K3RactuFootprintEvidence(
   ) {
     errors.push("rendered artwork must have a bound SHA-256 while remaining denied")
   }
+  return errors
+}
+
+/** Empty output means the BP-033 extension remains an internally consistent deny-by-default candidate. */
+export function validateBp031032033C0603C104K3RactuFootprintEvidence(
+  candidate: typeof bp031032033C0603C104K3RactuFootprintEvidence = bp031032033C0603C104K3RactuFootprintEvidence
+): readonly string[] {
+  const errors: string[] = []
+  try {
+    assertExactDataGraph(
+      candidate,
+      bp031032033C0603C104K3RactuFootprintEvidenceBaseline,
+      {
+        actualSeen: new Set(),
+        expectedSeen: new Set()
+      },
+      "root"
+    )
+  } catch {
+    return ["C0603C104K3RACTU BP-033 extension graph, descriptor, or deny-state drifted"]
+  }
+
+  const exactSource = candidate.sources[0]
+  const expectedReferences = [...bp031References, ...bp032References, ...bp033References]
+  if (
+    candidate.artifactKind !== "bp031-032-033-c0603c104k3ractu-footprint-evidence" ||
+    !sameJson(candidate.workUnits, ["BP-031", "BP-032", "BP-033"]) ||
+    !sameJson(candidate.sourceContracts, ["BP-101", "BP-123", "BP-142", "BP-144", "BP-145", "BP-146"]) ||
+    !sameJson(candidate.affectedReferences, expectedReferences)
+  ) {
+    errors.push("BP-033 extension identity, work-unit, source-contract, or reference scope drifted")
+  }
+
+  const bp033ReferenceSet = candidate.referenceSets.bp033
+  if (
+    bp033ReferenceSet.workUnit !== "BP-033" ||
+    !sameJson(bp033ReferenceSet.references, bp033References) ||
+    !sameJson(bp033ReferenceSet.sourceContracts, ["BP-142", "BP-144", "BP-145", "BP-146"]) ||
+    !sameJson(bp033ReferenceSet.sourceContractBindings, bp033SourceContractBindings) ||
+    !sameJson(candidate.sourceBinding.bp033SourceContractBindings, bp033SourceContractBindings)
+  ) {
+    errors.push("BP-033 exact reference-set or source-contract provenance drifted")
+  }
+
+  if (
+    candidate.sourceControl.basisCommit !== basisCommit ||
+    exactSource.sha256 !== sourceSha256 ||
+    !isSha256(exactSource.sha256) ||
+    candidate.artwork.sha256 !== artworkSha256 ||
+    !isSha256(candidate.artwork.sha256)
+  ) {
+    errors.push("shared C0603 source or rendered artwork hash drifted")
+  }
+
+  if (
+    candidate.manufacturerCad.state !== "not-acquired" ||
+    candidate.manufacturerCad.artifactPath !== null ||
+    candidate.manufacturerCad.authority !== "deny" ||
+    candidate.projectFootprint.accepted ||
+    candidate.projectFootprint.fabricationAuthority !== "deny" ||
+    candidate.artwork.authority !== "deny" ||
+    candidate.releaseState !== "deny" ||
+    candidate.fabricationAuthority !== "deny" ||
+    candidate.accepted
+  ) {
+    errors.push("BP-033 extension must preserve every CAD, artwork, release, fabrication, and acceptance deny gate")
+  }
+
   return errors
 }
 
