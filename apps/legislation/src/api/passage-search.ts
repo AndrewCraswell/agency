@@ -158,7 +158,7 @@ function modelsFor(page: PassageSearchResultPage, mode: SearchMode) {
   return { isReranked: page.search.isReranked, models }
 }
 
-function projectHit(
+export function projectPassageSearchHit(
   candidate: PassageSearchResultPage["items"][number],
   rank: number,
   apiBaseUrl: string,
@@ -266,7 +266,14 @@ export function createPassageSearchApiHandler(
           {
             ...page,
             items: page.items.map((item, index) =>
-              projectHit(item, offset + index + 1, options.apiBaseUrl, mode, body.query, body.explain === true)
+              projectPassageSearchHit(
+                item,
+                offset + index + 1,
+                options.apiBaseUrl,
+                mode,
+                body.query,
+                body.explain === true
+              )
             )
           },
           limit,

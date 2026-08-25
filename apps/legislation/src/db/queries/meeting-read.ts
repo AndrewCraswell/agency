@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, gte, inArray, lt, lte, or, sql, type SQL } from "drizzle-orm"
+import { and, asc, desc, eq, gt, gte, ilike, inArray, lt, lte, or, sql, type SQL } from "drizzle-orm"
 import { isIsoDate, isRfc3339Timestamp } from "../../api/canonical-projection.js"
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
@@ -28,6 +28,8 @@ export interface MeetingListInput {
   /** Internal singular lookup constraint; public callers use the path route. */
   meetingId?: string
   organizationId?: string
+  /** Internal lexical name constraint used by universal search. */
+  query?: string
   sessionId?: string
   sort?: MeetingSort
   status?: "cancelled" | "completed" | "other" | "postponed" | "scheduled"
@@ -79,6 +81,7 @@ type MeetingCursorScope = {
   isRemote: boolean | null
   meetingId: string | null
   organizationId: string | null
+  query: string | null
   sessionId: string | null
   sort: MeetingSort
   status: MeetingListInput["status"] | null
@@ -217,6 +220,7 @@ function meetingVisibility(scope: MeetingCursorScope): [SQL, ...SQL[]] {
     scope.organizationId === null
       ? undefined
       : sql`exists (select 1 from ${eventOrganizations} where ${eventOrganizations.eventId} = ${legislativeEvents.id} and ${eventOrganizations.organizationId} = ${scope.organizationId})`,
+    scope.query === null ? undefined : ilike(legislativeEvents.name, `%${scope.query}%`),
     scope.sessionId === null
       ? undefined
       : sql`exists (select 1 from ${eventSessions} where ${eventSessions.eventId} = ${legislativeEvents.id} and ${eventSessions.sessionId} = ${scope.sessionId})`
@@ -308,6 +312,7 @@ function cursorScope(input: MeetingListInput): MeetingCursorScope {
     isRemote: input.isRemote ?? null,
     meetingId: optionalId(input.meetingId, "meetingId"),
     organizationId: optionalId(input.organizationId, "organizationId"),
+    query: optionalText(input.query, "query", 500),
     sessionId: optionalId(input.sessionId, "sessionId"),
     sort: input.sort ?? "starts-asc",
     status: input.status ?? null,
@@ -379,6 +384,17 @@ function optionalId(value: string | undefined, name: string): string | null {
   const normalized = value.trim()
   if (normalized.length === 0 || normalized.length > 256) {
     throw new LegislationError("invalid_request", `${name} must be between 1 and 256 characters`)
+  }
+  return normalized
+}
+
+function optionalText(value: string | undefined, name: string, maximum: number): string | null {
+  if (value === undefined) {
+    return null
+  }
+  const normalized = value.trim()
+  if (normalized.length === 0 || normalized.length > maximum) {
+    throw new LegislationError("invalid_request", `${name} must be between 1 and ${maximum} characters`)
   }
   return normalized
 }

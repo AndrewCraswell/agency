@@ -876,6 +876,18 @@ describe("local API smoke harness", () => {
     ])
     expect(unauthorized.map((response) => response.status)).toEqual([401, 401])
 
+    const universalSearch = await fetch(`http://127.0.0.1:${address.port}/api/search/all`, {
+      body: JSON.stringify({ query: "fixture", recordTypes: ["bill"] }),
+      headers: { authorization: "Bearer smoke-token", "content-type": "application/json" },
+      method: "POST"
+    })
+    expect(universalSearch.status).toBe(200)
+    const universalSearchBody: unknown = await universalSearch.json()
+    if (!isRecord(universalSearchBody) || !isRecord(universalSearchBody.meta)) {
+      throw new Error("Expected a universal search response")
+    }
+    expect(universalSearchBody.meta.groups).toEqual([{ nextCursor: null, recordType: "bill", returned: 0 }])
+
     const report = await runApiSmoke({
       baseUrl: `http://127.0.0.1:${address.port}`,
       fixtures: {

@@ -101,6 +101,8 @@ import {
   SubscriptionService
 } from "./subscriptions.js"
 import { createSupportingMaterialSectionReadApiHandler } from "./supporting-material-section-read-routes.js"
+import { createProductionUniversalSearchApi } from "./universal-search-adapter.js"
+import { createUniversalSearchApiHandler } from "./universal-search.js"
 import { createVoteReadRepository } from "./vote-read-repository.js"
 import { createVoteReadApiHandler } from "./vote-read-routes.js"
 import { createWebhookMutationApiHandler } from "./webhook-mutation-routes.js"
@@ -311,6 +313,9 @@ export function createLegislationApiHandler(
     createAmendmentSearchApiHandler(queryService, options),
     createCivicSearchApiHandler(queryService, options),
     createPassageSearchApiHandler(queryService, options),
+    createUniversalSearchApiHandler(
+      createProductionUniversalSearchApi(queryService, documentDatabase, options.apiBaseUrl)
+    ),
     ...(options.subscriptionRepository === undefined
       ? []
       : (() => {

@@ -30,6 +30,7 @@ describe("meeting read queries", () => {
       isRemote: true,
       meetingId: null,
       organizationId: "organization:openstates:rules",
+      query: "budget",
       sessionId: "session:wa:2026",
       sort: "starts-asc",
       status: "scheduled",
@@ -42,6 +43,7 @@ describe("meeting read queries", () => {
       jurisdictionId: "jurisdiction:wa",
       isRemote: true,
       organizationId: "organization:openstates:rules",
+      query: "budget",
       sessionId: "session:wa:2026",
       status: "scheduled",
       to: "2026-08-31"
@@ -55,6 +57,7 @@ describe("meeting read queries", () => {
     expect(generated).toContain('exists (select 1 from "legislation"."event_organizations"')
     expect(generated).toContain('exists (select 1 from "legislation"."event_sessions"')
     expect(generated).toContain('"legislative_events"."is_remote"')
+    expect(generated).toContain('"legislative_events"."name" ilike')
   })
 
   it("supports explicit timestamp intervals plus persisted bill and calendar relationships", () => {
@@ -87,6 +90,7 @@ describe("meeting read queries", () => {
           isRemote: null,
           meetingId: null,
           organizationId: null,
+          query: null,
           sessionId: null,
           sort: "starts-asc",
           status: null,

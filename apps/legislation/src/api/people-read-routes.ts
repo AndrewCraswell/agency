@@ -76,7 +76,7 @@ function projectPage(page: PersonPage<PersonCollectionRead>, apiBaseUrl: string)
   return { ...page, items: page.items.map((item) => projectPersonRead(item, apiBaseUrl)) }
 }
 
-function projectPersonRead(read: PersonCollectionRead, apiBaseUrl: string) {
+export function projectPersonRead(read: PersonCollectionRead, apiBaseUrl: string) {
   const source = canonicalSource(read)
   return projectPersonSummary(
     {
