@@ -1,366 +1,255 @@
-# Canonical bench prototype plan
+# Clean-sheet ESP32 scoring prototype backlog
 
-## Decision and status
+## Decision
 
-Build the first integrated hardware as **one accessible bench PCB**. It is an
-engineering instrument for closing electrical, firmware, and rules-behavior
-questions before the production design is divided into scoring, application,
-and communications assemblies.
+The canonical P0 hardware is a new ESP32-S3-only bench board. Do not continue
+subtracting circuitry from the former STM32/ESP32 design. Git history retains
+that design as evidence, but the canonical schematic and PCB are replaced in
+place.
 
-The bench PCB is not a production-form-factor preview and is not presently
-ready to fabricate. Its design must remain denied until the prototype-ready
-definition at the end of this document is satisfied. Passing the prototype
-does not authorize the production PCB.
+P0 is an accessible engineering board, not a production-form-factor preview.
+It must acquire all seven weapon conductors, run the portable C17 scoring core,
+provide Ethernet, HUB75 display, encrypted IR control, USB service, protected
+primary outputs, and expose useful test access. It remains denied for
+fabrication until `BP-434` passes.
 
-## Prototype outcome
+## Fixed P0 boundary
 
-One board must let the team:
+- One ESP32-S3 module runs target adapters and the portable C17 core. The core
+  remains isolated in software from ESP-IDF, network, display, persistence,
+  and remote-control code so a later dedicated scoring MCU does not require a
+  rules rewrite.
+- Normal power is USB-C PD at SPR 20 V, 3 A. No alternate input connector,
+  source selector, battery, permanent rail telemetry, or full-rail shunt is
+  populated.
+- Wired networking uses W5500 and the Würth `7499011121A` MagJack.
+- Display output uses two `SN74AHCT245PWR` buffers and the selected Adafruit
+  2277 HUB75 panel interface.
+- Encrypted IR uses `TSOP38438`; a remote command can request workflow changes
+  but can never fabricate or reclassify an electrical hit.
+- Weapon cables are owner-validated OK Fencing-compatible cables. P0 provides
+  three labeled plated-through wire landings per side, six total, plus a
+  separate piste/ground landing and independent strain relief, or an exact
+  board connector only if a suitable part is selected.
+- Recovery uses native USB and labeled UART0, BOOT, EN/reset, 3.3 V, and ground
+  pads. No populated STM32 SWD or generic service header is required.
+- STM32, processor isolation, isolated link power, F-RAM, RTC, secure element,
+  audio, speaker, external antenna assembly, serialized output latch, and
+  speculative expansion are absent or explicit DNP.
 
-- acquire all seven fencing conductors with an external analog acquisition and
-  protection front end, normalized by the authoritative C17 scoring core on
-  the exact `ESP32-S3-WROOM-1U-N16R2`;
-- keep acquisition, C17 scoring, presentation, Ethernet, IR workflow, and
-  hardware adapters logically separated so a future scoring MCU may be added
-  without rewriting rules behavior;
-- run the exact ESP32-S3, W5500 Ethernet path, and Würth `7499011121A`
-  integrated-magnetics RJ45;
-- accept normal operating power from a USB-C PD adapter through the selected
-  Amphenol receptacle, TPS25730A sink, protection, eFuse, and conversion path;
-- drive the selected Adafruit product 2277 64-by-32 HUB75 panel through the
-  existing `SN74AHCT245PWR` safe-blanking architecture;
-- program, reset, recover, and observe the ESP32 without removing parts;
-- attach an external body-cord/piste fixture through a selected bench harness;
-- receive, authenticate, and exercise the in-scope encrypted IR referee remote
-  through the selected protected receiver path without allowing a remote
-  command to fabricate, qualify, or reclassify an electrical hit;
-- expose every critical rail, reset, timing, analog, and interface
-  node to labeled probes.
+The current `ESP32-S3-WROOM-1U-N16R2` record conflicts with the no-external-
+antenna rule. `BP-120` must select and reconcile an integrated-antenna module
+before the clean-sheet processor schematic is drawn.
 
-The board should favor hand access, probe clearance, replaceable protection
-parts, optional series links, current-measurement shunts, configuration straps,
-and visible domain boundaries over size or appearance.
+## Status rules
 
-## Explicit deferrals
+| Status | Meaning |
+| --- | --- |
+| `backlog` | Dependencies are complete; the task is ready but not active. |
+| `in-progress` | Root or a named bounded work unit is actively producing the deliverable. |
+| `review` | A committed implementation exists and is awaiting root acceptance or a recorded revision. |
+| `blocked` | One or more task IDs in `Dependencies` are incomplete. Physical evidence is not called a blocker until the board needed to obtain it has been ordered. |
+| `done` | Implementation, appropriate verification, root review, and commit are complete. |
+| `superseded` | Historical work was intentionally replaced and grants no P0 completion credit. |
 
-This prototype does not close or require:
+Root is always the reviewer and committer. Every root review must immediately
+update `Status` and `Latest state`. A task may preserve a downstream `DENY`
+and still be done when its acceptance is only a contract, selection, or test
+protocol. Post-order measurements belong in `BP-620` through `BP-633` and do
+not keep pre-order definition tasks open.
 
-- an enclosure, bezel, VESA mount, ingress target, cosmetic industrial design,
-  or final connector panel;
-- miniaturization, final component density, or the production three-board
-  split;
-- production battery/UPS or the standards proposal needed to reconcile the
-  final product with current FIE supply requirements;
-- FCC, CE, IEC/UL 62368-1, FIE homologation, ESD/EFT/surge certification, or a
-  compliance mark;
-- final factory test coverage, panelization, selective coating, alternate
-  sourcing, production programming, or factory DFM.
+## Priority order
 
-Those are production gates. The bench board must preserve the architecture
-needed to test them later without pretending it already satisfies them.
+1. Close exact selections and electrical contracts (`BP-050` through
+   `BP-149`).
+2. Draw and review the new schematic (`BP-320` through `BP-335`).
+3. Place, route, verify, and release the PCB (`BP-420` through `BP-435`).
+4. Build the board support and test firmware in parallel where interfaces are
+   frozen (`BP-520` through `BP-533`).
+5. Assemble and execute physical evidence (`BP-620` through `BP-633`).
 
-The encrypted IR referee remote is not deferred. Its product behavior, security boundary, bout-event requirements, and
-manufacturer package are defined in
-[`apps/scoring/docs/encrypted-ir-remote-control-contract.md`](../../../apps/scoring/docs/encrypted-ir-remote-control-contract.md).
-The current no-spare-GPIO allocation is a design blocker to resolve, not permission to omit the receiver.
+## Superseded task mapping
 
-## Documentation authority
+The former broad task IDs are not reused with different meanings. Their
+evidence remains in Git and is consumed by the clean-sheet units below:
 
-This page is the only active hardware backlog. Earlier roadmaps for a
-three-board apparatus, communications carrier, enclosure envelope, production
-stack-up, and factory fabrication release have been removed so they cannot
-compete with this prototype sequence.
+- `BP-031` through `BP-035` map to footprint/BOM convergence in `BP-111`,
+  `BP-148`, and `BP-149`;
+- `BP-300` through `BP-303` map to the granular schematic units `BP-320`
+  through `BP-335`;
+- `BP-400` through `BP-403` map to physical implementation `BP-420` through
+  `BP-435`; and
+- `BP-500` through `BP-511` map to firmware and physical-evidence units
+  `BP-520` through `BP-533` and `BP-620` through `BP-633`.
 
-Component-selection records, manufacturer-footprint evidence, analog studies,
-pin-allocation audits, Ethernet support calculations, and connector test
-records remain reusable technical evidence. Their production-oriented status
-language does not add work to this backlog unless a `BP-*` task explicitly
-uses that evidence.
+Those historical IDs grant no completion credit to their replacements.
 
-## One-board architecture
-
-Use a provisional four- or six-layer rectangular board on standoffs, with no
-enclosure assumptions. Final outline and layer count are selected during
-layout review from the routing and return-path evidence; the production
-six/six/four stack-ups are not inherited automatically.
-
-Organize the board from left to right:
-
-1. external fixture harness and connector-adjacent protection;
-2. socketed or option-selectable analog acquisition cells and REF5025 domain;
-3. ESP32, reset/watchdog, service header, C17 scoring adapter, and primary
-   lamp/buzzer outputs;
-4. USB-C receptacle, PD sink/protection/eFuse, W5500, crystal/support network,
-   and the board-edge MagJack;
-5. HUB75 logic buffers, display signal header, and separately protected display
-   power branch.
-
-Use one low-impedance digital ground with explicit analog return, ESD-return,
-chassis/shield, high-current display, and sensitive-reference routing rules.
-The prototype deliberately has no processor isolation corridor or isolated
-scoring supply. This is a P0 simplification, not evidence that a future split
-MCU product should omit a reviewed isolation boundary.
-
-## Fixed identities and prototype interfaces
-
-| Function | Bench identity or interface | Prototype rule |
-| --- | --- | --- |
-| Processor | `ESP32-S3-WROOM-1U-N16R2` | Sole prototype MCU. It hosts adapters, C17 scoring, outputs, display, Ethernet, storage, and controls, but the C17 core remains a separate portable authority module. No module substitution. |
-| External analog AFE | Existing seven-channel protection, reference, and ADS8881 candidate network | Converts weapon lines to explicitly timestamped normalized observations. BP-127 must prove the ADC-only cadence before per-channel comparators may be omitted; the interface is not a second scoring authority. |
-| Reference | `REF5025AQDRQ1` | Used only with a data-sheet-compliant input/output network and measured dynamic-load evidence. |
-| Ethernet controller | `W5500` | Uses the committed exact crystal, passives, ferrite, reset, and polling architecture. |
-| Ethernet jack | Würth `7499011121A` | W5500 MDI pairs remain entirely on this PCB; chassis/shield node is separately observable. |
-| Display | Adafruit product `2277`, 64-by-32, 1/16 scan | External panel only. Board provides 13 buffered HUB75 signals and a separately protected 5 V branch. |
-| Display buffers | Two `SN74AHCT245PWR` | Reset-gated high impedance plus panel `OE` pull-up must hold the panel blank during reset, absence, and brownout. |
-| Normal power and USB service | Amphenol `10177070-00011LF`, `TPD4S201TRGRRQ1`, `TPD2EUSB30DRTR`, `TPS25730ADREFR`, `TVS2200DRVR`, `B340A-13-F`, `TPS259474ARPWR` | Required USB-C PD sink input from a standard adapter. The normal operating contract is SPR 20 V/3 A. `TPD4S201TRGRRQ1` protects CC1, CC2, SBU1, and SBU2; exact `TPD2EUSB30DRTR` protects D-/D+. Native USB 2.0 service reaches ESP32 GPIO19/GPIO20 through one matched 22 Ohm series resistor on each data line. |
-| Bench power diagnosis | Labeled rail test pads and removable current links | P0 has no populated alternate input connector or source selector. Any current-limited injection is a USB-disconnected, de-energized bench procedure through reviewed test access, never a product input. |
-| Weapon fixture | Molex `43045-1200`, mate `43025-1200`, terminals `43030-0007` | Carries seven named conductors plus reviewed fixture/ESD returns; unused positions are NC. It never becomes the production body-cord connector. |
-| Body-cord sockets | External fixture using sample `66.9684-22` and `66.9684-25` where applicable | Samples remain candidates. Plug fit, line mapping, sweat/salt, retention, and cycle evidence remain separate. |
-| ESP32 service | Samtec `TSW-106-07-G-S` six-contact header candidate | Expose 3.3 V-compatible UART RX/TX, `BOOT_N`, active-high manual reset request, 3.3 V sense, and digital ground. Use an approved-level adapter. |
-| RF | WROOM-1U module connector | No external antenna assembly is populated on P0. Ethernet is the required product network; radio load is exercised only when the module antenna path is intentionally equipped for the BP-127 stress test. |
-
-The fixture harness reuses already selected Micro-Fit parts for bench
-convenience. This does not authorize those parts for the final external product
-interface. The exact HUB75 header, lamp connector, direct-wire strain relief,
-and debug mating access remain explicit prototype BOM tasks below.
-
-## USB-C PD and bench-measurement contract
-
-Normal operation uses a standard USB-C PD adapter. The selected sink requests
-an SPR 20 V/3 A contract; raw 5 V before negotiation must not energize the
-post-contract apparatus rail. `TPD4S201TRGRRQ1` protects only CC1, CC2, SBU1,
-and SBU2. Exact `TPD2EUSB30DRTR` protects USB D-/D+, followed by exactly one
-matched 22 Ohm series resistor on each line before ESP32 GPIO19/GPIO20. The
-exact receptacle, protection networks, disconnect behavior, TVS,
-reverse-current path, eFuse, V5 converter, and USB 2.0 data path are part of
-the prototype schematic and layout.
-
-P0 does not populate `J_LAB_INJECTION`, `7101SYZQE`, or their harness. Labeled
-rail test pads and removable current links may support staged diagnosis only
-under a procedure that disconnects USB-C and verifies the board is de-energized
-before attaching or removing a current-limited source. These pads are not an
-alternate supported input and cannot bypass the normal product protection in
-operation.
-
-The protected and converted power tree feeds three separately measurable
-branches:
-
-- display V5 through a fuse or resettable current limiter and a removable
-  current-measurement link;
-- ESP32 and analog V5, followed by the selected 3.3 V regulator, analog
-  filtering, and separately measurable AFE branch.
-
-Provide a physical display-branch disconnect so processor bring-up never
-requires powering the panel. Provide branch test points and removable links or
-current shunts for USB-PD output, V5 input, display, ESP32, and analog-front-end
-current. Test-pad injection and USB-C attachment must never coexist.
-The panel branch must be wired for the purchased panel's measured startup and
-full-white current; the published approximate 4 A value is a starting screen,
-not a harness release.
-
-## Authority and observable failure behavior
-
-The ESP32 is the sole prototype processor. It may supply explicit timestamps
-and normalized observations to the C17 core, but host services, Ethernet,
-display, IR workflow, persistence, and UI code may not decide scoring outcomes.
-The core must continue to have no wall-clock, random, network, or display
-dependency. It produces only canonical decisions and safe output requests.
-
-BP-127 must prove that acquisition timing, queue overflow, scheduler latency,
-Wi-Fi/Ethernet/display load, reset, brownout, and malformed input fail
-unavailable rather than silently changing a rules decision. Every output has a
-documented inactive state before firmware executes. Future MCU separation is a
-planned adapter boundary, not a compatibility promise for this prototype.
-
-## Parallel work lanes
-
-| Lane | Scope | May start after | Joins at |
-| --- | --- | --- | --- |
-| A: architecture and schematic control | Freeze one-board net ownership, BOM identities, power tree, reset table, and ERC rules | `BP-000` | `BP-300` schematic review |
-| B: analog and weapon fixture | Resolve the one-channel topology, seven-channel replication, reference drive, fixture harness, and thresholds | `BP-000` | `BP-300`; this lane is fabrication-critical |
-| C: ESP32 acquisition and recovery | ESP32 pin map, deterministic acquisition adapters, reset/watchdog, UART/USB recovery, and safe outputs | `BP-127` | `BP-300` |
-| D: Ethernet, display, IR, and application I/O | W5500/MagJack, HUB75, ESP32 rail, encrypted IR, USB, and safe primary outputs | `BP-127` | `BP-300` |
-| E: physical bench design | Outline, zones, mounting holes, probe access, harness strain relief, fixture registration | `BP-010` | `BP-400` layout review |
-| F: firmware and test assets | ESP32 board support, deterministic acquisition harness, manufacturing self-test, rule corpus, replay capture, bring-up scripts | `BP-127` | `BP-503` ready-to-apply-power review |
-
-Lane B can block fabrication without preventing C, D, E, and F from completing
-their paper designs and test assets. No lane may waive another lane's evidence.
-
-## Granular work units
-
-### Contract and electrical baseline
-
-**Status legend:** `backlog` dependencies complete but work not started; `in-progress` active work; `review` committed evidence awaiting explicit independent approval; `blocked` waiting on a named prerequisite; `done` implementation, verification, independent approval, and commit recorded; `superseded` historical work intentionally replaced by an approved architecture decision and retained only as evidence.
-
-`done` applies to the acceptance of that specific work unit. A completed contract, validator, inventory, or release gate may truthfully preserve a downstream `DENY` result; it does not authorize fabrication or product release unless that work unit explicitly grants the authority. Reopen affected completed units if a dependency later changes incompatibly.
+## Reusable foundation
 
 | ID | Status | Latest state | Work unit | Dependencies | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
-| `BP-000` | done | Delivered: Freeze this plan and assign owner/reviewer for every lane. | Freeze this plan and assign owner/reviewer for every lane. | None | Approved plan revision and decision log. |
-| `BP-010` | blocked | The ESP32-only architecture supersedes the 300 mm by 160 mm dual-domain drawing and its isolation corridor. Root has rewritten the architectural boundary; the remaining deliverable waits for BP-127 to fix the acquisition and peripheral envelope. | Freeze the ESP32-only bench boundary and provisional zone drawing. | `BP-000`, `BP-127` | Dimensioned zoning drawing with analog return, high-current return, connector edges, IR optical access, RF keepout, probe access, and direct-wire strain relief. |
-| `BP-020` | done | Root rebaselined the executable BOM around one ESP32, external AFE, W5500 Ethernet, TSOP38438 IR, HUB75, USB-C PD, native-USB/test-pad recovery, and direct hardware-safe primary outputs. The component audit removed the serialized output latch, NXE1S0505 analog isolation path, coupon-local TPS7A2033 network, and permanent INA238/V5 telemetry shunt; removable links and external instruments cover prototype current measurement. Aggregate USB-support and application-regulator placeholders were replaced with exact physical rows. STM32, processor isolation, populated service headers, alternate input/selector, F-RAM, RTC, secure element, audio, speaker, and external antenna remain explicit DNP rows. Commits `bb02424`, `fe91804`, and `7fb632b` capture these reductions; the latest 53 power/BOM tests and package types pass. | Rebaseline the ESP32-only prototype BOM separately from production. | `BP-000` | Every P0 reference is explicitly selected, `TBD`, or DNP; removed references are recorded as superseded or DNP rather than silently omitted; selected rows include MPN, lifecycle, quantity, source, and package. |
-| `BP-030` | done | Delivered and root-approved footprint-evidence method binds exact MPN/package, primary drawing/CAD, artwork digest, orientation, reviewer, and disposition without granting premature release. Regression commit `67c8a58` additionally proves non-HTTPS manufacturer sources and impossible calendar timestamps fail closed while release remains denied; 8 focused tests plus package types, lint, and format pass. | Freeze the footprint-evidence method and review template. | `BP-020` | Per-reference template binds exact MPN/package, manufacturer drawing/CAD, artwork digest, orientation, reviewer, and disposition. It does not claim closure before selections exist. |
-| `BP-031` | blocked | The 42 approved and 71 reviewed-unapproved dual-architecture analog records remain reusable, but BP-103 must first reconcile the external ADC and reference network with ESP32 acquisition. No previously approved analog footprint is revoked solely because the processor changed. | Close analog, protection, reference, and weapon-fixture footprints for the ESP32 acquisition path. | `BP-030`, `BP-103`, `BP-104` | Independent evidence record for every populated lane-B reference; unresolved options remain explicit DNP. |
-| `BP-032` | blocked | Root reviewed the rebuilt processor subset: the active ledger is now exactly `U_APP` plus five selected ESP32 support rows, with retained Espressif datasheet/DXF/STEP evidence, 40 perimeter pads, EPAD 41, and nine vias. STM32, isolation, isolated power, SWD, and populated service headers are absent from the active ledger; release gates remain denied. Eight focused tests pass. BP-121/BP-123/BP-124/BP-125 and the remaining reset/recovery/safe-output footprint reconciliation are incomplete dependencies/work. | Close ESP32, reset, recovery, clock, and safe-output footprints. | `BP-030`, `BP-121`, `BP-123`, `BP-124`, `BP-125` | Independent evidence record for every populated ESP32-only lane-C reference and zero active references to the superseded processor link. |
-| `BP-033` | blocked | Root reviewed the first ESP32-only reconciliation: F-RAM and its support parts are absent from active records, the obsolete reset fanout is removed, and the shared BP-123 reset plus BP-144 HUB75 identities and quantities now replace duplicate legacy references. Forty-three focused application/reset/display tests pass. The ledger still contains stale pre-simplification power references and cannot close until BP-050/BP-142/BP-144/BP-145/BP-146 finish and the complete active set is rebaselined. | Close power, Ethernet, HUB75, display, encrypted-IR, and retained application footprints. | `BP-030`, `BP-050`, `BP-141`, `BP-142`, `BP-143`, `BP-144`, `BP-145`, `BP-146` | Independent evidence record for every populated lane-D reference; removed F-RAM/audio/dual-domain options are explicit DNP or superseded. |
-| `BP-034` | blocked | Root replaced the ten-family preorder with five active groups: USB-C, OK Fencing weapon sockets/direct landings, W5500 MagJack, HUB75 signal, and HUB75 panel power. Lab input and both programming headers are removed. The owner-approved cable is not a blocker; exact received socket identity/dimensions and upstream BP-050/BP-104/BP-124/BP-141/BP-143 completion remain dependencies. | Converge the minimal P0 connector, mating, fit, pinout, and continuity plan. | `BP-050`, `BP-104`, `BP-124`, `BP-141`, `BP-143` | Exact active interface identities, drawings/CAD disposition, orientation, board footprint, strain relief, continuity procedure, and zero populated superseded connectors. Physical sample results remain post-order evidence. |
-| `BP-035` | blocked | BP-031, BP-032, and BP-033 are incomplete dependencies; BP-034 is complete. BP-031 is 42 approved/71 reviewed-unapproved, BP-032 is 1 approved/50 reviewed-unapproved, and BP-033 is 99 reviewed-unapproved/2 not-started. The current evaluator remains `DENY` with 343 blockers across 247 references: 21 unresolved MPN, 35 unresolved package, 33 unresolved population, 220 footprint-evidence, 7 missing-lane-reference, 8 missing-baseline-reference, 8 package-drift, and 11 population-drift; `selection-blocked` is zero. Reviewed-unapproved evidence intentionally does not grant footprint approval. | Converge the lane BOMs into an order-candidate BOM. | `BP-031`, `BP-032`, `BP-033`, `BP-034` | Every proposed populated row is exact and footprint-approved; no proposed populated `TBD` remains; every omitted option is explicit DNP; lane netlists and reference sets are ready for schematic integration. |
-| `BP-040` | blocked | Root implemented and verified the ESP32-only net contract: one `APP_GND` plane, a controlled `SCORING_SGND` quiet analog region with one reviewed connection, USB/Ethernet pair rules, local high-current returns, and no isolation corridor, lab input, or selector. BP-010 remains the sole incomplete dependency because the revised dimensioned placement drawing is not yet fixed. | Freeze ESP32-only net classes and ground/shield names. | `BP-010` | Reviewed digital, analog/reference, ESD-return, chassis/shield, high-current, USB, Ethernet differential-pair, and RF rules with no obsolete isolation corridor. |
-| `BP-050` | backlog | Root reviewed the simplified USB-C-only contract and integrated its eleven exact PD straps, seven exact local/CC capacitors, and matched 22 ohm USB pair. Commit `7fb632b` removes the permanent INA238 and 2 mOhm full-rail shunt: three removable current links and external instruments now own prototype measurement, improving the worst-low eFuse-bounded V5 ceiling from 40.60 W to 40.73 W. Fifty-three focused power/BOM tests and package types pass. Remaining task work is explicit rather than dependency-blocked: enumerate the full mandatory TPS56A37/eFuse support BOM, close AFE/output rail budgets, qualify or replace TVS2200, and collect physical PD/inrush/load-step/cable-drop/trip/thermal/shutdown evidence. | Freeze the simplified USB-C PD power, protection, conversion, and branch measurement path. | `BP-020` | Exact USB-C/PD/protection/eFuse/V5 parts and support values, 20 V/3 A contract behavior, USB2 routing, branch protection/current links, display disconnect, no populated alternate input, and current-limited test-pad procedure. |
+| `BP-000` | done | Canonical plan ownership and root-only review authority are recorded. | Maintain the clean-sheet plan and decision authority. | None | Approved plan/decision artifact and task-set validator. |
+| `BP-010` | blocked | The obsolete dual-domain zone drawing is rejected; the replacement waits on module, analog, power, and connector envelopes. | Freeze the board envelope and dimensioned functional zones. | `BP-057`, `BP-110`, `BP-120`, `BP-149` | Board-edge connectors, RF keepout, IR view, analog quiet region, high-current return, probe access, mounting, and strain relief are dimensioned. |
+| `BP-020` | done | ESP32-only baseline records selected, TBD, and DNP functions; four exact selections remain in their dedicated tasks. | Maintain the executable P0 population baseline. | `BP-000` | Every required function is selected, TBD, or DNP with quantity, package, source, and rationale. |
+| `BP-030` | done | Exact-MPN footprint evidence method and fail-closed validator are committed. | Maintain the footprint-evidence method. | `BP-020` | Drawing/CAD, digest, artwork, orientation, reviewer, and disposition fields fail closed. |
+| `BP-040` | done | ESP32-only net classes use APP_GND plus a controlled SCORING_SGND quiet region and explicit high-current, shield, USB, and Ethernet rules. | Maintain net-class and return-path rules. | `BP-000` | Reviewed net classes contain no isolation corridor or superseded processor nets. |
 
-### Analog and external fixture lane
+## Power selections and contracts
 
 | ID | Status | Latest state | Work unit | Dependencies | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
-| `BP-100` | backlog | Commit `bb02424` root-rebases the executable one-channel circuit onto the common-ground P0: the NXE1S0505 converter and coupon-local TPS7A2033 network are removed, protected `V5_ANALOG` directly supplies REF5025/ADA4177/TPS60400, and the sole LMR43620 `APP_3V3` supplies ADS8881/TMUX1112. TPS60400 remains because ADA4177 cannot guarantee near-ground input range on a 0 V/5 V supply. The coupon falls from 45 to 40 physical rows and 93 focused tests plus package types pass. BP-100 remains backlog, not done: close the explicit error, leakage, overload/recovery, rail-ripple, startup, thermal, and measured one-cell evidence without granting credit to unmeasured terms. | Select the one-channel acquisition topology that can cover 0 ohm, 450/475 ohm, and sabre timing. | `BP-000` | Reviewed error, settling, leakage, overload, and fault-recovery budget with no omitted term receiving credit. |
-| `BP-101` | blocked | The reusable REF5025/ADS8881 network and simulation still bind the removed isolated rail. Rebase their rail provenance, transient plan, and physical evidence after BP-100 closes. | Reconcile REF5025 input, output ESR/capacitance, and SAR dynamic load. | `BP-100` | Exact capacitors, ESR bounds, layout rule, transient capture plan, and simulation. |
-| `BP-102` | blocked | The reusable connector protection and guarded-energy work still traces the removed isolated rails and obsolete sink assumptions. Reconcile it to the BP-100 single-domain topology. | Close connector-side protection and guarded-fault energy. | `BP-100` | Exact protection network, unpowered behavior, current/energy limits, and fixture interlock review. |
-| `BP-103` | blocked | The seven explicit analog cells and ADS8881 chain remain useful, but their 14 STM32 enable bindings are obsolete. After BP-127, replace them with exact ESP32-controlled conversion, SPI/GDMA, safe-enable, sample-order, and fail-unavailable interfaces. Per-channel comparator hardware remains DNP unless the ADC-only timing experiment fails. | Reconcile and replicate the seven-channel external acquisition path for ESP32. | `BP-100`, `BP-101`, `BP-102`, `BP-127` | Channel-by-channel schematic and net map, exact ADC timing/order interface, queue bounds, safe enables, and no generic repeated block hiding pin swaps. |
-| `BP-104` | done | Root-approved at the pre-order contract boundary: commits `5339ec7` and `d195d47` retain exact Molex evidence and the fixture contract; commits `81beeed` and `97915a5` add the fail-closed received-part intake, explicit null-CAD disposition for `43030-0007`, exact pin/NC map, mating identities, labels, strain path, continuity limits, miswire cases, and independent-review schema. Root re-verification passed the 88-test BP-104/BP-123/BP-143/BP-144 set. Real received-part fit, seven crimp/retention records, strain relief, rejected miswires, and calibrated continuity remain mandatory BP-105/BP-502 evidence and do not block ordering the board/fixture used to obtain them. | Freeze fixture-harness pinout and NC positions. | `BP-010`, `BP-103` | Exact drawing/CAD disposition, continuity map, mating parts, labels, strain-relief design, miswire procedure, numeric limits, and fail-closed physical-evidence schema. |
-| `BP-105` | blocked | Blocked on `BP-403`: prototype-only pre-order release must complete before physical fixture build. | Build the automated external body-cord/piste fixture after prototype order release. | `BP-104`, `BP-106`, `BP-403` | Received-part identities/photos, de-energized mate and labels, seven crimp/retention records, strain relief, four rejected miswire cases, calibrated continuity and isolation, four-wire resistance, capacitance bank, relays, watchdog, interlock, and observed-state records. |
-| `BP-106` | done | Root-approved: the versioned 544-point analog characterization contract freezes exact resistance, capacitance, temperature, guarded-force, pulse/interval, interlock, instrument-category, calibration, digest, and record-schema requirements without authorizing energy or requiring fixture automation. Commit `57dccd5` validates the BP-101 source contract before snapshot use and adds real duplicate/extra/missing/category/fixture-drift adversarial coverage. Root verification passed 41 BP-101/BP-102/BP-104/BP-106 tests, package types, lint, format, and diff checks. BP-105 physical fixture evidence remains a prerequisite for executing characterization, not for freezing this BP-106 contract. | Freeze the analog test matrix, fixture behavior, and calibration artifact contract. | `BP-101`, `BP-102` | Versioned standards, temperatures, capacitances, resistance/force points, interlock behavior, instrument categories, and record schema. It does not require the automated fixture to be built. |
+| `BP-050` | in-progress | USB-C-only chain is selected; root is reconciling the minimal eFuse and TPS56A37 support population. | Converge the complete P0 power tree. | `BP-020` | `BP-051` through `BP-057` are done and one exact power-tree diagram is approved. |
+| `BP-051` | done | Exact TPS25730A straps, protected-CC capacitors, USB data protection, and matched 22 Ohm pair are committed and tested. | Freeze USB-C receptacle, PD negotiation, CC/SBU, and USB2 support. | `BP-020` | Exact MPN/value/pin network requests only 20 V/3 A and raw 5 V cannot energize apparatus rails. |
+| `BP-052` | in-progress | UVLO, OVLO, ILM, ITIMER, and DVDT values are under root review; unused PG/PGTH indication is being removed. | Freeze the minimal TPS259474A eFuse network. | `BP-051` | Exact input bypass, voltage window, current limit, inrush, blanking, reverse/fault behavior, and DNP indication parts. |
+| `BP-053` | in-progress | Exact TI 5 V reference parts are enumerated; optional EN, SS, feed-forward, and PG parts require the final keep/remove audit. | Freeze the minimal TPS56A37 20 V-to-5 V implementation. | `BP-052` | Exact U/L/C/R population, effective-capacitance assumptions, layout rules, and explicit optional-part dispositions. |
+| `BP-054` | done | LMR43620 application rail and all ten physical support references are committed. | Freeze the 5 V-to-3.3 V ESP32/AFE rail. | `BP-020` | Exact regulator/support BOM and separate ESP32/AFE measurement access. |
+| `BP-055` | backlog | Selected panel and branch limiter exist; the disconnect, fuse/current limit, and removable-link implementation must be made exact. | Freeze the protected HUB75 5 V branch. | `BP-020` | Exact limiter/fuse, connector, disconnect, removable measurement link, current envelope, and safe-off state. |
+| `BP-056` | backlog | Common-ground AFE direction is approved; its positive/negative/reference rail loads are not yet complete. | Close AFE and reference rail budgets. | `BP-020` | Worst-case startup, continuous, transient, fault, and conversion-loss allocation for every analog/reference rail. |
+| `BP-057` | blocked | Waiting on the eFuse, 5 V, display, and analog sub-budgets. | Reconcile the end-to-end power and thermal budget. | `BP-052`, `BP-053`, `BP-054`, `BP-055`, `BP-056` | USB-PD, eFuse, converters, display, ESP32, Ethernet, outputs, AFE, cable drop, and thermal screens close without double counting. |
 
-### ESP32 acquisition and recovery lane
-
-| ID | Status | Latest state | Work unit | Dependencies | Acceptance evidence |
-| --- | --- | --- | --- | --- | --- |
-| `BP-120` | superseded | The reviewed STM32G474 pin map remains historical evidence for a future split-MCU product, but no STM32 or SWD reference is active on the P0 board. | Historical STM32 pin allocation. | None | Superseded by the root-approved ESP32-only architecture decision; no P0 acceptance credit. |
-| `BP-121` | blocked | Root re-reviewed the exact sole-ESP32 pad table and removed the unnecessary serialized output latch. GPIO4/5/6 own ADS8881 SPI3/GDMA/CONVST; GPIO7/15/17/10/11 directly command one protected hardware-default-off output driver; W5500 now owns SPI2 without output-state coupling. HUB75, native USB, TSOP38438 RMT, recovery, watchdog, and three uncommitted GPIOs remain collision-free. Focused allocation/output/feasibility tests pass. BP-127 remains the incomplete dependency because loaded one-cell and seven-channel evidence is not run. | Reconcile the sole ESP32 module pad and peripheral allocation. | `BP-127` | Exact module-pad and peripheral-instance table covering external ADC SPI/GDMA and CONVST, W5500, HUB75, USB2, IR RMT, recovery, direct hardware-safe primary outputs, watchdog, straps, RF keepout, and safe-state ownership with no double allocation. |
-| `BP-122` | superseded | ISO7762, ISO7721, isolated SPI, rail separation, and the four-state processor power truth table are not populated on P0. The reviewed records remain historical evidence for a future partition. | Historical dual-processor isolation contract. | None | Superseded by the root-approved ESP32-only architecture decision; external-interface protection remains governed elsewhere. |
-| `BP-123` | blocked | Root reviewed the rewritten ESP32-only contract: one `TPS389033DSER`, one `TPS3431SDRBR`, their selected support passives, and one common `APP_RESET_N` govern ESP32 EN, W5500 reset, protected primary-output enable, and HUB75 blanking. GPIO12 may be serviced only by the aggregate fresh health epoch. Six focused contract tests pass. BP-121 and the five required cold-start, brownout, watchdog, manual-reset, and power-off/backfeed physical capture classes remain incomplete dependencies/evidence. | Close the ESP32 supervisor/watchdog/reset and output-safe-state network. | `BP-121` | Exact MPN/value schematic fragment, reset truth/timing review, clean generated ERC evidence, fail-closed capture protocol, and proof that only fresh acquisition/core/reference/output health can service the watchdog. |
-| `BP-124` | blocked | Root implemented and verified native USB plus six labeled UART0/BOOT_N/EN_RESET/APP_3V3/APP_GND recovery pads. Both populated service headers are DNP; a keyed temporary fixture uses 3.3 V logic, open-drain boot/reset, and no target power. BP-121 remains the incomplete dependency for the final sole-ESP32 pad allocation. | Freeze ESP32 USB, UART, boot, and reset recovery. | `BP-121` | Exact header/test-pad pinout, mating cable identity where used, voltage constraints, de-energized recovery procedure, native-USB recovery, and reversal-prevention plan. |
-| `BP-125` | blocked | Root reviewed the concise ESP32-only processor-support contract. It binds the exact WROOM-1U module, five selected local support rows, reset/boot/USB/recovery boundaries, acquisition, IR, W5500, HUB75 safing, disabled radio, no-flash-while-scoring policy, direct primary-output GPIOs, and explicit rejection of STM32/isolation/SWD/F-RAM/RTC/audio/latch assumptions. Four focused tests pass. BP-121 is still incomplete, and stale dual-MCU footprint artifacts are actively being reconciled before package type-check can pass. | Define and approve the ESP32-only support checklist and schematic inputs. | `BP-121` | Root-reviewed data-sheet checklist and exact ESP32/source/candidate reconciliation with every active rail, strap, recovery, RF, USB, acquisition, Ethernet, HUB75, IR, and safe-output connection accounted for. |
-| `BP-126` | blocked | The TSOP38438 and authenticated anti-replay workflow remain required. Remove the obsolete application-only processor wording while preserving the rule that remote commands cannot create, qualify, clear, or reclassify electrical hits. Final RMT pin and concurrency evidence wait on BP-121 and the optional-peripheral decision. | Reconcile encrypted IR capture and its command-to-scoring safety boundary. | `BP-121`, `BP-145` | Exact RMT-capable input, receiver queue/fault boundary, authentication and replay handoff, and tests proving remote workflow commands cannot enter the normalized electrical-sample interface. |
-| `BP-127` | blocked | Root corrected a substantive paper-model defect found during audit: seven ADS8881 devices shift 126 bits, not 140. At 20 MHz the wire time is 6.3 µs; including the data-sheet maximum 0.71 µs conversion and 1 µs scheduling guard gives 8.01 µs, still twelve complete scans per 100 µs sabre signal. The model now uses five direct hardware-safe output GPIOs and three spare GPIOs. Focused feasibility/allocation tests pass. Dependencies BP-050/BP-100/BP-101/BP-102 and the loaded one-cell plus seven-channel experiment remain incomplete; no paper result receives schematic or fabrication credit. | Prove ESP32-S3-only P0 scoring feasibility and safety boundary. | `BP-050`, `BP-100`, `BP-101`, `BP-102` | Exact ADS8881 SPI/GDMA and CONVST interface, monotonic sampling schedule, scan/timestamp error budget, bounded queue/error model, preliminary pin/resource map, direct hardware-safe primary outputs, watchdog contract, rail budget, and a one-cell falsification experiment under simultaneous Ethernet, HUB75, IR, USB, radio, and flash/cache stress. No paper result receives seven-channel or fabrication credit. |
-
-### Ethernet, display, and application lane
+## Analog, weapon, and primary-output definition
 
 | ID | Status | Latest state | Work unit | Dependencies | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
-| `BP-140` | done | Delivered: Exact W5500 controller and 17-part support network with independent provenance, reset/interrupt endpoints, polling policy, and fail-closed upstream drift checks. | Import the complete W5500 support network from the committed decision register. | `BP-020` | Exact W5500, crystal, load capacitors, feedback/series resistors, EXRES, TOCAP, 1V2O, AVDD/VDD bypass, ferrite, and reset nets. |
-| `BP-141` | done | Delivered: Exact W5500-to-7499011121A MDI polarity/pin map, 100 ohm on-board route plan, LED map, chassis shield boundary, and no-MDI-harness rule. | Close W5500-to-7499011121A MDI and shield wiring. | `BP-140` | Pin-by-pin review, 100 ohm route plan, shield/ESD-return decision, and no MDI harness crossing. |
-| `BP-142` | blocked | Root retained the exact `LMR43620MSC3RPERQ1` 2 A buck and removed the unused PGOOD pull-up because BP-123 owns rail supervision. Commit `fe91804` replaces the stale aggregate `U_APP_REG` BOM placeholder with all ten exact physical references: regulator, inductor, input/local/bootstrap/VCC capacitors, three output capacitors, and discharge resistor. Fifty-eight BOM/rail/footprint tests and package types pass. BP-050/BP-127 and loaded ESP32/AFE startup, transient, current, and thermal evidence remain incomplete dependencies. | Freeze the single ESP32/AFE 3.3 V implementation from the 5 V rail. | `BP-050`, `BP-127` | Exact regulator/support BOM plus loaded startup, transient, RF, acquisition, current, and thermal calculation with separately measurable ESP32 and analog branches. |
-| `BP-143` | done | Root-approved at the pre-order selection boundary: exact Adafruit 2277 panel, 4170 signal cable, 4767 power cable, JST/Samtec mating identities, 16-pin signal map, both power branches, current-rating inputs, drawings/source snapshots, and a fail-closed physical-evidence protocol are frozen. Commit `25754b3` binds real timestamps, calibrated continuity/current/voltage/thermal instruments, artifact hashes, mating/orientation, current, cable drop, temperature, and fit without claiming results. Root re-verification passed the 88-test cross-task set. Actual receipt, board-side fit/continuity, and powered panel measurements remain mandatory BP-502/BP-507 evidence. | Freeze HUB75 connector and panel power mating parts. | `BP-020` | Exact signal/power connector and cable MPNs, pinout, current-rating design inputs, retained source evidence, and fail-closed received-panel measurement protocol. |
-| `BP-144` | blocked | Root reviewed the rewritten sole-ESP32 HUB75 contract: two `SN74AHCT245PWR` buffers cover all 13 signals, sixteen shared defaults and two bypass capacitors replace scattered duplicates, and one `BSS138AKA` plus one shared bias/gate network owns `DISPLAY_ENABLE_N`. It consumes only `APP_RESET_N`; firmware enable, watchdog feedback, panel feedback, and reset authority are prohibited. Five focused tests pass. BP-121/BP-123 and the physical power-off/backfeed/default-state captures remain incomplete dependencies/evidence. | Reconcile the two-buffer reset-safe HUB75 path with the sole ESP32. | `BP-121`, `BP-123`, `BP-143` | Schematic truth table proves black/high-impedance defaults; all 13 signals, pulls, pins, and reset-enable paths are present. |
-| `BP-145` | blocked | Root implemented the zero-option population contract: F-RAM, RTC, secure element, audio, speaker, and external antenna are all DNP, and speculative support parts/stubs are prohibited. ESP32 eFuses plus encrypted NVS own identity/persistence; flash writes are prohibited during scoring and unavailable NVS cannot change hit classification. BP-121/BP-142 remain incomplete dependencies. | Freeze the intentionally minimal P0 peripheral population. | `BP-121`, `BP-142` | Explicit DNP/removal table for F-RAM, RTC, secure element, audio, speaker, and unused expansion; retained eFuse/NVS key, counter, journal, write-timing, wear, and recovery policy. |
-| `BP-146` | blocked | Exact `TSOP38438`, 38 kHz/940 nm assumptions, supply/filter/protection, optical geometry, footprint evidence, and numeric test targets remain selected. Rebind its GPIO, reset, queue, power, and authority claims after BP-126/BP-142/BP-145; do not repeat the manufacturer evidence work. | Reconcile and freeze the encrypted IR receiver path and optical test interface. | `BP-126`, `BP-142`, `BP-145` | Exact receiver, wavelength/carrier, supply/filter/protection, RMT input, optical window, test point, footprint, current budget, queue bounds, and numeric range/angle/light/latency/fault targets. |
+| `BP-100` | backlog | Existing AFE studies remain evidence, but the clean-sheet common-ground topology needs one concise approved circuit. | Freeze one-channel measurement topology. | `BP-020` | Exact excitation, clamp, buffer, ADC, return, ranges, settling, leakage, and fault-current budget. |
+| `BP-101` | backlog | REF5025 is selected; its complete input/output/dynamic-load network is not closed. | Freeze the reference drive and distribution network. | `BP-020` | Exact capacitors, ESR, load, routing, startup, fault, and acquisition-settling evidence. |
+| `BP-102` | backlog | Paper protection evidence exists; clean-sheet unpowered, overload, and recovery behavior must be reconciled. | Freeze weapon-line input and unpowered protection. | `BP-020` | Exact clamps, resistors, energy limits, leakage, back-power prevention, and fault truth table. |
+| `BP-103` | blocked | ADC timing model exists but depends on the final topology and reference drive. | Freeze ADS8881 conversion, CONVST, SPI/GDMA, and sample-order interface. | `BP-100`, `BP-101`, `BP-102` | Seven-device bit count, cadence, timestamp bound, queue bound, overrun behavior, and exact pins. |
+| `BP-104` | backlog | Owner-validated cables are not a blocker; P0 requires only board landings/sockets and mechanical strain relief. | Freeze the OK Fencing weapon-board interface. | `BP-020` | Three labeled plated-through landings per side, one separate piste/ground landing, line map, spacing, probe access, strain anchor, continuity procedure, and optional exact socket disposition. |
+| `BP-105` | blocked | Fixture implementation waits on the final line interface and topology. | Freeze the guarded analog test fixture. | `BP-100`, `BP-102`, `BP-104`, `BP-106` | Physically incompatible normal/fault connections, standards, interlock, calibration, and evidence schema. |
+| `BP-106` | done | Analog test matrix, temperatures, resistance/capacitance points, instruments, and evidence schema are committed. | Maintain the analog characterization matrix. | `BP-020` | Focused validator and test matrix remain aligned with the final topology. |
+| `BP-107` | blocked | V5_ANALOG and the retained negative rail require the incomplete analog rail budget. | Freeze analog positive/negative rail generation and filtering. | `BP-056` | Exact TPS60400/support/filter network, load margin, ripple, startup, and fault behavior. |
+| `BP-108` | backlog | Lamp/buzzer electrical requirements are not yet bounded. | Define primary lamp and buzzer electrical loads. | `BP-020` | Voltage, steady/inrush current, cable, inductive behavior, open/short/reverse, EMC, thermal, and default-off requirements. |
+| `BP-109` | blocked | Driver choice waits on the load envelope. | Select the hardware-safe primary-output driver. | `BP-108` | Exact driver/protection/support MPNs and truth table prove reset/unpowered/default-off behavior independent of firmware. |
+| `BP-110` | blocked | Seven-channel replication waits on the one-channel, reference, protection, acquisition, and analog-rail contracts. | Freeze the named seven-channel analog net map. | `BP-100`, `BP-101`, `BP-102`, `BP-103`, `BP-107` | Every channel/reference/enable/data net is explicit; no generic repeated block can hide swaps. |
+| `BP-111` | blocked | Analog footprint closure waits on the final active reference set. | Close analog, reference, protection, and weapon footprints. | `BP-030`, `BP-104`, `BP-107`, `BP-110` | Every populated analog/weapon reference has approved manufacturer evidence and artwork. |
 
-### Schematic and physical implementation
-
-| ID | Status | Latest state | Work unit | Dependencies | Acceptance evidence |
-| --- | --- | --- | --- | --- | --- |
-| `BP-300` | blocked | Root selected a clean-sheet physical implementation rather than continuing to subtract obsolete circuitry from the dual-MCU board. Git history retains the old design; the canonical schematic will be replaced in place with one ESP32, common-ground AFE, USB-C PD, W5500, HUB75, IR, recovery pads, direct weapon landings, and hardware-safe outputs. It must contain no active STM32, isolation, permanent power telemetry, SWD, F-RAM, RTC, secure element, audio, external antenna, or alternate power selector. BP-035 and the named electrical contracts remain incomplete dependencies. | Integrate one canonical ESP32-only bench schematic. | `BP-035`, `BP-050`, `BP-103`, `BP-104`, `BP-106`, `BP-121`, `BP-123`, `BP-125`, `BP-127`, `BP-141`, `BP-142`, `BP-143`, `BP-144`, `BP-145`, `BP-146` | Schematic source, generated PDF, converged candidate BOM, zero unexplained ERC errors, and independent ESP32/AFE/power review. Every fabrication-critical analog, power, processor, Ethernet, display, encrypted-IR, fixture, output, and recovery input has converged. |
-| `BP-301` | blocked | Blocked on `BP-300`: canonical schematic integration must complete before independent review. | Conduct independent mixed-signal and fault-containment review. | `BP-300` | Findings log closed with reviewer acceptance. |
-| `BP-302` | blocked | Blocked on `BP-300`: canonical schematic integration must complete before probe/link/label freeze. Permanent INA238/V5-shunt telemetry is DNP; calibrated external instruments connect only through reviewed removable links. | Freeze test points, removable links, external-current-measurement interfaces, and labels. | `BP-300`, `BP-106` | Probe map covers every rail, reset, ADC timing/data signal, encrypted-IR interface, analog stage, fixture line, reference, direct primary outputs, Ethernet, and display-enable state. |
-| `BP-303` | blocked | Blocked on `BP-035`, `BP-301`, and `BP-302`: BOM convergence and schematic reviews are incomplete. | Freeze the final prototype order BOM against the accepted schematic. | `BP-035`, `BP-301`, `BP-302` | BOM and schematic reference sets, quantities, MPNs, packages, population/DNP states, footprint evidence, and approved substitutions match exactly; zero populated TBDs remain. |
-| `BP-400` | blocked | Blocked on `BP-301`, `BP-302`, and `BP-303`: review findings, probe plan, and final prototype BOM are incomplete. | Freeze board outline, stack-up, mounting, and placement. | `BP-010`, `BP-301`, `BP-302`, `BP-303` | Dimensioned drawing, fabricator stack-up, placement review, hand/probe clearance, and strain-relief plan. |
-| `BP-401` | blocked | Blocked on `BP-400`: outline, stack-up, placement, and mechanical review are incomplete. | Route analog/reference, ADC timing, clocks, USB-C PD and USB2 service, UART recovery, Ethernet, IR, HUB75, and high-current branches. | `BP-400` | Routed source with reviewed analog/reference and high-current returns, USB/Ethernet differential constraints, RF/IR access, PD/power layout rules, and no unrouted nets. |
-| `BP-402` | blocked | Blocked on `BP-401`: routed board source is incomplete. | Run ERC, DRC, SI/PI, thermal, and fabrication-output review. | `BP-401` | Clean reports or reviewed waivers; Gerber/drill/ODB++, IPC-356, BOM, centroid, assembly, and impedance artifacts share one revision digest. |
-| `BP-403` | blocked | Blocked on `BP-402`: electrical, physical, and fabrication-output review is incomplete. | Perform independent pre-order release review. | `BP-402` | Signed prototype-only release record explicitly excluding production authority. |
-
-### Firmware, assembly, and evidence
+## ESP32, recovery, and application interfaces
 
 | ID | Status | Latest state | Work unit | Dependencies | Acceptance evidence |
 | --- | --- | --- | --- | --- | --- |
-| `BP-500` | blocked | Blocked on `BP-300`: ESP32 board support requires the canonical single-processor schematic. The portable C17 core and its native/WASM targets remain separate from ESP-IDF adapters. | Build the ESP32 board-support and target-neutral scoring adapter. | `BP-121`, `BP-126`, `BP-127`, `BP-300` | Pin/peripheral ownership tests, ADC/GDMA acquisition, direct hardware-safe outputs, watchdog health aggregation, encrypted-IR RMT support, build artifacts, firmware digests, and hardware revision binding. |
-| `BP-501` | blocked | Blocked on `BP-105`, `BP-302`, and `BP-500`: fixture, test-point plan, and firmware support are incomplete. | Implement fixture-safe manufacturing self-test. | `BP-105`, `BP-302`, `BP-500` | Test enumerates rails, reference, reset/watchdog, seven lines, ADC order/timing, lamps, buzzer, encrypted IR, Ethernet, USB, and display; failures cannot be reported as passes. |
-| `BP-502` | blocked | Blocked on `BP-403`: no prototype-only release exists to order and assemble boards. | Assemble and inspect the first boards. | `BP-403` | Serialized as-built BOM, received BP-104 fixture and BP-143 panel/interface identities, X-ray where required, AOI/manual inspection, de-energized board-side mating/orientation/labels, unpowered continuity/isolation, and rework record. |
-| `BP-503` | blocked | Blocked on `BP-105`, `BP-500`, `BP-501`, and `BP-502`: fixture, firmware, self-test, and assembled-board evidence are incomplete. | Conduct the ready-to-apply-power review. | `BP-050`, `BP-105`, `BP-106`, `BP-500`, `BP-501`, `BP-502` | Approved power procedure, current limits, stop conditions, calibrated equipment, fixture-interlock certificate, firmware digests, unpowered inspection, and signed external power permit. |
-| `BP-504` | blocked | Blocked on `BP-503`: ready-to-apply-power review and external power permit are incomplete. | Bring up power with ESP32 and display disconnected. | `BP-503` | Capture successful 20 V/3 A PD negotiation; prove raw 5 V/non-PD attachment cannot energize the post-contract rail; verify no populated alternate input; exercise the USB-disconnected current-limited test-pad procedure; archive rail sequence, ripple, temperature, and stop conditions. |
-| `BP-505` | superseded | The STM32, SWD, isolated link, peer heartbeat, and ESP32-absent bring-up unit is not part of P0. Its reset/fault methods remain historical evidence where applicable. | Historical STM32 and isolated-link bring-up. | None | Superseded by the root-approved ESP32-only architecture decision. |
-| `BP-506` | blocked | Blocked on `BP-504` and `BP-500`: safe power bring-up and ESP32 board support are incomplete. | Bring up ESP32 scoring acquisition, safe outputs, encrypted IR, Ethernet, USB service, and recovery. | `BP-504`, `BP-500`, `BP-141`, `BP-146` | Capture ADC cadence/order/overflow, core handoff, output blanking, USB Serial/JTAG, UART/boot recovery, reset/brownout/watchdog, NVS write exclusion, encrypted-IR security/optical behavior, W5500 traffic/faults, and power-off/backfeed results. |
-| `BP-507` | blocked | Blocked on `BP-504`: safe power bring-up must precede purchased-panel validation. | Bring up HUB75 with the purchased panel. | `BP-504`, `BP-144` | Record received panel/cable identities, fit and mating orientation, all 16 signal-continuity paths, both power branches, blank/reset behavior, display patterns, refresh, full-white current, inrush, cable drop, ghosting, connector temperature, and calibrated evidence under the BP-143 protocol. |
-| `BP-508` | blocked | Blocked on `BP-504`: safe power bring-up must precede analog characterization. | Execute one-channel analog characterization before seven-channel scoring. | `BP-504`, `BP-106` | Complete calibrated archive; unavailable conditions remain unavailable. |
-| `BP-509` | blocked | Blocked on `BP-506` and `BP-508`: ESP32 acquisition/output and analog bring-up evidence is incomplete. | Execute all-channel rules and interaction corpus. | `BP-506`, `BP-508` | Foil, epee, sabre, simultaneous-event, shorts, grounds, lockout, timing-boundary, native/ESP/WASM parity, every encrypted-IR command and state guard, loaded/fresh bout state, replay rejection, and failure-case results. |
-| `BP-510` | blocked | Blocked on `BP-506`, `BP-507`, and `BP-509`: integrated subsystem evidence is incomplete. | Run integrated stress and recovery. | `BP-506`, `BP-507`, `BP-509` | Panel load, Ethernet traffic, encrypted IR venue-light/flood/interference, radio when equipped, processor resets, cable faults, and 50 C bench-thermal record. The accepted archive must cover all six BP-123 reset classes and the BP-146 optical/fault cases with calibrated instruments, immutable artifacts, and independent review. |
-| `BP-511` | blocked | Blocked on `BP-510`: integrated stress/recovery archive is incomplete. | Conduct prototype completion review. | `BP-510` | Accepted evidence index, known-limit register, production-transfer recommendations, and explicit remaining production gates. |
+| `BP-120` | backlog | WROOM-1U without an antenna is invalid for the stated P0 boundary. | Select the exact integrated-antenna ESP32-S3 module. | `BP-020` | Exact orderable module, flash/PSRAM, RF keepout, lifecycle, power, package, and migration record replace every 1U assumption. |
+| `BP-121` | blocked | Existing GPIO work is reusable but must be regenerated for the selected module and final peripherals. | Freeze the complete ESP32 pad/peripheral allocation. | `BP-103`, `BP-109`, `BP-120`, `BP-126`, `BP-143` | Every module pad has one owner; ADC, W5500, HUB75, IR, USB, UART, reset, watchdog, and outputs have no collision. |
+| `BP-122` | superseded | Processor-to-processor isolation is not populated on P0. | Historical dual-MCU isolation contract. | None | No P0 acceptance credit. |
+| `BP-123` | blocked | Single-supervisor/watchdog contract exists but must bind the final ESP32 and output-enable nets. | Freeze reset, brownout, watchdog, and safe-enable network. | `BP-109`, `BP-120`, `BP-121` | Exact network and truth table cover cold start, brownout, watchdog, manual reset, and power-off/backfeed. |
+| `BP-124` | blocked | Populated service headers were removed; final pads depend on the module pin map. | Freeze native USB, UART0, BOOT, and reset recovery access. | `BP-120`, `BP-121`, `BP-123` | Exact pad map, levels, mating fixture, recovery procedure, labels, and no powered-header ambiguity. |
+| `BP-125` | blocked | Processor checklist has been simplified but still names the obsolete 1U module. | Reconcile the complete ESP32 support network. | `BP-120`, `BP-121`, `BP-123`, `BP-124` | Exact local bypass, EN/BOOT, RF keepout, unused pads, USB, recovery, and schematic sign-off. |
+| `BP-126` | backlog | TSOP38438/RMT direction is selected; queue and authority boundary remain to be frozen. | Freeze the encrypted-IR hardware/firmware interface. | `BP-020` | Exact RMT input, reset/default behavior, bounded queue, authentication handoff, replay failure, and no electrical-hit authority. |
+| `BP-127` | blocked | Paper timing shows 126 serial bits and an 8.01 us scan, but loaded falsification remains. | Prove ESP32-only acquisition feasibility. | `BP-057`, `BP-103`, `BP-121`, `BP-123` | One-cell and seven-channel tests under Ethernet, HUB75, IR, USB, radio, flash/cache, reset, and queue stress fail unavailable. |
+| `BP-128` | blocked | Direct GPIO outputs are planned; final pins and driver are incomplete. | Freeze direct output GPIO and hardware-permit ownership. | `BP-109`, `BP-121`, `BP-123` | Five outputs, permit/reset gating, inactive levels, startup order, and fault states are exact. |
+| `BP-140` | done | Exact W5500 and 17-part support network are committed. | Maintain the W5500 support network. | `BP-020` | Exact controller, crystal, analog supply, bypass, reset, interrupt/polling, and support rows. |
+| `BP-141` | done | W5500-to-MagJack MDI, polarity, 100 Ohm route plan, LEDs, and shield boundary are committed. | Maintain Ethernet MDI and shield wiring. | `BP-140` | Pin-by-pin map and shield/ESD-return rule remain exact. |
+| `BP-142` | done | Exact LMR43620 3.3 V implementation and ten physical BOM rows are committed; physical load evidence moved to BP-623/BP-631. | Maintain the application 3.3 V contract. | `BP-054` | Exact schematic inputs and calculation remain verified. |
+| `BP-143` | done | Panel, signal/power cables, board connector identities, pin map, and physical-evidence protocol are committed. | Maintain HUB75 panel and mating selections. | `BP-020` | Exact selected identities and received-part protocol remain verified. |
+| `BP-144` | blocked | ESP32-only two-buffer safing contract is implemented and tested, but final reset ownership depends on BP-123. | Freeze reset-safe HUB75 signal path. | `BP-123`, `BP-143` | All 13 signals, defaults, bypass, shared enable gate, and black/high-impedance truth table. |
+| `BP-145` | blocked | Zero-option peripheral population is implemented, but the module correction in BP-120 must be reconciled before closure. | Freeze the intentionally minimal peripheral population. | `BP-120`, `BP-142` | F-RAM, RTC, secure element, audio, speaker, external antenna assembly, and expansion remain DNP. |
+| `BP-146` | blocked | Receiver MPN/filter/optical targets are reusable but must bind the final GPIO, rail, and queue contract. | Freeze the complete TSOP38438 receive path. | `BP-121`, `BP-126`, `BP-142`, `BP-145` | Exact receiver/filter/protection/test point, optical window, current, latency, range, angle, flood, and fault targets. |
+| `BP-147` | blocked | Connector selection waits on the primary-output load definition. | Select the lamp/buzzer connector and cable pinout. | `BP-108` | Exact connector/mate/terminals, five outputs plus return, current rating, keying, strain relief, and continuity plan. |
+| `BP-148` | blocked | Footprints wait on the complete active processor/application set. | Close ESP32, reset, recovery, output, Ethernet, HUB75, and IR footprints. | `BP-030`, `BP-125`, `BP-128`, `BP-141`, `BP-143`, `BP-146`, `BP-147` | Every populated non-analog reference has approved evidence/artwork and every removed option is absent or DNP. |
+| `BP-149` | blocked | Final order-candidate population waits on analog and application footprint closure. | Converge the clean-sheet candidate BOM. | `BP-057`, `BP-111`, `BP-148` | Zero populated TBDs; exact references, quantities, MPNs, packages, sources, footprints, and DNPs agree. |
 
-## Convergence gates and dependency DAG
+## Clean-sheet schematic
 
-There is no single shortest chain. Order release requires all fabrication lanes
-to converge:
+| ID | Status | Latest state | Work unit | Dependencies | Acceptance evidence |
+| --- | --- | --- | --- | --- | --- |
+| `BP-320` | backlog | Clean-sheet replacement is approved; no new canonical source exists yet. | Create the new canonical schematic project and sheet hierarchy. | `BP-000`, `BP-040` | One canonical source, title/revision, global nets, rule classes, and no imported obsolete circuitry. |
+| `BP-321` | blocked | Waiting on the final USB-C/eFuse contract. | Draw USB-C, protection, PD, and eFuse sheet. | `BP-051`, `BP-052`, `BP-320` | Exact pins, straps, capacitors, protection, voltage window, and test access pass ERC. |
+| `BP-322` | blocked | Waiting on final V5 and branch power contracts. | Draw V5, 3.3 V, display, and branch-measurement sheet. | `BP-053`, `BP-054`, `BP-055`, `BP-057`, `BP-320` | Exact converters, rails, links, fuses, disconnects, and no telemetry/alternate input pass ERC. |
+| `BP-323` | blocked | Waiting on processor/reset/recovery contracts. | Draw ESP32, support, reset/watchdog, and recovery sheet. | `BP-123`, `BP-124`, `BP-125`, `BP-128`, `BP-320` | Exact module/pads/support/safe enables pass ERC with no obsolete MCU nets. |
+| `BP-324` | blocked | W5500 contracts are done; sheet waits on the project scaffold. | Draw W5500, MagJack, shield, and Ethernet support sheet. | `BP-140`, `BP-141`, `BP-320` | Exact support, MDI polarity, LEDs, reset, and shield nets pass ERC. |
+| `BP-325` | blocked | Waiting on the complete receiver contract. | Draw encrypted-IR receiver sheet. | `BP-146`, `BP-320` | Exact filter, protection, RMT net, test point, and optical placement attributes pass ERC. |
+| `BP-326` | blocked | Waiting on HUB75 safing acceptance. | Draw HUB75 signal and panel-power interface sheet. | `BP-055`, `BP-143`, `BP-144`, `BP-320` | Thirteen buffered signals, blanking defaults, connectors, and protected power pass ERC. |
+| `BP-327` | blocked | Waiting on driver and connector selections. | Draw primary lamp/buzzer output sheet. | `BP-109`, `BP-128`, `BP-147`, `BP-320` | Five protected outputs, shared return, permit/reset gate, and connector pass ERC. |
+| `BP-328` | blocked | Waiting on reference and analog rail contracts. | Draw reference and analog-rail sheet. | `BP-101`, `BP-107`, `BP-320` | Exact reference, bipolar/positive rails, filters, returns, and test access pass ERC. |
+| `BP-329` | blocked | Waiting on the one-channel measurement and protection contracts. | Draw one complete weapon acquisition channel. | `BP-100`, `BP-102`, `BP-103`, `BP-328` | Named input, clamps, buffer, ADC, enable, reference, return, and probe nets pass ERC. |
+| `BP-330` | blocked | Waiting on the seven-channel map and approved one-channel sheet. | Replicate and explicitly name all seven acquisition channels. | `BP-110`, `BP-329` | Channel-by-channel review proves no pin, protection, reference, or ADC-order swaps. |
+| `BP-331` | blocked | Waiting on the weapon landing definition. | Draw weapon wire landings, probes, and strain-relief features. | `BP-104`, `BP-320` | Both sides have exact labels, pin map, spacing, continuity access, and mechanical anchors. |
+| `BP-332` | blocked | Individual sheets are incomplete. | Add global test points, removable links, labels, and cross-sheet interfaces. | `BP-321`, `BP-322`, `BP-323`, `BP-324`, `BP-325`, `BP-326`, `BP-327`, `BP-330`, `BP-331` | Probe map covers every critical rail, reset, timing, analog, output, IR, Ethernet, USB, and display state. |
+| `BP-333` | blocked | Waiting on complete sheet integration. | Clear schematic ERC and intentional-waiver log. | `BP-332` | Zero unexplained ERC errors; every waiver has a named reason and owner. |
+| `BP-334` | blocked | Waiting on ERC-clean schematic and candidate BOM. | Reconcile schematic references against the candidate BOM. | `BP-149`, `BP-333` | Exact one-to-one reference, quantity, MPN, package, population, and footprint match. |
+| `BP-335` | blocked | Waiting on an ERC-clean, BOM-reconciled schematic. | Conduct root mixed-signal, power, and fault-containment review. | `BP-334` | Findings log is closed and root approves the schematic for PCB implementation only. |
+
+## PCB placement, routing, and order release
+
+| ID | Status | Latest state | Work unit | Dependencies | Acceptance evidence |
+| --- | --- | --- | --- | --- | --- |
+| `BP-420` | blocked | Waiting on the zone drawing and approved schematic. | Freeze outline, stack-up, mounting, and fabrication rules. | `BP-010`, `BP-335` | Dimensioned outline, stack-up, impedance, copper/clearance, mounting, and edge rules. |
+| `BP-421` | blocked | Waiting on the physical rules. | Place board-edge connectors, weapon landings, IR window, and strain relief. | `BP-420` | Mechanical clearances, mating access, RF/IR access, and cable loads are reviewed. |
+| `BP-422` | blocked | Waiting on connector placement. | Place USB-C PD, eFuse, V5, 3.3 V, and display-power stages. | `BP-421` | High-current loops, thermal copper, branch links, disconnect, and probe access match data-sheet guidance. |
+| `BP-423` | blocked | Waiting on connector and power placement. | Place reference, analog rails, and seven acquisition channels. | `BP-421`, `BP-422` | Symmetry, quiet return, guard/spacing, replaceability, and probe clearance are reviewed. |
+| `BP-424` | blocked | Waiting on analog/power placement. | Place ESP32, reset/recovery, W5500, HUB75, IR, and outputs. | `BP-422`, `BP-423` | Module RF keepout, clocks, reset, interfaces, thermal paths, and test access are reviewed. |
+| `BP-425` | blocked | Waiting on complete placement. | Review planes, return paths, partitions, and copper-current capacity. | `BP-424` | APP_GND, SCORING_SGND connection, shield/ESD return, display return, and high-current widths are approved. |
+| `BP-426` | blocked | Waiting on placement/return review. | Route USB-C PD, eFuse, converters, and high-current display power. | `BP-425` | Data-sheet critical loops, Kelvin/sense routes, thermal vias, and branch returns pass review. |
+| `BP-427` | blocked | Waiting on placement/return review. | Route reference, analog rails, acquisition channels, and ADC timing. | `BP-425` | Guarding, symmetry, quiet returns, CONVST/SPI timing, and crosstalk constraints pass review. |
+| `BP-428` | blocked | Waiting on placement/return review. | Route native USB2 and recovery signals. | `BP-425` | Controlled USB pair, matched series parts, ESD placement, UART/BOOT/reset access, and no stubs. |
+| `BP-429` | blocked | Waiting on placement/return review. | Route W5500 clock, SPI, MDI pairs, LEDs, and shield return. | `BP-425` | MDI impedance/polarity, crystal loop, SPI, shield/ESD, and MagJack placement pass review. |
+| `BP-430` | blocked | Waiting on placement/return review. | Route HUB75, encrypted IR, primary outputs, and remaining low-speed nets. | `BP-425` | Default-safe controls, optical input, output fault separation, and panel interfaces pass review. |
+| `BP-431` | blocked | Critical routing is incomplete. | Finish remaining nets, test access, silkscreen, and assembly markings. | `BP-426`, `BP-427`, `BP-428`, `BP-429`, `BP-430` | Zero unrouted nets; polarity, pin 1, DNP, voltage, warning, and connector labels are legible. |
+| `BP-432` | blocked | Waiting on the fully routed board. | Run DRC, connectivity, SI/PI, thermal, and manufacturability checks. | `BP-431` | Zero unexplained DRC/unrouted errors; reviewed impedance, voltage drop, thermal, and assembly reports. |
+| `BP-433` | blocked | Waiting on clean board checks. | Generate one revision-bound fabrication and assembly package. | `BP-432` | Gerber/drill or ODB++, IPC-356, BOM, centroid, drawings, stack-up, renders, and digests agree. |
+| `BP-434` | blocked | Waiting on complete release artifacts. | Conduct independent prototype-only pre-order review. | `BP-433` | Root closes findings and explicitly grants prototype-order authority while excluding production authority. |
+| `BP-435` | blocked | Waiting on prototype-only release. | Order boards and components and record supplier revisions. | `BP-434` | Purchase package, quantities, substitutions, supplier acknowledgements, and immutable release digest are archived. |
+
+## Firmware and pre-order test assets
+
+| ID | Status | Latest state | Work unit | Dependencies | Acceptance evidence |
+| --- | --- | --- | --- | --- | --- |
+| `BP-520` | blocked | Waiting on final pad ownership. | Create ESP-IDF board definition and generated pin ownership table. | `BP-121` | Build-time collisions fail; schematic/pin-table digest binds the hardware revision. |
+| `BP-521` | backlog | Portable C17 core already has native/WASM targets; the ESP-IDF boundary must remain adapter-only. | Define target-neutral HAL interfaces for time, acquisition, outputs, persistence, and diagnostics. | `BP-000` | C interfaces contain no ESP-IDF, wall-clock, network, display, or remote-control scoring authority. |
+| `BP-522` | blocked | Waiting on ADC and board definitions. | Implement ADS8881 CONVST/SPI/GDMA acquisition HAL. | `BP-103`, `BP-520`, `BP-521` | Ordered scans, monotonic timestamps, bounded queues, overrun/unavailable states, and unit tests. |
+| `BP-523` | blocked | Waiting on the HAL boundary and acquisition. | Integrate the portable C17 core on ESP32. | `BP-521`, `BP-522` | Native, ESP32-host, and WASM vectors produce byte-identical canonical decisions. |
+| `BP-524` | blocked | Waiting on reset/output ownership. | Implement watchdog health aggregation and reset-safe output permit. | `BP-123`, `BP-128`, `BP-520` | Only fresh acquisition/core/reference/output health services watchdog; stale states de-energize outputs. |
+| `BP-525` | blocked | Waiting on output hardware and board definition. | Implement primary lamp/buzzer HAL. | `BP-128`, `BP-520`, `BP-524` | Startup/reset/fault states remain off and requested outputs are bounded and observable. |
+| `BP-526` | blocked | Waiting on board definition. | Implement W5500 Ethernet HAL and fault recovery. | `BP-140`, `BP-141`, `BP-520` | Link loss, malformed traffic, congestion, and reset cannot affect acquisition/scoring authority. |
+| `BP-527` | blocked | Waiting on HUB75 contract and board definition. | Implement HUB75 renderer and hardware blanking control. | `BP-144`, `BP-520`, `BP-524` | Reset/brownout/absence stays blank; rendering cannot block or alter scoring. |
+| `BP-528` | blocked | Waiting on IR hardware/interface contracts. | Implement TSOP38438 RMT capture and encrypted-remote handoff. | `BP-126`, `BP-146`, `BP-520` | Authentication, replay, queue, latency, flood, reset, and command-authority tests pass. |
+| `BP-529` | blocked | Waiting on board definition and recovery contract. | Implement native USB diagnostics and UART/BOOT recovery. | `BP-124`, `BP-520` | Recovery works with scoring unavailable, never bypasses signed firmware policy, and is fixture-testable. |
+| `BP-530` | blocked | Waiting on implemented HALs. | Implement fixture-safe self-test. | `BP-522`, `BP-524`, `BP-525`, `BP-526`, `BP-527`, `BP-528`, `BP-529` | Enumerates rails, reference, reset, seven lines, ADC order, outputs, IR, Ethernet, USB, and display; failures cannot report pass. |
+| `BP-531` | blocked | Waiting on acquisition and subsystem implementations. | Build deterministic loaded-stress and fault-injection harness. | `BP-522`, `BP-526`, `BP-527`, `BP-528` | Simultaneous traffic/display/IR/USB/flash/reset/queue stress proves timing bounds and fail-unavailable behavior. |
+| `BP-532` | blocked | Waiting on complete firmware/test assets. | Run firmware coverage, static analysis, parity, and artifact gates. | `BP-523`, `BP-530`, `BP-531` | Core C/C++ remains 100% line/function/branch; other first-party C/C++ remains at least 80%; build digests are archived. |
+| `BP-533` | blocked | Waiting on fixture definition and board test access. | Build the guarded bench fixture and harness. | `BP-105`, `BP-332`, `BP-530` | Interlock, calibration, continuity, fault injection, connector incompatibility, and evidence capture are verified. |
+
+## Assembly and physical evidence
+
+| ID | Status | Latest state | Work unit | Dependencies | Acceptance evidence |
+| --- | --- | --- | --- | --- | --- |
+| `BP-620` | blocked | No board has been ordered under the clean-sheet release. | Receive, serialize, and inspect boards/components. | `BP-435` | As-built BOM, substitutions, orientation, AOI/manual/X-ray findings, and rework log. |
+| `BP-621` | blocked | Waiting on assembled boards and fixture. | Run unpowered continuity, resistance, isolation, and mating checks. | `BP-533`, `BP-620` | Every rail, weapon line, connector, polarity, shield, reset, and output default passes calibrated checks. |
+| `BP-622` | blocked | Waiting on unpowered inspection. | Conduct ready-to-apply-power review. | `BP-532`, `BP-621` | Current limits, stop conditions, calibrated equipment, firmware digest, fixture certificate, and signed permit. |
+| `BP-623` | blocked | Waiting on power permit. | Bring up USB-C PD, eFuse, V5, 3.3 V, and analog/reference rails with loads disconnected. | `BP-622` | PD negotiation, raw-5 V denial, ramp, ripple, current limit, shutdown, temperature, and backfeed captures. |
+| `BP-624` | blocked | Waiting on stable rails. | Bring up ESP32 reset, USB, UART recovery, watchdog, and safe outputs. | `BP-623` | Cold start, brownout, manual reset, watchdog, recovery, power-off, and default-off captures. |
+| `BP-625` | blocked | Waiting on ESP32 bring-up. | Bring up W5500 Ethernet. | `BP-624` | Link, throughput, reset, cable fault, congestion, and power evidence. |
+| `BP-626` | blocked | Waiting on stable rails and ESP32 bring-up. | Bring up HUB75 with the purchased panel. | `BP-623`, `BP-624` | Fit, continuity, blank/reset, patterns, refresh, inrush, full-white current, cable drop, ghosting, and temperature. |
+| `BP-627` | blocked | Waiting on ESP32 and IR firmware bring-up. | Validate encrypted IR optical and security behavior. | `BP-624`, `BP-528` | Range, angle, carrier, venue light, flood/interference, latency, queue, authentication, replay, reset, and power-off evidence. |
+| `BP-628` | blocked | Waiting on stable analog rails and fixture. | Characterize one weapon acquisition channel. | `BP-623`, `BP-533` | Complete BP-106 matrix for accuracy, settling, leakage, overload, recovery, temperature, and unavailable states. |
+| `BP-629` | blocked | Waiting on one-channel acceptance. | Characterize all seven channels and channel interactions. | `BP-628` | Channel order, crosstalk, simultaneous events, grounds, shorts, open lines, timing, and replication evidence. |
+| `BP-630` | blocked | Waiting on acquisition and output bring-up. | Validate lamp/buzzer outputs under normal and fault loads. | `BP-624`, `BP-629` | Voltage/current, inrush, short/open, inductive behavior, cable drop, EMC observations, temperature, and default-off evidence. |
+| `BP-631` | blocked | Waiting on all subsystems. | Run integrated scoring, parity, stress, recovery, and thermal corpus. | `BP-625`, `BP-626`, `BP-627`, `BP-629`, `BP-630` | Foil/epee/sabre corpus, native/ESP/WASM parity, remote workflows, 50 C thermal, resets, traffic, display, and fault stress. |
+| `BP-632` | blocked | Waiting on integrated evidence. | Resolve findings and issue the as-tested hardware/firmware revision. | `BP-631` | Every finding is fixed, accepted with a bounded limitation, or converted into an explicit production task. |
+| `BP-633` | blocked | Waiting on closed findings. | Conduct prototype completion and production-transfer review. | `BP-632` | Accepted evidence index, known-limit register, architecture recommendations, and explicit remaining certification/production gates. |
+
+## Dependency summary
 
 ```text
-BP-000 -> BP-020 -> BP-030
-
-analog:     BP-100 -> BP-101/BP-102 -> BP-103 -> BP-104/BP-106 -> BP-031
-power:      BP-020 -> BP-050 -> BP-127
-processor:  BP-127 -> BP-121 -> BP-123/BP-124/BP-125           -> BP-032
-peripheral: BP-050 + BP-140 -> BP-141/BP-142/BP-143
-                    BP-121/BP-123 -> BP-144
-                    BP-121/BP-142 -> BP-145 -> BP-126 -> BP-146 -> BP-033
-connectors: BP-050/BP-104/BP-124/BP-141/BP-143                 -> BP-034
-
-BP-031/BP-032/BP-033/BP-034 -> BP-035 lane-BOM convergence
-BP-035 + all electrical contracts -> BP-300 -> BP-301/BP-302
-BP-035/BP-301/BP-302 -> BP-303 final BOM freeze
-BP-010/BP-301/BP-302/BP-303 -> BP-400 -> BP-401 -> BP-402 -> BP-403
+power:       BP-051 -> BP-052 -> BP-053 -> BP-057
+             BP-054/BP-055/BP-056 --------^
+analog:      BP-100/BP-101/BP-102 -> BP-103 -> BP-110 -> BP-111
+processor:   BP-120 -> BP-121 -> BP-123/BP-124/BP-125 -> BP-127/BP-128
+peripheral:  BP-140/BP-141, BP-143/BP-144, BP-126/BP-146, BP-108/BP-109/BP-147
+BOM:         BP-057 + BP-111 + BP-148 -> BP-149
+schematic:   BP-320 -> BP-321..BP-332 -> BP-333 -> BP-334 -> BP-335
+PCB:         BP-010 + BP-335 -> BP-420 -> BP-421..BP-431 -> BP-432 -> BP-433 -> BP-434 -> BP-435
+firmware:    BP-521 + frozen interfaces -> BP-520/BP-522..BP-531 -> BP-532
+physical:    BP-435/BP-533 -> BP-620 -> BP-621 -> BP-622 -> BP-623..BP-631 -> BP-632 -> BP-633
 ```
 
-`BP-403` is the prototype-order gate. Automated fixture construction and
-bring-up firmware may proceed in parallel where useful, but neither is required
-to order the bare/assembled prototype. After order release:
+## Release definitions
 
-```text
-BP-403 -> BP-502 assembled-board inspection
-BP-403 + BP-104/BP-106 -> BP-105 automated fixture
-BP-300 -> BP-500 -> BP-501 ESP32 firmware/self-test
-BP-050/BP-105/BP-106/BP-500/BP-501/BP-502 -> BP-503 power permit
-BP-503 -> BP-504 ... BP-511
-```
+`BP-434` is the only prototype-order authority. It requires an exact
+order-candidate BOM, approved footprints, root-approved schematic, clean
+layout checks, and one revision-bound fabrication package. It does not require
+measurements that can only be obtained from the ordered board.
 
-No lane may bypass analog closure, exact selections, footprint evidence, final
-BOM convergence, schematic/ERC, layout/DRC, or independent release review.
-Pre-order tasks accept only design evidence that can exist before fabrication:
-exact identities, primary sources or explicit CAD dispositions, reviewed
-artwork/orientation, calculation and truth-table evidence, and fail-closed
-physical-test protocols. Received-part, assembled-board, powered, thermal, and
-optical results remain mandatory under `BP-105` and `BP-502` through `BP-510`;
-they cannot be prerequisites for ordering the hardware needed to obtain them.
-
-## Definition of prototype-ready
-
-The design is **prototype-ready to order** only when all of the following are
-true:
-
-1. Planning and electrical tasks `BP-000` through `BP-106` are accepted except
-   post-order fixture-build task `BP-105`; active ESP32 tasks `BP-121` and
-   `BP-123` through `BP-127`, peripheral tasks `BP-140` through `BP-146`, and
-   implementation tasks `BP-300` through `BP-403` are accepted with no open
-   fabrication-critical finding. Superseded BP-120/BP-122/BP-505 records grant
-   no P0 acceptance credit.
-2. `BP-303` proves every populated reference has an exact orderable MPN, approved footprint,
-   manufacturer drawing/CAD digest, assembly orientation, and independently
-   reviewed artwork. The order BOM has no populated `TBD`; every optional
-   reference has an explicit DNP state.
-3. The analog topology and REF5025 load network have closed analytical and
-   coupon evidence for the intended first-board experiment; no missing support
-   part is represented as present.
-4. The schematic has zero unexplained ERC errors, the PCB has zero unexplained
-   DRC/unrouted errors, and stack-up, impedance, analog/reference return paths,
-   high-current copper, thermals, and probe access are reviewed.
-5. Exact fixture, USB-C power/service, ESP32 UART/boot, Ethernet, HUB75, panel,
-   safe primary-output latch, and BP-146 encrypted-IR receiver drawings and
-   physical-validation procedures are frozen, and normal versus guarded/fault
-   connections are physically incompatible by design where required. Received
-   sample and powered-behavior results remain post-order gates. STM32,
-   processor isolation, isolated-link power, SWD, alternate power input,
-   F-RAM, RTC, secure element, audio, speaker, and external antenna are absent
-   from the populated P0 BOM.
-6. The test matrix, fixture behavior, evidence schemas, current-limit procedure,
-   and stop conditions are frozen. Automated fixture construction and executable
-   bring-up firmware may continue after order release.
-7. `BP-403` records an independent **prototype-only** order release that repeats the
-   exclusions in this document.
-
-The assembled board is **ready to apply power** only after `BP-503` passes. At
-that gate the board has passed unpowered inspection, the automated fixture and
-interlock are complete, current limits and stop conditions are loaded, required
-equipment calibrations are current, board-bound firmware/self-test artifacts
-exist, and a signed external power permit has been issued. Board arrival or a
-clean continuity test alone is not permission to energize it.
-
-The assembled system is **prototype-complete** only after `BP-504` through
-`BP-511` pass. That outcome permits production architecture decisions and a
-three-board transfer review. It does not authorize an enclosure, certification,
-factory tooling, final DFM, or production fabrication.
-
+`BP-622` is the only apply-power authority. `BP-633` is the only
+prototype-complete authority. Neither grants production fabrication,
+certification, enclosure, final DFM, factory programming, or FIE homologation.

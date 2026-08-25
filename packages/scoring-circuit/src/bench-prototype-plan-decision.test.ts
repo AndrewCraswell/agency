@@ -17,7 +17,7 @@ describe("BP-000 bench prototype plan decision", () => {
     expect(benchPrototypePlanDecision.approval).toEqual({
       preparedBy: "implementation-agent",
       finalReviewer: rootFinalReviewerRole,
-      reviewedAtUtc: "2026-08-24T00:00:00.000Z",
+      reviewedAtUtc: "2026-08-25T21:55:53.000Z",
       state: "approved"
     })
     expect(benchPrototypePlanDecision.lanes).toHaveLength(6)

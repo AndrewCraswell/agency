@@ -11,13 +11,15 @@ export const benchPrototypePlanTaskIds = [
   "BP-010",
   "BP-020",
   "BP-030",
-  "BP-031",
-  "BP-032",
-  "BP-033",
-  "BP-034",
-  "BP-035",
   "BP-040",
   "BP-050",
+  "BP-051",
+  "BP-052",
+  "BP-053",
+  "BP-054",
+  "BP-055",
+  "BP-056",
+  "BP-057",
   "BP-100",
   "BP-101",
   "BP-102",
@@ -25,6 +27,11 @@ export const benchPrototypePlanTaskIds = [
   "BP-104",
   "BP-105",
   "BP-106",
+  "BP-107",
+  "BP-108",
+  "BP-109",
+  "BP-110",
+  "BP-111",
   "BP-120",
   "BP-121",
   "BP-122",
@@ -32,6 +39,8 @@ export const benchPrototypePlanTaskIds = [
   "BP-124",
   "BP-125",
   "BP-126",
+  "BP-127",
+  "BP-128",
   "BP-140",
   "BP-141",
   "BP-142",
@@ -39,26 +48,69 @@ export const benchPrototypePlanTaskIds = [
   "BP-144",
   "BP-145",
   "BP-146",
-  "BP-300",
-  "BP-301",
-  "BP-302",
-  "BP-303",
-  "BP-400",
-  "BP-401",
-  "BP-402",
-  "BP-403",
-  "BP-500",
-  "BP-501",
-  "BP-502",
-  "BP-503",
-  "BP-504",
-  "BP-505",
-  "BP-506",
-  "BP-507",
-  "BP-508",
-  "BP-509",
-  "BP-510",
-  "BP-511"
+  "BP-147",
+  "BP-148",
+  "BP-149",
+  "BP-320",
+  "BP-321",
+  "BP-322",
+  "BP-323",
+  "BP-324",
+  "BP-325",
+  "BP-326",
+  "BP-327",
+  "BP-328",
+  "BP-329",
+  "BP-330",
+  "BP-331",
+  "BP-332",
+  "BP-333",
+  "BP-334",
+  "BP-335",
+  "BP-420",
+  "BP-421",
+  "BP-422",
+  "BP-423",
+  "BP-424",
+  "BP-425",
+  "BP-426",
+  "BP-427",
+  "BP-428",
+  "BP-429",
+  "BP-430",
+  "BP-431",
+  "BP-432",
+  "BP-433",
+  "BP-434",
+  "BP-435",
+  "BP-520",
+  "BP-521",
+  "BP-522",
+  "BP-523",
+  "BP-524",
+  "BP-525",
+  "BP-526",
+  "BP-527",
+  "BP-528",
+  "BP-529",
+  "BP-530",
+  "BP-531",
+  "BP-532",
+  "BP-533",
+  "BP-620",
+  "BP-621",
+  "BP-622",
+  "BP-623",
+  "BP-624",
+  "BP-625",
+  "BP-626",
+  "BP-627",
+  "BP-628",
+  "BP-629",
+  "BP-630",
+  "BP-631",
+  "BP-632",
+  "BP-633"
 ] as const
 
 export type BenchPrototypeTaskId = (typeof benchPrototypePlanTaskIds)[number]
@@ -76,96 +128,54 @@ type BenchPrototypeLaneDefinition = {
 const laneDefinitions = [
   {
     id: "A",
-    name: "architecture and schematic control",
+    name: "architecture, power contracts, and schematic control",
     owner: "architecture-and-schematic-owner",
     reviewer: rootFinalReviewerRole
   },
   {
     id: "B",
-    name: "analog and weapon fixture",
+    name: "analog, weapon interface, and fixture",
     owner: "analog-and-weapon-fixture-owner",
     reviewer: rootFinalReviewerRole
   },
   {
     id: "C",
-    name: "processors and isolation",
-    owner: "processors-and-isolation-owner",
+    name: "ESP32, acquisition, reset, and recovery",
+    owner: "esp32-acquisition-and-recovery-owner",
     reviewer: rootFinalReviewerRole
   },
   {
     id: "D",
-    name: "Ethernet, display, and application I/O",
+    name: "Ethernet, display, encrypted IR, and outputs",
     owner: "ethernet-display-and-application-io-owner",
     reviewer: rootFinalReviewerRole
   },
   {
     id: "E",
-    name: "physical bench design",
+    name: "physical board implementation",
     owner: "physical-bench-design-owner",
     reviewer: rootFinalReviewerRole
   },
   {
     id: "F",
-    name: "firmware and test assets",
+    name: "firmware, fixture software, and physical evidence",
     owner: "firmware-and-test-assets-owner",
     reviewer: rootFinalReviewerRole
   }
 ] as const satisfies readonly BenchPrototypeLaneDefinition[]
 
-const taskAssignments = [
-  ["BP-000", "A"],
-  ["BP-010", "E"],
-  ["BP-020", "A"],
-  ["BP-030", "A"],
-  ["BP-031", "B"],
-  ["BP-032", "C"],
-  ["BP-033", "D"],
-  ["BP-034", "B"],
-  ["BP-035", "A"],
-  ["BP-040", "A"],
-  ["BP-050", "A"],
-  ["BP-100", "B"],
-  ["BP-101", "B"],
-  ["BP-102", "B"],
-  ["BP-103", "B"],
-  ["BP-104", "B"],
-  ["BP-105", "B"],
-  ["BP-106", "B"],
-  ["BP-120", "C"],
-  ["BP-121", "C"],
-  ["BP-122", "C"],
-  ["BP-123", "C"],
-  ["BP-124", "C"],
-  ["BP-125", "C"],
-  ["BP-126", "C"],
-  ["BP-140", "D"],
-  ["BP-141", "D"],
-  ["BP-142", "D"],
-  ["BP-143", "D"],
-  ["BP-144", "D"],
-  ["BP-145", "D"],
-  ["BP-146", "D"],
-  ["BP-300", "A"],
-  ["BP-301", "A"],
-  ["BP-302", "E"],
-  ["BP-303", "A"],
-  ["BP-400", "E"],
-  ["BP-401", "E"],
-  ["BP-402", "E"],
-  ["BP-403", "A"],
-  ["BP-500", "C"],
-  ["BP-501", "F"],
-  ["BP-502", "E"],
-  ["BP-503", "F"],
-  ["BP-504", "F"],
-  ["BP-505", "C"],
-  ["BP-506", "D"],
-  ["BP-507", "D"],
-  ["BP-508", "B"],
-  ["BP-509", "F"],
-  ["BP-510", "F"],
-  ["BP-511", "F"]
-] as const satisfies readonly (readonly [BenchPrototypeTaskId, BenchPrototypeLaneId])[]
+function laneForTask(taskId: BenchPrototypeTaskId): BenchPrototypeLaneId {
+  const numericId = Number.parseInt(taskId.slice(3), 10)
+  if (taskId === "BP-010" || (numericId >= 420 && numericId <= 435)) return "E"
+  if (numericId >= 100 && numericId <= 111) return "B"
+  if (numericId >= 120 && numericId <= 128) return "C"
+  if (numericId >= 140 && numericId <= 149) return "D"
+  if ((numericId >= 520 && numericId <= 533) || (numericId >= 620 && numericId <= 633)) return "F"
+  return "A"
+}
+
+const taskAssignments: readonly (readonly [BenchPrototypeTaskId, BenchPrototypeLaneId])[] =
+  benchPrototypePlanTaskIds.map((taskId) => [taskId, laneForTask(taskId)] as const)
 
 function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
   if (value === null || typeof value !== "object") return value
@@ -202,12 +212,12 @@ const benchPrototypePlanDecisionDefinition = {
   artifactKind: "bench-prototype-plan-decision",
   workUnit: "BP-000",
   canonicalPlan: "packages/scoring-circuit/docs/bench-prototype-plan.md",
-  revision: "BP-000.1",
+  revision: "BP-000.2",
   decision: "approved-plan-revision",
   approval: {
     preparedBy: "implementation-agent",
     finalReviewer: rootFinalReviewerRole,
-    reviewedAtUtc: "2026-08-24T00:00:00.000Z",
+    reviewedAtUtc: "2026-08-25T21:55:53.000Z",
     state: "approved"
   },
   lanes: laneDefinitions,
@@ -262,7 +272,7 @@ export function validateBenchPrototypePlanDecision(input: unknown): true {
     input.artifactKind !== "bench-prototype-plan-decision" ||
     input.workUnit !== "BP-000" ||
     input.canonicalPlan !== "packages/scoring-circuit/docs/bench-prototype-plan.md" ||
-    input.revision !== "BP-000.1" ||
+    input.revision !== "BP-000.2" ||
     input.decision !== "approved-plan-revision"
   ) {
     throw new RangeError("BP-000 decision metadata drifted")
@@ -275,7 +285,7 @@ export function validateBenchPrototypePlanDecision(input: unknown): true {
   }
   if (
     input.approval.finalReviewer !== rootFinalReviewerRole ||
-    input.approval.reviewedAtUtc !== "2026-08-24T00:00:00.000Z" ||
+    input.approval.reviewedAtUtc !== "2026-08-25T21:55:53.000Z" ||
     input.approval.state !== "approved"
   ) {
     throw new RangeError("BP-000 must record final approval by root-final-reviewer")
