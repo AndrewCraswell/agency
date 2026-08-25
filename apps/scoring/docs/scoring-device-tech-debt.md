@@ -61,7 +61,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 42 | FW-009 | P1 | done | Root-approved scoring-record projection rejects malformed public hit counts before indexing |
 | 43 | FW-010 | P1 | done | Root-approved transport validation rejects out-of-range enums before one-byte narrowing |
 | 44 | SC-018 | P2 | done | Root-approved fabrication contract now derives shared manufacturing floors from the canonical stackup release |
-| 45 | SC-019 | P2 | in-progress | Bind application/display-carrier selected identities to canonical component and footprint records |
+| 45 | SC-019 | P2 | done | Root-approved application/display carrier derives selected identities from canonical component and footprint records |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -767,8 +767,8 @@ truth.
 ## SC-019: bind application/display-carrier selected identities
 
 - Priority: `P2`
-- State: `in-progress`
-- Latest state: A bounded isolated implementation has been delivered for root review. It replaces duplicated selected MPN literals with fail-closed projections from component decisions, power-stage footprints, and the existing HUB75 support record while preserving DNP connectors, fixture points, pins, geometry, and traces.
+- State: `done`
+- Latest state: Root review approved fail-closed selected-part projections from component decisions, power-stage footprints, and the existing HUB75 support record while preserving DNP connectors, fixture points, pins, geometry, and traces. Fifteen focused rendering tests plus package types, lint, and format pass. Delivered in `38cf470`.
 - Affected files: `packages/scoring-circuit/src/application-display-carrier.circuit.tsx`, its physical-board rendering test, and the existing canonical component/footprint records.
 - Description: the application/display carrier hard-codes selected processor, reset, power, storage, and peripheral identities already owned by canonical decision and footprint records.
 - Impact: a reviewed part or BOM change can update its canonical record while leaving the rendered carrier circuit on a stale MPN.
