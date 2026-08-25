@@ -57,7 +57,7 @@ describe("meeting read queries", () => {
     expect(generated).toContain('"legislative_events"."is_remote"')
   })
 
-  it("supports explicit timestamp intervals and persisted bill relationships without guessing calendar links", () => {
+  it("supports explicit timestamp intervals plus persisted bill and calendar relationships", () => {
     const generated = buildMeetingListQuery(database, {
       billId: "bill:wa:1",
       from: "2026-08-17T00:00:00Z",
@@ -67,7 +67,9 @@ describe("meeting read queries", () => {
     expect(generated).toContain('exists (select 1 from "legislation"."event_bills"')
     expect(generated).toContain('"legislative_events"."start_at" >=')
     expect(generated).toContain('"legislative_events"."start_at" <=')
-    expect(buildMeetingListQuery(database, { calendarId: "calendar:unmapped" }).toSQL().sql).toContain("false")
+    expect(buildMeetingListQuery(database, { calendarId: "calendar:wa:committee-schedule" }).toSQL().sql).toContain(
+      'exists (select 1 from "legislation"."calendar_events"'
+    )
   })
 
   it("rejects impossible dates and cursor scopes that no longer describe the collection", () => {

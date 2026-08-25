@@ -874,6 +874,76 @@ export const calendarEntries = legislationSchema.table(
   ]
 )
 
+/** A publisher-owned durable calendar or schedule feed. Event groups are never inferred into this table. */
+export const calendars = legislationSchema.table(
+  "calendars",
+  {
+    id: text("id").primaryKey(),
+    jurisdictionId: text("jurisdiction_id")
+      .notNull()
+      .references(() => jurisdictions.id, { onDelete: "restrict" }),
+    organizationId: text("organization_id").references(() => organizations.id, { onDelete: "restrict" }),
+    sourceProvider: text("source_provider").notNull(),
+    sourceId: text("source_id").notNull(),
+    name: text("name").notNull(),
+    classification: text("classification").notNull(),
+    timezone: text("timezone"),
+    description: text("description"),
+    coverageFrom: date("coverage_from"),
+    coverageTo: date("coverage_to"),
+    sourceUrl: text("source_url").notNull(),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }).notNull(),
+    sourceIsOfficial: boolean("source_is_official").notNull(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("calendars_id_check", sql`length(${table.id}) > 0`),
+    check("calendars_source_provider_check", sql`length(btrim(${table.sourceProvider})) > 0`),
+    check("calendars_source_id_check", sql`length(btrim(${table.sourceId})) > 0`),
+    check("calendars_name_check", sql`length(btrim(${table.name})) > 0`),
+    check("calendars_classification_check", sql`length(btrim(${table.classification})) > 0`),
+    check("calendars_source_url_check", sql`${table.sourceUrl} ~ '^https://'`),
+    check(
+      "calendars_coverage_bounds_check",
+      sql`${table.coverageFrom} is null or ${table.coverageTo} is null or ${table.coverageFrom} <= ${table.coverageTo}`
+    ),
+    uniqueIndex("calendars_source_uidx").on(table.sourceProvider, table.sourceId),
+    index("calendars_browse_idx").on(table.jurisdictionId, table.organizationId, table.name, table.id),
+    index("calendars_organization_idx").on(table.organizationId, table.name, table.id)
+  ]
+)
+
+/** An explicit publisher-declared calendar membership; temporal proximity never creates this relationship. */
+export const calendarEvents = legislationSchema.table(
+  "calendar_events",
+  {
+    calendarId: text("calendar_id")
+      .notNull()
+      .references(() => calendars.id, { onDelete: "cascade" }),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => legislativeEvents.id, { onDelete: "cascade" }),
+    sourceProvider: text("source_provider").notNull(),
+    sourceId: text("source_id").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }).notNull(),
+    sourceIsOfficial: boolean("source_is_official").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.calendarId, table.eventId, table.sourceProvider, table.sourceId] }),
+    check("calendar_events_source_provider_check", sql`length(btrim(${table.sourceProvider})) > 0`),
+    check("calendar_events_source_id_check", sql`length(btrim(${table.sourceId})) > 0`),
+    check("calendar_events_source_url_check", sql`${table.sourceUrl} ~ '^https://'`),
+    index("calendar_events_calendar_idx").on(table.calendarId, table.eventId),
+    index("calendar_events_event_idx").on(table.eventId, table.calendarId)
+  ]
+)
+
 export const billSponsors = legislationSchema.table(
   "bill_sponsors",
   {

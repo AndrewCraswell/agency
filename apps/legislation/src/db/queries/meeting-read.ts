@@ -2,7 +2,14 @@ import { and, asc, desc, eq, gt, gte, inArray, lt, lte, or, sql, type SQL } from
 import { isIsoDate, isRfc3339Timestamp } from "../../api/canonical-projection.js"
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
-import { eventBills, eventOrganizations, eventSessions, legislativeEvents, organizations } from "../schema/schema.js"
+import {
+  calendarEvents,
+  eventBills,
+  eventOrganizations,
+  eventSessions,
+  legislativeEvents,
+  organizations
+} from "../schema/schema.js"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100
@@ -195,7 +202,9 @@ function meetingVisibility(scope: MeetingCursorScope): [SQL, ...SQL[]] {
     eq(legislativeEvents.organizationRelationsComplete, true),
     eq(legislativeEvents.provenanceComplete, true),
     scope.meetingId === null ? undefined : eq(legislativeEvents.id, scope.meetingId),
-    scope.calendarId === null ? undefined : unsupportedCalendarScope(),
+    scope.calendarId === null
+      ? undefined
+      : sql`exists (select 1 from ${calendarEvents} where ${calendarEvents.eventId} = ${legislativeEvents.id} and ${calendarEvents.calendarId} = ${scope.calendarId})`,
     scope.jurisdictionId === null ? undefined : eq(legislativeEvents.jurisdictionId, scope.jurisdictionId),
     scope.classification === null ? undefined : sql`${legislativeEvents.classification} = ${scope.classification}`,
     scope.status === null ? undefined : sql`${legislativeEvents.status} = ${scope.status}`,
@@ -224,11 +233,6 @@ function upperDateBound(value: string): SQL {
   return isIsoDate(value)
     ? lte(legislativeEvents.publisherLocalDate, value)
     : lte(legislativeEvents.startAt, new Date(value))
-}
-
-/** Calendar entries have no authoritative event relationship, so no guessed association is exposed. */
-function unsupportedCalendarScope(): SQL {
-  return sql`false`
 }
 
 function cursorPredicate(

@@ -44,6 +44,8 @@ import { createBillDetailReadApiHandler } from "./bill-detail-read-routes.js"
 import { createBillRelatedReadApiHandler } from "./bill-related-read-routes.js"
 import { createBillTextReadApiHandler } from "./bill-text-read-routes.js"
 import { createBillTimelineReadApiHandler } from "./bill-timeline-read-routes.js"
+import { createCalendarReadRepository } from "./calendar-read-repository.js"
+import { createCalendarReadApiHandler } from "./calendar-read-routes.js"
 import { createChangeFeedApiHandler } from "./change-feed-routes.js"
 import { createCivicScopedReadApiHandler } from "./civic-scoped-read-routes.js"
 import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
@@ -209,6 +211,7 @@ export function createLegislationApiHandler(
             },
             options
           ),
+          createCalendarReadApiHandler(createCalendarReadRepository(documentDatabase), options),
           createMeetingAgendaReadApiHandler(
             {
               assertMeetingExists: async (meetingId) =>

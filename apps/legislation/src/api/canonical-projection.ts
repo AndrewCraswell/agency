@@ -226,6 +226,23 @@ export interface MeetingDetail extends MeetingSummary {
   childPageInfo: Record<"participants" | "agenda" | "documents" | "outcomes", ChildCollectionPageInfo>
 }
 
+export interface CalendarSummary extends CanonicalFields {
+  type: "calendar"
+  jurisdictionId: string
+  organizationId: string | null
+  name: string
+  classification: string
+  timezone: string | null
+  sourceUrl: string
+  isActive: boolean
+}
+
+export interface CalendarDetail extends CalendarSummary {
+  description: string | null
+  coverageFrom: string | null
+  coverageTo: string | null
+}
+
 export interface Sponsor {
   person: PersonSummary | null
   sourceName: string
@@ -517,6 +534,23 @@ export type MeetingSummaryProjectionInput = SourceRecord & {
   date: DateValue
   location: EventLocation | null
   isRemote: boolean
+}
+
+export type CalendarSummaryProjectionInput = SourceRecord & {
+  jurisdictionId: string
+  organizationId: string | null
+  name: string
+  classification: string
+  timezone: string | null
+  sourceUrl: string
+  isActive: boolean
+}
+
+export interface CalendarDetailProjectionInput {
+  calendar: CalendarSummaryProjectionInput
+  description: string | null
+  coverageFrom: DateValue | null
+  coverageTo: DateValue | null
 }
 
 export interface MeetingDetailProjectionInput {
@@ -898,6 +932,40 @@ export function projectMeetingDetail(input: MeetingDetailProjectionInput, contex
       documents: pageInfo(input.childPageInfo.documents, "meeting documents"),
       outcomes: pageInfo(input.childPageInfo.outcomes, "meeting outcomes")
     }
+  }
+}
+
+export function projectCalendarSummary(
+  input: CalendarSummaryProjectionInput,
+  context: ProjectionContext
+): CalendarSummary {
+  return {
+    ...canonical(input.id, `/api/calendars/${segment(input.id)}`, context),
+    type: "calendar",
+    jurisdictionId: required(input.jurisdictionId, "calendar jurisdictionId"),
+    organizationId: input.organizationId,
+    name: required(input.name, "calendar name"),
+    classification: required(input.classification, "calendar classification"),
+    timezone: input.timezone === null ? null : required(input.timezone, "calendar timezone"),
+    sourceUrl: absoluteUrl(input.sourceUrl, "calendar sourceUrl"),
+    isActive: input.isActive
+  }
+}
+
+export function projectCalendarDetail(
+  input: CalendarDetailProjectionInput,
+  context: ProjectionContext
+): CalendarDetail {
+  const coverageFrom = isoDate(input.coverageFrom, "calendar coverageFrom")
+  const coverageTo = isoDate(input.coverageTo, "calendar coverageTo")
+  if (coverageFrom !== null && coverageTo !== null && coverageFrom > coverageTo) {
+    throw new CanonicalProjectionError("calendar coverageTo must not precede coverageFrom")
+  }
+  return {
+    ...projectCalendarSummary(input.calendar, context),
+    description: input.description === null ? null : required(input.description, "calendar description"),
+    coverageFrom,
+    coverageTo
   }
 }
 
