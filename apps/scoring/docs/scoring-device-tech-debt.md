@@ -62,6 +62,7 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 43 | FW-010 | P1 | done | Root-approved transport validation rejects out-of-range enums before one-byte narrowing |
 | 44 | SC-018 | P2 | done | Root-approved fabrication contract now derives shared manufacturing floors from the canonical stackup release |
 | 45 | SC-019 | P2 | done | Root-approved application/display carrier derives selected identities from canonical component and footprint records |
+| 46 | FW-011 | P1 | done | Root-approved STM32 scoring core rejects negative weapon enum values without state mutation |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -775,3 +776,15 @@ truth.
 - Bounded remediation: add a narrow carrier-facing lookup over the already-selected overlaps and replace only duplicated literals.
 - Acceptance: rendered selected identities match their canonical records; upstream drift fails closed; DNP and fixture-only parts remain local; circuit geometry and behavior stay unchanged; focused rendering tests, package types, lint, and format pass.
 - Non-goals: no monorepo-wide parts catalog, connector selection, layout change, DNP promotion, or fabrication release.
+
+## FW-011: reject negative scoring-core weapon enums
+
+- Priority: `P1`
+- State: `done`
+- Latest state: Root review approved signed weapon-range validation at both scoring-core initialization and advance boundaries. A cast negative enum now returns `SCORING_CORE_INVALID_ARGUMENT` without mutating caller state; all seven STM32 host tests and the STM32G474RE target build/static checks pass, and the scoring core retains 100% line/function/branch coverage. Delivered in `aadc87c`.
+- Affected files: `apps/scoring/firmware/stm32/core/stm32_scoring_core.c` and `apps/scoring/firmware/stm32/tests/test_stm32_scoring_core.c`.
+- Description: the public weapon guards only rejected enum values above sabre, so a negative value could reach the default sabre branch on signed-enum builds.
+- Impact: malformed public input could select sabre behavior instead of failing closed at the authoritative native scoring boundary.
+- Bounded remediation: validate the complete supported enum range before initialization or scoring, and preserve state on rejection.
+- Acceptance: negative values reject in init and advance; state remains byte-for-byte unchanged; host, target, sanitizer, and coverage gates pass; core coverage remains 100% for lines, functions, and branches.
+- Non-goals: no weapon IDs, scoring semantics, ABI layout, valid-input behavior, or generic enum framework change.
