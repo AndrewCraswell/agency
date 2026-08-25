@@ -60,6 +60,8 @@ signal). State is one of `intake`, `ready`, `in-progress`, `blocked`, or
 | 41 | SC-017 | P2 | done | Root-approved BP-141 identity projections now derive the W5500 and MagJack from their canonical upstream owners |
 | 42 | FW-009 | P1 | done | Root-approved scoring-record projection rejects malformed public hit counts before indexing |
 | 43 | FW-010 | P1 | done | Root-approved transport validation rejects out-of-range enums before one-byte narrowing |
+| 44 | SC-018 | P2 | done | Root-approved fabrication contract now derives shared manufacturing floors from the canonical stackup release |
+| 45 | SC-019 | P2 | in-progress | Bind application/display-carrier selected identities to canonical component and footprint records |
 
 ## SD-001: consolidate epee contact and lockout mechanics
 
@@ -749,3 +751,27 @@ truth.
 - Bounded remediation: validate the enum in its native width before narrowing, with explicit wrapping and negative invalid-value tests.
 - Acceptance: invalid wide and negative enum values reject without mutating output, existing wire bytes remain unchanged, and the STM32 transport coverage gate remains at or above 80% for line/function/branch metrics.
 - Non-goals: no wire constant, message-direction, framing, payload, or protocol-version change.
+
+## SC-018: derive shared fabrication floors from the stackup release
+
+- Priority: `P2`
+- State: `done`
+- Latest state: Root review approved direct projections for the shared six-layer copper weights, trace, clearance, drill, hole, annular-ring, slot, edge, soldermask, tolerance, isolation, and impedance requirements while retaining fabrication-only roles and rules locally. Six focused tests plus package types, lint, and format pass. Delivered in `20279ca`.
+- Affected files: `packages/scoring-circuit/src/pcb-stackup-release.ts`, `packages/scoring-circuit/src/pcb-fabrication-constraints.ts`, and the focused fabrication-constraint test.
+- Description: the stackup release and fabrication contract independently repeated the same manufacturing floors and controlled-impedance targets.
+- Impact: a reviewed manufacturing floor, isolation target, or impedance requirement could change in one contract while the other silently retained a stale value.
+- Bounded remediation: project only the exact shared fields from `sixLayerBoardReleaseRequirements`; keep fabrication-only routing prose, supplier capabilities, and communications-module roles local.
+- Acceptance: shared values have one literal owner; a focused cross-contract test covers every projection; fabrication-local extensions remain present; package types, lint, format, and focused tests pass.
+- Non-goals: no fabrication release, supplier selection, stackup solver, routing change, or generic contract framework.
+
+## SC-019: bind application/display-carrier selected identities
+
+- Priority: `P2`
+- State: `in-progress`
+- Latest state: A bounded isolated implementation has been delivered for root review. It replaces duplicated selected MPN literals with fail-closed projections from component decisions, power-stage footprints, and the existing HUB75 support record while preserving DNP connectors, fixture points, pins, geometry, and traces.
+- Affected files: `packages/scoring-circuit/src/application-display-carrier.circuit.tsx`, its physical-board rendering test, and the existing canonical component/footprint records.
+- Description: the application/display carrier hard-codes selected processor, reset, power, storage, and peripheral identities already owned by canonical decision and footprint records.
+- Impact: a reviewed part or BOM change can update its canonical record while leaving the rendered carrier circuit on a stale MPN.
+- Bounded remediation: add a narrow carrier-facing lookup over the already-selected overlaps and replace only duplicated literals.
+- Acceptance: rendered selected identities match their canonical records; upstream drift fails closed; DNP and fixture-only parts remain local; circuit geometry and behavior stay unchanged; focused rendering tests, package types, lint, and format pass.
+- Non-goals: no monorepo-wide parts catalog, connector selection, layout change, DNP promotion, or fabrication release.
