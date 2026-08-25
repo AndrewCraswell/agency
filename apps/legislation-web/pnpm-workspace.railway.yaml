@@ -6,10 +6,7 @@ packages:
 
 # Keep the dependency graph locked while isolating Railway from unrelated
 # workspace packages and the workstation's hoisted node_modules layout.
-# Next standalone tracing must copy concrete dependency directories. The
-# workspace is already reduced to the four packages below, so hoisting cannot
-# pull unrelated monorepo applications into the image.
-nodeLinker: hoisted
+nodeLinker: isolated
 packageExtensions:
   "circuit-json@0.0.465":
     dependencies:
