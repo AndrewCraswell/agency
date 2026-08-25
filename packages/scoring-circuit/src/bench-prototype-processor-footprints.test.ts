@@ -49,7 +49,7 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
     ])
   })
 
-  it("reconciles the complete BP-125 support-reference contract and keeps unresolved parts DNP", () => {
+  it("reconciles every BP-125 support reference to its exact selection while retaining footprint DENY", () => {
     expect(benchPrototypeProcessorFootprints.debugReferences).toEqual([
       expect.objectContaining({
         reference: "J_STM_SWD",
@@ -67,7 +67,7 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
       benchPrototypeProcessorFootprints.processorSupportReferences.filter(
         (entry) => entry.reconciliation === "DNP-until-exact-selection"
       )
-    ).toHaveLength(8)
+    ).toHaveLength(0)
     expect(benchPrototypeProcessorFootprints.processorSupportReferences).toEqual(
       expect.arrayContaining([
         ...["C_STM_VDD16", "C_STM_VDD32", "C_STM_VDD48", "C_STM_VDD64"].map((reference) =>
@@ -108,10 +108,32 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
         }),
         expect.objectContaining({
           reference: "C_ESP_3V3_BULK",
-          value: "22 uF minimum ceramic",
-          selectedMpn: null,
-          reconciliation: "DNP-until-exact-selection"
-        })
+          value: "22 uF minimum effective ceramic",
+          mpn: "GCM32EC71A476KE02L",
+          selectedMpn: "GCM32EC71A476KE02L",
+          package: "1210 (3225M)",
+          reconciliation: "selected-by-BP-125"
+        }),
+        expect.objectContaining({
+          reference: "C_STM_3V3_BULK",
+          mpn: "GCM32ER71E106KA57L",
+          selectedMpn: "GCM32ER71E106KA57L",
+          package: "1210 (3225M)"
+        }),
+        expect.objectContaining({
+          reference: "C_STM_VDDA_HF",
+          mpn: "GCM188R71H103KA37D",
+          selectedMpn: "GCM188R71H103KA37D",
+          package: "0603 (1608M)"
+        }),
+        ...["C_STM_VDDA_BULK", "C_STM_VREF_BULK"].map((reference) =>
+          expect.objectContaining({
+            reference,
+            mpn: "GCM21BR71E225KA73L",
+            selectedMpn: "GCM21BR71E225KA73L",
+            package: "0805 (2012M)"
+          })
+        )
       ])
     )
     expect(
@@ -131,7 +153,7 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
       benchPrototypeProcessorFootprints.processorSupportReferences.filter(
         (entry) => entry.reconciliation === "selected-by-BP-125"
       )
-    ).toHaveLength(6)
+    ).toHaveLength(14)
     expect(
       benchPrototypeProcessorFootprints.processorSupportReferences.filter(
         (entry) => entry.reconciliation === "selected-by-BP-123"

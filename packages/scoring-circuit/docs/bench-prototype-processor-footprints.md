@@ -40,15 +40,21 @@ archive, generated artwork, and orientation review remain DENY.
 
 The STM32 HSE and LSE entries are DNP, with no MPN, oscillator, crystal, load,
 or bias network. The ESP32 oscillator remains module-integrated. The ledger
-extracts all 16 references in BP-125's processor-support contract: six exact
-BP-125 selections, two BP-123 reconciliations, and eight DNP-until-exact-selection
-rows. It reconciles
-`C_ESP_EN_DELAY` to BP-123's exact selection. The `R_STM_BOOT0` and
+extracts all 16 references in BP-125's processor-support contract: fourteen
+exact BP-125 selections and two BP-123 reconciliations. It reconciles
+`C_ESP_EN_DELAY` to BP-123's exact selection. The eight previously unselected
+capacitor rows now reconcile to the exact automotive Murata identities:
+`GCM32ER71E106KA57L` for `C_STM_3V3_BULK`,
+`GCM188R71H103KA37D` for `C_STM_VDDA_HF`,
+`GCM21BR71E225KA73L` for both STM32 1 uF-effective bulk roles,
+`GCM188R71H104KA57D` for `C_STM_VREF_HF`, `C_STM_VBAT`, and
+`C_ESP_3V3_HF`, and `GCM32EC71A476KE02L` for `C_ESP_3V3_BULK`.
+The `R_STM_BOOT0` and
 `R_ESP_BOOT_PULLUP` rows consume BP-125's exact Yageo `RC0603FR-0710KL` source
 record, while `R_ESP_EN_PULLUP` retains its exact BP-123 selection and now has
-the same BP-125 source evidence. All three remain geometry-unclaimed; the
-other 8 references whose MPN remains intentionally TBD stay DNP until an
-exact selection is reviewed. The retained source digest is
+the same BP-125 source evidence. Every support row remains PCB-geometry
+unclaimed. The retained GCM21 sheet contributes package-body dimensions only;
+it is not manufacturer CAD or a released land pattern. The retained source digest is
 `EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497` for
 `docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf`. An added, removed,
 reordered, or changed BP-125 support reference fails provenance validation.

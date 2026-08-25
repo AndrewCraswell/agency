@@ -3,7 +3,7 @@
  *
  * This document captures only requirements justified by the frozen pin maps
  * and the processor/module primary-source checklists. It deliberately leaves
- * land patterns, the remaining capacitor MPNs, oscillator selection, and
+ * PCB land patterns, capacitor PCB geometry, oscillator selection, and
  * layout release denied until BP-032/BP-300 supply their independent evidence.
  */
 
@@ -132,6 +132,167 @@ const processorSupportDefinition = {
     ]
   },
   supportSelectionEvidence: {
+    processorRequirements: {
+      stm32: {
+        sourceUrl: "https://www.st.com/resource/en/datasheet/stm32g474re.pdf",
+        sourceDocument: "ST DS12288 Rev 6 STM32G474xB/xC/xE datasheet",
+        retainedManufacturerPrimaryBytes: null,
+        primarySourceMapping: "source-unverified-primary-url-only",
+        requirement:
+          "VDD, VDDA, VREF+, and VBAT remain within the STM32's 1.71 V to 3.6 V supply domain; the existing pin and rail contracts require local VDD, VDDA, VREF+, and no-backup VBAT decoupling."
+      },
+      esp32: {
+        sourceUrl: "https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf",
+        sourceDocument: "Espressif ESP32-S3-WROOM-1/WROOM-1U Datasheet v1.8",
+        retainedManufacturerPrimaryBytes: {
+          archivePath: "docs/evidence/bp-125/espressif-esp32-s3-wroom-1-wroom-1u-datasheet-v1.8.pdf",
+          archiveSha256: "27D71971DA07C280C6068D08C74720D1A25B8F20CF8494DC1765BDD28D40D435"
+        },
+        primarySourceMapping: "verified-by-retained-manufacturer-primary-bytes",
+        requirement:
+          "The WROOM-1U 3V3 input remains a 3.0 V to 3.6 V module supply; the frozen rail contract retains one local high-frequency bypass and at least 22 uF effective ceramic bulk at the module supply entry."
+      }
+    },
+    capacitorSelections: [
+      {
+        references: ["C_STM_3V3_BULK"],
+        mpn: "GCM32ER71E106KA57L",
+        manufacturer: "Murata",
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GCM32ER71E106KA57L",
+        primarySourceMapping: "source-unverified-primary-url-only",
+        nominal: "10 uF ±10%",
+        effectiveRequirement: "4.7 uF minimum at 3.3 V",
+        dielectric: "X7R",
+        voltageRating: "25 VDC",
+        package: "1210 (3225M)",
+        temperatureScope: "-55 to 125 C",
+        reliability: "GCM automotive powertrain/safety, AEC-Q200",
+        dcBias: {
+          sourcePartNumber: "GCM32ER71E106KA57",
+          characteristic: "c_dcbias_capacitance",
+          sampleTemperatureC: 25,
+          sampleAcVrms: 1,
+          sampleBiasV: 3.5,
+          sampleCapacitanceUf: 10.251225363421954,
+          temperature: "25 C typical only",
+          archivePath: "docs/evidence/bp-125/murata-gcm32er71e106ka57-dcbias-tc25.json",
+          archiveSha256: "8DECC721E40C71BB41FAEDE8037A5A50A1AB7A95E7403A3C0E6AD9D2DBBB53EC"
+        }
+      },
+      {
+        references: ["C_STM_VDDA_HF"],
+        mpn: "GCM188R71H103KA37D",
+        manufacturer: "Murata",
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GCM188R71H103KA37D",
+        primarySourceMapping: "source-unverified-primary-url-only",
+        nominal: "10 nF ±10%",
+        effectiveRequirement: "10 nF nominal local VDDA high-frequency bypass",
+        dielectric: "X7R",
+        voltageRating: "50 VDC",
+        package: "0603 (1608M)",
+        temperatureScope: "-55 to 125 C",
+        reliability: "GCM automotive powertrain/safety, AEC-Q200",
+        dcBias: {
+          sourcePartNumber: "GCM188R71H103KA37",
+          characteristic: "c_dcbias_capacitance",
+          sampleTemperatureC: 125,
+          sampleAcVrms: 1,
+          sampleBiasV: 3.5,
+          sampleCapacitanceUf: 0.009245470648208033,
+          temperature: "125 C typical only",
+          archivePath: "docs/evidence/bp-125/murata-gcm188r71h103ka37-dcbias-tc125.json",
+          archiveSha256: "541BB5E1738D24528E43A654464F20365E90163A385C0B0E44ACA451B1319879"
+        }
+      },
+      {
+        references: ["C_STM_VDDA_BULK", "C_STM_VREF_BULK"],
+        mpn: "GCM21BR71E225KA73L",
+        manufacturer: "Murata",
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GCM21BR71E225KA73L",
+        primarySourceMapping: "verified-by-retained-manufacturer-primary-bytes",
+        archivePath: "docs/evidence/bp-125/murata-gcm21br71e225ka73-01.pdf",
+        archiveSourceUrl: "https://search.murata.co.jp/Ceramy/image/img/A01X/G101/ENG/GCM21BR71E225KA73-01.pdf",
+        archiveSha256: "26C42A798F304AA1D91453CC08646D91214125E6C7A1D93C9BD5B0D535AECF19",
+        packageBodyGeometry: {
+          lengthMm: { nominal: 2, tolerance: "±0.15" },
+          widthMm: { nominal: 1.25, tolerance: "±0.15" },
+          thicknessMm: { nominal: 1.25, tolerance: "±0.15" },
+          terminalWidthMm: { minimum: 0.2, maximum: 0.7 },
+          terminalGapMinimumMm: 0.7,
+          source: "Murata GCM21BR71E225KA73-01 retained reference sheet",
+          claimBoundary:
+            "Package-body and terminal dimensions only; no PCB land pattern, pad, mask, paste, courtyard, or manufacturer CAD is claimed."
+        },
+        nominal: "2.2 uF ±10%",
+        effectiveRequirement: "1 uF minimum at 3.3 V VDDA and 2.5 V VREF+",
+        dielectric: "X7R",
+        voltageRating: "25 VDC",
+        package: "0805 (2012M)",
+        temperatureScope: "-55 to 125 C",
+        reliability: "GCM automotive powertrain/safety, AEC-Q200",
+        dcBias: {
+          sourcePartNumber: "GCM21BR71E225KA73",
+          characteristic: "c_dcbias_capacitance",
+          sampleTemperatureC: 25,
+          sampleAcVrms: 1,
+          sampleBiasV: 3.5,
+          sampleCapacitanceUf: 2.210545489803181,
+          temperature: "25 C typical only",
+          archivePath: "docs/evidence/bp-125/murata-gcm21br71e225ka73-dcbias-tc25.json",
+          archiveSha256: "068FBE2AACEBB05D10C2C5446A64BB23B6273D19CB05E63B2D4FBF5FBEE1B3AC"
+        }
+      },
+      {
+        references: ["C_STM_VREF_HF", "C_STM_VBAT", "C_ESP_3V3_HF"],
+        mpn: "GCM188R71H104KA57D",
+        manufacturer: "Murata",
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GCM188R71H104KA57D",
+        primarySourceMapping: "verified-by-retained-manufacturer-primary-bytes",
+        nominal: "100 nF ±10%",
+        effectiveRequirement: "100 nF nominal local high-frequency bypass",
+        dielectric: "X7R",
+        voltageRating: "50 VDC",
+        package: "0603 (1608M)",
+        temperatureScope: "-55 to 125 C",
+        reliability: "GCM automotive powertrain/safety, AEC-Q200",
+        dcBias: {
+          sourcePartNumber: "GCM188R71H104KA57",
+          characteristic: "c_dcbias_capacitance",
+          sampleTemperatureC: 125,
+          sampleAcVrms: 1,
+          sampleBiasV: 3.5,
+          sampleCapacitanceUf: 0.09229961572997243,
+          temperature: "125 C typical only; existing retained characteristic response",
+          archivePath: "docs/evidence/bp-125/murata-gcm188r71h104ka57d-dcbias-tc125.json",
+          archiveSha256: "F7A096FD71D88535F4AD23B10BCD456498C8468C43E203AEDA0547D3AD0101FD"
+        }
+      },
+      {
+        references: ["C_ESP_3V3_BULK"],
+        mpn: "GCM32EC71A476KE02L",
+        manufacturer: "Murata",
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GCM32EC71A476KE02L",
+        primarySourceMapping: "source-unverified-primary-url-only",
+        nominal: "47 uF ±10%",
+        effectiveRequirement: "22 uF minimum at 3.3 V",
+        dielectric: "X7S",
+        voltageRating: "10 VDC",
+        package: "1210 (3225M)",
+        temperatureScope: "-55 to 125 C",
+        reliability: "GCM automotive powertrain/safety, AEC-Q200",
+        dcBias: {
+          sourcePartNumber: "GCM32EC71A476KE02",
+          characteristic: "c_dcbias_capacitance",
+          sampleTemperatureC: 25,
+          sampleAcVrms: 0.5,
+          sampleBiasV: 3.5,
+          sampleCapacitanceUf: 40.2527944398026,
+          temperature: "25 C typical only",
+          archivePath: "docs/evidence/bp-125/murata-gcm32ec71a476ke02-dcbias-tc25.json",
+          archiveSha256: "6FB8BB5B26B094D92156968AF9DC9E56DD68F4E93D86817F7DBEF19D264F906D"
+        }
+      }
+    ],
     stm32DigitalBypass: {
       references: ["C_STM_VDD16", "C_STM_VDD32", "C_STM_VDD48", "C_STM_VDD64"],
       mpn: "GCM188R71H104KA57D",
@@ -265,23 +426,24 @@ const processorSupportDefinition = {
       topology:
         "One local capacitor from each LQFP64 VDD pin (16, 32, 48, 64) to its nearest SCORING_DGND return; no shared long trace.",
       bulk: {
-        capacitorMpn: "TBD",
+        capacitorMpn: "GCM32ER71E106KA57L",
         value: "4.7 uF minimum ceramic",
         reference: "C_STM_3V3_BULK",
         topology: "SCORING_3V3 to SCORING_DGND in the MCU power region."
       }
     },
     stm32Analog: {
-      capacitorMpn: "TBD",
       population: "required",
       vdDa: {
         references: ["C_STM_VDDA_HF", "C_STM_VDDA_BULK"],
-        values: ["10 nF X7R", "1 uF X7R"],
+        values: ["10 nF X7R", "1 uF minimum effective X7R"],
+        capacitorMpns: ["GCM188R71H103KA37D", "GCM21BR71E225KA73L"],
         topology: "VDDA pin 29 to VSSA pin 27 at the analog supply entry."
       },
       vref: {
         references: ["C_STM_VREF_HF", "C_STM_VREF_BULK"],
-        values: ["100 nF X7R", "1 uF X7R"],
+        values: ["100 nF X7R", "1 uF minimum effective X7R"],
+        capacitorMpns: ["GCM188R71H104KA57D", "GCM21BR71E225KA73L"],
         topology:
           "VREF+ pin 28 to VSSA pin 27; it must remain on SCORING_VREF_2V5 and cannot be substituted with SCORING_3V3."
       }
@@ -289,17 +451,17 @@ const processorSupportDefinition = {
     stm32Vbat: {
       population: "required",
       connection: "VBAT pin 1 ties explicitly to SCORING_3V3_NO_BACKUP_TIE",
-      capacitorMpn: "TBD",
+      capacitorMpn: "GCM188R71H104KA57D",
       reference: "C_STM_VBAT",
       value: "100 nF X7R",
       return: "SCORING_DGND",
       rule: "No backup cell, supercapacitor, or alternate supply is authorized."
     },
     esp32: {
-      capacitorMpn: "TBD",
       population: "required",
       references: ["C_ESP_3V3_HF", "C_ESP_3V3_BULK"],
-      values: ["100 nF X7R", "22 uF minimum ceramic"],
+      values: ["100 nF X7R", "22 uF minimum effective ceramic"],
+      capacitorMpns: ["GCM188R71H104KA57D", "GCM32EC71A476KE02L"],
       topology:
         "Each capacitor connects directly from module pad 2 3V3 to module ground pads 1, 40, and exposed pad 41 through the shortest low-inductance return."
     }
@@ -429,9 +591,118 @@ export function validateBenchPrototypeProcessorSupport(value: unknown): true {
     contract.oscillators.stm32Lse.population !== "DNP" ||
     contract.bypassAndBulk.stm32Digital.references.length !== 4 ||
     contract.bypassAndBulk.stm32Analog.vref.values[0] !== "100 nF X7R" ||
-    contract.bypassAndBulk.stm32Analog.vref.values[1] !== "1 uF X7R" ||
-    contract.bypassAndBulk.esp32.values[1] !== "22 uF minimum ceramic" ||
+    contract.bypassAndBulk.stm32Analog.vdDa.values[1] !== "1 uF minimum effective X7R" ||
+    contract.bypassAndBulk.stm32Analog.vref.values[1] !== "1 uF minimum effective X7R" ||
+    contract.bypassAndBulk.esp32.values[1] !== "22 uF minimum effective ceramic" ||
     contract.bypassAndBulk.stm32Digital.capacitorMpn !== "GCM188R71H104KA57D" ||
+    contract.bypassAndBulk.stm32Digital.bulk.capacitorMpn !== "GCM32ER71E106KA57L" ||
+    !sameDataGraph(contract.bypassAndBulk.stm32Analog.vdDa.capacitorMpns, [
+      "GCM188R71H103KA37D",
+      "GCM21BR71E225KA73L"
+    ]) ||
+    !sameDataGraph(contract.bypassAndBulk.stm32Analog.vref.capacitorMpns, [
+      "GCM188R71H104KA57D",
+      "GCM21BR71E225KA73L"
+    ]) ||
+    contract.bypassAndBulk.stm32Vbat.capacitorMpn !== "GCM188R71H104KA57D" ||
+    !sameDataGraph(contract.bypassAndBulk.esp32.capacitorMpns, ["GCM188R71H104KA57D", "GCM32EC71A476KE02L"]) ||
+    contract.supportSelectionEvidence.processorRequirements.stm32.primarySourceMapping !==
+      "source-unverified-primary-url-only" ||
+    contract.supportSelectionEvidence.processorRequirements.esp32.primarySourceMapping !==
+      "verified-by-retained-manufacturer-primary-bytes" ||
+    contract.supportSelectionEvidence.processorRequirements.esp32.retainedManufacturerPrimaryBytes.archivePath !==
+      "docs/evidence/bp-125/espressif-esp32-s3-wroom-1-wroom-1u-datasheet-v1.8.pdf" ||
+    contract.supportSelectionEvidence.processorRequirements.esp32.retainedManufacturerPrimaryBytes.archiveSha256 !==
+      "27D71971DA07C280C6068D08C74720D1A25B8F20CF8494DC1765BDD28D40D435" ||
+    contract.supportSelectionEvidence.capacitorSelections.length !== 5 ||
+    contract.supportSelectionEvidence.capacitorSelections[2].mpn !== "GCM21BR71E225KA73L" ||
+    contract.supportSelectionEvidence.capacitorSelections[2].primarySourceMapping !==
+      "verified-by-retained-manufacturer-primary-bytes" ||
+    contract.supportSelectionEvidence.capacitorSelections[2].archivePath !==
+      "docs/evidence/bp-125/murata-gcm21br71e225ka73-01.pdf" ||
+    contract.supportSelectionEvidence.capacitorSelections[2].archiveSourceUrl !==
+      "https://search.murata.co.jp/Ceramy/image/img/A01X/G101/ENG/GCM21BR71E225KA73-01.pdf" ||
+    contract.supportSelectionEvidence.capacitorSelections[2].archiveSha256 !==
+      "26C42A798F304AA1D91453CC08646D91214125E6C7A1D93C9BD5B0D535AECF19" ||
+    !sameDataGraph(
+      contract.supportSelectionEvidence.capacitorSelections.map((selection) => ({
+        mpn: selection.mpn,
+        sourcePartNumber: selection.dcBias.sourcePartNumber,
+        characteristic: selection.dcBias.characteristic,
+        sampleTemperatureC: selection.dcBias.sampleTemperatureC,
+        sampleAcVrms: selection.dcBias.sampleAcVrms
+      })),
+      [
+        {
+          mpn: "GCM32ER71E106KA57L",
+          sourcePartNumber: "GCM32ER71E106KA57",
+          characteristic: "c_dcbias_capacitance",
+          sampleTemperatureC: 25,
+          sampleAcVrms: 1
+        },
+        {
+          mpn: "GCM188R71H103KA37D",
+          sourcePartNumber: "GCM188R71H103KA37",
+          characteristic: "c_dcbias_capacitance",
+          sampleTemperatureC: 125,
+          sampleAcVrms: 1
+        },
+        {
+          mpn: "GCM21BR71E225KA73L",
+          sourcePartNumber: "GCM21BR71E225KA73",
+          characteristic: "c_dcbias_capacitance",
+          sampleTemperatureC: 25,
+          sampleAcVrms: 1
+        },
+        {
+          mpn: "GCM188R71H104KA57D",
+          sourcePartNumber: "GCM188R71H104KA57",
+          characteristic: "c_dcbias_capacitance",
+          sampleTemperatureC: 125,
+          sampleAcVrms: 1
+        },
+        {
+          mpn: "GCM32EC71A476KE02L",
+          sourcePartNumber: "GCM32EC71A476KE02",
+          characteristic: "c_dcbias_capacitance",
+          sampleTemperatureC: 25,
+          sampleAcVrms: 0.5
+        }
+      ]
+    ) ||
+    !sameDataGraph(contract.supportSelectionEvidence.capacitorSelections[2].packageBodyGeometry, {
+      lengthMm: { nominal: 2, tolerance: "±0.15" },
+      widthMm: { nominal: 1.25, tolerance: "±0.15" },
+      thicknessMm: { nominal: 1.25, tolerance: "±0.15" },
+      terminalWidthMm: { minimum: 0.2, maximum: 0.7 },
+      terminalGapMinimumMm: 0.7,
+      source: "Murata GCM21BR71E225KA73-01 retained reference sheet",
+      claimBoundary:
+        "Package-body and terminal dimensions only; no PCB land pattern, pad, mask, paste, courtyard, or manufacturer CAD is claimed."
+    }) ||
+    !sameDataGraph(
+      contract.supportSelectionEvidence.capacitorSelections.flatMap((selection) => selection.references),
+      [
+        "C_STM_3V3_BULK",
+        "C_STM_VDDA_HF",
+        "C_STM_VDDA_BULK",
+        "C_STM_VREF_BULK",
+        "C_STM_VREF_HF",
+        "C_STM_VBAT",
+        "C_ESP_3V3_HF",
+        "C_ESP_3V3_BULK"
+      ]
+    ) ||
+    contract.supportSelectionEvidence.capacitorSelections.some(
+      (selection) =>
+        !selection.sourceUrl.startsWith("https://www.murata.com/") ||
+        !/^(?:source-unverified-primary-url-only|verified-by-retained-manufacturer-primary-bytes)$/u.test(
+          selection.primarySourceMapping
+        ) ||
+        selection.reliability !== "GCM automotive powertrain/safety, AEC-Q200" ||
+        selection.dcBias.sampleBiasV < 3.3 ||
+        !/^[0-9A-F]{64}$/u.test(selection.dcBias.archiveSha256)
+    ) ||
     !sameDataGraph(contract.supportSelectionEvidence.stm32DigitalBypass.references, [
       "C_STM_VDD16",
       "C_STM_VDD32",

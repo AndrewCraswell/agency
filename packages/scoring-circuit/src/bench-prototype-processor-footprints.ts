@@ -93,7 +93,11 @@ function packageFor(mpn: string): string {
     BSS138AKA: "SOT-23",
     C0603C104K3RACTU: "0603",
     C1608X5R1A105K080AC: "0603",
+    GCM188R71H103KA37D: "0603 (1608M)",
     GCM188R71H104KA57D: "0603 (1608M)",
+    GCM21BR71E225KA73L: "0805 (2012M)",
+    GCM32EC71A476KE02L: "1210 (3225M)",
+    GCM32ER71E106KA57L: "1210 (3225M)",
     ISO7721FDR: "SOIC-8",
     ISO7762FDWR: "SOIC-16 wide",
     NXE1S0505MC:
@@ -130,6 +134,22 @@ const manufacturerPrimarySourceByMpn = {
   GCM188R71H104KA57D: {
     manufacturer: "Murata",
     url: "https://www.murata.com/en-us/products/productdetail?partno=GCM188R71H104KA57D"
+  },
+  GCM188R71H103KA37D: {
+    manufacturer: "Murata",
+    url: "https://www.murata.com/en-us/products/productdetail?partno=GCM188R71H103KA37D"
+  },
+  GCM21BR71E225KA73L: {
+    manufacturer: "Murata",
+    url: "https://www.murata.com/en-us/products/productdetail?partno=GCM21BR71E225KA73L"
+  },
+  GCM32EC71A476KE02L: {
+    manufacturer: "Murata",
+    url: "https://www.murata.com/en-us/products/productdetail?partno=GCM32EC71A476KE02L"
+  },
+  GCM32ER71E106KA57L: {
+    manufacturer: "Murata",
+    url: "https://www.murata.com/en-us/products/productdetail?partno=GCM32ER71E106KA57L"
   },
   ISO7721FDR: { manufacturer: "Texas Instruments", url: "https://www.ti.com/product/ISO7721" },
   ISO7762FDWR: { manufacturer: "Texas Instruments", url: "https://www.ti.com/product/ISO7762" },
@@ -243,6 +263,15 @@ const resetLedger = benchPrototypeResetWatchdog.parts.map((part) => ({
 
 function processorSupportReferenceContract() {
   const support = benchPrototypeProcessorSupport
+  const capacitorMpnFor = (references: readonly string[], index: number) => {
+    const reference = references[index]
+    if (reference === undefined) throw new RangeError("BP-125 capacitor reference index drifted")
+    const selection = support.supportSelectionEvidence.capacitorSelections.find((candidate) =>
+      candidate.references.some((candidateReference) => candidateReference === reference)
+    )
+    if (selection === undefined) throw new RangeError(`BP-125 has no exact capacitor selection for ${reference}`)
+    return selection.mpn
+  }
   const rows = [
     ...support.bypassAndBulk.stm32Digital.references.map((reference) => ({
       reference,
@@ -260,14 +289,14 @@ function processorSupportReferenceContract() {
     },
     ...support.bypassAndBulk.stm32Analog.vdDa.references.map((reference, index) => ({
       reference,
-      mpn: support.bypassAndBulk.stm32Analog.capacitorMpn,
+      mpn: capacitorMpnFor(support.bypassAndBulk.stm32Analog.vdDa.references, index),
       value: support.bypassAndBulk.stm32Analog.vdDa.values[index],
       population: support.bypassAndBulk.stm32Analog.population,
       section: "stm32-vdda"
     })),
     ...support.bypassAndBulk.stm32Analog.vref.references.map((reference, index) => ({
       reference,
-      mpn: support.bypassAndBulk.stm32Analog.capacitorMpn,
+      mpn: capacitorMpnFor(support.bypassAndBulk.stm32Analog.vref.references, index),
       value: support.bypassAndBulk.stm32Analog.vref.values[index],
       population: support.bypassAndBulk.stm32Analog.population,
       section: "stm32-vref"
@@ -281,7 +310,7 @@ function processorSupportReferenceContract() {
     },
     ...support.bypassAndBulk.esp32.references.map((reference, index) => ({
       reference,
-      mpn: support.bypassAndBulk.esp32.capacitorMpn,
+      mpn: capacitorMpnFor(support.bypassAndBulk.esp32.references, index),
       value: support.bypassAndBulk.esp32.values[index],
       population: support.bypassAndBulk.esp32.population,
       section: "esp32-supply"
