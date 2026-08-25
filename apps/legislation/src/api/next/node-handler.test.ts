@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { LegislationError } from "../../legislation/errors.js"
+import type { LogContext } from "../../observability/logger.js"
 import { readJsonBody, sendApiError, sendApiJson, type HttpApiHandler } from "../http.js"
 import { executeNextHttpApiHandler } from "./node-handler.js"
 
@@ -94,6 +95,39 @@ describe("Next Node HTTP handler bridge", () => {
         category: "invalid_request",
         correlationId: "thrown-domain-error",
         message: "limit must be between 1 and 100",
+        retryable: false
+      }
+    })
+  })
+
+  it("reports an unexpected handler error with safe request context", async () => {
+    const failure = new Error("Database column is unavailable")
+    const reportUnexpectedError = vi.fn<(error: unknown, context: LogContext) => void>()
+    const handler: HttpApiHandler = async () => {
+      throw failure
+    }
+
+    const response = await executeNextHttpApiHandler(
+      new Request("https://api.example.test/api/jurisdictions?limit=1", {
+        headers: { "x-correlation-id": "unexpected-handler-error" }
+      }),
+      handler,
+      { reportUnexpectedError }
+    )
+
+    expect(response.status).toBe(500)
+    expect(reportUnexpectedError).toHaveBeenCalledWith(failure, {
+      correlationId: "unexpected-handler-error",
+      errorMessage: "Database column is unavailable",
+      errorName: "Error",
+      method: "GET",
+      path: "/api/jurisdictions"
+    })
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        category: "internal",
+        correlationId: "unexpected-handler-error",
+        message: "The request could not be completed",
         retryable: false
       }
     })

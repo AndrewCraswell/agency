@@ -4,12 +4,15 @@ import { IncomingMessage, ServerResponse, type IncomingHttpHeaders } from "node:
 import { Socket } from "node:net"
 import { runWithRequestContext } from "../../auth/request-context.js"
 import { LegislationError } from "../../legislation/errors.js"
+import { createLogger, errorContext, type LogContext } from "../../observability/logger.js"
 import { prepareApiResponse, sendApiError, type HttpApiHandler } from "../http.js"
 
 const DEFAULT_MAXIMUM_BODY_BYTES = 5 * 1024 * 1024
+const logger = createLogger({ level: "error", service: "legislation-next-api" })
 
 export type NodeHttpApiHandlerOptions = Readonly<{
   maximumBodyBytes?: number
+  reportUnexpectedError?: (error: unknown, context: LogContext) => void
 }>
 
 /**
@@ -47,6 +50,17 @@ export async function executeNextHttpApiHandler(
       if (webRequest.signal.aborted) {
         throw abortError(webRequest.signal)
       }
+      if (!(error instanceof LegislationError)) {
+        const url = new URL(webRequest.url)
+        const context = {
+          correlationId,
+          method: webRequest.method,
+          path: url.pathname,
+          ...errorContext(error)
+        }
+        const report = options.reportUnexpectedError ?? reportUnexpectedError
+        report(error, context)
+      }
       if (!response.writableEnded) {
         runWithRequestContext({ correlationId }, () => sendApiError(request, response, error))
       }
@@ -74,6 +88,10 @@ export async function executeNextHttpApiHandler(
     response.detachSocket(responseSocket)
     requestSocket.destroy()
   }
+}
+
+function reportUnexpectedError(_error: unknown, context: LogContext): void {
+  logger.error("Next API handler failed", context)
 }
 
 function createIncomingRequest(webRequest: Request, socket: Socket): IncomingMessage {
