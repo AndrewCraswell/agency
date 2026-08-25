@@ -181,7 +181,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
   })
 
   it("maps the seven U_ESD references to the TPD4E05 review inputs without opening release authority", () => {
-    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(12)
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(13)
     expect(
       benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
         (mapping) => mapping.mappingId === "bp031-tpd4e05u06-dqa-project-footprint"
@@ -272,6 +272,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
             record.sourceBaseReference !== "J_WEAPON_FIXTURE" &&
             record.sourceBaseReference !== "R_REF_SAR" &&
             record.sourceBaseReference !== "R_SOURCE" &&
+            record.sourceBaseReference !== "C_REF_REG" &&
             !["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference)
         )
         .every((record) => record.reviewEvidenceMappingId === null)
@@ -850,6 +851,55 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     expect(records.every((record) => record.reviewEvidenceMappingId === "bp031-era3aeb2491v-project-footprint")).toBe(
       true
     )
+    expect(records.every((record) => record.disposition === "DNP-unresolved")).toBe(true)
+  })
+
+  it("maps all seven C_REF_REG references to root-reviewed polarized T521B evidence without opening release", () => {
+    const mapping = benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+      (candidate) => candidate.mappingId === "bp031-kemet-t521b106m025ate100-project-footprint"
+    )
+    expect(mapping).toMatchObject({
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      artifactKind: "bp031-kemet-t521b106m025ate100-project-footprint",
+      workUnit: "BP-031",
+      baseReference: "C_REF_REG",
+      sourceContract: "BP-101",
+      manufacturer: "KEMET",
+      exactMpn: "T521B106M025ATE100",
+      exactPackage: "1411 / 3528 B case",
+      affectedReferences: [
+        "C_REF_REG_1",
+        "C_REF_REG_2",
+        "C_REF_REG_3",
+        "C_REF_REG_4",
+        "C_REF_REG_5",
+        "C_REF_REG_6",
+        "C_REF_REG_7"
+      ],
+      manufacturerCad: { state: "not-acquired", artifactPath: null, authority: "deny" },
+      manufacturerLandPattern: { state: "not-published", sourceScope: "exact-part package drawing only" },
+      projectFootprint: { accepted: false, fabricationAuthority: "deny" },
+      orientation: { state: "pending-review", polarity: "polarized", independentReview: "pending" },
+      acceptance: {
+        exactIdentityAndPackageReviewed: true,
+        manufacturerDrawingReviewed: true,
+        manufacturerLandPatternPublished: false,
+        manufacturerCadApproved: false,
+        orientationApproved: false,
+        projectArtworkApproved: false,
+        procurementApproved: false,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      }
+    })
+    const records = benchPrototypeAnalogFootprintClosure.records.filter(
+      (record) => record.sourceBaseReference === "C_REF_REG"
+    )
+    expect(records).toHaveLength(7)
+    expect(
+      records.every((record) => record.reviewEvidenceMappingId === "bp031-kemet-t521b106m025ate100-project-footprint")
+    ).toBe(true)
     expect(records.every((record) => record.disposition === "DNP-unresolved")).toBe(true)
   })
 
