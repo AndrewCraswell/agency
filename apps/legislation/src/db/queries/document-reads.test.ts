@@ -10,7 +10,8 @@ import {
   buildDocumentSectionListQuery,
   buildSupportingMaterialSectionListQuery,
   documentReadFromPersistence,
-  documentSectionReadFromPersistence
+  documentSectionReadFromPersistence,
+  supportingMaterialSectionReadFromPersistence
 } from "./document-reads.js"
 
 const pool = new pg.Pool({ connectionString: "postgresql://document-read-test.invalid/legislation" })
@@ -287,16 +288,18 @@ describe("document section traversal", () => {
 })
 
 describe("supporting-material section traversal", () => {
-  it("uses the same ordinal keyset without pretending that offsets are page numbers", () => {
+  it("uses exact persisted page overlap filters with the same ordinal keyset", () => {
     const generated = buildSupportingMaterialSectionListQuery(database, {
       cursor: cursor({
         id: "material-section:1:2",
         ordinal: 2,
-        scope: { heading: "Agenda", pageFrom: null, pageTo: null, parentId: "material:1" },
+        scope: { heading: "Agenda", pageFrom: 2, pageTo: 4, parentId: "material:1" },
         version: 1
       }),
       heading: "Agenda",
-      materialId: "material:1"
+      materialId: "material:1",
+      pageFrom: 2,
+      pageTo: 4
     }).toSQL().sql
 
     expect(generated).toContain('"supporting_material_sections"."material_id" =')
@@ -304,12 +307,68 @@ describe("supporting-material section traversal", () => {
       '"supporting_materials"."id" = "legislation"."supporting_material_sections"."material_id"'
     )
     expect(generated).toContain('"supporting_material_sections"."ordinal" >')
+    expect(generated).toContain('"supporting_material_sections"."page_end" >=')
+    expect(generated).toContain('"supporting_material_sections"."page_start" <=')
+    expect(generated).not.toContain('"supporting_materials"."blob_path"')
+    expect(generated).not.toContain('"supporting_materials"."text"')
     expect(generated).not.toContain(" offset ")
   })
 
-  it("rejects page filters until source page mappings are actually persisted", () => {
-    expect(() => buildSupportingMaterialSectionListQuery(database, { materialId: "material:1", pageFrom: 1 })).toThrow(
-      "Supporting material page filters are unavailable"
-    )
+  it("uses the matching page boundary for each one-sided overlap filter", () => {
+    const fromOnly = buildSupportingMaterialSectionListQuery(database, {
+      materialId: "material:1",
+      pageFrom: 4
+    }).toSQL().sql
+    const toOnly = buildSupportingMaterialSectionListQuery(database, {
+      materialId: "material:1",
+      pageTo: 4
+    }).toSQL().sql
+
+    expect(fromOnly).toContain('"supporting_material_sections"."page_end" >=')
+    expect(fromOnly).not.toContain('"supporting_material_sections"."page_start" <=')
+    expect(toOnly).toContain('"supporting_material_sections"."page_start" <=')
+    expect(toOnly).not.toContain('"supporting_material_sections"."page_end" >=')
+  })
+
+  it("rejects supporting-material cursors whose filter scope changes", () => {
+    const scopedCursor = cursor({
+      id: "material-section:1:2",
+      ordinal: 2,
+      scope: { heading: "Agenda", pageFrom: 2, pageTo: 4, parentId: "material:1" },
+      version: 1
+    })
+
+    expect(() =>
+      buildSupportingMaterialSectionListQuery(database, {
+        cursor: scopedCursor,
+        heading: "Agenda",
+        materialId: "material:1",
+        pageFrom: 2,
+        pageTo: 5
+      })
+    ).toThrow("Invalid document section pagination cursor")
+  })
+
+  it("fails closed for incomplete persisted supporting-material page mappings", () => {
+    expect(() =>
+      supportingMaterialSectionReadFromPersistence(
+        {
+          createdAt: new Date("2026-08-20T15:00:00.000Z"),
+          id: "material:1",
+          sourceUpdatedAt: null,
+          sourceUrl: "https://example.test/material",
+          updatedAt: new Date("2026-08-20T15:00:00.000Z")
+        },
+        {
+          contentHash: "a".repeat(64),
+          heading: null,
+          id: "material-section:1:1",
+          ordinal: 1,
+          pageEnd: null,
+          pageStart: 1,
+          text: "Persisted text"
+        }
+      )
+    ).toThrow("supporting material section page mapping is incomplete or invalid")
   })
 })

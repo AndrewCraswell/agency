@@ -299,6 +299,28 @@ describe("canonical legislative projections", () => {
     })
   })
 
+  it("requires a complete positive supporting-material page range", () => {
+    const input = {
+      contentHash: "b".repeat(64),
+      heading: null,
+      id: "material-section:123",
+      materialId: "material:ca:123",
+      ordinal: 2,
+      sourceUrl: "https://source.example.test/materials/123.pdf",
+      text: "Analysis text"
+    }
+
+    expect(() => projectSupportingMaterialSection({ ...input, pageEnd: 1, pageStart: 0 }, context)).toThrow(
+      "supporting material section pageStart must be a positive safe integer"
+    )
+    expect(() => projectSupportingMaterialSection({ ...input, pageEnd: null, pageStart: 1 }, context)).toThrow(
+      "supporting material section pages must both be null or both be present"
+    )
+    expect(() => projectSupportingMaterialSection({ ...input, pageEnd: 1, pageStart: null }, context)).toThrow(
+      "supporting material section pages must both be null or both be present"
+    )
+  })
+
   it("projects canonical people, organizations, memberships, and terms", () => {
     const personInput = {
       id: "person:ca:1",

@@ -225,6 +225,13 @@
       "when": 1787683200000,
       "tag": "0031_canonical-meeting-foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1787686800000,
+      "tag": "0032_supporting-material-section-pages",
+      "breakpoints": true
     }
   ]
 }

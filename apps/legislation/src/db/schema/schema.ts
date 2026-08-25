@@ -928,6 +928,8 @@ export const supportingMaterialSections = legislationSchema.table(
     heading: text("heading"),
     sourceStartOffset: integer("source_start_offset").notNull(),
     sourceEndOffset: integer("source_end_offset").notNull(),
+    pageStart: integer("page_start"),
+    pageEnd: integer("page_end"),
     text: text("text").notNull(),
     contentHash: char("content_hash", { length: 64 }).notNull(),
     searchVector: tsvector("search_vector"),
@@ -948,10 +950,15 @@ export const supportingMaterialSections = legislationSchema.table(
       "supporting_material_sections_offsets_check",
       sql`${table.sourceStartOffset} >= 0 and ${table.sourceEndOffset} >= ${table.sourceStartOffset}`
     ),
+    check(
+      "supporting_material_sections_pages_check",
+      sql`(${table.pageStart} is null and ${table.pageEnd} is null) or (${table.pageStart} >= 1 and ${table.pageEnd} >= ${table.pageStart})`
+    ),
     check("supporting_material_sections_text_check", sql`length(${table.text}) > 0`),
     check("supporting_material_sections_hash_check", sql`${table.contentHash} ~ '^[0-9a-f]{64}$'`),
     uniqueIndex("supporting_material_sections_ordinal_uidx").on(table.materialId, table.ordinal),
     index("supporting_material_sections_identifier_idx").on(table.materialId, table.sectionIdentifier),
+    index("supporting_material_sections_page_range_idx").on(table.materialId, table.pageStart, table.pageEnd),
     index("supporting_material_sections_search_vector_gin_idx").using("gin", table.searchVector),
     index("supporting_material_sections_embedding_hnsw_idx").using("hnsw", table.embedding.op("vector_cosine_ops"))
   ]

@@ -2,10 +2,12 @@ import type { LegislationDatabase } from "../db/database.js"
 import { getOrganizationMembership, getPersonTerm } from "../db/queries/civic-scoped-reads.js"
 import {
   assertBillExists,
+  assertSupportingMaterialExists,
   getDocumentDetail,
   getDocumentSection,
   listBillDocuments,
-  listDocumentSections
+  listDocumentSections,
+  listSupportingMaterialSections
 } from "../db/queries/document-reads.js"
 import { getEventDocumentRead } from "../db/queries/event-document-read.js"
 import {
@@ -175,8 +177,12 @@ export function createLegislationApiHandler(
           createSessionReadApiHandler(createSessionRepository(documentDatabase), options),
           createSupportingMaterialSectionReadApiHandler(
             {
+              assertSupportingMaterialExists: async (materialId) =>
+                await assertSupportingMaterialExists(documentDatabase, materialId),
               getSupportingMaterialSection: async (input) =>
-                await getSupportingMaterialSectionRead(documentDatabase, input)
+                await getSupportingMaterialSectionRead(documentDatabase, input),
+              listSupportingMaterialSections: async (input) =>
+                await listSupportingMaterialSections(documentDatabase, input)
             },
             options
           )

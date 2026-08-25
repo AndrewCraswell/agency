@@ -86,6 +86,8 @@ function materialSearchCandidate() {
       id: "material:fixture:section:0",
       materialId: "material:fixture",
       ordinal: 0,
+      pageEnd: null,
+      pageStart: null,
       searchVector: null,
       sectionIdentifier: null,
       sourceEndOffset: 32,

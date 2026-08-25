@@ -16,7 +16,7 @@ type SupportingMaterialPersistenceRead = Pick<
 
 type SupportingMaterialSectionPersistenceRead = Pick<
   typeof supportingMaterialSections.$inferSelect,
-  "contentHash" | "heading" | "id" | "ordinal" | "text"
+  "contentHash" | "heading" | "id" | "ordinal" | "pageEnd" | "pageStart" | "text"
 >
 
 /**
@@ -42,6 +42,8 @@ export function buildSupportingMaterialSectionReadQuery(
         heading: supportingMaterialSections.heading,
         id: supportingMaterialSections.id,
         ordinal: supportingMaterialSections.ordinal,
+        pageEnd: supportingMaterialSections.pageEnd,
+        pageStart: supportingMaterialSections.pageStart,
         text: supportingMaterialSections.text
       }
     })
@@ -72,6 +74,7 @@ export function supportingMaterialSectionReadFromPersistence(
   material: SupportingMaterialPersistenceRead,
   section: SupportingMaterialSectionPersistenceRead
 ): SupportingMaterialSectionRead {
+  validateSectionPages(section.pageStart, section.pageEnd)
   return {
     material: {
       createdAt: material.createdAt,
@@ -85,6 +88,8 @@ export function supportingMaterialSectionReadFromPersistence(
       heading: section.heading,
       id: requiredId(section.id, "supporting material section ID"),
       ordinal: nonnegativeInteger(section.ordinal, "supporting material section ordinal"),
+      pageEnd: section.pageEnd,
+      pageStart: section.pageStart,
       text: requiredText(section.text, "supporting material section text")
     }
   }
@@ -113,4 +118,20 @@ function nonnegativeInteger(value: number, field: string): number {
     throw new LegislationError("unprocessable", `${field} must be a non-negative integer`)
   }
   return value
+}
+
+function validateSectionPages(pageStart: number | null, pageEnd: number | null): void {
+  if (pageStart === null && pageEnd === null) {
+    return
+  }
+  if (
+    pageStart === null ||
+    pageEnd === null ||
+    !Number.isSafeInteger(pageStart) ||
+    !Number.isSafeInteger(pageEnd) ||
+    pageStart < 1 ||
+    pageEnd < pageStart
+  ) {
+    throw new LegislationError("unprocessable", "Supporting material section pages are invalid")
+  }
 }

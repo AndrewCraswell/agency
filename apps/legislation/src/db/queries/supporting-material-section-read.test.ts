@@ -38,6 +38,8 @@ describe("supporting material section repository", () => {
         heading: "Findings",
         id: "material-section:us:119:report:1:2",
         ordinal: 2,
+        pageEnd: 4,
+        pageStart: 3,
         text: "The persisted public section text."
       }
     )
@@ -55,6 +57,8 @@ describe("supporting material section repository", () => {
         heading: "Findings",
         id: "material-section:us:119:report:1:2",
         ordinal: 2,
+        pageEnd: 4,
+        pageStart: 3,
         text: "The persisted public section text."
       }
     })

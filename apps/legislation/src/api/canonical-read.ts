@@ -54,6 +54,8 @@ export interface SupportingMaterialSectionRecord {
   heading: string | null
   id: string
   ordinal: number
+  pageEnd?: number | null
+  pageStart?: number | null
   text: string
 }
 
@@ -163,8 +165,8 @@ export function projectSupportingMaterialSectionRead(
     {
       ...value.section,
       materialId: requiredString(value.material, "id", "supporting material ID"),
-      pageEnd: null,
-      pageStart: null,
+      pageEnd: value.section.pageEnd ?? null,
+      pageStart: value.section.pageStart ?? null,
       sourceUrl: value.material.sourceUrl
     },
     projectionContext(value.material, apiBaseUrl)

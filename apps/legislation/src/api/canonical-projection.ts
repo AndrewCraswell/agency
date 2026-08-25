@@ -1163,8 +1163,11 @@ export function projectSupportingMaterialSection(
   input: SupportingMaterialSectionProjectionInput,
   context: ProjectionContext
 ): SupportingMaterialSection {
-  const pageStart = nullableNonnegativeInteger(input.pageStart, "supporting material section pageStart")
-  const pageEnd = nullableNonnegativeInteger(input.pageEnd, "supporting material section pageEnd")
+  const pageStart = nullablePositiveInteger(input.pageStart, "supporting material section pageStart")
+  const pageEnd = nullablePositiveInteger(input.pageEnd, "supporting material section pageEnd")
+  if ((pageStart === null) !== (pageEnd === null)) {
+    throw new CanonicalProjectionError("supporting material section pages must both be null or both be present")
+  }
   if (pageStart !== null && pageEnd !== null && pageEnd < pageStart) {
     throw new CanonicalProjectionError("supporting material section pageEnd must not precede pageStart")
   }
@@ -1447,6 +1450,16 @@ function nonnegativeInteger(value: number, label: string): number {
 
 function nullableNonnegativeInteger(value: number | null, label: string): number | null {
   return value === null ? null : nonnegativeInteger(value, label)
+}
+
+function nullablePositiveInteger(value: number | null, label: string): number | null {
+  if (value === null) {
+    return null
+  }
+  if (!Number.isSafeInteger(value) || value < 1) {
+    throw new CanonicalProjectionError(`${label} must be a positive safe integer`)
+  }
+  return value
 }
 
 function isoDate(value: DateValue | null, label: string): string | null {

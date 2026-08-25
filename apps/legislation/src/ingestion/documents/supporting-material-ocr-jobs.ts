@@ -202,6 +202,7 @@ export async function processOcrRequiredSupportingMaterials(
         blobPath: record.blobPath,
         contentType,
         materialId: record.id,
+        pages: result.pages,
         sourceBytes,
         text: result.text
       })
