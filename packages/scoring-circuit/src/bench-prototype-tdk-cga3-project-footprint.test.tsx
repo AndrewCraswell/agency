@@ -1,9 +1,11 @@
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+import { benchPrototypeAnalogFootprintClosure } from "./bench-prototype-analog-footprint-closure.js"
 import {
   benchPrototypeTdkCga3ProjectFootprintGeometry,
-  BenchPrototypeTdkCga3ProjectFootprint
+  BenchPrototypeTdkCga3ProjectFootprint,
+  validateBenchPrototypeTdkCga3ProjectFootprint
 } from "./bench-prototype-tdk-cga3-project-footprint.js"
 import { oneChannelAnalogExperimentBom } from "./one-channel-analog-readiness.js"
 import { renderTestCircuit } from "./test-helper.js"
@@ -64,6 +66,7 @@ function renderedGeometryHash() {
 
 describe("BP-031 TDK CGA3E3X7R1H105K080AB project footprint", () => {
   it("binds only the exact affected references and retains denied release state", () => {
+    expect(validateBenchPrototypeTdkCga3ProjectFootprint()).toEqual([])
     expect(benchPrototypeTdkCga3ProjectFootprintGeometry).toMatchObject({
       artifactKind: "bp031-tdk-cga3e3x7r1h105k080ab-project-footprint",
       workUnit: "BP-031",
@@ -77,7 +80,10 @@ describe("BP-031 TDK CGA3E3X7R1H105K080AB project footprint", () => {
         replicatedReferencePrefix: "C_REF_IN_",
         manufacturer: "TDK",
         manufacturerPartNumber: "CGA3E3X7R1H105K080AB",
-        package: "0603"
+        package: "0603",
+        exactOrderableSourceId: "tdk-exact-part-detail",
+        landPatternSourceId: "tdk-exact-part-detail",
+        landPatternApplicability: expect.stringContaining("reference-only")
       },
       affectedReferences: [
         "C_REF_IN_1",
@@ -94,7 +100,7 @@ describe("BP-031 TDK CGA3E3X7R1H105K080AB project footprint", () => {
         representation: "canonical-rendered-footprint-soup-geometry",
         generator: "tscircuit",
         generatorVersion: "0.0.2271",
-        sha256: expect.any(String),
+        sha256: "D1DB1A503674A4E51CFB8E529C93CD02ACF6C30D025C284FD08431E239D945EC",
         authority: "deny"
       },
       releaseState: "deny",
@@ -110,20 +116,26 @@ describe("BP-031 TDK CGA3E3X7R1H105K080AB project footprint", () => {
         },
         {
           path: "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts",
-          sha256: "ac7a72f68b8d9113b6ad1d161645cc8f8b7062207abf4fe5411042962e22314c"
+          sha256: "acda1715f73820cfdd1eeec45395761fd8efd2badf25a0b8df8747516790bffe"
         }
       ]
     })
     expect(benchPrototypeTdkCga3ProjectFootprintGeometry.sources).toEqual([
       expect.objectContaining({
+        applicability: "exact-orderable-identity-package-electrical-and-land-guidance",
         artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/tdk-cga3e3x7r1h105k080ab-detail.pdf",
+        manufacturerProductPageUrl: benchPrototypeTdkCga3ProjectFootprintGeometry.primaryProductPageUrl,
+        reviewedPages: [1, 2, 3],
+        scope: expect.stringContaining("DC-bias reference graph"),
         sha256: "8692A2973DD875110C6F3FE3EB0A688454C0A155DCC8FCFAF3130F6862EC316F"
       }),
       expect.objectContaining({
+        applicability: "manufacturer-family-package-and-electrical-context",
         artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/tdk-mlcc-automotive-general-zh.pdf",
         sha256: "E6F5803E89514DC61813BF2C96414D784005274730A8AF43A5EF54EBD546DBFF"
       }),
       expect.objectContaining({
+        applicability: "manufacturer-exact-orderable-identity-only",
         artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/tdk-mlcc-virtual-component-library-parts-list.pdf",
         sha256: "B71416318033D9E0E50E4386A758FE58E133805F289B0200DFDE983B4FDA6DA4"
       })
@@ -160,10 +172,20 @@ describe("BP-031 TDK CGA3E3X7R1H105K080AB project footprint", () => {
       terminalWidthMm: { minimum: 0.2 },
       terminalSpacingMm: { minimum: 0.3 }
     })
-    expect(manufacturerLandPattern.reflow).toEqual({
-      paGapMm: { minimum: 0.6, maximum: 0.8 },
-      pbPadLengthMm: { minimum: 0.6, maximum: 0.8 },
-      pcPadWidthMm: { minimum: 0.6, maximum: 0.8 }
+    expect(manufacturerLandPattern).toMatchObject({
+      sourceId: "tdk-exact-part-detail",
+      sourceScope: expect.stringContaining("page 1"),
+      applicability: expect.stringContaining("not an exact-orderable CAD"),
+      flow: {
+        paGapMm: { minimum: 0.7, maximum: 1.0 },
+        pbPadLengthMm: { minimum: 0.8, maximum: 1.0 },
+        pcPadWidthMm: { minimum: 0.6, maximum: 0.8 }
+      },
+      reflow: {
+        paGapMm: { minimum: 0.6, maximum: 0.8 },
+        pbPadLengthMm: { minimum: 0.6, maximum: 0.8 },
+        pcPadWidthMm: { minimum: 0.6, maximum: 0.8 }
+      }
     })
     expect(projectSelection.manufacturerParameterSelectionMm).toEqual({ paGap: 0.7, pbPadLength: 0.7, pcPadWidth: 0.7 })
     expect(projectSelection).toMatchObject({
@@ -226,7 +248,22 @@ describe("BP-031 TDK CGA3E3X7R1H105K080AB project footprint", () => {
       pinOne: "not-applicable",
       ratedVoltageVdc: 50,
       nominalApplicationRailVdc: 5,
-      dcBiasEvidence: "not-retained"
+      dcBiasEvidence: "page-2-reference-graph-retained-not-guaranteed"
+    })
+    expect(benchPrototypeTdkCga3ProjectFootprintGeometry.dcBiasReview).toMatchObject({
+      sourceId: "tdk-exact-part-detail",
+      reviewedPage: 2,
+      status: "reference-graph-retained-not-guaranteed",
+      ratedVoltageVdc: 50,
+      nominalApplicationRailVdc: 5,
+      graphVoltageRangeVdc: { minimum: 0, maximum: 50 }
+    })
+    expect(benchPrototypeTdkCga3ProjectFootprintGeometry.placementReview).toMatchObject({
+      sourceId: "tdk-exact-part-detail",
+      reviewedPages: [1, 3],
+      packageMaximumMm: { length: 1.8, width: 1, thickness: 1 },
+      projectCourtyardMm: { length: 2.4, width: 1.3 },
+      boardPlacementStatus: "not-reviewed"
     })
     expect(benchPrototypeTdkCga3ProjectFootprintGeometry.orientation).toMatchObject({
       state: "pending-review",
@@ -234,9 +271,40 @@ describe("BP-031 TDK CGA3E3X7R1H105K080AB project footprint", () => {
     })
   })
 
+  it("cross-checks all seven C_REF_IN references against the canonical closure", () => {
+    const expectedReferences = [
+      "C_REF_IN_1",
+      "C_REF_IN_2",
+      "C_REF_IN_3",
+      "C_REF_IN_4",
+      "C_REF_IN_5",
+      "C_REF_IN_6",
+      "C_REF_IN_7"
+    ]
+    const canonicalRecords = benchPrototypeAnalogFootprintClosure.records.filter((record) =>
+      expectedReferences.includes(record.reference)
+    )
+    expect(canonicalRecords.map((record) => record.reference)).toEqual(expectedReferences)
+    expect(canonicalRecords).toHaveLength(7)
+    for (const record of canonicalRecords) {
+      expect(record).toMatchObject({
+        sourceBaseReference: "C_REF_IN",
+        sourceContract: "BP-103",
+        exactMpn: "CGA3E3X7R1H105K080AB",
+        exactPackage: "0603",
+        disposition: "DNP-unresolved"
+      })
+    }
+    expect(benchPrototypeTdkCga3ProjectFootprintGeometry.affectedReferences).toEqual(expectedReferences)
+  })
+
   it("renders the project copper and review courtyard without tscircuit errors", () => {
     const json = renderProjectFootprint()
     const pads = json.filter((element) => element.type === "pcb_smtpad")
+    expect(json.find((element) => element.type === "source_component")).toMatchObject({
+      name: "C_BP031_TDK_CGA3E3X7R1H105K080AB",
+      manufacturer_part_number: "CGA3E3X7R1H105K080AB"
+    })
     expect(pads).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -263,8 +331,8 @@ describe("BP-031 TDK CGA3E3X7R1H105K080AB project footprint", () => {
     )
     expect(json.filter((element) => element.type === "source_port")).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ pin_number: 1, name: "A", port_hints: expect.arrayContaining(["pin1"]) }),
-        expect.objectContaining({ pin_number: 2, name: "B", port_hints: expect.arrayContaining(["pin2"]) })
+        expect.objectContaining({ pin_number: 1, name: "A", port_hints: expect.arrayContaining(["A"]) }),
+        expect.objectContaining({ pin_number: 2, name: "B", port_hints: expect.arrayContaining(["B"]) })
       ])
     )
     expect(json.filter((element) => element.type === "pcb_courtyard_rect")).toEqual(
@@ -275,5 +343,33 @@ describe("BP-031 TDK CGA3E3X7R1H105K080AB project footprint", () => {
 
   it("hashes the canonical rendered geometry", () => {
     expect(renderedGeometryHash()).toBe(benchPrototypeTdkCga3ProjectFootprintGeometry.artwork.sha256)
+  })
+
+  it.each([
+    ["MPN", (copy: any) => (copy.manufacturerPartNumber = "CGA3E3X7R1H105K080AA")],
+    ["reference scope", (copy: any) => (copy.affectedReferences = ["C_REF_IN_1"])],
+    ["exact source hash", (copy: any) => (copy.sources[0].sha256 = "0".repeat(64))],
+    ["land guidance", (copy: any) => (copy.manufacturerLandPattern.reflow.paGapMm.minimum = 0.4)],
+    ["DC-bias review", (copy: any) => (copy.dcBiasReview.nominalApplicationRailVdc = 25)],
+    ["placement review", (copy: any) => (copy.placementReview.boardPlacementStatus = "accepted")],
+    ["orientation", (copy: any) => (copy.orientation.assemblyRotationDeg = 90)],
+    ["artwork authority", (copy: any) => (copy.artwork.authority = "allow")],
+    ["release state", (copy: any) => (copy.releaseState = "allow")]
+  ])("fails closed on %s drift", (_name, mutate) => {
+    const copy = structuredClone(benchPrototypeTdkCga3ProjectFootprintGeometry)
+    mutate(copy)
+    expect(validateBenchPrototypeTdkCga3ProjectFootprint(copy)).not.toEqual([])
+  })
+
+  it("keeps independent frozen evidence and rejects malformed candidates", () => {
+    expect(Object.isFrozen(benchPrototypeTdkCga3ProjectFootprintGeometry)).toBe(true)
+    expect(Object.isFrozen(benchPrototypeTdkCga3ProjectFootprintGeometry.sources)).toBe(true)
+    expect(Reflect.set(benchPrototypeTdkCga3ProjectFootprintGeometry, "accepted", true)).toBe(false)
+    expect(validateBenchPrototypeTdkCga3ProjectFootprint()).toEqual([])
+
+    const cyclicCandidate: { self?: unknown } = {}
+    cyclicCandidate.self = cyclicCandidate
+    expect(validateBenchPrototypeTdkCga3ProjectFootprint(cyclicCandidate)).not.toEqual([])
+    expect(validateBenchPrototypeTdkCga3ProjectFootprint({})).not.toEqual([])
   })
 })
