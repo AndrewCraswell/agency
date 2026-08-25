@@ -18,5 +18,7 @@
 **/.next
 **/.turbo
 **/coverage
+!apps/legislation/src/coverage/
+!apps/legislation/src/coverage/**
 **/node_modules
 **/*.tsbuildinfo
