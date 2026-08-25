@@ -191,7 +191,7 @@ const privateFrozenBaseline = deepFreeze({
     },
     bp031Identity: {
       artifactPath: "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts",
-      sha256: "4A50698A9344FF2390A12D515F0F964273812A165D3EA3EAF9A5C1E7EDC9BF71",
+      sha256: "341F58EB8506E127C71F71BC135A49F7AC0B7973C0671D01074A91EAFFB4D8CD",
       binding: "BP-031 imports J_WEAPON_FIXTURE from BP-104 as the exact 43045-1200 internal fixture connector record"
     },
     externalBoundary: {
@@ -395,7 +395,7 @@ export function validateBp031WeaponFixture430451200FootprintEvidence(
     sources.manufacturerDrawing.sha256 !== "571C8A381BE263CF8F92B064FE18DBC6CE6161E8CB2E931D186E8280B9F8338A" ||
     sources.manufacturerCadPreview.sha256 !== "7EC4BED5FA8DE35DBCF15486EEA86062F9BAAF8CDD2BFC0F4D2126A5D68F65FA" ||
     sources.bp104Identity.sha256 !== "281E698509CE08CE820436620610182C36DB02529F1A1DD0F510D6E47A369160" ||
-    sources.bp031Identity.sha256 !== "4A50698A9344FF2390A12D515F0F964273812A165D3EA3EAF9A5C1E7EDC9BF71" ||
+    sources.bp031Identity.sha256 !== "341F58EB8506E127C71F71BC135A49F7AC0B7973C0671D01074A91EAFFB4D8CD" ||
     sources.externalBoundary.sha256 !== "9743537C4A33A4208623B5F4CC80DF0469473C2710A960D7482AA0065AA59515" ||
     sources.prototypeHandoffBoundary.sha256 !== "BEF1FF45CEC4887226D9F3D4B8591B6F5266FD1C28D5AD1C923CB9B29A5B5276" ||
     pins.length !== expectedPins.length ||

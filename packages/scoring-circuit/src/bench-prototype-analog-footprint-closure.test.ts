@@ -181,7 +181,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
   })
 
   it("maps the seven U_ESD references to the TPD4E05 review inputs without opening release authority", () => {
-    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(9)
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(10)
     expect(
       benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
         (mapping) => mapping.mappingId === "bp031-tpd4e05u06-dqa-project-footprint"
@@ -269,6 +269,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
             record.sourceBaseReference !== "C_SAR" &&
             record.sourceBaseReference !== "C_REF_IN" &&
             record.sourceBaseReference !== "C_REF_REG_HF" &&
+            record.sourceBaseReference !== "J_WEAPON_FIXTURE" &&
             !["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference)
         )
         .every((record) => record.reviewEvidenceMappingId === null)
@@ -795,7 +796,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     expect(mappedRecords.every((record) => record.disposition === "DNP-unresolved")).toBe(true)
   })
 
-  it("freezes the exact Molex connector and BP-104 pin disposition", () => {
+  it("maps the exact Molex internal fixture header while preserving the external weapon-interface boundary", () => {
     const connectorRecord = benchPrototypeAnalogFootprintClosure.records.find(
       (record) => record.sourceContract === "BP-104"
     )
@@ -803,7 +804,39 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       reference: "J_WEAPON_FIXTURE",
       manufacturer: "Molex",
       exactMpn: "43045-1200",
+      reviewEvidenceMappingId: "bp031-weapon-fixture-43045-1200-footprint-evidence",
       disposition: "DNP-unresolved"
+    })
+    const mapping = benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+      (candidate) => candidate.mappingId === "bp031-weapon-fixture-43045-1200-footprint-evidence"
+    )
+    expect(mapping).toMatchObject({
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      artifactKind: "bp031-weapon-fixture-43045-1200-footprint-evidence",
+      workUnit: "BP-031",
+      baseReference: "J_WEAPON_FIXTURE",
+      sourceContract: "BP-104",
+      manufacturer: "Molex",
+      exactMpn: "43045-1200",
+      affectedReferences: ["J_WEAPON_FIXTURE"],
+      interfaceBoundary: {
+        internalFixtureHarness: { externalThreeBananaInterface: false },
+        externalWeaponMating: {
+          supplier: "OK Fencing",
+          cableCompatibility: "owner-validated-compatible-with-existing-boxes",
+          representedBy430451200: false,
+          socketIdentity: null,
+          productionStatus: "open"
+        }
+      },
+      acceptance: {
+        accepted: false,
+        fabricationAuthority: "deny",
+        physicalAuthority: "deny",
+        mechanicalAuthority: "deny",
+        externalMatingAuthority: "deny"
+      }
     })
     expect(benchPrototypeAnalogFootprintClosure.connectorClosure).toMatchObject({
       boardReference: "J_WEAPON_FIXTURE",
