@@ -60,6 +60,8 @@ import { createOrganizationReadApiHandler } from "./organization-read-routes.js"
 import { createPeopleReadApiHandler } from "./people-read-routes.js"
 import { createPersonAmendmentApiHandler } from "./person-amendment-routes.js"
 import { createPersonBillActivityApiHandler } from "./person-bill-activity-routes.js"
+import { createPersonDetailReadRepository } from "./person-detail-read-repository.js"
+import { createPersonDetailReadApiHandler } from "./person-detail-read-routes.js"
 import { createPersonMembershipsRepository } from "./person-membership-read-repository.js"
 import { createPersonMembershipReadApiHandler } from "./person-membership-read-routes.js"
 import { createResourceBatchReadRepositoryFromCanonicalReads } from "./resource-batch-read-repository.js"
@@ -206,6 +208,7 @@ export function createLegislationApiHandler(
             },
             options
           ),
+          createPersonDetailReadApiHandler(createPersonDetailReadRepository(documentDatabase), options),
           createPersonBillActivityApiHandler(
             {
               assertPersonExists: async (personId) => await assertPersonExists(documentDatabase, personId),

@@ -1,7 +1,16 @@
 import { and, eq, inArray, sql } from "drizzle-orm"
 import type { OpenStatesEntitySnapshot } from "../../ingestion/openstates/entities.js"
 import type { LegislationDatabase } from "../database.js"
-import { legislativeTerms, organizationMemberships, organizations, people, personAliases } from "../schema/schema.js"
+import {
+  legislativeTerms,
+  organizationMemberships,
+  organizations,
+  people,
+  personAliases,
+  personDetails,
+  personExternalIdentifiers,
+  personJurisdictions
+} from "../schema/schema.js"
 import { observeCanonicalRecord } from "./changes.js"
 
 function uniqueById<T extends { id: string }>(values: readonly T[]): T[] {
@@ -19,6 +28,10 @@ export async function replaceEntitySnapshot(
   const membershipValues = uniqueById(snapshot.memberships)
   const personAliasPersonIds = [...new Set(snapshot.personAliasPersonIds)]
   const personAliasValues = snapshot.personAliases
+  const personDetailPersonIds = [...new Set(snapshot.personDetailPersonIds ?? [])]
+  const personDetailValues = snapshot.personDetails ?? []
+  const personExternalIdentifierValues = snapshot.personExternalIdentifiers ?? []
+  const personJurisdictionValues = snapshot.personJurisdictions ?? []
 
   await database.transaction(async (transaction) => {
     await transaction
@@ -78,6 +91,86 @@ export async function replaceEntitySnapshot(
             updatedAt: new Date()
           },
           target: [personAliases.personId, personAliases.sourceIdentity]
+        })
+    }
+    if (personDetailPersonIds.length > 0) {
+      await transaction
+        .delete(personDetails)
+        .where(
+          and(inArray(personDetails.personId, personDetailPersonIds), eq(personDetails.sourceProvider, "openstates"))
+        )
+      await transaction
+        .delete(personExternalIdentifiers)
+        .where(
+          and(
+            inArray(personExternalIdentifiers.personId, personDetailPersonIds),
+            eq(personExternalIdentifiers.sourceProvider, "openstates")
+          )
+        )
+      await transaction
+        .delete(personJurisdictions)
+        .where(
+          and(
+            inArray(personJurisdictions.personId, personDetailPersonIds),
+            eq(personJurisdictions.sourceProvider, "openstates")
+          )
+        )
+    }
+    if (personDetailValues.length > 0) {
+      await transaction
+        .insert(personDetails)
+        .values(personDetailValues)
+        .onConflictDoUpdate({
+          set: {
+            imageUrl: sql`excluded.image_url`,
+            officialUrl: sql`excluded.official_url`,
+            provenanceComplete: sql`excluded.provenance_complete`,
+            publicEmail: sql`excluded.public_email`,
+            sourceIsOfficial: sql`excluded.source_is_official`,
+            sourceProvider: sql`excluded.source_provider`,
+            sourceRetrievedAt: sql`excluded.source_retrieved_at`,
+            sourceUpdatedAt: sql`excluded.source_updated_at`,
+            sourceUrl: sql`excluded.source_url`,
+            updatedAt: new Date()
+          },
+          target: personDetails.personId,
+          where: eq(personDetails.sourceProvider, "openstates")
+        })
+    }
+    if (personExternalIdentifierValues.length > 0) {
+      await transaction
+        .insert(personExternalIdentifiers)
+        .values(personExternalIdentifierValues)
+        .onConflictDoUpdate({
+          set: {
+            provenanceComplete: sql`excluded.provenance_complete`,
+            scheme: sql`excluded.scheme`,
+            sourceIsOfficial: sql`excluded.source_is_official`,
+            sourceProvider: sql`excluded.source_provider`,
+            sourceRetrievedAt: sql`excluded.source_retrieved_at`,
+            sourceUpdatedAt: sql`excluded.source_updated_at`,
+            sourceUrl: sql`excluded.source_url`,
+            updatedAt: new Date(),
+            value: sql`excluded.value`
+          },
+          target: [personExternalIdentifiers.personId, personExternalIdentifiers.sourceIdentity]
+        })
+    }
+    if (personJurisdictionValues.length > 0) {
+      await transaction
+        .insert(personJurisdictions)
+        .values(personJurisdictionValues)
+        .onConflictDoUpdate({
+          set: {
+            provenanceComplete: sql`excluded.provenance_complete`,
+            sourceIsOfficial: sql`excluded.source_is_official`,
+            sourceProvider: sql`excluded.source_provider`,
+            sourceRetrievedAt: sql`excluded.source_retrieved_at`,
+            sourceUpdatedAt: sql`excluded.source_updated_at`,
+            sourceUrl: sql`excluded.source_url`,
+            updatedAt: new Date()
+          },
+          target: [personJurisdictions.personId, personJurisdictions.jurisdictionId, personJurisdictions.sourceIdentity]
         })
     }
     if (organizationValues.length > 0) {

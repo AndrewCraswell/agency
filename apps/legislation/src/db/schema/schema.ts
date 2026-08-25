@@ -280,6 +280,105 @@ export const personAliases = legislationSchema.table(
   ]
 )
 
+/**
+ * Source-backed profile facts for a person.  Optional fields remain null when
+ * an authoritative source did not publish them; the row itself distinguishes
+ * that from an uncollected profile.
+ */
+export const personDetails = legislationSchema.table(
+  "person_details",
+  {
+    personId: text("person_id")
+      .primaryKey()
+      .references(() => people.id, { onDelete: "cascade" }),
+    imageUrl: text("image_url"),
+    publicEmail: text("public_email"),
+    officialUrl: text("official_url"),
+    sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check(
+      "person_details_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
+    check("person_details_image_url_check", sql`${table.imageUrl} is null or ${table.imageUrl} ~ '^https://'`),
+    check("person_details_official_url_check", sql`${table.officialUrl} is null or ${table.officialUrl} ~ '^https://'`),
+    check(
+      "person_details_public_email_check",
+      sql`${table.publicEmail} is null or length(btrim(${table.publicEmail})) > 0`
+    )
+  ]
+)
+
+/** Individual provider identifiers retain their own source relationship. */
+export const personExternalIdentifiers = legislationSchema.table(
+  "person_external_identifiers",
+  {
+    personId: text("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    sourceIdentity: text("source_identity").notNull(),
+    scheme: text("scheme").notNull(),
+    value: text("value").notNull(),
+    sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.personId, table.sourceIdentity] }),
+    check("person_external_identifiers_scheme_check", sql`length(btrim(${table.scheme})) > 0`),
+    check("person_external_identifiers_value_check", sql`length(btrim(${table.value})) > 0`),
+    check(
+      "person_external_identifiers_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
+    index("person_external_identifiers_person_idx").on(table.personId)
+  ]
+)
+
+/** A person can be authoritatively associated with more than one jurisdiction. */
+export const personJurisdictions = legislationSchema.table(
+  "person_jurisdictions",
+  {
+    personId: text("person_id")
+      .notNull()
+      .references(() => people.id, { onDelete: "cascade" }),
+    jurisdictionId: text("jurisdiction_id")
+      .notNull()
+      .references(() => jurisdictions.id, { onDelete: "restrict" }),
+    sourceIdentity: text("source_identity").notNull(),
+    sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    primaryKey({ columns: [table.personId, table.jurisdictionId, table.sourceIdentity] }),
+    check("person_jurisdictions_source_identity_check", sql`length(btrim(${table.sourceIdentity})) > 0`),
+    check(
+      "person_jurisdictions_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
+    index("person_jurisdictions_person_idx").on(table.personId, table.jurisdictionId)
+  ]
+)
+
 export const organizations = legislationSchema.table(
   "organizations",
   {

@@ -4,7 +4,10 @@ import type {
   organizationMemberships,
   organizations,
   people,
-  personAliases
+  personAliases,
+  personDetails,
+  personExternalIdentifiers,
+  personJurisdictions
 } from "../../db/schema/schema.js"
 import {
   jurisdictionId,
@@ -20,6 +23,14 @@ const optionalString = z.preprocess(
   z.string().trim().min(1).optional()
 )
 const sourceSchema = z.object({ url: z.string().trim().min(1) }).passthrough()
+const externalIdentifierSchema = z
+  .object({
+    identifier: optionalString,
+    scheme: optionalString,
+    value: optionalString
+  })
+  .passthrough()
+const personLinkSchema = z.object({ note: optionalString, url: z.string().trim().min(1) }).passthrough()
 const currentRoleSchema = z
   .object({
     district: optionalString,
@@ -39,6 +50,10 @@ const embeddedPersonSchema = z
 const personSchema = embeddedPersonSchema.extend({
   family_name: optionalString,
   given_name: optionalString,
+  email: optionalString,
+  image: optionalString,
+  identifiers: z.array(externalIdentifierSchema).default([]),
+  links: z.array(personLinkSchema).default([]),
   openstates_url: optionalString,
   other_names: z.array(z.string().trim().min(1)).default([]),
   sources: z.array(sourceSchema).default([]),
@@ -64,6 +79,9 @@ const committeeSchema = z
 
 type PersonInsert = typeof people.$inferInsert
 type PersonAliasInsert = typeof personAliases.$inferInsert
+type PersonDetailInsert = typeof personDetails.$inferInsert
+type PersonExternalIdentifierInsert = typeof personExternalIdentifiers.$inferInsert
+type PersonJurisdictionInsert = typeof personJurisdictions.$inferInsert
 type OrganizationInsert = typeof organizations.$inferInsert
 type TermInsert = typeof legislativeTerms.$inferInsert
 type MembershipInsert = typeof organizationMemberships.$inferInsert
@@ -78,6 +96,10 @@ export interface OpenStatesEntitySnapshot {
   organizations: OrganizationInsert[]
   personAliasPersonIds: string[]
   personAliases: PersonAliasInsert[]
+  personDetails?: PersonDetailInsert[]
+  personDetailPersonIds?: string[]
+  personExternalIdentifiers?: PersonExternalIdentifierInsert[]
+  personJurisdictions?: PersonJurisdictionInsert[]
   people: PersonInsert[]
   terms: TermInsert[]
 }
@@ -103,13 +125,32 @@ function normalizePerson(
   context: OpenStatesEntityContext,
   details?: Pick<
     z.infer<typeof personSchema>,
-    "family_name" | "given_name" | "openstates_url" | "other_names" | "sources" | "updated_at"
+    | "email"
+    | "family_name"
+    | "given_name"
+    | "identifiers"
+    | "image"
+    | "links"
+    | "openstates_url"
+    | "other_names"
+    | "sources"
+    | "updated_at"
   >
-): { aliases: PersonAliasInsert[]; person: PersonInsert; term?: TermInsert } {
+): {
+  aliases: PersonAliasInsert[]
+  detail?: PersonDetailInsert
+  externalIdentifiers: PersonExternalIdentifierInsert[]
+  person: PersonInsert
+  jurisdiction?: PersonJurisdictionInsert
+  term?: TermInsert
+} {
   const canonicalPersonId = personId("openstates", input.id)
   const canonicalJurisdictionId = jurisdictionId(context.jurisdictionCode)
   const role = input.current_role
   const aliasSourceUrl = sourceUrl(details?.sources ?? [], details?.openstates_url)
+  const detailSourceUrl = sourceUrl(details?.sources ?? [], details?.openstates_url)
+  const detailProvenanceComplete = detailSourceUrl !== undefined && detailSourceUrl.startsWith("https://")
+  const officialUrl = details === undefined ? undefined : declaredOfficialUrl(details.links)
   return {
     aliases:
       details === undefined
@@ -117,7 +158,7 @@ function normalizePerson(
         : [...new Set(details.other_names)].map((name) => ({
             name,
             personId: canonicalPersonId,
-            provenanceComplete: aliasSourceUrl !== undefined,
+            provenanceComplete: detailProvenanceComplete,
             sourceIdentity: `openstates:${input.id}:other-name:${name}`,
             sourceIsOfficial: false,
             sourceProvider: "openstates",
@@ -125,6 +166,49 @@ function normalizePerson(
             sourceUpdatedAt: details.updated_at === undefined ? undefined : new Date(details.updated_at),
             sourceUrl: aliasSourceUrl
           })),
+    detail:
+      details === undefined
+        ? undefined
+        : {
+            // Open States does not mark its directory profile as the elected
+            // official's site. Do not promote it into officialUrl or public
+            // email; those values remain null until an official artifact is
+            // imported.
+            imageUrl: httpsUrl(details.image),
+            officialUrl,
+            personId: canonicalPersonId,
+            provenanceComplete: detailProvenanceComplete,
+            publicEmail: details.email,
+            sourceIsOfficial: false,
+            sourceProvider: "openstates",
+            sourceRetrievedAt: context.retrievedAt,
+            sourceUpdatedAt: details.updated_at === undefined ? undefined : new Date(details.updated_at),
+            sourceUrl: detailSourceUrl
+          },
+    externalIdentifiers:
+      details === undefined
+        ? []
+        : details.identifiers.flatMap((identifier) => {
+            const scheme = identifier.scheme
+            const value = identifier.identifier ?? identifier.value
+            if (scheme === undefined || value === undefined) {
+              return []
+            }
+            return [
+              {
+                personId: canonicalPersonId,
+                provenanceComplete: detailProvenanceComplete,
+                scheme,
+                sourceIdentity: `openstates:${input.id}:identifier:${scheme}:${value}`,
+                sourceIsOfficial: false,
+                sourceProvider: "openstates",
+                sourceRetrievedAt: context.retrievedAt,
+                sourceUpdatedAt: details.updated_at === undefined ? undefined : new Date(details.updated_at),
+                sourceUrl: detailSourceUrl,
+                value
+              }
+            ] satisfies PersonExternalIdentifierInsert[]
+          }),
     person: {
       familyName: details?.family_name,
       givenName: details?.given_name,
@@ -138,6 +222,20 @@ function normalizePerson(
       sourceUrl: sourceUrl(details?.sources ?? [], details?.openstates_url),
       upstreamIds: { openstates: input.id }
     },
+    jurisdiction:
+      details === undefined
+        ? undefined
+        : {
+            jurisdictionId: canonicalJurisdictionId,
+            personId: canonicalPersonId,
+            provenanceComplete: detailProvenanceComplete,
+            sourceIdentity: `openstates:${input.id}:jurisdiction:${context.jurisdictionCode}`,
+            sourceIsOfficial: false,
+            sourceProvider: "openstates",
+            sourceRetrievedAt: context.retrievedAt,
+            sourceUpdatedAt: details.updated_at === undefined ? undefined : new Date(details.updated_at),
+            sourceUrl: detailSourceUrl
+          },
     term:
       role === undefined
         ? undefined
@@ -162,7 +260,17 @@ function normalizePerson(
 export function normalizeOpenStatesPeople(
   inputs: readonly unknown[],
   context: OpenStatesEntityContext
-): Pick<OpenStatesEntitySnapshot, "personAliasPersonIds" | "personAliases" | "people" | "terms"> {
+): Pick<
+  OpenStatesEntitySnapshot,
+  | "personAliasPersonIds"
+  | "personAliases"
+  | "personDetailPersonIds"
+  | "personDetails"
+  | "personExternalIdentifiers"
+  | "personJurisdictions"
+  | "people"
+  | "terms"
+> {
   const normalized = inputs.map((input) => {
     const parsed = personSchema.parse(input)
     return normalizePerson(parsed, context, parsed)
@@ -170,9 +278,38 @@ export function normalizeOpenStatesPeople(
   return {
     personAliasPersonIds: normalized.map((value) => value.person.id),
     personAliases: normalized.flatMap((value) => value.aliases),
+    personDetailPersonIds: normalized.map((value) => value.person.id),
+    personDetails: normalized.flatMap((value) => (value.detail === undefined ? [] : [value.detail])),
+    personExternalIdentifiers: normalized.flatMap((value) => value.externalIdentifiers),
+    personJurisdictions: normalized.flatMap((value) => (value.jurisdiction === undefined ? [] : [value.jurisdiction])),
     people: normalized.map((value) => value.person),
     terms: normalized.flatMap((value) => (value.term === undefined ? [] : [value.term]))
   }
+}
+
+function httpsUrl(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+  try {
+    return new URL(value).protocol === "https:" ? value : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** An Open States link is treated as official only when its provider label says so. */
+function declaredOfficialUrl(links: readonly { note?: string; url: string }[]): string | undefined {
+  for (const link of links) {
+    if (!/\b(official|website|web\s*site|home\s*page)\b/i.test(link.note ?? "")) {
+      continue
+    }
+    const value = httpsUrl(link.url)
+    if (value !== undefined) {
+      return value
+    }
+  }
+  return undefined
 }
 
 export function normalizeOpenStatesCommittees(

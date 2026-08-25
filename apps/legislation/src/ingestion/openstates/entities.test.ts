@@ -86,6 +86,45 @@ describe("Open States entity normalization", () => {
     ])
   })
 
+  it("maps only source-backed person detail facts and identifier relationships", () => {
+    const result = normalizeOpenStatesPeople(
+      [
+        {
+          email: "representative@example.test",
+          id: "ocd-person/detail-example",
+          identifiers: [{ identifier: "A000001", scheme: "bioguide" }, { scheme: "missing-value" }],
+          image: "https://images.example.test/detail-example.jpg",
+          name: "Detail Example",
+          links: [{ note: "Official website", url: "https://detail-example.example.test" }],
+          openstates_url: "https://openstates.org/person/detail-example/",
+          sources: [{ url: "https://legislature.example.test/members/detail-example" }],
+          updated_at: "2026-08-20T15:00:00Z"
+        }
+      ],
+      context
+    )
+
+    expect(result.personDetails).toEqual([
+      expect.objectContaining({
+        imageUrl: "https://images.example.test/detail-example.jpg",
+        officialUrl: "https://detail-example.example.test",
+        personId: "person:openstates:ocd-person-detail-example",
+        provenanceComplete: true,
+        publicEmail: "representative@example.test",
+        sourceUrl: "https://legislature.example.test/members/detail-example"
+      })
+    ])
+    expect(result.personExternalIdentifiers).toEqual([
+      expect.objectContaining({ scheme: "bioguide", value: "A000001" })
+    ])
+    expect(result.personJurisdictions).toEqual([
+      expect.objectContaining({
+        jurisdictionId: "jurisdiction:ak",
+        personId: "person:openstates:ocd-person-detail-example"
+      })
+    ])
+  })
+
   it("normalizes committee snapshots and retains unresolved parent identity", () => {
     const result = normalizeOpenStatesCommittees(
       [
