@@ -43,6 +43,49 @@ describe("people collection repository", () => {
     expect(generated).toContain('order by "legislation"."people"."name" asc, "legislation"."people"."id" asc')
   })
 
+  it("preserves multi-value universal filters and the canonical updated-at interval", () => {
+    const generated = buildPeopleListQuery(database, {
+      jurisdictionIds: ["jurisdiction:us", "jurisdiction:ca"],
+      organizationIds: ["organization:us:house:rules", "organization:us:senate:energy"],
+      parties: ["Independent", "Nonpartisan"],
+      updatedFrom: new Date("2026-08-01T00:00:00.000Z"),
+      updatedToExclusive: new Date("2026-09-01T00:00:00.000Z")
+    }).toSQL().sql
+
+    expect(generated).toContain('"people"."jurisdiction_id" in')
+    expect(generated).toContain('"organization_memberships"."organization_id" in')
+    expect(generated).toContain('"people"."party" in')
+    expect(generated).toContain('"people"."updated_at" >=')
+    expect(generated).toContain('"people"."updated_at" <')
+  })
+
+  it("binds updated-at bounds into the pagination cursor scope", () => {
+    const updatedFrom = new Date("2026-08-01T00:00:00.000Z")
+    const updatedToExclusive = new Date("2026-09-01T00:00:00.000Z")
+    const scope = {
+      isActive: null,
+      jurisdictionId: null,
+      organizationId: null,
+      party: null,
+      q: null,
+      sort: "updated-desc",
+      updatedFrom: updatedFrom.toISOString(),
+      updatedTo: null,
+      updatedToExclusive: updatedToExclusive.toISOString()
+    }
+    const base = {
+      cursor: cursor(scope, "updated-desc"),
+      sort: "updated-desc" as const,
+      updatedFrom,
+      updatedToExclusive
+    }
+
+    expect(() => buildPeopleListQuery(database, base)).not.toThrow()
+    expect(() =>
+      buildPeopleListQuery(database, { ...base, updatedFrom: new Date("2026-08-02T00:00:00.000Z") })
+    ).toThrow("Invalid people pagination cursor")
+  })
+
   it("uses an updated-at keyset only when the full sort/filter scope matches", () => {
     const scope = {
       isActive: false,

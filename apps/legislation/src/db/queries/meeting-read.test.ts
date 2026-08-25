@@ -120,6 +120,22 @@ describe("meeting read queries", () => {
     ])
   })
 
+  it("preserves multi-value universal filters, including shared session IDs", () => {
+    const generated = buildMeetingListQuery(database, {
+      classifications: ["meeting", "hearing"],
+      jurisdictionIds: ["jurisdiction:wa", "jurisdiction:or"],
+      organizationIds: ["organization:openstates:rules", "organization:openstates:energy"],
+      sessionIds: ["session:wa:2026", "session:or:2026"],
+      statuses: ["scheduled", "completed"]
+    }).toSQL().sql
+
+    expect(generated).toContain('"legislative_events"."jurisdiction_id" in')
+    expect(generated).toContain('"legislative_events"."classification" in')
+    expect(generated).toContain('"legislative_events"."status" in')
+    expect(generated).toContain('"event_organizations"."organization_id" in')
+    expect(generated).toContain('"event_sessions"."session_id" in')
+  })
+
   it("rejects impossible dates and cursor scopes that no longer describe the collection", () => {
     expect(() => buildMeetingListQuery(database, { from: "2026-02-31", jurisdictionId: "jurisdiction:wa" })).toThrow(
       "from must be an ISO date or RFC 3339 timestamp"

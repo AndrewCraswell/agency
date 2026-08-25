@@ -137,6 +137,11 @@ only. A `semantic` request selecting any of those types returns `422 unprocessab
 ranking to embedded types, lexical ranking to those three types, and merges normalized per-type ranks by RRF. It never
 pretends a lexical-only hit has a semantic score. The universal cursor continues only this merged request.
 
+`sessionIds` is supported for meeting groups and for products with a documented session relationship. People and
+organizations have no canonical session relationship in the current read model; selecting either type with
+`sessionIds` returns `422 unprocessable` rather than silently broadening the result set.
+Shared and product-specific `jurisdictionIds` are intersected; a disjoint intersection returns an empty product group.
+
 ## `POST /api/document-diffs` (`compareDocumentVersions`)
 
 ```ts

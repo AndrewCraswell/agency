@@ -92,6 +92,54 @@ describe("organization collection queries", () => {
     expect(generated).toContain("limit $")
   })
 
+  it("preserves multi-value universal filters and the canonical updated-at interval", () => {
+    const generated = buildOrganizationListQuery(database, {
+      classifications: ["committee", "commission"],
+      jurisdictionIds: ["jurisdiction:ca", "jurisdiction:ny"],
+      parentOrganizationIds: ["organization:ca:house", "organization:ny:senate"],
+      updatedFrom: new Date("2026-08-01T00:00:00.000Z"),
+      updatedToExclusive: new Date("2026-09-01T00:00:00.000Z")
+    }).toSQL().sql
+
+    expect(generated).toContain('"organizations"."jurisdiction_id" in')
+    expect(generated).toContain('"organizations"."classification" in')
+    expect(generated).toContain('"organizations"."parent_organization_id" in')
+    expect(generated).toContain('"organizations"."updated_at" >=')
+    expect(generated).toContain('"organizations"."updated_at" <')
+  })
+
+  it("binds updated-at bounds into the pagination cursor scope", () => {
+    const updatedFrom = new Date("2026-08-01T00:00:00.000Z")
+    const updatedToExclusive = new Date("2026-09-01T00:00:00.000Z")
+    const scope = {
+      chamber: null,
+      classification: null,
+      isActive: null,
+      jurisdictionId: null,
+      parentOrganizationId: null,
+      query: null,
+      sort: "updated-desc" as const,
+      updatedFrom: updatedFrom.toISOString(),
+      updatedTo: null,
+      updatedToExclusive: updatedToExclusive.toISOString()
+    }
+    const cursor = Buffer.from(
+      JSON.stringify({
+        id: "organization:ca:committee:1",
+        scope,
+        sort: "updated-desc",
+        updatedAt: "2026-01-01T00:00:00.000Z",
+        version: 1
+      })
+    ).toString("base64url")
+    const base = { cursor, sort: "updated-desc" as const, updatedFrom, updatedToExclusive }
+
+    expect(() => buildOrganizationListQuery(database, base)).not.toThrow()
+    expect(() =>
+      buildOrganizationListQuery(database, { ...base, updatedFrom: new Date("2026-08-02T00:00:00.000Z") })
+    ).toThrow("Invalid organization pagination cursor")
+  })
+
   it("keeps commission and committee views as jurisdiction-scoped classification filters", () => {
     const generated = buildJurisdictionClassificationOrganizationListQuery(database, "jurisdiction:ca", "commission", {
       isActive: true

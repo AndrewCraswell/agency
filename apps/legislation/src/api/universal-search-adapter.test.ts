@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { LegislationDatabase } from "../db/database.js"
 import type { AmendmentSearchApi } from "./amendment-search.js"
 import type { CivicSearchApi } from "./civic-search.js"
@@ -63,6 +63,10 @@ function input(recordType: "bill" | "meeting" | "person", query: string) {
 }
 
 describe("production universal-search adapter", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("passes person lexical search through the canonical people query", async () => {
     mocks.listPeople.mockResolvedValueOnce({ items: [{ id: "person:ada" }], truncated: false })
     mocks.projectPersonRead.mockReturnValueOnce(canonical("person", "person:ada"))
@@ -82,6 +86,51 @@ describe("production universal-search adapter", () => {
       input("meeting", "Budget")
     )
     expect(mocks.listMeetings).toHaveBeenCalledWith(database, expect.objectContaining({ limit: 7, query: "Budget" }))
+  })
+
+  it("intersects shared and product jurisdiction filters while preserving multi-value person filters", async () => {
+    mocks.listPeople.mockResolvedValueOnce({ items: [], truncated: false })
+    const database: LegislationDatabase = Object.create(null)
+    await createProductionUniversalSearchApi(service(), database, "https://api.example.test").search({
+      filters: {
+        jurisdictionIds: ["jurisdiction:ca", "jurisdiction:ny"],
+        organizationIds: ["organization:a", "organization:b"],
+        parties: ["A", "B"]
+      },
+      mode: "lexical",
+      perTypeLimit: 7,
+      query: "Ada",
+      recordType: "person",
+      shared: {
+        from: "2026-01-01",
+        jurisdictionIds: ["jurisdiction:wa", "jurisdiction:ca"],
+        to: "2026-01-31"
+      }
+    })
+    expect(mocks.listPeople).toHaveBeenCalledWith(database, {
+      isActive: undefined,
+      jurisdictionIds: ["jurisdiction:ca"],
+      limit: 7,
+      organizationIds: ["organization:a", "organization:b"],
+      parties: ["A", "B"],
+      q: "Ada",
+      updatedFrom: new Date("2026-01-01T00:00:00.000Z"),
+      updatedToExclusive: new Date("2026-02-01T00:00:00.000Z")
+    })
+  })
+
+  it("returns an empty group without querying when shared and product jurisdictions are disjoint", async () => {
+    const database: LegislationDatabase = Object.create(null)
+    const page = await createProductionUniversalSearchApi(service(), database, "https://api.example.test").search({
+      filters: { jurisdictionIds: ["jurisdiction:ca"] },
+      mode: "lexical",
+      perTypeLimit: 7,
+      query: "Ada",
+      recordType: "person",
+      shared: { jurisdictionIds: ["jurisdiction:wa"] }
+    })
+    expect(page).toEqual({ items: [], models: [], truncated: false })
+    expect(mocks.listPeople).not.toHaveBeenCalled()
   })
 
   it("adapts embedded bill retrieval through its canonical search projection", async () => {

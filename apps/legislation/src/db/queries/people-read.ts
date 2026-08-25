@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, exists, gt, ilike, isNotNull, lt, or, type SQL } from "drizzle-orm"
+import { and, asc, desc, eq, exists, gt, gte, ilike, inArray, isNotNull, lt, lte, or, type SQL } from "drizzle-orm"
 import { isRfc3339Timestamp } from "../../api/canonical-projection.js"
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
@@ -13,11 +13,17 @@ export interface PersonListInput {
   cursor?: string
   isActive?: boolean
   jurisdictionId?: string
+  jurisdictionIds?: readonly string[]
   limit?: number
   organizationId?: string
+  organizationIds?: readonly string[]
   party?: string
+  parties?: readonly string[]
   q?: string
   sort?: PersonSort
+  updatedFrom?: Date
+  updatedTo?: Date
+  updatedToExclusive?: Date
 }
 
 export interface PersonPage<T> {
@@ -35,6 +41,12 @@ type PersonCursorScope = {
   party: string | null
   q: string | null
   sort: PersonSort
+  jurisdictionIds?: readonly string[]
+  organizationIds?: readonly string[]
+  parties?: readonly string[]
+  updatedFrom?: string | null
+  updatedTo?: string | null
+  updatedToExclusive?: string | null
 }
 
 type PersonCursor =
@@ -45,20 +57,8 @@ export function buildPeopleListQuery(database: LegislationDatabase, input: Perso
   const limit = parseLimit(input.limit)
   const scope = cursorScope(input)
   const cursor = decodeCursor(input.cursor, scope)
-  const organizationMembership =
-    scope.organizationId === null
-      ? undefined
-      : exists(
-          database
-            .select({ id: organizationMemberships.id })
-            .from(organizationMemberships)
-            .where(
-              and(
-                eq(organizationMemberships.personId, people.id),
-                eq(organizationMemberships.organizationId, scope.organizationId)
-              )
-            )
-        )
+  const partyPredicate = personPartyPredicate(scope)
+  const organizationMembership = personOrganizationMembershipPredicate(database, scope)
   const aliasMatch =
     scope.q === null
       ? undefined
@@ -83,11 +83,14 @@ export function buildPeopleListQuery(database: LegislationDatabase, input: Perso
         eq(people.provenanceComplete, true),
         isNotNull(people.isActive),
         isNotNull(people.jurisdictionId),
-        scope.jurisdictionId === null ? undefined : eq(people.jurisdictionId, scope.jurisdictionId),
+        personJurisdictionPredicate(scope),
         organizationMembership,
-        scope.party === null ? undefined : eq(people.party, scope.party),
+        partyPredicate,
         scope.isActive === null ? undefined : eq(people.isActive, scope.isActive),
         scope.q === null ? undefined : or(ilike(people.name, `%${scope.q}%`), aliasMatch),
+        updatedFromPredicate(scope),
+        updatedToPredicate(scope),
+        updatedToExclusivePredicate(scope),
         cursorPredicate(cursor)
       )
     )
@@ -114,7 +117,7 @@ export async function listPeople(
 }
 
 function cursorScope(input: PersonListInput): PersonCursorScope {
-  return {
+  const scope: PersonCursorScope = {
     isActive: input.isActive ?? null,
     jurisdictionId:
       input.jurisdictionId === undefined ? null : requiredInputText(input.jurisdictionId, "jurisdictionId"),
@@ -122,8 +125,16 @@ function cursorScope(input: PersonListInput): PersonCursorScope {
       input.organizationId === undefined ? null : requiredInputText(input.organizationId, "organizationId"),
     party: input.party === undefined ? null : requiredInputText(input.party, "party"),
     q: input.q === undefined ? null : requiredInputText(input.q, "q"),
-    sort: input.sort ?? "name-asc"
+    sort: input.sort ?? "name-asc",
+    ...(input.jurisdictionIds === undefined
+      ? {}
+      : { jurisdictionIds: inputTexts(input.jurisdictionIds, "jurisdictionIds") }),
+    ...(input.organizationIds === undefined
+      ? {}
+      : { organizationIds: inputTexts(input.organizationIds, "organizationIds") }),
+    ...(input.parties === undefined ? {} : { parties: inputTexts(input.parties, "parties") })
   }
+  return { ...scope, ...updatedScope(input) }
 }
 
 function cursorPredicate(cursor: PersonCursor | undefined): SQL | undefined {
@@ -135,6 +146,70 @@ function cursorPredicate(cursor: PersonCursor | undefined): SQL | undefined {
   }
   const updatedAt = new Date(cursor.updatedAt)
   return or(lt(people.updatedAt, updatedAt), and(eq(people.updatedAt, updatedAt), gt(people.id, cursor.id)))
+}
+
+function personJurisdictionPredicate(scope: PersonCursorScope): SQL | undefined {
+  if (scope.jurisdictionIds !== undefined) {
+    return inArray(people.jurisdictionId, scope.jurisdictionIds)
+  }
+  return scope.jurisdictionId === null ? undefined : eq(people.jurisdictionId, scope.jurisdictionId)
+}
+
+function personPartyPredicate(scope: PersonCursorScope): SQL | undefined {
+  if (scope.parties !== undefined) {
+    return inArray(people.party, scope.parties)
+  }
+  return scope.party === null ? undefined : eq(people.party, scope.party)
+}
+
+function personOrganizationMembershipPredicate(
+  database: LegislationDatabase,
+  scope: PersonCursorScope
+): SQL | undefined {
+  if (scope.organizationIds === undefined && scope.organizationId === null) {
+    return undefined
+  }
+  const organizationPredicate =
+    scope.organizationIds === undefined
+      ? eq(organizationMemberships.organizationId, scope.organizationId!)
+      : inArray(organizationMemberships.organizationId, scope.organizationIds)
+  return exists(
+    database
+      .select({ id: organizationMemberships.id })
+      .from(organizationMemberships)
+      .where(and(eq(organizationMemberships.personId, people.id), organizationPredicate))
+  )
+}
+
+function updatedScope(
+  input: PersonListInput
+): Pick<PersonCursorScope, "updatedFrom" | "updatedTo" | "updatedToExclusive"> {
+  if (input.updatedFrom === undefined && input.updatedTo === undefined && input.updatedToExclusive === undefined) {
+    return {}
+  }
+  return {
+    updatedFrom: input.updatedFrom?.toISOString() ?? null,
+    updatedTo: input.updatedTo?.toISOString() ?? null,
+    updatedToExclusive: input.updatedToExclusive?.toISOString() ?? null
+  }
+}
+
+function updatedFromPredicate(scope: PersonCursorScope): SQL | undefined {
+  return scope.updatedFrom === undefined || scope.updatedFrom === null
+    ? undefined
+    : gte(people.updatedAt, new Date(scope.updatedFrom))
+}
+
+function updatedToPredicate(scope: PersonCursorScope): SQL | undefined {
+  return scope.updatedTo === undefined || scope.updatedTo === null
+    ? undefined
+    : lte(people.updatedAt, new Date(scope.updatedTo))
+}
+
+function updatedToExclusivePredicate(scope: PersonCursorScope): SQL | undefined {
+  return scope.updatedToExclusive === undefined || scope.updatedToExclusive === null
+    ? undefined
+    : lt(people.updatedAt, new Date(scope.updatedToExclusive))
 }
 
 function encodeCursor(row: PersonCollectionRead, scope: PersonCursorScope): string {
@@ -194,6 +269,17 @@ function requiredInputText(value: string, name: string): string {
     throw new LegislationError("invalid_request", `${name} must be between 1 and 256 characters`)
   }
   return normalized
+}
+
+function inputTexts(values: readonly string[], name: string): readonly string[] {
+  const normalized = values.map((value) => value.trim())
+  if (normalized.length === 0 || normalized.length > 25 || normalized.some((value) => value.length === 0)) {
+    throw new LegislationError("invalid_request", `${name} must contain between 1 and 25 values`)
+  }
+  if (new Set(normalized).size !== normalized.length) {
+    throw new LegislationError("invalid_request", `${name} must contain unique values`)
+  }
+  return normalized.map((value) => requiredInputText(value, name))
 }
 
 function isNonemptyString(value: unknown): value is string {

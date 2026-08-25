@@ -24,8 +24,8 @@ type SearchServices = CivicSearchApi & AmendmentSearchApi
 
 /**
  * Adapts the already canonical product-search/read boundaries to the universal
- * merger. It deliberately rejects a selected product's unsupported multi-value
- * filter rather than narrowing it and returning a plausible but wrong result.
+ * merger. Product adapters preserve the documented multi-value filters rather
+ * than narrowing them and returning a plausible but wrong result.
  */
 export function createProductionUniversalSearchApi(
   service: SearchServices,
@@ -163,19 +163,20 @@ async function searchPeople(
   const filters = input.filters ?? {}
   requireDatabase(database, "person")
   rejectSharedSession(input, "person")
-  const jurisdictionIds = single(
-    combine(strings(input.shared, "jurisdictionIds"), strings(filters, "jurisdictionIds")),
-    "person.jurisdictionIds"
-  )
-  const organizationIds = single(strings(filters, "organizationIds"), "person.organizationIds")
-  const parties = single(strings(filters, "parties"), "person.parties")
+  const jurisdictionIds = intersect(strings(input.shared, "jurisdictionIds"), strings(filters, "jurisdictionIds"))
+  const organizationIds = strings(filters, "organizationIds")
+  const parties = strings(filters, "parties")
+  if (jurisdictionIds?.length === 0) {
+    return lexicalReadPage([], false)
+  }
   const page = await listPeople(database, {
     isActive: boolean(filters, "isActive"),
-    jurisdictionId: jurisdictionIds,
+    jurisdictionIds,
     limit: input.perTypeLimit,
-    organizationId: organizationIds,
-    party: parties,
-    q: input.query
+    organizationIds,
+    parties,
+    q: input.query,
+    ...updatedRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"))
   })
   return lexicalReadPage(
     page.items.map((item) => projectPersonRead(item, apiBaseUrl)),
@@ -191,16 +192,18 @@ async function searchOrganizations(
   const filters = input.filters ?? {}
   requireDatabase(database, "organization")
   rejectSharedSession(input, "organization")
+  const jurisdictionIds = intersect(strings(input.shared, "jurisdictionIds"), strings(filters, "jurisdictionIds"))
+  if (jurisdictionIds?.length === 0) {
+    return lexicalReadPage([], false)
+  }
   const page = await listOrganizations(database, {
-    classification: single(strings(filters, "classifications"), "organization.classifications"),
+    classifications: strings(filters, "classifications"),
     isActive: boolean(filters, "isActive"),
-    jurisdictionId: single(
-      combine(strings(input.shared, "jurisdictionIds"), strings(filters, "jurisdictionIds")),
-      "organization.jurisdictionIds"
-    ),
+    jurisdictionIds,
     limit: input.perTypeLimit,
-    parentOrganizationId: single(strings(filters, "parentOrganizationIds"), "organization.parentOrganizationIds"),
-    query: input.query
+    parentOrganizationIds: strings(filters, "parentOrganizationIds"),
+    query: input.query,
+    ...updatedRange(nullableString(input.shared, "from"), nullableString(input.shared, "to"))
   })
   return lexicalReadPage(
     page.items.map((item) => projectOrganizationRow(item, apiBaseUrl)),
@@ -215,18 +218,19 @@ async function searchMeetings(
 ): Promise<UniversalProductPage> {
   const filters = input.filters ?? {}
   requireDatabase(database, "meeting")
+  const jurisdictionIds = intersect(strings(input.shared, "jurisdictionIds"), strings(filters, "jurisdictionIds"))
+  if (jurisdictionIds?.length === 0) {
+    return lexicalReadPage([], false)
+  }
   const page = await listMeetings(database, {
-    classification: meetingClassification(single(strings(filters, "classifications"), "meeting.classifications")),
+    classifications: meetingClassifications(strings(filters, "classifications")),
     from: string(filters, "from") ?? nullableString(input.shared, "from") ?? undefined,
-    jurisdictionId: single(
-      combine(strings(input.shared, "jurisdictionIds"), strings(filters, "jurisdictionIds")),
-      "meeting.jurisdictionIds"
-    ),
+    jurisdictionIds,
     limit: input.perTypeLimit,
-    organizationId: single(strings(filters, "organizationIds"), "meeting.organizationIds"),
+    organizationIds: strings(filters, "organizationIds"),
     query: input.query,
-    sessionId: single(strings(input.shared, "sessionIds"), "meeting.sessionIds"),
-    status: meetingStatus(single(strings(filters, "statuses"), "meeting.statuses")),
+    sessionIds: strings(input.shared, "sessionIds"),
+    statuses: meetingStatuses(strings(filters, "statuses")),
     to: string(filters, "to") ?? nullableString(input.shared, "to") ?? undefined
   })
   return lexicalReadPage(
@@ -338,19 +342,18 @@ function boolean(value: Record<string, unknown>, name: string): boolean | undefi
   return typeof value[name] === "boolean" ? value[name] : undefined
 }
 
-function single(values: readonly string[] | undefined, name: string): string | undefined {
-  if (values === undefined) {
-    return undefined
+function intersect(
+  shared: readonly string[] | undefined,
+  product: readonly string[] | undefined
+): string[] | undefined {
+  if (shared === undefined) {
+    return product === undefined ? undefined : [...product]
   }
-  if (values.length !== 1) {
-    throw new LegislationError("unprocessable", `${name} currently accepts one value in universal lexical search`)
+  if (product === undefined) {
+    return [...shared]
   }
-  return values[0]
-}
-
-function combine(...values: readonly (readonly string[] | undefined)[]): string[] | undefined {
-  const combined = values.flatMap((value) => value ?? [])
-  return combined.length === 0 ? undefined : [...new Set(combined)]
+  const productIds = new Set(product)
+  return shared.filter((value) => productIds.has(value))
 }
 
 function requireDatabase(
@@ -375,25 +378,40 @@ function isAmendmentRecordType(value: string): value is "document" | "structured
   return value === "document" || value === "structured"
 }
 
-function meetingClassification(value: string | undefined): "hearing" | "meeting" | "other" | "session" | undefined {
-  if (value === undefined || value === "hearing" || value === "meeting" || value === "other" || value === "session") {
-    return value
+function meetingClassifications(
+  values: readonly string[] | undefined
+): readonly ("hearing" | "meeting" | "other" | "session")[] | undefined {
+  if (values === undefined) {
+    return undefined
+  }
+  if (
+    values.every(
+      (value): value is "hearing" | "meeting" | "other" | "session" =>
+        value === "hearing" || value === "meeting" || value === "other" || value === "session"
+    )
+  ) {
+    return values
   }
   throw new LegislationError("unprocessable", "meeting.classifications is not supported")
 }
 
-function meetingStatus(
-  value: string | undefined
-): "cancelled" | "completed" | "other" | "postponed" | "scheduled" | undefined {
+function meetingStatuses(
+  values: readonly string[] | undefined
+): readonly ("cancelled" | "completed" | "other" | "postponed" | "scheduled")[] | undefined {
+  if (values === undefined) {
+    return undefined
+  }
   if (
-    value === undefined ||
-    value === "cancelled" ||
-    value === "completed" ||
-    value === "other" ||
-    value === "postponed" ||
-    value === "scheduled"
+    values.every(
+      (value): value is "cancelled" | "completed" | "other" | "postponed" | "scheduled" =>
+        value === "cancelled" ||
+        value === "completed" ||
+        value === "other" ||
+        value === "postponed" ||
+        value === "scheduled"
+    )
   ) {
-    return value
+    return values
   }
   throw new LegislationError("unprocessable", "meeting.statuses is not supported")
 }

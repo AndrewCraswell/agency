@@ -20,21 +20,26 @@ export interface MeetingListInput {
   billId?: string
   calendarId?: string
   classification?: "hearing" | "meeting" | "other" | "session"
+  classifications?: readonly ("hearing" | "meeting" | "other" | "session")[]
   cursor?: string
   from?: string
   jurisdictionId?: string
+  jurisdictionIds?: readonly string[]
   isRemote?: boolean
   limit?: number
   /** Internal singular lookup constraint; public callers use the path route. */
   meetingId?: string
   organizationId?: string
+  organizationIds?: readonly string[]
   /** Internal lexical name constraint used by universal search. */
   query?: string
   /** Internal calendar-local date boundary timezone; public callers use the calendar route. */
   dateTimezone?: string | null
   sessionId?: string
+  sessionIds?: readonly string[]
   sort?: MeetingSort
   status?: "cancelled" | "completed" | "other" | "postponed" | "scheduled"
+  statuses?: readonly ("cancelled" | "completed" | "other" | "postponed" | "scheduled")[]
   to?: string
 }
 
@@ -89,6 +94,11 @@ type MeetingCursorScope = {
   sort: MeetingSort
   status: MeetingListInput["status"] | null
   to: string | null
+  classifications?: readonly NonNullable<MeetingListInput["classifications"]>[number][]
+  jurisdictionIds?: readonly string[]
+  organizationIds?: readonly string[]
+  sessionIds?: readonly string[]
+  statuses?: readonly NonNullable<MeetingListInput["statuses"]>[number][]
 }
 
 type MeetingCursor = { id: string; scope: MeetingCursorScope; sortValue: string; sourceSequence: number; version: 1 }
@@ -211,22 +221,18 @@ function meetingVisibility(scope: MeetingCursorScope): [SQL, ...SQL[]] {
     scope.calendarId === null
       ? undefined
       : sql`exists (select 1 from ${calendarEvents} where ${calendarEvents.eventId} = ${legislativeEvents.id} and ${calendarEvents.calendarId} = ${scope.calendarId})`,
-    scope.jurisdictionId === null ? undefined : eq(legislativeEvents.jurisdictionId, scope.jurisdictionId),
-    scope.classification === null ? undefined : sql`${legislativeEvents.classification} = ${scope.classification}`,
-    scope.status === null ? undefined : sql`${legislativeEvents.status} = ${scope.status}`,
+    meetingJurisdictionPredicate(scope),
+    meetingClassificationPredicate(scope),
+    meetingStatusPredicate(scope),
     scope.from === null ? undefined : lowerDateBound(scope.from, scope.dateTimezone),
     scope.to === null ? undefined : upperDateBound(scope.to, scope.dateTimezone),
     scope.isRemote === null ? undefined : eq(legislativeEvents.isRemote, scope.isRemote),
     scope.billId === null
       ? undefined
       : sql`exists (select 1 from ${eventBills} where ${eventBills.eventId} = ${legislativeEvents.id} and ${eventBills.billId} = ${scope.billId})`,
-    scope.organizationId === null
-      ? undefined
-      : sql`exists (select 1 from ${eventOrganizations} where ${eventOrganizations.eventId} = ${legislativeEvents.id} and ${eventOrganizations.organizationId} = ${scope.organizationId})`,
+    meetingOrganizationPredicate(scope),
     scope.query === null ? undefined : ilike(legislativeEvents.name, `%${scope.query}%`),
-    scope.sessionId === null
-      ? undefined
-      : sql`exists (select 1 from ${eventSessions} where ${eventSessions.eventId} = ${legislativeEvents.id} and ${eventSessions.sessionId} = ${scope.sessionId})`
+    meetingSessionPredicate(scope)
   ].filter((value): value is SQL => value !== undefined) as [SQL, ...SQL[]]
 }
 
@@ -238,6 +244,45 @@ function lowerDateBound(value: string, dateTimezone: string | null): SQL {
     return gte(legislativeEvents.publisherLocalDate, value)
   }
   return sql`${legislativeEvents.startAt} >= ${localDateAtTimezone(value, dateTimezone)}`
+}
+
+function meetingJurisdictionPredicate(scope: MeetingCursorScope): SQL | undefined {
+  if (scope.jurisdictionIds !== undefined) {
+    return inArray(legislativeEvents.jurisdictionId, scope.jurisdictionIds)
+  }
+  return scope.jurisdictionId === null ? undefined : eq(legislativeEvents.jurisdictionId, scope.jurisdictionId)
+}
+
+function meetingClassificationPredicate(scope: MeetingCursorScope): SQL | undefined {
+  if (scope.classifications !== undefined) {
+    return inArray(legislativeEvents.classification, scope.classifications)
+  }
+  return scope.classification === null ? undefined : sql`${legislativeEvents.classification} = ${scope.classification}`
+}
+
+function meetingStatusPredicate(scope: MeetingCursorScope): SQL | undefined {
+  if (scope.statuses !== undefined) {
+    return inArray(legislativeEvents.status, scope.statuses)
+  }
+  return scope.status === null ? undefined : sql`${legislativeEvents.status} = ${scope.status}`
+}
+
+function meetingOrganizationPredicate(scope: MeetingCursorScope): SQL | undefined {
+  if (scope.organizationIds !== undefined) {
+    return sql`exists (select 1 from ${eventOrganizations} where ${eventOrganizations.eventId} = ${legislativeEvents.id} and ${inArray(eventOrganizations.organizationId, scope.organizationIds)})`
+  }
+  return scope.organizationId === null
+    ? undefined
+    : sql`exists (select 1 from ${eventOrganizations} where ${eventOrganizations.eventId} = ${legislativeEvents.id} and ${eventOrganizations.organizationId} = ${scope.organizationId})`
+}
+
+function meetingSessionPredicate(scope: MeetingCursorScope): SQL | undefined {
+  if (scope.sessionIds !== undefined) {
+    return sql`exists (select 1 from ${eventSessions} where ${eventSessions.eventId} = ${legislativeEvents.id} and ${inArray(eventSessions.sessionId, scope.sessionIds)})`
+  }
+  return scope.sessionId === null
+    ? undefined
+    : sql`exists (select 1 from ${eventSessions} where ${eventSessions.eventId} = ${legislativeEvents.id} and ${eventSessions.sessionId} = ${scope.sessionId})`
 }
 
 function upperDateBound(value: string, dateTimezone: string | null): SQL {
@@ -341,7 +386,18 @@ function cursorScope(input: MeetingListInput): MeetingCursorScope {
     sessionId: optionalId(input.sessionId, "sessionId"),
     sort: input.sort ?? "starts-asc",
     status: input.status ?? null,
-    to
+    to,
+    ...(input.classifications === undefined
+      ? {}
+      : { classifications: enumValues(input.classifications, "classifications") }),
+    ...(input.jurisdictionIds === undefined
+      ? {}
+      : { jurisdictionIds: textValues(input.jurisdictionIds, "jurisdictionIds") }),
+    ...(input.organizationIds === undefined
+      ? {}
+      : { organizationIds: textValues(input.organizationIds, "organizationIds") }),
+    ...(input.sessionIds === undefined ? {} : { sessionIds: textValues(input.sessionIds, "sessionIds") }),
+    ...(input.statuses === undefined ? {} : { statuses: enumValues(input.statuses, "statuses") })
   }
 }
 
@@ -400,6 +456,24 @@ function parseLimit(value: number | undefined): number {
     throw new LegislationError("invalid_request", `limit must be between 1 and ${MAX_LIMIT}`)
   }
   return limit
+}
+
+function textValues(values: readonly string[], name: string): readonly string[] {
+  const normalized = values.map((value) => value.trim())
+  if (normalized.length === 0 || normalized.length > 25 || normalized.some((value) => value.length === 0)) {
+    throw new LegislationError("invalid_request", `${name} must contain between 1 and 25 non-empty values`)
+  }
+  if (new Set(normalized).size !== normalized.length) {
+    throw new LegislationError("invalid_request", `${name} must contain unique values`)
+  }
+  return normalized
+}
+
+function enumValues<T extends string>(values: readonly T[], name: string): readonly T[] {
+  if (values.length === 0 || values.length > 25 || new Set(values).size !== values.length) {
+    throw new LegislationError("invalid_request", `${name} must contain between 1 and 25 values`)
+  }
+  return [...values]
 }
 
 function optionalId(value: string | undefined, name: string): string | null {
