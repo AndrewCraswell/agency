@@ -14,8 +14,8 @@ the verification listed below. The endpoint contract remains the source of truth
 The execution gate is the [local smoke checklist](http-api-local-smoke.md). This ledger was last reconciled on
 2026-08-24 with the reviewed endpoint implementations in commits `4546f7a`, `0fa41dc`, and `87f38be`, 14 successful
 composed-smoke routes, focused endpoint and query tests, and the two previously completed scoped-bill collections.
-Outcome persistence remains active. Current totals are 2 **In progress**, 48 **Blocked**, 0 **Ready**, and 37 **Done**
-across 87 endpoints.
+Canonical meeting outcome persistence and reads are complete. Current totals are 0 **In progress**, 48 **Blocked**, 0
+**Ready**, and 39 **Done** across 87 endpoints.
 
 ## Delivery phases
 
@@ -116,8 +116,8 @@ mutations and webhook mutation handlers remain intentionally uncomposed and **Bl
 | GET | `/api/meetings/{meetingId}/agenda/{agendaItemId}` | Done | Parent-bound complete-facts lookup, explicit relation projection, wrong-parent/incomplete-row 404 behavior, focused tests, root review, and reviewed commits `f9f9bae` and `87f38be`. |
 | GET | `/api/meetings/{meetingId}/documents` | Done | Parent-bound event-document query, classification-bound stable pagination, canonical Page projection, focused tests, root review, and reviewed commit `0fa41dc`. |
 | GET | `/api/meetings/{meetingId}/documents/{eventDocumentId}` | Done | Parent-bound repository query filters soft-deleted meetings, projects a canonical event-document Resource, and has exact-route/wrong-parent coverage, root review, and reviewed commit `4546f7a`. |
-| GET | `/api/meetings/{meetingId}/outcomes` | In progress | Canonical outcome persistence, agenda-association completeness, explicit target facts, authoritative ingestion, then parent-bound page query/route are actively being implemented. |
-| GET | `/api/meetings/{meetingId}/outcomes/{outcomeId}` | In progress | Shares the active canonical outcome prerequisite; action descriptions and vote motions are not substituted for outcome descriptions. |
+| GET | `/api/meetings/{meetingId}/outcomes` | Done | Canonical source-sequenced persistence, explicit agenda/target facts, bill/classification filters, scoped keyset pagination, strict projection, focused tests, root review, and reviewed commits `2d5de80` and `0fc6162`. |
+| GET | `/api/meetings/{meetingId}/outcomes/{outcomeId}` | Done | Parent-bound canonical outcome lookup with persisted provenance and explicit target/agenda semantics, wrong-parent coverage, focused tests, root review, and reviewed commits `2d5de80` and `0fc6162`. |
 | GET | `/api/meetings/{meetingId}/participants` | Done | Parent-bound participant query, canonical linked summaries, exact filters, filter-bound pagination, focused tests, root review, and reviewed commit `0fa41dc`. |
 | GET | `/api/meetings/{meetingId}/participants/{participantId}` | Done | Parent-bound repository query filters soft-deleted meetings, projects canonical linked person/organization summaries, and has exact-route/wrong-parent coverage, root review, and reviewed commit `4546f7a`. |
 | GET | `/api/calendars` | Blocked | Durable calendar resources are not modeled. |
@@ -157,4 +157,4 @@ mutations and webhook mutation handlers remain intentionally uncomposed and **Bl
 | POST | `/api/webhooks/{webhookId}/verify` | Blocked | Approved-destination/revalidation boundary exists; a pinned connection-time-revalidating challenge transport and durable activation transaction are missing. |
 
 The current release evidence is recorded in [the Railway API release record](http-api-railway-release.md). The endpoint
-matrix is 2 **In progress**, 48 **Blocked**, 0 **Ready**, and 37 **Done** routes.
+matrix is 0 **In progress**, 48 **Blocked**, 0 **Ready**, and 39 **Done** routes.
