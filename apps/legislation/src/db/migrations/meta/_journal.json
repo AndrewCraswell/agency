@@ -204,6 +204,13 @@
       "when": 1787620033113,
       "tag": "0028_agenda-canonical-facts",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1787621745773,
+      "tag": "0029_canonical-event-outcomes",
+      "breakpoints": true
     }
   ]
 }

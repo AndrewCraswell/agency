@@ -991,6 +991,56 @@ export const eventOutcomeLinks = legislationSchema.table(
   ]
 )
 
+/**
+ * Canonical meeting outcomes are authoritative source facts, unlike
+ * eventOutcomeLinks which records relationship evidence only.
+ */
+export const eventOutcomes = legislationSchema.table(
+  "event_outcomes",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => legislativeEvents.id, { onDelete: "cascade" }),
+    agendaAssociation: text("agenda_association").notNull(),
+    agendaItemId: text("agenda_item_id").references(() => eventAgendaItems.id, { onDelete: "restrict" }),
+    classification: text("classification").notNull(),
+    description: text("description").notNull(),
+    actionId: text("action_id").references(() => billActions.id, { onDelete: "restrict" }),
+    voteId: text("vote_id").references(() => votes.id, { onDelete: "restrict" }),
+    linkMethod: text("link_method").notNull(),
+    sourceSequence: integer("source_sequence").notNull(),
+    sourceUrl: text("source_url").notNull(),
+    sourceProvider: text("source_provider").notNull(),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }).notNull(),
+    sourceIsOfficial: boolean("source_is_official").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+  },
+  (table) => [
+    check("event_outcomes_description_check", sql`length(btrim(${table.description})) > 0`),
+    check("event_outcomes_source_sequence_check", sql`${table.sourceSequence} >= 0`),
+    check(
+      "event_outcomes_classification_check",
+      sql`${table.classification} in ('action', 'vote', 'disposition', 'note')`
+    ),
+    check(
+      "event_outcomes_agenda_association_check",
+      sql`(${table.agendaAssociation} = 'explicit' and ${table.agendaItemId} is not null) or (${table.agendaAssociation} = 'none' and ${table.agendaItemId} is null)`
+    ),
+    check(
+      "event_outcomes_target_check",
+      sql`(${table.classification} = 'action' and ${table.actionId} is not null and ${table.voteId} is null) or (${table.classification} = 'vote' and ${table.actionId} is null and ${table.voteId} is not null) or (${table.classification} in ('disposition', 'note') and ${table.actionId} is null and ${table.voteId} is null)`
+    ),
+    check("event_outcomes_link_method_check", sql`${table.linkMethod} in ('explicit', 'deterministic-id')`),
+    check("event_outcomes_source_url_check", sql`${table.sourceUrl} ~ '^https://'`),
+    check("event_outcomes_source_provider_check", sql`length(btrim(${table.sourceProvider})) > 0`),
+    index("event_outcomes_event_idx").on(table.eventId, table.sourceSequence, table.id),
+    index("event_outcomes_agenda_idx").on(table.agendaItemId, table.eventId)
+  ]
+)
+
 export const billDocuments = legislationSchema.table(
   "bill_documents",
   {
