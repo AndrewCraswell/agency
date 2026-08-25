@@ -176,17 +176,25 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
     }
   })
 
-  it("retains and hashes the exact bounded TI reset-source batch", () => {
+  it("retains and hashes the exact bounded TI reset and Yageo resistor source batch", () => {
     const sources = benchPrototypeProcessorFootprintsRetainedManufacturerSources
-    expect(sources).toHaveLength(2)
-    expect(sources.map((source) => source.mpn)).toEqual(["TPS3431SDRBR", "TPS389033DSER"])
+    expect(sources).toHaveLength(4)
+    expect(sources.map((source) => source.mpn)).toEqual([
+      "TPS3431SDRBR",
+      "TPS389033DSER",
+      "RC0603FR-0710KL",
+      "RC0603FR-07100KL"
+    ])
     for (const source of sources) {
       const bytes = readFileSync(new URL(`../${source.artifactPath}`, import.meta.url))
       expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(source.sha256)
-      expect(source.sourceUrl).toMatch(/^https:\/\/www\.ti\.com\//u)
-      const row = benchPrototypeProcessorFootprints.populatedReferences.find(
-        (candidate) => candidate.mpn === source.mpn
+      expect(source.sourceUrl).toMatch(
+        source.mpn.startsWith("RC0603FR-07", 0) ? /^https:\/\/www\.yageogroup\.com\//u : /^https:\/\/www\.ti\.com\//u
       )
+      const row = [
+        ...benchPrototypeProcessorFootprints.populatedReferences,
+        ...benchPrototypeProcessorFootprints.processorSupportReferences
+      ].find((candidate) => candidate.mpn === source.mpn)
       expect(row).toMatchObject({
         package: source.package,
         evidence: {

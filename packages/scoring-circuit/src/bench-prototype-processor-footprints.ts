@@ -22,6 +22,10 @@ import {
   benchPrototypeServiceHeaders,
   validateBenchPrototypeServiceHeaders
 } from "./bench-prototype-service-headers.js"
+import {
+  bp032YageoRc0603FootprintEvidenceFor,
+  bp032YageoRc0603ResistorFootprintEvidence
+} from "./bp032-yageo-rc0603-resistor-footprint-evidence.js"
 import { findFootprintReleaseEvidence } from "./footprint-release-evidence.js"
 import { stm32PinAllocation, validateStm32PinAllocation } from "./stm32-pin-allocation.js"
 
@@ -190,6 +194,22 @@ const retainedManufacturerPrimarySources = deepFreeze([
     artifactPath: "docs/evidence/bp-032/ti-tps3890.pdf",
     sourceUrl: "https://www.ti.com/lit/ds/symlink/tps3890.pdf",
     sha256: "EE79599730E7606BA9718D9820B411020E3DCD9FF7D44572F8EE63FEAD15B9D0"
+  },
+  {
+    requestIdentity: "BP032-BP125-Yageo-RC0603FR-0710KL-20260824",
+    mpn: "RC0603FR-0710KL",
+    package: "0603",
+    artifactPath: "docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf",
+    sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL",
+    sha256: "EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497"
+  },
+  {
+    requestIdentity: "BP032-BP033-Yageo-RC0603FR-07100KL-20260825",
+    mpn: "RC0603FR-07100KL",
+    package: "0603",
+    artifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
+    sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL",
+    sha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054"
   }
 ] as const)
 
@@ -202,15 +222,18 @@ export function validateBenchPrototypeProcessorFootprintsRetainedManufacturerSou
     )
   const sources = retainedManufacturerPrimarySources
   if (
-    sources.length !== 2 ||
+    sources.length !== 4 ||
     new Set(sources.map((source) => source.mpn)).size !== sources.length ||
     new Set(sources.map((source) => source.requestIdentity)).size !== sources.length ||
     new Set(sources.map((source) => source.artifactPath)).size !== sources.length ||
     sources.some(
       (source) =>
         source.package !== packageFor(source.mpn) ||
-        !source.sourceUrl.startsWith("https://www.ti.com/") ||
-        !/^docs\/evidence\/bp-032\/[^/]+\.pdf$/u.test(source.artifactPath) ||
+        (source.mpn.startsWith("RC0603FR-07", 0)
+          ? !source.sourceUrl.startsWith("https://www.yageogroup.com/") ||
+            !/^docs\/evidence\/bp-(?:125|033)\/yageo-rc0603fr-07(?:10|100)kl-datasheet\.pdf$/u.test(source.artifactPath)
+          : !source.sourceUrl.startsWith("https://www.ti.com/") ||
+            !/^docs\/evidence\/bp-032\/[^/]+\.pdf$/u.test(source.artifactPath)) ||
         !/^[0-9A-F]{64}$/u.test(source.sha256)
     )
   )
@@ -228,7 +251,7 @@ function retainedManufacturerPrimarySourceFor(mpn: string) {
   return matches[0]
 }
 
-const evidence = (mpn: string | null) => ({
+const evidence = (mpn: string | null, reference: string | null = null) => ({
   priorGateReferences: mpn === null ? [] : [...(findFootprintReleaseEvidence(mpn)?.gateReferences ?? [])],
   manufacturerPrimarySource:
     mpn === null || !hasManufacturerPrimarySource(mpn) ? null : structuredClone(manufacturerPrimarySourceByMpn[mpn]),
@@ -249,7 +272,8 @@ const evidence = (mpn: string | null) => ({
   paste: "not-claimed",
   courtyard: "not-claimed",
   artwork: "not-generated",
-  orientation: "unreviewed"
+  orientation: "unreviewed",
+  footprintEvidence: mpn === null || reference === null ? null : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
 })
 
 const resetLedger = benchPrototypeResetWatchdog.parts.map((part) => ({
@@ -258,7 +282,7 @@ const resetLedger = benchPrototypeResetWatchdog.parts.map((part) => ({
   package: packageFor(part.mpn),
   population: "selected-awaiting-footprint-evidence",
   source: "BP-123 reset/watchdog contract",
-  evidence: evidence(part.mpn)
+  evidence: evidence(part.mpn, part.reference)
 }))
 
 function processorSupportReferenceContract() {
@@ -362,7 +386,7 @@ const processorSupportLedger = processorSupportSnapshot.map((support) => {
       selectedMpn: support.mpn,
       package: packageFor(support.mpn),
       source: "BP-125 exact manufacturer-source selection",
-      evidence: evidence(support.mpn)
+      evidence: evidence(support.mpn, support.reference)
     }
   }
   return selected === undefined
@@ -380,7 +404,7 @@ const processorSupportLedger = processorSupportSnapshot.map((support) => {
         selectedMpn: selected.mpn,
         package: selected.package,
         source: "BP-125 requirement reconciled to BP-123 exact selection",
-        evidence: evidence(selected.mpn)
+        evidence: evidence(selected.mpn, selected.reference)
       }
 })
 
@@ -591,6 +615,10 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
     ...unresolvedProcessorSupport,
     ...bp125SelectedSupport
   ]
+  const yageoReferenceBindings = bp032YageoRc0603ResistorFootprintEvidence.referenceBindings
+  const yageoLedgerRows = references.filter(
+    (entry) => entry.mpn === "RC0603FR-0710KL" || entry.mpn === "RC0603FR-07100KL"
+  )
   if (
     new Set(references.map((entry) => entry.reference)).size !== references.length ||
     ledger.populatedReferences.some(
@@ -615,6 +643,24 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
         entry.evidence.manufacturerPrimarySourceMapping === "missing" ||
         entry.evidence.manufacturerPrimarySource === null
     ) ||
+    yageoLedgerRows.length !== yageoReferenceBindings.length ||
+    yageoReferenceBindings.some((expected) => {
+      const row = yageoLedgerRows.find((candidate) => candidate.reference === expected.reference)
+      return (
+        row === undefined ||
+        row.mpn !== expected.manufacturerPartNumber ||
+        !("evidence" in row) ||
+        row.evidence.footprintEvidence === null ||
+        row.evidence.footprintEvidence?.exactMpn !== expected.manufacturerPartNumber ||
+        row.evidence.footprintEvidence?.reference !== expected.reference ||
+        row.evidence.footprintEvidence?.sourceId !== expected.sourceId ||
+        row.evidence.footprintEvidence?.upstreamContract !== expected.upstreamContract ||
+        row.evidence.footprintEvidence?.projectFootprintId !== "yageo-rc0603-project-review" ||
+        row.evidence.footprintEvidence?.releaseState !== "deny" ||
+        row.evidence.footprintEvidence?.fabricationAuthority !== "deny" ||
+        row.evidence.footprintEvidence?.accepted
+      )
+    }) ||
     ledger.processorSupportReferences
       .filter((entry) => entry.reconciliation === "selected-by-BP-123")
       .some(
