@@ -14,6 +14,11 @@ import {
   listMeetingAgenda
 } from "../db/queries/meeting-agenda-read.js"
 import { assertMeetingExists, listMeetingDocuments } from "../db/queries/meeting-document-read.js"
+import {
+  assertMeetingOutcomeParentExists,
+  getMeetingOutcomeRead,
+  listMeetingOutcomes
+} from "../db/queries/meeting-outcome-read.js"
 import { getMeetingParticipantRead } from "../db/queries/meeting-participant-read.js"
 import {
   assertMeetingExists as assertMeetingParticipantParentExists,
@@ -33,6 +38,7 @@ import { createJurisdictionReadRepository } from "./jurisdiction-read-repository
 import { createJurisdictionReadApiHandler } from "./jurisdiction-read-routes.js"
 import { createMeetingAgendaReadApiHandler } from "./meeting-agenda-read-routes.js"
 import { createMeetingDocumentReadApiHandler } from "./meeting-document-read-routes.js"
+import { createMeetingOutcomeReadApiHandler } from "./meeting-outcome-read-routes.js"
 import { createMeetingParticipantListApiHandler } from "./meeting-participant-list-routes.js"
 import { createMeetingParticipantReadApiHandler } from "./meeting-participant-read-routes.js"
 import { createOrganizationBillReadApiHandler } from "./organization-bill-read-routes.js"
@@ -130,6 +136,15 @@ export function createLegislationApiHandler(
               assertMeetingExists: async (meetingId) =>
                 await assertMeetingParticipantParentExists(documentDatabase, meetingId),
               listMeetingParticipants: async (input) => await listMeetingParticipants(documentDatabase, input)
+            },
+            options
+          ),
+          createMeetingOutcomeReadApiHandler(
+            {
+              assertMeetingOutcomeParentExists: async (meetingId) =>
+                await assertMeetingOutcomeParentExists(documentDatabase, meetingId),
+              getMeetingOutcomeRead: async (input) => await getMeetingOutcomeRead(documentDatabase, input),
+              listMeetingOutcomes: async (input) => await listMeetingOutcomes(documentDatabase, input)
             },
             options
           ),
