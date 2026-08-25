@@ -32,6 +32,10 @@ import {
 } from "./bench-prototype-optional-peripherals.js"
 import { calculateBenchPrototypePowerContract, defaultBenchPrototypePowerInputs } from "./bench-prototype-power.js"
 import { validateBp033B340aProjectFootprintGeometry } from "./bp033-b340a-project-footprint.js"
+import {
+  bp033W5500ProjectFootprintGeometry,
+  validateBp033W5500ProjectFootprintGeometry
+} from "./bp033-w5500-project-footprint.js"
 import { ethernetSupportNetwork } from "./ethernet-support-network.js"
 
 type PlainRecord = Record<PropertyKey, unknown>
@@ -945,7 +949,19 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer" as const,
     reviewedAt: "2026-08-25" as const,
     fabricationRelease: "deny" as const
-  }))
+  })),
+  {
+    reference: bp033W5500ProjectFootprintGeometry.reference,
+    artifactKind: bp033W5500ProjectFootprintGeometry.artifactKind,
+    artworkModule: "src/bp033-w5500-project-footprint.tsx",
+    reviewDocument: "docs/bench-prototype-application-footprints.md",
+    sourceArtifactPath: bp033W5500ProjectFootprintGeometry.sources[0].artifactPath,
+    sourceSha256: bp033W5500ProjectFootprintGeometry.sources[0].sha256,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
+  }
 ] as const
 
 const definition = {
@@ -1027,6 +1043,7 @@ function assertUpstream(): void {
   if (validateBp033B340aProjectFootprintGeometry().length !== 0) {
     throw new RangeError("BP-033 B340A project-review candidate drifted")
   }
+  validateBp033W5500ProjectFootprintGeometry()
 }
 
 /** Rejects package inference, geometry credit, populated omitted peripherals, and release relaxation. */
@@ -1084,7 +1101,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 47 ||
+    contract.projectFootprintMappings.length !== 48 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1201,6 +1218,17 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         mapping.fabricationRelease === "deny"
       )
     }) ||
+    contract.projectFootprintMappings[47]?.reference !== "U_W5500" ||
+    contract.projectFootprintMappings[47]?.artifactKind !== "bp033-w5500-project-footprint" ||
+    contract.projectFootprintMappings[47]?.artworkModule !== "src/bp033-w5500-project-footprint.tsx" ||
+    contract.projectFootprintMappings[47]?.reviewDocument !== "docs/bench-prototype-application-footprints.md" ||
+    contract.projectFootprintMappings[47]?.sourceArtifactPath !== "docs/evidence/bp-033/wiznet-w5500-datasheet.pdf" ||
+    contract.projectFootprintMappings[47]?.sourceSha256 !==
+      "7B826B808084CCD986BCC22904C00A07A508EF42FB93D079FE7150A4C4F1A63D" ||
+    contract.projectFootprintMappings[47]?.reviewState !== "root-reviewed-review-input" ||
+    contract.projectFootprintMappings[47]?.reviewer !== "root-final-reviewer" ||
+    contract.projectFootprintMappings[47]?.reviewedAt !== "2026-08-25" ||
+    contract.projectFootprintMappings[47]?.fabricationRelease !== "deny" ||
     !contract.records.some(
       (record) =>
         record.reference === "U_USB_PD" &&

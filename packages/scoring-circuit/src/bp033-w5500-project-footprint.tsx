@@ -87,7 +87,20 @@ const terminals = [
 
 const pinLabels = Object.fromEntries(terminals.map((terminal) => [`pin${terminal.pin}`, String(terminal.pin)]))
 
-export const bp033W5500ProjectFootprintGeometry = {
+function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || typeof value !== "object") return value
+  if (seen.has(value)) throw new RangeError("W5500 evidence cannot contain aliases or cycles")
+  seen.add(value)
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (descriptor === undefined || !("value" in descriptor))
+      throw new RangeError("W5500 evidence accepts data properties only")
+    deepFreeze(descriptor.value, seen)
+  }
+  return Object.freeze(value)
+}
+
+const bp033W5500ProjectFootprintGeometryBaseline = deepFreeze({
   artifactKind: "bp033-w5500-project-footprint",
   workUnit: "BP-033",
   reference: "U_W5500",
@@ -170,7 +183,52 @@ export const bp033W5500ProjectFootprintGeometry = {
     fabricationAuthorized: false,
     releaseState: "deny"
   }
-} as const
+} as const)
+
+export const bp033W5500ProjectFootprintGeometry = deepFreeze(
+  structuredClone(bp033W5500ProjectFootprintGeometryBaseline)
+)
+
+function sameExactGraph(
+  actual: unknown,
+  expected: unknown,
+  actualSeen = new WeakSet<object>(),
+  expectedSeen = new WeakSet<object>()
+): boolean {
+  if (actual === null || expected === null || typeof actual !== "object" || typeof expected !== "object")
+    return Object.is(actual, expected)
+  if (actualSeen.has(actual) || expectedSeen.has(expected)) return false
+  actualSeen.add(actual)
+  expectedSeen.add(expected)
+  if (Object.getPrototypeOf(actual) !== Object.getPrototypeOf(expected)) return false
+  const actualKeys = Reflect.ownKeys(actual)
+  const expectedKeys = Reflect.ownKeys(expected)
+  if (
+    actualKeys.length !== expectedKeys.length ||
+    actualKeys.some((key) => typeof key === "symbol" || !expectedKeys.includes(key))
+  )
+    return false
+  return expectedKeys.every((key) => {
+    const left = Object.getOwnPropertyDescriptor(actual, key)
+    const right = Object.getOwnPropertyDescriptor(expected, key)
+    return (
+      left !== undefined &&
+      right !== undefined &&
+      "value" in left &&
+      "value" in right &&
+      left.enumerable === right.enumerable &&
+      left.configurable === right.configurable &&
+      left.writable === right.writable &&
+      sameExactGraph(left.value, right.value, actualSeen, expectedSeen)
+    )
+  })
+}
+
+export function validateBp033W5500ProjectFootprintGeometry(value: unknown = bp033W5500ProjectFootprintGeometry): true {
+  if (!sameExactGraph(value, bp033W5500ProjectFootprintGeometryBaseline))
+    throw new RangeError("BP-033 W5500 project-review evidence drifted")
+  return true
+}
 
 const projectFootprint = (
   <footprint name="BP033_W5500_PROJECT_FOOTPRINT" originalLayer="top">

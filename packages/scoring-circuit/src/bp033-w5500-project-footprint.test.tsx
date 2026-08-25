@@ -1,7 +1,11 @@
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
-import { bp033W5500ProjectFootprintGeometry, Bp033W5500ProjectFootprint } from "./bp033-w5500-project-footprint.js"
+import {
+  bp033W5500ProjectFootprintGeometry,
+  Bp033W5500ProjectFootprint,
+  validateBp033W5500ProjectFootprintGeometry
+} from "./bp033-w5500-project-footprint.js"
 import { renderTestCircuit } from "./test-helper.js"
 
 function renderProjectFootprint() {
@@ -58,6 +62,41 @@ function retainedEvidenceHash(artifactPath: string) {
 }
 
 describe("BP-033 W5500 project footprint", () => {
+  it("freezes the public evidence and rejects identity, geometry, and release drift", () => {
+    expect(validateBp033W5500ProjectFootprintGeometry()).toBe(true)
+    expect(Object.isFrozen(bp033W5500ProjectFootprintGeometry)).toBe(true)
+    expect(Object.isFrozen(bp033W5500ProjectFootprintGeometry.terminals[0])).toBe(true)
+
+    for (const mutate of [
+      (candidate: any) => (candidate.manufacturerPartNumber = "W5500L"),
+      (candidate: any) => (candidate.terminals[0].xMm = -4.3),
+      (candidate: any) => (candidate.pinOne.orientationVerified = true),
+      (candidate: any) => (candidate.acceptance.projectGeometryAccepted = true),
+      (candidate: any) => (candidate.acceptance.fabricationAuthorized = true),
+      (candidate: any) => (candidate.acceptance.releaseState = "allow")
+    ]) {
+      const candidate = structuredClone(bp033W5500ProjectFootprintGeometry)
+      mutate(candidate)
+      expect(() => validateBp033W5500ProjectFootprintGeometry(candidate)).toThrow(RangeError)
+    }
+  })
+
+  it("rejects hidden, symbol, getter, prototype, cycle, and alias graph attacks", () => {
+    const attacks = [
+      (candidate: any) => Object.defineProperty(candidate, "hidden", { value: true }),
+      (candidate: any) => Object.defineProperty(candidate, Symbol("hidden"), { value: true }),
+      (candidate: any) => Object.defineProperty(candidate, "reference", { get: () => "U_W5500" }),
+      (candidate: any) => Object.setPrototypeOf(candidate.package, null),
+      (candidate: any) => (candidate.package.loop = candidate),
+      (candidate: any) => (candidate.terminals[1] = candidate.terminals[0])
+    ]
+    for (const attack of attacks) {
+      const candidate = structuredClone(bp033W5500ProjectFootprintGeometry)
+      attack(candidate)
+      expect(() => validateBp033W5500ProjectFootprintGeometry(candidate)).toThrow(RangeError)
+    }
+  })
+
   it("binds the exact post-2021 LQFP-48 source and leaves every release gate denied", () => {
     expect(bp033W5500ProjectFootprintGeometry).toMatchObject({
       workUnit: "BP-033",

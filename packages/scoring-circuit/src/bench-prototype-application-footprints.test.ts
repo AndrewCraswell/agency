@@ -651,4 +651,19 @@ describe("BP-033 application footprint closure ledger", () => {
       validateBenchPrototypeApplicationFootprints({ ...benchPrototypeApplicationFootprints, releaseState: "allow" })
     ).toThrow(RangeError)
   })
+
+  it("links U_W5500 to the root-reviewed project footprint without granting release", () => {
+    expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toContainEqual({
+      reference: "U_W5500",
+      artifactKind: "bp033-w5500-project-footprint",
+      artworkModule: "src/bp033-w5500-project-footprint.tsx",
+      reviewDocument: "docs/bench-prototype-application-footprints.md",
+      sourceArtifactPath: "docs/evidence/bp-033/wiznet-w5500-datasheet.pdf",
+      sourceSha256: "7B826B808084CCD986BCC22904C00A07A508EF42FB93D079FE7150A4C4F1A63D",
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      reviewedAt: "2026-08-25",
+      fabricationRelease: "deny"
+    })
+  })
 })
