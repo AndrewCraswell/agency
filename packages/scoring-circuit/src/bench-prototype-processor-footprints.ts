@@ -49,6 +49,10 @@ import {
   bp032TdkC1608FootprintEvidenceFor
 } from "./bp032-tdk-c1608-capacitor-footprint-evidence.js"
 import {
+  bp032TiIsolatorFootprintEvidence,
+  validateBp032TiIsolatorFootprintEvidence
+} from "./bp032-ti-isolator-footprint-evidence.js"
+import {
   bp032YageoRc0603FootprintEvidenceFor,
   bp032YageoRc0603ResistorFootprintEvidence
 } from "./bp032-yageo-rc0603-resistor-footprint-evidence.js"
@@ -324,10 +328,36 @@ const evidence = (mpn: string | null, reference: string | null = null) => ({
               ? bp032TdkC1608FootprintEvidenceFor(mpn, reference)
               : mpn.startsWith("GCM")
                 ? murataProcessorSupportFootprintEvidenceFor(mpn, reference)
-                : mpn === "TPS389033DSER" || mpn === "TPS3431SDRBR"
-                  ? supervisorWatchdogFootprintEvidenceFor(mpn, reference)
-                  : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
+                : mpn === "ISO7762FDWR" || mpn === "ISO7721FDR"
+                  ? tiIsolatorFootprintEvidenceFor(mpn, reference)
+                  : mpn === "TPS389033DSER" || mpn === "TPS3431SDRBR"
+                    ? supervisorWatchdogFootprintEvidenceFor(mpn, reference)
+                    : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
 })
+
+function tiIsolatorFootprintEvidenceFor(mpn: string, reference: string) {
+  const device = bp032TiIsolatorFootprintEvidence.devices.find(
+    (item) => item.manufacturerPartNumber === mpn && item.canonicalReference === reference
+  )
+  if (device === undefined) return null
+  return {
+    artifactKind: bp032TiIsolatorFootprintEvidence.artifactKind,
+    exactMpn: mpn,
+    reference,
+    sourceId: `ti-${mpn.toLowerCase()}-datasheet`,
+    sourceArtifactPath: device.manufacturerSource.artifactPath,
+    sourceSha256: device.manufacturerSource.sha256,
+    upstreamContract: "BP-122",
+    projectFootprintId: `ti-${mpn.toLowerCase()}-project-review`,
+    manufacturerCad: device.manufacturerCad.state,
+    manufacturerLandPattern: device.manufacturerFacts.landPatternStatus,
+    artwork: device.projectGeometry.status,
+    orientation: device.projectGeometry.orientation.status,
+    releaseState: device.gates.release,
+    fabricationAuthority: device.gates.fabrication,
+    accepted: false
+  } as const
+}
 
 function murataProcessorSupportFootprintEvidenceFor(mpn: string, reference: string) {
   const binding = benchPrototypeBp125MurataCapacitorReviewBindings.find(
@@ -614,7 +644,7 @@ const definition = {
       package: "SOIC-16 wide",
       population: "selected-awaiting-footprint-evidence",
       source: "BP-122 main isolation channel",
-      evidence: evidence("ISO7762FDWR")
+      evidence: evidence("ISO7762FDWR", "U_ISO_MAIN")
     },
     {
       reference: "U_ISO_AUX",
@@ -623,7 +653,7 @@ const definition = {
       package: "SOIC-8",
       population: "selected-awaiting-footprint-evidence",
       source: "BP-122 auxiliary isolation channel",
-      evidence: evidence("ISO7721FDR")
+      evidence: evidence("ISO7721FDR", "U_ISO_AUX")
     },
     {
       reference: "U_ISO_POWER",
@@ -778,6 +808,9 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   if (bp125MurataCapacitorFootprintIntegrityErrors().length !== 0) {
     throw new RangeError("BP-032 Murata processor-support footprint candidate drifted")
   }
+  if (validateBp032TiIsolatorFootprintEvidence(bp032TiIsolatorFootprintEvidence).length !== 0) {
+    throw new RangeError("BP-032 TI isolator footprint candidate drifted")
+  }
   validateBenchPrototypeProcessorFootprintsRetainedManufacturerSources(retainedManufacturerPrimarySources)
   if (!sameDataGraph(value, benchPrototypeProcessorFootprints))
     throw new RangeError("BP-032 ledger must exactly match the reviewed canonical decision")
@@ -825,6 +858,7 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
     ["TPS389033DSER", "TPS3431SDRBR"].includes(entry.mpn)
   )
   const murataProcessorSupportRows = ledger.processorSupportReferences.filter((entry) => entry.mpn.startsWith("GCM"))
+  const isolatorRows = ledger.populatedReferences.filter((entry) => ["ISO7762FDWR", "ISO7721FDR"].includes(entry.mpn))
   const ftshRows = ledger.debugReferences.filter((entry) => entry.mpn === "FTSH-105-01-L-DV-007-K")
   if (
     new Set(references.map((entry) => entry.reference)).size !== references.length ||
@@ -936,6 +970,17 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
         row.evidence.footprintEvidence.exactMpn !== row.mpn ||
         row.evidence.footprintEvidence.reference !== row.reference ||
         row.evidence.footprintEvidence.upstreamContract !== "BP-125" ||
+        row.evidence.footprintEvidence.releaseState !== "deny" ||
+        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
+        row.evidence.footprintEvidence.accepted
+    ) ||
+    isolatorRows.length !== 2 ||
+    isolatorRows.some(
+      (row) =>
+        row.evidence.footprintEvidence === null ||
+        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
+        row.evidence.footprintEvidence.reference !== row.reference ||
+        row.evidence.footprintEvidence.upstreamContract !== "BP-122" ||
         row.evidence.footprintEvidence.releaseState !== "deny" ||
         row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
         row.evidence.footprintEvidence.accepted

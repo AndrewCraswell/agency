@@ -285,6 +285,24 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
     }
   })
 
+  it("binds both BP-122 isolators to review-only exact-package footprint evidence", () => {
+    for (const reference of ["U_ISO_MAIN", "U_ISO_AUX"]) {
+      const row = benchPrototypeProcessorFootprints.populatedReferences.find((entry) => entry.reference === reference)
+      expect(row?.evidence.footprintEvidence).toMatchObject({
+        artifactKind: "bp032-ti-isolator-footprint-evidence",
+        exactMpn: row?.mpn,
+        reference,
+        upstreamContract: "BP-122",
+        manufacturerCad: "not-acquired",
+        manufacturerLandPattern: "manufacturer-example-not-cad",
+        orientation: "pending-layout-review",
+        releaseState: "deny",
+        fabricationAuthority: "deny",
+        accepted: false
+      })
+    }
+  })
+
   it("binds the reset-support and keyed SWD rows to review-only evidence", () => {
     for (const reference of ["U_APP_RESET_FANOUT", "Q_ESP_RESET_STM", "Q_ESP_DEBUG_RESET"]) {
       const row = benchPrototypeProcessorFootprints.populatedReferences.find((entry) => entry.reference === reference)
