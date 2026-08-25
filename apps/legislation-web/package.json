@@ -8,7 +8,7 @@
     "pnpm": ">=11.0.0 <12.0.0"
   },
   "scripts": {
-    "build": "pnpm --filter legislation build && node scripts/next.mjs build && oxfmt next-env.d.ts",
+    "build": "pnpm --filter legislation build:next && node scripts/next.mjs build && oxfmt next-env.d.ts",
     "check:format": "oxfmt --check",
     "check:lint": "pnpm lint",
     "check:types": "node ../../node_modules/typescript/bin/tsc --project tsconfig.json --noEmit",

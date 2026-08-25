@@ -23,6 +23,7 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs",
+    "build:next": "tsc -p tsconfig.next.json",
     "check:format": "oxfmt --check",
     "check:lint": "pnpm lint",
     "check:types": "pnpm check:types:service",
