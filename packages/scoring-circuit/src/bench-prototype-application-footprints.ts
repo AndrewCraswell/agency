@@ -49,6 +49,10 @@ import {
   validateBp033DisplayBufferBss138akaReferenceBinding
 } from "./bp033-display-buffer-bss138aka-reference-binding.js"
 import {
+  bp033InfineonCy15b104qFootprintEvidence,
+  validateBp033InfineonCy15b104qFootprintEvidence
+} from "./bp033-infineon-cy15b104q-footprint-evidence.js"
+import {
   bp033Keystone5001TestPointEvidenceCandidate,
   validateBp033Keystone5001TestPointEvidenceCandidate
 } from "./bp033-keystone-5001-test-point-evidence-candidate.js"
@@ -60,6 +64,10 @@ import {
   bp033TdkC2012x7s1a226m125ac0805ReviewCandidate,
   validateBp033TdkC2012x7s1a226m125ac0805ReviewCandidate
 } from "./bp033-tdk-c2012x7s1a226m125ac-0805-review-candidate.js"
+import {
+  bp033W5500CrystalSupportEvidence,
+  validateBp033W5500CrystalSupportEvidence
+} from "./bp033-w5500-crystal-support-evidence.js"
 import {
   bp033W5500ProjectFootprintGeometry,
   validateBp033W5500ProjectFootprintGeometry
@@ -909,6 +917,16 @@ const bp033DisplayLimiterMappings = [
   ]
 ] as const
 
+const bp033W5500CrystalSupportMappings = bp033W5500CrystalSupportEvidence.rows.flatMap((row) => {
+  const source = bp033W5500CrystalSupportEvidence.sources.find((candidate) => candidate.exactMpn === row.mpn)
+  if (source === undefined) throw new RangeError(`BP-033 W5500 exact source missing for ${row.mpn}`)
+  return row.references.map((reference) => ({
+    reference,
+    sourceArtifactPath: source.artifactPath.replace(/^packages\/scoring-circuit\//u, ""),
+    sourceSha256: source.sha256
+  }))
+})
+
 const projectFootprintMappings = [
   {
     reference: "J_USB_C",
@@ -1198,6 +1216,33 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer" as const,
     reviewedAt: "2026-08-25" as const,
     fabricationRelease: "deny" as const
+  },
+  ...bp033W5500CrystalSupportMappings.map(({ reference, sourceArtifactPath, sourceSha256 }) => ({
+    reference,
+    artifactKind: bp033W5500CrystalSupportEvidence.artifactKind,
+    artworkModule: "src/bp033-w5500-crystal-support-evidence.ts",
+    reviewDocument: "docs/bench-prototype-application-footprints.md",
+    sourceArtifactPath,
+    sourceSha256,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
+  })),
+  {
+    reference: "U_FRAM",
+    artifactKind: bp033InfineonCy15b104qFootprintEvidence.artifactKind,
+    artworkModule: "src/bp033-infineon-cy15b104q-footprint-evidence.ts",
+    reviewDocument: "docs/bench-prototype-application-footprints.md",
+    sourceArtifactPath: bp033InfineonCy15b104qFootprintEvidence.source.artifactPath.replace(
+      /^packages\/scoring-circuit\//u,
+      ""
+    ),
+    sourceSha256: bp033InfineonCy15b104qFootprintEvidence.source.sha256,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
   }
 ] as const
 
@@ -1293,6 +1338,8 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
   if (validateBp032ResetSupportFootprintEvidence(bp032ResetSupportFootprintEvidence).length !== 0) {
     throw new RangeError("BP-033 reset-fanout footprint evidence drifted")
   }
+  validateBp033W5500CrystalSupportEvidence()
+  validateBp033InfineonCy15b104qFootprintEvidence()
   if (validateBp033Keystone5001TestPointEvidenceCandidate().length !== 0) {
     throw new RangeError("BP-033 Keystone 5001 evidence candidate drifted")
   }
@@ -1311,6 +1358,11 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
   const reconciledBp140References = contract.bp140ReferenceReconciliation.map((record) => record.reference)
   const retainedSourceReferences = contract.records.filter((record) => record.manufacturerDrawing.state === "acquired")
   const retainedSourceReferenceIds = retainedSourceReferences.map((record) => record.reference)
+  const w5500SupportReferences = bp033W5500CrystalSupportEvidence.rows.flatMap((row) => row.references)
+  const w5500SupportMappings = contract.projectFootprintMappings.filter(
+    (mapping) => mapping.artifactKind === bp033W5500CrystalSupportEvidence.artifactKind
+  )
+  const framMapping = contract.projectFootprintMappings.find((mapping) => mapping.reference === "U_FRAM")
   if (
     contract.workUnit !== "BP-033" ||
     contract.releaseState !== "deny" ||
@@ -1356,7 +1408,23 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 85 ||
+    contract.projectFootprintMappings.length !== 95 ||
+    w5500SupportMappings.length !== 9 ||
+    !w5500SupportReferences.every((reference) =>
+      w5500SupportMappings.some(
+        (mapping) =>
+          mapping.reference === reference &&
+          mapping.reviewState === "root-reviewed-review-input" &&
+          mapping.reviewer === "root-final-reviewer" &&
+          mapping.fabricationRelease === "deny"
+      )
+    ) ||
+    framMapping?.artifactKind !== bp033InfineonCy15b104qFootprintEvidence.artifactKind ||
+    framMapping.sourceArtifactPath !== "docs/evidence/bp-033/infineon-cy15b104q-datasheet.pdf" ||
+    framMapping.sourceSha256 !== bp033InfineonCy15b104qFootprintEvidence.source.sha256 ||
+    framMapping.reviewState !== "root-reviewed-review-input" ||
+    framMapping.reviewer !== "root-final-reviewer" ||
+    framMapping.fabricationRelease !== "deny" ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||

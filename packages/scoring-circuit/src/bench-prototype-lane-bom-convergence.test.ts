@@ -51,7 +51,7 @@ describe("BP-035 lane BOM convergence", () => {
     expect(benchPrototypeLaneBomConvergence.blockers).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "footprint-evidence-open", reference: "U_SCORING" })])
     )
-    expect(benchPrototypeLaneBomConvergence.blockers).toHaveLength(347)
+    expect(benchPrototypeLaneBomConvergence.blockers).toHaveLength(343)
     expect(benchPrototypeLaneBomConvergence.unresolvedPopulatedReferences).toHaveLength(247)
     expect(
       Object.fromEntries(
@@ -74,10 +74,10 @@ describe("BP-035 lane BOM convergence", () => {
       "missing-baseline-reference": 8,
       "missing-lane-reference": 7,
       "package-drift": 8,
-      "population-drift": 12,
-      "unresolved-mpn": 22,
-      "unresolved-package": 36,
-      "unresolved-population": 34
+      "population-drift": 11,
+      "unresolved-mpn": 21,
+      "unresolved-package": 35,
+      "unresolved-population": 33
     })
   })
 
@@ -237,7 +237,7 @@ describe("BP-035 lane BOM convergence", () => {
 
     expect(stateCounts("BP-031")).toEqual({ approved: 42, "reviewed-unapproved": 71 })
     expect(stateCounts("BP-032")).toEqual({ "reviewed-unapproved": 50, approved: 1 })
-    expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 89, "not-started": 12 })
+    expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 99, "not-started": 2 })
     expect(stateFor("BP-031", "C_SAR_1")).toBe("approved")
     expect(stateFor("BP-031", "C_REF_IN_7")).toBe("approved")
     expect(stateFor("BP-031", "R_FAULT_GUARD_7")).toBe("approved")
@@ -308,6 +308,11 @@ describe("BP-035 lane BOM convergence", () => {
     expect(stateFor("BP-033", "Q_DISPLAY_BUFFER_B_ENABLE")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "U_DISPLAY_BUFFER_A")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "U_DISPLAY_BUFFER_B")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-033", "Y_W5500")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-033", "FB_W5500_AVDD")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-033", "U_FRAM")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-033", "J_ETH")).toBe("not-started")
+    expect(stateFor("BP-033", "J_LAB_INJECTION")).toBe("not-started")
     const approvedReferences = benchPrototypeLaneBomRows
       .filter((row) => ["BP-031", "BP-032", "BP-033"].includes(row.source) && row.footprintEvidenceState === "approved")
       .map((row) => row.reference)

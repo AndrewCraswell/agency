@@ -60,7 +60,7 @@ const packageByMpn = {
   TPS3431SDRBR: "VSON-8, 2mm x 2mm",
   TPS389033DSER: "WSON-6, 1.5mm x 1.5mm",
   LMR43620MSC3RPERQ1: "VQFN-HR, 2mm x 2mm",
-  "CY15B104Q-LHXIT": "SOIC-8",
+  "CY15B104Q-LHXIT": "8-pin TDFN/DFN, 5 mm x 6 mm x 0.75 mm, PG-USON-8, drawing 001-85579",
   "RV-3028-C7": "SON-8, 3.0mm x 3.0mm",
   "STSAFE-A110": "SO8N, 150mil",
   TAS2505TRGERQ1: "VQFN-24, 4mm x 4mm",
@@ -258,13 +258,6 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     disposition: "TBD",
     quantity: 1,
     notes: "Select with the application regulator and reset timing evidence."
-  },
-  {
-    reference: "U_FRAM",
-    function: "Event journal F-RAM",
-    disposition: "TBD",
-    quantity: 1,
-    notes: "Storage remains optional for the first weapon and connector test until the application bus is exercised."
   },
   {
     reference: "U_RTC",
@@ -514,6 +507,12 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "SN74AHCT245PWR",
       "HUB75 signal buffer B",
       "Exact buffer identity is retained for safe blanking; panel header and current remain prototype gates."
+    ),
+    selectedDecisionRow(
+      "U_FRAM",
+      "CY15B104Q-LHXIT",
+      "Event journal F-RAM",
+      "Exact Infineon 8-pin TDFN orderable is selected; project footprint, orientation, placement, fabrication, and release remain denied."
     ),
     ...selectedEthernetSupportRows,
     ...unresolvedRows

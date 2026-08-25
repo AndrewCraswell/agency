@@ -33,7 +33,17 @@ describe("bench prototype BOM baseline", () => {
       C_USB_PD_PPHV: "T523H107M035APE070",
       C_USB_PD_LDO: "T55A106M010C0200",
       U_DISPLAY_BUFFER_A: "SN74AHCT245PWR",
-      U_DISPLAY_BUFFER_B: "SN74AHCT245PWR"
+      U_DISPLAY_BUFFER_B: "SN74AHCT245PWR",
+      U_FRAM: "CY15B104Q-LHXIT"
+    })
+  })
+
+  it("selects the exact F-RAM TDFN package", () => {
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_FRAM")).toMatchObject({
+      disposition: "selected",
+      manufacturer: "Infineon",
+      mpn: "CY15B104Q-LHXIT",
+      package: "8-pin TDFN/DFN, 5 mm x 6 mm x 0.75 mm, PG-USON-8, drawing 001-85579"
     })
   })
 

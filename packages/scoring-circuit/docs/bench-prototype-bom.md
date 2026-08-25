@@ -38,6 +38,7 @@ validated on the bench:
 | Test-only injection connector | `J_LAB_INJECTION` | `43045-0400` |
 | Hard source selector | `S_POWER_SOURCE_SELECTOR` | `7101SYZQE` |
 | HUB75 buffer A/B | `U_DISPLAY_BUFFER_A`, `U_DISPLAY_BUFFER_B` | `SN74AHCT245PWR` |
+| Event journal F-RAM | `U_FRAM` | `CY15B104Q-LHXIT`, 8-pin TDFN/DFN, 5 mm by 6 mm by 0.75 mm, drawing 001-85579 |
 
 The W5500 crystal, passives, ferrite, and supply capacitors are also included
 as selected rows. Their source and package data are reused from the committed
@@ -80,6 +81,9 @@ The baseline keeps work visible without pretending it is closed:
 - The primary lamp and buzzer output connector is represented by
   `J_PRIMARY_OUTPUTS` and remains `TBD` until its connector, mate, pinout, load
   ratings, and harness are selected.
+- `U_FRAM` is selected as exact Infineon `CY15B104Q-LHXIT`. Its retained
+  manufacturer package evidence does not grant project geometry, orientation,
+  placement, fabrication, or release authority.
 - USB-C PD is required. The Amphenol receptacle, TPS25730A controller,
   connector protection, VBUS TVS, disconnect Schottky, reverse-blocking eFuse,
   and committed bulk capacitors are selected. Remaining PD strap, timing,

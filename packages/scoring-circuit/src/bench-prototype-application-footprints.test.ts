@@ -297,6 +297,26 @@ describe("BP-033 application footprint closure ledger", () => {
     expect(benchPrototypeApplicationFootprints.authority.orientationsReviewed).toBe(false)
   })
 
+  it("maps the remaining W5500 support and F-RAM evidence without release credit", () => {
+    const reviewed = benchPrototypeApplicationFootprints.projectFootprintMappings.filter((mapping) =>
+      ["bp033-w5500-crystal-support-exact-mpn-evidence", "bp033-infineon-cy15b104q-footprint-evidence"].includes(
+        mapping.artifactKind
+      )
+    )
+    expect(reviewed).toHaveLength(10)
+    expect(reviewed.map((mapping) => mapping.reference)).toEqual(
+      expect.arrayContaining(["Y_W5500", "C_W5500_XI", "C_W5500_XO", "FB_W5500_AVDD", "U_FRAM"])
+    )
+    expect(
+      reviewed.every(
+        (mapping) =>
+          mapping.reviewState === "root-reviewed-review-input" &&
+          mapping.reviewer === "root-final-reviewer" &&
+          mapping.fabricationRelease === "deny"
+      )
+    ).toBe(true)
+  })
+
   it("maps the USB review candidates without board or release credit", () => {
     const record = benchPrototypeApplicationFootprints.records.find((candidate) => candidate.reference === "U_USB_PD")
     if (
