@@ -723,4 +723,27 @@ describe("BP-033 application footprint closure ledger", () => {
       })
     }
   })
+
+  it("links the five BP-033 TDK 22 uF rows to the exact review candidate", () => {
+    for (const reference of [
+      "C_DISPLAY_IN",
+      "C_DISPLAY_OUT",
+      "C_APP_REG_OUT_A",
+      "C_APP_REG_OUT_B",
+      "C_APP_REG_OUT_C"
+    ]) {
+      expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toContainEqual({
+        reference,
+        artifactKind: "bp033-tdk-c2012x7s1a226m125ac-0805-review-candidate",
+        artworkModule: "src/bp033-tdk-c2012x7s1a226m125ac-0805-review-candidate.tsx",
+        reviewDocument: "docs/bp-033-tdk-c2012x7s1a226m125ac-0805-review-candidate.md",
+        sourceArtifactPath: "docs/evidence/bp-033/tdk-c2012x7s1a226m125ac-product-page-capture.md",
+        sourceSha256: "60F2B7B008453D3BE7F5501C7904E54911D422BB068EC8296DA876D47D4A511E",
+        reviewState: "root-reviewed-review-input",
+        reviewer: "root-final-reviewer",
+        reviewedAt: "2026-08-25",
+        fabricationRelease: "deny"
+      })
+    }
+  })
 })

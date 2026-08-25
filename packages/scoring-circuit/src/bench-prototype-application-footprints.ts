@@ -45,6 +45,10 @@ import {
   validateBp033Keystone5001TestPointEvidenceCandidate
 } from "./bp033-keystone-5001-test-point-evidence-candidate.js"
 import {
+  bp033TdkC2012x7s1a226m125ac0805ReviewCandidate,
+  validateBp033TdkC2012x7s1a226m125ac0805ReviewCandidate
+} from "./bp033-tdk-c2012x7s1a226m125ac-0805-review-candidate.js"
+import {
   bp033W5500ProjectFootprintGeometry,
   validateBp033W5500ProjectFootprintGeometry
 } from "./bp033-w5500-project-footprint.js"
@@ -1016,6 +1020,18 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer" as const,
     reviewedAt: "2026-08-25" as const,
     fabricationRelease: "deny" as const
+  })),
+  ...bp033TdkC2012x7s1a226m125ac0805ReviewCandidate.rootIntegrationHandoff.requiredRows.map(({ reference }) => ({
+    reference,
+    artifactKind: bp033TdkC2012x7s1a226m125ac0805ReviewCandidate.artifactKind,
+    artworkModule: "src/bp033-tdk-c2012x7s1a226m125ac-0805-review-candidate.tsx",
+    reviewDocument: "docs/bp-033-tdk-c2012x7s1a226m125ac-0805-review-candidate.md",
+    sourceArtifactPath: "docs/evidence/bp-033/tdk-c2012x7s1a226m125ac-product-page-capture.md",
+    sourceSha256: bp033TdkC2012x7s1a226m125ac0805ReviewCandidate.source.sha256,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
   }))
 ] as const
 
@@ -1111,6 +1127,9 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
   if (validateBp033Keystone5001TestPointEvidenceCandidate().length !== 0) {
     throw new RangeError("BP-033 Keystone 5001 evidence candidate drifted")
   }
+  if (validateBp033TdkC2012x7s1a226m125ac0805ReviewCandidate().length !== 0) {
+    throw new RangeError("BP-033 TDK 22 uF review candidate drifted")
+  }
   if (!sameDataGraph(value, benchPrototypeApplicationFootprints))
     throw new RangeError("BP-033 must exactly match the reviewed fail-closed ledger")
   const contract = benchPrototypeApplicationFootprints
@@ -1163,7 +1182,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 58 ||
+    contract.projectFootprintMappings.length !== 63 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1327,6 +1346,24 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         mapping.reviewDocument === "docs/bp-033-keystone-5001-test-point-evidence-candidate.md" &&
         mapping.sourceArtifactPath === "docs/evidence/bp-033/keystone-terminal-test-points.pdf" &&
         mapping.sourceSha256 === bp033Keystone5001TestPointEvidenceCandidate.source.sha256 &&
+        mapping.reviewState === "root-reviewed-review-input" &&
+        mapping.reviewer === "root-final-reviewer" &&
+        mapping.reviewedAt === "2026-08-25" &&
+        mapping.fabricationRelease === "deny"
+      )
+    }) ||
+    !bp033TdkC2012x7s1a226m125ac0805ReviewCandidate.rootIntegrationHandoff.requiredRows.every((row, offset) => {
+      const mapping = contract.projectFootprintMappings[58 + offset]
+      return (
+        mapping?.reference === row.reference &&
+        row.manufacturer === "TDK" &&
+        row.manufacturerPartNumber === "C2012X7S1A226M125AC" &&
+        row.package === "0805" &&
+        mapping.artifactKind === bp033TdkC2012x7s1a226m125ac0805ReviewCandidate.artifactKind &&
+        mapping.artworkModule === "src/bp033-tdk-c2012x7s1a226m125ac-0805-review-candidate.tsx" &&
+        mapping.reviewDocument === "docs/bp-033-tdk-c2012x7s1a226m125ac-0805-review-candidate.md" &&
+        mapping.sourceArtifactPath === "docs/evidence/bp-033/tdk-c2012x7s1a226m125ac-product-page-capture.md" &&
+        mapping.sourceSha256 === bp033TdkC2012x7s1a226m125ac0805ReviewCandidate.source.sha256 &&
         mapping.reviewState === "root-reviewed-review-input" &&
         mapping.reviewer === "root-final-reviewer" &&
         mapping.reviewedAt === "2026-08-25" &&
