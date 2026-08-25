@@ -263,14 +263,11 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     "Removed from P0; encrypted-remote identity uses ESP32 eFuses and encrypted NVS."
   ),
   dnpRow("U_AUDIO", "Diagnostic audio amplifier", "Removed from P0; the primary buzzer path supplies audible output."),
-  {
-    reference: "J_WEAPON_HARNESS",
-    function: "Seven-conductor weapon and piste fixture input",
-    disposition: "TBD",
-    quantity: 1,
-    notes:
-      "Molex 43045-1200 remains the interface candidate; connector and fixture evidence is separate from this baseline."
-  },
+  dnpRow(
+    "J_WEAPON_HARNESS",
+    "Prototype weapon harness connector",
+    "No orderable connector is populated on P0; the owner-approved OK Fencing socket pigtails solder into six labeled plated-through landing holes with separate strain relief."
+  ),
   dnpRow("J_STM32_SWD", "Superseded STM32 SWD header", "Removed with the STM32; native USB and ESP32 recovery remain."),
   {
     reference: "J_ESP32_SERVICE",

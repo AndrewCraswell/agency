@@ -16,7 +16,7 @@ The executable source is `src/bench-prototype-bom.ts`.
 | Display | Two `SN74AHCT245PWR` buffers, protected display-power branch, HUB75 connector, and external Adafruit 2277 panel. |
 | Primary outputs | One hardware-safe serialized latch, one protected load-driver stage, and the lamp/buzzer connector. Exact parts remain BP-127/BP-144 work. |
 | Recovery and safety | Native USB, ESP32 UART/boot/reset access, exact `TPS389033DSER` supervisor, exact `TPS3431SDRBR` health watchdog, their five required support passives, removable current links, and labeled test points. |
-| Weapon connection | Owner-approved direct-wire OK Fencing cable landing, probe points, and mechanical strain relief. |
+| Weapon connection | Owner-approved OK Fencing socket pigtails soldered into six labeled plated-through board landings, with probe points and separate mechanical strain relief. The landings are PCB features, not BOM connectors. |
 
 ## Removed from populated P0
 
@@ -28,6 +28,8 @@ an old schematic or lane merge:
 - alternate laboratory power connector and source selector;
 - external F-RAM, RTC, secure element, audio amplifier, speaker connector, and
   external antenna assembly; and
+- the prototype weapon harness connector, because six direct-wire landing
+  holes and a separate strain anchor replace it; and
 - battery/UPS hardware, which remains a production/FIE power decision rather
   than dormant P0 circuitry.
 
