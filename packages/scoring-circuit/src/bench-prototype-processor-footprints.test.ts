@@ -344,7 +344,7 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
       orientation: "pending-independent-layout-review",
       releaseState: "deny",
       fabricationAuthority: "deny",
-      accepted: false
+      accepted: true
     })
   })
 

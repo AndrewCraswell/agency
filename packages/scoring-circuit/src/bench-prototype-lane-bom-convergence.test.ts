@@ -208,7 +208,7 @@ describe("BP-035 lane BOM convergence", () => {
         ?.footprintEvidenceState
 
     expect(stateCounts("BP-031")).toEqual({ "reviewed-unapproved": 113 })
-    expect(stateCounts("BP-032")).toEqual({ "reviewed-unapproved": 51 })
+    expect(stateCounts("BP-032")).toEqual({ "reviewed-unapproved": 50, approved: 1 })
     expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 71, "not-started": 30 })
     expect(stateFor("BP-031", "U_SAR_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-031", "U_OVP_BUFFER_1")).toBe("reviewed-unapproved")
@@ -240,7 +240,7 @@ describe("BP-035 lane BOM convergence", () => {
     expect(stateFor("BP-032", "U_SCORING")).toBe("reviewed-unapproved")
     expect(stateFor("BP-032", "J_ESP_SERVICE")).toBe("reviewed-unapproved")
     expect(stateFor("BP-032", "U_APP")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-032", "U_ISO_POWER")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-032", "U_ISO_POWER")).toBe("approved")
     expect(stateFor("BP-033", "J_USB_C")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "U_USB_PD")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "U_USB_PORT_PROTECT")).toBe("reviewed-unapproved")
@@ -278,9 +278,13 @@ describe("BP-035 lane BOM convergence", () => {
     expect(stateFor("BP-033", "Q_DISPLAY_BUFFER_B_ENABLE")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "U_DISPLAY_BUFFER_A")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "U_DISPLAY_BUFFER_B")).toBe("reviewed-unapproved")
-    expect(benchPrototypeLaneBomRows.filter((row) => ["BP-031", "BP-032", "BP-033"].includes(row.source))).not.toEqual(
-      expect.arrayContaining([expect.objectContaining({ footprintEvidenceState: "approved" })])
-    )
+    expect(
+      benchPrototypeLaneBomRows
+        .filter(
+          (row) => ["BP-031", "BP-032", "BP-033"].includes(row.source) && row.footprintEvidenceState === "approved"
+        )
+        .map((row) => row.reference)
+    ).toEqual(["U_ISO_POWER"])
   })
 
   it("projects only exact lane identities into the BP-035 order-candidate baseline", () => {

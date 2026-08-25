@@ -439,7 +439,7 @@ function canonicalRows(): LaneBomRow[] {
     population: row.population.startsWith("DNP") ? "DNP" : "populate",
     classification: "board-populated",
     footprintEvidenceRequired: !row.population.startsWith("DNP"),
-    footprintEvidenceComplete: false,
+    footprintEvidenceComplete: processorEvidenceState(row) === "approved",
     footprintEvidenceState: processorEvidenceState(row),
     sampleEvidenceRequired: false,
     sampleEvidenceComplete: false
@@ -452,7 +452,7 @@ function canonicalRows(): LaneBomRow[] {
     population: row.selectedMpn === null ? "TBD" : "populate",
     classification: "board-populated",
     footprintEvidenceRequired: row.selectedMpn !== null,
-    footprintEvidenceComplete: false,
+    footprintEvidenceComplete: processorEvidenceState(row) === "approved",
     footprintEvidenceState: processorEvidenceState(row),
     sampleEvidenceRequired: false,
     sampleEvidenceComplete: false

@@ -10,6 +10,7 @@ import {
   benchPrototypeEsp32Allocation,
   validateBenchPrototypeEsp32Allocation
 } from "./bench-prototype-esp32-allocation.js"
+import { isBenchPrototypeFootprintApproved } from "./bench-prototype-footprint-approval-decisions.js"
 import {
   benchPrototypeFootprintReviewTemplate,
   validateBenchPrototypeFootprintReview
@@ -379,7 +380,11 @@ function isolatedConverterFootprintEvidenceFor(mpn: string, reference: string) {
     orientation: candidate.orientation.state,
     releaseState: candidate.releaseState,
     fabricationAuthority: candidate.fabricationAuthority,
-    accepted: candidate.accepted
+    accepted: isBenchPrototypeFootprintApproved(
+      "BP-032",
+      reference,
+      "bp032-murata-nxe1s0505mc-preorder-promotion-candidate"
+    )
   } as const
 }
 
@@ -1145,7 +1150,7 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
         row.evidence.footprintEvidence.upstreamContract !== "BP-122/BP-125" ||
         row.evidence.footprintEvidence.releaseState !== "deny" ||
         row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
-        row.evidence.footprintEvidence.accepted
+        !row.evidence.footprintEvidence.accepted
     ) ||
     ftshRows.length !== 1 ||
     ftshRows.some(
