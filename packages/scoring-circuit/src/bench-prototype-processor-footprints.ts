@@ -45,6 +45,10 @@ import {
   validateBp032Ftsh10501LDv007KFootprintEvidence
 } from "./bp032-ftsh-105-01-l-dv-007-k-footprint.js"
 import {
+  bp032MurataNxe1s0505mcCandidate,
+  validateBp032MurataNxe1s0505mcCandidate
+} from "./bp032-murata-nxe1s0505mc-isolated-converter-candidate-footprint.js"
+import {
   bp032ResetSupportFootprintEvidence,
   validateBp032ResetSupportFootprintEvidence
 } from "./bp032-reset-support-footprints.js"
@@ -342,16 +346,42 @@ const evidence = (mpn: string | null, reference: string | null = null) => ({
                 ? murataProcessorSupportFootprintEvidenceFor(mpn, reference)
                 : mpn === "ISO7762FDWR" || mpn === "ISO7721FDR"
                   ? tiIsolatorFootprintEvidenceFor(mpn, reference)
-                  : mpn === "ESP32-S3-WROOM-1U-N16R2"
-                    ? esp32ModuleFootprintEvidenceFor(mpn, reference)
-                    : mpn === "STM32G474RET3TR"
-                      ? stm32FootprintEvidenceFor(mpn, reference)
-                      : mpn === "TPS389033DSER" || mpn === "TPS3431SDRBR"
-                        ? supervisorWatchdogFootprintEvidenceFor(mpn, reference)
-                        : mpn === "TSW-106-07-G-S"
-                          ? esp32ServiceHeaderFootprintEvidenceFor(mpn, reference)
-                          : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
+                  : mpn === "NXE1S0505MC"
+                    ? isolatedConverterFootprintEvidenceFor(mpn, reference)
+                    : mpn === "ESP32-S3-WROOM-1U-N16R2"
+                      ? esp32ModuleFootprintEvidenceFor(mpn, reference)
+                      : mpn === "STM32G474RET3TR"
+                        ? stm32FootprintEvidenceFor(mpn, reference)
+                        : mpn === "TPS389033DSER" || mpn === "TPS3431SDRBR"
+                          ? supervisorWatchdogFootprintEvidenceFor(mpn, reference)
+                          : mpn === "TSW-106-07-G-S"
+                            ? esp32ServiceHeaderFootprintEvidenceFor(mpn, reference)
+                            : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
 })
+
+function isolatedConverterFootprintEvidenceFor(mpn: string, reference: string) {
+  const candidate = bp032MurataNxe1s0505mcCandidate
+  if (candidate.manufacturerPartNumber !== mpn || candidate.canonicalReference !== reference) return null
+  const source = candidate.sources[0]
+  if (source === undefined) return null
+  return {
+    artifactKind: candidate.artifactKind,
+    exactMpn: mpn,
+    reference,
+    sourceId: source.id,
+    sourceArtifactPath: source.artifactPath,
+    sourceSha256: source.sha256,
+    upstreamContract: "BP-122/BP-125",
+    projectFootprintId: "murata-nxe1s0505mc-project-review",
+    manufacturerCad: candidate.manufacturerCad.state,
+    manufacturerLandPattern: candidate.manufacturerLandPattern.sourceScope,
+    artwork: candidate.projectArtwork.state,
+    orientation: candidate.orientation.state,
+    releaseState: candidate.releaseState,
+    fabricationAuthority: candidate.fabricationAuthority,
+    accepted: candidate.accepted
+  } as const
+}
 
 function esp32ModuleFootprintEvidenceFor(mpn: string, reference: string) {
   const candidate = benchPrototypeBp032Esp32S3Wroom1uExactFootprint
@@ -747,7 +777,7 @@ const definition = {
         "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect",
       population: "selected-awaiting-footprint-evidence",
       source: "BP-122 isolated-power channel",
-      evidence: evidence("NXE1S0505MC")
+      evidence: evidence("NXE1S0505MC", "U_ISO_POWER")
     },
     ...resetLedger
   ],
@@ -890,6 +920,9 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   }
   validateBp032Esp32ServiceHeaderTsw10607gsFootprintEvidence(bp032Esp32ServiceHeaderTsw10607gsFootprintEvidence)
   validateBenchPrototypeBp032Esp32S3Wroom1uExactFootprint(benchPrototypeBp032Esp32S3Wroom1uExactFootprint)
+  if (validateBp032MurataNxe1s0505mcCandidate(bp032MurataNxe1s0505mcCandidate).length !== 0) {
+    throw new RangeError("BP-032 isolated-converter footprint candidate drifted")
+  }
   validateBp032SupervisorWatchdogFootprintEvidence(bp032SupervisorWatchdogFootprintEvidence)
   if (bp125MurataCapacitorFootprintIntegrityErrors().length !== 0) {
     throw new RangeError("BP-032 Murata processor-support footprint candidate drifted")
@@ -953,6 +986,7 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   const isolatorRows = ledger.populatedReferences.filter((entry) => ["ISO7762FDWR", "ISO7721FDR"].includes(entry.mpn))
   const stm32Rows = ledger.populatedReferences.filter((entry) => entry.mpn === "STM32G474RET3TR")
   const esp32ModuleRows = ledger.populatedReferences.filter((entry) => entry.mpn === "ESP32-S3-WROOM-1U-N16R2")
+  const isolatedConverterRows = ledger.populatedReferences.filter((entry) => entry.mpn === "NXE1S0505MC")
   const ftshRows = ledger.debugReferences.filter((entry) => entry.mpn === "FTSH-105-01-L-DV-007-K")
   const esp32ServiceHeaderRows = ledger.debugReferences.filter((entry) => entry.mpn === "TSW-106-07-G-S")
   if (
@@ -1098,6 +1132,17 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
         row.evidence.footprintEvidence.exactMpn !== row.mpn ||
         row.evidence.footprintEvidence.reference !== row.reference ||
         row.evidence.footprintEvidence.upstreamContract !== "BP-121/BP-125" ||
+        row.evidence.footprintEvidence.releaseState !== "deny" ||
+        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
+        row.evidence.footprintEvidence.accepted
+    ) ||
+    isolatedConverterRows.length !== 1 ||
+    isolatedConverterRows.some(
+      (row) =>
+        row.evidence.footprintEvidence === null ||
+        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
+        row.evidence.footprintEvidence.reference !== row.reference ||
+        row.evidence.footprintEvidence.upstreamContract !== "BP-122/BP-125" ||
         row.evidence.footprintEvidence.releaseState !== "deny" ||
         row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
         row.evidence.footprintEvidence.accepted
