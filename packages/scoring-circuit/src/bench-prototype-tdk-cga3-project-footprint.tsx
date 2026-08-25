@@ -147,10 +147,6 @@ const evidenceDefinition = {
       {
         path: "packages/scoring-circuit/src/one-channel-analog-readiness.ts",
         sha256: "496d8727b33209c03b31f2b1f203397c7cab364f40d00edf2ec8b1bdf227e55d"
-      },
-      {
-        path: "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts",
-        sha256: "acda1715f73820cfdd1eeec45395761fd8efd2badf25a0b8df8747516790bffe"
       }
     ]
   },
@@ -353,11 +349,7 @@ export function validateBenchPrototypeTdkCga3ProjectFootprint(
     evidence.sourceControl.upstreamSources[0]?.path !==
       "packages/scoring-circuit/src/one-channel-analog-readiness.ts" ||
     evidence.sourceControl.upstreamSources[0]?.sha256 !==
-      "496d8727b33209c03b31f2b1f203397c7cab364f40d00edf2ec8b1bdf227e55d" ||
-    evidence.sourceControl.upstreamSources[1]?.path !==
-      "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts" ||
-    evidence.sourceControl.upstreamSources[1]?.sha256 !==
-      "acda1715f73820cfdd1eeec45395761fd8efd2badf25a0b8df8747516790bffe"
+      "496d8727b33209c03b31f2b1f203397c7cab364f40d00edf2ec8b1bdf227e55d"
   ) {
     errors.push("TDK upstream source-control hashes drifted")
   }

@@ -113,10 +113,6 @@ describe("BP-031 TDK CGA3E3X7R1H105K080AB project footprint", () => {
         {
           path: "packages/scoring-circuit/src/one-channel-analog-readiness.ts",
           sha256: "496d8727b33209c03b31f2b1f203397c7cab364f40d00edf2ec8b1bdf227e55d"
-        },
-        {
-          path: "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts",
-          sha256: "acda1715f73820cfdd1eeec45395761fd8efd2badf25a0b8df8747516790bffe"
         }
       ]
     })
