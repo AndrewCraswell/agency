@@ -814,4 +814,48 @@ describe("BP-033 application footprint closure ledger", () => {
       })
     }
   })
+
+  it("links all five BP-033 application-regulator support rows to exact primary evidence", () => {
+    const expected = [
+      [
+        "U_APP_REGULATOR",
+        "docs/evidence/bp-033/ti-lmr43620-q1-datasheet.pdf",
+        "DB767B9234F756C358C8254E682B917F16381EB0DB649A2936833E15EB8037FD"
+      ],
+      [
+        "L_APP_REGULATOR",
+        "docs/evidence/bp-033/coilcraft-xgl4030-datasheet.pdf",
+        "34BB1C739914FC2114653D5B3D5893E90501129D5C2AF8A152E546B8068B72E5"
+      ],
+      [
+        "C_APP_REG_IN",
+        "docs/evidence/bp-033/tdk-c2012x7r1e475k125ab-product-page-capture.md",
+        "BFCA5B5FA3A61383D54E9DF3AC784B571747A28D3E8ADA7410DE2391C3A40A93"
+      ],
+      [
+        "C_APP_REG_VCC",
+        "docs/evidence/bp-033/wurth-885012206052-datasheet.pdf",
+        "459D7762A62A7A4BF66BDA7F96D4306A1EFFCCA85C8BB68F7B8444D5BBAFEA0F"
+      ],
+      [
+        "R_APP_REG_DISCHARGE",
+        "docs/evidence/bp-033/yageo-rc0603fr-071kl-datasheet.pdf",
+        "81CC922D526F75AC7B479167DC5BC3B6A46618F09A7F8BEB2C5E309767E596CB"
+      ]
+    ] as const
+    for (const [reference, sourceArtifactPath, sourceSha256] of expected) {
+      expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toContainEqual({
+        reference,
+        artifactKind: "bp033-application-regulator-support-footprint-evidence",
+        artworkModule: "src/bp033-application-regulator-support-footprint-evidence.tsx",
+        reviewDocument: "docs/bp-033-application-regulator-support-footprint-evidence-review.md",
+        sourceArtifactPath,
+        sourceSha256,
+        reviewState: "root-reviewed-review-input",
+        reviewer: "root-final-reviewer",
+        reviewedAt: "2026-08-25",
+        fabricationRelease: "deny"
+      })
+    }
+  })
 })

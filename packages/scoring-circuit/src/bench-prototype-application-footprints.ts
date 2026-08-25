@@ -839,6 +839,34 @@ const bp033SharedC0603SourceArtifactPath = bp031032033C0603C104K3RactuFootprintE
   ""
 )
 
+const bp033ApplicationRegulatorSupportMappings = [
+  {
+    reference: "U_APP_REGULATOR",
+    sourceArtifactPath: "docs/evidence/bp-033/ti-lmr43620-q1-datasheet.pdf",
+    sourceSha256: "DB767B9234F756C358C8254E682B917F16381EB0DB649A2936833E15EB8037FD"
+  },
+  {
+    reference: "L_APP_REGULATOR",
+    sourceArtifactPath: "docs/evidence/bp-033/coilcraft-xgl4030-datasheet.pdf",
+    sourceSha256: "34BB1C739914FC2114653D5B3D5893E90501129D5C2AF8A152E546B8068B72E5"
+  },
+  {
+    reference: "C_APP_REG_IN",
+    sourceArtifactPath: "docs/evidence/bp-033/tdk-c2012x7r1e475k125ab-product-page-capture.md",
+    sourceSha256: "BFCA5B5FA3A61383D54E9DF3AC784B571747A28D3E8ADA7410DE2391C3A40A93"
+  },
+  {
+    reference: "C_APP_REG_VCC",
+    sourceArtifactPath: "docs/evidence/bp-033/wurth-885012206052-datasheet.pdf",
+    sourceSha256: "459D7762A62A7A4BF66BDA7F96D4306A1EFFCCA85C8BB68F7B8444D5BBAFEA0F"
+  },
+  {
+    reference: "R_APP_REG_DISCHARGE",
+    sourceArtifactPath: "docs/evidence/bp-033/yageo-rc0603fr-071kl-datasheet.pdf",
+    sourceSha256: "81CC922D526F75AC7B479167DC5BC3B6A46618F09A7F8BEB2C5E309767E596CB"
+  }
+] as const
+
 const projectFootprintMappings = [
   {
     reference: "J_USB_C",
@@ -1092,6 +1120,18 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer" as const,
     reviewedAt: "2026-08-25" as const,
     fabricationRelease: "deny" as const
+  })),
+  ...bp033ApplicationRegulatorSupportMappings.map(({ reference, sourceArtifactPath, sourceSha256 }) => ({
+    reference,
+    artifactKind: "bp033-application-regulator-support-footprint-evidence" as const,
+    artworkModule: "src/bp033-application-regulator-support-footprint-evidence.tsx",
+    reviewDocument: "docs/bp-033-application-regulator-support-footprint-evidence-review.md",
+    sourceArtifactPath,
+    sourceSha256,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
   }))
 ] as const
 
@@ -1247,7 +1287,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 72 ||
+    contract.projectFootprintMappings.length !== 77 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1492,6 +1532,21 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         mapping.reviewDocument === "docs/bp-033-yageo-rc0603fr-07100rl-ir-review-candidate.md" &&
         mapping.sourceArtifactPath === "docs/evidence/bp-033/yageo-rc0603fr-07100rl-datasheet.pdf" &&
         mapping.sourceSha256 === bp033YageoRc0603fr07100rlIrReviewCandidate.source.sha256 &&
+        mapping.reviewState === "root-reviewed-review-input" &&
+        mapping.reviewer === "root-final-reviewer" &&
+        mapping.reviewedAt === "2026-08-25" &&
+        mapping.fabricationRelease === "deny"
+      )
+    }) ||
+    !bp033ApplicationRegulatorSupportMappings.every((reviewed, offset) => {
+      const mapping = contract.projectFootprintMappings[72 + offset]
+      return (
+        mapping?.reference === reviewed.reference &&
+        mapping.artifactKind === "bp033-application-regulator-support-footprint-evidence" &&
+        mapping.artworkModule === "src/bp033-application-regulator-support-footprint-evidence.tsx" &&
+        mapping.reviewDocument === "docs/bp-033-application-regulator-support-footprint-evidence-review.md" &&
+        mapping.sourceArtifactPath === reviewed.sourceArtifactPath &&
+        mapping.sourceSha256 === reviewed.sourceSha256 &&
         mapping.reviewState === "root-reviewed-review-input" &&
         mapping.reviewer === "root-final-reviewer" &&
         mapping.reviewedAt === "2026-08-25" &&
