@@ -2,36 +2,42 @@
 
 ## Purpose
 
-This is the delivery ledger for the HTTP API and Railway release. Every endpoint has one current state:
+This is the delivery ledger for the HTTP API and Railway release. The
+[Next.js API migration plan](nextjs-api-migration-plan.md) is the canonical execution sequence. Every endpoint has two
+separate facts: its reusable domain implementation state and its Next.js Route Handler state. Every state uses these
+terms:
 
 - **Ready**: its prerequisites exist and implementation may start.
 - **In progress**: code exists or is being reviewed, but the endpoint has not passed its phase gate.
 - **Blocked**: a named dependency, provider, persistence adapter, or product decision is missing.
-- **Done**: exact contract implementation exists with applicable repository/query evidence and focused endpoint
-  tests/smoke, root review, and a reviewed commit.
+- **Done**: the artifact passed the gate named by its column. Domain **Done** means reusable implementation evidence
+  exists. Next route **Done** additionally requires an explicit `route.ts`, a reviewed commit, a successful Railway
+  deployment, and passing remote smoke.
 
-An endpoint is not **Done** merely because a route handler exists. Each phase is committed only after root review and
-the verification listed below. The endpoint contract remains the source of truth for request and response bodies. The
-execution gate is the [local smoke checklist](http-api-local-smoke.md). This ledger was last reconciled on 2026-08-25
-against current HEAD `cfd0c93`, including research implementation `ec3f81f`, composed smoke evidence `1194e89`, and the
-landed corrections through `b7e985f`, `e927e38`, `cfd0c93`, `98dc835`, and `b89185d`. MCP parity, API authentication,
-and rate limiting remain global release concerns and are not endpoint **Done** gates for this ledger. All 87 endpoint
-rows now have reviewed implementation, a typed client mapping, applicable route/query evidence, and applicable
-composed-smoke evidence; client tests cover representative request, response, and mutation behavior. Current totals are
-0 **In progress**, 0 **Blocked**, 0 **Ready**, and 87 **Done** across 87 endpoints.
+An endpoint is not Next-route **Done** merely because the standalone Node handler exists. The endpoint contract remains
+the source of truth for request and response bodies. The existing local smoke checklist is reusable test input, but the
+release gate also requires block-by-block deployed Railway smoke.
+
+This ledger was corrected on 2026-08-25 after Git and runtime inspection established that no Next.js dependency,
+`src/app` tree, Route Handler, or Next.js deployment exists on the active branch. All 87 rows have reviewed standalone
+domain/query/projection evidence, so the **Domain state** is 87 **Done**. The **Next route state** is 0 **Done**, 0 **In
+progress**, 0 **Ready**, and 87 **Blocked** on NX-01, the patched Next.js foundation. Authentication, distributed rate
+limiting, and MCP cutover are later global gates and must follow the sequence in the migration plan.
 
 ## Delivery phases
 
-| ID     | Phase                                    | State       | Granular tasks and exit gate                                                                                                                                                                                                                                                                                   |
-| ------ | ---------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| API-00 | Contract and dependency foundation       | In progress | Keep the complete endpoint contract current; install a reproducible web framework dependency graph; use TanStack Start if its public packages can be locked and built, otherwise replace the shell with the latest stable Next.js; run format, type, and contract checks.                                      |
-| API-01 | Shared HTTP foundation                   | Done        | Routing, envelope/error behavior, the complete typed API client, representative client tests, and composed HTTP endpoint smoke are evidenced by `98dc835` and `1194e89`. Remaining cache/observability hardening is tracked in API-08.                                                                         |
-| API-02 | Canonical legislative reads              | Done        | Legislative record/document endpoint rows have canonical projections, parent/completeness gates, route/query evidence, and applicable composed smoke through their reviewed implementation commits and `1194e89`.                                                                                              |
-| API-03 | Civic graph, meetings, search, and diffs | Done        | Civic graph, meeting/calendar, search, and diff endpoint rows have canonical projections, corrected timezone/filter semantics, route/query evidence, and composed smoke through `b7e985f`, `cfd0c93`, and `1194e89`.                                                                                           |
-| API-04 | Subscriptions and webhooks               | Done        | Subscription and webhook resource endpoint rows have durable scope/revision/replay/security behavior, corrected webhook receipt/name/ID semantics, focused tests, and composed route coverage through `e927e38` and `1194e89`. Background delivery workers and event materialization remain non-endpoint work. |
-| API-05 | Local smoke validation                   | Done        | Composed endpoint smoke covers canonical envelopes, newly landed route families, negative aliases, research answers, calendar meetings, universal search, and webhook mutations in `1194e89`. Remaining release hardening is tracked in API-08.                                                                |
-| API-06 | Railway API release                      | Done        | `legislation-api` is deployed at the recorded Railway release. `WORKOS_API_AUDIENCE` isolates the API token audience. Health, readiness, API challenges, and the scoped-bills remote smoke passed; the rollback target is documented. This is release evidence, not an endpoint completion gate.               |
-| API-08 | Hardening and completion                 | Ready       | Future global work may generate and validate OpenAPI, add rate limits and observability, validate daily incremental behavior, and harden release operations. These deferred concerns are outside the completed endpoint implementation gate.                                                                   |
+| ID | Phase | State | Granular tasks and exit gate |
+| --- | --- | --- | --- |
+| NX-00 | Correct the delivery record | In progress | Replace the TanStack/standalone completion model with the canonical Next.js plan, separate domain evidence from Next route evidence, and commit the correction. |
+| NX-01 | Next.js foundation and first deployment | Blocked | Install a patched Next.js 16.3.x from the approved Microsoft feed, add App Router health/readiness and server composition, build the production container, deploy, and smoke the foundation. |
+| NX-02 | Migrate 38 legislative routes | Blocked | Migrate and release jurisdictions/sessions (11), bills/amendments/votes (18), then documents/materials/resources (9), deploying and remotely smoking each block. |
+| NX-03 | Migrate 28 civic routes | Blocked | Migrate and release people/organizations (14), then meetings/calendars/representative lookup (14), deploying and remotely smoking each block. |
+| NX-04 | Migrate 7 search/diff/research routes | Blocked | Migrate, deploy, and remotely verify lexical, semantic, hybrid, diff, and cited-answer behavior. |
+| NX-05 | Migrate 14 subscription/webhook routes | Blocked | Migrate and release subscriptions (7), then webhooks (7), including mutation, ETag, idempotency, secret, and URL-safety smoke. |
+| NX-06 | Add WorkOS authentication | Blocked | Begin only after all 87 Next routes are deployed and smoked; enforce token and access-class semantics and rerun authenticated cumulative smoke. |
+| NX-07 | Add distributed rate limiting | Blocked | Begin only after auth; provision a shared store, enforce reviewed tiers, and prove cross-instance 429 and recovery behavior. |
+| NX-08 | Migrate MCP to the API | Blocked | Begin only after rate limiting; cut over tool-by-tool through the typed HTTP client with parity, canary, soak, and rollback evidence. |
+| NX-09 | Remove transitional server and close | Blocked | Remove duplicate standalone production serving, update final docs, run complete verification, and preserve one canonical Next.js runtime. |
 
 ## Review and commit protocol
 
@@ -46,13 +52,13 @@ For each deliverable:
 
 ## Endpoint state matrix
 
-The rows below are reconciled against the current implementation commits and their focused route, projection, query,
-ingestion, and security evidence. MCP parity, authentication composition, and rate limiting are global release gates,
-not endpoint **Done** gates. Research answers are implemented and covered by `ec3f81f` and composed smoke `1194e89`.
+The rows below record reusable standalone domain implementation only. Their **Domain state** does not promote a Next.js
+route. Until NX-01 is complete, every corresponding Next route is **Blocked**. After that, route status is promoted in
+the block ledger in the migration plan only after successful deployed smoke.
 
 ### Legislative records and documents
 
-| Method | Path                                                          | State | Current gate                                                                                                                                                                                                                                                                                 |
+| Method | Path                                                          | Domain state | Current gate                                                                                                                                                                                                                                                                                 |
 | ------ | ------------------------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/api/jurisdictions`                                          | Done  | Canonical source-complete collection query with classification/activity/search filters, stable filter-bound keyset pagination, fail-closed provenance/activity projection, focused route/query tests, and reviewed commit `1b61186`.                                                         |
 | GET    | `/api/jurisdictions/{jurisdictionId}`                         | Done  | Parent-bound lookup, strict canonical provenance/activity projection, exact Resource envelope, focused tests, root review, and reviewed commit `87f38be`; incomplete persisted rows fail closed with 422.                                                                                    |
@@ -95,7 +101,7 @@ not endpoint **Done** gates. Research answers are implemented and covered by `ec
 
 ### Civic graph and events
 
-| Method | Path                                                             | State | Current gate                                                                                                                                                                                                                                                                                                               |
+| Method | Path                                                             | Domain state | Current gate                                                                                                                                                                                                                                                                                                               |
 | ------ | ---------------------------------------------------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/api/people`                                                    | Done  | Fail-closed canonical collection query, complete documented filters and sorts, filter-bound keyset cursors, source-declared alias persistence with retrieval provenance, exact Page projection, production composition, focused query/handler/ingestion tests, root review, and reviewed commit `6f42df4`.                 |
 | GET    | `/api/people/{personId}`                                         | Done  | Persisted bounded profile, aliases, external identifiers, jurisdictions, terms, memberships, official-contact projection, fail-closed provenance/completeness checks, focused route/query tests, migration `0035_person-detail-canonical-facts.sql`, and reviewed commit `5949881`.                                        |
@@ -128,7 +134,7 @@ not endpoint **Done** gates. Research answers are implemented and covered by `ec
 
 ### Search and document differences
 
-| Method | Path                               | State | Current gate                                                                                                                                                                                                                                                                                                              |
+| Method | Path                               | Domain state | Current gate                                                                                                                                                                                                                                                                                                              |
 | ------ | ---------------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/api/search/bills`                | Done  | Canonical hits, truthful model/rerank metadata, all documented filters, stable capped ranking, filter-bound cursors, focused handler/query/projection tests, database-integration coverage, root review, and reviewed commit `4546f7a`.                                                                                   |
 | POST   | `/api/search/amendments`           | Done  | Independent structured/document canonical retrieval with bill-bound filtering, complete filter/mode validation, reciprocal-rank fusion, truthful embedding metadata, filter-bound cursors, focused projection/search/query tests, and reviewed commit `60870bc`.                                                          |
@@ -140,7 +146,7 @@ not endpoint **Done** gates. Research answers are implemented and covered by `ec
 
 ### Subscriptions and webhooks
 
-| Method | Path                                             | State | Current gate                                                                                                                                                                                                                                   |
+| Method | Path                                             | Domain state | Current gate                                                                                                                                                                                                                                   |
 | ------ | ------------------------------------------------ | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/api/subscriptions`                             | Done  | Scope-aware route composition/persistence, documented filters, keyset pagination, composed endpoint smoke, root review, and reviewed commit evidence exist.                                                                                    |
 | POST   | `/api/subscriptions`                             | Done  | Durable owner-scoped creation, transactional event/audit persistence, AES-256-GCM 24-hour exact replay, canonical path equivalence, strict HTTP validation, production composition, focused tests, root review, and reviewed commit `01af45d`. |
@@ -157,5 +163,7 @@ not endpoint **Done** gates. Research answers are implemented and covered by `ec
 | POST   | `/api/webhooks/{webhookId}/rotate-secret`        | Done  | Encrypted rotation, overlap/key expiry, bounded webhook IDs, exact idempotent replay, revision protection, security tests, and composed mutation coverage are evidenced by `e927e38` and `1194e89`.                                            |
 | POST   | `/api/webhooks/{webhookId}/verify`               | Done  | Pinned DNS-revalidated challenge transport, signed challenge response, bounded timeout, durable activation, exact replay/conflict handling, and composed mutation coverage are evidenced by `e927e38` and `1194e89`.                           |
 
-The current release evidence is recorded in [the Railway API release record](http-api-railway-release.md). The endpoint
-matrix is 0 **In progress**, 0 **Blocked**, 0 **Ready**, and 87 **Done** routes.
+The current standalone release evidence is recorded in the
+[Railway API release record](http-api-railway-release.md). Progress reports must state both totals: reusable domain
+implementation is 87/87 **Done**; Next.js Route Handler migration is 0/87 **Done**, with all 87 currently **Blocked** on
+the patched Next.js foundation.

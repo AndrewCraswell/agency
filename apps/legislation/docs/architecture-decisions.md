@@ -17,9 +17,24 @@
 | ADR-012 | Store broad-rollout vectors in dedicated, foreign-keyed tables under the `legislation` schema and require a treatment/control MCP retrieval canary before expansion. | A separate schema does not provide physical isolation, inline vectors would enlarge hot corpus rows, and a partially embedded corpus can bias hybrid ranking. Dedicated tables make model versions, canary cleanup, index rebuilds, and measured promotion safer. |
 | ADR-013 | Route bills and supporting materials to `voyageai/voyage-4`; route document sections and structured amendments to `openai/text-embedding-3-small`; apply `cohere/rerank-v3.5` only to bill and document-passage discovery. | The expanded graded bakeoff exceeded the 0.02 absolute nDCG@10 promotion threshold for these specific model and reranker changes, while reranking harmed amendment and supporting-material ranking. |
 | ADR-014 | Put Trigger.dev database traffic through PgBouncer transaction pooling while retaining a direct PostgreSQL administration and rollback URL. | A 200-client production smoke completed through 20 pooled PostgreSQL backends. Transaction pooling permits Trigger fan-out without assigning one PostgreSQL process to every worker, while the backend ceiling protects the 100-connection database. |
+| ADR-015 | Use Next.js 16 App Router as the legislation application and public API runtime, with one explicit Route Handler per documented operation. | One framework should own the future application and HTTP boundary. Existing standalone Node handlers remain reusable domain migration input, but a route is complete only after its Next.js handler passes a staged Railway deployment and remote smoke. WorkOS auth follows all route migrations, distributed rate limiting follows auth, and MCP HTTP cutover is last. |
 
-No blocking architecture decision remains open. New decisions use the next ADR number and record status, evidence,
-consequences, owner, and reconsideration trigger.
+ADR-015 has one dependency blocker: the approved Microsoft feed must expose a patched Next.js 16.3.x release before the
+foundation may install. New decisions use the next ADR number and record status, evidence, consequences, owner, and
+reconsideration trigger.
+
+## ADR-015 operational consequences
+
+- Status: accepted; implementation blocked on the patched Next.js package-feed gate.
+- Evidence: the active branch contains the standalone `node:http` production composition and no Next.js dependency,
+  `src/app` tree, Route Handler, or Next.js deployment. The approved feed exposes `16.3.1` but not the patched `16.3.3`
+  at decision time.
+- Consequences: do not count the 87 reusable handlers as Next routes; do not use a catch-all proxy as route migration;
+  deploy and smoke each endpoint block; do not begin auth, rate limiting, or MCP cutover out of sequence; do not start
+  product UX without an approved design.
+- Owner: legislation application platform.
+- Reconsideration trigger: reconsider framework choice only if a supported patched Next.js release cannot be obtained
+  reproducibly through an approved dependency source.
 
 ## ADR-011 operational consequences
 

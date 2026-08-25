@@ -1,6 +1,6 @@
 # Railway API release record
 
-## Current release
+## Current transitional release
 
 | Field | Recorded value |
 | --- | --- |
@@ -10,11 +10,15 @@
 | Active deployment | `f7c855ed-9b81-482b-9def-d3b3d8b90255` |
 | Deployment status | `SUCCESS` |
 | Previous successful deployment | `b00f37c0-50c1-4e95-91e3-1ba3bfa5d1d7` |
-| Deployment contract | Repository-root Docker build context with `/apps/legislation/railway.json`; the server binds Railway's `PORT` on `0.0.0.0`. Database migrations are not run at startup. |
+| Deployment contract | Repository-root Docker build context with `/apps/legislation/railway.json`; the standalone Node server binds Railway's `PORT` on `0.0.0.0`. Database migrations are not run at startup. |
 
-This record preserves valid deployment and authentication evidence from source commit `2846332` and deployment
-`f7c855ed-9b81-482b-9def-d3b3d8b90255`. It is not a route-registration record for current HEAD. Current HEAD
-intentionally leaves `GET /api/bills/{id}` unregistered. Nothing in this deployment record promotes an endpoint.
+This record preserves valid standalone-server deployment and authentication evidence from source commit `2846332` and
+deployment `f7c855ed-9b81-482b-9def-d3b3d8b90255`. It is not a Next.js deployment and does not promote any endpoint's
+Next route state. The approved replacement sequence is the
+[Next.js API migration and staged release plan](nextjs-api-migration-plan.md).
+
+The current public origin remains useful as a rollback target while the Next.js foundation and endpoint blocks are
+released. It must not be described as the final application architecture.
 
 ## Verified checks
 
@@ -38,16 +42,18 @@ acceptance checklist.
 
 ## Next safe actions
 
-1. Run release smoke only for exact registered routes: global and jurisdiction/session-scoped bill collections,
-   supporting-material list and detail routes, and singular document or supporting-material section routes. Add
-   canonical bill and supporting-material search-route coverage once those routes are landed and reviewed. Blocked
-   amendment, vote, meeting, person, and organization routes require their data and schema implementation first;
-   fixture discovery alone does not advance them.
-2. Keep endpoint states governed by the implementation backlog and local smoke checklist; this release record alone
-   does not promote any endpoint.
+1. Complete the patched Next.js dependency gate and NX-01 foundation work.
+2. Deploy the Next.js foundation without claiming endpoint migration, wait for terminal `SUCCESS`, and verify
+   `/health`, `/ready`, 404, and unsupported-method behavior.
+3. Migrate endpoint blocks in the plan's fixed order. After every block, record the new deployment ID, source commit,
+   cumulative remote-smoke evidence, and the immediately preceding successful deployment as rollback.
+4. Add authentication only after all 87 routes pass deployed smoke; add distributed rate limiting after auth; migrate
+   MCP last.
 
 ## Rollback
 
-For an application regression, redeploy the previous successful `legislation-api` deployment
-`b00f37c0-50c1-4e95-91e3-1ba3bfa5d1d7`, then recheck `/health`, `/ready`, protected API rejection, and MCP
-authentication. Database migrations stay backward-compatible and remain separate from process startup.
+Until the first Next.js deployment succeeds, an application regression rolls back to deployment
+`f7c855ed-9b81-482b-9def-d3b3d8b90255` (or, if that deployment itself is under investigation,
+`b00f37c0-50c1-4e95-91e3-1ba3bfa5d1d7`). After each Next.js block, the release record must replace this with the
+immediately preceding known-good deployment. Recheck `/health`, `/ready`, and every cumulative smoke profile after a
+rollback. Database migrations remain separate from process startup.

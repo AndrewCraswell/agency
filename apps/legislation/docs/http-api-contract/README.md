@@ -2,9 +2,15 @@
 
 ## Status and boundary
 
-This is the approved public and first-party application contract. Implementation is underway and route readiness is
-tracked per endpoint in the [HTTP API implementation backlog](../http-api-implementation-backlog.md). The web
-application, public API, and MCP adapter share one application-service boundary so authorization, canonical identity,
+This is the approved public and first-party application contract. The approved runtime is Next.js 16 App Router, with
+one explicit `route.ts` for every documented HTTP operation. Route migration and staged Railway release readiness are
+tracked in the [Next.js API migration plan](../nextjs-api-migration-plan.md) and the
+[HTTP API implementation backlog](../http-api-implementation-backlog.md).
+
+The 87 existing standalone Node handlers are reusable domain implementation, not completed Next.js routes. The
+standalone server is a transitional migration source only. Authentication is added after all 87 Next.js routes pass
+deployed smoke, distributed rate limiting follows authentication, and MCP moves to the HTTP API last. The application,
+public API, and eventual MCP adapter share one application-service boundary so authorization, canonical identity,
 source attribution, and query behavior do not diverge.
 
 The contract is split into focused pages:
