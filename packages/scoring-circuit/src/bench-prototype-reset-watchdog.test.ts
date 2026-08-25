@@ -3,6 +3,7 @@ import { defaultApplicationRailInputs } from "./application-rail.js"
 import {
   benchPrototypeResetWatchdog,
   evaluateBenchPrototypeResetWatchdogPhysicalEvidence,
+  evaluateBenchPrototypeResetWatchdogSchematicReconciliation,
   validateBenchPrototypeResetWatchdog
 } from "./bench-prototype-reset-watchdog.js"
 
@@ -221,6 +222,70 @@ describe("BP-123 reset, supervisor, and watchdog contract", () => {
     const mismatchedPrototype = makeSubmission()
     mismatchedPrototype.captures[3]!.prototype.serialNumber = "other-prototype"
     expect(evaluateBenchPrototypeResetWatchdogPhysicalEvidence(mismatchedPrototype).accepted).toBe(false)
+  })
+
+  it("keeps a hash-bound schematic-net reconciliation fail closed until independent review", () => {
+    const preflight = benchPrototypeResetWatchdog.schematicIntegrationPreflight
+    expect(preflight.state).toBe("not-submitted")
+    expect(preflight.submittedReconciliation).toBeNull()
+    expect(preflight.requiredNets.map((net) => net.net)).toEqual([
+      "SCORING_NRST_N",
+      "SCORING_WATCHDOG_WDI",
+      "APP_WD_KICK",
+      "EN_RESET",
+      "APP_SUPERVISOR_RESET_N",
+      "APP_W5500_RESET_N",
+      "ESP32_RESET_ASSERT_ISOLATED",
+      "ESP32_RESET_ASSERT",
+      "RESET_REQUEST",
+      "SCORING_SGND",
+      "APP_GND"
+    ])
+    expect(preflight.authority).toEqual({
+      staticNetReconciliationAccepted: false,
+      independentSchematicReviewAccepted: false,
+      physicalEvidenceAccepted: false,
+      schematicIntegrationAuthorized: false,
+      fabricationAuthorized: false,
+      releaseState: "deny"
+    })
+
+    const sha256 = (index: number) => index.toString(16).padStart(64, "0")
+    // Synthetic evaluator input only. It is not a generated schematic or a review record.
+    const makeSubmission = () => ({
+      artifactKind: "bench-prototype-reset-watchdog-schematic-reconciliation" as const,
+      source: {
+        sourceArtifactId: "bp300-source",
+        sourceSha256: sha256(1),
+        renderedPdfArtifactId: "bp300-rendered-pdf",
+        renderedPdfSha256: sha256(2),
+        sourceCommit: "0123456789abcdef0123456789abcdef01234567"
+      },
+      erc: {
+        reportArtifactId: "bp300-erc-report",
+        reportSha256: sha256(3),
+        unexplainedErrorCount: 0,
+        unexplainedWarningCount: 0
+      },
+      nets: preflight.requiredNets.map((net) => ({ net: net.net, endpoints: [...net.endpoints] }))
+    })
+
+    expect(evaluateBenchPrototypeResetWatchdogSchematicReconciliation(makeSubmission())).toMatchObject({
+      accepted: true,
+      integrationAuthorized: false
+    })
+
+    const pinSwap = makeSubmission()
+    pinSwap.nets[3]!.endpoints[0] = "C_ESP_EN_DELAY.1"
+    expect(evaluateBenchPrototypeResetWatchdogSchematicReconciliation(pinSwap).accepted).toBe(false)
+
+    const missedWarning = makeSubmission()
+    missedWarning.erc.unexplainedWarningCount = 1
+    expect(evaluateBenchPrototypeResetWatchdogSchematicReconciliation(missedWarning).accepted).toBe(false)
+
+    const missingPdfHash = makeSubmission()
+    missingPdfHash.source.renderedPdfSha256 = "not-a-digest"
+    expect(evaluateBenchPrototypeResetWatchdogSchematicReconciliation(missingPdfHash).accepted).toBe(false)
   })
 
   it("fails closed for forged graphs and a broken application 3V3 prerequisite", () => {

@@ -16,6 +16,10 @@ import {
   validateBenchPrototypeEsp32Allocation
 } from "./bench-prototype-esp32-allocation.js"
 import { parseCanonicalUtcTimestamp, parseRealUtcDate } from "./bench-prototype-evidence-time.js"
+import {
+  benchPrototypeIsolationChannel,
+  validateBenchPrototypeIsolationChannel
+} from "./bench-prototype-isolation-channel.js"
 import { stm32PinAllocation, validateStm32PinAllocation } from "./stm32-pin-allocation.js"
 
 type PlainRecord = Record<PropertyKey, unknown>
@@ -465,6 +469,215 @@ const resetWatchdogPhysicalEvidenceIntake = {
   }
 } as const
 
+/**
+ * BP-123's exact net/pin extraction requirements for a future BP-300 source.
+ * This is not a schematic, a rendered review, or a substitute for a real ERC
+ * run. It deliberately keeps source artifacts absent from the canonical
+ * contract until an integrator has produced them.
+ */
+const resetWatchdogSchematicNetRequirements = [
+  {
+    net: "SCORING_NRST_N",
+    endpoints: [
+      "U_STM32.NRST@7",
+      "U_STM_SUPERVISOR.RESET",
+      "U_STM_WATCHDOG.WDO",
+      "U_STM_WATCHDOG.ENOUT",
+      "R_STM_NRST_PULLUP.2",
+      "C_STM_NRST_FILTER.1",
+      "J_STM_SWD.NRST(open-drain-sink-only)"
+    ]
+  },
+  {
+    net: "SCORING_WATCHDOG_WDI",
+    endpoints: ["U_STM32.PC9@41", "U_STM_WATCHDOG.WDI", "R_STM_WDI_PULLUP.2"]
+  },
+  {
+    net: "APP_WD_KICK",
+    endpoints: ["U_ESP32.GPIO12@20", "U_ESP_WATCHDOG.WDI", "R_ESP_WDI_PULLUP.2"]
+  },
+  {
+    net: "EN_RESET",
+    endpoints: [
+      "U_ESP32.EN@3",
+      "U_APP_RESET_FANOUT.Y1",
+      "U_ESP_WATCHDOG.WDO",
+      "U_ESP_WATCHDOG.ENOUT",
+      "Q_ESP_RESET_STM.D",
+      "Q_ESP_DEBUG_RESET.D",
+      "R_ESP_EN_PULLUP.2",
+      "C_ESP_EN_DELAY.1"
+    ]
+  },
+  {
+    net: "APP_SUPERVISOR_RESET_N",
+    endpoints: [
+      "U_ESP_SUPERVISOR.RESET",
+      "U_APP_RESET_FANOUT.A1",
+      "U_APP_RESET_FANOUT.A2",
+      "R_APP_SUPERVISOR_RESET_PULLUP.2"
+    ]
+  },
+  {
+    net: "APP_W5500_RESET_N",
+    endpoints: ["U_APP_RESET_FANOUT.Y2", "R_W5500_RESET_PULLUP.2", "U_W5500.RST_N", "TP_W5500_RESET_N"]
+  },
+  {
+    net: "ESP32_RESET_ASSERT_ISOLATED",
+    endpoints: ["U_STM32.PB5@58", "R_STM_RESET_ISO_SERIES.1"]
+  },
+  {
+    net: "ESP32_RESET_ASSERT",
+    endpoints: ["R_STM_RESET_ISO_SERIES.2", "R_STM_RESET_ISO_PD.1", "U_ISO7762.CH4_IN@5"]
+  },
+  {
+    net: "RESET_REQUEST",
+    endpoints: ["U_ISO7762.CH4_OUT@12", "R_STM_RESET_GATE.1"]
+  },
+  {
+    net: "SCORING_SGND",
+    endpoints: [
+      "U_STM_SUPERVISOR.GND",
+      "U_STM_WATCHDOG.GND",
+      "C_STM_SUPERVISOR_CT.2",
+      "C_STM_SUPERVISOR_BYPASS.2",
+      "C_STM_WD_BYPASS.2",
+      "C_STM_NRST_FILTER.2",
+      "R_STM_RESET_ISO_PD.2"
+    ]
+  },
+  {
+    net: "APP_GND",
+    endpoints: [
+      "U_ESP_SUPERVISOR.GND",
+      "U_ESP_WATCHDOG.GND",
+      "U_APP_RESET_FANOUT.GND",
+      "C_ESP_SUPERVISOR_CT.2",
+      "C_ESP_SUPERVISOR_BYPASS.2",
+      "C_ESP_WD_BYPASS.2",
+      "C_APP_RESET_FANOUT_BYPASS.2",
+      "C_ESP_EN_DELAY.2",
+      "R_STM_RESET_GATE_PD.2",
+      "R_DEBUG_RESET_GATE_PD.2",
+      "Q_ESP_RESET_STM.S",
+      "Q_ESP_DEBUG_RESET.S"
+    ]
+  }
+] as const
+
+export type BenchPrototypeResetWatchdogSchematicReconciliation = {
+  readonly artifactKind: "bench-prototype-reset-watchdog-schematic-reconciliation"
+  readonly source: {
+    readonly sourceArtifactId: string
+    readonly sourceSha256: string
+    readonly renderedPdfArtifactId: string
+    readonly renderedPdfSha256: string
+    readonly sourceCommit: string
+  }
+  readonly erc: {
+    readonly reportArtifactId: string
+    readonly reportSha256: string
+    readonly unexplainedErrorCount: number
+    readonly unexplainedWarningCount: number
+  }
+  readonly nets: readonly { readonly net: string; readonly endpoints: readonly string[] }[]
+}
+
+export type BenchPrototypeResetWatchdogSchematicReconciliationEvaluation = {
+  readonly accepted: boolean
+  /** Never grants schematic, fabrication, or physical-test authority. */
+  readonly integrationAuthorized: false
+  readonly reasons: readonly string[]
+}
+
+function hasSchematicReconciliationShape(value: unknown): value is BenchPrototypeResetWatchdogSchematicReconciliation {
+  return (
+    hasExactKeys(value, ["artifactKind", "source", "erc", "nets"]) &&
+    hasExactKeys(value.source, [
+      "sourceArtifactId",
+      "sourceSha256",
+      "renderedPdfArtifactId",
+      "renderedPdfSha256",
+      "sourceCommit"
+    ]) &&
+    hasExactKeys(value.erc, ["reportArtifactId", "reportSha256", "unexplainedErrorCount", "unexplainedWarningCount"]) &&
+    Array.isArray(value.nets) &&
+    value.nets.every((net) => hasExactKeys(net, ["net", "endpoints"]) && Array.isArray(net.endpoints))
+  )
+}
+
+/**
+ * Admits only a complete, hash-bound BP-300 extraction of the BP-123 critical
+ * nets. A passing result is ready for independent schematic review, never
+ * permission to build, test, or fabricate.
+ */
+export function evaluateBenchPrototypeResetWatchdogSchematicReconciliation(
+  value: unknown
+): BenchPrototypeResetWatchdogSchematicReconciliationEvaluation {
+  const reasons: string[] = []
+  inspectPlainDataGraph(value, "schematicReconciliation", new WeakSet<object>(), reasons)
+  if (reasons.length > 0) return deepFreeze({ accepted: false, integrationAuthorized: false, reasons })
+  if (!hasSchematicReconciliationShape(value)) {
+    return deepFreeze({
+      accepted: false,
+      integrationAuthorized: false,
+      reasons: ["schematic reconciliation must contain only the exact BP-123 data keys"]
+    })
+  }
+  if (value.artifactKind !== "bench-prototype-reset-watchdog-schematic-reconciliation") {
+    reasons.push("artifact kind is invalid")
+  }
+  for (const [name, artifact] of [
+    ["source", { artifactId: value.source.sourceArtifactId, contentSha256: value.source.sourceSha256 }],
+    ["rendered PDF", { artifactId: value.source.renderedPdfArtifactId, contentSha256: value.source.renderedPdfSha256 }],
+    ["ERC report", { artifactId: value.erc.reportArtifactId, contentSha256: value.erc.reportSha256 }]
+  ] as const) {
+    if (!nonEmptyString(artifact.artifactId) || !isSha256(artifact.contentSha256)) {
+      reasons.push(`${name} requires an immutable artifact ID and lowercase SHA-256`)
+    }
+  }
+  if (!/^[a-f0-9]{40}$/u.test(value.source.sourceCommit)) {
+    reasons.push("sourceCommit must be a lowercase 40-character Git commit ID")
+  }
+  if (
+    !Number.isSafeInteger(value.erc.unexplainedErrorCount) ||
+    value.erc.unexplainedErrorCount !== 0 ||
+    !Number.isSafeInteger(value.erc.unexplainedWarningCount) ||
+    value.erc.unexplainedWarningCount !== 0
+  ) {
+    reasons.push("ERC must report zero unexplained errors and warnings")
+  }
+  if (value.nets.length !== resetWatchdogSchematicNetRequirements.length) {
+    reasons.push("every frozen BP-123 critical net is required exactly once")
+  }
+  for (const [index, expected] of resetWatchdogSchematicNetRequirements.entries()) {
+    const actual = value.nets[index]
+    if (
+      actual === undefined ||
+      actual.net !== expected.net ||
+      !sameDataGraph(actual.endpoints, expected.endpoints, new WeakSet(), new WeakSet())
+    ) {
+      reasons.push(`${expected.net} endpoints must exactly match the frozen BP-123 net/pin reconciliation`)
+    }
+  }
+  return deepFreeze({ accepted: reasons.length === 0, integrationAuthorized: false, reasons })
+}
+
+const resetWatchdogSchematicIntegrationPreflight = {
+  artifactKind: "bench-prototype-reset-watchdog-schematic-integration-preflight",
+  state: "not-submitted",
+  requiredNets: resetWatchdogSchematicNetRequirements,
+  submittedReconciliation: null,
+  authority: {
+    staticNetReconciliationAccepted: false,
+    independentSchematicReviewAccepted: false,
+    physicalEvidenceAccepted: false,
+    schematicIntegrationAuthorized: false,
+    fabricationAuthorized: false,
+    releaseState: "deny"
+  }
+} as const
+
 const resistor10k = "RC0603FR-0710KL"
 const resistor100k = "RC0603FR-07100KL"
 const ceramic100n = "C0603C104K3RACTU"
@@ -827,6 +1040,7 @@ const resetWatchdogDefinition = {
     "BP-144 must scope its buffer-enable and panel-OE defaults against EN_RESET before HUB75 enable is permitted."
   ],
   physicalEvidenceIntake: resetWatchdogPhysicalEvidenceIntake,
+  schematicIntegrationPreflight: resetWatchdogSchematicIntegrationPreflight,
   deniedEvidence: {
     exactFootprintsApproved: false,
     scoringRailImplementationApproved: false,
@@ -852,6 +1066,30 @@ export function validateBenchPrototypeResetWatchdog(value: unknown): true {
   validateStm32PinAllocation(stm32PinAllocation)
   validateBenchPrototypeEsp32Allocation(benchPrototypeEsp32Allocation)
   validateBenchPrototypeApplicationRail(benchPrototypeApplicationRail)
+  validateBenchPrototypeIsolationChannel(benchPrototypeIsolationChannel)
+  const hasStm32Pad = (pad: number, pin: string, signal: string) =>
+    stm32PinAllocation.pads.some(
+      ([allocatedPad, allocatedPin, allocatedSignal]) =>
+        allocatedPad === pad && allocatedPin === pin && allocatedSignal === signal
+    )
+  const hasEsp32Pad = (pad: number, pin: string, signal: string) =>
+    benchPrototypeEsp32Allocation.pads.some(
+      (allocated) => allocated.pad === pad && allocated.pin === pin && allocated.signal === signal
+    )
+  const resetChannel = benchPrototypeIsolationChannel.isolators.main.channels.find((channel) => channel.channel === 4)
+  if (
+    !hasStm32Pad(7, "NRST", "SCORING_NRST_N") ||
+    !hasStm32Pad(41, "PC9", "SCORING_WATCHDOG_WDI") ||
+    !hasStm32Pad(58, "PB5", "ESP32_RESET_ASSERT_ISOLATED") ||
+    !hasEsp32Pad(3, "EN", "EN_RESET") ||
+    !hasEsp32Pad(20, "GPIO12", "APP_WD_KICK") ||
+    resetChannel?.scoring.pin !== 5 ||
+    resetChannel.scoring.net !== "ESP32_RESET_ASSERT" ||
+    resetChannel.application.pin !== 12 ||
+    resetChannel.application.net !== "RESET_REQUEST"
+  ) {
+    throw new RangeError("BP-123 critical reset/watchdog pins no longer match the upstream allocation contracts")
+  }
   const applicationRailScreen = calculateApplicationRail()
 
   if (!sameDataGraph(value, benchPrototypeResetWatchdog, new WeakSet<object>(), new WeakSet<object>())) {
@@ -897,6 +1135,16 @@ export function validateBenchPrototypeResetWatchdog(value: unknown): true {
     contract.physicalEvidenceIntake.authority.schematicIntegrationAuthorized ||
     contract.physicalEvidenceIntake.authority.fabricationAuthorized ||
     contract.physicalEvidenceIntake.authority.releaseState !== "deny" ||
+    contract.schematicIntegrationPreflight.state !== "not-submitted" ||
+    contract.schematicIntegrationPreflight.submittedReconciliation !== null ||
+    contract.schematicIntegrationPreflight.requiredNets.map((net) => net.net).join(",") !==
+      "SCORING_NRST_N,SCORING_WATCHDOG_WDI,APP_WD_KICK,EN_RESET,APP_SUPERVISOR_RESET_N,APP_W5500_RESET_N,ESP32_RESET_ASSERT_ISOLATED,ESP32_RESET_ASSERT,RESET_REQUEST,SCORING_SGND,APP_GND" ||
+    contract.schematicIntegrationPreflight.authority.staticNetReconciliationAccepted ||
+    contract.schematicIntegrationPreflight.authority.independentSchematicReviewAccepted ||
+    contract.schematicIntegrationPreflight.authority.physicalEvidenceAccepted ||
+    contract.schematicIntegrationPreflight.authority.schematicIntegrationAuthorized ||
+    contract.schematicIntegrationPreflight.authority.fabricationAuthorized ||
+    contract.schematicIntegrationPreflight.authority.releaseState !== "deny" ||
     contract.deniedEvidence.fabricationApproved ||
     contract.releaseState !== "deny"
   ) {
