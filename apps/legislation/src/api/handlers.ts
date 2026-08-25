@@ -30,6 +30,8 @@ import { assertOrganizationExists, listOrganizationBillReads } from "../db/queri
 import { listPeople } from "../db/queries/people-read.js"
 import { assertPersonExists, listPersonBillActivity } from "../db/queries/person-bill-activity.js"
 import { getSupportingMaterialSectionRead } from "../db/queries/supporting-material-section-read.js"
+import { createBillDetailReadRepository } from "./bill-detail-read-repository.js"
+import { createBillDetailReadApiHandler } from "./bill-detail-read-routes.js"
 import { createCivicScopedReadApiHandler } from "./civic-scoped-read-routes.js"
 import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
 import { createCoreReadApiHandler, type CoreReadQueryApi } from "./core-read.js"
@@ -106,6 +108,7 @@ export function createLegislationApiHandler(
     ...(documentDatabase === undefined
       ? []
       : [
+          createBillDetailReadApiHandler(createBillDetailReadRepository(documentDatabase, options.apiBaseUrl)),
           createCivicScopedReadApiHandler(
             {
               getOrganizationMembership: async (input) => await getOrganizationMembership(documentDatabase, input),
