@@ -10,6 +10,9 @@ let baseUrl
 let malformedPath
 let invalidBatchStatusPath
 let changeFeedError
+let documentDetailError
+let documentSectionsError
+let documentBatchItemError
 
 function json(response, correlationId, body, status = 200, headers = {}) {
   response.writeHead(status, { "content-type": "application/json", "x-correlation-id": correlationId, ...headers })
@@ -46,18 +49,24 @@ async function body(request) {
   return chunks.length === 0 ? undefined : JSON.parse(Buffer.concat(chunks).toString("utf8"))
 }
 
+function resourceBatchItem(item) {
+  if (item.id === "document:__deployment-smoke-missing__") {
+    return {
+      error: { category: "not_found", message: "Fixture was not found", retryable: false },
+      id: item.id,
+      status: "error"
+    }
+  }
+  if (item.type === "document" && documentBatchItemError !== undefined) {
+    return { error: documentBatchItemError(item.id), id: item.id, status: "error" }
+  }
+  return { data: { id: item.id, type: item.type }, id: item.id, status: "ok" }
+}
+
 function batch(pathname, correlationId, requestBody) {
   if (pathname === "/api/resources/batch") {
     return {
-      data: requestBody.items.map((item) =>
-        item.id === "document:__deployment-smoke-missing__"
-          ? {
-              error: { category: "not_found", message: "Fixture was not found", retryable: false },
-              id: item.id,
-              status: "error"
-            }
-          : { data: { id: item.id, type: item.type }, id: item.id, status: "ok" }
-      ),
+      data: requestBody.items.map(resourceBatchItem),
       links: { self: pathname },
       meta: { correlationId, requested: requestBody.items.length, returned: requestBody.items.length, warnings: [] }
     }
@@ -115,6 +124,26 @@ beforeAll(async () => {
     }
     if (request.method === "GET" && url.pathname === "/api/changes" && changeFeedError !== undefined) {
       apiJson(response, correlationId, changeFeedError(correlationId), 422)
+      return
+    }
+    const requestSegments = url.pathname.split("/").filter(Boolean)
+    if (
+      request.method === "GET" &&
+      requestSegments[1] === "documents" &&
+      requestSegments.length === 3 &&
+      documentDetailError !== undefined
+    ) {
+      apiJson(response, correlationId, documentDetailError(correlationId), 422)
+      return
+    }
+    if (
+      request.method === "GET" &&
+      requestSegments[1] === "documents" &&
+      requestSegments[3] === "sections" &&
+      requestSegments.length === 4 &&
+      documentSectionsError !== undefined
+    ) {
+      apiJson(response, correlationId, documentSectionsError(correlationId), 422)
       return
     }
     if (request.method === "GET" && request.headers["if-none-match"] === 'W/"fixture"') {
@@ -443,6 +472,100 @@ describe("NX-02C deployed smoke profile", () => {
       expect(error.stderr).not.toContain(privateMessage)
     } finally {
       changeFeedError = undefined
+    }
+  })
+
+  it("classifies canonical document reads as data-incomplete and accepts the exact batch dependency mapping", async () => {
+    const detailMessage = "Document document:private-record has incomplete canonical OCR provenance"
+    const batchMessage = "Document document:private-record could not be projected"
+    documentDetailError = (correlationId) => ({
+      error: { category: "unprocessable", correlationId, message: detailMessage, retryable: false }
+    })
+    documentSectionsError = (correlationId) => ({
+      error: { category: "unprocessable", correlationId, message: detailMessage, retryable: false }
+    })
+    documentBatchItemError = () => ({
+      category: "dependency_unavailable",
+      message: batchMessage,
+      retryable: true
+    })
+    try {
+      const result = await runSmoke({
+        LEGISLATION_WEB_SMOKE_DOCUMENT_ID: "document:fixture",
+        LEGISLATION_WEB_SMOKE_DOCUMENT_SECTION_ID: "document-section:fixture",
+        LEGISLATION_WEB_SMOKE_NX_02C: "1",
+        LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_ID: "supporting-material:fixture",
+        LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_SECTION_ID: "supporting-material-section:fixture"
+      })
+
+      expect(result.nx02c.passed).toEqual([
+        "document section",
+        "supporting materials",
+        "supporting material",
+        "supporting material sections",
+        "supporting material section",
+        "changes",
+        "resource batch"
+      ])
+      expect(result.nx02c.skipped).toEqual([
+        { name: "document", reason: "canonical_data_incomplete" },
+        { name: "document sections", reason: "canonical_data_incomplete" }
+      ])
+      expect(JSON.stringify(result)).not.toContain("document:private-record")
+      expect(JSON.stringify(result)).not.toContain(detailMessage)
+      expect(JSON.stringify(result)).not.toContain(batchMessage)
+    } finally {
+      documentDetailError = undefined
+      documentSectionsError = undefined
+      documentBatchItemError = undefined
+    }
+  })
+
+  it("rejects a malformed document-detail 422 envelope without leaking its message", async () => {
+    const privateMessage = "Document document:private-record has incomplete canonical OCR provenance"
+    documentDetailError = (correlationId) => ({
+      error: { category: "unprocessable", correlationId, message: privateMessage, retryable: false },
+      unexpected: true
+    })
+    try {
+      let error
+      try {
+        await runSmoke({
+          LEGISLATION_WEB_SMOKE_DOCUMENT_ID: "document:fixture",
+          LEGISLATION_WEB_SMOKE_NX_02C: "1"
+        })
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("GET document did not return a canonical data-incomplete ErrorResponse")
+      expect(error.stderr).not.toContain("document:private-record")
+      expect(error.stderr).not.toContain(privateMessage)
+    } finally {
+      documentDetailError = undefined
+    }
+  })
+
+  it("rejects a malformed document batch error category without leaking its message", async () => {
+    const privateMessage = "Document document:private-record could not be projected"
+    documentBatchItemError = () => ({ category: "unprocessable", message: privateMessage, retryable: false })
+    try {
+      let error
+      try {
+        await runSmoke({
+          LEGISLATION_WEB_SMOKE_DOCUMENT_ID: "document:fixture",
+          LEGISLATION_WEB_SMOKE_NX_02C: "1",
+          LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_ID: "supporting-material:fixture"
+        })
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("POST resource batch did not return the expected resource Batch error item")
+      expect(error.stderr).not.toContain("document:private-record")
+      expect(error.stderr).not.toContain(privateMessage)
+    } finally {
+      documentBatchItemError = undefined
     }
   })
 })

@@ -153,6 +153,14 @@ function requireStringArray(value, description) {
   }
 }
 
+function isSafeNonEmptyMessage(value) {
+  return (
+    typeof value === "string" &&
+    value.trim() !== "" &&
+    ![...value].some((character) => character.codePointAt(0) <= 0x1f || character === "\u007F")
+  )
+}
+
 function requirePageEnvelope(body, name, expectedCorrelationId) {
   if (
     !hasExactKeys(body, ["data", "links", "meta"]) ||
@@ -279,10 +287,9 @@ function requireResourceBatchEnvelope(body, name, expectedCorrelationId, expecte
     if (!isRecord(item) || item.id !== expectedItem.id) {
       throw new Error(`${name} did not return the expected resource Batch item`)
     }
-    if (expectedItem.status === "ok") {
+    if (item.status === "ok" && (expectedItem.status === "ok" || expectedItem.status === "ok_or_error")) {
       if (
         !hasExactKeys(item, ["data", "id", "status"]) ||
-        item.status !== "ok" ||
         !isRecord(item.data) ||
         item.data.id !== expectedItem.id ||
         item.data.type !== expectedItem.type
@@ -296,12 +303,11 @@ function requireResourceBatchEnvelope(body, name, expectedCorrelationId, expecte
       item.status !== "error" ||
       !isRecord(item.error) ||
       !hasExactKeys(item.error, ["category", "message", "retryable"]) ||
-      item.error.category !== "not_found" ||
-      typeof item.error.message !== "string" ||
-      item.error.message === "" ||
-      item.error.retryable !== false
+      item.error.category !== expectedItem.category ||
+      !isSafeNonEmptyMessage(item.error.message) ||
+      item.error.retryable !== expectedItem.retryable
     ) {
-      throw new Error(`${name} did not return the expected missing resource Batch item`)
+      throw new Error(`${name} did not return the expected resource Batch error item`)
     }
   }
 }
@@ -344,9 +350,7 @@ function requireCanonicalDataIncomplete(body, name, expectedCorrelationId) {
     !hasExactKeys(body.error, ["category", "correlationId", "message", "retryable"]) ||
     body.error.category !== "unprocessable" ||
     body.error.correlationId !== expectedCorrelationId ||
-    typeof body.error.message !== "string" ||
-    body.error.message.trim() === "" ||
-    [...body.error.message].some((character) => character.codePointAt(0) <= 0x1f || character === "\u007F") ||
+    !isSafeNonEmptyMessage(body.error.message) ||
     body.error.retryable !== false
   ) {
     throw new Error(`${name} did not return a canonical data-incomplete ErrorResponse`)
@@ -765,7 +769,7 @@ async function smokeNx02cRoutes(root) {
     } catch {
       throw new Error(`${name} did not return a JSON body`)
     }
-    if (route.name === "changes" && response.status === 422) {
+    if (["changes", "document", "document sections"].includes(route.name) && response.status === 422) {
       requireCanonicalDataIncomplete(body, name, correlationId)
       skipped.push({ name: route.name, reason: "canonical_data_incomplete" })
       continue
@@ -789,9 +793,20 @@ async function smokeNx02cRoutes(root) {
       requireResourceEnvelope(body, name, correlationId, nx02cFixtures[route.fixtures.at(-1)])
     } else {
       requireResourceBatchEnvelope(body, name, correlationId, [
-        { id: nx02cFixtures.documentId, status: "ok", type: "document" },
+        {
+          category: "dependency_unavailable",
+          id: nx02cFixtures.documentId,
+          retryable: true,
+          status: "ok_or_error",
+          type: "document"
+        },
         { id: nx02cFixtures.supportingMaterialId, status: "ok", type: "supporting-material" },
-        { id: "document:__deployment-smoke-missing__", status: "error" }
+        {
+          category: "not_found",
+          id: "document:__deployment-smoke-missing__",
+          retryable: false,
+          status: "error"
+        }
       ])
     }
     passed.push(route.name)

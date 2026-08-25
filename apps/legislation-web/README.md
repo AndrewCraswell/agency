@@ -83,12 +83,14 @@ for configured fixtures report `fixture_missing`; malformed responses fail the s
 
 The profile checks the exact Page and Resource envelopes, correlation-ID propagation,
 `cache-control: private, no-store`, and ETag conditional `304` behavior for every NX-02C `GET` that returns `200`. Its
-one `POST /api/resources/batch` request includes valid document and supporting-material items plus a deliberately
-missing document item, so a valid outer batch must prove both successful canonical resources and the documented per-item
-`not_found` result. The supporting-material collection probe uses the indexed `jurisdiction:us` and `committee-report`
-scope. Only the global change-feed probe may report an exact canonical `422 unprocessable` as a
-`canonical_data_incomplete` skip when stored records lack canonical source provenance; the response message and record
-identity are never emitted, and any malformed `422` fails the smoke.
+one `POST /api/resources/batch` request includes document and supporting-material fixtures plus a deliberately missing
+document item. The supporting-material item must succeed and the missing item must return `not_found`; the configured
+document may either succeed or return the exact `dependency_unavailable`, retryable per-item mapping used when canonical
+document projection is incomplete. The supporting-material collection probe uses the indexed `jurisdiction:us` and
+`committee-report` scope. The document detail, document-section collection, and global change-feed probes may report an
+exact canonical `422 unprocessable` as a `canonical_data_incomplete` skip when document processing metadata or
+change-event source provenance is incomplete. Document-section detail remains a required successful Resource response.
+Response messages and record identities are never emitted, and any malformed `422` or batch item fails the smoke.
 
 ```powershell
 $env:LEGISLATION_WEB_SMOKE_NX_02C = "1"
