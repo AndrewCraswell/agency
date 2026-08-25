@@ -82,6 +82,12 @@ import { createPersonDetailReadRepository } from "./person-detail-read-repositor
 import { createPersonDetailReadApiHandler } from "./person-detail-read-routes.js"
 import { createPersonMembershipsRepository } from "./person-membership-read-repository.js"
 import { createPersonMembershipReadApiHandler } from "./person-membership-read-routes.js"
+import {
+  createRepresentativeLookupApi,
+  createRepresentativeLookupApiHandler,
+  UnavailableAddressToDistrictProvider,
+  type RepresentativeLookupApi
+} from "./representative-lookup.js"
 import { createResourceBatchReadRepositoryFromCanonicalReads } from "./resource-batch-read-repository.js"
 import { createResourceBatchReadApiHandler } from "./resource-batch-read-routes.js"
 import { createSessionRepository } from "./session-read-repository.js"
@@ -116,6 +122,7 @@ export function createLegislationApiHandler(
     webhookMutationExecutor?: SubscriptionMutationExecutor
     webhookSecretProtector?: WebhookSecretProtector
     webhookReadRepository?: WebhookReadRepository
+    representativeLookupApi?: RepresentativeLookupApi
   }>
 ): HttpApiHandler {
   const documentDatabase = options.documentDatabase
@@ -139,6 +146,9 @@ export function createLegislationApiHandler(
     ...(documentReadApi === undefined ? {} : { documentReadApi })
   })
   return createCompositeHttpApiHandler([
+    createRepresentativeLookupApiHandler(
+      options.representativeLookupApi ?? createRepresentativeLookupApi(new UnavailableAddressToDistrictProvider())
+    ),
     createResourceBatchReadApiHandler(resourceBatchReadRepository),
     ...(documentReadApi === undefined ? [] : [createDocumentReadApiHandler(documentReadApi, options)]),
     ...(documentDatabase === undefined

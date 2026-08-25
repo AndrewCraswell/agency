@@ -267,7 +267,10 @@ export class RetryingHttpClient {
         ...init,
         method: "GET",
         redirect: "follow",
-        signal: AbortSignal.timeout(this.#requestTimeoutMs)
+        signal:
+          init.signal === null || init.signal === undefined
+            ? AbortSignal.timeout(this.#requestTimeoutMs)
+            : AbortSignal.any([init.signal, AbortSignal.timeout(this.#requestTimeoutMs)])
       })
       const telemetry: HttpRequestTelemetry = {
         attempt,
