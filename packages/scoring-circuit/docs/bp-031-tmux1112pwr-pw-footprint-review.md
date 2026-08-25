@@ -4,13 +4,20 @@
 
 This is a bounded BP-031 candidate-footprint evidence slice for the exact
 Texas Instruments `TMUX1112PWR` orderable in the `PW (TSSOP, 16)` package.
-The candidate is review-only. It is not accepted, it has no fabrication
-authority, and it must not be treated as a generic TSSOP library footprint.
+Root review accepts the exact orderable identity, retained TI source pages,
+pin functions, seven-reference mapping, and deny-state integrity. The project
+geometry and orientation remain review-only and unaccepted, the artifact has
+no fabrication authority, and it must not be treated as a generic TSSOP
+library footprint.
 
 The implementation is isolated in
 [`bp031-ti-tmux1112pwr-pw-footprint-evidence.tsx`](../src/bp031-ti-tmux1112pwr-pw-footprint-evidence.tsx)
-with a focused rendering and drift test in the matching `.test.tsx` file.
-No board, ledger, backlog, or acceptance record is changed by this slice.
+with a focused rendering and drift test in the matching `.test.tsx` file. The
+BP-031 analog-footprint ledger maps this one candidate to all seven exact
+`U_SOURCE_SWITCH_1` through `U_SOURCE_SWITCH_7` references. That mapping
+preserves the candidate's source and deny state; it does not accept geometry,
+acquire manufacturer CAD, approve a footprint, or authorize a board, release,
+or fabrication.
 
 ## Exact identity and source binding
 
@@ -78,12 +85,18 @@ represented as acquired. The project TSX renders review geometry so that its
 dimensions and pin map can be inspected; it does not confer manufacturer-CAD
 authority.
 
-The candidate remains denied because independent orientation review,
-fabricator-specific mask and stencil review, package-to-artwork overlay,
-assembly inspection, schematic integration, and board-level clearance review
-are not complete. The artwork hash is
+The candidate remains denied because independent geometry and orientation
+acceptance, fabricator-specific mask and stencil review, package-to-artwork
+overlay, assembly inspection, schematic integration, and board-level
+clearance review are not complete. The artwork hash is
 `9ABFB669F4BE57EED397C1AF2B812653D9B56032F492433BFEAF20EF1F959A7B`; it binds
 the rendered review artifact only and is not a fabrication signoff.
+
+Root reviewer `root-final-reviewer` visually inspected retained PDF pages 3,
+33, and 41 through 43 on 2026-08-25 and verified the exact `TMUX1112PWR`
+orderable, PW TSSOP-16 package, pin map, package outline, example land pattern,
+mask guidance, and stencil example. This review does not accept the derived
+courtyard, project artwork, board fit, or fabrication release.
 
 ## Verification
 

@@ -181,8 +181,12 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
   })
 
   it("maps the seven U_ESD references to the TPD4E05 review inputs without opening release authority", () => {
-    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(1)
-    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings[0]).toMatchObject({
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(2)
+    expect(
+      benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+        (mapping) => mapping.mappingId === "bp031-tpd4e05u06-dqa-project-footprint"
+      )
+    ).toMatchObject({
       mappingId: "bp031-tpd4e05u06-dqa-project-footprint",
       reviewState: "root-reviewed-review-input",
       reviewer: "root-final-reviewer",
@@ -255,9 +259,91 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     ).toBe(true)
     expect(
       benchPrototypeAnalogFootprintClosure.records
-        .filter((record) => record.sourceBaseReference !== "U_ESD")
+        .filter((record) => record.sourceBaseReference !== "U_ESD" && record.sourceBaseReference !== "U_SOURCE_SWITCH")
         .every((record) => record.reviewEvidenceMappingId === null)
     ).toBe(true)
+  })
+
+  it("maps the seven U_SOURCE_SWITCH references to the retained TMUX1112PWR review input without accepting it", () => {
+    expect(
+      benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+        (mapping) => mapping.mappingId === "bp031-tmux1112pwr-pw-footprint-evidence"
+      )
+    ).toMatchObject({
+      mappingId: "bp031-tmux1112pwr-pw-footprint-evidence",
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      reviewedAt: "2026-08-25T08:56:12.543Z",
+      artifactKind: "bp031-ti-tmux1112pwr-pw-tssop16-footprint-evidence",
+      artifactPath: "packages/scoring-circuit/src/bp031-ti-tmux1112pwr-pw-footprint-evidence.tsx",
+      baseReference: "U_SOURCE_SWITCH",
+      sourceContract: "BP-102",
+      manufacturer: "Texas Instruments",
+      exactMpn: "TMUX1112PWR",
+      exactPackage: "PW TSSOP-16",
+      affectedReferences: [
+        "U_SOURCE_SWITCH_1",
+        "U_SOURCE_SWITCH_2",
+        "U_SOURCE_SWITCH_3",
+        "U_SOURCE_SWITCH_4",
+        "U_SOURCE_SWITCH_5",
+        "U_SOURCE_SWITCH_6",
+        "U_SOURCE_SWITCH_7"
+      ],
+      manufacturerDrawingInput: {
+        state: "source-controlled-pending-review",
+        acquisition: "exact-drawing-hash-bound",
+        artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/ti-tmux1112pwr-pw0016a-datasheet-rev-c.pdf",
+        revision: "C",
+        reviewedPages: "3, 33, 41-43",
+        sha256: "EB7CCF89EC59635B34043D364DB6B1E21B457A0BA7363737408CEBCA30CD6C4D",
+        authority: "deny"
+      },
+      manufacturerCad: { state: "not-acquired", artifactPath: null, sha256: null, authority: "deny" },
+      renderedArtwork: {
+        state: "generated-project-review-only",
+        generator: "tscircuit",
+        generatorVersion: "0.0.2271",
+        sha256: "9ABFB669F4BE57EED397C1AF2B812653D9B56032F492433BFEAF20EF1F959A7B",
+        authority: "deny"
+      },
+      pinOneOrientation: {
+        state: "source-controlled-pending-review",
+        pin: 1,
+        boardCoordinatesMm: { x: -2.9, y: 2.275 },
+        boardRotationDegrees: 0,
+        orientationVerified: false,
+        authority: "deny"
+      },
+      acceptance: {
+        packageIdentityReviewed: true,
+        packageDrawingReviewed: true,
+        pinFunctionsReviewed: true,
+        projectGeometryAccepted: false,
+        pinOneOrientationAccepted: false,
+        cadImportAccepted: false,
+        boardFitAccepted: false,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      }
+    })
+
+    const switchRecords = benchPrototypeAnalogFootprintClosure.records.filter(
+      (record) => record.sourceBaseReference === "U_SOURCE_SWITCH"
+    )
+    expect(switchRecords.map((record) => record.reference)).toEqual([
+      "U_SOURCE_SWITCH_1",
+      "U_SOURCE_SWITCH_2",
+      "U_SOURCE_SWITCH_3",
+      "U_SOURCE_SWITCH_4",
+      "U_SOURCE_SWITCH_5",
+      "U_SOURCE_SWITCH_6",
+      "U_SOURCE_SWITCH_7"
+    ])
+    expect(
+      switchRecords.every((record) => record.reviewEvidenceMappingId === "bp031-tmux1112pwr-pw-footprint-evidence")
+    ).toBe(true)
+    expect(switchRecords.every((record) => record.disposition === "DNP-unresolved")).toBe(true)
   })
 
   it("freezes the exact Molex connector and BP-104 pin disposition", () => {
@@ -357,6 +443,11 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       "forged TPD4 review mapping",
       (copy: typeof benchPrototypeAnalogFootprintClosure) =>
         Reflect.set(copy.reviewEvidenceMappings[0], "manufacturerCad", { state: "acquired" })
+    ],
+    [
+      "forged TMUX review mapping",
+      (copy: typeof benchPrototypeAnalogFootprintClosure) =>
+        Reflect.set(copy.reviewEvidenceMappings[1], "accepted", { fabricationAuthorized: true })
     ]
   ])("rejects %s", (_name, mutate) => {
     const copy = structuredClone(benchPrototypeAnalogFootprintClosure)
