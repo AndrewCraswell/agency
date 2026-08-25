@@ -24,7 +24,12 @@ COPY apps/legislation ./apps/legislation
 COPY apps/legislation-web ./apps/legislation-web
 COPY apps/legislation-web/pnpm-workspace.railway.yaml ./pnpm-workspace.yaml
 
-RUN pnpm install --frozen-lockfile --ignore-scripts --filter legislation... --filter legislation-web...
+# The committed lockfile is the reviewed dependency base for this build. Trusting
+# it skips pnpm's registry-backed whole-lock supply-chain recheck, which would
+# otherwise query private packages owned by unrelated workspaces before the
+# legislation-only filters are applied. Frozen resolution and integrity hashes
+# remain enforced for the selected dependency closure.
+RUN pnpm install --frozen-lockfile --trust-lockfile --ignore-scripts --filter legislation... --filter legislation-web...
 RUN pnpm --filter legislation-web build
 # Fail the image build clearly if the application stops producing the traced
 # production dependency closure required by the standalone runtime.
