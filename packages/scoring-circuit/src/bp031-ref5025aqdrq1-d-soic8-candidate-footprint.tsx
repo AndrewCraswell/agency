@@ -43,6 +43,58 @@ const maximumPackageEnvelope = {
   maximumYMm: packageBodyLengthMm.maximum / 2
 } as const
 
+const exactAnalogReferenceMapping = [
+  {
+    reference: "U_REF_1",
+    exactMpn: "REF5025AQDRQ1",
+    exactPackage: "D SOIC-8",
+    sharedManufacturerSourceId: "M4-04:REF5025AQDRQ1",
+    disposition: "DNP-unresolved"
+  },
+  {
+    reference: "U_REF_2",
+    exactMpn: "REF5025AQDRQ1",
+    exactPackage: "D SOIC-8",
+    sharedManufacturerSourceId: "M4-04:REF5025AQDRQ1",
+    disposition: "DNP-unresolved"
+  },
+  {
+    reference: "U_REF_3",
+    exactMpn: "REF5025AQDRQ1",
+    exactPackage: "D SOIC-8",
+    sharedManufacturerSourceId: "M4-04:REF5025AQDRQ1",
+    disposition: "DNP-unresolved"
+  },
+  {
+    reference: "U_REF_4",
+    exactMpn: "REF5025AQDRQ1",
+    exactPackage: "D SOIC-8",
+    sharedManufacturerSourceId: "M4-04:REF5025AQDRQ1",
+    disposition: "DNP-unresolved"
+  },
+  {
+    reference: "U_REF_5",
+    exactMpn: "REF5025AQDRQ1",
+    exactPackage: "D SOIC-8",
+    sharedManufacturerSourceId: "M4-04:REF5025AQDRQ1",
+    disposition: "DNP-unresolved"
+  },
+  {
+    reference: "U_REF_6",
+    exactMpn: "REF5025AQDRQ1",
+    exactPackage: "D SOIC-8",
+    sharedManufacturerSourceId: "M4-04:REF5025AQDRQ1",
+    disposition: "DNP-unresolved"
+  },
+  {
+    reference: "U_REF_7",
+    exactMpn: "REF5025AQDRQ1",
+    exactPackage: "D SOIC-8",
+    sharedManufacturerSourceId: "M4-04:REF5025AQDRQ1",
+    disposition: "DNP-unresolved"
+  }
+] as const
+
 const projectCourtyardEnvelope = {
   minimumXMm: Math.min(projectPadEnvelope.minimumXMm, maximumPackageEnvelope.minimumXMm) - courtyardClearanceMm,
   maximumXMm: Math.max(projectPadEnvelope.maximumXMm, maximumPackageEnvelope.maximumXMm) + courtyardClearanceMm,
@@ -70,6 +122,15 @@ export const bp031Ref5025Aqdrq1DSoic8CandidateFootprint = {
   workUnit: "BP-031",
   manufacturer: "Texas Instruments",
   manufacturerPartNumber: "REF5025AQDRQ1",
+  sourceBinding: {
+    sourceContract: "BP-031",
+    canonicalSourceReference: "U_REF",
+    replicatedReferencePrefix: "U_REF_",
+    manufacturer: "Texas Instruments",
+    manufacturerPartNumber: "REF5025AQDRQ1",
+    package: "D SOIC-8",
+    references: exactAnalogReferenceMapping
+  },
   package: {
     family: "SOIC",
     option: "D",
@@ -189,9 +250,22 @@ export const bp031Ref5025Aqdrq1DSoic8CandidateFootprint = {
       status: "project-review-input"
     },
     orientationStatus: "pending-independent-review",
+    boardIntegrationAuthority: "deny",
+    releaseState: "deny",
     fabricationAuthority: "deny",
     accepted: false
-  }
+  },
+  artwork: {
+    state: "generated-project-review-only",
+    representation: "canonical-rendered-footprint-soup-geometry",
+    generator: "tscircuit",
+    generatorVersion: "0.0.2271",
+    sha256: "BEB1A3CA6092E5488ACB6C0485D5002ED78A666DB043CC5AC7A83B4A7113C375",
+    authority: "deny"
+  },
+  releaseState: "deny",
+  fabricationAuthority: "deny",
+  accepted: false
 } as const
 
 type Envelope = {
@@ -199,6 +273,35 @@ type Envelope = {
   readonly maximumXMm: number
   readonly minimumYMm: number
   readonly maximumYMm: number
+}
+
+function isDigest(value: string): boolean {
+  return /^[0-9A-F]{64}$/u.test(value)
+}
+
+function sameDataValue(left: unknown, right: unknown, seen = new WeakMap<object, object>()): boolean {
+  if (Object.is(left, right)) return true
+  if (left === null || right === null || typeof left !== "object" || typeof right !== "object") return false
+  if (Array.isArray(left) !== Array.isArray(right)) return false
+  const prior = seen.get(left)
+  if (prior !== undefined) return prior === right
+  seen.set(left, right)
+  const leftKeys = Reflect.ownKeys(left)
+  const rightKeys = Reflect.ownKeys(right)
+  if (leftKeys.length !== rightKeys.length) return false
+  return rightKeys.every((key) => {
+    if (!leftKeys.some((candidate) => Object.is(candidate, key))) return false
+    const leftDescriptor = Object.getOwnPropertyDescriptor(left, key)
+    const rightDescriptor = Object.getOwnPropertyDescriptor(right, key)
+    return (
+      leftDescriptor !== undefined &&
+      rightDescriptor !== undefined &&
+      "value" in leftDescriptor &&
+      "value" in rightDescriptor &&
+      leftDescriptor.enumerable === rightDescriptor.enumerable &&
+      sameDataValue(leftDescriptor.value, rightDescriptor.value, seen)
+    )
+  })
 }
 
 function calculatePadEnvelope(candidate: typeof bp031Ref5025Aqdrq1DSoic8CandidateFootprint): Envelope {
@@ -232,6 +335,11 @@ export function validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint(
     candidate.manufacturerPartNumber !== "REF5025AQDRQ1"
   ) {
     errors.push("exact BP-031 TI REF5025AQDRQ1 identity drifted")
+  }
+  if (
+    JSON.stringify(candidate.sourceBinding) !== JSON.stringify(bp031Ref5025Aqdrq1DSoic8CandidateFootprint.sourceBinding)
+  ) {
+    errors.push("exact seven-reference BP-031 source mapping drifted")
   }
   if (
     candidate.package.family !== "SOIC" ||
@@ -269,13 +377,24 @@ export function validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint(
       errors.push(`retained TI source hash/path is invalid for ${source.id}`)
     }
   }
+  if (JSON.stringify(candidate.sources) !== JSON.stringify(bp031Ref5025Aqdrq1DSoic8CandidateFootprint.sources)) {
+    errors.push("retained TI source identity, revision, page scope, or hash drifted")
+  }
   if (
+    candidate.pinOneOrientation.sourceIds.length !== 2 ||
+    candidate.pinOneOrientation.sourceIds[0] !== "ti-ref50xxa-q1-datasheet-rev-h" ||
+    candidate.pinOneOrientation.sourceIds[1] !== "ti-d0008a-soic8-package-outline-rev-k" ||
+    candidate.pinOneOrientation.sourceTopViewPinOneDatum !== "pin 1 identifier at upper-left in TI top view" ||
+    candidate.pinOneOrientation.topViewNumbering !==
+      "pins 1 through 4 run top-to-bottom on the left edge; pins 5 through 8 run bottom-to-top on the right edge" ||
+    candidate.pinOneOrientation.independentOrientationReview !== "pending" ||
+    candidate.pinOneOrientation.exactMatchStatus !== "review-input-only" ||
     candidate.pinOneOrientation.projectPinOnePad.pin !== 1 ||
     candidate.pinOneOrientation.projectPinOnePad.xMm !== -padRowCenterMm ||
     candidate.pinOneOrientation.projectPinOnePad.yMm !== columnOffsetsMm[0] ||
     candidate.pinOneOrientation.projectBoardRotationDegrees !== 0
   ) {
-    errors.push("TI pin-one orientation or project rotation drifted")
+    errors.push("TI pin-one datum or project rotation drifted")
   }
   const expectedPins = projectPads.map(({ pin, xMm, yMm, function: pinFunction }) => ({
     pin,
@@ -338,10 +457,32 @@ export function validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint(
     candidate.projectFootprint.paste.openingLengthMm !== copperPadLengthMm ||
     candidate.projectFootprint.paste.openingWidthMm !== copperPadWidthMm ||
     candidate.projectFootprint.paste.reductionPerEdgeMm !== pasteReductionPerEdgeMm ||
+    candidate.projectFootprint.state !== "review-only" ||
+    candidate.projectFootprint.geometryAuthority !== "derived-from-ti-d0008a-drawing-example" ||
+    candidate.projectFootprint.orientationStatus !== "pending-independent-review" ||
+    candidate.projectFootprint.boardIntegrationAuthority !== "deny" ||
+    candidate.projectFootprint.releaseState !== "deny" ||
     candidate.projectFootprint.accepted ||
-    candidate.projectFootprint.fabricationAuthority !== "deny"
+    candidate.projectFootprint.fabricationAuthority !== "deny" ||
+    candidate.releaseState !== "deny" ||
+    candidate.fabricationAuthority !== "deny" ||
+    candidate.accepted
   ) {
     errors.push("CAD uncertainty and fabrication denial must remain fail-closed")
+  }
+  if (
+    candidate.artwork.state !== "generated-project-review-only" ||
+    candidate.artwork.representation !== "canonical-rendered-footprint-soup-geometry" ||
+    candidate.artwork.generator !== "tscircuit" ||
+    candidate.artwork.generatorVersion !== "0.0.2271" ||
+    candidate.artwork.sha256 !== "BEB1A3CA6092E5488ACB6C0485D5002ED78A666DB043CC5AC7A83B4A7113C375" ||
+    !isDigest(candidate.artwork.sha256) ||
+    candidate.artwork.authority !== "deny"
+  ) {
+    errors.push("rendered artwork hash or authority drifted")
+  }
+  if (errors.length === 0 && !sameDataValue(candidate, bp031Ref5025Aqdrq1DSoic8CandidateFootprint)) {
+    errors.push("unreviewed REF5025 evidence property or object shape drifted")
   }
   return errors
 }

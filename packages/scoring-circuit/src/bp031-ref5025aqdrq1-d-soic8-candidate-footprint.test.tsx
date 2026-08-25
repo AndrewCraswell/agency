@@ -69,6 +69,37 @@ function evidenceHash(artifactPath: string) {
     .toUpperCase()
 }
 
+function renderedArtworkHash(): string {
+  const geometry: Array<Record<string, unknown>> = []
+  for (const element of renderedFootprint(Bp031Ref5025Aqdrq1DSoic8CandidateFootprint)) {
+    if (isRectSmtPad(element)) {
+      geometry.push({
+        height: element.height,
+        shape: element.shape,
+        soldermask_margin: element.soldermask_margin,
+        type: element.type,
+        width: element.width,
+        x: element.x,
+        y: element.y
+      })
+    }
+    if (isRectSolderPaste(element)) {
+      geometry.push({
+        height: element.height,
+        shape: element.shape,
+        type: element.type,
+        width: element.width,
+        x: element.x,
+        y: element.y
+      })
+    }
+    if (element.type === "pcb_courtyard_rect") {
+      geometry.push({ center: element.center, height: element.height, type: element.type, width: element.width })
+    }
+  }
+  return createHash("sha256").update(JSON.stringify(geometry)).digest("hex").toUpperCase()
+}
+
 describe("BP-031 TI REF5025AQDRQ1 D SOIC-8 candidate footprint", () => {
   it("reconciles the exact D SOIC-8 identity across the canonical BOM and analog source contracts", () => {
     expect(benchPrototypeBom.rows.find((row) => row.reference === "U_REF")).toMatchObject({
@@ -115,6 +146,21 @@ describe("BP-031 TI REF5025AQDRQ1 D SOIC-8 candidate footprint", () => {
       workUnit: "BP-031",
       manufacturer: "Texas Instruments",
       manufacturerPartNumber: "REF5025AQDRQ1",
+      sourceBinding: {
+        sourceContract: "BP-031",
+        canonicalSourceReference: "U_REF",
+        replicatedReferencePrefix: "U_REF_",
+        manufacturer: "Texas Instruments",
+        manufacturerPartNumber: "REF5025AQDRQ1",
+        package: "D SOIC-8",
+        references: Array.from({ length: 7 }, (_, index) => ({
+          reference: `U_REF_${index + 1}`,
+          exactMpn: "REF5025AQDRQ1",
+          exactPackage: "D SOIC-8",
+          sharedManufacturerSourceId: "M4-04:REF5025AQDRQ1",
+          disposition: "DNP-unresolved"
+        }))
+      },
       package: {
         family: "SOIC",
         option: "D",
@@ -134,10 +180,24 @@ describe("BP-031 TI REF5025AQDRQ1 D SOIC-8 candidate footprint", () => {
       projectFootprint: {
         state: "review-only",
         orientationStatus: "pending-independent-review",
+        boardIntegrationAuthority: "deny",
+        releaseState: "deny",
         fabricationAuthority: "deny",
         accepted: false
       }
     })
+    expect(bp031Ref5025Aqdrq1DSoic8CandidateFootprint.sourceBinding.references).toEqual(
+      Array.from({ length: 7 }, (_, index) => ({
+        reference: `U_REF_${index + 1}`,
+        exactMpn: "REF5025AQDRQ1",
+        exactPackage: "D SOIC-8",
+        sharedManufacturerSourceId: "M4-04:REF5025AQDRQ1",
+        disposition: "DNP-unresolved"
+      }))
+    )
+    expect(bp031Ref5025Aqdrq1DSoic8CandidateFootprint.releaseState).toBe("deny")
+    expect(bp031Ref5025Aqdrq1DSoic8CandidateFootprint.fabricationAuthority).toBe("deny")
+    expect(bp031Ref5025Aqdrq1DSoic8CandidateFootprint.accepted).toBe(false)
     expect(bp031Ref5025Aqdrq1DSoic8CandidateFootprint.sources).toEqual([
       expect.objectContaining({
         id: "ti-ref50xxa-q1-datasheet-rev-h",
@@ -155,6 +215,12 @@ describe("BP-031 TI REF5025AQDRQ1 D SOIC-8 candidate footprint", () => {
     for (const source of bp031Ref5025Aqdrq1DSoic8CandidateFootprint.sources) {
       expect(evidenceHash(source.artifactPath)).toBe(source.sha256)
     }
+    expect(bp031Ref5025Aqdrq1DSoic8CandidateFootprint.pinOneOrientation).toMatchObject({
+      sourceIds: ["ti-ref50xxa-q1-datasheet-rev-h", "ti-d0008a-soic8-package-outline-rev-k"],
+      sourceTopViewPinOneDatum: "pin 1 identifier at upper-left in TI top view",
+      independentOrientationReview: "pending",
+      exactMatchStatus: "review-input-only"
+    })
   })
 
   it("retains TI's exact copper, NSMD mask, equal-size paste, and pin-one orientation", () => {
@@ -240,6 +306,15 @@ describe("BP-031 TI REF5025AQDRQ1 D SOIC-8 candidate footprint", () => {
     expect(elements.filter((element) => element.type.endsWith("_error"))).toEqual([])
   })
 
+  it("binds the persisted canonical artwork hash independently of the source record", () => {
+    expect(renderedArtworkHash()).toBe("BEB1A3CA6092E5488ACB6C0485D5002ED78A666DB043CC5AC7A83B4A7113C375")
+    expect(renderedArtworkHash()).toBe(bp031Ref5025Aqdrq1DSoic8CandidateFootprint.artwork.sha256)
+    expect(bp031Ref5025Aqdrq1DSoic8CandidateFootprint.artwork).toMatchObject({
+      state: "generated-project-review-only",
+      authority: "deny"
+    })
+  })
+
   it("fails closed if exact identity or fabrication denial drifts", () => {
     const identityDrift = structuredClone(bp031Ref5025Aqdrq1DSoic8CandidateFootprint)
     Reflect.set(identityDrift, "manufacturerPartNumber", "REF5025AQDRQ1.A")
@@ -263,6 +338,54 @@ describe("BP-031 TI REF5025AQDRQ1 D SOIC-8 candidate footprint", () => {
     Reflect.set(courtyardDrift.projectFootprint.courtyard, "widthMm", 7.44)
     expect(validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint(courtyardDrift)).toContain(
       "project courtyard must enclose TI package/pads and retain not-published status"
+    )
+
+    const mappingDrift = structuredClone(bp031Ref5025Aqdrq1DSoic8CandidateFootprint)
+    Reflect.set(mappingDrift.sourceBinding.references[0]!, "reference", "U_REF_8")
+    expect(validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint(mappingDrift)).toContain(
+      "exact seven-reference BP-031 source mapping drifted"
+    )
+
+    const sourceDrift = structuredClone(bp031Ref5025Aqdrq1DSoic8CandidateFootprint)
+    Reflect.set(sourceDrift.sources[0]!, "reviewedPages", "4, 18-25")
+    expect(validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint(sourceDrift)).toContain(
+      "retained TI source identity, revision, page scope, or hash drifted"
+    )
+
+    const orientationDrift = structuredClone(bp031Ref5025Aqdrq1DSoic8CandidateFootprint)
+    Reflect.set(orientationDrift.pinOneOrientation, "independentOrientationReview", "root-reviewed")
+    expect(validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint(orientationDrift)).toContain(
+      "TI pin-one datum or project rotation drifted"
+    )
+
+    const artworkDrift = structuredClone(bp031Ref5025Aqdrq1DSoic8CandidateFootprint)
+    Reflect.set(artworkDrift.artwork, "sha256", "0".repeat(64))
+    expect(validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint(artworkDrift)).toContain(
+      "rendered artwork hash or authority drifted"
+    )
+
+    const releaseDrift = structuredClone(bp031Ref5025Aqdrq1DSoic8CandidateFootprint)
+    Reflect.set(releaseDrift, "releaseState", "allow")
+    expect(validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint(releaseDrift)).toContain(
+      "CAD uncertainty and fabrication denial must remain fail-closed"
+    )
+
+    const hiddenProperty = structuredClone(bp031Ref5025Aqdrq1DSoic8CandidateFootprint)
+    Object.defineProperty(hiddenProperty, "hiddenApproval", { value: true, enumerable: false })
+    expect(validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint(hiddenProperty)).toContain(
+      "unreviewed REF5025 evidence property or object shape drifted"
+    )
+
+    const symbolProperty = structuredClone(bp031Ref5025Aqdrq1DSoic8CandidateFootprint)
+    Reflect.set(symbolProperty, Symbol("approval"), true)
+    expect(validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint(symbolProperty)).toContain(
+      "unreviewed REF5025 evidence property or object shape drifted"
+    )
+
+    const getterProperty = structuredClone(bp031Ref5025Aqdrq1DSoic8CandidateFootprint)
+    Object.defineProperty(getterProperty, "forgedApproval", { enumerable: true, get: () => true })
+    expect(validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint(getterProperty)).toContain(
+      "unreviewed REF5025 evidence property or object shape drifted"
     )
   })
 })
