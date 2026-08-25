@@ -30,6 +30,7 @@ import {
 } from "../db/queries/meeting-participant-reads.js"
 import { assertOrganizationExists, listOrganizationBillReads } from "../db/queries/organization-bill-read.js"
 import { listPeople } from "../db/queries/people-read.js"
+import { listPersonAmendments } from "../db/queries/person-amendments.js"
 import { assertPersonExists, listPersonBillActivity } from "../db/queries/person-bill-activity.js"
 import { getSupportingMaterialSectionRead } from "../db/queries/supporting-material-section-read.js"
 import { createBillDetailReadRepository } from "./bill-detail-read-repository.js"
@@ -57,6 +58,7 @@ import { createOrganizationMembersReadApiHandler } from "./organization-members-
 import { createOrganizationReadRepository } from "./organization-read-repository.js"
 import { createOrganizationReadApiHandler } from "./organization-read-routes.js"
 import { createPeopleReadApiHandler } from "./people-read-routes.js"
+import { createPersonAmendmentApiHandler } from "./person-amendment-routes.js"
 import { createPersonBillActivityApiHandler } from "./person-bill-activity-routes.js"
 import { createPersonMembershipsRepository } from "./person-membership-read-repository.js"
 import { createPersonMembershipReadApiHandler } from "./person-membership-read-routes.js"
@@ -195,6 +197,13 @@ export function createLegislationApiHandler(
           createOrganizationReadApiHandler(createOrganizationReadRepository(documentDatabase), options),
           createPeopleReadApiHandler(
             { listPeople: async (input) => await listPeople(documentDatabase, input) },
+            options
+          ),
+          createPersonAmendmentApiHandler(
+            {
+              assertPersonExists: async (personId) => await assertPersonExists(documentDatabase, personId),
+              listPersonAmendments: async (input) => await listPersonAmendments(documentDatabase, input)
+            },
             options
           ),
           createPersonBillActivityApiHandler(
