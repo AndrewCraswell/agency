@@ -667,6 +667,21 @@ describe("BP-033 application footprint closure ledger", () => {
     })
   })
 
+  it("reuses the retained BP-032 reset-fanout evidence without granting release", () => {
+    expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toContainEqual({
+      reference: "U_APP_RESET_FANOUT",
+      artifactKind: "bp032-reset-support-footprint-evidence",
+      artworkModule: "src/bp032-reset-support-footprints.ts",
+      reviewDocument: "docs/bench-prototype-application-footprints.md",
+      sourceArtifactPath: "docs/evidence/bp-032/ti-sn74lvc2g07-datasheet.pdf",
+      sourceSha256: "71BBB2FC452E2949B332C030B004B094BA679AC8CCE27123F806A0A6B1FDE660",
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      reviewedAt: "2026-08-25",
+      fabricationRelease: "deny"
+    })
+  })
+
   it("links U_IR to the BP-146 preorder geometry without closing physical optical gates", () => {
     expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toContainEqual({
       reference: "U_IR",

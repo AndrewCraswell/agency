@@ -39,6 +39,10 @@ import {
   bp031032033C0603C104K3RactuFootprintEvidence,
   validateBp031032033C0603C104K3RactuFootprintEvidence
 } from "./bp031-032-c0603c104k3ractu-footprint-evidence.js"
+import {
+  bp032ResetSupportFootprintEvidence,
+  validateBp032ResetSupportFootprintEvidence
+} from "./bp032-reset-support-footprints.js"
 import { validateBp033B340aProjectFootprintGeometry } from "./bp033-b340a-project-footprint.js"
 import {
   bp033DisplayBufferBss138akaReferenceBinding,
@@ -1182,7 +1186,19 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer" as const,
     reviewedAt: "2026-08-25" as const,
     fabricationRelease: "deny" as const
-  }))
+  })),
+  {
+    reference: "U_APP_RESET_FANOUT",
+    artifactKind: bp032ResetSupportFootprintEvidence.artifactKind,
+    artworkModule: "src/bp032-reset-support-footprints.ts",
+    reviewDocument: "docs/bench-prototype-application-footprints.md",
+    sourceArtifactPath: "docs/evidence/bp-032/ti-sn74lvc2g07-datasheet.pdf",
+    sourceSha256: "71BBB2FC452E2949B332C030B004B094BA679AC8CCE27123F806A0A6B1FDE660",
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
+  }
 ] as const
 
 const definition = {
@@ -1274,6 +1290,9 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
   if (validateBp031032033C0603C104K3RactuFootprintEvidence(bp031032033C0603C104K3RactuFootprintEvidence).length !== 0) {
     throw new RangeError("BP-033 shared C0603 footprint evidence drifted")
   }
+  if (validateBp032ResetSupportFootprintEvidence(bp032ResetSupportFootprintEvidence).length !== 0) {
+    throw new RangeError("BP-033 reset-fanout footprint evidence drifted")
+  }
   if (validateBp033Keystone5001TestPointEvidenceCandidate().length !== 0) {
     throw new RangeError("BP-033 Keystone 5001 evidence candidate drifted")
   }
@@ -1337,7 +1356,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 84 ||
+    contract.projectFootprintMappings.length !== 85 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1618,6 +1637,17 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         mapping.fabricationRelease === "deny"
       )
     }) ||
+    contract.projectFootprintMappings[84]?.reference !== "U_APP_RESET_FANOUT" ||
+    contract.projectFootprintMappings[84]?.artifactKind !== bp032ResetSupportFootprintEvidence.artifactKind ||
+    contract.projectFootprintMappings[84]?.artworkModule !== "src/bp032-reset-support-footprints.ts" ||
+    contract.projectFootprintMappings[84]?.reviewDocument !== "docs/bench-prototype-application-footprints.md" ||
+    contract.projectFootprintMappings[84]?.sourceArtifactPath !== "docs/evidence/bp-032/ti-sn74lvc2g07-datasheet.pdf" ||
+    contract.projectFootprintMappings[84]?.sourceSha256 !==
+      "71BBB2FC452E2949B332C030B004B094BA679AC8CCE27123F806A0A6B1FDE660" ||
+    contract.projectFootprintMappings[84]?.reviewState !== "root-reviewed-review-input" ||
+    contract.projectFootprintMappings[84]?.reviewer !== "root-final-reviewer" ||
+    contract.projectFootprintMappings[84]?.reviewedAt !== "2026-08-25" ||
+    contract.projectFootprintMappings[84]?.fabricationRelease !== "deny" ||
     !contract.records.some(
       (record) =>
         record.reference === "U_USB_PD" &&

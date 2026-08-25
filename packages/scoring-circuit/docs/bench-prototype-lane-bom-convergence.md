@@ -14,7 +14,7 @@ The current result is `DENY` with 389 blockers across 289 references: 22 unresol
 
 - BP-031: 113 reviewed-unapproved and zero not-started.
 - BP-032: 1 approved and 50 reviewed-unapproved; 48 populated rows currently contribute open footprint blockers.
-- BP-033: 88 reviewed-unapproved and 13 not-started.
+- BP-033: 89 reviewed-unapproved and 12 not-started.
 
 BP-034 has exact source-backed selections for the USB-C cable (`USB2CC1M`) and Ethernet patch cable (`N201-003-BL`), so those selections do not contribute `selection-blocked` blockers. In particular:
 
