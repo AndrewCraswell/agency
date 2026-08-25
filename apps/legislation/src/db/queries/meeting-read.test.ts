@@ -22,9 +22,13 @@ function cursor(scope: object): string {
 describe("meeting read queries", () => {
   it("binds scoped filters and keysets by start time, source sequence, then ID", () => {
     const scope = {
+      billId: null,
+      calendarId: null,
       classification: "meeting",
       from: "2026-08-01",
       jurisdictionId: "jurisdiction:wa",
+      isRemote: true,
+      meetingId: null,
       organizationId: "organization:openstates:rules",
       sessionId: "session:wa:2026",
       sort: "starts-asc",
@@ -36,6 +40,7 @@ describe("meeting read queries", () => {
       cursor: cursor(scope),
       from: "2026-08-01",
       jurisdictionId: "jurisdiction:wa",
+      isRemote: true,
       organizationId: "organization:openstates:rules",
       sessionId: "session:wa:2026",
       status: "scheduled",
@@ -49,18 +54,36 @@ describe("meeting read queries", () => {
     expect(generated).toContain('"legislative_events"."source_sequence"')
     expect(generated).toContain('exists (select 1 from "legislation"."event_organizations"')
     expect(generated).toContain('exists (select 1 from "legislation"."event_sessions"')
+    expect(generated).toContain('"legislative_events"."is_remote"')
+  })
+
+  it("supports explicit timestamp intervals and persisted bill relationships without guessing calendar links", () => {
+    const generated = buildMeetingListQuery(database, {
+      billId: "bill:wa:1",
+      from: "2026-08-17T00:00:00Z",
+      to: "2026-08-17T23:59:59Z"
+    }).toSQL().sql
+
+    expect(generated).toContain('exists (select 1 from "legislation"."event_bills"')
+    expect(generated).toContain('"legislative_events"."start_at" >=')
+    expect(generated).toContain('"legislative_events"."start_at" <=')
+    expect(buildMeetingListQuery(database, { calendarId: "calendar:unmapped" }).toSQL().sql).toContain("false")
   })
 
   it("rejects impossible dates and cursor scopes that no longer describe the collection", () => {
     expect(() => buildMeetingListQuery(database, { from: "2026-02-31", jurisdictionId: "jurisdiction:wa" })).toThrow(
-      "from must be an ISO date"
+      "from must be an ISO date or RFC 3339 timestamp"
     )
     expect(() =>
       buildMeetingListQuery(database, {
         cursor: cursor({
+          billId: null,
+          calendarId: null,
           classification: null,
           from: null,
           jurisdictionId: "jurisdiction:other",
+          isRemote: null,
+          meetingId: null,
           organizationId: null,
           sessionId: null,
           sort: "starts-asc",

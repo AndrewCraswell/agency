@@ -1,7 +1,8 @@
 import { and, asc, desc, eq, gt, gte, inArray, lt, lte, or, sql, type SQL } from "drizzle-orm"
+import { isIsoDate, isRfc3339Timestamp } from "../../api/canonical-projection.js"
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
-import { eventOrganizations, eventSessions, legislativeEvents } from "../schema/schema.js"
+import { eventBills, eventOrganizations, eventSessions, legislativeEvents, organizations } from "../schema/schema.js"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100
@@ -9,11 +10,16 @@ const MAX_LIMIT = 100
 export type MeetingSort = "starts-asc" | "starts-desc" | "updated-desc"
 
 export interface MeetingListInput {
+  billId?: string
+  calendarId?: string
   classification?: "hearing" | "meeting" | "other" | "session"
   cursor?: string
   from?: string
   jurisdictionId?: string
+  isRemote?: boolean
   limit?: number
+  /** Internal singular lookup constraint; public callers use the path route. */
+  meetingId?: string
   organizationId?: string
   sessionId?: string
   sort?: MeetingSort
@@ -49,6 +55,8 @@ export interface MeetingRead extends MeetingPersistenceRead {
   sessionIds: string[]
 }
 
+export type MeetingOrganizationRead = typeof organizations.$inferSelect
+
 export interface MeetingPage {
   items: MeetingRead[]
   nextCursor?: string
@@ -56,9 +64,13 @@ export interface MeetingPage {
 }
 
 type MeetingCursorScope = {
+  billId: string | null
+  calendarId: string | null
   classification: MeetingListInput["classification"] | null
   from: string | null
   jurisdictionId: string | null
+  isRemote: boolean | null
+  meetingId: string | null
   organizationId: string | null
   sessionId: string | null
   sort: MeetingSort
@@ -129,6 +141,52 @@ export async function listMeetings(database: LegislationDatabase, input: Meeting
   }
 }
 
+/**
+ * A singular meeting uses precisely the same visibility boundary as the
+ * collection. Incomplete legacy snapshots are therefore indistinguishable
+ * from a missing public resource rather than being projected with invented
+ * facts.
+ */
+export async function getMeetingRead(database: LegislationDatabase, meetingId: string): Promise<MeetingRead> {
+  const id = optionalId(meetingId, "meetingId")
+  if (id === null) {
+    throw new LegislationError("invalid_request", "meetingId must be between 1 and 256 characters")
+  }
+  const rows = await buildMeetingListQuery(database, { limit: 1, meetingId: id })
+  const row = rows[0]
+  if (row === undefined) {
+    throw new LegislationError("not_found", `Meeting ${id} was not found`)
+  }
+  const relations = await relationIds(database, [row.id])
+  return {
+    ...row,
+    organizationIds: relations.organizations.get(row.id) ?? [],
+    sessionIds: relations.sessions.get(row.id) ?? []
+  }
+}
+
+/** Meeting organizations are a bounded, source-complete relationship set. */
+export async function listMeetingOrganizations(
+  database: LegislationDatabase,
+  meetingId: string
+): Promise<MeetingOrganizationRead[]> {
+  const id = optionalId(meetingId, "meetingId")
+  if (id === null) {
+    throw new LegislationError("invalid_request", "meetingId must be between 1 and 256 characters")
+  }
+  const rows = await database
+    .select()
+    .from(eventOrganizations)
+    .innerJoin(organizations, eq(eventOrganizations.organizationId, organizations.id))
+    .where(eq(eventOrganizations.eventId, id))
+    .orderBy(asc(organizations.name), asc(organizations.id))
+    .limit(51)
+  if (rows.length > 50) {
+    throw new LegislationError("unprocessable", "meeting organization set exceeds the public maximum of 50")
+  }
+  return rows.map((row) => row.organizations)
+}
+
 function meetingVisibility(scope: MeetingCursorScope): [SQL, ...SQL[]] {
   return [
     eq(legislativeEvents.isDeleted, false),
@@ -136,11 +194,17 @@ function meetingVisibility(scope: MeetingCursorScope): [SQL, ...SQL[]] {
     eq(legislativeEvents.sessionRelationsComplete, true),
     eq(legislativeEvents.organizationRelationsComplete, true),
     eq(legislativeEvents.provenanceComplete, true),
+    scope.meetingId === null ? undefined : eq(legislativeEvents.id, scope.meetingId),
+    scope.calendarId === null ? undefined : unsupportedCalendarScope(),
     scope.jurisdictionId === null ? undefined : eq(legislativeEvents.jurisdictionId, scope.jurisdictionId),
     scope.classification === null ? undefined : sql`${legislativeEvents.classification} = ${scope.classification}`,
     scope.status === null ? undefined : sql`${legislativeEvents.status} = ${scope.status}`,
-    scope.from === null ? undefined : gte(legislativeEvents.publisherLocalDate, scope.from),
-    scope.to === null ? undefined : lte(legislativeEvents.publisherLocalDate, scope.to),
+    scope.from === null ? undefined : lowerDateBound(scope.from),
+    scope.to === null ? undefined : upperDateBound(scope.to),
+    scope.isRemote === null ? undefined : eq(legislativeEvents.isRemote, scope.isRemote),
+    scope.billId === null
+      ? undefined
+      : sql`exists (select 1 from ${eventBills} where ${eventBills.eventId} = ${legislativeEvents.id} and ${eventBills.billId} = ${scope.billId})`,
     scope.organizationId === null
       ? undefined
       : sql`exists (select 1 from ${eventOrganizations} where ${eventOrganizations.eventId} = ${legislativeEvents.id} and ${eventOrganizations.organizationId} = ${scope.organizationId})`,
@@ -148,6 +212,23 @@ function meetingVisibility(scope: MeetingCursorScope): [SQL, ...SQL[]] {
       ? undefined
       : sql`exists (select 1 from ${eventSessions} where ${eventSessions.eventId} = ${legislativeEvents.id} and ${eventSessions.sessionId} = ${scope.sessionId})`
   ].filter((value): value is SQL => value !== undefined) as [SQL, ...SQL[]]
+}
+
+function lowerDateBound(value: string): SQL {
+  return isIsoDate(value)
+    ? gte(legislativeEvents.publisherLocalDate, value)
+    : gte(legislativeEvents.startAt, new Date(value))
+}
+
+function upperDateBound(value: string): SQL {
+  return isIsoDate(value)
+    ? lte(legislativeEvents.publisherLocalDate, value)
+    : lte(legislativeEvents.startAt, new Date(value))
+}
+
+/** Calendar entries have no authoritative event relationship, so no guessed association is exposed. */
+function unsupportedCalendarScope(): SQL {
+  return sql`false`
 }
 
 function cursorPredicate(
@@ -209,15 +290,19 @@ async function relationIds(database: LegislationDatabase, eventIds: readonly str
 }
 
 function cursorScope(input: MeetingListInput): MeetingCursorScope {
-  const from = input.from === undefined ? null : isoDate(input.from, "from")
-  const to = input.to === undefined ? null : isoDate(input.to, "to")
-  if (from !== null && to !== null && from > to) {
+  const from = input.from === undefined ? null : dateOrTimestamp(input.from, "from")
+  const to = input.to === undefined ? null : dateOrTimestamp(input.to, "to")
+  if (from !== null && to !== null && comparableDateValue(from) > comparableDateValue(to)) {
     throw new LegislationError("invalid_request", "from must not be after to")
   }
   return {
+    billId: optionalId(input.billId, "billId"),
+    calendarId: optionalId(input.calendarId, "calendarId"),
     classification: input.classification ?? null,
     from,
     jurisdictionId: optionalId(input.jurisdictionId, "jurisdictionId"),
+    isRemote: input.isRemote ?? null,
+    meetingId: optionalId(input.meetingId, "meetingId"),
     organizationId: optionalId(input.organizationId, "organizationId"),
     sessionId: optionalId(input.sessionId, "sessionId"),
     sort: input.sort ?? "starts-asc",
@@ -294,19 +379,15 @@ function optionalId(value: string | undefined, name: string): string | null {
   return normalized
 }
 
-function isoDate(value: string, name: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
-  if (match === null) {
-    throw new LegislationError("invalid_request", `${name} must be an ISO date`)
+function dateOrTimestamp(value: string, name: string): string {
+  if (isIsoDate(value) || isRfc3339Timestamp(value)) {
+    return value
   }
-  const year = Number(match[1])
-  const month = Number(match[2])
-  const day = Number(match[3])
-  const parsed = new Date(Date.UTC(year, month - 1, day))
-  if (parsed.getUTCFullYear() !== year || parsed.getUTCMonth() !== month - 1 || parsed.getUTCDate() !== day) {
-    throw new LegislationError("invalid_request", `${name} must be an ISO date`)
-  }
-  return value
+  throw new LegislationError("invalid_request", `${name} must be an ISO date or RFC 3339 timestamp`)
+}
+
+function comparableDateValue(value: string): number {
+  return isIsoDate(value) ? Date.parse(`${value}T00:00:00.000Z`) : new Date(value).valueOf()
 }
 
 function invalidCursor(): LegislationError {

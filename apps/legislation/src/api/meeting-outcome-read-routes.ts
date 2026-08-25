@@ -90,7 +90,7 @@ function projectPage(page: MeetingOutcomePage, apiBaseUrl: string) {
   return { ...page, items: page.items.map((item) => projectMeetingOutcomeRead(item, apiBaseUrl)) }
 }
 
-function projectMeetingOutcomeRead(outcome: MeetingOutcomeRead, apiBaseUrl: string) {
+export function projectMeetingOutcomeRead(outcome: MeetingOutcomeRead, apiBaseUrl: string) {
   return projectMeetingOutcome(
     {
       agendaItemId: outcome.agendaItemId,

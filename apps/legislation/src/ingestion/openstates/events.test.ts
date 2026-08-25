@@ -24,11 +24,13 @@ describe("Open States event normalization", () => {
         ],
         end_date: "",
         id: "ocd-event/example",
+        is_remote: true,
         location: { name: "State Capitol", url: "https://example.test/watch" },
         name: "Rules",
         participants: [{ entity_type: "committee", name: "Rules", note: "host" }],
         start_date: "2026-08-17T07:00:00+00:00",
         status: "confirmed",
+        timezone: "America/Los_Angeles",
         upstream_id: ""
       },
       { jurisdictionCode: "ca" }
@@ -38,7 +40,9 @@ describe("Open States event normalization", () => {
       allDay: true,
       id: "event:openstates:ocd-event-example",
       jurisdictionId: "jurisdiction:ca",
+      isRemote: true,
       status: "scheduled",
+      timezone: "America/Los_Angeles",
       virtualAccess: { url: "https://example.test/watch" }
     })
     expect(snapshot.event.endAt).toBeUndefined()

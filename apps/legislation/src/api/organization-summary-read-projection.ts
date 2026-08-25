@@ -1,7 +1,6 @@
 import type { OrganizationRow } from "../db/queries/organization-relationships.js"
 import { LegislationError } from "../legislation/errors.js"
-import { projectOrganizationSummary, type OrganizationSummary } from "./canonical-projection.js"
-import { sourceProjectionContext } from "./canonical-read.js"
+import { projectOrganizationSummary, type OrganizationSummary, type ProjectionContext } from "./canonical-projection.js"
 
 export function projectOrganizationRow(
   row: OrganizationRow,
@@ -11,7 +10,7 @@ export function projectOrganizationRow(
   if (expectedJurisdictionId !== undefined && row.jurisdictionId !== expectedJurisdictionId) {
     throw new LegislationError("unprocessable", "organization does not belong to its jurisdiction path")
   }
-  const source = canonicalSource(row, "organization")
+  const source = canonicalSource(row, "organization", apiBaseUrl)
   return projectOrganizationSummary(
     {
       chamber: canonicalChamber(row.chamber),
@@ -21,13 +20,13 @@ export function projectOrganizationRow(
       jurisdictionId: requiredText(row.jurisdictionId, "organization jurisdictionId"),
       name: requiredText(row.name, "organization name"),
       parentOrganizationId: row.parentOrganizationId,
-      sourceUrl: source.sourceUrl
+      sourceUrl: requiredText(row.sourceUrl, "organization sourceUrl")
     },
-    sourceProjectionContext(source, apiBaseUrl)
+    source
   )
 }
 
-function canonicalSource(row: OrganizationRow, name: string) {
+function canonicalSource(row: OrganizationRow, name: string, apiBaseUrl: string): ProjectionContext {
   if (
     !row.provenanceComplete ||
     row.sourceIsOfficial === null ||
@@ -38,12 +37,17 @@ function canonicalSource(row: OrganizationRow, name: string) {
     throw new LegislationError("unprocessable", `${name} canonical provenance is incomplete`)
   }
   return {
-    createdAt: row.createdAt,
-    id: row.id,
-    sourceUpdatedAt: row.sourceUpdatedAt,
-    sourceUrl: row.sourceUrl,
-    updatedAt: row.updatedAt,
-    upstreamIds: row.upstreamIds
+    apiBaseUrl,
+    sources: [
+      {
+        isOfficial: row.sourceIsOfficial,
+        provider: row.sourceProvider,
+        retrievedAt: row.sourceRetrievedAt,
+        sourceUpdatedAt: row.sourceUpdatedAt,
+        sourceUrl: row.sourceUrl
+      }
+    ],
+    updatedAt: row.updatedAt
   }
 }
 

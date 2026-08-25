@@ -62,6 +62,8 @@ import { createMeetingDocumentReadApiHandler } from "./meeting-document-read-rou
 import { createMeetingOutcomeReadApiHandler } from "./meeting-outcome-read-routes.js"
 import { createMeetingParticipantListApiHandler } from "./meeting-participant-list-routes.js"
 import { createMeetingParticipantReadApiHandler } from "./meeting-participant-read-routes.js"
+import { createMeetingReadRepository } from "./meeting-read-repository.js"
+import { createMeetingReadApiHandler } from "./meeting-read-routes.js"
 import { createOrganizationBillReadApiHandler } from "./organization-bill-read-routes.js"
 import { createOrganizationDetailReadRepository } from "./organization-detail-read-repository.js"
 import { createOrganizationDetailReadApiHandler } from "./organization-detail-read-routes.js"
@@ -188,6 +190,16 @@ export function createLegislationApiHandler(
             options
           ),
           createJurisdictionReadApiHandler(createJurisdictionReadRepository(documentDatabase), options),
+          createMeetingReadApiHandler(
+            {
+              ...createMeetingReadRepository(documentDatabase),
+              listMeetingAgenda: async (input) => await listMeetingAgenda(documentDatabase, input),
+              listMeetingDocuments: async (input) => await listMeetingDocuments(documentDatabase, input),
+              listMeetingOutcomes: async (input) => await listMeetingOutcomes(documentDatabase, input),
+              listMeetingParticipants: async (input) => await listMeetingParticipants(documentDatabase, input)
+            },
+            options
+          ),
           createMeetingAgendaReadApiHandler(
             {
               assertMeetingExists: async (meetingId) =>

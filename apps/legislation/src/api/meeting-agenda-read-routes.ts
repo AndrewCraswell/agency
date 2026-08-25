@@ -82,14 +82,14 @@ async function handleItem(
     agendaItemId: route.agendaItemId,
     meetingId: route.meetingId
   })
-  sendApiJson(response, 200, apiResource(request, projectAgendaItemRead(item, apiBaseUrl)))
+  sendApiJson(response, 200, apiResource(request, projectMeetingAgendaItemRead(item, apiBaseUrl)))
 }
 
 function projectPage(page: MeetingAgendaPage, apiBaseUrl: string) {
-  return { ...page, items: page.items.map((item) => projectAgendaItemRead(item, apiBaseUrl)) }
+  return { ...page, items: page.items.map((item) => projectMeetingAgendaItemRead(item, apiBaseUrl)) }
 }
 
-function projectAgendaItemRead(item: MeetingAgendaItemRead, apiBaseUrl: string) {
+export function projectMeetingAgendaItemRead(item: MeetingAgendaItemRead, apiBaseUrl: string) {
   return projectAgendaItem(
     {
       amendmentIds: item.amendmentIds,

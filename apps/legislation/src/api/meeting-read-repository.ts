@@ -1,6 +1,14 @@
 import { eq } from "drizzle-orm"
 import type { LegislationDatabase } from "../db/database.js"
-import { listMeetings, type MeetingListInput, type MeetingPage } from "../db/queries/meeting-read.js"
+import {
+  getMeetingRead,
+  listMeetings,
+  listMeetingOrganizations,
+  type MeetingListInput,
+  type MeetingOrganizationRead,
+  type MeetingPage,
+  type MeetingRead
+} from "../db/queries/meeting-read.js"
 import { jurisdictions, legislativeSessions, organizations } from "../db/schema/schema.js"
 import { LegislationError } from "../legislation/errors.js"
 
@@ -11,6 +19,8 @@ export interface MeetingReadRepository {
   assertJurisdictionExists(jurisdictionId: string): Promise<void>
   assertOrganizationExists(organizationId: string): Promise<void>
   assertSessionExists(sessionId: string): Promise<void>
+  getMeetingRead(meetingId: string): Promise<MeetingRead>
+  listMeetingOrganizations(meetingId: string): Promise<MeetingOrganizationRead[]>
   listMeetings(input: MeetingCollectionInput): Promise<MeetingCollectionPage>
 }
 
@@ -19,6 +29,8 @@ export function createMeetingReadRepository(database: LegislationDatabase): Meet
     assertJurisdictionExists: async (id) => await assertExists(database, jurisdictions, id, "Jurisdiction"),
     assertOrganizationExists: async (id) => await assertExists(database, organizations, id, "Organization"),
     assertSessionExists: async (id) => await assertExists(database, legislativeSessions, id, "Session"),
+    getMeetingRead: async (id) => await getMeetingRead(database, id),
+    listMeetingOrganizations: async (id) => await listMeetingOrganizations(database, id),
     listMeetings: async (input) => await listMeetings(database, input)
   }
 }

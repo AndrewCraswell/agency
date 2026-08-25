@@ -42,6 +42,15 @@ describe("organization summary projection", () => {
       classification: "committee",
       isActive: true,
       jurisdictionId: "jurisdiction:ca",
+      sources: [
+        {
+          isOfficial: true,
+          provider: "openstates",
+          retrievedAt: "2026-08-20T15:00:00.000Z",
+          sourceUpdatedAt: "2026-08-20T14:00:00.000Z",
+          sourceUrl: "https://openstates.org/ca/organizations/rules"
+        }
+      ],
       type: "organization"
     })
   })

@@ -66,21 +66,23 @@ async function handleMeetingDocumentRequest(
 function projectPage(page: MeetingDocumentPage<MeetingDocumentRead>, apiBaseUrl: string) {
   return {
     ...page,
-    items: page.items.map((item) =>
-      projectEventDocument(
-        {
-          classification: item.classification,
-          documentId: item.documentId,
-          id: item.id,
-          materialId: item.materialId,
-          meetingId: item.meetingId,
-          sourceUrl: item.sourceUrl,
-          title: item.title
-        },
-        sourceProjectionContext(item, apiBaseUrl)
-      )
-    )
+    items: page.items.map((item) => projectMeetingDocumentRead(item, apiBaseUrl))
   }
+}
+
+export function projectMeetingDocumentRead(item: MeetingDocumentRead, apiBaseUrl: string) {
+  return projectEventDocument(
+    {
+      classification: item.classification,
+      documentId: item.documentId,
+      id: item.id,
+      materialId: item.materialId,
+      meetingId: item.meetingId,
+      sourceUrl: item.sourceUrl,
+      title: item.title
+    },
+    sourceProjectionContext(item, apiBaseUrl)
+  )
 }
 
 function routeMatch(method: string | undefined, pathname: string): string | undefined {

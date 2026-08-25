@@ -62,6 +62,7 @@ const eventSchema = z
     documents: z.array(documentSchema).default([]),
     end_date: optionalString,
     id: z.string().trim().min(1),
+    is_remote: z.boolean().optional(),
     location: z
       .object({ address: optionalString, name: optionalString, room: optionalString, url: optionalString })
       .passthrough()
@@ -71,6 +72,7 @@ const eventSchema = z
     sources: z.array(z.object({ url: z.string().trim().min(1) }).passthrough()).default([]),
     start_date: z.string().trim().min(1),
     status: z.string().trim().min(1),
+    timezone: optionalString,
     upstream_id: optionalString,
     updated_at: optionalString
   })
@@ -219,7 +221,7 @@ export function normalizeOpenStatesEvent(
       description: source.description,
       endAt: optionalSourceDate(source.end_date, "end_date"),
       id: canonicalEventId,
-      isRemote: undefined,
+      isRemote: source.is_remote,
       isDeleted: source.deleted,
       jurisdictionId: jurisdictionId(context.jurisdictionCode),
       location: sourceDeclaredLocation(source.location),
@@ -236,6 +238,7 @@ export function normalizeOpenStatesEvent(
       startAt,
       status: canonicalEventStatus(source.status),
       sessionRelationsComplete: false,
+      timezone: source.timezone,
       upstreamIds: {
         openstates: source.id,
         ...(source.upstream_id === undefined ? {} : { provider: source.upstream_id })

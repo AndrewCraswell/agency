@@ -58,7 +58,13 @@ function service(): MeetingReadApi {
     assertJurisdictionExists: async () => undefined,
     assertOrganizationExists: async () => undefined,
     assertSessionExists: async () => undefined,
-    listMeetings: async () => ({ items: [meeting()], truncated: false })
+    getMeetingRead: async () => meeting(),
+    listMeetingAgenda: async () => ({ items: [], truncated: false }),
+    listMeetingDocuments: async () => ({ items: [], truncated: false }),
+    listMeetings: async () => ({ items: [meeting()], truncated: false }),
+    listMeetingOrganizations: async () => [],
+    listMeetingOutcomes: async () => ({ items: [], truncated: false }),
+    listMeetingParticipants: async () => ({ items: [], truncated: false })
   }
 }
 
@@ -78,9 +84,12 @@ describe("meeting read API handler", () => {
 
     expect(response.status).toBe(200)
     expect(received).toEqual({
+      billId: undefined,
+      calendarId: undefined,
       classification: "meeting",
       cursor: undefined,
       from: "2026-08-01",
+      isRemote: undefined,
       jurisdictionId: "jurisdiction:wa",
       limit: 1,
       organizationId: "organization:openstates:rules",
@@ -126,11 +135,16 @@ describe("meeting read API handler", () => {
     expect(invalid.status).toBe(400)
   })
 
-  it("returns parent 404s and leaves the incomplete global collection unregistered", async () => {
+  it("returns parent 404s and serves the global collection with documented filters", async () => {
+    let received: unknown
     const baseUrl = await startServer({
       ...service(),
       assertOrganizationExists: async () => {
         throw new LegislationError("not_found", "Organization organization:missing was not found")
+      },
+      listMeetings: async (input) => {
+        received = input
+        return { items: [meeting()], truncated: false }
       }
     })
     const missing = await fetch(`${baseUrl}/api/organizations/organization%3Amissing/meetings`, {
@@ -140,6 +154,43 @@ describe("meeting read API handler", () => {
     await expect(missing.json()).resolves.toMatchObject({
       error: { category: "not_found", correlationId: "missing-parent" }
     })
-    expect((await fetch(`${baseUrl}/api/meetings`)).status).toBe(404)
+    const global = await fetch(
+      `${baseUrl}/api/meetings?billId=bill%3A1&calendarId=calendar%3A1&isRemote=false&jurisdictionId=jurisdiction%3Awa`
+    )
+    expect(global.status).toBe(200)
+    expect(received).toMatchObject({
+      billId: "bill:1",
+      calendarId: "calendar:1",
+      isRemote: false,
+      jurisdictionId: "jurisdiction:wa"
+    })
+  })
+
+  it("serves a bounded canonical detail and rejects encoded route literals or malformed IDs", async () => {
+    let childLimit: number | undefined
+    const baseUrl = await startServer({
+      ...service(),
+      listMeetingAgenda: async (input) => {
+        childLimit = input.limit
+        return { items: [], nextCursor: "agenda-next", truncated: true }
+      }
+    })
+    const detail = await fetch(`${baseUrl}/api/meetings/event%3Aopenstates%3Arules-1?childLimit=2`, {
+      headers: { "x-correlation-id": "meeting-detail" }
+    })
+    expect(detail.status).toBe(200)
+    expect(childLimit).toBe(2)
+    await expect(detail.json()).resolves.toMatchObject({
+      data: {
+        childPageInfo: {
+          agenda: { limit: 2, nextCursor: "agenda-next", truncated: true },
+          documents: { limit: 2, nextCursor: null, truncated: false }
+        },
+        type: "meeting"
+      },
+      meta: { correlationId: "meeting-detail" }
+    })
+    expect((await fetch(`${baseUrl}/%61pi/meetings/event%3Aopenstates%3Arules-1`)).status).toBe(404)
+    expect((await fetch(`${baseUrl}/api/meetings/%`)).status).toBe(400)
   })
 })
