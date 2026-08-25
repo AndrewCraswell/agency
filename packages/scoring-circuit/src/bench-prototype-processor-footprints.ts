@@ -28,6 +28,14 @@ import {
   validateBp031032C0603C104K3RactuFootprintEvidence
 } from "./bp031-032-c0603c104k3ractu-footprint-evidence.js"
 import {
+  bp032Ftsh10501LDv007KFootprintEvidence,
+  validateBp032Ftsh10501LDv007KFootprintEvidence
+} from "./bp032-ftsh-105-01-l-dv-007-k-footprint.js"
+import {
+  bp032ResetSupportFootprintEvidence,
+  validateBp032ResetSupportFootprintEvidence
+} from "./bp032-reset-support-footprints.js"
+import {
   bp032TdkC1608CapacitorFootprintEvidence,
   bp032TdkC1608FootprintEvidenceFor
 } from "./bp032-tdk-c1608-capacitor-footprint-evidence.js"
@@ -299,10 +307,61 @@ const evidence = (mpn: string | null, reference: string | null = null) => ({
       ? null
       : mpn === "C0603C104K3RACTU"
         ? bp031032C0603C104K3RactuFootprintEvidenceFor(mpn, reference)
-        : mpn === "C1608X5R1A105K080AC"
-          ? bp032TdkC1608FootprintEvidenceFor(mpn, reference)
-          : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
+        : mpn === "SN74LVC2G07DCKR" || mpn === "BSS138AKA"
+          ? resetSupportFootprintEvidenceFor(mpn, reference)
+          : mpn === "FTSH-105-01-L-DV-007-K"
+            ? ftshFootprintEvidenceFor(mpn, reference)
+            : mpn === "C1608X5R1A105K080AC"
+              ? bp032TdkC1608FootprintEvidenceFor(mpn, reference)
+              : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
 })
+
+function resetSupportFootprintEvidenceFor(mpn: string, reference: string) {
+  const part = bp032ResetSupportFootprintEvidence.parts.find(
+    (candidate) =>
+      candidate.manufacturerPartNumber === mpn && candidate.affectedReferences.some((item) => item === reference)
+  )
+  if (part === undefined) return null
+  return {
+    artifactKind: bp032ResetSupportFootprintEvidence.artifactKind,
+    exactMpn: mpn,
+    reference,
+    sourceId: mpn === "SN74LVC2G07DCKR" ? "ti-sn74lvc2g07-datasheet" : "nexperia-bss138aka-datasheet",
+    sourceArtifactPath: part.source.artifactPath,
+    sourceSha256: part.source.sha256,
+    upstreamContract: "BP-123",
+    projectFootprintId: `${mpn.toLowerCase()}-project-review`,
+    manufacturerCad: part.manufacturerCad.state,
+    manufacturerLandPattern: "retained-manufacturer-guidance",
+    artwork: part.artwork.state,
+    orientation: part.projectFootprint.orientation.state,
+    releaseState: bp032ResetSupportFootprintEvidence.releaseState,
+    fabricationAuthority: bp032ResetSupportFootprintEvidence.fabricationAuthority,
+    accepted: bp032ResetSupportFootprintEvidence.accepted
+  } as const
+}
+
+function ftshFootprintEvidenceFor(mpn: string, reference: string) {
+  const candidate = bp032Ftsh10501LDv007KFootprintEvidence
+  if (mpn !== candidate.connector.manufacturerPartNumber || reference !== candidate.reference) return null
+  return {
+    artifactKind: candidate.artifactKind,
+    exactMpn: mpn,
+    reference,
+    sourceId: "samtec-ftsh-105-01-l-dv-007-k-primary-set",
+    sourceArtifactPaths: candidate.manufacturerLandPattern.sourceDocuments.map((source) => source.artifactPath),
+    sourceSha256s: candidate.manufacturerLandPattern.sourceDocuments.map((source) => source.sha256),
+    upstreamContract: "BP-124",
+    projectFootprintId: "ftsh-105-01-l-dv-007-k-project-review",
+    manufacturerCad: candidate.manufacturerCad.state,
+    manufacturerLandPattern: candidate.manufacturerLandPattern.authority,
+    artwork: candidate.projectFootprint.artwork.state,
+    orientation: candidate.projectFootprint.pinOne.orientationStatus,
+    releaseState: candidate.releaseState,
+    fabricationAuthority: candidate.fabricationAuthority,
+    accepted: candidate.accepted
+  } as const
+}
 
 const resetLedger = benchPrototypeResetWatchdog.parts.map((part) => ({
   reference: part.reference,
@@ -504,7 +563,7 @@ const definition = {
       package: "2x5 1.27 mm surface-mount keyed header",
       population: "DNP-until-footprint-and-mating-evidence",
       source: "BP-124 STM32 service header",
-      evidence: evidence("FTSH-105-01-L-DV-007-K")
+      evidence: evidence("FTSH-105-01-L-DV-007-K", "J_STM_SWD")
     },
     {
       reference: "J_ESP_SERVICE",
@@ -628,6 +687,12 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   if (validateBp031032C0603C104K3RactuFootprintEvidence().length !== 0) {
     throw new RangeError("BP-032 C0603C104K3RACTU project-review candidate drifted")
   }
+  if (validateBp032ResetSupportFootprintEvidence().length !== 0) {
+    throw new RangeError("BP-032 reset-support project-review candidates drifted")
+  }
+  if (validateBp032Ftsh10501LDv007KFootprintEvidence().length !== 0) {
+    throw new RangeError("BP-032 FTSH service-header project-review candidate drifted")
+  }
   validateBenchPrototypeProcessorFootprintsRetainedManufacturerSources(retainedManufacturerPrimarySources)
   if (!sameDataGraph(value, benchPrototypeProcessorFootprints))
     throw new RangeError("BP-032 ledger must exactly match the reviewed canonical decision")
@@ -668,6 +733,10 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
     (entry) => entry.reference === "C_ESP_EN_DELAY" && entry.selectedMpn === "C1608X5R1A105K080AC"
   )
   const kemetResetRows = ledger.populatedReferences.filter((entry) => entry.mpn === "C0603C104K3RACTU")
+  const resetSupportRows = ledger.populatedReferences.filter((entry) =>
+    ["SN74LVC2G07DCKR", "BSS138AKA"].includes(entry.mpn)
+  )
+  const ftshRows = ledger.debugReferences.filter((entry) => entry.mpn === "FTSH-105-01-L-DV-007-K")
   if (
     new Set(references.map((entry) => entry.reference)).size !== references.length ||
     ledger.populatedReferences.some(
@@ -749,6 +818,28 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
         row.evidence.footprintEvidence?.accepted
       )
     }) ||
+    resetSupportRows.length !== 3 ||
+    resetSupportRows.some(
+      (row) =>
+        row.evidence.footprintEvidence === null ||
+        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
+        row.evidence.footprintEvidence.reference !== row.reference ||
+        row.evidence.footprintEvidence.upstreamContract !== "BP-123" ||
+        row.evidence.footprintEvidence.releaseState !== "deny" ||
+        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
+        row.evidence.footprintEvidence.accepted
+    ) ||
+    ftshRows.length !== 1 ||
+    ftshRows.some(
+      (row) =>
+        row.evidence.footprintEvidence === null ||
+        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
+        row.evidence.footprintEvidence.reference !== row.reference ||
+        row.evidence.footprintEvidence.upstreamContract !== "BP-124" ||
+        row.evidence.footprintEvidence.releaseState !== "deny" ||
+        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
+        row.evidence.footprintEvidence.accepted
+    ) ||
     ledger.processorSupportReferences
       .filter((entry) => entry.reconciliation === "selected-by-BP-123")
       .some(

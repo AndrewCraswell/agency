@@ -208,7 +208,7 @@ describe("BP-035 lane BOM convergence", () => {
         ?.footprintEvidenceState
 
     expect(stateCounts("BP-031")).toEqual({ "reviewed-unapproved": 84, "not-started": 29 })
-    expect(stateCounts("BP-032")).toEqual({ "not-started": 26, "reviewed-unapproved": 25 })
+    expect(stateCounts("BP-032")).toEqual({ "not-started": 22, "reviewed-unapproved": 29 })
     expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 51, "not-started": 50 })
     expect(stateFor("BP-031", "U_SAR_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-031", "U_OVP_BUFFER_1")).toBe("reviewed-unapproved")
@@ -219,6 +219,9 @@ describe("BP-035 lane BOM convergence", () => {
     expect(stateFor("BP-031", "C_REF_REG_HF_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-032", "C_ESP_EN_DELAY")).toBe("reviewed-unapproved")
     expect(stateFor("BP-032", "C_STM_SUPERVISOR_CT")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-032", "U_APP_RESET_FANOUT")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-032", "Q_ESP_RESET_STM")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-032", "J_STM_SWD")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "J_USB_C")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "U_USB_PD")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "U_USB_PORT_PROTECT")).toBe("reviewed-unapproved")

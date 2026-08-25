@@ -264,6 +264,30 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
     }
   })
 
+  it("binds the reset-support and keyed SWD rows to review-only evidence", () => {
+    for (const reference of ["U_APP_RESET_FANOUT", "Q_ESP_RESET_STM", "Q_ESP_DEBUG_RESET"]) {
+      const row = benchPrototypeProcessorFootprints.populatedReferences.find((entry) => entry.reference === reference)
+      expect(row?.evidence.footprintEvidence).toMatchObject({
+        exactMpn: row?.mpn,
+        reference,
+        upstreamContract: "BP-123",
+        releaseState: "deny",
+        fabricationAuthority: "deny",
+        accepted: false
+      })
+    }
+
+    const swd = benchPrototypeProcessorFootprints.debugReferences.find((entry) => entry.reference === "J_STM_SWD")
+    expect(swd?.evidence.footprintEvidence).toMatchObject({
+      exactMpn: "FTSH-105-01-L-DV-007-K",
+      reference: "J_STM_SWD",
+      upstreamContract: "BP-124",
+      releaseState: "deny",
+      fabricationAuthority: "deny",
+      accepted: false
+    })
+  })
+
   it("rejects substitutions, premature artwork, clock population, and release escalation", () => {
     for (const mutate of [
       (candidate: any) => (candidate.populatedReferences[0].mpn = "STM32G474RBT3TR"),
