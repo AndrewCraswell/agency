@@ -12,6 +12,7 @@ export type PrototypeBomSource = {
     | "component-decision"
     | "ethernet-support-network"
     | "ir-receiver-selection"
+    | "processor-support"
     | "usb-pd-footprint"
   readonly url: string
 }
@@ -77,6 +78,29 @@ const packageByMpn = {
   TPS25730ADREFR: "VQFN-38 (REF), 6mm x 4mm",
   TPS259474ARPWR: "VQFN-HR-10 (RPW), 2mm x 2mm"
 } as const
+
+function selectedSupportRow(
+  reference: string,
+  functionName: string,
+  manufacturer: string,
+  mpn: string,
+  packageName: string,
+  sourceUrl: string,
+  notes: string
+): BenchPrototypeBomRow {
+  return {
+    reference,
+    function: functionName,
+    disposition: "selected",
+    quantity: 1,
+    manufacturer,
+    mpn,
+    lifecycle: "active-preferred",
+    package: packageName,
+    source: { kind: "processor-support", url: sourceUrl },
+    notes
+  }
+}
 
 function dnpRow(reference: string, functionName: string, notes: string): BenchPrototypeBomRow {
   return {
@@ -363,6 +387,51 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "ESP32-S3-WROOM-1U-N16R2",
       "Sole P0 scoring and application controller",
       "Runs the target adapter and portable C17 core plus Ethernet, IR, display, USB, persistence, and recovery services."
+    ),
+    selectedSupportRow(
+      "R_ESP_BOOT_PULLUP",
+      "ESP32 GPIO0 boot-mode pull-up",
+      "Yageo",
+      "RC0603FR-0710KL",
+      "0603 (1608 metric)",
+      "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL",
+      "Required to keep GPIO0 out of the ROM download mode unless the recovery fixture deliberately pulls it low."
+    ),
+    selectedSupportRow(
+      "R_ESP_EN_PULLUP",
+      "ESP32 enable/reset pull-up",
+      "Yageo",
+      "RC0603FR-0710KL",
+      "0603 (1608 metric)",
+      "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL",
+      "Required open-drain reset bias; supervisor, watchdog, manual reset, and recovery fixture may only pull EN low."
+    ),
+    selectedSupportRow(
+      "C_ESP_EN_DELAY",
+      "ESP32 enable/reset delay capacitor",
+      "TDK",
+      "C1608X5R1A105K080AC",
+      "0603 (1608 metric)",
+      "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/0000?part_no=C1608X5R1A105K080AC",
+      "Required 1 uF EN capacitor; release timing must be verified with the final supervisor and 3.3 V rail."
+    ),
+    selectedSupportRow(
+      "C_ESP_3V3_HF",
+      "ESP32 local high-frequency bypass",
+      "Murata",
+      "GCM188R71H104KA57D",
+      "0603 (1608 metric)",
+      "https://www.murata.com/en-us/products/productdetail?partno=GCM188R71H104KA57D",
+      "Required 100 nF local module bypass; place at the ESP32 3.3 V entry with a direct APP_GND return."
+    ),
+    selectedSupportRow(
+      "C_ESP_3V3_BULK",
+      "ESP32 local bulk decoupling",
+      "Murata",
+      "GCM32EC71A476KE02L",
+      "1210 (3225 metric)",
+      "https://www.murata.com/en-us/products/productdetail?partno=GCM32EC71A476KE02L",
+      "Required 47 uF nominal local reservoir; effective capacitance and rail transient behavior remain BP-125 evidence gates."
     ),
     dnpRow("U_ISO_MAIN", "Superseded main processor isolator", "Removed because P0 has one processor domain."),
     dnpRow("U_ISO_AUX", "Superseded auxiliary processor isolator", "Removed because P0 has one processor domain."),
@@ -690,6 +759,7 @@ function parseRow(value: unknown, index: number, seen: WeakSet<object>): ParsedB
     sourceKind !== "component-decision" &&
     sourceKind !== "ethernet-support-network" &&
     sourceKind !== "ir-receiver-selection" &&
+    sourceKind !== "processor-support" &&
     sourceKind !== "usb-pd-footprint"
   ) {
     throw new RangeError(`${path}.source.kind is not recognized`)

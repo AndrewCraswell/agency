@@ -14,6 +14,11 @@ describe("bench prototype BOM baseline", () => {
     )
     expect(Object.fromEntries(selectedByReference)).toMatchObject({
       U_APP: "ESP32-S3-WROOM-1U-N16R2",
+      R_ESP_BOOT_PULLUP: "RC0603FR-0710KL",
+      R_ESP_EN_PULLUP: "RC0603FR-0710KL",
+      C_ESP_EN_DELAY: "C1608X5R1A105K080AC",
+      C_ESP_3V3_HF: "GCM188R71H104KA57D",
+      C_ESP_3V3_BULK: "GCM32EC71A476KE02L",
       U_REF: "REF5025AQDRQ1",
       U_W5500: "W5500",
       J_ETH: "7499011121A",
@@ -63,6 +68,12 @@ describe("bench prototype BOM baseline", () => {
         quantity: 0
       })
     }
+  })
+
+  it("makes every populated ESP32 support part explicit", () => {
+    expect(
+      benchPrototypeBom.rows.filter((row) => row.source?.kind === "processor-support").map((row) => row.reference)
+    ).toEqual(["R_ESP_BOOT_PULLUP", "R_ESP_EN_PULLUP", "C_ESP_EN_DELAY", "C_ESP_3V3_HF", "C_ESP_3V3_BULK"])
   })
 
   it("keeps CC/SBU and USB 2.0 protection ownership distinct", () => {
