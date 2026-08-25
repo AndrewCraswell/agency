@@ -116,6 +116,30 @@ type Seed = {
   readonly sourceContract: string
   readonly sourceUrl: string | null
   readonly manufacturerDrawing?: SourceEvidence
+  readonly pinMapOrientationOverlay?: {
+    readonly state: "source-controlled-pending-review"
+    readonly artifactPath: string
+    readonly sha256: string
+    readonly officialSources: {
+      readonly seriesPrint: { readonly artifactPath: string; readonly url: string; readonly sha256: string }
+      readonly footprintPrint: { readonly artifactPath: string; readonly url: string; readonly sha256: string }
+      readonly cad: { readonly state: "not-acquired-access-gated"; readonly url: string; readonly reason: string }
+    }
+    readonly pinMap: {
+      readonly rows: 2
+      readonly positions: 16
+      readonly pitchMm: 2.54
+      readonly pinOneAtKeyedEnd: true
+    }
+    readonly bp143Reconciliation: {
+      readonly signalCablePinOneMarker: "white stripe"
+      readonly panelConnector: "INPUT"
+      readonly sampleFitVerified: false
+      readonly orientationVerified: false
+      readonly continuityVerified: false
+      readonly currentVerified: false
+    }
+  }
 }
 
 const retainedPrimarySourceBatch = [
@@ -220,6 +244,12 @@ function retainedSourceFor(reference: string): SourceEvidence | undefined {
         revision: `Primary source retained at ${source.path}`,
         sha256: source.sha256
       }
+}
+
+function hasPinMapOrientationOverlay(record: {
+  readonly pinMapOrientationOverlay?: Seed["pinMapOrientationOverlay"]
+}): record is { readonly pinMapOrientationOverlay: NonNullable<Seed["pinMapOrientationOverlay"]> } {
+  return record.pinMapOrientationOverlay !== undefined
 }
 
 function selected(seed: Seed) {
@@ -392,7 +422,38 @@ const hub75Seeds = [
     mpn: "TST-108-04-G-D-RA",
     package: "2 x 8 right-angle through-hole header",
     sourceContract: "BP-143",
-    sourceUrl: "https://www.samtec.com/products/tst-108-04-g-d-ra"
+    sourceUrl: "https://www.samtec.com/products/tst-108-04-g-d-ra",
+    pinMapOrientationOverlay: {
+      state: "source-controlled-pending-review",
+      artifactPath: "docs/evidence/bp-033/samtec-tst-108-04-g-d-ra-pin-map-orientation-overlay.svg",
+      sha256: "08FD50CDF71A209D936B6B74FD7DBBDAEDEF0404EA105A168623707FFA9D02F7",
+      officialSources: {
+        seriesPrint: {
+          artifactPath: "docs/evidence/bp-143/samtec-tst-series-print.pdf",
+          url: "https://suddendocs.samtec.com/prints/tst-1xx-xx-x-x-xx-xx-mkt.pdf",
+          sha256: "56AE927287856E76D57FF3B0953D3D4F853183E397794A31EE6DC5D3E07B6059"
+        },
+        footprintPrint: {
+          artifactPath: "docs/evidence/bp-143/samtec-tst-footprint.pdf",
+          url: "https://suddendocs.samtec.com/prints/tss-tstd.pdf",
+          sha256: "ED9B9280C24AA99BB4714557997CA5452FE7E245961599A4C39537FEFCD366DC"
+        },
+        cad: {
+          state: "not-acquired-access-gated",
+          url: "https://www.samtec.com/products/tst-108-04-g-d-ra",
+          reason: "Samtec requires a valid email address before instant model download."
+        }
+      },
+      pinMap: { rows: 2, positions: 16, pitchMm: 2.54, pinOneAtKeyedEnd: true },
+      bp143Reconciliation: {
+        signalCablePinOneMarker: "white stripe",
+        panelConnector: "INPUT",
+        sampleFitVerified: false,
+        orientationVerified: false,
+        continuityVerified: false,
+        currentVerified: false
+      }
+    }
   },
   ...benchPrototypeHub75Safing.partIdentityEvidence.map((part) => ({
     reference: part.reference,
@@ -552,6 +613,7 @@ const definition = {
   closureRules: [
     "A package identity never grants pad, drill, copper, mask, paste, courtyard, or assembly geometry.",
     "Each DNP-unresolved record requires an exact manufacturer drawing revision and SHA-256, exact CAD or an explicit no-CAD record, generated artwork hash, and independent orientation review.",
+    "J_HUB75 has a source-controlled pin-map and orientation overlay bound to the canonical BP-143 Samtec prints. It is not a project footprint, CAD import, board artwork, sample fit, continuity, current, orientation, or fabrication approval.",
     "BP-300 may not instantiate a record whose packageStatus is upstream-package-not-specified; obtain the exact package from the manufacturer before assigning geometry.",
     "TP_W5500_RESET_N and TP_W5500_INT_N select Keystone Electronics 5001 miniature through-hole black test points with a 0.040 inch (catalog 1.0 mm) mounting hole; exact source evidence is retained, while drawings, CAD, artwork, orientation, and probe-clearance review remain open before population.",
     "R_W5500_INT_BIAS selects Yageo RC0603FR-07100KL, 100 kOhm, 1%, 0603, to provide the locally pulled-inactive INTn state required by the canonical ESP32 polling policy without allocating an ESP32 GPIO.",
@@ -638,6 +700,29 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
+    !contract.records.some(
+      (record) =>
+        record.reference === "J_HUB75" &&
+        record.mpn === "TST-108-04-G-D-RA" &&
+        hasPinMapOrientationOverlay(record) &&
+        record.pinMapOrientationOverlay.state === "source-controlled-pending-review" &&
+        record.pinMapOrientationOverlay.artifactPath ===
+          "docs/evidence/bp-033/samtec-tst-108-04-g-d-ra-pin-map-orientation-overlay.svg" &&
+        record.pinMapOrientationOverlay.officialSources.seriesPrint.artifactPath ===
+          "docs/evidence/bp-143/samtec-tst-series-print.pdf" &&
+        record.pinMapOrientationOverlay.officialSources.seriesPrint.sha256 ===
+          "56AE927287856E76D57FF3B0953D3D4F853183E397794A31EE6DC5D3E07B6059" &&
+        record.pinMapOrientationOverlay.officialSources.footprintPrint.artifactPath ===
+          "docs/evidence/bp-143/samtec-tst-footprint.pdf" &&
+        record.pinMapOrientationOverlay.officialSources.footprintPrint.sha256 ===
+          "ED9B9280C24AA99BB4714557997CA5452FE7E245961599A4C39537FEFCD366DC" &&
+        record.pinMapOrientationOverlay.officialSources.cad.state === "not-acquired-access-gated" &&
+        record.pinMapOrientationOverlay.bp143Reconciliation.sampleFitVerified === false &&
+        record.pinMapOrientationOverlay.bp143Reconciliation.orientationVerified === false &&
+        record.pinMapOrientationOverlay.bp143Reconciliation.continuityVerified === false &&
+        record.pinMapOrientationOverlay.bp143Reconciliation.currentVerified === false
+    ) ||
+    contract.records.filter(hasPinMapOrientationOverlay).length !== 1 ||
     !contract.records.some((record) => record.packageStatus === "upstream-package-not-specified") ||
     !contract.records.some(
       (record) =>

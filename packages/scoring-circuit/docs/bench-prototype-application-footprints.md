@@ -25,6 +25,33 @@ References without retained source bytes have no source URL in this ledger.
 They must not receive a guessed family or distributor link merely to make the
 ledger appear complete.
 
+## J_HUB75 Samtec source and candidate disposition
+
+`J_HUB75` is the exact Samtec `TST-108-04-G-D-RA`: a 16-position, double-row,
+2.54 mm-pitch, right-angle through-hole shrouded header. BP-033 retains the
+official [TST series print](https://suddendocs.samtec.com/prints/tst-1xx-xx-x-x-xx-xx-mkt.pdf)
+and [double-row footprint print](https://suddendocs.samtec.com/prints/tss-tstd.pdf):
+
+| Evidence | Repository artifact | SHA-256 | Disposition |
+| --- | --- | --- | --- |
+| Series print | `docs/evidence/bp-143/samtec-tst-series-print.pdf` | `56AE927287856E76D57FF3B0953D3D4F853183E397794A31EE6DC5D3E07B6059` | canonical BP-143 configuration source |
+| Double-row footprint print | `docs/evidence/bp-143/samtec-tst-footprint.pdf` | `ED9B9280C24AA99BB4714557997CA5452FE7E245961599A4C39537FEFCD366DC` | canonical BP-143 source, no project geometry accepted |
+| Samtec 3D CAD | product-page CAD download | not acquired | access requires a valid email address; no substitute model is claimed |
+| Pin-map and orientation overlay | `docs/evidence/bp-033/samtec-tst-108-04-g-d-ra-pin-map-orientation-overlay.svg` | `08FD50CDF71A209D936B6B74FD7DBBDAEDEF0404EA105A168623707FFA9D02F7` | source-controlled, not a footprint |
+
+The overlay records only the 2 by 8 pin sequence at 2.54 mm pitch, with pin 1
+at the keyed-end datum. It is not a project footprint, CAD import, or
+manufacturing artwork, and it supplies no drill, pad, mask, paste, courtyard,
+placement, or rotation release.
+
+BP-143 supplies the electrical mating contract: the 16-pin cable is
+straight-through, its white stripe identifies pin 1, and the panel mate must be
+the `INPUT` header. The overlay uses that pin sequence only. It does not
+claim that the key is seated, that either mating orientation fits, or that the
+pin-one datums agree on a received sample. Sample fit, orientation, signal
+continuity, current, and fabrication remain false or denied until the separate
+physical-evidence gate records them.
+
 Some BP-050 selections do not yet state an exact package in their upstream
 contract. They are recorded as `upstream-package-not-specified`, not guessed.
 Those references block schematic and layout release until the manufacturer

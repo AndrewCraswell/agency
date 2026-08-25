@@ -56,6 +56,85 @@ describe("BP-033 application footprint closure ledger", () => {
     expect(benchPrototypeApplicationFootprints.authority.fabricationAuthorized).toBe(false)
   })
 
+  it("binds only the J_HUB75 pin-map overlay and preserves BP-143 physical gates", () => {
+    const record = benchPrototypeApplicationFootprints.records.find((candidate) => candidate.reference === "J_HUB75")
+    if (
+      record === undefined ||
+      !("pinMapOrientationOverlay" in record) ||
+      record.pinMapOrientationOverlay === undefined
+    ) {
+      throw new Error("J_HUB75 pin-map overlay is missing")
+    }
+    const pinMapOrientationOverlay = record.pinMapOrientationOverlay
+
+    expect(record).toMatchObject({
+      manufacturer: "Samtec",
+      mpn: "TST-108-04-G-D-RA",
+      package: "2 x 8 right-angle through-hole header",
+      population: "DNP-unresolved",
+      manufacturerDrawing: { state: "not-acquired" },
+      manufacturerCad: { state: "not-acquired" },
+      artwork: { state: "not-generated" },
+      orientation: { state: "unreviewed" },
+      pinMapOrientationOverlay: {
+        state: "source-controlled-pending-review",
+        pinMap: { rows: 2, positions: 16, pitchMm: 2.54, pinOneAtKeyedEnd: true },
+        officialSources: {
+          cad: { state: "not-acquired-access-gated" },
+          seriesPrint: { sha256: "56AE927287856E76D57FF3B0953D3D4F853183E397794A31EE6DC5D3E07B6059" },
+          footprintPrint: { sha256: "ED9B9280C24AA99BB4714557997CA5452FE7E245961599A4C39537FEFCD366DC" }
+        },
+        bp143Reconciliation: {
+          signalCablePinOneMarker: "white stripe",
+          panelConnector: "INPUT",
+          sampleFitVerified: false,
+          orientationVerified: false,
+          continuityVerified: false,
+          currentVerified: false
+        }
+      }
+    })
+
+    const packageRoot = new URL("../", import.meta.url)
+    for (const artifact of [
+      {
+        path: pinMapOrientationOverlay.artifactPath,
+        sha256: pinMapOrientationOverlay.sha256
+      }
+    ]) {
+      const bytes = readFileSync(new URL(artifact.path, packageRoot))
+      expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(artifact.sha256)
+    }
+
+    expect(benchPrototypeApplicationFootprints.fabricationAuthorized).toBe(false)
+    expect(benchPrototypeApplicationFootprints.authority.manufacturerCadReviewed).toBe(false)
+    expect(benchPrototypeApplicationFootprints.authority.orientationsReviewed).toBe(false)
+  })
+
+  it("rejects a substituted canonical-source path or forged physical evidence", () => {
+    const substitutedSource = structuredClone(benchPrototypeApplicationFootprints) as {
+      records: Array<Record<string, unknown>>
+    }
+    const substitutedHub75 = substitutedSource.records.find((record) => record.reference === "J_HUB75")
+    if (substitutedHub75 === undefined) throw new Error("J_HUB75 ledger record is missing")
+    const substitutedOverlay = substitutedHub75.pinMapOrientationOverlay as {
+      officialSources: { seriesPrint: { artifactPath: string } }
+    }
+    substitutedOverlay.officialSources.seriesPrint.artifactPath = "docs/evidence/bp-033/samtec-tst-series-print.pdf"
+    expect(() => validateBenchPrototypeApplicationFootprints(substitutedSource)).toThrow(RangeError)
+
+    const forgedPhysicalEvidence = structuredClone(benchPrototypeApplicationFootprints) as {
+      records: Array<Record<string, unknown>>
+    }
+    const forgedHub75 = forgedPhysicalEvidence.records.find((record) => record.reference === "J_HUB75")
+    if (forgedHub75 === undefined) throw new Error("J_HUB75 ledger record is missing")
+    const forgedOverlay = forgedHub75.pinMapOrientationOverlay as {
+      bp143Reconciliation: { sampleFitVerified: boolean }
+    }
+    forgedOverlay.bp143Reconciliation.sampleFitVerified = true
+    expect(() => validateBenchPrototypeApplicationFootprints(forgedPhysicalEvidence)).toThrow(RangeError)
+  })
+
   it("keeps audio and every other omitted peripheral out of the board", () => {
     expect(benchPrototypeApplicationFootprints.omittedPeripherals.map((record) => record.reference)).toEqual([
       "U_RTC",
