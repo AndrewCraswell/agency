@@ -35,6 +35,10 @@ import {
   validateBenchPrototypeOptionalPeripherals
 } from "./bench-prototype-optional-peripherals.js"
 import { calculateBenchPrototypePowerContract, defaultBenchPrototypePowerInputs } from "./bench-prototype-power.js"
+import {
+  bp031032033C0603C104K3RactuFootprintEvidence,
+  validateBp031032033C0603C104K3RactuFootprintEvidence
+} from "./bp031-032-c0603c104k3ractu-footprint-evidence.js"
 import { validateBp033B340aProjectFootprintGeometry } from "./bp033-b340a-project-footprint.js"
 import {
   bp033W5500ProjectFootprintGeometry,
@@ -809,6 +813,12 @@ const yageo10kReferences = [
   "R_FRAM_HOLD_PULLUP"
 ] as const
 
+const bp033SharedC0603References = bp031032033C0603C104K3RactuFootprintEvidence.referenceSets.bp033.references
+const bp033SharedC0603SourceArtifactPath = bp031032033C0603C104K3RactuFootprintEvidence.sources[0].artifactPath.replace(
+  /^packages\/scoring-circuit\//u,
+  ""
+)
+
 const projectFootprintMappings = [
   {
     reference: "J_USB_C",
@@ -978,7 +988,19 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer" as const,
     reviewedAt: "2026-08-25" as const,
     fabricationRelease: "deny" as const
-  }
+  },
+  ...bp033SharedC0603References.map((reference) => ({
+    reference,
+    artifactKind: bp031032033C0603C104K3RactuFootprintEvidence.artifactKind,
+    artworkModule: "src/bp031-032-c0603c104k3ractu-footprint-evidence.tsx",
+    reviewDocument: "docs/bp-031-032-c0603c104k3ractu-footprint-review.md",
+    sourceArtifactPath: bp033SharedC0603SourceArtifactPath,
+    sourceSha256: bp031032033C0603C104K3RactuFootprintEvidence.sources[0].sha256,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
+  }))
 ] as const
 
 const definition = {
@@ -1067,6 +1089,9 @@ function assertUpstream(): void {
 /** Rejects package inference, geometry credit, populated omitted peripherals, and release relaxation. */
 export function validateBenchPrototypeApplicationFootprints(value: unknown): true {
   assertUpstream()
+  if (validateBp031032033C0603C104K3RactuFootprintEvidence(bp031032033C0603C104K3RactuFootprintEvidence).length !== 0) {
+    throw new RangeError("BP-033 shared C0603 footprint evidence drifted")
+  }
   if (!sameDataGraph(value, benchPrototypeApplicationFootprints))
     throw new RangeError("BP-033 must exactly match the reviewed fail-closed ledger")
   const contract = benchPrototypeApplicationFootprints
@@ -1119,7 +1144,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 49 ||
+    contract.projectFootprintMappings.length !== 55 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1259,6 +1284,21 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
     contract.projectFootprintMappings[48]?.reviewer !== "root-final-reviewer" ||
     contract.projectFootprintMappings[48]?.reviewedAt !== "2026-08-25" ||
     contract.projectFootprintMappings[48]?.fabricationRelease !== "deny" ||
+    !bp033SharedC0603References.every((reference, offset) => {
+      const mapping = contract.projectFootprintMappings[49 + offset]
+      return (
+        mapping?.reference === reference &&
+        mapping.artifactKind === bp031032033C0603C104K3RactuFootprintEvidence.artifactKind &&
+        mapping.artworkModule === "src/bp031-032-c0603c104k3ractu-footprint-evidence.tsx" &&
+        mapping.reviewDocument === "docs/bp-031-032-c0603c104k3ractu-footprint-review.md" &&
+        mapping.sourceArtifactPath === bp033SharedC0603SourceArtifactPath &&
+        mapping.sourceSha256 === bp031032033C0603C104K3RactuFootprintEvidence.sources[0].sha256 &&
+        mapping.reviewState === "root-reviewed-review-input" &&
+        mapping.reviewer === "root-final-reviewer" &&
+        mapping.reviewedAt === "2026-08-25" &&
+        mapping.fabricationRelease === "deny"
+      )
+    }) ||
     !contract.records.some(
       (record) =>
         record.reference === "U_USB_PD" &&

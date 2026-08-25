@@ -70,7 +70,7 @@ const upstreamSourceHashes = [
   },
   {
     path: "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts",
-    sha256: "4a50698a9344ff2390a12d515f0f964273812a165d3ea3eaf9a5c1e7edc9bf71",
+    sha256: "4deddd1d7e91d038d16a89276bf4d7ac67abb2c36a75e3e204ffa79655fcd714",
     scope: "BP-031 seven-channel C_REF_REG_HF_1..7 reference expansion"
   },
   {

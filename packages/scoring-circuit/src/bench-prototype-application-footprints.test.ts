@@ -681,4 +681,29 @@ describe("BP-033 application footprint closure ledger", () => {
       fabricationRelease: "deny"
     })
   })
+
+  it("links the six BP-033 KEMET 100 nF rows to the shared review-only evidence", () => {
+    const references = [
+      "C_APP_REG_IN_HF",
+      "C_APP_REG_BOOT",
+      "C_HUB75_BUF_A_BYPASS",
+      "C_HUB75_BUF_B_BYPASS",
+      "C_IR_VS",
+      "C_FRAM_BYPASS"
+    ]
+    for (const reference of references) {
+      expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toContainEqual({
+        reference,
+        artifactKind: "bp031-032-033-c0603c104k3ractu-footprint-evidence",
+        artworkModule: "src/bp031-032-c0603c104k3ractu-footprint-evidence.tsx",
+        reviewDocument: "docs/bp-031-032-c0603c104k3ractu-footprint-review.md",
+        sourceArtifactPath: "docs/evidence/m4-04/yageo-c0603c104k3ractu-datasheet.pdf",
+        sourceSha256: "F5A15A13E31AED37414EAA17722DD48C7488D85370679DFF4300AC5294EF2064",
+        reviewState: "root-reviewed-review-input",
+        reviewer: "root-final-reviewer",
+        reviewedAt: "2026-08-25",
+        fabricationRelease: "deny"
+      })
+    }
+  })
 })
