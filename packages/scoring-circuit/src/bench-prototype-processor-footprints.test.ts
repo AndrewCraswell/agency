@@ -318,6 +318,21 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
     })
   })
 
+  it("binds U_APP to the exact ESP32-S3-WROOM-1U-N16R2 review candidate", () => {
+    const row = benchPrototypeProcessorFootprints.populatedReferences.find((entry) => entry.reference === "U_APP")
+    expect(row?.evidence.footprintEvidence).toMatchObject({
+      artifactKind: "bp032-esp32-s3-wroom-1u-exact-project-footprint-candidate",
+      exactMpn: "ESP32-S3-WROOM-1U-N16R2",
+      reference: "U_APP",
+      upstreamContract: "BP-121/BP-125",
+      manufacturerCad: "deny",
+      orientation: "pending",
+      releaseState: "deny",
+      fabricationAuthority: "deny",
+      accepted: false
+    })
+  })
+
   it("binds the reset-support and keyed SWD rows to review-only evidence", () => {
     for (const reference of ["U_APP_RESET_FANOUT", "Q_ESP_RESET_STM", "Q_ESP_DEBUG_RESET"]) {
       const row = benchPrototypeProcessorFootprints.populatedReferences.find((entry) => entry.reference === reference)

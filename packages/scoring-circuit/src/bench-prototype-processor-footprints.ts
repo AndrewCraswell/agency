@@ -33,6 +33,10 @@ import {
   validateBp031032C0603C104K3RactuFootprintEvidence
 } from "./bp031-032-c0603c104k3ractu-footprint-evidence.js"
 import {
+  benchPrototypeBp032Esp32S3Wroom1uExactFootprint,
+  validateBenchPrototypeBp032Esp32S3Wroom1uExactFootprint
+} from "./bp032-esp32-s3-wroom-1u-exact-footprint.js"
+import {
   bp032Esp32ServiceHeaderTsw10607gsFootprintEvidence,
   validateBp032Esp32ServiceHeaderTsw10607gsFootprintEvidence
 } from "./bp032-esp32-service-header-tsw-106-07-g-s-footprint-evidence.js"
@@ -338,14 +342,38 @@ const evidence = (mpn: string | null, reference: string | null = null) => ({
                 ? murataProcessorSupportFootprintEvidenceFor(mpn, reference)
                 : mpn === "ISO7762FDWR" || mpn === "ISO7721FDR"
                   ? tiIsolatorFootprintEvidenceFor(mpn, reference)
-                  : mpn === "STM32G474RET3TR"
-                    ? stm32FootprintEvidenceFor(mpn, reference)
-                    : mpn === "TPS389033DSER" || mpn === "TPS3431SDRBR"
-                      ? supervisorWatchdogFootprintEvidenceFor(mpn, reference)
-                      : mpn === "TSW-106-07-G-S"
-                        ? esp32ServiceHeaderFootprintEvidenceFor(mpn, reference)
-                        : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
+                  : mpn === "ESP32-S3-WROOM-1U-N16R2"
+                    ? esp32ModuleFootprintEvidenceFor(mpn, reference)
+                    : mpn === "STM32G474RET3TR"
+                      ? stm32FootprintEvidenceFor(mpn, reference)
+                      : mpn === "TPS389033DSER" || mpn === "TPS3431SDRBR"
+                        ? supervisorWatchdogFootprintEvidenceFor(mpn, reference)
+                        : mpn === "TSW-106-07-G-S"
+                          ? esp32ServiceHeaderFootprintEvidenceFor(mpn, reference)
+                          : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
 })
+
+function esp32ModuleFootprintEvidenceFor(mpn: string, reference: string) {
+  const candidate = benchPrototypeBp032Esp32S3Wroom1uExactFootprint
+  if (candidate.manufacturerPartNumber !== mpn || candidate.canonicalReference !== reference) return null
+  return {
+    artifactKind: candidate.artifactKind,
+    exactMpn: mpn,
+    reference,
+    sourceId: "espressif-esp32-s3-wroom-1u-primary-set",
+    sourceArtifactPaths: candidate.officialSources.map((source) => source.artifactPath),
+    sourceSha256s: candidate.officialSources.map((source) => source.sha256),
+    upstreamContract: "BP-121/BP-125",
+    projectFootprintId: "esp32-s3-wroom-1u-n16r2-project-review",
+    manufacturerCad: candidate.authority.cadApproval,
+    manufacturerLandPattern: candidate.projectGeometry.perimeterCopper.source,
+    artwork: candidate.artworkProvenance.rendererState,
+    orientation: candidate.projectGeometry.orientation.independentOverlay,
+    releaseState: candidate.releaseState,
+    fabricationAuthority: candidate.fabricationAuthority,
+    accepted: candidate.accepted
+  } as const
+}
 
 function esp32ServiceHeaderFootprintEvidenceFor(mpn: string, reference: string) {
   const candidate = bp032Esp32ServiceHeaderTsw10607gsFootprintEvidence
@@ -691,7 +719,7 @@ const definition = {
       package: "WROOM-1U module",
       population: "selected-awaiting-footprint-evidence",
       source: "BP-121 ESP32 allocation and BP-125 module support",
-      evidence: evidence("ESP32-S3-WROOM-1U-N16R2")
+      evidence: evidence("ESP32-S3-WROOM-1U-N16R2", "U_APP")
     },
     {
       reference: "U_ISO_MAIN",
@@ -861,6 +889,7 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
     throw new RangeError("BP-032 FTSH service-header project-review candidate drifted")
   }
   validateBp032Esp32ServiceHeaderTsw10607gsFootprintEvidence(bp032Esp32ServiceHeaderTsw10607gsFootprintEvidence)
+  validateBenchPrototypeBp032Esp32S3Wroom1uExactFootprint(benchPrototypeBp032Esp32S3Wroom1uExactFootprint)
   validateBp032SupervisorWatchdogFootprintEvidence(bp032SupervisorWatchdogFootprintEvidence)
   if (bp125MurataCapacitorFootprintIntegrityErrors().length !== 0) {
     throw new RangeError("BP-032 Murata processor-support footprint candidate drifted")
@@ -923,6 +952,7 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   const murataProcessorSupportRows = ledger.processorSupportReferences.filter((entry) => entry.mpn.startsWith("GCM"))
   const isolatorRows = ledger.populatedReferences.filter((entry) => ["ISO7762FDWR", "ISO7721FDR"].includes(entry.mpn))
   const stm32Rows = ledger.populatedReferences.filter((entry) => entry.mpn === "STM32G474RET3TR")
+  const esp32ModuleRows = ledger.populatedReferences.filter((entry) => entry.mpn === "ESP32-S3-WROOM-1U-N16R2")
   const ftshRows = ledger.debugReferences.filter((entry) => entry.mpn === "FTSH-105-01-L-DV-007-K")
   const esp32ServiceHeaderRows = ledger.debugReferences.filter((entry) => entry.mpn === "TSW-106-07-G-S")
   if (
@@ -1057,6 +1087,17 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
         row.evidence.footprintEvidence.exactMpn !== row.mpn ||
         row.evidence.footprintEvidence.reference !== row.reference ||
         row.evidence.footprintEvidence.upstreamContract !== "BP-120/BP-125" ||
+        row.evidence.footprintEvidence.releaseState !== "deny" ||
+        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
+        row.evidence.footprintEvidence.accepted
+    ) ||
+    esp32ModuleRows.length !== 1 ||
+    esp32ModuleRows.some(
+      (row) =>
+        row.evidence.footprintEvidence === null ||
+        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
+        row.evidence.footprintEvidence.reference !== row.reference ||
+        row.evidence.footprintEvidence.upstreamContract !== "BP-121/BP-125" ||
         row.evidence.footprintEvidence.releaseState !== "deny" ||
         row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
         row.evidence.footprintEvidence.accepted
