@@ -55,6 +55,7 @@
     "eval:embeddings:rerank-bakeoff": "tsx scripts/rerank-embedding-bakeoff.ts",
     "eval:embeddings:seed": "tsx scripts/run-embedding-canary.ts",
     "docker:build": "docker build --file Dockerfile --tag legislation:local ../..",
+    "foundation:import": "tsx scripts/import-canonical-foundation.ts",
     "infra:build": "az bicep build --file infra/bicep/main.bicep --outfile infra/bicep/main.json",
     "infra:lint": "az bicep lint --file infra/bicep/main.bicep",
     "infra:what-if": "node scripts/infra-what-if.mjs",
