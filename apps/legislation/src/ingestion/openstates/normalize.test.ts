@@ -138,7 +138,7 @@ describe("Open States normalization", () => {
       organizationId: "organization:openstates:ocd-organization-wa-house"
     })
     expect(aggregate.votes?.[0]?.positions).toContainEqual(
-      expect.objectContaining({ personId: "person:openstates:ocd-person-example" })
+      expect.objectContaining({ personId: "person:openstates:ocd-person-example", sourceSequence: 0 })
     )
     expect(aggregate.organizations).toContainEqual({
       billId: "bill:wa:2025-2026:hb:1234",
@@ -203,8 +203,14 @@ describe("Open States normalization", () => {
     expect(result.aggregate.votes?.[0]?.vote.rollCallNumber).toBeUndefined()
     expect(result.aggregate.votes?.[0]?.vote.organizationId).toBeUndefined()
     expect(result.aggregate.votes?.[0]?.positions).toEqual([
-      expect.objectContaining({ personId: "person:openstates-voter-name:vote-name-wa-representative-example" }),
-      expect.objectContaining({ personId: "person:openstates-voter-name:vote-name-wa-unmatched-member" })
+      expect.objectContaining({
+        personId: "person:openstates-voter-name:vote-name-wa-representative-example",
+        sourceSequence: 0
+      }),
+      expect.objectContaining({
+        personId: "person:openstates-voter-name:vote-name-wa-unmatched-member",
+        sourceSequence: 1
+      })
     ])
   })
 

@@ -1223,18 +1223,22 @@ export const votePositions = legislationSchema.table(
     personId: text("person_id").references(() => people.id, { onDelete: "restrict" }),
     sourcePersonId: text("source_person_id"),
     sourceName: text("source_name"),
+    /** Publisher-array ordinal preserves the authoritative position order. */
+    sourceSequence: integer("source_sequence"),
     option: text("option").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     primaryKey({ columns: [table.voteId, table.sourceIdentity] }),
     check("vote_positions_source_identity_check", sql`length(${table.sourceIdentity}) > 0`),
+    check("vote_positions_source_sequence_check", sql`${table.sourceSequence} is null or ${table.sourceSequence} >= 0`),
     check("vote_positions_option_check", sql`length(${table.option}) > 0`),
     check(
       "vote_positions_normalized_option_check",
       sql`${table.option} in ('yes', 'no', 'absent', 'abstain', 'not-voting', 'present', 'proxy', 'paired', 'other')`
     ),
     index("vote_positions_person_idx").on(table.personId, table.option),
+    index("vote_positions_vote_sequence_idx").on(table.voteId, table.sourceSequence, table.sourceIdentity),
     index("vote_positions_source_person_idx").on(table.sourcePersonId, table.option)
   ]
 )

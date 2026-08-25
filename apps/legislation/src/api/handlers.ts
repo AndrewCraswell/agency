@@ -77,6 +77,8 @@ import type { SubscriptionMutationExecutor } from "./subscription-repository.js"
 import { createSubscriptionMutationApiHandler, createSubscriptionReadApiHandler } from "./subscription-routes.js"
 import { createWebhookSecretProtector, type SubscriptionRepository, SubscriptionService } from "./subscriptions.js"
 import { createSupportingMaterialSectionReadApiHandler } from "./supporting-material-section-read-routes.js"
+import { createVoteReadRepository } from "./vote-read-repository.js"
+import { createVoteReadApiHandler } from "./vote-read-routes.js"
 import type { WebhookReadRepository } from "./webhook-read-repository.js"
 import { createWebhookReadApiHandler } from "./webhook-read-routes.js"
 
@@ -123,6 +125,7 @@ export function createLegislationApiHandler(
       : [
           createAmendmentReadApiHandler(createAmendmentReadRepository(documentDatabase, options.apiBaseUrl)),
           createBillDetailReadApiHandler(createBillDetailReadRepository(documentDatabase, options.apiBaseUrl)),
+          createVoteReadApiHandler(createVoteReadRepository(documentDatabase), options),
           createBillTextReadApiHandler(
             {
               assertBillExists: async (billId) => await assertBillExists(documentDatabase, billId),

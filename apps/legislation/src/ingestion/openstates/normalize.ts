@@ -383,7 +383,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
       counts.set(bucket, (counts.get(bucket) ?? 0) + count.value)
     }
     const positions = uniqueBy(
-      vote.votes.flatMap((position) => {
+      vote.votes.flatMap((position, sourceSequence) => {
         const providerPersonId = nonBlank(position.voter?.id ?? position.voter_id)
         const sourcePersonId = providerPersonId ?? `vote-name:${context.jurisdictionCode}:${position.voter_name}`
         const canonicalPersonId = personId(
@@ -407,6 +407,7 @@ export function normalizeOpenStatesBill(input: unknown, context: OpenStatesConte
             sourceIdentity: sourcePersonId,
             sourceName: position.voter_name,
             sourcePersonId,
+            sourceSequence,
             voteId: canonicalVoteId
           }
         ]

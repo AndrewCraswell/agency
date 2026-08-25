@@ -97,13 +97,23 @@ export function normalizeCongressHouseVote(input: unknown): CongressHouseVoteSna
     "congress",
     `house-${reference.congress}-${reference.sessionNumber}-${reference.rollCallNumber}`
   )
-  const uniqueMembers = [...new Map(source.members.results.map((member) => [member.bioguideID, member])).values()]
-  const positions = uniqueMembers.map((member) => ({
+  const membersByIdentity = new Map<
+    string,
+    { member: (typeof source.members.results)[number]; sourceSequence: number }
+  >()
+  source.members.results.forEach((member, sourceSequence) => {
+    if (!membersByIdentity.has(member.bioguideID)) {
+      membersByIdentity.set(member.bioguideID, { member, sourceSequence })
+    }
+  })
+  const uniqueMembers = [...membersByIdentity.values()]
+  const positions = uniqueMembers.map(({ member, sourceSequence }) => ({
     option: normalizeOption(member.voteCast),
     personId: personId("congress", member.bioguideID),
     sourceIdentity: member.bioguideID,
     sourceName: [member.firstName, member.lastName].filter(Boolean).join(" "),
     sourcePersonId: member.bioguideID,
+    sourceSequence,
     voteId: canonicalVoteId
   }))
   const yesCount = positions.filter((position) => position.option === "yes").length
