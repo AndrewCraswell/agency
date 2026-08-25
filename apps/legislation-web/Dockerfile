@@ -34,14 +34,12 @@ RUN pnpm --filter legislation-web build
 # Next 16.3.1's standalone tracer retains the pnpm-isolated symlink from Next
 # to @swc/helpers but can omit that symlink's versioned target. Materialize the
 # direct dependency at the same .pnpm path so the runtime closure is complete.
-RUN cp --parents -R node_modules/.pnpm/@swc+helpers@*/node_modules/@swc/helpers \
+RUN cp --parents -R node_modules/.pnpm/@swc+helpers@0.5.23/node_modules/@swc/helpers \
       apps/legislation-web/.next/standalone/
 # Fail the image build clearly if the application stops producing the traced
 # production dependency closure required by the standalone runtime.
 RUN test -f apps/legislation-web/.next/standalone/apps/legislation-web/server.js
-RUN find apps/legislation-web/.next/standalone/node_modules/.pnpm \
-      -path '*/node_modules/@swc/helpers/esm/_interop_require_default.js' \
-      -type f -print -quit | grep -q .
+RUN test -f apps/legislation-web/.next/standalone/node_modules/.pnpm/@swc+helpers@0.5.23/node_modules/@swc/helpers/esm/_interop_require_default.js
 
 FROM node:${NODE_VERSION}-bookworm-slim AS runtime
 
