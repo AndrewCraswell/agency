@@ -694,6 +694,18 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer",
     reviewedAt: "2026-08-25",
     fabricationRelease: "deny"
+  },
+  {
+    reference: "S_SOURCE_SELECTOR",
+    artifactKind: "bp033-7101syzqe-project-footprint",
+    artworkModule: "src/bp033-7101syzqe-project-footprint.tsx",
+    reviewDocument: "docs/bp-033-7101syzqe-project-footprint.md",
+    sourceArtifactPath: "docs/evidence/bp-033/ck-7000toggle-7101syzqe-datasheet.pdf",
+    sourceSha256: "81C507AE655CBF893635F3E0ED421734A28AF08C975A8279E02070FFDCD353CB",
+    reviewState: "root-reviewed-review-input",
+    reviewer: "root-final-reviewer",
+    reviewedAt: "2026-08-25",
+    fabricationRelease: "deny"
   }
 ] as const
 
@@ -818,7 +830,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 2 ||
+    contract.projectFootprintMappings.length !== 3 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -840,6 +852,17 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
     contract.projectFootprintMappings[1]?.reviewState !== "root-reviewed-review-input" ||
     contract.projectFootprintMappings[1]?.reviewer !== "root-final-reviewer" ||
     contract.projectFootprintMappings[1]?.fabricationRelease !== "deny" ||
+    contract.projectFootprintMappings[2]?.reference !== "S_SOURCE_SELECTOR" ||
+    contract.projectFootprintMappings[2]?.artifactKind !== "bp033-7101syzqe-project-footprint" ||
+    contract.projectFootprintMappings[2]?.artworkModule !== "src/bp033-7101syzqe-project-footprint.tsx" ||
+    contract.projectFootprintMappings[2]?.reviewDocument !== "docs/bp-033-7101syzqe-project-footprint.md" ||
+    contract.projectFootprintMappings[2]?.sourceArtifactPath !==
+      "docs/evidence/bp-033/ck-7000toggle-7101syzqe-datasheet.pdf" ||
+    contract.projectFootprintMappings[2]?.sourceSha256 !==
+      "81C507AE655CBF893635F3E0ED421734A28AF08C975A8279E02070FFDCD353CB" ||
+    contract.projectFootprintMappings[2]?.reviewState !== "root-reviewed-review-input" ||
+    contract.projectFootprintMappings[2]?.reviewer !== "root-final-reviewer" ||
+    contract.projectFootprintMappings[2]?.fabricationRelease !== "deny" ||
     !contract.records.some(
       (record) =>
         record.reference === "U_USB_PD" &&

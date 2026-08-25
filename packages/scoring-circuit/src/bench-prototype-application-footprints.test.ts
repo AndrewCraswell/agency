@@ -224,6 +224,38 @@ describe("BP-033 application footprint closure ledger", () => {
     })
   })
 
+  it("maps S_SOURCE_SELECTOR to the root-reviewed 7101SYZQE evidence without granting placement authority", () => {
+    expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toEqual(
+      expect.arrayContaining([
+        {
+          reference: "S_SOURCE_SELECTOR",
+          artifactKind: "bp033-7101syzqe-project-footprint",
+          artworkModule: "src/bp033-7101syzqe-project-footprint.tsx",
+          reviewDocument: "docs/bp-033-7101syzqe-project-footprint.md",
+          sourceArtifactPath: "docs/evidence/bp-033/ck-7000toggle-7101syzqe-datasheet.pdf",
+          sourceSha256: "81C507AE655CBF893635F3E0ED421734A28AF08C975A8279E02070FFDCD353CB",
+          reviewState: "root-reviewed-review-input",
+          reviewer: "root-final-reviewer",
+          reviewedAt: "2026-08-25",
+          fabricationRelease: "deny"
+        }
+      ])
+    )
+    expect(
+      benchPrototypeApplicationFootprints.records.find((record) => record.reference === "S_SOURCE_SELECTOR")
+    ).toMatchObject({
+      manufacturer: "C&K",
+      mpn: "7101SYZQE",
+      population: "DNP-unresolved"
+    })
+
+    const drift = structuredClone(benchPrototypeApplicationFootprints) as unknown as {
+      projectFootprintMappings: Array<{ sourceSha256: string }>
+    }
+    drift.projectFootprintMappings[2]!.sourceSha256 = "0".repeat(64)
+    expect(() => validateBenchPrototypeApplicationFootprints(drift)).toThrow(RangeError)
+  })
+
   it("rejects a substituted canonical-source path or forged physical evidence", () => {
     const substitutedSource = structuredClone(benchPrototypeApplicationFootprints) as {
       records: Array<Record<string, unknown>>
