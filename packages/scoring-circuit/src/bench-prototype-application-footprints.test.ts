@@ -706,4 +706,21 @@ describe("BP-033 application footprint closure ledger", () => {
       })
     }
   })
+
+  it("links the three BP-033 Keystone 5001 test points to exact retained evidence", () => {
+    for (const reference of ["TP_W5500_RESET_N", "TP_W5500_INT_N", "TP_IR_RX"]) {
+      expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toContainEqual({
+        reference,
+        artifactKind: "bp033-keystone-5001-test-point-evidence-candidate",
+        artworkModule: "src/bp033-keystone-5001-test-point-evidence-candidate.ts",
+        reviewDocument: "docs/bp-033-keystone-5001-test-point-evidence-candidate.md",
+        sourceArtifactPath: "docs/evidence/bp-033/keystone-terminal-test-points.pdf",
+        sourceSha256: "00919BF8DA5DA41C978FE22717F8B39D443D03BB69BDD0A853CED85479FB237C",
+        reviewState: "root-reviewed-review-input",
+        reviewer: "root-final-reviewer",
+        reviewedAt: "2026-08-25",
+        fabricationRelease: "deny"
+      })
+    }
+  })
 })
