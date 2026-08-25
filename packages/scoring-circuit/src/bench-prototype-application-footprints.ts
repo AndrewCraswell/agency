@@ -41,6 +41,10 @@ import {
 } from "./bp031-032-c0603c104k3ractu-footprint-evidence.js"
 import { validateBp033B340aProjectFootprintGeometry } from "./bp033-b340a-project-footprint.js"
 import {
+  bp033DisplayBufferBss138akaReferenceBinding,
+  validateBp033DisplayBufferBss138akaReferenceBinding
+} from "./bp033-display-buffer-bss138aka-reference-binding.js"
+import {
   bp033Keystone5001TestPointEvidenceCandidate,
   validateBp033Keystone5001TestPointEvidenceCandidate
 } from "./bp033-keystone-5001-test-point-evidence-candidate.js"
@@ -1032,6 +1036,18 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer" as const,
     reviewedAt: "2026-08-25" as const,
     fabricationRelease: "deny" as const
+  })),
+  ...bp033DisplayBufferBss138akaReferenceBinding.exactReferenceSet.map((reference) => ({
+    reference,
+    artifactKind: bp033DisplayBufferBss138akaReferenceBinding.artifactKind,
+    artworkModule: "src/bp033-display-buffer-bss138aka-reference-binding.tsx",
+    reviewDocument: "docs/bp-033-display-buffer-bss138aka-reference-binding-review.md",
+    sourceArtifactPath: "docs/evidence/bp-032/nexperia-bss138aka-datasheet.pdf",
+    sourceSha256: bp033DisplayBufferBss138akaReferenceBinding.retainedManufacturerFacts.sourceSha256,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
   }))
 ] as const
 
@@ -1130,6 +1146,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
   if (validateBp033TdkC2012x7s1a226m125ac0805ReviewCandidate().length !== 0) {
     throw new RangeError("BP-033 TDK 22 uF review candidate drifted")
   }
+  validateBp033DisplayBufferBss138akaReferenceBinding()
   if (!sameDataGraph(value, benchPrototypeApplicationFootprints))
     throw new RangeError("BP-033 must exactly match the reviewed fail-closed ledger")
   const contract = benchPrototypeApplicationFootprints
@@ -1182,7 +1199,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 63 ||
+    contract.projectFootprintMappings.length !== 65 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1364,6 +1381,21 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         mapping.reviewDocument === "docs/bp-033-tdk-c2012x7s1a226m125ac-0805-review-candidate.md" &&
         mapping.sourceArtifactPath === "docs/evidence/bp-033/tdk-c2012x7s1a226m125ac-product-page-capture.md" &&
         mapping.sourceSha256 === bp033TdkC2012x7s1a226m125ac0805ReviewCandidate.source.sha256 &&
+        mapping.reviewState === "root-reviewed-review-input" &&
+        mapping.reviewer === "root-final-reviewer" &&
+        mapping.reviewedAt === "2026-08-25" &&
+        mapping.fabricationRelease === "deny"
+      )
+    }) ||
+    !bp033DisplayBufferBss138akaReferenceBinding.exactReferenceSet.every((reference, offset) => {
+      const mapping = contract.projectFootprintMappings[63 + offset]
+      return (
+        mapping?.reference === reference &&
+        mapping.artifactKind === bp033DisplayBufferBss138akaReferenceBinding.artifactKind &&
+        mapping.artworkModule === "src/bp033-display-buffer-bss138aka-reference-binding.tsx" &&
+        mapping.reviewDocument === "docs/bp-033-display-buffer-bss138aka-reference-binding-review.md" &&
+        mapping.sourceArtifactPath === "docs/evidence/bp-032/nexperia-bss138aka-datasheet.pdf" &&
+        mapping.sourceSha256 === bp033DisplayBufferBss138akaReferenceBinding.retainedManufacturerFacts.sourceSha256 &&
         mapping.reviewState === "root-reviewed-review-input" &&
         mapping.reviewer === "root-final-reviewer" &&
         mapping.reviewedAt === "2026-08-25" &&

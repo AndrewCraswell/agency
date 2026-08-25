@@ -746,4 +746,21 @@ describe("BP-033 application footprint closure ledger", () => {
       })
     }
   })
+
+  it("links both BP-033 display-enable MOSFETs to the retained BSS138AKA evidence", () => {
+    for (const reference of ["Q_DISPLAY_BUFFER_A_ENABLE", "Q_DISPLAY_BUFFER_B_ENABLE"]) {
+      expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toContainEqual({
+        reference,
+        artifactKind: "bp033-display-buffer-bss138aka-reference-binding",
+        artworkModule: "src/bp033-display-buffer-bss138aka-reference-binding.tsx",
+        reviewDocument: "docs/bp-033-display-buffer-bss138aka-reference-binding-review.md",
+        sourceArtifactPath: "docs/evidence/bp-032/nexperia-bss138aka-datasheet.pdf",
+        sourceSha256: "39D145F3B39A916F88B21CF8E19C865437D200752A7CD37872EF976C2BFD69F9",
+        reviewState: "root-reviewed-review-input",
+        reviewer: "root-final-reviewer",
+        reviewedAt: "2026-08-25",
+        fabricationRelease: "deny"
+      })
+    }
+  })
 })
