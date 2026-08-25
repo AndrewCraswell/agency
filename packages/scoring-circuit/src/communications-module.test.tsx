@@ -51,7 +51,7 @@ describe("communications-module circuit", () => {
     const componentBindings = [
       ["J_USB_C", "usb-c-power-and-service-connector"],
       ["U_USB_PORT_PROTECT", "usb-c-cc-sbu-protection"],
-      ["U_USB2_ESD", "usb2-esd-protection"],
+      ["U_USB_DATA_PROTECT", "usb2-esd-protection"],
       ["U_USB_PD", "usb-pd-controller"],
       ["D_USB_PD_VBUS_TVS", "usb-pd-vbus-transient-protection"],
       ["U_EFUSE", "power-protection"],
@@ -96,7 +96,7 @@ describe("communications-module circuit", () => {
       expect.arrayContaining([
         "J_USB_C",
         "U_USB_PORT_PROTECT",
-        "U_USB2_ESD",
+        "U_USB_DATA_PROTECT",
         "U_USB_PD",
         "U_EFUSE",
         "U_COMM_3V3",
@@ -134,7 +134,9 @@ describe("communications-module circuit", () => {
 
   it("uses the three-pin USB2 protector only as a shunt", () => {
     const json = renderModule()
-    const protector = json.find((element) => element.type === "source_component" && element.name === "U_USB2_ESD")
+    const protector = json.find(
+      (element) => element.type === "source_component" && element.name === "U_USB_DATA_PROTECT"
+    )
     const protectorId = protector?.type === "source_component" ? protector.source_component_id : undefined
     expect(protectorId).toBeDefined()
     expect(
@@ -145,11 +147,11 @@ describe("communications-module circuit", () => {
     ).toHaveLength(3)
     expect(traceNames(json)).toEqual(
       expect.arrayContaining([
-        "J_USB_C.USB_DN_PORT to U_USB2_ESD.IO1_USB_DN",
-        "J_USB_C.USB_DP_PORT to U_USB2_ESD.IO2_USB_DP",
+        "J_USB_C.USB_DP_PORT to U_USB_DATA_PROTECT.IO1_USB_DP",
+        "J_USB_C.USB_DN_PORT to U_USB_DATA_PROTECT.IO2_USB_DN",
         "J_USB_C.USB_DN_PORT to J_USB2.USB_DN",
         "J_USB_C.USB_DP_PORT to J_USB2.USB_DP",
-        "U_USB2_ESD.GND to net.GND"
+        "U_USB_DATA_PROTECT.GND to net.GND"
       ])
     )
     expect(sourceNames(json)).not.toEqual(expect.arrayContaining(["R_USB_DN", "R_USB_DP"]))
@@ -338,7 +340,7 @@ describe("communications-module circuit", () => {
     const critical = new Set([
       "J_USB_C",
       "U_USB_PORT_PROTECT",
-      "U_USB2_ESD",
+      "U_USB_DATA_PROTECT",
       "U_USB_PD",
       "U_EFUSE",
       "U_COMM_3V3",
@@ -385,8 +387,8 @@ describe("communications-module circuit", () => {
     }
     expect(traceNames(moduleJson)).toEqual(
       expect.arrayContaining([
-        "J_USB_C.USB_DN_PORT to U_USB2_ESD.IO1_USB_DN",
-        "J_USB_C.USB_DP_PORT to U_USB2_ESD.IO2_USB_DP",
+        "J_USB_C.USB_DP_PORT to U_USB_DATA_PROTECT.IO1_USB_DP",
+        "J_USB_C.USB_DN_PORT to U_USB_DATA_PROTECT.IO2_USB_DN",
         "J_USB_C.USB_DN_PORT to J_USB2.USB_DN",
         "J_USB_C.USB_DP_PORT to J_USB2.USB_DP"
       ])

@@ -162,11 +162,11 @@ export default function CommunicationsModuleCircuit() {
         pcbY={0}
       />
       <chip
-        name="U_USB2_ESD"
+        name="U_USB_DATA_PROTECT"
         manufacturerPartNumber={selectedMpn.usb2Protection}
         doNotPlace
         footprint={[]}
-        pinLabels={{ pin1: "IO1_USB_DN", pin2: "GND", pin3: "IO2_USB_DP" }}
+        pinLabels={{ pin1: "IO1_USB_DP", pin2: "IO2_USB_DN", pin3: "GND" }}
       />
       <chip
         name="U_USB_PD"
@@ -664,11 +664,11 @@ export default function CommunicationsModuleCircuit() {
       <trace from="U_USB_PORT_PROTECT.CC2" to="U_USB_PD.CC2" />
       <trace from="U_USB_PORT_PROTECT.RPD_G1" to="J_USB_C.CC1_PORT" />
       <trace from="U_USB_PORT_PROTECT.RPD_G2" to="J_USB_C.CC2_PORT" />
-      <trace from="J_USB_C.USB_DN_PORT" to="U_USB2_ESD.IO1_USB_DN" />
-      <trace from="J_USB_C.USB_DP_PORT" to="U_USB2_ESD.IO2_USB_DP" />
+      <trace from="J_USB_C.USB_DP_PORT" to="U_USB_DATA_PROTECT.IO1_USB_DP" />
+      <trace from="J_USB_C.USB_DN_PORT" to="U_USB_DATA_PROTECT.IO2_USB_DN" />
       <trace from="J_USB_C.USB_DN_PORT" to="J_USB2.USB_DN" />
       <trace from="J_USB_C.USB_DP_PORT" to="J_USB2.USB_DP" />
-      <trace from="U_USB2_ESD.GND" to="net.GND" />
+      <trace from="U_USB_DATA_PROTECT.GND" to="net.GND" />
       <trace from="J_USB2.SHIELD" to="net.CHASSIS" />
       {(["VBUS_32", "VBUS_33", "VBUS_IN_23", "VBUS_IN_24", "VBUS_IN_25"] as const).map((pin) => (
         <trace key={pin} from="J_USB_C.VBUS_PORT" to={`U_USB_PD.${pin}`} />

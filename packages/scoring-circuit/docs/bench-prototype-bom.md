@@ -29,7 +29,7 @@ validated on the bench:
 | USB-C power and service receptacle | `J_USB_C` | `10177070-00011LF` |
 | USB-PD sink controller | `U_USB_PD` | `TPS25730ADREFR` |
 | CC1/CC2/SBU1/SBU2 protection | `U_USB_PORT_PROTECT` | `TPD4S201TRGRRQ1` |
-| USB D-/D+ ESD protection | `U_USB2_ESD` | `TPD2EUSB30DRTR` |
+| USB D-/D+ ESD protection | `U_USB_DATA_PROTECT` | `TPD2EUSB30DRTR`, SOT-9X3 (DRT), 3-pin |
 | VBUS transient clamp | `D_USB_PD_VBUS_TVS` | `TVS2200DRVR` |
 | Disconnect-surge Schottky | `D_USB_PD_VBUS_DISCONNECT` | `B340A-13-F` |
 | Reverse-blocking eFuse | `U_EFUSE` | `TPS259474ARPWR` |

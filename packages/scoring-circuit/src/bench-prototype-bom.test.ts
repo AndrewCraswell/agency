@@ -24,7 +24,7 @@ describe("bench prototype BOM baseline", () => {
       J_USB_C: "10177070-00011LF",
       U_USB_PD: "TPS25730ADREFR",
       U_USB_PORT_PROTECT: "TPD4S201TRGRRQ1",
-      U_USB2_ESD: "TPD2EUSB30DRTR",
+      U_USB_DATA_PROTECT: "TPD2EUSB30DRTR",
       J_LAB_INJECTION: "43045-0400",
       S_POWER_SOURCE_SELECTOR: "7101SYZQE",
       D_USB_PD_VBUS_TVS: "TVS2200DRVR",
@@ -43,9 +43,11 @@ describe("bench prototype BOM baseline", () => {
       mpn: "TPD4S201TRGRRQ1",
       package: "VQFN-20 (RGR), 3.5mm x 3.5mm nominal body"
     })
-    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB2_ESD")?.function).toBe(
-      "Native USB 2.0 low-capacitance ESD protection"
-    )
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB_DATA_PROTECT")).toMatchObject({
+      function: "Native USB 2.0 low-capacitance ESD protection",
+      mpn: "TPD2EUSB30DRTR",
+      package: "SOT-9X3 (DRT), 3-pin"
+    })
   })
 
   it("classifies diagnostic injection as test-only and hard-selected", () => {

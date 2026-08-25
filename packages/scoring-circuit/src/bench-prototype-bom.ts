@@ -66,7 +66,7 @@ const packageByMpn = {
   TAS2505TRGERQ1: "VQFN-24, 4mm x 4mm",
   "10177070-00011LF": "Right-angle SMT USB-C receptacle, 0.80mm PCB",
   TPD4S201TRGRRQ1: "VQFN-20 (RGR), 3.5mm x 3.5mm nominal body",
-  TPD2EUSB30DRTR: "SOT-3 (DRT)",
+  TPD2EUSB30DRTR: "SOT-9X3 (DRT), 3-pin",
   TVS2200DRVR: "WSON-6 (DRV), 2mm x 2mm",
   TPS25730ADREFR: "VQFN-38 (REF), 6mm x 4mm",
   TPS259474ARPWR: "VQFN-HR-10 (RPW), 2mm x 2mm"
@@ -456,7 +456,7 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "Required connector-side low-speed protection; it does not carry or protect USB D-minus or D-plus."
     ),
     selectedDecisionRow(
-      "U_USB2_ESD",
+      "U_USB_DATA_PROTECT",
       "TPD2EUSB30DRTR",
       "Native USB 2.0 low-capacitance ESD protection",
       "Required service-data protection; the ESP32-S3 remains the native USB device."

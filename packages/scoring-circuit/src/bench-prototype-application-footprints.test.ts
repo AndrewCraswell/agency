@@ -377,6 +377,63 @@ describe("BP-033 application footprint closure ledger", () => {
     expect(() => validateBenchPrototypeApplicationFootprints(drift)).toThrow(RangeError)
   })
 
+  it("maps U_USB_DATA_PROTECT to the root-reviewed DRT candidate with independent identity and deny checks", () => {
+    const record = benchPrototypeApplicationFootprints.records.find(
+      (candidate) => candidate.reference === "U_USB_DATA_PROTECT"
+    )
+    if (
+      record === undefined ||
+      !("projectFootprintCandidate" in record) ||
+      record.projectFootprintCandidate === undefined
+    )
+      throw new Error("U_USB_DATA_PROTECT project footprint candidate is missing")
+    expect(record).toMatchObject({
+      manufacturer: "Texas Instruments",
+      mpn: "TPD2EUSB30DRTR",
+      package: "SOT-9X3 (DRT), 3-pin",
+      population: "DNP-unresolved",
+      projectFootprintCandidate: {
+        state: "source-controlled-review-only",
+        artifactPath: "src/bp033-tpd2eusb30drtr-drt-project-footprint.tsx",
+        testArtifactPath: "src/bp033-tpd2eusb30drtr-drt-project-footprint.test.tsx",
+        renderedGeometrySha256: "f206c789162f96e38c781ca937d052b48b44bc66a91df41cebd7ad4cc6eff86e",
+        orderableBinding: {
+          orderableMpn: "TPD2EUSB30DRTR",
+          deviceMpn: "TPD2EUSB30",
+          packageDrawing: "DRT0003A",
+          electricalPinCount: 3,
+          pinMap: [
+            { pad: "1", signal: "D+", function: "D1+" },
+            { pad: "2", signal: "D-", function: "D1-" },
+            { pad: "3", signal: "GND", function: "GND" }
+          ]
+        },
+        source: {
+          artifactPath: "docs/evidence/bp-033/ti-tpd2eusb30a-datasheet.pdf",
+          sha256: "A2C0DD845043A5BBFE610F673879C29E38649544385DEA51DBE0A4C49DF39136",
+          reviewedPages: "1, 3, 12, 15-17"
+        },
+        review: {
+          state: "root-reviewed-review-input",
+          reviewer: "root-final-reviewer",
+          reviewedAt: "2026-08-25"
+        },
+        authority: {
+          manufacturerCadImported: false,
+          boardImported: false,
+          orientationAccepted: false,
+          courtyardAccepted: false,
+          drcAccepted: false,
+          fabricationAuthorized: false,
+          releaseState: "deny"
+        }
+      }
+    })
+    expect(validateBenchPrototypeApplicationFootprints(benchPrototypeApplicationFootprints)).toBe(true)
+    expect(benchPrototypeApplicationFootprints.releaseState).toBe("deny")
+    expect(benchPrototypeApplicationFootprints.fabricationAuthorized).toBe(false)
+  })
+
   it("rejects a substituted canonical-source path or forged physical evidence", () => {
     const substitutedSource = structuredClone(benchPrototypeApplicationFootprints) as {
       records: Array<Record<string, unknown>>
@@ -399,6 +456,17 @@ describe("BP-033 application footprint closure ledger", () => {
     }
     forgedOverlay.bp143Reconciliation.sampleFitVerified = true
     expect(() => validateBenchPrototypeApplicationFootprints(forgedPhysicalEvidence)).toThrow(RangeError)
+
+    const forgedTpdCandidate = structuredClone(benchPrototypeApplicationFootprints) as {
+      records: Array<Record<string, unknown>>
+    }
+    const forgedTpdRecord = forgedTpdCandidate.records.find((record) => record.reference === "U_USB_DATA_PROTECT")
+    if (forgedTpdRecord === undefined) throw new Error("U_USB_DATA_PROTECT ledger record is missing")
+    const projectFootprintCandidate = forgedTpdRecord.projectFootprintCandidate as {
+      renderedGeometrySha256: string
+    }
+    projectFootprintCandidate.renderedGeometrySha256 = "forged-artwork-digest"
+    expect(() => validateBenchPrototypeApplicationFootprints(forgedTpdCandidate)).toThrow(RangeError)
   })
 
   it("keeps audio and every other omitted peripheral out of the board", () => {

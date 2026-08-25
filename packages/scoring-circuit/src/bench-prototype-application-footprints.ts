@@ -108,6 +108,42 @@ type SourceEvidence = {
   readonly sha256: string | null
 }
 
+type ProjectFootprintCandidate = {
+  readonly state: "source-controlled-review-only"
+  readonly artifactPath: string
+  readonly testArtifactPath: string
+  readonly renderedGeometrySha256: string
+  readonly orderableBinding: {
+    readonly orderableMpn: string
+    readonly deviceMpn: string
+    readonly packageDrawing: string
+    readonly perimeterPins?: number
+    readonly exposedPads?: readonly string[]
+    readonly electricalPinCount?: number
+    readonly pinMap?: readonly {
+      readonly pad: string
+      readonly signal: string
+      readonly function: string
+    }[]
+  }
+  readonly source: { readonly artifactPath: string; readonly sha256: string; readonly reviewedPages: string }
+  readonly review: {
+    readonly state: "root-reviewed-review-input" | "source-controlled-pending-review"
+    readonly reviewer: "root-final-reviewer" | null
+    readonly reviewedAt: "2026-08-25" | null
+    readonly scope: string
+  }
+  readonly authority: {
+    readonly manufacturerCadImported: false
+    readonly boardImported: false
+    readonly orientationAccepted: false
+    readonly courtyardAccepted: false
+    readonly drcAccepted: false
+    readonly fabricationAuthorized: false
+    readonly releaseState: "deny"
+  }
+}
+
 type Seed = {
   readonly reference: string
   readonly section: string
@@ -141,35 +177,7 @@ type Seed = {
       readonly currentVerified: false
     }
   }
-  readonly projectFootprintCandidate?: {
-    readonly state: "source-controlled-review-only"
-    readonly artifactPath: string
-    readonly testArtifactPath: string
-    readonly renderedGeometrySha256: string
-    readonly orderableBinding: {
-      readonly orderableMpn: string
-      readonly deviceMpn: string
-      readonly packageDrawing: string
-      readonly perimeterPins: number
-      readonly exposedPads: readonly string[]
-    }
-    readonly source: { readonly artifactPath: string; readonly sha256: string; readonly reviewedPages: string }
-    readonly review: {
-      readonly state: "root-reviewed-review-input" | "source-controlled-review-input"
-      readonly reviewer: "root-final-reviewer" | "pending-root-review"
-      readonly reviewedAt: "2026-08-25"
-      readonly scope: string
-    }
-    readonly authority: {
-      readonly manufacturerCadImported: false
-      readonly boardImported: false
-      readonly orientationAccepted: false
-      readonly courtyardAccepted: false
-      readonly drcAccepted: false
-      readonly fabricationAuthorized: false
-      readonly releaseState: "deny"
-    }
-  }
+  readonly projectFootprintCandidate?: ProjectFootprintCandidate
 }
 
 const retainedPrimarySourceBatch = [
@@ -354,6 +362,45 @@ const tpd4s201RgrProjectFootprintCandidate = {
     reviewedAt: "2026-08-25",
     scope:
       "Exact orderable, RGR package, TI pin map, copper, rendered stencil dimensions, explicit circuit-port aliases, and deny-state integrity; CAD, board fit, orientation acceptance, DRC, release, and fabrication remain unapproved."
+  },
+  authority: {
+    manufacturerCadImported: false,
+    boardImported: false,
+    orientationAccepted: false,
+    courtyardAccepted: false,
+    drcAccepted: false,
+    fabricationAuthorized: false,
+    releaseState: "deny"
+  }
+} as const
+
+const tpd2eusb30DrtProjectFootprintCandidate = {
+  state: "source-controlled-review-only",
+  artifactPath: "src/bp033-tpd2eusb30drtr-drt-project-footprint.tsx",
+  testArtifactPath: "src/bp033-tpd2eusb30drtr-drt-project-footprint.test.tsx",
+  renderedGeometrySha256: "f206c789162f96e38c781ca937d052b48b44bc66a91df41cebd7ad4cc6eff86e",
+  orderableBinding: {
+    orderableMpn: "TPD2EUSB30DRTR",
+    deviceMpn: "TPD2EUSB30",
+    packageDrawing: "DRT0003A",
+    electricalPinCount: 3,
+    pinMap: [
+      { pad: "1", signal: "D+", function: "D1+" },
+      { pad: "2", signal: "D-", function: "D1-" },
+      { pad: "3", signal: "GND", function: "GND" }
+    ]
+  },
+  source: {
+    artifactPath: "docs/evidence/bp-033/ti-tpd2eusb30a-datasheet.pdf",
+    sha256: "A2C0DD845043A5BBFE610F673879C29E38649544385DEA51DBE0A4C49DF39136",
+    reviewedPages: "1, 3, 12, 15-17"
+  },
+  review: {
+    state: "root-reviewed-review-input",
+    reviewer: "root-final-reviewer",
+    reviewedAt: "2026-08-25",
+    scope:
+      "Exact TPD2EUSB30DRTR orderable, DRT package, three-pin map, retained TI sources, rendered review hash, and deny-state integrity; CAD, independent orientation, board fit, DRC, and fabrication remain unapproved."
   },
   authority: {
     manufacturerCadImported: false,
@@ -669,7 +716,9 @@ const records = [
           ? tps25730aRefProjectFootprintCandidate
           : reference === "U_USB_PORT_PROTECT"
             ? tpd4s201RgrProjectFootprintCandidate
-            : undefined,
+            : reference === "U_USB_DATA_PROTECT"
+              ? tpd2eusb30DrtProjectFootprintCandidate
+              : undefined,
       role
     } as Seed & { readonly role: string })
   ),
@@ -837,6 +886,7 @@ const definition = {
     "Each DNP-unresolved record requires an exact manufacturer drawing revision and SHA-256, exact CAD or an explicit no-CAD record, generated artwork hash, and independent orientation review.",
     "U_USB_PD has one source-controlled TPS25730ADREFR REF0038A artwork candidate with a rendered-geometry hash. It is review-only: no TI native CAD, board import, orientation, courtyard, DRC, release, or fabrication authority is granted.",
     "U_USB_PORT_PROTECT has one source-controlled TPD4S201TRGRRQ1 RGR review candidate with a rendered-geometry hash and explicit TI-to-circuit port aliases. It is review-only: no TI native CAD, board import, orientation, courtyard, DRC, release, or fabrication authority is granted.",
+    "U_USB_DATA_PROTECT has one source-controlled TPD2EUSB30DRTR DRT review candidate with a rendered-geometry hash. It is review-only: no TI native CAD, board import, independent orientation, courtyard, DRC, release, or fabrication authority is granted.",
     "J_HUB75 has a source-controlled pin-map and orientation overlay bound to the canonical BP-143 Samtec prints. It is not a project footprint, CAD import, board artwork, sample fit, continuity, current, orientation, or fabrication approval.",
     "BP-300 may not instantiate a record whose packageStatus is upstream-package-not-specified; obtain the exact package from the manufacturer before assigning geometry.",
     "TP_W5500_RESET_N and TP_W5500_INT_N select Keystone Electronics 5001 miniature through-hole black test points with a 0.040 inch (catalog 1.0 mm) mounting hole; exact source evidence is retained, while drawings, CAD, artwork, orientation, and probe-clearance review remain open before population.",
@@ -1002,8 +1052,8 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.projectFootprintCandidate.orderableBinding.deviceMpn === "TPS25730AD" &&
         record.projectFootprintCandidate.orderableBinding.packageDrawing === "REF0038A" &&
         record.projectFootprintCandidate.orderableBinding.perimeterPins === 38 &&
-        record.projectFootprintCandidate.orderableBinding.exposedPads[0] === "39 GND" &&
-        record.projectFootprintCandidate.orderableBinding.exposedPads[1] === "40 DRAIN" &&
+        record.projectFootprintCandidate.orderableBinding.exposedPads?.[0] === "39 GND" &&
+        record.projectFootprintCandidate.orderableBinding.exposedPads?.[1] === "40 DRAIN" &&
         record.projectFootprintCandidate.source.artifactPath === "docs/evidence/bp-033/ti-tps25730a-datasheet.pdf" &&
         record.projectFootprintCandidate.source.sha256 ===
           "B7D9836E4C82D28BF400FC1747586F24C26DAF94A629AAB4EE57C49072371D28" &&
@@ -1033,14 +1083,15 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.projectFootprintCandidate.orderableBinding.deviceMpn === "TPD4S201-Q1" &&
         record.projectFootprintCandidate.orderableBinding.packageDrawing === "RGR0020C" &&
         record.projectFootprintCandidate.orderableBinding.perimeterPins === 20 &&
-        record.projectFootprintCandidate.orderableBinding.exposedPads.length === 1 &&
-        record.projectFootprintCandidate.orderableBinding.exposedPads[0] === "21 GND" &&
+        record.projectFootprintCandidate.orderableBinding.exposedPads?.length === 1 &&
+        record.projectFootprintCandidate.orderableBinding.exposedPads?.[0] === "21 GND" &&
         record.projectFootprintCandidate.source.artifactPath === "docs/evidence/bp-033/ti-tpd4s201-q1-datasheet.pdf" &&
         record.projectFootprintCandidate.source.sha256 ===
           "E5A00ECD4BBAD07C21A92754DA2050950B91EBA32A960381FD5C1DE921B758D5" &&
         record.projectFootprintCandidate.source.reviewedPages === "1, 3-4, 21, 26-28" &&
         record.projectFootprintCandidate.review.state === "root-reviewed-review-input" &&
         record.projectFootprintCandidate.review.reviewer === "root-final-reviewer" &&
+        record.projectFootprintCandidate.review.reviewedAt === "2026-08-25" &&
         record.projectFootprintCandidate.authority.manufacturerCadImported === false &&
         record.projectFootprintCandidate.authority.boardImported === false &&
         record.projectFootprintCandidate.authority.orientationAccepted === false &&
@@ -1049,7 +1100,49 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.projectFootprintCandidate.authority.fabricationAuthorized === false &&
         record.projectFootprintCandidate.authority.releaseState === "deny"
     ) ||
-    contract.records.filter(hasProjectFootprintCandidate).length !== 2 ||
+    !contract.records.some(
+      (record) =>
+        record.reference === "U_USB_DATA_PROTECT" &&
+        record.manufacturer === "Texas Instruments" &&
+        record.mpn === "TPD2EUSB30DRTR" &&
+        record.package === "SOT-9X3 (DRT), 3-pin" &&
+        hasProjectFootprintCandidate(record) &&
+        record.projectFootprintCandidate.state === "source-controlled-review-only" &&
+        record.projectFootprintCandidate.artifactPath === "src/bp033-tpd2eusb30drtr-drt-project-footprint.tsx" &&
+        record.projectFootprintCandidate.testArtifactPath ===
+          "src/bp033-tpd2eusb30drtr-drt-project-footprint.test.tsx" &&
+        record.projectFootprintCandidate.renderedGeometrySha256 ===
+          "f206c789162f96e38c781ca937d052b48b44bc66a91df41cebd7ad4cc6eff86e" &&
+        record.projectFootprintCandidate.orderableBinding.orderableMpn === "TPD2EUSB30DRTR" &&
+        record.projectFootprintCandidate.orderableBinding.deviceMpn === "TPD2EUSB30" &&
+        record.projectFootprintCandidate.orderableBinding.packageDrawing === "DRT0003A" &&
+        record.projectFootprintCandidate.orderableBinding.electricalPinCount === 3 &&
+        record.projectFootprintCandidate.orderableBinding.pinMap?.length === 3 &&
+        record.projectFootprintCandidate.orderableBinding.pinMap?.[0]?.pad === "1" &&
+        record.projectFootprintCandidate.orderableBinding.pinMap?.[0]?.signal === "D+" &&
+        record.projectFootprintCandidate.orderableBinding.pinMap?.[0]?.function === "D1+" &&
+        record.projectFootprintCandidate.orderableBinding.pinMap?.[1]?.pad === "2" &&
+        record.projectFootprintCandidate.orderableBinding.pinMap?.[1]?.signal === "D-" &&
+        record.projectFootprintCandidate.orderableBinding.pinMap?.[1]?.function === "D1-" &&
+        record.projectFootprintCandidate.orderableBinding.pinMap?.[2]?.pad === "3" &&
+        record.projectFootprintCandidate.orderableBinding.pinMap?.[2]?.signal === "GND" &&
+        record.projectFootprintCandidate.orderableBinding.pinMap?.[2]?.function === "GND" &&
+        record.projectFootprintCandidate.source.artifactPath === "docs/evidence/bp-033/ti-tpd2eusb30a-datasheet.pdf" &&
+        record.projectFootprintCandidate.source.sha256 ===
+          "A2C0DD845043A5BBFE610F673879C29E38649544385DEA51DBE0A4C49DF39136" &&
+        record.projectFootprintCandidate.source.reviewedPages === "1, 3, 12, 15-17" &&
+        record.projectFootprintCandidate.review.state === "root-reviewed-review-input" &&
+        record.projectFootprintCandidate.review.reviewer === "root-final-reviewer" &&
+        record.projectFootprintCandidate.review.reviewedAt === "2026-08-25" &&
+        record.projectFootprintCandidate.authority.manufacturerCadImported === false &&
+        record.projectFootprintCandidate.authority.boardImported === false &&
+        record.projectFootprintCandidate.authority.orientationAccepted === false &&
+        record.projectFootprintCandidate.authority.courtyardAccepted === false &&
+        record.projectFootprintCandidate.authority.drcAccepted === false &&
+        record.projectFootprintCandidate.authority.fabricationAuthorized === false &&
+        record.projectFootprintCandidate.authority.releaseState === "deny"
+    ) ||
+    contract.records.filter(hasProjectFootprintCandidate).length !== 3 ||
     !contract.records.some(
       (record) =>
         record.reference === "J_HUB75" &&
