@@ -142,7 +142,7 @@ export const benchPrototypeReferenceDrive = deepFreeze({
   selectedParts: referenceParts,
   topology: {
     input:
-      "S5V_ISOLATED -> C_REF_IN 1 uF X7R directly to SCORING_SGND at REF5025A-Q1 IN/GND; no shared return through ADS8881 or digital decoupling",
+      "V5_ANALOG -> C_REF_IN 1 uF X7R directly to SCORING_SGND at REF5025A-Q1 IN/GND; no shared return through ADS8881 or digital decoupling",
     regulatorOutput:
       "REF5025A-Q1 OUT -> C_REF_REG 10 uF polymer tantalum in parallel with C_REF_REG_HF 100 nF X7R -> SCORING_SGND, entirely inside the regulator-local loop",
     adc: "REF5025A-Q1 OUT -> R_REF_SAR 0.22 ohm -> ADS_REF2V5; C_REF 10 uF X7R 0805 is the only capacitor directly across ADS8881 REF/GND; AINN remains SCORING_SGND"
@@ -168,7 +168,7 @@ export const benchPrototypeReferenceDrive = deepFreeze({
     lowerValueParallelCapacitorPermitted: false
   },
   netRename: {
-    isolatedPositive: { legacy: "S5V_ISO", canonical: "S5V_ISOLATED" },
+    analogPositive: { legacy: "S5V_ISO", canonical: "V5_ANALOG" },
     scoringReturn: { legacy: "SGND", canonical: "SCORING_SGND" },
     validatedForBp101Contract: true
   },
@@ -211,14 +211,14 @@ export const benchPrototypeReferenceDrive = deepFreeze({
     requiredNodes: [
       "ADS_REF2V5 at ADS8881 REF/GND",
       "REF5025A-Q1 OUT/GND",
-      "S5V_ISOLATED at REF5025A-Q1 IN/GND",
+      "V5_ANALOG at REF5025A-Q1 IN/GND",
       "SCORING_SGND near ADS8881 GND"
     ],
     requiredConditions: [
       "single conversion and sustained conversion bursts at the chosen one-channel rate",
       "cold, ambient, and hot validated board conditions",
       "source off and the largest normal source-on signal",
-      "isolated-converter and charge-pump operating, plus separately controlled power-transition captures"
+      "protected V5 branch and charge pump operating, plus separately controlled power-transition captures"
     ],
     archiveMustInclude: [
       "probe model, bandwidth limit, grounding method, calibration state, and exact probe points",
@@ -248,7 +248,7 @@ export const benchPrototypeReferenceDrive = deepFreeze({
         "sustained conversion burst at the selected one-channel acquisition rate",
         "source off and largest normal source-on signal",
         "cold, ambient, and hot component conditions",
-        "isolated-converter startup and controlled power transitions"
+        "protected V5 startup, charge-pump startup, and controlled power transitions"
       ],
       requiredArtifacts: [
         "versioned simulator and model identifiers",
@@ -372,8 +372,8 @@ const expectedUpstream = deepFreeze({
     },
     partRows: referenceParts.map(([reference, mpn]) => ({ reference, mpn }))
   },
-  isolatedRail: {
-    converter: "NXE1S0505MC",
+  analogPower: {
+    positiveSource: "TPS56A37RPAR V5",
     reference: "REF5025AQDRQ1"
   }
 } as const)
@@ -392,9 +392,9 @@ function currentUpstreamSnapshot() {
         return { reference, mpn: matches.length === 1 ? matches[0]!.mpn : "__MISSING_OR_DUPLICATE__" }
       })
     },
-    isolatedRail: {
-      converter: oneChannelAnalogExperiment.isolatedRail.converter,
-      reference: oneChannelAnalogExperiment.isolatedRail.reference
+    analogPower: {
+      positiveSource: oneChannelAnalogExperiment.analogPower.positiveSource,
+      reference: oneChannelAnalogExperiment.analogPower.reference
     }
   }
 }

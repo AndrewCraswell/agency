@@ -6,7 +6,8 @@ import {
   oneChannelAnalogExperimentBom,
   oneChannelAnalogExperimentReadiness,
   ref5025OutputCapacitorRequirement,
-  supportCircuitReconciled
+  supportCircuitReconciled,
+  tdkAutomotiveOneUfCapacitorSelection
 } from "./one-channel-analog-readiness.js"
 
 const partEvidence = oneChannelAnalogExperimentBom.map((part, index) => ({
@@ -51,19 +52,19 @@ function observationsFor(step: (typeof oneChannelAnalogExperimentReadiness.bring
           withinLimits: true as const
         }
       ]
-    case "isolation-and-continuity":
+    case "continuity-and-ground-return":
       return [
         {
           kind: "numeric" as const,
-          maximum: 1_000_000_000_000,
-          minimum: 10_000_000,
-          name: "isolation-resistance" as const,
+          maximum: 1,
+          minimum: 0,
+          name: "ground-return-resistance" as const,
           unit: "ohm" as const,
-          value: 20_000_000,
+          value: 0.1,
           withinLimits: true as const
         }
       ]
-    case "isolated-rail-power":
+    case "analog-rail-power":
       return [
         {
           kind: "numeric" as const,
@@ -183,15 +184,25 @@ const physicalEvidence = {
 }
 
 describe("one-channel analog experiment readiness", () => {
-  it("tracks all 45 physical references individually and keeps every release state false", () => {
-    expect(oneChannelAnalogExperimentBom).toHaveLength(45)
-    expect(new Set(oneChannelAnalogExperimentBom.map((part) => part.reference)).size).toBe(45)
+  it("tracks all 40 physical references individually and keeps every release state false", () => {
+    expect(oneChannelAnalogExperimentBom).toHaveLength(40)
+    expect(new Set(oneChannelAnalogExperimentBom.map((part) => part.reference)).size).toBe(40)
     expect(oneChannelAnalogExperimentBom.every((part) => part.dnp)).toBe(true)
     expect(oneChannelAnalogExperimentReadiness.authorization).toBe(false)
     expect(oneChannelAnalogExperimentReadiness.fabrication.couponBomReleased).toBe(false)
     expect(oneChannelAnalogExperimentReadiness.fabrication.copperReleased).toBe(false)
     expect(oneChannelAnalogExperimentReadiness.fabrication.fabricationAuthorized).toBe(false)
     expect(oneChannelAnalogExperimentReadiness.poweredTestingAuthorized).toBe(false)
+  })
+
+  it("removes the isolation converter without opening the footprint gate", () => {
+    expect(oneChannelAnalogExperimentBom.find((part) => String(part.reference) === "U_ISO")).toBeUndefined()
+    expect(oneChannelAnalogExperimentReadiness.supportReconciliation.analogPower).toMatchObject({
+      isolationConverter: "DNP",
+      negativeGenerator: "TPS60400DBVR"
+    })
+    expect(oneChannelAnalogExperimentReadiness.fabrication.footprintState).toBe("all-unreleased-dnp")
+    expect(oneChannelAnalogExperimentReadiness.authorization).toBe(false)
   })
 
   it("selects shrouded, polarized, locking, mutually incompatible fixture families with the correct orientation", () => {
@@ -216,9 +227,7 @@ describe("one-channel analog experiment readiness", () => {
       "R_REF_SAR",
       "C_BUFFER_POS",
       "C_BUFFER_NEG",
-      "C_NEG_IN",
-      "C_ISO_IN",
-      "C_ISO_OUT"
+      "C_NEG_IN"
     ])
     expect(mandatoryExperimentSupportParts.every((part) => part.dnp && part.circuitPresent)).toBe(true)
     expect(
@@ -228,16 +237,35 @@ describe("one-channel analog experiment readiness", () => {
     expect(Object.fromEntries(mandatoryExperimentSupportParts.map((part) => [part.reference, part.mpn]))).toEqual({
       C_BUFFER_NEG: "C0603C104K3RACTU",
       C_BUFFER_POS: "C0603C104K3RACTU",
-      C_ISO_IN: "GRM188R71A225KE15D",
-      C_ISO_OUT: "GRM188R71A225KE15D",
-      C_NEG_IN: "GRM188R71A105KA12D",
-      C_REF_IN: "GRM188R71A105KA12D",
+      C_NEG_IN: "CGA3E3X7R1H105K080AB",
+      C_REF_IN: "CGA3E3X7R1H105K080AB",
       C_REF_REG_HF: "C0603C104K3RACTU",
       R_REF_SAR: "RCWE0603R220FKEA"
     })
-    expect(oneChannelAnalogExperimentReadiness.supportReconciliation.nxeOptionalEmiFilter.population).toBe(
-      "dnp-not-selected"
-    )
+    expect(oneChannelAnalogExperimentReadiness.supportReconciliation.analogPower.isolationConverter).toBe("DNP")
+  })
+
+  it("selects the exact automotive TDK 1 uF MLCC while retaining every physical authority denial", () => {
+    expect(tdkAutomotiveOneUfCapacitorSelection).toMatchObject({
+      manufacturer: "TDK",
+      selectedMpn: "CGA3E3X7R1H105K080AB",
+      nonAutomotiveAlternativeMpn: "C1608X7R1H105K080AB",
+      dcBiasEvidence: { exactEffectiveCapacitanceAt5V: null },
+      authority: {
+        artworkApproved: false,
+        cadApproved: false,
+        fabricationApproved: false,
+        footprintApproved: false,
+        orientationApproved: false,
+        procurementApproved: false,
+        releaseState: "deny"
+      }
+    })
+    expect(
+      oneChannelAnalogExperimentBom
+        .filter((part) => part.mpn === tdkAutomotiveOneUfCapacitorSelection.selectedMpn)
+        .map((part) => part.reference)
+    ).toEqual(["C_REF_IN", "C_SAR_AVDD", "C_SAR_DVDD", "C_NEG_FLY", "C_NEG_IN", "C_NEG_OUT"])
   })
 
   it("selects separate REF5025 stabilization and ADS8881-local reference parts", () => {
@@ -448,7 +476,7 @@ describe("one-channel analog experiment readiness", () => {
       assessOneChannelExperimentPhysicalEvidence({
         ...physicalEvidence,
         bringUpResults: physicalEvidence.bringUpResults.map((result, index) =>
-          index === 1 ? { ...result, observations: [{ ...result.observations[0], value: 1 }] } : result
+          index === 1 ? { ...result, observations: [{ ...result.observations[0], value: 2 }] } : result
         )
       })
     ).toThrow("outside its bounds")
@@ -464,7 +492,7 @@ describe("one-channel analog experiment readiness", () => {
       assessOneChannelExperimentPhysicalEvidence({
         ...physicalEvidence,
         bringUpResults: physicalEvidence.bringUpResults.map((result, index) =>
-          index === 1 ? { ...result, observations: [{ ...result.observations[0], minimum: 0 }] } : result
+          index === 1 ? { ...result, observations: [{ ...result.observations[0], minimum: -1 }] } : result
         )
       })
     ).toThrow("bounds mismatch")

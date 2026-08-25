@@ -30,6 +30,14 @@ export default function OneChannelAnalogExperimentCircuit() {
         pcbY={0}
       />
       <pinheader
+        name="J_UPSTREAM_3V3"
+        pinCount={2}
+        pinLabels={{ pin1: "APP_3V3", pin2: "SYSTEM_GND" }}
+        gender="male"
+        pcbX={-32}
+        pcbY={-5}
+      />
+      <pinheader
         name="J_CONTROL"
         pinCount={2}
         pinLabels={{ pin1: "SOURCE_EN", pin2: "SGND" }}
@@ -61,56 +69,24 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
 
       <chip
-        name="U_ISO"
-        manufacturerPartNumber="NXE1S0505MC"
-        footprint="sip7"
-        pinLabels={{ pin1: "SYSTEM_5V", pin2: "SYSTEM_GND", pin6: "S5V_ISO", pin7: "SGND" }}
-        pcbX={-16}
-        pcbY={0}
-      />
-      <capacitor
-        name="C_ISO_IN"
-        manufacturerPartNumber="GRM188R71A225KE15D"
-        capacitance="2.2uF"
-        footprint="0603"
-        pcbX={-25}
-        pcbY={-4}
-      />
-      <capacitor
-        name="C_ISO_OUT"
-        manufacturerPartNumber="GRM188R71A225KE15D"
-        capacitance="2.2uF"
-        footprint="0603"
-        pcbX={-11}
-        pcbY={5}
-      />
-      <chip
         name="U_NEGATIVE_RAIL"
         manufacturerPartNumber="TPS60400DBVR"
         footprint="sot23-5"
-        pinLabels={{ pin1: "S5V_NEG", pin2: "S5V_ISO", pin3: "CFLY_NEG", pin4: "SGND", pin5: "CFLY_POS" }}
+        pinLabels={{ pin1: "V5_NEG", pin2: "V5_ANALOG", pin3: "CFLY_NEG", pin4: "SGND", pin5: "CFLY_POS" }}
         pcbX={-5}
         pcbY={-6}
-      />
-      <chip
-        name="U_3V3"
-        manufacturerPartNumber="TPS7A2033PDBVR"
-        footprint="sot23-5"
-        pinLabels={{ pin1: "S5V_ISO", pin2: "SGND", pin3: "ENABLE_S5V", pin4: "NC", pin5: "S3V3_ISO" }}
-        pcbX={-5}
-        pcbY={2}
       />
       <chip
         name="U_REF"
         manufacturerPartNumber="REF5025AQDRQ1"
         footprint="soic8"
-        pinLabels={{ pin2: "S5V_ISO", pin4: "SGND", pin6: "REF_2V5" }}
+        pinLabels={{ pin2: "V5_ANALOG", pin4: "SGND", pin6: "REF_2V5" }}
         pcbX={7}
         pcbY={16}
       />
       <capacitor
         name="C_REF_IN"
-        manufacturerPartNumber="GRM188R71A105KA12D"
+        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
         capacitance="1uF"
         footprint="0603"
         pcbX={1}
@@ -176,7 +152,7 @@ export default function OneChannelAnalogExperimentCircuit() {
           pin10: "UNUSED_D3",
           pin11: "UNUSED_S3",
           pin12: "NC",
-          pin13: "S3V3_ISO",
+          pin13: "APP_3V3",
           pin14: "UNUSED_S2",
           pin15: "UNUSED_D2",
           pin16: "UNUSED_SEL2"
@@ -197,14 +173,14 @@ export default function OneChannelAnalogExperimentCircuit() {
 
       <chip
         name="U_OVP_BUFFER"
-        manufacturerPartNumber="ADA4177-1BRZ"
+        manufacturerPartNumber="ADA4177-1ARZ"
         footprint="soic8"
         pinLabels={{
           pin2: "BUFFER_INVERTING",
           pin3: "BUFFER_INPUT",
           pin4: "S5V_NEG",
           pin6: "BUFFER_OUTPUT",
-          pin7: "S5V_ISO"
+          pin7: "V5_ANALOG"
         }}
         pcbX={20}
         pcbY={0}
@@ -279,7 +255,7 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_SAR_AVDD"
-        manufacturerPartNumber="GRM188R71A105KA12D"
+        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
         capacitance="1uF"
         footprint="0603"
         pcbX={43}
@@ -287,7 +263,7 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_SAR_DVDD"
-        manufacturerPartNumber="GRM188R71A105KA12D"
+        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
         capacitance="1uF"
         footprint="0603"
         pcbX={43}
@@ -303,7 +279,7 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_NEG_FLY"
-        manufacturerPartNumber="GRM188R71A105KA12D"
+        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
         capacitance="1uF"
         footprint="0603"
         pcbX={-10}
@@ -311,7 +287,7 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_NEG_IN"
-        manufacturerPartNumber="GRM188R71A105KA12D"
+        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
         capacitance="1uF"
         footprint="0603"
         pcbX={-10}
@@ -319,27 +295,11 @@ export default function OneChannelAnalogExperimentCircuit() {
       />
       <capacitor
         name="C_NEG_OUT"
-        manufacturerPartNumber="GRM188R71A105KA12D"
+        manufacturerPartNumber="CGA3E3X7R1H105K080AB"
         capacitance="1uF"
         footprint="0603"
         pcbX={-10}
         pcbY={-18}
-      />
-      <capacitor
-        name="C_3V3_IN"
-        manufacturerPartNumber="GRM188R71A105KA12D"
-        capacitance="1uF"
-        footprint="0603"
-        pcbX={-4}
-        pcbY={8}
-      />
-      <capacitor
-        name="C_3V3_OUT"
-        manufacturerPartNumber="GRM188R71A105KA12D"
-        capacitance="1uF"
-        footprint="0603"
-        pcbX={4}
-        pcbY={8}
       />
 
       <pinheader name="TP_LINE" pinCount={1} pinLabels={["LINE"]} pcbX={-25} pcbY={29} />
@@ -376,38 +336,26 @@ export default function OneChannelAnalogExperimentCircuit() {
       <trace from="U_SAR.SPI_DOUT" to="J_ADC_IO.SPI_DOUT" />
       <trace from="U_SAR.SPI_SCLK" to="J_ADC_IO.SPI_SCLK" />
       <trace from="U_SAR.SPI_DIN" to="J_ADC_IO.SPI_DIN" />
-      <trace from="J_UPSTREAM_5V.SYSTEM_5V" to="U_ISO.SYSTEM_5V" />
-      <trace from="J_UPSTREAM_5V.SYSTEM_GND" to="U_ISO.SYSTEM_GND" />
-      <trace from="U_ISO.SYSTEM_5V" to="C_ISO_IN.pin1" />
-      <trace from="C_ISO_IN.pin2" to="U_ISO.SYSTEM_GND" />
-      <trace from="U_ISO.S5V_ISO" to="U_NEGATIVE_RAIL.S5V_ISO" />
-      <trace from="U_ISO.S5V_ISO" to="U_3V3.S5V_ISO" />
-      <trace from="U_ISO.S5V_ISO" to="U_REF.S5V_ISO" />
-      <trace from="U_ISO.SGND" to="net.SGND" />
-      <trace from="U_ISO.S5V_ISO" to="C_ISO_OUT.pin1" />
-      <trace from="C_ISO_OUT.pin2" to="net.SGND" />
+      <trace from="J_UPSTREAM_5V.SYSTEM_5V" to="U_NEGATIVE_RAIL.V5_ANALOG" />
+      <trace from="J_UPSTREAM_5V.SYSTEM_5V" to="U_REF.V5_ANALOG" />
+      <trace from="J_UPSTREAM_5V.SYSTEM_GND" to="net.SGND" />
+      <trace from="J_UPSTREAM_3V3.SYSTEM_GND" to="net.SGND" />
       <trace from="U_NEGATIVE_RAIL.SGND" to="net.SGND" />
-      <trace from="U_NEGATIVE_RAIL.S5V_ISO" to="C_NEG_IN.pin1" />
+      <trace from="U_NEGATIVE_RAIL.V5_ANALOG" to="C_NEG_IN.pin1" />
       <trace from="C_NEG_IN.pin2" to="net.SGND" />
       <trace from="U_NEGATIVE_RAIL.CFLY_NEG" to="C_NEG_FLY.pin1" />
       <trace from="U_NEGATIVE_RAIL.CFLY_POS" to="C_NEG_FLY.pin2" />
-      <trace from="U_NEGATIVE_RAIL.S5V_NEG" to="C_NEG_OUT.pin1" />
+      <trace from="U_NEGATIVE_RAIL.V5_NEG" to="C_NEG_OUT.pin1" />
       <trace from="C_NEG_OUT.pin2" to="net.SGND" />
-      <trace from="U_NEGATIVE_RAIL.S5V_NEG" to="U_OVP_BUFFER.S5V_NEG" />
-      <trace from="U_NEGATIVE_RAIL.S5V_NEG" to="TP_S5V_NEG.S5V_NEG" />
+      <trace from="U_NEGATIVE_RAIL.V5_NEG" to="U_OVP_BUFFER.S5V_NEG" />
+      <trace from="U_NEGATIVE_RAIL.V5_NEG" to="TP_S5V_NEG.S5V_NEG" />
       <trace from="U_OVP_BUFFER.S5V_NEG" to="C_BUFFER_NEG.pin1" />
       <trace from="C_BUFFER_NEG.pin2" to="net.SGND" />
-      <trace from="U_3V3.SGND" to="net.SGND" />
-      <trace from="U_3V3.S5V_ISO" to="U_3V3.ENABLE_S5V" />
-      <trace from="U_3V3.S5V_ISO" to="C_3V3_IN.pin1" />
-      <trace from="C_3V3_IN.pin2" to="net.SGND" />
-      <trace from="U_3V3.S3V3_ISO" to="U_SOURCE_SWITCH.S3V3_ISO" />
-      <trace from="U_3V3.S3V3_ISO" to="U_SAR.AVDD_3V3" />
-      <trace from="U_3V3.S3V3_ISO" to="U_SAR.DVDD_3V3" />
-      <trace from="U_3V3.S3V3_ISO" to="C_3V3_OUT.pin1" />
-      <trace from="C_3V3_OUT.pin2" to="net.SGND" />
+      <trace from="J_UPSTREAM_3V3.APP_3V3" to="U_SOURCE_SWITCH.APP_3V3" />
+      <trace from="J_UPSTREAM_3V3.APP_3V3" to="U_SAR.AVDD_3V3" />
+      <trace from="J_UPSTREAM_3V3.APP_3V3" to="U_SAR.DVDD_3V3" />
       <trace from="U_REF.SGND" to="net.SGND" />
-      <trace from="U_REF.S5V_ISO" to="C_REF_IN.pin1" />
+      <trace from="U_REF.V5_ANALOG" to="C_REF_IN.pin1" />
       <trace from="C_REF_IN.pin2" to="net.SGND" />
       <trace from="U_REF.REF_2V5" to="R_SOURCE.pin1" />
       <trace from="U_REF.REF_2V5" to="C_REF_REG.pin1" />
@@ -424,9 +372,10 @@ export default function OneChannelAnalogExperimentCircuit() {
       <trace from="J_CONTROL.SGND" to="net.SGND" />
       <trace from="U_SOURCE_SWITCH.SOURCE_EN" to="R_SOURCE_PD.pin1" />
       <trace from="R_SOURCE_PD.pin2" to="net.SGND" />
-      <trace from="U_SOURCE_SWITCH.S3V3_ISO" to="C_MUX.pin1" />
+      <trace from="U_SOURCE_SWITCH.APP_3V3" to="C_MUX.pin1" />
       <trace from="C_MUX.pin2" to="net.SGND" />
-      <trace from="U_OVP_BUFFER.S5V_ISO" to="C_BUFFER_POS.pin1" />
+      <trace from="J_UPSTREAM_5V.SYSTEM_5V" to="U_OVP_BUFFER.V5_ANALOG" />
+      <trace from="U_OVP_BUFFER.V5_ANALOG" to="C_BUFFER_POS.pin1" />
       <trace from="C_BUFFER_POS.pin2" to="net.SGND" />
       <trace from="U_SOURCE_SWITCH.UNUSED_SEL2" to="net.SGND" />
       <trace from="U_SOURCE_SWITCH.UNUSED_SEL3" to="net.SGND" />

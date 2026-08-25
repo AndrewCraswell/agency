@@ -213,6 +213,10 @@ describe("bench prototype BOM baseline", () => {
       disposition: "DNP",
       quantity: 0
     })
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_ANALOG_ISO_POWER")).toMatchObject({
+      disposition: "DNP",
+      quantity: 0
+    })
     expect(benchPrototypeBom.rows.find((row) => row.reference === "J_PRIMARY_OUTPUTS")?.disposition).toBe("TBD")
     expect(benchPrototypeBom.rows.find((row) => row.reference === "J_USB_C")?.disposition).toBe("selected")
     expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB_PD")?.disposition).toBe("selected")

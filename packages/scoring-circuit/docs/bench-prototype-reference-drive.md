@@ -16,7 +16,7 @@ It continues the selected one-channel chain in
 | Reference | Exact part | Connection and role |
 | --- | --- | --- |
 | `U_REF` | TI `REF5025AQDRQ1` | 2.5 V reference for source excitation and `ADS8881IDGS` `REF`. |
-| `C_REF_IN` | Murata `GRM188R71A105KA12D` | 1 uF X7R input bypass directly from `S5V_ISOLATED` to `SCORING_SGND` at `U_REF` IN/GND. |
+| `C_REF_IN` | TDK `CGA3E3X7R1H105K080AB` | Automotive/AEC-Q200 1 uF +/-10%, 50 VDC X7R, 0603 / 1608 input bypass directly from `V5_ANALOG` to `SCORING_SGND` at `U_REF` IN/GND. |
 | `C_REF_REG` | KEMET `T521B106M025ATE100` | REF5025-local 10 uF polymer output stabilization, 25 V, 100 milliohm maximum ESR at 25 C and 100 kHz. |
 | `C_REF_REG_HF` | KEMET `C0603C104K3RACTU` | REF5025-local 100 nF X7R high-frequency bypass in parallel with `C_REF_REG`. |
 | `R_REF_SAR` | Vishay Dale `RCWE0603R220FKEA` | Exact 0.22-ohm, 1% series feed between REF5025 OUT and `ADS_REF2V5`; inside the required 0.1-ohm to 0.47-ohm range. |
@@ -38,7 +38,13 @@ ADS8881 REF/GND, and `C_REF`. Each conductor between the named pads must be
 shorter than 0.1 inch, contain zero vias, and have less than 2 nH extracted
 loop inductance. `C_REF_IN` belongs at `U_REF` IN/GND with a local quiet
 return. Neither loop may share the source-switch, buffer-output, SCLK, CONVST,
-DOUT, isolated-converter, or charge-pump switching-current path.
+DOUT or charge-pump switching-current path.
+
+The 1-uF value above is the selected nominal value. Exact effective
+capacitance at the 5-V rail remains unknown because no raw TDK DC-bias CSV or
+model bytes have been retained. TDK's PA/PB/PC land-pattern ranges are
+manufacturer guidance only; project CAD, footprint, artwork, orientation,
+procurement, and fabrication all remain denied.
 
 Review evidence must include an annotated placement/copper image, measured
 pad-to-pad conductor lengths, via counts, and post-layout extracted inductance
@@ -49,7 +55,7 @@ via geometry, return path, and component orientation. This document does not
 approve any of those items.
 
 The legacy coupon names `S5V_ISO` and `SGND` map to the canonical prototype
-names `S5V_ISOLATED` and `SCORING_SGND`. BP-101 validates that mapping; new
+names `V5_ANALOG` and `SCORING_SGND`. BP-101 validates that mapping; new
 prototype integration must use only the canonical names.
 
 ## Illustrative arithmetic and capture
@@ -62,7 +68,7 @@ REF5025 response. This is only an illustrative stimulus for planning a
 capture. It is not an ADS8881 load claim, an upper bound, a regulator model,
 a ripple limit, or a pass/fail result.
 
-Capture `ADS_REF2V5` at ADS8881 REF/GND and REF5025 OUT/GND separately, the isolated
+Capture `ADS_REF2V5` at ADS8881 REF/GND and REF5025 OUT/GND separately, the common-ground
 5-V input at REF5025 IN/GND, and the local scoring ground. Trigger on CONVST.
 Archive single conversions and bursts, source-off and highest normal
 source-on conditions, cold/ambient/hot board conditions, plus controlled
@@ -98,10 +104,10 @@ reproduce exactly:
 | Artifact | SHA-256 |
 | --- | --- |
 | Netlist template | `87be1beb2285c6adc1ab4b620f7139445cf06b451f57264a94508658f66894c2` |
-| Parameter manifest | `5ca2d17e0664ace5c44ff4ed96113b1280b389591a2c1c03ba4ab17adce34f46` |
+| Parameter manifest | `7359892a5bea2a9e914ef3e1df6dda2df1dfae77318e36e95b4d4e4a50a0b7fb` |
 | Normalized results | `f3a2997911b1b700babc4822093731aa54c3286de8e941748f8e9a5764b5d975` |
 | Raw-waveform manifest | `1c708bcb507b3cbed63ddd416524c478dafef2409949362dba9f528a4e98f62f` |
-| Bound evidence identity | `79d700c8eddaf11a4a47ea1cd6e38ef29d8407effb30a1cef5cf6b2089b5599c` |
+| Bound evidence identity | `f9ff3706c1906ee7cf02f35dea0397e6cffeb9d5ac0e85463bf0b4b1e2db592c` |
 
 No official REF5025A-Q1 transient macromodel or ADS8881 conversion-phase
 reference-load model is claimed. The run uses an explicit 2.5-V behavioral
@@ -128,5 +134,5 @@ layout, footprint, and fabrication all remain **DENY**.
 - [T521B106M025ATE100 data sheet](https://search.kemet.com/download/specsheet/T521B106M025ATE100)
 - [GRM21BR71A106KE51L data sheet](https://search.murata.co.jp/Ceramy/image/img/A01X/G101/ENG/GRM21BR71A106KE51-01.pdf)
 - [RCWE0603R220FKEA family data sheet](https://www.vishay.com/docs/20019/rcwe.pdf)
-- [GRM188R71A105KA12D data sheet](https://search.murata.co.jp/Ceramy/image/img/A01X/EN/GRM188R71A105KA12-01.pdf)
+- [CGA3E3X7R1H105K080AB product page](https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=CGA3E3X7R1H105K080AB)
 - [C0603C104K3RACTU data sheet](https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en)

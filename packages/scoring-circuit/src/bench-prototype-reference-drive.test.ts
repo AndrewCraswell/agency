@@ -31,7 +31,7 @@ describe("BP-101 bench prototype reference drive", () => {
     )
     expect(benchPrototypeReferenceDrive.topology).toEqual({
       input:
-        "S5V_ISOLATED -> C_REF_IN 1 uF X7R directly to SCORING_SGND at REF5025A-Q1 IN/GND; no shared return through ADS8881 or digital decoupling",
+        "V5_ANALOG -> C_REF_IN 1 uF X7R directly to SCORING_SGND at REF5025A-Q1 IN/GND; no shared return through ADS8881 or digital decoupling",
       regulatorOutput:
         "REF5025A-Q1 OUT -> C_REF_REG 10 uF polymer tantalum in parallel with C_REF_REG_HF 100 nF X7R -> SCORING_SGND, entirely inside the regulator-local loop",
       adc: "REF5025A-Q1 OUT -> R_REF_SAR 0.22 ohm -> ADS_REF2V5; C_REF 10 uF X7R 0805 is the only capacitor directly across ADS8881 REF/GND; AINN remains SCORING_SGND"
@@ -171,7 +171,7 @@ describe("BP-101 bench prototype reference drive", () => {
     })
     expect(benchPrototypeReferenceDrive.layoutLoops.evidenceAccepted).toBe(false)
     expect(benchPrototypeReferenceDrive.netRename).toEqual({
-      isolatedPositive: { canonical: "S5V_ISOLATED", legacy: "S5V_ISO" },
+      analogPositive: { canonical: "V5_ANALOG", legacy: "S5V_ISO" },
       scoringReturn: { canonical: "SCORING_SGND", legacy: "SGND" },
       validatedForBp101Contract: true
     })

@@ -64,9 +64,7 @@ function hasExactDataGraph(actual: unknown, expected: unknown, seen = new WeakMa
 }
 
 const selectedReferences = [
-  ["U_ISO", "NXE1S0505MC"],
   ["U_NEGATIVE_RAIL", "TPS60400DBVR"],
-  ["U_3V3", "TPS7A2033PDBVR"],
   ["U_REF", "REF5025AQDRQ1"],
   ["U_ESD", "TPD4E05U06DQAR"],
   ["R_ESD", "CRCW060322R0FKEAHP"],
@@ -384,7 +382,7 @@ const overloadAndFaultBudgetTerms = [
     credit: "none",
     value: null,
     unit: null,
-    term: "isolated converter, negative generator, reference, return path, and upstream-supply fault behavior"
+    term: "protected V5 source, negative generator, reference, common-ground return path, and upstream-supply fault behavior"
   }
 ] as const
 
@@ -414,7 +412,7 @@ export const benchPrototypeAnalogTopology = deepFreeze({
   scope: "one channel only; BP-103 owns any seven-channel replication",
   selectedChain: {
     normal:
-      "fixture LINE -> TPD4E05U06 shunt -> 22 ohm -> TMUX1112 -> ADA4177-1 unity buffer on isolated +/-5 V -> 20 ohm/1 nF -> ADS8881 AINP; AINN -> SCORING_SGND",
+      "fixture LINE -> TPD4E05U06 shunt -> 22 ohm -> TMUX1112 -> ADA4177-1 unity buffer on common-ground +5 V/-5 V -> 20 ohm/1 nF -> ADS8881 AINP; AINN -> SCORING_SGND",
     excitation: "REF5025A-Q1 -> 2.49 kohm -> TMUX1112 source path -> source node",
     guardedFault:
       "physically separate normally-open fixture relay -> 56 kohm 1 percent guard -> LINE; 100 ms maximum and 10 second minimum interval"
@@ -527,11 +525,12 @@ const expectedUpstream = deepFreeze({
     sarFilterPart: "C0603C102J5GACTU",
     sarFilterResistancePart: "CRCW060320R0FKEAHP"
   },
-  isolatedRail: {
-    converter: "NXE1S0505MC",
+  analogPower: {
+    positiveSource: "TPS56A37RPAR V5",
     negativeGenerator: "TPS60400DBVR",
     reference: "REF5025AQDRQ1",
-    regulator3v3: "TPS7A2033PDBVR"
+    regulator3v3: "LMR43620MSC3RPERQ1",
+    groundSystem: "SCORING_SGND quiet region with one reviewed connection to APP_GND"
   },
   source: {
     resistancePart: "ERA3AEB2491V",
@@ -662,11 +661,12 @@ function currentUpstreamSnapshot() {
       sarFilterPart: oneChannelAnalogExperiment.acquisition.sarFilterPart,
       sarFilterResistancePart: oneChannelAnalogExperiment.acquisition.sarFilterResistancePart
     },
-    isolatedRail: {
-      converter: oneChannelAnalogExperiment.isolatedRail.converter,
-      negativeGenerator: oneChannelAnalogExperiment.isolatedRail.negativeGenerator,
-      reference: oneChannelAnalogExperiment.isolatedRail.reference,
-      regulator3v3: oneChannelAnalogExperiment.isolatedRail.regulator3v3
+    analogPower: {
+      positiveSource: oneChannelAnalogExperiment.analogPower.positiveSource,
+      negativeGenerator: oneChannelAnalogExperiment.analogPower.negativeGenerator,
+      reference: oneChannelAnalogExperiment.analogPower.reference,
+      regulator3v3: oneChannelAnalogExperiment.analogPower.regulator3v3,
+      groundSystem: oneChannelAnalogExperiment.analogPower.groundSystem
     },
     source: {
       resistancePart: oneChannelAnalogExperiment.source.resistancePart,

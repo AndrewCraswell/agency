@@ -60,14 +60,15 @@ export const oneChannelAnalogExperiment = {
     resistanceOhms: 56_000,
     resistancePart: "CRCW120656K0FKEAHP"
   },
-  isolatedRail: {
-    converter: "NXE1S0505MC",
-    nominalOutputVolts: 5,
-    outputCurrentMaximumMa: 200,
-    outputPowerMaximumW: 1,
+  analogPower: {
+    positiveSource: "TPS56A37RPAR V5",
+    positiveNominalVolts: 5,
     negativeGenerator: "TPS60400DBVR",
+    negativeNominalVolts: -5,
+    negativeCurrentMaximumMa: 60,
+    groundSystem: "SCORING_SGND quiet region with one reviewed connection to APP_GND",
     reference: "REF5025AQDRQ1",
-    regulator3v3: "TPS7A2033PDBVR"
+    regulator3v3: "LMR43620MSC3RPERQ1"
   },
   physicalPinMaps: {
     ads8881Dgs: {
@@ -141,7 +142,7 @@ export function oneChannelNormalRangeScreen(externalResistanceOhms: number) {
 /**
  * The guarded lane is a source envelope only. It deliberately does not claim
  * sustained fault, unpowered behavior, clamp temperature, or production fault
- * isolation. The OVP range is evaluated with the experiment's plus/minus 5 V
+ * isolation. The OVP range is evaluated with the experiment's common-ground plus/minus 5 V
  * rails, not an imagined single-supply operation.
  */
 export function oneChannelGuardedFaultScreen(appliedVolts: number) {
@@ -251,21 +252,17 @@ export function oneChannelSabreTimingScreen() {
 
 /**
  * Known typical loads are intentionally separated from a worst-case closure.
- * The Murata converter is the same 1 W isolated-domain class used by the
- * apparatus study, while this circuit's signed-off load is still absent.
+ * The common-ground charge pump has ample paper current for one buffer, while
+ * ripple, startup, injected-fault, and seven-channel load evidence stays open.
  */
-export function oneChannelIsolatedLoadScreen() {
-  const { acquisition, isolatedRail } = oneChannelAnalogExperiment
-  const knownTypicalW =
-    (acquisition.bufferQuiescentCurrentTypicalMa / 1_000) * 10 +
-    0.0055 + // ADS8881 typical total power at 1 MSPS
-    0.004 + // REF5025A-Q1 typical quiescent contribution from 5 V
-    0.002 // charge pump and 3.3 V LDO control current allowance
+export function oneChannelAnalogPowerScreen() {
+  const { acquisition, analogPower } = oneChannelAnalogExperiment
+  const knownTypicalNegativeMa = acquisition.bufferQuiescentCurrentTypicalMa + 0.2
 
   return {
-    converterOutputPowerMaximumW: isolatedRail.outputPowerMaximumW,
-    knownTypicalW,
-    remainingAgainstOneWTypicalW: isolatedRail.outputPowerMaximumW - knownTypicalW,
+    negativeRailCurrentMaximumMa: analogPower.negativeCurrentMaximumMa,
+    knownTypicalNegativeMa,
+    remainingNegativeCurrentTypicalMa: analogPower.negativeCurrentMaximumMa - knownTypicalNegativeMa,
     typicalOnly: true,
     worstCaseLoadClosed: false
   }
@@ -282,7 +279,7 @@ export function assessOneChannelAnalogExperiment() {
       foil450Ohms: oneChannelNormalRangeScreen(450),
       zeroOhms: oneChannelNormalRangeScreen(0)
     },
-    power: oneChannelIsolatedLoadScreen(),
+    power: oneChannelAnalogPowerScreen(),
     sabre: oneChannelSabreTimingScreen(),
     static450Ohms125C: oneChannelStaticScreen(450, 125),
     state: "deny" as const,
@@ -292,7 +289,7 @@ export function assessOneChannelAnalogExperiment() {
       "The timing screen uses typical buffer bandwidth and excludes switch memory, board and cable parasitics, firmware scheduling, comparator qualification, and fault recovery.",
       "The 450-ohm arithmetic omits TMUX on-resistance and leakage, TPD leakage, ADC input leakage and offset, reference load/transient behavior, all resistor/capacitor tolerances, and several temperature terms. It requires calibration at each corner and is not a production calibration policy, full uncertainty budget, or threshold authorization.",
       "The ADC reference needs its own dynamic-drive and placement evidence. The 10-uF reference capacitor value does not prove a REF5025A-Q1 transient response or a quiet reference return.",
-      "The isolated-rail screen contains known typical loads only. Converter efficiency, startup, reference transient current, negative-rail ripple, thermal operation, and worst-case rail load remain unclosed.",
+      "The common-ground analog-power screen contains known typical loads only. V5 startup, charge-pump efficiency/ripple, reference transient current, thermal operation, and worst-case rail load remain unclosed.",
       "This one channel has no seven-channel multiplexing, crosstalk, simultaneous fault, enclosure, EMC, connector, footprint, or fabrication evidence."
     ]
   }

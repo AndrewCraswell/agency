@@ -288,7 +288,7 @@ const channels = conductorNames.map((conductor, index) => {
       `U_SOURCE_SWITCH_${number}.QUIET -> U_OVP_BUFFER_${number} unity input`,
       `U_OVP_BUFFER_${number}.OUT -> R_SAR_${number} 20 ohm -> U_SAR_${number}.AINP with C_SAR_${number} C0603C102J5GACTU 1 nF from AINP to SCORING_SGND`,
       `U_SAR_${number}.AINN -> SCORING_SGND`,
-      `S5V_ISOLATED -> U_REF_${number}.IN with C_REF_IN_${number} 1 uF to SCORING_SGND`,
+      `V5_ANALOG -> U_REF_${number}.IN with C_REF_IN_${number} 1 uF to SCORING_SGND`,
       `U_REF_${number}.OUT -> C_REF_REG_${number} 10 uF and C_REF_REG_HF_${number} 100 nF regulator-local loop to SCORING_SGND`,
       `U_REF_${number}.OUT -> R_REF_SAR_${number} 0.22 ohm -> U_SAR_${number}.REF with C_REF_${number} 10 uF to SCORING_SGND`
     ],
@@ -434,7 +434,7 @@ export const benchPrototypeSevenChannelAnalog = deepFreeze({
     shared: {
       decision: "shared-with-review-required",
       resources: [
-        "S5V_ISOLATED",
+        "V5_ANALOG",
         "S5V_NEG",
         "SCORING_3V3",
         "SCORING_SGND",

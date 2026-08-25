@@ -181,7 +181,7 @@ describe("BP-103 seven-channel analog replication", () => {
       shared: {
         decision: "shared-with-review-required",
         resources: [
-          "S5V_ISOLATED",
+          "V5_ANALOG",
           "S5V_NEG",
           "SCORING_3V3",
           "SCORING_SGND",

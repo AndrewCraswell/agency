@@ -476,6 +476,11 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
     dnpRow("U_ISO_MAIN", "Superseded main processor isolator", "Removed because P0 has one processor domain."),
     dnpRow("U_ISO_AUX", "Superseded auxiliary processor isolator", "Removed because P0 has one processor domain."),
     dnpRow("U_ISO_POWER", "Superseded isolated processor-link power", "Removed because P0 has one processor domain."),
+    dnpRow(
+      "U_ANALOG_ISO_POWER",
+      "Superseded isolated analog-domain converter",
+      "Removed because the retained ADA4177 path uses common-ground V5_ANALOG plus a TPS60400 negative rail."
+    ),
     selectedDecisionRow(
       "U_REF",
       "REF5025AQDRQ1",

@@ -40,7 +40,7 @@ the protection chain, source resistor and enable pull-down, buffer, SAR filter a
 the complete REF5025 network. In particular, there is one REF5025 and one ADS8881-local 0.22-ohm and 10-uF reservoir
 per cell. A shared reference regulator or shared ADC-local reservoir is not selected.
 
-Only `S5V_ISOLATED`, `S5V_NEG`, `SCORING_3V3`, `SCORING_SGND`, shared `CONVST`, shared `SCLK`, and the serialized
+Only `V5_ANALOG`, `V5_NEG`, `APP_3V3`, `SCORING_SGND`, shared `CONVST`, shared `SCLK`, and the serialized
 data route are shared. Their physical return paths, rail power, crosstalk, and timing receive no credit until the
 machine-readable gates below have physical evidence.
 
@@ -68,7 +68,7 @@ Primary source: [TI ADS8881 datasheet SBAS547D Rev D](https://www.ti.com/lit/ds/
 The executable contract exposes seven gate records. Each is currently `state: unavailable`,
 `measurement: not-measured`, and `decision: DENY`:
 
-- seven-channel isolated-rail power
+- seven-channel common-ground analog power
 - simultaneous-channel crosstalk
 - daisy-chain signal integrity and timing
 - parser and host word order

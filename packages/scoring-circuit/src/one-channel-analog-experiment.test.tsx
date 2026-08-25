@@ -7,7 +7,7 @@ import {
   oneChannelExperimentArchiveSchema,
   oneChannelExperimentRecordSchema,
   oneChannelGuardedFaultScreen,
-  oneChannelIsolatedLoadScreen,
+  oneChannelAnalogPowerScreen,
   oneChannelNormalRangeScreen,
   oneChannelSabreTimingScreen,
   oneChannelStaticScreen,
@@ -146,7 +146,7 @@ const guardedRecord: OneChannelExperimentRecord = {
 }
 
 describe("one-channel protected analog experiment", () => {
-  it("renders an isolated rail, guarded force, OVP buffer, and grounded SAR input", () => {
+  it("renders common-ground analog rails, guarded force, OVP buffer, and grounded SAR input", () => {
     const circuitJson = renderCircuit()
     const serialized = JSON.stringify(circuitJson)
     const components = circuitJson.filter((element) => element.type === "source_component")
@@ -159,7 +159,6 @@ describe("one-channel protected analog experiment", () => {
 
     expect(names).toEqual(
       expect.arrayContaining([
-        "U_ISO",
         "U_NEGATIVE_RAIL",
         "U_ESD",
         "R_FAULT_GUARD",
@@ -175,13 +174,25 @@ describe("one-channel protected analog experiment", () => {
         "C_BUFFER_POS",
         "C_BUFFER_NEG",
         "C_NEG_IN",
-        "C_ISO_IN",
-        "C_ISO_OUT"
+        "J_UPSTREAM_3V3"
       ])
     )
     expect(new Set(names)).toEqual(new Set(oneChannelAnalogExperimentBom.map((part) => part.reference)))
-    expect(serialized).toContain("NXE1S0505MC")
-    expect(serialized).toContain("ADA4177-1BRZ")
+    expect(serialized).not.toContain("NXE1S0505MC")
+    expect(serialized).toContain("TPS60400DBVR")
+    expect(serialized).toContain('"name":"V5_ANALOG","pin_number":2')
+    expect(serialized).toContain('"name":"APP_3V3","pin_number":1')
+    expect(serialized).toContain("ADA4177-1ARZ")
+    expect(oneChannelAnalogExperiment.acquisition.bufferManufacturerEvidence).toEqual({
+      dataSheetRevision: "Rev. E",
+      dataSheetUrl: "https://www.analog.com/media/en/technical-documentation/data-sheets/ADA4177-1_4177-2_4177-4.pdf",
+      exactOrderable: "ADA4177-1ARZ",
+      manufacturerProductUrl: "https://www.analog.com/en/products/ADA4177-1.html",
+      package: "R SOIC-8",
+      retainedArtifactPath: null,
+      sha256: null,
+      state: "exact-orderable-identified-not-hash-acquired"
+    })
     expect(serialized).toContain("ADS8881IDGS")
     expect(serialized).toContain("T521B106M025ATE100")
     expect(serialized).toContain("GRM21BR71A106KE51L")
@@ -213,8 +224,8 @@ describe("one-channel protected analog experiment", () => {
       5: "CFLY+"
     })
     expect(physicalPortMap(circuitJson, "U_NEGATIVE_RAIL")).toEqual({
-      1: "S5V_NEG",
-      2: "S5V_ISO",
+      1: "V5_NEG",
+      2: "V5_ANALOG",
       3: "CFLY_NEG",
       4: "SGND",
       5: "CFLY_POS"
@@ -250,17 +261,17 @@ describe("one-channel protected analog experiment", () => {
         "U_ESD.SGND_3 to net.SGND",
         "U_ESD.SGND_8 to net.SGND",
         "U_NEGATIVE_RAIL.CFLY_NEG to C_NEG_FLY.pin1",
-        "U_NEGATIVE_RAIL.S5V_ISO to C_NEG_IN.pin1",
-        "U_OVP_BUFFER.S5V_ISO to C_BUFFER_POS.pin1",
+        "U_NEGATIVE_RAIL.V5_ANALOG to C_NEG_IN.pin1",
+        "U_OVP_BUFFER.V5_ANALOG to C_BUFFER_POS.pin1",
         "U_OVP_BUFFER.S5V_NEG to C_BUFFER_NEG.pin1",
-        "U_REF.S5V_ISO to C_REF_IN.pin1",
+        "U_REF.V5_ANALOG to C_REF_IN.pin1",
         "U_REF.REF_2V5 to C_REF_REG.pin1",
         "U_REF.REF_2V5 to C_REF_REG_HF.pin1",
         "U_REF.REF_2V5 to R_REF_SAR.pin1",
         "R_REF_SAR.pin2 to U_SAR.REF_2V5",
         "R_REF_SAR.pin2 to C_REF.pin1",
-        "U_ISO.SYSTEM_5V to C_ISO_IN.pin1",
-        "U_ISO.S5V_ISO to C_ISO_OUT.pin1",
+        "J_UPSTREAM_5V.SYSTEM_5V to U_NEGATIVE_RAIL.V5_ANALOG",
+        "J_UPSTREAM_3V3.APP_3V3 to U_SAR.AVDD_3V3",
         "U_SOURCE_SWITCH.UNUSED_SEL2 to net.SGND"
       ])
     )
@@ -303,12 +314,12 @@ describe("one-channel protected analog experiment", () => {
     expect(timing.validatesSabreCapture).toBe(false)
   })
 
-  it("separates realistic isolated-domain loading from a worst-case closure", () => {
-    const power = oneChannelIsolatedLoadScreen()
+  it("separates common-ground negative-rail loading from a worst-case closure", () => {
+    const power = oneChannelAnalogPowerScreen()
 
-    expect(power.converterOutputPowerMaximumW).toBe(1)
-    expect(power.knownTypicalW).toBeGreaterThan(0)
-    expect(power.remainingAgainstOneWTypicalW).toBeGreaterThan(0)
+    expect(power.negativeRailCurrentMaximumMa).toBe(60)
+    expect(power.knownTypicalNegativeMa).toBeGreaterThan(0)
+    expect(power.remainingNegativeCurrentTypicalMa).toBeGreaterThan(0)
     expect(power.typicalOnly).toBe(true)
     expect(power.worstCaseLoadClosed).toBe(false)
   })
