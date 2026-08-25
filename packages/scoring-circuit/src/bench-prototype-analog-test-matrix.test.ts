@@ -7,6 +7,7 @@ import {
   evaluateBenchPrototypeAnalogTestRun
 } from "./bench-prototype-analog-test-matrix.js"
 import type { BenchPrototypeAnalogTestRun } from "./bench-prototype-analog-test-matrix.js"
+import { oneChannelAnalogExperiment } from "./one-channel-analog-experiment.js"
 import type { OneChannelExperimentArchiveRecord } from "./one-channel-analog-experiment.js"
 
 const digest = "a".repeat(64)
@@ -208,10 +209,14 @@ function run(unavailablePointId?: string): BenchPrototypeAnalogTestRun {
 
 describe("BP-106 analog test matrix", () => {
   it("freezes the exact paper matrix without authorizing energy or requiring automation", () => {
-    expect(benchPrototypeAnalogTestMatrix.normal.resistanceOhms).toHaveLength(20)
-    expect(benchPrototypeAnalogTestMatrix.guarded.forceVolts).toContain(-24)
-    expect(benchPrototypeAnalogTestMatrix.guarded.forceVolts).toContain(24)
-    expect(benchPrototypeAnalogTestMatrix.guarded.forceVolts).not.toContain(0)
+    expect(benchPrototypeAnalogTestMatrix.normal.resistanceOhms).toEqual([
+      0, 10, 95, 100, 105, 195, 200, 205, 245, 250, 255, 445, 450, 455, 470, 475, 480, 495, 500, 505
+    ])
+    expect(benchPrototypeAnalogTestMatrix.normal.capacitancePf).toEqual([500, 2_000, 5_000, 10_000])
+    expect(benchPrototypeAnalogTestMatrix.normal.temperatureC).toEqual([-40, 25, 85, 125])
+    expect(benchPrototypeAnalogTestMatrix.guarded.forceVolts).toEqual([
+      -24, -7, -3, -1, -0.5, -0.3, -0.1, 0.1, 0.3, 0.5, 1, 3, 7, 24
+    ])
     expect(benchPrototypeAnalogTestExpectedPointIds).toHaveLength(544)
     expect(benchPrototypeAnalogTestMatrix.automationRequired).toBe(false)
     expect(benchPrototypeAnalogTestMatrix.energizedAuthorization).toBe(false)
@@ -231,7 +236,34 @@ describe("BP-106 analog test matrix", () => {
     const missing = run()
     missing.records.pop()
     refreshArtifactDigest(missing)
-    expect(evaluateBenchPrototypeAnalogTestRun(missing).acceptedOneChannel).toBe(false)
+    expect(evaluateBenchPrototypeAnalogTestRun(missing)).toMatchObject({
+      acceptedOneChannel: false,
+      sevenChannelEligible: false,
+      reasons: ["matrix is incomplete: 1 required points absent"]
+    })
+
+    const extra = run()
+    const extraRecord = structuredClone(extra.records[0]!)
+    extraRecord.pointId = "normal-r0-c500-t-41"
+    extraRecord.evidence.sequence.eventIndex = extra.records.length + 1
+    extraRecord.evidence.timestampUtc = new Date(
+      Date.parse(extra.records.at(-1)!.evidence.timestampUtc) + 11_000
+    ).toISOString()
+    extra.records.push(extraRecord)
+    refreshArtifactDigest(extra)
+    expect(() => evaluateBenchPrototypeAnalogTestRun(extra)).toThrow("unexpected matrix point")
+
+    const duplicate = run()
+    duplicate.records[1]!.pointId = duplicate.records[0]!.pointId
+    refreshArtifactDigest(duplicate)
+    expect(() => evaluateBenchPrototypeAnalogTestRun(duplicate)).toThrow("duplicate matrix point")
+
+    const missingCategory = run()
+    missingCategory.records[0]!.instrumentIds = missingCategory.records[0]!.instrumentIds.filter(
+      (id) => id !== "instrument-0"
+    )
+    refreshArtifactDigest(missingCategory)
+    expect(() => evaluateBenchPrototypeAnalogTestRun(missingCategory)).toThrow("lacks resistance-standard evidence")
 
     const reordered = run()
     ;[reordered.records[0], reordered.records[1]] = [reordered.records[1]!, reordered.records[0]!]
@@ -309,6 +341,19 @@ describe("BP-106 analog test matrix", () => {
       "firmware artifact URI does not resolve"
     )
 
+    const fixtureConfigurationDrift = run()
+    fixtureConfigurationDrift.fixtureConfigurationIdentity.artifactId = "substituted-fixture-configuration"
+    refreshArtifactDigest(fixtureConfigurationDrift)
+    expect(() => evaluateBenchPrototypeAnalogTestRun(fixtureConfigurationDrift)).toThrow("fixture digest does not bind")
+
+    const fixtureHarnessEvidenceDrift = run()
+    fixtureHarnessEvidenceDrift.fixtureHarnessEvidenceIdentity.immutableUri =
+      "https://evidence.invalid/fixture/harness/substituted"
+    refreshArtifactDigest(fixtureHarnessEvidenceDrift)
+    expect(() => evaluateBenchPrototypeAnalogTestRun(fixtureHarnessEvidenceDrift)).toThrow(
+      "fixture digest does not bind"
+    )
+
     const BP102Drift = run()
     BP102Drift.upstreamSnapshots.BP102.connectorSafety = { physicallyMutuallyIncompatible: false }
     BP102Drift.upstreamEvidence.BP102 = digestCanonicalArtifact(BP102Drift.upstreamSnapshots.BP102)
@@ -326,6 +371,19 @@ describe("BP-106 analog test matrix", () => {
     BP104Drift.upstreamEvidence.BP104 = digestCanonicalArtifact(BP104Drift.upstreamSnapshots.BP104)
     refreshArtifactDigest(BP104Drift)
     expect(() => evaluateBenchPrototypeAnalogTestRun(BP104Drift)).toThrow("upstream snapshot drifted")
+  })
+
+  it("validates the frozen BP-101 reference-drive contract before consuming its snapshot", () => {
+    const artifact = run()
+    const acquisition = oneChannelAnalogExperiment.acquisition as { adcReferenceVolts: number }
+    const originalReferenceVolts = acquisition.adcReferenceVolts
+    try {
+      acquisition.adcReferenceVolts = 3.3
+      expect(() => evaluateBenchPrototypeAnalogTestRun(artifact)).toThrow("source provenance drifted")
+    } finally {
+      acquisition.adcReferenceVolts = originalReferenceVolts
+    }
+    expect(evaluateBenchPrototypeAnalogTestRun(artifact).energizedAuthorized).toBe(false)
   })
 
   it("requires canonical UTC milliseconds and retains calibration validity boundaries", () => {
