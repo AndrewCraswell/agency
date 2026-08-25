@@ -138,7 +138,7 @@ describe("BP-031 ADS8881IDGS DGS VSSOP-10 footprint candidate", () => {
       },
       {
         path: "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts",
-        sha256: "3D565A3E71BC53B6182A7DBF80F775D5657A70AB54850CC6F8BCFA8EFDE69EDD"
+        sha256: "AC7A72F68B8D9113B6AD1D161645CC8F8B7062207ABF4FE5411042962E22314C"
       }
     ])
     const sourceControl = {

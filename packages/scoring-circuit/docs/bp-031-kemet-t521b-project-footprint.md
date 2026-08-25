@@ -26,7 +26,7 @@ focused test:
 | Upstream source | SHA-256 |
 | --- | --- |
 | `packages/scoring-circuit/src/one-channel-analog-readiness.ts` | `496d8727b33209c03b31f2b1f203397c7cab364f40d00edf2ec8b1bdf227e55d` |
-| `packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts` | `3d565a3e71bc53b6182a7dbf80f775d5657a70ab54850cc6f8bcfa8efde69edd` |
+| `packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts` | `ac7a72f68b8d9113b6ad1d161645cc8f8b7062207abf4fe5411042962e22314c` |
 
 ## Manufacturer package and polarity evidence
 

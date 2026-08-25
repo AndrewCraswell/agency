@@ -23,7 +23,7 @@ The source-control snapshot is tied to `refs/heads/main` at worktree creation:
 | Upstream source | SHA-256 |
 | --- | --- |
 | `packages/scoring-circuit/src/bench-prototype-analog-topology.ts` | `1F888DD5AA328FAD823738F09A48502EF50189775D5E1920A09413A32C14360D` |
-| `packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts` | `3D565A3E71BC53B6182A7DBF80F775D5657A70AB54850CC6F8BCFA8EFDE69EDD` |
+| `packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts` | `AC7A72F68B8D9113B6AD1D161645CC8F8B7062207ABF4FE5411042962E22314C` |
 
 The candidate validator checks these exact hashes and reports an error for an
 unknown or changed source snapshot. No shared BP-031 ledger or board file is

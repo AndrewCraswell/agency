@@ -180,6 +180,86 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     }
   })
 
+  it("maps the seven U_ESD references to the TPD4E05 review inputs without opening release authority", () => {
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(1)
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings[0]).toMatchObject({
+      mappingId: "bp031-tpd4e05u06-dqa-project-footprint",
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      reviewedAt: "2026-08-25T08:15:00.000Z",
+      artifactKind: "bp031-tpd4e05u06-dqa-project-footprint",
+      artifactPath: "packages/scoring-circuit/src/bp031-tpd4e05u06-dqa-project-footprint.tsx",
+      baseReference: "U_ESD",
+      sourceContract: "BP-103",
+      exactMpn: "TPD4E05U06DQAR",
+      exactPackage: "DQA0010A USON-10",
+      affectedReferences: ["U_ESD_1", "U_ESD_2", "U_ESD_3", "U_ESD_4", "U_ESD_5", "U_ESD_6", "U_ESD_7"],
+      manufacturerDrawingInput: {
+        state: "source-controlled-pending-review",
+        acquisition: "exact-drawing-hash-bound",
+        artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/ti-tpd4e05u06-dqar-datasheet.pdf",
+        revision: "Rev. O",
+        reviewedPages: "4, 20, 28-30, 37",
+        sha256: "C167CF1E72A5473A4D2C59B6A3C0251498701DA05B7785919B9CEAAE3B3E02C6",
+        authority: "deny"
+      },
+      manufacturerCad: {
+        state: "not-acquired",
+        artifactPath: null,
+        sha256: null,
+        authority: "deny"
+      },
+      renderedArtwork: {
+        state: "generated-project-review-only",
+        generator: "tscircuit",
+        generatorVersion: "0.0.2271",
+        sha256: "15706D98382BA8B1C0BB569AE04A34B2AEEAA665C2EB69CA1063D13ECDA6DCC9",
+        authority: "deny"
+      },
+      pinOneOrientation: {
+        state: "source-controlled-pending-review",
+        sourceDatum: "TI DQA0010A top-view top-left pin-one index area and optional pin-one ID",
+        pin: 1,
+        boardCoordinatesMm: { x: -0.4175, y: -1 },
+        boardRotationDegrees: 0,
+        orientationVerified: false,
+        authority: "deny"
+      },
+      acceptance: {
+        packageIdentityReviewed: true,
+        packageDrawingReviewed: true,
+        pinFunctionsReviewed: true,
+        projectGeometryAccepted: false,
+        pinOneOrientationAccepted: false,
+        cadImportAccepted: false,
+        boardFitAccepted: false,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      }
+    })
+
+    const esdRecords = benchPrototypeAnalogFootprintClosure.records.filter(
+      (record) => record.sourceBaseReference === "U_ESD"
+    )
+    expect(esdRecords.map((record) => record.reference)).toEqual([
+      "U_ESD_1",
+      "U_ESD_2",
+      "U_ESD_3",
+      "U_ESD_4",
+      "U_ESD_5",
+      "U_ESD_6",
+      "U_ESD_7"
+    ])
+    expect(
+      esdRecords.every((record) => record.reviewEvidenceMappingId === "bp031-tpd4e05u06-dqa-project-footprint")
+    ).toBe(true)
+    expect(
+      benchPrototypeAnalogFootprintClosure.records
+        .filter((record) => record.sourceBaseReference !== "U_ESD")
+        .every((record) => record.reviewEvidenceMappingId === null)
+    ).toBe(true)
+  })
+
   it("freezes the exact Molex connector and BP-104 pin disposition", () => {
     const connectorRecord = benchPrototypeAnalogFootprintClosure.records.find(
       (record) => record.sourceContract === "BP-104"
@@ -272,6 +352,11 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       "footprint closure",
       (copy: typeof benchPrototypeAnalogFootprintClosure) =>
         Reflect.set(copy.authority, "footprintClosureAuthorized", true)
+    ],
+    [
+      "forged TPD4 review mapping",
+      (copy: typeof benchPrototypeAnalogFootprintClosure) =>
+        Reflect.set(copy.reviewEvidenceMappings[0], "manufacturerCad", { state: "acquired" })
     ]
   ])("rejects %s", (_name, mutate) => {
     const copy = structuredClone(benchPrototypeAnalogFootprintClosure)

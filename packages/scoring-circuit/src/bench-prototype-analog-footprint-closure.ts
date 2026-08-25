@@ -21,6 +21,10 @@ import {
   benchPrototypeSevenChannelAnalog,
   validateBenchPrototypeSevenChannelAnalog
 } from "./bench-prototype-seven-channel-analog.js"
+import {
+  bp031Tpd4e05u06DqaProjectFootprintGeometry,
+  validateBp031Tpd4e05u06DqaProjectFootprint
+} from "./bp031-tpd4e05u06-dqa-project-footprint.js"
 import { findFootprintReleaseEvidence } from "./footprint-release-evidence.js"
 import { M404_SINGLE_CHANNEL_COUPON, validateM404SingleChannelCoupon } from "./m4-04-single-channel-coupon.js"
 import { manufacturerFootprintEligibility } from "./manufacturer-footprint-adapter.js"
@@ -206,6 +210,89 @@ function emptyOrientationEvidence(): FootprintOrientationEvidence {
   return { state: "unreviewed", assemblyRotationDeg: null, datum: null, notes: null }
 }
 
+const tpd4e05u06ReviewEvidenceMappingId = "bp031-tpd4e05u06-dqa-project-footprint"
+
+function createTpd4e05u06ReviewEvidenceMapping() {
+  const candidate = bp031Tpd4e05u06DqaProjectFootprintGeometry
+  const source = candidate.sources[0]
+  if (source === undefined) throw new RangeError("BP-031 TPD4E05U06DQAR source evidence is missing")
+  return {
+    mappingId: tpd4e05u06ReviewEvidenceMappingId,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25T08:15:00.000Z",
+    reviewScope:
+      "Exact identity, source binding, seven-reference mapping, and deny-state integrity only; project geometry, orientation, board fit, CAD import, release, and fabrication remain unapproved.",
+    artifactKind: candidate.artifactKind,
+    artifactPath: "packages/scoring-circuit/src/bp031-tpd4e05u06-dqa-project-footprint.tsx",
+    workUnit: candidate.workUnit,
+    baseReference: candidate.reference,
+    sourceContract: candidate.sourceContract,
+    manufacturer: candidate.manufacturer,
+    exactMpn: candidate.manufacturerPartNumber,
+    exactPackage: candidate.package.designation,
+    role: candidate.role,
+    affectedReferences: [...candidate.affectedReferences],
+    manufacturerDrawingInput: {
+      state: "source-controlled-pending-review" as const,
+      acquisition: "exact-drawing-hash-bound" as const,
+      artifactPath: source.artifactPath,
+      url: source.url,
+      revision: "Rev. O",
+      reviewedPages: source.reviewedPages,
+      sha256: source.sha256,
+      authority: "deny" as const
+    },
+    manufacturerCad: {
+      state: candidate.manufacturerCad.state,
+      artifactPath: candidate.manufacturerCad.artifactPath,
+      sha256: candidate.manufacturerCad.sha256,
+      authority: candidate.manufacturerCad.authority,
+      note: candidate.manufacturerCad.note
+    },
+    renderedArtwork: {
+      state: candidate.artwork.state,
+      representation: candidate.artwork.representation,
+      artifactPath: "packages/scoring-circuit/src/bp031-tpd4e05u06-dqa-project-footprint.tsx",
+      generator: candidate.artwork.generator,
+      generatorVersion: candidate.artwork.generatorVersion,
+      sha256: candidate.artwork.sha256,
+      authority: candidate.artwork.authority
+    },
+    pinOneOrientation: {
+      state: "source-controlled-pending-review" as const,
+      sourceDatum: candidate.pinOne.sourceDatum,
+      pin: candidate.pinOne.pin,
+      boardCoordinatesMm: {
+        x: candidate.pinOne.boardCoordinatesMm.x,
+        y: candidate.pinOne.boardCoordinatesMm.y
+      },
+      boardRotationDegrees: candidate.pinOne.boardRotationDegrees,
+      orientationVerified: candidate.pinOne.orientationVerified,
+      topViewOrdering: {
+        pin1: candidate.pinOne.topViewOrdering.pin1,
+        pin5: candidate.pinOne.topViewOrdering.pin5,
+        pin6: candidate.pinOne.topViewOrdering.pin6,
+        pin10: candidate.pinOne.topViewOrdering.pin10
+      },
+      authority: "deny" as const
+    },
+    acceptance: {
+      packageIdentityReviewed: candidate.acceptance.packageIdentityReviewed,
+      packageDrawingReviewed: candidate.acceptance.packageDrawingReviewed,
+      pinFunctionsReviewed: candidate.acceptance.pinFunctionsReviewed,
+      projectGeometryAccepted: candidate.acceptance.projectGeometryAccepted,
+      pinOneOrientationAccepted: candidate.acceptance.pinOneOrientationAccepted,
+      cadImportAccepted: candidate.acceptance.cadImportAccepted,
+      boardFitAccepted: candidate.acceptance.boardFitAccepted,
+      fabricationAuthorized: candidate.acceptance.fabricationAuthorized,
+      releaseState: candidate.acceptance.releaseState
+    }
+  }
+}
+
+const tpd4e05u06ReviewEvidenceMapping = deepFreeze(createTpd4e05u06ReviewEvidenceMapping())
+
 function existingFootprintEvidence(mpn: string) {
   const eligibility = manufacturerFootprintEligibility(mpn)
   const ledger = findFootprintReleaseEvidence(mpn)
@@ -346,6 +433,7 @@ function createCellRecord(
     exactPackage: sourcePart.package,
     primaryEvidenceUrl: sourcePart.primaryEvidenceUrl,
     sharedManufacturerSourceId: sharedManufacturerSourceByMpn.get(sourcePart.mpn)?.sourceId ?? null,
+    reviewEvidenceMappingId: binding.baseReference === "U_ESD" ? tpd4e05u06ReviewEvidenceMappingId : null,
     manufacturerDrawing: emptySourceEvidence(),
     manufacturerCad: emptySourceEvidence(),
     artwork: emptyArtworkEvidence(),
@@ -373,6 +461,7 @@ function createConnectorRecord() {
     exactMpn: header.mpn,
     exactPackage: header.family,
     primaryEvidenceUrl: "https://www.molex.com/en-us/products/part-detail/43045-1200",
+    reviewEvidenceMappingId: null,
     manufacturerDrawing: emptySourceEvidence(),
     manufacturerCad: emptySourceEvidence(),
     artwork: emptyArtworkEvidence(),
@@ -528,6 +617,7 @@ const definition = {
     rule: "Exact identity may be carried forward; no geometry or placement permission is carried forward without independent evidence."
   },
   records: [...records, connectorRecord],
+  reviewEvidenceMappings: [tpd4e05u06ReviewEvidenceMapping],
   sharedManufacturerSources,
   connectorClosure,
   authority: {
@@ -570,6 +660,9 @@ function assertUpstreamContracts(): void {
   validateBenchPrototypeSevenChannelAnalog(benchPrototypeSevenChannelAnalog)
   validateBenchPrototypeFixtureHarness(benchPrototypeFixtureHarness)
   validateM404SingleChannelCoupon(M404_SINGLE_CHANNEL_COUPON)
+  if (validateBp031Tpd4e05u06DqaProjectFootprint().length !== 0) {
+    throw new RangeError("BP-031 TPD4E05U06DQAR project-review candidate drifted")
+  }
   if (!sameDataGraph(liveUpstreamSnapshot(), upstreamSnapshot)) {
     throw new RangeError("BP-030, BP-103, BP-104, M4-04, or analog source-part evidence drifted")
   }
@@ -584,6 +677,11 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
   const contract = benchPrototypeAnalogFootprintClosure
   const cellRecords = contract.records.filter((record) => record.sourceContract === "BP-103")
   const connectorRecords = contract.records.filter((record) => record.sourceContract === "BP-104")
+  const tpd4e05u06Mapping = contract.reviewEvidenceMappings[0]
+  const expectedTpd4e05u06Mapping = createTpd4e05u06ReviewEvidenceMapping()
+  const mappedTpd4e05u06Records = cellRecords.filter(
+    (record) => record.reviewEvidenceMappingId === tpd4e05u06ReviewEvidenceMappingId
+  )
   if (
     cellReferenceBindings.length !== expectedCellReferenceCount ||
     cellRecords.length !== expectedReplicatedCellRecordCount ||
@@ -604,6 +702,22 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     contract.authority.fabricationAuthorized ||
     contract.authority.releaseState !== "deny" ||
     contract.connectorClosure.releaseState !== "deny" ||
+    contract.reviewEvidenceMappings.length !== 1 ||
+    tpd4e05u06Mapping === undefined ||
+    !sameDataGraph(tpd4e05u06Mapping, expectedTpd4e05u06Mapping) ||
+    mappedTpd4e05u06Records.length !== 7 ||
+    !sameDataGraph(
+      mappedTpd4e05u06Records.map((record) => record.reference),
+      expectedTpd4e05u06Mapping.affectedReferences
+    ) ||
+    cellRecords.some(
+      (record) =>
+        (record.sourceBaseReference === "U_ESD") !==
+        (record.reviewEvidenceMappingId === tpd4e05u06ReviewEvidenceMappingId)
+    ) ||
+    contract.records.some(
+      (record) => record.sourceBaseReference !== "U_ESD" && record.reviewEvidenceMappingId !== null
+    ) ||
     contract.records.some(
       (record) =>
         record.disposition !== "DNP-unresolved" ||

@@ -25,6 +25,34 @@ prototype. It reconciles BP-103's seven repeated acquisition cells and BP-104's
 exact source-backed identities, but it does not generate or release PCB
 geometry.
 
+## TPD4E05U06DQAR review-input mapping
+
+The canonical ledger now maps the seven populated `U_ESD_1` through `U_ESD_7`
+references to the isolated BP-031 review candidate
+[`bp031-tpd4e05u06-dqa-project-footprint.tsx`](../src/bp031-tpd4e05u06-dqa-project-footprint.tsx).
+Root review accepts the mapping's exact identity, retained source, seven-reference
+scope, and deny-state integrity. It remains review input, not accepted footprint evidence:
+each row retains `manufacturerDrawing`, `manufacturerCad`, `artwork`, and
+`orientation` in their existing deny-by-default states, remains
+`DNP-unresolved`, and remains ineligible for PCB use.
+
+The mapping binds the exact TI Rev. O drawing at
+`packages/scoring-circuit/docs/evidence/bp-031/ti-tpd4e05u06-dqar-datasheet.pdf`
+(`C167CF1E72A5473A4D2C59B6A3C0251498701DA05B7785919B9CEAAE3B3E02C6`) and
+records the exact CAD-or-absence disposition: no TI-native or partner CAD was
+acquired, so CAD artifact and digest are `null` with `deny` authority. It also
+records the rendered artwork digest
+`15706D98382BA8B1C0BB569AE04A34B2AEEAA665C2EB69CA1063D13ECDA6DCC9` from
+the tscircuit `0.0.2271` review rendering, plus pin one at the TI top-view
+top-left datum, board coordinates `(-0.4175, -1.0)` mm, and board rotation `0`
+degrees. Independent orientation, board-fit, CAD-import, project-geometry,
+schematic, and fabrication acceptance remain false; release remains denied.
+
+The executable evaluator requires exactly one mapping, exactly these seven
+affected references, and no mapping on any other BP-031 record. This prevents
+the review inputs from being mistaken for accepted or fabrication-authorized
+footprints.
+
 The retained Panasonic support set is byte-hash bound in M4-04: the exact
 [ERA3AEB2491V product page](https://industrial.panasonic.cn/ea/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V)
 is `packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-product.html`

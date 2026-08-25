@@ -57,7 +57,7 @@ export const benchPrototypeTdkCga3ProjectFootprintGeometry = {
       },
       {
         path: "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts",
-        sha256: "3d565a3e71bc53b6182a7dbf80f775d5657a70ab54850cc6f8bcfa8efde69edd"
+        sha256: "ac7a72f68b8d9113b6ad1d161645cc8f8b7062207abf4fe5411042962e22314c"
       }
     ]
   },
