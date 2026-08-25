@@ -38,9 +38,11 @@ describe("bench prototype BOM baseline", () => {
   })
 
   it("keeps CC/SBU and USB 2.0 protection ownership distinct", () => {
-    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB_PORT_PROTECT")?.function).toBe(
-      "USB-C CC1, CC2, SBU1, and SBU2 short-to-VBUS protection"
-    )
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB_PORT_PROTECT")).toMatchObject({
+      function: "USB-C CC1, CC2, SBU1, and SBU2 short-to-VBUS protection",
+      mpn: "TPD4S201TRGRRQ1",
+      package: "VQFN-20 (RGR), 3.5mm x 3.5mm nominal body"
+    })
     expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB2_ESD")?.function).toBe(
       "Native USB 2.0 low-capacitance ESD protection"
     )

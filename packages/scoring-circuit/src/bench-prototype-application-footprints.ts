@@ -147,16 +147,16 @@ type Seed = {
     readonly testArtifactPath: string
     readonly renderedGeometrySha256: string
     readonly orderableBinding: {
-      readonly orderableMpn: "TPS25730ADREFR"
-      readonly deviceMpn: "TPS25730AD"
-      readonly packageDrawing: "REF0038A"
-      readonly perimeterPins: 38
-      readonly exposedPads: readonly ["39 GND", "40 DRAIN"]
+      readonly orderableMpn: string
+      readonly deviceMpn: string
+      readonly packageDrawing: string
+      readonly perimeterPins: number
+      readonly exposedPads: readonly string[]
     }
-    readonly source: { readonly artifactPath: string; readonly sha256: string; readonly reviewedPages: "1, 4-6, 61-63" }
+    readonly source: { readonly artifactPath: string; readonly sha256: string; readonly reviewedPages: string }
     readonly review: {
-      readonly state: "root-reviewed-review-input"
-      readonly reviewer: "root-final-reviewer"
+      readonly state: "root-reviewed-review-input" | "source-controlled-review-input"
+      readonly reviewer: "root-final-reviewer" | "pending-root-review"
       readonly reviewedAt: "2026-08-25"
       readonly scope: string
     }
@@ -190,7 +190,7 @@ const retainedPrimarySourceBatch = [
     sha256: "B7D9836E4C82D28BF400FC1747586F24C26DAF94A629AAB4EE57C49072371D28"
   },
   {
-    reference: "U_USB_CC_SBU_PROTECT",
+    reference: "U_USB_PORT_PROTECT",
     mpn: "TPD4S201TRGRRQ1",
     package: "VQFN (RGR), 20-pin",
     path: "docs/evidence/bp-033/ti-tpd4s201-q1-datasheet.pdf",
@@ -331,6 +331,41 @@ const tps25730aRefProjectFootprintCandidate = {
   }
 } as const
 
+const tpd4s201RgrProjectFootprintCandidate = {
+  state: "source-controlled-review-only",
+  artifactPath: "src/bp033-tpd4s201-rgr-project-footprint.tsx",
+  testArtifactPath: "src/bp033-tpd4s201-rgr-project-footprint.test.tsx",
+  renderedGeometrySha256: "6fa9a9c5018a1e1d9498032c2691e7aff50c0e0c9b2daa3acd4982cb21db4ac7",
+  orderableBinding: {
+    orderableMpn: "TPD4S201TRGRRQ1",
+    deviceMpn: "TPD4S201-Q1",
+    packageDrawing: "RGR0020C",
+    perimeterPins: 20,
+    exposedPads: ["21 GND"]
+  },
+  source: {
+    artifactPath: "docs/evidence/bp-033/ti-tpd4s201-q1-datasheet.pdf",
+    sha256: "E5A00ECD4BBAD07C21A92754DA2050950B91EBA32A960381FD5C1DE921B758D5",
+    reviewedPages: "1, 3-4, 21, 26-28"
+  },
+  review: {
+    state: "root-reviewed-review-input",
+    reviewer: "root-final-reviewer",
+    reviewedAt: "2026-08-25",
+    scope:
+      "Exact orderable, RGR package, TI pin map, copper, rendered stencil dimensions, explicit circuit-port aliases, and deny-state integrity; CAD, board fit, orientation acceptance, DRC, release, and fabrication remain unapproved."
+  },
+  authority: {
+    manufacturerCadImported: false,
+    boardImported: false,
+    orientationAccepted: false,
+    courtyardAccepted: false,
+    drcAccepted: false,
+    fabricationAuthorized: false,
+    releaseState: "deny"
+  }
+} as const
+
 function selected(seed: Seed) {
   return {
     ...seed,
@@ -362,7 +397,7 @@ const powerSeeds = [
     "USB-C receptacle"
   ],
   ["U_USB_PD", "Texas Instruments", "TPS25730ADREFR", "WQFN (REF), 38-pin", "USB-C PD sink controller"],
-  ["U_USB_CC_SBU_PROTECT", "Texas Instruments", "TPD4S201TRGRRQ1", "VQFN (RGR), 20-pin", "CC/SBU protector"],
+  ["U_USB_PORT_PROTECT", "Texas Instruments", "TPD4S201TRGRRQ1", "VQFN (RGR), 20-pin", "CC/SBU protector"],
   ["U_USB_DATA_PROTECT", "Texas Instruments", "TPD2EUSB30DRTR", "SOT-9X3 (DRT), 3-pin", "USB data protector"],
   ["D_VBUS_TVS", "Texas Instruments", "TVS2200DRVR", "WSON (DRV), 6-pin", "VBUS TVS"],
   ["D_SOURCE_SELECTOR", "Diodes Incorporated", "B340A-13-F", "SMA (DO-214AC)", "source-selector surge diode"],
@@ -629,7 +664,12 @@ const records = [
       sourceContract: "BP-050",
       sourceUrl: retainedSourceFor(reference)?.url ?? null,
       manufacturerDrawing: retainedSourceFor(reference),
-      projectFootprintCandidate: reference === "U_USB_PD" ? tps25730aRefProjectFootprintCandidate : undefined,
+      projectFootprintCandidate:
+        reference === "U_USB_PD"
+          ? tps25730aRefProjectFootprintCandidate
+          : reference === "U_USB_PORT_PROTECT"
+            ? tpd4s201RgrProjectFootprintCandidate
+            : undefined,
       role
     } as Seed & { readonly role: string })
   ),
@@ -761,6 +801,14 @@ const definition = {
   artifactKind: "bench-prototype-application-footprint-closure-ledger",
   workUnit: "BP-033",
   targetAssembly: "one-board bench prototype",
+  referenceAliases: [
+    {
+      canonical: "U_USB_PORT_PROTECT",
+      ledgerAlias: "U_USB_CC_SBU_PROTECT",
+      manufacturerPartNumber: "TPD4S201TRGRRQ1",
+      disposition: "ledger-alias-only"
+    }
+  ],
   releaseState: "deny",
   fabricationAuthorized: false,
   upstream: {
@@ -788,6 +836,7 @@ const definition = {
     "A package identity never grants pad, drill, copper, mask, paste, courtyard, or assembly geometry.",
     "Each DNP-unresolved record requires an exact manufacturer drawing revision and SHA-256, exact CAD or an explicit no-CAD record, generated artwork hash, and independent orientation review.",
     "U_USB_PD has one source-controlled TPS25730ADREFR REF0038A artwork candidate with a rendered-geometry hash. It is review-only: no TI native CAD, board import, orientation, courtyard, DRC, release, or fabrication authority is granted.",
+    "U_USB_PORT_PROTECT has one source-controlled TPD4S201TRGRRQ1 RGR review candidate with a rendered-geometry hash and explicit TI-to-circuit port aliases. It is review-only: no TI native CAD, board import, orientation, courtyard, DRC, release, or fabrication authority is granted.",
     "J_HUB75 has a source-controlled pin-map and orientation overlay bound to the canonical BP-143 Samtec prints. It is not a project footprint, CAD import, board artwork, sample fit, continuity, current, orientation, or fabrication approval.",
     "BP-300 may not instantiate a record whose packageStatus is upstream-package-not-specified; obtain the exact package from the manufacturer before assigning geometry.",
     "TP_W5500_RESET_N and TP_W5500_INT_N select Keystone Electronics 5001 miniature through-hole black test points with a 0.040 inch (catalog 1.0 mm) mounting hole; exact source evidence is retained, while drawings, CAD, artwork, orientation, and probe-clearance review remain open before population.",
@@ -841,6 +890,11 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
   if (
     contract.workUnit !== "BP-033" ||
     contract.releaseState !== "deny" ||
+    contract.referenceAliases.length !== 1 ||
+    contract.referenceAliases[0]?.canonical !== "U_USB_PORT_PROTECT" ||
+    contract.referenceAliases[0]?.ledgerAlias !== "U_USB_CC_SBU_PROTECT" ||
+    contract.referenceAliases[0]?.manufacturerPartNumber !== "TPD4S201TRGRRQ1" ||
+    contract.referenceAliases[0]?.disposition !== "ledger-alias-only" ||
     contract.fabricationAuthorized ||
     contract.authority.exactMpnAndManufacturerReconciled !== true ||
     contract.authority.fullBp140ReferenceSetReconciled !== true ||
@@ -964,7 +1018,38 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.projectFootprintCandidate.authority.fabricationAuthorized === false &&
         record.projectFootprintCandidate.authority.releaseState === "deny"
     ) ||
-    contract.records.filter(hasProjectFootprintCandidate).length !== 1 ||
+    !contract.records.some(
+      (record) =>
+        record.reference === "U_USB_PORT_PROTECT" &&
+        record.mpn === "TPD4S201TRGRRQ1" &&
+        record.package === "VQFN (RGR), 20-pin" &&
+        hasProjectFootprintCandidate(record) &&
+        record.projectFootprintCandidate.state === "source-controlled-review-only" &&
+        record.projectFootprintCandidate.artifactPath === "src/bp033-tpd4s201-rgr-project-footprint.tsx" &&
+        record.projectFootprintCandidate.testArtifactPath === "src/bp033-tpd4s201-rgr-project-footprint.test.tsx" &&
+        record.projectFootprintCandidate.renderedGeometrySha256 ===
+          "6fa9a9c5018a1e1d9498032c2691e7aff50c0e0c9b2daa3acd4982cb21db4ac7" &&
+        record.projectFootprintCandidate.orderableBinding.orderableMpn === "TPD4S201TRGRRQ1" &&
+        record.projectFootprintCandidate.orderableBinding.deviceMpn === "TPD4S201-Q1" &&
+        record.projectFootprintCandidate.orderableBinding.packageDrawing === "RGR0020C" &&
+        record.projectFootprintCandidate.orderableBinding.perimeterPins === 20 &&
+        record.projectFootprintCandidate.orderableBinding.exposedPads.length === 1 &&
+        record.projectFootprintCandidate.orderableBinding.exposedPads[0] === "21 GND" &&
+        record.projectFootprintCandidate.source.artifactPath === "docs/evidence/bp-033/ti-tpd4s201-q1-datasheet.pdf" &&
+        record.projectFootprintCandidate.source.sha256 ===
+          "E5A00ECD4BBAD07C21A92754DA2050950B91EBA32A960381FD5C1DE921B758D5" &&
+        record.projectFootprintCandidate.source.reviewedPages === "1, 3-4, 21, 26-28" &&
+        record.projectFootprintCandidate.review.state === "root-reviewed-review-input" &&
+        record.projectFootprintCandidate.review.reviewer === "root-final-reviewer" &&
+        record.projectFootprintCandidate.authority.manufacturerCadImported === false &&
+        record.projectFootprintCandidate.authority.boardImported === false &&
+        record.projectFootprintCandidate.authority.orientationAccepted === false &&
+        record.projectFootprintCandidate.authority.courtyardAccepted === false &&
+        record.projectFootprintCandidate.authority.drcAccepted === false &&
+        record.projectFootprintCandidate.authority.fabricationAuthorized === false &&
+        record.projectFootprintCandidate.authority.releaseState === "deny"
+    ) ||
+    contract.records.filter(hasProjectFootprintCandidate).length !== 2 ||
     !contract.records.some(
       (record) =>
         record.reference === "J_HUB75" &&

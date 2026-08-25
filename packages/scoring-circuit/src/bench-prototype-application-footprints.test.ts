@@ -22,6 +22,19 @@ describe("BP-033 application footprint closure ledger", () => {
     ).toBe(true)
   })
 
+  it("records the canonical CC/SBU reference and its explicit ledger alias", () => {
+    expect(benchPrototypeApplicationFootprints.referenceAliases).toEqual([
+      {
+        canonical: "U_USB_PORT_PROTECT",
+        ledgerAlias: "U_USB_CC_SBU_PROTECT",
+        manufacturerPartNumber: "TPD4S201TRGRRQ1",
+        disposition: "ledger-alias-only"
+      }
+    ])
+    expect(benchPrototypeApplicationFootprints.releaseState).toBe("deny")
+    expect(benchPrototypeApplicationFootprints.fabricationAuthorized).toBe(false)
+  })
+
   it("hash-binds every retained primary source without granting review credit", () => {
     const retainedRecords = benchPrototypeApplicationFootprints.records.filter(
       (record) => record.manufacturerDrawing.state === "acquired"
@@ -36,9 +49,9 @@ describe("BP-033 application footprint closure ledger", () => {
       "TP_W5500_INT_N",
       "TP_W5500_RESET_N",
       "U_DISPLAY_LIMITER",
-      "U_USB_CC_SBU_PROTECT",
       "U_USB_DATA_PROTECT",
       "U_USB_PD",
+      "U_USB_PORT_PROTECT",
       "U_VBUS_EFUSE"
     ])
     expect(new Set(retainedRecords.map((record) => record.reference)).size).toBe(retainedRecords.length)
@@ -183,7 +196,7 @@ describe("BP-033 application footprint closure ledger", () => {
     expect(benchPrototypeApplicationFootprints.authority.orientationsReviewed).toBe(false)
   })
 
-  it("maps only U_USB_PD to the rendered REF0038A review candidate without board or release credit", () => {
+  it("maps the USB review candidates without board or release credit", () => {
     const record = benchPrototypeApplicationFootprints.records.find((candidate) => candidate.reference === "U_USB_PD")
     if (
       record === undefined ||
@@ -222,6 +235,55 @@ describe("BP-033 application footprint closure ledger", () => {
         }
       }
     })
+
+    const protector = benchPrototypeApplicationFootprints.records.find(
+      (candidate) => candidate.reference === "U_USB_PORT_PROTECT"
+    )
+    if (protector === undefined || !("projectFootprintCandidate" in protector))
+      throw new Error("U_USB_PORT_PROTECT project footprint candidate is missing")
+    expect(protector).toMatchObject({
+      manufacturer: "Texas Instruments",
+      mpn: "TPD4S201TRGRRQ1",
+      package: "VQFN (RGR), 20-pin",
+      population: "DNP-unresolved",
+      projectFootprintCandidate: {
+        state: "source-controlled-review-only",
+        artifactPath: "src/bp033-tpd4s201-rgr-project-footprint.tsx",
+        testArtifactPath: "src/bp033-tpd4s201-rgr-project-footprint.test.tsx",
+        renderedGeometrySha256: "6fa9a9c5018a1e1d9498032c2691e7aff50c0e0c9b2daa3acd4982cb21db4ac7",
+        orderableBinding: {
+          orderableMpn: "TPD4S201TRGRRQ1",
+          deviceMpn: "TPD4S201-Q1",
+          packageDrawing: "RGR0020C",
+          perimeterPins: 20,
+          exposedPads: ["21 GND"]
+        },
+        source: {
+          artifactPath: "docs/evidence/bp-033/ti-tpd4s201-q1-datasheet.pdf",
+          sha256: "E5A00ECD4BBAD07C21A92754DA2050950B91EBA32A960381FD5C1DE921B758D5",
+          reviewedPages: "1, 3-4, 21, 26-28"
+        },
+        review: {
+          state: "root-reviewed-review-input",
+          reviewer: "root-final-reviewer",
+          reviewedAt: "2026-08-25"
+        },
+        authority: {
+          manufacturerCadImported: false,
+          boardImported: false,
+          orientationAccepted: false,
+          courtyardAccepted: false,
+          drcAccepted: false,
+          fabricationAuthorized: false,
+          releaseState: "deny"
+        }
+      }
+    })
+    expect(
+      benchPrototypeApplicationFootprints.records.filter((record) => record.projectFootprintCandidate !== undefined)
+    ).toHaveLength(2)
+    expect(benchPrototypeApplicationFootprints.releaseState).toBe("deny")
+    expect(benchPrototypeApplicationFootprints.fabricationAuthorized).toBe(false)
   })
 
   it("maps S_SOURCE_SELECTOR to the root-reviewed 7101SYZQE evidence without granting placement authority", () => {

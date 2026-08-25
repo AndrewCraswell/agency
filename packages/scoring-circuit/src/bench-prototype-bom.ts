@@ -65,7 +65,7 @@ const packageByMpn = {
   "STSAFE-A110": "SO8N, 150mil",
   TAS2505TRGERQ1: "VQFN-24, 4mm x 4mm",
   "10177070-00011LF": "Right-angle SMT USB-C receptacle, 0.80mm PCB",
-  TPD4S201TRGRRQ1: "VQFN-20 (RGR), 3mm x 3mm",
+  TPD4S201TRGRRQ1: "VQFN-20 (RGR), 3.5mm x 3.5mm nominal body",
   TPD2EUSB30DRTR: "SOT-3 (DRT)",
   TVS2200DRVR: "WSON-6 (DRV), 2mm x 2mm",
   TPS25730ADREFR: "VQFN-38 (REF), 6mm x 4mm",
