@@ -18,6 +18,36 @@ function pageResponse(data: unknown[] = [{ id: "bill:ca:2025:ab:1" }]): Response
   })
 }
 
+function resourceResponse(data: object = { id: "resource:1" }): Response {
+  return jsonResponse({ data, links: { self: "/api/resource" }, meta: { correlationId, warnings: [] } })
+}
+
+function batchResponse(): Response {
+  return jsonResponse({
+    data: [{ data: { id: "resource:1" }, id: "resource:1", status: "ok" }],
+    links: { self: "/api/resources/batch" },
+    meta: { correlationId, requested: 1, returned: 1, warnings: [] }
+  })
+}
+
+function searchResponse(groups?: unknown[]): Response {
+  return jsonResponse({
+    data: [],
+    links: { next: null, self: "/api/search" },
+    meta: {
+      correlationId,
+      ...(groups === undefined ? {} : { groups }),
+      isReranked: false,
+      limit: 20,
+      mode: "lexical",
+      models: [],
+      nextCursor: null,
+      truncated: false,
+      warnings: []
+    }
+  })
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     headers: { "content-type": "application/json", "x-correlation-id": correlationId },
@@ -145,6 +175,123 @@ describe("LegislationApiClient", () => {
 
     expect(fetch.mock.calls.map(([, init]) => init?.method)).toEqual(["POST", "POST"])
     expect(String(fetch.mock.calls[1]?.[0])).toBe("https://legislation.example.test/api/document-diffs")
+  })
+
+  it("maps newly composed nested reads to their encoded paths", async () => {
+    const fetch = vi.fn<FetchLike>().mockImplementation(async () => pageResponse())
+    const api = client(fetch)
+
+    await api.listBillDocuments("bill:1", undefined, { correlationId })
+    await api.listVotePositions("vote:1", undefined, { correlationId })
+    await api.listPersonAmendments("person:1", undefined, { correlationId })
+    await api.listPersonVotes("person:1", undefined, { correlationId })
+    await api.listOrganizationMeetings("organization:1", undefined, { correlationId })
+    await api.listOrganizationCalendars("organization:1", undefined, { correlationId })
+    await api.listJurisdictionMeetings("jurisdiction:1", undefined, { correlationId })
+    await api.listSessionMeetings("session:1", undefined, { correlationId })
+    await api.listCalendarMeetings("calendar:1", undefined, { correlationId })
+    await api.listMeetingAgenda("meeting:1", undefined, { correlationId })
+    await api.listMeetingDocuments("meeting:1", undefined, { correlationId })
+    await api.listMeetingOutcomes("meeting:1", undefined, { correlationId })
+    await api.listMeetingParticipants("meeting:1", undefined, { correlationId })
+
+    expect(fetch.mock.calls.map(([url, init]) => [new URL(String(url)).pathname, init?.method])).toEqual([
+      ["/api/bills/bill%3A1/documents", "GET"],
+      ["/api/votes/vote%3A1/positions", "GET"],
+      ["/api/people/person%3A1/amendments", "GET"],
+      ["/api/people/person%3A1/votes", "GET"],
+      ["/api/organizations/organization%3A1/meetings", "GET"],
+      ["/api/organizations/organization%3A1/calendars", "GET"],
+      ["/api/jurisdictions/jurisdiction%3A1/meetings", "GET"],
+      ["/api/sessions/session%3A1/meetings", "GET"],
+      ["/api/calendars/calendar%3A1/meetings", "GET"],
+      ["/api/meetings/meeting%3A1/agenda", "GET"],
+      ["/api/meetings/meeting%3A1/documents", "GET"],
+      ["/api/meetings/meeting%3A1/outcomes", "GET"],
+      ["/api/meetings/meeting%3A1/participants", "GET"]
+    ])
+  })
+
+  it("maps composed search, batch, representative, and research requests", async () => {
+    const fetch = vi
+      .fn<FetchLike>()
+      .mockResolvedValueOnce(searchResponse([{ nextCursor: null, recordType: "bill", returned: 0 }]))
+      .mockResolvedValueOnce(batchResponse())
+      .mockResolvedValueOnce(resourceResponse())
+      .mockResolvedValueOnce(resourceResponse())
+    const api = client(fetch)
+
+    await api.searchAll({ query: "housing" }, { correlationId })
+    await api.getResources({ items: [{ id: "bill:1", type: "bill" }] }, { correlationId })
+    await api.lookupRepresentatives({ address: { country: "US", postalCode: "94103" } }, { correlationId })
+    await api.answerLegislativeResearchQuestion(
+      { question: "What changed?", scope: { billIds: ["bill:1"] } },
+      { correlationId }
+    )
+
+    expect(fetch.mock.calls.map(([url, init]) => [new URL(String(url)).pathname, init?.method, init?.body])).toEqual([
+      ["/api/search/all", "POST", JSON.stringify({ query: "housing" })],
+      ["/api/resources/batch", "POST", JSON.stringify({ items: [{ id: "bill:1", type: "bill" }] })],
+      ["/api/representative-lookups", "POST", JSON.stringify({ address: { country: "US", postalCode: "94103" } })],
+      ["/api/research/answers", "POST", JSON.stringify({ question: "What changed?", scope: { billIds: ["bill:1"] } })]
+    ])
+  })
+
+  it("uses subscription and webhook mutations with required bodies and concurrency headers", async () => {
+    const fetch = vi
+      .fn<FetchLike>()
+      .mockResolvedValueOnce(resourceResponse())
+      .mockResolvedValueOnce(resourceResponse())
+      .mockResolvedValueOnce(resourceResponse())
+      .mockResolvedValueOnce(resourceResponse())
+      .mockResolvedValueOnce(resourceResponse())
+      .mockResolvedValueOnce(resourceResponse())
+      .mockResolvedValueOnce(resourceResponse())
+      .mockResolvedValueOnce(resourceResponse())
+    const api = client(fetch)
+    const mutation = { correlationId, idempotencyKey: "mutation-key" }
+    const revisioned = { ...mutation, ifMatch: '"revision:1"' }
+
+    await api.createSubscription({ name: "Bills" }, mutation)
+    await api.updateSubscription("subscription:1", { status: "paused" }, revisioned)
+    await api.deleteSubscription("subscription:1", revisioned)
+    await api.createWebhook({ name: "Webhook", url: "https://example.test/hook" }, mutation)
+    await api.updateWebhook("webhook:1", { status: "paused" }, revisioned)
+    await api.deleteWebhook("webhook:1", revisioned)
+    await api.rotateWebhookSecret("webhook:1", { overlapSeconds: 60 }, revisioned)
+    await api.verifyWebhook("webhook:1", revisioned)
+
+    expect(fetch.mock.calls.map(([url, init]) => [new URL(String(url)).pathname, init?.method, init?.body])).toEqual([
+      ["/api/subscriptions", "POST", JSON.stringify({ name: "Bills" })],
+      ["/api/subscriptions/subscription%3A1", "PATCH", JSON.stringify({ status: "paused" })],
+      ["/api/subscriptions/subscription%3A1", "DELETE", undefined],
+      ["/api/webhooks", "POST", JSON.stringify({ name: "Webhook", url: "https://example.test/hook" })],
+      ["/api/webhooks/webhook%3A1", "PATCH", JSON.stringify({ status: "paused" })],
+      ["/api/webhooks/webhook%3A1", "DELETE", undefined],
+      ["/api/webhooks/webhook%3A1/rotate-secret", "POST", JSON.stringify({ overlapSeconds: 60 })],
+      ["/api/webhooks/webhook%3A1/verify", "POST", JSON.stringify({})]
+    ])
+    expect(fetch.mock.calls.map(([, init]) => new Headers(init?.headers).get("idempotency-key"))).toEqual([
+      "mutation-key",
+      "mutation-key",
+      "mutation-key",
+      "mutation-key",
+      "mutation-key",
+      "mutation-key",
+      "mutation-key",
+      "mutation-key"
+    ])
+    expect(fetch.mock.calls.map(([, init]) => new Headers(init?.headers).get("if-match"))).toEqual([
+      null,
+      '"revision:1"',
+      '"revision:1"',
+      null,
+      '"revision:1"',
+      '"revision:1"',
+      '"revision:1"',
+      '"revision:1"'
+    ])
+    expect(new Headers(fetch.mock.calls[1]?.[1]?.headers).get("content-type")).toBe("application/merge-patch+json")
   })
 
   it("turns a timed-out fetch into a dedicated timeout error and clears its timer", async () => {
