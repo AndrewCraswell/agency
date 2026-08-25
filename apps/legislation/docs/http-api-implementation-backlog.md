@@ -14,7 +14,7 @@ the verification listed below. The endpoint contract remains the source of truth
 The execution gate is the [local smoke checklist](http-api-local-smoke.md). This ledger was last reconciled on
 2026-08-24 with the reviewed endpoint implementations in commits `4546f7a`, `0fa41dc`, and `87f38be`, 14 successful
 composed-smoke routes, focused endpoint and query tests, and the two previously completed scoped-bill collections.
-Outcome persistence remains active. Current totals are 2 **In progress**, 50 **Blocked**, 0 **Ready**, and 35 **Done**
+Outcome persistence remains active. Current totals are 2 **In progress**, 48 **Blocked**, 0 **Ready**, and 37 **Done**
 across 87 endpoints.
 
 ## Delivery phases
@@ -55,13 +55,13 @@ mutations and webhook mutation handlers remain intentionally uncomposed and **Bl
 | --- | --- | --- | --- |
 | GET | `/api/jurisdictions` | Blocked | The additive canonical-foundation schema, guarded importer, checkpoint, and fail-closed audit exist. No authoritative source snapshot has supplied complete jurisdiction active/provenance facts, so the route remains intentionally unregistered. |
 | GET | `/api/jurisdictions/{jurisdictionId}` | Done | Parent-bound lookup, strict canonical provenance/activity projection, exact Resource envelope, focused tests, root review, and reviewed commit `87f38be`; incomplete persisted rows fail closed with 422. |
-| GET | `/api/jurisdictions/{jurisdictionId}/sessions` | Blocked | The additive canonical-foundation schema, guarded importer, checkpoint, and fail-closed audit exist. No authoritative source snapshot has supplied session classification/provenance facts, so the route remains intentionally unregistered. |
+| GET | `/api/jurisdictions/{jurisdictionId}/sessions` | Done | Parent-bound interval query, open-ended interval semantics, stable filter-bound keyset pagination, strict canonical projection, focused tests, root review, and reviewed commit `2620c25`. |
 | GET | `/api/jurisdictions/{jurisdictionId}/bills` | Done | Exact canonical projection and scoped filters have focused endpoint test/smoke and reviewed-commit evidence for the `scoped-bills` profile for `jurisdiction:ak`; `introduced-desc` avoids the separately tracked default latest-action performance work. |
 | GET | `/api/jurisdictions/{jurisdictionId}/organizations` | Done | Parent-bound jurisdiction query, exact filters, stable filter-bound pagination, strict canonical projection, focused tests, root review, and reviewed commit `0fa41dc`. |
 | GET | `/api/jurisdictions/{jurisdictionId}/commissions` | Done | Fixed commission classification view, exact filters, canonical projection, focused tests, root review, and reviewed commit `0fa41dc`. |
 | GET | `/api/jurisdictions/{jurisdictionId}/committees` | Done | Fixed committee classification view with chamber and parent filters, canonical projection, focused tests, root review, and reviewed commit `0fa41dc`. |
 | GET | `/api/jurisdictions/{jurisdictionId}/meetings` | Blocked | `legislative_events` lacks a session relationship and authoritative local date, canonical organization relation, and typed location/virtual-access fields required for `MeetingSummary`; route is intentionally unregistered. |
-| GET | `/api/sessions/{sessionId}` | Blocked | The additive canonical-foundation schema, guarded importer, checkpoint, and fail-closed audit exist. No authoritative source snapshot has supplied session classification/provenance facts, so the route remains intentionally unregistered. |
+| GET | `/api/sessions/{sessionId}` | Done | Exact lookup and Resource envelope with strict canonical classification/activity/provenance projection, focused tests, root review, and reviewed commit `2620c25`; incomplete persisted rows fail closed with 422. |
 | GET | `/api/sessions/{sessionId}/bills` | Done | Exact canonical projection and scoped filters have focused endpoint test/smoke and reviewed-commit evidence for the `scoped-bills` profile for `session:ak:30`; `introduced-desc` avoids the separately tracked default latest-action performance work. |
 | GET | `/api/sessions/{sessionId}/meetings` | Blocked | An authoritative event-session relation is missing; inferring through `event_bills` omits session meetings without linked bills. |
 | GET | `/api/bills` | Done | Complete documented filters, deterministic sort plus ID ordering, filter-bound cursors, canonical Page projection, focused query/handler coverage, root review, and reviewed commit `4546f7a`. |
@@ -157,4 +157,4 @@ mutations and webhook mutation handlers remain intentionally uncomposed and **Bl
 | POST | `/api/webhooks/{webhookId}/verify` | Blocked | Approved-destination/revalidation boundary exists; a pinned connection-time-revalidating challenge transport and durable activation transaction are missing. |
 
 The current release evidence is recorded in [the Railway API release record](http-api-railway-release.md). The endpoint
-matrix is 2 **In progress**, 50 **Blocked**, 0 **Ready**, and 35 **Done** routes.
+matrix is 2 **In progress**, 48 **Blocked**, 0 **Ready**, and 37 **Done** routes.
