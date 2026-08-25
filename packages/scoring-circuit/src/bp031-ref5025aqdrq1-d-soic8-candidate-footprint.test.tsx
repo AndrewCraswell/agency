@@ -2,11 +2,16 @@ import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import type { ReactElement } from "react"
 import { describe, expect, it } from "vitest"
+import { benchPrototypeAnalogFootprintClosure } from "./bench-prototype-analog-footprint-closure.js"
+import { benchPrototypeAnalogTopology } from "./bench-prototype-analog-topology.js"
+import { benchPrototypeBom } from "./bench-prototype-bom.js"
 import {
   bp031Ref5025Aqdrq1DSoic8CandidateFootprint,
   Bp031Ref5025Aqdrq1DSoic8CandidateFootprint,
   validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint
 } from "./bp031-ref5025aqdrq1-d-soic8-candidate-footprint.js"
+import { M404_SINGLE_CHANNEL_COUPON } from "./m4-04-single-channel-coupon.js"
+import { oneChannelAnalogExperimentBom } from "./one-channel-analog-readiness.js"
 import { renderTestCircuit } from "./test-helper.js"
 
 type CircuitElement = ReturnType<typeof renderTestCircuit>[number]
@@ -65,6 +70,44 @@ function evidenceHash(artifactPath: string) {
 }
 
 describe("BP-031 TI REF5025AQDRQ1 D SOIC-8 candidate footprint", () => {
+  it("reconciles the exact D SOIC-8 identity across the canonical BOM and analog source contracts", () => {
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_REF")).toMatchObject({
+      manufacturer: "Texas Instruments",
+      mpn: "REF5025AQDRQ1",
+      package: "D SOIC-8, 5.0mm x 3.9mm body, 1.27mm pitch"
+    })
+    expect(benchPrototypeAnalogTopology.selectedReferences).toContainEqual(["U_REF", "REF5025AQDRQ1"])
+    expect(oneChannelAnalogExperimentBom.find((part) => part.reference === "U_REF")).toMatchObject({
+      manufacturer: "Texas Instruments",
+      mpn: "REF5025AQDRQ1",
+      package: "D SOIC-8"
+    })
+    expect(M404_SINGLE_CHANNEL_COUPON.footprints.find((footprint) => footprint.reference === "U_REF")).toMatchObject({
+      exactMpn: "REF5025AQDRQ1",
+      package: "D SOIC-8"
+    })
+    expect(
+      benchPrototypeAnalogFootprintClosure.sharedManufacturerSources.find(
+        (source) => source.sourceId === "M4-04:REF5025AQDRQ1"
+      )
+    ).toMatchObject({
+      exactMpn: "REF5025AQDRQ1",
+      package: "D SOIC-8",
+      drawingIdentifier: "TI SBOS456H, revision H, D0008A mechanical drawing",
+      sha256: "908E1BB3275E2398DF8FAD130DAD91D524C6E5C413967F58229348DD2BCED68B"
+    })
+    for (const channelIndex of [1, 2, 3, 4, 5, 6, 7]) {
+      expect(
+        benchPrototypeAnalogFootprintClosure.records.find((record) => record.reference === `U_REF_${channelIndex}`)
+      ).toMatchObject({
+        exactMpn: "REF5025AQDRQ1",
+        exactPackage: "D SOIC-8",
+        sharedManufacturerSourceId: "M4-04:REF5025AQDRQ1",
+        disposition: "DNP-unresolved"
+      })
+    }
+  })
+
   it("binds the exact orderable, package, retained TI sources, and denied CAD disposition", () => {
     expect(validateBp031Ref5025Aqdrq1DSoic8CandidateFootprint()).toEqual([])
     expect(bp031Ref5025Aqdrq1DSoic8CandidateFootprint).toMatchObject({

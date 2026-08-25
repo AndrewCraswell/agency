@@ -104,6 +104,15 @@ describe("bench prototype BOM baseline", () => {
     })
   })
 
+  it("binds U_REF to the exact TI D SOIC-8 orderable package", () => {
+    expect(benchPrototypeBom.rows.find((candidate) => candidate.reference === "U_REF")).toMatchObject({
+      manufacturer: "Texas Instruments",
+      mpn: "REF5025AQDRQ1",
+      package: "D SOIC-8, 5.0mm x 3.9mm body, 1.27mm pitch",
+      source: { kind: "component-decision", url: "https://www.ti.com/product/REF5025A-Q1" }
+    })
+  })
+
   it("records the NXE1 manufacturer package positions without releasing a project footprint", () => {
     const row = benchPrototypeBom.rows.find((candidate) => candidate.reference === "U_ISO_POWER")
 

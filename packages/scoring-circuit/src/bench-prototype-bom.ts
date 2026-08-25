@@ -53,7 +53,7 @@ const packageByMpn = {
   ISO7721FDR: "SOIC-8, 5.0mm body",
   NXE1S0505MC:
     "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect",
-  REF5025AQDRQ1: "VSON-8, 3mm x 3mm",
+  REF5025AQDRQ1: "D SOIC-8, 5.0mm x 3.9mm body, 1.27mm pitch",
   W5500: "LQFP-48, 7mm x 7mm body, 0.5mm pitch",
   "7499011121A": "Shielded through-hole RJ45 with integrated magnetics and LEDs",
   SN74AHCT245PWR: "TSSOP-20",
