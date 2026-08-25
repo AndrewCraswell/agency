@@ -332,14 +332,17 @@ describe("document-backed amendments", () => {
       )
     ).toEqual({
       billId: "bill:wa:2025-2026:sb:6027",
+      createdAt: new Date("2026-08-19T00:00:00.000Z"),
       documentId,
       id: `amendment:document:${documentId}`,
       jurisdictionId: "jurisdiction:wa",
       printedIdentifier: "Floor amendment 001",
       recordType: "document",
+      sourceUpdatedAt: null,
       sourceUrl: "https://leg.wa.gov/amendments/sb6027.pdf",
       submittedDate: "2026-02-01",
-      title: "Floor amendment 001"
+      title: "Floor amendment 001",
+      updatedAt: new Date("2026-08-19T00:00:00.000Z")
     })
   })
 })
