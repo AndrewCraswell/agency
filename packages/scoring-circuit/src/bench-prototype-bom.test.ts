@@ -26,6 +26,16 @@ describe("bench prototype BOM baseline", () => {
       R_APP_WDOG_TIMEOUT: "RC0603FR-0710KL",
       R_APP_WDI_PULLUP: "RC0603FR-07100KL",
       U_REF: "REF5025AQDRQ1",
+      U_APP_REGULATOR: "LMR43620MSC3RPERQ1",
+      L_APP_REGULATOR: "XGL4030-222MEC",
+      C_APP_REG_IN: "C2012X7R1E475K125AB",
+      C_APP_REG_IN_HF: "C0603C104K3RACTU",
+      C_APP_REG_BOOT: "C0603C104K3RACTU",
+      C_APP_REG_VCC: "885012206052",
+      C_APP_REG_OUT_A: "C2012X7S1A226M125AC",
+      C_APP_REG_OUT_B: "C2012X7S1A226M125AC",
+      C_APP_REG_OUT_C: "C2012X7S1A226M125AC",
+      R_APP_REG_DISCHARGE: "RC0603FR-071KL",
       U_W5500: "W5500",
       J_ETH: "7499011121A",
       J_USB_C: "10177070-00011LF",
@@ -95,6 +105,24 @@ describe("bench prototype BOM baseline", () => {
         "C_ESP_3V3_BULK"
       ])
     )
+  })
+
+  it("replaces the stale application-regulator placeholder with every exact physical support row", () => {
+    const applicationRailRows = benchPrototypeBom.rows.filter((row) => row.source?.kind === "application-rail")
+    expect(applicationRailRows.map((row) => row.reference)).toEqual([
+      "U_APP_REGULATOR",
+      "L_APP_REGULATOR",
+      "C_APP_REG_IN",
+      "C_APP_REG_IN_HF",
+      "C_APP_REG_BOOT",
+      "C_APP_REG_VCC",
+      "C_APP_REG_OUT_A",
+      "C_APP_REG_OUT_B",
+      "C_APP_REG_OUT_C",
+      "R_APP_REG_DISCHARGE"
+    ])
+    expect(applicationRailRows.every((row) => row.disposition === "selected" && row.quantity === 1)).toBe(true)
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_APP_REG")).toBeUndefined()
   })
 
   it("selects one reset/watchdog domain and one shared HUB75 enable gate", () => {

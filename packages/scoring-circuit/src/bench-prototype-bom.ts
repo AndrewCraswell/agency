@@ -1,3 +1,4 @@
+import { benchPrototypeApplicationRail } from "./bench-prototype-application-rail.js"
 import { benchPrototypeIrReceiverSelection } from "./bench-prototype-ir-receiver-selection.js"
 import { benchPrototypeP0Power } from "./bench-prototype-p0-power.js"
 import { findCommunicationsFootprintEvidence } from "./communications-footprint-evidence.js"
@@ -10,6 +11,7 @@ export type PrototypeBomDisposition = "selected" | "TBD" | "DNP"
 export type PrototypeBomSource = {
   readonly kind:
     | "bench-prototype-power"
+    | "application-rail"
     | "component-decision"
     | "ethernet-support-network"
     | "hub75-connector"
@@ -268,6 +270,55 @@ const selectedUsbSupportRows: readonly BenchPrototypeBomRow[] = [
   )
 ]
 
+const applicationRailMetadata = {
+  LMR43620MSC3RPERQ1: {
+    package: "VQFN-HR RPE, 2 mm x 2 mm",
+    sourceUrl: "https://www.ti.com/product/LMR43620-Q1/part-details/LMR43620MSC3RPERQ1"
+  },
+  "XGL4030-222MEC": {
+    package: "XGL4030, 4 mm x 4 mm x 3 mm molded power inductor",
+    sourceUrl: "https://www.coilcraft.com/en-us/products/power/shielded-inductors/molded-inductor/xgl/xgl4030/"
+  },
+  C2012X7R1E475K125AB: {
+    package: "0805 (2012 metric)",
+    sourceUrl: "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C2012X7R1E475K125AB"
+  },
+  C0603C104K3RACTU: {
+    package: "0603 (1608 metric)",
+    sourceUrl: "https://search.kemet.com/component-documentation/download/specsheet/C0603C104K3RACTU"
+  },
+  "885012206052": {
+    package: "0603 (1608 metric)",
+    sourceUrl: "https://www.we-online.com/components/products/datasheet/885012206052.pdf"
+  },
+  C2012X7S1A226M125AC: {
+    package: "0805 (2012 metric)",
+    sourceUrl: "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=C2012X7S1A226M125AC"
+  },
+  "RC0603FR-071KL": {
+    package: "0603 (1608 metric)",
+    sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-071KL"
+  }
+} as const
+
+const selectedApplicationRailRows: readonly BenchPrototypeBomRow[] =
+  benchPrototypeApplicationRail.topology.supportParts.flatMap((part) =>
+    part.references.map((reference) => {
+      const metadata = applicationRailMetadata[part.mpn]
+      return selectedSupportRow(
+        reference,
+        `Application 3.3 V rail: ${part.value}`,
+        part.manufacturer,
+        part.mpn,
+        metadata.package,
+        metadata.sourceUrl,
+        `Required by the sole APP_3V3 implementation. ${part.connection}`,
+        1,
+        "application-rail"
+      )
+    })
+  )
+
 const unresolvedRows: readonly BenchPrototypeBomRow[] = [
   {
     reference: "U_ANALOG_CELL_1",
@@ -289,14 +340,6 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     "Superseded isolated scoring-domain regulator",
     "Removed with the STM32 and isolated scoring-power domain."
   ),
-  {
-    reference: "U_APP_REG",
-    function: "Application-domain 3.3 V regulator",
-    disposition: "TBD",
-    quantity: 1,
-    notes:
-      "The production rail candidate is not a bench-order selection until its support network and thermal envelope close."
-  },
   dnpRow("U_SCORING_WDOG", "Superseded STM32 watchdog", "Removed with the STM32 processor domain."),
   dnpRow("U_SCORING_SUPERVISOR", "Superseded STM32 brownout supervisor", "Removed with the STM32 processor domain."),
   dnpRow("U_RTC", "Wall-clock RTC", "Removed from P0; monotonic scoring time does not require wall-clock hardware."),
@@ -487,6 +530,7 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "Scoring-domain 2.5 V reference",
       "Exact production-intent reference; input/output network and dynamic-load evidence remain analog gates."
     ),
+    ...selectedApplicationRailRows,
     selectedDecisionRow(
       "U_W5500",
       "W5500",
@@ -868,6 +912,7 @@ function parseRow(value: unknown, index: number, seen: WeakSet<object>): ParsedB
   const source = readExactPlainDataRecord(`${path}.source`, record.source, ["kind", "url"], seen)
   const sourceKind = source.kind
   if (
+    sourceKind !== "application-rail" &&
     sourceKind !== "bench-prototype-power" &&
     sourceKind !== "component-decision" &&
     sourceKind !== "ethernet-support-network" &&

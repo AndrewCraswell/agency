@@ -54,6 +54,12 @@ they implement the selected 20 V/3 A input rather than optional features. The
 primary-output latch did not pass that test: five GPIOs were available, so it
 was removed instead of being selected merely to preserve an older topology.
 
+The application rail enumerates all ten physical references from the reviewed
+BP-142 contract: the LMR43620, inductor, input capacitor, local and bootstrap
+capacitors, VCC capacitor, three output capacitors, and discharge resistor.
+The former aggregate `U_APP_REG` placeholder is removed; a selected regulator
+without its mandatory support network is not a valid BOM entry.
+
 The USB-C path is the only populated power input. Bench diagnosis uses labeled
 test pads and removable links under a USB-disconnected, de-energized procedure;
 it does not receive a second connector or selector.
