@@ -207,13 +207,13 @@ describe("BP-035 lane BOM convergence", () => {
       benchPrototypeLaneBomRows.find((row) => row.source === source && row.reference === reference)
         ?.footprintEvidenceState
 
-    expect(stateCounts("BP-031")).toEqual({ "reviewed-unapproved": 56, "not-started": 57 })
+    expect(stateCounts("BP-031")).toEqual({ "reviewed-unapproved": 63, "not-started": 50 })
     expect(stateCounts("BP-032")).toEqual({ "not-started": 34, "reviewed-unapproved": 17 })
     expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 9, "not-started": 92 })
     expect(stateFor("BP-031", "U_SAR_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-031", "U_OVP_BUFFER_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-031", "R_ESD_1")).toBe("reviewed-unapproved")
-    expect(stateFor("BP-031", "U_REF_1")).toBe("not-started")
+    expect(stateFor("BP-031", "U_REF_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-032", "C_ESP_EN_DELAY")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "J_USB_C")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "U_USB_PD")).toBe("reviewed-unapproved")

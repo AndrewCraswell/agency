@@ -181,7 +181,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
   })
 
   it("maps the seven U_ESD references to the TPD4E05 review inputs without opening release authority", () => {
-    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(5)
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(6)
     expect(
       benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
         (mapping) => mapping.mappingId === "bp031-tpd4e05u06-dqa-project-footprint"
@@ -265,6 +265,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
             record.sourceBaseReference !== "U_SOURCE_SWITCH" &&
             record.sourceBaseReference !== "U_SAR" &&
             record.sourceBaseReference !== "U_OVP_BUFFER" &&
+            record.sourceBaseReference !== "U_REF" &&
             !["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference)
         )
         .every((record) => record.reviewEvidenceMappingId === null)
@@ -546,6 +547,41 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     ).toBe(true)
   })
 
+  it("maps the seven U_REF references to the root-reviewed REF5025 D SOIC-8 evidence without opening release authority", () => {
+    expect(
+      benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+        (mapping) => mapping.mappingId === "bp031-ref5025aqdrq1-d-soic8-candidate-footprint"
+      )
+    ).toMatchObject({
+      mappingId: "bp031-ref5025aqdrq1-d-soic8-candidate-footprint",
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      exactMpn: "REF5025AQDRQ1",
+      exactPackage: "D SOIC-8",
+      affectedReferences: ["U_REF_1", "U_REF_2", "U_REF_3", "U_REF_4", "U_REF_5", "U_REF_6", "U_REF_7"],
+      renderedArtwork: {
+        sha256: "BEB1A3CA6092E5488ACB6C0485D5002ED78A666DB043CC5AC7A83B4A7113C375",
+        authority: "deny"
+      },
+      pinOneOrientation: { state: "root-reviewed-manufacturer-drawing-match", authority: "deny" },
+      acceptance: {
+        projectGeometryAccepted: true,
+        pinOneOrientationAccepted: true,
+        cadImportAccepted: false,
+        boardFitAccepted: false,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      }
+    })
+    const records = benchPrototypeAnalogFootprintClosure.records.filter(
+      (record) => record.sourceBaseReference === "U_REF"
+    )
+    expect(records).toHaveLength(7)
+    expect(
+      records.every((record) => record.reviewEvidenceMappingId === "bp031-ref5025aqdrq1-d-soic8-candidate-footprint")
+    ).toBe(true)
+  })
+
   it("maps all 28 selected Vishay CRCW references to root-reviewed series geometry without opening release authority", () => {
     const mapping = benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
       (candidate) => candidate.mappingId === "bp031-vishay-crcw-selected-resistor-footprint-evidence"
@@ -709,6 +745,11 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       "forged Vishay CRCW review mapping",
       (copy: typeof benchPrototypeAnalogFootprintClosure) =>
         Reflect.set(copy.reviewEvidenceMappings[4], "reviewedAt", "2026-08-25T00:00:00.000Z")
+    ],
+    [
+      "forged REF5025 review mapping",
+      (copy: typeof benchPrototypeAnalogFootprintClosure) =>
+        Reflect.set(copy.reviewEvidenceMappings[5], "exactMpn", "REF5050AQDRQ1")
     ]
   ])("rejects %s", (_name, mutate) => {
     const copy = structuredClone(benchPrototypeAnalogFootprintClosure)
