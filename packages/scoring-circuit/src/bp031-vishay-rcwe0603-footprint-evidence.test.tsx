@@ -54,9 +54,19 @@ function renderedGeometryHash(json: readonly CircuitElement[]) {
   return createHash("sha256").update(JSON.stringify(geometry)).digest("hex").toUpperCase()
 }
 
+function isFrozenDataGraph(value: unknown, seen = new Set<object>()): boolean {
+  if (value === null || typeof value !== "object") return true
+  if (seen.has(value)) return true
+  if (!Object.isFrozen(value)) return false
+  seen.add(value)
+  return Object.values(value).every((child) => isFrozenDataGraph(child, seen))
+}
+
 describe("BP-031 exact Vishay Dale RCWE0603 R220 candidate footprint", () => {
   it("binds the exact MPN and seven replicated references separately from series evidence", () => {
     expect(validateBp031VishayRcwe0603FootprintEvidence()).toEqual([])
+    expect(isFrozenDataGraph(bp031VishayRcwe0603FootprintEvidence)).toBe(true)
+    expect(Object.isFrozen(bp031VishayRcwe0603References)).toBe(true)
     expect(bp031VishayRcwe0603FootprintEvidence).toMatchObject({
       artifactKind: "bp031-vishay-rcwe0603-r220-footprint-evidence",
       workUnit: "BP-031",
@@ -70,6 +80,9 @@ describe("BP-031 exact Vishay Dale RCWE0603 R220 candidate footprint", () => {
     expect(bp031VishayRcwe0603FootprintEvidence.sourceBinding.replicatedReferences).toEqual(
       bp031VishayRcwe0603References
     )
+    expect(bp031VishayRcwe0603FootprintEvidence.sourceBinding.replicatedReferences).not.toBe(
+      bp031VishayRcwe0603References
+    )
     expect(bp031VishayRcwe0603FootprintEvidence.exactSelectedPart).toMatchObject({
       canonicalReference: "R_REF_SAR",
       manufacturerPartNumber: "RCWE0603R220FKEA",
@@ -80,6 +93,12 @@ describe("BP-031 exact Vishay Dale RCWE0603 R220 candidate footprint", () => {
       exactMpnNamedInManufacturerSource: false,
       replicatedReferences: bp031VishayRcwe0603References
     })
+    expect(bp031VishayRcwe0603FootprintEvidence.exactSelectedPart.replicatedReferences).not.toBe(
+      bp031VishayRcwe0603References
+    )
+    expect(bp031VishayRcwe0603FootprintEvidence.sourceBinding.replicatedReferences).not.toBe(
+      bp031VishayRcwe0603FootprintEvidence.exactSelectedPart.replicatedReferences
+    )
     const seriesSource = bp031VishayRcwe0603FootprintEvidence.sources.find(
       (source) => source.id === "vishay-rcwe-series-rev-2023-10-24"
     )
@@ -171,36 +190,56 @@ describe("BP-031 exact Vishay Dale RCWE0603 R220 candidate footprint", () => {
     })
   }
 
-  it.each([
-    [
-      "exact MPN",
-      (copy: typeof bp031VishayRcwe0603FootprintEvidence) =>
-        Reflect.set(copy.exactSelectedPart, "manufacturerPartNumber", "FORGED")
-    ],
-    [
-      "source page mapping",
-      (copy: typeof bp031VishayRcwe0603FootprintEvidence) => Reflect.set(copy.sources[0], "reviewedPages", "2")
-    ],
-    [
-      "source hash",
-      (copy: typeof bp031VishayRcwe0603FootprintEvidence) => Reflect.set(copy.sources[0], "sha256", "0".repeat(64))
-    ],
-    [
-      "land pattern",
-      (copy: typeof bp031VishayRcwe0603FootprintEvidence) =>
-        Reflect.set(copy.manufacturerLandPattern, "overallCopperSpanMm", 9)
-    ],
-    [
-      "manufacturer CAD",
-      (copy: typeof bp031VishayRcwe0603FootprintEvidence) => Reflect.set(copy.manufacturerCad, "authority", "allow")
-    ],
-    [
-      "fabrication acceptance",
-      (copy: typeof bp031VishayRcwe0603FootprintEvidence) => Reflect.set(copy, "accepted", true)
-    ]
-  ])("fails closed on %s drift", (_name, mutate) => {
-    const copy = structuredClone(bp031VishayRcwe0603FootprintEvidence)
-    mutate(copy)
-    expect(validateBp031VishayRcwe0603FootprintEvidence(copy)).not.toEqual([])
+  it("accepts only a plain-data clone of its private frozen graph", () => {
+    const clone = structuredClone(bp031VishayRcwe0603FootprintEvidence)
+    expect(validateBp031VishayRcwe0603FootprintEvidence(clone)).toEqual([])
+
+    Reflect.set(clone.exactSelectedPart, "manufacturerPartNumber", "FORGED")
+    expect(validateBp031VishayRcwe0603FootprintEvidence(clone)).not.toEqual([])
+
+    const changedSourceScope = structuredClone(bp031VishayRcwe0603FootprintEvidence)
+    Reflect.set(changedSourceScope.sources[0], "scope", "exact-orderable CAD approved")
+    expect(validateBp031VishayRcwe0603FootprintEvidence(changedSourceScope)).not.toEqual([])
+
+    const changedGeometry = structuredClone(bp031VishayRcwe0603FootprintEvidence)
+    Reflect.set(changedGeometry.manufacturerLandPattern, "overallCopperSpanMm", 9)
+    expect(validateBp031VishayRcwe0603FootprintEvidence(changedGeometry)).not.toEqual([])
+
+    const fabricatedAuthority = structuredClone(bp031VishayRcwe0603FootprintEvidence)
+    Reflect.set(fabricatedAuthority.manufacturerCad, "authority", "allow")
+    expect(validateBp031VishayRcwe0603FootprintEvidence(fabricatedAuthority)).not.toEqual([])
+
+    const accessor = structuredClone(bp031VishayRcwe0603FootprintEvidence)
+    Object.defineProperty(accessor, "manufacturer", { get: () => "Vishay Dale" })
+    expect(validateBp031VishayRcwe0603FootprintEvidence(accessor)).not.toEqual([])
+
+    const withExtraProperty = structuredClone(bp031VishayRcwe0603FootprintEvidence)
+    Reflect.set(withExtraProperty, "fabricationOverride", true)
+    expect(validateBp031VishayRcwe0603FootprintEvidence(withExtraProperty)).not.toEqual([])
+
+    expect(validateBp031VishayRcwe0603FootprintEvidence(null)).not.toEqual([])
+    expect(validateBp031VishayRcwe0603FootprintEvidence([])).not.toEqual([])
+    expect(
+      validateBp031VishayRcwe0603FootprintEvidence(
+        new Proxy(
+          {},
+          {
+            ownKeys: () => {
+              throw new Error("forged graph")
+            }
+          }
+        )
+      )
+    ).not.toEqual([])
+  })
+
+  it("fails closed on alias and cycle graph attacks", () => {
+    const aliased = structuredClone(bp031VishayRcwe0603FootprintEvidence)
+    Reflect.set(aliased.sourceBinding, "replicatedReferences", aliased.exactSelectedPart.replicatedReferences)
+    expect(validateBp031VishayRcwe0603FootprintEvidence(aliased)).not.toEqual([])
+
+    const cyclic = structuredClone(bp031VishayRcwe0603FootprintEvidence)
+    Reflect.set(cyclic.sourceBinding, "replicatedReferences", cyclic.sourceBinding)
+    expect(validateBp031VishayRcwe0603FootprintEvidence(cyclic)).not.toEqual([])
   })
 })

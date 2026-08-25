@@ -11,7 +11,13 @@ const solderMaskMarginMm = 0.05
 const pasteReductionPerEdgeMm = 0.05
 const courtyardClearanceMm = 0.15
 
-export const bp031VishayRcwe0603References = [
+function freezeDataGraph<const Value>(value: Value): Value {
+  if (value === null || typeof value !== "object" || Object.isFrozen(value)) return value
+  for (const child of Object.values(value)) freezeDataGraph(child)
+  return Object.freeze(value)
+}
+
+const privateBp031VishayRcwe0603References = [
   "R_REF_SAR_1",
   "R_REF_SAR_2",
   "R_REF_SAR_3",
@@ -20,6 +26,8 @@ export const bp031VishayRcwe0603References = [
   "R_REF_SAR_6",
   "R_REF_SAR_7"
 ] as const
+
+export const bp031VishayRcwe0603References = freezeDataGraph([...privateBp031VishayRcwe0603References] as const)
 
 const packageBody = {
   designation: "RCWE0603",
@@ -157,7 +165,7 @@ const sources = [
 const exactSelectedPart = {
   canonicalReference: "R_REF_SAR",
   replicatedReferencePrefix: "R_REF_SAR_",
-  replicatedReferences: bp031VishayRcwe0603References,
+  replicatedReferences: privateBp031VishayRcwe0603References,
   role: "ADS8881 reference-feed isolation resistor",
   manufacturer,
   manufacturerPartNumber,
@@ -169,7 +177,7 @@ const exactSelectedPart = {
   exactMpnNamedInManufacturerSource: false
 } as const
 
-export const bp031VishayRcwe0603FootprintEvidence = {
+const frozenBp031VishayRcwe0603FootprintEvidence = freezeDataGraph({
   artifactKind: "bp031-vishay-rcwe0603-r220-footprint-evidence",
   workUnit: "BP-031",
   manufacturer,
@@ -179,7 +187,7 @@ export const bp031VishayRcwe0603FootprintEvidence = {
     canonicalSourcePath,
     canonicalSourceReference: "R_REF_SAR",
     replicatedReferencePrefix: "R_REF_SAR_",
-    replicatedReferences: bp031VishayRcwe0603References,
+    replicatedReferences: [...privateBp031VishayRcwe0603References],
     manufacturerPartNumber,
     package: "0603",
     sourceContract: "one-channel-analog-readiness"
@@ -222,168 +230,59 @@ export const bp031VishayRcwe0603FootprintEvidence = {
   releaseState: "deny",
   fabricationAuthority: "deny",
   accepted: false
-} as const
+} as const)
 
-type Candidate = typeof bp031VishayRcwe0603FootprintEvidence
+export const bp031VishayRcwe0603FootprintEvidence = freezeDataGraph(
+  structuredClone(frozenBp031VishayRcwe0603FootprintEvidence)
+)
 
-/** Empty output means the exact-MPN, series-evidence, and deny state are consistent. */
-export function validateBp031VishayRcwe0603FootprintEvidence(
-  candidate: Candidate = bp031VishayRcwe0603FootprintEvidence
-) {
-  const errors: string[] = []
-  const source = candidate.sources.find((entry) => entry.id === "vishay-rcwe-series-rev-2023-10-24")
-  const identitySource = candidate.sources.find((entry) => entry.id === "bp031-rcwe0603-selected-mpn-record")
-  if (
-    candidate.artifactKind !== "bp031-vishay-rcwe0603-r220-footprint-evidence" ||
-    candidate.workUnit !== "BP-031" ||
-    candidate.manufacturer !== manufacturer ||
-    candidate.manufacturerPartNumber !== manufacturerPartNumber ||
-    candidate.sourceControl.basisCommit !== basisCommit ||
-    candidate.sources.length !== 2 ||
-    candidate.releaseState !== "deny" ||
-    candidate.fabricationAuthority !== "deny" ||
-    candidate.accepted
-  ) {
-    errors.push("BP-031 RCWE0603 evidence identity, source control, or deny state drifted")
+function isExactPlainDataGraph(
+  candidate: unknown,
+  expected: unknown,
+  seenCandidates = new Set<object>(),
+  seenExpected = new Set<object>()
+): boolean {
+  if (candidate === null || expected === null || typeof candidate !== "object" || typeof expected !== "object") {
+    return Object.is(candidate, expected)
   }
-  if (
-    source === undefined ||
-    source.authority !== "manufacturer-primary" ||
-    source.documentNumber !== "20019" ||
-    source.revision !== "24-Oct-2023" ||
-    source.url !== "https://www.vishay.com/docs/20019/rcwe.pdf" ||
-    source.reviewedPages !== "1-2" ||
-    source.artifactPath !== seriesSourcePath ||
-    source.sha256 !== seriesSourceSha256 ||
-    !/^[0-9A-F]{64}$/u.test(source.sha256)
-  ) {
-    errors.push("Vishay RCWE series source identity or SHA-256 drifted")
-  }
-  if (
-    identitySource === undefined ||
-    identitySource.authority !== "project-canonical-source" ||
-    identitySource.artifactPath !== canonicalSourcePath ||
-    identitySource.sha256 !== canonicalSourceSha256 ||
-    identitySource.url !== null ||
-    identitySource.reviewedPages !== null
-  ) {
-    errors.push("exact RCWE0603 MPN source must remain project-only identity evidence")
-  }
-  if (
-    candidate.sourceControl.upstreamSources.length !== 2 ||
-    candidate.sourceControl.upstreamSources[0]?.path !== canonicalSourcePath ||
-    candidate.sourceControl.upstreamSources[0]?.sha256 !== canonicalSourceSha256 ||
-    candidate.sourceControl.upstreamSources[1]?.path !== seriesSourcePath ||
-    candidate.sourceControl.upstreamSources[1]?.sha256 !== seriesSourceSha256
-  ) {
-    errors.push("RCWE0603 upstream source hash bindings drifted")
-  }
-  if (
-    candidate.sourceBinding.canonicalSourcePath !== canonicalSourcePath ||
-    candidate.sourceBinding.canonicalSourceReference !== "R_REF_SAR" ||
-    candidate.sourceBinding.replicatedReferencePrefix !== "R_REF_SAR_" ||
-    candidate.sourceBinding.manufacturerPartNumber !== manufacturerPartNumber ||
-    candidate.sourceBinding.package !== "0603" ||
-    candidate.sourceBinding.replicatedReferences.length !== 7
-  ) {
-    errors.push("RCWE0603 exact source binding or seven-reference replication drifted")
-  }
-  if (
-    candidate.exactSelectedPart.canonicalReference !== exactSelectedPart.canonicalReference ||
-    candidate.exactSelectedPart.replicatedReferencePrefix !== exactSelectedPart.replicatedReferencePrefix ||
-    candidate.exactSelectedPart.manufacturerPartNumber !== manufacturerPartNumber ||
-    candidate.exactSelectedPart.resistanceOhms !== 0.22 ||
-    candidate.exactSelectedPart.tolerancePercent !== 1 ||
-    candidate.exactSelectedPart.tcrPpmPerC !== 100 ||
-    candidate.exactSelectedPart.package !== "0603" ||
-    candidate.exactSelectedPart.exactIdentitySourceId !== "bp031-rcwe0603-selected-mpn-record" ||
-    candidate.exactSelectedPart.exactMpnNamedInManufacturerSource ||
-    candidate.exactSelectedPart.replicatedReferences.join(",") !== bp031VishayRcwe0603References.join(",")
-  ) {
-    errors.push("exact RCWE0603 MPN, package, value, or replication identity drifted")
-  }
-  if (
-    candidate.package.bodyLengthMm.minimum !== packageBody.bodyLengthMm.minimum ||
-    candidate.package.bodyLengthMm.maximum !== packageBody.bodyLengthMm.maximum ||
-    candidate.package.bodyWidthMm.minimum !== packageBody.bodyWidthMm.minimum ||
-    candidate.package.bodyWidthMm.maximum !== packageBody.bodyWidthMm.maximum ||
-    candidate.package.bodyHeightMm.minimum !== packageBody.bodyHeightMm.minimum ||
-    candidate.package.bodyHeightMm.maximum !== packageBody.bodyHeightMm.maximum
-  ) {
-    errors.push("RCWE0603 package dimensions drifted")
-  }
-  if (
-    candidate.manufacturerLandPattern.sourceId !== "vishay-rcwe-series-rev-2023-10-24" ||
-    candidate.manufacturerLandPattern.method !== "reflow" ||
-    candidate.manufacturerLandPattern.padLengthAlongTerminalAxisMm !== 0.7 ||
-    candidate.manufacturerLandPattern.padWidthAcrossTerminalAxisMm !== 1 ||
-    candidate.manufacturerLandPattern.innerGapMm !== 0.8 ||
-    candidate.manufacturerLandPattern.overallCopperSpanMm !== 2.2
-  ) {
-    errors.push("RCWE0603 manufacturer reflow land pattern drifted")
-  }
-  const project = candidate.projectFootprint
-  if (
-    project.state !== "review-only" ||
-    project.padLengthMm !== projectPadLengthMm ||
-    project.padWidthMm !== projectPadWidthMm ||
-    project.padCenterSpanMm !== padCenterSpanMm ||
-    project.padGapMm !== manufacturerReflowLandPattern.innerGapMm ||
-    project.pads.length !== 2 ||
-    project.solderMask.openingLengthMm !== projectPadLengthMm + 2 * solderMaskMarginMm ||
-    project.solderMask.openingWidthMm !== projectPadWidthMm + 2 * solderMaskMarginMm ||
-    project.solderMask.marginPerEdgeMm !== solderMaskMarginMm ||
-    project.solderMask.sourceStatus !== "not-published" ||
-    project.paste.openingLengthMm !== projectPadLengthMm - 2 * pasteReductionPerEdgeMm ||
-    project.paste.openingWidthMm !== projectPadWidthMm - 2 * pasteReductionPerEdgeMm ||
-    project.paste.reductionPerEdgeMm !== pasteReductionPerEdgeMm ||
-    project.paste.sourceStatus !== "not-published" ||
-    project.courtyard.sourceStatus !== "not-published" ||
-    project.courtyard.minimumClearanceMm !== courtyardClearanceMm ||
-    project.orientation.polarity !== "non-polar" ||
-    project.orientation.pinOne !== "not-applicable" ||
-    project.accepted ||
-    project.fabricationAuthority !== "deny"
-  ) {
-    errors.push("RCWE0603 project geometry must remain derived, review-only, and denied")
-  }
-  for (const [index, pad] of project.pads.entries()) {
-    const expectedPad = projectPads[index]
-    if (
-      expectedPad === undefined ||
-      pad.pin !== expectedPad.pin ||
-      pad.name !== expectedPad.name ||
-      pad.xMm !== expectedPad.xMm ||
-      pad.yMm !== expectedPad.yMm
-    ) {
-      errors.push(`RCWE0603 pad mapping drifted at index ${index}`)
+  try {
+    if (seenCandidates.has(candidate) || seenExpected.has(expected)) return false
+    seenCandidates.add(candidate)
+    seenExpected.add(expected)
+    if (Array.isArray(candidate) !== Array.isArray(expected)) return false
+    if (Object.getPrototypeOf(candidate) !== Object.getPrototypeOf(expected)) return false
+    const candidateSymbols = Object.getOwnPropertySymbols(candidate)
+    const expectedSymbols = Object.getOwnPropertySymbols(expected)
+    if (candidateSymbols.length !== expectedSymbols.length) return false
+    const candidateNames = Object.getOwnPropertyNames(candidate)
+    const expectedNames = Object.getOwnPropertyNames(expected)
+    if (candidateNames.length !== expectedNames.length) return false
+    for (const name of expectedNames) {
+      const candidateDescriptor = Object.getOwnPropertyDescriptor(candidate, name)
+      const expectedDescriptor = Object.getOwnPropertyDescriptor(expected, name)
+      if (
+        candidateDescriptor === undefined ||
+        expectedDescriptor === undefined ||
+        !("value" in candidateDescriptor) ||
+        !("value" in expectedDescriptor) ||
+        !isExactPlainDataGraph(candidateDescriptor.value, expectedDescriptor.value, seenCandidates, seenExpected)
+      ) {
+        return false
+      }
     }
+    return true
+  } catch {
+    return false
   }
-  const expectedCourtyard = calculateCourtyard(
-    projectPadEnvelope,
-    packageBody.bodyLengthMm.maximum,
-    packageBody.bodyWidthMm.maximum
-  )
-  if (
-    project.courtyard.minimumXMm !== expectedCourtyard.minimumXMm ||
-    project.courtyard.maximumXMm !== expectedCourtyard.maximumXMm ||
-    project.courtyard.minimumYMm !== expectedCourtyard.minimumYMm ||
-    project.courtyard.maximumYMm !== expectedCourtyard.maximumYMm ||
-    project.courtyard.widthMm !== expectedCourtyard.widthMm ||
-    project.courtyard.heightMm !== expectedCourtyard.heightMm
-  ) {
-    errors.push("RCWE0603 courtyard derivation drifted")
-  }
-  if (
-    candidate.manufacturerCad.state !== "not-acquired" ||
-    candidate.manufacturerCad.artifactPath !== null ||
-    candidate.manufacturerCad.authority !== "deny" ||
-    candidate.artwork.authority !== "deny" ||
-    !/^[0-9A-F]{64}$/u.test(candidate.artwork.sha256)
-  ) {
-    errors.push("RCWE0603 manufacturer CAD and artwork authority must remain denied")
-  }
-  return errors
+}
+
+/** Empty output means a plain-data clone exactly matches the private frozen evidence graph. */
+export function validateBp031VishayRcwe0603FootprintEvidence(
+  candidate: unknown = bp031VishayRcwe0603FootprintEvidence
+): readonly string[] {
+  return isExactPlainDataGraph(candidate, frozenBp031VishayRcwe0603FootprintEvidence)
+    ? []
+    : ["BP-031 RCWE0603 evidence must exactly match the frozen series-only, fabrication-denied baseline"]
 }
 
 function resistorFootprint(reference: string) {
