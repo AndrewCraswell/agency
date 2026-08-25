@@ -23,6 +23,10 @@ import {
   validateBenchPrototypeServiceHeaders
 } from "./bench-prototype-service-headers.js"
 import {
+  bp032TdkC1608CapacitorFootprintEvidence,
+  bp032TdkC1608FootprintEvidenceFor
+} from "./bp032-tdk-c1608-capacitor-footprint-evidence.js"
+import {
   bp032YageoRc0603FootprintEvidenceFor,
   bp032YageoRc0603ResistorFootprintEvidence
 } from "./bp032-yageo-rc0603-resistor-footprint-evidence.js"
@@ -196,6 +200,15 @@ const retainedManufacturerPrimarySources = deepFreeze([
     sha256: "EE79599730E7606BA9718D9820B411020E3DCD9FF7D44572F8EE63FEAD15B9D0"
   },
   {
+    requestIdentity: "BP032-TDK-C1608X5R1A105K080AC-20260825",
+    mpn: "C1608X5R1A105K080AC",
+    package: "0603",
+    artifactPath: "docs/evidence/bp-032/tdk-c1608x5r1a105k080ac-characterization.pdf",
+    sourceUrl:
+      "https://product.tdk.cn/system/files/dam/doc/product/capacitor/ceramic/mlcc/charasheet/c1608x5r1a105k080ac.pdf",
+    sha256: "180BECCB71F93CF9C4E7FDF810F9295BBE2009EF4595D733D32BE9DC4DEFC00D"
+  },
+  {
     requestIdentity: "BP032-BP125-Yageo-RC0603FR-0710KL-20260824",
     mpn: "RC0603FR-0710KL",
     package: "0603",
@@ -222,7 +235,7 @@ export function validateBenchPrototypeProcessorFootprintsRetainedManufacturerSou
     )
   const sources = retainedManufacturerPrimarySources
   if (
-    sources.length !== 4 ||
+    sources.length !== 5 ||
     new Set(sources.map((source) => source.mpn)).size !== sources.length ||
     new Set(sources.map((source) => source.requestIdentity)).size !== sources.length ||
     new Set(sources.map((source) => source.artifactPath)).size !== sources.length ||
@@ -232,8 +245,11 @@ export function validateBenchPrototypeProcessorFootprintsRetainedManufacturerSou
         (source.mpn.startsWith("RC0603FR-07", 0)
           ? !source.sourceUrl.startsWith("https://www.yageogroup.com/") ||
             !/^docs\/evidence\/bp-(?:125|033)\/yageo-rc0603fr-07(?:10|100)kl-datasheet\.pdf$/u.test(source.artifactPath)
-          : !source.sourceUrl.startsWith("https://www.ti.com/") ||
-            !/^docs\/evidence\/bp-032\/[^/]+\.pdf$/u.test(source.artifactPath)) ||
+          : source.mpn === "C1608X5R1A105K080AC"
+            ? !source.sourceUrl.startsWith("https://product.tdk.cn/") ||
+              source.artifactPath !== "docs/evidence/bp-032/tdk-c1608x5r1a105k080ac-characterization.pdf"
+            : !source.sourceUrl.startsWith("https://www.ti.com/") ||
+              !/^docs\/evidence\/bp-032\/[^/]+\.pdf$/u.test(source.artifactPath)) ||
         !/^[0-9A-F]{64}$/u.test(source.sha256)
     )
   )
@@ -273,7 +289,12 @@ const evidence = (mpn: string | null, reference: string | null = null) => ({
   courtyard: "not-claimed",
   artwork: "not-generated",
   orientation: "unreviewed",
-  footprintEvidence: mpn === null || reference === null ? null : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
+  footprintEvidence:
+    mpn === null || reference === null
+      ? null
+      : mpn === "C1608X5R1A105K080AC"
+        ? bp032TdkC1608FootprintEvidenceFor(mpn, reference)
+        : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
 })
 
 const resetLedger = benchPrototypeResetWatchdog.parts.map((part) => ({
@@ -616,8 +637,17 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
     ...bp125SelectedSupport
   ]
   const yageoReferenceBindings = bp032YageoRc0603ResistorFootprintEvidence.referenceBindings
+  const tdkReferenceBindings = bp032TdkC1608CapacitorFootprintEvidence.affectedReferences.map((reference) => ({
+    reference,
+    manufacturerPartNumber: "C1608X5R1A105K080AC",
+    sourceId: bp032TdkC1608CapacitorFootprintEvidence.sources[0].id,
+    upstreamContract: "BP-123"
+  }))
   const yageoLedgerRows = references.filter(
     (entry) => entry.mpn === "RC0603FR-0710KL" || entry.mpn === "RC0603FR-07100KL"
+  )
+  const tdkSupportRows = ledger.processorSupportReferences.filter(
+    (entry) => entry.reference === "C_ESP_EN_DELAY" && entry.selectedMpn === "C1608X5R1A105K080AC"
   )
   if (
     new Set(references.map((entry) => entry.reference)).size !== references.length ||
@@ -656,6 +686,26 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
         row.evidence.footprintEvidence?.sourceId !== expected.sourceId ||
         row.evidence.footprintEvidence?.upstreamContract !== expected.upstreamContract ||
         row.evidence.footprintEvidence?.projectFootprintId !== "yageo-rc0603-project-review" ||
+        row.evidence.footprintEvidence?.releaseState !== "deny" ||
+        row.evidence.footprintEvidence?.fabricationAuthority !== "deny" ||
+        row.evidence.footprintEvidence?.accepted
+      )
+    }) ||
+    tdkSupportRows.length !== tdkReferenceBindings.length ||
+    tdkReferenceBindings.some((expected) => {
+      const row = tdkSupportRows.find((candidate) => candidate.reference === expected.reference)
+      return (
+        row === undefined ||
+        row.mpn !== "TBD" ||
+        row.selectedMpn !== expected.manufacturerPartNumber ||
+        row.package !== "0603" ||
+        row.reconciliation !== "selected-by-BP-123" ||
+        row.evidence.footprintEvidence === null ||
+        row.evidence.footprintEvidence?.exactMpn !== expected.manufacturerPartNumber ||
+        row.evidence.footprintEvidence?.reference !== expected.reference ||
+        row.evidence.footprintEvidence?.sourceId !== expected.sourceId ||
+        row.evidence.footprintEvidence?.upstreamContract !== expected.upstreamContract ||
+        row.evidence.footprintEvidence?.projectFootprintId !== "tdk-c1608-c1608x5r1a105k080ac-project-review" ||
         row.evidence.footprintEvidence?.releaseState !== "deny" ||
         row.evidence.footprintEvidence?.fabricationAuthority !== "deny" ||
         row.evidence.footprintEvidence?.accepted

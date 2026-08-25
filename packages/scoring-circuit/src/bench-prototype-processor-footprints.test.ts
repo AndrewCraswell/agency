@@ -176,12 +176,13 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
     }
   })
 
-  it("retains and hashes the exact bounded TI reset and Yageo resistor source batch", () => {
+  it("retains and hashes the exact bounded TI reset, TDK capacitor, and Yageo resistor source batch", () => {
     const sources = benchPrototypeProcessorFootprintsRetainedManufacturerSources
-    expect(sources).toHaveLength(4)
+    expect(sources).toHaveLength(5)
     expect(sources.map((source) => source.mpn)).toEqual([
       "TPS3431SDRBR",
       "TPS389033DSER",
+      "C1608X5R1A105K080AC",
       "RC0603FR-0710KL",
       "RC0603FR-07100KL"
     ])
@@ -189,7 +190,11 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
       const bytes = readFileSync(new URL(`../${source.artifactPath}`, import.meta.url))
       expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(source.sha256)
       expect(source.sourceUrl).toMatch(
-        source.mpn.startsWith("RC0603FR-07", 0) ? /^https:\/\/www\.yageogroup\.com\//u : /^https:\/\/www\.ti\.com\//u
+        source.mpn.startsWith("RC0603FR-07", 0)
+          ? /^https:\/\/www\.yageogroup\.com\//u
+          : source.mpn === "C1608X5R1A105K080AC"
+            ? /^https:\/\/product\.tdk\.cn\//u
+            : /^https:\/\/www\.ti\.com\//u
       )
       const row = [
         ...benchPrototypeProcessorFootprints.populatedReferences,
@@ -203,6 +208,23 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
         }
       })
     }
+    const tdkRow = benchPrototypeProcessorFootprints.processorSupportReferences.find(
+      (candidate) => candidate.reference === "C_ESP_EN_DELAY"
+    )
+    expect(tdkRow).toMatchObject({
+      selectedMpn: "C1608X5R1A105K080AC",
+      package: "0603",
+      evidence: {
+        footprintEvidence: expect.objectContaining({
+          exactMpn: "C1608X5R1A105K080AC",
+          reference: "C_ESP_EN_DELAY",
+          projectFootprintId: "tdk-c1608-c1608x5r1a105k080ac-project-review",
+          releaseState: "deny",
+          fabricationAuthority: "deny",
+          accepted: false
+        })
+      }
+    })
   })
 
   it("rejects substitutions, premature artwork, clock population, and release escalation", () => {
