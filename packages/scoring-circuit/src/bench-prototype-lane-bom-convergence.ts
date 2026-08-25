@@ -4,6 +4,7 @@ import { benchPrototypeAnalogFootprintClosure } from "./bench-prototype-analog-f
 import { benchPrototypeApplicationFootprints } from "./bench-prototype-application-footprints.js"
 import { benchPrototypeBom } from "./bench-prototype-bom.js"
 import { benchPrototypeConnectorPreorder } from "./bench-prototype-connector-preorder.js"
+import { isBenchPrototypeFootprintApproved } from "./bench-prototype-footprint-approval-decisions.js"
 import { benchPrototypeProcessorFootprints } from "./bench-prototype-processor-footprints.js"
 
 export type LaneBomSource = "BP-010" | "BP-031" | "BP-032" | "BP-033" | "BP-034" | "BP-035"
@@ -333,7 +334,13 @@ function evidenceState(hasReviewEvidence: boolean, accepted: boolean): LaneBomFo
 function analogEvidenceState(
   record: (typeof benchPrototypeAnalogFootprintClosure.records)[number]
 ): LaneBomFootprintEvidenceState {
-  return evidenceState(record.reviewEvidenceMappingId !== null, false)
+  const mapping = benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+    (candidate) => candidate.mappingId === record.reviewEvidenceMappingId
+  )
+  return evidenceState(
+    mapping !== undefined,
+    mapping !== undefined && isBenchPrototypeFootprintApproved("BP-031", record.reference, mapping.artifactKind)
+  )
 }
 
 function processorEvidenceState(record: {
@@ -411,19 +418,22 @@ function canonicalRows(): LaneBomRow[] {
     sampleEvidenceRequired: false,
     sampleEvidenceComplete: false
   }))
-  const analog: LaneBomRow[] = benchPrototypeAnalogFootprintClosure.records.map((row) => ({
-    source: "BP-031",
-    reference: row.reference,
-    mpn: row.exactMpn,
-    package: row.exactPackage,
-    population: "populate",
-    classification: "board-populated",
-    footprintEvidenceRequired: true,
-    footprintEvidenceComplete: false,
-    footprintEvidenceState: analogEvidenceState(row),
-    sampleEvidenceRequired: false,
-    sampleEvidenceComplete: false
-  }))
+  const analog: LaneBomRow[] = benchPrototypeAnalogFootprintClosure.records.map((row) => {
+    const footprintEvidenceState = analogEvidenceState(row)
+    return {
+      source: "BP-031",
+      reference: row.reference,
+      mpn: row.exactMpn,
+      package: row.exactPackage,
+      population: "populate",
+      classification: "board-populated",
+      footprintEvidenceRequired: true,
+      footprintEvidenceComplete: footprintEvidenceState === "approved",
+      footprintEvidenceState,
+      sampleEvidenceRequired: false,
+      sampleEvidenceComplete: false
+    }
+  })
   const processorSupportReferenceSet = new Set<string>(
     benchPrototypeProcessorFootprints.processorSupportReferences.map((row) => row.reference)
   )

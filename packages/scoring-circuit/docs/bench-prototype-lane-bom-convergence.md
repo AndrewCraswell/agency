@@ -10,9 +10,9 @@ BP-034 rows are classified before reconciliation. Board-populated connector refe
 
 Footprint state is per reference: `not-started`, `reviewed-unapproved`, or `approved`. Retained source files alone do not count as reviewed footprint evidence, and root-reviewed candidates remain blocked until their owning lane records explicit approval. BP-032 `U_ISO_POWER` is the first bounded `approved` lane footprint row; all other reviewed candidates remain unapproved.
 
-The current result is `DENY` with 389 blockers across 289 references: 22 unresolved MPNs, 36 unresolved packages, 34 unresolved populations, 262 open footprint-evidence rows, 7 missing lane references, 8 missing baseline references, 12 population drifts, and 8 package drifts. `selection-blocked` is zero. Current footprint states are:
+The current result is `DENY` with 347 blockers across 247 references: 22 unresolved MPNs, 36 unresolved packages, 34 unresolved populations, 220 open footprint-evidence rows, 7 missing lane references, 8 missing baseline references, 12 population drifts, and 8 package drifts. `selection-blocked` is zero. Current footprint states are:
 
-- BP-031: 113 reviewed-unapproved and zero not-started.
+- BP-031: 42 approved and 71 reviewed-unapproved.
 - BP-032: 1 approved and 50 reviewed-unapproved; 48 populated rows currently contribute open footprint blockers.
 - BP-033: 89 reviewed-unapproved and 12 not-started.
 
