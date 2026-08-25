@@ -141,7 +141,7 @@ const readiness = createReadinessReport({
     fabricationReady: false,
     modelAuthority: "canonical-clean-sheet-scaffold",
     modelPurpose:
-      "Canonical source, hierarchy, provisional outline, and mounting-hole scaffold for the clean-sheet ESP32-S3 prototype; electrical integration and fabrication remain denied",
+      "Canonical clean-sheet ESP32-S3 prototype with the P0 direct-wire weapon and piste interfaces placed; remaining electrical integration and fabrication are not complete",
     retainedArchitectureRouting: {
       connectionCount,
       routeCount,
@@ -157,7 +157,7 @@ const readiness = createReadinessReport({
         "Rendered supplier geometry is a candidate aid only; manufacturer evidence and production approval are tracked separately"
     },
     openGates: [
-      "Complete BP-321 through BP-335 clean-sheet schematic sheets, integration, and review",
+      "Complete BP-321, BP-323, BP-328, and BP-333 schematic integration and review",
       "Complete BP-420 through BP-435 stack-up, placement, routing, DRC, and release reviews",
       "Close every unresolved component selection and footprint gate before fabrication",
       "Run the physical bring-up and acceptance work tracked by BP-620 through BP-633"
@@ -224,11 +224,11 @@ const previewHtml = `<!doctype html>
 </head>
 <body>
   <h1>Competition scoring apparatus board model</h1>
-  <p class="warning"><strong>Canonical clean-sheet scaffold only.</strong> This model establishes the new board source, outline, hierarchy, and mounting datum. It has no integrated electrical design and is not ready for fabrication. Complete BP-321 through BP-435 before ordering hardware.</p>
+  <p class="warning"><strong>Prototype integration in progress.</strong> The canonical board now contains the direct-wire weapon and piste interfaces. Power, processor, peripheral, and acquisition circuits are still being integrated, so it is not ready for fabrication.</p>
   <ul class="metrics" aria-label="Prototype routing summary">
-    <li><strong>${routeCount}</strong> scaffold routes</li>
+    <li><strong>${routeCount}</strong> routed connections</li>
     <li><strong>${unresolvedConnectionCount}</strong> unresolved connections</li>
-    <li><strong>12</strong> planned schematic sheets</li>
+    <li><strong>3</strong> electrical sections remaining</li>
     <li><strong>${resolvedSupplierPartCount}</strong> candidate supplier matches</li>
     <li><strong>${renderedCadComponentCount}</strong> rendered CAD bodies</li>
     <li><strong>${partReadinessSummary.manufacturerVerifiedCad}</strong> manufacturer-verified critical CAD models</li>
@@ -261,7 +261,7 @@ const previewHtml = `<!doctype html>
     </section>
     <section id="view-io" role="tabpanel" aria-labelledby="tab-io" hidden>
       <figure>
-        <figcaption>Clean-sheet prototype external interfaces. Weapon-cable geometry remains unmeasured and no production socket is selected.</figcaption>
+        <figcaption>Clean-sheet prototype external interfaces. P0 direct-wire landing, probe, and strain-relief geometry is placed; no production socket is selected.</figcaption>
         <div class="io-assembly">
           <article class="io-module">
             <h2>Left weapon cable</h2>

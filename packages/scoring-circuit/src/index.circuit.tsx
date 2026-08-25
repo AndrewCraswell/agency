@@ -1,4 +1,6 @@
+import { Bp034DirectWireWeaponFootprint } from "./bp034-direct-wire-weapon-footprint.js"
 import { cleanSheetBoardArchitecture } from "./clean-sheet-board-architecture.js"
+import { P0PisteLanding } from "./p0-piste-landing.js"
 
 function ScoringCircuit() {
   const { board } = cleanSheetBoardArchitecture
@@ -17,6 +19,17 @@ function ScoringCircuit() {
       <hole name="H2" diameter="3.2mm" pcbX={halfWidth - mountingInset} pcbY={-halfHeight + mountingInset} />
       <hole name="H3" diameter="3.2mm" pcbX={-halfWidth + mountingInset} pcbY={halfHeight - mountingInset} />
       <hole name="H4" diameter="3.2mm" pcbX={halfWidth - mountingInset} pcbY={halfHeight - mountingInset} />
+
+      <Bp034DirectWireWeaponFootprint pcbX={-halfWidth + 16} pcbY={0} pcbRotation={90} />
+      <P0PisteLanding pcbX={-halfWidth + 16} pcbY={halfHeight - 20} />
+
+      <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_A" to="J_WEAPON_DIRECT.LEFT_WEAPON_A_TEST" />
+      <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_B" to="J_WEAPON_DIRECT.LEFT_WEAPON_B_TEST" />
+      <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_C" to="J_WEAPON_DIRECT.LEFT_WEAPON_C_TEST" />
+      <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_A" to="J_WEAPON_DIRECT.RIGHT_WEAPON_A_TEST" />
+      <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_B" to="J_WEAPON_DIRECT.RIGHT_WEAPON_B_TEST" />
+      <trace from="J_WEAPON_DIRECT.RIGHT_WEAPON_C" to="J_WEAPON_DIRECT.RIGHT_WEAPON_C_TEST" />
+      <trace from="J_PISTE_DIRECT.PISTE" to="J_PISTE_DIRECT.PISTE_TEST" />
     </board>
   )
 }
