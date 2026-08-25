@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest"
 import { AuthenticationError } from "../auth/workos.js"
 import { close, createLegislationServer } from "../mcp/server.js"
+import type { AmendmentSearchApi } from "./amendment-search.js"
 import type { BillSummaryRead, SupportingMaterialDetailRead } from "./canonical-read.js"
 import type { CivicSearchApi } from "./civic-search.js"
 import type { CoreReadQueryApi } from "./core-read.js"
@@ -295,7 +296,7 @@ function fakeFetch() {
       url.pathname === "/api/people" ||
       url.pathname === "/api/organizations" ||
       url.pathname === "/api/meetings" ||
-      (init?.method === "POST" && (url.pathname === "/api/search/amendments" || url.pathname === "/api/document-diffs"))
+      (init?.method === "POST" && url.pathname === "/api/document-diffs")
     ) {
       return jsonResponse(
         { error: { category: "not_found", correlationId, message: "not found", retryable: false } },
@@ -772,7 +773,7 @@ describe("local API smoke harness", () => {
         truncated: false
       })
     }
-    const service: CoreReadQueryApi & CivicSearchApi = {
+    const service: CoreReadQueryApi & CivicSearchApi & AmendmentSearchApi = {
       browseBills: async () => ({ items: [billSummaryRead("bill:fixture")], truncated: false, warnings: [] }),
       compareBillVersions: async () => ({ changes: [] }),
       findRelatedBills: async () => page(),
@@ -817,6 +818,12 @@ describe("local API smoke harness", () => {
       getVote: async () => canonical("vote:fixture"),
       listJurisdictions: async () => page(),
       listSessions: async () => page(),
+      searchAmendmentHits: async () => ({
+        items: [],
+        search: { isReranked: false, models: [] },
+        truncated: false,
+        warnings: []
+      }),
       searchAmendments: async () => page(),
       searchBills: async () => ({ items: [], truncated: false, warnings: [] }),
       searchBillText: async () => ({ items: [], search: { isReranked: false, models: [] }, truncated: false }),

@@ -323,12 +323,11 @@ const BLOCKED_ABSENCE_CHECKS: readonly CheckDefinition[] = [
   },
   {
     body: { limit: 1, mode: "lexical", query: "legislation" },
-    errorCategory: "not_found",
-    expected: "error",
-    id: "absent-search-amendments",
+    expected: "search",
+    id: "search-amendments",
     method: "POST",
     path: "/api/search/amendments",
-    statusCode: 404
+    statusCode: 200
   },
   {
     body: { limit: 1, mode: "lexical", query: "legislation" },

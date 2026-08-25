@@ -9,6 +9,7 @@ import {
   getTableColumns,
   gte,
   inArray,
+  isNotNull,
   lte,
   sql,
   type SQL,
@@ -19,6 +20,7 @@ import type { LegislationDatabase } from "../db/database.js"
 import { findChangeEvents, type CanonicalChangeType } from "../db/queries/changes.js"
 import {
   amendmentActions,
+  amendmentEmbeddings,
   amendments,
   billActions,
   billDocuments,
@@ -29,6 +31,7 @@ import {
   bills,
   calendarEntries,
   documentSections,
+  documentSectionEmbeddings,
   eventAgendaItems,
   eventBills,
   eventDocuments,
@@ -49,6 +52,14 @@ import {
 } from "../db/schema/schema.js"
 import { embeddingQueryRouteFor, embeddingRouteFor, type EmbeddingSearchTool } from "../models/embedding-routing.js"
 import type { RetrievalModelClient } from "../models/openrouter-retrieval.js"
+import {
+  decodeAmendmentSearchCursor,
+  encodeAmendmentSearchCursor,
+  fuseAmendmentSearchCandidates,
+  type AmendmentSearchCandidate,
+  type AmendmentSearchInput as ApiAmendmentSearchInput,
+  type AmendmentSearchPage
+} from "../search/amendment-search.js"
 import type {
   BillSearchCandidate,
   BillSearchResultPage,
@@ -84,6 +95,281 @@ function coverageWarnings(itemCount: number, domain: string): string[] {
   return itemCount === 0
     ? [`No ${domain} matched. Availability is source-dependent; an empty result does not prove none exist.`]
     : []
+}
+
+async function lexicalAmendmentCandidates(
+  database: LegislationDatabase,
+  input: ApiAmendmentSearchInput,
+  limit: number
+): Promise<Array<AmendmentSearchCandidate[]>> {
+  const query = sql`websearch_to_tsquery('english', ${input.query})`
+  const documentTitleVector = sql`to_tsvector('english', coalesce(${billDocuments.title}, ''))`
+  const documentCandidates = database.$with("amendment_document_lexical_candidates").as(
+    database
+      .select({
+        documentId: billDocuments.id,
+        identifierMatches: sql<boolean>`${documentTitleVector} @@ ${query}`.as("identifier_matches"),
+        rank: sql<number>`ts_rank_cd(${documentSections.searchVector}, ${query}) + ts_rank_cd(${documentTitleVector}, ${query})`.as(
+          "rank"
+        ),
+        rowNumber:
+          sql<number>`row_number() over (partition by ${billDocuments.id} order by ts_rank_cd(${documentSections.searchVector}, ${query}) + ts_rank_cd(${documentTitleVector}, ${query}) desc, ${documentSections.id} asc)`.as(
+            "row_number"
+          ),
+        snippet:
+          sql<string>`left(ts_headline('english', ${documentSections.text}, ${query}, 'MaxWords=35, MinWords=10, MaxFragments=1'), 1000)`.as(
+            "snippet"
+          ),
+        textMatches: sql<boolean>`${documentSections.searchVector} @@ ${query}`.as("text_matches")
+      })
+      .from(documentSections)
+      .innerJoin(billDocuments, eq(billDocuments.id, documentSections.documentId))
+      .innerJoin(bills, eq(bills.id, billDocuments.billId))
+      .where(
+        and(
+          documentSearchFilters(input),
+          sql`(${documentSections.searchVector} @@ ${query} or ${documentTitleVector} @@ ${query})`
+        )
+      )
+  )
+  const [structuredRows, documentRows] = await Promise.all([
+    input.recordTypes?.includes("document")
+      ? Promise.resolve([])
+      : buildStructuredAmendmentLexicalQuery(database, input, limit),
+    input.recordTypes?.includes("structured") || input.sponsorPersonIds !== undefined || input.statuses !== undefined
+      ? Promise.resolve([])
+      : database
+          .with(documentCandidates)
+          .select({
+            bill: bills,
+            document: billDocuments,
+            identifierMatches: documentCandidates.identifierMatches,
+            rank: documentCandidates.rank,
+            snippet: documentCandidates.snippet,
+            textMatches: documentCandidates.textMatches
+          })
+          .from(documentCandidates)
+          .innerJoin(billDocuments, eq(billDocuments.id, documentCandidates.documentId))
+          .innerJoin(bills, eq(bills.id, billDocuments.billId))
+          .where(eq(documentCandidates.rowNumber, 1))
+          .orderBy(desc(documentCandidates.rank), asc(documentCandidates.documentId))
+          .limit(limit)
+  ])
+  return [
+    structuredRows.map(({ amendment, identifierMatches, metadataMatches, rank, snippet }) => ({
+      amendment,
+      lexicalScore: finiteSearchScore(rank),
+      matchedFields: structuredMatchedFields(identifierMatches, metadataMatches),
+      recordType: "structured" as const,
+      rerankScore: null,
+      score: finiteSearchScore(rank),
+      semanticScore: null,
+      snippet
+    })),
+    documentRows.map(({ bill, document, identifierMatches, rank, snippet, textMatches }) => ({
+      document,
+      jurisdictionId: bill.jurisdictionId,
+      lexicalScore: finiteSearchScore(rank),
+      matchedFields: documentMatchedFields(identifierMatches, textMatches),
+      recordType: "document" as const,
+      rerankScore: null,
+      score: finiteSearchScore(rank),
+      semanticScore: null,
+      snippet
+    }))
+  ]
+}
+
+export function buildStructuredAmendmentLexicalQuery(
+  database: LegislationDatabase,
+  input: ApiAmendmentSearchInput,
+  limit: number
+) {
+  const query = sql`websearch_to_tsquery('english', ${input.query})`
+  const vector = sql`setweight(to_tsvector('english', coalesce(${amendments.printedIdentifier}, '')), 'A') || setweight(to_tsvector('english', coalesce(${amendments.purpose}, '')), 'B') || setweight(to_tsvector('english', coalesce(${amendments.description}, '')), 'C')`
+  const identifierVector = sql`to_tsvector('english', coalesce(${amendments.printedIdentifier}, ''))`
+  const metadataVector = sql`to_tsvector('english', concat_ws(' ', ${amendments.purpose}, ${amendments.description}))`
+  return database
+    .select({
+      amendment: amendments,
+      identifierMatches: sql<boolean>`${identifierVector} @@ ${query}`,
+      metadataMatches: sql<boolean>`${metadataVector} @@ ${query}`,
+      rank: sql<number>`ts_rank_cd(${vector}, ${query})`,
+      snippet: sql<string>`left(ts_headline('english', concat_ws(' ', ${amendments.purpose}, ${amendments.description}), ${query}, 'MaxWords=35, MinWords=10, MaxFragments=1'), 1000)`
+    })
+    .from(amendments)
+    .where(and(isNotNull(amendments.billId), structuredSearchFilters(input), sql`${vector} @@ ${query}`))
+    .orderBy(desc(sql`ts_rank_cd(${vector}, ${query})`), asc(amendments.id))
+    .limit(limit)
+}
+
+async function semanticAmendmentCandidates(
+  database: LegislationDatabase,
+  input: ApiAmendmentSearchInput,
+  embedding: number[],
+  limit: number
+): Promise<Array<AmendmentSearchCandidate[]>> {
+  const structuredRoute = embeddingRouteFor("structured-amendment")
+  const documentRoute = embeddingRouteFor("document-backed-amendment-section")
+  const documentCandidates = database.$with("amendment_document_semantic_candidates").as(
+    database
+      .select({
+        distance: sql<number>`${documentSectionEmbeddings.embedding} <=> ${embedding}`.as("distance"),
+        documentId: billDocuments.id,
+        rowNumber:
+          sql<number>`row_number() over (partition by ${billDocuments.id} order by ${documentSectionEmbeddings.embedding} <=> ${embedding}, ${documentSections.id} asc)`.as(
+            "row_number"
+          ),
+        snippet: sql<string>`left(${documentSections.text}, 500)`.as("snippet")
+      })
+      .from(documentSectionEmbeddings)
+      .innerJoin(documentSections, eq(documentSections.id, documentSectionEmbeddings.sectionId))
+      .innerJoin(billDocuments, eq(billDocuments.id, documentSections.documentId))
+      .innerJoin(bills, eq(bills.id, billDocuments.billId))
+      .where(
+        and(
+          documentSearchFilters(input),
+          eq(documentSectionEmbeddings.model, documentRoute.model),
+          eq(documentSectionEmbeddings.inputContract, documentRoute.embeddingInputContract)
+        )
+      )
+  )
+  const [structuredRows, documentRows] = await Promise.all([
+    input.recordTypes?.includes("document")
+      ? Promise.resolve([])
+      : database
+          .select({
+            amendment: amendments,
+            score: sql<number>`1 - (${amendmentEmbeddings.embedding} <=> ${embedding})`
+          })
+          .from(amendmentEmbeddings)
+          .innerJoin(amendments, eq(amendments.id, amendmentEmbeddings.amendmentId))
+          .where(
+            and(
+              isNotNull(amendments.billId),
+              structuredSearchFilters(input),
+              eq(amendmentEmbeddings.model, structuredRoute.model),
+              eq(amendmentEmbeddings.inputContract, structuredRoute.embeddingInputContract)
+            )
+          )
+          .orderBy(sql`${amendmentEmbeddings.embedding} <=> ${embedding}`, asc(amendments.id))
+          .limit(limit),
+    input.recordTypes?.includes("structured") || input.sponsorPersonIds !== undefined || input.statuses !== undefined
+      ? Promise.resolve([])
+      : database
+          .with(documentCandidates)
+          .select({
+            bill: bills,
+            distance: documentCandidates.distance,
+            document: billDocuments,
+            snippet: documentCandidates.snippet
+          })
+          .from(documentCandidates)
+          .innerJoin(billDocuments, eq(billDocuments.id, documentCandidates.documentId))
+          .innerJoin(bills, eq(bills.id, billDocuments.billId))
+          .where(eq(documentCandidates.rowNumber, 1))
+          .orderBy(asc(documentCandidates.distance), asc(documentCandidates.documentId))
+          .limit(limit)
+  ])
+  return [
+    structuredRows.map(({ amendment, score }) => ({
+      amendment,
+      lexicalScore: null,
+      matchedFields: ["semantic"] as const,
+      recordType: "structured" as const,
+      rerankScore: null,
+      score: semanticSimilarity(score),
+      semanticScore: semanticSimilarity(score),
+      snippet: null
+    })),
+    documentRows.map(({ bill, distance, document, snippet }) => ({
+      document,
+      jurisdictionId: bill.jurisdictionId,
+      lexicalScore: null,
+      matchedFields: ["semantic"] as const,
+      recordType: "document" as const,
+      rerankScore: null,
+      score: semanticSimilarity(1 - distance),
+      semanticScore: semanticSimilarity(1 - distance),
+      snippet
+    }))
+  ]
+}
+
+function structuredMatchedFields(identifierMatches: boolean, metadataMatches: boolean) {
+  const fields = [
+    ...(identifierMatches ? (["identifier"] as const) : []),
+    ...(metadataMatches ? (["metadata"] as const) : [])
+  ]
+  if (fields.length === 0) {
+    throw new LegislationError("unprocessable", "Structured lexical amendment search has no matched field")
+  }
+  return fields
+}
+
+function documentMatchedFields(identifierMatches: boolean, textMatches: boolean) {
+  const fields = [...(identifierMatches ? (["identifier"] as const) : []), ...(textMatches ? (["text"] as const) : [])]
+  if (fields.length === 0) {
+    throw new LegislationError("unprocessable", "Document lexical amendment search has no matched field")
+  }
+  return fields
+}
+
+function finiteSearchScore(value: number): number {
+  if (!Number.isFinite(value) || value < 0) {
+    throw new LegislationError("unprocessable", "Lexical amendment search returned an invalid rank")
+  }
+  return value
+}
+
+function semanticSimilarity(value: number): number {
+  if (!Number.isFinite(value)) {
+    throw new LegislationError("unprocessable", "Semantic amendment search returned an invalid similarity")
+  }
+  return Math.max(0, Math.min(1, value))
+}
+
+export function amendmentSearchPageState(
+  candidateCount: number,
+  offset: number,
+  limit: number,
+  candidateCapReached: boolean
+): Readonly<{ nextOffset?: number; truncated: boolean }> {
+  const hasKnownRemaining = candidateCount > offset + limit
+  return {
+    nextOffset: hasKnownRemaining ? offset + limit : undefined,
+    truncated: hasKnownRemaining || candidateCapReached
+  }
+}
+
+function structuredSearchFilters(input: ApiAmendmentSearchInput) {
+  return and(
+    input.billIds === undefined ? undefined : inArray(amendments.billId, input.billIds),
+    input.jurisdictionIds === undefined ? undefined : inArray(amendments.jurisdictionId, input.jurisdictionIds),
+    input.sessionIds === undefined ? undefined : inArray(amendments.sessionId, input.sessionIds),
+    input.sponsorPersonIds === undefined ? undefined : inArray(amendments.sponsorPersonId, input.sponsorPersonIds),
+    input.statuses === undefined ? undefined : inArray(amendments.status, input.statuses),
+    input.submittedFrom === undefined ? undefined : gte(amendments.submittedDate, input.submittedFrom),
+    input.submittedTo === undefined ? undefined : lte(amendments.submittedDate, input.submittedTo),
+    input.updatedFrom === undefined ? undefined : gte(amendments.updatedAt, input.updatedFrom),
+    input.updatedTo === undefined ? undefined : lte(amendments.updatedAt, input.updatedTo),
+    input.updatedToExclusive === undefined ? undefined : sql`${amendments.updatedAt} < ${input.updatedToExclusive}`
+  )
+}
+
+function documentSearchFilters(input: ApiAmendmentSearchInput) {
+  return and(
+    eq(billDocuments.classification, "amendment"),
+    eq(billDocuments.processingStatus, "processed"),
+    input.billIds === undefined ? undefined : inArray(billDocuments.billId, input.billIds),
+    input.jurisdictionIds === undefined ? undefined : inArray(bills.jurisdictionId, input.jurisdictionIds),
+    input.sessionIds === undefined ? undefined : inArray(bills.sessionId, input.sessionIds),
+    input.submittedFrom === undefined ? undefined : gte(billDocuments.documentDate, input.submittedFrom),
+    input.submittedTo === undefined ? undefined : lte(billDocuments.documentDate, input.submittedTo),
+    input.updatedFrom === undefined ? undefined : gte(billDocuments.updatedAt, input.updatedFrom),
+    input.updatedTo === undefined ? undefined : lte(billDocuments.updatedAt, input.updatedTo),
+    input.updatedToExclusive === undefined ? undefined : sql`${billDocuments.updatedAt} < ${input.updatedToExclusive}`
+  )
 }
 
 export interface BillLookup {
@@ -1671,6 +1957,43 @@ export class LegislationQueryService {
             ]
           : [])
       ]
+    }
+  }
+
+  /**
+   * Public amendment search uses a cursor bound to its full filter set. The
+   * older internal amendment lookup remains for MCP compatibility; this path
+   * searches the canonical persisted structured and document-backed records
+   * directly before they are projected by the HTTP boundary.
+   */
+  async searchAmendmentHits(input: ApiAmendmentSearchInput): Promise<AmendmentSearchPage<AmendmentSearchCandidate>> {
+    const offset = decodeAmendmentSearchCursor(input.cursor, input)
+    const candidateLimit = input.mode === "lexical" ? offset + input.limit + 1 : 25
+    const lexical =
+      input.mode === "semantic" ? [] : await lexicalAmendmentCandidates(this.#database, input, candidateLimit)
+    const queryEmbedding =
+      input.mode === "lexical" ? undefined : await this.#embedQueryWithModel("search_amendments", input.query)
+    const semantic =
+      queryEmbedding === undefined
+        ? []
+        : await semanticAmendmentCandidates(this.#database, input, queryEmbedding.embedding, candidateLimit)
+    const candidates = fuseAmendmentSearchCandidates(
+      [...lexical, ...semantic],
+      input.mode === "lexical" ? candidateLimit : 25
+    )
+    const items = candidates.slice(offset, offset + input.limit)
+    const candidateCapReached = input.mode !== "lexical" && [...lexical, ...semantic].some((list) => list.length >= 25)
+    const pageState = amendmentSearchPageState(candidates.length, offset, input.limit, candidateCapReached)
+    return {
+      items,
+      nextCursor:
+        pageState.nextOffset === undefined ? undefined : encodeAmendmentSearchCursor(pageState.nextOffset, input),
+      search: {
+        isReranked: false,
+        models: queryEmbedding === undefined ? [] : [{ model: queryEmbedding.model, purpose: "embedding" }]
+      },
+      truncated: pageState.truncated,
+      warnings: coverageWarnings(items.length, "amendments")
     }
   }
 

@@ -38,6 +38,7 @@ import { assertPersonExists, listPersonBillActivity } from "../db/queries/person
 import { getSupportingMaterialSectionRead } from "../db/queries/supporting-material-section-read.js"
 import { createAmendmentReadRepository } from "./amendment-read-repository.js"
 import { createAmendmentReadApiHandler } from "./amendment-read-routes.js"
+import { createAmendmentSearchApiHandler, type AmendmentSearchApi } from "./amendment-search.js"
 import { createBillDetailReadRepository } from "./bill-detail-read-repository.js"
 import { createBillDetailReadApiHandler } from "./bill-detail-read-routes.js"
 import { createBillRelatedReadApiHandler } from "./bill-related-read-routes.js"
@@ -97,7 +98,7 @@ import { createWebhookReadApiHandler } from "./webhook-read-routes.js"
  * handler here; the HTTP server and CLI remain unaware of individual routes.
  */
 export function createLegislationApiHandler(
-  queryService: CoreReadQueryApi & CivicSearchApi,
+  queryService: CoreReadQueryApi & CivicSearchApi & AmendmentSearchApi,
   options: Readonly<{
     apiBaseUrl: string
     documentDatabase?: LegislationDatabase
@@ -286,6 +287,7 @@ export function createLegislationApiHandler(
           )
         ]),
     createCoreReadApiHandler(queryService, options),
+    createAmendmentSearchApiHandler(queryService, options),
     createCivicSearchApiHandler(queryService, options),
     createPassageSearchApiHandler(queryService, options),
     ...(options.subscriptionRepository === undefined

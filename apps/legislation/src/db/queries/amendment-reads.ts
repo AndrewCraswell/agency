@@ -484,7 +484,10 @@ function amendmentStatuses(input: AmendmentReadInput): readonly string[] {
   return [...new Set(values.map((value) => requiredText(value, "status")))].toSorted()
 }
 
-function projectStructuredAmendment(amendment: typeof amendments.$inferSelect, apiBaseUrl: string): AmendmentSummary {
+export function projectStructuredAmendment(
+  amendment: typeof amendments.$inferSelect,
+  apiBaseUrl: string
+): AmendmentSummary {
   return projectAmendmentSummary(structuredAmendmentInput(amendment), sourceProjectionContext(amendment, apiBaseUrl))
 }
 
@@ -512,7 +515,7 @@ export function isStructuredAmendmentComplete(
   return value.billId !== null
 }
 
-function projectDocumentAmendment(
+export function projectDocumentAmendment(
   document: typeof billDocuments.$inferSelect,
   jurisdictionId: string,
   apiBaseUrl: string

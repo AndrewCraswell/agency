@@ -6,6 +6,8 @@ import * as schema from "../db/schema/schema.js"
 import { LegislationError } from "./errors.js"
 import {
   billSearchExecution,
+  amendmentSearchPageState,
+  buildStructuredAmendmentLexicalQuery,
   buildLexicalSupportingMaterialCandidateQuery,
   buildBillBrowseQuery,
   decodeBillBrowseCursor,
@@ -104,6 +106,54 @@ describe("bill browse query", () => {
     expect(generated.sql).toMatch(
       /order by coalesce\("latest_action_at", "browse_bill"\."source_updated_at", "browse_bill"\."updated_at"\) desc, "browse_bill"\."id" asc/
     )
+  })
+})
+
+describe("amendment lexical search query", () => {
+  it("uses full-text ranking and preserves every multi-value filter as bound parameters", () => {
+    const query = buildStructuredAmendmentLexicalQuery(
+      database,
+      {
+        billIds: ["bill:first", "bill:second"],
+        jurisdictionIds: ["jurisdiction:first", "jurisdiction:second"],
+        limit: 20,
+        mode: "lexical",
+        query: "housing & appropriations",
+        sessionIds: ["session:first", "session:second"],
+        sponsorPersonIds: ["person:first", "person:second"],
+        statuses: ["introduced", "adopted"],
+        submittedFrom: "2026-01-01",
+        submittedTo: "2026-01-31"
+      },
+      21
+    ).toSQL()
+
+    expect(query.sql).toContain("websearch_to_tsquery('english', $1)")
+    expect(query.sql).toContain("ts_rank_cd")
+    expect(query.sql).toContain("ts_headline")
+    expect(query.sql).not.toContain(" ilike ")
+    expect(query.params).toEqual(
+      expect.arrayContaining([
+        "housing & appropriations",
+        "bill:first",
+        "bill:second",
+        "jurisdiction:first",
+        "jurisdiction:second",
+        "session:first",
+        "session:second",
+        "person:first",
+        "person:second",
+        "introduced",
+        "adopted"
+      ])
+    )
+  })
+})
+
+describe("amendment capped page state", () => {
+  it("drains known candidates in a capped semantic window before retaining the cap signal", () => {
+    expect(amendmentSearchPageState(25, 0, 20, true)).toEqual({ nextOffset: 20, truncated: true })
+    expect(amendmentSearchPageState(25, 20, 20, true)).toEqual({ truncated: true })
   })
 })
 
