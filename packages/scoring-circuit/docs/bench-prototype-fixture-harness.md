@@ -76,8 +76,12 @@ acceptance remains unresolved.
 
 `evaluateBenchPrototypeFixturePhysicalEvidence` is a separate, fail-closed
 evidence intake. It accepts only a complete immutable record containing exact
-drawing and CAD review artifacts for `43045-1200`, `43025-1200`, `43030-0007`,
-and `44242-0005`; receipt evidence for those same parts; a de-energized
+drawing and review artifacts for `43045-1200`, `43025-1200`, `43030-0007`, and
+`44242-0005`; exact retained CAD artifacts for `43045-1200`, `43025-1200`, and
+`44242-0005`; and the explicit `not-acquired-pattern-probe-returned-404` CAD
+disposition with null CAD artifact fields for `43030-0007`. No other MPN may
+use that disposition or null CAD fields. It also requires receipt evidence for
+those same parts; a de-energized
 sample-fit/orientation/label result; rejected swap, open, return-bond, and
 reversed-mate results; all seven crimp/retention records; strain-relief
 evidence; and an accepted continuity record. Artifact digests and identifiers
@@ -111,7 +115,10 @@ of `430250000-SD`; `43030-0007` is the 20-24 AWG, form-A loose-terminal row of
 Exact-MPN CAD preview PDFs are retained for `43045-1200`, `43025-1200`, and
 `44242-0005`. For `43030-0007`, the unlisted candidate URL pattern returned
 HTTP 404; that observation does not establish whether Molex publishes CAD at
-another URL. All four series drawings and the three retrieved exact-MPN CAD
+another URL. The physical-evidence evaluator therefore accepts its exact
+retained drawing and the explicit `not-acquired-pattern-probe-returned-404`
+disposition, while retaining exact CAD-artifact requirements for the other
+three MPNs. All four series drawings and the three retrieved exact-MPN CAD
 previews are retained under `docs/evidence/bp-104/assets` and SHA-256 bound in
 the executable contract. This closes source-byte acquisition, not footprint
 approval or any physical-evidence gate.

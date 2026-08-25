@@ -283,17 +283,33 @@ describe("BP-104 seven-channel fixture harness", () => {
       status: "measured",
       recordedAtUtc: "2026-08-24T01:02:03.000Z",
       operator: "synthetic-test-operator",
-      drawingCadReviews: ["43045-1200", "43025-1200", "43030-0007", "44242-0005"].map((mpn) => ({
-        mpn,
-        drawingArtifactId: `${mpn}-drawing`,
-        cadArtifactId: `${mpn}-cad`,
-        reviewArtifactId: `${mpn}-review`,
-        drawingSha256: nextSha256(),
-        cadSha256: nextSha256(),
-        reviewSha256: nextSha256(),
-        reviewedAtUtc: "2026-08-24T01:02:03.000Z",
-        result: "accepted"
-      })),
+      drawingCadReviews: ["43045-1200", "43025-1200", "43030-0007", "44242-0005"].map((mpn) =>
+        mpn === "43030-0007"
+          ? {
+              mpn,
+              drawingArtifactId: `${mpn}-drawing`,
+              cadDisposition: "not-acquired-pattern-probe-returned-404",
+              cadArtifactId: null,
+              reviewArtifactId: `${mpn}-review`,
+              drawingSha256: nextSha256(),
+              cadSha256: null,
+              reviewSha256: nextSha256(),
+              reviewedAtUtc: "2026-08-24T01:02:03.000Z",
+              result: "accepted"
+            }
+          : {
+              mpn,
+              drawingArtifactId: `${mpn}-drawing`,
+              cadDisposition: "exact-retained-cad-artifact",
+              cadArtifactId: `${mpn}-cad`,
+              reviewArtifactId: `${mpn}-review`,
+              drawingSha256: nextSha256(),
+              cadSha256: nextSha256(),
+              reviewSha256: nextSha256(),
+              reviewedAtUtc: "2026-08-24T01:02:03.000Z",
+              result: "accepted"
+            }
+      ),
       receivedParts: [
         { mpn: "43045-1200", receivedQuantity: 1 },
         { mpn: "43025-1200", receivedQuantity: 1 },
@@ -360,10 +376,36 @@ describe("BP-104 seven-channel fixture harness", () => {
     expect(accepted).toEqual({ accepted: true, reasons: [] })
     expect(Object.isFrozen(accepted)).toBe(true)
     expect(Object.isFrozen(accepted.reasons)).toBe(true)
+    expect(physicalEvidence.drawingCadReviews[2]).toMatchObject({
+      mpn: "43030-0007",
+      cadDisposition: "not-acquired-pattern-probe-returned-404",
+      cadArtifactId: null,
+      cadSha256: null
+    })
 
     const missingDrawingReview = structuredClone(physicalEvidence)
     missingDrawingReview.drawingCadReviews[0]!.cadArtifactId = ""
     expect(evaluateBenchPrototypeFixturePhysicalEvidence(missingDrawingReview)).toMatchObject({ accepted: false })
+
+    const nullCadForHeader = structuredClone(physicalEvidence)
+    Object.assign(nullCadForHeader.drawingCadReviews[0]!, { cadArtifactId: null, cadSha256: null })
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(nullCadForHeader)).toMatchObject({ accepted: false })
+
+    const wrongNoCadDisposition = structuredClone(physicalEvidence)
+    Object.assign(wrongNoCadDisposition.drawingCadReviews[0]!, {
+      cadDisposition: "not-acquired-pattern-probe-returned-404",
+      cadArtifactId: null,
+      cadSha256: null
+    })
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(wrongNoCadDisposition)).toMatchObject({ accepted: false })
+
+    const terminalWithCadArtifact = structuredClone(physicalEvidence)
+    Object.assign(terminalWithCadArtifact.drawingCadReviews[2]!, {
+      cadDisposition: "exact-retained-cad-artifact",
+      cadArtifactId: "43030-0007-forged-cad",
+      cadSha256: "f".repeat(64)
+    })
+    expect(evaluateBenchPrototypeFixturePhysicalEvidence(terminalWithCadArtifact)).toMatchObject({ accepted: false })
 
     const insufficientTerminals = structuredClone(physicalEvidence)
     insufficientTerminals.receivedParts[2]!.receivedQuantity = 6

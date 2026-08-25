@@ -575,6 +575,8 @@ export function evaluateBenchPrototypeContinuityEvidence(value: unknown): BenchP
 
 const requiredDrawingCadReviewMpns = ["43045-1200", "43025-1200", "43030-0007", "44242-0005"] as const
 
+const cadNotAcquiredMpn = "43030-0007" as const
+
 const requiredReceivedParts = [
   { mpn: "43045-1200", minimumReceivedQuantity: 1 },
   { mpn: "43025-1200", minimumReceivedQuantity: 1 },
@@ -593,6 +595,29 @@ function isSha256(value: unknown): value is string {
   return typeof value === "string" && /^[a-f0-9]{64}$/u.test(value)
 }
 
+type BenchPrototypeFixtureDrawingCadReview = {
+  readonly mpn: "43045-1200" | "43025-1200" | "43030-0007" | "44242-0005"
+  readonly drawingArtifactId: string
+  readonly reviewArtifactId: string
+  readonly drawingSha256: string
+  readonly reviewSha256: string
+  readonly reviewedAtUtc: string
+  readonly result: "accepted"
+} & (
+  | {
+      readonly mpn: "43030-0007"
+      readonly cadDisposition: "not-acquired-pattern-probe-returned-404"
+      readonly cadArtifactId: null
+      readonly cadSha256: null
+    }
+  | {
+      readonly mpn: "43045-1200" | "43025-1200" | "44242-0005"
+      readonly cadDisposition: "exact-retained-cad-artifact"
+      readonly cadArtifactId: string
+      readonly cadSha256: string
+    }
+)
+
 /**
  * BP-104 physical evidence is deliberately separate from the frozen schematic
  * contract. An accepted synthetic test object proves only evaluator behavior;
@@ -604,17 +629,7 @@ export type BenchPrototypeFixturePhysicalEvidence = {
   readonly status: "measured"
   readonly recordedAtUtc: string
   readonly operator: string
-  readonly drawingCadReviews: readonly {
-    readonly mpn: "43045-1200" | "43025-1200" | "43030-0007" | "44242-0005"
-    readonly drawingArtifactId: string
-    readonly cadArtifactId: string
-    readonly reviewArtifactId: string
-    readonly drawingSha256: string
-    readonly cadSha256: string
-    readonly reviewSha256: string
-    readonly reviewedAtUtc: string
-    readonly result: "accepted"
-  }[]
+  readonly drawingCadReviews: readonly BenchPrototypeFixtureDrawingCadReview[]
   readonly receivedParts: readonly {
     readonly mpn: "43045-1200" | "43025-1200" | "43030-0007" | "44242-0005"
     readonly receivedQuantity: number
@@ -713,6 +728,7 @@ function physicalEvidenceHasExactShape(value: unknown): value is DataRecord {
       hasExactKeys(row, [
         "mpn",
         "drawingArtifactId",
+        "cadDisposition",
         "cadArtifactId",
         "reviewArtifactId",
         "drawingSha256",
@@ -784,31 +800,44 @@ export function evaluateBenchPrototypeFixturePhysicalEvidence(
 
   const drawingCadReviews = value.drawingCadReviews
   if (!Array.isArray(drawingCadReviews) || drawingCadReviews.length !== requiredDrawingCadReviewMpns.length) {
-    reasons.push("exact drawing and CAD reviews are required for all four fixture parts")
+    reasons.push("exact drawing reviews and the required CAD dispositions are required for all four fixture parts")
   } else {
     requiredDrawingCadReviewMpns.forEach((mpn, index) => {
       const review = drawingCadReviews[index]
       const drawingArtifactAccepted =
         isPlainRecord(review) &&
         registerEvidenceArtifact(review.drawingArtifactId, review.drawingSha256, `${mpn}.drawing`, artifacts, reasons)
-      const cadArtifactAccepted =
-        isPlainRecord(review) &&
-        registerEvidenceArtifact(review.cadArtifactId, review.cadSha256, `${mpn}.CAD`, artifacts, reasons)
       const reviewArtifactAccepted =
         isPlainRecord(review) &&
         registerEvidenceArtifact(review.reviewArtifactId, review.reviewSha256, `${mpn}.review`, artifacts, reasons)
+      const exactRetainedCadRequired = mpn !== cadNotAcquiredMpn
+      const cadArtifactAccepted =
+        isPlainRecord(review) &&
+        review.cadDisposition === "exact-retained-cad-artifact" &&
+        registerEvidenceArtifact(review.cadArtifactId, review.cadSha256, `${mpn}.CAD`, artifacts, reasons)
+      const notAcquiredCadAccepted =
+        isPlainRecord(review) &&
+        mpn === cadNotAcquiredMpn &&
+        review.cadDisposition === "not-acquired-pattern-probe-returned-404" &&
+        review.cadArtifactId === null &&
+        review.cadSha256 === null
+      const artifactBindingsAreDistinct =
+        isPlainRecord(review) &&
+        (exactRetainedCadRequired
+          ? new Set([review.drawingArtifactId, review.cadArtifactId, review.reviewArtifactId]).size === 3 &&
+            new Set([review.drawingSha256, review.cadSha256, review.reviewSha256]).size === 3
+          : review.drawingArtifactId !== review.reviewArtifactId && review.drawingSha256 !== review.reviewSha256)
       if (
         !isPlainRecord(review) ||
         review.mpn !== mpn ||
         !drawingArtifactAccepted ||
-        !cadArtifactAccepted ||
         !reviewArtifactAccepted ||
-        new Set([review.drawingArtifactId, review.cadArtifactId, review.reviewArtifactId]).size !== 3 ||
-        new Set([review.drawingSha256, review.cadSha256, review.reviewSha256]).size !== 3 ||
+        !(exactRetainedCadRequired ? cadArtifactAccepted : notAcquiredCadAccepted) ||
+        !artifactBindingsAreDistinct ||
         parseCanonicalUtcTimestamp(review.reviewedAtUtc) === null ||
         review.result !== "accepted"
       ) {
-        reasons.push(`drawing and CAD review for ${mpn} is incomplete or not accepted`)
+        reasons.push(`drawing review or CAD disposition for ${mpn} is incomplete or not accepted`)
       }
     })
   }
@@ -1127,7 +1156,7 @@ const definition = {
       status: "unresolved",
       evaluator: "evaluateBenchPrototypeFixturePhysicalEvidence",
       acceptanceRule:
-        "Acceptance remains unresolved until exact drawing/CAD reviews, received parts, de-energized fit/orientation/labels, negative miswire results, crimp/retention, strain relief, and accepted continuity evidence are all present."
+        "Acceptance remains unresolved until exact drawing reviews, exact retained CAD artifacts for 43045-1200, 43025-1200, and 44242-0005, the retained 43030-0007 no-CAD disposition, received parts, de-energized fit/orientation/labels, negative miswire results, crimp/retention, strain relief, and accepted continuity evidence are all present."
     },
     sampleFitProcedure: {
       purpose:
