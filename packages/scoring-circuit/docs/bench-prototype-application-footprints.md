@@ -55,6 +55,25 @@ exposed-pad identities, `U_USB_PD` mapping, rendered-review hash, and deny-state
 integrity. It does not accept the project mask, symmetric paste approximation,
 courtyard, board fit, DRC, or fabrication release.
 
+## `J_USB_C` Amphenol source and candidate disposition
+
+The BP-050 `J_USB_C` selection is now exact-package-identified as Amphenol ICC
+`10177070-00011LF`, a USB Type-C 16-position right-angle SMT receptacle for a
+0.80 mm PCB. BP-033 retains the official Amphenol FCI drawing at
+`docs/evidence/bp-033/amphenol-10177070-product-drawing.pdf` with SHA-256
+`A1F523048D0BE675C6E3554BB93592DD8B8CFFF88319E4DBE19B5A84AA8C66CF`.
+The isolated project-review artwork and orientation candidate is documented in
+[`bp-033-usb-c-project-footprint.md`](bp-033-usb-c-project-footprint.md) and
+mapped in `projectFootprintMappings[0]`. Page 2 publishes the recommended
+12-land row, four shell slots, two datum holes, and product-edge datum; the
+isolated artifact transcribes that manufacturer layout without adding mask,
+paste, courtyard, or chassis geometry. The official 3D archive remains
+access-gated. Root review accepts the exact orderable/package, 12-land
+source-pin/net order, slot and datum-hole geometry, product-edge wording, and
+top-view orientation. The `J_USB_C` row remains `DNP-unresolved`; CAD import,
+mask, paste, courtyard, chassis, board fit, release, and fabrication remain
+denied.
+
 ## J_HUB75 Samtec source and candidate disposition
 
 `J_HUB75` is the exact Samtec `TST-108-04-G-D-RA`: a 16-position, double-row,

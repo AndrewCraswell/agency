@@ -30,6 +30,7 @@ describe("BP-033 application footprint closure ledger", () => {
     expect(retainedRecords.map((record) => record.reference).sort()).toEqual([
       "D_SOURCE_SELECTOR",
       "D_VBUS_TVS",
+      "J_USB_C",
       "L_APP_REGULATOR",
       "R_W5500_INT_BIAS",
       "TP_W5500_INT_N",
@@ -54,6 +55,46 @@ describe("BP-033 application footprint closure ledger", () => {
     }
     expect(benchPrototypeApplicationFootprints.authority.manufacturerDrawingsReviewed).toBe(false)
     expect(benchPrototypeApplicationFootprints.authority.fabricationAuthorized).toBe(false)
+  })
+
+  it("maps J_USB_C to the isolated BP-033 review artifact without changing the deny state", () => {
+    expect(benchPrototypeApplicationFootprints.records).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          reference: "J_USB_C",
+          manufacturer: "Amphenol ICC",
+          mpn: "10177070-00011LF",
+          package: "USB Type-C 16-position right-angle SMT receptacle, 0.80 mm PCB",
+          packageStatus: "exact-package-identified",
+          population: "DNP-unresolved",
+          manufacturerDrawing: expect.objectContaining({
+            state: "acquired",
+            artifactPath: "docs/evidence/bp-033/amphenol-10177070-product-drawing.pdf",
+            revision: "Primary source retained at docs/evidence/bp-033/amphenol-10177070-product-drawing.pdf",
+            sha256: "A1F523048D0BE675C6E3554BB93592DD8B8CFFF88319E4DBE19B5A84AA8C66CF"
+          }),
+          manufacturerCad: expect.objectContaining({ state: "not-acquired" }),
+          artwork: expect.objectContaining({ state: "not-generated" }),
+          orientation: expect.objectContaining({ state: "unreviewed" })
+        })
+      ])
+    )
+    expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toEqual([
+      {
+        reference: "J_USB_C",
+        artifactKind: "bp033-usb-c-project-footprint",
+        artworkModule: "src/bp033-usb-c-project-footprint.tsx",
+        reviewDocument: "docs/bp-033-usb-c-project-footprint.md",
+        sourceArtifactPath: "docs/evidence/bp-033/amphenol-10177070-product-drawing.pdf",
+        sourceSha256: "A1F523048D0BE675C6E3554BB93592DD8B8CFFF88319E4DBE19B5A84AA8C66CF",
+        reviewState: "root-reviewed-review-input",
+        reviewer: "root-final-reviewer",
+        reviewedAt: "2026-08-25",
+        fabricationRelease: "deny"
+      }
+    ])
+    expect(benchPrototypeApplicationFootprints.releaseState).toBe("deny")
+    expect(benchPrototypeApplicationFootprints.fabricationAuthorized).toBe(false)
   })
 
   it("binds only the J_HUB75 pin-map overlay and preserves BP-143 physical gates", () => {

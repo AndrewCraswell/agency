@@ -173,6 +173,14 @@ type Seed = {
 
 const retainedPrimarySourceBatch = [
   {
+    reference: "J_USB_C",
+    mpn: "10177070-00011LF",
+    package: "USB Type-C 16-position right-angle SMT receptacle, 0.80 mm PCB",
+    path: "docs/evidence/bp-033/amphenol-10177070-product-drawing.pdf",
+    url: "https://cdn.amphenol-cs.com/media/wysiwyg/files/drawing/10177070.pdf",
+    sha256: "A1F523048D0BE675C6E3554BB93592DD8B8CFFF88319E4DBE19B5A84AA8C66CF"
+  },
+  {
     reference: "U_USB_PD",
     mpn: "TPS25730ADREFR",
     package: "WQFN (REF), 38-pin",
@@ -345,7 +353,13 @@ function dnp(reference: string, retainedCandidateMpn: string | null, reason: str
 }
 
 const powerSeeds = [
-  ["J_USB_C", "Amphenol ICC", "10177070-00011LF", null, "USB-C receptacle"],
+  [
+    "J_USB_C",
+    "Amphenol ICC",
+    "10177070-00011LF",
+    "USB Type-C 16-position right-angle SMT receptacle, 0.80 mm PCB",
+    "USB-C receptacle"
+  ],
   ["U_USB_PD", "Texas Instruments", "TPS25730ADREFR", "WQFN (REF), 38-pin", "USB-C PD sink controller"],
   ["U_USB_CC_SBU_PROTECT", "Texas Instruments", "TPD4S201TRGRRQ1", "VQFN (RGR), 20-pin", "CC/SBU protector"],
   ["U_USB_DATA_PROTECT", "Texas Instruments", "TPD2EUSB30DRTR", "SOT-9X3 (DRT), 3-pin", "USB data protector"],
@@ -655,6 +669,21 @@ const bp140ReferenceReconciliation = [
   }))
 ].sort((left, right) => left.reference.localeCompare(right.reference))
 
+const projectFootprintMappings = [
+  {
+    reference: "J_USB_C",
+    artifactKind: "bp033-usb-c-project-footprint",
+    artworkModule: "src/bp033-usb-c-project-footprint.tsx",
+    reviewDocument: "docs/bp-033-usb-c-project-footprint.md",
+    sourceArtifactPath: "docs/evidence/bp-033/amphenol-10177070-product-drawing.pdf",
+    sourceSha256: "A1F523048D0BE675C6E3554BB93592DD8B8CFFF88319E4DBE19B5A84AA8C66CF",
+    reviewState: "root-reviewed-review-input",
+    reviewer: "root-final-reviewer",
+    reviewedAt: "2026-08-25",
+    fabricationRelease: "deny"
+  }
+] as const
+
 const definition = {
   artifactKind: "bench-prototype-application-footprint-closure-ledger",
   workUnit: "BP-033",
@@ -671,6 +700,7 @@ const definition = {
     encryptedIrReceiver: "BP-146"
   },
   records,
+  projectFootprintMappings,
   bp140ReferenceReconciliation,
   bp140SelectionBlockedReferences,
   bp140DnpReferences,
@@ -772,6 +802,18 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
+    contract.projectFootprintMappings.length !== 1 ||
+    contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
+    contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
+    contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
+    contract.projectFootprintMappings[0]?.reviewDocument !== "docs/bp-033-usb-c-project-footprint.md" ||
+    contract.projectFootprintMappings[0]?.sourceArtifactPath !==
+      "docs/evidence/bp-033/amphenol-10177070-product-drawing.pdf" ||
+    contract.projectFootprintMappings[0]?.sourceSha256 !==
+      "A1F523048D0BE675C6E3554BB93592DD8B8CFFF88319E4DBE19B5A84AA8C66CF" ||
+    contract.projectFootprintMappings[0]?.reviewState !== "root-reviewed-review-input" ||
+    contract.projectFootprintMappings[0]?.reviewer !== "root-final-reviewer" ||
+    contract.projectFootprintMappings[0]?.fabricationRelease !== "deny" ||
     !contract.records.some(
       (record) =>
         record.reference === "U_USB_PD" &&
