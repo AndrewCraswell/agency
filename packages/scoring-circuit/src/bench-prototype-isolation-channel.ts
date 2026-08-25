@@ -405,8 +405,8 @@ function validateCommittedEvidence(): void {
     throw new RangeError("BP-120 isolation provenance no longer matches the reviewed pad allocation")
   }
 
-  const esp32Signals = benchPrototypeEsp32Allocation.pads.filter((pad) => "signal" in pad).map((pad) => pad.signal)
-  const requiredSignals = [
+  const esp32Signals: readonly string[] = benchPrototypeEsp32Allocation.pads.map((pad) => pad.signal)
+  const retiredSignals = [
     "SCORE_SCK",
     "SCORE_MOSI",
     "SCORE_MISO",
@@ -416,11 +416,11 @@ function validateCommittedEvidence(): void {
   ] as const
   if (
     benchPrototypeEsp32Allocation.moduleMpn !== "ESP32-S3-WROOM-1U-N16R2" ||
-    !requiredSignals.every((signal) => esp32Signals.includes(signal)) ||
-    benchPrototypeEsp32Allocation.unavailableResources.isolatedResetRequest !==
-      "not a GPIO; RESET_REQUEST crosses ISO7762FDWR and drives a BSS138 sink on EN_RESET"
+    retiredSignals.some((signal) => esp32Signals.includes(signal)) ||
+    benchPrototypeEsp32Allocation.unavailableResources.isolatedResetRequest !== "removed from P0" ||
+    benchPrototypeEsp32Allocation.unavailableResources.iso7721ReverseChannel !== "removed from P0"
   ) {
-    throw new RangeError("BP-121 isolation provenance no longer matches the reviewed module allocation")
+    throw new RangeError("BP-122 historical isolation evidence must remain absent from the BP-121 P0 allocation")
   }
 }
 

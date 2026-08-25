@@ -69,8 +69,8 @@ describe("BP-126 encrypted-IR receiver interface", () => {
       pads: expect.arrayContaining([
         expect.objectContaining({ pad: 15, gpio: 3, signal: "NC_STRAP_QUIET" }),
         expect.objectContaining({ pad: 28, gpio: 35, signal: "IR_RX" }),
-        expect.objectContaining({ pad: 29, gpio: 36, signal: "NC_AUDIO_DNP_WS", disposition: "reserved-nc" }),
-        expect.objectContaining({ pad: 30, gpio: 37, signal: "NC_AUDIO_DNP_DOUT", disposition: "reserved-nc" }),
+        expect.objectContaining({ pad: 29, gpio: 36, signal: "P0_SPARE_GPIO36", disposition: "reserved" }),
+        expect.objectContaining({ pad: 30, gpio: 37, signal: "P0_SPARE_GPIO37", disposition: "reserved" }),
         expect.objectContaining({ pad: 13, gpio: 19, signal: "USB_DN" }),
         expect.objectContaining({ pad: 14, gpio: 20, signal: "USB_DP" })
       ])

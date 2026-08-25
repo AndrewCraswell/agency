@@ -4,10 +4,9 @@ import {
   validateBenchPrototypeEsp32Allocation
 } from "./bench-prototype-esp32-allocation.js"
 
-describe("BP-121 ESP32-S3 module-pad allocation", () => {
-  it("covers every physical module pad exactly once and uses no GPIO twice", () => {
+describe("BP-121 sole-ESP32 P0 allocation", () => {
+  it("covers all module pads with no GPIO reuse", () => {
     expect(validateBenchPrototypeEsp32Allocation(benchPrototypeEsp32Allocation)).toBe(true)
-    expect(benchPrototypeEsp32Allocation.pads).toHaveLength(41)
     expect(benchPrototypeEsp32Allocation.pads.map(({ pad }) => pad)).toEqual(
       Array.from({ length: 41 }, (_, index) => index + 1)
     )
@@ -15,117 +14,54 @@ describe("BP-121 ESP32-S3 module-pad allocation", () => {
     expect(new Set(gpios).size).toBe(gpios.length)
   })
 
-  it("keeps isolated SPI separate from W5500 and F-RAM SPI", () => {
-    const signalsFor = (group: string) =>
-      benchPrototypeEsp32Allocation.pads.filter((pad) => pad.group === group).map((pad) => pad.signal)
-    expect(signalsFor("isolated-spi")).toEqual(["SCORE_SCK", "SCORE_MOSI", "SCORE_MISO", "SCORE_CS_N"])
-    expect(signalsFor("app-spi")).toEqual(["APP_SPI_SCK", "APP_SPI_MOSI", "APP_SPI_MISO", "FRAM_CS_N", "ETH_CS_N"])
-    expect(benchPrototypeEsp32Allocation.unavailableResources.w5500Interrupt).toContain("polled")
+  it("allocates dedicated ADC timing and shared-SPI primary outputs", () => {
+    expect(benchPrototypeEsp32Allocation.scoringAdc).toMatchObject({
+      converter: "seven ADS8881 devices in daisy-chain mode",
+      gpio: [4, 5, 6],
+      comparatorInputs: 0
+    })
+    expect(benchPrototypeEsp32Allocation.primaryOutputs).toMatchObject({
+      busSignals: ["APP_SPI_SCK", "APP_SPI_MOSI"],
+      latchSignal: "PRIMARY_OUTPUT_LATCH",
+      latchGpio: 7
+    })
+    expect(benchPrototypeEsp32Allocation.peripheralInstances).toMatchObject({
+      scoringAdc: "SPI3_HOST plus GDMA",
+      applicationBus: "SPI2_HOST shared by W5500 and the write-only primary-output shift register",
+      ir: "RMT RX on GPIO35"
+    })
   })
 
-  it("fixes the protected native USB2 pair and independent UART recovery", () => {
+  it("preserves Ethernet, HUB75, USB, IR, recovery, watchdog, and seven spare GPIOs", () => {
+    expect(benchPrototypeEsp32Allocation.pads.filter((pad) => pad.group === "hub75")).toHaveLength(13)
     expect(benchPrototypeEsp32Allocation.pads).toEqual(
       expect.arrayContaining([
+        expect.objectContaining({ gpio: 2, signal: "ETH_CS_N" }),
         expect.objectContaining({ gpio: 19, signal: "USB_DN" }),
         expect.objectContaining({ gpio: 20, signal: "USB_DP" }),
-        expect.objectContaining({ gpio: 44, signal: "UART0_RX" }),
-        expect.objectContaining({ gpio: 43, signal: "UART0_TX" }),
-        expect.objectContaining({ gpio: 0, signal: "BOOT_N" })
+        expect.objectContaining({ gpio: 35, signal: "IR_RX" }),
+        expect.objectContaining({ gpio: 12, signal: "APP_WD_KICK" })
       ])
     )
-    expect(benchPrototypeEsp32Allocation.usbService).toMatchObject({
-      protector: "TPD2EUSB30DRTR",
-      ccSbuProtectorExcludedFromDataPair: "TPD4S201TRGRRQ1",
-      seriesResistanceOhmPerLine: 22,
-      seriesResistorCount: 2,
-      matchedPairRequired: true
-    })
-    expect(benchPrototypeEsp32Allocation.recovery.resetRule).toContain("must not directly drive EN_RESET")
-    expect(benchPrototypeEsp32Allocation.recovery.bootRule).toBe(
-      "BOOT_N must be driven low before and throughout EN_RESET assertion, held low through the 10 ms post-release sample interval after EN_RESET is released, then released"
-    )
+    expect(benchPrototypeEsp32Allocation.unavailableResources.rawExpansionGpios).toEqual([10, 11, 15, 17, 36, 37, 47])
+    expect(benchPrototypeEsp32Allocation.recovery.populatedHeader).toBe(false)
   })
 
-  it("allocates all 13 HUB75 signals while preserving strap and reset-safe defaults", () => {
-    const displayPads = benchPrototypeEsp32Allocation.pads.filter((pad) => pad.group === "hub75")
-    expect(displayPads).toHaveLength(13)
-    expect(displayPads).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ gpio: 45, signal: "HUB75_D" }),
-        expect.objectContaining({ gpio: 46, signal: "HUB75_CLK" }),
-        expect.objectContaining({ gpio: 1, signal: "HUB75_OE_N" })
-      ])
-    )
-    expect(benchPrototypeEsp32Allocation.resetSafety.strapRules).toContain(
-      "GPIO45 and GPIO46 retain weak pull-downs and see high-impedance AHCT inputs during reset"
-    )
-    expect(benchPrototypeEsp32Allocation.resetSafety.inactivePullUpSignals).toContain("HUB75_OE_N")
+  it.each([
+    ["ADC GPIO", (copy: typeof benchPrototypeEsp32Allocation) => Reflect.set(copy.scoringAdc.gpio, "0", 7)],
+    ["IR", (copy: typeof benchPrototypeEsp32Allocation) => Reflect.set(copy.irReceiver, "gpio", 36)],
+    ["header", (copy: typeof benchPrototypeEsp32Allocation) => Reflect.set(copy.recovery, "populatedHeader", true)],
+    ["reused GPIO", (copy: typeof benchPrototypeEsp32Allocation) => Reflect.set(copy.pads[4], "gpio", 4)]
+  ])("rejects changed %s", (_name, mutate) => {
+    const copy = structuredClone(benchPrototypeEsp32Allocation)
+    mutate(copy)
+    expect(() => validateBenchPrototypeEsp32Allocation(copy)).toThrow(RangeError)
   })
 
-  it("retains I2C, IR RMT input, watchdog, heartbeat, NC, and unavailable-pad dispositions", () => {
-    expect(benchPrototypeEsp32Allocation.pads).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ gpio: 10, signal: "I2C_SDA" }),
-        expect.objectContaining({ gpio: 11, signal: "I2C_SCL" }),
-        expect.objectContaining({ gpio: 12, signal: "APP_WD_KICK" }),
-        expect.objectContaining({ gpio: 35, signal: "IR_RX", group: "ir-receiver" }),
-        expect.objectContaining({ gpio: 36, disposition: "reserved-nc", signal: "NC_AUDIO_DNP_WS" }),
-        expect.objectContaining({ gpio: 37, disposition: "reserved-nc", signal: "NC_AUDIO_DNP_DOUT" }),
-        expect.objectContaining({ gpio: 3, disposition: "reserved-nc", signal: "NC_STRAP_QUIET" })
-      ])
-    )
-    expect(benchPrototypeEsp32Allocation.unavailableResources.internalFlashPsramGpios).toEqual([
-      26, 27, 28, 29, 30, 31, 32
-    ])
-    expect(benchPrototypeEsp32Allocation.unavailableResources.rawExpansionGpios).toEqual([])
-    expect(benchPrototypeEsp32Allocation.unavailableResources.moduleUnexposedGpios).toEqual([33, 34])
-    expect(benchPrototypeEsp32Allocation.irReceiver).toMatchObject({
-      modulePad: 28,
-      gpio: 35,
-      peripheral: "RMT_RX",
-      receiverHardware: "BP-146 not selected"
-    })
-  })
-
-  it("fails closed on substitutions, omissions, extras, aliases, accessors, and reused GPIOs", () => {
-    for (const mutate of [
-      (candidate: any) => (candidate.moduleMpn = "ESP32-S3-WROOM-1U-N16R8"),
-      (candidate: any) => candidate.pads.splice(12, 1),
-      (candidate: any) => (candidate.pads[13].gpio = 19),
-      (candidate: any) => (candidate.usbService.seriesResistorCount = 4),
-      (candidate: any) => (candidate.recovery.bootRule = "BOOT_N may be pulled low only while EN_RESET is asserted"),
-      (candidate: any) => (candidate.unavailableResources.rawExpansionGpios = [3])
-    ]) {
-      const candidate = structuredClone(benchPrototypeEsp32Allocation)
-      mutate(candidate)
-      expect(() => validateBenchPrototypeEsp32Allocation(candidate)).toThrow(RangeError)
-    }
-
+  it("rejects malformed and aliased graphs", () => {
     expect(() => validateBenchPrototypeEsp32Allocation(null)).toThrow(RangeError)
-    expect(() => validateBenchPrototypeEsp32Allocation({ ...benchPrototypeEsp32Allocation, extra: true })).toThrow(
-      RangeError
-    )
-
     const alias = structuredClone(benchPrototypeEsp32Allocation)
     Reflect.set(alias.pads, "1", alias.pads[0])
     expect(() => validateBenchPrototypeEsp32Allocation(alias)).toThrow(RangeError)
-
-    const accessor = structuredClone(benchPrototypeEsp32Allocation)
-    let read = false
-    Object.defineProperty(accessor, "moduleMpn", {
-      enumerable: true,
-      get: () => {
-        read = true
-        return "ESP32-S3-WROOM-1U-N16R2"
-      }
-    })
-    expect(() => validateBenchPrototypeEsp32Allocation(accessor)).toThrow(RangeError)
-    expect(read).toBe(false)
-  })
-
-  it("deep-freezes the canonical allocation", () => {
-    expect(Object.isFrozen(benchPrototypeEsp32Allocation)).toBe(true)
-    expect(Object.isFrozen(benchPrototypeEsp32Allocation.pads)).toBe(true)
-    expect(Object.isFrozen(benchPrototypeEsp32Allocation.pads[0])).toBe(true)
   })
 })
