@@ -229,7 +229,7 @@ export function createVirtualStm32<State, Outcome>(
   function ingestSnapshot(snapshot: VirtualFrontEndSnapshot): VirtualStm32SnapshotReceipt<Outcome> {
     assertCanonicalSnapshot(snapshot)
     if (isUnavailable) {
-      throw new RangeError("Virtual STM32 is unavailable after an authoritative outcome observer failure")
+      throw new RangeError("Virtual STM32 is unavailable after an authoritative scoring pipeline failure")
     }
     if (isScoring) {
       throw new RangeError("Virtual STM32 cannot accept a snapshot while scoring")
@@ -267,27 +267,37 @@ export function createVirtualStm32<State, Outcome>(
           return
         }
 
-        const advanced = options.scorer.advance(scoringState, snapshot, { ...configuration, atUs })
-        assertSynchronousResult(advanced, "Virtual STM32 scorers")
-        assertAdvance<State, Outcome>(advanced)
-        const outcome =
-          advanced.outcome === null
-            ? null
-            : Object.freeze({
-                atUs,
-                outcome: cloneCanonicalData(advanced.outcome, {
-                  errorLabel: "Virtual STM32 authoritative outcome",
-                  maxDepth: MAX_AUTHORITATIVE_OUTCOME_DEPTH,
-                  maxEntries: MAX_AUTHORITATIVE_OUTCOME_ENTRIES,
-                  maxStringLength: MAX_AUTHORITATIVE_OUTCOME_STRING_LENGTH,
-                  symbolKeyError: "type"
-                }),
-                source: "weapon-scorer" as const,
-                timingTableRevision: timingTable.revision,
-                weapon: options.weapon
-              })
+        let advanced: VirtualStm32ScorerAdvance<State, Outcome>
+        let nextScoringState: State
+        let outcome: VirtualStm32AuthoritativeOutcome<Outcome> | null
+        try {
+          const scorerResult = options.scorer.advance(scoringState, snapshot, { ...configuration, atUs })
+          assertSynchronousResult(scorerResult, "Virtual STM32 scorers")
+          assertAdvance<State, Outcome>(scorerResult)
+          advanced = scorerResult
+          nextScoringState = advanced.state
+          outcome =
+            advanced.outcome === null
+              ? null
+              : Object.freeze({
+                  atUs,
+                  outcome: cloneCanonicalData(advanced.outcome, {
+                    errorLabel: "Virtual STM32 authoritative outcome",
+                    maxDepth: MAX_AUTHORITATIVE_OUTCOME_DEPTH,
+                    maxEntries: MAX_AUTHORITATIVE_OUTCOME_ENTRIES,
+                    maxStringLength: MAX_AUTHORITATIVE_OUTCOME_STRING_LENGTH,
+                    symbolKeyError: "type"
+                  }),
+                  source: "weapon-scorer" as const,
+                  timingTableRevision: timingTable.revision,
+                  weapon: options.weapon
+                })
+        } catch (error) {
+          isUnavailable = true
+          throw error
+        }
         receipt = Object.freeze({ atUs, outcome, status: "scored" as const })
-        scoringState = advanced.state
+        scoringState = nextScoringState
         lastReceipt = receipt
         lastSnapshotAtUs = atUs
         processedSnapshotCount += 1

@@ -46,14 +46,19 @@ canonical own data indices: sparse arrays, extra keys, symbols, and accessor ind
 are copied from data descriptors, including a literal `__proto__` key, without invoking getters or changing the clone's
 prototype.
 
-State, timestamp, count, and the single `lastReceipt` are committed before an observer runs. If an observer throws,
-reenters, or returns asynchronous work, that already-decided receipt remains committed and the shell enters
-`isUnavailable`. Later snapshot intake fails closed, so it cannot replay against advanced scorer state. A scorer state
-factory must also complete synchronously.
+For a trusted snapshot selected for the configured weapon, scorer advancement, synchronous-result validation, and
+authoritative outcome cloning are one uncommitted pipeline. If the scorer throws or the result cannot be validated or
+cloned, the shell rethrows that error, enters `isUnavailable`, and commits no scorer state, timestamp, snapshot count,
+or `lastReceipt`. Later snapshot intake fails closed with the stable authoritative scoring-pipeline-unavailable error,
+so it cannot replay against partially advanced scorer state. A scorer state factory must also complete synchronously.
+
+After a successful pipeline, state, timestamp, count, and the single `lastReceipt` are committed before an observer
+runs. If an observer throws, reenters, or returns asynchronous work, that already-decided receipt remains committed and
+the shell enters `isUnavailable`. Later snapshot intake fails closed with the same error.
 
 ## Acceptance
 
 `src/virtual-stm32.test.ts` proves timing/weapon selection, reviewed M2-02 weapon-profile selection, virtual-clock
 ordering, deterministic replay, nested front-end forgery rejection, trusted-input scoring, fail-closed untrusted or
-wrong-profile input, bounds, invalid configuration, deeply immutable outcomes, observer-failure finality, and that
-outcomes can originate only from the weapon-scorer return path.
+wrong-profile input, bounds, invalid configuration, deeply immutable outcomes, scorer/clone failure finality,
+observer-failure finality, and that outcomes can originate only from the weapon-scorer return path.
