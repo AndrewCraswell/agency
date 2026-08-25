@@ -52,6 +52,8 @@ ALTER TABLE "legislation"."calendar_events" ADD CONSTRAINT "calendar_events_even
 --> statement-breakpoint
 CREATE UNIQUE INDEX "calendars_source_uidx" ON "legislation"."calendars" USING btree ("source_provider", "source_id");
 --> statement-breakpoint
+CREATE INDEX "calendars_name_idx" ON "legislation"."calendars" USING btree ("name", "id");
+--> statement-breakpoint
 CREATE INDEX "calendars_browse_idx" ON "legislation"."calendars" USING btree ("jurisdiction_id", "organization_id", "name", "id");
 --> statement-breakpoint
 CREATE INDEX "calendars_organization_idx" ON "legislation"."calendars" USING btree ("organization_id", "name", "id");

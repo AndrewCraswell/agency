@@ -911,6 +911,7 @@ export const calendars = legislationSchema.table(
       sql`${table.coverageFrom} is null or ${table.coverageTo} is null or ${table.coverageFrom} <= ${table.coverageTo}`
     ),
     uniqueIndex("calendars_source_uidx").on(table.sourceProvider, table.sourceId),
+    index("calendars_name_idx").on(table.name, table.id),
     index("calendars_browse_idx").on(table.jurisdictionId, table.organizationId, table.name, table.id),
     index("calendars_organization_idx").on(table.organizationId, table.name, table.id)
   ]

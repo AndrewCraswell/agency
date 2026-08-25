@@ -288,6 +288,13 @@
       "when": 1787715600000,
       "tag": "0040_webhook-mutation-audit",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1787719200000,
+      "tag": "0041_calendar-foundation",
+      "breakpoints": true
     }
   ]
 }
