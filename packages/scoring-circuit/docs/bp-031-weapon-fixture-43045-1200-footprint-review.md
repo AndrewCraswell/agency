@@ -15,7 +15,7 @@ fabrication-denied until root review and the existing BP-104 physical gates.
 | Molex `SD-43045-001`, rev `H1` | 12-circuit finish-A material row `43045-1200`; component-side PCB layout; circuit-1 mark; contact and retention holes; right-angle body; edge rule | `packages/scoring-circuit/docs/evidence/bp-104/assets/43045-1200-drawing.pdf` | `571C8A381BE263CF8F92B064FE18DBC6CE6161E8CB2E931D186E8280B9F8338A` |
 | Molex exact CAD preview | Material `430451200`, circuit size 12, visual right-angle housing check | `packages/scoring-circuit/docs/evidence/bp-104/assets/43045-1200-cad-preview.pdf` | `7EC4BED5FA8DE35DBCF15486EEA86062F9BAAF8CDD2BFC0F4D2126A5D68F65FA` |
 | BP-104 fixture contract | Exact `J_WEAPON_FIXTURE`, `43045-1200`, 12-position, polarized latch/lock, and pin map identity | `packages/scoring-circuit/src/bench-prototype-fixture-harness.ts` | `281E698509CE08CE820436620610182C36DB02529F1A1DD0F510D6E47A369160` |
-| BP-031 footprint closure | Canonical import of the BP-104 exact connector record | `packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts` | `AC7A72F68B8D9113B6AD1D161645CC8F8B7062207ABF4FE5411042962E22314C` |
+| BP-031 footprint closure | Canonical import of the BP-104 exact connector record | `packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts` | `B2161E55788503DCD10BB96FDEBB502A1CE6C5D80159B8B5D9E5CC32C970E438` |
 
 The drawing is a series drawing with the exact 12-circuit finish-A material row.
 The CAD preview is exact-MPN evidence, not a manufacturer footprint release or

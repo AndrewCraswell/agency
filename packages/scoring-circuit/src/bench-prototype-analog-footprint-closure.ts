@@ -22,6 +22,10 @@ import {
   validateBenchPrototypeSevenChannelAnalog
 } from "./bench-prototype-seven-channel-analog.js"
 import {
+  bp031Ads8881IdgsDgsFootprintCandidate,
+  validateBp031Ads8881IdgsDgsFootprintCandidate
+} from "./bp031-ads8881idgs-dgs-footprint-candidate.js"
+import {
   bp031Tmux1112PwrPwFootprintEvidence,
   validateBp031Tmux1112PwrPwFootprintEvidence
 } from "./bp031-ti-tmux1112pwr-pw-footprint-evidence.js"
@@ -216,6 +220,7 @@ function emptyOrientationEvidence(): FootprintOrientationEvidence {
 
 const tpd4e05u06ReviewEvidenceMappingId = "bp031-tpd4e05u06-dqa-project-footprint"
 const tmux1112PwrPwReviewEvidenceMappingId = "bp031-tmux1112pwr-pw-footprint-evidence"
+const ads8881IdgsDgsReviewEvidenceMappingId = "bp031-ads8881idgs-dgs-footprint-candidate"
 
 function createTpd4e05u06ReviewEvidenceMapping() {
   const candidate = bp031Tpd4e05u06DqaProjectFootprintGeometry
@@ -374,6 +379,101 @@ function createTmux1112PwrPwReviewEvidenceMapping() {
 
 const tmux1112PwrPwReviewEvidenceMapping = deepFreeze(createTmux1112PwrPwReviewEvidenceMapping())
 
+function createAds8881IdgsDgsReviewEvidenceMapping() {
+  const candidate = bp031Ads8881IdgsDgsFootprintCandidate
+  const source = candidate.sources[0]
+  if (source === undefined) throw new RangeError("BP-031 ADS8881IDGS source evidence is missing")
+  return {
+    mappingId: ads8881IdgsDgsReviewEvidenceMappingId,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25T10:18:00.000Z",
+    reviewScope:
+      "Root-reviewed exact identity, retained manufacturer source, pin functions, seven-reference mapping, TI DGS0010A land geometry, pin-one orientation, and deny-state integrity; CAD import, board fit, release, and fabrication remain unapproved.",
+    artifactKind: candidate.artifactKind,
+    artifactPath: "packages/scoring-circuit/src/bp031-ads8881idgs-dgs-footprint-candidate.tsx",
+    workUnit: candidate.workUnit,
+    baseReference: candidate.sourceBinding.canonicalSourceReference,
+    sourceContract: candidate.sourceBinding.sourceContract,
+    manufacturer: candidate.manufacturer,
+    exactMpn: candidate.manufacturerPartNumber,
+    exactPackage: `${candidate.package.option} ${candidate.package.designation}`,
+    affectedReferences: benchPrototypeSevenChannelAnalog.channels.map((channel) => channel.references.adc),
+    manufacturerDrawingInput: {
+      state: "source-controlled-pending-review" as const,
+      acquisition: "exact-drawing-hash-bound" as const,
+      artifactPath: source.artifactPath,
+      url: source.url,
+      revision: source.revision,
+      reviewedPages: source.reviewedPages,
+      sha256: source.sha256,
+      authority: "deny" as const
+    },
+    manufacturerCad: {
+      state: candidate.manufacturerCad.state,
+      artifactPath: null,
+      sha256: null,
+      authority: candidate.manufacturerCad.authority,
+      note: candidate.manufacturerCad.note
+    },
+    renderedArtwork: {
+      state: candidate.artwork.state,
+      representation: candidate.artwork.representation,
+      artifactPath: "packages/scoring-circuit/src/bp031-ads8881idgs-dgs-footprint-candidate.tsx",
+      generator: candidate.artwork.generator,
+      generatorVersion: candidate.artwork.generatorVersion,
+      sha256: candidate.artwork.sha256,
+      authority: candidate.artwork.authority
+    },
+    pinOneOrientation: {
+      state: "root-reviewed-manufacturer-drawing-match" as const,
+      sourceDatum: candidate.pinOneOrientation.topViewPinOneDatum,
+      pin: candidate.pinOneOrientation.projectPinOnePad.pin,
+      boardCoordinatesMm: {
+        x: candidate.pinOneOrientation.projectPinOnePad.xMm,
+        y: candidate.pinOneOrientation.projectPinOnePad.yMm
+      },
+      boardRotationDegrees: candidate.pinOneOrientation.projectBoardRotationDegrees,
+      topViewNumbering: candidate.pinOneOrientation.topViewNumbering,
+      exactMatchStatus: candidate.pinOneOrientation.exactMatchStatus,
+      authority: "deny" as const
+    },
+    projectGeometry: {
+      state: candidate.projectFootprint.state,
+      geometryAuthority: candidate.projectFootprint.geometryAuthority,
+      padCount: candidate.projectFootprint.pads.length,
+      padLengthMm: candidate.projectFootprint.padLengthMm,
+      padWidthMm: candidate.projectFootprint.padWidthMm,
+      padRowCenterSpanMm: candidate.projectFootprint.padRowCenterSpanMm,
+      padPitchMm: candidate.projectFootprint.padPitchMm,
+      courtyard: {
+        minimumXMm: candidate.projectFootprint.courtyard.minimumXMm,
+        maximumXMm: candidate.projectFootprint.courtyard.maximumXMm,
+        minimumYMm: candidate.projectFootprint.courtyard.minimumYMm,
+        maximumYMm: candidate.projectFootprint.courtyard.maximumYMm,
+        sourceStatus: candidate.projectFootprint.courtyard.sourceStatus,
+        status: candidate.projectFootprint.courtyard.status
+      },
+      orientationStatus: "root-reviewed-manufacturer-drawing-match" as const,
+      accepted: true as const,
+      fabricationAuthority: candidate.projectFootprint.fabricationAuthority
+    },
+    acceptance: {
+      packageIdentityReviewed: true as const,
+      packageDrawingReviewed: true as const,
+      pinFunctionsReviewed: true as const,
+      projectGeometryAccepted: true as const,
+      pinOneOrientationAccepted: true as const,
+      cadImportAccepted: false,
+      boardFitAccepted: false,
+      fabricationAuthorized: false,
+      releaseState: candidate.releaseState
+    }
+  }
+}
+
+const ads8881IdgsDgsReviewEvidenceMapping = deepFreeze(createAds8881IdgsDgsReviewEvidenceMapping())
+
 function existingFootprintEvidence(mpn: string) {
   const eligibility = manufacturerFootprintEligibility(mpn)
   const ledger = findFootprintReleaseEvidence(mpn)
@@ -517,9 +617,11 @@ function createCellRecord(
     reviewEvidenceMappingId:
       binding.baseReference === "U_ESD"
         ? tpd4e05u06ReviewEvidenceMappingId
-        : binding.baseReference === "U_SOURCE_SWITCH"
-          ? tmux1112PwrPwReviewEvidenceMappingId
-          : null,
+        : binding.baseReference === "U_SAR"
+          ? ads8881IdgsDgsReviewEvidenceMappingId
+          : binding.baseReference === "U_SOURCE_SWITCH"
+            ? tmux1112PwrPwReviewEvidenceMappingId
+            : null,
     manufacturerDrawing: emptySourceEvidence(),
     manufacturerCad: emptySourceEvidence(),
     artwork: emptyArtworkEvidence(),
@@ -703,7 +805,11 @@ const definition = {
     rule: "Exact identity may be carried forward; no geometry or placement permission is carried forward without independent evidence."
   },
   records: [...records, connectorRecord],
-  reviewEvidenceMappings: [tpd4e05u06ReviewEvidenceMapping, tmux1112PwrPwReviewEvidenceMapping],
+  reviewEvidenceMappings: [
+    tpd4e05u06ReviewEvidenceMapping,
+    tmux1112PwrPwReviewEvidenceMapping,
+    ads8881IdgsDgsReviewEvidenceMapping
+  ],
   sharedManufacturerSources,
   connectorClosure,
   authority: {
@@ -752,6 +858,9 @@ function assertUpstreamContracts(): void {
   if (validateBp031Tmux1112PwrPwFootprintEvidence().length !== 0) {
     throw new RangeError("BP-031 TMUX1112PWR project-review candidate drifted")
   }
+  if (validateBp031Ads8881IdgsDgsFootprintCandidate().length !== 0) {
+    throw new RangeError("BP-031 ADS8881IDGS project-review candidate drifted")
+  }
   if (!sameDataGraph(liveUpstreamSnapshot(), upstreamSnapshot)) {
     throw new RangeError("BP-030, BP-103, BP-104, M4-04, or analog source-part evidence drifted")
   }
@@ -772,13 +881,20 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
   const tmux1112PwrPwMapping = contract.reviewEvidenceMappings.find(
     (mapping) => mapping.mappingId === tmux1112PwrPwReviewEvidenceMappingId
   )
+  const ads8881IdgsDgsMapping = contract.reviewEvidenceMappings.find(
+    (mapping) => mapping.mappingId === ads8881IdgsDgsReviewEvidenceMappingId
+  )
   const expectedTpd4e05u06Mapping = createTpd4e05u06ReviewEvidenceMapping()
   const expectedTmux1112PwrPwMapping = createTmux1112PwrPwReviewEvidenceMapping()
+  const expectedAds8881IdgsDgsMapping = createAds8881IdgsDgsReviewEvidenceMapping()
   const mappedTpd4e05u06Records = cellRecords.filter(
     (record) => record.reviewEvidenceMappingId === tpd4e05u06ReviewEvidenceMappingId
   )
   const mappedTmux1112PwrPwRecords = cellRecords.filter(
     (record) => record.reviewEvidenceMappingId === tmux1112PwrPwReviewEvidenceMappingId
+  )
+  const mappedAds8881IdgsDgsRecords = cellRecords.filter(
+    (record) => record.reviewEvidenceMappingId === ads8881IdgsDgsReviewEvidenceMappingId
   )
   if (
     cellReferenceBindings.length !== expectedCellReferenceCount ||
@@ -800,13 +916,16 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     contract.authority.fabricationAuthorized ||
     contract.authority.releaseState !== "deny" ||
     contract.connectorClosure.releaseState !== "deny" ||
-    contract.reviewEvidenceMappings.length !== 2 ||
+    contract.reviewEvidenceMappings.length !== 3 ||
     tpd4e05u06Mapping === undefined ||
     tmux1112PwrPwMapping === undefined ||
+    ads8881IdgsDgsMapping === undefined ||
     !sameDataGraph(tpd4e05u06Mapping, expectedTpd4e05u06Mapping) ||
     !sameDataGraph(tmux1112PwrPwMapping, expectedTmux1112PwrPwMapping) ||
+    !sameDataGraph(ads8881IdgsDgsMapping, expectedAds8881IdgsDgsMapping) ||
     mappedTpd4e05u06Records.length !== 7 ||
     mappedTmux1112PwrPwRecords.length !== 7 ||
+    mappedAds8881IdgsDgsRecords.length !== 7 ||
     !sameDataGraph(
       mappedTpd4e05u06Records.map((record) => record.reference),
       expectedTpd4e05u06Mapping.affectedReferences
@@ -814,6 +933,10 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     !sameDataGraph(
       mappedTmux1112PwrPwRecords.map((record) => record.reference),
       expectedTmux1112PwrPwMapping.affectedReferences
+    ) ||
+    !sameDataGraph(
+      mappedAds8881IdgsDgsRecords.map((record) => record.reference),
+      expectedAds8881IdgsDgsMapping.affectedReferences
     ) ||
     cellRecords.some(
       (record) =>
@@ -825,10 +948,16 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
         (record.sourceBaseReference === "U_SOURCE_SWITCH") !==
         (record.reviewEvidenceMappingId === tmux1112PwrPwReviewEvidenceMappingId)
     ) ||
+    cellRecords.some(
+      (record) =>
+        (record.sourceBaseReference === "U_SAR") !==
+        (record.reviewEvidenceMappingId === ads8881IdgsDgsReviewEvidenceMappingId)
+    ) ||
     contract.records.some(
       (record) =>
         record.sourceBaseReference !== "U_ESD" &&
         record.sourceBaseReference !== "U_SOURCE_SWITCH" &&
+        record.sourceBaseReference !== "U_SAR" &&
         record.reviewEvidenceMappingId !== null
     ) ||
     contract.records.some(

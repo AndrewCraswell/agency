@@ -181,7 +181,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
   })
 
   it("maps the seven U_ESD references to the TPD4E05 review inputs without opening release authority", () => {
-    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(2)
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(3)
     expect(
       benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
         (mapping) => mapping.mappingId === "bp031-tpd4e05u06-dqa-project-footprint"
@@ -259,7 +259,12 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     ).toBe(true)
     expect(
       benchPrototypeAnalogFootprintClosure.records
-        .filter((record) => record.sourceBaseReference !== "U_ESD" && record.sourceBaseReference !== "U_SOURCE_SWITCH")
+        .filter(
+          (record) =>
+            record.sourceBaseReference !== "U_ESD" &&
+            record.sourceBaseReference !== "U_SOURCE_SWITCH" &&
+            record.sourceBaseReference !== "U_SAR"
+        )
         .every((record) => record.reviewEvidenceMappingId === null)
     ).toBe(true)
   })
@@ -344,6 +349,85 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       switchRecords.every((record) => record.reviewEvidenceMappingId === "bp031-tmux1112pwr-pw-footprint-evidence")
     ).toBe(true)
     expect(switchRecords.every((record) => record.disposition === "DNP-unresolved")).toBe(true)
+  })
+
+  it("maps the seven U_SAR references to the root-reviewed ADS8881 evidence without opening release authority", () => {
+    expect(
+      benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+        (mapping) => mapping.mappingId === "bp031-ads8881idgs-dgs-footprint-candidate"
+      )
+    ).toMatchObject({
+      mappingId: "bp031-ads8881idgs-dgs-footprint-candidate",
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      reviewedAt: "2026-08-25T10:18:00.000Z",
+      artifactKind: "bp031-ads8881idgs-dgs-footprint-candidate",
+      artifactPath: "packages/scoring-circuit/src/bp031-ads8881idgs-dgs-footprint-candidate.tsx",
+      baseReference: "U_SAR",
+      sourceContract: "BP-101",
+      exactMpn: "ADS8881IDGS",
+      exactPackage: "DGS VSSOP-10",
+      affectedReferences: ["U_SAR_1", "U_SAR_2", "U_SAR_3", "U_SAR_4", "U_SAR_5", "U_SAR_6", "U_SAR_7"],
+      manufacturerDrawingInput: {
+        state: "source-controlled-pending-review",
+        acquisition: "exact-drawing-hash-bound",
+        artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/texas-instruments-ads8881-dgs-datasheet-rev-d.pdf",
+        revision: "D",
+        reviewedPages: "6-7, 50, 55-57",
+        sha256: "EA5896CA4C8053A1AE183BE8354DD551A5D947CE670AC1F1170C59176148F1A8",
+        authority: "deny"
+      },
+      manufacturerCad: { state: "not-acquired", artifactPath: null, sha256: null, authority: "deny" },
+      renderedArtwork: {
+        state: "generated-project-review-only",
+        generator: "tscircuit",
+        generatorVersion: "0.0.2271",
+        sha256: "7A3D47D9C7F6B7F8BC1C67CB6329B579B21C9353581F510A18888B6A87D19783",
+        authority: "deny"
+      },
+      pinOneOrientation: {
+        state: "root-reviewed-manufacturer-drawing-match",
+        pin: 1,
+        boardCoordinatesMm: { x: -2.2, y: -1 },
+        boardRotationDegrees: 0,
+        authority: "deny"
+      },
+      projectGeometry: {
+        state: "review-only",
+        padCount: 10,
+        courtyard: { sourceStatus: "not-published", status: "project-review-input" },
+        orientationStatus: "root-reviewed-manufacturer-drawing-match",
+        accepted: true,
+        fabricationAuthority: "deny"
+      },
+      acceptance: {
+        packageIdentityReviewed: true,
+        packageDrawingReviewed: true,
+        pinFunctionsReviewed: true,
+        projectGeometryAccepted: true,
+        pinOneOrientationAccepted: true,
+        cadImportAccepted: false,
+        boardFitAccepted: false,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      }
+    })
+
+    const adcRecords = benchPrototypeAnalogFootprintClosure.records.filter(
+      (record) => record.sourceBaseReference === "U_SAR"
+    )
+    expect(adcRecords.map((record) => record.reference)).toEqual([
+      "U_SAR_1",
+      "U_SAR_2",
+      "U_SAR_3",
+      "U_SAR_4",
+      "U_SAR_5",
+      "U_SAR_6",
+      "U_SAR_7"
+    ])
+    expect(
+      adcRecords.every((record) => record.reviewEvidenceMappingId === "bp031-ads8881idgs-dgs-footprint-candidate")
+    ).toBe(true)
   })
 
   it("freezes the exact Molex connector and BP-104 pin disposition", () => {
@@ -448,6 +532,11 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       "forged TMUX review mapping",
       (copy: typeof benchPrototypeAnalogFootprintClosure) =>
         Reflect.set(copy.reviewEvidenceMappings[1], "accepted", { fabricationAuthorized: true })
+    ],
+    [
+      "forged ADS8881 review mapping",
+      (copy: typeof benchPrototypeAnalogFootprintClosure) =>
+        Reflect.set(copy.reviewEvidenceMappings[2], "projectGeometry", { accepted: false })
     ]
   ])("rejects %s", (_name, mutate) => {
     const copy = structuredClone(benchPrototypeAnalogFootprintClosure)

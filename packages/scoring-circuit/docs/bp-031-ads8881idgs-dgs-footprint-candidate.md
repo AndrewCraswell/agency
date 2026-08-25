@@ -23,7 +23,7 @@ The source-control snapshot is tied to `refs/heads/main` at worktree creation:
 | Upstream source | SHA-256 |
 | --- | --- |
 | `packages/scoring-circuit/src/bench-prototype-analog-topology.ts` | `1F888DD5AA328FAD823738F09A48502EF50189775D5E1920A09413A32C14360D` |
-| `packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts` | `AC7A72F68B8D9113B6AD1D161645CC8F8B7062207ABF4FE5411042962E22314C` |
+| `packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts` | `B2161E55788503DCD10BB96FDEBB502A1CE6C5D80159B8B5D9E5CC32C970E438` |
 
 The candidate validator checks these exact hashes and reports an error for an
 unknown or changed source snapshot. No shared BP-031 ledger or board file is
@@ -106,8 +106,10 @@ through 10 return bottom-to-top on the right edge. The candidate maps pin 1 to
 (-2.20, -1.00) at 0° project rotation and records this as
 `manufacturer-drawing-derived`.
 
-An independent orientation review has not been completed. Therefore the
-orientation status remains `manufacturer-drawing-derived-awaiting-independent-review`.
+The root integration review independently matched this orientation to the
+retained TI top view. The immutable candidate retains its pre-review status;
+the canonical BP-031 ledger records the root-reviewed orientation and land
+geometry separately while keeping release authority denied.
 
 ## Release disposition and gaps
 
@@ -130,7 +132,8 @@ canonical rendered-soup SHA-256:
 7A3D47D9C7F6B7F8BC1C67CB6329B579B21C9353581F510A18888B6A87D19783
 ```
 
-Remaining gates are an acquired and hash-bound exact CAD object, independent
-orientation review, board-level courtyard/edge and assembly review, and the
-root review required before any shared ledger or board integration. This slice
-does not perform those actions and grants no approval.
+Remaining gates are an acquired and hash-bound exact CAD object if required by
+the final CAD workflow, board-level courtyard/edge and assembly review, and
+final footprint/fabrication release. The canonical ledger now carries the
+root-approved identity, drawing, pinout, copper geometry, orientation, and
+seven-reference mapping, without granting board or fabrication authority.

@@ -48,10 +48,32 @@ top-left datum, board coordinates `(-0.4175, -1.0)` mm, and board rotation `0`
 degrees. Independent orientation, board-fit, CAD-import, project-geometry,
 schematic, and fabrication acceptance remain false; release remains denied.
 
-The executable evaluator requires exactly one mapping, exactly these seven
-affected references, and no mapping on any other BP-031 record. This prevents
-the review inputs from being mistaken for accepted or fabrication-authorized
-footprints.
+The executable evaluator fixes this mapping to exactly these seven affected
+references and prevents it from being mistaken for accepted or
+fabrication-authorized footprint evidence.
+
+## ADS8881IDGS root-reviewed mapping
+
+The canonical ledger also maps `U_SAR_1` through `U_SAR_7` to the isolated
+[`bp031-ads8881idgs-dgs-footprint-candidate.tsx`](../src/bp031-ads8881idgs-dgs-footprint-candidate.tsx)
+candidate. Root review binds the exact `ADS8881IDGS` DGS VSSOP-10 orderable and
+the retained TI SBAS547D Rev. D source at
+`packages/scoring-circuit/docs/evidence/bp-031/texas-instruments-ads8881-dgs-datasheet-rev-d.pdf`
+(`EA5896CA4C8053A1AE183BE8354DD551A5D947CE670AC1F1170C59176148F1A8`). It is
+accepts the orderable, package drawing, pin functions, seven-reference mapping,
+TI DGS0010A land geometry, top-view pin-one orientation, and deny-state
+integrity. All seven rows remain `DNP-unresolved`, have no manufacturer CAD
+artifact, and remain ineligible for PCB use.
+
+The mapping retains the candidate's review-only DGS geometry and rendered
+artwork digest as traceable review input only. Root independently matched pin
+one to the manufacturer top view at `(-2.2, -1.0)` mm with rotation `0` degrees
+and matched the project copper to TI pages 55 through 57. CAD import, board fit,
+footprint closure, release, and fabrication authority remain denied.
+
+The executable evaluator requires exactly two root-reviewed mappings: TPD4 and
+ADS8881. Each must cover its own seven
+references, and no other BP-031 record may hold a mapping ID.
 
 The retained Panasonic support set is byte-hash bound in M4-04: the exact
 [ERA3AEB2491V product page](https://industrial.panasonic.cn/ea/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V)

@@ -126,7 +126,7 @@ export const bp031Ads8881IdgsDgsFootprintCandidate = {
       },
       {
         path: "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts",
-        sha256: "AC7A72F68B8D9113B6AD1D161645CC8F8B7062207ABF4FE5411042962E22314C"
+        sha256: "B2161E55788503DCD10BB96FDEBB502A1CE6C5D80159B8B5D9E5CC32C970E438"
       }
     ]
   },
@@ -236,7 +236,7 @@ export function validateBp031Ads8881IdgsDgsSourceControl(sourceControl: SourceCo
     "packages/scoring-circuit/src/bench-prototype-analog-topology.ts":
       "1F888DD5AA328FAD823738F09A48502EF50189775D5E1920A09413A32C14360D",
     "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts":
-      "AC7A72F68B8D9113B6AD1D161645CC8F8B7062207ABF4FE5411042962E22314C"
+      "B2161E55788503DCD10BB96FDEBB502A1CE6C5D80159B8B5D9E5CC32C970E438"
   }
   const errors: string[] = []
   if (sourceControl.basisRef !== "refs/heads/main") errors.push("source basis ref drifted")
