@@ -191,9 +191,11 @@ export function normalizeCongressCommitteeMeeting(input: unknown): CongressEvent
     })),
     event: {
       allDay: false,
-      classification: meeting.type?.toLowerCase() ?? "committee-meeting",
+      canonicalFactsComplete: false,
+      classification: meeting.type?.toLowerCase().includes("hearing") ? "hearing" : "meeting",
       id: eventId,
       isDeleted: false,
+      organizationRelationsComplete: false,
       jurisdictionId: jurisdictionId("us"),
       location: meeting.location,
       name: meeting.title,
@@ -201,11 +203,13 @@ export function normalizeCongressCommitteeMeeting(input: unknown): CongressEvent
       sourceUpdatedAt: meeting.updateDate === undefined ? undefined : new Date(meeting.updateDate),
       sourceUrl: source.sourceUrl,
       startAt: new Date(meeting.date),
-      status: status ?? "unknown",
+      sessionRelationsComplete: false,
+      status: status === "cancelled" ? "cancelled" : "other",
       upstreamIds: { congress: meeting.eventId },
       virtualAccess: meeting.videos[0] === undefined ? undefined : { url: meeting.videos[0].url }
     },
     materials: materials(eventId, documents, date),
+    organizationIds: [],
     participants: [
       ...committees.map((committee) => ({
         eventId,
@@ -220,7 +224,8 @@ export function normalizeCongressCommitteeMeeting(input: unknown): CongressEvent
         name: witness.name,
         role: [witness.position, witness.organization].filter(Boolean).join(", ") || "witness"
       }))
-    ]
+    ],
+    sessionIds: []
   }
 }
 
@@ -257,25 +262,30 @@ export function normalizeCongressHearing(input: unknown): CongressEventSnapshot 
     })),
     event: {
       allDay: true,
-      classification: "published-hearing",
+      canonicalFactsComplete: false,
+      classification: "hearing",
       id: eventId,
       isDeleted: false,
+      organizationRelationsComplete: false,
       jurisdictionId: jurisdictionId("us"),
       name: title,
       sourceId: hearing.jacketNumber,
       sourceUpdatedAt: hearing.updateDate === undefined ? undefined : new Date(hearing.updateDate),
       sourceUrl: source.sourceUrl,
       startAt: new Date(`${date}T00:00:00Z`),
-      status: "published",
+      sessionRelationsComplete: false,
+      status: "other",
       upstreamIds: { congress: hearing.jacketNumber }
     },
     materials: materials(eventId, formats, date),
+    organizationIds: [],
     participants: committees.map((committee) => ({
       eventId,
       id: eventChildId("participant", eventId, `committee:${committee.systemCode}`),
       name: committeeName(committee),
       organizationId: organizationId("congress", committee.systemCode),
       role: "committee"
-    }))
+    })),
+    sessionIds: []
   }
 }

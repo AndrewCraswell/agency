@@ -736,9 +736,10 @@ async function syncOpenStatesEvents(options: { from?: string; jurisdiction?: str
               to
             })) {
               counts.discovered += page.length
+              const retrievedAt = new Date()
               const snapshots = page.flatMap((record) => {
                 try {
-                  return [normalizeOpenStatesEvent(record, { jurisdictionCode: code })]
+                  return [normalizeOpenStatesEvent(record, { jurisdictionCode: code, retrievedAt })]
                 } catch (error) {
                   counts.failed += 1
                   failures.push({

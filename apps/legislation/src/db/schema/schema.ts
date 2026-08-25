@@ -23,6 +23,18 @@ const tsvector = customType<{ data: string }>({
   dataType: () => "tsvector"
 })
 
+/** Source-declared only; missing keys remain unknown rather than copied from a participant or venue label. */
+export interface EventLocationPayload {
+  address?: string
+  name?: string
+  room?: string
+}
+
+/** The provider may publish a stream or join URL without declaring the meeting remote. */
+export interface EventVirtualAccessPayload {
+  url: string
+}
+
 export const legislationSchema = pgSchema("legislation")
 
 export const jurisdictions = legislationSchema.table(
@@ -431,6 +443,8 @@ export const legislativeEvents = legislationSchema.table(
       .notNull()
       .references(() => jurisdictions.id, { onDelete: "restrict" }),
     sourceId: text("source_id").notNull(),
+    /** The date published by the source, never calculated from an instant or jurisdiction. */
+    publisherLocalDate: date("publisher_local_date"),
     name: text("name").notNull(),
     classification: text("classification"),
     status: text("status").notNull(),
@@ -438,9 +452,22 @@ export const legislativeEvents = legislationSchema.table(
     endAt: timestamp("end_at", { withTimezone: true }),
     timezone: text("timezone"),
     allDay: boolean("all_day").notNull().default(false),
-    location: jsonb("location").$type<Record<string, unknown>>(),
-    virtualAccess: jsonb("virtual_access").$type<Record<string, unknown>>(),
+    location: jsonb("location").$type<EventLocationPayload>(),
+    virtualAccess: jsonb("virtual_access").$type<EventVirtualAccessPayload>(),
+    /** Null means the publisher has not declared whether this meeting is remote. */
+    isRemote: boolean("is_remote"),
     description: text("description"),
+    /** Source ordering is retained only where the publisher supplies it. */
+    sourceSequence: integer("source_sequence"),
+    sourceProvider: text("source_provider"),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
+    /** All summary facts are source-declared and validated for the public contract. */
+    canonicalFactsComplete: boolean("canonical_facts_complete").notNull().default(false),
+    /** Empty relationship sets are complete only when the source says so. */
+    sessionRelationsComplete: boolean("session_relations_complete").notNull().default(false),
+    organizationRelationsComplete: boolean("organization_relations_complete").notNull().default(false),
     isDeleted: boolean("is_deleted").notNull().default(false),
     sourceUrl: text("source_url"),
     sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
@@ -454,9 +481,63 @@ export const legislativeEvents = legislationSchema.table(
     check("legislative_events_name_check", sql`length(${table.name}) > 0`),
     check("legislative_events_status_check", sql`length(${table.status}) > 0`),
     check("legislative_events_dates_check", sql`${table.endAt} is null or ${table.startAt} <= ${table.endAt}`),
+    check(
+      "legislative_events_classification_vocabulary_check",
+      sql`${table.classification} is null or ${table.classification} in ('meeting', 'hearing', 'session', 'other')`
+    ),
+    check(
+      "legislative_events_status_vocabulary_check",
+      sql`${table.status} in ('scheduled', 'completed', 'cancelled', 'postponed', 'other')`
+    ),
+    check(
+      "legislative_events_source_sequence_check",
+      sql`${table.sourceSequence} is null or ${table.sourceSequence} >= 0`
+    ),
+    check(
+      "legislative_events_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
+    check(
+      "legislative_events_canonical_facts_complete_check",
+      sql`not ${table.canonicalFactsComplete} or (${table.publisherLocalDate} is not null and ${table.classification} is not null and ${table.isRemote} is not null and ${table.provenanceComplete})`
+    ),
     uniqueIndex("legislative_events_jurisdiction_source_uidx").on(table.jurisdictionId, table.sourceId),
     index("legislative_events_schedule_idx").on(table.jurisdictionId, table.startAt, table.status),
     index("legislative_events_deleted_idx").on(table.jurisdictionId, table.isDeleted, table.startAt)
+  ]
+)
+
+/** Authoritative session links for a meeting. No date or jurisdiction matching is used to fabricate these rows. */
+export const eventSessions = legislationSchema.table(
+  "event_sessions",
+  {
+    eventId: text("event_id")
+      .notNull()
+      .references(() => legislativeEvents.id, { onDelete: "cascade" }),
+    sessionId: text("session_id")
+      .notNull()
+      .references(() => legislativeSessions.id, { onDelete: "restrict" })
+  },
+  (table) => [
+    primaryKey({ columns: [table.eventId, table.sessionId] }),
+    index("event_sessions_session_idx").on(table.sessionId, table.eventId)
+  ]
+)
+
+/** Authoritative organization links for a meeting. Participant labels never create these rows. */
+export const eventOrganizations = legislationSchema.table(
+  "event_organizations",
+  {
+    eventId: text("event_id")
+      .notNull()
+      .references(() => legislativeEvents.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organizations.id, { onDelete: "restrict" })
+  },
+  (table) => [
+    primaryKey({ columns: [table.eventId, table.organizationId] }),
+    index("event_organizations_organization_idx").on(table.organizationId, table.eventId)
   ]
 )
 

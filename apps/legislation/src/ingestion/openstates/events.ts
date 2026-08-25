@@ -1,7 +1,13 @@
 import { z } from "zod"
 import type { EventAgendaItemSnapshot } from "../../db/queries/events.js"
 import type { eventDocuments, eventParticipants, legislativeEvents } from "../../db/schema/schema.js"
-import { eventChildId, jurisdictionId, legislativeEventId } from "../../legislation/identifiers.js"
+import {
+  eventChildId,
+  jurisdictionId,
+  legislativeEventId,
+  legislativeSessionId,
+  organizationId
+} from "../../legislation/identifiers.js"
 
 const optionalString = z.preprocess(
   (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
@@ -19,13 +25,29 @@ const documentSchema = z
   })
   .passthrough()
 const participantSchema = z
-  .object({ entity_type: optionalString, name: z.string().trim().min(1), note: optionalString })
+  .object({
+    entity_type: optionalString,
+    name: z.string().trim().min(1),
+    note: optionalString,
+    organization: z
+      .object({ id: z.string().trim().min(1) })
+      .passthrough()
+      .nullable()
+      .optional()
+  })
+  .passthrough()
+const agendaRelatedEntitySchema = z
+  .object({
+    bill: z.object({ session: optionalString }).passthrough().optional(),
+    entity_type: optionalString
+  })
   .passthrough()
 const agendaSchema = z
   .object({
     classification: z.array(z.string()).default([]),
     description: optionalString,
     order: z.number().int().nonnegative(),
+    related_entities: z.array(agendaRelatedEntitySchema).default([]),
     status: optionalString,
     title: optionalString
   })
@@ -40,7 +62,10 @@ const eventSchema = z
     documents: z.array(documentSchema).default([]),
     end_date: optionalString,
     id: z.string().trim().min(1),
-    location: z.record(z.string(), z.unknown()).optional(),
+    location: z
+      .object({ address: optionalString, name: optionalString, room: optionalString, url: optionalString })
+      .passthrough()
+      .optional(),
     name: z.string().trim().min(1),
     participants: z.array(participantSchema).default([]),
     sources: z.array(z.object({ url: z.string().trim().min(1) }).passthrough()).default([]),
@@ -59,33 +84,98 @@ export interface OpenStatesEventSnapshot {
   agendaItems: EventAgendaItemSnapshot[]
   documents: DocumentInsert[]
   event: EventInsert
+  organizationIds: string[]
   participants: ParticipantInsert[]
+  sessionIds: string[]
 }
 
 function exactDate(value: string | undefined): string | undefined {
   return value?.match(/^(\d{4}-\d{2}-\d{2})/)?.[1]
 }
 
+function sourceDate(value: string, name: string): Date {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.valueOf())) {
+    throw new Error(`Open States event ${name} must be a valid timestamp`)
+  }
+  return parsed
+}
+
+function optionalSourceDate(value: string | undefined, name: string): Date | undefined {
+  return value === undefined ? undefined : sourceDate(value, name)
+}
+
+function httpsSourceUrl(value: string | undefined): value is string {
+  if (value === undefined) {
+    return false
+  }
+  try {
+    return value.startsWith("https://") && new URL(value).protocol === "https:"
+  } catch {
+    return false
+  }
+}
+
 function uniqueBy<T>(values: T[], identity: (value: T) => string): T[] {
   return [...new Map(values.map((value) => [identity(value), value])).values()]
 }
 
-function canonicalEventStatus(status: string, isDeleted: boolean): string {
-  if (isDeleted) {
-    return "deleted"
-  }
+function canonicalEventStatus(status: string): "cancelled" | "completed" | "other" | "postponed" | "scheduled" {
   const normalized = status.trim().toLowerCase().replaceAll("_", "-")
-  return normalized === "canceled" ? "cancelled" : normalized
+  if (["scheduled", "confirmed", "tentative"].includes(normalized)) {
+    return "scheduled"
+  }
+  if (["completed", "passed", "held"].includes(normalized)) {
+    return "completed"
+  }
+  if (["cancelled", "canceled"].includes(normalized)) {
+    return "cancelled"
+  }
+  if (["postponed", "rescheduled", "deferred"].includes(normalized)) {
+    return "postponed"
+  }
+  return "other"
+}
+
+function canonicalEventClassification(value: string | undefined): "hearing" | "meeting" | "other" | "session" {
+  const normalized = value?.trim().toLowerCase().replaceAll("_", "-")
+  if (normalized === "hearing" || normalized?.endsWith("-hearing")) {
+    return "hearing"
+  }
+  if (normalized === "session" || normalized?.endsWith("-session")) {
+    return "session"
+  }
+  if (normalized === "meeting" || normalized?.endsWith("-meeting")) {
+    return "meeting"
+  }
+  return "other"
+}
+
+function sourceDeclaredLocation(location: z.infer<typeof eventSchema>["location"]): Record<string, string> | undefined {
+  if (location === undefined) {
+    return undefined
+  }
+  const values = Object.fromEntries(
+    Object.entries({ address: location.address, name: location.name, room: location.room }).filter(
+      (entry): entry is [string, string] => entry[1] !== undefined
+    )
+  )
+  return Object.keys(values).length === 0 ? undefined : values
 }
 
 export function normalizeOpenStatesEvent(
   input: unknown,
-  context: { jurisdictionCode: string }
+  context: { jurisdictionCode: string; retrievedAt?: Date }
 ): OpenStatesEventSnapshot {
   const source = eventSchema.parse(input)
   const canonicalEventId = legislativeEventId("openstates", source.id)
-  const locationUrl =
-    typeof source.location?.url === "string" && source.location.url.length > 0 ? source.location.url : undefined
+  const sourceUrl = source.sources[0]?.url
+  const publisherLocalDate = exactDate(source.start_date)
+  const startAt = sourceDate(source.start_date, "start_date")
+  const provenanceComplete = httpsSourceUrl(sourceUrl) && context.retrievedAt !== undefined
+  const agendaSessionIds = [
+    ...new Set(source.agenda.flatMap((item) => item.related_entities.flatMap((entity) => entity.bill?.session ?? [])))
+  ].map((session) => legislativeSessionId(context.jurisdictionCode, session))
   return {
     agendaItems: uniqueBy(
       source.agenda.map((item) => ({
@@ -124,25 +214,35 @@ export function normalizeOpenStatesEvent(
     ),
     event: {
       allDay: source.all_day,
-      classification: source.classification,
+      canonicalFactsComplete: false,
+      classification: canonicalEventClassification(source.classification),
       description: source.description,
-      endAt: source.end_date === undefined ? undefined : new Date(source.end_date),
+      endAt: optionalSourceDate(source.end_date, "end_date"),
       id: canonicalEventId,
+      isRemote: undefined,
       isDeleted: source.deleted,
       jurisdictionId: jurisdictionId(context.jurisdictionCode),
-      location: source.location,
+      location: sourceDeclaredLocation(source.location),
       name: source.name,
+      organizationRelationsComplete: false,
+      provenanceComplete,
+      publisherLocalDate,
+      sourceIsOfficial: provenanceComplete ? false : undefined,
+      sourceProvider: provenanceComplete ? "openstates" : undefined,
+      sourceRetrievedAt: context.retrievedAt,
       sourceId: source.id,
-      sourceUpdatedAt: source.updated_at === undefined ? undefined : new Date(source.updated_at),
-      sourceUrl: source.sources[0]?.url,
-      startAt: new Date(source.start_date),
-      status: canonicalEventStatus(source.status, source.deleted),
+      sourceUpdatedAt: optionalSourceDate(source.updated_at, "updated_at"),
+      sourceUrl,
+      startAt,
+      status: canonicalEventStatus(source.status),
+      sessionRelationsComplete: false,
       upstreamIds: {
         openstates: source.id,
         ...(source.upstream_id === undefined ? {} : { provider: source.upstream_id })
       },
-      virtualAccess: locationUrl === undefined ? undefined : { url: locationUrl }
+      virtualAccess: source.location?.url === undefined ? undefined : { url: source.location.url }
     },
+    organizationIds: [],
     participants: uniqueBy(
       source.participants.map((participant) => ({
         eventId: canonicalEventId,
@@ -152,9 +252,14 @@ export function normalizeOpenStatesEvent(
           `${participant.entity_type ?? "unknown"}:${participant.name}`
         ),
         name: participant.name,
+        organizationId:
+          participant.organization === undefined || participant.organization === null
+            ? undefined
+            : organizationId("openstates", participant.organization.id),
         role: participant.note ?? participant.entity_type
       })),
       (participant) => participant.id
-    )
+    ),
+    sessionIds: agendaSessionIds
   }
 }

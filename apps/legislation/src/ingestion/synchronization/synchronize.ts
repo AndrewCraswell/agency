@@ -260,9 +260,10 @@ async function synchronizeOpenStatesEventsForScope(
       to
     })) {
       counts.discovered += page.length
+      const retrievedAt = new Date()
       const snapshots = page.flatMap((record) => {
         try {
-          return [normalizeOpenStatesEvent(record, { jurisdictionCode: identity.scope })]
+          return [normalizeOpenStatesEvent(record, { jurisdictionCode: identity.scope, retrievedAt })]
         } catch (error) {
           counts.failed += 1
           failures.push({

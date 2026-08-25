@@ -38,7 +38,7 @@ describe("Open States event normalization", () => {
       allDay: true,
       id: "event:openstates:ocd-event-example",
       jurisdictionId: "jurisdiction:ca",
-      status: "confirmed",
+      status: "scheduled",
       virtualAccess: { url: "https://example.test/watch" }
     })
     expect(snapshot.event.endAt).toBeUndefined()
@@ -94,7 +94,7 @@ describe("Open States event normalization", () => {
       { ...base, deleted: true, status: "confirmed" },
       { jurisdictionCode: "wa" }
     )
-    expect(deleted.event).toMatchObject({ isDeleted: true, status: "deleted" })
+    expect(deleted.event).toMatchObject({ isDeleted: true, status: "scheduled" })
     expect(deleted.event.id).toBe(cancelled.event.id)
   })
 
@@ -120,5 +120,85 @@ describe("Open States event normalization", () => {
       }
     })
     expect(snapshot.agendaItems[0]?.agendaItem.description).toBeUndefined()
+  })
+
+  it("retains actual participant and agenda evidence without fabricating complete meeting relationships", () => {
+    const snapshot = normalizeOpenStatesEvent(
+      {
+        agenda: [
+          {
+            classification: [],
+            order: 0,
+            related_entities: [{ bill: { session: "2026" }, entity_type: "bill" }]
+          }
+        ],
+        classification: "committee-meeting",
+        id: "ocd-event/source-evidence",
+        name: "Rules Committee",
+        participants: [
+          {
+            entity_type: "organization",
+            name: "Rules Committee",
+            organization: { id: "ocd-organization/committee:rules" }
+          }
+        ],
+        sources: [{ url: "https://leg.example.test/events/source-evidence" }],
+        start_date: "2026-08-17T10:00:00-07:00",
+        status: "confirmed"
+      },
+      { jurisdictionCode: "wa", retrievedAt: new Date("2026-08-01T00:00:00Z") }
+    )
+
+    expect(snapshot.event).toMatchObject({
+      canonicalFactsComplete: false,
+      classification: "meeting",
+      organizationRelationsComplete: false,
+      provenanceComplete: true,
+      publisherLocalDate: "2026-08-17",
+      sessionRelationsComplete: false,
+      sourceIsOfficial: false,
+      sourceProvider: "openstates",
+      status: "scheduled"
+    })
+    expect(snapshot.event.isRemote).toBeUndefined()
+    expect(snapshot.organizationIds).toEqual([])
+    expect(snapshot.sessionIds).toEqual(["session:wa:2026"])
+    expect(snapshot.participants[0]?.organizationId).toBe("organization:openstates:ocd-organization-committee-rules")
+  })
+
+  it("leaves a record incomplete when the publisher omits remote or relationship facts", () => {
+    const snapshot = normalizeOpenStatesEvent(
+      {
+        id: "ocd-event/no-inference",
+        name: "No inference",
+        sources: [{ url: "https://leg.example.test/events/no-inference" }],
+        start_date: "2026-08-17T10:00:00-07:00",
+        status: "confirmed"
+      },
+      { jurisdictionCode: "wa", retrievedAt: new Date("2026-08-01T00:00:00Z") }
+    )
+
+    expect(snapshot.event).toMatchObject({
+      canonicalFactsComplete: false,
+      organizationRelationsComplete: false,
+      sessionRelationsComplete: false
+    })
+    expect(snapshot.organizationIds).toEqual([])
+    expect(snapshot.sessionIds).toEqual([])
+  })
+
+  it("does not mark HTTP-only provenance complete", () => {
+    const snapshot = normalizeOpenStatesEvent(
+      {
+        id: "ocd-event/http-source",
+        name: "HTTP source",
+        sources: [{ url: "http://leg.example.test/events/http-source" }],
+        start_date: "2026-08-17T10:00:00-07:00",
+        status: "confirmed"
+      },
+      { jurisdictionCode: "wa", retrievedAt: new Date("2026-08-01T00:00:00Z") }
+    )
+
+    expect(snapshot.event).toMatchObject({ canonicalFactsComplete: false, provenanceComplete: false })
   })
 })
