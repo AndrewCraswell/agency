@@ -1,7 +1,13 @@
 import { createHash } from "node:crypto"
+import { readFile } from "node:fs/promises"
 import { createElement } from "react"
 import { describe, expect, it } from "vitest"
 import { benchPrototypeResetWatchdog } from "./bench-prototype-reset-watchdog.js"
+import {
+  bp123ResetWatchdogFragmentArtifactPaths,
+  renderBp123ResetWatchdogFragmentSchematic,
+  validateBp123ResetWatchdogFragmentErcReport
+} from "./bp-123-reset-watchdog-fragment-artifacts.js"
 import Bp123ResetWatchdogFragmentCircuit, {
   bp123ResetWatchdogFragmentContract,
   bp123ResetWatchdogFragmentEvidence,
@@ -20,6 +26,14 @@ function digestFragmentContract() {
   return createHash("sha256")
     .update(JSON.stringify({ geometry: bp123ResetWatchdogFragmentGeometry, nets: bp123ResetWatchdogPreflightNets }))
     .digest("hex")
+}
+
+const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex")
+const circuitSourceUrl = new URL("./bp-123-reset-watchdog-fragment.circuit.tsx", import.meta.url)
+const evidenceDirectoryUrl = new URL("../docs/evidence/bp-123/", import.meta.url)
+
+function evidenceUrl(fileName: string): URL {
+  return new URL(fileName, evidenceDirectoryUrl)
 }
 
 function traceNames(circuitJson: ReturnType<typeof renderCircuit>): string[] {
@@ -183,6 +197,52 @@ describe("BP-123 reset/watchdog fragment", () => {
       physicalEvidence: false,
       schematicIntegrationAuthorized: false
     })
+  })
+
+  it("reconciles deterministic fragment-only SVG and zero-error report artifacts fail closed", async () => {
+    const [source, schematicSvg, ercReportText, manifest] = await Promise.all([
+      readFile(circuitSourceUrl),
+      readFile(evidenceUrl("bp-123-reset-watchdog-fragment.schematic.svg"), "utf8"),
+      readFile(evidenceUrl("bp-123-reset-watchdog-fragment.erc.json"), "utf8"),
+      readFile(evidenceUrl("bp-123-reset-watchdog-fragment.sha256"), "utf8")
+    ])
+    const report: unknown = JSON.parse(ercReportText)
+    const rendered = renderBp123ResetWatchdogFragmentSchematic()
+    const sourceSha256 = sha256(source)
+
+    expect(rendered.errorElementTypes).toEqual([])
+    expect(schematicSvg).toBe(rendered.schematicSvg)
+    expect(validateBp123ResetWatchdogFragmentErcReport(report, sourceSha256, schematicSvg)).toBe(true)
+    expect(manifest).toBe(
+      [
+        `${sourceSha256}  ${bp123ResetWatchdogFragmentArtifactPaths.source}`,
+        `${sha256(schematicSvg)}  ${bp123ResetWatchdogFragmentArtifactPaths.schematicSvg}`,
+        `${sha256(ercReportText)}  ${bp123ResetWatchdogFragmentArtifactPaths.ercReport}`,
+        ""
+      ].join("\n")
+    )
+
+    const reportedPortError = structuredClone(report)
+    if (reportedPortError === null || typeof reportedPortError !== "object" || Array.isArray(reportedPortError))
+      throw new RangeError("Fragment ERC report fixture must be a record")
+    const erc = Reflect.get(reportedPortError, "erc")
+    if (erc === null || typeof erc !== "object" || Array.isArray(erc))
+      throw new RangeError("Fragment ERC report fixture must contain an ERC record")
+    Reflect.set(erc, "portErrorCount", 1)
+    expect(() => validateBp123ResetWatchdogFragmentErcReport(reportedPortError, sourceSha256, schematicSvg)).toThrow(
+      /zero render errors/u
+    )
+
+    const escalatedAuthority = structuredClone(report)
+    if (escalatedAuthority === null || typeof escalatedAuthority !== "object" || Array.isArray(escalatedAuthority))
+      throw new RangeError("Fragment ERC report fixture must be a record")
+    const authority = Reflect.get(escalatedAuthority, "authority")
+    if (authority === null || typeof authority !== "object" || Array.isArray(authority))
+      throw new RangeError("Fragment ERC report fixture must contain an authority record")
+    Reflect.set(authority, "ercReport", true)
+    expect(() => validateBp123ResetWatchdogFragmentErcReport(escalatedAuthority, sourceSha256, schematicSvg)).toThrow(
+      /authority denied/u
+    )
   })
 
   it("fails closed for altered net lists or authority escalation", () => {
