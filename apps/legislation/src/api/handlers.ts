@@ -47,6 +47,8 @@ import { createCoreReadApiHandler, type CoreReadQueryApi } from "./core-read.js"
 import { createDocumentReadApiHandler, type DocumentReadApi } from "./document-read-routes.js"
 import { createEventDocumentReadApiHandler } from "./event-document-read-routes.js"
 import { createCompositeHttpApiHandler, type HttpApiHandler } from "./http.js"
+import { createJurisdictionCollectionReadRepository } from "./jurisdiction-collection-read-repository.js"
+import { createJurisdictionCollectionReadApiHandler } from "./jurisdiction-collection-read-routes.js"
 import { createJurisdictionOrganizationRepository } from "./jurisdiction-organization-read-repository.js"
 import { createJurisdictionOrganizationReadApiHandler } from "./jurisdiction-organization-read-routes.js"
 import { createJurisdictionReadRepository } from "./jurisdiction-read-repository.js"
@@ -164,6 +166,10 @@ export function createLegislationApiHandler(
           ),
           createJurisdictionOrganizationReadApiHandler(
             createJurisdictionOrganizationRepository(documentDatabase),
+            options
+          ),
+          createJurisdictionCollectionReadApiHandler(
+            createJurisdictionCollectionReadRepository(documentDatabase),
             options
           ),
           createJurisdictionReadApiHandler(createJurisdictionReadRepository(documentDatabase), options),
