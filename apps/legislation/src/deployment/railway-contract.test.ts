@@ -66,7 +66,7 @@ describe("Railway deployment contract", () => {
     expect(readFileSync(`${repositoryRoot}pnpm-workspace.yaml`, "utf8")).toContain('"apps/*"')
     expect(applicationFile("README.md")).toContain("Config File Path to `/apps/legislation/railway.json`")
     expect(applicationFile("docs/development.md")).toContain(
-      "explicitly set Config File Path to `/apps/legislation/railway.json`"
+      "explicitly set Config File Path to `/apps/legislation-web/railway.json`"
     )
   })
 

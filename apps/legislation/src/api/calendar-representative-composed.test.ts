@@ -301,14 +301,14 @@ describe("calendar and representative routes through the composed HTTP handler",
       cursor: undefined,
       isActive: false,
       jurisdictionId: undefined,
-      limit: 25,
+      limit: 20,
       organizationId: "organization:wa:house",
       query: undefined
     })
     await expect(organization.json()).resolves.toMatchObject({
       data: [{ id: "calendar:wa:committee-schedule:2026", type: "calendar" }],
       links: { self: organizationPath },
-      meta: { limit: 25, nextCursor: null, truncated: false, warnings: [] }
+      meta: { limit: 20, nextCursor: null, truncated: false, warnings: [] }
     })
   })
 
