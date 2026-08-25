@@ -277,6 +277,18 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
       })
     }
 
+    for (const reference of ["U_STM_SUPERVISOR", "U_ESP_SUPERVISOR", "U_STM_WATCHDOG", "U_ESP_WATCHDOG"]) {
+      const row = benchPrototypeProcessorFootprints.populatedReferences.find((entry) => entry.reference === reference)
+      expect(row?.evidence.footprintEvidence).toMatchObject({
+        exactMpn: row?.mpn,
+        reference,
+        upstreamContract: "BP-123",
+        releaseState: "deny",
+        fabricationAuthority: "deny",
+        accepted: false
+      })
+    }
+
     const swd = benchPrototypeProcessorFootprints.debugReferences.find((entry) => entry.reference === "J_STM_SWD")
     expect(swd?.evidence.footprintEvidence).toMatchObject({
       exactMpn: "FTSH-105-01-L-DV-007-K",

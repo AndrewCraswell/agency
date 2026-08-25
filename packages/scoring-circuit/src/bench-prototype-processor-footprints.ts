@@ -36,6 +36,10 @@ import {
   validateBp032ResetSupportFootprintEvidence
 } from "./bp032-reset-support-footprints.js"
 import {
+  bp032SupervisorWatchdogFootprintEvidence,
+  validateBp032SupervisorWatchdogFootprintEvidence
+} from "./bp032-supervisor-watchdog-footprint-evidence.js"
+import {
   bp032TdkC1608CapacitorFootprintEvidence,
   bp032TdkC1608FootprintEvidenceFor
 } from "./bp032-tdk-c1608-capacitor-footprint-evidence.js"
@@ -313,8 +317,44 @@ const evidence = (mpn: string | null, reference: string | null = null) => ({
             ? ftshFootprintEvidenceFor(mpn, reference)
             : mpn === "C1608X5R1A105K080AC"
               ? bp032TdkC1608FootprintEvidenceFor(mpn, reference)
-              : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
+              : mpn === "TPS389033DSER" || mpn === "TPS3431SDRBR"
+                ? supervisorWatchdogFootprintEvidenceFor(mpn, reference)
+                : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
 })
+
+function supervisorWatchdogFootprintEvidenceFor(mpn: string, reference: string) {
+  const candidate = bp032SupervisorWatchdogFootprintEvidence
+  const assignment = candidate.assignments.find(
+    (item) => item.reference === reference && item.manufacturerPartNumber === mpn
+  )
+  if (assignment === undefined) return null
+  const geometry =
+    mpn === "TPS389033DSER"
+      ? candidate.candidates.TPS389033DSER
+      : mpn === "TPS3431SDRBR"
+        ? candidate.candidates.TPS3431SDRBR
+        : null
+  if (geometry === null) return null
+  const source = geometry.officialSources[0]
+  if (source === undefined) return null
+  return {
+    artifactKind: candidate.artifactKind,
+    exactMpn: mpn,
+    reference,
+    sourceId: assignment.sourceId,
+    sourceArtifactPath: source.artifactPath,
+    sourceSha256: source.sha256,
+    upstreamContract: "BP-123",
+    projectFootprintId: `${mpn.toLowerCase()}-project-review`,
+    manufacturerCad: geometry.manufacturerCad.state,
+    manufacturerLandPattern: source.packageGeometryEvidence.status,
+    artwork: "project-review-only",
+    orientation: geometry.orientation.state,
+    releaseState: "deny",
+    fabricationAuthority: geometry.fabricationAuthority,
+    accepted: geometry.accepted
+  } as const
+}
 
 function resetSupportFootprintEvidenceFor(mpn: string, reference: string) {
   const part = bp032ResetSupportFootprintEvidence.parts.find(
@@ -693,6 +733,7 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   if (validateBp032Ftsh10501LDv007KFootprintEvidence().length !== 0) {
     throw new RangeError("BP-032 FTSH service-header project-review candidate drifted")
   }
+  validateBp032SupervisorWatchdogFootprintEvidence(bp032SupervisorWatchdogFootprintEvidence)
   validateBenchPrototypeProcessorFootprintsRetainedManufacturerSources(retainedManufacturerPrimarySources)
   if (!sameDataGraph(value, benchPrototypeProcessorFootprints))
     throw new RangeError("BP-032 ledger must exactly match the reviewed canonical decision")
@@ -735,6 +776,9 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   const kemetResetRows = ledger.populatedReferences.filter((entry) => entry.mpn === "C0603C104K3RACTU")
   const resetSupportRows = ledger.populatedReferences.filter((entry) =>
     ["SN74LVC2G07DCKR", "BSS138AKA"].includes(entry.mpn)
+  )
+  const supervisorWatchdogRows = ledger.populatedReferences.filter((entry) =>
+    ["TPS389033DSER", "TPS3431SDRBR"].includes(entry.mpn)
   )
   const ftshRows = ledger.debugReferences.filter((entry) => entry.mpn === "FTSH-105-01-L-DV-007-K")
   if (
@@ -820,6 +864,17 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
     }) ||
     resetSupportRows.length !== 3 ||
     resetSupportRows.some(
+      (row) =>
+        row.evidence.footprintEvidence === null ||
+        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
+        row.evidence.footprintEvidence.reference !== row.reference ||
+        row.evidence.footprintEvidence.upstreamContract !== "BP-123" ||
+        row.evidence.footprintEvidence.releaseState !== "deny" ||
+        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
+        row.evidence.footprintEvidence.accepted
+    ) ||
+    supervisorWatchdogRows.length !== 4 ||
+    supervisorWatchdogRows.some(
       (row) =>
         row.evidence.footprintEvidence === null ||
         row.evidence.footprintEvidence.exactMpn !== row.mpn ||
