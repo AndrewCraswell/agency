@@ -36,11 +36,11 @@ The root agent alone approves, commits, and changes task status.
 | ID | Status | Deliverable | Dependencies | Latest state |
 | --- | --- | --- | --- | --- |
 | `P0-01` | done | Freeze the single-ESP32 prototype architecture and reusable foundations. | None | The clean-sheet board scaffold, minimal population policy, electrical rules, weapon/piste landings, encrypted-IR receiver, display-power contract, target-neutral HAL, and C/C++ coverage gate are committed. |
-| `P0-02` | active | Finish the complete power design. | `P0-01` | Root accepted the USB-C PD/eFuse/5 V/3.3 V circuit, display branch, and seven-channel analog/reference rail arithmetic after removing the obsolete isolation rail. Nineteen focused tests and package types pass. One non-duplicated 20 V load total and integration into the canonical schematic remain. |
-| `P0-03` | active | Finish one exact scoring-input channel and repeat it seven times. | `P0-01` | Root accepted the seven-line acquisition definition after binding GPIO4/5/6 and normalizing `VNEG_ANALOG`. Exact parts, support quantities, ADC order, failure states, and characterization are fixed; the seven repeated circuit cells still need integration. |
-| `P0-04` | active | Finish ESP32 support and all non-scoring peripherals. | `P0-01` | Root accepted ESP32 support and the W5500/HUB75 connectivity block. The lamp/buzzer path was reduced from five switches plus five gates to one `TBD62783AFWG` source array and one shared PPTC. Nine focused tests and package types pass. The MagJack/crystal footprints and the simplified output circuit still need to become placeable. |
-| `P0-05` | waiting | Integrate one complete schematic. | `P0-02`, `P0-03`, `P0-04` | Waiting for the three active hardware definitions. Integrate power, seven-channel analog, ESP32, Ethernet, HUB75, IR, USB, weapon interface, and outputs into the canonical circuit source. |
-| `P0-06` | waiting | Reconcile BOM and footprints and clear schematic errors. | `P0-05` | Every populated reference must have an exact MPN, quantity, package, placeable footprint, and disposition; no unexplained ERC errors or populated TBDs may remain. |
+| `P0-02` | done | Finish the complete power design. | `P0-01` | Commit `99a74c6` integrates the USB-C PD/eFuse/5 V/3.3 V chain, display branch, and corrected seven-channel analog/reference rail budget into the canonical schematic. Root review, focused circuit tests, types, lint, format, and the commit hook passed. |
+| `P0-03` | done | Finish one exact scoring-input channel and repeat it seven times. | `P0-01` | Commit `99a74c6` integrates all seven ADS8881 cells. Two quad TMUX1112 packages replace seven packages; one reset-cleared, hardware-disabled SN74HCS595 controls excitation using GPIO47 latch and GPIO36 output-enable. The acquisition topology drops from 151 to 132 placements. Root review and focused verification passed. |
+| `P0-04` | done | Finish ESP32 support and all non-scoring peripherals. | `P0-01` | Commit `99a74c6` integrates the ESP32 support/reset/recovery block, W5500 with exact MagJack and crystal geometry, HUB75, IR, protected primary outputs, and simplified source driver. Root review and focused verification passed. Exact fabrication footprint overlay remains correctly scoped to `P0-06`. |
+| `P0-05` | done | Integrate one complete schematic. | `P0-02`, `P0-03`, `P0-04` | Commit `99a74c6` integrates power, seven-channel analog, ESP32, Ethernet, HUB75, IR, USB, direct weapon/piste landings, display power, and outputs. The fast canonical schematic render reports zero circuit errors; 12 focused files and 44 tests passed. |
+| `P0-06` | ready | Reconcile BOM and footprints and clear schematic errors. | `P0-05` | Schematic integration is complete. Next, inventory the 321 rendered components, collapse duplicate/reference-only entries, bind every populated IC to an exact placeable footprint, overlay the official WROOM-1 CAD, and clear every populated TBD or review-only disposition. |
 | `P0-07` | waiting | Place the complete PCB. | `P0-06` | Place connectors and strain relief first, then power, analog, ESP32/RF, Ethernet, HUB75, IR, outputs, probes, and mounting features with reviewed clearances. |
 | `P0-08` | waiting | Route and review the PCB. | `P0-07` | Route power/thermal paths, analog/reference returns, ADC timing, USB, Ethernet, clocks, RF keepout, and remaining digital signals; finish with zero unexplained DRC or unrouted nets. |
 | `P0-09` | waiting | Generate and approve the manufacturing package, then order boards. | `P0-08` | Review Gerbers and drills, IPC-356, BOM, centroid, assembly drawings, stack-up, board renders, digests, and supplier constraints before root grants prototype-order authority. |
@@ -53,14 +53,13 @@ The root agent alone approves, commits, and changes task status.
 ## Current critical path
 
 ```text
-P0-02 + P0-03 + P0-04
-          -> P0-05 -> P0-06 -> P0-07 -> P0-08 -> P0-09
+P0-01 -> P0-02/P0-03/P0-04 -> P0-05 -> P0-06 -> P0-07 -> P0-08 -> P0-09
 P0-09 -> P0-10/P0-11 -> P0-12 -> P0-13 -> P0-14
 ```
 
-The next concrete milestone is `P0-05`: one complete schematic. Work that does
-not help close `P0-02`, `P0-03`, `P0-04`, or integrate `P0-05` is not on the
-prototype critical path.
+The next concrete milestone is `P0-06`: one reconciled BOM and exact placeable
+footprint set. Work that does not remove a populated ambiguity, duplicate,
+review-only footprint, or schematic error is not on the prototype critical path.
 
 ## Retired evidence identifiers
 
