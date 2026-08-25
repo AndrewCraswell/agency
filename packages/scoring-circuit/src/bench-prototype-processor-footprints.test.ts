@@ -303,6 +303,21 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
     }
   })
 
+  it("binds U_SCORING to the exact STM32 LQFP64 review candidate", () => {
+    const row = benchPrototypeProcessorFootprints.populatedReferences.find((entry) => entry.reference === "U_SCORING")
+    expect(row?.evidence.footprintEvidence).toMatchObject({
+      artifactKind: "bp032-stm32g474ret3tr-lqfp64-project-footprint-evidence",
+      exactMpn: "STM32G474RET3TR",
+      reference: "U_SCORING",
+      upstreamContract: "BP-120/BP-125",
+      manufacturerCad: "not-acquired",
+      orientation: "pending-independent-review",
+      releaseState: "deny",
+      fabricationAuthority: "deny",
+      accepted: false
+    })
+  })
+
   it("binds the reset-support and keyed SWD rows to review-only evidence", () => {
     for (const reference of ["U_APP_RESET_FANOUT", "Q_ESP_RESET_STM", "Q_ESP_DEBUG_RESET"]) {
       const row = benchPrototypeProcessorFootprints.populatedReferences.find((entry) => entry.reference === reference)

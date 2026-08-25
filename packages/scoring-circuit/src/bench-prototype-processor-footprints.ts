@@ -41,6 +41,10 @@ import {
   validateBp032ResetSupportFootprintEvidence
 } from "./bp032-reset-support-footprints.js"
 import {
+  bp032Stm32G474Ret3TrLqfp64ProjectFootprintEvidence,
+  validateBp032Stm32G474Ret3TrLqfp64ProjectFootprintEvidence
+} from "./bp032-stm32g474ret3tr-lqfp64-project-footprint.js"
+import {
   bp032SupervisorWatchdogFootprintEvidence,
   validateBp032SupervisorWatchdogFootprintEvidence
 } from "./bp032-supervisor-watchdog-footprint-evidence.js"
@@ -330,10 +334,34 @@ const evidence = (mpn: string | null, reference: string | null = null) => ({
                 ? murataProcessorSupportFootprintEvidenceFor(mpn, reference)
                 : mpn === "ISO7762FDWR" || mpn === "ISO7721FDR"
                   ? tiIsolatorFootprintEvidenceFor(mpn, reference)
-                  : mpn === "TPS389033DSER" || mpn === "TPS3431SDRBR"
-                    ? supervisorWatchdogFootprintEvidenceFor(mpn, reference)
-                    : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
+                  : mpn === "STM32G474RET3TR"
+                    ? stm32FootprintEvidenceFor(mpn, reference)
+                    : mpn === "TPS389033DSER" || mpn === "TPS3431SDRBR"
+                      ? supervisorWatchdogFootprintEvidenceFor(mpn, reference)
+                      : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
 })
+
+function stm32FootprintEvidenceFor(mpn: string, reference: string) {
+  const candidate = bp032Stm32G474Ret3TrLqfp64ProjectFootprintEvidence
+  if (candidate.source.manufacturerPartNumber !== mpn || candidate.canonicalReference !== reference) return null
+  return {
+    artifactKind: candidate.artifactKind,
+    exactMpn: mpn,
+    reference,
+    sourceId: "st-ds12288-rev6",
+    sourceArtifactPath: candidate.source.artifactPath,
+    sourceSha256: candidate.source.sha256,
+    upstreamContract: "BP-120/BP-125",
+    projectFootprintId: "stm32g474ret3tr-lqfp64-project-review",
+    manufacturerCad: candidate.manufacturerCad.state,
+    manufacturerLandPattern: candidate.manufacturerDrawing.state,
+    artwork: candidate.projectFootprint.state,
+    orientation: candidate.orientation.status,
+    releaseState: candidate.releaseState,
+    fabricationAuthority: candidate.fabricationAuthority,
+    accepted: candidate.accepted
+  } as const
+}
 
 function tiIsolatorFootprintEvidenceFor(mpn: string, reference: string) {
   const device = bp032TiIsolatorFootprintEvidence.devices.find(
@@ -626,7 +654,7 @@ const definition = {
       package: "LQFP-64",
       population: "selected-awaiting-footprint-evidence",
       source: "BP-120 STM32 allocation",
-      evidence: evidence("STM32G474RET3TR")
+      evidence: evidence("STM32G474RET3TR", "U_SCORING")
     },
     {
       reference: "U_APP",
@@ -811,6 +839,12 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   if (validateBp032TiIsolatorFootprintEvidence(bp032TiIsolatorFootprintEvidence).length !== 0) {
     throw new RangeError("BP-032 TI isolator footprint candidate drifted")
   }
+  if (
+    validateBp032Stm32G474Ret3TrLqfp64ProjectFootprintEvidence(bp032Stm32G474Ret3TrLqfp64ProjectFootprintEvidence)
+      .length !== 0
+  ) {
+    throw new RangeError("BP-032 STM32 footprint candidate drifted")
+  }
   validateBenchPrototypeProcessorFootprintsRetainedManufacturerSources(retainedManufacturerPrimarySources)
   if (!sameDataGraph(value, benchPrototypeProcessorFootprints))
     throw new RangeError("BP-032 ledger must exactly match the reviewed canonical decision")
@@ -859,6 +893,7 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   )
   const murataProcessorSupportRows = ledger.processorSupportReferences.filter((entry) => entry.mpn.startsWith("GCM"))
   const isolatorRows = ledger.populatedReferences.filter((entry) => ["ISO7762FDWR", "ISO7721FDR"].includes(entry.mpn))
+  const stm32Rows = ledger.populatedReferences.filter((entry) => entry.mpn === "STM32G474RET3TR")
   const ftshRows = ledger.debugReferences.filter((entry) => entry.mpn === "FTSH-105-01-L-DV-007-K")
   if (
     new Set(references.map((entry) => entry.reference)).size !== references.length ||
@@ -981,6 +1016,17 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
         row.evidence.footprintEvidence.exactMpn !== row.mpn ||
         row.evidence.footprintEvidence.reference !== row.reference ||
         row.evidence.footprintEvidence.upstreamContract !== "BP-122" ||
+        row.evidence.footprintEvidence.releaseState !== "deny" ||
+        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
+        row.evidence.footprintEvidence.accepted
+    ) ||
+    stm32Rows.length !== 1 ||
+    stm32Rows.some(
+      (row) =>
+        row.evidence.footprintEvidence === null ||
+        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
+        row.evidence.footprintEvidence.reference !== row.reference ||
+        row.evidence.footprintEvidence.upstreamContract !== "BP-120/BP-125" ||
         row.evidence.footprintEvidence.releaseState !== "deny" ||
         row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
         row.evidence.footprintEvidence.accepted
