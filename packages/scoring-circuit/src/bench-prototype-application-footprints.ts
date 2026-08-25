@@ -718,6 +718,42 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer",
     reviewedAt: "2026-08-25",
     fabricationRelease: "deny"
+  },
+  {
+    reference: "F_APPLICATION",
+    artifactKind: "bp033-littelfuse-0451-fuses-footprint-evidence",
+    artworkModule: "src/bp033-littelfuse-0451-fuses.tsx",
+    reviewDocument: "docs/bp-033-littelfuse-0451-fuses.md",
+    sourceArtifactPath: "docs/evidence/bp-033/littelfuse-451-453-datasheet.pdf",
+    sourceSha256: "399D3CC9DA991AA3192638F807FB568F137407D10A4B0D35D106A82B5C2BACE2",
+    reviewState: "root-reviewed-review-input",
+    reviewer: "root-final-reviewer",
+    reviewedAt: "2026-08-25",
+    fabricationRelease: "deny"
+  },
+  {
+    reference: "F_DISPLAY",
+    artifactKind: "bp033-littelfuse-0451-fuses-footprint-evidence",
+    artworkModule: "src/bp033-littelfuse-0451-fuses.tsx",
+    reviewDocument: "docs/bp-033-littelfuse-0451-fuses.md",
+    sourceArtifactPath: "docs/evidence/bp-033/littelfuse-451-453-datasheet.pdf",
+    sourceSha256: "399D3CC9DA991AA3192638F807FB568F137407D10A4B0D35D106A82B5C2BACE2",
+    reviewState: "root-reviewed-review-input",
+    reviewer: "root-final-reviewer",
+    reviewedAt: "2026-08-25",
+    fabricationRelease: "deny"
+  },
+  {
+    reference: "F_SCORING",
+    artifactKind: "bp033-littelfuse-0451-fuses-footprint-evidence",
+    artworkModule: "src/bp033-littelfuse-0451-fuses.tsx",
+    reviewDocument: "docs/bp-033-littelfuse-0451-fuses.md",
+    sourceArtifactPath: "docs/evidence/bp-033/littelfuse-451-453-datasheet.pdf",
+    sourceSha256: "399D3CC9DA991AA3192638F807FB568F137407D10A4B0D35D106A82B5C2BACE2",
+    reviewState: "root-reviewed-review-input",
+    reviewer: "root-final-reviewer",
+    reviewedAt: "2026-08-25",
+    fabricationRelease: "deny"
   }
 ] as const
 
@@ -842,7 +878,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 4 ||
+    contract.projectFootprintMappings.length !== 7 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -885,6 +921,20 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
     contract.projectFootprintMappings[3]?.reviewState !== "root-reviewed-review-input" ||
     contract.projectFootprintMappings[3]?.reviewer !== "root-final-reviewer" ||
     contract.projectFootprintMappings[3]?.fabricationRelease !== "deny" ||
+    !(["F_APPLICATION", "F_DISPLAY", "F_SCORING"] as const).every((reference, offset) => {
+      const mapping = contract.projectFootprintMappings[4 + offset]
+      return (
+        mapping?.reference === reference &&
+        mapping.artifactKind === "bp033-littelfuse-0451-fuses-footprint-evidence" &&
+        mapping.artworkModule === "src/bp033-littelfuse-0451-fuses.tsx" &&
+        mapping.reviewDocument === "docs/bp-033-littelfuse-0451-fuses.md" &&
+        mapping.sourceArtifactPath === "docs/evidence/bp-033/littelfuse-451-453-datasheet.pdf" &&
+        mapping.sourceSha256 === "399D3CC9DA991AA3192638F807FB568F137407D10A4B0D35D106A82B5C2BACE2" &&
+        mapping.reviewState === "root-reviewed-review-input" &&
+        mapping.reviewer === "root-final-reviewer" &&
+        mapping.fabricationRelease === "deny"
+      )
+    }) ||
     !contract.records.some(
       (record) =>
         record.reference === "U_USB_PD" &&

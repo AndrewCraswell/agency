@@ -289,6 +289,32 @@ describe("BP-033 application footprint closure ledger", () => {
     expect(() => validateBenchPrototypeApplicationFootprints(drift)).toThrow(RangeError)
   })
 
+  it("maps all three exact 0451 fuses to one root-reviewed common-package evidence artifact", () => {
+    const fuseMappings = benchPrototypeApplicationFootprints.projectFootprintMappings.filter((mapping) =>
+      ["F_APPLICATION", "F_DISPLAY", "F_SCORING"].includes(mapping.reference)
+    )
+    expect(fuseMappings).toEqual(
+      ["F_APPLICATION", "F_DISPLAY", "F_SCORING"].map((reference) => ({
+        reference,
+        artifactKind: "bp033-littelfuse-0451-fuses-footprint-evidence",
+        artworkModule: "src/bp033-littelfuse-0451-fuses.tsx",
+        reviewDocument: "docs/bp-033-littelfuse-0451-fuses.md",
+        sourceArtifactPath: "docs/evidence/bp-033/littelfuse-451-453-datasheet.pdf",
+        sourceSha256: "399D3CC9DA991AA3192638F807FB568F137407D10A4B0D35D106A82B5C2BACE2",
+        reviewState: "root-reviewed-review-input",
+        reviewer: "root-final-reviewer",
+        reviewedAt: "2026-08-25",
+        fabricationRelease: "deny"
+      }))
+    )
+
+    const drift = structuredClone(benchPrototypeApplicationFootprints) as unknown as {
+      projectFootprintMappings: Array<{ reference: string }>
+    }
+    drift.projectFootprintMappings[5]!.reference = "F_FORGED"
+    expect(() => validateBenchPrototypeApplicationFootprints(drift)).toThrow(RangeError)
+  })
+
   it("rejects a substituted canonical-source path or forged physical evidence", () => {
     const substitutedSource = structuredClone(benchPrototypeApplicationFootprints) as {
       records: Array<Record<string, unknown>>
