@@ -134,7 +134,7 @@ function documentRead(id = "document:fixture") {
   }
 }
 
-function documentSectionRead(documentId = "document:fixture") {
+function documentSectionRead(documentId = "document:fixture", sectionId = "document-section:fixture") {
   return {
     document: {
       billId: "bill:fixture",
@@ -146,7 +146,7 @@ function documentSectionRead(documentId = "document:fixture") {
     section: {
       contentHash: "b".repeat(64),
       heading: "Fixture section",
-      id: "document-section:fixture",
+      id: sectionId,
       ordinal: 0,
       pageEnd: 1,
       pageStart: 1,
@@ -513,6 +513,7 @@ describe("local API smoke harness", () => {
     expect(SMOKE_MANIFEST).toHaveLength(18)
     expect(new Set(SMOKE_MANIFEST.map((entry) => entry.id)).size).toBe(SMOKE_MANIFEST.length)
     expect(SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "done")).toHaveLength(2)
+    expect(SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "in-progress")).toHaveLength(16)
   })
 
   it("runs only universal checks and exact canonical scoped bill pages in the scoped-bills profile", async () => {
@@ -736,6 +737,7 @@ describe("local API smoke harness", () => {
     const documentReadApi: DocumentReadApi = {
       assertBillExists: async () => undefined,
       getDocumentDetail: async (id) => ({ ...documentRead(id), sectionCount: 1, textCharacterCount: 12 }),
+      getDocumentSection: async ({ documentId, sectionId }) => documentSectionRead(documentId, sectionId),
       listBillDocuments: async () => ({ items: [documentRead()], truncated: false }),
       listDocumentSections: async (input) => ({ items: [documentSectionRead(input.documentId)], truncated: false })
     }
@@ -911,6 +913,17 @@ describe("local API smoke harness", () => {
     expect(report.passed.map((check) => check.id)).toContain("absent-list-votes")
     expect(report.passed.map((check) => check.id)).toContain("auth-rejection")
 
+    const inProgressIds = new Set(
+      SMOKE_MANIFEST.filter((entry) => entry.lifecycle === "in-progress").map((entry) => entry.id)
+    )
+    expect(report.passed.filter((check) => inProgressIds.has(check.id))).toHaveLength(14)
+    expect(
+      report.skipped
+        .filter((check) => inProgressIds.has(check.id))
+        .map((check) => check.id)
+        .sort()
+    ).toEqual(["search-bills", "search-supporting-materials"])
+
     const revisionEtagMismatch = async (input: string | URL, init?: RequestInit): Promise<Response> => {
       const response = await fetch(input, init)
       const pathname = new URL(input).pathname
@@ -942,6 +955,32 @@ describe("local API smoke harness", () => {
     expect(etagReport.failed.map((check) => check.id)).toEqual(
       expect.arrayContaining(["get-subscription", "get-webhook"])
     )
+
+    const mismatchedDocumentIdentity = mutateJson(
+      async (input, init) => await fetch(input, init),
+      "/api/documents/document%3Afixture",
+      (body) => {
+        if (!isRecord(body) || !isRecord(body.data)) {
+          return body
+        }
+        return {
+          ...body,
+          data: {
+            ...body.data,
+            canonicalUrl: "https://api.example.test/api/documents/document%3Aother",
+            id: "document:other"
+          }
+        }
+      }
+    )
+    const identityReport = await runApiSmoke({
+      baseUrl: `http://127.0.0.1:${address.port}`,
+      fetchImpl: mismatchedDocumentIdentity,
+      fixtures: { documentId: "document:fixture" },
+      requireAuth: true,
+      token: "smoke-token"
+    })
+    expect(identityReport.failed.map((check) => check.id)).toContain("get-document")
   })
 
   it("rejects malformed error correlation and category responses", async () => {

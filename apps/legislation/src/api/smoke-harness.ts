@@ -78,6 +78,11 @@ type CheckDefinition = Readonly<{
   path: string
   protected?: boolean
   requireNonEmptySearch?: boolean
+  expectedId?: string
+  expectedParent?: Readonly<{
+    field: "billId" | "documentId" | "materialId" | "subscriptionId"
+    id: string
+  }>
   requiresAuthHeader?: boolean
   requiresRevisionEtag?: boolean
   statusCode?: number
@@ -358,6 +363,7 @@ function fixtureChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
   if (fixture.billId !== undefined) {
     checks.push({
       expected: "document-page",
+      expectedParent: { field: "billId", id: fixture.billId },
       id: "list-bill-documents",
       path: `/api/bills/${encoded(fixture.billId)}/documents?limit=1`
     })
@@ -365,11 +371,13 @@ function fixtureChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
   if (fixture.documentId !== undefined) {
     checks.push({
       expected: "document-resource",
+      expectedId: fixture.documentId,
       id: "get-document",
       path: `/api/documents/${encoded(fixture.documentId)}`
     })
     checks.push({
       expected: "document-section-page",
+      expectedParent: { field: "documentId", id: fixture.documentId },
       id: "list-document-sections",
       path: `/api/documents/${encoded(fixture.documentId)}/sections?limit=1`
     })
@@ -377,6 +385,7 @@ function fixtureChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
   if (fixture.materialId !== undefined) {
     checks.push({
       expected: "material-resource",
+      expectedId: fixture.materialId,
       id: "get-supporting-material",
       path: `/api/supporting-materials/${encoded(fixture.materialId)}`
     })
@@ -384,6 +393,8 @@ function fixtureChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
   if (fixture.documentId !== undefined && fixture.documentSectionId !== undefined) {
     checks.push({
       expected: "document-section-resource",
+      expectedId: fixture.documentSectionId,
+      expectedParent: { field: "documentId", id: fixture.documentId },
       id: "get-document-section",
       path: `/api/documents/${encoded(fixture.documentId)}/sections/${encoded(fixture.documentSectionId)}`
     })
@@ -391,6 +402,8 @@ function fixtureChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
   if (fixture.materialId !== undefined && fixture.materialSectionId !== undefined) {
     checks.push({
       expected: "material-section-resource",
+      expectedId: fixture.materialSectionId,
+      expectedParent: { field: "materialId", id: fixture.materialId },
       id: "get-supporting-material-section",
       path: `/api/supporting-materials/${encoded(fixture.materialId)}/sections/${encoded(fixture.materialSectionId)}`
     })
@@ -418,17 +431,20 @@ function fixtureChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
   if (fixture.subscriptionId !== undefined) {
     checks.push({
       expected: "subscription-resource",
+      expectedId: fixture.subscriptionId,
       id: "get-subscription",
       path: `/api/subscriptions/${encoded(fixture.subscriptionId)}`,
       requiresRevisionEtag: true
     })
     checks.push({
       expected: "subscription-event-page",
+      expectedParent: { field: "subscriptionId", id: fixture.subscriptionId },
       id: "list-subscription-events",
       path: `/api/subscriptions/${encoded(fixture.subscriptionId)}/events?limit=1`
     })
     checks.push({
       expected: "delivery-page",
+      expectedParent: { field: "subscriptionId", id: fixture.subscriptionId },
       id: "list-subscription-deliveries",
       path: `/api/subscriptions/${encoded(fixture.subscriptionId)}/deliveries?limit=1`
     })
@@ -436,6 +452,7 @@ function fixtureChecks(fixture: SmokeFixture): readonly CheckDefinition[] {
   if (fixture.webhookId !== undefined) {
     checks.push({
       expected: "webhook-resource",
+      expectedId: fixture.webhookId,
       id: "get-webhook",
       path: `/api/webhooks/${encoded(fixture.webhookId)}`,
       requiresRevisionEtag: true
@@ -1371,6 +1388,29 @@ function hasRevisionEtag(body: unknown, etag: string | null): boolean {
   return etag !== null && etag === body.data.revision
 }
 
+function hasExpectedResponseIdentity(
+  body: unknown,
+  expectedId: string | undefined,
+  expectedParent: CheckDefinition["expectedParent"]
+): boolean {
+  if (expectedId === undefined && expectedParent === undefined) {
+    return true
+  }
+  if (!isRecord(body)) {
+    return false
+  }
+  const values = Array.isArray(body.data) ? body.data : [body.data]
+  return values.every((value) => {
+    if (!isRecord(value)) {
+      return false
+    }
+    return (
+      (expectedId === undefined || value.id === expectedId) &&
+      (expectedParent === undefined || value[expectedParent.field] === expectedParent.id)
+    )
+  })
+}
+
 function hasExpectedEnvelope(
   body: unknown,
   expected: CheckDefinition["expected"],
@@ -1609,6 +1649,7 @@ async function execute(
     (definition.expected === "health"
       ? response.headers.get("x-correlation-id") !== `smoke-${definition.id}`
       : !hasApiCorrelation(body, response.headers.get("x-correlation-id"))) ||
+    !hasExpectedResponseIdentity(body, definition.expectedId, definition.expectedParent) ||
     (definition.requiresRevisionEtag && !hasRevisionEtag(body, response.headers.get("etag")))
   ) {
     return {

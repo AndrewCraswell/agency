@@ -3,11 +3,16 @@ import { PgDialect } from "drizzle-orm/pg-core"
 import pg from "pg"
 import { afterAll, describe, expect, it } from "vitest"
 import * as schema from "../db/schema/schema.js"
+import { LegislationError } from "./errors.js"
 import {
   billSearchExecution,
   buildLexicalSupportingMaterialCandidateQuery,
   buildBillBrowseQuery,
+  decodeBillBrowseCursor,
+  decodeSupportingMaterialSearchCursor,
   documentBackedAmendmentId,
+  encodeBillBrowseCursor,
+  encodeSupportingMaterialSearchCursor,
   lexicalSupportingMaterialCandidateLimit,
   lexicalSupportingMaterialCandidateWindowCapped,
   lexicalSupportingMaterialPageState,
@@ -22,6 +27,35 @@ afterAll(async () => {
 })
 
 describe("bill browse query", () => {
+  it("binds bill browse cursors to the complete filter and sort scope", () => {
+    const input = {
+      classification: ["resolution", "bill"],
+      identifier: "HR",
+      introducedFrom: "2026-01-01",
+      introducedTo: "2026-01-31",
+      jurisdictionId: "jurisdiction:us",
+      limit: 25,
+      organizationId: "organization:us:house:rules",
+      sessionId: "session:us:119",
+      sort: "updated-desc" as const,
+      sponsorPersonId: "person:us:1",
+      status: ["referred", "introduced"],
+      subject: ["taxes", "budget"],
+      updatedFrom: new Date("2026-08-20T12:00:00.000Z")
+    }
+    const cursor = encodeBillBrowseCursor(25, input)
+
+    expect(decodeBillBrowseCursor(cursor, { ...input, classification: ["bill", "resolution"] })).toBe(25)
+    expect(() => decodeBillBrowseCursor(cursor, { ...input, sort: "identifier-asc" })).toThrow(LegislationError)
+    expect(() => decodeBillBrowseCursor(cursor, { ...input, status: ["introduced"] })).toThrow(LegislationError)
+    expect(() => decodeBillBrowseCursor(cursor, { ...input, jurisdictionId: "jurisdiction:ak" })).toThrow(
+      LegislationError
+    )
+    expect(() => decodeBillBrowseCursor(Buffer.from('{"offset":25}').toString("base64url"), input)).toThrow(
+      LegislationError
+    )
+  })
+
   it("computes latest action once and reuses it for latest-action-desc ordering", () => {
     const query = buildBillBrowseQuery(
       database,
@@ -180,6 +214,34 @@ describe("lexical supporting material candidate search", () => {
     })
     expect(lexicalSupportingMaterialPageState(0, 25, 26, false)).toEqual({
       nextCursor: "eyJvZmZzZXQiOjI1fQ",
+      truncated: true
+    })
+  })
+
+  it("binds cursors to the material filter scope and stops at the candidate cap", () => {
+    const input = {
+      billIds: ["bill:fixture"],
+      classifications: ["committee-report", "testimony"],
+      documentFrom: "2026-01-01",
+      documentTo: "2026-01-31",
+      jurisdictionIds: ["jurisdiction:fixture"],
+      mode: "lexical" as const,
+      query: "public data",
+      sessionIds: ["session:fixture"]
+    }
+    const cursor = encodeSupportingMaterialSearchCursor(25, input)
+
+    expect(
+      decodeSupportingMaterialSearchCursor(cursor, { ...input, classifications: ["testimony", "committee-report"] })
+    ).toBe(25)
+    expect(() => decodeSupportingMaterialSearchCursor(cursor, { ...input, query: "private data" })).toThrow(
+      LegislationError
+    )
+    expect(() =>
+      decodeSupportingMaterialSearchCursor(Buffer.from('{"offset":25}').toString("base64url"), input)
+    ).toThrow(LegislationError)
+    expect(lexicalSupportingMaterialPageState(200, 50, 50, true)).toEqual({
+      nextCursor: undefined,
       truncated: true
     })
   })

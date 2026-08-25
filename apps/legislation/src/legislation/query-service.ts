@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import {
   and,
   arrayContains,
@@ -412,10 +413,84 @@ export function lexicalSupportingMaterialPageState(
 ): { nextCursor: string | undefined; truncated: boolean } {
   const pageLength = Math.min(rowCount, limit)
   const truncated = rowCount > limit || candidateWindowCapped
+  const nextOffset = offset + pageLength
   return {
-    nextCursor: truncated && pageLength > 0 ? encodeOffset(offset + pageLength) : undefined,
+    nextCursor:
+      truncated && pageLength > 0 && nextOffset < LEXICAL_SUPPORTING_MATERIAL_CANDIDATE_LIMIT
+        ? encodeOffset(nextOffset)
+        : undefined,
     truncated
   }
+}
+
+export function encodeSupportingMaterialSearchCursor(offset: number, input: SupportingMaterialSearchInput): string {
+  if (!Number.isSafeInteger(offset) || offset < 0 || offset >= LEXICAL_SUPPORTING_MATERIAL_CANDIDATE_LIMIT) {
+    throw new RangeError("Supporting material search cursor offset is outside the bounded candidate window")
+  }
+  return Buffer.from(
+    JSON.stringify({ binding: supportingMaterialSearchCursorBinding(input), offset, version: 1 }),
+    "utf8"
+  ).toString("base64url")
+}
+
+export function decodeSupportingMaterialSearchCursor(
+  cursor: string | undefined,
+  input: SupportingMaterialSearchInput
+): number {
+  if (cursor === undefined) {
+    return 0
+  }
+  try {
+    const value: unknown = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"))
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      !("binding" in value) ||
+      value.binding !== supportingMaterialSearchCursorBinding(input) ||
+      !("offset" in value) ||
+      typeof value.offset !== "number" ||
+      !Number.isSafeInteger(value.offset) ||
+      value.offset < 0 ||
+      value.offset >= LEXICAL_SUPPORTING_MATERIAL_CANDIDATE_LIMIT ||
+      !("version" in value) ||
+      value.version !== 1
+    ) {
+      throw new Error("invalid supporting material search cursor")
+    }
+    return value.offset
+  } catch {
+    throw new LegislationError("invalid_request", "Invalid supporting material search cursor")
+  }
+}
+
+function supportingMaterialSearchCursorBinding(input: SupportingMaterialSearchInput): string {
+  const value = {
+    amendmentIds: supportingMaterialCursorValues(input.amendmentIds, input.amendmentId),
+    billIds: supportingMaterialCursorValues(input.billIds, input.billId),
+    classifications: supportingMaterialCursorValues(input.classifications, input.classification),
+    documentFrom: input.documentFrom,
+    documentTo: input.documentTo,
+    eventIds: supportingMaterialCursorValues(input.eventIds, input.eventId),
+    jurisdictionIds: supportingMaterialCursorValues(input.jurisdictionIds, input.jurisdictionId),
+    mode: input.mode ?? "lexical",
+    organizationIds: supportingMaterialCursorValues(input.organizationIds, input.organizationId),
+    processingStatus: input.processingStatus,
+    query: input.query?.trim(),
+    sessionIds: sortedCursorValues(input.sessionIds),
+    sort: input.sort,
+    updatedFrom: input.updatedFrom?.toISOString(),
+    updatedTo: input.updatedTo?.toISOString(),
+    updatedToExclusive: input.updatedToExclusive?.toISOString()
+  }
+  return createHash("sha256").update(JSON.stringify(value), "utf8").digest("base64url")
+}
+
+function supportingMaterialCursorValues(
+  values: readonly string[] | undefined,
+  value: string | undefined
+): readonly string[] | undefined {
+  const combined = supportingMaterialFilterValues(values, value)
+  return combined === undefined ? undefined : [...new Set(combined)].sort()
 }
 
 function supportingMaterialLexicalLinkFilter(input: SupportingMaterialSearchInput): SQL | undefined {
@@ -546,6 +621,7 @@ export function buildLexicalSupportingMaterialCandidateQuery(
       from ${supportingMaterialSections}
       ${sectionMaterialJoin}
       where ${sectionMatches} and ${sectionScope}
+      order by ${sectionRank} desc, ${supportingMaterialSections.id} asc
       limit ${candidateProbeLimit}
     ),
     candidate_materials as (
@@ -749,6 +825,63 @@ export function buildBillBrowseQuery(
     .offset(offset)
 }
 
+export function encodeBillBrowseCursor(offset: number, input: BillBrowseInput): string {
+  if (!Number.isSafeInteger(offset) || offset < 0) {
+    throw new RangeError("Bill browse cursor offset must be a nonnegative safe integer")
+  }
+  return Buffer.from(JSON.stringify({ binding: billBrowseCursorBinding(input), offset, version: 1 }), "utf8").toString(
+    "base64url"
+  )
+}
+
+export function decodeBillBrowseCursor(cursor: string | undefined, input: BillBrowseInput): number {
+  if (cursor === undefined) {
+    return 0
+  }
+  try {
+    const value: unknown = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"))
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      !("binding" in value) ||
+      value.binding !== billBrowseCursorBinding(input) ||
+      !("offset" in value) ||
+      typeof value.offset !== "number" ||
+      !Number.isSafeInteger(value.offset) ||
+      value.offset < 0 ||
+      !("version" in value) ||
+      value.version !== 1
+    ) {
+      throw new Error("invalid bill browse cursor")
+    }
+    return value.offset
+  } catch {
+    throw new LegislationError("invalid_request", "Invalid bill browse pagination cursor")
+  }
+}
+
+function billBrowseCursorBinding(input: BillBrowseInput): string {
+  const value = {
+    classification: sortedCursorValues(input.classification),
+    identifier: input.identifier,
+    introducedFrom: input.introducedFrom,
+    introducedTo: input.introducedTo,
+    jurisdictionId: input.jurisdictionId,
+    organizationId: input.organizationId,
+    sessionId: input.sessionId,
+    sort: input.sort,
+    sponsorPersonId: input.sponsorPersonId,
+    status: sortedCursorValues(input.status),
+    subject: sortedCursorValues(input.subject),
+    updatedFrom: input.updatedFrom?.toISOString()
+  }
+  return createHash("sha256").update(JSON.stringify(value), "utf8").digest("base64url")
+}
+
+function sortedCursorValues(values: readonly string[] | undefined): readonly string[] | undefined {
+  return values === undefined ? undefined : [...new Set(values)].sort()
+}
+
 export interface DocumentSectionLookup {
   cursor?: string
   documentId: string
@@ -946,12 +1079,12 @@ export class LegislationQueryService {
 
   async browseBills(input: BillBrowseInput) {
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
-    const offset = decodeOffset(input.cursor)
+    const offset = decodeBillBrowseCursor(input.cursor, input)
     const rows = await buildBillBrowseQuery(this.#database, input, limit, offset)
     const truncated = rows.length > limit
     return {
       items: rows.slice(0, limit).map(({ bill, latestActionAt }) => ({ ...bill, latestActionAt })),
-      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      nextCursor: truncated ? encodeBillBrowseCursor(offset + limit, input) : undefined,
       truncated,
       warnings: coverageWarnings(rows.length, "bills")
     }
@@ -1721,7 +1854,7 @@ export class LegislationQueryService {
       throw new LegislationError("invalid_request", "Supporting material lexical search requires query")
     }
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
-    const offset = decodeOffset(input.cursor)
+    const offset = decodeSupportingMaterialSearchCursor(input.cursor, input)
     let rows: LexicalSupportingMaterialCandidate[]
     try {
       rows = await this.#database.transaction(async (transaction) => {
@@ -1793,7 +1926,10 @@ export class LegislationQueryService {
     const items = await this.#withSupportingMaterialLinkIds(rankedMaterials)
     return {
       items,
-      nextCursor: pageState.nextCursor,
+      nextCursor:
+        pageState.nextCursor === undefined
+          ? undefined
+          : encodeSupportingMaterialSearchCursor(offset + items.length, input),
       truncated: pageState.truncated,
       warnings: coverageWarnings(items.length, "supporting materials")
     }

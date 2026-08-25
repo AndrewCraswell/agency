@@ -281,6 +281,31 @@ describe("core read API handler", () => {
     })
   })
 
+  it("returns the global bill collection page envelope and preserves its continuation link", async () => {
+    const baseUrl = await startServer({
+      ...service(),
+      browseBills: async () => ({ items: [bill()], nextCursor: "bound-bill-cursor", truncated: true })
+    })
+    const response = await fetch(`${baseUrl}/api/bills?limit=1`)
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      data: [
+        {
+          canonicalUrl: "http://127.0.0.1:3100/api/bills/bill%3Aus%3A119%3Ahr%3A1",
+          latestActionAt: "2026-02-01T00:00:00.000Z",
+          sources: [{ isOfficial: true, provider: "congress" }],
+          type: "bill"
+        }
+      ],
+      links: {
+        next: "/api/bills?limit=1&cursor=bound-bill-cursor",
+        self: "/api/bills?limit=1"
+      },
+      meta: { limit: 1, nextCursor: "bound-bill-cursor", truncated: true }
+    })
+  })
+
   it("rejects malformed global bill filters and undocumented query controls", async () => {
     const baseUrl = await startServer(service())
     const responses = await Promise.all([

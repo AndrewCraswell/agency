@@ -1,11 +1,12 @@
 import type { IncomingMessage } from "node:http"
 import { z } from "zod"
 import { LegislationError } from "../legislation/errors.js"
-import type {
-  AmendmentSearchInput,
-  SupportingMaterialSearchHitResult,
-  SupportingMaterialSearchInput,
-  VersionComparisonInput
+import {
+  decodeSupportingMaterialSearchCursor,
+  type AmendmentSearchInput,
+  type SupportingMaterialSearchHitResult,
+  type SupportingMaterialSearchInput,
+  type VersionComparisonInput
 } from "../legislation/query-service.js"
 import { decodeSearchCursor, type PassageSearchInput, type SearchInput } from "../search/search.js"
 import { projectSupportingMaterialSearchHits } from "./canonical-material-search.js"
@@ -300,7 +301,6 @@ export function createCivicSearchApiHandler(
         const limit = validateSearchModeLimit(mode, body.limit)
         validateDateOrder(body.from ?? undefined, body.to ?? undefined, ["from", "to"])
         validateDateOrder(body.documentFrom, body.documentTo, ["documentFrom", "documentTo"])
-        const offset = searchCursorOffset(body.cursor)
         const updatedRange = materialUpdatedRange(body.from ?? undefined, body.to ?? undefined)
         const input: SupportingMaterialSearchInput = {
           amendmentIds: body.amendmentIds,
@@ -318,6 +318,10 @@ export function createCivicSearchApiHandler(
           sessionIds: body.sessionIds,
           ...updatedRange
         }
+        const offset =
+          mode === "lexical"
+            ? decodeSupportingMaterialSearchCursor(input.cursor, input)
+            : searchCursorOffset(body.cursor)
         const result = await service.searchSupportingMaterialHits(input)
         sendApiJson(
           response,

@@ -6,6 +6,7 @@ import {
   buildBillExistenceQuery,
   buildBillDocumentListQuery,
   buildDocumentDetailQuery,
+  buildDocumentSectionDetailQuery,
   buildDocumentSectionListQuery,
   buildSupportingMaterialSectionListQuery,
   documentReadFromPersistence,
@@ -187,6 +188,19 @@ describe("bill document reads", () => {
 })
 
 describe("document section traversal", () => {
+  it("binds a singular section to its document parent before joining canonical source facts", () => {
+    const generated = buildDocumentSectionDetailQuery(database, {
+      documentId: "document:us:119:hr:1:ih",
+      sectionId: "section:us:119:hr:1:ih:1"
+    }).toSQL().sql
+
+    expect(generated).toContain('from "legislation"."document_sections"')
+    expect(generated).toContain('inner join "legislation"."bill_documents"')
+    expect(generated).toContain('"document_sections"."document_id" =')
+    expect(generated).toContain('"document_sections"."id" =')
+    expect(generated).toContain("limit")
+  })
+
   it("uses known-document heading and page overlap filters with an ordinal keyset", () => {
     const generated = buildDocumentSectionListQuery(database, {
       cursor: cursor({

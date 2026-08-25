@@ -36,6 +36,11 @@ export interface DocumentSectionListInput {
   pageTo?: number
 }
 
+export interface DocumentSectionDetailInput {
+  documentId: string
+  sectionId: string
+}
+
 export interface SupportingMaterialSectionListInput {
   cursor?: string
   heading?: string
@@ -294,6 +299,37 @@ export async function getDocumentDetail(
     sectionCount: nonnegativeInteger(row.sectionCount, "document sectionCount"),
     textCharacterCount: nonnegativeInteger(row.textCharacterCount, "document textCharacterCount")
   }
+}
+
+/**
+ * Reads a section through both its opaque ID and its document parent. The
+ * parent predicate prevents a valid section ID from being exposed below an
+ * unrelated document URL.
+ */
+export function buildDocumentSectionDetailQuery(database: LegislationDatabase, input: DocumentSectionDetailInput) {
+  return database
+    .select({ document: billDocuments, section: documentSections })
+    .from(documentSections)
+    .innerJoin(billDocuments, eq(billDocuments.id, documentSections.documentId))
+    .where(
+      and(
+        eq(documentSections.documentId, requiredInputText(input.documentId, "documentId")),
+        eq(documentSections.id, requiredInputText(input.sectionId, "sectionId"))
+      )
+    )
+    .limit(1)
+}
+
+export async function getDocumentSection(
+  database: LegislationDatabase,
+  input: DocumentSectionDetailInput
+): Promise<CanonicalDocumentSectionRead> {
+  const rows = await buildDocumentSectionDetailQuery(database, input)
+  const row = rows[0]
+  if (row === undefined) {
+    throw new LegislationError("not_found", `Document section ${input.sectionId} was not found`)
+  }
+  return documentSectionReadFromPersistence(row.document, row.section)
 }
 
 export function buildDocumentSectionListQuery(database: LegislationDatabase, input: DocumentSectionListInput) {

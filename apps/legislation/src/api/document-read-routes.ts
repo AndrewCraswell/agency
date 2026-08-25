@@ -13,7 +13,7 @@ import type {
 } from "../db/queries/document-reads.js"
 import { LegislationError } from "../legislation/errors.js"
 import { projectDocumentDetail, projectDocumentSection, projectDocumentSummary } from "./canonical-projection.js"
-import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read.js"
+import { projectDocumentSectionRead, sourceProjectionContext, toProjectionLegislationError } from "./canonical-read.js"
 import {
   assertAllowedQueryParameters,
   apiPage,
@@ -29,6 +29,9 @@ import {
 export interface DocumentReadApi {
   assertBillExists: (billId: string) => Promise<void>
   getDocumentDetail: (documentId: string) => Promise<CanonicalDocumentDetailRead>
+  getDocumentSection: (
+    input: Readonly<{ documentId: string; sectionId: string }>
+  ) => Promise<CanonicalDocumentSectionRead>
   listBillDocuments: (input: BillDocumentListInput) => Promise<DocumentPage<CanonicalDocumentRead>>
   listDocumentSections: (input: DocumentSectionListInput) => Promise<DocumentPage<CanonicalDocumentSectionRead>>
 }
@@ -82,6 +85,11 @@ async function handleDocumentReadRequest(
     case "getDocument": {
       const document = await service.getDocumentDetail(route.documentId)
       sendApiJson(response, 200, apiResource(request, projectDocumentDetailRead(document, apiBaseUrl)))
+      return true
+    }
+    case "getDocumentSection": {
+      const section = await service.getDocumentSection({ documentId: route.documentId, sectionId: route.sectionId })
+      sendApiJson(response, 200, apiResource(request, projectDocumentSectionRead(section, apiBaseUrl)))
       return true
     }
     case "listDocumentSections": {
@@ -160,6 +168,7 @@ export function projectDocumentDetailRead(value: CanonicalDocumentDetailRead, ap
 type DocumentReadRoute =
   | { billId: string; name: "listBillDocuments" }
   | { documentId: string; name: "getDocument" | "listDocumentSections" }
+  | { documentId: string; name: "getDocumentSection"; sectionId: string }
 
 function routeMatch(method: string | undefined, pathname: string): DocumentReadRoute | undefined {
   if (method !== "GET") {
@@ -192,8 +201,15 @@ function routeMatch(method: string | undefined, pathname: string): DocumentReadR
   if (segments.length === 3) {
     return { documentId: segments[2], name: "getDocument" }
   }
-  return segments.length === 4 && segments[3] === "sections"
-    ? { documentId: segments[2], name: "listDocumentSections" }
+  if (segments.length === 4 && segments[3] === "sections") {
+    return { documentId: segments[2], name: "listDocumentSections" }
+  }
+  return segments.length === 5 && segments[3] === "sections" && typeof segments[4] === "string"
+    ? {
+        documentId: canonicalPathId(segments[2], "documentId"),
+        name: "getDocumentSection",
+        sectionId: canonicalPathId(segments[4], "sectionId")
+      }
     : undefined
 }
 
@@ -204,8 +220,16 @@ function allowedQueryParameters(name: DocumentReadRoute["name"]): readonly strin
     case "listDocumentSections":
       return ["cursor", "heading", "limit", "pageFrom", "pageTo"]
     case "getDocument":
+    case "getDocumentSection":
       return []
   }
+}
+
+function canonicalPathId(value: string, name: string): string {
+  if (value.length < 1 || value.length > 256) {
+    throw new LegislationError("invalid_request", `${name} must be between 1 and 256 characters`)
+  }
+  return value
 }
 
 function singleQueryString(url: URL, name: string): string | undefined {
