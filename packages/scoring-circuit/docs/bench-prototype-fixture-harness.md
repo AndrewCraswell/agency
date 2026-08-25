@@ -101,18 +101,20 @@ drawing import, and fabrication remain open gates. The executable contract is
 
 ## Drawing evidence state
 
-The detailed retrieval record is [BP-104 Molex drawing discovery](evidence/bp-104/molex-drawing-discovery.md).
+The detailed retrieval record is [BP-104 Molex drawing and CAD discovery](evidence/bp-104/molex-drawing-discovery.md).
 
 Molex's official drawing endpoints were checked and the material-number tables
 identify the selected parts within their series scope: `43045-1200` is the
 12-circuit, finish-A row of `SD-43045-001`; `43025-1200` is the 12-position row
 of `430250000-SD`; `43030-0007` is the 20-24 AWG, form-A loose-terminal row of
 `SD-43030-XXXX`; and `44242-0005` is the 12-circuit row of `SD-44242-001`.
-These are series drawings, not exact-MPN drawings or CAD-review artifacts.
-The remote web sources were readable for table verification, but the current
-execution environment could not retain their PDF bytes, so no local asset or
-SHA-256 is recorded. All four therefore remain
-`identified-not-hash-acquired`. This is not footprint approval.
+Exact-MPN CAD preview PDFs are retained for `43045-1200`, `43025-1200`, and
+`44242-0005`. For `43030-0007`, the unlisted candidate URL pattern returned
+HTTP 404; that observation does not establish whether Molex publishes CAD at
+another URL. All four series drawings and the three retrieved exact-MPN CAD
+previews are retained under `docs/evidence/bp-104/assets` and SHA-256 bound in
+the executable contract. This closes source-byte acquisition, not footprint
+approval or any physical-evidence gate.
 
 Sources:
 
@@ -126,4 +128,7 @@ Sources:
 - [Molex SD-43045-001 series drawing](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43045/430450600_sd.pdf)
 - [Molex SD-430250000 series drawing](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43025/430250400_sd.pdf)
 - [Molex SD-43030-XXXX terminal series drawing](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43030/430300003_sd.pdf)
+- [Molex 430451200 CAD preview](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/430/43045/430451200.pdf)
+- [Molex 430251200 CAD preview](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/430/43025/430251200.pdf?inline=)
+- [Molex 442420005 CAD preview](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/442/44242/442420005.pdf)
 - [Molex Micro-Fit product specification](https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/productspecificationpdf/203/203951/2039510000-PS-000.pdf)

@@ -938,6 +938,60 @@ export function evaluateBenchPrototypeFixturePhysicalEvidence(
   return deepFreeze({ accepted: reasons.length === 0, reasons })
 }
 
+const bp104MolexArtifacts = {
+  "43045-1200": {
+    drawing: {
+      path: "docs/evidence/bp-104/assets/43045-1200-drawing.pdf",
+      sha256: "571c8a381be263cf8f92b064fe18dbc6ce6161e8cb2e931d186e8280b9f8338a"
+    },
+    cad: {
+      sourceKind: "exact-mpn-cad-drawing-pdf",
+      sourceUrl:
+        "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/430/43045/430451200.pdf",
+      path: "docs/evidence/bp-104/assets/43045-1200-cad-preview.pdf",
+      sha256: "7ec4bed5fa8de35dbcf15486eea86062f9baaf8cdd2bfc0f4d2126a5d68f65fa"
+    }
+  },
+  "43025-1200": {
+    drawing: {
+      path: "docs/evidence/bp-104/assets/43025-1200-drawing.pdf",
+      sha256: "3fa78847433b382fa07609fb9f44b5e8b017804b9b491250dc493eef9e029e28"
+    },
+    cad: {
+      sourceKind: "exact-mpn-cad-drawing-pdf",
+      sourceUrl:
+        "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/430/43025/430251200.pdf?inline=",
+      path: "docs/evidence/bp-104/assets/43025-1200-cad-preview.pdf",
+      sha256: "57a49568309fb94161814f16e2544c6c096fd2c47c09536367bbbaf943b7680c"
+    }
+  },
+  "43030-0007": {
+    drawing: {
+      path: "docs/evidence/bp-104/assets/43030-0007-drawing.pdf",
+      sha256: "864e37707afed617ce5155661b9bbddd29bf10cae3d64185a34c71782574307b"
+    },
+    cad: {
+      sourceKind: "not-acquired-pattern-probe-returned-404",
+      sourceUrl: null,
+      path: null,
+      sha256: null
+    }
+  },
+  "44242-0005": {
+    drawing: {
+      path: "docs/evidence/bp-104/assets/44242-0005-drawing.pdf",
+      sha256: "c39b30b917e9beda545daa3ab00ff5f3ba5f27839d142edf035303dd8eb62eef"
+    },
+    cad: {
+      sourceKind: "exact-mpn-cad-drawing-pdf",
+      sourceUrl:
+        "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/442/44242/442420005.pdf",
+      path: "docs/evidence/bp-104/assets/44242-0005-cad-preview.pdf",
+      sha256: "a7a9a9b236ba687c8ee3835a16120942f97742e61413c036513b8da7c7d3d84f"
+    }
+  }
+} as const
+
 const definition = {
   artifactKind: "bench-prototype-fixture-harness-contract",
   workUnit: "BP-104",
@@ -1013,6 +1067,7 @@ const definition = {
       sourceUrls: [
         "https://www.molex.com/en-us/products/series-chart/44242",
         "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/442/44242/442420001_sd.pdf",
+        "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/442/44242/442420005.pdf",
         "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/productspecificationpdf/203/203951/2039510000-PS-000.pdf"
       ]
     },
@@ -1128,8 +1183,8 @@ const definition = {
     selectedParts: "candidate-orderable",
     manufacturerDrawings: "open",
     manufacturerDrawingDiscovery: {
-      status: "identified-not-hash-acquired",
-      rule: "A series drawing may identify the exact selected MPN, but it is not an exact-MPN drawing or CAD review until its source bytes are retained and hash-bound.",
+      status: "hash-bound",
+      rule: "Series drawings identify the exact selected MPN only within their material tables. Retained source bytes and SHA-256 digests bind each drawing and published exact-MPN CAD preview; this is still not a footprint review.",
       candidates: [
         {
           mpn: "43045-1200",
@@ -1139,9 +1194,15 @@ const definition = {
           materialTableScope: "12-circuit row, finish A, material number 43045-1200",
           sourceUrl:
             "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43045/430450600_sd.pdf",
-          retainedAsset: null,
-          contentSha256: null,
-          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+          retainedAsset: bp104MolexArtifacts["43045-1200"].drawing.path,
+          contentSha256: bp104MolexArtifacts["43045-1200"].drawing.sha256,
+          retrievalState: "official-bytes-retained-and-hash-bound",
+          cadSourceKind: "exact-mpn-cad-drawing-pdf",
+          cadSourceUrl:
+            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/430/43045/430451200.pdf",
+          cadRetainedAsset: bp104MolexArtifacts["43045-1200"].cad.path,
+          cadContentSha256: bp104MolexArtifacts["43045-1200"].cad.sha256,
+          cadRetrievalState: "official-bytes-retained-and-hash-bound"
         },
         {
           mpn: "43025-1200",
@@ -1151,9 +1212,15 @@ const definition = {
           materialTableScope: "12-position row, material number 43025-1200",
           sourceUrl:
             "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43025/430250400_sd.pdf",
-          retainedAsset: null,
-          contentSha256: null,
-          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+          retainedAsset: bp104MolexArtifacts["43025-1200"].drawing.path,
+          contentSha256: bp104MolexArtifacts["43025-1200"].drawing.sha256,
+          retrievalState: "official-bytes-retained-and-hash-bound",
+          cadSourceKind: "exact-mpn-cad-drawing-pdf",
+          cadSourceUrl:
+            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/430/43025/430251200.pdf?inline=",
+          cadRetainedAsset: bp104MolexArtifacts["43025-1200"].cad.path,
+          cadContentSha256: bp104MolexArtifacts["43025-1200"].cad.sha256,
+          cadRetrievalState: "official-bytes-retained-and-hash-bound"
         },
         {
           mpn: "43030-0007",
@@ -1163,9 +1230,14 @@ const definition = {
           materialTableScope: "20-24 AWG, form A, loose terminal row, material number 43030-0007",
           sourceUrl:
             "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/430/43030/430300003_sd.pdf",
-          retainedAsset: null,
-          contentSha256: null,
-          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+          retainedAsset: bp104MolexArtifacts["43030-0007"].drawing.path,
+          contentSha256: bp104MolexArtifacts["43030-0007"].drawing.sha256,
+          retrievalState: "official-bytes-retained-and-hash-bound",
+          cadSourceKind: "not-acquired-pattern-probe-returned-404",
+          cadSourceUrl: null,
+          cadRetainedAsset: null,
+          cadContentSha256: null,
+          cadRetrievalState: "not-acquired-pattern-probe-returned-404"
         },
         {
           mpn: "44242-0005",
@@ -1175,9 +1247,15 @@ const definition = {
           materialTableScope: "12-circuit test-plug row, material number 44242-0005",
           sourceUrl:
             "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/442/44242/442420001_sd.pdf",
-          retainedAsset: null,
-          contentSha256: null,
-          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+          retainedAsset: bp104MolexArtifacts["44242-0005"].drawing.path,
+          contentSha256: bp104MolexArtifacts["44242-0005"].drawing.sha256,
+          retrievalState: "official-bytes-retained-and-hash-bound",
+          cadSourceKind: "exact-mpn-cad-drawing-pdf",
+          cadSourceUrl:
+            "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/442/44242/442420005.pdf",
+          cadRetainedAsset: bp104MolexArtifacts["44242-0005"].cad.path,
+          cadContentSha256: bp104MolexArtifacts["44242-0005"].cad.sha256,
+          cadRetrievalState: "official-bytes-retained-and-hash-bound"
         }
       ]
     },
@@ -1233,6 +1311,10 @@ const definition = {
     {
       title: "Molex SD-44242-001 test-plug drawing",
       url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/salesdrawingpdf/442/44242/442420001_sd.pdf"
+    },
+    {
+      title: "Molex 442420005 exact CAD preview",
+      url: "https://www.molex.com/content/dam/molex/molex-dot-com/products/automated/en-us/3dcadmodelspdf/442/44242/442420005.pdf"
     },
     { title: "BP-010 board boundary", url: "src/bench-prototype-contract.ts" },
     { title: "BP-103 seven-channel analog architecture", url: "src/bench-prototype-seven-channel-analog.ts" }
@@ -1356,14 +1438,25 @@ export function validateBenchPrototypeFixtureHarness(value: unknown): true {
     connector.continuityMap.slice(7).some((entry) => !entry.expected.startsWith("open;")) ||
     contract.evidence.sampleFit !== "open" ||
     contract.evidence.harnessContinuity !== "open" ||
-    contract.evidence.manufacturerDrawingDiscovery.status !== "identified-not-hash-acquired" ||
-    contract.evidence.manufacturerDrawingDiscovery.candidates.some(
-      (candidate) =>
+    contract.evidence.manufacturerDrawingDiscovery.status !== "hash-bound" ||
+    contract.evidence.manufacturerDrawingDiscovery.candidates.some((candidate) => {
+      const artifacts = bp104MolexArtifacts[candidate.mpn]
+      return (
         candidate.sourceKind !== "series-drawing" ||
         !candidate.includesExactMpnInMaterialTable ||
-        candidate.retainedAsset !== null ||
-        candidate.contentSha256 !== null
-    ) ||
+        candidate.retainedAsset !== artifacts.drawing.path ||
+        candidate.contentSha256 !== artifacts.drawing.sha256 ||
+        candidate.retrievalState !== "official-bytes-retained-and-hash-bound" ||
+        candidate.cadSourceKind !== artifacts.cad.sourceKind ||
+        candidate.cadSourceUrl !== artifacts.cad.sourceUrl ||
+        candidate.cadRetainedAsset !== artifacts.cad.path ||
+        candidate.cadContentSha256 !== artifacts.cad.sha256 ||
+        candidate.cadRetrievalState !==
+          (artifacts.cad.path === null
+            ? "not-acquired-pattern-probe-returned-404"
+            : "official-bytes-retained-and-hash-bound")
+      )
+    }) ||
     contract.authority.sampleFitApproved ||
     contract.authority.continuityVerified ||
     contract.connector.sampleFitProcedure.status !== "unresolved"

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   benchPrototypeFixtureHarness,
@@ -538,7 +540,7 @@ describe("BP-104 seven-channel fixture harness", () => {
     expect(() => validateBenchPrototypeFixtureHarness(accessor)).toThrow(RangeError)
   })
 
-  it("keeps the canonical graph immutable and all physical evidence open", () => {
+  it("keeps retained manufacturer artifacts hash-bound while physical evidence stays open", () => {
     expect(Object.isFrozen(benchPrototypeFixtureHarness)).toBe(true)
     expect(Object.isFrozen(benchPrototypeFixtureHarness.connector)).toBe(true)
     expect(Object.isFrozen(benchPrototypeFixtureHarness.connector.pinMap)).toBe(true)
@@ -550,7 +552,7 @@ describe("BP-104 seven-channel fixture harness", () => {
       strainRelief: "open"
     })
     expect(benchPrototypeFixtureHarness.evidence.manufacturerDrawingDiscovery).toMatchObject({
-      status: "identified-not-hash-acquired",
+      status: "hash-bound",
       candidates: [
         {
           mpn: "43045-1200",
@@ -558,9 +560,14 @@ describe("BP-104 seven-channel fixture harness", () => {
           includesExactMpnInMaterialTable: true,
           materialTableScope: "12-circuit row, finish A, material number 43045-1200",
           sourceUrl: expect.stringContaining("430450600_sd.pdf"),
-          retainedAsset: null,
-          contentSha256: null,
-          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+          retainedAsset: "docs/evidence/bp-104/assets/43045-1200-drawing.pdf",
+          contentSha256: "571c8a381be263cf8f92b064fe18dbc6ce6161e8cb2e931d186e8280b9f8338a",
+          retrievalState: "official-bytes-retained-and-hash-bound",
+          cadSourceKind: "exact-mpn-cad-drawing-pdf",
+          cadSourceUrl: expect.stringContaining("3dcadmodelspdf/430/43045/430451200.pdf"),
+          cadRetainedAsset: "docs/evidence/bp-104/assets/43045-1200-cad-preview.pdf",
+          cadContentSha256: "7ec4bed5fa8de35dbcf15486eea86062f9baaf8cdd2bfc0f4d2126a5d68f65fa",
+          cadRetrievalState: "official-bytes-retained-and-hash-bound"
         },
         {
           mpn: "43025-1200",
@@ -568,9 +575,14 @@ describe("BP-104 seven-channel fixture harness", () => {
           includesExactMpnInMaterialTable: true,
           materialTableScope: "12-position row, material number 43025-1200",
           sourceUrl: expect.stringContaining("430250400_sd.pdf"),
-          retainedAsset: null,
-          contentSha256: null,
-          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+          retainedAsset: "docs/evidence/bp-104/assets/43025-1200-drawing.pdf",
+          contentSha256: "3fa78847433b382fa07609fb9f44b5e8b017804b9b491250dc493eef9e029e28",
+          retrievalState: "official-bytes-retained-and-hash-bound",
+          cadSourceKind: "exact-mpn-cad-drawing-pdf",
+          cadSourceUrl: expect.stringContaining("3dcadmodelspdf/430/43025/430251200.pdf"),
+          cadRetainedAsset: "docs/evidence/bp-104/assets/43025-1200-cad-preview.pdf",
+          cadContentSha256: "57a49568309fb94161814f16e2544c6c096fd2c47c09536367bbbaf943b7680c",
+          cadRetrievalState: "official-bytes-retained-and-hash-bound"
         },
         {
           mpn: "43030-0007",
@@ -578,9 +590,14 @@ describe("BP-104 seven-channel fixture harness", () => {
           includesExactMpnInMaterialTable: true,
           materialTableScope: "20-24 AWG, form A, loose terminal row, material number 43030-0007",
           sourceUrl: expect.stringContaining("430300003_sd.pdf"),
-          retainedAsset: null,
-          contentSha256: null,
-          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+          retainedAsset: "docs/evidence/bp-104/assets/43030-0007-drawing.pdf",
+          contentSha256: "864e37707afed617ce5155661b9bbddd29bf10cae3d64185a34c71782574307b",
+          retrievalState: "official-bytes-retained-and-hash-bound",
+          cadSourceKind: "not-acquired-pattern-probe-returned-404",
+          cadSourceUrl: null,
+          cadRetainedAsset: null,
+          cadContentSha256: null,
+          cadRetrievalState: "not-acquired-pattern-probe-returned-404"
         },
         {
           mpn: "44242-0005",
@@ -588,9 +605,14 @@ describe("BP-104 seven-channel fixture harness", () => {
           includesExactMpnInMaterialTable: true,
           materialTableScope: "12-circuit test-plug row, material number 44242-0005",
           sourceUrl: expect.stringContaining("442420001_sd.pdf"),
-          retainedAsset: null,
-          contentSha256: null,
-          retrievalState: "official-url-verified-but-local-bytes-unavailable"
+          retainedAsset: "docs/evidence/bp-104/assets/44242-0005-drawing.pdf",
+          contentSha256: "c39b30b917e9beda545daa3ab00ff5f3ba5f27839d142edf035303dd8eb62eef",
+          retrievalState: "official-bytes-retained-and-hash-bound",
+          cadSourceKind: "exact-mpn-cad-drawing-pdf",
+          cadSourceUrl: expect.stringContaining("3dcadmodelspdf/442/44242/442420005.pdf"),
+          cadRetainedAsset: "docs/evidence/bp-104/assets/44242-0005-cad-preview.pdf",
+          cadContentSha256: "a7a9a9b236ba687c8ee3835a16120942f97742e61413c036513b8da7c7d3d84f",
+          cadRetrievalState: "official-bytes-retained-and-hash-bound"
         }
       ]
     })
@@ -607,5 +629,52 @@ describe("BP-104 seven-channel fixture harness", () => {
       releaseState: "deny"
     })
     expect(benchPrototypeFixtureHarness.fabricationDisposition).toBe("DENY")
+  })
+
+  it("verifies retained Molex PDF bytes against the executable SHA-256 bindings", () => {
+    for (const candidate of benchPrototypeFixtureHarness.evidence.manufacturerDrawingDiscovery.candidates) {
+      expect(candidate.retainedAsset).not.toBeNull()
+      expect(candidate.contentSha256).not.toBeNull()
+      if (candidate.retainedAsset === null || candidate.contentSha256 === null) continue
+      const drawingBytes = readFileSync(new URL(`../${candidate.retainedAsset}`, import.meta.url))
+      expect(drawingBytes.subarray(0, 5).toString()).toBe("%PDF-")
+      expect(createHash("sha256").update(drawingBytes).digest("hex")).toBe(candidate.contentSha256)
+
+      if (candidate.cadRetainedAsset === null || candidate.cadContentSha256 === null) {
+        expect(candidate.cadSourceKind).toBe("not-acquired-pattern-probe-returned-404")
+        continue
+      }
+      const cadBytes = readFileSync(new URL(`../${candidate.cadRetainedAsset}`, import.meta.url))
+      expect(cadBytes.subarray(0, 5).toString()).toBe("%PDF-")
+      expect(createHash("sha256").update(cadBytes).digest("hex")).toBe(candidate.cadContentSha256)
+    }
+  })
+
+  it("fails closed if a retained Molex drawing or CAD binding is changed", () => {
+    const drawingDigestSubstitution = structuredClone(benchPrototypeFixtureHarness)
+    Object.assign(drawingDigestSubstitution.evidence.manufacturerDrawingDiscovery.candidates[0], {
+      contentSha256: "a".repeat(64)
+    })
+    expect(() => validateBenchPrototypeFixtureHarness(drawingDigestSubstitution)).toThrow(RangeError)
+
+    const cadPathSubstitution = structuredClone(benchPrototypeFixtureHarness)
+    Object.assign(cadPathSubstitution.evidence.manufacturerDrawingDiscovery.candidates[0], {
+      cadRetainedAsset: "docs/evidence/bp-104/assets/forged.pdf"
+    })
+    expect(() => validateBenchPrototypeFixtureHarness(cadPathSubstitution)).toThrow(RangeError)
+
+    const missingCadBytes = structuredClone(benchPrototypeFixtureHarness)
+    Object.assign(missingCadBytes.evidence.manufacturerDrawingDiscovery.candidates[0], {
+      cadRetainedAsset: null,
+      cadContentSha256: null,
+      cadRetrievalState: "official-url-verified-but-local-bytes-unavailable"
+    })
+    expect(() => validateBenchPrototypeFixtureHarness(missingCadBytes)).toThrow(RangeError)
+
+    const unpublishedCadUrl = structuredClone(benchPrototypeFixtureHarness)
+    Object.assign(unpublishedCadUrl.evidence.manufacturerDrawingDiscovery.candidates[2], {
+      cadSourceUrl: "https://www.molex.com/unverified-cad"
+    })
+    expect(() => validateBenchPrototypeFixtureHarness(unpublishedCadUrl)).toThrow(RangeError)
   })
 })
