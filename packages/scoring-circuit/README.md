@@ -13,7 +13,7 @@ manifest as `dist/critical-part-readiness.json` and refuses invalid approval cla
 The current generated `dist` board remains retained multi-assembly architecture evidence. It is not the canonical
 one-board bench schematic or PCB described by the active prototype backlog.
 
-Read `docs/bench-prototype-plan.md` for the active one-board prototype backlog, dependency graph, and physical-test
+Read `docs/esp32-prototype-backlog.md` for the active one-board prototype backlog, dependency graph, and physical-test
 acceptance evidence. It keeps the exact STM32, ESP32-S3, isolation, and W5500 Ethernet silicon while deferring the
 enclosure and factory-optimized implementation. The read-only LLM review workflows are documented in `judges/README.md`.
 The encrypted IR referee remote is an in-scope pre-prototype requirement defined by

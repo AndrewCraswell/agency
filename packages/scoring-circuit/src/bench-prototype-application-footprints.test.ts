@@ -715,7 +715,7 @@ describe("BP-033 application footprint closure ledger", () => {
       reference: "U_IR",
       artifactKind: "bp146-tsop38438-project-footprint",
       artworkModule: "src/bench-prototype-ir-receiver-project-footprint.tsx",
-      reviewDocument: "docs/bench-prototype-plan.md#bp-146",
+      reviewDocument: "docs/esp32-prototype-backlog.md#bp-126",
       sourceArtifactPath: "docs/evidence/bp-146/vishay-82491-tsop382-tsop384-datasheet.pdf",
       sourceSha256: "5F81C36AA02E9901E51C749D03AEE75A23A29B8195B30BF1CBA95F536C865074",
       reviewState: "root-reviewed-review-input",

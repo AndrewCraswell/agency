@@ -12,7 +12,7 @@ software-contract evidence only.
 
 This contract applies the terms in [the scoring glossary](scoring-glossary.md), the STM32/ESP32 authority boundary in
 [the processor fault-containment contract](processor-fault-containment-contract.md), and the intended isolated
-processor domains in [the bench prototype plan](../../../packages/scoring-circuit/docs/bench-prototype-plan.md).
+processor domains in [the prototype backlog](../../../packages/scoring-circuit/docs/esp32-prototype-backlog.md).
 The STM32G474 and ESP32-S3 allocation audits are candidate allocation evidence only. They do not prove the reset,
 power, isolator, driver, or persistence paths described here.
 

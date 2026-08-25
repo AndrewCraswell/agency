@@ -12,7 +12,7 @@ This contract covers the scoring apparatus, its two processor domains, isolated 
 flow, firmware delivery, and event records. It is read with the [device delivery plan](device-delivery-plan.md),
 [processor fault-containment contract](processor-fault-containment-contract.md), [transport-frame
 contract](transport-frame-contract.md), [power and reset-state contract](power-reset-state-contract.md), and
-[decision-record contract](decision-record-contract.md). The [bench prototype plan](../../../packages/scoring-circuit/docs/bench-prototype-plan.md),
+[decision-record contract](decision-record-contract.md). The [prototype backlog](../../../packages/scoring-circuit/docs/esp32-prototype-backlog.md),
 [candidate ESP32 allocation](../../../packages/scoring-circuit/docs/esp32-pin-allocation.md), and [candidate STM32
 allocation](../../../packages/scoring-circuit/docs/stm32-pin-allocation.md) are design inputs, not proof that hardware
 paths exist.

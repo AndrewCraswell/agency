@@ -23,7 +23,7 @@ const roleRubric =
 const prompt = `You are the ${role} judge for a premium competition fencing scoring apparatus.
 
 Review these repository files in read-only mode:
-- packages/scoring-circuit/docs/bench-prototype-plan.md
+- packages/scoring-circuit/docs/esp32-prototype-backlog.md
 - packages/scoring-circuit/src/component-decisions.ts
 - apps/scoring/src/device.ts
 - apps/scoring/src/device.test.ts

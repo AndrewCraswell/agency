@@ -27,7 +27,7 @@ are the [STM32 allocation](../../../packages/scoring-circuit/docs/stm32-pin-allo
 [connector CAD audit](../../../packages/scoring-circuit/docs/connector-cad-verification.md),
 [reel-socket study](../../../packages/scoring-circuit/docs/reel-socket-selection.md),
 [critical-part readiness](../../../packages/scoring-circuit/src/part-readiness.ts),
-and [bench prototype plan](../../../packages/scoring-circuit/docs/bench-prototype-plan.md).
+and [prototype backlog](../../../packages/scoring-circuit/docs/esp32-prototype-backlog.md).
 
 Use these stage codes in the ledger:
 

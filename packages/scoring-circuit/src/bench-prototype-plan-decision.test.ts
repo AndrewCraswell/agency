@@ -7,7 +7,7 @@ import {
   validateBenchPrototypePlanDecision
 } from "./bench-prototype-plan-decision.js"
 
-const canonicalPlan = readFileSync(new URL("../docs/bench-prototype-plan.md", import.meta.url), "utf8")
+const canonicalPlan = readFileSync(new URL("../docs/esp32-prototype-backlog.md", import.meta.url), "utf8")
 const taskIdsFromCanonicalPlan = [...canonicalPlan.matchAll(/^\|\s*`(BP-\d+)`\s*\|/gmu)].map((match) => match[1])
 
 describe("BP-000 bench prototype plan decision", () => {

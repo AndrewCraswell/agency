@@ -1048,7 +1048,7 @@ const projectFootprintMappings = [
     artifactKind:
       benchPrototypeIrReceiverFootprintEvidence.candidateFootprintReview.projectFootprintArtifact.geometry.artifactKind,
     artworkModule: "src/bench-prototype-ir-receiver-project-footprint.tsx",
-    reviewDocument: "docs/bench-prototype-plan.md#bp-146",
+    reviewDocument: "docs/esp32-prototype-backlog.md#bp-126",
     sourceArtifactPath: benchPrototypeIrReceiverFootprintEvidence.sources[0].retainedArtifactPath,
     sourceSha256: benchPrototypeIrReceiverFootprintEvidence.sources[0].sha256,
     reviewState: "root-reviewed-review-input" as const,
@@ -1485,7 +1485,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
     contract.projectFootprintMappings[28]?.reference !== "U_IR" ||
     contract.projectFootprintMappings[28]?.artifactKind !== "bp146-tsop38438-project-footprint" ||
     contract.projectFootprintMappings[28]?.artworkModule !== "src/bench-prototype-ir-receiver-project-footprint.tsx" ||
-    contract.projectFootprintMappings[28]?.reviewDocument !== "docs/bench-prototype-plan.md#bp-146" ||
+    contract.projectFootprintMappings[28]?.reviewDocument !== "docs/esp32-prototype-backlog.md#bp-126" ||
     contract.projectFootprintMappings[28]?.sourceArtifactPath !==
       "docs/evidence/bp-146/vishay-82491-tsop382-tsop384-datasheet.pdf" ||
     contract.projectFootprintMappings[28]?.sourceSha256 !==

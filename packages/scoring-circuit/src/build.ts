@@ -9,7 +9,8 @@ import { convertCircuitJsonToPcbSvg, convertCircuitJsonToSchematicSvg } from "ci
 import { build as bundle } from "esbuild"
 import { createElement } from "react"
 import { Circuit } from "tscircuit"
-import { componentDecisions } from "./component-decisions.js"
+import { benchPrototypeBom } from "./bench-prototype-bom.js"
+import { createReadinessReport, resolveSimulatorPresentationUrl } from "./board-artifact.js"
 import ScoringCircuit from "./index.circuit.js"
 import {
   criticalPartReadiness,
@@ -18,6 +19,8 @@ import {
 } from "./part-readiness.js"
 
 type PlatformPartsEngine = NonNullable<Parameters<InstanceType<typeof Circuit>["setPlatform"]>[0]["partsEngine"]>
+
+const simulatorPresentationUrl = resolveSimulatorPresentationUrl(process.env)
 
 const partsEngine = {
   fetchPartCircuitJson: async (parameters) => {
@@ -98,54 +101,69 @@ const interactiveViewerBuild = await bundle({
 })
 const interactiveViewerModule = interactiveViewerBuild.outputFiles[0]?.text
 if (!interactiveViewerModule) throw new Error("Interactive 3D viewer bundle was not generated")
-const bomHeader = ["category", "manufacturer", "mpn", "lifecycle", "purpose", "qualification", "manufacturer_url"]
+const bomHeader = [
+  "reference",
+  "function",
+  "disposition",
+  "quantity",
+  "manufacturer",
+  "mpn",
+  "lifecycle",
+  "package",
+  "notes",
+  "source_url"
+]
 const quoteCsv = (value: string) => `"${value.replaceAll('"', '""')}"`
 const bomCsv = [
   bomHeader.join(","),
-  ...componentDecisions.map((component) =>
+  ...benchPrototypeBom.rows.map((component) =>
     [
-      component.category,
-      component.manufacturer,
-      component.mpn,
-      component.lifecycle,
-      component.purpose,
-      component.qualification,
-      component.manufacturerUrl
+      component.reference,
+      component.function,
+      component.disposition,
+      String(component.quantity),
+      component.manufacturer ?? "",
+      component.mpn ?? "",
+      component.lifecycle ?? "",
+      component.package ?? "",
+      component.notes,
+      component.source?.url ?? ""
     ]
       .map(quoteCsv)
       .join(",")
   )
 ].join("\n")
-const readiness = {
-  canonicalBenchPrototype: false,
-  fabricationReady: false,
-  generatedAt: new Date().toISOString(),
-  modelAuthority: "retained-multi-assembly-evidence",
-  modelPurpose:
-    "Retained multi-assembly architecture, constrained placement, connector topology, and isolation review; not the canonical one-board bench prototype",
-  retainedArchitectureRouting: {
-    connectionCount,
-    routeCount,
-    unresolvedConnectionCount
-  },
-  partsResolution: {
-    engine: "JLC parts engine with EasyEDA footprint and CAD import",
-    criticalParts: partReadinessSummary,
-    externallySourcedCadModelCount,
-    renderedCadComponentCount,
-    resolvedSupplierPartCount,
-    status:
-      "Rendered supplier geometry is a candidate aid only; manufacturer evidence and production approval are tracked separately"
-  },
-  openGates: [
-    "Complete and characterize the three-weapon analog front end",
-    "Select every connector, protection device, passive, magnetics part, and power inductor",
-    "Complete the exact bench-prototype pin maps and decoupling networks",
-    "Run schematic ERC and independent mixed-signal review",
-    "Select the prototype four- or six-layer stack-up, route the board, and pass PCB DRC",
-    "Complete the BP-300 through BP-403 schematic, layout, output, and independent prototype-order reviews"
-  ]
-} as const
+const readiness = createReadinessReport({
+  circuitJson,
+  criticalPartReadiness,
+  readiness: {
+    canonicalBenchPrototype: true,
+    fabricationReady: false,
+    modelAuthority: "canonical-clean-sheet-scaffold",
+    modelPurpose:
+      "Canonical source, hierarchy, provisional outline, and mounting-hole scaffold for the clean-sheet ESP32-S3 prototype; electrical integration and fabrication remain denied",
+    retainedArchitectureRouting: {
+      connectionCount,
+      routeCount,
+      unresolvedConnectionCount
+    },
+    partsResolution: {
+      engine: "JLC parts engine with EasyEDA footprint and CAD import",
+      criticalParts: partReadinessSummary,
+      externallySourcedCadModelCount,
+      renderedCadComponentCount,
+      resolvedSupplierPartCount,
+      status:
+        "Rendered supplier geometry is a candidate aid only; manufacturer evidence and production approval are tracked separately"
+    },
+    openGates: [
+      "Complete BP-321 through BP-335 clean-sheet schematic sheets, integration, and review",
+      "Complete BP-420 through BP-435 stack-up, placement, routing, DRC, and release reviews",
+      "Close every unresolved component selection and footprint gate before fabrication",
+      "Run the physical bring-up and acceptance work tracked by BP-620 through BP-633"
+    ]
+  } as const
+})
 const previewHtml = `<!doctype html>
 <html lang="en">
 <head>
@@ -206,17 +224,17 @@ const previewHtml = `<!doctype html>
 </head>
 <body>
   <h1>Competition scoring apparatus board model</h1>
-  <p class="warning"><strong>Retained architecture evidence only.</strong> This generated model is not the canonical one-board bench schematic and is not ready for fabrication. Follow the bench prototype plan and BP-300 through BP-403 before ordering hardware.</p>
+  <p class="warning"><strong>Canonical clean-sheet scaffold only.</strong> This model establishes the new board source, outline, hierarchy, and mounting datum. It has no integrated electrical design and is not ready for fabrication. Complete BP-321 through BP-435 before ordering hardware.</p>
   <ul class="metrics" aria-label="Prototype routing summary">
-    <li><strong>${routeCount}</strong> retained architecture routes</li>
+    <li><strong>${routeCount}</strong> scaffold routes</li>
     <li><strong>${unresolvedConnectionCount}</strong> unresolved connections</li>
-    <li><strong>4</strong> functional placement zones</li>
+    <li><strong>12</strong> planned schematic sheets</li>
     <li><strong>${resolvedSupplierPartCount}</strong> candidate supplier matches</li>
     <li><strong>${renderedCadComponentCount}</strong> rendered CAD bodies</li>
     <li><strong>${partReadinessSummary.manufacturerVerifiedCad}</strong> manufacturer-verified critical CAD models</li>
     <li><strong>${partReadinessSummary.productionApproved}</strong> fabrication-approved critical parts</li>
   </ul>
-  <p class="resources"><a href="../docs/bench-prototype-plan.md">Bench prototype plan</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="critical-part-readiness.json">Critical-part evidence</a><a href="bom.csv">Component decisions</a><a href="http://127.0.0.1:4178/">Bout test simulator</a></p>
+  <p class="resources"><a href="../docs/esp32-prototype-backlog.md">Prototype backlog</a><a href="../docs/clean-sheet-board-architecture.md">Clean-sheet architecture</a><a href="../docs/analog-front-end.md">Analog front-end</a><a href="../docs/fie-modern-power-proposal.md">Modern power proposal</a><a href="analog-sim/summary.json">Simulation summary</a><a href="readiness-report.json">Readiness report</a><a href="critical-part-readiness.json">Critical-part evidence</a><a href="bom.csv">Prototype baseline BOM</a><a href="${simulatorPresentationUrl}">Bout test simulator</a></p>
   <div class="tabs" role="tablist" aria-label="Circuit views">
     <button id="tab-pcb" role="tab" aria-selected="true" aria-controls="view-pcb" tabindex="0">PCB</button>
     <button id="tab-schematic" role="tab" aria-selected="false" aria-controls="view-schematic" tabindex="-1">Schematic</button>
@@ -243,29 +261,36 @@ const previewHtml = `<!doctype html>
     </section>
     <section id="view-io" role="tabpanel" aria-labelledby="tab-io" hidden>
       <figure>
-        <figcaption>Replaceable, chassis-supported connector modules. Cable insertion loads are carried by the enclosure, not PCB solder joints.</figcaption>
+        <figcaption>Clean-sheet prototype external interfaces. Weapon-cable geometry remains unmeasured and no production socket is selected.</figcaption>
         <div class="io-assembly">
           <article class="io-module">
-            <h2>Left reel</h2>
-            <p>Three panel-mounted 4 mm banana sockets</p>
-            <div class="socket-row" aria-label="Left reel banana sockets A, B, and C">
+            <h2>Left weapon cable</h2>
+            <p>Three labeled plated-through solder landings with separate strain relief</p>
+            <div class="socket-row" aria-label="Left weapon cable solder landings A, B, and C">
               <span class="banana-socket"><span aria-hidden="true"></span><span>A</span></span>
               <span class="banana-socket"><span aria-hidden="true"></span><span>B</span></span>
               <span class="banana-socket"><span aria-hidden="true"></span><span>C</span></span>
             </div>
           </article>
           <article class="io-module">
-            <h2>Right reel</h2>
-            <p>Three panel-mounted 4 mm banana sockets</p>
-            <div class="socket-row" aria-label="Right reel banana sockets A, B, and C">
+            <h2>Right weapon cable</h2>
+            <p>Three labeled plated-through solder landings with separate strain relief</p>
+            <div class="socket-row" aria-label="Right weapon cable solder landings A, B, and C">
               <span class="banana-socket"><span aria-hidden="true"></span><span>A</span></span>
               <span class="banana-socket"><span aria-hidden="true"></span><span>B</span></span>
               <span class="banana-socket"><span aria-hidden="true"></span><span>C</span></span>
+            </div>
+          </article>
+          <article class="io-module">
+            <h2>Piste reference</h2>
+            <p>One separate labeled plated-through landing and probe point</p>
+            <div class="socket-row" aria-label="Piste reference solder landing">
+              <span class="banana-socket"><span aria-hidden="true"></span><span>PISTE</span></span>
             </div>
           </article>
           <article class="io-module">
             <h2>Communications</h2>
-            <p>Replaceable high-cycle connector module</p>
+            <p>Required board interfaces</p>
             <div class="port-row">
               <span class="port-model"><span class="rj45-model" aria-hidden="true"></span><span>Ethernet RJ45</span></span>
               <span class="port-model"><span class="usb-c-model" aria-hidden="true"></span><span>USB-C PD power and service data</span></span>
@@ -315,7 +340,7 @@ await mkdir("dist", { recursive: true })
 await Promise.all([
   writeFile("dist/board.glb", new Uint8Array(boardGlb)),
   writeFile("dist/bom.csv", `${bomCsv}\n`),
-  writeFile("dist/bom.json", `${JSON.stringify(componentDecisions, null, 2)}\n`),
+  writeFile("dist/bom.json", `${JSON.stringify(benchPrototypeBom, null, 2)}\n`),
   writeFile("dist/circuit.json", `${JSON.stringify(circuitJson, null, 2)}\n`),
   writeFile("dist/index.html", previewHtml),
   writeFile("dist/interactive-3d-viewer.js", interactiveViewerModule),

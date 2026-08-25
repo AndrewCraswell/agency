@@ -8,108 +8,36 @@
 
 export const benchPrototypePlanTaskIds = [
   "BP-000",
-  "BP-010",
   "BP-020",
-  "BP-030",
   "BP-040",
   "BP-050",
-  "BP-051",
-  "BP-052",
-  "BP-053",
-  "BP-054",
-  "BP-055",
-  "BP-056",
-  "BP-057",
   "BP-100",
-  "BP-101",
-  "BP-102",
-  "BP-103",
   "BP-104",
-  "BP-105",
-  "BP-106",
-  "BP-107",
   "BP-108",
-  "BP-109",
-  "BP-110",
-  "BP-111",
   "BP-120",
-  "BP-121",
-  "BP-122",
-  "BP-123",
-  "BP-124",
-  "BP-125",
   "BP-126",
-  "BP-127",
-  "BP-128",
   "BP-140",
-  "BP-141",
-  "BP-142",
   "BP-143",
-  "BP-144",
-  "BP-145",
-  "BP-146",
-  "BP-147",
-  "BP-148",
-  "BP-149",
   "BP-320",
   "BP-321",
-  "BP-322",
   "BP-323",
-  "BP-324",
-  "BP-325",
-  "BP-326",
-  "BP-327",
   "BP-328",
-  "BP-329",
-  "BP-330",
-  "BP-331",
-  "BP-332",
   "BP-333",
-  "BP-334",
-  "BP-335",
   "BP-420",
-  "BP-421",
-  "BP-422",
-  "BP-423",
-  "BP-424",
-  "BP-425",
   "BP-426",
   "BP-427",
-  "BP-428",
-  "BP-429",
   "BP-430",
-  "BP-431",
   "BP-432",
-  "BP-433",
   "BP-434",
-  "BP-435",
-  "BP-520",
   "BP-521",
   "BP-522",
-  "BP-523",
   "BP-524",
-  "BP-525",
   "BP-526",
-  "BP-527",
-  "BP-528",
-  "BP-529",
-  "BP-530",
-  "BP-531",
   "BP-532",
-  "BP-533",
-  "BP-620",
-  "BP-621",
-  "BP-622",
   "BP-623",
-  "BP-624",
   "BP-625",
-  "BP-626",
-  "BP-627",
   "BP-628",
-  "BP-629",
-  "BP-630",
   "BP-631",
-  "BP-632",
   "BP-633"
 ] as const
 
@@ -166,7 +94,7 @@ const laneDefinitions = [
 
 function laneForTask(taskId: BenchPrototypeTaskId): BenchPrototypeLaneId {
   const numericId = Number.parseInt(taskId.slice(3), 10)
-  if (taskId === "BP-010" || (numericId >= 420 && numericId <= 435)) return "E"
+  if (numericId >= 420 && numericId <= 435) return "E"
   if (numericId >= 100 && numericId <= 111) return "B"
   if (numericId >= 120 && numericId <= 128) return "C"
   if (numericId >= 140 && numericId <= 149) return "D"
@@ -211,8 +139,8 @@ const assignments = taskAssignments.map(([taskId, laneId]) => {
 const benchPrototypePlanDecisionDefinition = {
   artifactKind: "bench-prototype-plan-decision",
   workUnit: "BP-000",
-  canonicalPlan: "packages/scoring-circuit/docs/bench-prototype-plan.md",
-  revision: "BP-000.2",
+  canonicalPlan: "packages/scoring-circuit/docs/esp32-prototype-backlog.md",
+  revision: "BP-000.3",
   decision: "approved-plan-revision",
   approval: {
     preparedBy: "implementation-agent",
@@ -271,8 +199,8 @@ export function validateBenchPrototypePlanDecision(input: unknown): true {
   if (
     input.artifactKind !== "bench-prototype-plan-decision" ||
     input.workUnit !== "BP-000" ||
-    input.canonicalPlan !== "packages/scoring-circuit/docs/bench-prototype-plan.md" ||
-    input.revision !== "BP-000.2" ||
+    input.canonicalPlan !== "packages/scoring-circuit/docs/esp32-prototype-backlog.md" ||
+    input.revision !== "BP-000.3" ||
     input.decision !== "approved-plan-revision"
   ) {
     throw new RangeError("BP-000 decision metadata drifted")
