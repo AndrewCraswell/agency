@@ -181,7 +181,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
   })
 
   it("maps the seven U_ESD references to the TPD4E05 review inputs without opening release authority", () => {
-    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(6)
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(7)
     expect(
       benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
         (mapping) => mapping.mappingId === "bp031-tpd4e05u06-dqa-project-footprint"
@@ -266,6 +266,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
             record.sourceBaseReference !== "U_SAR" &&
             record.sourceBaseReference !== "U_OVP_BUFFER" &&
             record.sourceBaseReference !== "U_REF" &&
+            record.sourceBaseReference !== "C_SAR" &&
             !["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference)
         )
         .every((record) => record.reviewEvidenceMappingId === null)
@@ -582,6 +583,45 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     ).toBe(true)
   })
 
+  it("maps the seven C_SAR references to root-reviewed KEMET 0603 evidence without opening release authority", () => {
+    expect(
+      benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+        (mapping) => mapping.mappingId === "bp031-kemet-c0603c102j5gactu-project-footprint"
+      )
+    ).toMatchObject({
+      mappingId: "bp031-kemet-c0603c102j5gactu-project-footprint",
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      exactMpn: "C0603C102J5GACTU",
+      exactPackage: "0603",
+      affectedReferences: ["C_SAR_1", "C_SAR_2", "C_SAR_3", "C_SAR_4", "C_SAR_5", "C_SAR_6", "C_SAR_7"],
+      renderedArtwork: {
+        sha256: "F88A68AD1C2F808FD5CF38F97A26B843BB68FAE50A046250385E2E55A7C2CF84",
+        authority: "deny"
+      },
+      orientation: {
+        state: "root-reviewed-non-polar-design-inference",
+        polarity: "non-polar",
+        authority: "deny"
+      },
+      acceptance: {
+        projectGeometryAccepted: true,
+        nonPolarOrientationReviewed: true,
+        cadImportAccepted: false,
+        boardFitAccepted: false,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      }
+    })
+    const records = benchPrototypeAnalogFootprintClosure.records.filter(
+      (record) => record.sourceBaseReference === "C_SAR"
+    )
+    expect(records).toHaveLength(7)
+    expect(
+      records.every((record) => record.reviewEvidenceMappingId === "bp031-kemet-c0603c102j5gactu-project-footprint")
+    ).toBe(true)
+  })
+
   it("maps all 28 selected Vishay CRCW references to root-reviewed series geometry without opening release authority", () => {
     const mapping = benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
       (candidate) => candidate.mappingId === "bp031-vishay-crcw-selected-resistor-footprint-evidence"
@@ -750,6 +790,11 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       "forged REF5025 review mapping",
       (copy: typeof benchPrototypeAnalogFootprintClosure) =>
         Reflect.set(copy.reviewEvidenceMappings[5], "exactMpn", "REF5050AQDRQ1")
+    ],
+    [
+      "forged KEMET C_SAR review mapping",
+      (copy: typeof benchPrototypeAnalogFootprintClosure) =>
+        Reflect.set(copy.reviewEvidenceMappings[6], "exactMpn", "C0603C102J5RACTU")
     ]
   ])("rejects %s", (_name, mutate) => {
     const copy = structuredClone(benchPrototypeAnalogFootprintClosure)
