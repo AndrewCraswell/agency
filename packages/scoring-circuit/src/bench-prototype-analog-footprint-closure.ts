@@ -22,6 +22,10 @@ import {
   validateBenchPrototypeSevenChannelAnalog
 } from "./bench-prototype-seven-channel-analog.js"
 import {
+  bp031Ada4177R8FootprintEvidence,
+  validateBp031Ada4177R8FootprintEvidence
+} from "./bp031-ada4177-r8-footprint-evidence.js"
+import {
   bp031Ads8881IdgsDgsFootprintCandidate,
   validateBp031Ads8881IdgsDgsFootprintCandidate
 } from "./bp031-ads8881idgs-dgs-footprint-candidate.js"
@@ -221,6 +225,7 @@ function emptyOrientationEvidence(): FootprintOrientationEvidence {
 const tpd4e05u06ReviewEvidenceMappingId = "bp031-tpd4e05u06-dqa-project-footprint"
 const tmux1112PwrPwReviewEvidenceMappingId = "bp031-tmux1112pwr-pw-footprint-evidence"
 const ads8881IdgsDgsReviewEvidenceMappingId = "bp031-ads8881idgs-dgs-footprint-candidate"
+const ada4177ReviewEvidenceMappingId = "bp031-ada4177-1arz-r8-footprint-evidence"
 
 function createTpd4e05u06ReviewEvidenceMapping() {
   const candidate = bp031Tpd4e05u06DqaProjectFootprintGeometry
@@ -474,6 +479,120 @@ function createAds8881IdgsDgsReviewEvidenceMapping() {
 
 const ads8881IdgsDgsReviewEvidenceMapping = deepFreeze(createAds8881IdgsDgsReviewEvidenceMapping())
 
+function createAda4177ReviewEvidenceMapping() {
+  const candidate = bp031Ada4177R8FootprintEvidence
+  const exactSources = candidate.sources.filter(
+    (source) => source.id === "adi-ada4177-datasheet-rev-e" || source.id === "adi-r-8-package-outline"
+  )
+  const familyLandPatternSource = candidate.sources.find((source) => source.id === "adi-90-0096-s8-land-pattern-rev-m")
+  if (exactSources.length !== 2 || familyLandPatternSource === undefined) {
+    throw new RangeError("BP-031 ADA4177 exact R-8 sources are incomplete")
+  }
+  return {
+    mappingId: ada4177ReviewEvidenceMappingId,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25T10:31:00.000Z",
+    reviewScope:
+      "Root-reviewed exact ADA4177-1ARZ identity, R-8 package drawing, seven-reference mapping, pin-one orientation, and deny-state integrity; the S8 family land pattern remains non-exact, and project geometry, CAD, board fit, release, and fabrication remain unapproved.",
+    artifactKind: candidate.artifactKind,
+    artifactPath: "packages/scoring-circuit/src/bp031-ada4177-r8-footprint-evidence.tsx",
+    workUnit: candidate.workUnit,
+    baseReference: "U_OVP_BUFFER",
+    sourceContract: "BP-103" as const,
+    manufacturer: candidate.manufacturer,
+    exactMpn: candidate.manufacturerPartNumber,
+    exactPackage: "R SOIC-8",
+    role: "over-voltage-tolerant unity buffer",
+    affectedReferences: [
+      "U_OVP_BUFFER_1",
+      "U_OVP_BUFFER_2",
+      "U_OVP_BUFFER_3",
+      "U_OVP_BUFFER_4",
+      "U_OVP_BUFFER_5",
+      "U_OVP_BUFFER_6",
+      "U_OVP_BUFFER_7"
+    ],
+    manufacturerDrawingInputs: {
+      state: "source-controlled-pending-review" as const,
+      exactSources: structuredClone(exactSources),
+      authority: "deny" as const
+    },
+    familyLandPatternInput: {
+      state: "family-reference-only" as const,
+      source: structuredClone(familyLandPatternSource),
+      exactAda4177Approval: candidate.landPatternReconciliation.exactAda4177Approval,
+      authority: "deny" as const
+    },
+    manufacturerCad: {
+      state: candidate.manufacturerCad.state,
+      artifactPath: null,
+      sha256: null,
+      authority: candidate.manufacturerCad.authority,
+      note: candidate.manufacturerCad.note
+    },
+    partnerCad: {
+      availability: candidate.partnerCad.availability,
+      retainedArtifactPath: candidate.partnerCad.retainedArtifactPath,
+      sha256: candidate.partnerCad.sha256,
+      authority: candidate.partnerCad.authority,
+      note: candidate.partnerCad.note
+    },
+    pinOneOrientation: {
+      state: "root-reviewed-r8-drawing-match" as const,
+      sourceId: candidate.pinOneOrientation.sourceId,
+      topViewPinOneDatum: candidate.pinOneOrientation.topViewPinOneDatum,
+      topViewNumbering: candidate.pinOneOrientation.topViewNumbering,
+      projectBoardRotationDegrees: candidate.pinOneOrientation.projectBoardRotationDegrees,
+      projectPinOnePad: {
+        pin: candidate.pinOneOrientation.projectPinOnePad.pin,
+        xMm: candidate.pinOneOrientation.projectPinOnePad.xMm,
+        yMm: candidate.pinOneOrientation.projectPinOnePad.yMm
+      },
+      independentOrientationReview: "root-reviewed" as const,
+      authority: "deny" as const
+    },
+    projectFootprintInput: {
+      state: candidate.projectFootprint.state,
+      geometryAuthority: candidate.projectFootprint.geometryAuthority,
+      padShape: candidate.projectFootprint.padShape,
+      padLengthMm: candidate.projectFootprint.padLengthMm,
+      padWidthMm: candidate.projectFootprint.padWidthMm,
+      padRowCenterSpanMm: candidate.projectFootprint.padRowCenterSpanMm,
+      padPitchMm: candidate.projectFootprint.padPitchMm,
+      pads: structuredClone(candidate.projectFootprint.pads),
+      solderMask: structuredClone(candidate.projectFootprint.solderMask),
+      paste: structuredClone(candidate.projectFootprint.paste),
+      courtyard: structuredClone(candidate.projectFootprint.courtyard),
+      orientationStatus: candidate.projectFootprint.orientationStatus,
+      fabricationAuthority: candidate.projectFootprint.fabricationAuthority,
+      accepted: candidate.projectFootprint.accepted
+    },
+    renderedArtwork: {
+      state: "not-generated" as const,
+      artifactPath: null,
+      generator: null,
+      sha256: null,
+      authority: "deny" as const,
+      note: "The retained ADA4177 candidate has deterministic project geometry but no separately hashed rendered artwork artifact."
+    },
+    acceptance: {
+      packageIdentityReviewed: true as const,
+      packageDrawingReviewed: true as const,
+      referenceMappingReviewed: true as const,
+      familyLandPatternAcceptedForExactMpn: false as const,
+      projectGeometryAccepted: false as const,
+      pinOneOrientationAccepted: true as const,
+      cadImportAccepted: false as const,
+      boardFitAccepted: false as const,
+      fabricationAuthorized: false as const,
+      releaseState: "deny" as const
+    }
+  }
+}
+
+const ada4177ReviewEvidenceMapping = deepFreeze(createAda4177ReviewEvidenceMapping())
+
 function existingFootprintEvidence(mpn: string) {
   const eligibility = manufacturerFootprintEligibility(mpn)
   const ledger = findFootprintReleaseEvidence(mpn)
@@ -621,7 +740,9 @@ function createCellRecord(
           ? ads8881IdgsDgsReviewEvidenceMappingId
           : binding.baseReference === "U_SOURCE_SWITCH"
             ? tmux1112PwrPwReviewEvidenceMappingId
-            : null,
+            : binding.baseReference === "U_OVP_BUFFER"
+              ? ada4177ReviewEvidenceMappingId
+              : null,
     manufacturerDrawing: emptySourceEvidence(),
     manufacturerCad: emptySourceEvidence(),
     artwork: emptyArtworkEvidence(),
@@ -808,7 +929,8 @@ const definition = {
   reviewEvidenceMappings: [
     tpd4e05u06ReviewEvidenceMapping,
     tmux1112PwrPwReviewEvidenceMapping,
-    ads8881IdgsDgsReviewEvidenceMapping
+    ads8881IdgsDgsReviewEvidenceMapping,
+    ada4177ReviewEvidenceMapping
   ],
   sharedManufacturerSources,
   connectorClosure,
@@ -861,6 +983,9 @@ function assertUpstreamContracts(): void {
   if (validateBp031Ads8881IdgsDgsFootprintCandidate().length !== 0) {
     throw new RangeError("BP-031 ADS8881IDGS project-review candidate drifted")
   }
+  if (validateBp031Ada4177R8FootprintEvidence().length !== 0) {
+    throw new RangeError("BP-031 ADA4177-1ARZ R-8 project-review candidate drifted")
+  }
   if (!sameDataGraph(liveUpstreamSnapshot(), upstreamSnapshot)) {
     throw new RangeError("BP-030, BP-103, BP-104, M4-04, or analog source-part evidence drifted")
   }
@@ -884,9 +1009,13 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
   const ads8881IdgsDgsMapping = contract.reviewEvidenceMappings.find(
     (mapping) => mapping.mappingId === ads8881IdgsDgsReviewEvidenceMappingId
   )
+  const ada4177Mapping = contract.reviewEvidenceMappings.find(
+    (mapping) => mapping.mappingId === ada4177ReviewEvidenceMappingId
+  )
   const expectedTpd4e05u06Mapping = createTpd4e05u06ReviewEvidenceMapping()
   const expectedTmux1112PwrPwMapping = createTmux1112PwrPwReviewEvidenceMapping()
   const expectedAds8881IdgsDgsMapping = createAds8881IdgsDgsReviewEvidenceMapping()
+  const expectedAda4177Mapping = createAda4177ReviewEvidenceMapping()
   const mappedTpd4e05u06Records = cellRecords.filter(
     (record) => record.reviewEvidenceMappingId === tpd4e05u06ReviewEvidenceMappingId
   )
@@ -895,6 +1024,9 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
   )
   const mappedAds8881IdgsDgsRecords = cellRecords.filter(
     (record) => record.reviewEvidenceMappingId === ads8881IdgsDgsReviewEvidenceMappingId
+  )
+  const mappedAda4177Records = cellRecords.filter(
+    (record) => record.reviewEvidenceMappingId === ada4177ReviewEvidenceMappingId
   )
   if (
     cellReferenceBindings.length !== expectedCellReferenceCount ||
@@ -916,16 +1048,19 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     contract.authority.fabricationAuthorized ||
     contract.authority.releaseState !== "deny" ||
     contract.connectorClosure.releaseState !== "deny" ||
-    contract.reviewEvidenceMappings.length !== 3 ||
+    contract.reviewEvidenceMappings.length !== 4 ||
     tpd4e05u06Mapping === undefined ||
     tmux1112PwrPwMapping === undefined ||
     ads8881IdgsDgsMapping === undefined ||
+    ada4177Mapping === undefined ||
     !sameDataGraph(tpd4e05u06Mapping, expectedTpd4e05u06Mapping) ||
     !sameDataGraph(tmux1112PwrPwMapping, expectedTmux1112PwrPwMapping) ||
     !sameDataGraph(ads8881IdgsDgsMapping, expectedAds8881IdgsDgsMapping) ||
+    !sameDataGraph(ada4177Mapping, expectedAda4177Mapping) ||
     mappedTpd4e05u06Records.length !== 7 ||
     mappedTmux1112PwrPwRecords.length !== 7 ||
     mappedAds8881IdgsDgsRecords.length !== 7 ||
+    mappedAda4177Records.length !== 7 ||
     !sameDataGraph(
       mappedTpd4e05u06Records.map((record) => record.reference),
       expectedTpd4e05u06Mapping.affectedReferences
@@ -937,6 +1072,10 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     !sameDataGraph(
       mappedAds8881IdgsDgsRecords.map((record) => record.reference),
       expectedAds8881IdgsDgsMapping.affectedReferences
+    ) ||
+    !sameDataGraph(
+      mappedAda4177Records.map((record) => record.reference),
+      expectedAda4177Mapping.affectedReferences
     ) ||
     cellRecords.some(
       (record) =>
@@ -953,11 +1092,17 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
         (record.sourceBaseReference === "U_SAR") !==
         (record.reviewEvidenceMappingId === ads8881IdgsDgsReviewEvidenceMappingId)
     ) ||
+    cellRecords.some(
+      (record) =>
+        (record.sourceBaseReference === "U_OVP_BUFFER") !==
+        (record.reviewEvidenceMappingId === ada4177ReviewEvidenceMappingId)
+    ) ||
     contract.records.some(
       (record) =>
         record.sourceBaseReference !== "U_ESD" &&
         record.sourceBaseReference !== "U_SOURCE_SWITCH" &&
         record.sourceBaseReference !== "U_SAR" &&
+        record.sourceBaseReference !== "U_OVP_BUFFER" &&
         record.reviewEvidenceMappingId !== null
     ) ||
     contract.records.some(

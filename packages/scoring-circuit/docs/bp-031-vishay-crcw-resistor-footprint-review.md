@@ -52,7 +52,7 @@ bindings:
 | Ledger | Retained source | Per-row binding |
 | --- | --- | --- |
 | M4-04 | `packages/scoring-circuit/src/m4-04-single-channel-coupon.ts` (`2CBA495FC2746C038FB09A13793B1DBF7F7D0B4D8F55D7F748AD2E0E9E12D0E0`) | exact reference, exact MPN, package, `footprintRelease: deny`, root independent drawing review still pending |
-| BP-031 | `packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts` (`B2161E55788503DCD10BB96FDEBB502A1CE6C5D80159B8B5D9E5CC32C970E438`) | `BP-103` replicated row, `BP-102` source subcontract, source base reference, `M4-04:<MPN>` shared source ID, `DNP-unresolved`, PCB eligibility false, release deny |
+| BP-031 | `packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts` (`09446FCDD1D8543C5F97A87DDDF20AADF99054BAB204424FFDF069E8A8C40144`) | `BP-103` replicated row, `BP-102` source subcontract, source base reference, `M4-04:<MPN>` shared source ID, `DNP-unresolved`, PCB eligibility false, release deny |
 
 Focused tests compare all four rows against the canonical BOM, the M4-04
 footprint ledger, and the BP-031 replicated-cell ledger, including reference

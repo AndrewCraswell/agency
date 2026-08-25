@@ -76,3 +76,17 @@ The courtyard and mask/paste values are project review inputs because the
 retained ADI documents do not publish them. `independentOrientationReview` is
 `pending`, `accepted` is `false`, and `fabricationAuthority` is `deny`. The
 component is isolated and is not imported into a board model.
+
+The canonical BP-031 analog-footprint ledger maps this retained
+`ADA4177-1ARZ` review input to `U_OVP_BUFFER_1` through `U_OVP_BUFFER_7` while
+keeping the ledger's manufacturer drawing, CAD, artwork, orientation, PCB,
+schematic, and fabrication authority denied. The source data sheet mentions
+the wider ADA4177 family, including `ADA4177-2`, but no exact
+`ADA4177-2ARUZ` candidate or selected BOM identity is retained; that variant
+is therefore not substituted for the exact `ADA4177-1ARZ` mapping.
+
+Root integration review independently accepted the exact orderable/package,
+R-8 drawing, lower-left pin-one orientation, seven-reference mapping, and
+deny-state integrity. It did not promote the S8 family land pattern to exact
+ADA4177 geometry, and it did not approve CAD, board fit, release, or
+fabrication.

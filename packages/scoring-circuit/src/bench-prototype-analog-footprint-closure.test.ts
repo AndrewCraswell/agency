@@ -181,7 +181,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
   })
 
   it("maps the seven U_ESD references to the TPD4E05 review inputs without opening release authority", () => {
-    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(3)
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(4)
     expect(
       benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
         (mapping) => mapping.mappingId === "bp031-tpd4e05u06-dqa-project-footprint"
@@ -263,7 +263,8 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
           (record) =>
             record.sourceBaseReference !== "U_ESD" &&
             record.sourceBaseReference !== "U_SOURCE_SWITCH" &&
-            record.sourceBaseReference !== "U_SAR"
+            record.sourceBaseReference !== "U_SAR" &&
+            record.sourceBaseReference !== "U_OVP_BUFFER"
         )
         .every((record) => record.reviewEvidenceMappingId === null)
     ).toBe(true)
@@ -430,6 +431,120 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     ).toBe(true)
   })
 
+  it("maps the seven U_OVP_BUFFER references to the root-reviewed ADA4177-1ARZ evidence without opening release authority", () => {
+    expect(
+      benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+        (mapping) => mapping.mappingId === "bp031-ada4177-1arz-r8-footprint-evidence"
+      )
+    ).toMatchObject({
+      mappingId: "bp031-ada4177-1arz-r8-footprint-evidence",
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      reviewedAt: "2026-08-25T10:31:00.000Z",
+      artifactKind: "bp031-ada4177-1arz-r8-footprint-evidence",
+      artifactPath: "packages/scoring-circuit/src/bp031-ada4177-r8-footprint-evidence.tsx",
+      baseReference: "U_OVP_BUFFER",
+      sourceContract: "BP-103",
+      manufacturer: "Analog Devices",
+      exactMpn: "ADA4177-1ARZ",
+      exactPackage: "R SOIC-8",
+      affectedReferences: [
+        "U_OVP_BUFFER_1",
+        "U_OVP_BUFFER_2",
+        "U_OVP_BUFFER_3",
+        "U_OVP_BUFFER_4",
+        "U_OVP_BUFFER_5",
+        "U_OVP_BUFFER_6",
+        "U_OVP_BUFFER_7"
+      ],
+      manufacturerDrawingInputs: {
+        state: "source-controlled-pending-review",
+        exactSources: [
+          expect.objectContaining({
+            id: "adi-ada4177-datasheet-rev-e",
+            revision: "E",
+            artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/analog-devices-ada4177-datasheet-rev-e.pdf",
+            sha256: "363C6BB4B4DB88F197F4FB3A0D286CD041FB492B9BFD1900382078B1489078CC"
+          }),
+          expect.objectContaining({
+            id: "adi-r-8-package-outline",
+            drawingIdentifier: "012407-A",
+            artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/analog-devices-r-8-package-outline.pdf",
+            sha256: "83932339A984A08A714727BA5F7F836B6451B9194C3C8DAD160FF4408F28FCAF"
+          })
+        ],
+        authority: "deny"
+      },
+      familyLandPatternInput: {
+        state: "family-reference-only",
+        exactAda4177Approval: false,
+        authority: "deny"
+      },
+      manufacturerCad: {
+        state: "not-acquired",
+        artifactPath: null,
+        sha256: null,
+        authority: "deny"
+      },
+      partnerCad: {
+        availability: "listed-by-adi-not-retrieved",
+        retainedArtifactPath: null,
+        sha256: null,
+        authority: "deny"
+      },
+      pinOneOrientation: {
+        state: "root-reviewed-r8-drawing-match",
+        sourceId: "adi-r-8-package-outline",
+        topViewPinOneDatum: "lower-left pin-one identifier",
+        projectBoardRotationDegrees: 0,
+        projectPinOnePad: { pin: 1, xMm: -1.905, yMm: -2.465 },
+        independentOrientationReview: "root-reviewed",
+        authority: "deny"
+      },
+      projectFootprintInput: {
+        state: "review-only",
+        orientationStatus: "pending-independent-review",
+        fabricationAuthority: "deny",
+        accepted: false
+      },
+      renderedArtwork: {
+        state: "not-generated",
+        artifactPath: null,
+        generator: null,
+        sha256: null,
+        authority: "deny"
+      },
+      acceptance: {
+        packageIdentityReviewed: true,
+        packageDrawingReviewed: true,
+        referenceMappingReviewed: true,
+        familyLandPatternAcceptedForExactMpn: false,
+        projectGeometryAccepted: false,
+        pinOneOrientationAccepted: true,
+        cadImportAccepted: false,
+        boardFitAccepted: false,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      }
+    })
+
+    const bufferRecords = benchPrototypeAnalogFootprintClosure.records.filter(
+      (record) => record.sourceBaseReference === "U_OVP_BUFFER"
+    )
+    expect(bufferRecords.map((record) => record.reference)).toEqual([
+      "U_OVP_BUFFER_1",
+      "U_OVP_BUFFER_2",
+      "U_OVP_BUFFER_3",
+      "U_OVP_BUFFER_4",
+      "U_OVP_BUFFER_5",
+      "U_OVP_BUFFER_6",
+      "U_OVP_BUFFER_7"
+    ])
+    expect(
+      bufferRecords.every((record) => record.reviewEvidenceMappingId === "bp031-ada4177-1arz-r8-footprint-evidence")
+    ).toBe(true)
+  })
+
   it("freezes the exact Molex connector and BP-104 pin disposition", () => {
     const connectorRecord = benchPrototypeAnalogFootprintClosure.records.find(
       (record) => record.sourceContract === "BP-104"
@@ -537,6 +652,11 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       "forged ADS8881 review mapping",
       (copy: typeof benchPrototypeAnalogFootprintClosure) =>
         Reflect.set(copy.reviewEvidenceMappings[2], "projectGeometry", { accepted: false })
+    ],
+    [
+      "forged ADA4177 review mapping",
+      (copy: typeof benchPrototypeAnalogFootprintClosure) =>
+        Reflect.set(copy.reviewEvidenceMappings[3], "exactMpn", "ADA4177-2ARUZ")
     ]
   ])("rejects %s", (_name, mutate) => {
     const copy = structuredClone(benchPrototypeAnalogFootprintClosure)

@@ -59,7 +59,7 @@ The canonical ledger also maps `U_SAR_1` through `U_SAR_7` to the isolated
 candidate. Root review binds the exact `ADS8881IDGS` DGS VSSOP-10 orderable and
 the retained TI SBAS547D Rev. D source at
 `packages/scoring-circuit/docs/evidence/bp-031/texas-instruments-ads8881-dgs-datasheet-rev-d.pdf`
-(`EA5896CA4C8053A1AE183BE8354DD551A5D947CE670AC1F1170C59176148F1A8`). It is
+(`EA5896CA4C8053A1AE183BE8354DD551A5D947CE670AC1F1170C59176148F1A8`). Root review
 accepts the orderable, package drawing, pin functions, seven-reference mapping,
 TI DGS0010A land geometry, top-view pin-one orientation, and deny-state
 integrity. All seven rows remain `DNP-unresolved`, have no manufacturer CAD
@@ -71,9 +71,27 @@ one to the manufacturer top view at `(-2.2, -1.0)` mm with rotation `0` degrees
 and matched the project copper to TI pages 55 through 57. CAD import, board fit,
 footprint closure, release, and fabrication authority remain denied.
 
-The executable evaluator requires exactly two root-reviewed mappings: TPD4 and
-ADS8881. Each must cover its own seven
-references, and no other BP-031 record may hold a mapping ID.
+The executable evaluator requires exactly four root-reviewed mappings: TPD4,
+TMUX1112, ADS8881, and ADA4177. Each must cover its own seven references, and
+no other BP-031 record may hold a mapping ID.
+
+## ADA4177-1ARZ root-reviewed mapping
+
+The canonical ledger maps `U_OVP_BUFFER_1` through `U_OVP_BUFFER_7` to the
+retained BP-031 R-8 review candidate
+[`bp031-ada4177-r8-footprint-evidence.tsx`](../src/bp031-ada4177-r8-footprint-evidence.tsx).
+The exact selected orderable is `ADA4177-1ARZ`; no `ADA4177-2ARUZ` candidate
+or selected BOM identity is present, so the ledger does not invent a
+substitution.
+
+Root review visually matched the Rev. E ordering guide to the exact R-8
+package, the independent R-8 outline and lower-left pin-one datum, all seven
+canonical references, and the deny-state integrity. ADI document `90-0096`
+remains an S8 family land-pattern review input with
+`exactAda4177Approval: false`; project geometry, CAD, board fit, release, and
+fabrication remain unapproved. The canonical per-reference evidence fields
+remain empty and every mapped row remains `DNP-unresolved` and ineligible for
+PCB use.
 
 The retained Panasonic support set is byte-hash bound in M4-04: the exact
 [ERA3AEB2491V product page](https://industrial.panasonic.cn/ea/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V)

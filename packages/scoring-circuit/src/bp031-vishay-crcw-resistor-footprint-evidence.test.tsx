@@ -109,7 +109,7 @@ describe("BP-031 exact Vishay CRCW resistor candidate footprints", () => {
             id: "BP-031",
             artifactKind: "bench-prototype-analog-footprint-closure",
             path: "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts",
-            sha256: "B2161E55788503DCD10BB96FDEBB502A1CE6C5D80159B8B5D9E5CC32C970E438"
+            sha256: "09446FCDD1D8543C5F97A87DDDF20AADF99054BAB204424FFDF069E8A8C40144"
           }
         ]
       },

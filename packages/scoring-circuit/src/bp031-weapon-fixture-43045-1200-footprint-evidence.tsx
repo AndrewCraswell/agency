@@ -69,7 +69,7 @@ export const bp031WeaponFixture430451200FootprintEvidence = {
     },
     bp031Identity: {
       artifactPath: "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts",
-      sha256: "B2161E55788503DCD10BB96FDEBB502A1CE6C5D80159B8B5D9E5CC32C970E438",
+      sha256: "09446FCDD1D8543C5F97A87DDDF20AADF99054BAB204424FFDF069E8A8C40144",
       binding: "BP-031 imports J_WEAPON_FIXTURE from BP-104 as the exact 43045-1200 connector record"
     }
   },
@@ -189,7 +189,7 @@ export function validateBp031WeaponFixture430451200FootprintEvidence(
     sources.manufacturerDrawing.sha256 !== "571C8A381BE263CF8F92B064FE18DBC6CE6161E8CB2E931D186E8280B9F8338A" ||
     sources.manufacturerCadPreview.sha256 !== "7EC4BED5FA8DE35DBCF15486EEA86062F9BAAF8CDD2BFC0F4D2126A5D68F65FA" ||
     sources.bp104Identity.sha256 !== "281E698509CE08CE820436620610182C36DB02529F1A1DD0F510D6E47A369160" ||
-    sources.bp031Identity.sha256 !== "B2161E55788503DCD10BB96FDEBB502A1CE6C5D80159B8B5D9E5CC32C970E438" ||
+    sources.bp031Identity.sha256 !== "09446FCDD1D8543C5F97A87DDDF20AADF99054BAB204424FFDF069E8A8C40144" ||
     pins.length !== expectedPins.length ||
     pins.some((pin, index) => JSON.stringify(pin) !== JSON.stringify(expectedPins[index])) ||
     manufacturerGeometry.contactLayout.contactHoleDiameterMm.nominal !== contactHoleDiameterMm ||
