@@ -1697,6 +1697,11 @@ export const changeEvents = legislationSchema.table(
     before: jsonb("before").$type<Record<string, unknown>>(),
     after: jsonb("after").$type<Record<string, unknown>>(),
     sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    /** Immutable source reference captured with the observation, not resolved from the live record. */
+    sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
     observedAt: timestamp("observed_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
@@ -1707,6 +1712,10 @@ export const changeEvents = legislationSchema.table(
     check(
       "change_events_change_type_check",
       sql`${table.changeType} in ('create', 'update', 'delete', 'cancel', 'reschedule', 'relationship-change')`
+    ),
+    check(
+      "change_events_source_snapshot_check",
+      sql`(${table.sourceUrl} is null and ${table.sourceProvider} is null and ${table.sourceRetrievedAt} is null and ${table.sourceIsOfficial} is null) or (${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
     ),
     index("change_events_record_idx").on(table.recordType, table.recordId, table.observedAt),
     index("change_events_jurisdiction_idx").on(table.jurisdictionId, table.observedAt),

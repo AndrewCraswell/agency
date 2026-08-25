@@ -2,6 +2,7 @@ import type { LegislationDatabase } from "../db/database.js"
 import { assertBillRelatedParentExists, listBillRelatedBills } from "../db/queries/bill-related-read.js"
 import { listBillTextSections } from "../db/queries/bill-text-read.js"
 import { listBillTimeline } from "../db/queries/bill-timeline-read.js"
+import { listChangeFeed } from "../db/queries/change-feed-reads.js"
 import { getOrganizationMembership, getPersonTerm } from "../db/queries/civic-scoped-reads.js"
 import {
   assertBillExists,
@@ -41,6 +42,7 @@ import { createBillDetailReadApiHandler } from "./bill-detail-read-routes.js"
 import { createBillRelatedReadApiHandler } from "./bill-related-read-routes.js"
 import { createBillTextReadApiHandler } from "./bill-text-read-routes.js"
 import { createBillTimelineReadApiHandler } from "./bill-timeline-read-routes.js"
+import { createChangeFeedApiHandler } from "./change-feed-routes.js"
 import { createCivicScopedReadApiHandler } from "./civic-scoped-read-routes.js"
 import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
 import { createCoreReadApiHandler, type CoreReadQueryApi } from "./core-read.js"
@@ -130,6 +132,13 @@ export function createLegislationApiHandler(
           createAmendmentReadApiHandler(createAmendmentReadRepository(documentDatabase, options.apiBaseUrl)),
           createBillDetailReadApiHandler(createBillDetailReadRepository(documentDatabase, options.apiBaseUrl)),
           createVoteReadApiHandler(createVoteReadRepository(documentDatabase), options),
+          createChangeFeedApiHandler(
+            {
+              assertBillExists: async (billId) => await assertBillExists(documentDatabase, billId),
+              listChanges: async (input) => await listChangeFeed(documentDatabase, input)
+            },
+            options
+          ),
           createBillTextReadApiHandler(
             {
               assertBillExists: async (billId) => await assertBillExists(documentDatabase, billId),

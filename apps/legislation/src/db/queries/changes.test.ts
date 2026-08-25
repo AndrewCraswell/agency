@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import { planCanonicalChange } from "./changes.js"
+import { withIngestionRun } from "../../ingestion/run-context.js"
+import type { LegislationDatabase } from "../database.js"
+import { canonicalRecordFingerprints, changeEvents } from "../schema/schema.js"
+import { observeCanonicalRecord, planCanonicalChange } from "./changes.js"
 
 describe("canonical change planning", () => {
   it("emits deterministic minimal create and update events", () => {
@@ -70,5 +73,63 @@ describe("canonical change planning", () => {
         { fields: created.after, fingerprint: created.fingerprint }
       )?.changeType
     ).toBe("relationship-change")
+  })
+
+  it("copies the observed before and after payloads instead of retaining mutable record references", () => {
+    const fields = { nested: { status: "pending" }, status: "pending" }
+    const planned = planCanonicalChange({ fields, recordId: "bill:1", recordType: "bill" })!
+
+    fields.nested.status = "passed"
+    fields.status = "passed"
+
+    expect(planned.after).toEqual({ nested: { status: "pending" }, status: "pending" })
+  })
+
+  it("bounds persisted canonical snapshots", () => {
+    expect(() =>
+      planCanonicalChange({
+        fields: { description: "x".repeat(64 * 1024) },
+        recordId: "bill:1",
+        recordType: "bill"
+      })
+    ).toThrow("Canonical change snapshot exceeds")
+  })
+
+  it("persists the source reference captured before a later source update", async () => {
+    let source = { sourceUrl: "https://api.congress.gov/v3/bill/119/hr/1" }
+    let persisted: Record<string, unknown> | undefined
+    const database = {
+      insert: (table: unknown) => ({
+        values: (values: Record<string, unknown>) => ({
+          onConflictDoNothing: async () => {
+            if (table === changeEvents) {
+              persisted = values
+            }
+          },
+          onConflictDoUpdate: async () => undefined
+        })
+      }),
+      select: () => ({
+        from: (table: unknown) => ({
+          where: () => ({
+            limit: async () => (table === canonicalRecordFingerprints ? [] : [source])
+          })
+        })
+      })
+    } as unknown as Omit<LegislationDatabase, "$client">
+
+    await withIngestionRun("00000000-0000-4000-8000-000000000001", async () => {
+      await observeCanonicalRecord(database, {
+        fields: { status: "pending" },
+        recordId: "bill:us:119:house:hr-1",
+        recordType: "bill"
+      })
+    })
+    source = { sourceUrl: "https://api.openstates.org/v3/bills/changed" }
+
+    expect(persisted).toMatchObject({
+      sourceProvider: "congress",
+      sourceUrl: "https://api.congress.gov/v3/bill/119/hr/1"
+    })
   })
 })
