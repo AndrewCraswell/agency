@@ -8,6 +8,11 @@ import {
   listDocumentSections
 } from "../db/queries/document-reads.js"
 import { getEventDocumentRead } from "../db/queries/event-document-read.js"
+import {
+  assertMeetingExists as assertMeetingAgendaParentExists,
+  getMeetingAgendaItemRead,
+  listMeetingAgenda
+} from "../db/queries/meeting-agenda-read.js"
 import { assertMeetingExists, listMeetingDocuments } from "../db/queries/meeting-document-read.js"
 import { getMeetingParticipantRead } from "../db/queries/meeting-participant-read.js"
 import {
@@ -24,14 +29,21 @@ import { createEventDocumentReadApiHandler } from "./event-document-read-routes.
 import { createCompositeHttpApiHandler, type HttpApiHandler } from "./http.js"
 import { createJurisdictionOrganizationRepository } from "./jurisdiction-organization-read-repository.js"
 import { createJurisdictionOrganizationReadApiHandler } from "./jurisdiction-organization-read-routes.js"
+import { createJurisdictionReadRepository } from "./jurisdiction-read-repository.js"
+import { createJurisdictionReadApiHandler } from "./jurisdiction-read-routes.js"
+import { createMeetingAgendaReadApiHandler } from "./meeting-agenda-read-routes.js"
 import { createMeetingDocumentReadApiHandler } from "./meeting-document-read-routes.js"
 import { createMeetingParticipantListApiHandler } from "./meeting-participant-list-routes.js"
 import { createMeetingParticipantReadApiHandler } from "./meeting-participant-read-routes.js"
 import { createOrganizationBillReadApiHandler } from "./organization-bill-read-routes.js"
 import { createOrganizationMembersRepository } from "./organization-members-read-repository.js"
 import { createOrganizationMembersReadApiHandler } from "./organization-members-read-routes.js"
+import { createOrganizationReadRepository } from "./organization-read-repository.js"
+import { createOrganizationReadApiHandler } from "./organization-read-routes.js"
 import { createPersonMembershipsRepository } from "./person-membership-read-repository.js"
 import { createPersonMembershipReadApiHandler } from "./person-membership-read-routes.js"
+import { createResourceBatchReadRepositoryFromCanonicalReads } from "./resource-batch-read-repository.js"
+import { createResourceBatchReadApiHandler } from "./resource-batch-read-routes.js"
 import { createSubscriptionReadApiHandler } from "./subscription-routes.js"
 import { createWebhookSecretProtector, type SubscriptionRepository, SubscriptionService } from "./subscriptions.js"
 import { createSupportingMaterialSectionReadApiHandler } from "./supporting-material-section-read-routes.js"
@@ -67,7 +79,13 @@ export function createLegislationApiHandler(
           listBillDocuments: async (input) => await listBillDocuments(documentDatabase, input),
           listDocumentSections: async (input) => await listDocumentSections(documentDatabase, input)
         })
+  const resourceBatchReadRepository = createResourceBatchReadRepositoryFromCanonicalReads({
+    apiBaseUrl: options.apiBaseUrl,
+    coreReadApi: queryService,
+    ...(documentReadApi === undefined ? {} : { documentReadApi })
+  })
   return createCompositeHttpApiHandler([
+    createResourceBatchReadApiHandler(resourceBatchReadRepository),
     ...(documentReadApi === undefined ? [] : [createDocumentReadApiHandler(documentReadApi, options)]),
     ...(documentDatabase === undefined
       ? []
@@ -87,6 +105,16 @@ export function createLegislationApiHandler(
           ),
           createJurisdictionOrganizationReadApiHandler(
             createJurisdictionOrganizationRepository(documentDatabase),
+            options
+          ),
+          createJurisdictionReadApiHandler(createJurisdictionReadRepository(documentDatabase), options),
+          createMeetingAgendaReadApiHandler(
+            {
+              assertMeetingExists: async (meetingId) =>
+                await assertMeetingAgendaParentExists(documentDatabase, meetingId),
+              getMeetingAgendaItemRead: async (input) => await getMeetingAgendaItemRead(documentDatabase, input),
+              listMeetingAgenda: async (input) => await listMeetingAgenda(documentDatabase, input)
+            },
             options
           ),
           createMeetingParticipantReadApiHandler(
@@ -118,6 +146,7 @@ export function createLegislationApiHandler(
             },
             options
           ),
+          createOrganizationReadApiHandler(createOrganizationReadRepository(documentDatabase), options),
           createOrganizationMembersReadApiHandler(createOrganizationMembersRepository(documentDatabase), options),
           createPersonMembershipReadApiHandler(createPersonMembershipsRepository(documentDatabase), options),
           createSupportingMaterialSectionReadApiHandler(

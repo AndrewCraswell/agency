@@ -1,8 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http"
-import type { OrganizationRow } from "../db/queries/organization-relationships.js"
 import { LegislationError } from "../legislation/errors.js"
-import { projectOrganizationSummary, type OrganizationSummary } from "./canonical-projection.js"
-import { sourceProjectionContext, toProjectionLegislationError } from "./canonical-read.js"
+import type { OrganizationSummary } from "./canonical-projection.js"
+import { toProjectionLegislationError } from "./canonical-read.js"
 import {
   apiPage,
   assertAllowedQueryParameters,
@@ -16,6 +15,7 @@ import type {
   JurisdictionOrganizationListInput,
   JurisdictionOrganizationPage
 } from "./jurisdiction-organization-read-repository.js"
+import { projectOrganizationRow } from "./organization-summary-read-projection.js"
 
 const DEFAULT_LIMIT = 25
 const MAX_LIMIT = 100
@@ -87,90 +87,8 @@ function projectPage(
 ): { items: OrganizationSummary[]; nextCursor?: string; truncated: boolean } {
   return {
     ...page,
-    items: page.items.map((item) => projectOrganization(item, apiBaseUrl, jurisdictionId))
+    items: page.items.map((item) => projectOrganizationRow(item, apiBaseUrl, jurisdictionId))
   }
-}
-
-function projectOrganization(row: OrganizationRow, apiBaseUrl: string, jurisdictionId: string): OrganizationSummary {
-  if (row.jurisdictionId !== jurisdictionId) {
-    throw new LegislationError("unprocessable", "organization does not belong to its jurisdiction path")
-  }
-  const source = canonicalSource(row, "organization")
-  return projectOrganizationSummary(
-    {
-      chamber: canonicalChamber(row.chamber),
-      classification: canonicalOrganizationClassification(row.classification),
-      id: requiredText(row.id, "organization ID"),
-      isActive: requiredBoolean(row.isActive, "organization isActive"),
-      jurisdictionId: requiredText(row.jurisdictionId, "organization jurisdictionId"),
-      name: requiredText(row.name, "organization name"),
-      parentOrganizationId: row.parentOrganizationId,
-      sourceUrl: source.sourceUrl
-    },
-    sourceProjectionContext(source, apiBaseUrl)
-  )
-}
-
-function canonicalSource(row: OrganizationRow, name: string) {
-  if (
-    !row.provenanceComplete ||
-    row.sourceIsOfficial === null ||
-    !isNonemptyString(row.sourceProvider) ||
-    row.sourceRetrievedAt === null ||
-    !isNonemptyString(row.sourceUrl)
-  ) {
-    throw new LegislationError("unprocessable", `${name} canonical provenance is incomplete`)
-  }
-  return {
-    createdAt: row.createdAt,
-    id: row.id,
-    sourceUpdatedAt: row.sourceUpdatedAt,
-    sourceUrl: row.sourceUrl,
-    updatedAt: row.updatedAt,
-    upstreamIds: row.upstreamIds
-  }
-}
-
-function canonicalOrganizationClassification(value: string | null): OrganizationSummary["classification"] {
-  switch (value) {
-    case "agency":
-    case "chamber":
-    case "committee":
-    case "commission":
-    case "legislature":
-    case "other":
-    case "subcommittee":
-      return value
-    default:
-      throw new LegislationError("unprocessable", "organization classification is not canonical")
-  }
-}
-
-function canonicalChamber(value: string | null): OrganizationSummary["chamber"] {
-  switch (value) {
-    case "lower":
-    case "upper":
-    case "unicameral":
-    case "legislature":
-    case null:
-      return value
-    default:
-      throw new LegislationError("unprocessable", "organization chamber is not canonical")
-  }
-}
-
-function requiredBoolean(value: boolean | null, name: string): boolean {
-  if (typeof value !== "boolean") {
-    throw new LegislationError("unprocessable", `${name} must be boolean`)
-  }
-  return value
-}
-
-function requiredText(value: string | null, name: string): string {
-  if (!isNonemptyString(value)) {
-    throw new LegislationError("unprocessable", `${name} must be non-empty`)
-  }
-  return value
 }
 
 function routeMatch(
@@ -312,8 +230,4 @@ function canonicalPathId(value: string | undefined, name: string): string {
     throw new LegislationError("invalid_request", `${name} must be between 1 and ${MAX_TEXT_LENGTH} characters`)
   }
   return value
-}
-
-function isNonemptyString(value: string | null): value is string {
-  return typeof value === "string" && value.trim().length > 0
 }
