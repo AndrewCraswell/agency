@@ -759,6 +759,17 @@ const bp140ReferenceReconciliation = [
   }))
 ].sort((left, right) => left.reference.localeCompare(right.reference))
 
+const w5500BypassReferences = [
+  "C_ETH_AVDD_FERRITE_INPUT",
+  "C_W5500_VDD",
+  "C_W5500_AVDD_1",
+  "C_W5500_AVDD_2",
+  "C_W5500_AVDD_3",
+  "C_W5500_AVDD_4",
+  "C_W5500_AVDD_5",
+  "C_W5500_AVDD_6"
+] as const
+
 const projectFootprintMappings = [
   {
     reference: "J_USB_C",
@@ -867,7 +878,19 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer",
     reviewedAt: "2026-08-25",
     fabricationRelease: "deny"
-  }
+  },
+  ...w5500BypassReferences.map((reference) => ({
+    reference,
+    artifactKind: "bp033-murata-grm188r71c104ka01d-w5500-bypass-footprint",
+    artworkModule: "src/bp033-murata-grm188r71c104ka01d-w5500-bypass-footprint.tsx",
+    reviewDocument: "docs/bp-033-w5500-100nf-bypass-footprint-evidence.md",
+    sourceArtifactPath: "docs/evidence/bp-033/murata-grm188r71c104ka01d-reference-sheet.pdf",
+    sourceSha256: "A8D9E8E5A06AA235221C7E957837509E64A9F75E42230EE142F51F984B4CFA09",
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
+  }))
 ] as const
 
 const definition = {
@@ -1006,7 +1029,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 9 ||
+    contract.projectFootprintMappings.length !== 17 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1072,6 +1095,21 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         mapping.reviewDocument === "docs/bp-033-tps25947-project-footprint.md" &&
         mapping.sourceArtifactPath === "docs/evidence/bp-033/ti-tps25947-datasheet.pdf" &&
         mapping.sourceSha256 === "051ECDDFE545B8B9F4F992148D24F385F75B1116FD36BEC358F85008A7D919EC" &&
+        mapping.reviewState === "root-reviewed-review-input" &&
+        mapping.reviewer === "root-final-reviewer" &&
+        mapping.reviewedAt === "2026-08-25" &&
+        mapping.fabricationRelease === "deny"
+      )
+    }) ||
+    !w5500BypassReferences.every((reference, offset) => {
+      const mapping = contract.projectFootprintMappings[9 + offset]
+      return (
+        mapping?.reference === reference &&
+        mapping.artifactKind === "bp033-murata-grm188r71c104ka01d-w5500-bypass-footprint" &&
+        mapping.artworkModule === "src/bp033-murata-grm188r71c104ka01d-w5500-bypass-footprint.tsx" &&
+        mapping.reviewDocument === "docs/bp-033-w5500-100nf-bypass-footprint-evidence.md" &&
+        mapping.sourceArtifactPath === "docs/evidence/bp-033/murata-grm188r71c104ka01d-reference-sheet.pdf" &&
+        mapping.sourceSha256 === "A8D9E8E5A06AA235221C7E957837509E64A9F75E42230EE142F51F984B4CFA09" &&
         mapping.reviewState === "root-reviewed-review-input" &&
         mapping.reviewer === "root-final-reviewer" &&
         mapping.reviewedAt === "2026-08-25" &&

@@ -168,6 +168,33 @@ describe("BP-033 application footprint closure ledger", () => {
     expect(benchPrototypeApplicationFootprints.releaseState).toBe("deny")
   })
 
+  it("maps all eight W5500 bypass references to one reviewed Murata footprint family", () => {
+    const expectedReferences = [
+      "C_ETH_AVDD_FERRITE_INPUT",
+      "C_W5500_VDD",
+      "C_W5500_AVDD_1",
+      "C_W5500_AVDD_2",
+      "C_W5500_AVDD_3",
+      "C_W5500_AVDD_4",
+      "C_W5500_AVDD_5",
+      "C_W5500_AVDD_6"
+    ]
+    const mappings = benchPrototypeApplicationFootprints.projectFootprintMappings.filter(
+      (mapping) => mapping.artifactKind === "bp033-murata-grm188r71c104ka01d-w5500-bypass-footprint"
+    )
+    expect(mappings.map((mapping) => mapping.reference)).toEqual(expectedReferences)
+    expect(
+      mappings.every(
+        (mapping) =>
+          mapping.sourceSha256 === "A8D9E8E5A06AA235221C7E957837509E64A9F75E42230EE142F51F984B4CFA09" &&
+          mapping.reviewState === "root-reviewed-review-input" &&
+          mapping.reviewer === "root-final-reviewer" &&
+          mapping.fabricationRelease === "deny"
+      )
+    ).toBe(true)
+    expect(benchPrototypeApplicationFootprints.releaseState).toBe("deny")
+  })
+
   it("binds only the J_HUB75 pin-map overlay and preserves BP-143 physical gates", () => {
     const record = benchPrototypeApplicationFootprints.records.find((candidate) => candidate.reference === "J_HUB75")
     if (
