@@ -96,6 +96,17 @@ The executable evidence record deliberately remains open:
 - no current, cable-drop, inrush, or temperature measurement exists;
 - no footprint, layout, schematic, or fabrication approval is granted.
 
+## Received-panel evidence intake
+
+[`bp-143-received-panel-evidence-intake.md`](bp-143-received-panel-evidence-intake.md)
+defines the separate, empty-by-default submission schema for the actual
+received panel and cables. It binds the exact sample and prototype identities,
+calibrated instruments, procedure, and artifact hashes before it will accept
+continuity, mating, orientation, current, cable-drop, connector-temperature,
+and fit records. A complete intake still leaves every release authority
+`deny`; it is not a substitute for downstream schematic, footprint, layout,
+or fabrication review.
+
 ## Sources
 
 - [Adafruit 2277 panel](https://www.adafruit.com/product/2277)
