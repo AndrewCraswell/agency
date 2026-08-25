@@ -8,7 +8,11 @@
  */
 
 import { oneChannelAnalogExperiment } from "./one-channel-analog-experiment.js"
-import { oneChannelAnalogExperimentBom, supportCircuitReconciled } from "./one-channel-analog-readiness.js"
+import {
+  oneChannelAnalogExperimentBom,
+  supportCircuitReconciled,
+  tdkAutomotiveOneUfCapacitorSelection
+} from "./one-channel-analog-readiness.js"
 
 type PlainRecord = Record<PropertyKey, unknown>
 
@@ -184,9 +188,41 @@ type AcquiredDrawing = {
   byteMarkers: readonly string[]
   scope: string
   sha256: string
+  supportingSources?: readonly SupportingSource[]
+}
+
+type SupportingSource = {
+  classification: "manufacturer-recommended-land-pattern"
+  artifactPath: `packages/scoring-circuit/docs/evidence/m4-04/${string}`
+  sourceUrl: string
+  sha256: string
+  scope: string
+}
+
+type PrimaryIdentitySource = {
+  acquisition: "exact-primary-identity-hash-bound" | "not-acquired"
+  artifactPath: `packages/scoring-circuit/docs/evidence/m4-04/${string}` | null
+  identityIdentifier: string | null
+  sourceUrl: string | null
+  geometry: null
+  byteMarkers: readonly string[]
+  scope: string
+  sha256: string | null
 }
 
 const acquiredDrawingEvidenceByMpn: Readonly<Record<string, AcquiredDrawing>> = {
+  CGA3E3X7R1H105K080AB: {
+    acquisition: "exact-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/tdk-mlcc-automotive-general-zh.pdf",
+    drawingIdentifier: "TDK CGA3 automotive MLCC catalog, 0603/1608 manufacturer dimensions",
+    drawingUrl:
+      "https://product.tdk.cn/system/files/dam/doc/product/capacitor/ceramic/mlcc/catalog/mlcc_automotive_general_zh.pdf",
+    geometry: null,
+    byteMarkers: ["CGA3E3X7R1H105K080AB", "CGA3"],
+    scope:
+      "TDK automotive MLCC catalog. The retained manufacturer source names the exact CGA3E3X7R1H105K080AB orderable and supplies CGA3 0603/1608 component and recommended land-pattern dimensions. The recommendation is source guidance only; no project footprint, artwork, orientation, procurement, or fabrication authority is inferred.",
+    sha256: "E6F5803E89514DC61813BF2C96414D784005274730A8AF43A5EF54EBD546DBFF"
+  },
   ADS8881IDGS: {
     acquisition: "exact-drawing-hash-bound",
     artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-ads8881-dgs-datasheet.pdf",
@@ -241,6 +277,27 @@ const acquiredDrawingEvidenceByMpn: Readonly<Record<string, AcquiredDrawing>> = 
     scope:
       "Texas Instruments TMUX1112 datasheet. The orderable table names the exact TMUX1112PWR MPN and PW TSSOP-16 package; the mechanical section contains the manufacturer PW0016A package drawing. No project land pattern or geometry is inferred from this source.",
     sha256: "EB7CCF89EC59635B34043D364DB6B1E21B457A0BA7363737408CEBCA30CD6C4D"
+  },
+  ERA3AEB2491V: {
+    acquisition: "exact-drawing-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-datasheet.pdf",
+    drawingIdentifier: "Panasonic ERAA type, ERA3A 0603 manufacturer dimensions",
+    drawingUrl: "https://industrial.panasonic.cn/cdbs/www-data/pdf/RDM0000/AOA0000C309.pdf",
+    geometry: null,
+    byteMarkers: ["%PDF-1.7"],
+    scope:
+      "Panasonic Industry exact ERA3AEB2491V product page plus ERAA datasheet. The exact product page names ERA3AEB2491V, 2.49 kilohm, 0.1 percent, 0603 / 1.6 x 0.8 mm, 0.1 W, and 25 ppm/K. The ERAA package drawing supplies the manufacturer body and terminal dimensions; the retained Panasonic recommended land-pattern table applies to high-precision ERA 1608 (0603) with a = 0.7-0.9 mm, b = 2.0-2.2 mm, and c = 0.8-1.0 mm. This is source evidence only; no project footprint, artwork, orientation, CAD, or fabrication authority is inferred.",
+    sha256: "FFCBFA23E13542434BCE2003BE0B563C099792976D6F153ECD0227F2C0AF0C79",
+    supportingSources: [
+      {
+        classification: "manufacturer-recommended-land-pattern",
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-resistor-land-pattern.pdf",
+        sourceUrl: "https://industrial.panasonic.cn/cdbs/www-data/pdf/RDM0000/DMM0000COL20.pdf",
+        sha256: "65A9872D2618A23D77BD1B54B3DFDD6534A3F9E82A6BA6C136266399B9CFFA1D",
+        scope:
+          "Panasonic recommended land-pattern table for high-precision ERA, 1608 (0603): a = 0.7-0.9 mm, b = 2.0-2.2 mm, c = 0.8-1.0 mm. Manufacturer guidance only; not project CAD or artwork."
+      }
+    ]
   },
   TPD4E05U06DQAR: {
     acquisition: "exact-drawing-hash-bound",
@@ -307,6 +364,32 @@ const acquiredDrawingEvidenceByMpn: Readonly<Record<string, AcquiredDrawing>> = 
     scope:
       "Murata Power Solutions NXE1 series datasheet. The exact NXE1S0505MC orderable, 5 V to 5 V 1 W converter, manufacturer mechanical dimensions, and recommended footprint details are retained in the KDC_NXE1.A01 source. The surface-mount package uses 14 positions with five solder lands at positions 1, 3, 7, 8, and 14, four functional connections; the pin map is 1=-Vin, 3=+Vin, 7=-Vout, 8=+Vout, and 14=NA (not available for electrical connection). Murata's recommended 5-pad footprint remains source guidance only. No project land pattern, CAD, artwork, or fabrication geometry is inferred from the manufacturer drawing.",
     sha256: "53A6DCE053DA52AF149055634FC380E5B9AD1473D575D0B59F0EFF6123913D40"
+  }
+}
+
+const acquiredPrimaryIdentityEvidenceByMpn: Readonly<Record<string, PrimaryIdentitySource>> = {
+  "ADA4177-1ARZ": {
+    acquisition: "exact-primary-identity-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/analog-devices-ada4177-1arz-product.html",
+    identityIdentifier: "Analog Devices ADA4177-1 product page and Rev. E data-sheet identity, R-8 package option",
+    sourceUrl: "https://www.analog.com/en/products/ADA4177-1.html",
+    geometry: null,
+    byteMarkers: ["ADA4177-1ARZ", "SOIC_N", "R-8", "Rev. E"],
+    scope:
+      "Analog Devices HTML product-page capture. The retained artifact binds the exact ADA4177-1ARZ orderable, the 8-lead SOIC_N R-8 package identity, and the Rev. E data-sheet identity. It is not a manufacturer package drawing or CAD artifact; no land pattern, artwork, orientation, or footprint release is inferred.",
+    sha256: "A456369D2013DAF8E166E9CC2BCB1AAF54834FA86EAA292F5C1BE89EBE316703"
+  },
+  ERA3AEB2491V: {
+    acquisition: "exact-primary-identity-hash-bound",
+    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-product.html",
+    identityIdentifier:
+      "Panasonic Industry exact ERA3AEB2491V product page, 0603 / 1.6 x 0.8 mm, 2490 ohm, 0.1 percent, 0.1 W, 25 ppm/K",
+    sourceUrl: "https://industrial.panasonic.cn/ea/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V",
+    geometry: null,
+    byteMarkers: ["ERA3AEB2491V", "1.6 x 0.8", "2490.0000", "0.1", "25"],
+    scope:
+      "Panasonic Industry exact-MPN product-page capture. The retained artifact binds the exact ERA3AEB2491V orderable and package identity; it is not a CAD, project artwork, orientation, or fabrication release.",
+    sha256: "BB9C4A4BE74D7F700378C41A63089E158FFE929FA6EA3943427C27AD89BC6048"
   }
 }
 
@@ -455,8 +538,47 @@ function drawingEvidenceFor(part: CouponBomPart) {
   }
 }
 
+function primaryIdentityEvidenceFor(part: CouponBomPart): PrimaryIdentitySource {
+  const acquiredIdentity = acquiredPrimaryIdentityEvidenceByMpn[part.mpn]
+  if (acquiredIdentity !== undefined) {
+    return { ...acquiredIdentity, byteMarkers: [...acquiredIdentity.byteMarkers] }
+  }
+  return {
+    acquisition: "not-acquired",
+    artifactPath: null,
+    identityIdentifier: null,
+    sourceUrl: null,
+    geometry: null,
+    byteMarkers: [],
+    scope: "No hash-bound primary identity capture has been retained for this MPN.",
+    sha256: null
+  }
+}
+
+function manufacturerCadEvidenceFor(part: CouponBomPart) {
+  if (part.mpn === "ERA3AEB2491V") {
+    return {
+      availability: "not-published" as const,
+      sourceUrl: "https://industrial.panasonic.cn/ea/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V/cad",
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-cad.html" as const,
+      sha256: "ADA48ECB98E85E4C346D9365C1C6BC7FED81504131E1B761854AD664D960A93D",
+      status: "not-acquired" as const,
+      scope:
+        "Panasonic CAD-status page capture. The manufacturer page states that no CAD data is available for the exact product and exposes only third-party SamacSys and SnapMagic links; no Panasonic CAD object is retained or treated as project geometry."
+    }
+  }
+  return {
+    availability: "not-verified" as const,
+    sourceUrl: null,
+    artifactPath: null,
+    sha256: null,
+    status: "not-acquired" as const
+  }
+}
+
 function footprintEvidenceFor(part: CouponBomPart) {
   const manufacturerDrawing = drawingEvidenceFor(part)
+  const manufacturerIdentitySource = primaryIdentityEvidenceFor(part)
   return {
     exactMpn: part.mpn,
     manufacturerPrimaryDocument: {
@@ -471,13 +593,8 @@ function footprintEvidenceFor(part: CouponBomPart) {
             : ("identified-not-hash-acquired" as const)
     },
     manufacturerDrawing,
-    manufacturerCad: {
-      availability: "not-verified" as const,
-      sourceUrl: null,
-      artifactPath: null,
-      sha256: null,
-      status: "not-acquired" as const
-    },
+    manufacturerIdentitySource,
+    manufacturerCad: manufacturerCadEvidenceFor(part),
     reviewArtwork: {
       sourceFile: "src/one-channel-analog-experiment.circuit.tsx",
       status: "schematic-reference-only" as const,
@@ -529,6 +646,7 @@ const definition = {
   },
   connectorMates: connectorMateEvidence,
   footprints: footprintReviews,
+  selectedOneUfCapacitor: structuredClone(tdkAutomotiveOneUfCapacitorSelection),
   authority: {
     schematicIntegrationAuthorized: false,
     footprintsIndependentlyReviewed: false,
@@ -601,6 +719,19 @@ export function validateM404SingleChannelCoupon(value: unknown): true {
             !/^[0-9A-F]{64}$/u.test(footprint.evidence.manufacturerDrawing.sha256 ?? "") ||
             footprint.evidence.manufacturerDrawing.geometry !== null ||
             footprint.evidence.manufacturerDrawing.byteMarkers.length === 0)) ||
+        (footprint.exactMpn === "ERA3AEB2491V"
+          ? !("supportingSources" in footprint.evidence.manufacturerDrawing) ||
+            footprint.evidence.manufacturerDrawing.supportingSources?.length !== 1 ||
+            footprint.evidence.manufacturerDrawing.supportingSources?.some(
+              (source: SupportingSource) =>
+                source.classification !== "manufacturer-recommended-land-pattern" ||
+                source.sourceUrl !== "https://industrial.panasonic.cn/cdbs/www-data/pdf/RDM0000/DMM0000COL20.pdf" ||
+                source.artifactPath !==
+                  "packages/scoring-circuit/docs/evidence/m4-04/panasonic-resistor-land-pattern.pdf" ||
+                !/^[0-9A-F]{64}$/u.test(source.sha256) ||
+                !source.scope.includes("Manufacturer guidance only")
+            ) === true
+          : "supportingSources" in footprint.evidence.manufacturerDrawing) ||
         (footprint.evidence.manufacturerDrawing.acquisition !== "exact-drawing-hash-bound" &&
           footprint.evidence.manufacturerDrawing.acquisition !== "series-drawing-hash-bound" &&
           (footprint.exactMpn === "43650-0300"
@@ -610,8 +741,36 @@ export function validateM404SingleChannelCoupon(value: unknown): true {
             : footprint.evidence.manufacturerDrawing.acquisition !== "not-acquired" ||
               footprint.evidence.manufacturerDrawing.drawingUrl !== null ||
               footprint.evidence.manufacturerDrawing.geometry !== null)) ||
+        (footprint.evidence.manufacturerIdentitySource.acquisition === "exact-primary-identity-hash-bound"
+          ? footprint.evidence.manufacturerIdentitySource.sourceUrl === null ||
+            !footprint.evidence.manufacturerIdentitySource.sourceUrl.startsWith("https://") ||
+            footprint.evidence.manufacturerIdentitySource.identityIdentifier === null ||
+            footprint.evidence.manufacturerIdentitySource.identityIdentifier.trim() === "" ||
+            footprint.evidence.manufacturerIdentitySource.artifactPath === null ||
+            !footprint.evidence.manufacturerIdentitySource.artifactPath.startsWith(
+              "packages/scoring-circuit/docs/evidence/m4-04/"
+            ) ||
+            !/^[0-9A-F]{64}$/u.test(footprint.evidence.manufacturerIdentitySource.sha256 ?? "") ||
+            footprint.evidence.manufacturerIdentitySource.geometry !== null ||
+            footprint.evidence.manufacturerIdentitySource.byteMarkers.length === 0
+          : footprint.evidence.manufacturerIdentitySource.acquisition !== "not-acquired" ||
+            footprint.evidence.manufacturerIdentitySource.sourceUrl !== null ||
+            footprint.evidence.manufacturerIdentitySource.identityIdentifier !== null ||
+            footprint.evidence.manufacturerIdentitySource.artifactPath !== null ||
+            footprint.evidence.manufacturerIdentitySource.geometry !== null ||
+            footprint.evidence.manufacturerIdentitySource.sha256 !== null) ||
         footprint.evidence.manufacturerCad.status !== "not-acquired" ||
-        footprint.evidence.manufacturerCad.availability !== "not-verified" ||
+        (footprint.exactMpn === "ERA3AEB2491V"
+          ? footprint.evidence.manufacturerCad.availability !== "not-published" ||
+            footprint.evidence.manufacturerCad.sourceUrl !==
+              "https://industrial.panasonic.cn/ea/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V/cad" ||
+            footprint.evidence.manufacturerCad.artifactPath !==
+              "packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-cad.html" ||
+            !/^[0-9A-F]{64}$/u.test(footprint.evidence.manufacturerCad.sha256 ?? "")
+          : footprint.evidence.manufacturerCad.availability !== "not-verified" ||
+            footprint.evidence.manufacturerCad.sourceUrl !== null ||
+            footprint.evidence.manufacturerCad.artifactPath !== null ||
+            footprint.evidence.manufacturerCad.sha256 !== null) ||
         footprint.evidence.reviewArtwork.status !== "schematic-reference-only" ||
         footprint.evidence.reviewArtwork.overlayStatus !== "not-generated" ||
         footprint.implementationEvidence.status !== "bom-and-schematic-identity-reconciled" ||

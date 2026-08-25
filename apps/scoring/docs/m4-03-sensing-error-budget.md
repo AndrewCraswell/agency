@@ -6,9 +6,11 @@ scoring authority.
 
 The executable artifact is
 [`../src/m4-03-sensing-error-budget.ts`](../src/m4-03-sensing-error-budget.ts).
-It binds the committed M4-01, M4-02, BP-100, and BP-101 source artifacts by
-commit and SHA-256. It does not import the circuit package into application
-runtime.
+It binds the reviewed M4-01, M4-02, BP-100, and BP-101 source artifacts by
+historical commit SHA-256 and separately binds their current reviewed prototype
+source SHA-256 identities. The split records both historical and current
+reviewed source identities; it does not import the circuit package into
+application runtime.
 
 The application artifact is a conditional paper budget only. It does not
 supersede the detailed circuit-package audit in
@@ -80,8 +82,9 @@ reference or ADC conversion-timing change, power or rail change, temperature
 or humidity-boundary change, wiring/probe/fixture/channel-provenance change,
 calibration algorithm/standard/firmware/fit-limit change, integrity or
 configuration mismatch, failed drift/reference self-test, or explicit
-recalibration. The source contracts require the exact 40-character commit and
-64-character SHA-256 identity for each bound artifact.
+recalibration. The source contracts require the exact 40-character historical
+commit, its 64-character source SHA-256, and the current prototype source's
+separate 64-character SHA-256 identity for each bound artifact.
 
 All physical-authority flags remain false: fixture target validation,
 energized testing, fabrication, schematic integration, and scoring authority.

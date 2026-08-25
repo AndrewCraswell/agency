@@ -23,7 +23,7 @@ type MutableBudget = {
     scoringAuthority: boolean
   }
   calibration: { invalidationTriggers: string[] }
-  sourceContracts: Array<{ commit: string; sha256: string; sourcePath: string }>
+  sourceContracts: Array<{ commit: string; currentSha256: string; sha256: string; sourcePath: string }>
   thresholdScreens: Array<{
     terms: Array<{ allocationOhms: number; id: string }>
     totalWorstCaseOhms: number
@@ -52,7 +52,10 @@ describe("M4-03 sensing error budget", () => {
     expect(budget.calibration.invalidationTriggers.every((trigger) => trigger.length > 0)).toBe(true)
     expect(
       M403_SENSING_ERROR_SOURCE_CONTRACTS.every(
-        (contract) => /^[0-9a-f]{40}$/u.test(contract.commit) && /^[0-9a-f]{64}$/u.test(contract.sha256)
+        (contract) =>
+          /^[0-9a-f]{40}$/u.test(contract.commit) &&
+          /^[0-9a-f]{64}$/u.test(contract.currentSha256) &&
+          /^[0-9a-f]{64}$/u.test(contract.sha256)
       )
     ).toBe(true)
     expect(Object.values(budget.authority).every((authorized) => authorized === false)).toBe(true)
@@ -89,7 +92,7 @@ describe("M4-03 sensing error budget", () => {
       const committed = execFileSync("git", ["show", `${contract.commit}:${contract.sourcePath}`], {
         cwd: repositoryRoot
       })
-      expect(canonicalSourceDigest(current)).toBe(contract.sha256)
+      expect(canonicalSourceDigest(current)).toBe(contract.currentSha256)
       expect(canonicalSourceDigest(committed)).toBe(contract.sha256)
     }
   }, 30_000)

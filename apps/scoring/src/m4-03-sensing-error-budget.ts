@@ -8,6 +8,7 @@
 
 export type M403SourceContract = {
   readonly commit: string
+  readonly currentSha256: string
   readonly id: "BP-100" | "BP-101" | "M4-01" | "M4-02"
   readonly sha256: string
   readonly sourcePath: string
@@ -405,24 +406,28 @@ const thresholdScreens = [
 export const M403_SENSING_ERROR_SOURCE_CONTRACTS = deepFreeze([
   {
     commit: "49ec880a24e990bd511ffc3a22543d84231968a6",
+    currentSha256: "b18e380bc01830aab5cbe21c2bc43a97c77d4a2a2fbfea368cb270549908d697",
     id: "M4-01",
     sha256: "b18e380bc01830aab5cbe21c2bc43a97c77d4a2a2fbfea368cb270549908d697",
     sourcePath: "apps/scoring/src/m4-01-analog-rule-boundary-audit.ts"
   },
   {
     commit: "0ebd7feb7112818cba21a5b420a7c6785d9e522f",
+    currentSha256: "fc611d073c8baf8040a559d58e2996f78c8cf1c7c69d42ca92ce0c97d6b23603",
     id: "M4-02",
     sha256: "fc611d073c8baf8040a559d58e2996f78c8cf1c7c69d42ca92ce0c97d6b23603",
     sourcePath: "apps/scoring/src/m4-02-clamp-rail-protection.ts"
   },
   {
     commit: "b7590b03b6f162405690bb8d15aa0cc19799cfa2",
+    currentSha256: "1f888dd5aa328fad823738f09a48502ef50189775d5e1920a09413a32c14360d",
     id: "BP-100",
     sha256: "438983d09aa2dad47f6ff3b49076f3e245f0d8693d469cf5c7601e912ca776ee",
     sourcePath: "packages/scoring-circuit/src/bench-prototype-analog-topology.ts"
   },
   {
     commit: "b7590b03b6f162405690bb8d15aa0cc19799cfa2",
+    currentSha256: "6b2dd869bb91f40fc3439ee9fffd96cb774f1dada4777c32f3be50a1b79a1c66",
     id: "BP-101",
     sha256: "ed062898c379110e61ebc321e41901cdcdfd27976b5c11f1b75cd7a76ffb0544",
     sourcePath: "packages/scoring-circuit/src/bench-prototype-reference-drive.ts"
@@ -519,6 +524,7 @@ export function validateM403SensingErrorBudget(value: unknown): true {
     budget.sourceContracts.some(
       (contract) =>
         !/^[0-9a-f]{40}$/u.test(contract.commit) ||
+        !/^[0-9a-f]{64}$/u.test(contract.currentSha256) ||
         !/^[0-9a-f]{64}$/u.test(contract.sha256) ||
         (!contract.sourcePath.startsWith("apps/scoring/src/") &&
           !contract.sourcePath.startsWith("packages/scoring-circuit/src/"))

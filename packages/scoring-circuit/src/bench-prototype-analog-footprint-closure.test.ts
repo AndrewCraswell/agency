@@ -14,9 +14,9 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       replicatedCellRecordCount: 112,
       connectorRecordCount: 1,
       totalRecordCount: 113,
-      sharedManufacturerSourceCount: 13,
-      sharedSourceLinkedRecordCount: 91,
-      sharedSourceUnresolvedRecordCount: 21,
+      sharedManufacturerSourceCount: 16,
+      sharedSourceLinkedRecordCount: 112,
+      sharedSourceUnresolvedRecordCount: 0,
       closedFootprintCount: 0,
       deniedUnresolvedFootprintCount: 113
     })
@@ -36,7 +36,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
   })
 
   it("centralizes only matching M4-04 manufacturer sources without promoting a footprint gate", () => {
-    expect(benchPrototypeAnalogFootprintClosure.sharedManufacturerSources).toHaveLength(13)
+    expect(benchPrototypeAnalogFootprintClosure.sharedManufacturerSources).toHaveLength(16)
     expect(
       benchPrototypeAnalogFootprintClosure.sharedManufacturerSources.find(
         (source) => source.sourceId === "M4-04:TPD4E05U06DQAR"
@@ -64,18 +64,47 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       acquisition: "exact-drawing-hash-bound",
       artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/murata-grm21br71a106ke51l-datasheet.pdf"
     })
+    expect(
+      benchPrototypeAnalogFootprintClosure.sharedManufacturerSources.find(
+        (source) => source.sourceId === "M4-04:CGA3E3X7R1H105K080AB"
+      )
+    ).toMatchObject({
+      sourceStatus: "hash-bound",
+      acquisition: "exact-drawing-hash-bound",
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/tdk-mlcc-automotive-general-zh.pdf",
+      reviewStatus: "not-reviewed-for-bp-031"
+    })
+    expect(
+      benchPrototypeAnalogFootprintClosure.sharedManufacturerSources.find(
+        (source) => source.sourceId === "M4-04:ADA4177-1ARZ"
+      )
+    ).toMatchObject({
+      sourceStatus: "identity-hash-bound",
+      acquisition: "exact-primary-identity-hash-bound",
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/analog-devices-ada4177-1arz-product.html",
+      drawingIdentifier: null,
+      drawingUrl: null,
+      identityIdentifier: "Analog Devices ADA4177-1 product page and Rev. E data-sheet identity, R-8 package option",
+      identityUrl: "https://www.analog.com/en/products/ADA4177-1.html",
+      reviewStatus: "not-reviewed-for-bp-031"
+    })
+    expect(
+      benchPrototypeAnalogFootprintClosure.sharedManufacturerSources.find(
+        (source) => source.sourceId === "M4-04:ERA3AEB2491V"
+      )
+    ).toMatchObject({
+      sourceStatus: "hash-bound",
+      acquisition: "exact-drawing-hash-bound",
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-datasheet.pdf",
+      drawingIdentifier: "Panasonic ERAA type, ERA3A 0603 manufacturer dimensions",
+      drawingUrl: "https://industrial.panasonic.cn/cdbs/www-data/pdf/RDM0000/AOA0000C309.pdf",
+      sha256: "FFCBFA23E13542434BCE2003BE0B563C099792976D6F153ECD0227F2C0AF0C79",
+      reviewStatus: "not-reviewed-for-bp-031"
+    })
     for (const record of benchPrototypeAnalogFootprintClosure.records.filter(
       (candidate) => candidate.sourceContract === "BP-103"
     )) {
-      if (
-        record.exactMpn === "ERA3AEB2491V" ||
-        record.exactMpn === "ADA4177-1ARZ" ||
-        record.exactMpn === "GRM188R71A105KA12D"
-      ) {
-        expect(record.sharedManufacturerSourceId).toBeNull()
-      } else {
-        expect(record.sharedManufacturerSourceId).toBe(`M4-04:${record.exactMpn}`)
-      }
+      expect(record.sharedManufacturerSourceId).toBe(`M4-04:${record.exactMpn}`)
     }
     for (const record of benchPrototypeAnalogFootprintClosure.records) {
       expect(record.manufacturerDrawing).toMatchObject({
@@ -137,7 +166,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
         exactPackage: "R SOIC-8",
         primaryEvidenceUrl:
           "https://www.analog.com/media/en/technical-documentation/data-sheets/ADA4177-1_4177-2_4177-4.pdf",
-        sharedManufacturerSourceId: null
+        sharedManufacturerSourceId: "M4-04:ADA4177-1ARZ"
       })
       expect(channelRecords.find((record) => record.reference === `R_SOURCE_PD_${channelIndex}`)).toMatchObject({
         sourceContract: "BP-103",

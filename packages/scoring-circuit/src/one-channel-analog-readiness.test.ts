@@ -6,7 +6,8 @@ import {
   oneChannelAnalogExperimentBom,
   oneChannelAnalogExperimentReadiness,
   ref5025OutputCapacitorRequirement,
-  supportCircuitReconciled
+  supportCircuitReconciled,
+  tdkAutomotiveOneUfCapacitorSelection
 } from "./one-channel-analog-readiness.js"
 
 const partEvidence = oneChannelAnalogExperimentBom.map((part, index) => ({
@@ -240,14 +241,37 @@ describe("one-channel analog experiment readiness", () => {
       C_BUFFER_POS: "C0603C104K3RACTU",
       C_ISO_IN: "GRM188R71A225KE15D",
       C_ISO_OUT: "GRM188R71A225KE15D",
-      C_NEG_IN: "GRM188R71A105KA12D",
-      C_REF_IN: "GRM188R71A105KA12D",
+      C_NEG_IN: "CGA3E3X7R1H105K080AB",
+      C_REF_IN: "CGA3E3X7R1H105K080AB",
       C_REF_REG_HF: "C0603C104K3RACTU",
       R_REF_SAR: "RCWE0603R220FKEA"
     })
     expect(oneChannelAnalogExperimentReadiness.supportReconciliation.nxeOptionalEmiFilter.population).toBe(
       "dnp-not-selected"
     )
+  })
+
+  it("selects the exact automotive TDK 1 uF MLCC while retaining every physical authority denial", () => {
+    expect(tdkAutomotiveOneUfCapacitorSelection).toMatchObject({
+      manufacturer: "TDK",
+      selectedMpn: "CGA3E3X7R1H105K080AB",
+      nonAutomotiveAlternativeMpn: "C1608X7R1H105K080AB",
+      dcBiasEvidence: { exactEffectiveCapacitanceAt5V: null },
+      authority: {
+        artworkApproved: false,
+        cadApproved: false,
+        fabricationApproved: false,
+        footprintApproved: false,
+        orientationApproved: false,
+        procurementApproved: false,
+        releaseState: "deny"
+      }
+    })
+    expect(
+      oneChannelAnalogExperimentBom
+        .filter((part) => part.mpn === tdkAutomotiveOneUfCapacitorSelection.selectedMpn)
+        .map((part) => part.reference)
+    ).toEqual(["C_REF_IN", "C_SAR_AVDD", "C_SAR_DVDD", "C_NEG_FLY", "C_NEG_IN", "C_NEG_OUT", "C_3V3_IN", "C_3V3_OUT"])
   })
 
   it("selects separate REF5025 stabilization and ADS8881-local reference parts", () => {

@@ -214,7 +214,7 @@ const cellIdentity = {
   localReferenceReservoir: "GRM21BR71A106KE51L",
   localReferenceFeed: "RCWE0603R220FKEA",
   reference: "REF5025AQDRQ1",
-  referenceInputBypass: "GRM188R71A105KA12D",
+  referenceInputBypass: "CGA3E3X7R1H105K080AB",
   referenceRegulatorOutput: "T521B106M025ATE100",
   referenceRegulatorHighFrequency: "C0603C104K3RACTU"
 } as const

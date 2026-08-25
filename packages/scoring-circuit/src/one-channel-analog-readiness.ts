@@ -11,11 +11,72 @@ type PartSeed = readonly [
 ]
 
 const vishayCrcwEvidence = "https://www.vishay.com/docs/20035/dcrcwe3.pdf"
-const murataOneUfEvidence = "https://search.murata.co.jp/Ceramy/image/img/A01X/EN/GRM188R71A105KA12-01.pdf"
+const tdkAutomotiveOneUfEvidence =
+  "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=CGA3E3X7R1H105K080AB"
 const kemetOneNfEvidence = "https://yageogroup.com/component-documentation/download/specsheet/C0603C102J5GACTU?lang=en"
 const kemetOneHundredNfEvidence =
   "https://yageogroup.com/component-documentation/download/specsheet/C0603C104K3RACTU?lang=en"
 const keystoneTestPointEvidence = "https://www.keyelco.com/product.cfm/product_id/13550"
+
+/** Source-bound selection record for every 1 uF analog/reference/negative-rail MLCC. */
+export const tdkAutomotiveOneUfCapacitorSelection = {
+  manufacturer: "TDK",
+  selectedMpn: "CGA3E3X7R1H105K080AB",
+  nonAutomotiveAlternativeMpn: "C1608X7R1H105K080AB",
+  selection: {
+    aecQ200: true,
+    capacitanceTolerancePercent: 10,
+    nominalCapacitanceUf: 1,
+    operatingTemperatureC: { maximum: 125, minimum: -55 },
+    package: { eia: "0603", metric: "1608" },
+    ratedVoltageVdc: 50,
+    temperatureCharacteristic: "X7R"
+  },
+  sources: {
+    productPage: {
+      url: tdkAutomotiveOneUfEvidence
+    },
+    exactPartDetail: {
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/tdk-cga3e3x7r1h105k080ab-detail.pdf",
+      sha256: "8692A2973DD875110C6F3FE3EB0A688454C0A155DCC8FCFAF3130F6862EC316F",
+      sourceUrl: "https://www.farnell.com/datasheets/4491451.pdf",
+      scope:
+        "Exact-part TDK product-information report mirrored by Farnell; it includes reference-only characteristic graphs and does not guarantee performance."
+    },
+    automotiveCatalog: {
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/tdk-mlcc-automotive-general-zh.pdf",
+      sha256: "E6F5803E89514DC61813BF2C96414D784005274730A8AF43A5EF54EBD546DBFF",
+      sourceUrl:
+        "https://product.tdk.cn/system/files/dam/doc/product/capacitor/ceramic/mlcc/catalog/mlcc_automotive_general_zh.pdf"
+    },
+    virtualComponentLibraryPartsList: {
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/tdk-mlcc-virtual-component-library-parts-list.pdf",
+      sha256: "B71416318033D9E0E50E4386A758FE58E133805F289B0200DFDE983B4FDA6DA4",
+      sourceUrl: "https://product.tdk.cn/system/files/dam/tvcl/partslist_mlcc_en.pdf"
+    }
+  },
+  dcBiasEvidence: {
+    exactEffectiveCapacitanceAt5V: null,
+    modelBytesAcquired: false,
+    rawCsvBytesAcquired: false,
+    status:
+      "TDK lists exact-part characteristic data and DC-bias models, but raw CSV/model downloads were not retained because model download requires separate acceptance of TDK simulation-model terms."
+  },
+  recommendedLandPatternGuidanceMm: {
+    flow: { pa: [0.7, 1], pb: [0.8, 1], pc: [0.6, 0.8] },
+    reflow: { pa: [0.6, 0.8], pb: [0.6, 0.8], pc: [0.6, 0.8] },
+    sourceUrl: tdkAutomotiveOneUfEvidence
+  },
+  authority: {
+    cadApproved: false,
+    footprintApproved: false,
+    artworkApproved: false,
+    orientationApproved: false,
+    procurementApproved: false,
+    fabricationApproved: false,
+    releaseState: "deny"
+  }
+} as const
 
 /** REF5025A-Q1 local output-capacitor limits and selected stabilization part. */
 export const ref5025OutputCapacitorRequirement = {
@@ -136,7 +197,14 @@ const physicalPartSeeds = [
     "10 uF, 25 V polymer tantalum; 100 mOhm maximum ESR at 25 C, 100 kHz",
     "https://search.kemet.com/download/specsheet/T521B106M025ATE100"
   ],
-  ["C_REF_IN", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V REF5025A-Q1 input bypass", murataOneUfEvidence],
+  [
+    "C_REF_IN",
+    "TDK",
+    "CGA3E3X7R1H105K080AB",
+    "0603",
+    "1 uF, 10 percent, 50 V X7R AEC-Q200 REF5025A-Q1 input bypass",
+    tdkAutomotiveOneUfEvidence
+  ],
   [
     "C_REF_REG_HF",
     "KEMET",
@@ -177,14 +245,63 @@ const physicalPartSeeds = [
     "100 nF X7R, 25 V ADA4177-1 negative-rail local bypass",
     kemetOneHundredNfEvidence
   ],
-  ["C_SAR_AVDD", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V", murataOneUfEvidence],
-  ["C_SAR_DVDD", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V", murataOneUfEvidence],
+  [
+    "C_SAR_AVDD",
+    "TDK",
+    "CGA3E3X7R1H105K080AB",
+    "0603",
+    "1 uF, 10 percent, 50 V X7R AEC-Q200",
+    tdkAutomotiveOneUfEvidence
+  ],
+  [
+    "C_SAR_DVDD",
+    "TDK",
+    "CGA3E3X7R1H105K080AB",
+    "0603",
+    "1 uF, 10 percent, 50 V X7R AEC-Q200",
+    tdkAutomotiveOneUfEvidence
+  ],
   ["C_MUX", "KEMET", "C0603C104K3RACTU", "0603", "100 nF X7R, 25 V", kemetOneHundredNfEvidence],
-  ["C_NEG_FLY", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V", murataOneUfEvidence],
-  ["C_NEG_IN", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V TPS60400 input bypass", murataOneUfEvidence],
-  ["C_NEG_OUT", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V", murataOneUfEvidence],
-  ["C_3V3_IN", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V", murataOneUfEvidence],
-  ["C_3V3_OUT", "Murata", "GRM188R71A105KA12D", "0603", "1 uF X7R, 10 V", murataOneUfEvidence],
+  [
+    "C_NEG_FLY",
+    "TDK",
+    "CGA3E3X7R1H105K080AB",
+    "0603",
+    "1 uF, 10 percent, 50 V X7R AEC-Q200",
+    tdkAutomotiveOneUfEvidence
+  ],
+  [
+    "C_NEG_IN",
+    "TDK",
+    "CGA3E3X7R1H105K080AB",
+    "0603",
+    "1 uF, 10 percent, 50 V X7R AEC-Q200 TPS60400 input bypass",
+    tdkAutomotiveOneUfEvidence
+  ],
+  [
+    "C_NEG_OUT",
+    "TDK",
+    "CGA3E3X7R1H105K080AB",
+    "0603",
+    "1 uF, 10 percent, 50 V X7R AEC-Q200",
+    tdkAutomotiveOneUfEvidence
+  ],
+  [
+    "C_3V3_IN",
+    "TDK",
+    "CGA3E3X7R1H105K080AB",
+    "0603",
+    "1 uF, 10 percent, 50 V X7R AEC-Q200",
+    tdkAutomotiveOneUfEvidence
+  ],
+  [
+    "C_3V3_OUT",
+    "TDK",
+    "CGA3E3X7R1H105K080AB",
+    "0603",
+    "1 uF, 10 percent, 50 V X7R AEC-Q200",
+    tdkAutomotiveOneUfEvidence
+  ],
   [
     "C_ISO_IN",
     "Murata",

@@ -23,7 +23,18 @@ describe("M4-04 single-channel sensing coupon", () => {
     for (const footprint of M404_SINGLE_CHANNEL_COUPON.footprints) {
       expect(footprint.evidence.exactMpn).toBe(footprint.exactMpn)
       expect(footprint.evidence.manufacturerPrimaryDocument.url).toMatch(/^https:\/\//u)
-      expect(footprint.evidence.manufacturerCad).toMatchObject({ availability: "not-verified", status: "not-acquired" })
+      expect(footprint.evidence.manufacturerCad.status).toBe("not-acquired")
+      if (footprint.exactMpn === "ERA3AEB2491V") {
+        expect(footprint.evidence.manufacturerCad).toMatchObject({
+          availability: "not-published",
+          sourceUrl:
+            "https://industrial.panasonic.cn/ea/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V/cad",
+          artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-cad.html",
+          sha256: "ADA48ECB98E85E4C346D9365C1C6BC7FED81504131E1B761854AD664D960A93D"
+        })
+      } else {
+        expect(footprint.evidence.manufacturerCad).toMatchObject({ availability: "not-verified" })
+      }
       expect(footprint.evidence.reviewArtwork).toMatchObject({
         overlayStatus: "not-generated",
         status: "schematic-reference-only"
@@ -45,7 +56,18 @@ describe("M4-04 single-channel sensing coupon", () => {
         acquisition: "not-acquired",
         artifactPath: null,
         drawingUrl: null,
+        drawingIdentifier: null,
+        geometry: null,
         sha256: null
+      },
+      manufacturerIdentitySource: {
+        acquisition: "exact-primary-identity-hash-bound",
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/analog-devices-ada4177-1arz-product.html",
+        identityIdentifier: "Analog Devices ADA4177-1 product page and Rev. E data-sheet identity, R-8 package option",
+        sourceUrl: "https://www.analog.com/en/products/ADA4177-1.html",
+        geometry: null,
+        byteMarkers: ["ADA4177-1ARZ", "SOIC_N", "R-8", "Rev. E"],
+        sha256: "A456369D2013DAF8E166E9CC2BCB1AAF54834FA86EAA292F5C1BE89EBE316703"
       },
       manufacturerPrimaryDocument: {
         status: "identified-not-hash-acquired",
@@ -54,7 +76,7 @@ describe("M4-04 single-channel sensing coupon", () => {
     })
   })
 
-  it("binds an eleven-MPN first-party drawing batch without granting footprint authority", () => {
+  it("binds a thirteen-MPN manufacturer drawing batch without granting footprint authority", () => {
     const acquired = M404_SINGLE_CHANNEL_COUPON.footprints
       .filter((footprint) => footprint.evidence.manufacturerDrawing.acquisition === "exact-drawing-hash-bound")
       .filter(
@@ -106,6 +128,12 @@ describe("M4-04 single-channel sensing coupon", () => {
         sourceUrl: "https://www.ti.com/lit/ds/symlink/tmux1112.pdf"
       },
       {
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-datasheet.pdf",
+        exactMpn: "ERA3AEB2491V",
+        sha256: "FFCBFA23E13542434BCE2003BE0B563C099792976D6F153ECD0227F2C0AF0C79",
+        sourceUrl: "https://industrial.panasonic.cn/cdbs/www-data/pdf/RDM0000/AOA0000C309.pdf"
+      },
+      {
         artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c102j5gactu-datasheet.pdf",
         exactMpn: "C0603C102J5GACTU",
         sha256: "B62452DE5A68C2E26AE145A4F4F4DF1D989AA5482AF4746C93A86155D5910221",
@@ -122,6 +150,13 @@ describe("M4-04 single-channel sensing coupon", () => {
         exactMpn: "T521B106M025ATE100",
         sha256: "8DBB07C110359B8BC1BE5AE0044E08B8BADCC88A60F4DA36404BB27803F85EBD",
         sourceUrl: "https://search.kemet.com/download/specsheet/T521B106M025ATE100"
+      },
+      {
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/tdk-mlcc-automotive-general-zh.pdf",
+        exactMpn: "CGA3E3X7R1H105K080AB",
+        sha256: "E6F5803E89514DC61813BF2C96414D784005274730A8AF43A5EF54EBD546DBFF",
+        sourceUrl:
+          "https://product.tdk.cn/system/files/dam/doc/product/capacitor/ceramic/mlcc/catalog/mlcc_automotive_general_zh.pdf"
       },
       {
         artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/yageo-c0603c104k3ractu-datasheet.pdf",
@@ -148,6 +183,56 @@ describe("M4-04 single-channel sensing coupon", () => {
     })
   })
 
+  it("binds the exact Panasonic ERA3AEB2491V package and identity while recording CAD absence", () => {
+    const resistor = M404_SINGLE_CHANNEL_COUPON.footprints.find((footprint) => footprint.exactMpn === "ERA3AEB2491V")
+    expect(resistor).toMatchObject({
+      manufacturer: "Panasonic",
+      exactMpn: "ERA3AEB2491V",
+      package: "0603",
+      evidence: {
+        manufacturerDrawing: {
+          acquisition: "exact-drawing-hash-bound",
+          artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-datasheet.pdf",
+          drawingIdentifier: "Panasonic ERAA type, ERA3A 0603 manufacturer dimensions",
+          drawingUrl: "https://industrial.panasonic.cn/cdbs/www-data/pdf/RDM0000/AOA0000C309.pdf",
+          geometry: null,
+          sha256: "FFCBFA23E13542434BCE2003BE0B563C099792976D6F153ECD0227F2C0AF0C79",
+          supportingSources: [
+            {
+              classification: "manufacturer-recommended-land-pattern",
+              artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-resistor-land-pattern.pdf",
+              sourceUrl: "https://industrial.panasonic.cn/cdbs/www-data/pdf/RDM0000/DMM0000COL20.pdf",
+              sha256: "65A9872D2618A23D77BD1B54B3DFDD6534A3F9E82A6BA6C136266399B9CFFA1D",
+              scope: expect.stringContaining("Manufacturer guidance only")
+            }
+          ]
+        },
+        manufacturerIdentitySource: {
+          acquisition: "exact-primary-identity-hash-bound",
+          artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-product.html",
+          sourceUrl: "https://industrial.panasonic.cn/ea/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V",
+          identityIdentifier:
+            "Panasonic Industry exact ERA3AEB2491V product page, 0603 / 1.6 x 0.8 mm, 2490 ohm, 0.1 percent, 0.1 W, 25 ppm/K",
+          geometry: null,
+          sha256: "BB9C4A4BE74D7F700378C41A63089E158FFE929FA6EA3943427C27AD89BC6048"
+        },
+        manufacturerCad: {
+          availability: "not-published",
+          sourceUrl:
+            "https://industrial.panasonic.cn/ea/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V/cad",
+          artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-cad.html",
+          sha256: "ADA48ECB98E85E4C346D9365C1C6BC7FED81504131E1B761854AD664D960A93D",
+          status: "not-acquired"
+        },
+        reviewArtwork: { overlayStatus: "not-generated", status: "schematic-reference-only" }
+      },
+      footprintRelease: "deny"
+    })
+    expect(resistor?.evidence.manufacturerDrawing.scope).toContain("a = 0.7-0.9 mm")
+    expect(resistor?.evidence.manufacturerDrawing.scope).toContain("no project footprint")
+    expect(resistor?.evidence.manufacturerCad.scope).toContain("no Panasonic CAD object")
+  })
+
   it("binds the Murata NXE1 isolated-converter source without releasing its footprint", () => {
     const converter = M404_SINGLE_CHANNEL_COUPON.footprints.find((footprint) => footprint.exactMpn === "NXE1S0505MC")
     expect(converter?.package).toBe(
@@ -170,6 +255,89 @@ describe("M4-04 single-channel sensing coupon", () => {
     expect(converter?.evidence.manufacturerDrawing.scope).toContain("14=NA (not available for electrical connection)")
     expect(converter?.evidence.manufacturerDrawing.scope).toContain("recommended 5-pad footprint")
     expect(converter?.footprintRelease).toBe("deny")
+  })
+
+  it("binds the corrected ADA4177-1ARZ primary identity capture without granting drawing or release authority", () => {
+    const buffer = M404_SINGLE_CHANNEL_COUPON.footprints.find((footprint) => footprint.exactMpn === "ADA4177-1ARZ")
+    expect(buffer).toMatchObject({
+      manufacturer: "Analog Devices",
+      package: "R SOIC-8",
+      evidence: {
+        manufacturerDrawing: {
+          acquisition: "not-acquired",
+          artifactPath: null,
+          drawingUrl: null,
+          drawingIdentifier: null,
+          geometry: null,
+          byteMarkers: [],
+          sha256: null
+        },
+        manufacturerIdentitySource: {
+          acquisition: "exact-primary-identity-hash-bound",
+          artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/analog-devices-ada4177-1arz-product.html",
+          sourceUrl: "https://www.analog.com/en/products/ADA4177-1.html",
+          identityIdentifier:
+            "Analog Devices ADA4177-1 product page and Rev. E data-sheet identity, R-8 package option",
+          geometry: null,
+          byteMarkers: ["ADA4177-1ARZ", "SOIC_N", "R-8", "Rev. E"],
+          sha256: "A456369D2013DAF8E166E9CC2BCB1AAF54834FA86EAA292F5C1BE89EBE316703",
+          scope: expect.stringContaining("not a manufacturer package drawing")
+        },
+        manufacturerPrimaryDocument: {
+          status: "identified-not-hash-acquired",
+          url: "https://www.analog.com/media/en/technical-documentation/data-sheets/ADA4177-1_4177-2_4177-4.pdf"
+        },
+        manufacturerCad: { availability: "not-verified", status: "not-acquired" },
+        reviewArtwork: { overlayStatus: "not-generated", status: "schematic-reference-only" }
+      },
+      footprintRelease: "deny"
+    })
+  })
+
+  it("hash-binds the exact TDK selection sources without inventing 5 V effective capacitance", () => {
+    const repoRoot = new URL("../../../", import.meta.url)
+    const selected = M404_SINGLE_CHANNEL_COUPON.selectedOneUfCapacitor
+    expect(selected).toMatchObject({
+      manufacturer: "TDK",
+      selectedMpn: "CGA3E3X7R1H105K080AB",
+      nonAutomotiveAlternativeMpn: "C1608X7R1H105K080AB",
+      selection: {
+        aecQ200: true,
+        capacitanceTolerancePercent: 10,
+        nominalCapacitanceUf: 1,
+        operatingTemperatureC: { maximum: 125, minimum: -55 },
+        package: { eia: "0603", metric: "1608" },
+        ratedVoltageVdc: 50,
+        temperatureCharacteristic: "X7R"
+      },
+      dcBiasEvidence: {
+        exactEffectiveCapacitanceAt5V: null,
+        modelBytesAcquired: false,
+        rawCsvBytesAcquired: false
+      },
+      authority: {
+        artworkApproved: false,
+        cadApproved: false,
+        fabricationApproved: false,
+        footprintApproved: false,
+        orientationApproved: false,
+        procurementApproved: false,
+        releaseState: "deny"
+      }
+    })
+    expect(selected.recommendedLandPatternGuidanceMm).toEqual({
+      flow: { pa: [0.7, 1], pb: [0.8, 1], pc: [0.6, 0.8] },
+      reflow: { pa: [0.6, 0.8], pb: [0.6, 0.8], pc: [0.6, 0.8] },
+      sourceUrl: "https://product.tdk.com/en/search/capacitor/ceramic/mlcc/info?part_no=CGA3E3X7R1H105K080AB"
+    })
+    for (const source of [
+      selected.sources.exactPartDetail,
+      selected.sources.automotiveCatalog,
+      selected.sources.virtualComponentLibraryPartsList
+    ]) {
+      const bytes = readFileSync(new URL(source.artifactPath, repoRoot))
+      expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(source.sha256)
+    }
   })
 
   it("retains a Vishay D/CRCW family drawing as series evidence, not exact-MPN evidence", () => {
@@ -306,6 +474,92 @@ describe("M4-04 single-channel sensing coupon", () => {
       expect(drawing.drawingIdentifier).toMatch(/(?:mechanical drawing|manufacturer dimensions|series drawing)$/u)
       expect(drawing.geometry).toBeNull()
     }
+  }, 15_000)
+
+  it("hash-verifies primary identity captures without treating them as manufacturer drawings", () => {
+    const repoRoot = new URL("../../../", import.meta.url)
+    const footprint = M404_SINGLE_CHANNEL_COUPON.footprints.find((candidate) => candidate.exactMpn === "ADA4177-1ARZ")
+    const identity = footprint?.evidence.manufacturerIdentitySource
+    expect(identity).toMatchObject({
+      acquisition: "exact-primary-identity-hash-bound",
+      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/analog-devices-ada4177-1arz-product.html",
+      sourceUrl: "https://www.analog.com/en/products/ADA4177-1.html",
+      geometry: null,
+      sha256: "A456369D2013DAF8E166E9CC2BCB1AAF54834FA86EAA292F5C1BE89EBE316703"
+    })
+    if (identity?.acquisition !== "exact-primary-identity-hash-bound" || identity.artifactPath === null) {
+      throw new Error("ADA4177-1ARZ identity capture must be hash-bound")
+    }
+    const bytes = readFileSync(new URL(identity.artifactPath, repoRoot))
+    expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(identity.sha256)
+    for (const marker of identity.byteMarkers) expect(bytes.toString("utf8")).toContain(marker)
+    expect(footprint?.evidence.manufacturerDrawing).toMatchObject({
+      acquisition: "not-acquired",
+      artifactPath: null,
+      drawingUrl: null,
+      geometry: null,
+      sha256: null
+    })
+    expect(footprint?.evidence.manufacturerCad).toMatchObject({ availability: "not-verified", status: "not-acquired" })
+    expect(footprint?.footprintRelease).toBe("deny")
+  })
+
+  it("hash-verifies the Panasonic exact-MPN, recommended-land-pattern, and CAD-status captures", () => {
+    const repoRoot = new URL("../../../", import.meta.url)
+    const sources = [
+      {
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-product.html",
+        sha256: "BB9C4A4BE74D7F700378C41A63089E158FFE929FA6EA3943427C27AD89BC6048",
+        markers: ["ERA3AEB2491V", "1.6 x 0.8", "2490.0000"]
+      },
+      {
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-datasheet.pdf",
+        sha256: "FFCBFA23E13542434BCE2003BE0B563C099792976D6F153ECD0227F2C0AF0C79",
+        markers: ["%PDF-1.7"]
+      },
+      {
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-resistor-land-pattern.pdf",
+        sha256: "65A9872D2618A23D77BD1B54B3DFDD6534A3F9E82A6BA6C136266399B9CFFA1D",
+        markers: ["%PDF-1.7"]
+      },
+      {
+        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-cad.html",
+        sha256: "ADA48ECB98E85E4C346D9365C1C6BC7FED81504131E1B761854AD664D960A93D",
+        markers: ["ERA3AEB2491V", "CAD Data", "no-es-cad-files", "componentsearchengine.com", "snapeda.com"]
+      }
+    ]
+    const inflatePdfStreams = (bytes: Buffer) => {
+      let decoded = ""
+      let cursor = 0
+      while ((cursor = bytes.indexOf(Buffer.from("stream"), cursor)) >= 0) {
+        const streamStart =
+          bytes[cursor + 6] === 13 && bytes[cursor + 7] === 10
+            ? cursor + 8
+            : bytes[cursor + 6] === 10
+              ? cursor + 7
+              : cursor + 6
+        const streamEnd = bytes.indexOf(Buffer.from("endstream"), streamStart)
+        if (streamEnd < 0) break
+        try {
+          decoded += inflateSync(bytes.subarray(streamStart, streamEnd)).toString("latin1")
+        } catch {
+          // Non-content or uncompressed streams do not contribute to marker checks.
+        }
+        cursor = streamEnd + "endstream".length
+      }
+      return decoded
+    }
+    for (const source of sources) {
+      const bytes = readFileSync(new URL(source.artifactPath, repoRoot))
+      expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(source.sha256)
+      const content = source.artifactPath.endsWith(".pdf")
+        ? `${bytes.toString("latin1")}\n${inflatePdfStreams(bytes)}`
+        : bytes.toString("utf8")
+      for (const marker of source.markers) expect(content).toContain(marker)
+    }
+    expect(
+      M404_SINGLE_CHANNEL_COUPON.footprints.find((footprint) => footprint.exactMpn === "ERA3AEB2491V")?.footprintRelease
+    ).toBe("deny")
   })
 
   it("requires a separate root reviewer and refuses to convert implementation reconciliation into footprint approval", () => {

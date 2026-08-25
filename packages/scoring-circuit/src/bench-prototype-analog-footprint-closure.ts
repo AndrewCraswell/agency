@@ -51,6 +51,26 @@ type FootprintOrientationEvidence = {
 
 type SourcePart = (typeof oneChannelAnalogExperimentBom)[number]
 
+type SharedManufacturerSource = {
+  readonly sourceId: string
+  readonly sourceWorkUnit: "M4-04"
+  readonly exactMpn: string
+  readonly manufacturer: string
+  readonly package: string
+  readonly primaryEvidenceUrl: string
+  readonly sourceStatus: "hash-bound" | "series-hash-bound" | "identity-hash-bound"
+  readonly acquisition: "exact-drawing-hash-bound" | "series-drawing-hash-bound" | "exact-primary-identity-hash-bound"
+  readonly artifactPath: string
+  readonly drawingIdentifier: string | null
+  readonly drawingUrl: string | null
+  readonly identityIdentifier: string | null
+  readonly identityUrl: string | null
+  readonly sha256: string
+  readonly geometry: null
+  readonly reviewStatus: "not-reviewed-for-bp-031"
+  readonly scope: string
+}
+
 function isPlainRecord(value: unknown): value is PlainRecord {
   return (
     value !== null &&
@@ -161,7 +181,7 @@ const expectedCellReferenceCount = 16
 const expectedReplicatedCellRecordCount = expectedReplicatedCellCount * expectedCellReferenceCount
 const expectedConnectorRecordCount = 1
 const expectedTotalRecordCount = expectedReplicatedCellRecordCount + expectedConnectorRecordCount
-const expectedSharedManufacturerSourceCount = 13
+const expectedSharedManufacturerSourceCount = 16
 const expectedSharedSourceLinkedRecordCount = expectedReplicatedCellCount * expectedSharedManufacturerSourceCount
 const expectedSharedSourceUnresolvedRecordCount =
   expectedReplicatedCellRecordCount - expectedSharedSourceLinkedRecordCount
@@ -199,47 +219,96 @@ function existingFootprintEvidence(mpn: string) {
   }
 }
 
-function sharedManufacturerSourcesFor(parts: readonly SourcePart[]) {
-  return parts.flatMap((part) => {
+function sharedManufacturerSourcesFor(parts: readonly SourcePart[]): SharedManufacturerSource[] {
+  const sources: SharedManufacturerSource[] = []
+  for (const part of parts) {
     const m404Footprint = M404_SINGLE_CHANNEL_COUPON.footprints.find((footprint) => footprint.exactMpn === part.mpn)
+    if (m404Footprint === undefined) {
+      continue
+    }
+    const manufacturerDrawing = m404Footprint.evidence.manufacturerDrawing
+    const manufacturerIdentitySource = m404Footprint.evidence.manufacturerIdentitySource
+    const hasDrawingSource =
+      manufacturerDrawing !== undefined &&
+      (manufacturerDrawing.acquisition === "exact-drawing-hash-bound" ||
+        manufacturerDrawing.acquisition === "series-drawing-hash-bound") &&
+      manufacturerDrawing.artifactPath !== null &&
+      manufacturerDrawing.drawingUrl !== null &&
+      manufacturerDrawing.sha256 !== null
+    const hasIdentitySource =
+      manufacturerIdentitySource !== undefined &&
+      manufacturerIdentitySource.acquisition === "exact-primary-identity-hash-bound" &&
+      manufacturerIdentitySource.artifactPath !== null &&
+      manufacturerIdentitySource.sourceUrl !== null &&
+      manufacturerIdentitySource.identityIdentifier !== null &&
+      manufacturerIdentitySource.sha256 !== null
     if (
-      m404Footprint === undefined ||
       m404Footprint.manufacturer !== part.manufacturer ||
       m404Footprint.package !== part.package ||
       m404Footprint.evidence.exactMpn !== part.mpn ||
       m404Footprint.evidence.manufacturerPrimaryDocument.url !== part.primaryEvidenceUrl ||
-      (m404Footprint.evidence.manufacturerPrimaryDocument.status !== "hash-bound" &&
-        m404Footprint.evidence.manufacturerPrimaryDocument.status !== "series-hash-bound") ||
-      (m404Footprint.evidence.manufacturerDrawing.acquisition !== "exact-drawing-hash-bound" &&
-        m404Footprint.evidence.manufacturerDrawing.acquisition !== "series-drawing-hash-bound") ||
-      m404Footprint.evidence.manufacturerDrawing.artifactPath === null ||
-      m404Footprint.evidence.manufacturerDrawing.drawingUrl === null ||
-      m404Footprint.evidence.manufacturerDrawing.sha256 === null
+      (!hasDrawingSource && !hasIdentitySource)
     ) {
-      return []
+      continue
     }
 
-    return [
-      {
+    if (hasDrawingSource) {
+      sources.push({
         sourceId: `M4-04:${part.mpn}`,
         sourceWorkUnit: "M4-04" as const,
         exactMpn: part.mpn,
         manufacturer: part.manufacturer,
         package: part.package,
         primaryEvidenceUrl: part.primaryEvidenceUrl,
-        sourceStatus: m404Footprint.evidence.manufacturerPrimaryDocument.status,
-        acquisition: m404Footprint.evidence.manufacturerDrawing.acquisition,
-        artifactPath: m404Footprint.evidence.manufacturerDrawing.artifactPath,
-        drawingIdentifier: m404Footprint.evidence.manufacturerDrawing.drawingIdentifier,
-        drawingUrl: m404Footprint.evidence.manufacturerDrawing.drawingUrl,
-        sha256: m404Footprint.evidence.manufacturerDrawing.sha256,
+        sourceStatus:
+          manufacturerDrawing.acquisition === "exact-drawing-hash-bound"
+            ? ("hash-bound" as const)
+            : ("series-hash-bound" as const),
+        acquisition: manufacturerDrawing.acquisition,
+        artifactPath: manufacturerDrawing.artifactPath,
+        drawingIdentifier: manufacturerDrawing.drawingIdentifier,
+        drawingUrl: manufacturerDrawing.drawingUrl,
+        identityIdentifier: null,
+        identityUrl: null,
+        sha256: manufacturerDrawing.sha256,
         geometry: null,
         reviewStatus: "not-reviewed-for-bp-031" as const,
         scope:
           "Imported source identity only. BP-031 has not reviewed the source against project artwork, CAD, orientation, assembly, schematic integration, or fabrication acceptance."
-      }
-    ]
-  })
+      })
+      continue
+    }
+    if (
+      manufacturerIdentitySource !== undefined &&
+      manufacturerIdentitySource.acquisition === "exact-primary-identity-hash-bound" &&
+      manufacturerIdentitySource.artifactPath !== null &&
+      manufacturerIdentitySource.sourceUrl !== null &&
+      manufacturerIdentitySource.identityIdentifier !== null &&
+      manufacturerIdentitySource.sha256 !== null
+    ) {
+      sources.push({
+        sourceId: `M4-04:${part.mpn}`,
+        sourceWorkUnit: "M4-04" as const,
+        exactMpn: part.mpn,
+        manufacturer: part.manufacturer,
+        package: part.package,
+        primaryEvidenceUrl: part.primaryEvidenceUrl,
+        sourceStatus: "identity-hash-bound" as const,
+        acquisition: manufacturerIdentitySource.acquisition,
+        artifactPath: manufacturerIdentitySource.artifactPath,
+        drawingIdentifier: null,
+        drawingUrl: null,
+        identityIdentifier: manufacturerIdentitySource.identityIdentifier,
+        identityUrl: manufacturerIdentitySource.sourceUrl,
+        sha256: manufacturerIdentitySource.sha256,
+        geometry: null,
+        reviewStatus: "not-reviewed-for-bp-031" as const,
+        scope:
+          "Imported source identity only. BP-031 has not reviewed the source against project artwork, CAD, orientation, assembly, schematic integration, or fabrication acceptance."
+      })
+    }
+  }
+  return sources
 }
 
 const sourceParts = cellReferenceBindings.map((binding) => findUniqueSourcePart(binding.baseReference))
@@ -284,7 +353,7 @@ function createCellRecord(
     existingFootprintEvidence: existingFootprintEvidence(sourcePart.mpn),
     disposition: "DNP-unresolved" as const,
     findings: [
-      "Exact identity is source-backed, but no exact manufacturer drawing, CAD, generated artwork, or independently reviewed orientation evidence is archived."
+      "The exact BOM identity has M4-04 source evidence (classified as exact drawing, series-only drawing, or exact identity), but BP-031 has no independently reviewed project artwork, CAD approval, orientation, or fabrication evidence."
     ]
   }
 }
@@ -560,12 +629,26 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
       (source) =>
         source.sourceId !== `M4-04:${source.exactMpn}` ||
         source.sourceWorkUnit !== "M4-04" ||
-        (source.sourceStatus !== "hash-bound" && source.sourceStatus !== "series-hash-bound") ||
-        (source.acquisition !== "exact-drawing-hash-bound" && source.acquisition !== "series-drawing-hash-bound") ||
+        (source.sourceStatus !== "hash-bound" &&
+          source.sourceStatus !== "series-hash-bound" &&
+          source.sourceStatus !== "identity-hash-bound") ||
+        (source.acquisition !== "exact-drawing-hash-bound" &&
+          source.acquisition !== "series-drawing-hash-bound" &&
+          source.acquisition !== "exact-primary-identity-hash-bound") ||
         source.artifactPath === null ||
-        source.drawingUrl === null ||
         source.sha256 === null ||
         source.geometry !== null ||
+        (source.acquisition === "exact-primary-identity-hash-bound"
+          ? source.sourceStatus !== "identity-hash-bound" ||
+            source.drawingIdentifier !== null ||
+            source.drawingUrl !== null ||
+            source.identityIdentifier === null ||
+            source.identityUrl === null
+          : source.sourceStatus === "identity-hash-bound" ||
+            source.drawingIdentifier === null ||
+            source.drawingUrl === null ||
+            source.identityIdentifier !== null ||
+            source.identityUrl !== null) ||
         source.reviewStatus !== "not-reviewed-for-bp-031"
     ) ||
     cellRecords.some(

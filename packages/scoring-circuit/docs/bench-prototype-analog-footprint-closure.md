@@ -3,12 +3,15 @@
 ## Shared manufacturer-source projection
 
 BP-031 imports the already reviewed M4-04 source identities once, rather than
-copying source hashes into each of the seven repeated cells. Thirteen exact
-lane-B MPNs have a shared source ID: eight are exact-MPN hash-bound records and
-five are explicitly series-only Vishay resistor records. The 91 matching cell
-rows reference those IDs. The remaining 21 rows (`ERA3AEB2491V`, `ADA4177-1ARZ`,
-and `GRM188R71A105KA12D` across seven cells) retain no archived M4-04 drawing
-source.
+copying source hashes into each of the seven repeated cells. Sixteen lane-B
+MPN source IDs are shared: ten are exact-MPN hash-bound drawing records, one
+is an exact-primary-identity hash-bound capture, and five are explicitly
+series-only Vishay resistor records. All 112 matching cell rows reference
+those IDs, including `ERA3AEB2491V` across `R_SOURCE_1` through `R_SOURCE_7`.
+The Panasonic source is exact MPN/package evidence; its manufacturer CAD-status
+page explicitly records that no Panasonic CAD object is published, and the
+recommended land-pattern PDF remains manufacturer guidance rather than project
+geometry.
 
 This is source provenance only. A shared source ID does not change a row's
 `manufacturerDrawing` state, DNP disposition, or release authority. Every
@@ -21,6 +24,22 @@ prototype. It reconciles BP-103's seven repeated acquisition cells and BP-104's
 12-position weapon-fixture header to the BP-030 evidence method. It freezes
 exact source-backed identities, but it does not generate or release PCB
 geometry.
+
+The retained Panasonic support set is byte-hash bound in M4-04: the exact
+[ERA3AEB2491V product page](https://industrial.panasonic.cn/ea/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V)
+is `packages/scoring-circuit/docs/evidence/m4-04/panasonic-era3aeb2491v-product.html`
+(`BB9C4A4BE74D7F700378C41A63089E158FFE929FA6EA3943427C27AD89BC6048`); the
+[AOA0000C309 ERAA datasheet/package drawing](https://industrial.panasonic.cn/cdbs/www-data/pdf/RDM0000/AOA0000C309.pdf)
+is `panasonic-era3aeb2491v-datasheet.pdf`
+(`FFCBFA23E13542434BCE2003BE0B563C099792976D6F153ECD0227F2C0AF0C79`); the
+[DMM0000COL20 recommended-land-pattern PDF](https://industrial.panasonic.cn/cdbs/www-data/pdf/RDM0000/DMM0000COL20.pdf)
+is `panasonic-resistor-land-pattern.pdf`
+(`65A9872D2618A23D77BD1B54B3DFDD6534A3F9E82A6BA6C136266399B9CFFA1D`); and
+the [exact CAD-status page](https://industrial.panasonic.cn/ea/products/pt/high-precision-chip-resistors/models/ERA3AEB2491V/cad)
+is `panasonic-era3aeb2491v-cad.html`
+(`ADA48ECB98E85E4C346D9365C1C6BC7FED81504131E1B761854AD664D960A93D`). The
+last capture records manufacturer CAD as unavailable; none of these artifacts
+grants project artwork, orientation, fabrication, or footprint authority.
 
 ## Ledger scope
 
@@ -50,7 +69,7 @@ channel number, conductor, connector net, and role. The repeated set is:
 | `C_SAR_n` | `C0603C102J5GACTU` | 0603 | BP-102 |
 | `U_SAR_n` | `ADS8881IDGS` | DGS VSSOP-10 | BP-101 |
 | `U_REF_n` | `REF5025AQDRQ1` | D SOIC-8 | BP-101 |
-| `C_REF_IN_n` | `GRM188R71A105KA12D` | 0603 | BP-101 |
+| `C_REF_IN_n` | TDK `CGA3E3X7R1H105K080AB` | 0603 / 1608 | BP-101 |
 | `C_REF_REG_n` | `T521B106M025ATE100` | 1411 / 3528 B case | BP-101 |
 | `C_REF_REG_HF_n` | `C0603C104K3RACTU` | 0603 | BP-101 |
 | `R_REF_SAR_n` | `RCWE0603R220FKEA` | 0603 | BP-101 |
@@ -76,9 +95,12 @@ be reviewed as a footprint:
 4. An independent orientation review covering pin 1 or polarity, assembly
    rotation, package top view, edge/courtyard clearance, and assembly rules.
 
-The current ledger has none of these artifacts. It therefore records
-`DNP-unresolved` for all 113 references, `eligibleForPcb: false`, and missing
-copper, courtyard, paste, and solder-mask release data. Package prose,
+The current ledger carries source identity/drawing evidence centrally for all
+112 replicated cells, including the Panasonic exact-MPN record, but it has no
+project CAD approval, generated artwork, or independent orientation review. It
+therefore records `DNP-unresolved` for all 113 references,
+`eligibleForPcb: false`, and missing copper, courtyard, paste, and solder-mask
+release data. Package prose,
 datasheet images, generic library names, transcribed dimensions, and the old
 fabrication ledger cannot substitute for the four evidence classes.
 

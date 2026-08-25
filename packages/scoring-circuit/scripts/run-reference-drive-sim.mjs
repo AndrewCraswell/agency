@@ -107,7 +107,7 @@ export const referenceDriveSimulationManifest = {
     feedResistanceOhms: 0.22,
     feedResistorMpn: "RCWE0603R220FKEA",
     ref5025HighFrequencyCapacitorMpn: "C0603C104K3RACTU",
-    ref5025InputCapacitorMpn: "GRM188R71A105KA12D",
+    ref5025InputCapacitorMpn: "CGA3E3X7R1H105K080AB",
     ref5025OutputCapacitorMpn: "T521B106M025ATE100",
     referenceMpn: "REF5025AQDRQ1"
   },
@@ -151,11 +151,11 @@ export const reviewedReferenceDriveExecution = {
   artifactDigests: {
     netlistTemplateSha256: "87be1beb2285c6adc1ab4b620f7139445cf06b451f57264a94508658f66894c2",
     normalizedResultsSha256: "f3a2997911b1b700babc4822093731aa54c3286de8e941748f8e9a5764b5d975",
-    parameterManifestSha256: "5ca2d17e0664ace5c44ff4ed96113b1280b389591a2c1c03ba4ab17adce34f46",
+    parameterManifestSha256: "7359892a5bea2a9e914ef3e1df6dda2df1dfae77318e36e95b4d4e4a50a0b7fb",
     waveformManifestSha256: "1c708bcb507b3cbed63ddd416524c478dafef2409949362dba9f528a4e98f62f"
   },
   engineIdentity: "ngspice-47 : Circuit level simulation program",
-  evidenceDigest: "79d700c8eddaf11a4a47ea1cd6e38ef29d8407effb30a1cef5cf6b2089b5599c"
+  evidenceDigest: "f9ff3706c1906ee7cf02f35dea0397e6cffeb9d5ac0e85463bf0b4b1e2db592c"
 }
 
 function findExecutable() {

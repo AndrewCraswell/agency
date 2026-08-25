@@ -204,7 +204,7 @@ describe("BP-103 seven-channel analog replication", () => {
       ["C_SAR", "C0603C102J5GACTU"],
       ["U_SAR", "ADS8881IDGS"],
       ["U_REF", "REF5025AQDRQ1"],
-      ["C_REF_IN", "GRM188R71A105KA12D"],
+      ["C_REF_IN", "CGA3E3X7R1H105K080AB"],
       ["C_REF_REG", "T521B106M025ATE100"],
       ["C_REF_REG_HF", "C0603C104K3RACTU"],
       ["R_REF_SAR", "RCWE0603R220FKEA"],

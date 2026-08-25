@@ -21,7 +21,7 @@ describe("BP-101 bench prototype reference drive", () => {
     expect(benchPrototypeReferenceDrive.selectedParts).toEqual(
       expect.arrayContaining([
         ["U_REF", "REF5025AQDRQ1"],
-        ["C_REF_IN", "GRM188R71A105KA12D"],
+        ["C_REF_IN", "CGA3E3X7R1H105K080AB"],
         ["C_REF_REG", "T521B106M025ATE100"],
         ["C_REF_REG_HF", "C0603C104K3RACTU"],
         ["R_REF_SAR", "RCWE0603R220FKEA"],
@@ -37,6 +37,9 @@ describe("BP-101 bench prototype reference drive", () => {
       adc: "REF5025A-Q1 OUT -> R_REF_SAR 0.22 ohm -> ADS_REF2V5; C_REF 10 uF X7R 0805 is the only capacitor directly across ADS8881 REF/GND; AINN remains SCORING_SGND"
     })
     expect(benchPrototypeReferenceDrive.ref5025LocalStabilization).toMatchObject({
+      inputBypassMpn: "CGA3E3X7R1H105K080AB",
+      inputBypassNominalUf: 1,
+      inputBypassEffectiveCapacitanceAt5VUf: null,
       outputMaximumCapacitanceUf: 50,
       outputMaximumEsrOhms: 1.5,
       outputMinimumCapacitanceUf: 1,
@@ -140,9 +143,9 @@ describe("BP-101 bench prototype reference drive", () => {
       artifactDigests: {
         netlistTemplateSha256: "87be1beb2285c6adc1ab4b620f7139445cf06b451f57264a94508658f66894c2",
         normalizedResultsSha256: "f3a2997911b1b700babc4822093731aa54c3286de8e941748f8e9a5764b5d975",
-        parameterManifestSha256: "5ca2d17e0664ace5c44ff4ed96113b1280b389591a2c1c03ba4ab17adce34f46",
+        parameterManifestSha256: "7359892a5bea2a9e914ef3e1df6dda2df1dfae77318e36e95b4d4e4a50a0b7fb",
         waveformManifestSha256: "1c708bcb507b3cbed63ddd416524c478dafef2409949362dba9f528a4e98f62f",
-        evidenceDigest: "79d700c8eddaf11a4a47ea1cd6e38ef29d8407effb30a1cef5cf6b2089b5599c"
+        evidenceDigest: "f9ff3706c1906ee7cf02f35dea0397e6cffeb9d5ac0e85463bf0b4b1e2db592c"
       }
     })
     expect(benchPrototypeReferenceDrive.simulationAndEvidence.measurement.requiredArchiveFields).toEqual(
