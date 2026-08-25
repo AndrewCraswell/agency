@@ -770,6 +770,8 @@ const w5500BypassReferences = [
   "C_W5500_AVDD_6"
 ] as const
 
+const molexLinkReferences = ["J_LINK_INPUT", "J_LINK_APPLICATION", "J_LINK_DISPLAY", "J_LINK_SCORING"] as const
+
 const projectFootprintMappings = [
   {
     reference: "J_USB_C",
@@ -886,6 +888,18 @@ const projectFootprintMappings = [
     reviewDocument: "docs/bp-033-w5500-100nf-bypass-footprint-evidence.md",
     sourceArtifactPath: "docs/evidence/bp-033/murata-grm188r71c104ka01d-reference-sheet.pdf",
     sourceSha256: "A8D9E8E5A06AA235221C7E957837509E64A9F75E42230EE142F51F984B4CFA09",
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
+  })),
+  ...molexLinkReferences.map((reference) => ({
+    reference,
+    artifactKind: "bp033-molex-links-project-footprint",
+    artworkModule: "src/bp033-molex-links-project-footprint.tsx",
+    reviewDocument: "docs/bp-033-molex-links-project-footprint.md",
+    sourceArtifactPath: "docs/evidence/bp-033/molex-39281023-product-page.pdf",
+    sourceSha256: "BFEB1A0BEC2417BE7C8E09E0D17800CC7AED1C403F6D93D0747223829F331691",
     reviewState: "root-reviewed-review-input" as const,
     reviewer: "root-final-reviewer" as const,
     reviewedAt: "2026-08-25" as const,
@@ -1029,7 +1043,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 17 ||
+    contract.projectFootprintMappings.length !== 21 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1110,6 +1124,21 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         mapping.reviewDocument === "docs/bp-033-w5500-100nf-bypass-footprint-evidence.md" &&
         mapping.sourceArtifactPath === "docs/evidence/bp-033/murata-grm188r71c104ka01d-reference-sheet.pdf" &&
         mapping.sourceSha256 === "A8D9E8E5A06AA235221C7E957837509E64A9F75E42230EE142F51F984B4CFA09" &&
+        mapping.reviewState === "root-reviewed-review-input" &&
+        mapping.reviewer === "root-final-reviewer" &&
+        mapping.reviewedAt === "2026-08-25" &&
+        mapping.fabricationRelease === "deny"
+      )
+    }) ||
+    !molexLinkReferences.every((reference, offset) => {
+      const mapping = contract.projectFootprintMappings[17 + offset]
+      return (
+        mapping?.reference === reference &&
+        mapping.artifactKind === "bp033-molex-links-project-footprint" &&
+        mapping.artworkModule === "src/bp033-molex-links-project-footprint.tsx" &&
+        mapping.reviewDocument === "docs/bp-033-molex-links-project-footprint.md" &&
+        mapping.sourceArtifactPath === "docs/evidence/bp-033/molex-39281023-product-page.pdf" &&
+        mapping.sourceSha256 === "BFEB1A0BEC2417BE7C8E09E0D17800CC7AED1C403F6D93D0747223829F331691" &&
         mapping.reviewState === "root-reviewed-review-input" &&
         mapping.reviewer === "root-final-reviewer" &&
         mapping.reviewedAt === "2026-08-25" &&

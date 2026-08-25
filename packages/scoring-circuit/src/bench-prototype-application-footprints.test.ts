@@ -195,6 +195,24 @@ describe("BP-033 application footprint closure ledger", () => {
     expect(benchPrototypeApplicationFootprints.releaseState).toBe("deny")
   })
 
+  it("maps all four removable measurement links to the reviewed Molex evidence", () => {
+    const expectedReferences = ["J_LINK_INPUT", "J_LINK_APPLICATION", "J_LINK_DISPLAY", "J_LINK_SCORING"]
+    const mappings = benchPrototypeApplicationFootprints.projectFootprintMappings.filter(
+      (mapping) => mapping.artifactKind === "bp033-molex-links-project-footprint"
+    )
+    expect(mappings.map((mapping) => mapping.reference)).toEqual(expectedReferences)
+    expect(
+      mappings.every(
+        (mapping) =>
+          mapping.sourceSha256 === "BFEB1A0BEC2417BE7C8E09E0D17800CC7AED1C403F6D93D0747223829F331691" &&
+          mapping.reviewState === "root-reviewed-review-input" &&
+          mapping.reviewer === "root-final-reviewer" &&
+          mapping.fabricationRelease === "deny"
+      )
+    ).toBe(true)
+    expect(benchPrototypeApplicationFootprints.releaseState).toBe("deny")
+  })
+
   it("binds only the J_HUB75 pin-map overlay and preserves BP-143 physical gates", () => {
     const record = benchPrototypeApplicationFootprints.records.find((candidate) => candidate.reference === "J_HUB75")
     if (
