@@ -780,4 +780,21 @@ describe("BP-033 application footprint closure ledger", () => {
       })
     }
   })
+
+  it("links the three BP-033 100 kOhm resistors to exact Yageo evidence", () => {
+    for (const reference of ["R_W5500_INT_BIAS", "R_BUFFER_A_GATE_PD", "R_BUFFER_B_GATE_PD"]) {
+      expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toContainEqual({
+        reference,
+        artifactKind: "bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint",
+        artworkModule: "src/bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint.tsx",
+        reviewDocument: "docs/bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint-review.md",
+        sourceArtifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
+        sourceSha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054",
+        reviewState: "root-reviewed-review-input",
+        reviewer: "root-final-reviewer",
+        reviewedAt: "2026-08-25",
+        fabricationRelease: "deny"
+      })
+    }
+  })
 })

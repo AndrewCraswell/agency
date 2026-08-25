@@ -1064,6 +1064,18 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer" as const,
     reviewedAt: "2026-08-25" as const,
     fabricationRelease: "deny" as const
+  })),
+  ...(["R_W5500_INT_BIAS", "R_BUFFER_A_GATE_PD", "R_BUFFER_B_GATE_PD"] as const).map((reference) => ({
+    reference,
+    artifactKind: "bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint" as const,
+    artworkModule: "src/bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint.tsx",
+    reviewDocument: "docs/bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint-review.md",
+    sourceArtifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
+    sourceSha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054" as const,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
   }))
 ] as const
 
@@ -1216,7 +1228,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 67 ||
+    contract.projectFootprintMappings.length !== 70 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1428,6 +1440,21 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         mapping.reviewDocument === "docs/bp033-sn74ahct245pwr-tssop20-footprint.md" &&
         mapping.sourceArtifactPath === "docs/evidence/bp-033/ti-sn74ahct245-datasheet-official.pdf" &&
         mapping.sourceSha256 === bp033Sn74ahct245pwrTssop20Footprint.sourceBinding.sourceSha256 &&
+        mapping.reviewState === "root-reviewed-review-input" &&
+        mapping.reviewer === "root-final-reviewer" &&
+        mapping.reviewedAt === "2026-08-25" &&
+        mapping.fabricationRelease === "deny"
+      )
+    }) ||
+    !(["R_W5500_INT_BIAS", "R_BUFFER_A_GATE_PD", "R_BUFFER_B_GATE_PD"] as const).every((reference, offset) => {
+      const mapping = contract.projectFootprintMappings[67 + offset]
+      return (
+        mapping?.reference === reference &&
+        mapping.artifactKind === "bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint" &&
+        mapping.artworkModule === "src/bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint.tsx" &&
+        mapping.reviewDocument === "docs/bp033-yageo-rc0603fr-07100kl-100k-candidate-footprint-review.md" &&
+        mapping.sourceArtifactPath === "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf" &&
+        mapping.sourceSha256 === "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054" &&
         mapping.reviewState === "root-reviewed-review-input" &&
         mapping.reviewer === "root-final-reviewer" &&
         mapping.reviewedAt === "2026-08-25" &&
