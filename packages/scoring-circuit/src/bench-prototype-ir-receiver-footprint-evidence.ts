@@ -9,6 +9,7 @@
  */
 
 import { parseCanonicalUtcTimestamp, parseRealUtcDate } from "./bench-prototype-evidence-time.js"
+import { benchPrototypeIrReceiverProjectFootprintGeometry } from "./bench-prototype-ir-receiver-project-footprint.js"
 
 type DataRecord = Record<PropertyKey, unknown>
 
@@ -311,6 +312,74 @@ const definition = {
       "vishay-80068-ir-receiver-assembly"
     ],
     exactPart: "TSOP38438",
+    projectFootprintArtifact: {
+      state: "source-controlled-project-review-only",
+      artifactPath: "src/bench-prototype-ir-receiver-project-footprint.tsx",
+      exportName: "BenchPrototypeIrReceiverProjectFootprint",
+      geometryExportName: "benchPrototypeIrReceiverProjectFootprintGeometry",
+      componentName: "U_BP146_TSOP38438",
+      footprintName: "BP146_TSOP38438_PROJECT_FOOTPRINT",
+      gitBlobSha1: "44D776787650030A1622C6356B666F28981673A1",
+      sha256: "F8446CC9258EC3C55CF8378C837F4F7EBD08F42F94439AD0F457354FF7F87DC5",
+      authority: "deny",
+      geometry: {
+        artifactKind: "bp146-tsop38438-project-footprint",
+        workUnit: "BP-146",
+        manufacturer: "Vishay Semiconductors",
+        manufacturerPartNumber: "TSOP38438",
+        manufacturerCad: {
+          state: "not-acquired",
+          authority: "deny"
+        },
+        geometryAuthority: "project-review-input-not-manufacturer-specification",
+        pinOne: {
+          pin: 1,
+          name: "OUT",
+          coordinatesMm: { x: 0, y: 0 },
+          boardRotationDegrees: 0
+        },
+        pins: [
+          { pin: 1, name: "OUT", xMm: 0, yMm: 0 },
+          { pin: 2, name: "GND", xMm: 2.54, yMm: 0 },
+          { pin: 3, name: "VS", xMm: 5.08, yMm: 0 }
+        ],
+        pitchMm: 2.54,
+        finishedDrillDiameterMm: 1.1,
+        copperPadDiameterMm: 2.2,
+        copperPadGeometry: {
+          representation: "rounded-rectangle-equivalent-to-circle",
+          primitive: "circular_hole_with_rect_pad",
+          widthMm: 2.2,
+          heightMm: 2.2,
+          cornerRadiusMm: 1.1,
+          status: "runtime-workaround-for-zero-paste"
+        },
+        solderMaskOpeningDiameterMm: 2.3,
+        solderMaskMarginMm: 0.05,
+        pasteOpeningDiameterMm: 0,
+        lensDatum: {
+          source: "front optical window at the Vishay package drawing front face",
+          coordinatesMm: { x: 2.5, y: 0 },
+          opticalAxis: "negative-y"
+        },
+        bodyDatum: {
+          source: "Vishay Minicast package drawing 6.550-5263.01-4",
+          widthMm: 5,
+          heightMm: 6.95,
+          depthMm: 4.8,
+          frontFaceYMm: 0,
+          extendsPositiveY: true
+        },
+        opticalAuthority: "deny",
+        physicalAuthority: "deny",
+        fabricationAuthority: "deny",
+        accepted: false
+      },
+      manufacturerCad: {
+        state: "not-acquired",
+        authority: "deny"
+      }
+    },
     packageDrawingDatum: "front optical window and pin 1 lead order from Vishay drawing 6.550-5263.01-4",
     boardCoordinateDatum:
       "project-origin-at-pin-1-x0-y0; lead-row-and-lens-face-at-y0; body-extends-positive-y; optical-axis-negative-y",
@@ -633,10 +702,23 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
     throw new RangeError("BP-146 manufacturer land-pattern and window statements drifted")
   }
   const candidate = evidence.candidateFootprintReview
+  const projectFootprintArtifact = candidate.projectFootprintArtifact
   if (
     candidate.state !== "project-footprint-generated-pending-review" ||
     candidate.exactPart !== "TSOP38438" ||
     candidate.sourceBasis.length !== 3 ||
+    projectFootprintArtifact.state !== "source-controlled-project-review-only" ||
+    projectFootprintArtifact.artifactPath !== "src/bench-prototype-ir-receiver-project-footprint.tsx" ||
+    projectFootprintArtifact.exportName !== "BenchPrototypeIrReceiverProjectFootprint" ||
+    projectFootprintArtifact.geometryExportName !== "benchPrototypeIrReceiverProjectFootprintGeometry" ||
+    projectFootprintArtifact.componentName !== "U_BP146_TSOP38438" ||
+    projectFootprintArtifact.footprintName !== "BP146_TSOP38438_PROJECT_FOOTPRINT" ||
+    projectFootprintArtifact.gitBlobSha1 !== "44D776787650030A1622C6356B666F28981673A1" ||
+    projectFootprintArtifact.sha256 !== "F8446CC9258EC3C55CF8378C837F4F7EBD08F42F94439AD0F457354FF7F87DC5" ||
+    projectFootprintArtifact.authority !== "deny" ||
+    projectFootprintArtifact.manufacturerCad.state !== "not-acquired" ||
+    projectFootprintArtifact.manufacturerCad.authority !== "deny" ||
+    !sameDataGraph(projectFootprintArtifact.geometry, benchPrototypeIrReceiverProjectFootprintGeometry) ||
     candidate.finishedGeometry.drillDiameterMm !== 1.1 ||
     candidate.finishedGeometry.padDiameterMm !== 2.2 ||
     candidate.finishedGeometry.annularRingMm !== 0.55 ||

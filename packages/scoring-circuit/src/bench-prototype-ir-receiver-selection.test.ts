@@ -38,6 +38,24 @@ describe("BP-146 encrypted-IR receiver selection", () => {
       { pin: 2, name: "GND" },
       { pin: 3, name: "VS" }
     ])
+    expect(
+      benchPrototypeIrReceiverSelection.footprintEvidence.candidateFootprintReview.projectFootprintArtifact
+    ).toMatchObject({
+      artifactPath: "src/bench-prototype-ir-receiver-project-footprint.tsx",
+      geometryExportName: "benchPrototypeIrReceiverProjectFootprintGeometry",
+      gitBlobSha1: "44D776787650030A1622C6356B666F28981673A1",
+      sha256: "F8446CC9258EC3C55CF8378C837F4F7EBD08F42F94439AD0F457354FF7F87DC5",
+      authority: "deny",
+      manufacturerCad: { state: "not-acquired", authority: "deny" }
+    })
+    expect(
+      benchPrototypeIrReceiverSelection.footprintEvidence.candidateFootprintReview.projectFootprintArtifact.geometry
+        .pins
+    ).toEqual([
+      { pin: 1, name: "OUT", xMm: 0, yMm: 0 },
+      { pin: 2, name: "GND", xMm: 2.54, yMm: 0 },
+      { pin: 3, name: "VS", xMm: 5.08, yMm: 0 }
+    ])
     expect(benchPrototypeIrReceiverSelection.footprintEvidence.throughHoleGeometry).toMatchObject({
       leadPitchNominalMm: 2.54,
       leadWidthMaximumMm: 0.7,
@@ -140,6 +158,10 @@ describe("BP-146 encrypted-IR receiver selection", () => {
       (candidate: any) => (candidate.footprintEvidence.opticalWindow.fixedCopperKeepoutRadiusMm = 3),
       (candidate: any) => (candidate.footprintEvidence.opticalKeepoutReview.accepted = true),
       (candidate: any) => (candidate.footprintEvidence.manufacturerCad.state = "reviewed"),
+      (candidate: any) =>
+        (candidate.footprintEvidence.candidateFootprintReview.projectFootprintArtifact.geometry.pins[2].name = "VIN"),
+      (candidate: any) =>
+        (candidate.footprintEvidence.candidateFootprintReview.projectFootprintArtifact.gitBlobSha1 = "0".repeat(40)),
       (candidate: any) => (candidate.evidence.opticalKeepoutAccepted = true)
     ]) {
       const candidate = structuredClone(benchPrototypeIrReceiverSelection)

@@ -135,6 +135,19 @@ overlays the lens datum and the project 3 mm radial copper/component rule.
 Both remain `reviewStatus: pending`, with manufacturer-CAD authority, artwork
 release authority, physical evidence, and fabrication authority still denied.
 
+The executable selection also binds the candidate geometry to the
+source-controlled tscircuit artifact
+[`bench-prototype-ir-receiver-project-footprint.tsx`](../src/bench-prototype-ir-receiver-project-footprint.tsx).
+Its named component and footprint exports, exact TSOP38438 MPN, OUT/GND/VS pin
+order, and full project geometry snapshot are checked against the imported
+artifact. The record carries the artifact's Git blob SHA-1
+`44D776787650030A1622C6356B666F28981673A1` and SHA-256
+`F8446CC9258EC3C55CF8378C837F4F7EBD08F42F94439AD0F457354FF7F87DC5`; a source
+or geometry change therefore fails the evidence validation until the binding is
+reviewed. This identity does not acquire manufacturer CAD or grant optical,
+panel, range, angle, flood, reset, power-off, physical, fabrication, or overall
+BP-146 acceptance.
+
 ### Optical coupon review procedure
 
 Before accepting the board opening, record the panel material and thickness,

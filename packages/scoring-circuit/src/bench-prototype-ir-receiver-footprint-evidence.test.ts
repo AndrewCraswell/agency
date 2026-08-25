@@ -7,6 +7,7 @@ import {
   benchPrototypeIrReceiverFootprintEvidence,
   validateBenchPrototypeIrReceiverFootprintEvidence
 } from "./bench-prototype-ir-receiver-footprint-evidence.js"
+import { benchPrototypeIrReceiverProjectFootprintGeometry } from "./bench-prototype-ir-receiver-project-footprint.js"
 
 function inflatePdfStreams(bytes: Buffer) {
   let decoded = ""
@@ -213,6 +214,35 @@ describe("BP-146 IR receiver footprint source evidence", () => {
         reviewStatus: "pending"
       }
     ])
+  })
+
+  it("binds the evidence to the source-controlled project footprint artifact", () => {
+    const artifact = benchPrototypeIrReceiverFootprintEvidence.candidateFootprintReview.projectFootprintArtifact
+    expect(artifact).toMatchObject({
+      state: "source-controlled-project-review-only",
+      artifactPath: "src/bench-prototype-ir-receiver-project-footprint.tsx",
+      exportName: "BenchPrototypeIrReceiverProjectFootprint",
+      geometryExportName: "benchPrototypeIrReceiverProjectFootprintGeometry",
+      componentName: "U_BP146_TSOP38438",
+      footprintName: "BP146_TSOP38438_PROJECT_FOOTPRINT",
+      gitBlobSha1: "44D776787650030A1622C6356B666F28981673A1",
+      sha256: "F8446CC9258EC3C55CF8378C837F4F7EBD08F42F94439AD0F457354FF7F87DC5",
+      authority: "deny",
+      manufacturerCad: { state: "not-acquired", authority: "deny" }
+    })
+    expect(artifact.geometry).toEqual(benchPrototypeIrReceiverProjectFootprintGeometry)
+    expect(artifact.geometry.manufacturerPartNumber).toBe("TSOP38438")
+    expect(artifact.geometry.pins).toEqual([
+      { pin: 1, name: "OUT", xMm: 0, yMm: 0 },
+      { pin: 2, name: "GND", xMm: 2.54, yMm: 0 },
+      { pin: 3, name: "VS", xMm: 5.08, yMm: 0 }
+    ])
+
+    const packageRoot = new URL("../", import.meta.url)
+    const sourceBytes = readFileSync(new URL(artifact.artifactPath, packageRoot))
+    const gitBlobBytes = Buffer.concat([Buffer.from(`blob ${sourceBytes.length}\0`), sourceBytes])
+    expect(createHash("sha1").update(gitBlobBytes).digest("hex").toUpperCase()).toBe(artifact.gitBlobSha1)
+    expect(createHash("sha256").update(sourceBytes).digest("hex").toUpperCase()).toBe(artifact.sha256)
   })
 
   it("defines a dimensioned optical coupon procedure with empty evidence and denied gates", () => {
