@@ -12,6 +12,11 @@
 #define SABRE_CONTROL_BREAK_US UINT64_C(3000)
 #define SABRE_LOCKOUT_US UINT64_C(170000)
 
+static bool weapon_is_valid(scoring_core_weapon_t weapon) {
+  const int32_t value = (int32_t)weapon;
+  return value >= (int32_t)SCORING_CORE_WEAPON_EPEE && value <= (int32_t)SCORING_CORE_WEAPON_SABRE;
+}
+
 static const scoring_core_contact_t *contact_for(
   const scoring_core_sample_t *sample,
   scoring_core_side_t side
@@ -294,7 +299,7 @@ static scoring_core_status_t advance_latched_weapon(
 }
 
 scoring_core_status_t scoring_core_init(scoring_core_state_t *state, scoring_core_weapon_t weapon) {
-  if (state == NULL || weapon > SCORING_CORE_WEAPON_SABRE) return SCORING_CORE_INVALID_ARGUMENT;
+  if (state == NULL || !weapon_is_valid(weapon)) return SCORING_CORE_INVALID_ARGUMENT;
   memset(state, 0, sizeof(*state));
   state->weapon = weapon;
   return SCORING_CORE_OK;
@@ -303,7 +308,7 @@ scoring_core_status_t scoring_core_init(scoring_core_state_t *state, scoring_cor
 scoring_core_status_t scoring_core_advance(scoring_core_state_t *state, const scoring_core_sample_t *sample) {
   scoring_core_state_t next;
   scoring_core_status_t status;
-  if (state == NULL || sample == NULL || state->weapon > SCORING_CORE_WEAPON_SABRE) {
+  if (state == NULL || sample == NULL || !weapon_is_valid(state->weapon)) {
     return SCORING_CORE_INVALID_ARGUMENT;
   }
   if (!contact_is_normalized(&sample->left) || !contact_is_normalized(&sample->right)) {

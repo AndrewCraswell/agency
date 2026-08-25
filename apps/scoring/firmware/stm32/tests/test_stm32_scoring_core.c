@@ -480,6 +480,24 @@ static void test_advance_argument_branches(void) {
   CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_INVALID_ARGUMENT);
 }
 
+static void test_negative_weapon_enum_is_rejected_atomically(void) {
+  scoring_core_state_t state;
+  scoring_core_state_t before_invalid_init;
+  scoring_core_state_t before_invalid_advance;
+  scoring_core_sample_t sample = { 0 };
+
+  (void)memset(&state, 0xA5, sizeof(state));
+  before_invalid_init = state;
+  CHECK(scoring_core_init(&state, (scoring_core_weapon_t)-1) == SCORING_CORE_INVALID_ARGUMENT);
+  CHECK(memcmp(&state, &before_invalid_init, sizeof(state)) == 0);
+
+  CHECK(scoring_core_init(&state, SCORING_CORE_WEAPON_EPEE) == SCORING_CORE_OK);
+  state.weapon = (scoring_core_weapon_t)-1;
+  before_invalid_advance = state;
+  CHECK(scoring_core_advance(&state, &sample) == SCORING_CORE_INVALID_ARGUMENT);
+  CHECK(memcmp(&state, &before_invalid_advance, sizeof(state)) == 0);
+}
+
 int main(void) {
   test_complete_golden_corpus();
   test_fail_closed_api();
@@ -490,5 +508,6 @@ int main(void) {
   test_foil_off_target_and_reclassification();
   test_record_validation_branches();
   test_advance_argument_branches();
+  test_negative_weapon_enum_is_rejected_atomically();
   return EXIT_SUCCESS;
 }
