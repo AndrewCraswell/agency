@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
+import { benchPrototypeAnalogFootprintClosure } from "./bench-prototype-analog-footprint-closure.js"
 import {
   Bp031KemetC0603C102J5GactuProjectFootprint,
   bp031KemetC0603C102J5GactuProjectFootprint,
@@ -75,7 +76,8 @@ describe("BP-031 exact KEMET C0603C102J5GACTU 0603 project footprint", () => {
         manufacturer: "KEMET",
         manufacturerPartNumber: "C0603C102J5GACTU",
         package: "0603",
-        primarySourceId: "kemet-cer-eng-kit-29"
+        primarySourceId: "kemet-cer-eng-kit-29",
+        landPatternApplicability: expect.stringContaining("not exact-orderable CAD")
       },
       manufacturerCad: { state: "not-acquired", artifactPath: null, authority: "deny" },
       releaseState: "deny",
@@ -107,11 +109,13 @@ describe("BP-031 exact KEMET C0603C102J5GACTU 0603 project footprint", () => {
     expect(bp031KemetC0603C102J5GactuProjectFootprint.sources).toEqual([
       expect.objectContaining({
         id: "kemet-cer-eng-kit-29",
+        applicability: "exact-orderable-identity-and-package",
         artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/bp031-kemet-c0603c102j5gactu-cer-eng-kit-29.pdf",
         sha256: "73A53686BECC6EE192B0D265C22752E17B9F1E3DE2E979E6964470E005EE7596"
       }),
       expect.objectContaining({
         id: "kemet-c1091-c0g-esd-land-pattern",
+        applicability: "applicable-family-guidance-not-exact-orderable-cad",
         artifactPath:
           "packages/scoring-circuit/docs/evidence/bp-031/bp031-kemet-c0603c102j5gactu-c0g-esd-land-pattern.pdf",
         sha256: "E7A71BB470BBC82E77E3ECBFCE7749D3F5C963985E62D4494AD52DE285945189"
@@ -148,11 +152,12 @@ describe("BP-031 exact KEMET C0603C102J5GACTU 0603 project footprint", () => {
       widthMm: { nominal: 0.8, minimum: 0.65, maximum: 0.95 },
       thicknessMm: { nominal: 0.8, minimum: 0.73, maximum: 0.87 },
       terminalBandwidthMm: { minimum: 0.2, maximum: 0.5 },
-      terminalSeparationMinimumMm: 0.5,
+      terminalSeparationMinimumMm: 0.7,
       terminals: 2
     })
     expect(manufacturerLandPattern).toMatchObject({
       sourceScope: "manufacturer IPC-7351 guidance, not exact-orderable CAD",
+      applicability: expect.stringContaining("not an exact-orderable CAD"),
       termination: "standard",
       densityLevel: "B",
       copper: {
@@ -201,10 +206,30 @@ describe("BP-031 exact KEMET C0603C102J5GACTU 0603 project footprint", () => {
     ])
   })
 
+  it("cross-checks every replicated C_SAR reference against the canonical closure", () => {
+    const expectedReferences = ["C_SAR_1", "C_SAR_2", "C_SAR_3", "C_SAR_4", "C_SAR_5", "C_SAR_6", "C_SAR_7"]
+    const canonicalRecords = benchPrototypeAnalogFootprintClosure.records.filter((record) =>
+      expectedReferences.includes(record.reference)
+    )
+    expect(canonicalRecords.map((record) => record.reference)).toEqual(expectedReferences)
+    expect(canonicalRecords).toHaveLength(7)
+    for (const record of canonicalRecords) {
+      expect(record).toMatchObject({
+        sourceBaseReference: "C_SAR",
+        sourceContract: "BP-103",
+        exactMpn: "C0603C102J5GACTU",
+        exactPackage: "0603",
+        disposition: "DNP-unresolved"
+      })
+    }
+    expect(bp031KemetC0603C102J5GactuProjectFootprint.affectedReferences).toEqual(expectedReferences)
+  })
+
   it("keeps the exact capacitor non-polar with no pin-one claim", () => {
     expect(bp031KemetC0603C102J5GactuProjectFootprint.orientation).toMatchObject({
       state: "pending-review",
       polarity: "non-polar",
+      polarityBasis: expect.stringContaining("design inference from retained KEMET"),
       pinOne: "not-applicable",
       assemblyRotationDeg: null,
       rotationEquivalence: "180-degree rotationally equivalent"
@@ -214,6 +239,10 @@ describe("BP-031 exact KEMET C0603C102J5GACTU 0603 project footprint", () => {
   it("renders both copper pads, project mask and paste, source ports, courtyard, and no tscircuit errors", () => {
     const json = renderProjectFootprint()
     const pads = json.filter(isRectSmtPad)
+    expect(json.find((element) => element.type === "source_component")).toMatchObject({
+      name: "C_BP031_KEMET_C0603C102J5GACTU",
+      manufacturer_part_number: "C0603C102J5GACTU"
+    })
     expect(pads).toHaveLength(2)
     expect(pads).toEqual(
       expect.arrayContaining([
@@ -232,10 +261,11 @@ describe("BP-031 exact KEMET C0603C102J5GACTU 0603 project footprint", () => {
     expect(json.filter((element) => element.type === "pcb_courtyard_rect")).toEqual(
       expect.arrayContaining([expect.objectContaining({ center: { x: 0, y: 0 }, width: 3.1, height: 1.5 })])
     )
-    expect(json.filter((element) => element.type === "source_port")).toEqual(
+    const sourcePorts = json.filter((element) => element.type === "source_port")
+    expect(sourcePorts).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ pin_number: 1, name: "A", port_hints: expect.arrayContaining(["pin1"]) }),
-        expect.objectContaining({ pin_number: 2, name: "B", port_hints: expect.arrayContaining(["pin2"]) })
+        expect.objectContaining({ pin_number: 1, name: "A", port_hints: expect.arrayContaining(["A"]) }),
+        expect.objectContaining({ pin_number: 2, name: "B", port_hints: expect.arrayContaining(["B"]) })
       ])
     )
     expect(json.filter((element) => element.type.endsWith("_error"))).toEqual([])
@@ -292,5 +322,17 @@ describe("BP-031 exact KEMET C0603C102J5GACTU 0603 project footprint", () => {
     const copy = structuredClone(bp031KemetC0603C102J5GactuProjectFootprint)
     mutate(copy)
     expect(validateBp031KemetC0603C102J5GactuProjectFootprint(copy)).not.toEqual([])
+  })
+
+  it("keeps expected evidence independent and rejects malformed candidates", () => {
+    expect(Object.isFrozen(bp031KemetC0603C102J5GactuProjectFootprint)).toBe(true)
+    expect(Object.isFrozen(bp031KemetC0603C102J5GactuProjectFootprint.sources)).toBe(true)
+    expect(Reflect.set(bp031KemetC0603C102J5GactuProjectFootprint, "accepted", true)).toBe(false)
+    expect(validateBp031KemetC0603C102J5GactuProjectFootprint()).toEqual([])
+
+    const cyclicCandidate: { self?: unknown } = {}
+    cyclicCandidate.self = cyclicCandidate
+    expect(validateBp031KemetC0603C102J5GactuProjectFootprint(cyclicCandidate)).not.toEqual([])
+    expect(validateBp031KemetC0603C102J5GactuProjectFootprint({})).not.toEqual([])
   })
 })

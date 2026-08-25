@@ -1,12 +1,100 @@
 import type { ReactElement } from "react"
 
+type PlainRecord = Record<PropertyKey, unknown>
+
+function isPlainRecord(value: unknown): value is PlainRecord {
+  return (
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    Object.getPrototypeOf(value) === Object.prototype
+  )
+}
+
+function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
+  if (value === null || typeof value !== "object") return value
+  if (seen.has(value)) throw new RangeError("BP-031 KEMET evidence cannot contain cycles or aliases")
+  seen.add(value)
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (descriptor === undefined || !("value" in descriptor)) {
+      throw new RangeError("BP-031 KEMET evidence may contain only data properties")
+    }
+    deepFreeze(descriptor.value, seen)
+  }
+  return Object.freeze(value)
+}
+
+function sameDataGraph(actual: unknown, expected: unknown, seen = new WeakMap<object, object>()): boolean {
+  if (Object.is(actual, expected)) return true
+  if (actual === null || expected === null || typeof actual !== "object" || typeof expected !== "object") return false
+  if (seen.has(actual)) return seen.get(actual) === expected
+  seen.set(actual, expected)
+
+  const actualArray = Array.isArray(actual)
+  const expectedArray = Array.isArray(expected)
+  if (actualArray !== expectedArray) return false
+  if (actualArray) {
+    if (
+      !Array.isArray(actual) ||
+      !Array.isArray(expected) ||
+      Object.getPrototypeOf(actual) !== Array.prototype ||
+      Object.getPrototypeOf(expected) !== Array.prototype ||
+      actual.length !== expected.length
+    ) {
+      return false
+    }
+    const actualKeys = Reflect.ownKeys(actual)
+    const expectedKeys = Reflect.ownKeys(expected)
+    if (
+      actualKeys.length !== expectedKeys.length ||
+      actualKeys.some((key) => typeof key === "symbol" || !expectedKeys.includes(key))
+    ) {
+      return false
+    }
+    return expected.every((entry, index) => {
+      const descriptor = Object.getOwnPropertyDescriptor(actual, String(index))
+      return (
+        descriptor !== undefined &&
+        "value" in descriptor &&
+        descriptor.enumerable &&
+        sameDataGraph(descriptor.value, entry, seen)
+      )
+    })
+  }
+
+  if (!isPlainRecord(actual) || !isPlainRecord(expected)) return false
+  const actualKeys = Reflect.ownKeys(actual)
+  const expectedKeys = Reflect.ownKeys(expected)
+  if (
+    actualKeys.length !== expectedKeys.length ||
+    actualKeys.some((key) => typeof key === "symbol" || !expectedKeys.includes(key))
+  ) {
+    return false
+  }
+  return expectedKeys.every((key) => {
+    const actualDescriptor = Object.getOwnPropertyDescriptor(actual, key)
+    const expectedDescriptor = Object.getOwnPropertyDescriptor(expected, key)
+    return Boolean(
+      actualDescriptor &&
+      expectedDescriptor &&
+      "value" in actualDescriptor &&
+      "value" in expectedDescriptor &&
+      actualDescriptor.enumerable === expectedDescriptor.enumerable &&
+      sameDataGraph(actualDescriptor.value, expectedDescriptor.value, seen)
+    )
+  })
+}
+
 const affectedReferences = ["C_SAR_1", "C_SAR_2", "C_SAR_3", "C_SAR_4", "C_SAR_5", "C_SAR_6", "C_SAR_7"] as const
 
 const packageLengthMm = { nominal: 1.6, minimum: 1.45, maximum: 1.75 } as const
 const packageWidthMm = { nominal: 0.8, minimum: 0.65, maximum: 0.95 } as const
 const packageThicknessMm = { nominal: 0.8, minimum: 0.73, maximum: 0.87 } as const
 const terminalBandwidthMm = { nominal: 0.35, minimum: 0.2, maximum: 0.5 } as const
-const terminalSeparationMinimumMm = 0.5
+const terminalSeparationMinimumMm = 0.7
+const nonPolarOrientationBasis =
+  "design inference from retained KEMET CER ENG KIT 29 pages 1-2 and C1091_C0G_ESD pages 9-10: neither retained source specifies polarity or pin-one marking; A and B remain arbitrary review endpoints"
 
 // KEMET Table 4, standard termination, density level B (median/nominal).
 const manufacturerPadGapMm = 0.8
@@ -41,7 +129,7 @@ const canonicalTopologySourceSha256 = "1f888dd5aa328fad823738f09a48502ef50189775
  * KEMET publishes the package and IPC-7351 copper/grid-courtyard guidance;
  * mask, paste, and CAD-layer objects remain explicit project inputs.
  */
-export const bp031KemetC0603C102J5GactuProjectFootprint = {
+const evidenceDefinition = {
   artifactKind: "bp031-kemet-c0603c102j5gactu-project-footprint",
   workUnit: "BP-031",
   manufacturer: "KEMET",
@@ -58,6 +146,8 @@ export const bp031KemetC0603C102J5GactuProjectFootprint = {
     manufacturerPartNumber: "C0603C102J5GACTU",
     package: "0603",
     primarySourceId: "kemet-cer-eng-kit-29",
+    landPatternApplicability:
+      "KEMET C0G standard-termination 0603 family guidance applies to this exact orderable's package context; it is not exact-orderable CAD",
     sourceContract: "BP-102"
   },
   sourceControl: {
@@ -81,6 +171,7 @@ export const bp031KemetC0603C102J5GactuProjectFootprint = {
     {
       id: "kemet-cer-eng-kit-29",
       authority: "manufacturer-primary",
+      applicability: "exact-orderable-identity-and-package",
       documentNumber: "CER ENG KIT 29",
       revision: "2023-10-02",
       url: "https://content.kemet.com/datasheets/CER_ENG_KIT_29.pdf",
@@ -93,6 +184,7 @@ export const bp031KemetC0603C102J5GactuProjectFootprint = {
     {
       id: "kemet-c1091-c0g-esd-land-pattern",
       authority: "manufacturer-primary",
+      applicability: "applicable-family-guidance-not-exact-orderable-cad",
       documentNumber: "C1091_C0G_ESD",
       revision: "2025-02-26",
       url: "https://content.kemet.com/datasheets/KEM_C1091_C0G_ESD.pdf",
@@ -126,6 +218,8 @@ export const bp031KemetC0603C102J5GactuProjectFootprint = {
   manufacturerLandPattern: {
     sourceId: "kemet-c1091-c0g-esd-land-pattern",
     sourceScope: "manufacturer IPC-7351 guidance, not exact-orderable CAD",
+    applicability:
+      "applicable KEMET C0G standard-termination 0603 family guidance; not an exact-orderable CAD or released footprint",
     termination: "standard",
     densityLevel: "B",
     copper: {
@@ -203,11 +297,12 @@ export const bp031KemetC0603C102J5GactuProjectFootprint = {
   orientation: {
     state: "pending-review",
     polarity: "non-polar",
+    polarityBasis: nonPolarOrientationBasis,
     pinOne: "not-applicable",
     assemblyRotationDeg: null,
     rotationEquivalence: "180-degree rotationally equivalent",
     datum: "local two-terminal capacitor axis",
-    note: "C0603C102J5GACTU has no polarity or pin-one requirement. A and B are arbitrary review endpoints; rail transient, bias-dependent capacitance, assembly placement, and stress review remain open."
+    note: "C0603C102J5GACTU is treated as non-polar by design inference from the retained source pages; A and B are arbitrary review endpoints. Rail transient, bias-dependent capacitance, assembly placement, and stress review remain open."
   },
   projectFootprint: {
     state: "review-only",
@@ -251,10 +346,20 @@ export const bp031KemetC0603C102J5GactuProjectFootprint = {
   accepted: false
 } as const
 
+const expectedEvidence = deepFreeze(structuredClone(evidenceDefinition))
+export const bp031KemetC0603C102J5GactuProjectFootprint = deepFreeze(evidenceDefinition)
+
+function isExpectedEvidence(value: unknown): value is typeof evidenceDefinition {
+  return sameDataGraph(value, expectedEvidence)
+}
+
 /** Empty output means the deny-by-default candidate is internally consistent. */
 export function validateBp031KemetC0603C102J5GactuProjectFootprint(
-  candidate: typeof bp031KemetC0603C102J5GactuProjectFootprint = bp031KemetC0603C102J5GactuProjectFootprint
+  candidate: unknown = bp031KemetC0603C102J5GactuProjectFootprint
 ): readonly string[] {
+  if (!isExpectedEvidence(candidate)) {
+    return ["BP-031 KEMET source identity, geometry, orientation, or deny state drifted"]
+  }
   const evidence = candidate
   const errors: string[] = []
   const exactSource = evidence.sources[0]
@@ -283,6 +388,8 @@ export function validateBp031KemetC0603C102J5GactuProjectFootprint(
     evidence.sourceBinding.manufacturerPartNumber !== "C0603C102J5GACTU" ||
     evidence.sourceBinding.package !== "0603" ||
     evidence.sourceBinding.primarySourceId !== "kemet-cer-eng-kit-29" ||
+    evidence.sourceBinding.landPatternApplicability !==
+      "KEMET C0G standard-termination 0603 family guidance applies to this exact orderable's package context; it is not exact-orderable CAD" ||
     evidence.sourceBinding.sourceContract !== "BP-102"
   ) {
     errors.push("C_SAR canonical source binding drifted")
@@ -302,6 +409,7 @@ export function validateBp031KemetC0603C102J5GactuProjectFootprint(
     exactSource === undefined ||
     exactSource.id !== "kemet-cer-eng-kit-29" ||
     exactSource.authority !== "manufacturer-primary" ||
+    exactSource.applicability !== "exact-orderable-identity-and-package" ||
     exactSource.documentNumber !== "CER ENG KIT 29" ||
     exactSource.revision !== "2023-10-02" ||
     exactSource.url !== "https://content.kemet.com/datasheets/CER_ENG_KIT_29.pdf" ||
@@ -316,6 +424,7 @@ export function validateBp031KemetC0603C102J5GactuProjectFootprint(
     landSource === undefined ||
     landSource.id !== "kemet-c1091-c0g-esd-land-pattern" ||
     landSource.authority !== "manufacturer-primary" ||
+    landSource.applicability !== "applicable-family-guidance-not-exact-orderable-cad" ||
     landSource.documentNumber !== "C1091_C0G_ESD" ||
     landSource.revision !== "2025-02-26" ||
     landSource.url !== "https://content.kemet.com/datasheets/KEM_C1091_C0G_ESD.pdf" ||
@@ -341,7 +450,7 @@ export function validateBp031KemetC0603C102J5GactuProjectFootprint(
     evidence.package.thicknessMm.maximum !== 0.87 ||
     evidence.package.terminalBandwidthMm.minimum !== 0.2 ||
     evidence.package.terminalBandwidthMm.maximum !== 0.5 ||
-    evidence.package.terminalSeparationMinimumMm !== 0.5 ||
+    evidence.package.terminalSeparationMinimumMm !== 0.7 ||
     evidence.package.terminals !== 2
   ) {
     errors.push("KEMET 0603 package or exact electrical dimensions drifted")
@@ -357,6 +466,8 @@ export function validateBp031KemetC0603C102J5GactuProjectFootprint(
     evidence.manufacturerLandPattern.sourceId !== "kemet-c1091-c0g-esd-land-pattern" ||
     evidence.manufacturerLandPattern.termination !== "standard" ||
     evidence.manufacturerLandPattern.densityLevel !== "B" ||
+    evidence.manufacturerLandPattern.applicability !==
+      "applicable KEMET C0G standard-termination 0603 family guidance; not an exact-orderable CAD or released footprint" ||
     evidence.manufacturerLandPattern.copper.padGapMm !== 0.8 ||
     evidence.manufacturerLandPattern.copper.padLengthMm !== 0.95 ||
     evidence.manufacturerLandPattern.copper.padWidthMm !== 1.0 ||
@@ -386,16 +497,19 @@ export function validateBp031KemetC0603C102J5GactuProjectFootprint(
     errors.push("project C0603 copper, mask, paste, or courtyard derivation drifted")
   }
   if (
+    evidence.orientation.state !== "pending-review" ||
     evidence.terminals.length !== 2 ||
     evidence.terminals[0]?.polarity !== "non-polar" ||
     evidence.terminals[1]?.polarity !== "non-polar" ||
     evidence.orientation.polarity !== "non-polar" ||
+    evidence.orientation.polarityBasis !== nonPolarOrientationBasis ||
     evidence.orientation.pinOne !== "not-applicable" ||
     evidence.orientation.rotationEquivalence !== "180-degree rotationally equivalent"
   ) {
     errors.push("C0603 non-polar terminal or orientation disposition drifted")
   }
   if (
+    evidence.projectFootprint.state !== "review-only" ||
     evidence.projectFootprint.pads.length !== 2 ||
     evidence.projectFootprint.pads[0]?.xMm !== -projectPadCenterXMm ||
     evidence.projectFootprint.pads[1]?.xMm !== projectPadCenterXMm ||
@@ -411,7 +525,14 @@ export function validateBp031KemetC0603C102J5GactuProjectFootprint(
   ) {
     errors.push("project footprint geometry or deny state drifted")
   }
-  if (!/^[0-9A-F]{64}$/u.test(evidence.artwork.sha256) || evidence.artwork.authority !== "deny") {
+  if (
+    evidence.artwork.state !== "generated-project-review-only" ||
+    evidence.artwork.representation !== "canonical-rendered-footprint-soup-geometry" ||
+    evidence.artwork.generator !== "tscircuit" ||
+    evidence.artwork.generatorVersion !== "0.0.2271" ||
+    !/^[0-9A-F]{64}$/u.test(evidence.artwork.sha256) ||
+    evidence.artwork.authority !== "deny"
+  ) {
     errors.push("rendered artwork must have a bound SHA-256 while remaining denied")
   }
   return errors
@@ -428,7 +549,7 @@ const projectFootprint = (
       solderPasteMargin={`-${projectPasteReductionPerEdgeMm}mm`}
       width={`${manufacturerPadLengthMm}mm`}
       height={`${manufacturerPadWidthMm}mm`}
-      portHints={["1", "A", "non-polar", "pin1"]}
+      portHints={["1", "A", "non-polar"]}
     />
     <smtpad
       name="2"
@@ -439,7 +560,7 @@ const projectFootprint = (
       solderPasteMargin={`-${projectPasteReductionPerEdgeMm}mm`}
       width={`${manufacturerPadLengthMm}mm`}
       height={`${manufacturerPadWidthMm}mm`}
-      portHints={["2", "B", "non-polar", "pin2"]}
+      portHints={["2", "B", "non-polar"]}
     />
     {/* This review courtyard is project geometry based on KEMET V1/V2 guidance. */}
     <courtyardrect
