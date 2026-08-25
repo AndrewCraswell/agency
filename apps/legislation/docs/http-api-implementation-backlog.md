@@ -14,8 +14,8 @@ the verification listed below. The endpoint contract remains the source of truth
 The execution gate is the [local smoke checklist](http-api-local-smoke.md). This ledger was last reconciled on
 2026-08-24 with the reviewed endpoint implementations in commits `4546f7a`, `0fa41dc`, and `87f38be`, 14 successful
 composed-smoke routes, focused endpoint and query tests, and the two previously completed scoped-bill collections.
-Canonical meeting outcome persistence and reads are complete. Current totals are 0 **In progress**, 48 **Blocked**, 0
-**Ready**, and 39 **Done** across 87 endpoints.
+Canonical meeting outcome persistence and reads and the canonical people collection are complete. Current totals are 0
+**In progress**, 47 **Blocked**, 0 **Ready**, and 40 **Done** across 87 endpoints.
 
 ## Delivery phases
 
@@ -96,7 +96,7 @@ mutations and webhook mutation handlers remain intentionally uncomposed and **Bl
 
 | Method | Path | State | Current gate |
 | --- | --- | --- | --- |
-| GET | `/api/people` | Blocked | Route is intentionally unregistered: `people.source_url` and `is_active` are nullable, while canonical provenance and `isActive` are required; the query also lacks `party`/`sort` filters and stored aliases. Backfill provenance/activity and add the canonical query before registering it. |
+| GET | `/api/people` | Done | Fail-closed canonical collection query, complete documented filters and sorts, filter-bound keyset cursors, source-declared alias persistence with retrieval provenance, exact Page projection, production composition, focused query/handler/ingestion tests, root review, and reviewed commit `6f42df4`. |
 | GET | `/api/people/{personId}` | Blocked | Route is intentionally unregistered: no persisted aliases, image, public email, official URL, external identifiers, canonical person-jurisdiction set, or required term office title; membership role/provenance is incomplete. Add authoritative profile and relationship facts before registering it. |
 | GET | `/api/people/{personId}/bills` | Blocked | Role-aware sponsorship/action query is missing. |
 | GET | `/api/people/{personId}/amendments` | Blocked | Person-amendment relationship query is missing. |
@@ -157,4 +157,4 @@ mutations and webhook mutation handlers remain intentionally uncomposed and **Bl
 | POST | `/api/webhooks/{webhookId}/verify` | Blocked | Approved-destination/revalidation boundary exists; a pinned connection-time-revalidating challenge transport and durable activation transaction are missing. |
 
 The current release evidence is recorded in [the Railway API release record](http-api-railway-release.md). The endpoint
-matrix is 0 **In progress**, 48 **Blocked**, 0 **Ready**, and 39 **Done** routes.
+matrix is 0 **In progress**, 47 **Blocked**, 0 **Ready**, and 40 **Done** routes.
