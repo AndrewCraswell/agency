@@ -11,7 +11,7 @@ describe("BP-142 application 3.3 V implementation", () => {
   it("uses the committed BP-050 application branch and the exact LMR43620 support BOM", () => {
     expect(validateBenchPrototypeApplicationRail(benchPrototypeApplicationRail)).toBe(true)
     expect(benchPrototypeApplicationRail.input).toMatchObject({
-      source: "BP-050 J_LINK_APPLICATION V5 branch with its loopback installed",
+      source: "BP-050 protected V5 output branch",
       ground: "APP_GND",
       nominalVoltageV: 5,
       calculatorVoltageScreenV: { minimum: 4.75, maximum: 5.25 }
@@ -27,8 +27,7 @@ describe("BP-142 application 3.3 V implementation", () => {
           value: "1 uF, 16 V, +/-10%, X7R, 0603"
         }),
         expect.objectContaining({ references: ["C_APP_REG_OUT_A", "C_APP_REG_OUT_B", "C_APP_REG_OUT_C"], quantity: 3 }),
-        expect.objectContaining({ references: ["R_APP_REG_DISCHARGE"], mpn: "RC0603FR-071KL" }),
-        expect.objectContaining({ references: ["R_APP_REG_PGOOD"], mpn: "RC0603FR-0710KL" })
+        expect.objectContaining({ references: ["R_APP_REG_DISCHARGE"], mpn: "RC0603FR-071KL" })
       ])
     )
     expect(benchPrototypeApplicationRailUpstreamProvenance.bp050ApplicationBranch.measurementLink.label).toBe(
@@ -57,6 +56,17 @@ describe("BP-142 application 3.3 V implementation", () => {
           return: "C_APP_REG_OUT_C.GND to APP_GND"
         }
       ])
+    )
+  })
+
+  it("leaves the redundant regulator PGOOD output unrouted", () => {
+    expect(
+      benchPrototypeApplicationRail.topology.supportParts.some((part) =>
+        (part.references as readonly string[]).includes("R_APP_REG_PGOOD")
+      )
+    ).toBe(false)
+    expect(benchPrototypeApplicationRail.topology.rules).toContain(
+      "PGOOD is left open because BP-123's independent supervisor owns reset and brownout behavior; an unused status output does not earn a pull-up or routed net."
     )
   })
 

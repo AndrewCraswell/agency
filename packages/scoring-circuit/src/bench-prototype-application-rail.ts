@@ -67,14 +67,6 @@ const applicationRailSupportDefinition = [
     quantity: 1,
     value: "1 kOhm, 1%, 0603",
     connection: "V3_3 to APP_GND output discharge"
-  },
-  {
-    references: ["R_APP_REG_PGOOD"],
-    manufacturer: "Yageo",
-    mpn: "RC0603FR-0710KL",
-    quantity: 1,
-    value: "10 kOhm, 1%, 0603",
-    connection: "V5 pull-up to the open-drain U_APP_REGULATOR.PGOOD observation net"
   }
 ] as const satisfies readonly ApplicationRailPart[]
 
@@ -210,7 +202,7 @@ const definition = {
   fabricationRelease: false,
   releaseState: "deny",
   input: {
-    source: "BP-050 J_LINK_APPLICATION V5 branch with its loopback installed",
+    source: "BP-050 protected V5 output branch",
     ground: "APP_GND",
     nominalVoltageV: 5,
     calculatorVoltageScreenV: {
@@ -246,12 +238,12 @@ const definition = {
       }
     ],
     rules: [
-      "V5 feeds only U_APP_REGULATOR.VIN, EN/UVLO, and the PGOOD pull-up; it never bypasses the regulator onto V3_3.",
+      "V5 feeds only U_APP_REGULATOR.VIN and EN/UVLO; it never bypasses the regulator onto V3_3.",
       "MODE/SYNC is tied to VCC to select FPWM with spread spectrum; VCC has its dedicated local bypass.",
       "BOOT capacitor spans BOOT to SW and the inductor is the only power path from SW to V3_3.",
       "The fixed-output U_APP_REGULATOR.VOUT/FB pin connects directly to V3_3; no adjustable-output divider is allowed.",
       "The three output capacitors and discharge resistor connect V3_3 to APP_GND; the output bank must retain at least 40 uF effective capacitance.",
-      "PGOOD is an observation net only. Application reset, brownout policy, and W5500 reset remain owned by BP-123."
+      "PGOOD is left open because BP-123's independent supervisor owns reset and brownout behavior; an unused status output does not earn a pull-up or routed net."
     ]
   },
   screens: {
@@ -297,7 +289,7 @@ const definition = {
   requiredObservations: [
     "J_LINK_APPLICATION current link and V5 at U_APP_REGULATOR.VIN",
     "V3_3 at the output bank, W5500 supply region, and ESP32 3V3 pins",
-    "U_APP_REGULATOR.PGOOD and the BP-123 reset output",
+    "BP-123 APP_RESET_N at the supervisor and ESP32 EN",
     "SW node with a suitably short ground spring"
   ],
   deniedEvidence: {

@@ -6,13 +6,12 @@ does not change or revive the retired multi-board schematic model.
 
 ## Exact implementation
 
-`J_LINK_APPLICATION` is the removable BP-050 V5 branch-measurement link. With
-its loopback installed, V5 feeds `U_APP_REGULATOR` TI
+The protected BP-050 V5 output feeds `U_APP_REGULATOR` TI
 `LMR43620MSC3RPERQ1`. VIN and EN/UVLO connect to V5, MODE/SYNC connects to
-VCC for FPWM with spread spectrum, and the open-drain PGOOD output has a 10
-kOhm V5 pull-up for observation only. The fixed-output VOUT/FB pin connects
-directly to `V3_3`; there is no adjustable-output feedback divider. It does
-not own reset behavior.
+VCC for FPWM with spread spectrum. The fixed-output VOUT/FB pin connects
+directly to `V3_3`; there is no adjustable-output feedback divider. `PGOOD`
+is left open because the independent BP-123 supervisor already owns rail
+faults and reset; the unused status output does not earn a pull-up or route.
 
 The required support network is:
 
@@ -25,7 +24,6 @@ The required support network is:
 | `C_APP_REG_VCC` | `885012206052` | 1 uF, 16 V, +/-10%, X7R, 0603 | VCC to `APP_GND`; exact TI EVM CVCC selection |
 | `C_APP_REG_OUT_A/B/C` | `C2012X7S1A226M125AC` | 22 uF, 10 V each | Each capacitor connects directly from `V3_3` to `APP_GND`; 40 uF effective bank minimum |
 | `R_APP_REG_DISCHARGE` | `RC0603FR-071KL` | 1 kOhm | `V3_3` to `APP_GND` |
-| `R_APP_REG_PGOOD` | `RC0603FR-0710KL` | 10 kOhm | V5 to PGOOD observation net |
 
 ## Conservative screens
 
