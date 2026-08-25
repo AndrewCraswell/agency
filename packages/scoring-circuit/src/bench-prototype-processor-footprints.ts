@@ -33,6 +33,10 @@ import {
   validateBp031032C0603C104K3RactuFootprintEvidence
 } from "./bp031-032-c0603c104k3ractu-footprint-evidence.js"
 import {
+  bp032Esp32ServiceHeaderTsw10607gsFootprintEvidence,
+  validateBp032Esp32ServiceHeaderTsw10607gsFootprintEvidence
+} from "./bp032-esp32-service-header-tsw-106-07-g-s-footprint-evidence.js"
+import {
   bp032Ftsh10501LDv007KFootprintEvidence,
   validateBp032Ftsh10501LDv007KFootprintEvidence
 } from "./bp032-ftsh-105-01-l-dv-007-k-footprint.js"
@@ -338,8 +342,32 @@ const evidence = (mpn: string | null, reference: string | null = null) => ({
                     ? stm32FootprintEvidenceFor(mpn, reference)
                     : mpn === "TPS389033DSER" || mpn === "TPS3431SDRBR"
                       ? supervisorWatchdogFootprintEvidenceFor(mpn, reference)
-                      : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
+                      : mpn === "TSW-106-07-G-S"
+                        ? esp32ServiceHeaderFootprintEvidenceFor(mpn, reference)
+                        : bp032YageoRc0603FootprintEvidenceFor(mpn, reference)
 })
+
+function esp32ServiceHeaderFootprintEvidenceFor(mpn: string, reference: string) {
+  const candidate = bp032Esp32ServiceHeaderTsw10607gsFootprintEvidence
+  if (candidate.boundary.exactMpn !== mpn || candidate.boundary.reference !== reference) return null
+  return {
+    artifactKind: candidate.artifactKind,
+    exactMpn: mpn,
+    reference,
+    sourceId: "samtec-tsw-106-07-g-s-primary-set",
+    sourceArtifactPaths: candidate.manufacturerSources.map((source) => source.artifactPath),
+    sourceSha256s: candidate.manufacturerSources.map((source) => source.sha256),
+    upstreamContract: "BP-124",
+    projectFootprintId: "tsw-106-07-g-s-project-review",
+    manufacturerCad: candidate.gates.cadRelease,
+    manufacturerLandPattern: candidate.landPattern.holes.definition,
+    artwork: candidate.gates.cadRelease,
+    orientation: candidate.orientation.state,
+    releaseState: candidate.gates.fabricationRelease,
+    fabricationAuthority: candidate.gates.fabricationRelease,
+    accepted: candidate.gates.accepted
+  } as const
+}
 
 function stm32FootprintEvidenceFor(mpn: string, reference: string) {
   const candidate = bp032Stm32G474Ret3TrLqfp64ProjectFootprintEvidence
@@ -710,7 +738,7 @@ const definition = {
       package: "1x6 2.54 mm through-hole header",
       population: "DNP-until-footprint-and-mating-evidence",
       source: "BP-124 ESP32 service header",
-      evidence: evidence("TSW-106-07-G-S")
+      evidence: evidence("TSW-106-07-G-S", "J_ESP_SERVICE")
     }
   ],
   clockReferences: [
@@ -832,6 +860,7 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   if (validateBp032Ftsh10501LDv007KFootprintEvidence().length !== 0) {
     throw new RangeError("BP-032 FTSH service-header project-review candidate drifted")
   }
+  validateBp032Esp32ServiceHeaderTsw10607gsFootprintEvidence(bp032Esp32ServiceHeaderTsw10607gsFootprintEvidence)
   validateBp032SupervisorWatchdogFootprintEvidence(bp032SupervisorWatchdogFootprintEvidence)
   if (bp125MurataCapacitorFootprintIntegrityErrors().length !== 0) {
     throw new RangeError("BP-032 Murata processor-support footprint candidate drifted")
@@ -895,6 +924,7 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
   const isolatorRows = ledger.populatedReferences.filter((entry) => ["ISO7762FDWR", "ISO7721FDR"].includes(entry.mpn))
   const stm32Rows = ledger.populatedReferences.filter((entry) => entry.mpn === "STM32G474RET3TR")
   const ftshRows = ledger.debugReferences.filter((entry) => entry.mpn === "FTSH-105-01-L-DV-007-K")
+  const esp32ServiceHeaderRows = ledger.debugReferences.filter((entry) => entry.mpn === "TSW-106-07-G-S")
   if (
     new Set(references.map((entry) => entry.reference)).size !== references.length ||
     ledger.populatedReferences.some(
@@ -1033,6 +1063,17 @@ export function validateBenchPrototypeProcessorFootprints(value: unknown): true 
     ) ||
     ftshRows.length !== 1 ||
     ftshRows.some(
+      (row) =>
+        row.evidence.footprintEvidence === null ||
+        row.evidence.footprintEvidence.exactMpn !== row.mpn ||
+        row.evidence.footprintEvidence.reference !== row.reference ||
+        row.evidence.footprintEvidence.upstreamContract !== "BP-124" ||
+        row.evidence.footprintEvidence.releaseState !== "deny" ||
+        row.evidence.footprintEvidence.fabricationAuthority !== "deny" ||
+        row.evidence.footprintEvidence.accepted
+    ) ||
+    esp32ServiceHeaderRows.length !== 1 ||
+    esp32ServiceHeaderRows.some(
       (row) =>
         row.evidence.footprintEvidence === null ||
         row.evidence.footprintEvidence.exactMpn !== row.mpn ||

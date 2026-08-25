@@ -352,6 +352,21 @@ describe("BP-032 processor and isolation footprint closure ledger", () => {
       fabricationAuthority: "deny",
       accepted: false
     })
+
+    const espService = benchPrototypeProcessorFootprints.debugReferences.find(
+      (entry) => entry.reference === "J_ESP_SERVICE"
+    )
+    expect(espService?.evidence.footprintEvidence).toMatchObject({
+      artifactKind: "bp032-esp32-service-header-tsw-106-07-g-s-footprint-evidence",
+      exactMpn: "TSW-106-07-G-S",
+      reference: "J_ESP_SERVICE",
+      upstreamContract: "BP-124",
+      manufacturerCad: "deny",
+      orientation: "orientation-candidate-pending-independent-overlay",
+      releaseState: "deny",
+      fabricationAuthority: "deny",
+      accepted: false
+    })
   })
 
   it("rejects substitutions, premature artwork, clock population, and release escalation", () => {
