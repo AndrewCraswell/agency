@@ -163,6 +163,42 @@ reviewed. This identity does not acquire manufacturer CAD or grant optical,
 panel, range, angle, flood, reset, power-off, physical, fabrication, or overall
 BP-146 acceptance.
 
+### Manufacturer-CAD disposition and root-release candidate
+
+On 25 August 2026, the review retained a hash-bound snapshot of Vishay's
+official TSOP382/TSOP384 product page. It presents an `ECAD Models` link whose
+label is `Download from Ultra Librarian`; the page's own notice says that
+following the link leaves Vishay's site and directs questions about that
+external content to its owner. This establishes an official availability path,
+not a retained Vishay CAD artifact or a released land pattern. No model was
+downloaded, imported, or compared, so its exact TSOP38438 identity, revision,
+units, pin mapping, pad/drill choices, and license remain unverified.
+
+The executable disposition keeps `manufacturerCad.state` as `not-acquired`,
+with `authority: deny`, and binds the official page snapshot at
+[`vishay-82491-product-page-ecad.html`](evidence/bp-146/vishay-82491-product-page-ecad.html)
+to SHA-256 `BEAE68A5E2F16677CCB8CE54662F7B00E655F7ADBE80C1187E3DE55003A169F6`.
+The drawing-derived project geometry remains separate: it is based on drawing
+`6.550-5263.01-4` plus project drill, pad, mask, courtyard, and obstruction
+inputs. It does not become manufacturer CAD because an external ECAD path
+exists.
+
+The corrected project footprint is a root-release candidate only. It remains
+unapproved, unreleased, and fabrication-denied until a root reviewer records
+all of these decision inputs:
+
+- The 1:1 board-CAD review must confirm pin 1, lens and front-panel direction,
+  assembly obstruction, and courtyard against the Vishay drawing.
+- The selected fabricator and stackup must support the finished drill, annular
+  ring, pad, mask, paste, courtyard, and DRC results.
+- The final fabrication, drill, copper, solder-mask, silkscreen, assembly, and
+  courtyard outputs must be reviewed at 1:1 scale.
+- The panel dimensions, calculated Vishay aperture, and calibrated physical
+  front-panel coupon must be retained.
+- Immutable range, angle, latency, flood, reset, and power-off evidence plus
+  an independent root decision record are required before artwork or
+  fabrication release.
+
 ### Optical coupon review procedure
 
 Before accepting the board opening, record the panel material and thickness,

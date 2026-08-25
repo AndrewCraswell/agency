@@ -203,6 +203,24 @@ describe("BP-146 IR receiver footprint source evidence", () => {
         packageLeadPitchToleranceMm: 0.2,
         status: "project-review-inputs-pending-independent-CAD-review"
       },
+      rootReleaseCandidate: {
+        state: "candidate-unapproved",
+        scope: "corrected project footprint only; not a manufacturer CAD or fabrication release",
+        decisionAuthority: "root-review-required",
+        rootReviewerId: null,
+        approvedAtUtc: null,
+        decisionRecordArtifactPath: null,
+        remainingDecisionInputs: [
+          "Inspect the source-controlled board-CAD rendering and confirm pin 1, lens/front-panel direction, body obstruction, and courtyard against Vishay drawing 6.550-5263.01-4.",
+          "Select the fabricator and stackup, then confirm finished drill, annular ring, pad, mask, paste, courtyard, and DRC against that fabricator's published capability.",
+          "Review the final board outputs, including fabrication drawing, drill file, copper, solder-mask, silkscreen, assembly, and courtyard layers, with the corrected project footprint at 1:1 scale.",
+          "Record panel material, thickness, lens-to-panel distance, required viewing angle, and the calculated Vishay window aperture; complete the calibrated physical front-panel coupon.",
+          "Attach immutable evidence for range, angle, latency, flood, reset, and power-off gates, and record an independent root decision before any artwork or fabrication release."
+        ],
+        accepted: false,
+        footprintReleased: false,
+        fabricationAuthority: "deny"
+      },
       accepted: false,
       fabricationAuthority: "deny"
     })
@@ -338,6 +356,38 @@ describe("BP-146 IR receiver footprint source evidence", () => {
       const pdfContent = `${bytes.toString("latin1")}\n${inflatePdfStreams(bytes)}`
       for (const marker of source.byteMarkers) expect(pdfContent).toContain(marker)
     }
+  })
+
+  it("retains Vishay's ECAD availability disposition without treating it as manufacturer CAD", () => {
+    const availabilityAudit = benchPrototypeIrReceiverFootprintEvidence.manufacturerCad.availabilityAudit
+    expect(availabilityAudit).toEqual({
+      sourceAuthority: "manufacturer-primary-product-page",
+      sourceSnapshotArtifactPath: "docs/evidence/bp-146/vishay-82491-product-page-ecad.html",
+      sourceSnapshotSha256: "BEAE68A5E2F16677CCB8CE54662F7B00E655F7ADBE80C1187E3DE55003A169F6",
+      retrievedAtUtc: "2026-08-25T02:15:30.000Z",
+      reviewerId: "implementation-agent",
+      observedEcadLink:
+        "https://vendor.ultralibrarian.com/vishay/embedded?q=library/ecad/&vdrSearch=TSOP38&docId=82491",
+      observedProvider: "Ultra Librarian / EMA Design Automation",
+      disposition: "official-page-links-to-external-third-party-ecad; no-model-downloaded-or-retained",
+      manufacturerCadArtifactRetained: false,
+      authority: "deny"
+    })
+    const packageRoot = new URL("../", import.meta.url)
+    const bytes = readFileSync(new URL(availabilityAudit.sourceSnapshotArtifactPath, packageRoot))
+    expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(availabilityAudit.sourceSnapshotSha256)
+    const contents = bytes.toString("utf8")
+    for (const marker of [
+      "TSOP382.., TSOP384.. PRODUCT INFORMATION",
+      "ECAD Models",
+      "Download from Ultra Librarian",
+      "clicking I AGREE will result in you leaving the Vishay website",
+      "Vishay bears no responsibility for the accuracy"
+    ]) {
+      expect(contents).toContain(marker)
+    }
+    expect(benchPrototypeIrReceiverFootprintEvidence.manufacturerCad.state).toBe("not-acquired")
+    expect(benchPrototypeIrReceiverFootprintEvidence.acceptance.manufacturerCadReleased).toBe(false)
   })
 
   it("hash-verifies deterministic 1:1 project overlays without granting CAD authority", () => {

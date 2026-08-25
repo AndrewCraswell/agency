@@ -497,6 +497,24 @@ const definition = {
       courtyardToleranceMm: 0.1,
       status: "project-review-inputs-pending-independent-CAD-review"
     },
+    rootReleaseCandidate: {
+      state: "candidate-unapproved",
+      scope: "corrected project footprint only; not a manufacturer CAD or fabrication release",
+      decisionAuthority: "root-review-required",
+      rootReviewerId: null,
+      approvedAtUtc: null,
+      decisionRecordArtifactPath: null,
+      remainingDecisionInputs: [
+        "Inspect the source-controlled board-CAD rendering and confirm pin 1, lens/front-panel direction, body obstruction, and courtyard against Vishay drawing 6.550-5263.01-4.",
+        "Select the fabricator and stackup, then confirm finished drill, annular ring, pad, mask, paste, courtyard, and DRC against that fabricator's published capability.",
+        "Review the final board outputs, including fabrication drawing, drill file, copper, solder-mask, silkscreen, assembly, and courtyard layers, with the corrected project footprint at 1:1 scale.",
+        "Record panel material, thickness, lens-to-panel distance, required viewing angle, and the calculated Vishay window aperture; complete the calibrated physical front-panel coupon.",
+        "Attach immutable evidence for range, angle, latency, flood, reset, and power-off gates, and record an independent root decision before any artwork or fabrication release."
+      ],
+      accepted: false,
+      footprintReleased: false,
+      fabricationAuthority: "deny"
+    },
     accepted: false,
     fabricationAuthority: "deny",
     releaseBlocker:
@@ -602,10 +620,23 @@ const definition = {
     artifactId: null,
     sha256: null,
     reviewerId: "implementation-agent",
-    reviewedAtUtc: "2026-08-24T08:17:00.000Z",
+    reviewedAtUtc: "2026-08-25T02:15:30.000Z",
     reviewStatus: "reviewed-not-acquired",
+    availabilityAudit: {
+      sourceAuthority: "manufacturer-primary-product-page",
+      sourceSnapshotArtifactPath: "docs/evidence/bp-146/vishay-82491-product-page-ecad.html",
+      sourceSnapshotSha256: "BEAE68A5E2F16677CCB8CE54662F7B00E655F7ADBE80C1187E3DE55003A169F6",
+      retrievedAtUtc: "2026-08-25T02:15:30.000Z",
+      reviewerId: "implementation-agent",
+      observedEcadLink:
+        "https://vendor.ultralibrarian.com/vishay/embedded?q=library/ecad/&vdrSearch=TSOP38&docId=82491",
+      observedProvider: "Ultra Librarian / EMA Design Automation",
+      disposition: "official-page-links-to-external-third-party-ecad; no-model-downloaded-or-retained",
+      manufacturerCadArtifactRetained: false,
+      authority: "deny"
+    },
     limitation:
-      "The Vishay product page links ECAD downloads to Ultra Librarian, a third-party service. No first-party CAD artifact was acquired or treated as released geometry."
+      "The retained Vishay product-page snapshot shows an ECAD link to Ultra Librarian and states that following it leaves the Vishay website. No ECAD model was downloaded, no manufacturer CAD artifact was retained, and no external model is treated as released geometry."
   },
   acceptance: {
     packageDrawingReviewed: true,
@@ -800,6 +831,27 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
     candidate.manufacturerCad.revision !== null ||
     candidate.manufacturerCad.sha256 !== null ||
     candidate.manufacturerCad.authority !== "deny" ||
+    candidate.rootReleaseCandidate.state !== "candidate-unapproved" ||
+    candidate.rootReleaseCandidate.scope !==
+      "corrected project footprint only; not a manufacturer CAD or fabrication release" ||
+    candidate.rootReleaseCandidate.decisionAuthority !== "root-review-required" ||
+    candidate.rootReleaseCandidate.rootReviewerId !== null ||
+    candidate.rootReleaseCandidate.approvedAtUtc !== null ||
+    candidate.rootReleaseCandidate.decisionRecordArtifactPath !== null ||
+    candidate.rootReleaseCandidate.remainingDecisionInputs.length !== 5 ||
+    candidate.rootReleaseCandidate.remainingDecisionInputs[0] !==
+      "Inspect the source-controlled board-CAD rendering and confirm pin 1, lens/front-panel direction, body obstruction, and courtyard against Vishay drawing 6.550-5263.01-4." ||
+    candidate.rootReleaseCandidate.remainingDecisionInputs[1] !==
+      "Select the fabricator and stackup, then confirm finished drill, annular ring, pad, mask, paste, courtyard, and DRC against that fabricator's published capability." ||
+    candidate.rootReleaseCandidate.remainingDecisionInputs[2] !==
+      "Review the final board outputs, including fabrication drawing, drill file, copper, solder-mask, silkscreen, assembly, and courtyard layers, with the corrected project footprint at 1:1 scale." ||
+    candidate.rootReleaseCandidate.remainingDecisionInputs[3] !==
+      "Record panel material, thickness, lens-to-panel distance, required viewing angle, and the calculated Vishay window aperture; complete the calibrated physical front-panel coupon." ||
+    candidate.rootReleaseCandidate.remainingDecisionInputs[4] !==
+      "Attach immutable evidence for range, angle, latency, flood, reset, and power-off gates, and record an independent root decision before any artwork or fabrication release." ||
+    candidate.rootReleaseCandidate.accepted ||
+    candidate.rootReleaseCandidate.footprintReleased ||
+    candidate.rootReleaseCandidate.fabricationAuthority !== "deny" ||
     candidate.generatedArtwork.state !== "generated-project-review-only" ||
     candidate.generatedArtwork.artifactPath !== "docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg" ||
     candidate.generatedArtwork.generator !== "deterministic-svg-overlay-generator" ||
@@ -869,6 +921,23 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
   if (parseCanonicalUtcTimestamp(evidence.manufacturerCad.reviewedAtUtc) === null) {
     throw new RangeError("BP-146 manufacturer CAD evidence requires a canonical UTC review timestamp")
   }
+  const cadAvailability = evidence.manufacturerCad.availabilityAudit
+  if (
+    cadAvailability.sourceAuthority !== "manufacturer-primary-product-page" ||
+    cadAvailability.sourceSnapshotArtifactPath !== "docs/evidence/bp-146/vishay-82491-product-page-ecad.html" ||
+    cadAvailability.sourceSnapshotSha256 !== "BEAE68A5E2F16677CCB8CE54662F7B00E655F7ADBE80C1187E3DE55003A169F6" ||
+    parseCanonicalUtcTimestamp(cadAvailability.retrievedAtUtc) === null ||
+    cadAvailability.reviewerId !== "implementation-agent" ||
+    cadAvailability.observedEcadLink !==
+      "https://vendor.ultralibrarian.com/vishay/embedded?q=library/ecad/&vdrSearch=TSOP38&docId=82491" ||
+    cadAvailability.observedProvider !== "Ultra Librarian / EMA Design Automation" ||
+    cadAvailability.disposition !==
+      "official-page-links-to-external-third-party-ecad; no-model-downloaded-or-retained" ||
+    cadAvailability.manufacturerCadArtifactRetained ||
+    cadAvailability.authority !== "deny"
+  ) {
+    throw new RangeError("BP-146 manufacturer CAD availability audit drifted")
+  }
   if (parseCanonicalUtcTimestamp(evidence.review.reviewedAtUtc) === null) {
     throw new RangeError("BP-146 review evidence requires a canonical UTC review timestamp")
   }
@@ -893,6 +962,8 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
     evidence.opticalKeepoutReview.accepted ||
     evidence.manufacturerCad.state !== "not-acquired" ||
     evidence.manufacturerCad.sha256 !== null ||
+    evidence.manufacturerCad.availabilityAudit.manufacturerCadArtifactRetained ||
+    evidence.manufacturerCad.availabilityAudit.authority !== "deny" ||
     evidence.acceptance.manufacturerCadReleased ||
     evidence.acceptance.boardLandPatternAccepted ||
     evidence.acceptance.opticalKeepoutAccepted ||
