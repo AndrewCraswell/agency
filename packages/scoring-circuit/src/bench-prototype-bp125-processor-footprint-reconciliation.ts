@@ -114,7 +114,7 @@ const processorFootprintReconciliationDefinition = {
       document: "ESP32-S3-WROOM-1 & WROOM-1U Datasheet v1.8",
       officialUrl: "https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf",
       artifactPath:
-        "packages/scoring-circuit/docs/evidence/bp-125/espressif-esp32-s3-wroom-1-wroom-1u-datasheet-v1.8.pdf",
+        "packages/scoring-circuit/docs/evidence/bp-032/espressif-esp32-s3-wroom-1u-datasheet-v1.8-official.pdf",
       sha256: "27D71971DA07C280C6068D08C74720D1A25B8F20CF8494DC1765BDD28D40D435",
       reviewedPages: {
         exactVariant: [3],

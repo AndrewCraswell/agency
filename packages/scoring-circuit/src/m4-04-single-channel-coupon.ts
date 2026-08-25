@@ -181,7 +181,7 @@ type CouponBomPart = (typeof oneChannelAnalogExperimentBom)[number]
 
 type AcquiredDrawing = {
   acquisition: "exact-drawing-hash-bound" | "series-drawing-hash-bound"
-  artifactPath: `packages/scoring-circuit/docs/evidence/m4-04/${string}`
+  artifactPath: `packages/scoring-circuit/docs/evidence/${string}`
   drawingIdentifier: string
   drawingUrl: string
   geometry: null
@@ -193,7 +193,7 @@ type AcquiredDrawing = {
 
 type SupportingSource = {
   classification: "manufacturer-recommended-land-pattern"
-  artifactPath: `packages/scoring-circuit/docs/evidence/m4-04/${string}`
+  artifactPath: `packages/scoring-circuit/docs/evidence/${string}`
   sourceUrl: string
   sha256: string
   scope: string
@@ -201,7 +201,7 @@ type SupportingSource = {
 
 type PrimaryIdentitySource = {
   acquisition: "exact-primary-identity-hash-bound" | "not-acquired"
-  artifactPath: `packages/scoring-circuit/docs/evidence/m4-04/${string}` | null
+  artifactPath: `packages/scoring-circuit/docs/evidence/${string}` | null
   identityIdentifier: string | null
   sourceUrl: string | null
   geometry: null
@@ -225,7 +225,7 @@ const acquiredDrawingEvidenceByMpn: Readonly<Record<string, AcquiredDrawing>> = 
   },
   ADS8881IDGS: {
     acquisition: "exact-drawing-hash-bound",
-    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-ads8881-dgs-datasheet.pdf",
+    artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/texas-instruments-ads8881-dgs-datasheet-rev-d.pdf",
     drawingIdentifier: "TI SBAS547D, revision D, DGS0010A mechanical drawing",
     drawingUrl: "https://www.ti.com/lit/ds/symlink/ads8881.pdf",
     geometry: null,
@@ -236,7 +236,7 @@ const acquiredDrawingEvidenceByMpn: Readonly<Record<string, AcquiredDrawing>> = 
   },
   REF5025AQDRQ1: {
     acquisition: "exact-drawing-hash-bound",
-    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-ref5025a-q1-datasheet.pdf",
+    artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/ti-ref50xxa-q1-ref5025aqdrq1-datasheet-rev-h.pdf",
     drawingIdentifier: "TI SBOS456H, revision H, D0008A mechanical drawing",
     drawingUrl: "https://www.ti.com/lit/gpn/REF5025A-Q1",
     geometry: null,
@@ -269,7 +269,7 @@ const acquiredDrawingEvidenceByMpn: Readonly<Record<string, AcquiredDrawing>> = 
   },
   TMUX1112PWR: {
     acquisition: "exact-drawing-hash-bound",
-    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-tmux1112-pwr-datasheet.pdf",
+    artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/ti-tmux1112pwr-pw0016a-datasheet-rev-c.pdf",
     drawingIdentifier: "TI SCDS408C, revision C, PW0016A mechanical drawing",
     drawingUrl: "https://www.ti.com/lit/ds/symlink/tmux1112.pdf",
     geometry: null,
@@ -301,7 +301,7 @@ const acquiredDrawingEvidenceByMpn: Readonly<Record<string, AcquiredDrawing>> = 
   },
   TPD4E05U06DQAR: {
     acquisition: "exact-drawing-hash-bound",
-    artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-tpd4e05u06-dqar-datasheet.pdf",
+    artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/ti-tpd4e05u06-dqar-datasheet.pdf",
     drawingIdentifier: "TI SLVSBO7O, revision O, DQA0010A mechanical drawing",
     drawingUrl: "https://www.ti.com/lit/ds/symlink/tpd4e05u06.pdf",
     geometry: null,
@@ -714,7 +714,7 @@ export function validateM404SingleChannelCoupon(value: unknown): true {
             footprint.evidence.manufacturerDrawing.drawingIdentifier.trim() === "" ||
             footprint.evidence.manufacturerDrawing.artifactPath === null ||
             !footprint.evidence.manufacturerDrawing.artifactPath.startsWith(
-              "packages/scoring-circuit/docs/evidence/m4-04/"
+              "packages/scoring-circuit/docs/evidence/"
             ) ||
             !/^[0-9A-F]{64}$/u.test(footprint.evidence.manufacturerDrawing.sha256 ?? "") ||
             footprint.evidence.manufacturerDrawing.geometry !== null ||
@@ -748,7 +748,7 @@ export function validateM404SingleChannelCoupon(value: unknown): true {
             footprint.evidence.manufacturerIdentitySource.identityIdentifier.trim() === "" ||
             footprint.evidence.manufacturerIdentitySource.artifactPath === null ||
             !footprint.evidence.manufacturerIdentitySource.artifactPath.startsWith(
-              "packages/scoring-circuit/docs/evidence/m4-04/"
+              "packages/scoring-circuit/docs/evidence/"
             ) ||
             !/^[0-9A-F]{64}$/u.test(footprint.evidence.manufacturerIdentitySource.sha256 ?? "") ||
             footprint.evidence.manufacturerIdentitySource.geometry !== null ||

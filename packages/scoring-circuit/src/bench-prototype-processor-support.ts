@@ -148,7 +148,7 @@ const processorSupportDefinition = {
         sourceUrl: "https://documentation.espressif.com/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf",
         sourceDocument: "Espressif ESP32-S3-WROOM-1/WROOM-1U Datasheet v1.8",
         retainedManufacturerPrimaryBytes: {
-          archivePath: "docs/evidence/bp-125/espressif-esp32-s3-wroom-1-wroom-1u-datasheet-v1.8.pdf",
+          archivePath: "docs/evidence/bp-032/espressif-esp32-s3-wroom-1u-datasheet-v1.8-official.pdf",
           archiveSha256: "27D71971DA07C280C6068D08C74720D1A25B8F20CF8494DC1765BDD28D40D435"
         },
         primarySourceMapping: "verified-by-retained-manufacturer-primary-bytes",
@@ -618,7 +618,7 @@ export function validateBenchPrototypeProcessorSupport(value: unknown): true {
     contract.supportSelectionEvidence.processorRequirements.esp32.primarySourceMapping !==
       "verified-by-retained-manufacturer-primary-bytes" ||
     contract.supportSelectionEvidence.processorRequirements.esp32.retainedManufacturerPrimaryBytes.archivePath !==
-      "docs/evidence/bp-125/espressif-esp32-s3-wroom-1-wroom-1u-datasheet-v1.8.pdf" ||
+      "docs/evidence/bp-032/espressif-esp32-s3-wroom-1u-datasheet-v1.8-official.pdf" ||
     contract.supportSelectionEvidence.processorRequirements.esp32.retainedManufacturerPrimaryBytes.archiveSha256 !==
       "27D71971DA07C280C6068D08C74720D1A25B8F20CF8494DC1765BDD28D40D435" ||
     contract.supportSelectionEvidence.capacitorSelections.length !== 5 ||

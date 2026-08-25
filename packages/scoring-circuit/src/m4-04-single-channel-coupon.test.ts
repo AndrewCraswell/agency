@@ -110,19 +110,19 @@ describe("M4-04 single-channel sensing coupon", () => {
         sourceUrl: "https://www.ti.com/lit/ds/symlink/tps7a20.pdf"
       },
       {
-        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-ref5025a-q1-datasheet.pdf",
+        artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/ti-ref50xxa-q1-ref5025aqdrq1-datasheet-rev-h.pdf",
         exactMpn: "REF5025AQDRQ1",
         sha256: "908E1BB3275E2398DF8FAD130DAD91D524C6E5C413967F58229348DD2BCED68B",
         sourceUrl: "https://www.ti.com/lit/gpn/REF5025A-Q1"
       },
       {
-        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-tpd4e05u06-dqar-datasheet.pdf",
+        artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/ti-tpd4e05u06-dqar-datasheet.pdf",
         exactMpn: "TPD4E05U06DQAR",
         sha256: "C167CF1E72A5473A4D2C59B6A3C0251498701DA05B7785919B9CEAAE3B3E02C6",
         sourceUrl: "https://www.ti.com/lit/ds/symlink/tpd4e05u06.pdf"
       },
       {
-        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-tmux1112-pwr-datasheet.pdf",
+        artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/ti-tmux1112pwr-pw0016a-datasheet-rev-c.pdf",
         exactMpn: "TMUX1112PWR",
         sha256: "EB7CCF89EC59635B34043D364DB6B1E21B457A0BA7363737408CEBCA30CD6C4D",
         sourceUrl: "https://www.ti.com/lit/ds/symlink/tmux1112.pdf"
@@ -140,7 +140,7 @@ describe("M4-04 single-channel sensing coupon", () => {
         sourceUrl: "https://yageogroup.com/component-documentation/download/specsheet/C0603C102J5GACTU?lang=en"
       },
       {
-        artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-ads8881-dgs-datasheet.pdf",
+        artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/texas-instruments-ads8881-dgs-datasheet-rev-d.pdf",
         exactMpn: "ADS8881IDGS",
         sha256: "EA5896CA4C8053A1AE183BE8354DD551A5D947CE670AC1F1170C59176148F1A8",
         sourceUrl: "https://www.ti.com/lit/ds/symlink/ads8881.pdf"

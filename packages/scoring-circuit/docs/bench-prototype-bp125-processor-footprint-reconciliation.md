@@ -15,7 +15,7 @@ and its focused test is
 | Reference | Exact orderable | Candidate | Retained primary evidence |
 | --- | --- | --- | --- |
 | `U_SCORING` | `STM32G474RET3TR` | BP-032 LQFP64 candidate, 64 pads | [ST DS12288 Rev 6](evidence/bp-125/st-stm32g474re-ds12288-rev6-datasheet.pdf), SHA-256 `B018E20DBE34B63A43E49365518B186EF0E0E8E899DEEABC1C9F53A3A10C1ADD` |
-| `U_APP` | `ESP32-S3-WROOM-1U-N16R2` | BP-032 WROOM-1U candidate, 40 perimeter pads and exposed ground pad 41 | [Espressif WROOM-1/WROOM-1U v1.8](evidence/bp-125/espressif-esp32-s3-wroom-1-wroom-1u-datasheet-v1.8.pdf), SHA-256 `27D71971DA07C280C6068D08C74720D1A25B8F20CF8494DC1765BDD28D40D435` |
+| `U_APP` | `ESP32-S3-WROOM-1U-N16R2` | BP-032 WROOM-1U candidate, 40 perimeter pads and exposed ground pad 41 | [Espressif WROOM-1/WROOM-1U v1.8](evidence/bp-032/espressif-esp32-s3-wroom-1u-datasheet-v1.8-official.pdf), SHA-256 `27D71971DA07C280C6068D08C74720D1A25B8F20CF8494DC1765BDD28D40D435` |
 
 The STM32 candidate uses DS12288 Table 124 and Figures 62 through 64. The
 module candidate uses Espressif Table 1-2 and Figures 10-2 and 11-2. The

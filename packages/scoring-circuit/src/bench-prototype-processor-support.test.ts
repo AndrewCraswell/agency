@@ -147,7 +147,7 @@ describe("BP-125 processor support", () => {
       esp32: {
         primarySourceMapping: "verified-by-retained-manufacturer-primary-bytes",
         retainedManufacturerPrimaryBytes: {
-          archivePath: "docs/evidence/bp-125/espressif-esp32-s3-wroom-1-wroom-1u-datasheet-v1.8.pdf",
+          archivePath: "docs/evidence/bp-032/espressif-esp32-s3-wroom-1u-datasheet-v1.8-official.pdf",
           archiveSha256: "27D71971DA07C280C6068D08C74720D1A25B8F20CF8494DC1765BDD28D40D435"
         }
       }

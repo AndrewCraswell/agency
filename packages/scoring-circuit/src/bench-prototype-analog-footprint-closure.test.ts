@@ -44,7 +44,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     ).toMatchObject({
       sourceStatus: "hash-bound",
       acquisition: "exact-drawing-hash-bound",
-      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/ti-tpd4e05u06-dqar-datasheet.pdf"
+      artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/ti-tpd4e05u06-dqar-datasheet.pdf"
     })
     expect(
       benchPrototypeAnalogFootprintClosure.sharedManufacturerSources.find(
