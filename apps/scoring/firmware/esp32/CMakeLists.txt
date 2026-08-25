@@ -6,6 +6,7 @@ if(ESP_PLATFORM)
   idf_component_register(
     SRCS
       "src/scoring_esp32_services.c"
+      "src/scoring_esp32_hal.c"
       "src/scoring_esp32_journal.c"
       "src/scoring_esp32_receiver.c"
     INCLUDE_DIRS "include"
@@ -26,6 +27,7 @@ else()
     scoring_esp32_services
     STATIC
       src/scoring_esp32_services.c
+      src/scoring_esp32_hal.c
       src/scoring_esp32_journal.c
       src/scoring_esp32_receiver.c
   )
@@ -41,7 +43,10 @@ else()
   add_executable(scoring_esp32_receiver_host_test tests/scoring_esp32_receiver_host_test.c)
   target_link_libraries(scoring_esp32_receiver_host_test PRIVATE scoring_esp32_services)
 
-  foreach(target scoring_esp32_services scoring_esp32_services_host_test scoring_esp32_load_isolation_host_test scoring_esp32_receiver_host_test)
+  add_executable(scoring_esp32_hal_host_test tests/scoring_esp32_hal_host_test.c)
+  target_link_libraries(scoring_esp32_hal_host_test PRIVATE scoring_esp32_services)
+
+  foreach(target scoring_esp32_services scoring_esp32_services_host_test scoring_esp32_load_isolation_host_test scoring_esp32_receiver_host_test scoring_esp32_hal_host_test)
     scoring_native_apply_baseline_warnings(${target})
   endforeach()
   scoring_native_assert_baseline_warnings(
@@ -49,9 +54,11 @@ else()
     scoring_esp32_services_host_test
     scoring_esp32_load_isolation_host_test
     scoring_esp32_receiver_host_test
+    scoring_esp32_hal_host_test
   )
 
   add_test(NAME scoring_esp32_services_host_test COMMAND scoring_esp32_services_host_test)
   add_test(NAME scoring_esp32_load_isolation_host_test COMMAND scoring_esp32_load_isolation_host_test)
   add_test(NAME scoring_esp32_receiver_host_test COMMAND scoring_esp32_receiver_host_test)
+  add_test(NAME scoring_esp32_hal_host_test COMMAND scoring_esp32_hal_host_test)
 endif()
