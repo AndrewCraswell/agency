@@ -867,6 +867,44 @@ const bp033ApplicationRegulatorSupportMappings = [
   }
 ] as const
 
+const bp033DisplayLimiterMappings = [
+  [
+    "R_DISPLAY_ILM",
+    "yageo-rc0402fr-07698rl-specsheet.pdf",
+    "B22937845B9DD9352E2959C69AE306C0D74BD998FB072481640602BC469D1DC6"
+  ],
+  [
+    "C_DISPLAY_BYPASS",
+    "kemet-c0402c104k3ractu-specsheet.pdf",
+    "889DE4201A2C26835545FC3BE215BE03637E2D3422FCC86B5FA5D96DBE0B30F1"
+  ],
+  [
+    "C_DISPLAY_DVDT",
+    "kemet-c0402c222k3ractu-specsheet.pdf",
+    "54F836BE838A054C9E696CD8FDB0C9529A190E11B1372C2ADCD615CD97A22133"
+  ],
+  [
+    "C_DISPLAY_ITIMER",
+    "kemet-c0402c222k3ractu-specsheet.pdf",
+    "54F836BE838A054C9E696CD8FDB0C9529A190E11B1372C2ADCD615CD97A22133"
+  ],
+  [
+    "R_DISPLAY_PG_PULLUP",
+    "yageo-rc0402fr-0710kl-specsheet.pdf",
+    "85ACEB87C42E4093DDDCD9563251F2E47E9EF8D0432D1F03B3A03FAEADD86BA3"
+  ],
+  [
+    "R_DISPLAY_PG_LOWER",
+    "yageo-rc0402fr-0749k9l-specsheet.pdf",
+    "B531815E39E63385D45860F0C737FF8627681D448DC3497AAE5D46157474EA2B"
+  ],
+  [
+    "R_DISPLAY_PG_UPPER",
+    "yageo-rc0402fr-07137kl-specsheet.pdf",
+    "7C76432DCDCB6DCC6D35F07B9281CC0EF5189AF5C9A26A7115FA8818F1B72D7B"
+  ]
+] as const
+
 const projectFootprintMappings = [
   {
     reference: "J_USB_C",
@@ -1132,6 +1170,18 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer" as const,
     reviewedAt: "2026-08-25" as const,
     fabricationRelease: "deny" as const
+  })),
+  ...bp033DisplayLimiterMappings.map(([reference, sourceFile, sourceSha256]) => ({
+    reference,
+    artifactKind: "bp033-display-limiter-0402-footprint" as const,
+    artworkModule: "src/bp033-display-limiter-0402-footprint.tsx",
+    reviewDocument: "docs/bp033-display-limiter-0402-footprint.md",
+    sourceArtifactPath: `docs/evidence/bp-033/${sourceFile}` as const,
+    sourceSha256,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
   }))
 ] as const
 
@@ -1287,7 +1337,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 77 ||
+    contract.projectFootprintMappings.length !== 84 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1547,6 +1597,21 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         mapping.reviewDocument === "docs/bp-033-application-regulator-support-footprint-evidence-review.md" &&
         mapping.sourceArtifactPath === reviewed.sourceArtifactPath &&
         mapping.sourceSha256 === reviewed.sourceSha256 &&
+        mapping.reviewState === "root-reviewed-review-input" &&
+        mapping.reviewer === "root-final-reviewer" &&
+        mapping.reviewedAt === "2026-08-25" &&
+        mapping.fabricationRelease === "deny"
+      )
+    }) ||
+    !bp033DisplayLimiterMappings.every(([reference, sourceFile, sourceSha256], offset) => {
+      const mapping = contract.projectFootprintMappings[77 + offset]
+      return (
+        mapping?.reference === reference &&
+        mapping.artifactKind === "bp033-display-limiter-0402-footprint" &&
+        mapping.artworkModule === "src/bp033-display-limiter-0402-footprint.tsx" &&
+        mapping.reviewDocument === "docs/bp033-display-limiter-0402-footprint.md" &&
+        mapping.sourceArtifactPath === `docs/evidence/bp-033/${sourceFile}` &&
+        mapping.sourceSha256 === sourceSha256 &&
         mapping.reviewState === "root-reviewed-review-input" &&
         mapping.reviewer === "root-final-reviewer" &&
         mapping.reviewedAt === "2026-08-25" &&

@@ -209,7 +209,7 @@ describe("BP-035 lane BOM convergence", () => {
 
     expect(stateCounts("BP-031")).toEqual({ "reviewed-unapproved": 113 })
     expect(stateCounts("BP-032")).toEqual({ "reviewed-unapproved": 50, approved: 1 })
-    expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 81, "not-started": 20 })
+    expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 88, "not-started": 13 })
     expect(stateFor("BP-031", "U_SAR_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-031", "U_OVP_BUFFER_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-031", "R_ESD_1")).toBe("reviewed-unapproved")
