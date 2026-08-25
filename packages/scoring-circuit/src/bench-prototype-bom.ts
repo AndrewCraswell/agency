@@ -1,4 +1,4 @@
-import { defaultBenchPrototypePowerInputs } from "./bench-prototype-power.js"
+import { benchPrototypeIrReceiverSelection } from "./bench-prototype-ir-receiver-selection.js"
 import { findCommunicationsFootprintEvidence } from "./communications-footprint-evidence.js"
 import { componentDecisions } from "./component-decisions.js"
 import { ethernetSupportNetwork } from "./ethernet-support-network.js"
@@ -7,7 +7,12 @@ import { usbPdFootprints } from "./usb-pd-footprints.js"
 export type PrototypeBomDisposition = "selected" | "TBD" | "DNP"
 
 export type PrototypeBomSource = {
-  readonly kind: "bench-prototype-power" | "component-decision" | "ethernet-support-network" | "usb-pd-footprint"
+  readonly kind:
+    | "bench-prototype-power"
+    | "component-decision"
+    | "ethernet-support-network"
+    | "ir-receiver-selection"
+    | "usb-pd-footprint"
   readonly url: string
 }
 
@@ -51,25 +56,60 @@ const packageByMpn = {
   "ESP32-S3-WROOM-1U-N16R2": "ESP32-S3-WROOM-1U module, 18mm x 25.5mm",
   ISO7762FDWR: "SOIC-16, 10.3mm body",
   ISO7721FDR: "SOIC-8, 5.0mm body",
-  NXE1S0505MC: "SMD isolated DC-DC converter, 7-pin case",
-  REF5025AQDRQ1: "VSON-8, 3mm x 3mm",
+  NXE1S0505MC:
+    "Surface-mount 14-position package, 5 solder lands at positions 1, 3, 7, 8, 14; 4 functional connections, position 14 NA/no-connect",
+  REF5025AQDRQ1: "D SOIC-8, 5.0mm x 3.9mm body, 1.27mm pitch",
   W5500: "LQFP-48, 7mm x 7mm body, 0.5mm pitch",
   "7499011121A": "Shielded through-hole RJ45 with integrated magnetics and LEDs",
   SN74AHCT245PWR: "TSSOP-20",
   TPS3431SDRBR: "VSON-8, 2mm x 2mm",
   TPS389033DSER: "WSON-6, 1.5mm x 1.5mm",
   LMR43620MSC3RPERQ1: "VQFN-HR, 2mm x 2mm",
-  "CY15B104Q-LHXIT": "SOIC-8",
+  "CY15B104Q-LHXIT": "8-pin TDFN/DFN, 5 mm x 6 mm x 0.75 mm, PG-USON-8, drawing 001-85579",
   "RV-3028-C7": "SON-8, 3.0mm x 3.0mm",
   "STSAFE-A110": "SO8N, 150mil",
   TAS2505TRGERQ1: "VQFN-24, 4mm x 4mm",
+  TPS56A37RPAR: "VQFN-HR-21 (RPA), 3.0mm x 3.0mm",
   "10177070-00011LF": "Right-angle SMT USB-C receptacle, 0.80mm PCB",
-  TPD4S201TRGRRQ1: "VQFN-20 (RGR), 3mm x 3mm",
-  TPD2EUSB30DRTR: "SOT-3 (DRT)",
+  TPD4S201TRGRRQ1: "VQFN-20 (RGR), 3.5mm x 3.5mm nominal body",
+  TPD2EUSB30DRTR: "SOT-9X3 (DRT), 3-pin",
   TVS2200DRVR: "WSON-6 (DRV), 2mm x 2mm",
   TPS25730ADREFR: "VQFN-38 (REF), 6mm x 4mm",
   TPS259474ARPWR: "VQFN-HR-10 (RPW), 2mm x 2mm"
 } as const
+
+function dnpRow(reference: string, functionName: string, notes: string): BenchPrototypeBomRow {
+  return {
+    reference,
+    function: functionName,
+    disposition: "DNP",
+    quantity: 0,
+    notes
+  }
+}
+
+function selectedIrRow(
+  reference: string,
+  functionName: string,
+  manufacturer: string,
+  mpn: string,
+  packageName: string,
+  sourceUrl: string,
+  notes: string
+): BenchPrototypeBomRow {
+  return {
+    reference,
+    function: functionName,
+    disposition: "selected",
+    quantity: 1,
+    manufacturer,
+    mpn,
+    lifecycle: "active",
+    package: packageName,
+    source: { kind: "ir-receiver-selection", url: sourceUrl },
+    notes
+  }
+}
 
 const w5500FootprintEvidence = findCommunicationsFootprintEvidence("W5500")
 if (
@@ -90,19 +130,6 @@ const usbPdManufacturerByMpn = {
   "B340A-13-F": "Diodes Incorporated",
   T523H107M035APE070: "KEMET",
   T55A106M010C0200: "Vishay"
-} as const
-
-const benchPowerProvenance = {
-  "43045-0400": {
-    manufacturer: "Molex",
-    package: "Micro-Fit 3.0 right-angle 4-circuit through-hole header",
-    sourceUrl: "https://www.molex.com/en-us/products/part-detail/430450400"
-  },
-  "7101SYZQE": {
-    manufacturer: "C&K",
-    package: "7000-series SPDT toggle switch",
-    sourceUrl: "https://www.littelfuse.com/products/switches/toggle-switches/7000-series"
-  }
 } as const
 
 type DecisionMpn = keyof typeof packageByMpn
@@ -157,34 +184,6 @@ function selectedUsbPdFootprintRow(
   }
 }
 
-type BenchPowerMpn = keyof typeof benchPowerProvenance
-
-function selectedBenchPowerRow(
-  reference: string,
-  mpn: BenchPowerMpn,
-  functionName: string,
-  notes: string
-): BenchPrototypeBomRow {
-  const provenance = benchPowerProvenance[mpn]
-  const expectedMpn =
-    mpn === "7101SYZQE"
-      ? defaultBenchPrototypePowerInputs.sourceSelector.mpn
-      : defaultBenchPrototypePowerInputs.labInjection.connectorMpn
-  if (mpn !== expectedMpn) throw new Error(`${mpn} does not match the BP-050 power contract`)
-  return {
-    reference,
-    function: functionName,
-    disposition: "selected",
-    quantity: 1,
-    manufacturer: provenance.manufacturer,
-    mpn,
-    lifecycle: "unresolved",
-    package: provenance.package,
-    source: { kind: "bench-prototype-power", url: provenance.sourceUrl },
-    notes
-  }
-}
-
 const selectedEthernetSupportRows: readonly BenchPrototypeBomRow[] =
   ethernetSupportNetwork.supportNetworkComponents.map((component) => ({
     reference: component.reference,
@@ -215,13 +214,11 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     quantity: 1,
     notes: "Replication remains gated by the named seven-conductor schematic and channel-by-channel review."
   },
-  {
-    reference: "U_SCORING_REG",
-    function: "Scoring-domain 3.3 V regulator after isolated power",
-    disposition: "TBD",
-    quantity: 1,
-    notes: "Select after NXE1S0505MC output load, ripple, startup, and thermal measurements."
-  },
+  dnpRow(
+    "U_SCORING_REG",
+    "Superseded isolated scoring-domain regulator",
+    "Removed with the STM32 and isolated scoring-power domain."
+  ),
   {
     reference: "U_APP_REG",
     function: "Application-domain 3.3 V regulator",
@@ -230,13 +227,7 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     notes:
       "The production rail candidate is not a bench-order selection until its support network and thermal envelope close."
   },
-  {
-    reference: "U_SCORING_WDOG",
-    function: "Independent STM32 watchdog",
-    disposition: "TBD",
-    quantity: 1,
-    notes: "Exact watchdog support is retained as a selectable prototype position pending reset-sequence review."
-  },
+  dnpRow("U_SCORING_WDOG", "Superseded STM32 watchdog", "Removed with the STM32 processor domain."),
   {
     reference: "U_APP_WDOG",
     function: "Independent ESP32 watchdog",
@@ -244,13 +235,7 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     quantity: 1,
     notes: "Exact watchdog support is retained as a selectable prototype position pending reset-sequence review."
   },
-  {
-    reference: "U_SCORING_SUPERVISOR",
-    function: "Scoring-domain brownout and delayed-reset supervisor",
-    disposition: "TBD",
-    quantity: 1,
-    notes: "Select with the scoring regulator and reset timing evidence."
-  },
+  dnpRow("U_SCORING_SUPERVISOR", "Superseded STM32 brownout supervisor", "Removed with the STM32 processor domain."),
   {
     reference: "U_APP_SUPERVISOR",
     function: "Application-domain brownout and delayed-reset supervisor",
@@ -258,34 +243,13 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     quantity: 1,
     notes: "Select with the application regulator and reset timing evidence."
   },
-  {
-    reference: "U_FRAM",
-    function: "Event journal F-RAM",
-    disposition: "TBD",
-    quantity: 1,
-    notes: "Storage remains optional for the first weapon and connector test until the application bus is exercised."
-  },
-  {
-    reference: "U_RTC",
-    function: "Wall-clock RTC",
-    disposition: "TBD",
-    quantity: 1,
-    notes: "Storage and timestamp support remain explicit prototype positions, not selected order lines."
-  },
-  {
-    reference: "U_SECURE_ELEMENT",
-    function: "Per-device secure element",
-    disposition: "TBD",
-    quantity: 1,
-    notes: "Provisioning is not required to validate weapon sensing, connectors, or authoritative scoring."
-  },
-  {
-    reference: "U_AUDIO",
-    function: "Diagnostic audio amplifier",
-    disposition: "TBD",
-    quantity: 1,
-    notes: "Speaker, SPL, and enclosure are deferred; retain a position for later firmware-compatible bring-up."
-  },
+  dnpRow("U_RTC", "Wall-clock RTC", "Removed from P0; monotonic scoring time does not require wall-clock hardware."),
+  dnpRow(
+    "U_SECURE_ELEMENT",
+    "Per-device secure element",
+    "Removed from P0; encrypted-remote identity uses ESP32 eFuses and encrypted NVS."
+  ),
+  dnpRow("U_AUDIO", "Diagnostic audio amplifier", "Removed from P0; the primary buzzer path supplies audible output."),
   {
     reference: "J_WEAPON_HARNESS",
     function: "Seven-conductor weapon and piste fixture input",
@@ -301,27 +265,30 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     quantity: 1,
     notes: "The panel product is selected separately; exact mating header, keying, and cable remain open."
   },
+  dnpRow("J_STM32_SWD", "Superseded STM32 SWD header", "Removed with the STM32; native USB and ESP32 recovery remain."),
   {
-    reference: "J_STM32_SWD",
-    function: "STM32 Cortex-style SWD debug header",
+    reference: "J_ESP32_SERVICE",
+    function: "Superseded populated ESP32 service header",
+    disposition: "DNP",
+    quantity: 0,
+    notes: "Use native USB plus labeled UART0, BOOT_N, EN_RESET, APP_3V3, and APP_GND test pads for P0 recovery."
+  },
+  dnpRow("J_SPEAKER", "External diagnostic speaker connector", "Removed with the P0 audio amplifier."),
+  {
+    reference: "U_PRIMARY_OUTPUT_LATCH",
+    function: "Hardware-safe serialized primary lamp and buzzer latch",
     disposition: "TBD",
     quantity: 1,
     notes:
-      "Samtec FTSH-105-01-L-DV-007-K is a candidate with pin 7 omitted; exact footprint, pinout, keying, and mating cable remain open."
+      "Select an exact shared-SPI latch with reset/enable behavior that holds every primary output inactive before firmware and during faults."
   },
   {
-    reference: "J_ESP32_SERVICE",
-    function: "ESP32 isolated service UART and reset header",
+    reference: "U_PRIMARY_OUTPUT_DRIVER",
+    function: "Primary lamp and buzzer load driver",
     disposition: "TBD",
     quantity: 1,
-    notes: "Samtec TSW-106-07-G-S is a candidate; external adapter and isolation boundary remain open."
-  },
-  {
-    reference: "J_SPEAKER",
-    function: "External diagnostic speaker connector",
-    disposition: "TBD",
-    quantity: 1,
-    notes: "Speaker and connector are not needed for the first weapon and Ethernet functional test."
+    notes:
+      "Retain one protected driver stage after the serialized latch; exact voltage, current, connector, and inactive-state limits remain open."
   },
   {
     reference: "J_PRIMARY_OUTPUTS",
@@ -362,13 +329,11 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
     quantity: 0,
     notes: "Explicitly deferred from the bench prototype."
   },
-  {
-    reference: "ANT_EXTERNAL",
-    function: "ESP32 external test antenna and coax",
-    disposition: "TBD",
-    quantity: 1,
-    notes: "Radio acceptance is deferred; Ethernet is the required wired connectivity path for this baseline."
-  }
+  dnpRow(
+    "ANT_EXTERNAL",
+    "ESP32 external antenna and coax",
+    "Removed from populated P0; Ethernet is required and radio remains disabled unless a temporary lab antenna is attached."
+  )
 ]
 
 function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
@@ -388,36 +353,20 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
   fabricationRelease: false,
   releaseState: "deny",
   rows: [
-    selectedDecisionRow(
+    dnpRow(
       "U_SCORING",
-      "STM32G474RET3TR",
-      "Authoritative scoring controller",
-      "Exact production-intent MCU; owns acquisition, qualification, timing, lamps, and buzzer."
+      "Superseded STM32 scoring controller",
+      "Removed from P0; the portable C17 core runs behind an ESP32 target adapter."
     ),
     selectedDecisionRow(
       "U_APP",
       "ESP32-S3-WROOM-1U-N16R2",
-      "Application and network controller",
-      "Exact production-intent module; owns application services, display, Ethernet, and recovery."
+      "Sole P0 scoring and application controller",
+      "Runs the target adapter and portable C17 core plus Ethernet, IR, display, USB, persistence, and recovery services."
     ),
-    selectedDecisionRow(
-      "U_ISO_MAIN",
-      "ISO7762FDWR",
-      "Main reinforced digital isolation",
-      "Exact production-intent isolator; preserves the committed scoring/application boundary."
-    ),
-    selectedDecisionRow(
-      "U_ISO_AUX",
-      "ISO7721FDR",
-      "Auxiliary reinforced digital isolation",
-      "Exact production-intent isolator for the STM32 heartbeat and service-only reverse channel."
-    ),
-    selectedDecisionRow(
-      "U_ISO_POWER",
-      "NXE1S0505MC",
-      "Isolated scoring-domain power",
-      "Exact production-intent isolated converter; output load and local regulation remain measurement gates."
-    ),
+    dnpRow("U_ISO_MAIN", "Superseded main processor isolator", "Removed because P0 has one processor domain."),
+    dnpRow("U_ISO_AUX", "Superseded auxiliary processor isolator", "Removed because P0 has one processor domain."),
+    dnpRow("U_ISO_POWER", "Superseded isolated processor-link power", "Removed because P0 has one processor domain."),
     selectedDecisionRow(
       "U_REF",
       "REF5025AQDRQ1",
@@ -455,22 +404,20 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "Required connector-side low-speed protection; it does not carry or protect USB D-minus or D-plus."
     ),
     selectedDecisionRow(
-      "U_USB2_ESD",
+      "U_USB_DATA_PROTECT",
       "TPD2EUSB30DRTR",
       "Native USB 2.0 low-capacitance ESD protection",
       "Required service-data protection; the ESP32-S3 remains the native USB device."
     ),
-    selectedBenchPowerRow(
+    dnpRow(
       "J_LAB_INJECTION",
-      "43045-0400",
-      "Test-only 20 V, 2.3 A post-eFuse diagnostic injection connector",
-      "Bench-only BP-050 source; not a product input and usable only with normal USB-C power de-energized and isolated by the selector."
+      "Alternate laboratory power connector",
+      "Removed from populated P0; reviewed rail test pads and removable links provide diagnostic access."
     ),
-    selectedBenchPowerRow(
+    dnpRow(
       "S_POWER_SOURCE_SELECTOR",
-      "7101SYZQE",
-      "Hard USB-C PD versus diagnostic-injection source selector",
-      "Exact SPDT mutual-exclusion selector; change only while both sources are de-energized and never connect both sources simultaneously."
+      "Alternate power source selector",
+      "Removed with the alternate laboratory input; USB-C PD is the sole populated power input."
     ),
     selectedDecisionRow(
       "D_USB_PD_VBUS_TVS",
@@ -514,6 +461,46 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "HUB75 signal buffer B",
       "Exact buffer identity is retained for safe blanking; panel header and current remain prototype gates."
     ),
+    dnpRow(
+      "U_FRAM",
+      "External event-journal F-RAM",
+      "Removed from P0; bounded persistence uses encrypted NVS and no flash writes occur while scoring."
+    ),
+    selectedDecisionRow(
+      "U_V5_BUCK",
+      "TPS56A37RPAR",
+      "USB-C PD 20 V to protected 5 V conversion",
+      "Required by the ESP32/AFE and HUB75 branches; thermal, inrush, and exact support-network gates remain open."
+    ),
+    selectedIrRow(
+      "U_IR_RX",
+      "Encrypted-remote 38 kHz receiver",
+      benchPrototypeIrReceiverSelection.receiver.manufacturer,
+      benchPrototypeIrReceiverSelection.receiver.mpn,
+      benchPrototypeIrReceiverSelection.receiver.package,
+      benchPrototypeIrReceiverSelection.sources[0],
+      "Required TSOP38438 receive path; optical range, flood, latency, reset, and power-off evidence remain open."
+    ),
+    ...benchPrototypeIrReceiverSelection.supportNetwork.map((part, index) =>
+      selectedIrRow(
+        part.reference,
+        `Encrypted-remote support: ${part.purpose}`,
+        part.manufacturer,
+        part.mpn,
+        part.package,
+        benchPrototypeIrReceiverSelection.sources[index === 0 || index === 2 ? 5 : index === 1 ? 7 : 6],
+        `Required exact ${part.value} part for the TSOP38438 path.`
+      )
+    ),
+    selectedIrRow(
+      benchPrototypeIrReceiverSelection.observation.testPoint.reference,
+      "Encrypted-remote receiver test point",
+      benchPrototypeIrReceiverSelection.observation.testPoint.manufacturer,
+      benchPrototypeIrReceiverSelection.observation.testPoint.mpn,
+      benchPrototypeIrReceiverSelection.observation.testPoint.package,
+      benchPrototypeIrReceiverSelection.sources[8],
+      "Required optical-receiver observation point; it grants no command or scoring authority."
+    ),
     ...selectedEthernetSupportRows,
     ...unresolvedRows
   ],
@@ -535,30 +522,6 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
 }
 
 export const benchPrototypeBom = deepFreeze(benchPrototypeBomDefinition)
-
-const requiredExactSelections = new Map([
-  ["U_SCORING", "STM32G474RET3TR"],
-  ["U_APP", "ESP32-S3-WROOM-1U-N16R2"],
-  ["U_ISO_MAIN", "ISO7762FDWR"],
-  ["U_ISO_AUX", "ISO7721FDR"],
-  ["U_ISO_POWER", "NXE1S0505MC"],
-  ["U_REF", "REF5025AQDRQ1"],
-  ["U_W5500", "W5500"],
-  ["J_ETH", "7499011121A"],
-  ["J_USB_C", "10177070-00011LF"],
-  ["U_USB_PD", "TPS25730ADREFR"],
-  ["U_USB_PORT_PROTECT", "TPD4S201TRGRRQ1"],
-  ["U_USB2_ESD", "TPD2EUSB30DRTR"],
-  ["J_LAB_INJECTION", "43045-0400"],
-  ["S_POWER_SOURCE_SELECTOR", "7101SYZQE"],
-  ["D_USB_PD_VBUS_TVS", "TVS2200DRVR"],
-  ["D_USB_PD_VBUS_DISCONNECT", "B340A-13-F"],
-  ["U_EFUSE", "TPS259474ARPWR"],
-  ["C_USB_PD_PPHV", "T523H107M035APE070"],
-  ["C_USB_PD_LDO", "T55A106M010C0200"],
-  ["U_DISPLAY_BUFFER_A", "SN74AHCT245PWR"],
-  ["U_DISPLAY_BUFFER_B", "SN74AHCT245PWR"]
-])
 
 type ParsedBomRow = {
   reference: string
@@ -726,6 +689,7 @@ function parseRow(value: unknown, index: number, seen: WeakSet<object>): ParsedB
     sourceKind !== "bench-prototype-power" &&
     sourceKind !== "component-decision" &&
     sourceKind !== "ethernet-support-network" &&
+    sourceKind !== "ir-receiver-selection" &&
     sourceKind !== "usb-pd-footprint"
   ) {
     throw new RangeError(`${path}.source.kind is not recognized`)
@@ -820,12 +784,6 @@ export function validateBenchPrototypeBom(value: unknown): true {
         parsed.mpn !== expected.mpn
       ) {
         throw new RangeError(`${expected.reference} does not match the canonical baseline row`)
-      }
-    }
-    for (const [reference, mpn] of requiredExactSelections) {
-      const row = parsedRows.find((candidate) => candidate.reference === reference)
-      if (row === undefined || row.disposition !== "selected" || row.mpn !== mpn) {
-        throw new RangeError(`${reference} must select exact MPN ${mpn}`)
       }
     }
     validateExternalItems(bom.externalItems, seen)

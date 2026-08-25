@@ -369,8 +369,8 @@ const upstreamSnapshot = deepFreeze({
   },
   resetParts: structuredClone(benchPrototypeResetWatchdog.parts),
   debug: {
-    stm: benchPrototypeServiceHeaders.stm32.header.mpn,
-    esp: benchPrototypeServiceHeaders.esp32.header.mpn
+    stm: benchPrototypeServiceHeaders.removedFromP0.stm32Header.candidateMpn,
+    esp: benchPrototypeServiceHeaders.removedFromP0.esp32Header.candidateMpn
   },
   clocks: structuredClone(benchPrototypeProcessorSupport.oscillators),
   processorSupportReferences: structuredClone(processorSupportSnapshot)
@@ -397,8 +397,8 @@ function currentUpstreamSnapshot() {
     },
     resetParts: structuredClone(benchPrototypeResetWatchdog.parts),
     debug: {
-      stm: benchPrototypeServiceHeaders.stm32.header.mpn,
-      esp: benchPrototypeServiceHeaders.esp32.header.mpn
+      stm: benchPrototypeServiceHeaders.removedFromP0.stm32Header.candidateMpn,
+      esp: benchPrototypeServiceHeaders.removedFromP0.esp32Header.candidateMpn
     },
     clocks: structuredClone(benchPrototypeProcessorSupport.oscillators),
     processorSupportReferences: structuredClone(processorSupportReferenceContract())

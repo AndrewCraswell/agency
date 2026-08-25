@@ -1,144 +1,115 @@
 # BP-010 bench-prototype architecture
 
-## Purpose and release status
+## Decision and release status
 
-The first integrated hardware is one deliberately oversized, accessible PCB on
-standoffs. It is a bench instrument for electrical, firmware, and
-rules-behavior experiments. It is neither a production form-factor preview nor
-an order, fabrication, or production release.
+The first integrated hardware is one deliberately accessible PCB on standoffs.
+It is a bench instrument for closing electrical, firmware, and rules-behavior
+questions. It is not a production form-factor preview or a fabrication release.
 
-The machine-checkable source of this boundary is
-`src/bench-prototype-contract.ts`. Its release state is permanently `deny` for
-this planning unit. A later schematic, footprint, layout, and independent
-order review are still required before any prototype order.
+The P0 prototype uses one exact `ESP32-S3-WROOM-1U-N16R2`. The previous
+STM32-plus-ESP32 architecture, processor-to-processor isolators, isolated link
+power, isolated SPI, and STM32 SWD interface are superseded for this board.
+Their records remain historical evidence only.
+
+This decision does not merge the software responsibilities. The portable C17
+scoring core owns scoring decisions. Target adapters own acquisition,
+timestamps, queues, safe outputs, storage, Ethernet, display, USB, and IR. The
+interfaces between those layers must remain target-neutral so a separate
+scoring MCU can be introduced later without rewriting rules behavior.
+
+The machine-checkable source of the board boundary remains
+`src/bench-prototype-contract.ts`. Until it is reconciled with this decision,
+the schematic, PCB, fabrication, and order states remain denied.
 
 ## Required on the one board
 
-- `STM32G474RET3TR` owns acquisition, touch qualification, timing, primary
-  lamps, and buzzer in the `SCORING_SGND` domain.
-- `ESP32-S3-WROOM-1U-N16R2` owns display, Ethernet services, storage, encrypted IR remote reception, controls,
-  and non-authoritative replay in the `APP_GND` domain.
-- `ISO7762FDWR`, `ISO7721FDR`, and `NXE1S0505MC` are the only permitted
-  crossings of the visibly marked isolation corridor. The two grounds remain
-  separate on every layer.
-- The `W5500`, its committed support network, and Würth `7499011121A`
-  integrated-magnetics RJ45 are co-located. The MDI pairs never leave the PCB.
-- The two `SN74AHCT245PWR` buffers and protected HUB75 connection support the
-  external selected panel.
-
-The STM32 must remain functional when the ESP32 is held in reset, unpowered,
-malformed, or absent. The application processor cannot qualify a hit or
-automatically reset the scoring processor.
+- `ESP32-S3-WROOM-1U-N16R2` runs the target adapter and portable C17 core.
+- The seven-conductor external analog front end supplies ordered, timestamped
+  ADS8881 samples through a bounded interface. Queue overflow, timestamp loss,
+  conversion loss, or frame-order loss must make scoring unavailable rather
+  than drop evidence silently. Per-channel comparator GPIOs are omitted from
+  P0 unless BP-127 proves the ADC-only cadence cannot satisfy the timing budget.
+- `W5500` and Würth `7499011121A` provide required wired Ethernet. The MDI
+  pairs stay on the PCB.
+- `TSOP38438` provides the 38 kHz, 940 nm encrypted-remote receive path through
+  an ESP32 RMT-capable input. Authentication, replay protection, and workflow
+  handling cannot fabricate, qualify, clear, or reclassify an electrical hit.
+- Two `SN74AHCT245PWR` buffers drive the selected HUB75 panel and hold it blank
+  before firmware, during reset, and during brownout.
+- USB-C PD remains the only populated power input. Labeled rail test pads and
+  removable current links support de-energized diagnosis without a second
+  connector or source selector.
+- Primary lamps, buzzer, recovery access, labeled test points, and direct-wire
+  prototype weapon connections remain on the board.
 
 ## Provisional zoning and access
 
-The planning envelope is 300 mm wide by 160 mm high with a lower-left planning
-datum. These coordinates reserve hand and probe space; they are explicitly not
-a fabrication outline, mechanical drawing, placement release, or board-size
-commitment. The four- or six-layer choice remains evidence-driven.
+The old 300 mm by 160 mm drawing and isolation corridor are superseded. BP-010
+must produce a smaller dimensioned planning drawing after BP-127 proves the
+ESP32 peripheral allocation and acquisition boundary. The new drawing uses a
+lower-left datum and reserves, in order:
 
-| Zone | X range | Y range |
-| --- | ---: | ---: |
-| Fixture entry | 0 to 35 mm | 0 to 160 mm |
-| Analog acquisition | 35 to 90 mm | 0 to 160 mm |
-| Scoring control | 90 to 145 mm | 0 to 160 mm |
-| Isolation corridor | 145 to 165 mm | 0 to 160 mm |
-| Application control | 165 to 215 mm | 0 to 160 mm |
-| USB-C power and Ethernet edge | 215 to 300 mm | 60 to 160 mm |
-| Display edge | 215 to 300 mm | 0 to 60 mm |
+1. weapon connection, protection, and analog acquisition;
+2. reference, ADC, and guarded test access;
+3. ESP32, reset/recovery, primary outputs, and IR;
+4. USB-C PD, conversion, W5500, and board-edge MagJack; and
+5. HUB75 buffering and protected display power.
 
-The isolation corridor is therefore a provisional 20 mm-wide full-height
-reservation. No copper, plane, mounting, or clearance credit follows from the
-planning width.
+Use one low-impedance digital ground system with explicit sensitive analog
+return, reference return, ESD return, chassis/shield, and high-current display
+rules. There is no processor isolation corridor or isolated scoring supply on
+the P0 board. This does not waive isolation that may be required at exposed
+external interfaces or in a future production partition.
 
-The right-side upper zone contains the USB-C receptacle, PD controller,
-protection, eFuse, physical source selector, diagnostic input, W5500 support,
-and MagJack. It reaches both `J_USB_C` and `J_ETHERNET_MAGJACK` directly at the
-right edge. The HUB75 connector occupies the separate lower-right display zone,
-so neither power nor Ethernet routing requires crossing that zone.
-
-| Connector | Planning coordinate | Role |
-| --- | --- | --- |
-| `J_WEAPON_FIXTURE` | left edge, x = 0, y = 80 mm | Weapon and piste fixture |
-| `J_PRIMARY_OUTPUTS` | left edge, x = 0, y = 130 mm | Primary lamps and buzzer |
-| `J_USB_C` | right edge, x = 300, y = 90 mm | Normal USB-C PD input and USB 2.0 service |
-| `J_ETHERNET_MAGJACK` | right edge, x = 300, y = 130 mm | Ethernet |
-| `J_HUB75` | right edge, x = 300, y = 30 mm | External display |
-| `J_STM_SWD` | top edge, x = 118, y = 160 mm | STM32 debug |
-| `J_ESP_SERVICE` | top edge, x = 192, y = 160 mm | ESP32 recovery |
-| `J_LAB_INJECTION` | top edge, x = 235, y = 160 mm | Controlled diagnostic injection that bypasses USB-C PD/eFuse |
-
-Labeled, unobstructed probe zones cover current links, rails, reference,
-analog stages, fixture lines, resets, watchdogs, heartbeats, isolated SPI,
-Ethernet nodes, and display enable/buffer signals.
+The next drawing must place the weapon connection, Ethernet jack, USB-C,
+HUB75, IR optical window, ESP32 antenna connector/keepout, and recovery access
+on appropriate edges. It must preserve probe access and
+mechanical strain transfer around the direct-wire weapon landing.
 
 ## Fixed prototype interfaces
 
-The external display is Adafruit product `2277`, a 64-by-32, 1/16-scan HUB75
-panel. The board supplies 13 buffered signals and a separately protected 5 V
-branch.
+| Function | Fixed P0 decision |
+| --- | --- |
+| Processor | Exact `ESP32-S3-WROOM-1U-N16R2`; no second MCU on P0. |
+| Scoring software | One portable C17 core with target-neutral input/output byte contracts; no TypeScript scoring fallback. |
+| Analog acquisition | Existing protected seven-channel AFE and ADS8881 daisy-chain concept; exact ADC-only cadence and timestamp budget to be closed by BP-127 and BP-103. |
+| Ethernet | Exact `W5500` plus committed support network and Würth `7499011121A`. |
+| IR receiver | Exact `TSOP38438`, 38 kHz carrier, 940 nm assumption, protected supply, test point, optical access, and ESP32 RMT capture. |
+| Display | Adafruit product `2277`, 64 by 32, 1/16 scan, with two `SN74AHCT245PWR` buffers and protected 5 V branch. |
+| Normal power | Amphenol `10177070-00011LF` USB-C receptacle and selected PD/protection/eFuse/conversion path. |
+| Bench power diagnosis | No populated alternate input. Use labeled rail test pads and removable current links only under a de-energized, USB-disconnected procedure. |
+| Weapon prototype | Six labeled A/B/C solder landings, probe points, and mechanical strain relief; the owner-validated OK Fencing cable is accepted. |
+| Recovery | Native USB plus 3.3 V UART/boot/reset access; no STM32 SWD. |
 
-Normal product power enters through Amphenol `10177070-00011LF`. The required
-USB-C PD and protection chain includes `TPS25730ADREFR`, `TPD4S201TRGRRQ1`
-for CC/SBU only, `TPD2EUSB30DRTR` as the D-/D+ shunt, `TVS2200DRVR`,
-`B340A-13-F`, and `TPS259474ARPWR`, plus the complete controller
-configuration, CC, VBUS, gate, discharge, eFuse, bypass, and connector-side
-protection network. After the shunt, `USB_DN` and `USB_DP` each pass through
-one matched 22 ohm series resistor before reaching `ESP32-S3-WROOM-1U-N16R2`
-GPIO19 and GPIO20.
+## Failure and validation boundary
 
-`J_LAB_INJECTION` uses Molex `43045-0400`, mate `43025-0400`, and `43030-0007`
-terminals with two equal-length 20 AWG positive and two equal-length 20 AWG
-return conductors. It may inject regulated 20 V at no more than 2.3 A only at
-`LAB_POST_EFUSE_20V` for controlled bring-up. This diagnostic route bypasses
-the USB-C PD controller and eFuse and is not a normal product interface. Exact
-C&K/Littelfuse `7101SYZQE` provides physical SPDT selection with
-`PD_EFUSE_OUT_20V` or `LAB_POST_EFUSE_20V` feeding the common
-`V20_TO_V5_BUCK` node. Both sources must be de-energized before switching, and
-simultaneous sources are prohibited.
+BP-127 is the architecture feasibility gate. It must bind the exact ESP32 pins,
+timer, external ADC transfer, sample ordering, queue sizes, serialized primary
+outputs, inactive states, watchdog/brownout behavior, recovery path, and rail
+budget. It must measure or conservatively prove FIE-relevant acquisition under
+simultaneous Ethernet, HUB75, IR, USB, and storage load. No paper allocation
+receives physical timing credit.
 
-`J_WEAPON_FIXTURE` uses Molex `43045-1200`, mate `43025-1200`, and
-`43030-0007` terminals. Pins 1 through 7 are `LEFT_WEAPON_A`,
-`LEFT_WEAPON_B`, `LEFT_WEAPON_C`, `RIGHT_WEAPON_A`, `RIGHT_WEAPON_B`,
-`RIGHT_WEAPON_C`, and `PISTE`. Pins 8 through 10 reserve `PISTE_RETURN`, a
-fixture return requiring review, and an ESD return requiring review. Pins 11
-and 12 are NC and remain unpopulated. The fixture connector is not a
-production body-cord connector.
-
-The STM32 debug candidate is Samtec `FTSH-105-01-L-DV-007-K` with Cortex pin 7
-omitted, exposing SWDIO,
-SWCLK, NRST, scoring 3.3 V sense, scoring ground, and the pin-7-omitted key. The
-sense line never powers the board. The ESP32 service candidate is Samtec
-`TSW-106-07-G-S`, exposing 3.3 V-compatible UART RX/TX, `BOOT_N`, active-high
-manual reset request, application 3.3 V sense, and `APP_GND`. Use an isolated
-or approved-level external adapter; 5 V TTL is prohibited.
+The C17 core receives only explicit canonical timestamps and normalized
+observations. It imports no wall clock, network, display, storage, random, or
+ESP-IDF behavior. Platform overload and malformed input must return an explicit
+unavailable/fault record before any scoring output can change.
 
 ## Explicitly deferred
 
-The encrypted IR referee remote is not deferred. Its receiver/decoder path, ESP32 interface, optical test access, and
-numeric range/angle/light/latency requirements must converge through `BP-126` and `BP-146` before the canonical bench
-schematic or PCB can be released. BP-126 selects GPIO35/module pad 28 as the
-application-only `IR_RX` input using ESP32-S3 `RMT_RX`; the receiver hardware
-itself remains denied pending BP-146's exact-MPN and electrical/timing evidence.
-GPIO3 is reset/strap-quiet, GPIO36 and GPIO37 are reserved NC for DNP audio,
-GPIO33/GPIO34 are not exposed, and all other candidates are consumed by USB,
-Ethernet, F-RAM, HUB75, UART recovery, watchdog/heartbeat, isolation, or other
-frozen interfaces. See
-[the executable BP-126 interface decision](../src/bench-prototype-ir-receiver-interface.ts)
-and [its decision record](bench-prototype-ir-receiver-interface.md). No raw
-receiver, generic I2C expander, or direct STM32 path may be added as a
-workaround.
+The P0 board does not decide the enclosure, production body-cord socket,
+miniaturization, final board partition, battery/UPS implementation, regulatory
+certification, or factory panelization. It must nevertheless expose enough
+measurement and fault-injection access to determine whether the simplified
+architecture can meet FIE timing, resistance, output, power, and recovery
+requirements.
 
-This board does not decide enclosure mechanics, miniaturization, final
-three-board production partitioning, a production battery/UPS or charging
-subsystem, the standards proposal needed to reconcile FIE supply requirements,
-regulatory certification, factory test/DFM, or production release.
-Retained production-oriented technical evidence may inform a `BP-*` task, but
-it does not govern or add work to the prototype backlog.
-
-Normal prototype operation uses the USB-C PD power-adapter input. The regulated
-20 V, 2.3 A maximum diagnostic injection exists only for physically selected,
-mutually exclusive staged bring-up after the normal PD/eFuse path. Ethernet is
-retained as a product capability and test surface;
-production Ethernet EMC, mechanical, and certification closure remain future
-gates.
+Ethernet and encrypted IR are not deferred. Wi-Fi is not required for
+prototype-ready connectivity and must not receive timing credit until the
+loaded acquisition tests pass. F-RAM, RTC, secure element, audio, speaker,
+external antenna, STM32, processor isolators, isolated-link power, SWD, and
+dual-domain-only support are removed from the populated P0 BOM. One ESP32
+reset/brownout/watchdog path remains because it protects the sole scoring
+authority. Encrypted-remote identity and counters use ESP32 eFuses plus
+encrypted NVS under a reviewed wear, recovery, and no-write-during-scoring
+policy.

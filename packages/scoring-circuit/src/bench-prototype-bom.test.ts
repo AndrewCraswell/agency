@@ -6,56 +6,88 @@ import { ethernetSupportNetwork } from "./ethernet-support-network.js"
 import { usbPdFootprints } from "./usb-pd-footprints.js"
 
 describe("bench prototype BOM baseline", () => {
-  it("selects exact processors, isolation, and wired Ethernet identities", () => {
+  it("selects the minimal ESP32, power, Ethernet, display, and IR identities", () => {
     expect(validateBenchPrototypeBom(benchPrototypeBom)).toBe(true)
 
     const selectedByReference = new Map(
       benchPrototypeBom.rows.filter((row) => row.disposition === "selected").map((row) => [row.reference, row.mpn])
     )
     expect(Object.fromEntries(selectedByReference)).toMatchObject({
-      U_SCORING: "STM32G474RET3TR",
       U_APP: "ESP32-S3-WROOM-1U-N16R2",
-      U_ISO_MAIN: "ISO7762FDWR",
-      U_ISO_AUX: "ISO7721FDR",
-      U_ISO_POWER: "NXE1S0505MC",
       U_REF: "REF5025AQDRQ1",
       U_W5500: "W5500",
       J_ETH: "7499011121A",
       J_USB_C: "10177070-00011LF",
       U_USB_PD: "TPS25730ADREFR",
       U_USB_PORT_PROTECT: "TPD4S201TRGRRQ1",
-      U_USB2_ESD: "TPD2EUSB30DRTR",
-      J_LAB_INJECTION: "43045-0400",
-      S_POWER_SOURCE_SELECTOR: "7101SYZQE",
+      U_USB_DATA_PROTECT: "TPD2EUSB30DRTR",
       D_USB_PD_VBUS_TVS: "TVS2200DRVR",
       D_USB_PD_VBUS_DISCONNECT: "B340A-13-F",
       U_EFUSE: "TPS259474ARPWR",
       C_USB_PD_PPHV: "T523H107M035APE070",
       C_USB_PD_LDO: "T55A106M010C0200",
       U_DISPLAY_BUFFER_A: "SN74AHCT245PWR",
-      U_DISPLAY_BUFFER_B: "SN74AHCT245PWR"
+      U_DISPLAY_BUFFER_B: "SN74AHCT245PWR",
+      U_V5_BUCK: "TPS56A37RPAR",
+      U_IR_RX: "TSOP38438",
+      R_IR_VS: "RC0603FR-07100RL",
+      C_IR_VS: "C0603C104K3RACTU",
+      R_IR_OUT: "RC0603FR-07100RL",
+      R_IR_PULLUP: "RC0603FR-0710KL",
+      TP_IR_RX: "5001"
     })
+  })
+
+  it("explicitly removes dual-MCU and nonessential application parts", () => {
+    for (const reference of [
+      "U_SCORING",
+      "U_ISO_MAIN",
+      "U_ISO_AUX",
+      "U_ISO_POWER",
+      "U_SCORING_REG",
+      "U_SCORING_WDOG",
+      "U_SCORING_SUPERVISOR",
+      "J_STM32_SWD",
+      "J_ESP32_SERVICE",
+      "J_LAB_INJECTION",
+      "S_POWER_SOURCE_SELECTOR",
+      "U_FRAM",
+      "U_RTC",
+      "U_SECURE_ELEMENT",
+      "U_AUDIO",
+      "J_SPEAKER",
+      "ANT_EXTERNAL"
+    ]) {
+      expect(benchPrototypeBom.rows.find((row) => row.reference === reference)).toMatchObject({
+        disposition: "DNP",
+        quantity: 0
+      })
+    }
   })
 
   it("keeps CC/SBU and USB 2.0 protection ownership distinct", () => {
-    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB_PORT_PROTECT")?.function).toBe(
-      "USB-C CC1, CC2, SBU1, and SBU2 short-to-VBUS protection"
-    )
-    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB2_ESD")?.function).toBe(
-      "Native USB 2.0 low-capacitance ESD protection"
-    )
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB_PORT_PROTECT")).toMatchObject({
+      function: "USB-C CC1, CC2, SBU1, and SBU2 short-to-VBUS protection",
+      mpn: "TPD4S201TRGRRQ1",
+      package: "VQFN-20 (RGR), 3.5mm x 3.5mm nominal body"
+    })
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB_DATA_PROTECT")).toMatchObject({
+      function: "Native USB 2.0 low-capacitance ESD protection",
+      mpn: "TPD2EUSB30DRTR",
+      package: "SOT-9X3 (DRT), 3-pin"
+    })
   })
 
-  it("classifies diagnostic injection as test-only and hard-selected", () => {
+  it("uses USB-C PD as the only populated power input", () => {
     expect(benchPrototypeBom.rows.find((row) => row.reference === "J_LAB_INJECTION")).toMatchObject({
-      disposition: "selected",
-      mpn: "43045-0400",
-      function: "Test-only 20 V, 2.3 A post-eFuse diagnostic injection connector"
+      disposition: "DNP",
+      quantity: 0
     })
     expect(benchPrototypeBom.rows.find((row) => row.reference === "S_POWER_SOURCE_SELECTOR")).toMatchObject({
-      disposition: "selected",
-      mpn: "7101SYZQE"
+      disposition: "DNP",
+      quantity: 0
     })
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "J_USB_C")?.disposition).toBe("selected")
   })
 
   it("accounts for the selected external Adafruit 2277 panel", () => {
@@ -104,6 +136,26 @@ describe("bench prototype BOM baseline", () => {
     })
   })
 
+  it("binds U_REF to the exact TI D SOIC-8 orderable package", () => {
+    expect(benchPrototypeBom.rows.find((candidate) => candidate.reference === "U_REF")).toMatchObject({
+      manufacturer: "Texas Instruments",
+      mpn: "REF5025AQDRQ1",
+      package: "D SOIC-8, 5.0mm x 3.9mm body, 1.27mm pitch",
+      source: { kind: "component-decision", url: "https://www.ti.com/product/REF5025A-Q1" }
+    })
+  })
+
+  it("does not populate the obsolete isolated processor supply", () => {
+    const row = benchPrototypeBom.rows.find((candidate) => candidate.reference === "U_ISO_POWER")
+
+    expect(row).toMatchObject({
+      disposition: "DNP",
+      quantity: 0
+    })
+    expect(benchPrototypeBom.releaseState).toBe("deny")
+    expect(benchPrototypeBom.fabricationRelease).toBe(false)
+  })
+
   it("keeps unresolved analog, connector, and USB power scope explicit", () => {
     expect(benchPrototypeBom.rows.find((row) => row.reference === "U_ANALOG_CELL_1")?.disposition).toBe("TBD")
     expect(benchPrototypeBom.rows.find((row) => row.reference === "J_WEAPON_HARNESS")?.disposition).toBe("TBD")
@@ -112,6 +164,8 @@ describe("bench prototype BOM baseline", () => {
     expect(benchPrototypeBom.rows.find((row) => row.reference === "U_USB_PD")?.disposition).toBe("selected")
     expect(benchPrototypeBom.rows.find((row) => row.reference === "R_USB_PD_STRAPS")?.disposition).toBe("TBD")
     expect(benchPrototypeBom.rows.find((row) => row.reference === "R_USB2_SERIES")?.disposition).toBe("TBD")
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_PRIMARY_OUTPUT_LATCH")?.disposition).toBe("TBD")
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_PRIMARY_OUTPUT_DRIVER")?.disposition).toBe("TBD")
   })
 
   it("requires selected rows to carry orderable metadata", () => {
@@ -210,6 +264,7 @@ describe("bench prototype BOM baseline", () => {
 
   it("binds selected metadata to its exact provenance", () => {
     for (const [reference, change] of [
+      ["U_REF", { mpn: "forged-mpn" }],
       ["U_REF", { package: "wrong-package" }],
       ["U_DISPLAY_BUFFER_A", { manufacturer: "Not TI" }],
       ["U_DISPLAY_BUFFER_B", { lifecycle: "active-preferred" }],

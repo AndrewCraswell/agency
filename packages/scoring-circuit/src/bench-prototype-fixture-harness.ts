@@ -713,7 +713,7 @@ const definition = {
 export const benchPrototypeFixtureHarness = deepFreeze(definition)
 
 const upstreamSnapshot = deepFreeze({
-  fixture: structuredClone(benchPrototypeContract.fixedInterfaces.weaponFixture),
+  fixture: benchPrototypeContract.requiredHardware.weapon,
   order: structuredClone(benchPrototypeSevenChannelAnalog.channelOrder),
   channels: structuredClone(
     benchPrototypeSevenChannelAnalog.channels.map((channel) => ({
@@ -728,7 +728,7 @@ function assertUpstreamContracts(): void {
   validateBenchPrototypeSevenChannelAnalog(benchPrototypeSevenChannelAnalog)
 
   const liveUpstream = {
-    fixture: benchPrototypeContract.fixedInterfaces.weaponFixture,
+    fixture: benchPrototypeContract.requiredHardware.weapon,
     order: benchPrototypeSevenChannelAnalog.channelOrder,
     channels: benchPrototypeSevenChannelAnalog.channels.map((channel) => ({
       conductor: channel.conductor,

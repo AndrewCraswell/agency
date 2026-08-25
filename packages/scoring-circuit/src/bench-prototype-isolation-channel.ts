@@ -386,22 +386,13 @@ function validateCommittedEvidence(): void {
   validateStm32PinAllocation(stm32PinAllocation)
   validateBenchPrototypeEsp32Allocation(benchPrototypeEsp32Allocation)
 
-  const crossings = benchPrototypeNetClasses.isolationRules
-  const main = crossings.signalCrossings[0]
-  const auxiliary = crossings.signalCrossings[1]
+  const retirement = benchPrototypeNetClasses.retiredIsolation
   if (
-    crossings.applicationGround !== "APP_GND" ||
-    crossings.scoringGround !== "SCORING_SGND" ||
-    crossings.directGroundTiePermitted ||
-    crossings.crossingParts.join(",") !== "ISO7762FDWR,ISO7721FDR,NXE1S0505MC" ||
-    main?.part !== "ISO7762FDWR" ||
-    main.scoringToApplication.join(",") !== "SCK,MOSI,CS,RESET_REQUEST" ||
-    main.applicationToScoring.join(",") !== "MISO,ESP32_HEARTBEAT" ||
-    auxiliary?.part !== "ISO7721FDR" ||
-    auxiliary.scoringToApplication.join(",") !== "STM32_HEARTBEAT" ||
-    auxiliary.applicationToScoring.join(",") !== "SERVICE_ONLY_REVERSE_CHANNEL"
+    retirement.enabled ||
+    retirement.parts.join(",") !== "ISO7762FDWR,ISO7721FDR,NXE1S0505MC" ||
+    !retirement.rule.includes("DNP")
   ) {
-    throw new RangeError("BP-040 isolation provenance no longer matches the reviewed crossing map")
+    throw new RangeError("BP-122 historical evidence must remain retired by the current BP-040 contract")
   }
 
   const stm32Signals = stm32PinAllocation.isolatedSpi
