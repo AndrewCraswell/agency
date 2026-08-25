@@ -23,7 +23,9 @@ already exists in `apps/legislation-web` from commit `03e1c7b`, initially pinned
 target is `16.3.1`. Explicit Route Handlers belong under `apps/legislation-web/app/api`, not under `apps/legislation`.
 All 87 rows have reviewed standalone domain/query/projection evidence, so the **Domain state** is 87 **Done**. The
 **Next route state** is 0 **Done**, 0 **In progress**, 0 **Ready**, and 87 **Blocked** on the in-progress NX-01 foundation.
-The standalone `apps/legislation` server remains the transitional API and rollback target. Authentication, distributed
+The standalone `apps/legislation` server remains transitional source code during migration. The old Railway
+`legislation-api` service is retained only until the new `legislation-web` service reaches terminal `SUCCESS` and remote
+`/health` and `/ready` smoke passes, then it is deleted rather than retained as rollback. Authentication, distributed
 rate limiting, and MCP cutover are later global gates and must follow the sequence in the migration plan.
 
 ## Delivery phases
@@ -31,7 +33,7 @@ rate limiting, and MCP cutover are later global gates and must follow the sequen
 | ID | Phase | State | Granular tasks and exit gate |
 | --- | --- | --- | --- |
 | NX-00 | Correct the delivery record | In progress | Replace the TanStack/standalone completion model with the canonical Next.js plan, separate domain evidence from Next route evidence, and commit the correction. |
-| NX-01 | Next.js foundation and first deployment | In progress | Apply the approved Next.js `16.3.1` upgrade to the existing `apps/legislation-web` scaffold, add App Router health/readiness and server composition under the `app/api` boundary, build the production container, deploy the new parallel `legislation-web` Railway service, and smoke the foundation. |
+| NX-01 | Next.js foundation and first deployment | In progress | Apply the approved Next.js `16.3.1` upgrade to the existing `apps/legislation-web` scaffold, add root `/health` and `/ready` handlers plus server composition, add explicit API handlers under `app/api`, build the production container, deploy the new parallel `legislation-web` Railway service, verify terminal `SUCCESS` and remote health/readiness smoke, then delete the old `legislation-api` service and record the teardown before route migration. |
 | NX-02 | Migrate 38 legislative routes | Blocked | Migrate and release jurisdictions/sessions (11), bills/amendments/votes (18), then documents/materials/resources (9), deploying and remotely smoking each block. |
 | NX-03 | Migrate 28 civic routes | Blocked | Migrate and release people/organizations (14), then meetings/calendars/representative lookup (14), deploying and remotely smoking each block. |
 | NX-04 | Migrate 7 search/diff/research routes | Blocked | Migrate, deploy, and remotely verify lexical, semantic, hybrid, diff, and cited-answer behavior. |
@@ -39,7 +41,7 @@ rate limiting, and MCP cutover are later global gates and must follow the sequen
 | NX-06 | Add WorkOS authentication | Blocked | Begin only after all 87 Next routes are deployed and smoked; enforce token and access-class semantics and rerun authenticated cumulative smoke. |
 | NX-07 | Add distributed rate limiting | Blocked | Begin only after auth; provision a shared store, enforce reviewed tiers, and prove cross-instance 429 and recovery behavior. |
 | NX-08 | Migrate MCP to the API | Blocked | Begin only after rate limiting; cut over tool-by-tool through the typed HTTP client with parity, canary, soak, and rollback evidence. |
-| NX-09 | Remove transitional server and close | Blocked | Remove duplicate standalone production serving, update final docs, run complete verification, and preserve one canonical Next.js runtime. |
+| NX-09 | Remove transitional server and close | Blocked | Remove duplicate standalone production serving code, update final docs, run complete verification, and preserve one canonical Next.js runtime. |
 
 ## Review and commit protocol
 
