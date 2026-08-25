@@ -8,7 +8,13 @@ import {
   listDocumentSections
 } from "../db/queries/document-reads.js"
 import { getEventDocumentRead } from "../db/queries/event-document-read.js"
+import { assertMeetingExists, listMeetingDocuments } from "../db/queries/meeting-document-read.js"
 import { getMeetingParticipantRead } from "../db/queries/meeting-participant-read.js"
+import {
+  assertMeetingExists as assertMeetingParticipantParentExists,
+  listMeetingParticipants
+} from "../db/queries/meeting-participant-reads.js"
+import { assertOrganizationExists, listOrganizationBillReads } from "../db/queries/organization-bill-read.js"
 import { getSupportingMaterialSectionRead } from "../db/queries/supporting-material-section-read.js"
 import { createCivicScopedReadApiHandler } from "./civic-scoped-read-routes.js"
 import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
@@ -16,7 +22,16 @@ import { createCoreReadApiHandler, type CoreReadQueryApi } from "./core-read.js"
 import { createDocumentReadApiHandler, type DocumentReadApi } from "./document-read-routes.js"
 import { createEventDocumentReadApiHandler } from "./event-document-read-routes.js"
 import { createCompositeHttpApiHandler, type HttpApiHandler } from "./http.js"
+import { createJurisdictionOrganizationRepository } from "./jurisdiction-organization-read-repository.js"
+import { createJurisdictionOrganizationReadApiHandler } from "./jurisdiction-organization-read-routes.js"
+import { createMeetingDocumentReadApiHandler } from "./meeting-document-read-routes.js"
+import { createMeetingParticipantListApiHandler } from "./meeting-participant-list-routes.js"
 import { createMeetingParticipantReadApiHandler } from "./meeting-participant-read-routes.js"
+import { createOrganizationBillReadApiHandler } from "./organization-bill-read-routes.js"
+import { createOrganizationMembersRepository } from "./organization-members-read-repository.js"
+import { createOrganizationMembersReadApiHandler } from "./organization-members-read-routes.js"
+import { createPersonMembershipsRepository } from "./person-membership-read-repository.js"
+import { createPersonMembershipReadApiHandler } from "./person-membership-read-routes.js"
 import { createSubscriptionReadApiHandler } from "./subscription-routes.js"
 import { createWebhookSecretProtector, type SubscriptionRepository, SubscriptionService } from "./subscriptions.js"
 import { createSupportingMaterialSectionReadApiHandler } from "./supporting-material-section-read-routes.js"
@@ -70,12 +85,41 @@ export function createLegislationApiHandler(
             },
             options
           ),
+          createJurisdictionOrganizationReadApiHandler(
+            createJurisdictionOrganizationRepository(documentDatabase),
+            options
+          ),
           createMeetingParticipantReadApiHandler(
             {
               getMeetingParticipant: async (input) => await getMeetingParticipantRead(documentDatabase, input)
             },
             options
           ),
+          createMeetingParticipantListApiHandler(
+            {
+              assertMeetingExists: async (meetingId) =>
+                await assertMeetingParticipantParentExists(documentDatabase, meetingId),
+              listMeetingParticipants: async (input) => await listMeetingParticipants(documentDatabase, input)
+            },
+            options
+          ),
+          createMeetingDocumentReadApiHandler(
+            {
+              assertMeetingExists: async (meetingId) => await assertMeetingExists(documentDatabase, meetingId),
+              listMeetingDocuments: async (input) => await listMeetingDocuments(documentDatabase, input)
+            },
+            options
+          ),
+          createOrganizationBillReadApiHandler(
+            {
+              assertOrganizationExists: async (organizationId) =>
+                await assertOrganizationExists(documentDatabase, organizationId),
+              listOrganizationBillReads: async (input) => await listOrganizationBillReads(documentDatabase, input)
+            },
+            options
+          ),
+          createOrganizationMembersReadApiHandler(createOrganizationMembersRepository(documentDatabase), options),
+          createPersonMembershipReadApiHandler(createPersonMembershipsRepository(documentDatabase), options),
           createSupportingMaterialSectionReadApiHandler(
             {
               getSupportingMaterialSection: async (input) =>
