@@ -24,6 +24,9 @@ remain `DENY`.
 | VDD and six AVDD 100 nF bypasses | `C_W5500_VDD`, `C_W5500_AVDD_1` through `_6` | Murata `GRM188R71C104KA01D` |
 | Ferrite-input 100 nF bypass | `C_ETH_AVDD_FERRITE_INPUT` | Murata `GRM188R71C104KA01D` |
 | AVDD ferrite | `FB_W5500_AVDD` | Murata `BLM21PG221SN1D` |
+| Reset observation point | `TP_W5500_RESET_N` | Keystone Electronics `5001`, miniature through-hole black test point, 0.040 inch (catalog 1.0 mm) mounting hole |
+| Interrupt observation point | `TP_W5500_INT_N` | Keystone Electronics `5001`, miniature through-hole black test point, 0.040 inch (catalog 1.0 mm) mounting hole |
+| Interrupt local bias | `R_W5500_INT_BIAS` | Yageo `RC0603FR-07100KL`, 100 kOhm, 1%, 0603 |
 
 `V3_3` feeds W5500 VDD directly and feeds `ETH_AVDD` through the selected
 ferrite. Each of the six AVDD pins has its own local bypass to `APP_GND`;
@@ -35,23 +38,33 @@ bypass. All W5500 analog, digital, crystal-shield, and support returns use
 
 `APP_W5500_RESET_N` joins `U_APP_RESET_FANOUT.Y2`, exact Yageo
 `RC0603FR-0710KL` 10 kOhm pull-up `R_W5500_RESET_PULLUP`, W5500 `RST_N`, and
-the required `TP_W5500_RESET_N` observation point. BP-123 selects exact TI
+the required `TP_W5500_RESET_N` observation point. The point is Keystone 5001,
+whose retained catalog identifies the miniature black through-hole part and its
+0.040 inch (catalog 1.0 mm) mounting hole. BP-123 selects exact TI
 `SN74LVC2G07DCKR` as the dual non-inverting open-drain fanout from
 `APP_SUPERVISOR_RESET_N`. Y2 is the Ethernet-only output; Y1 separately drives
 `EN_RESET`. Therefore watchdog, manual, or STM32-request sinks on `EN_RESET`
 cannot reset W5500. No ESP32 GPIO is connected to the Ethernet reset net, so
 firmware cannot override a supervisor brownout or release delay.
+The catalog mounting-hole callout is not a finished PCB drill instruction.
 
-W5500 `INT_N` is an active-low push-pull output. The unconsumed output reaches
-`TP_W5500_INT_N` and the reserved `R_W5500_INT_BIAS` position, but no ESP32
-GPIO. The bias value remains `TBD` on `V3_3`; BP-123 must select it or record an
-explicit DNP after power-sequence review. Firmware polls the controller over
-SPI regardless.
+W5500 `INT_N` is an active-low digital output. The cited WIZnet pin and
+DC-characteristics tables do not specify whether its output stage is push-pull,
+open-drain, or another topology. The unconsumed output reaches
+the selected Keystone 5001 `TP_W5500_INT_N` observation point and the exact
+Yageo `RC0603FR-07100KL` 100 kOhm, 1%, 0603 local bias, but no ESP32 GPIO.
+WIZnet's DC-characteristics pull-up list names `SCSn`, `RSTn`, and `PMODE[2:0]`,
+not `INTn`; the external bias is an application policy that defines the
+inactive high state required by the canonical polling/test-point decision.
+Firmware polls the controller over SPI regardless. The retained WIZnet,
+Yageo, and Keystone evidence paths and hashes are recorded in the BP-033
+footprint ledger.
 
 BP-123 owns the exact supervisor, timing capacitor, fanout, reset pull-up, and
 reset timing; BP-142 owns the application rail. Their schematic inputs have
 converged, while footprints, placement, and measured sink/timing behavior
-remain open. The interrupt bias-or-DNP decision also remains open.
+remain open. The interrupt bias identity is selected, while its drawing, CAD,
+artwork, orientation, and placement review remain open.
 
 ## Still open
 
@@ -64,8 +77,9 @@ remain open. The interrupt bias-or-DNP decision also remains open.
 - Complete BP-141 for W5500 MDI pin mapping, the Würth `7499011121A`,
   termination, shield/ESD return, surge behavior, and 100 Ohm routing.
 - Integrate the BP-142 application rail and BP-123 supervisor, fanout, exact
-  reset pull-up, and timing network; close the interrupt bias-or-DNP decision
-  before schematic integration.
+  reset pull-up, and timing network; complete the selected test-point drawing,
+  CAD, artwork, orientation, and probe-clearance review before schematic or
+  layout consumption.
 
 The source evidence remains
 [`w5500-support-network-selection.md`](./w5500-support-network-selection.md),

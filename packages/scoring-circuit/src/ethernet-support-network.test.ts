@@ -40,6 +40,42 @@ describe("W5500 support-network selection", () => {
       ],
       targetCrystalShuntMaximumPf: 7
     })
+    expect(ethernetSupportNetwork.w5500.interruptPolicy).toMatchObject({
+      signal: "INTn",
+      electricalType: "active-low digital output",
+      outputStage: "not specified by the cited W5500 pin and DC-characteristics tables",
+      lowState: "interrupt asserted from W5500",
+      highState: "no interrupt",
+      hostConnection: "none",
+      firmwarePolicy: "poll W5500 over SPI; do not allocate an ESP32 GPIO",
+      bias: {
+        reference: "R_W5500_INT_BIAS",
+        disposition: "populate",
+        value: "100 kOhm, 1%",
+        manufacturer: "Yageo",
+        mpn: "RC0603FR-07100KL",
+        package: "0603",
+        rail: "V3_3"
+      },
+      sourceEvidence: {
+        manufacturer: "WIZnet",
+        document: "W5500 Datasheet v1.1.0",
+        artifactPath: "docs/evidence/bp-033/wiznet-w5500-datasheet.pdf",
+        sha256: "7B826B808084CCD986BCC22904C00A07A508EF42FB93D079FE7150A4C4F1A63D"
+      },
+      biasEvidence: {
+        manufacturer: "Yageo",
+        document: "RC0603FR-07100KL product specification",
+        artifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
+        sha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054"
+      },
+      policyEvidence: {
+        document: "docs/esp32-pin-allocation.md"
+      }
+    })
+    expect(ethernetSupportNetwork.w5500.interruptPolicy.sourceEvidence.claims).toContain(
+      "The cited W5500 pin and DC-characteristics tables do not specify whether the INTn output stage is push-pull, open-drain, or another topology."
+    )
     expect(ethernetSupportNetwork.avddPinCount).toBe(6)
     expect(ethernetSupportNetwork.requiredLocalSupplyCapacitors).toBe(7)
     expect(ethernetSupportNetwork.integrationRelease).toBe(false)

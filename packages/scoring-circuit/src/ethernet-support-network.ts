@@ -26,6 +26,53 @@ export type EthernetSupportSource = {
   readonly url: string
 }
 
+const W5500_INTERRUPT_POLICY = {
+  signal: "INTn",
+  electricalType: "active-low digital output",
+  outputStage: "not specified by the cited W5500 pin and DC-characteristics tables",
+  lowState: "interrupt asserted from W5500",
+  highState: "no interrupt",
+  hostConnection: "none",
+  firmwarePolicy: "poll W5500 over SPI; do not allocate an ESP32 GPIO",
+  bias: {
+    reference: "R_W5500_INT_BIAS",
+    disposition: "populate",
+    value: "100 kOhm, 1%",
+    manufacturer: "Yageo",
+    mpn: "RC0603FR-07100KL",
+    package: "0603",
+    rail: "V3_3",
+    reason:
+      "The canonical ESP32 allocation requires INTn to be pulled inactive locally for a defined high state while firmware polls over SPI; the 100 kOhm pull-up is a weak status bias and does not allocate an ESP32 GPIO."
+  },
+  sourceEvidence: {
+    manufacturer: "WIZnet",
+    document: "W5500 Datasheet v1.1.0",
+    url: "https://docs.wiznet.io/img/products/w5500/W5500_ds_v110e.pdf",
+    artifactPath: "docs/evidence/bp-033/wiznet-w5500-datasheet.pdf",
+    sha256: "7B826B808084CCD986BCC22904C00A07A508EF42FB93D079FE7150A4C4F1A63D",
+    claims: [
+      "W5500 pin 36 INTn is an output: Low means interrupt asserted from W5500 and High means no interrupt.",
+      "The W5500 DC-characteristics pull-up list names SCSn, RSTn, and PMODE[2:0], not INTn.",
+      "The cited W5500 pin and DC-characteristics tables do not specify whether the INTn output stage is push-pull, open-drain, or another topology."
+    ]
+  },
+  biasEvidence: {
+    manufacturer: "Yageo",
+    document: "RC0603FR-07100KL product specification",
+    url: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL",
+    artifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
+    sha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054",
+    claims: ["RC0603FR-07100KL is a 100 kOhm, 1%, 0603 / 1608 thick-film resistor."]
+  },
+  policyEvidence: {
+    document: "docs/esp32-pin-allocation.md",
+    claims: [
+      "INTn is intentionally not connected to an ESP32 GPIO; the application polls W5500 status and socket state over SPI while a local pull-up defines the inactive high state."
+    ]
+  }
+} as const
+
 export type CrystalLoadInput = {
   readonly capacitorPf: number
   readonly capacitorTolerancePercent: number
@@ -248,7 +295,8 @@ export const ethernetSupportSources: readonly EthernetSupportSource[] = [
       "W5500 crystal requirement is 25MHz, 18pF load capacitance, 59.12uW drive level, and 7pF maximum shunt capacitance",
       "W5500 crystal aging requirement is ±3ppm per year maximum at 25°C",
       "W5500 reference circuit uses 18pF crystal capacitors, 1MOhm feedback, and a 0Ohm series link",
-      "W5500 supply range is 2.97V to 3.63V and normal-operation current is 132mA at 3.3V"
+      "W5500 supply range is 2.97V to 3.63V and normal-operation current is 132mA at 3.3V",
+      "W5500 pin 36 INTn is an active-low digital output; the DC pull-up table does not list INTn, and the cited pin/DC tables do not specify its output-stage topology"
     ],
     manufacturer: "WIZnet",
     revisionOrAccessDate: "W5500 Datasheet v1.1.0, accessed 2026-08-23",
@@ -351,7 +399,8 @@ export const ethernetSupportNetwork = {
       "released-layout"
     ] satisfies readonly NegativeResistanceVerificationCorner[],
     targetCrystalShuntMaximumPf: 7,
-    targetCrystalDriveLevelUw: 59.12
+    targetCrystalDriveLevelUw: 59.12,
+    interruptPolicy: W5500_INTERRUPT_POLICY
   }
 } as const
 

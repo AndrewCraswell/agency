@@ -43,6 +43,37 @@ as proof that five capacitors are sufficient for this design.
 | Ferrite-input decoupler and W5500 VDD and AVDD decouplers | `C_ETH_AVDD_FERRITE_INPUT`, `C_W5500_VDD`, `C_W5500_AVDD_1` through `C_W5500_AVDD_6` | Murata `GRM188R71C104KA01D` | 100 nF ±10%, X7R, 16 V, 0603, -55 °C to 125 °C |
 | Ferrite candidate | `FB_W5500_AVDD` | Murata `BLM21PG221SN1D` | 220 Ohm at 100 MHz ±25%, 0.045 Ohm maximum DCR, 2.0 A at 85 °C, 1.25 A at 125 °C, 0805, -55 °C to 125 °C |
 
+## Reset, interrupt, and probe decisions
+
+The bench contract retains probe access for both W5500 control/status nodes.
+`TP_W5500_RESET_N` is needed to capture supervisor brownout hold, release
+timing, and the W5500 reset interval. `TP_W5500_INT_N` is needed to capture
+interrupt assertion/clear and fault-injection behavior even though firmware
+does not allocate an ESP32 GPIO and continues to poll over SPI. Both points
+select Keystone Electronics `5001`, the miniature black through-hole test point
+with a 0.040 inch (catalog 1.0 mm) mounting hole. The retained manufacturer catalog is
+`docs/evidence/bp-033/keystone-terminal-test-points.pdf`, SHA-256
+`00919BF8DA5DA41C978FE22717F8B39D443D03BB69BDD0A853CED85479FB237C`.
+The catalog mounting-hole callout is not a finished PCB drill instruction.
+
+WIZnet identifies W5500 `INTn` (pin 36) as an active-low digital output: low means
+interrupt asserted and high means no interrupt. Its DC-characteristics table lists
+internal pull-ups for `SCSn`, `RSTn`, and `PMODE[2:0]`, not `INTn`; the local
+external bias is therefore an application policy rather than a claimed W5500
+internal feature. The cited pin and DC-characteristics tables do not specify
+whether the `INTn` output stage is push-pull, open-drain, or another topology.
+The canonical ESP32 allocation requires a locally pulled
+inactive high state while leaving the signal off the ESP32 GPIO map, so
+`R_W5500_INT_BIAS` selects Yageo `RC0603FR-07100KL`, 100 kOhm, 1%, 0603. The
+WIZnet datasheet is retained at
+`docs/evidence/bp-033/wiznet-w5500-datasheet.pdf`, SHA-256
+`7B826B808084CCD986BCC22904C00A07A508EF42FB93D079FE7150A4C4F1A63D`.
+The Yageo product specification is retained at
+`docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf`, SHA-256
+`E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054`. This
+selection does not change the W5500 reset, interrupt observation, SPI polling,
+or MCU allocation topology.
+
 The six AVDD pins are treated as six local decoupling locations. The model
 therefore connects one selected 100 nF capacitor per AVDD pin, one to VDD, and
 one upstream of the AVDD ferrite. Every selected support reference is owned by
@@ -118,3 +149,8 @@ merely above 40 Ohm is not a pass.
 - [Panasonic ERJ thick-film chip resistor datasheet](https://industrial.panasonic.com/cdbs/www-data/pdf/RDA0000/AOA0000C301.pdf)
 - [Murata MLCC part list](https://www.murata.com/-/media/webrenewal/tool/library/common-pdf/dynamic-model/component-list-d-mlcc-2504.ashx?cvid=20250523010405000000&la=en)
 - [Murata BLM21PG221SN1D product record](https://www.murata.com/en-global/products/productdetail?partno=BLM21PG221SN1%23)
+- [Keystone terminals and test points catalog](https://www.keystone-europe.com/wp-content/uploads/2025/08/terminal-test-points.pdf)
+- [Yageo RC0603FR-07100KL product specification](https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL)
+
+Retained source files and SHA-256 digests for the two new decisions are
+recorded in the BP-033 application-footprint ledger and its focused tests.

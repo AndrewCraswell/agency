@@ -182,6 +182,30 @@ const retainedPrimarySourceBatch = [
     path: "docs/evidence/bp-033/coilcraft-xgl4030-datasheet.pdf",
     url: "https://www.coilcraft.com/getmedia/032d9c73-4222-482f-b6bc-7808590e27c9/xgl4030.pdf",
     sha256: "34BB1C739914FC2114653D5B3D5893E90501129D5C2AF8A152E546B8068B72E5"
+  },
+  {
+    reference: "TP_W5500_RESET_N",
+    mpn: "5001",
+    package: "miniature through-hole black test point, 0.040 inch (catalog 1.0 mm) mounting hole",
+    path: "docs/evidence/bp-033/keystone-terminal-test-points.pdf",
+    url: "https://www.keystone-europe.com/wp-content/uploads/2025/08/terminal-test-points.pdf",
+    sha256: "00919BF8DA5DA41C978FE22717F8B39D443D03BB69BDD0A853CED85479FB237C"
+  },
+  {
+    reference: "TP_W5500_INT_N",
+    mpn: "5001",
+    package: "miniature through-hole black test point, 0.040 inch (catalog 1.0 mm) mounting hole",
+    path: "docs/evidence/bp-033/keystone-terminal-test-points.pdf",
+    url: "https://www.keystone-europe.com/wp-content/uploads/2025/08/terminal-test-points.pdf",
+    sha256: "00919BF8DA5DA41C978FE22717F8B39D443D03BB69BDD0A853CED85479FB237C"
+  },
+  {
+    reference: "R_W5500_INT_BIAS",
+    mpn: "RC0603FR-07100KL",
+    package: "0603",
+    path: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
+    url: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL",
+    sha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054"
   }
 ] as const
 
@@ -217,22 +241,6 @@ function dnp(reference: string, retainedCandidateMpn: string | null, reason: str
     population: "DNP",
     reason,
     footprintLandPattern: "prohibited-until-a-scoped-selection-contract"
-  } as const
-}
-
-function selectionBlocked(reference: string, role: string, upstreamDisposition: string) {
-  return {
-    reference,
-    section: "ethernet",
-    manufacturer: null,
-    mpn: null,
-    package: null,
-    packageStatus: "upstream-package-not-specified",
-    population: "DNP-or-selection-blocked",
-    sourceContract: "BP-140",
-    role,
-    upstreamDisposition,
-    ...noEvidence()
   } as const
 }
 
@@ -314,6 +322,33 @@ const ethernetSeeds = [
     sourceUrl: part.sourceUrls[0] ?? null
   })),
   {
+    reference: "TP_W5500_RESET_N",
+    section: "ethernet",
+    manufacturer: benchPrototypeEthernet.nets.reset.testPoint.manufacturer,
+    mpn: benchPrototypeEthernet.nets.reset.testPoint.mpn,
+    package: benchPrototypeEthernet.nets.reset.testPoint.package,
+    sourceContract: "BP-140/BP-033",
+    sourceUrl: benchPrototypeEthernet.nets.reset.testPoint.sourceEvidence.url
+  },
+  {
+    reference: "TP_W5500_INT_N",
+    section: "ethernet",
+    manufacturer: benchPrototypeEthernet.nets.interrupt.testPoint.manufacturer,
+    mpn: benchPrototypeEthernet.nets.interrupt.testPoint.mpn,
+    package: benchPrototypeEthernet.nets.interrupt.testPoint.package,
+    sourceContract: "BP-140/BP-033",
+    sourceUrl: benchPrototypeEthernet.nets.interrupt.testPoint.sourceEvidence.url
+  },
+  {
+    reference: "R_W5500_INT_BIAS",
+    section: "ethernet",
+    manufacturer: benchPrototypeEthernet.nets.interrupt.bias.manufacturer,
+    mpn: benchPrototypeEthernet.nets.interrupt.bias.mpn,
+    package: benchPrototypeEthernet.nets.interrupt.bias.package,
+    sourceContract: "BP-140/BP-033",
+    sourceUrl: benchPrototypeEthernet.nets.interrupt.bias.biasEvidence.url
+  },
+  {
     reference: "R_W5500_RESET_PULLUP",
     section: "ethernet",
     manufacturer: "Yageo",
@@ -333,23 +368,9 @@ const ethernetSeeds = [
   }
 ] as const
 
-const bp140SelectionBlockedReferences = [
-  selectionBlocked(
-    "TP_W5500_RESET_N",
-    "W5500 reset observation point",
-    "BP-140 requires an observation endpoint but selects no exact test-point manufacturer, MPN, or package."
-  ),
-  selectionBlocked(
-    "TP_W5500_INT_N",
-    "W5500 interrupt observation point",
-    "BP-140 requires an observation endpoint but selects no exact test-point manufacturer, MPN, or package."
-  ),
-  selectionBlocked(
-    "R_W5500_INT_BIAS",
-    "optional W5500 interrupt local bias",
-    "BP-140 leaves the value TBD and requires BP-123 to select an exact bias part or explicitly DNP it after power-sequence review."
-  )
-] as const
+const bp140SelectionBlockedReferences: readonly { readonly reference: string }[] = []
+
+const bp140DnpReferences: readonly { readonly reference: string }[] = []
 
 function currentBp140ReferenceSet(): string[] {
   return [
@@ -478,7 +499,13 @@ const records = [
       role
     } as Seed & { readonly role: string })
   ),
-  ...ethernetSeeds.map(selected),
+  ...ethernetSeeds.map((seed) =>
+    selected({
+      ...seed,
+      sourceUrl: retainedSourceFor(seed.reference)?.url ?? seed.sourceUrl,
+      manufacturerDrawing: retainedSourceFor(seed.reference)
+    })
+  ),
   ...hub75Seeds.map(selected),
   ...irSeeds.map(selected)
 ]
@@ -490,9 +517,9 @@ const bp140ReferenceReconciliation = [
       reference: record.reference,
       reconciliation: "selected-awaiting-footprint-evidence" as const
     })),
-  ...bp140SelectionBlockedReferences.map((record) => ({
+  ...bp140DnpReferences.map((record) => ({
     reference: record.reference,
-    reconciliation: record.population
+    reconciliation: "DNP-reviewed" as const
   }))
 ].sort((left, right) => left.reference.localeCompare(right.reference))
 
@@ -514,6 +541,7 @@ const definition = {
   records,
   bp140ReferenceReconciliation,
   bp140SelectionBlockedReferences,
+  bp140DnpReferences,
   omittedPeripherals: [
     dnp("U_RTC", "RV-3028-C7", "Not required for first physical validation."),
     dnp("U_SECURE_ELEMENT", "STSAFE-A110", "Exact provisioned orderable and package variant are not selected."),
@@ -525,15 +553,15 @@ const definition = {
     "A package identity never grants pad, drill, copper, mask, paste, courtyard, or assembly geometry.",
     "Each DNP-unresolved record requires an exact manufacturer drawing revision and SHA-256, exact CAD or an explicit no-CAD record, generated artwork hash, and independent orientation review.",
     "BP-300 may not instantiate a record whose packageStatus is upstream-package-not-specified; obtain the exact package from the manufacturer before assigning geometry.",
-    "TP_W5500_RESET_N and TP_W5500_INT_N require exact test-point selections, packages, drawings, CAD, artwork, and probe-clearance review before population.",
-    "R_W5500_INT_BIAS remains DNP-or-selection-blocked until BP-123 either selects its exact value, manufacturer, MPN, and package or explicitly records DNP after power-sequence review.",
+    "TP_W5500_RESET_N and TP_W5500_INT_N select Keystone Electronics 5001 miniature through-hole black test points with a 0.040 inch (catalog 1.0 mm) mounting hole; exact source evidence is retained, while drawings, CAD, artwork, orientation, and probe-clearance review remain open before population.",
+    "R_W5500_INT_BIAS selects Yageo RC0603FR-07100KL, 100 kOhm, 1%, 0603, to provide the locally pulled-inactive INTn state required by the canonical ESP32 polling policy without allocating an ESP32 GPIO.",
     "Keep U_AUDIO and every omitted peripheral DNP. Do not create a land pattern, route, or bodge connection for an omitted peripheral.",
     "The TSOP38438 optical aperture, front-panel coupon, receiver timing/range/flood tests, and GPIO35 isolation remain BP-146 gates; they are not closed by this ledger."
   ],
   authority: {
     exactMpnAndManufacturerReconciled: true,
     fullBp140ReferenceSetReconciled: true,
-    bp140BlockedReferenceIdentitiesReconciled: false,
+    bp140BlockedReferenceIdentitiesReconciled: true,
     everyPackageIdentityReconciled: false,
     manufacturerDrawingsReviewed: false,
     manufacturerCadReviewed: false,
@@ -576,7 +604,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
     contract.fabricationAuthorized ||
     contract.authority.exactMpnAndManufacturerReconciled !== true ||
     contract.authority.fullBp140ReferenceSetReconciled !== true ||
-    contract.authority.bp140BlockedReferenceIdentitiesReconciled ||
+    contract.authority.bp140BlockedReferenceIdentitiesReconciled !== true ||
     contract.authority.everyPackageIdentityReconciled ||
     contract.authority.manufacturerDrawingsReviewed ||
     contract.authority.manufacturerCadReviewed ||
@@ -611,21 +639,19 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
       )
     }) ||
     !contract.records.some((record) => record.packageStatus === "upstream-package-not-specified") ||
+    !contract.records.some(
+      (record) =>
+        record.reference === "R_W5500_INT_BIAS" &&
+        record.manufacturer === "Yageo" &&
+        record.mpn === "RC0603FR-07100KL" &&
+        record.package === "0603" &&
+        record.population === "DNP-unresolved" &&
+        record.packageStatus === "exact-package-identified"
+    ) ||
     currentBp140References.length !== reconciledBp140References.length ||
     currentBp140References.some((reference, index) => reference !== reconciledBp140References[index]) ||
-    contract.bp140SelectionBlockedReferences.length !== 3 ||
-    contract.bp140SelectionBlockedReferences.some(
-      (record) =>
-        record.population !== "DNP-or-selection-blocked" ||
-        record.manufacturer !== null ||
-        record.mpn !== null ||
-        record.package !== null ||
-        record.packageStatus !== "upstream-package-not-specified" ||
-        record.manufacturerDrawing.state !== "not-acquired" ||
-        record.manufacturerCad.state !== "not-acquired" ||
-        record.artwork.state !== "not-generated" ||
-        record.orientation.state !== "unreviewed"
-    ) ||
+    contract.bp140SelectionBlockedReferences.length !== 0 ||
+    contract.bp140DnpReferences.length !== 0 ||
     contract.omittedPeripherals.length !== 5 ||
     contract.omittedPeripherals.some((record) => record.population !== "DNP") ||
     !contract.omittedPeripherals.some((record) => record.reference === "U_AUDIO")

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto"
+import { readFileSync } from "node:fs"
 import { describe, expect, it } from "vitest"
 import {
   benchPrototypeEthernet,
@@ -63,6 +65,19 @@ describe("BP-140 W5500 support-network import", () => {
       endpoints: ["U_APP_RESET_FANOUT.Y2", "R_W5500_RESET_PULLUP.2", "U_W5500.RST_N", "TP_W5500_RESET_N"],
       firmwareControl: "none",
       observationEndpoint: "TP_W5500_RESET_N",
+      testPoint: {
+        reference: "TP_W5500_RESET_N",
+        manufacturer: "Keystone Electronics",
+        mpn: "5001",
+        package: "miniature through-hole black test point, 0.040 inch (catalog 1.0 mm) mounting hole",
+        disposition: "populate-for-bench-observation",
+        sourceEvidence: {
+          document: "Keystone terminals and test points catalog",
+          artifactPath: "docs/evidence/bp-033/keystone-terminal-test-points.pdf",
+          sha256: "00919BF8DA5DA41C978FE22717F8B39D443D03BB69BDD0A853CED85479FB237C",
+          claims: expect.arrayContaining(["The catalog mounting-hole callout is not a finished PCB drill instruction."])
+        }
+      },
       pullup: {
         reference: "R_W5500_RESET_PULLUP",
         value: "10 kOhm, 1%",
@@ -79,18 +94,77 @@ describe("BP-140 W5500 support-network import", () => {
       }
     })
     expect(benchPrototypeEthernet.nets.interrupt).toMatchObject({
-      electricalType: "active-low push-pull W5500 output",
+      electricalType: "active-low digital W5500 output",
+      outputStage: "not specified by the cited W5500 pin and DC-characteristics tables",
       endpoints: expect.arrayContaining(["R_W5500_INT_BIAS.2", "TP_W5500_INT_N"]),
       hostConnection: "none",
       observationEndpoint: "TP_W5500_INT_N",
+      testPoint: {
+        reference: "TP_W5500_INT_N",
+        manufacturer: "Keystone Electronics",
+        mpn: "5001",
+        package: "miniature through-hole black test point, 0.040 inch (catalog 1.0 mm) mounting hole",
+        disposition: "populate-for-bench-observation",
+        sourceEvidence: {
+          document: "Keystone terminals and test points catalog",
+          artifactPath: "docs/evidence/bp-033/keystone-terminal-test-points.pdf",
+          sha256: "00919BF8DA5DA41C978FE22717F8B39D443D03BB69BDD0A853CED85479FB237C",
+          claims: expect.arrayContaining(["The catalog mounting-hole callout is not a finished PCB drill instruction."])
+        }
+      },
       bias: {
         reference: "R_W5500_INT_BIAS",
-        value: "TBD",
+        disposition: "populate",
+        value: "100 kOhm, 1%",
+        manufacturer: "Yageo",
+        mpn: "RC0603FR-07100KL",
+        package: "0603",
         rail: "V3_3",
-        ownershipStatus: expect.stringContaining("BP-123")
+        population: "selected; footprint evidence open",
+        ownershipStatus: expect.stringContaining("selected by the canonical ESP32 allocation"),
+        sourceEvidence: {
+          document: "W5500 Datasheet v1.1.0",
+          artifactPath: "docs/evidence/bp-033/wiznet-w5500-datasheet.pdf",
+          sha256: "7B826B808084CCD986BCC22904C00A07A508EF42FB93D079FE7150A4C4F1A63D"
+        },
+        biasEvidence: {
+          manufacturer: "Yageo",
+          document: "RC0603FR-07100KL product specification",
+          artifactPath: "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
+          sha256: "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054"
+        },
+        policyEvidence: {
+          document: "docs/esp32-pin-allocation.md"
+        }
       },
       firmwarePolicy: "poll W5500 over SPI; do not allocate an ESP32 GPIO"
     })
+  })
+
+  it("retains exact source evidence for the selected test points and interrupt bias", () => {
+    const root = new URL("../", import.meta.url)
+    const evidence = [
+      [
+        "docs/evidence/bp-033/keystone-terminal-test-points.pdf",
+        "00919BF8DA5DA41C978FE22717F8B39D443D03BB69BDD0A853CED85479FB237C"
+      ],
+      [
+        "docs/evidence/bp-033/wiznet-w5500-datasheet.pdf",
+        "7B826B808084CCD986BCC22904C00A07A508EF42FB93D079FE7150A4C4F1A63D"
+      ],
+      [
+        "docs/evidence/bp-033/yageo-rc0603fr-07100kl-datasheet.pdf",
+        "E6BA74C3F9ABAC1D8865473C885FF9CD6D2F7A1181846B32A8D1FF7FB5684054"
+      ]
+    ] as const
+    for (const [path, sha256] of evidence) {
+      expect(
+        createHash("sha256")
+          .update(readFileSync(new URL(path, root)))
+          .digest("hex")
+          .toUpperCase()
+      ).toBe(sha256)
+    }
   })
 
   it("cannot be mistaken for schematic integration or fabrication approval", () => {
@@ -103,7 +177,7 @@ describe("BP-140 W5500 support-network import", () => {
     })
     expect(benchPrototypeEthernet.openGates).toContain("BP-141 MDI, MagJack, termination, shield, and surge closure")
     expect(benchPrototypeEthernet.openGates).toContain(
-      "BP-123 exact application supervisor, W5500 reset pullup, timing, and INT bias-or-DNP closure"
+      "BP-123 exact application supervisor, W5500 reset pullup, and reset timing closure"
     )
   })
 
@@ -113,6 +187,7 @@ describe("BP-140 W5500 support-network import", () => {
     expect(Object.isFrozen(benchPrototypeEthernet.supportParts[0])).toBe(true)
     expect(Object.isFrozen(benchPrototypeEthernetUpstreamProvenance)).toBe(true)
     expect(Object.isFrozen(benchPrototypeEthernetUpstreamProvenance.supportParts)).toBe(true)
+    expect(Object.isFrozen(benchPrototypeEthernetUpstreamProvenance.interruptPolicy)).toBe(true)
 
     const forged = structuredClone(benchPrototypeEthernet)
     Reflect.set(forged.supportParts[0]!, "mpn", "wrong crystal")
@@ -148,6 +223,18 @@ describe("BP-140 W5500 support-network import", () => {
       expect(() => validateBenchPrototypeEthernet(benchPrototypeEthernet)).toThrow(RangeError)
     } finally {
       Reflect.set(source!, "manufacturer", originalManufacturer)
+    }
+    expect(validateBenchPrototypeEthernet(benchPrototypeEthernet)).toBe(true)
+  })
+
+  it("detects live interrupt-policy drift and always restores the support decision", () => {
+    const source = ethernetSupportNetwork.w5500.interruptPolicy.bias
+    const originalDisposition = source.disposition
+    try {
+      Reflect.set(source, "disposition", "DNP")
+      expect(() => validateBenchPrototypeEthernet(benchPrototypeEthernet)).toThrow(RangeError)
+    } finally {
+      Reflect.set(source, "disposition", originalDisposition)
     }
     expect(validateBenchPrototypeEthernet(benchPrototypeEthernet)).toBe(true)
   })

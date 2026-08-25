@@ -31,6 +31,9 @@ describe("BP-033 application footprint closure ledger", () => {
       "D_SOURCE_SELECTOR",
       "D_VBUS_TVS",
       "L_APP_REGULATOR",
+      "R_W5500_INT_BIAS",
+      "TP_W5500_INT_N",
+      "TP_W5500_RESET_N",
       "U_DISPLAY_LIMITER",
       "U_USB_CC_SBU_PROTECT",
       "U_USB_DATA_PROTECT",
@@ -92,11 +95,41 @@ describe("BP-033 application footprint closure ledger", () => {
       "U_W5500",
       "Y_W5500"
     ])
-    expect(benchPrototypeApplicationFootprints.bp140SelectionBlockedReferences).toMatchObject([
-      { reference: "TP_W5500_RESET_N", population: "DNP-or-selection-blocked", mpn: null, package: null },
-      { reference: "TP_W5500_INT_N", population: "DNP-or-selection-blocked", mpn: null, package: null },
-      { reference: "R_W5500_INT_BIAS", population: "DNP-or-selection-blocked", mpn: null, package: null }
-    ])
+    expect(benchPrototypeApplicationFootprints.bp140SelectionBlockedReferences).toHaveLength(0)
+    expect(benchPrototypeApplicationFootprints.records).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          reference: "TP_W5500_RESET_N",
+          manufacturer: "Keystone Electronics",
+          mpn: "5001",
+          package: "miniature through-hole black test point, 0.040 inch (catalog 1.0 mm) mounting hole",
+          packageStatus: "exact-package-identified",
+          population: "DNP-unresolved"
+        }),
+        expect.objectContaining({
+          reference: "TP_W5500_INT_N",
+          manufacturer: "Keystone Electronics",
+          mpn: "5001",
+          package: "miniature through-hole black test point, 0.040 inch (catalog 1.0 mm) mounting hole",
+          packageStatus: "exact-package-identified",
+          population: "DNP-unresolved"
+        })
+      ])
+    )
+    expect(benchPrototypeApplicationFootprints.bp140DnpReferences).toHaveLength(0)
+    expect(benchPrototypeApplicationFootprints.records).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          reference: "R_W5500_INT_BIAS",
+          manufacturer: "Yageo",
+          mpn: "RC0603FR-07100KL",
+          package: "0603",
+          packageStatus: "exact-package-identified",
+          population: "DNP-unresolved"
+        })
+      ])
+    )
+    expect(benchPrototypeApplicationFootprints.authority.bp140BlockedReferenceIdentitiesReconciled).toBe(true)
   })
 
   it("rejects release-state tampering", () => {
