@@ -4,6 +4,7 @@ import { listBillTextSections } from "../db/queries/bill-text-read.js"
 import { listBillTimeline } from "../db/queries/bill-timeline-read.js"
 import { listChangeFeed } from "../db/queries/change-feed-reads.js"
 import { getOrganizationMembership, getPersonTerm } from "../db/queries/civic-scoped-reads.js"
+import { readDocumentDiff } from "../db/queries/document-diff-read.js"
 import {
   assertBillExists,
   assertSupportingMaterialExists,
@@ -46,6 +47,7 @@ import { createChangeFeedApiHandler } from "./change-feed-routes.js"
 import { createCivicScopedReadApiHandler } from "./civic-scoped-read-routes.js"
 import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
 import { createCoreReadApiHandler, type CoreReadQueryApi } from "./core-read.js"
+import { createDocumentDiffApiHandler } from "./document-diff-routes.js"
 import { createDocumentReadApiHandler, type DocumentReadApi } from "./document-read-routes.js"
 import { createEventDocumentReadApiHandler } from "./event-document-read-routes.js"
 import { createCompositeHttpApiHandler, type HttpApiHandler } from "./http.js"
@@ -129,6 +131,10 @@ export function createLegislationApiHandler(
     ...(documentDatabase === undefined
       ? []
       : [
+          createDocumentDiffApiHandler(
+            { readDocumentDiff: async (input) => await readDocumentDiff(documentDatabase, input) },
+            options
+          ),
           createAmendmentReadApiHandler(createAmendmentReadRepository(documentDatabase, options.apiBaseUrl)),
           createBillDetailReadApiHandler(createBillDetailReadRepository(documentDatabase, options.apiBaseUrl)),
           createVoteReadApiHandler(createVoteReadRepository(documentDatabase), options),
