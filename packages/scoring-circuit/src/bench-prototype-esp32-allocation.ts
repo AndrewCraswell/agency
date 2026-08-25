@@ -48,7 +48,7 @@ const pads = [
 
 const allocationDefinition = {
   task: "BP-121",
-  moduleMpn: "ESP32-S3-WROOM-1U-N16R2",
+  moduleMpn: "ESP32-S3-WROOM-1-N16R2",
   architecture: "sole P0 processor running the ESP-IDF adapter and portable C17 scoring core",
   releaseState: "schematic-input-only",
   pads,

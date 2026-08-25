@@ -105,7 +105,7 @@ function currentBp145AudioDnpPolicy() {
 const definition = {
   artifactKind: "bench-prototype-encrypted-ir-receiver-interface",
   workUnit: "BP-126",
-  targetModule: "ESP32-S3-WROOM-1U-N16R2",
+  targetModule: "ESP32-S3-WROOM-1-N16R2",
   releaseState: "deny",
   decision: "INTERFACE_SELECTED_HARDWARE_DENY",
   interfaceStatus: "selected",
@@ -202,7 +202,7 @@ const definition = {
       currentSignal: "module-unexposed",
       proposedPeripheral: "RMT RX",
       disposition: "deny",
-      reason: "GPIO33 and GPIO34 are not exposed by the ESP32-S3-WROOM-1U-N16R2 module."
+      reason: "GPIO33 and GPIO34 are not exposed by the ESP32-S3-WROOM-1-N16R2 module."
     }
   ],
   protectedInterfaces: [
@@ -212,7 +212,7 @@ const definition = {
     "UART0_RX/UART0_TX/BOOT_N recovery and hardware EN_RESET",
     "APP_WD_KICK plus ESP32_HEARTBEAT and STM32_HEARTBEAT",
     "ISO7762FDWR/ISO7721FDR crossings and their fail-safe reset/heartbeat behavior",
-    "ESP32-S3-WROOM-1U-N16R2 exact module identity"
+    "ESP32-S3-WROOM-1-N16R2 exact module identity"
   ],
   requiredTradeoff: {
     status: "hardware-selection-required-before-BP-126-can-pass",
@@ -275,7 +275,7 @@ export function validateBenchPrototypeIrReceiverInterface(value: unknown): true 
   const contract = benchPrototypeIrReceiverInterface
   if (
     contract.workUnit !== "BP-126" ||
-    contract.targetModule !== "ESP32-S3-WROOM-1U-N16R2" ||
+    contract.targetModule !== "ESP32-S3-WROOM-1-N16R2" ||
     contract.releaseState !== "deny" ||
     contract.decision !== "INTERFACE_SELECTED_HARDWARE_DENY" ||
     contract.interfaceStatus !== "selected" ||

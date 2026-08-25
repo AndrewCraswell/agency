@@ -84,7 +84,7 @@ const definition = {
   targetAssembly: "one-board bench prototype",
   upstream: {
     interfaceTask: "BP-126",
-    esp32ModuleMpn: "ESP32-S3-WROOM-1U-N16R2",
+    esp32ModuleMpn: "ESP32-S3-WROOM-1-N16R2",
     inputSignal: "IR_RX",
     inputGpio: 35,
     inputModulePad: 28,

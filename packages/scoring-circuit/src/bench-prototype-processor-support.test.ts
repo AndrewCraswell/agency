@@ -8,7 +8,7 @@ describe("BP-125 sole-ESP32 processor support", () => {
   it("binds the exact module and its five selected support rows", () => {
     expect(validateBenchPrototypeProcessorSupport(benchPrototypeProcessorSupport)).toBe(true)
     expect(benchPrototypeProcessorSupport.processor).toMatchObject({
-      mpn: "ESP32-S3-WROOM-1U-N16R2",
+      mpn: "ESP32-S3-WROOM-1-N16R2",
       radio: "disabled without a populated, reviewed external antenna"
     })
     expect(benchPrototypeProcessorSupport.selectedSupportRows).toEqual([

@@ -1,5 +1,6 @@
 import { Bp034DirectWireWeaponFootprint } from "./bp034-direct-wire-weapon-footprint.js"
 import { cleanSheetBoardArchitecture } from "./clean-sheet-board-architecture.js"
+import { P0IrReceiver } from "./p0-ir-receiver.circuit.js"
 import { P0PisteLanding } from "./p0-piste-landing.js"
 
 function ScoringCircuit() {
@@ -22,6 +23,7 @@ function ScoringCircuit() {
 
       <Bp034DirectWireWeaponFootprint pcbX={-halfWidth + 16} pcbY={0} pcbRotation={90} />
       <P0PisteLanding pcbX={-halfWidth + 16} pcbY={halfHeight - 20} />
+      <P0IrReceiver pcbX={0} pcbY={halfHeight - 8} />
 
       <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_A" to="J_WEAPON_DIRECT.LEFT_WEAPON_A_TEST" />
       <trace from="J_WEAPON_DIRECT.LEFT_WEAPON_B" to="J_WEAPON_DIRECT.LEFT_WEAPON_B_TEST" />

@@ -176,7 +176,7 @@ const definition = {
     signalGroundsDoNotCarryPanelCurrent: true
   },
   signalPath: {
-    sourceModule: "ESP32-S3-WROOM-1U-N16R2",
+    sourceModule: "ESP32-S3-WROOM-1-N16R2",
     levelTranslators: ["U_DISPLAY_BUFFER_A", "U_DISPLAY_BUFFER_B"],
     destinationConnector: "J_HUB75",
     destinationPanel: "DISPLAY_PANEL_2277_HUB75_INPUT",
@@ -350,7 +350,7 @@ function assertUpstreamProvenance(): void {
       pad.group === "hub75" && pad.disposition === "assigned" && "gpio" in pad
   )
   if (
-    benchPrototypeEsp32Allocation.moduleMpn !== "ESP32-S3-WROOM-1U-N16R2" ||
+    benchPrototypeEsp32Allocation.moduleMpn !== "ESP32-S3-WROOM-1-N16R2" ||
     hub75Pads.length !== expectedHub75Signals.length ||
     expectedHub75Signals.some((signal) => !hub75Pads.some((pad) => pad.signal === signal)) ||
     hub75Pads.some((pad) => String(pad.signal) === "HUB75_E" || String(pad.signal) === "E")

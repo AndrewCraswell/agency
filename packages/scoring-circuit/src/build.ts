@@ -289,6 +289,10 @@ const previewHtml = `<!doctype html>
             </div>
           </article>
           <article class="io-module">
+            <h2>Encrypted IR receiver</h2>
+            <p>Vishay TSOP38438 with a filtered 3.3 V supply, protected GPIO35 output, probe point, and front-edge optical keepout</p>
+          </article>
+          <article class="io-module">
             <h2>Communications</h2>
             <p>Required board interfaces</p>
             <div class="port-row">

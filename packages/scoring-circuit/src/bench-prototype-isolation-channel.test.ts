@@ -80,7 +80,7 @@ describe("BP-122 pin-level isolation channel contract", () => {
   it("binds both supply and ground domains without a direct ground crossing", () => {
     expect(benchPrototypeIsolationChannel.domains).toMatchObject({
       scoring: { owner: "STM32G474RET3TR", supply: "SCORING_3V3", ground: "SCORING_SGND" },
-      application: { owner: "ESP32-S3-WROOM-1U-N16R2", supply: "APP_3V3", ground: "APP_GND" },
+      application: { owner: "ESP32-S3-WROOM-1-N16R2", supply: "APP_3V3", ground: "APP_GND" },
       digitalIsolation: {
         mainPart: "ISO7762FDWR",
         auxiliaryPart: "ISO7721FDR",

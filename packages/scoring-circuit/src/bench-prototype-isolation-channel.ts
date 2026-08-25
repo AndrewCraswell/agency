@@ -116,7 +116,7 @@ const definition = {
         workUnit: "BP-121",
         artifact: "benchPrototypeEsp32Allocation",
         source: "src/bench-prototype-esp32-allocation.ts",
-        moduleMpn: "ESP32-S3-WROOM-1U-N16R2",
+        moduleMpn: "ESP32-S3-WROOM-1-N16R2",
         padCount: 41
       }
     ]
@@ -129,7 +129,7 @@ const definition = {
       isolatedPowerInput: "SCORING_5V_ISOLATED"
     },
     application: {
-      owner: "ESP32-S3-WROOM-1U-N16R2",
+      owner: "ESP32-S3-WROOM-1-N16R2",
       supply: "APP_3V3",
       ground: "APP_GND",
       sourcePower: "V5"
@@ -163,7 +163,7 @@ const definition = {
           direction: "scoring-to-application",
           signal: "SCORE_SCK",
           scoring: { pin: 2, net: "SCORE_SCK", endpoint: "STM32G474RET3TR PC10 pad 52" },
-          application: { pin: 15, net: "SCORE_SCK", endpoint: "ESP32-S3-WROOM-1U-N16R2 GPIO4 pad 4" },
+          application: { pin: 15, net: "SCORE_SCK", endpoint: "ESP32-S3-WROOM-1-N16R2 GPIO4 pad 4" },
           activeLevel: "high",
           defaultLevel: "low",
           resetBehavior:
@@ -174,7 +174,7 @@ const definition = {
           direction: "scoring-to-application",
           signal: "SCORE_MOSI",
           scoring: { pin: 3, net: "SCORE_MOSI", endpoint: "STM32G474RET3TR PC12 pad 54" },
-          application: { pin: 14, net: "SCORE_MOSI", endpoint: "ESP32-S3-WROOM-1U-N16R2 GPIO5 pad 5" },
+          application: { pin: 14, net: "SCORE_MOSI", endpoint: "ESP32-S3-WROOM-1-N16R2 GPIO5 pad 5" },
           activeLevel: "high",
           defaultLevel: "low",
           resetBehavior:
@@ -185,7 +185,7 @@ const definition = {
           direction: "scoring-to-application",
           signal: "SCORE_CS_N",
           scoring: { pin: 4, net: "SCORE_CS_N", endpoint: "STM32G474RET3TR PA15 pad 51" },
-          application: { pin: 13, net: "SCORE_CS_N", endpoint: "ESP32-S3-WROOM-1U-N16R2 GPIO7 pad 7" },
+          application: { pin: 13, net: "SCORE_CS_N", endpoint: "ESP32-S3-WROOM-1-N16R2 GPIO7 pad 7" },
           activeLevel: "low",
           defaultLevel: "low",
           resetBehavior:
@@ -215,7 +215,7 @@ const definition = {
           direction: "application-to-scoring",
           signal: "SCORE_MISO",
           scoring: { pin: 6, net: "SCORE_MISO", endpoint: "STM32G474RET3TR PC11 pad 53" },
-          application: { pin: 11, net: "SCORE_MISO", endpoint: "ESP32-S3-WROOM-1U-N16R2 GPIO6 pad 6" },
+          application: { pin: 11, net: "SCORE_MISO", endpoint: "ESP32-S3-WROOM-1-N16R2 GPIO6 pad 6" },
           activeLevel: "high",
           defaultLevel: "low",
           resetBehavior:
@@ -226,7 +226,7 @@ const definition = {
           direction: "application-to-scoring",
           signal: "ESP32_HEARTBEAT",
           scoring: { pin: 7, net: "ESP32_HEARTBEAT", endpoint: "STM32G474RET3TR PB4 pad 57" },
-          application: { pin: 10, net: "ESP32_HEARTBEAT", endpoint: "ESP32-S3-WROOM-1U-N16R2 GPIO15 pad 8" },
+          application: { pin: 10, net: "ESP32_HEARTBEAT", endpoint: "ESP32-S3-WROOM-1-N16R2 GPIO15 pad 8" },
           activeLevel: "high",
           defaultLevel: "low",
           resetBehavior:
@@ -247,7 +247,7 @@ const definition = {
           direction: "scoring-to-application",
           signal: "STM32_HEARTBEAT",
           scoring: { pin: 3, net: "STM32_HEARTBEAT", endpoint: "STM32G474RET3TR PB3 pad 56" },
-          application: { pin: 6, net: "STM32_HEARTBEAT", endpoint: "ESP32-S3-WROOM-1U-N16R2 GPIO17 pad 10" },
+          application: { pin: 6, net: "STM32_HEARTBEAT", endpoint: "ESP32-S3-WROOM-1-N16R2 GPIO17 pad 10" },
           activeLevel: "high",
           defaultLevel: "low",
           resetBehavior:
@@ -279,7 +279,7 @@ const definition = {
     stm32ToEsp32: {
       signal: "STM32_HEARTBEAT",
       source: "STM32G474RET3TR PB3 pad 56",
-      destination: "ESP32-S3-WROOM-1U-N16R2 GPIO17 pad 10",
+      destination: "ESP32-S3-WROOM-1-N16R2 GPIO17 pad 10",
       isolator: "ISO7721FDR channel B (pin 3 INB to pin 6 OUTB)",
       defaultLevel: "low",
       missingPolicy:
@@ -287,7 +287,7 @@ const definition = {
     },
     esp32ToStm32: {
       signal: "ESP32_HEARTBEAT",
-      source: "ESP32-S3-WROOM-1U-N16R2 GPIO15 pad 8",
+      source: "ESP32-S3-WROOM-1-N16R2 GPIO15 pad 8",
       destination: "STM32G474RET3TR PB4 pad 57",
       isolator: "ISO7762FDWR channel 6",
       defaultLevel: "low",
@@ -415,7 +415,7 @@ function validateCommittedEvidence(): void {
     "STM32_HEARTBEAT"
   ] as const
   if (
-    benchPrototypeEsp32Allocation.moduleMpn !== "ESP32-S3-WROOM-1U-N16R2" ||
+    benchPrototypeEsp32Allocation.moduleMpn !== "ESP32-S3-WROOM-1-N16R2" ||
     retiredSignals.some((signal) => esp32Signals.includes(signal)) ||
     benchPrototypeEsp32Allocation.unavailableResources.isolatedResetRequest !== "removed from P0" ||
     benchPrototypeEsp32Allocation.unavailableResources.iso7721ReverseChannel !== "removed from P0"

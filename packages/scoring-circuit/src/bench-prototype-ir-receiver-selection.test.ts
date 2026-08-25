@@ -24,6 +24,7 @@ describe("BP-146 encrypted-IR receiver selection", () => {
       { pin: 3, name: "VS", net: "IR_3V3_FILTERED" }
     ])
     expect(benchPrototypeIrReceiverSelection.releaseState).toBe("deny")
+    expect(benchPrototypeIrReceiverSelection.upstream.esp32ModuleMpn).toBe("ESP32-S3-WROOM-1-N16R2")
   })
 
   it("binds reviewed Vishay geometry without treating it as released PCB CAD", () => {

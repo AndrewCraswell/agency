@@ -1,6 +1,6 @@
 # BP-121 sole-ESP32 P0 allocation
 
-The ESP32-S3-WROOM-1U-N16R2 is the only P0 processor. GPIO4, GPIO5, and
+The ESP32-S3-WROOM-1-N16R2 is the only P0 processor. GPIO4, GPIO5, and
 GPIO6 drive the dedicated ADS8881 daisy-chain SPI/GDMA interface (`SAR_SCLK`,
 `SAR_DOUT`, and hardware-timed `SAR_CONVST`). GPIO7, GPIO15, GPIO17, GPIO10,
 and GPIO11 directly command the five logic inputs of one protected primary

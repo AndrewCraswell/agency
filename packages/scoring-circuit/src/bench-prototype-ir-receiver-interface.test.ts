@@ -65,7 +65,7 @@ describe("BP-126 encrypted-IR receiver interface", () => {
   it("binds the selected interface to the exact BP-121 N16R2 allocation", () => {
     expect(benchPrototypeIrReceiverUpstreamAllocation).toMatchObject({
       task: "BP-121",
-      moduleMpn: "ESP32-S3-WROOM-1U-N16R2",
+      moduleMpn: "ESP32-S3-WROOM-1-N16R2",
       pads: expect.arrayContaining([
         expect.objectContaining({ pad: 15, gpio: 3, signal: "NC_STRAP_QUIET" }),
         expect.objectContaining({ pad: 28, gpio: 35, signal: "IR_RX" }),

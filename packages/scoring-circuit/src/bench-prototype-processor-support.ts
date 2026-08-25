@@ -82,7 +82,7 @@ const processorSupportDefinition = {
   targetAssembly: "sole-ESP32-S3 P0 bench prototype",
   releaseState: "deny",
   processor: {
-    mpn: "ESP32-S3-WROOM-1U-N16R2",
+    mpn: "ESP32-S3-WROOM-1-N16R2",
     role: "sole controller for the ESP-IDF adapter and portable C17 scoring core",
     supply: "APP_3V3, 3.0 V to 3.6 V",
     radio: "disabled without a populated, reviewed external antenna"
