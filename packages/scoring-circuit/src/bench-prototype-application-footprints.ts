@@ -772,6 +772,35 @@ const w5500BypassReferences = [
 
 const molexLinkReferences = ["J_LINK_INPUT", "J_LINK_APPLICATION", "J_LINK_DISPLAY", "J_LINK_SCORING"] as const
 
+const yageo10kReferences = [
+  "R_APP_REG_PGOOD",
+  "R_W5500_RESET_PULLUP",
+  "R_HUB75_R1_PD",
+  "R_HUB75_G1_PD",
+  "R_HUB75_B1_PD",
+  "R_HUB75_R2_PD",
+  "R_HUB75_G2_PD",
+  "R_HUB75_B2_PD",
+  "R_HUB75_A_PD",
+  "R_HUB75_B_PD",
+  "R_HUB75_C_PD",
+  "R_HUB75_D_PD",
+  "R_HUB75_CLK_PD",
+  "R_HUB75_LAT_PD",
+  "R_HUB75_OE_PULLUP",
+  "R_HUB75_UNUSED_B_A6_PD",
+  "R_HUB75_UNUSED_B_A7_PD",
+  "R_HUB75_UNUSED_B_A8_PD",
+  "R_HUB75_PANEL_OE_PULLUP",
+  "R_BUFFER_A_ENABLE_PULLUP",
+  "R_BUFFER_A_GATE",
+  "R_BUFFER_B_ENABLE_PULLUP",
+  "R_BUFFER_B_GATE",
+  "R_IR_PULLUP",
+  "R_FRAM_WP_PULLUP",
+  "R_FRAM_HOLD_PULLUP"
+] as const
+
 const projectFootprintMappings = [
   {
     reference: "J_USB_C",
@@ -900,6 +929,18 @@ const projectFootprintMappings = [
     reviewDocument: "docs/bp-033-molex-links-project-footprint.md",
     sourceArtifactPath: "docs/evidence/bp-033/molex-39281023-product-page.pdf",
     sourceSha256: "BFEB1A0BEC2417BE7C8E09E0D17800CC7AED1C403F6D93D0747223829F331691",
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
+  })),
+  ...yageo10kReferences.map((reference) => ({
+    reference,
+    artifactKind: "bp033-yageo-10k-bridge-footprint",
+    artworkModule: "src/bp033-yageo-10k-bridge-footprint.tsx",
+    reviewDocument: "docs/bp-033-yageo-10k-bridge-footprint.md",
+    sourceArtifactPath: "docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf",
+    sourceSha256: "EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497",
     reviewState: "root-reviewed-review-input" as const,
     reviewer: "root-final-reviewer" as const,
     reviewedAt: "2026-08-25" as const,
@@ -1043,7 +1084,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 21 ||
+    contract.projectFootprintMappings.length !== 47 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1139,6 +1180,21 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         mapping.reviewDocument === "docs/bp-033-molex-links-project-footprint.md" &&
         mapping.sourceArtifactPath === "docs/evidence/bp-033/molex-39281023-product-page.pdf" &&
         mapping.sourceSha256 === "BFEB1A0BEC2417BE7C8E09E0D17800CC7AED1C403F6D93D0747223829F331691" &&
+        mapping.reviewState === "root-reviewed-review-input" &&
+        mapping.reviewer === "root-final-reviewer" &&
+        mapping.reviewedAt === "2026-08-25" &&
+        mapping.fabricationRelease === "deny"
+      )
+    }) ||
+    !yageo10kReferences.every((reference, offset) => {
+      const mapping = contract.projectFootprintMappings[21 + offset]
+      return (
+        mapping?.reference === reference &&
+        mapping.artifactKind === "bp033-yageo-10k-bridge-footprint" &&
+        mapping.artworkModule === "src/bp033-yageo-10k-bridge-footprint.tsx" &&
+        mapping.reviewDocument === "docs/bp-033-yageo-10k-bridge-footprint.md" &&
+        mapping.sourceArtifactPath === "docs/evidence/bp-125/yageo-rc0603fr-0710kl-datasheet.pdf" &&
+        mapping.sourceSha256 === "EB05C2BF91E14E082BD438F809A4CE712DBF837B993DFC8CF6BDA0C6ED77A497" &&
         mapping.reviewState === "root-reviewed-review-input" &&
         mapping.reviewer === "root-final-reviewer" &&
         mapping.reviewedAt === "2026-08-25" &&
