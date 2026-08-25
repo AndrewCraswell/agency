@@ -256,6 +256,39 @@ describe("BP-033 application footprint closure ledger", () => {
     expect(() => validateBenchPrototypeApplicationFootprints(drift)).toThrow(RangeError)
   })
 
+  it("maps D_VBUS_TVS to the root-reviewed TVS2200 evidence without granting thermal authority", () => {
+    expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toEqual(
+      expect.arrayContaining([
+        {
+          reference: "D_VBUS_TVS",
+          artifactKind: "bp033-tvs2200-project-footprint",
+          artworkModule: "src/bp033-tvs2200-project-footprint.tsx",
+          reviewDocument: "docs/bp-033-tvs2200-project-footprint.md",
+          sourceArtifactPath: "docs/evidence/bp-033/ti-tvs2200-datasheet.pdf",
+          sourceSha256: "E79BF6F7D5B69FB71EC3DCE566B4B4D63C27BCCAD8561195E5F2F7122B44C801",
+          reviewState: "root-reviewed-review-input",
+          reviewer: "root-final-reviewer",
+          reviewedAt: "2026-08-25",
+          fabricationRelease: "deny"
+        }
+      ])
+    )
+    expect(
+      benchPrototypeApplicationFootprints.records.find((record) => record.reference === "D_VBUS_TVS")
+    ).toMatchObject({
+      manufacturer: "Texas Instruments",
+      mpn: "TVS2200DRVR",
+      package: "WSON (DRV), 6-pin",
+      population: "DNP-unresolved"
+    })
+
+    const drift = structuredClone(benchPrototypeApplicationFootprints) as unknown as {
+      projectFootprintMappings: Array<{ reviewDocument: string }>
+    }
+    drift.projectFootprintMappings[3]!.reviewDocument = "docs/forged.md"
+    expect(() => validateBenchPrototypeApplicationFootprints(drift)).toThrow(RangeError)
+  })
+
   it("rejects a substituted canonical-source path or forged physical evidence", () => {
     const substitutedSource = structuredClone(benchPrototypeApplicationFootprints) as {
       records: Array<Record<string, unknown>>

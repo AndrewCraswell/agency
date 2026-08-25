@@ -706,6 +706,18 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer",
     reviewedAt: "2026-08-25",
     fabricationRelease: "deny"
+  },
+  {
+    reference: "D_VBUS_TVS",
+    artifactKind: "bp033-tvs2200-project-footprint",
+    artworkModule: "src/bp033-tvs2200-project-footprint.tsx",
+    reviewDocument: "docs/bp-033-tvs2200-project-footprint.md",
+    sourceArtifactPath: "docs/evidence/bp-033/ti-tvs2200-datasheet.pdf",
+    sourceSha256: "E79BF6F7D5B69FB71EC3DCE566B4B4D63C27BCCAD8561195E5F2F7122B44C801",
+    reviewState: "root-reviewed-review-input",
+    reviewer: "root-final-reviewer",
+    reviewedAt: "2026-08-25",
+    fabricationRelease: "deny"
   }
 ] as const
 
@@ -830,7 +842,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 3 ||
+    contract.projectFootprintMappings.length !== 4 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -863,6 +875,16 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
     contract.projectFootprintMappings[2]?.reviewState !== "root-reviewed-review-input" ||
     contract.projectFootprintMappings[2]?.reviewer !== "root-final-reviewer" ||
     contract.projectFootprintMappings[2]?.fabricationRelease !== "deny" ||
+    contract.projectFootprintMappings[3]?.reference !== "D_VBUS_TVS" ||
+    contract.projectFootprintMappings[3]?.artifactKind !== "bp033-tvs2200-project-footprint" ||
+    contract.projectFootprintMappings[3]?.artworkModule !== "src/bp033-tvs2200-project-footprint.tsx" ||
+    contract.projectFootprintMappings[3]?.reviewDocument !== "docs/bp-033-tvs2200-project-footprint.md" ||
+    contract.projectFootprintMappings[3]?.sourceArtifactPath !== "docs/evidence/bp-033/ti-tvs2200-datasheet.pdf" ||
+    contract.projectFootprintMappings[3]?.sourceSha256 !==
+      "E79BF6F7D5B69FB71EC3DCE566B4B4D63C27BCCAD8561195E5F2F7122B44C801" ||
+    contract.projectFootprintMappings[3]?.reviewState !== "root-reviewed-review-input" ||
+    contract.projectFootprintMappings[3]?.reviewer !== "root-final-reviewer" ||
+    contract.projectFootprintMappings[3]?.fabricationRelease !== "deny" ||
     !contract.records.some(
       (record) =>
         record.reference === "U_USB_PD" &&

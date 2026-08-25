@@ -209,7 +209,7 @@ describe("BP-035 lane BOM convergence", () => {
 
     expect(stateCounts("BP-031")).toEqual({ "reviewed-unapproved": 56, "not-started": 57 })
     expect(stateCounts("BP-032")).toEqual({ "not-started": 34, "reviewed-unapproved": 17 })
-    expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 5, "not-started": 96 })
+    expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 6, "not-started": 95 })
     expect(stateFor("BP-031", "U_SAR_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-031", "U_OVP_BUFFER_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-031", "R_ESD_1")).toBe("reviewed-unapproved")
@@ -220,6 +220,7 @@ describe("BP-035 lane BOM convergence", () => {
     expect(stateFor("BP-033", "J_HUB75")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "D_SOURCE_SELECTOR")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "S_SOURCE_SELECTOR")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-033", "D_VBUS_TVS")).toBe("reviewed-unapproved")
     expect(benchPrototypeLaneBomRows.filter((row) => ["BP-031", "BP-032", "BP-033"].includes(row.source))).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ footprintEvidenceState: "approved" })])
     )
