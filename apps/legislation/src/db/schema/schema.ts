@@ -497,18 +497,74 @@ export const eventAgendaItems = legislationSchema.table(
       .notNull()
       .references(() => legislativeEvents.id, { onDelete: "cascade" }),
     ordinal: integer("ordinal").notNull(),
-    description: text("description").notNull(),
+    /** Published label. Null keeps legacy/source rows fail-closed. */
+    title: text("title"),
+    description: text("description"),
+    status: text("status"),
+    canonicalFactsComplete: boolean("canonical_facts_complete").notNull().default(false),
+    billRelationsComplete: boolean("bill_relations_complete").notNull().default(false),
+    amendmentRelationsComplete: boolean("amendment_relations_complete").notNull().default(false),
+    materialRelationsComplete: boolean("material_relations_complete").notNull().default(false),
     classification: text("classification"),
-    billId: text("bill_id").references(() => bills.id, { onDelete: "restrict" }),
     organizationId: text("organization_id").references(() => organizations.id, { onDelete: "restrict" }),
     documentId: text("document_id").references(() => eventDocuments.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     check("event_agenda_items_ordinal_check", sql`${table.ordinal} >= 0`),
-    check("event_agenda_items_description_check", sql`length(${table.description}) > 0`),
-    uniqueIndex("event_agenda_items_ordinal_uidx").on(table.eventId, table.ordinal),
-    index("event_agenda_items_bill_idx").on(table.billId, table.eventId)
+    check(
+      "event_agenda_items_canonical_facts_check",
+      sql`not ${table.canonicalFactsComplete} or (${table.title} is not null and length(btrim(${table.title})) > 0)`
+    ),
+    uniqueIndex("event_agenda_items_ordinal_uidx").on(table.eventId, table.ordinal)
+  ]
+)
+
+export const eventAgendaItemBills = legislationSchema.table(
+  "event_agenda_item_bills",
+  {
+    agendaItemId: text("agenda_item_id")
+      .notNull()
+      .references(() => eventAgendaItems.id, { onDelete: "cascade" }),
+    billId: text("bill_id")
+      .notNull()
+      .references(() => bills.id, { onDelete: "restrict" })
+  },
+  (table) => [
+    primaryKey({ columns: [table.agendaItemId, table.billId] }),
+    index("event_agenda_item_bills_bill_idx").on(table.billId, table.agendaItemId)
+  ]
+)
+
+export const eventAgendaItemAmendments = legislationSchema.table(
+  "event_agenda_item_amendments",
+  {
+    agendaItemId: text("agenda_item_id")
+      .notNull()
+      .references(() => eventAgendaItems.id, { onDelete: "cascade" }),
+    amendmentId: text("amendment_id")
+      .notNull()
+      .references(() => amendments.id, { onDelete: "restrict" })
+  },
+  (table) => [
+    primaryKey({ columns: [table.agendaItemId, table.amendmentId] }),
+    index("event_agenda_item_amendments_amendment_idx").on(table.amendmentId, table.agendaItemId)
+  ]
+)
+
+export const eventAgendaItemSupportingMaterials = legislationSchema.table(
+  "event_agenda_item_supporting_materials",
+  {
+    agendaItemId: text("agenda_item_id")
+      .notNull()
+      .references(() => eventAgendaItems.id, { onDelete: "cascade" }),
+    materialId: text("material_id")
+      .notNull()
+      .references(() => supportingMaterials.id, { onDelete: "restrict" })
+  },
+  (table) => [
+    primaryKey({ columns: [table.agendaItemId, table.materialId] }),
+    index("event_agenda_item_supporting_materials_material_idx").on(table.materialId, table.agendaItemId)
   ]
 )
 

@@ -2799,10 +2799,15 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
           {
             agendaItems: [
               {
-                description: "Invalid agenda item",
-                eventId: failedEvent.id,
-                id: `${failedEvent.id}:agenda:1`,
-                ordinal: -1
+                agendaItem: {
+                  description: "Invalid agenda item",
+                  eventId: failedEvent.id,
+                  id: `${failedEvent.id}:agenda:1`,
+                  ordinal: -1
+                },
+                amendmentIds: [],
+                billIds: [],
+                materialIds: []
               }
             ],
             documents: [],

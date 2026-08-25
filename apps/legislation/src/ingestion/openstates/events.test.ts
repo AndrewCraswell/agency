@@ -5,7 +5,15 @@ describe("Open States event normalization", () => {
   it("retains schedule state and children without fabricating missing links", () => {
     const snapshot = normalizeOpenStatesEvent(
       {
-        agenda: [{ classification: [], description: "Rules", order: 0 }],
+        agenda: [
+          {
+            classification: [],
+            description: "Rules",
+            order: 0,
+            status: "in-progress",
+            title: "Rules agenda"
+          }
+        ],
         all_day: true,
         classification: "committee-meeting",
         deleted: false,
@@ -36,6 +44,20 @@ describe("Open States event normalization", () => {
     expect(snapshot.event.endAt).toBeUndefined()
     expect(snapshot.participants).toHaveLength(1)
     expect(snapshot.agendaItems).toHaveLength(1)
+    expect(snapshot.agendaItems[0]).toMatchObject({
+      agendaItem: {
+        amendmentRelationsComplete: false,
+        billRelationsComplete: false,
+        canonicalFactsComplete: true,
+        description: "Rules",
+        materialRelationsComplete: false,
+        status: "in-progress",
+        title: "Rules agenda"
+      },
+      amendmentIds: [],
+      billIds: [],
+      materialIds: []
+    })
     expect(snapshot.documents).toHaveLength(1)
   })
 
@@ -64,7 +86,7 @@ describe("Open States event normalization", () => {
     const cancelled = normalizeOpenStatesEvent(base, { jurisdictionCode: "wa" })
     expect(cancelled.event.status).toBe("cancelled")
     expect(cancelled.agendaItems).toHaveLength(1)
-    expect(cancelled.agendaItems[0]?.description).toBe("Corrected description")
+    expect(cancelled.agendaItems[0]?.agendaItem.description).toBe("Corrected description")
     expect(cancelled.documents).toHaveLength(1)
     expect(cancelled.participants).toHaveLength(1)
 
@@ -74,5 +96,29 @@ describe("Open States event normalization", () => {
     )
     expect(deleted.event).toMatchObject({ isDeleted: true, status: "deleted" })
     expect(deleted.event.id).toBe(cancelled.event.id)
+  })
+
+  it("retains an agenda item with missing optional facts as incomplete", () => {
+    const snapshot = normalizeOpenStatesEvent(
+      {
+        agenda: [{ classification: [], order: 0 }],
+        id: "ocd-event/incomplete-agenda",
+        name: "Incomplete agenda",
+        start_date: "2026-08-17T10:00:00-07:00",
+        status: "confirmed"
+      },
+      { jurisdictionCode: "wa" }
+    )
+
+    expect(snapshot.agendaItems[0]).toMatchObject({
+      agendaItem: {
+        amendmentRelationsComplete: false,
+        billRelationsComplete: false,
+        canonicalFactsComplete: false,
+        materialRelationsComplete: false,
+        title: undefined
+      }
+    })
+    expect(snapshot.agendaItems[0]?.agendaItem.description).toBeUndefined()
   })
 })

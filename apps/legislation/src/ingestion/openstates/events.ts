@@ -1,5 +1,6 @@
 import { z } from "zod"
-import type { eventAgendaItems, eventDocuments, eventParticipants, legislativeEvents } from "../../db/schema/schema.js"
+import type { EventAgendaItemSnapshot } from "../../db/queries/events.js"
+import type { eventDocuments, eventParticipants, legislativeEvents } from "../../db/schema/schema.js"
 import { eventChildId, jurisdictionId, legislativeEventId } from "../../legislation/identifiers.js"
 
 const optionalString = z.preprocess(
@@ -23,8 +24,10 @@ const participantSchema = z
 const agendaSchema = z
   .object({
     classification: z.array(z.string()).default([]),
-    description: z.string().trim().min(1),
-    order: z.number().int().nonnegative()
+    description: optionalString,
+    order: z.number().int().nonnegative(),
+    status: optionalString,
+    title: optionalString
   })
   .passthrough()
 const eventSchema = z
@@ -50,11 +53,10 @@ const eventSchema = z
 
 type EventInsert = typeof legislativeEvents.$inferInsert
 type ParticipantInsert = typeof eventParticipants.$inferInsert
-type AgendaInsert = typeof eventAgendaItems.$inferInsert
 type DocumentInsert = typeof eventDocuments.$inferInsert
 
 export interface OpenStatesEventSnapshot {
-  agendaItems: AgendaInsert[]
+  agendaItems: EventAgendaItemSnapshot[]
   documents: DocumentInsert[]
   event: EventInsert
   participants: ParticipantInsert[]
@@ -87,13 +89,24 @@ export function normalizeOpenStatesEvent(
   return {
     agendaItems: uniqueBy(
       source.agenda.map((item) => ({
-        classification: item.classification[0],
-        description: item.description,
-        eventId: canonicalEventId,
-        id: eventChildId("agenda", canonicalEventId, `${item.order}:${item.description}`),
-        ordinal: item.order
+        agendaItem: {
+          amendmentRelationsComplete: false,
+          billRelationsComplete: false,
+          canonicalFactsComplete: item.title !== undefined,
+          classification: item.classification[0],
+          description: item.description,
+          eventId: canonicalEventId,
+          id: eventChildId("agenda", canonicalEventId, `${item.order}:${item.title ?? item.description ?? ""}`),
+          materialRelationsComplete: false,
+          ordinal: item.order,
+          status: item.status,
+          title: item.title
+        },
+        amendmentIds: [],
+        billIds: [],
+        materialIds: []
       })),
-      (item) => String(item.ordinal)
+      (item) => String(item.agendaItem.ordinal)
     ),
     documents: uniqueBy(
       source.documents.flatMap((document, documentIndex) =>
