@@ -13,8 +13,9 @@ An endpoint is not **Done** merely because a route handler exists. Each phase is
 the verification listed below. The endpoint contract remains the source of truth for request and response bodies.
 The execution gate is the [local smoke checklist](http-api-local-smoke.md). This ledger was last reconciled on
 2026-08-24 with the reviewed endpoint implementation in commit `4546f7a`, 14 successful composed-smoke routes, focused
-search tests, and the two previously completed scoped-bill collections. Current totals are 0 **In progress**, 65
-**Blocked**, 0 **Ready**, and 22 **Done** across 87 endpoints.
+search tests, and the two previously completed scoped-bill collections. The next relationship/meeting group is actively
+implementing both route-only and persistence prerequisites. Current totals are 8 **In progress**, 57 **Blocked**, 0
+**Ready**, and 22 **Done** across 87 endpoints.
 
 ## Delivery phases
 
@@ -100,24 +101,24 @@ mutations and webhook mutation handlers remain intentionally uncomposed and **Bl
 | GET | `/api/people/{personId}/bills` | Blocked | Role-aware sponsorship/action query is missing. |
 | GET | `/api/people/{personId}/amendments` | Blocked | Person-amendment relationship query is missing. |
 | GET | `/api/people/{personId}/votes` | Blocked | Person vote-position activity query is missing. |
-| GET | `/api/people/{personId}/memberships` | Blocked | Historical membership query is missing. |
+| GET | `/api/people/{personId}/memberships` | In progress | Parent-bound historical membership query, canonical embedded summaries, filter-bound pagination, and route tests are actively being implemented. |
 | GET | `/api/people/{personId}/terms/{termId}` | Done | Parent-bound repository query, fail-closed canonical term projection, exact nested route, wrong-parent 404 coverage, root review, and reviewed commit `4546f7a`. |
 | GET | `/api/organizations` | Blocked | Route is intentionally unregistered: `source_url` and `is_active` are nullable, chamber values are unconstrained, and the query lacks `chamber`/`sort` filters. Backfill canonical provenance/activity and add constrained projection/filtering before registering it. |
 | GET | `/api/organizations/{organizationId}` | Blocked | Route is intentionally unregistered: no persisted description, website, public contact, or terms of reference; children are unbounded and memberships lack canonical embedded-record provenance. Add profile facts and bounded canonical child queries before registering it. |
-| GET | `/api/organizations/{organizationId}/members` | Blocked | Historical organization membership query is missing. |
+| GET | `/api/organizations/{organizationId}/members` | In progress | Parent-bound historical membership query, canonical embedded summaries, filter-bound pagination, and route tests are actively being implemented. |
 | GET | `/api/organizations/{organizationId}/memberships/{membershipId}` | Done | Parent-bound repository query, canonical embedded person/organization projection, exact nested route, wrong-parent 404 coverage, root review, and reviewed commit `4546f7a`. |
 | GET | `/api/organizations/{organizationId}/meetings` | Blocked | `legislative_events` lacks a session relationship and authoritative local date, canonical organization relation, and typed location/virtual-access fields required for `MeetingSummary`; route is intentionally unregistered. |
 | GET | `/api/organizations/{organizationId}/bills` | Blocked | Organization-bill relationship query is missing. |
 | GET | `/api/organizations/{organizationId}/calendars` | Blocked | Durable calendar resources are not modeled. |
 | GET | `/api/meetings` | Blocked | Route is intentionally unregistered: `source_url` is nullable; location and virtual access are untyped JSON; no authoritative local date, session, or calendar relation exists; and the query lacks calendar, bill, classification, status, remote, and sort filters. Persist typed canonical facts before registering it. |
 | GET | `/api/meetings/{meetingId}` | Blocked | Route is intentionally unregistered: child collections are raw/unbounded; agenda rows lack title/status/amendment/material relations, event documents lack canonical links/classification, and outcome links lack description/classification/agenda relations. Add complete bounded child projections before registering it. |
-| GET | `/api/meetings/{meetingId}/agenda` | Blocked | Agenda-item query/projection is missing. |
-| GET | `/api/meetings/{meetingId}/agenda/{agendaItemId}` | Blocked | Canonical projector exists; direct meeting-scoped agenda-item lookup and handler are missing. |
-| GET | `/api/meetings/{meetingId}/documents` | Blocked | Event-document relationship query is missing. |
+| GET | `/api/meetings/{meetingId}/agenda` | In progress | Canonical title/status, explicit relation tables, completeness markers, authoritative ingestion, then parent-bound page query/route are actively being implemented. |
+| GET | `/api/meetings/{meetingId}/agenda/{agendaItemId}` | In progress | Shares the active agenda persistence/ingestion prerequisite; description is not substituted for title and unknown relations are not emitted as empty arrays. |
+| GET | `/api/meetings/{meetingId}/documents` | In progress | Parent-bound event-document page query, canonical projection, filter-bound pagination, and route tests are actively being implemented. |
 | GET | `/api/meetings/{meetingId}/documents/{eventDocumentId}` | Done | Parent-bound repository query filters soft-deleted meetings, projects a canonical event-document Resource, and has exact-route/wrong-parent coverage, root review, and reviewed commit `4546f7a`. |
-| GET | `/api/meetings/{meetingId}/outcomes` | Blocked | Meeting outcome query is missing. |
-| GET | `/api/meetings/{meetingId}/outcomes/{outcomeId}` | Blocked | Canonical projector exists; direct meeting-scoped outcome lookup and handler are missing. |
-| GET | `/api/meetings/{meetingId}/participants` | Blocked | Meeting participant query is missing. |
+| GET | `/api/meetings/{meetingId}/outcomes` | In progress | Canonical outcome persistence, agenda-association completeness, explicit target facts, authoritative ingestion, then parent-bound page query/route are actively being implemented. |
+| GET | `/api/meetings/{meetingId}/outcomes/{outcomeId}` | In progress | Shares the active canonical outcome prerequisite; action descriptions and vote motions are not substituted for outcome descriptions. |
+| GET | `/api/meetings/{meetingId}/participants` | In progress | Parent-bound participant page query, canonical linked summaries, filter-bound pagination, and route tests are actively being implemented. |
 | GET | `/api/meetings/{meetingId}/participants/{participantId}` | Done | Parent-bound repository query filters soft-deleted meetings, projects canonical linked person/organization summaries, and has exact-route/wrong-parent coverage, root review, and reviewed commit `4546f7a`. |
 | GET | `/api/calendars` | Blocked | Durable calendar resources are not modeled. |
 | GET | `/api/calendars/{calendarId}` | Blocked | Durable calendar resources are not modeled. |
@@ -156,4 +157,4 @@ mutations and webhook mutation handlers remain intentionally uncomposed and **Bl
 | POST | `/api/webhooks/{webhookId}/verify` | Blocked | Approved-destination/revalidation boundary exists; a pinned connection-time-revalidating challenge transport and durable activation transaction are missing. |
 
 The current release evidence is recorded in [the Railway API release record](http-api-railway-release.md). The endpoint
-matrix is 0 **In progress**, 65 **Blocked**, 0 **Ready**, and 22 **Done** routes.
+matrix is 8 **In progress**, 57 **Blocked**, 0 **Ready**, and 22 **Done** routes.
