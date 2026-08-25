@@ -49,10 +49,17 @@ import {
 } from "../db/schema/schema.js"
 import { embeddingQueryRouteFor, embeddingRouteFor, type EmbeddingSearchTool } from "../models/embedding-routing.js"
 import type { RetrievalModelClient } from "../models/openrouter-retrieval.js"
-import type { BillSearchCandidate, BillSearchResultPage, PassageSearchInput, SearchInput } from "../search/search.js"
+import type {
+  BillSearchCandidate,
+  BillSearchResultPage,
+  PassageSearchInput,
+  PassageSearchResultPage,
+  SearchInput
+} from "../search/search.js"
 import {
   lexicalBillSearch,
   lexicalPassageSearch,
+  encodePassageSearchCursor,
   paginateCappedSearchRows,
   paginateSearchRows,
   reciprocalRankFusionWithScores,
@@ -61,6 +68,7 @@ import {
   semanticPassageSearch,
   semanticStructuredAmendmentSearch,
   semanticSupportingMaterialSearch,
+  validatePassageSearchInput,
   validateSearchInput
 } from "../search/search.js"
 import { LegislationError } from "./errors.js"
@@ -908,6 +916,26 @@ export function billSearchExecution(embeddingModel: string, rerankModel: string,
           { model: rerankModel, purpose: "reranking" as const }
         ]
       }
+}
+
+function passageSearchExecution(embeddingModel: string, rerankModel: string, rerankedCandidateCount: number) {
+  return billSearchExecution(embeddingModel, rerankModel, rerankedCandidateCount)
+}
+
+function passageSearchPage<T extends { rerankScore: number | null; score: number }>(
+  candidates: readonly T[],
+  limit: number,
+  offset: number,
+  input: PassageSearchInput,
+  capped: boolean
+) {
+  const window = candidates.slice(offset, offset + limit)
+  const hasMore = candidates.length > offset + limit
+  return {
+    items: window.map((candidate) => ({ ...candidate, score: candidate.rerankScore ?? candidate.score })),
+    nextCursor: hasMore ? encodePassageSearchCursor(offset + limit, input) : undefined,
+    truncated: capped || hasMore
+  }
 }
 
 function comparisonClassification(before: string | undefined, after: string | undefined) {
@@ -2366,60 +2394,83 @@ export class LegislationQueryService {
     }
   }
 
-  async searchBillText(input: PassageSearchInput & { mode?: "hybrid" | "lexical" | "semantic" }) {
+  async searchBillText(
+    input: PassageSearchInput & { mode?: "hybrid" | "lexical" | "semantic" }
+  ): Promise<PassageSearchResultPage> {
     const mode = input.mode ?? "lexical"
     if (mode === "lexical") {
-      return lexicalPassageSearch(this.#database, input)
+      return { ...(await lexicalPassageSearch(this.#database, input)), search: { isReranked: false, models: [] } }
     }
-    const embedding = await this.#embedQuery("search_bill_text", input.query)
-    const { limit, offset } = validateSearchInput(input)
+    const queryEmbedding = await this.#embedQueryWithModel("search_bill_text", input.query)
+    const { limit, offset } = validatePassageSearchInput(input)
     const candidateLimit = embeddingQueryRouteFor("search_bill_text").candidateLimit
+    const rerankModel = embeddingQueryRouteFor("search_bill_text").rerank?.model
+    if (rerankModel === undefined) {
+      throw new LegislationError("dependency_unavailable", "Passage search reranking is not configured")
+    }
     if (mode === "semantic") {
       const semantic = await semanticPassageSearch(this.#database, {
         ...input,
         cursor: undefined,
-        embedding,
+        embedding: queryEmbedding.embedding,
         limit: candidateLimit
       })
       const reranked = await this.#rerank(
         "search_bill_text",
         input.query,
         semantic.items,
-        (item) => item.sectionId,
+        (item) => item.section.id,
         (item) => item.rerankText
       )
-      return paginateSearchRows(
-        reranked.map(({ rerankText: _rerankText, ...item }) => item),
-        limit,
-        offset,
-        semantic.truncated
-      )
+      return {
+        ...passageSearchPage(reranked, limit, offset, input, semantic.truncated),
+        search: passageSearchExecution(queryEmbedding.model, rerankModel, semantic.items.length)
+      }
     }
     const [lexical, semantic] = await Promise.all([
       lexicalPassageSearch(this.#database, { ...input, cursor: undefined, limit: candidateLimit }),
-      semanticPassageSearch(this.#database, { ...input, cursor: undefined, embedding, limit: candidateLimit })
+      semanticPassageSearch(this.#database, {
+        ...input,
+        cursor: undefined,
+        embedding: queryEmbedding.embedding,
+        limit: candidateLimit
+      })
     ])
-    const lexicalCandidates = lexical.items.map(({ rank: _rank, ...item }) => ({ ...item, id: item.sectionId }))
-    const semanticCandidates = semantic.items.map(({ distance: _distance, ...item }) => ({
-      ...item,
-      id: item.sectionId
-    }))
+    const lexicalById = new Map(lexical.items.map((item) => [item.section.id, item]))
+    const semanticById = new Map(semantic.items.map((item) => [item.section.id, item]))
+    const lexicalCandidates = lexical.items.map((item) => ({ ...item, id: item.section.id }))
+    const semanticCandidates = semantic.items.map((item) => ({ ...item, id: item.section.id }))
     const candidates = reciprocalRankFusionWithScores(lexicalCandidates, semanticCandidates, candidateLimit).map(
-      ({ id: _id, ...item }) => item
+      ({ id: _id, ...item }) => {
+        const lexicalCandidate = lexicalById.get(item.section.id)
+        const semanticCandidate = semanticById.get(item.section.id)
+        const primary = lexicalCandidate ?? semanticCandidate
+        if (primary === undefined) {
+          throw new LegislationError("internal", "Passage fusion lost its canonical candidate")
+        }
+        return {
+          ...primary,
+          lexicalScore: lexicalCandidate?.lexicalScore ?? null,
+          matchedFields: [
+            ...(lexicalCandidate?.matchedFields ?? []),
+            ...(semanticCandidate === undefined ? [] : (["semantic"] as const))
+          ],
+          score: item.score,
+          semanticScore: semanticCandidate?.semanticScore ?? null
+        }
+      }
     )
     const reranked = await this.#rerank(
       "search_bill_text",
       input.query,
       candidates,
-      (item) => item.sectionId,
+      (item) => item.section.id,
       (item) => item.rerankText
     )
-    return paginateSearchRows(
-      reranked.map(({ rerankText: _rerankText, ...item }) => item),
-      limit,
-      offset,
-      lexical.truncated || semantic.truncated
-    )
+    return {
+      ...passageSearchPage(reranked, limit, offset, input, lexical.truncated || semantic.truncated),
+      search: passageSearchExecution(queryEmbedding.model, rerankModel, candidates.length)
+    }
   }
 
   async getBillText(input: BillLookup & { cursor?: string; documentId?: string; versionCode?: string }) {

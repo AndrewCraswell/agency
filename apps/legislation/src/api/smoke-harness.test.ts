@@ -295,10 +295,7 @@ function fakeFetch() {
       url.pathname === "/api/people" ||
       url.pathname === "/api/organizations" ||
       url.pathname === "/api/meetings" ||
-      (init?.method === "POST" &&
-        (url.pathname === "/api/search/amendments" ||
-          url.pathname === "/api/search/passages" ||
-          url.pathname === "/api/document-diffs"))
+      (init?.method === "POST" && (url.pathname === "/api/search/amendments" || url.pathname === "/api/document-diffs"))
     ) {
       return jsonResponse(
         { error: { category: "not_found", correlationId, message: "not found", retryable: false } },
@@ -822,7 +819,7 @@ describe("local API smoke harness", () => {
       listSessions: async () => page(),
       searchAmendments: async () => page(),
       searchBills: async () => ({ items: [], truncated: false, warnings: [] }),
-      searchBillText: async () => page(),
+      searchBillText: async () => ({ items: [], search: { isReranked: false, models: [] }, truncated: false }),
       searchChanges: async () => page(),
       searchSupportingMaterials: async () => ({
         items: [supportingMaterialRead("material:fixture")],

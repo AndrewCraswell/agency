@@ -8,7 +8,12 @@ import {
   type SupportingMaterialSearchInput,
   type VersionComparisonInput
 } from "../legislation/query-service.js"
-import { decodeSearchCursor, type PassageSearchInput, type SearchInput } from "../search/search.js"
+import {
+  decodeSearchCursor,
+  type PassageSearchInput,
+  type PassageSearchResultPage,
+  type SearchInput
+} from "../search/search.js"
 import { projectSupportingMaterialSearchHits } from "./canonical-material-search.js"
 import { CanonicalProjectionError } from "./canonical-projection.js"
 import { projectBillSearchHits, type BillSearchCandidateRead } from "./canonical-search.js"
@@ -46,7 +51,7 @@ export type CivicSearchApi = Readonly<{
   searchAmendments: (input: AmendmentSearchInput) => Promise<QueryPage<unknown>>
   searchBillText: (
     input: PassageSearchInput & { mode?: "hybrid" | "lexical" | "semantic" }
-  ) => Promise<QueryPage<unknown>>
+  ) => Promise<PassageSearchResultPage>
   searchBills: (
     input: SearchInput & { mode?: "hybrid" | "lexical" | "semantic" }
   ) => Promise<QueryPage<BillSearchCandidateRead>>

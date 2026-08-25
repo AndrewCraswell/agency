@@ -57,6 +57,7 @@ import { createOrganizationMembersRepository } from "./organization-members-read
 import { createOrganizationMembersReadApiHandler } from "./organization-members-read-routes.js"
 import { createOrganizationReadRepository } from "./organization-read-repository.js"
 import { createOrganizationReadApiHandler } from "./organization-read-routes.js"
+import { createPassageSearchApiHandler } from "./passage-search.js"
 import { createPeopleReadApiHandler } from "./people-read-routes.js"
 import { createPersonAmendmentApiHandler } from "./person-amendment-routes.js"
 import { createPersonBillActivityApiHandler } from "./person-bill-activity-routes.js"
@@ -233,6 +234,7 @@ export function createLegislationApiHandler(
         ]),
     createCoreReadApiHandler(queryService, options),
     createCivicSearchApiHandler(queryService, options),
+    createPassageSearchApiHandler(queryService, options),
     ...(options.subscriptionRepository === undefined
       ? []
       : (() => {

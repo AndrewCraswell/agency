@@ -21,7 +21,7 @@ function createService(overrides: Partial<CivicSearchApi> = {}): CivicSearchApi 
   return {
     compareBillVersions: async () => ({ changes: [], truncated: false }),
     searchAmendments: async () => ({ items: [], truncated: false }),
-    searchBillText: async () => ({ items: [], truncated: false }),
+    searchBillText: async () => ({ items: [], search: { isReranked: false, models: [] }, truncated: false }),
     searchBills: async () => ({ items: [], truncated: false }),
     searchSupportingMaterialHits: async () => ({
       items: [],
@@ -532,7 +532,7 @@ describe("civic and search HTTP API handler", () => {
         },
         searchBillText: async () => {
           calls.push("searchBillText")
-          return { items: [], truncated: false }
+          return { items: [], search: { isReranked: false, models: [] }, truncated: false }
         }
       })
     )

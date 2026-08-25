@@ -332,12 +332,11 @@ const BLOCKED_ABSENCE_CHECKS: readonly CheckDefinition[] = [
   },
   {
     body: { limit: 1, mode: "lexical", query: "legislation" },
-    errorCategory: "not_found",
-    expected: "error",
-    id: "absent-search-passages",
+    expected: "search",
+    id: "search-passages",
     method: "POST",
     path: "/api/search/passages",
-    statusCode: 404
+    statusCode: 200
   },
   {
     body: {

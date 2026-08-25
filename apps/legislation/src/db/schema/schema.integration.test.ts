@@ -1195,9 +1195,9 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       truncated: false
     })
     await expect(
-      service.searchBillText({ billId: "bill:us:119:hr:1234", query: '"data shall be open"' })
+      service.searchBillText({ billIds: ["bill:us:119:hr:1234"], query: '"data shall be open"' })
     ).resolves.toMatchObject({
-      items: expect.arrayContaining([expect.objectContaining({ billId: "bill:us:119:hr:1234" })])
+      items: expect.arrayContaining([expect.objectContaining({ bill: { id: "bill:us:119:hr:1234" } })])
     })
     await expect(service.getBillText({ id: "bill:us:119:hr:1234", versionCode: "ih" })).resolves.toMatchObject({
       document: { id: documentId },
