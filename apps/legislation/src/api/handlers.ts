@@ -28,6 +28,7 @@ import {
 } from "../db/queries/meeting-participant-reads.js"
 import { assertOrganizationExists, listOrganizationBillReads } from "../db/queries/organization-bill-read.js"
 import { listPeople } from "../db/queries/people-read.js"
+import { assertPersonExists, listPersonBillActivity } from "../db/queries/person-bill-activity.js"
 import { getSupportingMaterialSectionRead } from "../db/queries/supporting-material-section-read.js"
 import { createCivicScopedReadApiHandler } from "./civic-scoped-read-routes.js"
 import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
@@ -50,6 +51,7 @@ import { createOrganizationMembersReadApiHandler } from "./organization-members-
 import { createOrganizationReadRepository } from "./organization-read-repository.js"
 import { createOrganizationReadApiHandler } from "./organization-read-routes.js"
 import { createPeopleReadApiHandler } from "./people-read-routes.js"
+import { createPersonBillActivityApiHandler } from "./person-bill-activity-routes.js"
 import { createPersonMembershipsRepository } from "./person-membership-read-repository.js"
 import { createPersonMembershipReadApiHandler } from "./person-membership-read-routes.js"
 import { createResourceBatchReadRepositoryFromCanonicalReads } from "./resource-batch-read-repository.js"
@@ -170,6 +172,13 @@ export function createLegislationApiHandler(
           createOrganizationReadApiHandler(createOrganizationReadRepository(documentDatabase), options),
           createPeopleReadApiHandler(
             { listPeople: async (input) => await listPeople(documentDatabase, input) },
+            options
+          ),
+          createPersonBillActivityApiHandler(
+            {
+              assertPersonExists: async (personId) => await assertPersonExists(documentDatabase, personId),
+              listPersonBillActivity: async (input) => await listPersonBillActivity(documentDatabase, input)
+            },
             options
           ),
           createOrganizationMembersReadApiHandler(createOrganizationMembersRepository(documentDatabase), options),

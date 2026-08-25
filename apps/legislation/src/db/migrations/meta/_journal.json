@@ -232,6 +232,13 @@
       "when": 1787686800000,
       "tag": "0032_supporting-material-section-pages",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1787690400000,
+      "tag": "0033_person-bill-activity-observations",
+      "breakpoints": true
     }
   ]
 }

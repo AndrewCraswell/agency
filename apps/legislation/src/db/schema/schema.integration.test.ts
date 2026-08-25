@@ -772,6 +772,128 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     await expect(getBillById(database, billId)).resolves.toMatchObject({ title: "A stable aggregate" })
   })
 
+  it("preserves and advances sponsor observation bounds across aggregate refreshes", async () => {
+    const billId = "bill:wa:2025-2026:hb:2469"
+    const sponsorId = `${billId}:sponsor:example`
+    const aggregate = {
+      bill: {
+        id: billId,
+        identifier: "HB 2469",
+        jurisdictionId: "jurisdiction:wa",
+        sessionId: "session:wa:2025-2026",
+        sourceUrl: "https://example.test/hb-2469",
+        title: "An observed sponsor relationship"
+      },
+      jurisdiction: {
+        classification: "state",
+        countryCode: "US",
+        id: "jurisdiction:wa",
+        name: "Washington",
+        subdivisionCode: "WA"
+      },
+      people: [{ id: "person:wa:example", jurisdictionId: "jurisdiction:wa", name: "Representative Example" }],
+      session: {
+        id: "session:wa:2025-2026",
+        identifier: "2025-2026",
+        jurisdictionId: "jurisdiction:wa",
+        name: "2025-2026 Regular Session"
+      },
+      sponsors: [
+        {
+          billId,
+          classification: "primary",
+          id: sponsorId,
+          isPrimary: true,
+          name: "Representative Example",
+          personId: "person:wa:example"
+        }
+      ]
+    }
+
+    await upsertBillAggregate(database, aggregate)
+    const first = await database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsorId) })
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 5))
+    await upsertBillAggregate(database, aggregate)
+    const refreshed = await database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsorId) })
+
+    if (
+      first === undefined ||
+      refreshed === undefined ||
+      first.latestObservedAt === null ||
+      refreshed.latestObservedAt === null
+    ) {
+      throw new Error("Expected sponsor observation to persist")
+    }
+    expect(first.firstObservedAt).toEqual(refreshed.firstObservedAt)
+    expect(refreshed.latestObservedAt.getTime()).toBeGreaterThan(first.latestObservedAt.getTime())
+
+    await upsertBillAggregate(database, { ...aggregate, sponsors: [] })
+    await expect(
+      database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsorId) })
+    ).resolves.toBeUndefined()
+  })
+
+  it("preserves sponsor observation bounds during batch aggregate refreshes", async () => {
+    const billId = "bill:wa:2025-2026:hb:2470"
+    const sponsorId = `${billId}:sponsor:example`
+    const aggregate = {
+      bill: {
+        id: billId,
+        identifier: "HB 2470",
+        jurisdictionId: "jurisdiction:wa",
+        sessionId: "session:wa:2025-2026",
+        sourceUrl: "https://example.test/hb-2470",
+        title: "An observed batch sponsor relationship"
+      },
+      jurisdiction: {
+        classification: "state",
+        countryCode: "US",
+        id: "jurisdiction:wa",
+        name: "Washington",
+        subdivisionCode: "WA"
+      },
+      people: [{ id: "person:wa:batch-example", jurisdictionId: "jurisdiction:wa", name: "Representative Batch" }],
+      session: {
+        id: "session:wa:2025-2026",
+        identifier: "2025-2026",
+        jurisdictionId: "jurisdiction:wa",
+        name: "2025-2026 Regular Session"
+      },
+      sponsors: [
+        {
+          billId,
+          classification: "primary",
+          id: sponsorId,
+          isPrimary: true,
+          name: "Representative Batch",
+          personId: "person:wa:batch-example"
+        }
+      ]
+    }
+
+    await upsertBillAggregates(database, [aggregate])
+    const first = await database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsorId) })
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 5))
+    await upsertBillAggregates(database, [aggregate])
+    const refreshed = await database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsorId) })
+
+    if (
+      first === undefined ||
+      refreshed === undefined ||
+      first.latestObservedAt === null ||
+      refreshed.latestObservedAt === null
+    ) {
+      throw new Error("Expected batch sponsor observation to persist")
+    }
+    expect(first.firstObservedAt).toEqual(refreshed.firstObservedAt)
+    expect(refreshed.latestObservedAt.getTime()).toBeGreaterThan(first.latestObservedAt.getTime())
+
+    await upsertBillAggregates(database, [{ ...aggregate, sponsors: [] }])
+    await expect(
+      database.query.billSponsors.findFirst({ where: eq(schema.billSponsors.id, sponsorId) })
+    ).resolves.toBeUndefined()
+  })
+
   it("merges federal provenance and preserves GovInfo documents during a Congress.gov update", async () => {
     const billId = "bill:us:119:hr:1234"
     const base = {

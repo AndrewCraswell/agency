@@ -748,14 +748,25 @@ export const billSponsors = legislationSchema.table(
     classification: text("classification").notNull(),
     isPrimary: boolean("is_primary").notNull().default(false),
     sourceUrl: text("source_url"),
+    /** First time this structured sponsorship relationship was observed locally. */
+    firstObservedAt: timestamp("first_observed_at", { withTimezone: true }),
+    /** Most recent successful observation of this structured sponsorship relationship. */
+    latestObservedAt: timestamp("latest_observed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     check("bill_sponsors_name_check", sql`length(${table.name}) > 0`),
+    check(
+      "bill_sponsors_observation_bounds_check",
+      sql`(${table.firstObservedAt} is null and ${table.latestObservedAt} is null) or (${table.firstObservedAt} is not null and ${table.latestObservedAt} is not null and ${table.firstObservedAt} <= ${table.latestObservedAt})`
+    ),
     uniqueIndex("bill_sponsors_person_uidx")
       .on(table.billId, table.personId, table.classification)
       .where(sql`${table.personId} is not null`),
-    index("bill_sponsors_bill_idx").on(table.billId, table.isPrimary)
+    index("bill_sponsors_bill_idx").on(table.billId, table.isPrimary),
+    index("bill_sponsors_person_activity_idx")
+      .on(table.personId, table.latestObservedAt, table.billId)
+      .where(sql`${table.personId} is not null and ${table.latestObservedAt} is not null`)
   ]
 )
 

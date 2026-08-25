@@ -1,4 +1,4 @@
-import { and, eq, inArray, or, sql } from "drizzle-orm"
+import { and, eq, inArray, notInArray, or, sql } from "drizzle-orm"
 import type { CanonicalBillAggregate } from "../../legislation/model.js"
 import type { LegislationDatabase } from "../database.js"
 import {
@@ -92,6 +92,68 @@ function assertAggregateOwnership(aggregate: CanonicalBillAggregate): void {
       throw new Error("document data does not belong to the aggregate bill")
     }
   }
+}
+
+/**
+ * Sponsor rows are observations, not a replaceable presentation collection.
+ * Retaining their bounds lets person activity distinguish the first observed
+ * relationship from the last successful observation of that relationship.
+ */
+async function upsertSponsorObservations(
+  database: Omit<LegislationDatabase, "$client">,
+  sponsors: readonly (typeof billSponsors.$inferInsert)[],
+  observedAt: Date
+): Promise<void> {
+  if (sponsors.length === 0) {
+    return
+  }
+  await database
+    .insert(billSponsors)
+    .values(
+      sponsors.map((sponsor) => ({
+        ...sponsor,
+        firstObservedAt: observedAt,
+        latestObservedAt: observedAt
+      }))
+    )
+    .onConflictDoUpdate({
+      set: {
+        billId: sql`excluded.bill_id`,
+        classification: sql`excluded.classification`,
+        firstObservedAt: sql`least(coalesce(${billSponsors.firstObservedAt}, excluded.first_observed_at), excluded.first_observed_at)`,
+        isPrimary: sql`excluded.is_primary`,
+        latestObservedAt: sql`greatest(coalesce(${billSponsors.latestObservedAt}, excluded.latest_observed_at), excluded.latest_observed_at)`,
+        name: sql`excluded.name`,
+        personId: sql`excluded.person_id`,
+        sourceUrl: sql`excluded.source_url`
+      },
+      target: billSponsors.id
+    })
+}
+
+/**
+ * An explicitly supplied sponsor collection is authoritative for its bill.
+ * Retain current rows so their observation bounds can advance, but remove
+ * relationships the source no longer reports rather than leaving them active.
+ */
+async function deleteAbsentSponsorObservations(
+  database: Omit<LegislationDatabase, "$client">,
+  billId: string,
+  sponsors: readonly (typeof billSponsors.$inferInsert)[]
+): Promise<void> {
+  if (sponsors.length === 0) {
+    await database.delete(billSponsors).where(eq(billSponsors.billId, billId))
+    return
+  }
+  await database.delete(billSponsors).where(
+    and(
+      eq(billSponsors.billId, billId),
+      notInArray(
+        billSponsors.id,
+        sponsors.map((sponsor) => sponsor.id)
+      )
+    )
+  )
 }
 
 export async function upsertBillAggregate(
@@ -188,10 +250,8 @@ export async function upsertBillAggregate(
     }
 
     if (aggregate.sponsors !== undefined) {
-      await transaction.delete(billSponsors).where(eq(billSponsors.billId, aggregate.bill.id))
-      if (aggregate.sponsors.length > 0) {
-        await transaction.insert(billSponsors).values(aggregate.sponsors)
-      }
+      await deleteAbsentSponsorObservations(transaction, aggregate.bill.id, aggregate.sponsors)
+      await upsertSponsorObservations(transaction, aggregate.sponsors, new Date())
     }
 
     if (aggregate.votes !== undefined) {
@@ -449,10 +509,15 @@ export async function upsertBillAggregates(
     const validOrganizationIds = new Set(existingOrganizations.map((organization) => organization.id))
 
     await transaction.delete(billActions).where(inArray(billActions.billId, billIds))
-    await transaction.delete(billSponsors).where(inArray(billSponsors.billId, billIds))
     await transaction.delete(billOrganizations).where(inArray(billOrganizations.billId, billIds))
     await transaction.delete(votes).where(inArray(votes.billId, billIds))
     await transaction.delete(billRelations).where(inArray(billRelations.billId, billIds))
+
+    for (const aggregate of aggregates) {
+      if (aggregate.sponsors !== undefined) {
+        await deleteAbsentSponsorObservations(transaction, aggregate.bill.id, aggregate.sponsors)
+      }
+    }
 
     const actionValues = aggregates.flatMap((aggregate) =>
       (aggregate.actions ?? []).map((action) => ({
@@ -489,7 +554,7 @@ export async function upsertBillAggregates(
       await transaction.insert(billActions).values(actionValues)
     }
     if (sponsorValues.length > 0) {
-      await transaction.insert(billSponsors).values(sponsorValues)
+      await upsertSponsorObservations(transaction, sponsorValues, new Date())
     }
     if (billOrganizationValues.length > 0) {
       await transaction.insert(billOrganizations).values(billOrganizationValues)
