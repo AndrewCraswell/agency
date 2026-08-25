@@ -6,13 +6,14 @@ TanStack Start was the original frontend choice, but its packages could not be i
 supported Microsoft Azure Artifacts feed after local registry workarounds were removed. The product application and
 public API boundary therefore live in `apps/legislation-web` as a standalone Next.js application. Explicit API Route
 Handlers belong under `app/api`. The service in `apps/legislation` remains the owner of canonical data, ingestion,
-search, reusable application/domain code, and the transitional standalone API rollback path; MCP remains in that service
-until the final HTTP cutover.
+search, and reusable application/domain code. The former `legislation-api` Railway service was deleted after the Next
+foundation gate; it is historical deployment evidence, not a current service or rollback target. MCP remains in the
+legislation domain service until the final HTTP cutover has a live Next.js MCP route.
 
 This split makes the browser application and API boundary independently testable without allowing the browser to open
-database connections or reuse MCP as a product-data transport. The Next.js application deploys as a new parallel Railway
-service named `legislation-web`; the existing `legislation-api` service remains the rollback target while route blocks
-migrate. It does not create a shared monorepo package: only the legislation product uses this boundary today.
+database connections or reuse MCP as a product-data transport. The Next.js application deploys as the Railway service
+named `legislation-web`; rollback selects the immediately preceding known-good `legislation-web` deployment. It does
+not create a shared monorepo package: only the legislation product uses this boundary today.
 
 ## Initial shape
 
@@ -42,21 +43,20 @@ be exposed through a `NEXT_PUBLIC_*` environment variable or browser bundle.
 
 ## Dependency graph
 
-The scaffold landed in commit `03e1c7b` with these exact runtime versions already resolved in the repository's committed
-`pnpm-lock.yaml`:
+The scaffold landed in commit `03e1c7b` with `next@16.2.6`. The current resolved application runtime is:
 
 ```text
 legislation-web
-├── next 16.2.6 (scaffold baseline)
+├── next 16.3.1
 ├── react 19.2.7
 └── react-dom 19.2.7
 ```
 
-The user approved upgrading the scaffold to exact `next@16.3.1`; the migration lockfile and package manifest must record
-that target with the existing React 19.2.7 pairing. The workspace registry remains the supported Microsoft Azure
-Artifacts feed; no hosts-file override or local-registry URL is required for this application.
+The package manifest and committed lockfile record exact `next@16.3.1` with the existing React 19.2.7 pairing. The
+workspace registry remains the supported Microsoft Azure Artifacts feed; no hosts-file override or local-registry URL
+is required for this application.
 
-The Railway Docker build is intentionally credential-free. Like the existing `legislation-api` image, it overlays an
+The Railway Docker build is intentionally credential-free. Like its deleted standalone predecessor, it overlays an
 app-local workspace containing only the web application, legislation service, and shared configuration packages, then
 performs a frozen install from `https://registry.npmjs.org/`. This deployment-only registry selection does not change
 the repository `.npmrc` or developers' Microsoft-feed workflow.
@@ -68,8 +68,7 @@ pnpm install --filter legislation-web --frozen-lockfile
 pnpm --filter legislation-web verify
 ```
 
-After the approved upgrade, that install must preserve `next` at `16.3.1` and React/React DOM at `19.2.7`. Do not use a
-floating `latest` tag.
+That install must preserve `next` at `16.3.1` and React/React DOM at `19.2.7`. Do not use a floating `latest` tag.
 Next also regenerates `next-env.d.ts` with a semicolon that conflicts with the workspace formatter. The build script
 normalizes that generated declaration after `next build`, leaving a successful build format-clean.
 
@@ -99,11 +98,12 @@ a five-second deadline and disables caching.
 
 ## Delivery sequence
 
-1. Apply and validate the approved `next@16.3.1` upgrade from the Microsoft feed with the frozen install command above.
+1. Validate the current exact `next@16.3.1` dependency graph from the Microsoft feed with the frozen install command
+   above.
 2. Verify the route shell locally at desktop and mobile sizes, including an unavailable API origin.
 3. Implement explicit API Route Handlers under `app/api` in the migration plan's endpoint blocks, reusing
    `apps/legislation` domain code.
-4. Deploy the foundation and every completed route block as the new parallel Railway `legislation-web` service, retaining
-   the standalone `legislation-api` service as rollback.
-5. Add WorkOS authentication after all 87 API routes pass deployed smoke, then distributed rate limiting; move MCP to
-   the HTTP API last.
+4. Deploy the foundation and every completed route block as Railway `legislation-web`; rollback uses the immediately
+   preceding known-good `legislation-web` deployment.
+5. Add WorkOS authentication after all 87 API routes pass deployed smoke, then distributed rate limiting. Move MCP to
+   the HTTP API last; its canary remains blocked until a live Next.js MCP route exists.

@@ -23,22 +23,23 @@ is the existing `apps/legislation-web/app/api` boundary, and its deployment is t
 `legislation-web`. The `apps/legislation` service remains reusable domain code plus transitional standalone source; it is
 not a live rollback service. Neither service should be described as final API cutover until the migration gates pass.
 
-## Last verified Next.js source deployment
+## Current Next.js source deployment
 
 | Field | Recorded value |
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
-| Source commit | `5de0383` |
-| Deployment | `cd297c07-b9d9-4900-b0ff-9f6ac2bc6434` |
+| Source commit | `27fa397` |
+| Deployment | `cc047806-27f7-4110-a6e0-7f27f4b4e517` |
 | Deployment status | `SUCCESS` |
+| Image | `sha256:121ef83d948e400d0f73c1d4d17fecce248153916fcf71936228bc3b0ff3e227` |
+| Rollback deployment | `c8238bec-5a3b-4335-8dee-ecf8568c6a06` |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
-| Production schema migrations | Applied through the current ledger |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
 | Old-service deletion | `legislation-api` (`05eb1486-7775-4797-b1c4-1b4a3f31cd26`), deleted 2026-08-25 after smoke |
 
-This is the last verified source deployment for the in-progress NX-02A block. It does not credit any of the 87 public API
-routes as migrated or **Done**.
+This is the current verified source deployment. The deleted `legislation-api` service is historical evidence only; it is
+not a current service or a rollback target.
 
 ## Next.js foundation deployment configuration
 
@@ -68,7 +69,7 @@ nonempty `Page<BillSummary>` responses for the jurisdiction- and session-scoped 
 server's health, readiness, and rejection-path behavior. Its scope remains intentionally narrower than the full API
 acceptance checklist.
 
-## NX-02A remote deployment evidence
+## Historical NX-02A remote deployment evidence
 
 | Check | Result |
 | --- | --- |
@@ -76,24 +77,38 @@ acceptance checklist.
 | Production migrations | Schema migrations through the current ledger are applied |
 | Alaska canonical foundation | Corrected publisher classification `legislature`; import `a89bc8c83d9c57893c731e090f9599cf094e9cb73e88fce5f0b7df44aadd357c` processed 6/6; idempotent rerun skipped 6 |
 | NX-02A deployed smoke | All 11 jurisdiction/session operations plus rejection checks passed |
-| Current release state | NX-02A's 11 operations are **Done**; the nationwide audit remains incomplete for 52 jurisdictions and 648 sessions |
+| NX-02A release state | NX-02A's 11 operations are **Done**; the nationwide audit remains incomplete for 52 jurisdictions and 648 sessions |
 | Old service teardown | `legislation-api` service `05eb1486-7775-4797-b1c4-1b4a3f31cd26` remains deleted |
 
 The deployed API catch-all remains outside the 87-route inventory. The scoped Alaska import closed NX-02A's data gate;
 the incomplete nationwide audit does not reduce the passed 11-operation deployed smoke evidence.
 
+## NX-02C deployed smoke
+
+| Outcome | Result |
+| --- | --- |
+| **Done** | 6 NX-02C operations passed deployed smoke against the current `legislation-web` deployment. |
+| Production-data blocked | Document detail and document-section collection remain blocked because the production records have `NULL` OCR status. |
+| Production-data blocked | Global changes remains blocked because the production records lack source provenance. |
+| Next endpoint block | NX-03A starts next. |
+| MCP | MCP remains last. Its browser-consent canary is blocked until a live Next.js MCP route exists. |
+
+The three production-data-blocked operations are not **Done**. They require production data that satisfies their
+documented contract, followed by a fresh deployed smoke, rather than a route or deployment change.
+
 ## Next safe actions
 
-1. Deploy NX-02B. Its route/composition code has passed root review and local verification; all 18 routes still require
-   deployed smoke before they can be **Done**.
-3. Continue the migration plan's fixed endpoint-block order; do not begin authentication until all 87 routes pass
+1. Start NX-03A and retain the distinction between route behavior and production-data evidence.
+2. Continue the migration plan's fixed endpoint-block order; do not begin authentication until all 87 routes pass
    deployed smoke.
-4. Add distributed rate limiting after authentication; migrate MCP last.
+3. Add distributed rate limiting after authentication. Migrate MCP last, and run its canary only after a live Next.js
+   MCP route exists.
 
 ## Rollback
 
-The last verified source deployment is `cd297c07-b9d9-4900-b0ff-9f6ac2bc6434`. After each subsequent
-`legislation-web` deployment, rollback uses only the immediately preceding known-good `legislation-web` deployment; the
-old `legislation-api` service was deleted at the NX-01 teardown gate and must not be recreated as a rollback target.
+The current deployment is `cc047806-27f7-4110-a6e0-7f27f4b4e517`; its rollback target is the prior successful
+`legislation-web` deployment `c8238bec-5a3b-4335-8dee-ecf8568c6a06`. After each subsequent `legislation-web`
+deployment, rollback uses only the immediately preceding known-good `legislation-web` deployment. The old
+`legislation-api` service was deleted at the NX-01 teardown gate and must not be recreated as a rollback target.
 Recheck `/health`, `/ready`, and every cumulative smoke profile after a rollback. Database migrations remain separate
 from process startup.

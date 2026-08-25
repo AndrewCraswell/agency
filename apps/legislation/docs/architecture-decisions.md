@@ -17,25 +17,26 @@
 | ADR-012 | Store broad-rollout vectors in dedicated, foreign-keyed tables under the `legislation` schema and require a treatment/control MCP retrieval canary before expansion. | A separate schema does not provide physical isolation, inline vectors would enlarge hot corpus rows, and a partially embedded corpus can bias hybrid ranking. Dedicated tables make model versions, canary cleanup, index rebuilds, and measured promotion safer. |
 | ADR-013 | Route bills and supporting materials to `voyageai/voyage-4`; route document sections and structured amendments to `openai/text-embedding-3-small`; apply `cohere/rerank-v3.5` only to bill and document-passage discovery. | The expanded graded bakeoff exceeded the 0.02 absolute nDCG@10 promotion threshold for these specific model and reranker changes, while reranking harmed amendment and supporting-material ranking. |
 | ADR-014 | Put Trigger.dev database traffic through PgBouncer transaction pooling while retaining a direct PostgreSQL administration and rollback URL. | A 200-client production smoke completed through 20 pooled PostgreSQL backends. Transaction pooling permits Trigger fan-out without assigning one PostgreSQL process to every worker, while the backend ceiling protects the 100-connection database. |
-| ADR-015 | Use the existing Next.js 16 App Router application in `apps/legislation-web` as the legislation application and public API runtime, with one explicit Route Handler under `apps/legislation-web/app/api` per documented operation. | One framework should own the future application and HTTP boundary. Existing standalone Node handlers and domain code in `apps/legislation` remain reusable migration input and the transitional API rollback target. A route is complete only after its Next.js handler passes a staged deployment of the new parallel `legislation-web` Railway service and remote smoke. WorkOS auth follows all route migrations, distributed rate limiting follows auth, and MCP HTTP cutover is last. |
+| ADR-015 | Use the existing Next.js 16 App Router application in `apps/legislation-web` as the legislation application and public API runtime, with one explicit Route Handler under `apps/legislation-web/app/api` per documented operation. | One framework owns the future application and HTTP boundary. Existing standalone Node handlers and domain code in `apps/legislation` remain reusable migration input, but the former Railway `legislation-api` service is deleted and is not a rollback target. A route is complete only after its Next.js handler passes a staged `legislation-web` deployment and remote smoke. WorkOS auth follows all route migrations, distributed rate limiting follows auth, and MCP HTTP cutover is last after a live Next.js MCP route exists. |
 
-The Next.js scaffold landed in commit `03e1c7b` with `next@16.2.6`; the user-approved foundation upgrade is exact
+The Next.js scaffold landed in commit `03e1c7b` with `next@16.2.6`; the current resolved version is exact
 `next@16.3.1`. New decisions use the next ADR number and record status, evidence, consequences, owner, and
 reconsideration trigger.
 
 ## ADR-015 operational consequences
 
-- Status: accepted; foundation implementation is in progress from the existing `apps/legislation-web` scaffold.
-- Evidence: commit `03e1c7b` added the Next.js application boundary with `next@16.2.6`; the approved upgrade is
-  `next@16.3.1`. The standalone `node:http` production composition remains in `apps/legislation` for transitional
-  serving and rollback. Explicit API Route Handlers belong under `apps/legislation-web/app/api`.
+- Status: accepted; NX-02C deployed smoke is complete for six operations, with three operations production-data blocked;
+  NX-03A is next.
+- Evidence: commit `03e1c7b` added the Next.js application boundary with `next@16.2.6`; the current application uses
+  `next@16.3.1`. Deployment `cc047806-27f7-4110-a6e0-7f27f4b4e517` from commit `27fa397` reached `SUCCESS`. Explicit
+  API Route Handlers belong under `apps/legislation-web/app/api`.
 - Consequences: do not count the 87 reusable handlers as Next routes; do not use a catch-all proxy as route migration;
-  deploy the new parallel `legislation-web` Railway service and smoke each endpoint block; retain `legislation-api` as
-  rollback until cutover; do not begin auth, rate limiting, or MCP cutover out of sequence; do not start product UX
-  without an approved design.
+  deploy `legislation-web` and smoke each endpoint block; rollback only to the immediately preceding known-good
+  `legislation-web` deployment; do not begin auth or rate limiting out of sequence; leave MCP last and do not run its
+  canary until a live Next.js MCP route exists; do not start product UX without an approved design.
 - Owner: legislation application platform.
-- Reconsideration trigger: reconsider framework choice only if the approved Next.js 16.3.1 upgrade cannot be built and
-  deployed reproducibly through the approved dependency source.
+- Reconsideration trigger: reconsider framework choice only if exact Next.js 16.3.1 cannot be built and deployed
+  reproducibly through the approved dependency source.
 
 ## ADR-011 operational consequences
 
