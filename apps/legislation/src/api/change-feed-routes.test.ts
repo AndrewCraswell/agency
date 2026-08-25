@@ -128,7 +128,7 @@ describe("change feed API handler", () => {
     })
     const response = await fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahouse%3Ahr-1/changes?classification=create`)
     expect(response.status).toBe(200)
-    expect(received).toMatchObject({ billId: "bill:us:119:house:hr-1", classification: "create", limit: 25 })
+    expect(received).toMatchObject({ billId: "bill:us:119:house:hr-1", classification: "create", limit: 20 })
 
     const missing = await fetch(`${baseUrl}/api/bills/bill%3Amissing/changes`)
     expect(missing.status).toBe(404)

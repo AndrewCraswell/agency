@@ -92,7 +92,7 @@ function projectPage(
   }
 }
 
-function projectSessionRead(row: SessionRead, apiBaseUrl: string, expectedJurisdictionId?: string): Session {
+export function projectSessionRead(row: SessionRead, apiBaseUrl: string, expectedJurisdictionId?: string): Session {
   const source = completeSessionSource(row)
   const jurisdictionId = requiredText(row.jurisdictionId, "session jurisdictionId")
   if (expectedJurisdictionId !== undefined && jurisdictionId !== expectedJurisdictionId) {

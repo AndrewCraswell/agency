@@ -46,7 +46,7 @@ export function createSupportingMaterialSectionReadApiHandler(
           return false
         }
         assertAllowedQueryParameters(url, ["cursor", "heading", "limit", "pageFrom", "pageTo"])
-        const limit = optionalPositiveInteger(url, "limit") ?? 25
+        const limit = optionalPositiveInteger(url, "limit") ?? 20
         const pageFrom = optionalPositiveInteger(url, "pageFrom")
         const pageTo = optionalPositiveInteger(url, "pageTo")
         const cursor = singleNonBlankQueryString(url, "cursor")
@@ -149,7 +149,7 @@ function singleNonBlankQueryString(url: URL, name: string): string | undefined {
   if (value === undefined || value.trim().length === 0) {
     throw new LegislationError("invalid_request", `${name} must not be blank`)
   }
-  return value
+  return value.trim()
 }
 
 function canonicalPathId(value: string, name: string): string {

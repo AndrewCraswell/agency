@@ -61,7 +61,7 @@ export function createChangeFeedApiHandler(
       if (route.name === "bill") {
         await service.assertBillExists(route.billId)
       }
-      const limit = queryInteger(url, "limit", 25, 100)
+      const limit = queryInteger(url, "limit", 20, 100)
       const page = await service.listChanges({
         billId: route.name === "bill" ? route.billId : undefined,
         classification: changeClassification(queryOptionalString(url, "classification")),

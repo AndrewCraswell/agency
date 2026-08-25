@@ -163,6 +163,31 @@ describe("document read API handler", () => {
     expect(documentReads).toBe(0)
   })
 
+  it("uses the shared default page limit for document collections", async () => {
+    let billDocumentsInput: unknown
+    let documentSectionsInput: unknown
+    const baseUrl = await startServer({
+      ...service(),
+      listBillDocuments: async (input) => {
+        billDocumentsInput = input
+        return { items: [], truncated: false }
+      },
+      listDocumentSections: async (input) => {
+        documentSectionsInput = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const [billDocuments, documentSections] = await Promise.all([
+      fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/documents`),
+      fetch(`${baseUrl}/api/documents/document%3Aus%3A119%3Ahr%3A1%3Aih/sections`)
+    ])
+
+    expect([billDocuments.status, documentSections.status]).toEqual([200, 200])
+    expect(billDocumentsInput).toMatchObject({ limit: 20 })
+    expect(documentSectionsInput).toMatchObject({ limit: 20 })
+  })
+
   it("projects persisted document section pages and preserves their page mapping", async () => {
     let received: unknown
     let detailReadId: string | undefined

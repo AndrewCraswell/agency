@@ -242,7 +242,7 @@ function personVotesInput(url: URL, personId: string): PersonVoteListInput {
   }
 }
 
-function projectVoteDetailRead(vote: VoteRead, page: Page<VotePositionRead>, apiBaseUrl: string): VoteDetail {
+export function projectVoteDetailRead(vote: VoteRead, page: Page<VotePositionRead>, apiBaseUrl: string): VoteDetail {
   return projectVoteDetail(
     {
       positions: page.items.map((item) => projectPosition(item, apiBaseUrl)),

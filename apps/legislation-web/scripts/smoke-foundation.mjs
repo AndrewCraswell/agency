@@ -17,8 +17,14 @@ const configuredNx02b = process.env.LEGISLATION_WEB_SMOKE_NX_02B?.trim()
 if (configuredNx02b !== undefined && configuredNx02b !== "" && configuredNx02b !== "1") {
   throw new TypeError("LEGISLATION_WEB_SMOKE_NX_02B must be 1 when it is set")
 }
+const configuredNx02c = process.env.LEGISLATION_WEB_SMOKE_NX_02C?.trim()
+if (configuredNx02c !== undefined && configuredNx02c !== "" && configuredNx02c !== "1") {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_NX_02C must be 1 when it is set")
+}
+const smokeNx02c = configuredNx02c === "1"
 const smokeNx02b = configuredNx02b === "1"
-const smokeNx02a = configuredNx02a === "1" || smokeNx02b
+const smokeNx02a = configuredNx02a === "1" || smokeNx02b || smokeNx02c
+const smokeNx02bCumulative = smokeNx02b || smokeNx02c
 
 function fixtureEnvironmentValue(name) {
   const configured = process.env[name]
@@ -39,6 +45,13 @@ const nx02bFixtures = {
   amendmentId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_AMENDMENT_ID"),
   billId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_BILL_ID"),
   voteId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_VOTE_ID")
+}
+
+const nx02cFixtures = {
+  documentId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_DOCUMENT_ID"),
+  documentSectionId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_DOCUMENT_SECTION_ID"),
+  supportingMaterialId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_ID"),
+  supportingMaterialSectionId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_SECTION_ID")
 }
 
 function smokeBaseUrl(value) {
@@ -244,6 +257,55 @@ function requireBatchEnvelope(body, name, expectedCorrelationId, expectedId, exp
   return "fixture_missing"
 }
 
+function requireResourceBatchEnvelope(body, name, expectedCorrelationId, expectedItems) {
+  if (
+    !hasExactKeys(body, ["data", "links", "meta"]) ||
+    !Array.isArray(body.data) ||
+    body.data.length !== expectedItems.length ||
+    !hasExactKeys(body.links, ["self"]) ||
+    !hasExactKeys(body.meta, ["correlationId", "requested", "returned", "warnings"]) ||
+    body.meta.correlationId !== expectedCorrelationId ||
+    body.meta.requested !== expectedItems.length ||
+    body.meta.returned !== expectedItems.length ||
+    typeof body.links.self !== "string"
+  ) {
+    throw new Error(`${name} did not return an exact resource Batch envelope`)
+  }
+  requireStringArray(body.meta.warnings, `${name} meta.warnings`)
+  requireNonEmptyString(body.links.self, `${name} links.self`)
+
+  for (const [index, expectedItem] of expectedItems.entries()) {
+    const item = body.data[index]
+    if (!isRecord(item) || item.id !== expectedItem.id) {
+      throw new Error(`${name} did not return the expected resource Batch item`)
+    }
+    if (expectedItem.status === "ok") {
+      if (
+        !hasExactKeys(item, ["data", "id", "status"]) ||
+        item.status !== "ok" ||
+        !isRecord(item.data) ||
+        item.data.id !== expectedItem.id ||
+        item.data.type !== expectedItem.type
+      ) {
+        throw new Error(`${name} did not return the expected successful resource Batch item`)
+      }
+      continue
+    }
+    if (
+      !hasExactKeys(item, ["error", "id", "status"]) ||
+      item.status !== "error" ||
+      !isRecord(item.error) ||
+      !hasExactKeys(item.error, ["category", "message", "retryable"]) ||
+      item.error.category !== "not_found" ||
+      typeof item.error.message !== "string" ||
+      item.error.message === "" ||
+      item.error.retryable !== false
+    ) {
+      throw new Error(`${name} did not return the expected missing resource Batch item`)
+    }
+  }
+}
+
 function requireCanonicalNotFound(body, name, expectedCorrelationId) {
   if (!hasExactKeys(body, ["error"]) || !isRecord(body.error)) {
     throw new Error(`${name} did not return a canonical ErrorResponse`)
@@ -273,6 +335,21 @@ function requireCanonicalNotFound(body, name, expectedCorrelationId) {
       ))
   ) {
     throw new Error(`${name} did not return valid ErrorResponse details`)
+  }
+}
+
+function requireCanonicalDataIncomplete(body, name, expectedCorrelationId) {
+  if (
+    !hasExactKeys(body, ["error"]) ||
+    !hasExactKeys(body.error, ["category", "correlationId", "message", "retryable"]) ||
+    body.error.category !== "unprocessable" ||
+    body.error.correlationId !== expectedCorrelationId ||
+    typeof body.error.message !== "string" ||
+    body.error.message.trim() === "" ||
+    [...body.error.message].some((character) => character.codePointAt(0) <= 0x1f || character === "\u007F") ||
+    body.error.retryable !== false
+  ) {
+    throw new Error(`${name} did not return a canonical data-incomplete ErrorResponse`)
   }
 }
 
@@ -586,6 +663,159 @@ async function smokeNx02bRoutes(root) {
   return { notFound: ["bills_trailing_slash", "amendments_trailing_slash", "votes_trailing_slash"], passed, skipped }
 }
 
+function missingFixtureName(route) {
+  return route.fixtures.find((fixture) => nx02cFixtures[fixture] === undefined)
+}
+
+async function smokeNx02cRoutes(root) {
+  const routes = [
+    {
+      fixtures: ["documentId"],
+      kind: "resource",
+      name: "document",
+      path: ({ documentId }) => `/api/documents/${encodeURIComponent(documentId)}`
+    },
+    {
+      fixtures: ["documentId"],
+      kind: "page",
+      name: "document sections",
+      path: ({ documentId }) => `/api/documents/${encodeURIComponent(documentId)}/sections?limit=1`
+    },
+    {
+      fixtures: ["documentId", "documentSectionId"],
+      kind: "resource",
+      name: "document section",
+      path: ({ documentId, documentSectionId }) =>
+        `/api/documents/${encodeURIComponent(documentId)}/sections/${encodeURIComponent(documentSectionId)}`
+    },
+    {
+      fixtures: [],
+      kind: "page",
+      name: "supporting materials",
+      path: "/api/supporting-materials?jurisdictionId=jurisdiction%3Aus&classification=committee-report&limit=1"
+    },
+    {
+      fixtures: ["supportingMaterialId"],
+      kind: "resource",
+      name: "supporting material",
+      path: ({ supportingMaterialId }) => `/api/supporting-materials/${encodeURIComponent(supportingMaterialId)}`
+    },
+    {
+      fixtures: ["supportingMaterialId"],
+      kind: "page",
+      name: "supporting material sections",
+      path: ({ supportingMaterialId }) =>
+        `/api/supporting-materials/${encodeURIComponent(supportingMaterialId)}/sections?limit=1`
+    },
+    {
+      fixtures: ["supportingMaterialId", "supportingMaterialSectionId"],
+      kind: "resource",
+      name: "supporting material section",
+      path: ({ supportingMaterialId, supportingMaterialSectionId }) =>
+        `/api/supporting-materials/${encodeURIComponent(supportingMaterialId)}/sections/${encodeURIComponent(
+          supportingMaterialSectionId
+        )}`
+    },
+    { fixtures: [], kind: "page", name: "changes", path: "/api/changes?limit=1" },
+    {
+      body: ({ documentId, supportingMaterialId }) => ({
+        items: [
+          { id: documentId, type: "document" },
+          { id: supportingMaterialId, type: "supporting-material" },
+          { id: "document:__deployment-smoke-missing__", type: "document" }
+        ]
+      }),
+      fixtures: ["documentId", "supportingMaterialId"],
+      kind: "resource-batch",
+      method: "POST",
+      name: "resource batch",
+      path: "/api/resources/batch"
+    }
+  ]
+  const passed = []
+  const skipped = []
+
+  for (const [index, route] of routes.entries()) {
+    const missingFixture = missingFixtureName(route)
+    if (missingFixture !== undefined) {
+      skipped.push({ name: route.name, reason: `fixture_not_configured:${missingFixture}` })
+      continue
+    }
+    const path = typeof route.path === "function" ? route.path(nx02cFixtures) : route.path
+    const url = new URL(path, root)
+    const method = route.method ?? "GET"
+    const correlationId = `nx-02c-smoke-${index + 1}`
+    const name = `${method} ${route.name}`
+    const response = await smokeFetch(url, {
+      ...(route.body === undefined ? {} : { body: JSON.stringify(route.body(nx02cFixtures)) }),
+      diagnosticName: name,
+      headers: {
+        ...(route.body === undefined ? {} : { "content-type": "application/json" }),
+        "x-correlation-id": correlationId
+      },
+      method
+    })
+    requireCorrelationId(response, name, correlationId)
+    if (!response.headers.get("content-type")?.includes("application/json")) {
+      throw new Error(`${name} did not return application/json`)
+    }
+    let body
+    try {
+      body = await response.json()
+    } catch {
+      throw new Error(`${name} did not return a JSON body`)
+    }
+    if (route.name === "changes" && response.status === 422) {
+      requireCanonicalDataIncomplete(body, name, correlationId)
+      skipped.push({ name: route.name, reason: "canonical_data_incomplete" })
+      continue
+    }
+    if (response.status === 404 && route.fixtures.length > 0) {
+      requireCanonicalNotFound(body, name, correlationId)
+      skipped.push({ name: route.name, reason: "fixture_missing" })
+      continue
+    }
+    if (response.status !== 200) {
+      throw new Error(`${name} returned status ${response.status}, expected 200 or canonical fixture 404`)
+    }
+    if (method === "GET") {
+      requirePrivateNoStore(response, name)
+      const etag = requireEtag(response, name)
+      await smokeConditionalGet(url, `conditional GET ${route.name}`, etag, `nx-02c-smoke-conditional-${index + 1}`)
+    }
+    if (route.kind === "page") {
+      requirePageEnvelope(body, name, correlationId)
+    } else if (route.kind === "resource") {
+      requireResourceEnvelope(body, name, correlationId, nx02cFixtures[route.fixtures.at(-1)])
+    } else {
+      requireResourceBatchEnvelope(body, name, correlationId, [
+        { id: nx02cFixtures.documentId, status: "ok", type: "document" },
+        { id: nx02cFixtures.supportingMaterialId, status: "ok", type: "supporting-material" },
+        { id: "document:__deployment-smoke-missing__", status: "error" }
+      ])
+    }
+    passed.push(route.name)
+  }
+
+  await Promise.all([
+    smokeCanonicalApiNotFound(root, "/api/documents/", "nx-02c-smoke-documents-trailing-slash"),
+    smokeCanonicalApiNotFound(root, "/api/supporting-materials/", "nx-02c-smoke-supporting-materials-trailing-slash"),
+    smokeCanonicalApiNotFound(root, "/api/changes/", "nx-02c-smoke-changes-trailing-slash"),
+    smokeCanonicalApiNotFound(root, "/api/resources/batch/", "nx-02c-smoke-resource-batch-trailing-slash")
+  ])
+
+  return {
+    notFound: [
+      "documents_trailing_slash",
+      "supporting_materials_trailing_slash",
+      "changes_trailing_slash",
+      "resource_batch_trailing_slash"
+    ],
+    passed,
+    skipped
+  }
+}
+
 const root = smokeBaseUrl(baseUrl)
 const healthUrl = new URL("/health", root)
 const readyUrl = new URL("/ready", root)
@@ -632,13 +862,17 @@ if (!homepageMarkup.includes("<main")) {
 }
 
 const nx02a = smokeNx02a ? await smokeNx02aRoutes(root) : undefined
-const nx02b = smokeNx02b ? await smokeNx02bRoutes(root) : undefined
+const nx02b = smokeNx02bCumulative ? await smokeNx02bRoutes(root) : undefined
+const nx02c = smokeNx02c ? await smokeNx02cRoutes(root) : undefined
 let profile = "foundation"
 if (smokeNx02a) {
   profile = "foundation+nx-02a"
 }
-if (smokeNx02b) {
+if (smokeNx02bCumulative) {
   profile = "foundation+nx-02a+nx-02b"
+}
+if (smokeNx02c) {
+  profile = "foundation+nx-02a+nx-02b+nx-02c"
 }
 
 process.stdout.write(
@@ -647,6 +881,7 @@ process.stdout.write(
     homepage: homepage.status,
     ...(nx02a === undefined ? {} : { nx02a }),
     ...(nx02b === undefined ? {} : { nx02b }),
+    ...(nx02c === undefined ? {} : { nx02c }),
     profile,
     ready: ready.status,
     timeoutMs,

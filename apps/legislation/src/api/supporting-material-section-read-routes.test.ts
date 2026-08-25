@@ -157,6 +157,42 @@ describe("supporting material section read API handler", () => {
     })
   })
 
+  it("uses the shared default page limit for material section traversal", async () => {
+    let received: unknown
+    const baseUrl = await startServer({
+      ...service(),
+      assertSupportingMaterialExists: async () => undefined,
+      listSupportingMaterialSections: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const response = await fetch(`${baseUrl}/api/supporting-materials/material%3Aus%3A119%3Areport%3A1/sections`)
+
+    expect(response.status).toBe(200)
+    expect(received).toMatchObject({ limit: 20 })
+  })
+
+  it("normalizes a section heading filter before exact persisted matching", async () => {
+    let received: unknown
+    const baseUrl = await startServer({
+      ...service(),
+      assertSupportingMaterialExists: async () => undefined,
+      listSupportingMaterialSections: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const response = await fetch(
+      `${baseUrl}/api/supporting-materials/material%3Aus%3A119%3Areport%3A1/sections?heading=%20Findings%20`
+    )
+
+    expect(response.status).toBe(200)
+    expect(received).toMatchObject({ heading: "Findings" })
+  })
+
   it("returns a correlated 404 when the section is absent from the requested material", async () => {
     const baseUrl = await startServer({
       getSupportingMaterialSection: async () => {

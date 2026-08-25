@@ -31,7 +31,8 @@ const CANONICAL_RESOURCE_TYPES = [
   "supporting-material",
   "person",
   "organization",
-  "meeting"
+  "meeting",
+  "calendar"
 ] as const
 
 type CanonicalResourceType = (typeof CANONICAL_RESOURCE_TYPES)[number]

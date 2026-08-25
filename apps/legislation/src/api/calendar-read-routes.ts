@@ -61,7 +61,7 @@ async function handleCalendarRequest(
   if (route.name === "detail") {
     assertAllowedQueryParameters(url, [])
     const calendar = await service.getCalendarRead(route.calendarId)
-    sendApiJson(response, 200, apiResource(request, projectDetail(calendar, apiBaseUrl)))
+    sendApiJson(response, 200, apiResource(request, projectCalendarDetailRead(calendar, apiBaseUrl)))
     return true
   }
   if (route.name === "meetings") {
@@ -113,7 +113,7 @@ function projectSummary(calendar: CalendarRead, apiBaseUrl: string) {
   )
 }
 
-function projectDetail(calendar: CalendarRead, apiBaseUrl: string) {
+export function projectCalendarDetailRead(calendar: CalendarRead, apiBaseUrl: string) {
   return projectCalendarDetail(
     {
       calendar: {

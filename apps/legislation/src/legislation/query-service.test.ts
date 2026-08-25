@@ -11,9 +11,11 @@ import {
   buildLexicalSupportingMaterialCandidateQuery,
   buildBillBrowseQuery,
   decodeBillBrowseCursor,
+  decodeSupportingMaterialCollectionCursor,
   decodeSupportingMaterialSearchCursor,
   documentBackedAmendmentId,
   encodeBillBrowseCursor,
+  encodeSupportingMaterialCollectionCursor,
   encodeSupportingMaterialSearchCursor,
   lexicalSupportingMaterialCandidateLimit,
   lexicalSupportingMaterialCandidateWindowCapped,
@@ -294,6 +296,30 @@ describe("lexical supporting material candidate search", () => {
       nextCursor: undefined,
       truncated: true
     })
+  })
+})
+
+describe("supporting material collection cursors", () => {
+  it("binds ordered traversal to filters and sort", () => {
+    const input = {
+      billId: "bill:fixture",
+      documentFrom: "2026-01-01",
+      mode: "lexical" as const,
+      processingStatus: "processed" as const,
+      sort: "document-desc" as const
+    }
+    const cursor = encodeSupportingMaterialCollectionCursor(20, input)
+
+    expect(decodeSupportingMaterialCollectionCursor(cursor, input)).toBe(20)
+    expect(() => decodeSupportingMaterialCollectionCursor(cursor, { ...input, sort: "title-asc" })).toThrow(
+      LegislationError
+    )
+    expect(() => decodeSupportingMaterialCollectionCursor(cursor, { ...input, billId: "bill:other" })).toThrow(
+      LegislationError
+    )
+    expect(() =>
+      decodeSupportingMaterialCollectionCursor(Buffer.from('{"offset":20}').toString("base64url"), input)
+    ).toThrow(LegislationError)
   })
 })
 

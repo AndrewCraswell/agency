@@ -228,6 +228,9 @@ describe("document section traversal", () => {
     expect(generated).toContain('"document_sections"."page_start" <=')
     expect(generated).toContain('"document_sections"."ordinal" >')
     expect(generated).toContain('"document_sections"."id" >')
+    expect(generated).toMatch(
+      /order by "legislation"\."document_sections"\."ordinal" asc, "legislation"\."document_sections"\."id" asc/
+    )
     expect(generated).not.toContain(" offset ")
   })
 
@@ -307,6 +310,10 @@ describe("supporting-material section traversal", () => {
       '"supporting_materials"."id" = "legislation"."supporting_material_sections"."material_id"'
     )
     expect(generated).toContain('"supporting_material_sections"."ordinal" >')
+    expect(generated).toContain('"supporting_material_sections"."id" >')
+    expect(generated).toMatch(
+      /order by "legislation"\."supporting_material_sections"\."ordinal" asc, "legislation"\."supporting_material_sections"\."id" asc/
+    )
     expect(generated).toContain('"supporting_material_sections"."page_end" >=')
     expect(generated).toContain('"supporting_material_sections"."page_start" <=')
     expect(generated).not.toContain('"supporting_materials"."blob_path"')

@@ -19,6 +19,69 @@ const batchRoutes = [
   { name: "votes", pathname: "/api/votes/batch" }
 ] as const
 
+type Nx02cRoute = Readonly<{
+  body?: string
+  method: "GET" | "POST"
+  name: string
+  pathname: string
+  probe?: string
+}>
+
+const nx02cRoutes: readonly Nx02cRoute[] = [
+  {
+    method: "GET",
+    name: "document detail",
+    pathname: "/api/documents/document%3Arouter",
+    probe: "?unexpected=1"
+  },
+  {
+    method: "GET",
+    name: "document sections",
+    pathname: "/api/documents/document%3Arouter/sections",
+    probe: "?limit=0"
+  },
+  {
+    method: "GET",
+    name: "document section detail",
+    pathname: "/api/documents/document%3Arouter/sections/section%3Arouter",
+    probe: "?unexpected=1"
+  },
+  {
+    method: "GET",
+    name: "supporting-material collection",
+    pathname: "/api/supporting-materials",
+    probe: "?limit=0"
+  },
+  {
+    method: "GET",
+    name: "supporting-material detail",
+    pathname: "/api/supporting-materials/supporting-material%3Arouter",
+    probe: "?unexpected=1"
+  },
+  {
+    method: "GET",
+    name: "supporting-material sections",
+    pathname: "/api/supporting-materials/supporting-material%3Arouter/sections",
+    probe: "?limit=0"
+  },
+  {
+    method: "GET",
+    name: "supporting-material section detail",
+    pathname: "/api/supporting-materials/supporting-material%3Arouter/sections/section%3Arouter",
+    probe: "?unexpected=1"
+  },
+  { method: "GET", name: "global changes", pathname: "/api/changes", probe: "?limit=0" },
+  {
+    body: JSON.stringify({ items: [] }),
+    method: "POST",
+    name: "resource batch",
+    pathname: "/api/resources/batch"
+  }
+]
+
+const unsupportedReadMethods = ["DELETE", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"] as const
+const unsupportedResourceBatchMethods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "PUT"] as const
+
 let baseUrl = ""
 let nextServer: ChildProcess | undefined
 let nextServerDiagnostics: () => string = () => "Next server did not start."
@@ -63,7 +126,7 @@ afterAll(async () => {
   }
 })
 
-describe.sequential("NX-02B Next router acceptance", () => {
+describe.sequential("NX-02B and NX-02C Next router acceptance", () => {
   it("resolves Next 16.3.1 from the legislation-web package and boots that resolved CLI", () => {
     const nextPackage = packageRequire("next/package.json") as Readonly<{ version: string }>
     const nextCliPath = packageRequire.resolve("next/dist/bin/next")
@@ -165,10 +228,160 @@ describe.sequential("NX-02B Next router acceptance", () => {
     },
     requestTimeoutMs + 5_000
   )
+
+  it.each(nx02cRoutes)("routes the documented NX-02C %s path through its built handler", async (route) => {
+    expect.hasAssertions()
+    const correlationId = `router-nx02c-${route.name}`
+    const response = await request(`${route.pathname}${route.probe ?? ""}`, {
+      ...(route.body === undefined ? {} : { body: route.body, headers: { "content-type": "application/json" } }),
+      headers: {
+        ...(route.body === undefined ? {} : { "content-type": "application/json" }),
+        "x-correlation-id": correlationId
+      },
+      method: route.method
+    })
+
+    await expectInvalidRequest(response, correlationId)
+  })
+
+  it.each(nx02cRoutes)("keeps all unsupported methods on the built NX-02C %s route", async (route) => {
+    expect.hasAssertions()
+    const unsupportedMethods = route.method === "GET" ? unsupportedReadMethods : unsupportedResourceBatchMethods
+    for (const method of unsupportedMethods) {
+      const correlationId = `router-nx02c-${route.name}-${method.toLowerCase()}`
+      const response = await request(route.pathname, {
+        headers: { "x-correlation-id": correlationId },
+        method
+      })
+
+      await expectCanonicalNotFound(response, correlationId, method === "HEAD")
+    }
+  })
+
+  it.each(nx02cRoutes)(
+    "returns a canonical JSON 404 without redirecting a true trailing slash for NX-02C %s",
+    async (route) => {
+      expect.hasAssertions()
+      const correlationId = `router-nx02c-trailing-${route.name}`
+      const response = await request(`${route.pathname}/`, {
+        ...(route.body === undefined ? {} : { body: route.body, headers: { "content-type": "application/json" } }),
+        headers: {
+          ...(route.body === undefined ? {} : { "content-type": "application/json" }),
+          "x-correlation-id": correlationId
+        },
+        method: route.method
+      })
+
+      expect(response.headers.get("location")).toBeNull()
+      await expectCanonicalNotFound(response, correlationId)
+    }
+  )
+
+  it.each([
+    "/api/documents/document%3Arouter/sections?limit=0",
+    "/api/supporting-materials/supporting-material%3Arouter/sections?limit=0"
+  ])("routes the nested static sections path before a dynamic parent for %s", async (pathname) => {
+    expect.hasAssertions()
+    const correlationId = "router-nx02c-static-sections"
+    const response = await request(pathname, {
+      headers: { "x-correlation-id": correlationId },
+      method: "GET"
+    })
+
+    await expectInvalidRequest(response, correlationId)
+  })
+
+  it.each([
+    "/api/documents/document%3Arouter?unexpected=1",
+    "/api/documents/document%3Arouter/sections/section%3Arouter?unexpected=1",
+    "/api/supporting-materials/supporting-material%3Arouter?unexpected=1",
+    "/api/supporting-materials/supporting-material%3Arouter/sections/section%3Arouter?unexpected=1",
+    "/api/documents/%ZZ?unexpected=1",
+    "/api/supporting-materials/%ZZ?unexpected=1",
+    "/api/documents/%C0%AF?unexpected=1"
+  ])("preserves encoded IDs and reports malformed IDs through the NX-02C boundary for %s", async (pathname) => {
+    expect.hasAssertions()
+    const correlationId = "router-nx02c-path-encoding"
+    const response = await request(pathname, {
+      headers: { "x-correlation-id": correlationId },
+      method: "GET"
+    })
+
+    await expectInvalidRequest(response, correlationId)
+  })
+
+  it("routes the static resources batch endpoint before the API catch-all", async () => {
+    expect.hasAssertions()
+    const correlationId = "router-nx02c-resources-static"
+    const response = await request("/api/resources/batch", {
+      body: JSON.stringify({ items: [] }),
+      headers: { "content-type": "application/json", "x-correlation-id": correlationId },
+      method: "POST"
+    })
+
+    await expectInvalidRequest(response, correlationId)
+  })
+
+  it("does not treat an encoded static resources batch segment as the documented endpoint", async () => {
+    expect.hasAssertions()
+    const correlationId = "router-nx02c-resources-encoded-static"
+    const response = await request("/api/resources/%62atch", {
+      headers: { "x-correlation-id": correlationId },
+      method: "POST"
+    })
+
+    await expectCanonicalNotFound(response, correlationId)
+  })
+
+  it.each([maximumBatchBytes - 1, maximumBatchBytes])(
+    "passes the %i-byte resource batch body into NX-02C request validation",
+    async (byteLength) => {
+      expect.hasAssertions()
+      const body = batchBody(byteLength)
+      expect(Buffer.byteLength(body)).toBe(byteLength)
+      const response = await request("/api/resources/batch", {
+        body,
+        headers: { "content-type": "application/json", "x-correlation-id": "router-resources-batch-boundary" },
+        method: "POST"
+      })
+
+      await expectInvalidRequest(response, "router-resources-batch-boundary")
+    },
+    requestTimeoutMs + 5_000
+  )
+
+  it(
+    "rejects a 5 MiB plus one resource batch body with 413 and leaves the server able to read the next request",
+    async () => {
+      expect.hasAssertions()
+      const body = batchBody(maximumBatchBytes + 1)
+      expect(Buffer.byteLength(body)).toBe(maximumBatchBytes + 1)
+      const response = await request("/api/resources/batch", {
+        body,
+        headers: { "content-type": "application/json", "x-correlation-id": "router-resources-batch-too-large" },
+        method: "POST"
+      })
+
+      await expectPayloadTooLarge(response, "router-resources-batch-too-large")
+
+      const followUp = await request("/api/resources/batch", {
+        body: JSON.stringify({ items: [] }),
+        headers: { "content-type": "application/json", "x-correlation-id": "router-resources-batch-follow-up" },
+        method: "POST"
+      })
+      await expectInvalidRequest(followUp, "router-resources-batch-follow-up")
+    },
+    requestTimeoutMs + 5_000
+  )
 })
 
 async function expectInvalidRequest(response: Response, correlationId: string): Promise<void> {
-  assertStatus(response, 400)
+  if (response.status !== 400) {
+    const body = await response.text()
+    throw new Error(
+      `Expected HTTP 400, received ${response.status} with body ${JSON.stringify(body)}. Next output:\n${nextServerDiagnostics()}`
+    )
+  }
   expect(response.headers.get("content-type")).toMatch(/^application\/json\b/)
   expect(response.headers.get("x-correlation-id")).toBe(correlationId)
   await expect(response.json()).resolves.toMatchObject({
@@ -176,10 +389,17 @@ async function expectInvalidRequest(response: Response, correlationId: string): 
   })
 }
 
-async function expectCanonicalNotFound(response: Response, correlationId: string): Promise<void> {
+async function expectCanonicalNotFound(response: Response, correlationId: string, headRequest = false): Promise<void> {
   assertStatus(response, 404)
   expect(response.headers.get("content-type")).toMatch(/^application\/json\b/)
   expect(response.headers.get("x-correlation-id")).toBe(correlationId)
+  if (headRequest) {
+    const body = await response.text()
+    if (body !== "") {
+      throw new Error(`Expected empty HTTP HEAD response body, received ${JSON.stringify(body)}`)
+    }
+    return
+  }
   await expect(response.json()).resolves.toEqual({
     error: {
       category: "not_found",

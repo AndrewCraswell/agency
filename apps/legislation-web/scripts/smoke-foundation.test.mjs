@@ -9,6 +9,7 @@ let server
 let baseUrl
 let malformedPath
 let invalidBatchStatusPath
+let changeFeedError
 
 function json(response, correlationId, body, status = 200, headers = {}) {
   response.writeHead(status, { "content-type": "application/json", "x-correlation-id": correlationId, ...headers })
@@ -46,6 +47,21 @@ async function body(request) {
 }
 
 function batch(pathname, correlationId, requestBody) {
+  if (pathname === "/api/resources/batch") {
+    return {
+      data: requestBody.items.map((item) =>
+        item.id === "document:__deployment-smoke-missing__"
+          ? {
+              error: { category: "not_found", message: "Fixture was not found", retryable: false },
+              id: item.id,
+              status: "error"
+            }
+          : { data: { id: item.id, type: item.type }, id: item.id, status: "ok" }
+      ),
+      links: { self: pathname },
+      meta: { correlationId, requested: requestBody.items.length, returned: requestBody.items.length, warnings: [] }
+    }
+  }
   const isBillAmendments = pathname === "/api/bills/amendments/batch"
   const id = isBillAmendments ? requestBody.billIds[0] : requestBody.ids[0]
   return {
@@ -97,6 +113,10 @@ beforeAll(async () => {
       json(response, correlationId, notFound(url.pathname, correlationId), 404)
       return
     }
+    if (request.method === "GET" && url.pathname === "/api/changes" && changeFeedError !== undefined) {
+      apiJson(response, correlationId, changeFeedError(correlationId), 422)
+      return
+    }
     if (request.method === "GET" && request.headers["if-none-match"] === 'W/"fixture"') {
       response.writeHead(304, {
         "cache-control": "private, no-store",
@@ -128,10 +148,17 @@ beforeAll(async () => {
       (segments[1] === "jurisdictions" && segments.length === 3) ||
       (segments[1] === "sessions" && segments.length === 3)
     const isNx02bResource = ["bills", "amendments", "votes"].includes(segments[1]) && segments.length === 3
+    const isNx02cResource =
+      (["documents", "supporting-materials"].includes(segments[1]) && segments.length === 3) ||
+      (["documents", "supporting-materials"].includes(segments[1]) &&
+        segments[3] === "sections" &&
+        segments.length === 5)
     apiJson(
       response,
       correlationId,
-      isNx02aResource || isNx02bResource ? resource(url.pathname, correlationId, id) : page(url.pathname, correlationId)
+      isNx02aResource || isNx02bResource || isNx02cResource
+        ? resource(url.pathname, correlationId, id)
+        : page(url.pathname, correlationId)
     )
   })
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve))
@@ -284,6 +311,138 @@ describe("NX-02B deployed smoke profile", () => {
       ).rejects.toThrow("Command failed")
     } finally {
       invalidBatchStatusPath = undefined
+    }
+  })
+})
+
+describe("NX-02C deployed smoke profile", () => {
+  it("cumulatively checks NX-02A/B and exactly nine NX-02C routes with encoded fixtures and mixed resource batch items", async () => {
+    requests.length = 0
+    const result = await runSmoke({
+      LEGISLATION_WEB_SMOKE_AMENDMENT_ID: "amendment:fixture",
+      LEGISLATION_WEB_SMOKE_BILL_ID: "bill:fixture",
+      LEGISLATION_WEB_SMOKE_DOCUMENT_ID: "document:fixture/with space",
+      LEGISLATION_WEB_SMOKE_DOCUMENT_SECTION_ID: "document-section:fixture/with space",
+      LEGISLATION_WEB_SMOKE_NX_02C: "1",
+      LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_ID: "supporting-material:fixture/with space",
+      LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_SECTION_ID: "supporting-material-section:fixture/with space",
+      LEGISLATION_WEB_SMOKE_VOTE_ID: "vote:fixture"
+    })
+
+    expect(result.profile).toBe("foundation+nx-02a+nx-02b+nx-02c")
+    expect(result.nx02a.passed).toHaveLength(11)
+    expect(result.nx02b.passed).toHaveLength(18)
+    expect(result.nx02c.passed).toHaveLength(9)
+    expect(result.nx02c.skipped).toEqual([])
+    expect(result.nx02c.notFound).toEqual([
+      "documents_trailing_slash",
+      "supporting_materials_trailing_slash",
+      "changes_trailing_slash",
+      "resource_batch_trailing_slash"
+    ])
+
+    const nx02c = requests.filter((request) => /^nx-02c-smoke-\d+$/.test(request.correlationId))
+    const conditional = requests.filter((request) => /^nx-02c-smoke-conditional-\d+$/.test(request.correlationId))
+    expect(nx02c).toHaveLength(9)
+    expect(nx02c.map(requestSignature).sort()).toEqual(
+      [
+        "GET /api/documents/document%3Afixture%2Fwith%20space",
+        "GET /api/documents/document%3Afixture%2Fwith%20space/sections?limit=1",
+        "GET /api/documents/document%3Afixture%2Fwith%20space/sections/document-section%3Afixture%2Fwith%20space",
+        "GET /api/supporting-materials?jurisdictionId=jurisdiction%3Aus&classification=committee-report&limit=1",
+        "GET /api/supporting-materials/supporting-material%3Afixture%2Fwith%20space",
+        "GET /api/supporting-materials/supporting-material%3Afixture%2Fwith%20space/sections?limit=1",
+        "GET /api/supporting-materials/supporting-material%3Afixture%2Fwith%20space/sections/supporting-material-section%3Afixture%2Fwith%20space",
+        "GET /api/changes?limit=1",
+        "POST /api/resources/batch"
+      ].sort()
+    )
+    expect(conditional).toHaveLength(8)
+    expect(conditional.every((request) => request.ifNoneMatch === 'W/"fixture"')).toBe(true)
+    expect(nx02c.find((request) => request.pathname === "/api/resources/batch")?.body).toEqual({
+      items: [
+        { id: "document:fixture/with space", type: "document" },
+        { id: "supporting-material:fixture/with space", type: "supporting-material" },
+        { id: "document:__deployment-smoke-missing__", type: "document" }
+      ]
+    })
+  })
+
+  it("reports missing NX-02C fixture configuration as explicit skips without embedding identifiers", async () => {
+    requests.length = 0
+    const result = await runSmoke({ LEGISLATION_WEB_SMOKE_NX_02C: "1" })
+
+    expect(result.nx02c.passed).toEqual(["supporting materials", "changes"])
+    expect(result.nx02c.skipped).toEqual([
+      { name: "document", reason: "fixture_not_configured:documentId" },
+      { name: "document sections", reason: "fixture_not_configured:documentId" },
+      { name: "document section", reason: "fixture_not_configured:documentId" },
+      { name: "supporting material", reason: "fixture_not_configured:supportingMaterialId" },
+      { name: "supporting material sections", reason: "fixture_not_configured:supportingMaterialId" },
+      { name: "supporting material section", reason: "fixture_not_configured:supportingMaterialId" },
+      { name: "resource batch", reason: "fixture_not_configured:documentId" }
+    ])
+    expect(requests.some((request) => `${request.pathname}${request.search}`.includes("fixture"))).toBe(false)
+  })
+
+  it("redacts NX-02C fixture IDs from failing diagnostics", async () => {
+    const fixtureId = "document:do-not-emit"
+    malformedPath = `/api/documents/${encodeURIComponent(fixtureId)}`
+    try {
+      let error
+      try {
+        await runSmoke({ LEGISLATION_WEB_SMOKE_DOCUMENT_ID: fixtureId, LEGISLATION_WEB_SMOKE_NX_02C: "1" })
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).not.toContain(fixtureId)
+      expect(error.stderr).not.toContain(encodeURIComponent(fixtureId))
+    } finally {
+      malformedPath = undefined
+    }
+  })
+
+  it("classifies an exact canonical global-change 422 as a data-incomplete skip without leaking its message", async () => {
+    const privateMessage = "Change record change:private-record has no canonical source provenance"
+    changeFeedError = (correlationId) => ({
+      error: { category: "unprocessable", correlationId, message: privateMessage, retryable: false }
+    })
+    try {
+      const result = await runSmoke({ LEGISLATION_WEB_SMOKE_NX_02C: "1" })
+
+      expect(result.nx02c.passed).toEqual(["supporting materials"])
+      expect(result.nx02c.skipped).toContainEqual({ name: "changes", reason: "canonical_data_incomplete" })
+      expect(JSON.stringify(result)).not.toContain("change:private-record")
+      expect(JSON.stringify(result)).not.toContain(privateMessage)
+    } finally {
+      changeFeedError = undefined
+    }
+  })
+
+  it("rejects a malformed global-change 422 without leaking its message", async () => {
+    const privateMessage = "Change record change:private-record has no canonical source provenance"
+    changeFeedError = () => ({
+      error: {
+        category: "unprocessable",
+        correlationId: "wrong-correlation",
+        message: privateMessage,
+        retryable: false
+      }
+    })
+    try {
+      let error
+      try {
+        await runSmoke({ LEGISLATION_WEB_SMOKE_NX_02C: "1" })
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("GET changes did not return a canonical data-incomplete ErrorResponse")
+      expect(error.stderr).not.toContain("change:private-record")
+      expect(error.stderr).not.toContain(privateMessage)
+    } finally {
+      changeFeedError = undefined
     }
   })
 })

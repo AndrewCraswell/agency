@@ -73,4 +73,30 @@ $env:LEGISLATION_WEB_SMOKE_VOTE_ID = "vote:approved-fixture"
 pnpm --filter legislation-web smoke:foundation
 ```
 
+After NX-02C is deployed, set `LEGISLATION_WEB_SMOKE_NX_02C` to `1`. This cumulative profile runs NX-02A and NX-02B,
+then checks all nine document, supporting-material, change-feed, and resource-batch routes. It keeps fixture IDs out of
+the report and URI-encodes them before use. Configure `LEGISLATION_WEB_SMOKE_DOCUMENT_ID`,
+`LEGISLATION_WEB_SMOKE_DOCUMENT_SECTION_ID`, `LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_ID`, and
+`LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_SECTION_ID` only when each value is available in the deployed target.
+Fixture-bound routes without their required values report `fixture_not_configured`; canonical `404 not_found` responses
+for configured fixtures report `fixture_missing`; malformed responses fail the smoke.
+
+The profile checks the exact Page and Resource envelopes, correlation-ID propagation,
+`cache-control: private, no-store`, and ETag conditional `304` behavior for every NX-02C `GET` that returns `200`. Its
+one `POST /api/resources/batch` request includes valid document and supporting-material items plus a deliberately
+missing document item, so a valid outer batch must prove both successful canonical resources and the documented per-item
+`not_found` result. The supporting-material collection probe uses the indexed `jurisdiction:us` and `committee-report`
+scope. Only the global change-feed probe may report an exact canonical `422 unprocessable` as a
+`canonical_data_incomplete` skip when stored records lack canonical source provenance; the response message and record
+identity are never emitted, and any malformed `422` fails the smoke.
+
+```powershell
+$env:LEGISLATION_WEB_SMOKE_NX_02C = "1"
+$env:LEGISLATION_WEB_SMOKE_DOCUMENT_ID = "document:approved-fixture"
+$env:LEGISLATION_WEB_SMOKE_DOCUMENT_SECTION_ID = "document-section:approved-fixture"
+$env:LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_ID = "supporting-material:approved-fixture"
+$env:LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_SECTION_ID = "supporting-material-section:approved-fixture"
+pnpm --filter legislation-web smoke:foundation
+```
+
 Start with the [frontend architecture and dependency record](docs/architecture.md).

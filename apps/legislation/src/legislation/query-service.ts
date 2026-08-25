@@ -767,6 +767,51 @@ export function decodeSupportingMaterialSearchCursor(
   }
 }
 
+/**
+ * Collection cursors bind the ordered material traversal to its complete
+ * filter and sort scope. Unlike ranked search, collection traversal has no
+ * bounded candidate window, so its offset is only constrained to a safe,
+ * nonnegative integer.
+ */
+export function encodeSupportingMaterialCollectionCursor(offset: number, input: SupportingMaterialSearchInput): string {
+  if (!Number.isSafeInteger(offset) || offset < 0) {
+    throw new RangeError("Supporting material collection cursor offset must be a nonnegative safe integer")
+  }
+  return Buffer.from(
+    JSON.stringify({ binding: supportingMaterialSearchCursorBinding(input), offset, version: 1 }),
+    "utf8"
+  ).toString("base64url")
+}
+
+export function decodeSupportingMaterialCollectionCursor(
+  cursor: string | undefined,
+  input: SupportingMaterialSearchInput
+): number {
+  if (cursor === undefined) {
+    return 0
+  }
+  try {
+    const value: unknown = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"))
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      !("binding" in value) ||
+      value.binding !== supportingMaterialSearchCursorBinding(input) ||
+      !("offset" in value) ||
+      typeof value.offset !== "number" ||
+      !Number.isSafeInteger(value.offset) ||
+      value.offset < 0 ||
+      !("version" in value) ||
+      value.version !== 1
+    ) {
+      throw new Error("invalid supporting material collection cursor")
+    }
+    return value.offset
+  } catch {
+    throw new LegislationError("invalid_request", "Invalid supporting material collection cursor")
+  }
+}
+
 function supportingMaterialSearchCursorBinding(input: SupportingMaterialSearchInput): string {
   const value = {
     amendmentIds: supportingMaterialCursorValues(input.amendmentIds, input.amendmentId),
@@ -2138,7 +2183,7 @@ export class LegislationQueryService {
       }
     }
     const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
-    const offset = decodeOffset(input.cursor)
+    const offset = decodeSupportingMaterialCollectionCursor(input.cursor, input)
     const rows = await this.#database
       .selectDistinct({ material: supportingMaterialSummaryColumns })
       .from(supportingMaterials)
@@ -2202,7 +2247,7 @@ export class LegislationQueryService {
     const items = await this.#withSupportingMaterialLinkIds(rows.slice(0, limit).map((row) => row.material))
     return {
       items,
-      nextCursor: truncated ? encodeOffset(offset + limit) : undefined,
+      nextCursor: truncated ? encodeSupportingMaterialCollectionCursor(offset + limit, input) : undefined,
       truncated,
       warnings: coverageWarnings(items.length, "supporting materials")
     }

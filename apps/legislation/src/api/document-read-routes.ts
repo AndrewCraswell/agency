@@ -69,7 +69,7 @@ async function handleDocumentReadRequest(
 
   switch (route.name) {
     case "listBillDocuments": {
-      const limit = queryInteger(url, "limit", 25)
+      const limit = queryInteger(url, "limit", 20)
       await service.assertBillExists(route.billId)
       const page = await service.listBillDocuments({
         billId: route.billId,
@@ -93,7 +93,7 @@ async function handleDocumentReadRequest(
       return true
     }
     case "listDocumentSections": {
-      const limit = queryInteger(url, "limit", 25)
+      const limit = queryInteger(url, "limit", 20)
       const pageFrom = optionalPositiveInteger(url, "pageFrom")
       const pageTo = optionalPositiveInteger(url, "pageTo")
       if (pageFrom !== undefined && pageTo !== undefined && pageFrom > pageTo) {

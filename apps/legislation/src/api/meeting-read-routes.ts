@@ -3,6 +3,7 @@ import type { MeetingAgendaPage } from "../db/queries/meeting-agenda-read.js"
 import type { MeetingDocumentPage, MeetingDocumentRead } from "../db/queries/meeting-document-read.js"
 import type { MeetingOutcomePage } from "../db/queries/meeting-outcome-read.js"
 import type { MeetingParticipantPage } from "../db/queries/meeting-participant-reads.js"
+import type { MeetingOrganizationRead, MeetingRead } from "../db/queries/meeting-read.js"
 import { LegislationError } from "../legislation/errors.js"
 import { toProjectionLegislationError } from "./canonical-read.js"
 import {
@@ -136,25 +137,50 @@ async function handleDetail(
     service.listMeetingOutcomes({ limit: childLimit, meetingId }),
     service.listMeetingParticipants({ limit: childLimit, meetingId })
   ])
-  const summary = projectMeetingRead(meeting, apiBaseUrl)
   sendApiJson(
     response,
     200,
-    apiResource(request, {
-      ...summary,
-      agenda: agenda.items.map((item) => projectMeetingAgendaItemRead(item, apiBaseUrl)),
-      childPageInfo: {
-        agenda: pageInfo(agenda, childLimit),
-        documents: pageInfo(documents, childLimit),
-        outcomes: pageInfo(outcomes, childLimit),
-        participants: pageInfo(participants, childLimit)
-      },
-      documents: documents.items.map((item) => projectMeetingDocumentRead(item, apiBaseUrl)),
-      organizations: organizations.map((item) => projectOrganizationRow(item, apiBaseUrl)),
-      outcomes: outcomes.items.map((item) => projectMeetingOutcomeRead(item, apiBaseUrl)),
-      participants: participants.items.map((item) => projectMeetingParticipantRead(item, apiBaseUrl))
-    })
+    apiResource(
+      request,
+      projectMeetingDetailRead(
+        meeting,
+        organizations,
+        agenda,
+        documents,
+        outcomes,
+        participants,
+        apiBaseUrl,
+        childLimit
+      )
+    )
   )
+}
+
+export function projectMeetingDetailRead(
+  meeting: MeetingRead,
+  organizations: readonly MeetingOrganizationRead[],
+  agenda: MeetingAgendaPage,
+  documents: MeetingDocumentPage<MeetingDocumentRead>,
+  outcomes: MeetingOutcomePage,
+  participants: MeetingParticipantPage,
+  apiBaseUrl: string,
+  childLimit: number
+) {
+  const summary = projectMeetingRead(meeting, apiBaseUrl)
+  return {
+    ...summary,
+    agenda: agenda.items.map((item) => projectMeetingAgendaItemRead(item, apiBaseUrl)),
+    childPageInfo: {
+      agenda: pageInfo(agenda, childLimit),
+      documents: pageInfo(documents, childLimit),
+      outcomes: pageInfo(outcomes, childLimit),
+      participants: pageInfo(participants, childLimit)
+    },
+    documents: documents.items.map((item) => projectMeetingDocumentRead(item, apiBaseUrl)),
+    organizations: organizations.map((item) => projectOrganizationRow(item, apiBaseUrl)),
+    outcomes: outcomes.items.map((item) => projectMeetingOutcomeRead(item, apiBaseUrl)),
+    participants: participants.items.map((item) => projectMeetingParticipantRead(item, apiBaseUrl))
+  }
 }
 
 function pageInfo(page: { nextCursor?: string; truncated: boolean }, limit: number) {
