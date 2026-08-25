@@ -320,8 +320,8 @@ export const usbPdFootprints = [
       pinOneMarker: "package pin-1 index area"
     },
     pads: [
-      ...qfnRing(1, 3, -0.75, 0.65, 0, -0.65, 0.45, 0.3, ["GND", "GND", "GND"]),
-      ...qfnRing(4, 3, 0.75, -0.65, 0, 0.65, 0.45, 0.3, ["IN", "IN", "IN"])
+      ...qfnRing(1, 3, -0.975, 0.65, 0, -0.65, 0.45, 0.3, ["GND", "GND", "GND"]),
+      ...qfnRing(4, 3, 0.975, -0.65, 0, 0.65, 0.45, 0.3, ["IN", "IN", "IN"])
     ],
     paste: {
       coverage: [{ padIds: ["7"], printedAreaPercent: 88 }],

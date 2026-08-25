@@ -54,7 +54,7 @@ describe("USB-C and PD footprint library", () => {
     expect(tvs?.pads.map((candidate) => candidate.role)).toEqual(["GND", "GND", "GND", "IN", "IN", "IN"])
     expect(tvs?.thermalPads).toMatchObject([{ id: "7", role: "GND thermal pad" }])
     expect(tvs?.pads.find((candidate) => candidate.id === "6")).toMatchObject({
-      xMm: 0.75,
+      xMm: 0.975,
       yMm: 0.65,
       widthMm: 0.45,
       heightMm: 0.3
