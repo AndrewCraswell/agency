@@ -49,4 +49,28 @@ $env:LEGISLATION_WEB_SMOKE_NX_02A = "1"
 pnpm --filter legislation-web smoke:foundation
 ```
 
+After NX-02B is deployed, set `LEGISLATION_WEB_SMOKE_NX_02B` to `1`. This cumulative profile also runs NX-02A, then
+checks all 18 bills, amendments, and votes routes. It uses no embedded record identifiers. Configure only the fixture
+IDs available in the target deployment; every route that needs an omitted ID is reported as an explicit
+`fixture_not_configured` skip. A configured fixture that returns a canonical `404 not_found` is reported as
+`fixture_missing`; malformed errors, Pages, Resources, or Batch responses fail the smoke.
+
+`LEGISLATION_WEB_SMOKE_BILL_ID` covers the bill detail, seven bill child collections, and both bill batch routes.
+`LEGISLATION_WEB_SMOKE_AMENDMENT_ID` covers amendment detail and its batch route. `LEGISLATION_WEB_SMOKE_VOTE_ID` covers
+vote detail, positions, and its batch route. Values are trimmed, never emitted in the report, URI-encoded before
+requesting, and reject control characters or values longer than 256 characters. The profile verifies correlation-ID
+propagation, JSON envelopes, documented request methods, `cache-control: private, no-store`, and ETag conditional `304`
+responses for every NX-02B `GET` that returns a canonical `200`. Routes skipped because their fixture is not configured
+or is missing do not perform the cache and ETag check; configure a known deployed fixture before treating that
+endpoint's cache behavior as verified. It also verifies canonical no-redirect trailing-slash `404` responses for the
+three collection roots.
+
+```powershell
+$env:LEGISLATION_WEB_SMOKE_NX_02B = "1"
+$env:LEGISLATION_WEB_SMOKE_BILL_ID = "bill:approved-fixture"
+$env:LEGISLATION_WEB_SMOKE_AMENDMENT_ID = "amendment:approved-fixture"
+$env:LEGISLATION_WEB_SMOKE_VOTE_ID = "vote:approved-fixture"
+pnpm --filter legislation-web smoke:foundation
+```
+
 Start with the [frontend architecture and dependency record](docs/architecture.md).

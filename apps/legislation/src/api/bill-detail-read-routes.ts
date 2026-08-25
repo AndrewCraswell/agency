@@ -78,6 +78,8 @@ async function serveRelationshipPage(
 ): Promise<boolean> {
   assertAllowedQueryParameters(url, ["cursor", "limit", "from", "to", "organizationId", "classification", "result"])
   assertSingleNonBlankQueryValues(url, ["cursor", "limit", "from", "to", "organizationId", "classification", "result"])
+  // Vote details contain positions, so this relationship intentionally does
+  // not inherit the broader 100-item collection maximum.
   const limit = queryInteger(url, "limit", MAX_BATCH_ITEMS, MAX_BATCH_ITEMS)
   const from = queryOptionalDate(url, "from")
   const to = queryOptionalDate(url, "to")

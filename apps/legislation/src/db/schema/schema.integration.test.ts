@@ -7,6 +7,8 @@ import { migrate } from "drizzle-orm/node-postgres/migrator"
 import pg from "pg"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { z } from "zod"
+import { createAmendmentReadRepository } from "../../api/amendment-read-repository.js"
+import { createBillDetailReadRepository } from "../../api/bill-detail-read-repository.js"
 import { createCivicSearchApiHandler } from "../../api/civic-search.js"
 import { generateCoverageReport } from "../../coverage/report.js"
 import {
@@ -3296,6 +3298,101 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
     )
 
     await expect(validateCorpus(database)).resolves.toMatchObject({ criticalIssues: 0, valid: true })
+  })
+
+  it("round-trips a mixed bill-detail amendment cursor through the repository without skips or scope widening", async () => {
+    const jurisdictionId = "jurisdiction:cursor-contract"
+    const sessionId = "session:cursor-contract:2026"
+    const billId = "bill:us:119:hr:cursor"
+    const apiBaseUrl = "https://api.example.test"
+    const childLimit = 2
+
+    await database.insert(schema.jurisdictions).values({
+      classification: "country",
+      countryCode: "US",
+      id: jurisdictionId,
+      name: "Cursor Contract"
+    })
+    await database.insert(schema.legislativeSessions).values({
+      id: sessionId,
+      identifier: "119",
+      jurisdictionId,
+      name: "119th Congress"
+    })
+    await database.insert(schema.bills).values({
+      id: billId,
+      identifier: "HR Cursor",
+      jurisdictionId,
+      sessionId,
+      sourceUrl: "https://source.example.test/bills/cursor",
+      title: "Cursor contract bill"
+    })
+    await database.insert(schema.amendments).values(
+      Array.from({ length: childLimit + 1 }, (_value, index) => ({
+        amendmentNumber: String(index + 1),
+        amendmentType: "floor",
+        billId,
+        id: `amendment:cursor:${index + 1}`,
+        jurisdictionId,
+        printedIdentifier: `Structured ${index + 1}`,
+        sourceId: `cursor:structured:${index + 1}`,
+        sourceUrl: `https://source.example.test/amendments/structured/${index + 1}`,
+        status: "introduced",
+        submittedDate: "2026-02-01"
+      }))
+    )
+    await database.insert(schema.billDocuments).values(
+      Array.from({ length: childLimit + 1 }, (_value, index) => ({
+        billId,
+        classification: "amendment",
+        documentDate: "2026-02-01",
+        id: `${billId}:document:amendment:${index + 1}`,
+        sourceUrl: `https://source.example.test/amendments/document/${index + 1}`,
+        title: `Document ${index + 1}`
+      }))
+    )
+
+    const billRepository = createBillDetailReadRepository(database, apiBaseUrl)
+    const amendmentRepository = createAmendmentReadRepository(database, apiBaseUrl)
+    const detail = await billRepository.getBillDetail({ childLimit, id: billId })
+    const firstCursor = detail.childPageInfo.amendments.nextCursor
+    expect(firstCursor).not.toBeNull()
+
+    const continuationItems: (typeof detail.amendments)[number][] = []
+    for (let cursor = firstCursor; cursor !== null; ) {
+      const page = await amendmentRepository.listAmendments({ billId, cursor, limit: childLimit })
+      continuationItems.push(...page.items)
+      cursor = page.nextCursor ?? null
+    }
+    const fullCollection = await amendmentRepository.listAmendments({ billId, limit: 100 })
+    const combinedIds = [...detail.amendments, ...continuationItems].map((item) => item.id)
+
+    expect(combinedIds).toEqual(fullCollection.items.map((item) => item.id))
+    expect(new Set(combinedIds).size).toBe(fullCollection.items.length)
+    await expect(
+      amendmentRepository.listAmendments({
+        billId,
+        cursor: firstCursor ?? undefined,
+        limit: childLimit,
+        recordTypes: ["document"]
+      })
+    ).rejects.toMatchObject({ category: "invalid_request" })
+    await expect(
+      amendmentRepository.listAmendments({
+        billId,
+        cursor: firstCursor ?? undefined,
+        limit: childLimit,
+        statuses: ["introduced"]
+      })
+    ).rejects.toMatchObject({ category: "invalid_request" })
+    await expect(
+      amendmentRepository.listAmendments({
+        billId,
+        cursor: firstCursor ?? undefined,
+        limit: childLimit,
+        submittedFrom: "2026-02-01"
+      })
+    ).rejects.toMatchObject({ category: "invalid_request" })
   })
 
   it("inspects representative structured, lexical, semantic, and passage query plans within the latency gate", async () => {

@@ -198,7 +198,7 @@ function parseIdsBody(body: JsonRecord, property: "billIds" | "ids"): string[] {
 }
 
 function parseIdsValue(value: unknown, property: "billIds" | "ids"): string[] {
-  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_BATCH_ITEMS) {
+  if (!Array.isArray(value) || value.length < 1) {
     throw new LegislationError("invalid_request", `${property} must contain between 1 and ${MAX_BATCH_ITEMS} IDs`)
   }
   const ids = value.map((item, index) => {
@@ -211,10 +211,11 @@ function parseIdsValue(value: unknown, property: "billIds" | "ids"): string[] {
     }
     return id
   })
-  if (new Set(ids).size !== ids.length) {
-    throw new LegislationError("invalid_request", `${property} values must be unique`)
+  const uniqueIds = [...new Set(ids)]
+  if (uniqueIds.length > MAX_BATCH_ITEMS) {
+    throw new LegislationError("invalid_request", `${property} must contain between 1 and ${MAX_BATCH_ITEMS} IDs`)
   }
-  return ids
+  return uniqueIds
 }
 
 function assertExactKeys(body: JsonRecord, allowed: readonly string[], required: readonly string[]): void {

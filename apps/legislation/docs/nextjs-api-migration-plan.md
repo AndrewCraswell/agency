@@ -25,10 +25,10 @@ placeholder needed to prove the application runtime.
 
 | Concern | Current evidence | Target state |
 | --- | --- | --- |
-| Application and API runtime | Next.js `16.3.1` App Router foundation deployed from source commit `d344cc0` | Next.js App Router production server in `legislation-web` with staged endpoint blocks |
+| Application and API runtime | Next.js `16.3.1` App Router foundation is deployed; the last verified source deployment is `cd297c07-b9d9-4900-b0ff-9f6ac2bc6434` from source commit `5de0383` | Next.js App Router production server in `legislation-web` with staged endpoint blocks |
 | Public endpoint domain code | 87 of 87 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
-| Next.js Route Handlers | 0 of 87 Done; 11 Ready; 76 Blocked | 87 of 87 deployed and remotely smoked |
-| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`, deployment `50a71f45-0d55-4ce7-9872-806c21043490` (`SUCCESS`), source `d344cc0`, domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service deleted after the gate | Staged Next.js endpoint releases on `legislation-web`; rollback uses the preceding successful `legislation-web` deployment |
+| Next.js Route Handlers | 11 of 87 Done in NX-02A; 18 In progress in NX-02B; 0 Ready; 58 Blocked at ordered release gates | 87 of 87 deployed and remotely smoked |
+| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`, last verified source deployment `cd297c07-b9d9-4900-b0ff-9f6ac2bc6434` (`SUCCESS`), source `5de0383`, domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; production schema migrations through the current ledger are applied; old `legislation-api` service is deleted | Staged Next.js endpoint releases on `legislation-web`; rollback uses the preceding successful `legislation-web` deployment |
 | Authentication | WorkOS logic exists in the standalone composition | Added to the Next.js request boundary only after route migration |
 | Rate limiting | No approved distributed Next.js boundary | Added after authentication with a shared Railway-compatible store |
 | MCP transport | In-process access remains | HTTP client cutover only after API, auth, and rate-limit gates pass |
@@ -119,10 +119,9 @@ State: **Done**.
 - Teardown evidence: old Railway `legislation-api` service `05eb1486-7775-4797-b1c4-1b4a3f31cd26` was deleted on
   2026-08-25 after the deployment and health/readiness smoke gates passed. The Railway service list now contains only
   `legislation-web`, `pgbouncer`, and `pgvector`.
-- Known follow-up carried into the active NX-02A gate: a generic unknown Next.js path still returns the framework's HTML
-  `404`. The API catch-all must normalize unknown `/api/**` paths to the standard JSON error envelope before NX-02A's
-  deployed smoke; this is not counted as one of the 87 endpoint routes and does not change the completed health/readiness
-  foundation gate.
+- NX-02A includes the committed and deployed API catch-all, which normalizes unknown `/api/**` paths to the standard JSON
+  error envelope. It remains part of the block's smoke coverage but is not counted as one of the 87 endpoint routes and
+  does not change the completed health/readiness foundation gate.
 
 Exit gate: complete. The approved Next.js App Router foundation reached terminal `SUCCESS`, remote `/health` and `/ready`
 smoke passed, and the old `legislation-api` Railway service was deleted and recorded before endpoint migration.
@@ -137,7 +136,8 @@ remote smoke, and rollback evidence.
 
 #### NX-02A: Jurisdictions and sessions (11 endpoints)
 
-Next route state for every operation in this block: **Ready**. NX-01 is complete; implementation may begin.
+Next route state for every operation in this block: **Done**. The explicit handlers and API catch-all are committed and
+deployed on `legislation-web`; all 11 operations and the rejection checks passed deployed smoke.
 
 - `GET /api/jurisdictions`
 - `GET /api/jurisdictions/{jurisdictionId}`
@@ -151,13 +151,19 @@ Next route state for every operation in this block: **Ready**. NX-01 is complete
 - `GET /api/sessions/{sessionId}/bills`
 - `GET /api/sessions/{sessionId}/meetings`
 
-NX-02A active gate: add the API catch-all fallback so unknown `/api/**` paths return the standard JSON error envelope
-instead of Next.js's generic HTML `404`. The catch-all closes the rejection-path gate but does not count as one of the 87
-explicit migrated endpoint handlers.
+The Alaska scoped snapshot corrected the publisher classification to `legislature`. Production processed all 6 of 6
+records from import hash `a89bc8c83d9c57893c731e090f9599cf094e9cb73e88fce5f0b7df44aadd357c`; its idempotent rerun skipped all
+6. The full deployed foundation and NX-02A smoke now passes all 11 operations plus rejection checks. Production schema
+migrations through the current ledger are applied. The nationwide audit remains incomplete for 52 jurisdictions and 648
+sessions; that broader data gap does not reopen the successfully scoped NX-02A route gate. The API catch-all is part of
+the deployed block and does not count as one of the 87 explicit migrated endpoint handlers.
 
 #### NX-02B: Bills, amendments, and votes (18 endpoints)
 
-Next route state for every operation in this block: **Blocked** on NX-02A.
+Next route state for every operation in this block: **In progress**. NX-02A's release gate is complete. Explicit bills,
+amendments, and votes Route Handlers plus their composition artifacts have passed root review and local verification but still require
+deployment and deployed smoke. This is not authorization, rate limiting, or MCP scope, and it does not
+promote any of these 18 operations to **Done**.
 
 - `GET /api/bills`
 - `POST /api/bills/batch`
@@ -367,7 +373,10 @@ client boundary with complete release and rollback evidence.
 Progress reports must always present both numbers:
 
 - **Reusable domain implementation:** 87/87.
-- **Next.js Route Handler migration:** 0/87 Done; 11 Ready; 76 Blocked.
+- **Next.js Route Handler release state:** 11/87 Done in NX-02A; 18 In progress in NX-02B; 0 Ready; 58 Blocked. The
+  11+18+58 states sum to all 87 public API operations.
+- **NX-02B code state:** 18 explicit route/composition artifacts are In progress and have passed root review and local
+  verification; deployment and deployed smoke remain before they can be **Done**.
 
 Foundation, authentication, rate limiting, MCP cutover, and final cleanup are separate phase gates. None may be inferred
 from the endpoint count, and none may be moved earlier than the approved sequence.

@@ -144,6 +144,58 @@ describe("amendment read API handler", () => {
     })
   })
 
+  it("de-duplicates amendment batch IDs in first-occurrence order and accepts 25 unique IDs", async () => {
+    const ids = Array.from({ length: 25 }, (_value, index) => `amendment:${index + 1}`)
+    const baseUrl = await startServer({
+      getAmendment: async (id) => detail(id),
+      listAmendments: async () => ({ items: [], truncated: false })
+    })
+
+    const response = await fetch(`${baseUrl}/api/amendments/batch`, {
+      body: JSON.stringify({ ids: [...ids, ids[0]] }),
+      headers: { "content-type": "application/json" },
+      method: "POST"
+    })
+
+    expect(response.status).toBe(200)
+    await expect(response.json()).resolves.toMatchObject({
+      data: ids.map((id) => ({ id, status: "ok" })),
+      meta: { requested: 25, returned: 25 }
+    })
+  })
+
+  it("accepts a batch body exactly at the 5 MiB limit and rejects one byte over", async () => {
+    const baseUrl = await startServer({
+      getAmendment: async (id) => detail(id),
+      listAmendments: async () => ({ items: [], truncated: false })
+    })
+    const maximumBytes = 5 * 1024 * 1024
+    const json = JSON.stringify({ ids: ["amendment:boundary"] })
+    const padding = " ".repeat(maximumBytes - new TextEncoder().encode(json).byteLength)
+    const atLimit = `${json}${padding}`
+
+    const [accepted, rejected] = await Promise.all([
+      fetch(`${baseUrl}/api/amendments/batch`, {
+        body: atLimit,
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      }),
+      fetch(`${baseUrl}/api/amendments/batch`, {
+        body: `${atLimit} `,
+        headers: { "content-type": "application/json" },
+        method: "POST"
+      })
+    ])
+
+    expect(accepted.status).toBe(200)
+    await expect(accepted.json()).resolves.toMatchObject({
+      data: [{ id: "amendment:boundary", status: "ok" }],
+      meta: { requested: 1, returned: 1 }
+    })
+    expect(rejected.status).toBe(413)
+    await expect(rejected.json()).resolves.toMatchObject({ error: { category: "payload_too_large" } })
+  })
+
   it("gives every bill batch item a separately filtered page and isolates a missing bill", async () => {
     const received: unknown[] = []
     const baseUrl = await startServer({
@@ -254,7 +306,7 @@ describe("amendment read API handler", () => {
       fetch(`${baseUrl}/%61pi/amendments/amendment%3A1`),
       fetch(`${baseUrl}/api/bills//amendments`),
       fetch(`${baseUrl}/api/amendments/batch`, {
-        body: JSON.stringify({ ids: ["amendment:1", "amendment:1"] }),
+        body: JSON.stringify({ ids: ["amendment:1"], ignored: true }),
         headers: { "content-type": "application/json" },
         method: "POST"
       }),

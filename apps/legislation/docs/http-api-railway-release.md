@@ -23,20 +23,22 @@ is the existing `apps/legislation-web/app/api` boundary, and its deployment is t
 `legislation-web`. The `apps/legislation` service remains reusable domain code plus transitional standalone source; it is
 not a live rollback service. Neither service should be described as final API cutover until the migration gates pass.
 
-## Current Next.js foundation release
+## Last verified Next.js source deployment
 
 | Field | Recorded value |
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
-| Source commit | `d344cc0` |
-| Deployment | `50a71f45-0d55-4ce7-9872-806c21043490` |
+| Source commit | `5de0383` |
+| Deployment | `cd297c07-b9d9-4900-b0ff-9f6ac2bc6434` |
 | Deployment status | `SUCCESS` |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
+| Production schema migrations | Applied through the current ledger |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
 | Old-service deletion | `legislation-api` (`05eb1486-7775-4797-b1c4-1b4a3f31cd26`), deleted 2026-08-25 after smoke |
 
-This is the NX-01 foundation deployment only. It does not credit any of the 87 public API routes as migrated.
+This is the last verified source deployment for the in-progress NX-02A block. It does not credit any of the 87 public API
+routes as migrated or **Done**.
 
 ## Next.js foundation deployment configuration
 
@@ -66,35 +68,32 @@ nonempty `Page<BillSummary>` responses for the jurisdiction- and session-scoped 
 server's health, readiness, and rejection-path behavior. Its scope remains intentionally narrower than the full API
 acceptance checklist.
 
-## NX-01 remote foundation evidence
+## NX-02A remote deployment evidence
 
 | Check | Result |
 | --- | --- |
-| Deployment | `legislation-web` deployment `50a71f45-0d55-4ce7-9872-806c21043490` reached terminal `SUCCESS` from source commit `d344cc0` |
-| `GET /health` | `200` with `{ "status": "ok" }` |
-| `GET /ready` | `200` with `{ "databasePool": { "active": 0, "idle": 1, "maximum": 8, "saturation": 0, "total": 1, "waiting": 0 }, "status": "ready" }` |
-| `POST /health` | JSON `404` with correlation ID preserved |
-| Old service teardown | `legislation-api` service `05eb1486-7775-4797-b1c4-1b4a3f31cd26` deleted after the deployment and health/readiness gates passed |
+| Deployment | `legislation-web` deployment `cd297c07-b9d9-4900-b0ff-9f6ac2bc6434` reached terminal `SUCCESS` from source commit `5de0383` |
+| Production migrations | Schema migrations through the current ledger are applied |
+| Alaska canonical foundation | Corrected publisher classification `legislature`; import `a89bc8c83d9c57893c731e090f9599cf094e9cb73e88fce5f0b7df44aadd357c` processed 6/6; idempotent rerun skipped 6 |
+| NX-02A deployed smoke | All 11 jurisdiction/session operations plus rejection checks passed |
+| Current release state | NX-02A's 11 operations are **Done**; the nationwide audit remains incomplete for 52 jurisdictions and 648 sessions |
+| Old service teardown | `legislation-api` service `05eb1486-7775-4797-b1c4-1b4a3f31cd26` remains deleted |
 
-Active NX-02A gate: generic unknown Next.js paths still return the framework's HTML `404`. The API catch-all must
-normalize unknown `/api/**` paths to the standard JSON error envelope before the first endpoint-block smoke; this does
-not add a route to the 87-endpoint inventory.
+The deployed API catch-all remains outside the 87-route inventory. The scoped Alaska import closed NX-02A's data gate;
+the incomplete nationwide audit does not reduce the passed 11-operation deployed smoke evidence.
 
 ## Next safe actions
 
-1. Close the active NX-02A API catch-all gate by normalizing generic unknown `/api/**` paths to the standard JSON error
-   envelope.
-2. Begin NX-02A with the 11 Ready jurisdictions and sessions routes. After the block passes local and deployed smoke,
-   redeploy `legislation-web` and record the new deployment ID, source commit, cumulative remote-smoke evidence, and the
-   immediately preceding successful `legislation-web` deployment as rollback.
+1. Deploy NX-02B. Its route/composition code has passed root review and local verification; all 18 routes still require
+   deployed smoke before they can be **Done**.
 3. Continue the migration plan's fixed endpoint-block order; do not begin authentication until all 87 routes pass
    deployed smoke.
 4. Add distributed rate limiting after authentication; migrate MCP last.
 
 ## Rollback
 
-The NX-01 foundation deployment `50a71f45-0d55-4ce7-9872-806c21043490` is the current rollback baseline. After each
-subsequent `legislation-web` deployment, rollback uses only the immediately preceding known-good `legislation-web`
-deployment; the old `legislation-api` service was deleted at the NX-01 teardown gate and must not be recreated as a
-rollback target. Recheck `/health`, `/ready`, and every cumulative smoke profile after a rollback. Database migrations
-remain separate from process startup.
+The last verified source deployment is `cd297c07-b9d9-4900-b0ff-9f6ac2bc6434`. After each subsequent
+`legislation-web` deployment, rollback uses only the immediately preceding known-good `legislation-web` deployment; the
+old `legislation-api` service was deleted at the NX-01 teardown gate and must not be recreated as a rollback target.
+Recheck `/health`, `/ready`, and every cumulative smoke profile after a rollback. Database migrations remain separate
+from process startup.

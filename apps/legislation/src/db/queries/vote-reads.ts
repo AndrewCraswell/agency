@@ -141,6 +141,10 @@ export async function listVoteReads(database: LegislationDatabase, input: VoteLi
     .orderBy(...voteOrder(scope.sort))
     .limit(limit + 1)
   const items = rows.slice(0, limit).map((row) => row.vote)
+  await assertVotePositionSequences(
+    database,
+    items.map((vote) => vote.id)
+  )
   const last = items.at(-1)
   return {
     items,
@@ -158,9 +162,7 @@ export async function getVoteRead(database: LegislationDatabase, voteId: string)
   if (row === undefined) {
     throw new LegislationError("not_found", `Vote ${id} was not found`)
   }
-  if (!row.timelineComplete) {
-    throw new LegislationError("unprocessable", "Vote canonical persistence is incomplete")
-  }
+  assertCanonicalVotePersistence(row)
   return row
 }
 
@@ -169,7 +171,7 @@ export async function listVotePositionReads(
   input: VotePositionListInput
 ): Promise<Page<VotePositionRead>> {
   const vote = await getVoteRead(database, input.voteId)
-  await assertVotePositionSequences(database, vote.id)
+  await assertVotePositionSequences(database, [vote.id])
   const limit = limitOf(input.limit)
   const scope = positionScope(input)
   const cursor = decodePositionCursor(input.cursor, scope)
@@ -207,7 +209,7 @@ export async function listVotePositionReads(
         ? encodePositionCursor({
             scope,
             sourceIdentity: last.position.sourceIdentity,
-            sourceSequence: requiredPositionSequence(last.position)
+            sourceSequence: assertVotePositionSequence(last.position)
           })
         : undefined,
     truncated: rows.length > limit
@@ -246,7 +248,7 @@ export async function listPersonVotePositionReads(
     .orderBy(desc(votes.heldAt), asc(votes.id), asc(votePositions.sourceSequence), asc(votePositions.sourceIdentity))
     .limit(limit + 1)
   const items = rows.slice(0, limit)
-  items.forEach((item) => requiredPositionSequence(item.position))
+  items.forEach((item) => assertVotePositionSequence(item.position))
   const last = items.at(-1)
   return {
     items,
@@ -256,7 +258,7 @@ export async function listPersonVotePositionReads(
             heldAt: requiredHeldAt(last.vote),
             scope,
             sourceIdentity: last.position.sourceIdentity,
-            sourceSequence: requiredPositionSequence(last.position),
+            sourceSequence: assertVotePositionSequence(last.position),
             voteId: last.vote.id
           })
         : undefined,
@@ -353,7 +355,15 @@ function requiredHeldAt(vote: VoteRead) {
   }
   return vote.heldAt.toISOString()
 }
-function requiredPositionSequence(position: typeof votePositions.$inferSelect): number {
+export function assertCanonicalVotePersistence(vote: Pick<VoteRead, "timelineComplete">): void {
+  if (!vote.timelineComplete) {
+    throw new LegislationError("unprocessable", "Vote canonical persistence is incomplete")
+  }
+}
+
+export function assertVotePositionSequence(
+  position: Pick<typeof votePositions.$inferSelect, "sourceSequence">
+): number {
   if (
     typeof position.sourceSequence !== "number" ||
     !Number.isSafeInteger(position.sourceSequence) ||
@@ -486,13 +496,16 @@ function nonnegativeInteger(value: unknown): value is number {
 function sameScope(value: unknown, expected: object) {
   return record(value) && JSON.stringify(value) === JSON.stringify(expected)
 }
-async function assertVotePositionSequences(database: LegislationDatabase, voteId: string): Promise<void> {
+async function assertVotePositionSequences(database: LegislationDatabase, voteIds: readonly string[]): Promise<void> {
+  if (voteIds.length === 0) {
+    return
+  }
   if (
     (
       await database
         .select({ sourceIdentity: votePositions.sourceIdentity })
         .from(votePositions)
-        .where(and(eq(votePositions.voteId, voteId), isNull(votePositions.sourceSequence)))
+        .where(and(inArray(votePositions.voteId, voteIds), isNull(votePositions.sourceSequence)))
         .limit(1)
     )[0] !== undefined
   ) {

@@ -22,19 +22,20 @@ This ledger was corrected on 2026-08-25 after the runtime boundary was reconcile
 already exists in `apps/legislation-web` from commit `03e1c7b`, initially pinned to `16.2.6`; the user-approved upgrade
 target is `16.3.1`. Explicit Route Handlers belong under `apps/legislation-web/app/api`, not under `apps/legislation`.
 All 87 rows have reviewed standalone domain/query/projection evidence, so the **Domain state** is 87 **Done**. The
-**Next route state** is 0 **Done**, 0 **In progress**, 11 **Ready**, and 76 **Blocked**. NX-01 is complete: deployment
-`50a71f45-0d55-4ce7-9872-806c21043490` reached terminal `SUCCESS`, remote health/readiness smoke passed, and the old
-Railway `legislation-api` service was deleted. The standalone `apps/legislation` server remains transitional source code
-during migration, not a live rollback service. Authentication, distributed rate limiting, and MCP cutover are later
-global gates and must follow the sequence in the migration plan.
+**Next route release state** is 11 **Done**, 18 **In progress**, 0 **Ready**, and 58 **Blocked**. NX-01 is complete. The
+last verified `legislation-web` source deployment is `cd297c07-b9d9-4900-b0ff-9f6ac2bc6434` from `5de0383`, which
+reached terminal `SUCCESS`; the old Railway `legislation-api` service is deleted. The standalone `apps/legislation`
+server remains transitional source code during migration, not a live rollback service. Production schema migrations
+through the current ledger are applied. Authentication, distributed rate limiting, and MCP cutover are later global gates
+and must follow the sequence in the migration plan.
 
 ## Delivery phases
 
 | ID | Phase | State | Granular tasks and exit gate |
 | --- | --- | --- | --- |
 | NX-00 | Correct the delivery record | In progress | Replace the TanStack/standalone completion model with the canonical Next.js plan, separate domain evidence from Next route evidence, and commit the correction. |
-| NX-01 | Next.js foundation and first deployment | Done | Service `786fbca7-8798-4357-9b45-f0ba092a9750`, deployment `50a71f45-0d55-4ce7-9872-806c21043490`, source `d344cc0`, target port `8080`, remote health/readiness smoke, and old-service deletion are recorded in the migration plan and Railway release record. |
-| NX-02 | Migrate 38 legislative routes | In progress | NX-02A's 11 jurisdictions/sessions routes are **Ready**; implement and release them first, then migrate bills/amendments/votes (18) and documents/materials/resources (9), deploying and remotely smoking each block. |
+| NX-01 | Next.js foundation and first deployment | Done | The foundation deployment and old-service deletion are recorded in the migration plan and Railway release record. The current `legislation-web` source deployment is `cd297c07-b9d9-4900-b0ff-9f6ac2bc6434` from `5de0383`; it is release evidence for NX-02A, not a new foundation completion claim. |
+| NX-02 | Migrate 38 legislative routes | In progress | NX-02A's 11 jurisdictions/sessions routes are **Done**: the corrected Alaska publisher classification is `legislature`; production import `a89bc8c83d9c57893c731e090f9599cf094e9cb73e88fce5f0b7df44aadd357c` processed 6/6 and its idempotent rerun skipped 6; all 11 deployed operations and rejection checks passed. The nationwide audit remains incomplete for 52 jurisdictions and 648 sessions. NX-02B's 18 bills/amendments/votes routes are **In progress**, reviewed, locally verified, and pending deployment and deployed smoke. NX-02C remains blocked. |
 | NX-03 | Migrate 28 civic routes | Blocked | Migrate and release people/organizations (14), then meetings/calendars/representative lookup (14), deploying and remotely smoking each block. |
 | NX-04 | Migrate 7 search/diff/research routes | Blocked | Migrate, deploy, and remotely verify lexical, semantic, hybrid, diff, and cited-answer behavior. |
 | NX-05 | Migrate 14 subscription/webhook routes | Blocked | Migrate and release subscriptions (7), then webhooks (7), including mutation, ETag, idempotency, secret, and URL-safety smoke. |
@@ -56,28 +57,29 @@ For each deliverable:
 
 ## Endpoint state matrix
 
-The endpoint rows below record reusable domain implementation only. The current Next.js route state is tracked separately
-until each explicit handler passes deployment smoke. The first 11 routes are Ready now that NX-01 is complete; the root
-operational `/health` and `/ready` handlers are foundation routes and are not included in the 87 public API endpoint count.
+The endpoint rows below record reusable domain implementation only. The current Next.js route release state is tracked
+separately until each explicit handler passes deployment smoke. The first 11 routes are Done; the root operational
+`/health` and `/ready` handlers are foundation routes and are not included in the 87 public API endpoint count.
 
-### Current Next.js route state
+### Current Next.js route release state
 
 | State | Count | Scope |
 | --- | ---: | --- |
-| Done | 0 | No Next.js API route has completed deployed smoke. |
-| In progress | 0 | No route is currently in implementation review. |
-| Ready | 11 | NX-02A jurisdictions and sessions routes listed in the migration plan. |
-| Blocked | 76 | Later legislative, civic, search, subscription, and webhook blocks. |
+| Done | 11 | NX-02A jurisdictions and sessions routes passed all 11 deployed operation checks and rejection checks after the Alaska snapshot correction. |
+| In progress | 18 | NX-02B bills, amendments, and votes routes have explicit reviewed code and are unblocked; deployment and deployed smoke remain. |
+| Ready | 0 | No unstarted route is eligible ahead of the ordered release gates. |
+| Blocked | 58 | NX-02C and later legislative, civic, search, subscription, and webhook blocks remain behind the ordered release gates. |
 
-The remaining 76 public API routes remain Blocked behind the ordered endpoint blocks in the migration plan. Generic
-unknown Next.js paths currently return HTML `404`; normalize unknown API paths to the standard JSON error envelope before
-final API smoke. This follow-up does not add an endpoint to the 87-route inventory.
+The remaining 58 public API routes remain Blocked behind the ordered endpoint blocks in the migration plan. NX-02B has
+explicit route/composition code In progress, is unblocked at the release gate, and has passed root review and local
+verification; deployment and deployed smoke remain. This work has no authentication, distributed-rate-limit, or MCP scope. The API
+catch-all is outside the 87-route inventory.
 
 The rows below record reusable domain implementation in `apps/legislation` only. Their **Domain state** does not promote a
-Next.js route. Next route status is promoted in the block ledger in the migration plan only after an explicit handler under
-`apps/legislation-web/app/api` passes successful deployed smoke on the parallel `legislation-web` service. NX-02A also
-owns the active API catch-all gate for normalizing unknown `/api/**` paths to the standard JSON error envelope; that
-fallback is not itself one of the 87 endpoint handlers.
+Next.js route. Next route release state is promoted in the block ledger in the migration plan only after an explicit handler under
+`apps/legislation-web/app/api` passes successful deployed smoke on the parallel `legislation-web` service. NX-02A's 11
+committed and deployed handlers are Done after all operation and rejection checks passed; the API catch-all is not itself
+one of the 87 endpoint handlers.
 
 ### Legislative records and documents
 
@@ -187,6 +189,7 @@ fallback is not itself one of the 87 endpoint handlers.
 | POST   | `/api/webhooks/{webhookId}/verify`               | Done  | Pinned DNS-revalidated challenge transport, signed challenge response, bounded timeout, durable activation, exact replay/conflict handling, and composed mutation coverage are evidenced by `e927e38` and `1194e89`.                           |
 
 The current release evidence is recorded in the [Railway API release record](http-api-railway-release.md). Progress
-reports must state both totals: reusable domain implementation is 87/87 **Done**; Next.js Route Handler migration is
-0/87 **Done**, 11 **Ready**, and 76 **Blocked**. The root operational `/health` and `/ready` handlers are foundation
-routes outside the 87-route count, and the unknown-API catch-all remains an active NX-02A gate.
+reports must state both totals: reusable domain implementation is 87/87 **Done**; Next.js Route Handler release state is
+11/87 **Done**, 18 **In progress**, 0 **Ready**, and 58 **Blocked**. The states sum to 87. NX-02B code for 18 unblocked
+routes is In progress but not yet deployed and therefore has no release credit. The root operational `/health` and `/ready`
+handlers and the API catch-all are outside the 87-route count.

@@ -13,7 +13,33 @@ const configuredNx02a = process.env.LEGISLATION_WEB_SMOKE_NX_02A?.trim()
 if (configuredNx02a !== undefined && configuredNx02a !== "" && configuredNx02a !== "1") {
   throw new TypeError("LEGISLATION_WEB_SMOKE_NX_02A must be 1 when it is set")
 }
-const smokeNx02a = configuredNx02a === "1"
+const configuredNx02b = process.env.LEGISLATION_WEB_SMOKE_NX_02B?.trim()
+if (configuredNx02b !== undefined && configuredNx02b !== "" && configuredNx02b !== "1") {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_NX_02B must be 1 when it is set")
+}
+const smokeNx02b = configuredNx02b === "1"
+const smokeNx02a = configuredNx02a === "1" || smokeNx02b
+
+function fixtureEnvironmentValue(name) {
+  const configured = process.env[name]
+  if (configured === undefined || configured.trim() === "") {
+    return undefined
+  }
+  const value = configured.trim()
+  if (
+    value.length > 256 ||
+    [...value].some((character) => character.codePointAt(0) <= 0x1f || character === "\u007F")
+  ) {
+    throw new TypeError(`${name} must be a non-empty fixture ID of at most 256 safe characters`)
+  }
+  return value
+}
+
+const nx02bFixtures = {
+  amendmentId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_AMENDMENT_ID"),
+  billId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_BILL_ID"),
+  voteId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_VOTE_ID")
+}
 
 function smokeBaseUrl(value) {
   let url
@@ -40,10 +66,11 @@ function requestName(url, method) {
 }
 
 async function smokeFetch(url, options = {}) {
-  const method = options.method ?? "GET"
-  const name = requestName(url, method)
+  const { diagnosticName, ...fetchOptions } = options
+  const method = fetchOptions.method ?? "GET"
+  const name = diagnosticName ?? requestName(url, method)
   try {
-    return await fetch(url, { ...options, signal: AbortSignal.timeout(timeoutMs) })
+    return await fetch(url, { ...fetchOptions, signal: AbortSignal.timeout(timeoutMs) })
   } catch (error) {
     const reason = error instanceof Error ? error.name : "request failure"
     throw new Error(`${name} failed within ${timeoutMs}ms (${reason})`)
@@ -67,6 +94,20 @@ function requireResponse(response, name, expectedStatus, expectedContentType) {
   if (expectedContentType !== undefined && !response.headers.get("content-type")?.includes(expectedContentType)) {
     throw new Error(`${name} did not return ${expectedContentType}`)
   }
+}
+
+function requirePrivateNoStore(response, name) {
+  if (response.headers.get("cache-control") !== "private, no-store") {
+    throw new Error(`${name} did not return cache-control private, no-store`)
+  }
+}
+
+function requireEtag(response, name) {
+  const etag = response.headers.get("etag")
+  if (etag === null || etag === "") {
+    throw new Error(`${name} did not return an etag`)
+  }
+  return etag
 }
 
 function isExactJsonObject(value, key, expectedValue) {
@@ -142,6 +183,67 @@ function requireResourceEnvelope(body, name, expectedCorrelationId, expectedId) 
   requireNonEmptyString(body.links.self, `${name} links.self`)
 }
 
+function requireBatchEnvelope(body, name, expectedCorrelationId, expectedId, expectedKind) {
+  if (
+    !hasExactKeys(body, ["data", "links", "meta"]) ||
+    !Array.isArray(body.data) ||
+    body.data.length !== 1 ||
+    !hasExactKeys(body.links, ["self"]) ||
+    !hasExactKeys(body.meta, ["correlationId", "requested", "returned", "warnings"]) ||
+    body.meta.correlationId !== expectedCorrelationId ||
+    body.meta.requested !== 1 ||
+    body.meta.returned !== 1 ||
+    typeof body.links.self !== "string"
+  ) {
+    throw new Error(`${name} did not return an exact Batch envelope`)
+  }
+  requireStringArray(body.meta.warnings, `${name} meta.warnings`)
+  requireNonEmptyString(body.links.self, `${name} links.self`)
+
+  const item = body.data[0]
+  if (!isRecord(item)) {
+    throw new Error(`${name} did not return a valid Batch item`)
+  }
+  if (item.status === "ok") {
+    const id = expectedKind === "bill-amendments" ? item.billId : item.id
+    const payload = expectedKind === "bill-amendments" ? item.page : item.data
+    if (
+      !hasExactKeys(
+        item,
+        expectedKind === "bill-amendments" ? ["billId", "page", "status"] : ["data", "id", "status"]
+      ) ||
+      id !== expectedId
+    ) {
+      throw new Error(`${name} did not return the expected Batch item`)
+    }
+    if (expectedKind === "bill-amendments") {
+      requirePageEnvelope(payload, name, expectedCorrelationId)
+    } else if (!isRecord(payload) || payload.id !== expectedId) {
+      throw new Error(`${name} did not return the expected Batch resource`)
+    }
+    return "passed"
+  }
+  if (item.status !== "error") {
+    throw new Error(`${name} did not return a Batch item with status ok or error`)
+  }
+  if (
+    !hasExactKeys(
+      item,
+      expectedKind === "bill-amendments" ? ["billId", "error", "status"] : ["error", "id", "status"]
+    ) ||
+    (expectedKind === "bill-amendments" ? item.billId : item.id) !== expectedId ||
+    !isRecord(item.error) ||
+    !hasExactKeys(item.error, ["category", "message", "retryable"]) ||
+    item.error.category !== "not_found" ||
+    typeof item.error.message !== "string" ||
+    item.error.message === "" ||
+    item.error.retryable !== false
+  ) {
+    throw new Error(`${name} did not return a canonical missing-fixture Batch item`)
+  }
+  return "fixture_missing"
+}
+
 function requireCanonicalNotFound(body, name, expectedCorrelationId) {
   if (!hasExactKeys(body, ["error"]) || !isRecord(body.error)) {
     throw new Error(`${name} did not return a canonical ErrorResponse`)
@@ -190,6 +292,19 @@ async function smokeCanonicalApiNotFound(root, path, correlationId) {
     throw new Error(`${name} did not return a JSON ErrorResponse body`)
   }
   requireCanonicalNotFound(body, name, correlationId)
+}
+
+async function smokeConditionalGet(url, name, etag, correlationId) {
+  const response = await smokeFetch(url, {
+    diagnosticName: name,
+    headers: { "if-none-match": etag, "x-correlation-id": correlationId }
+  })
+  requireResponse(response, name, 304)
+  requirePrivateNoStore(response, name)
+  requireCorrelationId(response, name, correlationId)
+  if (response.headers.get("etag") !== etag) {
+    throw new Error(`${name} did not preserve its etag for a conditional request`)
+  }
 }
 
 async function smokeNx02aRoutes(root) {
@@ -301,6 +416,168 @@ async function smokeNx02aRoutes(root) {
   return { notFound: ["unknown_api_path", "trailing_slash_api_path"], passed, skipped }
 }
 
+async function smokeNx02bRoutes(root) {
+  const routes = [
+    { kind: "page", name: "bills", path: "/api/bills?limit=1" },
+    { kind: "page", name: "amendments", path: "/api/amendments?limit=1" },
+    { kind: "page", name: "votes", path: "/api/votes?limit=1" },
+    {
+      body: (id) => ({ ids: [id] }),
+      fixture: "billId",
+      kind: "batch",
+      name: "bill batch",
+      method: "POST",
+      path: "/api/bills/batch"
+    },
+    {
+      body: (id) => ({ billIds: [id], limitPerBill: 1 }),
+      fixture: "billId",
+      kind: "bill-amendments",
+      name: "bill amendments batch",
+      method: "POST",
+      path: "/api/bills/amendments/batch"
+    },
+    { fixture: "billId", kind: "resource", name: "bill", path: (id) => `/api/bills/${encodeURIComponent(id)}` },
+    {
+      fixture: "billId",
+      kind: "page",
+      name: "bill timeline",
+      path: (id) => `/api/bills/${encodeURIComponent(id)}/timeline?limit=1`
+    },
+    {
+      fixture: "billId",
+      kind: "page",
+      name: "related bills",
+      path: (id) => `/api/bills/${encodeURIComponent(id)}/related?limit=1`
+    },
+    {
+      fixture: "billId",
+      kind: "page",
+      name: "bill sections",
+      path: (id) => `/api/bills/${encodeURIComponent(id)}/sections?limit=1`
+    },
+    {
+      fixture: "billId",
+      kind: "page",
+      name: "bill amendments",
+      path: (id) => `/api/bills/${encodeURIComponent(id)}/amendments?limit=1`
+    },
+    {
+      fixture: "billId",
+      kind: "page",
+      name: "bill votes",
+      path: (id) => `/api/bills/${encodeURIComponent(id)}/votes?limit=1`
+    },
+    {
+      fixture: "billId",
+      kind: "page",
+      name: "bill documents",
+      path: (id) => `/api/bills/${encodeURIComponent(id)}/documents?limit=1`
+    },
+    {
+      fixture: "billId",
+      kind: "page",
+      name: "bill changes",
+      path: (id) => `/api/bills/${encodeURIComponent(id)}/changes?limit=1`
+    },
+    {
+      body: (id) => ({ ids: [id] }),
+      fixture: "amendmentId",
+      kind: "batch",
+      name: "amendment batch",
+      method: "POST",
+      path: "/api/amendments/batch"
+    },
+    {
+      fixture: "amendmentId",
+      kind: "resource",
+      name: "amendment",
+      path: (id) => `/api/amendments/${encodeURIComponent(id)}`
+    },
+    {
+      body: (id) => ({ ids: [id] }),
+      fixture: "voteId",
+      kind: "batch",
+      name: "vote batch",
+      method: "POST",
+      path: "/api/votes/batch"
+    },
+    { fixture: "voteId", kind: "resource", name: "vote", path: (id) => `/api/votes/${encodeURIComponent(id)}` },
+    {
+      fixture: "voteId",
+      kind: "page",
+      name: "vote positions",
+      path: (id) => `/api/votes/${encodeURIComponent(id)}/positions?limit=1`
+    }
+  ]
+  const passed = []
+  const skipped = []
+
+  for (const [index, route] of routes.entries()) {
+    const fixtureId = route.fixture === undefined ? undefined : nx02bFixtures[route.fixture]
+    if (route.fixture !== undefined && fixtureId === undefined) {
+      skipped.push({ name: route.name, reason: `fixture_not_configured:${route.fixture}` })
+      continue
+    }
+    const path = typeof route.path === "function" ? route.path(fixtureId) : route.path
+    const url = new URL(path, root)
+    const method = route.method ?? "GET"
+    const correlationId = `nx-02b-smoke-${index + 1}`
+    const name = `${method} ${route.name}`
+    const response = await smokeFetch(url, {
+      ...(route.body === undefined ? {} : { body: JSON.stringify(route.body(fixtureId)) }),
+      diagnosticName: name,
+      headers: {
+        ...(route.body === undefined ? {} : { "content-type": "application/json" }),
+        "x-correlation-id": correlationId
+      },
+      method
+    })
+    requireCorrelationId(response, name, correlationId)
+    if (!response.headers.get("content-type")?.includes("application/json")) {
+      throw new Error(`${name} did not return application/json`)
+    }
+    let body
+    try {
+      body = await response.json()
+    } catch {
+      throw new Error(`${name} did not return a JSON body`)
+    }
+    if (response.status === 404 && route.fixture !== undefined) {
+      requireCanonicalNotFound(body, name, correlationId)
+      skipped.push({ name: route.name, reason: "fixture_missing" })
+      continue
+    }
+    if (response.status !== 200) {
+      throw new Error(`${name} returned status ${response.status}, expected 200 or canonical fixture 404`)
+    }
+    if (method === "GET") {
+      requirePrivateNoStore(response, name)
+      const etag = requireEtag(response, name)
+      await smokeConditionalGet(url, `conditional GET ${route.name}`, etag, `nx-02b-smoke-conditional-${index + 1}`)
+    }
+    if (route.kind === "page") {
+      requirePageEnvelope(body, name, correlationId)
+      passed.push(route.name)
+    } else if (route.kind === "resource") {
+      requireResourceEnvelope(body, name, correlationId, fixtureId)
+      passed.push(route.name)
+    } else if (requireBatchEnvelope(body, name, correlationId, fixtureId, route.kind) === "passed") {
+      passed.push(route.name)
+    } else {
+      skipped.push({ name: route.name, reason: "fixture_missing" })
+    }
+  }
+
+  await Promise.all([
+    smokeCanonicalApiNotFound(root, "/api/bills/", "nx-02b-smoke-bills-trailing-slash"),
+    smokeCanonicalApiNotFound(root, "/api/amendments/", "nx-02b-smoke-amendments-trailing-slash"),
+    smokeCanonicalApiNotFound(root, "/api/votes/", "nx-02b-smoke-votes-trailing-slash")
+  ])
+
+  return { notFound: ["bills_trailing_slash", "amendments_trailing_slash", "votes_trailing_slash"], passed, skipped }
+}
+
 const root = smokeBaseUrl(baseUrl)
 const healthUrl = new URL("/health", root)
 const readyUrl = new URL("/ready", root)
@@ -347,13 +624,22 @@ if (!homepageMarkup.includes("<main")) {
 }
 
 const nx02a = smokeNx02a ? await smokeNx02aRoutes(root) : undefined
+const nx02b = smokeNx02b ? await smokeNx02bRoutes(root) : undefined
+let profile = "foundation"
+if (smokeNx02a) {
+  profile = "foundation+nx-02a"
+}
+if (smokeNx02b) {
+  profile = "foundation+nx-02a+nx-02b"
+}
 
 process.stdout.write(
   `${JSON.stringify({
     health: health.status,
     homepage: homepage.status,
     ...(nx02a === undefined ? {} : { nx02a }),
-    profile: smokeNx02a ? "foundation+nx-02a" : "foundation",
+    ...(nx02b === undefined ? {} : { nx02b }),
+    profile,
     ready: ready.status,
     timeoutMs,
     unknownRoute: unknownRoute.status,

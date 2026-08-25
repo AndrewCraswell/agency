@@ -251,13 +251,13 @@ describe("bill detail read API handler", () => {
     })
 
     const [votes, invalid] = await Promise.all([
-      fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/votes?limit=1&result=passed`),
+      fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/votes?limit=25&result=passed`),
       fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/votes?unknown=value`)
     ])
 
     expect(votes.status).toBe(200)
     expect(invalid.status).toBe(400)
-    expect(voteInput).toMatchObject({ billId: "bill:us:119:hr:1", limit: 1, result: "passed" })
+    expect(voteInput).toMatchObject({ billId: "bill:us:119:hr:1", limit: 25, result: "passed" })
     await expect(votes.json()).resolves.toMatchObject({
       data: [{ id: "vote:1", positions: [] }],
       meta: { nextCursor: "vote-next" }

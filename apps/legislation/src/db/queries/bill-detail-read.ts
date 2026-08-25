@@ -25,7 +25,6 @@ import { projectOrganizationRow } from "../../api/organization-summary-read-proj
 import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
 import {
-  amendments,
   billActions,
   billOrganizations,
   billRelations,
@@ -36,9 +35,18 @@ import {
   votePositions,
   votes
 } from "../schema/schema.js"
+import {
+  amendmentContinuationCursor,
+  buildDocumentAmendmentListQuery,
+  buildStructuredAmendmentListQuery,
+  compareAmendmentReadOrder
+} from "./amendment-reads.js"
 import { listBillDocuments } from "./document-reads.js"
+import { assertCanonicalVotePersistence, assertVotePositionSequence } from "./vote-reads.js"
 
 const MAX_CHILD_LIMIT = 25
+/** Vote details embed positions, so this relationship keeps the 25-item cap. */
+export const MAX_BILL_VOTE_LIMIT = 25
 
 /**
  * Each non-paged child read has a hard materialization ceiling. The extra row
@@ -125,13 +133,8 @@ export async function getBillDetailRead(
       .orderBy(asc(votes.heldAt), asc(votes.id))
       .limit(childLimit + 1),
     listBillDocuments(database, { billId: id, limit: childLimit }),
-    database
-      .select()
-      .from(amendments)
-      .where(eq(amendments.billId, id))
-      .orderBy(asc(amendments.submittedDate), asc(amendments.id))
-      .limit(childLimit + 1),
-    listBillDocuments(database, { billId: id, classification: "amendment", limit: childLimit })
+    buildStructuredAmendmentListQuery(database, { billId: id }, undefined, "submitted-desc", childLimit),
+    buildDocumentAmendmentListQuery(database, { billId: id }, undefined, "submitted-desc", childLimit)
   ])
 
   if (organizationRows.length > 250) {
@@ -168,49 +171,47 @@ export async function getBillDetailRead(
     sourceProjectionContext(bill, apiBaseUrl)
   )
 
-  const amendmentItems = [
-    ...structuredAmendments.map((amendment) =>
-      projectAmendmentSummary(
-        {
-          billId: id,
-          documentId: null,
-          id: amendment.id,
-          identifier: amendment.printedIdentifier,
-          jurisdictionId: amendment.jurisdictionId,
-          recordType: "structured",
-          sourceUrl: amendment.sourceUrl,
-          status: amendment.status,
-          submittedDate: amendment.submittedDate,
-          title: amendment.purpose ?? amendment.printedIdentifier
-        },
-        sourceProjectionContext(amendment, apiBaseUrl)
+  const amendmentPage = billDetailAmendmentPage(
+    [
+      ...structuredAmendments.map((amendment) =>
+        projectAmendmentSummary(
+          {
+            billId: id,
+            documentId: null,
+            id: amendment.id,
+            identifier: amendment.printedIdentifier,
+            jurisdictionId: amendment.jurisdictionId,
+            recordType: "structured",
+            sourceUrl: amendment.sourceUrl,
+            status: amendment.status,
+            submittedDate: amendment.submittedDate,
+            title: amendment.purpose ?? amendment.printedIdentifier
+          },
+          sourceProjectionContext(amendment, apiBaseUrl)
+        )
+      ),
+      ...documentAmendments.map(({ document }) =>
+        projectAmendmentSummary(
+          {
+            billId: id,
+            documentId: document.id,
+            id: `amendment:document:${document.id}`,
+            identifier: document.title,
+            jurisdictionId: bill.jurisdictionId,
+            recordType: "document",
+            sourceUrl: document.sourceUrl,
+            status: null,
+            submittedDate: document.documentDate,
+            title: document.title
+          },
+          sourceProjectionContext(document, apiBaseUrl)
+        )
       )
-    ),
-    ...documentAmendments.items.map((document) =>
-      projectAmendmentSummary(
-        {
-          billId: id,
-          documentId: document.id,
-          id: `amendment:document:${document.id}`,
-          identifier: document.title,
-          jurisdictionId: bill.jurisdictionId,
-          recordType: "document",
-          sourceUrl: document.sourceUrl,
-          status: null,
-          submittedDate: document.documentDate,
-          title: document.title
-        },
-        sourceProjectionContext(document, apiBaseUrl)
-      )
-    )
-  ]
-    .toSorted(amendmentOrder)
-    .slice(0, childLimit)
-  const amendmentsTruncated =
-    structuredAmendments.length > childLimit ||
-    documentAmendments.truncated ||
-    structuredAmendments.length + documentAmendments.items.length > childLimit
-  const lastAmendment = amendmentItems.at(-1)
+    ],
+    childLimit,
+    id,
+    structuredAmendments.length > childLimit || documentAmendments.length > childLimit
+  )
   const documents = documentPage.items.map((document) => projectDocumentSummaryRead(document, apiBaseUrl))
   const canonicalOrganizations = organizationRows.map(({ row }) => projectOrganizationRow(row, apiBaseUrl))
   const latestActions = actionRows.map((action) => projectAction(action, canonicalOrganizations, apiBaseUrl))
@@ -219,13 +220,14 @@ export async function getBillDetailRead(
     projectRelation(relation, relatedBill, canonicalBill, apiBaseUrl)
   )
   const detailVoteRows = voteRows.slice(0, childLimit)
+  assertCanonicalBillVotes(detailVoteRows, votePositionRows)
   const votePageInfo = billDetailVotePageInfo(voteRows.length, detailVoteRows.at(-1), childLimit, { billId: id })
   const voteSummaries = projectVotes(detailVoteRows, votePositionRows, apiBaseUrl)
 
   return projectBillDetail(
     {
       abstract: bill.summary,
-      amendments: amendmentItems,
+      amendments: amendmentPage.items,
       bill: {
         classification: bill.classification,
         id: bill.id,
@@ -242,11 +244,8 @@ export async function getBillDetailRead(
       childPageInfo: {
         amendments: {
           limit: childLimit,
-          nextCursor:
-            amendmentsTruncated && lastAmendment !== undefined
-              ? encodeBillAmendmentCursor(amendmentKey(lastAmendment), { billId: id })
-              : null,
-          truncated: amendmentsTruncated
+          nextCursor: amendmentPage.nextCursor,
+          truncated: amendmentPage.truncated
         },
         documents: {
           limit: childLimit,
@@ -276,7 +275,7 @@ export async function listBillVoteReads(
   apiBaseUrl: string
 ): Promise<BillDetailPage<VoteDetail>> {
   const billId = requiredId(input.billId)
-  const limit = parseChildLimit(input.limit)
+  const limit = parseBillVoteLimit(input.limit)
   const scope = billVoteScope(input, billId)
   const after = decodeBillVoteCursor(input.cursor, scope)
   await assertBillDetailParent(database, billId)
@@ -306,6 +305,10 @@ export async function listBillVoteReads(
           .leftJoin(people, eq(votePositions.personId, people.id))
           .where(inArray(votePositions.voteId, voteIds))
           .orderBy(asc(votePositions.voteId), asc(votePositions.sourceIdentity))
+  assertCanonicalBillVotes(
+    voteRows.slice(0, limit),
+    positions.map((row) => row.position)
+  )
   const items = voteRows.slice(0, limit).map((vote) => projectVoteDetailRead(vote, positions, apiBaseUrl))
   const truncated = voteRows.length > limit
   const lastVote = voteRows[limit - 1]
@@ -329,6 +332,48 @@ function parseChildLimit(value: number | undefined): number {
     throw new LegislationError("invalid_request", `childLimit must be an integer between 1 and ${MAX_CHILD_LIMIT}`)
   }
   return limit
+}
+
+export function parseBillVoteLimit(value: number | undefined): number {
+  const limit = value ?? MAX_CHILD_LIMIT
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_BILL_VOTE_LIMIT) {
+    throw new LegislationError("invalid_request", `limit must be an integer between 1 and ${MAX_BILL_VOTE_LIMIT}`)
+  }
+  return limit
+}
+
+/**
+ * The embedded amendment page has exactly the default ordering and cursor
+ * scope of the dedicated amendment relationship collection. Its continuation
+ * can therefore be passed directly to GET /api/bills/{billId}/amendments.
+ */
+export function billDetailAmendmentPage(
+  amendments: readonly AmendmentSummary[],
+  childLimit: number,
+  billId: string,
+  hasAdditionalSourceRows = false
+): Readonly<{ items: readonly AmendmentSummary[]; nextCursor: string | null; truncated: boolean }> {
+  const ordered = amendments.toSorted((left, right) => compareAmendmentReadOrder(left, right, "submitted-desc"))
+  const items = ordered.slice(0, childLimit)
+  const last = items.at(-1)
+  const truncated = ordered.length > childLimit || hasAdditionalSourceRows
+  return {
+    items,
+    nextCursor: truncated && last !== undefined ? amendmentContinuationCursor(last, { billId }) : null,
+    truncated
+  }
+}
+
+function assertCanonicalBillVotes(
+  voteRows: readonly (typeof votes.$inferSelect)[],
+  positions: readonly (typeof votePositions.$inferSelect)[]
+): void {
+  voteRows.forEach(assertCanonicalVotePersistence)
+  positions.forEach((position) => {
+    if (voteRows.some((vote) => vote.id === position.voteId)) {
+      assertVotePositionSequence(position)
+    }
+  })
 }
 
 function projectAction(
@@ -726,14 +771,6 @@ function incomplete(message: string): LegislationError {
   return new LegislationError("unprocessable", message)
 }
 
-export type BillAmendmentCursorScope = Readonly<{
-  billId: string
-  recordType?: "document" | "structured"
-  status?: string
-  submittedFrom?: string
-  submittedTo?: string
-}>
-
 export type BillVoteCursorScope = Readonly<{
   billId: string
   classification?: string
@@ -743,7 +780,6 @@ export type BillVoteCursorScope = Readonly<{
   to?: string
 }>
 
-type AmendmentKey = Readonly<{ id: string; recordType: "document" | "structured"; submittedDate: string | null }>
 type VoteKey = Readonly<{ heldAt: string | null; id: string }>
 
 function billVoteScope(input: BillVoteReadInput, billId: string): BillVoteCursorScope {
@@ -755,10 +791,6 @@ function billVoteScope(input: BillVoteReadInput, billId: string): BillVoteCursor
     ...(input.result === undefined ? {} : { result: input.result }),
     ...(input.to === undefined ? {} : { to: input.to.toISOString() })
   }
-}
-
-function encodeBillAmendmentCursor(key: AmendmentKey, scope: BillAmendmentCursorScope): string {
-  return Buffer.from(JSON.stringify({ key, scope, version: 1 }), "utf8").toString("base64url")
 }
 
 function encodeBillVoteCursor(key: VoteKey, scope: BillVoteCursorScope): string {
@@ -778,7 +810,7 @@ function decodeBillVoteCursor(cursor: string | undefined, scope: BillVoteCursorS
 
 function decodeCursor(
   cursor: string | undefined,
-  scope: BillAmendmentCursorScope | BillVoteCursorScope,
+  scope: BillVoteCursorScope,
   label: string
 ): Readonly<{ key: unknown; scope: unknown; version: 1 }> | undefined {
   if (cursor === undefined) {
@@ -808,27 +840,8 @@ function isCursor(value: unknown): value is Readonly<{ key: unknown; scope: unkn
   )
 }
 
-function amendmentOrder(left: AmendmentSummary, right: AmendmentSummary): number {
-  return (
-    nullableDateOrder(left.submittedDate, right.submittedDate) ||
-    left.recordType.localeCompare(right.recordType) ||
-    left.id.localeCompare(right.id)
-  )
-}
-
-function amendmentKey(value: AmendmentSummary): AmendmentKey {
-  return { id: value.id, recordType: value.recordType, submittedDate: value.submittedDate }
-}
-
 function voteKey(value: typeof votes.$inferSelect): VoteKey {
   return { heldAt: value.heldAt?.toISOString() ?? null, id: value.id }
-}
-
-function nullableDateOrder(left: string | null, right: string | null): number {
-  if (left === null) {
-    return right === null ? 0 : 1
-  }
-  return right === null ? -1 : left.localeCompare(right)
 }
 
 function afterVoteKey(date: AnyPgColumn, id: AnyPgColumn, key: VoteKey) {
