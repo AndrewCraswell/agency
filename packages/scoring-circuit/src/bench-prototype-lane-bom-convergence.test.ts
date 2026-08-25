@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest"
 import {
   benchPrototypeLaneBomConvergence,
+  benchPrototypeLaneBomRows,
   evaluateLaneBomConvergence,
+  projectExactLaneRowsOntoOrderCandidateBaseline,
   type LaneBomRow
 } from "./bench-prototype-lane-bom-convergence.js"
 
@@ -14,6 +16,7 @@ const complete = (source: LaneBomRow["source"], reference: string): LaneBomRow =
   classification: "board-populated",
   footprintEvidenceRequired: source !== "BP-010",
   footprintEvidenceComplete: true,
+  footprintEvidenceState: source === "BP-010" ? "not-started" : "approved",
   sampleEvidenceRequired: false,
   sampleEvidenceComplete: false
 })
@@ -46,11 +49,7 @@ describe("BP-035 lane BOM convergence", () => {
     })
     expect(benchPrototypeLaneBomConvergence.blockers.filter(({ code }) => code === "selection-blocked")).toEqual([])
     expect(benchPrototypeLaneBomConvergence.blockers).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: "footprint-evidence-open", reference: "U_SCORING" }),
-        expect.objectContaining({ code: "sample-evidence-open", reference: "J_USB_C" }),
-        expect.objectContaining({ code: "sample-evidence-open", reference: "J_ETH" })
-      ])
+      expect.arrayContaining([expect.objectContaining({ code: "footprint-evidence-open", reference: "U_SCORING" })])
     )
   })
 
@@ -105,7 +104,6 @@ describe("BP-035 lane BOM convergence", () => {
         "package-drift",
         "population-drift",
         "footprint-evidence-open",
-        "sample-evidence-open",
         "unresolved-mpn",
         "unresolved-package",
         "selection-blocked"
@@ -134,15 +132,16 @@ describe("BP-035 lane BOM convergence", () => {
   })
 
   it("reconciles BP-034 board rows but excludes external sample rows from baseline identity drift", () => {
-    const board = { ...complete("BP-034", "J1"), sampleEvidenceRequired: true, sampleEvidenceComplete: true }
+    const board = { ...complete("BP-034", "J1"), sampleEvidenceRequired: true, sampleEvidenceComplete: false }
     const external: LaneBomRow = {
       ...complete("BP-034", "BP034_SAMPLE:cable:1:CABLE-1"),
       mpn: "CABLE-1",
       package: null,
       classification: "external-sample-test",
       footprintEvidenceRequired: false,
+      footprintEvidenceState: "not-started",
       sampleEvidenceRequired: true,
-      sampleEvidenceComplete: true
+      sampleEvidenceComplete: false
     }
     const evaluation = evaluateLaneBomConvergence({
       rows: [complete("BP-010", "J1"), board, external],
@@ -192,6 +191,57 @@ describe("BP-035 lane BOM convergence", () => {
     expect(Object.isFrozen(evaluation.blockers[0])).toBe(true)
     expect(Object.isFrozen(evaluation.blockers[0]?.sources)).toBe(true)
     expect(Object.isFrozen(evaluation.unresolvedPopulatedReferences)).toBe(true)
+  })
+
+  it("derives review state only from explicit per-row footprint evidence", () => {
+    const stateCounts = (source: LaneBomRow["source"]) =>
+      Object.fromEntries(
+        Object.entries(
+          Object.groupBy(
+            benchPrototypeLaneBomRows.filter((row) => row.source === source),
+            (row) => row.footprintEvidenceState
+          )
+        ).map(([state, rows]) => [state, rows.length])
+      )
+    const stateFor = (source: LaneBomRow["source"], reference: string) =>
+      benchPrototypeLaneBomRows.find((row) => row.source === source && row.reference === reference)
+        ?.footprintEvidenceState
+
+    expect(stateCounts("BP-031")).toEqual({ "reviewed-unapproved": 28, "not-started": 85 })
+    expect(stateCounts("BP-032")).toEqual({ "not-started": 34, "reviewed-unapproved": 17 })
+    expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 3, "not-started": 98 })
+    expect(stateFor("BP-031", "U_SAR_1")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-031", "U_OVP_BUFFER_1")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-031", "U_REF_1")).toBe("not-started")
+    expect(stateFor("BP-032", "C_ESP_EN_DELAY")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-033", "J_USB_C")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-033", "U_USB_PD")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-033", "J_HUB75")).toBe("reviewed-unapproved")
+    expect(benchPrototypeLaneBomRows.filter((row) => ["BP-031", "BP-032", "BP-033"].includes(row.source))).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ footprintEvidenceState: "approved" })])
+    )
+  })
+
+  it("projects only exact lane identities into the BP-035 order-candidate baseline", () => {
+    const historical = [complete("BP-010", "U_HISTORICAL"), complete("BP-010", "U_EXISTING")]
+    const projection = projectExactLaneRowsOntoOrderCandidateBaseline(historical, [
+      complete("BP-031", "U_EXACT"),
+      { ...complete("BP-032", "U_TBD"), population: "TBD" },
+      { ...complete("BP-033", "U_NO_PACKAGE"), package: null },
+      { ...complete("BP-033", "U_TBD_PACKAGE"), package: "TBD" },
+      { ...complete("BP-033", "U_EXISTING"), mpn: "CONFLICT" }
+    ])
+
+    expect(projection).toEqual([
+      expect.objectContaining({
+        source: "BP-035",
+        reference: "U_EXACT",
+        orderCandidateProjection: true,
+        mpn: "EXACT-1",
+        package: "PACKAGE-1",
+        population: "populate"
+      })
+    ])
   })
 
   it("enumerates every unresolved populated reference once", () => {

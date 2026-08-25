@@ -6,11 +6,13 @@ import { benchPrototypeBom } from "./bench-prototype-bom.js"
 import { benchPrototypeConnectorPreorder } from "./bench-prototype-connector-preorder.js"
 import { benchPrototypeProcessorFootprints } from "./bench-prototype-processor-footprints.js"
 
-export type LaneBomSource = "BP-010" | "BP-031" | "BP-032" | "BP-033" | "BP-034"
+export type LaneBomSource = "BP-010" | "BP-031" | "BP-032" | "BP-033" | "BP-034" | "BP-035"
 
 export type LaneBomPopulation = "populate" | "DNP" | "TBD"
 
 export type LaneBomClassification = "board-populated" | "external-sample-test"
+
+export type LaneBomFootprintEvidenceState = "not-started" | "reviewed-unapproved" | "approved"
 
 export type LaneBomRow = {
   readonly source: LaneBomSource
@@ -21,6 +23,8 @@ export type LaneBomRow = {
   readonly classification: LaneBomClassification
   readonly footprintEvidenceRequired: boolean
   readonly footprintEvidenceComplete: boolean
+  readonly footprintEvidenceState: LaneBomFootprintEvidenceState
+  readonly orderCandidateProjection?: true
   readonly sampleEvidenceRequired: boolean
   readonly sampleEvidenceComplete: boolean
 }
@@ -39,7 +43,6 @@ export type LaneBomBlockerCode =
   | "population-drift"
   | "unresolved-population"
   | "footprint-evidence-open"
-  | "sample-evidence-open"
   | "selection-blocked"
 
 export type LaneBomBlocker = {
@@ -213,8 +216,8 @@ export function evaluateLaneBomConvergence(input: EvaluationInput): LaneBomConve
 
   for (const [reference, rows] of byReference) {
     const boardRows = rows.filter((row) => row.classification === "board-populated")
-    const baseline = boardRows.find((row) => row.source === "BP-010")
-    const laneRows = boardRows.filter((row) => row.source !== "BP-010")
+    const baseline = boardRows.find((row) => row.source === "BP-010" || row.orderCandidateProjection === true)
+    const laneRows = boardRows.filter((row) => row.source !== "BP-010" && row.orderCandidateProjection !== true)
     const unresolvedDemand = rows.some((row) => row.population !== "DNP")
     if (baseline === undefined && laneRows.length > 0) {
       blockers.push({
@@ -273,20 +276,19 @@ export function evaluateLaneBomConvergence(input: EvaluationInput): LaneBomConve
       })
     }
     for (const row of rows) {
-      if (row.population !== "DNP" && row.footprintEvidenceRequired && !row.footprintEvidenceComplete) {
+      if (
+        row.population !== "DNP" &&
+        row.footprintEvidenceRequired &&
+        (row.footprintEvidenceState !== "approved" || !row.footprintEvidenceComplete)
+      ) {
         blockers.push({
           code: "footprint-evidence-open",
           reference,
           sources: [row.source],
-          detail: `${row.source} has no completed drawing, CAD, artwork, and independent orientation review`
-        })
-      }
-      if (row.population !== "DNP" && row.sampleEvidenceRequired && !row.sampleEvidenceComplete) {
-        blockers.push({
-          code: "sample-evidence-open",
-          reference,
-          sources: [row.source],
-          detail: `${row.source} has no accepted received-sample, mate, retention, strain, and continuity evidence`
+          detail:
+            row.footprintEvidenceState === "reviewed-unapproved"
+              ? `${row.source} has reviewed but unapproved footprint evidence`
+              : `${row.source} has no completed drawing, CAD, artwork, and independent orientation review`
         })
       }
     }
@@ -323,6 +325,78 @@ export function evaluateLaneBomConvergence(input: EvaluationInput): LaneBomConve
   })
 }
 
+function evidenceState(hasReviewEvidence: boolean, accepted: boolean): LaneBomFootprintEvidenceState {
+  if (accepted) return "approved"
+  return hasReviewEvidence ? "reviewed-unapproved" : "not-started"
+}
+
+function analogEvidenceState(
+  record: (typeof benchPrototypeAnalogFootprintClosure.records)[number]
+): LaneBomFootprintEvidenceState {
+  return evidenceState(record.reviewEvidenceMappingId !== null, false)
+}
+
+function processorEvidenceState(record: {
+  readonly evidence: { readonly footprintEvidence: { readonly accepted: boolean } | null }
+}): LaneBomFootprintEvidenceState {
+  return evidenceState(record.evidence.footprintEvidence !== null, record.evidence.footprintEvidence?.accepted === true)
+}
+
+function applicationEvidenceState(
+  record: (typeof benchPrototypeApplicationFootprints.records)[number]
+): LaneBomFootprintEvidenceState {
+  const projectMapping = benchPrototypeApplicationFootprints.projectFootprintMappings.some(
+    (mapping) => mapping.reference === record.reference
+  )
+  const recordReview =
+    ("projectFootprintCandidate" in record && record.projectFootprintCandidate !== undefined) ||
+    ("pinMapOrientationOverlay" in record && record.pinMapOrientationOverlay !== undefined)
+  return evidenceState(projectMapping || recordReview, false)
+}
+
+export function projectExactLaneRowsOntoOrderCandidateBaseline(
+  historicalBaseline: readonly LaneBomRow[],
+  laneRows: readonly LaneBomRow[]
+): readonly LaneBomRow[] {
+  const historicalReferences = new Set(historicalBaseline.map((row) => row.reference))
+  const projectedByReference = new Map<string, LaneBomRow>()
+  const conflictingReferences = new Set<string>()
+  for (const row of laneRows) {
+    if (
+      !["BP-031", "BP-032", "BP-033"].includes(row.source) ||
+      row.classification !== "board-populated" ||
+      row.mpn === null ||
+      row.package === null ||
+      row.mpn === "TBD" ||
+      row.package === "TBD" ||
+      row.population === "TBD" ||
+      historicalReferences.has(row.reference)
+    ) {
+      continue
+    }
+    const existing = projectedByReference.get(row.reference)
+    if (
+      existing !== undefined &&
+      (existing.mpn !== row.mpn || existing.package !== row.package || existing.population !== row.population)
+    ) {
+      conflictingReferences.add(row.reference)
+      projectedByReference.delete(row.reference)
+      continue
+    }
+    if (!conflictingReferences.has(row.reference)) projectedByReference.set(row.reference, row)
+  }
+  return [...projectedByReference.values()].map((row) => ({
+    ...row,
+    source: "BP-035" as const,
+    orderCandidateProjection: true as const,
+    footprintEvidenceRequired: false,
+    footprintEvidenceComplete: false,
+    footprintEvidenceState: "not-started" as const,
+    sampleEvidenceRequired: false,
+    sampleEvidenceComplete: false
+  }))
+}
+
 function canonicalRows(): LaneBomRow[] {
   const baseline: LaneBomRow[] = benchPrototypeBom.rows.map((row) => ({
     source: "BP-010",
@@ -333,6 +407,7 @@ function canonicalRows(): LaneBomRow[] {
     classification: "board-populated",
     footprintEvidenceRequired: false,
     footprintEvidenceComplete: false,
+    footprintEvidenceState: "not-started",
     sampleEvidenceRequired: false,
     sampleEvidenceComplete: false
   }))
@@ -345,13 +420,17 @@ function canonicalRows(): LaneBomRow[] {
     classification: "board-populated",
     footprintEvidenceRequired: true,
     footprintEvidenceComplete: false,
+    footprintEvidenceState: analogEvidenceState(row),
     sampleEvidenceRequired: false,
     sampleEvidenceComplete: false
   }))
+  const processorSupportReferenceSet = new Set<string>(
+    benchPrototypeProcessorFootprints.processorSupportReferences.map((row) => row.reference)
+  )
   const processorRecords = [
     ...benchPrototypeProcessorFootprints.populatedReferences,
     ...benchPrototypeProcessorFootprints.debugReferences
-  ]
+  ].filter((row) => !processorSupportReferenceSet.has(row.reference))
   const processor: LaneBomRow[] = processorRecords.map((row) => ({
     source: "BP-032",
     reference: row.reference,
@@ -361,6 +440,7 @@ function canonicalRows(): LaneBomRow[] {
     classification: "board-populated",
     footprintEvidenceRequired: !row.population.startsWith("DNP"),
     footprintEvidenceComplete: false,
+    footprintEvidenceState: processorEvidenceState(row),
     sampleEvidenceRequired: false,
     sampleEvidenceComplete: false
   }))
@@ -373,6 +453,7 @@ function canonicalRows(): LaneBomRow[] {
     classification: "board-populated",
     footprintEvidenceRequired: row.selectedMpn !== null,
     footprintEvidenceComplete: false,
+    footprintEvidenceState: processorEvidenceState(row),
     sampleEvidenceRequired: false,
     sampleEvidenceComplete: false
   }))
@@ -385,6 +466,7 @@ function canonicalRows(): LaneBomRow[] {
     classification: "board-populated",
     footprintEvidenceRequired: true,
     footprintEvidenceComplete: false,
+    footprintEvidenceState: applicationEvidenceState(row),
     sampleEvidenceRequired: false,
     sampleEvidenceComplete: false
   }))
@@ -398,6 +480,7 @@ function canonicalRows(): LaneBomRow[] {
       classification: "board-populated",
       footprintEvidenceRequired: false,
       footprintEvidenceComplete: false,
+      footprintEvidenceState: "not-started",
       sampleEvidenceRequired: false,
       sampleEvidenceComplete: false
     })
@@ -414,6 +497,7 @@ function canonicalRows(): LaneBomRow[] {
         classification: "external-sample-test" as const,
         footprintEvidenceRequired: false,
         footprintEvidenceComplete: false,
+        footprintEvidenceState: "not-started",
         sampleEvidenceRequired: true,
         sampleEvidenceComplete: false
       }))
@@ -428,6 +512,7 @@ function canonicalRows(): LaneBomRow[] {
       classification: "board-populated",
       footprintEvidenceRequired: false,
       footprintEvidenceComplete: false,
+      footprintEvidenceState: "not-started",
       sampleEvidenceRequired: true,
       sampleEvidenceComplete: false
     }))
@@ -440,26 +525,21 @@ function canonicalRows(): LaneBomRow[] {
       classification: "external-sample-test",
       footprintEvidenceRequired: false,
       footprintEvidenceComplete: false,
+      footprintEvidenceState: "not-started",
       sampleEvidenceRequired: true,
       sampleEvidenceComplete: false
     }))
     return [...boardRows, ...externalRows]
   })
-  return [
-    ...baseline,
-    ...analog,
-    ...processor,
-    ...processorSupport,
-    ...application,
-    ...blockedApplication,
-    ...connector
-  ]
+  const laneRows = [...analog, ...processor, ...processorSupport, ...application, ...blockedApplication]
+  const orderCandidateProjection = projectExactLaneRowsOntoOrderCandidateBaseline(baseline, laneRows)
+  return [...baseline, ...orderCandidateProjection, ...laneRows, ...connector]
 }
 
 /** Current BP-031 through BP-034 truth, reconciled against the BP-010 baseline BOM. */
 export function evaluateBenchPrototypeLaneBomConvergence(): LaneBomConvergenceEvaluation {
   return evaluateLaneBomConvergence({
-    rows: canonicalRows(),
+    rows: benchPrototypeLaneBomRows,
     sourceArtifacts: requiredSources.map((source) => ({ source, status: "provided" as const })),
     selectionBlockers: benchPrototypeConnectorPreorder.samples.flatMap((sample) =>
       sample.selectionState === "exact"
@@ -469,4 +549,5 @@ export function evaluateBenchPrototypeLaneBomConvergence(): LaneBomConvergenceEv
   })
 }
 
+export const benchPrototypeLaneBomRows = deepFreeze(canonicalRows())
 export const benchPrototypeLaneBomConvergence = deepFreeze(evaluateBenchPrototypeLaneBomConvergence())
