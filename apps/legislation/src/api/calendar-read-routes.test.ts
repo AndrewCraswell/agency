@@ -209,7 +209,7 @@ describe("calendar read API handler", () => {
       cursor: undefined,
       isActive: false,
       jurisdictionId: undefined,
-      limit: 25,
+      limit: 20,
       organizationId: "organization:wa:house",
       query: undefined
     })

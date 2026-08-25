@@ -20,7 +20,7 @@ import {
 } from "./http.js"
 import { projectMeetingRead } from "./meeting-read-projection.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 const CALENDAR_PARAMETERS = ["classification", "cursor", "isActive", "jurisdictionId", "limit", "organizationId", "q"]

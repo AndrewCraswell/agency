@@ -101,4 +101,30 @@ $env:LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_SECTION_ID = "supporting-material
 pnpm --filter legislation-web smoke:foundation
 ```
 
+After NX-03A is deployed, set `LEGISLATION_WEB_SMOKE_NX_03A` to `1`. This cumulative profile runs NX-02A, NX-02B, and
+NX-02C before checking all 14 people and organization routes. It embeds no production civic IDs. Configure only audited
+values from the target deployment through `LEGISLATION_WEB_SMOKE_PERSON_ID`, `LEGISLATION_WEB_SMOKE_TERM_ID`,
+`LEGISLATION_WEB_SMOKE_ORGANIZATION_ID`, and `LEGISLATION_WEB_SMOKE_MEMBERSHIP_ID`. The term must belong to the person,
+and the current production membership fixture is an audited deliberately missing ID.
+
+The profile always checks the people and organization collections. Fixture-bound detail and relationship routes report
+`fixture_not_configured` when their required environment value is absent. Only organization-membership detail may report
+`fixture_missing`, and only for a canonical `404 not_found`; a configured `404` from any other NX-03A route fails the
+smoke. Person detail, person-term detail, the organization collection, and organization detail may instead report an
+exact canonical `422 unprocessable` as `canonical_data_incomplete` while audited production rows lack required canonical
+facts. No other NX-03A route accepts `422`. Every successful route must return its exact Page or Resource envelope,
+preserve the correlation ID, use `cache-control: private, no-store`, and satisfy an ETag conditional `304`. Empty Pages
+remain successful canonical responses. The nested static `terms` and `memberships` paths are exercised with URI-encoded
+IDs, and trailing slashes on the two collection roots must return a canonical no-redirect `404`. Fixture IDs and error
+messages never appear in the JSON report or stable failure labels.
+
+```powershell
+$env:LEGISLATION_WEB_SMOKE_NX_03A = "1"
+$env:LEGISLATION_WEB_SMOKE_PERSON_ID = "person:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_TERM_ID = "term:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_ORGANIZATION_ID = "organization:audited-production-fixture"
+$env:LEGISLATION_WEB_SMOKE_MEMBERSHIP_ID = "membership:audited-production-fixture"
+pnpm --filter legislation-web smoke:foundation
+```
+
 Start with the [frontend architecture and dependency record](docs/architecture.md).

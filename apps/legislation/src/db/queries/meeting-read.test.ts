@@ -103,7 +103,7 @@ describe("meeting read queries", () => {
       "America/Los_Angeles",
       "2026-03-09",
       "America/Los_Angeles",
-      26
+      21
     ])
     expect(fall.params).toEqual([
       false,
@@ -116,7 +116,7 @@ describe("meeting read queries", () => {
       "America/Los_Angeles",
       "2026-11-02",
       "America/Los_Angeles",
-      26
+      21
     ])
   })
 

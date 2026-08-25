@@ -12,7 +12,7 @@ import {
   type HttpApiHandler
 } from "./http.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 export interface PeopleReadApi {
@@ -65,7 +65,7 @@ async function handlePeopleRequest(
     limit,
     organizationId: queryText(url, "organizationId", 256),
     party: queryText(url, "party", 256),
-    q: queryText(url, "q", 256),
+    q: queryText(url, "q", 500),
     sort: personSort(queryText(url, "sort", 32))
   })
   sendApiJson(response, 200, apiPage(request, projectPage(page, apiBaseUrl), limit))

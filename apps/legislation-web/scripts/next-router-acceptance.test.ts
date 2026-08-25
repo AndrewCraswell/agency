@@ -82,6 +82,36 @@ const nx02cRoutes: readonly Nx02cRoute[] = [
 const unsupportedReadMethods = ["DELETE", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"] as const
 const unsupportedResourceBatchMethods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "PUT"] as const
 
+type Nx03aRoute = Readonly<{
+  name: string
+  pathname: string
+  probe: string
+}>
+
+const personId = "person%3Arouter"
+const organizationId = "organization%3Arouter"
+
+const nx03aRoutes: readonly Nx03aRoute[] = [
+  { name: "people collection", pathname: "/api/people", probe: "?limit=0" },
+  { name: "person detail", pathname: `/api/people/${personId}`, probe: "?unexpected=1" },
+  { name: "person bills", pathname: `/api/people/${personId}/bills`, probe: "?limit=0" },
+  { name: "person amendments", pathname: `/api/people/${personId}/amendments`, probe: "?limit=0" },
+  { name: "person votes", pathname: `/api/people/${personId}/votes`, probe: "?limit=0" },
+  { name: "person memberships", pathname: `/api/people/${personId}/memberships`, probe: "?limit=0" },
+  { name: "person term", pathname: `/api/people/${personId}/terms/term%3Arouter`, probe: "?unexpected=1" },
+  { name: "organizations collection", pathname: "/api/organizations", probe: "?limit=0" },
+  { name: "organization detail", pathname: `/api/organizations/${organizationId}`, probe: "?unexpected=1" },
+  { name: "organization members", pathname: `/api/organizations/${organizationId}/members`, probe: "?limit=0" },
+  {
+    name: "organization membership",
+    pathname: `/api/organizations/${organizationId}/memberships/membership%3Arouter`,
+    probe: "?unexpected=1"
+  },
+  { name: "organization meetings", pathname: `/api/organizations/${organizationId}/meetings`, probe: "?limit=0" },
+  { name: "organization bills", pathname: `/api/organizations/${organizationId}/bills`, probe: "?limit=0" },
+  { name: "organization calendars", pathname: `/api/organizations/${organizationId}/calendars`, probe: "?limit=0" }
+]
+
 let baseUrl = ""
 let nextServer: ChildProcess | undefined
 let nextServerDiagnostics: () => string = () => "Next server did not start."
@@ -126,7 +156,7 @@ afterAll(async () => {
   }
 })
 
-describe.sequential("NX-02B and NX-02C Next router acceptance", () => {
+describe.sequential("NX-02B, NX-02C, and NX-03A Next router acceptance", () => {
   it("resolves Next 16.3.1 from the legislation-web package and boots that resolved CLI", () => {
     const nextPackage = packageRequire("next/package.json") as Readonly<{ version: string }>
     const nextCliPath = packageRequire.resolve("next/dist/bin/next")
@@ -373,6 +403,102 @@ describe.sequential("NX-02B and NX-02C Next router acceptance", () => {
     },
     requestTimeoutMs + 5_000
   )
+
+  it.each(nx03aRoutes)("routes the encoded NX-03A %s path and forwards its query string", async (route) => {
+    expect.hasAssertions()
+    const correlationId = `router-nx03a-${route.name}`
+    const response = await request(`${route.pathname}${route.probe}`, {
+      headers: { "x-correlation-id": correlationId },
+      method: "GET"
+    })
+
+    await expectInvalidRequest(response, correlationId)
+  })
+
+  it.each(nx03aRoutes)("keeps all unsupported methods on the built NX-03A %s route", async (route) => {
+    expect.hasAssertions()
+    for (const method of unsupportedReadMethods) {
+      const correlationId = `router-nx03a-${route.name}-${method.toLowerCase()}`
+      const response = await request(route.pathname, {
+        headers: { "x-correlation-id": correlationId },
+        method
+      })
+
+      await expectCanonicalNotFound(response, correlationId, method === "HEAD")
+    }
+  })
+
+  it.each(nx03aRoutes)(
+    "returns a canonical JSON 404 without redirecting a literal trailing slash for NX-03A %s",
+    async (route) => {
+      expect.hasAssertions()
+      const correlationId = `router-nx03a-trailing-${route.name}`
+      const response = await request(`${route.pathname}/`, {
+        headers: { "x-correlation-id": correlationId },
+        method: "GET"
+      })
+
+      expect(response.headers.get("location")).toBeNull()
+      await expectCanonicalNotFound(response, correlationId)
+    }
+  )
+
+  it.each([
+    `/api/people/${personId}/%62ills`,
+    `/api/people/${personId}/%61mendments`,
+    `/api/people/${personId}/%76otes`,
+    `/api/people/${personId}/%6Demberships`,
+    `/api/people/${personId}/%74erms/term%3Arouter`,
+    `/api/organizations/${organizationId}/%6Dembers`,
+    `/api/organizations/${organizationId}/%6Demberships/membership%3Arouter`,
+    `/api/organizations/${organizationId}/%6Deetings`,
+    `/api/organizations/${organizationId}/%62ills`,
+    `/api/organizations/${organizationId}/%63alendars`
+  ])("does not decode an encoded NX-03A static child segment before router precedence for %s", async (pathname) => {
+    expect.hasAssertions()
+    const correlationId = "router-nx03a-encoded-static-child"
+    const response = await request(pathname, {
+      headers: { "x-correlation-id": correlationId },
+      method: "GET"
+    })
+
+    await expectCanonicalNotFound(response, correlationId)
+  })
+
+  it.each([
+    `/api/people/${personId}/terms/term%3Arouter?unexpected=1`,
+    `/api/organizations/${organizationId}/memberships/membership%3Arouter?unexpected=1`
+  ])("routes NX-03A nested term and membership paths before the API catch-all for %s", async (pathname) => {
+    expect.hasAssertions()
+    const correlationId = "router-nx03a-nested-static"
+    const response = await request(pathname, {
+      headers: { "x-correlation-id": correlationId },
+      method: "GET"
+    })
+
+    await expectInvalidRequest(response, correlationId)
+  })
+
+  it("rejects malformed NX-03A path encodings at the proxy and keeps the built server usable", async () => {
+    expect.hasAssertions()
+    const malformed = await request(`/api/people/${personId}/terms/%ZZ`, {
+      headers: { "x-correlation-id": "router-nx03a-malformed" },
+      method: "GET"
+    })
+    await expectInvalidRequest(malformed, "router-nx03a-malformed")
+
+    const invalidUtf8 = await request(`/api/organizations/${organizationId}/memberships/%C0%AF`, {
+      headers: { "x-correlation-id": "router-nx03a-malformed-utf8" },
+      method: "GET"
+    })
+    await expectInvalidRequest(invalidUtf8, "router-nx03a-malformed-utf8")
+
+    const followUp = await request("/api/people?limit=0", {
+      headers: { "x-correlation-id": "router-nx03a-malformed-follow-up" },
+      method: "GET"
+    })
+    await expectInvalidRequest(followUp, "router-nx03a-malformed-follow-up")
+  })
 })
 
 async function expectInvalidRequest(response: Response, correlationId: string): Promise<void> {

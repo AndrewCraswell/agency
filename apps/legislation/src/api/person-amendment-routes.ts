@@ -55,7 +55,7 @@ async function handlePersonAmendmentRequest(
   const from = optionalBoundedQuery(url, "from", MAX_DATE_BOUND_LENGTH)
   const to = optionalBoundedQuery(url, "to", MAX_DATE_BOUND_LENGTH)
   validateDateBounds(from, to)
-  const limit = queryInteger(url, "limit", 25, 100)
+  const limit = queryInteger(url, "limit", 20, 100)
   await service.assertPersonExists(personId)
   const page = await service.listPersonAmendments({
     cursor: optionalBoundedQuery(url, "cursor", MAX_CURSOR_LENGTH),
@@ -123,6 +123,9 @@ function validateDateBounds(from: string | undefined, to: string | undefined): v
   }
   if (from === undefined || to === undefined) {
     return
+  }
+  if (isIsoDate(from) !== isIsoDate(to)) {
+    throw new LegislationError("invalid_request", "from and to must use the same format")
   }
   const fromTimestamp = Date.parse(from)
   const toTimestamp = Date.parse(to) + (isIsoDate(to) ? 86_400_000 : 0)

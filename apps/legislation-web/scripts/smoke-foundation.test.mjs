@@ -13,6 +13,8 @@ let changeFeedError
 let documentDetailError
 let documentSectionsError
 let documentBatchItemError
+let missingFixturePrefix
+const nx03aErrorPaths = new Map()
 
 function json(response, correlationId, body, status = 200, headers = {}) {
   response.writeHead(status, { "content-type": "application/json", "x-correlation-id": correlationId, ...headers })
@@ -122,6 +124,10 @@ beforeAll(async () => {
       json(response, correlationId, notFound(url.pathname, correlationId), 404)
       return
     }
+    if (missingFixturePrefix !== undefined && url.pathname.startsWith(missingFixturePrefix)) {
+      json(response, correlationId, notFound(url.pathname, correlationId), 404)
+      return
+    }
     if (request.method === "GET" && url.pathname === "/api/changes" && changeFeedError !== undefined) {
       apiJson(response, correlationId, changeFeedError(correlationId), 422)
       return
@@ -144,6 +150,11 @@ beforeAll(async () => {
       documentSectionsError !== undefined
     ) {
       apiJson(response, correlationId, documentSectionsError(correlationId), 422)
+      return
+    }
+    const nx03aError = nx03aErrorPaths.get(url.pathname)
+    if (request.method === "GET" && nx03aError !== undefined) {
+      apiJson(response, correlationId, nx03aError(correlationId), 422)
       return
     }
     if (request.method === "GET" && request.headers["if-none-match"] === 'W/"fixture"') {
@@ -182,10 +193,14 @@ beforeAll(async () => {
       (["documents", "supporting-materials"].includes(segments[1]) &&
         segments[3] === "sections" &&
         segments.length === 5)
+    const isNx03aResource =
+      (["people", "organizations"].includes(segments[1]) && segments.length === 3) ||
+      (segments[1] === "people" && segments[3] === "terms" && segments.length === 5) ||
+      (segments[1] === "organizations" && segments[3] === "memberships" && segments.length === 5)
     apiJson(
       response,
       correlationId,
-      isNx02aResource || isNx02bResource || isNx02cResource
+      isNx02aResource || isNx02bResource || isNx02cResource || isNx03aResource
         ? resource(url.pathname, correlationId, id)
         : page(url.pathname, correlationId)
     )
@@ -566,6 +581,223 @@ describe("NX-02C deployed smoke profile", () => {
       expect(error.stderr).not.toContain(privateMessage)
     } finally {
       documentBatchItemError = undefined
+    }
+  })
+})
+
+describe("NX-03A deployed smoke profile", () => {
+  it("cumulatively checks NX-02A/B/C and all 14 people and organization routes with static child precedence", async () => {
+    requests.length = 0
+    const result = await runSmoke({
+      LEGISLATION_WEB_SMOKE_AMENDMENT_ID: "amendment:fixture",
+      LEGISLATION_WEB_SMOKE_BILL_ID: "bill:fixture",
+      LEGISLATION_WEB_SMOKE_DOCUMENT_ID: "document:fixture",
+      LEGISLATION_WEB_SMOKE_DOCUMENT_SECTION_ID: "document-section:fixture",
+      LEGISLATION_WEB_SMOKE_MEMBERSHIP_ID: "membership:fixture/with space",
+      LEGISLATION_WEB_SMOKE_NX_03A: "1",
+      LEGISLATION_WEB_SMOKE_ORGANIZATION_ID: "organization:fixture/with space",
+      LEGISLATION_WEB_SMOKE_PERSON_ID: "person:fixture/with space",
+      LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_ID: "supporting-material:fixture",
+      LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_SECTION_ID: "supporting-material-section:fixture",
+      LEGISLATION_WEB_SMOKE_TERM_ID: "term:fixture/with space",
+      LEGISLATION_WEB_SMOKE_VOTE_ID: "vote:fixture"
+    })
+
+    expect(result.profile).toBe("foundation+nx-02a+nx-02b+nx-02c+nx-03a")
+    expect(result.nx02a.passed).toHaveLength(11)
+    expect(result.nx02b.passed).toHaveLength(18)
+    expect(result.nx02c.passed).toHaveLength(9)
+    expect(result.nx03a.passed).toHaveLength(14)
+    expect(result.nx03a.skipped).toEqual([])
+    expect(result.nx03a.notFound).toEqual(["people_trailing_slash", "organizations_trailing_slash"])
+
+    const nx03a = requests.filter((request) => /^nx-03a-smoke-\d+$/.test(request.correlationId))
+    const conditional = requests.filter((request) => /^nx-03a-smoke-conditional-\d+$/.test(request.correlationId))
+    expect(nx03a).toHaveLength(14)
+    expect(nx03a.map(requestSignature).sort()).toEqual(
+      [
+        "GET /api/people?limit=1",
+        "GET /api/people/person%3Afixture%2Fwith%20space",
+        "GET /api/people/person%3Afixture%2Fwith%20space/bills?limit=1",
+        "GET /api/people/person%3Afixture%2Fwith%20space/amendments?limit=1",
+        "GET /api/people/person%3Afixture%2Fwith%20space/votes?limit=1",
+        "GET /api/people/person%3Afixture%2Fwith%20space/memberships?limit=1",
+        "GET /api/people/person%3Afixture%2Fwith%20space/terms/term%3Afixture%2Fwith%20space",
+        "GET /api/organizations?limit=1",
+        "GET /api/organizations/organization%3Afixture%2Fwith%20space",
+        "GET /api/organizations/organization%3Afixture%2Fwith%20space/members?limit=1",
+        "GET /api/organizations/organization%3Afixture%2Fwith%20space/memberships/membership%3Afixture%2Fwith%20space",
+        "GET /api/organizations/organization%3Afixture%2Fwith%20space/meetings?limit=1",
+        "GET /api/organizations/organization%3Afixture%2Fwith%20space/bills?limit=1",
+        "GET /api/organizations/organization%3Afixture%2Fwith%20space/calendars?limit=1"
+      ].sort()
+    )
+    expect(conditional).toHaveLength(14)
+    expect(conditional.every((request) => request.ifNoneMatch === 'W/"fixture"')).toBe(true)
+  })
+
+  it("accepts the audited data-incomplete details while requiring nine exact empty Pages and membership 404", async () => {
+    requests.length = 0
+    const personId = "person:audited-fixture"
+    const termId = "term:audited-fixture"
+    const organizationId = "organization:audited-fixture"
+    const membershipId = "membership:audited-missing"
+    const privateMessage = "Canonical fixture record has incomplete private production facts"
+    const canonicalDataIncomplete = (correlationId) => ({
+      error: { category: "unprocessable", correlationId, message: privateMessage, retryable: false }
+    })
+    nx03aErrorPaths.set(`/api/people/${encodeURIComponent(personId)}`, canonicalDataIncomplete)
+    nx03aErrorPaths.set(
+      `/api/people/${encodeURIComponent(personId)}/terms/${encodeURIComponent(termId)}`,
+      canonicalDataIncomplete
+    )
+    nx03aErrorPaths.set("/api/organizations", canonicalDataIncomplete)
+    nx03aErrorPaths.set(`/api/organizations/${encodeURIComponent(organizationId)}`, canonicalDataIncomplete)
+    missingFixturePrefix = `/api/organizations/${encodeURIComponent(organizationId)}/memberships/${encodeURIComponent(membershipId)}`
+    try {
+      const result = await runSmoke({
+        LEGISLATION_WEB_SMOKE_MEMBERSHIP_ID: membershipId,
+        LEGISLATION_WEB_SMOKE_NX_03A: "1",
+        LEGISLATION_WEB_SMOKE_ORGANIZATION_ID: organizationId,
+        LEGISLATION_WEB_SMOKE_PERSON_ID: personId,
+        LEGISLATION_WEB_SMOKE_TERM_ID: termId
+      })
+
+      expect(result.nx03a.passed).toEqual([
+        "people",
+        "person bills",
+        "person amendments",
+        "person votes",
+        "person memberships",
+        "organization members",
+        "organization meetings",
+        "organization bills",
+        "organization calendars"
+      ])
+      expect(result.nx03a.skipped).toEqual([
+        { name: "person", reason: "canonical_data_incomplete" },
+        { name: "person term", reason: "canonical_data_incomplete" },
+        { name: "organizations", reason: "canonical_data_incomplete" },
+        { name: "organization", reason: "canonical_data_incomplete" },
+        { name: "organization membership", reason: "fixture_missing" }
+      ])
+      const primary = requests.filter((request) => /^nx-03a-smoke-\d+$/.test(request.correlationId))
+      const conditional = requests.filter((request) => /^nx-03a-smoke-conditional-\d+$/.test(request.correlationId))
+      expect(primary).toHaveLength(14)
+      expect(conditional).toHaveLength(9)
+      expect(conditional.every((request) => request.ifNoneMatch === 'W/"fixture"')).toBe(true)
+      const output = JSON.stringify(result)
+      expect(output).not.toContain(personId)
+      expect(output).not.toContain(termId)
+      expect(output).not.toContain(organizationId)
+      expect(output).not.toContain(membershipId)
+      expect(output).not.toContain(privateMessage)
+    } finally {
+      nx03aErrorPaths.clear()
+      missingFixturePrefix = undefined
+    }
+  })
+
+  it("reports every unconfigured NX-03A fixture route as an explicit skip", async () => {
+    requests.length = 0
+    const result = await runSmoke({ LEGISLATION_WEB_SMOKE_NX_03A: "1" })
+
+    expect(result.nx03a.passed).toEqual(["people", "organizations"])
+    expect(result.nx03a.skipped).toHaveLength(12)
+    expect(result.nx03a.skipped).toEqual(
+      expect.arrayContaining([
+        { name: "person", reason: "fixture_not_configured:personId" },
+        { name: "person term", reason: "fixture_not_configured:personId" },
+        { name: "organization", reason: "fixture_not_configured:organizationId" },
+        { name: "organization membership", reason: "fixture_not_configured:organizationId" }
+      ])
+    )
+    expect(requests.some((request) => `${request.pathname}${request.search}`.includes("fixture"))).toBe(false)
+  })
+
+  it("rejects a canonical 404 for a configured person without exposing its identifier", async () => {
+    const fixtureId = "person:private/with space"
+    missingFixturePrefix = `/api/people/${encodeURIComponent(fixtureId)}`
+    try {
+      let error
+      try {
+        await runSmoke({ LEGISLATION_WEB_SMOKE_NX_03A: "1", LEGISLATION_WEB_SMOKE_PERSON_ID: fixtureId })
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("GET person returned status 404")
+      expect(error.stderr).not.toContain(fixtureId)
+      expect(error.stderr).not.toContain(encodeURIComponent(fixtureId))
+    } finally {
+      missingFixturePrefix = undefined
+    }
+  })
+
+  it("fails malformed NX-03A envelopes without exposing the organization identifier", async () => {
+    const fixtureId = "organization:do-not-emit"
+    malformedPath = `/api/organizations/${encodeURIComponent(fixtureId)}`
+    try {
+      let error
+      try {
+        await runSmoke({
+          LEGISLATION_WEB_SMOKE_NX_03A: "1",
+          LEGISLATION_WEB_SMOKE_ORGANIZATION_ID: fixtureId
+        })
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("GET organization did not return an exact Resource envelope")
+      expect(error.stderr).not.toContain(fixtureId)
+      expect(error.stderr).not.toContain(encodeURIComponent(fixtureId))
+    } finally {
+      malformedPath = undefined
+    }
+  })
+
+  it("rejects a malformed 422 on an approved NX-03A data-incomplete route", async () => {
+    const personId = "person:private-malformed"
+    const privateMessage = "Private production record is incomplete"
+    nx03aErrorPaths.set(`/api/people/${encodeURIComponent(personId)}`, (correlationId) => ({
+      error: { category: "unprocessable", correlationId, message: privateMessage, retryable: false },
+      unexpected: true
+    }))
+    try {
+      let error
+      try {
+        await runSmoke({ LEGISLATION_WEB_SMOKE_NX_03A: "1", LEGISLATION_WEB_SMOKE_PERSON_ID: personId })
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("GET person did not return a canonical data-incomplete ErrorResponse")
+      expect(error.stderr).not.toContain(personId)
+      expect(error.stderr).not.toContain(privateMessage)
+    } finally {
+      nx03aErrorPaths.clear()
+    }
+  })
+
+  it("rejects an exact canonical 422 on an NX-03A route that must return a Page", async () => {
+    const personId = "person:private-child"
+    const privateMessage = "Private child collection is incomplete"
+    nx03aErrorPaths.set(`/api/people/${encodeURIComponent(personId)}/bills`, (correlationId) => ({
+      error: { category: "unprocessable", correlationId, message: privateMessage, retryable: false }
+    }))
+    try {
+      let error
+      try {
+        await runSmoke({ LEGISLATION_WEB_SMOKE_NX_03A: "1", LEGISLATION_WEB_SMOKE_PERSON_ID: personId })
+      } catch (caught) {
+        error = caught
+      }
+      expect(error).toMatchObject({ stderr: expect.any(String) })
+      expect(error.stderr).toContain("GET person bills returned status 422")
+      expect(error.stderr).not.toContain(personId)
+      expect(error.stderr).not.toContain(privateMessage)
+    } finally {
+      nx03aErrorPaths.clear()
     }
   })
 })

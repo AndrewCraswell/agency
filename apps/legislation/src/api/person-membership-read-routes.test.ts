@@ -147,6 +147,21 @@ describe("person membership read API handler", () => {
     })
   })
 
+  it("uses the shared pagination default", async () => {
+    let received: unknown
+    const baseUrl = await startServer({
+      listPersonMemberships: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const response = await fetch(`${baseUrl}/api/people/person%3Aus%3Aexample/memberships`)
+
+    expect(response.status).toBe(200)
+    expect(received).toMatchObject({ limit: 20, personId: "person:us:example" })
+  })
+
   it("fails closed for incomplete provenance and rejects noncanonical route or query input", async () => {
     const baseUrl = await startServer({
       listPersonMemberships: async () => ({
@@ -159,20 +174,23 @@ describe("person membership read API handler", () => {
     expect(incomplete.status).toBe(422)
     await expect(incomplete.json()).resolves.toMatchObject({ error: { category: "unprocessable", retryable: false } })
 
-    const [unsupported, repeated, invalidBoolean, overLimit, wrongMethod, extraPath, oversizedId] = await Promise.all([
-      fetch(`${baseUrl}${path}?unexpected=true`),
-      fetch(`${baseUrl}${path}?organizationId=organization%3Aus%3Ahouse&organizationId=organization%3Aus%3Asenate`),
-      fetch(`${baseUrl}${path}?isCurrent=yes`),
-      fetch(`${baseUrl}${path}?limit=101`),
-      fetch(`${baseUrl}${path}`, { method: "POST" }),
-      fetch(`${baseUrl}${path}/extra`),
-      fetch(`${baseUrl}/api/people/${"p".repeat(257)}/memberships`)
-    ])
+    const [unsupported, repeated, invalidBoolean, overLimit, mixedFormats, wrongMethod, extraPath, oversizedId] =
+      await Promise.all([
+        fetch(`${baseUrl}${path}?unexpected=true`),
+        fetch(`${baseUrl}${path}?organizationId=organization%3Aus%3Ahouse&organizationId=organization%3Aus%3Asenate`),
+        fetch(`${baseUrl}${path}?isCurrent=yes`),
+        fetch(`${baseUrl}${path}?limit=101`),
+        fetch(`${baseUrl}${path}?from=2026-01-01&to=2026-01-02T00%3A00%3A00Z`),
+        fetch(`${baseUrl}${path}`, { method: "POST" }),
+        fetch(`${baseUrl}${path}/extra`),
+        fetch(`${baseUrl}/api/people/${"p".repeat(257)}/memberships`)
+      ])
 
     expect(unsupported.status).toBe(400)
     expect(repeated.status).toBe(400)
     expect(invalidBoolean.status).toBe(400)
     expect(overLimit.status).toBe(400)
+    expect(mixedFormats.status).toBe(400)
     expect(wrongMethod.status).toBe(404)
     expect(extraPath.status).toBe(404)
     expect(oversizedId.status).toBe(400)

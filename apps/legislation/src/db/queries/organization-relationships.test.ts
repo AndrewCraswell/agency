@@ -348,23 +348,23 @@ describe("organization pagination validation", () => {
         organizationId: "organization:ak:committee:1",
         to: "2026-02-28T23:59:59Z"
       })
-    ).toThrow("from must be less than or equal to to")
+    ).toThrow("from and to must use the same format")
   })
 
-  it("normalizes mixed date and timestamp bounds to the same inclusive day window", () => {
+  it("rejects mixed date and timestamp bounds", () => {
     expect(() =>
       buildOrganizationBillListQuery(database, {
         from: "2026-01-01T12:00:00Z",
         organizationId: "organization:ak:committee:1",
         to: "2026-01-01"
       }).toSQL()
-    ).not.toThrow()
+    ).toThrow("from and to must use the same format")
     expect(() =>
       buildOrganizationBillListQuery(database, {
         from: "2026-01-02T00:00:00Z",
         organizationId: "organization:ak:committee:1",
         to: "2026-01-01"
       })
-    ).toThrow("from must be less than or equal to to")
+    ).toThrow("from and to must use the same format")
   })
 })

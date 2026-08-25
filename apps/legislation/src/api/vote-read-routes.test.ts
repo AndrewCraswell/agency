@@ -76,6 +76,23 @@ function service(overrides: Partial<VoteReadApi> = {}): VoteReadApi {
 }
 
 describe("vote read API handler", () => {
+  it("uses the shared pagination default for person vote activity", async () => {
+    let received: unknown
+    const baseUrl = await start(
+      service({
+        listPersonVotePositions: async (input) => {
+          received = input
+          return { items: [], truncated: false }
+        }
+      })
+    )
+
+    const response = await fetch(`${baseUrl}/api/people/person%3Aus%3Aexample/votes`)
+
+    expect(response.status).toBe(200)
+    expect(received).toMatchObject({ limit: 20, personId: "person:us:example" })
+  })
+
   it("returns bounded canonical vote pages and binds the cursor to the exact filters", async () => {
     let received: unknown
     const baseUrl = await start(

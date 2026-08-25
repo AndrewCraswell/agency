@@ -122,7 +122,7 @@ describe("person bill activity API handler", () => {
     expect(received).toEqual({
       cursor: undefined,
       from: timestamp,
-      limit: 25,
+      limit: 20,
       personId: "person:us:example",
       role: "subject",
       sessionId: undefined,
@@ -158,17 +158,27 @@ describe("person bill activity API handler", () => {
       assertPersonExists: async () => undefined,
       listPersonBillActivity: async () => ({ items: [], truncated: false })
     })
-    const [extraPath, wrongMethod, unsupported, duplicate, invalidRole, invalidDate, invertedRange, limit] =
-      await Promise.all([
-        fetch(`${baseUrl}/api/people/person%3A1/bills/extra`),
-        fetch(`${baseUrl}/api/people/person%3A1/bills`, { method: "POST" }),
-        fetch(`${baseUrl}/api/people/person%3A1/bills?unknown=value`),
-        fetch(`${baseUrl}/api/people/person%3A1/bills?status=pending&status=passed`),
-        fetch(`${baseUrl}/api/people/person%3A1/bills?role=primary`),
-        fetch(`${baseUrl}/api/people/person%3A1/bills?from=2026-02-30`),
-        fetch(`${baseUrl}/api/people/person%3A1/bills?from=2026-02-02&to=2026-02-01`),
-        fetch(`${baseUrl}/api/people/person%3A1/bills?limit=101`)
-      ])
+    const [
+      extraPath,
+      wrongMethod,
+      unsupported,
+      duplicate,
+      invalidRole,
+      invalidDate,
+      invertedRange,
+      mixedFormats,
+      limit
+    ] = await Promise.all([
+      fetch(`${baseUrl}/api/people/person%3A1/bills/extra`),
+      fetch(`${baseUrl}/api/people/person%3A1/bills`, { method: "POST" }),
+      fetch(`${baseUrl}/api/people/person%3A1/bills?unknown=value`),
+      fetch(`${baseUrl}/api/people/person%3A1/bills?status=pending&status=passed`),
+      fetch(`${baseUrl}/api/people/person%3A1/bills?role=primary`),
+      fetch(`${baseUrl}/api/people/person%3A1/bills?from=2026-02-30`),
+      fetch(`${baseUrl}/api/people/person%3A1/bills?from=2026-02-02&to=2026-02-01`),
+      fetch(`${baseUrl}/api/people/person%3A1/bills?from=2026-02-01&to=2026-02-02T00%3A00%3A00Z`),
+      fetch(`${baseUrl}/api/people/person%3A1/bills?limit=101`)
+    ])
 
     expect([
       extraPath.status,
@@ -178,8 +188,9 @@ describe("person bill activity API handler", () => {
       invalidRole.status,
       invalidDate.status,
       invertedRange.status,
+      mixedFormats.status,
       limit.status
-    ]).toEqual([404, 404, 400, 400, 400, 400, 400, 400])
+    ]).toEqual([404, 404, 400, 400, 400, 400, 400, 400, 400])
   })
 
   it("fails closed when activity bounds, roles, or bill provenance are incomplete", async () => {

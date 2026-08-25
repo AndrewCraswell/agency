@@ -21,10 +21,16 @@ const configuredNx02c = process.env.LEGISLATION_WEB_SMOKE_NX_02C?.trim()
 if (configuredNx02c !== undefined && configuredNx02c !== "" && configuredNx02c !== "1") {
   throw new TypeError("LEGISLATION_WEB_SMOKE_NX_02C must be 1 when it is set")
 }
+const configuredNx03a = process.env.LEGISLATION_WEB_SMOKE_NX_03A?.trim()
+if (configuredNx03a !== undefined && configuredNx03a !== "" && configuredNx03a !== "1") {
+  throw new TypeError("LEGISLATION_WEB_SMOKE_NX_03A must be 1 when it is set")
+}
+const smokeNx03a = configuredNx03a === "1"
 const smokeNx02c = configuredNx02c === "1"
 const smokeNx02b = configuredNx02b === "1"
-const smokeNx02a = configuredNx02a === "1" || smokeNx02b || smokeNx02c
-const smokeNx02bCumulative = smokeNx02b || smokeNx02c
+const smokeNx02cCumulative = smokeNx02c || smokeNx03a
+const smokeNx02bCumulative = smokeNx02b || smokeNx02cCumulative
+const smokeNx02a = configuredNx02a === "1" || smokeNx02bCumulative
 
 function fixtureEnvironmentValue(name) {
   const configured = process.env[name]
@@ -52,6 +58,13 @@ const nx02cFixtures = {
   documentSectionId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_DOCUMENT_SECTION_ID"),
   supportingMaterialId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_ID"),
   supportingMaterialSectionId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_SUPPORTING_MATERIAL_SECTION_ID")
+}
+
+const nx03aFixtures = {
+  membershipId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_MEMBERSHIP_ID"),
+  organizationId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_ORGANIZATION_ID"),
+  personId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_PERSON_ID"),
+  termId: fixtureEnvironmentValue("LEGISLATION_WEB_SMOKE_TERM_ID")
 }
 
 function smokeBaseUrl(value) {
@@ -831,6 +844,152 @@ async function smokeNx02cRoutes(root) {
   }
 }
 
+function missingNx03aFixtureName(route) {
+  return route.fixtures.find((fixture) => nx03aFixtures[fixture] === undefined)
+}
+
+async function smokeNx03aRoutes(root) {
+  const canonicalDataIncompleteRoutes = new Set(["organization", "organizations", "person", "person term"])
+  const routes = [
+    { fixtures: [], kind: "page", name: "people", path: "/api/people?limit=1" },
+    {
+      fixtures: ["personId"],
+      kind: "resource",
+      name: "person",
+      path: ({ personId }) => `/api/people/${encodeURIComponent(personId)}`
+    },
+    {
+      fixtures: ["personId"],
+      kind: "page",
+      name: "person bills",
+      path: ({ personId }) => `/api/people/${encodeURIComponent(personId)}/bills?limit=1`
+    },
+    {
+      fixtures: ["personId"],
+      kind: "page",
+      name: "person amendments",
+      path: ({ personId }) => `/api/people/${encodeURIComponent(personId)}/amendments?limit=1`
+    },
+    {
+      fixtures: ["personId"],
+      kind: "page",
+      name: "person votes",
+      path: ({ personId }) => `/api/people/${encodeURIComponent(personId)}/votes?limit=1`
+    },
+    {
+      fixtures: ["personId"],
+      kind: "page",
+      name: "person memberships",
+      path: ({ personId }) => `/api/people/${encodeURIComponent(personId)}/memberships?limit=1`
+    },
+    {
+      fixtures: ["personId", "termId"],
+      kind: "resource",
+      name: "person term",
+      path: ({ personId, termId }) => `/api/people/${encodeURIComponent(personId)}/terms/${encodeURIComponent(termId)}`
+    },
+    { fixtures: [], kind: "page", name: "organizations", path: "/api/organizations?limit=1" },
+    {
+      fixtures: ["organizationId"],
+      kind: "resource",
+      name: "organization",
+      path: ({ organizationId }) => `/api/organizations/${encodeURIComponent(organizationId)}`
+    },
+    {
+      fixtures: ["organizationId"],
+      kind: "page",
+      name: "organization members",
+      path: ({ organizationId }) => `/api/organizations/${encodeURIComponent(organizationId)}/members?limit=1`
+    },
+    {
+      fixtures: ["organizationId", "membershipId"],
+      kind: "resource",
+      name: "organization membership",
+      path: ({ organizationId, membershipId }) =>
+        `/api/organizations/${encodeURIComponent(organizationId)}/memberships/${encodeURIComponent(membershipId)}`
+    },
+    {
+      fixtures: ["organizationId"],
+      kind: "page",
+      name: "organization meetings",
+      path: ({ organizationId }) => `/api/organizations/${encodeURIComponent(organizationId)}/meetings?limit=1`
+    },
+    {
+      fixtures: ["organizationId"],
+      kind: "page",
+      name: "organization bills",
+      path: ({ organizationId }) => `/api/organizations/${encodeURIComponent(organizationId)}/bills?limit=1`
+    },
+    {
+      fixtures: ["organizationId"],
+      kind: "page",
+      name: "organization calendars",
+      path: ({ organizationId }) => `/api/organizations/${encodeURIComponent(organizationId)}/calendars?limit=1`
+    }
+  ]
+  const passed = []
+  const skipped = []
+
+  for (const [index, route] of routes.entries()) {
+    const missingFixture = missingNx03aFixtureName(route)
+    if (missingFixture !== undefined) {
+      skipped.push({ name: route.name, reason: `fixture_not_configured:${missingFixture}` })
+      continue
+    }
+    const path = typeof route.path === "function" ? route.path(nx03aFixtures) : route.path
+    const url = new URL(path, root)
+    const correlationId = `nx-03a-smoke-${index + 1}`
+    const name = `GET ${route.name}`
+    const response = await smokeFetch(url, {
+      diagnosticName: name,
+      headers: { "x-correlation-id": correlationId }
+    })
+    requireCorrelationId(response, name, correlationId)
+    if (!response.headers.get("content-type")?.includes("application/json")) {
+      throw new Error(`${name} did not return application/json`)
+    }
+    let body
+    try {
+      body = await response.json()
+    } catch {
+      throw new Error(`${name} did not return a JSON body`)
+    }
+    if (canonicalDataIncompleteRoutes.has(route.name) && response.status === 422) {
+      requireCanonicalDataIncomplete(body, name, correlationId)
+      skipped.push({ name: route.name, reason: "canonical_data_incomplete" })
+      continue
+    }
+    if (route.name === "organization membership" && response.status === 404) {
+      requireCanonicalNotFound(body, name, correlationId)
+      skipped.push({ name: route.name, reason: "fixture_missing" })
+      continue
+    }
+    if (response.status !== 200) {
+      throw new Error(`${name} returned status ${response.status}, expected 200 or canonical fixture 404`)
+    }
+    requirePrivateNoStore(response, name)
+    const etag = requireEtag(response, name)
+    await smokeConditionalGet(url, `conditional GET ${route.name}`, etag, `nx-03a-smoke-conditional-${index + 1}`)
+    if (route.kind === "page") {
+      requirePageEnvelope(body, name, correlationId)
+    } else {
+      requireResourceEnvelope(body, name, correlationId, nx03aFixtures[route.fixtures.at(-1)])
+    }
+    passed.push(route.name)
+  }
+
+  await Promise.all([
+    smokeCanonicalApiNotFound(root, "/api/people/", "nx-03a-smoke-people-trailing-slash"),
+    smokeCanonicalApiNotFound(root, "/api/organizations/", "nx-03a-smoke-organizations-trailing-slash")
+  ])
+
+  return {
+    notFound: ["people_trailing_slash", "organizations_trailing_slash"],
+    passed,
+    skipped
+  }
+}
+
 const root = smokeBaseUrl(baseUrl)
 const healthUrl = new URL("/health", root)
 const readyUrl = new URL("/ready", root)
@@ -878,7 +1037,8 @@ if (!homepageMarkup.includes("<main")) {
 
 const nx02a = smokeNx02a ? await smokeNx02aRoutes(root) : undefined
 const nx02b = smokeNx02bCumulative ? await smokeNx02bRoutes(root) : undefined
-const nx02c = smokeNx02c ? await smokeNx02cRoutes(root) : undefined
+const nx02c = smokeNx02cCumulative ? await smokeNx02cRoutes(root) : undefined
+const nx03a = smokeNx03a ? await smokeNx03aRoutes(root) : undefined
 let profile = "foundation"
 if (smokeNx02a) {
   profile = "foundation+nx-02a"
@@ -889,6 +1049,9 @@ if (smokeNx02bCumulative) {
 if (smokeNx02c) {
   profile = "foundation+nx-02a+nx-02b+nx-02c"
 }
+if (smokeNx03a) {
+  profile = "foundation+nx-02a+nx-02b+nx-02c+nx-03a"
+}
 
 process.stdout.write(
   `${JSON.stringify({
@@ -897,6 +1060,7 @@ process.stdout.write(
     ...(nx02a === undefined ? {} : { nx02a }),
     ...(nx02b === undefined ? {} : { nx02b }),
     ...(nx02c === undefined ? {} : { nx02c }),
+    ...(nx03a === undefined ? {} : { nx03a }),
     profile,
     ready: ready.status,
     timeoutMs,

@@ -43,6 +43,13 @@ describe("people collection repository", () => {
     expect(generated).toContain('order by "legislation"."people"."name" asc, "legislation"."people"."id" asc')
   })
 
+  it("accepts the documented 500-character people query", () => {
+    expect(() => buildPeopleListQuery(database, { q: "a".repeat(500) }).toSQL()).not.toThrow()
+    expect(() => buildPeopleListQuery(database, { q: "a".repeat(501) }).toSQL()).toThrow(
+      "q must be between 1 and 500 characters"
+    )
+  })
+
   it("preserves multi-value universal filters and the canonical updated-at interval", () => {
     const generated = buildPeopleListQuery(database, {
       jurisdictionIds: ["jurisdiction:us", "jurisdiction:ca"],

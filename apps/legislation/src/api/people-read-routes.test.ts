@@ -92,8 +92,19 @@ describe("people read API handler", () => {
   })
 
   it("accepts only the exact GET route and its bounded documented query values", async () => {
-    const baseUrl = await startServer({ listPeople: async () => ({ items: [], truncated: false }) })
-    const oversizedQuery = "a".repeat(257)
+    let received: unknown
+    const baseUrl = await startServer({
+      listPeople: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+    const acceptedQuery = "a".repeat(500)
+    const accepted = await fetch(`${baseUrl}/api/people?q=${acceptedQuery}`)
+    expect(accepted.status).toBe(200)
+    expect(received).toMatchObject({ limit: 20, q: acceptedQuery })
+
+    const oversizedQuery = "a".repeat(501)
     const [extraPath, wrongMethod, unsupported, duplicate, invalidBoolean, invalidSort, oversized, limit] =
       await Promise.all([
         fetch(`${baseUrl}/api/people/extra`),

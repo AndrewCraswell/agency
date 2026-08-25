@@ -15,7 +15,6 @@ import type {
 } from "./organization-detail-read-repository.js"
 
 const DEFAULT_CHILD_LIMIT = 25
-const MAX_CHILD_LIMIT = 25
 
 export interface OrganizationDetailReadApi {
   getOrganizationDetail(
@@ -45,10 +44,9 @@ async function handleOrganizationDetailRequest(
   if (organizationId === undefined) {
     return false
   }
-  assertAllowedQueryParameters(url, ["childLimit"])
-  assertSingleQueryParameter(url, "childLimit")
+  assertAllowedQueryParameters(url, [])
   const detail = await service.getOrganizationDetail({
-    childLimit: queryChildLimit(url),
+    childLimit: DEFAULT_CHILD_LIMIT,
     organizationId
   })
   sendApiJson(response, 200, apiResource(request, detail))
@@ -80,26 +78,4 @@ function routeOrganizationId(method: string | undefined, pathname: string): stri
     throw new LegislationError("invalid_request", "organizationId must be between 1 and 256 characters")
   }
   return organizationId
-}
-
-function assertSingleQueryParameter(url: URL, name: string): void {
-  if (url.searchParams.getAll(name).length > 1) {
-    throw new LegislationError("invalid_request", `${name} must appear once`)
-  }
-}
-
-function queryChildLimit(url: URL): number {
-  const raw = url.searchParams.get("childLimit")
-  if (raw === null) {
-    return DEFAULT_CHILD_LIMIT
-  }
-  const value = raw.trim()
-  if (!/^\d+$/.test(value)) {
-    throw new LegislationError("invalid_request", `childLimit must be between 1 and ${MAX_CHILD_LIMIT}`)
-  }
-  const parsed = Number(value)
-  if (!Number.isSafeInteger(parsed) || parsed < 1 || parsed > MAX_CHILD_LIMIT) {
-    throw new LegislationError("invalid_request", `childLimit must be between 1 and ${MAX_CHILD_LIMIT}`)
-  }
-  return parsed
 }

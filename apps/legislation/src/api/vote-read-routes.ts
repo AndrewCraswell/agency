@@ -122,7 +122,7 @@ export function createVoteReadApiHandler(
         apiPage(
           request,
           { ...page, items: page.items.map((item) => projectPersonVoteActivity(item, options.apiBaseUrl)) },
-          input.limit ?? 25
+          input.limit ?? 20
         )
       )
       return true
@@ -234,7 +234,7 @@ function personVotesInput(url: URL, personId: string): PersonVoteListInput {
   return {
     cursor: bounded(url, "cursor", 4096),
     from,
-    limit: queryInteger(url, "limit", 25, 100),
+    limit: queryInteger(url, "limit", 20, 100),
     option: option(bounded(url, "option", 16)),
     organizationId: bounded(url, "organizationId", 256),
     personId,

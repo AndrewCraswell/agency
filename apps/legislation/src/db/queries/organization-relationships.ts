@@ -11,7 +11,7 @@ import {
   people
 } from "../schema/schema.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 export type OrganizationSort = "name-asc" | "updated-desc"
@@ -540,6 +540,9 @@ function validateDateRange(from: string | undefined, to: string | undefined): vo
     throw new LegislationError("invalid_request", "to must be an ISO date or RFC3339 timestamp")
   }
   if (from !== undefined && to !== undefined) {
+    if (isDateOnly(from) !== isDateOnly(to)) {
+      throw new LegislationError("invalid_request", "from and to must use the same format")
+    }
     const fromTimestamp = normalizedDateBound(from, "from")
     const toTimestamp = normalizedDateBound(to, "to")
     const inverted = isDateOnly(to) ? fromTimestamp >= toTimestamp : fromTimestamp > toTimestamp

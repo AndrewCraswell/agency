@@ -4,7 +4,7 @@ import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
 import { organizationMemberships, organizations, people } from "../schema/schema.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 export interface PersonMembershipListInput {
@@ -189,6 +189,9 @@ function validateDateRange(from: string | undefined, to: string | undefined): vo
     throw new LegislationError("invalid_request", "to must be an ISO date or RFC3339 timestamp")
   }
   if (from !== undefined && to !== undefined) {
+    if (isDateOnly(from) !== isDateOnly(to)) {
+      throw new LegislationError("invalid_request", "from and to must use the same format")
+    }
     const fromTimestamp = Date.parse(from)
     const toTimestamp = Date.parse(to)
     const inverted = isDateOnly(to) ? fromTimestamp >= toTimestamp + 86_400_000 : fromTimestamp > toTimestamp

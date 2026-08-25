@@ -11,7 +11,7 @@ import {
   organizations
 } from "../schema/schema.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 export type MeetingSort = "starts-asc" | "starts-desc" | "updated-desc"

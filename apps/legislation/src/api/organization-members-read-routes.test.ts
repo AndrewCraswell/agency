@@ -150,6 +150,21 @@ describe("organization members read API handler", () => {
     })
   })
 
+  it("uses the shared pagination default", async () => {
+    let received: unknown
+    const baseUrl = await startServer({
+      listOrganizationMembers: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const response = await fetch(`${baseUrl}/api/organizations/organization%3Aus%3Ahouse/members`)
+
+    expect(response.status).toBe(200)
+    expect(received).toMatchObject({ limit: 20, organizationId: "organization:us:house" })
+  })
+
   it("fails closed for incomplete provenance and rejects noncanonical route or query input", async () => {
     const baseUrl = await startServer({
       listOrganizationMembers: async () => ({
@@ -158,15 +173,17 @@ describe("organization members read API handler", () => {
       })
     })
     const path = "/api/organizations/organization%3Aus%3Ahouse/members"
-    const [incomplete, unsupported, repeated, invalidBoolean, overLimit, wrongMethod, oversizedId] = await Promise.all([
-      fetch(`${baseUrl}${path}`),
-      fetch(`${baseUrl}${path}?unexpected=true`),
-      fetch(`${baseUrl}${path}?role=member&role=chair`),
-      fetch(`${baseUrl}${path}?isCurrent=yes`),
-      fetch(`${baseUrl}${path}?limit=101`),
-      fetch(`${baseUrl}${path}`, { method: "POST" }),
-      fetch(`${baseUrl}/api/organizations/${"o".repeat(257)}/members`)
-    ])
+    const [incomplete, unsupported, repeated, invalidBoolean, overLimit, mixedFormats, wrongMethod, oversizedId] =
+      await Promise.all([
+        fetch(`${baseUrl}${path}`),
+        fetch(`${baseUrl}${path}?unexpected=true`),
+        fetch(`${baseUrl}${path}?role=member&role=chair`),
+        fetch(`${baseUrl}${path}?isCurrent=yes`),
+        fetch(`${baseUrl}${path}?limit=101`),
+        fetch(`${baseUrl}${path}?from=2026-01-01&to=2026-01-02T00%3A00%3A00Z`),
+        fetch(`${baseUrl}${path}`, { method: "POST" }),
+        fetch(`${baseUrl}/api/organizations/${"o".repeat(257)}/members`)
+      ])
 
     expect(incomplete.status).toBe(422)
     await expect(incomplete.json()).resolves.toMatchObject({ error: { category: "unprocessable", retryable: false } })
@@ -175,8 +192,9 @@ describe("organization members read API handler", () => {
       repeated.status,
       invalidBoolean.status,
       overLimit.status,
+      mixedFormats.status,
       wrongMethod.status,
       oversizedId.status
-    ]).toEqual([400, 400, 400, 400, 404, 400])
+    ]).toEqual([400, 400, 400, 400, 400, 404, 400])
   })
 })

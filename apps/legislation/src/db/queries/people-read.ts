@@ -4,7 +4,7 @@ import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
 import { organizationMemberships, people, personAliases } from "../schema/schema.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 export type PersonSort = "name-asc" | "updated-desc"
@@ -124,7 +124,7 @@ function cursorScope(input: PersonListInput): PersonCursorScope {
     organizationId:
       input.organizationId === undefined ? null : requiredInputText(input.organizationId, "organizationId"),
     party: input.party === undefined ? null : requiredInputText(input.party, "party"),
-    q: input.q === undefined ? null : requiredInputText(input.q, "q"),
+    q: input.q === undefined ? null : requiredInputText(input.q, "q", 500),
     sort: input.sort ?? "name-asc",
     ...(input.jurisdictionIds === undefined
       ? {}
@@ -263,10 +263,10 @@ function parseLimit(value: number | undefined): number {
   return limit
 }
 
-function requiredInputText(value: string, name: string): string {
+function requiredInputText(value: string, name: string, maximumLength = 256): string {
   const normalized = value.trim()
-  if (normalized.length === 0 || normalized.length > 256) {
-    throw new LegislationError("invalid_request", `${name} must be between 1 and 256 characters`)
+  if (normalized.length === 0 || normalized.length > maximumLength) {
+    throw new LegislationError("invalid_request", `${name} must be between 1 and ${maximumLength} characters`)
   }
   return normalized
 }

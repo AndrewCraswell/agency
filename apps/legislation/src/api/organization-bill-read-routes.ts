@@ -13,7 +13,7 @@ import {
   type HttpApiHandler
 } from "./http.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 export interface OrganizationBillReadApi {
@@ -159,6 +159,9 @@ function queryDateBound(url: URL, name: "from" | "to"): string | undefined {
 function validateDateRange(from: string | undefined, to: string | undefined): void {
   if (from === undefined || to === undefined) {
     return
+  }
+  if (isIsoDate(from) !== isIsoDate(to)) {
+    throw new LegislationError("invalid_request", "from and to must use the same format")
   }
   const fromTimestamp = Date.parse(from)
   const toTimestamp = Date.parse(to) + (isIsoDate(to) ? 86_400_000 : 0)

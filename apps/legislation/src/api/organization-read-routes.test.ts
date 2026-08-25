@@ -129,7 +129,7 @@ describe("organization collection API handler", () => {
       cursor: undefined,
       isActive: undefined,
       jurisdictionId: undefined,
-      limit: 25,
+      limit: 20,
       parentOrganizationId: undefined,
       query: undefined,
       sort: "name-asc"

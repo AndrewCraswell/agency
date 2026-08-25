@@ -3,7 +3,7 @@ import { LegislationError } from "../../legislation/errors.js"
 import type { LegislationDatabase } from "../database.js"
 import { calendars } from "../schema/schema.js"
 
-const DEFAULT_LIMIT = 25
+const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
 
 export interface CalendarListInput {

@@ -117,21 +117,39 @@ describe("person amendment API handler", () => {
     })
   })
 
+  it("uses the shared pagination default", async () => {
+    let received: unknown
+    const baseUrl = await startServer({
+      assertPersonExists: async () => undefined,
+      listPersonAmendments: async (input) => {
+        received = input
+        return { items: [], truncated: false }
+      }
+    })
+
+    const response = await fetch(`${baseUrl}/api/people/person%3Aus%3Aexample/amendments`)
+
+    expect(response.status).toBe(200)
+    expect(received).toMatchObject({ limit: 20, personId: "person:us:example" })
+  })
+
   it("rejects unsupported, duplicate, malformed, and inverted filters", async () => {
     const baseUrl = await startServer({
       assertPersonExists: async () => undefined,
       listPersonAmendments: async () => ({ items: [], truncated: false })
     })
-    const [extra, method, unknown, duplicate, invalidDate, inverted, limit, encodedAlias] = await Promise.all([
-      fetch(`${baseUrl}/api/people/person%3A1/amendments/extra`),
-      fetch(`${baseUrl}/api/people/person%3A1/amendments`, { method: "POST" }),
-      fetch(`${baseUrl}/api/people/person%3A1/amendments?role=sponsor`),
-      fetch(`${baseUrl}/api/people/person%3A1/amendments?status=pending&status=passed`),
-      fetch(`${baseUrl}/api/people/person%3A1/amendments?from=2026-02-30`),
-      fetch(`${baseUrl}/api/people/person%3A1/amendments?from=2026-02-02&to=2026-02-01`),
-      fetch(`${baseUrl}/api/people/person%3A1/amendments?limit=101`),
-      fetch(`${baseUrl}/%61pi/people/person%3A1/amendments`)
-    ])
+    const [extra, method, unknown, duplicate, invalidDate, inverted, mixedFormats, limit, encodedAlias] =
+      await Promise.all([
+        fetch(`${baseUrl}/api/people/person%3A1/amendments/extra`),
+        fetch(`${baseUrl}/api/people/person%3A1/amendments`, { method: "POST" }),
+        fetch(`${baseUrl}/api/people/person%3A1/amendments?role=sponsor`),
+        fetch(`${baseUrl}/api/people/person%3A1/amendments?status=pending&status=passed`),
+        fetch(`${baseUrl}/api/people/person%3A1/amendments?from=2026-02-30`),
+        fetch(`${baseUrl}/api/people/person%3A1/amendments?from=2026-02-02&to=2026-02-01`),
+        fetch(`${baseUrl}/api/people/person%3A1/amendments?from=2026-02-01&to=2026-02-02T00%3A00%3A00Z`),
+        fetch(`${baseUrl}/api/people/person%3A1/amendments?limit=101`),
+        fetch(`${baseUrl}/%61pi/people/person%3A1/amendments`)
+      ])
 
     expect([
       extra.status,
@@ -140,9 +158,10 @@ describe("person amendment API handler", () => {
       duplicate.status,
       invalidDate.status,
       inverted.status,
+      mixedFormats.status,
       limit.status,
       encodedAlias.status
-    ]).toEqual([404, 404, 400, 400, 400, 400, 400, 404])
+    ]).toEqual([404, 404, 400, 400, 400, 400, 400, 400, 404])
   })
 
   it("fails closed when the persisted amendment is detached from its bill", async () => {

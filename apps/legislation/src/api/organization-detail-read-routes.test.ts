@@ -31,7 +31,7 @@ function organizationDetail(): OrganizationDetail {
   return {
     canonicalUrl: "https://api.example.test/api/organizations/organization%3Aus%3Arules",
     chamber: "lower",
-    childPageInfo: { memberships: { limit: 2, nextCursor: "member-cursor", truncated: true } },
+    childPageInfo: { memberships: { limit: 25, nextCursor: "member-cursor", truncated: true } },
     children: [],
     classification: "committee",
     contact: { address: null, email: "rules@example.test", phone: null },
@@ -59,7 +59,7 @@ function organizationDetail(): OrganizationDetail {
 }
 
 describe("organization detail read API handler", () => {
-  it("returns the exact canonical detail resource with its bounded child limit", async () => {
+  it("returns the exact canonical detail resource with its fixed child limit", async () => {
     let received: unknown
     const baseUrl = await startServer({
       getOrganizationDetail: async (input) => {
@@ -67,15 +67,15 @@ describe("organization detail read API handler", () => {
         return organizationDetail()
       }
     })
-    const response = await fetch(`${baseUrl}/api/organizations/organization%3Aus%3Arules?childLimit=2`, {
+    const response = await fetch(`${baseUrl}/api/organizations/organization%3Aus%3Arules`, {
       headers: { "x-correlation-id": "organization-detail" }
     })
 
     expect(response.status).toBe(200)
-    expect(received).toEqual({ childLimit: 2, organizationId: "organization:us:rules" })
+    expect(received).toEqual({ childLimit: 25, organizationId: "organization:us:rules" })
     await expect(response.json()).resolves.toMatchObject({
       data: {
-        childPageInfo: { memberships: { limit: 2, nextCursor: "member-cursor", truncated: true } },
+        childPageInfo: { memberships: { limit: 25, nextCursor: "member-cursor", truncated: true } },
         id: "organization:us:rules",
         type: "organization"
       },
@@ -83,7 +83,7 @@ describe("organization detail read API handler", () => {
     })
   })
 
-  it("uses the documented default child limit and converts an incomplete profile to a correlated 422", async () => {
+  it("uses the fixed internal child limit and converts an incomplete profile to a correlated 422", async () => {
     let received: unknown
     const baseUrl = await startServer({
       getOrganizationDetail: async (input) => {
@@ -102,7 +102,7 @@ describe("organization detail read API handler", () => {
     })
   })
 
-  it("rejects unsupported, repeated, malformed, and noncanonical route input", async () => {
+  it("rejects undocumented childLimit and noncanonical route input", async () => {
     const baseUrl = await startServer({ getOrganizationDetail: async () => organizationDetail() })
     const path = "/api/organizations/organization%3Aus%3Arules"
     const [unsupported, repeated, fractional, tooLarge, wrongMethod, extraPath, doubledSlash, blankId, malformed] =
