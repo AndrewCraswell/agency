@@ -189,8 +189,8 @@ describe("NX-02B deployed smoke profile", () => {
     )
     expect(nx02b.map(requestSignature).sort()).toEqual(
       [
-        "GET /api/bills?limit=1",
-        "GET /api/amendments?limit=1",
+        "GET /api/bills?jurisdictionId=jurisdiction:ak&limit=1",
+        "GET /api/amendments?recordType=structured&jurisdictionId=jurisdiction:us&sort=identifier-asc&limit=1",
         "GET /api/votes?limit=1",
         "POST /api/bills/batch",
         "POST /api/bills/amendments/batch",
@@ -217,6 +217,20 @@ describe("NX-02B deployed smoke profile", () => {
       { ids: ["amendment:fixture"] },
       { ids: ["vote:fixture"] }
     ])
+    expect(
+      nx02b
+        .filter((request) => request.pathname === "/api/bills" || request.pathname === "/api/amendments")
+        .map(requestSignature)
+        .sort()
+    ).toEqual([
+      "GET /api/amendments?recordType=structured&jurisdictionId=jurisdiction:us&sort=identifier-asc&limit=1",
+      "GET /api/bills?jurisdictionId=jurisdiction:ak&limit=1"
+    ])
+    expect(
+      nx02b
+        .filter((request) => request.pathname === "/api/bills" || request.pathname === "/api/amendments")
+        .every((request) => !request.search.includes("fixture"))
+    ).toBe(true)
   })
 
   it("reports every unconfigured detail fixture route as an explicit skip", async () => {
@@ -232,7 +246,7 @@ describe("NX-02B deployed smoke profile", () => {
         { name: "vote", reason: "fixture_not_configured:voteId" }
       ])
     )
-    expect(requests.some((request) => request.pathname.includes("fixture"))).toBe(false)
+    expect(requests.some((request) => `${request.pathname}${request.search}`.includes("fixture"))).toBe(false)
   })
 
   it("fails rather than skipping a malformed canonical response", async () => {

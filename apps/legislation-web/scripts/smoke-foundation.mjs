@@ -418,8 +418,16 @@ async function smokeNx02aRoutes(root) {
 
 async function smokeNx02bRoutes(root) {
   const routes = [
-    { kind: "page", name: "bills", path: "/api/bills?limit=1" },
-    { kind: "page", name: "amendments", path: "/api/amendments?limit=1" },
+    {
+      kind: "page",
+      name: "bills",
+      path: "/api/bills?jurisdictionId=jurisdiction:ak&limit=1"
+    },
+    {
+      kind: "page",
+      name: "amendments",
+      path: "/api/amendments?recordType=structured&jurisdictionId=jurisdiction:us&sort=identifier-asc&limit=1"
+    },
     { kind: "page", name: "votes", path: "/api/votes?limit=1" },
     {
       body: (id) => ({ ids: [id] }),
