@@ -15,7 +15,7 @@ The executable source is `src/bench-prototype-bom.ts`.
 | Power/service | USB-C receptacle, TPS25730A PD sink, CC/SBU and USB2 protection, VBUS protection, eFuse, TPS56A37 5 V conversion, application 3.3 V conversion, and required support networks. |
 | Display | Two `SN74AHCT245PWR` buffers, protected display-power branch, HUB75 connector, and external Adafruit 2277 panel. |
 | Primary outputs | One hardware-safe serialized latch, one protected load-driver stage, and the lamp/buzzer connector. Exact parts remain BP-127/BP-144 work. |
-| Recovery and safety | Native USB, ESP32 UART/boot/reset access, one justified watchdog/supervisor path, removable current links, and labeled test points. |
+| Recovery and safety | Native USB, ESP32 UART/boot/reset access, exact `TPS389033DSER` supervisor, exact `TPS3431SDRBR` health watchdog, their five required support passives, removable current links, and labeled test points. |
 | Weapon connection | Owner-approved direct-wire OK Fencing cable landing, probe points, and mechanical strain relief. |
 
 ## Removed from populated P0
@@ -46,6 +46,12 @@ and USB2 series pair. A `TBD` row cannot enter an order-candidate BOM.
 The USB-C path is the only populated power input. Bench diagnosis uses labeled
 test pads and removable links under a USB-disconnected, de-energized procedure;
 it does not receive a second connector or selector.
+
+The two HUB75 buffers share one hardware output-enable gate. The selected
+support inventory is sixteen reset-default resistors, one panel-side OE
+pull-up, two buffer bypass capacitors, one `BSS138AKA` sink, two 10 kOhm gate
+network resistors, and one 100 kOhm gate pulldown. A second enable transistor
+and duplicated gate network do not earn P0 population.
 
 ## Release boundary
 

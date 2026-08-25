@@ -19,6 +19,12 @@ describe("bench prototype BOM baseline", () => {
       C_ESP_EN_DELAY: "C1608X5R1A105K080AC",
       C_ESP_3V3_HF: "GCM188R71H104KA57D",
       C_ESP_3V3_BULK: "GCM32EC71A476KE02L",
+      U_APP_SUPERVISOR: "TPS389033DSER",
+      U_APP_WDOG: "TPS3431SDRBR",
+      C_APP_SUPERVISOR_CT_AND_BYPASS: "C0603C104K3RACTU",
+      C_APP_WDOG_BYPASS: "C0603C104K3RACTU",
+      R_APP_WDOG_TIMEOUT: "RC0603FR-0710KL",
+      R_APP_WDI_PULLUP: "RC0603FR-07100KL",
       U_REF: "REF5025AQDRQ1",
       U_W5500: "W5500",
       J_ETH: "7499011121A",
@@ -33,6 +39,12 @@ describe("bench prototype BOM baseline", () => {
       C_USB_PD_LDO: "T55A106M010C0200",
       U_DISPLAY_BUFFER_A: "SN74AHCT245PWR",
       U_DISPLAY_BUFFER_B: "SN74AHCT245PWR",
+      R_HUB75_SIGNAL_DEFAULTS: "RC0603FR-0710KL",
+      R_HUB75_PANEL_OE_PULLUP: "RC0603FR-0710KL",
+      C_HUB75_BUFFER_BYPASS: "C0603C104K3RACTU",
+      Q_DISPLAY_ENABLE: "BSS138AKA",
+      R_DISPLAY_ENABLE_PULLUP_AND_GATE: "RC0603FR-0710KL",
+      R_DISPLAY_ENABLE_GATE_PD: "RC0603FR-07100KL",
       U_V5_BUCK: "TPS56A37RPAR",
       U_IR_RX: "TSOP38438",
       R_IR_VS: "RC0603FR-07100RL",
@@ -73,7 +85,34 @@ describe("bench prototype BOM baseline", () => {
   it("makes every populated ESP32 support part explicit", () => {
     expect(
       benchPrototypeBom.rows.filter((row) => row.source?.kind === "processor-support").map((row) => row.reference)
-    ).toEqual(["R_ESP_BOOT_PULLUP", "R_ESP_EN_PULLUP", "C_ESP_EN_DELAY", "C_ESP_3V3_HF", "C_ESP_3V3_BULK"])
+    ).toEqual(
+      expect.arrayContaining([
+        "R_ESP_BOOT_PULLUP",
+        "R_ESP_EN_PULLUP",
+        "C_ESP_EN_DELAY",
+        "C_ESP_3V3_HF",
+        "C_ESP_3V3_BULK"
+      ])
+    )
+  })
+
+  it("selects one reset/watchdog domain and one shared HUB75 enable gate", () => {
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_APP_SUPERVISOR")).toMatchObject({
+      disposition: "selected",
+      mpn: "TPS389033DSER",
+      quantity: 1
+    })
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "U_APP_WDOG")).toMatchObject({
+      disposition: "selected",
+      mpn: "TPS3431SDRBR",
+      quantity: 1
+    })
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "Q_DISPLAY_ENABLE")).toMatchObject({
+      disposition: "selected",
+      mpn: "BSS138AKA",
+      quantity: 1
+    })
+    expect(benchPrototypeBom.rows.find((row) => row.reference === "R_HUB75_SIGNAL_DEFAULTS")?.quantity).toBe(16)
   })
 
   it("keeps CC/SBU and USB 2.0 protection ownership distinct", () => {

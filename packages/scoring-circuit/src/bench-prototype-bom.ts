@@ -86,13 +86,14 @@ function selectedSupportRow(
   mpn: string,
   packageName: string,
   sourceUrl: string,
-  notes: string
+  notes: string,
+  quantity = 1
 ): BenchPrototypeBomRow {
   return {
     reference,
     function: functionName,
     disposition: "selected",
-    quantity: 1,
+    quantity,
     manufacturer,
     mpn,
     lifecycle: "active-preferred",
@@ -252,21 +253,7 @@ const unresolvedRows: readonly BenchPrototypeBomRow[] = [
       "The production rail candidate is not a bench-order selection until its support network and thermal envelope close."
   },
   dnpRow("U_SCORING_WDOG", "Superseded STM32 watchdog", "Removed with the STM32 processor domain."),
-  {
-    reference: "U_APP_WDOG",
-    function: "Independent ESP32 watchdog",
-    disposition: "TBD",
-    quantity: 1,
-    notes: "Exact watchdog support is retained as a selectable prototype position pending reset-sequence review."
-  },
   dnpRow("U_SCORING_SUPERVISOR", "Superseded STM32 brownout supervisor", "Removed with the STM32 processor domain."),
-  {
-    reference: "U_APP_SUPERVISOR",
-    function: "Application-domain brownout and delayed-reset supervisor",
-    disposition: "TBD",
-    quantity: 1,
-    notes: "Select with the application regulator and reset timing evidence."
-  },
   dnpRow("U_RTC", "Wall-clock RTC", "Removed from P0; monotonic scoring time does not require wall-clock hardware."),
   dnpRow(
     "U_SECURE_ELEMENT",
@@ -433,6 +420,55 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "https://www.murata.com/en-us/products/productdetail?partno=GCM32EC71A476KE02L",
       "Required 47 uF nominal local reservoir; effective capacitance and rail transient behavior remain BP-125 evidence gates."
     ),
+    selectedDecisionRow(
+      "U_APP_SUPERVISOR",
+      "TPS389033DSER",
+      "Single 3.3 V brownout and delayed-reset supervisor",
+      "Required independent rail-fault reset source for the sole ESP32 domain; its open-drain output joins APP_RESET_N."
+    ),
+    selectedDecisionRow(
+      "U_APP_WDOG",
+      "TPS3431SDRBR",
+      "Single external ESP32 health watchdog",
+      "Required to reset the sole controller when acquisition, queues, reference, outputs, rails, or the scoring loop stop producing a valid health token."
+    ),
+    selectedSupportRow(
+      "C_APP_SUPERVISOR_CT_AND_BYPASS",
+      "Supervisor delay and local bypass capacitors",
+      "KEMET",
+      "C0603C104K3RACTU",
+      "0603 (1608 metric)",
+      "https://search.kemet.com/component-documentation/download/specsheet/C0603C104K3RACTU",
+      "Two required 100 nF parts: one sets the supervisor delay and one bypasses its 3.3 V supply.",
+      2
+    ),
+    selectedSupportRow(
+      "C_APP_WDOG_BYPASS",
+      "External-watchdog local bypass",
+      "KEMET",
+      "C0603C104K3RACTU",
+      "0603 (1608 metric)",
+      "https://search.kemet.com/component-documentation/download/specsheet/C0603C104K3RACTU",
+      "Required 100 nF local bypass at the watchdog supply."
+    ),
+    selectedSupportRow(
+      "R_APP_WDOG_TIMEOUT",
+      "External-watchdog timeout selection",
+      "Yageo",
+      "RC0603FR-0710KL",
+      "0603 (1608 metric)",
+      "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL",
+      "Required exact 10 kOhm timeout-selection resistor for the reviewed watchdog interval."
+    ),
+    selectedSupportRow(
+      "R_APP_WDI_PULLUP",
+      "External-watchdog input default",
+      "Yageo",
+      "RC0603FR-07100KL",
+      "0603 (1608 metric)",
+      "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL",
+      "Required 100 kOhm WDI bias so reset and absent-firmware states cannot generate valid watchdog edges."
+    ),
     dnpRow("U_ISO_MAIN", "Superseded main processor isolator", "Removed because P0 has one processor domain."),
     dnpRow("U_ISO_AUX", "Superseded auxiliary processor isolator", "Removed because P0 has one processor domain."),
     dnpRow("U_ISO_POWER", "Superseded isolated processor-link power", "Removed because P0 has one processor domain."),
@@ -529,6 +565,63 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "SN74AHCT245PWR",
       "HUB75 signal buffer B",
       "Exact buffer identity is retained for safe blanking; panel header and current remain prototype gates."
+    ),
+    selectedSupportRow(
+      "R_HUB75_SIGNAL_DEFAULTS",
+      "HUB75 reset-safe signal defaults",
+      "Yageo",
+      "RC0603FR-0710KL",
+      "0603 (1608 metric)",
+      "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL",
+      "Sixteen required 10 kOhm defaults cover twelve black-data/address/clock/latch pulldowns, the OE input pull-up, and three unused AHCT inputs.",
+      16
+    ),
+    selectedSupportRow(
+      "R_HUB75_PANEL_OE_PULLUP",
+      "HUB75 panel-side blanking default",
+      "Yageo",
+      "RC0603FR-0710KL",
+      "0603 (1608 metric)",
+      "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL",
+      "Required pull-up holds panel OE inactive when the level shifter is disabled or unpowered."
+    ),
+    selectedSupportRow(
+      "C_HUB75_BUFFER_BYPASS",
+      "HUB75 level-shifter local bypass",
+      "KEMET",
+      "C0603C104K3RACTU",
+      "0603 (1608 metric)",
+      "https://search.kemet.com/component-documentation/download/specsheet/C0603C104K3RACTU",
+      "Two required 100 nF local bypass capacitors, one at each SN74AHCT245 supply.",
+      2
+    ),
+    selectedSupportRow(
+      "Q_DISPLAY_ENABLE",
+      "Shared hardware display-enable sink",
+      "Nexperia",
+      "BSS138AKA",
+      "SOT23 (TO-236AB)",
+      "https://assets.nexperia.com/documents/data-sheet/BSS138AKA.pdf",
+      "One required low-side sink ties both AHCT output-enable inputs together so reset blanks all 13 HUB75 signals without firmware authority."
+    ),
+    selectedSupportRow(
+      "R_DISPLAY_ENABLE_PULLUP_AND_GATE",
+      "Shared display-enable bias and gate network",
+      "Yageo",
+      "RC0603FR-0710KL",
+      "0603 (1608 metric)",
+      "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0710KL",
+      "Two required 10 kOhm parts provide the common OE pull-up and reset-to-gate series path.",
+      2
+    ),
+    selectedSupportRow(
+      "R_DISPLAY_ENABLE_GATE_PD",
+      "Shared display-enable gate default",
+      "Yageo",
+      "RC0603FR-07100KL",
+      "0603 (1608 metric)",
+      "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07100KL",
+      "Required 100 kOhm gate pulldown prevents a floating BSS138 gate during reset or power sequencing."
     ),
     dnpRow(
       "U_FRAM",
