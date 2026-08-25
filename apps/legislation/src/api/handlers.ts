@@ -1,4 +1,5 @@
 import type { LegislationDatabase } from "../db/database.js"
+import { listBillTextSections } from "../db/queries/bill-text-read.js"
 import { listBillTimeline } from "../db/queries/bill-timeline-read.js"
 import { getOrganizationMembership, getPersonTerm } from "../db/queries/civic-scoped-reads.js"
 import {
@@ -33,6 +34,7 @@ import { assertPersonExists, listPersonBillActivity } from "../db/queries/person
 import { getSupportingMaterialSectionRead } from "../db/queries/supporting-material-section-read.js"
 import { createBillDetailReadRepository } from "./bill-detail-read-repository.js"
 import { createBillDetailReadApiHandler } from "./bill-detail-read-routes.js"
+import { createBillTextReadApiHandler } from "./bill-text-read-routes.js"
 import { createBillTimelineReadApiHandler } from "./bill-timeline-read-routes.js"
 import { createCivicScopedReadApiHandler } from "./civic-scoped-read-routes.js"
 import { createCivicSearchApiHandler, type CivicSearchApi } from "./civic-search.js"
@@ -111,6 +113,13 @@ export function createLegislationApiHandler(
       ? []
       : [
           createBillDetailReadApiHandler(createBillDetailReadRepository(documentDatabase, options.apiBaseUrl)),
+          createBillTextReadApiHandler(
+            {
+              assertBillExists: async (billId) => await assertBillExists(documentDatabase, billId),
+              listBillTextSections: async (input) => await listBillTextSections(documentDatabase, input)
+            },
+            options
+          ),
           createCivicScopedReadApiHandler(
             {
               getOrganizationMembership: async (input) => await getOrganizationMembership(documentDatabase, input),
