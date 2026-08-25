@@ -44,6 +44,8 @@ import { createPersonMembershipsRepository } from "./person-membership-read-repo
 import { createPersonMembershipReadApiHandler } from "./person-membership-read-routes.js"
 import { createResourceBatchReadRepositoryFromCanonicalReads } from "./resource-batch-read-repository.js"
 import { createResourceBatchReadApiHandler } from "./resource-batch-read-routes.js"
+import { createSessionRepository } from "./session-read-repository.js"
+import { createSessionReadApiHandler } from "./session-read-routes.js"
 import { createSubscriptionReadApiHandler } from "./subscription-routes.js"
 import { createWebhookSecretProtector, type SubscriptionRepository, SubscriptionService } from "./subscriptions.js"
 import { createSupportingMaterialSectionReadApiHandler } from "./supporting-material-section-read-routes.js"
@@ -149,6 +151,7 @@ export function createLegislationApiHandler(
           createOrganizationReadApiHandler(createOrganizationReadRepository(documentDatabase), options),
           createOrganizationMembersReadApiHandler(createOrganizationMembersRepository(documentDatabase), options),
           createPersonMembershipReadApiHandler(createPersonMembershipsRepository(documentDatabase), options),
+          createSessionReadApiHandler(createSessionRepository(documentDatabase), options),
           createSupportingMaterialSectionReadApiHandler(
             {
               getSupportingMaterialSection: async (input) =>
