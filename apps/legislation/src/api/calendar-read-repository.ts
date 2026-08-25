@@ -63,7 +63,11 @@ export function createCalendarReadRepository(database: LegislationDatabase): Cal
     getCalendarRead: async (calendarId) => toCalendarRead(await getPersistedCalendarRead(database, calendarId)),
     listCalendarMeetings: async (input) => {
       const calendar = await getPersistedCalendarRead(database, input.calendarId)
-      return await listMeetings(database, { ...input, jurisdictionId: calendar.jurisdictionId })
+      return await listMeetings(database, {
+        ...input,
+        dateTimezone: calendar.timezone,
+        jurisdictionId: calendar.jurisdictionId
+      })
     },
     listCalendars: async (input) => mapPage(await listPersistedCalendars(database, input))
   }

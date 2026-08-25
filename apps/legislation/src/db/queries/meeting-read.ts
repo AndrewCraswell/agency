@@ -30,6 +30,8 @@ export interface MeetingListInput {
   organizationId?: string
   /** Internal lexical name constraint used by universal search. */
   query?: string
+  /** Internal calendar-local date boundary timezone; public callers use the calendar route. */
+  dateTimezone?: string | null
   sessionId?: string
   sort?: MeetingSort
   status?: "cancelled" | "completed" | "other" | "postponed" | "scheduled"
@@ -76,6 +78,7 @@ type MeetingCursorScope = {
   billId: string | null
   calendarId: string | null
   classification: MeetingListInput["classification"] | null
+  dateTimezone: string | null
   from: string | null
   jurisdictionId: string | null
   isRemote: boolean | null
@@ -211,8 +214,8 @@ function meetingVisibility(scope: MeetingCursorScope): [SQL, ...SQL[]] {
     scope.jurisdictionId === null ? undefined : eq(legislativeEvents.jurisdictionId, scope.jurisdictionId),
     scope.classification === null ? undefined : sql`${legislativeEvents.classification} = ${scope.classification}`,
     scope.status === null ? undefined : sql`${legislativeEvents.status} = ${scope.status}`,
-    scope.from === null ? undefined : lowerDateBound(scope.from),
-    scope.to === null ? undefined : upperDateBound(scope.to),
+    scope.from === null ? undefined : lowerDateBound(scope.from, scope.dateTimezone),
+    scope.to === null ? undefined : upperDateBound(scope.to, scope.dateTimezone),
     scope.isRemote === null ? undefined : eq(legislativeEvents.isRemote, scope.isRemote),
     scope.billId === null
       ? undefined
@@ -227,16 +230,34 @@ function meetingVisibility(scope: MeetingCursorScope): [SQL, ...SQL[]] {
   ].filter((value): value is SQL => value !== undefined) as [SQL, ...SQL[]]
 }
 
-function lowerDateBound(value: string): SQL {
-  return isIsoDate(value)
-    ? gte(legislativeEvents.publisherLocalDate, value)
-    : gte(legislativeEvents.startAt, new Date(value))
+function lowerDateBound(value: string, dateTimezone: string | null): SQL {
+  if (!isIsoDate(value)) {
+    return gte(legislativeEvents.startAt, new Date(value))
+  }
+  if (dateTimezone === null) {
+    return gte(legislativeEvents.publisherLocalDate, value)
+  }
+  return sql`${legislativeEvents.startAt} >= ${localDateAtTimezone(value, dateTimezone)}`
 }
 
-function upperDateBound(value: string): SQL {
-  return isIsoDate(value)
-    ? lte(legislativeEvents.publisherLocalDate, value)
-    : lte(legislativeEvents.startAt, new Date(value))
+function upperDateBound(value: string, dateTimezone: string | null): SQL {
+  if (!isIsoDate(value)) {
+    return lte(legislativeEvents.startAt, new Date(value))
+  }
+  if (dateTimezone === null) {
+    return lte(legislativeEvents.publisherLocalDate, value)
+  }
+  return sql`${legislativeEvents.startAt} < ${localDateAtTimezone(nextIsoDate(value), dateTimezone)}`
+}
+
+function localDateAtTimezone(value: string, dateTimezone: string): SQL {
+  return sql`${value}::date at time zone ${dateTimezone}`
+}
+
+function nextIsoDate(value: string): string {
+  const date = new Date(`${value}T00:00:00.000Z`)
+  date.setUTCDate(date.getUTCDate() + 1)
+  return date.toISOString().slice(0, 10)
 }
 
 function cursorPredicate(
@@ -307,6 +328,10 @@ function cursorScope(input: MeetingListInput): MeetingCursorScope {
     billId: optionalId(input.billId, "billId"),
     calendarId: optionalId(input.calendarId, "calendarId"),
     classification: input.classification ?? null,
+    dateTimezone:
+      input.dateTimezone === undefined || input.dateTimezone === null
+        ? null
+        : optionalText(input.dateTimezone, "dateTimezone", 256),
     from,
     jurisdictionId: optionalId(input.jurisdictionId, "jurisdictionId"),
     isRemote: input.isRemote ?? null,

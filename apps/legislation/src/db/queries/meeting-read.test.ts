@@ -25,6 +25,7 @@ describe("meeting read queries", () => {
       billId: null,
       calendarId: null,
       classification: "meeting",
+      dateTimezone: null,
       from: "2026-08-01",
       jurisdictionId: "jurisdiction:wa",
       isRemote: true,
@@ -75,6 +76,50 @@ describe("meeting read queries", () => {
     )
   })
 
+  it("uses the selected calendar timezone for date-only bounds across DST transitions", () => {
+    const spring = buildMeetingListQuery(database, {
+      calendarId: "calendar:wa:committee-schedule",
+      dateTimezone: "America/Los_Angeles",
+      from: "2026-03-08",
+      to: "2026-03-08"
+    }).toSQL()
+    const fall = buildMeetingListQuery(database, {
+      calendarId: "calendar:wa:committee-schedule",
+      dateTimezone: "America/Los_Angeles",
+      from: "2026-11-01",
+      to: "2026-11-01"
+    }).toSQL()
+
+    expect(spring.sql).toContain('"legislative_events"."start_at" >= $7::date at time zone $8')
+    expect(spring.sql).toContain('"legislative_events"."start_at" < $9::date at time zone $10')
+    expect(spring.params).toEqual([
+      false,
+      true,
+      true,
+      true,
+      true,
+      "calendar:wa:committee-schedule",
+      "2026-03-08",
+      "America/Los_Angeles",
+      "2026-03-09",
+      "America/Los_Angeles",
+      26
+    ])
+    expect(fall.params).toEqual([
+      false,
+      true,
+      true,
+      true,
+      true,
+      "calendar:wa:committee-schedule",
+      "2026-11-01",
+      "America/Los_Angeles",
+      "2026-11-02",
+      "America/Los_Angeles",
+      26
+    ])
+  })
+
   it("rejects impossible dates and cursor scopes that no longer describe the collection", () => {
     expect(() => buildMeetingListQuery(database, { from: "2026-02-31", jurisdictionId: "jurisdiction:wa" })).toThrow(
       "from must be an ISO date or RFC 3339 timestamp"
@@ -85,6 +130,7 @@ describe("meeting read queries", () => {
           billId: null,
           calendarId: null,
           classification: null,
+          dateTimezone: null,
           from: null,
           jurisdictionId: "jurisdiction:other",
           isRemote: null,
