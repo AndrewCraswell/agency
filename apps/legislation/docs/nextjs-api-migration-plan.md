@@ -25,10 +25,10 @@ placeholder needed to prove the application runtime.
 
 | Concern | Current evidence | Target state |
 | --- | --- | --- |
-| Application and API runtime | Next.js `16.3.1` App Router foundation is deployed; commit `27fa397` deployed as `cc047806-27f7-4110-a6e0-7f27f4b4e517` and reached terminal `SUCCESS` | Next.js App Router production server in `legislation-web` with staged endpoint blocks |
+| Application and API runtime | Next.js `16.3.1` App Router foundation and NX-03A route block are deployed; source commit `6afcf42` (including route commit `04ca95d`) deployed as `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a` and reached terminal `SUCCESS` | Next.js App Router production server in `legislation-web` with staged endpoint blocks |
 | Public endpoint domain code | 87 of 87 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
-| Next.js Route Handlers | 32 of 87 Done; 14 In progress in NX-03A; 0 Ready; 41 Blocked (six named production-data blockers and 35 later phase-gated routes) | 87 of 87 deployed and remotely smoked |
-| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; deployment `cc047806-27f7-4110-a6e0-7f27f4b4e517` from commit `27fa397` reached `SUCCESS` with image `sha256:121ef83d948e400d0f73c1d4d17fecce248153916fcf71936228bc3b0ff3e227`; rollback deployment is `c8238bec-5a3b-4335-8dee-ecf8568c6a06`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; production schema migrations through the current ledger are applied; old `legislation-api` service is deleted | Staged Next.js endpoint releases on `legislation-web`; rollback uses the recorded prior successful `legislation-web` deployment |
+| Next.js Route Handlers | 32 of 87 Done; 14 In progress in NX-03B; 0 Ready; 41 Blocked (20 named production-data blockers and 21 later phase-gated routes) | 87 of 87 deployed and remotely smoked |
+| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; deployment `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a` from source commit `6afcf42` (including route commit `04ca95d`) reached `SUCCESS` with image `sha256:a9bd51f8b4af80b50986b5f7bec35b272d8530c71ded44f10805635c51221f84`; rollback deployment is `cc047806-27f7-4110-a6e0-7f27f4b4e517`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; production schema migrations through the current ledger are applied; old `legislation-api` service is deleted | Staged Next.js endpoint releases on `legislation-web`; rollback uses the recorded prior successful `legislation-web` deployment |
 | Authentication | WorkOS logic exists in the standalone composition | Added to the Next.js request boundary only after route migration |
 | Rate limiting | No approved distributed Next.js boundary | Added after authentication with a shared Railway-compatible store |
 | MCP transport | In-process access remains | HTTP client cutover only after API, auth, and rate-limit gates pass |
@@ -134,9 +134,10 @@ Each sub-block requires explicit `route.ts` files under `apps/legislation-web/ap
 production build, reviewed commit, deployment of the parallel `legislation-web` Railway service, terminal `SUCCESS`,
 remote smoke, and rollback evidence.
 
-Current deployment evidence: commit `27fa397` deployed as `cc047806-27f7-4110-a6e0-7f27f4b4e517`, reached terminal
-`SUCCESS`, and produced image `sha256:121ef83d948e400d0f73c1d4d17fecce248153916fcf71936228bc3b0ff3e227`; rollback
-is deployment `c8238bec-5a3b-4335-8dee-ecf8568c6a06`.
+Current deployment evidence: source commit `6afcf42` (including route commit `04ca95d`) deployed as
+`1795e79c-9a7a-4f6a-ab6c-c7c1a546450a`, reached terminal `SUCCESS`, and produced image
+`sha256:a9bd51f8b4af80b50986b5f7bec35b272d8530c71ded44f10805635c51221f84`; rollback is deployment
+`cc047806-27f7-4110-a6e0-7f27f4b4e517`.
 
 #### NX-02A: Jurisdictions and sessions (11 endpoints)
 
@@ -216,8 +217,11 @@ State: **In progress**.
 
 #### NX-03A: People and organizations (14 endpoints)
 
-Next route state for every operation in this block: **In progress**. NX-03A is the active implementation block; none of
-its routes receive Done credit until their deployment and remote-smoke gates pass.
+Next route implementation and deployment state: **Complete**. Next-route release state for every operation in this block:
+**14 Blocked by canonical production data**. The route code, focused tests, production build, deployment
+`1795e79c-9a7a-4f6a-ab6c-c7c1a546450a`, and cumulative remote smoke are complete, but none of these routes receives Done
+credit because production has zero canonical-ready civic fixtures. The safe smoke profile passed nine operations and
+classified four canonical-data responses as blocked; one synthetic membership lookup correctly returned `404`.
 
 - `GET /api/people`
 - `GET /api/people/{personId}`
@@ -236,7 +240,8 @@ its routes receive Done credit until their deployment and remote-smoke gates pas
 
 #### NX-03B: Meetings, calendars, and representative lookup (14 endpoints)
 
-Next route state for every operation in this block: **Blocked** on NX-03A.
+Next route state for every operation in this block: **In progress**. NX-03B is the active implementation block. Its routes
+must not receive Done credit until their implementation, deployment, and remote-smoke gates pass.
 
 - `GET /api/meetings`
 - `GET /api/meetings/{meetingId}`
@@ -385,10 +390,11 @@ client boundary with complete release and rollback evidence.
 Progress reports must always present both numbers:
 
 - **Reusable domain implementation:** 87/87.
-- **Next.js Route Handler release state:** 32/87 Done; 14 In progress in NX-03A; 0 Ready; 41 Blocked. The
+- **Next.js Route Handler release state:** 32/87 Done; 14 In progress in NX-03B; 0 Ready; 41 Blocked. The
   32+14+41 states sum to all 87 public API operations.
-- **Blocked-route accounting:** six routes are Blocked by named production-data deficiencies (three vote operations,
-  document detail, document sections, and global changes); the remaining 35 are Blocked by later phase gates. The next
+- **Blocked-route accounting:** 20 routes are Blocked by named production-data deficiencies (three vote operations,
+  document detail, document sections, global changes, and all 14 NX-03A people/organization operations); the remaining
+  21 are Blocked by later phase gates. The next
   explicit route count remains 38 legislative routes.
 
 Foundation, authentication, rate limiting, MCP cutover, and final cleanup are separate phase gates. None may be inferred

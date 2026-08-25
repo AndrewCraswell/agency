@@ -22,10 +22,12 @@ This ledger was corrected on 2026-08-25 after the runtime boundary was reconcile
 already exists in `apps/legislation-web` from commit `03e1c7b`, initially pinned to `16.2.6`; the user-approved upgrade
 target is `16.3.1`. Explicit Route Handlers belong under `apps/legislation-web/app/api`, not under `apps/legislation`.
 All 87 rows have reviewed standalone domain/query/projection evidence, so the **Domain state** is 87 **Done**. The
-**Next route release state** is 32 **Done**, 14 **In progress** (NX-03A), 0 **Ready**, and 41 **Blocked**. NX-01 is
-complete. Commit `27fa397` deployed as `cc047806-27f7-4110-a6e0-7f27f4b4e517`, reached terminal `SUCCESS`, and produced
-image `sha256:121ef83d948e400d0f73c1d4d17fecce248153916fcf71936228bc3b0ff3e227`; rollback target is deployment
-`c8238bec-5a3b-4335-8dee-ecf8568c6a06`. The old Railway `legislation-api` service is deleted. The standalone
+**Next route release state** is 32 **Done**, 14 **In progress** (NX-03B), 0 **Ready**, and 41 **Blocked**. NX-01 is
+complete. The NX-03A route implementation and deployment are complete, but its 14 operations remain data-blocked and
+therefore do not receive Next-route Done credit. Source commit `6afcf42` (including route commit `04ca95d`) deployed as
+`1795e79c-9a7a-4f6a-ab6c-c7c1a546450a`, reached terminal `SUCCESS`, and produced image
+`sha256:a9bd51f8b4af80b50986b5f7bec35b272d8530c71ded44f10805635c51221f84`; rollback target is deployment
+`cc047806-27f7-4110-a6e0-7f27f4b4e517`. The old Railway `legislation-api` service is deleted. The standalone
 `apps/legislation` server remains transitional source code during migration, not a live rollback service. Production
 schema migrations through the current ledger are applied. Authentication, distributed rate limiting, and MCP cutover are
 later global gates and must follow the sequence in the migration plan.
@@ -34,10 +36,10 @@ later global gates and must follow the sequence in the migration plan.
 
 | ID | Phase | State | Granular tasks and exit gate |
 | --- | --- | --- | --- |
-| NX-00 | Correct the delivery record | In progress | Replace the TanStack/standalone completion model with the canonical Next.js plan, separate domain evidence from Next route evidence, and commit the correction. |
-| NX-01 | Next.js foundation and first deployment | Done | The foundation deployment and old-service deletion are recorded in the migration plan and Railway release record. Commit `27fa397` deployed as `cc047806-27f7-4110-a6e0-7f27f4b4e517` and reached terminal `SUCCESS`; it is current release evidence, not a new foundation completion claim. |
+| NX-00 | Correct the delivery record | Done | Replace the TanStack/standalone completion model with the canonical Next.js plan, separate domain evidence from Next route evidence, and commit the correction. |
+| NX-01 | Next.js foundation and first deployment | Done | The foundation deployment and old-service deletion are recorded in the migration plan and Railway release record. Commit `27fa397` deployed as `cc047806-27f7-4110-a6e0-7f27f4b4e517` and reached terminal `SUCCESS`; this remains historical foundation evidence, while the current release is the NX-03A deployment recorded below. |
 | NX-02 | Migrate 38 legislative routes | In progress | 32 routes are Done: NX-02A's 11, 15 non-data-blocked NX-02B routes, and six NX-02C routes. The remaining six are Blocked by production data: three vote operations, document detail and section collection because every section-bearing production `bill_documents` row has `ocr_status = NULL`, and the global change feed because canonical source provenance is incomplete. The next explicit route count remains 38. |
-| NX-03 | Migrate 28 civic routes | In progress | NX-03A people and organizations (14) is now In progress. NX-03B meetings, calendars, and representative lookup (14) remains phase-gated on NX-03A. |
+| NX-03 | Migrate 28 civic routes | In progress | NX-03A people and organizations (14) has complete route implementation, deployment, and smoke evidence, but all 14 operations remain blocked by missing canonical production fixtures. NX-03B meetings, calendars, and representative lookup (14) is now In progress. |
 | NX-04 | Migrate 7 search/diff/research routes | Blocked | Migrate, deploy, and remotely verify lexical, semantic, hybrid, diff, and cited-answer behavior. |
 | NX-05 | Migrate 14 subscription/webhook routes | Blocked | Migrate and release subscriptions (7), then webhooks (7), including mutation, ETag, idempotency, secret, and URL-safety smoke. |
 | NX-06 | Add WorkOS authentication | Blocked | Begin only after all 87 Next routes are deployed and smoked; enforce token and access-class semantics and rerun authenticated cumulative smoke. |
@@ -67,15 +69,17 @@ separately until each explicit handler passes deployment smoke. The first 32 rou
 | State | Count | Scope |
 | --- | ---: | --- |
 | Done | 32 | NX-02A's 11 routes, 15 NX-02B routes, and six NX-02C routes passed their deployed smoke. NX-02C evidence covers all four supporting-material routes, document-section detail, and mixed-result resource batch. |
-| In progress | 14 | NX-03A people and organizations is the active implementation block. |
+| In progress | 14 | NX-03B meetings, calendars, and representative lookup is the active implementation block. |
 | Ready | 0 | No unstarted route is eligible ahead of the ordered release gates. |
-| Blocked | 41 | Six routes are data-blocked: three NX-02B vote operations; NX-02C document detail and sections; and global changes. The other 35 are later phase-gated. |
+| Blocked | 41 | Twenty routes are data-blocked: six earlier NX-02B/NX-02C operations and all 14 NX-03A people/organization operations. The other 21 are later phase-gated. |
 
-The 41 Blocked public API routes consist of six named production-data blockers and 35 routes behind later phase gates.
+The 41 Blocked public API routes consist of 20 named production-data blockers and 21 routes behind later phase gates.
 The data blockers do not receive Done credit: document detail and collection cannot project canonical OCR facts while all
-section-bearing production `bill_documents` rows have `ocr_status = NULL`; global changes cannot project canonical
-source provenance; and three vote operations remain blocked by their required production data. This work has no
-authentication, distributed-rate-limit, or MCP scope. The API catch-all is outside the 87-route inventory.
+section-bearing production `bill_documents` rows have `ocr_status = NULL`; global changes cannot project canonical source
+provenance; three vote operations remain blocked by their required production data; and all 14 NX-03A people/organization
+operations lack canonical-ready civic fixtures (people, person profiles, terms, organizations, memberships, calendars,
+and required relationships). This work has no authentication, distributed-rate-limit, or MCP scope. The API catch-all is
+outside the 87-route inventory.
 
 The rows below record reusable domain implementation in `apps/legislation` only. Their **Domain state** does not promote a
 Next.js route. Next route release state is promoted in the block ledger in the migration plan only after an explicit handler under
@@ -192,6 +196,6 @@ one of the 87 endpoint handlers.
 
 The current release evidence is recorded in the [Railway API release record](http-api-railway-release.md). Progress
 reports must state both totals: reusable domain implementation is 87/87 **Done**; Next.js Route Handler release state is
-32/87 **Done**, 14 **In progress** (NX-03A), 0 **Ready**, and 41 **Blocked**. The states sum to 87. Six routes remain
-Blocked by named production-data deficiencies; 35 remain Blocked by later phase gates. The root operational `/health` and
+32/87 **Done**, 14 **In progress** (NX-03B), 0 **Ready**, and 41 **Blocked**. The states sum to 87. Twenty routes remain
+Blocked by named production-data deficiencies; 21 remain Blocked by later phase gates. The root operational `/health` and
 `/ready` handlers and the API catch-all are outside the 87-route count.

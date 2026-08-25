@@ -26,10 +26,13 @@ reconsideration trigger.
 ## ADR-015 operational consequences
 
 - Status: accepted; NX-02C deployed smoke is complete for six operations, with three operations production-data blocked;
-  NX-03A is next.
+  NX-03A route implementation and deployment are complete, its 14 operations remain production-data blocked, and NX-03B
+  is the active implementation block.
 - Evidence: commit `03e1c7b` added the Next.js application boundary with `next@16.2.6`; the current application uses
-  `next@16.3.1`. Deployment `cc047806-27f7-4110-a6e0-7f27f4b4e517` from commit `27fa397` reached `SUCCESS`. Explicit
-  API Route Handlers belong under `apps/legislation-web/app/api`.
+  `next@16.3.1`. Source commit `6afcf42` (including route commit `04ca95d`) deployed as
+  `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a` and reached
+  `SUCCESS` with image `sha256:a9bd51f8b4af80b50986b5f7bec35b272d8530c71ded44f10805635c51221f84`. Explicit API Route
+  Handlers belong under `apps/legislation-web/app/api`.
 - Consequences: do not count the 87 reusable handlers as Next routes; do not use a catch-all proxy as route migration;
   deploy `legislation-web` and smoke each endpoint block; rollback only to the immediately preceding known-good
   `legislation-web` deployment; do not begin auth or rate limiting out of sequence; leave MCP last and do not run its

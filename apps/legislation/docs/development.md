@@ -100,9 +100,10 @@ Before release, verify the effective service uses the Dockerfile builder, `apps/
 health check. Railway injects `PORT`; the service binds it on `0.0.0.0`. Apply migrations as a separate, explicit
 release operation with `pnpm --filter legislation db:migrate`; neither the image build nor startup runs migrations.
 
-The current verified deployment is `cc047806-27f7-4110-a6e0-7f27f4b4e517` from commit `27fa397`, with image
-`sha256:121ef83d948e400d0f73c1d4d17fecce248153916fcf71936228bc3b0ff3e227`. Rollback uses the prior successful
-`legislation-web` deployment `c8238bec-5a3b-4335-8dee-ecf8568c6a06`. The former `legislation-api` Railway service was
+The current verified deployment is `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a` from source commit `6afcf42` (including route
+commit `04ca95d`), with image
+`sha256:a9bd51f8b4af80b50986b5f7bec35b272d8530c71ded44f10805635c51221f84`. Rollback uses the prior successful
+`legislation-web` deployment `cc047806-27f7-4110-a6e0-7f27f4b4e517`. The former `legislation-api` Railway service was
 deleted and must not be redeployed, described as current, or used as a rollback target.
 
 After Railway allocates the public service domain, set `LEGISLATION_PUBLIC_API_BASE_URL` to that exact `https` URL.
