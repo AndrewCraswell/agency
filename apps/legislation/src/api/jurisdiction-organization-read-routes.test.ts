@@ -113,7 +113,7 @@ describe("jurisdiction organization collection API handler", () => {
           jurisdictionId: "jurisdiction:ca",
           name: "Rules Committee",
           parentOrganizationId: "organization:ca:house",
-          sources: [{ isOfficial: false, provider: "openstates" }],
+          sources: [{ isOfficial: true, provider: "openstates" }],
           type: "organization"
         }
       ],
