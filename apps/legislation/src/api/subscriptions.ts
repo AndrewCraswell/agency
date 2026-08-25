@@ -767,6 +767,9 @@ export class SubscriptionService {
     if (webhook.status === "cancelled") {
       throw new SubscriptionApiError("conflict", "Cancelled webhooks cannot be updated.")
     }
+    if (patch.name !== undefined) {
+      validateWebhookName(patch.name)
+    }
     if (patch.status === "active" && webhook.status === "pending-verification") {
       throw new SubscriptionApiError("conflict", "Pending webhooks must be verified before activation.")
     }
@@ -862,9 +865,7 @@ export class SubscriptionService {
 }
 
 export function validateWebhookInput(input: CreateWebhookInput): void {
-  if (input.name.trim().length === 0 || input.name.trim().length > 120) {
-    throw new SubscriptionApiError("invalid_request", "Webhook name must contain 1 to 120 characters.")
-  }
+  validateWebhookName(input.name)
   let url: URL
   try {
     url = new URL(input.url)
@@ -876,5 +877,12 @@ export function validateWebhookInput(input: CreateWebhookInput): void {
       "invalid_request",
       "Webhook URL must be a credential-free HTTPS URL up to 2048 characters."
     )
+  }
+}
+
+function validateWebhookName(name: string): void {
+  const trimmed = name.trim()
+  if (trimmed.length === 0 || [...trimmed].length > 120) {
+    throw new SubscriptionApiError("invalid_request", "Webhook name must contain 1 to 120 characters.")
   }
 }

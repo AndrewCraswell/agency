@@ -117,14 +117,21 @@ export function createWebhookMutationApiHandler(
           "DELETE",
           canonicalPath,
           idempotencyKey,
-          { revision },
+          // A replay key identifies the original cancellation request. The
+          // later If-Match value is intentionally not part of its hash so the
+          // durable receipt can be replayed after the resource revision moves.
+          {},
           async (repository) => {
             const webhook = await service.withWebhookRepository(repository).cancelWebhook(identity, id, revision)
             if (webhook.cancelledAt === null) {
               throw new SubscriptionApiError("unprocessable", "Webhook cancellation did not persist its timestamp.")
             }
             return {
-              body: apiResource(request, { cancelledAt: webhook.cancelledAt.toISOString(), id: webhook.id }),
+              body: apiResource(request, {
+                cancelledAt: webhook.cancelledAt.toISOString(),
+                finalRevision: webhook.revision,
+                id: webhook.id
+              }),
               headers: { etag: webhook.revision },
               statusCode: 200
             }
@@ -324,7 +331,7 @@ function parseCreate(body: Readonly<Record<string, unknown>>): CreateWebhookInpu
   assertFields(body, ["eventTypes", "name", "url"])
   return {
     eventTypes: parseEvents(body.eventTypes),
-    name: stringField(body.name, "name"),
+    name: boundedStringField(body.name, "name", 120),
     url: stringField(body.url, "url")
   }
 }
@@ -340,7 +347,7 @@ function parsePatch(body: Readonly<Record<string, unknown>>): UpdateWebhookInput
   }
   return {
     ...(body.eventTypes === undefined ? {} : { eventTypes: parseEvents(body.eventTypes) }),
-    ...(body.name === undefined ? {} : { name: stringField(body.name, "name") }),
+    ...(body.name === undefined ? {} : { name: boundedStringField(body.name, "name", 120) }),
     ...(status === undefined ? {} : { status }),
     ...(body.url === undefined ? {} : { url: stringField(body.url, "url") })
   }
@@ -386,6 +393,14 @@ function stringField(value: unknown, field: string): string {
   return value.trim()
 }
 
+function boundedStringField(value: unknown, field: string, maximumCodePoints: number): string {
+  const result = stringField(value, field)
+  if ([...result].length > maximumCodePoints) {
+    throw new SubscriptionApiError("invalid_request", `${field} must contain at most ${maximumCodePoints} characters.`)
+  }
+  return result
+}
+
 function assertFields(body: Readonly<Record<string, unknown>>, fields: readonly string[]): void {
   const allowed = new Set(fields)
   const unknown = Object.keys(body).find((key) => !allowed.has(key))
@@ -407,7 +422,7 @@ function webhookId(raw: string): string {
   } catch {
     throw new SubscriptionApiError("invalid_request", "webhookId is invalid.")
   }
-  if (!/^webhook:[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(id)) {
+  if (id.length === 0 || id.trim() !== id || [...id].length > 256) {
     throw new SubscriptionApiError("invalid_request", "webhookId is invalid.")
   }
   return id
