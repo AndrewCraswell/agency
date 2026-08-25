@@ -23,6 +23,10 @@ import {
 } from "./bench-prototype-hub75-connector.js"
 import { benchPrototypeHub75Safing, validateBenchPrototypeHub75Safing } from "./bench-prototype-hub75-safing.js"
 import {
+  benchPrototypeIrReceiverFootprintEvidence,
+  validateBenchPrototypeIrReceiverFootprintEvidence
+} from "./bench-prototype-ir-receiver-footprint-evidence.js"
+import {
   benchPrototypeIrReceiverSelection,
   validateBenchPrototypeIrReceiverSelection
 } from "./bench-prototype-ir-receiver-selection.js"
@@ -961,6 +965,19 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer" as const,
     reviewedAt: "2026-08-25" as const,
     fabricationRelease: "deny" as const
+  },
+  {
+    reference: "U_IR",
+    artifactKind:
+      benchPrototypeIrReceiverFootprintEvidence.candidateFootprintReview.projectFootprintArtifact.geometry.artifactKind,
+    artworkModule: "src/bench-prototype-ir-receiver-project-footprint.tsx",
+    reviewDocument: "docs/bench-prototype-plan.md#bp-146",
+    sourceArtifactPath: benchPrototypeIrReceiverFootprintEvidence.sources[0].retainedArtifactPath,
+    sourceSha256: benchPrototypeIrReceiverFootprintEvidence.sources[0].sha256,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25" as const,
+    fabricationRelease: "deny" as const
   }
 ] as const
 
@@ -1040,6 +1057,7 @@ function assertUpstream(): void {
   validateBenchPrototypeHub75Safing(benchPrototypeHub75Safing)
   validateBenchPrototypeOptionalPeripherals(benchPrototypeOptionalPeripherals)
   validateBenchPrototypeIrReceiverSelection(benchPrototypeIrReceiverSelection)
+  validateBenchPrototypeIrReceiverFootprintEvidence(benchPrototypeIrReceiverFootprintEvidence)
   if (validateBp033B340aProjectFootprintGeometry().length !== 0) {
     throw new RangeError("BP-033 B340A project-review candidate drifted")
   }
@@ -1101,7 +1119,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 48 ||
+    contract.projectFootprintMappings.length !== 49 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -1229,6 +1247,18 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
     contract.projectFootprintMappings[47]?.reviewer !== "root-final-reviewer" ||
     contract.projectFootprintMappings[47]?.reviewedAt !== "2026-08-25" ||
     contract.projectFootprintMappings[47]?.fabricationRelease !== "deny" ||
+    contract.projectFootprintMappings[48]?.reference !== "U_IR" ||
+    contract.projectFootprintMappings[48]?.artifactKind !== "bp146-tsop38438-project-footprint" ||
+    contract.projectFootprintMappings[48]?.artworkModule !== "src/bench-prototype-ir-receiver-project-footprint.tsx" ||
+    contract.projectFootprintMappings[48]?.reviewDocument !== "docs/bench-prototype-plan.md#bp-146" ||
+    contract.projectFootprintMappings[48]?.sourceArtifactPath !==
+      "docs/evidence/bp-146/vishay-82491-tsop382-tsop384-datasheet.pdf" ||
+    contract.projectFootprintMappings[48]?.sourceSha256 !==
+      "5F81C36AA02E9901E51C749D03AEE75A23A29B8195B30BF1CBA95F536C865074" ||
+    contract.projectFootprintMappings[48]?.reviewState !== "root-reviewed-review-input" ||
+    contract.projectFootprintMappings[48]?.reviewer !== "root-final-reviewer" ||
+    contract.projectFootprintMappings[48]?.reviewedAt !== "2026-08-25" ||
+    contract.projectFootprintMappings[48]?.fabricationRelease !== "deny" ||
     !contract.records.some(
       (record) =>
         record.reference === "U_USB_PD" &&

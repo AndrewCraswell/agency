@@ -209,7 +209,7 @@ describe("BP-035 lane BOM convergence", () => {
 
     expect(stateCounts("BP-031")).toEqual({ "reviewed-unapproved": 84, "not-started": 29 })
     expect(stateCounts("BP-032")).toEqual({ "not-started": 22, "reviewed-unapproved": 29 })
-    expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 52, "not-started": 49 })
+    expect(stateCounts("BP-033")).toEqual({ "reviewed-unapproved": 53, "not-started": 48 })
     expect(stateFor("BP-031", "U_SAR_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-031", "U_OVP_BUFFER_1")).toBe("reviewed-unapproved")
     expect(stateFor("BP-031", "R_ESD_1")).toBe("reviewed-unapproved")
@@ -231,6 +231,7 @@ describe("BP-035 lane BOM convergence", () => {
     expect(stateFor("BP-033", "C_ETH_AVDD_FERRITE_INPUT")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "C_W5500_AVDD_6")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "U_W5500")).toBe("reviewed-unapproved")
+    expect(stateFor("BP-033", "U_IR")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "J_LINK_INPUT")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "J_LINK_SCORING")).toBe("reviewed-unapproved")
     expect(stateFor("BP-033", "R_APP_REG_PGOOD")).toBe("reviewed-unapproved")
