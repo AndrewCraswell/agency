@@ -181,7 +181,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
   })
 
   it("maps the seven U_ESD references to the TPD4E05 review inputs without opening release authority", () => {
-    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(4)
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(5)
     expect(
       benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
         (mapping) => mapping.mappingId === "bp031-tpd4e05u06-dqa-project-footprint"
@@ -264,7 +264,8 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
             record.sourceBaseReference !== "U_ESD" &&
             record.sourceBaseReference !== "U_SOURCE_SWITCH" &&
             record.sourceBaseReference !== "U_SAR" &&
-            record.sourceBaseReference !== "U_OVP_BUFFER"
+            record.sourceBaseReference !== "U_OVP_BUFFER" &&
+            !["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference)
         )
         .every((record) => record.reviewEvidenceMappingId === null)
     ).toBe(true)
@@ -545,6 +546,52 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     ).toBe(true)
   })
 
+  it("maps all 28 selected Vishay CRCW references to root-reviewed series geometry without opening release authority", () => {
+    const mapping = benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+      (candidate) => candidate.mappingId === "bp031-vishay-crcw-selected-resistor-footprint-evidence"
+    )
+    expect(mapping).toMatchObject({
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      reviewedAt: "2026-08-25T11:06:00.000Z",
+      artifactKind: "bp031-vishay-crcw-selected-resistor-footprint-evidence",
+      artifactPath: "packages/scoring-circuit/src/bp031-vishay-crcw-resistor-footprint-evidence.tsx",
+      manufacturer: "Vishay",
+      manufacturerSeriesDrawingInput: {
+        state: "root-reviewed-series-geometry",
+        documentNumber: "20043",
+        revision: "17-Mar-2026",
+        reviewedPages: "1, 9",
+        sha256: "949CC96331F62B1BF8E5CEEA628ADB2D8A58E981D4EF9EA8E77B2C6D530E4E20",
+        exactOrderablesNamed: false,
+        authority: "deny"
+      },
+      acceptance: {
+        exactSelectionIdentityReviewed: true,
+        seriesPackageBindingReviewed: true,
+        recommendedReflowGeometryAccepted: true,
+        nonPolarOrientationAccepted: true,
+        exactOrderableCadAccepted: false,
+        boardFitAccepted: false,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      }
+    })
+    expect(
+      mapping && "exactSelectedParts" in mapping
+        ? mapping.exactSelectedParts.map((part) => part.manufacturerPartNumber)
+        : null
+    ).toEqual(["CRCW060322R0FKEAHP", "CRCW060320R0FKEAHP", "CRCW0603100KFKEAHP", "CRCW120656K0FKEAHP"])
+    const mappedRecords = benchPrototypeAnalogFootprintClosure.records.filter(
+      (record) => record.reviewEvidenceMappingId === "bp031-vishay-crcw-selected-resistor-footprint-evidence"
+    )
+    expect(mappedRecords).toHaveLength(28)
+    expect(new Set(mappedRecords.map((record) => record.sourceBaseReference))).toEqual(
+      new Set(["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"])
+    )
+    expect(mappedRecords.every((record) => record.disposition === "DNP-unresolved")).toBe(true)
+  })
+
   it("freezes the exact Molex connector and BP-104 pin disposition", () => {
     const connectorRecord = benchPrototypeAnalogFootprintClosure.records.find(
       (record) => record.sourceContract === "BP-104"
@@ -657,6 +704,11 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
       "forged ADA4177 review mapping",
       (copy: typeof benchPrototypeAnalogFootprintClosure) =>
         Reflect.set(copy.reviewEvidenceMappings[3], "exactMpn", "ADA4177-2ARUZ")
+    ],
+    [
+      "forged Vishay CRCW review mapping",
+      (copy: typeof benchPrototypeAnalogFootprintClosure) =>
+        Reflect.set(copy.reviewEvidenceMappings[4], "reviewedAt", "2026-08-25T00:00:00.000Z")
     ]
   ])("rejects %s", (_name, mutate) => {
     const copy = structuredClone(benchPrototypeAnalogFootprintClosure)

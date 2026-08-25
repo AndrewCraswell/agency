@@ -79,20 +79,51 @@ describe("BP-033 application footprint closure ledger", () => {
         })
       ])
     )
-    expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toEqual([
-      {
-        reference: "J_USB_C",
-        artifactKind: "bp033-usb-c-project-footprint",
-        artworkModule: "src/bp033-usb-c-project-footprint.tsx",
-        reviewDocument: "docs/bp-033-usb-c-project-footprint.md",
-        sourceArtifactPath: "docs/evidence/bp-033/amphenol-10177070-product-drawing.pdf",
-        sourceSha256: "A1F523048D0BE675C6E3554BB93592DD8B8CFFF88319E4DBE19B5A84AA8C66CF",
-        reviewState: "root-reviewed-review-input",
-        reviewer: "root-final-reviewer",
-        reviewedAt: "2026-08-25",
-        fabricationRelease: "deny"
-      }
-    ])
+    expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toEqual(
+      expect.arrayContaining([
+        {
+          reference: "J_USB_C",
+          artifactKind: "bp033-usb-c-project-footprint",
+          artworkModule: "src/bp033-usb-c-project-footprint.tsx",
+          reviewDocument: "docs/bp-033-usb-c-project-footprint.md",
+          sourceArtifactPath: "docs/evidence/bp-033/amphenol-10177070-product-drawing.pdf",
+          sourceSha256: "A1F523048D0BE675C6E3554BB93592DD8B8CFFF88319E4DBE19B5A84AA8C66CF",
+          reviewState: "root-reviewed-review-input",
+          reviewer: "root-final-reviewer",
+          reviewedAt: "2026-08-25",
+          fabricationRelease: "deny"
+        }
+      ])
+    )
+    expect(benchPrototypeApplicationFootprints.releaseState).toBe("deny")
+    expect(benchPrototypeApplicationFootprints.fabricationAuthorized).toBe(false)
+  })
+
+  it("maps D_SOURCE_SELECTOR to the root-reviewed B340A evidence without opening release authority", () => {
+    expect(benchPrototypeApplicationFootprints.projectFootprintMappings).toEqual(
+      expect.arrayContaining([
+        {
+          reference: "D_SOURCE_SELECTOR",
+          artifactKind: "bp033-b340a-project-footprint",
+          artworkModule: "src/bp033-b340a-project-footprint.tsx",
+          reviewDocument: "docs/bp-033-b340a-project-footprint.md",
+          sourceArtifactPath: "docs/evidence/bp-033/diodes-b340a-datasheet.pdf",
+          sourceSha256: "453CBD34D996482ABD07AC694C4E2D812D26B1D679D05EE325ACC5C3EEB79917",
+          reviewState: "root-reviewed-review-input",
+          reviewer: "root-final-reviewer",
+          reviewedAt: "2026-08-25",
+          fabricationRelease: "deny"
+        }
+      ])
+    )
+    expect(
+      benchPrototypeApplicationFootprints.records.find((record) => record.reference === "D_SOURCE_SELECTOR")
+    ).toMatchObject({
+      manufacturer: "Diodes Incorporated",
+      mpn: "B340A-13-F",
+      package: "SMA (DO-214AC)",
+      population: "DNP-unresolved"
+    })
     expect(benchPrototypeApplicationFootprints.releaseState).toBe("deny")
     expect(benchPrototypeApplicationFootprints.fabricationAuthorized).toBe(false)
   })

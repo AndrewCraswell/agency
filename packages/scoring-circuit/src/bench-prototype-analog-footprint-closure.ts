@@ -37,6 +37,10 @@ import {
   bp031Tpd4e05u06DqaProjectFootprintGeometry,
   validateBp031Tpd4e05u06DqaProjectFootprint
 } from "./bp031-tpd4e05u06-dqa-project-footprint.js"
+import {
+  bp031VishayCrcwResistorFootprintEvidence,
+  validateBp031VishayCrcwResistorFootprintEvidence
+} from "./bp031-vishay-crcw-resistor-footprint-evidence.js"
 import { findFootprintReleaseEvidence } from "./footprint-release-evidence.js"
 import { M404_SINGLE_CHANNEL_COUPON, validateM404SingleChannelCoupon } from "./m4-04-single-channel-coupon.js"
 import { manufacturerFootprintEligibility } from "./manufacturer-footprint-adapter.js"
@@ -226,6 +230,7 @@ const tpd4e05u06ReviewEvidenceMappingId = "bp031-tpd4e05u06-dqa-project-footprin
 const tmux1112PwrPwReviewEvidenceMappingId = "bp031-tmux1112pwr-pw-footprint-evidence"
 const ads8881IdgsDgsReviewEvidenceMappingId = "bp031-ads8881idgs-dgs-footprint-candidate"
 const ada4177ReviewEvidenceMappingId = "bp031-ada4177-1arz-r8-footprint-evidence"
+const vishayCrcwReviewEvidenceMappingId = "bp031-vishay-crcw-selected-resistor-footprint-evidence"
 
 function createTpd4e05u06ReviewEvidenceMapping() {
   const candidate = bp031Tpd4e05u06DqaProjectFootprintGeometry
@@ -593,6 +598,65 @@ function createAda4177ReviewEvidenceMapping() {
 
 const ada4177ReviewEvidenceMapping = deepFreeze(createAda4177ReviewEvidenceMapping())
 
+function createVishayCrcwReviewEvidenceMapping() {
+  const candidate = bp031VishayCrcwResistorFootprintEvidence
+  const seriesSource = candidate.sources.find((source) => source.id === "vishay-crcw-hp-e3-series-rev-2026-03-17")
+  const identitySource = candidate.sources.find((source) => source.id === "bp031-selected-vishay-mpn-records")
+  if (seriesSource === undefined || identitySource === undefined) {
+    throw new RangeError("BP-031 Vishay CRCW source evidence is incomplete")
+  }
+  return {
+    mappingId: vishayCrcwReviewEvidenceMappingId,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25T11:06:00.000Z",
+    reviewScope:
+      "Root-reviewed the exact four project selections, Vishay CRCW0603-HP and CRCW1206-HP series binding, HP body and terminal limits, recommended reflow lands, non-polar orientation, all 28 replicated references, and deny-state integrity. Exact-orderable CAD, board fit, release, and fabrication remain unapproved.",
+    artifactKind: candidate.artifactKind,
+    artifactPath: "packages/scoring-circuit/src/bp031-vishay-crcw-resistor-footprint-evidence.tsx",
+    workUnit: candidate.workUnit,
+    manufacturer: candidate.manufacturer,
+    exactSelectedParts: structuredClone(candidate.exactSelectedParts),
+    affectedReferences: Array.from({ length: expectedReplicatedCellCount }, (_, index) =>
+      ["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].map((baseReference) => {
+        const part = candidate.exactSelectedParts.find((entry) => entry.canonicalReference === baseReference)
+        if (part === undefined) throw new RangeError(`BP-031 Vishay CRCW selection ${baseReference} is missing`)
+        return `${part.replicatedReferencePrefix}${index + 1}`
+      })
+    ).flat(),
+    manufacturerSeriesDrawingInput: {
+      state: "root-reviewed-series-geometry" as const,
+      documentNumber: seriesSource.documentNumber,
+      revision: seriesSource.revision,
+      artifactPath: seriesSource.artifactPath,
+      url: seriesSource.url,
+      reviewedPages: seriesSource.reviewedPages,
+      sha256: seriesSource.sha256,
+      exactOrderablesNamed: false as const,
+      authority: "deny" as const
+    },
+    exactIdentityInput: {
+      state: "root-reviewed-project-identity" as const,
+      artifactPath: identitySource.artifactPath,
+      sha256: identitySource.sha256,
+      authority: "identity-only" as const
+    },
+    seriesGeometry: structuredClone(candidate.seriesGeometry),
+    acceptance: {
+      exactSelectionIdentityReviewed: true as const,
+      seriesPackageBindingReviewed: true as const,
+      recommendedReflowGeometryAccepted: true as const,
+      nonPolarOrientationAccepted: true as const,
+      exactOrderableCadAccepted: false as const,
+      boardFitAccepted: false as const,
+      fabricationAuthorized: false as const,
+      releaseState: candidate.releaseState
+    }
+  }
+}
+
+const vishayCrcwReviewEvidenceMapping = deepFreeze(createVishayCrcwReviewEvidenceMapping())
+
 function existingFootprintEvidence(mpn: string) {
   const eligibility = manufacturerFootprintEligibility(mpn)
   const ledger = findFootprintReleaseEvidence(mpn)
@@ -742,7 +806,9 @@ function createCellRecord(
             ? tmux1112PwrPwReviewEvidenceMappingId
             : binding.baseReference === "U_OVP_BUFFER"
               ? ada4177ReviewEvidenceMappingId
-              : null,
+              : ["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(binding.baseReference)
+                ? vishayCrcwReviewEvidenceMappingId
+                : null,
     manufacturerDrawing: emptySourceEvidence(),
     manufacturerCad: emptySourceEvidence(),
     artwork: emptyArtworkEvidence(),
@@ -930,7 +996,8 @@ const definition = {
     tpd4e05u06ReviewEvidenceMapping,
     tmux1112PwrPwReviewEvidenceMapping,
     ads8881IdgsDgsReviewEvidenceMapping,
-    ada4177ReviewEvidenceMapping
+    ada4177ReviewEvidenceMapping,
+    vishayCrcwReviewEvidenceMapping
   ],
   sharedManufacturerSources,
   connectorClosure,
@@ -986,6 +1053,9 @@ function assertUpstreamContracts(): void {
   if (validateBp031Ada4177R8FootprintEvidence().length !== 0) {
     throw new RangeError("BP-031 ADA4177-1ARZ R-8 project-review candidate drifted")
   }
+  if (validateBp031VishayCrcwResistorFootprintEvidence().length !== 0) {
+    throw new RangeError("BP-031 Vishay CRCW project-review candidate drifted")
+  }
   if (!sameDataGraph(liveUpstreamSnapshot(), upstreamSnapshot)) {
     throw new RangeError("BP-030, BP-103, BP-104, M4-04, or analog source-part evidence drifted")
   }
@@ -1012,10 +1082,14 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
   const ada4177Mapping = contract.reviewEvidenceMappings.find(
     (mapping) => mapping.mappingId === ada4177ReviewEvidenceMappingId
   )
+  const vishayCrcwMapping = contract.reviewEvidenceMappings.find(
+    (mapping) => mapping.mappingId === vishayCrcwReviewEvidenceMappingId
+  )
   const expectedTpd4e05u06Mapping = createTpd4e05u06ReviewEvidenceMapping()
   const expectedTmux1112PwrPwMapping = createTmux1112PwrPwReviewEvidenceMapping()
   const expectedAds8881IdgsDgsMapping = createAds8881IdgsDgsReviewEvidenceMapping()
   const expectedAda4177Mapping = createAda4177ReviewEvidenceMapping()
+  const expectedVishayCrcwMapping = createVishayCrcwReviewEvidenceMapping()
   const mappedTpd4e05u06Records = cellRecords.filter(
     (record) => record.reviewEvidenceMappingId === tpd4e05u06ReviewEvidenceMappingId
   )
@@ -1027,6 +1101,9 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
   )
   const mappedAda4177Records = cellRecords.filter(
     (record) => record.reviewEvidenceMappingId === ada4177ReviewEvidenceMappingId
+  )
+  const mappedVishayCrcwRecords = cellRecords.filter(
+    (record) => record.reviewEvidenceMappingId === vishayCrcwReviewEvidenceMappingId
   )
   if (
     cellReferenceBindings.length !== expectedCellReferenceCount ||
@@ -1048,19 +1125,22 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     contract.authority.fabricationAuthorized ||
     contract.authority.releaseState !== "deny" ||
     contract.connectorClosure.releaseState !== "deny" ||
-    contract.reviewEvidenceMappings.length !== 4 ||
+    contract.reviewEvidenceMappings.length !== 5 ||
     tpd4e05u06Mapping === undefined ||
     tmux1112PwrPwMapping === undefined ||
     ads8881IdgsDgsMapping === undefined ||
     ada4177Mapping === undefined ||
+    vishayCrcwMapping === undefined ||
     !sameDataGraph(tpd4e05u06Mapping, expectedTpd4e05u06Mapping) ||
     !sameDataGraph(tmux1112PwrPwMapping, expectedTmux1112PwrPwMapping) ||
     !sameDataGraph(ads8881IdgsDgsMapping, expectedAds8881IdgsDgsMapping) ||
     !sameDataGraph(ada4177Mapping, expectedAda4177Mapping) ||
+    !sameDataGraph(vishayCrcwMapping, expectedVishayCrcwMapping) ||
     mappedTpd4e05u06Records.length !== 7 ||
     mappedTmux1112PwrPwRecords.length !== 7 ||
     mappedAds8881IdgsDgsRecords.length !== 7 ||
     mappedAda4177Records.length !== 7 ||
+    mappedVishayCrcwRecords.length !== 28 ||
     !sameDataGraph(
       mappedTpd4e05u06Records.map((record) => record.reference),
       expectedTpd4e05u06Mapping.affectedReferences
@@ -1076,6 +1156,10 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     !sameDataGraph(
       mappedAda4177Records.map((record) => record.reference),
       expectedAda4177Mapping.affectedReferences
+    ) ||
+    !sameDataGraph(
+      mappedVishayCrcwRecords.map((record) => record.reference),
+      expectedVishayCrcwMapping.affectedReferences
     ) ||
     cellRecords.some(
       (record) =>
@@ -1097,12 +1181,18 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
         (record.sourceBaseReference === "U_OVP_BUFFER") !==
         (record.reviewEvidenceMappingId === ada4177ReviewEvidenceMappingId)
     ) ||
+    cellRecords.some(
+      (record) =>
+        ["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference) !==
+        (record.reviewEvidenceMappingId === vishayCrcwReviewEvidenceMappingId)
+    ) ||
     contract.records.some(
       (record) =>
         record.sourceBaseReference !== "U_ESD" &&
         record.sourceBaseReference !== "U_SOURCE_SWITCH" &&
         record.sourceBaseReference !== "U_SAR" &&
         record.sourceBaseReference !== "U_OVP_BUFFER" &&
+        !["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference) &&
         record.reviewEvidenceMappingId !== null
     ) ||
     contract.records.some(

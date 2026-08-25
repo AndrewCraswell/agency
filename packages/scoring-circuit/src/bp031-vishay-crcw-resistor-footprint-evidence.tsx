@@ -1,39 +1,39 @@
 import type { ReactElement } from "react"
 
 const manufacturer = "Vishay"
-const seriesSourcePath = "packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf"
-const seriesSourceSha256 = "1F5E20329C74727DA629B92E2BFBDBDB3FA3BE57229E3208E24058173F9CECF3"
+const seriesSourcePath = "packages/scoring-circuit/docs/evidence/bp-031/vishay-crcw-hp-e3-datasheet-20043.pdf"
+const seriesSourceSha256 = "949CC96331F62B1BF8E5CEEA628ADB2D8A58E981D4EF9EA8E77B2C6D530E4E20"
 const exactIdentitySourcePath = "packages/scoring-circuit/src/one-channel-analog-readiness.ts"
 const exactIdentitySourceSha256 = "496d8727b33209c03b31f2b1f203397c7cab364f40d00edf2ec8b1bdf227e55d"
 const m404LedgerPath = "packages/scoring-circuit/src/m4-04-single-channel-coupon.ts"
 const m404LedgerSha256 = "2CBA495FC2746C038FB09A13793B1DBF7F7D0B4D8F55D7F748AD2E0E9E12D0E0"
 const bp031LedgerPath = "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts"
-const bp031LedgerSha256 = "09446FCDD1D8543C5F97A87DDDF20AADF99054BAB204424FFDF069E8A8C40144"
+const bp031LedgerSha256 = "3D565A3E71BC53B6182A7DBF80F775D5657A70AB54850CC6F8BCFA8EFDE69EDD"
 const basisCommit = "d29c549b9da078b7c2e6f23487eb4c613eb4798f"
 const projectSolderMaskMarginMm = 0.05
 const projectPasteReductionMm = 0.05
 const projectCourtyardClearanceMm = 0.15
 
 const d11Package = {
-  family: "D11/CRCW0603 e3",
+  family: "D11/CRCW0603-HP e3",
   imperialSize: "0603",
   metricSizeCode: "RR1608M",
-  bodyLengthMm: { minimum: 1.5, maximum: 1.65 },
+  bodyLengthMm: { minimum: 1.5, maximum: 1.7 },
   bodyWidthMm: { minimum: 0.75, maximum: 0.95 },
-  bodyHeightMm: { minimum: 0.4, maximum: 0.5 },
+  bodyHeightMm: { minimum: 0.35, maximum: 0.55 },
   terminalLengthT1Mm: { minimum: 0.1, maximum: 0.5 },
   terminalLengthT2Mm: { minimum: 0.1, maximum: 0.5 }
 } as const
 
 const d25Package = {
-  family: "D25/CRCW1206 e3",
+  family: "D25/CRCW1206-HP e3",
   imperialSize: "1206",
   metricSizeCode: "RR3216M",
-  bodyLengthMm: { minimum: 3, maximum: 3.3 },
+  bodyLengthMm: { minimum: 2.9, maximum: 3.3 },
   bodyWidthMm: { minimum: 1.45, maximum: 1.75 },
-  bodyHeightMm: { minimum: 0.5, maximum: 0.6 },
-  terminalLengthT1Mm: { minimum: 0.25, maximum: 0.65 },
-  terminalLengthT2Mm: { minimum: 0.2, maximum: 0.6 }
+  bodyHeightMm: { minimum: 0.35, maximum: 0.65 },
+  terminalLengthT1Mm: { minimum: 0.3, maximum: 0.7 },
+  terminalLengthT2Mm: { minimum: 0.25, maximum: 0.65 }
 } as const
 
 const d11ReflowLandPattern = {
@@ -120,7 +120,7 @@ const d25ProjectPadWidthMm = d25ReflowLandPattern.padWidthAcrossTerminalAxisMm
 
 const d11ProjectFootprint = {
   state: "review-only",
-  geometryAuthority: "project-review-input-derived-from-vishay-d11-reflow-guidance",
+  geometryAuthority: "project-review-input-derived-from-vishay-d11-hp-reflow-guidance",
   padShape: "rectangular-smt",
   padLengthMm: d11ProjectPadLengthMm,
   padWidthMm: d11ProjectPadWidthMm,
@@ -141,7 +141,11 @@ const d11ProjectFootprint = {
     sourceStatus: "not-published",
     status: "project-review-input"
   },
-  courtyard: courtyardFor(envelopeForPads(d11Pads, d11ProjectPadLengthMm, d11ProjectPadWidthMm), 1.65, 0.95),
+  courtyard: courtyardFor(
+    envelopeForPads(d11Pads, d11ProjectPadLengthMm, d11ProjectPadWidthMm),
+    d11Package.bodyLengthMm.maximum,
+    d11Package.bodyWidthMm.maximum
+  ),
   orientation: {
     polarity: "non-polar",
     pinOne: "not-applicable",
@@ -156,7 +160,7 @@ const d11ProjectFootprint = {
 
 const d25ProjectFootprint = {
   state: "review-only",
-  geometryAuthority: "project-review-input-derived-from-vishay-d25-reflow-guidance",
+  geometryAuthority: "project-review-input-derived-from-vishay-d25-hp-reflow-guidance",
   padShape: "rectangular-smt",
   padLengthMm: d25ProjectPadLengthMm,
   padWidthMm: d25ProjectPadWidthMm,
@@ -177,7 +181,11 @@ const d25ProjectFootprint = {
     sourceStatus: "not-published",
     status: "project-review-input"
   },
-  courtyard: courtyardFor(envelopeForPads(d25Pads, d25ProjectPadLengthMm, d25ProjectPadWidthMm), 3.3, 1.75),
+  courtyard: courtyardFor(
+    envelopeForPads(d25Pads, d25ProjectPadLengthMm, d25ProjectPadWidthMm),
+    d25Package.bodyLengthMm.maximum,
+    d25Package.bodyWidthMm.maximum
+  ),
   orientation: {
     polarity: "non-polar",
     pinOne: "not-applicable",
@@ -192,28 +200,28 @@ const d25ProjectFootprint = {
 
 const seriesSources = [
   {
-    id: "vishay-dcrcwe3-series-rev-2026-04-14",
+    id: "vishay-crcw-hp-e3-series-rev-2026-03-17",
     authority: "manufacturer-primary",
-    documentNumber: "20035",
-    revision: "14-Apr-2026",
-    url: "https://www.vishay.com/docs/20035/dcrcwe3.pdf",
-    reviewedPages: "1, 11",
+    documentNumber: "20043",
+    revision: "17-Mar-2026",
+    url: "https://www.vishay.com/docs/20043/crcwhpe3.pdf",
+    reviewedPages: "1, 9",
     artifactPath: seriesSourcePath,
     sha256: seriesSourceSha256,
     pageEvidence: [
       {
         page: 1,
-        claim: "D11/CRCW0603 e3 and D25/CRCW1206 e3 package-family identity and metric size codes",
-        markers: ["D/CRCW e3", "D11/CRCW0603", "D25/CRCW1206", "20035"]
+        claim: "CRCW-HP e3 series identity and CRCW0603-HP/CRCW1206-HP package-family identity",
+        markers: ["CRCW-HP e3", "CRCW0603-HP", "CRCW1206-HP", "20043"]
       },
       {
-        page: 11,
-        claim: "manufacturer package dimensions and recommended wave/reflow solder-pad dimensions",
-        markers: ["MASS", "D11/CRCW0603 e3", "D25/CRCW1206 e3", "SOLDER", "PAD", "G", "Y", "X", "Z"]
+        page: 9,
+        claim: "HP package dimensions and recommended wave/reflow solder-pad dimensions",
+        markers: ["DIM", "MASS", "CRCW0603-HP", "CRCW1206-HP", "SOLDER", "PAD", "G", "Y", "X", "Z"]
       }
     ],
     scope:
-      "Series-only package dimensions and recommended solder-pad dimensions for D11/CRCW0603 e3 and D25/CRCW1206 e3. The PDF does not name the four selected exact orderable MPNs and does not provide exact-orderable CAD, solder-mask, paste, or courtyard objects."
+      "Series-only HP package dimensions and recommended solder-pad dimensions for CRCW0603-HP e3 and CRCW1206-HP e3. The PDF does not name the four selected exact orderable MPNs and does not provide exact-orderable CAD, solder-mask, paste, or courtyard objects."
   },
   {
     id: "bp031-selected-vishay-mpn-records",
@@ -272,7 +280,7 @@ const exactSelectedParts = [
     resistanceOhms: 22,
     tolerancePercent: 1,
     package: "0603",
-    seriesGeometryId: "vishay-d11-crcw0603-e3",
+    seriesGeometryId: "vishay-d11-crcw0603-hp-e3",
     exactIdentitySourceId: "bp031-selected-vishay-mpn-records",
     upstreamLedgerBinding: upstreamLedgerBinding("R_ESD", "R_ESD_", "CRCW060322R0FKEAHP", "0603"),
     exactMpnNamedInManufacturerSource: false
@@ -286,7 +294,7 @@ const exactSelectedParts = [
     resistanceOhms: 20,
     tolerancePercent: 1,
     package: "0603",
-    seriesGeometryId: "vishay-d11-crcw0603-e3",
+    seriesGeometryId: "vishay-d11-crcw0603-hp-e3",
     exactIdentitySourceId: "bp031-selected-vishay-mpn-records",
     upstreamLedgerBinding: upstreamLedgerBinding("R_SAR", "R_SAR_", "CRCW060320R0FKEAHP", "0603"),
     exactMpnNamedInManufacturerSource: false
@@ -300,7 +308,7 @@ const exactSelectedParts = [
     resistanceOhms: 100000,
     tolerancePercent: 1,
     package: "0603",
-    seriesGeometryId: "vishay-d11-crcw0603-e3",
+    seriesGeometryId: "vishay-d11-crcw0603-hp-e3",
     exactIdentitySourceId: "bp031-selected-vishay-mpn-records",
     upstreamLedgerBinding: upstreamLedgerBinding("R_SOURCE_PD", "R_SOURCE_PD_", "CRCW0603100KFKEAHP", "0603"),
     exactMpnNamedInManufacturerSource: false
@@ -314,7 +322,7 @@ const exactSelectedParts = [
     resistanceOhms: 56000,
     tolerancePercent: 1,
     package: "1206",
-    seriesGeometryId: "vishay-d25-crcw1206-e3",
+    seriesGeometryId: "vishay-d25-crcw1206-hp-e3",
     exactIdentitySourceId: "bp031-selected-vishay-mpn-records",
     upstreamLedgerBinding: upstreamLedgerBinding("R_FAULT_GUARD", "R_FAULT_GUARD_", "CRCW120656K0FKEAHP", "1206"),
     exactMpnNamedInManufacturerSource: false
@@ -338,13 +346,15 @@ export const bp031VishayCrcwResistorFootprintEvidence = {
         id: "M4-04",
         artifactKind: "m4-04-single-channel-sensing-coupon",
         path: m404LedgerPath,
-        sha256: m404LedgerSha256
+        snapshotCommit: basisCommit,
+        basisCommitSha256: m404LedgerSha256
       },
       {
         id: "BP-031",
         artifactKind: "bench-prototype-analog-footprint-closure",
         path: bp031LedgerPath,
-        sha256: bp031LedgerSha256
+        snapshotCommit: basisCommit,
+        basisCommitSha256: bp031LedgerSha256
       }
     ]
   },
@@ -352,12 +362,12 @@ export const bp031VishayCrcwResistorFootprintEvidence = {
   exactSelectedParts,
   seriesGeometry: [
     {
-      id: "vishay-d11-crcw0603-e3",
+      id: "vishay-d11-crcw0603-hp-e3",
       package: d11Package,
       landPattern: {
         wave: d11WaveLandPattern,
         reflow: d11ReflowLandPattern,
-        sourceId: "vishay-dcrcwe3-series-rev-2026-04-14"
+        sourceId: "vishay-crcw-hp-e3-series-rev-2026-03-17"
       },
       projectFootprint: d11ProjectFootprint,
       manufacturerCad: {
@@ -376,12 +386,12 @@ export const bp031VishayCrcwResistorFootprintEvidence = {
       }
     },
     {
-      id: "vishay-d25-crcw1206-e3",
+      id: "vishay-d25-crcw1206-hp-e3",
       package: d25Package,
       landPattern: {
         wave: d25WaveLandPattern,
         reflow: d25ReflowLandPattern,
-        sourceId: "vishay-dcrcwe3-series-rev-2026-04-14"
+        sourceId: "vishay-crcw-hp-e3-series-rev-2026-03-17"
       },
       projectFootprint: d25ProjectFootprint,
       manufacturerCad: {
@@ -444,13 +454,15 @@ export function validateBp031VishayCrcwResistorFootprintEvidence(
       id: "M4-04",
       artifactKind: "m4-04-single-channel-sensing-coupon",
       path: m404LedgerPath,
-      sha256: m404LedgerSha256
+      snapshotCommit: basisCommit,
+      basisCommitSha256: m404LedgerSha256
     },
     {
       id: "BP-031",
       artifactKind: "bench-prototype-analog-footprint-closure",
       path: bp031LedgerPath,
-      sha256: bp031LedgerSha256
+      snapshotCommit: basisCommit,
+      basisCommitSha256: bp031LedgerSha256
     }
   ]
   if (
@@ -459,33 +471,33 @@ export function validateBp031VishayCrcwResistorFootprintEvidence(
         ledger.id !== expectedUpstreamLedgers[index]?.id ||
         ledger.artifactKind !== expectedUpstreamLedgers[index]?.artifactKind ||
         ledger.path !== expectedUpstreamLedgers[index]?.path ||
-        ledger.sha256 !== expectedUpstreamLedgers[index]?.sha256 ||
-        !/^[0-9A-F]{64}$/u.test(ledger.sha256)
+        ledger.snapshotCommit !== expectedUpstreamLedgers[index]?.snapshotCommit ||
+        ledger.basisCommitSha256 !== expectedUpstreamLedgers[index]?.basisCommitSha256 ||
+        !/^[0-9A-F]{64}$/u.test(ledger.basisCommitSha256)
     )
   ) {
     errors.push("BP-031 upstream ledger binding drifted")
   }
-  const seriesSource = evidence.sources.find((source) => source.id === "vishay-dcrcwe3-series-rev-2026-04-14")
+  const seriesSource = evidence.sources.find((source) => source.id === "vishay-crcw-hp-e3-series-rev-2026-03-17")
   const identitySource = evidence.sources.find((source) => source.id === "bp031-selected-vishay-mpn-records")
   if (
     seriesSource === undefined ||
     seriesSource.authority !== "manufacturer-primary" ||
-    seriesSource.documentNumber !== "20035" ||
-    seriesSource.revision !== "14-Apr-2026" ||
-    seriesSource.url !== "https://www.vishay.com/docs/20035/dcrcwe3.pdf" ||
-    seriesSource.reviewedPages !== "1, 11" ||
+    seriesSource.documentNumber !== "20043" ||
+    seriesSource.revision !== "17-Mar-2026" ||
+    seriesSource.url !== "https://www.vishay.com/docs/20043/crcwhpe3.pdf" ||
+    seriesSource.reviewedPages !== "1, 9" ||
     seriesSource.artifactPath !== seriesSourcePath ||
     seriesSource.sha256 !== seriesSourceSha256 ||
     !/^[0-9A-F]{64}$/u.test(seriesSource.sha256) ||
     seriesSource.pageEvidence.length !== 2 ||
     seriesSource.pageEvidence[0]?.page !== 1 ||
     seriesSource.pageEvidence[0]?.claim !==
-      "D11/CRCW0603 e3 and D25/CRCW1206 e3 package-family identity and metric size codes" ||
-    seriesSource.pageEvidence[0]?.markers.join(",") !== "D/CRCW e3,D11/CRCW0603,D25/CRCW1206,20035" ||
-    seriesSource.pageEvidence[1]?.page !== 11 ||
-    seriesSource.pageEvidence[1]?.claim !==
-      "manufacturer package dimensions and recommended wave/reflow solder-pad dimensions" ||
-    seriesSource.pageEvidence[1]?.markers.join(",") !== "MASS,D11/CRCW0603 e3,D25/CRCW1206 e3,SOLDER,PAD,G,Y,X,Z"
+      "CRCW-HP e3 series identity and CRCW0603-HP/CRCW1206-HP package-family identity" ||
+    seriesSource.pageEvidence[0]?.markers.join(",") !== "CRCW-HP e3,CRCW0603-HP,CRCW1206-HP,20043" ||
+    seriesSource.pageEvidence[1]?.page !== 9 ||
+    seriesSource.pageEvidence[1]?.claim !== "HP package dimensions and recommended wave/reflow solder-pad dimensions" ||
+    seriesSource.pageEvidence[1]?.markers.join(",") !== "DIM,MASS,CRCW0603-HP,CRCW1206-HP,SOLDER,PAD,G,Y,X,Z"
   ) {
     errors.push("Vishay series source identity or SHA-256 drifted")
   }
@@ -509,7 +521,7 @@ export function validateBp031VishayCrcwResistorFootprintEvidence(
         package: "0603",
         resistanceOhms: 22,
         tolerancePercent: 1,
-        series: "vishay-d11-crcw0603-e3"
+        series: "vishay-d11-crcw0603-hp-e3"
       }
     ],
     [
@@ -521,7 +533,7 @@ export function validateBp031VishayCrcwResistorFootprintEvidence(
         package: "0603",
         resistanceOhms: 20,
         tolerancePercent: 1,
-        series: "vishay-d11-crcw0603-e3"
+        series: "vishay-d11-crcw0603-hp-e3"
       }
     ],
     [
@@ -533,7 +545,7 @@ export function validateBp031VishayCrcwResistorFootprintEvidence(
         package: "0603",
         resistanceOhms: 100000,
         tolerancePercent: 1,
-        series: "vishay-d11-crcw0603-e3"
+        series: "vishay-d11-crcw0603-hp-e3"
       }
     ],
     [
@@ -545,7 +557,7 @@ export function validateBp031VishayCrcwResistorFootprintEvidence(
         package: "1206",
         resistanceOhms: 56000,
         tolerancePercent: 1,
-        series: "vishay-d25-crcw1206-e3"
+        series: "vishay-d25-crcw1206-hp-e3"
       }
     ]
   ])
@@ -591,12 +603,16 @@ export function validateBp031VishayCrcwResistorFootprintEvidence(
   if (seenMpns.size !== expectedParts.size) errors.push("selected Vishay MPN set is incomplete")
 
   const familyIds = new Set(evidence.seriesGeometry.map((family) => family.id))
-  if (familyIds.size !== 2 || !familyIds.has("vishay-d11-crcw0603-e3") || !familyIds.has("vishay-d25-crcw1206-e3")) {
+  if (
+    familyIds.size !== 2 ||
+    !familyIds.has("vishay-d11-crcw0603-hp-e3") ||
+    !familyIds.has("vishay-d25-crcw1206-hp-e3")
+  ) {
     errors.push("selected Vishay series family set is incomplete")
   }
   for (const family of evidence.seriesGeometry) {
-    const expectedD11 = family.id === "vishay-d11-crcw0603-e3"
-    const expectedFamilyId = expectedD11 ? "vishay-d11-crcw0603-e3" : "vishay-d25-crcw1206-e3"
+    const expectedD11 = family.id === "vishay-d11-crcw0603-hp-e3"
+    const expectedFamilyId = expectedD11 ? "vishay-d11-crcw0603-hp-e3" : "vishay-d25-crcw1206-hp-e3"
     const expectedPackage = expectedD11 ? d11Package : d25Package
     const expectedReflow = expectedD11 ? d11ReflowLandPattern : d25ReflowLandPattern
     const expectedWave = expectedD11 ? d11WaveLandPattern : d25WaveLandPattern
@@ -618,7 +634,7 @@ export function validateBp031VishayCrcwResistorFootprintEvidence(
       family.package.terminalLengthT2Mm.maximum !== expectedPackage.terminalLengthT2Mm.maximum ||
       family.package.imperialSize !== expectedPackage.imperialSize ||
       family.package.metricSizeCode !== expectedPackage.metricSizeCode ||
-      family.landPattern.sourceId !== "vishay-dcrcwe3-series-rev-2026-04-14" ||
+      family.landPattern.sourceId !== "vishay-crcw-hp-e3-series-rev-2026-03-17" ||
       family.landPattern.reflow.gapMm !== expectedReflow.gapMm ||
       family.landPattern.reflow.padLengthAlongTerminalAxisMm !== expectedReflow.padLengthAlongTerminalAxisMm ||
       family.landPattern.reflow.padWidthAcrossTerminalAxisMm !== expectedReflow.padWidthAcrossTerminalAxisMm ||
@@ -637,8 +653,8 @@ export function validateBp031VishayCrcwResistorFootprintEvidence(
       project.state !== "review-only" ||
       project.geometryAuthority !==
         (expectedD11
-          ? "project-review-input-derived-from-vishay-d11-reflow-guidance"
-          : "project-review-input-derived-from-vishay-d25-reflow-guidance") ||
+          ? "project-review-input-derived-from-vishay-d11-hp-reflow-guidance"
+          : "project-review-input-derived-from-vishay-d25-hp-reflow-guidance") ||
       project.padShape !== "rectangular-smt" ||
       project.padLengthMm !== expectedProject.padLengthMm ||
       project.padWidthMm !== expectedProject.padWidthMm ||
@@ -770,7 +786,7 @@ export function Bp031VishayCrcw060322R0FkeaHpFootprint(
 ): ReactElement {
   return resistorComponent(
     "CRCW060322R0FKEAHP",
-    "vishay-d11-crcw0603-e3",
+    "vishay-d11-crcw0603-hp-e3",
     "BP031_VISHAY_CRCW0603_R_ESD_PROJECT_FOOTPRINT",
     props
   )
@@ -781,7 +797,7 @@ export function Bp031VishayCrcw060320R0FkeaHpFootprint(
 ): ReactElement {
   return resistorComponent(
     "CRCW060320R0FKEAHP",
-    "vishay-d11-crcw0603-e3",
+    "vishay-d11-crcw0603-hp-e3",
     "BP031_VISHAY_CRCW0603_R_SAR_PROJECT_FOOTPRINT",
     props
   )
@@ -792,7 +808,7 @@ export function Bp031VishayCrcw0603100KfkeaHpFootprint(
 ): ReactElement {
   return resistorComponent(
     "CRCW0603100KFKEAHP",
-    "vishay-d11-crcw0603-e3",
+    "vishay-d11-crcw0603-hp-e3",
     "BP031_VISHAY_CRCW0603_R_SOURCE_PD_PROJECT_FOOTPRINT",
     props
   )
@@ -803,7 +819,7 @@ export function Bp031VishayCrcw120656K0FkeaHpFootprint(
 ): ReactElement {
   return resistorComponent(
     "CRCW120656K0FKEAHP",
-    "vishay-d25-crcw1206-e3",
+    "vishay-d25-crcw1206-hp-e3",
     "BP031_VISHAY_CRCW1206_R_FAULT_GUARD_PROJECT_FOOTPRINT",
     props
   )

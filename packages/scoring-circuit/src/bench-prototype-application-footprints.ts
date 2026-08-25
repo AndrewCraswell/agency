@@ -31,6 +31,7 @@ import {
   validateBenchPrototypeOptionalPeripherals
 } from "./bench-prototype-optional-peripherals.js"
 import { calculateBenchPrototypePowerContract, defaultBenchPrototypePowerInputs } from "./bench-prototype-power.js"
+import { validateBp033B340aProjectFootprintGeometry } from "./bp033-b340a-project-footprint.js"
 import { ethernetSupportNetwork } from "./ethernet-support-network.js"
 
 type PlainRecord = Record<PropertyKey, unknown>
@@ -681,6 +682,18 @@ const projectFootprintMappings = [
     reviewer: "root-final-reviewer",
     reviewedAt: "2026-08-25",
     fabricationRelease: "deny"
+  },
+  {
+    reference: "D_SOURCE_SELECTOR",
+    artifactKind: "bp033-b340a-project-footprint",
+    artworkModule: "src/bp033-b340a-project-footprint.tsx",
+    reviewDocument: "docs/bp-033-b340a-project-footprint.md",
+    sourceArtifactPath: "docs/evidence/bp-033/diodes-b340a-datasheet.pdf",
+    sourceSha256: "453CBD34D996482ABD07AC694C4E2D812D26B1D679D05EE325ACC5C3EEB79917",
+    reviewState: "root-reviewed-review-input",
+    reviewer: "root-final-reviewer",
+    reviewedAt: "2026-08-25",
+    fabricationRelease: "deny"
   }
 ] as const
 
@@ -750,6 +763,9 @@ function assertUpstream(): void {
   validateBenchPrototypeHub75Safing(benchPrototypeHub75Safing)
   validateBenchPrototypeOptionalPeripherals(benchPrototypeOptionalPeripherals)
   validateBenchPrototypeIrReceiverSelection(benchPrototypeIrReceiverSelection)
+  if (validateBp033B340aProjectFootprintGeometry().length !== 0) {
+    throw new RangeError("BP-033 B340A project-review candidate drifted")
+  }
 }
 
 /** Rejects package inference, geometry credit, populated omitted peripherals, and release relaxation. */
@@ -802,7 +818,7 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
         record.manufacturerDrawing.revision !== `Primary source retained at ${source.path}`
       )
     }) ||
-    contract.projectFootprintMappings.length !== 1 ||
+    contract.projectFootprintMappings.length !== 2 ||
     contract.projectFootprintMappings[0]?.reference !== "J_USB_C" ||
     contract.projectFootprintMappings[0]?.artifactKind !== "bp033-usb-c-project-footprint" ||
     contract.projectFootprintMappings[0]?.artworkModule !== "src/bp033-usb-c-project-footprint.tsx" ||
@@ -814,6 +830,16 @@ export function validateBenchPrototypeApplicationFootprints(value: unknown): tru
     contract.projectFootprintMappings[0]?.reviewState !== "root-reviewed-review-input" ||
     contract.projectFootprintMappings[0]?.reviewer !== "root-final-reviewer" ||
     contract.projectFootprintMappings[0]?.fabricationRelease !== "deny" ||
+    contract.projectFootprintMappings[1]?.reference !== "D_SOURCE_SELECTOR" ||
+    contract.projectFootprintMappings[1]?.artifactKind !== "bp033-b340a-project-footprint" ||
+    contract.projectFootprintMappings[1]?.artworkModule !== "src/bp033-b340a-project-footprint.tsx" ||
+    contract.projectFootprintMappings[1]?.reviewDocument !== "docs/bp-033-b340a-project-footprint.md" ||
+    contract.projectFootprintMappings[1]?.sourceArtifactPath !== "docs/evidence/bp-033/diodes-b340a-datasheet.pdf" ||
+    contract.projectFootprintMappings[1]?.sourceSha256 !==
+      "453CBD34D996482ABD07AC694C4E2D812D26B1D679D05EE325ACC5C3EEB79917" ||
+    contract.projectFootprintMappings[1]?.reviewState !== "root-reviewed-review-input" ||
+    contract.projectFootprintMappings[1]?.reviewer !== "root-final-reviewer" ||
+    contract.projectFootprintMappings[1]?.fabricationRelease !== "deny" ||
     !contract.records.some(
       (record) =>
         record.reference === "U_USB_PD" &&

@@ -1,4 +1,4 @@
-# BP-031 Vishay CRCW selected-resistor candidate-footprint review
+# BP-031 Vishay CRCW-HP selected-resistor candidate-footprint review
 
 ## Decision
 
@@ -7,31 +7,31 @@ four exact Vishay selections used by the analog and protection contracts:
 
 | Canonical reference | Exact MPN | Package and value | Series geometry |
 | --- | --- | --- | --- |
-| `R_ESD` | `CRCW060322R0FKEAHP` | 0603, 22 ohm, 1 percent | `D11/CRCW0603 e3` |
-| `R_SAR` | `CRCW060320R0FKEAHP` | 0603, 20 ohm, 1 percent | `D11/CRCW0603 e3` |
-| `R_SOURCE_PD` | `CRCW0603100KFKEAHP` | 0603, 100 kilohm, 1 percent | `D11/CRCW0603 e3` |
-| `R_FAULT_GUARD` | `CRCW120656K0FKEAHP` | 1206, 56 kilohm, 1 percent | `D25/CRCW1206 e3` |
+| `R_ESD` | `CRCW060322R0FKEAHP` | 0603, 22 ohm, 1 percent | `CRCW0603-HP e3` |
+| `R_SAR` | `CRCW060320R0FKEAHP` | 0603, 20 ohm, 1 percent | `CRCW0603-HP e3` |
+| `R_SOURCE_PD` | `CRCW0603100KFKEAHP` | 0603, 100 kilohm, 1 percent | `CRCW0603-HP e3` |
+| `R_FAULT_GUARD` | `CRCW120656K0FKEAHP` | 1206, 56 kilohm, 1 percent | `CRCW1206-HP e3` |
 
-The exact MPN rows are bound separately from Vishay's series-only package
-drawing. The Vishay PDF does not name these four orderables and does not
-provide exact-orderable CAD. No exact MPN is represented as manufacturer-CAD
-approved. All project geometry remains review-only, unaccepted, and
-fabrication-denied.
+The exact MPN rows are bound separately from Vishay's HP series package
+drawing. The Vishay PDF names the `CRCW0603-HP` and `CRCW1206-HP` series but
+does not name these four exact orderables or provide exact-orderable CAD. No
+exact MPN is represented as manufacturer-CAD approved. All project geometry
+remains review-only, unaccepted, and fabrication-denied.
 
 ## Source binding
 
-The retained official series source is the existing M4-04 artifact:
+The retained official HP series source is:
 
-- Vishay D/CRCW e3 datasheet, document `20035`, revision `14-Apr-2026`
-- <https://www.vishay.com/docs/20035/dcrcwe3.pdf>
-- retained artifact: `packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf`
-- SHA-256: `1F5E20329C74727DA629B92E2BFBDBDB3FA3BE57229E3208E24058173F9CECF3`
-- reviewed pages: 1 and 11
+- Vishay CRCW-HP e3 datasheet, document `20043`, revision `17-Mar-2026`
+- <https://www.vishay.com/docs/20043/crcwhpe3.pdf>
+- retained artifact: `packages/scoring-circuit/docs/evidence/bp-031/vishay-crcw-hp-e3-datasheet-20043.pdf`
+- SHA-256: `949CC96331F62B1BF8E5CEEA628ADB2D8A58E981D4EF9EA8E77B2C6D530E4E20`
+- reviewed pages: 1 and 9
 
-Page 1 establishes the D11 and D25 series designations and package families.
-Page 11 supplies the package dimensions and recommended wave and reflow solder
-pad dimensions. The exact selected MPN, canonical reference, resistance, and
-role rows are independently bound to
+Page 1 establishes the CRCW-HP series and `CRCW0603-HP` and `CRCW1206-HP`
+package families. Page 9 supplies the HP package body and terminal limits and
+the recommended wave and reflow solder-pad dimensions. The exact selected MPN,
+canonical reference, resistance, and role rows are independently bound to
 `packages/scoring-circuit/src/one-channel-analog-readiness.ts`, whose retained
 source hash is
 `496d8727b33209c03b31f2b1f203397c7cab364f40d00edf2ec8b1bdf227e55d`. That
@@ -41,8 +41,8 @@ The executable evidence retains page claims and byte markers for the two
 reviewed pages. The focused test verifies the retained PDF SHA-256, checks
 those markers against the PDF bytes and inflated content streams, and rejects
 each of the four exact MPN strings in the Vishay source. The source is used for
-series geometry only; exact orderable identity comes from the canonical project
-row.
+HP series geometry only; exact orderable identity comes from the canonical
+project row.
 
 ## Upstream ledger binding
 
@@ -51,8 +51,8 @@ bindings:
 
 | Ledger | Retained source | Per-row binding |
 | --- | --- | --- |
-| M4-04 | `packages/scoring-circuit/src/m4-04-single-channel-coupon.ts` (`2CBA495FC2746C038FB09A13793B1DBF7F7D0B4D8F55D7F748AD2E0E9E12D0E0`) | exact reference, exact MPN, package, `footprintRelease: deny`, root independent drawing review still pending |
-| BP-031 | `packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts` (`09446FCDD1D8543C5F97A87DDDF20AADF99054BAB204424FFDF069E8A8C40144`) | `BP-103` replicated row, `BP-102` source subcontract, source base reference, `M4-04:<MPN>` shared source ID, `DNP-unresolved`, PCB eligibility false, release deny |
+| M4-04 | `packages/scoring-circuit/src/m4-04-single-channel-coupon.ts` at basis commit `d29c549b9da078b7c2e6f23487eb4c613eb4798f` (`2CBA495FC2746C038FB09A13793B1DBF7F7D0B4D8F55D7F748AD2E0E9E12D0E0`) | exact reference, exact MPN, package, `footprintRelease: deny`, root independent drawing review still pending |
+| BP-031 | `packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts` at basis commit `d29c549b9da078b7c2e6f23487eb4c613eb4798f` (`3D565A3E71BC53B6182A7DBF80F775D5657A70AB54850CC6F8BCFA8EFDE69EDD`) | `BP-103` replicated row, `BP-102` source subcontract, source base reference, `M4-04:<MPN>` shared source ID, `DNP-unresolved`, PCB eligibility false, release deny |
 
 Focused tests compare all four rows against the canonical BOM, the M4-04
 footprint ledger, and the BP-031 replicated-cell ledger, including reference
@@ -65,28 +65,31 @@ length along the resistor terminal axis, `X` as pad width across that axis,
 and `Z` as the overall exposed-land span. The values reconcile as
 `Z = G + 2Y` for both selected reflow patterns.
 
-### D11/CRCW0603 e3
+### CRCW0603-HP e3
 
-- body length: 1.50 minimum to 1.65 maximum millimeters
+- body length: 1.50 minimum to 1.70 maximum millimeters
 - body width: 0.75 minimum to 0.95 maximum millimeters
-- body height: 0.40 minimum to 0.50 maximum millimeters
+- body height: 0.35 minimum to 0.55 maximum millimeters
+- terminal lengths T1 and T2: 0.10 minimum to 0.50 maximum millimeters
 - reflow land pattern: `G 0.75`, `Y 0.75`, `X 1.00`, `Z 2.25` millimeters
 - wave land pattern: `G 0.65`, `Y 1.10`, `X 1.25`, `Z 2.85` millimeters
 - rendered review copper uses 0.75 millimeter pad length, 1.00 millimeter
   pad width, and 1.50 millimeter pad-center span
 
-### D25/CRCW1206 e3
+### CRCW1206-HP e3
 
-- body length: 3.00 minimum to 3.30 maximum millimeters
+- body length: 2.90 minimum to 3.30 maximum millimeters
 - body width: 1.45 minimum to 1.75 maximum millimeters
-- body height: 0.50 minimum to 0.60 maximum millimeters
+- body height: 0.35 minimum to 0.65 maximum millimeters
+- terminal T1 length: 0.30 minimum to 0.70 maximum millimeters
+- terminal T2 length: 0.25 minimum to 0.65 maximum millimeters
 - reflow land pattern: `G 1.50`, `Y 1.05`, `X 1.80`, `Z 3.60` millimeters
 - wave land pattern: `G 1.40`, `Y 1.40`, `X 1.95`, `Z 4.20` millimeters
 - rendered review copper uses 1.05 millimeter pad length, 1.80 millimeter
   pad width, and 2.55 millimeter pad-center span
 
 The 0603 and 1206 geometry is shared only within its corresponding Vishay
-series family. No cross-package or exact-orderable geometry substitution is
+HP series family. No cross-package or exact-orderable geometry substitution is
 made.
 
 ## Review-only mask, paste, courtyard, and orientation

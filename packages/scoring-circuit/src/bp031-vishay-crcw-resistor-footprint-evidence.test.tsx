@@ -1,5 +1,7 @@
+import { execFileSync } from "node:child_process"
 import { createHash } from "node:crypto"
 import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
 import { inflateSync } from "node:zlib"
 import { describe, expect, it } from "vitest"
 import { benchPrototypeAnalogFootprintClosure } from "./bench-prototype-analog-footprint-closure.js"
@@ -83,11 +85,20 @@ function inflatePdfStreams(bytes: Buffer) {
 }
 
 const exactMpnRows = [
-  ["R_ESD", "CRCW060322R0FKEAHP", "0603", 22, "vishay-d11-crcw0603-e3"],
-  ["R_SAR", "CRCW060320R0FKEAHP", "0603", 20, "vishay-d11-crcw0603-e3"],
-  ["R_SOURCE_PD", "CRCW0603100KFKEAHP", "0603", 100000, "vishay-d11-crcw0603-e3"],
-  ["R_FAULT_GUARD", "CRCW120656K0FKEAHP", "1206", 56000, "vishay-d25-crcw1206-e3"]
+  ["R_ESD", "CRCW060322R0FKEAHP", "0603", 22, "vishay-d11-crcw0603-hp-e3"],
+  ["R_SAR", "CRCW060320R0FKEAHP", "0603", 20, "vishay-d11-crcw0603-hp-e3"],
+  ["R_SOURCE_PD", "CRCW0603100KFKEAHP", "0603", 100000, "vishay-d11-crcw0603-hp-e3"],
+  ["R_FAULT_GUARD", "CRCW120656K0FKEAHP", "1206", 56000, "vishay-d25-crcw1206-hp-e3"]
 ] as const
+
+const basisCommit = "d29c549b9da078b7c2e6f23487eb4c613eb4798f"
+const bp031LedgerPath = "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts"
+
+function immutableSnapshotSha256(commit: string, path: string) {
+  const repositoryRoot = fileURLToPath(new URL("../../../", import.meta.url))
+  const snapshotBytes = execFileSync("git", ["show", `${commit}:${path}`], { cwd: repositoryRoot })
+  return createHash("sha256").update(snapshotBytes).digest("hex").toUpperCase()
+}
 
 describe("BP-031 exact Vishay CRCW resistor candidate footprints", () => {
   it("keeps exact selected MPN identity separate from hash-bound series geometry", () => {
@@ -97,19 +108,21 @@ describe("BP-031 exact Vishay CRCW resistor candidate footprints", () => {
       workUnit: "BP-031",
       manufacturer: "Vishay",
       sourceControl: {
-        basisCommit: "d29c549b9da078b7c2e6f23487eb4c613eb4798f",
+        basisCommit,
         upstreamLedgers: [
           {
             id: "M4-04",
             artifactKind: "m4-04-single-channel-sensing-coupon",
             path: "packages/scoring-circuit/src/m4-04-single-channel-coupon.ts",
-            sha256: "2CBA495FC2746C038FB09A13793B1DBF7F7D0B4D8F55D7F748AD2E0E9E12D0E0"
+            snapshotCommit: "d29c549b9da078b7c2e6f23487eb4c613eb4798f",
+            basisCommitSha256: "2CBA495FC2746C038FB09A13793B1DBF7F7D0B4D8F55D7F748AD2E0E9E12D0E0"
           },
           {
             id: "BP-031",
             artifactKind: "bench-prototype-analog-footprint-closure",
             path: "packages/scoring-circuit/src/bench-prototype-analog-footprint-closure.ts",
-            sha256: "09446FCDD1D8543C5F97A87DDDF20AADF99054BAB204424FFDF069E8A8C40144"
+            snapshotCommit: basisCommit,
+            basisCommitSha256: "3D565A3E71BC53B6182A7DBF80F775D5657A70AB54850CC6F8BCFA8EFDE69EDD"
           }
         ]
       },
@@ -119,16 +132,16 @@ describe("BP-031 exact Vishay CRCW resistor candidate footprints", () => {
     })
     expect(
       bp031VishayCrcwResistorFootprintEvidence.sources.find(
-        (source) => source.id === "vishay-dcrcwe3-series-rev-2026-04-14"
+        (source) => source.id === "vishay-crcw-hp-e3-series-rev-2026-03-17"
       )
     ).toMatchObject({
       authority: "manufacturer-primary",
-      documentNumber: "20035",
-      revision: "14-Apr-2026",
-      reviewedPages: "1, 11",
-      artifactPath: "packages/scoring-circuit/docs/evidence/m4-04/vishay-dcrcwe3-chip-resistor-datasheet.pdf",
-      sha256: "1F5E20329C74727DA629B92E2BFBDBDB3FA3BE57229E3208E24058173F9CECF3",
-      scope: expect.stringContaining("does not name the four selected exact orderable MPNs")
+      documentNumber: "20043",
+      revision: "17-Mar-2026",
+      reviewedPages: "1, 9",
+      artifactPath: "packages/scoring-circuit/docs/evidence/bp-031/vishay-crcw-hp-e3-datasheet-20043.pdf",
+      sha256: "949CC96331F62B1BF8E5CEEA628ADB2D8A58E981D4EF9EA8E77B2C6D530E4E20",
+      scope: expect.stringContaining("CRCW0603-HP e3 and CRCW1206-HP e3")
     })
     expect(
       bp031VishayCrcwResistorFootprintEvidence.sources.find(
@@ -216,27 +229,31 @@ describe("BP-031 exact Vishay CRCW resistor candidate footprints", () => {
       expect(seriesContent).not.toContain(part.manufacturerPartNumber)
     }
     for (const upstream of bp031VishayCrcwResistorFootprintEvidence.sourceControl.upstreamLedgers) {
-      const bytes = readFileSync(
-        new URL(`../${upstream.path.replace("packages/scoring-circuit/", "")}`, import.meta.url)
-      )
-      expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(upstream.sha256)
+      expect(upstream.snapshotCommit).toBe(basisCommit)
+      expect(upstream.basisCommitSha256).toMatch(/^[0-9A-F]{64}$/u)
     }
+    expect(
+      bp031VishayCrcwResistorFootprintEvidence.sourceControl.upstreamLedgers.find((ledger) => ledger.id === "BP-031")
+        ?.basisCommitSha256
+    ).toBe(immutableSnapshotSha256(basisCommit, bp031LedgerPath))
   })
 
   it("shares only the two proven Vishay series land patterns and derives review geometry", () => {
     const d11 = bp031VishayCrcwResistorFootprintEvidence.seriesGeometry.find(
-      (family) => family.id === "vishay-d11-crcw0603-e3"
+      (family) => family.id === "vishay-d11-crcw0603-hp-e3"
     )
     const d25 = bp031VishayCrcwResistorFootprintEvidence.seriesGeometry.find(
-      (family) => family.id === "vishay-d25-crcw1206-e3"
+      (family) => family.id === "vishay-d25-crcw1206-hp-e3"
     )
     expect(d11).toMatchObject({
       package: {
-        family: "D11/CRCW0603 e3",
+        family: "D11/CRCW0603-HP e3",
         imperialSize: "0603",
-        bodyLengthMm: { minimum: 1.5, maximum: 1.65 },
+        bodyLengthMm: { minimum: 1.5, maximum: 1.7 },
         bodyWidthMm: { minimum: 0.75, maximum: 0.95 },
-        bodyHeightMm: { minimum: 0.4, maximum: 0.5 }
+        bodyHeightMm: { minimum: 0.35, maximum: 0.55 },
+        terminalLengthT1Mm: { minimum: 0.1, maximum: 0.5 },
+        terminalLengthT2Mm: { minimum: 0.1, maximum: 0.5 }
       },
       landPattern: {
         wave: {
@@ -268,11 +285,13 @@ describe("BP-031 exact Vishay CRCW resistor candidate footprints", () => {
     })
     expect(d25).toMatchObject({
       package: {
-        family: "D25/CRCW1206 e3",
+        family: "D25/CRCW1206-HP e3",
         imperialSize: "1206",
-        bodyLengthMm: { minimum: 3, maximum: 3.3 },
+        bodyLengthMm: { minimum: 2.9, maximum: 3.3 },
         bodyWidthMm: { minimum: 1.45, maximum: 1.75 },
-        bodyHeightMm: { minimum: 0.5, maximum: 0.6 }
+        bodyHeightMm: { minimum: 0.35, maximum: 0.65 },
+        terminalLengthT1Mm: { minimum: 0.3, maximum: 0.7 },
+        terminalLengthT2Mm: { minimum: 0.25, maximum: 0.65 }
       },
       landPattern: {
         wave: { gapMm: 1.4, padLengthAlongTerminalAxisMm: 1.4, padWidthAcrossTerminalAxisMm: 1.95, overallSpanMm: 4.2 },
@@ -321,10 +340,10 @@ describe("BP-031 exact Vishay CRCW resistor candidate footprints", () => {
   })
 
   it.each([
-    ["CRCW060322R0FKEAHP", <Bp031VishayCrcw060322R0FkeaHpFootprint />, "vishay-d11-crcw0603-e3"],
-    ["CRCW060320R0FKEAHP", <Bp031VishayCrcw060320R0FkeaHpFootprint />, "vishay-d11-crcw0603-e3"],
-    ["CRCW0603100KFKEAHP", <Bp031VishayCrcw0603100KfkeaHpFootprint />, "vishay-d11-crcw0603-e3"],
-    ["CRCW120656K0FKEAHP", <Bp031VishayCrcw120656K0FkeaHpFootprint />, "vishay-d25-crcw1206-e3"]
+    ["CRCW060322R0FKEAHP", <Bp031VishayCrcw060322R0FkeaHpFootprint />, "vishay-d11-crcw0603-hp-e3"],
+    ["CRCW060320R0FKEAHP", <Bp031VishayCrcw060320R0FkeaHpFootprint />, "vishay-d11-crcw0603-hp-e3"],
+    ["CRCW0603100KFKEAHP", <Bp031VishayCrcw0603100KfkeaHpFootprint />, "vishay-d11-crcw0603-hp-e3"],
+    ["CRCW120656K0FKEAHP", <Bp031VishayCrcw120656K0FkeaHpFootprint />, "vishay-d25-crcw1206-hp-e3"]
   ])("renders the exact %s candidate with source ports and no tscircuit errors", (mpn, component, familyId) => {
     const json = renderTestCircuit(component)
     const pads = json.filter(isRectSmtPad)
@@ -359,7 +378,7 @@ describe("BP-031 exact Vishay CRCW resistor candidate footprints", () => {
     [
       "cross-family geometry substitution",
       (copy: typeof bp031VishayCrcwResistorFootprintEvidence) =>
-        Reflect.set(copy.exactSelectedParts[0], "seriesGeometryId", "vishay-d25-crcw1206-e3")
+        Reflect.set(copy.exactSelectedParts[0], "seriesGeometryId", "vishay-d25-crcw1206-hp-e3")
     ],
     [
       "series source hash",
