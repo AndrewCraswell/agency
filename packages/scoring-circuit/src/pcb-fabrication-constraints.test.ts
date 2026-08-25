@@ -5,6 +5,7 @@ import {
   pcbFabricationContract,
   type PcbFabricationInput
 } from "./pcb-fabrication-constraints.js"
+import { sixLayerBoardReleaseRequirements } from "./pcb-stackup-release.js"
 
 describe("PCB fabrication constraints", () => {
   it("defines a six-layer mixed-signal stack with split domain references", () => {
@@ -33,6 +34,53 @@ describe("PCB fabrication constraints", () => {
     expect(pcbFabricationContract.designRules.projectIsolationCreepageTargetMm).toBeGreaterThan(
       pcbFabricationContract.designRules.projectIsolationClearanceTargetMm
     )
+  })
+
+  it("projects shared release floors while retaining fabrication-local fields", () => {
+    const sharedCopperWeights = sixLayerBoardReleaseRequirements.layerOrder.map((layer) => layer.copperOz)
+
+    expect(pcbFabricationContract.board).toMatchObject({
+      outerCopperOz: sixLayerBoardReleaseRequirements.outerCopperOz,
+      innerCopperOz: sixLayerBoardReleaseRequirements.innerCopperOz
+    })
+    expect(pcbFabricationContract.stackups.scoringIoBoard.map((layer) => layer.copperOz)).toEqual(sharedCopperWeights)
+    expect(pcbFabricationContract.stackups.applicationDisplayCarrier.map((layer) => layer.copperOz)).toEqual(
+      sharedCopperWeights
+    )
+    expect(pcbFabricationContract.designRules).toMatchObject({
+      minimumTrackWidthMm: sixLayerBoardReleaseRequirements.minimumTraceWidthMm,
+      minimumClearanceMm: sixLayerBoardReleaseRequirements.minimumClearanceMm,
+      minimumViaDrillMm: sixLayerBoardReleaseRequirements.minimumViaDrillMm,
+      minimumFinishedHoleMm: sixLayerBoardReleaseRequirements.minimumFinishedHoleMm,
+      minimumFinishedAnnularRingMm: sixLayerBoardReleaseRequirements.minimumFinishedAnnularRingMm,
+      minimumComponentAnnularRingMm: sixLayerBoardReleaseRequirements.minimumComponentAnnularRingMm,
+      minimumPlatedSlotWidthMm: sixLayerBoardReleaseRequirements.minimumPlatedSlotWidthMm,
+      minimumNonPlatedSlotWidthMm: sixLayerBoardReleaseRequirements.minimumNonPlatedSlotWidthMm,
+      minimumCopperToRoutedEdgeMm: sixLayerBoardReleaseRequirements.minimumCopperToRoutedEdgeMm,
+      minimumSoldermaskBridgeMm: sixLayerBoardReleaseRequirements.minimumSoldermaskBridgeMm,
+      maximumTraceWidthTolerancePercent: sixLayerBoardReleaseRequirements.maximumTraceWidthTolerancePercent,
+      maximumFinishedPthHoleTolerancePositiveMm:
+        sixLayerBoardReleaseRequirements.maximumFinishedPthHoleTolerancePositiveMm,
+      maximumFinishedPthHoleToleranceNegativeMm:
+        sixLayerBoardReleaseRequirements.maximumFinishedPthHoleToleranceNegativeMm,
+      maximumHolePositionToleranceMm: sixLayerBoardReleaseRequirements.maximumHolePositionToleranceMm,
+      maximumBoardOutlineToleranceMm: sixLayerBoardReleaseRequirements.maximumBoardOutlineToleranceMm,
+      projectIsolationSlotWidthTargetMm: sixLayerBoardReleaseRequirements.isolation.slotWidthTargetMm,
+      projectIsolationSlotWidthToleranceMm: sixLayerBoardReleaseRequirements.isolation.slotWidthToleranceMm,
+      projectIsolationCreepageTargetMm: sixLayerBoardReleaseRequirements.isolation.creepageTargetMm,
+      projectIsolationClearanceTargetMm: sixLayerBoardReleaseRequirements.isolation.clearanceTargetMm,
+      projectIsolationCopperKeepoutTargetMm: sixLayerBoardReleaseRequirements.isolation.copperKeepoutTargetMm,
+      powerEntryClearanceMm: 0.3,
+      switchNodeToQuietCopperKeepoutMm: 2
+    })
+    expect(
+      pcbFabricationContract.impedanceTargets.map(({ netClass, targetOhms, tolerancePercent }) => ({
+        netClass,
+        targetOhms,
+        tolerancePercent
+      }))
+    ).toEqual(sixLayerBoardReleaseRequirements.controlledImpedance)
+    expect(pcbFabricationContract.impedanceTargets.every((target) => target.routing.length > 0)).toBe(true)
   })
 
   it("keeps the current architectural model denied without overstating fabrication readiness", () => {
