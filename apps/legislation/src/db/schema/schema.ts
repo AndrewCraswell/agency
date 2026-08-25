@@ -1251,12 +1251,39 @@ export const billRelations = legislationSchema.table(
       .references(() => bills.id, { onDelete: "cascade" }),
     relatedBillId: text("related_bill_id").notNull(),
     classification: text("classification").notNull(),
+    /** Null means this legacy relation has not received a source-declared direction. */
+    direction: text("direction"),
+    /** Relation-level provenance is separate from the related bill's provenance. */
+    sourceUrl: text("source_url"),
+    sourceProvider: text("source_provider"),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
+    sourceRetrievedAt: timestamp("source_retrieved_at", { withTimezone: true }),
+    sourceIsOfficial: boolean("source_is_official"),
+    provenanceComplete: boolean("provenance_complete").notNull().default(false),
+    canonicalFactsComplete: boolean("canonical_facts_complete").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow()
   },
   (table) => [
     primaryKey({ columns: [table.billId, table.relatedBillId, table.classification] }),
     check("bill_relations_distinct_check", sql`${table.billId} <> ${table.relatedBillId}`),
-    index("bill_relations_related_idx").on(table.relatedBillId, table.classification)
+    check(
+      "bill_relations_classification_check",
+      sql`${table.classification} in ('companion', 'replacement', 'replaced-by', 'prior-session', 'related', 'other')`
+    ),
+    check(
+      "bill_relations_direction_check",
+      sql`${table.direction} is null or ${table.direction} in ('outgoing', 'incoming')`
+    ),
+    check(
+      "bill_relations_provenance_complete_check",
+      sql`not ${table.provenanceComplete} or (${table.sourceUrl} is not null and ${table.sourceUrl} ~ '^https://' and ${table.sourceProvider} is not null and length(btrim(${table.sourceProvider})) > 0 and ${table.sourceRetrievedAt} is not null and ${table.sourceIsOfficial} is not null)`
+    ),
+    check(
+      "bill_relations_canonical_facts_complete_check",
+      sql`not ${table.canonicalFactsComplete} or (${table.direction} is not null and ${table.provenanceComplete} and ${table.sourceUpdatedAt} is not null)`
+    ),
+    index("bill_relations_related_idx").on(table.relatedBillId, table.classification),
+    index("bill_relations_lookup_idx").on(table.billId, table.direction, table.classification, table.relatedBillId)
   ]
 )
 

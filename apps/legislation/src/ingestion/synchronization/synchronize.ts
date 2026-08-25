@@ -169,7 +169,8 @@ async function synchronizeOpenStatesBillsForScope(
       context.database,
       {
         jurisdictionCode: identity.scope,
-        jurisdictionName: openStatesJurisdictionNames[identity.scope]
+        jurisdictionName: openStatesJurisdictionNames[identity.scope],
+        retrievedAt: new Date()
       },
       records,
       {

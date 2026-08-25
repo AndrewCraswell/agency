@@ -59,15 +59,36 @@ describe("Open States normalization", () => {
       "fiscal-note"
     ])
     expect(result.aggregate.relations).toEqual([
-      {
+      expect.objectContaining({
         billId: "bill:wa:2025-2026:hb:1234",
         classification: "companion",
+        direction: "outgoing",
         relatedBillId: "bill:wa:2025-2026:sb:5678"
-      }
+      })
     ])
     expect(result.diagnostics).toEqual([
       { field: "actions.date", reason: "fuzzy date was not fabricated", value: "2025" }
     ])
+  })
+
+  it("persists source-declared relation direction and complete provenance when retrieved", () => {
+    const result = normalizeOpenStatesBill(fixture, {
+      jurisdictionCode: "WA",
+      jurisdictionName: "Washington",
+      retrievedAt: new Date("2026-08-24T12:00:00.000Z"),
+      sessionName: "2025-2026 Regular Session"
+    })
+
+    expect(result.aggregate.relations?.[0]).toMatchObject({
+      canonicalFactsComplete: true,
+      direction: "outgoing",
+      provenanceComplete: true,
+      sourceIsOfficial: false,
+      sourceProvider: "openstates",
+      sourceRetrievedAt: new Date("2026-08-24T12:00:00.000Z"),
+      sourceUpdatedAt: new Date("2025-03-02T12:00:00.000Z"),
+      sourceUrl: "https://leg.wa.gov/billsummary?BillNumber=1234&Year=2025"
+    })
   })
 
   it("maps the Open States v3 bill shape with resolved sessions and organizations", () => {

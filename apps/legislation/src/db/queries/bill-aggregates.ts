@@ -95,6 +95,43 @@ function assertAggregateOwnership(aggregate: CanonicalBillAggregate): void {
 }
 
 /**
+ * Keeps relation completeness derived from facts supplied by the source aggregate.
+ * Missing legacy provenance is intentionally retained as incomplete; this helper
+ * never fills a source fact or infers a relation direction.
+ */
+export function prepareBillRelationInsert(relation: typeof billRelations.$inferInsert) {
+  const provenanceComplete =
+    relation.direction !== undefined &&
+    relation.sourceUrl !== undefined &&
+    relation.sourceUrl !== null &&
+    isHttpsUrl(relation.sourceUrl) &&
+    relation.sourceProvider !== undefined &&
+    relation.sourceProvider !== null &&
+    relation.sourceProvider.trim().length > 0 &&
+    relation.sourceRetrievedAt instanceof Date &&
+    !Number.isNaN(relation.sourceRetrievedAt.valueOf()) &&
+    relation.sourceIsOfficial !== undefined &&
+    relation.sourceIsOfficial !== null
+  return {
+    ...relation,
+    canonicalFactsComplete:
+      provenanceComplete &&
+      relation.sourceUpdatedAt instanceof Date &&
+      !Number.isNaN(relation.sourceUpdatedAt.valueOf()),
+    provenanceComplete
+  }
+}
+
+function isHttpsUrl(value: string): boolean {
+  try {
+    const url = new URL(value)
+    return url.protocol === "https:" && url.hostname.length > 0
+  } catch {
+    return false
+  }
+}
+
+/**
  * Sponsor rows are observations, not a replaceable presentation collection.
  * Retaining their bounds lets person activity distinguish the first observed
  * relationship from the last successful observation of that relationship.
@@ -316,7 +353,7 @@ export async function upsertBillAggregate(
     if (aggregate.relations !== undefined) {
       await transaction.delete(billRelations).where(eq(billRelations.billId, aggregate.bill.id))
       if (aggregate.relations.length > 0) {
-        await transaction.insert(billRelations).values(aggregate.relations)
+        await transaction.insert(billRelations).values(aggregate.relations.map(prepareBillRelationInsert))
       }
     }
 
@@ -549,7 +586,7 @@ export async function upsertBillAggregates(
     const positionValues = aggregates.flatMap(
       (aggregate) => aggregate.votes?.flatMap((vote) => vote.positions ?? []) ?? []
     )
-    const relationValues = aggregates.flatMap((aggregate) => aggregate.relations ?? [])
+    const relationValues = aggregates.flatMap((aggregate) => (aggregate.relations ?? []).map(prepareBillRelationInsert))
     if (actionValues.length > 0) {
       await transaction.insert(billActions).values(actionValues)
     }

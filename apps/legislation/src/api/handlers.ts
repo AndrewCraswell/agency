@@ -1,4 +1,5 @@
 import type { LegislationDatabase } from "../db/database.js"
+import { assertBillRelatedParentExists, listBillRelatedBills } from "../db/queries/bill-related-read.js"
 import { listBillTextSections } from "../db/queries/bill-text-read.js"
 import { listBillTimeline } from "../db/queries/bill-timeline-read.js"
 import { getOrganizationMembership, getPersonTerm } from "../db/queries/civic-scoped-reads.js"
@@ -37,6 +38,7 @@ import { createAmendmentReadRepository } from "./amendment-read-repository.js"
 import { createAmendmentReadApiHandler } from "./amendment-read-routes.js"
 import { createBillDetailReadRepository } from "./bill-detail-read-repository.js"
 import { createBillDetailReadApiHandler } from "./bill-detail-read-routes.js"
+import { createBillRelatedReadApiHandler } from "./bill-related-read-routes.js"
 import { createBillTextReadApiHandler } from "./bill-text-read-routes.js"
 import { createBillTimelineReadApiHandler } from "./bill-timeline-read-routes.js"
 import { createCivicScopedReadApiHandler } from "./civic-scoped-read-routes.js"
@@ -130,6 +132,13 @@ export function createLegislationApiHandler(
             {
               assertBillExists: async (billId) => await assertBillExists(documentDatabase, billId),
               listBillTextSections: async (input) => await listBillTextSections(documentDatabase, input)
+            },
+            options
+          ),
+          createBillRelatedReadApiHandler(
+            {
+              assertBillExists: async (billId) => await assertBillRelatedParentExists(documentDatabase, billId),
+              listBillRelatedBills: async (input) => await listBillRelatedBills(documentDatabase, input)
             },
             options
           ),

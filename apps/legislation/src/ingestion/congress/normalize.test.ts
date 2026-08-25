@@ -50,6 +50,21 @@ describe("Congress.gov normalization", () => {
     expect(aggregate.relations?.[0]?.relatedBillId).toBe("bill:us:119:s:22")
   })
 
+  it("persists source-declared relation direction and complete provenance when retrieved", () => {
+    const aggregate = normalizeCongressBillBundle(fixture, { retrievedAt: new Date("2026-08-24T12:00:00.000Z") })
+
+    expect(aggregate.relations?.[0]).toMatchObject({
+      canonicalFactsComplete: true,
+      direction: "outgoing",
+      provenanceComplete: true,
+      sourceIsOfficial: true,
+      sourceProvider: "congress",
+      sourceRetrievedAt: new Date("2026-08-24T12:00:00.000Z"),
+      sourceUpdatedAt: new Date("2025-03-01T09:30:00.000Z"),
+      sourceUrl: "https://api.congress.gov/v3/bill/119/hr/1234"
+    })
+  })
+
   it("keeps duplicate provider actions distinct by their source order", () => {
     const source = structuredClone(fixture) as Record<string, unknown>
     const actions = source.actions as unknown[]
