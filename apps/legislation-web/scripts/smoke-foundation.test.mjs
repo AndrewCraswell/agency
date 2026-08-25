@@ -196,7 +196,7 @@ describe("NX-02B deployed smoke profile", () => {
         "POST /api/bills/amendments/batch",
         "GET /api/bills/bill%3Afixture%2Fwith%20space",
         "GET /api/bills/bill%3Afixture%2Fwith%20space/timeline?limit=1",
-        "GET /api/bills/bill%3Afixture%2Fwith%20space/related?limit=1",
+        "GET /api/bills/bill%3Afixture%2Fwith%20space/related?mode=explicit&limit=1",
         "GET /api/bills/bill%3Afixture%2Fwith%20space/sections?limit=1",
         "GET /api/bills/bill%3Afixture%2Fwith%20space/amendments?limit=1",
         "GET /api/bills/bill%3Afixture%2Fwith%20space/votes?limit=1",

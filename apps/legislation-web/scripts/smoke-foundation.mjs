@@ -456,7 +456,7 @@ async function smokeNx02bRoutes(root) {
       fixture: "billId",
       kind: "page",
       name: "related bills",
-      path: (id) => `/api/bills/${encodeURIComponent(id)}/related?limit=1`
+      path: (id) => `/api/bills/${encodeURIComponent(id)}/related?mode=explicit&limit=1`
     },
     {
       fixture: "billId",
