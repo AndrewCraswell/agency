@@ -10,6 +10,26 @@ The manufacturer product pages and primary downloads were rechecked on
 2026-08-23. No source-access or CAD-import status changed; the dated hashes
 below remain the acquired-file record.
 
+## 2026-08-24 source reconciliation
+
+The later M4-11 executable audit retained the Würth `7499011121A` datasheet
+with SHA-256
+`05B718A55907F45D2388BEA0EBEAADB60C7C93CE2C4C5CA582637936E890E350`
+and STEP rev1 with SHA-256
+`A4968DA8AC85C413990CD4F1F20600BFDB07F30005A4503DA7484651E38C386C`.
+These bytes establish source identity only; they still grant no project import,
+overlay, enclosure, or fabrication approval.
+
+USB-C PD through Amphenol `10177070-00011LF` remains the sole normal external
+apparatus power input and USB 2.0 service port, with a planned 20 V, 3 A request.
+Molex `43045-0400` (`J_PWR_CARRIER`) is only the locking internal carrier-power
+harness header; its exact mate is `43025-0400` with `43030-0007` female crimp
+terminals. Manufacturer product and drawing records identified those parts, but
+the M4-11 snapshot did not retain the Molex downloads and granted no harness,
+crimp-tooling, strain-relief, bend-radius, or fit credit. Later BP-033 USB-C
+footprint evidence is governed by the canonical prototype backlog and does not
+retroactively turn this source audit into physical approval.
+
 ## Evidence status
 
 This is a drawing-source audit, not physical verification. The exact Würth

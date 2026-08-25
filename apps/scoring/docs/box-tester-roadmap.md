@@ -119,6 +119,40 @@ arrangement.
 | DVT qualification | Repeats the approved matrix across temperature, supply, cable, reset, and fault conditions | Supports formal product claims within the approved scope |
 | Production/service subset | Runs a shorter escape-detection and diagnosis suite | Does not replace DVT or broaden FIE claims |
 
+## Executable BT-01 through BT-05 contracts
+
+The detailed BT-01 through BT-05 behavior is maintained in tested source instead of
+separate status documents:
+
+- [`box-tester-requirements-contract.ts`](../src/box-tester-requirements-contract.ts)
+  maps every frozen requirement family to an independent stimulus, physical or virtual
+  observation, uncertainty statement, and retained evidence class. DUT records remain
+  secondary correlation evidence; unavailable participating evidence is indeterminate,
+  and infrastructure failure remains distinct from a DUT failure.
+- [`box-tester-interface-contract.ts`](../src/box-tester-interface-contract.ts) keeps
+  the two keyed three-contact reel interfaces, separate piste reference, independent
+  power and timebase, floating polarity-independent boundary, source-envelope limits,
+  open-when-unpowered behavior, and no-back-power requirement. It does not authorize an
+  energized connection or infer unmeasured DUT limits.
+- [`box-tester-dut-limits.ts`](../src/box-tester-dut-limits.ts) requires four-wire
+  resistance measurement, calibrated capacitance, measured delay, bounce, skew,
+  leakage, isolation, observer uncertainty, and a seven-conductor coverage proof before
+  selecting or releasing a switch topology.
+- [`box-tester-sequence.ts`](../src/box-tester-sequence.ts) deterministically compiles
+  strict accepted scenarios into detached, deeply frozen logical steps while preserving
+  authored order and integer-microsecond timestamps. Unknown, unsafe, non-monotonic,
+  accessor-backed, duplicate, or over-capacity input fails closed; the compiler never
+  supplies scoring decisions or hardware relay instructions.
+- [`box-tester-virtual-timeline.ts`](../src/box-tester-virtual-timeline.ts) projects an
+  immutable sequence and existing scenario result into fixed command, measurement,
+  expected, actual-output, and evaluation lanes. Virtual measurements are explicitly
+  not physical observations, and passed, failed, skipped, indeterminate, and
+  infrastructure-error outcomes remain distinct.
+
+These contracts are planning and host-validation boundaries only. BT-06 through BT-12
+retain ownership of tester hardware, calibration, physical correlation, qualification,
+production, and service evidence.
+
 ## Milestone plan
 
 | ID | Deliverable | Acceptance |

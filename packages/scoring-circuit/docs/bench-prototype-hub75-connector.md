@@ -98,8 +98,8 @@ The executable evidence record deliberately remains open:
 
 ## Received-panel evidence intake
 
-[`bp-143-received-panel-evidence-intake.md`](bp-143-received-panel-evidence-intake.md)
-defines the separate, empty-by-default submission schema for the actual
+The tested `bp-143-received-panel-evidence` source defines the separate,
+empty-by-default submission schema for the actual
 received panel and cables. It binds the exact sample and prototype identities,
 calibrated instruments, procedure, and artifact hashes before it will accept
 continuity, mating, orientation, current, cable-drop, connector-temperature,

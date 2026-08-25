@@ -65,8 +65,6 @@ byte replay evidence is specified in
 The independent two-reel scoring-box tester, physical-output observer, and
 timeline-evidence program is defined in
 [box-tester-roadmap.md](box-tester-roadmap.md).
-Its executable BT-01 coverage and independence boundary is defined in
-[box-tester-requirements-contract.md](box-tester-requirements-contract.md).
 The M3-13 bounded ESP32-S3 QEMU feasibility result and optional smoke probe are
 specified in
 [`firmware/esp32/docs/qemu-feasibility-evidence.md`](../firmware/esp32/docs/qemu-feasibility-evidence.md).

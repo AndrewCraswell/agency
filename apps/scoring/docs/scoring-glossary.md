@@ -8,6 +8,18 @@ This document defines the words, symbols, and units used by the scoring apparatu
 firmware, electrical design, scenarios, protocol records, user interface copy, and evidence. A term in this document
 has one meaning. A convenient synonym must not be introduced in a rule table or a machine-readable record.
 
+The tested machine-readable implementation is
+[`scoring-glossary-and-units.ts`](../src/scoring-glossary-and-units.ts). Its
+canonical graph is deeply frozen. `validateScoringGlossary` rejects duplicate
+canonical names, case or whitespace collisions, duplicate or unknown unit codes,
+quantity terms without units, non-quantity terms with units, ambiguous aliases,
+extra properties, and shape drift. `resolveScoringGlossaryTerm` accepts only a
+canonical name or an explicitly reviewed alias. `validateGlossaryMeasurement`
+rejects display symbols, unknown units, fractions, negative values, and extra
+properties; `assertIntegerMicroseconds` is the shared guard for monotonic instants
+and durations. Validation never converts malformed input into a default unit,
+`noSignal`, or `indeterminate` result.
+
 ## Authority and separation of terms
 
 The August 2026 English FIE Material Rules, Book 3, in

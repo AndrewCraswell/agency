@@ -34,6 +34,20 @@ material, not procurement paperwork:
    designed and tested cord retainer or shroud before the sockets can claim to
    meet that requirement as an assembly.
 
+### Superseded discrete-socket study
+
+An earlier central-apparatus study considered three discrete Stäubli
+`SLB4-F/A` sockets per side: red `23.3070-22` and blue `23.3070-23`. It was not
+released because the manufacturer records disagreed on overall length (30.5 mm
+in the 2022 sheet versus 30.7 mm in the 2024 sheet and 2026 catalogue), no
+controlling revision or received-sample measurement resolved the discrepancy,
+and no physical Favero or Allstar plug-fit evidence existed. Favero `900-09`
+and the Allstar/Uhlmann spool socket remain comparison parts, not documented
+central-apparatus selections. OK Fencing `17-2017-03` is a weapon/body-wire
+socket and generic triangular three-pole XLR does not match the FIE straight-line
+contact geometry. This rejected path grants no production, enclosure, footprint,
+or procurement authority.
+
 ### Exact bench-order candidates, not a released BOM
 
 The M4-10 sample order is intentionally simple: red identifies the left
