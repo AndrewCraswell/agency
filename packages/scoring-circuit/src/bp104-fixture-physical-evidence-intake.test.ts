@@ -17,7 +17,7 @@ const timestamp = "2026-08-24T01:02:03.000Z"
 function makeSyntheticAcceptedIntake() {
   const intake = structuredClone(blankBp104FixturePhysicalEvidenceIntake)
   let hashCounter = 1
-  const nextHash = () => hashCounter.toString(16).padStart(64, "0")
+  const nextHash = () => (hashCounter++).toString(16).padStart(64, "0")
   const artifact = (
     artifactId: string,
     mediaType: "pdf" | "photo" | "review-record" | "measurement-record" | "calibration-certificate",
