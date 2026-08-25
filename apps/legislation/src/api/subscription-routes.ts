@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto"
 import type { IncomingMessage, ServerResponse } from "node:http"
 import { getRequestContext } from "../auth/request-context.js"
 import { LegislationError } from "../legislation/errors.js"
@@ -14,7 +15,13 @@ import {
   sendApiJson,
   type HttpApiHandler
 } from "./http.js"
-import { SubscriptionRepositoryError } from "./subscription-repository.js"
+import {
+  type IdempotencyResult,
+  type IdempotentResponse,
+  principalScopeForSubscriptionOwner,
+  SubscriptionRepositoryError,
+  type SubscriptionMutationExecutor
+} from "./subscription-repository.js"
 import {
   type CreateSubscriptionInput,
   type CreateWebhookInput,
@@ -26,6 +33,7 @@ import {
   type SubscriptionEventListInput,
   type SubscriptionEventType,
   type SubscriptionListInput,
+  type SubscriptionRepository,
   SubscriptionService,
   type Subscription,
   type SubscriptionTarget,
@@ -105,7 +113,7 @@ export function createSubscriptionReadApiHandler(
         sendApiJson(response, 200, apiPage(request, projectPage(page, options, projectSubscription), input.limit))
         return true
       }
-      const id = decodeURIComponent(match![1]!)
+      const id = decodeSubscriptionId(match![1]!)
       const child = match![2]
       if (child === "events") {
         const input = subscriptionEventListInput(url)
@@ -244,6 +252,195 @@ function isoTimestamp(value: Date | null): string | null {
   return value === null ? null : value.toISOString()
 }
 
+export function createSubscriptionMutationApiHandler(
+  service: SubscriptionService,
+  executor: SubscriptionMutationExecutor,
+  options: SubscriptionReadRouteOptions
+): HttpApiHandler {
+  return async (request, response) => {
+    const url = requestUrl(request)
+    const subscriptionMatch = /^\/api\/subscriptions\/([^/]+)$/.exec(url.pathname)
+    const isCreate = url.pathname === "/api/subscriptions" && request.method === "POST"
+    const isUpdate = subscriptionMatch !== null && request.method === "PATCH"
+    const isDelete = subscriptionMatch !== null && request.method === "DELETE"
+    if (!isCreate && !isUpdate && !isDelete) {
+      return false
+    }
+    const identity = getRequestContext()?.identity
+    if (identity === undefined) {
+      sendError(request, response, new SubscriptionApiError("forbidden", "An authenticated identity is required."))
+      return true
+    }
+    try {
+      assertAllowedQueryParameters(url, [])
+      const idempotencyKey = requireIdempotencyKey(request)
+      if (isCreate) {
+        requireJsonContentType(request)
+        const body = await readJsonBody(request)
+        const input = parseCreateSubscription(body)
+        const result = await executeSubscriptionMutation(
+          executor,
+          identity,
+          request.method!,
+          url.pathname,
+          idempotencyKey,
+          { body },
+          async (repository) => {
+            const created = await service.withRepository(repository).createSubscription(identity, input)
+            return {
+              body: apiResource(request, projectSubscription(created, options)),
+              headers: {
+                etag: created.revision,
+                location: `/api/subscriptions/${encodeURIComponent(created.id)}`
+              },
+              statusCode: 201
+            }
+          }
+        )
+        sendIdempotentResponse(response, result.response)
+        return true
+      }
+
+      const id = decodeSubscriptionId(subscriptionMatch![1]!)
+      const canonicalPath = `/api/subscriptions/${encodeURIComponent(id)}`
+      const revision = requireIfMatch(request)
+      if (isUpdate) {
+        requireMergePatchContentType(request)
+        const body = await readJsonBody(request)
+        const patch = parseSubscriptionPatch(body)
+        const result = await executeSubscriptionMutation(
+          executor,
+          identity,
+          request.method!,
+          canonicalPath,
+          idempotencyKey,
+          { body, revision },
+          async (repository) => {
+            const subscription = await service
+              .withRepository(repository)
+              .updateSubscription(identity, id, revision, patch)
+            return {
+              body: apiResource(request, projectSubscription(subscription, options)),
+              headers: { etag: subscription.revision },
+              statusCode: 200
+            }
+          }
+        )
+        sendIdempotentResponse(response, result.response)
+        return true
+      }
+
+      await requireEmptyDeleteBody(request)
+      const result = await executeSubscriptionMutation(
+        executor,
+        identity,
+        request.method!,
+        canonicalPath,
+        idempotencyKey,
+        { revision },
+        async (repository) => {
+          const subscription = await service.withRepository(repository).cancelSubscription(identity, id, revision)
+          return {
+            body: apiResource(request, { cancelledAt: isoTimestamp(subscription.cancelledAt), id: subscription.id }),
+            headers: { etag: subscription.revision },
+            statusCode: 200
+          }
+        }
+      )
+      sendIdempotentResponse(response, result.response)
+      return true
+    } catch (error) {
+      sendError(request, response, addDuplicateSubscriptionCanonicalUrl(error, options))
+      return true
+    }
+  }
+}
+
+async function executeSubscriptionMutation<T>(
+  executor: SubscriptionMutationExecutor,
+  identity: NonNullable<ReturnType<typeof getRequestContext>>["identity"] & {},
+  method: string,
+  canonicalPath: string,
+  key: string,
+  value: unknown,
+  operation: (repository: SubscriptionRepository) => Promise<IdempotentResponse<T>>
+): Promise<IdempotencyResult<T>> {
+  return await executor.execute<T>(
+    {
+      canonicalPath,
+      key,
+      method,
+      principalScope: principalScopeForSubscriptionOwner({
+        organizationId: identity.organizationId ?? null,
+        userId: identity.userId
+      }),
+      requestHash: requestHash(value)
+    },
+    operation
+  )
+}
+
+function requestHash(value: unknown): string {
+  return createHash("sha256").update(canonicalJson(value)).digest("hex")
+}
+
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => canonicalJson(item)).join(",")}]`
+  }
+  if (isJsonRecord(value)) {
+    return `{${Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonicalJson(item)}`)
+      .join(",")}}`
+  }
+  const result = JSON.stringify(value)
+  if (result === undefined) {
+    throw new Error("Idempotency requests must be JSON-serializable.")
+  }
+  return result
+}
+
+function isJsonRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function decodeSubscriptionId(value: string): string {
+  let id: string
+  try {
+    id = decodeURIComponent(value)
+  } catch {
+    throw new SubscriptionApiError("invalid_request", "Subscription ID must use valid percent-encoding.")
+  }
+  if (!/^subscription:[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/.test(id)) {
+    throw new SubscriptionApiError("invalid_request", "Subscription ID must be a canonical subscription identifier.")
+  }
+  return id
+}
+
+function addDuplicateSubscriptionCanonicalUrl(error: unknown, options: SubscriptionReadRouteOptions): unknown {
+  if (error instanceof SubscriptionApiError && error.category === "conflict") {
+    const existingSubscriptionId = error.details?.existingSubscriptionId
+    if (typeof existingSubscriptionId === "string" && error.details?.canonicalUrl === undefined) {
+      return new SubscriptionApiError(error.category, error.message, {
+        ...error.details,
+        canonicalUrl: canonicalUrl(options, `/api/subscriptions/${encodeURIComponent(existingSubscriptionId)}`)
+      })
+    }
+  }
+  return error
+}
+
+function sendIdempotentResponse(
+  response: ServerResponse,
+  result: Readonly<{ body: unknown; headers: Readonly<Record<string, string>>; statusCode: number }>
+): void {
+  for (const [name, value] of Object.entries(result.headers)) {
+    response.setHeader(name, value)
+  }
+  sendApiJson(response, result.statusCode, result.body)
+}
+
 export function createSubscriptionApiHandler(
   service: SubscriptionService,
   options: Readonly<{ verifyWebhook?: WebhookVerificationExecutor }> = {}
@@ -293,7 +490,7 @@ async function handleRequest(
     return true
   }
   if (subscriptionMatch !== null) {
-    const id = decodeURIComponent(subscriptionMatch[1]!)
+    const id = decodeSubscriptionId(subscriptionMatch[1]!)
     const child = subscriptionMatch[2]
     if (child === "events" && request.method === "GET") {
       const input = subscriptionEventListInput(url)
@@ -420,7 +617,10 @@ async function handleRequest(
 
 function requireIfMatch(request: IncomingMessage): string {
   const value = request.headers["if-match"]
-  const revision = Array.isArray(value) ? value[0] : value
+  if (Array.isArray(value) || hasMultipleHeaderValues(request, "if-match")) {
+    throw new SubscriptionApiError("invalid_request", "If-Match must appear once.")
+  }
+  const revision = value
   if (revision === undefined || revision.length === 0) {
     throw new SubscriptionApiError("precondition_failed", "If-Match is required for this mutation.")
   }
@@ -429,7 +629,10 @@ function requireIfMatch(request: IncomingMessage): string {
 
 function requireIdempotencyKey(request: IncomingMessage): string {
   const value = request.headers["idempotency-key"]
-  const key = Array.isArray(value) ? value[0] : value
+  if (Array.isArray(value) || hasMultipleHeaderValues(request, "idempotency-key")) {
+    throw new SubscriptionApiError("invalid_request", "Idempotency-Key must appear once.")
+  }
+  const key = value
   if (key === undefined || !/^[\x20-\x7e]{8,128}$/.test(key)) {
     throw new SubscriptionApiError(
       "invalid_request",
@@ -441,10 +644,65 @@ function requireIdempotencyKey(request: IncomingMessage): string {
 
 function requireMergePatchContentType(request: IncomingMessage): void {
   const value = request.headers["content-type"]
-  const contentType = Array.isArray(value) ? value[0] : value
+  if (hasMultipleHeaderValues(request, "content-type")) {
+    throw new SubscriptionApiError("invalid_request", "Content-Type must appear once.")
+  }
+  const contentType = value
   if (contentType?.split(";", 1)[0]?.trim().toLowerCase() !== "application/merge-patch+json") {
     throw new SubscriptionApiError("invalid_request", "PATCH requires Content-Type application/merge-patch+json.")
   }
+}
+
+function requireJsonContentType(request: IncomingMessage): void {
+  const value = request.headers["content-type"]
+  if (hasMultipleHeaderValues(request, "content-type")) {
+    throw new SubscriptionApiError("invalid_request", "Content-Type must appear once.")
+  }
+  if (value?.split(";", 1)[0]?.trim().toLowerCase() !== "application/json") {
+    throw new SubscriptionApiError("invalid_request", "POST requires Content-Type application/json.")
+  }
+}
+
+async function requireEmptyDeleteBody(request: IncomingMessage): Promise<void> {
+  const contentLength = request.headers["content-length"]
+  if (hasMultipleHeaderValues(request, "content-length")) {
+    request.destroy()
+    throw new SubscriptionApiError("invalid_request", "DELETE requests must not include a request body.")
+  }
+  let bytes = 0
+  let timedOut = false
+  const timeout = setTimeout(() => {
+    timedOut = true
+    request.destroy()
+  }, 1000)
+  timeout.unref()
+  try {
+    for await (const chunk of request) {
+      bytes += Buffer.isBuffer(chunk) ? chunk.byteLength : Buffer.byteLength(chunk)
+      if (bytes > 1024) {
+        request.destroy()
+        throw new SubscriptionApiError("invalid_request", "DELETE requests must not include a request body.")
+      }
+    }
+    if (bytes > 0 || (contentLength !== undefined && contentLength !== "0")) {
+      throw new SubscriptionApiError("invalid_request", "DELETE requests must not include a request body.")
+    }
+  } catch (error) {
+    if (error instanceof SubscriptionApiError) {
+      throw error
+    }
+    if (timedOut) {
+      throw new SubscriptionApiError("invalid_request", "DELETE request body did not finish promptly.")
+    }
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+function hasMultipleHeaderValues(request: IncomingMessage, name: string): boolean {
+  const distinct = request.headersDistinct[name]
+  return Array.isArray(request.headers[name]) || (distinct !== undefined && distinct.length > 1)
 }
 
 function parseCreateSubscription(body: Readonly<Record<string, unknown>>): CreateSubscriptionInput {
@@ -609,7 +867,7 @@ function sendError(request: IncomingMessage, response: ServerResponse, error: un
   if (error instanceof LegislationError) {
     apiError = error
   } else if (error instanceof SubscriptionApiError) {
-    apiError = new LegislationError(error.category, error.message)
+    apiError = new LegislationError(error.category, error.message, { details: error.details })
   } else if (error instanceof SubscriptionRepositoryError) {
     apiError = repositoryError(error)
   } else if (error instanceof UnsafeWebhookUrlError) {
@@ -626,7 +884,7 @@ function repositoryError(error: SubscriptionRepositoryError): LegislationError {
       return new LegislationError("invalid_request", "Cursor is invalid for this request")
     case "conflict":
     case "idempotency_conflict":
-      return new LegislationError("conflict", "The request conflicts with existing state")
+      return new LegislationError("conflict", "The request conflicts with existing state", { details: error.details })
     case "invalid_persistence":
       return new LegislationError("internal", "The request could not be completed")
     default:

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { ConfigurationError, loadConfig } from "./config.js"
+import { ConfigurationError, decodeIdempotencyEncryptionKey, loadConfig } from "./config.js"
 
 describe("loadConfig", () => {
   it("provides safe local defaults", () => {
@@ -55,6 +55,7 @@ describe("loadConfig", () => {
       GOVINFO_API_KEY: "govinfo-key",
       GOVINFO_API_URL: "https://govinfo.example/api/",
       LEGISLATION_HOST: "0.0.0.0",
+      LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
       LEGISLATION_PORT: "8080",
       LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
       LOG_LEVEL: "debug",
@@ -128,6 +129,28 @@ describe("loadConfig", () => {
     expect(loadConfig({ LEGISLATION_PUBLIC_API_BASE_URL: "http://legislation.example" }).server.publicApiBaseUrl).toBe(
       "http://legislation.example"
     )
+  })
+
+  it("requires a valid 32-byte idempotency encryption key in production", () => {
+    const validKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+    expect(() =>
+      loadConfig({ LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example", NODE_ENV: "production" })
+    ).toThrow("LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY is required in production")
+    expect(() =>
+      loadConfig({
+        LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: "too-short",
+        LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
+        NODE_ENV: "production"
+      })
+    ).toThrow("LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY must be a base64 or base64url-encoded 32-byte key")
+    expect(
+      loadConfig({
+        LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY: validKey,
+        LEGISLATION_PUBLIC_API_BASE_URL: "https://legislation.example",
+        NODE_ENV: "production"
+      }).security.idempotencyEncryptionKey
+    ).toBe(validKey)
+    expect(decodeIdempotencyEncryptionKey(validKey)).toHaveLength(32)
   })
 
   it.each(["0", "65536", "not-a-port"])('rejects invalid port "%s" without including secrets', (port) => {

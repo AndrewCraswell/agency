@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto"
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto"
 import { and, desc, eq, isNull, lt, lte, ne, or, sql } from "drizzle-orm"
 import type { ExtractTablesWithRelations } from "drizzle-orm"
 import type { NodePgQueryResultHKT } from "drizzle-orm/node-postgres/session"
@@ -66,13 +66,16 @@ const deliveryStatuses = new Set(["delivered", "failed", "pending", "processing"
 
 export class SubscriptionRepositoryError extends Error {
   readonly category: "conflict" | "invalid_cursor" | "invalid_persistence" | "idempotency_conflict"
+  readonly details: Readonly<Record<string, unknown>> | undefined
 
   constructor(
     category: "conflict" | "invalid_cursor" | "invalid_persistence" | "idempotency_conflict",
-    message: string
+    message: string,
+    details?: Readonly<Record<string, unknown>>
   ) {
     super(message)
     this.category = category
+    this.details = details
     this.name = "SubscriptionRepositoryError"
   }
 }
@@ -123,6 +126,13 @@ export type IdempotencyResult<T> = Readonly<{
   replayed: boolean
 }>
 
+export type SubscriptionMutationExecutor = Readonly<{
+  execute<T>(
+    request: IdempotencyRequest,
+    operation: (repository: SubscriptionTransaction) => Promise<IdempotentResponse<T>>
+  ): Promise<IdempotencyResult<T>>
+}>
+
 export type SubscriptionTransaction = SubscriptionRepository & SubscriptionEventWriter
 
 type IdempotencyRow = typeof schema.apiIdempotencyRecords.$inferSelect
@@ -157,6 +167,80 @@ export function createEncryptedIdempotencyCipher(
       return ciphertext
     }
   }
+}
+
+const idempotencyCipherVersion = "v1"
+const idempotencyCipherAad = Buffer.from("legislation:idempotency-response:v1", "utf8")
+
+export function createAes256GcmIdempotencyCipher(key: Uint8Array): EncryptedIdempotencyCipher {
+  const encryptionKey = Buffer.from(key)
+  if (encryptionKey.byteLength !== 32) {
+    throw new Error("Idempotency encryption key must contain exactly 32 bytes.")
+  }
+  return createEncryptedIdempotencyCipher(
+    async (plaintext) => {
+      const nonce = randomBytes(12)
+      const cipher = createCipheriv("aes-256-gcm", encryptionKey, nonce)
+      cipher.setAAD(idempotencyCipherAad)
+      const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()])
+      const tag = cipher.getAuthTag()
+      return [
+        idempotencyCipherVersion,
+        nonce.toString("base64url"),
+        tag.toString("base64url"),
+        ciphertext.toString("base64url")
+      ].join(".")
+    },
+    async (protectedValue) => {
+      const [version, encodedNonce, encodedTag, encodedCiphertext, extra] = protectedValue.split(".")
+      if (
+        version !== idempotencyCipherVersion ||
+        encodedNonce === undefined ||
+        encodedTag === undefined ||
+        encodedCiphertext === undefined ||
+        extra !== undefined
+      ) {
+        throw new SubscriptionRepositoryError(
+          "invalid_persistence",
+          "Stored idempotency response has an invalid cipher format."
+        )
+      }
+      const nonce = decodeBase64Url(encodedNonce, "nonce")
+      const tag = decodeBase64Url(encodedTag, "authentication tag")
+      const ciphertext = decodeBase64Url(encodedCiphertext, "ciphertext")
+      if (nonce.byteLength !== 12 || tag.byteLength !== 16 || ciphertext.byteLength === 0) {
+        throw new SubscriptionRepositoryError(
+          "invalid_persistence",
+          "Stored idempotency response has invalid cipher values."
+        )
+      }
+      try {
+        const decipher = createDecipheriv("aes-256-gcm", encryptionKey, nonce)
+        decipher.setAAD(idempotencyCipherAad)
+        decipher.setAuthTag(tag)
+        return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8")
+      } catch {
+        throw new SubscriptionRepositoryError(
+          "invalid_persistence",
+          "Stored idempotency response could not be authenticated."
+        )
+      }
+    }
+  )
+}
+
+function decodeBase64Url(value: string, name: string): Buffer {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) {
+    throw new SubscriptionRepositoryError("invalid_persistence", `Stored idempotency ${name} is not base64url.`)
+  }
+  const decoded = Buffer.from(value, "base64url")
+  if (decoded.byteLength === 0 || decoded.toString("base64url") !== value) {
+    throw new SubscriptionRepositoryError(
+      "invalid_persistence",
+      `Stored idempotency ${name} is not canonical base64url.`
+    )
+  }
+  return decoded
 }
 
 export class PostgresSubscriptionRepository implements SubscriptionRepository, SubscriptionEventWriter {
@@ -500,7 +584,7 @@ export class PostgresSubscriptionRepository implements SubscriptionRepository, S
   }
 }
 
-export class SubscriptionIdempotencyTransaction {
+export class SubscriptionIdempotencyTransaction implements SubscriptionMutationExecutor {
   readonly #database: LegislationDatabase
   readonly #cipher: EncryptedIdempotencyCipher
   readonly #now: () => Date
@@ -513,7 +597,7 @@ export class SubscriptionIdempotencyTransaction {
 
   async execute<T>(
     request: IdempotencyRequest,
-    operation: (repository: PostgresSubscriptionRepository) => Promise<IdempotentResponse<T>>
+    operation: (repository: SubscriptionTransaction) => Promise<IdempotentResponse<T>>
   ): Promise<IdempotencyResult<T>> {
     validateIdempotencyRequest(request)
     const now = this.#now()
@@ -553,7 +637,8 @@ export class SubscriptionIdempotencyTransaction {
         if (stored.requestHash !== request.requestHash) {
           throw new SubscriptionRepositoryError(
             "idempotency_conflict",
-            "The idempotency key was already used with a different request."
+            "The idempotency key was already used with a different request.",
+            { reason: "idempotency_key_reused" }
           )
         }
         return { replayed: true, response: await decryptResponse<T>(this.#cipher, stored) }

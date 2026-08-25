@@ -58,7 +58,8 @@ import { createResourceBatchReadRepositoryFromCanonicalReads } from "./resource-
 import { createResourceBatchReadApiHandler } from "./resource-batch-read-routes.js"
 import { createSessionRepository } from "./session-read-repository.js"
 import { createSessionReadApiHandler } from "./session-read-routes.js"
-import { createSubscriptionReadApiHandler } from "./subscription-routes.js"
+import type { SubscriptionMutationExecutor } from "./subscription-repository.js"
+import { createSubscriptionMutationApiHandler, createSubscriptionReadApiHandler } from "./subscription-routes.js"
 import { createWebhookSecretProtector, type SubscriptionRepository, SubscriptionService } from "./subscriptions.js"
 import { createSupportingMaterialSectionReadApiHandler } from "./supporting-material-section-read-routes.js"
 import type { WebhookReadRepository } from "./webhook-read-repository.js"
@@ -74,6 +75,7 @@ export function createLegislationApiHandler(
     apiBaseUrl: string
     documentDatabase?: LegislationDatabase
     documentReadApi?: DocumentReadApi
+    subscriptionMutationExecutor?: SubscriptionMutationExecutor
     subscriptionRepository?: SubscriptionRepository
     webhookReadRepository?: WebhookReadRepository
   }>
@@ -200,17 +202,26 @@ export function createLegislationApiHandler(
     createCivicSearchApiHandler(queryService, options),
     ...(options.subscriptionRepository === undefined
       ? []
-      : [
-          createSubscriptionReadApiHandler(
-            new SubscriptionService(
-              options.subscriptionRepository,
-              createWebhookSecretProtector(async () => {
-                throw new Error("Webhook secret protection is not configured for this deployment.")
-              })
-            ),
-            options
+      : (() => {
+          const subscriptionService = new SubscriptionService(
+            options.subscriptionRepository,
+            createWebhookSecretProtector(async () => {
+              throw new Error("Webhook secret protection is not configured for this deployment.")
+            })
           )
-        ]),
+          return [
+            createSubscriptionReadApiHandler(subscriptionService, options),
+            ...(options.subscriptionMutationExecutor === undefined
+              ? []
+              : [
+                  createSubscriptionMutationApiHandler(
+                    subscriptionService,
+                    options.subscriptionMutationExecutor,
+                    options
+                  )
+                ])
+          ]
+        })()),
     ...(options.webhookReadRepository === undefined
       ? []
       : [createWebhookReadApiHandler(options.webhookReadRepository, options)])

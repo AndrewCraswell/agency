@@ -78,6 +78,9 @@ const configSchema = z
         return Number.isFinite(parsed) ? Math.min(parsed, 5) : value
       }, z.number().int().min(1).max(5))
     }),
+    security: z.object({
+      idempotencyEncryptionKey: optionalSecret
+    }),
     server: z.object({
       host: z.string().trim().min(1),
       port: z.coerce.number().int().min(1).max(65_535),
@@ -108,6 +111,23 @@ const configSchema = z
         code: "custom",
         message: "Langfuse public and secret keys must be configured together",
         path: ["observability"]
+      })
+    }
+    if (config.environment === "production" && config.security.idempotencyEncryptionKey === undefined) {
+      context.addIssue({
+        code: "custom",
+        message: "LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY is required in production",
+        path: ["security", "idempotencyEncryptionKey"]
+      })
+    }
+    if (
+      config.security.idempotencyEncryptionKey !== undefined &&
+      !isAes256Key(config.security.idempotencyEncryptionKey)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY must be a base64 or base64url-encoded 32-byte key",
+        path: ["security", "idempotencyEncryptionKey"]
       })
     }
   })
@@ -195,6 +215,9 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
       endpoint: environment.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT,
       maximumAttempts: environment.OCR_MAXIMUM_ATTEMPTS ?? "5"
     },
+    security: {
+      idempotencyEncryptionKey: environment.LEGISLATION_IDEMPOTENCY_ENCRYPTION_KEY
+    },
     server: {
       host: environment.LEGISLATION_HOST ?? (environment.PORT === undefined ? "127.0.0.1" : "0.0.0.0"),
       port: environment.PORT ?? environment.LEGISLATION_PORT ?? "3100",
@@ -227,4 +250,32 @@ function parseEnvironmentBoolean(value: unknown): unknown {
     return false
   }
   return value
+}
+
+export function decodeIdempotencyEncryptionKey(value: string): Buffer {
+  const isBase64 = /^[A-Za-z0-9+/]{43}=?$/.test(value)
+  const isBase64Url = /^[A-Za-z0-9_-]{43}=?$/.test(value)
+  if (!isBase64 && !isBase64Url) {
+    throw new Error("Idempotency encryption key is not valid base64 or base64url.")
+  }
+  try {
+    const decoded = Buffer.from(value, isBase64Url ? "base64url" : "base64")
+    const supplied = value.endsWith("=") ? value.slice(0, -1) : value
+    const canonical = isBase64Url ? decoded.toString("base64url") : decoded.toString("base64").slice(0, -1)
+    if (decoded.byteLength !== 32 || canonical !== supplied) {
+      throw new Error("Idempotency encryption key must contain exactly 32 bytes.")
+    }
+    return decoded
+  } catch {
+    throw new Error("Idempotency encryption key is not valid base64 or base64url.")
+  }
+}
+
+function isAes256Key(value: string): boolean {
+  try {
+    decodeIdempotencyEncryptionKey(value)
+    return true
+  } catch {
+    return false
+  }
 }

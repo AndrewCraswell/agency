@@ -1,8 +1,18 @@
-import { createServer } from "node:http"
+import { createServer, request as sendRequest } from "node:http"
 import { afterEach, describe, expect, it } from "vitest"
 import { runWithRequestContext } from "../auth/request-context.js"
-import { SubscriptionRepositoryError } from "./subscription-repository.js"
-import { createSubscriptionApiHandler, createSubscriptionReadApiHandler } from "./subscription-routes.js"
+import {
+  type IdempotentResponse,
+  type IdempotencyRequest,
+  type SubscriptionMutationExecutor,
+  SubscriptionRepositoryError,
+  type SubscriptionTransaction
+} from "./subscription-repository.js"
+import {
+  createSubscriptionApiHandler,
+  createSubscriptionMutationApiHandler,
+  createSubscriptionReadApiHandler
+} from "./subscription-routes.js"
 import {
   createWebhookSecretProtector,
   type Delivery,
@@ -67,6 +77,137 @@ async function start() {
     throw new Error("Expected a TCP server address")
   }
   return `http://127.0.0.1:${address.port}`
+}
+
+function createMutationRepository(): SubscriptionTransaction {
+  const subscriptions = new Map<string, Subscription>()
+  const unavailableEventWriter = async () => {
+    throw new Error("Event persistence is not expected during subscription mutations")
+  }
+  return {
+    appendDelivery: unavailableEventWriter,
+    appendSubscriptionEvent: unavailableEventWriter,
+    cancelSubscription: async ({ id, revision, when }) => {
+      const existing = subscriptions.get(id)
+      if (existing === undefined || existing.revision !== revision) {
+        return undefined
+      }
+      const cancelled: Subscription = {
+        ...existing,
+        cancelledAt: when,
+        revision: `${revision}:cancelled`,
+        status: "cancelled",
+        updatedAt: when
+      }
+      subscriptions.set(id, cancelled)
+      return cancelled
+    },
+    createSubscription: async ({ subscription }) => {
+      subscriptions.set(subscription.id, subscription)
+      return subscription
+    },
+    findExactSubscription: async () => undefined,
+    getSubscription: async ({ id }) => subscriptions.get(id),
+    listDeliveries: async () => ({ items: [], truncated: false }),
+    listSubscriptionEvents: async () => ({ items: [], truncated: false }),
+    listSubscriptions: async () => ({ items: [], truncated: false }),
+    updateSubscription: async ({ id, patch, revision, when }) => {
+      const existing = subscriptions.get(id)
+      if (existing === undefined || existing.revision !== revision || existing.status === "cancelled") {
+        return undefined
+      }
+      const updated: Subscription = { ...existing, ...patch, revision: `${revision}:next`, updatedAt: when }
+      subscriptions.set(id, updated)
+      return updated
+    }
+  }
+}
+
+function replayingMutationExecutor(
+  repository: SubscriptionTransaction,
+  requests: IdempotencyRequest[]
+): SubscriptionMutationExecutor {
+  const responses = new Map<string, Readonly<{ requestHash: string; response: IdempotentResponse<unknown> }>>()
+  return {
+    execute: async (request, operation) => {
+      requests.push(request)
+      const recordKey = [request.principalScope, request.method, request.canonicalPath, request.key].join("\u0000")
+      const existing = responses.get(recordKey)
+      if (existing !== undefined) {
+        if (existing.requestHash !== request.requestHash) {
+          throw new SubscriptionRepositoryError(
+            "idempotency_conflict",
+            "The idempotency key was already used with a different request.",
+            { reason: "idempotency_key_reused" }
+          )
+        }
+        return { replayed: true, response: existing.response as IdempotentResponse<never> }
+      }
+      const response = await operation(repository)
+      responses.set(recordKey, { requestHash: request.requestHash, response })
+      return { replayed: false, response }
+    }
+  }
+}
+
+async function startMutation() {
+  const repository = createMutationRepository()
+  const requests: IdempotencyRequest[] = []
+  const service = new SubscriptionService(
+    repository,
+    createWebhookSecretProtector(async () => "encrypted"),
+    () => new Date("2026-08-25T12:00:00.000Z"),
+    () => "test"
+  )
+  const handler = createSubscriptionMutationApiHandler(service, replayingMutationExecutor(repository, requests), {
+    apiBaseUrl: "https://api.example.test"
+  })
+  const server = createServer(async (request, response) => {
+    const handled = await runWithRequestContext(
+      { correlationId: "mutation-route-test", identity: { userId: "user:test" } },
+      async () => await handler(request, response)
+    )
+    if (!handled) {
+      response.writeHead(404).end()
+    }
+  })
+  servers.add(server)
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+  const address = server.address()
+  if (address === null || typeof address === "string") {
+    throw new Error("Expected a TCP server address")
+  }
+  return { baseUrl: `http://127.0.0.1:${address.port}`, requests }
+}
+
+async function sendRawRequest(
+  baseUrl: string,
+  input: Readonly<{
+    body?: string
+    headers: Readonly<Record<string, string | string[]>>
+    method: string
+    path: string
+  }>
+): Promise<Readonly<{ body: unknown; status: number }>> {
+  return await new Promise((resolve, reject) => {
+    const request = sendRequest(
+      new URL(input.path, baseUrl),
+      { headers: input.headers, method: input.method },
+      (response) => {
+        const chunks: Buffer[] = []
+        response.on("data", (chunk: Buffer) => chunks.push(chunk))
+        response.on("end", () => {
+          try {
+            resolve({ body: JSON.parse(Buffer.concat(chunks).toString("utf8")), status: response.statusCode ?? 0 })
+          } catch (error) {
+            reject(error)
+          }
+        })
+      }
+    )
+    request.on("error", reject)
+    request.end(input.body)
+  })
 }
 
 const subscription: Subscription = {
@@ -197,7 +338,218 @@ describe("createSubscriptionApiHandler", () => {
   })
 })
 
+describe("createSubscriptionMutationApiHandler", () => {
+  it("rejects invalid mutation metadata before calling the executor", async () => {
+    const { baseUrl, requests } = await startMutation()
+    const createBody = JSON.stringify({
+      delivery: [{ channel: "in-app", destinationId: null, isEnabled: true }],
+      eventTypes: ["vote-added"],
+      frequency: "immediate",
+      name: "Floor votes",
+      target: { recordId: "bill:us:119:hr:1", recordType: "bill", type: "record" },
+      timezone: "America/Los_Angeles"
+    })
+    const [queryCreate, contentTypeCreate, queryPatch, bodyDelete, repeatedIdempotencyKey, repeatedIfMatch] =
+      await Promise.all([
+        fetch(`${baseUrl}/api/subscriptions?unexpected=true`, {
+          body: createBody,
+          headers: { "content-type": "application/json", "idempotency-key": "query-create" },
+          method: "POST"
+        }),
+        fetch(`${baseUrl}/api/subscriptions`, {
+          body: createBody,
+          headers: { "idempotency-key": "content-type-create" },
+          method: "POST"
+        }),
+        fetch(`${baseUrl}/api/subscriptions/subscription%3Atest?unexpected=true`, {
+          body: JSON.stringify({ name: "Updated" }),
+          headers: {
+            "content-type": "application/merge-patch+json",
+            "idempotency-key": "query-patch",
+            "if-match": "revision:test"
+          },
+          method: "PATCH"
+        }),
+        fetch(`${baseUrl}/api/subscriptions/subscription%3Atest`, {
+          body: "unexpected",
+          headers: { "idempotency-key": "body-delete", "if-match": "revision:test" },
+          method: "DELETE"
+        }),
+        sendRawRequest(baseUrl, {
+          headers: {
+            "content-type": "application/merge-patch+json",
+            "idempotency-key": ["repeated-key-one", "repeated-key-two"],
+            "if-match": "revision:test"
+          },
+          method: "PATCH",
+          path: "/api/subscriptions/subscription%3Atest"
+        }),
+        sendRawRequest(baseUrl, {
+          headers: {
+            "content-type": "application/merge-patch+json",
+            "idempotency-key": "single-key",
+            "if-match": ["revision:one", "revision:two"]
+          },
+          method: "PATCH",
+          path: "/api/subscriptions/subscription%3Atest"
+        })
+      ])
+
+    expect([
+      queryCreate.status,
+      contentTypeCreate.status,
+      queryPatch.status,
+      bodyDelete.status,
+      repeatedIdempotencyKey.status,
+      repeatedIfMatch.status
+    ]).toEqual([400, 400, 400, 400, 400, 400])
+    expect(repeatedIdempotencyKey.body).toMatchObject({ error: { category: "invalid_request" } })
+    expect(repeatedIfMatch.body).toMatchObject({ error: { category: "invalid_request" } })
+    expect(requests).toEqual([])
+  })
+
+  it("creates, revision-updates, and cancels a subscription without inventing deliveries", async () => {
+    const { baseUrl, requests } = await startMutation()
+    const created = await fetch(`${baseUrl}/api/subscriptions`, {
+      body: JSON.stringify({
+        delivery: [{ channel: "in-app", destinationId: null, isEnabled: true }],
+        eventTypes: ["vote-added"],
+        frequency: "immediate",
+        name: "Floor votes",
+        target: { recordId: "bill:us:119:hr:1", recordType: "bill", type: "record" },
+        timezone: "America/Los_Angeles"
+      }),
+      headers: { "content-type": "application/json", "idempotency-key": "create-subscription" },
+      method: "POST"
+    })
+
+    expect(created.status).toBe(201)
+    expect(created.headers.get("location")).toBe("/api/subscriptions/subscription%3Atest")
+    const createdRevision = created.headers.get("etag")
+    expect(createdRevision).not.toBeNull()
+    await expect(created.json()).resolves.toMatchObject({
+      data: {
+        canonicalUrl: "https://api.example.test/api/subscriptions/subscription%3Atest",
+        delivery: [{ channel: "in-app", destinationId: null, isEnabled: true }],
+        status: "active"
+      },
+      meta: { correlationId: "mutation-route-test" }
+    })
+
+    const encodedUpdate = await fetch(`${baseUrl}/api/subscriptions/subscription:test`, {
+      body: JSON.stringify({ name: "Priority floor votes" }),
+      headers: {
+        "content-type": "application/merge-patch+json",
+        "idempotency-key": "equivalent-path-update",
+        "if-match": createdRevision!
+      },
+      method: "PATCH"
+    })
+    const encodedUpdateBody = await encodedUpdate.json()
+    const encodedUpdateRevision = encodedUpdate.headers.get("etag")
+    const equivalentReplay = await fetch(`${baseUrl}/api/subscriptions/subscription%3atest`, {
+      body: JSON.stringify({ name: "Priority floor votes" }),
+      headers: {
+        "content-type": "application/merge-patch+json",
+        "idempotency-key": "equivalent-path-update",
+        "if-match": createdRevision!
+      },
+      method: "PATCH"
+    })
+
+    expect(encodedUpdate.status).toBe(200)
+    expect(equivalentReplay.status).toBe(200)
+    expect(equivalentReplay.headers.get("etag")).toBe(encodedUpdateRevision)
+    await expect(equivalentReplay.json()).resolves.toEqual(encodedUpdateBody)
+
+    const equivalentConflict = await fetch(`${baseUrl}/api/subscriptions/subscription%3Atest`, {
+      body: JSON.stringify({ name: "Different request" }),
+      headers: {
+        "content-type": "application/merge-patch+json",
+        "idempotency-key": "equivalent-path-update",
+        "if-match": createdRevision!
+      },
+      method: "PATCH"
+    })
+
+    expect(equivalentConflict.status).toBe(409)
+    await expect(equivalentConflict.json()).resolves.toMatchObject({
+      error: { category: "conflict", details: { reason: "idempotency_key_reused" } }
+    })
+
+    const updated = await fetch(`${baseUrl}/api/subscriptions/subscription%3Atest`, {
+      body: JSON.stringify({ name: "Priority floor votes" }),
+      headers: {
+        "content-type": "application/merge-patch+json",
+        "idempotency-key": "update-subscription",
+        "if-match": encodedUpdateRevision!
+      },
+      method: "PATCH"
+    })
+
+    expect(updated.status).toBe(200)
+    const updatedRevision = updated.headers.get("etag")
+    expect(updatedRevision).not.toBe(createdRevision)
+    await expect(updated.json()).resolves.toMatchObject({ data: { name: "Priority floor votes" } })
+
+    const repeatedPatch = await fetch(`${baseUrl}/api/subscriptions/subscription%3Atest`, {
+      body: JSON.stringify({ name: "Priority floor votes" }),
+      headers: {
+        "content-type": "application/merge-patch+json",
+        "idempotency-key": "repeat-update-subscription",
+        "if-match": updatedRevision!
+      },
+      method: "PATCH"
+    })
+
+    expect(repeatedPatch.status).toBe(200)
+    const repeatedPatchRevision = repeatedPatch.headers.get("etag")
+    expect(repeatedPatchRevision).not.toBe(updatedRevision)
+    expect(requests).toMatchObject([
+      { canonicalPath: "/api/subscriptions", method: "POST" },
+      { canonicalPath: "/api/subscriptions/subscription%3Atest", method: "PATCH" },
+      { canonicalPath: "/api/subscriptions/subscription%3Atest", method: "PATCH" },
+      { canonicalPath: "/api/subscriptions/subscription%3Atest", method: "PATCH" },
+      { canonicalPath: "/api/subscriptions/subscription%3Atest", method: "PATCH" },
+      { canonicalPath: "/api/subscriptions/subscription%3Atest", method: "PATCH" }
+    ])
+    expect(requests[1]?.requestHash).toBe(requests[2]?.requestHash)
+    expect(requests[1]?.requestHash).not.toBe(requests[4]?.requestHash)
+
+    const cancelled = await fetch(`${baseUrl}/api/subscriptions/subscription%3Atest`, {
+      headers: { "idempotency-key": "delete-subscription", "if-match": repeatedPatchRevision! },
+      method: "DELETE"
+    })
+
+    expect(cancelled.status).toBe(200)
+    await expect(cancelled.json()).resolves.toMatchObject({
+      data: { cancelledAt: "2026-08-25T12:00:00.000Z", id: "subscription:test" }
+    })
+  })
+})
+
 describe("createSubscriptionReadApiHandler", () => {
+  it("rejects malformed percent-encoding in a subscription ID", async () => {
+    const baseUrl = await startRead(unavailableRepository())
+
+    const response = await fetch(`${baseUrl}/api/subscriptions/%E0%A4%A`)
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ error: { category: "invalid_request" } })
+  })
+
+  it("rejects decoded separators, controls, and overlong subscription IDs", async () => {
+    const baseUrl = await startRead(unavailableRepository())
+    const overlongId = `subscription%3A${"a".repeat(129)}`
+    const [separator, control, overlong] = await Promise.all([
+      fetch(`${baseUrl}/api/subscriptions/subscription%3Aone%2Ftwo`),
+      fetch(`${baseUrl}/api/subscriptions/subscription%3Aone%0Atwo`),
+      fetch(`${baseUrl}/api/subscriptions/${overlongId}`)
+    ])
+
+    expect([separator.status, control.status, overlong.status]).toEqual([400, 400, 400])
+  })
+
   it("returns a canonical, scope-authorized subscription with its ETag", async () => {
     const baseUrl = await startRead({
       ...unavailableRepository(),

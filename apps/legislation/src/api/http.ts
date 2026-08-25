@@ -109,10 +109,12 @@ export function apiError(request: IncomingMessage, error: unknown): JsonRecord {
   const category = error instanceof LegislationError ? error.category : "internal"
   const status = statusForError(category)
   const message = error instanceof LegislationError ? error.message : "The request could not be completed"
+  const details = error instanceof LegislationError ? error.details : undefined
   return {
     error: {
       category,
       correlationId: correlationId(request),
+      ...(details === undefined ? {} : { details }),
       message,
       retryable: category === "dependency_unavailable" || category === "rate_limited"
     },

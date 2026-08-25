@@ -450,6 +450,10 @@ export class SubscriptionService {
     this.webhookRepository = webhookRepository ?? (hasWebhookRepository(repository) ? repository : undefined)
   }
 
+  withRepository(repository: SubscriptionRepository): SubscriptionService {
+    return new SubscriptionService(repository, this.secretProtector, this.now, this.identifiers, this.webhookRepository)
+  }
+
   private requireWebhookRepository(): WebhookRepository {
     if (this.webhookRepository === undefined) {
       throw new SubscriptionApiError(

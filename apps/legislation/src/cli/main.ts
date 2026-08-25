@@ -4,10 +4,14 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import { dirname, resolve } from "node:path"
 import { Command } from "commander"
 import { createLegislationApiHandler } from "../api/handlers.js"
-import { PostgresSubscriptionRepository } from "../api/subscription-repository.js"
+import {
+  createAes256GcmIdempotencyCipher,
+  PostgresSubscriptionRepository,
+  SubscriptionIdempotencyTransaction
+} from "../api/subscription-repository.js"
 import { PostgresWebhookReadRepository } from "../api/webhook-read-repository.js"
 import { createWorkosAuthenticator } from "../auth/workos.js"
-import { loadConfig, type LegislationConfig } from "../config/config.js"
+import { decodeIdempotencyEncryptionKey, loadConfig, type LegislationConfig } from "../config/config.js"
 import { compareCoverageReports, generateCoverageReport, isCoverageReport } from "../coverage/report.js"
 import { createDatabase, databasePoolSnapshot, type LegislationDatabase } from "../db/database.js"
 import { migrateDatabase } from "../db/migrate.js"
@@ -361,6 +365,14 @@ async function serve() {
     apiHandler: createLegislationApiHandler(queryService, {
       apiBaseUrl: config.server.publicApiBaseUrl,
       documentDatabase: database,
+      ...(config.security.idempotencyEncryptionKey === undefined
+        ? {}
+        : {
+            subscriptionMutationExecutor: new SubscriptionIdempotencyTransaction(
+              database,
+              createAes256GcmIdempotencyCipher(decodeIdempotencyEncryptionKey(config.security.idempotencyEncryptionKey))
+            )
+          }),
       subscriptionRepository: new PostgresSubscriptionRepository(database),
       webhookReadRepository: new PostgresWebhookReadRepository(database)
     }),
