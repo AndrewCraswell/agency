@@ -10,9 +10,10 @@ the ESP32 has enough GPIOs and the extra stateful IC did not earn its place.
 
 W5500, all 13 HUB75 signals, native USB GPIO19/20, TSOP38438 IR on GPIO35 RMT,
 UART0/BOOT/EN recovery pads, and the external watchdog kick remain allocated.
-GPIO36, 37, and 47 remain uncommitted P0 spares. F-RAM,
-optional I2C, peer heartbeats, isolated scoring SPI, audio, and both populated
-service headers consume no P0 pins.
+GPIO36, GPIO37, and GPIO47 remain reserved P0 spares. No P0 circuit, pull,
+test pad, or firmware claim is permitted on them. F-RAM, optional I2C, peer
+heartbeats, audio, a second processor, processor isolation, and a populated
+service header are not P0 interfaces and consume no P0 pins.
 
 No comparator GPIOs are allocated. BP-127 must prove that continuous
 seven-channel ADS8881 sampling meets the acquisition and timestamp budget

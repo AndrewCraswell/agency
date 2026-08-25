@@ -1,6 +1,6 @@
 # BP-125 processor support contract
 
-P0 has one controller: `ESP32-S3-WROOM-1U-N16R2`. It runs the ESP-IDF target
+P0 has one controller: `ESP32-S3-WROOM-1-N16R2`. It runs the ESP-IDF target
 adapter and portable C17 scoring core. This is a schematic-input contract, not
 a schematic, layout, power-up, RF, or fabrication approval. The executable
 contract is `src/bench-prototype-processor-support.ts`.
@@ -33,11 +33,14 @@ reset timing, and placement are still physical evidence gates.
   output off before firmware and during faults. HUB75 remains blank until
   external hardware sees a complete safe frame. No serialized output latch or
   SPI2 shift-register is part of P0.
-- Wi-Fi and Bluetooth remain disabled without a reviewed populated antenna.
+- Wi-Fi and Bluetooth remain disabled in P0. Any later radio enablement uses
+  the selected WROOM-1 integrated PCB antenna and requires its placement,
+  enclosure-clearance, throughput, and range evidence. There is no
+  `ANT_EXTERNAL` net or external antenna chain.
   No flash, NVS, OTA, filesystem, or log erase/write is permitted while
   scoring acquisition is active. The listed spare pins remain reserved.
 
-STM32, processor isolators and cross-domain reset, F-RAM, RTC, secure element,
-audio, speaker, and external antenna are not P0 hardware. Schematic, rail,
-reset, RF, and fabrication authority remain denied pending their independent
-evidence.
+No second processor, processor isolation, cross-domain reset, F-RAM, RTC,
+secure element, audio, speaker, or external antenna chain is P0 hardware.
+GPIO36, GPIO37, and GPIO47 remain reserved spares. Schematic, rail, reset,
+RF, and fabrication authority remain denied pending their independent evidence.

@@ -85,7 +85,8 @@ const processorSupportDefinition = {
     mpn: "ESP32-S3-WROOM-1-N16R2",
     role: "sole controller for the ESP-IDF adapter and portable C17 scoring core",
     supply: "APP_3V3, 3.0 V to 3.6 V",
-    radio: "disabled without a populated, reviewed external antenna"
+    radio:
+      "Wi-Fi and Bluetooth remain disabled in P0; any later enablement uses the selected WROOM-1 integrated PCB antenna and requires its placement and final-product RF evidence."
   },
   selectedSupportRows: [
     { reference: "R_ESP_BOOT_PULLUP", mpn: "RC0603FR-0710KL", value: "10 kOhm, 1%", role: "GPIO0 BOOT_N pull-up" },
@@ -134,15 +135,16 @@ const processorSupportDefinition = {
       "External reset/output-enable circuitry keeps the HUB75 panel blank until a complete safe frame is latched; the display is never a reset source."
   },
   restrictions: {
-    radio: "Wi-Fi and Bluetooth remain disabled while ANT_EXTERNAL is DNP.",
+    radio:
+      "Wi-Fi and Bluetooth remain disabled in P0; ANT_EXTERNAL is not a P0 net because the selected WROOM-1 antenna is integrated.",
     flash: "No flash, NVS, OTA, filesystem, or log erase/write may occur while scoring acquisition is active.",
-    unusedPins: "GPIO36 and GPIO37 remain reserved; GPIO33/GPIO34 and module flash/PSRAM pads are unavailable."
+    unusedPins: "GPIO36, GPIO37, and GPIO47 remain reserved; GPIO33/GPIO34 and module flash/PSRAM pads are unavailable."
   },
   rejectedFromP0: [
-    "STM32 processor and its clocks, SWD, backup domain, and support network",
+    "a second processor and its clocks, debug, backup domain, and support network",
     "processor isolators, isolated link power, and cross-domain reset paths",
     "serialized primary-output latch or SPI2 shift-register",
-    "F-RAM, RTC, secure element, audio amplifier, speaker connector, and external antenna"
+    "F-RAM, RTC, secure element, audio amplifier, speaker connector, and an external antenna chain"
   ],
   authority: {
     schematicApproved: false,
@@ -185,7 +187,7 @@ export function validateBenchPrototypeProcessorSupport(value: unknown): true {
     !contract.restrictions.unusedPins.includes("GPIO36") ||
     contract.rejectedFromP0.some(
       (rejection) =>
-        !rejection.includes("STM32") &&
+        !rejection.includes("second processor") &&
         !rejection.includes("isolators") &&
         !rejection.includes("serialized") &&
         !rejection.includes("F-RAM")

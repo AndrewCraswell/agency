@@ -9,7 +9,8 @@ describe("BP-125 sole-ESP32 processor support", () => {
     expect(validateBenchPrototypeProcessorSupport(benchPrototypeProcessorSupport)).toBe(true)
     expect(benchPrototypeProcessorSupport.processor).toMatchObject({
       mpn: "ESP32-S3-WROOM-1-N16R2",
-      radio: "disabled without a populated, reviewed external antenna"
+      radio:
+        "Wi-Fi and Bluetooth remain disabled in P0; any later enablement uses the selected WROOM-1 integrated PCB antenna and requires its placement and final-product RF evidence."
     })
     expect(benchPrototypeProcessorSupport.selectedSupportRows).toEqual([
       expect.objectContaining({ reference: "R_ESP_BOOT_PULLUP", mpn: "RC0603FR-0710KL" }),
@@ -40,10 +41,10 @@ describe("BP-125 sole-ESP32 processor support", () => {
 
   it("rejects former dual-processor parts, substitutions, omissions, and release escalation", () => {
     const mutations: Array<(candidate: any) => void> = [
-      (candidate) => (candidate.processor.mpn = "STM32G474RET3TR"),
+      (candidate) => (candidate.processor.mpn = "second processor"),
       (candidate) => candidate.selectedSupportRows.pop(),
       (candidate) => (candidate.selectedSupportRows[2].mpn = "TBD"),
-      (candidate) => (candidate.rejectedFromP0[0] = "STM32 permitted"),
+      (candidate) => (candidate.rejectedFromP0[0] = "second processor permitted"),
       (candidate) => (candidate.fixedInterfaces.primaryOutputs = "serialized latch permitted"),
       (candidate) => (candidate.restrictions.flash = "Writes allowed while scoring"),
       (candidate) => (candidate.authority.fabricationAuthorized = true)
