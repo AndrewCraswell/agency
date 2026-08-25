@@ -1,3 +1,4 @@
+import { benchPrototypeP0Power } from "./bench-prototype-p0-power.js"
 import { calculateRailBudget, type RailBudgetResult } from "./power-budget.js"
 
 export const v5PowerStage = {
@@ -9,7 +10,6 @@ export const v5PowerStage = {
     recommendedMaximumInputV: 28,
     switchingFrequencyHz: 500_000
   },
-  enable: { lowerResistorOhms: 6_040, risingThresholdV: 1.18, upperResistorOhms: 88_700 },
   inductor: {
     dcResistanceOhms: 0.0059,
     heatingCurrentA: 9.7,
@@ -32,7 +32,9 @@ export const v5PowerStage = {
     mlccMpn: "GRM32ER71E226KE15L",
     mlccRatedCapacitanceF: 22e-6,
     voltageV: 5
-  }
+  },
+  supportParts: benchPrototypeP0Power.v5Stage.supportParts,
+  intentionallyUnpopulated: benchPrototypeP0Power.v5Stage.intentionallyUnpopulated
 } as const
 
 export type V5PowerStageAssessment = {
@@ -43,7 +45,6 @@ export type V5PowerStageAssessment = {
     maximumOutputCurrentA: number
     minimumCurrentLimitA: number
   }
-  enable: { nominalStartV: number; nominalStopV: number }
   inductor: {
     continuousRmsCurrentA: number
     peakCurrentA: number
@@ -129,15 +130,6 @@ export function assessV5PowerStage(
   const peakInductorCurrentA = peak.outputCurrentA + peakToPeakRippleA / 2
   const continuousInductorRmsCurrentA = Math.sqrt(continuous.outputCurrentA ** 2 + peakToPeakRippleA ** 2 / 12)
   const peakInductorRmsCurrentA = Math.sqrt(peak.outputCurrentA ** 2 + peakToPeakRippleA ** 2 / 12)
-  const nominalStartV =
-    (v5PowerStage.enable.risingThresholdV *
-      (v5PowerStage.enable.upperResistorOhms + v5PowerStage.enable.lowerResistorOhms) -
-      v5PowerStage.enable.upperResistorOhms * v5PowerStage.enable.lowerResistorOhms * 1e-6) /
-    v5PowerStage.enable.lowerResistorOhms
-  const nominalStopV =
-    (1.07 * (v5PowerStage.enable.upperResistorOhms + v5PowerStage.enable.lowerResistorOhms) -
-      v5PowerStage.enable.upperResistorOhms * v5PowerStage.enable.lowerResistorOhms * 4e-6) /
-    v5PowerStage.enable.lowerResistorOhms
   const minimumOnTimeNs =
     (v5PowerStage.output.voltageV /
       v5PowerStage.controller.recommendedMaximumInputV /
@@ -159,7 +151,6 @@ export function assessV5PowerStage(
       maximumOutputCurrentA: outputCurrentA(eFuseBoundedOutputLoadW),
       minimumCurrentLimitA: minimumEfuseCurrentLimitA
     },
-    enable: { nominalStartV, nominalStopV },
     inductor: {
       continuousRmsCurrentA: continuousInductorRmsCurrentA,
       peakCurrentA: peakInductorCurrentA,

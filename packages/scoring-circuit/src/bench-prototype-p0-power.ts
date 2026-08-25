@@ -232,6 +232,80 @@ const definition = {
         quantity: 1,
         sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0402FR-0722RL"
       }
+    ],
+    efuseSupport: [
+      {
+        reference: "C_EFUSE_IN",
+        mpn: "GCM188R71H104KA57D",
+        manufacturer: "Murata",
+        value: "100 nF, 50 V, X7R, 10%",
+        package: "0603 (1608 metric)",
+        function: "TPS259474A local input bypass",
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GCM188R71H104KA57D"
+      },
+      {
+        reference: "R_EFUSE_UVLO_UP",
+        mpn: "RC0603FR-07475KL",
+        manufacturer: "Yageo",
+        value: "475 kOhm, 1%",
+        package: "0603 (1608 metric)",
+        function: "TPS259474A adjustable undervoltage-lockout upper divider",
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07475KL"
+      },
+      {
+        reference: "R_EFUSE_UVLO_DOWN",
+        mpn: "RC0603FR-0738K3L",
+        manufacturer: "Yageo",
+        value: "38.3 kOhm, 1%",
+        package: "0603 (1608 metric)",
+        function: "TPS259474A adjustable undervoltage-lockout lower divider",
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0738K3L"
+      },
+      {
+        reference: "R_EFUSE_OVLO_UP",
+        mpn: "RC0603FR-07499KL",
+        manufacturer: "Yageo",
+        value: "499 kOhm, 1%",
+        package: "0603 (1608 metric)",
+        function: "TPS259474A adjustable overvoltage-lockout upper divider",
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-07499KL"
+      },
+      {
+        reference: "R_EFUSE_OVLO_DOWN",
+        mpn: "RC0603FR-0728K7L",
+        manufacturer: "Yageo",
+        value: "28.7 kOhm, 1%",
+        package: "0603 (1608 metric)",
+        function: "TPS259474A adjustable overvoltage-lockout lower divider",
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-0728K7L"
+      },
+      {
+        reference: "R_EFUSE_ILM",
+        mpn: "RC0603FR-071K24L",
+        manufacturer: "Yageo",
+        value: "1.24 kOhm, 1%",
+        package: "0603 (1608 metric)",
+        function: "TPS259474A 2.69 A nominal current-limit programming",
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RC0603FR-071K24L"
+      },
+      {
+        reference: "C_EFUSE_ITIMER",
+        mpn: "C0603C222K5RACTU",
+        manufacturer: "KEMET",
+        value: "2.2 nF, 50 V, X7R, 10%",
+        package: "0603 (1608 metric)",
+        function: "TPS259474A transient-overcurrent blanking timer",
+        sourceUrl: "https://search.kemet.com/component-documentation/download/specsheet/C0603C222K5RACTU"
+      },
+      {
+        reference: "C_EFUSE_DVDT",
+        mpn: "C0603C222K5RACTU",
+        manufacturer: "KEMET",
+        value: "2.2 nF, 50 V, X7R, 10%",
+        package: "0603 (1608 metric)",
+        function: "TPS259474A controlled output slew rate and inrush",
+        sourceUrl: "https://search.kemet.com/component-documentation/download/specsheet/C0603C222K5RACTU"
+      }
     ]
   },
   v5Stage: {
@@ -241,6 +315,105 @@ const definition = {
     inputCapacitors: { mpn: "GRM32ER7YA106KA12L", quantity: 2, nominalUfEach: 10 },
     inputBypass: { mpn: "885012206095", nominalNf: 100 },
     outputCapacitors: { mpn: "GRM32ER71E226KE15L", quantity: 2, nominalUfEach: 22 },
+    supportParts: [
+      {
+        reference: "L_V5_BUCK",
+        mpn: "744325330",
+        manufacturer: "Wurth Elektronik",
+        value: "3.3 uH, 12 A",
+        package: "WE-HCI 13.2 mm x 12.8 mm",
+        function: "TPS56A37 power inductor",
+        sourceUrl: "https://www.we-online.com/components/products/datasheet/744325330.pdf"
+      },
+      ...["C_V5_BUCK_IN_A", "C_V5_BUCK_IN_B"].map((reference) => ({
+        reference,
+        mpn: "GRM32ER7YA106KA12L",
+        manufacturer: "Murata",
+        value: "10 uF, 35 V, X7R, 10%",
+        package: "1210 (3225 metric)",
+        function: "TPS56A37 input bulk decoupling",
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GRM32ER7YA106KA12L"
+      })),
+      {
+        reference: "C_V5_BUCK_IN_HF",
+        mpn: "885012206095",
+        manufacturer: "Wurth Elektronik",
+        value: "100 nF, 50 V, X7R, 10%",
+        package: "0603 (1608 metric)",
+        function: "TPS56A37 high-frequency input bypass",
+        sourceUrl: "https://www.we-online.com/components/products/datasheet/885012206095.pdf"
+      },
+      {
+        reference: "C_V5_BUCK_BOOT",
+        mpn: "885012206095",
+        manufacturer: "Wurth Elektronik",
+        value: "100 nF, 50 V, X7R, 10%",
+        package: "0603 (1608 metric)",
+        function: "TPS56A37 BOOT-to-SW capacitor",
+        sourceUrl: "https://www.we-online.com/components/products/datasheet/885012206095.pdf"
+      },
+      ...["C_V5_BUCK_OUT_A", "C_V5_BUCK_OUT_B"].map((reference) => ({
+        reference,
+        mpn: "GRM32ER71E226KE15L",
+        manufacturer: "Murata",
+        value: "22 uF, 25 V, X7R, 10%",
+        package: "1210 (3225 metric)",
+        function: "TPS56A37 output capacitance",
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GRM32ER71E226KE15L"
+      })),
+      {
+        reference: "R_V5_BUCK_MODE",
+        mpn: "RT0603DRE0752K3L",
+        manufacturer: "Yageo",
+        value: "52.3 kOhm, 0.5%",
+        package: "0603 (1608 metric)",
+        function: "TPS56A37 500 kHz MODE programming",
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RT0603DRE0752K3L"
+      },
+      {
+        reference: "R_V5_BUCK_FB_TOP",
+        mpn: "RT0603DRE0773K2L",
+        manufacturer: "Yageo",
+        value: "73.2 kOhm, 0.5%",
+        package: "0603 (1608 metric)",
+        function: "TPS56A37 5 V feedback upper divider",
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RT0603DRE0773K2L"
+      },
+      {
+        reference: "R_V5_BUCK_FB_BOTTOM",
+        mpn: "RT0603DRE0710KL",
+        manufacturer: "Yageo",
+        value: "10 kOhm, 0.5%",
+        package: "0603 (1608 metric)",
+        function: "TPS56A37 5 V feedback lower divider",
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RT0603DRE0710KL"
+      },
+      {
+        reference: "R_V5_BUCK_FF",
+        mpn: "RT0603DRE0749R9L",
+        manufacturer: "Yageo",
+        value: "49.9 Ohm, 0.5%",
+        package: "0603 (1608 metric)",
+        function: "TPS56A37 feed-forward damping resistor",
+        sourceUrl: "https://www.yageogroup.com/component-documentation/download/specsheet/RT0603DRE0749R9L"
+      },
+      {
+        reference: "C_V5_BUCK_FF",
+        mpn: "GRM1885C1H151JA01D",
+        manufacturer: "Murata",
+        value: "150 pF, 50 V, C0G, 5%",
+        package: "0603 (1608 metric)",
+        function: "TPS56A37 feed-forward capacitor",
+        sourceUrl: "https://www.murata.com/en-us/products/productdetail?partno=GRM1885C1H151JA01D"
+      }
+    ],
+    intentionallyUnpopulated: [
+      "R_V5_BUCK_EN_UP",
+      "R_V5_BUCK_EN_DOWN",
+      "C_V5_BUCK_SS",
+      "R_V5_BUCK_PG_PULLUP",
+      "TP_V5_BUCK_PG"
+    ],
     outputVoltageV: 5,
     continuousRatingA: 10,
     exactLayoutAndThermalProof: false

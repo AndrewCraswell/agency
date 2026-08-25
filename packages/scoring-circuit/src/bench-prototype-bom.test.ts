@@ -127,6 +127,58 @@ describe("bench prototype BOM baseline", () => {
     expect(benchPrototypeBom.rows.find((row) => row.reference === "U_APP_REG")).toBeUndefined()
   })
 
+  it("enumerates every populated eFuse and 5 V conversion support part", () => {
+    const expectedEfuseReferences = [
+      "C_EFUSE_IN",
+      "R_EFUSE_UVLO_UP",
+      "R_EFUSE_UVLO_DOWN",
+      "R_EFUSE_OVLO_UP",
+      "R_EFUSE_OVLO_DOWN",
+      "R_EFUSE_ILM",
+      "C_EFUSE_ITIMER",
+      "C_EFUSE_DVDT"
+    ]
+    const expectedV5References = [
+      "L_V5_BUCK",
+      "C_V5_BUCK_IN_A",
+      "C_V5_BUCK_IN_B",
+      "C_V5_BUCK_IN_HF",
+      "C_V5_BUCK_BOOT",
+      "C_V5_BUCK_OUT_A",
+      "C_V5_BUCK_OUT_B",
+      "R_V5_BUCK_MODE",
+      "R_V5_BUCK_FB_TOP",
+      "R_V5_BUCK_FB_BOTTOM",
+      "R_V5_BUCK_FF",
+      "C_V5_BUCK_FF"
+    ]
+    const powerRows = benchPrototypeBom.rows.filter((row) => row.source?.kind === "bench-prototype-power")
+
+    for (const reference of [...expectedEfuseReferences, ...expectedV5References]) {
+      expect(powerRows.find((row) => row.reference === reference)).toMatchObject({
+        disposition: "selected",
+        quantity: 1,
+        lifecycle: "active-preferred"
+      })
+    }
+    for (const reference of [
+      "C_EFUSE_OUT",
+      "R_EFUSE_PGTH_UP",
+      "R_EFUSE_PGTH_DOWN",
+      "R_EFUSE_PG_PULLUP",
+      "R_V5_BUCK_EN_UP",
+      "R_V5_BUCK_EN_DOWN",
+      "C_V5_BUCK_SS",
+      "R_V5_BUCK_PG_PULLUP",
+      "TP_V5_BUCK_PG"
+    ]) {
+      expect(benchPrototypeBom.rows.find((row) => row.reference === reference)).toMatchObject({
+        disposition: "DNP",
+        quantity: 0
+      })
+    }
+  })
+
   it("selects one reset/watchdog domain and one shared HUB75 enable gate", () => {
     expect(benchPrototypeBom.rows.find((row) => row.reference === "U_APP_SUPERVISOR")).toMatchObject({
       disposition: "selected",

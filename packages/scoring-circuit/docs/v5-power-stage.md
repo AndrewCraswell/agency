@@ -15,13 +15,32 @@ The selected replacement is TI `TPS56A37RPAR`, a fixed-frequency 500 kHz synchro
 
 | Function | Exact selection | Connection and boundary |
 | --- | --- | --- |
-| V5 regulator | TI `TPS56A37RPAR` | eFuse output to VIN. EN divider keeps the rail off during the eFuse ramp. Integrated FETs mean there are no external buck FETs to select. |
+| V5 regulator | TI `TPS56A37RPAR` | eFuse output to VIN. EN uses the device's internal pull-up; the upstream eFuse owns the voltage window and controlled ramp. Integrated FETs mean there are no external buck FETs to select. |
 | Inductor | Würth Elektronik `744325330` | 3.3 uH shielded Superflux, 5.9 mOhm DCR. TI's worked example cites 2.4 uH typical at 12 A, 15 A typical saturation current, and 9.7 A heating current. The executable screen uses 2.4 uH, but combined initial tolerance, DC-bias, temperature, aging, and lot variation remain an unclosed measurement/qualification gate. Neither typical figure is treated as a guaranteed production limit. |
 | Input MLCC bank | 2 x Murata `GRM32ER7YA106KA12L` | 10 uF, 35 V, X7R, 1210, directly between VIN and PGND, plus Würth `885012206095` 100 nF, 50 V, X7R at the IC. Effective capacitance at 20 V and temperature remains a measurement gate. |
 | Bootstrap | Würth `885012206095` | 100 nF, 50 V, X7R from BOOT to SW. |
 | Output MLCC bank | 2 x Murata `GRM32ER71E226KE15L` | 22 uF, 25 V, X7R, 1210, directly on V5. The EVM identifies 35 uF effective total at 5 V; release must prove at least that effective value over tolerance and temperature. |
 | Setpoint and transient network | 73.2 kOhm / 10.0 kOhm / 49.9 Ohm and Murata `GRM1885C1H151JA01D` 150 pF C0G | 5 V divider and EVM feed-forward network. D-CAP3 has internal compensation; this is not an unverified external Type-II/III compensation loop. |
-| Startup / mode | 88.7 kOhm / 6.04 kOhm EN divider, 52.3 kOhm MODE, TDK `C1608X7R1H473K080AA` 47 nF SS | Nominal EN start/stop are 18.42 V / 16.43 V using the data-sheet current-source equations. SS is approximately 4.7 ms nominal, not an approval for an attached panel's inrush. |
+| Startup / mode | 52.3 kOhm MODE; EN divider and external SS capacitor DNP | MODE selects 500 kHz. Floating SS uses the device's approximately 1.8 ms internal soft start; system inrush is controlled upstream by the eFuse DVDT network. |
+
+The executable contract now enumerates all twelve populated external TPS56A37
+parts as individual physical references. The exact resistor identities follow
+the TI EVM. The two-part EN divider, external SS capacitor, PG pull-up, and PG
+test point are DNP because the eFuse owns input qualification/ramp, TPS56A37
+provides internal EN/soft-start behavior, and no safety or sequencing decision
+consumes PG. The two-part feed-forward network is retained because the selected
+HUB75 branch is a large step load and the network is part of TI's tested 5 V
+EVM response. Independent APP_3V3 supervision is owned by BP-123, while
+bring-up measures V5 directly at the rail test point.
+
+The upstream TPS259474A support is likewise explicit: local 100 nF input
+bypass, UVLO and OVLO dividers, the 1.24 kOhm ILM resistor, 2.2 nF ITIMER
+capacitor, and 2.2 nF DVDT capacitor.
+The unused PGTH divider and PG pull-up are DNP. A separate `C_EFUSE_OUT` is
+also DNP because the two TPS56A37 input capacitors are located directly on the
+eFuse output. This removes indication-only and duplicate-storage parts without
+removing current limit, transient blanking, controlled slew, or voltage-window
+protection.
 
 ## Arithmetic screen
 
@@ -80,7 +99,7 @@ The rail-budget 85 percent value is an allocation, not measured TPS56A37 efficie
 Required evidence before lifting DENY:
 
 - PCB PI layout review against the TPS56A37 EVM/layout guidance: VIN capacitor loop and PGND, SW copper keepout, BOOT loop, AGND/PGND single point, direct output feedback sense, and output return to the HUB75 connector. The circuit-model coordinates are nonphysical placeholders, not a placement or clearance proof; the former `L_V5_BUCK` / `L_APP_REGULATOR` coordinate collision is prevented by a circuit assertion only.
-- Scope VIN at the regulator, SW, V5 at the capacitors and panel end, EN, PG, eFuse output, and external-link V5 current for attach, detach, PD hard reset, eFuse retry, 0 A to maximum load steps, Ethernet traffic, and full-white panel content.
+- Scope VIN at the regulator, SW, V5 at the capacitors and panel end, EN, eFuse output, and external-link V5 current for attach, detach, PD hard reset, eFuse retry, 0 A to maximum load steps, Ethernet traffic, and full-white panel content.
 - Measure actual MLCC effective capacitance, V5 ripple, stability/loop response, 5 V accuracy at the panel end, current-limit/hiccup behavior, and start-up with every candidate HUB75 panel attached. The panel must remain blank until V5 and logic are known good.
 - Perform thermal-camera and thermocouple tests at 50 C ambient with blocked vents. Record IC junction proxy/case, inductor, input/output MLCCs, eFuse, USB-C connector, copper, and panel-end cable temperatures at continuous load and the repeated transient profile.
 - Verify 20 V adapter/cable variation and the eFuse OVP response never expose TPS56A37 VIN to more than its recommended or absolute ratings. Validate EFT/ESD/surge return paths at the actual component pins.

@@ -270,6 +270,35 @@ const selectedUsbSupportRows: readonly BenchPrototypeBomRow[] = [
   )
 ]
 
+const selectedEfuseSupportRows: readonly BenchPrototypeBomRow[] =
+  benchPrototypeP0Power.upstreamSupport.efuseSupport.map((part) =>
+    selectedSupportRow(
+      part.reference,
+      `${part.function}, ${part.value}`,
+      part.manufacturer,
+      part.mpn,
+      part.package,
+      part.sourceUrl,
+      "Required by the selected TPS259474A protection configuration; PG and PGTH remain unused and unpopulated.",
+      1,
+      "bench-prototype-power"
+    )
+  )
+
+const selectedV5SupportRows: readonly BenchPrototypeBomRow[] = benchPrototypeP0Power.v5Stage.supportParts.map((part) =>
+  selectedSupportRow(
+    part.reference,
+    `${part.function}, ${part.value}`,
+    part.manufacturer,
+    part.mpn,
+    part.package,
+    part.sourceUrl,
+    "Required by the selected TPS56A37 5 V implementation; exact placement, effective capacitance, thermal, and load-step evidence remain open.",
+    1,
+    "bench-prototype-power"
+  )
+)
+
 const applicationRailMetadata = {
   LMR43620MSC3RPERQ1: {
     package: "VQFN-HR RPE, 2 mm x 2 mm",
@@ -534,6 +563,51 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "Full-rail V5 telemetry shunt",
       "Removed with the on-board power monitor; P0 does not spend voltage headroom, routing, calibration, or footprint work on permanent rail telemetry."
     ),
+    dnpRow(
+      "C_EFUSE_OUT",
+      "Dedicated eFuse-output bulk capacitor",
+      "Removed as a duplicate reservoir; the two exact TPS56A37 input capacitors are directly on the eFuse output."
+    ),
+    dnpRow(
+      "R_EFUSE_PGTH_UP",
+      "eFuse power-good threshold upper divider",
+      "Removed because no P0 control or safety decision consumes eFuse PG; the TPS259474A permits PGTH to remain open."
+    ),
+    dnpRow(
+      "R_EFUSE_PGTH_DOWN",
+      "eFuse power-good threshold lower divider",
+      "Removed with the unused eFuse PG indication path."
+    ),
+    dnpRow(
+      "R_EFUSE_PG_PULLUP",
+      "eFuse power-good pull-up",
+      "Removed because the open-drain PG output is unused on P0."
+    ),
+    dnpRow(
+      "R_V5_BUCK_PG_PULLUP",
+      "5 V buck power-good pull-up",
+      "Removed because BP-123 owns independent APP_3V3 supervision and no control decision consumes the TPS56A37 PG output."
+    ),
+    dnpRow(
+      "R_V5_BUCK_EN_UP",
+      "5 V buck enable upper divider",
+      "Removed because the upstream eFuse owns the input voltage window and controlled ramp; TPS56A37 EN uses its internal pull-up."
+    ),
+    dnpRow(
+      "R_V5_BUCK_EN_DOWN",
+      "5 V buck enable lower divider",
+      "Removed with the redundant TPS56A37 external enable threshold."
+    ),
+    dnpRow(
+      "C_V5_BUCK_SS",
+      "5 V buck external soft-start capacitor",
+      "Removed because the eFuse DVDT network controls apparatus inrush and TPS56A37 provides a default internal 1.8 ms soft start."
+    ),
+    dnpRow(
+      "TP_V5_BUCK_PG",
+      "Dedicated 5 V buck power-good test point",
+      "Removed with the unused PG pull-up; bring-up observes V5 directly at the reviewed rail test point."
+    ),
     selectedDecisionRow(
       "U_REF",
       "REF5025AQDRQ1",
@@ -603,8 +677,9 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "U_EFUSE",
       "TPS259474ARPWR",
       "Post-contract reverse-blocking eFuse",
-      "Required 20 V power-path protection; exact current, ramp, timer, PG threshold, and thermal evidence remain gates."
+      "Required 20 V power-path protection; exact UVLO/OVLO, current, ramp, timer, transient, and thermal evidence remain gates."
     ),
+    ...selectedEfuseSupportRows,
     selectedUsbPdFootprintRow(
       "C_USB_PD_PPHV",
       "T523H107M035APE070",
@@ -708,6 +783,7 @@ const benchPrototypeBomDefinition: BenchPrototypeBom = {
       "USB-C PD 20 V to protected 5 V conversion",
       "Required by the ESP32/AFE and HUB75 branches; thermal, inrush, and exact support-network gates remain open."
     ),
+    ...selectedV5SupportRows,
     selectedIrRow(
       "U_IR_RX",
       "Encrypted-remote 38 kHz receiver",

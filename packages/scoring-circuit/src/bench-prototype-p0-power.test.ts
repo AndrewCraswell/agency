@@ -38,6 +38,27 @@ describe("BP-050 simplified P0 power", () => {
       fuseMpn: "045106.3MRL",
       disconnect: "J_DISPLAY_DISCONNECT"
     })
+    expect(benchPrototypeP0Power.v5Stage.supportParts.map((part) => part.reference)).toEqual([
+      "L_V5_BUCK",
+      "C_V5_BUCK_IN_A",
+      "C_V5_BUCK_IN_B",
+      "C_V5_BUCK_IN_HF",
+      "C_V5_BUCK_BOOT",
+      "C_V5_BUCK_OUT_A",
+      "C_V5_BUCK_OUT_B",
+      "R_V5_BUCK_MODE",
+      "R_V5_BUCK_FB_TOP",
+      "R_V5_BUCK_FB_BOTTOM",
+      "R_V5_BUCK_FF",
+      "C_V5_BUCK_FF"
+    ])
+    expect(benchPrototypeP0Power.v5Stage.intentionallyUnpopulated).toEqual([
+      "R_V5_BUCK_EN_UP",
+      "R_V5_BUCK_EN_DOWN",
+      "C_V5_BUCK_SS",
+      "R_V5_BUCK_PG_PULLUP",
+      "TP_V5_BUCK_PG"
+    ])
   })
 
   it("freezes the USB-PD support values and matched native-USB pair", () => {
@@ -66,6 +87,16 @@ describe("BP-050 simplified P0 power", () => {
     expect(benchPrototypeP0Power.upstreamSupport.usbSeriesPair).toEqual([
       expect.objectContaining({ reference: "R_USB_DN_SERIES", mpn: "RC0402FR-0722RL", valueOhms: 22 }),
       expect.objectContaining({ reference: "R_USB_DP_SERIES", mpn: "RC0402FR-0722RL", valueOhms: 22 })
+    ])
+    expect(benchPrototypeP0Power.upstreamSupport.efuseSupport).toEqual([
+      expect.objectContaining({ reference: "C_EFUSE_IN", mpn: "GCM188R71H104KA57D" }),
+      expect.objectContaining({ reference: "R_EFUSE_UVLO_UP", mpn: "RC0603FR-07475KL" }),
+      expect.objectContaining({ reference: "R_EFUSE_UVLO_DOWN", mpn: "RC0603FR-0738K3L" }),
+      expect.objectContaining({ reference: "R_EFUSE_OVLO_UP", mpn: "RC0603FR-07499KL" }),
+      expect.objectContaining({ reference: "R_EFUSE_OVLO_DOWN", mpn: "RC0603FR-0728K7L" }),
+      expect.objectContaining({ reference: "R_EFUSE_ILM", mpn: "RC0603FR-071K24L" }),
+      expect.objectContaining({ reference: "C_EFUSE_ITIMER", mpn: "C0603C222K5RACTU" }),
+      expect.objectContaining({ reference: "C_EFUSE_DVDT", mpn: "C0603C222K5RACTU" })
     ])
   })
 

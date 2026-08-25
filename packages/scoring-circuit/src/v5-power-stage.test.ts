@@ -4,6 +4,27 @@ import { assessV5PowerStage, v5PowerStage } from "./v5-power-stage.js"
 describe("20 V USB-PD to V5 power stage", () => {
   const assessment = assessV5PowerStage()
 
+  it("binds the exact minimal support network and omits unused power-good parts", () => {
+    expect(v5PowerStage.supportParts).toHaveLength(12)
+    expect(v5PowerStage.supportParts.map((part) => part.reference)).toEqual(
+      expect.arrayContaining([
+        "L_V5_BUCK",
+        "C_V5_BUCK_IN_A",
+        "C_V5_BUCK_BOOT",
+        "R_V5_BUCK_MODE",
+        "R_V5_BUCK_FB_TOP",
+        "C_V5_BUCK_FF"
+      ])
+    )
+    expect(v5PowerStage.intentionallyUnpopulated).toEqual([
+      "R_V5_BUCK_EN_UP",
+      "R_V5_BUCK_EN_DOWN",
+      "C_V5_BUCK_SS",
+      "R_V5_BUCK_PG_PULLUP",
+      "TP_V5_BUCK_PG"
+    ])
+  })
+
   it("rejects the TPS55288 because its 6.35 A programmable limit cannot carry the V5 envelope", () => {
     expect(v5PowerStage.controller.mpn).toBe("TPS56A37RPAR")
     expect(assessment.continuous.outputCurrentA).toBeCloseTo(7.99, 2)
