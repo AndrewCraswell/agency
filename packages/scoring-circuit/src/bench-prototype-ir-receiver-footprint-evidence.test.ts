@@ -183,14 +183,14 @@ describe("BP-146 IR receiver footprint source evidence", () => {
         boardRotationDegrees: 0,
         boardRotationToleranceDegrees: 0.1,
         boardCoordinatesMm: { x: 0, y: 3.6 },
-        overlayMatch: false
+        overlayMatch: true
       },
       lens: {
         boardLensDatum: "lens-front-center-at-x2.5-y0; lens-envelope-center-x2.5-y2-radius2; optical-axis-negative-y",
         boardRotationDegrees: 0,
         boardRotationToleranceDegrees: 0.1,
         boardCoordinatesMm: { x: 2.5, y: 0 },
-        overlayMatch: false
+        overlayMatch: true
       },
       manufacturerCad: { state: "not-acquired", sha256: null, authority: "deny" },
       generatedArtwork: {
@@ -201,17 +201,26 @@ describe("BP-146 IR receiver footprint source evidence", () => {
       },
       toleranceReview: {
         packageLeadPitchToleranceMm: 0.2,
-        status: "project-review-inputs-pending-independent-CAD-review"
+        status: "reviewed-for-preorder-design"
+      },
+      preorderDesignReview: {
+        status: "accepted",
+        reviewerId: "root-final-reviewer",
+        reviewedAtUtc: "2026-08-25T07:52:08.056Z",
+        decisionRecordArtifactPath: "docs/bench-prototype-plan.md#bp-146",
+        manufacturerCadAuthority: "deny",
+        footprintReleaseAuthority: "deny",
+        fabricationAuthority: "deny",
+        physicalEvidenceAuthority: "deny"
       },
       rootReleaseCandidate: {
         state: "candidate-unapproved",
         scope: "corrected project footprint only; not a manufacturer CAD or fabrication release",
         decisionAuthority: "root-review-required",
-        rootReviewerId: null,
+        rootReviewerId: "root-final-reviewer",
         approvedAtUtc: null,
-        decisionRecordArtifactPath: null,
+        decisionRecordArtifactPath: "docs/bench-prototype-plan.md#bp-146",
         remainingDecisionInputs: [
-          "Inspect the source-controlled board-CAD rendering and confirm pin 1, lens/front-panel direction, body obstruction, and courtyard against Vishay drawing 6.550-5263.01-4.",
           "Select the fabricator and stackup, then confirm finished drill, annular ring, pad, mask, paste, courtyard, and DRC against that fabricator's published capability.",
           "Review the final board outputs, including fabrication drawing, drill file, copper, solder-mask, silkscreen, assembly, and courtyard layers, with the corrected project footprint at 1:1 scale.",
           "Record panel material, thickness, lens-to-panel distance, required viewing angle, and the calculated Vishay window aperture; complete the calibrated physical front-panel coupon.",
@@ -233,8 +242,8 @@ describe("BP-146 IR receiver footprint source evidence", () => {
         generator: "deterministic-svg-overlay-generator",
         generatorVersion: "2.1.0",
         sha256: "72B78D44DE5B70E527BD7555B3BAD89BDED4A8A158F1A4F71B10F92405853DB5",
-        reviewedBy: null,
-        reviewStatus: "pending"
+        reviewedBy: "root-final-reviewer",
+        reviewStatus: "reviewed-preorder-design"
       },
       {
         kind: "package-drawing-vs-project-assembly-overlay",
@@ -244,8 +253,8 @@ describe("BP-146 IR receiver footprint source evidence", () => {
         generator: "deterministic-svg-overlay-generator",
         generatorVersion: "2.1.0",
         sha256: "AD5CB0119E64E688D6597CB13AAD1C41835F01AA1FBA72D9B2698856CD4CDA8A",
-        reviewedBy: null,
-        reviewStatus: "pending"
+        reviewedBy: "root-final-reviewer",
+        reviewStatus: "reviewed-preorder-design"
       }
     ])
   })
@@ -387,6 +396,7 @@ describe("BP-146 IR receiver footprint source evidence", () => {
       expect(contents).toContain(marker)
     }
     expect(benchPrototypeIrReceiverFootprintEvidence.manufacturerCad.state).toBe("not-acquired")
+    expect(benchPrototypeIrReceiverFootprintEvidence.acceptance.preorderDesignAccepted).toBe(true)
     expect(benchPrototypeIrReceiverFootprintEvidence.acceptance.manufacturerCadReleased).toBe(false)
   })
 
@@ -398,7 +408,7 @@ describe("BP-146 IR receiver footprint source evidence", () => {
       expect(createHash("sha256").update(bytes).digest("hex").toUpperCase()).toBe(overlay.sha256)
       expect(bytes.toString("utf8")).toContain("scale 1:1")
       expect(bytes.toString("utf8")).toContain(`${BP146_OVERLAY_GENERATOR} ${BP146_OVERLAY_GENERATOR_VERSION}`)
-      expect(overlay.reviewStatus).toBe("pending")
+      expect(overlay.reviewStatus).toBe("reviewed-preorder-design")
     }
     const footprintSvg = readFileSync(
       new URL("docs/evidence/bp-146/tsop38438-project-footprint-overlay.svg", packageRoot),

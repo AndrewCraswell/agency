@@ -147,8 +147,12 @@ and
 The first overlays the board-plane package projection, through-hole geometry,
 and courtyard; the second adds the body/lens obstruction, lens datum, and the
 project 3 mm radial copper/component rule.
-Both remain `reviewStatus: pending`, with manufacturer-CAD authority, artwork
-release authority, physical evidence, and fabrication authority still denied.
+Root independently reviewed both overlays against Vishay drawing
+`6.550-5263.01-4` on 25 August 2026. Their status is
+`reviewed-preorder-design`; the review confirms the lead row, pin 1, lens and
+front-panel direction, body/lens obstruction, and project courtyard. It does
+not grant manufacturer-CAD authority, artwork release authority, physical
+evidence, or fabrication authority.
 
 The executable selection also binds the candidate geometry to the
 source-controlled tscircuit artifact
@@ -183,12 +187,10 @@ The drawing-derived project geometry remains separate: it is based on drawing
 inputs. It does not become manufacturer CAD because an external ECAD path
 exists.
 
-The corrected project footprint is a root-release candidate only. It remains
-unapproved, unreleased, and fabrication-denied until a root reviewer records
-all of these decision inputs:
+The corrected project footprint is accepted as the BP-146 pre-order design
+input only. The final root-release candidate remains unapproved, unreleased,
+and fabrication-denied until all of these remaining decision inputs exist:
 
-- The 1:1 board-CAD review must confirm pin 1, lens and front-panel direction,
-  assembly obstruction, and courtyard against the Vishay drawing.
 - The selected fabricator and stackup must support the finished drill, annular
   ring, pad, mask, paste, courtyard, and DRC results.
 - The final fabrication, drill, copper, solder-mask, silkscreen, assembly, and

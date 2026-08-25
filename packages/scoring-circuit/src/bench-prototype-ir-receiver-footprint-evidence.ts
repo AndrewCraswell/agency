@@ -440,7 +440,7 @@ const definition = {
       boardRotationDegrees: 0,
       boardRotationToleranceDegrees: 0.1,
       boardCoordinatesMm: { x: 0, y: 3.6 },
-      overlayMatch: false
+      overlayMatch: true
     },
     lens: {
       sourceDatum: "front optical window is the y=0 lens face; optical axis points toward negative y",
@@ -448,7 +448,7 @@ const definition = {
       boardRotationDegrees: 0,
       boardRotationToleranceDegrees: 0.1,
       boardCoordinatesMm: { x: 2.5, y: 0 },
-      overlayMatch: false
+      overlayMatch: true
     },
     manufacturerCad: {
       state: "not-acquired",
@@ -474,8 +474,8 @@ const definition = {
         generator: "deterministic-svg-overlay-generator",
         generatorVersion: "2.1.0",
         sha256: "72B78D44DE5B70E527BD7555B3BAD89BDED4A8A158F1A4F71B10F92405853DB5",
-        reviewedBy: null,
-        reviewStatus: "pending"
+        reviewedBy: "root-final-reviewer",
+        reviewStatus: "reviewed-preorder-design"
       },
       {
         kind: "package-drawing-vs-project-assembly-overlay",
@@ -485,8 +485,8 @@ const definition = {
         generator: "deterministic-svg-overlay-generator",
         generatorVersion: "2.1.0",
         sha256: "AD5CB0119E64E688D6597CB13AAD1C41835F01AA1FBA72D9B2698856CD4CDA8A",
-        reviewedBy: null,
-        reviewStatus: "pending"
+        reviewedBy: "root-final-reviewer",
+        reviewStatus: "reviewed-preorder-design"
       }
     ],
     toleranceReview: {
@@ -495,17 +495,33 @@ const definition = {
       padToleranceMm: 0.05,
       boardRotationToleranceDegrees: 0.1,
       courtyardToleranceMm: 0.1,
-      status: "project-review-inputs-pending-independent-CAD-review"
+      status: "reviewed-for-preorder-design"
+    },
+    preorderDesignReview: {
+      status: "accepted",
+      reviewerId: "root-final-reviewer",
+      reviewedAtUtc: "2026-08-25T07:52:08.056Z",
+      decisionRecordArtifactPath: "docs/bench-prototype-plan.md#bp-146",
+      scope: "drawing-derived project footprint geometry and pre-order optical interface only",
+      confirms: [
+        "pin 1 OUT is at x0 y3.6 with the three-lead row on 2.54 mm pitch",
+        "lens front datum is x2.5 y0 and the optical axis points toward negative y",
+        "body and lens obstruction geometry matches Vishay drawing 6.550-5263.01-4",
+        "project courtyard encloses the nominal body projection and copper-pad extents with 0.55 mm clearance"
+      ],
+      manufacturerCadAuthority: "deny",
+      footprintReleaseAuthority: "deny",
+      fabricationAuthority: "deny",
+      physicalEvidenceAuthority: "deny"
     },
     rootReleaseCandidate: {
       state: "candidate-unapproved",
       scope: "corrected project footprint only; not a manufacturer CAD or fabrication release",
       decisionAuthority: "root-review-required",
-      rootReviewerId: null,
+      rootReviewerId: "root-final-reviewer",
       approvedAtUtc: null,
-      decisionRecordArtifactPath: null,
+      decisionRecordArtifactPath: "docs/bench-prototype-plan.md#bp-146",
       remainingDecisionInputs: [
-        "Inspect the source-controlled board-CAD rendering and confirm pin 1, lens/front-panel direction, body obstruction, and courtyard against Vishay drawing 6.550-5263.01-4.",
         "Select the fabricator and stackup, then confirm finished drill, annular ring, pad, mask, paste, courtyard, and DRC against that fabricator's published capability.",
         "Review the final board outputs, including fabrication drawing, drill file, copper, solder-mask, silkscreen, assembly, and courtyard layers, with the corrected project footprint at 1:1 scale.",
         "Record panel material, thickness, lens-to-panel distance, required viewing angle, and the calculated Vishay window aperture; complete the calibrated physical front-panel coupon.",
@@ -643,6 +659,7 @@ const definition = {
     pinOrientationReviewed: true,
     throughHoleGeometryReviewed: true,
     opticalWindowGuidanceReviewed: true,
+    preorderDesignAccepted: true,
     manufacturerCadReleased: false,
     boardLandPatternAccepted: false,
     opticalKeepoutAccepted: false,
@@ -651,10 +668,10 @@ const definition = {
     releaseState: "deny"
   },
   review: {
-    reviewerId: "implementation-agent",
-    reviewedAtUtc: "2026-08-24T08:17:00.000Z",
-    reviewStatus: "source-review-only",
-    independentApproval: false
+    reviewerId: "root-final-reviewer",
+    reviewedAtUtc: "2026-08-25T07:52:08.056Z",
+    reviewStatus: "preorder-design-approved",
+    independentApproval: true
   }
 } as const
 
@@ -818,14 +835,14 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
     candidate.pinOne.boardRotationToleranceDegrees !== 0.1 ||
     candidate.pinOne.boardCoordinatesMm.x !== 0 ||
     candidate.pinOne.boardCoordinatesMm.y !== 3.6 ||
-    candidate.pinOne.overlayMatch ||
+    candidate.pinOne.overlayMatch !== true ||
     candidate.lens.boardLensDatum !==
       "lens-front-center-at-x2.5-y0; lens-envelope-center-x2.5-y2-radius2; optical-axis-negative-y" ||
     candidate.lens.boardRotationDegrees !== 0 ||
     candidate.lens.boardRotationToleranceDegrees !== 0.1 ||
     candidate.lens.boardCoordinatesMm.x !== 2.5 ||
     candidate.lens.boardCoordinatesMm.y !== 0 ||
-    candidate.lens.overlayMatch ||
+    candidate.lens.overlayMatch !== true ||
     candidate.manufacturerCad.state !== "not-acquired" ||
     candidate.manufacturerCad.sourceUrl !== null ||
     candidate.manufacturerCad.revision !== null ||
@@ -835,19 +852,17 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
     candidate.rootReleaseCandidate.scope !==
       "corrected project footprint only; not a manufacturer CAD or fabrication release" ||
     candidate.rootReleaseCandidate.decisionAuthority !== "root-review-required" ||
-    candidate.rootReleaseCandidate.rootReviewerId !== null ||
+    candidate.rootReleaseCandidate.rootReviewerId !== "root-final-reviewer" ||
     candidate.rootReleaseCandidate.approvedAtUtc !== null ||
-    candidate.rootReleaseCandidate.decisionRecordArtifactPath !== null ||
-    candidate.rootReleaseCandidate.remainingDecisionInputs.length !== 5 ||
+    candidate.rootReleaseCandidate.decisionRecordArtifactPath !== "docs/bench-prototype-plan.md#bp-146" ||
+    candidate.rootReleaseCandidate.remainingDecisionInputs.length !== 4 ||
     candidate.rootReleaseCandidate.remainingDecisionInputs[0] !==
-      "Inspect the source-controlled board-CAD rendering and confirm pin 1, lens/front-panel direction, body obstruction, and courtyard against Vishay drawing 6.550-5263.01-4." ||
-    candidate.rootReleaseCandidate.remainingDecisionInputs[1] !==
       "Select the fabricator and stackup, then confirm finished drill, annular ring, pad, mask, paste, courtyard, and DRC against that fabricator's published capability." ||
-    candidate.rootReleaseCandidate.remainingDecisionInputs[2] !==
+    candidate.rootReleaseCandidate.remainingDecisionInputs[1] !==
       "Review the final board outputs, including fabrication drawing, drill file, copper, solder-mask, silkscreen, assembly, and courtyard layers, with the corrected project footprint at 1:1 scale." ||
-    candidate.rootReleaseCandidate.remainingDecisionInputs[3] !==
+    candidate.rootReleaseCandidate.remainingDecisionInputs[2] !==
       "Record panel material, thickness, lens-to-panel distance, required viewing angle, and the calculated Vishay window aperture; complete the calibrated physical front-panel coupon." ||
-    candidate.rootReleaseCandidate.remainingDecisionInputs[4] !==
+    candidate.rootReleaseCandidate.remainingDecisionInputs[3] !==
       "Attach immutable evidence for range, angle, latency, flood, reset, and power-off gates, and record an independent root decision before any artwork or fabrication release." ||
     candidate.rootReleaseCandidate.accepted ||
     candidate.rootReleaseCandidate.footprintReleased ||
@@ -873,15 +888,33 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
           (artifact.kind === "package-drawing-vs-project-footprint"
             ? "72B78D44DE5B70E527BD7555B3BAD89BDED4A8A158F1A4F71B10F92405853DB5"
             : "AD5CB0119E64E688D6597CB13AAD1C41835F01AA1FBA72D9B2698856CD4CDA8A") ||
-        artifact.reviewedBy !== null ||
-        artifact.reviewStatus !== "pending"
+        artifact.reviewedBy !== "root-final-reviewer" ||
+        artifact.reviewStatus !== "reviewed-preorder-design"
     ) ||
     candidate.toleranceReview.packageLeadPitchToleranceMm !== 0.2 ||
     candidate.toleranceReview.drillToleranceMm !== 0.05 ||
     candidate.toleranceReview.padToleranceMm !== 0.05 ||
     candidate.toleranceReview.boardRotationToleranceDegrees !== 0.1 ||
     candidate.toleranceReview.courtyardToleranceMm !== 0.1 ||
-    candidate.toleranceReview.status !== "project-review-inputs-pending-independent-CAD-review" ||
+    candidate.toleranceReview.status !== "reviewed-for-preorder-design" ||
+    candidate.preorderDesignReview.status !== "accepted" ||
+    candidate.preorderDesignReview.reviewerId !== "root-final-reviewer" ||
+    candidate.preorderDesignReview.reviewedAtUtc !== "2026-08-25T07:52:08.056Z" ||
+    candidate.preorderDesignReview.decisionRecordArtifactPath !== "docs/bench-prototype-plan.md#bp-146" ||
+    candidate.preorderDesignReview.scope !==
+      "drawing-derived project footprint geometry and pre-order optical interface only" ||
+    candidate.preorderDesignReview.confirms.length !== 4 ||
+    candidate.preorderDesignReview.confirms[0] !== "pin 1 OUT is at x0 y3.6 with the three-lead row on 2.54 mm pitch" ||
+    candidate.preorderDesignReview.confirms[1] !==
+      "lens front datum is x2.5 y0 and the optical axis points toward negative y" ||
+    candidate.preorderDesignReview.confirms[2] !==
+      "body and lens obstruction geometry matches Vishay drawing 6.550-5263.01-4" ||
+    candidate.preorderDesignReview.confirms[3] !==
+      "project courtyard encloses the nominal body projection and copper-pad extents with 0.55 mm clearance" ||
+    candidate.preorderDesignReview.manufacturerCadAuthority !== "deny" ||
+    candidate.preorderDesignReview.footprintReleaseAuthority !== "deny" ||
+    candidate.preorderDesignReview.fabricationAuthority !== "deny" ||
+    candidate.preorderDesignReview.physicalEvidenceAuthority !== "deny" ||
     candidate.accepted ||
     candidate.fabricationAuthority !== "deny" ||
     evidence.opticalCouponReviewProcedure.state !== "not-run" ||
@@ -964,13 +997,17 @@ export function validateBenchPrototypeIrReceiverFootprintEvidence(value: unknown
     evidence.manufacturerCad.sha256 !== null ||
     evidence.manufacturerCad.availabilityAudit.manufacturerCadArtifactRetained ||
     evidence.manufacturerCad.availabilityAudit.authority !== "deny" ||
+    evidence.acceptance.preorderDesignAccepted !== true ||
     evidence.acceptance.manufacturerCadReleased ||
     evidence.acceptance.boardLandPatternAccepted ||
     evidence.acceptance.opticalKeepoutAccepted ||
     evidence.acceptance.footprintReleased ||
     evidence.acceptance.fabricationAuthorized ||
     evidence.acceptance.releaseState !== "deny" ||
-    evidence.review.independentApproval
+    evidence.review.reviewerId !== "root-final-reviewer" ||
+    evidence.review.reviewedAtUtc !== "2026-08-25T07:52:08.056Z" ||
+    evidence.review.reviewStatus !== "preorder-design-approved" ||
+    evidence.review.independentApproval !== true
   ) {
     throw new RangeError("BP-146 footprint evidence must fail closed until CAD and layout are accepted")
   }
