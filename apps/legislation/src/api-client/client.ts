@@ -329,6 +329,10 @@ export class LegislationApiClient {
     return this.#search({ body, method: "POST", path: "/api/search/supporting-materials" }, options)
   }
 
+  answerLegislativeResearchQuestion(body: ApiRequestBody, options?: ApiRequestOptions): Promise<ResourceResponse> {
+    return this.#resource({ body, method: "POST", path: "/api/research/answers" }, options)
+  }
+
   compareBillVersions(
     billId: string,
     leftDocumentId: string,

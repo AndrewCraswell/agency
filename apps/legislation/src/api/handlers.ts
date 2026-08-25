@@ -1,3 +1,4 @@
+import type { RequestIdentity } from "../auth/request-context.js"
 import type { LegislationDatabase } from "../db/database.js"
 import { assertBillRelatedParentExists, listBillRelatedBills } from "../db/queries/bill-related-read.js"
 import { listBillTextSections } from "../db/queries/bill-text-read.js"
@@ -88,6 +89,11 @@ import {
   UnavailableAddressToDistrictProvider,
   type RepresentativeLookupApi
 } from "./representative-lookup.js"
+import {
+  createResearchAnswerApiHandler,
+  createUnavailableResearchAnswerApi,
+  type ResearchAnswerApi
+} from "./research-answers.js"
 import { createResourceBatchReadRepositoryFromCanonicalReads } from "./resource-batch-read-repository.js"
 import { createResourceBatchReadApiHandler } from "./resource-batch-read-routes.js"
 import { createSessionRepository } from "./session-read-repository.js"
@@ -119,6 +125,8 @@ export function createLegislationApiHandler(
     apiBaseUrl: string
     documentDatabase?: LegislationDatabase
     documentReadApi?: DocumentReadApi
+    hasGlobalResearchPermission?: (identity: RequestIdentity | undefined) => boolean
+    researchAnswerApi?: ResearchAnswerApi
     subscriptionMutationExecutor?: SubscriptionMutationExecutor
     subscriptionRepository?: SubscriptionRepository
     webhookMutationExecutor?: SubscriptionMutationExecutor
@@ -316,6 +324,9 @@ export function createLegislationApiHandler(
     createUniversalSearchApiHandler(
       createProductionUniversalSearchApi(queryService, documentDatabase, options.apiBaseUrl)
     ),
+    createResearchAnswerApiHandler(options.researchAnswerApi ?? createUnavailableResearchAnswerApi(), {
+      hasGlobalResearchPermission: options.hasGlobalResearchPermission
+    }),
     ...(options.subscriptionRepository === undefined
       ? []
       : (() => {

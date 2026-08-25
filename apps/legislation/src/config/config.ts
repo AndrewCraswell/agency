@@ -64,7 +64,8 @@ const configSchema = z
     }),
     model: z.object({
       apiKey: optionalSecret,
-      baseUrl: z.url({ protocol: /^https$/ })
+      baseUrl: z.url({ protocol: /^https$/ }),
+      researchAnswerModel: optionalSecret
     }),
     observability: z.object({
       langfuseBaseUrl: z.url({ protocol: /^https$/ }),
@@ -215,7 +216,8 @@ export function loadConfig(environment: NodeJS.ProcessEnv = process.env): Legisl
     logging: { level: environment.LOG_LEVEL ?? "info" },
     model: {
       apiKey: environment.OPENROUTER_API_KEY,
-      baseUrl: environment.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1"
+      baseUrl: environment.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1",
+      researchAnswerModel: environment.RESEARCH_ANSWER_MODEL
     },
     observability: {
       langfuseBaseUrl: environment.LANGFUSE_BASE_URL ?? "https://cloud.langfuse.com",

@@ -6,6 +6,11 @@ import { Command } from "commander"
 import { createLegislationApiHandler } from "../api/handlers.js"
 import { createRepresentativeLookupApi } from "../api/representative-lookup.js"
 import {
+  createCanonicalResearchEvidenceRetriever,
+  createOpenRouterResearchAnswerGenerator,
+  createResearchAnswerService
+} from "../api/research-answers.js"
+import {
   createAes256GcmIdempotencyCipher,
   PostgresSubscriptionRepository,
   SubscriptionIdempotencyTransaction
@@ -356,6 +361,13 @@ async function serve() {
             })
           })
         )
+  const researchAnswerApi =
+    retrievalClient === undefined
+      ? undefined
+      : createResearchAnswerService(
+          createCanonicalResearchEvidenceRetriever(queryService, config.server.publicApiBaseUrl),
+          createOpenRouterResearchAnswerGenerator(retrievalClient, config.model.researchAnswerModel)
+        )
   const mcp = createLegislationMcpHandler(queryService, logger, telemetry)
   const apiAuthenticate =
     config.auth.mode === "workos"
@@ -383,6 +395,7 @@ async function serve() {
       apiBaseUrl: config.server.publicApiBaseUrl,
       documentDatabase: database,
       ...(representativeLookupApi === undefined ? {} : { representativeLookupApi }),
+      researchAnswerApi,
       ...(config.security.idempotencyEncryptionKey === undefined
         ? {}
         : {

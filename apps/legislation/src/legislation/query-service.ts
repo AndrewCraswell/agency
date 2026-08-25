@@ -487,14 +487,17 @@ export interface AmendmentSearchInput {
 
 export interface DocumentBackedAmendment {
   billId: string
+  createdAt: Date
   documentId: string
   id: string
   jurisdictionId: string
   printedIdentifier: string
   recordType: "document"
+  sourceUpdatedAt: Date | null
   sourceUrl: string
   submittedDate: null | string
   title: string
+  updatedAt: Date
 }
 
 type AmendmentSearchItem =
@@ -504,6 +507,10 @@ type AmendmentSearchItem =
 interface AmendmentSearchResult {
   items: AmendmentSearchItem[]
   nextCursor?: string
+  search?: Readonly<{
+    isReranked: false
+    models: readonly Readonly<{ model: string; purpose: "embedding" }>[]
+  }>
   truncated: boolean
   warnings: string[]
 }
@@ -524,14 +531,17 @@ export function projectDocumentBackedAmendment(
 ): DocumentBackedAmendment {
   return {
     billId: document.billId,
+    createdAt: document.createdAt,
     documentId: document.id,
     id: documentBackedAmendmentId(document.id),
     jurisdictionId,
     printedIdentifier: document.title,
     recordType: "document",
+    sourceUpdatedAt: null,
     sourceUrl: document.sourceUrl,
     submittedDate: document.documentDate,
-    title: document.title
+    title: document.title,
+    updatedAt: document.updatedAt
   }
 }
 
@@ -1840,11 +1850,11 @@ export class LegislationQueryService {
       const limit = Math.min(Math.max(input.limit ?? CHILD_LIMIT, 1), CHILD_LIMIT)
       const offset = decodeOffset(input.cursor)
       const candidateLimit = embeddingQueryRouteFor("search_amendments").candidateLimit
-      const embedding = await this.#embedQuery("search_amendments", input.query)
+      const queryEmbedding = await this.#embedQueryWithModel("search_amendments", input.query)
       const [structuredRows, documentRows] = await Promise.all([
         semanticStructuredAmendmentSearch(this.#database, {
           billId: input.billId,
-          embedding,
+          embedding: queryEmbedding.embedding,
           jurisdictionId: input.jurisdictionId,
           limit: candidateLimit,
           sponsorPersonId: input.sponsorPersonId
@@ -1852,7 +1862,7 @@ export class LegislationQueryService {
         input.sponsorPersonId === undefined
           ? semanticDocumentAmendmentSearch(this.#database, {
               billId: input.billId,
-              embedding,
+              embedding: queryEmbedding.embedding,
               jurisdictionId: input.jurisdictionId,
               limit: candidateLimit
             })
@@ -1892,6 +1902,7 @@ export class LegislationQueryService {
       const includesDocumentBackedAmendment = page.items.some((item) => item.recordType === "document")
       return {
         ...page,
+        search: { isReranked: false, models: [{ model: queryEmbedding.model, purpose: "embedding" }] },
         warnings: [
           ...coverageWarnings(page.items.length, "amendments"),
           ...(includesDocumentBackedAmendment
@@ -2937,10 +2948,6 @@ export class LegislationQueryService {
         similarity: bill.semanticScore
       }))
     return { items: [...explicit, ...semanticItems], truncated: relations.length > limit || semantic.truncated }
-  }
-
-  async #embedQuery(tool: EmbeddingSearchTool, query: string): Promise<number[]> {
-    return (await this.#embedQueryWithModel(tool, query)).embedding
   }
 
   async #embedQueryWithModel(

@@ -54,4 +54,33 @@ describe("OpenRouter retrieval client", () => {
       client.rerank("search_amendments", "education amendment", [{ id: "a", text: "education" }])
     ).rejects.toThrow("does not have a reranking route")
   })
+
+  it("sends configured generation model and returns the provider-reported model", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: '{"answer":"Supported","claims":[]}' } }],
+          model: "openai/gpt-5-mini"
+        }),
+        { status: 200 }
+      )
+    )
+    const client = new OpenRouterRetrievalClient({ apiKey: "secret", fetch: fetchMock })
+
+    await expect(
+      client.generateResearchAnswer({
+        evidence: "[evidence:1] The bill requires publication.",
+        model: "openai/gpt-5-mini",
+        question: "What does the bill require?"
+      })
+    ).resolves.toEqual({ content: '{"answer":"Supported","claims":[]}', model: "openai/gpt-5-mini" })
+
+    const request = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))
+    expect(request).toMatchObject({
+      model: "openai/gpt-5-mini",
+      provider: { allow_fallbacks: false, data_collection: "deny" },
+      response_format: { type: "json_object" },
+      temperature: 0
+    })
+  })
 })

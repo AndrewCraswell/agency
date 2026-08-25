@@ -45,6 +45,13 @@ describe("loadConfig", () => {
     })
   })
 
+  it("keeps the research generation model opt-in", () => {
+    expect(loadConfig({}).model.researchAnswerModel).toBeUndefined()
+    expect(loadConfig({ RESEARCH_ANSWER_MODEL: "openai/gpt-5-mini" }).model.researchAnswerModel).toBe(
+      "openai/gpt-5-mini"
+    )
+  })
+
   it("parses configured values", () => {
     const config = loadConfig({
       AUTH_MODE: "workos",
