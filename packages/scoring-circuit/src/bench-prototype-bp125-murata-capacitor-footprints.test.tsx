@@ -4,6 +4,7 @@ import type { ReactElement } from "react"
 import { describe, expect, it } from "vitest"
 import {
   benchPrototypeBp125MurataCapacitorFootprintGeometries,
+  benchPrototypeBp125MurataCapacitorReviewBindings,
   benchPrototypeBp125MurataCapacitorFootprintNotes,
   BenchPrototypeBp125Murata0603CandidateFootprint,
   BenchPrototypeBp125Murata0805CandidateFootprint,
@@ -126,6 +127,20 @@ function upstreamSelectionHash() {
     .toUpperCase()
 }
 
+function mutableGeometryGraph() {
+  return structuredClone(benchPrototypeBp125MurataCapacitorFootprintGeometries)
+}
+
+function graphObjects(value: unknown, seen = new Set<object>()): Set<object> {
+  if (typeof value !== "object" || value === null || seen.has(value)) return seen
+  seen.add(value)
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key)
+    if (descriptor !== undefined && "value" in descriptor) graphObjects(descriptor.value, seen)
+  }
+  return seen
+}
+
 describe("BP-125 Murata MLCC candidate footprints", () => {
   it("binds every selected BP-125 Murata capacitor to exactly one package candidate without accepting it", () => {
     expect(benchPrototypeBp125MurataCapacitorFootprintGeometries).toMatchObject({
@@ -169,7 +184,7 @@ describe("BP-125 Murata MLCC candidate footprints", () => {
         selectedMpnMapping: {
           sourcePath: "packages/scoring-circuit/src/bench-prototype-processor-support.ts",
           baselineCommit: "7a3566b",
-          currentSourceSha256: "725263CDCAA58A157512204E65177839B9512C92AD4E1A4AAB8CBFA64E6BD200",
+          currentSourceSha256: "6A0CEAD8A893BA61D4C6FC7D40B6374E1E8EE783BF66B7951AE856110F8A2D20",
           disposition: "fixed-upstream-selection"
         },
         reflowLandPattern: {
@@ -215,7 +230,40 @@ describe("BP-125 Murata MLCC candidate footprints", () => {
       "GCM32ER71E106KA57L",
       "GCM32EC71A476KE02L"
     ])
+    expect(benchPrototypeBp125MurataCapacitorReviewBindings).toHaveLength(12)
+    expect(
+      benchPrototypeBp125MurataCapacitorReviewBindings.map(({ manufacturerPartNumber, reference }) => [
+        manufacturerPartNumber,
+        reference
+      ])
+    ).toEqual([
+      ["GCM188R71H103KA37D", "C_STM_VDDA_HF"],
+      ["GCM188R71H104KA57D", "C_STM_VDD16"],
+      ["GCM188R71H104KA57D", "C_STM_VDD32"],
+      ["GCM188R71H104KA57D", "C_STM_VDD48"],
+      ["GCM188R71H104KA57D", "C_STM_VDD64"],
+      ["GCM188R71H104KA57D", "C_STM_VREF_HF"],
+      ["GCM188R71H104KA57D", "C_STM_VBAT"],
+      ["GCM188R71H104KA57D", "C_ESP_3V3_HF"],
+      ["GCM21BR71E225KA73L", "C_STM_VDDA_BULK"],
+      ["GCM21BR71E225KA73L", "C_STM_VREF_BULK"],
+      ["GCM32ER71E106KA57L", "C_STM_3V3_BULK"],
+      ["GCM32EC71A476KE02L", "C_ESP_3V3_BULK"]
+    ])
+    expect(
+      benchPrototypeBp125MurataCapacitorReviewBindings.every(
+        (binding) => binding.footprintEvidenceState === "not-started"
+      )
+    ).toBe(true)
+    expect(
+      benchPrototypeBp125MurataCapacitorReviewBindings.every(
+        (binding) => binding.landGuidanceScope === "common-gc-family-package-code"
+      )
+    ).toBe(true)
     expect(benchPrototypeBp125MurataCapacitorFootprintNotes.candidateSourceNote).toContain("no entry asserts exact-MPN")
+    expect(benchPrototypeBp125MurataCapacitorFootprintNotes.candidateSourceNote).toContain(
+      "exactly 12 BP-032 references"
+    )
   })
 
   it.each([
@@ -345,7 +393,95 @@ describe("BP-125 Murata MLCC candidate footprints", () => {
     }
   })
 
-  it("rejects selection and courtyard drift before an artifact could be reused", () => {
+  it("keeps the public geometry and binding graphs recursively frozen and independent", () => {
+    const geometryObjects = graphObjects(benchPrototypeBp125MurataCapacitorFootprintGeometries)
+    const bindingObjects = graphObjects(benchPrototypeBp125MurataCapacitorReviewBindings)
+
+    for (const value of [...geometryObjects, ...bindingObjects]) expect(Object.isFrozen(value)).toBe(true)
+    for (const value of bindingObjects) expect(geometryObjects.has(value)).toBe(false)
+    expect(benchPrototypeBp125MurataCapacitorReviewBindings).not.toBe(
+      benchPrototypeBp125MurataCapacitorFootprintGeometries
+    )
+    expect(() =>
+      Object.defineProperty(benchPrototypeBp125MurataCapacitorFootprintGeometries, "unexpected", {
+        value: true
+      })
+    ).toThrow()
+    expect(() =>
+      Object.defineProperty(benchPrototypeBp125MurataCapacitorReviewBindings[0], "unexpected", {
+        value: true
+      })
+    ).toThrow()
+    expect(bp125MurataCapacitorFootprintIntegrityErrors()).toEqual([])
+  })
+
+  it.each([
+    [
+      "accessors",
+      (graph: ReturnType<typeof mutableGeometryGraph>) => {
+        Object.defineProperty(graph["0603-1608m"], "package", {
+          configurable: true,
+          enumerable: true,
+          get: () => "0603 (1608M)"
+        })
+      },
+      "accessors are not permitted"
+    ],
+    [
+      "symbols and hidden fields",
+      (graph: ReturnType<typeof mutableGeometryGraph>) => {
+        Object.defineProperty(graph["0603-1608m"], Symbol("hidden"), { value: true })
+      },
+      "unexpected or hidden field"
+    ],
+    [
+      "sparse arrays",
+      (graph: ReturnType<typeof mutableGeometryGraph>) => {
+        Reflect.deleteProperty(graph["0603-1608m"].appliesTo, "0")
+      },
+      "missing field or sparse array entry"
+    ],
+    [
+      "prototypes",
+      (graph: ReturnType<typeof mutableGeometryGraph>) => {
+        Object.setPrototypeOf(graph["0603-1608m"], { unexpected: true })
+      },
+      "prototype drifted"
+    ],
+    [
+      "aliases",
+      (graph: ReturnType<typeof mutableGeometryGraph>) => {
+        Reflect.set(graph, "0805-2012m", graph["0603-1608m"])
+      },
+      "actual graph aliases or cycles"
+    ],
+    [
+      "cycles",
+      (graph: ReturnType<typeof mutableGeometryGraph>) => {
+        Reflect.set(graph["0603-1608m"].appliesTo[0], "references", graph)
+      },
+      "actual graph aliases or cycles"
+    ]
+  ] as const)("fails closed on %s in the candidate graph", (_name, mutate, expectedError) => {
+    const graph = mutableGeometryGraph()
+    mutate(graph)
+    const errors = bp125MurataCapacitorFootprintIntegrityErrors(graph)
+    expect(errors).toEqual(expect.arrayContaining([expect.stringContaining(expectedError)]))
+  })
+
+  it("fails closed when a candidate graph proxy traps inspection", () => {
+    const proxy = new Proxy(mutableGeometryGraph(), {
+      ownKeys: () => {
+        throw new Error("inspection trap")
+      }
+    })
+    const errors = bp125MurataCapacitorFootprintIntegrityErrors(
+      proxy as unknown as typeof benchPrototypeBp125MurataCapacitorFootprintGeometries
+    )
+    expect(errors).toEqual(expect.arrayContaining([expect.stringContaining("proxies are not permitted")]))
+  })
+
+  it("rejects selection, source, gate, and courtyard drift before an artifact could be reused", () => {
     expect(bp125MurataCapacitorFootprintIntegrityErrors()).toEqual([])
 
     const packageDrift = {
@@ -390,6 +526,58 @@ describe("BP-125 Murata MLCC candidate footprints", () => {
     }
     expect(bp125MurataCapacitorFootprintIntegrityErrors(courtyardDrift)).toContain(
       "1210-3225m courtyard width does not enclose copper/body plus its stated clearance"
+    )
+
+    const referenceDrift = {
+      ...benchPrototypeBp125MurataCapacitorFootprintGeometries,
+      "0603-1608m": {
+        ...benchPrototypeBp125MurataCapacitorFootprintGeometries["0603-1608m"],
+        appliesTo: benchPrototypeBp125MurataCapacitorFootprintGeometries["0603-1608m"].appliesTo.map((selection) =>
+          selection.manufacturerPartNumber === "GCM188R71H104KA57D"
+            ? { ...selection, references: [...selection.references, "C_STM_VDDA_HF"] }
+            : selection
+        )
+      }
+    }
+    expect(bp125MurataCapacitorFootprintIntegrityErrors(referenceDrift)).toEqual(
+      expect.arrayContaining([
+        "GCM188R71H104KA57D reference binding does not match the frozen BP-125 rows",
+        "C_STM_VDDA_HF must map exactly once to GCM188R71H103KA37D"
+      ])
+    )
+
+    const evidenceDrift = {
+      ...benchPrototypeBp125MurataCapacitorFootprintGeometries,
+      "1210-3225m": {
+        ...benchPrototypeBp125MurataCapacitorFootprintGeometries["1210-3225m"],
+        exactMpnEvidence: benchPrototypeBp125MurataCapacitorFootprintGeometries["1210-3225m"].exactMpnEvidence.map(
+          (evidence) =>
+            evidence.manufacturerPartNumber === "GCM32ER71E106KA57L"
+              ? { ...evidence, evidenceKind: "exact-mpn-reference-sheet" as const }
+              : evidence
+        )
+      }
+    }
+    expect(bp125MurataCapacitorFootprintIntegrityErrors(evidenceDrift)).toContain(
+      "GCM32ER71E106KA57L exact retained evidence binding drifted"
+    )
+
+    const releaseBoundaryDrift = mutableGeometryGraph()
+    Reflect.set(
+      releaseBoundaryDrift["0603-1608m"].sourceApplicability.selectedMpnMapping,
+      "currentSourceSha256",
+      "stale-source-hash"
+    )
+    Reflect.set(releaseBoundaryDrift["0603-1608m"].manufacturerCad, "authority", "allow")
+    Reflect.set(releaseBoundaryDrift["0603-1608m"], "fabricationAuthority", "allow")
+    Reflect.set(releaseBoundaryDrift["0603-1608m"], "accepted", true)
+    Reflect.set(releaseBoundaryDrift["0603-1608m"].projectSelection.copperPad, "lengthMm", 0.2)
+    expect(bp125MurataCapacitorFootprintIntegrityErrors(releaseBoundaryDrift)).toEqual(
+      expect.arrayContaining([
+        "0603-1608m source applicability does not bind the retained Murata reflow guide",
+        "0603-1608m must remain review-only and denied for fabrication",
+        expect.stringContaining("value drifted")
+      ])
     )
   })
 
