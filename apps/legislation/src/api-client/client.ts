@@ -104,7 +104,6 @@ export type UniversalSearchPageResponse = z.infer<typeof universalSearchPageSche
 export type BatchResponse = z.infer<typeof batchSchema>
 export type ErrorResponse = z.infer<typeof errorResponseSchema>
 export type ErrorCategory = ErrorResponse["error"]["category"]
-export type SearchMode = SearchPageResponse["meta"]["mode"]
 export type QueryValue = boolean | number | string | readonly (boolean | number | string)[] | undefined
 export type Query = Readonly<Record<string, QueryValue>>
 export type ApiRequestBody = Readonly<Record<string, unknown>>

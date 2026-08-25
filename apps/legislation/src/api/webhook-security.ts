@@ -2,7 +2,6 @@ import { createHmac, timingSafeEqual } from "node:crypto"
 import type { LookupAddress } from "node:dns"
 import { lookup } from "node:dns/promises"
 import { isIP } from "node:net"
-import type { SubscriptionEventType } from "./subscriptions.js"
 
 export class UnsafeWebhookUrlError extends Error {
   constructor(message: string) {
@@ -122,21 +121,6 @@ export async function resolvePublicWebhookUrl(
 ): Promise<ApprovedWebhookDestination> {
   return await ApprovedWebhookDestination.resolve(rawUrl, resolve)
 }
-
-export type WebhookPayload = Readonly<{
-  data: Readonly<{
-    changeEventId: string | null
-    recordId: string
-    recordType: string
-    sourceUrls: readonly string[]
-    summary: string
-    title: string
-  }>
-  id: string
-  occurredAt: string
-  subscriptionId: string
-  type: SubscriptionEventType
-}>
 
 export type WebhookSignature = Readonly<{ keyId: string; signature: string }>
 

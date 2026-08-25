@@ -73,8 +73,6 @@
     "jose": "^6.2.8",
     "pdfjs-dist": "^6.2.108",
     "pg": "^8.22.0",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -83,8 +81,6 @@
     "@repo/typescript-config": "workspace:*",
     "@types/node": "catalog:",
     "@types/pg": "^8.20.0",
-    "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0",
     "@vitest/coverage-v8": "^4.1.9",
     "drizzle-kit": "^0.31.10",
     "oxlint": "^1.72.0",

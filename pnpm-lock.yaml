@@ -360,12 +360,6 @@ importers:
       pg:
         specifier: ^8.22.0
         version: 8.22.0
-      react:
-        specifier: 19.2.7
-        version: 19.2.7
-      react-dom:
-        specifier: 19.2.7
-        version: 19.2.7(react@19.2.7)
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -385,12 +379,6 @@ importers:
       '@types/pg':
         specifier: ^8.20.0
         version: 8.20.0
-      '@types/react':
-        specifier: ^19.2.0
-        version: 19.2.17
-      '@types/react-dom':
-        specifier: ^19.2.0
-        version: 19.2.3(@types/react@19.2.17)
       '@vitest/coverage-v8':
         specifier: ^4.1.9
         version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)

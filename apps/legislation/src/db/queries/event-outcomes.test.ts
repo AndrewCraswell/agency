@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { normalizeCanonicalEventOutcome } from "./event-outcomes.js"
+import type { LegislationDatabase } from "../database.js"
+import { normalizeCanonicalEventOutcome, upsertCanonicalEventOutcomes } from "./event-outcomes.js"
 
 function canonicalOutcome() {
   return {
@@ -23,6 +24,10 @@ function canonicalOutcome() {
 }
 
 describe("canonical event outcome ingestion", () => {
+  it("does not touch persistence for an empty canonical batch", async () => {
+    await expect(upsertCanonicalEventOutcomes({} as LegislationDatabase, [])).resolves.toBeUndefined()
+  })
+
   it("retains only explicit, complete canonical facts", () => {
     expect(normalizeCanonicalEventOutcome(canonicalOutcome())).toMatchObject({
       actionId: "action:us:119:hr:1:2",

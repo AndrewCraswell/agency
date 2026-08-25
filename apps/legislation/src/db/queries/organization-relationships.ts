@@ -260,15 +260,6 @@ export async function listOrganizationMemberships(
   }
 }
 
-export async function findOrganizationMembership(
-  database: LegislationDatabase,
-  organizationId: string,
-  membershipId: string
-): Promise<OrganizationMembershipRow | undefined> {
-  const rows = await buildOrganizationMembershipLookupQuery(database, organizationId, membershipId)
-  return rows[0]
-}
-
 export function buildOrganizationMembershipLookupQuery(
   database: LegislationDatabase,
   organizationId: string,

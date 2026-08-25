@@ -1,4 +1,4 @@
-import { and, asc, eq, gt, gte, inArray, isNull, lte, or, sql } from "drizzle-orm"
+import { and, asc, eq, gt, gte, inArray, isNull, lte, or } from "drizzle-orm"
 import type { AnyPgColumn } from "drizzle-orm/pg-core"
 import {
   projectAmendmentSummary,
@@ -7,7 +7,6 @@ import {
   projectPersonSummary,
   projectVoteDetail,
   projectVoteSummary,
-  isIsoDate,
   type AmendmentSummary,
   type BillAction,
   type BillDetail,
@@ -28,7 +27,6 @@ import type { LegislationDatabase } from "../database.js"
 import {
   amendments,
   billActions,
-  billDocuments,
   billOrganizations,
   billRelations,
   billSponsors,
@@ -55,15 +53,6 @@ export const BILL_DETAIL_READ_LIMITS = {
 } as const
 
 export type BillDetailReadInput = Readonly<{ childLimit?: number; id: string }>
-export type BillAmendmentReadInput = Readonly<{
-  billId: string
-  cursor?: string
-  limit?: number
-  recordType?: "document" | "structured"
-  status?: string
-  submittedFrom?: string
-  submittedTo?: string
-}>
 export type BillVoteReadInput = Readonly<{
   billId: string
   classification?: string
@@ -281,72 +270,6 @@ export async function getBillDetailRead(
   )
 }
 
-export async function listBillAmendmentReads(
-  database: LegislationDatabase,
-  input: BillAmendmentReadInput,
-  apiBaseUrl: string
-): Promise<BillDetailPage<AmendmentSummary>> {
-  const billId = requiredId(input.billId)
-  const limit = parseChildLimit(input.limit)
-  const scope = billAmendmentScope(input, billId)
-  const after = decodeBillAmendmentCursor(input.cursor, scope)
-  await assertBillDetailParent(database, billId)
-  const [structuredRows, documentRows] = await Promise.all([
-    input.recordType === "document"
-      ? Promise.resolve([])
-      : database
-          .select()
-          .from(amendments)
-          .where(
-            and(
-              eq(amendments.billId, billId),
-              after === undefined
-                ? undefined
-                : afterAmendmentKey(amendments.submittedDate, amendments.id, "structured", after),
-              input.status === undefined ? undefined : eq(amendments.status, input.status),
-              input.submittedFrom === undefined ? undefined : gte(amendments.submittedDate, input.submittedFrom),
-              input.submittedTo === undefined ? undefined : lte(amendments.submittedDate, input.submittedTo)
-            )
-          )
-          .orderBy(asc(amendments.submittedDate), asc(amendments.id))
-          .limit(limit + 1),
-    input.recordType === "structured" || input.status !== undefined
-      ? Promise.resolve([])
-      : database
-          .select({ document: billDocuments, jurisdictionId: bills.jurisdictionId })
-          .from(billDocuments)
-          .innerJoin(bills, eq(billDocuments.billId, bills.id))
-          .where(
-            and(
-              eq(billDocuments.billId, billId),
-              eq(billDocuments.classification, "amendment"),
-              after === undefined
-                ? undefined
-                : afterAmendmentKey(billDocuments.documentDate, billDocuments.id, "document", after),
-              input.submittedFrom === undefined ? undefined : gte(billDocuments.documentDate, input.submittedFrom),
-              input.submittedTo === undefined ? undefined : lte(billDocuments.documentDate, input.submittedTo)
-            )
-          )
-          .orderBy(asc(billDocuments.documentDate), asc(billDocuments.id))
-          .limit(limit + 1)
-  ])
-  const merged = [
-    ...structuredRows.map((amendment) => projectStructuredAmendment(amendment, apiBaseUrl)),
-    ...documentRows.map(({ document, jurisdictionId }) =>
-      projectDocumentAmendment(document, jurisdictionId, apiBaseUrl)
-    )
-  ].toSorted(amendmentOrder)
-  const items = merged.slice(0, limit)
-  const truncated = merged.length > limit
-  const lastItem = items.at(-1)
-  return {
-    items,
-    nextCursor:
-      truncated && lastItem !== undefined ? encodeBillAmendmentCursor(amendmentKey(lastItem), scope) : undefined,
-    truncated
-  }
-}
-
 export async function listBillVoteReads(
   database: LegislationDatabase,
   input: BillVoteReadInput,
@@ -398,49 +321,6 @@ async function assertBillDetailParent(database: LegislationDatabase, billId: str
   if (bill === undefined) {
     throw new LegislationError("not_found", `Bill ${billId} was not found`)
   }
-}
-
-function projectStructuredAmendment(amendment: typeof amendments.$inferSelect, apiBaseUrl: string): AmendmentSummary {
-  if (amendment.billId === null) {
-    throw incomplete("Structured amendment is no longer attached to its bill")
-  }
-  return projectAmendmentSummary(
-    {
-      billId: amendment.billId,
-      documentId: null,
-      id: amendment.id,
-      identifier: amendment.printedIdentifier,
-      jurisdictionId: amendment.jurisdictionId,
-      recordType: "structured",
-      sourceUrl: amendment.sourceUrl,
-      status: amendment.status,
-      submittedDate: amendment.submittedDate,
-      title: amendment.purpose ?? amendment.printedIdentifier
-    },
-    sourceProjectionContext(amendment, apiBaseUrl)
-  )
-}
-
-function projectDocumentAmendment(
-  document: typeof billDocuments.$inferSelect,
-  jurisdictionId: string,
-  apiBaseUrl: string
-): AmendmentSummary {
-  return projectAmendmentSummary(
-    {
-      billId: document.billId,
-      documentId: document.id,
-      id: `amendment:document:${document.id}`,
-      identifier: document.title,
-      jurisdictionId,
-      recordType: "document",
-      sourceUrl: document.sourceUrl,
-      status: null,
-      submittedDate: document.documentDate,
-      title: document.title
-    },
-    sourceProjectionContext(document, apiBaseUrl)
-  )
 }
 
 function parseChildLimit(value: number | undefined): number {
@@ -866,16 +746,6 @@ export type BillVoteCursorScope = Readonly<{
 type AmendmentKey = Readonly<{ id: string; recordType: "document" | "structured"; submittedDate: string | null }>
 type VoteKey = Readonly<{ heldAt: string | null; id: string }>
 
-function billAmendmentScope(input: BillAmendmentReadInput, billId: string): BillAmendmentCursorScope {
-  return {
-    billId,
-    ...(input.recordType === undefined ? {} : { recordType: input.recordType }),
-    ...(input.status === undefined ? {} : { status: input.status }),
-    ...(input.submittedFrom === undefined ? {} : { submittedFrom: input.submittedFrom }),
-    ...(input.submittedTo === undefined ? {} : { submittedTo: input.submittedTo })
-  }
-}
-
 function billVoteScope(input: BillVoteReadInput, billId: string): BillVoteCursorScope {
   return {
     billId,
@@ -891,26 +761,8 @@ function encodeBillAmendmentCursor(key: AmendmentKey, scope: BillAmendmentCursor
   return Buffer.from(JSON.stringify({ key, scope, version: 1 }), "utf8").toString("base64url")
 }
 
-export function billAmendmentContinuationCursor(amendment: AmendmentSummary, scope: BillAmendmentCursorScope): string {
-  return encodeBillAmendmentCursor(amendmentKey(amendment), scope)
-}
-
 function encodeBillVoteCursor(key: VoteKey, scope: BillVoteCursorScope): string {
   return Buffer.from(JSON.stringify({ key, scope, version: 1 }), "utf8").toString("base64url")
-}
-
-function decodeBillAmendmentCursor(
-  cursor: string | undefined,
-  scope: BillAmendmentCursorScope
-): AmendmentKey | undefined {
-  const parsed = decodeCursor(cursor, scope, "bill amendment")
-  if (parsed === undefined) {
-    return undefined
-  }
-  if (!isAmendmentKey(parsed.key)) {
-    throw new LegislationError("invalid_request", "Invalid bill amendment pagination cursor")
-  }
-  return parsed.key
 }
 
 function decodeBillVoteCursor(cursor: string | undefined, scope: BillVoteCursorScope): VoteKey | undefined {
@@ -979,42 +831,10 @@ function nullableDateOrder(left: string | null, right: string | null): number {
   return right === null ? -1 : left.localeCompare(right)
 }
 
-function afterAmendmentKey(
-  date: AnyPgColumn,
-  id: AnyPgColumn,
-  recordType: AmendmentKey["recordType"],
-  key: AmendmentKey
-) {
-  const tie = amendmentTieCondition(id, recordType, key)
-  return key.submittedDate === null
-    ? and(isNull(date), tie)
-    : or(isNull(date), gt(date, key.submittedDate), and(eq(date, key.submittedDate), tie))
-}
-
-function amendmentTieCondition(id: AnyPgColumn, recordType: AmendmentKey["recordType"], key: AmendmentKey) {
-  if (recordType > key.recordType) {
-    return sql`true`
-  }
-  return recordType === key.recordType ? gt(id, key.id) : sql`false`
-}
-
 function afterVoteKey(date: AnyPgColumn, id: AnyPgColumn, key: VoteKey) {
   return key.heldAt === null
     ? and(isNull(date), gt(id, key.id))
     : or(isNull(date), gt(date, new Date(key.heldAt)), and(eq(date, new Date(key.heldAt)), gt(id, key.id)))
-}
-
-function isAmendmentKey(value: unknown): value is AmendmentKey {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "id" in value &&
-    "recordType" in value &&
-    "submittedDate" in value &&
-    typeof value.id === "string" &&
-    (value.recordType === "document" || value.recordType === "structured") &&
-    (value.submittedDate === null || isIsoDate(value.submittedDate))
-  )
 }
 
 function isVoteKey(value: unknown): value is VoteKey {

@@ -181,18 +181,6 @@ export function queryOptionalDate(url: URL, name: string): Date | undefined {
   return parseRfc3339Timestamp(value, name)
 }
 
-export function queryOptionalDateOrTimestamp(url: URL, name: string): Date | undefined {
-  const value = querySingleValue(url, name)
-  if (value === undefined) {
-    return undefined
-  }
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    const date = parseIsoDate(value, name)
-    return new Date(`${date}T00:00:00.000Z`)
-  }
-  return parseRfc3339Timestamp(value, name, "an ISO date or RFC 3339 timestamp")
-}
-
 export function queryOptionalIsoDate(url: URL, name: string): string | undefined {
   const value = querySingleValue(url, name)
   return value === undefined ? undefined : parseIsoDate(value, name)
@@ -276,14 +264,6 @@ function querySingleValue(url: URL, name: string): string | undefined {
   return values[0]?.trim() ?? ""
 }
 
-export function queryRepeatedStrings(url: URL, name: string): string[] | undefined {
-  const values = url.searchParams
-    .getAll(name)
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0)
-  return values.length === 0 ? undefined : [...new Set(values)]
-}
-
 export function assertAllowedQueryParameters(url: URL, allowed: readonly string[]): void {
   const allowedParameters = new Set(allowed)
   for (const name of url.searchParams.keys()) {
@@ -316,19 +296,6 @@ export async function readJsonBody(request: IncomingMessage, maximumBytes = 1_04
     }
     throw new LegislationError("invalid_request", "Request body must be valid JSON")
   }
-}
-
-export function stringArrayBody(body: JsonRecord, name: string, maximum = 25): string[] {
-  const value = body[name]
-  if (
-    !Array.isArray(value) ||
-    value.length < 1 ||
-    value.length > maximum ||
-    value.some((item) => typeof item !== "string" || item.trim().length === 0)
-  ) {
-    throw new LegislationError("invalid_request", `${name} must contain between 1 and ${maximum} non-empty IDs`)
-  }
-  return [...new Set(value.map((item) => item.trim()))]
 }
 
 function statusForError(category: LegislationError["category"] | "internal"): number {
