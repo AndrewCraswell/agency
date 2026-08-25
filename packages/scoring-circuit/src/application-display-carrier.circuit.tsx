@@ -1,6 +1,44 @@
 import { applicationDisplayHub75SupportPart } from "./application-display-carrier-support.js"
+import { componentDecisions } from "./component-decisions.js"
 import { manufacturerFootprintProps } from "./manufacturer-footprint-adapter.js"
 import { isolatedInterboardPinLabels, physicalBoardContract } from "./physical-board-contract.js"
+import { powerStageFootprints } from "./power-stage-footprints.js"
+
+type ComponentDecisionCategory = (typeof componentDecisions)[number]["category"]
+
+function requiredComponentDecision(category: ComponentDecisionCategory) {
+  const component = componentDecisions.find((candidate) => candidate.category === category)
+  if (component === undefined) throw new RangeError(`Application display carrier is missing ${category} selection`)
+  return component
+}
+
+function requiredPowerStageFootprint(mpn: string) {
+  const footprint = powerStageFootprints.find((candidate) => candidate.mpn === mpn)
+  if (footprint === undefined) throw new RangeError(`Application display carrier is missing ${mpn} footprint evidence`)
+  return footprint
+}
+
+const carrierComponents = {
+  applicationController: requiredComponentDecision("application-controller"),
+  applicationRailRegulator: requiredComponentDecision("application-rail-regulator"),
+  audioAmplifier: requiredComponentDecision("audio-amplifier"),
+  eventJournal: requiredComponentDecision("event-journal"),
+  hardwareWatchdog: requiredComponentDecision("hardware-watchdog"),
+  powerMonitor: requiredComponentDecision("power-monitor"),
+  powerSupervisor: requiredComponentDecision("power-supervisor"),
+  realTimeClock: requiredComponentDecision("real-time-clock"),
+  secureElement: requiredComponentDecision("secure-element"),
+  systemRegulator: requiredComponentDecision("system-regulator")
+}
+
+const carrierPowerStageFootprints = {
+  applicationInductor: requiredPowerStageFootprint("XGL4030-222MEC"),
+  applicationRegulator: requiredPowerStageFootprint(carrierComponents.applicationRailRegulator.mpn),
+  systemInductor: requiredPowerStageFootprint("744325330"),
+  systemOutputCapacitor: requiredPowerStageFootprint("GRM32ER71E226KE15L"),
+  systemRegulator: requiredPowerStageFootprint(carrierComponents.systemRegulator.mpn),
+  systemSenseResistor: requiredPowerStageFootprint("CRE2512-FZ-R002E-3")
+}
 
 export const hub75Signals = [
   ["HUB75_R1", "U_DISPLAY_BUFFER_A", "R1_IN", "R1_OUT", "R1"],
@@ -34,8 +72,8 @@ export default function ApplicationDisplayCarrierCircuit() {
       />
       <chip
         name="U_ESP32"
-        manufacturerPartNumber="ESP32-S3-WROOM-1U-N16R2"
-        {...manufacturerFootprintProps("ESP32-S3-WROOM-1U-N16R2")}
+        manufacturerPartNumber={carrierComponents.applicationController.mpn}
+        {...manufacturerFootprintProps(carrierComponents.applicationController.mpn)}
         footprint={[]}
         pinLabels={{
           pin1: "GND",
@@ -81,7 +119,7 @@ export default function ApplicationDisplayCarrierCircuit() {
       />
       <chip
         name="U_ESP_WATCHDOG"
-        manufacturerPartNumber="TPS3431SDRBR"
+        manufacturerPartNumber={carrierComponents.hardwareWatchdog.mpn}
         footprint="qfn8"
         pinLabels={{
           pin1: "V3_3",
@@ -96,8 +134,8 @@ export default function ApplicationDisplayCarrierCircuit() {
       />
       <chip
         name="U_ESP_SUPERVISOR"
-        manufacturerPartNumber="TPS389033DSER"
-        {...manufacturerFootprintProps("TPS389033DSER")}
+        manufacturerPartNumber={carrierComponents.powerSupervisor.mpn}
+        {...manufacturerFootprintProps(carrierComponents.powerSupervisor.mpn)}
         footprint={[]}
         pinLabels={{ pin1: "SENSE", pin2: "GND", pin3: "MR", pin4: "V3_3", pin5: "CT", pin6: "RESET" }}
       />
@@ -214,8 +252,8 @@ export default function ApplicationDisplayCarrierCircuit() {
 
       <chip
         name="U_V5_BUCK"
-        manufacturerPartNumber="TPS56A37RPAR"
-        {...manufacturerFootprintProps("TPS56A37RPAR")}
+        manufacturerPartNumber={carrierComponents.systemRegulator.mpn}
+        {...manufacturerFootprintProps(carrierPowerStageFootprints.systemRegulator.mpn)}
         footprint={[]}
         pinLabels={{
           pin1: "EN",
@@ -232,22 +270,22 @@ export default function ApplicationDisplayCarrierCircuit() {
       />
       <chip
         name="L_V5_BUCK"
-        manufacturerPartNumber="744325330"
-        {...manufacturerFootprintProps("744325330")}
+        manufacturerPartNumber={carrierPowerStageFootprints.systemInductor.mpn}
+        {...manufacturerFootprintProps(carrierPowerStageFootprints.systemInductor.mpn)}
         footprint={[]}
         pinLabels={{ pin1: "SW", pin2: "V5_SENSE_IN" }}
       />
       <chip
         name="R_V5_SENSE"
-        manufacturerPartNumber="CRE2512-FZ-R002E-3"
-        {...manufacturerFootprintProps("CRE2512-FZ-R002E-3")}
+        manufacturerPartNumber={carrierPowerStageFootprints.systemSenseResistor.mpn}
+        {...manufacturerFootprintProps(carrierPowerStageFootprints.systemSenseResistor.mpn)}
         footprint={[]}
         pinLabels={{ pin1: "V5_SENSE_IN", pin2: "V5" }}
       />
       <chip
         name="U_APP_REGULATOR"
-        manufacturerPartNumber="LMR43620MSC3RPERQ1"
-        {...manufacturerFootprintProps("LMR43620MSC3RPERQ1")}
+        manufacturerPartNumber={carrierComponents.applicationRailRegulator.mpn}
+        {...manufacturerFootprintProps(carrierPowerStageFootprints.applicationRegulator.mpn)}
         footprint={[]}
         pinLabels={{
           pin1: "MODE_SYNC",
@@ -263,14 +301,14 @@ export default function ApplicationDisplayCarrierCircuit() {
       />
       <chip
         name="L_APP_REGULATOR"
-        manufacturerPartNumber="XGL4030-222MEC"
-        {...manufacturerFootprintProps("XGL4030-222MEC")}
+        manufacturerPartNumber={carrierPowerStageFootprints.applicationInductor.mpn}
+        {...manufacturerFootprintProps(carrierPowerStageFootprints.applicationInductor.mpn)}
         footprint={[]}
         pinLabels={{ pin1: "SW", pin2: "V3_3" }}
       />
       <chip
         name="U_POWER_MONITOR"
-        manufacturerPartNumber="INA238AIDGSR"
+        manufacturerPartNumber={carrierComponents.powerMonitor.mpn}
         footprint="vssop10"
         pinLabels={{ pin1: "VIN_P", pin2: "VIN_N", pin3: "GND", pin4: "SDA", pin5: "SCL", pin10: "V3_3" }}
       />
@@ -278,8 +316,8 @@ export default function ApplicationDisplayCarrierCircuit() {
       <capacitor name="C_V5_BUCK_BOOT" manufacturerPartNumber="885012206095" capacitance="100nF" footprint="0603" />
       <chip
         name="C_V5_BUCK_OUT_A"
-        manufacturerPartNumber="GRM32ER71E226KE15L"
-        {...manufacturerFootprintProps("GRM32ER71E226KE15L")}
+        manufacturerPartNumber={carrierPowerStageFootprints.systemOutputCapacitor.mpn}
+        {...manufacturerFootprintProps(carrierPowerStageFootprints.systemOutputCapacitor.mpn)}
         footprint={[]}
         pinLabels={{ pin1: "V5", pin2: "GND" }}
       />
@@ -290,7 +328,7 @@ export default function ApplicationDisplayCarrierCircuit() {
 
       <chip
         name="U_FRAM"
-        manufacturerPartNumber="CY15B104Q-LHXIT"
+        manufacturerPartNumber={carrierComponents.eventJournal.mpn}
         footprint="qfn8"
         pinLabels={{
           pin1: "CS",
@@ -307,20 +345,20 @@ export default function ApplicationDisplayCarrierCircuit() {
       <resistor name="R_FRAM_HOLD_PULLUP" resistance="10k" tolerance="1%" footprint="0603" />
       <chip
         name="U_RTC"
-        manufacturerPartNumber="RV-3028-C7"
+        manufacturerPartNumber={carrierComponents.realTimeClock.mpn}
         footprint="qfn8"
         pinLabels={{ pin1: "CLKOUT", pin2: "INT", pin3: "SCL", pin4: "SDA", pin5: "GND", pin8: "V3_3" }}
       />
       <chip
         name="U_SECURE_ELEMENT"
-        manufacturerPartNumber="STSAFE-A110"
+        manufacturerPartNumber={carrierComponents.secureElement.mpn}
         footprint="qfn8"
         pinLabels={{ pin1: "SDA", pin2: "SCL", pin3: "GND", pin4: "V3_3" }}
       />
       <chip
         name="U_AUDIO"
-        manufacturerPartNumber="TAS2505TRGERQ1"
-        {...manufacturerFootprintProps("TAS2505TRGERQ1")}
+        manufacturerPartNumber={carrierComponents.audioAmplifier.mpn}
+        {...manufacturerFootprintProps(carrierComponents.audioAmplifier.mpn)}
         footprint={[]}
         pinLabels={{
           pin1: "SPI_SEL",
