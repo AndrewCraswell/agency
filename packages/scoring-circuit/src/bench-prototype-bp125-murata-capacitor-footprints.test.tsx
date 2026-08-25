@@ -169,7 +169,7 @@ describe("BP-125 Murata MLCC candidate footprints", () => {
         selectedMpnMapping: {
           sourcePath: "packages/scoring-circuit/src/bench-prototype-processor-support.ts",
           baselineCommit: "7a3566b",
-          currentSourceSha256: "DE4FCC8DE1FE349EF529F320D864C6D33D819874BB7E14254094469355430AB2",
+          currentSourceSha256: "725263CDCAA58A157512204E65177839B9512C92AD4E1A4AAB8CBFA64E6BD200",
           disposition: "fixed-upstream-selection"
         },
         reflowLandPattern: {

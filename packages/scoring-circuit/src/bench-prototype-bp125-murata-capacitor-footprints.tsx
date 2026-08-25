@@ -46,7 +46,7 @@ type CandidateFootprintGeometry = {
     readonly selectedMpnMapping: {
       readonly sourcePath: string
       readonly baselineCommit: "7a3566b"
-      readonly currentSourceSha256: "DE4FCC8DE1FE349EF529F320D864C6D33D819874BB7E14254094469355430AB2"
+      readonly currentSourceSha256: "725263CDCAA58A157512204E65177839B9512C92AD4E1A4AAB8CBFA64E6BD200"
       readonly disposition: "fixed-upstream-selection"
     }
     readonly packageBody: {
@@ -127,7 +127,7 @@ const officialCadDataUrl = "https://www.murata.com/en-global/tool/data/caddata"
 const selectionSource = {
   sourcePath: "packages/scoring-circuit/src/bench-prototype-processor-support.ts",
   baselineCommit: "7a3566b",
-  currentSourceSha256: "DE4FCC8DE1FE349EF529F320D864C6D33D819874BB7E14254094469355430AB2",
+  currentSourceSha256: "725263CDCAA58A157512204E65177839B9512C92AD4E1A4AAB8CBFA64E6BD200",
   disposition: "fixed-upstream-selection"
 } as const
 const cadAudit = {
@@ -493,7 +493,7 @@ export function bp125MurataCapacitorFootprintIntegrityErrors(
     if (
       candidate.sourceApplicability.selectedMpnMapping.baselineCommit !== "7a3566b" ||
       candidate.sourceApplicability.selectedMpnMapping.currentSourceSha256 !==
-        "DE4FCC8DE1FE349EF529F320D864C6D33D819874BB7E14254094469355430AB2" ||
+        "725263CDCAA58A157512204E65177839B9512C92AD4E1A4AAB8CBFA64E6BD200" ||
       candidate.sourceApplicability.reflowLandPattern.sourceId !== sourceGuide.id ||
       candidate.sourceApplicability.reflowLandPattern.reviewedPage !== sourceGuide.reviewedPage
     ) {

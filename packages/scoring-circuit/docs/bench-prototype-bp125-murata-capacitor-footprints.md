@@ -16,7 +16,7 @@ as project review inputs, not released manufacturer CAD.
 The selected MPN identities below are copied from the BP-125
 processor-support contract baseline at main `7a3566b` and are bound to the
 current contract source SHA-256
-`DE4FCC8DE1FE349EF529F320D864C6D33D819874BB7E14254094469355430AB2`.
+`725263CDCAA58A157512204E65177839B9512C92AD4E1A4AAB8CBFA64E6BD200`.
 The candidate test hashes that source file and fails closed if the upstream
 selection drifts. Each MPN has retained, SHA-256-bound Murata evidence. A
 retained characteristic response supports the selected MPN's source part
