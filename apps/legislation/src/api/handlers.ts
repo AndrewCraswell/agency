@@ -33,6 +33,8 @@ import { listPeople } from "../db/queries/people-read.js"
 import { listPersonAmendments } from "../db/queries/person-amendments.js"
 import { assertPersonExists, listPersonBillActivity } from "../db/queries/person-bill-activity.js"
 import { getSupportingMaterialSectionRead } from "../db/queries/supporting-material-section-read.js"
+import { createAmendmentReadRepository } from "./amendment-read-repository.js"
+import { createAmendmentReadApiHandler } from "./amendment-read-routes.js"
 import { createBillDetailReadRepository } from "./bill-detail-read-repository.js"
 import { createBillDetailReadApiHandler } from "./bill-detail-read-routes.js"
 import { createBillTextReadApiHandler } from "./bill-text-read-routes.js"
@@ -117,6 +119,7 @@ export function createLegislationApiHandler(
     ...(documentDatabase === undefined
       ? []
       : [
+          createAmendmentReadApiHandler(createAmendmentReadRepository(documentDatabase, options.apiBaseUrl)),
           createBillDetailReadApiHandler(createBillDetailReadRepository(documentDatabase, options.apiBaseUrl)),
           createBillTextReadApiHandler(
             {

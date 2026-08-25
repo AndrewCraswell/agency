@@ -1258,6 +1258,13 @@ function projectSources(inputs: readonly [ProjectionSourceInput, ...ProjectionSo
   return [projectSource(first), ...rest.map(projectSource)]
 }
 
+/** Projects persisted source facts for a nested canonical record. */
+export function projectSourceReferences(
+  inputs: readonly [ProjectionSourceInput, ...ProjectionSourceInput[]]
+): SourceReferences {
+  return projectSources(inputs)
+}
+
 function voteCounts(input: VoteCounts): VoteCounts {
   return {
     yes: nonnegativeInteger(input.yes, "vote count yes"),

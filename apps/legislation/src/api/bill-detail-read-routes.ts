@@ -9,7 +9,6 @@ import {
   correlationId,
   queryInteger,
   queryOptionalDate,
-  queryOptionalIsoDate,
   queryOptionalString,
   readJsonBody,
   requestUrl,
@@ -72,30 +71,11 @@ export function createBillDetailReadApiHandler(repository: BillDetailReadReposit
 
 async function serveRelationshipPage(
   repository: BillDetailReadRepository,
-  relationship: Readonly<{ billId: string; collection: "amendments" | "votes" }>,
+  relationship: Readonly<{ billId: string; collection: "votes" }>,
   request: Parameters<HttpApiHandler>[0],
   response: Parameters<HttpApiHandler>[1],
   url: URL
 ): Promise<boolean> {
-  if (relationship.collection === "amendments") {
-    assertAllowedQueryParameters(url, ["cursor", "limit", "recordType", "status", "submittedFrom", "submittedTo"])
-    assertSingleNonBlankQueryValues(url, ["cursor", "limit", "recordType", "status", "submittedFrom", "submittedTo"])
-    const limit = queryInteger(url, "limit", MAX_BATCH_ITEMS, MAX_BATCH_ITEMS)
-    const submittedFrom = queryOptionalIsoDate(url, "submittedFrom")
-    const submittedTo = queryOptionalIsoDate(url, "submittedTo")
-    assertOrderedRange(submittedFrom, submittedTo, "submittedFrom", "submittedTo")
-    const page = await repository.listBillAmendments({
-      billId: relationship.billId,
-      cursor: queryOptionalString(url, "cursor"),
-      limit,
-      recordType: amendmentRecordType(queryOptionalString(url, "recordType")),
-      status: queryOptionalString(url, "status"),
-      submittedFrom,
-      submittedTo
-    })
-    sendApiJson(response, 200, apiPage(request, page, limit))
-    return true
-  }
   assertAllowedQueryParameters(url, ["cursor", "limit", "from", "to", "organizationId", "classification", "result"])
   assertSingleNonBlankQueryValues(url, ["cursor", "limit", "from", "to", "organizationId", "classification", "result"])
   const limit = queryInteger(url, "limit", MAX_BATCH_ITEMS, MAX_BATCH_ITEMS)
@@ -191,27 +171,13 @@ function billDetailPath(pathname: string): string | undefined {
   }
 }
 
-function billRelationshipPath(
-  pathname: string
-): Readonly<{ billId: string; collection: "amendments" | "votes" }> | undefined {
+function billRelationshipPath(pathname: string): Readonly<{ billId: string; collection: "votes" }> | undefined {
   const segments = pathname.split("/").filter(Boolean)
-  if (
-    segments.length !== 4 ||
-    segments[0] !== "api" ||
-    segments[1] !== "bills" ||
-    (segments[3] !== "amendments" && segments[3] !== "votes")
-  ) {
+  if (segments.length !== 4 || segments[0] !== "api" || segments[1] !== "bills" || segments[3] !== "votes") {
     return undefined
   }
   const billId = billDetailPath(`/api/bills/${segments[2] ?? ""}`)
   return billId === undefined ? undefined : { billId, collection: segments[3] }
-}
-
-function amendmentRecordType(value: string | undefined): "document" | "structured" | undefined {
-  if (value === undefined || value === "document" || value === "structured") {
-    return value
-  }
-  throw new LegislationError("invalid_request", "recordType must be document or structured")
 }
 
 function voteResult(value: string | undefined): "failed" | "other" | "passed" | undefined {

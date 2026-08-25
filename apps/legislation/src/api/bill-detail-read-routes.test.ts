@@ -1,9 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest"
-import {
-  BILL_DETAIL_READ_LIMITS,
-  billAmendmentContinuationCursor,
-  requiredVoteSourceUrl
-} from "../db/queries/bill-detail-read.js"
+import { BILL_DETAIL_READ_LIMITS, requiredVoteSourceUrl } from "../db/queries/bill-detail-read.js"
 import { LegislationError } from "../legislation/errors.js"
 import { close, createLegislationServer } from "../mcp/server.js"
 import { createLogger } from "../observability/logger.js"
@@ -24,7 +20,6 @@ async function startServer(
 ) {
   const completeRepository: BillDetailReadRepository = {
     getBillDetail: repository.getBillDetail,
-    listBillAmendments: repository.listBillAmendments ?? (async () => ({ items: [], truncated: false })),
     listBillVotes: repository.listBillVotes ?? (async () => ({ items: [], truncated: false }))
   }
   const server = createLegislationServer({ apiHandler: createBillDetailReadApiHandler(completeRepository), logger })
@@ -235,19 +230,10 @@ describe("bill detail read API handler", () => {
     expect(maximumActive).toBeLessThanOrEqual(4)
   })
 
-  it("serves non-empty bill amendment and vote continuation pages with their own cursors", async () => {
-    let amendmentInput: unknown
+  it("serves non-empty bill vote continuation pages with their own cursor", async () => {
     let voteInput: unknown
     const baseUrl = await startServer({
       getBillDetail: async ({ id }) => detail(id),
-      listBillAmendments: async (input) => {
-        amendmentInput = input
-        return {
-          items: [detail(input.billId).amendments[0]].filter((item) => item !== undefined),
-          nextCursor: "amendment-next",
-          truncated: true
-        }
-      },
       listBillVotes: async (input) => {
         voteInput = input
         return {
@@ -264,28 +250,14 @@ describe("bill detail read API handler", () => {
       }
     })
 
-    const [amendments, votes, invalid] = await Promise.all([
-      fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/amendments?limit=1&recordType=structured`),
+    const [votes, invalid] = await Promise.all([
       fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/votes?limit=1&result=passed`),
       fetch(`${baseUrl}/api/bills/bill%3Aus%3A119%3Ahr%3A1/votes?unknown=value`)
     ])
 
-    expect(amendments.status).toBe(200)
     expect(votes.status).toBe(200)
     expect(invalid.status).toBe(400)
-    expect(amendmentInput).toEqual({
-      billId: "bill:us:119:hr:1",
-      cursor: undefined,
-      limit: 1,
-      recordType: "structured",
-      status: undefined,
-      submittedFrom: undefined,
-      submittedTo: undefined
-    })
     expect(voteInput).toMatchObject({ billId: "bill:us:119:hr:1", limit: 1, result: "passed" })
-    await expect(amendments.json()).resolves.toMatchObject({
-      links: { next: expect.stringContaining("amendment-next") }
-    })
     await expect(votes.json()).resolves.toMatchObject({
       data: [{ id: "vote:1", positions: [] }],
       meta: { nextCursor: "vote-next" }
@@ -299,28 +271,14 @@ describe("bill detail read API handler", () => {
     )
   })
 
-  it("rejects repeated or blank relationship query values and inverted date ranges", async () => {
+  it("rejects repeated vote relationship values and inverted date ranges", async () => {
     const baseUrl = await startServer({ getBillDetail: async ({ id }) => detail(id) })
     const responses = await Promise.all([
       fetch(`${baseUrl}/api/bills/bill%3A1/votes?result=passed&result=failed`),
-      fetch(`${baseUrl}/api/bills/bill%3A1/amendments?status=`),
-      fetch(`${baseUrl}/api/bills/bill%3A1/amendments?submittedFrom=2026-02-02&submittedTo=2026-02-01`),
       fetch(`${baseUrl}/api/bills/bill%3A1/votes?from=2026-02-02T00%3A00%3A00Z&to=2026-02-01T00%3A00%3A00Z`)
     ])
 
-    expect(responses.map((response) => response.status)).toEqual([400, 400, 400, 400])
-  })
-
-  it("builds stable amendment continuation cursors that bind the active filters", () => {
-    const amendment = detail("bill:1").amendments[0]
-    if (amendment === undefined) {
-      throw new Error("Expected amendment fixture")
-    }
-    const defaultCursor = billAmendmentContinuationCursor(amendment, { billId: "bill:1" })
-    expect(billAmendmentContinuationCursor(amendment, { billId: "bill:1" })).toBe(defaultCursor)
-    expect(billAmendmentContinuationCursor(amendment, { billId: "bill:1", recordType: "structured" })).not.toBe(
-      defaultCursor
-    )
+    expect(responses.map((response) => response.status)).toEqual([400, 400])
   })
 
   it("rejects noncanonical paths, unsupported queries, and malformed batches", async () => {
