@@ -181,7 +181,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
   })
 
   it("maps the seven U_ESD references to the TPD4E05 review inputs without opening release authority", () => {
-    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(11)
+    expect(benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings).toHaveLength(12)
     expect(
       benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
         (mapping) => mapping.mappingId === "bp031-tpd4e05u06-dqa-project-footprint"
@@ -271,6 +271,7 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
             record.sourceBaseReference !== "C_REF_REG_HF" &&
             record.sourceBaseReference !== "J_WEAPON_FIXTURE" &&
             record.sourceBaseReference !== "R_REF_SAR" &&
+            record.sourceBaseReference !== "R_SOURCE" &&
             !["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference)
         )
         .every((record) => record.reviewEvidenceMappingId === null)
@@ -796,6 +797,59 @@ describe("BP-031 analog and weapon-fixture footprint closure", () => {
     expect(
       records.every((record) => record.reviewEvidenceMappingId === "bp031-vishay-rcwe0603-r220-footprint-evidence")
     ).toBe(true)
+    expect(records.every((record) => record.disposition === "DNP-unresolved")).toBe(true)
+  })
+
+  it("maps all seven R_SOURCE references to root-reviewed ERA3A evidence without opening release authority", () => {
+    const mapping = benchPrototypeAnalogFootprintClosure.reviewEvidenceMappings.find(
+      (candidate) => candidate.mappingId === "bp031-era3aeb2491v-project-footprint"
+    )
+    expect(mapping).toMatchObject({
+      reviewState: "root-reviewed-review-input",
+      reviewer: "root-final-reviewer",
+      artifactKind: "bp031-era3aeb2491v-project-footprint",
+      workUnit: "BP-031",
+      baseReference: "R_SOURCE",
+      sourceContract: "BP-102",
+      manufacturer: "Panasonic Industry",
+      exactMpn: "ERA3AEB2491V",
+      exactPackage: "ERA3A / 1608 (0603)",
+      affectedReferences: [
+        "R_SOURCE_1",
+        "R_SOURCE_2",
+        "R_SOURCE_3",
+        "R_SOURCE_4",
+        "R_SOURCE_5",
+        "R_SOURCE_6",
+        "R_SOURCE_7"
+      ],
+      manufacturerCad: { state: "not-acquired", availability: "not-published", authority: "deny" },
+      projectFootprint: { accepted: false, fabricationAuthority: "deny" },
+      authority: {
+        manufacturerCadImported: false,
+        independentOrientationAccepted: false,
+        projectArtworkAccepted: false,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      },
+      acceptance: {
+        exactIdentityReviewed: true,
+        manufacturerPackageEvidenceReviewed: true,
+        manufacturerLandGuidanceReviewed: true,
+        manufacturerCadImported: false,
+        independentOrientationAccepted: false,
+        projectArtworkAccepted: false,
+        fabricationAuthorized: false,
+        releaseState: "deny"
+      }
+    })
+    const records = benchPrototypeAnalogFootprintClosure.records.filter(
+      (record) => record.sourceBaseReference === "R_SOURCE"
+    )
+    expect(records).toHaveLength(7)
+    expect(records.every((record) => record.reviewEvidenceMappingId === "bp031-era3aeb2491v-project-footprint")).toBe(
+      true
+    )
     expect(records.every((record) => record.disposition === "DNP-unresolved")).toBe(true)
   })
 

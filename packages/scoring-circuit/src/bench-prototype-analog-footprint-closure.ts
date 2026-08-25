@@ -10,6 +10,10 @@
  */
 
 import {
+  benchPrototypeEra3aProjectFootprintGeometry,
+  validateBenchPrototypeEra3aProjectFootprint
+} from "./bench-prototype-era3a-project-footprint.js"
+import {
   benchPrototypeFixtureHarness,
   validateBenchPrototypeFixtureHarness
 } from "./bench-prototype-fixture-harness.js"
@@ -261,6 +265,49 @@ const tdkCRefInReviewEvidenceMappingId = "bp031-tdk-cga3e3x7r1h105k080ab-project
 const kemetCRefRegHfReviewEvidenceMappingId = "bp031-032-c0603c104k3ractu-footprint-evidence"
 const weaponFixtureReviewEvidenceMappingId = "bp031-weapon-fixture-43045-1200-footprint-evidence"
 const vishayRcweReviewEvidenceMappingId = "bp031-vishay-rcwe0603-r220-footprint-evidence"
+const era3aReviewEvidenceMappingId = "bp031-era3aeb2491v-project-footprint"
+
+function createEra3aReviewEvidenceMapping() {
+  const candidate = benchPrototypeEra3aProjectFootprintGeometry
+  return {
+    mappingId: era3aReviewEvidenceMappingId,
+    reviewState: "root-reviewed-review-input" as const,
+    reviewer: "root-final-reviewer" as const,
+    reviewedAt: "2026-08-25T14:39:00.000Z",
+    reviewScope:
+      "Exact ERA3AEB2491V identity and seven-reference binding, retained Panasonic package/product evidence, family land guidance, explicit manufacturer-CAD unavailability, and deny-state integrity. Orientation, board placement, project-artwork acceptance, release, and fabrication remain denied.",
+    artifactKind: candidate.artifactKind,
+    artifactPath: "packages/scoring-circuit/src/bench-prototype-era3a-project-footprint.tsx",
+    workUnit: candidate.workUnit,
+    baseReference: candidate.sourceBinding.canonicalSourceReference,
+    sourceContract: candidate.sourceContract,
+    manufacturer: candidate.manufacturer,
+    exactMpn: candidate.manufacturerPartNumber,
+    exactPackage: candidate.package.designation,
+    role: candidate.role,
+    affectedReferences: [...candidate.affectedReferences],
+    sources: structuredClone(candidate.sources),
+    manufacturerCad: structuredClone(candidate.manufacturerCad),
+    manufacturerLandPattern: structuredClone(candidate.manufacturerLandPattern),
+    projectSelection: structuredClone(candidate.projectSelection),
+    projectFootprint: structuredClone(candidate.projectFootprint),
+    orientation: structuredClone(candidate.orientation),
+    artwork: structuredClone(candidate.artwork),
+    authority: structuredClone(candidate.authority),
+    acceptance: {
+      exactIdentityReviewed: true as const,
+      manufacturerPackageEvidenceReviewed: true as const,
+      manufacturerLandGuidanceReviewed: true as const,
+      manufacturerCadImported: candidate.authority.manufacturerCadImported,
+      independentOrientationAccepted: candidate.authority.independentOrientationAccepted,
+      projectArtworkAccepted: candidate.authority.projectArtworkAccepted,
+      fabricationAuthorized: candidate.authority.fabricationAuthorized,
+      releaseState: candidate.releaseState
+    }
+  }
+}
+
+const era3aReviewEvidenceMapping = deepFreeze(createEra3aReviewEvidenceMapping())
 
 function createVishayRcweReviewEvidenceMapping() {
   const candidate = bp031VishayRcwe0603FootprintEvidence
@@ -1221,9 +1268,11 @@ function createCellRecord(
                       ? kemetCRefRegHfReviewEvidenceMappingId
                       : binding.baseReference === "R_REF_SAR"
                         ? vishayRcweReviewEvidenceMappingId
-                        : ["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(binding.baseReference)
-                          ? vishayCrcwReviewEvidenceMappingId
-                          : null,
+                        : binding.baseReference === "R_SOURCE"
+                          ? era3aReviewEvidenceMappingId
+                          : ["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(binding.baseReference)
+                            ? vishayCrcwReviewEvidenceMappingId
+                            : null,
     manufacturerDrawing: emptySourceEvidence(),
     manufacturerCad: emptySourceEvidence(),
     artwork: emptyArtworkEvidence(),
@@ -1418,6 +1467,7 @@ const definition = {
     tdkCRefInReviewEvidenceMapping,
     kemetCRefRegHfReviewEvidenceMapping,
     vishayRcweReviewEvidenceMapping,
+    era3aReviewEvidenceMapping,
     weaponFixtureReviewEvidenceMapping
   ],
   sharedManufacturerSources,
@@ -1495,6 +1545,9 @@ function assertUpstreamContracts(): void {
   if (validateBp031VishayRcwe0603FootprintEvidence().length !== 0) {
     throw new RangeError("BP-031 RCWE0603 reference-feed review candidate drifted")
   }
+  if (validateBenchPrototypeEra3aProjectFootprint().length !== 0) {
+    throw new RangeError("BP-031 ERA3A source-resistor review candidate drifted")
+  }
   if (!sameDataGraph(liveUpstreamSnapshot(), upstreamSnapshot)) {
     throw new RangeError("BP-030, BP-103, BP-104, M4-04, or analog source-part evidence drifted")
   }
@@ -1542,6 +1595,9 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
   const vishayRcweMapping = contract.reviewEvidenceMappings.find(
     (mapping) => mapping.mappingId === vishayRcweReviewEvidenceMappingId
   )
+  const era3aMapping = contract.reviewEvidenceMappings.find(
+    (mapping) => mapping.mappingId === era3aReviewEvidenceMappingId
+  )
   const expectedTpd4e05u06Mapping = createTpd4e05u06ReviewEvidenceMapping()
   const expectedTmux1112PwrPwMapping = createTmux1112PwrPwReviewEvidenceMapping()
   const expectedAds8881IdgsDgsMapping = createAds8881IdgsDgsReviewEvidenceMapping()
@@ -1553,6 +1609,7 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
   const expectedKemetCRefRegHfMapping = createKemetCRefRegHfReviewEvidenceMapping()
   const expectedWeaponFixtureMapping = createWeaponFixtureReviewEvidenceMapping()
   const expectedVishayRcweMapping = createVishayRcweReviewEvidenceMapping()
+  const expectedEra3aMapping = createEra3aReviewEvidenceMapping()
   const mappedTpd4e05u06Records = cellRecords.filter(
     (record) => record.reviewEvidenceMappingId === tpd4e05u06ReviewEvidenceMappingId
   )
@@ -1586,6 +1643,9 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
   const mappedVishayRcweRecords = cellRecords.filter(
     (record) => record.reviewEvidenceMappingId === vishayRcweReviewEvidenceMappingId
   )
+  const mappedEra3aRecords = cellRecords.filter(
+    (record) => record.reviewEvidenceMappingId === era3aReviewEvidenceMappingId
+  )
   if (
     cellReferenceBindings.length !== expectedCellReferenceCount ||
     cellRecords.length !== expectedReplicatedCellRecordCount ||
@@ -1606,7 +1666,7 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     contract.authority.fabricationAuthorized ||
     contract.authority.releaseState !== "deny" ||
     contract.connectorClosure.releaseState !== "deny" ||
-    contract.reviewEvidenceMappings.length !== 11 ||
+    contract.reviewEvidenceMappings.length !== 12 ||
     tpd4e05u06Mapping === undefined ||
     tmux1112PwrPwMapping === undefined ||
     ads8881IdgsDgsMapping === undefined ||
@@ -1618,6 +1678,7 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     kemetCRefRegHfMapping === undefined ||
     weaponFixtureMapping === undefined ||
     vishayRcweMapping === undefined ||
+    era3aMapping === undefined ||
     !sameDataGraph(tpd4e05u06Mapping, expectedTpd4e05u06Mapping) ||
     !sameDataGraph(tmux1112PwrPwMapping, expectedTmux1112PwrPwMapping) ||
     !sameDataGraph(ads8881IdgsDgsMapping, expectedAds8881IdgsDgsMapping) ||
@@ -1629,6 +1690,7 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     !sameDataGraph(kemetCRefRegHfMapping, expectedKemetCRefRegHfMapping) ||
     !sameDataGraph(weaponFixtureMapping, expectedWeaponFixtureMapping) ||
     !sameDataGraph(vishayRcweMapping, expectedVishayRcweMapping) ||
+    !sameDataGraph(era3aMapping, expectedEra3aMapping) ||
     mappedTpd4e05u06Records.length !== 7 ||
     mappedTmux1112PwrPwRecords.length !== 7 ||
     mappedAds8881IdgsDgsRecords.length !== 7 ||
@@ -1640,6 +1702,7 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     mappedKemetCRefRegHfRecords.length !== 7 ||
     mappedWeaponFixtureRecords.length !== 1 ||
     mappedVishayRcweRecords.length !== 7 ||
+    mappedEra3aRecords.length !== 7 ||
     !sameDataGraph(
       mappedTpd4e05u06Records.map((record) => record.reference),
       expectedTpd4e05u06Mapping.affectedReferences
@@ -1683,6 +1746,10 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     !sameDataGraph(
       mappedVishayRcweRecords.map((record) => record.reference),
       expectedVishayRcweMapping.affectedReferences
+    ) ||
+    !sameDataGraph(
+      mappedEra3aRecords.map((record) => record.reference),
+      expectedEra3aMapping.affectedReferences
     ) ||
     cellRecords.some(
       (record) =>
@@ -1730,6 +1797,11 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
     ) ||
     cellRecords.some(
       (record) =>
+        (record.sourceBaseReference === "R_SOURCE") !==
+        (record.reviewEvidenceMappingId === era3aReviewEvidenceMappingId)
+    ) ||
+    cellRecords.some(
+      (record) =>
         ["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference) !==
         (record.reviewEvidenceMappingId === vishayCrcwReviewEvidenceMappingId)
     ) ||
@@ -1744,6 +1816,7 @@ export function validateBenchPrototypeAnalogFootprintClosure(value: unknown): tr
         record.sourceBaseReference !== "C_REF_IN" &&
         record.sourceBaseReference !== "C_REF_REG_HF" &&
         record.sourceBaseReference !== "R_REF_SAR" &&
+        record.sourceBaseReference !== "R_SOURCE" &&
         record.sourceBaseReference !== "J_WEAPON_FIXTURE" &&
         !["R_ESD", "R_SOURCE_PD", "R_SAR", "R_FAULT_GUARD"].includes(record.sourceBaseReference) &&
         record.reviewEvidenceMappingId !== null
