@@ -1,5 +1,24 @@
 import { describe, expect, it } from "vitest"
+import { isOrganizationCivicFoundationComplete } from "../civic-foundation.js"
 import { normalizeOpenStatesCommittees, normalizeOpenStatesPeople } from "./entities.js"
+
+function organizationFoundationComplete(
+  row: ReturnType<typeof normalizeOpenStatesCommittees>["organizations"][number]
+): boolean {
+  return isOrganizationCivicFoundationComplete({
+    chamber: row.chamber ?? null,
+    classification: row.classification ?? null,
+    isActive: row.isActive ?? null,
+    name: row.name,
+    parentOrganizationId: row.parentOrganizationId ?? null,
+    provenanceComplete: row.provenanceComplete ?? false,
+    sourceIsOfficial: row.sourceIsOfficial ?? null,
+    sourceProvider: row.sourceProvider ?? null,
+    sourceRetrievedAt: row.sourceRetrievedAt ?? null,
+    sourceUrl: row.sourceUrl ?? null,
+    upstreamIds: row.upstreamIds ?? {}
+  })
+}
 
 const context = { jurisdictionCode: "ak", retrievedAt: new Date("2026-08-24T12:00:00.000Z") }
 
@@ -209,5 +228,57 @@ describe("Open States entity normalization", () => {
 
     expect(child).toMatchObject({ parentOrganizationId: "organization:openstates:ocd-organization-parent" })
     expect(child?.upstreamIds).not.toHaveProperty("openstatesParent")
+  })
+
+  it("persists only source-supplied organization detail facts and relationship completeness", () => {
+    const result = normalizeOpenStatesCommittees(
+      [
+        {
+          classification: "committee",
+          contact: { email: "committee@example.test", phone: "555-0100" },
+          description: "Reviews public safety proposals.",
+          id: "ocd-organization/detailed",
+          memberships: [],
+          name: "Public Safety",
+          sources: [{ url: "https://v3.openstates.org/organizations/ocd-organization/detailed" }],
+          terms_of_reference: "Standing rules section 4.",
+          website_url: "https://legislature.example.test/committees/public-safety"
+        },
+        {
+          classification: "committee",
+          id: "ocd-organization/summary-only",
+          links: [{ note: "committee listing", url: "https://legislature.example.test/committees/summary-only" }],
+          memberships: [],
+          name: "Summary only"
+        }
+      ],
+      context
+    )
+
+    const detailed = result.organizations.find((organization) => organization.sourceId === "ocd-organization/detailed")
+    const summaryOnly = result.organizations.find(
+      (organization) => organization.sourceId === "ocd-organization/summary-only"
+    )
+
+    expect(detailed).toMatchObject({
+      childRelationsComplete: true,
+      description: "Reviews public safety proposals.",
+      detailFactsComplete: true,
+      membershipRelationsComplete: true,
+      publicContactAddress: null,
+      publicContactEmail: "committee@example.test",
+      publicContactPhone: "555-0100",
+      termsOfReference: "Standing rules section 4.",
+      websiteUrl: "https://legislature.example.test/committees/public-safety"
+    })
+    expect(summaryOnly).toMatchObject({
+      detailFactsComplete: false,
+      membershipRelationsComplete: true,
+      websiteUrl: null
+    })
+    expect(detailed).toBeDefined()
+    expect(summaryOnly).toBeDefined()
+    expect(organizationFoundationComplete(detailed!)).toBe(true)
+    expect(organizationFoundationComplete(summaryOnly!)).toBe(false)
   })
 })

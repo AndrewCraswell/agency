@@ -19,8 +19,12 @@ import {
 import { canonicalChamberSchema, canonicalOrganizationClassificationSchema } from "../civic-foundation.js"
 
 const optionalString = z.preprocess(
-  (value) => (typeof value === "string" && value.trim().length === 0 ? undefined : value),
+  (value) => (value === null || (typeof value === "string" && value.trim().length === 0) ? undefined : value),
   z.string().trim().min(1).optional()
+)
+const optionalHttpsUrl = z.preprocess(
+  (value) => (value === null || (typeof value === "string" && value.trim().length === 0) ? undefined : value),
+  z.url({ protocol: /^https$/ }).optional()
 )
 const sourceSchema = z.object({ url: z.string().trim().min(1) }).passthrough()
 const externalIdentifierSchema = z
@@ -31,6 +35,7 @@ const externalIdentifierSchema = z
   })
   .passthrough()
 const personLinkSchema = z.object({ note: optionalString, url: z.string().trim().min(1) }).passthrough()
+const publicLinkSchema = z.object({ note: optionalString, url: optionalHttpsUrl }).passthrough()
 const currentRoleSchema = z
   .object({
     district: optionalString,
@@ -66,14 +71,23 @@ const membershipSchema = z
     role: optionalString
   })
   .passthrough()
+const publicContactSchema = z
+  .object({ address: optionalString, email: optionalString, phone: optionalString })
+  .passthrough()
 const committeeSchema = z
   .object({
     classification: z.string().trim().min(1),
+    contact: publicContactSchema.optional(),
+    description: optionalString,
     id: z.string().trim().min(1),
-    memberships: z.array(membershipSchema).default([]),
+    links: z.array(publicLinkSchema).optional(),
+    memberships: z.array(membershipSchema).optional(),
     name: z.string().trim().min(1),
     parent_id: optionalString,
-    sources: z.array(sourceSchema).default([])
+    sources: z.array(sourceSchema).default([]),
+    terms_of_reference: optionalString,
+    website: optionalHttpsUrl,
+    website_url: optionalHttpsUrl
   })
   .passthrough()
 
@@ -118,6 +132,28 @@ function canonicalOrganizationClassification(
 ): z.output<typeof canonicalOrganizationClassificationSchema> | null {
   const parsed = canonicalOrganizationClassificationSchema.safeParse(value.trim().toLowerCase())
   return parsed.success ? parsed.data : null
+}
+
+function rawObjectHasOwn(input: unknown, key: string): boolean {
+  return typeof input === "object" && input !== null && Object.hasOwn(input, key)
+}
+
+function profileFactsWereSupplied(input: unknown): boolean {
+  return ["contact", "description", "terms_of_reference", "website", "website_url"].some((key) =>
+    rawObjectHasOwn(input, key)
+  )
+}
+
+function publicWebsiteUrl(committee: z.infer<typeof committeeSchema>): string | null {
+  return committee.website_url ?? committee.website ?? null
+}
+
+function isHttpsUrl(value: string | undefined): value is string {
+  return value !== undefined && value.startsWith("https://")
+}
+
+function membershipFactsWereSupplied(input: unknown): boolean {
+  return rawObjectHasOwn(input, "memberships")
 }
 
 function normalizePerson(
@@ -217,9 +253,13 @@ function normalizePerson(
       jurisdictionId: canonicalJurisdictionId,
       name: input.name,
       party: input.party,
+      provenanceComplete: detailProvenanceComplete,
       sourceId: input.id,
+      sourceIsOfficial: false,
+      sourceProvider: "openstates",
+      sourceRetrievedAt: context.retrievedAt,
       sourceUpdatedAt: details?.updated_at === undefined ? undefined : new Date(details.updated_at),
-      sourceUrl: sourceUrl(details?.sources ?? [], details?.openstates_url),
+      sourceUrl: detailSourceUrl,
       upstreamIds: { openstates: input.id }
     },
     jurisdiction:
@@ -248,11 +288,17 @@ function normalizePerson(
             ),
             isActive: true,
             jurisdictionId: canonicalJurisdictionId,
+            officeTitle: role.title,
             party: input.party,
             personId: canonicalPersonId,
+            provenanceComplete: detailProvenanceComplete,
             role: role.title,
             sourceId: role.division_id ?? `current:${role.org_classification}:${role.district ?? "unknown"}`,
-            sourceUrl: details?.openstates_url
+            sourceIsOfficial: false,
+            sourceProvider: "openstates",
+            sourceRetrievedAt: context.retrievedAt,
+            sourceUpdatedAt: details?.updated_at === undefined ? undefined : new Date(details.updated_at),
+            sourceUrl: detailSourceUrl
           }
   }
 }
@@ -323,47 +369,73 @@ export function normalizeOpenStatesCommittees(
   const termsById = new Map<string, TermInsert>()
   const memberships: MembershipInsert[] = []
   const canonicalJurisdictionId = jurisdictionId(context.jurisdictionCode)
-  const committees = inputs.map((input) => committeeSchema.parse(input))
+  const committees = inputs.map((input) => ({
+    detailFactsComplete: profileFactsWereSupplied(input),
+    membershipRelationsComplete: membershipFactsWereSupplied(input),
+    record: committeeSchema.parse(input)
+  }))
   const canonicalOrganizationIds = new Map(
-    committees.map((committee) => [committee.id, organizationId("openstates", committee.id)])
+    committees.map(({ record }) => [record.id, organizationId("openstates", record.id)])
   )
-  const normalizedOrganizations = committees.map((committee) => {
-    const canonicalOrganizationId = organizationId("openstates", committee.id)
-    for (const membership of committee.memberships) {
-      const normalizedPerson = normalizePerson(membership.person, context)
-      peopleById.set(normalizedPerson.person.id, normalizedPerson.person)
-      if (normalizedPerson.term !== undefined) {
-        termsById.set(normalizedPerson.term.id, normalizedPerson.term)
+  const normalizedOrganizations = committees.map(
+    ({ detailFactsComplete, membershipRelationsComplete, record: committee }) => {
+      const canonicalOrganizationId = organizationId("openstates", committee.id)
+      const canonicalSourceUrl = sourceUrl(committee.sources)
+      for (const membership of committee.memberships ?? []) {
+        const normalizedPerson = normalizePerson(membership.person, context)
+        peopleById.set(normalizedPerson.person.id, normalizedPerson.person)
+        if (normalizedPerson.term !== undefined) {
+          termsById.set(normalizedPerson.term.id, normalizedPerson.term)
+        }
+        const sourceIdentity = membership.role ?? "member"
+        memberships.push({
+          classification: membership.role,
+          id: organizationMembershipId(canonicalOrganizationId, normalizedPerson.person.id, sourceIdentity),
+          isActive: true,
+          organizationId: canonicalOrganizationId,
+          personId: normalizedPerson.person.id,
+          provenanceComplete: isHttpsUrl(canonicalSourceUrl),
+          sourceId: `${committee.id}:${membership.person.id}:${sourceIdentity}`,
+          sourceIsOfficial: false,
+          sourceProvider: "openstates",
+          sourceRetrievedAt: context.retrievedAt,
+          sourceUrl: canonicalSourceUrl,
+          title: membership.role
+        })
       }
-      const sourceIdentity = membership.role ?? "member"
-      memberships.push({
-        classification: membership.role,
-        id: organizationMembershipId(canonicalOrganizationId, normalizedPerson.person.id, sourceIdentity),
+      return {
+        chamber: null,
+        classification: canonicalOrganizationClassification(committee.classification),
+        childRelationsComplete: true,
+        description: committee.description ?? null,
+        detailFactsComplete,
+        id: canonicalOrganizationId,
         isActive: true,
-        organizationId: canonicalOrganizationId,
-        personId: normalizedPerson.person.id,
-        sourceId: `${committee.id}:${membership.person.id}:${sourceIdentity}`,
-        title: membership.role
-      })
+        jurisdictionId: canonicalJurisdictionId,
+        membershipRelationsComplete,
+        name: committee.name,
+        parentOrganizationId:
+          committee.parent_id === undefined ? null : (canonicalOrganizationIds.get(committee.parent_id) ?? null),
+        sourceId: committee.id,
+        sourceUrl: canonicalSourceUrl,
+        termsOfReference: committee.terms_of_reference ?? null,
+        upstreamIds: {
+          openstates: committee.id,
+          ...(committee.parent_id === undefined || canonicalOrganizationIds.has(committee.parent_id)
+            ? {}
+            : { openstatesParent: committee.parent_id })
+        },
+        publicContactAddress: committee.contact?.address ?? null,
+        publicContactEmail: committee.contact?.email ?? null,
+        publicContactPhone: committee.contact?.phone ?? null,
+        provenanceComplete: isHttpsUrl(canonicalSourceUrl),
+        sourceIsOfficial: false,
+        sourceProvider: "openstates",
+        sourceRetrievedAt: context.retrievedAt,
+        websiteUrl: publicWebsiteUrl(committee)
+      } satisfies OrganizationInsert
     }
-    return {
-      classification: canonicalOrganizationClassification(committee.classification),
-      id: canonicalOrganizationId,
-      isActive: true,
-      jurisdictionId: canonicalJurisdictionId,
-      name: committee.name,
-      parentOrganizationId:
-        committee.parent_id === undefined ? undefined : (canonicalOrganizationIds.get(committee.parent_id) ?? null),
-      sourceId: committee.id,
-      sourceUrl: sourceUrl(committee.sources),
-      upstreamIds: {
-        openstates: committee.id,
-        ...(committee.parent_id === undefined || canonicalOrganizationIds.has(committee.parent_id)
-          ? {}
-          : { openstatesParent: committee.parent_id })
-      }
-    } satisfies OrganizationInsert
-  })
+  )
   return {
     memberships,
     organizations: normalizedOrganizations,

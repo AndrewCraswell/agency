@@ -17,6 +17,18 @@ import {
 const pool = new pg.Pool({ connectionString: "postgresql://organization-relationships-test.invalid/legislation" })
 const database = drizzle(pool, { schema })
 
+const organizationDetailDefaults = {
+  childRelationsComplete: false,
+  description: null,
+  detailFactsComplete: false,
+  membershipRelationsComplete: false,
+  publicContactAddress: null,
+  publicContactEmail: null,
+  publicContactPhone: null,
+  termsOfReference: null,
+  websiteUrl: null
+} as const
+
 afterAll(async () => {
   await pool.end()
 })
@@ -25,6 +37,7 @@ describe("organization collection queries", () => {
   it("scopes organizations to a jurisdiction and applies a strict name keyset", () => {
     const cursor = encodeOrganizationCursor(
       {
+        ...organizationDetailDefaults,
         id: "organization:ak:committee:1",
         jurisdictionId: "jurisdiction:ak",
         parentOrganizationId: null,
@@ -154,6 +167,7 @@ describe("organization pagination validation", () => {
   it("rejects a cursor encoded for another organization sort or filter scope", async () => {
     const cursor = encodeOrganizationCursor(
       {
+        ...organizationDetailDefaults,
         id: "organization:ak:committee:1",
         jurisdictionId: "jurisdiction:ak",
         parentOrganizationId: null,
@@ -190,6 +204,7 @@ describe("organization pagination validation", () => {
 
     const scopedCursor = encodeOrganizationCursor(
       {
+        ...organizationDetailDefaults,
         id: "organization:ak:committee:1",
         jurisdictionId: "jurisdiction:ak",
         parentOrganizationId: null,

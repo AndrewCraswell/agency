@@ -396,6 +396,23 @@ export const organizations = legislationSchema.table(
     /** Canonical chamber vocabulary. Null means the provider value was not safely mappable. */
     chamber: text("chamber"),
     isActive: boolean("is_active"),
+    /** Source-supplied public organization profile. Null records an explicitly unavailable source fact. */
+    description: text("description"),
+    websiteUrl: text("website_url"),
+    publicContactAddress: text("public_contact_address"),
+    publicContactPhone: text("public_contact_phone"),
+    publicContactEmail: text("public_contact_email"),
+    termsOfReference: text("terms_of_reference"),
+    /**
+     * True only after an authoritative provider record supplied a detail
+     * profile. It prevents legacy summary-only rows from being projected as a
+     * detail with invented null fields.
+     */
+    detailFactsComplete: boolean("detail_facts_complete").notNull().default(false),
+    /** A source-complete snapshot established the complete direct-child set. */
+    childRelationsComplete: boolean("child_relations_complete").notNull().default(false),
+    /** A source-complete snapshot established the complete direct-membership set. */
+    membershipRelationsComplete: boolean("membership_relations_complete").notNull().default(false),
     sourceUrl: text("source_url"),
     sourceProvider: text("source_provider"),
     sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }),
@@ -421,6 +438,27 @@ export const organizations = legislationSchema.table(
     check(
       "organizations_parent_check",
       sql`${table.parentOrganizationId} is null or ${table.parentOrganizationId} <> ${table.id}`
+    ),
+    check(
+      "organizations_description_check",
+      sql`${table.description} is null or length(btrim(${table.description})) > 0`
+    ),
+    check("organizations_website_url_check", sql`${table.websiteUrl} is null or ${table.websiteUrl} ~ '^https://'`),
+    check(
+      "organizations_public_contact_address_check",
+      sql`${table.publicContactAddress} is null or length(btrim(${table.publicContactAddress})) > 0`
+    ),
+    check(
+      "organizations_public_contact_phone_check",
+      sql`${table.publicContactPhone} is null or length(btrim(${table.publicContactPhone})) > 0`
+    ),
+    check(
+      "organizations_public_contact_email_check",
+      sql`${table.publicContactEmail} is null or length(btrim(${table.publicContactEmail})) > 0`
+    ),
+    check(
+      "organizations_terms_of_reference_check",
+      sql`${table.termsOfReference} is null or length(btrim(${table.termsOfReference})) > 0`
     ),
     check(
       "organizations_provenance_complete_check",

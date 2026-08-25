@@ -180,19 +180,32 @@ export async function replaceEntitySnapshot(
         .onConflictDoUpdate({
           set: {
             chamber: sql`excluded.chamber`,
+            childRelationsComplete: sql`excluded.child_relations_complete`,
             classification: sql`excluded.classification`,
+            description: sql`excluded.description`,
+            detailFactsComplete: sql`excluded.detail_facts_complete`,
             isActive: sql`excluded.is_active`,
             jurisdictionId: sql`excluded.jurisdiction_id`,
+            membershipRelationsComplete: sql`excluded.membership_relations_complete`,
             name: sql`excluded.name`,
             parentOrganizationId: sql`excluded.parent_organization_id`,
+            publicContactAddress: sql`excluded.public_contact_address`,
+            publicContactEmail: sql`excluded.public_contact_email`,
+            publicContactPhone: sql`excluded.public_contact_phone`,
+            provenanceComplete: sql`excluded.provenance_complete`,
             sourceId: sql`excluded.source_id`,
+            sourceIsOfficial: sql`excluded.source_is_official`,
+            sourceProvider: sql`excluded.source_provider`,
+            sourceRetrievedAt: sql`excluded.source_retrieved_at`,
             sourceUpdatedAt: sql`excluded.source_updated_at`,
             sourceUrl: sql`excluded.source_url`,
+            termsOfReference: sql`excluded.terms_of_reference`,
             updatedAt: new Date(),
             // A full entity snapshot is authoritative for its Open States parent graph.
             // Replacing this object clears a now-resolved raw parent identity rather
             // than retaining it beside the canonical FK indefinitely.
-            upstreamIds: sql`excluded.upstream_ids`
+            upstreamIds: sql`excluded.upstream_ids`,
+            websiteUrl: sql`excluded.website_url`
           },
           target: organizations.id
         })
@@ -267,10 +280,19 @@ export async function replaceEntitySnapshot(
       await observeCanonicalRecord(transaction, {
         fields: {
           chamber: organization.chamber,
+          childRelationsComplete: organization.childRelationsComplete,
           classification: organization.classification,
+          description: organization.description,
+          detailFactsComplete: organization.detailFactsComplete,
           isActive: organization.isActive,
+          membershipRelationsComplete: organization.membershipRelationsComplete,
           name: organization.name,
-          parentOrganizationId: organization.parentOrganizationId
+          parentOrganizationId: organization.parentOrganizationId,
+          publicContactAddress: organization.publicContactAddress,
+          publicContactEmail: organization.publicContactEmail,
+          publicContactPhone: organization.publicContactPhone,
+          termsOfReference: organization.termsOfReference,
+          websiteUrl: organization.websiteUrl
         },
         jurisdictionId,
         organizationId: organization.id,

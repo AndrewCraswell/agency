@@ -315,7 +315,7 @@ async function synchronizeCongressEntitiesForScope(
     committees.push(...page)
   }
   const memberSnapshot = normalizeCongressMembers(members, identity.scope)
-  const committeeSnapshot = normalizeCongressCommittees(committees)
+  const committeeSnapshot = normalizeCongressCommittees(committees, { retrievedAt: new Date() })
   const peopleById = new Map(memberSnapshot.people.map((person) => [person.id, person]))
   const termsById = new Map(memberSnapshot.terms.map((term) => [term.id, term]))
   const organizationsById = new Map(

@@ -19,22 +19,31 @@ afterAll(async () => {
 
 const row = {
   chamber: "lower",
+  childRelationsComplete: false,
   classification: "committee",
   createdAt: new Date("2026-01-01T00:00:00.000Z"),
+  description: null,
+  detailFactsComplete: false,
   id: "organization:ca:committee:1",
   isActive: true,
   jurisdictionId: "jurisdiction:ca",
+  membershipRelationsComplete: false,
   name: "Rules",
   parentOrganizationId: "organization:ca:house",
   provenanceComplete: false,
+  publicContactAddress: null,
+  publicContactEmail: null,
+  publicContactPhone: null,
   sourceId: "rules",
   sourceIsOfficial: null,
   sourceProvider: null,
   sourceRetrievedAt: null,
   sourceUpdatedAt: null,
   sourceUrl: null,
+  termsOfReference: null,
   updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-  upstreamIds: {}
+  upstreamIds: {},
+  websiteUrl: null
 }
 
 describe("organization collection repository", () => {

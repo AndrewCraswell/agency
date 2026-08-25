@@ -5,22 +5,31 @@ import { projectOrganizationRow } from "./organization-summary-read-projection.j
 function organization(overrides: Partial<OrganizationRow> = {}): OrganizationRow {
   return {
     chamber: "lower",
+    childRelationsComplete: false,
     classification: "committee",
     createdAt: new Date("2026-08-20T15:00:00.000Z"),
+    description: null,
+    detailFactsComplete: false,
     id: "organization:ca:house:rules",
     isActive: true,
     jurisdictionId: "jurisdiction:ca",
+    membershipRelationsComplete: false,
     name: "Rules Committee",
     parentOrganizationId: "organization:ca:house",
     provenanceComplete: true,
+    publicContactAddress: null,
+    publicContactEmail: null,
+    publicContactPhone: null,
     sourceId: "ca-rules",
     sourceIsOfficial: true,
     sourceProvider: "openstates",
     sourceRetrievedAt: new Date("2026-08-20T15:00:00.000Z"),
     sourceUpdatedAt: new Date("2026-08-20T14:00:00.000Z"),
     sourceUrl: "https://openstates.org/ca/organizations/rules",
+    termsOfReference: null,
     updatedAt: new Date("2026-08-20T15:00:00.000Z"),
     upstreamIds: { openstates: "ca-rules" },
+    websiteUrl: null,
     ...overrides
   }
 }

@@ -55,6 +55,8 @@ import { createMeetingOutcomeReadApiHandler } from "./meeting-outcome-read-route
 import { createMeetingParticipantListApiHandler } from "./meeting-participant-list-routes.js"
 import { createMeetingParticipantReadApiHandler } from "./meeting-participant-read-routes.js"
 import { createOrganizationBillReadApiHandler } from "./organization-bill-read-routes.js"
+import { createOrganizationDetailReadRepository } from "./organization-detail-read-repository.js"
+import { createOrganizationDetailReadApiHandler } from "./organization-detail-read-routes.js"
 import { createOrganizationMembersRepository } from "./organization-members-read-repository.js"
 import { createOrganizationMembersReadApiHandler } from "./organization-members-read-routes.js"
 import { createOrganizationReadRepository } from "./organization-read-repository.js"
@@ -199,6 +201,9 @@ export function createLegislationApiHandler(
               listOrganizationBillReads: async (input) => await listOrganizationBillReads(documentDatabase, input)
             },
             options
+          ),
+          createOrganizationDetailReadApiHandler(
+            createOrganizationDetailReadRepository(documentDatabase, options.apiBaseUrl)
           ),
           createOrganizationReadApiHandler(createOrganizationReadRepository(documentDatabase), options),
           createPeopleReadApiHandler(

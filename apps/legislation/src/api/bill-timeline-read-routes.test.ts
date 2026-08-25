@@ -46,22 +46,31 @@ function rows(): BillTimelinePersistenceRead[] {
       kind: "action",
       organization: {
         chamber: "lower",
+        childRelationsComplete: false,
         classification: "chamber",
         createdAt: new Date("2026-02-01T08:00:00.000Z"),
+        description: null,
+        detailFactsComplete: false,
         id: "organization:house",
         isActive: true,
         jurisdictionId: "jurisdiction:us",
+        membershipRelationsComplete: false,
         name: "United States House of Representatives",
         parentOrganizationId: null,
         provenanceComplete: true,
+        publicContactAddress: null,
+        publicContactEmail: null,
+        publicContactPhone: null,
         sourceId: "house",
         sourceIsOfficial: true,
         sourceProvider: "congress",
         sourceRetrievedAt: new Date("2026-02-01T08:00:00.000Z"),
         sourceUpdatedAt: null,
         sourceUrl: "https://api.congress.gov/house",
+        termsOfReference: null,
         updatedAt: new Date("2026-02-01T08:00:00.000Z"),
-        upstreamIds: { congress: "house" }
+        upstreamIds: { congress: "house" },
+        websiteUrl: null
       }
     },
     {
