@@ -76,7 +76,6 @@ import { importOpenStatesRecords } from "../ingestion/openstates/import.js"
 import { parseOpenStatesManifest } from "../ingestion/openstates/manifest.js"
 import { ArtifactSourceStore, LocalSourceStore, type SourceStore } from "../ingestion/source-store.js"
 import { LegislationQueryService } from "../legislation/query-service.js"
-import { createMcpQueryApi } from "../mcp/query-transport.js"
 import { close, createLegislationServer, listen } from "../mcp/server.js"
 import { createLegislationMcpHandler } from "../mcp/tools.js"
 import { embeddingRouteFor } from "../models/embedding-routing.js"
@@ -336,7 +335,7 @@ async function serve() {
       ? undefined
       : new OpenRouterRetrievalClient({ apiKey: config.model.apiKey, baseUrl: new URL(config.model.baseUrl) })
   const queryService = new LegislationQueryService(database, retrievalClient)
-  const mcp = createLegislationMcpHandler(createMcpQueryApi(config.mcp, queryService), logger, telemetry)
+  const mcp = createLegislationMcpHandler(queryService, logger, telemetry)
   const apiAuthenticate =
     config.auth.mode === "workos"
       ? createWorkosAuthenticator({

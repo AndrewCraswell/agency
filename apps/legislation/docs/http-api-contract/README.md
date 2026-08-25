@@ -14,7 +14,6 @@ The contract is split into focused pages:
 - [People, organizations, meetings, and calendars](civic-graph-and-events.md)
 - [Search, research answers, and document comparison](search-and-diffs.md)
 - [Subscriptions, deliveries, and webhooks](subscriptions-and-webhooks.md)
-- [MCP migration and parity map](mcp-migration.md)
 
 ## Design rules
 
@@ -178,8 +177,3 @@ schema are the only success response. This matrix plus endpoint-specific excepti
 
 The endpoint pages are the source contract for the future OpenAPI document; a generated specification must preserve
 the documented request type, response envelope, statuses, calculated operation ID, and examples exactly.
-
-## MCP migration
-
-See the [complete MCP parity map](mcp-migration.md). HTTP handlers and MCP tools call the same application-service
-methods. An in-process MCP server never makes loopback HTTP calls; a separately deployed adapter may use the HTTP API.

@@ -1,10 +1,13 @@
-# HTTP API local smoke and MCP parity checklist
+# HTTP API local smoke checklist
 
 ## Purpose and evidence rule
 
-Use this checklist after an API product has passed code review and before any endpoint moves from **In progress** to
-**Done**. It is an execution plan, not evidence that a smoke or parity run has occurred. Record the date, commit,
-database snapshot, model routing configuration, commands, sanitized results, and reviewer in the run record.
+Use this checklist to collect focused endpoint test/smoke evidence after an API product has passed code review. Endpoint
+**Done** requires exact contract implementation, applicable repository/query evidence, focused endpoint tests/smoke,
+root review, and a reviewed commit. Railway deployment, remote smoke, auth configuration, rate limiting, and other
+release/operations concerns are tracked separately. This is an execution plan, not evidence that a smoke run has
+occurred. Record the date, commit, database snapshot, model routing configuration, commands, sanitized results, and
+reviewer in the run record.
 
 An endpoint passes only when the live handler projects the documented contract. A `200` response from an existing
 application-service method is insufficient when canonical fields, provenance, filters, pagination, or search metadata
@@ -19,8 +22,8 @@ do not match the contract.
 - Include one missing ID, one inaccessible tenant-owned ID, one image-only document completed through OCR, and enough
   records to produce a second page.
 - Start the same composed handler used by the service. Do not mount a slice-only test server for acceptance evidence.
-- Run authenticated requests with a valid user token and, separately, an organization token. Retain correlation IDs but
-  redact tokens, addresses, webhook secrets, and provider credentials.
+- When a protected route is exercised, use a valid local fixture principal for the applicable request mode. Retain
+  correlation IDs but redact tokens, addresses, webhook secrets, and provider credentials.
 - Pin the expected embedding and reranking routes from the contract. If model credentials are intentionally absent,
   semantic and hybrid checks are blocked rather than silently treated as lexical checks.
 
@@ -48,14 +51,12 @@ when `LEGISLATION_SMOKE_BILL_SEARCH_QUERY` and `LEGISLATION_SMOKE_MATERIAL_SEARC
 each query must return a nonempty canonical hit page. For `AUTH_MODE=workos` (or explicit
 `LEGISLATION_SMOKE_REQUIRE_AUTH=true`),
 `LEGISLATION_SMOKE_TOKEN` is required. It is sent only as an in-memory bearer header and is never included in the
-report or diagnostics. The API smoke command never opens `/mcp` and never reads the MCP-only
-`LEGISLATION_MCP_SMOKE_TOKEN`; use the separate deployment smoke command when an MCP credential is intentionally
-available. Each manifest request has a 30-second request deadline by default; set
+report or diagnostics. Each manifest request has a 30-second request deadline by default; set
 `LEGISLATION_SMOKE_REQUEST_TIMEOUT_MS` to an integer from 1 through 60,000 milliseconds when a different bounded
 deadline is needed. The harness separately asserts unauthenticated `401` rejection, response envelopes, matching
 `x-correlation-id` values, unknown-route handling, and unsupported-method handling.
 
-The release gate has no skipped checks: the reviewed full-profile report must have `status: "passed"`, with empty
+The release profile has no skipped checks: its reviewed full-profile report must have `status: "passed"`, with empty
 `blocked`, `failed`, and `skipped` arrays. To produce that report, provide jurisdiction and session IDs, bill ID,
 material ID, document ID plus document section ID, material section ID, subscription ID, webhook ID, both search-query
 variables, and authenticated mode with an explicit smoke token. A report with any skipped check is evidence of an
@@ -160,78 +161,20 @@ and delivery adapters are implemented and reviewed.
 - [ ] Exercise webhook retry categories, bounded jitter/backoff, five-attempt terminal behavior, dead-letter/audit state,
       and delivery-ID deduplication. Email and in-application delivery require their own reviewed executors.
 
-## MCP-to-HTTP parity
+## API smoke run record
 
-This table is a parity-coverage map, not route-registration or allowlist authorization. Current HEAD intentionally
-leaves `GET /api/bills/{billId}` unregistered. Production MCP remains in-process and the hybrid allowlist remains empty;
-do not use a `getBill` result to authorize HTTP or hybrid routing.
-
-For each approved candidate whose HTTP operation is registered, call the MCP tool and its HTTP operation against the
-same database snapshot and normalized input.
-
-| Product | MCP operations | HTTP assertions |
-| --- | --- | --- |
-| Bills | search, get one/many, timeline, text, related, version comparison | Same canonical bill/document IDs, child completeness, ordering, warnings, and diff operations. |
-| Amendments | search, get one/many, search for bills | Same structured/document-backed identities, bill links, item errors, pagination, and ranking. |
-| Votes | search, get bill votes, get one/many | Same vote IDs, result/count vocabulary, named positions, ordering, and pagination. |
-| People and organizations | search and get | Same canonical IDs, memberships exposed by the approved detail contract, filters, and warnings. |
-| Meetings and calendars | search/get event and calendar | Same canonical meeting IDs, time/status fields, child records, and explicit absence where calendar resources are blocked. |
-| Supporting materials | search and get | Same material/section IDs, parent mapping, provenance, ranking, and pagination. |
-| Changes | search changes | Same event IDs, filters, observed ordering, before/after policy, and cursors. |
-
-Apply these parity rules:
-
-- [ ] Compare canonical records after removing transport-only envelope fields; do not compare raw provider objects.
-- [ ] Require exact ID, discriminator, date/time, relationship, source URL, warning, and pagination equality.
-- [ ] For deterministic lexical retrieval, require identical ordered IDs through the compared depth.
-- [ ] For semantic or hybrid retrieval, pin models and index snapshot, then require identical ordered IDs and scores within
-      the documented numeric tolerance. A top-k overlap metric alone does not excuse transport divergence.
-- [ ] Compare error category, retryability, item isolation, and absent-versus-empty behavior for invalid and missing input.
-- [ ] Record latency separately; parity passes on behavior and quality, while latency is an independent release gate.
-
-### Historical deployed `getBill` canary (stale, non-authorizing)
-
-The completed `pnpm --filter legislation canary:mcp-http-parity` run below targeted a prior deployed source commit,
-not current HEAD. It compared the direct `LegislationQueryService.getBill` result with the then-deployed HTTP-backed
-MCP adapter for one explicit fixture. The token remained in memory and was never printed. The canary normalized JSON
-date serialization and required exact recursive equality, including child ordering, warnings, truncation, and
-absent-versus-present fields. It exited nonzero on any request error or mismatch and did not change Railway
-configuration or `LEGISLATION_MCP_HTTP_METHODS`.
-
-Current HEAD intentionally leaves `GET /api/bills/{billId}` unregistered. This historical parity result is stale for
-current HEAD and cannot authorize `getBill` in the HTTP or hybrid allowlist. The next candidates are canonical
-`searchBills` and query-present `searchSupportingMaterials`, each only after shared direct-MCP/HTTP output parity, a
-remote same-snapshot canary, and MCP-resource authentication.
-
-## Run record
-
-Record one row per execution:
+Record one row per API smoke execution:
 
 | Field | Value |
 | --- | --- |
 | Date and reviewer | |
-| Commit/deployment | |
+| Commit (deployment reference only for release evidence) | |
 | Database fixture/snapshot | |
-| Auth principal scopes | |
+| Request mode/principal (optional context) | |
 | Embedding and reranking routes | |
 | Products and routes exercised | |
 | Smoke result and evidence path | |
-| MCP parity result and evidence path | |
 | Known deviations and owning backlog item | |
 
-### 2026-08-24 release-preparation record
-
-| Field | Value |
-| --- | --- |
-| Date and reviewer | 2026-08-24, authenticated remote evidence supplied for root review |
-| Commit/deployment | Commit `2846332`; Railway `legislation-api` deployment `f7c855ed-9b81-482b-9def-d3b3d8b90255` |
-| Database fixture/snapshot | Local scoped bill fixture; remote production records `jurisdiction:ak` and `session:ak:30` |
-| Auth principal scopes | Local scoped profile and remote no-token API/MCP challenge checks passed. The authenticated API profile uses the externally provisioned API AuthKit session; the generic API smoke does not exercise `/mcp`. |
-| Embedding and reranking routes | Not exercised |
-| Products and routes exercised | Local scoped bill routes; remote `/health`, `/ready`, unknown route, unsupported method, unauthenticated rejection, and authenticated scoped `GET /api/jurisdictions/{jurisdictionId}/bills` plus `GET /api/sessions/{sessionId}/bills` |
-| Smoke result and evidence path | Remote `scoped-bills` profile passed 7/7 with 0 blocked and 0 failed against the recorded deployment. See [Railway API release record](http-api-railway-release.md). |
-| MCP parity result and evidence path | Historical/stale deployed `getBill` HTTP-parity canary passed for `bill:ak:30:hb:1`: exact recursive direct QueryService versus deployed HTTP-adapter equality, correlation ID `bd7dda5d-104b-47d8-8ffa-2251e2abbcda`. Current HEAD intentionally unregisters `GET /api/bills/{id}`, so this cannot authorize allowlisting. Production MCP remains in-process and the hybrid allowlist remains empty. |
-| Known deviations and owning backlog item | Only the two scoped bill collection routes are Done. Remaining MCP methods, a separate MCP-resource authenticated canary, and any HTTP/hybrid enablement remain pending (API-07). Next candidates are canonical `searchBills` and query-present `searchSupportingMaterials`, subject to shared direct-MCP/HTTP output parity and remote same-snapshot and MCP-resource-auth gates. |
-
-Only after the run is reviewed, linked from the backlog, and the route is included in a reviewed commit may its state
-move to **Done**.
+Only after focused endpoint test/smoke evidence is reviewed, linked from the backlog, and the route is included in a
+reviewed commit may its state move to **Done**.

@@ -27,7 +27,6 @@ describe("loadConfig", () => {
         requestTimeoutMs: 30_000
       },
       logging: { level: "info" },
-      mcp: { transport: "in-process" },
       model: { baseUrl: "https://openrouter.ai/api/v1" },
       ocr: { maximumAttempts: 5 },
       server: {
@@ -44,85 +43,6 @@ describe("loadConfig", () => {
         requestBodyBytes: 1_048_576
       }
     })
-  })
-
-  it("requires complete bounded configuration when MCP HTTP transport is selected", () => {
-    expect(
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "https://legislation.example",
-        LEGISLATION_MCP_API_BEARER_TOKEN: "service-secret",
-        LEGISLATION_MCP_API_TIMEOUT_MS: "12000",
-        LEGISLATION_MCP_TRANSPORT: "http"
-      }).mcp
-    ).toEqual({
-      apiBaseUrl: "https://legislation.example",
-      bearerToken: "service-secret",
-      timeoutMs: 12_000,
-      transport: "http"
-    })
-    expect(() => loadConfig({ LEGISLATION_MCP_TRANSPORT: "http" })).toThrow(ConfigurationError)
-    expect(() =>
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "https://legislation.example/mcp",
-        LEGISLATION_MCP_TRANSPORT: "http"
-      })
-    ).toThrow(ConfigurationError)
-    expect(() =>
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "https://legislation.example",
-        LEGISLATION_MCP_API_TIMEOUT_MS: "60001",
-        LEGISLATION_MCP_TRANSPORT: "http"
-      })
-    ).toThrow(ConfigurationError)
-    expect(() => loadConfig({ LEGISLATION_MCP_TRANSPORT: "sidecar" })).toThrow(ConfigurationError)
-    expect(
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
-        LEGISLATION_MCP_TRANSPORT: "http"
-      }).mcp
-    ).toMatchObject({ apiBaseUrl: "http://127.0.0.1:3100", transport: "http" })
-    expect(
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
-        LEGISLATION_MCP_TRANSPORT: "hybrid"
-      }).mcp
-    ).toMatchObject({ apiBaseUrl: "http://127.0.0.1:3100", httpMethods: [], transport: "hybrid" })
-    expect(
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
-        LEGISLATION_MCP_HTTP_METHODS: "  ,  ",
-        LEGISLATION_MCP_TRANSPORT: "hybrid"
-      }).mcp
-    ).toMatchObject({ httpMethods: [], transport: "hybrid" })
-    expect(() =>
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
-        LEGISLATION_MCP_HTTP_METHODS: "getBill,notAQueryMethod",
-        LEGISLATION_MCP_TRANSPORT: "hybrid"
-      })
-    ).toThrow(ConfigurationError)
-    expect(() =>
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "http://127.0.0.1:3100",
-        LEGISLATION_MCP_HTTP_METHODS: "getBill,getBill",
-        LEGISLATION_MCP_TRANSPORT: "hybrid"
-      })
-    ).toThrow(ConfigurationError)
-  })
-
-  it("does not expose an HTTP transport bearer token in configuration errors", () => {
-    const secret = "do-not-log-this-token"
-    let thrown: unknown
-    try {
-      loadConfig({
-        LEGISLATION_MCP_API_BASE_URL: "not-a-url",
-        LEGISLATION_MCP_API_BEARER_TOKEN: secret,
-        LEGISLATION_MCP_TRANSPORT: "http"
-      })
-    } catch (error) {
-      thrown = error
-    }
-    expect(String(thrown)).not.toContain(secret)
   })
 
   it("parses configured values", () => {

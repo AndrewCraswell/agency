@@ -13,7 +13,6 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json && node scripts/copy-migrations.mjs",
-    "canary:mcp-http-parity": "tsx scripts/canary-mcp-http-parity.ts",
     "check:format": "oxfmt --check",
     "check:lint": "pnpm lint",
     "check:types": "pnpm check:types:service",
