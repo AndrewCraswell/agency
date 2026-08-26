@@ -100,7 +100,7 @@ describe("prototype board routing gate", () => {
     )
   })
 
-  it("declares the four-layer APP_GND plane and its fanout phase", () => {
+  it("declares the four-layer APP_GND plane", () => {
     const circuit = new Circuit()
     circuit.pcbDisabled = true
     circuit.pcbRoutingDisabled = true
@@ -126,16 +126,7 @@ describe("prototype board routing gate", () => {
       traceMargin: 0.25
     })
 
-    const phases = circuit.selectAll("autoroutingphase")
-    expect(phases).toHaveLength(1)
-    expect(phases[0]?._parsedProps).toMatchObject({
-      autorouter: "fanout",
-      connection: "net.APP_GND",
-      fanoutPourNetMap: { inner1: "net.APP_GND" },
-      fanoutRoutingLayers: ["inner1"],
-      name: "APP_GND_FANOUT",
-      phaseIndex: 0
-    })
+    expect(circuit.selectAll("autoroutingphase")).toHaveLength(0)
   }, 20_000)
 })
 

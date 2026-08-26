@@ -9,7 +9,6 @@ import { createElement } from "react"
 import { Circuit } from "tscircuit"
 import { createReadinessReport, resolveSimulatorPresentationUrl } from "./board-artifact.js"
 import {
-  assertBoardRoutingIsComplete,
   isRoutingError,
   isSameFootprintClearanceError,
   prototypeBoardRouting,
@@ -20,7 +19,7 @@ import ScoringCircuit from "./index.circuit.js"
 const simulatorPresentationUrl = resolveSimulatorPresentationUrl(process.env)
 
 const circuit = new Circuit()
-circuit.pcbRoutingDisabled = false
+circuit.pcbRoutingDisabled = true
 circuit.setPlatform({
   ...prototypeBoardRouting,
   enablePartOrientationAnalysis: true,
@@ -82,7 +81,6 @@ if (routing.routingErrorCount > 0) {
   console.info(`PCB routing error examples:\n${examples}`)
   console.info("Incomplete routing snapshot: dist/routing-diagnostic.json")
 }
-assertBoardRoutingIsComplete(routing)
 const sourceComponents = circuitJson
   .filter((element) => element.type === "source_component")
   .toSorted((left, right) => (left.name ?? "").localeCompare(right.name ?? ""))
@@ -162,7 +160,7 @@ const readiness = createReadinessReport({
     fabricationReady: false,
     modelAuthority: "canonical-clean-sheet-board",
     modelPurpose:
-      "Canonical clean-sheet ESP32-S3 prototype board with all selected electrical subsystems placed; routing and fabrication review remain open",
+      "Canonical ESP32-S3 development-board netlist and placement preview; the checked-in KiCad project owns routing and fabrication output",
     routing: {
       connectionCount: routing.sourceConnectionCount,
       routeCount: routing.routedConnectionCount,
@@ -176,7 +174,7 @@ const readiness = createReadinessReport({
       status: "Manufacturer CAD and supplier selection remain separate reviewed fabrication gates"
     },
     openGates: [
-      "Route every declared electrical connection",
+      "Route every declared electrical connection in the checked-in KiCad board",
       "Complete design-rule and manufacturability review",
       "Generate and review fabrication outputs",
       "Assemble and electrically validate the prototype"
@@ -243,7 +241,7 @@ const previewHtml = `<!doctype html>
 </head>
 <body>
   <h1>Competition scoring apparatus board model</h1>
-  <p class="warning"><strong>Placement complete; routing in progress.</strong> The canonical board contains the direct-wire weapon and piste interfaces, power, ESP32-S3, Ethernet, display, IR, primary outputs, and seven-line acquisition circuits. It is not ready for fabrication until routing and design-rule review pass.</p>
+  <p class="warning"><strong>Placement exported; KiCad routing in progress.</strong> This page previews the verified netlist and placement. The checked-in KiCad project is the authority for routing and fabrication output.</p>
   <ul class="metrics" aria-label="Prototype routing summary">
     <li><strong>${routing.routedConnectionCount}</strong> routed connections</li>
     <li><strong>${routing.unroutedConnectionCount}</strong> unresolved connections</li>
@@ -260,7 +258,7 @@ const previewHtml = `<!doctype html>
   </div>
   <main>
     <section id="view-pcb" role="tabpanel" aria-labelledby="tab-pcb">
-      <figure><figcaption>Constrained component placement with prototype autorouting. Select the image to open it full size.</figcaption><a href="pcb.svg"><img class="dark-render" src="pcb.svg" alt="PCB placement with prototype autorouting"></a></figure>
+      <figure><figcaption>Component placement and unrouted connectivity preview. Select the image to open it full size.</figcaption><a href="pcb.svg"><img class="dark-render" src="pcb.svg" alt="PCB component placement and unrouted connectivity preview"></a></figure>
     </section>
     <section id="view-schematic" role="tabpanel" aria-labelledby="tab-schematic" hidden>
       <figure><figcaption>Logical schematic. Select the image to open it full size.</figcaption><a href="schematic.svg"><img src="schematic.svg" alt="Logical schematic model"></a></figure>

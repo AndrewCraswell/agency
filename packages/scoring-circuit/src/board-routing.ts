@@ -30,15 +30,10 @@ function countByType(elements: readonly CircuitElement[]): Readonly<Record<strin
   )
 }
 
-/**
- * Route the complete board locally in stable source order. The installed core
- * requires explicit opt-in for this deterministic trace-by-trace router; the
- * fail-closed post-render gate still rejects every missing route or routing
- * error.
- */
+/** Legacy preview routing configuration. The fabrication-authority PCB is routed in KiCad. */
 export const prototypeBoardRouting = {
   allowLegacyAutorouters: true,
-  autorouter: "sequential_trace",
+  autorouter: process.argv.includes("--route") ? "freerouting" : "sequential_trace",
   routingDrcChecksDisabled: false
 } as const
 

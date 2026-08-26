@@ -41,15 +41,6 @@ function ScoringCircuit() {
         traceMargin="0.25mm"
         boardEdgeMargin="1mm"
       />
-      <autoroutingphase
-        name="APP_GND_FANOUT"
-        phaseIndex={0}
-        autorouter="fanout"
-        connection="net.APP_GND"
-        fanoutRoutingLayers={["inner1"]}
-        fanoutPourNetMap={{ inner1: "net.APP_GND" }}
-      />
-
       <Bp034DirectWireWeaponFootprint {...p0BoardPlacement.islands.weapon} />
       <P0PisteLanding {...p0BoardPlacement.islands.piste} />
       <P0IrReceiver {...p0BoardPlacement.islands.irReceiver} />

@@ -837,6 +837,9 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@tscircuit/circuit-json-util':
+        specifier: 0.0.104
+        version: 0.0.104(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(transformation-matrix@3.1.0)(zod@3.25.76)
       '@types/node':
         specifier: 'catalog:'
         version: 24.13.2
@@ -846,12 +849,27 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4.1.9
         version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
+      circuit-json-to-kicad:
+        specifier: 0.0.173
+        version: 0.0.173(typescript@7.0.1-rc)
+      earcut:
+        specifier: 3.0.2
+        version: 3.0.2
       esbuild:
         specifier: 0.28.1
         version: 0.28.1
+      kicadts:
+        specifier: 0.0.49
+        version: 0.0.49(typescript@7.0.1-rc)
       oxlint:
         specifier: ^1.72.0
         version: 1.76.0
+      polygon-clipping:
+        specifier: 0.15.7
+        version: 0.15.7
+      transformation-matrix:
+        specifier: 3.1.0
+        version: 3.1.0
       tsx:
         specifier: ^4.23.0
         version: 4.23.0
@@ -7083,6 +7101,11 @@ packages:
       '@resvg/resvg-wasm':
         optional: true
 
+  circuit-json-to-kicad@0.0.173:
+    resolution: {integrity: sha1-/V9fZAa9ZfYoUIknfoyiANDX2sk=}
+    peerDependencies:
+      typescript: ^5
+
   circuit-json-to-pnp-csv@0.0.8:
     resolution: {integrity: sha1-VuKq3br7DHUYQghZsVpXtuXsC0M=}
     peerDependencies:
@@ -7701,6 +7724,9 @@ packages:
   dunder-proto@1.0.1:
     resolution: {integrity: sha1-165mfh3INIL4tw/Q9u78UNow9Yo=}
     engines: {node: '>= 0.4'}
+
+  earcut@3.0.2:
+    resolution: {integrity: sha1-1Hiimq+ZrPQYFRSTBIqhl9BRIkg=}
 
   earcut@3.2.3:
     resolution: {integrity: sha1-dK7BlVWn4odzQpgmcp0uS/6xkCI=}
@@ -8707,6 +8733,11 @@ packages:
 
   kicad-to-circuit-json@0.0.117:
     resolution: {integrity: sha1-m/XvruWWfx9W23pqsebKQc5qfj0=}
+    peerDependencies:
+      typescript: ^5
+
+  kicadts@0.0.49:
+    resolution: {integrity: sha1-Mwo2XVVTfcTrkfPrvnIiAFl7Gu0=}
     peerDependencies:
       typescript: ^5
 
@@ -9739,6 +9770,9 @@ packages:
     resolution: {integrity: sha1-WgCuMnFWCfg9ifbzHQ8CYcYXBUg=}
     engines: {node: '>=10'}
 
+  polygon-clipping@0.15.7:
+    resolution: {integrity: sha1-OCPKHjclZvNQeVzp3Zp7Gel72q0=}
+
   poppygl@0.0.26:
     resolution: {integrity: sha1-3bw0MuHpHTEEk0kc2yu763Gwacs=}
     peerDependencies:
@@ -10109,6 +10143,9 @@ packages:
   roarr@2.15.4:
     resolution: {integrity: sha1-9f55W3uDjM/jXcYI4Cgrnrouev0=}
     engines: {node: '>=8.0'}
+
+  robust-predicates@3.0.3:
+    resolution: {integrity: sha1-EJkGGzNJ4sWr7GwqsKzUQNJNQGI=}
 
   rolldown@1.1.5:
     resolution: {integrity: sha1-M5quJQhENR/FW3TiZS0+vW+6OJ0=}
@@ -10509,6 +10546,10 @@ packages:
     resolution: {integrity: sha1-AYumFLLHS9mcRg+AXx3oHkF6uPc=}
     peerDependencies:
       typescript: ^5
+
+  splaytree@3.2.3:
+    resolution: {integrity: sha1-Xkg2vFTMk5NEu6jcgm+C+95FMQY=}
+    engines: {node: '>=18.20 || >=20'}
 
   split2@4.2.0:
     resolution: {integrity: sha1-ycWSCQTRSLqwufZxRfJFqGqtv6Q=}
@@ -18000,6 +18041,10 @@ snapshots:
       - react-dom
       - three
 
+  circuit-json-to-kicad@0.0.173(typescript@7.0.1-rc):
+    dependencies:
+      typescript: 7.0.1-rc
+
   circuit-json-to-pnp-csv@0.0.8(@tscircuit/soup-util@0.0.41(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(transformation-matrix@3.1.0)(zod@3.25.76))(typescript@7.0.1-rc):
     dependencies:
       '@tscircuit/soup-util': 0.0.41(circuit-json@0.0.465(format-si-unit@0.0.7(typescript@7.0.1-rc)))(transformation-matrix@3.1.0)(zod@3.25.76)
@@ -18486,6 +18531,8 @@ snapshots:
       call-bind-apply-helpers: 1.0.2
       es-errors: 1.3.0
       gopd: 1.2.0
+
+  earcut@3.0.2: {}
 
   earcut@3.2.3: {}
 
@@ -19655,6 +19702,10 @@ snapshots:
     dependencies:
       typescript: 7.0.1-rc
 
+  kicadts@0.0.49(typescript@7.0.1-rc):
+    dependencies:
+      typescript: 7.0.1-rc
+
   kicadts@0.0.53(typescript@7.0.1-rc):
     dependencies:
       typescript: 7.0.1-rc
@@ -20667,6 +20718,11 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.29.7
 
+  polygon-clipping@0.15.7:
+    dependencies:
+      robust-predicates: 3.0.3
+      splaytree: 3.2.3
+
   poppygl@0.0.26(typescript@7.0.1-rc):
     dependencies:
       fast-png: 8.0.0
@@ -21114,6 +21170,8 @@ snapshots:
       json-stringify-safe: 5.0.1
       semver-compare: 1.0.0
       sprintf-js: 1.1.3
+
+  robust-predicates@3.0.3: {}
 
   rolldown@1.1.5:
     dependencies:
@@ -21638,6 +21696,8 @@ snapshots:
   spicey@0.0.14(typescript@7.0.1-rc):
     dependencies:
       typescript: 7.0.1-rc
+
+  splaytree@3.2.3: {}
 
   split2@4.2.0: {}
 
