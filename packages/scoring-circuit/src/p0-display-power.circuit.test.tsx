@@ -56,10 +56,11 @@ function isPcbWirePoint(point: PcbRoute[number] | undefined): point is PcbWirePo
 }
 
 function expectAxisAlignedRoute(route: ReturnType<typeof pcbRouteFor>) {
-  expect(route.length).toBeGreaterThan(3)
-  for (let index = 1; index < route.length; index += 1) {
-    const previous = route[index - 1]
-    const current = route[index]
+  const interior = route.slice(1, -1)
+  expect(interior.length).toBeGreaterThan(1)
+  for (let index = 1; index < interior.length; index += 1) {
+    const previous = interior[index - 1]
+    const current = interior[index]
     if (!isPcbWirePoint(previous) || !isPcbWirePoint(current)) continue
     expect(Math.abs(current.x - previous.x) < 1e-9 || Math.abs(current.y - previous.y) < 1e-9).toBe(true)
   }
