@@ -29,26 +29,26 @@ described as final API cutover until the remaining migration gates pass.
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
 | Canonical application | `apps/legislation` |
-| Source snapshot commit | `b8e6ca6` (canonical Congress meeting provenance/relations plus explicit rematerialization operator) |
-| Deployment | `bb0d1d62-742a-48a6-a261-fc304acc12e7` |
+| Source snapshot commit | `9879d32` (source-backed Congress member hydration plus bounded document-section embedding repair) |
+| Deployment | `fe2db27e-4229-4fb4-9afd-98911fd6941d` |
 | Deployment status | `SUCCESS` |
-| Image | `sha256:b9665f0ba91742d6fa69d662ea53a43c436dac45a28b910f7e1657d5f401fc48` |
-| Previous rollback artifact | `e419978a-d839-41c5-897b-d9d536a60dc3` (superseded and `REMOVED`; redeploy its immutable source/image only if Railway supports it) |
+| Image | `sha256:acf825164bfaaa08aed2d19885d1c6a1885cc34f33523a82e0be3170bba7b544` |
+| Previous rollback artifact | `bb0d1d62-742a-48a6-a261-fc304acc12e7` (superseded and `REMOVED`; redeploy its immutable source/image only if Railway supports it) |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
 | Old-service deletion | `legislation-api` (`05eb1486-7775-4797-b1c4-1b4a3f31cd26`), deleted 2026-08-25 after smoke |
-| Unified verification | 227 test files passed with 2 skipped; 1,829 tests passed with 40 skipped; focused route acceptance passed; the Next.js production build succeeded |
+| Current verification | Changed-surface format, lint, and type checks passed; 25 focused tests passed with the PostgreSQL integration suites skipped because no disposable test database URL was configured; the Next.js 16.3.1 production build succeeded. The broader app run passed 226 files and 1,862 tests but retains three unrelated webhook-test discovery/expectation failures. |
 | Foundation smoke | Health, readiness, and homepage returned `200`; unknown-route and unsupported-method checks returned `404` |
 | Reviewed source handler coverage | 88 of 88 explicit Next.js handlers |
 | Current deployment handler coverage | 88 of 88 explicit Next.js handlers |
-| Authentication smoke | WorkOS mode is active with separate M2M API and AuthKit session authorities; current health returned `200` in `361ms`, readiness returned `200` in `179ms`, and the opt-in authenticated subscription and webhook lifecycle smokes passed 12 and 14 checks respectively |
+| Authentication smoke | WorkOS mode is active with separate M2M API and AuthKit session authorities. Current health and readiness returned `200`; prior bounded probes recorded `361ms` and `179ms`. The opt-in authenticated subscription and webhook lifecycle smokes passed 12 and 14 checks respectively. |
 | Subscription lifecycle smoke | Authenticated list `200`, create `201`, create replay `201`, filtered list `200`, detail `200`, patch `200`, stale revision `412`, events `200` empty Page, deliveries `200` empty Page, delete `200`, delete replay `200`, and cancelled visibility `200`; cancellation fixture remains cancelled by design |
 | Webhook lifecycle smoke | All 14 checks passed: list `200`, create/replay `201`, pending filtered list `200`, detail `200`, patch/replay `200`, stale revision `412`, rotate/replay `200`, post-rotate detail `200`, delete/replay `200`, and cancelled visibility `200`; cancellation fixture remains cancelled by design |
 | Webhook verification smoke | Receiver deployment `ec110122-dc9a-4d03-aa0f-7f782739712c` resolved to public IP `69.46.46.106`; the signed challenge returned `200`, follow-up detail was `active`, and a redacted receiver acceptance receipt was observed. The cancellation fixture was cancelled afterward. Receiver service `66ac14e0-8726-40a0-a70b-db534b96c92f` was deleted; receiver test tool commit `553578e`. |
 | Next API database safety | PostgreSQL `statement_timeout` is set to `15s` for API requests |
 | Vote/change production smoke | The authenticated `vote-change` profile passed all 10 checks with no blocked, failed, or skipped checks. Vote collection/detail/batch used `vote:congress:house-119-2-74`; change collection/detail used a genuine provenance-complete event created by the same standard ingestion run. |
-| Search/diff/research production smoke | Deliberately paused while the document HNSW build consumes database I/O; the latest 2026-08-26 read-only sample was `435065/648743` blocks. Resume only after the index work is safe to exercise. |
+| Search/diff/research production smoke | Deliberately paused while the document HNSW build consumes database I/O; the latest read-only sample was `437897/648743` blocks (`67.50%`) at `2026-08-26T14:49:37Z`. Resume only after the index work is safe to exercise. |
 
 This is the current verified unified deployment from `apps/legislation`. The deleted `legislation-api` service is
 historical evidence only; it is not a current service or a rollback target. The successful unified verification,
@@ -63,7 +63,7 @@ The remaining functional promotion gate covers the seven search, document-differ
 named production-fixture blocker.
 The OpenStates plural `OPENSTATES_API_KEY` is corrected in both Railway and Trigger; the Alaska canary remains deferred while
 the active document HNSW build continues to consume database I/O. Its latest 2026-08-26 read-only sample was
-`435065/648743` blocks. Do not claim representative lookup completion from configuration alone.
+`437897/648743` blocks (`67.50%`) at `2026-08-26T14:49:37Z`. Do not claim representative lookup completion from configuration alone.
 Application-level API and MCP rate limiting is out of scope and intentionally absent. The application has no Redis
 limiter dependency, limiter configuration, or Railway Redis service. Provider-specific ingestion concurrency, retry,
 and `429` handling protect upstream data sources and remain separate from client-facing API throttling.
@@ -115,7 +115,7 @@ the incomplete nationwide audit does not reduce the passed 11-operation deployed
 | Outcome | Result |
 | --- | --- |
 | **Done** | 6 document/resource operations passed deployed smoke against the current `legislation-web` deployment. |
-| Production-data blocked | Document detail and document-section collection remain blocked because the production records have `NULL` OCR status. |
+| Production-data blocked | Document detail and document-section collection remain blocked because the production records have `NULL` OCR status. Deployment `fe2db27e-4229-4fb4-9afd-98911fd6941d` adds a one-document section-embedding repair command and fixes targeted pagination; run it only after the source document is successfully reprocessed and HNSW maintenance is idle. |
 | Resolved in current release | Global changes were blocked in this historical release; standard vote ingestion later created a genuine provenance-complete event, and both change routes passed authenticated smoke in `e419978a-d839-41c5-897b-d9d536a60dc3`. |
 | Next endpoint block | People/organization and meeting/calendar delivery subsequently completed; their remaining operation-specific data gates are recorded below. |
 | MCP | MCP remains last. Its browser-consent canary is blocked until a live Next.js MCP route exists. |
@@ -138,6 +138,12 @@ remaining people/organization smoke routes returned the documented empty-page, d
 production fixture audit found no canonical-ready people, profiles, terms, organizations, memberships, calendars, or
 required civic relationships, so data remediation is required before promoting these routes to Done.
 
+Deployment `fe2db27e-4229-4fb4-9afd-98911fd6941d` now fetches the official Congress.gov member-detail resource, reuses
+Bioguide identities across Congress ranges, and persists provider-owned profiles, federal jurisdiction links, and
+source-titled terms through CLI, backfill, and daily synchronization. This can unblock person detail and person-term
+detail after a bounded production refresh and fresh smoke. It does not fabricate or populate committee memberships, so
+organization detail and membership detail remain structurally blocked on an authoritative roster source.
+
 ## Meetings, calendars, and representative lookup deployed smoke
 
 | Outcome | Result |
@@ -148,7 +154,7 @@ required civic relationships, so data remediation is required before promoting t
 | Done | Eight operations passed deployed smoke: meetings collection, meeting agenda list, meeting documents list and detail, meeting outcomes list, meeting participants list and detail, and calendars collection. |
 | Canonical-fixture blocked | Meeting detail, meeting agenda-item detail, meeting outcome detail, calendar detail, and calendar meetings remain blocked and receive no Done credit. |
 | Meeting rematerialization operator | Deployment `bb0d1d62-742a-48a6-a261-fc304acc12e7` adds `congress:events --domain meetings --rematerialize`, which restarts the selected Congress range, reuses the canonical normalizer/upsert path for unchanged provider records, and fails closed on ambiguous location, classification, status, provenance, session, or committee facts. Do not run it until HNSW is clear. |
-| Dependency-configuration blocked | Representative lookup remains blocked pending the production OpenStates canary. The plural `OPENSTATES_API_KEY` is now corrected in both Railway and Trigger, but the Alaska canary remains deferred while the active document HNSW build consumes database I/O; its latest 2026-08-26 read-only sample was `435065/648743` blocks. Do not promote this route until a fresh POST smoke passes. |
+| Dependency-configuration blocked | Representative lookup remains blocked pending the production OpenStates canary. The plural `OPENSTATES_API_KEY` is now corrected in both Railway and Trigger, but the Alaska canary remains deferred while the active document HNSW build consumes database I/O; its latest read-only sample was `437897/648743` blocks (`67.50%`) at `2026-08-26T14:49:37Z`. Do not promote this route until a fresh POST smoke passes. |
 | Rollback | Previous successful `legislation-web` deployment: `1795e79c-9a7a-4f6a-ab6c-c7c1a546450a`. |
 | Next endpoint block | Search, document-difference, and research delivery is **In progress**. |
 
@@ -168,9 +174,9 @@ them Done until the fixture or OpenStates production-canary prerequisite is reso
 The subsequent unified-runtime source snapshot `3a498d1` deployed as
 `9de2719a-d34e-46ee-a86e-09768058d1ff` with terminal `SUCCESS` and superseded
 `35cfc3bb-ea63-477c-b467-6bf84a4200c5`. Both are historical milestones and are now `REMOVED`; neither is a current
-rollback target. Current-release evidence is source `b8e6ca6` deployed as
-`bb0d1d62-742a-48a6-a261-fc304acc12e7`; its immediately preceding successful deployment
-`e419978a-d839-41c5-897b-d9d536a60dc3` is also `REMOVED`, as recorded above.
+rollback target. Current-release evidence is source `9879d32` deployed as
+`fe2db27e-4229-4fb4-9afd-98911fd6941d`; its immediately preceding successful deployment
+`bb0d1d62-742a-48a6-a261-fc304acc12e7` is also `REMOVED`, as recorded above.
 
 The old `legislation-api` service remains deleted. The next action is to relieve or otherwise schedule around HNSW index
 pressure, then run the complete search, document-difference, and research production smoke with audited fixtures. Webhook
@@ -178,9 +184,9 @@ verification evidence is already recorded above; update this record with the rem
 
 ## Authenticated API release evidence
 
-The current `legislation-web` deployment `bb0d1d62-742a-48a6-a261-fc304acc12e7` is sourced from snapshot `b8e6ca6`
+The current `legislation-web` deployment `fe2db27e-4229-4fb4-9afd-98911fd6941d` is sourced from snapshot `9879d32`
 and reached terminal `SUCCESS`; health and readiness returned `200`, with an idle, unsaturated database pool. The prior
-deployment `e419978a-d839-41c5-897b-d9d536a60dc3` is superseded and `REMOVED`. The release uses separate WorkOS
+deployment `bb0d1d62-742a-48a6-a261-fc304acc12e7` is superseded and `REMOVED`. The release uses separate WorkOS
 authorities for M2M API tokens and AuthKit user-session tokens. Prior bounded remote probes returned
 `GET /health` `200` in `361ms` with `status`, `GET /ready` `200` in `179ms` with `databasePool/status`, an anonymous
 protected API request `401` with the canonical challenge, authenticated `GET /api/organizations` `200` in `813ms` with
@@ -198,19 +204,25 @@ is paused during active HNSW I/O.
 
 1. Relieve or schedule around active HNSW index pressure, then run the pending search, document-difference, and research
    production smoke without reopening the meeting/calendar release. Keep every named fixture and configuration blocker explicit until it passes a fresh deployed smoke.
-2. After HNSW is clear, run a bounded federal entity refresh and then
+2. After HNSW is clear, run
+   `congress:entities --start-congress 119 --end-congress 119`, verify the canonical person/profile/jurisdiction/term
+   predicates, and smoke person detail and person-term detail. Then run
    `congress:events --domain meetings --start-congress <start> --end-congress <end> --rematerialize`. Verify canonical
    provenance/relationship predicates before using the resulting meeting as smoke evidence; do not infer completion from
    an ingestion success count.
-3. Resolve the document OCR and remaining canonical civic-fixture blockers one bounded source-backed cohort at a time,
-   then repeat the exact affected production smoke profile before promoting an operation.
-4. Keep MCP migration deferred until every API endpoint is complete and the authenticated API release gate passes; run
+3. For one official native-text document, run
+   `documents:process --document-id <document-id> --force` and then
+   `embeddings:document-sections --document-id <document-id> --limit 64`. Verify replacement sections, dedicated vectors,
+   and the two affected document routes before promotion.
+4. Resolve the remaining canonical civic-fixture blockers one bounded source-backed cohort at a time, then repeat the
+   exact affected production smoke profile before promoting an operation.
+5. Keep MCP migration deferred until every API endpoint is complete and the authenticated API release gate passes; run
    its canary only after a live Next.js MCP route exists.
 
 ## Rollback
 
-The current deployment is `bb0d1d62-742a-48a6-a261-fc304acc12e7`. The preceding deployment
-`e419978a-d839-41c5-897b-d9d536a60dc3` was superseded and removed; it is not an active rollback deployment. If Railway
+The current deployment is `fe2db27e-4229-4fb4-9afd-98911fd6941d`. The preceding deployment
+`bb0d1d62-742a-48a6-a261-fc304acc12e7` was superseded and removed; it is not an active rollback deployment. If Railway
 supports redeploying its immutable source/image, it may be used only after verifying the resulting deployment. After each
 subsequent `legislation-web` deployment, record the prior known-good artifact and verify whether it remains available for
 redeploy. The old `legislation-api` service was deleted at the foundation teardown gate and must not be recreated as a

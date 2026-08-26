@@ -25,10 +25,10 @@ placeholder needed to prove the application runtime.
 
 | Concern | Current evidence | Target state |
 | --- | --- | --- |
-| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source snapshot `b8e6ca6` deployed as `bb0d1d62-742a-48a6-a261-fc304acc12e7` and reached terminal `SUCCESS`; the prior deployment `e419978a-d839-41c5-897b-d9d536a60dc3` is superseded and `REMOVED`. Authenticated vote/change smoke passed all 10 checks on that predecessor with no blocked, failed, or skipped checks. Earlier subscription and webhook lifecycle evidence remains valid. | One Next.js App Router production runtime with staged endpoint blocks |
+| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source snapshot `9879d32` deployed as `fe2db27e-4229-4fb4-9afd-98911fd6941d` and reached terminal `SUCCESS`; the prior deployment `bb0d1d62-742a-48a6-a261-fc304acc12e7` is superseded and `REMOVED`. Authenticated vote/change smoke passed all 10 checks on an earlier release with no blocked, failed, or skipped checks. Earlier subscription and webhook lifecycle evidence remains valid. | One Next.js App Router production runtime with staged endpoint blocks |
 | Public endpoint domain code | 88 of 88 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
 | Next.js Route Handlers | Reviewed source and current production coverage are both 88 of 88. Across all 88 operations, 59 are Done, 7 are In progress, and 22 have named data, fixture, or dependency blockers. The remaining promotion gates are the complete authenticated smoke and the named data/index prerequisites. | 88 of 88 deployed and remotely smoked |
-| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `bb0d1d62-742a-48a6-a261-fc304acc12e7` from source snapshot `b8e6ca6` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. Health and readiness both returned `200` after deployment. The Next API sets PostgreSQL `statement_timeout` to `15s`. Full expensive smoke is deliberately paused because the active document HNSW build consumes database I/O; its latest 2026-08-26 read-only sample was `435065/648743` blocks. | Staged Next.js endpoint releases on `legislation-web`; rollback uses an immutable prior source/image only if Railway supports redeploying it |
+| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `fe2db27e-4229-4fb4-9afd-98911fd6941d` from source snapshot `9879d32` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. Health and readiness both returned `200` after deployment. The Next API sets PostgreSQL `statement_timeout` to `15s`. Full expensive smoke is deliberately paused because the active document HNSW build consumes database I/O; its latest read-only sample was `437897/648743` blocks (`67.50%`) at `2026-08-26T14:49:37Z`. | Staged Next.js endpoint releases on `legislation-web`; rollback uses an immutable prior source/image only if Railway supports redeploying it |
 | Authentication | The shared Next.js API boundary verifies separate WorkOS M2M API and AuthKit session authorities, installs verified request identity, preserves canonical `401` behavior, and leaves health/readiness public. WorkOS mode is deployed in `e1781bbc-6526-4f87-8eb8-df39142bf11a`; bounded anonymous protected `401`, authenticated canonical-page probes, the 12-check subscription lifecycle, and the 14-check webhook lifecycle smoke passed. The complete authenticated cumulative gate remains. | Deployed before the complete authenticated cumulative gate |
 | MCP transport | In-process access remains | HTTP client cutover only after every API endpoint and authentication gate passes |
 
@@ -274,7 +274,7 @@ The five operations below remain **Blocked by canonical production fixtures** an
 `POST /api/representative-lookups` remains **Blocked** pending the production OpenStates canary. The civic repair is
 committed and the plural `OPENSTATES_API_KEY` is now corrected in both Railway and Trigger, but the Alaska canary remains
 deferred while the active document HNSW build consumes database I/O; its latest 2026-08-26 read-only sample was
-`435065/648743` blocks. Do not promote blocked civic routes until a fresh POST
+`437897/648743` blocks (`67.50%`) at `2026-08-26T14:49:37Z`. Do not promote blocked civic routes until a fresh POST
 smoke passes.
 
 Exit gate: the meeting/calendar release is complete. Promote each currently blocked operation only after its named fixture or
@@ -434,7 +434,8 @@ Progress reports must always present both numbers:
   deficiencies: document detail and sections, 14 people/organization operations, five
   meeting/calendar fixture operations, and the representative lookup Alaska canary. The plural `OPENSTATES_API_KEY` is
   corrected in Railway and Trigger; the canary remains deferred while the active document HNSW build consumes database
-  I/O. Its latest 2026-08-26 read-only sample was `435065/648743` blocks.
+  I/O. Its latest read-only sample was `437897/648743` blocks (`67.50%`) at
+  `2026-08-26T14:49:37Z`.
 
 Foundation, authentication, MCP cutover, and final cleanup are separate phase gates. None may be inferred from the
 endpoint count, and none may be moved earlier than the approved sequence.
