@@ -53,10 +53,10 @@ describe("BP-320 clean-sheet board architecture", () => {
     )
   })
 
-  it("does not grant schematic, PCB, or fabrication authority", () => {
+  it("records schematic integration without granting PCB or fabrication authority", () => {
     expect(cleanSheetBoardArchitecture.authority).toEqual({
       canonicalPrototypeSource: true,
-      schematicIntegrated: false,
+      schematicIntegrated: true,
       pcbPlacedOrRouted: false,
       fabricationAuthorized: false
     })

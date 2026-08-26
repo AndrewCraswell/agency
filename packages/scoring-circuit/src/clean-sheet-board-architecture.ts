@@ -1,7 +1,7 @@
 export const cleanSheetBoardArchitecture = {
   artifactKind: "clean-sheet-esp32-bench-board",
   workUnit: "BP-320",
-  revision: "P0-CS-A",
+  revision: "P0-CS-B",
   canonicalEntryPoint: "packages/scoring-circuit/src/index.circuit.tsx",
   board: {
     title: "ESP32 clean-sheet fencing scoring prototype",
@@ -25,18 +25,18 @@ export const cleanSheetBoardArchitecture = {
     "OUTPUT_PERMIT_N"
   ],
   sheets: [
-    { id: "power-input", workUnit: "BP-321", state: "not-integrated" },
-    { id: "power-rails", workUnit: "BP-322", state: "not-integrated" },
-    { id: "esp32-reset-recovery", workUnit: "BP-323", state: "not-integrated" },
-    { id: "ethernet", workUnit: "BP-324", state: "not-integrated" },
-    { id: "encrypted-ir", workUnit: "BP-325", state: "not-integrated" },
-    { id: "hub75", workUnit: "BP-326", state: "not-integrated" },
-    { id: "primary-outputs", workUnit: "BP-327", state: "not-integrated" },
-    { id: "reference-and-analog-rails", workUnit: "BP-328", state: "not-integrated" },
-    { id: "one-acquisition-channel", workUnit: "BP-329", state: "not-integrated" },
-    { id: "seven-channel-replication", workUnit: "BP-330", state: "not-integrated" },
-    { id: "weapon-landings", workUnit: "BP-331", state: "not-integrated" },
-    { id: "test-access-and-labels", workUnit: "BP-332", state: "not-integrated" }
+    { id: "power-input", workUnit: "BP-321", state: "integrated" },
+    { id: "power-rails", workUnit: "BP-322", state: "integrated" },
+    { id: "esp32-reset-recovery", workUnit: "BP-323", state: "integrated" },
+    { id: "ethernet", workUnit: "BP-324", state: "integrated" },
+    { id: "encrypted-ir", workUnit: "BP-325", state: "integrated" },
+    { id: "hub75", workUnit: "BP-326", state: "integrated" },
+    { id: "primary-outputs", workUnit: "BP-327", state: "integrated" },
+    { id: "reference-and-analog-rails", workUnit: "BP-328", state: "integrated" },
+    { id: "phased-conductor-acquisition", workUnit: "BP-329", state: "integrated" },
+    { id: "source-sink-sense-selection", workUnit: "BP-330", state: "integrated" },
+    { id: "weapon-landings", workUnit: "BP-331", state: "integrated" },
+    { id: "test-access-and-labels", workUnit: "BP-332", state: "integrated" }
   ],
   prohibitedActiveReferences: [
     "U_SCORING",
@@ -56,7 +56,7 @@ export const cleanSheetBoardArchitecture = {
   ],
   authority: {
     canonicalPrototypeSource: true,
-    schematicIntegrated: false,
+    schematicIntegrated: true,
     pcbPlacedOrRouted: false,
     fabricationAuthorized: false
   }
@@ -71,7 +71,8 @@ export function validateCleanSheetBoardArchitecture(value: unknown): true {
     new Set(cleanSheetBoardArchitecture.sheets.map((sheet) => sheet.id)).size !== 12 ||
     new Set(cleanSheetBoardArchitecture.globalNets).size !== cleanSheetBoardArchitecture.globalNets.length ||
     !cleanSheetBoardArchitecture.authority.canonicalPrototypeSource ||
-    cleanSheetBoardArchitecture.authority.schematicIntegrated ||
+    !cleanSheetBoardArchitecture.authority.schematicIntegrated ||
+    cleanSheetBoardArchitecture.sheets.some(({ state }) => state !== "integrated") ||
     cleanSheetBoardArchitecture.authority.pcbPlacedOrRouted ||
     cleanSheetBoardArchitecture.authority.fabricationAuthorized
   ) {
