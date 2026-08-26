@@ -24,14 +24,17 @@ effort is not a reason to include hardware.
 
 The initial schematic contains only these functional blocks:
 
-- An ESP32-S3 development module or module-plus-minimum-support circuit with USB programming, reset, and boot access.
+- An official ESP32-S3-DevKitC-1-N8R8 on two socket rows. Its on-board regulator, USB interfaces, reset, and boot
+  controls replace the previous bare-module support circuitry.
 - Direct solder pads or simple headers for the six weapon wires and piste conductor.
-- The smallest analog interface that can safely stimulate and measure those seven conductors well enough to develop and
-  validate foil, epee, and sabre scoring behavior.
+- An OpenPiste-style resistor/transistor conductor interface connected directly to ESP32-S3 GPIO and ADC-capable pins.
+  It is the starting prototype topology, not proof of FIE conformance. Add an external ADC, reference, mux, buffer, or
+  negative rail only if measured scoring behavior demonstrates that the direct interface cannot meet a named threshold.
 - A socketed or directly soldered WIZ850io module for Ethernet.
 - One TSOP38438-compatible IR receiver input.
-- A HUB75 connector and only the level shifting or buffering proven necessary for the selected panel.
-- Simple lamp and buzzer outputs suitable for bench development.
+- A HUB75 connector with two 74AHCT245 buffers because a 5 V panel cannot be assumed to accept 3.3 V logic reliably.
+- One transistor-driven buzzer. The HUB75 panel provides the prototype scoring lamps, so duplicate discrete lamp drivers
+  are omitted.
 - Fused 5 V input from the existing off-board USB-C PD and regulator modules, plus only the rails actually consumed by
   the board.
 - Essential decoupling, reset-state resistors, protection at externally handled conductor inputs, and useful test pads.
@@ -58,9 +61,21 @@ Before adding any component, answer all three questions:
 If those answers are not concrete, omit the component. Prefer modules, direct soldering, headers, jumpers, and bodge-wire
 repair. Do not add circuitry solely for a possible production revision.
 
-The schematic must remain understandable as a small number of functional blocks. Before PCB layout begins, the root
-agent must publish a one-line justification for every active IC and connector and review the total component count. A
-large or difficult-to-explain count is an architecture failure, not a routing problem.
+The schematic must remain understandable as a small number of functional blocks. The first-pass target is no more than
+60 populated parts including connectors and passives, on a two-layer board no larger than 160 mm by 100 mm. Crossing
+either limit requires removing or moving functions off-board before layout; it is not permission to expand the limit.
+
+### Active ICs and modules
+
+| Item | Why it is on the first board |
+| --- | --- |
+| ESP32-S3-DevKitC-1-N8R8 | Runs all firmware and already includes programming, reset, boot, USB, regulation, flash, and PSRAM. |
+| WIZ850io | Supplies required wired Ethernet without a custom PHY, magnetics, crystal, or RJ45 design. |
+| TSOP38438 | Receives the required infrared remote signal with one ESP32 input. |
+| Two 74AHCT245 buffers | Translate the thirteen HUB75 control signals from 3.3 V to reliable 5 V logic. |
+
+There is no external scoring ADC, precision reference, analog mux, op-amp, negative-rail generator, STM32, isolation
+device, supervisor, or multi-channel output driver in the starting design.
 
 ## Work ownership
 

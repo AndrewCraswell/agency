@@ -23,7 +23,7 @@ outputs must not be advanced or ordered. Useful verified knowledge may be reused
 
 | Deliverable | Status | Latest state |
 | --- | --- | --- |
-| Replace the oversized carrier | active | The previous 164-component design is retired. Redraw a blank-sheet schematic containing one ESP32-S3, direct weapon and piste connections, the minimum seven-conductor analog interface, WIZ850io, IR, HUB75, simple outputs, and off-board power input. First produce an IC/connector list with a one-line justification for each item. |
+| Replace the oversized carrier | active | Commits `8513c96` and `c4935f1` retire the previous architecture and delete its generated PCB/order outputs. The replacement is capped at 60 populated parts and 160 mm by 100 mm on two layers. Its complete active silicon is one socketed ESP32-S3 DevKitC, WIZ850io, TSOP38438, and two HUB75 buffers; the conductor interface starts with the simple discrete OpenPiste topology. Next: draw and root-review that schematic. |
 | Produce the prototype PCB | waiting | Starts only after root simplicity review of the replacement schematic. Place and route the smallest practical board, run basic ERC/DRC, inspect Gerbers and drills, and order a small batch. Delete or replace obsolete generated outputs from the retired carrier. |
 | Bind firmware to the ordered board | waiting | After the final pinout is fixed, connect the portable C17 scoring core to the real ESP32 acquisition and interface adapters. Avoid firmware for hypothetical hardware. |
 | Bring up scoring behavior | waiting | Verify rails and programming, then Ethernet, IR, display, outputs, and all seven conductors. Exercise foil, epee, and sabre timing and resistance behavior and record only faults that require a board or firmware revision. |
