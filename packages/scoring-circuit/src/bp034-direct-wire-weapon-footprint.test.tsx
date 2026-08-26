@@ -84,6 +84,8 @@ describe("BP-034 direct-wire weapon footprint", () => {
 
   it("renders six electrical solder PTHs, six separate electrical test PTHs, and four non-electrical anchors", () => {
     const json = renderedFootprint()
+    const source = json.find((element) => element.type === "source_component" && element.name === "J_WEAPON_DIRECT")
+    expect(source).toMatchObject({ manufacturer_part_number: undefined })
     const platedHoles = json.filter((element) => element.type === "pcb_plated_hole")
     const mechanicalHoles = json.filter((element) => element.type === "pcb_hole")
     expect(platedHoles).toHaveLength(12)

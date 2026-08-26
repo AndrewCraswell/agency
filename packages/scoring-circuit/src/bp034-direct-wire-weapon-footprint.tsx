@@ -337,7 +337,7 @@ export function Bp034DirectWireWeaponFootprint({
   return (
     <chip
       name="J_WEAPON_DIRECT"
-      manufacturerPartNumber="PROJECT-DERIVED-NO-MANUFACTURER-CAD"
+      kicadSymbolMetadata={{ inBom: false, onBoard: true }}
       pinLabels={Object.fromEntries(
         landingRows.flatMap((landing, index) => [
           [`pin${index + 1}`, landing.boardNet],

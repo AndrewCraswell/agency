@@ -34,7 +34,7 @@ export function P0PisteLanding({ pcbX, pcbY }: { readonly pcbX: number; readonly
   return (
     <chip
       name="J_PISTE_DIRECT"
-      manufacturerPartNumber="PROJECT-DERIVED-P0-DIRECT-WIRE"
+      kicadSymbolMetadata={{ inBom: false, onBoard: true }}
       pinLabels={{ pin1: "PISTE", pin2: "PISTE_TEST" }}
       footprint={footprint}
       pcbX={pcbX}
