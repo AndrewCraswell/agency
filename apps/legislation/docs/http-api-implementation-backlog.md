@@ -18,19 +18,19 @@ An endpoint is not Next-route **Done** merely because the standalone Node handle
 the source of truth for request and response bodies. The existing local smoke checklist is reusable test input, but the
 release gate also requires block-by-block deployed Railway smoke.
 
-This ledger was corrected on 2026-08-25 after the runtime boundary was reconciled. `apps/legislation` is the canonical
+This ledger was updated on 2026-08-26 after the authenticated Next.js release was verified. `apps/legislation` is the canonical
 application and documentation home; Railway retains the `legislation-web` service name. All 88 rows have reviewed
 domain/query/projection evidence, so the **Domain state** is 88 **Done**. Reviewed source now has 88/88 explicit Next.js
 handlers, and the current production deployment contains 88/88. Across all 88 operations, release state is 40
 **Done**, 25 **Blocked** by named production prerequisites, and 23 **In progress**. The shared Next.js API boundary now verifies WorkOS bearer tokens and
-installs the derived request identity in reviewed local source. Railway has the public WorkOS verifier values and both
-required encryption secrets. The 14 subscription/webhook operations are deployed and await functional authenticated
-smoke. Source snapshot commit `7bb8a68` deployed as `f6a0534f-c56e-479f-b201-a086cd0f678a` with terminal `SUCCESS`;
-the final bounded verification passed 227 test files with 2 skipped and 1,829 tests with 40 skipped, focused route
-acceptance checks, and the Next.js build. Remote health and readiness returned `200`; an anonymous protected API request
-returned the canonical `401` envelope and Bearer challenge. Search,
-document-difference, and research production smoke remains pending because active HNSW index pressure must be relieved
-before semantic/hybrid smoke.
+installs the derived request identity in reviewed local source. The deployed release records separate WorkOS authorities for
+M2M API tokens and AuthKit user-session tokens, plus both required encryption secrets. The 14 subscription/webhook
+operations are deployed and await functional authenticated smoke. Reviewed commits `ce91b16`, `09b9d28`, and `c0ca1bf`
+are included in source snapshot `c0ca1bf`, deployed as `b33d51ac-bc9b-462f-86db-7c5fa28fd015` with terminal `SUCCESS`.
+Live probes returned health `200`, readiness `200`, anonymous protected API `401`, authenticated organizations `200` with
+an empty canonical page, and authenticated subscriptions `200` with an empty canonical page. The Next API database
+session `statement_timeout` is `15s`. Full expensive smoke is deliberately paused while HNSW index construction is
+actively consuming database I/O; semantic/hybrid and other expensive probes remain pending.
 The old Railway `legislation-api` service is deleted and is not a rollback target. Authentication enforcement is live;
 authenticated functional smoke is the remaining global API gate. MCP cutover is deferred until after the API release.
 
@@ -42,9 +42,9 @@ authenticated functional smoke is the remaining global API gate. MCP cutover is 
 | Next.js foundation and first deployment | Done | The foundation deployment and old-service deletion are recorded in the migration plan and Railway release record. Commit `27fa397` deployed as `cc047806-27f7-4110-a6e0-7f27f4b4e517` and reached terminal `SUCCESS`; this remains historical foundation evidence, while the current unified deployment is recorded above. |
 | Legislative routes | In progress | 32 routes are Done: 11 jurisdiction/session routes, 15 non-data-blocked bills, amendments, and vote routes, and six document/resource routes. Five remain Blocked by production data: three vote operations and document detail and section collection because every section-bearing production `bill_documents` row has `ocr_status = NULL`. The deployed global change collection and canonical change detail are In progress pending authenticated smoke of their provenance-complete visibility rule. This block now contains 39 explicit routes. |
 | Civic routes | Complete | People and organizations (14) has complete route implementation, deployment, and smoke evidence, but all 14 operations remain blocked by missing canonical production fixtures. The meeting/calendar release completed: eight operations are Done; five await canonical fixtures and representative lookup awaits its configured OpenStates dependency to reach production. |
-| Search, document-difference, and research routes | In progress | All seven handlers were remediated in `0a2748b`; unified snapshot `3a498d1` is deployed as `9de2719a-d34e-46ee-a86e-09768058d1ff` with terminal `SUCCESS`, successful unified verification/build, and passing foundation smoke. Production lexical, semantic, hybrid, diff, and cited-answer smoke remains pending until active HNSW index pressure is relieved. |
-| Subscription and webhook routes | In progress | All 14 explicit routes, domain compositions, and focused local tests are deployed. Authenticated functional smoke covering ownership, concurrency, idempotency, secret rotation, cancellation, verification, and replay remains. |
-| WorkOS authentication | In progress | The shared Next.js API boundary verifies API-audience M2M and AuthKit session tokens, preserves canonical `401` challenges, installs only the verified identity, and keeps health/readiness public. Deployment with `AUTH_MODE=workos` is complete and anonymous rejection passed remote smoke; authenticated cumulative smoke remains. |
+| Search, document-difference, and research routes | In progress | All seven handlers are included in reviewed commit `c0ca1bf`, deployed as `b33d51ac-bc9b-462f-86db-7c5fa28fd015` with terminal `SUCCESS`, and passed build/foundation gates. Full expensive lexical, semantic, hybrid, diff, and cited-answer smoke is deliberately paused while active HNSW construction consumes database I/O. |
+| Subscription and webhook routes | In progress | All 14 explicit routes, domain compositions, and focused local tests are deployed. Authenticated `GET /api/subscriptions` returned a valid empty `200` page; ownership, concurrency, idempotency, secret rotation, cancellation, verification, and replay smoke remains. |
+| WorkOS authentication | In progress | The shared Next.js API boundary verifies separate M2M API and AuthKit session authorities, preserves canonical `401` challenges, installs only the verified identity, and keeps health/readiness public. Deployment with `AUTH_MODE=workos` is live; health/readiness, anonymous `401`, authenticated organizations `200` empty-page, and subscriptions `200` empty-page probes passed. The full authenticated cumulative gate remains. |
 | MCP HTTP migration | Deferred | Begin only after the authenticated API release; cut over tool-by-tool through the typed HTTP client with parity, canary, soak, and rollback evidence. |
 | Final runtime cleanup | Blocked | Remove duplicate standalone production serving code, update final docs, run complete verification, and preserve one canonical Next.js runtime. |
 
@@ -62,8 +62,8 @@ For each deliverable:
 ## Endpoint state matrix
 
 The endpoint rows below record reusable domain implementation only. The current Next.js route release state is tracked
-separately until each explicit handler passes deployment smoke. All 88 explicit handlers are deployed; the first
-40 routes are Done. The root operational `/health` and `/ready` handlers are foundation routes and are not included in
+separately until each explicit handler passes deployment smoke. All 88 explicit handlers are deployed; the release ledger
+remains 40 Done, 23 In progress, and 25 Blocked pending the documented gates. The root operational `/health` and `/ready` handlers are foundation routes and are not included in
 the 88 public API endpoint count.
 
 ### Current Next.js route release state

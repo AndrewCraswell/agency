@@ -25,12 +25,12 @@ placeholder needed to prove the application runtime.
 
 | Concern | Current evidence | Target state |
 | --- | --- | --- |
-| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Source snapshot commit `7bb8a68` deployed as `f6a0534f-c56e-479f-b201-a086cd0f678a` and reached terminal `SUCCESS`. Bounded verification passed 227 test files with 2 skipped and 1,829 tests with 40 skipped; focused route acceptance and the Next.js build passed. Remote health and readiness returned `200`. | One Next.js App Router production runtime with staged endpoint blocks |
+| Application and API runtime | Canonical application: `apps/legislation`; the deployed Next.js service remains named `legislation-web`. Reviewed commits `ce91b16`, `09b9d28`, and `c0ca1bf` are included in source snapshot `c0ca1bf`, deployed as `b33d51ac-bc9b-462f-86db-7c5fa28fd015` and reached terminal `SUCCESS`. Live health and readiness probes returned `200`; authenticated organizations and subscriptions probes returned valid empty `200` pages. | One Next.js App Router production runtime with staged endpoint blocks |
 | Public endpoint domain code | 88 of 88 implemented and reviewed in `apps/legislation` | Reused behind Next.js Route Handlers |
 | Next.js Route Handlers | Reviewed source and current production coverage are both 88 of 88. Across all 88 operations, 40 are Done, 23 are In progress, and 25 have named data, fixture, or dependency blockers. The remaining promotion gates are authenticated functional smoke and the named data/index prerequisites. | 88 of 88 deployed and remotely smoked |
-| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `f6a0534f-c56e-479f-b201-a086cd0f678a` from source snapshot `7bb8a68` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. Search, document-difference, and research production smoke is pending because active HNSW index pressure makes semantic/hybrid search unsafe to exercise. | Staged Next.js endpoint releases on `legislation-web`; rollback uses the recorded prior successful `legislation-web` deployment |
-| Authentication | The shared Next.js API boundary verifies WorkOS tokens, installs verified request identity, preserves canonical `401` behavior, and leaves health/readiness public. WorkOS mode is deployed; anonymous rejection passed remote smoke, while authenticated functional smoke remains. | Deployed before functional subscription/webhook release smoke |
-| MCP transport | In-process access remains | HTTP client cutover only after the API and authentication gates pass |
+| Railway runtime | `legislation-web` service `786fbca7-8798-4357-9b45-f0ba092a9750`; current deployment `b33d51ac-bc9b-462f-86db-7c5fa28fd015` from source snapshot `c0ca1bf` is `SUCCESS`; domain `https://legislation-web-production-b024.up.railway.app`, target port `8080`; old `legislation-api` service is deleted. The Next API sets PostgreSQL `statement_timeout` to `15s`. Full expensive smoke is deliberately paused because active HNSW construction is consuming database I/O. | Staged Next.js endpoint releases on `legislation-web`; rollback uses the recorded prior successful `legislation-web` deployment |
+| Authentication | The shared Next.js API boundary verifies separate WorkOS M2M API and AuthKit session authorities, installs verified request identity, preserves canonical `401` behavior, and leaves health/readiness public. WorkOS mode is deployed; live anonymous protected `401` and authenticated organizations/subscriptions empty-page probes passed, while the complete authenticated cumulative gate remains. | Deployed before functional subscription/webhook release smoke |
+| MCP transport | In-process access remains | HTTP client cutover only after every API endpoint and authentication gate passes |
 
 The previous endpoint ledger's 88 **Done** rows described the reusable standalone implementation. They did not prove
 Next.js routing or a Next.js deployment. This plan uses separate **Domain state** and **Next route state** so that those
@@ -343,19 +343,23 @@ coverage and local tests alone do not satisfy this gate.
 
 ### WorkOS authentication
 
-State: **In progress**. Reviewed local source is complete, and Railway has the public WorkOS verifier values plus both
-application encryption secrets. The currently deployed image still has authentication disabled. Deployment and
-authenticated smoke remain.
+State: **In progress**. The authenticated boundary is deployed in `b33d51ac-bc9b-462f-86db-7c5fa28fd015` from source
+snapshot `c0ca1bf` (terminal `SUCCESS`). The release uses separate WorkOS authorities for M2M API tokens and AuthKit
+user-session tokens and has both application encryption secrets configured. Live health/readiness probes returned `200`,
+anonymous protected API returned `401`, and authenticated organizations/subscriptions returned valid empty `200` pages.
+The complete authenticated cumulative gate remains pending.
 
 - WorkOS bearer verification and request identity now run in the shared Next.js API boundary.
 - `/health` and `/ready` remain public; supported and catch-all `/api/**` requests authenticate in WorkOS mode.
 - Enforce issuer, JWKS signature, audience, expiry, subject, client/session identity, organization scope, and access
   class.
 - Preserve exact `401` challenge and `403` authorization semantics and correlation IDs.
-- Store WorkOS configuration only in Railway variables; never commit or print credentials or tokens.
+- Store separate M2M and AuthKit session authority configuration only in Railway variables; never commit or print
+  credentials or tokens.
 - Add negative tests for missing, malformed, expired, wrong-issuer, wrong-audience, wrong-client, and wrong-organization
   tokens.
-- Deploy, wait for `SUCCESS`, run authenticated cumulative smoke for all endpoint blocks, and record rollback evidence.
+- Deploy, wait for `SUCCESS`, run authenticated cumulative smoke for all endpoint blocks once HNSW I/O pressure allows
+  the expensive probes, and record rollback evidence.
 
 Exit gate: every documented API operation passes authenticated remote smoke and all negative token cases fail closed.
 

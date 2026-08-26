@@ -29,10 +29,10 @@ described as final API cutover until the remaining migration gates pass.
 | --- | --- |
 | Service | `legislation-web` (`786fbca7-8798-4357-9b45-f0ba092a9750`) |
 | Canonical application | `apps/legislation` |
-| Source snapshot commit | `7bb8a68` |
-| Deployment | `f6a0534f-c56e-479f-b201-a086cd0f678a` |
+| Source snapshot commit | `c0ca1bf` (reviewed commits `ce91b16`, `09b9d28`, and `c0ca1bf`) |
+| Deployment | `b33d51ac-bc9b-462f-86db-7c5fa28fd015` |
 | Deployment status | `SUCCESS` |
-| Previous successful rollback deployment | `9de2719a-d34e-46ee-a86e-09768058d1ff` |
+| Previous successful rollback deployment | `49fd21e5-ce81-4483-8e41-02d53799e82e` |
 | Public origin | `https://legislation-web-production-b024.up.railway.app` |
 | Target port | `8080` |
 | Railway service list after teardown | `legislation-web`, `pgbouncer`, `pgvector` |
@@ -41,16 +41,17 @@ described as final API cutover until the remaining migration gates pass.
 | Foundation smoke | Health, readiness, and homepage returned `200`; unknown-route and unsupported-method checks returned `404` |
 | Reviewed source handler coverage | 88 of 88 explicit Next.js handlers |
 | Current deployment handler coverage | 88 of 88 explicit Next.js handlers |
-| Authentication smoke | WorkOS mode is active; health and readiness returned `200`, while an anonymous `GET /api/jurisdictions` returned the canonical `401` envelope and Bearer challenge |
-| Search/diff/research production smoke | Pending: active HNSW index pressure must be relieved before semantic and hybrid search smoke |
+| Authentication smoke | WorkOS mode is active with separate M2M API and AuthKit session authorities; health/readiness returned `200`, anonymous protected API returned `401`, and authenticated organizations/subscriptions returned valid empty `200` pages |
+| Next API database safety | PostgreSQL `statement_timeout` is set to `15s` for API requests |
+| Search/diff/research production smoke | Deliberately paused while active HNSW construction consumes database I/O; resume only after the index work is safe to exercise |
 
 This is the current verified unified deployment from `apps/legislation`. The deleted `legislation-api` service is
 historical evidence only; it is not a current service or a rollback target. The successful unified verification,
-production build, and foundation smoke prove the consolidated runtime and operational boundary. Required production
-semantic and hybrid smoke remains pending.
+production build, and foundation smoke prove the consolidated runtime and operational boundary. Live authenticated
+probes are recorded above; full expensive smoke remains deliberately paused while HNSW construction consumes database I/O.
 
-The 14 subscription/webhook handlers are deployed, and Railway has the public WorkOS verifier values and both
-application encryption secrets. `AUTH_MODE=workos` is active and the anonymous rejection boundary passed remote smoke;
+The 14 subscription/webhook handlers are deployed, and Railway has separate WorkOS M2M and AuthKit session authorities plus
+both application encryption secrets. `AUTH_MODE=workos` is active and the anonymous rejection boundary passed remote smoke;
 authenticated ownership and lifecycle smoke remains. Across all 88 operations, release state is
 40 **Done**, 23 **In progress**, and 25 **Blocked** by named production prerequisites. Authenticated functional smoke
 must cover the subscription/webhook handlers and provenance-complete change-feed rule before promoting any operation to
@@ -147,10 +148,10 @@ them Done until the fixture or `OPENSTATES_API_KEY` prerequisite is resolved and
 
 | Outcome | Result |
 | --- | --- |
-| Handler coverage | 73 of 88 public operations have explicit deployed Next.js handlers. This includes 40 routes with Done release credit, 26 routes blocked by named production prerequisites, and seven active search, document-difference, and research routes. |
+| Handler coverage | 88 of 88 public operations have explicit deployed Next.js handlers. This includes 40 routes with Done release credit, 25 routes blocked by named production prerequisites, and 23 operations awaiting their documented release gates. |
 | Deployment | Source commit `0a2748b` deployed as `35cfc3bb-ea63-477c-b467-6bf84a4200c5`; terminal `SUCCESS`. |
 | Operational smoke | Production `GET /health` and `GET /ready` returned `200`. |
-| Production endpoint smoke | Pending. Active HNSW index pressure prevents safely running semantic and hybrid search probes. |
+| Production endpoint smoke | Deliberately paused. Active HNSW index construction consumes database I/O, so the full expensive lexical, semantic, hybrid, diff, and research probes must wait. |
 | Route state | All seven routes remain **In progress**. Do not mark them Done until cumulative production smoke passes after the index pressure is relieved. |
 
 The subsequent unified-runtime source snapshot `3a498d1` deployed as
@@ -161,20 +162,30 @@ which is now the immediately preceding successful rollback target, but it does n
 The old `legislation-api` service remains deleted. The next action is to relieve or otherwise schedule around HNSW index
 pressure, then run the complete search, document-difference, and research production smoke with audited fixtures and record the result here.
 
+## Authenticated API release evidence
+
+The current `legislation-web` deployment `b33d51ac-bc9b-462f-86db-7c5fa28fd015` is sourced from reviewed commits
+`ce91b16`, `09b9d28`, and `c0ca1bf`; it reached terminal `SUCCESS`. The release uses separate WorkOS authorities for
+M2M API tokens and AuthKit user-session tokens. Live probes returned `GET /health` `200`, `GET /ready` `200`, an
+anonymous protected API request `401` with the canonical challenge, authenticated `GET /api/organizations` `200` with
+an empty canonical page, and authenticated `GET /api/subscriptions` `200` with an empty canonical page. The Next API
+sets PostgreSQL `statement_timeout` to `15s`. These probes do not promote the 40/23/25 endpoint ledger: the full
+authenticated cumulative smoke remains pending, and expensive smoke is paused during active HNSW I/O.
+
 ## Next safe actions
 
 1. Relieve or schedule around active HNSW index pressure, then run the pending search, document-difference, and research
    production smoke without reopening the meeting/calendar release. Keep every named fixture and configuration blocker explicit until it passes a fresh deployed smoke.
-2. After that smoke passes, add the production WorkOS request-identity boundary and required subscription/webhook secrets,
-   then deploy and functionally smoke all 14 subscription/webhook routes. Do not treat their reviewed source or fail-closed `403` behavior as release
-   completion.
-3. Keep MCP migration deferred until after the authenticated API release, and run its canary only after a live Next.js
-   MCP route exists.
+2. After that smoke passes, run authenticated ownership and lifecycle smoke for all 14 subscription/webhook routes and
+   the provenance-complete change-feed rule. Do not treat empty collection probes, reviewed source, or fail-closed
+   `403` behavior as release completion.
+3. Keep MCP migration deferred until every API endpoint is complete and the authenticated API release gate passes; run
+   its canary only after a live Next.js MCP route exists.
 
 ## Rollback
 
-The current deployment is `9de2719a-d34e-46ee-a86e-09768058d1ff`; its immediately preceding known-good
-`legislation-web` rollback deployment is `35cfc3bb-ea63-477c-b467-6bf84a4200c5`. After each subsequent
+The current deployment is `b33d51ac-bc9b-462f-86db-7c5fa28fd015`; its immediately preceding known-good
+`legislation-web` rollback deployment is `49fd21e5-ce81-4483-8e41-02d53799e82e`. After each subsequent
 `legislation-web` deployment, rollback uses only the newly recorded immediately preceding known-good deployment. The
 old `legislation-api` service was deleted at the foundation teardown gate and must not be recreated as a rollback target.
 Recheck `/health`, `/ready`, and every cumulative smoke profile after a rollback. Database migrations remain separate
