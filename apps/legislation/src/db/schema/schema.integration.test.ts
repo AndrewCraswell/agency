@@ -1680,6 +1680,20 @@ describePostgres.sequential("legislation PostgreSQL schema", () => {
       sourceStartOffset: 0,
       text: "Public data access evidence."
     })
+    await expect(
+      database.insert(schema.supportingMaterialSections).values({
+        contentHash: "b".repeat(64),
+        id: "material-section:material-search:invalid-page-range",
+        materialId: "material:material-search:2026:committee-report:0000",
+        ordinal: 1,
+        pageStart: 1,
+        sourceEndOffset: 1,
+        sourceStartOffset: 0,
+        text: "x"
+      })
+    ).rejects.toMatchObject({
+      cause: expect.objectContaining({ code: "23514", constraint: "supporting_material_sections_pages_check" })
+    })
     await database.insert(schema.supportingMaterialLinks).values({
       amendmentId,
       billId,

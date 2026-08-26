@@ -300,7 +300,7 @@
       "idx": 42,
       "version": "7",
       "when": 1787761765364,
-      "tag": "0042_strict-document-page-range",
+      "tag": "0042_strict-section-page-ranges",
       "breakpoints": true
     }
   ]

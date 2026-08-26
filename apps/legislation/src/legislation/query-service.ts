@@ -1091,7 +1091,7 @@ export function buildLexicalSupportingMaterialCandidateQuery(
       group by ${supportingMaterialSections.materialId}
     ),
     section_candidate_probe as (
-      select material_id
+      select material_id, section_score
       from section_candidate_scores
       order by section_score desc, material_id asc
       limit ${candidateProbeLimit}
@@ -1099,6 +1099,7 @@ export function buildLexicalSupportingMaterialCandidateQuery(
     section_candidate_materials as (
       select material_id
       from section_candidate_probe
+      order by section_score desc, material_id asc
       limit ${candidateLimit}
     ),
     candidate_materials as (

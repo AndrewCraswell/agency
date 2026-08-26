@@ -305,6 +305,7 @@ describe("lexical supporting material candidate search", () => {
     expect(rendered.sql).toContain("section_candidate_scores as")
     expect(rendered.sql).toContain("section_candidate_probe as")
     expect(rendered.sql).toContain("section_candidate_materials as")
+    expect(rendered.sql.match(/order by section_score desc, material_id asc/g)).toHaveLength(2)
     expect(rendered.sql).toContain("section_ranked_candidates as")
     expect(rendered.sql).toContain("section_candidates as")
     expect(rendered.sql.match(/limit \$\d+/g)).toHaveLength(5)

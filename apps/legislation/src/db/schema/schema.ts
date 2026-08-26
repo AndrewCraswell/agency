@@ -1172,7 +1172,7 @@ export const supportingMaterialSections = legislationSchema.table(
     ),
     check(
       "supporting_material_sections_pages_check",
-      sql`(${table.pageStart} is null and ${table.pageEnd} is null) or (${table.pageStart} >= 1 and ${table.pageEnd} >= ${table.pageStart})`
+      sql`(${table.pageStart} is null and ${table.pageEnd} is null) or (${table.pageStart} is not null and ${table.pageEnd} is not null and ${table.pageStart} >= 1 and ${table.pageEnd} >= ${table.pageStart})`
     ),
     check("supporting_material_sections_text_check", sql`length(${table.text}) > 0`),
     check("supporting_material_sections_hash_check", sql`${table.contentHash} ~ '^[0-9a-f]{64}$'`),
